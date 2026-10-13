@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Q-Tech CRM — G2 Today B (revised)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="mockup.css">
+<link rel="stylesheet" href="g2-a.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-calendar-check" viewBox="0 0 24 24"><path d="M8 2v4" /> <path d="M16 2v4" /> <rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M3 10h18" /> <path d="m9 16 2 2 4-4" /></symbol><symbol id="i-file-text" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /></symbol><symbol id="i-package" viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /> <path d="M12 22V12" /> <path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" /> <path d="m7.5 4.27 9 5.15" /></symbol><symbol id="i-building-2" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /> <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /> <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /> <path d="M10 6h4" /> <path d="M10 10h4" /> <path d="M10 14h4" /> <path d="M10 18h4" /></symbol><symbol id="i-banknote" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="2" /> <circle cx="12" cy="12" r="2" /> <path d="M6 12h.01M18 12h.01" /></symbol><symbol id="i-chart-column" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16" /> <path d="M18 17V9" /> <path d="M13 17V5" /> <path d="M8 17v-3" /></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /> <path d="m21 21-4.3-4.3" /></symbol><symbol id="i-message-circle-question" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /> <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /> <path d="M12 17h.01" /></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" /> <path d="m21.854 2.147-10.94 10.939" /></symbol><symbol id="i-reply" viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7" /> <path d="M20 18v-2a4 4 0 0 0-4-4H4" /></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12" /> <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></symbol><symbol id="i-truck" viewBox="0 0 24 24"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" /> <path d="M15 18H9" /> <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" /> <circle cx="17" cy="18" r="2" /> <circle cx="7" cy="18" r="2" /></symbol><symbol id="i-alarm-clock-off" viewBox="0 0 24 24"><path d="M6.87 6.87a8 8 0 1 0 11.26 11.26" /> <path d="M19.9 14.25a8 8 0 0 0-9.15-9.15" /> <path d="m22 6-3-3" /> <path d="M6.26 18.67 4 21" /> <path d="m2 2 20 20" /> <path d="M4 4 2 6" /></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <polyline points="12 6 12 12 16 14" /></symbol><symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <line x1="12" x2="12" y1="8" y2="12" /> <line x1="12" x2="12.01" y1="16" y2="16" /></symbol><symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" /></symbol><symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18" /> <path d="m6 6 12 12" /></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></symbol><symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></symbol><symbol id="i-refresh-cw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /> <path d="M21 3v5h-5" /> <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /> <path d="M8 16H3v5" /></symbol><symbol id="i-cloud-off" viewBox="0 0 24 24"><path d="m2 2 20 20" /> <path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193" /> <path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07" /></symbol><symbol id="i-ellipsis" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1" /> <circle cx="19" cy="12" r="1" /> <circle cx="5" cy="12" r="1" /></symbol><symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14" /> <path d="m12 5 7 7-7 7" /></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path d="M8 2v4" /> <path d="M16 2v4" /> <rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M3 10h18" /></symbol><symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="6" /> <circle cx="12" cy="12" r="2" /></symbol><symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" /> <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" /> <path d="M12 17.5v-11" /></symbol><symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2" /> <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></symbol><symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /> <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></symbol><symbol id="i-undo-2" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5" /> <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" /></symbol><symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14" /> <path d="M5 2h14" /> <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22" /> <path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" /></symbol><symbol id="i-circle-dashed" viewBox="0 0 24 24"><path d="M10.1 2.182a10 10 0 0 1 3.8 0" /> <path d="M13.9 21.818a10 10 0 0 1-3.8 0" /> <path d="M17.609 3.721a10 10 0 0 1 2.69 2.7" /> <path d="M2.182 13.9a10 10 0 0 1 0-3.8" /> <path d="M20.279 17.609a10 10 0 0 1-2.7 2.69" /> <path d="M21.818 10.1a10 10 0 0 1 0 3.8" /> <path d="M3.721 6.391a10 10 0 0 1 2.7-2.69" /> <path d="M6.391 20.279a10 10 0 0 1-2.69-2.7" /></symbol><symbol id="i-circle-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="1" /></symbol><symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></symbol><symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="m4.9 4.9 14.2 14.2" /></symbol><symbol id="i-file-plus" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M9 15h6" /> <path d="M12 18v-6" /></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14" /> <path d="M12 5v14" /></symbol><symbol id="i-wallet" viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" /> <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" /></symbol><symbol id="i-bell-off" viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0" /> <path d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742" /> <path d="m2 2 20 20" /> <path d="M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05" /></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /> <polyline points="16 17 21 12 16 7" /> <line x1="21" x2="9" y1="12" y2="12" /></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /> <circle cx="12" cy="12" r="3" /></symbol><symbol id="i-clipboard-check" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /> <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /> <path d="m9 14 2 2 4-4" /></symbol><symbol id="i-shopping-cart" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1" /> <circle cx="19" cy="21" r="1" /> <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></symbol><symbol id="i-share-2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /> <circle cx="6" cy="12" r="3" /> <circle cx="18" cy="19" r="3" /> <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /> <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></symbol><symbol id="i-package-check" viewBox="0 0 24 24"><path d="m16 16 2 2 4-4" /> <path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14" /> <path d="m7.5 4.27 9 5.15" /> <polyline points="3.29 7 12 12 20.71 7" /> <line x1="12" x2="12" y1="22" y2="12" /></symbol><symbol id="i-file-pen" viewBox="0 0 24 24"><path d="M12.5 22H18a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v9.5" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M13.378 15.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" /></symbol><symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /> <path d="M3 3v5h5" /> <path d="M12 7v5l4 2" /></symbol><symbol id="i-file-check" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="m9 15 2 2 4-4" /></symbol><symbol id="i-circle-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /> <path d="M12 17h.01" /></symbol><symbol id="i-clock-alert" viewBox="0 0 24 24"><path d="M12 6v6l4 2" /> <path d="M16 21.16a10 10 0 1 1 5-13.516" /> <path d="M20 11.5v6" /> <path d="M20 21.5h.01" /></symbol><symbol id="i-message-square" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></symbol><symbol id="i-list-filter" viewBox="0 0 24 24"><path d="M3 6h18" /> <path d="M7 12h10" /> <path d="M10 18h4" /></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /> <path d="M20 3v4" /> <path d="M22 5h-4" /> <path d="M4 17v2" /> <path d="M5 18H3" /></symbol><symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <circle cx="9" cy="7" r="4" /> <path d="M22 21v-2a4 4 0 0 0-3-3.87" /> <path d="M16 3.13a4 4 0 0 1 0 7.75" /></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" /> <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" /> <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" /></symbol><symbol id="i-message-circle" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></symbol><symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" /><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" /><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" /><path d="m2 2 20 20" /></symbol><symbol id="i-clipboard-paste" viewBox="0 0 24 24"><path d="M15 2H9a1 1 0 0 0-1 1v2c0 .6.4 1 1 1h6c.6 0 1-.4 1-1V3c0-.6-.4-1-1-1Z" /><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4" /><path d="M16 4h2a2 2 0 0 1 2 2v2" /><path d="M21 14H11" /><path d="m15 10-4 4 4 4" /></symbol><symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3" /><path d="M8.12 8.12 12 12" /><path d="M20 4 8.12 15.88" /><circle cx="6" cy="18" r="3" /><path d="M14.8 14.8 20 20" /></symbol><symbol id="i-user-plus" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="19" x2="19" y1="8" y2="14" /><line x1="22" x2="16" y1="11" y2="11" /></symbol><symbol id="i-timer" viewBox="0 0 24 24"><line x1="10" x2="14" y1="2" y2="2" /><line x1="12" x2="15" y1="14" y2="11" /><circle cx="12" cy="14" r="8" /></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" /><circle cx="7.5" cy="7.5" r=".5" fill="currentColor" /></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6" /></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" /></symbol></defs></svg>
+<div class="doc">
+  <header class="doc-head">
+    <h1>Today, direction B, revised for Gate 2</h1>
+    <p>Three fixes on the approved layout. The target tile now shows its working and recomputes from its inputs. The chase draft has three states: draft, copied with a 10-second undo, and just chased, where the item leaves the active list and settles into a dimmed Waiting group. Friday 27 November 2026, signed in as Ayesha Rana (sales).</p>
+    <nav class="doc-index" aria-label="Frames"><a href="#tile">Target tile</a><a href="#s1">1 Draft</a><a href="#s2">2 Copied</a><a href="#s3">3 Just chased</a><a href="#waiting">Waiting group</a><a href="#mobile">Mobile 375</a></nav>
+    <div class="legend"><span><svg class="i i-sm" aria-hidden="true"><use href="#i-info"/></svg>The first desktop frame is live: press Copy message and mark chased and watch it play through states 2 and 3.</span></div>
+  </header>
+
+  <section class="board-wrap" id="tile"><div class="board-cap"><h2>Target tile, with the working</h2><p>Every figure is derived from four inputs. The day line opens the working.</p></div><div class="board board-xl" data-w="1440"><div class="board-inner">
+    <div class="spec-grid">
+      <div><div class="spec-tile"><section class="tile2" aria-label="Your Q4 target">
+  <div class="t2-head"><span class="lbl">Your Q4 target</span><span class="behind"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg>PKR 330,000 behind pace</span></div>
+  <div class="t2-fig"><span class="big num">PKR 3,450,000</span><span class="of num">of PKR 6,000,000</span></div>
+  <div class="pace" role="img" aria-label="PKR 3,450,000 achieved of PKR 6,000,000. On pace would be PKR 3,780,000."><span class="pace-lbl"><span>on pace</span><span class="num">PKR 3.78M</span></span><div class="pace-track"><i class="pace-fill"></i><i class="pace-gap"></i><i class="pace-mark"></i></div></div>
+  <details class="how" open><summary>Day <span class="num">58</span> of <span class="num">92</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span class="muted">&nbsp;·&nbsp;<span class="num">34</span> days left</span></summary>
+  <dl class="work">
+    <dt>Target for Q4 (1 Oct to 31 Dec)</dt><dd class="num">PKR 6,000,000</dd>
+    <dt>Share of the quarter gone</dt><dd class="num">58 ÷ 92 days</dd>
+    <dt>On pace today</dt><dd class="num">PKR 3,780,000</dd>
+    <dt>Achieved so far</dt><dd class="num">− PKR 3,450,000</dd>
+    <i class="rule"></i>
+    <div class="sum" style="display:contents"><dt>Behind pace</dt><dd class="num">PKR 330,000</dd></div>
+    <span class="foot">Net cash received by you since 1 Oct, GST left out. Shown to the nearest PKR 10,000: exact on pace 3,782,609, behind 332,609.</span>
+  </dl></details>
+</section></div></div>
+      <div>
+        <table class="maths"><thead><tr><th>Figure on the tile</th><th>Worked from</th><th style="text-align:right">Exact</th><th style="text-align:right">Shown</th></tr></thead><tbody>
+          <tr><td>Target</td><td class="calc">set by an admin for Q4</td><td class="rt num">6,000,000</td><td class="rt num">PKR 6,000,000</td></tr>
+          <tr><td>Achieved</td><td class="calc">net cash you were credited, 1 Oct to 27 Nov, GST left out</td><td class="rt num">3,450,000</td><td class="rt num">PKR 3,450,000</td></tr>
+          <tr><td>Day of quarter</td><td class="calc">1 Oct is day 1; 27 Nov is day 58; Q4 has 92 days</td><td class="rt num">58 of 92</td><td class="rt num">Day 58 of 92</td></tr>
+          <tr><td>Days left</td><td class="calc">92 − 58</td><td class="rt num">34</td><td class="rt num">34 days left</td></tr>
+          <tr><td>On pace</td><td class="calc">6,000,000 × 58 ÷ 92</td><td class="rt num">3,782,609</td><td class="rt num">PKR 3,780,000</td></tr>
+          <tr class="sum"><td>Behind pace</td><td class="calc">3,782,609 − 3,450,000, never below zero</td><td class="rt num">332,609</td><td class="rt num">PKR 330,000</td></tr>
+        </tbody></table>
+        <p class="muted" style="margin-top:var(--sp-4);font-size:var(--text-sm);max-width:70ch">The bar fills to 3,450,000 of 6,000,000. The black marker sits at 3,782,609 of 6,000,000, and the hatched stretch between them is the shortfall. Rounding is to the nearest PKR 10,000 on the tile only, so on pace minus achieved still reads as the figure shown. The hover text carries the exact values. No percentage is printed, so there is no figure to stand without its count. This is the person's own progress only: a tile never shows a colleague's number.</p>
+      </div>
+    </div>
+    <div class="var-row">
+      <figure><figcaption>Ahead of pace (example: achieved PKR 4,100,000)</figcaption><div class="spec-tile"><section class="tile2" aria-label="Your Q4 target">
+  <div class="t2-head"><span class="lbl">Your Q4 target</span><span class="behind is-ahead"><svg class="i i-sm" aria-hidden="true"><use href="#i-circle-check"/></svg>PKR 320,000 ahead of pace</span></div>
+  <div class="t2-fig"><span class="big num">PKR 4,100,000</span><span class="of num">of PKR 6,000,000</span></div>
+  <div class="pace is-ahead" style="--pa:68.33%" role="img" aria-label="PKR 4,100,000 achieved of PKR 6,000,000. On pace would be PKR 3,780,000."><span class="pace-lbl"><span>on pace</span><span class="num">PKR 3.78M</span></span><div class="pace-track"><i class="pace-fill"></i><i class="pace-mark"></i></div></div>
+  <details class="how"><summary>Day <span class="num">58</span> of <span class="num">92</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span class="muted">&nbsp;·&nbsp;<span class="num">34</span> days left</span></summary></details>
+</section></div></figure>
+      <figure><figcaption>No target set</figcaption><div class="spec-tile"><section class="tile2" aria-label="Your Q4 target">
+  <div class="t2-head"><span class="lbl">Your Q4 target</span></div>
+  <div class="t2-none"><strong>No target set for Q4</strong><span>Ask an admin to set one on the Team screen. Nothing else on Today depends on it.</span></div>
+</section></div></figure>
+      <figure><figcaption>Collapsed, as it sits in the list by default</figcaption><div class="spec-tile" style="padding:var(--sp-3)"><section class="tile2" aria-label="Your Q4 target">
+  <div class="t2-head"><span class="lbl">Your Q4 target</span><span class="behind"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg>PKR 330,000 behind pace</span></div>
+  <div class="t2-fig"><span class="big num">PKR 3,450,000</span><span class="of num">of PKR 6,000,000</span></div>
+  <div class="pace" role="img" aria-label="PKR 3,450,000 achieved of PKR 6,000,000. On pace would be PKR 3,780,000."><span class="pace-lbl"><span>on pace</span><span class="num">PKR 3.78M</span></span><div class="pace-track"><i class="pace-fill"></i><i class="pace-gap"></i><i class="pace-mark"></i></div></div>
+  <details class="how"><summary>Day <span class="num">58</span> of <span class="num">92</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span class="muted">&nbsp;·&nbsp;<span class="num">34</span> days left</span></summary>
+  <dl class="work">
+    <dt>Target for Q4 (1 Oct to 31 Dec)</dt><dd class="num">PKR 6,000,000</dd>
+    <dt>Share of the quarter gone</dt><dd class="num">58 ÷ 92 days</dd>
+    <dt>On pace today</dt><dd class="num">PKR 3,780,000</dd>
+    <dt>Achieved so far</dt><dd class="num">− PKR 3,450,000</dd>
+    <i class="rule"></i>
+    <div class="sum" style="display:contents"><dt>Behind pace</dt><dd class="num">PKR 330,000</dd></div>
+    <span class="foot">Net cash received by you since 1 Oct, GST left out. Shown to the nearest PKR 10,000: exact on pace 3,782,609, behind 332,609.</span>
+  </dl></details>
+</section></div></figure>
+    </div>
+  </div></div></section>
+
+  <section class="board-wrap" id="s1"><div class="board-cap"><h2>1 · Draft</h2><p>Desktop 1440. RFQ-0177 is selected and the message is ready. Waiting already holds 5 items, so it is open. Try the copy button.</p></div><div class="board board-xl" data-w="1440"><div class="board-inner"><div class="app"><header class="top">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="30"></a>
+  <nav class="tabs" aria-label="Main"><a class="tab-i " href="#"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span><span class="num cnt">9</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span><span class="num cnt">14</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span><span class="num cnt">7</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-banknote"/></svg><span>Money</span><span class="num cnt">3</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <div class="who"><span class="role">Sales</span><span class="avatar" title="Ayesha Rana">AR</span></div>
+</header><div class="split"><aside class="pane-l"><div class="pl-h"><div><h1>Today</h1><p>Friday 27 November · 9 need you · 3 due now</p></div></div>
+<div class="seg-c" role="tablist" aria-label="Filter"><button class="is-on" role="tab">All <span class="num">9</span></button><button role="tab">Bids <span class="num">3</span></button><button role="tab">Sourcing <span class="num">3</span></button><button role="tab">Money <span class="num">2</span></button></div>
+<div class="pl-list">
+<section class="g"><h2><span>Overdue or due today</span><span class="num cnt">3</span></h2><ul>
+<li><button class="r" data-pick="pay" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-banknote"/></svg></span>
+  <span class="r-b"><span class="r-t">Payment 12 days overdue</span><span class="r-m"><span class="num">INV-2291</span> · Karachi Glassworks (KHI)</span></span>
+  <span class="r-due num is-danger">12d late</span>
+</button></li>
+<li><button class="r" data-pick="bidtoday" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg></span>
+  <span class="r-b"><span class="r-t">Bid due today, 17:00</span><span class="r-m"><span class="num">RFQ-0181</span> · Punjab Cement Ltd</span></span>
+  <span class="r-due num is-danger">today</span>
+</button></li>
+<li><button class="r" data-pick="late" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-truck"/></svg></span>
+  <span class="r-b"><span class="r-t">Goods 5 days late from supplier</span><span class="r-m"><span class="num">PO 253102</span> · Indus Textile Mills — Faisalabad</span></span>
+  <span class="r-due num is-danger">5d late</span>
+</button></li>
+</ul></section>
+<section class="g"><h2><span>Due in the next 5 days</span><span class="num cnt">5</span></h2><ul>
+<li><button class="r" data-pick="tomorrow" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg></span>
+  <span class="r-b"><span class="r-t">Bid due tomorrow, 12:00</span><span class="r-m"><span class="num">RFQ-0183</span> · Ravi Steel Works — Lahore</span></span>
+  <span class="r-due num is-warn">1d</span>
+</button></li>
+<li><button class="r" data-pick="relay" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-reply"/></svg></span>
+  <span class="r-b"><span class="r-t">Answer received on 3 questions: relay to Belimo agent</span><span class="r-m"><span class="num">RFQ-0178</span> · Sargodha Dairy Foods</span></span>
+  <span class="r-due num is-warn">3d</span>
+</button></li>
+<li><button class="r" data-pick="chasesup" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Chase supplier for a quote</span><span class="r-m"><span class="num">RFQ-0179</span> · Chenab Paper Board — Sialkot</span></span>
+  <span class="r-due num is-warn">3d</span>
+</button></li>
+<li><button class="r is-sel" data-pick="chasecust" aria-pressed="true">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Chase customer for clarifications</span><span class="r-m"><span class="num">RFQ-0177</span> · Indus Textile Mills — Faisalabad</span></span>
+  <span class="r-due num is-warn">4d</span>
+</button></li>
+<li><button class="r" data-pick="notfloated" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-share-2"/></svg></span>
+  <span class="r-b"><span class="r-t">Not floated to suppliers yet</span><span class="r-m"><span class="num">RFQ-0184</span> · Mehran Paper Board — Hyderabad</span></span>
+  <span class="r-due num ">5d</span>
+</button></li>
+</ul></section>
+<section class="g"><h2><span>Ready to move</span><span class="num cnt">1</span></h2><ul>
+<li><button class="r" data-pick="placepo" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-shopping-cart"/></svg></span>
+  <span class="r-b"><span class="r-t">Place PO with supplier</span><span class="r-m"><span class="num">PO 253091</span> · Punjab Cement Ltd</span></span>
+  <span class="r-due num ">3d old</span>
+</button></li>
+</ul></section>
+<section class="g g-wait"><h2><button class="g-tg" aria-expanded="true" data-wait-toggle><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Waiting</span><span class="num cnt">5</span></button><span class="g-note">comes back when its date arrives</span></h2><ul><li><button class="r" data-wait="RFQ-0168">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0168</span> · Gujrat Fans &amp; Motors</span><span class="r-w">chased 2 days ago · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0166">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0166</span> · Rahim Yar Khan Textile</span><span class="r-w">chased yesterday · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0163">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0163</span> · Bahawalpur Cotton Ginners</span><span class="r-w">chased 3 days ago · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0170">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0170</span> · Sukkur Flour Mills</span><span class="r-w">chased yesterday · next nudge on <span class="num">Tue 1 Dec</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0172">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0172</span> · Jhelum Sugar Mills</span><span class="r-w">chased 2 days ago · next nudge on <span class="num">Thu 3 Dec</span></span></span>
+</button></li></ul></section>
+</div>
+<div class="pl-foot"><section class="tile2" aria-label="Your Q4 target">
+  <div class="t2-head"><span class="lbl">Your Q4 target</span><span class="behind"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg>PKR 330,000 behind pace</span></div>
+  <div class="t2-fig"><span class="big num">PKR 3,450,000</span><span class="of num">of PKR 6,000,000</span></div>
+  <div class="pace" role="img" aria-label="PKR 3,450,000 achieved of PKR 6,000,000. On pace would be PKR 3,780,000."><span class="pace-lbl"><span>on pace</span><span class="num">PKR 3.78M</span></span><div class="pace-track"><i class="pace-fill"></i><i class="pace-gap"></i><i class="pace-mark"></i></div></div>
+  <details class="how"><summary>Day <span class="num">58</span> of <span class="num">92</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span class="muted">&nbsp;·&nbsp;<span class="num">34</span> days left</span></summary>
+  <dl class="work">
+    <dt>Target for Q4 (1 Oct to 31 Dec)</dt><dd class="num">PKR 6,000,000</dd>
+    <dt>Share of the quarter gone</dt><dd class="num">58 ÷ 92 days</dd>
+    <dt>On pace today</dt><dd class="num">PKR 3,780,000</dd>
+    <dt>Achieved so far</dt><dd class="num">− PKR 3,450,000</dd>
+    <i class="rule"></i>
+    <div class="sum" style="display:contents"><dt>Behind pace</dt><dd class="num">PKR 330,000</dd></div>
+    <span class="foot">Net cash received by you since 1 Oct, GST left out. Shown to the nearest PKR 10,000: exact on pace 3,782,609, behind 332,609.</span>
+  </dl></details>
+</section></div></aside><main class="pane-r"><article class="detail" data-detail="chasecust">
+  <header class="d-h">
+    <p class="crumb">Today <svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg> <a href="#" class="num">RFQ-0177</a></p>
+    <h2>Chase customer for clarifications</h2>
+    <p class="d-sub">Indus Textile Mills — Faisalabad<span class="dot"></span>customer ref <span class="num">RFQ #74037</span></p>
+    <div class="d-chips"><span class="chip" data-status="clarification:waiting-customer"><svg class="i " aria-hidden="true"><use href="#i-circle-dot"/></svg>Waiting on customer</span><span class="chip" data-status="deadline:due-soon"><svg class="i " aria-hidden="true"><use href="#i-clock"/></svg>Due soon</span><span class="chip" data-status="sourcing:partly-covered"><svg class="i " aria-hidden="true"><use href="#i-circle-dot"/></svg>Partly covered</span></div>
+  </header>
+  
+  <section class="sit" aria-label="Situation">
+    <div class="cell is-warn"><span class="c-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-message-circle-question"/></svg>Unanswered</span><span class="c-v num">2</span><span class="c-s">questions</span></div>
+    <div class="cell"><span class="c-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock"/></svg>Asked customer</span><span class="c-v"><span class="num">6</span> days ago</span><span class="c-s num">Sat 21 Nov</span></div>
+    <div class="cell"><span class="c-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg>Bid due in</span><span class="c-v"><span class="num">4</span> days</span><span class="c-s num">Tue 1 Dec</span></div>
+    <div class="cell"><span class="c-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-hourglass"/></svg>Waiting</span><span class="c-v c-t">Endress+Hauser</span><span class="c-s">via ABC Traders</span></div>
+  </section>
+  <div class="rail" style="--p:60%"><span class="rail-today num">Today · Fri 27 Nov</span><div class="rail-track"><i></i><em></em></div><div class="rail-ends"><span class="num">Asked Sat 21 Nov</span><span class="num">Bid due Tue 1 Dec</span></div></div>
+  <section class="prep">
+    <header><div><h3>Prepared for you</h3><p>Written from the two open questions. Edit anything before you send.</p></div>
+      <div class="seg-c" role="tablist" aria-label="Channel"><button class="is-on" role="tab" data-ch="wa">WhatsApp</button><button role="tab" data-ch="em">Email</button></div></header>
+    <div class="msg" data-msg="wa"><div class="msg-to"><svg class="i i-sm" aria-hidden="true"><use href="#i-phone"/></svg><span>To Mr. Tariq Mehmood</span><span class="num muted">+92 300 555 0142</span></div><pre>Assalam o Alaikum Mr. Tariq,
+
+A gentle reminder about your RFQ <span class="mk">*</span><b>#74037</b><span class="mk">*</span> (flow meters, Faisalabad plant). To complete our quotation we still need your confirmation on:
+
+1. Line size and flange rating on the process line (item 2)
+2. Fluid temperature range, and whether the meter sees CIP cleaning (items 2 and 3)
+
+Kindly confirm by <span class="mk">*</span><b>Monday 30 November</b><span class="mk">*</span>; our bid is due on Tuesday 1 December.
+
+Thank you for your support.
+Regards,
+Ayesha Rana
+Q-Tech Solutions</pre></div>
+    <div class="msg" data-msg="em" hidden><div class="msg-to"><svg class="i i-sm" aria-hidden="true"><use href="#i-mail"/></svg><span>To Mr. Tariq Mehmood</span><span class="muted">procurement@indus-textile.example</span></div><div class="subj"><span class="lbl">Subject</span><b>RFQ #74037: your confirmation needed by Monday 30 November</b></div><pre>Dear Mr. Tariq,
+
+Assalam o Alaikum.
+
+Thank you for your RFQ #74037 for flow meters at your Faisalabad plant. We are preparing our quotation and, further to our message of Saturday 21 November, still need your confirmation on the following points:
+
+1. Line size and flange rating on the process line (item 2, Endress+Hauser Proline Promag 400)
+2. Fluid temperature range, and whether the meter will see CIP cleaning (items 2 and 3)
+
+Kindly confirm by Monday 30 November. Our bid is due on Tuesday 1 December, and a reply by Monday will allow us to hold the supplier's price.
+
+If it is easier to discuss these over a call, please let me know a convenient time.
+
+With best regards,
+Ayesha Rana
+Sales, Q-Tech Solutions
++92 300 555 0188</pre></div>
+    <footer><button class="btn btn-primary" data-act="copy-chase"><svg class="i " aria-hidden="true"><use href="#i-copy"/></svg>Copy message and mark chased</button><button class="btn"><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg>Open RFQ-0177</button><span class="spacer"></span><button class="btn btn-quiet" data-snz><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg>Snooze</button>
+      <div class="menu" role="menu"><button role="menuitem"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button></div></footer>
+  </section>
+  <div class="two">
+    <section class="card qs"><h3>Open questions</h3><ol>
+      <li><span class="q-n num">1</span><div><p>Line size and flange rating on the process line, item 2 (Proline Promag 400)</p><span class="muted">asked <span class="num">21 Nov</span> · no reply</span></div></li>
+      <li><span class="q-n num">2</span><div><p>Fluid temperature range, and whether the meter sees CIP cleaning, items 2 and 3</p><span class="muted">asked <span class="num">21 Nov</span> · no reply</span></div></li>
+    </ol></section>
+    <section class="card hist"><h3>What happened</h3><ol>
+      <li><span class="num">17 Nov</span><span>RFQ received from customer</span></li>
+      <li><span class="num">19 Nov</span><span>Floated to 3 suppliers</span></li>
+      <li><span class="num">21 Nov</span><span>2 questions sent to customer</span></li>
+      <li class="now"><span class="num">27 Nov</span><span>Not chased yet</span></li>
+    </ol></section>
+  </div>
+</article></main></div></div></div></div></section>
+  <section class="board-wrap" id="s2"><div class="board-cap"><h2>2 · Copied</h2><p>The text is on the clipboard and the item is stamped. A toast offers undo for 10 seconds; the row still shows because nothing has moved yet.</p></div><div class="board board-xl" data-w="1440"><div class="board-inner"><div class="app"><header class="top">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="30"></a>
+  <nav class="tabs" aria-label="Main"><a class="tab-i " href="#"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span><span class="num cnt">9</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span><span class="num cnt">14</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span><span class="num cnt">7</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-banknote"/></svg><span>Money</span><span class="num cnt">3</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <div class="who"><span class="role">Sales</span><span class="avatar" title="Ayesha Rana">AR</span></div>
+</header><div class="split"><aside class="pane-l"><div class="pl-h"><div><h1>Today</h1><p>Friday 27 November · 9 need you · 3 due now</p></div></div>
+<div class="seg-c" role="tablist" aria-label="Filter"><button class="is-on" role="tab">All <span class="num">9</span></button><button role="tab">Bids <span class="num">3</span></button><button role="tab">Sourcing <span class="num">3</span></button><button role="tab">Money <span class="num">2</span></button></div>
+<div class="pl-list">
+<section class="g"><h2><span>Overdue or due today</span><span class="num cnt">3</span></h2><ul>
+<li><button class="r" data-pick="pay" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-banknote"/></svg></span>
+  <span class="r-b"><span class="r-t">Payment 12 days overdue</span><span class="r-m"><span class="num">INV-2291</span> · Karachi Glassworks (KHI)</span></span>
+  <span class="r-due num is-danger">12d late</span>
+</button></li>
+<li><button class="r" data-pick="bidtoday" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg></span>
+  <span class="r-b"><span class="r-t">Bid due today, 17:00</span><span class="r-m"><span class="num">RFQ-0181</span> · Punjab Cement Ltd</span></span>
+  <span class="r-due num is-danger">today</span>
+</button></li>
+<li><button class="r" data-pick="late" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-truck"/></svg></span>
+  <span class="r-b"><span class="r-t">Goods 5 days late from supplier</span><span class="r-m"><span class="num">PO 253102</span> · Indus Textile Mills — Faisalabad</span></span>
+  <span class="r-due num is-danger">5d late</span>
+</button></li>
+</ul></section>
+<section class="g"><h2><span>Due in the next 5 days</span><span class="num cnt">5</span></h2><ul>
+<li><button class="r" data-pick="tomorrow" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg></span>
+  <span class="r-b"><span class="r-t">Bid due tomorrow, 12:00</span><span class="r-m"><span class="num">RFQ-0183</span> · Ravi Steel Works — Lahore</span></span>
+  <span class="r-due num is-warn">1d</span>
+</button></li>
+<li><button class="r" data-pick="relay" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-reply"/></svg></span>
+  <span class="r-b"><span class="r-t">Answer received on 3 questions: relay to Belimo agent</span><span class="r-m"><span class="num">RFQ-0178</span> · Sargodha Dairy Foods</span></span>
+  <span class="r-due num is-warn">3d</span>
+</button></li>
+<li><button class="r" data-pick="chasesup" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Chase supplier for a quote</span><span class="r-m"><span class="num">RFQ-0179</span> · Chenab Paper Board — Sialkot</span></span>
+  <span class="r-due num is-warn">3d</span>
+</button></li>
+<li><button class="r is-sel" data-pick="chasecust" aria-pressed="true">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Chase customer for clarifications</span><span class="r-m"><span class="num">RFQ-0177</span> · Indus Textile Mills — Faisalabad</span></span>
+  <span class="r-tag"><svg class="i " aria-hidden="true"><use href="#i-check"/></svg>Copied</span>
+</button></li>
+<li><button class="r" data-pick="notfloated" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-share-2"/></svg></span>
+  <span class="r-b"><span class="r-t">Not floated to suppliers yet</span><span class="r-m"><span class="num">RFQ-0184</span> · Mehran Paper Board — Hyderabad</span></span>
+  <span class="r-due num ">5d</span>
+</button></li>
+</ul></section>
+<section class="g"><h2><span>Ready to move</span><span class="num cnt">1</span></h2><ul>
+<li><button class="r" data-pick="placepo" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-shopping-cart"/></svg></span>
+  <span class="r-b"><span class="r-t">Place PO with supplier</span><span class="r-m"><span class="num">PO 253091</span> · Punjab Cement Ltd</span></span>
+  <span class="r-due num ">3d old</span>
+</button></li>
+</ul></section>
+<section class="g g-wait"><h2><button class="g-tg" aria-expanded="true" data-wait-toggle><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Waiting</span><span class="num cnt">5</span></button><span class="g-note">comes back when its date arrives</span></h2><ul><li><button class="r" data-wait="RFQ-0168">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0168</span> · Gujrat Fans &amp; Motors</span><span class="r-w">chased 2 days ago · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0166">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0166</span> · Rahim Yar Khan Textile</span><span class="r-w">chased yesterday · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0163">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0163</span> · Bahawalpur Cotton Ginners</span><span class="r-w">chased 3 days ago · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0170">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0170</span> · Sukkur Flour Mills</span><span class="r-w">chased yesterday · next nudge on <span class="num">Tue 1 Dec</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0172">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0172</span> · Jhelum Sugar Mills</span><span class="r-w">chased 2 days ago · next nudge on <span class="num">Thu 3 Dec</span></span></span>
+</button></li></ul></section>
+</div>
+<div class="pl-foot"><section class="tile2" aria-label="Your Q4 target">
+  <div class="t2-head"><span class="lbl">Your Q4 target</span><span class="behind"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg>PKR 330,000 behind pace</span></div>
+  <div class="t2-fig"><span class="big num">PKR 3,450,000</span><span class="of num">of PKR 6,000,000</span></div>
+  <div class="pace" role="img" aria-label="PKR 3,450,000 achieved of PKR 6,000,000. On pace would be PKR 3,780,000."><span class="pace-lbl"><span>on pace</span><span class="num">PKR 3.78M</span></span><div class="pace-track"><i class="pace-fill"></i><i class="pace-gap"></i><i class="pace-mark"></i></div></div>
+  <details class="how"><summary>Day <span class="num">58</span> of <span class="num">92</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span class="muted">&nbsp;·&nbsp;<span class="num">34</span> days left</span></summary>
+  <dl class="work">
+    <dt>Target for Q4 (1 Oct to 31 Dec)</dt><dd class="num">PKR 6,000,000</dd>
+    <dt>Share of the quarter gone</dt><dd class="num">58 ÷ 92 days</dd>
+    <dt>On pace today</dt><dd class="num">PKR 3,780,000</dd>
+    <dt>Achieved so far</dt><dd class="num">− PKR 3,450,000</dd>
+    <i class="rule"></i>
+    <div class="sum" style="display:contents"><dt>Behind pace</dt><dd class="num">PKR 330,000</dd></div>
+    <span class="foot">Net cash received by you since 1 Oct, GST left out. Shown to the nearest PKR 10,000: exact on pace 3,782,609, behind 332,609.</span>
+  </dl></details>
+</section></div></aside><main class="pane-r"><article class="detail" data-detail="chasecust">
+  <header class="d-h">
+    <p class="crumb">Today <svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg> <a href="#" class="num">RFQ-0177</a></p>
+    <h2>Chase customer for clarifications</h2>
+    <p class="d-sub">Indus Textile Mills — Faisalabad<span class="dot"></span>customer ref <span class="num">RFQ #74037</span></p>
+    <div class="d-chips"><span class="chip" data-status="clarification:waiting-customer"><svg class="i " aria-hidden="true"><use href="#i-circle-dot"/></svg>Waiting on customer</span><span class="chip" data-status="deadline:due-soon"><svg class="i " aria-hidden="true"><use href="#i-clock"/></svg>Due soon</span><span class="chip" data-status="sourcing:partly-covered"><svg class="i " aria-hidden="true"><use href="#i-circle-dot"/></svg>Partly covered</span></div>
+  </header>
+  
+  <section class="sit" aria-label="Situation">
+    <div class="cell is-warn"><span class="c-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-message-circle-question"/></svg>Unanswered</span><span class="c-v num">2</span><span class="c-s">questions</span></div>
+    <div class="cell"><span class="c-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock"/></svg>Asked customer</span><span class="c-v"><span class="num">6</span> days ago</span><span class="c-s num">Sat 21 Nov</span></div>
+    <div class="cell"><span class="c-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg>Bid due in</span><span class="c-v"><span class="num">4</span> days</span><span class="c-s num">Tue 1 Dec</span></div>
+    <div class="cell"><span class="c-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-hourglass"/></svg>Waiting</span><span class="c-v c-t">Endress+Hauser</span><span class="c-s">via ABC Traders</span></div>
+  </section>
+  <div class="rail" style="--p:60%"><span class="rail-today num">Today · Fri 27 Nov</span><div class="rail-track"><i></i><em></em></div><div class="rail-ends"><span class="num">Asked Sat 21 Nov</span><span class="num">Bid due Tue 1 Dec</span></div></div>
+  <section class="prep is-copied">
+    <div class="copied-bar"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg><span><b>Copied.</b> <span class="sub">Paste it into WhatsApp.</span></span></div>
+    <div class="msg"><div class="msg-to"><svg class="i i-sm" aria-hidden="true"><use href="#i-phone"/></svg><span>To Mr. Tariq Mehmood</span><span class="num muted">+92 300 555 0142</span></div><pre>Assalam o Alaikum Mr. Tariq,
+
+A gentle reminder about your RFQ <span class="mk">*</span><b>#74037</b><span class="mk">*</span> (flow meters, Faisalabad plant). To complete our quotation we still need your confirmation on:
+
+1. Line size and flange rating on the process line (item 2)
+2. Fluid temperature range, and whether the meter sees CIP cleaning (items 2 and 3)
+
+Kindly confirm by <span class="mk">*</span><b>Monday 30 November</b><span class="mk">*</span>; our bid is due on Tuesday 1 December.
+
+Thank you for your support.
+Regards,
+Ayesha Rana
+Q-Tech Solutions</pre></div>
+    <footer><span class="done-note"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>Chased today. Moves to Waiting when the undo closes.</span><span class="spacer"></span><button class="btn"><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg>Open RFQ-0177</button></footer>
+  </section>
+  <div class="two">
+    <section class="card qs"><h3>Open questions</h3><ol>
+      <li><span class="q-n num">1</span><div><p>Line size and flange rating on the process line, item 2 (Proline Promag 400)</p><span class="muted">asked <span class="num">21 Nov</span> · no reply</span></div></li>
+      <li><span class="q-n num">2</span><div><p>Fluid temperature range, and whether the meter sees CIP cleaning, items 2 and 3</p><span class="muted">asked <span class="num">21 Nov</span> · no reply</span></div></li>
+    </ol></section>
+    <section class="card hist"><h3>What happened</h3><ol>
+      <li><span class="num">17 Nov</span><span>RFQ received from customer</span></li>
+      <li><span class="num">19 Nov</span><span>Floated to 3 suppliers</span></li>
+      <li><span class="num">21 Nov</span><span>2 questions sent to customer</span></li>
+      <li class="now"><span class="num">27 Nov</span><span>Not chased yet</span></li>
+    </ol></section>
+  </div>
+</article></main></div><div class="toast" role="status"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg><span><b>Copied.</b> <span class="sub">RFQ-0177 marked chased.</span></span><button class="t-undo js-undo"><svg class="ring is-frozen" viewBox="0 0 18 18" aria-hidden="true"><circle class="bg" cx="9" cy="9" r="7"/><circle class="fg" cx="9" cy="9" r="7" style="stroke-dashoffset:30"/></svg>Undo <span class="secs num">7s</span></button></div></div></div></div></section>
+  <section class="board-wrap" id="s3"><div class="board-cap"><h2>3 · Just chased</h2><p>The undo has closed. The row has left the active list and joined Waiting, which now holds 6, so the group collapses. The pane says where it went and when it returns.</p></div><div class="board board-xl" data-w="1440"><div class="board-inner"><div class="app"><header class="top">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="30"></a>
+  <nav class="tabs" aria-label="Main"><a class="tab-i " href="#"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span><span class="num cnt">9</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span><span class="num cnt">14</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span><span class="num cnt">7</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-banknote"/></svg><span>Money</span><span class="num cnt">3</span></a><a class="tab-i " href="#" ><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <div class="who"><span class="role">Sales</span><span class="avatar" title="Ayesha Rana">AR</span></div>
+</header><div class="split"><aside class="pane-l"><div class="pl-h"><div><h1>Today</h1><p>Friday 27 November · 8 need you · 3 due now</p></div></div>
+<div class="seg-c" role="tablist" aria-label="Filter"><button class="is-on" role="tab">All <span class="num">8</span></button><button role="tab">Bids <span class="num">2</span></button><button role="tab">Sourcing <span class="num">3</span></button><button role="tab">Money <span class="num">2</span></button></div>
+<div class="pl-list">
+<section class="g"><h2><span>Overdue or due today</span><span class="num cnt">3</span></h2><ul>
+<li><button class="r" data-pick="pay" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-banknote"/></svg></span>
+  <span class="r-b"><span class="r-t">Payment 12 days overdue</span><span class="r-m"><span class="num">INV-2291</span> · Karachi Glassworks (KHI)</span></span>
+  <span class="r-due num is-danger">12d late</span>
+</button></li>
+<li><button class="r" data-pick="bidtoday" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg></span>
+  <span class="r-b"><span class="r-t">Bid due today, 17:00</span><span class="r-m"><span class="num">RFQ-0181</span> · Punjab Cement Ltd</span></span>
+  <span class="r-due num is-danger">today</span>
+</button></li>
+<li><button class="r" data-pick="late" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-truck"/></svg></span>
+  <span class="r-b"><span class="r-t">Goods 5 days late from supplier</span><span class="r-m"><span class="num">PO 253102</span> · Indus Textile Mills — Faisalabad</span></span>
+  <span class="r-due num is-danger">5d late</span>
+</button></li>
+</ul></section>
+<section class="g"><h2><span>Due in the next 5 days</span><span class="num cnt">4</span></h2><ul>
+<li><button class="r" data-pick="tomorrow" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg></span>
+  <span class="r-b"><span class="r-t">Bid due tomorrow, 12:00</span><span class="r-m"><span class="num">RFQ-0183</span> · Ravi Steel Works — Lahore</span></span>
+  <span class="r-due num is-warn">1d</span>
+</button></li>
+<li><button class="r" data-pick="relay" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-reply"/></svg></span>
+  <span class="r-b"><span class="r-t">Answer received on 3 questions: relay to Belimo agent</span><span class="r-m"><span class="num">RFQ-0178</span> · Sargodha Dairy Foods</span></span>
+  <span class="r-due num is-warn">3d</span>
+</button></li>
+<li><button class="r" data-pick="chasesup" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Chase supplier for a quote</span><span class="r-m"><span class="num">RFQ-0179</span> · Chenab Paper Board — Sialkot</span></span>
+  <span class="r-due num is-warn">3d</span>
+</button></li>
+
+<li><button class="r" data-pick="notfloated" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-share-2"/></svg></span>
+  <span class="r-b"><span class="r-t">Not floated to suppliers yet</span><span class="r-m"><span class="num">RFQ-0184</span> · Mehran Paper Board — Hyderabad</span></span>
+  <span class="r-due num ">5d</span>
+</button></li>
+</ul></section>
+<section class="g"><h2><span>Ready to move</span><span class="num cnt">1</span></h2><ul>
+<li><button class="r" data-pick="placepo" aria-pressed="false">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-shopping-cart"/></svg></span>
+  <span class="r-b"><span class="r-t">Place PO with supplier</span><span class="r-m"><span class="num">PO 253091</span> · Punjab Cement Ltd</span></span>
+  <span class="r-due num ">3d old</span>
+</button></li>
+</ul></section>
+<section class="g g-wait is-collapsed"><h2><button class="g-tg" aria-expanded="false" data-wait-toggle><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Waiting</span><span class="num cnt">6</span></button><span class="g-note">next nudge <span class="num">Mon 30 Nov</span></span></h2><ul><li><button class="r r-new" data-wait="RFQ-0177">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0177</span> · Indus Textile Mills — Faisalabad</span><span class="r-w">chased just now · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0168">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0168</span> · Gujrat Fans &amp; Motors</span><span class="r-w">chased 2 days ago · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0166">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0166</span> · Rahim Yar Khan Textile</span><span class="r-w">chased yesterday · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0163">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0163</span> · Bahawalpur Cotton Ginners</span><span class="r-w">chased 3 days ago · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0170">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0170</span> · Sukkur Flour Mills</span><span class="r-w">chased yesterday · next nudge on <span class="num">Tue 1 Dec</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0172">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0172</span> · Jhelum Sugar Mills</span><span class="r-w">chased 2 days ago · next nudge on <span class="num">Thu 3 Dec</span></span></span>
+</button></li></ul></section>
+</div>
+<div class="pl-foot"><section class="tile2" aria-label="Your Q4 target">
+  <div class="t2-head"><span class="lbl">Your Q4 target</span><span class="behind"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg>PKR 330,000 behind pace</span></div>
+  <div class="t2-fig"><span class="big num">PKR 3,450,000</span><span class="of num">of PKR 6,000,000</span></div>
+  <div class="pace" role="img" aria-label="PKR 3,450,000 achieved of PKR 6,000,000. On pace would be PKR 3,780,000."><span class="pace-lbl"><span>on pace</span><span class="num">PKR 3.78M</span></span><div class="pace-track"><i class="pace-fill"></i><i class="pace-gap"></i><i class="pace-mark"></i></div></div>
+  <details class="how"><summary>Day <span class="num">58</span> of <span class="num">92</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span class="muted">&nbsp;·&nbsp;<span class="num">34</span> days left</span></summary>
+  <dl class="work">
+    <dt>Target for Q4 (1 Oct to 31 Dec)</dt><dd class="num">PKR 6,000,000</dd>
+    <dt>Share of the quarter gone</dt><dd class="num">58 ÷ 92 days</dd>
+    <dt>On pace today</dt><dd class="num">PKR 3,780,000</dd>
+    <dt>Achieved so far</dt><dd class="num">− PKR 3,450,000</dd>
+    <i class="rule"></i>
+    <div class="sum" style="display:contents"><dt>Behind pace</dt><dd class="num">PKR 330,000</dd></div>
+    <span class="foot">Net cash received by you since 1 Oct, GST left out. Shown to the nearest PKR 10,000: exact on pace 3,782,609, behind 332,609.</span>
+  </dl></details>
+</section></div></aside><main class="pane-r"><article class="detail" data-detail="chasecust">
+  <header class="d-h">
+    <p class="crumb">Today <svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg> <a href="#" class="num">RFQ-0177</a></p>
+    <h2>Chase customer for clarifications</h2>
+    <p class="d-sub">Indus Textile Mills — Faisalabad<span class="dot"></span>customer ref <span class="num">RFQ #74037</span></p>
+    <div class="d-chips"><span class="chip" data-status="clarification:waiting-customer"><svg class="i " aria-hidden="true"><use href="#i-circle-dot"/></svg>Waiting on customer · asked ×2</span><span class="chip" data-status="deadline:due-soon"><svg class="i " aria-hidden="true"><use href="#i-clock"/></svg>Due soon</span><span class="chip" data-status="sourcing:partly-covered"><svg class="i " aria-hidden="true"><use href="#i-circle-dot"/></svg>Partly covered</span></div>
+  </header>
+  <div class="note-bar"><svg class="i " aria-hidden="true"><use href="#i-hourglass"/></svg><span><b>Moved to Waiting.</b> <span class="sub">It comes back to your list on <span class="num">Mon 30 Nov</span>, or sooner if the customer replies.</span></span><a href="#">Next: RFQ-0184</a></div>
+  <section class="sit" aria-label="Situation">
+    <div class="cell is-warn"><span class="c-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-message-circle-question"/></svg>Unanswered</span><span class="c-v num">2</span><span class="c-s">questions</span></div>
+    <div class="cell is-ok"><span class="c-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-check"/></svg>Chased customer</span><span class="c-v">Today</span><span class="c-s num">Fri 27 Nov · asked ×2</span></div>
+    <div class="cell"><span class="c-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg>Bid due in</span><span class="c-v"><span class="num">4</span> days</span><span class="c-s num">Tue 1 Dec</span></div>
+    <div class="cell"><span class="c-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-hourglass"/></svg>Next nudge</span><span class="c-v c-t num">Mon 30 Nov</span><span class="c-s">short wait: bid is close</span></div>
+  </section>
+  <div class="rail" style="--p:60%;--n:90%"><span class="rail-today num">Today · Fri 27 Nov</span><span class="rail-today num" style="left:var(--n);color:var(--fg-muted);transform:translateX(-82%)">Next nudge · Mon 30 Nov</span><div class="rail-track"><i></i><em></em><b class="nudge"></b></div><div class="rail-ends"><span class="num">Asked Sat 21 Nov</span><span class="num">Bid due Tue 1 Dec</span></div></div>
+  <section class="prep">
+    <header><div><h3>Chased today</h3><p>WhatsApp to Mr. Tariq Mehmood, copied at <span class="num">14:32</span>. Asked ×2 now.</p></div><span class="stamp"><svg class="i i-sm" aria-hidden="true"><use href="#i-circle-check"/></svg>In Waiting</span></header>
+    <div class="sent-min"><p>A gentle reminder about your RFQ *#74037* (flow meters, Faisalabad plant). To complete our quotation we still need your confirmation on:</p></div>
+    <footer><button class="btn"><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg>Open RFQ-0177</button><button class="btn btn-quiet"><svg class="i " aria-hidden="true"><use href="#i-history"/></svg>Chase again now</button><span class="spacer"></span><span class="muted" style="font-size:var(--text-xs)">A third ask suggests closing as no reply.</span></footer>
+  </section>
+  <div class="two">
+    <section class="card qs"><h3>Open questions</h3><ol>
+      <li><span class="q-n num">1</span><div><p>Line size and flange rating on the process line, item 2 (Proline Promag 400)</p><span class="muted">asked <span class="num">21 Nov</span> · chased <span class="num">27 Nov</span> · no reply</span></div></li>
+      <li><span class="q-n num">2</span><div><p>Fluid temperature range, and whether the meter sees CIP cleaning, items 2 and 3</p><span class="muted">asked <span class="num">21 Nov</span> · chased <span class="num">27 Nov</span> · no reply</span></div></li>
+    </ol></section>
+    <section class="card hist"><h3>What happened</h3><ol>
+      <li><span class="num">17 Nov</span><span>RFQ received from customer</span></li>
+      <li><span class="num">19 Nov</span><span>Floated to 3 suppliers</span></li>
+      <li><span class="num">21 Nov</span><span>2 questions sent to customer</span></li>
+      <li class="now"><span class="num">27 Nov</span><span>Chased customer, asked ×2</span></li><li style="color:var(--fg-muted)"><span class="num">30 Nov</span><span>Next nudge if no reply</span></li>
+    </ol></section>
+  </div>
+</article></main></div></div></div></div></section>
+
+  <section class="board-wrap" id="waiting"><div class="board-cap"><h2>Waiting group</h2><p>The system's cooldown, not the user's snooze. Dimmed, at the foot of the list, never in the count of things that need you.</p></div>
+  <div class="note-grid">
+    <figure><div class="board-cap" style="margin-bottom:var(--sp-2)"><p>Collapsed: more than 5 items. One line, with the earliest return.</p></div><div style="width:420px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden"><div class="pane-l" style="border:0;width:420px"><section class="g g-wait is-collapsed" style="margin-top:0;border-top:0"><h2><button class="g-tg" aria-expanded="false" data-wait-toggle><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Waiting</span><span class="num cnt">6</span></button><span class="g-note">next nudge <span class="num">Mon 30 Nov</span></span></h2><ul><li><button class="r r-new" data-wait="RFQ-0177">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0177</span> · Indus Textile Mills — Faisalabad</span><span class="r-w">chased just now · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0168">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0168</span> · Gujrat Fans &amp; Motors</span><span class="r-w">chased 2 days ago · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0166">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0166</span> · Rahim Yar Khan Textile</span><span class="r-w">chased yesterday · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0163">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0163</span> · Bahawalpur Cotton Ginners</span><span class="r-w">chased 3 days ago · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0170">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0170</span> · Sukkur Flour Mills</span><span class="r-w">chased yesterday · next nudge on <span class="num">Tue 1 Dec</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0172">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0172</span> · Jhelum Sugar Mills</span><span class="r-w">chased 2 days ago · next nudge on <span class="num">Thu 3 Dec</span></span></span>
+</button></li></ul></section></div></div></figure>
+    <figure><div class="board-cap" style="margin-bottom:var(--sp-2)"><p>Opened by the user: the new item sits first in its date.</p></div><div style="width:420px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden"><div class="pane-l" style="border:0;width:420px"><section class="g g-wait" style="margin-top:0;border-top:0"><h2><button class="g-tg" aria-expanded="true" data-wait-toggle><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Waiting</span><span class="num cnt">6</span></button><span class="g-note">comes back when its date arrives</span></h2><ul><li><button class="r r-new" data-wait="RFQ-0177">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0177</span> · Indus Textile Mills — Faisalabad</span><span class="r-w">chased just now · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0168">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0168</span> · Gujrat Fans &amp; Motors</span><span class="r-w">chased 2 days ago · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0166">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0166</span> · Rahim Yar Khan Textile</span><span class="r-w">chased yesterday · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0163">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0163</span> · Bahawalpur Cotton Ginners</span><span class="r-w">chased 3 days ago · next nudge on <span class="num">Mon 30 Nov</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0170">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span>
+  <span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0170</span> · Sukkur Flour Mills</span><span class="r-w">chased yesterday · next nudge on <span class="num">Tue 1 Dec</span></span></span>
+</button></li><li><button class="r" data-wait="RFQ-0172">
+  <span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span>
+  <span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0172</span> · Jhelum Sugar Mills</span><span class="r-w">chased 2 days ago · next nudge on <span class="num">Thu 3 Dec</span></span></span>
+</button></li></ul></section></div></div></figure>
+    <div class="card"><h3>Rules this frame follows</h3><ul>
+      <li>Row text reads "chased 2 days ago · next nudge on Thu 3 Dec". The date is the day the item returns.</li>
+      <li>5 items or fewer: open. More than 5: collapsed, and the choice to open is the user's. Opening is remembered only for the session.</li>
+      <li>Snoozed items are not here at all. A snooze is the user's choice, Waiting is the system's.</li>
+      <li>The wait is shorter when the bid is close: RFQ-0177 returns on Mon 30 Nov, 1 working day, because the bid is due Tue 1 Dec.</li>
+      <li>Dimmed with colour, not opacity: every line stays above 4.5:1.</li>
+    </ul></div>
+  </div></section>
+
+  <section class="board-wrap" id="mobile"><div class="board-cap"><h2>Mobile, 375</h2><p>The pane folds into the list as an accordion. Left to right: draft, copied with undo, just chased with Waiting collapsed. Actions are 44px.</p></div>
+    <div class="states-row">
+      <div class="board board-phone" data-w="375"><div class="board-inner"><div class="phone">
+  <header class="m-bar"><img src="../../../public/brand/logo-mark.png" alt="Q-Tech" width="28" height="28"><span class="m-title">Today</span><button class="btn btn-quiet btn-icon" aria-label="Search"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg></button><span class="avatar">AR</span></header>
+  <div class="m-scroll">
+    <div class="m-pad"><p class="m-date">Friday 27 November · <b>9</b> need you, <b>3</b> due now</p><section class="tile2 is-compact" aria-label="Your Q4 target">
+  <div class="t2-head"><span class="lbl">Your Q4 target</span><span class="behind"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg>PKR 330,000 behind pace</span></div>
+  <div class="t2-fig"><span class="big num">PKR 3,450,000</span><span class="of num">of PKR 6,000,000</span></div>
+  <div class="pace" role="img" aria-label="PKR 3,450,000 achieved of PKR 6,000,000. On pace would be PKR 3,780,000."><span class="pace-lbl"><span>on pace</span><span class="num">PKR 3.78M</span></span><div class="pace-track"><i class="pace-fill"></i><i class="pace-gap"></i><i class="pace-mark"></i></div></div>
+  <details class="how"><summary>Day <span class="num">58</span> of <span class="num">92</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span class="muted">&nbsp;·&nbsp;<span class="num">34</span> days left</span></summary>
+  <dl class="work">
+    <dt>Target for Q4 (1 Oct to 31 Dec)</dt><dd class="num">PKR 6,000,000</dd>
+    <dt>Share of the quarter gone</dt><dd class="num">58 ÷ 92 days</dd>
+    <dt>On pace today</dt><dd class="num">PKR 3,780,000</dd>
+    <dt>Achieved so far</dt><dd class="num">− PKR 3,450,000</dd>
+    <i class="rule"></i>
+    <div class="sum" style="display:contents"><dt>Behind pace</dt><dd class="num">PKR 330,000</dd></div>
+    <span class="foot">Net cash received by you since 1 Oct, GST left out. Shown to the nearest PKR 10,000: exact on pace 3,782,609, behind 332,609.</span>
+  </dl></details>
+</section><div class="seg-c" role="tablist" aria-label="Filter"><button class="is-on" role="tab">All <span class="num">9</span></button><button role="tab">Bids <span class="num">3</span></button><button role="tab">Sourcing <span class="num">3</span></button><button role="tab">Money <span class="num">2</span></button></div></div>
+    <section class="g"><h2><span>Due in the next 5 days</span><span class="num cnt">5</span></h2><ul class="m-list">
+      <li><button class="r m-r" data-pick="tomorrow"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg></span><span class="r-b"><span class="r-t">Bid due tomorrow, 12:00</span><span class="r-m"><span class="num">RFQ-0183</span> · Ravi Steel Works — Lahore</span></span><span class="r-due num is-warn">1d</span><svg class="i i-sm chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></button></li>
+      <li><button class="r m-r" data-pick="chasesup"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span><span class="r-b"><span class="r-t">Chase supplier for a quote</span><span class="r-m"><span class="num">RFQ-0179</span> · Chenab Paper Board — Sialkot</span></span><span class="r-due num is-warn">3d</span><svg class="i i-sm chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></button></li>
+      <li class="m-open"><button class="r m-r is-sel" aria-pressed="true"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span><span class="r-b"><span class="r-t">Chase customer for clarifications</span><span class="r-m"><span class="num">RFQ-0177</span> · Indus Textile Mills — Faisalabad</span></span><span class="r-due num is-warn">4d</span><svg class="i i-sm chev" aria-hidden="true"><use href="#i-chevron-down"/></svg></button><div class="m-body">
+    <div class="sit"><div class="cell is-warn"><span class="c-l">Unanswered</span><span class="c-v num">2</span></div><div class="cell"><span class="c-l">Asked</span><span class="c-v"><span class="num">6</span> days ago</span></div><div class="cell"><span class="c-l">Bid due in</span><span class="c-v"><span class="num">4</span> days</span></div><div class="cell"><span class="c-l">Waiting</span><span class="c-v c-t">Endress+Hauser</span></div></div>
+    <div class="rail" style="--p:60%"><span class="rail-today num">Today</span><div class="rail-track"><i></i><em></em></div><div class="rail-ends"><span class="num">Sat 21 Nov</span><span class="num">Tue 1 Dec</span></div></div>
+    <div class="prep"><header><div><h3>Prepared for you</h3></div><div class="seg-c"><button class="is-on">WhatsApp</button><button>Email</button></div></header><div class="msg"><pre>Assalam o Alaikum Mr. Tariq,
+
+A gentle reminder about your RFQ <span class="mk">*</span><b>#74037</b><span class="mk">*</span> (flow meters, Faisalabad plant). To complete our quotation we still need your confirmation on:
+
+1. Line size and flange rating on the process line (item 2)
+2. Fluid temperature range, and whether the meter sees CIP cleaning (items 2 and 3)
+
+Kindly confirm by <span class="mk">*</span><b>Monday 30 November</b><span class="mk">*</span>; our bid is due on Tuesday 1 December.
+
+Thank you for your support.
+Regards,
+Ayesha Rana
+Q-Tech Solutions</pre></div><a href="#" class="more">Show full message</a></div>
+    <div class="m-act"><button class="btn btn-primary" data-act="copy-chase"><svg class="i " aria-hidden="true"><use href="#i-copy"/></svg>Copy and mark chased</button><button class="btn btn-icon" aria-label="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button></div>
+  </div></li>
+      <li><button class="r m-r" data-pick="notfloated"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-share-2"/></svg></span><span class="r-b"><span class="r-t">Not floated to suppliers yet</span><span class="r-m"><span class="num">RFQ-0184</span> · Mehran Paper Board — Hyderabad</span></span><span class="r-due num ">5d</span><svg class="i i-sm chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></button></li>
+    </ul></section>
+    <section class="g g-wait"><h2><button class="g-tg" aria-expanded="true"><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Waiting</span><span class="num cnt">5</span></button><span class="g-note" style="padding-right:var(--sp-4)"></span></h2><ul class="m-list is-wait"><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span><span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0168</span> · Gujrat Fans &amp; Motors</span><span class="r-w">chased 2 days ago · next nudge <span class="num">Mon 30 Nov</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span><span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0166</span> · Rahim Yar Khan Textile</span><span class="r-w">chased yesterday · next nudge <span class="num">Mon 30 Nov</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span><span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0163</span> · Bahawalpur Cotton Ginners</span><span class="r-w">chased 3 days ago · next nudge <span class="num">Mon 30 Nov</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span><span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0170</span> · Sukkur Flour Mills</span><span class="r-w">chased yesterday · next nudge <span class="num">Tue 1 Dec</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span><span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0172</span> · Jhelum Sugar Mills</span><span class="r-w">chased 2 days ago · next nudge <span class="num">Thu 3 Dec</span></span></span></button></li></ul></section>
+  </div>
+  <nav class="m-tabs" aria-label="Main"><a href="#" class="is-active"><svg class="i i-lg" aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-banknote"/></svg><span>Money</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  
+</div></div></div>
+      <div class="board board-phone" data-w="375"><div class="board-inner"><div class="phone">
+  <header class="m-bar"><img src="../../../public/brand/logo-mark.png" alt="Q-Tech" width="28" height="28"><span class="m-title">Today</span><button class="btn btn-quiet btn-icon" aria-label="Search"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg></button><span class="avatar">AR</span></header>
+  <div class="m-scroll">
+    <div class="m-pad"><p class="m-date">Friday 27 November · <b>9</b> need you, <b>3</b> due now</p><section class="tile2 is-compact" aria-label="Your Q4 target">
+  <div class="t2-head"><span class="lbl">Your Q4 target</span><span class="behind"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg>PKR 330,000 behind pace</span></div>
+  <div class="t2-fig"><span class="big num">PKR 3,450,000</span><span class="of num">of PKR 6,000,000</span></div>
+  <div class="pace" role="img" aria-label="PKR 3,450,000 achieved of PKR 6,000,000. On pace would be PKR 3,780,000."><span class="pace-lbl"><span>on pace</span><span class="num">PKR 3.78M</span></span><div class="pace-track"><i class="pace-fill"></i><i class="pace-gap"></i><i class="pace-mark"></i></div></div>
+  <details class="how"><summary>Day <span class="num">58</span> of <span class="num">92</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span class="muted">&nbsp;·&nbsp;<span class="num">34</span> days left</span></summary>
+  <dl class="work">
+    <dt>Target for Q4 (1 Oct to 31 Dec)</dt><dd class="num">PKR 6,000,000</dd>
+    <dt>Share of the quarter gone</dt><dd class="num">58 ÷ 92 days</dd>
+    <dt>On pace today</dt><dd class="num">PKR 3,780,000</dd>
+    <dt>Achieved so far</dt><dd class="num">− PKR 3,450,000</dd>
+    <i class="rule"></i>
+    <div class="sum" style="display:contents"><dt>Behind pace</dt><dd class="num">PKR 330,000</dd></div>
+    <span class="foot">Net cash received by you since 1 Oct, GST left out. Shown to the nearest PKR 10,000: exact on pace 3,782,609, behind 332,609.</span>
+  </dl></details>
+</section><div class="seg-c" role="tablist" aria-label="Filter"><button class="is-on" role="tab">All <span class="num">9</span></button><button role="tab">Bids <span class="num">3</span></button><button role="tab">Sourcing <span class="num">3</span></button><button role="tab">Money <span class="num">2</span></button></div></div>
+    <section class="g"><h2><span>Due in the next 5 days</span><span class="num cnt">5</span></h2><ul class="m-list">
+      <li><button class="r m-r" data-pick="tomorrow"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg></span><span class="r-b"><span class="r-t">Bid due tomorrow, 12:00</span><span class="r-m"><span class="num">RFQ-0183</span> · Ravi Steel Works — Lahore</span></span><span class="r-due num is-warn">1d</span><svg class="i i-sm chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></button></li>
+      <li><button class="r m-r" data-pick="chasesup"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span><span class="r-b"><span class="r-t">Chase supplier for a quote</span><span class="r-m"><span class="num">RFQ-0179</span> · Chenab Paper Board — Sialkot</span></span><span class="r-due num is-warn">3d</span><svg class="i i-sm chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></button></li>
+      <li class="m-open"><button class="r m-r is-sel" aria-pressed="true"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span><span class="r-b"><span class="r-t">Chase customer for clarifications</span><span class="r-m"><span class="num">RFQ-0177</span> · Indus Textile Mills — Faisalabad</span></span><span class="r-tag"><svg class="i " aria-hidden="true"><use href="#i-check"/></svg>Copied</span><svg class="i i-sm chev" aria-hidden="true"><use href="#i-chevron-down"/></svg></button><div class="m-body">
+    <div class="sit"><div class="cell is-warn"><span class="c-l">Unanswered</span><span class="c-v num">2</span></div><div class="cell"><span class="c-l">Asked</span><span class="c-v"><span class="num">6</span> days ago</span></div><div class="cell"><span class="c-l">Bid due in</span><span class="c-v"><span class="num">4</span> days</span></div><div class="cell"><span class="c-l">Waiting</span><span class="c-v c-t">Endress+Hauser</span></div></div>
+    <div class="rail" style="--p:60%"><span class="rail-today num">Today</span><div class="rail-track"><i></i><em></em></div><div class="rail-ends"><span class="num">Sat 21 Nov</span><span class="num">Tue 1 Dec</span></div></div>
+    <div class="prep is-copied"><div class="copied-bar" style="padding:var(--sp-3) var(--sp-4)"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg><span><b>Copied.</b> <span class="sub">Paste it into WhatsApp.</span></span></div><div class="msg"><pre>Assalam o Alaikum Mr. Tariq,
+
+A gentle reminder about your RFQ <span class="mk">*</span><b>#74037</b><span class="mk">*</span> (flow meters, Faisalabad plant). To complete our quotation we still need your confirmation on:
+
+1. Line size and flange rating on the process line (item 2)
+2. Fluid temperature range, and whether the meter sees CIP cleaning (items 2 and 3)
+
+Kindly confirm by <span class="mk">*</span><b>Monday 30 November</b><span class="mk">*</span>; our bid is due on Tuesday 1 December.
+
+Thank you for your support.
+Regards,
+Ayesha Rana
+Q-Tech Solutions</pre></div><a href="#" class="more">Show full message</a></div>
+    <div class="m-act"><button class="btn" disabled style="flex:1"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>Marked chased today</button><button class="btn btn-icon" aria-label="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button></div>
+  </div></li>
+      <li><button class="r m-r" data-pick="notfloated"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-share-2"/></svg></span><span class="r-b"><span class="r-t">Not floated to suppliers yet</span><span class="r-m"><span class="num">RFQ-0184</span> · Mehran Paper Board — Hyderabad</span></span><span class="r-due num ">5d</span><svg class="i i-sm chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></button></li>
+    </ul></section>
+    <section class="g g-wait"><h2><button class="g-tg" aria-expanded="true"><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Waiting</span><span class="num cnt">5</span></button><span class="g-note" style="padding-right:var(--sp-4)"></span></h2><ul class="m-list is-wait"><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span><span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0168</span> · Gujrat Fans &amp; Motors</span><span class="r-w">chased 2 days ago · next nudge <span class="num">Mon 30 Nov</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span><span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0166</span> · Rahim Yar Khan Textile</span><span class="r-w">chased yesterday · next nudge <span class="num">Mon 30 Nov</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span><span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0163</span> · Bahawalpur Cotton Ginners</span><span class="r-w">chased 3 days ago · next nudge <span class="num">Mon 30 Nov</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span><span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0170</span> · Sukkur Flour Mills</span><span class="r-w">chased yesterday · next nudge <span class="num">Tue 1 Dec</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span><span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0172</span> · Jhelum Sugar Mills</span><span class="r-w">chased 2 days ago · next nudge <span class="num">Thu 3 Dec</span></span></span></button></li></ul></section>
+  </div>
+  <nav class="m-tabs" aria-label="Main"><a href="#" class="is-active"><svg class="i i-lg" aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-banknote"/></svg><span>Money</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  <div class="toast is-m" role="status"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg><span><b>Copied.</b> <span class="sub">RFQ-0177 marked chased.</span></span><button class="t-undo js-undo"><svg class="ring is-frozen" viewBox="0 0 18 18" aria-hidden="true"><circle class="bg" cx="9" cy="9" r="7"/><circle class="fg" cx="9" cy="9" r="7" style="stroke-dashoffset:30"/></svg>Undo <span class="secs num">7s</span></button></div>
+</div></div></div>
+      <div class="board board-phone" data-w="375"><div class="board-inner"><div class="phone">
+  <header class="m-bar"><img src="../../../public/brand/logo-mark.png" alt="Q-Tech" width="28" height="28"><span class="m-title">Today</span><button class="btn btn-quiet btn-icon" aria-label="Search"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg></button><span class="avatar">AR</span></header>
+  <div class="m-scroll">
+    <div class="m-pad"><p class="m-date">Friday 27 November · <b>8</b> need you, <b>3</b> due now</p><section class="tile2 is-compact" aria-label="Your Q4 target">
+  <div class="t2-head"><span class="lbl">Your Q4 target</span><span class="behind"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg>PKR 330,000 behind pace</span></div>
+  <div class="t2-fig"><span class="big num">PKR 3,450,000</span><span class="of num">of PKR 6,000,000</span></div>
+  <div class="pace" role="img" aria-label="PKR 3,450,000 achieved of PKR 6,000,000. On pace would be PKR 3,780,000."><span class="pace-lbl"><span>on pace</span><span class="num">PKR 3.78M</span></span><div class="pace-track"><i class="pace-fill"></i><i class="pace-gap"></i><i class="pace-mark"></i></div></div>
+  <details class="how"><summary>Day <span class="num">58</span> of <span class="num">92</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span class="muted">&nbsp;·&nbsp;<span class="num">34</span> days left</span></summary>
+  <dl class="work">
+    <dt>Target for Q4 (1 Oct to 31 Dec)</dt><dd class="num">PKR 6,000,000</dd>
+    <dt>Share of the quarter gone</dt><dd class="num">58 ÷ 92 days</dd>
+    <dt>On pace today</dt><dd class="num">PKR 3,780,000</dd>
+    <dt>Achieved so far</dt><dd class="num">− PKR 3,450,000</dd>
+    <i class="rule"></i>
+    <div class="sum" style="display:contents"><dt>Behind pace</dt><dd class="num">PKR 330,000</dd></div>
+    <span class="foot">Net cash received by you since 1 Oct, GST left out. Shown to the nearest PKR 10,000: exact on pace 3,782,609, behind 332,609.</span>
+  </dl></details>
+</section><div class="seg-c" role="tablist" aria-label="Filter"><button class="is-on" role="tab">All <span class="num">8</span></button><button role="tab">Bids <span class="num">2</span></button><button role="tab">Sourcing <span class="num">3</span></button><button role="tab">Money <span class="num">2</span></button></div></div>
+    <section class="g"><h2><span>Due in the next 5 days</span><span class="num cnt">4</span></h2><ul class="m-list">
+      <li><button class="r m-r" data-pick="tomorrow"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg></span><span class="r-b"><span class="r-t">Bid due tomorrow, 12:00</span><span class="r-m"><span class="num">RFQ-0183</span> · Ravi Steel Works — Lahore</span></span><span class="r-due num is-warn">1d</span><svg class="i i-sm chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></button></li>
+      <li><button class="r m-r" data-pick="chasesup"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span><span class="r-b"><span class="r-t">Chase supplier for a quote</span><span class="r-m"><span class="num">RFQ-0179</span> · Chenab Paper Board — Sialkot</span></span><span class="r-due num is-warn">3d</span><svg class="i i-sm chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></button></li>
+      
+      <li><button class="r m-r" data-pick="notfloated"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-share-2"/></svg></span><span class="r-b"><span class="r-t">Not floated to suppliers yet</span><span class="r-m"><span class="num">RFQ-0184</span> · Mehran Paper Board — Hyderabad</span></span><span class="r-due num ">5d</span><svg class="i i-sm chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></button></li>
+    </ul></section>
+    <section class="g g-wait is-collapsed"><h2><button class="g-tg" aria-expanded="false"><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Waiting</span><span class="num cnt">6</span></button><span class="g-note" style="padding-right:var(--sp-4)">next <span class="num">Mon 30 Nov</span></span></h2><ul class="m-list is-wait"><li><button class="r m-r r-new"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span><span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0177</span> · Indus Textile Mills — Faisalabad</span><span class="r-w">chased just now · next nudge <span class="num">Mon 30 Nov</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span><span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0168</span> · Gujrat Fans &amp; Motors</span><span class="r-w">chased 2 days ago · next nudge <span class="num">Mon 30 Nov</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span><span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0166</span> · Rahim Yar Khan Textile</span><span class="r-w">chased yesterday · next nudge <span class="num">Mon 30 Nov</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span><span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0163</span> · Bahawalpur Cotton Ginners</span><span class="r-w">chased 3 days ago · next nudge <span class="num">Mon 30 Nov</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-message-circle-question"/></svg></span><span class="r-b"><span class="r-t">Customer chased</span><span class="r-m"><span class="num">RFQ-0170</span> · Sukkur Flour Mills</span><span class="r-w">chased yesterday · next nudge <span class="num">Tue 1 Dec</span></span></span></button></li><li><button class="r m-r"><span class="r-ic"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg></span><span class="r-b"><span class="r-t">Supplier chased</span><span class="r-m"><span class="num">RFQ-0172</span> · Jhelum Sugar Mills</span><span class="r-w">chased 2 days ago · next nudge <span class="num">Thu 3 Dec</span></span></span></button></li></ul></section>
+  </div>
+  <nav class="m-tabs" aria-label="Main"><a href="#" class="is-active"><svg class="i i-lg" aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-banknote"/></svg><span>Money</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  
+</div></div></div>
+    </div></section>
+</div>
+<script>
+(function(){
+  function fit(){document.querySelectorAll('.board[data-w]').forEach(function(b){
+    var inner=b.firstElementChild,w=+b.dataset.w,s=Math.min(1,b.clientWidth/w);
+    inner.style.width=w+'px';inner.style.transform='scale('+s+')';
+    b.style.height=Math.ceil(inner.offsetHeight*s)+'px';});}
+  window.__fit=fit;
+  addEventListener('resize',fit);addEventListener('load',fit);
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);
+  fit();
+})();
+(function(){
+  var live=document.querySelector('#s1 .board-inner');
+  var snap={};['s1','s2','s3'].forEach(function(id){var a=document.querySelector('#'+id+' .app');snap[id]=a.innerHTML;});
+  var timer=null,tick=null;
+  function show(id){live.querySelector('.app').innerHTML=snap[id];
+    if(id==='s2'){var r=live.querySelector('.ring');if(r){r.classList.remove('is-frozen');var c=r.querySelector('.fg');c.removeAttribute('style');}live.querySelector('.secs').textContent='10s';}
+    if(window.__fit)window.__fit();}
+  function clear(){clearTimeout(timer);clearInterval(tick);}
+  document.addEventListener('click',function(e){
+    var act=e.target.closest('#s1 [data-act="copy-chase"]');
+    if(act){try{var pre=live.querySelector('.msg:not([hidden]) pre');navigator.clipboard.writeText(pre.innerText).catch(function(){});}catch(_){}
+      show('s2');var n=10;clear();
+      tick=setInterval(function(){n--;var s=live.querySelector('.secs');if(s)s.textContent=n+'s';},1000);
+      timer=setTimeout(function(){clear();show('s3');},10000);return;}
+    var und=e.target.closest('#s1 .js-undo');
+    if(und){clear();show('s1');return;}
+    var wt=e.target.closest('[data-wait-toggle]');
+    if(wt){var g=wt.closest('.g-wait');var c=g.classList.toggle('is-collapsed');wt.setAttribute('aria-expanded',!c);if(window.__fit)window.__fit();return;}
+    var ch=e.target.closest('[data-ch]');
+    if(ch){var p=ch.closest('.prep');p.querySelectorAll('[data-ch]').forEach(function(b){b.classList.toggle('is-on',b===ch);});p.querySelectorAll('[data-msg]').forEach(function(m){m.hidden=m.dataset.msg!==ch.dataset.ch;});if(window.__fit)window.__fit();return;}
+    var snz=e.target.closest('[data-snz]');
+    if(snz){var m=snz.parentElement.querySelector('.menu');if(m){var o=m.classList.contains('is-open');document.querySelectorAll('.menu.is-open').forEach(function(x){x.classList.remove('is-open');});if(!o)m.classList.add('is-open');e.stopPropagation();}return;}
+    document.querySelectorAll('.menu.is-open').forEach(function(x){x.classList.remove('is-open');});
+  });
+})();
+document.addEventListener('toggle',function(){if(window.__fit)window.__fit();},true);
+
+</script>
+</body>
+</html>
