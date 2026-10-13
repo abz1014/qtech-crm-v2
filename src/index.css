@@ -1,3 +1,113 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Q-Tech CRM design tokens. Canonical reference: docs/BRAND.md.
+ * Values are HSL channels (shadcn convention), used as hsl(var(--token)).
+ * Brand green (#429446) is 3.78:1 on white, so it is for fills, indicators and
+ * focus only. Text-bearing green (buttons, links) uses deep green (#1a7b46, 5.30:1).
+ */
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* #ffffff */
+    --foreground: 0 0% 7%; /* #111111 */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 7%;
+
+    --primary: 147 65% 29%; /* deep green #1a7b46 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%; /* #f5f5f5 */
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 36%; /* #5c5c5c, 6.69:1 on white */
+    --accent: 0 0% 96%; /* neutral hover surface, deliberately not green */
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 66% 47%; /* #c62828 */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%; /* #e5e5e5 hairline */
+    --input: 0 0% 55%; /* #8c8c8c, form control edge (3:1 non-text) */
+    --ring: 123 38% 42%; /* brand green #429446 */
+
+    --radius: 0.25rem; /* 4px */
+
+    --brand-green: 123 38% 42%; /* #429446 */
+    --brand-deep: 147 65% 29%; /* #1a7b46 */
+
+    --success: 175 77% 26%; /* teal #0f766e, not brand green */
+    --success-foreground: 0 0% 100%;
+    --success-soft: 177 41% 91%;
+    --warning: 26 90% 37%; /* #b45309 */
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 48 96% 89%;
+    --danger: 0 66% 47%; /* #c62828 */
+    --danger-foreground: 0 0% 100%;
+    --danger-soft: 0 84% 95%;
+    --info: 208 73% 42%; /* #1d6fb8 */
+    --info-foreground: 0 0% 100%;
+    --info-soft: 207 75% 94%;
+  }
+
+  .dark {
+    --background: 0 0% 5%; /* #0e0e0e */
+    --foreground: 0 0% 93%; /* #ededed */
+    --card: 0 0% 9%; /* #171717 */
+    --card-foreground: 0 0% 93%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 93%;
+
+    --primary: 123 38% 42%; /* brand green fill, black text 5.52:1 */
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 15%; /* #262626 */
+    --secondary-foreground: 0 0% 93%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 63%; /* #a1a1a1, 6.94:1 on card */
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 93%;
+    --destructive: 0 91% 71%; /* #f87171 */
+    --destructive-foreground: 0 0% 7%;
+
+    --border: 0 0% 15%;
+    --input: 0 0% 35%;
+    --ring: 124 36% 58%; /* #6dbb72 */
+
+    --brand-green: 123 38% 42%;
+    --brand-deep: 147 65% 29%;
+
+    --success: 171 77% 64%; /* #5eead4 */
+    --success-foreground: 0 0% 7%;
+    --success-soft: 175 60% 12%;
+    --warning: 43 96% 56%; /* #fbbf24 */
+    --warning-foreground: 0 0% 7%;
+    --warning-soft: 35 70% 13%;
+    --danger: 0 91% 71%;
+    --danger-foreground: 0 0% 7%;
+    --danger-soft: 0 50% 14%;
+    --info: 213 94% 68%; /* #60a5fa */
+    --info-foreground: 0 0% 7%;
+    --info-soft: 213 50% 14%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+}
+
+@layer utilities {
+  /* Fixed-width digits so columns of figures align. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Numbers and codes (PO / invoice / RFQ numbers, PKR amounts). */
+  .num {
+    @apply font-mono;
+    font-variant-numeric: tabular-nums;
+  }
+}
