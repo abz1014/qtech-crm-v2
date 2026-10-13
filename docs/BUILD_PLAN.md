@@ -751,3 +751,13 @@ Mapping notes: the real task IDs matched the brief by content, so no remapping w
 - **S12** `order_receivables(p_order_id default null)` and `my_target_progress()` repeat the section 5a net-portion maths because the admin-only money views cannot be read from a definer function (their `current_user_role() = 'admin'` filter sees the caller). Any change to `v_order_basis` / `v_payment_net` must be mirrored in `0018_definer_functions.sql`; the 0018 tests pin the two together.
 - **S14**: the access matrix must include the extra admin-only view `v_order_basis` (created in 0015 as a helper for `v_payment_net`; it is not listed in DATA_MODEL §10), and the new functions `order_receivables` (admin, sales), `my_target_progress` (all active roles), plus the S13 RPCs: `float_rfq`, `convert_rfq_to_order`, `create_repeat_order`, `stamp_clarification_ask`, `stamp_supplier_chase` (all staff); `stamp_payment_reminder`, `stamp_tcs_sent`, `stamp_fbr_psid`, `stamp_tax_deposited` (admin, sales); `merge_companies`, `merge_brands`, `resolve_value_basis` (admin). `my_target_progress_at` is a test seam granted to nobody.
 - **S18** must add `quotation_expired` to `v_rfq_state.bid_state` (0014 ships only `to_bid` / `bid_sent`).
+
+---
+
+# Amendment A5: S17 / S18 worker notes (2026-10-13)
+
+- **S18 done in 0023:** `v_rfq_state.bid_state` now returns `quotation_expired` (latest quotation lapsed, RFQ still open: not won, not closed) and exposes `quotation_valid_until`. The A4 item is closed.
+- **S14 matrix must add:** tables `fx_rates` (SIUD admin; SIU sales and engineer for `source = 'manual'` only), `company_profile` (S all staff, U admin, no I/D), `quotations` and `purchase_orders` (SIU all staff, D admin; UPDATE only of `pdf_path`, enforced by the lock trigger); the view `v_fx_latest` (all staff); the bucket `generated-docs` (SIU all staff, D admin); the functions `set_fx_rate`, `issue_quotation`, `issue_purchase_order` (all staff) and `item_text_norm` (all staff, helper). `capture_quote_line_fx()` is a trigger function with no client grant. The audit trigger now covers 26 tables.
+- **S17 captures even an unusable rate** on a quote line (the stored `fx_rate_on` shows its age); only a currency with no rate at all leaves both columns NULL.
+- **S19** can reuse `item_text_norm(text)` as the section 5c `norm()`.
+- **R23** (nightly FX fetch) is not part of S17: it needs the service role and an external API, and stays with its own task.
