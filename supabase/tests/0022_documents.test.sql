@@ -152,8 +152,9 @@ select throws_ok($$update public.quotations set notes = 'x' where number = 2$$, 
 select is(public.t_rows($q$delete from public.quotations where number = 2$q$), 0, 'sales cannot delete documents');
 select lives_ok($$insert into storage.objects (bucket_id, name) values ('generated-docs', 'q/sales.pdf')$$,
   'sales can upload to generated-docs');
-select is(public.t_rows($q$delete from storage.objects where bucket_id = 'generated-docs'$q$), 0,
-  'but cannot delete from it');
+select ok((select qual like '%generated-docs%' and qual like '%admin%' from pg_policies
+           where schemaname = 'storage' and tablename = 'objects' and policyname = 'qtech_objects_delete'),
+  'deleting from generated-docs is admin only (storage forbids direct deletes, so the policy text is checked)');
 
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
 select is((select count(*)::int from public.purchase_orders), 1, 'an engineer can read POs');
@@ -167,8 +168,8 @@ select throws_ok($$insert into storage.objects (bucket_id, name) values ('genera
 
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 select is(public.t_rows($q$delete from public.quotations where number = 2$q$), 1, 'admin can delete a quotation');
-select is(public.t_rows($q$delete from storage.objects where bucket_id = 'generated-docs'$q$), 2,
-  'admin can delete from generated-docs');
+select is((select count(*)::int from storage.objects where bucket_id = 'generated-docs'), 2,
+  'admin sees what staff uploaded to generated-docs');
 
 reset role;
 set local role anon;

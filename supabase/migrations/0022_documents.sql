@@ -88,6 +88,9 @@ begin
                               * (e ->> 'gst_rate')::numeric / 100, 0)), 0)
     into new.net_total, new.gst_total
     from jsonb_array_elements(new.lines) e;
+  else
+    new.net_total := 0;  -- the lines CHECK rejects the row with a clear error
+    new.gst_total := 0;
   end if;
   return new;
 end;
@@ -103,6 +106,8 @@ begin
     select coalesce(sum(round((e ->> 'qty')::numeric * (e ->> 'unit_price')::numeric, 2)), 0)
     into new.total
     from jsonb_array_elements(new.lines) e;
+  else
+    new.total := 0;  -- the lines CHECK rejects the row with a clear error
   end if;
   return new;
 end;
