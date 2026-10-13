@@ -1,0 +1,225 @@
+/* ==========================================================================
+   Q-Tech CRM v2 — design tokens. SINGLE SOURCE OF TRUTH.
+   Light theme only (default). Components must read these; never hard-code.
+   Layers: 1 primitives (--neutral-*) → 2 semantic (--bg-*, --fg-*, --tone-*)
+   → 3 component-facing (--status-*, --row-h, …). Prose rules: ../DESIGN_SYSTEM.md
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* ---- 1. Neutral ramp (cool, hue ≈ 240°, chroma < 3%) ------------------- */
+  --neutral-0: #ffffff;
+  --neutral-25: #fafafb;
+  --neutral-50: #f4f4f6;
+  --neutral-100: #eeeef1;
+  --neutral-150: #e3e3e7;
+  --neutral-200: #d2d2d8;
+  --neutral-300: #b3b3bb;
+  --neutral-400: #8a8a93;
+  --neutral-500: #6e6e77;
+  --neutral-600: #5a5a63;
+  --neutral-700: #3d3d44;
+  --neutral-800: #26262b;
+  --neutral-900: #111113;
+
+  /* ---- 2a. Brand & action ----------------------------------------------- */
+  --brand-green: #429446;        /* NON-TEXT ONLY: focus ring, active indicator, progress, logo (3.78:1 on white) */
+  --primary: #1a7b46;             /* primary actions, links, ANY green text (5.30:1 on white) */
+  --primary-hover: #166a3b;
+  --primary-active: #115a31;
+  --on-primary: var(--neutral-0);
+
+  /* ---- 2b. Surfaces ------------------------------------------------------ */
+  --bg-canvas: var(--neutral-25);       /* app background behind panels */
+  --bg-surface: var(--neutral-0);       /* panels, lists, inputs */
+  --bg-sunken: var(--neutral-50);       /* table header, hover row, quiet panel */
+  --bg-selected: var(--neutral-100);    /* selected row / active nav (never carries green text below 4.5:1) */
+  --bg-scrim: rgb(17 17 19 / 0.42);     /* behind modals only */
+
+  /* ---- 2c. Text ---------------------------------------------------------- */
+  --fg: var(--neutral-900);
+  --fg-2: var(--neutral-700);
+  --fg-muted: var(--neutral-600);       /* labels, captions, placeholders (≥ 5.7:1 on every surface) */
+  --fg-disabled: var(--neutral-300);    /* disabled controls only (WCAG-exempt) */
+
+  /* ---- 2d. Lines & focus ------------------------------------------------- */
+  --border: var(--neutral-150);         /* hairline: panels, rows, dividers */
+  --border-strong: var(--neutral-200);  /* hover/active hairline, popover edge */
+  --border-input: var(--neutral-400);   /* form control edge (3.42:1 on white, WCAG 1.4.11) */
+  --hairline: 1px;
+  --focus-width: 2px;
+  --focus-offset: 2px;                  /* ring colour is --brand-green */
+
+  /* ---- 2e. Semantic tones (text on its own tint ≥ 4.5:1) ----------------- */
+  --tone-neutral-fg: var(--neutral-700);
+  --tone-neutral-bg: var(--neutral-100);
+  --tone-info-fg: #1d6fb8;
+  --tone-info-bg: #e3f0fb;
+  --tone-success-fg: #0f766e;
+  --tone-success-bg: #e0f2f1;
+  --tone-warning-fg: #b45309;
+  --tone-warning-bg: #fef3c7;
+  --tone-danger-fg: #c62828;
+  --tone-danger-bg: #fde8e8;
+  --tone-ink-fg: var(--neutral-0);
+  --tone-ink-bg: var(--neutral-800);
+
+  /* ---- 3. Type ----------------------------------------------------------- */
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --text-xs: 12px;   --lh-xs: 16px;
+  --text-sm: 13px;   --lh-sm: 20px;
+  --text-base: 14px; --lh-base: 22px;
+  --text-lg: 16px;   --lh-lg: 24px;
+  --text-xl: 20px;   --lh-xl: 28px;
+  --text-2xl: 28px;  --lh-2xl: 34px;
+  --text-display: 36px; --lh-display: 40px;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  --tracking-tight: -0.02em;   /* ≥ 28px */
+  --tracking-snug: -0.01em;    /* 16–20px */
+
+  /* ---- 4. Spacing: 4px rhythm ------------------------------------------- */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px; --sp-5: 20px;
+  --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+
+  /* ---- 5. Shape & elevation (hairlines first; shadows on overlays only) -- */
+  --radius: 4px;
+  --radius-round: 999px;                /* dots, avatars, progress ends only */
+  --shadow-pop: 0 0 0 1px rgb(17 17 19 / 0.06), 0 4px 6px -2px rgb(17 17 19 / 0.06), 0 12px 28px -6px rgb(17 17 19 / 0.14);
+  --shadow-modal: 0 0 0 1px rgb(17 17 19 / 0.06), 0 8px 16px -4px rgb(17 17 19 / 0.10), 0 32px 64px -12px rgb(17 17 19 / 0.24);
+
+  /* ---- 6. Motion (transform + opacity only) ------------------------------ */
+  --dur-fast: 120ms;     /* hover, press, focus */
+  --dur-base: 200ms;     /* popovers, row state change */
+  --dur-slow: 320ms;     /* panels, page-level reveal (max one per view) */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- 7. Density (default; compact overrides below) --------------------- */
+  --control-h: 32px;     /* buttons, inputs, selects */
+  --row-h: 40px;         /* table / list rows */
+  --cell-px: var(--sp-3);
+  --text-table: var(--text-sm);
+  --lh-table: var(--lh-sm);
+  --hit-touch: 44px;     /* minimum tap target on phones */
+
+  /* ---- 8. Layout --------------------------------------------------------- */
+  --nav-w: 224px;        /* left navigation */
+  --topbar-h: 52px;
+}
+
+[data-density="compact"] {
+  --row-h: 32px;
+  --cell-px: var(--sp-2);
+  --text-table: var(--text-xs);
+  --lh-table: var(--lh-xs);
+}
+
+@media (pointer: coarse) {
+  :root { --control-h: 40px; --row-h: 48px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0.01ms; --dur-base: 0.01ms; --dur-slow: 0.01ms; }
+}
+
+/* ==========================================================================
+   Status → tone map. Every derived state in the app resolves to --status-fg /
+   --status-bg through its data-status="group:value" attribute.
+   Dashed border variant = “not firm” (data trust, prospect).
+   ========================================================================== */
+
+[data-status="rfq-outcome:closed"],
+[data-status="clarification:withdrawn"],
+[data-status="inquiry:shortlisted"],
+[data-status="order:cancelled"],
+[data-status="commissioning:na"],
+[data-status="payment:unpaid"],
+[data-status="trust:estimated"],
+[data-status="tcs:not-started"],
+[data-status="company-role:supplier"],
+[data-status="company-role:prospect"] {
+  --status-fg: var(--tone-neutral-fg);
+  --status-bg: var(--tone-neutral-bg);
+}
+
+[data-status="rfq-outcome:open"],
+[data-status="sourcing:awaiting"],
+[data-status="sourcing:partly-covered"],
+[data-status="clarification:waiting-customer"],
+[data-status="inquiry:sent"],
+[data-status="order:active"],
+[data-status="goods:on-order"],
+[data-status="goods:received"],
+[data-status="goods:partly-delivered"],
+[data-status="commissioning:planned"],
+[data-status="invoicing:part"],
+[data-status="payment:part"],
+[data-status="tcs:copy-received"],
+[data-status="tcs:sent"],
+[data-status="fbr:generated"],
+[data-status="fbr:receipt"],
+[data-status="company-role:customer"] {
+  --status-fg: var(--tone-info-fg);
+  --status-bg: var(--tone-info-bg);
+}
+
+[data-status="rfq-outcome:won"],
+[data-status="sourcing:covered"],
+[data-status="clarification:answered"],
+[data-status="bid:bid-sent"],
+[data-status="inquiry:quoted"],
+[data-status="order:done"],
+[data-status="goods:delivered"],
+[data-status="commissioning:done"],
+[data-status="invoicing:full"],
+[data-status="payment:settled"],
+[data-status="costs:complete"],
+[data-status="tcs:delivered"],
+[data-status="fbr:deposited"] {
+  --status-fg: var(--tone-success-fg);
+  --status-bg: var(--tone-success-bg);
+}
+
+[data-status="sourcing:not-floated"],
+[data-status="clarification:to-ask"],
+[data-status="clarification:answers-to-relay"],
+[data-status="bid:to-bid"],
+[data-status="deadline:due-soon"],
+[data-status="inquiry:chased"],
+[data-status="goods:to-source"],
+[data-status="goods:to-place"],
+[data-status="commissioning:to-plan"],
+[data-status="invoicing:not-invoiced"],
+[data-status="costs:provisional"],
+[data-status="trust:basis-unknown"],
+[data-status="fbr:pending"] {
+  --status-fg: var(--tone-warning-fg);
+  --status-bg: var(--tone-warning-bg);
+}
+
+[data-status="sourcing:no-offer"],
+[data-status="deadline:overdue"],
+[data-status="inquiry:no-offer"],
+[data-status="goods:late"],
+[data-status="payment:overdue"] {
+  --status-fg: var(--tone-danger-fg);
+  --status-bg: var(--tone-danger-bg);
+}
+
+[data-status="company-role:both"] {
+  --status-fg: var(--tone-ink-fg);
+  --status-bg: var(--tone-ink-bg);
+}
+
+[data-status="trust:basis-unknown"],
+[data-status="trust:estimated"],
+[data-status="company-role:prospect"] {
+  --status-border-style: dashed;
+}

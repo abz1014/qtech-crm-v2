@@ -1,0 +1,117 @@
+/* Shared mockup components. Reads ../tokens.css only; no literal colours. */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg-canvas);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--lh-base);
+  font-weight: var(--weight-regular);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4, p, ul, ol, figure { margin: 0; padding: 0; }
+ul, ol { list-style: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+a { color: var(--primary); text-decoration: none; }
+a:hover { color: var(--primary-hover); text-decoration: underline; text-underline-offset: 2px; }
+
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.tab { font-variant-numeric: tabular-nums; }
+.muted { color: var(--fg-muted); }
+
+:focus-visible { outline: var(--focus-width) solid var(--brand-green); outline-offset: var(--focus-offset); border-radius: var(--radius); }
+
+/* ---- icons: lucide, one stroke width ---------------------------------- */
+.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.i-sm { width: 14px; height: 14px; }
+.i-lg { width: 20px; height: 20px; }
+.i-xl { width: 24px; height: 24px; }
+
+/* ---- buttons ----------------------------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  height: var(--control-h); padding: 0 var(--sp-3);
+  border: var(--hairline) solid var(--border-strong); border-radius: var(--radius);
+  background: var(--bg-surface); color: var(--fg);
+  font-size: var(--text-sm); line-height: 1; font-weight: var(--weight-medium); white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.btn:hover { background: var(--bg-sunken); border-color: var(--border-input); }
+.btn:active { transform: translateY(0.5px); }
+.btn .i { color: var(--fg-muted); }
+.btn-primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+.btn-primary:active { background: var(--primary-active); border-color: var(--primary-active); }
+.btn-primary .i { color: var(--on-primary); }
+.btn-quiet { border-color: transparent; background: transparent; }
+.btn-quiet:hover { background: var(--bg-sunken); border-color: transparent; }
+.btn-icon { width: var(--control-h); padding: 0; }
+.btn-sm { height: 28px; padding: 0 var(--sp-2); font-size: var(--text-xs); }
+.btn-sm.btn-icon { width: 28px; }
+
+/* ---- status chip ------------------------------------------------------- */
+.chip {
+  display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 var(--sp-2) 0 6px;
+  border: var(--hairline) var(--status-border-style, solid) color-mix(in srgb, var(--status-fg) 24%, transparent);
+  border-radius: var(--radius); background: var(--status-bg); color: var(--status-fg);
+  font-size: var(--text-xs); line-height: 1; font-weight: var(--weight-medium); white-space: nowrap;
+}
+.chip .i { width: 12px; height: 12px; stroke-width: 2; }
+
+/* ---- keyboard hint, avatar -------------------------------------------- */
+.kbd {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px;
+  border: var(--hairline) solid var(--border-strong); border-bottom-width: 2px; border-radius: var(--radius);
+  background: var(--bg-surface); color: var(--fg-muted); font-family: var(--font-sans); font-size: var(--text-xs); line-height: 1; font-weight: var(--weight-medium);
+}
+.avatar {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-round);
+  background: var(--neutral-800); color: var(--neutral-0); font-size: var(--text-xs); font-weight: var(--weight-medium); letter-spacing: 0.02em;
+}
+
+/* ---- popover menu ------------------------------------------------------ */
+.menu {
+  position: absolute; z-index: 20; min-width: 196px; padding: var(--sp-1);
+  background: var(--bg-surface); border-radius: var(--radius); box-shadow: var(--shadow-pop);
+  opacity: 0; transform: translateY(-4px); pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+}
+.menu.is-open { opacity: 1; transform: none; pointer-events: auto; }
+.menu button {
+  display: flex; width: 100%; align-items: center; justify-content: space-between; gap: var(--sp-4);
+  height: 32px; padding: 0 var(--sp-2); border-radius: var(--radius); font-size: var(--text-sm); text-align: left;
+}
+.menu button:hover, .menu button:focus-visible { background: var(--bg-sunken); }
+.menu button span:last-child { color: var(--fg-muted); font-size: var(--text-xs); }
+.menu hr { border: 0; border-top: var(--hairline) solid var(--border); margin: var(--sp-1) 0; }
+
+/* ---- progress (brand green = progress, allowed) ------------------------ */
+.progress { position: relative; height: 6px; border-radius: var(--radius-round); background: var(--bg-selected); }
+.progress > i { position: absolute; inset: 0 auto 0 0; border-radius: var(--radius-round); background: var(--brand-green); transform-origin: left center; }
+.progress > b { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--fg); border-radius: 1px; }
+
+/* ---- skeleton ---------------------------------------------------------- */
+.sk { display: block; border-radius: var(--radius); background: var(--bg-selected); animation: sk-pulse 1.4s var(--ease-standard) infinite; }
+@keyframes sk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
+/* ---- design board scaffolding (presentation only) ---------------------- */
+.doc { max-width: 1360px; margin: 0 auto; padding-inline: var(--sp-4); padding-block: var(--sp-8) var(--sp-16); }
+.doc-head { display: grid; gap: var(--sp-3); max-width: 760px; margin-bottom: var(--sp-8); }
+.doc-head h1 { font-size: var(--text-2xl); line-height: var(--lh-2xl); letter-spacing: var(--tracking-tight); font-weight: var(--weight-semibold); text-wrap: balance; }
+.doc-head p { color: var(--fg-2); max-width: 66ch; text-wrap: pretty; }
+.doc-index { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
+.doc-index a { display: inline-flex; align-items: center; height: 28px; padding: 0 var(--sp-3); border: var(--hairline) solid var(--border-strong); border-radius: var(--radius); background: var(--bg-surface); color: var(--fg); font-size: var(--text-sm); font-weight: var(--weight-medium); }
+.doc-index a:hover { border-color: var(--border-input); text-decoration: none; background: var(--bg-sunken); }
+.board-wrap { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-10); scroll-margin-top: var(--sp-4); }
+.board-cap { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp-2) var(--sp-4); }
+.board-cap h2 { font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-snug); }
+.board-cap p { color: var(--fg-muted); font-size: var(--text-sm); }
+.board { position: relative; overflow: hidden; border-radius: var(--radius); border: var(--hairline) solid var(--border-strong); background: var(--bg-canvas); }
+.board-inner { transform-origin: 0 0; background: var(--bg-canvas); }
+.board { max-width: 1282px; }
+.board-phone { max-width: 377px; }

@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Q-Tech CRM — Today, direction A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+/* ============ Direction A: sidebar + one prioritised column ============ */
+.app { display: grid; grid-template-columns: var(--nav-w) minmax(0, 1fr); min-height: 900px; background: var(--bg-canvas); }
+.nav { position: relative; display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4) var(--sp-3); background: var(--bg-surface); border-right: var(--hairline) solid var(--border); }
+.brand { display: block; padding: var(--sp-1) var(--sp-2) var(--sp-2); }
+.brand img { display: block; height: 36px; width: auto; }
+.search { display: flex; align-items: center; gap: var(--sp-2); height: var(--control-h); padding: 0 var(--sp-2) 0 var(--sp-3); border: var(--hairline) solid var(--border-strong); border-radius: var(--radius); background: var(--bg-surface); color: var(--fg-muted); font-size: var(--text-sm); text-align: left; transition: border-color var(--dur-fast) var(--ease-out); }
+.search:hover { border-color: var(--border-input); }
+.search span:nth-child(2) { flex: 1; }
+.nav-list { display: grid; gap: 2px; }
+.nav-item { position: relative; display: flex; align-items: center; gap: var(--sp-3); height: 32px; padding: 0 var(--sp-3); border-radius: var(--radius); color: var(--fg-2); font-size: var(--text-sm); font-weight: var(--weight-medium); }
+.nav-item .i { color: var(--fg-muted); }
+.nav-item span:nth-child(2) { flex: 1; }
+.nav-item:hover { background: var(--bg-sunken); color: var(--fg); text-decoration: none; }
+.nav-item.is-active { background: var(--bg-selected); color: var(--fg); }
+.nav-item.is-active .i { color: var(--fg); }
+.nav-item.is-active::before { content: ""; position: absolute; left: calc(-1 * var(--sp-3)); top: 8px; bottom: 8px; width: 3px; border-radius: 0 2px 2px 0; background: var(--brand-green); }
+.cnt { color: var(--fg-muted); font-size: var(--text-xs); }
+.who { margin-top: auto; display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-2) 0; border-top: var(--hairline) solid var(--border); }
+.who-t { display: grid; flex: 1; line-height: 16px; font-size: var(--text-sm); } .who-t b { font-weight: var(--weight-medium); } .who-t .muted { font-size: var(--text-xs); }
+.who .i { color: var(--fg-muted); }
+
+.main { min-width: 0; padding: var(--sp-10) var(--sp-10) var(--sp-16); }
+.col { max-width: 860px; margin: 0 auto; display: grid; gap: var(--sp-6); }
+.page-h h1 { font-size: var(--text-2xl); line-height: var(--lh-2xl); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+.page-h p { margin-top: var(--sp-1); color: var(--fg-muted); font-size: var(--text-base); }
+.card { background: var(--bg-surface); border: var(--hairline) solid var(--border); border-radius: var(--radius); }
+
+.tile { background: var(--bg-surface); border: var(--hairline) solid var(--border); border-radius: var(--radius); padding: var(--sp-4) var(--sp-5) var(--sp-4); display: grid; gap: var(--sp-4); }
+.tile-top { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; }
+.tile-fig { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 var(--sp-3); }
+.tile-fig .lbl { flex-basis: 100%; font-size: var(--text-sm); color: var(--fg-muted); margin-bottom: var(--sp-1); }
+.tile-fig .big { font-size: var(--text-display); line-height: var(--lh-display); font-weight: var(--weight-medium); letter-spacing: var(--tracking-tight); }
+.tile-fig .of { font-size: var(--text-base); color: var(--fg-muted); }
+.tile-state { display: grid; justify-items: end; gap: 2px; font-size: var(--text-sm); }
+.behind { display: inline-flex; align-items: center; gap: 6px; color: var(--tone-warning-fg); font-weight: var(--weight-medium); }
+.tile .progress { margin-block: var(--sp-1); }
+.tile-legend { display: flex; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; font-size: var(--text-xs); color: var(--fg-muted); }
+.tile.is-compact { padding: var(--sp-3) var(--sp-4); gap: var(--sp-3); }
+.tile.is-compact .big { font-size: var(--text-xl); line-height: var(--lh-xl); }
+.tile.is-compact .tile-state { display: flex; flex-wrap: wrap; justify-items: start; gap: 0 var(--sp-3); }
+.tile.is-compact .tile-legend { display: none; }
+.tile.is-compact .tile-top { gap: var(--sp-2); }
+.facts.stack .fact:nth-child(n+3) { display: none; }
+.tile.is-stale { opacity: 0.6; }
+
+.grp { display: grid; gap: var(--sp-2); }
+.grp > header { display: flex; align-items: baseline; gap: var(--sp-2); padding-inline: var(--sp-1); }
+.grp > header h2 { font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); }
+.grp > header .hint { margin-left: auto; font-size: var(--text-xs); color: var(--fg-muted); }
+.list { overflow: visible; }
+.it { position: relative; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: var(--sp-4); padding: var(--sp-4); align-items: start; transition: background-color var(--dur-fast) var(--ease-out); }
+.it + .it { border-top: var(--hairline) solid var(--border); }
+.it:hover { background: var(--bg-sunken); }
+.it:first-child { border-radius: var(--radius) var(--radius) 0 0; } .it:last-child { border-radius: 0 0 var(--radius) var(--radius); } .it:only-child { border-radius: var(--radius); }
+.it-ic { display: grid; place-items: center; width: 36px; height: 36px; border: var(--hairline) solid var(--border); border-radius: var(--radius); background: var(--bg-surface); color: var(--fg-2); }
+.it-main { min-width: 0; display: grid; gap: 6px; }
+.it-main h3 { font-size: var(--text-base); line-height: var(--lh-base); font-weight: var(--weight-medium); letter-spacing: var(--tracking-snug); text-wrap: balance; }
+.it-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--sp-2); margin-top: -4px; font-size: var(--text-sm); color: var(--fg-muted); }
+.it-sub .num { color: var(--fg-2); font-weight: var(--weight-medium); }
+.dot { width: 3px; height: 3px; border-radius: var(--radius-round); background: var(--border-input); }
+.it-act { position: relative; display: flex; align-items: center; gap: var(--sp-1); }
+
+.facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-5); font-size: var(--text-sm); color: var(--fg-2); }
+.fact { display: inline-flex; align-items: center; gap: 6px; }
+.fact .i { color: var(--fg-muted); }
+.fact b { font-weight: var(--weight-medium); color: var(--fg); }
+.fact.is-warn .i, .fact.is-warn b { color: var(--tone-warning-fg); }
+.fact.is-danger .i, .fact.is-danger b { color: var(--tone-danger-fg); }
+.facts.stack { display: grid; gap: var(--sp-1); }
+
+.keyline { display: grid; grid-template-columns: auto auto; justify-content: start; gap: var(--sp-2) var(--sp-8); margin-block: 2px; padding: var(--sp-3) var(--sp-4); border: var(--hairline) solid var(--border); border-radius: var(--radius); background: var(--bg-sunken); font-size: var(--text-sm); color: var(--fg-2); }
+.seg { display: inline-flex; align-items: center; gap: 6px; }
+.seg .i { color: var(--fg-muted); }
+.seg b { font-weight: var(--weight-medium); color: var(--fg); font-size: var(--text-base); }
+.seg.is-warn { color: var(--tone-warning-fg); font-weight: var(--weight-medium); } .seg.is-warn .i, .seg.is-warn b { color: var(--tone-warning-fg); }
+
+.rail { position: relative; max-width: 520px; padding-top: 18px; margin-top: 2px; }
+.rail-today { position: absolute; top: 0; left: var(--p); transform: translateX(-50%); font-size: var(--text-xs); line-height: 14px; font-weight: var(--weight-medium); color: var(--tone-warning-fg); white-space: nowrap; }
+.rail-track { position: relative; height: 4px; border-radius: var(--radius-round); background: var(--bg-selected); }
+.rail-track i { position: absolute; inset: 0 auto 0 0; width: var(--p); border-radius: var(--radius-round); background: var(--neutral-500); transform-origin: left; animation: rail-grow var(--dur-slow) var(--ease-out) both; }
+.rail-track em { position: absolute; top: 50%; left: var(--p); width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: var(--radius-round); background: var(--tone-warning-fg); box-shadow: 0 0 0 2px var(--bg-surface); }
+.it:hover .rail-track em { box-shadow: 0 0 0 2px var(--bg-sunken); }
+.rail-ends { display: flex; justify-content: space-between; margin-top: 6px; font-size: var(--text-xs); color: var(--fg-muted); }
+@keyframes rail-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.it.is-done .it-main, .it.is-done .it-ic { opacity: 0.45; transition: opacity var(--dur-base) var(--ease-out); }
+.it .done-note { display: none; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--tone-success-fg); font-weight: var(--weight-medium); }
+.it.is-done .done-note { display: inline-flex; }
+.it.is-done [data-act], .it.is-done [data-snz] { display: none; }
+.it .undo { display: none; }
+.it.is-done .undo { display: inline-flex; }
+
+.empty { display: grid; justify-items: center; text-align: center; gap: var(--sp-3); padding: var(--sp-12) var(--sp-8) var(--sp-10); }
+.empty-art { width: 120px; height: 120px; animation: pop var(--dur-slow) var(--ease-out) both; }
+@keyframes pop { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+.empty h2 { font-size: var(--text-xl); line-height: var(--lh-xl); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-snug); }
+.empty p { max-width: 46ch; color: var(--fg-muted); text-wrap: pretty; }
+.ahead { display: grid; gap: var(--sp-2); margin-top: var(--sp-2); padding-top: var(--sp-4); border-top: var(--hairline) solid var(--border); width: min(460px, 100%); text-align: left; font-size: var(--text-sm); color: var(--fg-2); }
+.ahead li { display: flex; align-items: flex-start; gap: var(--sp-3); } .ahead .i { margin-top: 2px; color: var(--fg-muted); }
+.ahead b { font-weight: var(--weight-medium); color: var(--fg); }
+.empty-act { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); }
+
+.err { display: grid; grid-template-columns: auto 1fr; gap: var(--sp-5); padding: var(--sp-6); }
+.err-ic { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--radius); background: var(--tone-danger-bg); color: var(--tone-danger-fg); }
+.err h2 { font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); }
+.err p { margin-top: var(--sp-1); max-width: 60ch; color: var(--fg-2); text-wrap: pretty; }
+.err-meta { display: grid; grid-template-columns: auto 1fr; gap: var(--sp-1) var(--sp-4); margin-top: var(--sp-4); font-size: var(--text-sm); width: fit-content; }
+.err-act { display: flex; gap: var(--sp-2); margin-top: var(--sp-5); }
+
+/* ---- mobile ---- */
+.phone { position: relative; width: 375px; height: 1260px; display: grid; grid-template-rows: auto 1fr auto; background: var(--bg-canvas); overflow: hidden; }
+.m-bar { display: flex; align-items: center; gap: var(--sp-3); height: 52px; padding: 0 var(--sp-3) 0 var(--sp-4); background: var(--bg-surface); border-bottom: var(--hairline) solid var(--border); }
+.m-bar img { border-radius: var(--radius); }
+.m-title { flex: 1; font-size: var(--text-lg); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-snug); }
+.m-bar .btn-icon { width: var(--hit-touch); height: var(--hit-touch); margin-right: -4px; }
+.m-scroll { overflow-y: auto; padding-bottom: var(--sp-6); display: grid; align-content: start; gap: var(--sp-5); }
+.m-pad { display: grid; gap: var(--sp-3); padding: var(--sp-4) var(--sp-4) 0; }
+.m-date { font-size: var(--text-sm); color: var(--fg-muted); } .m-date b { color: var(--fg); font-weight: var(--weight-medium); font-family: var(--font-mono); }
+.phone .grp > header { padding-inline: var(--sp-4); }
+.m-list { border-block: var(--hairline) solid var(--border); background: var(--bg-surface); }
+.m-it { display: grid; grid-template-columns: 1fr; gap: var(--sp-3); padding: var(--sp-4); }
+.m-it:hover { background: var(--bg-surface); }
+.m-it:first-child, .m-it:last-child { border-radius: 0; }
+.m-top { display: grid; grid-template-columns: 36px 1fr; gap: var(--sp-3); }
+.m-it .keyline { grid-template-columns: 1fr; gap: var(--sp-2); padding: var(--sp-3); }
+.m-it .rail { max-width: none; }
+.m-act { position: relative; display: flex; gap: var(--sp-2); }
+.m-act .btn { height: var(--hit-touch); }
+.m-act .btn:first-child { flex: 1; } .m-act .btn-icon { width: var(--hit-touch); }
+.m-tabs { display: grid; grid-template-columns: repeat(6, 1fr); padding: 0 var(--sp-1) env(safe-area-inset-bottom, 0px); background: var(--bg-surface); border-top: var(--hairline) solid var(--border); }
+.m-tabs a { position: relative; display: grid; justify-items: center; gap: 2px; padding: var(--sp-2) 0 var(--sp-2); color: var(--fg-muted); font-size: var(--text-xs); line-height: 16px; font-weight: var(--weight-medium); }
+.m-tabs a:hover { text-decoration: none; color: var(--fg); }
+.m-tabs a.is-active { color: var(--fg); }
+.m-tabs a.is-active::before { content: ""; position: absolute; top: -1px; left: 14px; right: 14px; height: 2px; background: var(--brand-green); }
+
+@media (prefers-reduced-motion: reduce) { .rail-track i, .empty-art { animation: none; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-calendar-check" viewBox="0 0 24 24"><path d="M8 2v4" /> <path d="M16 2v4" /> <rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M3 10h18" /> <path d="m9 16 2 2 4-4" /></symbol><symbol id="i-file-text" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /></symbol><symbol id="i-package" viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /> <path d="M12 22V12" /> <path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" /> <path d="m7.5 4.27 9 5.15" /></symbol><symbol id="i-building-2" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /> <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /> <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /> <path d="M10 6h4" /> <path d="M10 10h4" /> <path d="M10 14h4" /> <path d="M10 18h4" /></symbol><symbol id="i-banknote" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="2" /> <circle cx="12" cy="12" r="2" /> <path d="M6 12h.01M18 12h.01" /></symbol><symbol id="i-chart-column" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16" /> <path d="M18 17V9" /> <path d="M13 17V5" /> <path d="M8 17v-3" /></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /> <path d="m21 21-4.3-4.3" /></symbol><symbol id="i-message-circle-question" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /> <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /> <path d="M12 17h.01" /></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" /> <path d="m21.854 2.147-10.94 10.939" /></symbol><symbol id="i-reply" viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7" /> <path d="M20 18v-2a4 4 0 0 0-4-4H4" /></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12" /> <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></symbol><symbol id="i-truck" viewBox="0 0 24 24"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" /> <path d="M15 18H9" /> <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" /> <circle cx="17" cy="18" r="2" /> <circle cx="7" cy="18" r="2" /></symbol><symbol id="i-alarm-clock-off" viewBox="0 0 24 24"><path d="M6.87 6.87a8 8 0 1 0 11.26 11.26" /> <path d="M19.9 14.25a8 8 0 0 0-9.15-9.15" /> <path d="m22 6-3-3" /> <path d="M6.26 18.67 4 21" /> <path d="m2 2 20 20" /> <path d="M4 4 2 6" /></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <polyline points="12 6 12 12 16 14" /></symbol><symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <line x1="12" x2="12" y1="8" y2="12" /> <line x1="12" x2="12.01" y1="16" y2="16" /></symbol><symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" /></symbol><symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18" /> <path d="m6 6 12 12" /></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></symbol><symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></symbol><symbol id="i-refresh-cw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /> <path d="M21 3v5h-5" /> <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /> <path d="M8 16H3v5" /></symbol><symbol id="i-cloud-off" viewBox="0 0 24 24"><path d="m2 2 20 20" /> <path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193" /> <path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07" /></symbol><symbol id="i-ellipsis" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1" /> <circle cx="19" cy="12" r="1" /> <circle cx="5" cy="12" r="1" /></symbol><symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14" /> <path d="m12 5 7 7-7 7" /></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path d="M8 2v4" /> <path d="M16 2v4" /> <rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M3 10h18" /></symbol><symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="6" /> <circle cx="12" cy="12" r="2" /></symbol><symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" /> <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" /> <path d="M12 17.5v-11" /></symbol><symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2" /> <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></symbol><symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /> <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></symbol><symbol id="i-undo-2" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5" /> <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" /></symbol><symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14" /> <path d="M5 2h14" /> <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22" /> <path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" /></symbol><symbol id="i-circle-dashed" viewBox="0 0 24 24"><path d="M10.1 2.182a10 10 0 0 1 3.8 0" /> <path d="M13.9 21.818a10 10 0 0 1-3.8 0" /> <path d="M17.609 3.721a10 10 0 0 1 2.69 2.7" /> <path d="M2.182 13.9a10 10 0 0 1 0-3.8" /> <path d="M20.279 17.609a10 10 0 0 1-2.7 2.69" /> <path d="M21.818 10.1a10 10 0 0 1 0 3.8" /> <path d="M3.721 6.391a10 10 0 0 1 2.7-2.69" /> <path d="M6.391 20.279a10 10 0 0 1-2.69-2.7" /></symbol><symbol id="i-circle-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="1" /></symbol><symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></symbol><symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="m4.9 4.9 14.2 14.2" /></symbol><symbol id="i-file-plus" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M9 15h6" /> <path d="M12 18v-6" /></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14" /> <path d="M12 5v14" /></symbol><symbol id="i-wallet" viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" /> <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" /></symbol><symbol id="i-bell-off" viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0" /> <path d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742" /> <path d="m2 2 20 20" /> <path d="M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05" /></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /> <polyline points="16 17 21 12 16 7" /> <line x1="21" x2="9" y1="12" y2="12" /></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /> <circle cx="12" cy="12" r="3" /></symbol><symbol id="i-clipboard-check" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /> <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /> <path d="m9 14 2 2 4-4" /></symbol><symbol id="i-shopping-cart" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1" /> <circle cx="19" cy="21" r="1" /> <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></symbol><symbol id="i-share-2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /> <circle cx="6" cy="12" r="3" /> <circle cx="18" cy="19" r="3" /> <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /> <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></symbol><symbol id="i-package-check" viewBox="0 0 24 24"><path d="m16 16 2 2 4-4" /> <path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14" /> <path d="m7.5 4.27 9 5.15" /> <polyline points="3.29 7 12 12 20.71 7" /> <line x1="12" x2="12" y1="22" y2="12" /></symbol><symbol id="i-file-pen" viewBox="0 0 24 24"><path d="M12.5 22H18a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v9.5" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M13.378 15.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" /></symbol><symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /> <path d="M3 3v5h5" /> <path d="M12 7v5l4 2" /></symbol><symbol id="i-file-check" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="m9 15 2 2 4-4" /></symbol><symbol id="i-circle-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /> <path d="M12 17h.01" /></symbol><symbol id="i-clock-alert" viewBox="0 0 24 24"><path d="M12 6v6l4 2" /> <path d="M16 21.16a10 10 0 1 1 5-13.516" /> <path d="M20 11.5v6" /> <path d="M20 21.5h.01" /></symbol><symbol id="i-message-square" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></symbol><symbol id="i-list-filter" viewBox="0 0 24 24"><path d="M3 6h18" /> <path d="M7 12h10" /> <path d="M10 18h4" /></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /> <path d="M20 3v4" /> <path d="M22 5h-4" /> <path d="M4 17v2" /> <path d="M5 18H3" /></symbol><symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <circle cx="9" cy="7" r="4" /> <path d="M22 21v-2a4 4 0 0 0-3-3.87" /> <path d="M16 3.13a4 4 0 0 1 0 7.75" /></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" /> <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" /> <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" /></symbol></defs></svg>
+<div class="doc">
+  <header class="doc-head">
+    <h1>Today, direction A: one column, grouped by date</h1>
+    <p>A left navigation and a single reading column. The work list is split into three date bands, so you always know which items have a real deadline pressing. The chase-the-customer line is drawn as a sentence of four facts over a date rail that runs from the day you asked to the day the bid is due. Click any action or snooze icon to see the row settle.</p>
+    <nav class="doc-index" aria-label="States"><a href="#populated">Populated</a><a href="#empty">Empty</a><a href="#loading">Loading</a><a href="#error">Error</a><a href="#mobile">Mobile 375</a></nav>
+  </header>
+  <section class="board-wrap" id="populated"><div class="board-cap"><h2>Populated</h2><p>Desktop 1280. Friday 27 November 2026, signed in as Ayesha Rana (sales).</p></div><div class="board " data-w="1280"><div class="board-inner"><div class="app"><nav class="nav" aria-label="Main">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="36"></a>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <ul class="nav-list"><li><a class="nav-item is-active" href="#" aria-current="page"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span><span class="num cnt">9</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span><span class="num cnt">14</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span><span class="num cnt">7</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-banknote"/></svg><span>Money</span><span class="num cnt">3</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></li></ul>
+  <div class="who"><span class="avatar">AR</span><span class="who-t"><b>Ayesha Rana</b><span class="muted">Sales</span></span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg></div>
+</nav><main class="main"><div class="col"><header class="page-h"><h1>Today</h1><p>Friday 27 November · 9 things need you, 3 of them are due now</p></header><section class="tile " aria-label="Your target">
+  <div class="tile-top">
+    <div class="tile-fig"><span class="lbl">Your Q4 target</span><span class="big num">₨ 3,450,000</span><span class="of num">of ₨ 6,000,000</span></div>
+    <div class="tile-state"><span class="behind"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg>₨ 1.2M behind pace</span><span class="muted">34 days left in Q4</span></div>
+  </div>
+  <div class="progress" role="img" aria-label="57% of target achieved, pace marker at 77%"><i style="width:57.5%"></i><b style="left:77.5%"></b></div>
+  <div class="tile-legend"><span>Achieved <span class="num">57%</span></span><span>Pace marker: <span class="num">₨ 4,650,000</span> expected by today</span></div>
+</section><section class="grp"><header><h2>Overdue or due today</h2><span class="num cnt">3</span><span class="hint">Dates have passed or land today</span></header><ul class="card list"><li class="it" data-id="pay">
+  <div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-banknote"/></svg></div>
+  <div class="it-main">
+    <h3>Payment 12 days overdue</h3>
+    <p class="it-sub"><span class="num">INV-2291</span><span class="dot"></span>Karachi Glassworks (KHI)</p>
+    <div class="facts "><span class="fact is-danger"><svg class="i i-sm" aria-hidden="true"><use href="#i-banknote"/></svg><span><b class="num">₨ 1,244,310</b> outstanding</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>was due <b class="num">15 Nov</b></span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-send"/></svg><span>last reminder <b class="num">8</b> days ago</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-file-text"/></svg><span>PO <b class="num">253074</b></span></span></div>
+    
+  </div>
+  <div class="it-act">
+    <button class="btn btn-primary" data-act="Send reminder"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg><span>Send reminder</span></button>
+    <button class="btn btn-icon btn-quiet" data-snz aria-label="Snooze" title="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button>
+    <div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div>
+  </div>
+</li><li class="it" data-id="bidtoday">
+  <div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-file-check"/></svg></div>
+  <div class="it-main">
+    <h3>Bid due today, 17:00</h3>
+    <p class="it-sub"><span class="num">RFQ-0181</span><span class="dot"></span>Punjab Cement Ltd</p>
+    <div class="facts "><span class="fact is-danger"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg><span>due <b class="num">17:00</b> today</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-clipboard-check"/></svg><span><b class="num">11</b> of <b class="num">12</b> lines priced</span></span><span class="fact is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-circle-alert"/></svg><span>1 line has no offer: Dwyer 616 differential gauge</span></span></div>
+    
+  </div>
+  <div class="it-act">
+    <button class="btn " data-act="Review and send bid"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg><span>Review and send bid</span></button>
+    <button class="btn btn-icon btn-quiet" data-snz aria-label="Snooze" title="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button>
+    <div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div>
+  </div>
+</li><li class="it" data-id="late">
+  <div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-truck"/></svg></div>
+  <div class="it-main">
+    <h3>Goods 5 days late from supplier</h3>
+    <p class="it-sub"><span class="num">PO 253102</span><span class="dot"></span>Indus Textile Mills — Faisalabad</p>
+    <div class="facts "><span class="fact is-danger"><svg class="i i-sm" aria-hidden="true"><use href="#i-truck"/></svg><span>Siemens SITRANS FC430 × <b class="num">4</b> promised <b class="num">22 Nov</b></span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-hourglass"/></svg><span>ABC Traders has not confirmed a new date</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>customer needs it by <b class="num">3 Dec</b></span></span></div>
+    
+  </div>
+  <div class="it-act">
+    <button class="btn " data-act="Chase ABC Traders"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg><span>Chase ABC Traders</span></button>
+    <button class="btn btn-icon btn-quiet" data-snz aria-label="Snooze" title="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button>
+    <div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div>
+  </div>
+</li></ul></section><section class="grp"><header><h2>Due in the next 5 days</h2><span class="num cnt">5</span><span class="hint">Ordered by the nearest real deadline</span></header><ul class="card list"><li class="it" data-id="tomorrow">
+  <div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-file-check"/></svg></div>
+  <div class="it-main">
+    <h3>Bid due tomorrow, 12:00</h3>
+    <p class="it-sub"><span class="num">RFQ-0183</span><span class="dot"></span>Ravi Steel Works — Lahore</p>
+    <div class="facts "><span class="fact is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>due <b class="num">Sat 28 Nov</b>, <b class="num">12:00</b></span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-clipboard-check"/></svg><span>all <b class="num">6</b> lines priced · margin <b class="num">14.2%</b></span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-circle-dashed"/></svg><span>not reviewed yet</span></span></div>
+    
+  </div>
+  <div class="it-act">
+    <button class="btn " data-act="Review bid"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg><span>Review bid</span></button>
+    <button class="btn btn-icon btn-quiet" data-snz aria-label="Snooze" title="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button>
+    <div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div>
+  </div>
+</li><li class="it" data-id="relay">
+  <div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-reply"/></svg></div>
+  <div class="it-main">
+    <h3>Answer received on 3 questions: relay to Belimo agent</h3>
+    <p class="it-sub"><span class="num">RFQ-0178</span><span class="dot"></span>Sargodha Dairy Foods</p>
+    <div class="facts "><span class="fact is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-message-circle-question"/></svg><span><b class="num">3</b> answers from customer</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-clock"/></svg><span>received <b class="num">2</b> days ago</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>bid due in <b class="num">3</b> days</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-hourglass"/></svg><span>Belimo agent <span class="muted">(Lahore)</span> waiting</span></span></div>
+    
+  </div>
+  <div class="it-act">
+    <button class="btn " data-act="Relay to Belimo agent"><svg class="i " aria-hidden="true"><use href="#i-reply"/></svg><span>Relay to Belimo agent</span></button>
+    <button class="btn btn-icon btn-quiet" data-snz aria-label="Snooze" title="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button>
+    <div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div>
+  </div>
+</li><li class="it" data-id="chasesup">
+  <div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-send"/></svg></div>
+  <div class="it-main">
+    <h3>Chase supplier for a quote</h3>
+    <p class="it-sub"><span class="num">RFQ-0179</span><span class="dot"></span>Chenab Paper Board — Sialkot</p>
+    <div class="facts "><span class="fact is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-send"/></svg><span>Yokogawa agent: sent <b class="num">8</b> days ago</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-circle-dashed"/></svg><span>no quote yet</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>bid due in <b class="num">3</b> days</span></span></div>
+    <div class="rail" style="--p:73%"><span class="rail-today num">Today · Fri 27 Nov</span><div class="rail-track"><i></i><em></em></div><div class="rail-ends"><span class="num">Sent Thu 19 Nov</span><span class="num">Bid due Mon 30 Nov</span></div></div>
+  </div>
+  <div class="it-act">
+    <button class="btn " data-act="Chase Yokogawa agent"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg><span>Chase Yokogawa agent</span></button>
+    <button class="btn btn-icon btn-quiet" data-snz aria-label="Snooze" title="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button>
+    <div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div>
+  </div>
+</li><li class="it" data-id="chasecust">
+  <div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-message-circle-question"/></svg></div>
+  <div class="it-main">
+    <h3>Chase customer for clarifications</h3>
+    <p class="it-sub"><span class="num">RFQ-0177</span><span class="dot"></span>Indus Textile Mills — Faisalabad<span class="dot"></span><span class="muted">customer ref <span class="num">RFQ #74037</span></span></p>
+    <div class="keyline">
+  <span class="seg is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-message-circle-question"/></svg><span><b class="num">2</b> questions unanswered</span></span>
+  <span class="seg"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock"/></svg><span>asked customer <b class="num">6</b> days ago</span></span>
+  <span class="seg"><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>bid due in <b class="num">4</b> days</span></span>
+  <span class="seg"><svg class="i i-sm" aria-hidden="true"><use href="#i-hourglass"/></svg><span>Endress+Hauser <span class="muted">(via ABC Traders)</span> waiting</span></span>
+</div>
+    <div class="rail" style="--p:60%"><span class="rail-today num">Today · Fri 27 Nov</span><div class="rail-track"><i></i><em></em></div><div class="rail-ends"><span class="num">Asked Sat 21 Nov</span><span class="num">Bid due Tue 1 Dec</span></div></div>
+  </div>
+  <div class="it-act">
+    <button class="btn " data-act="Chase customer"><svg class="i " aria-hidden="true"><use href="#i-message-square"/></svg><span>Chase customer</span></button>
+    <button class="btn btn-icon btn-quiet" data-snz aria-label="Snooze" title="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button>
+    <div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div>
+  </div>
+</li><li class="it" data-id="notfloated">
+  <div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-share-2"/></svg></div>
+  <div class="it-main">
+    <h3>Not floated to suppliers yet</h3>
+    <p class="it-sub"><span class="num">RFQ-0184</span><span class="dot"></span>Mehran Paper Board — Hyderabad</p>
+    <div class="facts "><span class="fact is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-inbox"/></svg><span>received <b class="num">2</b> days ago</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>due in <b class="num">5</b> days</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-layers"/></svg><span><b class="num">7</b> lines · <b class="num">3</b> suppliers suggested</span></span></div>
+    <div class="rail" style="--p:29%"><span class="rail-today num">Today · Fri 27 Nov</span><div class="rail-track"><i></i><em></em></div><div class="rail-ends"><span class="num">Received Wed 25 Nov</span><span class="num">Bid due Wed 2 Dec</span></div></div>
+  </div>
+  <div class="it-act">
+    <button class="btn " data-act="Float to suppliers"><svg class="i " aria-hidden="true"><use href="#i-share-2"/></svg><span>Float to suppliers</span></button>
+    <button class="btn btn-icon btn-quiet" data-snz aria-label="Snooze" title="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button>
+    <div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div>
+  </div>
+</li></ul></section><section class="grp"><header><h2>Ready to move</h2><span class="num cnt">1</span><span class="hint">No date pressure, work is prepared</span></header><ul class="card list"><li class="it" data-id="placepo">
+  <div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-shopping-cart"/></svg></div>
+  <div class="it-main">
+    <h3>Place PO with supplier</h3>
+    <p class="it-sub"><span class="num">PO 253091</span><span class="dot"></span>Punjab Cement Ltd</p>
+    <div class="facts "><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-file-check"/></svg><span>order confirmed <b class="num">3</b> days ago</span></span><span class="fact is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-circle-dashed"/></svg><span>no supplier PO yet</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-package"/></svg><span>Endress+Hauser Proline 300 × <b class="num">2</b></span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>customer wants delivery by <b class="num">21 Dec</b></span></span></div>
+    
+  </div>
+  <div class="it-act">
+    <button class="btn " data-act="Create supplier PO"><svg class="i " aria-hidden="true"><use href="#i-file-plus"/></svg><span>Create supplier PO</span></button>
+    <button class="btn btn-icon btn-quiet" data-snz aria-label="Snooze" title="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button>
+    <div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div>
+  </div>
+</li></ul></section></div></main></div></div></div></section>
+  <section class="board-wrap" id="empty"><div class="board-cap"><h2>Empty: the goal state</h2><p>Nothing is due, so the page says so and shows what is coming and what is snoozed.</p></div><div class="board " data-w="1280"><div class="board-inner"><div class="app"><nav class="nav" aria-label="Main">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="36"></a>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <ul class="nav-list"><li><a class="nav-item is-active" href="#" aria-current="page"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span><span class="num cnt">9</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span><span class="num cnt">14</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span><span class="num cnt">7</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-banknote"/></svg><span>Money</span><span class="num cnt">3</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></li></ul>
+  <div class="who"><span class="avatar">AR</span><span class="who-t"><b>Ayesha Rana</b><span class="muted">Sales</span></span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg></div>
+</nav><main class="main"><div class="col"><header class="page-h"><h1>Today</h1><p>Friday 27 November · nothing needs you</p></header><section class="tile " aria-label="Your target">
+  <div class="tile-top">
+    <div class="tile-fig"><span class="lbl">Your Q4 target</span><span class="big num">₨ 3,450,000</span><span class="of num">of ₨ 6,000,000</span></div>
+    <div class="tile-state"><span class="behind"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg>₨ 1.2M behind pace</span><span class="muted">34 days left in Q4</span></div>
+  </div>
+  <div class="progress" role="img" aria-label="57% of target achieved, pace marker at 77%"><i style="width:57.5%"></i><b style="left:77.5%"></b></div>
+  <div class="tile-legend"><span>Achieved <span class="num">57%</span></span><span>Pace marker: <span class="num">₨ 4,650,000</span> expected by today</span></div>
+</section>
+<section class="empty card">
+  <svg class="empty-art" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" fill="none" stroke="var(--border)" stroke-width="1"/><circle cx="60" cy="60" r="38" fill="none" stroke="var(--border)" stroke-width="1"/><circle cx="60" cy="60" r="22" fill="var(--bg-surface)" stroke="var(--brand-green)" stroke-width="2"/><path d="M50 61l7 7 13-15" fill="none" stroke="var(--brand-green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <h2>Nothing needs you right now</h2>
+  <p>Every RFQ, order and invoice with a date is either handled or waiting on someone else. This list fills itself when a date gets close.</p>
+  <ul class="ahead">
+    <li><svg class="i " aria-hidden="true"><use href="#i-calendar"/></svg><span><b class="num">Tue 1 Dec</b> bid due for <span class="num">RFQ-0177</span>, waiting on the customer</span></li>
+    <li><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg><span><b class="num">Mon 30 Nov</b> 2 snoozed items come back</span></li>
+  </ul>
+  <div class="empty-act"><button class="btn"><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg>Open RFQs</button><button class="btn btn-quiet"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg>See snoozed (2)</button></div>
+</section></div></main></div></div></div></section>
+  <section class="board-wrap" id="loading"><div class="board-cap"><h2>Loading</h2><p>Skeleton in the shape of the real list. The shell and heading are already real.</p></div><div class="board " data-w="1280"><div class="board-inner"><div class="app"><nav class="nav" aria-label="Main">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="36"></a>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <ul class="nav-list"><li><a class="nav-item is-active" href="#" aria-current="page"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span><span class="num cnt">9</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span><span class="num cnt">14</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span><span class="num cnt">7</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-banknote"/></svg><span>Money</span><span class="num cnt">3</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></li></ul>
+  <div class="who"><span class="avatar">AR</span><span class="who-t"><b>Ayesha Rana</b><span class="muted">Sales</span></span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg></div>
+</nav><main class="main"><div class="col"><header class="page-h"><h1>Today</h1><p>Friday 27 November</p></header><section class="tile"><div class="tile-top"><div class="tile-fig"><span class="sk" style="width:90px;height:12px"></span><span class="sk" style="width:220px;height:36px;margin-top:6px"></span></div></div><span class="sk" style="height:6px;border-radius:999px;margin-top:16px"></span></section>
+<section class="grp"><header><span class="sk" style="width:150px;height:14px"></span></header><ul class="card list"><li class="it sk-it"><span class="sk" style="width:36px;height:36px"></span><div class="it-main" style="display:grid;gap:10px"><span class="sk" style="width:54%;height:16px"></span><span class="sk" style="width:32%;height:12px"></span><span class="sk" style="width:62%;height:12px"></span></div><span class="sk" style="width:128px;height:32px"></span></li><li class="it sk-it"><span class="sk" style="width:36px;height:36px"></span><div class="it-main" style="display:grid;gap:10px"><span class="sk" style="width:67%;height:16px"></span><span class="sk" style="width:45%;height:12px"></span><span class="sk" style="width:75%;height:12px"></span></div><span class="sk" style="width:128px;height:32px"></span></li><li class="it sk-it"><span class="sk" style="width:36px;height:36px"></span><div class="it-main" style="display:grid;gap:10px"><span class="sk" style="width:80%;height:16px"></span><span class="sk" style="width:58%;height:12px"></span><span class="sk" style="width:88%;height:12px"></span></div><span class="sk" style="width:128px;height:32px"></span></li></ul></section><section class="grp"><header><span class="sk" style="width:170px;height:14px"></span></header><ul class="card list"><li class="it sk-it"><span class="sk" style="width:36px;height:36px"></span><div class="it-main" style="display:grid;gap:10px"><span class="sk" style="width:61%;height:16px"></span><span class="sk" style="width:39%;height:12px"></span><span class="sk" style="width:69%;height:12px"></span></div><span class="sk" style="width:128px;height:32px"></span></li><li class="it sk-it"><span class="sk" style="width:36px;height:36px"></span><div class="it-main" style="display:grid;gap:10px"><span class="sk" style="width:74%;height:16px"></span><span class="sk" style="width:52%;height:12px"></span><span class="sk" style="width:82%;height:12px"></span></div><span class="sk" style="width:128px;height:32px"></span></li><li class="it sk-it"><span class="sk" style="width:36px;height:36px"></span><div class="it-main" style="display:grid;gap:10px"><span class="sk" style="width:57%;height:16px"></span><span class="sk" style="width:35%;height:12px"></span><span class="sk" style="width:65%;height:12px"></span></div><span class="sk" style="width:128px;height:32px"></span></li><li class="it sk-it"><span class="sk" style="width:36px;height:36px"></span><div class="it-main" style="display:grid;gap:10px"><span class="sk" style="width:70%;height:16px"></span><span class="sk" style="width:48%;height:12px"></span><span class="sk" style="width:78%;height:12px"></span></div><span class="sk" style="width:128px;height:32px"></span></li></ul></section><section class="grp"><header><span class="sk" style="width:190px;height:14px"></span></header><ul class="card list"><li class="it sk-it"><span class="sk" style="width:36px;height:36px"></span><div class="it-main" style="display:grid;gap:10px"><span class="sk" style="width:68%;height:16px"></span><span class="sk" style="width:46%;height:12px"></span><span class="sk" style="width:76%;height:12px"></span></div><span class="sk" style="width:128px;height:32px"></span></li></ul></section></div></main></div></div></div></section>
+  <section class="board-wrap" id="error"><div class="board-cap"><h2>Error</h2><p>The list could not be built. Says what happened, what is safe, and what to do.</p></div><div class="board " data-w="1280"><div class="board-inner"><div class="app"><nav class="nav" aria-label="Main">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="36"></a>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <ul class="nav-list"><li><a class="nav-item is-active" href="#" aria-current="page"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span><span class="num cnt">9</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span><span class="num cnt">14</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span><span class="num cnt">7</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-banknote"/></svg><span>Money</span><span class="num cnt">3</span></a></li><li><a class="nav-item " href="#" ><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></li></ul>
+  <div class="who"><span class="avatar">AR</span><span class="who-t"><b>Ayesha Rana</b><span class="muted">Sales</span></span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg></div>
+</nav><main class="main"><div class="col"><header class="page-h"><h1>Today</h1><p>Friday 27 November</p></header><section class="tile is-stale" aria-label="Your target">
+  <div class="tile-top">
+    <div class="tile-fig"><span class="lbl">Your Q4 target</span><span class="big num">₨ 3,450,000</span><span class="of num">of ₨ 6,000,000</span></div>
+    <div class="tile-state"><span class="behind"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg>₨ 1.2M behind pace</span><span class="muted">34 days left in Q4</span></div>
+  </div>
+  <div class="progress" role="img" aria-label="57% of target achieved, pace marker at 77%"><i style="width:57.5%"></i><b style="left:77.5%"></b></div>
+  <div class="tile-legend"><span>Achieved <span class="num">57%</span></span><span>Pace marker: <span class="num">₨ 4,650,000</span> expected by today</span></div>
+</section>
+<section class="err card" role="alert">
+  <div class="err-ic"><svg class="i i-xl" aria-hidden="true"><use href="#i-cloud-off"/></svg></div>
+  <div class="err-b">
+    <h2>Today didn't load</h2>
+    <p>The server didn't answer, so your work list couldn't be built. Nothing was changed. Check your connection and try again; if it keeps failing, tell your admin and quote the reference below.</p>
+    <div class="err-meta"><span class="muted">Last loaded</span><span class="num">09:42 today</span><span class="muted">Reference</span><span class="num">req_8f2c1a7e</span></div>
+    <div class="err-act"><button class="btn btn-primary"><svg class="i " aria-hidden="true"><use href="#i-refresh-cw"/></svg>Try again</button><button class="btn"><svg class="i " aria-hidden="true"><use href="#i-copy"/></svg>Copy reference</button></div>
+  </div>
+</section></div></main></div></div></div></section>
+  <section class="board-wrap" id="mobile"><div class="board-cap"><h2>Mobile, 375</h2><p>Same list, one column. 44px tap targets, actions are full width, bottom tab bar holds the six sections.</p></div><div class="board board-phone" data-w="375"><div class="board-inner"><div class="phone">
+  <header class="m-bar"><img src="../../../public/brand/logo-mark.png" alt="Q-Tech" width="28" height="28"><span class="m-title">Today</span><button class="btn btn-quiet btn-icon" aria-label="Search"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg></button><span class="avatar">AR</span></header>
+  <div class="m-scroll">
+    <div class="m-pad"><p class="m-date">Friday 27 November · <b>9</b> need you, <b>3</b> due now</p><section class="tile is-compact" aria-label="Your target">
+  <div class="tile-top">
+    <div class="tile-fig"><span class="lbl">Your Q4 target</span><span class="big num">₨ 3,450,000</span><span class="of num">of ₨ 6,000,000</span></div>
+    <div class="tile-state"><span class="behind"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg>₨ 1.2M behind pace</span><span class="muted">34 days left in Q4</span></div>
+  </div>
+  <div class="progress" role="img" aria-label="57% of target achieved, pace marker at 77%"><i style="width:57.5%"></i><b style="left:77.5%"></b></div>
+  <div class="tile-legend"><span>Achieved <span class="num">57%</span></span><span>Pace marker: <span class="num">₨ 4,650,000</span> expected by today</span></div>
+</section></div>
+    <section class="grp"><header><h2>Overdue or due today</h2><span class="num cnt">3</span></header><ul class="list m-list"><li class="it m-it" data-id="pay">
+  <div class="m-top"><div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-banknote"/></svg></div><div class="it-main"><h3>Payment 12 days overdue</h3><p class="it-sub"><span class="num">INV-2291</span><span class="dot"></span>Karachi Glassworks (KHI)</p></div></div>
+  <div class="facts stack"><span class="fact is-danger"><svg class="i i-sm" aria-hidden="true"><use href="#i-banknote"/></svg><span><b class="num">₨ 1,244,310</b> outstanding</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>was due <b class="num">15 Nov</b></span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-send"/></svg><span>last reminder <b class="num">8</b> days ago</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-file-text"/></svg><span>PO <b class="num">253074</b></span></span></div>
+  
+  <div class="m-act"><button class="btn btn-primary" data-act="Send reminder"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg><span>Send reminder</span></button><button class="btn btn-icon" data-snz aria-label="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button><div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div></div>
+</li><li class="it m-it" data-id="bidtoday">
+  <div class="m-top"><div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-file-check"/></svg></div><div class="it-main"><h3>Bid due today, 17:00</h3><p class="it-sub"><span class="num">RFQ-0181</span><span class="dot"></span>Punjab Cement Ltd</p></div></div>
+  <div class="facts stack"><span class="fact is-danger"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock-alert"/></svg><span>due <b class="num">17:00</b> today</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-clipboard-check"/></svg><span><b class="num">11</b> of <b class="num">12</b> lines priced</span></span><span class="fact is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-circle-alert"/></svg><span>1 line has no offer: Dwyer 616 differential gauge</span></span></div>
+  
+  <div class="m-act"><button class="btn " data-act="Review and send bid"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg><span>Review and send bid</span></button><button class="btn btn-icon" data-snz aria-label="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button><div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div></div>
+</li><li class="it m-it" data-id="late">
+  <div class="m-top"><div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-truck"/></svg></div><div class="it-main"><h3>Goods 5 days late from supplier</h3><p class="it-sub"><span class="num">PO 253102</span><span class="dot"></span>Indus Textile Mills — Faisalabad</p></div></div>
+  <div class="facts stack"><span class="fact is-danger"><svg class="i i-sm" aria-hidden="true"><use href="#i-truck"/></svg><span>Siemens SITRANS FC430 × <b class="num">4</b> promised <b class="num">22 Nov</b></span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-hourglass"/></svg><span>ABC Traders has not confirmed a new date</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>customer needs it by <b class="num">3 Dec</b></span></span></div>
+  
+  <div class="m-act"><button class="btn " data-act="Chase ABC Traders"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg><span>Chase ABC Traders</span></button><button class="btn btn-icon" data-snz aria-label="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button><div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div></div>
+</li></ul></section><section class="grp"><header><h2>Due in the next 5 days</h2><span class="num cnt">5</span></header><ul class="list m-list"><li class="it m-it" data-id="tomorrow">
+  <div class="m-top"><div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-file-check"/></svg></div><div class="it-main"><h3>Bid due tomorrow, 12:00</h3><p class="it-sub"><span class="num">RFQ-0183</span><span class="dot"></span>Ravi Steel Works — Lahore</p></div></div>
+  <div class="facts stack"><span class="fact is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>due <b class="num">Sat 28 Nov</b>, <b class="num">12:00</b></span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-clipboard-check"/></svg><span>all <b class="num">6</b> lines priced · margin <b class="num">14.2%</b></span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-circle-dashed"/></svg><span>not reviewed yet</span></span></div>
+  
+  <div class="m-act"><button class="btn " data-act="Review bid"><svg class="i " aria-hidden="true"><use href="#i-file-check"/></svg><span>Review bid</span></button><button class="btn btn-icon" data-snz aria-label="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button><div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div></div>
+</li><li class="it m-it" data-id="relay">
+  <div class="m-top"><div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-reply"/></svg></div><div class="it-main"><h3>Answer received on 3 questions: relay to Belimo agent</h3><p class="it-sub"><span class="num">RFQ-0178</span><span class="dot"></span>Sargodha Dairy Foods</p></div></div>
+  <div class="facts stack"><span class="fact is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-message-circle-question"/></svg><span><b class="num">3</b> answers from customer</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-clock"/></svg><span>received <b class="num">2</b> days ago</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>bid due in <b class="num">3</b> days</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-hourglass"/></svg><span>Belimo agent <span class="muted">(Lahore)</span> waiting</span></span></div>
+  
+  <div class="m-act"><button class="btn " data-act="Relay to Belimo agent"><svg class="i " aria-hidden="true"><use href="#i-reply"/></svg><span>Relay to Belimo agent</span></button><button class="btn btn-icon" data-snz aria-label="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button><div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div></div>
+</li><li class="it m-it" data-id="chasesup">
+  <div class="m-top"><div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-send"/></svg></div><div class="it-main"><h3>Chase supplier for a quote</h3><p class="it-sub"><span class="num">RFQ-0179</span><span class="dot"></span>Chenab Paper Board — Sialkot</p></div></div>
+  <div class="facts stack"><span class="fact is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-send"/></svg><span>Yokogawa agent: sent <b class="num">8</b> days ago</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-circle-dashed"/></svg><span>no quote yet</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>bid due in <b class="num">3</b> days</span></span></div>
+  <div class="rail" style="--p:73%"><span class="rail-today num">Today · Fri 27 Nov</span><div class="rail-track"><i></i><em></em></div><div class="rail-ends"><span class="num">Sent Thu 19 Nov</span><span class="num">Bid due Mon 30 Nov</span></div></div>
+  <div class="m-act"><button class="btn " data-act="Chase Yokogawa agent"><svg class="i " aria-hidden="true"><use href="#i-send"/></svg><span>Chase Yokogawa agent</span></button><button class="btn btn-icon" data-snz aria-label="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button><div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div></div>
+</li><li class="it m-it" data-id="chasecust">
+  <div class="m-top"><div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-message-circle-question"/></svg></div><div class="it-main"><h3>Chase customer for clarifications</h3><p class="it-sub"><span class="num">RFQ-0177</span><span class="dot"></span>Indus Textile Mills — Faisalabad</p></div></div>
+  <div class="keyline">
+  <span class="seg is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-message-circle-question"/></svg><span><b class="num">2</b> questions unanswered</span></span>
+  <span class="seg"><svg class="i i-sm" aria-hidden="true"><use href="#i-clock"/></svg><span>asked customer <b class="num">6</b> days ago</span></span>
+  <span class="seg"><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>bid due in <b class="num">4</b> days</span></span>
+  <span class="seg"><svg class="i i-sm" aria-hidden="true"><use href="#i-hourglass"/></svg><span>Endress+Hauser <span class="muted">(via ABC Traders)</span> waiting</span></span>
+</div>
+  <div class="rail" style="--p:60%"><span class="rail-today num">Today · Fri 27 Nov</span><div class="rail-track"><i></i><em></em></div><div class="rail-ends"><span class="num">Asked Sat 21 Nov</span><span class="num">Bid due Tue 1 Dec</span></div></div>
+  <div class="m-act"><button class="btn " data-act="Chase customer"><svg class="i " aria-hidden="true"><use href="#i-message-square"/></svg><span>Chase customer</span></button><button class="btn btn-icon" data-snz aria-label="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button><div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div></div>
+</li><li class="it m-it" data-id="notfloated">
+  <div class="m-top"><div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-share-2"/></svg></div><div class="it-main"><h3>Not floated to suppliers yet</h3><p class="it-sub"><span class="num">RFQ-0184</span><span class="dot"></span>Mehran Paper Board — Hyderabad</p></div></div>
+  <div class="facts stack"><span class="fact is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-inbox"/></svg><span>received <b class="num">2</b> days ago</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>due in <b class="num">5</b> days</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-layers"/></svg><span><b class="num">7</b> lines · <b class="num">3</b> suppliers suggested</span></span></div>
+  <div class="rail" style="--p:29%"><span class="rail-today num">Today · Fri 27 Nov</span><div class="rail-track"><i></i><em></em></div><div class="rail-ends"><span class="num">Received Wed 25 Nov</span><span class="num">Bid due Wed 2 Dec</span></div></div>
+  <div class="m-act"><button class="btn " data-act="Float to suppliers"><svg class="i " aria-hidden="true"><use href="#i-share-2"/></svg><span>Float to suppliers</span></button><button class="btn btn-icon" data-snz aria-label="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button><div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div></div>
+</li></ul></section><section class="grp"><header><h2>Ready to move</h2><span class="num cnt">1</span></header><ul class="list m-list"><li class="it m-it" data-id="placepo">
+  <div class="m-top"><div class="it-ic"><svg class="i i-lg" aria-hidden="true"><use href="#i-shopping-cart"/></svg></div><div class="it-main"><h3>Place PO with supplier</h3><p class="it-sub"><span class="num">PO 253091</span><span class="dot"></span>Punjab Cement Ltd</p></div></div>
+  <div class="facts stack"><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-file-check"/></svg><span>order confirmed <b class="num">3</b> days ago</span></span><span class="fact is-warn"><svg class="i i-sm" aria-hidden="true"><use href="#i-circle-dashed"/></svg><span>no supplier PO yet</span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-package"/></svg><span>Endress+Hauser Proline 300 × <b class="num">2</b></span></span><span class="fact "><svg class="i i-sm" aria-hidden="true"><use href="#i-calendar"/></svg><span>customer wants delivery by <b class="num">21 Dec</b></span></span></div>
+  
+  <div class="m-act"><button class="btn " data-act="Create supplier PO"><svg class="i " aria-hidden="true"><use href="#i-file-plus"/></svg><span>Create supplier PO</span></button><button class="btn btn-icon" data-snz aria-label="Snooze"><svg class="i " aria-hidden="true"><use href="#i-alarm-clock-off"/></svg></button><div class="menu" role="menu"><button role="menuitem" data-snooze="tomorrow morning"><span>Tomorrow morning</span><span class="num">Sat 28</span></button><button role="menuitem" data-snooze="Monday"><span>Monday</span><span class="num">Mon 30 Nov</span></button><button role="menuitem" data-snooze="a date"><span>Pick a date</span><svg class="i i-sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></button><hr><button role="menuitem" disabled style="cursor:default"><span class="muted" style="font-size:var(--text-xs);white-space:normal;line-height:16px">Deadlines don't move. Only this reminder does.</span></button></div></div>
+</li></ul></section>
+  </div>
+  <nav class="m-tabs" aria-label="Main"><a href="#" class="is-active"><svg class="i i-lg" aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span></a><a href="#" class=""><svg class="i i-lg" aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span></a><a href="#" class=""><svg class="i i-lg" aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span></a><a href="#" class=""><svg class="i i-lg" aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a href="#" class=""><svg class="i i-lg" aria-hidden="true"><use href="#i-banknote"/></svg><span>Money</span></a><a href="#" class=""><svg class="i i-lg" aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+</div></div></div></section>
+</div>
+<script>
+
+(function(){
+  function fit(){document.querySelectorAll('.board[data-w]').forEach(function(b){
+    var inner=b.firstElementChild,w=+b.dataset.w,s=Math.min(1,b.clientWidth/w);
+    inner.style.width=w+'px';inner.style.transform='scale('+s+')';
+    b.style.height=Math.ceil(inner.offsetHeight*s)+'px';});}
+  addEventListener('resize',fit);addEventListener('load',fit);
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);
+  fit();
+})();
+(function(){
+  function closeAll(){document.querySelectorAll('.menu.is-open').forEach(function(m){m.classList.remove('is-open');});}
+  document.addEventListener('click',function(e){
+    var snz=e.target.closest('[data-snz]');
+    if(snz){var m=snz.parentElement.querySelector('.menu');var o=m.classList.contains('is-open');closeAll();if(!o){m.classList.add('is-open');}e.stopPropagation();return;}
+    var sn=e.target.closest('[data-snooze]');
+    if(sn){settle(sn.closest('.it'),'Snoozed to '+sn.dataset.snooze);closeAll();return;}
+    var act=e.target.closest('[data-act]');
+    if(act){settle(act.closest('.it'),'Done: '+act.dataset.act);return;}
+    var u=e.target.closest('.undo');
+    if(u){var it=u.closest('.it');it.classList.remove('is-done');var n=it.querySelector('.done-note');if(n)n.remove();u.remove();return;}
+    closeAll();
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeAll();});
+  function settle(it,msg){
+    if(!it||it.classList.contains('is-done'))return;
+    it.classList.add('is-done');
+    var host=it.querySelector('.it-act')||it.querySelector('.m-act');
+    var note=document.createElement('span');note.className='done-note';note.innerHTML='<svg class="i" aria-hidden="true"><use href="#i-circle-check"/></svg>'+msg;
+    var undo=document.createElement('button');undo.className='btn btn-quiet btn-sm undo';undo.textContent='Undo';
+    host.prepend(note);host.append(undo);
+  }
+})();</script>
+</body>
+</html>
