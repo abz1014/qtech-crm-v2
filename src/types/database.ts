@@ -23,7 +23,45 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "audit_log": {
+            "attachments": {
+                  Row: {
+                    "bucket": string,"clarification_id": string | null,"created_at": string,"created_by": string | null,"file_name": string,"id": string,"invoice_id": string | null,"mime_type": string,"path": string,"rfq_id": string | null,"size_bytes": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bucket": string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"file_name": string,"id"?: string,"invoice_id"?: string | null,"mime_type": string,"path": string,"rfq_id"?: string | null,"size_bytes": number
+                  }
+                  Update: {
+                    "bucket"?: string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"file_name"?: string,"id"?: string,"invoice_id"?: string | null,"mime_type"?: string,"path"?: string,"rfq_id"?: string | null,"size_bytes"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "attachments_clarification_id_fkey"
+      columns: ["clarification_id"]
+isOneToOne: false
+      referencedRelation: "clarifications"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "attachments_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "attachments_invoice_id_fkey"
+      columns: ["invoice_id"]
+isOneToOne: false
+      referencedRelation: "invoices"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "attachments_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "rfqs"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"audit_log": {
                   Row: {
                     "action": string,"changed_at": string,"changed_by": string | null,"id": string,"new_value": Json | null,"old_value": Json | null,"record_id": string,"table_name": string
                   }
@@ -715,7 +753,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "current_user_role":
+            "can_access_bucket":
+{ Args: { "bucket": string }; Returns: boolean
+                           },
+"current_user_role":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
 "model_tokens":
