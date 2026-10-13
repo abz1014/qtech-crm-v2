@@ -469,6 +469,35 @@ Add this at the top of P3:
 > 5. The PR includes desktop screenshots at 1440. Today, RFQ detail and intake also need mobile screenshots at 375; every other screen must work at 768. Each screen gets a Playwright screenshot baseline.
 > 6. Review gate: the orchestrator checks each PR against the mockup. Any deviation is listed in the PR and either fixed or accepted explicitly.
 
+> **FE-2: Entry burden (applies with FE-1 to every create/edit flow; Amendment A3). Workers must not skip it.**
+> 1. Every create/edit flow lists its required fields in the commit.
+> 2. Dates default to today, and context pre-fills.
+> 3. Missing data blocks only the payoff that needs it. No completeness percentages and no nags.
+> 4. Each flow has a Playwright interaction-count test against its target below.
+> 5. Any new required field needs a `DECISIONS.md` entry.
+>
+> | Flow | Target |
+> |---|---|
+> | New RFQ desktop | ≤3 actions + 1 paste |
+> | Capture | Android ≤4 taps, iPhone ≤6 |
+> | Float | ≤2 taps |
+> | Supplier reply | paste+accept ≤2, else ≤1 typed price per item, currency never typed |
+> | Can't quote / bid sent | 1 tap |
+> | Issue quotation | ≤1 price per item + 2 taps |
+> | Win | ≤2 taps |
+> | Lose | ≤2 taps |
+> | Issue PO (priced) | ≤2 taps |
+> | Mark placed/received/delivered | 1 tap each |
+> | Engineer commissioning done | 1 tap, 0 typed |
+> | Change planned date | ≤2 taps |
+> | Expense from a leg/order | 1 amount + ≤2 taps |
+> | Recurring expense | 1 tap |
+> | Invoice | ≤2 taps |
+> | TCS/FBR month | ≤3 taps + 1 PSID paste |
+> | Full payment | ≤2 taps |
+> | Chase | 1 tap |
+> | Photo answer | ≤3 taps, 0 typed |
+
 Two existing tasks also change:
 - **P04:** add a polish pass (spacing, alignment and motion audit against `DESIGN_SYSTEM.md`) and confirm the CSP needs no third-party font host.
 - **F08:** note that the CSP will be revisited if a webfont is chosen, but self-hosting means no change is needed.
@@ -686,3 +715,29 @@ ID mapping for reviewers. Every v2-only ID is absorbed, so no duplicates remain:
 |---|---|---|
 | A2b-R1 | The free rate service changes its terms, disappears, or drifts from the bank rate | One fallback source; manual override wins on its day; staleness bands make missing updates visible; comparisons still work on stale rates (with a label) and stop only at "unusable" (> 30 days). |
 | A2b-R2 | The supplier price on the order and the issued PO diverge | Issuing a PO writes its prices back to the order items, so there is one working price; the PO snapshot is the record of what was sent. |
+
+---
+
+# Amendment A3: Minimal entry burden (owner standing rule, 2026-10-13)
+
+> Source: the owner's rule that logging be as limited as possible. Schema changes are in `DATA_MODEL.md` Amendment A3. The standing rule **FE-2** is defined under FE-1 above and applies to every UI task listed in FE-1.
+
+### Task acceptance additions
+
+| ID | Added acceptance |
+|---|---|
+| S04 | Apply A3-1: the clarification CHECK is `answer IS NULL OR answered_at IS NOT NULL` (replaces the "answer/answered_at pair CHECK holds" wording). Apply the A3-4 defaults: `rfqs.owner_id` DEFAULT `auth.uid()`. |
+| S06 | Apply A3-2 (no `tax_deposit_bank`), A3-3 (`copy_received_on` kept pending I06 verification; `client_received_on` optional), and the A3-4 defaults: `invoices.invoice_date`, `payments_in.received_on` and `expenses.paid_on` DEFAULT `today_pkt()`. |
+| S13 | Apply A3-4: `convert_rfq_to_order` carries `owner_id` across (and `orders.owner_id` DEFAULT `auth.uid()`); batch stamping RPCs for the TCS and FBR tracks (sent by TCS today, PSID, deposited today) over a set of invoice ids, with `tax_deposit_amount` defaulting to `gst_amount` when the deposit date is stamped. Single-invoice stamping still works. |
+| R07 | No blocking rate prompt: a missing FX rate never blocks saving a price; the line shows "not compared, no rate". |
+| R09 | Photo-only answers: an answer or an attachment is enough to stamp answered; the relay text reads "see attached photo". Photo answer is at most 3 taps, 0 typed. |
+| R19 | Price chips: the last price sold to this customer and the last price quoted. |
+| O01 | Terms default: `payment_terms_days` defaults to the company's last order. |
+| O03 | Stamp buttons per leg (Mark placed / Received today / Delivered today; Delivered fills `received_on` if empty). `expected_on` suggested from `placed_on` plus the upper bound of the chosen quote line's lead time. Engineer commissioning is one tap, "Mark done today"; the planned date is a separate small action; no scope, gate pass or site phone fields. |
+| O07 | PO terms default: incoterm and terms from the supplier's last PO, else `company_profile`. |
+| M01 | Invoice number pre-fills as the next in the series. Batch TCS/FBR stamping UI (at most 3 taps + 1 PSID paste per month). Deposit amount defaults to the GST amount. |
+| M02 | Payment defaults: amount = balance due, date = today. |
+| M03 | Expense pre-fills: from a leg, category is supplier payment and payee/leg are filled; from an order, the last category used. Recurring expense is 1 tap. |
+| P03 | Interaction-count assertions (FE-2 targets) for the journeys of all three roles. |
+
+Mapping notes: the real task IDs matched the brief by content, so no remapping was needed. Judgement calls: the A3-4 `owner_id` defaults are split between S04 (RFQ default) and S13 (conversion RPC carries the owner); price chips go to R19 (the quotation task), though R17 (supplier memory chips) is a plausible alternative; the "supplier goods-chase text includes `supplier_orders.reference`" note has no task in the brief and probably belongs with R16 (chase text generators), so it is stated in DATA_MODEL A3 only.
