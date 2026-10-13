@@ -215,6 +215,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"company_profile": {
+                  Row: {
+                    "address": string | null,"bank_account_title": string | null,"bank_iban": string | null,"bank_name": string | null,"email": string | null,"id": number,"legal_name": string | null,"ntn": string | null,"phone": string | null,"po_terms": string | null,"quotation_terms": string | null,"quotation_validity_days": number,"strn": string | null,"updated_at": string,"updated_by": string | null,"website": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "address"?: string | null,"bank_account_title"?: string | null,"bank_iban"?: string | null,"bank_name"?: string | null,"email"?: string | null,"id"?: number,"legal_name"?: string | null,"ntn"?: string | null,"phone"?: string | null,"po_terms"?: string | null,"quotation_terms"?: string | null,"quotation_validity_days"?: number,"strn"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"website"?: string | null
+                  }
+                  Update: {
+                    "address"?: string | null,"bank_account_title"?: string | null,"bank_iban"?: string | null,"bank_name"?: string | null,"email"?: string | null,"id"?: number,"legal_name"?: string | null,"ntn"?: string | null,"phone"?: string | null,"po_terms"?: string | null,"quotation_terms"?: string | null,"quotation_validity_days"?: number,"strn"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"website"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "company_profile_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"company_sites": {
                   Row: {
                     "address": string | null,"company_id": string,"created_at": string,"created_by": string | null,"id": string,"name": string
@@ -356,6 +376,26 @@ isOneToOne: false
       columns: ["supplier_order_id"]
 isOneToOne: false
       referencedRelation: "supplier_orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"fx_rates": {
+                  Row: {
+                    "as_of": string,"created_at": string,"created_by": string | null,"currency": string,"id": string,"rate_pkr": number,"source": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "as_of"?: string,"created_at"?: string,"created_by"?: string | null,"currency": string,"id"?: string,"rate_pkr": number,"source"?: string
+                  }
+                  Update: {
+                    "as_of"?: string,"created_at"?: string,"created_by"?: string | null,"currency"?: string,"id"?: string,"rate_pkr"?: number,"source"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "fx_rates_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
       referencedColumns: ["id"]
     }
                   ]
@@ -719,6 +759,82 @@ isOneToOne: false
       referencedColumns: ["order_id"]
     }
                   ]
+                },"purchase_orders": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"currency": string,"delivery_terms": string | null,"id": string,"incoterm": string | null,"issued_on": string,"lines": NonNullable<Json>,"notes": string | null,"number": number,"payment_terms": string | null,"pdf_path": string | null,"revision": number,"ship_to": string | null,"signatory_id": string,"supplier_order_id": string,"total": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"currency": string,"delivery_terms"?: string | null,"id"?: string,"incoterm"?: string | null,"issued_on"?: string,"lines": NonNullable<Json>,"notes"?: string | null,"number": number,"payment_terms"?: string | null,"pdf_path"?: string | null,"revision"?: number,"ship_to"?: string | null,"signatory_id"?: string,"supplier_order_id": string,"total": number
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"currency"?: string,"delivery_terms"?: string | null,"id"?: string,"incoterm"?: string | null,"issued_on"?: string,"lines"?: NonNullable<Json>,"notes"?: string | null,"number"?: number,"payment_terms"?: string | null,"pdf_path"?: string | null,"revision"?: number,"ship_to"?: string | null,"signatory_id"?: string,"supplier_order_id"?: string,"total"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "purchase_orders_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "purchase_orders_signatory_id_fkey"
+      columns: ["signatory_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "purchase_orders_supplier_order_id_fkey"
+      columns: ["supplier_order_id"]
+isOneToOne: false
+      referencedRelation: "supplier_orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"quotations": {
+                  Row: {
+                    "contact_id": string | null,"created_at": string,"created_by": string | null,"delivery_text": string | null,"gst_total": number,"id": string,"issued_on": string,"lines": NonNullable<Json>,"net_total": number,"notes": string | null,"number": number,"payment_terms": string | null,"pdf_path": string | null,"revision": number,"rfq_id": string,"signatory_id": string,"valid_until": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivery_text"?: string | null,"gst_total": number,"id"?: string,"issued_on"?: string,"lines": NonNullable<Json>,"net_total": number,"notes"?: string | null,"number": number,"payment_terms"?: string | null,"pdf_path"?: string | null,"revision"?: number,"rfq_id": string,"signatory_id"?: string,"valid_until": string
+                  }
+                  Update: {
+                    "contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivery_text"?: string | null,"gst_total"?: number,"id"?: string,"issued_on"?: string,"lines"?: NonNullable<Json>,"net_total"?: number,"notes"?: string | null,"number"?: number,"payment_terms"?: string | null,"pdf_path"?: string | null,"revision"?: number,"rfq_id"?: string,"signatory_id"?: string,"valid_until"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "quotations_contact_id_fkey"
+      columns: ["contact_id"]
+isOneToOne: false
+      referencedRelation: "contacts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "quotations_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "quotations_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "rfqs"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "quotations_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "v_rfq_state"
+      referencedColumns: ["rfq_id"]
+    },{
+      foreignKeyName: "quotations_signatory_id_fkey"
+      columns: ["signatory_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"recurring_expenses": {
                   Row: {
                     "active": boolean,"amount": number,"category": string,"created_at": string,"created_by": string | null,"day_of_month": number | null,"id": string,"label": string,"notes": string | null,"start_month": string | null
@@ -973,14 +1089,14 @@ isOneToOne: false
                   ]
                 },"supplier_quote_lines": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"currency": string,"id": string,"in_stock": boolean | null,"inquiry_id": string,"lead_time": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"notes": string | null,"origin": string | null,"rfq_item_id": string,"unit_price": number
+                    "created_at": string,"created_by": string | null,"currency": string,"fx_rate_on": string | null,"fx_rate_pkr": number | null,"id": string,"in_stock": boolean | null,"inquiry_id": string,"lead_time": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"notes": string | null,"origin": string | null,"rfq_item_id": string,"unit_price": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"currency": string,"id"?: string,"in_stock"?: boolean | null,"inquiry_id": string,"lead_time"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"origin"?: string | null,"rfq_item_id": string,"unit_price": number
+                    "created_at"?: string,"created_by"?: string | null,"currency": string,"fx_rate_on"?: string | null,"fx_rate_pkr"?: number | null,"id"?: string,"in_stock"?: boolean | null,"inquiry_id": string,"lead_time"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"origin"?: string | null,"rfq_item_id": string,"unit_price": number
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"currency"?: string,"id"?: string,"in_stock"?: boolean | null,"inquiry_id"?: string,"lead_time"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"origin"?: string | null,"rfq_item_id"?: string,"unit_price"?: number
+                    "created_at"?: string,"created_by"?: string | null,"currency"?: string,"fx_rate_on"?: string | null,"fx_rate_pkr"?: number | null,"id"?: string,"in_stock"?: boolean | null,"inquiry_id"?: string,"lead_time"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"origin"?: string | null,"rfq_item_id"?: string,"unit_price"?: number
                   }
                   Relationships: [
                     {
@@ -1063,6 +1179,14 @@ isOneToOne: false
                 },"v_company_roles": {
                   Row: {
                     "company_id": string | null,"is_customer": boolean | null,"is_prospect": boolean | null,"is_supplier": boolean | null,"name": string | null,"role": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_fx_latest": {
+                  Row: {
+                    "age_days": number | null,"as_of": string | null,"currency": string | null,"rate_pkr": number | null,"source": string | null,"staleness": string | null
                   }
                   ComputedFields: never
                   Relationships: [
@@ -1320,7 +1444,7 @@ isOneToOne: false
                   ]
                 },"v_rfq_state": {
                   Row: {
-                    "bid_state": string | null,"clarification_state": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string | null,"days_to_due": number | null,"due_on": string | null,"floated": number | null,"is_overdue": boolean | null,"is_priority": boolean | null,"items_quoted": number | null,"items_total": number | null,"items_uncovered": number | null,"number": number | null,"outcome": string | null,"outcome_clash": boolean | null,"owner_id": string | null,"quoted_on": string | null,"received_on": string | null,"responders": number | null,"rfq_id": string | null,"sourcing_state": string | null,"to_ask": number | null,"to_relay": number | null,"waiting": number | null,"waiting_days": number | null
+                    "bid_state": string | null,"clarification_state": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string | null,"days_to_due": number | null,"due_on": string | null,"floated": number | null,"is_overdue": boolean | null,"is_priority": boolean | null,"items_quoted": number | null,"items_total": number | null,"items_uncovered": number | null,"number": number | null,"outcome": string | null,"outcome_clash": boolean | null,"owner_id": string | null,"quotation_valid_until": string | null,"quoted_on": string | null,"received_on": string | null,"responders": number | null,"rfq_id": string | null,"sourcing_state": string | null,"to_ask": number | null,"to_relay": number | null,"waiting": number | null,"waiting_days": number | null
                   }
                   ComputedFields: never
                   Relationships: [
@@ -1370,6 +1494,15 @@ isOneToOne: false
 "float_rfq":
 { Args: { "p_company_id": string,"p_contact_id"?: string,"p_customer_ref"?: string,"p_due_on"?: string,"p_items": Json,"p_mark_sent"?: boolean,"p_rfq_id": string,"p_site_id"?: string,"p_supplier_ids"?: (string)[] }; Returns: string
                            },
+"issue_purchase_order":
+{ Args: { "p_delivery_terms"?: string,"p_incoterm"?: string,"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_po_id": string,"p_ship_to"?: string,"p_supplier_order_id": string }; Returns: string
+                           },
+"issue_quotation":
+{ Args: { "p_contact_id"?: string,"p_delivery_text"?: string,"p_notes"?: string,"p_payment_terms"?: string,"p_quotation_id": string,"p_rfq_id": string,"p_valid_until"?: string }; Returns: string
+                           },
+"item_text_norm":
+{ Args: { "t": string }; Returns: string
+                           },
 "merge_brands":
 { Args: { "p_drop": string,"p_keep": string }; Returns: undefined
                            },
@@ -1396,6 +1529,9 @@ isOneToOne: false
                            },
 "resolve_value_basis":
 { Args: { "p_basis": string,"p_order_id": string }; Returns: undefined
+                           },
+"set_fx_rate":
+{ Args: { "p_as_of"?: string,"p_currency": string,"p_rate_pkr": number }; Returns: string
                            },
 "stamp_clarification_ask":
 { Args: { "p_clarification_ids": (string)[] }; Returns: number
