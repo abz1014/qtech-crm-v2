@@ -195,15 +195,15 @@ select is((select sourcing_state from public.v_rfq_state where rfq_id = 'd000000
   'covered', 'sourcing: covered');
 select is((select sourcing_state from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000005'),
   'no_offer_anywhere', 'sourcing: no offer anywhere');
-select is((select items_uncovered from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000003'), 1,
+select is((select items_uncovered::int from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000003'), 1,
   'an item every responder skipped is uncovered');
-select is((select items_uncovered from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000002'), 0,
+select is((select items_uncovered::int from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000002'), 0,
   'with no responder there is nothing uncovered yet');
 
 -- clarification dimension
 select is((select clarification_state from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000002'),
   'to_ask', 'clarification: to ask');
-select is((select to_ask from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000002'), 2,
+select is((select to_ask::int from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000002'), 2,
   'both unasked questions count (own and supplier-raised)');
 select is((select clarification_state from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000003'),
   'waiting_on_customer', 'clarification: waiting on customer');
@@ -212,7 +212,7 @@ select ok((select waiting = 1 and waiting_days = 6 and to_ask = 0 from public.v_
   'one question waiting, asked 6 days ago; the withdrawn one does not count');
 select is((select clarification_state from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000004'),
   'answers_to_relay', 'clarification: answers to relay');
-select is((select to_relay from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000004'), 1,
+select is((select to_relay::int from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000004'), 1,
   'an answered supplier question not yet relayed counts');
 select is((select clarification_state from public.v_rfq_state where rfq_id = 'd0000000-0000-4000-8000-000000000005'),
   'none', 'clarification: none once the answer has been relayed');
