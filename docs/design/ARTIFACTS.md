@@ -16,5 +16,8 @@ Private Claude artifacts (standalone builds: tokens, CSS, icons and logos inline
 | Q-Tech CRM — G2 RFQ detail | https://claude.ai/artifact/VfEgNkiBpMf5ATSJyWMGaG | `mockups/g2-rfq-detail.html` |
 | Q-Tech CRM — G2 Quotation PDF | https://claude.ai/artifact/XN2zs1q1VtuRA7fJYno9DE | `mockups/g2-quotation-pdf.html` |
 | Q-Tech CRM — G2 Supplier PO PDF | https://claude.ai/artifact/LFPD2VbdsYaPzgGP5H92aE | `mockups/g2-po-pdf.html` |
+| Q-Tech CRM — G2 Login, Team & Settings | https://claude.ai/artifact/BsTeU6fDu3ShCMnTKAW9ab | `mockups/g2-login-team-settings.html` |
+| Q-Tech CRM — G2 Component states | https://claude.ai/artifact/WmEUXx1AS6hWuw5baRnbgQ | `mockups/g2-components.html` |
+| Q-Tech CRM — G2 Capture (share-in) | https://claude.ai/artifact/QHMh9Gzahykh6m1tkFrnt1 | `mockups/g2-capture.html` |
 
 Open the files locally through any static server rooted at the repo (the pages reference `../tokens.css`, `mockup.css` and `public/brand/*`).

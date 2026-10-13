@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Q-Tech CRM — G2 Login, Team & Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="mockup.css">
+<link rel="stylesheet" href="g2-d.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-calendar-check" viewBox="0 0 24 24"><path d="M8 2v4" /> <path d="M16 2v4" /> <rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M3 10h18" /> <path d="m9 16 2 2 4-4" /></symbol><symbol id="i-file-text" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /></symbol><symbol id="i-package" viewBox="0 0 24 24"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /> <path d="M12 22V12" /> <path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" /> <path d="m7.5 4.27 9 5.15" /></symbol><symbol id="i-building-2" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" /> <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /> <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" /> <path d="M10 6h4" /> <path d="M10 10h4" /> <path d="M10 14h4" /> <path d="M10 18h4" /></symbol><symbol id="i-banknote" viewBox="0 0 24 24"><rect width="20" height="12" x="2" y="6" rx="2" /> <circle cx="12" cy="12" r="2" /> <path d="M6 12h.01M18 12h.01" /></symbol><symbol id="i-chart-column" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16" /> <path d="M18 17V9" /> <path d="M13 17V5" /> <path d="M8 17v-3" /></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /> <path d="m21 21-4.3-4.3" /></symbol><symbol id="i-message-circle-question" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /> <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /> <path d="M12 17h.01" /></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" /> <path d="m21.854 2.147-10.94 10.939" /></symbol><symbol id="i-reply" viewBox="0 0 24 24"><polyline points="9 17 4 12 9 7" /> <path d="M20 18v-2a4 4 0 0 0-4-4H4" /></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12" /> <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></symbol><symbol id="i-truck" viewBox="0 0 24 24"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" /> <path d="M15 18H9" /> <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" /> <circle cx="17" cy="18" r="2" /> <circle cx="7" cy="18" r="2" /></symbol><symbol id="i-alarm-clock-off" viewBox="0 0 24 24"><path d="M6.87 6.87a8 8 0 1 0 11.26 11.26" /> <path d="M19.9 14.25a8 8 0 0 0-9.15-9.15" /> <path d="m22 6-3-3" /> <path d="M6.26 18.67 4 21" /> <path d="m2 2 20 20" /> <path d="M4 4 2 6" /></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <polyline points="12 6 12 12 16 14" /></symbol><symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <line x1="12" x2="12" y1="8" y2="12" /> <line x1="12" x2="12.01" y1="16" y2="16" /></symbol><symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" /></symbol><symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="m9 12 2 2 4-4" /></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18" /> <path d="m6 6 12 12" /></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></symbol><symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></symbol><symbol id="i-refresh-cw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /> <path d="M21 3v5h-5" /> <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /> <path d="M8 16H3v5" /></symbol><symbol id="i-cloud-off" viewBox="0 0 24 24"><path d="m2 2 20 20" /> <path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193" /> <path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07" /></symbol><symbol id="i-ellipsis" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1" /> <circle cx="19" cy="12" r="1" /> <circle cx="5" cy="12" r="1" /></symbol><symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14" /> <path d="m12 5 7 7-7 7" /></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><path d="M8 2v4" /> <path d="M16 2v4" /> <rect width="18" height="18" x="3" y="4" rx="2" /> <path d="M3 10h18" /></symbol><symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="6" /> <circle cx="12" cy="12" r="2" /></symbol><symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" /> <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" /> <path d="M12 17.5v-11" /></symbol><symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2" /> <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></symbol><symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /> <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></symbol><symbol id="i-undo-2" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5" /> <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" /></symbol><symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M5 22h14" /> <path d="M5 2h14" /> <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22" /> <path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" /></symbol><symbol id="i-circle-dashed" viewBox="0 0 24 24"><path d="M10.1 2.182a10 10 0 0 1 3.8 0" /> <path d="M13.9 21.818a10 10 0 0 1-3.8 0" /> <path d="M17.609 3.721a10 10 0 0 1 2.69 2.7" /> <path d="M2.182 13.9a10 10 0 0 1 0-3.8" /> <path d="M20.279 17.609a10 10 0 0 1-2.7 2.69" /> <path d="M21.818 10.1a10 10 0 0 1 0 3.8" /> <path d="M3.721 6.391a10 10 0 0 1 2.7-2.69" /> <path d="M6.391 20.279a10 10 0 0 1-2.69-2.7" /></symbol><symbol id="i-circle-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="1" /></symbol><symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></symbol><symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="m4.9 4.9 14.2 14.2" /></symbol><symbol id="i-file-plus" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M9 15h6" /> <path d="M12 18v-6" /></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14" /> <path d="M12 5v14" /></symbol><symbol id="i-wallet" viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" /> <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" /></symbol><symbol id="i-bell-off" viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0" /> <path d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742" /> <path d="m2 2 20 20" /> <path d="M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05" /></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /> <polyline points="16 17 21 12 16 7" /> <line x1="21" x2="9" y1="12" y2="12" /></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /> <circle cx="12" cy="12" r="3" /></symbol><symbol id="i-clipboard-check" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /> <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /> <path d="m9 14 2 2 4-4" /></symbol><symbol id="i-shopping-cart" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1" /> <circle cx="19" cy="21" r="1" /> <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></symbol><symbol id="i-share-2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /> <circle cx="6" cy="12" r="3" /> <circle cx="18" cy="19" r="3" /> <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /> <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></symbol><symbol id="i-package-check" viewBox="0 0 24 24"><path d="m16 16 2 2 4-4" /> <path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14" /> <path d="m7.5 4.27 9 5.15" /> <polyline points="3.29 7 12 12 20.71 7" /> <line x1="12" x2="12" y1="22" y2="12" /></symbol><symbol id="i-file-pen" viewBox="0 0 24 24"><path d="M12.5 22H18a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v9.5" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M13.378 15.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" /></symbol><symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /> <path d="M3 3v5h5" /> <path d="M12 7v5l4 2" /></symbol><symbol id="i-file-check" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="m9 15 2 2 4-4" /></symbol><symbol id="i-circle-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /> <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /> <path d="M12 17h.01" /></symbol><symbol id="i-clock-alert" viewBox="0 0 24 24"><path d="M12 6v6l4 2" /> <path d="M16 21.16a10 10 0 1 1 5-13.516" /> <path d="M20 11.5v6" /> <path d="M20 21.5h.01" /></symbol><symbol id="i-message-square" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></symbol><symbol id="i-list-filter" viewBox="0 0 24 24"><path d="M3 6h18" /> <path d="M7 12h10" /> <path d="M10 18h4" /></symbol><symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /> <path d="M20 3v4" /> <path d="M22 5h-4" /> <path d="M4 17v2" /> <path d="M5 18H3" /></symbol><symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <circle cx="9" cy="7" r="4" /> <path d="M22 21v-2a4 4 0 0 0-3-3.87" /> <path d="M16 3.13a4 4 0 0 1 0 7.75" /></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" /> <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" /> <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" /></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol><symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></symbol><symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></symbol><symbol id="i-user-plus" viewBox="0 0 24 24"><path d="M2 21a8 8 0 0 1 13.292-6"/><circle cx="10" cy="8" r="5"/><path d="M19 16v6"/><path d="M22 19h-6"/></symbol><symbol id="i-user-x" viewBox="0 0 24 24"><path d="M2 21a8 8 0 0 1 11.873-7"/><circle cx="10" cy="8" r="5"/><path d="m17 17 5 5"/><path d="m22 17-5 5"/></symbol><symbol id="i-user-check" viewBox="0 0 24 24"><path d="m16 11 2 2 4-4"/><path d="M2 21a8 8 0 0 1 13.292-6"/><circle cx="10" cy="8" r="5"/></symbol><symbol id="i-key-round" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol><symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></symbol><symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol><symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol><symbol id="i-chevrons-up-down" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></symbol><symbol id="i-command" viewBox="0 0 24 24"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol><symbol id="i-clipboard-paste" viewBox="0 0 24 24"><path d="M11 14h10"/><path d="M16 4h2a2 2 0 0 1 2 2v1.344"/><path d="m17 18 4-4-4-4"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 1.793-1.113"/><rect x="8" y="2" width="8" height="4" rx="1"/></symbol><symbol id="i-smartphone" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></symbol><symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></symbol><symbol id="i-list-plus" viewBox="0 0 24 24"><path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="M18 9v6"/><path d="M21 12h-6"/></symbol><symbol id="i-sticky-note" viewBox="0 0 24 24"><path d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><path d="M15 3v5a1 1 0 0 0 1 1h5"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol><symbol id="i-loader" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></symbol><symbol id="i-paperclip" viewBox="0 0 24 24"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"/></symbol><symbol id="i-landmark" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></symbol><symbol id="i-circle-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol><symbol id="i-file-warning" viewBox="0 0 24 24"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-corner-down-left" viewBox="0 0 24 24"><path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/></symbol><symbol id="i-mouse-pointer-click" viewBox="0 0 24 24"><path d="M14 4.1 12 6"/><path d="m5.1 8-2.9-.8"/><path d="m6 12-1.9 2"/><path d="M7.2 2.2 8 5.1"/><path d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"/></symbol><symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></symbol><symbol id="i-hash" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol><symbol id="i-plus-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></symbol><symbol id="i-check-circle-2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol></defs></svg>
+<div class="doc">
+  <header class="doc-head"><h1>Login, Team and Settings</h1>
+  <p>Gate 2, D07. Built on direction B and the design system. Friday 27 November 2026; Bilal Chaudhry is the admin, Ayesha Rana is in sales. Every person and company here is fictional. Generated passwords appear once, with a copy button and a warning, and are never shown again.</p>
+  <nav class="doc-index" aria-label="Sections"><a href="#login">Login</a><a href="#team">Team</a><a href="#create">Add person</a><a href="#reset">Reset password</a><a href="#role">Change role</a><a href="#deact">Deactivate</a><a href="#react">Reactivate</a><a href="#profile">Company profile</a><a href="#home">Settings and exchange rates</a></nav></header>
+
+  <div class="sec-head" id="login"><h2 class="sec">Login</h2><p>There is no “forgot password” link. The one recovery path is the admin, and the screen says so.</p></div>
+  <section class="board-wrap" id="login-d"><div class="board-cap"><h2>Desktop 1280</h2><p>Resting state. Wordmark, two fields, one action, one sentence about what to do if the password is lost.</p></div><div class="board " data-w="1280"><div class="board-inner"><div class="login-stage" style="min-height:600px;"><div class="login-card" >
+    <img class="logo" src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions">
+    <div><h1>Sign in</h1><p class="sub">Use the email and password your admin gave you.</p></div>
+    
+    <form class="stack" style="gap:var(--sp-4)" onsubmit="return false">
+      <div class="field"><label class="lbl" for="e-rest">Email</label><input class="input" id="e-rest" type="email" autocomplete="username" placeholder="name@company.pk" value="" ></div>
+      <div class="field"><label class="lbl" for="p-rest">Password</label><div class="in-wrap"><input class="input" id="p-rest" type="password" autocomplete="current-password" value="" ><button class="adorn" type="button" aria-label="Show password"><svg class="i " aria-hidden="true"><use href="#i-eye"/></svg></button></div></div>
+      <button class="btn btn-primary btn-lg btn-block" type="submit" >Sign in</button>
+    </form>
+    <p class="forgot"><svg class="i " aria-hidden="true"><use href="#i-key-round"/></svg><span>Forgot your password? Ask your admin to reset it.</span></p>
+  </div></div></div></div></section>
+  <div class="grid-auto" style="margin-bottom:var(--sp-10)">
+    <figure class="cell-fig"><figcaption><b>Wrong email or password</b><span>One message for both fields, so it never says which one was wrong.</span></figcaption><div class="board " data-w="420"><div class="board-inner"><div class="login-stage" style="min-height:600px;"><div class="login-card" >
+    <img class="logo" src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions">
+    <div><h1>Sign in</h1><p class="sub">Use the email and password your admin gave you.</p></div>
+    <div class="banner" data-tone="danger" role="alert"><svg class="i " aria-hidden="true"><use href="#i-circle-alert"/></svg><div class="b-body"><b>Email or password is incorrect</b><span>Check both and try again.</span></div></div>
+    <form class="stack" style="gap:var(--sp-4)" onsubmit="return false">
+      <div class="field"><label class="lbl" for="e-error">Email</label><input class="input" id="e-error" type="email" autocomplete="username" placeholder="name@company.pk" value="ayesha@qtech.example" ></div>
+      <div class="field"><label class="lbl" for="p-error">Password</label><div class="in-wrap"><input class="input is-invalid" id="p-error" type="password" autocomplete="current-password" value="password-here" ><button class="adorn" type="button" aria-label="Show password"><svg class="i " aria-hidden="true"><use href="#i-eye"/></svg></button></div></div>
+      <button class="btn btn-primary btn-lg btn-block" type="submit" >Sign in</button>
+    </form>
+    <p class="forgot"><svg class="i " aria-hidden="true"><use href="#i-key-round"/></svg><span>Forgot your password? Ask your admin to reset it.</span></p>
+  </div></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Account deactivated</b><span>Named plainly, with the next step.</span></figcaption><div class="board " data-w="420"><div class="board-inner"><div class="login-stage" style="min-height:600px;"><div class="login-card" >
+    <img class="logo" src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions">
+    <div><h1>Sign in</h1><p class="sub">Use the email and password your admin gave you.</p></div>
+    <div class="banner" data-tone="warning" role="alert"><svg class="i " aria-hidden="true"><use href="#i-user-x"/></svg><div class="b-body"><b>This account is deactivated</b><span>Ask your admin to reactivate it.</span></div></div>
+    <form class="stack" style="gap:var(--sp-4)" onsubmit="return false">
+      <div class="field"><label class="lbl" for="e-deact">Email</label><input class="input" id="e-deact" type="email" autocomplete="username" placeholder="name@company.pk" value="ayesha@qtech.example" ></div>
+      <div class="field"><label class="lbl" for="p-deact">Password</label><div class="in-wrap"><input class="input" id="p-deact" type="password" autocomplete="current-password" value="password-here" ><button class="adorn" type="button" aria-label="Show password"><svg class="i " aria-hidden="true"><use href="#i-eye"/></svg></button></div></div>
+      <button class="btn btn-primary btn-lg btn-block" type="submit" >Sign in</button>
+    </form>
+    <p class="forgot"><svg class="i " aria-hidden="true"><use href="#i-key-round"/></svg><span>Forgot your password? Ask your admin to reset it.</span></p>
+  </div></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Signing in</b><span>Fields locked and the button busy, so a second press does nothing.</span></figcaption><div class="board " data-w="420"><div class="board-inner"><div class="login-stage" style="min-height:600px;"><div class="login-card" >
+    <img class="logo" src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions">
+    <div><h1>Sign in</h1><p class="sub">Use the email and password your admin gave you.</p></div>
+    
+    <form class="stack" style="gap:var(--sp-4)" onsubmit="return false">
+      <div class="field"><label class="lbl" for="e-busy">Email</label><input class="input" id="e-busy" type="email" autocomplete="username" placeholder="name@company.pk" value="ayesha@qtech.example" readonly></div>
+      <div class="field"><label class="lbl" for="p-busy">Password</label><div class="in-wrap"><input class="input" id="p-busy" type="password" autocomplete="current-password" value="password-here" readonly><button class="adorn" type="button" aria-label="Show password"><svg class="i " aria-hidden="true"><use href="#i-eye"/></svg></button></div></div>
+      <button class="btn btn-primary btn-lg btn-block" type="submit" aria-busy="true" disabled><svg class="i spin" aria-hidden="true"><use href="#i-loader"/></svg>Signing in</button>
+    </form>
+    <p class="forgot"><svg class="i " aria-hidden="true"><use href="#i-key-round"/></svg><span>Forgot your password? Ask your admin to reset it.</span></p>
+  </div></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Phone 375</b><span>Same card, no border, full width. Fields are 40 px tall on touch.</span></figcaption><div class="board " data-w="375"><div class="board-inner"><div class="login-stage" style="min-height:700px;padding:var(--sp-6) 0;align-content:start;background:var(--bg-surface)"><div class="login-card" style="width:100%;border:0;padding:var(--sp-6) var(--sp-4);background:none">
+    <img class="logo" src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions">
+    <div><h1>Sign in</h1><p class="sub">Use the email and password your admin gave you.</p></div>
+    
+    <form class="stack" style="gap:var(--sp-4)" onsubmit="return false">
+      <div class="field"><label class="lbl" for="e-rest">Email</label><input class="input" id="e-rest" type="email" autocomplete="username" placeholder="name@company.pk" value="" ></div>
+      <div class="field"><label class="lbl" for="p-rest">Password</label><div class="in-wrap"><input class="input" id="p-rest" type="password" autocomplete="current-password" value="" ><button class="adorn" type="button" aria-label="Show password"><svg class="i " aria-hidden="true"><use href="#i-eye"/></svg></button></div></div>
+      <button class="btn btn-primary btn-lg btn-block" type="submit" >Sign in</button>
+    </form>
+    <p class="forgot"><svg class="i " aria-hidden="true"><use href="#i-key-round"/></svg><span>Forgot your password? Ask your admin to reset it.</span></p>
+  </div></div></div></div></figure>
+  </div>
+
+  <div class="sec-head" id="team"><h2 class="sec">Team</h2><p>Admin only. Reached from the account menu in the top bar, then Settings. Job title is new: it prints under the signature on quotations and purchase orders.</p></div>
+  <section class="board-wrap" id="team-menu"><div class="board-cap"><h2>Team list, row menu open</h2><p>Desktop 1280. Deactivated people stay in the list, dimmed, with Reactivate in place of the menu.</p></div><div class="board " data-w="1280"><div class="board-inner"><div class="app"><header class="top">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="30"></a>
+  <nav class="tabs" aria-label="Main"><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-wallet"/></svg><span>Money</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <div class="who"><span class="role">Admin</span><button class="avatar" type="button" title="Bilal Chaudhry" aria-label="Account menu" aria-expanded="false">BC</button>
+  </div>
+</header><div class="set"><aside class="set-nav" aria-label="Settings">
+  <h2>Settings</h2>
+  <a href="#" class="is-active"><svg class="i " aria-hidden="true"><use href="#i-users"/></svg>Team</a>
+  <a href="#" class=""><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg>Company profile</a>
+  <a href="#" class=""><svg class="i " aria-hidden="true"><use href="#i-refresh-cw"/></svg>Exchange rates</a>
+</aside><main class="set-main"><div class="inner"><div class="page-h"><div><h1>Team</h1><p>Everyone who can sign in to Q-Tech CRM. Passwords are created and reset here, and shown once.</p></div><button class="btn btn-primary"><svg class="i " aria-hidden="true"><use href="#i-user-plus"/></svg>Add person</button></div><div class="dt-card " style="overflow:visible">
+  <div class="dt-tools"><div class="in-wrap" style="width:260px"><input class="input" placeholder="Search name or email" aria-label="Search team" style="padding-left:32px"><span class="adorn" style="left:2px;right:auto;pointer-events:none"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg></span></div>
+    <div class="seg-c" role="tablist" aria-label="Status filter"><button class="is-on" role="tab">All <span class="num">6</span></button><button role="tab">Active <span class="num">5</span></button><button role="tab">Deactivated <span class="num">1</span></button></div>
+    <span class="spacer"></span><span class="count">At least one active admin is always required.</span></div>
+  <div class="dt-scroll" style="overflow:visible"><table class="dt"><thead><tr>
+    <th style="width:34%"><button class="sort" type="button">Name</button></th><th>Role</th><th>Job title</th><th>Status</th><th style="width:132px"><span class="sr-only" style="position:absolute;left:-9999px">Actions</span></th></tr></thead><tbody>
+  <tr class="">
+    <td><div class="cell-main"><span class="avatar">BC</span><span><b>Bilal Chaudhry</b> <span class="tag" style="margin-left:4px">You</span><span class="sub">bilal@qtech.example</span></span></div></td>
+    <td>Admin</td><td>Director</td>
+    <td><span class="chip" data-status="user:active"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>Active</span></td>
+    <td class="r" style="position:relative"><button class="btn btn-quiet btn-icon btn-sm" aria-label="Actions for Bilal Chaudhry" aria-haspopup="menu"><svg class="i " aria-hidden="true"><use href="#i-ellipsis"/></svg></button></td></tr><tr class=" is-sel">
+    <td><div class="cell-main"><span class="avatar">AR</span><span><b>Ayesha Rana</b><span class="sub">ayesha@qtech.example</span></span></div></td>
+    <td>Sales</td><td>Sales engineer</td>
+    <td><span class="chip" data-status="user:active"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>Active</span></td>
+    <td class="r" style="position:relative"><button class="btn btn-quiet btn-icon btn-sm" aria-label="Actions for Ayesha Rana" aria-haspopup="menu"><svg class="i " aria-hidden="true"><use href="#i-ellipsis"/></svg></button><div class="menu is-static" role="menu" style="top:calc(100% - 4px)">
+  <button role="menuitem"><span style="display:flex;gap:8px;align-items:center;color:inherit;font-size:inherit"><svg class="i " aria-hidden="true"><use href="#i-pencil"/></svg>Edit job title</span></button>
+  <button role="menuitem"><span style="display:flex;gap:8px;align-items:center;color:inherit;font-size:inherit"><svg class="i " aria-hidden="true"><use href="#i-shield"/></svg>Change role</span></button>
+  <button role="menuitem"><span style="display:flex;gap:8px;align-items:center;color:inherit;font-size:inherit"><svg class="i " aria-hidden="true"><use href="#i-key-round"/></svg>Reset password</span></button><hr>
+  <button role="menuitem" class="is-danger"><span style="display:flex;gap:8px;align-items:center;color:inherit;font-size:inherit"><svg class="i " aria-hidden="true"><use href="#i-user-x"/></svg>Deactivate</span></button></div></td></tr><tr class="">
+    <td><div class="cell-main"><span class="avatar">UT</span><span><b>Usman Tariq</b><span class="sub">usman@qtech.example</span></span></div></td>
+    <td>Sales</td><td>Sales manager</td>
+    <td><span class="chip" data-status="user:active"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>Active</span></td>
+    <td class="r" style="position:relative"><button class="btn btn-quiet btn-icon btn-sm" aria-label="Actions for Usman Tariq" aria-haspopup="menu"><svg class="i " aria-hidden="true"><use href="#i-ellipsis"/></svg></button></td></tr><tr class="">
+    <td><div class="cell-main"><span class="avatar">FA</span><span><b>Faizan Ahmed</b><span class="sub">faizan@qtech.example</span></span></div></td>
+    <td>Engineer</td><td>Commissioning engineer</td>
+    <td><span class="chip" data-status="user:active"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>Active</span></td>
+    <td class="r" style="position:relative"><button class="btn btn-quiet btn-icon btn-sm" aria-label="Actions for Faizan Ahmed" aria-haspopup="menu"><svg class="i " aria-hidden="true"><use href="#i-ellipsis"/></svg></button></td></tr><tr class="">
+    <td><div class="cell-main"><span class="avatar">NA</span><span><b>Naveed Akhtar</b><span class="sub">naveed@qtech.example</span></span></div></td>
+    <td>Engineer</td><td>Service engineer</td>
+    <td><span class="chip" data-status="user:active"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>Active</span></td>
+    <td class="r" style="position:relative"><button class="btn btn-quiet btn-icon btn-sm" aria-label="Actions for Naveed Akhtar" aria-haspopup="menu"><svg class="i " aria-hidden="true"><use href="#i-ellipsis"/></svg></button></td></tr><tr class="is-dim">
+    <td><div class="cell-main"><span class="avatar" style="background:var(--neutral-400)">SH</span><span><b>Saad Hussain</b><span class="sub">saad@qtech.example</span></span></div></td>
+    <td>Sales</td><td>Sales executive</td>
+    <td><span class="chip" data-status="user:deactivated"><svg class="i " aria-hidden="true"><use href="#i-ban"/></svg>Deactivated</span></td>
+    <td class="r" style="position:relative"><button class="btn btn-sm"><svg class="i " aria-hidden="true"><use href="#i-user-check"/></svg>Reactivate</button></td></tr>
+  </tbody></table></div>
+  <div class="dt-foot"><span>6 people · 5 active, 1 deactivated</span><span>Deactivated people keep their name on everything they created.</span></div></div></div></main></div></div></div></div></section>
+  <section class="board-wrap" id="team-menu-acct"><div class="board-cap"><h2>Account menu</h2><p>Settings and Team live under the avatar. The six main destinations do not change.</p></div><div class="board " data-w="1280"><div class="board-inner"><div class="app"><header class="top">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="30"></a>
+  <nav class="tabs" aria-label="Main"><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-wallet"/></svg><span>Money</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <div class="who"><span class="role">Admin</span><button class="avatar" type="button" title="Bilal Chaudhry" aria-label="Account menu" aria-expanded="true">BC</button>
+  <div class="menu is-static" role="menu"><div class="menu-id"><b style="font-weight:500">Bilal Chaudhry</b><span>Admin</span></div><hr>
+    <button role="menuitem"><svg class="i " aria-hidden="true"><use href="#i-settings"/></svg><span style="flex:1;color:inherit;font-size:inherit">Settings</span></button>
+    <button role="menuitem"><svg class="i " aria-hidden="true"><use href="#i-users"/></svg><span style="flex:1;color:inherit;font-size:inherit">Team</span></button><hr>
+    <button role="menuitem" class="is-danger"><svg class="i " aria-hidden="true"><use href="#i-log-out"/></svg><span style="flex:1;color:inherit;font-size:inherit">Sign out</span></button></div></div>
+</header><div class="set"><aside class="set-nav" aria-label="Settings">
+  <h2>Settings</h2>
+  <a href="#" class="is-active"><svg class="i " aria-hidden="true"><use href="#i-users"/></svg>Team</a>
+  <a href="#" class=""><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg>Company profile</a>
+  <a href="#" class=""><svg class="i " aria-hidden="true"><use href="#i-refresh-cw"/></svg>Exchange rates</a>
+</aside><main class="set-main"><div class="inner"><div class="page-h"><div><h1>Team</h1><p>Everyone who can sign in to Q-Tech CRM. Passwords are created and reset here, and shown once.</p></div><button class="btn btn-primary"><svg class="i " aria-hidden="true"><use href="#i-user-plus"/></svg>Add person</button></div><div class="dt-card " style="overflow:visible">
+  <div class="dt-tools"><div class="in-wrap" style="width:260px"><input class="input" placeholder="Search name or email" aria-label="Search team" style="padding-left:32px"><span class="adorn" style="left:2px;right:auto;pointer-events:none"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg></span></div>
+    <div class="seg-c" role="tablist" aria-label="Status filter"><button class="is-on" role="tab">All <span class="num">6</span></button><button role="tab">Active <span class="num">5</span></button><button role="tab">Deactivated <span class="num">1</span></button></div>
+    <span class="spacer"></span><span class="count">At least one active admin is always required.</span></div>
+  <div class="dt-scroll" style="overflow:visible"><table class="dt"><thead><tr>
+    <th style="width:34%"><button class="sort" type="button">Name</button></th><th>Role</th><th>Job title</th><th>Status</th><th style="width:132px"><span class="sr-only" style="position:absolute;left:-9999px">Actions</span></th></tr></thead><tbody>
+  <tr class="">
+    <td><div class="cell-main"><span class="avatar">BC</span><span><b>Bilal Chaudhry</b> <span class="tag" style="margin-left:4px">You</span><span class="sub">bilal@qtech.example</span></span></div></td>
+    <td>Admin</td><td>Director</td>
+    <td><span class="chip" data-status="user:active"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>Active</span></td>
+    <td class="r" style="position:relative"><button class="btn btn-quiet btn-icon btn-sm" aria-label="Actions for Bilal Chaudhry" aria-haspopup="menu"><svg class="i " aria-hidden="true"><use href="#i-ellipsis"/></svg></button></td></tr><tr class="">
+    <td><div class="cell-main"><span class="avatar">AR</span><span><b>Ayesha Rana</b><span class="sub">ayesha@qtech.example</span></span></div></td>
+    <td>Sales</td><td>Sales engineer</td>
+    <td><span class="chip" data-status="user:active"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>Active</span></td>
+    <td class="r" style="position:relative"><button class="btn btn-quiet btn-icon btn-sm" aria-label="Actions for Ayesha Rana" aria-haspopup="menu"><svg class="i " aria-hidden="true"><use href="#i-ellipsis"/></svg></button></td></tr><tr class="">
+    <td><div class="cell-main"><span class="avatar">UT</span><span><b>Usman Tariq</b><span class="sub">usman@qtech.example</span></span></div></td>
+    <td>Sales</td><td>Sales manager</td>
+    <td><span class="chip" data-status="user:active"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>Active</span></td>
+    <td class="r" style="position:relative"><button class="btn btn-quiet btn-icon btn-sm" aria-label="Actions for Usman Tariq" aria-haspopup="menu"><svg class="i " aria-hidden="true"><use href="#i-ellipsis"/></svg></button></td></tr><tr class="">
+    <td><div class="cell-main"><span class="avatar">FA</span><span><b>Faizan Ahmed</b><span class="sub">faizan@qtech.example</span></span></div></td>
+    <td>Engineer</td><td>Commissioning engineer</td>
+    <td><span class="chip" data-status="user:active"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>Active</span></td>
+    <td class="r" style="position:relative"><button class="btn btn-quiet btn-icon btn-sm" aria-label="Actions for Faizan Ahmed" aria-haspopup="menu"><svg class="i " aria-hidden="true"><use href="#i-ellipsis"/></svg></button></td></tr><tr class="">
+    <td><div class="cell-main"><span class="avatar">NA</span><span><b>Naveed Akhtar</b><span class="sub">naveed@qtech.example</span></span></div></td>
+    <td>Engineer</td><td>Service engineer</td>
+    <td><span class="chip" data-status="user:active"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>Active</span></td>
+    <td class="r" style="position:relative"><button class="btn btn-quiet btn-icon btn-sm" aria-label="Actions for Naveed Akhtar" aria-haspopup="menu"><svg class="i " aria-hidden="true"><use href="#i-ellipsis"/></svg></button></td></tr><tr class="is-dim">
+    <td><div class="cell-main"><span class="avatar" style="background:var(--neutral-400)">SH</span><span><b>Saad Hussain</b><span class="sub">saad@qtech.example</span></span></div></td>
+    <td>Sales</td><td>Sales executive</td>
+    <td><span class="chip" data-status="user:deactivated"><svg class="i " aria-hidden="true"><use href="#i-ban"/></svg>Deactivated</span></td>
+    <td class="r" style="position:relative"><button class="btn btn-sm"><svg class="i " aria-hidden="true"><use href="#i-user-check"/></svg>Reactivate</button></td></tr>
+  </tbody></table></div>
+  <div class="dt-foot"><span>6 people · 5 active, 1 deactivated</span><span>Deactivated people keep their name on everything they created.</span></div></div></div></main></div></div></div></div></section>
+  <div class="grid-2" style="margin-bottom:var(--sp-10)">
+    <figure class="cell-fig"><figcaption><b>Team on a phone, 375</b><span>Rows are 60 px, whole row opens the action sheet.</span></figcaption><div class="board board-phone" data-w="375"><div class="board-inner"><div class="phone"><div><div class="statusbar"><span class="num">09:41</span><span class="sb-r"><i></i><i></i></span></div>
+  <div class="m-bar"><button class="btn btn-quiet btn-icon" aria-label="Back"><svg class="i i-lg" aria-hidden="true"><use href="#i-chevron-left"/></svg></button><span class="m-title">Team</span><button class="btn btn-primary btn-sm" style="height:36px"><svg class="i " aria-hidden="true"><use href="#i-user-plus"/></svg>Add</button></div></div>
+  <div class="m-scroll"><div class="m-pad" style="padding-bottom:var(--sp-2)"><div class="seg-c" style="justify-self:start"><button class="is-on">All <span class="num">6</span></button><button>Active <span class="num">5</span></button><button>Deactivated <span class="num">1</span></button></div></div>
+  <ul class="m-list2"><li><button class="m-row" ><span class="avatar">BC</span><span class="grow"><b>Bilal Chaudhry</b><span>Admin · Director</span></span><svg class="i chev" aria-hidden="true"><use href="#i-ellipsis"/></svg></button></li><li><button class="m-row" ><span class="avatar">AR</span><span class="grow"><b>Ayesha Rana</b><span>Sales · Sales engineer</span></span><svg class="i chev" aria-hidden="true"><use href="#i-ellipsis"/></svg></button></li><li><button class="m-row" ><span class="avatar">UT</span><span class="grow"><b>Usman Tariq</b><span>Sales · Sales manager</span></span><svg class="i chev" aria-hidden="true"><use href="#i-ellipsis"/></svg></button></li><li><button class="m-row" ><span class="avatar">FA</span><span class="grow"><b>Faizan Ahmed</b><span>Engineer · Commissioning engineer</span></span><svg class="i chev" aria-hidden="true"><use href="#i-ellipsis"/></svg></button></li><li><button class="m-row" ><span class="avatar">NA</span><span class="grow"><b>Naveed Akhtar</b><span>Engineer · Service engineer</span></span><svg class="i chev" aria-hidden="true"><use href="#i-ellipsis"/></svg></button></li><li><button class="m-row is-dim" ><span class="avatar" style="background:var(--neutral-400)">SH</span><span class="grow"><b>Saad Hussain</b><span>Sales · Sales executive</span></span><span class="chip" data-status="user:deactivated"><svg class="i " aria-hidden="true"><use href="#i-ban"/></svg>Deactivated</span><svg class="i chev" aria-hidden="true"><use href="#i-ellipsis"/></svg></button></li></ul>
+  <p class="help" style="padding:var(--sp-3) var(--sp-4)">At least one active admin is always required.</p></div>
+  <nav class="m-tabs" aria-label="Main"><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-wallet"/></svg><span>Money</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  
+</div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Row actions as a bottom sheet</b><span>Same four actions as the desktop menu. Deactivate is last and red.</span></figcaption><div class="board board-phone" data-w="375"><div class="board-inner"><div class="phone"><div><div class="statusbar"><span class="num">09:41</span><span class="sb-r"><i></i><i></i></span></div>
+  <div class="m-bar"><button class="btn btn-quiet btn-icon" aria-label="Back"><svg class="i i-lg" aria-hidden="true"><use href="#i-chevron-left"/></svg></button><span class="m-title">Team</span><button class="btn btn-primary btn-sm" style="height:36px"><svg class="i " aria-hidden="true"><use href="#i-user-plus"/></svg>Add</button></div></div>
+  <div class="m-scroll"><div class="m-pad" style="padding-bottom:var(--sp-2)"><div class="seg-c" style="justify-self:start"><button class="is-on">All <span class="num">6</span></button><button>Active <span class="num">5</span></button><button>Deactivated <span class="num">1</span></button></div></div>
+  <ul class="m-list2"><li><button class="m-row" ><span class="avatar">BC</span><span class="grow"><b>Bilal Chaudhry</b><span>Admin · Director</span></span><svg class="i chev" aria-hidden="true"><use href="#i-ellipsis"/></svg></button></li><li><button class="m-row" style="background:var(--bg-selected)"><span class="avatar">AR</span><span class="grow"><b>Ayesha Rana</b><span>Sales · Sales engineer</span></span><svg class="i chev" aria-hidden="true"><use href="#i-ellipsis"/></svg></button></li><li><button class="m-row" ><span class="avatar">UT</span><span class="grow"><b>Usman Tariq</b><span>Sales · Sales manager</span></span><svg class="i chev" aria-hidden="true"><use href="#i-ellipsis"/></svg></button></li><li><button class="m-row" ><span class="avatar">FA</span><span class="grow"><b>Faizan Ahmed</b><span>Engineer · Commissioning engineer</span></span><svg class="i chev" aria-hidden="true"><use href="#i-ellipsis"/></svg></button></li><li><button class="m-row" ><span class="avatar">NA</span><span class="grow"><b>Naveed Akhtar</b><span>Engineer · Service engineer</span></span><svg class="i chev" aria-hidden="true"><use href="#i-ellipsis"/></svg></button></li><li><button class="m-row is-dim" ><span class="avatar" style="background:var(--neutral-400)">SH</span><span class="grow"><b>Saad Hussain</b><span>Sales · Sales executive</span></span><span class="chip" data-status="user:deactivated"><svg class="i " aria-hidden="true"><use href="#i-ban"/></svg>Deactivated</span><svg class="i chev" aria-hidden="true"><use href="#i-ellipsis"/></svg></button></li></ul>
+  <p class="help" style="padding:var(--sp-3) var(--sp-4)">At least one active admin is always required.</p></div>
+  <nav class="m-tabs" aria-label="Main"><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-wallet"/></svg><span>Money</span></a><a href="#"><svg class="i i-lg" aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  <div class="scrim-p"></div><div class="sheet" style="position:absolute;left:0;right:0;bottom:0;z-index:4;max-width:none;padding-bottom:var(--sp-4)"><div class="grab"></div>
+    <div class="who-row" style="padding:var(--sp-2) var(--sp-4) var(--sp-3)"><span class="avatar">AR</span><div><b>Ayesha Rana</b><span>Sales · Sales engineer</span></div></div>
+    <ul><li><button class="m-row" style="min-height:var(--hit-touch);"><svg class="i i-lg" aria-hidden="true"><use href="#i-pencil"/></svg><span class="grow"><b style="">Edit job title</b></span></button></li><li><button class="m-row" style="min-height:var(--hit-touch);"><svg class="i i-lg" aria-hidden="true"><use href="#i-shield"/></svg><span class="grow"><b style="">Change role</b></span></button></li><li><button class="m-row" style="min-height:var(--hit-touch);"><svg class="i i-lg" aria-hidden="true"><use href="#i-key-round"/></svg><span class="grow"><b style="">Reset password</b></span></button></li><li><button class="m-row" style="min-height:var(--hit-touch);color:var(--tone-danger-fg)"><svg class="i i-lg" aria-hidden="true"><use href="#i-user-x"/></svg><span class="grow"><b style="color:var(--tone-danger-fg)">Deactivate</b></span></button></li></ul></div>
+</div></div></div></figure>
+  </div>
+
+  <div class="sec-head" id="create"><h2 class="sec">Add person</h2><p>Name, email and role. The password is generated by the server and shown once.</p></div>
+  <div class="grid-2" style="margin-bottom:var(--sp-10)">
+    <figure class="cell-fig"><figcaption><b>Form</b><span>Job title is optional and explained in place.</span></figcaption><div class="board"><div class="stage" style="min-height:470px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg " role="dialog" aria-modal="true" aria-labelledby="d-create-form">
+  <div class="dlg-h"><span class="dlg-tile"><svg class="i i-lg" aria-hidden="true"><use href="#i-user-plus"/></svg></span><div class="grow"><h2 id="d-create-form">Add person</h2><p>They sign in with the email below and a password we generate.</p></div><button class="btn btn-quiet btn-icon btn-sm" aria-label="Close" ><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <form class="dlg-b" onsubmit="return false">
+    <div class="field"><label class="lbl" for="cn-form">Full name <span class="req">Required</span></label><input class="input" id="cn-form" value="Hira Siddiqui"  ></div>
+    <div class="field"><label class="lbl" for="ce-form">Email <span class="req">Required</span></label><input class="input" id="ce-form" type="email" value="hira@qtech.example"   >
+      </div>
+    <div class="form-grid">
+      <div class="field"><label class="lbl" for="cr-form">Role</label><select class="select" id="cr-form" ><option>Sales</option><option>Engineer</option><option>Admin</option></select></div>
+      <div class="field"><label class="lbl" for="cj-form">Job title <span class="opt">Optional</span></label><input class="input" id="cj-form" value="Sales coordinator" ></div>
+      <p class="help span-2">The job title prints under the signature on quotations and purchase orders.</p>
+    </div>
+  </form>
+  <div class="dlg-f"><span class="lead"><svg class="i i-sm" aria-hidden="true"><use href="#i-key-round"/></svg>Password is generated for you</span><button class="btn" >Cancel</button>
+    <button class="btn btn-primary" >Create account</button></div></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Email already used</b><span>A unique-violation names who has it and what to do. The rest of the form is kept.</span></figcaption><div class="board"><div class="stage" style="min-height:470px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg " role="dialog" aria-modal="true" aria-labelledby="d-create-unique">
+  <div class="dlg-h"><span class="dlg-tile"><svg class="i i-lg" aria-hidden="true"><use href="#i-user-plus"/></svg></span><div class="grow"><h2 id="d-create-unique">Add person</h2><p>They sign in with the email below and a password we generate.</p></div><button class="btn btn-quiet btn-icon btn-sm" aria-label="Close" ><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <form class="dlg-b" onsubmit="return false">
+    <div class="field"><label class="lbl" for="cn-unique">Full name <span class="req">Required</span></label><input class="input" id="cn-unique" value="Hira Siddiqui"  ></div>
+    <div class="field"><label class="lbl" for="ce-unique">Email <span class="req">Required</span></label><input class="input is-invalid" id="ce-unique" type="email" value="usman@qtech.example"  aria-invalid="true" aria-describedby="ce-err" >
+      <p class="err-msg" id="ce-err"><svg class="i " aria-hidden="true"><use href="#i-circle-alert"/></svg><span>Usman Tariq already uses this email. Use a different address, or change his details from the Team list.</span></p></div>
+    <div class="form-grid">
+      <div class="field"><label class="lbl" for="cr-unique">Role</label><select class="select" id="cr-unique" ><option>Sales</option><option>Engineer</option><option>Admin</option></select></div>
+      <div class="field"><label class="lbl" for="cj-unique">Job title <span class="opt">Optional</span></label><input class="input" id="cj-unique" value="Sales coordinator" ></div>
+      <p class="help span-2">The job title prints under the signature on quotations and purchase orders.</p>
+    </div>
+  </form>
+  <div class="dlg-f"><span class="lead"><svg class="i i-sm" aria-hidden="true"><use href="#i-key-round"/></svg>Password is generated for you</span><button class="btn" >Cancel</button>
+    <button class="btn btn-primary" >Create account</button></div></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Creating</b><span>Fields read-only, both buttons disabled, spinner in the primary. Esc and the close button are ignored until it ends.</span></figcaption><div class="board"><div class="stage" style="min-height:470px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg is-busy" role="dialog" aria-modal="true" aria-labelledby="d-create-busy">
+  <div class="dlg-h"><span class="dlg-tile"><svg class="i i-lg" aria-hidden="true"><use href="#i-user-plus"/></svg></span><div class="grow"><h2 id="d-create-busy">Add person</h2><p>They sign in with the email below and a password we generate.</p></div><button class="btn btn-quiet btn-icon btn-sm" aria-label="Close" disabled><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <form class="dlg-b" onsubmit="return false">
+    <div class="field"><label class="lbl" for="cn-busy">Full name <span class="req">Required</span></label><input class="input" id="cn-busy" value="Hira Siddiqui"  readonly></div>
+    <div class="field"><label class="lbl" for="ce-busy">Email <span class="req">Required</span></label><input class="input" id="ce-busy" type="email" value="hira@qtech.example"   readonly>
+      </div>
+    <div class="form-grid">
+      <div class="field"><label class="lbl" for="cr-busy">Role</label><select class="select" id="cr-busy" disabled><option>Sales</option><option>Engineer</option><option>Admin</option></select></div>
+      <div class="field"><label class="lbl" for="cj-busy">Job title <span class="opt">Optional</span></label><input class="input" id="cj-busy" value="Sales coordinator" readonly></div>
+      <p class="help span-2">The job title prints under the signature on quotations and purchase orders.</p>
+    </div>
+  </form>
+  <div class="dlg-f"><span class="lead"><svg class="i i-sm" aria-hidden="true"><use href="#i-key-round"/></svg>Password is generated for you</span><button class="btn" disabled>Cancel</button>
+    <button class="btn btn-primary" disabled aria-busy="true"><svg class="i spin" aria-hidden="true"><use href="#i-loader"/></svg>Creating account</button></div></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Created: password shown once</b><span>Done stays disabled until Copy is pressed. Press Copy to try it.</span></figcaption><div class="board"><div class="stage" style="min-height:470px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg" role="dialog" aria-modal="true">
+  <div class="dlg-h"><span class="dlg-tile" data-tone="success"><svg class="i i-lg" aria-hidden="true"><use href="#i-circle-check"/></svg></span><div class="grow"><h2>Account created</h2><p>Give Hira the email and password below so she can sign in.</p></div></div>
+  <div class="dlg-b">
+    <div class="who-row"><span class="avatar">HS</span><div><b>Hira Siddiqui</b><span class="num" style="font-size:var(--text-xs)">hira@qtech.example</span> <span style="margin-left:6px">Sales</span></div></div>
+    <div class="secret"><span class="s-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-key-round"/></svg>Password</span>
+      <div class="s-v"><code>Vk7x-mQ3p-Rt9w-Hn2e</code><button class="btn btn-primary" type="button" data-copy aria-label="Copy password"><svg class="i " aria-hidden="true"><use href="#i-copy"/></svg>Copy</button></div></div>
+    <div class="banner" data-tone="warning" role="note"><svg class="i " aria-hidden="true"><use href="#i-triangle-alert"/></svg><div class="b-body"><b>This password is shown once</b><span>Copy it now and send it to Hira yourself. After you close this window it can't be shown again. You would reset it instead.</span></div></div>
+  </div>
+  <div class="dlg-f"><span class="lead">Copy the password to continue</span><button class="btn btn-primary is-disabled" disabled data-needs-copy>Done</button></div></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>After copying</b><span>The box turns teal, the button says Copied, and Done unlocks.</span></figcaption><div class="board"><div class="stage" style="min-height:470px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg" role="dialog" aria-modal="true">
+  <div class="dlg-h"><span class="dlg-tile" data-tone="success"><svg class="i i-lg" aria-hidden="true"><use href="#i-circle-check"/></svg></span><div class="grow"><h2>Account created</h2><p>Give Hira the email and password below so she can sign in.</p></div></div>
+  <div class="dlg-b">
+    <div class="who-row"><span class="avatar">HS</span><div><b>Hira Siddiqui</b><span class="num" style="font-size:var(--text-xs)">hira@qtech.example</span> <span style="margin-left:6px">Sales</span></div></div>
+    <div class="secret is-copied"><span class="s-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-key-round"/></svg>Password</span>
+      <div class="s-v"><code>Vk7x-mQ3p-Rt9w-Hn2e</code><button class="btn" type="button" data-copy aria-label="Copy password"><svg class="i " aria-hidden="true"><use href="#i-check"/></svg>Copied</button></div></div>
+    <div class="banner" data-tone="warning" role="note"><svg class="i " aria-hidden="true"><use href="#i-triangle-alert"/></svg><div class="b-body"><b>This password is shown once</b><span>Copy it now and send it to Hira yourself. After you close this window it can't be shown again. You would reset it instead.</span></div></div>
+  </div>
+  <div class="dlg-f"><span class="lead"><svg class="i i-sm" aria-hidden="true"><use href="#i-circle-check"/></svg>Copied to clipboard</span><button class="btn btn-primary" >Done</button></div></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Job title, edited later</b><span>From the row menu. Same field, same help text.</span></figcaption><div class="board"><div class="stage" style="min-height:300px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg is-sm" role="dialog" aria-modal="true">
+  <div class="dlg-h"><span class="dlg-tile" data-tone="neutral"><svg class="i i-lg" aria-hidden="true"><use href="#i-pencil"/></svg></span><div class="grow"><h2>Edit job title</h2><p>Ayesha Rana</p></div><button class="btn btn-quiet btn-icon btn-sm" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <div class="dlg-b"><div class="field"><label class="lbl" for="jt">Job title</label><input class="input" id="jt" value="Sales engineer"><p class="help">Prints under the signature on quotations and purchase orders.</p></div></div>
+  <div class="dlg-f"><button class="btn">Cancel</button><button class="btn btn-primary">Save</button></div></div></div></div></figure>
+  </div>
+
+  <div class="sec-head" id="reset"><h2 class="sec">Reset password</h2><p>Admin only. The old password stops working at once and the person is signed out.</p></div>
+  <div class="grid-2" style="margin-bottom:var(--sp-10)">
+    <figure class="cell-fig"><figcaption><b>Confirm</b><span>Says what changes before it changes.</span></figcaption><div class="board"><div class="stage" style="min-height:300px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg is-sm" role="alertdialog" aria-modal="true">
+  <div class="dlg-h"><span class="dlg-tile" data-tone="warning"><svg class="i i-lg" aria-hidden="true"><use href="#i-key-round"/></svg></span><div class="grow"><h2>Reset Ayesha Rana’s password?</h2></div><button class="btn btn-quiet btn-icon btn-sm" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <div class="dlg-b"><p>We generate a new password and show it to you once. Her current password stops working and she is signed out on every device.</p></div>
+  <div class="dlg-f"><button class="btn">Cancel</button><button class="btn btn-primary"><svg class="i " aria-hidden="true"><use href="#i-key-round"/></svg>Reset password</button></div></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>New password, shown once</b><span>Same pattern as account creation.</span></figcaption><div class="board"><div class="stage" style="min-height:470px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg" role="dialog" aria-modal="true">
+  <div class="dlg-h"><span class="dlg-tile" data-tone="success"><svg class="i i-lg" aria-hidden="true"><use href="#i-circle-check"/></svg></span><div class="grow"><h2>Password reset</h2><p>Hira is signed out everywhere. Give her the new password below.</p></div></div>
+  <div class="dlg-b">
+    <div class="who-row"><span class="avatar">HS</span><div><b>Hira Siddiqui</b><span class="num" style="font-size:var(--text-xs)">hira@qtech.example</span> <span style="margin-left:6px">Sales</span></div></div>
+    <div class="secret"><span class="s-l"><svg class="i i-sm" aria-hidden="true"><use href="#i-key-round"/></svg>New password</span>
+      <div class="s-v"><code>Vk7x-mQ3p-Rt9w-Hn2e</code><button class="btn btn-primary" type="button" data-copy aria-label="Copy password"><svg class="i " aria-hidden="true"><use href="#i-copy"/></svg>Copy</button></div></div>
+    <div class="banner" data-tone="warning" role="note"><svg class="i " aria-hidden="true"><use href="#i-triangle-alert"/></svg><div class="b-body"><b>This password is shown once</b><span>Copy it now and send it to Hira yourself. After you close this window it can't be shown again. You would reset it instead.</span></div></div>
+  </div>
+  <div class="dlg-f"><span class="lead">Copy the password to continue</span><button class="btn btn-primary is-disabled" disabled data-needs-copy>Done</button></div></div></div></div></figure>
+  </div>
+
+  <div class="sec-head" id="role"><h2 class="sec">Change role</h2><p>Each role says what it can and cannot see. The last active admin cannot demote themselves.</p></div>
+  <div class="grid-2" style="margin-bottom:var(--sp-10)">
+    <figure class="cell-fig"><figcaption><b>Change a role</b><span>Radio cards, current role selected.</span></figcaption><div class="board"><div class="stage" style="min-height:470px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg" role="dialog" aria-modal="true">
+  <div class="dlg-h"><span class="dlg-tile" data-tone="neutral"><svg class="i i-lg" aria-hidden="true"><use href="#i-shield"/></svg></span><div class="grow"><h2>Change Ayesha Rana’s role</h2><p>Takes effect immediately.</p></div><button class="btn btn-quiet btn-icon btn-sm" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <div class="dlg-b">
+    
+    <div class="stack" style="gap:var(--sp-2)" role="radiogroup" aria-label="Role">
+      <label class="opt-card"><input class="rd" type="radio" name="role-n"  ><span><b>Admin</b><span class="help">Everything, including money, Team and company settings.</span></span></label>
+      <label class="opt-card is-on"><input class="rd" type="radio" name="role-n" checked ><span><b>Sales</b><span class="help">RFQs, orders, companies, invoices and receivables. No payments, expenses or margins.</span></span></label>
+      <label class="opt-card"><input class="rd" type="radio" name="role-n"  ><span><b>Engineer</b><span class="help">RFQs, orders and companies. No invoices, payments or margins.</span></span></label>
+    </div></div>
+  <div class="dlg-f"><button class="btn">Cancel</button><button class="btn btn-primary" >Change role</button></div></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Only active admin</b><span>The other roles are disabled and a note explains why.</span></figcaption><div class="board"><div class="stage" style="min-height:470px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg" role="dialog" aria-modal="true">
+  <div class="dlg-h"><span class="dlg-tile" data-tone="neutral"><svg class="i i-lg" aria-hidden="true"><use href="#i-shield"/></svg></span><div class="grow"><h2>Change Bilal Chaudhry’s role</h2><p>Takes effect immediately.</p></div><button class="btn btn-quiet btn-icon btn-sm" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <div class="dlg-b">
+    <div class="banner" data-tone="warning" role="note"><svg class="i " aria-hidden="true"><use href="#i-triangle-alert"/></svg><div class="b-body"><b>Bilal is the only active admin</b><span>Make someone else an admin first. Q-Tech CRM always needs at least one.</span></div></div>
+    <div class="stack" style="gap:var(--sp-2)" role="radiogroup" aria-label="Role">
+      <label class="opt-card is-on"><input class="rd" type="radio" name="role-g" checked ><span><b>Admin</b><span class="help">Everything, including money, Team and company settings.</span></span></label>
+      <label class="opt-card is-off"><input class="rd" type="radio" name="role-g"  disabled><span><b>Sales</b><span class="help">RFQs, orders, companies, invoices and receivables. No payments, expenses or margins.</span></span></label>
+      <label class="opt-card is-off"><input class="rd" type="radio" name="role-g"  disabled><span><b>Engineer</b><span class="help">RFQs, orders and companies. No invoices, payments or margins.</span></span></label>
+    </div></div>
+  <div class="dlg-f"><button class="btn">Cancel</button><button class="btn btn-primary" disabled>Change role</button></div></div></div></div></figure>
+  </div>
+
+  <div class="sec-head" id="deact"><h2 class="sec">Deactivate</h2><p>The confirm explains the three things people worry about: signing out, their records, and getting back in.</p></div>
+  <div class="grid-2" style="margin-bottom:var(--sp-10)">
+    <figure class="cell-fig"><figcaption><b>Confirm</b><span>Names the person on the button. Red because the person loses access.</span></figcaption><div class="board"><div class="stage" style="min-height:400px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg" role="alertdialog" aria-modal="true">
+  <div class="dlg-h"><span class="dlg-tile" data-tone="danger"><svg class="i i-lg" aria-hidden="true"><use href="#i-user-x"/></svg></span><div class="grow"><h2>Deactivate Saad Hussain?</h2></div><button class="btn btn-quiet btn-icon btn-sm" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <div class="dlg-b">
+    
+    <ul class="bul">
+      <li><svg class="i " aria-hidden="true"><use href="#i-log-out"/></svg><span>He is signed out on every device straight away, and can't sign in again until you reactivate him.</span></li>
+      <li><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>His RFQs, orders and notes stay exactly as they are, with his name as the author.</span></li>
+      <li><svg class="i " aria-hidden="true"><use href="#i-history"/></svg><span>You can reactivate him at any time. His role and job title are kept.</span></li>
+    </ul>
+  </div>
+  <div class="dlg-f"><button class="btn">Cancel</button><button class="btn btn-danger" ><svg class="i " aria-hidden="true"><use href="#i-user-x"/></svg>Deactivate Saad</button></div></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Blocked for the last admin</b><span>The reason replaces the explanation and the button is disabled.</span></figcaption><div class="board"><div class="stage" style="min-height:400px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg" role="alertdialog" aria-modal="true">
+  <div class="dlg-h"><span class="dlg-tile" data-tone="danger"><svg class="i i-lg" aria-hidden="true"><use href="#i-user-x"/></svg></span><div class="grow"><h2>Deactivate Bilal Chaudhry?</h2></div><button class="btn btn-quiet btn-icon btn-sm" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <div class="dlg-b">
+    <div class="banner" data-tone="danger" role="alert"><svg class="i " aria-hidden="true"><use href="#i-circle-alert"/></svg><div class="b-body"><b>You can't deactivate the only active admin</b><span>Make another person an admin first, then try again.</span></div></div>
+  </div>
+  <div class="dlg-f"><button class="btn">Cancel</button><button class="btn btn-danger" disabled><svg class="i " aria-hidden="true"><use href="#i-user-x"/></svg>Deactivate</button></div></div></div></div></figure>
+  </div>
+
+  <div class="sec-head" id="react"><h2 class="sec">Reactivate</h2><p>A quiet confirm, then a toast. Nothing about the password changes.</p></div>
+  <div class="grid-2" style="margin-bottom:var(--sp-10)">
+    <figure class="cell-fig"><figcaption><b>Confirm</b><span></span></figcaption><div class="board"><div class="stage" style="min-height:300px"><div class="ghost" aria-hidden="true"><span class="sk" style="width:30%;height:22px"></span><span class="sk" style="width:90%"></span><span class="sk" style="width:84%"></span><span class="sk" style="width:88%"></span><span class="sk" style="width:60%"></span></div><div class="dlg is-sm" role="alertdialog" aria-modal="true">
+  <div class="dlg-h"><span class="dlg-tile" data-tone="success"><svg class="i i-lg" aria-hidden="true"><use href="#i-user-check"/></svg></span><div class="grow"><h2>Reactivate Saad Hussain?</h2></div><button class="btn btn-quiet btn-icon btn-sm" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <div class="dlg-b"><p>He can sign in again as Sales with his existing password. If he has forgotten it, reset it from his row afterwards.</p></div>
+  <div class="dlg-f"><button class="btn">Cancel</button><button class="btn btn-primary"><svg class="i " aria-hidden="true"><use href="#i-user-check"/></svg>Reactivate</button></div></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Result</b><span>Toasts say the same verb as the button.</span></figcaption><div class="swatch is-canvas stack" style="min-height:300px;align-content:end;justify-items:start"><div class="toast is-done" data-tone="success" role="status"><span class="t-ic"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg></span><div class="t-body">Saad Hussain reactivated<span>He can sign in again as Sales.</span></div><button class="t-x" aria-label="Dismiss"><svg class="i i-sm" aria-hidden="true"><use href="#i-x"/></svg></button></div><div class="toast is-done" data-tone="success" role="status"><span class="t-ic"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg></span><div class="t-body">Ayesha Rana deactivated<span>She is signed out everywhere.</span></div><button class="t-x" aria-label="Dismiss"><svg class="i i-sm" aria-hidden="true"><use href="#i-x"/></svg></button></div><div class="toast is-done" data-tone="success" role="status"><span class="t-ic"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg></span><div class="t-body">Role changed to Engineer<span>Faizan Ahmed</span></div><button class="t-x" aria-label="Dismiss"><svg class="i i-sm" aria-hidden="true"><use href="#i-x"/></svg></button></div></div></figure>
+  </div>
+
+  <div class="sec-head" id="profile"><h2 class="sec">Company profile</h2><p>One record. Admins edit it; everyone else reads it. PDFs for quotations and purchase orders are blocked until legal name and address exist.</p></div>
+  <section class="board-wrap" id="profile-inc"><div class="board-cap"><h2>Admin, not yet complete</h2><p>The warning sits at the top. The two blocking fields say so and are marked, nothing else is.</p></div><div class="board " data-w="1280"><div class="board-inner"><div class="app"><header class="top">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="30"></a>
+  <nav class="tabs" aria-label="Main"><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-wallet"/></svg><span>Money</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <div class="who"><span class="role">Admin</span><button class="avatar" type="button" title="Bilal Chaudhry" aria-label="Account menu" aria-expanded="false">BC</button>
+  </div>
+</header><div class="set"><aside class="set-nav" aria-label="Settings">
+  <h2>Settings</h2>
+  <a href="#" class=""><svg class="i " aria-hidden="true"><use href="#i-users"/></svg>Team</a>
+  <a href="#" class="is-active"><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg>Company profile</a>
+  <a href="#" class=""><svg class="i " aria-hidden="true"><use href="#i-refresh-cw"/></svg>Exchange rates</a>
+</aside><main class="set-main"><div class="inner"><div class="page-h"><div><h1>Company profile</h1><p>Your registered details and standard wording. Only admins can change them.</p></div></div>
+  <div class="banner" data-tone="warning" role="alert"><svg class="i " aria-hidden="true"><use href="#i-triangle-alert"/></svg><div class="b-body"><b>PDFs can’t be issued until legal name and address are set</b><span>Quotations and purchase orders print these at the top. Everything else can wait.</span></div></div>
+  <form class="stack" style="gap:var(--sp-4)" onsubmit="return false">
+  <section class="fieldset"><header><h3>Business details</h3><p>Printed in the letterhead of every quotation and purchase order.</p></header>
+    <div class="form-grid">
+      <div class="field span-2"><label class="lbl" for="cp-name">Legal name <span class="req">Needed for PDFs</span></label>
+  <input class="input is-invalid" id="cp-name" value="" placeholder="As registered with SECP" aria-invalid="true" aria-describedby="cp-name-e">
+  <p class="err-msg" id="cp-name-e"><svg class="i " aria-hidden="true"><use href="#i-circle-alert"/></svg><span>Add the legal name before issuing a PDF.</span></p></div>
+      <div class="field span-2"><label class="lbl" for="cp-addr">Address <span class="req">Needed for PDFs</span></label>
+  <textarea class="textarea is-invalid" id="cp-addr" rows="2"  ></textarea>
+  <p class="err-msg" id="cp-addr-e"><svg class="i " aria-hidden="true"><use href="#i-circle-alert"/></svg><span>Add the address before issuing a PDF.</span></p></div>
+      <div class="field "><label class="lbl" for="cp-phone">Phone <span class="opt">Optional</span></label>
+  <input class="input num" id="cp-phone" value=""  >
+  </div>
+      <div class="field "><label class="lbl" for="cp-mail">Email <span class="opt">Optional</span></label>
+  <input class="input" id="cp-mail" value=""  >
+  </div>
+      <div class="field "><label class="lbl" for="cp-web">Website <span class="opt">Optional</span></label>
+  <input class="input" id="cp-web" value=""  >
+  </div>
+    </div></section>
+  <section class="fieldset"><header><h3>Tax registration</h3><p>Printed on quotations and purchase orders.</p></header>
+    <div class="form-grid"><div class="field "><label class="lbl" for="cp-ntn">NTN <span class="opt">Optional</span></label>
+  <input class="input num" id="cp-ntn" value=""  >
+  </div><div class="field "><label class="lbl" for="cp-strn">STRN <span class="opt">Optional</span></label>
+  <input class="input num" id="cp-strn" value=""  >
+  </div></div></section>
+  <section class="fieldset"><header><h3>Bank details</h3><p>Not printed anywhere until the letterhead layout is approved.</p></header>
+    <div class="form-grid"><div class="field "><label class="lbl" for="cp-bank">Bank <span class="opt">Optional</span></label>
+  <input class="input" id="cp-bank" value=""  >
+  </div><div class="field "><label class="lbl" for="cp-title">Account title <span class="opt">Optional</span></label>
+  <input class="input" id="cp-title" value=""  >
+  </div>
+    <div class="field"><label class="lbl" for="cp-iban">IBAN <span class="opt">Optional</span></label>
+  <input class="input num" id="cp-iban" value=""  >
+  </div></div></section>
+  <section class="fieldset"><header><h3>Quotations and purchase orders</h3><p>Standard wording that is added to every document. You can still edit it on each document before issuing.</p></header>
+    <div class="form-grid">
+      <div class="field span-2"><label class="lbl" for="cp-valid">Quotation validity</label>
+  <div class="in-suf"><input class="input num" id="cp-valid" value="30" style="max-width:100px"><span>days</span></div>
+  <p class="help">A new quotation is valid for this many days from its date.</p></div>
+      <div class="field span-2"><label class="lbl" for="cp-qt">Quotation terms <span class="opt">Optional</span></label>
+  <textarea class="textarea" id="cp-qt" rows="5"  ></textarea>
+  </div>
+      <div class="field span-2"><label class="lbl" for="cp-pt">Purchase order terms <span class="opt">Optional</span></label>
+  <textarea class="textarea" id="cp-pt" rows="4"  ></textarea>
+  </div>
+    </div></section>
+  <div class="form-foot"><span class="muted">Nothing to save yet</span><span class="spacer"></span><button class="btn" disabled>Discard</button><button class="btn btn-primary" disabled>Save changes</button></div>
+  </form></div></main></div></div></div></div></section>
+  <section class="board-wrap" id="profile-dirty"><div class="board-cap"><h2>Admin, complete, with an unsaved change</h2><p>No banner once both fields are set. The footer counts unsaved changes by name.</p></div><div class="board " data-w="1280"><div class="board-inner"><div class="app"><header class="top">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="30"></a>
+  <nav class="tabs" aria-label="Main"><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-wallet"/></svg><span>Money</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <div class="who"><span class="role">Admin</span><button class="avatar" type="button" title="Bilal Chaudhry" aria-label="Account menu" aria-expanded="false">BC</button>
+  </div>
+</header><div class="set"><aside class="set-nav" aria-label="Settings">
+  <h2>Settings</h2>
+  <a href="#" class=""><svg class="i " aria-hidden="true"><use href="#i-users"/></svg>Team</a>
+  <a href="#" class="is-active"><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg>Company profile</a>
+  <a href="#" class=""><svg class="i " aria-hidden="true"><use href="#i-refresh-cw"/></svg>Exchange rates</a>
+</aside><main class="set-main"><div class="inner"><div class="page-h"><div><h1>Company profile</h1><p>Your registered details and standard wording. Only admins can change them.</p></div></div>
+  
+  <form class="stack" style="gap:var(--sp-4)" onsubmit="return false">
+  <section class="fieldset"><header><h3>Business details</h3><p>Printed in the letterhead of every quotation and purchase order.</p></header>
+    <div class="form-grid">
+      <div class="field span-2"><label class="lbl" for="cp-name">Legal name <span class="req">Needed for PDFs</span></label>
+  <input class="input" id="cp-name" value="Q Tech Solutions (Private) Limited" placeholder="As registered with SECP" >
+  </div>
+      <div class="field span-2"><label class="lbl" for="cp-addr">Address <span class="req">Needed for PDFs</span></label>
+  <textarea class="textarea" id="cp-addr" rows="2"  >Plot 14, Sector 12-B, Korangi Industrial Area,
+Karachi 74900, Pakistan</textarea>
+  </div>
+      <div class="field "><label class="lbl" for="cp-phone">Phone <span class="opt">Optional</span></label>
+  <input class="input num" id="cp-phone" value="+92 21 3555 0188"  >
+  </div>
+      <div class="field "><label class="lbl" for="cp-mail">Email <span class="opt">Optional</span></label>
+  <input class="input" id="cp-mail" value="sales@qtech.example"  >
+  </div>
+      <div class="field "><label class="lbl" for="cp-web">Website <span class="opt">Optional</span></label>
+  <input class="input" id="cp-web" value="www.qtech.example"  >
+  </div>
+    </div></section>
+  <section class="fieldset"><header><h3>Tax registration</h3><p>Printed on quotations and purchase orders.</p></header>
+    <div class="form-grid"><div class="field "><label class="lbl" for="cp-ntn">NTN <span class="opt">Optional</span></label>
+  <input class="input num" id="cp-ntn" value="3827149-5"  >
+  </div><div class="field "><label class="lbl" for="cp-strn">STRN <span class="opt">Optional</span></label>
+  <input class="input num" id="cp-strn" value="17-00-3827-149-46"  >
+  </div></div></section>
+  <section class="fieldset"><header><h3>Bank details</h3><p>Not printed anywhere until the letterhead layout is approved.</p></header>
+    <div class="form-grid"><div class="field "><label class="lbl" for="cp-bank">Bank <span class="opt">Optional</span></label>
+  <input class="input" id="cp-bank" value="Indus Commercial Bank, Korangi branch"  >
+  </div><div class="field "><label class="lbl" for="cp-title">Account title <span class="opt">Optional</span></label>
+  <input class="input" id="cp-title" value="Q Tech Solutions (Private) Limited"  >
+  </div>
+    <div class="field"><label class="lbl" for="cp-iban">IBAN <span class="opt">Optional</span></label>
+  <input class="input num" id="cp-iban" value="PK36 INDC 0000 0012 3456 7891"  >
+  </div></div></section>
+  <section class="fieldset"><header><h3>Quotations and purchase orders</h3><p>Standard wording that is added to every document. You can still edit it on each document before issuing.</p></header>
+    <div class="form-grid">
+      <div class="field span-2"><label class="lbl" for="cp-valid">Quotation validity</label>
+  <div class="in-suf"><input class="input num" id="cp-valid" value="45" style="max-width:100px"><span>days</span></div>
+  <p class="help">A new quotation is valid for this many days from its date.</p></div>
+      <div class="field span-2"><label class="lbl" for="cp-qt">Quotation terms <span class="opt">Optional</span></label>
+  <textarea class="textarea" id="cp-qt" rows="5"  >1. Prices are in PKR and exclusive of sales tax unless stated.
+2. Delivery is ex-works Karachi unless stated.
+3. Payment: advance with order, balance against delivery.
+4. Warranty is as per the manufacturer’s terms.</textarea>
+  </div>
+      <div class="field span-2"><label class="lbl" for="cp-pt">Purchase order terms <span class="opt">Optional</span></label>
+  <textarea class="textarea" id="cp-pt" rows="4"  >1. Please acknowledge this order within 2 working days.
+2. Goods must match the specification and part numbers listed.
+3. Quote our PO number on every challan and invoice.</textarea>
+  </div>
+    </div></section>
+  <div class="form-foot"><svg class="i i-sm" aria-hidden="true"><use href="#i-circle-dot"/></svg><span class="muted">1 unsaved change: Quotation validity</span><span class="spacer"></span><button class="btn">Discard</button><button class="btn btn-primary">Save changes</button></div>
+  </form></div></main></div></div></div></div></section>
+  <section class="board-wrap" id="profile-ro"><div class="board-cap"><h2>Everyone else, read only</h2><p>Ayesha Rana, sales. Same layout as a definition list; missing values are flagged instead of blank.</p></div><div class="board " data-w="1280"><div class="board-inner"><div class="app"><header class="top">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="30"></a>
+  <nav class="tabs" aria-label="Main"><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-wallet"/></svg><span>Money</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <div class="who"><span class="role">Sales</span><button class="avatar" type="button" title="Ayesha Rana" aria-label="Account menu" aria-expanded="false">AR</button>
+  </div>
+</header><div class="set"><aside class="set-nav" aria-label="Settings">
+  <h2>Settings</h2>
+  
+  <a href="#" class="is-active"><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg>Company profile<span class="tag">View only</span></a>
+  <a href="#" class=""><svg class="i " aria-hidden="true"><use href="#i-refresh-cw"/></svg>Exchange rates</a>
+</aside><main class="set-main"><div class="inner"><div class="page-h"><div><h1>Company profile</h1><p>Your registered details and standard wording, as printed on quotations and purchase orders.</p></div><span class="tag" style="height:24px;gap:6px"><svg class="i i-sm" aria-hidden="true"><use href="#i-lock"/></svg>Only an admin can edit</span></div>
+  <section class="fieldset"><header><h3>Business details</h3></header><dl class="kv"><dt>Legal name</dt><dd class="" >Q Tech Solutions (Private) Limited</dd><dt>Address</dt><dd class="" style="white-space:pre-line">Plot 14, Sector 12-B, Korangi Industrial Area,
+Karachi 74900, Pakistan</dd><dt>Phone</dt><dd class="num" >+92 21 3555 0188</dd><dt>Email</dt><dd class="" >sales@qtech.example</dd><dt>Website</dt><dd class="" >www.qtech.example</dd></dl></section>
+  <section class="fieldset"><header><h3>Tax registration</h3></header><dl class="kv"><dt>NTN</dt><dd class="num" >3827149-5</dd><dt>STRN</dt><dd class="num" >17-00-3827-149-46</dd></dl></section>
+  <section class="fieldset"><header><h3>Bank details</h3></header><dl class="kv"><dt>Bank</dt><dd class="" >Indus Commercial Bank, Korangi branch</dd><dt>Account title</dt><dd class="" >Q Tech Solutions (Private) Limited</dd><dt>IBAN</dt><dd class="num" >PK36 INDC 0000 0012 3456 7891</dd></dl></section>
+  <section class="fieldset"><header><h3>Quotations and purchase orders</h3></header><dl class="kv"><dt>Quotation validity</dt><dd class="" >30 days</dd><dt>Quotation terms</dt><dd class="" style="white-space:pre-line">1. Prices are in PKR and exclusive of sales tax unless stated.
+2. Delivery is ex-works Karachi unless stated.
+3. Payment: advance with order, balance against delivery.
+4. Warranty is as per the manufacturer’s terms.</dd><dt>Purchase order terms</dt><dd class="" style="white-space:pre-line">1. Please acknowledge this order within 2 working days.
+2. Goods must match the specification and part numbers listed.
+3. Quote our PO number on every challan and invoice.</dd></dl></section></div></main></div></div></div></div></section>
+  <div class="grid-2" style="margin-bottom:var(--sp-10)">
+    <figure class="cell-fig"><figcaption><b>Banner for an admin</b><span>Points to where the fix is.</span></figcaption><div class="stack"><div class="banner" data-tone="warning"><svg class="i " aria-hidden="true"><use href="#i-triangle-alert"/></svg><div class="b-body"><b>PDFs can’t be issued until legal name and address are set</b><span>Quotations and purchase orders print these at the top.</span></div><a class="btn btn-sm b-act" href="#">Add them</a></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Banner for sales and engineers</b><span>Same sentence. The action is a person, not a button.</span></figcaption><div class="stack"><div class="banner" data-tone="warning"><svg class="i " aria-hidden="true"><use href="#i-triangle-alert"/></svg><div class="b-body"><b>PDFs can’t be issued until legal name and address are set</b><span>Ask an admin to add them in Settings.</span></div></div></div></figure>
+    <figure class="cell-fig"><figcaption><b>Saved</b><span></span></figcaption><div class="swatch is-canvas" style="min-height:90px;display:grid;align-items:end;justify-items:start"><div class="toast is-done" data-tone="success" role="status"><span class="t-ic"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg></span><div class="t-body">Company profile saved<span>PDFs can be issued now.</span></div><button class="t-x" aria-label="Dismiss"><svg class="i i-sm" aria-hidden="true"><use href="#i-x"/></svg></button></div></div></figure>
+  </div>
+
+  <div class="sec-head" id="home"><h2 class="sec">Settings and exchange rates</h2><p>Sales and engineers land here. Exchange rates are open to the whole team; the company profile is a link to the read-only view.</p></div>
+  <section class="board-wrap" id="home-b"><div class="board-cap"><h2>Settings home, sales</h2><p>The rate age uses the same labels as the price comparison, so a stale rate looks stale everywhere.</p></div><div class="board " data-w="1280"><div class="board-inner"><div class="app"><header class="top">
+  <a class="brand" href="#"><img src="../../../public/brand/logo-wordmark.png" alt="Q Tech Solutions" height="30"></a>
+  <nav class="tabs" aria-label="Main"><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-calendar-check"/></svg><span>Today</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-file-text"/></svg><span>RFQs</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-package"/></svg><span>Orders</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg><span>Companies</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-wallet"/></svg><span>Money</span></a><a class="tab-i" href="#"><svg class="i " aria-hidden="true"><use href="#i-chart-column"/></svg><span>Reports</span></a></nav>
+  <button class="search" type="button"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span>Search or jump to</span><span class="kbd">⌘K</span></button>
+  <div class="who"><span class="role">Sales</span><button class="avatar" type="button" title="Ayesha Rana" aria-label="Account menu" aria-expanded="false">AR</button>
+  </div>
+</header><div class="set"><aside class="set-nav" aria-label="Settings">
+  <h2>Settings</h2>
+  
+  <a href="#" class=""><svg class="i " aria-hidden="true"><use href="#i-building-2"/></svg>Company profile<span class="tag">View only</span></a>
+  <a href="#" class="is-active"><svg class="i " aria-hidden="true"><use href="#i-refresh-cw"/></svg>Exchange rates</a>
+</aside><main class="set-main"><div class="inner"><div class="page-h"><div><h1>Settings</h1><p>Company details for documents, and the rates used to compare prices in other currencies.</p></div></div>
+  <section class="fieldset" aria-labelledby="fxh"><header style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--sp-4)"><div><h3 id="fxh">Exchange rates</h3><p>Updated every night. Anyone on the team can enter today’s rate by hand, for example the bank’s rate.</p></div><a class="btn" href="#">Open exchange rates <svg class="i " aria-hidden="true"><use href="#i-chevron-right"/></svg></a></header>
+    <div class="dt-card"><table class="dt"><thead><tr><th>Currency</th><th class="r">PKR for 1 unit</th><th>Source</th><th>As of</th><th>Rate age</th></tr></thead><tbody>
+      <tr><td><b class="num">USD</b></td><td class="r num">278.40</td><td>Automatic</td><td class="num">Thu 26 Nov</td><td><span class="chip" data-status="fx:fresh"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>1 day old</span></td></tr><tr><td><b class="num">EUR</b></td><td class="r num">301.15</td><td>Automatic</td><td class="num">Thu 26 Nov</td><td><span class="chip" data-status="fx:fresh"><svg class="i " aria-hidden="true"><use href="#i-circle-check"/></svg>1 day old</span></td></tr><tr><td><b class="num">CNY</b></td><td class="r num">38.42</td><td>Entered by Usman Tariq</td><td class="num">Fri 13 Nov</td><td><span class="chip" data-status="fx:stale"><svg class="i " aria-hidden="true"><use href="#i-clock"/></svg>14 days old</span></td></tr><tr><td><b class="num">AED</b></td><td class="r num">75.80</td><td>Automatic</td><td class="num">Tue 6 Oct</td><td><span class="chip" data-status="fx:unusable"><svg class="i " aria-hidden="true"><use href="#i-circle-alert"/></svg>52 days old, not compared</span></td></tr>
+    </tbody></table></div></section>
+  <section class="fieldset" aria-labelledby="cph"><header style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--sp-4)"><div><h3 id="cph">Company profile</h3><p>Legal name, address, tax numbers and standard terms. Ask an admin to change them.</p></div><a class="btn" href="#">View <svg class="i " aria-hidden="true"><use href="#i-chevron-right"/></svg></a></header></section></div></main></div></div></div></div></section>
+</div>
+<script>
+(function(){
+  function fit(){document.querySelectorAll('.board[data-w]').forEach(function(b){
+    var inner=b.firstElementChild,w=+b.dataset.w,s=Math.min(1,b.clientWidth/w);
+    inner.style.width=w+'px';inner.style.transform='scale('+s+')';
+    b.style.height=Math.ceil(inner.offsetHeight*s)+'px';});}
+  addEventListener('resize',fit);addEventListener('load',fit);
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);
+  fit();
+  window.__fit=fit;
+})();
+(function(){
+  document.addEventListener('click',function(e){
+    var c=e.target.closest('[data-copy]');
+    if(c){var box=c.closest('.secret');var code=box&&box.querySelector('code');
+      try{navigator.clipboard.writeText(code.textContent).catch(function(){});}catch(x){}
+      if(box){box.classList.add('is-copied');}
+      c.innerHTML='<svg class="i" aria-hidden="true"><use href="#i-check"/></svg>Copied';
+      var ok=c.closest('.dlg')&&c.closest('.dlg').querySelector('[data-needs-copy]');if(ok){ok.removeAttribute('disabled');ok.classList.remove('is-disabled');}
+      return;}
+    var s=e.target.closest('.seg-c button:not([disabled])');
+    if(s){var g=s.parentElement;g.querySelectorAll('button').forEach(function(b){b.classList.toggle('is-on',b===s);});return;}
+    var r=e.target.closest('[data-replay]');
+    if(r){var t=r.closest('.cell-fig').querySelector('.toast');var cd=t.querySelector('.cd');t.classList.remove('is-done');
+      var old=cd.cloneNode(true);cd.replaceWith(old);runToast(t);return;}
+    var u=e.target.closest('.toast .t-undo');
+    if(u){var tt=u.closest('.toast');tt.classList.add('is-done');tt.querySelector('.t-body').innerHTML=tt.dataset.undone||'Undone';u.remove();return;}
+  });
+  function runToast(t){var n=t.querySelector('.t-undo .num');if(!n)return;var total=+t.dataset.secs||10,left=total;n.textContent=left+'s';
+    clearInterval(t._i);t._i=setInterval(function(){if(t.matches(':hover')||t.classList.contains('is-paused'))return;left--;if(left<=0){clearInterval(t._i);n.textContent='0s';t.classList.add('is-done');var u=t.querySelector('.t-undo');if(u)u.remove();var b=t.querySelector('.t-body');b.innerHTML=t.dataset.final||'Done';return;}n.textContent=left+'s';},1000);}
+  document.querySelectorAll('.toast[data-live]').forEach(runToast);
+})();
+</script>
+</body>
+</html>
