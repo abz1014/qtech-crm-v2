@@ -54,11 +54,29 @@ isOneToOne: false
       referencedRelation: "invoices"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "attachments_invoice_id_fkey"
+      columns: ["invoice_id"]
+isOneToOne: false
+      referencedRelation: "v_gst_register"
+      referencedColumns: ["invoice_id"]
+    },{
+      foreignKeyName: "attachments_invoice_id_fkey"
+      columns: ["invoice_id"]
+isOneToOne: false
+      referencedRelation: "v_invoice_state"
+      referencedColumns: ["invoice_id"]
+    },{
       foreignKeyName: "attachments_rfq_id_fkey"
       columns: ["rfq_id"]
 isOneToOne: false
       referencedRelation: "rfqs"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "attachments_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "v_rfq_state"
+      referencedColumns: ["rfq_id"]
     }
                   ]
                 },"audit_log": {
@@ -120,11 +138,23 @@ isOneToOne: false
       referencedRelation: "supplier_inquiries"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "clarifications_raised_by_inquiry_id_fkey"
+      columns: ["raised_by_inquiry_id"]
+isOneToOne: false
+      referencedRelation: "v_inquiry_state"
+      referencedColumns: ["inquiry_id"]
+    },{
       foreignKeyName: "clarifications_rfq_id_fkey"
       columns: ["rfq_id"]
 isOneToOne: false
       referencedRelation: "rfqs"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "clarifications_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "v_rfq_state"
+      referencedColumns: ["rfq_id"]
     }
                   ]
                 },"companies": {
@@ -172,6 +202,12 @@ isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "company_brands_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
       foreignKeyName: "company_brands_created_by_fkey"
       columns: ["created_by"]
 isOneToOne: false
@@ -198,6 +234,12 @@ isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "company_sites_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
       foreignKeyName: "company_sites_created_by_fkey"
       columns: ["created_by"]
 isOneToOne: false
@@ -223,6 +265,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "contacts_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
     },{
       foreignKeyName: "contacts_created_by_fkey"
       columns: ["created_by"]
@@ -262,11 +310,41 @@ isOneToOne: false
       referencedRelation: "orders"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "expenses_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "expenses_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "expenses_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "expenses_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
+    },{
       foreignKeyName: "expenses_payee_id_fkey"
       columns: ["payee_id"]
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "expenses_payee_id_fkey"
+      columns: ["payee_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
     },{
       foreignKeyName: "expenses_recurring_id_fkey"
       columns: ["recurring_id"]
@@ -300,6 +378,12 @@ isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "invoices_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
       foreignKeyName: "invoices_created_by_fkey"
       columns: ["created_by"]
 isOneToOne: false
@@ -311,6 +395,30 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "orders"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
     }
                   ]
                 },"order_costs": {
@@ -343,6 +451,30 @@ isOneToOne: false
 isOneToOne: true
       referencedRelation: "orders"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_costs_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: true
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_costs_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: true
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_costs_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: true
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_costs_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: true
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
     }
                   ]
                 },"order_engineers": {
@@ -363,6 +495,30 @@ isOneToOne: true
 isOneToOne: false
       referencedRelation: "orders"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_engineers_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_engineers_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_engineers_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_engineers_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
     },{
       foreignKeyName: "order_engineers_user_id_fkey"
       columns: ["user_id"]
@@ -408,6 +564,30 @@ isOneToOne: false
       referencedRelation: "orders"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "order_items_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_items_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_items_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "order_items_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
+    },{
       foreignKeyName: "order_items_rfq_item_id_fkey"
       columns: ["rfq_item_id"]
 isOneToOne: false
@@ -440,6 +620,12 @@ isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
       foreignKeyName: "orders_contact_id_fkey"
       columns: ["contact_id"]
 isOneToOne: false
@@ -463,6 +649,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "rfqs"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "v_rfq_state"
+      referencedColumns: ["rfq_id"]
     },{
       foreignKeyName: "orders_site_id_fkey"
       columns: ["site_id"]
@@ -501,6 +693,30 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "orders"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
     }
                   ]
                 },"recurring_expenses": {
@@ -559,6 +775,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "rfqs"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "rfq_items_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "v_rfq_state"
+      referencedColumns: ["rfq_id"]
     }
                   ]
                 },"rfqs": {
@@ -579,6 +801,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "rfqs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
     },{
       foreignKeyName: "rfqs_contact_id_fkey"
       columns: ["contact_id"]
@@ -630,11 +858,23 @@ isOneToOne: false
       referencedRelation: "rfqs"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "supplier_inquiries_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "v_rfq_state"
+      referencedColumns: ["rfq_id"]
+    },{
       foreignKeyName: "supplier_inquiries_supplier_id_fkey"
       columns: ["supplier_id"]
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
     }
                   ]
                 },"supplier_orders": {
@@ -662,17 +902,53 @@ isOneToOne: false
       referencedRelation: "supplier_inquiries"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "supplier_orders_inquiry_id_fkey"
+      columns: ["inquiry_id"]
+isOneToOne: false
+      referencedRelation: "v_inquiry_state"
+      referencedColumns: ["inquiry_id"]
+    },{
       foreignKeyName: "supplier_orders_order_id_fkey"
       columns: ["order_id"]
 isOneToOne: false
       referencedRelation: "orders"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "supplier_orders_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "supplier_orders_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "supplier_orders_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "supplier_orders_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
+    },{
       foreignKeyName: "supplier_orders_supplier_id_fkey"
       columns: ["supplier_id"]
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "supplier_orders_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
     }
                   ]
                 },"supplier_quote_lines": {
@@ -699,6 +975,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "supplier_inquiries"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "supplier_quote_lines_inquiry_id_fkey"
+      columns: ["inquiry_id"]
+isOneToOne: false
+      referencedRelation: "v_inquiry_state"
+      referencedColumns: ["inquiry_id"]
     },{
       foreignKeyName: "supplier_quote_lines_rfq_item_id_fkey"
       columns: ["rfq_item_id"]
@@ -750,7 +1032,307 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "v_cash_month": {
+                  Row: {
+                    "gross_received": number | null,"gst_received": number | null,"money_out": number | null,"month": string | null,"net_received": number | null,"unresolved_count": number | null,"unresolved_gross": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_company_roles": {
+                  Row: {
+                    "company_id": string | null,"is_customer": boolean | null,"is_prospect": boolean | null,"is_supplier": boolean | null,"name": string | null,"role": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_gst_register": {
+                  Row: {
+                    "company_id": string | null,"company_name": string | null,"courier_state": string | null,"fbr_exception": boolean | null,"fbr_state": string | null,"gross_amount": number | null,"gst_amount": number | null,"invoice_date": string | null,"invoice_id": string | null,"invoice_month": string | null,"needs_fbr_attention": boolean | null,"net_amount": number | null,"number": string | null,"order_id": string | null,"order_number": number | null,"psid": string | null,"tax_deposit_amount": number | null,"tax_deposited_on": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
+    }
+                  ]
+                },"v_inquiry_state": {
+                  Row: {
+                    "answers_to_relay": number | null,"blocked_state": string | null,"chase_count": number | null,"contact_state": string | null,"inquiry_id": string | null,"items_quoted": number | null,"items_total": number | null,"last_chased_on": string | null,"open_questions": number | null,"quote_received_on": string | null,"response_state": string | null,"rfq_id": string | null,"sent_on": string | null,"supplier_id": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "supplier_inquiries_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "rfqs"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "supplier_inquiries_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "v_rfq_state"
+      referencedColumns: ["rfq_id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    }
+                  ]
+                },"v_invoice_state": {
+                  Row: {
+                    "company_id": string | null,"courier_state": string | null,"fbr_exception": boolean | null,"fbr_state": string | null,"gross_amount": number | null,"gst_amount": number | null,"invoice_date": string | null,"invoice_id": string | null,"last_reminded_on": string | null,"needs_fbr_attention": boolean | null,"net_amount": number | null,"number": string | null,"order_id": string | null,"reminder_count": number | null,"reminder_state": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "invoices_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invoices_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
+    }
+                  ]
+                },"v_order_basis": {
+                  Row: {
+                    "basis": string | null,"g": number | null,"invoice_count": number | null,"invoice_gross": number | null,"invoice_net": number | null,"items_gross": number | null,"items_net": number | null,"n": number | null,"order_id": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_order_items_total": {
+                  Row: {
+                    "gross": number | null,"gst": number | null,"net": number | null,"order_id": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_order_money": {
+                  Row: {
+                    "actual_cost": number | null,"basis": string | null,"company_id": string | null,"costs_state": string | null,"data_trust": string | null,"due_on": string | null,"expected_cost": number | null,"gross_target": number | null,"margin": number | null,"margin_state": string | null,"net_sale": number | null,"order_id": string | null,"order_number": number | null,"overpaid_by": number | null,"owner_id": string | null,"payment_state": string | null,"receivable": number | null,"settled": number | null,"settled_ok": boolean | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_owner_id_fkey"
+      columns: ["owner_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"v_order_state": {
+                  Row: {
+                    "commissioning_state": string | null,"company_id": string | null,"data_trust": string | null,"goods_state": string | null,"gross": number | null,"gst": number | null,"invoiced": number | null,"invoicing_state": string | null,"is_done": boolean | null,"lifecycle": string | null,"net": number | null,"number": number | null,"order_id": string | null,"owner_id": string | null,"rfq_id": string | null,"site_id": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_owner_id_fkey"
+      columns: ["owner_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "rfqs"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "v_rfq_state"
+      referencedColumns: ["rfq_id"]
+    },{
+      foreignKeyName: "orders_site_id_fkey"
+      columns: ["site_id"]
+isOneToOne: false
+      referencedRelation: "company_sites"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"v_payment_net": {
+                  Row: {
+                    "amount": number | null,"basis": string | null,"counts_in_cash_net": boolean | null,"counts_in_target": boolean | null,"credited_user_id": string | null,"excluded_reason": string | null,"g": number | null,"gst_portion": number | null,"n": number | null,"net_portion": number | null,"order_id": string | null,"payment_id": string | null,"received_on": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "payments_in_credited_user_id_fkey"
+      columns: ["credited_user_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
+    }
+                  ]
+                },"v_rfq_state": {
+                  Row: {
+                    "bid_state": string | null,"clarification_state": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string | null,"days_to_due": number | null,"due_on": string | null,"floated": number | null,"is_overdue": boolean | null,"is_priority": boolean | null,"items_quoted": number | null,"items_total": number | null,"items_uncovered": number | null,"number": number | null,"outcome": string | null,"outcome_clash": boolean | null,"owner_id": string | null,"quoted_on": string | null,"received_on": string | null,"responders": number | null,"rfq_id": string | null,"sourcing_state": string | null,"to_ask": number | null,"to_relay": number | null,"waiting": number | null,"waiting_days": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "rfqs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "rfqs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "rfqs_owner_id_fkey"
+      columns: ["owner_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"v_target_progress": {
+                  Row: {
+                    "achieved_net": number | null,"behind_pace": number | null,"excluded_count": number | null,"gap": number | null,"on_pace_net": number | null,"quarter": number | null,"quarter_end": string | null,"quarter_start": string | null,"target_net": number | null,"user_id": string | null,"year": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                }
           }
           Functions: {
             "can_access_bucket":
