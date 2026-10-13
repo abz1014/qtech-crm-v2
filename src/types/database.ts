@@ -833,6 +833,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"snoozes": {
+                  Row: {
+                    "created_at": string,"id": string,"rule": string,"subject_id": string,"until_on": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"rule": string,"subject_id": string,"until_on": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"rule"?: string,"subject_id"?: string,"until_on"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "snoozes_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"supplier_inquiries": {
                   Row: {
                     "chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"notes": string | null,"rfq_id": string,"sent_on": string | null,"supplier_id": string
@@ -1338,11 +1358,62 @@ isOneToOne: false
             "can_access_bucket":
 { Args: { "bucket": string }; Returns: boolean
                            },
+"convert_rfq_to_order":
+{ Args: { "p_customer_po_number"?: string,"p_items"?: Json,"p_needs_commissioning"?: boolean,"p_order_id": string,"p_ordered_on"?: string,"p_payment_terms_days"?: number,"p_rfq_id": string }; Returns: string
+                           },
+"create_repeat_order":
+{ Args: { "p_customer_po_number"?: string,"p_from_order_id": string,"p_order_id": string,"p_ordered_on"?: string }; Returns: string
+                           },
 "current_user_role":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"float_rfq":
+{ Args: { "p_company_id": string,"p_contact_id"?: string,"p_customer_ref"?: string,"p_due_on"?: string,"p_items": Json,"p_mark_sent"?: boolean,"p_rfq_id": string,"p_site_id"?: string,"p_supplier_ids"?: (string)[] }; Returns: string
+                           },
+"merge_brands":
+{ Args: { "p_drop": string,"p_keep": string }; Returns: undefined
+                           },
+"merge_companies":
+{ Args: { "p_drop": string,"p_keep": string }; Returns: undefined
+                           },
 "model_tokens":
 { Args: { "t": string }; Returns: (string)[]
+                           },
+"my_target_progress":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "achieved_net": number,"behind_pace": number,"excluded_count": number,"gap": number,"on_pace_net": number,"quarter": number,"quarter_end": string,"target_net": number,"year": number
+            }[]
+                           },
+"my_target_progress_at":
+{ Args: { "p_at": string }; Returns: {
+              "achieved_net": number,"behind_pace": number,"excluded_count": number,"gap": number,"on_pace_net": number,"quarter": number,"quarter_end": string,"target_net": number,"year": number
+            }[]
+                           },
+"order_receivables":
+{ Args: { "p_order_id"?: string }; Returns: {
+              "balance": number,"company_id": string,"data_trust": string,"due_on": string,"gross_target": number,"is_overdue": boolean,"last_reminded_on": string,"order_id": string,"order_number": number,"overpaid_by": number,"owner_id": string,"payment_state": string,"reminder_count": number,"settled": number
+            }[]
+                           },
+"resolve_value_basis":
+{ Args: { "p_basis": string,"p_order_id": string }; Returns: undefined
+                           },
+"stamp_clarification_ask":
+{ Args: { "p_clarification_ids": (string)[] }; Returns: number
+                           },
+"stamp_fbr_psid":
+{ Args: { "p_invoice_ids": (string)[],"p_psid": string }; Returns: number
+                           },
+"stamp_payment_reminder":
+{ Args: { "p_invoice_ids": (string)[] }; Returns: number
+                           },
+"stamp_supplier_chase":
+{ Args: { "p_inquiry_id": string }; Returns: number
+                           },
+"stamp_tax_deposited":
+{ Args: { "p_invoice_ids": (string)[],"p_on"?: string }; Returns: number
+                           },
+"stamp_tcs_sent":
+{ Args: { "p_invoice_ids": (string)[],"p_on"?: string,"p_tcs_number"?: string }; Returns: number
                            },
 "today_pkt":
 { Args: { "ts"?: string }; Returns: string
