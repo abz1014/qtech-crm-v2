@@ -199,6 +199,292 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"expenses": {
+                  Row: {
+                    "amount_pkr": number,"category": string,"created_at": string,"created_by": string | null,"description": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string | null,"paid_on": string,"payee_id": string | null,"period": string | null,"recurring_id": string | null,"reference": string | null,"supplier_order_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount_pkr": number,"category": string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string | null,"paid_on"?: string,"payee_id"?: string | null,"period"?: string | null,"recurring_id"?: string | null,"reference"?: string | null,"supplier_order_id"?: string | null
+                  }
+                  Update: {
+                    "amount_pkr"?: number,"category"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string | null,"paid_on"?: string,"payee_id"?: string | null,"period"?: string | null,"recurring_id"?: string | null,"reference"?: string | null,"supplier_order_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "expenses_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "expenses_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "expenses_payee_id_fkey"
+      columns: ["payee_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "expenses_recurring_id_fkey"
+      columns: ["recurring_id"]
+isOneToOne: false
+      referencedRelation: "recurring_expenses"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "expenses_supplier_order_id_fkey"
+      columns: ["supplier_order_id"]
+isOneToOne: false
+      referencedRelation: "supplier_orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"invoices": {
+                  Row: {
+                    "client_received_on": string | null,"company_id": string | null,"copy_received_on": string | null,"created_at": string,"created_by": string | null,"gst_amount": number,"id": string,"invoice_date": string | null,"last_reminded_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"net_amount": number,"notes": string | null,"number": string | null,"order_id": string | null,"psid": string | null,"reminder_count": number,"tax_deposit_amount": number | null,"tax_deposited_on": string | null,"tcs_number": string | null,"tcs_sent_on": string | null,"updated_at": string,"wasif_receipt_on": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "client_received_on"?: string | null,"company_id"?: string | null,"copy_received_on"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount": number,"id"?: string,"invoice_date"?: string | null,"last_reminded_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"net_amount": number,"notes"?: string | null,"number"?: string | null,"order_id"?: string | null,"psid"?: string | null,"reminder_count"?: number,"tax_deposit_amount"?: number | null,"tax_deposited_on"?: string | null,"tcs_number"?: string | null,"tcs_sent_on"?: string | null,"updated_at"?: string,"wasif_receipt_on"?: string | null
+                  }
+                  Update: {
+                    "client_received_on"?: string | null,"company_id"?: string | null,"copy_received_on"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount"?: number,"id"?: string,"invoice_date"?: string | null,"last_reminded_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"net_amount"?: number,"notes"?: string | null,"number"?: string | null,"order_id"?: string | null,"psid"?: string | null,"reminder_count"?: number,"tax_deposit_amount"?: number | null,"tax_deposited_on"?: string | null,"tcs_number"?: string | null,"tcs_sent_on"?: string | null,"updated_at"?: string,"wasif_receipt_on"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "invoices_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invoices_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "invoices_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"order_costs": {
+                  Row: {
+                    "costs_complete_at": string | null,"costs_complete_by": string | null,"created_at": string,"created_by": string | null,"expected_cost_pkr": number | null,"order_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "costs_complete_at"?: string | null,"costs_complete_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"expected_cost_pkr"?: number | null,"order_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "costs_complete_at"?: string | null,"costs_complete_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"expected_cost_pkr"?: number | null,"order_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "order_costs_costs_complete_by_fkey"
+      columns: ["costs_complete_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_costs_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_costs_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: true
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"order_engineers": {
+                  Row: {
+                    "order_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "order_id": string,"user_id": string
+                  }
+                  Update: {
+                    "order_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "order_engineers_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_engineers_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"order_items": {
+                  Row: {
+                    "brand_id": string | null,"created_at": string,"created_by": string | null,"description": string,"family_id": string | null,"gst_rate": number,"id": string,"is_service": boolean,"legacy_flags": (string)[],"legacy_source": Json | null,"model_tokens": (string)[],"order_id": string,"position": number,"qty": number,"rfq_item_id": string | null,"supplier_order_id": string | null,"supplier_unit_price": number | null,"unit": string | null,"unit_price_net": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "brand_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"description": string,"family_id"?: string | null,"gst_rate"?: number,"id"?: string,"is_service"?: boolean,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"model_tokens"?: never,"order_id": string,"position"?: number,"qty"?: number,"rfq_item_id"?: string | null,"supplier_order_id"?: string | null,"supplier_unit_price"?: number | null,"unit"?: string | null,"unit_price_net": number
+                  }
+                  Update: {
+                    "brand_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"description"?: string,"family_id"?: string | null,"gst_rate"?: number,"id"?: string,"is_service"?: boolean,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"model_tokens"?: never,"order_id"?: string,"position"?: number,"qty"?: number,"rfq_item_id"?: string | null,"supplier_order_id"?: string | null,"supplier_unit_price"?: number | null,"unit"?: string | null,"unit_price_net"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "order_items_brand_id_fkey"
+      columns: ["brand_id"]
+isOneToOne: false
+      referencedRelation: "brands"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_items_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_items_family_id_fkey"
+      columns: ["family_id"]
+isOneToOne: false
+      referencedRelation: "brands"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_items_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_items_rfq_item_id_fkey"
+      columns: ["rfq_item_id"]
+isOneToOne: false
+      referencedRelation: "rfq_items"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "order_items_supplier_order_id_fkey"
+      columns: ["supplier_order_id"]
+isOneToOne: false
+      referencedRelation: "supplier_orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"orders": {
+                  Row: {
+                    "cancelled_on": string | null,"commissioning_done_on": string | null,"commissioning_planned_on": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_po_number": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"needs_commissioning": boolean,"notes": string | null,"number": number,"ordered_on": string | null,"owner_id": string | null,"payment_terms_days": number | null,"rfq_id": string | null,"site_id": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_contact_id_fkey"
+      columns: ["contact_id"]
+isOneToOne: false
+      referencedRelation: "contacts"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_owner_id_fkey"
+      columns: ["owner_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "rfqs"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "orders_site_id_fkey"
+      columns: ["site_id"]
+isOneToOne: false
+      referencedRelation: "company_sites"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payments_in": {
+                  Row: {
+                    "amount": number,"created_at": string,"created_by": string | null,"credited_user_id": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"received_on": string,"reference": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount": number,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"received_on"?: string,"reference"?: string | null
+                  }
+                  Update: {
+                    "amount"?: number,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"received_on"?: string,"reference"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payments_in_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_in_credited_user_id_fkey"
+      columns: ["credited_user_id"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_in_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"recurring_expenses": {
+                  Row: {
+                    "active": boolean,"amount": number,"category": string,"created_at": string,"created_by": string | null,"day_of_month": number | null,"id": string,"label": string,"notes": string | null,"start_month": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "active"?: boolean,"amount": number,"category": string,"created_at"?: string,"created_by"?: string | null,"day_of_month"?: number | null,"id"?: string,"label": string,"notes"?: string | null,"start_month"?: string | null
+                  }
+                  Update: {
+                    "active"?: boolean,"amount"?: number,"category"?: string,"created_at"?: string,"created_by"?: string | null,"day_of_month"?: number | null,"id"?: string,"label"?: string,"notes"?: string | null,"start_month"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "recurring_expenses_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"rfq_items": {
                   Row: {
                     "brand_id": string | null,"created_at": string,"created_by": string | null,"description": string,"family_id": string | null,"gst_rate": number,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"model_tokens": (string)[],"position": number,"qty": number,"quoted_lead_time": string | null,"quoted_unit_price_net": number | null,"rfq_id": string,"unit": string | null
@@ -313,6 +599,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"supplier_orders": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"currency": string | null,"delivered_on": string | null,"expected_on": string | null,"id": string,"inquiry_id": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"placed_on": string | null,"received_on": string | null,"reference": string | null,"supplier_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "supplier_orders_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "supplier_orders_inquiry_id_fkey"
+      columns: ["inquiry_id"]
+isOneToOne: false
+      referencedRelation: "supplier_inquiries"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "supplier_orders_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "supplier_orders_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"supplier_quote_lines": {
                   Row: {
                     "created_at": string,"created_by": string | null,"currency": string,"id": string,"in_stock": boolean | null,"inquiry_id": string,"lead_time": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"notes": string | null,"origin": string | null,"rfq_item_id": string,"unit_price": number
@@ -342,6 +666,32 @@ isOneToOne: false
       columns: ["rfq_item_id"]
 isOneToOne: false
       referencedRelation: "rfq_items"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"targets": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"note": string | null,"quarter": number,"target_net_pkr": number,"updated_at": string,"user_id": string,"year": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"note"?: string | null,"quarter": number,"target_net_pkr": number,"updated_at"?: string,"user_id": string,"year": number
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"note"?: string | null,"quarter"?: number,"target_net_pkr"?: number,"updated_at"?: string,"user_id"?: string,"year"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "targets_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "targets_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "users"
       referencedColumns: ["id"]
     }
                   ]
