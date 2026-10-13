@@ -2,9 +2,9 @@
 
 Status: FROZEN — approved by owner 2026-10-13
 
-Sources: original model + Revision 1 + Amendment A2 (2026-10-13) + Amendment A2b (2026-10-13)
+Sources: original model + Revision 1 + Amendment A2 (2026-10-13) + Amendment A2b (2026-10-13) + Amendment A3 (2026-10-13)
 
-This is one merged document: the planner's original model with Revision 1 applied in place. Section numbers are kept so tasks can cite them (§2.17, §5a, §10). Passages added or replaced by Revision 1 are marked "(Revision 1)" where practical. Passages added or changed by Amendment A2 are marked "(Amendment A2)". Passages added or changed by Amendment A2b (which reconciles the two A2 versions) are marked "(Amendment A2b)".
+This is one merged document: the planner's original model with Revision 1 applied in place. Section numbers are kept so tasks can cite them (§2.17, §5a, §10). Passages added or replaced by Revision 1 are marked "(Revision 1)" where practical. Passages added or changed by Amendment A2 are marked "(Amendment A2)". Passages added or changed by Amendment A2b (which reconciles the two A2 versions) are marked "(Amendment A2b)". Passages changed by Amendment A3 (minimal entry burden) are marked "(Amendment A3)"; where A3 conflicts with older text, A3 wins.
 
 
 Repo checked on `phase0/stabilise`. Claims are tagged **FACT** (seen in the repo or the brief), **INFERENCE**, **ASSUMPTION** or **PROPOSED**.
@@ -189,7 +189,7 @@ This is not a catalog: no models, SKUs or prices, and rows grow only when typed.
 | customer_ref | text | yes | — | S | Customer's RFQ number. Present on only 3 of 17, so optional. |
 | received_on | date | no | today (PKT) | S | |
 | due_on | date | yes | — | S | Bid deadline. Editable because it slips. A sort key and risk signal only. NULL is allowed for relationship enquiries. |
-| owner_id | uuid FK users RESTRICT | no* | — | S | The person who chases. *NULL allowed only with the legacy flag `owner_unknown`. |
+| owner_id | uuid FK users RESTRICT | no* | `auth.uid()` *(Amendment A3)* | S | The person who chases. *NULL allowed only with the legacy flag `owner_unknown`. |
 | is_priority | boolean | no | false | S | "TOP PRIORITY" (4 of 17 in the seed). One-tap sort boost. |
 | quoted_on | date | yes | — | S | When Q-Tech bid. Overwritten on re-send ("sent offer again"). |
 | closed_on | date | yes | — | S | Set by a human when the customer says no, or when the owner gives up. |
@@ -287,7 +287,7 @@ Examples:
 | first_asked_at | timestamptz | yes | — | S | Stamped the first time it goes into a "Copy questions for customer" bundle. |
 | last_asked_at | timestamptz | yes | — | S | Stamped on every bundle or chase. Drives "asked 6 days ago". |
 | ask_count | smallint | no | 0 | S | Incremented by `stamp_clarification_ask`. After 3 asks with no answer, Today offers "close as no reply to clarification" as a one-click choice. It never closes on its own. |
-| answer | text | yes | — | S | Q-Tech's rewritten answer, the one relayed to suppliers. The raw answer stays in email/WhatsApp, or is an attachment if it is an image. |
+| answer | text | yes | — | S | Q-Tech's rewritten answer, the one relayed to suppliers. The raw answer stays in email/WhatsApp, or is an attachment if it is an image. *(Amendment A3: text is optional; a photo alone is enough. See A3-1.)* |
 | answered_at | timestamptz | yes | — | S | Per question, so staged answers resolve piecemeal. |
 | withdrawn_at | timestamptz | yes | — | S | No longer relevant, e.g. that supplier was dropped. |
 | state | — | — | — | **D** | Not yet asked / asked-open / answered / withdrawn. |
@@ -306,7 +306,7 @@ Examples:
 | site_id | uuid FK sites SET NULL | yes | — | S | Delivery site; key for "same as last year". |
 | contact_id | uuid FK contacts SET NULL | yes | — | S | |
 | rfq_id | uuid FK rfqs RESTRICT | yes | — | S | NULL for WhatsApp and repeat orders. Not unique (see F). |
-| owner_id | uuid FK users RESTRICT | no* | — | S | The salesperson. *NULL only with flag `owner_unknown`. |
+| owner_id | uuid FK users RESTRICT | no* | `auth.uid()` *(Amendment A3)* | S | The salesperson. Carried across from the RFQ on conversion. *NULL only with flag `owner_unknown`. |
 | customer_po_number | text | yes | — | S | WhatsApp orders may get a PO later. |
 | ordered_on | date | no* | today (PKT) | S | PO date, or the date confirmed on WhatsApp. *NULL only with flag `undated`. Replaces `confirmed_date` and `customer_po_date`. |
 | payment_terms_days | integer | yes | — | S | CHECK ≥ 0. Drives the overdue rule. |
@@ -397,18 +397,18 @@ Line net, line GST and line gross are derived. Rounding: GST is rounded to whole
 | order_id | uuid FK orders RESTRICT | yes* | — | S | *Required for new rows (app). NULL only for unlinked legacy register rows. |
 | company_id | uuid FK companies RESTRICT | yes | — | S | Only used when `order_id` is NULL. CHECK (order_id IS NOT NULL OR company_id IS NOT NULL). |
 | number | text | no* | — | S | *NULL only with a legacy flag. Partial UNIQUE. |
-| invoice_date | date | no* | — | S | The GST-register clock. |
+| invoice_date | date | no* | `today_pkt()` *(Amendment A3)* | S | The GST-register clock. |
 | net_amount | numeric(14,2) | no | — | S | Legal figure; pre-filled from items. Stored because the invoice is the external truth FBR sees. |
 | gst_amount | numeric(14,2) | no | — | S | CHECK ≥ 0 and ≤ net_amount. |
-| copy_received_on | date | yes | — | S | TCS track step 1. Meaning to validate (§8). |
+| copy_received_on | date | yes | — | S | TCS track step 1. Meaning to validate (§8). *(Amendment A3: kept for now; verify against live data at the I06 import, see A3-3.)* |
 | tcs_sent_on | date | yes | — | S | TCS step 2. |
 | tcs_number | text | yes | — | S | Consignment number. |
-| client_received_on | date | yes | — | S | TCS step 4. |
+| client_received_on | date | yes | — | S | TCS step 4. *(Amendment A3: optional and not in the entry flow; no Today rule reads it. See A3-3.)* |
 | psid | text | yes | — | S | FBR track. |
 | wasif_receipt_on | date | yes | — | S | Replaces both the boolean and the date column. |
 | tax_deposited_on | date | yes | — | S | |
 | tax_deposit_amount | numeric(14,2) | yes | — | S | |
-| tax_deposit_bank | text | yes | — | S | |
+| ~~tax_deposit_bank~~ | — | — | — | — | **Dropped (Amendment A3, A3-2).** Use `notes`. |
 | notes | text | yes | — | S | |
 | last_reminded_on | date | yes | — | S | Stamped when someone copies a payment reminder. The Today item then drops away for 7 days. Only admin and sales can see it (engineers have no access to `invoices`). |
 | reminder_count | smallint | no | 0 | S |  |
@@ -434,7 +434,7 @@ created_at, created_by, legacy flags and legacy source as before.
 | Field | Type | Null | Default | Purpose |
 |---|---|---|---|---|
 | order_id | uuid FK orders RESTRICT | no | — | Payments are recorded against the order, because advances arrive before the invoice. |
-| received_on | date | no | — | The date cash is counted (cash-basis revenue), and the date that places the payment in a target quarter. |
+| received_on | date | no | `today_pkt()` *(Amendment A3)* | The date cash is counted (cash-basis revenue), and the date that places the payment in a target quarter. |
 | amount | numeric(14,2) | no | — | CHECK > 0. **Gross**: the money actually received, GST included. Customers pay the full invoice amount and deduct nothing (owner, FACT). |
 | credited_user_id | uuid FK users RESTRICT | yes | set from `orders.owner_id` when the payment is recorded | Whose target this payment counts towards. Copied once so that reassigning an order later doesn't rewrite past quarters. Admin can change it. NULL means unattributed (some legacy rows). |
 | reference | text | yes | — | Cheque or bank-transfer reference. |
@@ -447,7 +447,7 @@ The net portion of a payment is not stored; it is calculated by `v_payment_net` 
 
 | Field | Type | Null | Default | Purpose |
 |---|---|---|---|---|
-| paid_on | date | no | — | Cash-out clock. |
+| paid_on | date | no | `today_pkt()` *(Amendment A3)* | Cash-out clock. |
 | amount_pkr | numeric(14,2) | no | — | CHECK > 0. What left the bank. |
 | category | text | no | — | Free text with suggestions: Supplier payment, Freight, Clearing/Service, Commissioning – travel, Commissioning – subcontract, Commissioning – materials, Salaries, Utilities… The app maps known categories to procurement / commissioning / overhead. |
 | description | text | yes | — | |
@@ -737,7 +737,7 @@ Delete rules that matter:
 - Currency matches `^[A-Z]{3}$`.
 - Role, `close_reason`, brand `kind`, attachment bucket enums.
 - `close_reason IS NOT NULL` iff `closed_on IS NOT NULL` (a lost RFQ must carry a reason, as today).
-- `answer IS NOT NULL` iff `answered_at IS NOT NULL`.
+- `answer IS NULL OR answered_at IS NOT NULL` *(Amendment A3, A3-1; replaces "iff")*.
 - NOT (`answered_at` AND `withdrawn_at` both set).
 - `last_asked_at ≥ first_asked_at`.
 - Legacy escape hatches:
@@ -846,7 +846,7 @@ Delete rules that matter:
 | | Payment *(admin; sales through `order_receivables()`; hidden from engineers)* | unpaid / part / settled / overdue | settled means Σ`payments_in.amount` ≥ the gross target, allowing ₨1 for rounding. The gross target is the invoiced gross if any invoice exists, otherwise the gross from the items. Overdue means the earliest invoice date plus `payment_terms_days` is before today and the order isn't settled. |
 | | Costs *(admin only)* | provisional / complete | `order_costs.costs_complete_at`. Actual cost = Σ expenses tagged to the order. Expected cost = `order_costs.expected_cost_pkr`. |
 | | Data trust | ok / basis unknown / estimated dates | `legacy_flags`. |
-| **Invoice** | Courier (TCS) | not started / copy received / sent / delivered to client | `copy_received_on`, `tcs_sent_on`, `client_received_on`. |
+| **Invoice** | Courier (TCS) | not started / copy received / sent / delivered to client | `copy_received_on`, `tcs_sent_on`, `client_received_on` *(Amendment A3: the last is optional and not in the entry flow)*. |
 | | FBR | pending / generated / receipt received / deposited | The furthest step reached:<br>• deposited if `tax_deposited_on` is set<br>• receipt received if `wasif_receipt_on` is set<br>• generated if `psid` is set, or the row carries the legacy flag `fbr_generated_legacy`<br>• otherwise pending<br>If a later step is set without an earlier one (e.g. deposited with no PSID), it shows as the later step and is reported as an exception.<br>`needsFbrAttention` becomes: `tax_deposited_on` is empty AND the invoice month is before the current month. |
 | | Reminder (new; admin and sales only) | not reminded / reminded n× (last date) | `last_reminded_on`, `reminder_count`. |
 | **Company** | Role | customer / supplier / both / prospect | `v_company_roles`. |
@@ -1425,6 +1425,50 @@ S14 (the access-matrix test) and S16 (the remote anonymous-denial smoke test) no
 
 ---
 
+
+## Amendment A3: minimal entry burden (2026-10-13)
+
+Standing rule from the owner: logging must be as limited as possible, because if engineers waste time logging every detail the CRM becomes useless again. Required fields are the true minimum, dates default to today, and context pre-fills. The build-plan rule is FE-2 (`BUILD_PLAN.md`). Where A3 conflicts with text above, A3 wins. The owner delegated the calls on `tax_deposit_bank`, `client_received_on` and monthly batch stamping (`DECISIONS.md`).
+
+### Schema changes
+
+**A3-1. `clarifications` (§2.11).**
+- Replace CHECK (`answer IS NOT NULL` iff `answered_at IS NOT NULL`) with CHECK (`answer IS NULL OR answered_at IS NOT NULL`).
+- The app requires an answer **or** an attachment on the clarification before it stamps `answered_at`. This is app/RPC logic; the CHECK only forbids text without a stamp.
+- When only a photo was given, the relay text to suppliers reads "see attached photo".
+
+**A3-2. `invoices` (§2.16).** Drop `tax_deposit_bank`. Use `notes` instead.
+
+**A3-3. `invoices` dates (§2.16).**
+- `copy_received_on` is kept for now. Mark it "verify against live data at the I06 import; drop if unused or identical to `tcs_sent_on`".
+- `client_received_on` is kept as optional. It is not in the entry flow, and no Today rule reads it.
+
+**A3-4. Defaults and stamping RPCs.**
+- `rfqs.owner_id` and `orders.owner_id` DEFAULT `auth.uid()`. Converting an RFQ carries its owner across.
+- `payments_in.received_on`, `expenses.paid_on` and `invoices.invoice_date` DEFAULT `today_pkt()`.
+- `invoices.tax_deposit_amount` defaults to `gst_amount` when the deposit date is stamped (done inside the stamping RPC, not as a column default).
+- Batch stamping RPCs for the TCS and FBR tracks, each taking a set of invoice ids:
+  - sent by TCS today;
+  - PSID;
+  - deposited today.
+- Single-invoice stamping still works (the same RPCs with one id). GST, TCS and FBR steps are stamped in monthly batches.
+
+### App-behaviour notes (no schema change)
+
+- **Leg dates:** one next-step stamp button: Mark placed / Received today / Delivered today. Delivered fills `received_on` if it is empty.
+- **`expected_on`** is suggested from `placed_on` plus the upper bound of the chosen quote line's lead time.
+- **Engineer commissioning** is one tap: "Mark done today". The planned date is a separate small action. Scope, gate pass and site phone are **not** fields; use order notes and contacts.
+- **Missing FX rate** never blocks saving a price. The line shows "not compared, no rate".
+- **Price chips:** the last price sold to this customer and the last price quoted.
+- **`payment_terms_days`** defaults to the company's last order.
+- **PO incoterm and terms** default to the supplier's last PO, else `company_profile`.
+- **Invoice number** pre-fills as the next number in the series.
+- **Payment in:** amount = balance due, date = today.
+- **Expense context pre-fills:** from a leg, the category is supplier payment and the payee and leg are filled; from an order, the last category used.
+- **Close reason** is pre-filled from context.
+- **Supplier goods-chase text** includes `supplier_orders.reference`.
+
+---
 
 ### Critical Files for Implementation
 
