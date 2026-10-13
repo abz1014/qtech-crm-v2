@@ -1,6 +1,6 @@
 # Q-Tech CRM v2: build plan
 
-Status: APPROVED by owner 2026-10-13. Q1 = (a) real trial data kept; Q2 = (a) GitHub protected-environment secrets; Q3 deferred to go-live.
+Status: APPROVED by owner 2026-10-13. Q1 = (a) real trial data kept; Q2 = (a) GitHub protected-environment secrets; Q3 deferred to go-live. Amendment A1 appended (design direction, approved 2026-10-13).
 
 **Based on:** the approved data model (original document plus Revision 1) and the owner decisions you sent.
 **Facts checked in the old repo:**
@@ -364,3 +364,139 @@ Everything else has defaults: Supabase region (Mumbai), the report list (P01), a
 - C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\supabase\functions\create-user\index.ts
 - C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\supabase\migrations\seed_historical_data.sql
 - C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\src\lib\dates.ts
+
+---
+
+# Amendment A1 — Design direction (approved by owner 2026-10-13)
+
+> Correction (orchestrator): lucide is NOT yet installed in qtech-crm-v2 (F08 finding). D01 specifies the icon set; U01 installs it.
+
+# Build plan amendment: design direction and frontend quality
+
+The new design phase (PD) sits between P0 and P2. The owner signs off the look on mockups at two review gates before any primitive is built. The schema phase (P1) and the import track never wait for it. Each block below says which section of the build plan it replaces or extends.
+
+## §0: add choice 4
+
+> 4. **Design comes before code.** No UI code is written until the owner has approved the mockups (PD). Every frontend task invokes the `frontend-design:frontend-design` skill before writing code. The target feel is calm, precise and refined, in the spirit of Linear, the Stripe dashboard and the Vercel dashboard. The density stays, but it has to look deliberate and polished. No default shadcn look, and none of the old app's glass or glow.
+
+## §1 Folder structure: add under `qtech-crm-v2/docs/`
+
+```
+    docs/
+      DESIGN_SYSTEM.md        ← the spec P2 implements (written in PD, frozen at gate G2)
+      design/
+        tokens.css            ← SINGLE source of design tokens (CSS custom properties)
+        mockups/*.html        ← source of every approved artifact (self-contained, imports ../tokens.css)
+        screens/*.png         ← approved reference screenshots, desktop 1440 + mobile 375 where specified
+        ARTIFACTS.md          ← artifact link, version and approval date per screen
+```
+
+**How tokens get into the code:**
+- The design tasks write `docs/design/tokens.css` and never touch `src/`.
+- **U01** copies those tokens into `src/index.css` and maps them in `tailwind.config.ts`.
+- A CI token-parity script fails the build if any token value in `src/index.css` differs from `docs/design/tokens.css`.
+- So the code has exactly one source for tokens, and the designers never edit code.
+
+**Webfont:** if the design adds one, **self-host it** (e.g. `@fontsource`, a Latin subset, `font-display: swap`). Then the CSP keeps `font-src 'self'` and there is no third-party host to allow. This touches F08 and P04.
+
+## §2 Phases: insert a row between P0 and P2, and amend P2
+
+| Phase | Goal | Exit criteria |
+|---|---|---|
+| **PD Design direction** | The owner approves the visual direction and the high-fidelity mockups of the key screens. | Both gates are passed: G1 (direction) and G2 (all screens). Approval is recorded in `docs/DECISIONS.md`. Every approved artifact has its HTML source committed. `DESIGN_SYSTEM.md` is frozen. |
+| P2 UI primitives (amended) | Build the approved system exactly. | Exit criteria as before, plus: the gallery matches the mockups side by side, and visual-regression baselines are committed. |
+
+## §3: new task group, PD Design direction
+
+**Rules that apply to every D task:**
+
+1. **Invoke the skills first.** Invoke `frontend-design:frontend-design` and the `artifact-design` skill before designing anything.
+2. **Publish as a Claude Design artifact.** The owner must be able to view it and comment from any device.
+3. **Commit the source.** The HTML/CSS goes to `docs/design/mockups/`; the link and version go to `ARTIFACTS.md`.
+4. **Data is realistic but fictionalised.** Use instrumentation brands, PKR amounts, PO and part numbers, and the shapes of the seed data. **Do not use real customer names** in artifacts that may be visible by link (see risk D-R4).
+5. **Brand inputs are fixed:**
+   - deep green **#1a7b46** for primary actions and text
+   - brand green **#429446** for non-text only (focus, active state, logo)
+   - teal for success
+   - light theme by default
+   - 4px radius
+   - monospace with tabular figures for all numbers and identifiers
+6. **What the designer may refine:** neutrals, the type scale, and a single webfont.
+
+| ID | Deliverable | Acceptance | Deps | ∥ |
+|---|---|---|---|---|
+| D01 | **Design system spec.** `DESIGN_SYSTEM.md` and `tokens.css` covering:<br>• type scale (sizes, weights, line heights; mono and tabular rules)<br>• 4px spacing rhythm<br>• elevation (hairlines first; at most 2 shadow levels, used only for overlays)<br>• neutral ramp<br>• semantic tones for **every §5 status value**<br>• focus ring<br>• motion (durations, easing; transform and opacity only; honours `prefers-reduced-motion`)<br>• icons: **lucide** (already a dependency), one stroke width, defined sizes<br>• density: one default; DataTable also gets a compact mode<br>A spec-sheet artifact shows all of it. | • Contrast table: every text/background pair meets WCAG AA.<br>• The fixed brand inputs are honoured.<br>• Every status value in the U05 registry has a tone.<br>• No token is left unused or duplicated. | F07, F09 | a |
+| D02 | **Today, in two alternative directions.** Both stay within D01, so the owner chooses rather than iterates from scratch. Each shows:<br>• populated, with the clarification collision line and the target tile<br>• empty (the goal state)<br>• loading (skeleton)<br>• error<br>• mobile at 375px | All 5 states in both directions. The collision line reads cleanly at 1440 and at 375. | D01 | a* |
+| **G1** | **Owner gate: direction.** The owner comments on D01 and D02 and picks one direction. At most 2 iteration rounds. | Approval quote, date and artifact versions recorded in `DECISIONS.md`. | D01, D02 | — |
+| D03 | **Intake and float, the 30-second flow,** as a storyboard. Frames:<br>• empty<br>• company typed (with the inline create)<br>• items pasted and split into rows<br>• suggestions with plain reasons; only "supplied before" is ticked<br>• the draft, with `Spec:` visibly left blank<br>• "Copy & mark floated to N" with the 10-second undo toast | • The interaction count is annotated and comes to ≤ 15.<br>• No numeric scores anywhere. | G1 | b |
+| D04 | **RFQ detail.** Shows:<br>• items with coverage (uncovered item flagged)<br>• inline supplier reply rows (price, currency, lead time, stock), lowest price marked, "can't quote" reasons<br>• clarifications panel (to ask / asked / answered / relay pending), an answer with an image attachment<br>• bid and close actions<br>States: empty, loading, error. Mobile at 375px. | • Reply capture has no modal.<br>• All 3 states are shown.<br>• Mobile layout is usable: one column, sticky actions. | G1 | b |
+| D05 | **Order detail with its status dimensions.** Shows items with GST per line, procurement legs, commissioning, and each dimension's badges. Two role variants: admin (with the margin panel) and engineer (no money shown anywhere). | The engineer variant contains no money figure apart from sale and supplier prices (per Revision 1 §10). | G1 | b |
+| D06 | **Money / GST register (admin).** Shows the register table with the TCS and FBR tracks, receivables, the cash-month summary, and the margin panel with the provisional and basis-unknown marks. Also the sales variant: invoices plus receivables only. | • Money is shown as net / GST / gross everywhere.<br>• Numbers align on tabular figures. | G1 | b |
+| D07 | **Login and Team screen.** Shows the login (no "forgot password"; it says "ask your admin"), the Team list, the create dialog with the password shown once, deactivation confirm, and role change. | Covers the full A04 flow. | G1 | b |
+| D08 | **Component states sheet**, the spec P2 builds against. Shows every state of: Dialog, DataTable (dense and compact, sorted, empty, loading), StatusBadge (all tones), Money variants, Form (validation, unique-violation, submitting), the ⌘K palette, toast with undo, and the empty-state pattern. | Every primitive state that appears in D02–D07 also appears here. | G1 | b |
+| **G2** | **Owner gate: all screens.** The owner reviews D03–D08 together, as one batch. At most 2 rounds. | Approval recorded in `DECISIONS.md`. | D03–D08 | — |
+| D09 | **Freeze and hand-off.** Commit the final HTML; export reference PNGs to `screens/`; freeze `DESIGN_SYSTEM.md`; write a screen → primitive inventory; fill `ARTIFACTS.md`. | • Every approved artifact version has its source committed.<br>• The inventory names a primitive for every UI element. | G2 | — |
+
+*D01 and D02 run as one task or back to back, since D02 depends on D01.
+
+## §3 P2: amended acceptance criteria
+
+These criteria are added to every U task:
+
+- **U-std rules:**
+  - (i) Invoke the `frontend-design:frontend-design` skill before writing code.
+  - (ii) Build to `DESIGN_SYSTEM.md` and D08. No ad hoc colours, sizes or shadows; lint enforces this.
+  - (iii) The PR includes Playwright screenshots of the primitive beside the matching D08 reference PNG, at the same viewport.
+  - (iv) Every state shown in D08 is implemented.
+
+| ID | Change |
+|---|---|
+| U01 | The **only task that writes tokens into code**: from `docs/design/tokens.css` into `src/index.css` and `tailwind.config.ts`. Adds the CI token-parity check. Self-hosts the webfont if D01 chose one. Lint also bans arbitrary colours (`bg-[#…]`) and shadows outside the tokens. |
+| U02–U08 | Plus U-std. Acceptance now reads "matches D08 side by side; any deviation is listed in the PR and approved by the orchestrator". Deps: **G2/D09** as well as U01. |
+| U09 | The gallery covers every D08 state. **Visual-regression baselines** are committed (Playwright `toHaveScreenshot` on the gallery at 1440 and 375). Later changes to a primitive must update a baseline deliberately. axe still shows zero violations. |
+
+## §3 P3–P7: standing rule FE-1
+
+Add this at the top of P3:
+
+> **FE-1 (applies to A03, A04, R02, R05, R06, R07, R09, R10, R11, R12, O01–O04, O06, M01–M06, M07 (panel), P01, P02, P04, and any future UI task). Workers must not skip it.**
+> 1. Invoke `frontend-design:frontend-design` before writing UI code, and follow it.
+> 2. Build to the approved mockup (D02–D07). A screen that has no mockup (RFQ board, orders list, companies, expenses, targets, reports) is composed from `DESIGN_SYSTEM.md` and the nearest approved mockup.
+>    - If it needs a **pattern that isn't in the system**, the worker publishes a small delta artifact and gets the owner's approval first.
+>    - Otherwise no new design review is needed.
+> 3. Use primitives and tokens only. The lint rules from U01 apply.
+> 4. Empty, loading and error states are required on every screen.
+> 5. The PR includes desktop screenshots at 1440. Today, RFQ detail and intake also need mobile screenshots at 375; every other screen must work at 768. Each screen gets a Playwright screenshot baseline.
+> 6. Review gate: the orchestrator checks each PR against the mockup. Any deviation is listed in the PR and either fixed or accepted explicitly.
+
+Two existing tasks also change:
+- **P04:** add a polish pass (spacing, alignment and motion audit against `DESIGN_SYSTEM.md`) and confirm the CSP needs no third-party font host.
+- **F08:** note that the CSP will be revisited if a webfont is chosen, but self-hosting means no change is needed.
+
+## §2/§3 Dependencies: what PD blocks and what proceeds
+
+| Blocked by PD | Proceeds in parallel with PD (no design dependency) |
+|---|---|
+| **G2/D09** blocks all of U01–U09, and therefore every screen task in P3–P7. | P0 apart from F07 (F07 *feeds* PD). |
+| **D07** blocks A03 (login) and A04 (Team). | **All of P1 (S01–S16)**. |
+| | A01, A02, A05. |
+| | Pure-logic tasks R03, R04, R08, and the rule functions inside R11. Their UI wiring waits for U. |
+| | R13 (backups). |
+| | I01–I05 (import track). |
+
+**Revised critical path:** F07 → D01/D02 → G1 → D03–D08 → G2 → D09 → U01 → U02–U08 → A03/A04 and the P4 screens. P1 runs alongside and must finish before R05.
+
+## §7 Risks: add these rows
+
+| # | Risk | Mitigation |
+|---|---|---|
+| D-R1 | Owner review bandwidth stalls PD | • Only **2 gates**, and reviews are batched (G2 reviews 6 artifacts at once).<br>• At most 2 rounds per gate. After that the orchestrator proposes the final version and the owner approves or rejects.<br>• Comments go directly on the artifacts, from any device.<br>• P1 and the import track keep the build moving in the meantime. |
+| D-R2 | "Beautiful" becomes open-ended scope creep | • Definition of done is "matches the approved mockup and `DESIGN_SYSTEM.md`".<br>• New patterns need a small delta artifact.<br>• Polish beyond the mockups is limited to the single P04 pass.<br>• No animation unless it carries meaning (state change, undo, focus). |
+| D-R3 | Code drifts away from the mockups | • Token-parity check in CI.<br>• Gallery and screen screenshot baselines.<br>• Side-by-side screenshots required in every PR. |
+| D-R4 | Published artifacts expose real customer and supplier relationships | • Fictionalised but realistic data in every mockup.<br>• Check artifact visibility settings before sharing links. |
+| D-R5 | Visual polish costs performance (webfont, motion, effects) | • Self-hosted, subset webfont.<br>• Motion uses transform and opacity only.<br>• The P04 bundle budget (≤ 300 KB gzip initial JS) and Lighthouse checks are unchanged. |
+| D-R6 | Density and beauty conflict on data-heavy screens (register, RFQ detail) | • D01 defines a compact mode for DataTable only.<br>• D04 and D06 are the stress tests: if they work at 1440 with real-length data, the system holds. |
+
+## §8 Open questions
+
+None added. The webfont is the designer's call within D01, self-hosted by default. Artifact visibility is handled under D-R4.

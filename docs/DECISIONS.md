@@ -21,3 +21,8 @@ Changes to `DATA_MODEL.md` need an entry here first.
 - 2026-10-13: The Phase 4 trial uses real data, which is kept; backups are live before the trial starts.
 - 2026-10-13: The new project's credentials are stored as GitHub protected-environment secrets.
 - 2026-10-13: The owner signs off scope. There is no fixed deadline.
+- 2026-10-13: Frontend quality: every UI task invokes the `frontend-design` skill. Design comes before code: the owner approves mockups (Claude Design artifacts) at two gates before UI primitives are built. Target feel is calm, precise and refined (Linear / Stripe / Vercel), not a default template and not the old glass/glow look.
+- 2026-10-13: Any webfont is self-hosted; the CSP keeps `font-src 'self'`. The Google Fonts allowances in `vercel.json` are removed in P7 if unused.
+- 2026-10-13: CSP `connect-src` and `img-src` currently allow `*.supabase.co`; P7 tightens them to the exact new project host.
+- 2026-10-13: The FBR exception rule in `src/lib/fbr.ts` also flags "deposited without Wasif receipt". Whether the receipt always precedes the deposit is unverified; check against live data in import task I06 and narrow the rule if it produces false exceptions.
+- 2026-10-13: Brand colours: deep green #1a7b46 for primary and green text; brand green #429446 for non-text only; success is teal.
