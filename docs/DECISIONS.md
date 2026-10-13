@@ -55,3 +55,4 @@ Changes to `DATA_MODEL.md` need an entry here first.
 - 2026-10-13 (A2b): Kept from version 1, unchanged: 28 tables; `purchase_orders` as its own table with a lock trigger; PDFs stored in `generated-docs`, with the snapshot as a reprint fallback; the chase counters and escalation suggestions; only "supplied this item before" pre-ticks; memory never reorders suggestions; `users.job_title`.
 - 2026-10-13 (A2b): Task IDs reconciled. Two new tasks: R23 (nightly FX fetch) and R24 (real-device share-in test). All other version-2 tasks are absorbed into existing IDs.
 - 2026-10-13 (A2b, orchestrator): FX-capture trigger skips imported rows (legacy_source set) rather than being disabled during import.
+- 2026-10-13: Supabase auth configured by the owner: public sign-ups off, email confirmation off. Admins create every account.

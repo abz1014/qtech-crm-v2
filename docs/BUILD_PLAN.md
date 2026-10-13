@@ -731,6 +731,7 @@ ID mapping for reviewers. Every v2-only ID is absorbed, so no duplicates remain:
 | S13 | Apply A3-4: `convert_rfq_to_order` carries `owner_id` across (and `orders.owner_id` DEFAULT `auth.uid()`); batch stamping RPCs for the TCS and FBR tracks (sent by TCS today, PSID, deposited today) over a set of invoice ids, with `tax_deposit_amount` defaulting to `gst_amount` when the deposit date is stamped. Single-invoice stamping still works. |
 | R07 | No blocking rate prompt: a missing FX rate never blocks saving a price; the line shows "not compared, no rate". |
 | R09 | Photo-only answers: an answer or an attachment is enough to stamp answered; the relay text reads "see attached photo". Photo answer is at most 3 taps, 0 typed. |
+| R16 | Supplier goods-chase text includes `supplier_orders.reference` when set. |
 | R19 | Price chips: the last price sold to this customer and the last price quoted. |
 | O01 | Terms default: `payment_terms_days` defaults to the company's last order. |
 | O03 | Stamp buttons per leg (Mark placed / Received today / Delivered today; Delivered fills `received_on` if empty). `expected_on` suggested from `placed_on` plus the upper bound of the chosen quote line's lead time. Engineer commissioning is one tap, "Mark done today"; the planned date is a separate small action; no scope, gate pass or site phone fields. |
