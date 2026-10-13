@@ -21,3 +21,7 @@ Private Claude artifacts (standalone builds: tokens, CSS, icons and logos inline
 | Q-Tech CRM — G2 Capture (share-in) | https://claude.ai/artifact/QHMh9Gzahykh6m1tkFrnt1 | `mockups/g2-capture.html` |
 
 Open the files locally through any static server rooted at the repo (the pages reference `../tokens.css`, `mockup.css` and `public/brand/*`).
+
+## Revision note: Gate 2 entry trim (design/g2-entry-trim)
+
+The Order detail, Money, RFQ detail, Capture, Company page and Chase texts mockups were revised to cut entry burden. Each flow frame now carries a tap-count annotation. New frames: month stamping, record payment, add expense, create invoice (Money) and Won: create the order (RFQ detail); frame e, answer with a photo (Capture). Shared styles live in `mockups/mockup.css`. The artifact URLs above are unchanged; republish the six affected sources after merging.
