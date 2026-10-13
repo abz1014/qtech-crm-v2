@@ -80,9 +80,9 @@ select ok((select gross_target = 1180 and settled = 0 and balance = 1180 and due
                   and payment_state = 'unpaid' and last_reminded_on is null and reminder_count = 0
            from public.order_receivables('a1000000-0000-4000-8000-000000000002')),
   'not invoiced: gross from the items, no due date, never overdue, never reminded');
-select ok((select payment_state = 'settled' and not is_overdue and balance = 0
+select ok((select payment_state = 'settled' and not is_overdue and balance = 1
            from public.order_receivables('a1000000-0000-4000-8000-000000000003')),
-  'paid within Rs 1 is settled and cannot be overdue');
+  'paid within Rs 1 is settled and cannot be overdue (the Re 1 stays in the balance, as in v_order_money)');
 select ok((select payment_state = 'settled' and balance = 0 and overpaid_by = 320
            from public.order_receivables('a1000000-0000-4000-8000-000000000004')),
   'over-paid: balance 0, the excess reported');
