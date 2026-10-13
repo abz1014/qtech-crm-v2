@@ -1,5 +1,5 @@
 begin;
-select plan(94);
+select plan(95);
 
 -- Fixture users come from supabase/seed.sql.
 -- admin a0..01, sales a0..02, engineer a0..03, deactivated a0..04
@@ -201,8 +201,12 @@ select throws_ok($$select public.convert_rfq_to_order('a1000000-0000-4000-8000-0
 select throws_ok($$select public.convert_rfq_to_order('a1000000-0000-4000-8000-000000000002', 'd0000000-0000-4000-8000-000000000001',
                      '[{"rfq_item_id":"d1000000-0000-4000-8000-000000000005"}]'::jsonb)$$,
   '22023', null, 'an item from another RFQ is refused');
-select throws_ok($$select public.convert_rfq_to_order('a1000000-0000-4000-8000-000000000002', 'd0000000-0000-4000-8000-000000000002')$$,
-  '23514', null, 'a closed RFQ cannot be converted');
+select lives_ok($$select public.convert_rfq_to_order('a1000000-0000-4000-8000-000000000008', 'd0000000-0000-4000-8000-000000000002')$$,
+  'a closed RFQ can still be converted');
+select ok((select closed_on is null and close_reason is null and close_note is null
+           from public.rfqs where id = 'd0000000-0000-4000-8000-000000000002')
+      and (select count(*) = 1 from public.orders where rfq_id = 'd0000000-0000-4000-8000-000000000002'),
+  'converting reopened the RFQ (closed_on, close_reason, close_note cleared) and created the order');
 select throws_ok($$select public.convert_rfq_to_order('a1000000-0000-4000-8000-000000000002', gen_random_uuid())$$,
   'P0002', null, 'an unknown RFQ is refused');
 select is((select count(*)::int from public.orders where id = 'a1000000-0000-4000-8000-000000000002'), 0,

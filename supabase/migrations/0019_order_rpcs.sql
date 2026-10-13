@@ -138,8 +138,10 @@ begin
   if not found then
     raise exception 'RFQ % not found', p_rfq_id using errcode = 'P0002';
   end if;
+  -- A customer may send the PO weeks after the RFQ was closed (e.g. "no reply"). Converting reopens it in the
+  -- same transaction, so there is no separate reopen step; audit_log records the update.
   if v_rfq.closed_on is not null then
-    raise exception 'RFQ is closed; reopen it before converting it to an order' using errcode = '23514';
+    update public.rfqs set closed_on = null, close_reason = null, close_note = null where id = p_rfq_id;
   end if;
 
   v_sel := coalesce(
