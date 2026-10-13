@@ -1,0 +1,54 @@
+name: DB
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Start local Supabase (db, auth, rest, storage)
+        run: |
+          start=$(date +%s)
+          npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime
+          echo "supabase start took $(( $(date +%s) - start ))s"
+
+      - name: Rebuild database from zero (all migrations)
+        run: npx supabase db reset --local
+
+      - name: Lint database (fail on error)
+        run: npx supabase db lint --local --level warning --fail-on error
+
+      - name: pgTAP tests
+        run: npx supabase test db
+
+      - name: Generate types
+        run: npx supabase gen types typescript --local > "$RUNNER_TEMP/types.ts"
+
+      - name: Upload generated types
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-types
+          path: ${{ runner.temp }}/types.ts
+          if-no-files-found: ignore
+
+      - name: Generated types match src/types/database.ts
+        run: diff -u src/types/database.ts "$RUNNER_TEMP/types.ts"
+
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop --no-backup
