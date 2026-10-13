@@ -1,5 +1,5 @@
 # Q-Tech CRM v2 - Supabase CLI config (LOCAL / CI use only).
-# Remote project ref: gufnutjoapgbqeqtayst (Mumbai, ap-south-1).
+# Remote project ref: yafbphagorydbitfgfmg (Singapore, ap-southeast-1).
 # Remote changes happen ONLY via `supabase db push` from the protected CI job.
 # Never edit the schema in the Supabase dashboard.
 # No SMTP is configured on purpose: the app sends no email at all.

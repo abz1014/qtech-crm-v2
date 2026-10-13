@@ -23,13 +23,46 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            [_ in never]: never
+            "audit_log": {
+                  Row: {
+                    "action": string,"changed_at": string,"changed_by": string | null,"id": string,"new_value": Json | null,"old_value": Json | null,"record_id": string,"table_name": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action": string,"changed_at"?: string,"changed_by"?: string | null,"id"?: string,"new_value"?: Json | null,"old_value"?: Json | null,"record_id": string,"table_name": string
+                  }
+                  Update: {
+                    "action"?: string,"changed_at"?: string,"changed_by"?: string | null,"id"?: string,"new_value"?: Json | null,"old_value"?: Json | null,"record_id"?: string,"table_name"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"users": {
+                  Row: {
+                    "created_at": string,"deactivated_at": string | null,"id": string,"job_title": string | null,"name": string,"role": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"deactivated_at"?: string | null,"id": string,"job_title"?: string | null,"name": string,"role": string
+                  }
+                  Update: {
+                    "created_at"?: string,"deactivated_at"?: string | null,"id"?: string,"job_title"?: string | null,"name"?: string,"role"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                }
           }
           Views: {
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "current_user_role":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
+"today_pkt":
+{ Args: { "ts"?: string }; Returns: string
+                           }
           }
           Enums: {
             [_ in never]: never
