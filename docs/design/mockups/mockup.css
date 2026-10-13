@@ -175,3 +175,10 @@ a:hover { color: var(--primary-hover); text-decoration: underline; text-underlin
 .ln .price-chips { margin-top: 6px; flex-direction: column; align-items: flex-start; gap: 4px; }
 .ln .price-chip { border-radius: var(--radius); text-align: left; }
 .fld .src { font-weight: var(--weight-regular); }
+.ln .d .price-chips { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-top: 6px; }
+.ln .d .price-chips .price-chip { display: block; max-width: 100%; padding: 3px 10px; border-radius: var(--radius); text-align: left; text-wrap: balance; font-size: var(--text-xs); line-height: 16px; color: var(--fg-2); }
+.ln .d .price-chips .price-chip b { font-family: var(--font-mono); font-weight: var(--weight-medium); color: var(--fg); }
+@media (max-width: 480px) {
+  .doc { overflow-x: clip; }
+  table.cmp { display: block; overflow-x: auto; max-width: 100%; }
+}
