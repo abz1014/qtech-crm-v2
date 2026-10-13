@@ -2,9 +2,9 @@
 
 Status: FROZEN — approved by owner 2026-10-13
 
-Sources: original model + Revision 1
+Sources: original model + Revision 1 + Amendment A2 (2026-10-13)
 
-This is one merged document: the planner's original model with Revision 1 applied in place. Section numbers are kept so tasks can cite them (§2.17, §5a, §10). Passages added or replaced by Revision 1 are marked "(Revision 1)" where practical.
+This is one merged document: the planner's original model with Revision 1 applied in place. Section numbers are kept so tasks can cite them (§2.17, §5a, §10). Passages added or replaced by Revision 1 are marked "(Revision 1)" where practical. Passages added or changed by Amendment A2 are marked "(Amendment A2)".
 
 
 Repo checked on `phase0/stabilise`. Claims are tagged **FACT** (seen in the repo or the brief), **INFERENCE**, **ASSUMPTION** or **PROPOSED**.
@@ -21,7 +21,7 @@ Evidence I relied on beyond the brief:
 
 ---
 
-## 1. Entity list (24 tables, down from 28)
+## 1. Entity list (28 tables: 24 after Revision 1, plus 4 added by Amendment A2)
 
 | # | Table | Purpose |
 |---|---|---|
@@ -49,14 +49,23 @@ Evidence I relied on beyond the brief:
 | 22 | `audit_log` | Append-only change history. Kept as it is today. |
 | 23 | `order_costs` | Admin-only cost data for an order, split off `orders`: the expected cost and the "costs complete" mark. |
 | 24 | `targets` | Quarterly target per person, measured in net cash received. |
+| 25 | `fx_rates` | PKR rate per currency per day. Used only to compare and display prices. |
+| 26 | `quotations` | Issued customer quotation: an unchangeable snapshot with a number and revision. The PDF is stored. |
+| 27 | `purchase_orders` | Issued supplier PO for one procurement leg: an unchangeable snapshot in the supplier's currency. The PDF is stored. |
+| 28 | `company_profile` | One row holding Q-Tech's letterhead and legal details, used by the PDFs and text generators. |
 
 Derived objects. All views use `security_invoker = true`. **Every view that exposes money also carries an explicit `current_user_role()` filter.** Underlying row security alone is not enough: if a user can't see some of the rows a view sums, the view returns a wrong number rather than nothing.
 
-- Views: `v_company_roles`, `v_rfq_state`, `v_inquiry_state`, `v_order_state`, `v_invoice_state`, `v_gst_register`.
+- Views: `v_company_roles`, `v_rfq_state`, `v_inquiry_state`, `v_order_state`, `v_invoice_state`, `v_gst_register`. *(Amendment A2: plus `v_fx_latest`, `v_supplier_activity`, `v_supplier_stats`.)*
 - Admin-only views: `v_order_money`, `v_cash_month`, `v_payment_net`, `v_target_progress`.
 - Two narrow functions that run with owner rights, so they can read money tables the caller can't (`SECURITY DEFINER`, `STABLE`, fixed `search_path`; EXECUTE granted to `authenticated`, revoked from `public`/`anon`):
   - `order_receivables()`: payment status for admin and sales only.
   - `my_target_progress()`: the caller's own target, for any active user.
+- *(Amendment A2)* Added derived objects:
+  - `v_fx_latest`
+  - `v_supplier_activity`
+  - `v_supplier_stats`
+  - the function `supplier_item_memory()` (security invoker)
 
 The work list is computed in app code from these views, with snoozes subtracted.
 
@@ -97,6 +106,7 @@ S = stored, D = derived.
 | role | text | no | — | S | CHECK in ('admin','sales','engineer'). Read by `current_user_role()`. |
 | deactivated_at | timestamptz | yes | NULL | S | When set, `current_user_role()` returns NULL, so RLS fails closed. The account is also banned in auth. |
 | created_at | timestamptz | no | now() | S | |
+| job_title | text | yes | — | S | Signatory line on quotation and PO PDFs. Set through the `admin-users` function. |
 
 - **Cut:** `email`. It lives in `auth.users`, and the admin Edge Function returns it, so keeping a copy would only drift. `password` is already gone.
 - **Edge Function `admin-users`** (extends `create-user`; service role; caller must be an active admin). Actions:
@@ -209,6 +219,7 @@ This is not a catalog: no models, SKUs or prices, and rows grow only when typed.
 | qty | numeric(12,3) | no | 1 | CHECK > 0. |
 | unit | text | yes | — | "pcs", "m". Matters for cable. |
 | quoted_unit_price_net | numeric(14,2) | yes | — | Optional bid price. Pre-fills the order on conversion. Quote total is derived from it. |
+| gst_rate | numeric(5,2) | no | 18 | CHECK 0–100. The quotation needs totals per line. `convert_rfq_to_order` copies it to `order_items.gst_rate`. |
 
 **Cut:** `target_price` (all NULL in the seed), and a separate `model` column (text search on description covers it).
 
@@ -223,6 +234,7 @@ This is not a catalog: no models, SKUs or prices, and rows grow only when typed.
 | no_offer_on | date | yes | — | S | "Floated but could not find offer". A real outcome, distinct from never floated (no row) and from silence. |
 | last_relayed_at | timestamptz | yes | — | S | Stamped by "Copy answers for this supplier". Drives "supplier X waiting". |
 | notes | text | yes | — | S | |
+| chase_count | smallint | no | 0 | S | Incremented by `stamp_supplier_chase`. After 2 chases, Today suggests floating to another supplier. |
 | quote_received_on | — | — | — | **D** | `min(line.created_at)::date`. |
 
 - **Cut:**
@@ -259,6 +271,7 @@ This is not a catalog: no models, SKUs or prices, and rows grow only when typed.
 | question | text | no | — | S | One question. Captured by pasting the supplier's message; one line becomes one row. |
 | first_asked_at | timestamptz | yes | — | S | Stamped the first time it goes into a "Copy questions for customer" bundle. |
 | last_asked_at | timestamptz | yes | — | S | Stamped on every bundle or chase. Drives "asked 6 days ago". |
+| ask_count | smallint | no | 0 | S | Incremented by `stamp_clarification_ask`. After 3 asks with no answer, Today offers "close as no reply to clarification" as a one-click choice. It never closes on its own. |
 | answer | text | yes | — | S | Q-Tech's rewritten answer, the one relayed to suppliers. The raw answer stays in email/WhatsApp, or is an attachment if it is an image. |
 | answered_at | timestamptz | yes | — | S | Per question, so staged answers resolve piecemeal. |
 | withdrawn_at | timestamptz | yes | — | S | No longer relevant, e.g. that supplier was dropped. |
@@ -379,6 +392,8 @@ Line net, line GST and line gross are derived. Rounding: GST is rounded to whole
 | tax_deposit_amount | numeric(14,2) | yes | — | S | |
 | tax_deposit_bank | text | yes | — | S | |
 | notes | text | yes | — | S | |
+| last_reminded_on | date | yes | — | S | Stamped when someone copies a payment reminder. The Today item then drops away for 7 days. Only admin and sales can see it (engineers have no access to `invoices`). |
+| reminder_count | smallint | no | 0 | S |  |
 | gross, courier_state, fbr_state | — | — | — | **D** | `v_invoice_state`. |
 
 > Every invoice goes to FBR; there is one GST register and no provincial (SRB/PRA) tax. `order_items.gst_rate` stays at 18 by default, 0 for exempt items. Only admin and sales can see invoices; engineers have no access (§10).
@@ -391,6 +406,8 @@ Line net, line GST and line gross are derived. Rounding: GST is rounded to whole
   - `wasif_receipt_file_path` — moves to `attachments`.
   - `tcs_receipt_date` — pending validation (likely the same as `tcs_sent_on`).
 - Old `invoices` and `orders.invoice_number`/`invoice_date` merge into this table.
+
+*(Amendment A2)* `order_receivables()` gains `last_reminded_on` (the latest across the order's invoices) and `reminder_count`.
 
 ### 2.17 `payments_in` — [std] [L]
 
@@ -460,6 +477,8 @@ CHECKs:
 
 Storage objects are deleted by the app after a cascade (orphan sweep acceptable).
 
+> No new parent types. Images and text shared in from WhatsApp (F-4) attach to an RFQ or a clarification through the existing columns. Generated PDFs are not attachments. They live in a new private bucket, `generated-docs`, and are referenced by `pdf_path` on `quotations` and `purchase_orders`.
+
 ### 2.21 `snoozes`
 
 | Field | Type | Null | Default | Purpose |
@@ -495,6 +514,108 @@ Append-only, no client grants, trigger on every business table. It replaces all 
 Constraint: UNIQUE(user_id, year, quarter). Only admins can write to this table.
 
 "Achieved" is never stored. It is always calculated from `v_payment_net`, so it can't drift from the payments.
+
+### 2.24 `fx_rates` (new, Amendment A2)
+
+Has the standard id / created_at / created_by columns.
+
+| Field | Type | Null | Default | Purpose |
+|---|---|---|---|---|
+| currency | char(3) | no | — | CHECK `~ '^[A-Z]{3}$'` and ≠ 'PKR'. |
+| rate_pkr | numeric(14,6) | no | — | PKR for 1 unit of the currency. CHECK > 0. |
+| as_of | date | no | today in PKT | |
+
+- UNIQUE(currency, as_of). Entering a rate again on the same day updates that day's row.
+- **Derived view `v_fx_latest`:** currency, rate_pkr, as_of, age_days, and a staleness band:
+  - fresh: ≤ 7 days
+  - stale: 8–30 days
+  - unusable: more than 30 days
+- **Who enters rates:** any staff member, inline, at the moment a quote line needs a rate. The prompt reads "Rate for USD? (last 278.40 on 3 Oct)". There is also a Settings › Exchange rates page.
+- Rates are market information, not company money, so engineers may enter them.
+
+### 2.25 `quotations` (new, Amendment A2)
+
+Has the standard columns.
+
+| Field | Type | Null | Default | Purpose |
+|---|---|---|---|---|
+| rfq_id | uuid FK rfqs RESTRICT | no | — | An issued document blocks deletion of its RFQ. |
+| number | integer | no | — | Taken from `quotation_number_seq` on the first issue for this RFQ. Re-issues reuse it. Displayed as `QT-YY-NNNN` (format pending Q5). |
+| revision | smallint | no | 0 | The R0, R1, … suffix on re-issue. |
+| issued_on | date | no | today in PKT | Issuing stamps `rfqs.quoted_on`. |
+| valid_until | date | no | — | Default is `issued_on + company_profile.quotation_validity_days`. |
+| contact_id | uuid FK contacts SET NULL | yes | — | Who the quotation is addressed to. |
+| lines | jsonb | no | — | Snapshot. Each element holds `rfq_item_id`, `description`, `qty`, `unit`, `unit_price_net`, `gst_rate`. CHECK: an array with at least one element. |
+| net_total | numeric(14,2) | no | — | Calculated by the RPC from `lines`. The client does not supply it. |
+| gst_total | numeric(14,2) | no | — | Same: calculated by the RPC. |
+| delivery_text | text | yes | — | e.g. "4–6 weeks from PO". |
+| payment_terms | text | yes | — | |
+| notes | text | yes | — | |
+| signatory_id | uuid FK users RESTRICT | no | auth.uid() | |
+| pdf_path | text | yes | — | Set after upload. NULL means "generate the PDF again". |
+
+- UNIQUE(number, revision).
+- **The record can't be changed after it is issued:** a trigger rejects any UPDATE except to `pdf_path`.
+- Gross total is derived.
+- State is derived: an open RFQ whose `valid_until` has passed shows as expired.
+- Quotations are issued only through the RPC `issue_quotation`.
+  - It requires every item to have `quoted_unit_price_net`.
+  - It copies the RFQ's current prices into the snapshot.
+- **Cut:**
+  - per-line lead time (the quotation-level `delivery_text` covers it)
+  - a separate quotation-lines table (the JSON snapshot is never queried line by line)
+  - bank details on the quotation (Q5 recommends they appear on invoices only)
+
+### 2.26 `purchase_orders` (new, Amendment A2)
+
+Has the standard columns.
+
+| Field | Type | Null | Default | Purpose |
+|---|---|---|---|---|
+| supplier_order_id | uuid FK supplier_orders RESTRICT | no | — | The procurement leg this PO is for. |
+| number | integer | no | — | Taken from `po_number_seq` on the first issue for this leg. Displayed as `PO-YY-NNNN`. |
+| revision | smallint | no | 0 | |
+| issued_on | date | no | today in PKT | Issuing stamps `supplier_orders.placed_on` if it is still empty. |
+| currency | char(3) | no | — | The supplier's currency. No default. |
+| lines | jsonb | no | — | Snapshot. Each element holds `order_item_id`, `description`, `qty`, `unit`, `unit_price`, and `price_source`, one of 'quote', 'last_po' or 'typed'. |
+| total | numeric(14,2) | no | — | Calculated by the RPC, in `currency`. |
+| incoterm | text | yes | — | EXW, FOB, CIF, DAP, … |
+| delivery_terms | text | yes | — | |
+| payment_terms | text | yes | — | |
+| ship_to | text | yes | — | Default is Q-Tech's address from `company_profile`. |
+| notes | text | yes | — | |
+| signatory_id | uuid FK users RESTRICT | no | auth.uid() | |
+| pdf_path | text | yes | — | |
+
+- UNIQUE(number, revision).
+- The same trigger makes the record unchangeable except for `pdf_path`.
+- `supplier_orders.reference` stays as it is, holding the supplier's PI number.
+- **Where PO prices come from:** the leg itself still has no amount or currency columns (the Revision 1 cut stands). Each line is pre-filled from the first source available:
+  1. the supplier's quote line for the matching RFQ item
+  2. the last PO line to the same supplier for a "same item" match (§5c tier 1)
+  3. blank, for the user to type
+- Each line records its `price_source`, and the source is shown as a label in the UI.
+
+### 2.27 `company_profile` (new, Amendment A2; single row)
+
+| Field | Type | Null | Default | Purpose |
+|---|---|---|---|---|
+| id | smallint PK | no | 1 | CHECK `id = 1`. The row is created by a migration. |
+| legal_name | text | yes | — | PDF generation is blocked until this and `address` are set. |
+| address | text | yes | — | |
+| phone | text | yes | — | |
+| email | text | yes | — | |
+| website | text | yes | — | |
+| ntn | text | yes | — | |
+| strn | text | yes | — | |
+| bank_name | text | yes | — | Only printed on PO and reminder texts if Q5 says so. |
+| bank_account_title | text | yes | — | Same rule. |
+| bank_iban | text | yes | — | Same rule. |
+| quotation_validity_days | smallint | no | 30 | |
+| quotation_terms | text | yes | — | Standard terms printed on quotations. |
+| po_terms | text | yes | — | Standard terms printed on POs. |
+| updated_at | timestamptz | no | now() | |
+| updated_by | uuid FK users | yes | — | |
 
 ### Global cut list
 
@@ -548,6 +669,16 @@ users 1─< payments_in.credited_user_id (RESTRICT, nullable)
 ```
 
 Revision 1 note. The existing rule still holds: an order with an invoice, payment or expense can't be deleted. `order_costs` cascades only because it is a purely internal 1:1 row.
+
+**Additions (Amendment A2):**
+
+```
+rfqs 1─< quotations (RESTRICT)   contacts 1─< quotations (SET NULL)   users 1─< quotations.signatory (RESTRICT)
+supplier_orders 1─< purchase_orders (RESTRICT)   users 1─< purchase_orders.signatory (RESTRICT)
+fx_rates — no FKs (keyed by currency code); company_profile — singleton, no FKs in
+```
+
+An issued quotation or PO blocks deletion of its RFQ or leg. That is the same rule as for money facts: the document exists outside the system.
 
 Delete rules that matter:
 - **Money facts block deletion.** An order with an invoice, a payment or an expense cannot be deleted; cancel it with `cancelled_on` instead.
@@ -626,6 +757,33 @@ Delete rules that matter:
 
 **Idempotency:** the client generates the new order's UUID. A double submit then hits the primary key and returns the existing row. This replaces the unapplied `one_order_per_rfq` partial index, which wrongly forbids one RFQ producing two customer POs.
 
+**Additions (Amendment A2):**
+
+**Enforced by the database:**
+- `fx_rates`:
+  - UNIQUE(currency, as_of)
+  - the currency CHECK
+  - rate > 0
+- `quotations` and `purchase_orders`:
+  - UNIQUE(number, revision)
+  - `lines` must be a non-empty array
+  - every field except `pdf_path` is locked after insert (trigger)
+  - totals are calculated only inside the issuing RPC
+- `company_profile`: CHECK `id = 1`.
+- The new counters are ≥ 0.
+- Number gaps from sequence rollbacks are accepted. These are not tax documents; invoices keep their own numbering.
+
+**Transactional RPCs** (security invoker; the client generates the id, so a double submit is idempotent):
+- `issue_quotation(rfq_id, …)`: snapshots the prices, assigns number and revision, stamps `quoted_on`.
+- `issue_purchase_order(supplier_order_id, lines, currency, …)`: snapshots the lines, assigns number and revision, stamps `placed_on`.
+- `stamp_clarification_ask(clarification_ids[])`: sets `first_asked_at` if empty and `last_asked_at` = now, and increments `ask_count`. This replaces the plain timestamp update described in R09.
+- `stamp_supplier_chase(inquiry_id)`: sets `last_chased_on` and increments `chase_count`.
+- `stamp_payment_reminder(invoice_ids[])`: sets `last_reminded_on` and increments `reminder_count`. Callable by admin and sales only; row security on `invoices` enforces this.
+
+**Enforced by app code:**
+- The text generators and the PDF renderers are pure functions with snapshot tests.
+- Prices are compared through the rule in §5c.
+
 ---
 
 ## 5. Status design — independent dimensions, all derived unless marked HAND
@@ -635,15 +793,15 @@ Delete rules that matter:
 | **RFQ** | Outcome | open / won / closed | won = a non-cancelled order with this `rfq_id`. closed = `closed_on` (**HAND**, with reason). Otherwise open. A passed `due_on` never changes it. |
 | | Sourcing | not floated / floated-awaiting / partly covered / covered / no offer anywhere | Inquiries (`sent_on`, `no_offer_on`) and quote lines per item. "Uncovered item" = every responder skipped it. |
 | | Clarification | none / to ask (count) / waiting on customer (count, days since `last_asked_at`) / answers to relay (per supplier) | `clarifications` vs `inquiry.last_relayed_at`. |
-| | Bid | to bid / bid sent (`quoted_on`) | `quoted_on`, typed or stamped by "Mark bid sent". **HAND**, one tap. |
+| | Bid *(changed, Amendment A2)* | to bid / bid sent / quotation expired | `quoted_on` is stamped by `issue_quotation`, or by the manual "mark bid sent" when no PDF was issued. Expired = the latest quotation's `valid_until` has passed and the RFQ is still open. |
 | | Deadline risk | days to `due_on`; overdue badge | `due_on`. A sort key only. |
-| **Supplier inquiry** | Contact | shortlisted / sent / chased | `sent_on`, `last_chased_on`. |
+| **Supplier inquiry** | Contact *(changed, Amendment A2)* | shortlisted / sent / chased ×n | `sent_on`, `last_chased_on`, `chase_count`. |
 | | Response | awaiting / quoted (n of m items) / no offer | Quote lines; `no_offer_on` (**HAND**). |
 | | Blocked | has open questions it raised / answers waiting to relay | Clarifications. |
-| **Clarification** | single | to ask / asked / answered / withdrawn | Timestamps. Each is stamped by a copy action or **HAND** (answer, withdraw). |
+| **Clarification** | single *(changed, Amendment A2)* | to ask / asked ×n / answered / withdrawn | Timestamps. Each is stamped by a copy action or **HAND** (answer, withdraw). Plus `ask_count`. |
 | **Order** | Lifecycle | active / cancelled / done | `cancelled_on` (**HAND**). done = every other dimension terminal. |
 | | Lifecycle "done" | — | For admin, every dimension must be finished. Engineers and sales see "done" computed from the dimensions they can see (goods, commissioning, invoicing for sales). The view computes this per role so that a hidden dimension never counts as finished. |
-| | Goods | n/a (all service) / to source / to place / on order / late / received / partly delivered / delivered | Items without a leg; legs' `placed_on`, `expected_on`, `received_on`, `delivered_on` (the minimum across legs). |
+| | Goods *(changed, Amendment A2)* | n/a (all service) / to source / to place / on order / late / received / partly delivered / delivered; "to place" ends when the PO is issued | Items without a leg; legs' `placed_on`, `expected_on`, `received_on`, `delivered_on` (the minimum across legs).. `placed_on` is stamped by `issue_purchase_order`, or entered by hand. |
 | | Commissioning | n/a / to plan / planned / done | `needs_commissioning`, `commissioning_planned_on`, `commissioning_done_on`. |
 | | Invoicing | not invoiced / part / fully invoiced | Σ invoice gross vs items gross. |
 | | Payment *(admin; sales through `order_receivables()`; hidden from engineers)* | unpaid / part / settled / overdue | settled means Σ`payments_in.amount` ≥ the gross target, allowing ₨1 for rounding. The gross target is the invoiced gross if any invoice exists, otherwise the gross from the items. Overdue means the earliest invoice date plus `payment_terms_days` is before today and the order isn't settled. |
@@ -651,7 +809,9 @@ Delete rules that matter:
 | | Data trust | ok / basis unknown / estimated dates | `legacy_flags`. |
 | **Invoice** | Courier (TCS) | not started / copy received / sent / delivered to client | `copy_received_on`, `tcs_sent_on`, `client_received_on`. |
 | | FBR | pending / generated / receipt received / deposited | The furthest step reached:<br>• deposited if `tax_deposited_on` is set<br>• receipt received if `wasif_receipt_on` is set<br>• generated if `psid` is set, or the row carries the legacy flag `fbr_generated_legacy`<br>• otherwise pending<br>If a later step is set without an earlier one (e.g. deposited with no PSID), it shows as the later step and is reported as an exception.<br>`needsFbrAttention` becomes: `tax_deposited_on` is empty AND the invoice month is before the current month. |
+| | Reminder (new; admin and sales only) | not reminded / reminded n× (last date) | `last_reminded_on`, `reminder_count`. |
 | **Company** | Role | customer / supplier / both / prospect | `v_company_roles`. |
+| **FX rate** | Staleness (new) | fresh / stale / unusable | `v_fx_latest.age_days`, using the bands ≤ 7, 8–30 and > 30 days. |
 | **Expense / payment** | — | none | They are facts, so they carry no status. |
 
 Why not something simpler: three states (dropping "generated") would hide the step where the team waits on Wasif & Co. The PSID is already typed in, so that state costs no input.
@@ -727,9 +887,93 @@ For each payment *p* on order *o*:
 
 **Home-screen line** (decision C test): "2 questions unanswered · asked customer 6 days ago · bid due in 4 days · Red Lion/Four Stars waiting". Every piece is one query over `clarifications`, `rfqs.due_on` and `supplier_inquiries`. No field exists solely to produce it.
 
+
+### 5c. Price comparison and supplier memory (Amendment A2)
+
+**Price comparison for one RFQ item** (pure function `comparePrices`, used on reply rows and in the convert dialog):
+1. **All quote lines in the same currency:** compare them directly in that currency. No rate is needed.
+2. **Mixed currencies:** convert each line with its currency's latest rate, provided the rate is fresh or stale (≤ 30 days old).
+   - A line whose rate is unusable or missing is shown in its own currency, marked "not compared — no current USD rate", and offers the inline rate entry.
+   - "Lowest" is only marked when at least 2 lines are comparable.
+   - A stale rate shows an amber note, e.g. "rate 12 days old".
+3. **How amounts are displayed:** original currency first, then "≈ PKR …" with the rate date as a tooltip.
+4. **Expected cost suggestion (admin only):** Σ PO line totals × the current rate, labelled "supplier price only — excludes freight, duty, service". It pre-fills `order_costs.expected_cost_pkr` but never overwrites a value already entered. This is display and suggestion only. There is no landed-cost calculation; the costing engine stays removed.
+
+**Supplier memory** is derived only: no input, no score, and facts shown as counts.
+
+**When a past item counts as "the same item".** There is no catalog, so the match is decided against the target `rfq_item` (its brand B, family F and description D). The tier is always shown in the UI as a label.
+
+| Tier | Label | Rule |
+|---|---|---|
+| 1 | "same item" | Brand equal to B (when B is set) AND `similarity(norm(D), norm(D′)) ≥ 0.45` (pg_trgm), OR, when B is empty: family equal to F AND similarity ≥ 0.60. `norm()` lowercases the text, strips quantities, units and punctuation, and collapses spaces. |
+| 2 | "same brand" | Brand equal to B. |
+| 3 | "same family" | Family equal to F. |
+| — | supplier-level | No item match; only the supplier's overall stats are shown. |
+
+**`v_supplier_activity`** has one row per sent inquiry (sent within the last 24 months):
+- supplier_id, rfq_id
+- sent_on
+- first_reply_on = min(first quote line `created_at::date`, `no_offer_on`)
+- replied, quoted, no_offer (booleans)
+- reply_days = first_reply_on − sent_on, in calendar days
+- is_legacy = `legacy_source IS NOT NULL` on the inquiry, or on any of its quote lines
+
+**`v_supplier_stats`** has one row per supplier. Every rate is stored as a numerator and a denominator, never as a percentage alone.
+
+| Metric | Definition | When shown |
+|---|---|---|
+| asked | Count of sent inquiries that are old enough to judge: sent at least 7 days ago, or already replied. | Always shown as a count. |
+| replied | The part of `asked` that got a reply (a quote, or a declared no-offer). | Shown as "replied r of a". If a < 3, raw facts only, e.g. "asked twice, 1 reply". |
+| no_offer | The part of `asked` that ended in a declared no-offer. | "couldn't offer n of a"; shown only when n ≥ 1. |
+| median_reply_days | Median `reply_days` over **non-legacy** replied rows only. Imported rows are excluded because their `created_at` is the import date, not the reply date. | Only when there are ≥ 3 such rows. Shown as "usually logs a reply in ~N days". |
+| chosen | Among items this supplier quoted where the item was later ordered (from anyone, order not cancelled): how many were ordered on a leg with this supplier. | "chosen c of k times the item was ordered"; only when k ≥ 1. Never shown as a percentage. |
+| deliveries | Legs with `expected_on` and `received_on` set; late = `received_on > expected_on`. | "late l of d"; the median days late only when l ≥ 3. |
+| last_contact | max(`sent_on`, `last_chased_on`, `last_relayed_at::date`, PO `issued_on`). | Always shown. |
+| brands | `company_brands` | Always shown. |
+
+**`supplier_item_memory(p_supplier_ids uuid[], p_brand_id, p_family_id, p_description)`** returns, for each supplier, its best tier plus:
+- the last quote: price, currency, ≈ PKR at the latest rate, date, qty, lead-time text, and the tier
+- the last PO price: same fields, taken from the `purchase_orders.lines` snapshot
+- the two most recent lead-time strings, verbatim (they are free text, so there is no median)
+
+How legacy rows feed memory:
+
+| Legacy flag | Treatment |
+|---|---|
+| Any imported row | Counts towards asked, replied, no_offer and chosen. |
+| `currency_unverified` | The price is **hidden** and shown as "price on file, currency unverified". |
+| `item_guessed` | Excluded from tier 1 and tier 2 matches; still counts at supplier level. |
+
+Prices older than 18 months show their age prominently, e.g. "Mar 2025 — 19 months ago".
+
+**Display rules:**
+- Never a single composite score.
+- Never a percentage without its counts.
+- Below the thresholds above, show only the raw fact or "no history yet".
+- Each card has a provenance footnote, e.g. "includes imported history · 2 prices hidden (currency unverified)".
+- **Order of suggestions** in intake stays by reason: supplied before, then carries the brand, then family shortlist; ties broken by most recent contact. Memory statistics never reorder the list, because sorting on them would be a hidden score.
+
+**Performance:**
+- Plain SQL, no materialized views.
+- Indexes:
+  - pg_trgm GIN indexes on `rfq_items.description` and `order_items.description`
+  - B-tree indexes on `supplier_inquiries(supplier_id, sent_on)` and `supplier_quote_lines(rfq_item_id)`
+- Budget: p95 < 150 ms for `supplier_item_memory` on a fixture 10× today's volume (≈ 1.5k inquiries, 1.2k quote lines).
+- Intake loads `v_supplier_stats` once when a company is chosen, and calls `supplier_item_memory` per item, debounced by 300 ms.
+- If the budget fails in the future, the fallback is a materialized `v_supplier_stats` refreshed after writes.
+
+**Work-list rules that use the stamps.** Thresholds are constants in code, and a just-stamped item drops out of the list until its threshold passes. Snoozes still apply. All day counts below are business days.
+
+| Rule | Due when | Escalation (a suggestion, never automatic) |
+|---|---|---|
+| Customer clarification chase | Open asked questions and `last_asked_at` ≥ 3 days ago (≥ 1 day if the bid is due within 3 days). | `ask_count` ≥ 3 → "3 chases, no answer — close as no reply?" |
+| Supplier chase | No quote and no no-offer, and the time since `last_chased_on` (or `sent_on` if never chased) is ≥ max(2, the supplier's median reply days + 1 when there are ≥ 3 replies), OR the reply-by date has passed. | `chase_count` ≥ 2 → "float to another supplier", listing the next suggestions with their memory one-liners. |
+| Payment reminder (admin and sales) | The order is overdue and (`last_reminded_on` is empty or ≥ 7 days ago). | Shows `reminder_count`. Engineer-owned orders route to admin, as before. |
+| Quotation expired (low priority) | Open RFQ whose latest quotation has passed `valid_until`. | "re-confirm supplier prices before re-issuing" |
+
 ---
 
-## 6. Decisions A–I
+## 6. Decisions A–N
 
 ### A. New Supabase project — RECOMMENDED
 
@@ -830,7 +1074,14 @@ The two attach points are RFQ/clarification and the GST invoice receipt. Storage
 - **If skipped:** You rebuild the status drift that made the old app untrustworthy.
 - **Visibility by role (Revision 1):** Visibility now depends on role. The payment and cost dimensions are hidden from engineers, so each role's view computes "done" only from the dimensions that role can see. A hidden dimension never counts as finished.
 
-### H. Quote versioning — OUT of MVP
+### H. Quote versioning — amended by Amendment A2
+
+- Still no general versioning.
+- A **revision now exists as a row** in `quotations` or `purchase_orders`, and only when a document is actually issued.
+- `rfq_items.quoted_unit_price_net` stays as the working copy.
+- Why: a document a customer or supplier holds must never change underneath them. A snapshot row is the cheapest guarantee.
+
+**Original rationale (retained from the frozen model):**
 
 - **Evidence:**
   - `quoted_price` is 0 or NULL on all 176 RFQs (FACT).
@@ -855,6 +1106,53 @@ The two attach points are RFQ/clarification and the GST invoice receipt. Storage
   - one definer function (`my_target_progress()`)
 - **Justified at this size.** Yes. The target is entered once a quarter by an admin, and everything else is calculated from payments that are recorded anyway.
 - **If skipped.** The owner tracks targets in his head or in Excel, and engineers can't see their position at all.
+
+### J. Currency conversion: manual daily rates, comparison only.
+- **Problem:** "lowest price" compared USD, CNY and EUR as raw numbers, which is wrong.
+- **Why better than the alternatives:**
+  - *A free FX API* adds a network dependency, a CSP entry, a cron job and a failure mode for outages. It also gives the interbank rate, while Q-Tech pays at its bank's rate.
+  - *A rate stored on each quote line* means suppliers quoted on different days are compared at different rates, which defeats the comparison.
+- **Complexity added:** 1 table, 1 view, one inline prompt.
+- **Justified at this size:** yes. A handful of currencies, entered about once a week.
+- **If skipped:** wrong supplier choices and wrong expected costs.
+- **Note:** the old costing engine stays removed. The PKR figure is only ever a display or a suggestion.
+
+### K. Customer quotation and supplier PO PDFs.
+
+This reverses the non-goal "no PDF generation", for these two documents only. Sales-tax invoice PDFs stay out.
+- **Problem:** the team produces these documents by hand today. The app already holds every field they need.
+- **Why client-side `@react-pdf/renderer`:**
+  - It lays out tables and typography like a page component, which is good enough for a branded letterhead.
+  - It is lazy-loaded (only fetched when the user generates a document), so the ≤ 300 KB initial JS budget is untouched.
+  - Rejected — an Edge Function: cold starts, embedding fonts on the server, harder debugging.
+  - Rejected — `window.print()`: inconsistent output, and poor on phones.
+- **Sharing:** on a phone, the "Share…" button opens the operating system's share sheet with the PDF (Web Share API with files), so the user can send it in WhatsApp themselves. The app still never sends anything.
+- **Complexity added:** 3 tables (`quotations`, `purchase_orders`, `company_profile`), 2 RPCs, 1 bucket, a lazy-loaded chunk of roughly 0.4–0.5 MB gzipped (INFERENCE; measured in task R20).
+- **If skipped:** documents are typed by hand outside the system, and the prices on them drift from the records.
+
+### L. Chase texts on the clipboard.
+- **Problem:** chasing is where most deals are lost (about 20 of 43 losses). Writing each chase by hand is friction.
+- **What it is:** pure text generators plus atomic "stamp" RPCs. Stamps both prevent nagging and drive the escalation suggestions.
+- **The new counters are justified** because they drive the "close?" and "float elsewhere?" suggestions. Without them, the last-chased date alone can't tell a first chase from a fifth.
+- **Engineers never receive payment texts:** the generator's data comes from `order_receivables()` and `invoices`, and engineers can call or read neither.
+
+### M. WhatsApp share-in as an installable web app (PWA).
+- **Problem:** customers' answers arrive as WhatsApp text and nameplate photos on phones.
+- **What it is:** the Web Share Target API, which adds the CRM to the phone's share sheet. No WhatsApp API is used and nothing is sent.
+- **Platform limit (FACT):** this works on Android Chrome and Chromium browsers. **iOS Safari does not support share targets.** The fallback is an in-app share-in panel (paste text, pick photos) that works on every platform.
+- **Complexity added:** a manifest, a service worker (app shell only, no offline data), and one route. No schema change.
+- **Depends on Q4.**
+
+### N. Supplier memory: derived, honest, never a score (§5c)
+
+- **Problem:** supplier choice lives in people's heads.
+- **Why better:**
+  - A composite score hides its reasoning, and the owner rejects scores.
+  - Manual supplier ratings would be paperwork.
+  - Derived counts cost no input.
+- **Complexity added:** 2 views, 1 function, the trigram indexes.
+- **Expected value curve:** close to empty before cutover. It becomes useful once roughly 140 legacy inquiries and 124 quotes are imported, and grows with use.
+- **If skipped:** the intake suggestions give a reason but no evidence.
 
 ---
 
@@ -922,6 +1220,16 @@ The two attach points are RFQ/clarification and the GST invoice receipt. Storage
 - **Drops:** dead costing columns, `profit`, `ops_dismissed`, `order_gst_amount` (used only for basis resolution), `payment_due_date`.
 - Sale ≈ cost anomalies are flagged as `margin_anomaly` (e.g. PO 2224: note says 200,000 total landing, amount 150,000; PO 13378 is a negative-margin order).
 
+**Additions (Amendment A2):**
+
+| Old | New | Rule |
+|---|---|---|
+| — | fx_rates | Not imported. At cutover, an admin enters the current USD, EUR and CNY rates. Legacy quotes with `currency_unverified` aren't converted. |
+| — | quotations, purchase_orders | None. Legacy `rfqs.quoted_on` stands. Legacy `supplier_orders.reference` stays as text. Supplier POs issued from now on use `po_number_seq` (starting value from Q5). |
+| — | company_profile | Entered by the owner (Q5). |
+| supplier_quotes | supplier_quote_lines (unchanged) | Memory rules apply: legacy rows are excluded from reply-time medians; `currency_unverified` prices are hidden; `item_guessed` rows are excluded from item tiers. |
+| rfq_line_items | rfq_items | `gst_rate` = 18. |
+
 ---
 
 ## 8. Assumptions to validate against the live dump
@@ -948,6 +1256,8 @@ The two attach points are RFQ/clarification and the GST invoice receipt. Storage
 20. PO 253074: find the live rows (orders, invoices or GST-register rows, payments, expenses) for both units, so the merge in §7 captures every row.
 21. How many rows `quarterly_targets` has and what they contain (archived only).
 22. How reliable `orders.sales_person_id` is in the live data. Owners marked unreliable lead to unattributed payments, which affect past target results only.
+23. In live `supplier_quotes`, does `received_at` hold real reply dates? If it does, import it as the effective reply date, so legacy rows can feed `median_reply_days` (the rule in §5c would then be relaxed).
+24. Which currencies appear in `supplier_quotes`, and do they include real non-PKR rows? This decides how big the `currency_unverified` problem is.
 
 ---
 
@@ -1005,7 +1315,7 @@ The two attach points are RFQ/clarification and the GST invoice receipt. Storage
 | supplier_orders | SIUD | SIUD | SIUD | Delete is blocked if expenses are attached (FK). |
 | order_engineers | SIUD | SIUD | SIUD | |
 | **order_costs** | SIUD | — | — | |
-| invoices | SIUD | SIU | — | See confirmation 1 in §9. |
+| invoices *(changed, Amendment A2)* | SIUD | SIU | — | Sales' update now also covers the reminder stamp. See confirmation 1 in §9. |
 | payments_in | SIUD | — | — | |
 | expenses | SIUD | — | — | |
 | recurring_expenses | SIUD | — | — | |
@@ -1021,6 +1331,17 @@ The two attach points are RFQ/clarification and the GST invoice receipt. Storage
 | `my_target_progress()` (definer) | ✓ (own) | ✓ (own) | ✓ (own) | No parameters; always the caller and the current quarter. |
 | RPCs `convert_rfq_to_order`, `create_repeat_order` | ✓ | ✓ | ✓ | Run with the caller's permissions; never write to `order_costs`. |
 | RPCs `merge_companies`, `merge_brands`, `resolve_value_basis` | ✓ | — | — | |
+| fx_rates | SIUD | SIU | SIU | Market information, not company money. |
+| company_profile | SU | S | S | Singleton row, no insert or delete. |
+| quotations | SIUD | SIU¹ | SIU¹ | ¹ UPDATE limited to `pdf_path` by the trigger. |
+| purchase_orders | SIUD | SIU¹ | SIU¹ | Supplier prices are visible to engineers, consistent with §10. |
+| bucket `generated-docs` | SIUD | SIU | SIU | Private. |
+| v_fx_latest, v_supplier_activity, v_supplier_stats, `supplier_item_memory()` | S | S | S | Security invoker. Every underlying table is already readable by all staff. |
+| RPCs `issue_quotation`, `issue_purchase_order`, `stamp_clarification_ask`, `stamp_supplier_chase` | ✓ | ✓ | ✓ | |
+| RPC `stamp_payment_reminder` | ✓ | ✓ | — | |
+| users.job_title | via `admin-users` | — | — | |
+
+S14 (the access-matrix test) and S16 (the remote anonymous-denial smoke test) now cover **28 tables**.
 
 ---
 

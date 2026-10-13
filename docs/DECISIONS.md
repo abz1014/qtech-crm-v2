@@ -26,3 +26,18 @@ Changes to `DATA_MODEL.md` need an entry here first.
 - 2026-10-13: CSP `connect-src` and `img-src` currently allow `*.supabase.co`; P7 tightens them to the exact new project host.
 - 2026-10-13: The FBR exception rule in `src/lib/fbr.ts` also flags "deposited without Wasif receipt". Whether the receipt always precedes the deposit is unverified; check against live data in import task I06 and narrow the rule if it produces false exceptions.
 - 2026-10-13: Brand colours: deep green #1a7b46 for primary and green text; brand green #429446 for non-text only; success is teal.
+- 2026-10-13: G1 passed: Today direction **B**. Top bar; 420 px list plus a context pane with key figures, a date rail and a prepared WhatsApp/email chase draft with "Copy and mark chased"; target tile as the list footer; on mobile the pane folds into an accordion.
+- 2026-10-13: Design system v1 approved: Geist and Geist Mono (self-hosted via @fontsource), Lucide icons at stroke 1.75, 81 tokens, AA contrast throughout. "PKR" is used instead of the ₨ glyph in dense tables and PDFs.
+- 2026-10-13: Target-tile maths corrected: target 6.0M, achieved 3.45M, 58 of 92 days → pace 3.78M, behind 0.33M. The fix ships in the G2 batch.
+- 2026-10-13: F-1: currency conversion is in scope, for comparison and display only. Rates are entered by hand by any staff member and are not stored on quote lines; staleness bands are 7 and 30 days; lowest price is judged only among comparable lines.
+- 2026-10-13: F-2: customer quotation PDF is in scope. This reverses "no PDF generation" for this document. Issued quotations are stored as snapshots, with revisions as rows.
+- 2026-10-13: F-3: supplier PO PDF is in scope, in the supplier's currency, with prices pre-filled quote → last PO → typed. POs are stored as snapshots.
+- 2026-10-13: PDFs are generated in the browser with a lazy-loaded `@react-pdf/renderer`; sharing on phones goes through the OS share sheet; the app sends nothing. Sales-tax invoice PDFs stay out of scope.
+- 2026-10-13: F-4: the app becomes an installable PWA with WhatsApp share-in (Web Share Target, Android) plus an in-app fallback for every platform. The service worker caches only the app shell.
+- 2026-10-13: F-5: chase texts on the clipboard for three cases (customer clarification, supplier, payment reminder), with stamps and counters that stop nagging. Payment reminders are for admin and sales only.
+- 2026-10-13: F-7: supplier memory is derived from existing records only. No score, counts always shown, sample thresholds (n ≥ 3 for medians), legacy caveats applied, and memory never reorders suggestions.
+- 2026-10-13: F-6 (site-engineer mobile mode with receipt capture): not chosen. Expense receipts stay out of the MVP.
+- 2026-10-13: Data model grows to 28 tables: `fx_rates`, `quotations`, `purchase_orders`, `company_profile`. New columns: `rfq_items.gst_rate`, `supplier_inquiries.chase_count`, `clarifications.ask_count`, `invoices.last_reminded_on` and `reminder_count`, `users.job_title`.
+- 2026-10-13: Quote versioning (decision H) is amended: versioning exists only as revisions of issued documents.
+- 2026-10-13: Q4 answered: team uses both Android and iPhone; Android share target plus first-class in-app share-in for iPhone.
+- 2026-10-13: Git pushes to qtech-crm-v2 allowed for agents by owner (scoped permission rule; no force pushes).

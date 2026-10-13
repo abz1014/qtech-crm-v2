@@ -1,6 +1,6 @@
 # Q-Tech CRM v2: build plan
 
-Status: APPROVED by owner 2026-10-13. Q1 = (a) real trial data kept; Q2 = (a) GitHub protected-environment secrets; Q3 deferred to go-live. Amendment A1 appended (design direction, approved 2026-10-13).
+Status: APPROVED by owner 2026-10-13. Q1 = (a) real trial data kept; Q2 = (a) GitHub protected-environment secrets; Q3 deferred to go-live. Amendment A1 appended (design direction, approved 2026-10-13). Amendment A2 appended (Gate 1 result and features F-1 to F-7, approved 2026-10-13).
 
 **Based on:** the approved data model (original document plus Revision 1) and the owner decisions you sent.
 **Facts checked in the old repo:**
@@ -500,3 +500,112 @@ Two existing tasks also change:
 ## §8 Open questions
 
 None added. The webfont is the designer's call within D01, self-hosted by default. Artifact visibility is handled under D-R4.
+
+---
+
+# Amendment A2 — Gate 1 result and features F-1 to F-7 (approved by owner 2026-10-13)
+
+> Owner answers since A2 was written: Q4 = (b) the team uses BOTH Android and iPhone — build the Android share target AND a first-class in-app share-in for iPhone (R22 ships fully). Q5 (letterhead/legal content) still open — blocks only R19, O07, A06 releases.
+
+### §1 Folder structure: additions
+
+```
+src/lib/texts/        enquiry · clarificationChase · supplierChase · paymentReminder (pure, snapshot-tested; email + WhatsApp variants)
+src/lib/fx/           comparePrices · format (pure)
+src/lib/memory/       one-liner selection · threshold rules (pure)
+src/features/pdf/     lazy chunk: renderer, Letterhead, QuotationDoc, PurchaseOrderDoc; fonts in public/fonts/ (Geist TTF)
+src/features/share-in/  share-in route + chooser
+public/manifest.webmanifest   src/sw.ts (injectManifest)   ← app shell precache + share-target POST handler only
+```
+
+Two more `vercel.json` entries:
+- CSP gains `manifest-src 'self'` and `worker-src 'self'`.
+- `sw.js` is served with `Cache-Control: no-cache`.
+
+### PD Design direction: amendments (everything stays in the single **G2** batch)
+
+**G1 is recorded as passed:** direction **B**. Rule for G2 mockups: in dense tables and in PDFs, show the currency as "PKR". **Geist has no ₨ glyph.**
+
+| ID | Change / new | Acceptance |
+|---|---|---|
+| D02b (new) | Today B fixes: the target tile shows the worked maths (target 6.0M, achieved 3.45M, 58 of 92 days → pace 3.78M, behind 0.33M); context-pane chase-draft states (draft / copied + undo / just chased, so the item drops away). | The tile's figures recompute correctly from the stated inputs; the reviewer checks the arithmetic. |
+| D03 (amended) | Intake suggestions carry memory one-liners and a memory card (expanded state). Low-data states: "no history yet" and "asked twice, 1 reply". | No percentage anywhere without its counts. No score. The tier label is visible. |
+| D04 (amended) | Supplier reply rows show the original price and ≈ PKR with the rate date; stale (amber) and missing-rate states, with the inline rate prompt; lowest price only among comparable lines; a memory chip with "last price for this item"; supplier-chase and clarification-chase panels. | Mixed USD/CNY fixture rendered. The "not compared" state shown. |
+| D05 (amended) | Order detail: the "Issue PO" flow on a leg, with price-source labels (quote / last PO / typed) and the currency. | The engineer variant shows supplier prices and still no margin. |
+| D06 (amended) | Payment-reminder panel (admin and sales variants), showing reminder count and last date. | No payment figures in the engineer variant (there is no engineer variant of this screen). |
+| D07 (amended) | Settings: company profile (admin), exchange rates (staff), job title on the Team screen. | |
+| D10 (new) | Quotation PDF layout, A4: letterhead, number and revision, date, validity, customer + site + contact, customer ref, items with net and GST, totals net/GST/gross, delivery, payment terms, standard terms, signatory. | Printed at 100% it is legible; 30 lines flow onto page 2 with the table header repeated. |
+| D11 (new) | Supplier PO PDF layout, A4: supplier (and the brand it acts as agent for), PO number and revision, lines in the supplier's currency, incoterm, delivery and payment terms, ship-to, signatory. | Same as D10. |
+| D12 (new) | Share-in flow on a phone at 375px: Android share sheet → chooser (answer a question / new supplier questions / add to RFQ notes / start a new RFQ) → confirmation; login-resume state; iOS fallback panel (paste text + pick photos). | Every chooser path ends in at most 3 taps after the share. |
+| D13 (new) | Chase-text panels: customer clarification chase, supplier chase, payment reminder, each with an email/WhatsApp toggle; polite Pakistani business English (the owner reviews the wording here). | The owner approves the template wording at G2. |
+| D14 (new) | Company page section "What we know" for suppliers: brands carried, enquiry counts, recent quotes table (original currency + PKR, outcome), deliveries; low-data and legacy-provenance states. | Same honesty rules as D03. |
+
+G2 depends on D02b–D14.
+
+### §3 Task breakdown: changes to existing tasks
+
+| ID | Change |
+|---|---|
+| S04 | Add `rfq_items.gst_rate`, `supplier_inquiries.chase_count`, `clarifications.ask_count`. |
+| S06 | Add `invoices.last_reminded_on` and `reminder_count`. `order_receivables()` (S12) returns both. |
+| S13 | Add the RPCs `stamp_clarification_ask`, `stamp_supplier_chase`, `stamp_payment_reminder`. `convert_rfq_to_order` copies `gst_rate`. |
+| S14 / S16 | Cover 28 tables. |
+| R07 | The "lowest price" mark goes through `comparePrices` (R15). |
+| R09 | "Copy questions for customer" calls `stamp_clarification_ask`. |
+| R11 | Today v1 uses the stamp rules in §5c and the escalation suggestions. Built as direction B: a 420 px list plus a context pane that holds the prepared chase draft; on mobile the pane folds into an accordion. |
+| M04 | Expected-cost suggestion from PO lines × FX, which never overwrites an existing value. |
+| P04 | Measure the PDF chunk and the service worker. Initial JS stays ≤ 300 KB gzipped. |
+
+### §3 Task breakdown: new tasks
+
+Every UI task below follows FE-1.
+
+| ID | Deliverable | Acceptance | Deps | ∥ | Flag |
+|---|---|---|---|---|---|
+| S17 | `fx_rates` and `v_fx_latest`; `company_profile` singleton with RLS; `users.job_title`. | Same-day re-entry updates the row. Staleness bands are tested at 7, 8, 30 and 31 days. Profile is updatable only by admin. | S03 | b | |
+| S18 | `quotations`, `purchase_orders`, both number sequences, the lock trigger, the `issue_*` RPCs, and the `generated-docs` bucket. | An UPDATE of anything except `pdf_path` is rejected. Re-issue keeps the number and increments the revision. Issuing stamps `quoted_on` / `placed_on`. Totals come from the RPC, and a mismatched total sent by the client is ignored. Double submit gives one row. | S05, S08, S17 | | |
+| S19 | Supplier memory: pg_trgm, the indexes, `v_supplier_activity`, `v_supplier_stats`, `supplier_item_memory()`. | The fixture tests listed after this table pass. p95 < 150 ms on the 10× fixture. | S18 | | |
+| R15 | Exchange rates in the UI: inline rate prompt on reply rows; Settings › Exchange rates; the ≈ PKR display; `comparePrices` (pure). | Unit tests: same-currency comparison without rates; mixed currencies with fresh, stale and unusable rates; fewer than 2 comparable lines means no "lowest" mark. Playwright: entering a missing rate updates the ranking. | R07, S17 | g | |
+| R16 | Text generators for the clarification chase and the supplier chase (email and WhatsApp variants); the Today B context pane with "Copy and mark chased"; undo within 10 s. | Snapshot tests. The generator never invents a spec or an answer. After a stamp the item leaves Today until its threshold. The escalation suggestion appears at ask_count 3 and chase_count 2. | R11, S13 | g | OWNER wording at G2 (D13) |
+| R17 | Supplier memory in intake: one-liner per suggestion (selected from §5c in priority order), expandable memory card, "last price for this item" chip on RFQ reply rows. | Fixture tests through the UI; memory never reorders the suggestions (test). Low-data copy matches D03. | R05, S19 | | |
+| R18 | Company page section "What we know" (supplier side). | Matches D14. Legacy provenance footnote shown. | R02, S19 | g | |
+| R20 | PDF foundation: lazy-loaded `@react-pdf/renderer`, Geist TTF embedded, Letterhead component from `company_profile`, upload to `generated-docs`, a Share button (Web Share with files, falling back to download). | Initial bundle unchanged (build report). The chunk loads only on demand. Generating a test document takes < 3 s on a mid-range Android phone (manual check). Generation is blocked with a clear message until the profile is complete. | U09, S18 | g | |
+| R19 | Quotation: issue dialog (edit prices and GST into `rfq_items`, validity, delivery, terms, contact), `issue_quotation`, the PDF per D10, re-issue as a new revision, quotation list on the RFQ page. | The PDF matches D10. Re-issue doesn't change the previous revision's PDF or row. `quoted_on` is stamped. | R20, R07 | | OWNER Q5 (content) |
+| A06 | Settings: company profile (admin), job title on the Team screen. | Only admin can edit; all staff can read. | A04, S17 | | OWNER Q5 |
+| R21 | PWA base: manifest (brand icons, theme colour), service worker with an app-shell precache only (**no API or data caching**), install prompt, CSP and headers. | Lighthouse "installable" passes. A test asserts the service worker caches no Supabase response. | U02 | h | |
+| R22 | Share-in: the service worker handles the share-target POST → payload kept in IndexedDB for up to 24 h → `/share-in` chooser (answer a question / new supplier questions split into lines / add to RFQ notes / start a new RFQ with the items paste pre-filled). Images compressed with `imageCompress` and limited to 5 MB. If the session has expired, login and then resume. **iOS and desktop fallback:** the same chooser, reached from an in-app "Share in" button with paste and photo picking. | Android manual test on a real device: text and 1–3 images from WhatsApp land on the chosen record. Playwright covers the fallback path. The payload is cleared after use or after 24 h. | R21, R09, R10 | | **OWNER Q4** decides whether the share-target part ships |
+| O07 | Supplier PO: "Issue PO" on a leg; line prices pre-filled quote → last PO → typed, each with its source label; currency; incoterm and terms; ship-to defaulted from the profile; PDF per D11; revisions. | Price-source test for each of the 3 sources. `placed_on` is stamped. A repeat order with no quote is pre-filled from the last PO. | O03, R20, S19 | i | OWNER Q5 |
+| M09 | Payment-reminder generator (invoice numbers, gross, received, balance, days overdue; bank details only if Q5 says so) plus `stamp_payment_reminder` plus the Today rule. | Engineers can't reach the panel or the RPC (route and RLS tests). The item reappears 7 days after the last reminder. | M02, M08, S13 | k | |
+
+**Supplier-memory fixture tests (S19 and R17), all named:**
+- (a) 0 inquiries → "no history yet"
+- (b) 2 inquiries, 1 reply → raw facts, no rate
+- (c) 5 asked, 4 replied with non-legacy reply days [1,2,2,5] → "replied 4 of 5", median 2
+- (d) legacy-only replies → no median shown
+- (e) a `currency_unverified` quote → price hidden, reply still counted
+- (f) an `item_guessed` quote → absent from tier 1/2, present at supplier level
+- (g) "Belimo LF24-SR actuator" against "BELIMO LF24 SR actuator 24V" → tier 1; against "Belimo damper" → tier 2
+- (h) an item quoted by A and B, ordered from B → B "chosen 1 of 1", A "chosen 0 of 1"; a cancelled order doesn't count
+- (i) an inquiry sent 3 days ago with no reply → not counted in `asked`
+- (j) legs late [3, 9, 12] days → "late 3 of 3, median 9 days"
+
+### §2 Phases: changes
+
+| Phase | Added scope |
+|---|---|
+| P1 | S17, S18, S19. |
+| P4 | R15, R16 and R17 before R14, because they make the trial useful. R18, R19, R20, R21 and R22 make up **P4b, "RFQ completion"**, and do not block the R14 trial start. R22's share-target part waits for Q4. |
+| P5 | O07. |
+| P6 | M09. |
+
+The **P4 exit** gains: mixed-currency comparison is correct; chase stamps stop the nagging; memory renders within budget.
+
+### §7 Risks: additions
+
+| # | Risk | Mitigation |
+|---|---|---|
+| R11 | Supplier memory looks empty until import | Expected and labelled "no history yet". Its value arrives at cutover; the trial measures the draft and chase features instead. |
+| R12 | The PDF chunk is large or slow on cheap phones | Lazy-loaded, measured in R20 and P04. Fallback: generate on desktop. |
+| R13 | iPhone users get no share-sheet entry | The in-app fallback works on every platform. Q4 decides whether the Android-only share target is worth building. |
+| R14 | A stale exchange rate misleads a choice | Staleness bands, the amber note, and no comparison beyond 30 days. |
+| R15 | Generated text sounds wrong for the customers | The owner reviews the wording at G2 (D13). Templates are constants and cheap to change. |
