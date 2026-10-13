@@ -2,9 +2,9 @@
 
 Status: FROZEN — approved by owner 2026-10-13
 
-Sources: original model + Revision 1 + Amendment A2 (2026-10-13)
+Sources: original model + Revision 1 + Amendment A2 (2026-10-13) + Amendment A2b (2026-10-13)
 
-This is one merged document: the planner's original model with Revision 1 applied in place. Section numbers are kept so tasks can cite them (§2.17, §5a, §10). Passages added or replaced by Revision 1 are marked "(Revision 1)" where practical. Passages added or changed by Amendment A2 are marked "(Amendment A2)".
+This is one merged document: the planner's original model with Revision 1 applied in place. Section numbers are kept so tasks can cite them (§2.17, §5a, §10). Passages added or replaced by Revision 1 are marked "(Revision 1)" where practical. Passages added or changed by Amendment A2 are marked "(Amendment A2)". Passages added or changed by Amendment A2b (which reconciles the two A2 versions) are marked "(Amendment A2b)".
 
 
 Repo checked on `phase0/stabilise`. Claims are tagged **FACT** (seen in the repo or the brief), **INFERENCE**, **ASSUMPTION** or **PROPOSED**.
@@ -220,8 +220,21 @@ This is not a catalog: no models, SKUs or prices, and rows grow only when typed.
 | unit | text | yes | — | "pcs", "m". Matters for cable. |
 | quoted_unit_price_net | numeric(14,2) | yes | — | Optional bid price. Pre-fills the order on conversion. Quote total is derived from it. |
 | gst_rate | numeric(5,2) | no | 18 | CHECK 0–100. The quotation needs totals per line. `convert_rfq_to_order` copies it to `order_items.gst_rate`. |
+| quoted_lead_time | text | yes | — | Lead time printed on the quotation line ("ex-stock", "6–8 weeks from PO").<br>**Not pre-filled.** The chosen supplier's `lead_time` is shown beside it as a hint, because the customer's lead time = supplier time + shipping + clearance. *(Amendment A2b)* |
+| model_tokens | text[] | no | generated | `GENERATED ALWAYS AS (model_tokens(description)) STORED`, with a GIN index. *(Amendment A2b)* |
 
-**Cut:** `target_price` (all NULL in the seed), and a separate `model` column (text search on description covers it).
+**Cut:** `target_price` (all NULL in the seed), and a separate `model` column (text search on description covers it; the generated `model_tokens` column above is derived, not typed).
+
+**(Amendment A2b)** `model_tokens(text)` is an IMMUTABLE SQL function:
+1. Upper-case the text and split on whitespace and commas.
+2. Strip `- . /` from each token.
+3. Keep a token only if it has ≥ 4 characters, at least 1 letter and at least 1 digit.
+4. Drop unit and range patterns: `^\d+(V|VAC|VDC|MA|MM|CM|M|KV|KW|W|HZ|BAR|PSI|C)$` and `^\d+\d+MA$` (for example "420MA").
+
+Examples:
+- "Hach HQ1110 portable meter" → {HQ1110}
+- "Position transmitter PMA-18-F0200-X" → {PMA18F0200X}
+- "24V actuator" → {}
 
 ### 2.9 `supplier_inquiries` — [std] [L]
 
@@ -255,11 +268,13 @@ This is not a catalog: no models, SKUs or prices, and rows grow only when typed.
 | origin | text | yes | — | Country of origin and authenticity ("Genuine Siemens, DE"). |
 | in_stock | boolean | yes | — | Current stock availability. |
 | notes | text | yes | — | |
+| fx_rate_pkr | numeric(14,6) | yes | trigger | PKR per 1 unit of `currency`, captured when the line is entered.<br>• A BEFORE INSERT trigger fills it from `v_fx_latest`, but only if it was left empty.<br>• PKR gives 1. No rate gives NULL.<br>• Editable.<br>Used for **history and supplier memory only** ("at the time"). Live comparison never uses it (§5c). *(Amendment A2b)* |
+| fx_rate_on | date | yes | trigger | The date of that rate. *(Amendment A2b)* |
 
 - **Cut:**
   - `moq` and `validity_days` (validity defaulted to 30 and meant nothing) — they go in notes.
   - `is_selected` — selection is recorded by the order leg's supplier at conversion.
-  - FX rate — no costing engine.
+  - FX rate as a costing input — no costing engine. *(Amendment A2b: the captured `fx_rate_pkr` above is for history and supplier memory only, never for costing or live comparison.)*
 - Supplier price revisions overwrite the line; `audit_log` keeps the old value.
 
 ### 2.11 `clarifications` — [std] (decision C)
@@ -345,6 +360,8 @@ This is not a catalog: no models, SKUs or prices, and rows grow only when typed.
 | is_service | boolean | no | false | Commissioning or service charge. Has no goods leg. |
 | supplier_order_id | uuid FK supplier_orders SET NULL | yes | — | Which leg supplies it. NULL and not a service means "not yet sourced". |
 | rfq_item_id | uuid FK rfq_items SET NULL | yes | — | Lineage, for the quote-vs-sale comparison. |
+| supplier_unit_price | numeric(14,4) | yes | — | CHECK ≥ 0. The working purchase price, in the leg's `supplier_orders.currency`.<br>**Filled by:** `convert_rfq_to_order` (from the chosen quote line) or `create_repeat_order` (copied from the source order).<br>**Overwritten by:** `issue_purchase_order` with the prices actually issued.<br>Editable. *(Amendment A2b)* |
+| model_tokens | text[] | no | generated | Same as on `rfq_items`. GIN index. *(Amendment A2b)* |
 
 Line net, line GST and line gross are derived. Rounding: GST is rounded to whole rupees per line (PROPOSED; to be validated against the 4 GST-linked live invoices).
 
@@ -360,8 +377,9 @@ Line net, line GST and line gross are derived. Rounding: GST is rounded to whole
 | expected_on | date | yes | — | From lead time. Triggers "goods late from X". |
 | received_on | date | yes | — | Goods arrived at Q-Tech. |
 | delivered_on | date | yes | — | Delivered to the customer. Partial delivery across legs comes for free. |
+| currency | char(3) | yes | — | CHECK `^[A-Z]{3}$`. **The single source of truth for the leg's currency.** Set from the quote line on conversion, copied on repeat, editable. Required before a PO can be issued. *(Amendment A2b)* |
 
-**Cut:** supplier amount and currency (payables module is out; the price is on the quote line), and leg status (derived from the dates).
+**Cut:** the supplier amount (prices live per line in `order_items.supplier_unit_price`; the total is calculated) and leg status (derived from dates). Currency is reinstated by Amendment A2b: one supplier quotes in one currency, so the leg is the natural home. *(Amendment A2b)*
 
 ### 2.15 `order_engineers`
 
@@ -515,22 +533,28 @@ Constraint: UNIQUE(user_id, year, quarter). Only admins can write to this table.
 
 "Achieved" is never stored. It is always calculated from `v_payment_net`, so it can't drift from the payments.
 
-### 2.24 `fx_rates` (new, Amendment A2)
+### 2.24 `fx_rates` (new, Amendment A2; replaced by Amendment A2b)
 
 Has the standard id / created_at / created_by columns.
 
 | Field | Type | Null | Default | Purpose |
 |---|---|---|---|---|
 | currency | char(3) | no | — | CHECK `~ '^[A-Z]{3}$'` and ≠ 'PKR'. |
-| rate_pkr | numeric(14,6) | no | — | PKR for 1 unit of the currency. CHECK > 0. |
+| rate_pkr | numeric(14,6) | no | — | PKR for 1 unit. CHECK > 0. |
 | as_of | date | no | today in PKT | |
+| source | text | no | 'manual' | CHECK in ('auto','manual'). |
 
-- UNIQUE(currency, as_of). Entering a rate again on the same day updates that day's row.
-- **Derived view `v_fx_latest`:** currency, rate_pkr, as_of, age_days, and a staleness band:
-  - fresh: ≤ 7 days
-  - stale: 8–30 days
-  - unusable: more than 30 days
-- **Who enters rates:** any staff member, inline, at the moment a quote line needs a rate. The prompt reads "Rate for USD? (last 278.40 on 3 Oct)". There is also a Settings › Exchange rates page.
+- **Uniqueness:** UNIQUE(currency, as_of, source). Re-entering a manual rate on the same day updates that day's manual row.
+- **Automatic rows** are written nightly with the service-role key by task R23.
+  - Source: open.er-api.com (**ASSUMPTION:** its terms allow this use; checked in §8 item 24), with one fallback source configured.
+  - Currencies fetched: USD, EUR and CNY, plus every currency seen on a quote line in the last 12 months.
+- **Manual rows** can be entered by any staff member: inline at a quote line ("Rate for USD? last 278.40 on 3 Oct · auto"), or on Settings › Exchange rates. Use manual entry for the bank's TT rate, or when the fetch has failed.
+- **Derived view `v_fx_latest`:**
+  - Returns one row per currency: the latest `as_of`, and on the same day **manual is preferred over auto**.
+  - Columns: currency, rate_pkr, as_of, source, age_days, and the staleness band.
+  - Bands are unchanged: fresh ≤ 7 days, stale 8–30, unusable > 30.
+  - A manual rate applies for its own day only. The next day's automatic rate replaces it unless someone re-enters a manual one.
+- **If every fetch fails,** nothing new is written. The rates age, and the staleness bands make the gap visible. No separate alerting is needed beyond the failed nightly job.
 - Rates are market information, not company money, so engineers may enter them.
 
 ### 2.25 `quotations` (new, Amendment A2)
@@ -545,7 +569,7 @@ Has the standard columns.
 | issued_on | date | no | today in PKT | Issuing stamps `rfqs.quoted_on`. |
 | valid_until | date | no | — | Default is `issued_on + company_profile.quotation_validity_days`. |
 | contact_id | uuid FK contacts SET NULL | yes | — | Who the quotation is addressed to. |
-| lines | jsonb | no | — | Snapshot. Each element holds `rfq_item_id`, `description`, `qty`, `unit`, `unit_price_net`, `gst_rate`. CHECK: an array with at least one element. |
+| lines | jsonb | no | — | Snapshot. Each element holds `rfq_item_id`, `description`, `qty`, `unit`, `unit_price_net`, `gst_rate`, and **`lead_time`** (copied from `rfq_items.quoted_lead_time`; Amendment A2b). CHECK: an array with at least one element. |
 | net_total | numeric(14,2) | no | — | Calculated by the RPC from `lines`. The client does not supply it. |
 | gst_total | numeric(14,2) | no | — | Same: calculated by the RPC. |
 | delivery_text | text | yes | — | e.g. "4–6 weeks from PO". |
@@ -561,8 +585,7 @@ Has the standard columns.
 - Quotations are issued only through the RPC `issue_quotation`.
   - It requires every item to have `quoted_unit_price_net`.
   - It copies the RFQ's current prices into the snapshot.
-- **Cut:**
-  - per-line lead time (the quotation-level `delivery_text` covers it)
+- **Cut:** *(Amendment A2b: per-line lead time is no longer cut; it is `lead_time` in each `lines` element. `delivery_text` stays for general delivery wording.)*
   - a separate quotation-lines table (the JSON snapshot is never queried line by line)
   - bank details on the quotation (Q5 recommends they appear on invoices only)
 
@@ -576,8 +599,8 @@ Has the standard columns.
 | number | integer | no | — | Taken from `po_number_seq` on the first issue for this leg. Displayed as `PO-YY-NNNN`. |
 | revision | smallint | no | 0 | |
 | issued_on | date | no | today in PKT | Issuing stamps `supplier_orders.placed_on` if it is still empty. |
-| currency | char(3) | no | — | The supplier's currency. No default. |
-| lines | jsonb | no | — | Snapshot. Each element holds `order_item_id`, `description`, `qty`, `unit`, `unit_price`, and `price_source`, one of 'quote', 'last_po' or 'typed'. |
+| currency | char(3) | no | — | **A frozen copy** of `supplier_orders.currency`, taken at issue. A record of what the document said, not a second source of truth. *(Amendment A2b)* |
+| lines | jsonb | no | — | Snapshot. Each element holds `order_item_id`, `description`, `qty`, `unit`, `unit_price`, and `price_source`, one of 'order', 'quote', 'last_po' or 'typed' *(Amendment A2b adds 'order')*. |
 | total | numeric(14,2) | no | — | Calculated by the RPC, in `currency`. |
 | incoterm | text | yes | — | EXW, FOB, CIF, DAP, … |
 | delivery_terms | text | yes | — | |
@@ -590,11 +613,13 @@ Has the standard columns.
 - UNIQUE(number, revision).
 - The same trigger makes the record unchangeable except for `pdf_path`.
 - `supplier_orders.reference` stays as it is, holding the supplier's PI number.
-- **Where PO prices come from:** the leg itself still has no amount or currency columns (the Revision 1 cut stands). Each line is pre-filled from the first source available:
-  1. the supplier's quote line for the matching RFQ item
-  2. the last PO line to the same supplier for a "same item" match (§5c tier 1)
-  3. blank, for the user to type
-- Each line records its `price_source`, and the source is shown as a label in the UI.
+- **Where PO prices come from.** `issue_purchase_order` refuses to run if `supplier_orders.currency` is NULL. Each line is pre-filled from the first available source:
+  1. `order_items.supplier_unit_price` → label `order`
+  2. the supplier's quote line for the linked RFQ item → `quote`
+  3. the last PO line to the same supplier for a "same model" or "same item" match (§5c tiers 0 and 1) → `last_po`
+  4. blank, for the user to type → `typed`
+- `price_source` is CHECKed by the RPC against ('order','quote','last_po','typed') and shown as a label on each line.
+- On issue, the RPC **writes the issued unit prices back** to `order_items.supplier_unit_price`, so the order always holds the agreed price. *(Amendment A2b)*
 
 ### 2.27 `company_profile` (new, Amendment A2; single row)
 
@@ -761,9 +786,9 @@ Delete rules that matter:
 
 **Enforced by the database:**
 - `fx_rates`:
-  - UNIQUE(currency, as_of)
   - the currency CHECK
   - rate > 0
+  - *(Amendment A2b)* CHECK on `source`; UNIQUE(currency, as_of, source) (replaces UNIQUE(currency, as_of))
 - `quotations` and `purchase_orders`:
   - UNIQUE(number, revision)
   - `lines` must be a non-empty array
@@ -779,6 +804,20 @@ Delete rules that matter:
 - `stamp_clarification_ask(clarification_ids[])`: sets `first_asked_at` if empty and `last_asked_at` = now, and increments `ask_count`. This replaces the plain timestamp update described in R09.
 - `stamp_supplier_chase(inquiry_id)`: sets `last_chased_on` and increments `chase_count`.
 - `stamp_payment_reminder(invoice_ids[])`: sets `last_reminded_on` and increments `reminder_count`. Callable by admin and sales only; row security on `invoices` enforces this.
+
+**Additions (Amendment A2b):**
+
+**Database:**
+- The FX-capture trigger on `supplier_quote_lines` fills the rate only when the field is NULL, so an edited rate is kept. Skips rows with `legacy_source` set (imports).
+- `model_tokens()` is IMMUTABLE, with GIN indexes on both `model_tokens` columns.
+
+**Functions:**
+- `convert_rfq_to_order` also fills `order_items.supplier_unit_price` and `supplier_orders.currency` from the chosen quote line.
+- `create_repeat_order` copies both.
+- `issue_purchase_order`:
+  - Requires the leg currency.
+  - Copies it into `purchase_orders.currency`.
+  - Writes the issued prices back to the order items.
 
 **Enforced by app code:**
 - The text generators and the PDF renderers are pure functions with snapshot tests.
@@ -812,6 +851,7 @@ Delete rules that matter:
 | | Reminder (new; admin and sales only) | not reminded / reminded n× (last date) | `last_reminded_on`, `reminder_count`. |
 | **Company** | Role | customer / supplier / both / prospect | `v_company_roles`. |
 | **FX rate** | Staleness (new) | fresh / stale / unusable | `v_fx_latest.age_days`, using the bands ≤ 7, 8–30 and > 30 days. |
+| **Quote line** | Captured rate *(Amendment A2b)* | captured (rate, date) / none | `fx_rate_pkr`, `fx_rate_on`. Display only, labelled "at the time". |
 | **Expense / payment** | — | none | They are facts, so they carry no status. |
 
 Why not something simpler: three states (dropping "generated") would hide the step where the team waits on Wasif & Co. The PSID is already typed in, so that state costs no input.
@@ -888,16 +928,17 @@ For each payment *p* on order *o*:
 **Home-screen line** (decision C test): "2 questions unanswered · asked customer 6 days ago · bid due in 4 days · Red Lion/Four Stars waiting". Every piece is one query over `clarifications`, `rfqs.due_on` and `supplier_inquiries`. No field exists solely to produce it.
 
 
-### 5c. Price comparison and supplier memory (Amendment A2)
+### 5c. Price comparison and supplier memory (Amendment A2; amended by Amendment A2b)
 
 **Price comparison for one RFQ item** (pure function `comparePrices`, used on reply rows and in the convert dialog):
 1. **All quote lines in the same currency:** compare them directly in that currency. No rate is needed.
-2. **Mixed currencies:** convert each line with its currency's latest rate, provided the rate is fresh or stale (≤ 30 days old).
+2. **Mixed currencies:** convert each line at **today's** rate from `v_fx_latest` *(Amendment A2b; the captured `fx_rate_pkr` is never used for live comparison)*, provided the rate is fresh or stale (≤ 30 days old).
    - A line whose rate is unusable or missing is shown in its own currency, marked "not compared — no current USD rate", and offers the inline rate entry.
    - "Lowest" is only marked when at least 2 lines are comparable.
    - A stale rate shows an amber note, e.g. "rate 12 days old".
 3. **How amounts are displayed:** original currency first, then "≈ PKR …" with the rate date as a tooltip.
-4. **Expected cost suggestion (admin only):** Σ PO line totals × the current rate, labelled "supplier price only — excludes freight, duty, service". It pre-fills `order_costs.expected_cost_pkr` but never overwrites a value already entered. This is display and suggestion only. There is no landed-cost calculation; the costing engine stays removed.
+4. **Expected cost suggestion (admin only):** Σ qty × `order_items.supplier_unit_price` × today's rate, per leg currency; uses PO line totals when a PO has been issued *(Amendment A2b basis)*. Labelled "supplier price only — excludes freight, duty, service". It pre-fills `order_costs.expected_cost_pkr` but never overwrites a value already entered. This is display and suggestion only. There is no landed-cost calculation; the costing engine stays removed.
+5. **History displays** (memory cards, the company page, reprints) show the captured rate: "USD 412 ≈ PKR 114,700 *at the time* (3 Oct)". If no rate was captured (legacy rows, or no rate existed at entry), show the original currency only. *(Amendment A2b)*
 
 **Supplier memory** is derived only: no input, no score, and facts shown as counts.
 
@@ -905,6 +946,7 @@ For each payment *p* on order *o*:
 
 | Tier | Label | Rule |
 |---|---|---|
+| 0 | "same model" | Shares at least one `model_tokens` element with the target, AND brand equal when both brands are set. Cross-brand token matches never count, because short codes collide across makers. *(Amendment A2b)* |
 | 1 | "same item" | Brand equal to B (when B is set) AND `similarity(norm(D), norm(D′)) ≥ 0.45` (pg_trgm), OR, when B is empty: family equal to F AND similarity ≥ 0.60. `norm()` lowercases the text, strips quantities, units and punctuation, and collapses spaces. |
 | 2 | "same brand" | Brand equal to B. |
 | 3 | "same family" | Family equal to F. |
@@ -932,8 +974,9 @@ For each payment *p* on order *o*:
 | brands | `company_brands` | Always shown. |
 
 **`supplier_item_memory(p_supplier_ids uuid[], p_brand_id, p_family_id, p_description)`** returns, for each supplier, its best tier plus:
-- the last quote: price, currency, ≈ PKR at the latest rate, date, qty, lead-time text, and the tier
+- the last quote: price, currency, ≈ PKR **at the time** (captured rate; Amendment A2b), date, qty, lead-time text, and the tier
 - the last PO price: same fields, taken from the `purchase_orders.lines` snapshot
+- *(Amendment A2b)* the last ordered price: taken from the latest `purchase_orders.lines` snapshot. Where no PO was ever issued, use `order_items.supplier_unit_price` on a leg with this supplier, labelled "agreed on order, no PO issued".
 - the two most recent lead-time strings, verbatim (they are free text, so there is no median)
 
 How legacy rows feed memory:
@@ -952,6 +995,7 @@ Prices older than 18 months show their age prominently, e.g. "Mar 2025 — 19 mo
 - Below the thresholds above, show only the raw fact or "no history yet".
 - Each card has a provenance footnote, e.g. "includes imported history · 2 prices hidden (currency unverified)".
 - **Order of suggestions** in intake stays by reason: supplied before, then carries the brand, then family shortlist; ties broken by most recent contact. Memory statistics never reorder the list, because sorting on them would be a hidden score.
+  - *(Amendment A2b, wording clarified, not a rule change)* "Supplied this item before" means a tier 0 or tier 1 match on a past procurement leg with this supplier. It is the only reason that pre-ticks. The order of reasons, the tie-break by most recent contact, and "memory never reorders" are all unchanged.
 
 **Performance:**
 - Plain SQL, no materialized views.
@@ -962,7 +1006,19 @@ Prices older than 18 months show their age prominently, e.g. "Mar 2025 — 19 mo
 - Intake loads `v_supplier_stats` once when a company is chosen, and calls `supplier_item_memory` per item, debounced by 300 ms.
 - If the budget fails in the future, the fallback is a materialized `v_supplier_stats` refreshed after writes.
 
-**Work-list rules that use the stamps.** Thresholds are constants in code, and a just-stamped item drops out of the list until its threshold passes. Snoozes still apply. All day counts below are business days.
+**Fixtures to add (Amendment A2b)** (to S19 and R17):
+- (k) "Hach HQ1110 portable meter" against "HQ1110 pH/EC meter with probes", both brand Hach → tier 0.
+- (l) "24V actuator" produces no tokens, so no tier 0.
+- (m) Brand A "XK2040" against brand B "XK2040" → not tier 0.
+- (n) A memory card shows the captured rate "at the time". A legacy line with a NULL rate shows the original currency only.
+
+**Work-list rules that use the stamps.** Thresholds are constants in code. Snoozes still apply. All day counts below are business days. *(Amendment A2b: replaces "a just-stamped item drops out of the list until its threshold passes".)*
+- A just-stamped item moves to a dimmed **Waiting** group at the foot of the Today list, showing "chased n days ago · next nudge on {date}".
+- It returns to the active list when its threshold passes.
+- The Waiting group is collapsed by default when it holds more than 5 items.
+- Snoozed items stay hidden entirely: a snooze is the user's choice, while Waiting is the system's cooldown.
+- The thresholds, business-day counting, the shorter cooldown when the bid is due soon, and the escalation suggestions in the table are unchanged.
+
 
 | Rule | Due when | Escalation (a suggestion, never automatic) |
 |---|---|---|
@@ -1107,15 +1163,18 @@ The two attach points are RFQ/clarification and the GST invoice receipt. Storage
 - **Justified at this size.** Yes. The target is entered once a quarter by an admin, and everything else is calculated from payments that are recorded anyway.
 - **If skipped.** The owner tracks targets in his head or in Excel, and engineers can't see their position at all.
 
-### J. Currency conversion: manual daily rates, comparison only.
-- **Problem:** "lowest price" compared USD, CNY and EUR as raw numbers, which is wrong.
+### J. Currency conversion: nightly automatic rates, manual override, rate captured on each line. *(Amendment A2b; replaces the manual-only version)*
+- **Problem:** "Lowest price" compared USD, CNY and EUR as raw numbers, which is wrong.
 - **Why better than the alternatives:**
-  - *A free FX API* adds a network dependency, a CSP entry, a cron job and a failure mode for outages. It also gives the interbank rate, while Q-Tech pays at its bank's rate.
-  - *A rate stored on each quote line* means suppliers quoted on different days are compared at different rates, which defeats the comparison.
-- **Complexity added:** 1 table, 1 view, one inline prompt.
-- **Justified at this size:** yes. A handful of currencies, entered about once a week.
-- **If skipped:** wrong supplier choices and wrong expected costs.
-- **Note:** the old costing engine stays removed. The PKR figure is only ever a display or a suggestion.
+  - *Manual-only rates* depend on someone typing them. They go stale silently, and the comparison quietly degrades.
+  - A nightly **server-side** fetch types nothing. It adds no CSP entry (the browser never calls the rate service) and puts no outage in the user's path.
+  - The objection that "the API gives the interbank rate, but Q-Tech pays its bank's rate" is answered by **manual override**, which wins on its day.
+  - *Comparing at captured rates* would compare suppliers who quoted on different days at different rates, so live comparison uses today's rate.
+  - The captured rate keeps history honest ("what it cost then").
+- **Complexity added:** 1 table, 1 view, 1 trigger, 2 columns, one step in the nightly job, the inline prompt.
+- **Justified at this size:** yes. A handful of currencies, no recurring input.
+- **If skipped:** wrong supplier choices, wrong cost suggestions, and misleading price history.
+- **Note:** The costing engine stays removed. PKR figures are only ever a display or a suggestion.
 
 ### K. Customer quotation and supplier PO PDFs.
 
@@ -1136,12 +1195,28 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 - **The new counters are justified** because they drive the "close?" and "float elsewhere?" suggestions. Without them, the last-chased date alone can't tell a first chase from a fifth.
 - **Engineers never receive payment texts:** the generator's data comes from `order_receivables()` and `invoices`, and engineers can call or read neither.
 
-### M. WhatsApp share-in as an installable web app (PWA).
-- **Problem:** customers' answers arrive as WhatsApp text and nameplate photos on phones.
-- **What it is:** the Web Share Target API, which adds the CRM to the phone's share sheet. No WhatsApp API is used and nothing is sent.
-- **Platform limit (FACT):** this works on Android Chrome and Chromium browsers. **iOS Safari does not support share targets.** The fallback is an in-app share-in panel (paste text, pick photos) that works on every platform.
-- **Complexity added:** a manifest, a service worker (app shell only, no offline data), and one route. No schema change.
-- **Depends on Q4.**
+### M. Share-in as an installable web app, with one Capture sheet on every platform. *(Amendment A2b; replaces the earlier version)*
+- **Problem:** Customers' answers arrive as WhatsApp text and nameplate photos on phones.
+- **Design:** One **Capture sheet**, the same on every platform, offering:
+  - a native paste zone ("tap and hold → Paste"; the system paste avoids the clipboard-permission prompt and accepts images)
+  - a photo/file picker
+  - drag-and-drop and paste on desktop (for WhatsApp Desktop users)
+  - a destination chooser with recents: RFQs opened in the last 24 hours, plus the user's own RFQs that have open questions. Destinations: answer a question / new supplier questions split into lines / add to RFQ notes / start a new RFQ.
+- **Entry points:** the Capture button in the top bar, RFQ detail, and the clarifications panel.
+- **Android:** Web Share Target adds "Q-Tech CRM" to WhatsApp's share sheet. The service worker accepts the POST, keeps the payload in IndexedDB and opens the same sheet. Three taps.
+- **iPhone:** Safari has no share targets (FACT). The path is Copy → switch to the app → Paste → choose destination: four or five taps, the same sheet, not a lesser one.
+- **Shared rules:**
+  - Payloads survive a login redirect.
+  - Local copies are cleared after **7 days**.
+  - Images are compressed with `imageCompress` and capped at 5 MB.
+  - The service worker caches the **app shell only**, never API or data responses.
+- **Rejected: an iOS Shortcut.**
+  - A Shortcut can only open a URL, and on iOS that opens Safari, not the installed web app. Safari keeps a separate login, so the user lands on a login screen.
+  - Images can't travel in a URL.
+  - Posting straight to the API would mean storing an auth token inside the Shortcut.
+  - Revisit only if Apple adds share-target support.
+- **Complexity added:** a manifest, a shell-only service worker, one route, one sheet. No schema change.
+- **Q4 is closed** (the team uses both Android and iPhone).
 
 ### N. Supplier memory: derived, honest, never a score (§5c)
 
@@ -1150,7 +1225,7 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
   - A composite score hides its reasoning, and the owner rejects scores.
   - Manual supplier ratings would be paperwork.
   - Derived counts cost no input.
-- **Complexity added:** 2 views, 1 function, the trigram indexes.
+- **Complexity added:** 2 views, 1 function, the trigram indexes. *(Amendment A2b: plus the `model_tokens` function, 2 generated columns, 2 GIN indexes; the 'same model' tier is the strongest match because a shared model code is clearer to the user than text similarity.)*
 - **Expected value curve:** close to empty before cutover. It becomes useful once roughly 140 legacy inquiries and 124 quotes are imported, and grows with use.
 - **If skipped:** the intake suggestions give a reason but no evidence.
 
@@ -1224,11 +1299,13 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 
 | Old | New | Rule |
 |---|---|---|
-| — | fx_rates | Not imported. At cutover, an admin enters the current USD, EUR and CNY rates. Legacy quotes with `currency_unverified` aren't converted. |
+| — | fx_rates | Not imported. The nightly job (R23) seeds automatic rates from the day it goes live. Admin overrides only if the bank rate differs materially. *(Replaces "admin enters USD, EUR and CNY at cutover".)* Legacy quotes with `currency_unverified` aren't converted. *(Amendment A2b)* |
 | — | quotations, purchase_orders | None. Legacy `rfqs.quoted_on` stands. Legacy `supplier_orders.reference` stays as text. Supplier POs issued from now on use `po_number_seq` (starting value from Q5). |
 | — | company_profile | Entered by the owner (Q5). |
 | supplier_quotes | supplier_quote_lines (unchanged) | Memory rules apply: legacy rows are excluded from reply-time medians; `currency_unverified` prices are hidden; `item_guessed` rows are excluded from item tiers. |
 | rfq_line_items | rfq_items | `gst_rate` = 18. |
+| supplier_quotes (add) | supplier_quote_lines.fx_rate_pkr / fx_rate_on | Set to NULL on import. History shows the original currency only. The FX-capture trigger skips rows whose `legacy_source IS NOT NULL`, so imported lines keep NULL rates without disabling any trigger (orchestrator correction: disabling triggers needs elevated privileges and is fragile). History shows the original currency only. *(Amendment A2b)* |
+| orders (add) | order_items.supplier_unit_price, supplier_orders.currency | Left NULL; legacy supplier prices are unreliable. Repeat orders from legacy orders therefore start with blank prices. *(Amendment A2b)* |
 
 ---
 
@@ -1257,7 +1334,8 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 21. How many rows `quarterly_targets` has and what they contain (archived only).
 22. How reliable `orders.sales_person_id` is in the live data. Owners marked unreliable lead to unattributed payments, which affect past target results only.
 23. In live `supplier_quotes`, does `received_at` hold real reply dates? If it does, import it as the effective reply date, so legacy rows can feed `median_reply_days` (the rule in §5c would then be relaxed).
-24. Which currencies appear in `supplier_quotes`, and do they include real non-PKR rows? This decides how big the `currency_unverified` problem is.
+24. open.er-api.com: confirm its terms allow a nightly server-side fetch, and compare its PKR rate against one week of the bank's TT selling rate. If the gap is above 2%, recommend manual override as the norm for USD. *(Amendment A2b)*
+25. Which currencies appear in `supplier_quotes`, and do they include real non-PKR rows? This decides how big the `currency_unverified` problem is. *(renumbered from 24 by Amendment A2b)*
 
 ---
 
@@ -1331,7 +1409,9 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | `my_target_progress()` (definer) | ✓ (own) | ✓ (own) | ✓ (own) | No parameters; always the caller and the current quarter. |
 | RPCs `convert_rfq_to_order`, `create_repeat_order` | ✓ | ✓ | ✓ | Run with the caller's permissions; never write to `order_costs`. |
 | RPCs `merge_companies`, `merge_brands`, `resolve_value_basis` | ✓ | — | — | |
-| fx_rates | SIUD | SIU | SIU | Market information, not company money. |
+| fx_rates | SIUD | SIU² | SIU² | ² Insert and update are allowed only where `source = 'manual'`. Automatic rows are written by the R23 nightly job using the service-role key, which bypasses RLS. |
+| `model_tokens()` | ✓ | ✓ | ✓ | Immutable helper with no data access. |
+| order_items.supplier_unit_price, supplier_orders.currency | SIU | SIU | SIU | Covered by the existing rules on those tables. Supplier prices are visible to engineers. |
 | company_profile | SU | S | S | Singleton row, no insert or delete. |
 | quotations | SIUD | SIU¹ | SIU¹ | ¹ UPDATE limited to `pdf_path` by the trigger. |
 | purchase_orders | SIUD | SIU¹ | SIU¹ | Supplier prices are visible to engineers, consistent with §10. |

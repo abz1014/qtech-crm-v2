@@ -1,6 +1,6 @@
 # Q-Tech CRM v2: build plan
 
-Status: APPROVED by owner 2026-10-13. Q1 = (a) real trial data kept; Q2 = (a) GitHub protected-environment secrets; Q3 deferred to go-live. Amendment A1 appended (design direction, approved 2026-10-13). Amendment A2 appended (Gate 1 result and features F-1 to F-7, approved 2026-10-13).
+Status: APPROVED by owner 2026-10-13. Q1 = (a) real trial data kept; Q2 = (a) GitHub protected-environment secrets; Q3 deferred to go-live. Amendment A1 appended (design direction, approved 2026-10-13). Amendment A2 appended (Gate 1 result and features F-1 to F-7, approved 2026-10-13). Amendment A2b appended (reconciliation of the two A2 versions, approved by orchestrator 2026-10-13).
 
 **Based on:** the approved data model (original document plus Revision 1) and the owner decisions you sent.
 **Facts checked in the old repo:**
@@ -609,3 +609,80 @@ The **P4 exit** gains: mixed-currency comparison is correct; chase stamps stop t
 | R13 | iPhone users get no share-sheet entry | The in-app fallback works on every platform. Q4 decides whether the Android-only share target is worth building. |
 | R14 | A stale exchange rate misleads a choice | Staleness bands, the amber note, and no comparison beyond 30 days. |
 | R15 | Generated text sounds wrong for the customers | The owner reviews the wording at G2 (D13). Templates are constants and cheap to change. |
+
+---
+
+# Amendment A2b — Reconciliation of the two A2 versions (approved by orchestrator 2026-10-13)
+
+> This supersedes any conflicting text in Amendment A2. The task-ID mapping table below is authoritative; v2-only IDs (X01, C01, W01, Q01, K01…) do not exist. Orchestrator correction: the FX-capture trigger skips imported rows (legacy_source set) instead of being disabled during import.
+
+### PD design tasks (all still inside the one G2 batch)
+
+| ID | Change |
+|---|---|
+| D02-B fix | Also show the **Waiting** group: dimmed, "chased n days ago · next nudge on …", collapsed when there are more than 5 items. |
+| D04 | FX labels: today's "≈ PKR" on reply rows versus the captured "at the time" in memory chips; the inline rate prompt shows source (auto or manual) and age. |
+| D05 | A supplier-price column on order items in the leg's currency, and the leg currency field. |
+| D10 | A per-line **lead-time** column on the quotation. |
+| D12 | Redrawn as the **Capture sheet** at 375 px for Android and iPhone, plus desktop at 1440 (drag-drop and paste).<br>Acceptance: the iPhone path is ≤ 2 taps longer than Android; the login-resume state is shown; recents are shown. |
+
+### Task scope changes (no new IDs)
+
+| ID | Added scope | Added acceptance |
+|---|---|---|
+| S04 | `rfq_items.quoted_lead_time`, `rfq_items.model_tokens` + GIN, the `model_tokens()` function | Unit cases for `model_tokens` (the §2.8 examples, plus the unit and range exclusions). |
+| S05 | `order_items.supplier_unit_price`, `order_items.model_tokens` + GIN, `supplier_orders.currency` | — |
+| S13 | `convert_rfq_to_order` and `create_repeat_order` fill or copy the supplier price and the leg currency | Conversion copies the price and currency from the chosen quote line. |
+| S17 | `fx_rates.source`, the new uniqueness, `v_fx_latest` with manual-over-auto, the quote-line FX columns and capture trigger. **Dependencies become S03 + S04.** | Manual beats auto on the same day; the next day's auto beats yesterday's manual. The trigger fills only NULLs. PKR gives 1. No rate gives NULL. Staleness band tests unchanged. |
+| S18 | `issue_purchase_order`: requires the leg currency, freezes it, applies the 4-source pre-fill order, writes prices back to the order items | Price-source test for all 4 sources. The write-back is verified. Refuses when the currency is NULL. |
+| S19 | Tier 0 "same model". Memory uses captured rates. The "last ordered price" fallback. | Fixtures (k)–(n) pass. |
+| R15 | Rate source (auto or manual) shown. Manual-override entry. Captured-versus-today labelling in history displays. | — |
+| R16 | Waiting group and its cooldown display. Covers the old v2 C01/C02 scope. | With a fake clock, a chased item → Waiting → back on the active list on the threshold date. Bid due within 3 days shortens the wait. |
+| R17 | Tier 0 labels; memory chips "at the time". Covers K01. | Fixtures (k)–(n) through the UI. |
+| R18 | Covers K02. | — |
+| R19 | Per-line `quoted_lead_time` (supplier lead time shown as a hint) in the dialog and the snapshot. Covers Q03. | The PDF prints the per-line lead time. The hint never auto-fills the field. |
+| R20 | Covers Q02. | — |
+| R21 | Covers W01. | — |
+| R22 | Rebuilt as the Capture sheet (§6 M): every entry point, desktop drag-drop and paste, recents, 7-day local retention (was 24 h). Covers W02/W03. | End-to-end for each destination. A simulated share-target POST in Chromium. Native paste of an image in Chromium. Payload survives a login redirect. Purged after 7 days. |
+| A06 | Covers Q01; uses `job_title`. | — |
+| O07 | 4-source pre-fill including `order`; edits the leg currency. Covers Q04. | — |
+| M04 | The expected-cost suggestion uses supplier prices × today's rate, or PO totals once a PO has been issued. | — |
+| M09 | Covers C03. | — |
+
+### New tasks
+
+| ID | Deliverable | Acceptance | Deps | ∥ | Phase |
+|---|---|---|---|---|---|
+| R23 | Nightly FX fetch: a step in `nightly.yml`, service role, writes `auto` rows from open.er-api.com with one fallback source; currencies = USD/EUR/CNY plus those seen on quote lines in the last 12 months | Running twice in one day writes no duplicates. A failing source makes the job fail (red). It never writes `manual` rows. | S17, S15, R13 | g | P4 (before R14) |
+| R24 | Real-device test of share-in and capture: Android Chrome (install, WhatsApp → Share) and iPhone Safari (install to the home screen, Copy → Paste, photo pick). Written test script; results recorded in `docs/` | Both paths complete on the team's own phones; tap counts recorded; the iPhone path is ≤ 2 taps longer than Android. | R21, R22 | | P4b; OWNER (team phones) |
+
+ID mapping for reviewers. Every v2-only ID is absorbed, so no duplicates remain:
+
+| Version 2 ID | A2b ID |
+|---|---|
+| X01 | R15 |
+| X02 | R23 |
+| C01, C02 | R16 |
+| C03 | M09 |
+| W01 | R21 |
+| W02, W03 | R22 |
+| W04 | R24 |
+| Q01 | A06 |
+| Q02 | R20 |
+| Q03 | R19 |
+| Q04 | O07 |
+| K01 | R17 |
+| K02 | R18 |
+| v2's S17 | S19 |
+
+### §2 Phases: changes
+
+- **P4 (before R14):** add R23.
+- **P4b:** add R24.
+
+### §7 Risks: add
+
+| # | Risk | Mitigation |
+|---|---|---|
+| A2b-R1 | The free rate service changes its terms, disappears, or drifts from the bank rate | One fallback source; manual override wins on its day; staleness bands make missing updates visible; comparisons still work on stale rates (with a label) and stop only at "unusable" (> 30 days). |
+| A2b-R2 | The supplier price on the order and the issued PO diverge | Issuing a PO writes its prices back to the order items, so there is one working price; the PO snapshot is the record of what was sent. |
