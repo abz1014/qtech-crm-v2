@@ -5,6 +5,9 @@ Changes to `DATA_MODEL.md` need an entry here first.
 
 - 2026-10-13: Brand-new codebase in `qtech-crm-v2/` with its own git repo; the old repo is kept beside it as a read-only reference.
 - 2026-10-13: New Supabase project on the free plan; Mumbai region recommended; whether to go Pro or rely on exports is decided before go-live.
+- 2026-10-13: Project created in Singapore (ref yafbphagorydbitfgfmg) at the owner's choice; the earlier project gufnutjoapgbqeqtayst was deleted.
+- 2026-10-13: Minimal logging is a standing rule. Required fields are the true minimum, dates default to today, context pre-fills, and every flow has an interaction-count target (Amendment A3 / FE-2). Owner: "if the engineers waste time logging every detail to the site its gonna be useless again".
+- 2026-10-13: Owner delegated the A3 calls: drop invoices.tax_deposit_bank; keep invoices.client_received_on but out of the entry flow; GST/FBR steps stamped in monthly batches (single-invoice stamping still possible).
 - 2026-10-13: Stack kept: React, Vite, TypeScript, Tailwind, shadcn/Radix, TanStack Query, react-hook-form, Zod, Supabase, Vercel.
 - 2026-10-13: No email delivery. Password reset is started by an admin. The app never sends email or WhatsApp; supplier enquiries are copied to the clipboard.
 - 2026-10-13: The costing calculator is removed. Each order has one expected cost, plus expenses tagged to the order. An admin marks "costs complete"; margin stays provisional until then.

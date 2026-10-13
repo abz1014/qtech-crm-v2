@@ -2,9 +2,9 @@
 
 | Item   | Value                                      |
 | ------ | ------------------------------------------ |
-| Ref    | `gufnutjoapgbqeqtayst`                     |
-| URL    | `https://gufnutjoapgbqeqtayst.supabase.co` |
-| Region | Mumbai (ap-south-1)                        |
+| Ref    | `yafbphagorydbitfgfmg`                     |
+| URL    | `https://yafbphagorydbitfgfmg.supabase.co` |
+| Region | Singapore (ap-southeast-1)                 |
 | Plan   | Free                                       |
 
 Remote changes happen ONLY via `supabase db push` from the protected CI job.
@@ -22,7 +22,7 @@ Never edit the schema in the dashboard. `supabase/config.toml` is for local/CI u
 
 ```powershell
 npx supabase login
-npx supabase link --project-ref gufnutjoapgbqeqtayst
+npx supabase link --project-ref yafbphagorydbitfgfmg
 ```
 
 `login` opens the browser. `link` prompts for the DB password: type it yourself;
