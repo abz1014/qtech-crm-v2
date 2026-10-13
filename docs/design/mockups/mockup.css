@@ -115,3 +115,70 @@ a:hover { color: var(--primary-hover); text-decoration: underline; text-underlin
 .board-inner { transform-origin: 0 0; background: var(--bg-canvas); }
 .board { max-width: 1282px; }
 .board-phone { max-width: 377px; }
+
+/* ---- Gate 2 entry-trim additions (shared across g2-* mockups) ---- */
+/* Interaction-count annotation, same language as g2-intake-float's tally */
+.taps { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); margin-top: var(--sp-1); }
+.taps-bar { display: flex; gap: 3px; }
+.taps-bar i { width: 18px; height: 8px; border-radius: 2px; background: var(--tone-ink-bg); }
+.taps-bar i.is-opt { background: repeating-linear-gradient(135deg, var(--tone-ink-bg) 0 2px, var(--bg-surface) 2px 4px); box-shadow: inset 0 0 0 1px var(--tone-ink-bg); }
+.taps-bar i.is-free { background: var(--bg-selected); }
+.taps p { font-size: var(--text-sm); color: var(--fg-2); max-width: 90ch; }
+.taps p b { color: var(--fg); font-weight: var(--weight-semibold); }
+.pin { position: absolute; z-index: 25; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--radius-round); background: var(--tone-ink-bg); color: var(--tone-ink-fg); font: var(--weight-medium) 12px/1 var(--font-mono); box-shadow: 0 0 0 2px var(--bg-canvas); pointer-events: none; }
+.pin.is-opt { background: var(--bg-surface); color: var(--fg); box-shadow: 0 0 0 1px var(--fg), 0 0 0 3px var(--bg-canvas); }
+.has-pin { position: relative; }
+/* Stamped dates: text you can tap to edit; the next step is one button */
+.dtv { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: var(--text-sm); line-height: 20px; color: var(--fg); cursor: pointer; border-radius: var(--radius); border-bottom: 1px dotted var(--border-input); }
+.dtv:hover, .dtv:focus-visible { border-bottom-color: var(--primary); color: var(--primary); }
+.dtv:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.dtv .i { width: 12px; height: 12px; opacity: 0; }
+.dtv:hover .i, .dtv:focus-visible .i { opacity: 1; }
+.dt .sug { font-size: var(--text-xs); line-height: 14px; color: var(--fg-muted); margin-top: 2px; text-wrap: balance; }
+.stamp { display: inline-flex; align-items: center; gap: 6px; }
+.leg-end .stamp-row { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+/* Pre-filled value with its source */
+.src { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-xs); line-height: 16px; color: var(--fg-muted); }
+.src .i { width: 12px; height: 12px; }
+.src b { font-family: var(--font-mono); font-weight: var(--weight-regular); color: var(--fg-2); }
+.chip-quiet { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: var(--radius-round); font-size: var(--text-xs); line-height: 18px; color: var(--fg-muted); background: var(--bg-selected); }
+.chip-quiet .i { width: 12px; height: 12px; }
+.price-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.price-chip { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--radius-round); border: var(--hairline) solid var(--border-input); background: var(--bg-surface); font-size: var(--text-xs); line-height: 18px; color: var(--fg-2); cursor: pointer; }
+.price-chip:hover { border-color: var(--primary); color: var(--primary); }
+.price-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.price-chip .num { font-family: var(--font-mono); color: var(--fg); }
+.ro-lock { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-xs); color: var(--fg-muted); }
+.ro-lock .i { width: 12px; height: 12px; }
+.cm-ro { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--sp-5); padding: 0 var(--sp-5) var(--sp-4); }
+.cm-ro .k { font-size: var(--text-xs); line-height: 16px; color: var(--fg-muted); font-weight: var(--weight-medium); margin-bottom: 4px; display: flex; gap: 8px; align-items: center; }
+.cm-ro p, .cm-ro .v { font-size: var(--text-sm); color: var(--fg-2); text-wrap: pretty; }
+.g-768 .cm-ro { grid-template-columns: 1fr; }
+.cb { position: relative; display: grid; place-items: center; width: 18px; height: 18px; border: var(--hairline) solid var(--border-input); border-radius: 3px; background: var(--bg-surface); color: var(--on-primary); }
+.cb .i { width: 12px; height: 12px; stroke-width: 2.5; opacity: 0; }
+.cb.is-on { background: var(--primary); border-color: var(--primary); }
+.cb.is-on .i { opacity: 1; }
+.batch-bar { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-5); background: var(--bg-selected); border-bottom: var(--hairline) solid var(--border); }
+.batch-bar .b-t { font-size: var(--text-sm); color: var(--fg-2); padding-left: var(--sp-2); }
+.batch-bar .b-t b { color: var(--fg); font-family: var(--font-mono); }
+.psid { display: inline-flex; align-items: center; gap: 6px; }
+.psid-f { width: 190px; height: 28px; display: inline-flex; align-items: center; }
+.psid-f .ph { color: var(--fg-muted); font-size: var(--text-xs); }
+.pfx { position: relative; display: block; }
+.pfx .cc { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: var(--text-xs); color: var(--fg-muted); pointer-events: none; }
+.pfx .inp { padding-left: 42px; }
+.cap .cap-grid { grid-template-columns: minmax(0, 1.4fr) 140px minmax(0, 1fr) 96px; }
+.is-m .cap .cap-grid { grid-template-columns: 1fr 1fr; }
+.rate-quiet { margin: 0 var(--sp-4) var(--sp-3); }
+.q-act { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); margin-top: var(--sp-2); }
+.q-act .hint { font-size: var(--text-xs); color: var(--fg-muted); }
+.ln .price-chips { margin-top: 6px; flex-direction: column; align-items: flex-start; gap: 4px; }
+.ln .price-chip { border-radius: var(--radius); text-align: left; }
+.fld .src { font-weight: var(--weight-regular); }
+.ln .d .price-chips { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-top: 6px; }
+.ln .d .price-chips .price-chip { display: block; max-width: 100%; padding: 3px 10px; border-radius: var(--radius); text-align: left; text-wrap: balance; font-size: var(--text-xs); line-height: 16px; color: var(--fg-2); }
+.ln .d .price-chips .price-chip b { font-family: var(--font-mono); font-weight: var(--weight-medium); color: var(--fg); }
+@media (max-width: 480px) {
+  .doc { overflow-x: clip; }
+  table.cmp { display: block; overflow-x: auto; max-width: 100%; }
+}
