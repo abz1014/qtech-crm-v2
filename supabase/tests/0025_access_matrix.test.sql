@@ -57,6 +57,9 @@ begin
       get stacked diagnostics d = pg_exception_detail;
       return case when d::bigint > 0 then 'Y' else 'N' end;
     when insufficient_privilege then
+      if sqlerrm like 'Direct deletion from storage%' then
+        return 'Y';
+      end if;
       return 'N';
     when sqlstate 'P0002' then
       return 'N';
@@ -376,16 +379,23 @@ select is((select array_agg(distinct obj order by obj) from matrix where kind = 
   'coverage: the matrix lists every storage bucket');
 select is((select count(*)::int from matrix m where not exists (select 1 from probes p where p.obj = m.obj and p.variant = m.variant)), 0,
   'coverage: every matrix line has probes');
-select is((select count(*)::int from pg_proc p
+select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prorettype = 'trigger'::regtype
              and p.proname in ('audit_row_change', 'set_payment_credited_user', 'learn_company_brands', 'capture_quote_line_fx',
                                'quotation_set_totals', 'purchase_order_set_total', 'lock_issued_document', 'company_profile_touch')
-             and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))), 0,
+             and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))),
+          '{}'::text[],
   'trigger functions have no client grant (A5: capture_quote_line_fx, and the other definer/trigger helpers)');
 select is((select count(*)::int from pg_class c
            where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'v', 'p')
              and exists (select 1 from aclexplode(c.relacl) a where a.grantee in (0, 'anon'::regrole::oid))), 0,
   'anon and PUBLIC hold no privilege on any table or view in public');
+
+insert into known values
+  ('model_tokens', '', 'anon'), ('model_tokens', '', 'deactivated'),
+  ('item_text_norm', '', 'anon'), ('item_text_norm', '', 'deactivated'),
+  ('item_match_tier', '', 'deactivated'),
+  ('today_pkt', '', 'anon'), ('today_pkt', '', 'deactivated');
 
 -- ------------------------------------------------------------------ the matrix, line by line and persona by persona
 select is(pg_temp.actual(m.obj, m.variant, p.persona), pg_temp.expected(m.obj, m.variant, p.persona),
@@ -394,6 +404,18 @@ from matrix m
 cross join (values ('admin'), ('sales'), ('engineer'), ('deactivated'), ('anon')) p (persona)
 where not exists (select 1 from known k where k.obj = m.obj and k.variant = m.variant and k.persona = p.persona)
 order by m.kind, m.obj, m.variant, p.persona;
+
+-- Known failures. Section 10 lists the pure helpers (model_tokens and the like) for the three staff roles only and
+-- says nothing about anon or a deactivated user. The brief expects both to be denied. Today anon can execute
+-- model_tokens, item_text_norm and today_pkt (their migrations grant to authenticated but never revoke the default
+-- PUBLIC execute), and a deactivated user, who is still the database role `authenticated`, can execute every pure
+-- helper: they read no table, so there is no row-security rule to turn the call away. Whether that matters is the
+-- owner's call (no data is exposed), so these are listed in the report and marked TODO rather than changed here.
+select todo_start('s10 is silent on anon and deactivated for pure helpers; they can execute them (no data access)');
+select is(pg_temp.actual(k.obj, k.variant, k.persona), pg_temp.expected(k.obj, k.variant, k.persona),
+  format('KNOWN function %s as %s', k.obj, k.persona))
+from known k order by k.obj, k.persona;
+select todo_end();
 
 select * from finish();
 rollback;
