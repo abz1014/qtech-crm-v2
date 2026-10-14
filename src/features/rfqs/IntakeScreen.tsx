@@ -1,0 +1,791 @@
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { ChevronRight, Copy, Save } from 'lucide-react'
+import { businessToday } from '@/lib/dates'
+import { formatDay } from '@/lib/formatDay'
+import { copyToClipboard } from '@/lib/clipboard'
+import { constraintOf, mapPgError } from '@/lib/pgErrors'
+import { rfqRef } from '@/lib/refs'
+import { useSession } from '@/app/session'
+import { CreateCompanyDialog } from '@/features/companies/CreateCompanyDialog'
+import { useBrands, useCompany, useCompanyContacts, useCompanySites } from '@/features/companies/hooks'
+import type { CompanyRole } from '@/features/companies/api'
+import type { FloatInput, SavedRfq } from '@/features/rfqs/api'
+import { findRfqByCustomerRef, useCompanyMatches, useFloatRfq, useSetRfqFloated, useSupplierCandidates, useSupplierMemory } from '@/features/rfqs/hooks'
+import {
+  computeReplyBy,
+  copyText,
+  generateEnquiryDraft,
+  guessBrandFamily,
+  itemsWithoutSupplier,
+  joinNames,
+  parsePaste,
+  realItems,
+  RFQ_REF_PLACEHOLDER,
+  suggestSuppliers,
+  tickedIds,
+  toEnquiryItems,
+  toFloatItems,
+  toSuggestionItems,
+  type BrandRef,
+  type DraftItem,
+  type EnquiryVariant,
+} from '@/features/rfqs/lib'
+import { ItemRows, PastedPanel, PasteZone, type PastedBlock } from '@/features/rfqs/ItemsEditor'
+import { EnquiryCard, FloatedPanel, SidePanels, type Step } from '@/features/rfqs/IntakeParts'
+import { ItemChips, SupplierPicker, type ManualSupplier } from '@/features/rfqs/SupplierPicker'
+import { Avatar } from '@/ui/Avatar'
+import { Banner } from '@/ui/Banner'
+import { Button } from '@/ui/Button'
+import { Checkbox } from '@/ui/form/Checkbox'
+import { Combobox } from '@/ui/form/Combobox'
+import { DateInput } from '@/ui/form/DateInput'
+import { Field } from '@/ui/form/Field'
+import { Select } from '@/ui/form/Select'
+import { TextField } from '@/ui/form/TextField'
+import { Icon } from '@/ui/Icon'
+import { StatusBadge } from '@/ui/StatusBadge'
+import { useToast } from '@/ui/useToast'
+
+/*
+ * New RFQ: intake and float on one screen (R05; g2-intake-float.html). Company and a paste, then suppliers with their
+ * reasons, then the enquiry text, then one button that copies it and marks the RFQ floated, with a 10-second Undo.
+ *
+ * FE-2 entry burden, listed for the commit:
+ *   required     the company, and at least one item (a description). Nothing else.
+ *   pre-filled   received on = today and owner = you (database defaults); site and contact when the company has exactly
+ *                one (with the source shown); qty 1 and GST 18 % when not given; brand and family picked from the
+ *                description; only suppliers who supplied the item before are ticked.
+ *   optional     customer reference, bid due date, top priority, site, contact.
+ *   interactions pick the company, paste, "Looks right: find suppliers" (new RFQ: 2 actions and 1 paste);
+ *                "Write the enquiry", "Copy & mark floated" (float: 2 taps).
+ *
+ * Nothing is saved until the person copies the enquiry or chooses "Save without floating". The RFQ number is given by
+ * the database when it is saved, so the draft carries a placeholder that is replaced in the copy.
+ */
+
+interface Company {
+  id: string
+  name: string
+  country: string | null
+  role: CompanyRole | null
+}
+
+type Variant = EnquiryVariant
+
+interface ErrorNote {
+  message: string
+  existing?: SavedRfq | null
+  customerRef?: boolean
+}
+
+const TEAM_COMPANY = 'Q-Tech Solutions'
+
+let keySeq = 0
+const newKey = () => `i${++keySeq}`
+
+export default function IntakeScreen() {
+  const [round, setRound] = useState(0)
+  return <IntakeForm key={round} onAnother={() => setRound(r => r + 1)} />
+}
+
+function IntakeForm({ onAnother }: { onAnother: () => void }) {
+  const session = useSession()
+  const user = session.status === 'signed-in' ? session.user : null
+  const { toast } = useToast()
+  const [params] = useSearchParams()
+  const today = businessToday()
+
+  // ---- the form
+  const [company, setCompany] = useState<Company | null>(null)
+  const [siteOverride, setSiteOverride] = useState<string | null>(null)
+  const [contactOverride, setContactOverride] = useState<string | null>(null)
+  const [dueOn, setDueOn] = useState('')
+  const [customerRef, setCustomerRef] = useState('')
+  const [isPriority, setIsPriority] = useState(false)
+  const [items, setItems] = useState<DraftItem[]>([])
+  const [pasted, setPasted] = useState<PastedBlock | null>(null)
+  const [focusKey, setFocusKey] = useState<string | null>(null)
+  const [creating, setCreating] = useState<string | null>(null)
+  const zoneRef = useRef<HTMLTextAreaElement>(null)
+
+  // ---- the flow
+  const [step, setStep] = useState<Step>('build')
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
+  const [manual, setManual] = useState<ManualSupplier[]>([])
+  const [variant, setVariant] = useState<Variant>('whatsapp')
+  const [edit, setEdit] = useState<{ sig: string; text: Partial<Record<Variant, string>> }>({ sig: '', text: {} })
+  const [saved, setSaved] = useState<SavedRfq | null>(null)
+  const [floatedOn, setFloatedOn] = useState<string | null>(null)
+  const [copied, setCopied] = useState(true)
+  const [copiedText, setCopiedText] = useState('')
+  const [busy, setBusy] = useState<null | 'copy' | 'save'>(null)
+  const [error, setError] = useState<ErrorNote | null>(null)
+  const [undone, setUndone] = useState(false)
+  // One id for this RFQ for the life of the form: a second tap, a retry, or a lost reply can only ever find the same RFQ.
+  const rfqId = useRef(crypto.randomUUID())
+  const inFlight = useRef(false)
+
+  const float = useFloatRfq()
+  const setFloated = useSetRfqFloated()
+
+  // ---- data
+  const brandsQuery = useBrands()
+  const brands = useMemo<BrandRef[]>(
+    () => (brandsQuery.data ?? []).map(b => ({ id: b.id, name: b.name, kind: b.kind === 'family' ? 'family' : 'brand' })),
+    [brandsQuery.data],
+  )
+  const sites = useCompanySites(company?.id)
+  const contacts = useCompanyContacts(company?.id)
+
+  // The customer page's "New RFQ" button arrives with ?company=<id>.
+  const wantedId = params.get('company')
+  const wanted = useCompany(company ? undefined : (wantedId ?? undefined))
+  useEffect(() => {
+    if (!company && wanted.data) {
+      setCompany({ id: wanted.data.id, name: wanted.data.name, country: wanted.data.country, role: wanted.data.role })
+    }
+  }, [company, wanted.data])
+
+  // ---- items
+  const addItems = useCallback(
+    (parsed: { description: string; qty: number; unit: string | null }[], list: BrandRef[]) => {
+      const rows = parsed.map<DraftItem>(p => ({
+        key: newKey(),
+        description: p.description,
+        qty: p.qty,
+        unit: p.unit ?? '',
+        ...guessBrandFamily(p.description, list),
+      }))
+      setItems(prev => [...prev, ...rows])
+    },
+    [],
+  )
+  const brandsRef = useRef(brands)
+  brandsRef.current = brands
+  const takePaste = useCallback(
+    (text: string) => {
+      const result = parsePaste(text)
+      setPasted({ result })
+      if (result.items.length > 0) addItems(result.items, brandsRef.current)
+    },
+    [addItems],
+  )
+  // A paste made with nothing focused (Ctrl+V anywhere on the page) is handled here; the paste zone handles its own.
+  useEffect(() => {
+    if (step !== 'build') return
+    const onPaste = (e: ClipboardEvent) => {
+      const t = e.target as HTMLElement | null
+      const editable = t?.closest?.('input, textarea, select, [contenteditable="true"]')
+      if (editable && editable !== zoneRef.current) return
+      const text = e.clipboardData?.getData('text/plain') ?? ''
+      if (!text.trim()) return
+      e.preventDefault()
+      takePaste(text)
+    }
+    document.addEventListener('paste', onPaste)
+    return () => document.removeEventListener('paste', onPaste)
+  }, [step, takePaste])
+
+  // Rows whose brand or family the person has set themselves: a late-arriving brand list never overrides those.
+  const touched = useRef(new Set<string>())
+  const updateItem = (key: string, patch: Partial<DraftItem>) => {
+    if ('brandId' in patch || 'familyId' in patch) touched.current.add(key)
+    setItems(list => list.map(i => (i.key === key ? { ...i, ...patch } : i)))
+  }
+  // A paste can land before the brand list has loaded: when it arrives, rows with no brand or family get their guess.
+  useEffect(() => {
+    if (brands.length === 0) return
+    setItems(list => {
+      let changed = false
+      const next = list.map(i => {
+        if (touched.current.has(i.key) || i.brandId || i.familyId || !i.description.trim()) return i
+        const g = guessBrandFamily(i.description, brands)
+        if (!g.brandId && !g.familyId) return i
+        changed = true
+        return { ...i, ...g }
+      })
+      return changed ? next : list
+    })
+  }, [brands])
+  const removeItem = (key: string) => setItems(list => list.filter(i => i.key !== key))
+  const addBlank = () => {
+    const key = newKey()
+    setItems(list => [...list, { key, description: '', qty: null, unit: '', brandId: null, familyId: null }])
+    setFocusKey(key)
+  }
+
+  const real = realItems(items)
+  const ready = Boolean(company) && real.length > 0
+
+  // ---- site and contact: pre-filled when the company has exactly one
+  const siteList = sites.data ?? []
+  const contactList = contacts.data ?? []
+  const siteId = siteOverride ?? (siteList.length === 1 ? siteList[0].id : '')
+  const contactId = contactOverride ?? (contactList.length === 1 ? contactList[0].id : '')
+
+  // ---- suppliers
+  const wantSuppliers = step === 'suppliers' || step === 'enquiry' || step === 'floated' || step === 'saved'
+  const candidates = useSupplierCandidates(wantSuppliers && Boolean(company))
+  const candidateList = useMemo(() => (candidates.data ?? []).filter(c => c.id !== company?.id), [candidates.data, company?.id])
+  const suggestionItems = useMemo(() => toSuggestionItems(items, brands), [items, brands])
+  const memoryQuery = useMemo(
+    () => suggestionItems.map(i => ({ key: i.id, description: i.description, brandId: i.brandId, familyId: i.familyId })),
+    [suggestionItems],
+  )
+  const memory = useSupplierMemory(
+    memoryQuery,
+    candidateList.map(c => c.id),
+    wantSuppliers && candidates.isSuccess,
+  )
+  const suggestions = useMemo(
+    () => suggestSuppliers(suggestionItems, { suppliers: candidateList, memory: memory.data ?? {} }, { today }),
+    [suggestionItems, candidateList, memory.data, today],
+  )
+  const suppliersLoading = wantSuppliers && (candidates.isPending || (candidates.isSuccess && memory.isPending && suggestionItems.length > 0 && candidateList.length > 0))
+  const suppliersError = candidates.isError || memory.isError
+
+  const manualIds = manual.map(m => m.id)
+  const ticked = tickedIds(suggestions.suppliers, overrides, manualIds)
+  const tickedSet = useMemo(() => new Set(ticked), [ticked])
+  const flaggedKeys = itemsWithoutSupplier(
+    suggestionItems.map(i => i.id),
+    suggestions.suppliers,
+    ticked,
+    manualIds,
+  )
+  const nameOf = (id: string) => suggestions.suppliers.find(s => s.supplierId === id)?.name ?? manual.find(m => m.id === id)?.name ?? 'Supplier'
+  const recipients = ticked.map(id => ({ id, name: nameOf(id) }))
+  const itemNumber = (key: string) => suggestionItems.findIndex(i => i.id === key) + 1
+  const shortItem = (key: string) => {
+    const d = suggestionItems.find(i => i.id === key)?.description ?? ''
+    return d.length > 34 ? `${d.slice(0, 33).trimEnd()}…` : d
+  }
+
+  const toggleSupplier = (id: string, on: boolean) => setOverrides(o => ({ ...o, [id]: on }))
+  const addManual = (s: ManualSupplier) => {
+    setManual(m => (m.some(x => x.id === s.id) ? m : [...m, s]))
+    setOverrides(o => ({ ...o, [s.id]: true }))
+  }
+
+  // ---- the enquiry text
+  const sig = JSON.stringify([suggestionItems.map(i => [i.description, i.brandId, i.id]), items.map(i => i.qty), items.map(i => i.unit), dueOn, user?.name, saved?.number])
+  const draft = useMemo(() => {
+    if (step === 'build' || suggestionItems.length === 0) return null
+    return generateEnquiryDraft({
+      rfqRef: saved ? rfqRef(saved.number) : RFQ_REF_PLACEHOLDER,
+      items: toEnquiryItems(items, brands),
+      dueOn: dueOn || null,
+      today,
+      signature: { name: user?.name ?? 'Q-Tech', company: TEAM_COMPANY },
+      variant,
+    })
+    // `items` and `brands` are covered by `sig` and the brand list identity
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, sig, brands, variant, today])
+  const editedBody = edit.sig === sig ? edit.text[variant] : undefined
+  const body = editedBody ?? draft?.body ?? ''
+
+  // ---- writes
+  const buildInput = (markSent: boolean): FloatInput => ({
+    id: rfqId.current,
+    companyId: (company as Company).id,
+    siteId: siteId || null,
+    contactId: contactId || null,
+    customerRef,
+    dueOn: dueOn || null,
+    isPriority,
+    items: toFloatItems(items),
+    supplierIds: ticked,
+    markSent,
+  })
+
+  const explain = async (err: unknown) => {
+    const e = err as { code?: string; message?: string }
+    if (e?.code === '23505' && /customer_ref/.test(constraintOf(e) ?? e.message ?? '')) {
+      const existing = company ? await findRfqByCustomerRef(company.id, customerRef).catch(() => null) : null
+      setError({ message: 'This customer already has an RFQ with that reference.', existing, customerRef: true })
+      return
+    }
+    setError({ message: mapPgError(err, { entity: 'RFQ' }).message })
+  }
+
+  async function copyAndFloat() {
+    if (inFlight.current || !company || ticked.length === 0 || !draft) return
+    inFlight.current = true
+    setBusy('copy')
+    setError(null)
+    const before = saved
+    const save: Promise<SavedRfq> = before
+      ? setFloated.mutateAsync({ rfqId: before.id, floated: true }).then(() => before)
+      : float.mutateAsync(buildInput(true))
+    const text = save.then(s => copyText({ subject: draft.subject, body }, rfqRef(s.number)))
+    try {
+      // The copy starts inside this tap, with the text still on its way: the number arrives with the save.
+      const [s, ok] = await Promise.all([save, copyToClipboard(text)])
+      const finalText = await text
+      setSaved(s)
+      setCopied(ok)
+      setCopiedText(finalText)
+      setFloatedOn(today)
+      setUndone(false)
+      setStep('floated')
+      const n = ticked.length
+      toast({
+        title: `Floated to ${n}`,
+        body: ok ? `Copied, and ${rfqRef(s.number)} marked floated.` : `${rfqRef(s.number)} marked floated. The text did not copy: copy it from the page.`,
+        undo: {
+          seconds: 10,
+          onUndo: async () => {
+            try {
+              await setFloated.mutateAsync({ rfqId: s.id, floated: false })
+              setFloatedOn(null)
+              setUndone(true)
+              setStep('enquiry')
+            } catch (err) {
+              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
+            }
+          },
+          settledTitle: `Floated to ${n}`,
+          settledBody: `${rfqRef(s.number)} is out for prices.`,
+          undoneTitle: 'Float undone',
+          undoneBody: `${rfqRef(s.number)} is saved with ${n} ${n === 1 ? 'supplier' : 'suppliers'} shortlisted.`,
+        },
+      })
+    } catch (err) {
+      await explain(err)
+    } finally {
+      inFlight.current = false
+      setBusy(null)
+    }
+  }
+
+  async function saveOnly() {
+    if (inFlight.current || !company) return
+    if (saved) {
+      setStep('saved')
+      return
+    }
+    inFlight.current = true
+    setBusy('save')
+    setError(null)
+    try {
+      const s = await float.mutateAsync(buildInput(false))
+      setSaved(s)
+      setStep('saved')
+    } catch (err) {
+      await explain(err)
+    } finally {
+      inFlight.current = false
+      setBusy(null)
+    }
+  }
+
+  async function copyAgain() {
+    await copyToClipboard(copiedText).then(ok => setCopied(ok))
+  }
+
+  // ---- text
+  const heading = step === 'floated' ? 'Floated. Paste the text into each supplier chat.' : null
+  const lede =
+    step === 'build'
+      ? real.length > 0
+        ? 'Check the split, then find suppliers.'
+        : 'Paste what the customer sent. Nothing is saved until you copy the enquiry or save.'
+      : step === 'suppliers'
+        ? 'Suggestions come with a reason. Nothing is ranked by how well a supplier has done.'
+        : step === 'enquiry'
+          ? 'Check the text, then copy it once.'
+          : step === 'saved'
+            ? 'Saved. Nothing has been sent to a supplier.'
+            : (heading ?? '')
+
+  const itemCountNote = pasted
+    ? `${pasted.result.items.length} ${pasted.result.items.length === 1 ? 'item' : 'items'} found in ${pasted.result.lineCount} ${pasted.result.lineCount === 1 ? 'line' : 'lines'}. Edit any cell to fix a split.`
+    : 'Edit any cell to change it. Quantity is 1 unless you say otherwise.'
+
+  const noSupplierLine =
+    flaggedKeys.length > 0 && ticked.length > 0
+      ? flaggedKeys.length === 1
+        ? `Item ${itemNumber(flaggedKeys[0])}, ${shortItem(flaggedKeys[0])}, has no supplier ticked.`
+        : `${flaggedKeys.length} items have no supplier ticked.`
+      : null
+
+  const errorBanner: ReactNode = error ? (
+    <Banner
+      tone="danger"
+      title={error.message}
+      action={
+        error.customerRef ? (
+          <div className="flex flex-wrap gap-2">
+            {error.existing ? (
+              <Link to={`/rfqs/${error.existing.id}`} className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium">
+                Open {rfqRef(error.existing.number)}
+              </Link>
+            ) : null}
+            <Button onClick={() => { setError(null); setStep('build') }}>Change the reference</Button>
+          </div>
+        ) : undefined
+      }
+    >
+      {error.customerRef ? 'Nothing was saved.' : 'Nothing was saved. Try again; it cannot create a duplicate.'}
+    </Banner>
+  ) : null
+
+  const floatedNames = recipients.map(r => r.name)
+  const replyBy = computeReplyBy(dueOn || null, today)
+  const unfloated: ReactNode[] = flaggedKeys.slice(0, 3).map(k => {
+    const alt = suggestions.suppliers.find(s => !tickedSet.has(s.supplierId) && s.coversItemIds.includes(k))
+    return (
+      <span key={k}>
+        <strong className="font-medium">Item {itemNumber(k)} has no supplier yet.</strong>{' '}
+        {alt ? `${alt.name} is on your shortlist for it. ${alt.memoryLine === 'no history yet' ? 'It has no history with us.' : ''}` : 'Nothing on file carries it. Add a supplier from the RFQ.'}
+      </span>
+    )
+  })
+
+  return (
+    <div className="mx-auto w-full max-w-[1100px] px-4 pb-12 pt-6 md:px-8">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_288px]">
+        <div className="grid min-w-0 content-start gap-6">
+          <header className="grid gap-1">
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-fg-muted">
+              <Link to="/rfqs" className="hover:text-fg">RFQs</Link>
+              <Icon icon={ChevronRight} size="sm" />
+              <span aria-current="page">New RFQ</span>
+            </nav>
+            <h1 className="text-2xl font-semibold tracking-tight">New RFQ</h1>
+            <p className="max-w-prose text-sm text-fg-muted">{lede}</p>
+          </header>
+
+          {step === 'build' ? (
+            <>
+              <section aria-labelledby="h-customer" className="grid gap-3">
+                <h2 id="h-customer" className="text-lg font-semibold tracking-snug">Customer</h2>
+                {company ? (
+                  <CustomerChip company={company} onChange={() => setCompany(null)} />
+                ) : (
+                  <CompanyPicker
+                    onPick={c => setCompany(c)}
+                    onCreate={text => setCreating(text)}
+                    loadingName={Boolean(wantedId) && wanted.isPending}
+                  />
+                )}
+                {company && (siteList.length > 0 || contactList.length > 0) ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {siteList.length > 0 ? (
+                      <Field
+                        label="Site"
+                        requirement="optional"
+                        source={siteOverride === null && siteList.length === 1 ? 'Only site on file' : undefined}
+                        edited={siteOverride !== null && siteList.length === 1}
+                      >
+                        <Select
+                          value={siteId}
+                          onChange={e => setSiteOverride(e.target.value)}
+                          options={siteList.map(s => ({ value: s.id, label: s.name }))}
+                          placeholder="No site"
+                        />
+                      </Field>
+                    ) : null}
+                    {contactList.length > 0 ? (
+                      <Field
+                        label="Contact"
+                        requirement="optional"
+                        source={contactOverride === null && contactList.length === 1 ? 'Only contact on file' : undefined}
+                        edited={contactOverride !== null && contactList.length === 1}
+                      >
+                        <Select
+                          value={contactId}
+                          onChange={e => setContactOverride(e.target.value)}
+                          options={contactList.map(c => ({ value: c.id, label: c.name }))}
+                          placeholder="No contact"
+                        />
+                      </Field>
+                    ) : null}
+                  </div>
+                ) : null}
+              </section>
+
+              <section aria-labelledby="h-items" className="grid gap-3">
+                <div className="flex items-baseline justify-between gap-4">
+                  <h2 id="h-items" className={`text-lg font-semibold tracking-snug ${company ? '' : 'text-fg-muted'}`}>Items</h2>
+                  <p className="text-sm text-fg-muted">{pasted ? 'Split from the pasted text' : 'Paste once. We split it.'}</p>
+                </div>
+                {pasted ? <PastedPanel block={pasted} /> : null}
+                {items.length > 0 ? (
+                  <ItemRows
+                    items={items}
+                    brands={brands}
+                    onChange={updateItem}
+                    onRemove={removeItem}
+                    onAdd={addBlank}
+                    note={itemCountNote}
+                    focusKey={focusKey}
+                  />
+                ) : null}
+                <PasteZone zoneRef={zoneRef} onText={takePaste} filled={items.length > 0} />
+                {items.length === 0 ? (
+                  <div>
+                    <Button variant="quiet" onClick={addBlank}>Add an item by hand</Button>
+                  </div>
+                ) : null}
+              </section>
+
+              <section aria-label="Optional details" className="grid gap-4 sm:grid-cols-2">
+                <Field label="Bid due" requirement="optional">
+                  <DateInput value={dueOn} onChange={setDueOn} defaultToday={false} placeholder="e.g. 3 dec" />
+                </Field>
+                <Field label="Customer reference" requirement="optional">
+                  <TextField value={customerRef} onChange={e => setCustomerRef(e.target.value)} placeholder="Their RFQ number" autoComplete="off" />
+                </Field>
+                <Checkbox
+                  checked={isPriority}
+                  onCheckedChange={v => setIsPriority(v === true)}
+                  label="Top priority"
+                  help="Sorts it to the top of the board for everyone."
+                />
+              </section>
+            </>
+          ) : null}
+
+          {step === 'suppliers' ? (
+            <>
+              <section aria-labelledby="h-items" className="grid gap-3">
+                <div className="flex items-baseline justify-between gap-4">
+                  <h2 id="h-items" className="text-lg font-semibold tracking-snug">Items</h2>
+                  <p className="text-sm text-fg-muted">
+                    <span className="num">{real.length}</span> {real.length === 1 ? 'item' : 'items'}
+                    {dueOn ? <> · bid due <span className="num">{formatDay(dueOn)}</span></> : null}
+                  </p>
+                </div>
+                <ItemChips items={real} />
+              </section>
+              <section aria-labelledby="h-sup" className="grid gap-3">
+                <div className="flex items-baseline justify-between gap-4">
+                  <h2 id="h-sup" className="text-lg font-semibold tracking-snug">Suppliers</h2>
+                  <p className="text-sm text-fg-muted">Ticked: supplied this item before. The rest is your call.</p>
+                </div>
+                <SupplierPicker
+                  groups={suggestions.groups}
+                  ticked={tickedSet}
+                  onToggle={toggleSupplier}
+                  manual={manual}
+                  onAddManual={addManual}
+                  excludeIds={new Set([...(company ? [company.id] : []), ...suggestions.suppliers.map(s => s.supplierId)])}
+                  loading={suppliersLoading}
+                  error={suppliersError}
+                  onRetry={() => {
+                    void candidates.refetch()
+                    void memory.refetch()
+                  }}
+                />
+                <p className="text-xs text-fg-muted">Order follows the reason, then the most recent contact. What we know about a supplier never changes the order.</p>
+              </section>
+            </>
+          ) : null}
+
+          {step === 'enquiry' && draft ? (
+            <>
+              {undone && saved ? (
+                <Banner tone="info" title="Float undone">
+                  {rfqRef(saved.number)} is saved with {ticked.length} {ticked.length === 1 ? 'supplier' : 'suppliers'} shortlisted. Copy the text again when you send it.
+                </Banner>
+              ) : null}
+              <Banner tone="warning" title="Spec lines are blank on purpose.">
+                Type what the customer gave you under any item, or leave it. The app never writes a spec for you, and a blank one is fine to send.
+              </Banner>
+              <EnquiryCard
+                count={ticked.length}
+                variant={variant}
+                onVariant={setVariant}
+                recipients={recipients}
+                onRemoveRecipient={id => toggleSupplier(id, false)}
+                subject={draft.subject}
+                body={body}
+                onBody={text => setEdit(e => ({ sig, text: { ...(e.sig === sig ? e.text : {}), [variant]: text } }))}
+                note={saved ? `${rfqRef(saved.number)} is saved. You paste the text into each supplier’s chat.` : 'The RFQ number is filled in when you copy. You paste the text into each supplier’s chat.'}
+                locked={Boolean(saved)}
+                actions={
+                  <>
+                    <Button variant="primary" icon={Copy} onClick={copyAndFloat} busy={busy === 'copy'} busyLabel="Copying" disabled={ticked.length === 0}>
+                      Copy &amp; mark floated to {ticked.length}
+                    </Button>
+                    {saved ? null : <Button onClick={() => setStep('suppliers')}>Back to suppliers</Button>}
+                    <Button variant="quiet" icon={Save} onClick={saveOnly} busy={busy === 'save'} busyLabel="Saving">
+                      Save without floating
+                    </Button>
+                  </>
+                }
+              />
+              {errorBanner}
+            </>
+          ) : null}
+
+          {step === 'floated' && saved && draft && floatedOn ? (
+            <FloatedPanel
+              refText={rfqRef(saved.number)}
+              openTo={`/rfqs/${saved.id}`}
+              floatedOn={floatedOn}
+              names={floatedNames}
+              replyBy={replyBy}
+              dueOn={dueOn || null}
+              copied={copied}
+              text={copiedText}
+              onCopyAgain={copyAgain}
+              unfloated={unfloated}
+              onAnother={onAnother}
+            />
+          ) : null}
+
+          {step === 'saved' && saved ? (
+            <section aria-label="Saved" className="grid gap-4 rounded border bg-surface p-6">
+              <h2 className="m-0 text-xl font-semibold tracking-snug"><span className="num">{rfqRef(saved.number)}</span> is saved</h2>
+              <p className="m-0 text-sm text-fg-2">
+                {ticked.length > 0
+                  ? `${ticked.length} ${ticked.length === 1 ? 'supplier is' : 'suppliers are'} shortlisted (${joinNames(floatedNames)}). Nothing has been sent, so it still shows as not floated.`
+                  : 'No supplier is shortlisted yet. Open it to float it when you are ready.'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  to={`/rfqs/${saved.id}`}
+                  className="inline-flex h-control items-center justify-center rounded border border-primary bg-primary px-3 text-sm font-medium leading-none text-primary-foreground transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover"
+                >
+                  Open {rfqRef(saved.number)}
+                </Link>
+                {ticked.length > 0 ? <Button onClick={() => setStep('enquiry')}>Write the enquiry</Button> : null}
+                <Button variant="quiet" onClick={onAnother}>Start another RFQ</Button>
+              </div>
+            </section>
+          ) : null}
+
+          {step === 'build' || step === 'suppliers' ? (
+            <>
+              {errorBanner}
+              <div
+                role="region"
+                aria-label="Next step"
+                className="sticky bottom-3 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 rounded border bg-surface px-4 py-3 shadow-pop"
+              >
+                <p className="m-0 min-w-0 flex-1 text-sm text-fg-2">
+                  {step === 'build' ? (
+                    ready ? (
+                      <>Saves as a new RFQ for <strong className="font-medium">{company?.name}</strong> with <strong className="num font-medium">{real.length}</strong> {real.length === 1 ? 'item' : 'items'}.</>
+                    ) : (
+                      'Choose the company and paste or add at least one item.'
+                    )
+                  ) : (
+                    <>
+                      <strong className="num font-medium">{ticked.length}</strong> {ticked.length === 1 ? 'supplier' : 'suppliers'} ticked
+                      {noSupplierLine ? <span className="ml-2 text-tone-warning-fg">{noSupplierLine}</span> : null}
+                    </>
+                  )}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {step === 'suppliers' ? <Button onClick={() => setStep('build')}>Back to items</Button> : null}
+                  <Button
+                    variant={step === 'suppliers' && ticked.length === 0 ? 'primary' : 'quiet'}
+                    icon={Save}
+                    onClick={saveOnly}
+                    disabled={!ready}
+                    busy={busy === 'save'}
+                    busyLabel="Saving"
+                  >
+                    Save without floating
+                  </Button>
+                  {step === 'build' ? (
+                    <Button variant="primary" disabled={!ready} onClick={() => setStep('suppliers')}>
+                      Looks right: find suppliers
+                      <Icon icon={ChevronRight} />
+                    </Button>
+                  ) : ticked.length > 0 ? (
+                    <Button variant="primary" onClick={() => setStep('enquiry')}>
+                      Write the enquiry
+                      <Icon icon={ChevronRight} />
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        <SidePanels
+          step={step}
+          number={saved?.number ?? null}
+          customer={company?.name ?? null}
+          itemCount={real.length}
+          dueOn={dueOn || null}
+          tickedCount={ticked.length}
+          floated={step === 'floated'}
+          floatedOn={floatedOn}
+        />
+      </div>
+
+      <CreateCompanyDialog
+        open={creating !== null}
+        onOpenChange={open => !open && setCreating(null)}
+        initialName={creating ?? ''}
+        onCreated={c => {
+          setCompany({ id: c.id, name: c.name, country: null, role: 'prospect' })
+          setCreating(null)
+        }}
+      />
+    </div>
+  )
+}
+
+function CompanyPicker({
+  onPick,
+  onCreate,
+  loadingName,
+}: {
+  onPick: (c: Company) => void
+  onCreate: (text: string) => void
+  loadingName: boolean
+}) {
+  const [text, setText] = useState('')
+  const matches = useCompanyMatches(text)
+  const hits = matches.data ?? []
+  return (
+    <Field label="Company" id="intake-company">
+      <Combobox
+        autoFocus
+        options={hits.map(h => ({
+          value: h.id,
+          label: h.name,
+          meta: [h.role ? ROLE_WORD[h.role] : null, h.country].filter(Boolean).join(' · ') || undefined,
+        }))}
+        value=""
+        onChange={id => {
+          const hit = hits.find(h => h.id === id)
+          if (hit) onPick({ id: hit.id, name: hit.name, country: hit.country, role: hit.role })
+        }}
+        onQueryChange={setText}
+        onCreate={onCreate}
+        createLabel={t => `Add “${t}” as a new company`}
+        loading={matches.isFetching}
+        placeholder={loadingName ? 'Opening the customer' : 'Search, or type a new company name'}
+      />
+    </Field>
+  )
+}
+
+const ROLE_WORD: Record<CompanyRole, string> = { customer: 'customer', supplier: 'supplier', both: 'customer and supplier', prospect: 'prospect' }
+
+function CustomerChip({ company, onChange }: { company: Company; onChange: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded border bg-surface px-4 py-3">
+      <Avatar name={company.name} />
+      <div className="min-w-0">
+        <p className="m-0 truncate text-sm font-medium">{company.name}</p>
+        <p className="m-0 text-xs text-fg-muted">{company.country ?? 'No country on file'}</p>
+      </div>
+      <span className="ml-auto" />
+      {company.role ? <StatusBadge dimension="company-role" value={company.role} /> : null}
+      <Button variant="quiet" onClick={onChange} aria-label={`Change company, now ${company.name}`}>
+        Change
+      </Button>
+    </div>
+  )
+}

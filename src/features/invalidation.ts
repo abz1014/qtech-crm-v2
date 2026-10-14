@@ -21,6 +21,8 @@ export interface WriteVars {
   'contact.add': { companyId: string }
   'brand.link': { companyId: string }
   'brand.create': Record<string, never>
+  'rfq.float': { companyId: string }
+  'rfq.setFloated': { rfqId: string }
 }
 
 export type WriteName = keyof WriteVars
@@ -39,6 +41,10 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Carrying a brand makes the company a supplier, so the roster's role column can change too.
   'brand.link': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   'brand.create': () => [qk.brands.all],
+  // Floating creates an RFQ (and inquiries): the RFQ lists, the customer's history and every supplier's activity change.
+  'rfq.float': v => [qk.rfqs.all, qk.companies.detail(v.companyId), qk.companies.lists()],
+  // Floating or un-floating moves inquiries between shortlisted and sent: the RFQ and the suppliers' counts.
+  'rfq.setFloated': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all],
 }
 
 /** The keys a write makes stale. Pure, so it can be tested without a QueryClient. */

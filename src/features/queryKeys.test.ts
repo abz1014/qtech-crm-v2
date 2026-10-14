@@ -38,6 +38,8 @@ describe('invalidation map (R01)', () => {
     'contact.add': { companyId: 'c1' },
     'brand.link': { companyId: 'c1' },
     'brand.create': {},
+    'rfq.float': { companyId: 'c1' },
+    'rfq.setFloated': { rfqId: 'r1' },
   }
 
   it('names at least one key for every write', () => {

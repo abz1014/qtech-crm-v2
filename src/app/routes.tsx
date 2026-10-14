@@ -15,6 +15,7 @@ import { AppShell } from '@/app/shell/AppShell'
  * Sub-routes such as /rfqs/:id are declared by the feature under the same key.
  */
 const screens: Partial<Record<NavKey, ComponentType>> = {
+  rfqs: lazy(() => import('@/features/rfqs/RfqsScreen')),
   companies: lazy(() => import('@/features/companies/CompaniesScreen')),
 }
 

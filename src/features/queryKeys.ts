@@ -45,7 +45,14 @@ function brands() {
 /** Reserved roots for areas that other tasks build. They exist now so the invalidation map can name them. */
 function rfqs() {
   const all = root('rfqs')
-  return { all, lists: () => [...all, 'list'] as const, detail: (id: string) => [...all, 'detail', id] as const }
+  return {
+    all,
+    lists: () => [...all, 'list'] as const,
+    detail: (id: string) => [...all, 'detail', id] as const,
+    /** Intake (R05): who can be asked, and what each of them remembers about the items being entered. */
+    suppliers: () => [...all, 'intake', 'suppliers'] as const,
+    memory: (signature: string) => [...all, 'intake', 'memory', signature] as const,
+  }
 }
 function orders() {
   const all = root('orders')

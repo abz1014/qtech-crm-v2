@@ -165,6 +165,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'convert_rfq_to_order',    '',    'X',    'X',    'X'),    -- s10 "RPCs convert_rfq_to_order, create_repeat_order"
   ('function', 'create_repeat_order',     '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'float_rfq',               '',    'X',    'X',    'X'),    -- A4: S13 RPC, all staff
+  ('function', 'set_rfq_floated',         '',    'X',    'X',    'X'),    -- R05: Undo of a float / float a saved RFQ, all staff
   ('function', 'merge_companies',         '',    'X',    '',     ''),     -- s10 "RPCs merge_companies, merge_brands, resolve_value_basis"
   ('function', 'merge_brands',            '',    'X',    '',     ''),     -- s10 (same row)
   ('function', 'resolve_value_basis',     '',    'X',    '',     ''),     -- s10 (same row)
@@ -353,6 +354,7 @@ insert into probes values
   ('my_target_progress', '', 'X', 'select * from public.my_target_progress()'),
   ('my_target_progress_at', '', 'X', 'select * from public.my_target_progress_at(now())'),
   ('float_rfq', '', 'X', $q$select public.float_rfq(@c0, @01, '[{"description":"x"}]'::jsonb)$q$),
+  ('set_rfq_floated', '', 'X', 'select 1 from (select public.set_rfq_floated(@15, false) r) x where r > 0'),   -- R05: @1a is sent today, unchased, no quote line
   ('convert_rfq_to_order', '', 'X', 'select public.convert_rfq_to_order(@c1, @15)'),
   ('create_repeat_order', '', 'X', 'select public.create_repeat_order(@c2, @20)'),
   ('merge_companies', '', 'X', 'select public.merge_companies(@01, @02)'),
