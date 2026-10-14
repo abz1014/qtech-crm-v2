@@ -224,8 +224,10 @@ web3 = 30
 # secret = ""
 
 [auth.email]
-# Allow/disallow new user signups via email to your project.
-enable_signup = false
+# This is the email PROVIDER switch: false makes password sign-in fail with email_provider_disabled.
+# It must be true for anyone to sign in. Public self-signup stays blocked by enable_signup = false under [auth],
+# so accounts exist only when an admin creates them (admin-users function or the bootstrap script).
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = false

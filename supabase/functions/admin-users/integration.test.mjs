@@ -2,6 +2,7 @@
 // Needs: `supabase start`, `supabase db reset` (seed fixtures) and `supabase functions serve admin-users`.
 // Env: API_URL, ANON_KEY, SERVICE_ROLE_KEY (from `supabase status -o env`), optional FN_URL.
 // Run: node --test supabase/functions/admin-users/integration.test.mjs
+import '../../../scripts/ws-shim.mjs'
 import assert from 'node:assert/strict'
 import { before, describe, it } from 'node:test'
 import { createClient } from '@supabase/supabase-js'
@@ -82,6 +83,12 @@ describe('admin-users', () => {
     }
     const rows = await serviceGet(`users?id=eq.${SALES_ID}&select=role`)
     assert.equal(rows[0].role, 'sales', 'sales did not promote themselves')
+  })
+
+  it('public self-signup is closed', async () => {
+    const { data, error } = await anon().auth.signUp({ email: `self-${Date.now()}@test.invalid`, password: 'self-service-password' })
+    assert.ok(error || !data.session, 'signUp must not hand out a session')
+    assert.ok(error, 'signUp is refused')
   })
 
   it('an origin outside the allow-list is refused', async () => {

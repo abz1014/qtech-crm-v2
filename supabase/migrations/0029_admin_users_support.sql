@@ -42,6 +42,8 @@ begin
 end;
 $$;
 
+revoke all on function public.guard_last_admin() from public, anon, authenticated;
+
 create trigger users_keep_one_admin
   before update or delete on public.users
   for each row execute function public.guard_last_admin();

@@ -6,6 +6,7 @@
 //
 // Refuses if any admin already exists. Prints the generated password once; it is never stored or logged.
 // Against a non-local URL it also needs --allow-remote (see docs/SUPABASE.md, "First admin").
+import './ws-shim.mjs'
 import { parseArgs } from 'node:util'
 import { createClient } from '@supabase/supabase-js'
 import { bootstrapAdmin, isLocalUrl } from './bootstrap-admin.lib.mjs'
