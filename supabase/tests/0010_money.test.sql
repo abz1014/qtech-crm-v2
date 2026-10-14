@@ -19,19 +19,20 @@ select columns_are('public', 'invoices',
   array['id', 'created_at', 'created_by', 'updated_at', 'order_id', 'company_id', 'number', 'invoice_date',
         'net_amount', 'gst_amount', 'copy_received_on', 'tcs_sent_on', 'tcs_number', 'client_received_on', 'psid',
         'wasif_receipt_on', 'tax_deposited_on', 'tax_deposit_amount', 'notes', 'last_reminded_on', 'reminder_count',
-        'legacy_flags', 'legacy_source'],
+        'legacy_flags', 'legacy_source', 'tax_bank_month'],
   'invoices has the section 2.16 columns (reminder stamps, no tax_deposit_bank)');
 select hasnt_column('public', 'invoices', 'tax_deposit_bank', 'invoices.tax_deposit_bank is dropped (A3-2)');
 select columns_are('public', 'payments_in',
   array['id', 'created_at', 'created_by', 'order_id', 'received_on', 'amount', 'credited_user_id', 'reference',
-        'legacy_flags', 'legacy_source'],
+        'legacy_flags', 'legacy_source', 'paid_via', 'bank_month'],
   'payments_in has the section 2.17 columns and no tax_withheld');
 select columns_are('public', 'expenses',
-  array['id', 'created_at', 'created_by', 'paid_on', 'amount_pkr', 'category', 'description', 'order_id',
-        'supplier_order_id', 'payee_id', 'reference', 'recurring_id', 'period', 'legacy_flags', 'legacy_source'],
-  'expenses has the section 2.18 columns');
+  array['id', 'created_at', 'created_by', 'paid_on', 'amount_pkr', 'category_id', 'description', 'order_id',
+        'supplier_order_id', 'payee_id', 'reference', 'recurring_id', 'period', 'legacy_flags', 'legacy_source',
+        'paid_via', 'input_tax_pkr', 'bank_month'],
+  'expenses has the section 2.18 columns (A6: category_id, paid_via, input_tax_pkr, bank_month)');
 select columns_are('public', 'recurring_expenses',
-  array['id', 'created_at', 'created_by', 'label', 'category', 'amount', 'day_of_month', 'active', 'start_month',
+  array['id', 'created_at', 'created_by', 'label', 'category_id', 'amount', 'day_of_month', 'active', 'start_month',
         'notes'],
   'recurring_expenses has the section 2.19 columns');
 select ok((select bool_and(relrowsecurity) from pg_class
@@ -176,49 +177,49 @@ select throws_ok($$insert into public.payments_in (amount) values (10)$$,
   '23502', null, 'a payment needs an order');
 
 -- ------------------------------------------------------------------ recurring_expenses and expenses constraints
-insert into public.recurring_expenses (id, label, category, amount) values
-  ('b3000000-0000-4000-8000-000000000001', 'Salaries', 'Salaries', 100000);
+insert into public.recurring_expenses (id, label, category_id, amount) values
+  ('b3000000-0000-4000-8000-000000000001', 'Salaries', 'ca7e0000-0000-4000-8000-000000000001', 100000);
 select is((select active from public.recurring_expenses where id = 'b3000000-0000-4000-8000-000000000001'), true,
   'recurring_expenses.active defaults to true');
-select throws_ok($$insert into public.recurring_expenses (label, category, amount) values ('x', 'y', 0)$$,
+select throws_ok($$insert into public.recurring_expenses (label, category_id, amount) values ('x', 'ca7e0000-0000-4000-8000-000000000010', 0)$$,
   '23514', null, 'a zero recurring amount is rejected');
-select throws_ok($$insert into public.recurring_expenses (label, category, amount, day_of_month)
-                   values ('x', 'y', 1, 29)$$,
+select throws_ok($$insert into public.recurring_expenses (label, category_id, amount, day_of_month)
+                   values ('x', 'ca7e0000-0000-4000-8000-000000000010', 1, 29)$$,
   '23514', null, 'day_of_month above 28 is rejected');
-select throws_ok($$insert into public.recurring_expenses (label, category, amount, day_of_month)
-                   values ('x', 'y', 1, 0)$$,
+select throws_ok($$insert into public.recurring_expenses (label, category_id, amount, day_of_month)
+                   values ('x', 'ca7e0000-0000-4000-8000-000000000010', 1, 0)$$,
   '23514', null, 'day_of_month below 1 is rejected');
-select throws_ok($$insert into public.recurring_expenses (label, category, amount, start_month)
-                   values ('x', 'y', 1, '2026-13')$$,
+select throws_ok($$insert into public.recurring_expenses (label, category_id, amount, start_month)
+                   values ('x', 'ca7e0000-0000-4000-8000-000000000010', 1, '2026-13')$$,
   '23514', null, 'a malformed start_month is rejected');
-select lives_ok($$insert into public.recurring_expenses (label, category, amount, day_of_month, start_month)
-                  values ('Rent', 'Rent', 1, 28, '2026-01')$$, 'a valid day and start month are accepted');
+select lives_ok($$insert into public.recurring_expenses (label, category_id, amount, day_of_month, start_month)
+                  values ('Rent', 'ca7e0000-0000-4000-8000-000000000002', 1, 28, '2026-01')$$, 'a valid day and start month are accepted');
 
-select lives_ok($$insert into public.expenses (id, amount_pkr, category)
-                  values ('b4000000-0000-4000-8000-000000000001', 250, 'Freight')$$,
+select lives_ok($$insert into public.expenses (id, amount_pkr, category_id)
+                  values ('b4000000-0000-4000-8000-000000000001', 250, 'ca7e0000-0000-4000-8000-000000000012')$$,
   'an expense needs only an amount and a category');
 select is((select paid_on from public.expenses where id = 'b4000000-0000-4000-8000-000000000001'),
   public.today_pkt(), 'paid_on defaults to today in Karachi');
 select throws_ok($$insert into public.expenses (amount_pkr) values (250)$$,
   '23502', null, 'category is required');
-select throws_ok($$insert into public.expenses (amount_pkr, category) values (0, 'x')$$,
+select throws_ok($$insert into public.expenses (amount_pkr, category_id) values (0, 'ca7e0000-0000-4000-8000-000000000010')$$,
   '23514', null, 'a zero expense is rejected');
-select throws_ok($$insert into public.expenses (amount_pkr, category, period) values (1, 'x', '2026-1')$$,
+select throws_ok($$insert into public.expenses (amount_pkr, category_id, period) values (1, 'ca7e0000-0000-4000-8000-000000000010', '2026-1')$$,
   '23514', null, 'a malformed period is rejected');
-select lives_ok($$insert into public.expenses (id, amount_pkr, category, recurring_id, period)
-                  values ('b4000000-0000-4000-8000-000000000002', 100000, 'Salaries',
+select lives_ok($$insert into public.expenses (id, amount_pkr, category_id, recurring_id, period)
+                  values ('b4000000-0000-4000-8000-000000000002', 100000, 'ca7e0000-0000-4000-8000-000000000001',
                           'b3000000-0000-4000-8000-000000000001', '2026-10')$$,
   'a recurring expense for a period is accepted');
-select throws_ok($$insert into public.expenses (amount_pkr, category, recurring_id, period)
-                   values (1, 'Salaries', 'b3000000-0000-4000-8000-000000000001', '2026-10')$$,
+select throws_ok($$insert into public.expenses (amount_pkr, category_id, recurring_id, period)
+                   values (1, 'ca7e0000-0000-4000-8000-000000000001', 'b3000000-0000-4000-8000-000000000001', '2026-10')$$,
   '23505', null, 'one expense per (recurring, period)');
-select lives_ok($$insert into public.expenses (amount_pkr, category, recurring_id, period)
-                  values (1, 'Salaries', 'b3000000-0000-4000-8000-000000000001', '2026-11')$$,
+select lives_ok($$insert into public.expenses (amount_pkr, category_id, recurring_id, period)
+                  values (1, 'ca7e0000-0000-4000-8000-000000000001', 'b3000000-0000-4000-8000-000000000001', '2026-11')$$,
   'the same template in another period is accepted');
 
 -- Money attached to an order or leg blocks deleting it (the FKs are RESTRICT).
-insert into public.expenses (id, amount_pkr, category, order_id, supplier_order_id) values
-  ('b4000000-0000-4000-8000-000000000003', 70, 'Supplier payment', 'a1000000-0000-4000-8000-000000000001',
+insert into public.expenses (id, amount_pkr, category_id, order_id, supplier_order_id) values
+  ('b4000000-0000-4000-8000-000000000003', 70, 'ca7e0000-0000-4000-8000-000000000011', 'a1000000-0000-4000-8000-000000000001',
    'a2000000-0000-4000-8000-000000000001');
 select throws_ok($$delete from public.orders where id = 'a1000000-0000-4000-8000-000000000001'$$,
   '23503', null, 'an order with invoices, payments or expenses cannot be deleted');
@@ -259,11 +260,11 @@ select throws_ok($$insert into public.payments_in (order_id, amount)
 select is(public.t_rows($q$update public.payments_in set amount = 1$q$), 0, 'sales cannot update payments');
 select is(public.t_rows($q$delete from public.payments_in$q$), 0, 'sales cannot delete payments');
 select is((select count(*)::int from public.expenses), 0, 'sales sees no expenses');
-select throws_ok($$insert into public.expenses (amount_pkr, category) values (1, 'x')$$,
+select throws_ok($$insert into public.expenses (amount_pkr, category_id) values (1, 'ca7e0000-0000-4000-8000-000000000010')$$,
   '42501', null, 'sales cannot insert an expense');
 select is(public.t_rows($q$delete from public.expenses$q$), 0, 'sales cannot delete expenses');
 select is((select count(*)::int from public.recurring_expenses), 0, 'sales sees no recurring expenses');
-select throws_ok($$insert into public.recurring_expenses (label, category, amount) values ('x', 'y', 1)$$,
+select throws_ok($$insert into public.recurring_expenses (label, category_id, amount) values ('x', 'ca7e0000-0000-4000-8000-000000000010', 1)$$,
   '42501', null, 'sales cannot insert a recurring expense');
 
 -- ------------------------------------------------------------------ engineer
@@ -280,7 +281,7 @@ select throws_ok($$insert into public.payments_in (order_id, amount)
                    values ('a1000000-0000-4000-8000-000000000001', 1)$$,
   '42501', null, 'engineer cannot insert a payment');
 select is((select count(*)::int from public.expenses), 0, 'engineer gets 0 expense rows');
-select throws_ok($$insert into public.expenses (amount_pkr, category) values (1, 'x')$$,
+select throws_ok($$insert into public.expenses (amount_pkr, category_id) values (1, 'ca7e0000-0000-4000-8000-000000000010')$$,
   '42501', null, 'engineer cannot insert an expense');
 select is((select count(*)::int from public.recurring_expenses), 0, 'engineer gets 0 recurring rows');
 
@@ -312,14 +313,14 @@ select is(public.t_rows($q$update public.payments_in set credited_user_id = 'a00
   'admin can change credited_user_id');
 select is(public.t_rows($q$delete from public.payments_in where id = 'b2000000-0000-4000-8000-0000000000a1'$q$), 1,
   'admin deletes a payment');
-select lives_ok($$insert into public.expenses (id, amount_pkr, category)
-                  values ('b4000000-0000-4000-8000-0000000000a1', 5, 'Utilities')$$, 'admin inserts an expense');
+select lives_ok($$insert into public.expenses (id, amount_pkr, category_id)
+                  values ('b4000000-0000-4000-8000-0000000000a1', 5, 'ca7e0000-0000-4000-8000-000000000003')$$, 'admin inserts an expense');
 select is(public.t_rows($q$update public.expenses set description = 'bill' where id = 'b4000000-0000-4000-8000-0000000000a1'$q$), 1,
   'admin updates an expense');
 select is(public.t_rows($q$delete from public.expenses where id = 'b4000000-0000-4000-8000-0000000000a1'$q$), 1,
   'admin deletes an expense');
-select lives_ok($$insert into public.recurring_expenses (id, label, category, amount)
-                  values ('b3000000-0000-4000-8000-0000000000a1', 'Internet', 'Utilities', 9000)$$,
+select lives_ok($$insert into public.recurring_expenses (id, label, category_id, amount)
+                  values ('b3000000-0000-4000-8000-0000000000a1', 'Internet', 'ca7e0000-0000-4000-8000-000000000003', 9000)$$,
   'admin inserts a recurring expense');
 select is(public.t_rows($q$delete from public.recurring_expenses where id = 'b3000000-0000-4000-8000-0000000000a1'$q$), 1,
   'admin deletes a recurring expense');

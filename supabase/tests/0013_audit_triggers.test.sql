@@ -22,7 +22,7 @@ select is((select coalesce(array_agg(c.relname::text order by c.relname), '{}')
 select is((select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
            where t.tgfoid = 'public.audit_row_change()'::regprocedure and not t.tgisinternal
              and c.relnamespace = 'public'::regnamespace),
-  26, 'the audit trigger is attached to 26 tables');
+  28, 'the audit trigger is attached to 28 tables');
 select ok((select bool_and(t.tgtype & 1 = 1 and t.tgtype & 2 = 0) from pg_trigger t join pg_class c on c.oid = t.tgrelid
            where t.tgfoid = 'public.audit_row_change()'::regprocedure and not t.tgisinternal
              and c.relnamespace = 'public'::regnamespace),
@@ -111,8 +111,8 @@ insert into public.invoices (id, order_id, number, net_amount, gst_amount)
   values ('b1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', 'INV-1', 100, 18);
 insert into public.payments_in (id, order_id, amount)
   values ('b2000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', 50);
-insert into public.expenses (id, amount_pkr, category)
-  values ('b4000000-0000-4000-8000-000000000001', 5, 'Freight');
+insert into public.expenses (id, amount_pkr, category_id)
+  values ('b4000000-0000-4000-8000-000000000001', 5, 'ca7e0000-0000-4000-8000-000000000012');
 insert into public.targets (id, user_id, year, quarter, target_net_pkr)
   values ('f1000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', 2026, 4, 1000);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id)
