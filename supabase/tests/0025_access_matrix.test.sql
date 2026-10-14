@@ -39,7 +39,7 @@ declare
 begin
   other := case when persona = 'admin' then pg_temp.uid('sales') else pg_temp.uid('admin') end;
   s := replace(replace(stmt, '{uid}', pg_temp.uid(persona)), '{other}', other);
-  s := regexp_replace(s, '@([0-9a-f]{2})\M', '''f0000000-0000-4000-8000-0000000000\1''', 'g');
+  s := regexp_replace(s, '@([0-9a-f]{2})\M', '''f0000000-0000-4000-8000-0000000000\1''::uuid', 'g');
   begin
     if persona = 'anon' then
       perform set_config('request.jwt.claims', '', true);
