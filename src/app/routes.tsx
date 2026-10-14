@@ -16,6 +16,7 @@ import { AppShell } from '@/app/shell/AppShell'
  */
 const screens: Partial<Record<NavKey, ComponentType>> = {
   companies: lazy(() => import('@/features/companies/CompaniesScreen')),
+  rfqs: lazy(() => import('@/features/rfqs/board/RfqsScreen')),
 }
 
 /** Dev builds only: the component gallery (U09). Dead code in production. */

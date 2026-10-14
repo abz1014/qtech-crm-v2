@@ -45,7 +45,18 @@ function brands() {
 /** Reserved roots for areas that other tasks build. They exist now so the invalidation map can name them. */
 function rfqs() {
   const all = root('rfqs')
-  return { all, lists: () => [...all, 'list'] as const, detail: (id: string) => [...all, 'detail', id] as const }
+  return {
+    all,
+    lists: () => [...all, 'list'] as const,
+    /** R06: every open RFQ with its state, owner and company name. */
+    board: () => [...all, 'list', 'board'] as const,
+    /** R06: one page of won and closed RFQs. */
+    closed: (page: number) => [...all, 'list', 'closed', page] as const,
+    closedCount: () => [...all, 'list', 'closed-count'] as const,
+    /** R06: palette search by number, customer ref or company. */
+    search: (text: string) => [...all, 'list', 'search', text.trim().toLowerCase()] as const,
+    detail: (id: string) => [...all, 'detail', id] as const,
+  }
 }
 function orders() {
   const all = root('orders')

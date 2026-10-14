@@ -16,13 +16,19 @@ import { defineConfig, devices } from '@playwright/test'
  *      E2E_SUITE=auth npx playwright test --project=auth
  *    The tests read API_URL and SERVICE_ROLE_KEY from the environment (local keys only).
  *
+ *  - rfq-board (R06): the RFQ board over a fixture set of RFQs, with axe at 1440 and 375 and the review screenshots.
+ *    Same server, build and stack as 'companies' (.github/workflows/e2e-rfq-board.yml):
+ *      E2E_SUITE=rfq-board REVIEW_DIR=review-shots npx playwright test --project=rfq-board
+ *
  *  - companies (R02): the Companies screens, signed in through the login form as the fixture users, with its data
  *    set up through the REST API as those users. Same server and build as 'auth' (.github/workflows/e2e-companies.yml):
  *      E2E_SUITE=companies REVIEW_DIR=review-shots npx playwright test --project=companies
  *    The tests read API_URL and ANON_KEY from the environment (local keys only). REVIEW_DIR, when set, collects the
  *    review screenshots.
  */
-const suite = process.env.E2E_SUITE === 'auth' ? 'auth' : process.env.E2E_SUITE === 'companies' ? 'companies' : 'gallery'
+const suite =
+  process.env.E2E_SUITE === 'auth' ? 'auth' : process.env.E2E_SUITE === 'companies' ? 'companies' : process.env.E2E_SUITE === 'rfq-board' ? 'rfq-board' : 'gallery'
+const onStack = suite !== 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
 
@@ -43,7 +49,7 @@ export default defineConfig({
   outputDir: 'test-results',
   forbidOnly: Boolean(process.env.CI),
   // The auth and companies suites share one database: one worker, in order. The gallery suite is stateless.
-  workers: suite === 'auth' || suite === 'companies' ? 1 : process.env.CI ? 2 : undefined,
+  workers: onStack ? 1 : process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   expect: {
     toHaveScreenshot: { animations: 'disabled', caret: 'hide', scale: 'css', maxDiffPixelRatio: 0.002 },
@@ -75,11 +81,18 @@ export default defineConfig({
         screenshot: 'only-on-failure',
       },
     },
+    {
+      name: 'rfq-board',
+      testMatch: /rfqs\/board\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
+    },
     { name: 'w1440', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 1440, height: 900 } } },
     { name: 'w375', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 375, height: 812 } } },
   ],
   webServer:
-    suite === 'auth' || suite === 'companies'
+    onStack
       ? {
           command: `npx vite preview --host 127.0.0.1 --port ${AUTH_PORT} --strictPort`,
           url: `http://127.0.0.1:${AUTH_PORT}/login`,
