@@ -6,12 +6,15 @@ import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRe
  * tests do not depend on each other or on the seed beyond its fixture users.
  */
 
-/** Ctrl+K is heard only once the shell has mounted; press it until the palette is open (a press made too early is lost). */
-async function openPalette(page: Page): Promise<void> {
-  await expect(async () => {
-    if (!(await page.getByRole('combobox').isVisible())) await page.keyboard.press('Control+k')
-    await expect(page.getByRole('combobox')).toBeVisible({ timeout: 1000 })
-  }).toPass({ timeout: 15_000 })
+/**
+ * Open the command palette with its shortcut. The shortcut listener is attached when the shell mounts, so a key
+ * pressed straight after `goto` can be lost: wait for the shell (heading and an enabled search button) first.
+ */
+async function openPalette(page: Page) {
+  await expect(page.getByRole('heading', { name: 'Today', level: 1 })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Search or jump to' }).first()).toBeEnabled()
+  await page.keyboard.press('Control+k')
+  await expect(page.getByRole('dialog', { name: 'Search or jump to' })).toBeVisible()
 }
 
 test.describe('inline create (FE-2: name only, three actions)', () => {
