@@ -14,7 +14,8 @@ export function MobileBar({ user, title, onSearch }: { user: SessionUser; title:
       <NavLink to="/" aria-label="Q-Tech, home" className="mr-2 shrink-0 rounded">
         <img src="/brand/logo-mark.png" alt="" width={28} height={28} className="block size-[28px]" />
       </NavLink>
-      <h1 className="flex-1 truncate text-lg font-semibold tracking-snug">{title}</h1>
+      {/* Not a heading: every screen draws its own h1, and two h1s on a phone is wrong. */}
+      <p className="flex-1 truncate text-lg font-semibold tracking-snug">{title}</p>
       <Button variant="quiet" size="touch" icon={Search} aria-label="Search" onClick={onSearch} />
       <AccountMenu user={user} touch />
     </header>
