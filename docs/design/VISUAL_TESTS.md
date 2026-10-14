@@ -19,7 +19,7 @@ They are in `e2e/__screenshots__/<project>/` with no platform suffix. Never comm
 
 1. Make the change. Run the axe suite locally: `npm run test:e2e -- e2e/gallery.axe.spec.ts`.
 2. Push the branch. The visual suite fails and its diffs are in the `playwright-report` artifact. Check that every diff is intended.
-3. Actions, CI, Run workflow, pick your branch, tick `update_baselines`. (Needs the workflow on the default branch. `gh workflow run ci.yml --ref <branch> -f update_baselines=true`.)
+3. Actions, CI, Run workflow, pick your branch, tick `update_baselines`. (Or: `gh workflow run ci.yml --ref <branch> -f update_baselines=true` (works on a feature branch).)
 4. `gh run download <run-id> -n visual-baselines -D e2e/__screenshots__`
 5. `git add e2e/__screenshots__`, commit with the change, push. CI is green when the committed images match.
 
