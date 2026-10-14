@@ -263,29 +263,30 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
                   ))}
                 </Command.Group>
               ))}
-
-              {slow && searching ? (
-                <div role="status" aria-label="Searching" className="grid pb-1">
-                  <p className="px-4 pb-1 pt-3 text-xs font-semibold text-fg-muted">Searching</p>
-                  {[60, 42, 52].map(w => (
-                    <div key={w} className="flex h-row items-center gap-3 px-4">
-                      <span className="size-4 rounded-round border border-line-strong" />
-                      <span className="h-[10px] animate-pulse rounded bg-selected motion-reduce:animate-none" style={{ width: `${w}%` }} />
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {settled && !searching && total === 0 && q ? (
-                <div role="status" className="grid justify-items-center gap-2 px-6 py-8 text-center text-sm text-fg-muted">
-                  <span className="grid size-10 place-items-center rounded bg-selected text-fg-2">
-                    <Icon icon={Search} size="lg" />
-                  </span>
-                  <b className="font-medium text-fg">Nothing found for “{q}”</b>
-                  <p className="max-w-prose text-pretty">{emptyHint ?? 'Try one word, or check the spelling.'}</p>
-                </div>
-              ) : null}
             </Command.List>
+
+            {/* Status lines sit beside the listbox, not inside it: a listbox may only hold options and groups. */}
+            {slow && searching ? (
+              <div role="status" aria-label="Searching" className="grid pb-1">
+                <p className="px-4 pb-1 pt-3 text-xs font-semibold text-fg-muted">Searching</p>
+                {[60, 42, 52].map(w => (
+                  <div key={w} className="flex h-row items-center gap-3 px-4">
+                    <span className="size-4 rounded-round border border-line-strong" />
+                    <span className="h-[10px] animate-pulse rounded bg-selected motion-reduce:animate-none" style={{ width: `${w}%` }} />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {settled && !searching && total === 0 && q ? (
+              <div role="status" className="grid justify-items-center gap-2 px-6 py-8 text-center text-sm text-fg-muted">
+                <span className="grid size-10 place-items-center rounded bg-selected text-fg-2">
+                  <Icon icon={Search} size="lg" />
+                </span>
+                <b className="font-medium text-fg">Nothing found for “{q}”</b>
+                <p className="max-w-prose text-pretty">{emptyHint ?? 'Try one word, or check the spelling.'}</p>
+              </div>
+            ) : null}
 
             <div className="flex h-[36px] items-center gap-4 border-t bg-sunken px-4 text-xs text-fg-muted">
               <span className="inline-flex items-center gap-[6px]">

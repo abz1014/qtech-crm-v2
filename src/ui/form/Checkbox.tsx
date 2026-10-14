@@ -7,11 +7,12 @@ import { Icon } from '@/ui/Icon'
 /*
  * Checkbox (INVENTORY: U07; D08 section 01). 18px box. The
  * checked fill is the primary action colour.
- * Label is required: it is the click target as well as the name. Supports
- * "indeterminate" for a select-all header. Space toggles.
+ * Label is the click target as well as the name. The only label-less use is a
+ * table row or header tick: pass `aria-label` instead and no label is drawn.
+ * Supports "indeterminate" for a select-all header. Space toggles.
  */
 interface CheckboxProps extends Omit<ComponentPropsWithoutRef<typeof RadixCheckbox.Root>, 'children'> {
-  label: ReactNode
+  label?: ReactNode
   help?: ReactNode
 }
 
@@ -21,6 +22,9 @@ export const Checkbox = forwardRef<ElementRef<typeof RadixCheckbox.Root>, Checkb
 ) {
   const auto = useId()
   const id = idProp ?? auto
+  if (label === undefined && !rest['aria-label'] && !rest['aria-labelledby']) {
+    throw new Error('Checkbox needs a label, or an aria-label when it is drawn without one.')
+  }
   return (
     <div className="flex items-start gap-3 text-sm leading-5">
       <RadixCheckbox.Root
@@ -40,16 +44,18 @@ export const Checkbox = forwardRef<ElementRef<typeof RadixCheckbox.Root>, Checkb
           <Icon icon={rest.checked === 'indeterminate' ? Minus : Check} size="chip" />
         </RadixCheckbox.Indicator>
       </RadixCheckbox.Root>
-      <div className="grid">
-        <label htmlFor={id} className={cn('cursor-pointer', rest.disabled && 'cursor-not-allowed text-fg-muted')}>
-          {label}
-        </label>
-        {help ? (
-          <span id={`${id}-help`} className="text-xs text-fg-muted">
-            {help}
-          </span>
-        ) : null}
-      </div>
+      {label !== undefined ? (
+        <div className="grid">
+          <label htmlFor={id} className={cn('cursor-pointer', rest.disabled && 'cursor-not-allowed text-fg-muted')}>
+            {label}
+          </label>
+          {help ? (
+            <span id={`${id}-help`} className="text-xs text-fg-muted">
+              {help}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 })

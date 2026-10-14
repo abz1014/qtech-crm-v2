@@ -37,7 +37,7 @@ jobs:
       - name: Playwright (companies project, local stack only)
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
-          REVIEW_DIR=review-shots npx playwright test --project=companies
+          E2E_SUITE=companies REVIEW_DIR=review-shots npx playwright test --project=companies
 
       - name: Upload report and review screenshots
         if: always()

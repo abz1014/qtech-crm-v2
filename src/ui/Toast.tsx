@@ -186,7 +186,7 @@ function ToastCard({
       <Icon icon={tone === 'danger' ? CircleAlert : phase === 'undone' ? Undo2 : CircleCheck} className={cn('shrink-0', tone === 'success' && 'text-tone-success-bg')} />
       <div className="grid min-w-0 flex-1 text-pretty">
         <span className="font-medium">{title}</span>
-        {body ? <span className="text-xs leading-4 opacity-80">{body}</span> : null}
+        {body ? <span className={cn('text-xs leading-4', tone === 'danger' ? 'opacity-90' : 'opacity-80')}>{body}</span> : null}
       </div>
       {undoable ? (
         <button

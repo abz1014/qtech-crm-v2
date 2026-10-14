@@ -33,7 +33,7 @@ function classBans(list) {
 }
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'node_modules', 'import/.data', 'backups', 'supabase/functions'] },
+  { ignores: ['dist', 'dist-e2e', 'test-results', 'playwright-report', 'coverage', 'node_modules', 'import/.data', 'backups', 'supabase/functions'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx,js}'],
@@ -59,6 +59,7 @@ export default tseslint.config(
             'e2e/**/*.{ts,tsx}',
             '**/*.config.{ts,js}',
             'src/test/**',
+            'e2e/**',
           ],
           includeInternal: false,
         },

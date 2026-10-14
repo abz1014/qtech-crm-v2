@@ -1,47 +1,96 @@
 import { defineConfig, devices } from '@playwright/test'
 
 /*
- * One config, one project per suite. 'auth' (A03) signs in as the seeded fixture users against the
- * local CI stack; 'companies' (R02) drives the Companies screens signed in the same way, with data set up
- * through the REST API as the fixture users. Other suites (visual, journeys) add their own project here.
+ * One config, separate projects per suite. A suite brings its own server, chosen by E2E_SUITE
+ * (default 'gallery'), because `--project` does not stop Playwright starting every webServer.
  *
- * Both projects need the local Supabase stack running and the app built with its URL and anon key:
- *   eval "$(npx supabase status -o env | sed 's/^/export /')"
- *   VITE_SUPABASE_URL=$API_URL VITE_SUPABASE_ANON_KEY=$ANON_KEY npm run build
- *   npx playwright test --project=auth     (or --project=companies)
- * The tests read API_URL, ANON_KEY and SERVICE_ROLE_KEY from the environment (local keys only).
+ *  - gallery (U09): 'w1440' and 'w375' run the visual-regression and axe suites over /dev/gallery.
+ *    The gallery is dev-only, so the server is a development-mode build served by `vite preview`
+ *    (no DB, no HMR socket). Baselines are Linux-only, produced by CI on ubuntu-24.04, with no
+ *    platform suffix. See docs/design/VISUAL_TESTS.md. Run: npx playwright test --project=w1440 --project=w375
+ *
+ *  - auth (A03): signs in as the seeded fixture users against the local CI Supabase stack, using the
+ *    production build made with the stack's URL and anon key (.github/workflows/e2e.yml):
+ *      eval "$(npx supabase status -o env | sed 's/^/export /')"
+ *      VITE_SUPABASE_URL=$API_URL VITE_SUPABASE_ANON_KEY=$ANON_KEY npm run build
+ *      E2E_SUITE=auth npx playwright test --project=auth
+ *    The tests read API_URL and SERVICE_ROLE_KEY from the environment (local keys only).
+ *
+ *  - companies (R02): the Companies screens, signed in through the login form as the fixture users, with its data
+ *    set up through the REST API as those users. Same server and build as 'auth' (.github/workflows/e2e-companies.yml):
+ *      E2E_SUITE=companies REVIEW_DIR=review-shots npx playwright test --project=companies
+ *    The tests read API_URL and ANON_KEY from the environment (local keys only). REVIEW_DIR, when set, collects the
+ *    review screenshots.
  */
-const PORT = 4173
+const suite = process.env.E2E_SUITE === 'auth' ? 'auth' : process.env.E2E_SUITE === 'companies' ? 'companies' : 'gallery'
+const GALLERY_PORT = 5199
+const AUTH_PORT = 4173
+
+const galleryUse = {
+  baseURL: `http://localhost:${GALLERY_PORT}`,
+  browserName: 'chromium' as const,
+  locale: 'en-GB',
+  timezoneId: 'Asia/Karachi',
+  colorScheme: 'light' as const,
+  reducedMotion: 'reduce' as const,
+  deviceScaleFactor: 1,
+}
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: false,
-  workers: 1,
+  // No platform suffix: there is exactly one set of gallery baselines, the one CI produces.
+  snapshotPathTemplate: '{testDir}/__screenshots__/{projectName}/{arg}{ext}',
+  outputDir: 'test-results',
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 1 : 0,
+  // The auth and companies suites share one database: one worker, in order. The gallery suite is stateless.
+  workers: suite === 'auth' || suite === 'companies' ? 1 : process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
-  use: {
-    baseURL: `http://127.0.0.1:${PORT}`,
-    trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
+  expect: {
+    toHaveScreenshot: { animations: 'disabled', caret: 'hide', scale: 'css', maxDiffPixelRatio: 0.002 },
   },
+  use: { trace: 'retain-on-failure' },
   projects: [
     {
       name: 'auth',
       testMatch: /auth\/.*\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'] },
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://127.0.0.1:${AUTH_PORT}`,
+        screenshot: 'only-on-failure',
+      },
     },
     {
       name: 'companies',
       testMatch: /companies\/.*\.spec\.ts/,
       // 1440 is the design width (FE-1); the review screenshots are taken at it.
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://127.0.0.1:${AUTH_PORT}`,
+        // 1440 is the design width (FE-1); the review screenshots are taken at it.
+        viewport: { width: 1440, height: 900 },
+        screenshot: 'only-on-failure',
+      },
     },
+    { name: 'w1440', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 1440, height: 900 } } },
+    { name: 'w375', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 375, height: 812 } } },
   ],
-  webServer: {
-    command: `npx vite preview --host 127.0.0.1 --port ${PORT} --strictPort`,
-    url: `http://127.0.0.1:${PORT}/login`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  webServer:
+    suite === 'auth' || suite === 'companies'
+      ? {
+          command: `npx vite preview --host 127.0.0.1 --port ${AUTH_PORT} --strictPort`,
+          url: `http://127.0.0.1:${AUTH_PORT}/login`,
+          reuseExistingServer: !process.env.CI,
+          timeout: 60_000,
+        }
+      : {
+          command: `npm run build:e2e && npx vite preview --outDir dist-e2e --port ${GALLERY_PORT} --strictPort`,
+          url: `http://localhost:${GALLERY_PORT}/`,
+          reuseExistingServer: !process.env.CI,
+          timeout: 180_000,
+          env: { NODE_ENV: 'development' },
+        },
 })
