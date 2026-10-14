@@ -20,6 +20,7 @@ The owner approved all 12 mockups in chat on 2026-10-14: "i think I like the moc
 | Login, Team and Settings | v1 | https://claude.ai/artifact/BsTeU6fDu3ShCMnTKAW9ab | `mockups/g2-login-team-settings.html` | `login-team-settings-*` |
 | Capture (share-in) | v1 | https://claude.ai/artifact/QHMh9Gzahykh6m1tkFrnt1 | `mockups/g2-capture.html` | `capture-*` |
 | Component states | v1 | https://claude.ai/artifact/WmEUXx1AS6hWuw5baRnbgQ | `mockups/g2-components.html` | `components-*` |
+| Month-end and burst entry (D15, approved 2026-10-14) | v1 | https://claude.ai/artifact/14Kkj3oVfHiRcYjhvxLGfG | `mockups/g2-month-end.html` (+ `mockups/g2-e.css`) | `month-end-*` |
 
 Shared styles for the sources above: `mockups/mockup.css`, `mockups/g2-a.css` to `g2-d.css` and `tokens.css`. Today (v2) and Money (v2) are the revised versions that carry the corrected target-tile maths and the entry-trim frames respectively.
 
