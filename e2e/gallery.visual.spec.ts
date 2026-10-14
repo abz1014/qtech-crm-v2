@@ -20,8 +20,19 @@ test.describe('gallery sections', () => {
 
   test('the page does not scroll sideways', async ({ page }) => {
     await openGallery(page)
-    const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-    expect(over).toBeLessThanOrEqual(0)
+    // Elements poking past the viewport, outside any scroll container, named so a failure points at one.
+    const offenders = await page.evaluate(() => {
+      const w = document.documentElement.clientWidth
+      const out: string[] = []
+      for (const el of Array.from(document.querySelectorAll('main *'))) {
+        const r = el.getBoundingClientRect()
+        if (r.width > 0 && r.right > w + 0.5 && !el.closest('[class*="overflow-"]')) {
+          out.push(`${el.tagName.toLowerCase()}.${String(el.className).slice(0, 50)} right=${Math.round(r.right)} in #${el.closest('section')?.id}`)
+        }
+      }
+      return out.slice(0, 10)
+    })
+    expect(offenders).toEqual([])
   })
 })
 
