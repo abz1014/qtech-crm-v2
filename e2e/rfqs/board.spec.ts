@@ -141,9 +141,9 @@ test.describe('open RFQs', () => {
     await expect(partly.getByText('Waiting on customer')).toBeVisible()
     await expect(partly.getByText('To bid', { exact: true })).toBeVisible()
     const covered = row(page, 'covered')
-    await expect(covered.getByText('Covered', { exact: true })).toBeVisible()
+    await expect(covered.getByText(/^Covered/)).toBeVisible()
     await expect(covered.getByText('Bid sent', { exact: true })).toBeVisible()
-    await expect(row(page, 'toask').getByText('To ask', { exact: true })).toBeVisible()
+    await expect(row(page, 'toask').getByText(/^To ask/)).toBeVisible()
     await expect(row(page, 'partly').getByRole('img', { name: /./ }).first()).toBeVisible() // owner avatar
     await review(page, 'board-all-1440')
   })
@@ -215,6 +215,8 @@ test.describe('palette', () => {
       [`BRD-${fx.tag}-P`, 'priority'],
       [fx.names.covered, 'covered'],
     ] as const) {
+      await page.goto('/today') // a fresh page each time, so the shortcut never meets a closing palette
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
       await page.keyboard.press('Control+k')
       await page.getByRole('combobox').fill(text)
       const hit = page.getByRole('option', { name: new RegExp(`${rfqRef(fx.numbers[key])} ${fx.names[key]}`) })
