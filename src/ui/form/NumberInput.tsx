@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useState, type InputHTMLAttributes, type ReactNode } from 'react'
+import { forwardRef, useEffect, useLayoutEffect, useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { formatAmount, parseAmount } from '@/lib/number'
 import { controlClass, useControlProps } from '@/ui/form/fieldContext'
@@ -32,6 +32,12 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(functi
   const a11y = useControlProps(rest)
   const [text, setText] = useState(() => formatAmount(value, decimals))
   const [focused, setFocused] = useState(false)
+  const inner = useRef<HTMLInputElement | null>(null)
+
+  // Focus selects the whole amount, after the raw text is in place and before the next keystroke.
+  useLayoutEffect(() => {
+    if (focused) inner.current?.select()
+  }, [focused])
 
   // Follow outside changes (form reset, a pre-fill arriving) but never rewrite what is being typed.
   useEffect(() => {
@@ -42,7 +48,11 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(functi
   return (
     <Adorned prefix={prefix} suffix={suffix}>
       <input
-        ref={ref}
+        ref={node => {
+          inner.current = node
+          if (typeof ref === 'function') ref(node)
+          else if (ref) ref.current = node
+        }}
         type="text"
         inputMode="decimal"
         autoComplete="off"
@@ -52,8 +62,6 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(functi
         onFocus={e => {
           setFocused(true)
           setText(text.replace(/,/g, ''))
-          const el = e.currentTarget
-          requestAnimationFrame(() => el.select?.())
           onFocus?.(e)
         }}
         onChange={e => {
