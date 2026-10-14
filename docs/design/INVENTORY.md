@@ -8,19 +8,20 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 
 | Primitive | What it covers | Ref | Task |
 |---|---|---|---|
-| `Button` | Primary, secondary, quiet, danger; sizes 40, 32 (40 on touch), 28; busy state; icon-only variant needs `aria-label` | 01 Controls | U01/U07 |
+| `Icon` | The only way to draw a Lucide icon: sizes 12 (chip), 14, 16, 20, 24; stroke 1.75 (2 in chips); decorative by default | 01, spec sheet | U02 (built) |
+| `Button` | Primary, secondary, quiet, danger; sizes 40, 32 (40 on touch), 28, plus a 44 touch size for phone chrome; busy state; icon-only variant needs `aria-label` | 01 Controls | U02 (built; the shell and the error page need it) |
 | `TextField` | Single-line input; `numeric` variant is mono and right aligned; prefix/suffix adornment (currency, unit); invalid, disabled, read only | 01 | U07 |
 | `TextArea` | Multi-line input, optional label | 01 | U07 |
 | `Select` | Native-styled select | 01 | U07 |
 | `Combobox` | Search-as-you-type with the "Add new" row (company, supplier, contact) | 01 | U07 |
 | `Checkbox`, `Radio`, `ToggleButton` | Selection controls; ToggleButton is the pressed/not-pressed filter ("Lowest only") | 01, 13 | U07 |
-| `Banner` | Info, warning, error, success strips with optional action | 01 | U02 |
-| `Tabs` | Page and panel tabs with count pills | 01 | U02 |
-| `Breadcrumb` | Page ancestry on detail pages | 01 | U02 |
+| `Banner` | Info, warning, error, success strips with optional action | 01 | U02 (built) |
+| `Tabs` | Page and panel tabs with count pills (tablist semantics; not used for site navigation, which is a `nav` of links in `AppShell`) | 01 | U02 not built; first needed by RFQ detail and Money, so build it with the first of them |
+| `Breadcrumb` | Page ancestry on detail pages | 01 | U02 not built (not in BUILD_PLAN U02); build with the first detail page |
 | `Skeleton` | Loading placeholder for text, rows and cards | 01 | U04 |
 | `FileDrop`, `FileRow` | Drop zone (resting, drag-over, added, too large), added-file rows with size and shrink note | 01 | U07 |
-| `Kbd` | Key hint (`⌘K`, `Esc`, `Enter`) | 01, 07 | U08 |
-| `Avatar` | Initials circle for a person | 01 | U02 |
+| `Kbd` | Key hint (`⌘K`, `Esc`, `Enter`) | 01, 07 | U02 (built; the shell search shows `⌘K`) |
+| `Avatar` | Initials circle for a person (28, or 22 inside key figures) | 01 | U02 (built) |
 | `Tag` | Mono identifier or brand tag; dashed when not firm | 13 | U05 |
 | `CountPill` | Count beside tab or group names | 13 | U05 |
 | `StatusBadge` | Chip for any status value; shape, colour and label together; tones from `tokens.css` | 02 | U05 |
@@ -31,8 +32,8 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 | `CommandPalette` | Cmd+K / Ctrl+K, recent, actions, jump to, searching, empty | 07 | U08 |
 | `Toast` | With Undo (10 s), plain, error | 08 | U03 |
 | `EmptyState` | Heading, what happens next, optional action; role-limited variant | 09 | U04 |
-| `Tooltip` | Short hover and focus hint; also carries exact values behind rounded figures | 10 | U02 |
-| `SegmentedControl` | 2 to 5 options, counts, large size; tablist or radiogroup semantics | 11 | U02 |
+| `Tooltip` | Short hover and focus hint; also carries exact values behind rounded figures | 10 | U02 not built (not in BUILD_PLAN U02); first needed by the Today target tile |
+| `SegmentedControl` | 2 to 5 options, counts, large size; tablist or radiogroup semantics | 11 | U02 not built (not in BUILD_PLAN U02); first needed by Today |
 | `DateRail` | Start-to-due rail with today marker; tones on track, due soon, due today, overdue, done, no date | 12 | U05 |
 | `Popover` | `Menu` variant (actions, 32 px items) and information variant | 13 | U03 |
 | `InlineConfirm` | In-place "Copied. Marked as chased today. Undo" line | 13 | U03 |
@@ -44,7 +45,7 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 
 | Composite | Made of | Used on |
 |---|---|---|
-| `AppShell` (top bar, six role-filtered destinations, `⌘K` trigger, role chip, account menu, mobile bottom bar) | `Tabs`, `Button`, `Kbd`, `Avatar`, `Popover`, `Tag` | every screen |
+| `AppShell` (top bar, six role-filtered destinations, `⌘K` trigger, role text, account avatar, phone bar and bottom tab bar). Built in U02: destinations are a `nav` of links with `aria-current="page"`, not `Tabs`; the role is plain text, not a `Tag`; the account menu (`Popover`, sign out) arrives with A03 | `Icon`, `Button`, `Kbd`, `Avatar` | every screen |
 | `PageHeader` (title, sub line, actions, breadcrumb) | `Breadcrumb`, `Button`, `StatusBadge` | all detail and register pages |
 | `Panel` (titled card with header, meta, actions) | `Button`, `Tag`, `SegmentedControl` | Money, Order, Company |
 | `KeyValue` list | `Money`, `Tag`, `StatusBadge` | Order, Company, Today detail |
@@ -76,14 +77,14 @@ PNG names are in `screens/`. "Element" is anything a user sees or touches.
 ### Today (`today-b2-*`, source `g2-today-b2.html`)
 | Element | Primitive or composite |
 |---|---|
-| Top bar, destinations, search, role chip | `AppShell`, `Tabs`, `Kbd`, `Avatar` |
+| Top bar, destinations, search, role text | `AppShell` (nav links), `Kbd`, `Avatar` |
 | Target tile with working, ahead, none and collapsed states | `TargetTile`, `Money`, `Tooltip`, `EmptyState` (no target) |
 | Action list groups, rows with reason line, due and age, the clarification collision line | `DataTable`-style list rows, `StatusBadge`, `Tag`, `DateRail` |
 | Waiting group (dimmed, chased n days ago, next nudge) | list group, `StatusBadge`, `Tooltip` |
 | Context pane: crumb, key figures, chips, date rail, history | `PageHeader`, `KeyValue`, `DateRail`, `Tag` |
 | Prepared draft, WhatsApp / Email switch, copy and mark, undo | `ChasePrep`, `SegmentedControl`, `Button`, `Toast` (Undo), `InlineConfirm` |
 | Snooze menu | `Popover` (Menu) |
-| Mobile: list with accordion pane | `AppShell` bottom bar, `Popover`, `Button` |
+| Mobile: list with accordion pane | `AppShell` phone bar and bottom tab bar, `Popover`, `Button` |
 | Empty (goal state), loading, error | `EmptyState`, `Skeleton`, `Banner` |
 
 ### Intake and float (`intake-float-*`)

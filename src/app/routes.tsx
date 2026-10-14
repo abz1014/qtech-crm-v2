@@ -1,0 +1,49 @@
+import type { ComponentType } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { RequireRole, RequireSession, RoleLanding } from '@/app/guards'
+import { navItems, type NavKey } from '@/app/navConfig'
+import { DestinationPage } from '@/app/pages/DestinationPage'
+import { NoAccessPage } from '@/app/pages/NoAccessPage'
+import { NotFoundPage } from '@/app/pages/NotFoundPage'
+import { SignInPage } from '@/app/pages/SignInPage'
+import { useSession } from '@/app/session'
+import { AppShell } from '@/app/shell/AppShell'
+
+/**
+ * Screens plug in here, one per destination. A feature task replaces its entry
+ * (a lazy-loaded page component); until then the destination shows the stand-in.
+ * Sub-routes such as /rfqs/:id are declared by the feature under the same key.
+ */
+const screens: Partial<Record<NavKey, ComponentType>> = {}
+
+function SignInRoute() {
+  const session = useSession()
+  return session.status === 'signed-in' ? <Navigate to="/" replace /> : <SignInPage />
+}
+
+export function AppRoutes({ onSearch }: { onSearch?: () => void }) {
+  return (
+    <Routes>
+      <Route path="/login" element={<SignInRoute />} />
+      <Route element={<RequireSession />}>
+        <Route element={<AppShell onSearch={onSearch} />}>
+          <Route index element={<RoleLanding />} />
+          <Route path="no-access" element={<NoAccessPage />} />
+          {navItems.map(item => {
+            const Screen = screens[item.key]
+            return (
+              <Route
+                key={item.key}
+                path={`${item.path.slice(1)}/*`}
+                element={
+                  <RequireRole item={item}>{Screen ? <Screen /> : <DestinationPage navKey={item.key} />}</RequireRole>
+                }
+              />
+            )
+          })}
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Route>
+    </Routes>
+  )
+}

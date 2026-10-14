@@ -144,6 +144,12 @@ isOneToOne: false
       referencedRelation: "v_inquiry_state"
       referencedColumns: ["inquiry_id"]
     },{
+      foreignKeyName: "clarifications_raised_by_inquiry_id_fkey"
+      columns: ["raised_by_inquiry_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_activity"
+      referencedColumns: ["inquiry_id"]
+    },{
       foreignKeyName: "clarifications_rfq_id_fkey"
       columns: ["rfq_id"]
 isOneToOne: false
@@ -208,6 +214,12 @@ isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
     },{
+      foreignKeyName: "company_brands_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
+    },{
       foreignKeyName: "company_brands_created_by_fkey"
       columns: ["created_by"]
 isOneToOne: false
@@ -260,6 +272,12 @@ isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
     },{
+      foreignKeyName: "company_sites_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
+    },{
       foreignKeyName: "company_sites_created_by_fkey"
       columns: ["created_by"]
 isOneToOne: false
@@ -291,6 +309,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "contacts_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
     },{
       foreignKeyName: "contacts_created_by_fkey"
       columns: ["created_by"]
@@ -366,6 +390,12 @@ isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
     },{
+      foreignKeyName: "expenses_payee_id_fkey"
+      columns: ["payee_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
+    },{
       foreignKeyName: "expenses_recurring_id_fkey"
       columns: ["recurring_id"]
 isOneToOne: false
@@ -423,6 +453,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "invoices_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
     },{
       foreignKeyName: "invoices_created_by_fkey"
       columns: ["created_by"]
@@ -665,6 +701,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
     },{
       foreignKeyName: "orders_contact_id_fkey"
       columns: ["contact_id"]
@@ -924,6 +966,12 @@ isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
     },{
+      foreignKeyName: "rfqs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
+    },{
       foreignKeyName: "rfqs_contact_id_fkey"
       columns: ["contact_id"]
 isOneToOne: false
@@ -1011,6 +1059,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
     }
                   ]
                 },"supplier_orders": {
@@ -1042,6 +1096,12 @@ isOneToOne: false
       columns: ["inquiry_id"]
 isOneToOne: false
       referencedRelation: "v_inquiry_state"
+      referencedColumns: ["inquiry_id"]
+    },{
+      foreignKeyName: "supplier_orders_inquiry_id_fkey"
+      columns: ["inquiry_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_activity"
       referencedColumns: ["inquiry_id"]
     },{
       foreignKeyName: "supplier_orders_order_id_fkey"
@@ -1085,6 +1145,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "supplier_orders_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
     }
                   ]
                 },"supplier_quote_lines": {
@@ -1116,6 +1182,12 @@ isOneToOne: false
       columns: ["inquiry_id"]
 isOneToOne: false
       referencedRelation: "v_inquiry_state"
+      referencedColumns: ["inquiry_id"]
+    },{
+      foreignKeyName: "supplier_quote_lines_inquiry_id_fkey"
+      columns: ["inquiry_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_activity"
       referencedColumns: ["inquiry_id"]
     },{
       foreignKeyName: "supplier_quote_lines_rfq_item_id_fkey"
@@ -1260,6 +1332,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
     }
                   ]
                 },"v_invoice_state": {
@@ -1280,6 +1358,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "invoices_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
     },{
       foreignKeyName: "invoices_order_id_fkey"
       columns: ["order_id"]
@@ -1347,6 +1431,12 @@ isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
     },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
+    },{
       foreignKeyName: "orders_owner_id_fkey"
       columns: ["owner_id"]
 isOneToOne: false
@@ -1372,6 +1462,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
     },{
       foreignKeyName: "orders_owner_id_fkey"
       columns: ["owner_id"]
@@ -1461,12 +1557,64 @@ isOneToOne: false
       referencedRelation: "v_company_roles"
       referencedColumns: ["company_id"]
     },{
+      foreignKeyName: "rfqs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
+    },{
       foreignKeyName: "rfqs_owner_id_fkey"
       columns: ["owner_id"]
 isOneToOne: false
       referencedRelation: "users"
       referencedColumns: ["id"]
     }
+                  ]
+                },"v_supplier_activity": {
+                  Row: {
+                    "first_reply_on": string | null,"inquiry_id": string | null,"is_legacy": boolean | null,"no_offer": boolean | null,"quoted": boolean | null,"replied": boolean | null,"reply_days": number | null,"rfq_id": string | null,"sent_on": string | null,"supplier_id": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "supplier_inquiries_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "rfqs"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "supplier_inquiries_rfq_id_fkey"
+      columns: ["rfq_id"]
+isOneToOne: false
+      referencedRelation: "v_rfq_state"
+      referencedColumns: ["rfq_id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_stats"
+      referencedColumns: ["supplier_id"]
+    }
+                  ]
+                },"v_supplier_stats": {
+                  Row: {
+                    "asked": number | null,"brand_ids": (string)[] | null,"brand_names": (string)[] | null,"chosen": number | null,"chosen_of": number | null,"deliveries": number | null,"last_contact": string | null,"late": number | null,"legacy_asked": number | null,"median_days_late": number | null,"median_reply_days": number | null,"no_offer": number | null,"prices_hidden": number | null,"quoted": number | null,"replied": number | null,"reply_days_n": number | null,"supplier_id": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
                   ]
                 },"v_target_progress": {
                   Row: {
@@ -1499,6 +1647,9 @@ isOneToOne: false
                            },
 "issue_quotation":
 { Args: { "p_contact_id"?: string,"p_delivery_text"?: string,"p_notes"?: string,"p_payment_terms"?: string,"p_quotation_id": string,"p_rfq_id": string,"p_valid_until"?: string }; Returns: string
+                           },
+"item_match_tier":
+{ Args: { "c_brand": string,"c_family": string,"c_guessed"?: boolean,"c_norm": string,"c_tokens": (string)[],"t_brand": string,"t_family": string,"t_norm": string,"t_tokens": (string)[] }; Returns: number
                            },
 "item_text_norm":
 { Args: { "t": string }; Returns: string
@@ -1550,6 +1701,11 @@ isOneToOne: false
                            },
 "stamp_tcs_sent":
 { Args: { "p_invoice_ids": (string)[],"p_on"?: string,"p_tcs_number"?: string }; Returns: number
+                           },
+"supplier_item_memory":
+{ Args: { "p_brand_id": string,"p_description": string,"p_exclude_rfq_id"?: string,"p_family_id": string,"p_supplier_ids": (string)[] }; Returns: {
+              "best_tier": number,"best_tier_label": string,"last_ordered_currency": string,"last_ordered_fx_rate_on": string,"last_ordered_fx_rate_pkr": number,"last_ordered_on": string,"last_ordered_price": number,"last_ordered_price_pkr": number,"last_ordered_qty": number,"last_ordered_source": string,"last_ordered_tier": number,"last_ordered_unit": string,"last_po_currency": string,"last_po_fx_rate_on": string,"last_po_fx_rate_pkr": number,"last_po_on": string,"last_po_price": number,"last_po_price_pkr": number,"last_po_qty": number,"last_po_tier": number,"last_po_unit": string,"last_quote_currency": string,"last_quote_fx_rate_on": string,"last_quote_fx_rate_pkr": number,"last_quote_is_legacy": boolean,"last_quote_lead_time": string,"last_quote_on": string,"last_quote_price": number,"last_quote_price_hidden": boolean,"last_quote_price_pkr": number,"last_quote_qty": number,"last_quote_tier": number,"last_quote_unit": string,"recent_lead_times": (string)[],"supplied_before": boolean,"supplier_id": string
+            }[]
                            },
 "today_pkt":
 { Args: { "ts"?: string }; Returns: string

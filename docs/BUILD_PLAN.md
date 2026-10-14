@@ -229,7 +229,7 @@ M06 is OWNER-gated: the owner enters the target values.
 |---|---|---|---|---|---|
 | P01 | Reports (3–4, all from views): RFQ outcomes by close reason, float coverage and conversion, clarification turnaround, repeat customers | Each report matches a hand-computed fixture. | R11, O04 | l | OWNER (light: confirm the report list) |
 | P02 | Search v2: PO numbers, invoice numbers (invoice numbers hidden from engineers) | Role test. | M01, R12 | l | |
-| P03 | Playwright journeys for the three roles on the CI stack | Green in `db.yml`. | M08 | l | |
+| P03 | Playwright journeys for the three roles on the CI stack | Green in `db.yml`. *(A6: also asserts the A6 tap targets and the keyboard-only 5-row burst entry; see Amendment A6.)* | M08 | l | |
 | P04 | Performance and accessibility pass; CSP tightened; bundle budget | Lighthouse accessibility ≥ 95; initial JS ≤ 300 KB gzip. | P03 | | |
 
 ### P8 Import and cutover
@@ -478,6 +478,7 @@ Add this at the top of P3:
 >
 > | Flow | Target |
 > |---|---|
+> | *(A6)* Bookkeeping flows: expense entry, bank tick, month close, reports, CSV | See "A6.5 UI and FE-2 tap targets" in Amendment A6 below; they are part of this table. |
 > | New RFQ desktop | ≤3 actions + 1 paste |
 > | Capture | Android ≤4 taps, iPhone ≤6 |
 > | Float | ≤2 taps |
@@ -761,3 +762,104 @@ Mapping notes: the real task IDs matched the brief by content, so no remapping w
 - **S17 captures even an unusable rate** on a quote line (the stored `fx_rate_on` shows its age); only a currency with no rate at all leaves both columns NULL.
 - **S19** can reuse `item_text_norm(text)` as the section 5c `norm()`.
 - **R23** (nightly FX fetch) is not part of S17: it needs the service role and an external API, and stays with its own task.
+
+---
+
+# Amendment A6: monthly bookkeeping (approved 2026-10-14)
+
+> Schema and rules are in `DATA_MODEL.md` Amendment A6. Decisions are in `DECISIONS.md` (2026-10-14). The A6 branches start from main and rebase after `p1/s19-s14` merges, keeping migration numbers 0025–0028. Input tax is decided "yes" and is confirmed with the owner at the D15 review.
+
+## A6 task table (A6.7)
+
+| ID | Deliverable | Deps | ∥ | Phase |
+|---|---|---|---|---|
+| S20 | 0025_expense_categories (A6.1) plus tests | S19/S14 merged (rebase only; no logic dependency) | n | P1-late |
+| S21 | 0026_bank_and_receipts plus tests | S20 | n | P1-late |
+| S22 | 0027_month_close plus tests, and the cutover-runbook line "close no month before the final import" | S21 | | P1-late |
+| S23 | 0028_month_reports plus tests (named fixtures) | S22 | | P1-late |
+| D15 | Mockup and mini-gate (A6.8) | — | b | PD (in parallel with S20–S23) |
+| M03 (amended) | Expense form uses `category_id` and `paid_via` (defaulted), plus input tax as a collapsed optional field | S20 | | P6 |
+| M10 | Month-end tab: checklist, close/reopen, report tabs, CSV | S23, D15, M05 | k | P6 |
+| M11 | Burst expense entry (desktop sheet plus phone list, photo) | S21, D15, M03 | k | P6 |
+| M12 | Bank tick screen (in/out lists, PSID groups, running totals) | S21, D15 | k | P6 |
+| M13 | Category admin: rename, reorder, (de)activate, group, default paid via | S20 | k | P6 |
+| M05 (amended) | Cash month moves under the Month-end reports; the GST register keeps its own tab | — | | P6 |
+| M08 (amended) | Rule A6.4 | S23 | | P6 |
+| I05 (amended) | Category mapping file plus the `category_unmapped` flag; `paid_via` = bank, `bank_month` NULL for legacy | S20 | m | P8 |
+| I11 runbook | After sign-off: `close_months_through(last month)` | S22 | | P8 |
+
+S20–S23 don't block any current work. They run on their own branch from main and rebase after `p1/s19-s14` merges, keeping the numbers 0025–0028.
+
+---
+
+## M08 Today rule (A6.4, amends M08)
+
+- **Admin only:** "Close {previous month}: n checks". It appears from the 1st to the 10th of each month while that month is open.
+- Snoozable. Never more than one item.
+
+---
+
+## A6.5 UI and FE-2 tap targets (added to FE-2 above and to the P03 assertions)
+
+### Burst expense entry (M11): a sheet in Money › Expenses, keyboard-first
+
+- **Rows:** amount → category → date → paid via → note → photo.
+- **Defaults:**
+  - category = the previous row's category; the first row uses the most-used category of the last 30 days
+  - date = today
+  - paid via = the category's default
+- **Keys:** Enter adds a row; Tab moves between cells; type-ahead on category (2–3 letters); Ctrl+Enter saves all.
+- **Saving:** one bulk PostgREST insert, atomic, with client-generated ids so a double submit can't duplicate.
+- **Phone:** a list version where the photo button opens the camera, compressed with `imageCompress` before upload.
+
+### Bank tick (M12): Month-end › Bank
+
+- Pick the statement month.
+- Two lists, money in and money out. Money out also shows FBR deposits grouped by PSID.
+- Each list has unticked items first, plus older unticked items.
+- One tap per row.
+- Running ticked totals for in and out, so the owner can compare them with the statement totals.
+
+### Month-end tab (M10)
+
+- Checklist counts with links.
+- Report tabs: P&L, expenses by category, aging, we owe, GST/FBR, team.
+- CSV export of every report through `csvExport`.
+- **"Close September"**: one confirmation that shows the warning counts.
+- Reopen, from the closed-months list.
+
+### A6 tap targets
+
+| Event | Target |
+|---|---|
+| One expense, default category | 1 amount + Enter |
+| Different category | + 2–3 letters |
+| Photo | + 2 taps |
+| Five small spends in a burst | ≤ 5 amounts + 6 keys, 0 mouse |
+| Tick a bank item | 1 tap |
+| Tick a whole PSID group | 1 tap |
+| Close month (checklist reviewed) | 2 taps |
+| Reopen | 2 taps |
+| Monthly report viewed | 1 tap (tab) |
+| CSV export | 1 tap |
+
+---
+
+## D15 brief (A6.8)
+
+**D15: Month-end and burst entry** (one artifact, reviewed by the owner in a mini-gate, at most 2 rounds)
+
+- **Desktop 1440:**
+  - Month-end tab with the checklist, close confirmation, closed state and reopen.
+  - P&L, Expenses by category ("water, snacks, salaries, fuel" grouped), Aging, We owe, GST/FBR and Team report tabs.
+  - Bank tick lists, including a PSID group and running totals.
+  - Burst-entry sheet with defaults visible and an inline closed-month error.
+- **Phone 375:** burst list with camera.
+- **States:** empty month, everything ticked (the goal state), loading, error.
+- **Interaction counts** annotated on each flow (FE-2).
+- **Constraints:**
+  - Money component, PKR in dense tables.
+  - No percentages without counts.
+  - Not-in-P&L lines visually set apart below the result.
+
+---
