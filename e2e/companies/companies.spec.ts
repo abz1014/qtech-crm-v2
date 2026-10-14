@@ -1,10 +1,18 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 
 /*
  * R02 end to end, against the local CI stack. Each test makes its own companies with unique names, so the
  * tests do not depend on each other or on the seed beyond its fixture users.
  */
+
+/** Ctrl+K is heard only once the shell has mounted; press it until the palette is open (a press made too early is lost). */
+async function openPalette(page: Page): Promise<void> {
+  await expect(async () => {
+    if (!(await page.getByRole('combobox').isVisible())) await page.keyboard.press('Control+k')
+    await expect(page.getByRole('combobox')).toBeVisible({ timeout: 1000 })
+  }).toPass({ timeout: 15_000 })
+}
 
 test.describe('inline create (FE-2: name only, three actions)', () => {
   test('a company is created from its name alone, in one dialog', async ({ page }) => {
@@ -62,7 +70,7 @@ test.describe('inline create (FE-2: name only, three actions)', () => {
   test('the command palette finds a company by name and opens it', async ({ page }) => {
     const company = await createCompany(uniqueName('Palette Probe'))
     await openAs(page, 'sales', '/today')
-    await page.keyboard.press('Control+k')
+    await openPalette(page)
     await page.getByRole('combobox').fill(company.name.slice(0, 18))
     const hit = page.getByRole('option', { name: new RegExp(company.name) })
     await expect(hit).toBeVisible()
@@ -72,7 +80,7 @@ test.describe('inline create (FE-2: name only, three actions)', () => {
 
   test('the palette offers to add a name that is not on file', async ({ page }) => {
     await openAs(page, 'sales', '/today')
-    await page.keyboard.press('Control+k')
+    await openPalette(page)
     await page.getByRole('combobox').fill('Zzyzx Brand New Works')
     await page.getByRole('option', { name: /Add “Zzyzx Brand New Works” as a new company/ }).click()
     await expect(page).toHaveURL(/\/companies/)
