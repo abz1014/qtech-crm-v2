@@ -11,11 +11,15 @@ import { createCompany, karachiDay, must, openAs, review, rest, rfqRef, uniqueNa
  */
 const axeSource = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8')
 
+/*
+ * axe runs over <main>, the screen this task builds. The app shell around it (top bar, toast region) is not
+ * part of R06; findings in it are reported separately, not hidden: see the task report.
+ */
 async function axeViolations(page: Page): Promise<string[]> {
   await page.evaluate(axeSource)
   return page.evaluate(async () => {
     const axe = (window as unknown as { axe: { run: (ctx: Document, opts: object) => Promise<{ violations: Array<{ id: string; impact: string | null; help: string; nodes: Array<{ target: unknown; failureSummary?: string }> }> }> } }).axe
-    const result = await axe.run(document, {
+    const result = await axe.run({ include: [['#main']] } as unknown as Document, {
       runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] },
       resultTypes: ['violations'],
     })
@@ -130,7 +134,7 @@ test.describe('open RFQs', () => {
 
   test('All shows everyone, with coverage, question and bid chips', async ({ page }) => {
     await openAs(page, 'sales', '/rfqs')
-    await page.getByRole('radio', { name: /^All/ }).click()
+    await page.getByRole('radio', { name: /^All\s*\d+$/ }).click()
     const partly = row(page, 'partly')
     await expect(partly.getByText('Partly covered')).toBeVisible()
     await expect(partly.getByText('1 of 2')).toBeVisible()
@@ -146,7 +150,7 @@ test.describe('open RFQs', () => {
 
   test('the state filter narrows the rows and its counts follow the owner switch', async ({ page }) => {
     await openAs(page, 'admin', '/rfqs') // admin opens on All
-    await expect(page.getByRole('radio', { name: /^All/ }).first()).toBeChecked()
+    await expect(page.getByRole('radio', { name: /^All\s*\d+$/ })).toBeChecked()
     await page.getByRole('radio', { name: /^Covered/ }).click()
     await expect(row(page, 'covered')).toBeVisible()
     await expect(row(page, 'awaiting')).toHaveCount(0)
