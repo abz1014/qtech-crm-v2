@@ -350,11 +350,11 @@ export function Misc() {
   const [filter, setFilter] = useState('all')
   const [role, setRole] = useState('customer')
   return (
-    <div className="grid w-full gap-6 rounded border bg-surface p-6">
-      <section className="grid gap-3">
+    <div className="grid w-full min-w-0 grid-cols-1 gap-6 rounded border bg-surface p-4 md:p-6">
+      <section className="grid min-w-0 grid-cols-1 gap-3">
         <h2 className="text-base font-semibold">Segmented control</h2>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="grid gap-3">
+          <div className="grid min-w-0 grid-cols-1 gap-3">
             <SegmentedControl aria-label="Message channel" value={ch} onValueChange={setCh} options={[{ value: 'whatsapp', label: 'WhatsApp', icon: MessageSquare }, { value: 'email', label: 'Email', icon: Mail }]} />
           </div>
           <SegmentedControl
@@ -370,7 +370,7 @@ export function Misc() {
               { value: 'disabled', label: 'Disabled', disabled: true },
             ]}
           />
-          <div className="grid gap-3">
+          <div className="grid min-w-0 grid-cols-1 gap-3">
             <SegmentedControl
               aria-label="Filter"
               value={filter}
@@ -386,7 +386,7 @@ export function Misc() {
           </div>
         </div>
       </section>
-      <section className="grid gap-3">
+      <section className="grid min-w-0 grid-cols-1 gap-3">
         <h2 className="text-base font-semibold">Tabs and breadcrumb</h2>
         <Tabs defaultValue="suppliers" className="max-w-[420px]">
           <TabList aria-label="RFQ sections">
