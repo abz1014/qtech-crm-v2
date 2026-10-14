@@ -176,6 +176,36 @@ export function StatusMoneyTableSections() {
         </div>
       </Section>
 
+      <Section id="cards" title="DataTable: phone cards" note="With mobileRow, rows below 640px become stacked, tappable cards (44px minimum, keyboard and selection kept). Wider screens still show the table.">
+        <DataTable
+          label="RFQs as cards"
+          columns={rfqCols}
+          rows={RFQS}
+          getRowId={r => r.id}
+          defaultSort={{ id: 'due', dir: 'asc' }}
+          onRowOpen={r => setOpen(r.id)}
+          activeRowId={open}
+          summary="Showing 7 of 7 RFQs"
+          mobileRow={r => (
+            <div className="grid gap-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="truncate font-medium">{r.customer}</span>
+                <span className="num shrink-0 text-xs text-fg-muted">{r.no}</span>
+              </div>
+              <span className="num text-xs text-fg-muted">Due {formatDay(r.due)}</span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <StatusBadge dimension="sourcing" value={r.sourcing} />
+                {r.status === 'to_bid' ? <StatusBadge dimension="bid" value="to_bid" /> : <StatusBadge dimension="rfq-outcome" value={r.status === 'closed' ? 'closed' : 'open'} />}
+              </div>
+            </div>
+          )}
+        />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <DataTable label="Cards, loading" columns={rfqCols.slice(0, 5)} rows={[]} getRowId={r => r.id} loading mobileRow={() => null} />
+          <DataTable label="Cards, goal state" columns={rfqCols.slice(0, 5)} rows={[]} getRowId={r => r.id} mobileRow={() => null} empty={<EmptyState mood="goal" title="No open RFQs. Nice.">Every RFQ is won or closed.</EmptyState>} />
+        </div>
+      </Section>
+
       <Section id="register" title="GST register: groups, selection, tracks, totals" note="Month stamping: tick a month once. Group subtotals and the footer are summed from the rows.">
         <DataTable twoLine
           label="GST register"

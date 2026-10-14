@@ -9,6 +9,7 @@ import { Checkbox } from '@/ui/form/Checkbox'
 import { Money } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
 import { downloadCSV, generateCSV } from '@/lib/csvExport'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { paisaToFixed } from '@/lib/money'
 import {
   columnShowsPaisa,
@@ -33,6 +34,12 @@ export type { Column, SortState } from '@/ui/dataTableModel'
  * Performance: past `virtualAfter` rows (default 80) only the rows in view plus
  * an overscan are rendered, with spacer rows keeping the scroll height. Row
  * heights are fixed (40 / 32 / 48 and 36 for group rows) so no measuring is needed.
+ *
+ * Phone cards: give `mobileRow` and, below 640px, each row is drawn as one stacked, tappable card
+ * (whatever `mobileRow` returns) instead of table cells. The rows keep their keyboard focus, Enter to
+ * open, Space and the checkbox for selection, and a 44px minimum height. The column header row is kept
+ * for screen readers only, so sorting is a desktop control; group subtotals and the totals footer are
+ * not drawn as cards (a group shows its label). Cards are not virtualised.
  *
  * Keyboard: Up/Down or J/K move the focus row, Home/End jump, PageUp/PageDown move
  * 10, Enter opens, Space ticks. Focus is a roving tabindex: one Tab stop for the body.
@@ -84,6 +91,8 @@ export interface DataTableProps<T> {
   virtualAfter?: number
   /** Rows hold two-line cells (name over reference): 48 px as in the mockups. Required for virtualised tables with two-line cells. */
   twoLine?: boolean
+  /** Below 640px, draw each row as a stacked card with this content instead of columns. */
+  mobileRow?: (row: T) => ReactNode
   className?: string
 }
 
@@ -108,8 +117,11 @@ export function DataTable<T>(props: DataTableProps<T>) {
     maxHeight = '70vh',
     virtualAfter = 80,
     twoLine,
+    mobileRow,
     className,
   } = props
+  const phone = useMediaQuery('(max-width: 639px)')
+  const cards = !!mobileRow && phone
 
   // ---- sort ---------------------------------------------------------------
   const [innerSort, setInnerSort] = useState<SortState | null>(props.defaultSort ?? null)
@@ -155,7 +167,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   // ---- windowing ----------------------------------------------------------
   const coarse = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
   const rowH = coarse || twoLine ? 48 : density === 'compact' ? 32 : 40
-  const virtual = items.length > virtualAfter
+  const virtual = !cards && items.length > virtualAfter
   const offsets = useMemo(() => {
     const o = new Array<number>(items.length + 1)
     o[0] = 0
@@ -344,7 +356,14 @@ export function DataTable<T>(props: DataTableProps<T>) {
   )
 
   const labelCols = firstTotal < 0 ? columns.length : firstTotal
-  const summaryRow = (kind: 'group' | 'foot', labelNode: ReactNode, list: readonly T[], key: string, groupIds?: string[]) => (
+  const summaryRow = (kind: 'group' | 'foot', labelNode: ReactNode, list: readonly T[], key: string, groupIds?: string[]) =>
+    cards ? (
+      <tr key={key} role="row" data-row-kind={kind} className="block bg-canvas">
+        <td role="cell" className="block border-b border-line px-4 py-2 text-xs font-medium text-fg-muted">
+          {labelNode}
+        </td>
+      </tr>
+    ) : (
     <tr
       key={key}
       data-row-kind={kind}
@@ -391,6 +410,33 @@ export function DataTable<T>(props: DataTableProps<T>) {
     const id = getRowId(row)
     const ticked = !!selected?.has(id)
     const active = activeRowId === id
+    if (cards && mobileRow)
+      return (
+        <tr
+          key={id}
+          role="row"
+          data-di={di}
+          data-card=""
+          aria-selected={selection || activeRowId !== undefined ? ticked || active : undefined}
+          tabIndex={di === safeFocus ? 0 : -1}
+          onFocus={e => e.target === e.currentTarget && setFocusDi(di)}
+          onKeyDown={e => onRowKey(e, di, row)}
+          onClick={e => {
+            if (onRowOpen && !(e.target as HTMLElement).closest('a,button,input,label,select,textarea')) onRowOpen(row)
+          }}
+          className={cn(
+            'relative block border-b border-line transition-colors focus-visible:bg-sunken focus-visible:-outline-offset-2',
+            onRowOpen && 'cursor-pointer',
+            ticked || active ? 'bg-selected' : 'active:bg-sunken',
+            active && 'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green',
+          )}
+        >
+          <td role="cell" className="flex min-h-[44px] items-start gap-3 px-4 py-3">
+            {selection ? <span className="pt-0.5">{checkbox(ticked, shift => toggleRow(id, shift), selection.rowLabel ? `Select ${selection.rowLabel(row)}` : 'Select row')}</span> : null}
+            <div className="min-w-0 flex-1">{mobileRow(row)}</div>
+          </td>
+        </tr>
+      )
     return (
       <tr
         key={id}
@@ -452,6 +498,15 @@ export function DataTable<T>(props: DataTableProps<T>) {
           </td>
         </tr>
       )
+    if (loading && cards)
+      return Array.from({ length: 4 }, (_, r) => (
+        <tr key={r} role="row" aria-hidden="true" className="block border-b border-line">
+          <td role="cell" className="grid min-h-[44px] gap-2 px-4 py-3">
+            <Skeleton style={{ width: `${[60, 75, 50, 68][r % 4]}%` }} />
+            <Skeleton style={{ width: '40%' }} />
+          </td>
+        </tr>
+      ))
     if (loading)
       return Array.from({ length: 6 }, (_, r) => (
         <tr key={r} aria-hidden="true">
@@ -487,7 +542,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     )
   })()
 
-  const showFoot = hasTotals && !loading && !error && items.length > 0
+  const showFoot = !cards && hasTotals && !loading && !error && items.length > 0
   const hints = !!(onRowOpen || selection)
 
   return (
@@ -517,9 +572,10 @@ export function DataTable<T>(props: DataTableProps<T>) {
           aria-label={label}
           aria-busy={loading || undefined}
           aria-rowcount={virtual ? items.length + 1 : undefined}
-          className="w-full border-separate border-spacing-0 text-table"
+          role={cards ? 'table' : undefined}
+          className={cn('w-full border-separate border-spacing-0 text-table', cards && 'block')}
         >
-          <thead>
+          <thead role={cards ? 'rowgroup' : undefined} className={cn(cards && 'sr-only')}>
             <tr aria-rowindex={virtual ? 1 : undefined}>
               {selection ? (
                 <th className="sticky top-0 z-[1] h-[36px] w-10 border-b border-line bg-sunken px-[var(--cell-px)] first:pl-5 last:pr-5">
@@ -563,7 +619,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
               })}
             </tr>
           </thead>
-          <tbody ref={bodyRef}>{body}</tbody>
+          <tbody ref={bodyRef} role={cards ? 'rowgroup' : undefined} className={cn(cards && 'block')}>
+            {body}
+          </tbody>
           {showFoot ? <tfoot>{summaryRow('foot', footerLabel ?? 'Total', dataRows, 'foot')}</tfoot> : null}
         </table>
       </div>

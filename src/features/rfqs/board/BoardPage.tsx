@@ -14,7 +14,7 @@ import {
   type OwnerFilter,
   type StateFilter,
 } from '@/features/rfqs/board/model'
-import { BidCell, ClarificationCell, CompanyCell, DueCell, OutcomeCell, OwnerCell, ReceivedCell, SourcingCell } from '@/features/rfqs/board/BoardParts'
+import { BidCell, ClarificationCell, ClosedCard, CompanyCell, DueCell, OpenCard, OutcomeCell, OwnerCell, ReceivedCell, SourcingCell } from '@/features/rfqs/board/BoardParts'
 import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
@@ -156,6 +156,7 @@ export function BoardPage() {
             rows={shown}
             getRowId={r => r.rfqId}
             twoLine
+            mobileRow={r => <OpenCard row={r} />}
             onRowOpen={openRow}
             loading={open.isPending}
             error={open.isError ? errorProps(open.refetch) : null}
@@ -190,6 +191,7 @@ export function BoardPage() {
             rows={closed.data?.rows ?? []}
             getRowId={r => r.rfqId}
             twoLine
+            mobileRow={r => <ClosedCard row={r} />}
             onRowOpen={openRow}
             loading={closed.isPending}
             error={closed.isError ? errorProps(closed.refetch) : null}

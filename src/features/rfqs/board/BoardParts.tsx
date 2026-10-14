@@ -86,3 +86,61 @@ export function OutcomeCell({ row }: { row: BoardRow }) {
 export function ReceivedCell({ row }: { row: BoardRow }) {
   return <span className="num text-fg-2">{formatDay(row.receivedOn)}</span>
 }
+
+/*
+ * The phone card (DataTable `mobileRow`, below 640px). Line 1: company and RFQ ref. Line 2: due, in the
+ * danger tone when overdue. Then the chips, wrapped. Last: the owner, and their ref when there is one.
+ */
+export function OpenCard({ row }: { row: BoardRow }) {
+  const due = dueText(row)
+  const danger = due.tone === 'danger'
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <Link to={`/rfqs/${row.rfqId}`} className="truncate font-medium text-fg hover:underline">
+            {row.companyName}
+          </Link>
+          {row.isPriority ? (
+            <span className="inline-flex shrink-0 items-center text-tone-warning-fg">
+              <Icon icon={Flag} size="sm" />
+              <span className="sr-only">Priority</span>
+            </span>
+          ) : null}
+        </span>
+        <span className="num shrink-0 text-xs text-fg-muted">{rfqRef(row.number)}</span>
+      </div>
+      <div className={cn('text-xs', danger ? 'font-medium text-tone-danger-fg' : due.tone === 'warning' ? 'text-tone-warning-fg' : 'text-fg-muted')}>
+        <span className="num">{due.date ?? 'No due date'}</span>
+        {due.date && due.hint ? <> · {due.hint}</> : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <StatusBadge dimension="sourcing" value={row.sourcingState} detail={sourcingDetail(row)} />
+        {row.clarificationState !== 'none' ? <StatusBadge dimension="clarification" value={row.clarificationState} detail={clarificationDetail(row)} /> : null}
+        <StatusBadge dimension="bid" value={row.bidState} />
+      </div>
+      <div className="flex items-center justify-between gap-3 text-xs text-fg-muted">
+        <OwnerCell row={row} />
+        {row.customerRef ? <span className="truncate">their ref {row.customerRef}</span> : null}
+      </div>
+    </div>
+  )
+}
+
+export function ClosedCard({ row }: { row: BoardRow }) {
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <Link to={`/rfqs/${row.rfqId}`} className="truncate font-medium text-fg hover:underline">
+          {row.companyName}
+        </Link>
+        <span className="num shrink-0 text-xs text-fg-muted">{rfqRef(row.number)}</span>
+      </div>
+      <OutcomeCell row={row} />
+      <div className="flex items-center justify-between gap-3 text-xs text-fg-muted">
+        <OwnerCell row={row} />
+        <span className="num">Received {formatDay(row.receivedOn)}</span>
+      </div>
+    </div>
+  )
+}

@@ -11,15 +11,12 @@ import { createCompany, karachiDay, must, openAs, review, rest, rfqRef, uniqueNa
  */
 const axeSource = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8')
 
-/*
- * axe runs over <main>, the screen this task builds. The app shell around it (top bar, toast region) is not
- * part of R06; findings in it are reported separately, not hidden: see the task report.
- */
+/* axe over the whole page, shell included: WCAG 2.2 AA plus best-practice rules, zero violations. */
 async function axeViolations(page: Page): Promise<string[]> {
   await page.evaluate(axeSource)
   return page.evaluate(async () => {
     const axe = (window as unknown as { axe: { run: (ctx: Document, opts: object) => Promise<{ violations: Array<{ id: string; impact: string | null; help: string; nodes: Array<{ target: unknown; failureSummary?: string }> }> }> } }).axe
-    const result = await axe.run({ include: [['#main']] } as unknown as Document, {
+    const result = await axe.run(document, {
       runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] },
       resultTypes: ['violations'],
     })
@@ -272,7 +269,13 @@ test.describe('accessibility (axe, WCAG 2.2 AA)', () => {
       await page.setViewportSize({ width: w, height: h })
       await openAs(page, 'sales', '/rfqs?owner=all')
       await expect(row(page, 'covered')).toBeVisible()
-      if (w === 375) await review(page, 'board-375')
+      if (w === 375) {
+        await review(page, 'board-375')
+        // Phone cards: every row is at least 44px tall, and a tap on the card opens the RFQ.
+        const cards = page.getByRole('table', { name: 'Open RFQs' }).locator('tr[data-card]')
+        expect(await cards.count()).toBeGreaterThan(3)
+        for (const box of await cards.evaluateAll(els => els.map(e => e.getBoundingClientRect().height))) expect(box).toBeGreaterThanOrEqual(44)
+      }
       expect(await axeViolations(page)).toEqual([])
 
       await page.getByRole('tab', { name: /Closed and won/ }).click()

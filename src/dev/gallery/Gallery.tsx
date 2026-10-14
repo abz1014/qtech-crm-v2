@@ -30,6 +30,7 @@ const NAV = [
   ['money', 'Money'],
   ['sumbar', 'SumBar'],
   ['rfq', 'DataTable'],
+  ['cards', 'Phone cards'],
   ['overlays', 'Overlays'],
   ['not-built', 'Not built'],
 ] as const
