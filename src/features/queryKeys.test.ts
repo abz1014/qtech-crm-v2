@@ -38,6 +38,13 @@ describe('invalidation map (R01)', () => {
     'contact.add': { companyId: 'c1' },
     'brand.link': { companyId: 'c1' },
     'brand.create': {},
+    'team.create': {},
+    'team.reset-password': {},
+    'team.set-role': {},
+    'team.set-job-title': {},
+    'team.deactivate': {},
+    'team.reactivate': {},
+    'company-profile.update': {},
     'site.update': { companyId: 'c1' },
     'site.remove': { companyId: 'c1' },
     'contact.update': { companyId: 'c1' },
@@ -60,6 +67,13 @@ describe('invalidation map (R01)', () => {
     expect(keys).toContainEqual(qk.companies.all)
     expect(keys).toContainEqual(qk.rfqs.all)
     expect(keys).toContainEqual(qk.orders.all)
+  })
+
+  it('every change to a person re-reads the team list, and a profile save re-reads the profile', () => {
+    for (const n of ['team.create', 'team.reset-password', 'team.set-role', 'team.set-job-title', 'team.deactivate', 'team.reactivate'] as const) {
+      expect(keysFor(n, {})).toEqual([qk.settings.team()])
+    }
+    expect(keysFor('company-profile.update', {})).toEqual([qk.settings.profile()])
   })
 
   it('editing or removing a site or contact refreshes that company only; unlinking a brand also refreshes the roster', () => {
