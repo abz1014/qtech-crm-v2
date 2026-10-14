@@ -74,7 +74,7 @@ export function BoardPage() {
       { id: 'company', header: 'Company', value: r => r.companyName, sortable: true, cell: r => <CompanyCell row={r} /> },
       { id: 'due', header: 'Due', kind: 'date', value: r => r.dueOn, sortable: true, width: 150, cell: r => <DueCell row={r} /> },
       { id: 'sourcing', header: 'Sourcing', value: r => r.sourcingState, width: 190, cell: r => <SourcingCell row={r} /> },
-      { id: 'clarification', header: 'Questions', value: r => r.clarificationState, width: 190, hideBelowMd: true, cell: r => <ClarificationCell row={r} /> },
+      { id: 'clarification', header: 'Questions', value: r => r.clarificationState, width: 240, hideBelowMd: true, cell: r => <ClarificationCell row={r} /> },
       { id: 'bid', header: 'Bid', value: r => r.bidState, width: 160, hideBelowMd: true, cell: r => <BidCell row={r} /> },
       { id: 'owner', header: 'Owner', value: r => r.ownerName, sortable: true, width: 130, hideBelowMd: true, cell: r => <OwnerCell row={r} /> },
     ],
@@ -133,13 +133,13 @@ export function BoardPage() {
     : 'Open RFQs, earliest due date first.'
 
   return (
-    <div className="mx-auto grid w-full max-w-table content-start gap-4 px-4 pb-12 pt-6 md:px-8">
+    <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-6 md:px-8">
       <header className="grid gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">RFQs</h1>
         <p className="text-sm text-fg-muted">{lede}</p>
       </header>
 
-      <Tabs value={tab} onValueChange={v => change({ tab: v === 'closed' ? 'closed' : null, page: null })}>
+      <Tabs className="min-w-0" value={tab} onValueChange={v => change({ tab: v === 'closed' ? 'closed' : null, page: null })}>
         <TabList aria-label="RFQ lists">
           <Tab value="open" count={open.isSuccess ? total : undefined}>
             Open
