@@ -1,6 +1,6 @@
 # Q-Tech CRM v2 design system
 
-Status: v1, 13 Oct 2026. Source of truth for every value is [`design/tokens.css`](design/tokens.css). This file explains the rules. The live specimen is [`design/mockups/spec-sheet.html`](design/mockups/spec-sheet.html). Brand inputs come from [`BRAND.md`](BRAND.md) and are unchanged: deep green `#1a7b46` for actions and green text, brand green `#429446` for non-text only, teal success, 4px radius, light theme, mono tabular numbers.
+Status: v1, **frozen 14 Oct 2026** (Gate 2 approved, D09). Changes now need an entry in [`DECISIONS.md`](DECISIONS.md) and the orchestrator's approval; see section 15. Source of truth for every value is [`design/tokens.css`](design/tokens.css). This file explains the rules. The live specimen is [`design/mockups/spec-sheet.html`](design/mockups/spec-sheet.html). Brand inputs come from [`BRAND.md`](BRAND.md) and are unchanged: deep green `#1a7b46` for actions and green text, brand green `#429446` for non-text only, teal success, 4px radius, light theme, mono tabular numbers.
 
 Direction in one line: an instrument panel that has been tidied by someone who cares. Flat white and cool-grey surfaces, one-pixel hairlines doing the separating, a single quiet green for "this is where you act or where you are", and numbers set in a monospace so columns of rupees line up like a ledger.
 
@@ -259,3 +259,16 @@ Sentence case, plain verbs, the same name for an action in the button and in the
 ## 14. Token hygiene
 
 Every token in `tokens.css` is used by the spec sheet or a mockup. A token is added only with a component that reads it. Primitives (`--neutral-*`) are referenced only by semantic tokens. If two tokens would hold the same value for the same purpose, keep one. The check script in the build notes (grep each `--name` outside its definition) must return no orphans.
+
+## 15. Freeze and Gate 2 decisions
+
+Gate 2 was approved by the owner on 2026-10-14 ("i think I like the mockup for now its good to go"), so this file, `design/tokens.css` and the mockups are frozen. The reference for every screen is the committed HTML in `design/mockups/`, rendered as PNGs in `design/screens/`; `design/ARTIFACTS.md` lists the approved artifact versions and `design/INVENTORY.md` maps every screen element to a primitive. U-tasks build to these; a deviation is listed in the PR and approved by the orchestrator. Re-render the PNGs with `design/tools/render-screens.mjs` after any approved change.
+
+Governing goal (owner, 2026-10-14): reduce work and logging while keeping the detail that helps sales and engineers and proper bookkeeping. Detail is a by-product of actions people take anyway, and money records are pre-filled, never skipped. Every interaction-count annotation in the mockups serves this goal.
+
+Gate 2 decisions that shape the interface (all recorded in `DECISIONS.md`, 2026-10-14):
+
+1. **Chase and payment-reminder wording** ships as mocked: polite at first, firmer after 30 days overdue (section 13 applies to both).
+2. **"Can't quote"** records one reason per supplier inquiry, with an optional per-item override. The RFQ detail reply row shows the inquiry-level reason and only offers the override when the person opens it.
+3. **Capture** pre-selects the most likely destination, and one tap confirms it. The chooser is a correction path, not a required step.
+4. **Quotation PDFs** print the bank details only if they are filled in `company_profile`. The field is optional; when blank, no heading, no empty block and no placeholder is printed.
