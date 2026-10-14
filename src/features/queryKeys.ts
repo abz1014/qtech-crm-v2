@@ -58,6 +58,15 @@ function rfqs() {
     detail: (id: string) => [...all, 'detail', id] as const,
   }
 }
+/** Intake (R05): who can be asked for a price, and what each of them remembers about the items being entered. */
+function intake() {
+  const all = root('intake')
+  return {
+    all,
+    suppliers: () => [...all, 'suppliers'] as const,
+    memory: (signature: string) => [...all, 'memory', signature] as const,
+  }
+}
 function orders() {
   const all = root('orders')
   return { all, lists: () => [...all, 'list'] as const, detail: (id: string) => [...all, 'detail', id] as const }
@@ -75,6 +84,7 @@ export const qk = {
   brands: brands(),
   rfqs: rfqs(),
   orders: orders(),
+  intake: intake(),
 }
 
 export type QueryKeyRoot = keyof typeof qk

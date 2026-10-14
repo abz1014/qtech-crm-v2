@@ -22,6 +22,9 @@ const screens: Partial<Record<NavKey, ComponentType>> = {
 
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
 const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfilePage').then(m => ({ default: m.CompanyProfilePage })))
+/** New RFQ (R05): its own route, so it works under whichever screen owns the rest of /rfqs. */
+const IntakeScreen = lazy(() => import('@/features/rfqs/IntakeScreen'))
+const rfqsItem = navItems.find(i => i.key === 'rfqs')
 
 /** Dev builds only: the component gallery (U09). Dead code in production. */
 const Gallery = import.meta.env.DEV ? lazy(() => import('@/dev/gallery/Gallery')) : null
@@ -72,6 +75,18 @@ export function AppRoutes() {
             />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
+          {rfqsItem ? (
+            <Route
+              path="rfqs/new"
+              element={
+                <RequireRole item={rfqsItem}>
+                  <Suspense fallback={null}>
+                    <IntakeScreen />
+                  </Suspense>
+                </RequireRole>
+              }
+            />
+          ) : null}
           {navItems.map(item => {
             const Screen = screens[item.key]
             return (

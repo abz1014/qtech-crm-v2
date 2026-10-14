@@ -50,6 +50,8 @@ describe('invalidation map (R01)', () => {
     'contact.update': { companyId: 'c1' },
     'contact.remove': { companyId: 'c1' },
     'brand.unlink': { companyId: 'c1' },
+    'rfq.float': { companyId: 'c1' },
+    'rfq.setFloated': { rfqId: 'r1' },
   }
 
   it('names at least one key for every write', () => {
