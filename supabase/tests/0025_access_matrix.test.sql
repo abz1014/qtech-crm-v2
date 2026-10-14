@@ -422,7 +422,7 @@ select is(pg_temp.actual(k.obj, k.variant, k.persona), pg_temp.expected(k.obj, k
 from known k order by k.obj, k.persona;
 select todo_end();
 
--- The four SECURITY INVOKER trigger functions below were never revoked from PUBLIC. A trigger function cannot be called
+-- The five SECURITY INVOKER trigger functions (company_profile_touch, lock_issued_document, purchase_order_set_total, quotation_set_totals, set_updated_at) were never revoked from PUBLIC. A trigger function cannot be called
 -- as a function, so this exposes nothing; A5 only names capture_quote_line_fx. Listed in the report, not changed here.
 select todo_start('invoker trigger functions keep the default PUBLIC execute (uncallable, harmless)');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
