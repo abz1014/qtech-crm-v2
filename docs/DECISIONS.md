@@ -1,8 +1,9 @@
 # Decision log
 
-Dated decisions for Q-Tech CRM v2. One line each. All dated 2026-10-13 unless noted.
+Dated decisions for Q-Tech CRM v2. One line each. Dated 2026-10-13 unless a line says otherwise.
 Changes to `DATA_MODEL.md` need an entry here first.
 
+- 2026-10-14: Governing goal (owner): reduce work and logging, while still keeping the detail that helps sales and engineers and keeping proper bookkeeping. Detail is captured as a by-product of actions the user takes anyway (paste, photo, one-tap stamps, issuing documents), not by separate logging. The books must stay complete and accurate. Money records are never skipped, only pre-filled. Owner: "our goal is to reduce work and logging so that we can actually keep information detail and help the sales engineer and have a proper book keeping for us".
 - 2026-10-13: Brand-new codebase in `qtech-crm-v2/` with its own git repo; the old repo is kept beside it as a read-only reference.
 - 2026-10-13: New Supabase project on the free plan; Mumbai region recommended; whether to go Pro or rely on exports is decided before go-live.
 - 2026-10-13: Project created in Singapore (ref yafbphagorydbitfgfmg) at the owner's choice; the earlier project gufnutjoapgbqeqtayst was deleted.
@@ -56,3 +57,9 @@ Changes to `DATA_MODEL.md` need an entry here first.
 - 2026-10-13 (A2b): Task IDs reconciled. Two new tasks: R23 (nightly FX fetch) and R24 (real-device share-in test). All other version-2 tasks are absorbed into existing IDs.
 - 2026-10-13 (A2b, orchestrator): FX-capture trigger skips imported rows (legacy_source set) rather than being disabled during import.
 - 2026-10-13: Supabase auth configured by the owner: public sign-ups off, email confirmation off. Admins create every account.
+- 2026-10-14: Gate 2 passed. Owner, reviewing all 12 mockups: "i think I like the mockup for now its good to go". Approved artifact versions are listed in `design/ARTIFACTS.md`.
+- 2026-10-14: Gate 2 open question 1 (owner delegated; orchestrator default): chase and payment-reminder wording ships as mocked, polite at first and firmer after 30 days overdue.
+- 2026-10-14: Gate 2 open question 2 (owner delegated; orchestrator default): "Can't quote" records one reason per supplier inquiry, with an optional per-item override. This keeps entry minimal.
+- 2026-10-14: Gate 2 open question 3 (owner delegated; orchestrator default): Capture pre-selects the most likely destination, and one tap confirms it. This keeps taps minimal.
+- 2026-10-14: Gate 2 open question 4 (owner delegated; orchestrator default): quotation PDFs print the bank details only if they are filled in `company_profile`. The field is optional and nothing is shown when it is blank.
+- 2026-10-14: Gate 2 approved by the owner; designs frozen (D09).

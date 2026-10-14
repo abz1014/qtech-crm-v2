@@ -1,0 +1,181 @@
+# Screen to primitive inventory
+
+Frozen with Gate 2 (2026-10-14, D09). Every UI element in the approved mockups maps to a named primitive, or to a named composite built only from primitives. U-tasks build the primitives; screen tasks build the composites. States for every primitive are in `mockups/g2-components.html` (PNGs `screens/components-*`). Nothing on a screen may use a one-off control, colour, size or shadow: if an element is not listed, it is not approved.
+
+## 1. Primitives
+
+Names are the component names to build. "Ref" is the section of `g2-components` (`screens/components-NN-*`) that shows its states.
+
+| Primitive | What it covers | Ref | Task |
+|---|---|---|---|
+| `Button` | Primary, secondary, quiet, danger; sizes 40, 32 (40 on touch), 28; busy state; icon-only variant needs `aria-label` | 01 Controls | U01/U07 |
+| `TextField` | Single-line input; `numeric` variant is mono and right aligned; prefix/suffix adornment (currency, unit); invalid, disabled, read only | 01 | U07 |
+| `TextArea` | Multi-line input, optional label | 01 | U07 |
+| `Select` | Native-styled select | 01 | U07 |
+| `Combobox` | Search-as-you-type with the "Add new" row (company, supplier, contact) | 01 | U07 |
+| `Checkbox`, `Radio`, `ToggleButton` | Selection controls; ToggleButton is the pressed/not-pressed filter ("Lowest only") | 01, 13 | U07 |
+| `Banner` | Info, warning, error, success strips with optional action | 01 | U02 |
+| `Tabs` | Page and panel tabs with count pills | 01 | U02 |
+| `Breadcrumb` | Page ancestry on detail pages | 01 | U02 |
+| `Skeleton` | Loading placeholder for text, rows and cards | 01 | U04 |
+| `FileDrop`, `FileRow` | Drop zone (resting, drag-over, added, too large), added-file rows with size and shrink note | 01 | U07 |
+| `Kbd` | Key hint (`⌘K`, `Esc`, `Enter`) | 01, 07 | U08 |
+| `Avatar` | Initials circle for a person | 01 | U02 |
+| `Tag` | Mono identifier or brand tag; dashed when not firm | 13 | U05 |
+| `CountPill` | Count beside tab or group names | 13 | U05 |
+| `StatusBadge` | Chip for any status value; shape, colour and label together; tones from `tokens.css` | 02 | U05 |
+| `Money` | Net / GST / gross, PKR grouping, foreign variant, estimate, stale-rate and basis-unknown marks, tabular mono | 03 | U06 |
+| `Form`, `Field` | RHF + Zod form, label, help, error line, submitting and unique-violation states | 04 | U07 |
+| `Dialog` | Modal (Radix), header, body, footer, destructive confirm variant, focus return | 05 | U03 |
+| `DataTable` | Comfortable and compact density, sorted column, keyboard row focus, selected row, empty, loading, error, footer totals, group rows | 06 | U04 |
+| `CommandPalette` | Cmd+K / Ctrl+K, recent, actions, jump to, searching, empty | 07 | U08 |
+| `Toast` | With Undo (10 s), plain, error | 08 | U03 |
+| `EmptyState` | Heading, what happens next, optional action; role-limited variant | 09 | U04 |
+| `Tooltip` | Short hover and focus hint; also carries exact values behind rounded figures | 10 | U02 |
+| `SegmentedControl` | 2 to 5 options, counts, large size; tablist or radiogroup semantics | 11 | U02 |
+| `DateRail` | Start-to-due rail with today marker; tones on track, due soon, due today, overdue, done, no date | 12 | U05 |
+| `Popover` | `Menu` variant (actions, 32 px items) and information variant | 13 | U03 |
+| `InlineConfirm` | In-place "Copied. Marked as chased today. Undo" line | 13 | U03 |
+| `Callout` | Dashed quiet note; no tone | 13 | U03 |
+| `StepList`, `ProgressSegments` | "n of m" segments and process steps | 13 | U05 |
+| `InlineEditRow` | Table row edited in place: resting, editing, saving, error; Enter saves, Esc cancels | 13 | U04 |
+
+## 2. Composites (built from the primitives; screen tasks own them)
+
+| Composite | Made of | Used on |
+|---|---|---|
+| `AppShell` (top bar, six role-filtered destinations, `⌘K` trigger, role chip, account menu, mobile bottom bar) | `Tabs`, `Button`, `Kbd`, `Avatar`, `Popover`, `Tag` | every screen |
+| `PageHeader` (title, sub line, actions, breadcrumb) | `Breadcrumb`, `Button`, `StatusBadge` | all detail and register pages |
+| `Panel` (titled card with header, meta, actions) | `Button`, `Tag`, `SegmentedControl` | Money, Order, Company |
+| `KeyValue` list | `Money`, `Tag`, `StatusBadge` | Order, Company, Today detail |
+| `TotalsBar` (net / GST / gross summary) | `Money` | Money, Order |
+| `TargetTile` (progress to quarterly target, pace marker, working) | `Money`, `Tooltip`, `Callout` | Today |
+| `ChasePrep` (prepared draft, WhatsApp/Email switch, "Copy and mark chased", stamp) | `SegmentedControl`, `TextArea`, `Button`, `InlineConfirm`, `Toast` | Today, RFQ detail, Money |
+| `SupplierSuggestion` row and `MemoryCard` (plain reasons, counts, no scores) | `Checkbox`, `Tag`, `CountPill`, `Popover` | Intake and float |
+| `ReplyRow` (supplier reply captured inline, lowest price mark, can't-quote reason) | `InlineEditRow`, `Money`, `StatusBadge`, `Tooltip` | RFQ detail |
+| `ClarificationPanel` (to ask / asked / answered / relay pending, photo answer) | `Tabs`, `FileRow`, `StatusBadge`, `Button` | RFQ detail |
+| `ItemRow` (item, coverage, GST per line, spec line) | `DataTable`, `Money`, `ProgressSegments`, `Tag` | RFQ, Order |
+| `LegCard` (procurement leg, dates, lines, total, expense add) | `Panel`, `Money`, `StatusBadge`, `DateRail`, `Button` | Order detail |
+| `DimensionBar` (order status dimensions) | `StatusBadge` | Order detail |
+| `MarginPanel` (provisional / basis-unknown marks) | `Panel`, `Money`, `Tooltip` | Order detail, Money (admin only) |
+| `RegisterTable` (GST register, month stamping batch bar, TCS and FBR tracks) | `DataTable`, `Checkbox`, `StatusBadge`, `TextField`, `Button` | Money |
+| `ReminderPane` (payment reminder draft, counters) | `ChasePrep`, `StatusBadge` | Money |
+| `RateStrip` and rates table (staleness bands, manual override) | `Banner`, `DataTable`, `Money`, `TextField` | RFQ detail, Money |
+| `UnitChart` (per-brand history) | `ProgressSegments`, `Tag` | Company |
+| `CapturePicker` (what to do, on which RFQ, tap count) | `Dialog` (sheet on phone), radio cards via `Radio`, `FileRow`, `FileDrop`, `Button` | Capture |
+| `PdfDocument` (letterhead from `company_profile`, line table, totals, terms, signature) | print styles only; `Money` formatting | Quotation, PO |
+| `LoginCard`, `SecretReveal` (password shown once, copy) | `TextField`, `Button`, `Banner`, `Dialog` | Login, Team |
+| `SettingsNav` + settings forms | `Tabs`, `Form`, `Field`, `Banner` | Settings |
+
+Mockup-only chrome that is not built: phone status bar and home bar, board captions, tap-count pins and bars (`taps-bar`, `pin`), OS and chat mock surfaces on Capture (`os-*`), board scaffolding. Tap-count annotations are design evidence; they belong in tests and the interaction-count checks, not in the app.
+
+## 3. Screen by screen
+
+PNG names are in `screens/`. "Element" is anything a user sees or touches.
+
+### Today (`today-b2-*`, source `g2-today-b2.html`)
+| Element | Primitive or composite |
+|---|---|
+| Top bar, destinations, search, role chip | `AppShell`, `Tabs`, `Kbd`, `Avatar` |
+| Target tile with working, ahead, none and collapsed states | `TargetTile`, `Money`, `Tooltip`, `EmptyState` (no target) |
+| Action list groups, rows with reason line, due and age, the clarification collision line | `DataTable`-style list rows, `StatusBadge`, `Tag`, `DateRail` |
+| Waiting group (dimmed, chased n days ago, next nudge) | list group, `StatusBadge`, `Tooltip` |
+| Context pane: crumb, key figures, chips, date rail, history | `PageHeader`, `KeyValue`, `DateRail`, `Tag` |
+| Prepared draft, WhatsApp / Email switch, copy and mark, undo | `ChasePrep`, `SegmentedControl`, `Button`, `Toast` (Undo), `InlineConfirm` |
+| Snooze menu | `Popover` (Menu) |
+| Mobile: list with accordion pane | `AppShell` bottom bar, `Popover`, `Button` |
+| Empty (goal state), loading, error | `EmptyState`, `Skeleton`, `Banner` |
+
+### Intake and float (`intake-float-*`)
+| Element | Primitive or composite |
+|---|---|
+| Company field with inline create | `Combobox`, `Field` |
+| Paste area and split item rows | `TextArea`, `ItemRow`, `TextField` |
+| Supplier groups with plain reasons, "supplied before" ticked | `SupplierSuggestion`, `Checkbox`, `Tag`, `CountPill` |
+| Memory card and its sample-size states | `MemoryCard`, `Popover` (information) |
+| Draft with blank `Spec:` | `TextArea`, `Callout` |
+| Copy & mark floated, 10 s undo | `Button`, `Toast` (Undo), `InlineConfirm` |
+| Step trail and tally | `StepList` |
+
+### RFQ detail (`rfq-detail-*`)
+| Element | Primitive or composite |
+|---|---|
+| Header, owner, due date, bid and close actions | `PageHeader`, `StatusBadge`, `DateRail`, `Button`, `Popover` (Menu) |
+| Items with coverage, uncovered flag | `ItemRow`, `ProgressSegments`, `StatusBadge` |
+| Supplier reply rows, lowest price, currency, can't-quote reason (inquiry-level, optional item override) | `ReplyRow`, `InlineEditRow`, `Money`, `Select`, `Tag` |
+| Rate strip and rate states | `RateStrip`, `Banner`, `Tooltip` |
+| Clarifications with photo answer | `ClarificationPanel`, `FileRow`, `Tabs`, `CountPill` |
+| Issue quotation dialog | `Dialog`, `Form`, `TextField`, `TextArea`, `Money` |
+| Won: create the order | `Dialog`, `Form`, `Button` |
+| Chase draft | `ChasePrep` |
+| Empty, loading, error, mobile 375 (sticky actions) | `EmptyState`, `Skeleton`, `Banner`, `Button` |
+
+### Chase texts (`chase-texts-*`)
+| Element | Primitive or composite |
+|---|---|
+| Customer clarification and supplier chase drafts | `ChasePrep`, `TextArea`, `SegmentedControl` |
+| Subject, recipient, channel | `Field`, `Tag` |
+| Wording by situation (first nudge, later, 30 days overdue) | `DataTable` (documentation board), `StatusBadge` |
+
+### Order detail (`order-detail-*`)
+| Element | Primitive or composite |
+|---|---|
+| Header, status dimensions | `PageHeader`, `DimensionBar`, `StatusBadge` |
+| Items with GST per line | `DataTable`, `Money` |
+| Procurement legs, dates, expense add | `LegCard`, `DateRail`, `Button`, `Dialog` |
+| Commissioning and dates | `StepList`, `KeyValue`, `DateRail` |
+| Margin panel (admin only) with provisional and basis-unknown marks | `MarginPanel`, `Money`, `Tooltip` |
+| Engineer variant: no money apart from sale and supplier prices | same primitives; `Money` omitted by role |
+| Issue PO dialog | `Dialog`, `Form`, `Money`, `Select` |
+| Legacy basis-unknown, loading, error, tablet 768 | `Banner`, `Skeleton`, `EmptyState` |
+
+### Money (`money-*`)
+| Element | Primitive or composite |
+|---|---|
+| Views switch (register, receivables, cash, margins, rates) | `Tabs`, `CountPill` |
+| Totals bar | `TotalsBar`, `Money` |
+| GST register with TCS and FBR tracks, month stamping, batch bar | `RegisterTable`, `DataTable`, `Checkbox`, `StatusBadge`, `TextField`, `Button`, `Toast` (Undo) |
+| Record payment, add expense, create invoice | `Dialog`, `Form`, `Field`, `Money`, `Combobox` |
+| Receivables and reminder pane | `DataTable`, `ReminderPane`, `ChasePrep` |
+| Cash month, order margins, exchange rates | `Panel`, `DataTable`, `Money`, `MarginPanel`, `RateStrip` |
+| Sales variants (invoices, balances, register only) | same, with role-filtered columns |
+| Loading, error, tablet 768 | `Skeleton`, `Banner` |
+
+### Company (`company-*`)
+| Element | Primitive or composite |
+|---|---|
+| Header, tags, contacts | `PageHeader`, `Tag`, `Avatar`, `KeyValue` |
+| Supplier memory: populated, low data, imported history only | `MemoryCard`, `UnitChart`, `Tooltip`, `Callout` |
+| Customer sites with RFQ and order history | `Panel`, `DataTable`, `StatusBadge` |
+| Brand and unit history | `UnitChart`, `Tag` |
+
+### Quotation PDF and PO PDF (`quotation-pdf-*`, `po-pdf-*`)
+| Element | Primitive or composite |
+|---|---|
+| Letterhead (from `company_profile`), reference block, customer block | `PdfDocument` |
+| Line table, running header on pages 2 and 3, "continued" marker | `PdfDocument` |
+| Totals, amount in words, terms, signature | `PdfDocument`, `Money` format |
+| Bank details (printed only when filled in `company_profile`) | `PdfDocument` optional block |
+| PO price-source labels | `PdfDocument`, `Tag` |
+
+### Login, Team, Settings (`login-team-settings-*`)
+| Element | Primitive or composite |
+|---|---|
+| Login with "ask your admin" line | `LoginCard`, `TextField`, `Button`, `Banner` |
+| Team list, row menu, account menu | `DataTable`, `Popover` (Menu), `StatusBadge`, `Avatar` |
+| Add person (password shown once), reset, change role, deactivate, reactivate | `Dialog`, `Form`, `SecretReveal`, `Select`, `Banner` |
+| Company profile (incomplete, complete with unsaved change, read only) | `SettingsNav`, `Form`, `Field`, `Banner`, `Button` |
+| Settings home and exchange rates | `SettingsNav`, `RateStrip`, `DataTable` |
+
+### Capture (`capture-*`)
+| Element | Primitive or composite |
+|---|---|
+| Share-in sheet, captured text and photo | `CapturePicker`, `FileRow`, `TextArea` |
+| What to do (answer, photo answer, supplier questions, notes, new RFQ), most likely pre-selected | `Radio` cards in `CapturePicker` |
+| On which RFQ (recents, search all) | `Combobox`, `Radio` list |
+| Split into questions with ticks | `Checkbox` list |
+| Save action with tap count | `Button` |
+| Signed-out resume, desktop drag-drop, size limits and failures | `Banner`, `FileDrop`, `FileRow`, `Dialog` |
+
+### Components sheet (`components-*`)
+The sheet is the primitive reference: sections 01 to 13 correspond to the rows in the primitives table. Every state used by the screens above also appears here.
