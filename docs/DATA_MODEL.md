@@ -21,7 +21,9 @@ Evidence I relied on beyond the brief:
 
 ---
 
-## 1. Entity list (28 tables: 24 after Revision 1, plus 4 added by Amendment A2)
+## 1. Entity list (30 tables: 24 after Revision 1, plus 4 added by Amendment A2, plus 2 added by Amendment A6)
+
+> **Amendment A6 (monthly bookkeeping) supersedes this document wherever it conflicts, and adds `expense_categories` and `closed_months` (rows 29 and 30 below). Read "Amendment A6" at the end before building anything that touches money. Notes marked "superseded by A6" in the sections below point to it.**
 
 | # | Table | Purpose |
 |---|---|---|
@@ -53,11 +55,13 @@ Evidence I relied on beyond the brief:
 | 26 | `quotations` | Issued customer quotation: an unchangeable snapshot with a number and revision. The PDF is stored. |
 | 27 | `purchase_orders` | Issued supplier PO for one procurement leg: an unchangeable snapshot in the supplier's currency. The PDF is stored. |
 | 28 | `company_profile` | One row holding Q-Tech's letterhead and legal details, used by the PDFs and text generators. |
+| 29 | `expense_categories` | *(Amendment A6)* Expense categories with a group (overhead / order cost / not in P&L), sort order, active flag and default paid-via. |
+| 30 | `closed_months` | *(Amendment A6)* One row per month the owner has closed. Locks payments, expenses and invoices dated in that month. |
 
 Derived objects. All views use `security_invoker = true`. **Every view that exposes money also carries an explicit `current_user_role()` filter.** Underlying row security alone is not enough: if a user can't see some of the rows a view sums, the view returns a wrong number rather than nothing.
 
 - Views: `v_company_roles`, `v_rfq_state`, `v_inquiry_state`, `v_order_state`, `v_invoice_state`, `v_gst_register`. *(Amendment A2: plus `v_fx_latest`, `v_supplier_activity`, `v_supplier_stats`.)*
-- Admin-only views: `v_order_money`, `v_cash_month`, `v_payment_net`, `v_target_progress`.
+- Admin-only views: `v_order_money`, `v_cash_month`, `v_payment_net`, `v_target_progress`. *(Amendment A6: plus `v_month_pnl`, `v_month_expense_category`, `v_month_team`, and the functions `aging_as_of()`, `payables_as_of()`, `month_end_status()`; `v_gst_month` is readable by admin and sales. See A6.3.)*
 - Two narrow functions that run with owner rights, so they can read money tables the caller can't (`SECURITY DEFINER`, `STABLE`, fixed `search_path`; EXECUTE granted to `authenticated`, revoked from `public`/`anon`):
   - `order_receivables()`: payment status for admin and sales only.
   - `my_target_progress()`: the caller's own target, for any active user.
@@ -412,6 +416,7 @@ Line net, line GST and line gross are derived. Rounding: GST is rounded to whole
 | notes | text | yes | — | S | |
 | last_reminded_on | date | yes | — | S | Stamped when someone copies a payment reminder. The Today item then drops away for 7 days. Only admin and sales can see it (engineers have no access to `invoices`). |
 | reminder_count | smallint | no | 0 | S |  |
+| tax_bank_month | date | yes | — | S | *(Amendment A6, A6.1)* The bank tick for the FBR deposit: the first day of the statement month. CHECK first day of a month. The UI ticks a whole PSID group at once. Stays editable after the month closes. |
 | gross, courier_state, fbr_state | — | — | — | **D** | `v_invoice_state`. |
 
 > Every invoice goes to FBR; there is one GST register and no provincial (SRB/PRA) tax. `order_items.gst_rate` stays at 18 by default, 0 for exempt items. Only admin and sales can see invoices; engineers have no access (§10).
@@ -438,18 +443,26 @@ created_at, created_by, legacy flags and legacy source as before.
 | amount | numeric(14,2) | no | — | CHECK > 0. **Gross**: the money actually received, GST included. Customers pay the full invoice amount and deduct nothing (owner, FACT). |
 | credited_user_id | uuid FK users RESTRICT | yes | set from `orders.owner_id` when the payment is recorded | Whose target this payment counts towards. Copied once so that reassigning an order later doesn't rewrite past quarters. Admin can change it. NULL means unattributed (some legacy rows). |
 | reference | text | yes | — | Cheque or bank-transfer reference. |
+| paid_via | text | no | `'bank'` | *(Amendment A6, A6.1)* CHECK in ('bank', 'cash'). Only bank items are ticked. |
+| bank_month | date | yes | — | *(Amendment A6, A6.1)* The statement month this payment was ticked against; NULL = not ticked. CHECK first day of a month, and CHECK `bank_month IS NULL OR paid_via = 'bank'`. Stays editable after the month closes. |
 
 **Removed:** `tax_withheld` (the owner confirms no withholding happens) and `payment_method`.
 
 The net portion of a payment is not stored; it is calculated by `v_payment_net` (§5).
+
+*(Amendment A6)* Once a month is closed, `payments_in` rows dated (`received_on`) in it can't be inserted, changed or deleted, except for `bank_month`.
 
 ### 2.18 `expenses` (all money out) — [std] [L]
 
 | Field | Type | Null | Default | Purpose |
 |---|---|---|---|---|
 | paid_on | date | no | `today_pkt()` *(Amendment A3)* | Cash-out clock. |
-| amount_pkr | numeric(14,2) | no | — | CHECK > 0. What left the bank. |
-| category | text | no | — | Free text with suggestions: Supplier payment, Freight, Clearing/Service, Commissioning – travel, Commissioning – subcontract, Commissioning – materials, Salaries, Utilities… The app maps known categories to procurement / commissioning / overhead. |
+| amount_pkr | numeric(14,2) | no | — | CHECK > 0. What left the bank. *(Amendment A6: still the bank debit, which may include recoverable input tax; the cost is `amount_pkr − input_tax_pkr`.)* |
+| ~~category~~ | — | — | — | **Superseded by A6.** The free-text column is dropped (no live data yet). Use `category_id`. |
+| category_id | uuid FK expense_categories RESTRICT | no | — | *(Amendment A6, A6.1)* Replaces the free-text `category`. The category's group (overhead / order cost / not in P&L) is what the reports use. A trigger rejects an insert, or a category change, to an inactive category; legacy rows (non-empty `legacy_flags`) are exempt. |
+| paid_via | text | no | — | *(Amendment A6)* CHECK in ('bank', 'cash'). A BEFORE INSERT trigger fills it from the category's `default_paid_via` when left NULL. |
+| input_tax_pkr | numeric(14,2) | no | 0 | *(Amendment A6)* CHECK between 0 and `amount_pkr`. Optional, normally 0. The cost used in the P&L and in order margin is `amount_pkr − input_tax_pkr`. |
+| bank_month | date | yes | — | *(Amendment A6)* The statement month this expense was ticked against; NULL = not ticked. CHECK first day of a month, and CHECK `bank_month IS NULL OR paid_via = 'bank'`. Stays editable after the month closes. |
 | description | text | yes | — | |
 | order_id | uuid FK orders RESTRICT | yes | — | Tagging to an order makes it order cost. Actual cost = sum of these. |
 | supplier_order_id | uuid FK supplier_orders RESTRICT | yes | — | For supplier payments, ties the payment to a leg. |
@@ -460,13 +473,15 @@ The net portion of a payment is not stored; it is calculated by `v_payment_net` 
 
 This replaces `expenses`, `supplier_payments`, `payables` and `payable_payments`. One table, one cost rule, one cash-out rule.
 
+*(Amendment A6)* Expense categories are now a table (`expense_categories`), `paid_via` and `bank_month` exist for the bank tick, `input_tax_pkr` makes the tick match the bank debit, and receipt photos are allowed (attachments, below). Once a month is closed, expenses dated (`paid_on`) in it are locked except for `bank_month`. See A6.
+
 **Cut:** `payment_method`, `updated_by`, `updated_at` (`audit_log` covers them), and foreign-currency amount (no payables module).
 
 ### 2.19 `recurring_expenses` — [std]
 
 Kept as today (VERIFIED shape):
 - `label text NOT NULL`
-- `category text NOT NULL`
+- ~~`category text NOT NULL`~~ *(superseded by A6: `category_id uuid NOT NULL`, FK RESTRICT to `expense_categories`, same as expenses)*
 - `amount numeric(14,2) NOT NULL` CHECK > 0
 - `day_of_month smallint` CHECK 1–28
 - `active boolean DEFAULT true`
@@ -479,7 +494,7 @@ It does work: "Salaries for October not yet recorded" is derived from a template
 
 | Field | Type | Null | Default | Purpose |
 |---|---|---|---|---|
-| bucket | text | no | — | CHECK in ('rfq-files','gst-receipts'). |
+| bucket | text | no | — | CHECK in ('rfq-files','gst-receipts'). *(Superseded by A6: also 'expense-receipts'.)* |
 | path | text | no | — | UNIQUE(bucket, path). Format `{parent_id}/{uuid}.{ext}`. |
 | file_name | text | no | — | Original name. |
 | mime_type | text | no | — | |
@@ -487,15 +502,18 @@ It does work: "Salaries for October not yet recorded" is derived from a template
 | rfq_id | uuid FK rfqs CASCADE | yes | — | |
 | clarification_id | uuid FK clarifications SET NULL | yes | — | Requires `rfq_id`. |
 | invoice_id | uuid FK invoices CASCADE | yes | — | |
+| expense_id | uuid FK expenses CASCADE | yes | — | *(Amendment A6)* Receipt photo on an expense. Admin only. |
 
 CHECKs:
-- `(rfq_id IS NOT NULL)::int + (invoice_id IS NOT NULL)::int = 1`
+- `(rfq_id IS NOT NULL)::int + (invoice_id IS NOT NULL)::int = 1` *(superseded by A6: three parents, `(rfq_id IS NOT NULL)::int + (invoice_id IS NOT NULL)::int + (expense_id IS NOT NULL)::int = 1`)*
 - `clarification_id IS NULL OR rfq_id IS NOT NULL`
 - bucket matches parent
 
 Storage objects are deleted by the app after a cascade (orphan sweep acceptable).
 
-> No new parent types. Images and text shared in from WhatsApp (F-4) attach to an RFQ or a clarification through the existing columns. Generated PDFs are not attachments. They live in a new private bucket, `generated-docs`, and are referenced by `pdf_path` on `quotations` and `purchase_orders`.
+> *(Superseded by A6: one new parent type, `expense_id`, with the private bucket `expense-receipts`, 5 MB limit, admin only.)*
+>
+> No new parent types (before A6). Images and text shared in from WhatsApp (F-4) attach to an RFQ or a clarification through the existing columns. Generated PDFs are not attachments. They live in a new private bucket, `generated-docs`, and are referenced by `pdf_path` on `quotations` and `purchase_orders`.
 
 ### 2.21 `snoozes`
 
@@ -864,8 +882,8 @@ Why not something simpler: three states (dropping "generated") would hide the st
    - Payments excluded from the net calculation (see the net-portion rule) still count in gross, and their net is shown as "unresolved".
 2. **GST register** (`v_gst_register`, admin and sales). Uses `invoices.invoice_date`. It's the only register; everything is FBR.
 3. **Whole-life order margin** (`v_order_money`, admin only).
-   - Margin = net sale − Σ expenses tagged to the order, **with no adjustment**.
-   - Expenses are recorded at true cost and **never include recoverable input tax** (owner, FACT). GST is outside margin on both sides.
+   - Margin = net sale − Σ expenses tagged to the order, **with no adjustment**. *(Superseded by A6: use the net cost `amount_pkr − input_tax_pkr`; identical while input tax is 0.)*
+   - Expenses are recorded at true cost and **never include recoverable input tax** (owner, FACT). GST is outside margin on both sides. *(Superseded by A6: `amount_pkr` is the bank debit and may include input tax. The cost is `amount_pkr − input_tax_pkr`, so the rule still holds. Margin = net sale − Σ(`amount_pkr − input_tax_pkr`).)*
    - Net sale is the invoiced net if any invoice exists, otherwise the net from the items.
    - Marked PROVISIONAL until `costs_complete_at` is set. Excluded while the order is flagged `value_basis_unknown`.
 4. **Targets** (§5a). Net cash by `received_on` quarter, counted to `credited_user_id`. GST is excluded from targets, the same as from profit.
@@ -1090,7 +1108,7 @@ The two attach points are RFQ/clarification and the GST invoice receipt. Storage
 - **Why better than keeping the receipt as a path column:** One table and one RLS model instead of per-table file columns.
 - **Complexity added:** 1 table, 1 new bucket, storage policies mirroring table RLS.
 - **Justified:** Yes, on free-tier storage (1 GB at roughly 300 KB per file).
-- **Not in MVP:** Expense and commissioning receipts. The CHECK pattern makes adding `expense_id` a one-column migration if the owner wants it.
+- **Not in MVP:** Expense and commissioning receipts. The CHECK pattern makes adding `expense_id` a one-column migration if the owner wants it. *(Reversed by A6: expense receipt photos are allowed, admin only, bucket `expense-receipts`.)*
 - **If skipped:** Photos stay in WhatsApp, and the engineer rewriting the answer cannot see them in context.
 
 ### E. Brands and families as tags with a supplier link
@@ -1251,7 +1269,7 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | order_payments | payments_in | `payment_date` → `received_on`; `reference` kept.<br>`credited_user_id`:<br>• the order's `owner_id` when the order isn't flagged `owner_unknown` or `owner_unreliable`<br>• otherwise empty (unattributed); admin can assign it afterwards<br>**No `tax_withheld`.** | Drop `payment_method`. |
 | supplier_payments | expenses | category "Supplier payment"; `order_id`; `supplier_order_id` = the single imported leg; `payee_id` = the leg's supplier. | — |
 | payables, payable_payments | expenses (payments only) | `payable_payments` with no supplier_payments equivalent → expenses. | Payables themselves dropped (module out). |
-| expenses | expenses | `date` text → `paid_on`. Category kept. `vendor_id` → `payee_id`. `order_id` kept. | Flag `cost_possible_double_count` on orders that have both an "Inventory/Procurement" expense and supplier_payments. Flag `invalid_date` when parsing fails. |
+| expenses | expenses | `date` text → `paid_on`. Category kept. *(Superseded by A6.2: legacy category text maps to `category_id` through `mappings/expense_categories.csv`; unmapped rows get the flag `category_unmapped`; `paid_via` = 'bank', `bank_month` NULL.)* `vendor_id` → `payee_id`. `order_id` kept. | Flag `cost_possible_double_count` on orders that have both an "Inventory/Procurement" expense and supplier_payments. Flag `invalid_date` when parsing fails. |
 | recurring_expenses | recurring_expenses | `''` → NULL. | — |
 | follow_up_actions | — | Dropped. 552 machine-generated rows, never edited (FACT). | — |
 | quarterly_targets | **targets** structure; **the old rows are dropped** | The old rows were company-level (year, quarter, target_value) and measured booked order value by PO date. The new target is per person and measured in net cash.<br>• Splitting an old company target across people would invent attribution.<br>• The old figures measure a different thing, so carrying them over would make old and new quarters look comparable when they aren't.<br>The old rows stay in the archive dump. At cutover, the admin enters the current quarter's per-person targets. | — |
@@ -1393,17 +1411,23 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | supplier_orders | SIUD | SIUD | SIUD | Delete is blocked if expenses are attached (FK). |
 | order_engineers | SIUD | SIUD | SIUD | |
 | **order_costs** | SIUD | — | — | |
-| invoices *(changed, Amendment A2)* | SIUD | SIU | — | Sales' update now also covers the reminder stamp. See confirmation 1 in §9. |
-| payments_in | SIUD | — | — | |
-| expenses | SIUD | — | — | |
+| invoices *(changed, Amendment A2)* | SIUD | SIU | — | Sales' update now also covers the reminder stamp. See confirmation 1 in §9. *(A6)* Core columns locked for a closed month; stamps, `tax_bank_month` and notes stay editable. |
+| payments_in | SIUD | — | — | *(A6)* Locked for a closed month, except `bank_month`. |
+| expenses | SIUD | — | — | *(A6)* Locked for a closed month, except `bank_month`. |
 | recurring_expenses | SIUD | — | — | |
+| **expense_categories** *(A6)* | SIUD | — | — | Delete blocked while in use (RESTRICT); deactivate instead. |
+| **closed_months** *(A6)* | S | — | — | Written only through the admin RPCs `close_month`, `close_months_through`, `reopen_month`. Audited. |
 | attachments (parent is an RFQ or clarification) | SIUD | SIUD | SIUD | Storage bucket `rfq-files`: same rules. |
 | attachments (parent is an invoice) | SIUD | SIUD | — | Storage bucket `gst-receipts`: admin and sales, as today. |
+| attachments (parent is an expense) *(A6)* | SIUD | — | — | Storage bucket `expense-receipts`: admin only, private, 5 MB. |
 | snoozes | own SIUD | own SIUD | own SIUD | |
 | **targets** | SIUD | S own | S own | |
 | audit_log | S | — | — | Append-only; written only by triggers. |
 | v_company_roles, v_rfq_state, v_inquiry_state, v_order_state | S | S | S | Show net, GST and gross from items only. |
 | v_invoice_state, v_gst_register | S | S | — | |
+| `v_gst_month` *(A6)* | S | S | — | Its input-tax column is NULL for sales. |
+| `v_month_pnl`, `v_month_expense_category`, `v_month_team`, `aging_as_of()`, `payables_as_of()`, `month_end_status()` *(A6)* | S | — | — | Explicit admin check inside each. |
+| RPCs `close_month`, `close_months_through`, `reopen_month` *(A6)* | ✓ | — | — | Run as the caller; admin check inside; audited. |
 | v_order_money, v_cash_month, v_payment_net, v_target_progress | S | — | — | Explicit admin check inside each view. |
 | `order_receivables()` (definer) | ✓ | ✓ | — | Returns gross due, settled, balance, due date and overdue. No cost or margin. |
 | `my_target_progress()` (definer) | ✓ (own) | ✓ (own) | ✓ (own) | No parameters; always the caller and the current quarter. |
@@ -1421,7 +1445,7 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | RPC `stamp_payment_reminder` | ✓ | ✓ | — | |
 | users.job_title | via `admin-users` | — | — | |
 
-S14 (the access-matrix test) and S16 (the remote anonymous-denial smoke test) now cover **28 tables**.
+S14 (the access-matrix test) and S16 (the remote anonymous-denial smoke test) now cover **28 tables** *(superseded by A6: 30 tables; each A6 task adds its own rows to the S14 matrix data)*.
 
 ---
 
@@ -1467,6 +1491,227 @@ Standing rule from the owner: logging must be as limited as possible, because if
 - **Expense context pre-fills:** from a leg, the category is supplier payment and the payee and leg are filled; from an order, the last category used.
 - **Close reason** is pre-filled from context.
 - **Supplier goods-chase text** includes `supplier_orders.reference`.
+
+---
+
+---
+
+## Amendment A6: monthly bookkeeping (2026-10-14)
+
+Approved by the orchestrator on 2026-10-14. Where A6 conflicts with text above, **A6 wins**. It adds `expense_categories` and `closed_months` (30 tables), changes `expenses`, `payments_in`, `invoices`, `recurring_expenses` and `attachments`, and adds the month lock and the monthly views. Decisions are in `DECISIONS.md`; tasks (S20–S23, M10–M13, D15) and the UI tap targets are in `BUILD_PLAN.md` Amendment A6.
+
+**Built state it was planned against** (main `db8d3ed` plus branch `p1/s19-s14`): money tables are in migration 0010 (`expenses.category` is free text, no paid-via, no bank tick); attachment parents are only RFQ/clarification and invoice; `v_cash_month` is in 0015, admin only; stamp RPCs are in 0020 and run as the calling user; S19 takes migration 0024 and S14's matrix test is `tests/0025_access_matrix.test.sql`.
+
+A6 adds four migrations, **0025–0028**: categories, bank ticks and receipt photos, month close, monthly reports. None of it touches S19 or S14; A6 branches start from main and rebase after `p1/s19-s14` merges.
+
+**Input tax:** decided "yes" (claimed), to be confirmed by the owner at the D15 review. The optional `input_tax_pkr` field is shown only on Supplier payment, Clearing and Freight, collapsed by default. If the owner says no, hide the field; the column stays 0 and nothing else changes.
+
+### A6.0 Answers to the seven questions
+
+| # | Answer |
+|---|---|
+| 1 | **A table, `expense_categories`**, with a group (overhead / order cost / not in P&L), sort order, an active flag and a default paid-via. `expenses.category_id` is a foreign key, so pgTAP can enforce it (FK plus an active-category trigger). Free text can't carry the group the reports need, and renaming a category would mean rewriting rows. |
+| 2 | **Yes, one field: `paid_via`** ('bank' or 'cash') on expenses and on payments in. It is **defaulted from the category** (snacks and fuel default to cash), so it normally costs zero taps. Only bank items appear in the tick list. There is no cash book. |
+| 3 | **Columns, not a table:** `bank_month date` (the statement month the item was ticked against) on `payments_in` and `expenses`, plus `invoices.tax_bank_month` for FBR deposits. Who ticked and when is already in `audit_log`. |
+| 4 | **A `closed_months` table** plus lock triggers on payments, expenses and invoices, and admin RPCs to close and reopen, all audited. Tick and filing-stamp columns stay editable after a month closes. The import runs before any month is closed (see A6.2). |
+| 5 | **Views and functions** as specified in A6.3, all admin-only with the explicit role check. The exception is the GST month summary, which admin and sales can both see, because sales already see the register. Checklist: `month_end_status()`. |
+| 6 | **Owner salary goes under Salaries** (it is in the P&L). **Drawings and loan principal repayments go to a "Not in P&L" group,** shown below the result as "after drawings". Loan interest goes under Bank charges. Loans or capital *received* aren't recorded in the MVP (`payments_in` needs an order), so they never show up and need no tick. This doesn't need the owner. |
+| 7 | **A Month-end tab in Money** (checklist, reports, bank tick, close button) and **burst expense entry**. Tap targets are in A6.5. **One mockup is needed (D15)** before building M10–M13, with a mini review by the owner. |
+
+
+### A6.1 Schema changes (new migrations after S19's 0024)
+
+#### 0025_expense_categories (task S20)
+
+**`expense_categories` (new table)**
+- Standard columns: id, created_at, created_by.
+- `name text NOT NULL`, unique on `lower(btrim(name))`.
+- `grp text NOT NULL`, CHECK in ('overhead', 'order_cost', 'non_pnl').
+- `default_paid_via text NOT NULL DEFAULT 'bank'`, CHECK in ('bank', 'cash').
+- `sort smallint NOT NULL DEFAULT 0`.
+- `active boolean NOT NULL DEFAULT true`.
+- Deleting a category that is in use is blocked by RESTRICT; deactivate it instead.
+
+**Seed rows** (name: group, default paid via):
+
+| Group | Category | Default paid via |
+|---|---|---|
+| Overhead | Salaries | bank |
+| Overhead | Rent | bank |
+| Overhead | Utilities | bank |
+| Overhead | Fuel & travel | cash |
+| Overhead | Office supplies & snacks | cash |
+| Overhead | Courier & postage | cash |
+| Overhead | Repairs & maintenance | cash |
+| Overhead | Bank charges | bank |
+| Overhead | Taxes & fees | bank |
+| Overhead | Other | bank |
+| Order cost | Supplier payment | bank |
+| Order cost | Freight | bank |
+| Order cost | Clearing | bank |
+| Order cost | Commissioning | cash |
+| Order cost | Subcontractor | bank |
+| Not in P&L (PROPOSED additions) | Owner drawings | bank |
+| Not in P&L (PROPOSED additions) | Loan repayment | bank |
+
+**Changes to `expenses`:**
+- `category text` is replaced by `category_id uuid NOT NULL`, FK RESTRICT. There is no live data yet, so the text column is simply dropped.
+- `paid_via text NOT NULL`, CHECK in ('bank', 'cash'). A BEFORE INSERT trigger fills it from the category's `default_paid_via` when it is left NULL.
+- `input_tax_pkr numeric(14,2) NOT NULL DEFAULT 0`, CHECK between 0 and `amount_pkr`.
+  - **Why:** `amount_pkr` must equal the bank debit or the tick can't match.
+  - The cost used in the P&L and in order margin is `amount_pkr − input_tax_pkr`. This keeps the earlier decision that costs exclude recoverable input tax. It is optional and normally 0.
+  - Margin views are amended to use the net cost.
+
+**Other changes:**
+- `recurring_expenses.category` becomes `category_id`, the same way.
+- A trigger rejects inserting an expense, or changing its category, to an inactive category. Legacy rows (non-empty `legacy_flags`) are exempt.
+- `v_order_money` uses the net cost. This is a `create or replace` of the 0015 view; results are unchanged while input tax is 0.
+
+#### 0026_bank_and_receipts (task S21)
+
+**Bank ticks:**
+- `payments_in.paid_via text NOT NULL DEFAULT 'bank'`, same CHECK.
+- `payments_in.bank_month date` and `expenses.bank_month date`, both CHECK first day of the month. NULL means not ticked.
+- A CHECK on both tables: `bank_month IS NULL OR paid_via = 'bank'`.
+- `invoices.tax_bank_month date`: the tick for the FBR deposit. The UI ticks a whole PSID group at once.
+
+**Receipt photos on expenses** (the owner's "optional receipt photo"; this reverses "expense receipts out of MVP"):
+- `attachments.expense_id uuid`, FK CASCADE to expenses.
+- The `one_parent` and `bucket_matches_parent` CHECKs are extended for the new parent.
+- New private bucket `expense-receipts`, 5 MB limit.
+- Attachment rows and storage objects with an expense parent are **admin only**.
+
+#### 0027_month_close (task S22)
+
+**`closed_months` (new table)**
+- `month date PK`, CHECK first day of the month.
+- `closed_at timestamptz NOT NULL DEFAULT now()`.
+- `closed_by uuid NOT NULL DEFAULT auth.uid()`.
+- `note text`.
+- Audit trigger attached.
+- Reopening deletes the row. The audit log keeps the history.
+
+**`month_is_closed(d date)`** is a STABLE function. Lock triggers run BEFORE INSERT, UPDATE and DELETE and check both the OLD and the NEW date:
+
+| Table | Date column | Columns that stay editable after close |
+|---|---|---|
+| payments_in | received_on | `bank_month` |
+| expenses | paid_on | `bank_month` |
+| invoices | invoice_date | Everything except number, invoice_date, net_amount, gst_amount, order_id, company_id. So the TCS and FBR stamps, `tax_bank_month`, `last_reminded_on`, `reminder_count`, `notes` and `client_received_on` stay editable. October's filing happens in November. |
+
+A blocked change raises errcode **P0001** with the message "September 2026 is closed. An admin can reopen it." U07 maps this to plain wording.
+
+**RPCs** (run as the caller; admin check inside):
+
+| RPC | Behaviour |
+|---|---|
+| `close_month(p_month)` | Refuses the current month or a future month. Refuses if an earlier month that has money rows is still open; the UI then offers `close_months_through`. |
+| `close_months_through(p_month)` | Closes every open month up to and including `p_month`. One tap closes all imported history. |
+| `reopen_month(p_month, p_note default null)` | Reopens one month. The note is optional. |
+
+#### 0028_month_reports (task S23)
+
+The views and functions in A6.3.
+
+**Entity count goes from 28 to 30** (`expense_categories`, `closed_months`). DATA_MODEL §1, §2.16–2.20 and §10 are updated in place with "A6" notes.
+
+
+### A6.2 How the existing machinery interacts with the month lock
+
+- **Stamp RPCs** (`stamp_payment_reminder`, `stamp_tcs_sent`, `stamp_fbr_psid`, `stamp_tax_deposited`) only touch exempt invoice columns, so **they need no change**. They are tested in a closed month.
+- **`issue_purchase_order`, `convert_rfq_to_order` and the other order RPCs** don't write locked tables, so they are unaffected.
+- **Recurring "record this month"** in a closed month is refused. That is correct behaviour.
+- **Import (I-series):**
+  - All dry runs and the final load happen while **no month is closed**. Add this to the cutover runbook: the new project closes no month before the final import.
+  - After the owner signs off, he runs `close_months_through(last month)` once.
+  - A re-import later would need a reopen, which is audited. There is **no trigger bypass for the service role**, deliberately, so the lock has no hidden hole.
+  - The expenses transform (I05) maps legacy category text to `category_id` through a reviewed `mappings/expense_categories.csv`, e.g. Inventory/Procurement → Supplier payment, Travel → Fuel & travel, Office Expenses → Office supplies & snacks, anything else → Other.
+  - Unmapped rows get the flag `category_unmapped`.
+  - Legacy rows get `paid_via` 'bank', and **their `bank_month` stays NULL**, because history isn't ticked.
+
+
+### A6.3 Monthly views and functions (0028)
+
+All use `security_invoker`. Each carries `where public.current_user_role() = 'admin'` unless noted.
+
+| Object | Columns / rule |
+|---|---|
+| `v_month_pnl` | Per month:<br>• **Money in:** `net_in` (net portion of payments, from `v_payment_net`), `gst_in` (shown, not revenue), `unresolved_gross`.<br>• **Money out**, using net cost = amount − input tax: `order_costs`, `overheads`, `result = net_in − order_costs − overheads`, `non_pnl_out`, `after_drawings = result − non_pnl_out`.<br>• **Cash lines:** `cash_out_total` (sum of `amount_pkr`), `input_tax`. |
+| `v_month_expense_category` | month, group, category, total net cost, gross paid, count. Feeds "water, snacks, salaries, fuel". |
+| `aging_as_of(p_date)` | Per order and per invoice, as of `p_date`:<br>• Invoices dated ≤ p_date; payments received ≤ p_date.<br>• Payments are applied **first-in, first-out to the oldest invoice of the order**.<br>• Remaining gross is bucketed by days since invoice date: 0–30 / 31–60 / 61–90 / 90+.<br>• Advances on orders not yet invoiced are listed as "advance held", not as negative aging. |
+| `payables_as_of(p_date)` ("we owe") | Per placed leg (`placed_on` ≤ p_date) on a non-cancelled order:<br>• **committed:** latest PO total, or else Σ qty × `supplier_unit_price`, in the leg's currency, converted at the rate on or before p_date.<br>• **paid:** Σ `amount_pkr` of "Supplier payment" expenses on that leg dated ≤ p_date.<br>• **owed:** ≈ committed − paid.<br>• Rows with owed within 3% of committed are shown as "settled (≈)"; negative owed is clamped at 0 with a flag. |
+| `v_gst_month` (admin **and sales**) | Per invoice month:<br>• Invoice count, net, GST.<br>• PSID set count; deposited count and amount.<br>• GST still to deposit.<br>• `input_tax` from expenses by `paid_on` month, shown separately as "input tax paid (for Wasif & Co)". This one column is shown to admin only, so the view's input-tax column is NULL for sales.<br>Output GST and input tax are never netted together here; the filing stays with the tax agent. |
+| `v_month_team` | Per month and per credited user: net cash credited. Next to it, quarter-to-date from `v_target_progress`. |
+| `month_end_status(p_month)` | Returns the checklist counts below. |
+
+**Checklist from `month_end_status(p_month)`.** Nothing blocks closing except the month-order rule in A6.1. Every item is a warning with a count and a jump link.
+
+| Check | Rule |
+|---|---|
+| Bank items unticked | `paid_via = 'bank'`, dated ≤ month end, `bank_month` NULL. In-transit items are expected. |
+| FBR deposits unticked | `tax_deposited_on` ≤ month end and `tax_bank_month` NULL. |
+| Uncategorised | Category "Other" with no description; an order-cost category with no order tag; or the legacy flag `category_unmapped`. |
+| Recurring not recorded | Active template with no expense for this period. |
+| Provisional margins | Orders settled on or before month end without `costs_complete_at`. |
+| FBR pending | Invoices dated in this month or earlier with no `tax_deposited_on`. |
+| Unresolved payments | Payments counted in gross but not yet split into net, i.e. their order's value basis is unknown or zero (`v_payment_net.excluded_reason` is `basis_unknown` or `zero_value`). |
+
+
+### A6.6 Acceptance tests (pgTAP unless marked)
+
+### S20
+- 17 categories are seeded with the right groups.
+- A duplicate name differing only in case is rejected.
+- An insert with an inactive category is rejected; a legacy row with an inactive category is accepted.
+- Deleting a category that is in use is blocked; deactivating it works.
+- `paid_via` is filled from the category: "Office supplies & snacks" gives cash.
+- `input_tax_pkr` greater than the amount is rejected.
+- `v_order_money` cost = Σ(amount − input tax).
+- Engineer and sales get 0 rows from `expense_categories`.
+
+### S21
+- `bank_month` is refused on a cash item, and refused unless it is the first day of a month.
+- An expense attachment with a non-admin caller is denied, for both the row and the storage object.
+- The `one_parent` CHECK holds with three parents.
+- The bucket–parent pairing is enforced.
+
+### S22
+- **Inside a closed month:**
+  - Inserting, updating or deleting a payment or expense is refused with P0001.
+  - Moving a payment's date *into* a closed month is refused.
+  - Ticking `bank_month` succeeds.
+- **Invoices in a closed month:**
+  - Changing `net_amount` is refused.
+  - `stamp_tcs_sent`, `stamp_fbr_psid`, `stamp_tax_deposited` and `stamp_payment_reminder` succeed.
+  - Setting `tax_bank_month` succeeds.
+- **Close and reopen:**
+  - `close_month` on the current month is refused.
+  - `close_month` with an earlier open month that has rows is refused.
+  - `close_months_through` closes all of them.
+  - `reopen_month` is admin only, and writes an audit row.
+  - Sales and engineer are refused on every close RPC.
+
+### S23
+Each scenario is a named fixture.
+- **P&L:** a fixture month with one GST payment, one exempt payment, overheads, order costs, input tax and a drawing gives the expected net in, result and after-drawings figures to the paisa.
+- **Aging:**
+  - Two invoices and a partial payment are applied first-in, first-out; the buckets land at days 29/31/61/91.
+  - An advance on an uninvoiced order is listed separately.
+- **Payables:**
+  - A USD leg with a PO, converted at the rate on the month end, with one part payment, gives the expected owed figure.
+  - A leg within 3% of fully paid shows "settled".
+  - A leg on a cancelled order is excluded.
+- **GST month:** sales see it, with input tax NULL.
+- **Checklist:** each warning count is right on a fixture.
+- **Access:** every new view gives 0 rows to non-admins.
+
+### S14 data
+Add rows for: `expense_categories`, `closed_months`, the attachment expense parent, the `expense-receipts` bucket, and the new views and RPCs.
+
+### Playwright (M10–M13)
+- The tap targets in A6.5.
+- Burst entry of 5 rows done keyboard-only.
+- A save rejected by a closed month shows the plain message and keeps the row's entries.
 
 ---
 
