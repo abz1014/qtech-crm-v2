@@ -37,7 +37,7 @@ jobs:
       - name: Playwright (auth project)
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
-          npx playwright test --project=auth
+          E2E_SUITE=auth npx playwright test --project=auth
 
       - name: Upload report
         if: always()

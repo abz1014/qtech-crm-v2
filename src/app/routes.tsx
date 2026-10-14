@@ -16,8 +16,8 @@ import { AppShell } from '@/app/shell/AppShell'
  */
 const screens: Partial<Record<NavKey, ComponentType>> = {}
 
-/** Dev builds only: review page for the U03/U07/U08 primitives. U09's /dev/gallery replaces it. Dead code in production. */
-const PrimitivesPreview = import.meta.env.DEV ? lazy(() => import('@/dev/PrimitivesPreview')) : null
+/** Dev builds only: the component gallery (U09). Dead code in production. */
+const Gallery = import.meta.env.DEV ? lazy(() => import('@/dev/gallery/Gallery')) : null
 
 function SignInRoute() {
   const session = useSession()
@@ -29,12 +29,12 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<SignInRoute />} />
-      {PrimitivesPreview ? (
+      {Gallery ? (
         <Route
-          path="/dev/primitives"
+          path="/dev/gallery"
           element={
             <Suspense fallback={null}>
-              <PrimitivesPreview />
+              <Gallery />
             </Suspense>
           }
         />

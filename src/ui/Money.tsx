@@ -3,6 +3,7 @@ import { CircleAlert, Clock, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import { StatusBadge } from '@/ui/StatusBadge'
+import { Tooltip } from '@/ui/Tooltip'
 import {
   convertToPaisa,
   formatAmount,
@@ -105,18 +106,18 @@ export function Money({
       </span>
       {provisional ? (
         mark === 'chip' ? (
-          <span title="Some costs are still estimates, so this figure can change.">
+          <Tooltip forDisabled content="Some costs are still estimates, so this figure can change.">
             <StatusBadge dimension="costs" value="provisional" />
-          </span>
+          </Tooltip>
         ) : (
           <span className="sr-only">Provisional</span>
         )
       ) : null}
       {basisUnknown ? (
         mark === 'chip' ? (
-          <span title="The net or gross value was never recorded for this legacy order. Shown as typed.">
+          <Tooltip forDisabled content="The net or gross value was never recorded for this legacy order. Shown as typed.">
             <StatusBadge dimension="trust" value="basis-unknown" />
-          </span>
+          </Tooltip>
         ) : (
           <span className="sr-only">Basis unknown</span>
         )

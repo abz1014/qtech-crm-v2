@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { SceneFrame } from '@/dev/gallery/layout'
+import { SCENE_LIST, type SceneName } from '@/dev/gallery/sceneList'
 import { z } from 'zod'
 import { Building2, CalendarDays, Copy, FileText, ListFilter, Package, Mail, MessageSquare, Plus, Send, Trash2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
@@ -32,10 +34,9 @@ import { Tab, TabList, TabPanel, Tabs } from '@/ui/Tabs'
 import { Tooltip } from '@/ui/Tooltip'
 
 /*
- * Dev-only review page for U03, U07 and U08 (not routed in production builds).
- * `?scene=<name>` renders one state on its own so Playwright can photograph it
- * beside the matching D08 reference (scripts/u03-screenshots.mjs). U09 replaces
- * this with the full /dev/gallery.
+ * Overlay and interaction scenes for /dev/gallery (U09). Dialogs, the palette and toasts cannot sit
+ * on the page beside everything else, so each is rendered on its own at /dev/gallery?scene=<name>.
+ * The gallery page links every scene; the Playwright suites visit each one.
  */
 const Ghost = () => (
   <div aria-hidden="true" className="fixed inset-0 grid content-start gap-3 bg-canvas p-6">
@@ -147,7 +148,7 @@ const companySchema = z.object({
 })
 type CompanyIn = z.input<typeof companySchema>
 
-function CompanyForm({ mode }: { mode: 'validation' | 'unique' | 'submitting' | 'failure' | 'resting' }) {
+export function CompanyForm({ mode }: { mode: 'validation' | 'unique' | 'submitting' | 'failure' | 'resting' }) {
   const sf = useSubmitForm({
     schema: companySchema,
     entity: 'company',
@@ -196,7 +197,7 @@ function CompanyForm({ mode }: { mode: 'validation' | 'unique' | 'submitting' | 
           >
             {f => <TextField {...f} />}
           </FormField>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField<CompanyIn, 'city'> name="city" label="City" requirement="required">
               {f => (
                 <Select
@@ -245,11 +246,11 @@ const COMPANIES: ComboOption[] = [
   { value: 'ivt', label: 'Indus Valve Traders', meta: 'Karachi · supplier' },
 ]
 
-function ComboScene() {
+export function ComboScene() {
   const [co, setCo] = useState<string | null>(null)
   return (
     <div className="grid w-[427px] max-w-full gap-2 rounded border bg-surface p-5">
-      <Field label="Combobox, open">
+      <Field label="Company">
         <Combobox
           options={COMPANIES}
           value={co}
@@ -264,11 +265,11 @@ function ComboScene() {
   )
 }
 
-function Controls() {
+export function Controls() {
   const [rate, setRate] = useState<number | null>(278.4)
   const [a, setA] = useState(true)
   return (
-    <div className="grid w-[1180px] max-w-full grid-cols-3 gap-6 rounded border bg-surface p-6">
+    <div className="grid w-full gap-6 rounded border bg-surface p-6 grid-cols-1 md:grid-cols-3">
       <div className="grid content-start gap-4">
         <Field label="Default">
           <TextField placeholder="Placeholder, 5.7:1" />
@@ -343,17 +344,17 @@ function Palette() {
   )
 }
 
-function Misc() {
+export function Misc() {
   const [ch, setCh] = useState('whatsapp')
   const [stateSeg, setStateSeg] = useState('selected')
   const [filter, setFilter] = useState('all')
   const [role, setRole] = useState('customer')
   return (
-    <div className="grid w-[1180px] max-w-full gap-6 rounded border bg-surface p-6">
-      <section className="grid gap-3">
+    <div className="grid w-full min-w-0 grid-cols-1 gap-6 rounded border bg-surface p-4 md:p-6">
+      <section className="grid min-w-0 grid-cols-1 gap-3">
         <h2 className="text-base font-semibold">Segmented control</h2>
-        <div className="grid grid-cols-3 gap-6">
-          <div className="grid gap-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="grid min-w-0 grid-cols-1 gap-3">
             <SegmentedControl aria-label="Message channel" value={ch} onValueChange={setCh} options={[{ value: 'whatsapp', label: 'WhatsApp', icon: MessageSquare }, { value: 'email', label: 'Email', icon: Mail }]} />
           </div>
           <SegmentedControl
@@ -369,7 +370,7 @@ function Misc() {
               { value: 'disabled', label: 'Disabled', disabled: true },
             ]}
           />
-          <div className="grid gap-3">
+          <div className="grid min-w-0 grid-cols-1 gap-3">
             <SegmentedControl
               aria-label="Filter"
               value={filter}
@@ -385,7 +386,7 @@ function Misc() {
           </div>
         </div>
       </section>
-      <section className="grid gap-3">
+      <section className="grid min-w-0 grid-cols-1 gap-3">
         <h2 className="text-base font-semibold">Tabs and breadcrumb</h2>
         <Tabs defaultValue="suppliers" className="max-w-[420px]">
           <TabList aria-label="RFQ sections">
@@ -406,7 +407,7 @@ function Misc() {
   )
 }
 
-function Overlays() {
+export function Overlays() {
   return (
     <div className="grid w-[420px] max-w-full gap-3 rounded border bg-surface p-6">
       <section className="grid gap-3 pb-[170px]">
@@ -501,10 +502,10 @@ function ToastScene({ kind }: { kind: 'undo' | 'error' | 'settled' | 'plain' }) 
   return <div className="h-[60px]" />
 }
 
-function Feedback() {
+export function Feedback() {
   const [on, setOn] = useState(true)
   return (
-    <div className="grid w-[900px] max-w-full grid-cols-2 gap-6 rounded border bg-surface p-6">
+    <div className="grid w-full gap-6 rounded border bg-surface p-6 grid-cols-1 md:grid-cols-2">
       <div className="grid content-start gap-3">
         <div className="flex flex-wrap gap-2">
           <ToggleButton pressed={false} onPressedChange={noop} icon={ListFilter}>
@@ -529,7 +530,7 @@ function Feedback() {
   )
 }
 
-function Files({ mode }: { mode: 'resting' | 'rows' }) {
+export function Files({ mode }: { mode: 'resting' | 'rows' }) {
   const [rows] = useState<AddedFile[]>([
     { id: '1', file: new File([new Uint8Array(640 * 1024)], 'nameplate-flowmeter.jpg', { type: 'image/jpeg' }), originalSize: 3.8 * 1024 * 1024 },
     { id: '2', file: new File([new Uint8Array(10)], 'datasheet-scan.pdf', { type: 'application/pdf' }), originalSize: 0, error: '7.2 MB. The limit is 5 MB.' },
@@ -547,88 +548,42 @@ function Files({ mode }: { mode: 'resting' | 'rows' }) {
   )
 }
 
-export default function PrimitivesPreview() {
-  const scene = new URLSearchParams(window.location.search).get('scene') ?? 'index'
-  let body: ReactNode
-  switch (scene) {
-    case 'dialog-default':
-    case 'dialog-busy':
-    case 'dialog-error':
-    case 'dialog-confirm':
-    case 'dialog-long':
-      body = (
-        <>
-          <Ghost />
-          <DialogDefault state={scene.replace('dialog-', '') as 'default'} />
-        </>
-      )
-      break
-    case 'money-dialog':
-      body = (
-        <>
-          <Ghost />
-          <MoneyDialog />
-        </>
-      )
-      break
-    case 'form-validation':
-    case 'form-unique':
-    case 'form-submitting':
-    case 'form-failure':
-      body = <CompanyForm mode={scene.replace('form-', '') as 'validation'} />
-      break
-    case 'controls':
-      body = <Controls />
-      break
-    case 'combobox':
-      body = <ComboScene />
-      break
-    case 'palette-idle':
-      body = <Palette />
-      break
-    case 'palette-typing':
-      body = <Palette />
-      break
-    case 'palette-empty':
-      body = <Palette />
-      break
-    case 'overlays':
-      body = <Overlays />
-      break
-    case 'toast-undo':
-    case 'toast-error':
-    case 'toast-settled':
-    case 'toast-plain':
-      body = (
-        <ToastProvider>
-          <ToastScene kind={scene.replace('toast-', '') as 'undo'} />
-        </ToastProvider>
-      )
-      break
-    case 'feedback':
-      body = <Feedback />
-      break
-    case 'files-resting':
-      body = <Files mode="resting" />
-      break
-    case 'files-rows':
-      body = <Files mode="rows" />
-      break
-    case 'misc':
-      body = <Misc />
-      break
-    default:
-      body = (
-        <ul className="grid gap-1 p-6 text-sm">
-          {['dialog-default', 'dialog-busy', 'dialog-error', 'dialog-confirm', 'dialog-long', 'money-dialog', 'form-validation', 'form-unique', 'form-submitting', 'form-failure', 'controls', 'combobox', 'palette-idle', 'palette-typing', 'palette-empty', 'misc'].map(s => (
-            <li key={s}>
-              <a className="underline" href={`?scene=${s}`}>
-                {s}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )
-  }
-  return <div className="min-h-dvh bg-canvas p-6">{body}</div>
+/** Scene name to what it renders. */
+const NODES: Record<SceneName, () => ReactNode> = {
+  'dialog-default': () => (<><Ghost /><DialogDefault state="default" /></>),
+  'dialog-busy': () => (<><Ghost /><DialogDefault state="busy" /></>),
+  'dialog-error': () => (<><Ghost /><DialogDefault state="error" /></>),
+  'dialog-confirm': () => (<><Ghost /><DialogDefault state="confirm" /></>),
+  'dialog-long': () => (<><Ghost /><DialogDefault state="long" /></>),
+  'dialog-money': () => (<><Ghost /><MoneyDialog /></>),
+  'palette-idle': () => <Palette />,
+  'palette-typing': () => <Palette />,
+  'palette-empty': () => <Palette />,
+  'toast-undo': () => <ToastHost kind="undo" />,
+  'toast-settled': () => <ToastHost kind="settled" />,
+  'toast-error': () => <ToastHost kind="error" />,
+  'toast-plain': () => <ToastHost kind="plain" />,
+  'combobox-open': () => <ComboScene />,
+  'overlays': () => <Overlays />,
+}
+
+/** Name to group, label and node, in the order of SCENE_LIST (the order on the gallery page). */
+export const SCENES: Record<string, { label: string; group: string; node: () => ReactNode }> = Object.fromEntries(
+  SCENE_LIST.map(s => [s.scene, { group: s.group, label: s.label, node: NODES[s.scene] }]),
+)
+
+function ToastHost({ kind }: { kind: 'undo' | 'error' | 'settled' | 'plain' }) {
+  return (
+    <ToastProvider>
+      <ToastScene kind={kind} />
+    </ToastProvider>
+  )
+}
+
+export function SceneView({ name }: { name: string }) {
+  const scene = SCENES[name]
+  if (!scene) return <p className="p-6 text-sm">No scene called {name}.</p>
+  return (
+    <SceneFrame title={`${scene.group}: ${scene.label}`}>{scene.node()}</SceneFrame>
+  )
 }
