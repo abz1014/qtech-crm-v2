@@ -238,13 +238,15 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
               const q = qtyText(it.qty, it.unit)
               const reason = notes.items[it.number]
               return (
-                <li key={it.id} className="grid grid-cols-[minmax(0,1fr)_132px] items-center gap-3">
-                  <span className="min-w-0 text-sm" aria-hidden="true">
-                    <span className="num mr-2 text-xs text-fg-muted">{it.number}</span>
-                    <span className="line-clamp-2 break-words align-top" title={it.description}>
-                      {it.description}
+                <li key={it.id} className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_132px]">
+                  <span className="flex min-w-0 items-start gap-2 text-sm" aria-hidden="true">
+                    <span className="num mt-[2px] text-xs text-fg-muted">{it.number}</span>
+                    <span className="min-w-0">
+                      <span className="line-clamp-2 break-words" title={it.description}>
+                        {it.description}
+                      </span>
+                      {q ? <span className="num text-xs text-fg-muted">{q}</span> : null}
                     </span>
-                    {q ? <span className="num ml-1 text-xs text-fg-muted">{q}</span> : null}
                   </span>
                   {reason ? (
                     <span className="text-xs text-fg-muted">{`Can't quote: ${reason}`}</span>
