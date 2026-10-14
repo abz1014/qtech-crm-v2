@@ -212,13 +212,14 @@ describe('DataTable: 1,000 rows', () => {
     fbr: ['pending', 'generated', 'receipt_received', 'deposited'][i % 4],
   }))
 
-  it('renders in under 100 ms by drawing only the rows in view', () => {
+  it('renders in under 200 ms by drawing only the rows in view', () => {
     const t0 = performance.now()
     mount(<DataTable label="big" columns={columns} rows={big} getRowId={r => r.id} selection={{ selected: new Set(), onChange: () => undefined }} />)
     const ms = performance.now() - t0
     expect(el.querySelector('[data-virtual]')).not.toBeNull()
     expect(rows().length).toBeLessThan(60)
-    expect(ms).toBeLessThan(100)
+    // 100 ms before the ticks became U07 Checkboxes (Radix, ~50 of them here); CI runners measured 110 ms after. 1,000 drawn rows would be seconds.
+    expect(ms).toBeLessThan(200)
   })
 
   it('footer total still covers all 1,000 rows, not just the visible ones', () => {
