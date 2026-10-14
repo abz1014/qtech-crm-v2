@@ -20,6 +20,8 @@ jobs:
       - run: npm ci
       - name: Lint
         run: npm run lint
+      - name: Token parity (docs/design/tokens.css vs src/index.css)
+        run: npm run check:tokens
       - name: Typecheck
         run: npm run typecheck
       - name: Unit tests
