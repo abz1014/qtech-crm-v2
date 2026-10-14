@@ -14,7 +14,9 @@ import { AppShell } from '@/app/shell/AppShell'
  * (a lazy-loaded page component); until then the destination shows the stand-in.
  * Sub-routes such as /rfqs/:id are declared by the feature under the same key.
  */
-const screens: Partial<Record<NavKey, ComponentType>> = {}
+const screens: Partial<Record<NavKey, ComponentType>> = {
+  companies: lazy(() => import('@/features/companies/CompaniesScreen')),
+}
 
 /** Dev builds only: review page for the U03/U07/U08 primitives. U09's /dev/gallery replaces it. Dead code in production. */
 const PrimitivesPreview = import.meta.env.DEV ? lazy(() => import('@/dev/PrimitivesPreview')) : null
@@ -49,7 +51,15 @@ export function AppRoutes() {
                 key={item.key}
                 path={`${item.path.slice(1)}/*`}
                 element={
-                  <RequireRole item={item}>{Screen ? <Screen /> : <DestinationPage navKey={item.key} />}</RequireRole>
+                  <RequireRole item={item}>
+                    {Screen ? (
+                      <Suspense fallback={null}>
+                        <Screen />
+                      </Suspense>
+                    ) : (
+                      <DestinationPage navKey={item.key} />
+                    )}
+                  </RequireRole>
                 }
               />
             )

@@ -56,6 +56,7 @@ export default tseslint.config(
         {
           devDependencies: [
             '**/*.test.{ts,tsx}',
+            'e2e/**/*.{ts,tsx}',
             '**/*.config.{ts,js}',
             'src/test/**',
           ],
@@ -89,5 +90,26 @@ export default tseslint.config(
       ],
     },
   },
+  // R01: server state lives in TanStack Query, never in React context. Features may not create a context at all;
+  // a UI-only context (a wizard's step, a panel's open state) takes an eslint-disable that says why. The app shell
+  // (src/app) keeps its session and palette contexts: those are not server data.
+  {
+    files: ['src/features/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react',
+              importNames: ['createContext'],
+              message:
+                'No React context for data in features (R01). Read server data with the TanStack Query hooks in src/features/<area>/hooks.ts so every screen shares one cache. See src/features/README.md.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 )
-

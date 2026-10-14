@@ -6,3 +6,5 @@ coverage
 import/.data/
 backups/
 *.local
+playwright-report/
+test-results/

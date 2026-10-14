@@ -1,0 +1,52 @@
+import type { QueryClient, QueryKey } from '@tanstack/react-query'
+import { qk } from '@/features/queryKeys'
+
+/*
+ * The invalidation map (R01): for every write, the keys that go stale. A mutation hook does not
+ * decide this itself; it names its write here, so "what refreshes after a merge" is one line you
+ * can read, review and test, instead of a guess scattered through components.
+ *
+ * Rules:
+ *  - Name the write after the verb and the thing: 'company.create', 'company.merge'.
+ *  - Prefer a prefix (a whole detail, a whole area) over a list of leaves; over-refreshing is cheap,
+ *    a stale screen is not.
+ *  - A write that moves rows between areas (a merge moves RFQs and orders) lists every area it touches.
+ *  - Realtime and cross-tab changes are out of scope; the map is for this tab's own writes.
+ */
+export interface WriteVars {
+  'company.create': { id: string }
+  'company.update': { id: string }
+  'company.merge': { keepId: string; dropId: string }
+  'site.add': { companyId: string }
+  'contact.add': { companyId: string }
+  'brand.link': { companyId: string }
+  'brand.create': Record<string, never>
+}
+
+export type WriteName = keyof WriteVars
+
+type Keys = readonly QueryKey[]
+
+export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
+  // A new company appears in every list and search. Its own page does not exist in the cache yet.
+  'company.create': () => [qk.companies.lists()],
+  'company.update': v => [qk.companies.lists(), qk.companies.detail(v.id)],
+  // The dropped company is gone; everything that pointed at it now points at the kept one.
+  'company.merge': v => [qk.companies.all, qk.rfqs.all, qk.orders.all, qk.companies.detail(v.keepId)],
+  // Adding a site or contact changes the page, and the roster does not show them, so only the detail.
+  'site.add': v => [qk.companies.detail(v.companyId)],
+  'contact.add': v => [qk.companies.detail(v.companyId)],
+  // Carrying a brand makes the company a supplier, so the roster's role column can change too.
+  'brand.link': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
+  'brand.create': () => [qk.brands.all],
+}
+
+/** The keys a write makes stale. Pure, so it can be tested without a QueryClient. */
+export function keysFor<N extends WriteName>(name: N, vars: WriteVars[N]): Keys {
+  return invalidates[name](vars)
+}
+
+/** Invalidate every key a write makes stale. Call from a mutation's onSuccess; returns when the refetches settle. */
+export function invalidateAfter<N extends WriteName>(client: QueryClient, name: N, vars: WriteVars[N]): Promise<unknown> {
+  return Promise.all(keysFor(name, vars).map(queryKey => client.invalidateQueries({ queryKey })))
+}

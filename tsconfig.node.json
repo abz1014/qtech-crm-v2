@@ -14,5 +14,5 @@
     "typeRoots": ["./node_modules/@types"],
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "tailwind.config.ts"]
+  "include": ["vite.config.ts", "tailwind.config.ts", "playwright.config.ts", "e2e"]
 }
