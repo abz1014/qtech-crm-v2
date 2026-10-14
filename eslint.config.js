@@ -5,6 +5,33 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
+// Arbitrary Tailwind values that bypass the tokens. Matched inside any string
+// or template literal, so className="...", cn(...) and cva(...) are all caught.
+const colourProps = 'bg|text|border|ring|ring-offset|fill|stroke|from|via|to|outline|divide|decoration|accent|caret|placeholder|shadow'
+const colourAndShadowBans = [
+  {
+    // bg-[#fff], text-[rgb(...)], border-[hsl(...)], bg-[oklch(...)], bg-[color:...]
+    re: String.raw`(^|[\s:!])-?(${colourProps})-\[(#|rgba?\(|hsla?\(|oklch\(|color:)`,
+    message: 'Arbitrary colours are banned. Use a token class (bg-surface, text-fg-muted, border-line, ...). See docs/DESIGN_SYSTEM.md section 5.',
+  },
+  {
+    re: String.raw`(^|[\s:!])shadow-\[`,
+    message: 'Arbitrary shadows are banned. Use shadow-pop or shadow-modal (overlays only). See docs/DESIGN_SYSTEM.md section 4.',
+  },
+]
+const textSizeBans = [
+  {
+    re: String.raw`(^|[\s:!])text-\[`,
+    message: 'text-[...] is banned. Use the type scale: text-xs, text-sm, text-base, text-lg, text-xl, text-2xl, text-display, text-table.',
+  },
+]
+function classBans(list) {
+  return list.flatMap(({ re, message }) => [
+    { selector: `Literal[value=/${re}/]`, message },
+    { selector: `TemplateElement[value.raw=/${re}/]`, message },
+  ])
+}
+
 export default tseslint.config(
   { ignores: ['dist', 'coverage', 'node_modules', 'import/.data', 'backups'] },
   {
@@ -37,4 +64,30 @@ export default tseslint.config(
       ],
     },
   },
+  // Design-system lint bans (U01). Tokens are the only source of colour, shadow
+  // and text size (docs/DESIGN_SYSTEM.md). Tests and the dev gallery are exempt
+  // so that the bans themselves can be tested with planted violations.
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': ['error', ...classBans(colourAndShadowBans)],
+    },
+  },
+  {
+    files: ['src/features/**/*.{ts,tsx}', 'src/app/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...classBans(colourAndShadowBans),
+        ...classBans(textSizeBans),
+        {
+          selector: "JSXOpeningElement[name.name=/^(table|thead|tbody|tfoot|tr|th|td)$/]",
+          message: 'Raw table markup is banned outside primitives. Use <DataTable> (docs/design/INVENTORY.md).',
+        },
+      ],
+    },
+  },
 )
+
