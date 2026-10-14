@@ -239,22 +239,23 @@ export function FloatedPanel({
           </div>
         </div>
       )}
-      <dl className="m-0 grid gap-2 text-sm">
-        {replyBy.date ? (
-          <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-4">
-            <dt className="num m-0">{formatDay(replyBy.date)}</dt>
-            <dd className="m-0 text-fg-2">Reply-by date. Any supplier still silent then appears on Today as a chase.</dd>
-          </div>
-        ) : null}
-        {dueOn ? (
-          <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-4">
-            <dt className="num m-0">{formatDay(dueOn)}</dt>
-            <dd className="m-0 text-fg-2">Bid due. Replies you log appear on this RFQ with the lowest price marked.</dd>
-          </div>
-        ) : (
-          <div className="text-fg-2">No bid due date was given, so nothing is chased until you add one.</div>
-        )}
-      </dl>
+      {replyBy.date || dueOn ? (
+        <dl className="m-0 grid gap-2 text-sm">
+          {replyBy.date ? (
+            <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-4">
+              <dt className="num m-0">{formatDay(replyBy.date)}</dt>
+              <dd className="m-0 text-fg-2">Reply-by date. Any supplier still silent then appears on Today as a chase.</dd>
+            </div>
+          ) : null}
+          {dueOn ? (
+            <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-4">
+              <dt className="num m-0">{formatDay(dueOn)}</dt>
+              <dd className="m-0 text-fg-2">Bid due. Replies you log appear on this RFQ with the lowest price marked.</dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
+      {dueOn ? null : <p className="m-0 text-sm text-fg-2">No bid due date was given, so nothing is chased until you add one.</p>}
       {unfloated.map((u, i) => (
         <div key={i} className="flex items-start gap-3 rounded border border-tone-info-fg/25 bg-tone-info-bg px-4 py-3 text-sm">
           <Icon icon={Info} className="mt-[2px] text-tone-info-fg" />

@@ -110,7 +110,7 @@ const itemsOf = (rfqId: string) =>
 
 /** The whole supplier row is the tap target: its name is the label that covers the row. */
 async function tick(page: Page, name: string): Promise<void> {
-  await page.getByText(name, { exact: true }).click()
+  await page.locator('label').filter({ hasText: name }).click()
 }
 
 async function pickCompany(page: Page, name: string): Promise<void> {
@@ -295,6 +295,7 @@ test.describe('save only, and no supplier ticked', () => {
     await expect(page.getByRole('button', { name: 'Write the enquiry' })).toHaveCount(0)
     await page.getByRole('button', { name: 'Save without floating' }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
+    expect(await violations(page)).toEqual([])
     const [rfq] = await rfqsOf(customer.id)
     expect(await inquiriesOf(rfq.id)).toEqual([])
     await expect(page.getByRole('link', { name: `Open ${rfqRef(rfq.number)}` })).toBeVisible()
