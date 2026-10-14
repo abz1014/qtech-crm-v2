@@ -162,7 +162,7 @@ test.describe('Team (A04)', () => {
     await expect(page.getByText(`${name} reactivated`)).toBeVisible()
     await expect(rowOf(page, name)).toContainText('Active')
     await signIn(newbie.page, email, newPassword)
-    await expect(newbie.page).toHaveURL(/\/today$/)
+    await expect(newbie.page.getByRole('button', { name: `Account menu, ${name}` })).toBeVisible() // the app resumes where they were, not always /today
 
     await newbie.ctx.close()
     await admin.ctx.close()
@@ -226,6 +226,13 @@ test.describe('Team (A04)', () => {
 test.describe('Company profile (A06)', () => {
   test('an admin saves two fields in three actions, blank fields stay empty, everyone else reads the same record', async ({ browser }) => {
     test.skip(!SERVICE_KEY, 'needs SERVICE_ROLE_KEY from the local stack')
+    // Start from an empty profile so a retry sees the same thing as the first run.
+    const reset = await fetch(`${API_URL}/rest/v1/company_profile?id=eq.1`, {
+      method: 'PATCH',
+      headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ legal_name: null, address: null, quotation_validity_days: 30 }),
+    })
+    expect(reset.status).toBe(204)
     const admin = await person(browser)
     const { page } = admin
     await signInAdmin(page)
@@ -275,6 +282,7 @@ test.describe('Company profile (A06)', () => {
     // Sales reads the same values, with no way to edit.
     const sales = await person(browser)
     await signIn(sales.page, 'sales@test.invalid')
+    await expect(sales.page).toHaveURL(/\/today$/)
     await sales.page.goto('/settings/company')
     await expect(sales.page.getByText('Q-Tech Solutions (Private) Limited')).toBeVisible()
     await expect(sales.page.getByText('Only an admin can edit')).toBeVisible()
