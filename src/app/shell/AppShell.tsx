@@ -40,11 +40,12 @@ function Frame({ user, counts }: { user: SessionUser; counts?: Partial<Record<Na
   useRfqsPaletteSource()
   const { pathname } = useLocation()
   const active = navItemForPath(pathname)
-  const title = active?.label ?? 'Q-Tech CRM'
+  const inSettings = pathname === '/settings' || pathname.startsWith('/settings/')
+  const title = active?.label ?? (inSettings ? 'Settings' : 'Q-Tech CRM')
 
   useEffect(() => {
-    document.title = active ? `${active.label} · Q-Tech CRM` : 'Q-Tech CRM'
-  }, [active])
+    document.title = active ? `${active.label} · Q-Tech CRM` : inSettings ? 'Settings · Q-Tech CRM' : 'Q-Tech CRM'
+  }, [active, inSettings])
 
   return (
     <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas">

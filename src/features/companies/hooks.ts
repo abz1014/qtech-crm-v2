@@ -161,7 +161,7 @@ export function useUpdateContact(companyId: string) {
   })
 }
 
-/** Throws api.InUseError (and deletes nothing) when RFQs or orders are filed under the site. */
+/** Throws api.InUseError (the database refuses; nothing is deleted) when RFQs or orders are filed under the site. */
 export function useRemoveSite(companyId: string) {
   const client = useQueryClient()
   return useMutation({
@@ -170,7 +170,7 @@ export function useRemoveSite(companyId: string) {
   })
 }
 
-/** Throws api.InUseError (and deletes nothing) when RFQs, orders or quotations name the contact. */
+/** Throws api.InUseError (the database refuses; nothing is deleted) when RFQs, orders or quotations name the contact. */
 export function useRemoveContact(companyId: string) {
   const client = useQueryClient()
   return useMutation({

@@ -51,7 +51,7 @@ describe('account menu (U03, on Popover)', () => {
     const trigger = screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0]
     trigger.focus()
     await user.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Sign out' })).toHaveFocus())
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Settings' })).toHaveFocus())
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
     expect(trigger).toHaveFocus()
@@ -83,4 +83,40 @@ describe('search button and Cmd/Ctrl+K open the palette (U08)', () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     })
   })
+})
+describe('account menu: Settings and Team (A04)', () => {
+  const open = async (role: string) => {
+    const user = userEvent.setup()
+    render(
+      <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role } }}>
+        <MemoryRouter initialEntries={['/today']}>
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route path="/today" element={<p>Today page</p>} />
+              <Route path="/settings" element={<p>Settings page</p>} />
+              <Route path="/settings/team" element={<p>Team page</p>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </SessionProvider>,
+    )
+    await user.click(screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0])
+    return user
+  }
+
+  it('an admin sees Settings and Team, and Team goes to the Team screen', async () => {
+    const user = await open('admin')
+    expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeInTheDocument()
+    await user.click(screen.getByRole('menuitem', { name: 'Team' }))
+    expect(await screen.findByText('Team page')).toBeInTheDocument()
+  })
+
+  for (const role of ['sales', 'engineer']) {
+    it(`a ${role} sees Settings but no Team`, async () => {
+      const user = await open(role)
+      expect(screen.queryByRole('menuitem', { name: 'Team' })).toBeNull()
+      await user.click(screen.getByRole('menuitem', { name: 'Settings' }))
+      expect(await screen.findByText('Settings page')).toBeInTheDocument()
+    })
+  }
 })

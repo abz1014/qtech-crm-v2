@@ -28,7 +28,7 @@ export interface Store {
   createAuthUser(email: string, password: string): Promise<{ id: string } | { error: string; conflict: boolean }>
   deleteAuthUser(id: string): Promise<void>
   insertProfile(p: { id: string; name: string; role: Role; job_title: string | null }): Promise<string | null>
-  updateProfile(id: string, patch: Partial<Pick<Profile, 'role' | 'deactivated_at'>>): Promise<string | null>
+  updateProfile(id: string, patch: Partial<Pick<Profile, 'role' | 'deactivated_at' | 'job_title'>>): Promise<string | null>
   setBan(id: string, banned: boolean): Promise<string | null>
   setPassword(id: string, password: string): Promise<string | null>
   revokeSessions(id: string): Promise<string | null>

@@ -26,6 +26,13 @@ export interface WriteVars {
   'brand.unlink': { companyId: string }
   'brand.link': { companyId: string }
   'brand.create': Record<string, never>
+  'team.create': Record<string, never>
+  'team.reset-password': Record<string, never>
+  'team.set-role': Record<string, never>
+  'team.set-job-title': Record<string, never>
+  'team.deactivate': Record<string, never>
+  'team.reactivate': Record<string, never>
+  'company-profile.update': Record<string, never>
 }
 
 export type WriteName = keyof WriteVars
@@ -50,6 +57,15 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Carrying a brand makes the company a supplier, so the roster's role column can change too.
   'brand.link': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   'brand.create': () => [qk.brands.all],
+  // Every change to a person is read back from the admin-users function, the source of truth for the list.
+  'team.create': () => [qk.settings.team()],
+  // A new password changes nothing the list shows; refreshing it anyway is cheap and keeps the rule simple.
+  'team.reset-password': () => [qk.settings.team()],
+  'team.set-role': () => [qk.settings.team()],
+  'team.set-job-title': () => [qk.settings.team()],
+  'team.deactivate': () => [qk.settings.team()],
+  'team.reactivate': () => [qk.settings.team()],
+  'company-profile.update': () => [qk.settings.profile()],
 }
 
 /** The keys a write makes stale. Pure, so it can be tested without a QueryClient. */

@@ -46,9 +46,14 @@ describe('in-use sentence', () => {
   })
 })
 
+const fk = { error: { code: '23503', message: 'violates foreign key constraint', details: 'still referenced' } }
+/** The database refuses the delete (23503); the counts are only read afterwards, to word the message. */
+const refuse = (counts: Record<string, number>) => (c: FakeCall): FakeResult =>
+  c.verb === 'delete' ? fk : { data: rows(counts[c.target] ?? 0) }
+
 describe('removing a site', () => {
-  it('refuses, and deletes nothing, while RFQs are filed under it', async () => {
-    const { wrapper, db, client } = setup(c => (c.target === 'rfqs' ? { data: rows(3) } : { data: [] }))
+  it('relies on the database refusal, then counts to say how many; nothing is refreshed', async () => {
+    const { wrapper, db, client } = setup(refuse({ rfqs: 3 }))
     const spy = vi.spyOn(client, 'invalidateQueries')
     const { result } = renderHook(() => useRemoveSite('co'), { wrapper })
     let caught: unknown
@@ -58,36 +63,38 @@ describe('removing a site', () => {
     expect(caught).toBeInstanceOf(InUseError)
     expect((caught as Error).message).toBe("This site is used on 3 RFQs; it can't be removed.")
     expect((caught as InUseError).code).toBe('23503')
-    expect(db.calls.some(c => c.verb === 'delete')).toBe(false)
+    expect(db.calls[0].verb).toBe('delete')
+    expect(db.calls.slice(1).every(c => c.verb === 'select')).toBe(true)
     expect(spy).not.toHaveBeenCalled()
   })
 
-  it('refuses while an order is filed under it, even with no RFQ', async () => {
-    const { wrapper, db } = setup(c => (c.target === 'orders' ? { data: rows(1) } : { data: [] }))
+  it('names an order too, even with no RFQ', async () => {
+    const { wrapper } = setup(refuse({ orders: 1 }))
     const { result } = renderHook(() => useRemoveSite('co'), { wrapper })
     let caught: unknown
     await act(async () => {
       await result.current.mutateAsync('site-1').catch(e => (caught = e))
     })
     expect((caught as Error).message).toBe("This site is used on 1 order; it can't be removed.")
-    expect(db.calls.some(c => c.verb === 'delete')).toBe(false)
   })
 
-  it('deletes an unused site, scoped to its company, and refreshes that company', async () => {
+  it('deletes an unused site with a single call, scoped to its company, and refreshes that company', async () => {
     const { wrapper, db, client } = setup(() => ({ data: [] }))
     const spy = vi.spyOn(client, 'invalidateQueries')
     const { result } = renderHook(() => useRemoveSite('co'), { wrapper })
     await act(async () => {
       await result.current.mutateAsync('site-1')
     })
-    const del = db.calls.find(c => c.verb === 'delete')!
+    expect(db.calls).toHaveLength(1)
+    const del = db.calls[0]
+    expect(del.verb).toBe('delete')
     expect(del.target).toBe('company_sites')
     expect(eqs(del)).toEqual([['id', 'site-1'], ['company_id', 'co']])
     expect(spy).toHaveBeenCalledWith({ queryKey: qk.companies.detail('co') })
   })
 
-  it('reports a database refusal (23503) in plain words', async () => {
-    const { wrapper } = setup(c => (c.verb === 'delete' ? { error: { code: '23503', message: 'violates foreign key constraint', details: 'still referenced' } } : { data: [] }))
+  it('a refusal nobody can be counted against still reads in plain words', async () => {
+    const { wrapper } = setup(refuse({}))
     const { result } = renderHook(() => useRemoveSite('co'), { wrapper })
     let caught: unknown
     await act(async () => {
@@ -95,32 +102,45 @@ describe('removing a site', () => {
     })
     expect(removeErrorMessage(caught, 'site')).toBe("This site is still used by other records, so it can't be removed.")
   })
+
+  it('other failures pass through untouched, with no counting', async () => {
+    const { wrapper, db } = setup(() => ({ error: { code: '42501', message: 'denied' } }))
+    const { result } = renderHook(() => useRemoveSite('co'), { wrapper })
+    let caught: unknown
+    await act(async () => {
+      await result.current.mutateAsync('s').catch(e => (caught = e))
+    })
+    expect((caught as { code: string }).code).toBe('42501')
+    expect(db.calls).toHaveLength(1)
+  })
 })
 
 describe('removing a contact', () => {
-  it('counts RFQs, orders and quotations together, and deletes nothing', async () => {
-    const { wrapper, db } = setup(c => ({ data: c.target === 'rfqs' ? rows(1) : c.target === 'orders' ? rows(2) : c.target === 'quotations' ? rows(1) : [] }))
+  it('counts RFQs, orders and quotations together, but only after the database refuses', async () => {
+    const { wrapper, db } = setup(refuse({ rfqs: 1, orders: 2, quotations: 1 }))
     const { result } = renderHook(() => useRemoveContact('co'), { wrapper })
     let caught: unknown
     await act(async () => {
       await result.current.mutateAsync('ct').catch(e => (caught = e))
     })
     expect((caught as Error).message).toBe("This contact is used on 1 RFQ, 2 orders and 1 quotation; it can't be removed.")
-    expect(db.calls.some(c => c.verb === 'delete')).toBe(false)
-    expect(db.calls.filter(c => c.verb === 'select').map(c => opArgs(c, 'eq'))).toEqual([
+    expect(db.calls[0].verb).toBe('delete')
+    expect(db.calls.slice(1).map(c => opArgs(c, 'eq'))).toEqual([
       ['contact_id', 'ct'],
       ['contact_id', 'ct'],
       ['contact_id', 'ct'],
     ])
   })
 
-  it('deletes an unreferenced contact', async () => {
+  it('deletes an unreferenced contact with a single call', async () => {
     const { wrapper, db } = setup(() => ({ data: [] }))
     const { result } = renderHook(() => useRemoveContact('co'), { wrapper })
     await act(async () => {
       await result.current.mutateAsync('ct')
     })
-    expect(db.calls.find(c => c.verb === 'delete')?.target).toBe('contacts')
+    expect(db.calls).toHaveLength(1)
+    expect(db.calls[0].target).toBe('contacts')
+    expect(db.calls[0].verb).toBe('delete')
   })
 })
 
