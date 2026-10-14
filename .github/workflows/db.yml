@@ -37,7 +37,9 @@ jobs:
 
       - name: S19 supplier-memory timing (prints the p95 numbers)
         run: |
-          PGOPTIONS='-c search_path=public,extensions' psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"             -v ON_ERROR_STOP=1 -f supabase/tests/0024_supplier_memory_perf.test.sql
+          URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          psql "$URL" -v ON_ERROR_STOP=1 -c "create extension if not exists pgtap with schema extensions"
+          PGOPTIONS='-c search_path=public,extensions' psql "$URL"             -v ON_ERROR_STOP=1 -f supabase/tests/0024_supplier_memory_perf.test.sql
 
       - name: Generate types
         run: npx supabase gen types typescript --local > "$RUNNER_TEMP/types.ts"
