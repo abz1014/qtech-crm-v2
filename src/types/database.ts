@@ -1759,7 +1759,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: string
                            },
 "float_rfq":
-{ Args: { "p_company_id": string,"p_contact_id"?: string,"p_customer_ref"?: string,"p_due_on"?: string,"p_items": Json,"p_mark_sent"?: boolean,"p_rfq_id": string,"p_site_id"?: string,"p_supplier_ids"?: (string)[] }; Returns: string
+{ Args: { "p_company_id": string,"p_contact_id"?: string,"p_customer_ref"?: string,"p_due_on"?: string,"p_is_priority"?: boolean,"p_items": Json,"p_mark_sent"?: boolean,"p_rfq_id": string,"p_site_id"?: string,"p_supplier_ids"?: (string)[] }; Returns: string
                            },
 "issue_purchase_order":
 { Args: { "p_delivery_terms"?: string,"p_incoterm"?: string,"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_po_id": string,"p_ship_to"?: string,"p_supplier_order_id": string }; Returns: string
@@ -1821,6 +1821,9 @@ isOneToOne: false
                            },
 "set_fx_rate":
 { Args: { "p_as_of"?: string,"p_currency": string,"p_rate_pkr": number }; Returns: string
+                           },
+"set_rfq_floated":
+{ Args: { "p_floated": boolean,"p_rfq_id": string }; Returns: number
                            },
 "stamp_clarification_ask":
 { Args: { "p_clarification_ids": (string)[] }; Returns: number

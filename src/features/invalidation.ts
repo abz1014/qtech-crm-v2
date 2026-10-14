@@ -33,6 +33,8 @@ export interface WriteVars {
   'team.deactivate': Record<string, never>
   'team.reactivate': Record<string, never>
   'company-profile.update': Record<string, never>
+  'rfq.float': { companyId: string }
+  'rfq.setFloated': { rfqId: string }
 }
 
 export type WriteName = keyof WriteVars
@@ -66,6 +68,10 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'team.deactivate': () => [qk.settings.team()],
   'team.reactivate': () => [qk.settings.team()],
   'company-profile.update': () => [qk.settings.profile()],
+  // Floating creates an RFQ (and inquiries): the RFQ lists, the customer's history and every supplier's activity change.
+  'rfq.float': v => [qk.rfqs.all, qk.intake.all, qk.companies.detail(v.companyId), qk.companies.lists()],
+  // Floating or un-floating moves inquiries between shortlisted and sent: the RFQ and the suppliers' counts.
+  'rfq.setFloated': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all],
 }
 
 /** The keys a write makes stale. Pure, so it can be tested without a QueryClient. */
