@@ -14,12 +14,12 @@ export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={`Account menu, ${user.name}`}
           className={cn(
             'grid place-items-center rounded-round transition-opacity duration-fast ease-out hover:opacity-85',
             touch && 'size-touch',
           )}
         >
+          <span className="sr-only">Account menu, </span>
           <Avatar name={user.name} />
         </button>
       </PopoverTrigger>

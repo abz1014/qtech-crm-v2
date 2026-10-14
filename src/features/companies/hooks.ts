@@ -144,6 +144,49 @@ export function useAddContact(companyId: string) {
   })
 }
 
+export function useUpdateSite(companyId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { id: string; name: string; address?: string | null }) => api.updateSite(input.id, input),
+    onSuccess: () => invalidateAfter(client, 'site.update', { companyId }),
+  })
+}
+
+export function useUpdateContact(companyId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { id: string; name: string; siteId?: string | null; phone?: string | null; email?: string | null; notes?: string | null }) =>
+      api.updateContact(input.id, input),
+    onSuccess: () => invalidateAfter(client, 'contact.update', { companyId }),
+  })
+}
+
+/** Throws api.InUseError (and deletes nothing) when RFQs or orders are filed under the site. */
+export function useRemoveSite(companyId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.removeSite(companyId, id),
+    onSuccess: () => invalidateAfter(client, 'site.remove', { companyId }),
+  })
+}
+
+/** Throws api.InUseError (and deletes nothing) when RFQs, orders or quotations name the contact. */
+export function useRemoveContact(companyId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.removeContact(companyId, id),
+    onSuccess: () => invalidateAfter(client, 'contact.remove', { companyId }),
+  })
+}
+
+export function useUnlinkBrand(companyId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (brandId: string) => api.unlinkBrand(companyId, brandId),
+    onSuccess: () => invalidateAfter(client, 'brand.unlink', { companyId }),
+  })
+}
+
 /** Carry a brand: an existing one by id, or a new one by typing its name (created first, then linked). */
 export function useCarryBrand(companyId: string) {
   const client = useQueryClient()

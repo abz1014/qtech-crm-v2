@@ -1,6 +1,7 @@
-import { useId, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { Check, Minus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 
 /*
@@ -101,4 +102,57 @@ export function UnitChart({
 /** A quiet line of small print. */
 export function Fine({ children, className }: { children: ReactNode; className?: string }) {
   return <p className={cn('text-xs text-fg-muted', className)}>{children}</p>
+}
+
+/**
+ * The inline step before a remove: the row is replaced by the question, with Remove and Cancel. If the
+ * database or a reference check refuses, `error` takes its place in plain words and the only action left
+ * is Close, so nothing looks half done. Focus lands on Cancel, the safe choice.
+ */
+export function ConfirmRemove({
+  title,
+  detail,
+  busy,
+  error,
+  onConfirm,
+  onCancel,
+  className,
+}: {
+  title: string
+  detail?: string
+  busy?: boolean
+  error?: string | null
+  onConfirm: () => void
+  onCancel: () => void
+  className?: string
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    ref.current?.querySelector<HTMLButtonElement>('button[data-cancel]')?.focus()
+  }, [error])
+  return (
+    <div
+      ref={ref}
+      role={error ? 'alert' : 'group'}
+      aria-label={error ? undefined : title}
+      className={cn(
+        'grid gap-2 rounded border px-3 py-3 text-sm',
+        error ? 'border-tone-danger-fg/25 bg-tone-danger-bg' : 'border-tone-warning-fg/25 bg-tone-warning-bg',
+        className,
+      )}
+    >
+      <p className="font-medium text-pretty">{error ?? title}</p>
+      {!error && detail ? <p className="text-xs text-fg-2 text-pretty">{detail}</p> : null}
+      <div className="flex gap-2">
+        {error ? null : (
+          <Button size="sm" variant="danger" busy={busy} onClick={onConfirm}>
+            Remove
+          </Button>
+        )}
+        <Button size="sm" data-cancel onClick={onCancel} disabled={busy}>
+          {error ? 'Close' : 'Cancel'}
+        </Button>
+      </div>
+    </div>
+  )
 }
