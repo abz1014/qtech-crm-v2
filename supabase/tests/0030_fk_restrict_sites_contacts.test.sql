@@ -1,5 +1,5 @@
 begin;
-select plan(16);
+select plan(15);
 
 -- Fixture users come from supabase/seed.sql: admin a0..01, sales a0..02. Run as the table owner.
 
