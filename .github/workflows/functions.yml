@@ -1,0 +1,71 @@
+name: Functions
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  admin-users:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: npm ci
+
+      - name: Deno unit tests
+        working-directory: supabase/functions/admin-users
+        run: deno test --no-prompt handler_test.ts
+
+      - name: Deno type check
+        working-directory: supabase/functions/admin-users
+        run: deno check index.ts handler.ts
+
+      - name: Start local Supabase
+        run: npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime
+
+      - name: Rebuild database (migrations and seed fixtures)
+        run: npx supabase db reset --local
+
+      - name: Serve the function
+        run: |
+          # --no-verify-jwt: the function authenticates the bearer token itself (auth.getUser) and
+          # then requires an active admin, so the platform check adds nothing in CI.
+          nohup npx supabase functions serve admin-users --no-verify-jwt > "$RUNNER_TEMP/functions-serve.log" 2>&1 &
+          echo "started"
+
+      - name: Integration test (non-admin 403, last admin guard, audit rows)
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          export FN_URL="$API_URL/functions/v1/admin-users"
+          node --test supabase/functions/admin-users/integration.test.mjs
+
+      - name: Bootstrap script refuses when an admin already exists
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          export SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+          if node scripts/bootstrap-admin.mjs --name "Second Admin" --email second@test.invalid; then
+            echo "bootstrap should have refused"; exit 1
+          fi
+          # and it refuses a non-local target without --allow-remote
+          if SUPABASE_URL=https://example.supabase.co node scripts/bootstrap-admin.mjs --name X --email x@test.invalid; then
+            echo "bootstrap should have refused a remote URL"; exit 1
+          fi
+
+      - name: Function log
+        if: always()
+        run: cat "$RUNNER_TEMP/functions-serve.log" || true
+
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop --no-backup

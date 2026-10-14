@@ -7,6 +7,8 @@ const FREEZE_CSS = `
   *, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; scroll-behavior: auto !important; }
 `
 
+import { SCENE_LIST } from '../src/dev/gallery/sceneList'
+
 export interface Scene {
   /** Screenshot and test name. */
   name: string
@@ -16,51 +18,30 @@ export interface Scene {
   steps?: (page: Page) => Promise<void>
 }
 
-/** Every overlay scene, with the interaction that opens it. Keep in step with SCENES in src/dev/gallery/scenes.tsx. */
-export const SCENES: Scene[] = [
-  { name: 'dialog-default', scene: 'dialog-default' },
-  { name: 'dialog-busy', scene: 'dialog-busy' },
-  { name: 'dialog-error', scene: 'dialog-error' },
-  { name: 'dialog-confirm', scene: 'dialog-confirm' },
-  { name: 'dialog-long', scene: 'dialog-long' },
-  { name: 'dialog-money', scene: 'dialog-money' },
-  { name: 'palette-idle', scene: 'palette-idle' },
-  {
-    name: 'palette-typing',
-    scene: 'palette-typing',
-    steps: async page => {
-      await page.getByRole('combobox').fill('ind')
-      await page.clock.runFor(600)
-    },
+type Steps = (page: Page) => Promise<void>
+
+/** Interactions that open a scene. A scene not listed here is photographed as it loads. */
+const STEPS: Record<string, Steps> = {
+  'palette-typing': async page => {
+    await page.getByRole('combobox').fill('ind')
+    await page.clock.runFor(600)
   },
-  {
-    name: 'palette-empty',
-    scene: 'palette-empty',
-    steps: async page => {
-      await page.getByRole('combobox').fill('zzzz')
-      await page.clock.runFor(600)
-    },
+  'palette-empty': async page => {
+    await page.getByRole('combobox').fill('zzzz')
+    await page.clock.runFor(600)
   },
-  { name: 'toast-undo', scene: 'toast-undo' },
-  {
-    name: 'toast-settled',
-    scene: 'toast-settled',
-    steps: async page => {
-      await page.clock.runFor(1300)
-    },
+  'toast-settled': async page => {
+    await page.clock.runFor(1300)
   },
-  { name: 'toast-error', scene: 'toast-error' },
-  { name: 'toast-plain', scene: 'toast-plain' },
-  {
-    name: 'combobox-open',
-    scene: 'combobox-open',
-    steps: async page => {
-      const box = page.locator('[data-preview-combo]')
-      await box.click()
-      await page.keyboard.type('Ind')
-      await page.clock.runFor(300)
-    },
+  'combobox-open': async page => {
+    await page.locator('[data-preview-combo]').click()
+    await page.keyboard.type('Ind')
+    await page.clock.runFor(300)
   },
+}
+
+/** The 'overlays' scene holds three things that each open on their own, so it is photographed three times. */
+const OVERLAY_VARIANTS: Scene[] = [
   {
     name: 'tooltip-open',
     scene: 'overlays',
@@ -69,21 +50,18 @@ export const SCENES: Scene[] = [
       await page.clock.runFor(600)
     },
   },
-  {
-    name: 'menu-open',
-    scene: 'overlays',
-    steps: async page => {
-      await page.locator('[data-preview-menu]').click()
-    },
-  },
-  {
-    name: 'info-popover-open',
-    scene: 'overlays',
-    steps: async page => {
-      await page.locator('[data-preview-info]').click()
-    },
-  },
+  { name: 'menu-open', scene: 'overlays', steps: async page => void (await page.locator('[data-preview-menu]').click()) },
+  { name: 'info-popover-open', scene: 'overlays', steps: async page => void (await page.locator('[data-preview-info]').click()) },
 ]
+
+for (const key of Object.keys(STEPS)) {
+  if (!SCENE_LIST.some(s => s.scene === key)) throw new Error(`e2e/support.ts has steps for a scene that does not exist: ${key}`)
+}
+
+/** Every scene in SCENE_LIST (src/dev/gallery/sceneList.ts), with the interaction that opens it. */
+export const SCENES: Scene[] = SCENE_LIST.flatMap(s =>
+  s.scene === 'overlays' ? OVERLAY_VARIANTS : [{ name: s.scene, scene: s.scene, steps: STEPS[s.scene] }],
+)
 
 /**
  * Open a gallery URL in a state that renders the same every time: the clock is installed at FIXED_NOW

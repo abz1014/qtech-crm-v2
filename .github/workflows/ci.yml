@@ -38,7 +38,7 @@ jobs:
   # U09: visual regression and axe over /dev/gallery, in real Chromium on Ubuntu.
   # Baselines are Linux-only and live in e2e/__screenshots__.
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,10 +50,10 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Regenerate baselines (manual run with update_baselines)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_baselines }}
-        run: npx playwright test e2e/gallery.visual.spec.ts --update-snapshots
+        run: npx playwright test e2e/gallery.visual.spec.ts --project=w1440 --project=w375 --update-snapshots
       - name: Axe suite (zero violations)
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.update_baselines) }}
-        run: npx playwright test e2e/gallery.axe.spec.ts
+        run: npx playwright test e2e/gallery.axe.spec.ts --project=w1440 --project=w375
       - name: Visual suite
         id: visual
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.update_baselines) }}
@@ -61,10 +61,10 @@ jobs:
           if [ ! -d e2e/__screenshots__ ]; then
             echo "::error::No committed baselines in e2e/__screenshots__. Generating them; download the artifact, commit it, push."
             echo "generated=true" >> "$GITHUB_OUTPUT"
-            npx playwright test e2e/gallery.visual.spec.ts --update-snapshots
+            npx playwright test e2e/gallery.visual.spec.ts --project=w1440 --project=w375 --update-snapshots
             exit 1
           fi
-          npx playwright test e2e/gallery.visual.spec.ts
+          npx playwright test e2e/gallery.visual.spec.ts --project=w1440 --project=w375
       - name: Upload generated baselines
         if: ${{ always() && (steps.visual.outputs.generated == 'true' || (github.event_name == 'workflow_dispatch' && inputs.update_baselines)) }}
         uses: actions/upload-artifact@v4

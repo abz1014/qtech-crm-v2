@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { SceneFrame } from '@/dev/gallery/layout'
+import { SCENE_LIST, type SceneName } from '@/dev/gallery/sceneList'
 import { z } from 'zod'
 import { Building2, CalendarDays, Copy, FileText, ListFilter, Package, Mail, MessageSquare, Plus, Send, Trash2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
@@ -32,7 +33,6 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Tab, TabList, TabPanel, Tabs } from '@/ui/Tabs'
 import { Tooltip } from '@/ui/Tooltip'
 
-/* eslint-disable react-refresh/only-export-components -- a dev page, not a hot-reloaded module */
 /*
  * Overlay and interaction scenes for /dev/gallery (U09). Dialogs, the palette and toasts cannot sit
  * on the page beside everything else, so each is rendered on its own at /dev/gallery?scene=<name>.
@@ -548,24 +548,29 @@ export function Files({ mode }: { mode: 'resting' | 'rows' }) {
   )
 }
 
-/** Scene name to what it renders. The order is the order on the gallery page. */
-export const SCENES: Record<string, { label: string; group: string; node: () => ReactNode }> = {
-  'dialog-default': { group: 'Dialog', label: 'Default', node: () => (<><Ghost /><DialogDefault state="default" /></>) },
-  'dialog-busy': { group: 'Dialog', label: 'Busy', node: () => (<><Ghost /><DialogDefault state="busy" /></>) },
-  'dialog-error': { group: 'Dialog', label: 'With error', node: () => (<><Ghost /><DialogDefault state="error" /></>) },
-  'dialog-confirm': { group: 'Dialog', label: 'Destructive confirm', node: () => (<><Ghost /><DialogDefault state="confirm" /></>) },
-  'dialog-long': { group: 'Dialog', label: 'Long body scrolls', node: () => (<><Ghost /><DialogDefault state="long" /></>) },
-  'dialog-money': { group: 'Dialog', label: 'Record payment (pre-filled, with source)', node: () => (<><Ghost /><MoneyDialog /></>) },
-  'palette-idle': { group: 'Command palette', label: 'Idle: recent, actions, jump to', node: () => <Palette /> },
-  'palette-typing': { group: 'Command palette', label: 'Searching', node: () => <Palette /> },
-  'palette-empty': { group: 'Command palette', label: 'No results', node: () => <Palette /> },
-  'toast-undo': { group: 'Toast', label: 'With Undo (10 s)', node: () => <ToastHost kind="undo" /> },
-  'toast-settled': { group: 'Toast', label: 'Settled after the countdown', node: () => <ToastHost kind="settled" /> },
-  'toast-error': { group: 'Toast', label: 'Error with retry', node: () => <ToastHost kind="error" /> },
-  'toast-plain': { group: 'Toast', label: 'Plain', node: () => <ToastHost kind="plain" /> },
-  'combobox-open': { group: 'Combobox', label: 'Open with the Add new row', node: () => <ComboScene /> },
-  'overlays': { group: 'Tooltip and Popover', label: 'Tooltip, menu and information popover', node: () => <Overlays /> },
+/** Scene name to what it renders. */
+const NODES: Record<SceneName, () => ReactNode> = {
+  'dialog-default': () => (<><Ghost /><DialogDefault state="default" /></>),
+  'dialog-busy': () => (<><Ghost /><DialogDefault state="busy" /></>),
+  'dialog-error': () => (<><Ghost /><DialogDefault state="error" /></>),
+  'dialog-confirm': () => (<><Ghost /><DialogDefault state="confirm" /></>),
+  'dialog-long': () => (<><Ghost /><DialogDefault state="long" /></>),
+  'dialog-money': () => (<><Ghost /><MoneyDialog /></>),
+  'palette-idle': () => <Palette />,
+  'palette-typing': () => <Palette />,
+  'palette-empty': () => <Palette />,
+  'toast-undo': () => <ToastHost kind="undo" />,
+  'toast-settled': () => <ToastHost kind="settled" />,
+  'toast-error': () => <ToastHost kind="error" />,
+  'toast-plain': () => <ToastHost kind="plain" />,
+  'combobox-open': () => <ComboScene />,
+  'overlays': () => <Overlays />,
 }
+
+/** Name to group, label and node, in the order of SCENE_LIST (the order on the gallery page). */
+export const SCENES: Record<string, { label: string; group: string; node: () => ReactNode }> = Object.fromEntries(
+  SCENE_LIST.map(s => [s.scene, { group: s.group, label: s.label, node: NODES[s.scene] }]),
+)
 
 function ToastHost({ kind }: { kind: 'undo' | 'error' | 'settled' | 'plain' }) {
   return (

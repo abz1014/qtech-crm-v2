@@ -1816,6 +1816,9 @@ isOneToOne: false
 "resolve_value_basis":
 { Args: { "p_basis": string,"p_order_id": string }; Returns: undefined
                            },
+"revoke_user_sessions":
+{ Args: { "p_user_id": string }; Returns: undefined
+                           },
 "set_fx_rate":
 { Args: { "p_as_of"?: string,"p_currency": string,"p_rate_pkr": number }; Returns: string
                            },

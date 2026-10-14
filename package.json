@@ -15,8 +15,8 @@
     "test": "vitest run",
     "check:tokens": "node scripts/check-token-parity.mjs",
     "build:e2e": "vite build --mode development --outDir dist-e2e",
-    "test:e2e": "playwright test",
-    "test:e2e:update": "playwright test e2e/gallery.visual.spec.ts --update-snapshots"
+    "test:e2e": "playwright test --project=w1440 --project=w375",
+    "test:e2e:update": "playwright test e2e/gallery.visual.spec.ts --project=w1440 --project=w375 --update-snapshots"
   },
   "dependencies": {
     "@fontsource/geist-mono": "^5.3.0",

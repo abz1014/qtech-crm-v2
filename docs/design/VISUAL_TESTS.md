@@ -1,6 +1,6 @@
 # Visual and accessibility tests (U09)
 
-`/dev/gallery` (dev builds only) shows every built primitive and D08 state. Dialogs, the command palette, toasts and open pop-ups are separate pages at `/dev/gallery?scene=<name>`. Scene names live in `SCENES` in `src/dev/gallery/scenes.tsx`; `e2e/support.ts` lists the same names with the steps that open them. Add a primitive or state there, in both places.
+`/dev/gallery` (dev builds only) shows every built primitive and D08 state. Dialogs, the command palette, toasts and open pop-ups are separate pages at `/dev/gallery?scene=<name>`. Scene names live in `SCENE_LIST` in `src/dev/gallery/sceneList.ts` (plain data, shared by the gallery and the tests); the node for each is in `scenes.tsx` and the steps that open one, if any, are in `e2e/support.ts`.
 
 ## What runs
 
@@ -9,7 +9,9 @@
 - Determinism: clock frozen at Fri 27 Nov 2026 10:00 (Asia/Karachi) before the page loads, `Asia/Karachi` timezone, reduced motion, animations and transitions off, caret hidden, and the test fails if Geist Sans or Geist Mono has not loaded.
 - The server is a development-mode build (`npm run build:e2e`) served by `vite preview`, because the gallery route exists only when `import.meta.env.DEV` is true.
 
-CI runs both suites in the `e2e` job of `.github/workflows/ci.yml` on Ubuntu (`npx playwright install --with-deps chromium`).
+CI runs both suites in the `e2e` job of `.github/workflows/ci.yml` on `ubuntu-24.04` (pinned, not `ubuntu-latest`: a runner image change shifts font rendering and breaks every baseline; move the pin and regenerate the baselines in the same PR). The job installs Chromium with `npx playwright install --with-deps chromium`.
+
+One `playwright.config.ts` holds every suite as separate projects: `w1440` and `w375` (this suite, dev build, no database) and `auth` (A03, the CI Supabase stack, run by `.github/workflows/e2e.yml` with `E2E_SUITE=auth`). Each suite starts only its own server, so always pass `--project` (`npm run test:e2e` does).
 
 ## Baselines are Linux-only
 
