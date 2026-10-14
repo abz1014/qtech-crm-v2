@@ -1,0 +1,247 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`snapshots > 20 items, WhatsApp 1`] = `
+"Assalam o Alaikum,
+Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):
+1. Pressure gauge model PG-100, 1 m
+   Spec: left blank
+2. Pressure gauge model PG-101, 2 nos
+   Spec: left blank
+3. Pressure gauge model PG-102, 3 nos
+   Spec: left blank
+4. Pressure gauge model PG-103, 4 nos
+   Spec: left blank
+5. Pressure gauge model PG-104, 5 m
+   Spec: left blank
+6. Pressure gauge model PG-105, 6 nos
+   Spec: left blank
+7. Pressure gauge model PG-106, 7 nos
+   Spec: left blank
+8. Pressure gauge model PG-107, 8 nos
+   Spec: left blank
+9. Pressure gauge model PG-108, 9 m
+   Spec: left blank
+10. Pressure gauge model PG-109, 10 nos
+   Spec: left blank
+11. Pressure gauge model PG-110, 11 nos
+   Spec: left blank
+12. Pressure gauge model PG-111, 12 nos
+   Spec: left blank
+13. Pressure gauge model PG-112, 13 m
+   Spec: left blank
+14. Pressure gauge model PG-113, 14 nos
+   Spec: left blank
+15. Pressure gauge model PG-114, 15 nos
+   Spec: left blank
+16. Pressure gauge model PG-115, 16 nos
+   Spec: left blank
+17. Pressure gauge model PG-116, 17 m
+   Spec: left blank
+18. Pressure gauge model PG-117, 18 nos
+   Spec: left blank
+19. Pressure gauge model PG-118, 19 nos
+   Spec: left blank
+20. Pressure gauge model PG-119, 20 nos
+   Spec: left blank
+Please include in your reply:
+- Unit price and currency
+- Lead time
+- Origin and authenticity (country of origin; original and genuine)
+- Stock position
+- MOQ, offer validity and payment terms
+Kindly reply by *Monday 30 November*. If you cannot offer an item, please say so and we will look elsewhere.
+Thank you.
+Regards,
+Ayesha Rana
+Q-Tech Solutions"
+`;
+
+exports[`snapshots > WhatsApp, the four mockup items 1`] = `
+"Assalam o Alaikum,
+Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):
+1. Endress+Hauser Proline Promag 400 electromagnetic flow meter, DN50, 2 nos
+   Spec: left blank
+2. Hach HQ1110 portable pH/EC meter with probes, 1 no
+   Spec: left blank
+3. Siemens SITRANS P320 pressure transmitter, 0-10 bar, 4 nos
+   Spec: left blank
+4. 24V actuator for ball valve, DN40, 2 nos
+   Spec: left blank
+Please include in your reply:
+- Unit price and currency
+- Lead time
+- Origin and authenticity (country of origin; original and genuine)
+- Stock position
+- MOQ, offer validity and payment terms
+Kindly reply by *Monday 30 November*. If you cannot offer an item, please say so and we will look elsewhere.
+Thank you.
+Regards,
+Ayesha Rana
+Q-Tech Solutions"
+`;
+
+exports[`snapshots > email, the four mockup items 1`] = `"RFQ-0185: quotation requested for 4 items, reply by Monday 30 November"`;
+
+exports[`snapshots > email, the four mockup items 2`] = `
+"Dear Sir / Madam,
+Assalam o Alaikum.
+
+We are preparing a quotation and would appreciate your best offer for the items below (our ref. RFQ-0185):
+
+1. Endress+Hauser Proline Promag 400 electromagnetic flow meter, DN50, 2 nos
+   Spec: left blank
+2. Hach HQ1110 portable pH/EC meter with probes, 1 no
+   Spec: left blank
+3. Siemens SITRANS P320 pressure transmitter, 0-10 bar, 4 nos
+   Spec: left blank
+4. 24V actuator for ball valve, DN40, 2 nos
+   Spec: left blank
+
+Please include in your reply:
+- Unit price and currency
+- Lead time
+- Origin and authenticity (country of origin; original and genuine)
+- Stock position
+- MOQ, offer validity and payment terms
+
+Kindly reply by Monday 30 November. If you cannot offer an item, please say so and we will look elsewhere.
+
+Thank you for your continued support.
+
+With best regards,
+Ayesha Rana
+Sales, Q-Tech Solutions
++92 300 555 0188
+ayesha@q-tech.example"
+`;
+
+exports[`snapshots > missing brand, brand given separately, and a spec carried by the item 1`] = `
+"Assalam o Alaikum,
+Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):
+1. Ball valve DN40, PN16, 6 nos
+   Spec: left blank
+2. Belimo LF24-SR actuator, 3 nos
+   Spec: left blank
+3. Belimo NM24A actuator, 1 no
+   Spec: left blank
+4. Cable 4x1.5 mm2, 150 m
+   Spec: Armoured, copper
+   600/1000 V
+Please include in your reply:
+- Unit price and currency
+- Lead time
+- Origin and authenticity (country of origin; original and genuine)
+- Stock position
+- MOQ, offer validity and payment terms
+Kindly reply by *Monday 30 November*. If you cannot offer an item, please say so and we will look elsewhere.
+Thank you.
+Regards,
+Ayesha Rana
+Q-Tech Solutions"
+`;
+
+exports[`snapshots > no due date, WhatsApp and email 1`] = `
+"Assalam o Alaikum,
+Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):
+1. Endress+Hauser Proline Promag 400 electromagnetic flow meter, DN50, 2 nos
+   Spec: left blank
+2. Hach HQ1110 portable pH/EC meter with probes, 1 no
+   Spec: left blank
+3. Siemens SITRANS P320 pressure transmitter, 0-10 bar, 4 nos
+   Spec: left blank
+4. 24V actuator for ball valve, DN40, 2 nos
+   Spec: left blank
+Please include in your reply:
+- Unit price and currency
+- Lead time
+- Origin and authenticity (country of origin; original and genuine)
+- Stock position
+- MOQ, offer validity and payment terms
+Kindly reply at your earliest convenience. If you cannot offer an item, please say so and we will look elsewhere.
+Thank you.
+Regards,
+Ayesha Rana
+Q-Tech Solutions"
+`;
+
+exports[`snapshots > no due date, WhatsApp and email 2`] = `"RFQ-0185: quotation requested for 4 items"`;
+
+exports[`snapshots > no due date, WhatsApp and email 3`] = `
+"Dear Sir / Madam,
+Assalam o Alaikum.
+
+We are preparing a quotation and would appreciate your best offer for the items below (our ref. RFQ-0185):
+
+1. Endress+Hauser Proline Promag 400 electromagnetic flow meter, DN50, 2 nos
+   Spec: left blank
+2. Hach HQ1110 portable pH/EC meter with probes, 1 no
+   Spec: left blank
+3. Siemens SITRANS P320 pressure transmitter, 0-10 bar, 4 nos
+   Spec: left blank
+4. 24V actuator for ball valve, DN40, 2 nos
+   Spec: left blank
+
+Please include in your reply:
+- Unit price and currency
+- Lead time
+- Origin and authenticity (country of origin; original and genuine)
+- Stock position
+- MOQ, offer validity and payment terms
+
+Kindly reply at your earliest convenience. If you cannot offer an item, please say so and we will look elsewhere.
+
+Thank you for your continued support.
+
+With best regards,
+Ayesha Rana
+Sales, Q-Tech Solutions
++92 300 555 0188
+ayesha@q-tech.example"
+`;
+
+exports[`snapshots > single item, WhatsApp and email 1`] = `
+"Assalam o Alaikum,
+Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):
+1. Hach HQ1110 portable pH/EC meter with probes, 1 no
+   Spec: left blank
+Please include in your reply:
+- Unit price and currency
+- Lead time
+- Origin and authenticity (country of origin; original and genuine)
+- Stock position
+- MOQ, offer validity and payment terms
+Kindly reply by *Monday 30 November*. If you cannot offer an item, please say so and we will look elsewhere.
+Thank you.
+Regards,
+Ayesha Rana
+Q-Tech Solutions"
+`;
+
+exports[`snapshots > single item, WhatsApp and email 2`] = `"RFQ-0185: quotation requested for 1 item, reply by Monday 30 November"`;
+
+exports[`snapshots > single item, WhatsApp and email 3`] = `
+"Dear Sir / Madam,
+Assalam o Alaikum.
+
+We are preparing a quotation and would appreciate your best offer for the item below (our ref. RFQ-0185):
+
+1. Hach HQ1110 portable pH/EC meter with probes, 1 no
+   Spec: left blank
+
+Please include in your reply:
+- Unit price and currency
+- Lead time
+- Origin and authenticity (country of origin; original and genuine)
+- Stock position
+- MOQ, offer validity and payment terms
+
+Kindly reply by Monday 30 November. If you cannot offer an item, please say so and we will look elsewhere.
+
+Thank you for your continued support.
+
+With best regards,
+Ayesha Rana
+Sales, Q-Tech Solutions
++92 300 555 0188
+ayesha@q-tech.example"
+`;
