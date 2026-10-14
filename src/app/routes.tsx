@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react'
+import { lazy, Suspense, type ComponentType } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { RequireRole, RequireSession, RoleLanding } from '@/app/guards'
 import { navItems, type NavKey } from '@/app/navConfig'
@@ -16,17 +16,30 @@ import { AppShell } from '@/app/shell/AppShell'
  */
 const screens: Partial<Record<NavKey, ComponentType>> = {}
 
+/** Dev builds only: review page for the U03/U07/U08 primitives. U09's /dev/gallery replaces it. Dead code in production. */
+const PrimitivesPreview = import.meta.env.DEV ? lazy(() => import('@/dev/PrimitivesPreview')) : null
+
 function SignInRoute() {
   const session = useSession()
   return session.status === 'signed-in' ? <Navigate to="/" replace /> : <SignInPage />
 }
 
-export function AppRoutes({ onSearch }: { onSearch?: () => void }) {
+export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<SignInRoute />} />
+      {PrimitivesPreview ? (
+        <Route
+          path="/dev/primitives"
+          element={
+            <Suspense fallback={null}>
+              <PrimitivesPreview />
+            </Suspense>
+          }
+        />
+      ) : null}
       <Route element={<RequireSession />}>
-        <Route element={<AppShell onSearch={onSearch} />}>
+        <Route element={<AppShell />}>
           <Route index element={<RoleLanding />} />
           <Route path="no-access" element={<NoAccessPage />} />
           {navItems.map(item => {

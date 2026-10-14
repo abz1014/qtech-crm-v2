@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { navItemsForRole, type NavKey } from '@/app/navConfig'
 import { ROLE_LABEL, type SessionUser } from '@/app/session'
-import { Avatar } from '@/ui/Avatar'
+import { AccountMenu } from '@/app/shell/AccountMenu'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
 import { cn } from '@/lib/utils'
@@ -73,7 +73,7 @@ export function TopBar({ user, counts, onSearch }: TopBarProps) {
 
       <div className="flex items-center gap-3">
         <span className="text-xs font-medium text-fg-muted max-xl:hidden">{ROLE_LABEL[user.role] ?? user.role}</span>
-        <Avatar name={user.name} />
+        <AccountMenu user={user} />
       </div>
     </header>
   )

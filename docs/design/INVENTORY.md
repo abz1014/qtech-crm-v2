@@ -10,16 +10,16 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 |---|---|---|---|
 | `Icon` | The only way to draw a Lucide icon: sizes 12 (chip), 14, 16, 20, 24; stroke 1.75 (2 in chips); decorative by default | 01, spec sheet | U02 (built) |
 | `Button` | Primary, secondary, quiet, danger; sizes 40, 32 (40 on touch), 28, plus a 44 touch size for phone chrome; busy state; icon-only variant needs `aria-label` | 01 Controls | U02 (built; the shell and the error page need it) |
-| `TextField` | Single-line input; `numeric` variant is mono and right aligned; prefix/suffix adornment (currency, unit); invalid, disabled, read only | 01 | U07 |
-| `TextArea` | Multi-line input, optional label | 01 | U07 |
-| `Select` | Native-styled select | 01 | U07 |
-| `Combobox` | Search-as-you-type with the "Add new" row (company, supplier, contact) | 01 | U07 |
-| `Checkbox`, `Radio`, `ToggleButton` | Selection controls; ToggleButton is the pressed/not-pressed filter ("Lowest only") | 01, 13 | U07 |
+| `TextField` | Single-line input; `numeric` variant is mono and right aligned; prefix/suffix adornment (currency, unit); invalid, disabled, read only | 01 | U07 (built: `TextField`, `NumberInput`) |
+| `TextArea` | Multi-line input, optional label | 01 | U07 (built) |
+| `Select` | Native-styled select | 01 | U07 (built) |
+| `Combobox` | Search-as-you-type with the "Add new" row (company, supplier, contact) | 01 | U07 (built) |
+| `Checkbox`, `Radio`, `ToggleButton` | Selection controls; ToggleButton is the pressed/not-pressed filter ("Lowest only") | 01, 13 | U07 (built: `Checkbox`, `Radio`, `RadioCard`, `ToggleButton`) |
 | `Banner` | Info, warning, error, success strips with optional action | 01 | U02 (built) |
-| `Tabs` | Page and panel tabs with count pills (tablist semantics; not used for site navigation, which is a `nav` of links in `AppShell`) | 01 | U02 not built; first needed by RFQ detail and Money, so build it with the first of them |
-| `Breadcrumb` | Page ancestry on detail pages | 01 | U02 not built (not in BUILD_PLAN U02); build with the first detail page |
+| `Tabs` | Page and panel tabs with count pills (tablist semantics; not used for site navigation, which is a `nav` of links in `AppShell`) | 01 | U03 (built) |
+| `Breadcrumb` | Page ancestry on detail pages | 01 | U03 (built) |
 | `Skeleton` | Loading placeholder for text, rows and cards | 01 | U04 (built) |
-| `FileDrop`, `FileRow` | Drop zone (resting, drag-over, added, too large), added-file rows with size and shrink note | 01 | U07 |
+| `FileDrop`, `FileRow` | Drop zone (resting, drag-over, added, too large), added-file rows with size and shrink note | 01 | U07 (built: `FileDrop`, `FileRow`) |
 | `Kbd` | Key hint (`⌘K`, `Esc`, `Enter`) | 01, 07 | U02 (built; the shell search shows `⌘K`) |
 | `Avatar` | Initials circle for a person (28, or 22 inside key figures) | 01 | U02 (built) |
 | `Tag` | Mono identifier or brand tag; dashed when not firm | 13 | U05 (built) |
@@ -28,18 +28,18 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 | `Money` | Net / GST / gross, PKR grouping, foreign variant, estimate, stale-rate and basis-unknown marks, tabular mono | 03 | U06 (built: `Money`, `Margin`, `MoneyFx`, `NetGstGross`) |
 | `StatusTrack` | Three-step track beside a chip for the invoice courier (TCS) and FBR dimensions | money-01, 02 | U05 (built) |
 | `SumBar`, `AfterDrawings` | The Money summary strip (label, figure, one line of context) and the Amendment A6 "Not in P&L" and "After drawings" lines set apart below a month result | money-07, 10 | U06 (built) |
-| `Form`, `Field` | RHF + Zod form, label, help, error line, submitting and unique-violation states | 04 | U07 |
-| `Dialog` | Modal (Radix), header, body, footer, destructive confirm variant, focus return | 05 | U03 |
+| `Form`, `Field` | RHF + Zod form, label, help, error line, submitting and unique-violation states | 04 | U07 (built: `Form`, `FormField`, `Field`, `useSubmitForm`, `DateInput`, source note) |
+| `Dialog` | Modal (Radix), header, body, footer, destructive confirm variant, focus return | 05 | U03 (built) |
 | `DataTable` | Comfortable and compact density, sorted column, keyboard row focus, selected row, empty, loading, error, footer totals, group rows | 06 | U04 (built; also selection, virtualised past 80 rows, CSV export) |
-| `CommandPalette` | Cmd+K / Ctrl+K, recent, actions, jump to, searching, empty | 07 | U08 |
-| `Toast` | With Undo (10 s), plain, error | 08 | U03 |
+| `CommandPalette` | Cmd+K / Ctrl+K, recent, actions, jump to, searching, empty | 07 | U08 (built: shell with pluggable sources; recent rows keep the document glyph) |
+| `Toast` | With Undo (10 s), plain, error | 08 | U03 (built: `ToastProvider`, `useToast`) |
 | `EmptyState` | Heading, what happens next, optional action; role-limited variant | 09 | U04 (built; goal, neutral and error moods; the role-limited wording is a screen concern) |
-| `Tooltip` | Short hover and focus hint; also carries exact values behind rounded figures | 10 | U02 not built (not in BUILD_PLAN U02); first needed by the Today target tile |
-| `SegmentedControl` | 2 to 5 options, counts, large size; tablist or radiogroup semantics | 11 | U02 not built (not in BUILD_PLAN U02); first needed by Today |
+| `Tooltip` | Short hover and focus hint; also carries exact values behind rounded figures | 10 | U03 (built) |
+| `SegmentedControl` | 2 to 5 options, counts, large size; tablist or radiogroup semantics | 11 | U03 (built) |
 | `DateRail` | Start-to-due rail with today marker; tones on track, due soon, due today, overdue, done, no date | 12 | U05 NOT built (not in the U05 brief; build with the first screen that needs it) |
-| `Popover` | `Menu` variant (actions, 32 px items) and information variant | 13 | U03 |
-| `InlineConfirm` | In-place "Copied. Marked as chased today. Undo" line | 13 | U03 |
-| `Callout` | Dashed quiet note; no tone | 13 | U03 |
+| `Popover` | `Menu` variant (actions, 32 px items) and information variant | 13 | U03 (built) |
+| `InlineConfirm` | In-place "Copied. Marked as chased today. Undo" line | 13 | U03 (built) |
+| `Callout` | Dashed quiet note; no tone | 13 | U03 (built) |
 | `StepList`, `ProgressSegments` | "n of m" segments and process steps | 13 | U05 (`ProgressSegments` built; `StepList` NOT built) |
 | `InlineEditRow` | Table row edited in place: resting, editing, saving, error; Enter saves, Esc cancels | 13 | U04 NOT built (not in the U04 brief; build with the first inline-edit screen) |
 
@@ -47,7 +47,7 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 
 | Composite | Made of | Used on |
 |---|---|---|
-| `AppShell` (top bar, six role-filtered destinations, `⌘K` trigger, role text, account avatar, phone bar and bottom tab bar). Built in U02: destinations are a `nav` of links with `aria-current="page"`, not `Tabs`; the role is plain text, not a `Tag`; the account menu (`Popover`, sign out) arrives with A03 | `Icon`, `Button`, `Kbd`, `Avatar` | every screen |
+| `AppShell` (top bar, six role-filtered destinations, `⌘K` trigger, role text, account avatar, phone bar and bottom tab bar). Built in U02: destinations are a `nav` of links with `aria-current="page"`, not `Tabs`; the role is plain text, not a `Tag`; the account menu (`Popover`, name, role, Sign out calling the `session.signOut()` stub) was built in U03; the `⌘K` button opens the U08 palette | `Icon`, `Button`, `Kbd`, `Avatar` | every screen |
 | `PageHeader` (title, sub line, actions, breadcrumb) | `Breadcrumb`, `Button`, `StatusBadge` | all detail and register pages |
 | `Panel` (titled card with header, meta, actions) | `Button`, `Tag`, `SegmentedControl` | Money, Order, Company |
 | `KeyValue` list | `Money`, `Tag`, `StatusBadge` | Order, Company, Today detail |
