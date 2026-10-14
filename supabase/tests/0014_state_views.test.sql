@@ -127,8 +127,8 @@ insert into public.company_brands (company_id, brand_id)
   values ('c0000000-0000-4000-8000-000000000006', 'c3000000-0000-4000-8000-000000000001');
 insert into public.supplier_orders (order_id, supplier_id)
   values ('a1000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000007');
-insert into public.expenses (amount_pkr, category, payee_id)
-  values (10, 'Freight', 'c0000000-0000-4000-8000-000000000008');
+insert into public.expenses (amount_pkr, category_id, payee_id)
+  values (10, 'ca7e0000-0000-4000-8000-000000000012', 'c0000000-0000-4000-8000-000000000008');
 insert into public.rfqs (company_id, owner_id)
   values ('c0000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-000000000002');
 
