@@ -26,6 +26,19 @@ jobs:
       - name: Rebuild database (migrations and seed fixtures)
         run: npx supabase db reset --local
 
+      - name: Serve the admin-users function (the Team screen calls it)
+        run: |
+          # --no-verify-jwt: the function authenticates the bearer token itself and then requires an
+          # active admin (same as functions.yml). The preview server's origin is on its allow-list.
+          nohup npx supabase functions serve admin-users --no-verify-jwt > "$RUNNER_TEMP/functions-serve.log" 2>&1 &
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H 'Origin: http://127.0.0.1:4173' "$API_URL/functions/v1/admin-users" || true)
+            if [ "$code" = "204" ]; then echo "function ready after $i tries"; exit 0; fi
+            sleep 2
+          done
+          echo "admin-users did not become ready"; cat "$RUNNER_TEMP/functions-serve.log" || true; exit 1
+
       - name: Build the app against the local stack
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
@@ -48,6 +61,10 @@ jobs:
             playwright-report
             test-results
           if-no-files-found: ignore
+
+      - name: Function log
+        if: always()
+        run: cat "$RUNNER_TEMP/functions-serve.log" || true
 
       - name: Stop Supabase
         if: always()

@@ -7,6 +7,7 @@ import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { SignInPage } from '@/app/pages/SignInPage'
 import { useSession } from '@/app/session'
+import { AdminOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
 import { AppShell } from '@/app/shell/AppShell'
 
 /**
@@ -15,6 +16,9 @@ import { AppShell } from '@/app/shell/AppShell'
  * Sub-routes such as /rfqs/:id are declared by the feature under the same key.
  */
 const screens: Partial<Record<NavKey, ComponentType>> = {}
+
+const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
+const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfilePage').then(m => ({ default: m.CompanyProfilePage })))
 
 /** Dev builds only: the component gallery (U09). Dead code in production. */
 const Gallery = import.meta.env.DEV ? lazy(() => import('@/dev/gallery/Gallery')) : null
@@ -43,6 +47,28 @@ export function AppRoutes() {
         <Route element={<AppShell />}>
           <Route index element={<RoleLanding />} />
           <Route path="no-access" element={<NoAccessPage />} />
+          <Route path="settings" element={<SettingsLayout />}>
+            <Route index element={<SettingsHome />} />
+            <Route
+              path="team"
+              element={
+                <AdminOnly area="Team">
+                  <Suspense fallback={null}>
+                    <TeamPage />
+                  </Suspense>
+                </AdminOnly>
+              }
+            />
+            <Route
+              path="company"
+              element={
+                <Suspense fallback={null}>
+                  <CompanyProfilePage />
+                </Suspense>
+              }
+            />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
           {navItems.map(item => {
             const Screen = screens[item.key]
             return (

@@ -32,6 +32,8 @@ export interface MappedError {
   kind: PgErrorKind
   /** Plain sentence for a banner or a field line. */
   message: string
+  /** The server's own code for a PlainError (email_taken, last_admin), so a form can route it. */
+  code?: string
   /** Constraint name when Postgres gave one, so a form can route the message to a field. */
   constraint?: string
 }
@@ -39,6 +41,19 @@ export interface MappedError {
 export interface MapOptions {
   /** What was being saved ("company", "expense"): reads better in the unique-violation sentence. */
   entity?: string
+}
+
+/**
+ * An error whose message is already a plain sentence written for people (the admin-users function
+ * answers in them). mapPgError passes it through unchanged instead of the generic fallback.
+ */
+export class PlainError extends Error {
+  code?: string
+  constructor(message: string, code?: string) {
+    super(message)
+    this.name = 'PlainError'
+    this.code = code
+  }
 }
 
 const CLOSED_MONTH = /\bis closed\.\s*An admin can reopen it\.?$/i
@@ -58,6 +73,7 @@ export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
   if (err instanceof TypeError || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
     return { kind: 'network', message: 'Check your connection and try again. Trying again will not create a duplicate.' }
   }
+  if (err instanceof PlainError) return { kind: 'unknown', message: err.message, code: err.code }
   if (!isPgLike(err)) {
     return { kind: 'unknown', message: 'Something went wrong. Nothing was saved. Try again.' }
   }

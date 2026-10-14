@@ -144,6 +144,18 @@ export function createHandler(deps: Deps): (req: Request) => Promise<Response> {
           return reply(200, { user_id: t.id, role: body.role })
         }
 
+        case 'set_job_title': {
+          const t = await target()
+          if (body.job_title !== null && typeof body.job_title !== 'string') throw new HttpError(400, 'Job title must be text, or empty to clear it.')
+          const jobTitle = typeof body.job_title === 'string' && body.job_title.trim() ? body.job_title.trim() : null
+          if (jobTitle && jobTitle.length > 100) throw new HttpError(400, 'Job title is too long.')
+          if (t.job_title === jobTitle) return reply(200, { user_id: t.id, job_title: t.job_title })
+          const err = await store.updateProfile(t.id, { job_title: jobTitle })
+          if (err) throw new HttpError(500, 'Could not save the change.')
+          await audit(t.id, 'update', { job_title: t.job_title }, { job_title: jobTitle })
+          return reply(200, { user_id: t.id, job_title: jobTitle })
+        }
+
         case 'deactivate': {
           const t = await target()
           if (t.deactivated_at !== null) return reply(200, { user_id: t.id, deactivated_at: t.deactivated_at })
