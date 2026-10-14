@@ -487,6 +487,50 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"inquiry_item_declines": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"inquiry_id": string,"reason": string,"rfq_item_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"inquiry_id": string,"reason": string,"rfq_item_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"inquiry_id"?: string,"reason"?: string,"rfq_item_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "inquiry_item_declines_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "inquiry_item_declines_inquiry_id_fkey"
+      columns: ["inquiry_id"]
+isOneToOne: false
+      referencedRelation: "supplier_inquiries"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "inquiry_item_declines_inquiry_id_fkey"
+      columns: ["inquiry_id"]
+isOneToOne: false
+      referencedRelation: "v_inquiry_state"
+      referencedColumns: ["inquiry_id"]
+    },{
+      foreignKeyName: "inquiry_item_declines_inquiry_id_fkey"
+      columns: ["inquiry_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_activity"
+      referencedColumns: ["inquiry_id"]
+    },{
+      foreignKeyName: "inquiry_item_declines_rfq_item_id_fkey"
+      columns: ["rfq_item_id"]
+isOneToOne: false
+      referencedRelation: "rfq_items"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"invoices": {
                   Row: {
                     "client_received_on": string | null,"company_id": string | null,"copy_received_on": string | null,"created_at": string,"created_by": string | null,"gst_amount": number,"id": string,"invoice_date": string | null,"last_reminded_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"net_amount": number,"notes": string | null,"number": string | null,"order_id": string | null,"psid": string | null,"reminder_count": number,"tax_bank_month": string | null,"tax_deposit_amount": number | null,"tax_deposited_on": string | null,"tcs_number": string | null,"tcs_sent_on": string | null,"updated_at": string,"wasif_receipt_on": string | null
@@ -1089,14 +1133,14 @@ isOneToOne: false
                   ]
                 },"supplier_inquiries": {
                   Row: {
-                    "chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"notes": string | null,"rfq_id": string,"sent_on": string | null,"supplier_id": string
+                    "chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_on": string | null,"supplier_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_on"?: string | null,"supplier_id": string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_on"?: string | null,"supplier_id": string
                   }
                   Update: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"notes"?: string | null,"rfq_id"?: string,"sent_on"?: string | null,"supplier_id"?: string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id"?: string,"sent_on"?: string | null,"supplier_id"?: string
                   }
                   Relationships: [
                     {

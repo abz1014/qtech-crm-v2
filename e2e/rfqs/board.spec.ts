@@ -175,7 +175,7 @@ test.describe('open RFQs', () => {
     await openAs(page, 'engineer', '/rfqs')
     await row(page, 'covered').getByRole('link', { name: fx.names.covered }).click()
     await expect(page).toHaveURL(new RegExp(`/rfqs/${fx.ids.covered}$`))
-    await expect(page.getByTestId('rfq-id')).toHaveText(fx.ids.covered)
+    await expect(page.getByRole('heading', { level: 1, name: /RFQ-\d+/ })).toBeVisible() // the RFQ detail page (R07)
   })
 
   test('Mine with nothing assigned reads as done, and offers everyone’s RFQs', async ({ page }) => {

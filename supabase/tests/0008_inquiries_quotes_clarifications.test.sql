@@ -17,8 +17,8 @@ $f$;
 -- ------------------------------------------------------------------ structure
 select columns_are('public', 'supplier_inquiries',
   array['id', 'created_at', 'created_by', 'rfq_id', 'supplier_id', 'sent_on', 'last_chased_on', 'no_offer_on',
-        'last_relayed_at', 'notes', 'chase_count', 'legacy_flags', 'legacy_source'],
-  'supplier_inquiries has the section 2.9 columns (with chase_count)');
+        'last_relayed_at', 'notes', 'chase_count', 'legacy_flags', 'legacy_source', 'no_offer_reason'],
+  'supplier_inquiries has the section 2.9 columns (with chase_count, and no_offer_reason from 0032)');
 select columns_are('public', 'supplier_quote_lines',
   array['id', 'created_at', 'created_by', 'inquiry_id', 'rfq_item_id', 'unit_price', 'currency', 'lead_time',
         'origin', 'in_stock', 'notes', 'legacy_flags', 'legacy_source',

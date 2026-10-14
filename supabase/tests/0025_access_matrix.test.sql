@@ -120,6 +120,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'supplier_inquiries',  'unsent',     'SIUD', 'SIUD', 'SIUD'), -- s10 "supplier_inquiries" note 1: staff delete while sent_on is empty
   ('table', 'supplier_inquiries',  'sent',       'SIUD', 'SIU',  'SIU'),  -- s10 "supplier_inquiries": SIU + D only while sent_on is empty
   ('table', 'supplier_quote_lines','',           'SIUD', 'SIUD', 'SIUD'), -- s10 "supplier_quote_lines"
+  ('table', 'inquiry_item_declines','',          'SIUD', 'SIUD', 'SIUD'), -- R07 (0032): same rules as supplier_quote_lines
   ('table', 'clarifications',      '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "clarifications"
   ('table', 'orders',              '',           'SIUD', 'SIU',  'SIU'),  -- s10 "orders"
   ('table', 'order_items',         '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "order_items"
@@ -229,6 +230,8 @@ insert into public.supplier_inquiries (id, rfq_id, supplier_id, sent_on) values
   (pg_temp.f('1b'), pg_temp.f('15'), pg_temp.f('05'), null);
 insert into public.supplier_quote_lines (id, inquiry_id, rfq_item_id, unit_price, currency) values
   (pg_temp.f('1c'), pg_temp.f('19'), pg_temp.f('17'), 10, 'PKR');
+insert into public.inquiry_item_declines (inquiry_id, rfq_item_id, reason) values   -- R07 (0032)
+  (pg_temp.f('19'), pg_temp.f('18'), 'other');
 insert into public.clarifications (id, rfq_id, question) values
   (pg_temp.f('1d'), pg_temp.f('15'), 'Main q'), (pg_temp.f('1e'), pg_temp.f('15'), 'Leaf q');
 insert into public.orders (id, company_id, owner_id) values
@@ -292,6 +295,7 @@ insert into spec values
   ('supplier_inquiries', 'unsent', 'id = @1b', 'notes', $q$insert into public.supplier_inquiries (id, rfq_id, supplier_id) values (@a7, @16, @03)$q$),
   ('supplier_inquiries', 'sent', 'id = @1a', 'notes', $q$insert into public.supplier_inquiries (id, rfq_id, supplier_id) values (@a7, @16, @03)$q$),
   ('supplier_quote_lines', '', 'id = @1c', 'notes', $q$insert into public.supplier_quote_lines (inquiry_id, rfq_item_id, unit_price, currency) values (@1a, @17, 5, 'PKR')$q$),
+  ('inquiry_item_declines', '', 'inquiry_id = @19 and rfq_item_id = @18', 'reason', $q$insert into public.inquiry_item_declines (inquiry_id, rfq_item_id, reason) values (@1a, @17, 'other')$q$),   -- R07 (0032)
   ('clarifications', '', 'id = @1e', 'question', $q$insert into public.clarifications (id, rfq_id, question) values (@a8, @15, 'probe')$q$),
   ('orders', '', 'id = @21', 'notes', $q$insert into public.orders (id, company_id, owner_id) values (@a9, @01, 'a0000000-0000-4000-8000-000000000002')$q$),
   ('order_items', '', 'id = @25', 'description', $q$insert into public.order_items (id, order_id, description, unit_price_net) values (@aa, @20, 'probe', 1)$q$),
@@ -408,8 +412,8 @@ from unnest(array['rfq-files','gst-receipts','generated-docs','expense-receipts'
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
-  'coverage: the matrix lists every table in schema public (30)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 30, 'coverage: 30 tables');
+  'coverage: the matrix lists every table in schema public (31)');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 31, 'coverage: 31 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');

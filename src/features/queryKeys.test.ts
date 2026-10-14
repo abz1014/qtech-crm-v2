@@ -52,6 +52,11 @@ describe('invalidation map (R01)', () => {
     'brand.unlink': { companyId: 'c1' },
     'rfq.float': { companyId: 'c1' },
     'rfq.setFloated': { rfqId: 'r1' },
+    'quote.save': { rfqId: 'r1' },
+    'inquiry.cantQuote': { rfqId: 'r1' },
+    'inquiry.chase': { rfqId: 'r1' },
+    'rfq.markBidSent': { rfqId: 'r1' },
+    'rfq.close': { rfqId: 'r1' },
   }
 
   it('names at least one key for every write', () => {
