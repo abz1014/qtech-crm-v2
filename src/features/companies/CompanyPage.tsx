@@ -366,12 +366,12 @@ function ContactsPanel({
                 {c.notes ? <span className="text-xs text-fg-muted">{c.notes}</span> : null}
                 {c.site_id && siteName.get(c.site_id) ? <span className="text-xs text-fg-muted">{siteName.get(c.site_id)}</span> : null}
                 {c.phone ? (
-                  <a href={`tel:${c.phone.replace(/\s+/g, '')}`} className="num w-fit text-xs text-fg-muted hover:text-fg">
+                  <a href={`tel:${c.phone.replace(/\s+/g, '')}`} className="num inline-flex min-h-6 w-fit items-center text-xs text-fg-muted hover:text-fg">
                     {c.phone}
                   </a>
                 ) : null}
                 {c.email ? (
-                  <a href={`mailto:${c.email}`} className="w-fit text-xs text-fg-muted hover:text-fg">
+                  <a href={`mailto:${c.email}`} className="inline-flex min-h-6 w-fit items-center text-xs text-fg-muted hover:text-fg">
                     {c.email}
                   </a>
                 ) : null}
