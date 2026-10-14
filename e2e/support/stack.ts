@@ -51,6 +51,8 @@ export async function openAs(page: Page, role: Role, path: string): Promise<void
   await page.getByRole('button', { name: 'Sign in' }).click()
   await page.waitForURL(url => !url.pathname.startsWith('/login'))
   await page.goto(path)
+  // The shell (and so the Ctrl+K handler) only exists once the session has resolved. Wait for it, so a key pressed right after this returns is not lost.
+  await page.locator('#main').waitFor()
 }
 
 export interface RestResult<T> {
