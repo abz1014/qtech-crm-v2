@@ -2,6 +2,8 @@
 export function generateCSV(headers: string[], rows: unknown[][]): string {
   const sanitize = (value: unknown): string => {
     if (value === null || value === undefined) return '""';
+    // A finite number can never be a formula, and a negative amount must stay a number in Excel.
+    if (typeof value === 'number' && Number.isFinite(value)) return `"${value}"`;
     let str = String(value);
     // Formula-injection guard: cells starting with = + - @ or tab/CR execute
     // as formulas when the CSV is opened in Excel. Prefix with ' to neutralize.
