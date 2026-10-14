@@ -62,7 +62,7 @@ describe('search button and Cmd/Ctrl+K open the palette (U08)', () => {
   it('the top-bar search button opens it; it lists this role\'s destinations; Enter goes there', async () => {
     const user = userEvent.setup()
     shell()
-    await user.click(screen.getAllByRole('button', { name: 'Search or jump to' })[0])
+    await user.click(screen.getAllByRole('button', { name: /^Search or jump to/ })[0])
     const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
     const rows = await within(dlg).findAllByRole('option')
     expect(rows.map(r => r.textContent)).toEqual(
