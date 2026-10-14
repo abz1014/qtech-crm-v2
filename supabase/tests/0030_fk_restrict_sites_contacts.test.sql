@@ -3,6 +3,8 @@ select plan(16);
 
 -- Fixture users come from supabase/seed.sql: admin a0..01, sales a0..02. Run as the table owner.
 
+select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+
 insert into public.companies (id, name) values ('c0000000-0000-4000-8000-000000000001', 'Customer');
 insert into public.company_sites (id, company_id, name) values
   ('51e00000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'Used by RFQ'),
