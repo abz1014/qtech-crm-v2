@@ -277,7 +277,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     const s = await seed({ dueInDays: 8 })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = row(page, s.china.name)
-    await r.getByRole('button', { name: /Copy and mark chased/ }).click() // the one tap
+    await r.getByRole('button', { name: /Copy & mark chased/ }).click() // the one tap
     await expect(page.getByRole('status').filter({ hasText: 'Chase text copied' })).toBeVisible()
     const text = await page.evaluate(() => navigator.clipboard.readText())
     expect(text).toContain(`ref *RFQ-${String(s.rfq.number).padStart(4, '0')}*`)
@@ -291,7 +291,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await expect(r.getByText(/chased 1 time/)).toBeVisible()
 
     // The second chase uses the second-reminder wording.
-    await r.getByRole('button', { name: /Copy and mark chased/ }).click()
+    await r.getByRole('button', { name: /Copy & mark chased/ }).click()
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('A second reminder')
     expect((await inquiryOf(s.china.inquiryId)).chase_count).toBe(2)
   })

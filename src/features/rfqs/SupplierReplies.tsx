@@ -433,7 +433,7 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
                 <Button size="sm" variant="quiet" icon={showText ? EyeOff : Eye} onClick={() => setShowText(s => !s)} aria-expanded={showText}>
                   {showText ? 'Hide text' : 'Preview text'}
                 </Button>
-                <Button icon={Copy} onClick={() => void doChase()} busy={stamp.isPending} busyLabel="Marking chased" aria-label={`Copy and mark chased, ${inquiry.supplierName}`}>
+                <Button icon={Copy} onClick={() => void doChase()} busy={stamp.isPending} busyLabel="Marking chased" aria-label={`Copy & mark chased, ${inquiry.supplierName}`}>
                   Copy &amp; mark chased
                 </Button>
               </>
