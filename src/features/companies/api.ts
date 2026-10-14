@@ -414,10 +414,9 @@ export async function updateContact(
 }
 
 /**
- * Raised instead of deleting when RFQs, orders or quotations still point at a site or contact. The
- * foreign keys are ON DELETE SET NULL, so the database would NOT refuse: it would quietly unfile the RFQs
- * and orders. Anything that money or RFQs reference is never deleted, so this is checked first. `code`
- * is 23503, the code Postgres uses for the same situation, so mapPgError-style handling treats it alike.
+ * Raised when a site or contact cannot be removed because RFQs, orders or quotations still point at it. The
+ * foreign keys are ON DELETE RESTRICT, so the database refuses with 23503 and this carries the counts, read
+ * only after that refusal, to say how many. `code` stays 23503 so mapPgError-style handling treats it alike.
  */
 export class InUseError extends Error {
   readonly code = '23503'
@@ -448,20 +447,25 @@ async function countRefs(kind: 'site' | 'contact', id: string) {
   return { rfqs, orders, quotations }
 }
 
-/** Remove a site that nothing refers to. Throws InUseError if an RFQ or order is filed under it. */
-export async function removeSite(companyId: string, id: string) {
-  const uses = await countRefs('site', id)
-  if (uses.rfqs + uses.orders > 0) throw new InUseError('site', uses)
+/** Delete a site or contact. The database refuses (23503) while anything uses it; only then are the uses counted. */
+async function removeRow(table: 'company_sites' | 'contacts', kind: 'site' | 'contact', companyId: string, id: string) {
   const db = requireSupabase()
-  unwrap(await db.from('company_sites').delete().eq('id', id).eq('company_id', companyId).select('id'))
+  const res = await db.from(table).delete().eq('id', id).eq('company_id', companyId).select('id')
+  if (res.error?.code === '23503') {
+    const uses = await countRefs(kind, id)
+    if (uses.rfqs + uses.orders + uses.quotations > 0) throw new InUseError(kind, uses)
+  }
+  unwrap(res)
 }
 
-/** Remove a contact that nothing refers to. Throws InUseError if an RFQ, order or quotation names them. */
-export async function removeContact(companyId: string, id: string) {
-  const uses = await countRefs('contact', id)
-  if (uses.rfqs + uses.orders + uses.quotations > 0) throw new InUseError('contact', uses)
-  const db = requireSupabase()
-  unwrap(await db.from('contacts').delete().eq('id', id).eq('company_id', companyId).select('id'))
+/** Remove a site. Throws InUseError if an RFQ or order is filed under it (the database refuses; nothing is unfiled). */
+export function removeSite(companyId: string, id: string) {
+  return removeRow('company_sites', 'site', companyId, id)
+}
+
+/** Remove a contact. Throws InUseError if an RFQ, order or quotation names them. */
+export function removeContact(companyId: string, id: string) {
+  return removeRow('contacts', 'contact', companyId, id)
 }
 
 /** Stop carrying a brand. Only the link goes: the brand itself and any quotes for it stay. */
