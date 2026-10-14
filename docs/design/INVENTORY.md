@@ -18,28 +18,30 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 | `Banner` | Info, warning, error, success strips with optional action | 01 | U02 (built) |
 | `Tabs` | Page and panel tabs with count pills (tablist semantics; not used for site navigation, which is a `nav` of links in `AppShell`) | 01 | U02 not built; first needed by RFQ detail and Money, so build it with the first of them |
 | `Breadcrumb` | Page ancestry on detail pages | 01 | U02 not built (not in BUILD_PLAN U02); build with the first detail page |
-| `Skeleton` | Loading placeholder for text, rows and cards | 01 | U04 |
+| `Skeleton` | Loading placeholder for text, rows and cards | 01 | U04 (built) |
 | `FileDrop`, `FileRow` | Drop zone (resting, drag-over, added, too large), added-file rows with size and shrink note | 01 | U07 |
 | `Kbd` | Key hint (`⌘K`, `Esc`, `Enter`) | 01, 07 | U02 (built; the shell search shows `⌘K`) |
 | `Avatar` | Initials circle for a person (28, or 22 inside key figures) | 01 | U02 (built) |
-| `Tag` | Mono identifier or brand tag; dashed when not firm | 13 | U05 |
-| `CountPill` | Count beside tab or group names | 13 | U05 |
-| `StatusBadge` | Chip for any status value; shape, colour and label together; tones from `tokens.css` | 02 | U05 |
-| `Money` | Net / GST / gross, PKR grouping, foreign variant, estimate, stale-rate and basis-unknown marks, tabular mono | 03 | U06 |
+| `Tag` | Mono identifier or brand tag; dashed when not firm | 13 | U05 (built) |
+| `CountPill` | Count beside tab or group names | 13 | U05 (built) |
+| `StatusBadge` | Chip for any status value; shape, colour and label together; tones from `tokens.css` | 02 | U05 (built; registry in `src/lib/status.ts`) |
+| `Money` | Net / GST / gross, PKR grouping, foreign variant, estimate, stale-rate and basis-unknown marks, tabular mono | 03 | U06 (built: `Money`, `Margin`, `MoneyFx`, `NetGstGross`) |
+| `StatusTrack` | Three-step track beside a chip for the invoice courier (TCS) and FBR dimensions | money-01, 02 | U05 (built) |
+| `SumBar`, `AfterDrawings` | The Money summary strip (label, figure, one line of context) and the Amendment A6 "Not in P&L" and "After drawings" lines set apart below a month result | money-07, 10 | U06 (built) |
 | `Form`, `Field` | RHF + Zod form, label, help, error line, submitting and unique-violation states | 04 | U07 |
 | `Dialog` | Modal (Radix), header, body, footer, destructive confirm variant, focus return | 05 | U03 |
-| `DataTable` | Comfortable and compact density, sorted column, keyboard row focus, selected row, empty, loading, error, footer totals, group rows | 06 | U04 |
+| `DataTable` | Comfortable and compact density, sorted column, keyboard row focus, selected row, empty, loading, error, footer totals, group rows | 06 | U04 (built; also selection, virtualised past 80 rows, CSV export) |
 | `CommandPalette` | Cmd+K / Ctrl+K, recent, actions, jump to, searching, empty | 07 | U08 |
 | `Toast` | With Undo (10 s), plain, error | 08 | U03 |
-| `EmptyState` | Heading, what happens next, optional action; role-limited variant | 09 | U04 |
+| `EmptyState` | Heading, what happens next, optional action; role-limited variant | 09 | U04 (built; goal, neutral and error moods; the role-limited wording is a screen concern) |
 | `Tooltip` | Short hover and focus hint; also carries exact values behind rounded figures | 10 | U02 not built (not in BUILD_PLAN U02); first needed by the Today target tile |
 | `SegmentedControl` | 2 to 5 options, counts, large size; tablist or radiogroup semantics | 11 | U02 not built (not in BUILD_PLAN U02); first needed by Today |
-| `DateRail` | Start-to-due rail with today marker; tones on track, due soon, due today, overdue, done, no date | 12 | U05 |
+| `DateRail` | Start-to-due rail with today marker; tones on track, due soon, due today, overdue, done, no date | 12 | U05 NOT built (not in the U05 brief; build with the first screen that needs it) |
 | `Popover` | `Menu` variant (actions, 32 px items) and information variant | 13 | U03 |
 | `InlineConfirm` | In-place "Copied. Marked as chased today. Undo" line | 13 | U03 |
 | `Callout` | Dashed quiet note; no tone | 13 | U03 |
-| `StepList`, `ProgressSegments` | "n of m" segments and process steps | 13 | U05 |
-| `InlineEditRow` | Table row edited in place: resting, editing, saving, error; Enter saves, Esc cancels | 13 | U04 |
+| `StepList`, `ProgressSegments` | "n of m" segments and process steps | 13 | U05 (`ProgressSegments` built; `StepList` NOT built) |
+| `InlineEditRow` | Table row edited in place: resting, editing, saving, error; Enter saves, Esc cancels | 13 | U04 NOT built (not in the U04 brief; build with the first inline-edit screen) |
 
 ## 2. Composites (built from the primitives; screen tasks own them)
 
@@ -49,7 +51,7 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 | `PageHeader` (title, sub line, actions, breadcrumb) | `Breadcrumb`, `Button`, `StatusBadge` | all detail and register pages |
 | `Panel` (titled card with header, meta, actions) | `Button`, `Tag`, `SegmentedControl` | Money, Order, Company |
 | `KeyValue` list | `Money`, `Tag`, `StatusBadge` | Order, Company, Today detail |
-| `TotalsBar` (net / GST / gross summary) | `Money` | Money, Order |
+| `TotalsBar` (net / GST / gross summary) | `Money` | Money, Order (the three-cell `NetGstGross` is built in U06; a screen composes the bar from it and `SumBar`) |
 | `TargetTile` (progress to quarterly target, pace marker, working) | `Money`, `Tooltip`, `Callout` | Today |
 | `ChasePrep` (prepared draft, WhatsApp/Email switch, "Copy and mark chased", stamp) | `SegmentedControl`, `TextArea`, `Button`, `InlineConfirm`, `Toast` | Today, RFQ detail, Money |
 | `SupplierSuggestion` row and `MemoryCard` (plain reasons, counts, no scores) | `Checkbox`, `Tag`, `CountPill`, `Popover` | Intake and float |
