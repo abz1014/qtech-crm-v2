@@ -49,6 +49,13 @@ function rfqs() {
   return {
     all,
     lists: () => [...all, 'list'] as const,
+    /** R06: every open RFQ with its state, owner and company name. */
+    board: () => [...all, 'list', 'board'] as const,
+    /** R06: one page of won and closed RFQs. */
+    closed: (page: number) => [...all, 'list', 'closed', page] as const,
+    closedCount: () => [...all, 'list', 'closed-count'] as const,
+    /** R06: palette search by number, customer ref or company. */
+    search: (text: string) => [...all, 'list', 'search', text.trim().toLowerCase()] as const,
     detail,
     /** One slice of an RFQ page (R07). `slice` is a fixed word, so a typo is a type error. */
     part: (id: string, slice: RfqPart) => [...detail(id), slice] as const,
