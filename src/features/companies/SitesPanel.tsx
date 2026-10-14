@@ -1,8 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin, Plus } from 'lucide-react'
+import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { CompanyHistory, SiteRow } from '@/features/companies/api'
-import { Fine, Panel } from '@/features/companies/CompanyParts'
+import { ConfirmRemove, Fine, Panel } from '@/features/companies/CompanyParts'
+import { useRemoveSite } from '@/features/companies/hooks'
+import { removeErrorMessage } from '@/features/companies/removeError'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef, rfqRef } from '@/lib/refs'
@@ -13,6 +15,7 @@ import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { Tag } from '@/ui/Tag'
+import { useToast } from '@/ui/useToast'
 
 /*
  * Sites, with their RFQs and orders filed under the site they were for (g2-company.html board 4), so a
@@ -62,19 +65,43 @@ function itemsFor(history: CompanyHistory, siteId: string | null): Item[] {
 }
 
 export function SitesPanel({
+  companyId,
   sites,
   history,
   loading,
   error,
   onAddSite,
+  onEditSite,
 }: {
+  companyId: string
   sites: readonly SiteRow[] | undefined
   history: CompanyHistory | undefined
   loading: boolean
   error: boolean
   onAddSite: () => void
+  onEditSite: (site: SiteRow) => void
 }) {
   const today = businessToday()
+  const { toast } = useToast()
+  const remove = useRemoveSite(companyId)
+  const [removing, setRemoving] = useState<SiteRow | null>(null)
+  const [removeError, setRemoveError] = useState<string | null>(null)
+  const cancelRemove = () => {
+    const id = removing?.id
+    setRemoving(null)
+    setRemoveError(null)
+    if (id) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-remove-site="${id}"]`)?.focus())
+  }
+  const confirmRemove = () => {
+    if (!removing) return
+    remove.mutate(removing.id, {
+      onSuccess: () => {
+        toast({ title: `Removed ${removing.name}`, tone: 'success' })
+        setRemoving(null)
+      },
+      onError: err => setRemoveError(removeErrorMessage(err, 'site')),
+    })
+  }
   const columns = useMemo<Column<Item>[]>(
     () => [
       {
@@ -137,7 +164,32 @@ export function SitesPanel({
       ) : (
         <div>
           {sites.map(s => (
-            <SiteBlock key={s.id} name={s.name} address={s.address} items={history ? itemsFor(history, s.id) : []} columns={columns} />
+            <SiteBlock
+              key={s.id}
+              id={s.id}
+              name={s.name}
+              address={s.address}
+              items={history ? itemsFor(history, s.id) : []}
+              columns={columns}
+              onEdit={() => onEditSite(s)}
+              onRemove={() => {
+                setRemoveError(null)
+                setRemoving(s)
+              }}
+              confirm={
+                removing?.id === s.id ? (
+                  <ConfirmRemove
+                    title={`Remove ${s.name}?`}
+                    detail="Its address is deleted. Contacts at this site stay, with no site set."
+                    busy={remove.isPending}
+                    error={removeError}
+                    onConfirm={confirmRemove}
+                    onCancel={cancelRemove}
+                    className="mx-5 mb-3"
+                  />
+                ) : null
+              }
+            />
           ))}
           {unfiled.length > 0 ? <SiteBlock name="Not filed under a site" items={unfiled} columns={columns} muted /> : null}
         </div>
@@ -146,7 +198,27 @@ export function SitesPanel({
   )
 }
 
-function SiteBlock({ name, address, items, columns, muted }: { name: string; address?: string | null; items: Item[]; columns: Column<Item>[]; muted?: boolean }) {
+function SiteBlock({
+  id,
+  name,
+  address,
+  items,
+  columns,
+  muted,
+  onEdit,
+  onRemove,
+  confirm,
+}: {
+  id?: string
+  name: string
+  address?: string | null
+  items: Item[]
+  columns: Column<Item>[]
+  muted?: boolean
+  onEdit?: () => void
+  onRemove?: () => void
+  confirm?: ReactNode
+}) {
   const rfqs = items.filter(i => i.kind === 'rfq').length
   const orders = items.length - rfqs
   return (
@@ -160,7 +232,14 @@ function SiteBlock({ name, address, items, columns, muted }: { name: string; add
         <span className="num shrink-0 text-xs text-fg-muted">
           {rfqs} {rfqs === 1 ? 'RFQ' : 'RFQs'} · {orders} {orders === 1 ? 'order' : 'orders'}
         </span>
+        {onEdit && onRemove ? (
+          <div className="-my-1 flex shrink-0 items-center">
+            <Button variant="quiet" size="sm" icon={Pencil} aria-label={`Edit ${name}`} onClick={onEdit} />
+            <Button variant="quiet" size="sm" icon={Trash2} aria-label={`Remove ${name}`} data-remove-site={id} onClick={onRemove} />
+          </div>
+        ) : null}
       </header>
+      {confirm}
       {items.length > 0 ? (
         <DataTable label={`RFQs and orders at ${name}`} columns={columns} rows={items} getRowId={r => r.key} density="compact" />
       ) : (

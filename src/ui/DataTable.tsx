@@ -352,7 +352,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
       className={cn(kind === 'group' ? 'bg-canvas text-xs font-medium text-fg-muted [&_.num]:text-fg-2' : 'bg-sunken font-medium')}
     >
       {selection ? (
-        <td className="h-9 w-10 border-b border-line px-[var(--cell-px)]">
+        <td className="h-9 w-10 border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5">
           {groupIds
             ? checkbox(
                 groupIds.every(id => selected?.has(id)),
@@ -364,7 +364,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
       ) : null}
       <td
         colSpan={labelCols}
-        className={cn('h-9 whitespace-nowrap border-b border-line px-[var(--cell-px)]', kind === 'foot' && 'border-t border-line-strong')}
+        className={cn('h-9 whitespace-nowrap border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5', kind === 'foot' && 'border-t border-line-strong')}
       >
         {labelNode}
       </td>
@@ -372,7 +372,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
         <td
           key={c.id}
           className={cn(
-            'h-9 whitespace-nowrap border-b border-line px-[var(--cell-px)]',
+            'h-9 whitespace-nowrap border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5',
             kind === 'foot' && 'border-t border-line-strong',
             alignRight(c) && 'text-right',
             hide(c),
@@ -522,7 +522,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
           <thead>
             <tr aria-rowindex={virtual ? 1 : undefined}>
               {selection ? (
-                <th className="sticky top-0 z-[1] h-[36px] w-10 border-b border-line bg-sunken px-[var(--cell-px)]">
+                <th className="sticky top-0 z-[1] h-[36px] w-10 border-b border-line bg-sunken px-[var(--cell-px)] first:pl-5 last:pr-5">
                   {checkbox(headState, () => setMany(ids, !allOn), 'Select all rows')}
                 </th>
               ) : null}
@@ -536,7 +536,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                     aria-sort={dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : sortable ? 'none' : undefined}
                     style={c.width !== undefined ? { width: c.width } : undefined}
                     className={cn(
-                      'group sticky top-0 z-[1] h-[36px] whitespace-nowrap border-b border-line bg-sunken px-[var(--cell-px)] text-xs font-medium',
+                      'group sticky top-0 z-[1] h-[36px] whitespace-nowrap border-b border-line bg-sunken px-[var(--cell-px)] text-xs font-medium first:pl-5 last:pr-5',
                       alignRight(c) ? 'text-right' : 'text-left',
                       dir ? 'text-fg' : 'text-fg-muted',
                       hide(c),

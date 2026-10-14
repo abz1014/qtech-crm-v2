@@ -15,9 +15,12 @@ import { AppShell } from '@/app/shell/AppShell'
  * Sub-routes such as /rfqs/:id are declared by the feature under the same key.
  */
 const screens: Partial<Record<NavKey, ComponentType>> = {
-  rfqs: lazy(() => import('@/features/rfqs/RfqsScreen')),
   companies: lazy(() => import('@/features/companies/CompaniesScreen')),
 }
+
+/** New RFQ (R05): its own route, so it works under whichever screen owns the rest of /rfqs. */
+const IntakeScreen = lazy(() => import('@/features/rfqs/IntakeScreen'))
+const rfqsItem = navItems.find(i => i.key === 'rfqs')
 
 /** Dev builds only: the component gallery (U09). Dead code in production. */
 const Gallery = import.meta.env.DEV ? lazy(() => import('@/dev/gallery/Gallery')) : null
@@ -46,6 +49,18 @@ export function AppRoutes() {
         <Route element={<AppShell />}>
           <Route index element={<RoleLanding />} />
           <Route path="no-access" element={<NoAccessPage />} />
+          {rfqsItem ? (
+            <Route
+              path="rfqs/new"
+              element={
+                <RequireRole item={rfqsItem}>
+                  <Suspense fallback={null}>
+                    <IntakeScreen />
+                  </Suspense>
+                </RequireRole>
+              }
+            />
+          ) : null}
           {navItems.map(item => {
             const Screen = screens[item.key]
             return (

@@ -387,6 +387,89 @@ export async function addContact(input: {
   )
 }
 
+export async function updateSite(id: string, patch: { name: string; address?: string | null }) {
+  const db = requireSupabase()
+  unwrap(await db.from('company_sites').update({ name: patch.name.trim(), address: patch.address?.trim() || null }).eq('id', id).select('id').single())
+}
+
+export async function updateContact(
+  id: string,
+  patch: { name: string; siteId?: string | null; phone?: string | null; email?: string | null; notes?: string | null },
+) {
+  const db = requireSupabase()
+  unwrap(
+    await db
+      .from('contacts')
+      .update({
+        name: patch.name.trim(),
+        site_id: patch.siteId || null,
+        phone: patch.phone?.trim() || null,
+        email: patch.email?.trim() || null,
+        notes: patch.notes?.trim() || null,
+      })
+      .eq('id', id)
+      .select('id')
+      .single(),
+  )
+}
+
+/**
+ * Raised instead of deleting when RFQs, orders or quotations still point at a site or contact. The
+ * foreign keys are ON DELETE SET NULL, so the database would NOT refuse: it would quietly unfile the RFQs
+ * and orders. Anything that money or RFQs reference is never deleted, so this is checked first. `code`
+ * is 23503, the code Postgres uses for the same situation, so mapPgError-style handling treats it alike.
+ */
+export class InUseError extends Error {
+  readonly code = '23503'
+  constructor(readonly noun: 'site' | 'contact', readonly uses: { rfqs: number; orders: number; quotations: number }) {
+    super(inUseSentence(noun, uses))
+    this.name = 'InUseError'
+  }
+}
+
+const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+
+export function inUseSentence(noun: string, u: { rfqs: number; orders: number; quotations: number }): string {
+  const parts = [u.rfqs > 0 ? count(u.rfqs, 'RFQ') : '', u.orders > 0 ? count(u.orders, 'order') : '', u.quotations > 0 ? count(u.quotations, 'quotation') : ''].filter(Boolean)
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0]
+  return `This ${noun} is used on ${list}; it can't be removed.`
+}
+
+/** How many rows of RFQs, orders and quotations point at a site or contact. */
+async function countRefs(kind: 'site' | 'contact', id: string) {
+  const db = requireSupabase()
+  const col = kind === 'site' ? 'site_id' : 'contact_id'
+  const n = async (q: PromiseLike<{ data: unknown[] | null; error: { code?: string; message: string } | null }>) => (unwrap(await q) ?? []).length
+  const [rfqs, orders, quotations] = await Promise.all([
+    n(db.from('rfqs').select('id').eq(col, id)),
+    n(db.from('orders').select('id').eq(col, id)),
+    kind === 'contact' ? n(db.from('quotations').select('id').eq('contact_id', id)) : Promise.resolve(0),
+  ])
+  return { rfqs, orders, quotations }
+}
+
+/** Remove a site that nothing refers to. Throws InUseError if an RFQ or order is filed under it. */
+export async function removeSite(companyId: string, id: string) {
+  const uses = await countRefs('site', id)
+  if (uses.rfqs + uses.orders > 0) throw new InUseError('site', uses)
+  const db = requireSupabase()
+  unwrap(await db.from('company_sites').delete().eq('id', id).eq('company_id', companyId).select('id'))
+}
+
+/** Remove a contact that nothing refers to. Throws InUseError if an RFQ, order or quotation names them. */
+export async function removeContact(companyId: string, id: string) {
+  const uses = await countRefs('contact', id)
+  if (uses.rfqs + uses.orders + uses.quotations > 0) throw new InUseError('contact', uses)
+  const db = requireSupabase()
+  unwrap(await db.from('contacts').delete().eq('id', id).eq('company_id', companyId).select('id'))
+}
+
+/** Stop carrying a brand. Only the link goes: the brand itself and any quotes for it stay. */
+export async function unlinkBrand(companyId: string, brandId: string) {
+  const db = requireSupabase()
+  unwrap(await db.from('company_brands').delete().eq('company_id', companyId).eq('brand_id', brandId).select('brand_id'))
+}
+
 /** Link a brand (or family) to a company. Idempotent: carrying it twice is not an error. */
 export async function linkBrand(companyId: string, brandId: string) {
   const db = requireSupabase()

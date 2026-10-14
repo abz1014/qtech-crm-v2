@@ -22,12 +22,12 @@ import { defineConfig, devices } from '@playwright/test'
  *    The tests read API_URL and ANON_KEY from the environment (local keys only). REVIEW_DIR, when set, collects the
  *    review screenshots.
  *
- *  - rfqs (R05): the intake = float screen on the same stack and build. Asserts the FE-2 interaction counts, the
- *    Undo, the double-tap guard and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e-rfqs.yml):
- *      E2E_SUITE=rfqs REVIEW_DIR=review-shots npx playwright test --project=rfqs
+ *  - rfq-intake (R05): the intake = float screen on the same stack and build. Asserts the FE-2 interaction counts, the
+ *    Undo, the double-tap guard and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e-rfq-intake.yml):
+ *      E2E_SUITE=rfq-intake REVIEW_DIR=review-shots npx playwright test --project=rfq-intake
  */
-const dbSuites = ['auth', 'companies', 'rfqs']
-const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? (process.env.E2E_SUITE as 'auth' | 'companies' | 'rfqs') : 'gallery'
+const dbSuites = ['auth', 'companies', 'rfq-intake']
+const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? (process.env.E2E_SUITE as 'auth' | 'companies' | 'rfq-intake') : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
 
@@ -81,8 +81,8 @@ export default defineConfig({
       },
     },
     {
-      name: 'rfqs',
-      testMatch: /rfqs\/.*\.spec\.ts/,
+      name: 'rfq-intake',
+      testMatch: /rfqs\/intake\.spec\.ts/,
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: {

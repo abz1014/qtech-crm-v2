@@ -10,7 +10,7 @@ import { ToastProvider } from '@/ui/Toast'
 
 /*
  * The intake screen's flow with a scripted database (R05): what is called, in what order, and how often. The real
- * queries, the RPC and Row Level Security are proven against the real database by the Playwright `rfqs` project.
+ * queries, the RPC and Row Level Security are proven against the real database by the Playwright `rfq-intake` project.
  */
 
 const EMAIL = ['Dear Sir, please quote:', '1) Hach HQ1110 portable meter - 1 no', '2) 24V actuator for ball valve x 2', 'Regards, K'].join('\n')

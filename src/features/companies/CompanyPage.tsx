@@ -1,16 +1,18 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Building2, ChevronLeft, Ellipsis, FilePlus2, GitMerge, History, Pencil, Plus, Send } from 'lucide-react'
+import { Building2, ChevronLeft, Ellipsis, FilePlus2, GitMerge, History, Pencil, Plus, Send, Trash2 } from 'lucide-react'
 import {
   useCompany,
   useCompanyContacts,
   useCompanyHistory,
   useCompanyMoney,
   useCompanySites,
+  useRemoveContact,
 } from '@/features/companies/hooks'
 import type { CompanyDetail, CompanyRole, ContactRow, SiteRow } from '@/features/companies/api'
-import { AddContactDialog, AddSiteDialog, EditCompanyDialog } from '@/features/companies/CompanyDialogs'
-import { Fine, KeyValue, Panel } from '@/features/companies/CompanyParts'
+import { ContactDialog, EditCompanyDialog, SiteDialog } from '@/features/companies/CompanyDialogs'
+import { ConfirmRemove, Fine, KeyValue, Panel } from '@/features/companies/CompanyParts'
+import { removeErrorMessage } from '@/features/companies/removeError'
 import { BrandsPanel } from '@/features/companies/BrandsPanel'
 import { MergeCompanyDialog } from '@/features/companies/MergeCompanyDialog'
 import { SitesPanel } from '@/features/companies/SitesPanel'
@@ -119,9 +121,16 @@ function Loaded({ company }: { company: CompanyDetail }) {
   const history = useCompanyHistory(company.id)
   const money = useCompanyMoney(company.id, isAdmin)
 
+  // 'site' and 'contact' are the add dialogs; editSite and editContact open the same dialogs filled in.
   const [dialog, setDialog] = useState<null | 'edit' | 'site' | 'contact' | 'merge'>(null)
+  const [editSite, setEditSite] = useState<SiteRow | null>(null)
+  const [editContact, setEditContact] = useState<ContactRow | null>(null)
   const close = (open: boolean) => {
-    if (!open) setDialog(null)
+    if (!open) {
+      setDialog(null)
+      setEditSite(null)
+      setEditContact(null)
+    }
   }
 
   const supplierSide = company.isSupplier
@@ -185,11 +194,16 @@ function Loaded({ company }: { company: CompanyDetail }) {
             {supplierSide ? <SupplierPanel companyId={company.id} /> : null}
             {showSites ? (
               <SitesPanel
+                companyId={company.id}
                 sites={sites.data}
                 history={history.data}
                 loading={sites.isPending || history.isPending}
                 error={sites.isError || history.isError}
                 onAddSite={() => setDialog('site')}
+                onEditSite={s => {
+                  setEditSite(s)
+                  setDialog('site')
+                }}
               />
             ) : null}
             <Panel title="History" meta="Changes to this company">
@@ -204,7 +218,18 @@ function Loaded({ company }: { company: CompanyDetail }) {
           </div>
 
           <aside className="grid content-start gap-6" aria-label="Company details">
-            <ContactsPanel contacts={contacts.data} sites={sites.data} loading={contacts.isPending} error={contacts.isError} onAdd={() => setDialog('contact')} />
+            <ContactsPanel
+              companyId={company.id}
+              contacts={contacts.data}
+              sites={sites.data}
+              loading={contacts.isPending}
+              error={contacts.isError}
+              onAdd={() => setDialog('contact')}
+              onEdit={c => {
+                setEditContact(c)
+                setDialog('contact')
+              }}
+            />
             {supplierSide || !company.isCustomer ? <BrandsPanel companyId={company.id} /> : null}
             <RolesPanel company={company} />
             {isAdmin && money.data && money.data.orders > 0 ? (
@@ -231,8 +256,8 @@ function Loaded({ company }: { company: CompanyDetail }) {
       </div>
 
       <EditCompanyDialog open={dialog === 'edit'} onOpenChange={close} company={company} />
-      <AddSiteDialog open={dialog === 'site'} onOpenChange={close} companyId={company.id} companyName={company.name} />
-      <AddContactDialog open={dialog === 'contact'} onOpenChange={close} companyId={company.id} companyName={company.name} sites={sites.data ?? []} />
+      <SiteDialog open={dialog === 'site'} onOpenChange={close} companyId={company.id} companyName={company.name} site={editSite} />
+      <ContactDialog open={dialog === 'contact'} onOpenChange={close} companyId={company.id} companyName={company.name} sites={sites.data ?? []} contact={editContact} />
       {isAdmin ? (
         <MergeCompanyDialog
           open={dialog === 'merge'}
@@ -249,19 +274,43 @@ function Loaded({ company }: { company: CompanyDetail }) {
 }
 
 function ContactsPanel({
+  companyId,
   contacts,
   sites,
   loading,
   error,
   onAdd,
+  onEdit,
 }: {
+  companyId: string
   contacts: ContactRow[] | undefined
   sites: SiteRow[] | undefined
   loading: boolean
   error: boolean
   onAdd: () => void
+  onEdit: (contact: ContactRow) => void
 }) {
   const siteName = new Map((sites ?? []).map(s => [s.id, s.name]))
+  const { toast } = useToast()
+  const remove = useRemoveContact(companyId)
+  const [removing, setRemoving] = useState<ContactRow | null>(null)
+  const [removeError, setRemoveError] = useState<string | null>(null)
+  const cancelRemove = () => {
+    const id = removing?.id
+    setRemoving(null)
+    setRemoveError(null)
+    if (id) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-remove-contact="${id}"]`)?.focus())
+  }
+  const confirmRemove = () => {
+    if (!removing) return
+    remove.mutate(removing.id, {
+      onSuccess: () => {
+        toast({ title: `Removed ${removing.name}`, tone: 'success' })
+        setRemoving(null)
+      },
+      onError: err => setRemoveError(removeErrorMessage(err, 'contact')),
+    })
+  }
   return (
     <Panel
       title="Contacts"
@@ -287,16 +336,42 @@ function ContactsPanel({
           <ul className="grid">
             {contacts.map(c => (
               <li key={c.id} className="grid gap-[2px] border-t py-3 text-sm first:border-t-0 first:pt-0 last:pb-0">
-                <span className="font-medium">{c.name}</span>
+                {removing?.id === c.id ? (
+                  <ConfirmRemove
+                    title={`Remove ${c.name}?`}
+                    detail="Their details are deleted from this company."
+                    busy={remove.isPending}
+                    error={removeError}
+                    onConfirm={confirmRemove}
+                    onCancel={cancelRemove}
+                  />
+                ) : null}
+                <div className="flex items-start justify-between gap-2">
+                  <span className="min-w-0 break-words font-medium">{c.name}</span>
+                  <span className="-my-1 flex shrink-0 items-center">
+                    <Button variant="quiet" size="sm" icon={Pencil} aria-label={`Edit ${c.name}`} onClick={() => onEdit(c)} />
+                    <Button
+                      variant="quiet"
+                      size="sm"
+                      icon={Trash2}
+                      aria-label={`Remove ${c.name}`}
+                      data-remove-contact={c.id}
+                      onClick={() => {
+                        setRemoveError(null)
+                        setRemoving(c)
+                      }}
+                    />
+                  </span>
+                </div>
                 {c.notes ? <span className="text-xs text-fg-muted">{c.notes}</span> : null}
                 {c.site_id && siteName.get(c.site_id) ? <span className="text-xs text-fg-muted">{siteName.get(c.site_id)}</span> : null}
                 {c.phone ? (
-                  <a href={`tel:${c.phone.replace(/\s+/g, '')}`} className="num w-fit text-xs text-fg-muted hover:text-fg">
+                  <a href={`tel:${c.phone.replace(/\s+/g, '')}`} className="num inline-flex min-h-6 w-fit items-center text-xs text-fg-muted hover:text-fg">
                     {c.phone}
                   </a>
                 ) : null}
                 {c.email ? (
-                  <a href={`mailto:${c.email}`} className="w-fit text-xs text-fg-muted hover:text-fg">
+                  <a href={`mailto:${c.email}`} className="inline-flex min-h-6 w-fit items-center text-xs text-fg-muted hover:text-fg">
                     {c.email}
                   </a>
                 ) : null}

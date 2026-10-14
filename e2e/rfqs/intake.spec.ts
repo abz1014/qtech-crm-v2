@@ -108,6 +108,11 @@ const inquiriesOf = (rfqId: string) =>
 const itemsOf = (rfqId: string) =>
   must(rest<{ description: string; qty: number; unit: string | null; gst_rate: number; brand_id: string | null; position: number }[]>('admin', `rfq_items?rfq_id=eq.${rfqId}&order=position&select=description,qty,unit,gst_rate,brand_id,position`))
 
+/** The whole supplier row is the tap target: its name is the label that covers the row. */
+async function tick(page: Page, name: string): Promise<void> {
+  await page.getByText(name, { exact: true }).click()
+}
+
 async function pickCompany(page: Page, name: string): Promise<void> {
   await page.getByRole('combobox', { name: 'Company' }).fill(name)
   await page.getByRole('option', { name: new RegExp(name) }).click()
@@ -302,7 +307,8 @@ test.describe('save only, and no supplier ticked', () => {
     await paste(page, s.email)
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     await expect(page.getByRole('checkbox', { name: s.supplied.name })).toBeChecked()
-    await page.getByRole('checkbox', { name: s.carries.name }).check()
+    await tick(page, s.carries.name)
+    await expect(page.getByRole('checkbox', { name: s.carries.name })).toBeChecked()
     await page.getByRole('button', { name: 'Save without floating' }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
     const [rfq] = await rfqsOf(s.customer.id)

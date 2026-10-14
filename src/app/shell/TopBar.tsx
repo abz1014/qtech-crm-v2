@@ -59,7 +59,7 @@ export function TopBar({ user, counts, onSearch }: TopBarProps) {
       <button
         type="button"
         onClick={onSearch}
-        aria-label="Search or jump to"
+        aria-label="Search or jump to ⌘K"
         className={cn(
           'ml-auto flex h-control items-center gap-2 rounded border border-line-strong bg-sunken px-2 text-left text-sm text-fg-muted',
           'transition-colors duration-fast ease-out hover:border-line-input',

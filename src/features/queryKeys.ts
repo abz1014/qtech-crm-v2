@@ -45,13 +45,15 @@ function brands() {
 /** Reserved roots for areas that other tasks build. They exist now so the invalidation map can name them. */
 function rfqs() {
   const all = root('rfqs')
+  return { all, lists: () => [...all, 'list'] as const, detail: (id: string) => [...all, 'detail', id] as const }
+}
+/** Intake (R05): who can be asked for a price, and what each of them remembers about the items being entered. */
+function intake() {
+  const all = root('intake')
   return {
     all,
-    lists: () => [...all, 'list'] as const,
-    detail: (id: string) => [...all, 'detail', id] as const,
-    /** Intake (R05): who can be asked, and what each of them remembers about the items being entered. */
-    suppliers: () => [...all, 'intake', 'suppliers'] as const,
-    memory: (signature: string) => [...all, 'intake', 'memory', signature] as const,
+    suppliers: () => [...all, 'suppliers'] as const,
+    memory: (signature: string) => [...all, 'memory', signature] as const,
   }
 }
 function orders() {
@@ -64,6 +66,7 @@ export const qk = {
   brands: brands(),
   rfqs: rfqs(),
   orders: orders(),
+  intake: intake(),
 }
 
 export type QueryKeyRoot = keyof typeof qk

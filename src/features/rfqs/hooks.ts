@@ -22,14 +22,14 @@ export function useCompanyMatches(text: string) {
 
 /** Everyone who can be asked for a price. Only read once the person reaches the suppliers step. */
 export function useSupplierCandidates(enabled: boolean) {
-  return useQuery({ queryKey: qk.rfqs.suppliers(), queryFn: api.listSupplierCandidates, enabled, staleTime: 60_000 })
+  return useQuery({ queryKey: qk.intake.suppliers(), queryFn: api.listSupplierCandidates, enabled, staleTime: 60_000 })
 }
 
 /** What each candidate remembers about each item. `signature` changes when an item's description, brand or family does. */
 export function useSupplierMemory(items: readonly api.MemoryQuery[], supplierIds: readonly string[], enabled: boolean) {
   const signature = JSON.stringify([items.map(i => [i.key, i.description, i.brandId, i.familyId]), supplierIds.length])
   return useQuery({
-    queryKey: qk.rfqs.memory(signature),
+    queryKey: qk.intake.memory(signature),
     queryFn: () => api.getSupplierMemory(items, supplierIds),
     enabled: enabled && items.length > 0,
     staleTime: 60_000,
