@@ -15,8 +15,14 @@ import { defineConfig, devices } from '@playwright/test'
  *      VITE_SUPABASE_URL=$API_URL VITE_SUPABASE_ANON_KEY=$ANON_KEY npm run build
  *      E2E_SUITE=auth npx playwright test --project=auth
  *    The tests read API_URL and SERVICE_ROLE_KEY from the environment (local keys only).
+ *
+ *  - companies (R02): the Companies screens, signed in through the login form as the fixture users, with its data
+ *    set up through the REST API as those users. Same server and build as 'auth' (.github/workflows/e2e-companies.yml):
+ *      E2E_SUITE=companies REVIEW_DIR=review-shots npx playwright test --project=companies
+ *    The tests read API_URL and ANON_KEY from the environment (local keys only). REVIEW_DIR, when set, collects the
+ *    review screenshots.
  */
-const suite = process.env.E2E_SUITE === 'auth' ? 'auth' : 'gallery'
+const suite = process.env.E2E_SUITE === 'auth' ? 'auth' : process.env.E2E_SUITE === 'companies' ? 'companies' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
 
@@ -36,8 +42,8 @@ export default defineConfig({
   snapshotPathTemplate: '{testDir}/__screenshots__/{projectName}/{arg}{ext}',
   outputDir: 'test-results',
   forbidOnly: Boolean(process.env.CI),
-  // The auth suite shares one database: one worker, in order. The gallery suite is stateless.
-  workers: suite === 'auth' ? 1 : process.env.CI ? 2 : undefined,
+  // The auth and companies suites share one database: one worker, in order. The gallery suite is stateless.
+  workers: suite === 'auth' || suite === 'companies' ? 1 : process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   expect: {
     toHaveScreenshot: { animations: 'disabled', caret: 'hide', scale: 'css', maxDiffPixelRatio: 0.002 },
@@ -55,11 +61,25 @@ export default defineConfig({
         screenshot: 'only-on-failure',
       },
     },
+    {
+      name: 'companies',
+      testMatch: /companies\/.*\.spec\.ts/,
+      // 1440 is the design width (FE-1); the review screenshots are taken at it.
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://127.0.0.1:${AUTH_PORT}`,
+        // 1440 is the design width (FE-1); the review screenshots are taken at it.
+        viewport: { width: 1440, height: 900 },
+        screenshot: 'only-on-failure',
+      },
+    },
     { name: 'w1440', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 1440, height: 900 } } },
     { name: 'w375', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 375, height: 812 } } },
   ],
   webServer:
-    suite === 'auth'
+    suite === 'auth' || suite === 'companies'
       ? {
           command: `npx vite preview --host 127.0.0.1 --port ${AUTH_PORT} --strictPort`,
           url: `http://127.0.0.1:${AUTH_PORT}/login`,

@@ -1,0 +1,422 @@
+import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import type { TableRow, ViewRow } from '@/features/dbTypes'
+
+/*
+ * Companies: every database call for this area (R01 reference implementation). This is the only
+ * file that names a companies table or view. Hooks (hooks.ts) wrap these in TanStack Query; nothing
+ * else talks to Supabase. Access follows DATA_MODEL section 10 and is enforced by Row Level
+ * Security, not here: engineers and sales read every column below, and the one money read
+ * (getCompanyMoney) is a view that only an admin can select from.
+ */
+
+export type CompanyRole = 'customer' | 'supplier' | 'both' | 'prospect'
+
+export interface CompanyListRow {
+  id: string
+  name: string
+  country: string | null
+  role: CompanyRole | null
+  rfqCount: number
+  orderCount: number
+  updatedAt: string
+}
+
+export interface CompanyDetail {
+  id: string
+  name: string
+  country: string | null
+  notes: string | null
+  createdAt: string
+  role: CompanyRole | null
+  isCustomer: boolean
+  isSupplier: boolean
+  legacyImported: boolean
+}
+
+function asRole(r: string | null | undefined): CompanyRole | null {
+  return r === 'customer' || r === 'supplier' || r === 'both' || r === 'prospect' ? r : null
+}
+
+/** Every company with its derived role and how many RFQs and orders it has. Four light reads, joined here. */
+export async function listCompanies(): Promise<CompanyListRow[]> {
+  const db = requireSupabase()
+  const [companies, roles, rfqs, orders] = await Promise.all([
+    fetchAll<Pick<TableRow<'companies'>, 'id' | 'name' | 'country' | 'updated_at'>>((from, to) =>
+      db.from('companies').select('id, name, country, updated_at').order('name').range(from, to),
+    ),
+    fetchAll<Pick<ViewRow<'v_company_roles'>, 'company_id' | 'role'>>((from, to) =>
+      db.from('v_company_roles').select('company_id, role').range(from, to),
+    ),
+    fetchAll<{ company_id: string }>((from, to) => db.from('rfqs').select('company_id').range(from, to)),
+    fetchAll<{ company_id: string }>((from, to) => db.from('orders').select('company_id').range(from, to)),
+  ])
+  const roleBy = new Map(roles.map(r => [r.company_id, asRole(r.role)]))
+  const count = (rows: { company_id: string }[]) => {
+    const m = new Map<string, number>()
+    for (const r of rows) m.set(r.company_id, (m.get(r.company_id) ?? 0) + 1)
+    return m
+  }
+  const rfqBy = count(rfqs)
+  const orderBy = count(orders)
+  return companies.map(c => ({
+    id: c.id,
+    name: c.name,
+    country: c.country,
+    role: roleBy.get(c.id) ?? null,
+    rfqCount: rfqBy.get(c.id) ?? 0,
+    orderCount: orderBy.get(c.id) ?? 0,
+    updatedAt: c.updated_at,
+  }))
+}
+
+export interface CompanyHit {
+  id: string
+  name: string
+  country: string | null
+  role: CompanyRole | null
+}
+
+/** Escape the characters that mean something to ilike, so typing "50%" searches for "50%". */
+const likeEscape = (s: string) => s.replace(/[\\%_]/g, c => `\\${c}`)
+
+/** Name search for the command palette and pickers. Up to `limit` companies whose name contains the text. */
+export async function searchCompanies(text: string, limit = 8): Promise<CompanyHit[]> {
+  const db = requireSupabase()
+  const q = text.trim()
+  if (!q) return []
+  const rows = unwrap(
+    await db.from('companies').select('id, name, country').ilike('name', `%${likeEscape(q)}%`).order('name').limit(limit),
+  )
+  const ids = rows.map(r => r.id)
+  const roles = ids.length ? unwrap(await db.from('v_company_roles').select('company_id, role').in('company_id', ids)) : []
+  const roleBy = new Map(roles.map(r => [r.company_id, asRole(r.role)]))
+  return rows.map(r => ({ id: r.id, name: r.name, country: r.country, role: roleBy.get(r.id) ?? null }))
+}
+
+/** The company whose name equals `name` ignoring case and surrounding spaces, as the unique index sees it. */
+export async function findCompanyByName(name: string): Promise<CompanyHit | null> {
+  const db = requireSupabase()
+  const wanted = name.trim()
+  if (!wanted) return null
+  const rows = unwrap(await db.from('companies').select('id, name, country').ilike('name', likeEscape(wanted)).limit(5))
+  const hit = rows.find(r => r.name.trim().toLowerCase() === wanted.toLowerCase())
+  return hit ? { id: hit.id, name: hit.name, country: hit.country, role: null } : null
+}
+
+export async function getCompany(id: string): Promise<CompanyDetail | null> {
+  const db = requireSupabase()
+  const [company, role] = await Promise.all([
+    db.from('companies').select('id, name, country, notes, created_at, legacy_flags, legacy_source').eq('id', id).maybeSingle(),
+    db.from('v_company_roles').select('role, is_customer, is_supplier').eq('company_id', id).maybeSingle(),
+  ])
+  const c = unwrap(company)
+  if (!c) return null
+  const r = unwrap(role)
+  return {
+    id: c.id,
+    name: c.name,
+    country: c.country,
+    notes: c.notes,
+    createdAt: c.created_at,
+    role: asRole(r?.role),
+    isCustomer: r?.is_customer ?? false,
+    isSupplier: r?.is_supplier ?? false,
+    legacyImported: c.legacy_source !== null || (c.legacy_flags?.length ?? 0) > 0,
+  }
+}
+
+export interface SiteRow {
+  id: string
+  name: string
+  address: string | null
+}
+
+export async function listSites(companyId: string): Promise<SiteRow[]> {
+  const db = requireSupabase()
+  return unwrap(await db.from('company_sites').select('id, name, address').eq('company_id', companyId).order('name'))
+}
+
+export interface ContactRow {
+  id: string
+  name: string
+  phone: string | null
+  email: string | null
+  notes: string | null
+  site_id: string | null
+}
+
+export async function listContacts(companyId: string): Promise<ContactRow[]> {
+  const db = requireSupabase()
+  return unwrap(
+    await db.from('contacts').select('id, name, phone, email, notes, site_id').eq('company_id', companyId).order('name'),
+  )
+}
+
+export interface CarriedBrand {
+  brandId: string
+  name: string
+  kind: 'brand' | 'family'
+}
+
+export async function listCompanyBrands(companyId: string): Promise<CarriedBrand[]> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('company_brands').select('brand_id, brands(name, kind)').eq('company_id', companyId))
+  return rows
+    .map(r => {
+      const b = Array.isArray(r.brands) ? r.brands[0] : r.brands
+      return b
+        ? { brandId: r.brand_id, name: b.name, kind: (b.kind === 'family' ? 'family' : 'brand') as CarriedBrand['kind'] }
+        : null
+    })
+    .filter((b): b is CarriedBrand => b !== null)
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+export async function listBrands() {
+  const db = requireSupabase()
+  return fetchAll<Pick<TableRow<'brands'>, 'id' | 'name' | 'kind'>>((from, to) =>
+    db.from('brands').select('id, name, kind').order('name').range(from, to),
+  )
+}
+
+export type SupplierStats = ViewRow<'v_supplier_stats'>
+
+export async function getSupplierStats(companyId: string): Promise<SupplierStats | null> {
+  const db = requireSupabase()
+  return unwrap(await db.from('v_supplier_stats').select('*').eq('supplier_id', companyId).maybeSingle())
+}
+
+export interface SupplierEnquiry {
+  inquiryId: string
+  rfqId: string
+  rfqNumber: number | null
+  sentOn: string
+  replied: boolean
+  quoted: boolean
+  noOffer: boolean
+  replyDays: number | null
+  isLegacy: boolean
+}
+
+/** The supplier's sent enquiries of the last 24 months (v_supplier_activity), newest first, with the RFQ number. */
+export async function getSupplierActivity(companyId: string): Promise<SupplierEnquiry[]> {
+  const db = requireSupabase()
+  const rows = unwrap(
+    await db
+      .from('v_supplier_activity')
+      .select('inquiry_id, rfq_id, sent_on, replied, quoted, no_offer, reply_days, is_legacy')
+      .eq('supplier_id', companyId)
+      .order('sent_on', { ascending: false })
+      .limit(50),
+  )
+  const rfqIds = [...new Set(rows.map(r => r.rfq_id).filter((x): x is string => !!x))]
+  const numbers = rfqIds.length ? unwrap(await db.from('rfqs').select('id, number').in('id', rfqIds)) : []
+  const numberBy = new Map(numbers.map(n => [n.id, n.number]))
+  return rows.map(r => ({
+    inquiryId: r.inquiry_id ?? '',
+    rfqId: r.rfq_id ?? '',
+    rfqNumber: numberBy.get(r.rfq_id ?? '') ?? null,
+    sentOn: r.sent_on ?? '',
+    replied: r.replied ?? false,
+    quoted: r.quoted ?? false,
+    noOffer: r.no_offer ?? false,
+    replyDays: r.reply_days,
+    isLegacy: r.is_legacy ?? false,
+  }))
+}
+
+export interface HistoryRfq {
+  id: string
+  number: number
+  siteId: string | null
+  receivedOn: string
+  dueOn: string | null
+  customerRef: string | null
+  outcome: string | null
+  orderNumber: number | null
+}
+export interface HistoryOrder {
+  id: string
+  number: number
+  siteId: string | null
+  orderedOn: string | null
+  rfqId: string | null
+  lifecycle: string | null
+  invoicing: string | null
+}
+export interface CompanyHistory {
+  rfqs: HistoryRfq[]
+  orders: HistoryOrder[]
+}
+
+/** The company's RFQs and orders, for the site-by-site list. Status values come straight from the state views. */
+export async function getCompanyHistory(companyId: string): Promise<CompanyHistory> {
+  const db = requireSupabase()
+  const [rfqs, rfqState, orders, orderState] = await Promise.all([
+    db
+      .from('rfqs')
+      .select('id, number, site_id, received_on, due_on, customer_ref')
+      .eq('company_id', companyId)
+      .order('received_on', { ascending: false }),
+    db.from('v_rfq_state').select('rfq_id, outcome').eq('company_id', companyId),
+    db
+      .from('orders')
+      .select('id, number, site_id, ordered_on, rfq_id')
+      .eq('company_id', companyId)
+      .order('ordered_on', { ascending: false, nullsFirst: false }),
+    db.from('v_order_state').select('order_id, lifecycle, invoicing_state').eq('company_id', companyId),
+  ])
+  const outcomeBy = new Map(unwrap(rfqState).map(s => [s.rfq_id, s.outcome]))
+  const stateBy = new Map(unwrap(orderState).map(s => [s.order_id, s]))
+  const orderRows = unwrap(orders)
+  const orderNumberByRfq = new Map(orderRows.filter(o => o.rfq_id).map(o => [o.rfq_id as string, o.number]))
+  return {
+    rfqs: unwrap(rfqs).map(r => ({
+      id: r.id,
+      number: r.number,
+      siteId: r.site_id,
+      receivedOn: r.received_on,
+      dueOn: r.due_on,
+      customerRef: r.customer_ref,
+      outcome: outcomeBy.get(r.id) ?? null,
+      orderNumber: orderNumberByRfq.get(r.id) ?? null,
+    })),
+    orders: orderRows.map(o => ({
+      id: o.id,
+      number: o.number,
+      siteId: o.site_id,
+      orderedOn: o.ordered_on,
+      rfqId: o.rfq_id,
+      lifecycle: stateBy.get(o.id)?.lifecycle ?? null,
+      invoicing: stateBy.get(o.id)?.invoicing_state ?? null,
+    })),
+  }
+}
+
+export interface CompanyMoney {
+  receivable: number
+  settled: number
+  balance: number
+  orders: number
+}
+
+/** ADMIN ONLY (v_order_money refuses anyone else; the screen also hides the panel). Totals over the company's orders. */
+export async function getCompanyMoney(companyId: string): Promise<CompanyMoney> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('v_order_money').select('receivable, settled').eq('company_id', companyId))
+  let receivable = 0
+  let settled = 0
+  for (const r of rows) {
+    receivable += Number(r.receivable ?? 0)
+    settled += Number(r.settled ?? 0)
+  }
+  return { receivable, settled, balance: receivable - settled, orders: rows.length }
+}
+
+// ---------------------------------------------------------------- writes
+
+export interface NewCompany {
+  /** The client-generated request id: a retry of the same save cannot add a second row. */
+  id: string
+  name: string
+  country?: string | null
+  notes?: string | null
+}
+
+export async function createCompany(input: NewCompany): Promise<{ id: string; name: string }> {
+  const db = requireSupabase()
+  return unwrap(
+    await db
+      .from('companies')
+      .insert({
+        id: input.id,
+        name: input.name.trim(),
+        country: input.country?.trim() || null,
+        notes: input.notes?.trim() || null,
+      })
+      .select('id, name')
+      .single(),
+  )
+}
+
+export async function updateCompany(id: string, patch: { name?: string; country?: string | null; notes?: string | null }) {
+  const db = requireSupabase()
+  const next = {
+    ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
+    ...(patch.country !== undefined ? { country: patch.country?.trim() || null } : {}),
+    ...(patch.notes !== undefined ? { notes: patch.notes?.trim() || null } : {}),
+  }
+  unwrap(await db.from('companies').update(next).eq('id', id).select('id').single())
+}
+
+export async function addSite(input: { id: string; companyId: string; name: string; address?: string | null }) {
+  const db = requireSupabase()
+  unwrap(
+    await db
+      .from('company_sites')
+      .insert({ id: input.id, company_id: input.companyId, name: input.name.trim(), address: input.address?.trim() || null })
+      .select('id')
+      .single(),
+  )
+}
+
+export async function addContact(input: {
+  id: string
+  companyId: string
+  siteId?: string | null
+  name: string
+  phone?: string | null
+  email?: string | null
+  notes?: string | null
+}) {
+  const db = requireSupabase()
+  unwrap(
+    await db
+      .from('contacts')
+      .insert({
+        id: input.id,
+        company_id: input.companyId,
+        site_id: input.siteId || null,
+        name: input.name.trim(),
+        phone: input.phone?.trim() || null,
+        email: input.email?.trim() || null,
+        notes: input.notes?.trim() || null,
+      })
+      .select('id')
+      .single(),
+  )
+}
+
+/** Link a brand (or family) to a company. Idempotent: carrying it twice is not an error. */
+export async function linkBrand(companyId: string, brandId: string) {
+  const db = requireSupabase()
+  unwrap(
+    await db
+      .from('company_brands')
+      .upsert({ company_id: companyId, brand_id: brandId }, { onConflict: 'company_id,brand_id', ignoreDuplicates: true }),
+  )
+}
+
+/** Create a brand by typing its name; if it already exists (any case) the existing one is returned. */
+export async function createBrand(input: {
+  id: string
+  name: string
+  kind?: 'brand' | 'family'
+}): Promise<{ id: string; name: string }> {
+  const db = requireSupabase()
+  const name = input.name.trim()
+  const made = await db.from('brands').insert({ id: input.id, name, kind: input.kind ?? 'brand' }).select('id, name').single()
+  if (!made.error) return made.data
+  if (made.error.code !== '23505') throw made.error
+  const found = unwrap(await db.from('brands').select('id, name').ilike('name', likeEscape(name)).limit(5))
+  const same = found.find(b => b.name.trim().toLowerCase() === name.toLowerCase())
+  if (!same) throw made.error
+  return same
+}
+
+/** Admin only (the function checks). Moves everything on `dropId` onto `keepId`, then deletes `dropId`. */
+export async function mergeCompanies(keepId: string, dropId: string): Promise<void> {
+  const db = requireSupabase()
+  const { error } = await db.rpc('merge_companies', { p_keep: keepId, p_drop: dropId })
+  if (error) throw error
+}

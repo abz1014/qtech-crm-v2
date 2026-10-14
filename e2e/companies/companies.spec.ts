@@ -1,0 +1,284 @@
+import { expect, test } from '@playwright/test'
+import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
+
+/*
+ * R02 end to end, against the local CI stack. Each test makes its own companies with unique names, so the
+ * tests do not depend on each other or on the seed beyond its fixture users.
+ */
+
+test.describe('inline create (FE-2: name only, three actions)', () => {
+  test('a company is created from its name alone, in one dialog', async ({ page }) => {
+    const name = uniqueName('Indus Textile')
+    await openAs(page, 'sales', '/companies')
+    await expect(page.getByRole('heading', { name: 'Companies', level: 1 })).toBeVisible()
+
+    let actions = 0
+    await page.getByRole('button', { name: 'New company' }).first().click() // 1 (a fresh database also shows the empty state's button)
+    actions++
+    const dialog = page.getByRole('dialog', { name: 'New company' })
+    await expect(dialog.getByText('Only the name is required.')).toBeVisible()
+    await dialog.getByRole('textbox', { name: /Company name/ }).fill(name) // 2
+    actions++
+    await review(page, 'create-dialog-1440')
+    await dialog.getByRole('button', { name: 'Add company' }).click() // 3
+    actions++
+
+    await expect(page).toHaveURL(/\/companies\/[0-9a-f-]{36}$/)
+    await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible()
+    expect(actions).toBeLessThanOrEqual(3)
+
+    const rows = await must(rest<{ name: string; country: string | null; notes: string | null; created_by: string }[]>('admin', `companies?name=eq.${encodeURIComponent(name)}`))
+    expect(rows).toHaveLength(1)
+    expect(rows[0].notes).toBeNull() // nothing but the name was required, nothing else was invented
+  })
+
+  test('an empty name is the only thing that blocks the save', async ({ page }) => {
+    await openAs(page, 'sales', '/companies')
+    await page.getByRole('button', { name: 'New company' }).first().click()
+    const dialog = page.getByRole('dialog', { name: 'New company' })
+    await dialog.getByRole('button', { name: 'Add company' }).click()
+    await expect(dialog.getByText('Enter the company name.').first()).toBeVisible()
+    await expect(dialog).toBeVisible()
+  })
+
+  test('a name that exists in any case says so plainly and offers Open it', async ({ page }) => {
+    const existing = await createCompany(uniqueName('Karachi Glassworks'))
+    await openAs(page, 'engineer', '/companies')
+    await page.getByRole('button', { name: 'New company' }).first().click()
+    const dialog = page.getByRole('dialog', { name: 'New company' })
+    await dialog.getByRole('textbox', { name: /Company name/ }).fill(`  ${existing.name.toUpperCase()} `)
+    await dialog.getByRole('button', { name: 'Add company' }).click()
+
+    await expect(dialog.getByText('A company with this name already exists.')).toBeVisible()
+    await review(page, 'create-dialog-duplicate-1440')
+    await dialog.getByRole('link', { name: 'Open it' }).click()
+    await expect(page).toHaveURL(new RegExp(`/companies/${existing.id}$`))
+    await expect(page.getByRole('heading', { name: existing.name, level: 1 })).toBeVisible()
+
+    const all = await must(rest<unknown[]>('admin', `companies?name=ilike.${encodeURIComponent(existing.name)}`))
+    expect(all).toHaveLength(1)
+  })
+
+  test('the command palette finds a company by name and opens it', async ({ page }) => {
+    const company = await createCompany(uniqueName('Palette Probe'))
+    await openAs(page, 'sales', '/today')
+    await page.keyboard.press('Control+k')
+    await page.getByRole('combobox').fill(company.name.slice(0, 18))
+    const hit = page.getByRole('option', { name: new RegExp(company.name) })
+    await expect(hit).toBeVisible()
+    await hit.click()
+    await expect(page).toHaveURL(new RegExp(`/companies/${company.id}$`))
+  })
+
+  test('the palette offers to add a name that is not on file', async ({ page }) => {
+    await openAs(page, 'sales', '/today')
+    await page.keyboard.press('Control+k')
+    await page.getByRole('combobox').fill('Zzyzx Brand New Works')
+    await page.getByRole('option', { name: /Add “Zzyzx Brand New Works” as a new company/ }).click()
+    await expect(page).toHaveURL(/\/companies/)
+    const dialog = page.getByRole('dialog', { name: 'New company' })
+    await expect(dialog.getByRole('textbox', { name: /Company name/ })).toHaveValue('Zzyzx Brand New Works')
+  })
+})
+
+test.describe('company page', () => {
+  test('a customer shows its sites with their RFQs, contacts and an honest history placeholder', async ({ page }) => {
+    const company = await createCompany(uniqueName('Page Customer'), { country: 'Pakistan' })
+    const site = (await must(rest<{ id: string }[]>('admin', 'company_sites', { method: 'POST', body: { company_id: company.id, name: 'Main plant', address: 'Plot 14, Landhi' } })))[0]
+    await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: company.id, site_id: site.id, name: 'Naveed Akhtar', notes: 'Finance' } }))
+    const rfq = await createRfq(company.id, { site_id: site.id, customer_ref: 'ENQ-2211' })
+
+    await openAs(page, 'sales', `/companies/${company.id}`)
+    await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
+    await expect(page.getByText('Customer', { exact: true }).first()).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Main plant' }).getByText(rfqRef(rfq.number))).toBeVisible()
+    await expect(page.getByText('Naveed Akhtar')).toBeVisible()
+    await expect(page.getByText('Nothing to show yet.')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Money with them' })).toHaveCount(0)
+    await review(page, 'company-customer-1440')
+  })
+
+  test('a supplier shows what we know from its enquiries, with counts and no score', async ({ page }) => {
+    const supplier = await createCompany(uniqueName('Alpenmark Test'), { country: 'Austria' })
+    const customer = await createCompany(uniqueName('Enquiring Customer'))
+    const rfq = await createRfq(customer.id)
+    await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: rfq.id, supplier_id: supplier.id, sent_on: karachiDay(-10) } }))
+
+    await openAs(page, 'engineer', `/companies/${supplier.id}`)
+    await expect(page.getByRole('heading', { name: supplier.name, level: 1 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'What we know' })).toBeVisible()
+    await expect(page.getByText('Asked once, no replies')).toBeVisible()
+    await expect(page.getByText('Low data')).toBeVisible()
+    await expect(page.getByText('Nothing here is typed in.')).toBeVisible()
+    await expect(page.getByRole('row', { name: new RegExp(rfqRef(rfq.number)) })).toContainText('No reply')
+    expect(await page.getByRole('region', { name: 'What we know' }).innerText()).not.toMatch(/score|rating|rank|%/i)
+    await review(page, 'company-supplier-1440')
+  })
+
+  test('brands are carried by picking one or typing a new one', async ({ page }) => {
+    const supplier = await createCompany(uniqueName('Brand Carrier'))
+    const brand = uniqueName('Belimo')
+    await openAs(page, 'sales', `/companies/${supplier.id}`)
+    const panel = page.getByRole('region', { name: 'Brands carried' })
+    await panel.getByRole('button', { name: 'Add' }).click()
+    await panel.getByRole('combobox', { name: 'Brand or product family' }).fill(brand)
+    await page.getByRole('option', { name: new RegExp(`Add “${brand}” as a new brand`) }).click()
+    await expect(panel.getByText(brand)).toBeVisible()
+    const linked = await must(rest<unknown[]>('admin', `company_brands?company_id=eq.${supplier.id}`))
+    expect(linked).toHaveLength(1)
+  })
+
+  test('a site and a contact are added in one dialog each, name only', async ({ page }) => {
+    const company = await createCompany(uniqueName('Dialog Customer'))
+    await openAs(page, 'engineer', `/companies/${company.id}`)
+    await page.getByRole('button', { name: 'Add site' }).click()
+    await page.getByRole('dialog', { name: 'Add site' }).getByRole('textbox', { name: /Site name/ }).fill('Karachi')
+    await page.getByRole('dialog', { name: 'Add site' }).getByRole('button', { name: 'Add site' }).click()
+    await expect(page.getByRole('region', { name: 'Karachi' })).toBeVisible()
+
+    await page.getByRole('region', { name: 'Contacts' }).getByRole('button', { name: 'Add' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Add contact' })
+    await dialog.getByRole('textbox', { name: /^Name/ }).fill('Salman Khan')
+    await expect(dialog.getByText('Only site on file: Karachi')).toBeVisible() // pre-filled, with its source
+    await dialog.getByRole('button', { name: 'Add contact' }).click()
+    await expect(page.getByText('Salman Khan')).toBeVisible()
+  })
+})
+
+test.describe('admin merge', () => {
+  test('merging a duplicate moves its RFQs, contacts and sites to the company you keep', async ({ page }) => {
+    const keep = await createCompany(uniqueName('Keep Glassworks'))
+    const drop = await createCompany(uniqueName('Keep Glass Works'))
+    const rfq = await createRfq(drop.id, { customer_ref: 'DUP-1' })
+    await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: drop.id, name: 'Moved Contact' } }))
+    await must(rest('admin', 'company_sites', { method: 'POST', body: { company_id: drop.id, name: 'Moved Site' } }))
+
+    await openAs(page, 'admin', `/companies/${drop.id}`)
+    await expect(page.getByRole('heading', { name: drop.name, level: 1 })).toBeVisible()
+    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('menuitem', { name: 'Merge into another company' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Merge duplicate company' })
+    await dialog.getByRole('combobox', { name: 'Merge into' }).fill(keep.name)
+    await page.getByRole('option', { name: new RegExp(keep.name) }).click()
+    await expect(dialog.getByText(/1 RFQ, 0 orders, 1 contact, 1 site move to/)).toBeVisible()
+    await review(page, 'merge-dialog-1440')
+    await dialog.getByRole('button', { name: `Merge into ${keep.name}` }).click()
+
+    await expect(page).toHaveURL(new RegExp(`/companies/${keep.id}$`))
+    await expect(page.getByRole('heading', { name: keep.name, level: 1 })).toBeVisible()
+    await expect(page.getByText(rfqRef(rfq.number))).toBeVisible()
+    await expect(page.getByText('Moved Contact')).toBeVisible()
+    await review(page, 'after-merge-1440')
+
+    // The database agrees: the RFQ now belongs to the kept company and the duplicate is gone.
+    const moved = await must(rest<{ company_id: string }[]>('admin', `rfqs?id=eq.${rfq.id}&select=company_id`))
+    expect(moved[0].company_id).toBe(keep.id)
+    expect(await must(rest<unknown[]>('admin', `companies?id=eq.${drop.id}`))).toHaveLength(0)
+    expect(await must(rest<unknown[]>('admin', `contacts?company_id=eq.${keep.id}&name=eq.Moved%20Contact`))).toHaveLength(1)
+    expect(await must(rest<unknown[]>('admin', `company_sites?company_id=eq.${keep.id}&name=eq.Moved%20Site`))).toHaveLength(1)
+
+    // The page for the removed company says where to look instead of crashing.
+    await page.goto(`/companies/${drop.id}`)
+    await expect(page.getByText("This company isn't here")).toBeVisible()
+  })
+
+  test('a clash the database cannot settle is refused in plain words and nothing moves', async ({ page }) => {
+    const keep = await createCompany(uniqueName('Clash Keep'))
+    const drop = await createCompany(uniqueName('Clash Drop'))
+    await createRfq(keep.id, { customer_ref: 'SAME-REF' })
+    const dropRfq = await createRfq(drop.id, { customer_ref: 'SAME-REF' })
+
+    await openAs(page, 'admin', `/companies/${drop.id}`)
+    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('menuitem', { name: 'Merge into another company' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Merge duplicate company' })
+    await dialog.getByRole('combobox', { name: 'Merge into' }).fill(keep.name)
+    await page.getByRole('option', { name: new RegExp(keep.name) }).click()
+    await dialog.getByRole('button', { name: `Merge into ${keep.name}` }).click()
+
+    await expect(dialog.getByText(/same customer reference/i)).toBeVisible()
+    await expect(dialog.getByText('Nothing was changed.')).toBeVisible()
+    const still = await must(rest<{ company_id: string }[]>('admin', `rfqs?id=eq.${dropRfq.id}&select=company_id`))
+    expect(still[0].company_id).toBe(drop.id)
+  })
+})
+
+test.describe('access by role (DATA_MODEL section 10)', () => {
+  test('sales and engineers get no merge action and never request money; admin does', async ({ browser }) => {
+    const company = await createCompany(uniqueName('Role Probe'))
+    const money: Record<string, number> = {}
+    for (const role of ['sales', 'engineer', 'admin'] as const) {
+      const context = await browser.newContext()
+      const page = await context.newPage()
+      let seen = 0
+      page.on('request', r => {
+        if (r.url().includes('/rest/v1/v_order_money')) seen++
+      })
+      await openAs(page, role, `/companies/${company.id}`)
+      await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
+      await page.waitForLoadState('networkidle')
+      const more = await page.getByRole('button', { name: 'More actions' }).count()
+      expect(more, `${role} merge menu`).toBe(role === 'admin' ? 1 : 0)
+      money[role] = seen
+      await context.close()
+    }
+    expect(money.sales).toBe(0)
+    expect(money.engineer).toBe(0)
+    expect(money.admin).toBeGreaterThan(0)
+  })
+
+  test('the database refuses what the screen hides', async () => {
+    const a = await createCompany(uniqueName('RLS One'))
+    const b = await createCompany(uniqueName('RLS Two'))
+    for (const role of ['sales', 'engineer'] as const) {
+      const merge = await rest<{ message: string }>(role, 'rpc/merge_companies', { method: 'POST', body: { p_keep: a.id, p_drop: b.id } })
+      expect(merge.status, `${role} merge`).toBeGreaterThanOrEqual(400)
+      const money = await rest<unknown[]>(role, `v_order_money?company_id=eq.${a.id}`)
+      expect(money.body ?? []).toHaveLength(0)
+      const del = await rest<unknown[]>(role, `companies?id=eq.${b.id}`, { method: 'DELETE' })
+      expect(del.body ?? []).toHaveLength(0)
+    }
+    expect(await must(rest<unknown[]>('admin', `companies?id=eq.${b.id}`))).toHaveLength(1)
+  })
+
+  test('engineers and sales can create and edit companies (section 10: SIU)', async () => {
+    for (const role of ['sales', 'engineer'] as const) {
+      const made = await rest<{ id: string }[]>(role, 'companies', { method: 'POST', body: { name: uniqueName(`Made by ${role}`) } })
+      expect(made.status).toBe(201)
+      const edited = await rest<{ country: string }[]>(role, `companies?id=eq.${made.body[0].id}`, { method: 'PATCH', body: { country: 'Pakistan' } })
+      expect(edited.status).toBe(200)
+      expect(edited.body[0].country).toBe('Pakistan')
+    }
+  })
+})
+
+test.describe('review screenshots (only with REVIEW_DIR)', () => {
+  test.skip(!process.env.REVIEW_DIR, 'screenshots are for the review folder')
+
+  for (const [label, width, height] of [
+    ['1440', 1440, 900],
+    ['375', 375, 812],
+    ['768', 768, 1024],
+  ] as const) {
+    test(`list and company pages at ${label}`, async ({ browser }) => {
+      const customer = await createCompany(uniqueName('Shot Customer'), { country: 'Pakistan' })
+      const site = (await must(rest<{ id: string }[]>('admin', 'company_sites', { method: 'POST', body: { company_id: customer.id, name: 'Main plant', address: 'Plot 14' } })))[0]
+      await createRfq(customer.id, { site_id: site.id })
+      const supplier = await createCompany(uniqueName('Shot Supplier'), { country: 'Austria' })
+      const rfq = await createRfq(customer.id)
+      await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: rfq.id, supplier_id: supplier.id, sent_on: karachiDay(-10) } }))
+      const context = await browser.newContext({ viewport: { width, height } })
+      const page = await context.newPage()
+      await openAs(page, 'sales', '/companies')
+      await expect(page.getByRole('heading', { name: 'Companies', level: 1 })).toBeVisible()
+      await review(page, `companies-list-${label}`)
+      await page.goto(`/companies/${customer.id}`)
+      await expect(page.getByRole('heading', { name: customer.name, level: 1 })).toBeVisible()
+      await review(page, `company-customer-${label}`)
+      await page.goto(`/companies/${supplier.id}`)
+      await expect(page.getByRole('heading', { name: 'What we know' })).toBeVisible()
+      await review(page, `company-supplier-${label}`)
+      await context.close()
+    })
+  }
+})
