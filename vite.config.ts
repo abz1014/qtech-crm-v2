@@ -10,6 +10,6 @@ export default defineConfig({
     setupFiles: ['src/test/setup.ts'],
     // designGuards.test.ts starts ESLint in-process; the first lint takes 2 to 10 s on a cold or busy machine.
     testTimeout: 30_000,
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs'],
   },
 })

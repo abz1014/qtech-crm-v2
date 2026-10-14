@@ -4,12 +4,13 @@ import { canAccess, type NavItem } from '@/app/navConfig'
 import { getHomeRoute } from '@/app/roleRoutes'
 import { useSession } from '@/app/session'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
+import { Splash } from '@/app/pages/Splash'
 
-/** Everything inside needs a signed-in person. Loading shows nothing (A03 adds the splash); signed out goes to /login. */
+/** Everything inside needs a signed-in person. Loading shows the splash; signed out goes to /login. */
 export function RequireSession() {
   const session = useSession()
   const location = useLocation()
-  if (session.status === 'loading') return null
+  if (session.status === 'loading') return <Splash />
   if (session.status === 'signed-out') return <Navigate to="/login" replace state={{ from: location.pathname }} />
   return <Outlet />
 }

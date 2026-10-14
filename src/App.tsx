@@ -3,26 +3,34 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { AppRoutes } from '@/app/routes'
 import { devSessionFromUrl } from '@/app/devSession'
+import { AuthProvider } from '@/app/AuthProvider'
 import { SessionProvider } from '@/app/SessionProvider'
-import type { SessionState } from '@/app/session'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: false } },
 })
 
-// A03 replaces this with the Supabase-backed session. Until then only dev builds
-// can sign in (devSession.ts); a production build shows the sign-in page.
-const session: SessionState = devSessionFromUrl() ?? { status: 'signed-out' }
+// Dev builds only: ?devRole= fakes a signed-in session. In production this is always
+// undefined (devSession.ts is dead code there) and AuthProvider supplies the real session.
+const devSession = devSessionFromUrl()
 
 export default function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <SessionProvider value={session}>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </SessionProvider>
+        {devSession ? (
+          <SessionProvider value={devSession}>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </SessionProvider>
+        ) : (
+          <AuthProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </AuthProvider>
+        )}
       </QueryClientProvider>
     </ErrorBoundary>
   )
