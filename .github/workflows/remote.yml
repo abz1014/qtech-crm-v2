@@ -100,18 +100,35 @@ jobs:
           [ "$fail" -eq 0 ] || exit 1
           echo "Parity OK: $(wc -l < "$RUNNER_TEMP/files.txt") local migrations, all applied, none extra."
 
-      - name: Generate remote types
+      - name: Schema drift check (linked project vs migrations)
+        run: |
+          set -uo pipefail
+          # Diffs the remote schema against the migrations via a shadow database.
+          # Empty stdout means no drift. Anything printed is drift and fails the run.
+          npx supabase db diff --linked --schema public,storage > "$RUNNER_TEMP/drift.sql"
+          rc=$?
+          echo "---- drift output ----"
+          cat "$RUNNER_TEMP/drift.sql"
+          echo "---- end ----"
+          if [ "$rc" -ne 0 ]; then echo "::error::db diff failed (exit $rc)"; exit 1; fi
+          if grep -q '[^[:space:]]' "$RUNNER_TEMP/drift.sql"; then
+            echo "::error::schema drift detected between remote and migrations"; exit 1
+          fi
+          echo "Schema drift: none."
+
+      # Informational only. The hosted generator differs from the local CLI's, so
+      # byte equality with src/types/database.ts is not a valid gate.
+      - name: Generate remote types (informational)
+        if: always()
+        continue-on-error: true
         run: npx supabase gen types typescript --project-id "$SUPABASE_PROJECT_REF" > "$RUNNER_TEMP/remote-types.ts"
 
-      - name: Remote types match src/types/database.ts
-        run: diff -u src/types/database.ts "$RUNNER_TEMP/remote-types.ts"
-
-      - name: Upload types on failure
-        if: failure()
+      - name: Upload remote types and drift output
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: remote-types-diff
+          name: remote-types
           path: |
             ${{ runner.temp }}/remote-types.ts
-            src/types/database.ts
+            ${{ runner.temp }}/drift.sql
           if-no-files-found: ignore

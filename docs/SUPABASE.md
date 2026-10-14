@@ -46,7 +46,7 @@ Manual only: Actions, Remote, Run workflow. The `production` environment needs
 owner approval. There is no push or schedule trigger.
 
 - `mode = check` (default): link, print `migration list`, print the
-  `db push --dry-run` plan, assert parity, compare remote types. Changes nothing.
+  `db push --dry-run` plan, assert parity, check schema drift, upload remote types. Changes nothing.
 - `mode = push`: same, but applies pending migrations with `supabase db push`
   between the dry run and the parity check. Run `check` first and read the plan.
 
@@ -61,6 +61,12 @@ checkout of `config.toml` before any remote command. Local `db reset` is unchang
 Reading the result: the parity step prints the list twice (before and after).
 Each row is `local | remote | time`. Green means every file in
 `supabase/migrations` is applied remotely and no remote-only version exists.
-`::error::` lines name the version that is missing or extra. The last step diffs
-remote-generated types against `src/types/database.ts`; on failure both files are
-uploaded as the `remote-types-diff` artifact.
+`::error::` lines name the version that is missing or extra.
+
+The drift step runs `supabase db diff --linked --schema public,storage`
+(shadow database on the runner) and fails if anything is printed. The remote
+types are generated and uploaded as the `remote-types` artifact for reference only;
+they do not gate the run (hosted and local generators format differently).
+
+S15 acceptance: migration list matches; schema drift = none; remote types
+artifact for reference.
