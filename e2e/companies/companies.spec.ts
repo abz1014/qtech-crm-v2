@@ -11,10 +11,9 @@ test.describe('inline create (FE-2: name only, three actions)', () => {
     const name = uniqueName('Indus Textile')
     await openAs(page, 'sales', '/companies')
     await expect(page.getByRole('heading', { name: 'Companies', level: 1 })).toBeVisible()
-    await review(page, 'companies-list-1440')
 
     let actions = 0
-    await page.getByRole('button', { name: 'New company' }).click() // 1
+    await page.getByRole('button', { name: 'New company' }).first().click() // 1 (a fresh database also shows the empty state's button)
     actions++
     const dialog = page.getByRole('dialog', { name: 'New company' })
     await expect(dialog.getByText('Only the name is required.')).toBeVisible()
@@ -35,7 +34,7 @@ test.describe('inline create (FE-2: name only, three actions)', () => {
 
   test('an empty name is the only thing that blocks the save', async ({ page }) => {
     await openAs(page, 'sales', '/companies')
-    await page.getByRole('button', { name: 'New company' }).click()
+    await page.getByRole('button', { name: 'New company' }).first().click()
     const dialog = page.getByRole('dialog', { name: 'New company' })
     await dialog.getByRole('button', { name: 'Add company' }).click()
     await expect(dialog.getByText('Enter the company name.').first()).toBeVisible()
@@ -45,7 +44,7 @@ test.describe('inline create (FE-2: name only, three actions)', () => {
   test('a name that exists in any case says so plainly and offers Open it', async ({ page }) => {
     const existing = await createCompany(uniqueName('Karachi Glassworks'))
     await openAs(page, 'engineer', '/companies')
-    await page.getByRole('button', { name: 'New company' }).click()
+    await page.getByRole('button', { name: 'New company' }).first().click()
     const dialog = page.getByRole('dialog', { name: 'New company' })
     await dialog.getByRole('textbox', { name: /Company name/ }).fill(`  ${existing.name.toUpperCase()} `)
     await dialog.getByRole('button', { name: 'Add company' }).click()
@@ -257,6 +256,7 @@ test.describe('review screenshots (only with REVIEW_DIR)', () => {
   test.skip(!process.env.REVIEW_DIR, 'screenshots are for the review folder')
 
   for (const [label, width, height] of [
+    ['1440', 1440, 900],
     ['375', 375, 812],
     ['768', 768, 1024],
   ] as const) {

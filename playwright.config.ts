@@ -34,7 +34,8 @@ export default defineConfig({
     {
       name: 'companies',
       testMatch: /companies\/.*\.spec\.ts/,
-      use: { ...devices['Desktop Chrome'] },
+      // 1440 is the design width (FE-1); the review screenshots are taken at it.
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
   ],
   webServer: {
