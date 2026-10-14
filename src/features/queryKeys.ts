@@ -45,7 +45,21 @@ function brands() {
 /** Reserved roots for areas that other tasks build. They exist now so the invalidation map can name them. */
 function rfqs() {
   const all = root('rfqs')
-  return { all, lists: () => [...all, 'list'] as const, detail: (id: string) => [...all, 'detail', id] as const }
+  const detail = (id: string) => [...all, 'detail', id] as const
+  return {
+    all,
+    lists: () => [...all, 'list'] as const,
+    detail,
+    /** One slice of an RFQ page (R07). `slice` is a fixed word, so a typo is a type error. */
+    part: (id: string, slice: RfqPart) => [...detail(id), slice] as const,
+  }
+}
+export type RfqPart = 'header' | 'items' | 'inquiries'
+
+/** Exchange rates (R07 reads today's rate per currency; R15 owns editing them). */
+function fx() {
+  const all = root('fx')
+  return { all, latest: () => [...all, 'latest'] as const }
 }
 /** Intake (R05): who can be asked for a price, and what each of them remembers about the items being entered. */
 function intake() {
@@ -74,6 +88,7 @@ export const qk = {
   rfqs: rfqs(),
   orders: orders(),
   intake: intake(),
+  fx: fx(),
 }
 
 export type QueryKeyRoot = keyof typeof qk

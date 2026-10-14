@@ -53,3 +53,70 @@ export function useSetRfqFloated() {
 }
 
 export { findRfqByCustomerRef } from '@/features/rfqs/api'
+
+// ================================================================ RFQ detail (R07)
+
+export function useRfqHeader(id: string | undefined) {
+  return useQuery({ queryKey: qk.rfqs.part(id ?? '', 'header'), queryFn: () => api.getRfqHeader(id as string), enabled: Boolean(id) })
+}
+
+export function useRfqItems(id: string | undefined) {
+  return useQuery({ queryKey: qk.rfqs.part(id ?? '', 'items'), queryFn: () => api.listRfqItems(id as string), enabled: Boolean(id) })
+}
+
+export function useRfqInquiries(id: string | undefined) {
+  return useQuery({ queryKey: qk.rfqs.part(id ?? '', 'inquiries'), queryFn: () => api.listInquiries(id as string), enabled: Boolean(id) })
+}
+
+/** Today's rate per currency. Read-only here; a missing rate never blocks a price. */
+export function useFxLatest() {
+  return useQuery({ queryKey: qk.fx.latest(), queryFn: api.listFxLatest, staleTime: 60_000 })
+}
+
+export function useSaveReply(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: api.SaveReplyInput) => api.saveReply(input),
+    onSuccess: () => invalidateAfter(client, 'quote.save', { rfqId }),
+  })
+}
+
+export function useSetInquiryNoOffer(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { inquiryId: string; noOfferOn: string | null; notes: string | null }) => api.setInquiryNoOffer(input),
+    onSuccess: () => invalidateAfter(client, 'inquiry.cantQuote', { rfqId }),
+  })
+}
+
+export function useSetInquiryNotes(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { inquiryId: string; notes: string | null }) => api.setInquiryNotes(v.inquiryId, v.notes),
+    onSuccess: () => invalidateAfter(client, 'inquiry.cantQuote', { rfqId }),
+  })
+}
+
+export function useStampSupplierChase(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (inquiryId: string) => api.stampSupplierChase(inquiryId),
+    onSuccess: () => invalidateAfter(client, 'inquiry.chase', { rfqId }),
+  })
+}
+
+export function useSetBidSent(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (on: string | null) => api.setBidSent(rfqId, on),
+    onSuccess: () => invalidateAfter(client, 'rfq.markBidSent', { rfqId }),
+  })
+}
+
+export function useSetRfqClosed(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { closedOn: string | null; reason: string | null; note: string | null }) => api.setRfqClosed({ rfqId, ...v }),
+    onSuccess: () => invalidateAfter(client, 'rfq.close', { rfqId }),
+  })
+}

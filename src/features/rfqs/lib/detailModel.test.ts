@@ -1,0 +1,149 @@
+import { describe, expect, it } from 'vitest'
+import { currencyForSupplier, currencySourceNote } from './replyCurrency'
+import {
+  buildCantQuoteNotes,
+  parseCantQuoteNotes,
+  reasonForItem,
+  withItemReason,
+  withoutReason,
+  withReason,
+} from './cantQuote'
+import { defaultCloseReason } from './closeDefaults'
+import { generateSupplierChase, supplierReplyBy } from './supplierChase'
+
+describe('currencyForSupplier', () => {
+  it('prefers the supplier\'s last currency', () => {
+    expect(currencyForSupplier('USD', 'Germany')).toEqual({ currency: 'USD', source: 'last' })
+  })
+  it('falls back to the country map, any case', () => {
+    expect(currencyForSupplier(null, ' china ')).toEqual({ currency: 'CNY', source: 'country' })
+    expect(currencyForSupplier(undefined, 'Germany')).toEqual({ currency: 'EUR', source: 'country' })
+    expect(currencyForSupplier(null, 'UAE').currency).toBe('AED')
+  })
+  it('falls back to PKR with no history and an unknown country', () => {
+    expect(currencyForSupplier(null, null)).toEqual({ currency: 'PKR', source: 'default' })
+    expect(currencyForSupplier(null, 'Atlantis').source).toBe('default')
+  })
+  it('ignores a malformed stored currency', () => {
+    expect(currencyForSupplier('usd', 'China').source).toBe('country')
+  })
+  it('says where the currency came from', () => {
+    expect(currencySourceNote({ currency: 'USD', source: 'last' })).toBe('USD, their last reply')
+    expect(currencySourceNote({ currency: 'CNY', source: 'country' }, 'China')).toBe('CNY, usual for China')
+  })
+})
+
+describe("can't quote notes", () => {
+  it('writes one reason and keeps a person\'s own notes', () => {
+    const n = withReason('Call Imran on Monday', "Doesn't carry this brand")
+    expect(n).toBe("Can't quote: Doesn't carry this brand\nCall Imran on Monday")
+    expect(parseCantQuoteNotes(n)).toEqual({ reason: "Doesn't carry this brand", items: {}, rest: 'Call Imran on Monday' })
+  })
+  it('replaces the reason instead of stacking it', () => {
+    const once = withReason(null, 'Item discontinued')
+    expect(withReason(once, 'Other reason')).toBe("Can't quote: Other reason")
+  })
+  it('takes the reason back and leaves null when nothing remains', () => {
+    expect(withoutReason(withReason(null, 'Other reason'))).toBeNull()
+    expect(withoutReason(withReason('keep me', 'Other reason'))).toBe('keep me')
+  })
+  it('sets and clears a per-item override that wins over the inquiry reason', () => {
+    const n = withItemReason(withReason(null, "Can't source in time"), 2, 'Item discontinued')
+    expect(n).toBe("Can't quote: Can't source in time\nItem 2 can't quote: Item discontinued")
+    const p = parseCantQuoteNotes(n)
+    expect(reasonForItem(p, 2)).toBe('Item discontinued')
+    expect(reasonForItem(p, 1)).toBe("Can't source in time")
+    expect(withItemReason(n, 2, null)).toBe("Can't quote: Can't source in time")
+  })
+  it('orders per-item lines by item number and round-trips', () => {
+    const text = buildCantQuoteNotes({ reason: null, items: { 3: 'B', 1: 'A' }, rest: '' })
+    expect(text).toBe("Item 1 can't quote: A\nItem 3 can't quote: B")
+    expect(buildCantQuoteNotes(parseCantQuoteNotes(text))).toBe(text)
+  })
+  it('handles empty and CRLF notes', () => {
+    expect(parseCantQuoteNotes(null)).toEqual({ reason: null, items: {}, rest: '' })
+    expect(parseCantQuoteNotes("Can't quote: X\r\nhello").rest).toBe('hello')
+  })
+})
+
+describe('defaultCloseReason', () => {
+  const base = { sourcingState: 'partly_covered', clarificationState: 'none', bidState: 'to_bid', isOverdue: false }
+  it('reads the context', () => {
+    expect(defaultCloseReason({ ...base, sourcingState: 'no_offer_anywhere' })).toBe('could_not_source')
+    expect(defaultCloseReason({ ...base, clarificationState: 'waiting_on_customer' })).toBe('no_reply_to_clarification')
+    expect(defaultCloseReason({ ...base, isOverdue: true })).toBe('we_were_late')
+    expect(defaultCloseReason({ ...base, bidState: 'bid_sent' })).toBe('price')
+    expect(defaultCloseReason(base)).toBe('other')
+  })
+  it('does not call a bid that went out late', () => {
+    expect(defaultCloseReason({ ...base, isOverdue: true, bidState: 'bid_sent' })).toBe('price')
+  })
+})
+
+describe('supplier chase text', () => {
+  // 2026-11-27 is a Friday; the bid is due Thursday 3 December.
+  const input = {
+    rfqRef: 'RFQ-0179',
+    sentOn: '2026-11-23',
+    dueOn: '2026-12-03',
+    today: '2026-11-27',
+    chaseCount: 0,
+    contactName: 'Mr. Imran',
+    pricedNumbers: [1],
+    items: [
+      { number: 2, description: 'Yokogawa EJA530E pressure transmitter, 0-1 MPa', qty: 3, unit: 'nos' },
+      { number: 3, description: 'Endress+Hauser Cerabar PMC71', qty: 2, unit: null },
+    ],
+    signature: { name: 'Ayesha Rana', company: 'Q-Tech Solutions' },
+    variant: 'whatsapp' as const,
+  }
+
+  it('reply-by is two working days before the bid', () => {
+    expect(supplierReplyBy('2026-12-03', '2026-11-27')).toBe('2026-12-01')
+    expect(supplierReplyBy('2026-12-01', '2026-11-27')).toBe('2026-11-30')
+  })
+  it('never earlier than the next working day; three working days with no bid date', () => {
+    expect(supplierReplyBy('2026-11-28', '2026-11-27')).toBe('2026-11-30')
+    expect(supplierReplyBy(null, '2026-11-27')).toBe('2026-12-02')
+  })
+  it('writes the first WhatsApp chase as approved', () => {
+    const t = generateSupplierChase(input)
+    expect(t.replyBy).toBe('2026-12-01')
+    expect(t.subject).toBeNull()
+    expect(t.body).toBe(
+      [
+        'Assalam o Alaikum Mr. Imran,',
+        '',
+        'Following up on our enquiry of *Monday 23 November* (ref *RFQ-0179*). Thank you for pricing item 1. We are still awaiting your price for:',
+        '2. Yokogawa EJA530E pressure transmitter, 0-1 MPa, 3 nos',
+        '3. Endress+Hauser Cerabar PMC71, 2 nos',
+        '',
+        'Kindly send your price and lead time by *Tuesday 1 December*. If you cannot offer an item, a short note will help us approach others.',
+        '',
+        'Thank you.',
+        'Regards,',
+        'Ayesha Rana',
+        'Q-Tech Solutions',
+      ].join('\n'),
+    )
+  })
+  it('asks for a "cannot offer" today from the second chase', () => {
+    const t = generateSupplierChase({ ...input, chaseCount: 1 })
+    expect(t.body).toContain('A second reminder on our enquiry of *Monday 23 November* (ref *RFQ-0179*).')
+    expect(t.body).toContain('kindly let us know today so that we can move on.')
+    expect(generateSupplierChase({ ...input, chaseCount: 2 }).body).toContain('A third reminder')
+  })
+  it('email carries a subject and the longer wording', () => {
+    const t = generateSupplierChase({ ...input, variant: 'email', signature: { ...input.signature, jobTitle: 'Sales' } })
+    expect(t.subject).toBe('RFQ-0179: price needed for 2 items by Tuesday 1 December')
+    expect(t.body).toContain('Dear Mr. Imran,\nAssalam o Alaikum.')
+    expect(t.body).toContain('Thank you for your quotation on item 1.')
+    expect(t.body).toContain('Sales, Q-Tech Solutions')
+  })
+  it('never names the customer or a price, and copes with no contact, no bid date, nothing priced', () => {
+    const t = generateSupplierChase({ ...input, contactName: null, dueOn: null, pricedNumbers: [], sentOn: null })
+    expect(t.body.startsWith('Assalam o Alaikum,\n')).toBe(true)
+    expect(t.body).toContain('our enquiry *RFQ-0179*. We are still awaiting')
+    expect(t.replyBy).toBe('2026-12-02')
+  })
+})

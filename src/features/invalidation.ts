@@ -35,6 +35,11 @@ export interface WriteVars {
   'company-profile.update': Record<string, never>
   'rfq.float': { companyId: string }
   'rfq.setFloated': { rfqId: string }
+  'quote.save': { rfqId: string }
+  'inquiry.cantQuote': { rfqId: string }
+  'inquiry.chase': { rfqId: string }
+  'rfq.markBidSent': { rfqId: string }
+  'rfq.close': { rfqId: string }
 }
 
 export type WriteName = keyof WriteVars
@@ -72,6 +77,13 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'rfq.float': v => [qk.rfqs.all, qk.intake.all, qk.companies.detail(v.companyId), qk.companies.lists()],
   // Floating or un-floating moves inquiries between shortlisted and sent: the RFQ and the suppliers' counts.
   'rfq.setFloated': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all],
+  // A price, a "can't quote" or a chase changes the RFQ page and the board's states, and the supplier's own counts.
+  'quote.save': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all],
+  'inquiry.cantQuote': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all],
+  'inquiry.chase': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
+  // Bid sent, closed and re-opened only move the RFQ itself (and the board's lists).
+  'rfq.markBidSent': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
+  'rfq.close': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
 }
 
 /** The keys a write makes stale. Pure, so it can be tested without a QueryClient. */

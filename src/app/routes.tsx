@@ -23,6 +23,8 @@ const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ 
 const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfilePage').then(m => ({ default: m.CompanyProfilePage })))
 /** New RFQ (R05): its own route, so it works under whichever screen owns the rest of /rfqs. */
 const IntakeScreen = lazy(() => import('@/features/rfqs/IntakeScreen'))
+/** RFQ detail (R07): replaces the placeholder at /rfqs/:id. */
+const RfqDetailScreen = lazy(() => import('@/features/rfqs/RfqDetailScreen'))
 const rfqsItem = navItems.find(i => i.key === 'rfqs')
 
 /** Dev builds only: the component gallery (U09). Dead code in production. */
@@ -81,6 +83,18 @@ export function AppRoutes() {
                 <RequireRole item={rfqsItem}>
                   <Suspense fallback={null}>
                     <IntakeScreen />
+                  </Suspense>
+                </RequireRole>
+              }
+            />
+          ) : null}
+          {rfqsItem ? (
+            <Route
+              path="rfqs/:id"
+              element={
+                <RequireRole item={rfqsItem}>
+                  <Suspense fallback={null}>
+                    <RfqDetailScreen />
                   </Suspense>
                 </RequireRole>
               }
