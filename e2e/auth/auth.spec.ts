@@ -30,7 +30,7 @@ test.describe('sign-in and role landing', () => {
       await signIn(page, p.email)
       await expect(page).toHaveURL(/\/today$/)
       await page.getByRole('button', { name: `Account menu, ${p.name}` }).click()
-      await expect(page.getByText(p.role, { exact: true })).toBeVisible()
+      await expect(page.getByRole('menu', { name: 'Account' }).getByText(p.role, { exact: true })).toBeVisible()
       await page.keyboard.press('Escape')
       const money = page.getByRole('link', { name: 'Money' })
       if (p.money) await expect(money.first()).toBeVisible()
