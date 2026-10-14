@@ -9,8 +9,8 @@ const NAMES: Record<string, string> = {
 /**
  * Dev builds only: `?devRole=admin|sales|engineer` fakes a signed-in session so
  * the shell can be reviewed without Supabase. Remembered for the tab. Returns
- * undefined in production (the branch is dead code there, so it is stripped).
- * A03 replaces the whole mechanism with the real session.
+ * undefined in production: `import.meta.env.DEV` is false there, so the branch is
+ * dead code and the bundler strips it. The real session is AuthProvider.
  */
 export function devSessionFromUrl(): SessionState | undefined {
   if (!import.meta.env.DEV) return undefined
@@ -23,4 +23,16 @@ export function devSessionFromUrl(): SessionState | undefined {
   }
   if (!role) return undefined
   return { status: 'signed-in', user: { id: `dev-${role}`, name: NAMES[role] ?? 'Dev User', role } }
+}
+
+/** Forget the dev role. Returns true if there was one (so sign-out knows to leave the page). */
+export function clearDevRole(): boolean {
+  if (!import.meta.env.DEV) return false
+  try {
+    const had = window.sessionStorage.getItem('devRole') !== null || new URLSearchParams(window.location.search).has('devRole')
+    window.sessionStorage.removeItem('devRole')
+    return had
+  } catch {
+    return false
+  }
 }

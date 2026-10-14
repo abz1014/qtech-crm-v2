@@ -1,11 +1,11 @@
 import { createContext, useContext } from 'react'
+import { clearDevRole } from '@/app/devSession'
+import { getSupabase } from '@/lib/supabase'
 
 /**
- * What the shell needs to know about the person. U02 owns this contract; A03
- * supplies the real provider (Supabase session + role resolved through TanStack
- * Query, deactivated users forced out). Until then main.tsx only supplies a
- * session in dev builds (see devSession.ts), so a production build before A03
- * shows the sign-in screen and nothing else.
+ * What the shell needs to know about the person. The Supabase-backed provider is
+ * AuthProvider.tsx (the users row plus current_user_role(), resolved through TanStack
+ * Query). A dev build can instead fake a session with ?devRole= (devSession.ts).
  */
 export interface SessionUser {
   id: string
@@ -27,11 +27,23 @@ export function useSession(): SessionState {
 
 export const ROLE_LABEL: Record<string, string> = { admin: 'Admin', sales: 'Sales', engineer: 'Engineer' }
 
+/** Why the person is on the sign-in screen without having asked to be. */
+export type SignInNotice = 'deactivated' | 'unreachable' | 'unconfigured' | null
+export const SignInNoticeContext = createContext<SignInNotice>(null)
+export function useSignInNotice(): SignInNotice {
+  return useContext(SignInNoticeContext)
+}
+
 /**
- * Session actions. `signOut` is a stub until A03 supplies the Supabase-backed
- * session: it resolves immediately and changes nothing. The account menu calls
- * `session.signOut()` so A03 only has to replace this one function.
+ * Session actions. `signOut` ends the Supabase session; AuthProvider sees the change, clears the
+ * query cache and the shell returns to /login. For a dev ?devRole= session
+ * it forgets the dev role and goes to /login.
  */
 export const session = {
-  signOut: async (): Promise<void> => {},
+  signOut: async (): Promise<void> => {
+    const dev = clearDevRole()
+    const supabase = getSupabase()
+    if (supabase) await supabase.auth.signOut()
+    if (dev) window.location.assign('/login')
+  },
 }

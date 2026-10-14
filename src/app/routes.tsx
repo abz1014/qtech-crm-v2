@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ComponentType } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { RequireRole, RequireSession, RoleLanding } from '@/app/guards'
 import { navItems, type NavKey } from '@/app/navConfig'
 import { DestinationPage } from '@/app/pages/DestinationPage'
@@ -21,7 +21,8 @@ const PrimitivesPreview = import.meta.env.DEV ? lazy(() => import('@/dev/Primiti
 
 function SignInRoute() {
   const session = useSession()
-  return session.status === 'signed-in' ? <Navigate to="/" replace /> : <SignInPage />
+  const from = (useLocation().state as { from?: string } | null)?.from
+  return session.status === 'signed-in' ? <Navigate to={from && from !== '/login' ? from : '/'} replace /> : <SignInPage />
 }
 
 export function AppRoutes() {
