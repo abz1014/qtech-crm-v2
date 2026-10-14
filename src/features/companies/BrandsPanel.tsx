@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
-import { useBrands, useCarryBrand, useCompanyBrands } from '@/features/companies/hooks'
-import { Fine, Panel } from '@/features/companies/CompanyParts'
+import { Plus, X } from 'lucide-react'
+import { useBrands, useCarryBrand, useCompanyBrands, useUnlinkBrand } from '@/features/companies/hooks'
+import { removeErrorMessage } from '@/features/companies/removeError'
+import { ConfirmRemove, Fine, Panel } from '@/features/companies/CompanyParts'
 import { mapPgError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
@@ -20,6 +21,9 @@ export function BrandsPanel({ companyId }: { companyId: string }) {
   const [adding, setAdding] = useState(false)
   const all = useBrands(adding)
   const carry = useCarryBrand(companyId)
+  const unlink = useUnlinkBrand(companyId)
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null)
+  const [removeError, setRemoveError] = useState<string | null>(null)
   const { toast } = useToast()
 
   const options = useMemo<ComboOption[]>(() => {
@@ -30,6 +34,22 @@ export function BrandsPanel({ companyId }: { companyId: string }) {
   const done = (name: string) => {
     setAdding(false)
     toast({ title: `Added ${name}`, tone: 'success' })
+  }
+  const cancelRemove = () => {
+    const id = removing?.id
+    setRemoving(null)
+    setRemoveError(null)
+    if (id) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-remove-brand="${id}"]`)?.focus())
+  }
+  const confirmRemove = () => {
+    if (!removing) return
+    unlink.mutate(removing.id, {
+      onSuccess: () => {
+        toast({ title: `Removed ${removing.name}`, tone: 'success' })
+        setRemoving(null)
+      },
+      onError: err => setRemoveError(removeErrorMessage(err, 'brand')),
+    })
   }
   const fail = (err: unknown) => toast({ title: "Couldn't add the brand", body: mapPgError(err, { entity: 'brand' }).message, tone: 'danger' })
 
@@ -56,13 +76,34 @@ export function BrandsPanel({ companyId }: { companyId: string }) {
         ) : (
           <ul className="flex flex-wrap gap-2">
             {carried.data.map(b => (
-              <li key={b.brandId}>
+              <li key={b.brandId} className="flex items-center gap-1">
                 <Tag>{b.name}</Tag>
                 {b.kind === 'family' ? <span className="sr-only"> (product family)</span> : null}
+                <Button
+                  variant="quiet"
+                  size="sm"
+                  icon={X}
+                  aria-label={`Remove ${b.name}`}
+                  data-remove-brand={b.brandId}
+                  onClick={() => {
+                    setRemoveError(null)
+                    setRemoving({ id: b.brandId, name: b.name })
+                  }}
+                />
               </li>
             ))}
           </ul>
         )}
+        {removing ? (
+          <ConfirmRemove
+            title={`Remove ${removing.name}?`}
+            detail="It stops being listed for this supplier. The brand itself and any quotes for it stay."
+            busy={unlink.isPending}
+            error={removeError}
+            onConfirm={confirmRemove}
+            onCancel={cancelRemove}
+          />
+        ) : null}
         {adding ? (
           <div className="grid gap-2">
             <Combobox

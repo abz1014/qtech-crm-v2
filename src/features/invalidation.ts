@@ -19,6 +19,11 @@ export interface WriteVars {
   'company.merge': { keepId: string; dropId: string }
   'site.add': { companyId: string }
   'contact.add': { companyId: string }
+  'site.update': { companyId: string }
+  'site.remove': { companyId: string }
+  'contact.update': { companyId: string }
+  'contact.remove': { companyId: string }
+  'brand.unlink': { companyId: string }
   'brand.link': { companyId: string }
   'brand.create': Record<string, never>
 }
@@ -36,6 +41,12 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Adding a site or contact changes the page, and the roster does not show them, so only the detail.
   'site.add': v => [qk.companies.detail(v.companyId)],
   'contact.add': v => [qk.companies.detail(v.companyId)],
+  'site.update': v => [qk.companies.detail(v.companyId)],
+  'site.remove': v => [qk.companies.detail(v.companyId)],
+  'contact.update': v => [qk.companies.detail(v.companyId)],
+  'contact.remove': v => [qk.companies.detail(v.companyId)],
+  // Dropping the last brand can end a supplier's role, so the roster refreshes too.
+  'brand.unlink': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   // Carrying a brand makes the company a supplier, so the roster's role column can change too.
   'brand.link': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   'brand.create': () => [qk.brands.all],
