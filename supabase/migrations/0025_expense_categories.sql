@@ -134,7 +134,8 @@ begin
   select * into v_cat from public.expense_categories c where c.id = new.category_id;
 
   if new.paid_via is null and tg_op = 'INSERT' then
-    new.paid_via := v_cat.default_paid_via;
+    -- an unknown category falls back to bank so the foreign key, not the NOT NULL, answers
+    new.paid_via := coalesce(v_cat.default_paid_via, 'bank');
   end if;
 
   -- An inactive category cannot be chosen; legacy rows (non-empty legacy_flags) are exempt.

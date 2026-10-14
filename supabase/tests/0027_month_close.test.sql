@@ -280,7 +280,7 @@ select lives_ok($$update public.payments_in set reference = 'x' where id = 'b200
 select lives_ok($$select public.reopen_month('2026-06-01')$$, 'admin reopens June without a note');
 select lives_ok($$update public.payments_in set amount = 118.50 where id = 'b2000000-0000-4000-8000-000000000006'$$,
   'June is editable again');
-select throws_ok($$update public.payments_in set amount = 118 where id = 'b2000000-0000-4000-8000-000000000005'$$,
+select throws_ok($$update public.payments_in set amount = 119 where id = 'b2000000-0000-4000-8000-000000000005'$$,
   'P0001', 'May 2026 is closed. An admin can reopen it.', 'May is still locked');
 select lives_ok($$select public.reopen_month('2026-03-01')$$, 'reopening a month that is not closed does nothing');
 select lives_ok($$select public.close_month('2026-06-01')$$, 'June closes again');

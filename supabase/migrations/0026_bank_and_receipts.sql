@@ -112,7 +112,7 @@ as $$
     when 'rfq-files'         then public.current_user_role() is not null
     when 'gst-receipts'      then public.current_user_role() in ('admin', 'sales')
     when 'generated-docs'    then public.current_user_role() is not null
-    when 'expense-receipts'  then public.current_user_role() = 'admin'
+    when 'expense-receipts'  then coalesce(public.current_user_role() = 'admin', false)
     else false
   end
 $$;
