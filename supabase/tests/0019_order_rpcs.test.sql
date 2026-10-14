@@ -315,8 +315,8 @@ insert into public.supplier_orders (id, order_id, supplier_id) values
   ('a2000000-0000-4000-8000-0000000000a1', 'a1000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-0000000000a2');
 insert into public.invoices (id, company_id, number, net_amount, gst_amount) values
   ('b1000000-0000-4000-8000-0000000000a1', 'c0000000-0000-4000-8000-0000000000a2', 'LEGACY-1', 100, 18);
-insert into public.expenses (id, amount_pkr, category, payee_id) values
-  ('b4000000-0000-4000-8000-0000000000a1', 5, 'Freight', 'c0000000-0000-4000-8000-0000000000a2');
+insert into public.expenses (id, amount_pkr, category_id, payee_id) values
+  ('b4000000-0000-4000-8000-0000000000a1', 5, 'ca7e0000-0000-4000-8000-000000000012', 'c0000000-0000-4000-8000-0000000000a2');
 -- Conflicts: the same customer reference, the same PO, the same RFQ sent to both suppliers.
 insert into public.rfqs (id, company_id, customer_ref, owner_id) values
   ('d0000000-0000-4000-8000-0000000000b1', 'c0000000-0000-4000-8000-0000000000b1', 'SAME', 'a0000000-0000-4000-8000-000000000002'),

@@ -82,13 +82,13 @@ insert into public.payments_in (id, order_id, received_on, amount) values
 insert into public.order_costs (order_id, expected_cost_pkr, costs_complete_at, costs_complete_by) values
   ('a1000000-0000-4000-8000-000000000012', 800, now(), 'a0000000-0000-4000-8000-000000000001'),
   ('a1000000-0000-4000-8000-000000000001', 700, null, null);
-insert into public.expenses (paid_on, amount_pkr, category, order_id) values
-  ('2026-05-20', 300, 'Supplier payment', 'a1000000-0000-4000-8000-000000000001'),
-  ('2026-06-20', 600, 'Supplier payment', 'a1000000-0000-4000-8000-000000000012'),
-  ('2026-05-20', 400, 'Supplier payment', 'a1000000-0000-4000-8000-000000000005');
-insert into public.expenses (paid_on, amount_pkr, category) values
-  ('2026-05-20', 50, 'Utilities'),
-  ('2026-04-20', 20, 'Utilities');
+insert into public.expenses (paid_on, amount_pkr, category_id, order_id) values
+  ('2026-05-20', 300, 'ca7e0000-0000-4000-8000-000000000011', 'a1000000-0000-4000-8000-000000000001'),
+  ('2026-06-20', 600, 'ca7e0000-0000-4000-8000-000000000011', 'a1000000-0000-4000-8000-000000000012'),
+  ('2026-05-20', 400, 'ca7e0000-0000-4000-8000-000000000011', 'a1000000-0000-4000-8000-000000000005');
+insert into public.expenses (paid_on, amount_pkr, category_id) values
+  ('2026-05-20', 50, 'ca7e0000-0000-4000-8000-000000000003'),
+  ('2026-04-20', 20, 'ca7e0000-0000-4000-8000-000000000003');
 
 insert into public.targets (user_id, year, quarter, target_net_pkr) values
   ('a0000000-0000-4000-8000-000000000002', 2026, 2, 5000),

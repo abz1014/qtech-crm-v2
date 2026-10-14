@@ -64,8 +64,8 @@ insert into public.payments_in (order_id, received_on, amount) values
   ('a1000000-0000-4000-8000-000000000001', public.today_pkt() - 1, 500),
   ('a1000000-0000-4000-8000-000000000003', public.today_pkt() - 1, 1179),
   ('a1000000-0000-4000-8000-000000000004', public.today_pkt() - 1, 1500);
-insert into public.expenses (amount_pkr, category, order_id) values
-  (700, 'Supplier payment', 'a1000000-0000-4000-8000-000000000001');
+insert into public.expenses (amount_pkr, category_id, order_id) values
+  (700, 'ca7e0000-0000-4000-8000-000000000011', 'a1000000-0000-4000-8000-000000000001');
 insert into public.order_costs (order_id, expected_cost_pkr) values ('a1000000-0000-4000-8000-000000000001', 800);
 
 -- ------------------------------------------------------------------ order_receivables: the figures

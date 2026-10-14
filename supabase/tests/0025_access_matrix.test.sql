@@ -15,7 +15,8 @@ select * from no_plan();
 -- violation, zero rows and "not found / not visible" (P0002) all count as denied. Any other error is reported verbatim.
 -- The test uses no_plan because the number of assertions follows the matrix.
 --
--- Known failures (section 10 silent or ambiguous) are wrapped in todo_start/todo_end below and explained there.
+-- The one remaining known gap (section 10 silent: deactivated users may execute pure helpers) is wrapped in
+-- todo_start/todo_end below and explained there. Rows added by Amendment A6 carry a `-- A6` comment.
 
 -- ------------------------------------------------------------------ probe machinery (session-local)
 create function pg_temp.f(h text) returns uuid language sql immutable as
@@ -183,9 +184,24 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'current_user_role',       '',    'X',    'X',    'X'),    -- NOT in s10: the role lookup behind every policy (answers NULL for deactivated)
   ('function', 'can_access_bucket',       '',    'X',    'X',    'X'),    -- NOT in s10: storage policy helper (true for the caller's own buckets)
   ('function', 'today_pkt',               '',    'X',    'X',    'X'),    -- NOT in s10: pure date helper
+  ('table', 'expense_categories',  '',           'SIUD', '',     ''),     -- A6 s10 "expense_categories": admin only, delete blocked while in use
+  ('table', 'closed_months',       '',           'S',    '',     ''),     -- A6 s10 "closed_months": admin reads; written only through the admin RPCs
+  ('table', 'attachments',         'expense',    'SIUD', '',     ''),     -- A6 s10 "attachments (parent is an expense)": admin only
+  ('view',  'v_month_pnl',              '',      'S',    '',     ''),     -- A6 A6.3: admin only
+  ('view',  'v_month_expense_category', '',      'S',    '',     ''),     -- A6 A6.3: admin only
+  ('view',  'v_month_team',             '',      'S',    '',     ''),     -- A6 A6.3: admin only
+  ('view',  'v_gst_month',              '',      'S',    'S',    ''),     -- A6 A6.3: admin and sales (input tax is NULL for sales)
+  ('function', 'close_month',           '',      'X',    '',     ''),     -- A6 A6.1: admin RPC
+  ('function', 'close_months_through',  '',      'X',    '',     ''),     -- A6 A6.1: admin RPC
+  ('function', 'reopen_month',          '',      'X',    '',     ''),     -- A6 A6.1: admin RPC
+  ('function', 'month_is_closed',       '',      '',     '',     ''),     -- A6 A6.1: used by the lock triggers only, granted to nobody
+  ('function', 'aging_as_of',           '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
+  ('function', 'payables_as_of',        '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
+  ('function', 'month_end_status',      '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('bucket', 'rfq-files',        '',  'SIUD', 'SIUD', 'SIUD'),           -- s10 "attachments (RFQ/clarification)": bucket rfq-files, same rules
   ('bucket', 'gst-receipts',     '',  'SIUD', 'SIUD', ''),               -- s10 "attachments (invoice)": bucket gst-receipts, admin and sales
-  ('bucket', 'generated-docs',   '',  'SIUD', 'SIU',  'SIU');            -- s10 "bucket generated-docs" (D admin only, A5)
+  ('bucket', 'generated-docs',   '',  'SIUD', 'SIU',  'SIU'),            -- s10 "bucket generated-docs" (D admin only, A5)
+  ('bucket', 'expense-receipts', '',  'SIUD', '',     '');               -- A6 s10 "attachments (parent is an expense)": bucket expense-receipts, admin only
 
 -- ------------------------------------------------------------------ fixtures (as the table owner, admin claims)
 -- Row ids are written in hex and appear in the probes as @NN (same two hex digits).
@@ -226,12 +242,17 @@ insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
-insert into public.expenses (id, amount_pkr, category) values (pg_temp.f('29'), 5, 'misc');
-insert into public.recurring_expenses (id, label, category, amount) values (pg_temp.f('2a'), 'rent', 'rent', 5);
+insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000010');
+insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values
   (pg_temp.f('2b'), 'rfq-files', 'm/1.pdf', 'a.pdf', 'application/pdf', 10, pg_temp.f('15'));
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, invoice_id) values
   (pg_temp.f('2c'), 'gst-receipts', 'm/2.pdf', 'b.pdf', 'application/pdf', 10, pg_temp.f('26'));
+insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values   -- A6
+  (pg_temp.f('3c'), 'expense-receipts', 'm/3.jpg', 'c.jpg', 'image/jpeg', 10, pg_temp.f('29'));
+insert into public.expense_categories (id, name, grp) values (pg_temp.f('3d'), 'M Category', 'overhead');   -- A6
+insert into public.closed_months (month, closed_by) values ('2019-01-01', 'a0000000-0000-4000-8000-000000000001');   -- A6
+update public.supplier_orders set placed_on = public.today_pkt() where id = pg_temp.f('23');   -- A6: payables_as_of needs a placed leg
 insert into public.snoozes (user_id, rule, subject_id, until_on)
 select u, 'r', pg_temp.f('2d'), public.today_pkt() + 3
 from unnest(array['a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002',
@@ -250,7 +271,8 @@ insert into public.purchase_orders (id, supplier_order_id, number, revision, cur
 -- order @21 is the target of resolve_value_basis
 update public.orders set legacy_flags = '{value_basis_unknown}' where id = pg_temp.f('21');
 insert into storage.objects (bucket_id, name) values
-  ('rfq-files', 'fixture.txt'), ('gst-receipts', 'fixture.txt'), ('generated-docs', 'fixture.txt');
+  ('rfq-files', 'fixture.txt'), ('gst-receipts', 'fixture.txt'), ('generated-docs', 'fixture.txt'),
+  ('expense-receipts', 'fixture.txt');
 
 -- ------------------------------------------------------------------ probes: tables
 -- Generated probes for the simple cases: S (select), U (touch one column to its own value), D (delete the leaf row).
@@ -276,8 +298,11 @@ insert into spec values
   ('order_costs', '', 'order_id = @20', 'expected_cost_pkr', $q$insert into public.order_costs (order_id, expected_cost_pkr) values (@21, 5)$q$),
   ('invoices', '', 'id = @27', 'notes', $q$insert into public.invoices (id, order_id, number, net_amount, gst_amount) values (@ac, @21, 'INV-P', 100, 18)$q$),
   ('payments_in', '', 'id = @28', 'reference', $q$insert into public.payments_in (id, order_id, amount) values (@ad, @21, 5)$q$),
-  ('expenses', '', 'id = @29', 'description', $q$insert into public.expenses (id, amount_pkr, category) values (@ae, 5, 'misc')$q$),
-  ('recurring_expenses', '', 'id = @2a', 'label', $q$insert into public.recurring_expenses (id, label, category, amount) values (@af, 'l', 'c', 5)$q$),
+  ('expenses', '', 'id = @29', 'description', $q$insert into public.expenses (id, amount_pkr, category_id) values (@ae, 5, 'ca7e0000-0000-4000-8000-000000000010')$q$),
+  ('recurring_expenses', '', 'id = @2a', 'label', $q$insert into public.recurring_expenses (id, label, category_id, amount) values (@af, 'l', 'ca7e0000-0000-4000-8000-000000000002', 5)$q$),
+  ('expense_categories', '', 'id = @3d', 'name', $q$insert into public.expense_categories (id, name, grp) values (@b6, 'probe category', 'overhead')$q$),   -- A6
+  ('closed_months', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.closed_months (month, closed_by) values ('2019-02-01', '{uid}')$q$),   -- A6
+  ('attachments', 'expense', 'id = @3c', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values (@b7, 'expense-receipts', 'p/3.jpg', 'c.jpg', 'image/jpeg', 10, @29)$q$),   -- A6
   ('attachments', 'rfq', 'id = @2b', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values (@b0, 'rfq-files', 'p/1.pdf', 'a.pdf', 'application/pdf', 10, @15)$q$),
   ('attachments', 'invoice', 'id = @2c', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, invoice_id) values (@b1, 'gst-receipts', 'p/2.pdf', 'b.pdf', 'application/pdf', 10, @26)$q$),
   ('snoozes', 'own', $q$user_id = '{uid}'$q$, 'until_on', $q$insert into public.snoozes (user_id, rule, subject_id, until_on) values ('{uid}', 'r2', @b2, current_date)$q$),
@@ -316,7 +341,8 @@ insert into probes
 select v, '', 'S', format('select 1 from public.%s limit 1', v)
 from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_state','v_invoice_state','v_gst_register',
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
-                  'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_stats']) v;
+                  'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_stats',
+                  'v_month_pnl','v_month_expense_category','v_month_team','v_gst_month']) v;   -- A6
 
 -- ------------------------------------------------------------------ probes: functions (X)
 -- Each call is valid for an authorised caller and rolled back. A call counts as allowed when it returns rows (or a
@@ -346,7 +372,14 @@ insert into probes values
   ('set_fx_rate', '', 'X', $q$select public.set_fx_rate('GBP', 350)$q$),
   ('current_user_role', '', 'X', 'select 1 where public.current_user_role() is not null'),
   ('can_access_bucket', '', 'X', $q$select 1 where public.can_access_bucket('rfq-files')$q$),
-  ('today_pkt', '', 'X', 'select public.today_pkt()');
+  ('today_pkt', '', 'X', 'select public.today_pkt()'),
+  ('close_month', '', 'X', $q$select public.close_month(date '2020-01-01')$q$),                -- A6
+  ('close_months_through', '', 'X', $q$select public.close_months_through(date '2020-01-01')$q$),   -- A6
+  ('reopen_month', '', 'X', $q$select public.reopen_month(date '2019-01-01')$q$),               -- A6
+  ('month_is_closed', '', 'X', $q$select public.month_is_closed(date '2019-01-01')$q$),         -- A6
+  ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
+  ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6
+  ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1');   -- A6
 
 -- ------------------------------------------------------------------ probes: storage buckets
 -- Storage refuses a direct SQL DELETE on storage.objects for every role (its protect_delete guard fires before row
@@ -355,24 +388,24 @@ insert into probes values
 -- from pg_policies, but it is evaluated by the database for that persona, so the helper functions it calls are tested.
 insert into probes
 select b, '', 'S', format($q$select 1 from storage.objects where bucket_id = '%s' and name = 'fixture.txt'$q$, b)
-from unnest(array['rfq-files','gst-receipts','generated-docs']) b
+from unnest(array['rfq-files','gst-receipts','generated-docs','expense-receipts']) b
 union all
 select b, '', 'I', format($q$insert into storage.objects (bucket_id, name) values ('%s', 'probe.txt')$q$, b)
-from unnest(array['rfq-files','gst-receipts','generated-docs']) b
+from unnest(array['rfq-files','gst-receipts','generated-docs','expense-receipts']) b
 union all
 select b, '', 'U', format($q$update storage.objects set name = name where bucket_id = '%s' and name = 'fixture.txt'$q$, b)
-from unnest(array['rfq-files','gst-receipts','generated-docs']) b
+from unnest(array['rfq-files','gst-receipts','generated-docs','expense-receipts']) b
 union all
 select b, '', 'D', format($q$select 1 from storage.objects where bucket_id = '%s' and name = 'fixture.txt' and (%s)$q$, b,
   (select string_agg('(' || coalesce(pl.qual, 'false') || ')', ' or ') from pg_policies pl
    where pl.schemaname = 'storage' and pl.tablename = 'objects' and pl.cmd = 'DELETE'))
-from unnest(array['rfq-files','gst-receipts','generated-docs']) b;
+from unnest(array['rfq-files','gst-receipts','generated-docs','expense-receipts']) b;
 
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
-  'coverage: the matrix lists every table in schema public (28)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 28, 'coverage: 28 tables');
+  'coverage: the matrix lists every table in schema public (30)');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 30, 'coverage: 30 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');
@@ -396,11 +429,12 @@ select is((select count(*)::int from pg_class c
              and exists (select 1 from aclexplode(c.relacl) a where a.grantee in (0, 'anon'::regrole::oid))), 0,
   'anon and PUBLIC hold no privilege on any table or view in public');
 
+-- S14 follow-up (0025): anon no longer runs the pure helpers, so only the deactivated rows stay known (item 3).
 insert into known values
-  ('model_tokens', '', 'anon'), ('model_tokens', '', 'deactivated'),
-  ('item_text_norm', '', 'anon'), ('item_text_norm', '', 'deactivated'),
+  ('model_tokens', '', 'deactivated'),
+  ('item_text_norm', '', 'deactivated'),
   ('item_match_tier', '', 'deactivated'),
-  ('today_pkt', '', 'anon'), ('today_pkt', '', 'deactivated');
+  ('today_pkt', '', 'deactivated');
 
 -- ------------------------------------------------------------------ the matrix, line by line and persona by persona
 select is(pg_temp.actual(m.obj, m.variant, p.persona), pg_temp.expected(m.obj, m.variant, p.persona),
@@ -410,25 +444,42 @@ cross join (values ('admin'), ('sales'), ('engineer'), ('deactivated'), ('anon')
 where not exists (select 1 from known k where k.obj = m.obj and k.variant = m.variant and k.persona = p.persona)
 order by m.kind, m.obj, m.variant, p.persona;
 
--- Known failures. Section 10 lists the pure helpers (model_tokens and the like) for the three staff roles only and
--- says nothing about anon or a deactivated user. The brief expects both to be denied. Today anon can execute
--- model_tokens, item_text_norm and today_pkt (their migrations grant to authenticated but never revoke the default
--- PUBLIC execute), and a deactivated user, who is still the database role `authenticated`, can execute every pure
--- helper: they read no table, so there is no row-security rule to turn the call away. Whether that matters is the
--- owner's call (no data is exposed), so these are listed in the report and marked TODO rather than changed here.
-select todo_start('s10 is silent on anon and deactivated for pure helpers; they can execute them (no data access)');
+-- S14 follow-up, item 1 (migration 0025): model_tokens, item_text_norm and today_pkt were granted to authenticated but
+-- never revoked from PUBLIC. They are now executable by authenticated only (the matrix loop above checks anon too).
+select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
+           where p.pronamespace = 'public'::regnamespace and p.proname in ('model_tokens', 'item_text_norm', 'today_pkt')
+             and (has_function_privilege('anon', p.oid, 'execute')
+                  or exists (select 1 from aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                             where a.grantee = 0 and a.privilege_type = 'EXECUTE'))),
+          '{}'::text[], 'model_tokens, item_text_norm and today_pkt have no PUBLIC or anon execute');
+select is((select count(*)::int from pg_proc p
+           where p.pronamespace = 'public'::regnamespace and p.proname in ('model_tokens', 'item_text_norm', 'today_pkt')
+             and has_function_privilege('authenticated', p.oid, 'execute')), 3,
+  'model_tokens, item_text_norm and today_pkt stay executable by authenticated');
+
+-- Item 2: the SECURITY INVOKER trigger functions no longer carry the default PUBLIC execute either. Triggers still fire
+-- without an execute check (the other test files exercise every one of them), so nothing is lost.
+select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
+           where p.pronamespace = 'public'::regnamespace and p.prorettype = 'trigger'::regtype and not p.prosecdef
+             and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute')
+                  or exists (select 1 from aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                             where a.grantee = 0 and a.privilege_type = 'EXECUTE'))),
+          '{}'::text[], 'trigger functions (security invoker) have no client or PUBLIC grant');
+select is((select array_agg(p.proname::text order by p.proname::text) from pg_proc p
+           where p.pronamespace = 'public'::regnamespace and p.prorettype = 'trigger'::regtype and not p.prosecdef
+             and p.proname in ('company_profile_touch', 'lock_issued_document', 'purchase_order_set_total',
+                               'quotation_set_totals', 'set_updated_at')),
+          array['company_profile_touch', 'lock_issued_document', 'purchase_order_set_total', 'quotation_set_totals',
+                'set_updated_at'], 'the five named trigger functions exist and are covered by that check');
+
+-- Item 3 stays a documented TODO. Section 10 lists the pure helpers (model_tokens and the like) for the three staff
+-- roles only and says nothing about a deactivated user. A deactivated user is still the database role `authenticated`,
+-- and the helpers read no table, so there is no row-security rule to turn the call away. No data is exposed, so this
+-- is left as it is and reported rather than changed.
+select todo_start('s10 is silent on deactivated users for pure helpers; they can execute them (no data access)');
 select is(pg_temp.actual(k.obj, k.variant, k.persona), pg_temp.expected(k.obj, k.variant, k.persona),
   format('KNOWN function %s as %s', k.obj, k.persona))
 from known k order by k.obj, k.persona;
-select todo_end();
-
--- The five SECURITY INVOKER trigger functions (company_profile_touch, lock_issued_document, purchase_order_set_total, quotation_set_totals, set_updated_at) were never revoked from PUBLIC. A trigger function cannot be called
--- as a function, so this exposes nothing; A5 only names capture_quote_line_fx. Listed in the report, not changed here.
-select todo_start('invoker trigger functions keep the default PUBLIC execute (uncallable, harmless)');
-select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
-           where p.pronamespace = 'public'::regnamespace and p.prorettype = 'trigger'::regtype and not p.prosecdef
-             and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))),
-          '{}'::text[], 'KNOWN trigger functions (security invoker) have no client grant');
 select todo_end();
 
 select * from finish();
