@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { navItemsForRole } from '@/app/navConfig'
 import type { SessionUser } from '@/app/session'
 import { Search } from 'lucide-react'
-import { Avatar } from '@/ui/Avatar'
+import { AccountMenu } from '@/app/shell/AccountMenu'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { cn } from '@/lib/utils'
@@ -16,7 +16,7 @@ export function MobileBar({ user, title, onSearch }: { user: SessionUser; title:
       </NavLink>
       <h1 className="flex-1 truncate text-lg font-semibold tracking-snug">{title}</h1>
       <Button variant="quiet" size="touch" icon={Search} aria-label="Search" onClick={onSearch} />
-      <Avatar name={user.name} className="mr-2" />
+      <AccountMenu user={user} touch />
     </header>
   )
 }

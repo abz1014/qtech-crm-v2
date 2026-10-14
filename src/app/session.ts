@@ -26,3 +26,12 @@ export function useSession(): SessionState {
 }
 
 export const ROLE_LABEL: Record<string, string> = { admin: 'Admin', sales: 'Sales', engineer: 'Engineer' }
+
+/**
+ * Session actions. `signOut` is a stub until A03 supplies the Supabase-backed
+ * session: it resolves immediately and changes nothing. The account menu calls
+ * `session.signOut()` so A03 only has to replace this one function.
+ */
+export const session = {
+  signOut: async (): Promise<void> => {},
+}

@@ -7,6 +7,9 @@ export default defineConfig({
   resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
   test: {
     environment: 'jsdom',
+    setupFiles: ['src/test/setup.ts'],
+    // the first ESLint run in designGuards.test.ts parses the whole config cold
+    testTimeout: 30_000,
     include: ['src/**/*.test.{ts,tsx}'],
   },
 })

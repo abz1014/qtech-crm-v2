@@ -84,6 +84,19 @@ export default {
     transitionDuration: { DEFAULT: v('dur-fast'), fast: v('dur-fast'), base: v('dur-base'), slow: v('dur-slow') },
     transitionTimingFunction: { DEFAULT: v('ease-out'), out: v('ease-out'), standard: v('ease-standard') },
     extend: {
+      // Overlay motion (DESIGN_SYSTEM section 9): fade and rise, always in answer to an action.
+      keyframes: {
+        'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
+        'rise-4': { from: { opacity: '0', transform: 'translateY(4px)' }, to: { opacity: '1', transform: 'none' } },
+        'rise-6': { from: { opacity: '0', transform: 'translateY(6px)' }, to: { opacity: '1', transform: 'none' } },
+        'sheet-in': { from: { transform: 'translateY(24px)', opacity: '0' }, to: { transform: 'none', opacity: '1' } },
+      },
+      animation: {
+        'fade-in': 'fade-in var(--dur-base) var(--ease-out) both',
+        'rise-4': 'rise-4 var(--dur-base) var(--ease-out) both',
+        'rise-6': 'rise-6 var(--dur-base) var(--ease-out) both',
+        'sheet-in': 'sheet-in var(--dur-base) var(--ease-out) both',
+      },
       height: { control: v('control-h'), row: v('row-h'), topbar: v('topbar-h'), touch: v('hit-touch'), indicator: '2px' },
       minHeight: { control: v('control-h'), row: v('row-h'), touch: v('hit-touch') },
       minWidth: { touch: v('hit-touch') },
