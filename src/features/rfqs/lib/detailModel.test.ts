@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { currencyForSupplier, currencySourceNote } from './replyCurrency'
-import {
-  buildCantQuoteNotes,
-  parseCantQuoteNotes,
-  reasonForItem,
-  withItemReason,
-  withoutReason,
-  withReason,
-} from './cantQuote'
+import { CANT_QUOTE_REASONS, isCantQuoteReason, reasonForItem, reasonLabel } from './cantQuote'
 import { defaultCloseReason } from './closeDefaults'
 import { generateSupplierChase, supplierReplyBy } from './supplierChase'
 
@@ -33,36 +26,25 @@ describe('currencyForSupplier', () => {
   })
 })
 
-describe("can't quote notes", () => {
-  it('writes one reason and keeps a person\'s own notes', () => {
-    const n = withReason('Call Imran on Monday', "Doesn't carry this brand")
-    expect(n).toBe("Can't quote: Doesn't carry this brand\nCall Imran on Monday")
-    expect(parseCantQuoteNotes(n)).toEqual({ reason: "Doesn't carry this brand", items: {}, rest: 'Call Imran on Monday' })
+describe("can't quote reasons", () => {
+  it('has five stable snake_case keys, the ones the database accepts', () => {
+    expect(CANT_QUOTE_REASONS.map(r => r.key)).toEqual(['no_brand', 'cant_source_in_time', 'discontinued', 'wont_quote_quantity', 'other'])
+    for (const r of CANT_QUOTE_REASONS) expect(r.key).toMatch(/^[a-z_]+$/)
   })
-  it('replaces the reason instead of stacking it', () => {
-    const once = withReason(null, 'Item discontinued')
-    expect(withReason(once, 'Other reason')).toBe("Can't quote: Other reason")
+  it('builds the words from the key, and reads an unknown key as other', () => {
+    expect(reasonLabel('no_brand')).toBe("Doesn't carry this brand")
+    expect(reasonLabel('discontinued')).toBe('Item discontinued')
+    expect(reasonLabel('something_new')).toBe('Other reason')
+    expect(reasonLabel(null)).toBe('Other reason')
+    expect(isCantQuoteReason('other')).toBe(true)
+    expect(isCantQuoteReason("Doesn't carry this brand")).toBe(false)
   })
-  it('takes the reason back and leaves null when nothing remains', () => {
-    expect(withoutReason(withReason(null, 'Other reason'))).toBeNull()
-    expect(withoutReason(withReason('keep me', 'Other reason'))).toBe('keep me')
-  })
-  it('sets and clears a per-item override that wins over the inquiry reason', () => {
-    const n = withItemReason(withReason(null, "Can't source in time"), 2, 'Item discontinued')
-    expect(n).toBe("Can't quote: Can't source in time\nItem 2 can't quote: Item discontinued")
-    const p = parseCantQuoteNotes(n)
-    expect(reasonForItem(p, 2)).toBe('Item discontinued')
-    expect(reasonForItem(p, 1)).toBe("Can't source in time")
-    expect(withItemReason(n, 2, null)).toBe("Can't quote: Can't source in time")
-  })
-  it('orders per-item lines by item number and round-trips', () => {
-    const text = buildCantQuoteNotes({ reason: null, items: { 3: 'B', 1: 'A' }, rest: '' })
-    expect(text).toBe("Item 1 can't quote: A\nItem 3 can't quote: B")
-    expect(buildCantQuoteNotes(parseCantQuoteNotes(text))).toBe(text)
-  })
-  it('handles empty and CRLF notes', () => {
-    expect(parseCantQuoteNotes(null)).toEqual({ reason: null, items: {}, rest: '' })
-    expect(parseCantQuoteNotes("Can't quote: X\r\nhello").rest).toBe('hello')
+  it('an item override wins over the inquiry reason, which only counts once the inquiry is marked', () => {
+    const base = { noOfferOn: '2026-11-27', noOfferReason: 'no_brand', itemDeclines: { b: 'discontinued' } }
+    expect(reasonForItem('a', base)).toBe('no_brand')
+    expect(reasonForItem('b', base)).toBe('discontinued')
+    expect(reasonForItem('a', { ...base, noOfferOn: null })).toBeNull()
+    expect(reasonForItem('b', { ...base, noOfferOn: null })).toBe('discontinued')
   })
 })
 

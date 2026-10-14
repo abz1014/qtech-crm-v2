@@ -85,7 +85,9 @@ const row = (page: Page, name: string) => page.getByRole('region', { name })
 const linesOf = (inquiryId: string) =>
   must(rest<{ rfq_item_id: string; unit_price: number; currency: string; fx_rate_pkr: number | null; lead_time: string | null; in_stock: boolean | null }[]>('admin', `supplier_quote_lines?inquiry_id=eq.${inquiryId}&select=rfq_item_id,unit_price,currency,fx_rate_pkr,lead_time,in_stock`))
 const inquiryOf = (id: string) =>
-  must(rest<{ no_offer_on: string | null; notes: string | null; chase_count: number; last_chased_on: string | null }[]>('admin', `supplier_inquiries?id=eq.${id}&select=no_offer_on,notes,chase_count,last_chased_on`)).then(r => r[0])
+  must(rest<{ no_offer_on: string | null; no_offer_reason: string | null; notes: string | null; chase_count: number; last_chased_on: string | null }[]>('admin', `supplier_inquiries?id=eq.${id}&select=no_offer_on,no_offer_reason,notes,chase_count,last_chased_on`)).then(r => r[0])
+const declinesOf = (inquiryId: string) =>
+  must(rest<{ rfq_item_id: string; reason: string }[]>('admin', `inquiry_item_declines?inquiry_id=eq.${inquiryId}&select=rfq_item_id,reason`))
 const rfqOf = (id: string) =>
   must(rest<{ quoted_on: string | null; closed_on: string | null; close_reason: string | null }[]>('admin', `rfqs?id=eq.${id}&select=quoted_on,closed_on,close_reason`)).then(r => r[0])
 
@@ -187,7 +189,9 @@ test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
     await expect(r.getByText(/They say they can't quote\. Reason:/)).toBeVisible()
     await r.getByRole('button', { name: "Mark can't quote" }).click()
     await expect.poll(async () => (await inquiryOf(s.china.inquiryId)).no_offer_on).toBe(today())
-    expect((await inquiryOf(s.china.inquiryId)).notes).toMatch(/^Can't quote: /)
+    const done = await inquiryOf(s.china.inquiryId)
+    expect(['no_brand', 'other']).toContain(done.no_offer_reason)
+    expect(done.notes).toBeNull()
   })
 })
 
@@ -244,6 +248,7 @@ test.describe('comparison', () => {
 test.describe("can't quote (FE-2: 1 tap)", () => {
   test('one tap records the reason, a per-item override is optional, and it can be taken back', async ({ page }) => {
     const s = await seed()
+    await must(rest('admin', `supplier_inquiries?id=eq.${s.china.inquiryId}`, { method: 'PATCH', body: { notes: 'Call Imran on Monday' } }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = row(page, s.china.name)
     await r.getByRole('button', { name: "Doesn't carry this brand" }).click() // the one tap
@@ -251,14 +256,16 @@ test.describe("can't quote (FE-2: 1 tap)", () => {
     await expect(r.getByText("Can't quote", { exact: false }).first()).toBeVisible()
     const after = await inquiryOf(s.china.inquiryId)
     expect(after.no_offer_on).toBe(today())
-    expect(after.notes).toBe("Can't quote: Doesn't carry this brand")
+    expect(after.no_offer_reason).toBe('no_brand') // a stored key, not a phrase
+    expect(after.notes).toBe('Call Imran on Monday') // the notes belong to people and are never written
     await expect(page.getByRole('article', { name: 'Item 1' }).getByText("Can't quote: Doesn't carry this brand")).toBeVisible()
 
     await r.getByRole('button', { name: 'Take back' }).click()
     await expect(r.getByRole('button', { name: "Doesn't carry this brand" })).toBeVisible()
     const back = await inquiryOf(s.china.inquiryId)
     expect(back.no_offer_on).toBeNull()
-    expect(back.notes).toBeNull()
+    expect(back.no_offer_reason).toBeNull()
+    expect(back.notes).toBe('Call Imran on Monday')
   })
 
   test('a different reason for one item is kept beside the inquiry reason', async ({ page }) => {
@@ -267,7 +274,10 @@ test.describe("can't quote (FE-2: 1 tap)", () => {
     const r = row(page, s.germany.name)
     await r.getByText('A different reason for one item').click()
     await r.getByLabel(`Can't quote reason for item 2 from ${s.germany.name}`).selectOption('Item discontinued')
-    await expect.poll(async () => (await inquiryOf(s.germany.inquiryId)).notes).toBe("Item 2 can't quote: Item discontinued")
+    await expect.poll(async () => (await declinesOf(s.germany.inquiryId)).map(d => [d.rfq_item_id, d.reason])).toEqual([[s.items[1].id, 'discontinued']])
+    const after = await inquiryOf(s.germany.inquiryId)
+    expect(after.notes).toBeNull()
+    expect(after.no_offer_on).toBeNull()
     await expect(page.getByRole('article', { name: 'Item 2' }).getByText("Can't quote: Item discontinued")).toBeVisible()
   })
 })

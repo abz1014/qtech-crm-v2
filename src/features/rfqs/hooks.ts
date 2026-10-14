@@ -84,15 +84,15 @@ export function useSaveReply(rfqId: string) {
 export function useSetInquiryNoOffer(rfqId: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (input: { inquiryId: string; noOfferOn: string | null; notes: string | null }) => api.setInquiryNoOffer(input),
+    mutationFn: (input: { inquiryId: string; noOfferOn: string | null; reason: string | null }) => api.setInquiryNoOffer(input),
     onSuccess: () => invalidateAfter(client, 'inquiry.cantQuote', { rfqId }),
   })
 }
 
-export function useSetInquiryNotes(rfqId: string) {
+export function useSetItemDecline(rfqId: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (v: { inquiryId: string; notes: string | null }) => api.setInquiryNotes(v.inquiryId, v.notes),
+    mutationFn: (v: { inquiryId: string; itemId: string; reason: string | null }) => api.setItemDecline(v),
     onSuccess: () => invalidateAfter(client, 'inquiry.cantQuote', { rfqId }),
   })
 }

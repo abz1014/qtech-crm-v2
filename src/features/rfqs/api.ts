@@ -268,6 +268,10 @@ export interface InquiryRow {
   sentOn: string | null
   lastChasedOn: string | null
   noOfferOn: string | null
+  /** Why the supplier cannot quote (a stored key, see lib/cantQuote.ts); set together with noOfferOn. */
+  noOfferReason: string | null
+  /** A different reason for one item, by item id. */
+  itemDeclines: Record<string, string>
   chaseCount: number
   notes: string | null
   contactName: string | null
@@ -287,14 +291,14 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
   const inq = unwrap(
     await db
       .from('supplier_inquiries')
-      .select('id, supplier_id, sent_on, last_chased_on, no_offer_on, chase_count, notes, created_at')
+      .select('id, supplier_id, sent_on, last_chased_on, no_offer_on, no_offer_reason, chase_count, notes, created_at')
       .eq('rfq_id', rfqId)
       .order('created_at'),
   )
   if (inq.length === 0) return []
   const supplierIds = [...new Set(inq.map(i => i.supplier_id))]
   const inquiryIds = inq.map(i => i.id)
-  const [companies, states, contacts, lines, recent] = await Promise.all([
+  const [companies, states, contacts, lines, recent, declines] = await Promise.all([
     db.from('companies').select('id, name, country').in('id', supplierIds),
     db.from('v_inquiry_state').select('inquiry_id, response_state, contact_state, items_quoted').eq('rfq_id', rfqId),
     db.from('contacts').select('company_id, name, phone, created_at').in('company_id', supplierIds).order('created_at'),
@@ -308,7 +312,10 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
       .in('supplier_inquiries.supplier_id', supplierIds)
       .order('created_at', { ascending: false })
       .limit(500),
+    db.from('inquiry_item_declines').select('inquiry_id, rfq_item_id, reason').in('inquiry_id', inquiryIds),
   ])
+  const declinesBy = new Map<string, Record<string, string>>()
+  for (const d of unwrap(declines)) declinesBy.set(d.inquiry_id, { ...(declinesBy.get(d.inquiry_id) ?? {}), [d.rfq_item_id]: d.reason })
   const byCompany = new Map(unwrap(companies).map(c => [c.id, c]))
   const stateBy = new Map(unwrap(states).map(s => [s.inquiry_id, s]))
   const contactBy = new Map<string, { name: string; phone: string | null }>()
@@ -346,6 +353,8 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
       sentOn: i.sent_on,
       lastChasedOn: i.last_chased_on,
       noOfferOn: i.no_offer_on,
+      noOfferReason: i.no_offer_reason,
+      itemDeclines: declinesBy.get(i.id) ?? {},
       chaseCount: i.chase_count,
       notes: i.notes,
       contactName: ct?.name ?? null,
@@ -420,17 +429,24 @@ export async function saveReply(input: SaveReplyInput): Promise<number> {
   return input.prices.length
 }
 
-/** Marks the inquiry "can't quote" with its notes (the fixed reason phrase), or takes it back (noOfferOn null). */
-export async function setInquiryNoOffer(input: { inquiryId: string; noOfferOn: string | null; notes: string | null }): Promise<void> {
+/** Marks the inquiry "can't quote" (the day and the reason key go together), or takes it back (both null). The notes are never touched. */
+export async function setInquiryNoOffer(input: { inquiryId: string; noOfferOn: string | null; reason: string | null }): Promise<void> {
   const db = requireSupabase()
-  const { error } = await db.from('supplier_inquiries').update({ no_offer_on: input.noOfferOn, notes: input.notes }).eq('id', input.inquiryId)
+  const { error } = await db.from('supplier_inquiries').update({ no_offer_on: input.noOfferOn, no_offer_reason: input.reason }).eq('id', input.inquiryId)
   if (error) throw error
 }
 
-/** Only the notes (a per-item reason). */
-export async function setInquiryNotes(inquiryId: string, notes: string | null): Promise<void> {
+/** A different reason for one item of an inquiry (a stored key), or none (null) to take it back. */
+export async function setItemDecline(input: { inquiryId: string; itemId: string; reason: string | null }): Promise<void> {
   const db = requireSupabase()
-  const { error } = await db.from('supplier_inquiries').update({ notes }).eq('id', inquiryId)
+  if (input.reason === null) {
+    const { error } = await db.from('inquiry_item_declines').delete().eq('inquiry_id', input.inquiryId).eq('rfq_item_id', input.itemId)
+    if (error) throw error
+    return
+  }
+  const { error } = await db
+    .from('inquiry_item_declines')
+    .upsert({ inquiry_id: input.inquiryId, rfq_item_id: input.itemId, reason: input.reason }, { onConflict: 'inquiry_id,rfq_item_id' })
   if (error) throw error
 }
 

@@ -17,7 +17,7 @@ import { useToast } from '@/ui/useToast'
 import { Panel } from '@/features/companies/CompanyParts'
 import { PasteBox, PasteReplyPanel } from '@/features/rfqs/PasteReply'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
-import { useSaveReply, useSetInquiryNoOffer, useSetInquiryNotes, useStampSupplierChase } from '@/features/rfqs/hooks'
+import { useSaveReply, useSetInquiryNoOffer, useSetItemDecline, useStampSupplierChase } from '@/features/rfqs/hooks'
 import {
   CANT_QUOTE_REASONS,
   currencyForSupplier,
@@ -26,15 +26,12 @@ import {
   draftFromSuggestions,
   generateSupplierChase,
   isReplyDirty,
-  parseCantQuoteNotes,
   parseSupplierReply,
   planReplySave,
   qtyText,
   REPLY_CURRENCIES,
   suggestFromReply,
-  withItemReason,
-  withoutReason,
-  withReason,
+  reasonLabel,
   type EnquiryVariant,
   type RateTable,
   type SuggestionSet,
@@ -49,8 +46,8 @@ import {
  *         can't quote      1 tap: the reason buttons are in the row
  *         chase            1 tap: copies the text and stamps the chase together
  *
- * "Can't quote" records one reason for the whole inquiry (no_offer_on and a fixed phrase in the notes); a different reason for
- * one item is an option, kept in the same notes (see lib/cantQuote.ts).
+ * "Can't quote" records one reason for the whole inquiry (no_offer_on and no_offer_reason, a stored key); a different reason for
+ * one item is an option, kept in inquiry_item_declines (see lib/cantQuote.ts). The notes stay free for people.
  */
 
 export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHeader; items: RfqItemRow[]; inquiries: InquiryRow[]; rates: RateTable }) {
@@ -84,7 +81,7 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
   const headingId = useId()
   const save = useSaveReply(rfq.id)
   const noOffer = useSetInquiryNoOffer(rfq.id)
-  const itemReason = useSetInquiryNotes(rfq.id)
+  const itemReason = useSetItemDecline(rfq.id)
   const stamp = useStampSupplierChase(rfq.id)
 
   const prefill = currencyForSupplier(inquiry.lastCurrency, inquiry.supplierCountry)
@@ -95,7 +92,6 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
   const [pasteMode, setPasteMode] = useState<null | 'box' | 'suggest'>(null)
   const [suggestions, setSuggestions] = useState<SuggestionSet | null>(null)
 
-  const notes = parseCantQuoteNotes(inquiry.notes)
   const hasLines = inquiry.lines.length > 0
   const declinedAll = Boolean(inquiry.noOfferOn) && !hasLines
   const dirty = isReplyDirty(existing, draft)
@@ -129,16 +125,16 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
   }
 
   const cantQuote = async (reason: string) => {
-    const before = { notes: inquiry.notes }
+    const before = { noOfferOn: inquiry.noOfferOn, reason: inquiry.noOfferReason }
     try {
-      await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: businessToday(), notes: withReason(inquiry.notes, reason) })
+      await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: businessToday(), reason })
       toast({
         title: "Marked can't quote",
-        body: `${inquiry.supplierName} · ${reason}`,
+        body: `${inquiry.supplierName} · ${reasonLabel(reason)}`,
         undo: {
           onUndo: async () => {
             try {
-              await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: null, notes: before.notes })
+              await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: before.noOfferOn, reason: before.reason })
             } catch (err) {
               toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
             }
@@ -154,15 +150,15 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
 
   const takeBack = async () => {
     try {
-      await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: null, notes: withoutReason(inquiry.notes) })
+      await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: null, reason: null })
     } catch (err) {
       toast({ title: "Could not take back can't quote", body: mapPgError(err).message, tone: 'danger' })
     }
   }
 
-  const setItem = async (itemNumber: number, reason: string | null) => {
+  const setItem = async (itemId: string, reason: string | null) => {
     try {
-      await itemReason.mutateAsync({ inquiryId: inquiry.id, notes: withItemReason(inquiry.notes, itemNumber, reason) })
+      await itemReason.mutateAsync({ inquiryId: inquiry.id, itemId, reason })
     } catch (err) {
       toast({ title: 'Could not save the reason', body: mapPgError(err).message, tone: 'danger' })
     }
@@ -186,10 +182,10 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
   }
   const acceptSuggestions = async (selected: ReadonlySet<string>) => {
     if (!suggestions) return
-    let notesNow = inquiry.notes
-    for (const d of suggestions.declined) notesNow = withItemReason(notesNow, d.itemNumber, d.reason)
     try {
-      if (suggestions.declined.length > 0 && notesNow !== inquiry.notes) await itemReason.mutateAsync({ inquiryId: inquiry.id, notes: notesNow })
+      for (const d of suggestions.declined) {
+        if (inquiry.itemDeclines[d.itemId] !== d.reason) await itemReason.mutateAsync({ inquiryId: inquiry.id, itemId: d.itemId, reason: d.reason })
+      }
     } catch (err) {
       toast({ title: 'Could not save the reasons', body: mapPgError(err).message, tone: 'danger' })
       return
@@ -205,7 +201,7 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
 
   // ---- chase: the items still without a price from this supplier, and not declined for a reason of their own
   const pricedNumbers = items.filter(it => inquiry.lines.some(l => l.itemId === it.id)).map(it => it.number)
-  const outstanding = items.filter(it => !inquiry.lines.some(l => l.itemId === it.id) && !notes.items[it.number])
+  const outstanding = items.filter(it => !inquiry.lines.some(l => l.itemId === it.id) && !inquiry.itemDeclines[it.id])
   const canChase = Boolean(inquiry.sentOn) && !inquiry.noOfferOn && outstanding.length > 0
   const chase = canChase
     ? generateSupplierChase({
@@ -266,7 +262,7 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
         <div className="flex flex-wrap items-center gap-3 rounded border border-line bg-sunken px-3 py-2 text-sm">
           <span>
             <span className="font-medium">{"Can't quote"}</span>
-            {notes.reason ? `: ${notes.reason}` : ''}
+            {inquiry.noOfferReason ? `: ${reasonLabel(inquiry.noOfferReason)}` : ''}
             <span className="text-fg-muted">{` · ${formatDay(inquiry.noOfferOn as string)}`}</span>
           </span>
           <Button size="sm" icon={Undo2} className="ml-auto" onClick={() => void takeBack()} busy={noOffer.isPending}>
@@ -278,7 +274,7 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
           <ul className="grid gap-x-6 gap-y-2 md:grid-cols-2">
             {items.map(it => {
               const q = qtyText(it.qty, it.unit)
-              const reason = notes.items[it.number]
+              const reason = inquiry.itemDeclines[it.id]
               return (
                 <li key={it.id} className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_132px]">
                   <span className="flex min-w-0 items-start gap-2 text-sm" aria-hidden="true">
@@ -291,7 +287,7 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
                     </span>
                   </span>
                   {reason ? (
-                    <span className="text-xs text-fg-muted">{`Can't quote: ${reason}`}</span>
+                    <span className="text-xs text-fg-muted">{`Can't quote: ${reasonLabel(reason)}`}</span>
                   ) : (
                     <NumberInput
                       aria-label={`Price for item ${it.number} from ${inquiry.supplierName}`}
@@ -389,8 +385,8 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
             <div role="group" aria-label={`Can't quote, ${inquiry.supplierName}`} className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium">{"Can't quote:"}</span>
               {CANT_QUOTE_REASONS.map(r => (
-                <Button key={r} size="sm" onClick={() => void cantQuote(r)} disabled={noOffer.isPending}>
-                  {r}
+                <Button key={r.key} size="sm" onClick={() => void cantQuote(r.key)} disabled={noOffer.isPending}>
+                  {r.label}
                 </Button>
               ))}
             </div>
@@ -408,9 +404,9 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
                   <Select
                     aria-label={`Can't quote reason for item ${it.number} from ${inquiry.supplierName}`}
                     placeholder="Can quote"
-                    options={CANT_QUOTE_REASONS.map(r => ({ value: r, label: r }))}
-                    value={notes.items[it.number] ?? ''}
-                    onChange={e => void setItem(it.number, e.target.value || null)}
+                    options={CANT_QUOTE_REASONS.map(r => ({ value: r.key, label: r.label }))}
+                    value={inquiry.itemDeclines[it.id] ?? ''}
+                    onChange={e => void setItem(it.id, e.target.value || null)}
                     disabled={itemReason.isPending || inquiry.lines.some(l => l.itemId === it.id)}
                   />
                 </li>

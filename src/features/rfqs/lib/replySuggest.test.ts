@@ -75,10 +75,10 @@ describe('suggestFromReply', () => {
   it('a regret becomes a can\'t quote with the reason chosen from its kind', () => {
     const set = suggestFromReply(parseSupplierReply('Regret, we cannot quote this item. We do not handle this brand.', items), items, 'USD')
     expect(set.regret).not.toBeNull()
-    expect(set.regret?.reason).toMatch(/Doesn't carry this brand|Other reason/)
-    expect(reasonForRegret('discontinued')).toBe('Item discontinued')
-    expect(reasonForRegret('unavailable')).toBe("Can't source in time")
-    expect(reasonForRegret('cannot_quote')).toBe('Other reason')
+    expect(['no_brand', 'other']).toContain(set.regret?.reason)
+    expect(reasonForRegret('discontinued')).toBe('discontinued')
+    expect(reasonForRegret('unavailable')).toBe('cant_source_in_time')
+    expect(reasonForRegret('cannot_quote')).toBe('other')
   })
 
   it('says nothing was found for text with no offers', () => {

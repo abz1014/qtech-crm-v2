@@ -8,7 +8,7 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { Tag } from '@/ui/Tag'
 import { Panel } from '@/features/companies/CompanyParts'
 import type { InquiryRow, QuoteLineRow, RfqItemRow } from '@/features/rfqs/api'
-import { comparePrices, parseCantQuoteNotes, reasonForItem, type ComparedLine, type RateTable } from '@/features/rfqs/lib'
+import { comparePrices, reasonForItem, reasonLabel, type ComparedLine, type RateTable } from '@/features/rfqs/lib'
 import { qtyText } from '@/features/rfqs/lib'
 
 /*
@@ -109,8 +109,8 @@ export function ItemsPanel({ items, inquiries, rates }: { items: RfqItemRow[]; i
             })
             const declined = inquiries
               .filter(i => !i.lines.some(l => l.itemId === item.id))
-              .map(i => ({ i, reason: reasonForItem(parseCantQuoteNotes(i.notes), item.number), whole: Boolean(i.noOfferOn) }))
-              .filter(d => d.reason && (d.whole || parseCantQuoteNotes(d.i.notes).items[item.number]))
+              .map(i => ({ i, reason: reasonForItem(item.id, i), own: Boolean(i.itemDeclines[item.id]) }))
+              .filter(d => d.reason || d.own)
             const waiting = inquiries.filter(i => i.sentOn && !i.noOfferOn && i.lines.length === 0)
             const uncovered = lines.length === 0 && responders.length > 0
             const q = qtyText(item.qty, item.unit)
@@ -198,7 +198,7 @@ export function ItemsPanel({ items, inquiries, rates }: { items: RfqItemRow[]; i
                       {declined.map(({ i, reason }) => (
                         <li key={i.id} className={`${ROW} text-fg-muted`}>
                           <span className="min-w-0 break-words text-sm font-medium text-fg-2">{i.supplierName}</span>
-                          <span className="text-sm md:col-span-4">{`Can't quote: ${reason}`}</span>
+                          <span className="text-sm md:col-span-4">{`Can't quote: ${reasonLabel(reason)}`}</span>
                         </li>
                       ))}
                     </ul>

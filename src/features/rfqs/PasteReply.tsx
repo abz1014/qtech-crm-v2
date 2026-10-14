@@ -6,7 +6,7 @@ import { Icon } from '@/ui/Icon'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { TextArea } from '@/ui/form/TextField'
 import type { RfqItemRow } from '@/features/rfqs/api'
-import type { Suggestion, SuggestionSet } from '@/features/rfqs/lib'
+import { reasonLabel, type Suggestion, type SuggestionSet } from '@/features/rfqs/lib'
 
 /*
  * "Paste reply" suggestions (R08 parser, R07 screen). Everything the parser read is offered here and nothing is saved until
@@ -61,7 +61,7 @@ export function PasteReplyPanel({
 
       {set.regret ? (
         <div className="flex flex-wrap items-center gap-3 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
-          <span className="min-w-0 flex-1 basis-56">{`They say they can't quote. Reason: ${set.regret.reason}.`}</span>
+          <span className="min-w-0 flex-1 basis-56">{`They say they can't quote. Reason: ${reasonLabel(set.regret.reason)}.`}</span>
           <Button variant="primary" size="sm" busy={busy} busyLabel="Saving" onClick={() => onCantQuote(set.regret!.reason)}>
             {"Mark can't quote"}
           </Button>
@@ -127,7 +127,7 @@ export function PasteReplyPanel({
 
       {set.declined.length > 0 ? (
         <p className="text-sm text-fg-2">
-          {`They decline ${set.declined.map(d => `item ${d.itemNumber}`).join(', ')}. Accepting records that as can't quote: ${[...new Set(set.declined.map(d => d.reason))].join(', ')}.`}
+          {`They decline ${set.declined.map(d => `item ${d.itemNumber}`).join(', ')}. Accepting records that as can't quote: ${[...new Set(set.declined.map(d => reasonLabel(d.reason)))].join(', ')}.`}
         </p>
       ) : null}
 

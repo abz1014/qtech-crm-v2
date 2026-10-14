@@ -8,6 +8,7 @@
 //  - a regret becomes a "can't quote" with the reason chosen from the kind of regret.
 // Nothing here writes. "Accept" in the screen turns the selected suggestions into a ReplyDraft and saves it.
 
+import type { CantQuoteReason } from './cantQuote'
 import type { ParsedReply, RegretKind, ReplyItemRef, ReplyOffer } from './replyParse'
 import type { ReplyDraft } from './replySave'
 
@@ -39,13 +40,13 @@ export interface Suggestion {
 }
 
 export interface RegretSuggestion {
-  reason: string
+  reason: CantQuoteReason
 }
 
 export interface DeclinedSuggestion {
   itemId: string
   itemNumber: number
-  reason: string
+  reason: CantQuoteReason
 }
 
 export interface SuggestionSet {
@@ -58,17 +59,17 @@ export interface SuggestionSet {
   nothingFound: boolean
 }
 
-/** The fixed "can't quote" phrases (lib/cantQuote.ts) by the kind of regret the parser saw. */
-export function reasonForRegret(kind: RegretKind | null): string {
+/** The stored "can't quote" key (lib/cantQuote.ts) for the kind of regret the parser saw. */
+export function reasonForRegret(kind: RegretKind | null): CantQuoteReason {
   switch (kind) {
     case 'not_handled':
-      return "Doesn't carry this brand"
+      return 'no_brand'
     case 'discontinued':
-      return 'Item discontinued'
+      return 'discontinued'
     case 'unavailable':
-      return "Can't source in time"
+      return 'cant_source_in_time'
     default:
-      return 'Other reason'
+      return 'other'
   }
 }
 
