@@ -17,6 +17,7 @@ import { AppShell } from '@/app/shell/AppShell'
  */
 const screens: Partial<Record<NavKey, ComponentType>> = {
   companies: lazy(() => import('@/features/companies/CompaniesScreen')),
+  rfqs: lazy(() => import('@/features/rfqs/board/RfqsScreen')),
 }
 
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
