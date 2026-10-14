@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, CircleCheck, Users, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CircleCheck, Plus, Users, X } from 'lucide-react'
 import { useClosedCount, useClosedRfqs, useOpenRfqs } from '@/features/rfqs/board/hooks'
 import {
   applyOwner,
@@ -91,6 +91,7 @@ export function BoardPage() {
   )
 
   const navigate = useNavigate()
+  const newRfq = () => navigate('/rfqs/new')
   const openRow = (r: BoardRow) => navigate(`/rfqs/${r.rfqId}`)
 
   const total = open.data?.length ?? 0
@@ -98,7 +99,15 @@ export function BoardPage() {
   const reset = () => change({ owner: 'all', state: null })
 
   const emptyOpen = !filtered && total === 0 ? (
-    <EmptyState mood="goal" title="No open RFQs. Nice.">
+    <EmptyState
+      mood="goal"
+      title="No open RFQs. Nice."
+      actions={
+        <Button variant="primary" icon={Plus} onClick={newRfq}>
+          New RFQ
+        </Button>
+      }
+    >
       Every RFQ is won or closed. New ones appear here as soon as they are logged.
     </EmptyState>
   ) : owner === 'mine' && mineCount === 0 && state === 'all' ? (
@@ -134,9 +143,14 @@ export function BoardPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-6 md:px-8">
-      <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">RFQs</h1>
-        <p className="text-sm text-fg-muted">{lede}</p>
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="grid gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">RFQs</h1>
+          <p className="text-sm text-fg-muted">{lede}</p>
+        </div>
+        <Button variant="primary" icon={Plus} onClick={newRfq}>
+          New RFQ
+        </Button>
       </header>
 
       <Tabs className="min-w-0" value={tab} onValueChange={v => change({ tab: v === 'closed' ? 'closed' : null, page: null })}>

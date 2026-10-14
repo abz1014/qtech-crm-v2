@@ -165,6 +165,12 @@ test.describe('open RFQs', () => {
     await expect(page.getByRole('table', { name: 'Open RFQs' }).locator('tbody tr[data-di]')).toHaveCount(n)
   })
 
+  test('New RFQ opens the intake screen', async ({ page }) => {
+    await openAs(page, 'sales', '/rfqs')
+    await page.getByRole('button', { name: 'New RFQ' }).click()
+    await expect(page).toHaveURL(/\/rfqs\/new$/)
+  })
+
   test('a row opens the RFQ at /rfqs/:id', async ({ page }) => {
     await openAs(page, 'engineer', '/rfqs')
     await row(page, 'covered').getByRole('link', { name: fx.names.covered }).click()

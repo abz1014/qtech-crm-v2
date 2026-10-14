@@ -78,6 +78,7 @@ function renderBoard(role: string, url = '/rfqs') {
     <Routes>
       <Route path="/rfqs" element={<BoardPage />} />
       <Route path="/rfqs/:id" element={<Where />} />
+      <Route path="/rfqs/new" element={<Where />} />
     </Routes>,
     { wrapper: wrap },
   )
@@ -133,10 +134,20 @@ describe('RFQ board', () => {
     expect(await screen.findByTestId('where')).toHaveTextContent('/rfqs/b')
   })
 
-  it('says "No open RFQs. Nice." when everything is done', async () => {
+  it('says "No open RFQs. Nice." when everything is done, with New RFQ in the empty view too', async () => {
     db([])
     renderBoard('admin')
     expect(await screen.findByText('No open RFQs. Nice.')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'New RFQ' })).toHaveLength(2)
+  })
+
+  it('New RFQ in the header opens the intake screen', async () => {
+    db()
+    const user = userEvent.setup()
+    renderBoard('sales')
+    await screen.findByText('Indus Textile Mills')
+    await user.click(screen.getByRole('button', { name: 'New RFQ' }))
+    expect(await screen.findByTestId('where')).toHaveTextContent('/rfqs/new')
   })
 
   it('offers everyone’s RFQs when none are yours', async () => {
