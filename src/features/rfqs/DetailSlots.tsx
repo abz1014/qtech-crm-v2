@@ -1,16 +1,15 @@
 import type { ReactNode } from 'react'
-import { MessageSquareText, FileText } from 'lucide-react'
+import { FileText } from 'lucide-react'
 import { Icon } from '@/ui/Icon'
 
 /*
- * Reserved places for work that is built by other tasks. They are marked on the page so nobody mistakes them for a
+ * Reserved places for work that is built by other tasks (R09's clarifications panel is built: ClarificationsPanel.tsx). They are marked on the page so nobody mistakes them for a
  * missing feature, and each one has a stable data-slot attribute for the task that fills it:
  *
- *   data-slot="clarifications"       R09  the clarifications panel (paste splits into questions, asked times, answers, relay)
  *   data-slot="quotations"           R19  the quotations list and the "Issue quotation" action (the header has its own
  *                                         data-slot="issue-quotation" beside Mark bid sent)
  *
- * R09 and R19 replace the body of these components; the props carry what they need to load their own data.
+ * R19 replaces the body of this component; the props carry what they need to load their own data.
  */
 
 function Slot({ slot, title, task, children, icon }: { slot: string; title: string; task: string; children: ReactNode; icon: typeof FileText }) {
@@ -27,15 +26,6 @@ function Slot({ slot, title, task, children, icon }: { slot: string; title: stri
       </div>
       <p className="mt-2 text-sm text-fg-muted">{children}</p>
     </section>
-  )
-}
-
-export function ClarificationsSlot({ rfqId }: { rfqId: string }) {
-  void rfqId
-  return (
-    <Slot slot="clarifications" title="Questions for the customer" task="Reserved for R09" icon={MessageSquareText}>
-      The clarifications panel goes here: questions to ask, questions waiting on the customer, and answers to relay.
-    </Slot>
   )
 }
 

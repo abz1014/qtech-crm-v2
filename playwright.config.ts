@@ -30,7 +30,7 @@ import { defineConfig, devices } from '@playwright/test'
  *    Undo, the double-tap guard and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e-rfq-intake.yml):
  *      E2E_SUITE=rfq-intake REVIEW_DIR=review-shots npx playwright test --project=rfq-intake
  *
- *  - rfq-detail (R07): the RFQ detail page on the same stack and build. Reply capture, can't quote, the lowest mark, chase, close,
+ *  - rfq-detail (R07, R09, R10): the RFQ detail page on the same stack and build; clarifications.spec.ts adds the questions panel and the files. Reply capture, can't quote, the lowest mark, chase, close,
  *    the FE-2 counts, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e-rfq-detail.yml):
  *      E2E_SUITE=rfq-detail REVIEW_DIR=review-shots npx playwright test --project=rfq-detail
  */
@@ -111,7 +111,7 @@ export default defineConfig({
     },
     {
       name: 'rfq-detail',
-      testMatch: /rfqs\/detail\.spec\.ts/,
+      testMatch: /rfqs\/(detail|clarifications)\.spec\.ts/,
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: {

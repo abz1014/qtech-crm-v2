@@ -26,12 +26,20 @@ export function formatBytes(n: number): string {
 export const acceptLabel = (accept: readonly string[]) =>
   accept.map(t => (t === 'application/pdf' ? 'PDF' : t.replace('image/', '').replace('jpeg', 'jpg').toUpperCase())).join(', ')
 
+/** Phones often hand over a HEIC photo with no type (or a generic one). The extension then says what it is. */
+function withKnownType(file: File): File {
+  if (file.type && file.type !== 'application/octet-stream') return file
+  const m = /\.(heic|heif)$/i.exec(file.name)
+  return m ? new File([file], file.name, { type: `image/${m[1].toLowerCase()}`, lastModified: file.lastModified }) : file
+}
+
 export async function intakeFiles(
   files: readonly File[],
   { maxBytes = DEFAULT_MAX_BYTES, accept = DEFAULT_ACCEPT }: { maxBytes?: number; accept?: readonly string[] } = {},
 ): Promise<AddedFile[]> {
   return Promise.all(
-    files.map(async original => {
+    files.map(async picked => {
+      const original = withKnownType(picked)
       const id = crypto.randomUUID()
       if (!accept.includes(original.type)) {
         return { id, file: original, originalSize: original.size, error: `Only ${acceptLabel(accept)} files can be added.` }

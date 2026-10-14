@@ -57,11 +57,13 @@ function rfqs() {
     /** R06: palette search by number, customer ref or company. */
     search: (text: string) => [...all, 'list', 'search', text.trim().toLowerCase()] as const,
     detail,
+    /** R10: short-lived signed links for the RFQ's files; `signature` changes when the set of files does. */
+    fileUrls: (id: string, signature: string) => [...detail(id), 'file-urls', signature] as const,
     /** One slice of an RFQ page (R07). `slice` is a fixed word, so a typo is a type error. */
     part: (id: string, slice: RfqPart) => [...detail(id), slice] as const,
   }
 }
-export type RfqPart = 'header' | 'items' | 'inquiries'
+export type RfqPart = 'header' | 'items' | 'inquiries' | 'clarifications' | 'attachments'
 
 /** Exchange rates (R07 reads today's rate per currency; R15 owns editing them). */
 function fx() {
