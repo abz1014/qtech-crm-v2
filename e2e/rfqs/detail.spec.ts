@@ -360,8 +360,8 @@ for (const width of [1440, 375]) {
     const s = await seed()
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: [
       { inquiry_id: s.usd.inquiryId, rfq_item_id: s.items[0].id, unit_price: 100, currency: 'USD', lead_time: '3 weeks', in_stock: true },
-      { inquiry_id: s.germany.inquiryId, rfq_item_id: s.items[0].id, unit_price: 90, currency: 'EUR', in_stock: false },
-      { inquiry_id: s.china.inquiryId, rfq_item_id: s.items[0].id, unit_price: 1, currency: 'CNY' },
+      { inquiry_id: s.germany.inquiryId, rfq_item_id: s.items[0].id, unit_price: 90, currency: 'EUR', lead_time: null, in_stock: false },
+      { inquiry_id: s.china.inquiryId, rfq_item_id: s.items[0].id, unit_price: 1, currency: 'CNY', lead_time: null, in_stock: null },
     ] }))
     await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
