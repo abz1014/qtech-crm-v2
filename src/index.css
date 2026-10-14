@@ -273,8 +273,67 @@
 
 [data-status="trust:basis-unknown"],
 [data-status="trust:estimated"],
-[data-status="company-role:prospect"] {
+[data-status="company-role:prospect"],
+[data-status="excluded:basis-unknown"] {
   --status-border-style: dashed;
+}
+
+/* ---- Additions (U05, 2026-10-14; DECISIONS.md). Values from DATA_MODEL section 5, the
+   g2-c / g2-d mockup additions (fx, user) and Amendment A6 (month, aging, bank tick). ---- */
+
+[data-status="clarification:none"],
+[data-status="goods:na"],
+[data-status="trust:ok"],
+[data-status="inquiry-blocked:none"],
+[data-status="reminder:none"],
+[data-status="fx-capture:captured"],
+[data-status="fx-capture:none"],
+[data-status="user:deactivated"],
+[data-status="aging:0-30"],
+[data-status="paid-via:bank"],
+[data-status="paid-via:cash"],
+[data-status="expense-group:overhead"],
+[data-status="expense-group:order-cost"],
+[data-status="expense-group:not-in-pnl"],
+[data-status="excluded:zero-value"],
+[data-status="excluded:unattributed"] {
+  --status-fg: var(--tone-neutral-fg);
+  --status-bg: var(--tone-neutral-bg);
+}
+
+[data-status="clarification:asked"],
+[data-status="inquiry:awaiting"],
+[data-status="reminder:reminded"],
+[data-status="aging:advance-held"],
+[data-status="month:open"] {
+  --status-fg: var(--tone-info-fg);
+  --status-bg: var(--tone-info-bg);
+}
+
+[data-status="fx:fresh"],
+[data-status="user:active"],
+[data-status="month:closed"],
+[data-status="bank:ticked"] {
+  --status-fg: var(--tone-success-fg);
+  --status-bg: var(--tone-success-bg);
+}
+
+[data-status="bid:expired"],
+[data-status="inquiry-blocked:open-questions"],
+[data-status="inquiry-blocked:answers-waiting"],
+[data-status="fx:stale"],
+[data-status="aging:31-60"],
+[data-status="aging:61-90"],
+[data-status="bank:unticked"],
+[data-status="excluded:basis-unknown"] {
+  --status-fg: var(--tone-warning-fg);
+  --status-bg: var(--tone-warning-bg);
+}
+
+[data-status="fx:unusable"],
+[data-status="aging:90-plus"] {
+  --status-fg: var(--tone-danger-fg);
+  --status-bg: var(--tone-danger-bg);
 }
 /* tokens:end */
 
@@ -337,4 +396,14 @@
   .cur {
     font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
   }
+}
+
+/* Skeleton pulse (DESIGN_SYSTEM section 9): opacity only, 1.4 s, removed under reduced motion. */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.skeleton { animation: skeleton-pulse 1.4s var(--ease-standard) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
 }
