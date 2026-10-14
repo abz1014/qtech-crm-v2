@@ -72,11 +72,12 @@ describe('admin-users', () => {
     assert.ok(r.status === 401 || r.status === 403, `got ${r.status}`)
   })
 
-  it('a non-admin gets 403 on list, create and set_role', async () => {
+  it('a non-admin gets 403 on list, create, set_role and set_job_title', async () => {
     for (const body of [
       { action: 'list' },
       { action: 'create', name: 'Mallory', email: 'mallory@test.invalid', role: 'admin' },
       { action: 'set_role', user_id: SALES_ID, role: 'admin' },
+      { action: 'set_job_title', user_id: SALES_ID, job_title: 'Chairman' },
     ]) {
       const r = await call(salesToken, body)
       assert.equal(r.status, 403, `${body.action}: ${r.text}`)
@@ -162,11 +163,19 @@ describe('admin-users', () => {
     const role = await call(adminToken, { action: 'set_role', user_id: id, role: 'sales' })
     assert.equal(role.status, 200, role.text)
 
+    // set_job_title: saved, trimmed, audited, a blank clears it
+    const titled = await call(adminToken, { action: 'set_job_title', user_id: id, job_title: '  Estimator ' })
+    assert.equal(titled.status, 200, titled.text)
+    assert.deepEqual(await serviceGet(`users?id=eq.${id}&select=job_title`), [{ job_title: 'Estimator' }])
+    const cleared = await call(adminToken, { action: 'set_job_title', user_id: id, job_title: '' })
+    assert.equal(cleared.status, 200, cleared.text)
+    assert.deepEqual(await serviceGet(`users?id=eq.${id}&select=job_title`), [{ job_title: null }])
+
     // audit: one row per action, acting admin as changed_by, never a password
     const audit = await serviceGet(`audit_log?table_name=eq.users&record_id=eq.${id}&order=changed_at.asc&select=action,changed_by,old_value,new_value`)
-    assert.equal(audit.length, 5, JSON.stringify(audit))
+    assert.equal(audit.length, 7, JSON.stringify(audit))
     assert.ok(audit.every((a) => a.changed_by === ADMIN_ID))
-    assert.deepEqual(audit.map((a) => a.action), ['insert', 'update', 'update', 'update', 'update'])
+    assert.deepEqual(audit.map((a) => a.action), ['insert', 'update', 'update', 'update', 'update', 'update', 'update'])
     const dump = JSON.stringify(audit)
     assert.ok(!dump.includes(password) && !dump.includes(newPassword), 'no password in the audit log')
   })

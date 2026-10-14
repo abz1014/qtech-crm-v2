@@ -1,4 +1,5 @@
-import { LogOut } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { LogOut, Settings, Users } from 'lucide-react'
 import { ROLE_LABEL, session, type SessionUser } from '@/app/session'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/ui/Avatar'
@@ -9,6 +10,7 @@ import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from
  * person's name and role and "Sign out". Esc closes it and returns focus to the avatar.
  */
 export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?: boolean }) {
+  const navigate = useNavigate()
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -28,6 +30,15 @@ export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?
           <span className="font-medium">{user.name}</span>
           <span className="text-xs text-fg-muted">{ROLE_LABEL[user.role] ?? user.role}</span>
         </div>
+        <MenuSeparator />
+        <MenuItem icon={Settings} onClick={() => navigate('/settings')}>
+          Settings
+        </MenuItem>
+        {user.role === 'admin' ? (
+          <MenuItem icon={Users} onClick={() => navigate('/settings/team')}>
+            Team
+          </MenuItem>
+        ) : null}
         <MenuSeparator />
         <MenuItem icon={LogOut} onClick={() => void session.signOut()}>
           Sign out

@@ -61,7 +61,14 @@ function orders() {
   return { all, lists: () => [...all, 'list'] as const, detail: (id: string) => [...all, 'detail', id] as const }
 }
 
+/** Settings (A04, A06): the team list (read through the admin-users function) and the one company-profile row. */
+function settings() {
+  const all = root('settings')
+  return { all, team: () => [...all, 'team'] as const, profile: () => [...all, 'company-profile'] as const }
+}
+
 export const qk = {
+  settings: settings(),
   companies: companies(),
   brands: brands(),
   rfqs: rfqs(),

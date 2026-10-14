@@ -1,4 +1,4 @@
--- 0030_float_undo (R05): the intake screen's "top priority" tick and the atomic Undo of a float.
+-- 0031_float_undo (R05): the intake screen's "top priority" tick and the atomic Undo of a float.
 --
 --  1. float_rfq gains a trailing p_is_priority (default false). The signature changes, so the old nine-argument
 --     function is dropped and recreated; every existing call (named or positional) still resolves, because the new

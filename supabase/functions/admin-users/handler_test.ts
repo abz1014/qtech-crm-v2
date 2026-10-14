@@ -94,7 +94,7 @@ Deno.test('rejects a missing or invalid token with 401', async () => {
 
 Deno.test('a non-admin gets 403 on every action', async () => {
   const { handler, rows } = setup()
-  for (const action of ['list', 'create', 'reset_password', 'set_role', 'deactivate', 'reactivate']) {
+  for (const action of ['list', 'create', 'reset_password', 'set_role', 'set_job_title', 'deactivate', 'reactivate']) {
     const res = await call(handler, { action, user_id: ADMIN, role: 'sales', name: 'N', email: 'n@x.test' }, SALES)
     assertEquals(res.status, 403, action)
   }
@@ -172,6 +172,34 @@ Deno.test('set_role to the same role writes nothing', async () => {
   assertEquals(audits.length, 0)
 })
 
+Deno.test('set_job_title trims, saves, audits old and new; empty clears it', async () => {
+  const { handler, rows, audits } = setup()
+  const res = await call(handler, { action: 'set_job_title', user_id: SALES, job_title: '  Sales manager ' })
+  assertEquals(res.status, 200)
+  assertEquals((await res.json()).job_title, 'Sales manager')
+  assertEquals(rows.get(SALES)!.job_title, 'Sales manager')
+  assertEquals(audits.length, 1)
+  assertEquals(audits[0].changed_by, ADMIN)
+  assertEquals(audits[0].old_value, { job_title: null })
+  assertEquals(audits[0].new_value, { job_title: 'Sales manager' })
+  const cleared = await call(handler, { action: 'set_job_title', user_id: SALES, job_title: '   ' })
+  assertEquals(cleared.status, 200)
+  assertEquals(rows.get(SALES)!.job_title, null)
+  assertEquals(audits.length, 2)
+})
+
+Deno.test('set_job_title with the same value writes nothing; bad input is refused', async () => {
+  const { handler, rows, audits } = setup()
+  assertEquals((await call(handler, { action: 'set_job_title', user_id: SALES, job_title: null })).status, 200)
+  assertEquals(audits.length, 0)
+  assertEquals((await call(handler, { action: 'set_job_title', user_id: SALES })).status, 400)
+  assertEquals((await call(handler, { action: 'set_job_title', user_id: SALES, job_title: 42 })).status, 400)
+  assertEquals((await call(handler, { action: 'set_job_title', user_id: SALES, job_title: 'x'.repeat(101) })).status, 400)
+  assertEquals((await call(handler, { action: 'set_job_title', user_id: 'nope', job_title: 'x' })).status, 400)
+  assertEquals((await call(handler, { action: 'set_job_title', user_id: '00000000-0000-4000-8000-0000000000ff', job_title: 'x' })).status, 404)
+  assertEquals(rows.get(SALES)!.job_title, null)
+  assertEquals(audits.length, 0)
+})
 Deno.test('the last admin cannot be demoted or deactivated', async () => {
   const { handler, rows, audits } = setup()
   const demote = await call(handler, { action: 'set_role', user_id: ADMIN, role: 'sales' })

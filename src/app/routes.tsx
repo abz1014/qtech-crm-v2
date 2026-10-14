@@ -7,6 +7,7 @@ import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { SignInPage } from '@/app/pages/SignInPage'
 import { useSession } from '@/app/session'
+import { AdminOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
 import { AppShell } from '@/app/shell/AppShell'
 
 /**
@@ -18,6 +19,8 @@ const screens: Partial<Record<NavKey, ComponentType>> = {
   companies: lazy(() => import('@/features/companies/CompaniesScreen')),
 }
 
+const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
+const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfilePage').then(m => ({ default: m.CompanyProfilePage })))
 /** New RFQ (R05): its own route, so it works under whichever screen owns the rest of /rfqs. */
 const IntakeScreen = lazy(() => import('@/features/rfqs/IntakeScreen'))
 const rfqsItem = navItems.find(i => i.key === 'rfqs')
@@ -49,6 +52,28 @@ export function AppRoutes() {
         <Route element={<AppShell />}>
           <Route index element={<RoleLanding />} />
           <Route path="no-access" element={<NoAccessPage />} />
+          <Route path="settings" element={<SettingsLayout />}>
+            <Route index element={<SettingsHome />} />
+            <Route
+              path="team"
+              element={
+                <AdminOnly area="Team">
+                  <Suspense fallback={null}>
+                    <TeamPage />
+                  </Suspense>
+                </AdminOnly>
+              }
+            />
+            <Route
+              path="company"
+              element={
+                <Suspense fallback={null}>
+                  <CompanyProfilePage />
+                </Suspense>
+              }
+            />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
           {rfqsItem ? (
             <Route
               path="rfqs/new"
