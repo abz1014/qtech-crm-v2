@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 import { MapPin, Pencil, UserPlus } from 'lucide-react'
 import { z } from 'zod'
-import { useAddContact, useAddSite, useUpdateCompany } from '@/features/companies/hooks'
-import type { CompanyDetail, SiteRow } from '@/features/companies/api'
+import { useAddContact, useAddSite, useUpdateCompany, useUpdateContact, useUpdateSite } from '@/features/companies/hooks'
+import type { CompanyDetail, ContactRow, SiteRow } from '@/features/companies/api'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Form, FormField } from '@/ui/form/Form'
@@ -16,8 +16,8 @@ import type { FieldValues } from 'react-hook-form'
  *
  * FE-2 required fields, per dialog (for the commit):
  *   Edit company   name
- *   Add site       name (the address is optional)
- *   Add contact    name (phone, email, note and site are optional; the site is pre-filled when there is only one)
+ *   Add / edit site       name (the address is optional)
+ *   Add / edit contact    name (phone, email, note and site are optional; on add the site is pre-filled when there is only one)
  */
 
 function Shell<TIn extends FieldValues, TOut>({
@@ -103,22 +103,25 @@ const siteSchema = z.object({
   address: z.string().trim().optional(),
 })
 
-export function AddSiteDialog({ open, onOpenChange, companyId, companyName }: { open: boolean; onOpenChange: (o: boolean) => void; companyId: string; companyName: string }) {
-  return <Dialog open={open} onOpenChange={onOpenChange}>{open ? <SiteBody onOpenChange={onOpenChange} companyId={companyId} companyName={companyName} /> : null}</Dialog>
+/** Add a site, or edit `site` when one is given (same fields). */
+export function SiteDialog({ open, onOpenChange, companyId, companyName, site }: { open: boolean; onOpenChange: (o: boolean) => void; companyId: string; companyName: string; site?: SiteRow | null }) {
+  return <Dialog open={open} onOpenChange={onOpenChange}>{open ? <SiteBody onOpenChange={onOpenChange} companyId={companyId} companyName={companyName} site={site ?? null} /> : null}</Dialog>
 }
 
-function SiteBody({ onOpenChange, companyId, companyName }: { onOpenChange: (o: boolean) => void; companyId: string; companyName: string }) {
+function SiteBody({ onOpenChange, companyId, companyName, site }: { onOpenChange: (o: boolean) => void; companyId: string; companyName: string; site: SiteRow | null }) {
   const add = useAddSite(companyId)
+  const update = useUpdateSite(companyId)
   const sf = useSubmitForm({
     schema: siteSchema,
     entity: 'site',
-    defaultValues: { name: '', address: '' },
-    onSubmit: (v, { requestId }) => add.mutateAsync({ id: requestId, name: v.name, address: v.address || null }),
+    defaultValues: { name: site?.name ?? '', address: site?.address ?? '' },
+    onSubmit: (v, { requestId }) =>
+      site ? update.mutateAsync({ id: site.id, name: v.name, address: v.address || null }) : add.mutateAsync({ id: requestId, name: v.name, address: v.address || null }),
     routeError: e => (e.kind === 'unique' ? { field: 'name', message: `${companyName} already has a site with this name.` } : undefined),
     onSuccess: () => onOpenChange(false),
   })
   return (
-    <Shell title="Add site" context={companyName} icon={MapPin} onOpenChange={onOpenChange} sf={sf} submitLabel="Add site">
+    <Shell title={site ? 'Edit site' : 'Add site'} context={companyName} icon={MapPin} onOpenChange={onOpenChange} sf={sf} submitLabel={site ? 'Save changes' : 'Add site'}>
       <Form sf={sf} labels={{ name: 'Site name' }}>
         <FormField name="name" label="Site name" requirement="required">
           {f => <TextField {...f} autoComplete="off" placeholder="Main plant" />}
@@ -140,39 +143,52 @@ const contactSchema = z.object({
   siteId: z.string().optional(),
 })
 
-export function AddContactDialog({
+/** Add a contact, or edit `contact` when one is given (same fields). */
+export function ContactDialog({
   open,
   onOpenChange,
   companyId,
   companyName,
   sites,
+  contact,
 }: {
   open: boolean
   onOpenChange: (o: boolean) => void
   companyId: string
   companyName: string
   sites: readonly SiteRow[]
+  contact?: ContactRow | null
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {open ? <ContactBody onOpenChange={onOpenChange} companyId={companyId} companyName={companyName} sites={sites} /> : null}
+      {open ? <ContactBody onOpenChange={onOpenChange} companyId={companyId} companyName={companyName} sites={sites} contact={contact ?? null} /> : null}
     </Dialog>
   )
 }
 
-function ContactBody({ onOpenChange, companyId, companyName, sites }: { onOpenChange: (o: boolean) => void; companyId: string; companyName: string; sites: readonly SiteRow[] }) {
+function ContactBody({ onOpenChange, companyId, companyName, sites, contact }: { onOpenChange: (o: boolean) => void; companyId: string; companyName: string; sites: readonly SiteRow[]; contact: ContactRow | null }) {
   const add = useAddContact(companyId)
-  const onlySite = sites.length === 1 ? sites[0] : null
+  const update = useUpdateContact(companyId)
+  // Pre-filling the only site is for a new contact; an edit shows what is on file.
+  const onlySite = !contact && sites.length === 1 ? sites[0] : null
   const sf = useSubmitForm({
     schema: contactSchema,
     entity: 'contact',
-    defaultValues: { name: '', phone: '', email: '', notes: '', siteId: onlySite?.id ?? '' },
-    onSubmit: (v, { requestId }) =>
-      add.mutateAsync({ id: requestId, name: v.name, phone: v.phone || null, email: v.email || null, notes: v.notes || null, siteId: v.siteId || null }),
+    defaultValues: {
+      name: contact?.name ?? '',
+      phone: contact?.phone ?? '',
+      email: contact?.email ?? '',
+      notes: contact?.notes ?? '',
+      siteId: contact?.site_id ?? onlySite?.id ?? '',
+    },
+    onSubmit: (v, { requestId }) => {
+      const fields = { name: v.name, phone: v.phone || null, email: v.email || null, notes: v.notes || null, siteId: v.siteId || null }
+      return contact ? update.mutateAsync({ id: contact.id, ...fields }) : add.mutateAsync({ id: requestId, ...fields })
+    },
     onSuccess: () => onOpenChange(false),
   })
   return (
-    <Shell title="Add contact" context={companyName} icon={UserPlus} onOpenChange={onOpenChange} sf={sf} submitLabel="Add contact">
+    <Shell title={contact ? 'Edit contact' : 'Add contact'} context={companyName} icon={UserPlus} onOpenChange={onOpenChange} sf={sf} submitLabel={contact ? 'Save changes' : 'Add contact'}>
       <Form sf={sf} labels={{ name: 'Contact name' }}>
         <FormField name="name" label="Name" requirement="required">
           {f => <TextField {...f} autoComplete="off" />}

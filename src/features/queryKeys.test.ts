@@ -45,6 +45,11 @@ describe('invalidation map (R01)', () => {
     'team.deactivate': {},
     'team.reactivate': {},
     'company-profile.update': {},
+    'site.update': { companyId: 'c1' },
+    'site.remove': { companyId: 'c1' },
+    'contact.update': { companyId: 'c1' },
+    'contact.remove': { companyId: 'c1' },
+    'brand.unlink': { companyId: 'c1' },
   }
 
   it('names at least one key for every write', () => {
@@ -69,6 +74,13 @@ describe('invalidation map (R01)', () => {
       expect(keysFor(n, {})).toEqual([qk.settings.team()])
     }
     expect(keysFor('company-profile.update', {})).toEqual([qk.settings.profile()])
+  })
+
+  it('editing or removing a site or contact refreshes that company only; unlinking a brand also refreshes the roster', () => {
+    for (const w of ['site.update', 'site.remove', 'contact.update', 'contact.remove'] as const) {
+      expect(keysFor(w, { companyId: 'c1' })).toEqual([qk.companies.detail('c1')])
+    }
+    expect(keysFor('brand.unlink', { companyId: 'c1' })).toEqual([qk.companies.detail('c1'), qk.companies.lists()])
   })
 
   it('adding a site or contact refreshes that company only', () => {
