@@ -13,7 +13,7 @@ import { Button } from '@/ui/Button'
 import { Margin, Money, MoneyFx, NetGstGross } from '@/ui/Money'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { StatusTrack } from '@/ui/StatusTrack'
-import { AfterDrawings, SumBar } from '@/ui/SumBar'
+import { AfterDrawings, ExactEquation, SumBar } from '@/ui/SumBar'
 import { Tag } from '@/ui/Tag'
 import { Icon } from '@/ui/Icon'
 import { formatDay } from '@/lib/formatDay'
@@ -191,6 +191,7 @@ function Gallery() {
             { label: 'Money out', amount: '1313300', sub: '7 expenses paid' },
           ]}
         />
+        <ExactEquation total="2841150" parts={[{ amount: "2280635.60", label: "net" }, { amount: "410514.40", label: "GST" }, { amount: "150000", label: "not yet split" }]} />
         <div className="max-w-[560px]"><AfterDrawings result="2280635.60" notInPnl="300000" /></div>
       </Section>
 
@@ -206,7 +207,7 @@ function Gallery() {
       </Section>
 
       <Section id="register" title="GST register: groups, selection, tracks, totals" note="Month stamping: tick a month once. Group subtotals and the footer are summed from the rows.">
-        <DataTable
+        <DataTable twoLine
           label="GST register"
           columns={invCols}
           rows={INV}
@@ -220,11 +221,11 @@ function Gallery() {
       </Section>
 
       <Section id="cash" title="Cash month" note="Money in by payment date, with the unresolved payment set apart.">
-        <DataTable label="Money in" columns={payCols} rows={PAY} getRowId={r => r.id} footerLabel="Total" />
+        <DataTable twoLine label="Money in" columns={payCols} rows={PAY} getRowId={r => r.id} footerLabel="Total" />
       </Section>
 
       <Section id="margins" title="Order margins" note="Only costs-complete orders are totalled. Provisional margins carry dashed underlines.">
-        <DataTable
+        <DataTable twoLine
           label="Order margins"
           columns={ordCols.map(c => (['net', 'expected', 'actual', 'margin'].includes(c.id) ? { ...c, total: (rows: Ord[]) => {
             const done = rows.filter(r => r.state === 'final')

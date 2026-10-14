@@ -81,6 +81,8 @@ export interface DataTableProps<T> {
   /** Scroll height once virtualised. Default 70vh. */
   maxHeight?: string
   virtualAfter?: number
+  /** Rows hold two-line cells (name over reference): 48 px as in the mockups. Required for virtualised tables with two-line cells. */
+  twoLine?: boolean
   className?: string
 }
 
@@ -104,6 +106,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     empty,
     maxHeight = '70vh',
     virtualAfter = 80,
+    twoLine,
     className,
   } = props
 
@@ -150,7 +153,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
 
   // ---- windowing ----------------------------------------------------------
   const coarse = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
-  const rowH = coarse ? 48 : density === 'compact' ? 32 : 40
+  const rowH = coarse || twoLine ? 48 : density === 'compact' ? 32 : 40
   const virtual = items.length > virtualAfter
   const offsets = useMemo(() => {
     const o = new Array<number>(items.length + 1)
@@ -325,7 +328,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const colCount = columns.length + (selection ? 1 : 0)
   const alignRight = (c: Column<T>) => (c.align ?? (c.kind === 'money' || c.kind === 'num' ? 'right' : 'left')) === 'right'
   const monoCell = (c: Column<T>) => c.kind === 'money' || c.kind === 'num' || c.kind === 'date'
-  const cellBase = 'h-row whitespace-nowrap border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5'
+  const cellBase = 'h-row whitespace-nowrap border-b border-line px-[var(--cell-px)] py-[6px] first:pl-5 last:pr-5'
   const hide = (c: Column<T>) => (c.hideBelowMd ? 'hidden md:table-cell' : '')
 
   const toolbarNode = typeof toolbar === 'function' ? toolbar({ selectedCount }) : toolbar

@@ -3,7 +3,7 @@ import { CircleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
-import { formatPaisa, paisaToFixed, toPaisa, type Amount } from '@/lib/money'
+import { formatPaisa, paisaToFixed, toPaisa, type Amount, type PaisaMode } from '@/lib/money'
 
 const abs = (p: bigint) => (p < 0n ? -p : p)
 
@@ -21,6 +21,8 @@ export interface SumBarItem {
   /** One line of context: "6 payments received". */
   sub?: ReactNode
   provisional?: boolean
+  /** Headline rounding. Default 'never' (whole rupees, as in the approved mockup); the exact paisa stays in the rows and the equation line. */
+  paisa?: PaisaMode
 }
 
 export function SumBar({ items, label, className }: { items: SumBarItem[]; label: string; className?: string }) {
@@ -38,7 +40,7 @@ export function SumBar({ items, label, className }: { items: SumBarItem[]; label
           {item.count !== undefined ? (
             <span className="num text-xl font-medium tracking-snug">{item.count}</span>
           ) : (
-            <Money value={item.amount} size="xl" provisional={item.provisional} />
+            <Money value={item.amount} size="xl" provisional={item.provisional} paisa={item.paisa ?? 'never'} />
           )}
           {item.sub ? <span className="text-xs text-fg-muted">{item.sub}</span> : null}
         </div>
@@ -91,5 +93,21 @@ export function AfterDrawings({ result, notInPnl, afterDrawings, className }: Af
         </dd>
       </div>
     </dl>
+  )
+}
+
+/*
+ * ExactEquation: the small mono line under a SumBar (money-07): the exact figures
+ * behind the rounded headlines, "2,841,150 = 2,280,635.60 net + 410,514.40 GST + 150,000 not yet split".
+ * The parts are summed in paisa; if they do not add up to the total, the line says so instead of printing a false equation.
+ */
+export function ExactEquation({ total, parts, className }: { total: Amount; parts: Array<{ amount: Amount; label: string }>; className?: string }) {
+  const sum = parts.reduce((n, p) => n + toPaisa(p.amount), 0n)
+  const ok = sum === toPaisa(total)
+  return (
+    <p data-mismatch={ok ? undefined : ''} className={cn('num text-xs', ok ? 'text-fg-muted' : 'text-tone-warning-fg', className)}>
+      {formatPaisa(toPaisa(total))} = {parts.map(p => `${formatPaisa(toPaisa(p.amount))} ${p.label}`).join(' + ')}
+      {ok ? '' : ` (parts add to ${formatPaisa(sum)})`}
+    </p>
   )
 }

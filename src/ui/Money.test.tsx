@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { Margin, Money, MoneyFx, NetGstGross } from '@/ui/Money'
-import { AfterDrawings, SumBar } from '@/ui/SumBar'
+import { AfterDrawings, ExactEquation, SumBar } from '@/ui/SumBar'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { StatusTrack } from '@/ui/StatusTrack'
 import type { MarginState } from '@/lib/money'
@@ -135,5 +135,21 @@ describe('a margin is never shown without the provisional mark when costs are in
 
   it('a negative margin says "below cost" in words as well as colour', () => {
     expect(text(<Margin value="-84500" state="final" />)).toContain('below cost')
+  })
+})
+
+describe('SumBar headline (approved mockup: whole rupees; exact paisa lives in the rows and the equation)', () => {
+  const bar = <SumBar label="x" items={[{ label: 'Net in', amount: '2280635.60' }, { label: 'GST', amount: '410514.40', paisa: 'always' }]} />
+  it('rounds to whole rupees by default and can be told otherwise', () => {
+    const t = text(bar)
+    expect(t).toContain('2,280,636')
+    expect(t).not.toContain('2,280,635.60')
+    expect(t).toContain('410,514.40')
+  })
+
+  it('the exact equation adds up to the paisa, or says it does not', () => {
+    const parts = [{ amount: '2280635.60', label: 'net' }, { amount: '410514.40', label: 'GST' }, { amount: '150000', label: 'not yet split' }]
+    expect(text(<ExactEquation total="2841150" parts={parts} />)).toBe('2,841,150 = 2,280,635.60 net + 410,514.40 GST + 150,000 not yet split')
+    expect(text(<ExactEquation total="2841151" parts={parts} />)).toContain('parts add to 2,841,150')
   })
 })
