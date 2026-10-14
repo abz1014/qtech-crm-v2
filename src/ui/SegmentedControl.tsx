@@ -67,6 +67,8 @@ export function SegmentedControl({
     'transition-colors duration-fast ease-out hover:text-fg disabled:text-fg-disabled disabled:hover:text-fg-disabled',
     'data-[state=checked]:border-line-strong data-[state=checked]:bg-surface data-[state=checked]:text-fg',
     'data-[state=active]:border-line-strong data-[state=active]:bg-surface data-[state=active]:text-fg',
+    // locked (a submitting form disables its fieldset): the selected segment keeps its surface but greys out
+    'disabled:data-[state=checked]:text-fg-disabled disabled:data-[state=active]:text-fg-disabled',
     large ? 'h-8' : 'h-[26px]',
     fill && 'min-w-0 flex-1 px-2',
   )

@@ -1,13 +1,21 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { z } from 'zod'
-import { Building2, CalendarDays, Copy, FileText, Package, Mail, MessageSquare, Plus, Send, Trash2 } from 'lucide-react'
+import { Building2, CalendarDays, Copy, FileText, ListFilter, Package, Mail, MessageSquare, Plus, Send, Trash2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
 import { CommandPalette } from '@/ui/CommandPalette'
 import { Dialog, DialogContent } from '@/ui/Dialog'
+import { Callout, InlineConfirm } from '@/ui/Inline'
+import { ToastProvider } from '@/ui/Toast'
+import { ToggleButton } from '@/ui/ToggleButton'
+import { useToast } from '@/ui/useToast'
+import type { AddedFile } from '@/lib/fileIntake'
 import { Checkbox } from '@/ui/form/Checkbox'
+import { FileDrop } from '@/ui/form/FileDrop'
+import { FileRow } from '@/ui/form/FileRow'
+import { Radio, RadioGroup } from '@/ui/form/Radio'
 import { Combobox, type ComboOption } from '@/ui/form/Combobox'
 import { DateInput } from '@/ui/form/DateInput'
 import { Field } from '@/ui/form/Field'
@@ -296,6 +304,10 @@ function Controls() {
         <Checkbox label="Float to supplier shortlist" checked={a} onCheckedChange={v => setA(v === true)} />
         <Checkbox label="Include item 4" />
         <Checkbox label="Disabled option" disabled />
+        <RadioGroup aria-label="Role" defaultValue="customer" className="gap-[10px]">
+          <Radio value="customer" label="Customer" />
+          <Radio value="supplier" label="Supplier" />
+        </RadioGroup>
       </div>
     </div>
   )
@@ -475,6 +487,66 @@ function MoneyDialog() {
   )
 }
 
+function ToastScene({ kind }: { kind: 'undo' | 'error' | 'settled' | 'plain' }) {
+  const { toast } = useToast()
+  const fired = useRef(false)
+  useEffect(() => {
+    if (fired.current) return
+    fired.current = true
+    if (kind === 'undo') toast({ title: 'Marked floated', body: '4 suppliers · RFQ-0177', tone: 'success', undo: { onUndo: noop } })
+    if (kind === 'settled') toast({ title: 'Marked floated', undo: { onUndo: noop, seconds: 1, settledTitle: 'Floated to 4 suppliers', settledBody: 'Sent today, Fri 27 Nov' } })
+    if (kind === 'error') toast({ title: 'Couldn’t save the answer', body: 'Nothing was changed.', tone: 'danger', action: { label: 'Try again', onClick: noop } })
+    if (kind === 'plain') toast({ title: 'Copied', body: 'Message is on your clipboard', tone: 'success' })
+  }, [kind, toast])
+  return <div className="h-[60px]" />
+}
+
+function Feedback() {
+  const [on, setOn] = useState(true)
+  return (
+    <div className="grid w-[900px] max-w-full grid-cols-2 gap-6 rounded border bg-surface p-6">
+      <div className="grid content-start gap-3">
+        <div className="flex flex-wrap gap-2">
+          <ToggleButton pressed={false} onPressedChange={noop} icon={ListFilter}>
+            Lowest only
+          </ToggleButton>
+          <ToggleButton pressed={on} onPressedChange={setOn} icon={ListFilter}>
+            Lowest only
+          </ToggleButton>
+          <ToggleButton pressed={false} onPressedChange={noop} icon={ListFilter} disabled>
+            Disabled
+          </ToggleButton>
+        </div>
+      </div>
+      <div className="grid content-start gap-3">
+        <Callout title="No message is sent from here.">The text is copied and you send it yourself in WhatsApp or email.</Callout>
+      </div>
+      <div className="grid content-start gap-3">
+        <InlineConfirm onUndo={noop}>Copied. Marked as chased today, Fri 27 Nov.</InlineConfirm>
+        <InlineConfirm variant="line">Chased Fri 27 Nov</InlineConfirm>
+      </div>
+    </div>
+  )
+}
+
+function Files({ mode }: { mode: 'resting' | 'rows' }) {
+  const [rows] = useState<AddedFile[]>([
+    { id: '1', file: new File([new Uint8Array(640 * 1024)], 'nameplate-flowmeter.jpg', { type: 'image/jpeg' }), originalSize: 3.8 * 1024 * 1024 },
+    { id: '2', file: new File([new Uint8Array(10)], 'datasheet-scan.pdf', { type: 'application/pdf' }), originalSize: 0, error: '7.2 MB. The limit is 5 MB.' },
+  ])
+  return mode === 'resting' ? (
+    <div className="w-[427px] max-w-full">
+      <FileDrop onAdd={noop} />
+    </div>
+  ) : (
+    <div className="grid w-[427px] max-w-full gap-2">
+      {rows.map(r => (
+        <FileRow key={r.id} item={r} onRemove={noop} />
+      ))}
+    </div>
+  )
+}
+
 export default function PrimitivesPreview() {
   const scene = new URLSearchParams(window.location.search).get('scene') ?? 'index'
   let body: ReactNode
@@ -522,6 +594,25 @@ export default function PrimitivesPreview() {
       break
     case 'overlays':
       body = <Overlays />
+      break
+    case 'toast-undo':
+    case 'toast-error':
+    case 'toast-settled':
+    case 'toast-plain':
+      body = (
+        <ToastProvider>
+          <ToastScene kind={scene.replace('toast-', '') as 'undo'} />
+        </ToastProvider>
+      )
+      break
+    case 'feedback':
+      body = <Feedback />
+      break
+    case 'files-resting':
+      body = <Files mode="resting" />
+      break
+    case 'files-rows':
+      body = <Files mode="rows" />
       break
     case 'misc':
       body = <Misc />

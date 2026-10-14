@@ -1,4 +1,5 @@
-import { forwardRef, useId, useMemo, useState, type InputHTMLAttributes, type KeyboardEvent } from 'react'
+import { forwardRef, useId, useMemo, useRef, useState, type InputHTMLAttributes, type KeyboardEvent } from 'react'
+import * as RadixPopover from '@radix-ui/react-popover'
 import { Plus, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { controlClass, useControlProps } from '@/ui/form/fieldContext'
@@ -54,6 +55,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
   const [query, setQuery] = useState<string | null>(null) // null: showing the chosen label, not typing
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
+  const inputRef = useRef<HTMLInputElement | null>(null)
 
   const selected = options.find(o => o.value === value)
   const typed = query ?? ''
@@ -125,13 +127,20 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
     }
   }
 
+  const anchorHas = (t: EventTarget | null) => t instanceof Node && Boolean(inputRef.current?.parentElement?.contains(t))
   const optionId = (i: number) => `${listId}-o${i}`
   const showList = open && (rows > 0 || loading || typed.trim() !== '')
 
   return (
-    <div className="relative min-w-0">
+    <RadixPopover.Root open={showList}>
+      <RadixPopover.Anchor asChild>
+        <div className="relative min-w-0">
       <input
-        ref={ref}
+        ref={node => {
+          inputRef.current = node
+          if (typeof ref === 'function') ref(node)
+          else if (ref) ref.current = node
+        }}
         type="text"
         role="combobox"
         aria-expanded={showList}
@@ -159,13 +168,28 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
         }}
         className={cn(controlClass, className)}
       />
-      {showList ? (
+        </div>
+      </RadixPopover.Anchor>
+      {/* A popper in a portal, so a dialog body's overflow cannot clip the list. Focus never leaves the input. */}
+      <RadixPopover.Portal>
+        <RadixPopover.Content
+          role={undefined}
+          align="start"
+          sideOffset={4}
+          collisionPadding={8}
+          onOpenAutoFocus={e => e.preventDefault()}
+          onCloseAutoFocus={e => e.preventDefault()}
+          onInteractOutside={e => {
+            if (anchorHas(e.target)) e.preventDefault()
+          }}
+          className="z-[70] w-[var(--radix-popover-trigger-width)] focus:outline-none"
+        >
         <ul
           id={listId}
           role="listbox"
           aria-label="Matches"
           onMouseDown={e => e.preventDefault()}
-          className="absolute inset-x-0 top-[calc(100%+4px)] z-30 max-h-[280px] animate-rise-4 overflow-y-auto rounded bg-surface p-1 shadow-pop"
+          className="max-h-[280px] animate-rise-4 overflow-y-auto rounded bg-surface p-1 shadow-pop"
         >
           {matches.map((o, i) => (
             <li
@@ -212,7 +236,8 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
             </li>
           ) : null}
         </ul>
-      ) : null}
-    </div>
+        </RadixPopover.Content>
+      </RadixPopover.Portal>
+    </RadixPopover.Root>
   )
 })

@@ -72,6 +72,30 @@ const shots = [
   { name: 'palette-idle', w: 652, h: 562, scene: 'palette-idle', ref: ['components-07-command-palette.png', 16, 175, 652, 562] },
   { name: 'palette-typing', w: 652, h: 562, scene: 'palette-typing', type: 'indus', ref: ['components-07-command-palette.png', 692, 197, 652, 562] },
   { name: 'palette-empty', w: 652, h: 362, scene: 'palette-empty', type: 'belimo gaskets', ref: ['components-07-command-palette.png', 16, 837, 652, 362] },
+  { name: 'toast-undo', w: 420, h: 88, scene: 'toast-undo', wait: 3000, ref: ['components-08-toast-with-undo.png', 37, 229, 380, 56] },
+  { name: 'toast-settled', w: 420, h: 88, scene: 'toast-settled', wait: 1800, ref: ['components-08-toast-with-undo.png', 37, 478, 380, 56] },
+  { name: 'toast-error', w: 420, h: 88, scene: 'toast-error', ref: ['components-08-toast-with-undo.png', 713, 472, 380, 56] },
+  { name: 'toast-plain', w: 420, h: 88, scene: 'toast-plain', ref: ['components-08-toast-with-undo.png', 37, 828, 380, 56] },
+  { name: 'toast-undo-today-b2', w: 1000, h: 140, scene: 'toast-undo', wait: 3000, ref: ['today-b2-03-2-copied.png', 514, 875, 380, 56] },
+  { name: 'feedback-toggle-callout-inline', w: 940, h: 220, scene: 'feedback', ref: ['components-13-more-primitives.png', 16, 197, 880, 400] },
+  { name: 'files-resting', w: 427, h: 210, scene: 'files-resting', ref: ['components-01-controls.png', 16, 1401, 427, 206] },
+  {
+    name: 'files-drag-over',
+    w: 427,
+    h: 210,
+    scene: 'files-resting',
+    steps: async p => {
+      await p.evaluate(() => {
+        const zone = document.querySelector('[aria-label="Add files"]')
+        const dt = new DataTransfer()
+        dt.items.add(new File(['a'], 'a.png', { type: 'image/png' }))
+        dt.items.add(new File(['b'], 'b.png', { type: 'image/png' }))
+        zone.dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer: dt }))
+      })
+    },
+    ref: ['components-01-controls.png', 467, 1447, 427, 180],
+  },
+  { name: 'files-rows', w: 427, h: 150, scene: 'files-rows', ref: ['components-01-controls.png', 917, 1401, 427, 132] },
   {
     name: 'shell-account-menu-1440',
     w: 1440,
@@ -108,8 +132,8 @@ for (const s of shots) {
   }
   if (s.type) await page.keyboard.type(s.type)
   if (s.steps) await s.steps(page)
-  await page.waitForTimeout(350)
-  const clip = s.w < 768 && !s.mobile ? { x: /^(dialog|palette)/.test(s.name) ? (VW - s.w) / 2 : 0, y: 0, width: s.w, height: s.h } : undefined
+  await page.waitForTimeout(s.wait ?? 350)
+  const clip = s.w < 768 && !s.mobile ? { x: /^(dialog|palette)/.test(s.name) ? (VW - s.w) / 2 : /^toast/.test(s.name) ? VW - s.w : /^files/.test(s.name) ? 24 : 0, y: /^files/.test(s.name) ? 24 : 0, width: s.w, height: s.h } : undefined
   await page.screenshot({ path: `${out}/${s.name}.png`, clip })
   await ctx.close()
 }

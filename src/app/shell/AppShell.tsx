@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { navItemForPath, type NavKey } from '@/app/navConfig'
 import { useSession, type SessionUser } from '@/app/session'
+import { ToastProvider } from '@/ui/Toast'
 import { PaletteHost } from '@/app/palette/PaletteHost'
 import { usePalette } from '@/app/palette/usePalette'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
@@ -23,9 +24,11 @@ export function AppShell({ counts }: AppShellProps) {
   const session = useSession()
   if (session.status !== 'signed-in') return null
   return (
-    <PaletteHost role={session.user.role}>
-      <Frame user={session.user} counts={counts} />
-    </PaletteHost>
+    <ToastProvider>
+      <PaletteHost role={session.user.role}>
+        <Frame user={session.user} counts={counts} />
+      </PaletteHost>
+    </ToastProvider>
   )
 }
 

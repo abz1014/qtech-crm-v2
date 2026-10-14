@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
+import { formatDateText } from '@/lib/dateInput'
 import { axeViolations } from '@/test/axe'
 import { Button } from '@/ui/Button'
 import { DateInput } from '@/ui/form/DateInput'
@@ -191,7 +192,7 @@ describe('Form (U07): pre-filled values say where they came from (FE-2)', () => 
 
   it('the date defaults to today (business timezone) with no touch', () => {
     render(<Harness save={vi.fn<Save>()} />)
-    expect(screen.getByLabelText('Date received')).toHaveValue(businessToday())
+    expect(screen.getByLabelText('Date received')).toHaveValue(formatDateText(businessToday()))
   })
 
   it('has no axe violations', async () => {

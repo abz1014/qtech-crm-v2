@@ -9,8 +9,9 @@ import { Adorned } from '@/ui/form/TextField'
  * tabular, right aligned. The value is a number (or null when empty or not a
  * number), the text is whatever is being typed. While typing nothing is
  * reformatted; on blur the text is grouped in thousands (1,600,764; 278.40 with
- * `decimals={2}`). Focus selects the text so a pre-filled amount is one keystroke
- * to replace. Works with RHF's Controller: `<NumberInput {...field} />`.
+ * `decimals={2}`). A pre-filled amount keeps its grouping on focus and is
+ * selected, so typing replaces it in one keystroke; the commas only go if the
+ * person edits inside the number. Works with RHF's Controller: `<NumberInput {...field} />`.
  */
 type Base = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type' | 'prefix' | 'defaultValue'>
 
@@ -61,7 +62,6 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(functi
         value={text}
         onFocus={e => {
           setFocused(true)
-          setText(text.replace(/,/g, ''))
           onFocus?.(e)
         }}
         onChange={e => {
