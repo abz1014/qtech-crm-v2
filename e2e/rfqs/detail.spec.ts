@@ -9,6 +9,7 @@ import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqu
  *
  * FE-2 targets asserted here (BUILD_PLAN FE-2):
  *   Supplier reply   at most 1 typed price per item, currency never typed (then one Save reply)
+ *   Paste reply      paste + accept, at most 2 actions (nothing is saved until Accept)
  *   Can't quote      1 tap
  *   Chase            1 tap
  *   Mark bid sent    1 tap
@@ -42,6 +43,7 @@ async function setRates(): Promise<void> {
 }
 
 interface Seed {
+  tag: string
   rfq: { id: string; number: number }
   customer: string
   items: { id: string; description: string }[]
@@ -76,7 +78,7 @@ async function seed(opts: { dueInDays?: number } = {}): Promise<Seed> {
   const eItem = (await must(rest<{ id: string }[]>('admin', 'rfq_items', { method: 'POST', body: { rfq_id: earlier.id, description: 'Earlier item', qty: 1 } })))[0]
   const eInq = (await must(rest<{ id: string }[]>('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: earlier.id, supplier_id: usd.id, sent_on: karachiDay(-40) } })))[0]
   await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: eInq.id, rfq_item_id: eItem.id, unit_price: 50, currency: 'USD' } }))
-  return { rfq, customer, items, china, usd, germany }
+  return { tag, rfq, customer, items, china, usd, germany }
 }
 
 const row = (page: Page, name: string) => page.getByRole('region', { name })
@@ -138,6 +140,54 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     await expect(item.locator('[data-compared]')).toContainText('28,000')
     await expect(item.getByText("USD 280.00, today's rate")).toBeVisible()
     await expect(item.getByText(/At entry 280\.00/)).toBeVisible()
+  })
+})
+
+test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
+  const copy = (page: Page, text: string) => page.evaluate(t => navigator.clipboard.writeText(t), text)
+
+  test('one paste and one accept save every offer; nothing is saved before Accept', async ({ page }) => {
+    const s = await seed()
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    const r = row(page, s.usd.name)
+    await copy(page, ['Dear Sir,', `FM${s.tag}1 DN50 - USD 100.00 each, 3 weeks`, `PT${s.tag}2 0-10 bar - USD 250.00 each, 4 weeks`, 'Regards'].join('\n'))
+    let actions = 0
+    await r.getByRole('button', { name: 'Paste reply' }).click() // action 1: paste
+    actions++
+    await expect(r.getByText('Read from their reply')).toBeVisible()
+    expect(await linesOf(s.usd.inquiryId)).toHaveLength(0) // nothing committed yet
+    await review(page, 'rfq-detail-03-paste-suggestions-1440')
+    await r.getByRole('button', { name: 'Accept 2 offers' }).click() // action 2: accept all
+    actions++
+    expect(actions).toBeLessThanOrEqual(2)
+    await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
+    const lines = await linesOf(s.usd.inquiryId)
+    expect(lines.map(l => [Number(l.unit_price), l.currency]).sort()).toEqual([[100, 'USD'], [250, 'USD']])
+    expect(Number(lines[0].fx_rate_pkr)).toBe(280)
+  })
+
+  test('a figure that could be read two ways is highlighted for checking, and Cancel saves nothing', async ({ page }) => {
+    const s = await seed()
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    const r = row(page, s.germany.name)
+    await copy(page, `FM${s.tag}1 DN50: EUR 1.234 each`)
+    await r.getByRole('button', { name: 'Paste reply' }).click()
+    await expect(r.locator('[data-flagged]')).toHaveCount(1)
+    await expect(r.locator('[data-flagged]')).toContainText('check')
+    await r.getByRole('button', { name: 'Cancel' }).click()
+    expect(await linesOf(s.germany.inquiryId)).toHaveLength(0)
+  })
+
+  test("a regret becomes can't quote with the reason filled in", async ({ page }) => {
+    const s = await seed()
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    const r = row(page, s.china.name)
+    await copy(page, 'Regret, we do not handle this brand. Sorry we cannot quote.')
+    await r.getByRole('button', { name: 'Paste reply' }).click()
+    await expect(r.getByText(/They say they can't quote\. Reason:/)).toBeVisible()
+    await r.getByRole('button', { name: "Mark can't quote" }).click()
+    await expect.poll(async () => (await inquiryOf(s.china.inquiryId)).no_offer_on).toBe(today())
+    expect((await inquiryOf(s.china.inquiryId)).notes).toMatch(/^Can't quote: /)
   })
 })
 

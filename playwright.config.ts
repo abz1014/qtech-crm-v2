@@ -34,8 +34,8 @@ import { defineConfig, devices } from '@playwright/test'
  *    the FE-2 counts, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e-rfq-detail.yml):
  *      E2E_SUITE=rfq-detail REVIEW_DIR=review-shots npx playwright test --project=rfq-detail
  */
-const dbSuites = ['auth', 'companies', 'rfq-board', 'rfq-intake']
-const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? (process.env.E2E_SUITE as 'auth' | 'companies' | 'rfq-board' | 'rfq-intake') : 'gallery'
+const dbSuites = ['auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail']
+const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? (process.env.E2E_SUITE as 'auth' | 'companies' | 'rfq-board' | 'rfq-intake' | 'rfq-detail') : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
 

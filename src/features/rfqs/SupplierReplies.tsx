@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { Copy, Eye, EyeOff, Info, Undo2 } from 'lucide-react'
+import { ClipboardPaste, Copy, Eye, EyeOff, Info, Undo2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
 import { formatDay } from '@/lib/formatDay'
@@ -15,6 +15,7 @@ import { TextField } from '@/ui/form/TextField'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import { Panel } from '@/features/companies/CompanyParts'
+import { PasteBox, PasteReplyPanel } from '@/features/rfqs/PasteReply'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useSaveReply, useSetInquiryNoOffer, useSetInquiryNotes, useStampSupplierChase } from '@/features/rfqs/hooks'
 import {
@@ -22,17 +23,21 @@ import {
   currencyForSupplier,
   currencySourceNote,
   draftFromLines,
+  draftFromSuggestions,
   generateSupplierChase,
   isReplyDirty,
   parseCantQuoteNotes,
+  parseSupplierReply,
   planReplySave,
   qtyText,
   REPLY_CURRENCIES,
+  suggestFromReply,
   withItemReason,
   withoutReason,
   withReason,
   type EnquiryVariant,
   type RateTable,
+  type SuggestionSet,
   type ReplyDraft,
 } from '@/features/rfqs/lib'
 
@@ -87,6 +92,8 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
   const [draft, setDraft] = useState<ReplyDraft>(() => draftFromLines(existing, prefill.currency))
   const [showText, setShowText] = useState(false)
   const [variant, setVariant] = useState<EnquiryVariant>('whatsapp')
+  const [pasteMode, setPasteMode] = useState<null | 'box' | 'suggest'>(null)
+  const [suggestions, setSuggestions] = useState<SuggestionSet | null>(null)
 
   const notes = parseCantQuoteNotes(inquiry.notes)
   const hasLines = inquiry.lines.length > 0
@@ -99,13 +106,13 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
   const currencyNote = hasLines && existing[0].currency === draft.currency ? `${draft.currency}, as saved` : draft.currency === prefill.currency ? currencySourceNote(prefill, inquiry.supplierCountry) : `${draft.currency}, changed by you`
   const currencyOptions = [...new Set([draft.currency, prefill.currency, ...REPLY_CURRENCIES])].map(c => ({ value: c, label: c }))
 
-  const doSave = async () => {
-    const plan = planReplySave(existing, draft)
+  const doSave = async (d: ReplyDraft = draft) => {
+    const plan = planReplySave(existing, d)
     if (plan.prices.length === 0 && plan.removeItemIds.length === 0) return
     try {
       const n = await save.mutateAsync({
         inquiryId: inquiry.id,
-        currency: draft.currency,
+        currency: d.currency,
         leadTime: plan.leadTime,
         inStock: plan.inStock,
         prices: plan.prices,
@@ -113,7 +120,7 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
       })
       toast({
         title: 'Reply saved',
-        body: `${inquiry.supplierName} · ${n} ${n === 1 ? 'price' : 'prices'}${rateMissing ? ' · not compared, no rate' : ''}`,
+        body: `${inquiry.supplierName} · ${n} ${n === 1 ? 'price' : 'prices'}${d.currency !== 'PKR' && (!rates[d.currency] || rates[d.currency]!.staleness === 'unusable' || rates[d.currency]!.ageDays > 30) ? ' · not compared, no rate' : ''}`,
         tone: 'success',
       })
     } catch (err) {
@@ -159,6 +166,41 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
     } catch (err) {
       toast({ title: 'Could not save the reason', body: mapPgError(err).message, tone: 'danger' })
     }
+  }
+
+  // ---- paste reply (R08): read the clipboard, offer what was found, save nothing until Accept
+  const suggestItems = items.map(it => ({ id: it.id, number: it.number, description: it.description, qty: it.qty, unit: it.unit }))
+  const readText = (text: string) => {
+    setSuggestions(suggestFromReply(parseSupplierReply(text, suggestItems, { today: businessToday() }), suggestItems, draft.currency))
+    setPasteMode('suggest')
+  }
+  const startPaste = async () => {
+    let text = ''
+    try {
+      text = await navigator.clipboard.readText()
+    } catch {
+      text = ''
+    }
+    if (text.trim()) readText(text)
+    else setPasteMode('box') // the browser would not give the clipboard up, or it is empty: paste into a box instead
+  }
+  const acceptSuggestions = async (selected: ReadonlySet<string>) => {
+    if (!suggestions) return
+    let notesNow = inquiry.notes
+    for (const d of suggestions.declined) notesNow = withItemReason(notesNow, d.itemNumber, d.reason)
+    try {
+      if (suggestions.declined.length > 0 && notesNow !== inquiry.notes) await itemReason.mutateAsync({ inquiryId: inquiry.id, notes: notesNow })
+    } catch (err) {
+      toast({ title: 'Could not save the reasons', body: mapPgError(err).message, tone: 'danger' })
+      return
+    }
+    const next = draftFromSuggestions(draft, suggestions, selected)
+    if (next !== draft) {
+      setDraft(next)
+      await doSave(next)
+    }
+    setPasteMode(null)
+    setSuggestions(null)
   }
 
   // ---- chase: the items still without a price from this supplier, and not declined for a reason of their own
@@ -316,6 +358,32 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
               </span>
             ) : null}
           </p>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" icon={ClipboardPaste} onClick={() => void startPaste()} disabled={pasteMode !== null}>
+              Paste reply
+            </Button>
+            <span className="text-xs text-fg-muted">Reads the email or message you copied. Nothing is saved until you accept.</span>
+          </div>
+          {pasteMode === 'box' ? <PasteBox onRead={readText} onCancel={() => setPasteMode(null)} /> : null}
+          {pasteMode === 'suggest' && suggestions ? (
+            <PasteReplyPanel
+              set={suggestions}
+              items={items}
+              supplierName={inquiry.supplierName}
+              busy={save.isPending || itemReason.isPending || noOffer.isPending}
+              onAccept={sel => void acceptSuggestions(sel)}
+              onCantQuote={reason => {
+                setPasteMode(null)
+                setSuggestions(null)
+                void cantQuote(reason)
+              }}
+              onCancel={() => {
+                setPasteMode(null)
+                setSuggestions(null)
+              }}
+            />
+          ) : null}
 
           {!hasLines ? (
             <div role="group" aria-label={`Can't quote, ${inquiry.supplierName}`} className="flex flex-wrap items-center gap-2">

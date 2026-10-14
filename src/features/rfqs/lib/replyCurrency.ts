@@ -38,14 +38,14 @@ const COUNTRY_CURRENCY: Record<string, string> = {
 
 export const REPLY_CURRENCIES = ['PKR', 'USD', 'EUR', 'CNY', 'AED', 'GBP', 'JPY', 'SAR'] as const
 
-export type CurrencySource = 'last' | 'country' | 'default'
+export type PrefillSource = 'last' | 'country' | 'default'
 
-export interface ReplyCurrency {
+export interface PrefillCurrency {
   currency: string
-  source: CurrencySource
+  source: PrefillSource
 }
 
-export function currencyForSupplier(lastCurrency: string | null | undefined, country: string | null | undefined): ReplyCurrency {
+export function currencyForSupplier(lastCurrency: string | null | undefined, country: string | null | undefined): PrefillCurrency {
   if (lastCurrency && /^[A-Z]{3}$/.test(lastCurrency)) return { currency: lastCurrency, source: 'last' }
   const mapped = country ? COUNTRY_CURRENCY[country.trim().toLowerCase()] : undefined
   if (mapped) return { currency: mapped, source: 'country' }
@@ -53,7 +53,7 @@ export function currencyForSupplier(lastCurrency: string | null | undefined, cou
 }
 
 /** The words that say where the pre-filled currency came from ("USD, their last reply"). */
-export function currencySourceNote(c: ReplyCurrency, country?: string | null): string {
+export function currencySourceNote(c: PrefillCurrency, country?: string | null): string {
   if (c.source === 'last') return `${c.currency}, their last reply`
   if (c.source === 'country') return `${c.currency}, usual for ${country ?? 'their country'}`
   return `${c.currency}, no earlier reply`
