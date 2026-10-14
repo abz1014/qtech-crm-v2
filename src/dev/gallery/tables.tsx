@@ -1,11 +1,8 @@
-/* eslint-disable react-refresh/only-export-components -- a dev page, not a hot-reloaded module */
-// Review gallery for U04 DataTable, U05 status module and U06 Money. Dev only: open /gallery-u04.html
-// from `npm run dev`. It is not part of the production build (vite builds index.html only). U09 replaces it
-// with the full gallery. Data below is the mockups' own (money-01, money-07, money-08, components-06).
-import { StrictMode, useState, type ReactNode } from 'react'
-import { createRoot } from 'react-dom/client'
+// Gallery sections for U04 DataTable, U05 status module and U06 Money (part of /dev/gallery, dev only).
+// Data below is the mockups' own (money-01, money-07, money-08, components-06).
+import { useState, type ReactNode } from 'react'
 import { Truck } from 'lucide-react'
-import '@/index.css'
+import { Row, Section } from '@/dev/gallery/layout'
 import { STATUS, type StatusDimension } from '@/lib/status'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
@@ -14,29 +11,7 @@ import { Margin, Money, MoneyFx, NetGstGross } from '@/ui/Money'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { StatusTrack } from '@/ui/StatusTrack'
 import { AfterDrawings, ExactEquation, SumBar } from '@/ui/SumBar'
-import { Tag } from '@/ui/Tag'
-import { Icon } from '@/ui/Icon'
 import { formatDay } from '@/lib/formatDay'
-
-const Section = ({ id, title, note, children }: { id: string; title: string; note?: string; children: ReactNode }) => (
-  <section id={id} className="grid gap-3">
-    <div className="grid gap-1">
-      <h2 className="text-xl font-semibold tracking-snug">{title}</h2>
-      {note ? <p className="max-w-prose text-sm text-fg-muted">{note}</p> : null}
-    </div>
-    {children}
-  </section>
-)
-
-const Row = ({ title, note, children }: { title: string; note: string; children: ReactNode }) => (
-  <div className="grid gap-3 border-t py-4 first:border-t-0 md:grid-cols-[320px_1fr]">
-    <div className="grid content-start gap-1">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="text-xs text-fg-muted">{note}</p>
-    </div>
-    <div className="flex flex-wrap items-center gap-4">{children}</div>
-  </div>
-)
 
 const Cell2 = ({ t, s }: { t: ReactNode; s?: ReactNode }) => (
   <span className="grid gap-px">
@@ -142,18 +117,13 @@ const payCols: Column<Pay>[] = [
   { id: 'net', header: 'Net portion', kind: 'money', value: r => r.net, total: true, cell: r => (r.net === null ? <StatusBadge dimension="trust" value="basis_unknown" label="Net unresolved" /> : <Money value={r.net} prefix={false} paisa="always" />) },
 ]
 
-function Gallery() {
+export function StatusMoneyTableSections() {
   const [sel, setSel] = useState<ReadonlySet<string>>(new Set(['i1', 'i2', 'i3']))
   const [open, setOpen] = useState<string | null>('3')
   return (
-    <main className="mx-auto grid max-w-table content-start gap-12 px-8 pb-24 pt-10">
-      <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">U04 DataTable, U05 status, U06 Money</h1>
-        <p className="text-sm text-fg-muted">Review gallery against components-02, 03, 06 and money-01, 02, 07, 08.</p>
-      </header>
-
+    <>
       <Section id="status" title="StatusBadge" note="Every value in the registry, grouped by dimension. Colours come from the data-status map in tokens.css.">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {(Object.keys(STATUS) as StatusDimension[]).map(dim => (
             <div key={dim} className="grid content-start gap-3 rounded border bg-surface p-4">
               <p className="flex justify-between text-sm font-medium"><span>{dim}</span><span className="num text-fg-muted">{Object.keys(STATUS[dim]).length}</span></p>
@@ -198,7 +168,7 @@ function Gallery() {
       <Section id="rfq" title="DataTable: comfortable, then compact with a selected row" note="Press Tab, then the arrow keys, Enter and Space.">
         <DataTable label="RFQs" columns={rfqCols} rows={RFQS} getRowId={r => r.id} defaultSort={{ id: 'due', dir: 'asc' }} onRowOpen={r => setOpen(r.id)} activeRowId={null} summary="Showing 7 of 7 RFQs" />
         <DataTable label="RFQs, compact" density="compact" columns={rfqCols} rows={RFQS} getRowId={r => r.id} defaultSort={{ id: 'due', dir: 'asc' }} onRowOpen={r => setOpen(r.id)} activeRowId={open} summary="Showing 7 of 7 RFQs" />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <DataTable label="Loading" columns={rfqCols.slice(0, 5)} rows={[]} getRowId={r => r.id} loading />
           <DataTable label="Error" columns={rfqCols.slice(0, 5)} rows={[]} getRowId={r => r.id} error={{ title: 'Couldn’t load RFQs', message: 'Your changes are safe. Check your connection and try again.', onRetry: () => undefined, reference: '4f1c9a' }} />
           <DataTable label="Goal state" columns={rfqCols.slice(0, 5)} rows={[]} getRowId={r => r.id} empty={<EmptyState mood="goal" title="Every bid is in" actions={<Button variant="primary">New RFQ</Button>}>Nothing is open and nothing is due in the next 5 days. New RFQs appear here as soon as you start one.</EmptyState>} />
@@ -237,16 +207,6 @@ function Gallery() {
           footerLabel={<span>Costs complete {'·'} <span className="num">2</span> orders</span>}
         />
       </Section>
-
-      <Section id="tags" title="Tag and icon check" note="">
-        <div className="flex items-center gap-3"><Tag>ORD-0038</Tag><Tag dashed>no PO yet</Tag><Icon icon={Truck} /></div>
-      </Section>
-    </main>
+    </>
   )
 }
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Gallery />
-  </StrictMode>,
-)

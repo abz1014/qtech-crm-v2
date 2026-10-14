@@ -6,3 +6,6 @@ coverage
 import/.data/
 backups/
 *.local
+dist-e2e
+test-results
+playwright-report

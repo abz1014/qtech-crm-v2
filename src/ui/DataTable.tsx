@@ -5,6 +5,7 @@ import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
+import { Checkbox } from '@/ui/form/Checkbox'
 import { Money } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
 import { downloadCSV, generateCSV } from '@/lib/csvExport'
@@ -253,10 +254,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   }
   const selectedCount = selected ? ids.filter(id => selected.has(id)).length : 0
   const allOn = ids.length > 0 && selectedCount === ids.length
-  const headRef = useRef<HTMLInputElement>(null)
-  useLayoutEffect(() => {
-    if (headRef.current) headRef.current.indeterminate = selectedCount > 0 && !allOn
-  })
+  const headState: boolean | 'indeterminate' = allOn ? true : selectedCount > 0 ? 'indeterminate' : false
 
   const onRowKey = (e: KeyboardEvent<HTMLTableRowElement>, di: number, row: T) => {
     if (e.target !== e.currentTarget || e.altKey || e.ctrlKey || e.metaKey) return
@@ -338,18 +336,11 @@ export function DataTable<T>(props: DataTableProps<T>) {
     downloadCSV(generateCSV(headers, body), exportCsv.filename)
   }
 
-  const checkbox = (checked: boolean, onChange: (shift: boolean) => void, aria: string, ref?: React.Ref<HTMLInputElement>) => (
-    <label className="-m-3 flex cursor-pointer p-3">
-      <input
-        ref={ref}
-        type="checkbox"
-        aria-label={aria}
-        checked={checked}
-        onChange={() => undefined}
-        onClick={e => onChange(e.shiftKey)}
-        className="size-4 cursor-pointer accent-brand-green"
-      />
-    </label>
+  // The U07 Checkbox, drawn without a visible label (the aria-label names it). The padded wrapper keeps a 44px touch target.
+  const checkbox = (checked: boolean | 'indeterminate', onChange: (shift: boolean) => void, aria: string) => (
+    <span className="-m-3 flex p-3">
+      <Checkbox aria-label={aria} checked={checked} onClick={e => onChange(e.shiftKey)} />
+    </span>
   )
 
   const labelCols = firstTotal < 0 ? columns.length : firstTotal
@@ -532,7 +523,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
             <tr aria-rowindex={virtual ? 1 : undefined}>
               {selection ? (
                 <th className="sticky top-0 z-[1] h-[36px] w-10 border-b border-line bg-sunken px-[var(--cell-px)]">
-                  {checkbox(allOn, () => setMany(ids, !allOn), 'Select all rows', headRef)}
+                  {checkbox(headState, () => setMany(ids, !allOn), 'Select all rows')}
                 </th>
               ) : null}
               {columns.map(c => {

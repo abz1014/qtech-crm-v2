@@ -149,11 +149,11 @@ describe('DataTable: keyboard', () => {
     const out = () => el.querySelector('output')!.textContent
     key(rows()[0], ' ')
     expect(out()).toBe('a')
-    const boxes = () => [...el.querySelectorAll<HTMLInputElement>('tbody input[type="checkbox"]')]
+    const boxes = () => [...el.querySelectorAll<HTMLButtonElement>('tbody button[role="checkbox"]')]
     act(() => boxes()[2].dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true })))
     expect(out()).toBe('a,b,c')
     // header checkbox: everything is on, so one click clears it
-    act(() => el.querySelector<HTMLInputElement>('thead input')!.click())
+    act(() => el.querySelector<HTMLButtonElement>('thead button[role="checkbox"]')!.click())
     expect(out()).toBe('')
   })
 
@@ -175,7 +175,7 @@ describe('DataTable: keyboard', () => {
       )
     }
     mount(<Harness />)
-    act(() => el.querySelector<HTMLInputElement>('tr[data-row-kind="group"] input')!.click())
+    act(() => el.querySelector<HTMLButtonElement>('tr[data-row-kind="group"] button[role="checkbox"]')!.click())
     expect(el.querySelector('output')!.textContent).toBe('a,b')
   })
 })

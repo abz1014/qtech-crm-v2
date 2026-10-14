@@ -4,6 +4,12 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      update_baselines:
+        description: "Regenerate the visual baselines and upload them as an artifact (docs/design/VISUAL_TESTS.md)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -28,3 +34,50 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+
+  # U09: visual regression and axe over /dev/gallery, in real Chromium on Ubuntu.
+  # Baselines are Linux-only and live in e2e/__screenshots__.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium with system dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Regenerate baselines (manual run with update_baselines)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_baselines }}
+        run: npx playwright test e2e/gallery.visual.spec.ts --update-snapshots
+      - name: Axe suite (zero violations)
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.update_baselines) }}
+        run: npx playwright test e2e/gallery.axe.spec.ts
+      - name: Visual suite
+        id: visual
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.update_baselines) }}
+        run: |
+          if [ ! -d e2e/__screenshots__ ]; then
+            echo "::error::No committed baselines in e2e/__screenshots__. Generating them; download the artifact, commit it, push."
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+            npx playwright test e2e/gallery.visual.spec.ts --update-snapshots
+            exit 1
+          fi
+          npx playwright test e2e/gallery.visual.spec.ts
+      - name: Upload generated baselines
+        if: ${{ always() && (steps.visual.outputs.generated == 'true' || (github.event_name == 'workflow_dispatch' && inputs.update_baselines)) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines
+          path: e2e/__screenshots__
+          if-no-files-found: ignore
+      - name: Upload failure report (diffs and traces)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            test-results
+            playwright-report
+          if-no-files-found: ignore

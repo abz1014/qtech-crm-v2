@@ -142,7 +142,7 @@ export function DialogContent({
             data-dialog-body
             className={cn(
               'grid min-h-0 content-start gap-4 overflow-y-auto px-5 pb-5 pt-4 text-sm text-fg-2 transition-opacity duration-fast [&>p]:max-w-[62ch]',
-              busy && 'opacity-70',
+              busy && 'opacity-80',
             )}
           >
             {children}
