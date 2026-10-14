@@ -1,27 +1,41 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { adminUsers } from '@/features/settings/adminUsers'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import * as api from '@/features/settings/api'
+import { setSupabaseForTests, type Db } from '@/lib/supabase'
 import { mapPgError, PlainError } from '@/lib/pgErrors'
 
 const h = vi.hoisted(() => ({ invoke: vi.fn() }))
-vi.mock('@/lib/supabase', () => ({ getSupabase: () => ({ functions: { invoke: h.invoke } }), onApiActivity: () => () => {} }))
 
 const httpError = (status: number, body: unknown) => ({
   message: 'Edge Function returned a non-2xx status code',
   context: new Response(typeof body === 'string' ? body : JSON.stringify(body), { status }),
 })
 
-beforeEach(() => h.invoke.mockReset())
+/** The rejection of a call that is expected to fail. */
+const fail = (p: Promise<unknown>) =>
+  p.then(
+    () => {
+      throw new Error('expected the call to fail')
+    },
+    (e: Error & { code?: string }) => e,
+  )
 
-describe('adminUsers', () => {
+beforeEach(() => {
+  h.invoke.mockReset()
+  setSupabaseForTests({ functions: { invoke: h.invoke } } as unknown as Db)
+})
+
+afterEach(() => setSupabaseForTests(null))
+
+describe('settings api: admin-users calls', () => {
   it('sends every action to the admin-users function with the right body', async () => {
     h.invoke.mockResolvedValue({ data: { users: [] }, error: null })
-    await adminUsers.list()
-    await adminUsers.create({ name: 'Hira', email: 'hira@x.test', role: 'sales' })
-    await adminUsers.resetPassword('u1')
-    await adminUsers.setRole('u1', 'engineer')
-    await adminUsers.setJobTitle('u1', null)
-    await adminUsers.deactivate('u1')
-    await adminUsers.reactivate('u1')
+    await api.listTeam()
+    await api.createPerson({ name: 'Hira', email: 'hira@x.test', role: 'sales' })
+    await api.resetPassword('u1')
+    await api.setRole('u1', 'engineer')
+    await api.setJobTitle('u1', null)
+    await api.deactivatePerson('u1')
+    await api.reactivatePerson('u1')
     expect(h.invoke.mock.calls.map(c => [c[0], c[1].body])).toEqual([
       ['admin-users', { action: 'list' }],
       ['admin-users', { action: 'create', name: 'Hira', email: 'hira@x.test', role: 'sales' }],
@@ -35,13 +49,13 @@ describe('adminUsers', () => {
 
   it('returns the generated password to the caller and nothing else keeps it', async () => {
     h.invoke.mockResolvedValue({ data: { user: { id: 'u2', name: 'Hira', email: 'h@x.test', role: 'sales', job_title: null }, password: 'Vk7xmQ3pRt9wHn2e' }, error: null })
-    const created = await adminUsers.create({ name: 'Hira', email: 'h@x.test', role: 'sales' })
+    const created = await api.createPerson({ name: 'Hira', email: 'h@x.test', role: 'sales' })
     expect(created.password).toBe('Vk7xmQ3pRt9wHn2e')
   })
 
   it("passes the function's own plain message and code through (last admin)", async () => {
     h.invoke.mockResolvedValue({ data: null, error: httpError(409, { error: 'The system must keep at least one active admin.', code: 'last_admin' }) })
-    const err = await adminUsers.deactivate('u1').catch(e => e)
+    const err = await fail(api.deactivatePerson('u1'))
     expect(err).toBeInstanceOf(PlainError)
     expect(err.message).toBe('The system must keep at least one active admin.')
     expect(err.code).toBe('last_admin')
@@ -50,14 +64,14 @@ describe('adminUsers', () => {
 
   it('says something plain when the body is not JSON', async () => {
     h.invoke.mockResolvedValue({ data: null, error: httpError(403, '<html>forbidden</html>') })
-    expect((await adminUsers.list().catch(e => e)).message).toBe('Only an active admin can manage people.')
+    expect((await fail(api.listTeam())).message).toBe('Only an active admin can manage people.')
     h.invoke.mockResolvedValue({ data: null, error: httpError(500, 'boom') })
-    expect((await adminUsers.list().catch(e => e)).message).toBe('Something went wrong. Nothing was changed. Try again.')
+    expect((await fail(api.listTeam())).message).toBe('Something went wrong. Nothing was changed. Try again.')
   })
 
   it('treats a request that never arrived as a network error', async () => {
     h.invoke.mockResolvedValue({ data: null, error: { message: 'Failed to send a request to the Edge Function' } })
-    const err = await adminUsers.list().catch(e => e)
+    const err = await fail(api.listTeam())
     expect(err).toBeInstanceOf(TypeError)
     expect(mapPgError(err).kind).toBe('network')
   })

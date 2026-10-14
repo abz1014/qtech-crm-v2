@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { TeamMember } from '@/features/settings/adminUsers'
+import type { TeamMember } from '@/features/settings/api'
 import {
   filterTeam,
   firstName,

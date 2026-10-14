@@ -5,11 +5,10 @@ import {
   missingForPdf,
   profileSchema,
   toFormValues,
-  useCompanyProfile,
-  useSaveCompanyProfile,
   type CompanyProfile,
   type ProfileValues,
 } from '@/features/settings/companyProfile'
+import { useCompanyProfile, useSaveCompanyProfile } from '@/features/settings/hooks'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
@@ -133,7 +132,7 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
     entity: 'company profile',
     defaultValues: toFormValues(profile),
     onSubmit: async v => {
-      saved.current = await save(v)
+      saved.current = await save.mutateAsync(v)
     },
     onSuccess: () => {
       const row = saved.current

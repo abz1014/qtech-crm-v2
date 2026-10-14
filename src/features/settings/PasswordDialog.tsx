@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Check, CircleCheck, Copy, KeyRound, MessageSquareText, TriangleAlert } from 'lucide-react'
-import type { Role } from '@/features/settings/adminUsers'
+import type { Role } from '@/features/settings/api'
 import { firstName, passwordGroups, roleLabel, signInMessage } from '@/features/settings/teamModel'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/ui/Avatar'

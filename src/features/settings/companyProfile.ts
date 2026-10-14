@@ -1,14 +1,10 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
-import { PlainError } from '@/lib/pgErrors'
-import { getSupabase } from '@/lib/supabase'
 import type { TablesUpdate } from '@/types/database'
 
 /*
- * company_profile (DATA_MODEL 2.27): one row, id = 1, created by a migration. Every staff role may
- * read it; only an admin may update it (RLS decides, this file only asks). Every field is optional
- * except the validity days, which has a default. Missing legal name or address blocks only PDF
- * generation (R20), never saving.
+ * company_profile (DATA_MODEL 2.27): the pure model. One row, id = 1, created by a migration. Every
+ * field is optional except the validity days, which has a default. Missing legal name or address
+ * blocks only PDF generation (R20), never saving. The calls are in api.ts, the hooks in hooks.ts.
  */
 export const TEXT_FIELDS = [
   'legal_name',
@@ -43,8 +39,7 @@ export interface CompanyProfile {
   updated_at: string
 }
 
-const COLS = [...TEXT_FIELDS, 'quotation_validity_days', 'updated_at'].join(', ')
-const KEY = ['company_profile'] as const
+export const COLS = [...TEXT_FIELDS, 'quotation_validity_days', 'updated_at'].join(', ')
 
 const text = (max: number, what: string) => z.string().trim().max(max, `Keep ${what} under ${max} characters.`)
 
@@ -91,30 +86,3 @@ export function missingForPdf(p: Pick<CompanyProfile, 'legal_name' | 'address'>)
   return out
 }
 
-export function useCompanyProfile() {
-  return useQuery<CompanyProfile>({
-    queryKey: KEY,
-    queryFn: async () => {
-      const supabase = getSupabase()
-      if (!supabase) throw new Error('The app is not connected to its database.')
-      const { data, error } = await supabase.from('company_profile').select(COLS).eq('id', 1).single()
-      if (error) throw error
-      return data as unknown as CompanyProfile
-    },
-  })
-}
-
-export function useSaveCompanyProfile() {
-  const qc = useQueryClient()
-  return async (values: ProfileValues): Promise<CompanyProfile> => {
-    const supabase = getSupabase()
-    if (!supabase) throw new Error('The app is not connected to its database.')
-    // select() after update: an update RLS refuses affects no row and returns no error, which must not look like success.
-    const { data, error } = await supabase.from('company_profile').update(toRow(values)).eq('id', 1).select(COLS)
-    if (error) throw error
-    if (!data || data.length === 0) throw new PlainError('Only an admin can change the company profile.')
-    const saved = data[0] as unknown as CompanyProfile
-    qc.setQueryData(KEY, saved)
-    return saved
-  }
-}

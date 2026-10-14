@@ -1,7 +1,15 @@
 import { useRef, type ReactNode } from 'react'
 import { FileText, History, KeyRound, LogOut, Pencil, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
 import { z } from 'zod'
-import { adminUsers, type CreatedUser, type Role, type TeamMember } from '@/features/settings/adminUsers'
+import type { CreatedUser, Role, TeamMember } from '@/features/settings/api'
+import {
+  useCreatePerson,
+  useDeactivatePerson,
+  useReactivatePerson,
+  useResetPassword,
+  useSetJobTitle,
+  useSetRole,
+} from '@/features/settings/hooks'
 import { firstName, isOnlyActiveAdmin, ROLE_OPTIONS, roleLabel } from '@/features/settings/teamModel'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
@@ -17,11 +25,10 @@ import { useSubmitForm } from '@/ui/form/useSubmitForm'
 /*
  * The Team dialogs. Every one is a useSubmitForm (one press is one request, the form keeps what
  * was typed on a failure, the server's plain-language error lands in the banner) and every call
- * goes through the admin-users function. `onChanged` re-reads the list.
+ * goes through the admin-users function (via hooks.ts, which refreshes the list).
  */
 interface Base {
   onClose: () => void
-  onChanged: () => void
 }
 const none = z.object({})
 
@@ -39,9 +46,9 @@ const JOB_TITLE_HELP = 'The job title prints under the signature on quotations a
 export function AddPersonDialog({
   members,
   onClose,
-  onChanged,
   onCreated,
 }: Base & { members: readonly TeamMember[]; onCreated: (c: CreatedUser) => void }) {
+  const create = useCreatePerson()
   const created = useRef<CreatedUser | null>(null)
   const tried = useRef('')
   const sf = useSubmitForm({
@@ -52,10 +59,9 @@ export function AddPersonDialog({
     // The generated password leaves useSubmitForm only through this ref, straight into the reveal dialog.
     onSubmit: async v => {
       tried.current = v.email.toLowerCase()
-      created.current = await adminUsers.create({ name: v.name, email: v.email, role: v.role, job_title: v.job_title || undefined })
+      created.current = await create.mutateAsync({ name: v.name, email: v.email, role: v.role, job_title: v.job_title || undefined })
     },
     onSuccess: () => {
-      onChanged()
       if (created.current) onCreated(created.current)
       created.current = null
     },
@@ -125,15 +131,15 @@ export function AddPersonDialog({
 
 const titleSchema = z.object({ job_title: z.string().trim().max(100, 'Keep the job title under 100 characters.') })
 
-export function EditJobTitleDialog({ member, onClose, onChanged }: Base & { member: TeamMember }) {
+export function EditJobTitleDialog({ member, onClose }: Base & { member: TeamMember }) {
   const { toast } = useToast()
+  const setTitle = useSetJobTitle()
   const sf = useSubmitForm({
     schema: titleSchema,
     entity: 'job title',
     defaultValues: { job_title: member.job_title ?? '' },
-    onSubmit: v => adminUsers.setJobTitle(member.id, v.job_title || null),
+    onSubmit: v => setTitle.mutateAsync({ userId: member.id, jobTitle: v.job_title || null }),
     onSuccess: v => {
-      onChanged()
       toast({ title: v.job_title ? 'Job title saved' : 'Job title cleared', body: member.name, tone: 'success' })
       onClose()
     },
@@ -170,16 +176,16 @@ export function EditJobTitleDialog({ member, onClose, onChanged }: Base & { memb
 
 const roleSchema = z.object({ role: z.enum(['admin', 'sales', 'engineer']) })
 
-export function ChangeRoleDialog({ member, members, onClose, onChanged }: Base & { member: TeamMember; members: readonly TeamMember[] }) {
+export function ChangeRoleDialog({ member, members, onClose }: Base & { member: TeamMember; members: readonly TeamMember[] }) {
   const { toast } = useToast()
+  const changeRole = useSetRole()
   const locked = isOnlyActiveAdmin(member, members)
   const sf = useSubmitForm({
     schema: roleSchema,
     entity: 'role',
     defaultValues: { role: member.role },
-    onSubmit: v => adminUsers.setRole(member.id, v.role),
+    onSubmit: v => changeRole.mutateAsync({ userId: member.id, role: v.role }),
     onSuccess: v => {
-      onChanged()
       toast({ title: `Role changed to ${roleLabel(v.role)}`, body: member.name, tone: 'success' })
       onClose()
     },
@@ -237,13 +243,14 @@ export function ResetPasswordDialog({
   onClose,
   onReset,
 }: Pick<Base, 'onClose'> & { member: TeamMember; onReset: (password: string) => void }) {
+  const reset = useResetPassword()
   const password = useRef<string | null>(null)
   const sf = useSubmitForm({
     schema: none,
     entity: 'password',
     defaultValues: {},
     onSubmit: async () => {
-      password.current = (await adminUsers.resetPassword(member.id)).password
+      password.current = (await reset.mutateAsync(member.id)).password
     },
     onSuccess: () => {
       if (password.current) onReset(password.current)
@@ -281,17 +288,17 @@ export function ResetPasswordDialog({
 
 // ---------------------------------------------------------------- Deactivate / reactivate
 
-export function DeactivateDialog({ member, members, onClose, onChanged }: Base & { member: TeamMember; members: readonly TeamMember[] }) {
+export function DeactivateDialog({ member, members, onClose }: Base & { member: TeamMember; members: readonly TeamMember[] }) {
   const { toast } = useToast()
+  const deactivate = useDeactivatePerson()
   const locked = isOnlyActiveAdmin(member, members)
   const first = firstName(member.name)
   const sf = useSubmitForm({
     schema: none,
     entity: 'person',
     defaultValues: {},
-    onSubmit: () => adminUsers.deactivate(member.id),
+    onSubmit: () => deactivate.mutateAsync(member.id),
     onSuccess: () => {
-      onChanged()
       toast({ title: `${member.name} deactivated`, body: 'Signed out everywhere.', tone: 'success' })
       onClose()
     },
@@ -353,15 +360,15 @@ function Consequence({ icon, children }: { icon: typeof LogOut; children: ReactN
   )
 }
 
-export function ReactivateDialog({ member, onClose, onChanged }: Base & { member: TeamMember }) {
+export function ReactivateDialog({ member, onClose }: Base & { member: TeamMember }) {
   const { toast } = useToast()
+  const reactivate = useReactivatePerson()
   const sf = useSubmitForm({
     schema: none,
     entity: 'person',
     defaultValues: {},
-    onSubmit: () => adminUsers.reactivate(member.id),
+    onSubmit: () => reactivate.mutateAsync(member.id),
     onSuccess: () => {
-      onChanged()
       toast({ title: `${member.name} reactivated`, body: `They can sign in again as ${roleLabel(member.role)}.`, tone: 'success' })
       onClose()
     },

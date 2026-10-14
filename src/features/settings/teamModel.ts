@@ -1,4 +1,4 @@
-import type { Role, TeamMember } from '@/features/settings/adminUsers'
+import type { Role, TeamMember } from '@/features/settings/api'
 
 /* Pure helpers for the Team screen (kept apart from the components so they test without a DOM). */
 

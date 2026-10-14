@@ -2,28 +2,27 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
 import { CompanyProfilePage } from '@/features/settings/CompanyProfilePage'
 import { missingForPdf, profileSchema, toFormValues, toRow, type CompanyProfile } from '@/features/settings/companyProfile'
+import { setSupabaseForTests, type Db } from '@/lib/supabase'
 import { ToastProvider } from '@/ui/Toast'
 import { axeViolations } from '@/test/axe'
 
 const h = vi.hoisted(() => ({ row: null as unknown, update: vi.fn(), updated: [] as unknown[] }))
 
-vi.mock('@/lib/supabase', () => ({
-  onApiActivity: () => () => {},
-  getSupabase: () => ({
-    from: () => ({
-      select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: h.row, error: null }) }) }),
-      update: (patch: unknown) => {
-        h.update(patch)
-        return { eq: () => ({ select: () => Promise.resolve({ data: h.updated, error: null }) }) }
-      },
-    }),
+const fakeDb = {
+  from: () => ({
+    select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: h.row, error: null }) }) }),
+    update: (patch: unknown) => {
+      h.update(patch)
+      return { eq: () => ({ select: () => Promise.resolve({ data: h.updated, error: null }) }) }
+    },
   }),
-}))
+} as unknown as Db
+
 
 const EMPTY: CompanyProfile = {
   legal_name: null,
@@ -70,10 +69,13 @@ function mount(role: string) {
 }
 
 beforeEach(() => {
+  setSupabaseForTests(fakeDb)
   h.row = FULL
   h.update.mockReset()
   h.updated = []
 })
+
+afterEach(() => setSupabaseForTests(null))
 
 describe('company profile rules', () => {
   it('blank text is stored as null and values are trimmed', () => {

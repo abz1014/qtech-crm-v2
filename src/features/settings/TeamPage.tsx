@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Ellipsis, KeyRound, Pencil, Search, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
 import { useSession } from '@/app/session'
-import type { CreatedUser, Role, TeamMember } from '@/features/settings/adminUsers'
+import type { CreatedUser, Role, TeamMember } from '@/features/settings/api'
 import { PasswordDialog } from '@/features/settings/PasswordDialog'
 import {
   AddPersonDialog,
@@ -12,7 +12,7 @@ import {
   ResetPasswordDialog,
 } from '@/features/settings/TeamDialogs'
 import { filterTeam, isActive, roleLabel, teamCounts, type TeamFilter } from '@/features/settings/teamModel'
-import { useRefreshTeam, useTeam } from '@/features/settings/useTeam'
+import { useTeam } from '@/features/settings/hooks'
 import { Avatar } from '@/ui/Avatar'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
@@ -37,8 +37,8 @@ type Open =
 export function TeamPage() {
   const session = useSession()
   const me = session.status === 'signed-in' ? session.user.id : ''
-  const team = useTeam(true)
-  const refresh = useRefreshTeam()
+  const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
+  const team = useTeam(isAdmin) // the list is read only for an admin: for anyone else the request is never made
   const [dialog, setDialog] = useState<Open>(null)
   const [filter, setFilter] = useState<TeamFilter>('all')
   const [query, setQuery] = useState('')
@@ -173,14 +173,13 @@ export function TeamPage() {
         <AddPersonDialog
           members={members}
           onClose={close}
-          onChanged={refresh}
           onCreated={(c: CreatedUser) =>
             setDialog({ kind: 'secret', variant: 'created', person: { name: c.user.name, email: c.user.email, role: c.user.role }, password: c.password })
           }
         />
       ) : null}
-      {dialog?.kind === 'title' ? <EditJobTitleDialog member={dialog.member} onClose={close} onChanged={refresh} /> : null}
-      {dialog?.kind === 'role' ? <ChangeRoleDialog member={dialog.member} members={members} onClose={close} onChanged={refresh} /> : null}
+      {dialog?.kind === 'title' ? <EditJobTitleDialog member={dialog.member} onClose={close} /> : null}
+      {dialog?.kind === 'role' ? <ChangeRoleDialog member={dialog.member} members={members} onClose={close} /> : null}
       {dialog?.kind === 'reset' ? (
         <ResetPasswordDialog
           member={dialog.member}
@@ -191,8 +190,8 @@ export function TeamPage() {
           }}
         />
       ) : null}
-      {dialog?.kind === 'deactivate' ? <DeactivateDialog member={dialog.member} members={members} onClose={close} onChanged={refresh} /> : null}
-      {dialog?.kind === 'reactivate' ? <ReactivateDialog member={dialog.member} onClose={close} onChanged={refresh} /> : null}
+      {dialog?.kind === 'deactivate' ? <DeactivateDialog member={dialog.member} members={members} onClose={close} /> : null}
+      {dialog?.kind === 'reactivate' ? <ReactivateDialog member={dialog.member} onClose={close} /> : null}
       {dialog?.kind === 'secret' ? (
         <PasswordDialog kind={dialog.variant} person={dialog.person} password={dialog.password} onClose={close} />
       ) : null}

@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
 import { PlainError } from '@/lib/pgErrors'
-import type { TeamMember } from '@/features/settings/adminUsers'
+import type { TeamMember } from '@/features/settings/api'
 import { TeamPage } from '@/features/settings/TeamPage'
 import { ToastProvider } from '@/ui/Toast'
 import { axeViolations } from '@/test/axe'
@@ -20,7 +20,15 @@ const h = vi.hoisted(() => ({
   deactivate: vi.fn(),
   reactivate: vi.fn(),
 }))
-vi.mock('@/features/settings/adminUsers', () => ({ adminUsers: h }))
+vi.mock('@/features/settings/api', () => ({
+  listTeam: h.list,
+  createPerson: h.create,
+  resetPassword: h.resetPassword,
+  setRole: h.setRole,
+  setJobTitle: h.setJobTitle,
+  deactivatePerson: h.deactivate,
+  reactivatePerson: h.reactivate,
+}))
 
 const member = (id: string, name: string, role: TeamMember['role'], extra: Partial<TeamMember> = {}): TeamMember => ({
   id,
