@@ -1,18 +1,17 @@
 import { defineConfig, devices } from '@playwright/test'
 
 /*
- * One config, one project per suite. Other suites (auth A03, visual U09, journeys) add their own project
- * and, if they need another server, their own entry in `webServer` (it accepts a list).
+ * One config, one project per suite. 'auth' (A03) signs in as the seeded fixture users against the
+ * local CI stack; 'companies' (R02) drives the Companies screens signed in the same way, with data set up
+ * through the REST API as the fixture users. Other suites (visual, journeys) add their own project here.
  *
- * 'companies' (R02) runs against the local CI stack only (supabase start + db reset, seed fixtures):
+ * Both projects need the local Supabase stack running and the app built with its URL and anon key:
  *   eval "$(npx supabase status -o env | sed 's/^/export /')"
- *   npx playwright test --project=companies
- * It needs API_URL and ANON_KEY in the environment, and serves the app with `vite` (a dev build) so the
- * shell takes the ?devRole= session; the data calls carry a real session for the seeded fixture user, so
- * Row Level Security is exercised for real. Once real sign-in is on main, `signInAs` in
- * e2e/support/stack.ts becomes a pass through the login form and the dev server can be a preview build.
+ *   VITE_SUPABASE_URL=$API_URL VITE_SUPABASE_ANON_KEY=$ANON_KEY npm run build
+ *   npx playwright test --project=auth     (or --project=companies)
+ * The tests read API_URL, ANON_KEY and SERVICE_ROLE_KEY from the environment (local keys only).
  */
-const PORT = 5174
+const PORT = 4173
 
 export default defineConfig({
   testDir: './e2e',
@@ -28,19 +27,20 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'auth',
+      testMatch: /auth\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
       name: 'companies',
       testMatch: /companies\/.*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
   ],
   webServer: {
-    command: `npx vite --host 127.0.0.1 --port ${PORT} --strictPort`,
+    command: `npx vite preview --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: `http://127.0.0.1:${PORT}/login`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
-    env: {
-      VITE_SUPABASE_URL: process.env.API_URL ?? 'http://127.0.0.1:54321',
-      VITE_SUPABASE_ANON_KEY: process.env.ANON_KEY ?? '',
-    },
   },
 })

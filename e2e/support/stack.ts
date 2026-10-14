@@ -40,23 +40,17 @@ export async function login(role: Role): Promise<Session> {
   return session
 }
 
-/** supabase-js keeps its session under sb-<first label of the API host>-auth-token. */
-function storageKey(): string {
-  return `sb-${new URL(API_URL).hostname.split('.')[0]}-auth-token`
-}
-
 /**
- * Open a page as a role. The shell takes its session from ?devRole= (a dev build), and every data request
- * carries the real fixture user's token, so Row Level Security is what answers. When real sign-in is on main this
- * becomes: fill the login form with the fixture address and password.
+ * Sign in through the real login form as a fixture user, then open `path`. Every data request the app makes
+ * carries that person's token, so Row Level Security is what answers.
  */
 export async function openAs(page: Page, role: Role, path: string): Promise<void> {
-  const session = await login(role)
-  // A string script, so the Node-side type check needs no DOM types.
-  await page.addInitScript(
-    `try { window.localStorage.setItem(${JSON.stringify(storageKey())}, ${JSON.stringify(JSON.stringify(session))}) } catch (e) { /* storage blocked: the first data request will fail loudly */ }`,
-  )
-  await page.goto(`${path}${path.includes('?') ? '&' : '?'}devRole=${role}`)
+  await page.goto('/login')
+  await page.getByLabel('Email').fill(EMAIL[role])
+  await page.getByLabel('Password', { exact: true }).fill(FIXTURE_PASSWORD)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.waitForURL(url => !url.pathname.startsWith('/login'))
+  await page.goto(path)
 }
 
 export interface RestResult<T> {

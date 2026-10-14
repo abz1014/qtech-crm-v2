@@ -26,6 +26,11 @@ jobs:
       - name: Rebuild database (migrations and seed fixtures)
         run: npx supabase db reset --local
 
+      - name: Build the app against the local stack
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY" npm run build
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
