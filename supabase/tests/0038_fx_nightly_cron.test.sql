@@ -31,7 +31,7 @@ select throws_ok($$select public.apply_fx_payload('{}'::jsonb, 'x')$$, '42501', 
 reset role;
 
 -- ------------------------------------------------------------------ fixtures
-delete from public.fx_rates where source = 'auto';
+delete from public.fx_rates;
 delete from public.fx_fetch_log;
 insert into public.companies (id, name) values
   ('c0000000-0000-4000-8000-000000000001', 'Customer'),
@@ -79,7 +79,7 @@ select is((select source from public.v_fx_latest where currency = 'USD'), 'manua
 select is((select count(*)::int from public.fx_rates where source = 'manual'), 1, 'no manual row was added');
 
 -- ------------------------------------------------------------------ missing and nonsensical values are skipped and logged
-delete from public.fx_rates where source = 'auto';
+delete from public.fx_rates;
 delete from public.fx_fetch_log;
 create temp table r2 as select public.apply_fx_payload(
   '{"result":"success","base_code":"PKR","rates":{"USD":0,"EUR":-0.0025,"CNY":"abc","GBP":null,"JPY":0.5}}'::jsonb,
@@ -90,7 +90,7 @@ select is((select array_agg(currency order by currency) from public.fx_fetch_log
 select is((select array_agg(currency::text) from public.fx_rates where source = 'auto'), array['JPY'], 'only the sane value was written');
 
 -- ------------------------------------------------------------------ jump guard (more than 50% from the previous auto value)
-delete from public.fx_rates where source = 'auto';
+delete from public.fx_rates;
 delete from public.fx_fetch_log;
 insert into public.fx_rates (currency, rate_pkr, as_of, source, provider) values ('USD', 250, public.today_pkt() - 1, 'auto', 'open.er-api.com');
 select public.apply_fx_payload('{"result":"success","base_code":"PKR","rates":{"USD":0.002}}'::jsonb, 'open.er-api.com', 'b0000000-0000-4000-8000-000000000002');
@@ -110,7 +110,7 @@ select is((select (public.apply_fx_payload('{"result":"success","base_code":"USD
 select is((select (public.apply_fx_payload('[1,2]'::jsonb, 'x') ->> 'usable')::boolean), false, 'a non-object payload is unusable');
 
 -- ------------------------------------------------------------------ fallback source (currency-api shape) and its recording
-delete from public.fx_rates where source = 'auto';
+delete from public.fx_rates;
 delete from public.fx_fetch_log;
 select public.apply_fx_payload('{"date":"2026-10-14","pkr":{"usd":0.004,"eur":0.0025,"cny":0.04,"aed":0.016,"gbp":0.002}}'::jsonb, 'currency-api');
 select is((select array_agg(currency || '=' || rate_pkr::text order by currency) from public.fx_rates where source = 'auto'),
@@ -118,7 +118,7 @@ select is((select array_agg(currency || '=' || rate_pkr::text order by currency)
 select is((select array_agg(distinct provider) from public.fx_rates where source = 'auto'), array['currency-api'], 'the fallback provider is recorded');
 
 -- ------------------------------------------------------------------ ingest: primary failed -> fallback used
-delete from public.fx_rates where source = 'auto';
+delete from public.fx_rates;
 delete from public.fx_fetch_log;
 insert into public.fx_fetch_log (batch_id, kind, source, priority, detail, response_status, response_body, response_at) values
   ('b0000000-0000-4000-8000-000000000003', 'request', 'open.er-api.com', 1, 'u1', 500, 'oops', now()),
@@ -131,7 +131,7 @@ select is((select count(*)::int from public.fx_fetch_log where batch_id = 'b0000
 select is(public.ingest_fx_response(), 0, 'running ingest again does nothing');
 
 -- primary good -> fallback not applied
-delete from public.fx_rates where source = 'auto';
+delete from public.fx_rates;
 insert into public.fx_fetch_log (batch_id, kind, source, priority, detail, response_status, response_body, response_at) values
   ('b0000000-0000-4000-8000-000000000004', 'request', 'open.er-api.com', 1, 'u1', 200, '{"result":"success","base_code":"PKR","rates":{"USD":0.004}}', now()),
   ('b0000000-0000-4000-8000-000000000004', 'request', 'currency-api', 2, 'u2', 200, '{"pkr":{"usd":0.01}}', now());
@@ -140,7 +140,7 @@ select is((select provider || ':' || rate_pkr::text from public.fx_rates where c
   'a good primary is used and the fallback is ignored');
 
 -- both failed (old batch, one never answered, one not JSON)
-delete from public.fx_rates where source = 'auto';
+delete from public.fx_rates;
 insert into public.fx_fetch_log (batch_id, kind, source, priority, detail, created_at, response_status, response_body, response_at) values
   ('b0000000-0000-4000-8000-000000000005', 'request', 'open.er-api.com', 1, 'u1', now() - interval '1 hour', null, null, null),
   ('b0000000-0000-4000-8000-000000000005', 'request', 'currency-api', 2, 'u2', now() - interval '1 hour', 200, '<html>', now());
