@@ -42,7 +42,7 @@ export function supplierFacts(s: SupplierStats | null): SupplierFacts | null {
   const enquirySummary =
     asked >= 3
       ? `Asked ${asked} · replied ${replied} of ${asked}${declined >= 1 ? ` · couldn't offer ${declined} of ${asked}` : ''}`
-      : `Asked ${times(asked)}${asked ? `, ${replies(replied)}` : ''}`
+      : `Asked ${times(asked)}${asked ? ` · ${replies(replied)}` : ''}`
 
   return {
     asked,

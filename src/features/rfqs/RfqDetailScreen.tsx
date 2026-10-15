@@ -12,6 +12,8 @@ import { SupplierReplies } from '@/features/rfqs/SupplierReplies'
 import { QuotationsPanel } from '@/features/quotations/QuotationsPanel'
 import { ClarificationsPanel } from '@/features/rfqs/ClarificationsPanel'
 import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
+import { ConvertDialog } from '@/features/orders/ConvertDialog'
+import { useWonDialog } from '@/features/orders/useWonDialog'
 
 /*
  * RFQ detail (R07; g2-rfq-detail.html). Replaces the placeholder at /rfqs/:id.
@@ -58,6 +60,7 @@ export default function RfqDetailScreen() {
   const header = useRfqHeader(id)
   const items = useRfqItems(id)
   const inquiries = useRfqInquiries(id)
+  const [wonOpen, setWonOpen] = useWonDialog()
   const fx = useFxLatest()
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
   // "Last price for this item" (R17): one batched read per distinct item, for every supplier asked at once, leaving this RFQ out.
@@ -110,6 +113,8 @@ export default function RfqDetailScreen() {
   return (
     <Shell>
       <RfqHeaderBlock rfq={rfq} />
+      {/* data-slot="convert-dialog" (O01): the Create order dialog, open while the address carries ?won=1. */}
+      {wonOpen && inquiries.data ? <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} /> : null}
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="grid min-w-0 gap-6">
           {loadError ? (

@@ -676,74 +676,74 @@ Companies list, create dialog, merge dialog: NO dedicated mockup exists (INVENTO
 
 | ID | element | mockup | built | status | severity | suggested fix + task |
 |---|---|---|---|---|---|---|
-| D-01 | Breadcrumb | "Companies > {name}", Companies link in brand green | `Breadcrumb` Companies > name; review png shows Companies in body colour | DIFFERENT | low | Use primary link colour. R02 |
+| D-01 | Breadcrumb | "Companies > {name}", Companies link in brand green | `Breadcrumb` Companies > name; review png shows Companies in body colour | FIXED (2c352f1) | low | Use primary link colour. R02 |
 | D-02 | H1 + role chip | name 2xl, chip "Supplier" (circle icon) / "Customer" (circle-dot) beside it | h1 + `StatusBadge company-role` | MATCH | - | - |
-| D-03 | Meta line, supplier populated | "Linz, Austria - Quotes in EUR - Supplier since 2023" | "Austria - Added Oct 2026" (country only; no city; no "Quotes in"; "Added {Mon YYYY}" from created_at, never "Supplier since") | DIFFERENT | medium | Add "Quotes in {currency}" (from `open.currency`) and "Supplier since {year}". City has no column -> OWNER DECISION. R02/R18 |
-| D-04 | Meta line, low data | "Shenzhen, China - Quotes in CNY - Added Oct 2026" | "China - Added Oct 2026" | DIFFERENT | medium | as D-03 |
-| D-05 | Meta line, imported only | "Rawalpindi, Pakistan - Quotes in PKR - Imported from the old CRM" | "Pakistan - Imported from the old CRM" (string matches when legacyImported) | DIFFERENT | low | add "Quotes in PKR" |
-| D-06 | Meta line, customer | "Karachi, Pakistan - 3 sites - 3 RFQs - 3 orders" | "Pakistan - 3 sites - 3 RFQs - 3 orders - Added Mar 2024" | DIFFERENT | low | Drop the extra "Added" on customers (mockup puts "Customer since 2024" in Roles panel). R02 |
+| D-03 | Meta line, supplier populated | "Linz, Austria - Quotes in EUR - Supplier since 2023" | "Austria - Added Oct 2026" (country only; no city; no "Quotes in"; "Added {Mon YYYY}" from created_at, never "Supplier since") | FIXED (2c352f1, city a198ee3) | medium | Add "Quotes in {currency}" (from `open.currency`) and "Supplier since {year}". City has no column -> OWNER DECISION. R02/R18 |
+| D-04 | Meta line, low data | "Shenzhen, China - Quotes in CNY - Added Oct 2026" | "China - Added Oct 2026" | FIXED (2c352f1, city a198ee3) | medium | as D-03 |
+| D-05 | Meta line, imported only | "Rawalpindi, Pakistan - Quotes in PKR - Imported from the old CRM" | "Pakistan - Imported from the old CRM" (string matches when legacyImported) | FIXED (2c352f1) | low | add "Quotes in PKR" |
+| D-06 | Meta line, customer | "Karachi, Pakistan - 3 sites - 3 RFQs - 3 orders" | "Pakistan - 3 sites - 3 RFQs - 3 orders - Added Mar 2024" | FIXED (2c352f1) | low | Drop the extra "Added" on customers (mockup puts "Customer since 2024" in Roles panel). R02 |
 | D-07 | Primary action | supplier "Float an RFQ here" (send icon); customer "New RFQ" (file-plus icon) | same labels and icons, goes to `/rfqs/new?company=` | MATCH | - | - |
 | D-08 | Edit button | pencil + "Edit" | same | MATCH | - | - |
-| D-09 | Overflow "..." | ellipsis icon, no menu content drawn | rendered for admin only; menu item "Merge into another company" | EXTRA | low | Non-admin loses the ellipsis the mockup shows (signed in as sales). R02 |
-| D-10 | App header | logo, 6 tabs with count badges (Today 9, RFQs 14, Orders 7, Money 3), "Search or jump to", role + avatar | tabs without count badges in review png; Money hidden for Engineer (by role) | DIFFERENT | medium | Nav counts belong to the shell auditor; noted. U02 |
+| D-09 | Overflow "..." | ellipsis icon, no menu content drawn | rendered for admin only; menu item "Merge into another company" | FIXED (2c352f1, menu for every role (Copy link; Merge stays admin-only)) | low | Non-admin loses the ellipsis the mockup shows (signed in as sales). R02 |
+| D-10 | App header | logo, 6 tabs with count badges (Today 9, RFQs 14, Orders 7, Money 3), "Search or jump to", role + avatar | tabs without count badges in review png; Money hidden for Engineer (by role) | NOT PART D: nav count badges belong to the shell (Part A); noted | medium | Nav counts belong to the shell auditor; noted. U02 |
 | D-11 | Layout | main column + right rail (about 340px) | `lg:grid-cols-[minmax(0,1fr)_340px]`, gap-6, max 1440 | MATCH | - | - |
-| D-12 | Page loading / error / not found | not designed | Skeleton; "Couldn't load this company" + Try again; "This company isn't here" + "All companies" | EXTRA | low | - |
+| D-12 | Page loading / error / not found | not designed | Skeleton; "Couldn't load this company" + Try again; "This company isn't here" + "All companies" | KEPT: state the mockup does not draw | low | - |
 
 ## 2. Supplier - "What we know" panel (boards 1-3)
 
 | ID | element | mockup | built | status | severity | suggested fix + task |
 |---|---|---|---|---|---|---|
 | D-20 | Panel header | "What we know" + "From our own enquiries, quotes and deliveries, last 24 months" + dashed tag right | same title/meta; `Tag dashed` | MATCH | - | - |
-| D-21 | Header meta, low data | "From our own enquiries, quotes and deliveries" (no "last 24 months") | always ", last 24 months" | DIFFERENT | low | variant text. R18 |
-| D-22 | Header meta, imported only | "From enquiries, quotes and deliveries, last 24 months" (no "our own") | always "From our own ..." | DIFFERENT | low | variant text. R18 |
+| D-21 | Header meta, low data | "From our own enquiries, quotes and deliveries" (no "last 24 months") | always ", last 24 months" | FIXED (2c352f1) | low | variant text. R18 |
+| D-22 | Header meta, imported only | "From enquiries, quotes and deliveries, last 24 months" (no "our own") | always "From our own ..." | FIXED (2c352f1) | low | variant text. R18 |
 | D-23 | Tag text | "Includes imported history" / "Low data" / "Imported history only" | same three strings | MATCH | - | - |
 | D-24 | Four-cell grid | Brands + Enquiries over Deliveries + Last contacted, vertical divider | `md:grid-cols-2`, same arrangement, stacks at 375 | MATCH | - | - |
 | D-25 | Brands cell | "Brands" / "Evidence we hold, not what the supplier claims." rows "Belimo - quoted 4x", "Siemens - listed, no quote yet" | same strings and layout | MATCH | - | - |
-| D-26 | Brands empty | not designed | "No brand listed yet. One is added by itself when they quote an item of it." | EXTRA | low | - |
-| D-27 | Enquiry summary (3 or more) | "Asked 6 · replied 5 of 6 · couldn't offer 1 of 6" with bold numerals | same string, numerals not bold | DIFFERENT | low | bold the counts. R18 |
-| D-28 | Enquiry summary (under 3) | "Asked twice · 1 reply" (middot) | "Asked twice, 1 reply" (comma) | DIFFERENT | low | use middot in supplierFacts.ts. R18 |
+| D-26 | Brands empty | not designed | "No brand listed yet. One is added by itself when they quote an item of it." | KEPT: empty state | low | - |
+| D-27 | Enquiry summary (3 or more) | "Asked 6 · replied 5 of 6 · couldn't offer 1 of 6" with bold numerals | same string, numerals not bold | FIXED (2c352f1) | low | bold the counts. R18 |
+| D-28 | Enquiry summary (under 3) | "Asked twice · 1 reply" (middot) | "Asked twice, 1 reply" (comma) | FIXED (2c352f1) | low | use middot in supplierFacts.ts. R18 |
 | D-29 | Enquiry squares + legend | filled check = quoted; outlined minus = couldn't offer; dashed empty = no reply; legend "quoted 4 / couldn't offer 1 / no reply 1" | same 22px squares, same legend text, zero counts hidden | MATCH | - | - |
 | D-30 | Usual reply time, known | "About 2 days" / "Middle value of the 3 replies logged in this CRM. 2 imported replies have no real date and are left out." | same strings | MATCH | - | - |
 | D-31 | Usual reply time, low | "Not enough replies yet." / "Needs 3 logged replies. There is 1." | same | MATCH | - | - |
 | D-32 | Usual reply time, imported only | "Not shown." + imported explanation | same | MATCH | - | - |
 | D-33 | Chosen | "2 of 3 times" + "A quoted item was later ordered, and the order went on a leg with them."; none: "Nothing ordered yet." / "No quoted item has gone to an order." | same strings | MATCH | - | - |
-| D-34 | Deliveries sub-line | "Late 1 of 4"; imported: "Late 2 of 6, dates estimated" | "Late 1 of 4"; never appends ", dates estimated" | DIFFERENT | medium | append for legacy deliveries (`deliverySub`). R18 |
-| D-35 | Delivery squares | on time = filled check; late = red outlined square WITH clock icon; "on time, dates estimated" = DASHED outlined check; legend "on time 2 / late 1 / on time, dates estimated 1" (imported board: 4 dashed checks, 2 red clocks, legend "on time, dates estimated 4 / late 2") | on time filled check; late red square with no icon; no dashed "estimated" unit, imported counted as plain on time/late | DIFFERENT | medium | add estimated unit variants (dashed) and clock icon on late; needs per-leg legacy info. R18 |
-| D-36 | Delivery extra line | not in mockup | "Late ones usually ran about N days over." | EXTRA | low | drop or approve. R18 |
-| D-37 | Deliveries empty | "No deliveries recorded yet. The first PO to this supplier starts the count." | "... The first purchase order to this supplier ..." | DIFFERENT | low | wording |
-| D-38 | Last contacted | left "Tue 24 Nov 2026"; right "Enquiry sent for RFQ-0171 (green mono link). No reply yet." | left formatted day; right plain string, RFQ ref not a link | DIFFERENT | medium | render ref as link. `lastContactText` is a string today. R18 |
-| D-39 | Last contacted, low data | "Enquiry sent for RFQ-0165. Chased once on 19 Nov." | shows newest single event only ("Chased for RFQ-0165.") | DIFFERENT | low | compose sentence with chase count + date. R18 |
-| D-40 | Last contacted, imported | "Order leg for ORD-0020. Imported." | no leg-based text (fallback "Contact on record.") | DIFFERENT | medium | add leg events and "Imported." suffix. R18 |
-| D-41 | Provenance footer | info icon "Where this comes from..." in three variants | populated variant matches; low-data says "With few enquiries" vs mockup "With so few enquiries"; imported-only variant ("All of this was imported from the old CRM, Jan 2024 to Sep 2026 ... Nothing has been logged here since the move.") NOT built (generic "Includes imported history: N of N ..." used) | DIFFERENT | medium | add imported-only footnote with date span; fix wording. R18 |
-| D-42 | Empty (no enquiries) | not designed | "No enquiries yet." + Fine copy | EXTRA | low | - |
-| D-43 | Skeleton / error | not designed | skeleton; Banner + Try again | EXTRA | low | - |
+| D-34 | Deliveries sub-line | "Late 1 of 4"; imported: "Late 2 of 6, dates estimated" | "Late 1 of 4"; never appends ", dates estimated" | FIXED (2c352f1) | medium | append for legacy deliveries (`deliverySub`). R18 |
+| D-35 | Delivery squares | on time = filled check; late = red outlined square WITH clock icon; "on time, dates estimated" = DASHED outlined check; legend "on time 2 / late 1 / on time, dates estimated 1" (imported board: 4 dashed checks, 2 red clocks, legend "on time, dates estimated 4 / late 2") | on time filled check; late red square with no icon; no dashed "estimated" unit, imported counted as plain on time/late | FIXED (2c352f1) | medium | add estimated unit variants (dashed) and clock icon on late; needs per-leg legacy info. R18 |
+| D-36 | Delivery extra line | not in mockup | "Late ones usually ran about N days over." | KEPT: DATA_MODEL 5c shows the median days late from 3 late legs | low | drop or approve. R18 |
+| D-37 | Deliveries empty | "No deliveries recorded yet. The first PO to this supplier starts the count." | "... The first purchase order to this supplier ..." | FIXED (2c352f1) | low | wording |
+| D-38 | Last contacted | left "Tue 24 Nov 2026"; right "Enquiry sent for RFQ-0171 (green mono link). No reply yet." | left formatted day; right plain string, RFQ ref not a link | FIXED (2c352f1) | medium | render ref as link. `lastContactText` is a string today. R18 |
+| D-39 | Last contacted, low data | "Enquiry sent for RFQ-0165. Chased once on 19 Nov." | shows newest single event only ("Chased for RFQ-0165.") | FIXED (2c352f1) | low | compose sentence with chase count + date. R18 |
+| D-40 | Last contacted, imported | "Order leg for ORD-0020. Imported." | no leg-based text (fallback "Contact on record.") | FIXED (2c352f1) | medium | add leg events and "Imported." suffix. R18 |
+| D-41 | Provenance footer | info icon "Where this comes from..." in three variants | populated variant matches; low-data says "With few enquiries" vs mockup "With so few enquiries"; imported-only variant ("All of this was imported from the old CRM, Jan 2024 to Sep 2026 ... Nothing has been logged here since the move.") NOT built (generic "Includes imported history: N of N ..." used) | FIXED (2c352f1) | medium | add imported-only footnote with date span; fix wording. R18 |
+| D-42 | Empty (no enquiries) | not designed | "No enquiries yet." + Fine copy | KEPT: empty state | low | - |
+| D-43 | Skeleton / error | not designed | skeleton; Banner + Try again | KEPT: loading and error states | low | - |
 
 ## 3. Supplier - Recent quotes, Deliveries, Open with them, Contacts, rail panels
 
 | ID | element | mockup | built | status | severity | suggested fix + task |
 |---|---|---|---|---|---|---|
-| D-50 | Recent quotes header | `Original currency first. "At the time" uses the rate captured when the quote was logged.` + "All enquiries" link; low data meta "Everything we have from them"; imported "Imported rows are marked" | `... "At the time" is the rate captured ...`; one meta for all states | DIFFERENT | low | per-state meta. R18 |
+| D-50 | Recent quotes header | `Original currency first. "At the time" uses the rate captured when the quote was logged.` + "All enquiries" link; low data meta "Everything we have from them"; imported "Imported rows are marked" | `... "At the time" is the rate captured ...`; one meta for all states | FIXED (2c352f1) | low | per-state meta. R18 |
 | D-51 | Quotes columns | Date, RFQ, Item, Quoted price, "≈ PKR at the time", "Lead time, as written", Outcome | same seven headers | MATCH | - | - |
-| D-52 | Item cell sub-line | "Belimo · same model" / "same item" tier label | brand only | DIFFERENT | low | Approved deviation: DECISIONS 2026-10-15 (R17, R18) |
-| D-53 | Awaiting-quote row | PKR col "Awaiting a quote"; "Sent 24 Nov, 3 days ago" under item | note text goes in the PKR col ("Sent 12 Oct, 3 days ago", review png) and also under item; "Awaiting a quote" only when no note | DIFFERENT | medium | PKR col "Awaiting a quote", note under item only. R18 |
-| D-54 | Couldn't-offer row | PKR col "Does not stock this model" | "Doesn't carry this brand" (cantQuote reasonLabel) | DIFFERENT | low | align string. R18 |
+| D-52 | Item cell sub-line | "Belimo · same model" / "same item" tier label | brand only | APPROVED deviation (DECISIONS 2026-10-15, R17/R18): row shows the brand, not a per-row tier label | low | Approved deviation: DECISIONS 2026-10-15 (R17, R18) |
+| D-53 | Awaiting-quote row | PKR col "Awaiting a quote"; "Sent 24 Nov, 3 days ago" under item | note text goes in the PKR col ("Sent 12 Oct, 3 days ago", review png) and also under item; "Awaiting a quote" only when no note | FIXED (2c352f1) | medium | PKR col "Awaiting a quote", note under item only. R18 |
+| D-54 | Couldn't-offer row | PKR col "Does not stock this model" | "Doesn't carry this brand" (cantQuote reasonLabel) | KEPT: the reason is the structured can't-quote key (R07), so the words are its label, not free text | low | align string. R18 |
 | D-55 | No-reply row | "Sent 2 Jun, never answered"; dashed "No reply" chip | same | MATCH | - | - |
-| D-56 | Price cell | "EUR 214.00" (always 2 dp); hidden: lock icon + "Price on file, currency unverified" | review png "EUR 214" (no decimals for whole values); hidden uses EyeOff icon | DIFFERENT | low | Lock icon, 2 dp. R18 |
-| D-57 | PKR at the time | "≈ 69,935" / "at 326.80 · 11 Oct" | "≈ PKR 69,935" / "at the time, rate 326.80 · 16 Sep" | DIFFERENT | low | match mockup wording |
-| D-58 | PKR col, hidden price | "No rate was captured" | "Not shown" | DIFFERENT | low | match text |
+| D-56 | Price cell | "EUR 214.00" (always 2 dp); hidden: lock icon + "Price on file, currency unverified" | review png "EUR 214" (no decimals for whole values); hidden uses EyeOff icon | FIXED (2c352f1) | low | Lock icon, 2 dp. R18 |
+| D-57 | PKR at the time | "≈ 69,935" / "at 326.80 · 11 Oct" | "≈ PKR 69,935" / "at the time, rate 326.80 · 16 Sep" | FIXED (2c352f1) | low | match mockup wording |
+| D-58 | PKR col, hidden price | "No rate was captured" | "Not shown" | FIXED (2c352f1) | low | match text |
 | D-59 | PKR col, PKR quote | "Already in PKR" | same | MATCH | - | - |
 | D-60 | Aged-row note | orange "Apr 2025, 19 months ago" | same (tone-warning) | MATCH | - | - |
 | D-61 | Imported row date | "Apr 2025" month-year | same | MATCH | - | - |
-| D-62 | Outcome chips | with icons (circle-dot "Waiting for a reply", circle-check "Ordered here" + ORD tag, circle "Ordered elsewhere"/"Couldn't offer"/"Not ordered here", circle-dashed "No reply"); low-data "Quoted, RFQ open" | chips have no leading icons; "Not ordered" (approved, DECISIONS R18); no "Quoted, RFQ open" outcome (quoted line on open RFQ shows "Not ordered") | DIFFERENT | medium | add icons and the RFQ-open outcome; "Not ordered here" wording is an approved deviation. R18 |
-| D-63 | Row cap note | none | footer "Showing the latest N of M. Every enquiry is in the list below." | EXTRA | low | - |
-| D-64 | Quotes empty | not designed | "No quote yet. Prices appear here ..." | EXTRA | low | - |
-| D-65 | "Recent enquiries" panel | none ("All enquiries" link has no drawn target) | extra table panel (Sent, RFQ, Outcome, Reply time) | EXTRA | medium | owner to keep or drop. R18 |
-| D-66 | Deliveries table | Purchase order (mono, "PO-26-0017 · R1"), Order, Expected, Received, Result; legacy rows show an "Imported" tag in PO col; "est." after dates | same columns/format and "est."; legacy rows read "No PO issued" | DIFFERENT | low | show "Imported" tag for legacy. R18 |
+| D-62 | Outcome chips | with icons (circle-dot "Waiting for a reply", circle-check "Ordered here" + ORD tag, circle "Ordered elsewhere"/"Couldn't offer"/"Not ordered here", circle-dashed "No reply"); low-data "Quoted, RFQ open" | chips have no leading icons; "Not ordered" (approved, DECISIONS R18); no "Quoted, RFQ open" outcome (quoted line on open RFQ shows "Not ordered") | FIXED (2c352f1) | medium | add icons and the RFQ-open outcome; "Not ordered here" wording is an approved deviation. R18 |
+| D-63 | Row cap note | none | footer "Showing the latest N of M. Every enquiry is in the list below." | KEPT: row cap note | low | - |
+| D-64 | Quotes empty | not designed | "No quote yet. Prices appear here ..." | KEPT: empty state | low | - |
+| D-65 | "Recent enquiries" panel | none ("All enquiries" link has no drawn target) | extra table panel (Sent, RFQ, Outcome, Reply time) | KEPT (owner): restyled with the same outcome chips and icons as Recent quotes, 2c352f1 | medium | owner to keep or drop. R18 |
+| D-66 | Deliveries table | Purchase order (mono, "PO-26-0017 · R1"), Order, Expected, Received, Result; legacy rows show an "Imported" tag in PO col; "est." after dates | same columns/format and "est."; legacy rows read "No PO issued" | FIXED (2c352f1) | low | show "Imported" tag for legacy. R18 |
 | D-67 | Delivery result | "On time" + "1 day early"; "Late 6 days"; "On time" + "dates estimated" | same (plus extra states "Not received, N days past", "Not received yet") | MATCH | - | - |
-| D-68 | Contacts panel | name, role, phone mono; "+ Add" | same plus site name, e-mail, edit and trash buttons; empty "No contacts yet. Every field is optional, so a name alone is enough." | EXTRA | low | additions from R02 follow-up |
-| D-69 | Open with them | Enquiry ("RFQ-0171 waiting, 3 days"), Order leg ("ORD-0038 A received"), Currency ("EUR"; low data "CNY, rate 38.85, 8 days old" with orange age) | Enquiry same; Order leg shows "expected 20 Oct"-style text or "None open"; Currency code only (no rate, no age); extra footnote "Enquiries still unanswered and order legs not yet received. ..." | DIFFERENT | medium | add rate + age (staleness) ; OWNER on "A received" wording. R18 |
-| D-70 | Brands panel in rail | none (brands live inside What we know) | extra "Brands carried" rail panel (tags, remove X, Add combobox) shown for suppliers | EXTRA | medium | duplicates the Brands cell; OWNER DECISION. R02 |
-| D-71 | Roles panel | customer board only: Customer chip, "Also a supplier?" No, "Customer since" 2024 | shown for all roles: rows "Customer"/"Supplier" (chip or No) + sentence | DIFFERENT | medium | use mockup labels; add "Customer since"; hide on supplier boards. R02 |
+| D-68 | Contacts panel | name, role, phone mono; "+ Add" | same plus site name, e-mail, edit and trash buttons; empty "No contacts yet. Every field is optional, so a name alone is enough." | KEPT: R02 follow-up edit and remove (job title now shown, a198ee3) | low | additions from R02 follow-up |
+| D-69 | Open with them | Enquiry ("RFQ-0171 waiting, 3 days"), Order leg ("ORD-0038 A received"), Currency ("EUR"; low data "CNY, rate 38.85, 8 days old" with orange age) | Enquiry same; Order leg shows "expected 20 Oct"-style text or "None open"; Currency code only (no rate, no age); extra footnote "Enquiries still unanswered and order legs not yet received. ..." | PARTLY FIXED 2c352f1: rate and age added, footnote removed. OPEN (owner): "A received" wording on the Order leg row | medium | add rate + age (staleness) ; OWNER on "A received" wording. R18 |
+| D-70 | Brands panel in rail | none (brands live inside What we know) | extra "Brands carried" rail panel (tags, remove X, Add combobox) shown for suppliers | KEPT (owner): rail panel, same panel and tag treatment as Contacts | medium | duplicates the Brands cell; OWNER DECISION. R02 |
+| D-71 | Roles panel | customer board only: Customer chip, "Also a supplier?" No, "Customer since" 2024 | shown for all roles: rows "Customer"/"Supplier" (chip or No) + sentence | FIXED (2c352f1) | medium | use mockup labels; add "Customer since"; hide on supplier boards. R02 |
 
 ## 4. Customer - Sites with RFQ and order history (board 4; orders are later phase)
 
@@ -751,55 +751,55 @@ Companies list, create dialog, merge dialog: NO dedicated mockup exists (INVENTO
 |---|---|---|---|---|---|---|
 | D-80 | Panel header | "Sites" + "RFQs and orders are filed under the site they are for" + "+ Add site" | same | MATCH | - | - |
 | D-81 | Site header | pin icon, bold name, address, "2 RFQs · 2 orders" | same + edit and remove icon buttons | MATCH | - | edit/remove EXTRA (R02 follow-up) |
-| D-82 | History columns | Reference, What, Date, State, action | Reference, "Their reference", Date, State | DIFFERENT | high | No "What" (description, e.g. "Furnace zone thermocouples and transmitters"); built shows customer ref instead. Fetch first item description / order title in getCompanyHistory. R02 / O06 |
-| D-83 | Repeat order | "Repeat order" (refresh icon) on each order row | missing | MISSING | high | later phase: O02 (create_repeat_order), O06 |
-| D-84 | Order state chips | "Delivered" + "Fully invoiced" / "Payment overdue" / "Not invoiced" | order lifecycle chip "Active"/"Done"/"Cancelled" (review png "Done", "Active"); invoicing chips match; no "Payment overdue" | DIFFERENT | high | use goods state "Delivered" and payment "Payment overdue" from views; later phase O03/O06 |
-| D-85 | Order link target | reference tag | links `/orders/:id`; orders screen not built (placeholder) | MISSING | medium | later phase O03/O04 |
-| D-86 | RFQ state text | Open + "bid due Tue 1 Dec"; Closed + "no reply from customer"; Won + "became ORD-0040" | "bid due 1 Dec" (no weekday); Closed shows "bid due 15 Aug" (close reason missing); Won matches | DIFFERENT | medium | weekday; show close reason. R02 / O06 |
+| D-82 | History columns | Reference, What, Date, State, action | Reference, "Their reference", Date, State | FIXED (2c352f1) | high | No "What" (description, e.g. "Furnace zone thermocouples and transmitters"); built shows customer ref instead. Fetch first item description / order title in getCompanyHistory. R02 / O06 |
+| D-83 | Repeat order | "Repeat order" (refresh icon) on each order row | missing | SLOT BUILT 2c352f1: "Repeat order" drawn in the design position, disabled; the action is O02 (create_repeat_order). TRACKED: replace RepeatOrderSlot in SitesPanel.tsx when O02 merges | high | later phase: O02 (create_repeat_order), O06 |
+| D-84 | Order state chips | "Delivered" + "Fully invoiced" / "Payment overdue" / "Not invoiced" | order lifecycle chip "Active"/"Done"/"Cancelled" (review png "Done", "Active"); invoicing chips match; no "Payment overdue" | FIXED (2c352f1) | high | use goods state "Delivered" and payment "Payment overdue" from views; later phase O03/O06 |
+| D-85 | Order link target | reference tag | links `/orders/:id`; orders screen not built (placeholder) | TRACKED: order link goes to /orders/:id; the Orders screen is O03/O04 | medium | later phase O03/O04 |
+| D-86 | RFQ state text | Open + "bid due Tue 1 Dec"; Closed + "no reply from customer"; Won + "became ORD-0040" | "bid due 1 Dec" (no weekday); Closed shows "bid due 15 Aug" (close reason missing); Won matches | FIXED (2c352f1) | medium | weekday; show close reason. R02 / O06 |
 | D-87 | Row ordering | RFQs and orders interleaved by date desc | same | MATCH | - | - |
 | D-88 | Date format | "24 Nov" mono | same ("No date" fallback) | MATCH | - | - |
-| D-89 | Empty site | bold "No RFQs or orders for this site yet." + "Start one from the button above and it will be filed under this site." | one small line "No RFQs or orders for this site yet. Start one and it is filed here." | DIFFERENT | low | use mockup copy |
-| D-90 | "Not filed under a site" block | none | extra muted block | EXTRA | low | - |
-| D-91 | Sites empty | not designed | "No sites or RFQs yet." | EXTRA | low | - |
+| D-89 | Empty site | bold "No RFQs or orders for this site yet." + "Start one from the button above and it will be filed under this site." | one small line "No RFQs or orders for this site yet. Start one and it is filed here." | FIXED (2c352f1) | low | use mockup copy |
+| D-90 | "Not filed under a site" block | none | extra muted block | KEPT | low | - |
+| D-91 | Sites empty | not designed | "No sites or RFQs yet." | KEPT: empty state | low | - |
 | D-92 | Contacts (customer) | Naveed Akhtar / Finance / 0321 555 0173 ... | same plus site name | MATCH | - | - |
-| D-93 | Money with them | none | admin-only Receivable/Received/Balance panel | EXTRA | medium | OWNER DECISION (DECISIONS R02 built it) |
-| D-94 | Notes panel | none | shown when notes exist | EXTRA | low | - |
-| D-95 | History panel | none (BUILD_PLAN R02 says "history placeholder") | placeholder "History / Changes to this company / Nothing to show yet. A timeline of edits, merges and notes ..." on every company | EXTRA | medium | remove or build; no mockup |
+| D-93 | Money with them | none | admin-only Receivable/Received/Balance panel | KEPT (owner): Money with them, admin only, same row style as Open with them | medium | OWNER DECISION (DECISIONS R02 built it) |
+| D-94 | Notes panel | none | shown when notes exist | KEPT (owner): Notes | low | - |
+| D-95 | History panel | none (BUILD_PLAN R02 says "history placeholder") | placeholder "History / Changes to this company / Nothing to show yet. A timeline of edits, merges and notes ..." on every company | FIXED (2c352f1, History placeholder removed) | medium | remove or build; no mockup |
 
 ## 5. Mobile 375
 
 | ID | element | mockup | built | status | severity | suggested fix + task |
 |---|---|---|---|---|---|---|
-| D-100 | Phone design | none | single column, actions wrap under title, bottom tab bar | EXTRA | low | - |
-| D-101 | Quotes/deliveries on phone | none | every field stacked with label (very tall, about 7 rows per quote) | EXTRA | medium | consider compact card |
-| D-102 | Sites tables on phone | none | Reference / Date / State; "Their reference" hidden | EXTRA | low | - |
-| D-103 | Panel order on phone | none | Contacts rail placed after all main panels | EXTRA | low | - |
+| D-100 | Phone design | none | single column, actions wrap under title, bottom tab bar | KEPT | low | - |
+| D-101 | Quotes/deliveries on phone | none | every field stacked with label (very tall, about 7 rows per quote) | FIXED (2c352f1, phone rows compact (labels only on the numbers)) | medium | consider compact card |
+| D-102 | Sites tables on phone | none | Reference / Date / State; "Their reference" hidden | KEPT | low | - |
+| D-103 | Panel order on phone | none | Contacts rail placed after all main panels | KEPT | low | - |
 
 ## 6. Companies list (no mockup)
 
 | ID | element | mockup | built | status | severity | suggested fix + task |
 |---|---|---|---|---|---|---|
-| D-110 | Whole screen | none | "Companies", "7 companies. Whether one is a customer or a supplier follows from what you do with it.", "+ New company", table (Company+country, Role, RFQs, Orders), search "Search by name or country", segmented All/Customers/Suppliers/Prospects with counts, footer "Showing 7 of 7 companies" | EXTRA | low | report only |
-| D-111 | Empty / no match | none | "No companies yet" / "No company matches" with Clear search / Add "text" | EXTRA | low | - |
-| D-112 | Role cell, no role | none | "No activity yet" | EXTRA | low | - |
-| D-113 | Mobile | none | RFQs and Orders columns hidden below md | EXTRA | low | - |
+| D-110 | Whole screen | none | "Companies", "7 companies. Whether one is a customer or a supplier follows from what you do with it.", "+ New company", table (Company+country, Role, RFQs, Orders), search "Search by name or country", segmented All/Customers/Suppliers/Prospects with counts, footer "Showing 7 of 7 companies" | KEPT: no mockup | low | report only |
+| D-111 | Empty / no match | none | "No companies yet" / "No company matches" with Clear search / Add "text" | KEPT: no mockup | low | - |
+| D-112 | Role cell, no role | none | "No activity yet" | KEPT: no mockup | low | - |
+| D-113 | Mobile | none | RFQs and Orders columns hidden below md | KEPT: no mockup | low | - |
 
 ## 7. Create company dialog and inline create
 
 | ID | element | mockup | built | status | severity | suggested fix + task |
 |---|---|---|---|---|---|---|
-| D-120 | Dialog on Companies screen | none | "New company", "Only the name is required.", Company name (required), Country (optional, pre-fill with source note), Cancel / "Add company" | EXTRA | low | - |
-| D-121 | Inline create in intake | g2-intake-float: inline mini-form under the combobox: "Company name", "City" (Optional), "Contact" (Optional); "Create and use" / "Cancel"; note "City and contact can wait. Add them from the company page later." | modal CreateCompanyDialog (Company name, Country), button "Add company", no City/Contact, no note | DIFFERENT | high | build the inline form as drawn; City needs a column (OWNER DECISION). R02 / R05 |
-| D-122 | Combobox create row | `Add “Mianwali Polymers” as a new company` + sub "Saved as a prospect until the first order" | label matches, no sub line | DIFFERENT | medium | add sub line. R05 |
-| D-123 | Combobox existing rows | "Mianwali · customer · 2 RFQs · similar name" | "customer · Pakistan" | DIFFERENT | low | country accepted (DECISIONS R05); add RFQ count and "similar name" hint |
-| D-124 | Duplicate name | none | "A company with this name already exists." + "Open it" | EXTRA | low | - |
+| D-120 | Dialog on Companies screen | none | "New company", "Only the name is required.", Company name (required), Country (optional, pre-fill with source note), Cancel / "Add company" | KEPT: dialog on the Companies screen, no mockup | low | - |
+| D-121 | Inline create in intake | g2-intake-float: inline mini-form under the combobox: "Company name", "City" (Optional), "Contact" (Optional); "Create and use" / "Cancel"; note "City and contact can wait. Add them from the company page later." | modal CreateCompanyDialog (Company name, Country), button "Add company", no City/Contact, no note | FIXED (460537d, city a198ee3) | high | build the inline form as drawn; City needs a column (OWNER DECISION). R02 / R05 |
+| D-122 | Combobox create row | `Add “Mianwali Polymers” as a new company` + sub "Saved as a prospect until the first order" | label matches, no sub line | FIXED (460537d) | medium | add sub line. R05 |
+| D-123 | Combobox existing rows | "Mianwali · customer · 2 RFQs · similar name" | "customer · Pakistan" | FIXED (460537d, city a198ee3) | low | country accepted (DECISIONS R05); add RFQ count and "similar name" hint |
+| D-124 | Duplicate name | none | "A company with this name already exists." + "Open it" | KEPT: duplicate name handling | low | - |
 
 ## 8. Merge dialog
 
 | ID | element | mockup | built | status | severity | suggested fix + task |
 |---|---|---|---|---|---|---|
-| D-130 | Merge dialog | none | "Merge duplicate company", "{name} is the duplicate.", Combobox "Merge into", moved-counts sentence, danger button "Merge into {name}" | EXTRA | low | report only |
-| D-131 | Merge entry | ellipsis (no menu drawn) | admin popover "Merge into another company" | EXTRA | low | - |
+| D-130 | Merge dialog | none | "Merge duplicate company", "{name} is the duplicate.", Combobox "Merge into", moved-counts sentence, danger button "Merge into {name}" | KEPT: no mockup | low | report only |
+| D-131 | Merge entry | ellipsis (no menu drawn) | admin popover "Merge into another company" | KEPT: no mockup | low | - |
 
 ## OWNER DECISION needed
 - D-03, D-04, D-121, D-123: mockups show a City ("Linz, Austria", "Mianwali") but companies only have `country`. Add `companies.city` (and capture it in create) or keep country-only (DECISIONS R05)?
@@ -825,3 +825,15 @@ D-01, D-03, D-04, D-05, D-06, D-21, D-22, D-27, D-28, D-34, D-35, D-37, D-38, D-
 
 ---
 
+
+
+## Fix log, Part D (branch p4/parity-d)
+
+Every non-MATCH row above now says FIXED with the commit that did it, or why it was kept (owner decision, approved deviation, a state the mockup does not draw) or where it is tracked. Commits: `2c352f1` (header, site history, supplier panels), `460537d` (inline create, similar-name rows), `a198ee3` (companies.city and contacts.job_title from migration 0039).
+
+Open after this branch:
+- D-83 the "Repeat order" action (O02, another worker): the slot is in place and disabled.
+- D-69 the "A received" wording on the Order leg row (owner).
+- D-85 the order link target (Orders screen, O03/O04).
+- D-10 nav count badges (shell).
+- users.phone (0039) is not shown anywhere on the company page in the mockups; it is for signatures on chase texts and quotations.
