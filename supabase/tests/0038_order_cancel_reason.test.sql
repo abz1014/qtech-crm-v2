@@ -1,5 +1,5 @@
 begin;
-select plan(17);
+select plan(16);
 
 -- O03: the cancel reason is structured (orders.cancel_reason), never appended to the notes.
 -- Fixture users come from supabase/seed.sql: admin a0..01, sales a0..02, engineer a0..03, deactivated a0..04.
