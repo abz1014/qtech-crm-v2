@@ -110,6 +110,8 @@ $$;
 insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) values
   ('table', 'users',               '',           'S',    'S',    'S'),    -- s10 "users"; writes only via admin-users (service role)
   ('table', 'users',               'job_title',  '',     '',     ''),     -- s10 "users.job_title": via admin-users only, nothing direct
+  ('table', 'users',               'phone',      'U',    'U',    'U'),    -- A7 (0038): everyone changes their own phone
+  ('table', 'users',               'phone_other','U',    '',     ''),     -- A7 (0038): only an admin changes someone else's phone
   ('table', 'companies',           '',           'SIUD', 'SIU',  'SIU'),  -- s10 "companies"
   ('table', 'company_sites',       '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "company_sites"
   ('table', 'contacts',            '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "contacts"
@@ -293,6 +295,8 @@ create temp table spec (obj text, variant text, where_clause text, touch text, i
 insert into spec values
   ('users', '', $q$id = '{uid}'$q$, 'name', $q$insert into public.users (id, name, role) values (@a0, 'x', 'sales')$q$),
   ('users', 'job_title', $q$id = '{uid}'$q$, 'job_title', null),
+  ('users', 'phone', $q$id = '{uid}'$q$, 'phone', null),   -- A7 (0038)
+  ('users', 'phone_other', $q$id = '{other}'$q$, 'phone', null),   -- A7 (0038)
   ('companies', '', 'id = @02', 'name', $q$insert into public.companies (id, name) values (@a1, 'probe co')$q$),
   ('company_sites', '', 'id = @11', 'name', $q$insert into public.company_sites (id, company_id, name) values (@a2, @01, 'probe')$q$),
   ('contacts', '', 'id = @12', 'name', $q$insert into public.contacts (id, company_id, name) values (@a3, @01, 'probe')$q$),

@@ -1716,6 +1716,22 @@ Add rows for: `expense_categories`, `closed_months`, the attachment expense pare
 
 ---
 
+---
+
+## Amendment A7: parity fields (migration 0038)
+
+Optional data the approved mockups show. Every column is nullable; nothing is required of anyone and a screen shows the value only when it is there.
+
+| Column | Type | Notes |
+|---|---|---|
+| `contacts.job_title` | text | "Procurement Manager" under the name; quotation "Attention" and chase signatures. |
+| `companies.city` | text | The mockups show a city; `country` stays. |
+| `rfqs.due_time` | time | Optional bid deadline time ("17:00"). `due_on` stays the date. |
+| `users.phone` | text | Printed in signatures. Own row or admin may update (column grant and policy `users_update_phone`); it is the only writable `users` column. |
+| `clarifications.rfq_item_id` | uuid, FK `rfq_items`, ON DELETE SET NULL | The item a question is about. |
+
+`issue_quotation(p_quotation_id, p_rfq_id, p_valid_until, p_contact_id, p_delivery_text, p_payment_terms, p_notes, p_item_ids uuid[] default null)`: a partial quotation. Only the items in `p_item_ids` need a quoted price and are snapshotted; NULL means every item (unchanged). An empty array, or an id that is not an item of the RFQ, is an error. Section 10: `users.phone` own row U for all staff, any row U for admin; the function stays X for all staff.
+
 ### Critical Files for Implementation
 
 - old CRM repo: supabase/migrations/seed_historical_data.sql
