@@ -550,6 +550,23 @@ export async function listClarifications(rfqId: string): Promise<ClarificationRo
   }))
 }
 
+/** Files on an order (R22, migration 0042): same bucket and columns, the parent is order_id. */
+export async function listOrderAttachments(orderId: string): Promise<AttachmentRow[]> {
+  const db = requireSupabase()
+  const rows = unwrap(
+    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at').eq('order_id', orderId).eq('bucket', FILE_BUCKET).order('created_at'),
+  )
+  return rows.map(r => ({
+    id: r.id,
+    path: r.path,
+    fileName: r.file_name,
+    mimeType: r.mime_type,
+    sizeBytes: r.size_bytes,
+    clarificationId: r.clarification_id,
+    createdAt: r.created_at,
+  }))
+}
+
 export async function listAttachments(rfqId: string): Promise<AttachmentRow[]> {
   const db = requireSupabase()
   const rows = unwrap(
@@ -644,7 +661,7 @@ export async function setInquiryRelayed(inquiryId: string, at: string | null): P
  * Upload one file to rfq-files at {rfq_id}/{uuid}.{ext} and record it. The object goes first; if the row cannot be
  * written the object is removed again, so nothing is left behind.
  */
-export async function uploadAttachment(input: { rfqId: string; clarificationId: string | null; file: File; path: string }): Promise<AttachmentRow> {
+export async function uploadAttachment(input: { rfqId?: string; orderId?: string; clarificationId: string | null; file: File; path: string }): Promise<AttachmentRow> {
   const db = requireSupabase()
   const up = await db.storage.from(FILE_BUCKET).upload(input.path, input.file, { contentType: input.file.type, upsert: false })
   if (up.error) throw up.error
@@ -656,7 +673,8 @@ export async function uploadAttachment(input: { rfqId: string; clarificationId: 
       file_name: input.file.name,
       mime_type: input.file.type,
       size_bytes: input.file.size,
-      rfq_id: input.rfqId,
+      rfq_id: input.rfqId ?? null,
+      order_id: input.orderId ?? null,
       clarification_id: input.clarificationId,
     })
     .select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at')

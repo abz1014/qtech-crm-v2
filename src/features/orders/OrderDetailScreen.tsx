@@ -11,6 +11,7 @@ import { OrderItemsPanel } from '@/features/orders/OrderItemsPanel'
 import { LegsPanel } from '@/features/orders/LegsPanel'
 import { CommissioningPanel } from '@/features/orders/CommissioningPanel'
 import { InvoicesPanel, MarginPanel } from '@/features/orders/MoneyPanels'
+import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
 
 /*
  * Order detail (O03; g2-order-detail.html). /orders/:id.
@@ -165,6 +166,7 @@ export default function OrderDetailScreen() {
               <div className="grid min-w-0 gap-6">
                 <LegsPanel order={order} legs={legs.data} items={items.data} pos={pos.data ?? []} money={money} isAdmin={isAdmin} canEdit={canEdit} />
                 <CommissioningPanel order={order} engineers={engineers.data ?? []} isEngineer={isEngineer} canEdit={canEdit} />
+                <AttachmentsPanel orderId={order.id} />
               </div>
               <aside className="grid min-w-0 gap-6 lg:row-start-1 lg:col-start-2" aria-label="Site and money">
                 {isEngineer ? (

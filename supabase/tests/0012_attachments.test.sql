@@ -17,8 +17,8 @@ $f$;
 -- ------------------------------------------------------------------ structure
 select columns_are('public', 'attachments',
   array['id', 'created_at', 'created_by', 'bucket', 'path', 'file_name', 'mime_type', 'size_bytes', 'rfq_id',
-        'clarification_id', 'invoice_id', 'expense_id'],
-  'attachments has the section 2.20 columns (A6: expense_id)');
+        'clarification_id', 'invoice_id', 'expense_id', 'order_id'],
+  'attachments has the section 2.20 columns (A6: expense_id; R22: order_id)');
 select ok((select relrowsecurity from pg_class where oid = 'public.attachments'::regclass),
   'RLS is enabled on attachments');
 select is((select array_agg(policyname::text order by policyname) from pg_policies

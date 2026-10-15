@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Eye, EyeOff, KeyRound } from 'lucide-react'
+import { Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useSession, useSignInNotice } from '@/app/session'
 import { getSupabase } from '@/lib/supabase'
+import { shortDay } from '@/features/capture/model'
+import { listCaptures, markCaptureBeforeSignIn, safely } from '@/lib/capture/store'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Field } from '@/ui/form/Field'
@@ -31,6 +33,18 @@ export function SignInPage() {
   const [submitting, setSubmitting] = useState(false)
   const [attempted, setAttempted] = useState(false)
   const [reveal, setReveal] = useState(false)
+  // A shared item is saved on this device before the app checks the session, so signing in again cannot lose it (R22).
+  const [kept, setKept] = useState<{ what: string; until: string } | null>(null)
+  useEffect(() => {
+    void safely(() => listCaptures(), []).then(items => {
+      const newest = items[0]
+      if (!newest) return
+      markCaptureBeforeSignIn()
+      const photos = newest.files.length
+      const what = [newest.text.trim() ? (newest.source === 'share' ? '1 message' : '1 text') : '', photos ? `${photos} ${photos === 1 ? 'photo' : 'photos'}` : ''].filter(Boolean).join(' and ')
+      setKept({ what, until: shortDay(new Date(newest.expiresAt).toISOString()) })
+    })
+  }, [])
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: '', password: '' } })
   const { errors } = form.formState
 
@@ -62,8 +76,8 @@ export function SignInPage() {
       <div className="grid w-full max-w-[360px] gap-5 rounded border border-line bg-surface px-8 pb-6 pt-8 max-sm:max-w-none max-sm:border-0 max-sm:px-4">
         <img src="/brand/logo-wordmark.png" alt="Q Tech Solutions" height={44} className="h-[44px] w-auto justify-self-start" />
         <div className="grid gap-[2px]">
-          <h1 className="text-xl font-semibold tracking-snug">Sign in</h1>
-          <p className="text-sm text-fg-muted">Use the email and password your admin gave you.</p>
+          <h1 className="text-xl font-semibold tracking-snug">{kept ? 'Sign in to continue' : 'Sign in'}</h1>
+          <p className="text-sm text-fg-muted">{kept ? 'You were signed out.' : 'Use the email and password your admin gave you.'}</p>
         </div>
 
         {shown === 'invalid' ? (
@@ -80,6 +94,22 @@ export function SignInPage() {
           <Banner tone="danger" title="Can’t reach the server">
             Check your connection and try again.
           </Banner>
+        ) : null}
+        {kept ? (
+          <>
+            <Banner tone="success" title="Your shared item is safe">
+              Sign in and the Capture sheet opens with it.
+            </Banner>
+            <div className="flex items-center gap-3 rounded border border-line-strong bg-sunken p-3 text-sm">
+              <span aria-hidden="true" className="grid size-[32px] shrink-0 place-items-center rounded border bg-surface text-fg-2">
+                <Icon icon={Smartphone} />
+              </span>
+              <span className="grid">
+                <b className="font-medium">{kept.what}</b>
+                <span className="text-xs text-fg-muted">{`Kept on this phone until ${kept.until}`}</span>
+              </span>
+            </div>
+          </>
         ) : null}
         {notice === 'unconfigured' ? (
           <Banner tone="warning" title="Sign-in is not set up in this build">

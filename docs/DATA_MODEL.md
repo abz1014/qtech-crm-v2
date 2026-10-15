@@ -503,6 +503,7 @@ It does work: "Salaries for October not yet recorded" is derived from a template
 | clarification_id | uuid FK clarifications SET NULL | yes | — | Requires `rfq_id`. |
 | invoice_id | uuid FK invoices CASCADE | yes | — | |
 | expense_id | uuid FK expenses CASCADE | yes | — | *(Amendment A6)* Receipt photo on an expense. Admin only. |
+| order_id | uuid FK orders CASCADE | yes | — | *(R22, migration 0042)* A file kept with an order (a customer PO scan, a photo from site). Bucket `rfq-files`, all staff. |
 
 CHECKs:
 - `(rfq_id IS NOT NULL)::int + (invoice_id IS NOT NULL)::int = 1` *(superseded by A6: three parents, `(rfq_id IS NOT NULL)::int + (invoice_id IS NOT NULL)::int + (expense_id IS NOT NULL)::int = 1`)*
@@ -1420,6 +1421,7 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | attachments (parent is an RFQ or clarification) | SIUD | SIUD | SIUD | Storage bucket `rfq-files`: same rules. |
 | attachments (parent is an invoice) | SIUD | SIUD | — | Storage bucket `gst-receipts`: admin and sales, as today. |
 | attachments (parent is an expense) *(A6)* | SIUD | — | — | Storage bucket `expense-receipts`: admin only, private, 5 MB. |
+| attachments (parent is an order) *(R22)* | SIUD | SIUD | SIUD | Storage bucket `rfq-files`: same rules as RFQ files. One parent per row: RFQ, order, invoice or expense. |
 | snoozes | own SIUD | own SIUD | own SIUD | |
 | **targets** | SIUD | S own | S own | |
 | audit_log | S | — | — | Append-only; written only by triggers. |
