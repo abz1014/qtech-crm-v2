@@ -66,7 +66,7 @@ test.describe('O02: a new order from a past order', () => {
     // the most recent orders are offered before anything is typed; typing narrows them
     await expect(d.getByRole('list', { name: 'Most recent orders' })).toBeVisible()
     await d.getByLabel('Find a past order').fill(s.company.name)
-    const hit = d.getByRole('button', { name: new RegExp(`ORD-${String(s.order.number).padStart(4, '0')} ${s.company.name}`) })
+    const hit = d.getByRole('button', { name: new RegExp(`${s.company.name}.*ORD-${String(s.order.number).padStart(4, '0')}`) })
     await expect(hit).toBeVisible()
     await expect(hit).toContainText(s.site.name)
     await expect(hit).toContainText('Belimo damper actuator')
@@ -116,7 +116,7 @@ test.describe('O02: a new order from a past order', () => {
     await page.getByRole('button', { name: 'New order' }).first().click()
     const d = dialog(page)
     const input = d.getByLabel('Find a past order')
-    const hit = d.getByRole('button', { name: new RegExp(`ORD-${String(s.order.number).padStart(4, '0')} ${s.company.name}`) })
+    const hit = d.getByRole('button', { name: new RegExp(`${s.company.name}.*ORD-${String(s.order.number).padStart(4, '0')}`) })
     for (const q of [s.site.name, `Belimo damper actuator ${s.tag}`, `ORD-${String(s.order.number).padStart(4, '0')}`, `OLD-${s.tag}`]) {
       await input.fill(q)
       await expect(hit).toBeVisible()

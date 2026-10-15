@@ -73,7 +73,7 @@ test.describe('O07: Issue PO', () => {
     await price(page, 4).fill('18.50')
     await expect(d.getByTestId('po-source-4')).toContainText('Typed by you, check it')
     // 3 x 612 + 2 x 742 + 2 x 214 + 8 x 18.50 = 1,836 + 1,484 + 428 + 148
-    await expect(d.getByRole('table', { name: 'PO lines' })).toContainText('3,896.00')
+    await expect(d.getByTestId('po-total')).toContainText('USD 3,896.00')
     // an edited price becomes typed, and the totals move
     await price(page, 1).fill('600')
     await expect(d.getByTestId('po-source-1')).toContainText('typed')
@@ -187,12 +187,12 @@ test.describe('O07: Issue PO', () => {
     const s = await seedPo({ allPriced: true })
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     await legLoc(page, 'A').getByRole('button', { name: 'Issue PO, leg A' }).click()
-    const popup = context.waitForEvent('page')
+    // headless Chromium has no PDF viewer: pointing the new tab at the PDF makes it a download, which is the proof that a PDF was made
+    let downloaded = 0
+    context.on('page', p => p.on('download', () => downloaded++))
     await dialog(page).getByRole('button', { name: 'Preview PDF' }).click()
-    const tab = await popup
-    await expect.poll(() => tab.url(), { timeout: 30_000 }).toMatch(/^blob:/)
+    await expect.poll(() => downloaded, { timeout: 30_000 }).toBeGreaterThan(0)
     expect(await posOf(s.leg)).toHaveLength(0)
-    await tab.close()
   })
 
   test('Add expense on a leg opens the M03 dialog with this order and leg, the supplier as payee', async ({ page }) => {

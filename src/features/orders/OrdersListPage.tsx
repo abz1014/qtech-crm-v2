@@ -120,7 +120,8 @@ export default function OrdersListPage() {
   const change = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params)
     for (const [k, v] of Object.entries(patch)) {
-      if (v === null || v === '' || v === ALL) next.delete(k)
+      // 'all' is a real choice for the owner switch; for a dimension it means no filter, so it leaves the address
+      if (v === null || v === '' || (v === ALL && k !== 'owner')) next.delete(k)
       else next.set(k, v)
     }
     setParams(next, { replace: true })
@@ -145,7 +146,7 @@ export default function OrdersListPage() {
   const today = businessToday()
   const columns = useMemo<Column<OrderListRow>[]>(
     () => [
-      { id: 'order', header: 'Order', value: r => r.number, kind: 'num', sortable: true, width: 130, cell: r => <OrderCell row={r} /> },
+      { id: 'order', header: 'Order', value: r => r.number, kind: 'num', align: 'left', sortable: true, width: 130, cell: r => <OrderCell row={r} /> },
       { id: 'customer', header: 'Customer', value: r => r.companyName, sortable: true, cell: r => <CustomerCell row={r} /> },
       { id: 'goods', header: 'Goods', value: r => r.goods, width: 160, cell: r => <Chip dim="goods" value={r.goods} /> },
       { id: 'commissioning', header: 'Commissioning', value: r => r.commissioning, width: 150, hideBelowMd: true, cell: r => <Chip dim="commissioning" value={r.commissioning} /> },
@@ -275,7 +276,7 @@ export default function OrdersListPage() {
               placeholder="Order, PO, customer or site"
               value={filters.text}
               onChange={e => change({ q: e.target.value })}
-              className="pl-9"
+              style={{ paddingLeft: 36 }}
               autoComplete="off"
             />
           </div>

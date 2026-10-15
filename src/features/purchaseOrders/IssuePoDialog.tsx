@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { FileCheck2, FileText, Info, Lock, TriangleAlert } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
-import { convertToPaisa, formatPaisa, formatRate } from '@/lib/money'
+import { convertToPaisa, formatAmount, formatPaisa, formatRate } from '@/lib/money'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, poRef } from '@/lib/refs'
@@ -298,7 +298,6 @@ export function IssuePoDialog({ order, leg, legIndex, onClose }: { order: OrderH
       kind: 'money',
       paisa: 'always',
       value: r => lineTotal(r.qty, priceOf(r, typed)),
-      total: true,
       width: 150,
     },
   ]
@@ -408,15 +407,21 @@ export function IssuePoDialog({ order, leg, legIndex, onClose }: { order: OrderH
                 Put a goods line on the leg before issuing a purchase order.
               </Banner>
             ) : (
+              <>
               <DataTable
                 label="PO lines"
                 rows={rows}
                 getRowId={r => r.orderItemId}
                 columns={columns}
                 twoLine
-                footerLabel={`Total in ${ccy ?? '—'}`}
-                summary={conversion}
               />
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded border bg-sunken px-4 py-3 text-xs text-fg-2">
+                <span>{conversion ?? `Total in ${ccy ?? '—'}`}</span>
+                <span className="num text-sm font-medium text-fg" data-testid="po-total">
+                  {ccy ?? ''} {formatAmount(total, 'always')}
+                </span>
+              </div>
+              </>
             )}
 
             <div className="flex items-start gap-3 rounded bg-sunken px-4 py-3 text-sm text-fg-2">

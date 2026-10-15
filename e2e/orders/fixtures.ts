@@ -85,7 +85,7 @@ export async function seedPo(opts: { allPriced?: boolean } = {}): Promise<PoSeed
     await must(
       rest<{ id: string }[]>('admin', 'order_items', {
         method: 'POST',
-        body: { order_id: earlier.id, position: 0, description: `Siemens SITRANS LUC500 level controller ${tag}`, qty: 1, unit: 'ea', unit_price_net: 1000, supplier_order_id: earlierLeg.id, supplier_unit_price: 742 },
+        body: { order_id: earlier.id, position: 0, description: `Siemens SITRANS LUC500 level controller`, qty: 1, unit: 'ea', unit_price_net: 1000, supplier_order_id: earlierLeg.id, supplier_unit_price: 742 },
       }),
     )
   )[0]
@@ -100,7 +100,7 @@ export async function seedPo(opts: { allPriced?: boolean } = {}): Promise<PoSeed
 
   // the RFQ the supplier quoted on, so line 3 has a quote
   const rfq = await createRfq(company.id)
-  const rfqItem = (await must(rest<{ id: string }[]>('admin', 'rfq_items', { method: 'POST', body: { rfq_id: rfq.id, description: `Memosens CPS11E pH sensor ${tag}`, qty: 2 } })))[0]
+  const rfqItem = (await must(rest<{ id: string }[]>('admin', 'rfq_items', { method: 'POST', body: { rfq_id: rfq.id, description: `Memosens CPS11E pH sensor`, qty: 2 } })))[0]
   const inquiry = (await must(rest<{ id: string }[]>('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: rfq.id, supplier_id: supplier.id, sent_on: karachiDay(-20) } })))[0]
   await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: inquiry.id, rfq_item_id: rfqItem.id, unit_price: 214, currency: 'USD', lead_time: '2 wks' }, prefer: 'return=minimal' }))
 
@@ -110,11 +110,11 @@ export async function seedPo(opts: { allPriced?: boolean } = {}): Promise<PoSeed
     rest<{ id: string; description: string; position: number }[]>('admin', 'order_items', {
       method: 'POST',
       body: [
-        { order_id: order.id, position: 0, description: `Endress+Hauser Cerabar PMC51 pressure transmitter ${tag}`, qty: 3, unit: 'ea', unit_price_net: 187400, supplier_order_id: leg.id, supplier_unit_price: 612, rfq_item_id: null, is_service: false },
-        { order_id: order.id, position: 1, description: `Siemens SITRANS LUC500 level controller ${tag}`, qty: 2, unit: 'ea', unit_price_net: 214000, supplier_order_id: leg.id, supplier_unit_price: null, rfq_item_id: null, is_service: false },
-        { order_id: order.id, position: 2, description: `Memosens CPS11E pH sensor ${tag}`, qty: 2, unit: 'ea', unit_price_net: 96500, supplier_order_id: leg.id, supplier_unit_price: null, rfq_item_id: rfqItem.id, is_service: false },
-        { order_id: order.id, position: 3, description: `M12 sensor cable set, 5 m ${tag}`, qty: 8, unit: 'ea', unit_price_net: 4200, supplier_order_id: leg.id, supplier_unit_price: opts.allPriced ? 18.5 : null, rfq_item_id: null, is_service: false },
-        { order_id: order.id, position: 4, description: `Commissioning and loop check ${tag}`, qty: 1, unit: 'job', unit_price_net: 135000, supplier_order_id: null, supplier_unit_price: null, rfq_item_id: null, is_service: true },
+        { order_id: order.id, position: 0, description: `Endress+Hauser Cerabar PMC51 pressure transmitter`, qty: 3, unit: 'ea', unit_price_net: 187400, supplier_order_id: leg.id, supplier_unit_price: 612, rfq_item_id: null, is_service: false },
+        { order_id: order.id, position: 1, description: `Siemens SITRANS LUC500 level controller`, qty: 2, unit: 'ea', unit_price_net: 214000, supplier_order_id: leg.id, supplier_unit_price: null, rfq_item_id: null, is_service: false },
+        { order_id: order.id, position: 2, description: `Memosens CPS11E pH sensor`, qty: 2, unit: 'ea', unit_price_net: 96500, supplier_order_id: leg.id, supplier_unit_price: null, rfq_item_id: rfqItem.id, is_service: false },
+        { order_id: order.id, position: 3, description: `M12 sensor cable set, 5 m`, qty: 8, unit: 'ea', unit_price_net: 4200, supplier_order_id: leg.id, supplier_unit_price: opts.allPriced ? 18.5 : null, rfq_item_id: null, is_service: false },
+        { order_id: order.id, position: 4, description: `Commissioning and loop check`, qty: 1, unit: 'job', unit_price_net: 135000, supplier_order_id: null, supplier_unit_price: null, rfq_item_id: null, is_service: true },
       ],
     }),
   )

@@ -142,7 +142,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
                 placeholder="Company, site, item, order number or customer PO"
                 value={text}
                 onChange={e => setText(e.target.value)}
-                className="pl-9"
+                style={{ paddingLeft: 36 }}
                 autoComplete="off"
                 data-autofocus
               />
@@ -168,7 +168,6 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
                       type="button"
                       onClick={() => setChosen(o)}
                       className={cn('grid w-full gap-px rounded border bg-surface px-4 py-3 text-left transition-colors duration-fast hover:border-line-input hover:bg-sunken')}
-                      aria-label={`${orderRef(o.number)} ${o.companyName}`}
                     >
                       <span className="flex flex-wrap items-baseline justify-between gap-2">
                         <span className="font-medium">{o.companyName}</span>
