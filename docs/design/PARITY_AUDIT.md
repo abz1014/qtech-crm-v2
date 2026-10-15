@@ -741,7 +741,7 @@ Companies list, create dialog, merge dialog: NO dedicated mockup exists (INVENTO
 | D-66 | Deliveries table | Purchase order (mono, "PO-26-0017 · R1"), Order, Expected, Received, Result; legacy rows show an "Imported" tag in PO col; "est." after dates | same columns/format and "est."; legacy rows read "No PO issued" | FIXED (2c352f1) | low | show "Imported" tag for legacy. R18 |
 | D-67 | Delivery result | "On time" + "1 day early"; "Late 6 days"; "On time" + "dates estimated" | same (plus extra states "Not received, N days past", "Not received yet") | MATCH | - | - |
 | D-68 | Contacts panel | name, role, phone mono; "+ Add" | same plus site name, e-mail, edit and trash buttons; empty "No contacts yet. Every field is optional, so a name alone is enough." | KEPT: R02 follow-up edit and remove (job title now shown, a198ee3) | low | additions from R02 follow-up |
-| D-69 | Open with them | Enquiry ("RFQ-0171 waiting, 3 days"), Order leg ("ORD-0038 A received"), Currency ("EUR"; low data "CNY, rate 38.85, 8 days old" with orange age) | Enquiry same; Order leg shows "expected 20 Oct"-style text or "None open"; Currency code only (no rate, no age); extra footnote "Enquiries still unanswered and order legs not yet received. ..." | PARTLY FIXED 2c352f1: rate and age added, footnote removed. OPEN (owner): "A received" wording on the Order leg row | medium | add rate + age (staleness) ; OWNER on "A received" wording. R18 |
+| D-69 | Open with them | Enquiry ("RFQ-0171 waiting, 3 days"), Order leg ("ORD-0038 A received"), Currency ("EUR"; low data "CNY, rate 38.85, 8 days old" with orange age) | Enquiry same; Order leg shows "expected 20 Oct"-style text or "None open"; Currency code only (no rate, no age); extra footnote "Enquiries still unanswered and order legs not yet received. ..." | FIXED (rate and age 2c352f1; "received" wording now Delivered, branch p4/parity-d69) | medium | add rate + age (staleness) ; OWNER on "A received" wording. R18 |
 | D-70 | Brands panel in rail | none (brands live inside What we know) | extra "Brands carried" rail panel (tags, remove X, Add combobox) shown for suppliers | KEPT (owner): rail panel, same panel and tag treatment as Contacts | medium | duplicates the Brands cell; OWNER DECISION. R02 |
 | D-71 | Roles panel | customer board only: Customer chip, "Also a supplier?" No, "Customer since" 2024 | shown for all roles: rows "Customer"/"Supplier" (chip or No) + sentence | FIXED (2c352f1) | medium | use mockup labels; add "Customer since"; hide on supplier boards. R02 |
 
@@ -807,7 +807,7 @@ Companies list, create dialog, merge dialog: NO dedicated mockup exists (INVENTO
 - D-65, D-95: keep the extra "Recent enquiries" table and the "History" placeholder panel (neither in the mockup)?
 - D-93, D-94: keep admin "Money with them" and "Notes" panels?
 - D-52, D-62: "Not ordered" wording and dropped tier label are an approved deviation (DECISIONS 2026-10-15 R17/R18); confirm.
-- D-69: mockup Order leg reads "ORD-0038 A received" (ambiguous); confirm intended wording.
+- D-69 (decided by the owner): the Received step is removed. Supplier legs go Placed, then Delivered, and received_on follows delivered_on, so the supplier panels say Delivered (column, results, copy).
 
 ## UNDONE (not built / not matching)
 D-01, D-03, D-04, D-05, D-06, D-21, D-22, D-27, D-28, D-34, D-35, D-37, D-38, D-39, D-40, D-41, D-50, D-53, D-54, D-56, D-57, D-58, D-62, D-66, D-69, D-71, D-82, D-83 (O02, later), D-84 (O06, later), D-85 (O03/O04, later), D-86, D-89, D-121, D-122, D-123.
@@ -833,7 +833,6 @@ Every non-MATCH row above now says FIXED with the commit that did it, or why it 
 
 Open after this branch:
 - D-83 the "Repeat order" action (O02, another worker): the slot is in place and disabled.
-- D-69 the "A received" wording on the Order leg row (owner).
 - D-85 the order link target (Orders screen, O03/O04).
 - D-10 nav count badges (shell).
 - users.phone (0039) is not shown anywhere on the company page in the mockups; it is for signatures on chase texts and quotations.
