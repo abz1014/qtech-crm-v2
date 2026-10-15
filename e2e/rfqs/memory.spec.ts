@@ -19,12 +19,18 @@ async function shot(target: Locator, name: string): Promise<void> {
   await target.screenshot({ path: `${dir}/${name}.png` })
 }
 
-/** The whole page, not just the first screen: the chips and the lower panels sit below the fold. */
-async function full(page: Page, name: string): Promise<void> {
+/**
+ * The whole page, not just the first screen: the chips and the lower panels sit below the fold. The app scrolls inside its own
+ * main area, so a full-page capture would cut off; the viewport is made tall for the shot instead, then put back.
+ */
+async function full(page: Page, name: string, height = 2400): Promise<void> {
   const dir = process.env.REVIEW_DIR
   if (!dir) return
   mkdirSync(dir, { recursive: true })
-  await page.screenshot({ path: `${dir}/${name}.png`, fullPage: true })
+  const before = page.viewportSize() ?? { width: 1440, height: 900 }
+  await page.setViewportSize({ width: before.width, height: before.width < 600 ? 3800 : height })
+  await page.screenshot({ path: `${dir}/${name}.png` })
+  await page.setViewportSize(before)
 }
 
 async function paste(page: Page, text: string): Promise<void> {
