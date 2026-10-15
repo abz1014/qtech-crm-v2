@@ -113,7 +113,7 @@ export function GstRegisterPage() {
           return (
             <span className="grid gap-px">
               <span className="truncate font-medium">{r.companyName ?? 'No customer'}</span>
-              {why ? <span className="truncate text-xs text-tone-warning-fg">{why}</span> : r.orderNumber !== null ? <span className="num text-xs text-fg-muted">{orderRef(r.orderNumber)}</span> : null}
+              {why ? <span className={`truncate text-xs ${ticked.has(r.invoiceId) ? 'text-fg-2' : 'text-tone-warning-fg'}`}>{why}</span> : r.orderNumber !== null ? <span className="num text-xs text-fg-muted">{orderRef(r.orderNumber)}</span> : null}
             </span>
           )
         },
@@ -124,7 +124,8 @@ export function GstRegisterPage() {
       { id: 'tcs', header: 'Courier (TCS)', sortable: false, cell: r => <StatusTrack dimension="tcs" value={r.courierState} /> },
       { id: 'fbr', header: 'FBR', sortable: false, cell: r => <StatusTrack dimension="fbr" value={r.fbrState} /> },
     ],
-    [],
+    // a ticked row has the selected background, where the amber text is below 4.5:1, so it reads in the body colour there
+    [ticked],
   )
 
   const stamp = async (kind: StampKind) => {
