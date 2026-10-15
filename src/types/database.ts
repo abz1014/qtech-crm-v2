@@ -1899,7 +1899,7 @@ isOneToOne: false
                            },
 "po_line_prefill":
 { Args: { "p_supplier_order_id": string }; Returns: {
-              "description": string,"order_item_id": string,"position": number,"price_source": string,"qty": number,"source_number": number,"source_on": string,"source_revision": number,"unit": string,"unit_price": number,
+              "description": string,"order_item_id": string,"position": number,"price_source": string,"qty": number,"source_number": number,"source_on": string,"source_revision": number,"unit": string,"unit_price": number
             }[]
                            },
 "reopen_month":
