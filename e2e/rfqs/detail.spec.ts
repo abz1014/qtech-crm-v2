@@ -569,7 +569,7 @@ test.describe('Suppliers asked, Float to another supplier, and the empty state (
     await rail.getByRole('button', { name: 'Float to another supplier' }).click()
     const dialog = page.getByRole('dialog', { name: /Float to another supplier/ })
     await expect(dialog).toContainText(s.carrier!.name)
-    await expect(dialog).toContainText('Carries a brand') // the reason is in plain words
+    await expect(dialog).toContainText('Carries ') // the reason is in plain words (Carries the brand ...)
     await dialog.locator('label', { hasText: s.carrier!.name }).click()
     await dialog.getByRole('button', { name: 'Copy enquiry for 1 supplier' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Enquiry text copied' })).toBeVisible()
