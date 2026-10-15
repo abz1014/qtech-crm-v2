@@ -1,11 +1,13 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, CircleCheck, Plus, Users, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CircleCheck, Plus, Search, Users, X } from 'lucide-react'
 import { useClosedCount, useClosedRfqs, useOpenRfqs } from '@/features/rfqs/board/hooks'
 import {
   applyOwner,
+  applyQuery,
   applyState,
   defaultOwner,
+  failureLine,
   PAGE_SIZE,
   pageSummary,
   STATE_FILTERS,
@@ -20,7 +22,8 @@ import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { SegmentedControl } from '@/ui/SegmentedControl'
-import { Tab, TabList, TabPanel, Tabs } from '@/ui/Tabs'
+import { Icon } from '@/ui/Icon'
+import { TextField } from '@/ui/form/TextField'
 
 /*
  * RFQ board (R06). Open RFQs in the order the work is due: due date first, then priority. The filters
@@ -28,15 +31,28 @@ import { Tab, TabList, TabPanel, Tabs } from '@/ui/Tabs'
  * sourcing state in v_rfq_state, each with live counts. A second tab pages through RFQs that are won
  * or closed. Where you are (tab, owner, state, page) lives in the address, so a reload or a shared
  * link lands on the same view. An empty open list is the goal state.
+ * The toolbar is drawn in the DataTable mockup: a filter box (`/` focuses it, Esc clears), the Open and
+ * Closed switch, and the Comfortable or Compact density, which is remembered per person on this device.
  */
 type TabKey = 'open' | 'closed'
 
 const isState = (v: string | null): v is StateFilter => STATE_FILTERS.some(s => s.value === v)
 
-const errorProps = (refetch: () => unknown) => ({
-  title: "Couldn't load the RFQs",
-  message: 'Nothing was changed. Check your connection and try again.',
-  onRetry: () => void refetch(),
+type Density = 'comfortable' | 'compact'
+const DENSITY_KEY = 'qtech.rfqs.density'
+const readDensity = (): Density => {
+  try {
+    return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfortable'
+  } catch {
+    return 'comfortable'
+  }
+}
+
+const errorProps = (q: { refetch: () => unknown; error: Error | null; errorUpdatedAt: number }) => ({
+  title: 'Couldn’t load RFQs',
+  message: 'Your changes are safe. Check your connection and try again.',
+  onRetry: () => void q.refetch(),
+  meta: failureLine(q.errorUpdatedAt, q.error?.message ?? ''),
 })
 
 export function BoardPage() {
@@ -48,6 +64,34 @@ export function BoardPage() {
   const owner: OwnerFilter = params.get('owner') === 'all' ? 'all' : params.get('owner') === 'mine' ? 'mine' : defaultOwner(user?.role ?? '')
   const state: StateFilter = isState(params.get('state')) ? (params.get('state') as StateFilter) : 'all'
   const page = Math.max(0, (Number(params.get('page')) || 1) - 1)
+  const [query, setQuery] = useState('')
+  const [density, setDensity] = useState<Density>(readDensity)
+  const filterRef = useRef<HTMLInputElement>(null)
+  const q = query.trim()
+  const compact = density === 'compact'
+
+  const pickDensity = (d: string) => {
+    const next: Density = d === 'compact' ? 'compact' : 'comfortable'
+    setDensity(next)
+    try {
+      localStorage.setItem(DENSITY_KEY, next)
+    } catch {
+      /* private window: the choice lasts for this visit only */
+    }
+  }
+
+  // "/" jumps to the filter box, unless the person is already typing somewhere.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.closest('[role="dialog"]'))) return
+      e.preventDefault()
+      filterRef.current?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const change = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params)
@@ -65,29 +109,29 @@ export function BoardPage() {
   // Owner narrows first, so the state counts always add up to what the owner switch shows.
   const byOwner = useMemo(() => applyOwner(open.data ?? [], owner, user?.id ?? null), [open.data, owner, user?.id])
   const counts = useMemo(() => stateCounts(byOwner), [byOwner])
-  const shown = useMemo(() => applyState(byOwner, state), [byOwner, state])
+  const shown = useMemo(() => applyQuery(applyState(byOwner, state), q), [byOwner, state, q])
   const mineCount = useMemo(() => applyOwner(open.data ?? [], 'mine', user?.id ?? null).length, [open.data, user?.id])
   const overdue = useMemo(() => (open.data ?? []).filter(r => r.isOverdue).length, [open.data])
 
   const openColumns = useMemo<Column<BoardRow>[]>(
     () => [
-      { id: 'company', header: 'Company', value: r => r.companyName, sortable: true, cell: r => <CompanyCell row={r} /> },
-      { id: 'due', header: 'Due', kind: 'date', value: r => r.dueOn, sortable: true, width: 150, cell: r => <DueCell row={r} /> },
-      { id: 'sourcing', header: 'Sourcing', value: r => r.sourcingState, width: 190, cell: r => <SourcingCell row={r} /> },
+      { id: 'company', header: 'Company', value: r => r.companyName, sortable: true, cell: r => <CompanyCell row={r} compact={compact} /> },
+      { id: 'due', header: 'Due', kind: 'date', value: r => r.dueOn, sortable: true, width: compact ? 230 : 150, cell: r => <DueCell row={r} compact={compact} /> },
+      { id: 'sourcing', header: 'Sourcing', value: r => r.sourcingState, width: compact ? 260 : 190, cell: r => <SourcingCell row={r} compact={compact} /> },
       { id: 'clarification', header: 'Questions', value: r => r.clarificationState, width: 240, hideBelowMd: true, cell: r => <ClarificationCell row={r} /> },
       { id: 'bid', header: 'Bid', value: r => r.bidState, width: 160, hideBelowMd: true, cell: r => <BidCell row={r} /> },
       { id: 'owner', header: 'Owner', value: r => r.ownerName, sortable: true, width: 130, hideBelowMd: true, cell: r => <OwnerCell row={r} /> },
     ],
-    [],
+    [compact],
   )
   const closedColumns = useMemo<Column<BoardRow>[]>(
     () => [
-      { id: 'company', header: 'Company', value: r => r.companyName, cell: r => <CompanyCell row={r} /> },
+      { id: 'company', header: 'Company', value: r => r.companyName, cell: r => <CompanyCell row={r} compact={compact} /> },
       { id: 'outcome', header: 'Outcome', value: r => r.outcome, width: 220, cell: r => <OutcomeCell row={r} /> },
       { id: 'received', header: 'Received', kind: 'date', value: r => r.receivedOn, width: 150, hideBelowMd: true, cell: r => <ReceivedCell row={r} /> },
       { id: 'owner', header: 'Owner', value: r => r.ownerName, width: 130, hideBelowMd: true, cell: r => <OwnerCell row={r} /> },
     ],
-    [],
+    [compact],
   )
 
   const navigate = useNavigate()
@@ -98,17 +142,27 @@ export function BoardPage() {
   const filtered = owner === 'mine' || state !== 'all'
   const reset = () => change({ owner: 'all', state: null })
 
-  const emptyOpen = !filtered && total === 0 ? (
+  const clearQuery = () => {
+    setQuery('')
+    filterRef.current?.focus()
+  }
+  const noMatch = (
+    <EmptyState title={`No RFQs match “${q}”`} actions={<Button onClick={clearQuery}>Clear filter</Button>}>
+      The filter covers RFQ number, customer and customer ref. Try fewer words or clear the filter.
+    </EmptyState>
+  )
+
+  const emptyOpen = q && total > 0 ? noMatch : !filtered && total === 0 ? (
     <EmptyState
       mood="goal"
-      title="No open RFQs. Nice."
+      title="Every bid is in"
       actions={
         <Button variant="primary" icon={Plus} onClick={newRfq}>
           New RFQ
         </Button>
       }
     >
-      Every RFQ is won or closed. New ones appear here as soon as they are logged.
+      Nothing is open and nothing is due in the next 5 days. New RFQs appear here as soon as you start one.
     </EmptyState>
   ) : owner === 'mine' && mineCount === 0 && state === 'all' ? (
     <EmptyState
@@ -135,6 +189,58 @@ export function BoardPage() {
     </EmptyState>
   )
 
+  const closedShown = useMemo(() => applyQuery(closed.data?.rows ?? [], q), [closed.data, q])
+
+  const filterBox = (
+    <div className="relative w-[220px] max-w-full">
+      <span className="pointer-events-none absolute inset-y-0 left-2.5 grid place-items-center text-fg-muted">
+        <Icon icon={Search} />
+      </span>
+      <TextField
+        ref={filterRef}
+        className="pl-8"
+        placeholder="Filter RFQs"
+        aria-label="Filter RFQs"
+        aria-keyshortcuts="/"
+        autoComplete="off"
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Escape' && query) {
+            e.preventDefault()
+            setQuery('')
+          }
+        }}
+      />
+    </div>
+  )
+  const listBar = (
+    <>
+      {filterBox}
+      <SegmentedControl
+        aria-label="Which RFQs"
+        value={tab}
+        onValueChange={v => change({ tab: v === 'closed' ? 'closed' : null, page: null })}
+        options={[
+          { value: 'open', label: 'Open', count: open.isSuccess ? total : undefined },
+          { value: 'closed', label: 'Closed', count: closedCount.isSuccess ? closedCount.data : undefined },
+        ]}
+      />
+    </>
+  )
+  const densityBar = (
+    <SegmentedControl
+      aria-label="Density"
+      className="ml-auto"
+      value={density}
+      onValueChange={pickDensity}
+      options={[
+        { value: 'comfortable', label: 'Comfortable' },
+        { value: 'compact', label: 'Compact' },
+      ]}
+    />
+  )
+
   const lede = open.isSuccess
     ? total === 0
       ? 'Nothing is waiting on you.'
@@ -153,30 +259,23 @@ export function BoardPage() {
         </Button>
       </header>
 
-      <Tabs className="min-w-0" value={tab} onValueChange={v => change({ tab: v === 'closed' ? 'closed' : null, page: null })}>
-        <TabList aria-label="RFQ lists">
-          <Tab value="open" count={open.isSuccess ? total : undefined}>
-            Open
-          </Tab>
-          <Tab value="closed" count={closedCount.isSuccess ? closedCount.data : undefined}>
-            Closed and won
-          </Tab>
-        </TabList>
-
-        <TabPanel value="open">
+      <div className="min-w-0">
+        {tab === 'open' ? (
           <DataTable
             label="Open RFQs"
             columns={openColumns}
             rows={shown}
             getRowId={r => r.rfqId}
-            twoLine
+            twoLine={!compact}
+            density={density}
             mobileRow={r => <OpenCard row={r} />}
             onRowOpen={openRow}
             loading={open.isPending}
-            error={open.isError ? errorProps(open.refetch) : null}
+            error={open.isError ? errorProps(open) : null}
             summary={open.isSuccess ? `Showing ${shown.length} of ${total} open RFQs` : undefined}
             toolbar={
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <>
+                {listBar}
                 <SegmentedControl
                   aria-label="Whose RFQs"
                   value={owner}
@@ -192,28 +291,39 @@ export function BoardPage() {
                   onValueChange={v => change({ state: v === 'all' ? null : v })}
                   options={STATE_FILTERS.map(s => ({ ...s, count: open.isSuccess ? counts[s.value] : undefined }))}
                 />
-              </div>
+                {densityBar}
+              </>
             }
             empty={emptyOpen}
           />
-        </TabPanel>
-
-        <TabPanel value="closed">
+        ) : (
+          <>
           <DataTable
             label="Closed and won RFQs"
             columns={closedColumns}
-            rows={closed.data?.rows ?? []}
+            rows={closedShown}
             getRowId={r => r.rfqId}
-            twoLine
+            twoLine={!compact}
+            density={density}
             mobileRow={r => <ClosedCard row={r} />}
             onRowOpen={openRow}
             loading={closed.isPending}
-            error={closed.isError ? errorProps(closed.refetch) : null}
+            error={closed.isError ? errorProps(closed) : null}
             summary={closed.isSuccess ? pageSummary(page, PAGE_SIZE, closed.data.total) : undefined}
+            toolbar={
+              <>
+                {listBar}
+                {densityBar}
+              </>
+            }
             empty={
-              <EmptyState icon={CircleCheck} title="Nothing closed or won yet">
-                RFQs that are won, or closed with a reason, are kept here.
-              </EmptyState>
+              q && (closed.data?.rows.length ?? 0) > 0 ? (
+                noMatch
+              ) : (
+                <EmptyState icon={CircleCheck} title="Nothing closed or won yet">
+                  RFQs that are won, or closed with a reason, are kept here.
+                </EmptyState>
+              )
             }
           />
           {closed.isSuccess && closed.data.total > PAGE_SIZE ? (
@@ -234,8 +344,9 @@ export function BoardPage() {
               </Button>
             </nav>
           ) : null}
-        </TabPanel>
-      </Tabs>
+          </>
+        )}
+      </div>
     </div>
   )
 }

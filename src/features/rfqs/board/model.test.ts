@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyOwner,
+  applyQuery,
+  failureLine,
   applyState,
   clarificationDetail,
   compareBoard,
@@ -150,5 +152,21 @@ describe('pager text', () => {
     expect(pageSummary(0, 25, 61)).toBe('Showing 1 to 25 of 61')
     expect(pageSummary(2, 25, 61)).toBe('Showing 51 to 61 of 61')
     expect(pageSummary(0, 25, 0)).toBe('Nothing to show')
+  })
+})
+
+describe('filter box and failure line', () => {
+  const rows = [row({ number: 177, companyName: 'Indus Textile Mills', customerRef: 'ENQ-2211' }), row({ number: 178, companyName: 'Punjab Cement' })]
+  it('needs every word, matching number, customer or customer ref', () => {
+    expect(applyQuery(rows, '').length).toBe(2)
+    expect(applyQuery(rows, 'rfq-0177')).toHaveLength(1)
+    expect(applyQuery(rows, '178')).toHaveLength(1)
+    expect(applyQuery(rows, 'indus enq')).toHaveLength(1)
+    expect(applyQuery(rows, 'indus cement')).toHaveLength(0)
+  })
+  it('reads like the drawing, with a stable six-digit reference', () => {
+    const at = Date.UTC(2026, 10, 27, 4, 41)
+    expect(failureLine(at, 'down')).toMatch(/^Request failed · Fri 27 Nov, 09:41 · reference [0-9a-f]{6}$/)
+    expect(failureLine(at, 'down')).toBe(failureLine(at, 'down'))
   })
 })

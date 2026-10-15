@@ -4,6 +4,12 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import { AppShell } from '@/app/shell/AppShell'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { installFakeDb } from '@/test/fakeSupabase'
+
+/* The shell reads the Today and RFQ counts for the top bar: an empty database, and a fresh cache per render. */
+const qc = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
+installFakeDb(() => ({ data: [] }))
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -20,7 +26,8 @@ describe('ErrorBoundary inside the shell', () => {
     const root = createRoot(el)
     act(() =>
       root.render(
-        <SessionProvider value={{ status: 'signed-in', user: { id: 'u', name: 'Test Person', role: 'admin' } }}>
+        <QueryClientProvider client={qc()}>
+          <SessionProvider value={{ status: 'signed-in', user: { id: 'u', name: 'Test Person', role: 'admin' } }}>
           <MemoryRouter initialEntries={['/today']}>
             <Routes>
               <Route element={<AppShell />}>
@@ -28,7 +35,8 @@ describe('ErrorBoundary inside the shell', () => {
               </Route>
             </Routes>
           </MemoryRouter>
-        </SessionProvider>,
+        </SessionProvider>
+        </QueryClientProvider>,
       ),
     )
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('Something went wrong')
