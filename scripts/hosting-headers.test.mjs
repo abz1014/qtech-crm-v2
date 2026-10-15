@@ -52,6 +52,13 @@ describe('hosting headers parity', () => {
     expect(csp).toContain("frame-ancestors 'none'")
   })
 
+  it('lets the service worker and manifest load (R21) and re-checks sw.js on every visit', () => {
+    const csp = vc['/*']['Content-Security-Policy']
+    expect(csp).toContain("worker-src 'self'")
+    expect(csp).toContain("manifest-src 'self'")
+    expect(vc['/sw.js']['Cache-Control']).toBe('no-cache')
+  })
+
   it('caches /assets/* long and rewrites every path to index.html', () => {
     expect(vc['/assets/*']['Cache-Control']).toContain('immutable')
     expect(json.rewrites).toContainEqual({ source: '/(.*)', destination: '/index.html' })

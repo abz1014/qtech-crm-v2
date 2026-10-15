@@ -81,7 +81,8 @@ Brand green fails AA for text in both directions (3.78:1). So:
 | `public/brand/logo-mark.png` | Square contexts: collapsed sidebar, avatars, PWA/app icon sources. |
 | `public/favicon.ico`, `favicon-32.png` | Browser tab (generated from the mark). |
 | `public/apple-touch-icon.png` (180) | iOS home screen. |
-| `public/icon-192.png`, `icon-512.png` | PWA / manifest icons. |
+&
+| `public/icon-maskable-512.png` | Maskable manifest icon, made from the mark by `scripts/make-pwa-icons.py` (the white disc fits the 80% safe zone). |
 
 Do not recolour, stretch, outline or place the wordmark on a coloured or photographic background. The wordmark's tagline is too small to read below 24px height; use the mark instead.
 
