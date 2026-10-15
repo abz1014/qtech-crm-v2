@@ -121,3 +121,19 @@ Vercel production URL). Local dev origins (`localhost:5173`, `localhost:4173`) a
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided by the platform.
 
 CI (`functions.yml`) runs the Deno unit tests and an integration test against `supabase functions serve`.
+
+## Deploying the `admin-users` function (`deploy-functions.yml`)
+
+Manual only: Actions, Deploy functions, Run workflow. The `production` environment needs owner approval.
+There is no push or schedule trigger.
+
+1. Inputs: `allowed_origins` = comma-separated https origins that may call the function from a browser
+   (for example `https://crm.example.com`), and `function` = `admin-users`. Each origin must match
+   `^https://[a-z0-9.-]+(:[0-9]+)?$`: no trailing slash, no wildcard, no path. The run fails before touching Supabase otherwise.
+2. Guard: same as `remote.yml`. `SUPABASE_PROJECT_REF` must be `yafbphagorydbitfgfmg`; the old CRM project fails explicitly.
+3. The job runs `supabase secrets set ALLOWED_ORIGINS=...`, then `supabase functions deploy admin-users`
+   (JWT verification stays on, the platform default), then a smoke check:
+   OPTIONS from the first allowed origin returns `Access-Control-Allow-Origin`; POST with no token returns 401;
+   OPTIONS from `https://evil.example` returns no allow-origin header.
+4. Needs the `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` secrets in the `production` environment.
+   Run it again after changing the origin list; the secret is replaced, not merged. Local dev origins stay allowed regardless.

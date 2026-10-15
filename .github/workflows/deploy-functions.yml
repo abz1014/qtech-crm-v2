@@ -1,0 +1,101 @@
+name: Deploy functions
+
+# Manual only, owner-approved (the `production` environment gates the run). Never triggered by push or schedule.
+# Sets the ALLOWED_ORIGINS secret, deploys the Edge Function with JWT verification ON (platform default),
+# then smoke-checks CORS and auth. Runbook: docs/SUPABASE.md.
+on:
+  workflow_dispatch:
+    inputs:
+      allowed_origins:
+        description: "Comma-separated https origins allowed to call the function, e.g. https://crm.example.com (no trailing slash, no wildcard)"
+        type: string
+        required: true
+      function:
+        description: "Function to deploy"
+        type: choice
+        options: [admin-users]
+        default: admin-users
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      ALLOWED_ORIGINS: ${{ inputs.allowed_origins }}
+      FUNCTION: ${{ inputs.function }}
+    steps:
+      - name: Guard - target must be the new CRM project
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
+            echo "::error::SUPABASE_PROJECT_REF is empty"; exit 1
+          fi
+          echo "::add-mask::$SUPABASE_PROJECT_REF"
+          if [ "$SUPABASE_PROJECT_REF" = "vptyhluvgnjpvkcbhxsf" ]; then
+            echo "::error::Refusing: ref is the OLD CRM project. Never target it."; exit 1
+          fi
+          if [ "$SUPABASE_PROJECT_REF" != "yafbphagorydbitfgfmg" ]; then
+            echo "::error::Refusing: ref is not the expected Q-Tech CRM v2 project."; exit 1
+          fi
+          echo "Guard passed."
+
+      - name: Validate inputs
+        run: |
+          set -euo pipefail
+          [ "$FUNCTION" = "admin-users" ] || { echo "::error::unknown function"; exit 1; }
+          if [ -z "$ALLOWED_ORIGINS" ]; then echo "::error::allowed_origins is empty"; exit 1; fi
+          IFS=',' read -ra items <<< "$ALLOWED_ORIGINS"
+          for o in "${items[@]}"; do
+            if ! printf '%s' "$o" | grep -Eq '^https://[a-z0-9.-]+(:[0-9]+)?$'; then
+              echo "::error::bad origin '$o': must be https://host[:port], lowercase, no trailing slash, no wildcard, no spaces"; exit 1
+            fi
+          done
+          echo "Validated ${#items[@]} origin(s)."
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      # Supabase CLI version is pinned by package-lock.json, same as remote.yml.
+      - run: npm ci
+
+      - name: Set ALLOWED_ORIGINS secret
+        run: npx supabase secrets set ALLOWED_ORIGINS="$ALLOWED_ORIGINS" --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Deploy admin-users (JWT verification stays on)
+        run: npx supabase functions deploy admin-users --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Smoke check
+        run: |
+          set -euo pipefail
+          URL="https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/admin-users"
+          ORIGIN="${ALLOWED_ORIGINS%%,*}"
+          sleep 5
+
+          hdrs=$(curl -sS -D - -o /dev/null -X OPTIONS -H "Origin: $ORIGIN" \
+            -H 'Access-Control-Request-Method: POST' "$URL")
+          echo "$hdrs" | grep -i '^access-control-allow-origin:' | grep -qiF "$ORIGIN" \
+            || { echo "::error::allowed origin did not get the CORS header"; exit 1; }
+          echo "OK: OPTIONS from the allowed origin returns the CORS header."
+
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "$URL")
+          [ "$code" = "401" ] || { echo "::error::POST with no token returned $code, expected 401"; exit 1; }
+          echo "OK: POST with no token returns 401."
+
+          hdrs=$(curl -sS -D - -o /dev/null -X OPTIONS -H 'Origin: https://evil.example' \
+            -H 'Access-Control-Request-Method: POST' "$URL")
+          if echo "$hdrs" | grep -qi '^access-control-allow-origin:'; then
+            echo "::error::https://evil.example got an allow-origin header"; exit 1
+          fi
+          echo "OK: OPTIONS from https://evil.example gets no allow-origin."

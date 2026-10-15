@@ -3,13 +3,23 @@ name: DB
 on:
   push:
     branches: ["**"]
-  pull_request:
+    paths:
+      - "supabase/**"
+      - "src/types/database.ts"
+      - "package*.json"
+      - ".github/workflows/db.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   db:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

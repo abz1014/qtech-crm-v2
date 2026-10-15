@@ -1,17 +1,100 @@
 name: E2E
 
+# ONE Supabase stack boot and ONE build for every database-backed suite (auth, companies, rfq-board,
+# rfq-intake, rfq-detail). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
+# once and runs only those, one after another, with a database reset between them.
+# Branch pushes skip this workflow unless the commit message contains [full]; it always runs on main and manual runs.
+# Pushes to main and manual runs (Actions, E2E, Run workflow) run every suite. See docs/CI.md.
+# No pull_request trigger: a push to a PR branch already runs this, and a second run doubled the minutes.
 on:
   push:
     branches: ["**"]
-  pull_request:
+    paths:
+      - "src/**"
+      - "e2e/**"
+      - "supabase/migrations/**"
+      - "supabase/seed.sql"
+      - "supabase/config.toml"
+      - "supabase/functions/admin-users/**"
+      - "playwright.config.ts"
+      - "package*.json"
+      - ".github/workflows/e2e.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  auth:
+  changes:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full]') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    outputs:
+      auth: ${{ steps.final.outputs.auth }}
+      companies: ${{ steps.final.outputs.companies }}
+      rfq_board: ${{ steps.final.outputs.rfq_board }}
+      rfq_intake: ${{ steps.final.outputs.rfq_intake }}
+      rfq_detail: ${{ steps.final.outputs.rfq_detail }}
+      any: ${{ steps.final.outputs.any }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3.0.2
+        id: filter
+        with:
+          filters: |
+            shared:
+              - 'src/**'
+              - 'e2e/support/**'
+              - 'e2e/support.ts'
+              - 'supabase/migrations/**'
+              - 'supabase/seed.sql'
+              - 'supabase/config.toml'
+              - 'playwright.config.ts'
+              - 'package*.json'
+              - '.github/workflows/e2e.yml'
+            auth:
+              - 'e2e/auth/**'
+            companies:
+              - 'e2e/companies/**'
+            rfq_board:
+              - 'e2e/rfqs/board.spec.ts'
+            rfq_intake:
+              - 'e2e/rfqs/intake.spec.ts'
+            rfq_detail:
+              - 'e2e/rfqs/detail.spec.ts'
+      - id: final
+        env:
+          SHARED: ${{ steps.filter.outputs.shared }}
+          S_AUTH: ${{ steps.filter.outputs.auth }}
+          S_COMPANIES: ${{ steps.filter.outputs.companies }}
+          S_RFQ_BOARD: ${{ steps.filter.outputs.rfq_board }}
+          S_RFQ_INTAKE: ${{ steps.filter.outputs.rfq_intake }}
+          S_RFQ_DETAIL: ${{ steps.filter.outputs.rfq_detail }}
+        run: |
+          all=false
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$GITHUB_REF" = "refs/heads/main" ] || [ "$SHARED" = "true" ]; then all=true; fi
+          any=false
+          v=$S_AUTH; if [ "$all" = "true" ]; then v=true; fi
+          echo "auth=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_COMPANIES; if [ "$all" = "true" ]; then v=true; fi
+          echo "companies=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_RFQ_BOARD; if [ "$all" = "true" ]; then v=true; fi
+          echo "rfq_board=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_RFQ_INTAKE; if [ "$all" = "true" ]; then v=true; fi
+          echo "rfq_intake=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_RFQ_DETAIL; if [ "$all" = "true" ]; then v=true; fi
+          echo "rfq_detail=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          echo "any=$any" >> "$GITHUB_OUTPUT"
+
+  e2e:
+    needs: changes
+    if: ${{ needs.changes.outputs.any == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,7 +103,26 @@ jobs:
           cache: npm
       - run: npm ci
 
-      - name: Start local Supabase (db, auth, rest, storage)
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pwcache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+
+      - name: Install Chromium with system dependencies
+        if: steps.pwcache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install system dependencies only (browser restored from cache)
+        if: steps.pwcache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Start local Supabase (db, auth, rest, storage) - the only boot
         run: npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime
 
       - name: Rebuild database (migrations and seed fixtures)
@@ -44,22 +146,61 @@ jobs:
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY" npm run build
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-
       - name: Playwright (auth project)
+        if: ${{ !cancelled() && needs.changes.outputs.auth == 'true' }}
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=auth npx playwright test --project=auth
+          E2E_SUITE=auth REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/auth npx playwright test --project=auth --output=test-results/auth
 
-      - name: Upload report
+      - name: Reset database (companies)
+        if: ${{ !cancelled() && needs.changes.outputs.companies == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (companies project)
+        if: ${{ !cancelled() && needs.changes.outputs.companies == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=companies REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/companies npx playwright test --project=companies --output=test-results/companies
+
+      - name: Reset database (rfq-board)
+        if: ${{ !cancelled() && needs.changes.outputs.rfq_board == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (rfq-board project)
+        if: ${{ !cancelled() && needs.changes.outputs.rfq_board == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=rfq-board REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-board npx playwright test --project=rfq-board --output=test-results/rfq-board
+
+      - name: Reset database (rfq-intake)
+        if: ${{ !cancelled() && needs.changes.outputs.rfq_intake == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (rfq-intake project)
+        if: ${{ !cancelled() && needs.changes.outputs.rfq_intake == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=rfq-intake REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-intake npx playwright test --project=rfq-intake --output=test-results/rfq-intake
+
+      - name: Reset database (rfq-detail)
+        if: ${{ !cancelled() && needs.changes.outputs.rfq_detail == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (rfq-detail project)
+        if: ${{ !cancelled() && needs.changes.outputs.rfq_detail == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=rfq-detail REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-detail npx playwright test --project=rfq-detail --output=test-results/rfq-detail
+
+      - name: Upload reports and review screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-auth
+          name: playwright-e2e
           path: |
             playwright-report
             test-results
+            review-shots
           if-no-files-found: ignore
 
       - name: Function log
