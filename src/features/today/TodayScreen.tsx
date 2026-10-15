@@ -257,7 +257,7 @@ function Row({ item, today, waiting = false, open, copied, wide, onPick, childre
         ) : copied ? (
           <span className="inline-flex h-5 items-center rounded bg-tone-success-bg px-2 text-xs font-medium text-tone-success-fg">Copied</span>
         ) : (
-          <span className={cn('num whitespace-nowrap pt-0.5 text-xs', tone)}>{item.badge.text}</span>
+          <span className={cn('num whitespace-nowrap pt-1 text-xs', tone)}>{item.badge.text}</span>
         )}
         {wide ? null : <Icon icon={ChevronRight} size="sm" className={cn('mt-1 text-fg-muted transition-transform duration-fast', open && 'rotate-90')} />}
       </button>

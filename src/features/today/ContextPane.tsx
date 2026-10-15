@@ -280,9 +280,9 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           {facts.map(f => (
             <div
               key={f.label}
-              className={cn('grid content-start gap-0.5 border-b border-r p-3', compact ? '[&:nth-child(2n)]:border-r-0' : '[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(4n)]:border-r-0')}
+              className={cn('grid content-start gap-1 border-b border-r p-3', compact ? '[&:nth-child(2n)]:border-r-0' : '[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(4n)]:border-r-0')}
             >
-              <dt className={cn('flex items-center gap-1.5 text-xs', f.tone === 'warning' ? 'text-tone-warning-fg' : f.tone === 'success' ? 'text-tone-success-fg' : 'text-fg-muted')}>
+              <dt className={cn('flex items-center gap-2 text-xs', f.tone === 'warning' ? 'text-tone-warning-fg' : f.tone === 'success' ? 'text-tone-success-fg' : 'text-fg-muted')}>
                 {f.icon && !compact ? <Icon icon={f.icon} size="sm" /> : null}
                 {compact ? (f.short ?? f.label) : f.label}
               </dt>

@@ -253,6 +253,7 @@ test.describe('Today: accessibility and mobile', () => {
     await expect(page.getByRole('region', { name: 'Waiting' }).locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })).toBeVisible({ timeout: 15_000 })
     // (the row was open when it was chased, so it stays open in Waiting)
     await expect(page.getByRole('region', { name: 'Chased today' })).toBeVisible()
+    await page.getByRole('region', { name: 'Chased today' }).scrollIntoViewIfNeeded()
     await review(page, 'today-10-mobile-waiting-375')
   })
 
