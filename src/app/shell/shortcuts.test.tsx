@@ -8,6 +8,7 @@ import { AppShell } from '@/app/shell/AppShell'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Avatar } from '@/ui/Avatar'
 
+vi.mock('@/features/capture/CaptureSheet', () => ({ default: () => <div role="dialog" aria-label="Capture" /> }))
 vi.mock('@/features/search/api', () => ({ searchAll: () => Promise.resolve([]) }))
 
 const signedIn: SessionState = { status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }
@@ -61,7 +62,7 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
     expect(await within(dlg).findByText('Actions')).toBeInTheDocument()
     const text = within(dlg).getAllByRole('option').map(r => r.textContent)
-    expect(text).toEqual(expect.arrayContaining(['New RFQGo to intakeN', 'Capture a message or photoC', 'Go to TodayG T']))
+    expect(text).toEqual(expect.arrayContaining(['New RFQGo to intakeN', 'CaptureActionC', 'Go to TodayG T']))
   })
 
   it('N opens intake, C opens the capture surface, G then T goes to Today', async () => {
@@ -73,7 +74,8 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     press('t')
     expect(screen.getByTestId('where').textContent).toBe('/today')
     press('c')
-    expect(screen.getByTestId('where').textContent).toBe('/rfqs/new')
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByTestId('where').textContent).toBe('/today')
   })
 
   it('T alone does nothing, and typing in a field never triggers a shortcut', async () => {

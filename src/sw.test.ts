@@ -8,12 +8,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const SUPABASE = 'https://yafbphagorydbitfgfmg.supabase.co'
 const ORIGIN = 'https://qtechcrm.vercel.app'
 
-type Matcher = (ctx: { request: { mode: string; url: string }; url: URL }) => boolean
-const registerRoute = vi.fn<(m: Matcher, h: unknown) => void>()
+type Matcher = (ctx: { request: { mode: string; url: string; method?: string }; url: URL }) => boolean
+const registerRoute = vi.fn<(m: Matcher, h: unknown, method?: string) => void>()
 const precacheAndRoute = vi.fn()
 const listeners: string[] = []
 
-vi.mock('workbox-routing', () => ({ registerRoute: (m: Matcher, h: unknown) => registerRoute(m, h) }))
+vi.mock('workbox-routing', () => ({ registerRoute: (m: Matcher, h: unknown, method?: string) => registerRoute(m, h, method) }))
 vi.mock('workbox-precaching', () => ({
   precacheAndRoute: (m: unknown) => precacheAndRoute(m),
   cleanupOutdatedCaches: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('workbox-precaching', () => ({
 }))
 vi.mock('workbox-core', () => ({ clientsClaim: vi.fn() }))
 
-const ctx = (url: string, mode: string) => ({ request: { mode, url }, url: new URL(url) })
+const ctx = (url: string, mode: string) => ({ request: { mode, url, method: 'GET' }, url: new URL(url) })
 
 beforeEach(async () => {
   vi.resetModules()
@@ -42,26 +42,40 @@ describe('service worker: nothing from Supabase is cached', () => {
     expect(precacheAndRoute.mock.calls[0][0]).toEqual([{ url: 'index.html', revision: 'x' }])
   })
 
-  it('registers exactly one runtime route: the app-shell navigation fallback', () => {
-    expect(registerRoute).toHaveBeenCalledTimes(1)
+  it('registers exactly two routes: the app-shell navigation fallback and the share-target POST (R22)', () => {
+    expect(registerRoute).toHaveBeenCalledTimes(2)
     expect(registerRoute.mock.calls[0][1]).toEqual({ shell: '/index.html' })
+    expect(registerRoute.mock.calls[0][2]).toBeUndefined()
+    expect(registerRoute.mock.calls[1][2]).toBe('POST')
   })
 
-  it('that route never matches a request to the Supabase origin (REST, auth, storage, functions, even navigation)', () => {
-    const match = registerRoute.mock.calls[0][0]
-    for (const path of ['/rest/v1/rfqs?select=*', '/auth/v1/token?grant_type=password', '/storage/v1/object/sign/quotes/a.pdf', '/functions/v1/admin-users']) {
-      for (const mode of ['cors', 'same-origin', 'no-cors', 'navigate']) {
-        expect(match(ctx(SUPABASE + path, mode))).toBe(false)
+  it('neither route ever matches a request to the Supabase origin (REST, auth, storage, functions, any method or mode)', () => {
+    for (const [match] of registerRoute.mock.calls) {
+      for (const path of ['/rest/v1/rfqs?select=*', '/auth/v1/token?grant_type=password', '/storage/v1/object/sign/quotes/a.pdf', '/functions/v1/admin-users', '/capture']) {
+        for (const mode of ['cors', 'same-origin', 'no-cors', 'navigate']) {
+          for (const method of ['GET', 'POST']) {
+            expect(match({ request: { mode, url: SUPABASE + path, method } as never, url: new URL(SUPABASE + path) })).toBe(false)
+          }
+        }
       }
     }
   })
 
-  it('matches only same-origin page navigations without a file extension', () => {
+  it('the shell route matches only same-origin page navigations without a file extension', () => {
     const match = registerRoute.mock.calls[0][0]
     expect(match(ctx(ORIGIN + '/rfqs/123', 'navigate'))).toBe(true)
     expect(match(ctx(ORIGIN + '/rfqs/123', 'cors'))).toBe(false)
     expect(match(ctx(ORIGIN + '/assets/app.js', 'navigate'))).toBe(false)
     expect(match(ctx('https://example.com/rfqs', 'navigate'))).toBe(false)
+  })
+
+  it('the share route matches only a same-origin POST to /capture', () => {
+    const match = registerRoute.mock.calls[1][0]
+    const req = (url: string, method: string) => ({ request: { mode: 'navigate', url, method } as never, url: new URL(url) })
+    expect(match(req(ORIGIN + '/capture', 'POST'))).toBe(true)
+    expect(match(req(ORIGIN + '/capture', 'GET'))).toBe(false)
+    expect(match(req(ORIGIN + '/rfqs', 'POST'))).toBe(false)
+    expect(match(req('https://example.com/capture', 'POST'))).toBe(false)
   })
 
   it('has no fetch listener of its own (only the precache router, which answers listed files)', () => {

@@ -32,6 +32,8 @@ const MyDetailsPage = lazy(() => import('@/features/settings/MyDetailsPage').the
 const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfilePage').then(m => ({ default: m.CompanyProfilePage })))
 /** New RFQ (R05): its own route, so it works under whichever screen owns the rest of /rfqs. */
 const IntakeScreen = lazy(() => import('@/features/rfqs/IntakeScreen'))
+/** The Android share target and sign-in return point (R22): opens the Capture sheet. */
+const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
 const rfqsItem = navItems.find(i => i.key === 'rfqs')
 
 /** Dev builds only: the component gallery (U09). Dead code in production. */
@@ -61,6 +63,14 @@ export function AppRoutes() {
         <Route element={<AppShell />}>
           <Route index element={<RoleLanding />} />
           <Route path="no-access" element={<NoAccessPage />} />
+          <Route
+            path="capture"
+            element={
+              <Suspense fallback={null}>
+                <CaptureRoute />
+              </Suspense>
+            }
+          />
           <Route path="settings" element={<SettingsLayout />}>
             <Route index element={<SettingsHome />} />
             <Route

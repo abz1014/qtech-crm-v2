@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, CalendarCheck, ClipboardPaste, Plus } from 'lucide-react'
+import { Building2, CalendarCheck, Import, Plus } from 'lucide-react'
 import { navItemsForRole } from '@/app/navConfig'
+import { CaptureContext } from '@/app/capture/useCapture'
 import { PaletteContext, type PaletteApi } from '@/app/palette/usePalette'
 import { CommandPalette } from '@/ui/CommandPalette'
 import { Kbd } from '@/ui/Kbd'
 import { filterItems, type PaletteItem, type PaletteSource } from '@/ui/paletteSources'
 
-/** Where the shortcut actions go. Capture (a pasted message or photo) is part of intake today, so both open it. */
+/** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
 const INTAKE_ROUTE = '/rfqs/new'
 const TODAY_ROUTE = '/today'
 
@@ -33,6 +34,7 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
   const [open, setOpen] = useState(false)
   const [extra, setExtra] = useState<PaletteSource[]>([])
   const seq = useRef(0)
+  const openCapture = useContext(CaptureContext)?.openCapture
 
   const register = useCallback((source: PaletteSource) => {
     const tagged = { ...source, id: `${source.id}#${seq.current++}` }
@@ -60,12 +62,12 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
   const actions = useMemo<PaletteSource>(() => {
     const items: PaletteItem[] = [
       { id: 'new-rfq', label: 'New RFQ', meta: 'Go to intake', icon: Plus, shortcut: ['N'], href: INTAKE_ROUTE },
-      { id: 'capture', label: 'Capture a message or photo', icon: ClipboardPaste, shortcut: ['C'], href: INTAKE_ROUTE },
+      { id: 'capture', label: 'Capture', meta: 'Action', icon: Import, shortcut: ['C'], onSelect: () => openCapture?.() },
       { id: 'go-today', label: 'Go to Today', icon: CalendarCheck, shortcut: ['G T'], href: TODAY_ROUTE },
       { id: 'new-company', label: 'New company', icon: Building2, href: '/companies?new=1' },
     ]
     return { id: 'actions', group: 'Actions', order: 90, idle: () => items }
-  }, [])
+  }, [openCapture])
 
   useEffect(() => {
     let armedAt = 0
@@ -78,9 +80,12 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
       }
       const armed = Date.now() - armedAt < 1000
       armedAt = 0
-      if (k === 'n' || k === 'c') {
+      if (k === 'n') {
         e.preventDefault()
         navigate(INTAKE_ROUTE)
+      } else if (k === 'c' && openCapture) {
+        e.preventDefault()
+        openCapture()
       } else if (k === 't' && armed) {
         e.preventDefault()
         navigate(TODAY_ROUTE)
@@ -88,7 +93,7 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [navigate])
+  }, [navigate, openCapture])
 
   const sources = useMemo(() => [...extra, actions, goTo], [extra, actions, goTo])
   const api = useMemo<PaletteApi>(() => ({ open: () => setOpen(true), register }), [register])

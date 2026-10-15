@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { navItemsForRole } from '@/app/navConfig'
 import type { SessionUser } from '@/app/session'
-import { ChevronLeft, Search, X } from 'lucide-react'
+import { ChevronLeft, Import, Search, X } from 'lucide-react'
 import { useMobileBarConfig } from '@/app/shell/MobileBarContext'
 import { AccountMenu } from '@/app/shell/AccountMenu'
 import { Button } from '@/ui/Button'
@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
  * A screen can ask for the back / close form through useMobileBar(): chevron-left or x, its own title, and one
  * slot on the right (g2-login-team-settings phone frames).
  */
-export function MobileBar({ user, title, onSearch }: { user: SessionUser; title: string; onSearch?: () => void }) {
+export function MobileBar({ user, title, onSearch, onCapture }: { user: SessionUser; title: string; onSearch?: () => void; onCapture?: () => void }) {
   const navigate = useNavigate()
   const config = useMobileBarConfig()
   const lead = config?.back ?? config?.close
@@ -46,6 +46,11 @@ export function MobileBar({ user, title, onSearch }: { user: SessionUser; title:
       {/* Not a heading: every screen draws its own h1, and two h1s on a phone is wrong. */}
       <p className="flex-1 truncate text-lg font-semibold tracking-snug">{config?.title ?? title}</p>
       {config?.action ?? <Button variant="quiet" size="touch" icon={Search} aria-label="Search" onClick={onSearch} />}
+      {onCapture ? (
+        <Button variant="primary" size="touch" icon={Import} onClick={onCapture}>
+          Capture
+        </Button>
+      ) : null}
       <AccountMenu user={user} touch />
     </header>
   )

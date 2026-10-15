@@ -11,6 +11,8 @@ import { usePalette } from '@/app/palette/usePalette'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
 import { MobileBarProvider } from '@/app/shell/MobileBarProvider'
 import { PwaPrompts } from '@/app/shell/PwaPrompts'
+import { CaptureProvider } from '@/app/capture/CaptureProvider'
+import { useCapture } from '@/app/capture/useCapture'
 import { TopBar } from '@/app/shell/TopBar'
 
 interface AppShellProps {
@@ -30,17 +32,20 @@ export function AppShell({ counts }: AppShellProps) {
   return (
     <ToastProvider>
       <PwaPrompts />
-      <PaletteHost role={session.user.role}>
-        <MobileBarProvider>
-          <Frame user={session.user} counts={counts} />
-        </MobileBarProvider>
-      </PaletteHost>
+      <CaptureProvider>
+        <PaletteHost role={session.user.role}>
+          <MobileBarProvider>
+            <Frame user={session.user} counts={counts} />
+          </MobileBarProvider>
+        </PaletteHost>
+      </CaptureProvider>
     </ToastProvider>
   )
 }
 
 function Frame({ user, counts }: { user: SessionUser; counts?: Partial<Record<NavKey, number>> }) {
   const palette = usePalette()
+  const { openCapture } = useCapture()
   useSearchPaletteSource()
   useOrdersPaletteSource()
   const { pathname } = useLocation()
@@ -60,8 +65,8 @@ function Frame({ user, counts }: { user: SessionUser; counts?: Partial<Record<Na
       >
         Skip to content
       </a>
-      <TopBar user={user} counts={counts} onSearch={palette.open} />
-      <MobileBar user={user} title={title} onSearch={palette.open} />
+      <TopBar user={user} counts={counts} onSearch={palette.open} onCapture={openCapture} />
+      <MobileBar user={user} title={title} onSearch={palette.open} onCapture={openCapture} />
       <main id="main" tabIndex={-1} className="min-h-0 overflow-y-auto focus:outline-none">
         <ErrorBoundary key={pathname} variant="inline">
           <Outlet />
