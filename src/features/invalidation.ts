@@ -47,6 +47,9 @@ export interface WriteVars {
   'clarification.relay': { rfqId: string }
   'attachment.add': { rfqId: string }
   'attachment.delete': { rfqId: string }
+  /** R19: issuing a quotation (or attaching its PDF) changes the RFQ page, the board and Today (quoted_on is stamped). */
+  'quotation.issue': { rfqId: string }
+  'quotation.pdf': { rfqId: string }
   /** R11/R16: a chase stamp on Today (customer ask, supplier chase, goods chase, payment reminder) or taking it back. */
   'today.chase': Record<string, never>
   'today.snooze': Record<string, never>
@@ -103,6 +106,8 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Files only change this RFQ's page (the list of files, the photos under answers, the signed links).
   'attachment.add': v => [qk.rfqs.detail(v.rfqId)],
   'attachment.delete': v => [qk.rfqs.detail(v.rfqId)],
+  'quotation.issue': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.today.all, qk.companies.all],
+  'quotation.pdf': v => [qk.rfqs.part(v.rfqId, 'quotations')],
   // A chase stamp changes the asked/chased fields the RFQ page, the board and the order screens read, and every Today read.
   'today.chase': () => [qk.today.all, qk.rfqs.all, qk.orders.all],
   // A snooze is read only by Today.

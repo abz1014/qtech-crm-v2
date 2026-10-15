@@ -179,6 +179,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'strip_words',             '',    'X',    'X',    'X'),    -- 0036 pure helper, all staff
   ('function', 'similar_enough',          '',    'X',    'X',    'X'),    -- 0036 pure helper, all staff
   ('function', 'supplier_item_memory',    '',    'X',    'X',    'X'),    -- s10 "supplier_item_memory()"
+  ('function', 'customer_price_memory',  '',    'X',    'X',    'X'),    -- R19 (0037): the two price chips of the issue-quotation dialog, all staff
   ('function', 'issue_quotation',         '',    'X',    'X',    'X'),    -- s10 "RPCs issue_quotation, issue_purchase_order, stamp_clarification_ask, stamp_supplier_chase"
   ('function', 'issue_purchase_order',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_clarification_ask', '',    'X',    'X',    'X'),    -- s10 (same row)
@@ -380,6 +381,7 @@ insert into probes values
   ('strip_words', '', 'X', $q$select public.strip_words('a b', '{a}')$q$),
   ('similar_enough', '', 'X', $q$select public.similar_enough('a b c', 'a b c', 0.45)$q$),
   ('supplier_item_memory', '', 'X', $q$select 1 from public.supplier_item_memory(array[@03], @13, null, 'Fixture item') where best_tier is not null$q$),
+  ('customer_price_memory', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.customer_price_memory(@15)) >= 0'),   -- R19: returns no rows for the fixture, so the probe also needs the RFQ to be visible (a deactivated user sees none)
   ('issue_quotation', '', 'X', 'select public.issue_quotation(@c3, @15)'),
   ('issue_purchase_order', '', 'X', 'select public.issue_purchase_order(@c4, @23)'),
   ('stamp_clarification_ask', '', 'X', 'select 1 from (select public.stamp_clarification_ask(array[@1d]) r) x where r > 0'),

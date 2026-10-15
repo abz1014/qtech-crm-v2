@@ -9,7 +9,7 @@ import { toRateTable } from '@/features/rfqs/lib'
 import { RfqHeaderBlock } from '@/features/rfqs/RfqHeaderBlock'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
 import { SupplierReplies } from '@/features/rfqs/SupplierReplies'
-import { QuotationsSlot } from '@/features/rfqs/DetailSlots'
+import { QuotationsPanel } from '@/features/quotations/QuotationsPanel'
 import { ClarificationsPanel } from '@/features/rfqs/ClarificationsPanel'
 import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
 
@@ -19,7 +19,7 @@ import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
  * What is on the page: the header with its state chips and one-tap actions (mark bid sent, close or lose); the items
  * with every supplier's price side by side and the lowest marked (comparePrices, at today's rate); one inline reply row
  * per supplier asked (a price per item, the currency pre-filled and never typed, lead time, stock, one-tap "can't quote"
- * with a reason, one-tap chase); the questions for the customer (R09), the files (R10), and a clearly marked slot for the quotations (R19).
+ * with a reason, one-tap chase); the questions for the customer (R09), the files (R10), and the quotations with the Issue quotation dialog (R19).
  *
  * FE-2 entry burden, listed for the commit:
  *   required     a price (greater than zero) for each item the supplier quoted. Nothing else is required.
@@ -144,7 +144,7 @@ export default function RfqDetailScreen() {
         </div>
         <aside className="grid min-w-0 gap-6" aria-label="Questions and quotations">
           <ClarificationsPanel rfq={rfq} inquiries={inquiries.data ?? []} />
-          <QuotationsSlot rfqId={rfq.id} />
+          <QuotationsPanel rfq={rfq} inquiries={inquiries.data ?? []} />
           <AttachmentsPanel rfqId={rfq.id} />
         </aside>
       </div>

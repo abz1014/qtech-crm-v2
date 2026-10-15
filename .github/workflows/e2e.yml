@@ -1,7 +1,7 @@
 name: E2E
 
 # ONE Supabase stack boot and ONE build for every database-backed suite (auth, companies, rfq-board,
-# rfq-intake, rfq-detail, today, search, rfq-memory). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
+# rfq-intake, rfq-detail, rfq-quotation, today, search, rfq-memory). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
 # once and runs only those, one after another, with a database reset between them.
 # Pushes to main and manual runs (Actions, E2E, Run workflow) run every suite. See docs/CI.md.
 # No pull_request trigger: a push to a PR branch already runs this, and a second run doubled the minutes.
@@ -37,6 +37,7 @@ jobs:
       rfq_board: ${{ steps.final.outputs.rfq_board }}
       rfq_intake: ${{ steps.final.outputs.rfq_intake }}
       rfq_detail: ${{ steps.final.outputs.rfq_detail }}
+      rfq_quotation: ${{ steps.final.outputs.rfq_quotation }}
       rfq_memory: ${{ steps.final.outputs.rfq_memory }}
       today: ${{ steps.final.outputs.today }}
       search: ${{ steps.final.outputs.search }}
@@ -68,6 +69,8 @@ jobs:
             rfq_detail:
               - 'e2e/rfqs/detail.spec.ts'
               - 'e2e/rfqs/clarifications.spec.ts'
+            rfq_quotation:
+              - 'e2e/rfqs/quotation.spec.ts'
             rfq_memory:
               - 'e2e/rfqs/memory.spec.ts'
             today:
@@ -82,6 +85,7 @@ jobs:
           S_RFQ_BOARD: ${{ steps.filter.outputs.rfq_board }}
           S_RFQ_INTAKE: ${{ steps.filter.outputs.rfq_intake }}
           S_RFQ_DETAIL: ${{ steps.filter.outputs.rfq_detail }}
+          S_RFQ_QUOTATION: ${{ steps.filter.outputs.rfq_quotation }}
           S_RFQ_MEMORY: ${{ steps.filter.outputs.rfq_memory }}
           S_TODAY: ${{ steps.filter.outputs.today }}
           S_SEARCH: ${{ steps.filter.outputs.search }}
@@ -99,6 +103,8 @@ jobs:
           echo "rfq_intake=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_RFQ_DETAIL; if [ "$all" = "true" ]; then v=true; fi
           echo "rfq_detail=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_RFQ_QUOTATION; if [ "$all" = "true" ]; then v=true; fi
+          echo "rfq_quotation=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_RFQ_MEMORY; if [ "$all" = "true" ]; then v=true; fi
           echo "rfq_memory=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_TODAY; if [ "$all" = "true" ]; then v=true; fi
@@ -208,6 +214,20 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=rfq-detail REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-detail npx playwright test --project=rfq-detail --output=test-results/rfq-detail
+
+      - name: Reset database (rfq-quotation)
+        if: ${{ !cancelled() && needs.changes.outputs.rfq_quotation == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: PDF tools (poppler, to read and render the stored quotation PDFs)
+        if: ${{ !cancelled() && needs.changes.outputs.rfq_quotation == 'true' }}
+        run: command -v pdftoppm && command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils)
+
+      - name: Playwright (rfq-quotation project)
+        if: ${{ !cancelled() && needs.changes.outputs.rfq_quotation == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=rfq-quotation REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-quotation npx playwright test --project=rfq-quotation --output=test-results/rfq-quotation
 
       - name: Reset database (rfq-memory)
         if: ${{ !cancelled() && needs.changes.outputs.rfq_memory == 'true' }}

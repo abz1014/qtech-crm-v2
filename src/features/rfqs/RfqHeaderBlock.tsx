@@ -18,6 +18,7 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader } from '@/features/rfqs/api'
 import { useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
+import { IssueQuotationButton } from '@/features/quotations/QuotationsPanel'
 import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, type CloseReason } from '@/features/rfqs/lib'
 
 /*
@@ -126,8 +127,10 @@ export function RfqHeaderBlock({ rfq }: { rfq: RfqHeader }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* data-slot="issue-quotation": R19 puts the Issue quotation action here, beside Mark bid sent. */}
-          <span data-slot="issue-quotation" className="contents" />
+          {/* data-slot="issue-quotation" (R19): the Issue quotation action, beside Mark bid sent. */}
+          <span data-slot="issue-quotation" className="contents">
+            {open ? <IssueQuotationButton rfqId={rfq.id} /> : null}
+          </span>
           {open && !bidSent ? (
             <Button variant="primary" icon={CalendarCheck} onClick={() => void markBidSent()} busy={bid.isPending} busyLabel="Marking">
               Mark bid sent
