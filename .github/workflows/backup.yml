@@ -73,10 +73,12 @@ jobs:
           set -euo pipefail
           host="$(bash scripts/backup/find-pooler.sh)"
           echo "::add-mask::$host"
-          echo "PGHOST=$host" >> "$GITHUB_ENV"
-          echo "PGPORT=5432" >> "$GITHUB_ENV"
-          echo "PGUSER=postgres.$SUPABASE_PROJECT_REF" >> "$GITHUB_ENV"
-          echo "PGSSLMODE=require" >> "$GITHUB_ENV"
+          {
+            echo "PGHOST=$host"
+            echo "PGPORT=5432"
+            echo "PGUSER=postgres.$SUPABASE_PROJECT_REF"
+            echo "PGSSLMODE=require"
+          } >> "$GITHUB_ENV"
 
       - name: Dump the live database
         run: |
@@ -164,9 +166,9 @@ jobs:
             v="$(basename "$f" | sed -E 's/^([0-9]+)_.*/\1/')"
             grep -qx "$v" "$RUNNER_TEMP/drill/migrations.txt" || { echo "not live yet, skipped: $(basename "$f")"; rm "$f"; }
           done
-          for v in $(cat "$RUNNER_TEMP/drill/migrations.txt"); do
-            ls supabase/migrations/${v}_*.sql > /dev/null 2>&1 || { echo "::error::live has migration $v that main does not"; exit 1; }
-          done
+          while read -r v; do
+            compgen -G "supabase/migrations/${v}_*.sql" > /dev/null || { echo "::error::live has migration $v that main does not"; exit 1; }
+          done < "$RUNNER_TEMP/drill/migrations.txt"
 
       - name: Start the local Supabase stack
         run: |
