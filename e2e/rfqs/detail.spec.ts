@@ -337,7 +337,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await expect(card.getByText('Mr. Li Wei li@hengxin.example')).toBeVisible()
     await expect(card.locator('pre')).toContainText('Subject: RFQ-')
     // Another supplier: "Show text" opens its card.
-    await page.getByRole('button', { name: `Show the chase text for ${s.usd.name}` }).click()
+    await page.getByRole('button', { name: `Show text, ${s.usd.name}` }).click()
     await expect(page.locator(`[data-chase-card="${s.usd.id}"]`)).toBeVisible()
   })
 

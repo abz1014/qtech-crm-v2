@@ -74,7 +74,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, onFloat }: Props)
                 <div className="flex flex-wrap items-center gap-2">
                   <ChaseNow rfq={rfq} items={items} inquiry={i} />
                   {open?.id !== i.id ? (
-                    <Button size="sm" variant="quiet" onClick={() => setPicked(i.id)} aria-label={`Show the chase text for ${i.supplierName}`}>
+                    <Button size="sm" variant="quiet" onClick={() => setPicked(i.id)} aria-label={`Show text, ${i.supplierName}`}>
                       Show text
                     </Button>
                   ) : null}
