@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Building2, ChevronLeft, Ellipsis, FilePlus2, GitMerge, History, Pencil, Plus, Send, Trash2 } from 'lucide-react'
+import { Building2, ChevronLeft, Ellipsis, FilePlus2, GitMerge, Link2, Pencil, Plus, Send, Trash2 } from 'lucide-react'
 import {
   useCompany,
   useCompanyContacts,
@@ -10,7 +10,7 @@ import {
   useRemoveContact,
   useSupplierRecordView,
 } from '@/features/companies/hooks'
-import type { CompanyDetail, CompanyRole, ContactRow, SiteRow } from '@/features/companies/api'
+import type { CompanyDetail, ContactRow, SiteRow } from '@/features/companies/api'
 import { ContactDialog, EditCompanyDialog, SiteDialog } from '@/features/companies/CompanyDialogs'
 import { ConfirmRemove, Fine, KeyValue, Panel } from '@/features/companies/CompanyParts'
 import { removeErrorMessage } from '@/features/companies/removeError'
@@ -18,6 +18,9 @@ import { BrandsPanel } from '@/features/companies/BrandsPanel'
 import { MergeCompanyDialog } from '@/features/companies/MergeCompanyDialog'
 import { SitesPanel } from '@/features/companies/SitesPanel'
 import { SupplierPanel } from '@/features/companies/SupplierPanel'
+import { companyMeta } from '@/features/companies/companyMeta'
+import { earliestYear } from '@/features/companies/supplierRecord'
+import { copyToClipboard } from '@/lib/clipboard'
 import { OpenWithThem } from '@/features/companies/SupplierRecordPanels'
 import { useSession } from '@/app/session'
 import { Banner } from '@/ui/Banner'
@@ -108,10 +111,6 @@ function PageSkeleton() {
   )
 }
 
-function plural(n: number, one: string, many = `${one}s`) {
-  return `${n} ${n === 1 ? one : many}`
-}
-
 function Loaded({ company }: { company: CompanyDetail }) {
   const navigate = useNavigate()
   const session = useSession()
@@ -120,7 +119,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
 
   const sites = useCompanySites(company.id)
   const contacts = useCompanyContacts(company.id)
-  const history = useCompanyHistory(company.id)
+  const history = useCompanyHistory(company.id, session.status === 'signed-in' && session.user.role !== 'engineer')
   const money = useCompanyMoney(company.id, isAdmin)
   const record = useSupplierRecordView(company.id, company.isSupplier)
 
@@ -140,9 +139,31 @@ function Loaded({ company }: { company: CompanyDetail }) {
   const customerSide = company.isCustomer || !company.isSupplier
   const rfqCount = history.data?.rfqs.length ?? 0
   const orderCount = history.data?.orders.length ?? 0
-  const added = company.legacyImported
-    ? 'Imported from the old CRM'
-    : `Added ${new Date(company.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'Asia/Karachi' })}`
+  const lowData = (record.query.data?.inquiries.length ?? 0) < 3
+  const sinceYear = earliestYear(record.query.data, company.createdAt)
+  const meta = companyMeta({
+    city: company.city,
+    country: company.country,
+    isSupplier: supplierSide,
+    isCustomer: company.isCustomer,
+    legacyImported: company.legacyImported,
+    createdAt: company.createdAt,
+    lowData,
+    currency: record.view?.open.currency ?? null,
+    sinceYear,
+    counts: history.data ? { sites: sites.data?.length ?? 0, rfqs: rfqCount, orders: orderCount } : null,
+  })
+  const customerSince = (() => {
+    const years = [
+      ...(history.data?.rfqs.map(r => r.receivedOn) ?? []),
+      ...(history.data?.orders.map(o => o.orderedOn).filter((d): d is string => Boolean(d)) ?? []),
+    ].map(d => Number(d.slice(0, 4)))
+    return years.length > 0 ? Math.min(...years) : Number(company.createdAt.slice(0, 4))
+  })()
+  const copyLink = async () => {
+    const ok = await copyToClipboard(window.location.href)
+    toast({ title: ok ? 'Link copied' : "Couldn't copy the link", body: ok ? company.name : 'Copy it from the address bar.', tone: ok ? 'success' : 'danger' })
+  }
 
   // A supplier-only company has no plants to list until one is added; a customer always shows its sites.
   const showSites = company.isCustomer || !company.isSupplier || (sites.data?.length ?? 0) > 0 || sites.isPending
@@ -152,7 +173,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
     <Shell>
       <div className="grid gap-6">
         <header className="grid gap-2">
-          <Breadcrumb items={[{ label: 'Companies', to: '/companies' }, { label: company.name }]} />
+          <Breadcrumb links="primary" items={[{ label: 'Companies', to: '/companies' }, { label: company.name }]} />
           <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
             <div className="grid min-w-0 gap-2">
               <h1 className="flex flex-wrap items-baseline gap-3 text-2xl font-semibold tracking-tight text-balance">
@@ -160,13 +181,16 @@ function Loaded({ company }: { company: CompanyDetail }) {
                 {company.role ? <StatusBadge dimension="company-role" value={company.role} className="translate-y-[-2px]" /> : null}
               </h1>
               <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-2">
-                {company.country ? <span>{company.country}</span> : null}
-                {customerSide && history.data ? (
-                  <span className="text-fg-muted">
-                    {plural(sites.data?.length ?? 0, 'site')} · {plural(rfqCount, 'RFQ')} · {plural(orderCount, 'order')}
-                  </span>
-                ) : null}
-                <span className="text-fg-muted">{added}</span>
+                {meta.map((m, i) => (
+                  <Fragment key={m}>
+                    {i > 0 ? (
+                      <span aria-hidden="true" className="text-fg-muted">
+                        ·
+                      </span>
+                    ) : null}
+                    <span className={i === 0 ? undefined : 'text-fg-muted'}>{m}</span>
+                  </Fragment>
+                ))}
               </p>
             </div>
             <div className="flex flex-none items-center gap-2">
@@ -176,18 +200,21 @@ function Loaded({ company }: { company: CompanyDetail }) {
               <Button icon={Pencil} onClick={() => setDialog('edit')}>
                 Edit
               </Button>
-              {isAdmin ? (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="quiet" icon={Ellipsis} aria-label="More actions" />
-                  </PopoverTrigger>
-                  <PopoverContent variant="menu" align="end">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="quiet" icon={Ellipsis} aria-label="More actions" />
+                </PopoverTrigger>
+                <PopoverContent variant="menu" align="end">
+                  <MenuItem icon={Link2} onClick={() => void copyLink()}>
+                    Copy link to this company
+                  </MenuItem>
+                  {isAdmin ? (
                     <MenuItem icon={GitMerge} onClick={() => setDialog('merge')}>
                       Merge into another company
                     </MenuItem>
-                  </PopoverContent>
-                </Popover>
-              ) : null}
+                  ) : null}
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </header>
@@ -209,15 +236,6 @@ function Loaded({ company }: { company: CompanyDetail }) {
                 }}
               />
             ) : null}
-            <Panel title="History" meta="Changes to this company">
-              <div className="grid gap-1 px-5 py-6 text-sm">
-                <p className="inline-flex items-center gap-2 font-medium text-fg">
-                  <History aria-hidden="true" className="size-4 text-fg-muted" />
-                  Nothing to show yet.
-                </p>
-                <Fine>A timeline of edits, merges and notes on this company will appear here. Nothing needs typing for it to fill.</Fine>
-              </div>
-            </Panel>
           </div>
 
           <aside className="grid content-start gap-6" aria-label="Company details">
@@ -235,7 +253,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
             />
             {supplierSide ? <OpenWithThem view={record.view} loading={record.query.isPending} error={record.query.isError} onRetry={() => void record.query.refetch()} /> : null}
             {supplierSide || !company.isCustomer ? <BrandsPanel companyId={company.id} /> : null}
-            <RolesPanel company={company} />
+            {customerSide && !(supplierSide && !company.isCustomer) ? <RolesPanel company={company} since={customerSince} /> : null}
             {isAdmin && money.data && money.data.orders > 0 ? (
               <Panel title="Money with them" meta="Admin only">
                 <div className="px-5 py-3">
@@ -367,6 +385,7 @@ function ContactsPanel({
                     />
                   </span>
                 </div>
+                {c.job_title ? <span className="text-xs text-fg-muted">{c.job_title}</span> : null}
                 {c.notes ? <span className="text-xs text-fg-muted">{c.notes}</span> : null}
                 {c.site_id && siteName.get(c.site_id) ? <span className="text-xs text-fg-muted">{siteName.get(c.site_id)}</span> : null}
                 {c.phone ? (
@@ -388,24 +407,21 @@ function ContactsPanel({
   )
 }
 
-const ROLE_SENTENCE: Record<CompanyRole, string> = {
-  customer: 'We have sent them a bid and have an order.',
-  supplier: 'We have asked them for prices or bought from them.',
-  both: 'We sell to them and buy from them.',
-  prospect: 'We have bid, with no order yet.',
-}
-
-function RolesPanel({ company }: { company: CompanyDetail }) {
+/** Roles (g2-company board 4): only drawn for a customer. "Customer since" is the year of the first RFQ or order. */
+function RolesPanel({ company, since }: { company: CompanyDetail; since: number }) {
   return (
     <Panel title="Roles">
       <div className="px-5 py-3">
         <KeyValue
           rows={[
-            { key: 'Customer', value: company.isCustomer ? <StatusBadge dimension="company-role" value={company.role === 'both' ? 'customer' : company.role ?? 'customer'} /> : <span className="text-fg-muted">No</span> },
-            { key: 'Supplier', value: company.isSupplier ? <StatusBadge dimension="company-role" value="supplier" /> : <span className="text-fg-muted">No</span> },
+            {
+              key: 'Customer',
+              value: <StatusBadge dimension="company-role" value={company.role === 'prospect' ? 'prospect' : 'customer'} />,
+            },
+            { key: 'Also a supplier?', value: company.isSupplier ? <span>Yes</span> : <span>No</span> },
+            { key: 'Customer since', value: <span className="num">{since}</span> },
           ]}
         />
-        <Fine className="pt-2">{company.role ? ROLE_SENTENCE[company.role] : 'No RFQ, enquiry or order yet. The role fills in by itself as you work.'}</Fine>
       </div>
     </Panel>
   )

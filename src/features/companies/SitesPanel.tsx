@@ -2,13 +2,13 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { MapPin, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useSession } from '@/app/session'
-import { NewOrderDialog } from '@/features/orders/NewOrderDialog'
 import type { CompanyHistory, SiteRow } from '@/features/companies/api'
+import { NewOrderDialog } from '@/features/orders/NewOrderDialog'
 import { ConfirmRemove, Fine, Panel } from '@/features/companies/CompanyParts'
 import { useRemoveSite } from '@/features/companies/hooks'
 import { removeErrorMessage } from '@/features/companies/removeError'
 import { businessToday } from '@/lib/dates'
-import { formatShortDate } from '@/lib/formatDay'
+import { formatDay, formatShortDate } from '@/lib/formatDay'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
@@ -30,12 +30,27 @@ interface Item {
   number: number
   href: string
   date: string | null
-  reference: string | null
+  what: string | null
+  moreItems: number
   state: string | null
-  extra: string | null
+  /** Order only: the goods state (Delivered...), the invoicing chip, and "Payment overdue" (which takes the invoicing chip's place). */
+  goods: string | null
   invoicing: string | null
+  paymentOverdue: boolean
   /** Orders only: the order's id, for "Repeat order" (O02). */
   orderId?: string
+  extra: string | null
+}
+
+/** Short words for why an RFQ was closed, as drawn beside the Closed chip ("no reply from customer"). */
+const CLOSED_WHY: Record<string, string> = {
+  competitor: 'chose a competitor',
+  price: 'price too high',
+  no_reply_to_clarification: 'no reply from customer',
+  customer_cancelled: 'customer cancelled',
+  could_not_source: 'could not source',
+  we_were_late: 'we were too late',
+  other: 'closed, another reason',
 }
 
 function itemsFor(history: CompanyHistory, siteId: string | null): Item[] {
@@ -47,10 +62,20 @@ function itemsFor(history: CompanyHistory, siteId: string | null): Item[] {
       number: r.number,
       href: `/rfqs/${r.id}`,
       date: r.receivedOn,
-      reference: r.customerRef,
+      what: r.what,
+      moreItems: r.moreItems,
       state: r.outcome,
-      extra: r.orderNumber ? `became ${orderRef(r.orderNumber)}` : r.dueOn ? `bid due ${formatShortDate(r.dueOn)}` : null,
+      goods: null,
       invoicing: null,
+      paymentOverdue: false,
+      extra:
+        r.outcome === 'won' && r.orderNumber
+          ? `became ${orderRef(r.orderNumber)}`
+          : r.outcome === 'closed'
+            ? (CLOSED_WHY[r.closeReason ?? ''] ?? null)
+            : r.dueOn
+              ? `bid due ${formatDay(r.dueOn)}`
+              : null,
     }))
   const orders: Item[] = history.orders
     .filter(o => o.siteId === siteId)
@@ -60,11 +85,14 @@ function itemsFor(history: CompanyHistory, siteId: string | null): Item[] {
       number: o.number,
       href: `/orders/${o.id}`,
       date: o.orderedOn,
-      reference: null,
+      what: o.what,
+      moreItems: o.moreItems,
       state: o.lifecycle,
-      extra: null,
+      goods: o.goods,
       invoicing: o.invoicing,
+      paymentOverdue: o.paymentOverdue === true,
       orderId: o.id,
+      extra: null,
     }))
   return [...rfqs, ...orders].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
 }
@@ -89,10 +117,6 @@ export function SitesPanel({
   const today = businessToday()
   const { toast } = useToast()
   const remove = useRemoveSite(companyId)
-  const session = useSession()
-  const canRepeat = session.status === 'signed-in' && session.user.role !== 'engineer'
-  /** The order a "Repeat order" was tapped on (O02): its dialog opens with that order already chosen. */
-  const [repeating, setRepeating] = useState<string | null>(null)
   const [removing, setRemoving] = useState<SiteRow | null>(null)
   const [removeError, setRemoveError] = useState<string | null>(null)
   const cancelRemove = () => {
@@ -124,37 +148,52 @@ export function SitesPanel({
         ),
         width: 132,
       },
-      { id: 'custref', header: 'Their reference', cell: r => (r.reference ? <span className="num">{r.reference}</span> : <span className="text-fg-muted">None</span>), hideBelowMd: true },
-      { id: 'date', header: 'Date', kind: 'date', value: r => r.date, cell: r => <span className="num">{r.date ? formatShortDate(r.date, today) : 'No date'}</span>, width: 120 },
+      {
+        id: 'what',
+        header: 'What',
+        value: r => r.what,
+        cell: r =>
+          r.what ? (
+            <span title={r.what}>
+              {r.what}
+              {r.moreItems > 0 ? <span className="ml-1 text-fg-muted">{`+ ${r.moreItems} more`}</span> : null}
+            </span>
+          ) : (
+            <span className="text-fg-muted">No items yet</span>
+          ),
+      },
+      { id: 'date', header: 'Date', kind: 'date', value: r => r.date, cell: r => <span className="num">{r.date ? formatShortDate(r.date, today) : 'No date'}</span>, width: 104 },
       {
         id: 'state',
         header: 'State',
+        width: 330,
         cell: r =>
-          r.state ? (
+          r.kind === 'order' ? (
+            <span className="inline-flex flex-wrap items-center gap-[6px]">
+              {r.state === 'cancelled' ? <StatusBadge dimension="order" value="cancelled" /> : r.goods ? <StatusBadge dimension="goods" value={r.goods} /> : null}
+              {r.paymentOverdue ? (
+                <StatusBadge dimension="payment" value="overdue" label="Payment overdue" />
+              ) : r.invoicing ? (
+                <StatusBadge dimension="invoicing" value={r.invoicing} />
+              ) : null}
+            </span>
+          ) : r.state ? (
             <span className="inline-flex flex-wrap items-center gap-2">
-              <StatusBadge dimension={r.kind === 'rfq' ? 'rfq-outcome' : 'order'} value={r.state} />
-              {r.invoicing ? <StatusBadge dimension="invoicing" value={r.invoicing} /> : null}
+              <StatusBadge dimension="rfq-outcome" value={r.state} />
               {r.extra ? <span className="text-xs text-fg-muted">{r.extra}</span> : null}
             </span>
           ) : null,
       },
-      ...(canRepeat
-        ? ([
-            {
-              id: 'repeat',
-              header: 'Repeat order',
-              width: 150,
-              cell: (r: Item) =>
-                r.orderId ? (
-                  <Button size="sm" variant="quiet" icon={RefreshCw} aria-label={`Repeat order ${orderRef(r.number)}`} onClick={() => setRepeating(r.orderId as string)}>
-                    Repeat order
-                  </Button>
-                ) : null,
-            },
-          ] satisfies Column<Item>[])
-        : []),
+      {
+        id: 'repeat',
+        header: 'Row actions',
+        hiddenHeader: true,
+        width: 150,
+        cell: r =>
+          r.kind === 'order' && r.orderId ? <RepeatOrderSlot orderId={r.orderId} orderNumber={r.number} /> : null,
+      },
     ],
-    [today, canRepeat],
+    [today],
   )
 
   const unfiled = history ? itemsFor(history, null) : []
@@ -218,8 +257,30 @@ export function SitesPanel({
           {unfiled.length > 0 ? <SiteBlock name="Not filed under a site" items={unfiled} columns={columns} muted /> : null}
         </div>
       )}
-      {repeating ? <NewOrderDialog sourceId={repeating} onClose={() => setRepeating(null)} /> : null}
     </Panel>
+  )
+}
+
+/**
+ * "Repeat order" (g2-company board 4): starts a new order from this one, filed under the same site. The action itself is O02
+ * (create_repeat_order, built by another worker): until it lands the slot is drawn as the design has it, but disabled and
+ * labelled. Replace the disabled button with the real action when O02 merges. Tracked in docs/design/PARITY_AUDIT.md (D-83).
+ */
+/**
+ * "Repeat order" on an order row (O02; D-83): opens the New order dialog with this order already chosen, so a repeat is Create order and
+ * nothing else. Engineers are not offered it: a repeat copies prices.
+ */
+function RepeatOrderSlot({ orderId, orderNumber }: { orderId: string; orderNumber: number }) {
+  const session = useSession()
+  const [open, setOpen] = useState(false)
+  if (session.status !== 'signed-in' || session.user.role === 'engineer') return null
+  return (
+    <>
+      <Button variant="quiet" size="sm" icon={RefreshCw} aria-label={`Repeat order ${orderRef(orderNumber)}`} onClick={() => setOpen(true)}>
+        Repeat order
+      </Button>
+      {open ? <NewOrderDialog sourceId={orderId} onClose={() => setOpen(false)} /> : null}
+    </>
   )
 }
 
@@ -268,7 +329,10 @@ function SiteBlock({
       {items.length > 0 ? (
         <DataTable label={`RFQs and orders at ${name}`} columns={columns} rows={items} getRowId={r => r.key} density="compact" />
       ) : (
-        <p className="px-5 pb-4 pl-[52px] text-xs text-fg-muted">No RFQs or orders for this site yet. Start one and it is filed here.</p>
+        <div className="grid gap-1 px-5 pb-5 pt-4 text-sm">
+          <p className="font-medium text-fg">No RFQs or orders for this site yet.</p>
+          <p className="text-fg-2">Start one from the button above and it will be filed under this site.</p>
+        </div>
       )}
     </section>
   )
