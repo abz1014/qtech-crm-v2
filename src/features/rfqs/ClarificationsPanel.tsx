@@ -15,7 +15,7 @@ import { useToast } from '@/ui/useToast'
 import { Panel } from '@/features/companies/CompanyParts'
 import type { ClarificationRow, InquiryRow, RfqHeader } from '@/features/rfqs/api'
 import { AddQuestions, QuestionRow, WithdrawnRow } from '@/features/rfqs/ClarificationParts'
-import { useClarifications, useFileUrls, useRfqAttachments, useSetInquiryRelayed, useStampClarificationAsk } from '@/features/rfqs/hooks'
+import { useClarifications, useFileUrls, useMySignature, useRfqAttachments, useSetInquiryRelayed, useStampClarificationAsk } from '@/features/rfqs/hooks'
 import {
   agoText,
   answersToRelay,
@@ -61,7 +61,8 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
   const open = groups.toAsk.length + groups.asked.length
   const options = inquiries.map(i => ({ id: i.id, name: i.supplierName }))
 
-  const signature = { name: user?.name ?? 'Q-Tech Solutions', company: 'Q-Tech Solutions' }
+  const mine = useMySignature(user?.id)
+  const signature = { name: user?.name ?? 'Q-Tech Solutions', company: 'Q-Tech Solutions', jobTitle: mine.data?.jobTitle, phone: mine.data?.phone }
   const askText = (group: ClarificationRow[], repeat: boolean) => {
     const firsts = group.map(c => c.firstAskedAt).filter((x): x is string => Boolean(x)).sort()
     const ask = generateCustomerAsk({
