@@ -75,9 +75,9 @@ function PricePreview({ itemId, amount, currency, others, rates }: { itemId: str
   const usable = rate && rate.staleness !== 'unusable' && rate.ageDays <= 30
   if (!usable) {
     return (
-      <p className="flex flex-wrap items-center gap-1 text-xs text-fg-muted" data-preview="no-rate">
-        <Icon icon={Info} size="chip" />
-        {`No current ${currency} rate. You can save the reply and add the rate afterwards.`}
+      <p className="text-xs text-fg-muted" data-preview="no-rate">
+        <Icon icon={Info} size="chip" className="mr-1 inline-block align-[-2px]" />
+        {`No current ${currency} rate. You can save the reply and add the rate afterwards.`}{' '}
         <Link to="/settings/exchange-rates" className="underline underline-offset-2">
           Exchange rates
         </Link>

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Calendar, Building2, ChevronDown, Ellipsis, FileCheck2, FileText, MapPin, MessageCircle, Package, RotateCcw, UserRound, Users, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Calendar, CalendarCheck, Building2, ChevronDown, Ellipsis, FileCheck2, FileText, MapPin, MessageCircle, Package, RotateCcw, UserRound, Users, type LucideIcon } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
@@ -118,10 +118,16 @@ function useBidAndClose(rfq: RfqHeader) {
 }
 
 /** The menu items of "Bid and close". */
-function BidAndCloseItems({ rfq, actions }: { rfq: RfqHeader; actions: ReturnType<typeof useBidAndClose> }) {
+function BidAndCloseItems({ rfq, actions, onMarkWon }: { rfq: RfqHeader; actions: ReturnType<typeof useBidAndClose>; onMarkWon?: () => void }) {
   const bidSent = rfq.state?.bid_state === 'bid_sent' || rfq.state?.bid_state === 'quotation_expired'
   return (
     <>
+      {onMarkWon ? (
+        <>
+          <MenuItem onClick={onMarkWon}>Mark won</MenuItem>
+          <MenuSeparator />
+        </>
+      ) : null}
       <MenuItem hint="no PDF" disabled={bidSent} onClick={() => void actions.markBidSent(false)}>
         Mark bid sent
       </MenuItem>
@@ -141,12 +147,12 @@ function BidAndCloseItems({ rfq, actions }: { rfq: RfqHeader; actions: ReturnTyp
   )
 }
 
-function BidAndCloseMenu({ rfq, actions, trigger, label }: { rfq: RfqHeader; actions: ReturnType<typeof useBidAndClose>; trigger: React.ReactNode; label: string }) {
+function BidAndCloseMenu({ rfq, actions, trigger, label, onMarkWon }: { rfq: RfqHeader; actions: ReturnType<typeof useBidAndClose>; trigger: React.ReactNode; label: string; onMarkWon?: () => void }) {
   return (
     <Popover>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent variant="menu" align="end" className="min-w-[280px]" aria-label={label}>
-        <BidAndCloseItems rfq={rfq} actions={actions} />
+        <BidAndCloseItems rfq={rfq} actions={actions} onMarkWon={onMarkWon} />
       </PopoverContent>
     </Popover>
   )
@@ -212,6 +218,7 @@ export function RfqHeaderBlock({ rfq, hasPrices }: { rfq: RfqHeader; hasPrices: 
           actions={actions}
           label="More"
           trigger={<Button variant="quiet" size="touch" icon={Ellipsis} aria-label="More" disabled={!open} />}
+          onMarkWon={s?.outcome !== 'won' && liveOrders.length === 0 ? () => setWon(true) : undefined}
         />
       </div>
       <Breadcrumb className="max-md:hidden" items={[{ label: 'RFQs', to: '/rfqs' }, { label: ref, mono: true }]} />
@@ -245,6 +252,12 @@ export function RfqHeaderBlock({ rfq, hasPrices }: { rfq: RfqHeader; hasPrices: 
           <span data-slot="issue-quotation" className="contents">
             {open ? <IssueQuotationButton rfqId={rfq.id} disabled={!hasPrices} className="max-md:hidden" /> : null}
           </span>
+          {/* Mark bid sent in 1 tap, while the bid is open and not yet sent (FE-2). The Bid and close menu keeps the rest. Issuing a quotation also marks it sent. */}
+          {open && !bidSent ? (
+            <Button icon={CalendarCheck} onClick={() => void actions.markBidSent(false)} busy={actions.busy} busyLabel="Marking">
+              Mark bid sent
+            </Button>
+          ) : null}
           {/* data-slot="mark-won" (O01): Mark won opens the Create order dialog; once there is an order, the way to it. */}
           <span data-slot="mark-won" className="contents">
             {s?.outcome !== 'won' && liveOrders.length === 0 ? (
@@ -341,6 +354,9 @@ function scrollTo(slot: string) {
 export function RfqActionBar({ rfq, hasPrices, chaseSuppliers, chaseCustomer }: { rfq: RfqHeader; hasPrices: boolean; chaseSuppliers: number; chaseCustomer: number }) {
   const actions = useBidAndClose(rfq)
   const [, setIssue] = useIssueDialog()
+  const [, setWon] = useWonDialog()
+  const orders = useOrdersForRfq(rfq.id)
+  const canWin = (orders.data ?? []).filter(o => !o.cancelledOn).length === 0
   if ((rfq.state?.outcome ?? 'open') !== 'open') return null
   return (
     <div
@@ -370,7 +386,7 @@ export function RfqActionBar({ rfq, hasPrices, chaseSuppliers, chaseCustomer }: 
           <Button size="touch" icon={Ellipsis} aria-label="More actions" />
         </PopoverTrigger>
         <PopoverContent variant="menu" align="end" side="top" className="min-w-[280px]" aria-label="More actions">
-          <BidAndCloseItems rfq={rfq} actions={actions} />
+          <BidAndCloseItems rfq={rfq} actions={actions} onMarkWon={canWin ? () => setWon(true) : undefined} />
         </PopoverContent>
       </Popover>
     </div>
