@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
+import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
 
 /*
@@ -330,24 +330,42 @@ test.describe('save only, and no supplier ticked', () => {
 })
 
 test.describe('company picker', () => {
-  test('a company that is not on file is added in one dialog without leaving the page', async ({ page }) => {
+  test('a company that is not on file is added inline (name, optional contact) without leaving the page', async ({ page }) => {
     const name = uniqueName('Brand New Works')
     await openAs(page, 'sales', '/rfqs/new')
     let actions = 0
     await page.getByRole('combobox', { name: 'Company' }).fill(name)
     actions++
+    await expect(page.getByText('Saved as a prospect until the first order')).toBeVisible()
     await page.getByRole('option', { name: new RegExp(`Add “${name}” as a new company`) }).click()
     actions++
-    const dialog = page.getByRole('dialog', { name: 'New company' })
-    await expect(dialog.getByRole('textbox', { name: /Company name/ })).toHaveValue(name)
-    await dialog.getByRole('button', { name: 'Add company' }).click()
+    const inline = page.getByRole('region', { name: 'New company' })
+    await expect(inline.getByRole('textbox', { name: /Company name/ })).toHaveValue(name)
+    await expect(inline.getByText('can wait. Add it')).toBeVisible()
+    await inline.getByRole('textbox', { name: /Contact/ }).fill('Kamran Zafar')
+    await inline.getByRole('button', { name: 'Create and use' }).click()
     actions++
     await expect(page.getByText(name).first()).toBeVisible()
     await expect(page.getByText('Prospect')).toBeVisible()
-    expect(actions).toBeLessThanOrEqual(3)
+    expect(actions).toBeLessThanOrEqual(3) // the optional contact is typed, not a required action
     expect(page.url()).toMatch(/\/rfqs\/new/)
     const rows = await must(rest<{ id: string }[]>('admin', `companies?name=eq.${encodeURIComponent(name)}`))
     expect(rows).toHaveLength(1)
+    const contacts = await must(rest<{ name: string }[]>('admin', `contacts?company_id=eq.${rows[0].id}`))
+    expect(contacts.map(c => c.name)).toEqual(['Kamran Zafar'])
+  })
+
+  test('a near name is listed as a similar name, with its RFQ count, before a new company is added', async ({ page }) => {
+    const tag = Math.random().toString(36).slice(2, 8)
+    const near = await createCompany(`Mianwali${tag} Plastics Ltd`)
+    await createRfq(near.id)
+    await openAs(page, 'sales', '/rfqs/new')
+    await page.getByRole('combobox', { name: 'Company' }).fill(`Mianwali${tag} Polymers`)
+    const option = page.getByRole('option', { name: new RegExp(`Mianwali${tag} Plastics Ltd`) })
+    await expect(option).toBeVisible()
+    await expect(option).toContainText('similar name')
+    await expect(option).toContainText('1 RFQ')
+    await expect(page.getByRole('option', { name: /as a new company/ })).toBeVisible()
   })
 })
 

@@ -7,7 +7,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { constraintOf, mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
 import { useSession } from '@/app/session'
-import { CreateCompanyDialog } from '@/features/companies/CreateCompanyDialog'
+import { CreateCompanyInline } from '@/features/companies/CreateCompanyInline'
 import { useBrands, useCompany, useCompanyContacts, useCompanySites } from '@/features/companies/hooks'
 import type { CompanyRole } from '@/features/companies/api'
 import type { FloatInput, SavedRfq } from '@/features/rfqs/api'
@@ -469,11 +469,23 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                 {company ? (
                   <CustomerChip company={company} onChange={() => setCompany(null)} />
                 ) : (
-                  <CompanyPicker
-                    onPick={c => setCompany(c)}
-                    onCreate={text => setCreating(text)}
-                    loadingName={Boolean(wantedId) && wanted.isPending}
-                  />
+                  <>
+                    <CompanyPicker
+                      onPick={c => setCompany(c)}
+                      onCreate={text => setCreating(text)}
+                      loadingName={Boolean(wantedId) && wanted.isPending}
+                    />
+                    {creating !== null ? (
+                      <CreateCompanyInline
+                        initialName={creating}
+                        onCancel={() => setCreating(null)}
+                        onCreated={c => {
+                          setCompany({ id: c.id, name: c.name, country: null, role: 'prospect' })
+                          setCreating(null)
+                        }}
+                      />
+                    ) : null}
+                  </>
                 )}
                 {company && (siteList.length > 0 || contactList.length > 0) ? (
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -726,16 +738,6 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
           floatedOn={floatedOn}
         />
       </div>
-
-      <CreateCompanyDialog
-        open={creating !== null}
-        onOpenChange={open => !open && setCreating(null)}
-        initialName={creating ?? ''}
-        onCreated={c => {
-          setCompany({ id: c.id, name: c.name, country: null, role: 'prospect' })
-          setCreating(null)
-        }}
-      />
     </div>
   )
 }
@@ -756,10 +758,15 @@ function CompanyPicker({
     <Field label="Company" id="intake-company">
       <Combobox
         autoFocus
+        metaBelow
         options={hits.map(h => ({
           value: h.id,
           label: h.name,
-          meta: [h.role ? ROLE_WORD[h.role] : null, h.country].filter(Boolean).join(' · ') || undefined,
+          keep: h.similar,
+          meta:
+            [h.country, h.role ? ROLE_WORD[h.role] : null, h.rfqCount ? `${h.rfqCount} ${h.rfqCount === 1 ? 'RFQ' : 'RFQs'}` : null, h.similar ? 'similar name' : null]
+              .filter(Boolean)
+              .join(' · ') || undefined,
         }))}
         value=""
         onChange={id => {
@@ -769,6 +776,7 @@ function CompanyPicker({
         onQueryChange={setText}
         onCreate={onCreate}
         createLabel={t => `Add “${t}” as a new company`}
+        createHint="Saved as a prospect until the first order"
         loading={matches.isFetching}
         placeholder={loadingName ? 'Opening the customer' : 'Search, or type a new company name'}
       />

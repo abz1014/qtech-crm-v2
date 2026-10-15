@@ -76,12 +76,20 @@ export interface CompanyHit {
   name: string
   country: string | null
   role: CompanyRole | null
+  /** How many RFQs we have with them (pickers show "2 RFQs"). */
+  rfqCount?: number
+  /** Found by its first word only, not by the whole text typed: a name that is close, not the same ("similar name"). */
+  similar?: boolean
 }
 
 /** Escape the characters that mean something to ilike, so typing "50%" searches for "50%". */
 const likeEscape = (s: string) => s.replace(/[\\%_]/g, c => `\\${c}`)
 
-/** Name search for the command palette and pickers. Up to `limit` companies whose name contains the text. */
+/**
+ * Name search for the command palette and pickers. Up to `limit` companies whose name contains the text; when the text is
+ * several words and there is room, companies that share only its first word follow, marked `similar` ("Mianwali Polymers"
+ * finds "Mianwali Plastics Ltd"), so a near duplicate is noticed before a new company is added.
+ */
 export async function searchCompanies(text: string, limit = 8): Promise<CompanyHit[]> {
   const db = requireSupabase()
   const q = text.trim()
@@ -89,10 +97,22 @@ export async function searchCompanies(text: string, limit = 8): Promise<CompanyH
   const rows = unwrap(
     await db.from('companies').select('id, name, country').ilike('name', `%${likeEscape(q)}%`).order('name').limit(limit),
   )
-  const ids = rows.map(r => r.id)
-  const roles = ids.length ? unwrap(await db.from('v_company_roles').select('company_id, role').in('company_id', ids)) : []
-  const roleBy = new Map(roles.map(r => [r.company_id, asRole(r.role)]))
-  return rows.map(r => ({ id: r.id, name: r.name, country: r.country, role: roleBy.get(r.id) ?? null }))
+  const first = q.split(/\s+/)[0]
+  const similarRows =
+    q.includes(' ') && first.length >= 3 && rows.length < limit
+      ? unwrap(await db.from('companies').select('id, name, country').ilike('name', `%${likeEscape(first)}%`).order('name').limit(limit))
+          .filter(r => !rows.some(x => x.id === r.id))
+          .slice(0, limit - rows.length)
+      : []
+  const all = [...rows.map(r => ({ ...r, similar: false })), ...similarRows.map(r => ({ ...r, similar: true }))]
+  const ids = all.map(r => r.id)
+  const [roles, rfqs] = ids.length
+    ? await Promise.all([db.from('v_company_roles').select('company_id, role').in('company_id', ids), db.from('rfqs').select('company_id').in('company_id', ids)])
+    : [null, null]
+  const roleBy = new Map(unwrap(roles ?? { data: [], error: null }).map(r => [r.company_id, asRole(r.role)]))
+  const rfqCount = new Map<string, number>()
+  for (const r of unwrap(rfqs ?? { data: [], error: null })) rfqCount.set(r.company_id, (rfqCount.get(r.company_id) ?? 0) + 1)
+  return all.map(r => ({ id: r.id, name: r.name, country: r.country, role: roleBy.get(r.id) ?? null, rfqCount: rfqCount.get(r.id) ?? 0, similar: r.similar }))
 }
 
 /** The company whose name equals `name` ignoring case and surrounding spaces, as the unique index sees it. */
@@ -534,7 +554,15 @@ export interface NewCompany {
   name: string
   country?: string | null
   notes?: string | null
+  /** The city, when the companies.city column exists (migration 0038 / A7; see HAS_CITY_COLUMN). */
+  city?: string | null
 }
+
+/**
+ * Whether companies.city exists in the database this build talks to. The migration that adds it (0038, parity data) lands
+ * separately; until it does the screens do not ask for a city, so no request names a column that is not there.
+ */
+export const HAS_CITY_COLUMN = false
 
 export async function createCompany(input: NewCompany): Promise<{ id: string; name: string }> {
   const db = requireSupabase()
@@ -546,6 +574,8 @@ export async function createCompany(input: NewCompany): Promise<{ id: string; na
         name: input.name.trim(),
         country: input.country?.trim() || null,
         notes: input.notes?.trim() || null,
+        // The generated types do not know companies.city until migration 0038 lands.
+        ...((HAS_CITY_COLUMN && input.city?.trim() ? { city: input.city.trim() } : {}) as Record<string, never>),
       })
       .select('id, name')
       .single(),

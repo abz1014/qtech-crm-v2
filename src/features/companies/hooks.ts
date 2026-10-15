@@ -131,12 +131,15 @@ export class DuplicateCompanyError extends Error {
   }
 }
 
+/** `contactName` (optional) adds a first contact in the same gesture, as the inline create in intake draws it. */
 export function useCreateCompany() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: async (input: api.NewCompany) => {
+    mutationFn: async (input: api.NewCompany & { contactName?: string | null }) => {
       try {
-        return await api.createCompany(input)
+        const created = await api.createCompany(input)
+        if (input.contactName?.trim()) await api.addContact({ id: crypto.randomUUID(), companyId: created.id, name: input.contactName })
+        return created
       } catch (err) {
         const e = err as { code?: string; message?: string }
         if (e?.code === '23505' && /companies_name_key/.test(e.message ?? '')) {
