@@ -50,6 +50,7 @@ const clar = (o: Partial<ClarificationFact> = {}): ClarificationFact => ({
   question: 'Line size?',
   firstAskedOn: '2026-11-20',
   lastAskedOn: '2026-11-20',
+  lastAskedAt: '2026-11-20T09:00:00+05:00',
   askCount: 1,
   ...o,
 })

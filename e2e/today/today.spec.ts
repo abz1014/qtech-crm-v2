@@ -125,7 +125,17 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(waiting.getByText(/chased just now · next nudge on/).first()).toBeVisible()
     await expect(page.locator('li[data-rule="chase_customer"]:not([data-waiting])').filter({ hasText: s.ref })).toHaveCount(0)
     expect((await askOf(s.clarificationId)).ask_count).toBe(2)
+
+    // ---- just chased: the title stays, the bar says where it went, the cells and the card switch, "Chase again now" is there
+    await expect(pane.getByRole('heading', { level: 2, name: 'Chase customer for clarifications' })).toBeVisible()
+    await expect(pane.getByText('Moved to Waiting.')).toBeVisible()
+    await expect(pane.getByText('Chased customer')).toBeVisible()
+    await expect(pane.getByText('Next nudge', { exact: true })).toBeVisible()
+    await expect(pane.getByRole('region', { name: 'Chased today' })).toBeVisible()
+    await expect(pane.getByRole('button', { name: 'Copy message and mark chased' })).toHaveCount(0)
     await review(page, 'today-03-waiting-1440')
+    await pane.getByRole('button', { name: 'Chase again now' }).click()
+    await expect(pane.getByRole('button', { name: 'Copy message and mark chased' })).toBeVisible()
   })
 
   test('snooze: Tomorrow hides the item, Undo brings it back', async ({ page }) => {
@@ -231,11 +241,11 @@ test.describe('Today: accessibility and mobile', () => {
     await expect(row.getByText('Prepared for you')).toBeVisible()
     await review(page, 'today-08-mobile-accordion-375')
     expect(await violations(page), 'axe at 375, accordion open').toEqual([])
-    const hit = await row.getByRole('button', { name: 'Copy message and mark chased' }).boundingBox()
+    const hit = await row.getByRole('button', { name: 'Copy and mark chased' }).boundingBox()
     expect(hit?.height ?? 0).toBeGreaterThanOrEqual(44) // actions are 44 px on a phone
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
-    await row.getByRole('button', { name: 'Copy message and mark chased' }).click()
+    await row.getByRole('button', { name: 'Copy and mark chased' }).click()
     await expect(page.getByRole('status').filter({ hasText: `Copied. ${s.ref} marked chased.` })).toBeVisible()
     await review(page, 'today-09-mobile-copied-375')
   })

@@ -84,6 +84,7 @@ async function loadClarifications(open: Set<string>): Promise<ClarificationFact[
       question: c.question,
       firstAskedOn: toBusinessDate(new Date(c.first_asked_at as string)),
       lastAskedOn: toBusinessDate(new Date((c.last_asked_at ?? c.first_asked_at) as string)),
+      lastAskedAt: (c.last_asked_at ?? c.first_asked_at) as string,
       askCount: num(c.ask_count),
     }))
 }

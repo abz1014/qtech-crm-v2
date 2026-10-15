@@ -407,3 +407,13 @@
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; }
 }
+
+/* A row that has just joined Waiting settles from the success tint to nothing (g2-today-b2 .r-new). Motion that answers a tap. */
+@keyframes row-settle {
+  from { background-color: var(--tone-success-bg); }
+  to { background-color: transparent; }
+}
+.row-settle { animation: row-settle var(--dur-slow) var(--ease-out) both; }
+@media (prefers-reduced-motion: reduce) {
+  .row-settle { animation: none; }
+}

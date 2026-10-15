@@ -60,6 +60,8 @@ export interface ClarificationFact {
   question: string
   firstAskedOn: string
   lastAskedOn: string
+  /** The latest ask as a timestamp, for "copied at 14:32". */
+  lastAskedAt: string
   askCount: number
 }
 
