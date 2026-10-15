@@ -86,9 +86,9 @@ Task keys in the fix column: A03 (login), A04 (Team), A06 (Company profile), R15
 | A-06 | Primary button | `btn-primary btn-lg btn-block` "Sign in" | `Button primary lg`, full width, "Sign in" | MATCH | - | - |
 | A-07 | Forgot line | key-round icon + "Forgot your password? Ask your admin to reset it." under a top rule, no link | identical | MATCH | - | - |
 | A-08 | Wrong credentials | danger banner "Email or password is incorrect" / "Check both and try again."; password field invalid, email not | same copy; password `aria-invalid` | MATCH | - | - |
-| A-09 | Deactivated banner | warning, user-x icon, "This account is deactivated" / "Ask your admin to reactivate it." | same copy; icon is the shared Banner TriangleAlert, not user-x | DIFFERENT -> FIXED ac8e41a | low | Banner `icon` override, pass UserX (U02/A03) |
+| A-09 | Deactivated banner | warning, user-x icon, "This account is deactivated" / "Ask your admin to reactivate it." | same copy; icon is the shared Banner TriangleAlert, not user-x | DIFFERENT -> FIXED d3e8cc0 | low | Banner `icon` override, pass UserX (U02/A03) |
 | A-10 | Signing in (busy) | fields readonly, button disabled with spinner "Signing in" | `readOnly={busy}`, `Button busy busyLabel="Signing in"` | MATCH | - | - |
-| A-11 | Phone 375 | no border, full width, surface bg, padding 24/16; "Fields are 40 px tall on touch" | border-0, surface bg, px-4; inputs and button use `max-sm:h-touch` = 44px | DIFFERENT -> FIXED ac8e41a | low | Mockup says 40 (coarse control height): drop `max-sm:h-touch` (A03) |
+| A-11 | Phone 375 | no border, full width, surface bg, padding 24/16; "Fields are 40 px tall on touch" | border-0, surface bg, px-4; inputs and button use `max-sm:h-touch` = 44px | DIFFERENT -> FIXED d3e8cc0 | low | Mockup says 40 (coarse control height): drop `max-sm:h-touch` (A03) |
 | A-12 | Client validation text | none drawn | "Enter your email.", "Enter a valid email address.", "Enter your password." | EXTRA -> KEPT extra | low | Keep |
 | A-13 | Extra error states | wrong credentials, deactivated, busy only | adds "Can’t reach the server / Check your connection and try again." and "Sign-in is not set up in this build" | EXTRA -> KEPT extra | low | Keep (needed) |
 
@@ -98,14 +98,14 @@ Task keys in the fix column: A03 (login), A04 (Team), A06 (Company profile), R15
 
 | ID | element | mockup | built | status | severity | suggested fix + task |
 |---|---|---|---|---|---|---|
-| A-14 | Left nav width and bg | `.set` grid 220px / 1fr; nav bg surface, right border | `md:grid-cols-[200px_...]`, nav `bg-canvas` | DIFFERENT -> FIXED ac8e41a | low | 220px and `bg-surface` (A04/A06) |
-| A-15 | Nav heading and links | "Settings" xs semibold muted; links 32px; active = selected bg + 3px green bar inset 6px top/bottom, right-rounded | "Settings" xs medium; links `h-control`; bar `inset-y-0 rounded-l` | DIFFERENT -> FIXED ac8e41a | low | Bar top/bottom 6px, round the right side (A04) |
-| A-16 | Nav entries, admin | Team, Company profile, Exchange rates (refresh-cw) | Team, Company profile, Change password (key-round). No Exchange rates | MISSING -> FIXED ac8e41a | high | Build Exchange rates and its nav entry (R15; DECISIONS A06 "not linked yet") |
-| A-17 | Nav entries, sales/engineer | Company profile with a "View only" tag at the right; Exchange rates; no Team | Company profile (no tag), Change password | DIFFERENT -> FIXED ac8e41a | medium | Add the View only Tag, Exchange rates (A06/R15) |
-| A-18 | Settings home (sales/engineer land here) | title "Settings", sub "Company details for documents, and the rates used to compare prices in other currencies."; Exchange rates card (table Currency / PKR for 1 unit / Source / As of / Rate age with fx chips, "Open exchange rates" button) and Company profile card ("View") | `/settings` redirects to team (admin) or company (others); no home | MISSING -> FIXED ac8e41a | high | Build the Settings home (R15 + A06) |
-| A-19 | Content width and padding | `.set-main` padding 32/40/48, inner max 940 | `px-8 pt-6`; Team in `max-w-table` (1280), profile and password in `max-w-list` (860) | DIFFERENT -> FIXED ac8e41a | low | One 940px column, 32/40 padding (A04/A06) |
+| A-14 | Left nav width and bg | `.set` grid 220px / 1fr; nav bg surface, right border | `md:grid-cols-[200px_...]`, nav `bg-canvas` | DIFFERENT -> FIXED d3e8cc0 | low | 220px and `bg-surface` (A04/A06) |
+| A-15 | Nav heading and links | "Settings" xs semibold muted; links 32px; active = selected bg + 3px green bar inset 6px top/bottom, right-rounded | "Settings" xs medium; links `h-control`; bar `inset-y-0 rounded-l` | DIFFERENT -> FIXED d3e8cc0 | low | Bar top/bottom 6px, round the right side (A04) |
+| A-16 | Nav entries, admin | Team, Company profile, Exchange rates (refresh-cw) | Team, Company profile, Change password (key-round). No Exchange rates | MISSING -> FIXED d3e8cc0 | high | Build Exchange rates and its nav entry (R15; DECISIONS A06 "not linked yet") |
+| A-17 | Nav entries, sales/engineer | Company profile with a "View only" tag at the right; Exchange rates; no Team | Company profile (no tag), Change password | DIFFERENT -> FIXED d3e8cc0 | medium | Add the View only Tag, Exchange rates (A06/R15) |
+| A-18 | Settings home (sales/engineer land here) | title "Settings", sub "Company details for documents, and the rates used to compare prices in other currencies."; Exchange rates card (table Currency / PKR for 1 unit / Source / As of / Rate age with fx chips, "Open exchange rates" button) and Company profile card ("View") | `/settings` redirects to team (admin) or company (others); no home | MISSING -> FIXED d3e8cc0 | high | Build the Settings home (R15 + A06) |
+| A-19 | Content width and padding | `.set-main` padding 32/40/48, inner max 940 | `px-8 pt-6`; Team in `max-w-table` (1280), profile and password in `max-w-list` (860) | DIFFERENT -> FIXED d3e8cc0 | low | One 940px column, 32/40 padding (A04/A06) |
 | A-20 | Page header | `.page-h`: h1 2xl semibold, sub max 62ch, right action | same classes and copy | MATCH | - | - |
-| A-21 | Phone settings navigation | only the Team phone frame is drawn (back bar) | a link row above the page: Team / Company profile / Change password | DIFFERENT -> PARTLY FIXED ac8e41a | low | Mockup silent on phone settings nav; see A-34 and Q6 |
+| A-21 | Phone settings navigation | only the Team phone frame is drawn (back bar) | a link row above the page: Team / Company profile / Change password | DIFFERENT -> PARTLY FIXED d3e8cc0 | low | Mockup silent on phone settings nav; see A-34 and Q6 |
 
 ### 2b. Team list
 
@@ -113,27 +113,27 @@ Task keys in the fix column: A03 (login), A04 (Team), A06 (Company profile), R15
 |---|---|---|---|---|---|---|
 | A-22 | Title, sub, Add button | "Team"; "Everyone who can sign in to Q-Tech CRM. Passwords are created and reset here, and shown once."; primary user-plus "Add person" | identical | MATCH | - | - |
 | A-23 | Toolbar | search 260px "Search name or email" with icon; All / Active / Deactivated with mono counts; right note "At least one active admin is always required." | search 240px, same placeholder, SegmentedControl with counts, same note | MATCH | - | - |
-| A-24 | Columns | Name (sortable), Role, Job title, Status, actions header visually hidden | Name, Role (also sortable), Job title, Status, header text "Actions" visible (a04-team-1440.png) | DIFFERENT -> FIXED ac8e41a | low | Hide the Actions header; Role not sortable (A04) |
+| A-24 | Columns | Name (sortable), Role, Job title, Status, actions header visually hidden | Name, Role (also sortable), Job title, Status, header text "Actions" visible (a04-team-1440.png) | DIFFERENT -> FIXED d3e8cc0 | low | Hide the Actions header; Role not sortable (A04) |
 | A-25 | Name cell | avatar 28, bold name, "You" tag, mono email | same | MATCH | - | - |
 | A-26 | Status chip | `user:active` "Active", `user:deactivated` "Deactivated" with ban icon | `StatusBadge dimension=user` | MATCH | - | - |
 | A-27 | Empty job title | n/a | "Not set" muted | EXTRA -> KEPT extra | low | Keep |
-| A-28 | Deactivated row | whole row dimmed (`is-dim`), avatar neutral-400, secondary "Reactivate" (user-check) replaces menu | only avatar at 60% opacity; Reactivate button present (APPROVED A04) | DIFFERENT -> FIXED ac8e41a | low | Dim the whole row (A04) |
+| A-28 | Deactivated row | whole row dimmed (`is-dim`), avatar neutral-400, secondary "Reactivate" (user-check) replaces menu | only avatar at 60% opacity; Reactivate button present (APPROVED A04) | DIFFERENT -> FIXED d3e8cc0 | low | Dim the whole row (A04) |
 | A-29 | Row menu | ellipsis quiet button; Edit job title (pencil), Change role (shield), Reset password (key-round), divider, Deactivate (user-x, red) | identical | MATCH | - | - |
-| A-30 | Row highlight while menu open | selected-row background | none | DIFFERENT -> FIXED ac8e41a | low | Use `activeRowId` while the menu is open (A04) |
-| A-31 | Footer | in the card: left "6 people · 5 active, 1 deactivated", right "Deactivated people keep their name on everything they created." | left "6 people, 5 active, 1 deactivated" (commas); the sentence sits outside the card, right aligned | DIFFERENT -> FIXED ac8e41a | low | Use " · ", move the sentence into the footer (A04) |
-| A-32 | Empty / no match | tile, title, reason, "Clear filter" (components 09) | muted paragraph: `No one matches "x".` / "No one is deactivated." / "No people yet."; no tile, no clear action | DIFFERENT -> FIXED ac8e41a | low | EmptyState with Clear filter (U04/A04) |
-| A-33 | Loading / error | skeleton rows; error with retry | skeleton rows; error "Could not load the team" + raw `error.message` + Try again | DIFFERENT -> FIXED ac8e41a | low | "Couldn’t load the team", safe sentence, reference line, never raw text (U04) |
-| A-34 | Phone header | own bar: chevron-left Back, "Team", primary "Add" (36px) | shared MobileBar titled "Settings" (logo, search, avatar); h1 "Team" and "Add person" below; link row above | DIFFERENT -> FIXED ac8e41a | medium | Back-bar variant of MobileBar with title and right action (U02/A04) |
-| A-35 | Phone rows | 60px, avatar 36, "Name" + "Role · Job title", Deactivated chip, ellipsis; whole row opens the sheet; no search field | table rows 48px, avatar 28, subline "Role · Title" (deactivated as text "Deactivated · "), Reactivate button, search box shown, only the ellipsis opens the menu | DIFFERENT -> FIXED ac8e41a | medium | `mobileRow` cards, 60px, chip, tappable row (A04) |
-| A-36 | Phone row actions | bottom sheet: person header (avatar, "Name / Role · Title"), four 44px rows, Deactivate red | same dropdown Popover as desktop | MISSING -> FIXED ac8e41a | medium | Bottom-sheet menu for phones (U03/A04) |
-| A-37 | Phone note | "At least one active admin is always required." under the list | inside the toolbar | DIFFERENT -> FIXED ac8e41a | low | Move below the list on phone (A04) |
+| A-30 | Row highlight while menu open | selected-row background | none | DIFFERENT -> FIXED d3e8cc0 | low | Use `activeRowId` while the menu is open (A04) |
+| A-31 | Footer | in the card: left "6 people · 5 active, 1 deactivated", right "Deactivated people keep their name on everything they created." | left "6 people, 5 active, 1 deactivated" (commas); the sentence sits outside the card, right aligned | DIFFERENT -> FIXED d3e8cc0 | low | Use " · ", move the sentence into the footer (A04) |
+| A-32 | Empty / no match | tile, title, reason, "Clear filter" (components 09) | muted paragraph: `No one matches "x".` / "No one is deactivated." / "No people yet."; no tile, no clear action | DIFFERENT -> FIXED d3e8cc0 | low | EmptyState with Clear filter (U04/A04) |
+| A-33 | Loading / error | skeleton rows; error with retry | skeleton rows; error "Could not load the team" + raw `error.message` + Try again | DIFFERENT -> FIXED d3e8cc0 | low | "Couldn’t load the team", safe sentence, reference line, never raw text (U04) |
+| A-34 | Phone header | own bar: chevron-left Back, "Team", primary "Add" (36px) | shared MobileBar titled "Settings" (logo, search, avatar); h1 "Team" and "Add person" below; link row above | DIFFERENT -> FIXED d3e8cc0 | medium | Back-bar variant of MobileBar with title and right action (U02/A04) |
+| A-35 | Phone rows | 60px, avatar 36, "Name" + "Role · Job title", Deactivated chip, ellipsis; whole row opens the sheet; no search field | table rows 48px, avatar 28, subline "Role · Title" (deactivated as text "Deactivated · "), Reactivate button, search box shown, only the ellipsis opens the menu | DIFFERENT -> FIXED d3e8cc0 | medium | `mobileRow` cards, 60px, chip, tappable row (A04) |
+| A-36 | Phone row actions | bottom sheet: person header (avatar, "Name / Role · Title"), four 44px rows, Deactivate red | same dropdown Popover as desktop | MISSING -> FIXED d3e8cc0 | medium | Bottom-sheet menu for phones (U03/A04) |
+| A-37 | Phone note | "At least one active admin is always required." under the list | inside the toolbar | DIFFERENT -> FIXED d3e8cc0 | low | Move below the list on phone (A04) |
 
 ### 2c. Account menu
 
 | ID | element | mockup | built | status | severity | suggested fix + task |
 |---|---|---|---|---|---|---|
 | A-38 | Header | name (medium) + role (xs muted), divider | same | MATCH | - | - |
-| A-39 | Items | Settings (gear), Team (users, admin only), divider, Sign out (log-out, red) | Settings, Team (admin), Change password, Install app (when installable), divider, Sign out in default ink (not red) | DIFFERENT -> FIXED ac8e41a | medium | `danger` on Sign out (U03). Extras: A-77, A-78 |
+| A-39 | Items | Settings (gear), Team (users, admin only), divider, Sign out (log-out, red) | Settings, Team (admin), Change password, Install app (when installable), divider, Sign out in default ink (not red) | DIFFERENT -> FIXED d3e8cc0 | medium | `danger` on Sign out (U03). Extras: A-77, A-78 |
 
 ### 2d. Dialogs
 
@@ -143,18 +143,18 @@ Task keys in the fix column: A03 (login), A04 (Team), A06 (Company profile), R15
 | A-41 | Email already used | "Usman Tariq already uses this email. Use a different address, or change his details from the Team list." | same with "their" (APPROVED A04) | DIFFERENT -> APPROVED deviation | low | Approved |
 | A-42 | Creating | read-only fields, disabled buttons, "Creating account", Esc/close ignored | same via useSubmitForm + Dialog busy | MATCH | - | - |
 | A-43 | Account created | success tile; "Account created"; "Give Hira the email and password below so she can sign in."; who-row avatar 32 + name + mono email + role; secret box; warning banner "This password is shown once / Copy it now and send it to Hira yourself. After you close this window it can't be shown again. You would reset it instead."; lead "Copy the password to continue"; Done disabled | same structure and banner copy; sub says "they" (APPROVED); who-row avatar 28 (no 32 size, see A-84); Done locked until copy | DIFFERENT -> APPROVED deviation | low | Wording approved; avatar size via A-84 |
-| A-44 | Secret box | sunken bg, dashed border-input; code `Vk7x-mQ3p-Rt9w-Hn2e`; copied = solid green border, tinted bg, "Copied", lead "Copied to clipboard" | surface bg, dashed line-strong; value shown as four-character groups with spaces, raw 16 chars copied (APPROVED A04); copied tint, "Copied", "Copied to clipboard" | DIFFERENT -> FIXED ac8e41a | low | Format approved; use `bg-sunken` and `border-line-input` to match (A04) |
-| A-45 | Copy sign-in message | not in mockup | "Copy sign-in message" button + note "For WhatsApp. It includes the password." (also unlocks Done) | EXTRA -> KEPT (owner decision), restyled - FIXED ac8e41a | medium | Mentioned in DECISIONS A04; owner Q1 |
+| A-44 | Secret box | sunken bg, dashed border-input; code `Vk7x-mQ3p-Rt9w-Hn2e`; copied = solid green border, tinted bg, "Copied", lead "Copied to clipboard" | surface bg, dashed line-strong; value shown as four-character groups with spaces, raw 16 chars copied (APPROVED A04); copied tint, "Copied", "Copied to clipboard" | DIFFERENT -> FIXED d3e8cc0 | low | Format approved; use `bg-sunken` and `border-line-input` to match (A04) |
+| A-45 | Copy sign-in message | not in mockup | "Copy sign-in message" button + note "For WhatsApp. It includes the password." (also unlocks Done) | EXTRA -> KEPT (owner decision), restyled - FIXED d3e8cc0 | medium | Mentioned in DECISIONS A04; owner Q1 |
 | A-46 | Edit job title | small, pencil tile, sub = name, help "Prints under the signature on quotations and purchase orders.", Cancel / Save | identical (placeholder "Sales engineer") | MATCH | - | - |
 | A-47 | Reset confirm | warning tile; "Reset Ayesha Rana’s password?"; "We generate a new password and show it to you once. Her current password stops working and she is signed out on every device."; "Reset password" with key-round | same title; first name and "they" (APPROVED) | DIFFERENT -> APPROVED deviation | low | Approved |
 | A-48 | Reset result | "Password reset"; "Hira is signed out everywhere. Give her the new password below."; label "New password" | "them"; label "New password" | DIFFERENT -> APPROVED deviation | low | Approved |
 | A-49 | Change role | "Change Ayesha Rana’s role"; "Takes effect immediately."; radio cards Admin / Sales / Engineer with the three help lines; Cancel / "Change role" | identical; Change role also disabled when unchanged | MATCH | - | - |
 | A-50 | Only active admin (role) | warning banner "Bilal is the only active admin / Make someone else an admin first. Q-Tech CRM always needs at least one."; other cards disabled; button disabled | same | MATCH | - | - |
 | A-51 | Deactivate confirm | danger tile; "Deactivate Saad Hussain?"; three bullets (log-out, file-text, history); danger "Deactivate Saad" | same; bullets use "them/their" (APPROVED) | DIFFERENT -> APPROVED deviation | low | Approved |
-| A-52 | Deactivate blocked | danger banner "You can't deactivate the only active admin / Make another person an admin first, then try again."; button plain "Deactivate", disabled | same banner; button reads "Deactivate Bilal" disabled | DIFFERENT -> FIXED ac8e41a | low | Plain "Deactivate" when blocked (A04) |
+| A-52 | Deactivate blocked | danger banner "You can't deactivate the only active admin / Make another person an admin first, then try again."; button plain "Deactivate", disabled | same banner; button reads "Deactivate Bilal" disabled | DIFFERENT -> FIXED d3e8cc0 | low | Plain "Deactivate" when blocked (A04) |
 | A-53 | Reactivate confirm | success tile; "Reactivate Saad Hussain?"; "He can sign in again as Sales with his existing password. If he has forgotten it, reset it from his row afterwards."; "Reactivate" (user-check) | same with "They" (APPROVED) | DIFFERENT -> APPROVED deviation | low | Approved |
-| A-54 | Result toasts | "Saad Hussain reactivated / He can sign in again as Sales."; "Ayesha Rana deactivated / She is signed out everywhere."; "Role changed to Engineer / Faizan Ahmed" | "They can sign in again as Sales."; body "Signed out everywhere."; role toast identical; extra "Job title saved/cleared" toast | DIFFERENT -> FIXED ac8e41a | low | Deactivate body should read "They are signed out everywhere." (A04); rest approved |
-| A-55 | Phone dialogs | bottom sheet with grab handle, stacked 44px buttons | bottom sheet below 768, stacked buttons, no grab handle | DIFFERENT -> FIXED ac8e41a | low | See A-91 |
+| A-54 | Result toasts | "Saad Hussain reactivated / He can sign in again as Sales."; "Ayesha Rana deactivated / She is signed out everywhere."; "Role changed to Engineer / Faizan Ahmed" | "They can sign in again as Sales."; body "Signed out everywhere."; role toast identical; extra "Job title saved/cleared" toast | DIFFERENT -> FIXED d3e8cc0 | low | Deactivate body should read "They are signed out everywhere." (A04); rest approved |
+| A-55 | Phone dialogs | bottom sheet with grab handle, stacked 44px buttons | bottom sheet below 768, stacked buttons, no grab handle | DIFFERENT -> FIXED d3e8cc0 | low | See A-91 |
 
 ## 3. Company profile and Change password (`CompanyProfilePage.tsx`, `ChangePasswordPage.tsx`)
 
@@ -163,19 +163,19 @@ Task keys in the fix column: A03 (login), A04 (Team), A06 (Company profile), R15
 | A-56 | Admin header | "Company profile" / "Your registered details and standard wording. Only admins can change them." | identical | MATCH | - | - |
 | A-57 | Incomplete banner | warning "PDFs can’t be issued until legal name and address are set" / "Quotations and purchase orders print these at the top. Everything else can wait." + "Add them"; non-admin: "Ask an admin to add them in Settings." | identical (straight apostrophe) | MATCH | - | - |
 | A-58 | Sections | four cards: Business details, Tax registration, Bank details, Quotations and purchase orders, each with the hint line | same four with hints | MATCH | - | - |
-| A-59 | Legal name / Address invalid state | labels with "Needed for PDFs"; empty fields drawn invalid with inline "Add the legal name before issuing a PDF." and "Add the address before issuing a PDF." | "Needed for PDFs" note present; no invalid styling and no inline sentences (banner only) | MISSING -> FIXED ac8e41a | medium | Invalid style + two inline messages while empty (A06) |
-| A-60 | Address rows | textarea rows 2 | rows 3 | DIFFERENT -> FIXED ac8e41a | low | rows=2 (A06) |
-| A-61 | Phone / Email / Website | one 2-col grid (Phone, Email, Website), phone mono | Phone + Email grid; Website separate row, max 320px; phone not mono | DIFFERENT -> FIXED ac8e41a | low | `num` class on phone (A06) |
+| A-59 | Legal name / Address invalid state | labels with "Needed for PDFs"; empty fields drawn invalid with inline "Add the legal name before issuing a PDF." and "Add the address before issuing a PDF." | "Needed for PDFs" note present; no invalid styling and no inline sentences (banner only) | MISSING -> FIXED d3e8cc0 | medium | Invalid style + two inline messages while empty (A06) |
+| A-60 | Address rows | textarea rows 2 | rows 3 | DIFFERENT -> FIXED d3e8cc0 | low | rows=2 (A06) |
+| A-61 | Phone / Email / Website | one 2-col grid (Phone, Email, Website), phone mono | Phone + Email grid; Website separate row, max 320px; phone not mono | DIFFERENT -> FIXED d3e8cc0 | low | `num` class on phone (A06) |
 | A-62 | Tax registration | NTN, STRN mono, Optional | same | MATCH | - | - |
 | A-63 | Bank hint | "Not printed anywhere until the letterhead layout is approved." | "Printed on quotations only when filled in. Leave them blank to print nothing." (APPROVED A06) | DIFFERENT -> APPROVED deviation | low | Approved |
 | A-64 | Bank fields | Bank, Account title, IBAN mono | same | MATCH | - | - |
 | A-65 | Quotation validity | "30" + suffix "days", max 100px, help "A new quotation is valid for this many days from its date." | NumberInput suffix days, max 200px, same help | MATCH | - | - |
-| A-66 | Terms | Quotation terms rows 5; PO terms rows 4 | both rows 5 | DIFFERENT -> FIXED ac8e41a | low | PO rows=4 (A06) |
-| A-67 | Footer bar | static card: "Nothing to save yet" / circle-dot + "1 unsaved change: Quotation validity"; Discard, Save changes | same copy; sticky bottom bar; no circle-dot icon | DIFFERENT -> FIXED ac8e41a | low | Add the icon; sticky is an addition (Q5) |
+| A-66 | Terms | Quotation terms rows 5; PO terms rows 4 | both rows 5 | DIFFERENT -> FIXED d3e8cc0 | low | PO rows=4 (A06) |
+| A-67 | Footer bar | static card: "Nothing to save yet" / circle-dot + "1 unsaved change: Quotation validity"; Discard, Save changes | same copy; sticky bottom bar; no circle-dot icon | DIFFERENT -> FIXED d3e8cc0 | low | Add the icon; sticky is an addition (Q5) |
 | A-68 | Saved toast | "Company profile saved / PDFs can be issued now." | identical (variant when still incomplete) | MATCH | - | - |
-| A-69 | Read-only (sales) | lock tag 24px "Only an admin can edit"; fieldsets with title only; `dl` 160px label column; missing values flagged in warning colour with icon; "30 days" | tag 20px; hints kept under titles; label column 180px; missing shows muted "Not set" | DIFFERENT -> FIXED ac8e41a | medium | Warning-coloured flagged blanks, 24px tag, 160px column, no hints (A06) |
+| A-69 | Read-only (sales) | lock tag 24px "Only an admin can edit"; fieldsets with title only; `dl` 160px label column; missing values flagged in warning colour with icon; "30 days" | tag 20px; hints kept under titles; label column 180px; missing shows muted "Not set" | DIFFERENT -> FIXED d3e8cc0 | medium | Warning-coloured flagged blanks, 24px tag, 160px column, no hints (A06) |
 | A-70 | Loading / error | not drawn | skeletons; error "Could not load the company profile" + Try again | EXTRA -> KEPT extra | low | Keep |
-| A-71 | Change password page | not in the mockup (no frame, no nav item) | `/settings/password`: "Change password" / "Change the password for your own sign-in. You stay signed in on this device."; Current, New ("At least 12 characters."), Confirm; "Change password"; toast "Password changed" | EXTRA -> KEPT (owner decision), restyled - FIXED ac8e41a | medium | Owner Q2; needs a mockup if kept |
+| A-71 | Change password page | not in the mockup (no frame, no nav item) | `/settings/password`: "Change password" / "Change the password for your own sign-in. You stay signed in on this device."; Current, New ("At least 12 characters."), Confirm; "Change password"; toast "Password changed" | EXTRA -> KEPT (owner decision), restyled - FIXED d3e8cc0 | medium | Owner Q2; needs a mockup if kept |
 
 ## 4. Shell
 
@@ -183,29 +183,29 @@ Task keys in the fix column: A03 (login), A04 (Team), A06 (Company profile), R15
 |---|---|---|---|---|---|---|
 | A-72 | Top bar frame | 52px, padding 0 20, gap 24, wordmark 30px, six tabs, search, role text, avatar | `h-topbar px-5 gap-6`, wordmark 124x30, same | MATCH | - | - |
 | A-73 | Tabs and indicator | Today, RFQs, Orders, Companies, Money, Reports; active fg + 2px green underline | same order and indicator | MATCH | - | - |
-| A-74 | Money icon | `wallet` in every mockup frame | `Banknote` (matches DESIGN_SYSTEM section 10 "banknote") | DIFFERENT -> FIXED ac8e41a | low | Docs disagree: owner Q4 |
-| A-75 | Search field | 280px sunken, "Search or jump to", `⌘K` | same; always shows "⌘K" even on Windows/Linux while the palette footer switches to Ctrl | DIFFERENT -> FIXED ac8e41a | low | Platform-aware key (U02/U08) |
+| A-74 | Money icon | `wallet` in every mockup frame | `Banknote` (matches DESIGN_SYSTEM section 10 "banknote") | DIFFERENT -> FIXED d3e8cc0 | low | Docs disagree: owner Q4 |
+| A-75 | Search field | 280px sunken, "Search or jump to", `⌘K` | same; always shows "⌘K" even on Windows/Linux while the palette footer switches to Ctrl | DIFFERENT -> FIXED d3e8cc0 | low | Platform-aware key (U02/U08) |
 | A-76 | Role text + avatar | "Admin"/"Sales" xs muted; 28px avatar, title attr | same; role hidden below xl | MATCH | - | - |
-| A-77 | Account menu: Change password | not present | menu item "Change password" | EXTRA -> KEPT (owner decision), restyled - FIXED ac8e41a | medium | Follows Q2 |
+| A-77 | Account menu: Change password | not present | menu item "Change password" | EXTRA -> KEPT (owner decision), restyled - FIXED d3e8cc0 | medium | Follows Q2 |
 | A-78 | Account menu: Install app | not present | "Install app" when installable (R21) | EXTRA -> KEPT extra | low | Approved by R21 decisions; no mockup |
-| A-79 | Sign out colour | red | default ink (see A-39) | DIFFERENT -> FIXED ac8e41a | low | `danger` item (U03) |
+| A-79 | Sign out colour | red | default ink (see A-39) | DIFFERENT -> FIXED d3e8cc0 | low | `danger` item (U03) |
 | A-80 | Tablet 768-1279 | icons + active label (money-12) | max-xl collapse | MATCH | - | - |
 | A-81 | Phone bar, default | 52px: logo mark 28, destination title, search icon, avatar | identical | MATCH | - | - |
-| A-82 | Phone bar, back/close variants | chevron-left (or x) + title + right slot ("Add", an amount, Capture) on detail and sub screens (Team, RFQ detail, Capture, add expenses) | `MobileBar` has only the default form: no back, no close, no right slot | MISSING -> FIXED ac8e41a | high | Add `back`/`close` and `action` to MobileBar; each detail screen depends on it (U02) |
+| A-82 | Phone bar, back/close variants | chevron-left (or x) + title + right slot ("Add", an amount, Capture) on detail and sub screens (Team, RFQ detail, Capture, add expenses) | `MobileBar` has only the default form: no back, no close, no right slot | MISSING -> FIXED d3e8cc0 | high | Add `back`/`close` and `action` to MobileBar; each detail screen depends on it (U02) |
 | A-83 | Phone tab bar | 6 equal columns, icon over 11px label, green 2px bar top, safe area | same (20px glyph, `min-h-touch`, safe area) | MATCH | - | - |
-| A-84 | Avatar sizes | 22, 28, 32 (who-row), 36 (phone row), 40 (`avatar-lg`) | `Avatar` md 28 and sm 22 only | MISSING -> FIXED ac8e41a | medium | Add 32/36/40 (U02) |
+| A-84 | Avatar sizes | 22, 28, 32 (who-row), 36 (phone row), 40 (`avatar-lg`) | `Avatar` md 28 and sm 22 only | MISSING -> FIXED d3e8cc0 | medium | Add 32/36/40 (U02) |
 | A-85 | Orders, Money, Reports destinations | full screens | `DestinationPage` stand-in "The Orders screen is not built yet" (also for Money, Reports) | MISSING -> LATER (O/M screens) | high | O03, M01-M13 (other auditors' screens) |
 | A-86 | Skip link, inline ErrorBoundary | n/a | present | EXTRA -> KEPT extra | low | Keep |
-| A-87 | Role-limited page | warning tile with lock; "Money is for admins and sales"; "Your role is Engineer. Ask an admin if you need to see invoices or receivables." | `NoAccessPage`: no tile, title "Team is not available to your role", "Your role does not include this page. Everything you can use is in the navigation." + Go to Today | DIFFERENT -> FIXED ac8e41a | medium | Rebuild on a warning EmptyState naming the role (U02/U04) |
+| A-87 | Role-limited page | warning tile with lock; "Money is for admins and sales"; "Your role is Engineer. Ask an admin if you need to see invoices or receivables." | `NoAccessPage`: no tile, title "Team is not available to your role", "Your role does not include this page. Everything you can use is in the navigation." + Go to Today | DIFFERENT -> FIXED d3e8cc0 | medium | Rebuild on a warning EmptyState naming the role (U02/U04) |
 
 ### Command palette
 
 | ID | element | mockup | built | status | severity | suggested fix + task |
 |---|---|---|---|---|---|---|
 | A-88 | Frame | 640 wide, 96px from top, input 52px/16px, rows 40px, active row selected bg + 3px green edge, "esc" kbd, footer hints, result count, matches semibold | all present (phone `top-4`) | MATCH | - | - |
-| A-89 | Idle content | "Recent" (file-text / building-2 / package icons, "Opened 2 hours ago"), then "Actions": New RFQ (N), Capture a message or photo (C), Go to Today (G T) | "Recent" (all rows with the document glyph, APPROVED INVENTORY), "Companies > New company", "Jump to" Today..Reports. No New RFQ, no Capture, no N / C / G T shortcuts (only the gallery scene has them; no global key handler exists) | MISSING -> FIXED ac8e41a | high | Actions source + N/C/G-T keys; per-type recent icons (U08, R05, Capture task) |
-| A-90 | Typing results | "Jump to" (RFQs, orders, companies, items) then "Actions" ("New RFQ for Indus Textile Mills"); meta "RFQ · bid due Tue 1 Dec", "Order · goods late" | groups "Companies", "Contacts", "RFQs" then "Add “x” as a new company"; no orders, items, or New-RFQ-for-company | DIFFERENT -> PARTLY FIXED ac8e41a | medium | Orders/items when O-tasks land; contextual action (R12 follow-up) |
-| A-91 | No results / searching | "Nothing found for “belimo gaskets”" + "Search covers RFQs, orders, companies and items. Try one word, or press N to start an RFQ."; skeleton after 200 ms | heading same; hint "Search finds companies, contacts (name, phone, e-mail), RFQ numbers and customer references, and the places you can open from here."; skeleton after 200 ms | DIFFERENT -> FIXED ac8e41a | low | Use the mockup sentence once N exists (R12) |
+| A-89 | Idle content | "Recent" (file-text / building-2 / package icons, "Opened 2 hours ago"), then "Actions": New RFQ (N), Capture a message or photo (C), Go to Today (G T) | "Recent" (all rows with the document glyph, APPROVED INVENTORY), "Companies > New company", "Jump to" Today..Reports. No New RFQ, no Capture, no N / C / G T shortcuts (only the gallery scene has them; no global key handler exists) | MISSING -> FIXED d3e8cc0 | high | Actions source + N/C/G-T keys; per-type recent icons (U08, R05, Capture task) |
+| A-90 | Typing results | "Jump to" (RFQs, orders, companies, items) then "Actions" ("New RFQ for Indus Textile Mills"); meta "RFQ · bid due Tue 1 Dec", "Order · goods late" | groups "Companies", "Contacts", "RFQs" then "Add “x” as a new company"; no orders, items, or New-RFQ-for-company | DIFFERENT -> PARTLY FIXED d3e8cc0 | medium | Orders/items when O-tasks land; contextual action (R12 follow-up) |
+| A-91 | No results / searching | "Nothing found for “belimo gaskets”" + "Search covers RFQs, orders, companies and items. Try one word, or press N to start an RFQ."; skeleton after 200 ms | heading same; hint "Search finds companies, contacts (name, phone, e-mail), RFQ numbers and customer references, and the places you can open from here."; skeleton after 200 ms | DIFFERENT -> FIXED d3e8cc0 | low | Use the mockup sentence once N exists (R12) |
 
 ## 5. Components (`src/ui`, `/dev/gallery`) vs g2-components.html
 
@@ -217,33 +217,33 @@ Task keys in the fix column: A03 (login), A04 (Team), A06 (Company profile), R15
 | A-95 | Combobox | open list with meta, "Add “Ind” as a new company" row | `Combobox createLabel` | MATCH | - | - |
 | A-96 | Banner | info/warning/danger/success + action | built | MATCH | - | - |
 | A-97 | Tabs, breadcrumb, skeleton | underline tabs with count pill, crumb, skeleton | built | MATCH | - | - |
-| A-98 | Progress | continuous bar "3 of 5 items covered" and separate segments | only `ProgressSegments` (segments + "n of m") | DIFFERENT -> FIXED ac8e41a | low | Add the plain bar or drop it from the sheet (U05) |
+| A-98 | Progress | continuous bar "3 of 5 items covered" and separate segments | only `ProgressSegments` (segments + "n of m") | DIFFERENT -> FIXED d3e8cc0 | low | Add the plain bar or drop it from the sheet (U05) |
 | A-99 | FileDrop / FileRow | resting, drag-over "Release to add 2 files", "3.8 MB → 640 KB", "7.2 MB. The limit is 5 MB." | strings match | MATCH | - | - |
 | A-100 | StatusBadge | 20px chip, shape+colour+label, dashed when not firm | built from registry and tokens | MATCH | - | - |
 | A-101 | Money, Margin, MoneyFx, NetGstGross | all rows of the Money sheet | built | MATCH | - | - |
-| A-102 | "No rate yet" | line "No GBP rate yet" and a separate quiet chip "not compared — no rate" | single line "No GBP rate yet · not compared" | DIFFERENT -> FIXED ac8e41a | low | Add quiet chip (U06) |
-| A-103 | "below cost" | 14px medium danger | `text-sm` regular weight | DIFFERENT -> FIXED ac8e41a | low | font-medium (U06) |
+| A-102 | "No rate yet" | line "No GBP rate yet" and a separate quiet chip "not compared — no rate" | single line "No GBP rate yet · not compared" | DIFFERENT -> FIXED d3e8cc0 | low | Add quiet chip (U06) |
+| A-103 | "below cost" | 14px medium danger | `text-sm` regular weight | DIFFERENT -> FIXED d3e8cc0 | low | font-medium (U06) |
 | A-104 | Form validation | summary "Fix 2 fields to continue" with links, field messages, unique violation with "Open it", submitting, double-submit guard | `FormSummary`, `Field`, `renderError`, `useSubmitForm` | MATCH | - | - |
 | A-105 | Dialog desktop | widths 400/480/640, 36px tile, footer band + lead, Esc/scrim ignored when busy | same | MATCH | - | - |
-| A-106 | Dialog phone sheet | grab handle 36x4 | no grab handle | DIFFERENT -> FIXED ac8e41a | low | Add under `max-md` (U03) |
+| A-106 | Dialog phone sheet | grab handle 36x4 | no grab handle | DIFFERENT -> FIXED d3e8cc0 | low | Add under `max-md` (U03) |
 | A-107 | DataTable core | densities, sorted header, selected edge, group rows, totals, touch 48 | built | MATCH | - | - |
-| A-108 | Density switch | toolbar "Comfortable / Compact", remembered per person | `density` prop only | MISSING -> FIXED ac8e41a | medium | Toggle + per-user storage (U04) |
-| A-109 | DataTable keyboard | ↑↓ J K, Enter, Space, `/` focuses filter, Esc clears, focus remembered after a detail view | all but `/`, Esc, and focus memory | MISSING -> FIXED ac8e41a | medium | Add them (U04) |
-| A-110 | Keyboard focus look | 2px green ring inset on the focused row | `focus-visible:bg-sunken` + outline offset | DIFFERENT -> FIXED ac8e41a | low | Verify ring colour/width (U04) |
-| A-111 | DataTable footer | "Showing 7 of 7 RFQs" + key legend always | summary slot; legend only with `onRowOpen`/`selection`, hidden below md | DIFFERENT -> FIXED ac8e41a | low | Show whenever rows focusable (U04) |
-| A-112 | DataTable loading / error | toolbar "Loading RFQs", skeleton footer; error "Couldn’t load RFQs" / "Your changes are safe. Check your connection and try again." / "Request failed · Fri 27 Nov, 09:41 · reference 4f1c9a" | skeleton rows only; error text supplied by caller; meta "Reference X" | DIFFERENT -> FIXED ac8e41a | low | Default sentence and time stamp (U04) |
-| A-113 | Truncation tooltip | long text truncates with ellipsis and tooltip | `truncate` only when `width` set, no tooltip | MISSING -> FIXED ac8e41a | low | Tooltip on truncated cells (U04) |
-| A-114 | EmptyState | four cards: goal (solid border, success tile), first use (dashed), no results, role-limited (warning tile, lock icon) | moods goal / neutral / error; no card border, no warning mood | DIFFERENT -> FIXED ac8e41a | medium | Add warning mood + card border (U04) |
+| A-108 | Density switch | toolbar "Comfortable / Compact", remembered per person | `density` prop only | MISSING -> FIXED d3e8cc0 | medium | Toggle + per-user storage (U04) |
+| A-109 | DataTable keyboard | ↑↓ J K, Enter, Space, `/` focuses filter, Esc clears, focus remembered after a detail view | all but `/`, Esc, and focus memory | MISSING -> FIXED d3e8cc0 | medium | Add them (U04) |
+| A-110 | Keyboard focus look | 2px green ring inset on the focused row | `focus-visible:bg-sunken` + outline offset | DIFFERENT -> FIXED d3e8cc0 | low | Verify ring colour/width (U04) |
+| A-111 | DataTable footer | "Showing 7 of 7 RFQs" + key legend always | summary slot; legend only with `onRowOpen`/`selection`, hidden below md | DIFFERENT -> FIXED d3e8cc0 | low | Show whenever rows focusable (U04) |
+| A-112 | DataTable loading / error | toolbar "Loading RFQs", skeleton footer; error "Couldn’t load RFQs" / "Your changes are safe. Check your connection and try again." / "Request failed · Fri 27 Nov, 09:41 · reference 4f1c9a" | skeleton rows only; error text supplied by caller; meta "Reference X" | DIFFERENT -> FIXED d3e8cc0 | low | Default sentence and time stamp (U04) |
+| A-113 | Truncation tooltip | long text truncates with ellipsis and tooltip | `truncate` only when `width` set, no tooltip | MISSING -> FIXED d3e8cc0 | low | Tooltip on truncated cells (U04) |
+| A-114 | EmptyState | four cards: goal (solid border, success tile), first use (dashed), no results, role-limited (warning tile, lock icon) | moods goal / neutral / error; no card border, no warning mood | DIFFERENT -> FIXED d3e8cc0 | medium | Add warning mood + card border (U04) |
 | A-115 | Toast | ink, 380px, Undo ring + "10s", bar, pause, settled sentence, errors stay with action, max 3, Cmd+Z | built to spec | MATCH | - | - |
 | A-116 | Tooltip | 400 ms, focus instant, 260px, keyboard hint, disabled-why | built (`forDisabled`, `title`, `shortcut`) | MATCH | - | - |
 | A-117 | SegmentedControl | 26/32px, icons, counts, tablist/radiogroup | built | MATCH | - | - |
-| A-118 | DateRail | six tones (on track, due soon, due today, overdue, done, no date), flips label near the end, "Asked / Bid due" ends | NOT built as a primitive (INVENTORY). Today has a private rail in `features/today/ContextPane.tsx`: warning tone only, chase rules only | MISSING -> FIXED ac8e41a | high | Shared `DateRail` with six states (U05 follow-up, R09, O03) |
-| A-119 | StepList | done / now / todo steps | not built | MISSING -> FIXED ac8e41a | medium | With Intake/Order (R05, O03) |
-| A-120 | InlineEditRow | resting, editing (3px green edge), saving, error line | not built as a primitive | MISSING -> FIXED ac8e41a | medium | U04 follow-up with RFQ reply row |
+| A-118 | DateRail | six tones (on track, due soon, due today, overdue, done, no date), flips label near the end, "Asked / Bid due" ends | NOT built as a primitive (INVENTORY). Today has a private rail in `features/today/ContextPane.tsx`: warning tone only, chase rules only | MISSING -> FIXED d3e8cc0 | high | Shared `DateRail` with six states (U05 follow-up, R09, O03) |
+| A-119 | StepList | done / now / todo steps | not built | MISSING -> FIXED d3e8cc0 | medium | With Intake/Order (R05, O03) |
+| A-120 | InlineEditRow | resting, editing (3px green edge), saving, error line | not built as a primitive | MISSING -> FIXED d3e8cc0 | medium | U04 follow-up with RFQ reply row |
 | A-121 | Popover menu / information | 32px items, hints, divider; information card | built | MATCH | - | - |
 | A-122 | InlineConfirm, Callout, Tag, CountPill, ToggleButton | as sheet | built | MATCH | - | - |
-| A-123 | Gallery coverage | one sheet, every state | `/dev/gallery` has all built primitives and dialog/palette/toast/combobox scenes; lacks tooltip variants (disabled-why, long label, status, two-line), toast paused / two-at-once / phone, density switch, and the three unbuilt primitives ("Not built yet" list) | DIFFERENT -> FIXED ac8e41a | low | Add scenes as primitives land (U09) |
-| A-124 | Gallery palette scene | idle shows Recent + Actions (N, C, G T) | gallery stubs the Actions source; the app does not (A-89) | DIFFERENT -> FIXED ac8e41a | medium | Fix the app, not the gallery |
+| A-123 | Gallery coverage | one sheet, every state | `/dev/gallery` has all built primitives and dialog/palette/toast/combobox scenes; lacks tooltip variants (disabled-why, long label, status, two-line), toast paused / two-at-once / phone, density switch, and the three unbuilt primitives ("Not built yet" list) | DIFFERENT -> FIXED d3e8cc0 | low | Add scenes as primitives land (U09) |
+| A-124 | Gallery palette scene | idle shows Recent + Actions (N, C, G T) | gallery stubs the Actions source; the app does not (A-89) | DIFFERENT -> FIXED d3e8cc0 | medium | Fix the app, not the gallery |
 
 ## OWNER DECISION needed
 
