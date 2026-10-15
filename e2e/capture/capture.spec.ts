@@ -431,7 +431,7 @@ test.describe('attach to an order (migration 0041)', () => {
     expect((await orderFiles(s.order.id)).map(f => f.file_name)).toEqual(['delivery-note.png'])
     expect(await axeViolations(page)).toEqual([])
     await page.getByRole('button', { name: 'Delete delivery-note.png' }).click()
-    await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete file' }).click()
     await expect.poll(async () => (await orderFiles(s.order.id)).length).toBe(0)
   })
 
