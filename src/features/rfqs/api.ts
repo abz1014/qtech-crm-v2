@@ -267,6 +267,7 @@ export interface InquiryRow {
   supplierCountry: string | null
   sentOn: string | null
   lastChasedOn: string | null
+  lastRelayedAt: string | null
   noOfferOn: string | null
   /** Why the supplier cannot quote (a stored key, see lib/cantQuote.ts); set together with noOfferOn. */
   noOfferReason: string | null
@@ -291,7 +292,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
   const inq = unwrap(
     await db
       .from('supplier_inquiries')
-      .select('id, supplier_id, sent_on, last_chased_on, no_offer_on, no_offer_reason, chase_count, notes, created_at')
+      .select('id, supplier_id, sent_on, last_chased_on, last_relayed_at, no_offer_on, no_offer_reason, chase_count, notes, created_at')
       .eq('rfq_id', rfqId)
       .order('created_at'),
   )
@@ -352,6 +353,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
       supplierCountry: c?.country ?? null,
       sentOn: i.sent_on,
       lastChasedOn: i.last_chased_on,
+      lastRelayedAt: i.last_relayed_at,
       noOfferOn: i.no_offer_on,
       noOfferReason: i.no_offer_reason,
       itemDeclines: declinesBy.get(i.id) ?? {},
@@ -470,4 +472,171 @@ export async function setRfqClosed(input: { rfqId: string; closedOn: string | nu
   const db = requireSupabase()
   const { error } = await db.from('rfqs').update({ closed_on: input.closedOn, close_reason: input.reason, close_note: input.note }).eq('id', input.rfqId)
   if (error) throw error
+}
+
+// ================================================================ Clarifications and files (R09, R10)
+
+export interface AttachmentRow {
+  id: string
+  path: string
+  fileName: string
+  mimeType: string
+  sizeBytes: number
+  clarificationId: string | null
+  createdAt: string
+}
+
+export interface ClarificationRow {
+  id: string
+  question: string
+  raisedByInquiryId: string | null
+  firstAskedAt: string | null
+  lastAskedAt: string | null
+  askCount: number
+  answer: string | null
+  answeredAt: string | null
+  withdrawnAt: string | null
+  createdAt: string
+}
+
+const FILE_BUCKET = 'rfq-files'
+
+/** Every question on the RFQ, withdrawn ones too (the panel keeps them in a closed list). */
+export async function listClarifications(rfqId: string): Promise<ClarificationRow[]> {
+  const db = requireSupabase()
+  const rows = unwrap(
+    await db
+      .from('clarifications')
+      .select('id, question, raised_by_inquiry_id, first_asked_at, last_asked_at, ask_count, answer, answered_at, withdrawn_at, created_at')
+      .eq('rfq_id', rfqId)
+      .order('created_at')
+      .order('id'),
+  )
+  return rows.map(r => ({
+    id: r.id,
+    question: r.question,
+    raisedByInquiryId: r.raised_by_inquiry_id,
+    firstAskedAt: r.first_asked_at,
+    lastAskedAt: r.last_asked_at,
+    askCount: r.ask_count,
+    answer: r.answer,
+    answeredAt: r.answered_at,
+    withdrawnAt: r.withdrawn_at,
+    createdAt: r.created_at,
+  }))
+}
+
+export async function listAttachments(rfqId: string): Promise<AttachmentRow[]> {
+  const db = requireSupabase()
+  const rows = unwrap(
+    await db.from('attachments').select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at').eq('rfq_id', rfqId).eq('bucket', FILE_BUCKET).order('created_at'),
+  )
+  return rows.map(r => ({
+    id: r.id,
+    path: r.path,
+    fileName: r.file_name,
+    mimeType: r.mime_type,
+    sizeBytes: r.size_bytes,
+    clarificationId: r.clarification_id,
+    createdAt: r.created_at,
+  }))
+}
+
+export interface NewQuestion {
+  /** Client-generated, so a retry or a double tap cannot add the same question twice. */
+  id: string
+  question: string
+  inquiryId: string | null
+}
+
+export async function addClarifications(rfqId: string, questions: readonly NewQuestion[]): Promise<number> {
+  const db = requireSupabase()
+  if (questions.length === 0) return 0
+  // One statement gives every row the same created_at; stagger it by a millisecond so the pasted order is the shown order.
+  const base = Date.now()
+  const { error } = await db
+    .from('clarifications')
+    .upsert(
+      questions.map((q, i) => ({ id: q.id, rfq_id: rfqId, question: q.question, raised_by_inquiry_id: q.inquiryId, created_at: new Date(base + i).toISOString() })),
+      { onConflict: 'id', ignoreDuplicates: true },
+    )
+  if (error) throw error
+  return questions.length
+}
+
+/** stamp_clarification_ask: first_asked_at if empty, last_asked_at = now, ask_count + 1, for the open questions in the set. */
+export async function stampClarificationAsk(ids: readonly string[]): Promise<number> {
+  const db = requireSupabase()
+  const { data, error } = await db.rpc('stamp_clarification_ask', { p_clarification_ids: [...ids] })
+  if (error) throw error
+  return data ?? 0
+}
+
+/** An answer: text, or none (a photo answers alone), stamped now. All null takes the answer back. */
+export async function setClarificationAnswer(input: { id: string; answer: string | null; answeredAt: string | null }): Promise<void> {
+  const db = requireSupabase()
+  const { error } = await db.from('clarifications').update({ answer: input.answer, answered_at: input.answeredAt }).eq('id', input.id)
+  if (error) throw error
+}
+
+/** Withdraw (a time) or put back (null). */
+export async function setClarificationWithdrawn(id: string, at: string | null): Promise<void> {
+  const db = requireSupabase()
+  const { error } = await db.from('clarifications').update({ withdrawn_at: at }).eq('id', id)
+  if (error) throw error
+}
+
+/** "Copy answers for supplier X": last_relayed_at on the inquiry. A previous value (or null) puts it back for Undo. */
+export async function setInquiryRelayed(inquiryId: string, at: string | null): Promise<void> {
+  const db = requireSupabase()
+  const { error } = await db.from('supplier_inquiries').update({ last_relayed_at: at }).eq('id', inquiryId)
+  if (error) throw error
+}
+
+/**
+ * Upload one file to rfq-files at {rfq_id}/{uuid}.{ext} and record it. The object goes first; if the row cannot be
+ * written the object is removed again, so nothing is left behind.
+ */
+export async function uploadAttachment(input: { rfqId: string; clarificationId: string | null; file: File; path: string }): Promise<AttachmentRow> {
+  const db = requireSupabase()
+  const up = await db.storage.from(FILE_BUCKET).upload(input.path, input.file, { contentType: input.file.type, upsert: false })
+  if (up.error) throw up.error
+  const res = await db
+    .from('attachments')
+    .insert({
+      bucket: FILE_BUCKET,
+      path: input.path,
+      file_name: input.file.name,
+      mime_type: input.file.type,
+      size_bytes: input.file.size,
+      rfq_id: input.rfqId,
+      clarification_id: input.clarificationId,
+    })
+    .select('id, path, file_name, mime_type, size_bytes, clarification_id, created_at')
+    .single()
+  if (res.error) {
+    await db.storage.from(FILE_BUCKET).remove([input.path])
+    throw res.error
+  }
+  const r = res.data
+  return { id: r.id, path: r.path, fileName: r.file_name, mimeType: r.mime_type, sizeBytes: r.size_bytes, clarificationId: r.clarification_id, createdAt: r.created_at }
+}
+
+/** The row first, then the object: a failed object removal leaves an orphan (swept later), never a row pointing at nothing. */
+export async function deleteAttachment(att: Pick<AttachmentRow, 'id' | 'path'>): Promise<void> {
+  const db = requireSupabase()
+  const { error } = await db.from('attachments').delete().eq('id', att.id)
+  if (error) throw error
+  await db.storage.from(FILE_BUCKET).remove([att.path])
+}
+
+/** Short-lived links for showing and opening files (the bucket is private). Keyed by path. */
+export async function signFileUrls(paths: readonly string[], seconds = 600): Promise<Record<string, string>> {
+  const db = requireSupabase()
+  if (paths.length === 0) return {}
+  const { data, error } = await db.storage.from(FILE_BUCKET).createSignedUrls([...paths], seconds)
+  if (error) throw error
+  const out: Record<string, string> = {}
+  for (const d of data ?? []) if (d.path && d.signedUrl) out[d.path] = d.signedUrl
+  return out
 }
