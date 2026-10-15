@@ -41,13 +41,15 @@ as $$
            (t ~ '^[0-9+()[:space:]-]+$' and length(regexp_replace(t, '\D', '', 'g')) >= 3) as phoneish
     from p
     where btrim(coalesce(q, '')) <> '' and length(btrim(coalesce(q, ''))) <= 100 and public.current_user_role() is not null
-  ), co as (
+  ), cm as materialized (
+    -- Every company the text matches, found once: the company rows below and the RFQs filed under them both use it.
+    -- (A correlated subquery per RFQ would evaluate the companies row-security check once per company per RFQ.)
     select c.id, c.name, c.country,
            (case when lower(c.name) = lower(x.t) then 3 when c.name ilike x.pre then 2 else 1 end)::real as score
     from public.companies c, x
     where c.name ilike x.pat
-    order by score desc, c.name
-    limit (select n from x)
+  ), co as (
+    select id, name, country, score from cm order by score desc, name limit (select n from x)
   ), ct as (
     select k.id, k.name, k.company_id, k.phone, k.email,
            (case when lower(k.name) = lower(x.t) then 3 when k.name ilike x.pre then 2 else 1 end)::real as score
@@ -65,7 +67,7 @@ as $$
     from public.rfqs r, x
     where (x.num is not null and r.number = x.num)
        or r.customer_ref ilike x.pat
-       or r.company_id in (select c2.id from public.companies c2 where c2.name ilike x.pat limit 25)
+       or r.company_id in (select id from (select id from cm order by score desc, name limit 25) top)
     order by score desc, r.number desc
     limit (select n from x)
   )
