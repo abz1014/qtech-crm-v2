@@ -6,14 +6,14 @@ select plan(74);
 
 -- ------------------------------------------------------------------ structure
 select columns_are('public', 'companies',
-  array['id', 'created_at', 'created_by', 'updated_at', 'name', 'country', 'notes', 'legacy_flags', 'legacy_source'],
-  'companies has the section 2.2 columns');
+  array['id', 'created_at', 'created_by', 'updated_at', 'name', 'country', 'notes', 'legacy_flags', 'legacy_source', 'city'],
+  'companies has the section 2.2 columns (city from A7, 0039)');
 select columns_are('public', 'company_sites',
   array['id', 'created_at', 'created_by', 'company_id', 'name', 'address'],
   'company_sites has the section 2.3 columns');
 select columns_are('public', 'contacts',
-  array['id', 'created_at', 'created_by', 'company_id', 'site_id', 'name', 'phone', 'email', 'notes'],
-  'contacts has the section 2.4 columns');
+  array['id', 'created_at', 'created_by', 'company_id', 'site_id', 'name', 'phone', 'email', 'notes', 'job_title'],
+  'contacts has the section 2.4 columns (job_title from A7, 0039)');
 select columns_are('public', 'brands',
   array['id', 'created_at', 'created_by', 'name', 'kind'],
   'brands has the section 2.5 columns');
