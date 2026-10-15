@@ -162,7 +162,7 @@ describe('editing and unlinking', () => {
     await act(async () => {
       await result.current.mutateAsync({ id: 'c', name: ' Salman ', phone: '', email: ' s@x.pk ', notes: null, siteId: '' })
     })
-    expect(opArgs(db.calls[0], 'update')).toEqual([{ name: 'Salman', site_id: null, phone: null, email: 's@x.pk', notes: null }])
+    expect(opArgs(db.calls[0], 'update')).toEqual([{ name: 'Salman', site_id: null, phone: null, email: 's@x.pk', job_title: null, notes: null }])
   })
 
   it('useUnlinkBrand removes only the link and refreshes the roster', async () => {

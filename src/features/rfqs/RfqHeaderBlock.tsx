@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Ban, Calendar, CalendarCheck, Building2, FileText, MapPin, RotateCcw, User, UserRound, Users } from 'lucide-react'
+import { Ban, Calendar, CalendarCheck, Building2, FileCheck2, FileText, MapPin, Package, RotateCcw, User, UserRound, Users } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
-import { rfqRef } from '@/lib/refs'
+import { orderRef, rfqRef } from '@/lib/refs'
 import { deadlineValue } from '@/lib/status'
 import { Avatar } from '@/ui/Avatar'
 import { Breadcrumb } from '@/ui/Breadcrumb'
@@ -18,6 +18,8 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader } from '@/features/rfqs/api'
 import { useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
+import { useOrdersForRfq } from '@/features/orders/hooks'
+import { useWonDialog } from '@/features/orders/useWonDialog'
 import { IssueQuotationButton } from '@/features/quotations/QuotationsPanel'
 import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, type CloseReason } from '@/features/rfqs/lib'
 
@@ -44,6 +46,9 @@ export function RfqHeaderBlock({ rfq }: { rfq: RfqHeader }) {
   const bid = useSetBidSent(rfq.id)
   const closeRfq = useSetRfqClosed(rfq.id)
   const [closing, setClosing] = useState(false)
+  const [, setWon] = useWonDialog()
+  const orders = useOrdersForRfq(rfq.id)
+  const liveOrders = (orders.data ?? []).filter(o => !o.cancelledOn)
   const s = rfq.state
   const ref = rfqRef(rfq.number)
   const open = (s?.outcome ?? 'open') === 'open'
@@ -130,6 +135,20 @@ export function RfqHeaderBlock({ rfq }: { rfq: RfqHeader }) {
           {/* data-slot="issue-quotation" (R19): the Issue quotation action, beside Mark bid sent. */}
           <span data-slot="issue-quotation" className="contents">
             {open ? <IssueQuotationButton rfqId={rfq.id} /> : null}
+          </span>
+          {/* data-slot="mark-won" (O01): Mark won opens the Create order dialog; once there is an order, the way to it. */}
+          <span data-slot="mark-won" className="contents">
+            {s?.outcome !== 'won' && liveOrders.length === 0 ? (
+              <Button variant={bidSent ? 'primary' : 'secondary'} icon={FileCheck2} onClick={() => setWon(true)}>
+                Mark won
+              </Button>
+            ) : null}
+            {liveOrders.map(o => (
+              <Link key={o.id} to={`/orders/${o.id}`} className="inline-flex h-control items-center gap-2 rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
+                <Icon icon={Package} />
+                Open {orderRef(o.number)}
+              </Link>
+            ))}
           </span>
           {open && !bidSent ? (
             <Button variant="primary" icon={CalendarCheck} onClick={() => void markBidSent()} busy={bid.isPending} busyLabel="Marking">

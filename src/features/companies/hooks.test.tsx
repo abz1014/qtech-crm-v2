@@ -101,7 +101,7 @@ describe('companies writes', () => {
     await act(async () => {
       await result.current.mutateAsync({ id: 'new-id', name: '  Indus Textile ', country: ' ' })
     })
-    expect(opArgs(db.calls[0], 'insert')).toEqual([{ id: 'new-id', name: 'Indus Textile', country: null, notes: null }])
+    expect(opArgs(db.calls[0], 'insert')).toEqual([{ id: 'new-id', name: 'Indus Textile', country: null, notes: null, city: null }])
     expect(spy).toHaveBeenCalledWith({ queryKey: qk.companies.lists() })
   })
 

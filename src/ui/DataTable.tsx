@@ -339,7 +339,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const alignRight = (c: Column<T>) => (c.align ?? (c.kind === 'money' || c.kind === 'num' ? 'right' : 'left')) === 'right'
   const monoCell = (c: Column<T>) => c.kind === 'money' || c.kind === 'num' || c.kind === 'date'
   const cellBase = 'h-row whitespace-nowrap border-b border-line px-[var(--cell-px)] py-[6px] first:pl-5 last:pr-5'
-  const hide = (c: Column<T>) => (c.hideBelowMd ? 'hidden md:table-cell' : '')
+  const hide = (c: Column<T>) => (c.hideBelowLg ? 'hidden lg:table-cell' : c.hideBelowMd ? 'hidden md:table-cell' : '')
 
   const toolbarNode = typeof toolbar === 'function' ? toolbar({ selectedCount }) : toolbar
   const csv = () => {
@@ -611,6 +611,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
                           className={cn(!dir && 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100')}
                         />
                       </button>
+                    ) : c.hiddenHeader ? (
+                      <span className="sr-only">{c.header}</span>
                     ) : (
                       c.header
                     )}

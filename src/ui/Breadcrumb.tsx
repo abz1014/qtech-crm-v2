@@ -17,13 +17,14 @@ export interface Crumb {
   mono?: boolean
 }
 
-export function Breadcrumb({ items, className }: { items: readonly Crumb[]; className?: string }) {
+/** `links: 'primary'` draws the ancestors in the brand link colour, as the company mockup does. The default stays muted so existing screens are unchanged. */
+export function Breadcrumb({ items, className, links = 'muted' }: { items: readonly Crumb[]; className?: string; links?: 'muted' | 'primary' }) {
   return (
     <nav aria-label="Breadcrumb" className={className}>
       <ol className="flex flex-wrap items-center gap-1 text-sm text-fg-muted">
         {items.map((c, i) => {
           const last = i === items.length - 1
-          const cls = cn(c.mono && 'num', last ? 'text-fg-2' : 'rounded hover:text-fg')
+          const cls = cn(c.mono && 'num', last ? 'text-fg-2' : links === 'primary' ? 'rounded text-primary hover:underline' : 'rounded hover:text-fg')
           return (
             <Fragment key={`${c.label}-${i}`}>
               <li className="inline-flex items-center">

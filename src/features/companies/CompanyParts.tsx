@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
-import { Check, Minus } from 'lucide-react'
+import { Check, Clock, Minus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
@@ -56,11 +56,12 @@ export function KeyValue({ rows }: { rows: { key: string; value: ReactNode }[] }
   )
 }
 
-export type Unit = 'quoted' | 'declined' | 'waiting' | 'ontime' | 'late'
+export type Unit = 'quoted' | 'declined' | 'waiting' | 'ontime' | 'estimated' | 'late'
 
 const UNIT_BOX: Record<Unit, string> = {
   quoted: 'bg-tone-ink-bg text-tone-ink-fg',
   ontime: 'bg-tone-ink-bg text-tone-ink-fg',
+  estimated: 'border border-dashed border-fg-2 bg-surface text-fg-2',
   declined: 'border border-fg-2 bg-surface text-fg-2',
   waiting: 'border border-dashed border-line-input bg-surface',
   late: 'border border-tone-danger-fg bg-tone-danger-bg text-tone-danger-fg',
@@ -81,7 +82,7 @@ export function UnitChart({
       <div role="img" aria-label={label} className="flex flex-wrap items-center gap-1">
         {units.map((u, i) => (
           <span key={i} className={cn('grid size-[22px] place-items-center rounded', UNIT_BOX[u])}>
-            {u === 'quoted' || u === 'ontime' ? <Icon icon={Check} size="chip" /> : u === 'declined' ? <Icon icon={Minus} size="chip" /> : null}
+            {u === 'quoted' || u === 'ontime' || u === 'estimated' ? <Icon icon={Check} size="chip" /> : u === 'declined' ? <Icon icon={Minus} size="chip" /> : u === 'late' ? <Icon icon={Clock} size="chip" /> : null}
           </span>
         ))}
       </div>
