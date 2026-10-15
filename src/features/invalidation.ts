@@ -56,6 +56,8 @@ export interface WriteVars {
   'quotation.pdf': { rfqId: string }
   /** O01: converting an RFQ creates an order and legs, and the RFQ becomes won. */
   'order.convert': { rfqId: string }
+  /** O02: a repeat order creates an order, its lines and legs; the customer's history and Today change. */
+  'order.repeat': { companyId: string }
   /** O03: any edit on the order page (items, legs, commissioning, notes). */
   'order.update': { orderId: string }
   /** O03: cancelling (or taking the cancel back) also moves the RFQ between won and open and the company role. */
@@ -126,6 +128,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'quotation.pdf': v => [qk.rfqs.part(v.rfqId, 'quotations')],
   // A new order changes the RFQ (won), every list that shows orders or states, Today (place PO, goods late) and the customer's history.
   'order.convert': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.all, qk.orders.all, qk.today.all, qk.companies.all],
+  'order.repeat': v => [qk.orders.all, qk.today.all, qk.companies.all, qk.companies.detail(v.companyId)],
   'order.update': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all],
   'order.cancel': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.rfqs.all, qk.today.all, qk.companies.all],
   // An issued PO changes the order page (leg placed, prices written back), the order lists, Today and every PO read.

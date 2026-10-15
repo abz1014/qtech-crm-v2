@@ -99,6 +99,11 @@ function orders() {
     detail,
     /** One slice of an order page (O03). `slice` is a fixed word, so a typo is a type error. */
     part: (id: string, slice: OrderPart) => [...detail(id), slice] as const,
+    /** O02: past orders found to start a new one from (cached a moment; the search text is part of the key). */
+    past: (text: string) => [...all, 'list', 'past', text.trim().toLowerCase()] as const,
+    pastOne: (id: string) => [...all, 'list', 'past-one', id] as const,
+    /** O04: every order with its state dimensions, shaped by the caller's role (an engineer's has no money in it). */
+    board: (role: string) => [...all, 'list', 'board', role] as const,
     /** The orders an RFQ produced (the RFQ page shows 'Open ORD-0039' once it is won). */
     forRfq: (rfqId: string) => [...all, 'list', 'for-rfq', rfqId] as const,
     /** The company's last payment terms, the default for the next order (O01). */

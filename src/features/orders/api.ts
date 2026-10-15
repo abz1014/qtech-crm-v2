@@ -1,4 +1,4 @@
-import { requireSupabase, unwrap } from '@/lib/supabase'
+import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { TableUpdate, ViewRow } from '@/features/dbTypes'
 import type { ConvertPayloadLine } from '@/features/orders/lib/convert'
 import type { LegPatch } from '@/features/orders/lib/legModel'
@@ -503,4 +503,227 @@ export async function listSupplierChoices(): Promise<Array<{ id: string; name: s
   const last = new Map<string, string>()
   for (const l of unwrap(legs)) if (l.currency && !last.has(l.supplier_id)) last.set(l.supplier_id, l.currency.trim())
   return unwrap(companies).map(c => ({ id: c.id, name: c.name, lastCurrency: last.get(c.id) ?? null }))
+}
+
+// ---------------------------------------------------------------- the orders list (O04)
+
+export interface OrderListRow {
+  id: string
+  number: number
+  customerPo: string | null
+  orderedOn: string | null
+  ownerId: string | null
+  ownerName: string | null
+  companyId: string
+  companyName: string
+  siteName: string | null
+  /** v_order_state, which every staff role may read. */
+  lifecycle: string
+  goods: string
+  commissioning: string
+  dataTrust: string
+  /** Admin and sales only: never requested for an engineer. */
+  invoicing: string | null
+  gross: number | null
+  /** Admin (v_order_money) and sales (order_receivables()): the payment state and what is still owed. Null for an engineer. */
+  payment: string | null
+  balance: number | null
+  /** The engineers assigned (order_engineers), so an engineer's "My jobs" view can be a filter. */
+  engineerIds: string[]
+}
+
+/**
+ * Every order with its five state dimensions. Reads are role-shaped, not just hidden: an engineer's request has no invoicing, gross,
+ * payment or balance column in it, and no receivables call is made for them (DATA_MODEL section 10). 1,000-row pages (PostgREST's cap).
+ */
+export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<OrderListRow[]> {
+  const db = requireSupabase()
+  const money = role !== 'engineer'
+  const stateCols = money ? 'order_id, lifecycle, goods_state, commissioning_state, data_trust, invoicing_state, gross' : 'order_id, lifecycle, goods_state, commissioning_state, data_trust'
+  const [orders, states, users, assigned, pay] = await Promise.all([
+    fetchAll(
+      (from, to) =>
+        db
+          .from('orders')
+          .select('id, number, customer_po_number, ordered_on, owner_id, company_id, companies(name), company_sites(name)')
+          .order('number', { ascending: false })
+          .range(from, to) as unknown as PromiseLike<{ data: OrdersJoin[] | null; error: { code?: string; message: string } | null }>,
+    ),
+    fetchAll(
+      (from, to) =>
+        db
+          .from('v_order_state')
+          .select(stateCols)
+          .range(from, to) as unknown as PromiseLike<{ data: Array<Record<string, unknown>> | null; error: { code?: string; message: string } | null }>,
+    ),
+    db.from('users').select('id, name'),
+    fetchAll((from, to) => db.from('order_engineers').select('order_id, user_id').range(from, to)),
+    role === 'admin'
+      ? fetchAll(
+          (from, to) =>
+            db.from('v_order_money').select('order_id, payment_state, receivable').range(from, to) as unknown as PromiseLike<{ data: Array<Record<string, unknown>> | null; error: { code?: string; message: string } | null }>,
+        )
+      : role === 'sales'
+        ? db.rpc('order_receivables').then(r => {
+            if (r.error) throw r.error
+            return (r.data ?? []) as Array<Record<string, unknown>>
+          })
+        : Promise.resolve([] as Array<Record<string, unknown>>),
+  ])
+  const names = new Map(unwrap(users).map(u => [u.id, u.name]))
+  const stateBy = new Map(states.map(s => [s.order_id as string, s]))
+  const payBy = new Map(pay.map(p => [p.order_id as string, p]))
+  const engBy = new Map<string, string[]>()
+  for (const a of assigned) engBy.set(a.order_id, [...(engBy.get(a.order_id) ?? []), a.user_id])
+  const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v)
+  return orders.map(o => {
+    const s = stateBy.get(o.id)
+    const p = payBy.get(o.id)
+    return {
+      id: o.id,
+      number: o.number,
+      customerPo: o.customer_po_number,
+      orderedOn: o.ordered_on,
+      ownerId: o.owner_id ?? null,
+      ownerName: o.owner_id ? (names.get(o.owner_id) ?? null) : null,
+      companyId: o.company_id,
+      companyName: one(o.companies)?.name ?? 'Unknown company',
+      siteName: one(o.company_sites)?.name ?? null,
+      lifecycle: (s?.lifecycle as string | undefined) ?? 'active',
+      goods: (s?.goods_state as string | undefined) ?? 'n_a',
+      commissioning: (s?.commissioning_state as string | undefined) ?? 'n_a',
+      dataTrust: (s?.data_trust as string | undefined) ?? 'ok',
+      invoicing: money ? ((s?.invoicing_state as string | null | undefined) ?? null) : null,
+      gross: money && s?.gross !== null && s?.gross !== undefined ? Number(s.gross) : null,
+      payment: money ? ((p?.payment_state as string | null | undefined) ?? null) : null,
+      balance: money && p ? Number(p.receivable ?? p.balance ?? 0) : null,
+      engineerIds: engBy.get(o.id) ?? [],
+    }
+  })
+}
+
+type OrdersJoin = {
+  id: string
+  number: number
+  customer_po_number: string | null
+  ordered_on: string | null
+  owner_id?: string | null
+  company_id: string
+  site_id?: string | null
+  companies: { name: string } | { name: string }[] | null
+  company_sites: { name: string } | { name: string }[] | null
+}
+
+// ---------------------------------------------------------------- a repeat order, or an order that came in without an RFQ (O02)
+
+export interface PastOrder {
+  id: string
+  number: number
+  companyId: string
+  companyName: string
+  siteName: string | null
+  orderedOn: string | null
+  customerPo: string | null
+  lineCount: number
+  /** "Belimo NM24A-SR ×6, Cerabar PMC51 ×3 and 2 more": what the order was for. No prices. */
+  summary: string
+}
+
+const likeSafe = (s: string) => escapeLike(s).replace(/[,()]/g, ' ')
+
+/**
+ * Past orders to start a new one from, found by company, site, item text, order number or customer PO. With nothing typed, the most
+ * recent ones. Cancelled orders are left out. No price is read: the new order copies them in the database (create_repeat_order).
+ */
+export async function searchPastOrders(text: string, signal?: AbortSignal, limit = 12): Promise<PastOrder[]> {
+  const db = requireSupabase()
+  const q = text.trim()
+  const orderCols = 'id, number, company_id, site_id, ordered_on, customer_po_number, companies(name), company_sites(name)'
+  const base = () => {
+    const req = db.from('orders').select(orderCols).is('cancelled_on', null).order('ordered_on', { ascending: false, nullsFirst: false }).order('number', { ascending: false }).limit(limit)
+    return signal ? req.abortSignal(signal) : req
+  }
+  let rows: OrdersJoin[]
+  if (!q) {
+    rows = unwrap(await base()) as unknown as OrdersJoin[]
+  } else {
+    const like = `%${likeSafe(q)}%`
+    const [companies, sites, items] = await Promise.all([
+      db.from('companies').select('id').ilike('name', like).limit(30),
+      db.from('company_sites').select('id').or(`name.ilike.${like},address.ilike.${like}`).limit(30),
+      db.from('order_items').select('order_id').ilike('description', like).limit(60),
+    ])
+    const companyIds = unwrap(companies).map(c => c.id)
+    const siteIds = unwrap(sites).map(s => s.id)
+    const itemOrderIds = [...new Set(unwrap(items).map(i => i.order_id))]
+    const digits = /^(ord[-\s]*)?0*(\d{1,9})$/i.exec(q)
+    const filters: string[] = [`customer_po_number.ilike.${like}`]
+    if (companyIds.length) filters.push(`company_id.in.(${companyIds.join(',')})`)
+    if (siteIds.length) filters.push(`site_id.in.(${siteIds.join(',')})`)
+    if (itemOrderIds.length) filters.push(`id.in.(${itemOrderIds.join(',')})`)
+    if (digits) filters.push(`number.eq.${Number(digits[2])}`)
+    rows = unwrap(await base().or(filters.join(','))) as unknown as OrdersJoin[]
+  }
+  return hydratePastOrders(rows)
+}
+
+async function hydratePastOrders(rows: OrdersJoin[]): Promise<PastOrder[]> {
+  if (rows.length === 0) return []
+  const db = requireSupabase()
+  const lines = unwrap(
+    await db
+      .from('order_items')
+      .select('order_id, description, qty, position')
+      .in(
+        'order_id',
+        rows.map(r => r.id),
+      )
+      .order('position'),
+  )
+  const byOrder = new Map<string, Array<{ description: string; qty: number }>>()
+  for (const l of lines) byOrder.set(l.order_id, [...(byOrder.get(l.order_id) ?? []), { description: l.description, qty: Number(l.qty) }])
+  const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v)
+  return rows.map(r => {
+    const ls = byOrder.get(r.id) ?? []
+    const shown = ls.slice(0, 2).map(l => `${l.description} ×${l.qty}`)
+    return {
+      id: r.id,
+      number: r.number,
+      companyId: r.company_id,
+      companyName: one(r.companies)?.name ?? 'Unknown company',
+      siteName: one(r.company_sites)?.name ?? null,
+      orderedOn: r.ordered_on,
+      customerPo: r.customer_po_number,
+      lineCount: ls.length,
+      summary: `${shown.join(', ')}${ls.length > 2 ? ` and ${ls.length - 2} more` : ''}`,
+    }
+  })
+}
+
+/** One past order by id (the "Repeat order" button on a company's order history opens the dialog with it already chosen). */
+export async function getPastOrder(id: string): Promise<PastOrder | null> {
+  const rows = unwrap(
+    await requireSupabase().from('orders').select('id, number, company_id, site_id, ordered_on, customer_po_number, companies(name), company_sites(name)').eq('id', id).limit(1),
+  ) as unknown as OrdersJoin[]
+  return (await hydratePastOrders(rows))[0] ?? null
+}
+
+export interface RepeatInput {
+  /** Client-generated: a second call with the same id returns the same order and writes nothing, so a double submit makes one order. */
+  orderId: string
+  fromOrderId: string
+  customerPo: string | null
+  orderedOn: string | null
+}
+
+/** create_repeat_order: copies the source order's company, site, contact, terms, lines with their last prices, and the legs that supplied them. */
+export async function createRepeatOrder(input: RepeatInput): Promise<string> {
+  const { data, error } = await requireSupabase().rpc('create_repeat_order', {
+    p_order_id: input.orderId,
+    p_from_order_id: input.fromOrderId,
+    ...(input.customerPo ? { p_customer_po_number: input.customerPo } : {}),
+    ...(input.orderedOn ? { p_ordered_on: input.orderedOn } : {}),
+  })
+  if (error) throw error
+  return (data as string | null) ?? input.orderId
 }

@@ -69,6 +69,7 @@ describe('invalidation map (R01)', () => {
     'quotation.issue': { rfqId: 'r1' },
     'quotation.pdf': { rfqId: 'r1' },
     'order.convert': { rfqId: 'r1' },
+    'order.repeat': { companyId: 'c1' },
     'order.update': { orderId: 'o1' },
     'order.cancel': { orderId: 'o1' },
     'po.issue': { orderId: 'o1' },
