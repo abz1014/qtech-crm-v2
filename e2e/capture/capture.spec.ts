@@ -284,10 +284,12 @@ test.describe('iPhone: Capture button, paste, photo pick', () => {
     await page.getByRole('button', { name: 'Capture' }).first().click()
     taps++
     await expect(sheet(page)).toBeVisible()
+    await page.waitForTimeout(450)
     await review(page, 'capture-iphone-empty')
     await sheet(page).getByRole('textbox', { name: 'Captured text' }).fill('1. Line size is 4 inch, flange PN16.' + String.fromCharCode(10) + '2. Fluid is hot water, 5 to 85 C.') // press and hold, then Paste
     taps++
     await expect(page.getByRole('radio', { name: /Answer a question/ })).toBeChecked()
+    await page.waitForTimeout(450)
     await review(page, 'capture-iphone-pasted')
     await sheet(page).getByRole('button', { name: 'Save answer to 2 questions' }).click()
     taps++

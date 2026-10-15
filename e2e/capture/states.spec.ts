@@ -169,6 +169,7 @@ for (const [name, size] of [
       await ready(page, s.rfq.id)
       await paste(page, MESSAGE, [{ name: 'wiring-photo.png', type: 'image/png' }])
       await expect(sheet(page).getByText('Resizing')).toBeVisible()
+      await settle(page)
       await review(page, `capture-frame-resizing-${name}`)
       await expect(sheet(page).getByText('Resizing')).toHaveCount(0)
 
@@ -274,5 +275,36 @@ test.describe('signed out in the middle', () => {
     await expect(page.getByText('Choose where it goes to finish.')).toBeVisible()
     await settle(page)
     await review(page, 'capture-frame-signed-out-back-375')
+  })
+})
+
+test.describe('after 7 days', () => {
+  test.use({ viewport: { width: 375, height: 812 } })
+
+  test('the screen says the item is gone and offers Open Capture', async ({ page }) => {
+    const s = await seed()
+    await ready(page, s.rfq.id)
+    const id = await page.evaluate(
+      () =>
+        new Promise<string>((resolve, reject) => {
+          const id = crypto.randomUUID()
+          const open = indexedDB.open('qtech-capture', 1)
+          open.onupgradeneeded = () => open.result.createObjectStore('items', { keyPath: 'id' })
+          open.onsuccess = () => {
+            const tx = open.result.transaction('items', 'readwrite')
+            const old = Date.now() - 8 * 86_400_000
+            tx.objectStore('items').put({ id, createdAt: old, expiresAt: old + 7 * 86_400_000, source: 'share', text: 'old', files: [] })
+            tx.oncomplete = () => resolve(id)
+            tx.onerror = () => reject(tx.error)
+          }
+        }),
+    )
+    await page.goto(`/capture?share=${id}`)
+    await expect(sheet(page).getByText('The shared item is no longer on this phone')).toBeVisible()
+    await expect(sheet(page).getByText('Shared items are kept for 7 days. Share it again from WhatsApp, or paste it.')).toBeVisible()
+    await settle(page)
+    await review(page, 'capture-frame-expired-375')
+    await sheet(page).getByRole('button', { name: 'Open Capture' }).click()
+    await expect(sheet(page).getByText('Tap and hold here, then tap Paste')).toBeVisible()
   })
 })
