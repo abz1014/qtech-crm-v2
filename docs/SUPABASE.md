@@ -103,7 +103,29 @@ $env:SUPABASE_SERVICE_ROLE_KEY = "<paste here>"
 node scripts/bootstrap-admin.mjs --name "Your Name" --email you@company.pk --allow-remote
 ```
 
-3. Copy the printed password into your password manager, sign in, and set up everyone else from Team.
+   That prints a generated password once. To choose your own instead, add `--prompt-password`: the script asks
+   for the password in your terminal with nothing shown except `*` per character, asks a second time to confirm,
+   and prints "Password set (not shown)." The password never appears in the command line, the output, a file or
+   the audit log. It needs a real terminal (PowerShell or Windows Terminal); piped input is refused.
+
+```powershell
+node scripts/bootstrap-admin.mjs --name "Your Name" --email you@company.pk --allow-remote --prompt-password
+```
+
+   The password must be at least 12 characters and must not contain a common pattern (such as `password`,
+   `123456` or `qtech`); otherwise it says why in plain words and asks again.
+
+   If you deliberately want a short or simple first password and plan to change it straight after signing in,
+   add `--allow-weak` (only valid together with `--prompt-password`). A weak password is then accepted with one
+   warning line. The 8 character minimum still applies:
+
+```powershell
+node scripts/bootstrap-admin.mjs --name "Your Name" --email you@company.pk --allow-remote --prompt-password --allow-weak
+```
+
+3. Without `--prompt-password`, copy the printed password into your password manager. Either way, sign in, then
+   change your password under Account menu > Change password (a weak one especially), and set up everyone else
+   from Team.
 4. Close the window (or `Remove-Item Env:SUPABASE_SERVICE_ROLE_KEY`). A second run refuses.
 
 Nothing here ever runs in CI against a remote project.

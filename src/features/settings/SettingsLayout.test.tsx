@@ -23,6 +23,7 @@ function at(path: string, role: string) {
               }
             />
             <Route path="company" element={<p>Company screen</p>} />
+            <Route path="password" element={<p>Password screen</p>} />
           </Route>
           <Route path="/no-access" element={null} />
         </Routes>
@@ -50,6 +51,15 @@ describe('settings access (A04, A06)', () => {
       expect(screen.getByText('Team is not available to your role')).toBeInTheDocument()
     })
   }
+
+  it('everyone is offered Change password', () => {
+    for (const role of ['admin', 'sales', 'engineer']) {
+      const r = at('/settings/password', role)
+      expect(screen.getByText('Password screen')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Change password' })).toBeInTheDocument()
+      r.unmount()
+    }
+  })
 
   it('an admin sees both links', () => {
     at('/settings/company', 'admin')
