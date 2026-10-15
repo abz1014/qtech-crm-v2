@@ -114,7 +114,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     await noShareApi(page)
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await expect(page.locator('[data-slot="quotations"]')).toContainText('No quotation has been issued yet')
+    await expect(page.locator('[data-slot="quotations"]')).toContainText('Nothing issued')
     await openIssue(page)
     await expect(dialog(page).getByRole('heading', { name: 'Issue quotation' })).toBeVisible()
     await shot(page, 'rfq-quotation-01-issue-dialog-1440')
@@ -245,7 +245,7 @@ test.describe('re-issue', () => {
     expect(pdfIsValid(pdf0)).toBe(true)
 
     // The button now offers the next revision.
-    await page.locator('[data-slot="issue-quotation"]').getByRole('button', { name: 'Issue R1' }).click()
+    await page.locator('[data-slot="issue-quotation"]').getByRole('button', { name: 'Issue quotation' }).click()
     await expect(dialog(page).getByRole('heading', { name: `Issue quotation ${refOf(r0)} R1` })).toBeVisible()
     await expect(dialog(page).getByText('R0 stays exactly as it was sent. This creates R1 under the same number.')).toBeVisible()
     // Everything from R0 is carried over, so a re-issue with one changed price is one typed number and two taps.
@@ -381,7 +381,7 @@ for (const width of [1440, 375]) {
     const s = await seed()
     await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await expect(page.locator('[data-slot="quotations"]')).toContainText('No quotation has been issued yet')
+    await expect(page.locator('[data-slot="quotations"]')).toContainText('Nothing issued')
     expect(await pageViolations(page)).toEqual([])
 
     await openIssue(page)
