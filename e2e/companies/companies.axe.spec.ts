@@ -1,29 +1,14 @@
-import { readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { axeViolations } from '../support/axe'
 
 /*
  * axe-core on the real Companies screens, set up like e2e/gallery.axe.spec.ts: WCAG 2.2 AA plus axe's
  * best-practice rules, colour contrast on (a real browser, which jsdom cannot give), zero violations.
  * Run at 1440 and 375 wide. `region` is off for the two dialogs only: Radix portals them outside <main>.
  */
-const axeSource = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8')
 
-async function violations(page: Page, landmarks: boolean) {
-  await page.evaluate(axeSource)
-  return page.evaluate(async landmarks => {
-    const axe = (window as unknown as { axe: { run: (ctx: Document, opts: object) => Promise<{ violations: Array<{ id: string; impact: string | null; help: string; nodes: Array<{ target: unknown; failureSummary?: string }> }> }> } }).axe
-    const result = await axe.run(document, {
-      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] },
-      resultTypes: ['violations'],
-      rules: { region: { enabled: landmarks } },
-    })
-    return result.violations.flatMap(v =>
-      v.nodes.map(n => `${v.id} (${v.impact}) ${JSON.stringify(n.target)}: ${(n.failureSummary ?? v.help).replace(/\s+/g, ' ')}`),
-    )
-  }, landmarks)
-}
+const violations = (page: Page, landmarks: boolean) => axeViolations(page, { landmarks })
 
 async function settle(page: Page) {
   await page.waitForLoadState('networkidle')
