@@ -83,7 +83,7 @@ export interface DataTableProps<T> {
   toolbar?: ReactNode | ((ctx: { selectedCount: number }) => ReactNode)
   exportCsv?: { filename: string; label?: string }
   loading?: boolean
-  error?: { title: string; message?: ReactNode; onRetry?: () => void; reference?: string } | null
+  error?: { title: string; message?: ReactNode; onRetry?: () => void; reference?: string; meta?: ReactNode } | null
   /** The empty-state slot. Say what is true and what happens next ("Every bid is in"). */
   empty?: ReactNode
   /** Scroll height once virtualised. Default 70vh. */
@@ -491,7 +491,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
               mood="error"
               title={error.title}
               actions={error.onRetry ? <Button variant="primary" icon={RefreshCw} onClick={error.onRetry}>Try again</Button> : undefined}
-              meta={error.reference ? `Reference ${error.reference}` : undefined}
+              meta={error.meta ?? (error.reference ? `Reference ${error.reference}` : undefined)}
             >
               {error.message}
             </EmptyState>

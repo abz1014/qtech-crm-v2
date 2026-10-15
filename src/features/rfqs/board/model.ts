@@ -1,4 +1,5 @@
 import { formatDay } from '@/lib/formatDay'
+import { rfqRef } from '@/lib/refs'
 
 /*
  * The RFQ board's pure rules (R06): what is sorted first, what the filters keep, how a due date reads.
@@ -89,6 +90,16 @@ export function applyState(rows: readonly BoardRow[], state: StateFilter): Board
   return state === 'all' ? [...rows] : rows.filter(r => filterOf(r.sourcingState) === state)
 }
 
+/** The filter box: every word must appear in the RFQ number ("RFQ-0177" or "177"), the customer or their reference. */
+export function applyQuery(rows: readonly BoardRow[], query: string): BoardRow[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return [...rows]
+  return rows.filter(r => {
+    const hay = `${rfqRef(r.number)} ${r.number} ${r.companyName} ${r.customerRef ?? ''}`.toLowerCase()
+    return words.every(w => hay.includes(w))
+  })
+}
+
 export function stateCounts(rows: readonly BoardRow[]): Record<StateFilter, number> {
   const out: Record<StateFilter, number> = { all: rows.length, 'not-floated': 0, out: 0, covered: 0, 'no-offer': 0 }
   for (const r of rows) out[filterOf(r.sourcingState)]++
@@ -159,4 +170,18 @@ export function pageSummary(page: number, size: number, total: number): string {
   const from = page * size + 1
   const to = Math.min(total, (page + 1) * size)
   return `Showing ${from} to ${to} of ${total}`
+}
+
+/**
+ * The small print under a load error: "Request failed · Fri 27 Nov, 09:41 · reference 4f1c9a".
+ * The reference is six hex digits derived from the time and the error text, so the same failure reads
+ * the same on screen and in a screenshot someone sends to support.
+ */
+export function failureLine(at: number, message: string): string {
+  const when = new Date(at || Date.now())
+  const day = formatDay(when.toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' }))
+  const time = when.toLocaleTimeString('en-GB', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: false })
+  let h = 2166136261
+  for (const c of `${at}|${message}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619)
+  return `Request failed · ${day}, ${time} · reference ${(h >>> 0).toString(16).padStart(8, '0').slice(0, 6)}`
 }

@@ -11,9 +11,9 @@ import { StatusBadge } from '@/ui/StatusBadge'
 /* Cells of the RFQ board (R06). Each is a pure rendering of one BoardRow; the status words come from the U05 registry. */
 
 /** Company over "RFQ-0177 · their ref ENQ-2211". The company is the link that opens the RFQ. */
-export function CompanyCell({ row }: { row: BoardRow }) {
+export function CompanyCell({ row, compact = false }: { row: BoardRow; compact?: boolean }) {
   return (
-    <div className="grid min-w-0 gap-px">
+    <div className={compact ? 'flex min-w-0 items-baseline gap-2' : 'grid min-w-0 gap-px'}>
       <span className="flex min-w-0 items-center gap-1.5">
         <Link to={`/rfqs/${row.rfqId}`} className="truncate font-medium text-fg hover:underline">
           {row.companyName}
@@ -34,20 +34,20 @@ export function CompanyCell({ row }: { row: BoardRow }) {
 }
 
 /** The due date, with how far away it is. Overdue is the one danger-toned thing on the row. */
-export function DueCell({ row }: { row: BoardRow }) {
+export function DueCell({ row, compact = false }: { row: BoardRow; compact?: boolean }) {
   const due = dueText(row)
   const danger = due.tone === 'danger'
   return (
-    <div className="grid gap-px">
+    <div className={compact ? 'flex items-baseline gap-2' : 'grid gap-px'}>
       <span className={cn('num', danger ? 'font-medium text-tone-danger-fg' : due.date ? 'text-fg' : 'text-fg-muted')}>{due.date ?? '—'}</span>
       <span className={cn('text-xs', danger ? 'text-tone-danger-fg' : due.tone === 'warning' ? 'text-tone-warning-fg' : 'text-fg-muted')}>{due.hint}</span>
     </div>
   )
 }
 
-export function SourcingCell({ row }: { row: BoardRow }) {
+export function SourcingCell({ row, compact = false }: { row: BoardRow; compact?: boolean }) {
   return (
-    <div className="grid justify-items-start gap-0.5">
+    <div className={compact ? 'flex items-center gap-2' : 'grid justify-items-start gap-0.5'}>
       <StatusBadge dimension="sourcing" value={row.sourcingState} detail={sourcingDetail(row)} />
       {row.itemsUncovered > 0 ? <span className="text-xs text-tone-danger-fg">{row.itemsUncovered} uncovered</span> : null}
     </div>

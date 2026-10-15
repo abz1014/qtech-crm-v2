@@ -6,12 +6,19 @@ import { SessionProvider } from '@/app/SessionProvider'
 import { session, type SessionState } from '@/app/session'
 import { AppShell } from '@/app/shell/AppShell'
 import { axeViolations } from '@/test/axe'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { installFakeDb } from '@/test/fakeSupabase'
+
+/* The shell reads the Today and RFQ counts for the top bar: an empty database, and a fresh cache per render. */
+const qc = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
+installFakeDb(() => ({ data: [] }))
 
 const signedIn: SessionState = { status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }
 
 function shell(path = '/today') {
   return render(
-    <SessionProvider value={signedIn}>
+    <QueryClientProvider client={qc()}>
+      <SessionProvider value={signedIn}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route element={<AppShell />}>
@@ -20,7 +27,8 @@ function shell(path = '/today') {
           </Route>
         </Routes>
       </MemoryRouter>
-    </SessionProvider>,
+    </SessionProvider>
+    </QueryClientProvider>,
   )
 }
 
@@ -48,7 +56,8 @@ describe('account menu (U03, on Popover)', () => {
   it('Change password is in the menu and goes to /settings/password', async () => {
     const user = userEvent.setup()
     render(
-      <SessionProvider value={signedIn}>
+      <QueryClientProvider client={qc()}>
+        <SessionProvider value={signedIn}>
         <MemoryRouter initialEntries={['/today']}>
           <Routes>
             <Route element={<AppShell />}>
@@ -57,7 +66,8 @@ describe('account menu (U03, on Popover)', () => {
             </Route>
           </Routes>
         </MemoryRouter>
-      </SessionProvider>,
+      </SessionProvider>
+      </QueryClientProvider>,
     )
     await user.click(screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0])
     await user.click(await screen.findByRole('menuitem', { name: 'Change password' }))
@@ -107,7 +117,8 @@ describe('account menu: Settings and Team (A04)', () => {
   const open = async (role: string) => {
     const user = userEvent.setup()
     render(
-      <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role } }}>
+      <QueryClientProvider client={qc()}>
+        <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role } }}>
         <MemoryRouter initialEntries={['/today']}>
           <Routes>
             <Route element={<AppShell />}>
@@ -117,7 +128,8 @@ describe('account menu: Settings and Team (A04)', () => {
             </Route>
           </Routes>
         </MemoryRouter>
-      </SessionProvider>,
+      </SessionProvider>
+      </QueryClientProvider>,
     )
     await user.click(screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0])
     return user
