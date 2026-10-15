@@ -16,6 +16,8 @@ import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/o
 import { useUpdateLeg } from '@/features/orders/hooks'
 import { before, editPatch, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, suggestExpected, type LegDates, type LegPatch } from '@/features/orders/lib/legModel'
 import { AddLegDialog } from '@/features/orders/AddDialogs'
+import { IssuePoDialog } from '@/features/purchaseOrders/IssuePoDialog'
+import { useOpenPoPdf } from '@/features/purchaseOrders/useOpenPoPdf'
 import { GoodsChaseDialog } from '@/features/orders/GoodsChaseDialog'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
 
@@ -29,8 +31,7 @@ import { TapDate, TapText } from '@/features/orders/TapEdit'
  * A placed leg that has not arrived has "Chase goods": the R16 message and stamp.
  *
  * Also on a leg, as the mockup draws them: the PO chip ("No PO yet", or "PO-26-0017 · R1" from purchase_orders), "Add expense" (admin) and
- * "Issue PO" / "View PO" (admin and sales). TRACKED GAPS: "Add expense" waits for Expenses (M03); "Issue PO" and "View PO" are wired by the
- * supplier PO task (O07) through the data-slot="issue-po" place on each leg.
+ * "Issue PO" / "View PO" (admin and sales; O07, the supplier PO dialog and its PDF). TRACKED GAP: "Add expense" waits for Expenses (M03).
  */
 const STATE_DIM: Record<string, string> = { 'to-place': 'to-place', 'on-order': 'on-order', late: 'late', received: 'received', delivered: 'delivered' }
 
@@ -55,6 +56,8 @@ export function LegsPanel({
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
   const [chasing, setChasing] = useState<OrderLegRow | null>(null)
   const [adding, setAdding] = useState(false)
+  const [issuing, setIssuing] = useState<OrderLegRow | null>(null)
+  const poPdf = useOpenPoPdf(order.id)
   const today = businessToday()
   const currencies = new Set(legs.map(l => l.currency).filter(Boolean)).size
   const imported = order.imported
@@ -99,12 +102,16 @@ export function LegsPanel({
               rates={rates}
               today={today}
               onChase={() => setChasing(leg)}
+              onIssue={() => setIssuing(leg)}
+              onViewPo={() => void poPdf.open(leg.id)}
+              viewingPo={poPdf.busyLeg === leg.id}
             />
           ))}
         </ul>
       )}
       {chasing ? <GoodsChaseDialog order={order} leg={legs.find(l => l.id === chasing.id) ?? chasing} onClose={() => setChasing(null)} /> : null}
       {adding ? <AddLegDialog order={order} legs={legs} onClose={() => setAdding(false)} /> : null}
+      {issuing ? <IssuePoDialog order={order} leg={legs.find(l => l.id === issuing.id) ?? issuing} legIndex={Math.max(0, legs.findIndex(l => l.id === issuing.id))} onClose={() => setIssuing(null)} /> : null}
     </section>
   )
 }
@@ -121,6 +128,9 @@ function Leg({
   rates,
   today,
   onChase,
+  onIssue,
+  onViewPo,
+  viewingPo,
 }: {
   order: OrderHeader
   leg: OrderLegRow
@@ -133,6 +143,9 @@ function Leg({
   rates: ReturnType<typeof toRateTable>
   today: string
   onChase: () => void
+  onIssue: () => void
+  onViewPo: () => void
+  viewingPo: boolean
 }) {
   const { toast } = useToast()
   const update = useUpdateLeg(order.id)
@@ -272,11 +285,16 @@ function Leg({
             ) : null}
           </div>
         ) : null}
-        {/* data-slot="issue-po" (O07): Issue PO / View PO for this leg. Drawn as the mockup places it, disabled until the PO task wires it. */}
+        {/* data-slot="issue-po" (O07): Issue PO opens the dialog (1 tap, then Issue PO in it: 2 taps); View PO opens the PDF; a PO that exists can be re-issued as the next revision. Admin and sales only: a PO carries prices. */}
         <span data-slot="issue-po" className="contents">
+          {money && po ? (
+            <Button size="sm" variant="quiet" icon={FileText} onClick={onViewPo} busy={viewingPo} busyLabel="Opening" aria-label={`View PO, ${label}`}>
+              View PO
+            </Button>
+          ) : null}
           {money && canEdit ? (
-            <Button size="sm" variant={po ? 'quiet' : 'secondary'} icon={FileText} disabled title="Arrives with the supplier PO (O07)" aria-label={`${po ? 'View PO' : 'Issue PO'}, ${label}`}>
-              {po ? 'View PO' : 'Issue PO'}
+            <Button size="sm" variant={po ? 'quiet' : 'secondary'} icon={FileText} onClick={onIssue} aria-label={`${po ? `Issue R${po.revision + 1}` : 'Issue PO'}, ${label}`}>
+              {po ? `Issue R${po.revision + 1}` : 'Issue PO'}
             </Button>
           ) : null}
         </span>

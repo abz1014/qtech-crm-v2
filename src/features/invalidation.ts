@@ -60,6 +60,10 @@ export interface WriteVars {
   'order.update': { orderId: string }
   /** O03: cancelling (or taking the cancel back) also moves the RFQ between won and open and the company role. */
   'order.cancel': { orderId: string }
+  /** O07: issuing a supplier PO stamps the leg placed, writes the prices back to the order lines and moves Today's place-PO rule. */
+  'po.issue': { orderId: string }
+  /** O07: attaching a PO's PDF changes only the PO chips and View PO. */
+  'po.pdf': { orderId: string }
   /** R11/R16: a chase stamp on Today (customer ask, supplier chase, goods chase, payment reminder) or taking it back. */
   'today.chase': Record<string, never>
   'today.snooze': Record<string, never>
@@ -124,6 +128,9 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'order.convert': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.all, qk.orders.all, qk.today.all, qk.companies.all],
   'order.update': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all],
   'order.cancel': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.rfqs.all, qk.today.all, qk.companies.all],
+  // An issued PO changes the order page (leg placed, prices written back), the order lists, Today and every PO read.
+  'po.issue': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.purchaseOrders.all],
+  'po.pdf': v => [qk.orders.part(v.orderId, 'pos'), qk.purchaseOrders.all],
   // A chase stamp changes the asked/chased fields the RFQ page, the board and the order screens read, and every Today read.
   'today.chase': () => [qk.today.all, qk.rfqs.all, qk.orders.all],
   // A snooze is read only by Today.

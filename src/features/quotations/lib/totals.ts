@@ -112,7 +112,7 @@ function below1000(n: number): string {
   return parts.join(' ')
 }
 
-function wholeInWords(n: number): string {
+export function wholeInWords(n: number): string {
   if (n === 0) return 'zero'
   const groups: [number, string][] = [
     [1_000_000_000, 'billion'],

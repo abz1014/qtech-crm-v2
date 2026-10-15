@@ -144,6 +144,18 @@ function today() {
   }
 }
 
+/** Supplier POs (O07): the dialog's pre-fill, the supplier's last PO, a leg's latest PO and the next number. */
+function purchaseOrders() {
+  const all = root('purchaseOrders')
+  return {
+    all,
+    prefill: (legId: string) => [...all, 'prefill', legId] as const,
+    lastToSupplier: (supplierId: string) => [...all, 'last-to-supplier', supplierId] as const,
+    leg: (legId: string) => [...all, 'leg', legId] as const,
+    nextNumber: () => [...all, 'next-number'] as const,
+  }
+}
+
 export const qk = {
   today: today(),
   settings: settings(),
@@ -151,6 +163,7 @@ export const qk = {
   brands: brands(),
   rfqs: rfqs(),
   orders: orders(),
+  purchaseOrders: purchaseOrders(),
   intake: intake(),
   memory: memory(),
   fx: fx(),
