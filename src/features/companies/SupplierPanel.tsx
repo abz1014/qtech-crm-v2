@@ -333,7 +333,7 @@ function Provenance({ facts, span }: { facts: SupplierFacts; span: { from: strin
         </p>
       ) : p.hasImported ? (
         <p className="text-pretty">
-          <b className="font-medium text-fg-2">Where this comes from.</b> Counts are derived from enquiries, quote lines, purchase orders and received dates. Nothing here is typed in.{' '}
+          <b className="font-medium text-fg-2">Where this comes from.</b> Counts are derived from enquiries, quote lines, purchase orders and delivery dates. Nothing here is typed in.{' '}
           <b className="font-medium text-fg-2">Includes imported history:</b> <span className="num">{p.legacyAsked}</span> of <span className="num">{facts.asked}</span> enquiries came from the old CRM
           {p.pricesHidden > 0 ? (
             <>
@@ -347,7 +347,7 @@ function Provenance({ facts, span }: { facts: SupplierFacts; span: { from: strin
           <b className="font-medium text-fg-2">Where this comes from.</b>{' '}
           {facts.lowData
             ? 'Everything here was logged in this CRM. There is no imported history. With so few enquiries the page shows facts only, and no pattern is implied.'
-            : 'Counts are derived from enquiries, quote lines, purchase orders and received dates. Nothing here is typed in. Everything here was logged in this CRM.'}
+            : 'Counts are derived from enquiries, quote lines, purchase orders and delivery dates. Nothing here is typed in. Everything here was logged in this CRM.'}
         </p>
       )}
     </div>
