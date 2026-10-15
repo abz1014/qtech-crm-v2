@@ -121,6 +121,9 @@ describe('supplier chase text', () => {
     expect(t.body).toContain('Dear Mr. Imran,\nAssalam o Alaikum.')
     expect(t.body).toContain('Thank you for your quotation on item 1.')
     expect(t.body).toContain('Sales, Q-Tech Solutions')
+    const withPhone = generateSupplierChase({ ...input, variant: 'email', signature: { ...input.signature, jobTitle: 'Sales', phone: '+92 300 555 0188' } })
+    expect(withPhone.body.endsWith('Sales, Q-Tech Solutions\n+92 300 555 0188')).toBe(true)
+    expect(generateSupplierChase({ ...input, signature: { ...input.signature, phone: '+92 300 555 0188' } }).body).not.toContain('+92') // WhatsApp stays short
   })
   it('never names the customer or a price, and copes with no contact, no bid date, nothing priced', () => {
     const t = generateSupplierChase({ ...input, contactName: null, dueOn: null, pricedNumbers: [], sentOn: null })

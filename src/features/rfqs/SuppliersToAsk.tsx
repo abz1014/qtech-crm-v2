@@ -1,0 +1,156 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Copy } from 'lucide-react'
+import { Button } from '@/ui/Button'
+import { Dialog, DialogContent } from '@/ui/Dialog'
+import { Checkbox } from '@/ui/form/Checkbox'
+import { Skeleton } from '@/ui/Skeleton'
+import type { RfqItemRow } from '@/features/rfqs/api'
+import { DetailPanel } from '@/features/rfqs/DetailPanel'
+import type { SupplierSuggestion } from '@/features/rfqs/lib'
+
+/*
+ * "Suppliers to ask" (g2-rfq-detail, empty state): the suggested suppliers with the reason for each, the ones who supplied the
+ * item before already ticked, and one button that copies an enquiry listing every item and records the asking. The same list
+ * is what "Float to another supplier" opens in a dialog once suppliers have been asked. Suggestions come from R03 (the reasons)
+ * and R17 (the memory); nothing is scored and the history never reorders the list.
+ */
+
+/** The ticked suppliers, starting with the pre-ticked ones; a tick or untick by hand is kept. */
+function useTicks(suggestions: readonly SupplierSuggestion[] | undefined) {
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const isTicked = (s: SupplierSuggestion) => touched[s.supplierId] ?? s.preTicked
+  const ticked = (suggestions ?? []).filter(isTicked)
+  return { isTicked, ticked, set: (id: string, on: boolean) => setTouched(t => ({ ...t, [id]: on })) }
+}
+
+function PickList({
+  suggestions,
+  isTicked,
+  onTick,
+}: {
+  suggestions: readonly SupplierSuggestion[]
+  isTicked: (s: SupplierSuggestion) => boolean
+  onTick: (id: string, on: boolean) => void
+}) {
+  return (
+    <ul>
+      {suggestions.map(s => {
+        const id = `ask-${s.supplierId}`
+        return (
+          <li key={s.supplierId} className="relative grid gap-[2px] border-t px-5 py-3 first:border-t-0">
+            <div className="flex min-w-0 items-center gap-3">
+              <Checkbox id={id} checked={isTicked(s)} onCheckedChange={v => onTick(s.supplierId, v === true)} aria-label={s.name} />
+              <label htmlFor={id} className="min-w-0 text-sm font-medium after:absolute after:inset-0 after:cursor-pointer">
+                {s.name}
+                {s.city ? <span className="ml-2 text-xs font-regular text-fg-muted">{s.city}</span> : null}
+              </label>
+            </div>
+            <p className="pl-[30px] text-xs text-fg-muted">{s.reason}</p>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function Empty() {
+  return (
+    <p className="px-5 py-4 text-sm text-fg-muted">
+      No supplier on file carries a brand in this RFQ yet. Add the brands a supplier carries on its company page, or ask anyone from{' '}
+      <Link to="/companies" className="underline underline-offset-2">
+        Companies
+      </Link>
+      .
+    </p>
+  )
+}
+
+export function SuppliersToAskCard({
+  suggestions,
+  items,
+  busy,
+  onAsk,
+}: {
+  /** Undefined while they load. */
+  suggestions: readonly SupplierSuggestion[] | undefined
+  items: readonly RfqItemRow[]
+  busy: boolean
+  onAsk: (ticked: readonly SupplierSuggestion[]) => void
+}) {
+  const t = useTicks(suggestions)
+  return (
+    <DetailPanel title="Suppliers to ask" pill="suggested" dataSlot="suppliers-to-ask">
+      {suggestions === undefined ? (
+        <div className="grid gap-2 p-5" aria-busy="true" aria-label="Finding suppliers">
+          <Skeleton className="h-10" />
+          <Skeleton className="h-10" />
+        </div>
+      ) : suggestions.length === 0 ? (
+        <Empty />
+      ) : (
+        <>
+          <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} />
+          <div className="border-t px-5 py-3">
+            <Button
+              variant="primary"
+              icon={Copy}
+              busy={busy}
+              busyLabel="Copying"
+              disabled={t.ticked.length === 0 || items.length === 0}
+              onClick={() => onAsk(t.ticked)}
+            >
+              {t.ticked.length === 0 ? 'Tick a supplier to ask' : `Copy enquiry for ${t.ticked.length} ${t.ticked.length === 1 ? 'supplier' : 'suppliers'}`}
+            </Button>
+          </div>
+        </>
+      )}
+    </DetailPanel>
+  )
+}
+
+/** "Float to another supplier": the same list in a dialog, for the items that still need a price (all of them when none does). */
+export function FloatDialog({
+  suggestions,
+  itemCount,
+  busy,
+  onAsk,
+  onClose,
+}: {
+  suggestions: readonly SupplierSuggestion[] | undefined
+  itemCount: number
+  busy: boolean
+  onAsk: (ticked: readonly SupplierSuggestion[]) => void
+  onClose: () => void
+}) {
+  const t = useTicks(suggestions)
+  return (
+    <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
+      <DialogContent
+        title="Float to another supplier"
+        context={`${itemCount} ${itemCount === 1 ? 'item' : 'items'} in the enquiry`}
+        icon={Copy}
+        footer={
+          <>
+            <Button data-cancel onClick={onClose} disabled={busy}>
+              Cancel
+            </Button>
+            <Button variant="primary" icon={Copy} busy={busy} busyLabel="Copying" disabled={t.ticked.length === 0} onClick={() => onAsk(t.ticked)}>
+              {t.ticked.length === 0 ? 'Tick a supplier' : `Copy enquiry for ${t.ticked.length} ${t.ticked.length === 1 ? 'supplier' : 'suppliers'}`}
+            </Button>
+          </>
+        }
+      >
+        {suggestions === undefined ? (
+          <Skeleton className="h-24" />
+        ) : suggestions.length === 0 ? (
+          <Empty />
+        ) : (
+          <div className="-mx-5 -my-2">
+            <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} />
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}

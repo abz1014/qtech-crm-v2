@@ -1,7 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { ViewRow } from '@/features/dbTypes'
 import type { FloatItemPayload } from '@/features/rfqs/lib/intakeModel'
-import type { SupplierItemMemoryRow, SupplierRecord } from '@/features/rfqs/lib/supplierSuggestion'
+import type { SupplierItemMemoryRow, SupplierRecord, SupplierStatsRow } from '@/features/rfqs/lib/supplierSuggestion'
 
 /*
  * RFQs: every database call for the intake screen (R05). This is the only file that names an RFQ table or
@@ -148,17 +148,19 @@ export interface RfqHeader {
   customerRef: string | null
   receivedOn: string
   dueOn: string | null
+  /** The bid deadline's time (HH:MM), when one was given. */
+  dueTime?: string | null
   isPriority: boolean
   quotedOn: string | null
   closedOn: string | null
   closeReason: string | null
   closeNote: string | null
   notes: string | null
-  company: { id: string; name: string; country: string | null }
+  company: { id: string; name: string; country: string | null; city?: string | null; createdAt: string | null }
   site: { name: string; address: string | null } | null
   contactId: string | null
-  contact: { name: string; phone: string | null } | null
-  owner: { id: string; name: string; role: string } | null
+  contact: { name: string; phone: string | null; jobTitle?: string | null } | null
+  owner: { id: string; name: string; role: string; phone?: string | null } | null
   state: RfqStateRow | null
 }
 
@@ -171,7 +173,7 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
   const [rfqRes, stateRes] = await Promise.all([
     db
       .from('rfqs')
-      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, owner_id, is_priority, quoted_on, closed_on, close_reason, close_note, notes')
+      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, due_time, owner_id, is_priority, quoted_on, closed_on, close_reason, close_note, notes')
       .eq('id', id)
       .maybeSingle(),
     db.from('v_rfq_state').select('*').eq('rfq_id', id).maybeSingle(),
@@ -179,29 +181,31 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
   const r = unwrap(rfqRes)
   if (!r) return null
   const [company, site, contact, owner] = await Promise.all([
-    db.from('companies').select('id, name, country').eq('id', r.company_id).maybeSingle(),
+    db.from('companies').select('id, name, country, city, created_at').eq('id', r.company_id).maybeSingle(),
     r.site_id ? db.from('company_sites').select('name, address').eq('id', r.site_id).maybeSingle() : none,
-    r.contact_id ? db.from('contacts').select('name, phone').eq('id', r.contact_id).maybeSingle() : none,
-    r.owner_id ? db.from('users').select('id, name, role').eq('id', r.owner_id).maybeSingle() : none,
+    r.contact_id ? db.from('contacts').select('name, phone, job_title').eq('id', r.contact_id).maybeSingle() : none,
+    r.owner_id ? db.from('users').select('id, name, role, phone').eq('id', r.owner_id).maybeSingle() : none,
   ])
   const c = unwrap(company)
+  const ct0 = unwrap(contact as Maybe<{ name: string; phone: string | null; job_title: string | null }>)
   return {
     id: r.id,
     number: r.number,
     customerRef: r.customer_ref,
     receivedOn: r.received_on,
     dueOn: r.due_on,
+    dueTime: r.due_time ? r.due_time.slice(0, 5) : null,
     isPriority: r.is_priority,
     quotedOn: r.quoted_on,
     closedOn: r.closed_on,
     closeReason: r.close_reason,
     closeNote: r.close_note,
     notes: r.notes,
-    company: { id: r.company_id, name: c?.name ?? 'Unknown company', country: c?.country ?? null },
+    company: { id: r.company_id, name: c?.name ?? 'Unknown company', country: c?.country ?? null, city: c?.city ?? null, createdAt: c?.created_at ?? null },
     contactId: r.contact_id,
     site: unwrap(site as Maybe<{ name: string; address: string | null }>),
-    contact: unwrap(contact as Maybe<{ name: string; phone: string | null }>),
-    owner: unwrap(owner as Maybe<{ id: string; name: string; role: string }>),
+    contact: ct0 ? { name: ct0.name, phone: ct0.phone, jobTitle: ct0.job_title } : null,
+    owner: unwrap(owner as Maybe<{ id: string; name: string; role: string; phone: string | null }>),
     state: unwrap(stateRes) as RfqStateRow | null,
   }
 }
@@ -214,6 +218,8 @@ export interface RfqItemRow {
   brandId: string | null
   brandName: string | null
   familyId: string | null
+  /** The family brand's name (a brands row of kind family), for the item's meta line. */
+  familyName?: string | null
   qty: number
   unit: string | null
 }
@@ -223,7 +229,7 @@ export async function listRfqItems(rfqId: string): Promise<RfqItemRow[]> {
   const rows = unwrap(
     await db.from('rfq_items').select('id, position, description, brand_id, family_id, qty, unit, created_at').eq('rfq_id', rfqId).order('position').order('created_at'),
   )
-  const brandIds = [...new Set(rows.map(r => r.brand_id).filter((b): b is string => Boolean(b)))]
+  const brandIds = [...new Set(rows.flatMap(r => [r.brand_id, r.family_id]).filter((b): b is string => Boolean(b)))]
   const brands = brandIds.length ? unwrap(await db.from('brands').select('id, name').in('id', brandIds)) : []
   const names = new Map(brands.map(b => [b.id, b.name]))
   return rows.map((r, i) => ({
@@ -233,6 +239,7 @@ export async function listRfqItems(rfqId: string): Promise<RfqItemRow[]> {
     brandId: r.brand_id,
     brandName: r.brand_id ? (names.get(r.brand_id) ?? null) : null,
     familyId: r.family_id,
+    familyName: r.family_id ? (names.get(r.family_id) ?? null) : null,
     qty: Number(r.qty),
     unit: r.unit,
   }))
@@ -255,6 +262,8 @@ export interface InquiryRow {
   supplierId: string
   supplierName: string
   supplierCountry: string | null
+  /** The supplier's city (companies.city), shown under its name beside the country. */
+  supplierCity?: string | null
   sentOn: string | null
   lastChasedOn: string | null
   lastRelayedAt: string | null
@@ -267,12 +276,16 @@ export interface InquiryRow {
   notes: string | null
   contactName: string | null
   contactPhone: string | null
+  contactEmail?: string | null
+  contactTitle?: string | null
   /** The currency of this supplier's most recent quote line on any RFQ, or null. */
   lastCurrency: string | null
   /** v_inquiry_state values. */
   responseState: string | null
   contactState: string | null
   itemsQuoted: number
+  /** The day the first price arrived (v_inquiry_state.quote_received_on). */
+  quoteReceivedOn?: string | null
   lines: QuoteLineRow[]
 }
 
@@ -290,9 +303,9 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
   const supplierIds = [...new Set(inq.map(i => i.supplier_id))]
   const inquiryIds = inq.map(i => i.id)
   const [companies, states, contacts, lines, recent, declines] = await Promise.all([
-    db.from('companies').select('id, name, country').in('id', supplierIds),
-    db.from('v_inquiry_state').select('inquiry_id, response_state, contact_state, items_quoted').eq('rfq_id', rfqId),
-    db.from('contacts').select('company_id, name, phone, created_at').in('company_id', supplierIds).order('created_at'),
+    db.from('companies').select('id, name, country, city').in('id', supplierIds),
+    db.from('v_inquiry_state').select('inquiry_id, response_state, contact_state, items_quoted, quote_received_on').eq('rfq_id', rfqId),
+    db.from('contacts').select('company_id, name, phone, email, job_title, created_at').in('company_id', supplierIds).order('created_at'),
     db
       .from('supplier_quote_lines')
       .select('id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, in_stock, fx_rate_pkr, fx_rate_on')
@@ -309,8 +322,8 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
   for (const d of unwrap(declines)) declinesBy.set(d.inquiry_id, { ...(declinesBy.get(d.inquiry_id) ?? {}), [d.rfq_item_id]: d.reason })
   const byCompany = new Map(unwrap(companies).map(c => [c.id, c]))
   const stateBy = new Map(unwrap(states).map(s => [s.inquiry_id, s]))
-  const contactBy = new Map<string, { name: string; phone: string | null }>()
-  for (const c of unwrap(contacts)) if (!contactBy.has(c.company_id)) contactBy.set(c.company_id, { name: c.name, phone: c.phone })
+  const contactBy = new Map<string, { name: string; phone: string | null; email: string | null; title: string | null }>()
+  for (const c of unwrap(contacts)) if (!contactBy.has(c.company_id)) contactBy.set(c.company_id, { name: c.name, phone: c.phone, email: c.email, title: c.job_title })
   const lastCurrency = new Map<string, string>()
   type Recent = { currency: string; supplier_inquiries: { supplier_id: string } | { supplier_id: string }[] }
   for (const r of unwrap(recent) as unknown as Recent[]) {
@@ -341,6 +354,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
       supplierId: i.supplier_id,
       supplierName: c?.name ?? 'Unknown supplier',
       supplierCountry: c?.country ?? null,
+      supplierCity: c?.city ?? null,
       sentOn: i.sent_on,
       lastChasedOn: i.last_chased_on,
       lastRelayedAt: i.last_relayed_at,
@@ -351,10 +365,13 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
       notes: i.notes,
       contactName: ct?.name ?? null,
       contactPhone: ct?.phone ?? null,
+      contactEmail: ct?.email ?? null,
+      contactTitle: ct?.title ?? null,
       lastCurrency: lastCurrency.get(i.supplier_id) ?? null,
       responseState: s?.response_state ?? null,
       contactState: s?.contact_state ?? null,
       itemsQuoted: s?.items_quoted ?? 0,
+      quoteReceivedOn: s?.quote_received_on ?? null,
       lines: linesBy.get(i.id) ?? [],
     }
   })
@@ -629,4 +646,102 @@ export async function signFileUrls(paths: readonly string[], seconds = 600): Pro
   const out: Record<string, string> = {}
   for (const d of data ?? []) if (d.path && d.signedUrl) out[d.path] = d.signedUrl
   return out
+}
+
+// ================================================================ RFQ detail parity (Part C of the parity audit)
+
+/** Add an item to an RFQ that already exists: the description is the only thing required (qty 1 and GST 18 come from the table). */
+export async function addRfqItem(input: { id: string; rfqId: string; description: string; qty?: number; unit?: string | null }): Promise<void> {
+  const db = requireSupabase()
+  const last = unwrap(await db.from('rfq_items').select('position').eq('rfq_id', input.rfqId).order('position', { ascending: false }).limit(1))
+  const position = last.length > 0 ? Number(last[0].position) + 1 : 0
+  const { error } = await db.from('rfq_items').upsert(
+    { id: input.id, rfq_id: input.rfqId, position, description: input.description.trim(), qty: input.qty ?? 1, unit: input.unit?.trim() || null },
+    { onConflict: 'id', ignoreDuplicates: true },
+  )
+  if (error) throw error
+}
+
+/** Remove one supplier's price for one item. The row is returned so an Undo can put it back exactly as it was. */
+export async function removeQuoteLine(input: { inquiryId: string; itemId: string }): Promise<void> {
+  const db = requireSupabase()
+  const { error } = await db.from('supplier_quote_lines').delete().eq('inquiry_id', input.inquiryId).eq('rfq_item_id', input.itemId)
+  if (error) throw error
+}
+
+/** Put a removed price back with the rate it was entered at (the capture trigger leaves a rate that is already set). */
+export async function restoreQuoteLine(line: QuoteLineRow): Promise<void> {
+  const db = requireSupabase()
+  const { error } = await db.from('supplier_quote_lines').upsert(
+    {
+      inquiry_id: line.inquiryId,
+      rfq_item_id: line.itemId,
+      unit_price: line.unitPrice,
+      currency: line.currency,
+      lead_time: line.leadTime,
+      in_stock: line.inStock,
+      fx_rate_pkr: line.fxRatePkr,
+      fx_rate_on: line.fxRateOn,
+    },
+    { onConflict: 'inquiry_id,rfq_item_id' },
+  )
+  if (error) throw error
+}
+
+/** v_supplier_stats for the suppliers on this RFQ (asked, replied, the usual reply time), for the memory line under each name. */
+export async function listSupplierStatsFor(supplierIds: readonly string[]): Promise<Record<string, SupplierStatsRow>> {
+  const db = requireSupabase()
+  if (supplierIds.length === 0) return {}
+  const rows = unwrap(
+    await db.from('v_supplier_stats').select('supplier_id, asked, replied, no_offer, median_reply_days, last_contact, reply_days_n').in('supplier_id', [...supplierIds]),
+  )
+  const out: Record<string, SupplierStatsRow> = {}
+  for (const r of rows) {
+    if (!r.supplier_id) continue
+    out[r.supplier_id] = {
+      supplier_id: r.supplier_id,
+      asked: r.asked,
+      replied: r.replied,
+      no_offer: r.no_offer,
+      median_reply_days: r.median_reply_days,
+      last_contact: r.last_contact,
+      reply_days_n: r.reply_days_n,
+      brand_ids: null,
+    }
+  }
+  return out
+}
+
+/** Ask more suppliers (Float to another supplier, Copy enquiry text): an inquiry per supplier, stamped sent today. Suppliers already asked are left alone. */
+export async function addInquiries(input: { rfqId: string; supplierIds: readonly string[]; sentOn: string }): Promise<string[]> {
+  const db = requireSupabase()
+  if (input.supplierIds.length === 0) return []
+  const existing = unwrap(await db.from('supplier_inquiries').select('supplier_id').eq('rfq_id', input.rfqId))
+  const have = new Set(existing.map(e => e.supplier_id))
+  const fresh = input.supplierIds.filter(id => !have.has(id))
+  if (fresh.length === 0) return []
+  const rows = unwrap(
+    await db
+      .from('supplier_inquiries')
+      .insert(fresh.map(supplier_id => ({ rfq_id: input.rfqId, supplier_id, sent_on: input.sentOn })))
+      .select('id'),
+  )
+  return rows.map(r => r.id)
+}
+
+/** Take back inquiries just added: they go back to shortlisted (sent_on empty), which is the only state staff may delete. */
+export async function removeInquiries(ids: readonly string[]): Promise<void> {
+  const db = requireSupabase()
+  if (ids.length === 0) return
+  const { error: e1 } = await db.from('supplier_inquiries').update({ sent_on: null }).in('id', [...ids])
+  if (e1) throw e1
+  const { error: e2 } = await db.from('supplier_inquiries').delete().in('id', [...ids])
+  if (e2) throw e2
+}
+
+/** The signed-in person's job title and phone (users.job_title, users.phone), printed under a chase text's signature. */
+export async function getMySignature(userId: string): Promise<{ jobTitle: string | null; phone: string | null }> {
+  const db = requireSupabase()
+  const row = unwrap(await db.from('users').select('job_title, phone').eq('id', userId).maybeSingle()) as { job_title: string | null; phone: string | null } | null
+  return { jobTitle: row?.job_title ?? null, phone: row?.phone ?? null }
 }
