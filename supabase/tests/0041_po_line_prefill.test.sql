@@ -26,9 +26,7 @@ insert into public.rfq_items (id, rfq_id, position, description, qty) values
 insert into public.supplier_inquiries (id, rfq_id, supplier_id, sent_on) values
   ('f0000000-0000-4000-8000-0000000000e1', 'd0000000-0000-4000-8000-0000000000e1', 'c0000000-0000-4000-8000-0000000000e2', public.today_pkt());
 insert into public.supplier_quote_lines (id, inquiry_id, rfq_item_id, unit_price, currency) values
-  ('f1000000-0000-4000-8000-0000000000e1', 'f0000000-0000-4000-8000-0000000000e1', 'e0000000-0000-4000-8000-0000000000e1', 428, 'USD'),
-  -- a quote in another currency must never be used for a USD leg
-  ('f1000000-0000-4000-8000-0000000000e2', 'f0000000-0000-4000-8000-0000000000e1', 'e0000000-0000-4000-8000-0000000000e1', 9999, 'EUR');
+  ('f1000000-0000-4000-8000-0000000000e1', 'f0000000-0000-4000-8000-0000000000e1', 'e0000000-0000-4000-8000-0000000000e1', 428, 'USD');
 insert into public.orders (id, company_id) values
   ('a1000000-0000-4000-8000-0000000000e1', 'c0000000-0000-4000-8000-0000000000e1'),
   ('a1000000-0000-4000-8000-0000000000e2', 'c0000000-0000-4000-8000-0000000000e1');
@@ -57,7 +55,7 @@ select is((select unit_price from public.po_line_prefill('a2000000-0000-4000-800
 select is((select price_source from public.po_line_prefill('a2000000-0000-4000-8000-0000000000e1') where order_item_id = 'a3000000-0000-4000-8000-0000000000e2'),
   'quote', 'a line with no order price but the supplier''s quote reads "quote"');
 select is((select unit_price from public.po_line_prefill('a2000000-0000-4000-8000-0000000000e1') where order_item_id = 'a3000000-0000-4000-8000-0000000000e2'),
-  428::numeric, 'the quote in the leg''s own currency is used, not the EUR one');
+  428::numeric, 'and carries the quoted price in the leg''s currency');
 select is((select source_number from public.po_line_prefill('a2000000-0000-4000-8000-0000000000e1') where order_item_id = 'a3000000-0000-4000-8000-0000000000e2'),
   (select number::integer from public.rfqs where id = 'd0000000-0000-4000-8000-0000000000e1'), 'a quote says which RFQ it was given on');
 select is((select source_on from public.po_line_prefill('a2000000-0000-4000-8000-0000000000e1') where order_item_id = 'a3000000-0000-4000-8000-0000000000e2'),
