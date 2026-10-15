@@ -121,14 +121,14 @@ isOneToOne: false
                   ]
                 },"clarifications": {
                   Row: {
-                    "answer": string | null,"answered_at": string | null,"ask_count": number,"created_at": string,"created_by": string | null,"first_asked_at": string | null,"id": string,"last_asked_at": string | null,"question": string,"raised_by_inquiry_id": string | null,"rfq_id": string,"withdrawn_at": string | null
+                    "answer": string | null,"answered_at": string | null,"ask_count": number,"created_at": string,"created_by": string | null,"first_asked_at": string | null,"id": string,"last_asked_at": string | null,"question": string,"raised_by_inquiry_id": string | null,"rfq_id": string,"rfq_item_id": string | null,"withdrawn_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"question": string,"raised_by_inquiry_id"?: string | null,"rfq_id": string,"withdrawn_at"?: string | null
+                    "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"question": string,"raised_by_inquiry_id"?: string | null,"rfq_id": string,"rfq_item_id"?: string | null,"withdrawn_at"?: string | null
                   }
                   Update: {
-                    "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"question"?: string,"raised_by_inquiry_id"?: string | null,"rfq_id"?: string,"withdrawn_at"?: string | null
+                    "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"question"?: string,"raised_by_inquiry_id"?: string | null,"rfq_id"?: string,"rfq_item_id"?: string | null,"withdrawn_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -167,6 +167,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_rfq_state"
       referencedColumns: ["rfq_id"]
+    },{
+      foreignKeyName: "clarifications_rfq_item_id_fkey"
+      columns: ["rfq_item_id"]
+isOneToOne: false
+      referencedRelation: "rfq_items"
+      referencedColumns: ["id"]
     }
                   ]
                 },"closed_months": {
@@ -191,14 +197,14 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "country": string | null,"created_at": string,"created_by": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"name": string,"notes": string | null,"updated_at": string
+                    "city": string | null,"country": string | null,"created_at": string,"created_by": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"name": string,"notes": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name": string,"notes"?: string | null,"updated_at"?: string
+                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name": string,"notes"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name"?: string,"notes"?: string | null,"updated_at"?: string
+                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name"?: string,"notes"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -313,14 +319,14 @@ isOneToOne: false
                   ]
                 },"contacts": {
                   Row: {
-                    "company_id": string,"created_at": string,"created_by": string | null,"email": string | null,"id": string,"name": string,"notes": string | null,"phone": string | null,"site_id": string | null
+                    "company_id": string,"created_at": string,"created_by": string | null,"email": string | null,"id": string,"job_title": string | null,"name": string,"notes": string | null,"phone": string | null,"site_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "company_id": string,"created_at"?: string,"created_by"?: string | null,"email"?: string | null,"id"?: string,"name": string,"notes"?: string | null,"phone"?: string | null,"site_id"?: string | null
+                    "company_id": string,"created_at"?: string,"created_by"?: string | null,"email"?: string | null,"id"?: string,"job_title"?: string | null,"name": string,"notes"?: string | null,"phone"?: string | null,"site_id"?: string | null
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"created_by"?: string | null,"email"?: string | null,"id"?: string,"name"?: string,"notes"?: string | null,"phone"?: string | null,"site_id"?: string | null
+                    "company_id"?: string,"created_at"?: string,"created_by"?: string | null,"email"?: string | null,"id"?: string,"job_title"?: string | null,"name"?: string,"notes"?: string | null,"phone"?: string | null,"site_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -467,16 +473,30 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"fx_rates": {
+                },"fx_fetch_log": {
                   Row: {
-                    "as_of": string,"created_at": string,"created_by": string | null,"currency": string,"id": string,"rate_pkr": number,"source": string
+                    "batch_id": string | null,"created_at": string,"currency": string | null,"detail": string | null,"id": string,"kind": string,"priority": number | null,"processed_at": string | null,"request_id": number | null,"response_at": string | null,"response_body": string | null,"response_status": number | null,"source": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "as_of"?: string,"created_at"?: string,"created_by"?: string | null,"currency": string,"id"?: string,"rate_pkr": number,"source"?: string
+                    "batch_id"?: string | null,"created_at"?: string,"currency"?: string | null,"detail"?: string | null,"id"?: string,"kind": string,"priority"?: number | null,"processed_at"?: string | null,"request_id"?: number | null,"response_at"?: string | null,"response_body"?: string | null,"response_status"?: number | null,"source"?: string | null
                   }
                   Update: {
-                    "as_of"?: string,"created_at"?: string,"created_by"?: string | null,"currency"?: string,"id"?: string,"rate_pkr"?: number,"source"?: string
+                    "batch_id"?: string | null,"created_at"?: string,"currency"?: string | null,"detail"?: string | null,"id"?: string,"kind"?: string,"priority"?: number | null,"processed_at"?: string | null,"request_id"?: number | null,"response_at"?: string | null,"response_body"?: string | null,"response_status"?: number | null,"source"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"fx_rates": {
+                  Row: {
+                    "as_of": string,"created_at": string,"created_by": string | null,"currency": string,"id": string,"provider": string | null,"rate_pkr": number,"source": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "as_of"?: string,"created_at"?: string,"created_by"?: string | null,"currency": string,"id"?: string,"provider"?: string | null,"rate_pkr": number,"source"?: string
+                  }
+                  Update: {
+                    "as_of"?: string,"created_at"?: string,"created_by"?: string | null,"currency"?: string,"id"?: string,"provider"?: string | null,"rate_pkr"?: number,"source"?: string
                   }
                   Relationships: [
                     {
@@ -1057,14 +1077,14 @@ isOneToOne: false
                   ]
                 },"rfqs": {
                   Row: {
-                    "close_note": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_ref": string | null,"due_on": string | null,"id": string,"is_priority": boolean,"legacy_flags": (string)[],"legacy_source": Json | null,"notes": string | null,"number": number,"owner_id": string | null,"quoted_on": string | null,"received_on": string,"site_id": string | null,"updated_at": string
+                    "close_note": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_ref": string | null,"due_on": string | null,"due_time": string | null,"id": string,"is_priority": boolean,"legacy_flags": (string)[],"legacy_source": Json | null,"notes": string | null,"number": number,"owner_id": string | null,"quoted_on": string | null,"received_on": string,"site_id": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "close_note"?: string | null,"close_reason"?: string | null,"closed_on"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_ref"?: string | null,"due_on"?: string | null,"id"?: string,"is_priority"?: boolean,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"number"?: never,"owner_id"?: string | null,"quoted_on"?: string | null,"received_on"?: string,"site_id"?: string | null,"updated_at"?: string
+                    "close_note"?: string | null,"close_reason"?: string | null,"closed_on"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_ref"?: string | null,"due_on"?: string | null,"due_time"?: string | null,"id"?: string,"is_priority"?: boolean,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"number"?: never,"owner_id"?: string | null,"quoted_on"?: string | null,"received_on"?: string,"site_id"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "close_note"?: string | null,"close_reason"?: string | null,"closed_on"?: string | null,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_ref"?: string | null,"due_on"?: string | null,"id"?: string,"is_priority"?: boolean,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"number"?: never,"owner_id"?: string | null,"quoted_on"?: string | null,"received_on"?: string,"site_id"?: string | null,"updated_at"?: string
+                    "close_note"?: string | null,"close_reason"?: string | null,"closed_on"?: string | null,"company_id"?: string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_ref"?: string | null,"due_on"?: string | null,"due_time"?: string | null,"id"?: string,"is_priority"?: boolean,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"number"?: never,"owner_id"?: string | null,"quoted_on"?: string | null,"received_on"?: string,"site_id"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1339,14 +1359,14 @@ isOneToOne: false
                   ]
                 },"users": {
                   Row: {
-                    "created_at": string,"deactivated_at": string | null,"id": string,"job_title": string | null,"name": string,"role": string
+                    "created_at": string,"deactivated_at": string | null,"id": string,"job_title": string | null,"name": string,"phone": string | null,"role": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"deactivated_at"?: string | null,"id": string,"job_title"?: string | null,"name": string,"role": string
+                    "created_at"?: string,"deactivated_at"?: string | null,"id": string,"job_title"?: string | null,"name": string,"phone"?: string | null,"role": string
                   }
                   Update: {
-                    "created_at"?: string,"deactivated_at"?: string | null,"id"?: string,"job_title"?: string | null,"name"?: string,"role"?: string
+                    "created_at"?: string,"deactivated_at"?: string | null,"id"?: string,"job_title"?: string | null,"name"?: string,"phone"?: string | null,"role"?: string
                   }
                   Relationships: [
                     
@@ -1784,6 +1804,9 @@ isOneToOne: false
               "advance_held": number,"age_days": number,"applied": number,"bucket": string,"company_id": string,"gross": number,"invoice_date": string,"invoice_id": string,"invoice_number": string,"kind": string,"order_id": string,"order_number": number,"remaining": number
             }[]
                            },
+"apply_fx_payload":
+{ Args: { "p_batch"?: string,"p_payload": Json,"p_source": string }; Returns: Json
+                           },
 "brand_tokens":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
@@ -1813,14 +1836,23 @@ isOneToOne: false
               "quoted_number": number,"quoted_on": string,"quoted_price": number,"quoted_revision": number,"quoted_tier": number,"rfq_item_id": string,"sold_on": string,"sold_price": number,"sold_tier": number
             }[]
                            },
+"fetch_fx_rates":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "float_rfq":
 { Args: { "p_company_id": string,"p_contact_id"?: string,"p_customer_ref"?: string,"p_due_on"?: string,"p_is_priority"?: boolean,"p_items": Json,"p_mark_sent"?: boolean,"p_rfq_id": string,"p_site_id"?: string,"p_supplier_ids"?: (string)[] }; Returns: string
+                           },
+"fx_wanted_currencies":
+{ Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
+"ingest_fx_response":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "issue_purchase_order":
 { Args: { "p_delivery_terms"?: string,"p_incoterm"?: string,"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_po_id": string,"p_ship_to"?: string,"p_supplier_order_id": string }; Returns: string
                            },
 "issue_quotation":
-{ Args: { "p_contact_id"?: string,"p_delivery_text"?: string,"p_notes"?: string,"p_payment_terms"?: string,"p_quotation_id": string,"p_rfq_id": string,"p_valid_until"?: string }; Returns: string
+{ Args: { "p_contact_id"?: string,"p_delivery_text"?: string,"p_item_ids"?: (string)[],"p_notes"?: string,"p_payment_terms"?: string,"p_quotation_id": string,"p_rfq_id": string,"p_valid_until"?: string }; Returns: string
                            },
 "item_match_tier":
 { Args: { "c_brand": string,"c_family": string,"c_guessed"?: boolean,"c_norm": string,"c_tokens": (string)[],"t_brand": string,"t_family": string,"t_norm": string,"t_tokens": (string)[] }; Returns: number
@@ -1873,6 +1905,9 @@ isOneToOne: false
                            },
 "revoke_user_sessions":
 { Args: { "p_user_id": string }; Returns: undefined
+                           },
+"schedule_fx_cron":
+{ Args: Record<PropertyKey, never>; Returns: string
                            },
 "search_all":
 { Args: { "lim"?: number,"q": string }; Returns: {
