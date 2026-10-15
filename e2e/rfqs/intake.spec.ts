@@ -400,7 +400,7 @@ test.describe('float one item to the supplier who is not ticked', () => {
     await page.getByRole('button', { name: 'Copy & mark floated to 1' }).click()
     await expect(page.getByText(/is out for prices/)).toBeVisible()
     await page.getByRole('button', { name: 'Float item 2 to them' }).click()
-    await expect(page.getByText(/Item 2 floated to /)).toBeVisible()
+    await expect(page.getByText(/Item 2 floated to /).first()).toBeVisible()
     const [rfq] = await rfqsOf(s.customer.id)
     const inquiries = await inquiriesOf(rfq.id)
     expect(inquiries.map(i => i.supplier_id).sort()).toEqual([s.supplied.id, s.other.id].sort())

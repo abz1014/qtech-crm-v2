@@ -543,7 +543,14 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                 ) : null}
               </section>
 
-              <section aria-labelledby="h-items" className={`grid gap-3 ${company ? '' : 'opacity-50'}`}>
+              <section
+                aria-labelledby="h-items"
+                // Faded and out of reach until a company is chosen (the mockup's "waits"); a paste anywhere on the page still works.
+                ref={el => {
+                  if (el) el.inert = !company
+                }}
+                className={`grid gap-3 ${company ? '' : 'opacity-50'}`}
+              >
                 <div className="flex items-baseline justify-between gap-4">
                   <h2 id="h-items" className="text-lg font-semibold tracking-snug">Items</h2>
                   <p className="text-sm text-fg-muted">{pasted ? 'Split from the pasted text' : 'Paste once. We split it.'}</p>
