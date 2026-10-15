@@ -104,14 +104,19 @@ jobs:
         run: |
           set -uo pipefail
           # Diffs the remote schema against the migrations via a shadow database.
-          # Empty stdout means no drift. Anything printed is drift and fails the run.
+          # Empty stdout means no drift. Anything left after the allowlist filter is drift and fails the run.
           npx supabase db diff --linked --schema public,storage > "$RUNNER_TEMP/drift.sql"
           rc=$?
           echo "---- drift output ----"
           cat "$RUNNER_TEMP/drift.sql"
           echo "---- end ----"
           if [ "$rc" -ne 0 ]; then echo "::error::db diff failed (exit $rc)"; exit 1; fi
-          if grep -q '[^[:space:]]' "$RUNNER_TEMP/drift.sql"; then
+          # Drop statements for known platform-managed objects (supabase/drift-allowlist.txt).
+          bash scripts/filter-drift.sh "$RUNNER_TEMP/drift.sql" supabase/drift-allowlist.txt > "$RUNNER_TEMP/drift.filtered.sql"
+          echo "---- drift after allowlist ----"
+          cat "$RUNNER_TEMP/drift.filtered.sql"
+          echo "---- end ----"
+          if grep -q '[^[:space:]]' "$RUNNER_TEMP/drift.filtered.sql"; then
             echo "::error::schema drift detected between remote and migrations"; exit 1
           fi
           echo "Schema drift: none."
