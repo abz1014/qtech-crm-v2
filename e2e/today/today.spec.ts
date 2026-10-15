@@ -1,7 +1,6 @@
-import { readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName, type Role } from './../support/stack'
+import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName, type Role } from '../support/stack'
+import { axeViolations } from '../support/axe'
 
 /*
  * R11 and R16 end to end, against the local CI stack: Today for the three fixture roles, through the real login form.
@@ -17,19 +16,7 @@ const SALES = 'a0000000-0000-4000-8000-000000000002'
 const ADMIN = 'a0000000-0000-4000-8000-000000000001'
 const ENGINEER = 'a0000000-0000-4000-8000-000000000003'
 
-const axeSource = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8')
-
-async function violations(page: Page): Promise<string[]> {
-  await page.evaluate(axeSource)
-  return page.evaluate(async () => {
-    const axe = (window as unknown as { axe: { run: (ctx: Document, opts: object) => Promise<{ violations: Array<{ id: string; impact: string | null; help: string; nodes: Array<{ target: unknown; failureSummary?: string }> }> }> } }).axe
-    const result = await axe.run(document, {
-      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] },
-      resultTypes: ['violations'],
-    })
-    return result.violations.flatMap(v => v.nodes.map(n => `${v.id} (${v.impact}) ${JSON.stringify(n.target)}: ${(n.failureSummary ?? v.help).replace(/\s+/g, ' ')}`))
-  })
-}
+const violations = (page: Page): Promise<string[]> => axeViolations(page)
 
 const iso = (days: number) => karachiDay(days)
 const ts = (days: number) => `${karachiDay(days)}T09:00:00+05:00`
