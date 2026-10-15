@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Download, FileText, Share2, TriangleAlert } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
@@ -18,6 +17,7 @@ import { TextArea, TextField } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader, InquiryRow } from '@/features/rfqs/api'
 import { useCompanyProfile } from '@/features/settings/hooks'
+import { SettingsLink } from '@/features/quotations/SettingsLink'
 import { loadPdfData, type QuotationRow, type PriceMemory, type QuoteItem } from '@/features/quotations/api'
 import { useCompanyContacts, useIssueQuotation, usePriceMemory, useQuoteItems, useQuotations, useStorePdf } from '@/features/quotations/hooks'
 import { generateQuotationPdf } from '@/features/quotations/pdf/generate'
@@ -230,13 +230,8 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
             <Banner
               tone="warning"
               title="The PDF was not made"
-              action={
-                <Link to="/settings/company" className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium text-fg hover:bg-sunken">
-                  Open Settings, Company
-                </Link>
-              }
             >
-              Add the {gaps.join(' and ')} in Settings, Company. The quotation itself is saved; make its PDF from the list once that is done.
+              Add the {gaps.join(' and ')} in Settings, Company. The quotation itself is saved; make its PDF from the list once that is done. <SettingsLink />
             </Banner>
           ) : null}
           {pdfError ? (
@@ -293,13 +288,8 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
               <Banner
                 tone="warning"
                 title={`The PDF needs the company's ${gaps.join(' and ')}`}
-                action={
-                  <Link to="/settings/company" className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium text-fg hover:bg-sunken">
-                    Open Settings, Company
-                  </Link>
-                }
               >
-                You can still issue the quotation. Its PDF is made once the profile is complete.
+                You can still issue the quotation. Its PDF is made once the profile is complete. <SettingsLink />
               </Banner>
             ) : null}
             {error ? (

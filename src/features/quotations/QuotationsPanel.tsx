@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { ExternalLink, FilePlus2, FileText, Share2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
@@ -13,6 +12,7 @@ import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
 import type { InquiryRow, RfqHeader } from '@/features/rfqs/api'
 import { useCompanyProfile } from '@/features/settings/hooks'
+import { SettingsLink } from '@/features/quotations/SettingsLink'
 import { downloadStoredPdf, loadPdfData, type QuotationRow } from '@/features/quotations/api'
 import { useQuotations, useStorePdf } from '@/features/quotations/hooks'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
@@ -137,13 +137,8 @@ export function QuotationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquiries:
               <Banner
                 tone="warning"
                 title={`A PDF needs the company's ${gaps.join(' and ')}`}
-                action={
-                  <Link to="/settings/company" className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium text-fg hover:bg-sunken">
-                    Open Settings, Company
-                  </Link>
-                }
               >
-                Quotations are saved without one. Their PDFs are made when you open them after the profile is complete.
+                Quotations are saved without one. Their PDFs are made when you open them after the profile is complete. <SettingsLink />
               </Banner>
             ) : null}
             <p className="text-xs text-fg-muted">Re-issuing makes a new revision under the same number. Earlier revisions and their PDFs never change.</p>
