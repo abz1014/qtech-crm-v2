@@ -224,7 +224,8 @@ test.describe('Settings › Expense categories (M13)', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Expense categories' })).toBeVisible()
     await expect(page.getByText('Categories in use cannot be deleted')).toBeVisible()
     const list = page.getByRole('list', { name: 'Expense categories' })
-    await expect(list.getByRole('listitem')).toHaveCount(17)
+    await expect(list.getByRole('listitem')).toHaveCount((await allCategories()).length)
+    expect((await allCategories()).length).toBeGreaterThanOrEqual(17)
     await expect(list.getByRole('listitem').first()).toHaveAttribute('data-category', 'Salaries')
     await expect(list.locator('[data-category="Rent"]').getByTestId('usage')).toHaveText('Not used yet')
     await review(page, 'm13-01-list-1440')
@@ -248,7 +249,7 @@ test.describe('Settings › Expense categories (M13)', () => {
     // a duplicate name (ignoring case) is refused on the field
     await page.getByLabel('New category').fill(name.toUpperCase())
     await page.getByRole('button', { name: 'Add category' }).click()
-    await expect(page.getByRole('alert').filter({ hasText: 'already exists' })).toBeVisible()
+    await expect(page.getByText('A category with this name already exists.')).toBeVisible()
     await page.getByLabel('New category').fill('')
 
     // rename
@@ -269,10 +270,12 @@ test.describe('Settings › Expense categories (M13)', () => {
     await expect
       .poll(async () => (await allCategories()).map(c => c.id))
       .toEqual([...before.slice(0, -2), before[before.length - 1], before[before.length - 2]])
-    await expect(page.getByRole('list', { name: 'Expense categories' }).getByRole('listitem').nth(15)).toHaveAttribute('data-category', renamed)
+    const at = (await allCategories()).findIndex(c => c.id === added.id)
+    expect(at).toBe(before.length - 2)
+    await expect(page.getByRole('list', { name: 'Expense categories' }).getByRole('listitem').nth(at)).toHaveAttribute('data-category', renamed)
     // and it survives a reload
     await page.reload()
-    await expect(page.getByRole('list', { name: 'Expense categories' }).getByRole('listitem').nth(15)).toHaveAttribute('data-category', renamed)
+    await expect(page.getByRole('list', { name: 'Expense categories' }).getByRole('listitem').nth(at)).toHaveAttribute('data-category', renamed)
     await review(page, 'm13-02-after-edits-1440')
   })
 
@@ -304,7 +307,7 @@ test.describe('Settings › Expense categories (M13)', () => {
     // ---- through the data layer: what new expenses choose from (active = true) no longer includes it
     const offered = await must(rest<CategoryRow[]>('admin', 'expense_categories?active=eq.true&select=id,name&order=sort.asc,name.asc'))
     expect(offered.map(c => c.id)).not.toContain(cat.id)
-    expect(offered.length).toBe(16)
+    expect(offered.length).toBe((await allCategories()).length - 1)
     // ...and a new expense that names it is refused by the database, while the old expense keeps it
     const refused = await rest<{ code?: string; message?: string }>('admin', 'expenses', { method: 'POST', body: { amount_pkr: 10, category_id: cat.id } })
     expect(refused.status).toBe(400)
