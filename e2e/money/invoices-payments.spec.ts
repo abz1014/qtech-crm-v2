@@ -205,7 +205,7 @@ test.describe('invoices and the GST register (M01)', () => {
     const dialog = page.getByRole('dialog', { name: `Invoice ${inv.number}` })
     await expect(dialog).toBeVisible()
     await dialog.locator('input[type=file]').setInputFiles({ name: 'fbr-receipt.png', mimeType: 'image/png', buffer: PNG })
-    await expect(dialog.getByRole('button', { name: /fbr-receipt/ })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'fbr-receipt.png', exact: true })).toBeVisible()
     const [att] = await must(rest<{ bucket: string; path: string }[]>('admin', `attachments?invoice_id=eq.${inv.id}&select=bucket,path`))
     expect(att.bucket).toBe('gst-receipts')
     expect(att.path.startsWith(`${inv.id}/`)).toBe(true)
