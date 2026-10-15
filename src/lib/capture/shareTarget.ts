@@ -15,7 +15,8 @@ export function isShareRequest(request: { method: string }, url: URL, ownOrigin:
 export function sharedText(form: FormData): string {
   const part = (k: string) => {
     const v = form.get(k)
-    return typeof v === 'string' ? v.trim() : ''
+    // A form post turns line breaks into CRLF; keep plain LF, as typed and pasted text has it.
+    return typeof v === 'string' ? v.replace(/\r\n?/g, '\n').trim() : ''
   }
   const title = part('title')
   const text = part('text')

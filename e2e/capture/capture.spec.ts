@@ -320,6 +320,9 @@ test.describe('the other destinations', () => {
     await sheet(page).getByRole('button', { name: 'Continue to intake' }).click()
     await expect(page).toHaveURL(/\/rfqs\/new\?company=/)
     await expect(page.getByText(/ultrasonic level transmitter/).first()).toBeVisible()
+    // A sentence is not an item list: the pasted text is shown and the person adds the item, as with any paste on this screen.
+    await page.getByRole('button', { name: 'Add an item by hand' }).click()
+    await page.getByRole('textbox', { name: 'Description of item 1' }).fill('Ultrasonic level transmitter 0 to 8 m')
     await page.getByRole('button', { name: 'Save without floating' }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
     await expect.poll(async () => (await must(rest<{ id: string }[]>('admin', `rfqs?company_id=eq.${s.co.id}&select=id&order=number`))).length).toBe(2)

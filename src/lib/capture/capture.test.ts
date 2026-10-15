@@ -59,6 +59,10 @@ describe('share target POST', () => {
     expect(sharedText(form({ text: 'Same', title: 'Same' }))).toBe('Same')
   })
 
+  it('a form post turns line breaks into CRLF; the stored text has plain LF', () => {
+    expect(sharedText(form({ text: 'Line size is 4 inch\r\nFluid is hot water' }))).toBe('Line size is 4 inch\nFluid is hot water')
+  })
+
   it('stores the payload, then redirects with a GET to the sheet', async () => {
     ;(globalThis as { indexedDB?: IDBFactory }).indexedDB = idb
     const res = await handleShareRequest({ formData: async () => form({ text: 'Line size is 4 inch' }) } as unknown as Request, ORIGIN, 5_000)
