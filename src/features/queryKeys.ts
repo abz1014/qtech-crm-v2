@@ -23,6 +23,8 @@ function companies() {
     search: (text: string) => [...all, 'list', 'search', text.trim().toLowerCase()] as const,
     byName: (name: string) => [...all, 'list', 'by-name', name.trim().toLowerCase()] as const,
     detail,
+    /** R22: the RFQs Capture offers (recents and your own with open questions), with their open questions. */
+    capture: (signature = '') => [...all, 'capture', signature] as const,
     /** One slice of a company. `slice` is a fixed word, so a typo is a type error. */
     part: (id: string, slice: CompanyPart) => [...detail(id), slice] as const,
   }
@@ -59,6 +61,8 @@ function rfqs() {
     /** R06: palette search by number, customer ref or company. */
     search: (text: string) => [...all, 'list', 'search', text.trim().toLowerCase()] as const,
     detail,
+    /** R22: the RFQs Capture offers (recents and your own with open questions), with their open questions. */
+    capture: (signature = '') => [...all, 'capture', signature] as const,
     /** R10: short-lived signed links for the RFQ's files; `signature` changes when the set of files does. */
     fileUrls: (id: string, signature: string) => [...detail(id), 'file-urls', signature] as const,
     /** One slice of an RFQ page (R07). `slice` is a fixed word, so a typo is a type error. */
@@ -115,12 +119,15 @@ function orders() {
     /** Active engineers who can be put on a commissioning job. */
     engineers: () => [...all, 'list', 'engineers'] as const,
     /** The signed-in person's job title (the sign-off of a chase message). */
+    /** R22: the orders Capture offers (opened lately), and its search. */
+    captureRecent: () => [...all, 'list', 'capture-recent'] as const,
+    captureSearch: (text: string, includePo: boolean) => [...all, 'list', 'capture-search', text.trim().toLowerCase(), includePo] as const,
     /** Suppliers a leg can be added for. */
     supplierChoices: () => [...all, 'list', 'supplier-choices'] as const,
     jobTitle: (userId: string) => [...all, 'list', 'job-title', userId] as const,
   }
 }
-export type OrderPart = 'header' | 'items' | 'legs' | 'engineers' | 'money' | 'pos'
+export type OrderPart = 'header' | 'items' | 'legs' | 'engineers' | 'money' | 'pos' | 'files'
 
 /** Settings (A04, A06): the team list (read through the admin-users function) and the one company-profile row. */
 function settings() {

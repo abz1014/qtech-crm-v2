@@ -505,8 +505,8 @@ Note on mockup content: the mockup has NO separate "Files/attachments panel" (on
 | C-04 | State chips, set | Open, Partly covered, "Waiting on customer, 2", "Answers to relay, 1", "Bid sent Thu 26 Nov", "Due soon" | StatusBadge rfq-outcome, sourcing, clarification (count detail), bid (+ date), deadline | MATCH | - | - |
 | C-05 | Deadline chip wording | "Due soon" (populated) / "Due in 7 days" (empty) / "Due in 4 days" (mobile) | `Due soon` with detail `{n} d` or `today` (e.g. "Due soon 4 d") | FIXED (7220564) | low | Make the chip read "Due in N days". R07 polish |
 | C-06 | Extra chip | none | "Top priority" chip when `is_priority` | KEPT (7220564; extra chip accepted) | low | Keep; owner to confirm. R07 |
-| C-07 | Header actions | Two buttons: `Issue quotation` (label constant, file-plus icon) and a `Bid and close` dropdown | Three buttons: `Issue quotation`/`Issue R{n+1}` (label changes), primary green `Mark bid sent`, `Close or lose`; `Reopen` when closed | FIXED (7220564) | medium | Fold Mark bid sent / Sent again / Close reasons into one "Bid and close" menu; keep header label "Issue quotation". R07 |
-| C-08 | "Bid and close" menu contents | `Mark bid sent` (hint "no PDF"), `Sent the offer again` (hint "updates date"), rule, note "Close RFQ because", 7 one-tap reasons: The customer chose a competitor, Price too high, No reply to our questions, The customer cancelled, We could not source it, We were too late, Another reason | Separate `Mark bid sent` button (hidden once bid is sent, so "Sent the offer again" does not exist); `Close or lose` opens a Dialog with radios of the same 7 labels pre-filled from state, optional Note, `Close RFQ` | FIXED (7220564) | medium | "Sent the offer again" (re-stamp quoted_on) is MISSING. Reason labels MATCH. Dialog is 2 taps like the menu and adds a default reason (D-R07); owner to accept or switch to menu. R07 |
+| C-07 | Header actions | Two buttons: `Issue quotation` (label constant, file-plus icon) and a `Bid and close` dropdown | Three buttons: `Issue quotation`/`Issue R{n+1}` (label changes), primary green `Mark bid sent`, `Close or lose`; `Reopen` when closed | FIXED (7220564); KEPT for FE-2 (parity-c2: Mark bid sent stays a 1-tap header button) | medium | Fold Mark bid sent / Sent again / Close reasons into one "Bid and close" menu; keep header label "Issue quotation". R07 |
+| C-08 | "Bid and close" menu contents | `Mark bid sent` (hint "no PDF"), `Sent the offer again` (hint "updates date"), rule, note "Close RFQ because", 7 one-tap reasons: The customer chose a competitor, Price too high, No reply to our questions, The customer cancelled, We could not source it, We were too late, Another reason | Separate `Mark bid sent` button (hidden once bid is sent, so "Sent the offer again" does not exist); `Close or lose` opens a Dialog with radios of the same 7 labels pre-filled from state, optional Note, `Close RFQ` | FIXED (7220564); KEPT for FE-2 (parity-c2: Mark bid sent stays a 1-tap header button) | medium | "Sent the offer again" (re-stamp quoted_on) is MISSING. Reason labels MATCH. Dialog is 2 taps like the menu and adds a default reason (D-R07); owner to accept or switch to menu. R07 |
 | C-09 | Mark bid sent hint | Menu sub-label "no PDF" | none | FIXED (7220564) | low | Add the hint when menu is built. R07 |
 | C-10 | Close dialog | Not a dialog in mockup (menu only) | Title `Close or lose this RFQ`, context `RFQ-… · Company`, lead "The reason is filled in from where this RFQ stands. Change it if it is not right.", `Note` optional "Anything worth remembering", `Cancel` / `Close RFQ`; undo toast | FIXED (7220564) | low | See C-08. R07 |
 | C-11 | Closed state | not shown | line "Closed {day}: {reason}. {note}" + `Reopen` | KEPT (7220564; closed state is not in the mockup) | low | Mockup silent; keep. R07 |
@@ -547,7 +547,7 @@ Note on mockup content: the mockup has NO separate "Files/attachments panel" (on
 | C-43 | Item with no replies | Chip `No replies yet`, text "No supplier has been asked about this item." | Chip `No prices yet`; no per-item text | FIXED (7220564) | low | Align. R07 |
 | C-44 | Empty page (nobody asked) | Meta "3 items · nobody asked yet"; block "Ask suppliers for prices" + "Pick the suppliers on the right. One tap copies an enquiry listing every item, ready to paste into WhatsApp or email. Replies are typed in under each item as they arrive."; rail "Suppliers to ask" (ticked suggestions, `Copy enquiry for 2 suppliers`) | "No supplier has been asked about this RFQ yet. Once one is, their reply is typed in here."; no suggestions rail, no copy-enquiry on this page | FIXED (7220564) | high | Empty block and Suppliers-to-ask rail missing on detail (exist only on `/rfqs/new`). R07/R05 |
 | C-45 | Paste-to-parse | not in mockup | `Paste reply` button + "Reads the email or message you copied. Nothing is saved until you accept." + suggestions panel | KEPT (7220564; Paste reply is a built extra, now inside each supplier box) | low | Keep (BUILD_PLAN R08, D-R08); re-home into the Add reply box |
-| C-46 | Supplier chase text | Rail card `Chase Apex Instrumentation Co.` with WhatsApp/Email tabs, recipient line (phone/email), full message shown, `Copy and mark chased`, "Chased once already" | Per supplier row: "Sent … · chased N times, last …", `Preview text` toggle (WhatsApp/Email), `Copy & mark chased` | FIXED (7220564) | medium | Label "Copy & mark chased" vs "Copy and mark chased"; no recipient line; preview hidden by default. R16/R07 |
+| C-46 | Supplier chase text | Rail card `Chase Apex Instrumentation Co.` with WhatsApp/Email tabs, recipient line (phone/email), full message shown, `Copy and mark chased`, "Chased once already" | Per supplier row: "Sent … · chased N times, last …", `Preview text` toggle (WhatsApp/Email), `Copy & mark chased` | FIXED (7220564); KEPT for FE-2 (parity-c2: a 1-tap Chase on every supplier asked) | medium | Label "Copy & mark chased" vs "Copy and mark chased"; no recipient line; preview hidden by default. R16/R07 |
 | C-47 | Item rows at 375 | Card rows | Same pattern; built shows small field labels (Supplier/Price/…) | MATCH | - | - |
 
 ## 3. Right rail: Suppliers asked, Questions, Files
@@ -868,5 +868,21 @@ Exempt only; the Files panel stays.
 - Loading and error (C-15, C-16): the skeleton mirrors the page; an error keeps the header and says "Supplier replies did not load", with the
   rail cards "Not loaded".
 - Deviations kept on purpose: Stock stays a three-way choice (In stock, Not in stock, Not stated) so an unknown stock is never saved as
-  "Not in stock"; the chase is 1 tap for the supplier shown and 2 for another, where it used to be 1 for each; a mockup row that needs data we
+  "Not in stock"; a mockup row that needs data we
   do not have (a free-text supplier descriptor such as "China stock, factory certificate") is left out.
+
+### Follow-up, Part C (branch p4/parity-c2): FE-2 tap counts win over the mockup's look
+
+The owner's rule is fewer taps, and a mockup look never beats an FE-2 tap count. Two Part C rows therefore keep the FE-2 count and are
+logged KEPT for FE-2:
+
+- C-46 chase: every supplier in "Suppliers asked" has its own **Chase** button. One tap copies that supplier's WhatsApp text and marks it
+  chased (stamp_supplier_chase), exactly as "Copy and mark chased" does in the card. "Show text" opens the card (WhatsApp or Email, the
+  recipient, the full text) for the supplier you want to read first. The card is unchanged. Asserted in E2E: 1 tap for a supplier that is
+  not the one shown in the card, then 1 tap again for the next.
+- C-07 / C-08 mark bid sent: while the bid is open and not yet sent, **Mark bid sent** is a direct header button beside Issue quotation (1 tap,
+  with an Undo), on the phone too. The "Bid and close" menu keeps Mark bid sent, "Sent the offer again" and the close reasons. Issuing a
+  quotation already sets bid sent. Asserted in E2E: 1 tap.
+
+Also: the "No current X rate" preview line keeps its icon inline with its text in the narrow reply box, and the phone "..." menus start with
+**Mark won**, as in the mockup.
