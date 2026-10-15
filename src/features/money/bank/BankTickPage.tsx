@@ -52,7 +52,15 @@ export function BankTickPage() {
       clearTimeout(timer.current)
       timer.current = setTimeout(() => setJust(null), 2400)
     }
-    tick.mutate({ line, tick: next }, { onError: e => setError(mapPgError(e, { entity: 'bank tick' })) })
+    tick.mutate(
+      { line, tick: next },
+      {
+        onError: e => {
+          setJust(null)
+          setError(mapPgError(e, { entity: 'bank tick' }))
+        },
+      },
+    )
   }
 
   const go = (by: number) => setParams({ month: shiftMonth(month, by) }, { replace: true })
