@@ -60,6 +60,8 @@ interface DialogContentProps {
   title: string
   /** The context line under the title ("RFQ-0177 · Indus Textile Mills"). Also the dialog's accessible description. */
   context?: ReactNode
+  /** A small chip beside the title ("Re-issue"). It sits next to the heading, not inside it. */
+  titleChip?: ReactNode
   /** The 36px tile glyph. A destructive confirm uses tone="danger". */
   icon?: LucideIcon
   tone?: Tone
@@ -78,6 +80,7 @@ interface DialogContentProps {
 
 export function DialogContent({
   title,
+  titleChip,
   context,
   icon,
   tone = 'neutral',
@@ -132,7 +135,10 @@ export function DialogContent({
               </span>
             ) : null}
             <div className="grid min-w-0 flex-1 gap-[2px]">
-              <RadixDialog.Title className="text-lg font-semibold tracking-snug">{title}</RadixDialog.Title>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <RadixDialog.Title className="text-lg font-semibold tracking-snug">{title}</RadixDialog.Title>
+                {titleChip}
+              </div>
               {context ? (
                 <RadixDialog.Description className="text-sm text-fg-muted">{context}</RadixDialog.Description>
               ) : null}

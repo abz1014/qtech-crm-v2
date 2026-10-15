@@ -1,7 +1,7 @@
 // Supplier PO (O07): the lines of the Issue purchase order dialog and what they cost. Pure and framework-free.
 //
 // Each line's price comes from the first source that has one, in this order (DATA_MODEL 2.26, Amendment A2b), and always says where it
-// came from: the order, the supplier's quote, the supplier's last PO, or typed. The database (po_line_prefill, migration 0041) decides
+// came from: the order, the supplier's quote, the supplier's last PO, or typed. The database (po_line_prefill, migration 0043) decides
 // the source; this file words it and adds up the money. A price the person types over becomes "typed", exactly as issue_purchase_order
 // labels it when the issued price differs from the pre-fill.
 

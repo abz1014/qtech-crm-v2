@@ -185,7 +185,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'customer_price_memory',  '',    'X',    'X',    'X'),    -- R19 (0037): the two price chips of the issue-quotation dialog, all staff
   ('function', 'issue_quotation',         '',    'X',    'X',    'X'),    -- s10 "RPCs issue_quotation, issue_purchase_order, stamp_clarification_ask, stamp_supplier_chase"
   ('function', 'issue_purchase_order',    '',    'X',    'X',    'X'),    -- s10 (same row)
-  ('function', 'po_line_prefill',         '',    'X',    'X',    'X'),    -- O07 (0041): what Issue PO would pre-fill, SECURITY INVOKER, all staff; writes nothing
+  ('function', 'po_line_prefill',         '',    'X',    'X',    'X'),    -- O07 (0043): what Issue PO would pre-fill, SECURITY INVOKER, all staff; writes nothing
   ('function', 'stamp_clarification_ask', '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_supplier_chase',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_goods_chase',      '',    'X',    'X',    'X'),    -- R16 (0033): goods-chase stamp on a supplier leg, all staff

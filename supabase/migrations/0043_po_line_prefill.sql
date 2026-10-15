@@ -1,4 +1,4 @@
--- 0041_po_line_prefill (O07): what "Issue PO" would pre-fill, shown before anything is issued.
+-- 0043_po_line_prefill (O07): what "Issue PO" would pre-fill, shown before anything is issued.
 --
 -- The Issue purchase order dialog (g2-order-detail.html, "Issue PO dialog") shows every line with its price and where the price came
 -- from: the order, the supplier's quote, the supplier's last PO, or typed. issue_purchase_order() (0036) already decides that and
@@ -11,7 +11,7 @@
 --   source_on         quote: the day the quote line was saved. last_po: the day that PO was issued.
 --
 -- The matching rules are issue_purchase_order's, copied line for line (same sources, same order, same currency rule, same section 5c
--- tiers 0 and 1 for "last PO"). A pgTAP test (0041_po_line_prefill.test.sql) issues a PO and checks that every line's price and source
+-- tiers 0 and 1 for "last PO"). A pgTAP test (0043_po_line_prefill.test.sql) issues a PO and checks that every line's price and source
 -- equal what this function said first, so the two cannot drift apart without a test failing.
 --
 -- SECURITY INVOKER with a fixed search_path: the caller's own row security applies, so a leg the caller cannot read gives no rows.
