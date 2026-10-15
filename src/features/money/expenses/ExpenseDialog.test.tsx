@@ -1,0 +1,103 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, describe, expect, it } from 'vitest'
+import { AddExpenseDialog, type ExpenseContext } from '@/features/money/expenses/ExpenseDialog'
+import { SUPPLIER_PAYMENT_ID } from '@/features/money/expenses/model'
+import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
+import { ToastProvider } from '@/ui/Toast'
+
+const CATEGORIES = [
+  { id: 'c-snacks', name: 'Office supplies & snacks', grp: 'overhead', default_paid_via: 'cash', sort: 50, active: true },
+  { id: 'c-rent', name: 'Rent', grp: 'overhead', default_paid_via: 'bank', sort: 20, active: true },
+  { id: SUPPLIER_PAYMENT_ID, name: 'Supplier payment', grp: 'order_cost', default_paid_via: 'bank', sort: 110, active: true },
+]
+
+function setup(opts: { upsert?: () => FakeResult; context?: ExpenseContext; lastForOrder?: string } = {}) {
+  const db = installFakeDb((c: FakeCall) => {
+    if (c.target === 'expense_categories') return { data: CATEGORIES }
+    if (c.target === 'expenses' && c.verb === 'select') {
+      // the order's last category is a different select from the 30-day tally
+      if (c.ops.some(([n]) => n === 'eq')) return { data: opts.lastForOrder ? [{ category_id: opts.lastForOrder }] : [] }
+      return { data: [{ category_id: 'c-snacks', paid_on: '2026-11-01' }] }
+    }
+    if (c.target === 'expenses' && c.verb === 'upsert') return opts.upsert?.() ?? {}
+    return { data: [] }
+  })
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  render(
+    <QueryClientProvider client={client}>
+      <ToastProvider>
+        <AddExpenseDialog open onOpenChange={() => {}} context={opts.context} />
+      </ToastProvider>
+    </QueryClientProvider>,
+  )
+  return db
+}
+const saves = (db: ReturnType<typeof installFakeDb>) => db.calls.filter(c => c.target === 'expenses' && c.verb === 'upsert')
+
+afterEach(() => installFakeDb(() => ({})).uninstall())
+
+describe('Add expense dialog (M03)', () => {
+  it('one expense in the default category is one amount and Enter', async () => {
+    const user = userEvent.setup()
+    const db = setup()
+    const amount = await screen.findByRole('textbox', { name: 'Amount, PKR' })
+    await waitFor(() => expect(amount).toHaveFocus())
+    expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('Office supplies & snacks')
+    expect(screen.getByText('Most used in the last 30 days')).toBeInTheDocument()
+    await user.keyboard('450{Enter}')
+    await waitFor(() => expect(saves(db)).toHaveLength(1))
+    const [row] = opArgs(saves(db)[0], 'upsert')?.[0] as { amount_pkr: number; category_id: string; paid_via: string }[]
+    expect(row).toMatchObject({ amount_pkr: 450, category_id: 'c-snacks', paid_via: 'cash' })
+  })
+
+  it('from a leg: Supplier payment, payee and leg filled, the amount starts at the balance, two taps to save', async () => {
+    const user = userEvent.setup()
+    const db = setup({
+      context: { orderId: 'o1', orderLabel: 'ORD-0038', legId: 'leg1', legLabel: 'leg A', payeeId: 'p1', payeeName: 'Alpenmark Controls GmbH', amount: 384497, amountNote: 'Still owed on leg A: EUR 2,430.00 less the 412,300 advance' },
+    })
+    await screen.findByRole('textbox', { name: 'Amount, PKR' })
+    expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('Supplier payment')
+    expect(screen.getByText('Opened from a leg')).toBeInTheDocument()
+    expect(screen.getByText(/Alpenmark Controls GmbH · leg A/)).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('384,497')
+    expect(screen.getByText(/Still owed on leg A/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Save expense' }))
+    await waitFor(() => expect(saves(db)).toHaveLength(1))
+    const [row] = opArgs(saves(db)[0], 'upsert')?.[0] as Record<string, unknown>[]
+    expect(row).toMatchObject({ amount_pkr: 384497, category_id: SUPPLIER_PAYMENT_ID, order_id: 'o1', supplier_order_id: 'leg1', payee_id: 'p1', paid_via: 'bank' })
+  })
+
+  it('from an order: the last category used on it', async () => {
+    setup({ context: { orderId: 'o1', orderLabel: 'ORD-0038' }, lastForOrder: 'c-rent' })
+    await screen.findByRole('textbox', { name: 'Amount, PKR' })
+    expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('Rent')
+    expect(screen.getByText('Last used on ORD-0038')).toBeInTheDocument()
+  })
+
+  it('input tax is collapsed and shows only on Supplier payment, Freight and Clearing', async () => {
+    const user = userEvent.setup()
+    setup()
+    await screen.findByRole('textbox', { name: 'Amount, PKR' })
+    expect(screen.queryByText('Input tax, optional')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('combobox', { name: 'Category' }))
+    await user.keyboard('sup{Tab}')
+    const open = await screen.findByRole('button', { name: /Input tax, optional/ })
+    await user.click(open)
+    expect(screen.getByText('Cost in margin and P&L')).toBeInTheDocument()
+  })
+
+  it('a closed month shows the plain sentence under the date and keeps every entry', async () => {
+    const user = userEvent.setup()
+    setup({ upsert: () => ({ error: { code: 'P0001', message: 'September 2026 is closed. An admin can reopen it.' } }) })
+    const amount = await screen.findByRole('textbox', { name: 'Amount, PKR' })
+    await waitFor(() => expect(amount).toHaveFocus())
+    await user.keyboard('450')
+    await user.click(screen.getByRole('textbox', { name: 'Date paid' }))
+    await user.keyboard('30 sep{Enter}')
+    expect(await screen.findByText('September 2026 is closed. An admin can reopen it.')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('450')
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+})

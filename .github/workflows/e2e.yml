@@ -46,6 +46,7 @@ jobs:
       today: ${{ steps.final.outputs.today }}
       search: ${{ steps.final.outputs.search }}
       pwa: ${{ steps.final.outputs.pwa }}
+      expenses: ${{ steps.final.outputs.expenses }}
       any: ${{ steps.final.outputs.any }}
     steps:
       - uses: actions/checkout@v4
@@ -82,6 +83,8 @@ jobs:
               - 'e2e/today/**'
             search:
               - 'e2e/search/**'
+            expenses:
+              - 'e2e/expenses/**'
             pwa:
               - 'e2e/pwa/**'
               - 'public/manifest.webmanifest'
@@ -101,6 +104,7 @@ jobs:
           S_TODAY: ${{ steps.filter.outputs.today }}
           S_SEARCH: ${{ steps.filter.outputs.search }}
           S_PWA: ${{ steps.filter.outputs.pwa }}
+          S_EXPENSES: ${{ steps.filter.outputs.expenses }}
         run: |
           all=false
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$GITHUB_REF" = "refs/heads/main" ] || [ "$SHARED" = "true" ]; then all=true; fi
@@ -125,6 +129,8 @@ jobs:
           echo "search=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_PWA; if [ "$all" = "true" ]; then v=true; fi
           echo "pwa=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_EXPENSES; if [ "$all" = "true" ]; then v=true; fi
+          echo "expenses=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           echo "any=$any" >> "$GITHUB_OUTPUT"
 
   e2e:
@@ -271,6 +277,16 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=search REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/search npx playwright test --project=search --output=test-results/search
+
+      - name: Reset database (expenses)
+        if: ${{ !cancelled() && needs.changes.outputs.expenses == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (expenses project)
+        if: ${{ !cancelled() && needs.changes.outputs.expenses == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=expenses REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/expenses npx playwright test --project=expenses --output=test-results/expenses
 
       - name: Playwright (pwa project, no database reset needed)
         if: ${{ !cancelled() && needs.changes.outputs.pwa == 'true' }}

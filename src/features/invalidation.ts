@@ -53,6 +53,11 @@ export interface WriteVars {
   /** R11/R16: a chase stamp on Today (customer ask, supplier chase, goods chase, payment reminder) or taking it back. */
   'today.chase': Record<string, never>
   'today.snooze': Record<string, never>
+  /** M03/M11: an expense added, edited, deleted, or a receipt photo added or taken off. */
+  'expense.save': Record<string, never>
+  'expense.receipt': { expenseId: string }
+  'recurring.save': Record<string, never>
+  'recurring.record': Record<string, never>
 }
 
 export type WriteName = keyof WriteVars
@@ -112,6 +117,12 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'today.chase': () => [qk.today.all, qk.rfqs.all, qk.orders.all],
   // A snooze is read only by Today.
   'today.snooze': () => [qk.today.all],
+  // An expense changes every month list, the recent-use tally, the order's own cost panel and Today (a recurring item leaves it).
+  'expense.save': () => [qk.money.expenses.all, qk.money.recurring.all, qk.orders.all, qk.today.all],
+  'expense.receipt': v => [qk.money.expenses.receipts(v.expenseId)],
+  'recurring.save': () => [qk.money.recurring.all, qk.today.all],
+  // Recording makes an expense (and a recurring item leaves Today).
+  'recurring.record': () => [qk.money.expenses.all, qk.money.recurring.all, qk.today.all],
 }
 
 /** The keys a write makes stale. Pure, so it can be tested without a QueryClient. */

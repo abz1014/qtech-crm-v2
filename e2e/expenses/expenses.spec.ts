@@ -1,0 +1,458 @@
+import { expect, test, type Page } from '@playwright/test'
+import { createCompany, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
+import { axeViolations } from '../support/axe'
+
+/*
+ * M03 and M11 end to end, against the local CI stack: Money > Expenses for the admin, through the real login form.
+ *
+ * FE-2 targets asserted here (BUILD_PLAN A6.5):
+ *   One expense, default category      1 amount + Enter
+ *   Five small spends in a burst       at most 5 amounts + 6 keys, 0 mouse
+ *   Recurring expense                  1 tap
+ *   Supplier payment from a leg        2 taps
+ * plus the closed-month refusal (month closed by the admin first), the engineer and sales having no access, and axe
+ * (WCAG 2.2 AA) at 1440 and 375. Each test makes its own records with unique notes; the closed-month tests run last
+ * because closing a month is permanent until it is reopened (and the suite reopens it).
+ */
+const SNACKS = 'ca7e0000-0000-4000-8000-000000000005' // Office supplies & snacks (cash)
+const FUEL = 'ca7e0000-0000-4000-8000-000000000004' // Fuel & travel (cash)
+const RENT = 'ca7e0000-0000-4000-8000-000000000002'
+const UTILITIES = 'ca7e0000-0000-4000-8000-000000000003'
+const SUPPLIER_PAYMENT = 'ca7e0000-0000-4000-8000-000000000011'
+
+const today = () => karachiDay(0)
+const unique = () => Math.random().toString(36).slice(2, 8)
+
+interface ExpenseRow {
+  id: string
+  amount_pkr: number
+  category_id: string
+  paid_on: string
+  paid_via: string
+  description: string | null
+  input_tax_pkr: number
+  order_id: string | null
+  supplier_order_id: string | null
+  payee_id: string | null
+  recurring_id: string | null
+  period: string | null
+}
+
+const addExpense = (body: Record<string, unknown>) =>
+  must(rest<ExpenseRow[]>('admin', 'expenses', { method: 'POST', body: { paid_on: today(), paid_via: 'cash', ...body } })).then(r => r[0])
+
+const byNote = (note: string) => must(rest<ExpenseRow[]>('admin', `expenses?description=ilike.${encodeURIComponent(`${note}*`)}&select=*&order=amount_pkr`))
+
+/** Make "Office supplies & snacks" the most used category of the last 30 days, so the default is the one in the mockup. */
+async function seedFavourite() {
+  const tag = `fav-${unique()}`
+  for (let i = 0; i < 4; i++) await addExpense({ amount_pkr: 100 + i, category_id: SNACKS, description: tag })
+}
+
+/** What a keyboard-only person does is counted from the page itself: named keys pressed and mouse presses, after `start`. */
+async function startCounting(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { __keys: string[]; __mouse: number }
+    w.__keys = []
+    w.__mouse = 0
+    document.addEventListener('keydown', e => e.key.length > 1 && !['Control', 'Shift', 'Alt', 'Meta'].includes(e.key) && w.__keys.push(e.key), true)
+    document.addEventListener('mousedown', () => (w.__mouse += 1), true)
+  })
+}
+const counted = (page: Page) => page.evaluate(() => ({ keys: (window as unknown as { __keys: string[] }).__keys, mouse: (window as unknown as { __mouse: number }).__mouse }))
+
+const expensesRequests = (page: Page) => {
+  const posts: string[] = []
+  page.on('request', r => {
+    if (r.method() === 'POST' && r.url().includes('/rest/v1/expenses')) posts.push(r.url())
+  })
+  return posts
+}
+
+// A 2x2 PNG, enough for the photo path (it is read, shrunk if that helps, uploaded and recorded).
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR4nGP8z8DwnwEJMDEgAVwcAEVXAgJQ6mHVAAAAAElFTkSuQmCC', 'base64')
+
+test.describe.configure({ mode: 'serial' })
+
+test.describe('expenses (M03, M11)', () => {
+  test('one expense in the default category is one amount and Enter', async ({ page }) => {
+    await seedFavourite()
+    await openAs(page, 'admin', '/money/expenses')
+    const posts = expensesRequests(page)
+    await page.getByRole('button', { name: 'Add expense', exact: true }).click()
+    const amount = page.getByRole('textbox', { name: 'Amount, PKR' })
+    await expect(amount).toBeFocused()
+    // the pre-fills: most used category, today, paid via from the category
+    await expect(page.getByRole('combobox', { name: 'Category' })).toHaveValue('Office supplies & snacks')
+    await expect(page.getByText('Most used in the last 30 days')).toBeVisible()
+    await review(page, 'm03-add-expense-dialog-1440')
+    await startCounting(page)
+    await page.keyboard.type('450')
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('dialog')).toBeHidden()
+    const c = await counted(page)
+    expect(c.keys).toEqual(['Enter']) // 1 amount + Enter
+    expect(c.mouse).toBe(0)
+    expect(posts).toHaveLength(1)
+    // 450 is saved (the note is empty, so find it by amount and today)
+    const rows = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.450&paid_on=eq.${today()}&select=*`))
+    expect(rows.length).toBeGreaterThan(0)
+    expect(rows[0]).toMatchObject({ category_id: SNACKS, paid_via: 'cash', input_tax_pkr: 0 })
+  })
+
+  test('five small spends in a burst: at most 5 amounts and 6 keys, 0 mouse, one request', async ({ page }) => {
+    await seedFavourite()
+    await openAs(page, 'admin', '/money/expenses')
+    const posts = expensesRequests(page)
+    await page.getByRole('button', { name: 'Add expenses' }).click()
+    const first = page.getByRole('textbox', { name: 'Amount, row 1' })
+    await expect(first).toBeFocused()
+    await expect(page.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Office supplies & snacks')
+    await expect(page.getByText('most used')).toBeVisible()
+    await startCounting(page)
+    const amounts = [5001, 5002, 5003, 5004, 5005]
+    for (const [i, a] of amounts.entries()) {
+      await page.keyboard.type(String(a))
+      if (i < amounts.length - 1) await page.keyboard.press('Enter')
+    }
+    await expect(page.getByRole('textbox', { name: /^Amount, row/ })).toHaveCount(5)
+    await expect(page.getByText('carried')).toHaveCount(4)
+    await review(page, 'm11-burst-sheet-1440')
+    await page.keyboard.press('Control+Enter')
+    await expect(page.getByRole('dialog')).toBeHidden()
+    const c = await counted(page)
+    expect(amounts).toHaveLength(5)
+    expect(c.keys.length).toBeLessThanOrEqual(6)
+    expect(c.keys).toEqual(['Enter', 'Enter', 'Enter', 'Enter', 'Enter']) // 4 Enters + Ctrl+Enter
+    expect(c.mouse).toBe(0)
+    // one atomic request, five rows, each with its own client id
+    expect(posts).toHaveLength(1)
+    const rows = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=gte.5001&amount_pkr=lte.5005&select=*&order=amount_pkr`))
+    expect(rows.map(r => r.amount_pkr)).toEqual(amounts)
+    expect(rows.every(r => r.category_id === SNACKS && r.paid_via === 'cash' && r.paid_on === today())).toBe(true)
+  })
+
+  test('a different category is two or three letters, and paid via follows it', async ({ page }) => {
+    await seedFavourite()
+    await openAs(page, 'admin', '/money/expenses')
+    await page.getByRole('button', { name: 'Add expenses' }).click()
+    await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
+    await startCounting(page)
+    await page.keyboard.type('6001')
+    await page.keyboard.press('Tab')
+    await page.keyboard.type('fu')
+    await expect(page.getByRole('option', { name: /Fuel & travel/ })).toBeVisible()
+    await expect(page.getByText('1 of 17')).toBeVisible()
+    await review(page, 'm11-burst-typeahead-1440')
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Fuel & travel')
+    // salaries is a bank category: the row's paid via follows it
+    await page.keyboard.press('Control+Enter')
+    await expect(page.getByRole('dialog')).toBeHidden()
+    expect((await counted(page)).mouse).toBe(0)
+    const [row] = await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=eq.6001&select=*'))
+    expect(row).toMatchObject({ category_id: FUEL, paid_via: 'cash' })
+  })
+
+  test('a receipt photo from the burst sheet is stored in expense-receipts and recorded', async ({ page }) => {
+    await openAs(page, 'admin', '/money/expenses')
+    await page.getByRole('button', { name: 'Add expenses' }).click()
+    await page.getByRole('textbox', { name: 'Amount, row 1' }).fill('7001')
+    await page.locator('input[type=file]').first().setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: PNG })
+    await expect(page.getByRole('button', { name: 'Remove receipt photo, row 1' })).toBeVisible()
+    await page.keyboard.press('Control+Enter')
+    await expect(page.getByRole('dialog')).toBeHidden()
+    const [row] = await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=eq.7001&select=*'))
+    await expect
+      .poll(async () => (await must(rest<{ bucket: string; path: string }[]>('admin', `attachments?expense_id=eq.${row.id}&select=bucket,path`))).length)
+      .toBe(1)
+    const [att] = await must(rest<{ bucket: string; path: string }[]>('admin', `attachments?expense_id=eq.${row.id}&select=bucket,path`))
+    expect(att.bucket).toBe('expense-receipts')
+    expect(att.path.startsWith(`${row.id}/`)).toBe(true)
+  })
+
+  test('input tax is collapsed, optional, and only on Supplier payment, Freight and Clearing', async ({ page }) => {
+    await openAs(page, 'admin', '/money/expenses')
+    await page.getByRole('button', { name: 'Add expense', exact: true }).click()
+    await expect(page.getByText('Input tax, optional')).toHaveCount(0)
+    const category = page.getByRole('combobox', { name: 'Category' })
+    await category.click()
+    await page.keyboard.type('sup')
+    await page.keyboard.press('Tab')
+    await expect(category).toHaveValue('Supplier payment')
+    await page.getByRole('button', { name: /Input tax, optional/ }).click()
+    await page.getByRole('textbox', { name: 'Input tax, PKR' }).fill('90,000')
+    await page.getByRole('textbox', { name: 'Amount, PKR' }).fill('590,000')
+    await expect(page.getByText('Cost in margin and P&L')).toBeVisible()
+    await review(page, 'm03-input-tax-1440')
+    await page.getByRole('button', { name: 'Save expense' }).click()
+    await expect(page.getByRole('dialog')).toBeHidden()
+    const [row] = await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=eq.590000&select=*'))
+    expect(row).toMatchObject({ category_id: SUPPLIER_PAYMENT, input_tax_pkr: 90000, paid_via: 'bank' })
+    // a category without input tax never offers it
+    await page.getByRole('button', { name: 'Add expense', exact: true }).click()
+    await page.getByRole('combobox', { name: 'Category' }).click()
+    await page.keyboard.type('rent')
+    await page.keyboard.press('Tab')
+    await expect(page.getByText('Input tax, optional')).toHaveCount(0)
+  })
+
+  test('from a leg: Supplier payment, payee and leg filled, amount at the balance, 2 taps', async ({ page }) => {
+    const customer = await createCompany(uniqueName('Leg Customer'))
+    const supplier = await createCompany(uniqueName('Leg Supplier'))
+    const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id } })))[0]
+    const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: supplier.id } })))[0]
+    await openAs(page, 'admin', '/today')
+    const note = 'Still owed on leg A: EUR 2,430.00 less the 412,300 advance'
+    await page.goto(`/money/expenses?add=1&order=${order.id}&leg=${leg.id}&amount=384497&note=${encodeURIComponent(note)}`)
+    const dialog = page.getByRole('dialog', { name: 'Add expense' })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole('combobox', { name: 'Category' })).toHaveValue('Supplier payment')
+    await expect(dialog.getByText('Opened from a leg')).toBeVisible()
+    await expect(dialog.getByText(new RegExp(`${supplier.name} · leg A`))).toBeVisible()
+    await expect(dialog.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('384,497')
+    await expect(dialog.getByText(note)).toBeVisible()
+    await review(page, 'm03-add-expense-from-a-leg-1440')
+    await startCounting(page)
+    await dialog.getByRole('button', { name: 'Save expense' }).click() // tap 2 (tap 1 was "Add expense" on the leg)
+    await expect(page.getByRole('dialog')).toBeHidden()
+    expect((await counted(page)).mouse).toBe(1)
+    const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?order_id=eq.${order.id}&select=*`))
+    expect(row).toMatchObject({ amount_pkr: 384497, category_id: SUPPLIER_PAYMENT, supplier_order_id: leg.id, payee_id: supplier.id, paid_via: 'bank', paid_on: today() })
+  })
+
+  test('from an order: the last category used on it', async ({ page }) => {
+    const customer = await createCompany(uniqueName('Order Customer'))
+    const order = (await must(rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id } })))[0]
+    await addExpense({ amount_pkr: 1234, category_id: FUEL, order_id: order.id, description: `ord-${unique()}` })
+    await openAs(page, 'admin', `/money/expenses?add=1&order=${order.id}`)
+    await expect(page.getByRole('combobox', { name: 'Category' })).toHaveValue('Fuel & travel')
+    await expect(page.getByText(/Last used on ORD-/)).toBeVisible()
+  })
+
+  test('the list: by month with totals, filters by group, category and paid via, edit and delete', async ({ page }) => {
+    const tag = `list-${unique()}`
+    await addExpense({ amount_pkr: 1111, category_id: RENT, paid_via: 'bank', description: `${tag} a` })
+    await addExpense({ amount_pkr: 2222, category_id: SNACKS, paid_via: 'cash', description: `${tag} b` })
+    await addExpense({ amount_pkr: 3333, category_id: SUPPLIER_PAYMENT, paid_via: 'bank', input_tax_pkr: 333, description: `${tag} c` })
+    await openAs(page, 'admin', '/money/expenses')
+    await expect(page.getByText(`${tag} a`)).toBeVisible()
+    await expect(page.getByText(`${tag} c`)).toBeVisible()
+    await review(page, 'm03-expenses-list-1440')
+    // filter: group, then category, then paid via
+    await page.getByRole('combobox', { name: 'Group' }).selectOption('order_cost')
+    await expect(page.getByText(`${tag} c`)).toBeVisible()
+    await expect(page.getByText(`${tag} a`)).toHaveCount(0)
+    await page.getByRole('button', { name: 'Clear filters' }).click()
+    await page.getByRole('combobox', { name: 'Category' }).selectOption({ label: 'Office supplies & snacks' })
+    await expect(page.getByText(`${tag} b`)).toBeVisible()
+    await expect(page.getByText(`${tag} a`)).toHaveCount(0)
+    await page.getByRole('button', { name: 'Clear filters' }).click()
+    await page.getByRole('combobox', { name: 'Paid via' }).selectOption('bank')
+    await expect(page.getByText(`${tag} a`)).toBeVisible()
+    await expect(page.getByText(`${tag} b`)).toHaveCount(0)
+    await page.getByRole('button', { name: 'Clear filters' }).click()
+    // totals under the list: paid, input tax and cost
+    await expect(page.getByText(/All \d+ expenses shown/)).toBeVisible()
+    // edit
+    await page.getByRole('button', { name: /^Edit Rent of 1111/ }).click()
+    const amount = page.getByRole('textbox', { name: 'Amount, PKR' })
+    await expect(amount).toHaveValue('1,111')
+    await amount.fill('1,500')
+    await page.getByRole('button', { name: 'Save expense' }).click()
+    await expect(page.getByRole('dialog')).toBeHidden()
+    await expect(page.getByText(`${tag} a`)).toBeVisible()
+    expect((await byNote(`${tag} a`))[0].amount_pkr).toBe(1500)
+    // delete asks first
+    await page.getByRole('button', { name: /^Delete Office supplies & snacks of 2222/ }).click()
+    await page.getByRole('button', { name: 'Delete expense' }).click()
+    await expect(page.getByText(`${tag} b`)).toHaveCount(0)
+    expect(await byNote(`${tag} b`)).toHaveLength(0)
+  })
+
+  test('recurring is one tap, and only once for a month', async ({ page }) => {
+    const label = `Internet ${unique()}`
+    const [tpl] = await must(
+      rest<{ id: string }[]>('admin', 'recurring_expenses', { method: 'POST', body: { label, category_id: UTILITIES, amount: 9500, day_of_month: 1 } }),
+    )
+    await openAs(page, 'admin', '/money/expenses')
+    const item = page.getByTestId(`recurring-${label}`)
+    await expect(item).toBeVisible()
+    await review(page, 'm03-recurring-1440')
+    await startCounting(page)
+    await item.getByRole('button', { name: `Record ${label}` }).click()
+    await expect(item.getByText('Recorded')).toBeVisible()
+    expect((await counted(page)).mouse).toBe(1) // 1 tap
+    const rows = await must(rest<ExpenseRow[]>('admin', `expenses?recurring_id=eq.${tpl.id}&select=*`))
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ amount_pkr: 9500, category_id: UTILITIES, period: today().slice(0, 7), description: label })
+    // (recurring_id, period) is unique: a second record for the month is refused by the database
+    const again = await rest('admin', 'expenses', { method: 'POST', body: { amount_pkr: 9500, category_id: UTILITIES, paid_via: 'bank', recurring_id: tpl.id, period: today().slice(0, 7) } })
+    expect(again.status).toBe(409)
+    // and the template can be added and edited from the panel
+    await page.getByRole('button', { name: 'Add recurring' }).click()
+    const name = `Rent ${unique()}`
+    await page.getByRole('textbox', { name: 'Name' }).fill(name)
+    await page.getByRole('textbox', { name: 'Amount, PKR' }).fill('75,000')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByTestId(`recurring-${name}`)).toBeVisible()
+    await expect(page.getByTestId(`recurring-${name}`).getByRole('button', { name: `Record ${name}` })).toBeVisible()
+  })
+
+  test('sales and engineer get no access, and the database refuses them too', async ({ browser }) => {
+    for (const role of ['sales', 'engineer'] as const) {
+      const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
+      const seen: string[] = []
+      page.on('request', r => {
+        if (/\/rest\/v1\/(expenses|expense_categories|recurring_expenses)/.test(r.url())) seen.push(r.url())
+      })
+      await openAs(page, role, '/money/expenses')
+      await expect(page.getByRole('heading', { name: /not available to your role/ })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Add expenses' })).toHaveCount(0)
+      expect(seen, `${role} must not fetch expense data`).toEqual([])
+      await page.close()
+      // Row Level Security answers the same way: nothing to read, nothing to write
+      const read = await rest<unknown[]>(role, 'expenses?select=id')
+      expect(read.body).toEqual([])
+      const write = await rest(role, 'expenses', { method: 'POST', body: { amount_pkr: 1, category_id: SNACKS, paid_via: 'cash' } })
+      expect(write.status).toBeGreaterThanOrEqual(400)
+    }
+  })
+
+  test('axe at 1440: the list, the single dialog and the burst sheet', async ({ page }) => {
+    await seedFavourite()
+    await openAs(page, 'admin', '/money/expenses')
+    await expect(page.getByRole('button', { name: 'Add expenses' })).toBeVisible()
+    await expect(page.getByText(/All \d+ expenses shown/)).toBeVisible()
+    expect(await axeViolations(page)).toEqual([])
+    await page.getByRole('button', { name: 'Add expense', exact: true }).click()
+    await expect(page.getByRole('textbox', { name: 'Amount, PKR' })).toBeFocused()
+    expect(await axeViolations(page, { landmarks: false })).toEqual([])
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Add expenses' }).click()
+    await page.keyboard.type('450')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('600')
+    expect(await axeViolations(page, { landmarks: false })).toEqual([])
+  })
+
+  test('axe at 375: the list and the burst list with its camera button', async ({ page }) => {
+    await seedFavourite()
+    await page.setViewportSize({ width: 375, height: 812 })
+    await openAs(page, 'admin', '/money/expenses')
+    await expect(page.getByRole('button', { name: 'Add expenses' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Recurring' })).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    await review(page, 'm03-expenses-list-375')
+    expect(await axeViolations(page)).toEqual([])
+    await page.getByRole('button', { name: 'Add expenses' }).click()
+    const first = page.getByRole('textbox', { name: 'Amount, expense 1' })
+    await expect(first).toBeVisible()
+    await first.fill('450')
+    await page.getByRole('button', { name: 'Add a row' }).click()
+    await page.getByRole('textbox', { name: 'Amount, expense 2' }).fill('600')
+    // the camera button is a 44 px tap target
+    const cam = page.getByRole('button', { name: 'Take a receipt photo, expense 2' })
+    const box = await cam.boundingBox()
+    expect(box?.width).toBeGreaterThanOrEqual(44)
+    expect(box?.height).toBeGreaterThanOrEqual(44)
+    await page.locator('input[type=file][capture]').nth(1).setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: PNG })
+    await expect(page.getByRole('button', { name: 'Remove receipt photo, expense 2' })).toBeVisible()
+    await review(page, 'm11-burst-list-375')
+    expect(await axeViolations(page, { landmarks: false })).toEqual([])
+    await page.getByRole('button', { name: /^Save 2 expenses/ }).click()
+    await expect(page.getByRole('dialog')).toBeHidden()
+    await expect.poll(async () => (await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=eq.600&select=id'))).length).toBeGreaterThan(0)
+  })
+
+  // ---- last: closing a month is permanent until it is reopened -----------------------------------------------
+
+  test.describe('a closed month', () => {
+    const prev = (() => {
+      const [y, m] = today().split('-').map(Number)
+      const d = new Date(Date.UTC(y, m - 2, 1))
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+      return {
+        start: `${key}-01`,
+        day: `${key}-05`,
+        typed: `05/${key.slice(5)}/${key.slice(0, 4)}`,
+        label: new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(d),
+      }
+    })()
+    const sentence = `${prev.label} is closed. An admin can reopen it.`
+
+    test.beforeAll(async () => {
+      await addExpense({ amount_pkr: 11, category_id: RENT, paid_on: prev.day, paid_via: 'bank', description: 'before the close' })
+      await must(rest('admin', 'rpc/close_months_through', { method: 'POST', body: { p_month: prev.start }, prefer: 'return=minimal' }))
+    })
+    test.afterAll(async () => {
+      await rest('admin', 'rpc/reopen_month', { method: 'POST', body: { p_month: prev.start }, prefer: 'return=minimal' })
+    })
+
+    test('the burst sheet shows the sentence on the offending row; the other rows stay; nothing is saved', async ({ page }) => {
+      const tag = `closed-${unique()}`
+      await openAs(page, 'admin', '/money/expenses')
+      await page.getByRole('button', { name: 'Add expenses' }).click()
+      await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
+      await page.keyboard.type('8001')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('8002')
+      await page.keyboard.press('Enter')
+      await page.keyboard.type('100000')
+      await page.keyboard.press('Tab') // category
+      await page.keyboard.type('sal')
+      await page.keyboard.press('Tab') // date
+      await page.keyboard.type(prev.typed)
+      await page.keyboard.press('Tab') // paid via
+      await page.keyboard.press('Tab') // note
+      await page.keyboard.type(tag)
+      await page.keyboard.press('Control+Enter')
+      const alert = page.getByRole('alert').filter({ hasText: sentence })
+      await expect(alert).toBeVisible()
+      await expect(alert).toContainText('Nothing was saved')
+      await expect(alert).toContainText('The other 2 rows are still here')
+      await expect(page.getByText('1 row needs a change')).toBeVisible()
+      // every row keeps what it held
+      await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toHaveValue('8,001')
+      await expect(page.getByRole('textbox', { name: 'Amount, row 2' })).toHaveValue('8,002')
+      await expect(page.getByRole('textbox', { name: 'Amount, row 3' })).toHaveValue('100,000')
+      await expect(page.getByRole('textbox', { name: 'Note, row 3' })).toHaveValue(tag)
+      await review(page, 'm11-burst-closed-month-1440')
+      // the whole save was refused
+      expect((await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=in.(8001,8002)&select=id'))).length).toBe(0)
+      expect(await byNote(tag)).toHaveLength(0)
+      // fixing the date (today) lets the same sheet save all three
+      await page.getByRole('textbox', { name: 'Date, row 3' }).fill('today')
+      await page.getByRole('textbox', { name: 'Note, row 3' }).focus()
+      await expect(alert).toBeHidden() // the date was read on leaving it, which clears the row's error
+      await page.keyboard.press('Control+Enter')
+      await expect(page.getByRole('dialog')).toBeHidden()
+      expect((await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=in.(8001,8002,100000)&select=id'))).length).toBeGreaterThanOrEqual(3)
+    })
+
+    test('the single dialog shows the plain sentence under the date and keeps every entry', async ({ page }) => {
+      await openAs(page, 'admin', '/money/expenses')
+      await page.getByRole('button', { name: 'Add expense', exact: true }).click()
+      await page.getByRole('textbox', { name: 'Amount, PKR' }).fill('9001')
+      await page.getByRole('textbox', { name: 'Date paid' }).fill(prev.typed)
+      await page.getByRole('button', { name: 'Add a note' }).click()
+      await page.getByRole('textbox', { name: 'Note' }).fill('kept in the form')
+      await page.getByRole('button', { name: 'Save expense' }).click()
+      await expect(page.getByText(sentence)).toBeVisible()
+      await expect(page.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('9,001')
+      await expect(page.getByRole('textbox', { name: 'Note' })).toHaveValue('kept in the form')
+      await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
+      await review(page, 'm03-closed-month-dialog-1440')
+      expect((await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=eq.9001&select=id'))).length).toBe(0)
+    })
+
+    test('editing or deleting an expense in the closed month shows the same sentence', async ({ page }) => {
+      await openAs(page, 'admin', '/money/expenses')
+      await page.getByRole('button', { name: 'Previous month' }).click()
+      await expect(page.getByText('before the close')).toBeVisible()
+      await page.getByRole('button', { name: /^Delete Rent of 11/ }).click()
+      await page.getByRole('button', { name: 'Delete expense' }).click()
+      await expect(page.getByText(sentence)).toBeVisible()
+    })
+  })
+})
