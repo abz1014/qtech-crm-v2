@@ -33,8 +33,8 @@ describe('drafts', () => {
   })
 
   const items: RfqItemRow[] = [
-    { id: 'i1', number: 1, description: 'Flow meter', brandId: null, brandName: null, qty: 2, unit: 'nos' },
-    { id: 'i2', number: 2, description: 'Transmitter', brandId: null, brandName: null, qty: 3, unit: 'nos' },
+    { id: 'i1', number: 1, description: 'Flow meter', brandId: null, brandName: null, familyId: null, qty: 2, unit: 'nos' },
+    { id: 'i2', number: 2, description: 'Transmitter', brandId: null, brandName: null, familyId: null, qty: 3, unit: 'nos' },
   ]
   const inquiry = (o: Partial<InquiryRow> = {}): InquiryRow => ({
     id: 'q1', supplierId: 's1', supplierName: 'Metro', supplierCountry: null, sentOn: '2026-11-23', lastChasedOn: null, lastRelayedAt: null, noOfferOn: null, noOfferReason: null,
