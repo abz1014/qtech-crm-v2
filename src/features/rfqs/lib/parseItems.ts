@@ -172,12 +172,31 @@ const UNIT_LIKE = /^\d+(?:V|VAC|VDC|MA|MM|CM|M|KV|KW|W|HZ|BAR|PSI|C)$/
  * The model codes in a description, as the database computes rfq_items.model_tokens (DATA_MODEL 2.8, A2b): upper-case,
  * split on spaces and commas, strip - . /, keep a token of 4 or more characters with a letter and a digit, drop
  * quantity-and-unit shapes ("24V", "420MA"). Used only to name the model in a supplier's reason.
+ *
+ * `brandNames` mirrors migration 0035: a word that is really a brand or family name ("XYZ2000", "S7-1200") is not a model
+ * code, so it is left out. The database does this at comparison time (brand_tokens()); here the caller passes the names it
+ * already loaded for the brand pickers.
  */
-export function modelTokens(text: string): string[] {
-  const out: string[] = []
-  for (const raw of text.toUpperCase().split(/[\s,]+/)) {
-    const t = raw.replace(/[-./]/g, '')
-    if (t.length >= 4 && /[A-Z]/.test(t) && /\d/.test(t) && !UNIT_LIKE.test(t) && !out.includes(t)) out.push(t)
+export function modelTokens(text: string, brandNames: readonly string[] = []): string[] {
+  const own = (s: string): string[] => {
+    const out: string[] = []
+    for (const raw of s.toUpperCase().split(/[\s,]+/)) {
+      const t = raw.replace(/[-./]/g, '')
+      if (t.length >= 4 && /[A-Z]/.test(t) && /\d/.test(t) && !UNIT_LIKE.test(t) && !out.includes(t)) out.push(t)
+    }
+    return out
+  }
+  const drop = brandNames.length === 0 ? null : brandTokens(brandNames)
+  return own(text).filter(t => !drop || !drop.has(t))
+}
+
+/** The tokens that come from brand or family names: their own model-shaped words, and the name squeezed to letters and digits ("E+H 2000" is EH2000). Mirrors brand_tokens(). */
+export function brandTokens(names: readonly string[]): Set<string> {
+  const out = new Set<string>()
+  for (const name of names) {
+    for (const t of modelTokens(name)) out.add(t)
+    const squeezed = name.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (squeezed.length >= 4 && /[A-Z]/.test(squeezed) && /\d/.test(squeezed)) out.add(squeezed)
   }
   return out
 }

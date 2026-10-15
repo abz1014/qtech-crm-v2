@@ -175,6 +175,9 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'item_match_tier',         '',    'X',    'X',    'X'),    -- S19 helper, all staff (not in s10; same class as model_tokens)
   ('function', 'brand_tokens',            '',    'X',    'X',    'X'),    -- 0035 helper: tokens that are brand or family names, all staff (same class as model_tokens)
   ('function', 'tokens_without',          '',    'X',    'X',    'X'),    -- 0035 pure helper, all staff
+  ('function', 'brand_words',             '',    'X',    'X',    'X'),    -- 0036 helper: words of brand and family names, all staff
+  ('function', 'strip_words',             '',    'X',    'X',    'X'),    -- 0036 pure helper, all staff
+  ('function', 'similar_enough',          '',    'X',    'X',    'X'),    -- 0036 pure helper, all staff
   ('function', 'supplier_item_memory',    '',    'X',    'X',    'X'),    -- s10 "supplier_item_memory()"
   ('function', 'issue_quotation',         '',    'X',    'X',    'X'),    -- s10 "RPCs issue_quotation, issue_purchase_order, stamp_clarification_ask, stamp_supplier_chase"
   ('function', 'issue_purchase_order',    '',    'X',    'X',    'X'),    -- s10 (same row)
@@ -373,6 +376,9 @@ insert into probes values
   ('item_match_tier', '', 'X', $q$select public.item_match_tier('{}', 'x', null, null, '{}', 'x', null, null)$q$),
   ('brand_tokens', '', 'X', $q$select public.brand_tokens()$q$),
   ('tokens_without', '', 'X', $q$select public.tokens_without('{AB12}', '{}')$q$),
+  ('brand_words', '', 'X', $q$select public.brand_words()$q$),
+  ('strip_words', '', 'X', $q$select public.strip_words('a b', '{a}')$q$),
+  ('similar_enough', '', 'X', $q$select public.similar_enough('a b c', 'a b c', 0.45)$q$),
   ('supplier_item_memory', '', 'X', $q$select 1 from public.supplier_item_memory(array[@03], @13, null, 'Fixture item') where best_tier is not null$q$),
   ('issue_quotation', '', 'X', 'select public.issue_quotation(@c3, @15)'),
   ('issue_purchase_order', '', 'X', 'select public.issue_purchase_order(@c4, @23)'),
@@ -452,6 +458,9 @@ insert into known values
   ('item_match_tier', '', 'deactivated'),
   ('brand_tokens', '', 'deactivated'),
   ('tokens_without', '', 'deactivated'),
+  ('brand_words', '', 'deactivated'),
+  ('strip_words', '', 'deactivated'),
+  ('similar_enough', '', 'deactivated'),
   ('today_pkt', '', 'deactivated');
 
 -- ------------------------------------------------------------------ the matrix, line by line and persona by persona
