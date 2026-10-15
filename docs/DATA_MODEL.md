@@ -11,7 +11,7 @@ Repo checked on `phase0/stabilise`. Claims are tagged **FACT** (seen in the repo
 
 Evidence I relied on beyond the brief:
 - **FACT** — `seed_historical_data.sql` holds 17 RFQs, 17 orders, 17 invoices, 17 expenses and 5 payables.
-- **FACT** — Customer PO 253074 is split into two orders, "Unit A" and "Unit B", each with its own invoice (INV-2024-008/009).
+- **FACT** — Customer PO 000001 is split into two orders, "Unit A" and "Unit B", each with its own invoice (INV-0001/INV-0002).
 - **FACT** — The seed header says `order_value` = "Sales Invoice … incl. GST". HANDOVER §8 proves it is net on 4 live rows. The two sources contradict each other.
 - **FACT** — The PO 2224 expense note says total landing cost is 200,000, but the amount stored is 150,000.
 - **FACT** — `rfq_line_items.product_type` holds product families ("Flow Meter", "Proximity Switch").
@@ -741,7 +741,7 @@ Delete rules that matter:
 - `invoices(number) WHERE number IS NOT NULL` — Q-Tech's own series, globally unique.
 - `orders(company_id, customer_po_number) WHERE customer_po_number IS NOT NULL AND NOT ('po_shared' = ANY(legacy_flags))`
   - Scoped per company, because PO numbers are the customer's own series.
-  - The exemption exists because of **FACT** PO 253074 A/B; see §7.
+  - The exemption exists because of **FACT** PO 000001 A/B; see §7.
 - `supplier_inquiries(rfq_id, supplier_id)`
 - `supplier_quote_lines(inquiry_id, rfq_item_id)`
 - `expenses(recurring_id, period)`
@@ -872,7 +872,7 @@ Delete rules that matter:
 | **Quote line** | Captured rate *(Amendment A2b)* | captured (rate, date) / none | `fx_rate_pkr`, `fx_rate_on`. Display only, labelled "at the time". |
 | **Expense / payment** | — | none | They are facts, so they carry no status. |
 
-Why not something simpler: three states (dropping "generated") would hide the step where the team waits on Wasif & Co. The PSID is already typed in, so that state costs no input.
+Why not something simpler: three states (dropping "generated") would hide the step where the team waits on the tax agent. The PSID is already typed in, so that state costs no input.
 
 **Money clocks** — shown separately, never combined:
 
@@ -1130,7 +1130,7 @@ The two attach points are RFQ/clarification and the GST invoice receipt. Storage
     - It gives supplier payments nothing to attach to.
   - Simpler still: one supplier per order, the old rule.
     - Fits all 17 seeded orders (FACT).
-    - But it forces split orders (PO 253074 A/B), which breaks one invoice per PO and per-PO receivables.
+    - But it forces split orders (PO 000001 A/B), which breaks one invoice per PO and per-PO receivables.
   - Verdict: the leg table earns its place for multi-supplier orders and partial delivery. It costs one row per supplier per order, which in practice is almost always exactly one.
 - **Per-item supplier quotes:** `supplier_quote_lines` per (inquiry, item), with currency required and no default. Partial quotes are rows that simply are not there.
 - **Complexity added:** 3 tables (items, legs, quote lines).
@@ -1261,7 +1261,7 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | rfq_line_items | rfq_items | `specification` → description. `product_type` → family brand. `quantity` → qty. | Drop `target_price`. |
 | supplier_inquiries | supplier_inquiries | `sent_at` → `sent_on` (parsed). Old `no_response` status means silence and is left derived; it is NOT mapped to `no_offer_on`. "Floated but could not find offer" phrases in RFQ notes are surfaced for manual tagging. | Drop `email_draft` (kept in `legacy_source`), `follow_up_date`. |
 | supplier_quotes | supplier_quote_lines | Old quotes are RFQ-level. If the RFQ has exactly 1 item, link to it; otherwise link to the first item. `lead_time_days` → text. | Flag `item_guessed` on multi-item RFQs. Flag `currency_unverified` on every row (the hardcoded-PKR bug). Drop `moq`, `validity_days`, `is_selected`. |
-| orders | orders + order_items + supplier_orders + **order_costs** | As before, except:<br>• `cost_value` → `order_costs.expected_cost_pkr` (one row per order where cost_value > 0).<br>• **PO 253074 Unit A and Unit B are merged (owner decision):**<br>&nbsp;&nbsp;– one order with `customer_po_number` 253074, `ordered_on` = the earlier date, one supplier order (XIAMEN TONGKONG)<br>&nbsp;&nbsp;– two items: "Moxa Serial-Ethernet Converter x2 — Unit A" and "… — Unit B", each qty 1 at 73,986<br>&nbsp;&nbsp;– both invoices (INV-2024-008 and -009, or their live GST-register equivalents) attached to the merged order<br>&nbsp;&nbsp;– all payments and expenses from both old orders moved to the merged order<br>&nbsp;&nbsp;– `legacy_source` holds both original rows<br>• **Sapphire batch A** (no PO) and **batch B** (PO 90222) stay as separate orders. They don't clash on PO number, so they don't need the `po_shared` flag.<br>• Any *other* PO-number clash found in the live data goes to the owner as a merge-or-flag decision. | `po_shared` is used only if such clashes exist. |
+| orders | orders + order_items + supplier_orders + **order_costs** | As before, except:<br>• `cost_value` → `order_costs.expected_cost_pkr` (one row per order where cost_value > 0).<br>• **PO 000001 Unit A and Unit B are merged (owner decision):**<br>&nbsp;&nbsp;– one order with `customer_po_number` 000001, `ordered_on` = the earlier date, one supplier order (XIAMEN TONGKONG)<br>&nbsp;&nbsp;– two items: "Moxa Serial-Ethernet Converter x2 — Unit A" and "… — Unit B", each qty 1 at 73,986<br>&nbsp;&nbsp;– both invoices (INV-0001 and -009, or their live GST-register equivalents) attached to the merged order<br>&nbsp;&nbsp;– all payments and expenses from both old orders moved to the merged order<br>&nbsp;&nbsp;– `legacy_source` holds both original rows<br>• **batch A** (no PO) and **batch B** (PO 90222) stay as separate orders. They don't clash on PO number, so they don't need the `po_shared` flag.<br>• Any *other* PO-number clash found in the live data goes to the owner as a merge-or-flag decision. | `po_shared` is used only if such clashes exist. |
 | order_engineers | order_engineers + order commissioning dates | `needs_commissioning` = true. `start_date` → `commissioning_planned_on`. Status completed → `commissioning_done_on`. | Estimated done date flagged `dates_estimated`. Drop `site_location` (→ notes). |
 | gst_invoices | invoices + attachments | As before. `fbr_status` maps as follows:<br>• Pending → none of the FBR dates set<br>• 'Generated' or 'Fully Generated' → generated (`psid` as stored); if `psid` is empty, add flag `fbr_generated_legacy` so the row still shows as generated<br>• 'Receipt Received' and 'Deposited' → checked against `wasif_receipt_on` and `tax_deposited_on`<br>Any remaining disagreement is flagged `fbr_status_mismatch`. | Same as before. |
 | invoices (bookkeeping) | invoices, only where the order has no gst_invoices row and no `orders.invoice_number` | `invoice_amount` treated per the order's basis rule. | `amount_paid` NOT turned into payments; flagged `paid_per_old_invoice` if payments_in disagrees. Seed rows likely exist (17). |
@@ -1309,7 +1309,7 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 - Old status → leg dates estimated from the best available timestamps, flagged `dates_estimated`. `delivery_date` maps to `delivered_on` only if the status says delivered; otherwise it maps to `expected_on`.
 - `invoice_number`/`invoice_date` → an invoices row if no gst_invoice exists.
 - Status payment_received but no payments → flag `paid_per_status_no_payment_rows`. Payments are never invented.
-- Orders sharing (company, PO number), e.g. 253074 A/B → owner chooses: merge into one order with 2 invoices, or keep both with flag `po_shared`. *(Revision 1: decided. PO 253074 Unit A/B are merged; Sapphire batch A stays separate; see the §7 `orders` row.)*
+- Orders sharing (company, PO number), e.g. 000001 A/B → owner chooses: merge into one order with 2 invoices, or keep both with flag `po_shared`. *(Revision 1: decided. PO 000001 Unit A/B are merged; batch A stays separate; see the §7 `orders` row.)*
 - **Drops:** dead costing columns, `profit`, `ops_dismissed`, `order_gst_amount` (used only for basis resolution), `payment_due_date`.
 - Sale ≈ cost anomalies are flagged as `margin_anomaly` (e.g. PO 2224: note says 200,000 total landing, amount 150,000; PO 13378 is a negative-margin order).
 
@@ -1348,7 +1348,7 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 17. Postgres version ≥ 15 on the new project (needed for `security_invoker` views).
 18. Free-tier project slot available, and the Edge Function secrets list (`ALLOWED_ORIGINS`) to carry over.
 19. For fully paid live orders, Σ `order_payments` should be within ₨1 of invoice net + GST. That confirms customers pay the full gross amount, and also confirms the net basis of `order_value`. Any shortfall becomes a reconciliation item, not a model change.
-20. PO 253074: find the live rows (orders, invoices or GST-register rows, payments, expenses) for both units, so the merge in §7 captures every row.
+20. PO 000001: find the live rows (orders, invoices or GST-register rows, payments, expenses) for both units, so the merge in §7 captures every row.
 21. How many rows `quarterly_targets` has and what they contain (archived only).
 22. How reliable `orders.sales_person_id` is in the live data. Owners marked unreliable lead to unattributed payments, which affect past target results only.
 23. In live `supplier_quotes`, does `received_at` hold real reply dates? If it does, import it as the effective reply date, so legacy rows can feed `median_reply_days` (the rule in §5c would then be relaxed).
@@ -1365,7 +1365,7 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 2. Customers pay the full gross amount and withhold nothing. `tax_withheld` is dropped; settled and receivable are measured on gross; margin and targets on net.
 3. Every invoice goes to FBR; there is one register and no provincial tax.
 4. FBR has a single "generated" state; legacy 'Generated' and 'Fully Generated' both map to it.
-5. PO 253074 Unit A/B are merged; Sapphire batch A stays separate.
+5. PO 000001 Unit A/B are merged; batch A stays separate.
 6. Expenses are true cost, with no input-tax adjustment to margin.
 7. Quarterly targets are kept, now per person and measured in net cash (§2.23, §5a, §5b, §6 I).
 
@@ -1640,7 +1640,7 @@ All use `security_invoker`. Each carries `where public.current_user_role() = 'ad
 | `v_month_expense_category` | month, group, category, total net cost, gross paid, count. Feeds "water, snacks, salaries, fuel". |
 | `aging_as_of(p_date)` | Per order and per invoice, as of `p_date`:<br>• Invoices dated ≤ p_date; payments received ≤ p_date.<br>• Payments are applied **first-in, first-out to the oldest invoice of the order**.<br>• Remaining gross is bucketed by days since invoice date: 0–30 / 31–60 / 61–90 / 90+.<br>• Advances on orders not yet invoiced are listed as "advance held", not as negative aging. |
 | `payables_as_of(p_date)` ("we owe") | Per placed leg (`placed_on` ≤ p_date) on a non-cancelled order:<br>• **committed:** latest PO total, or else Σ qty × `supplier_unit_price`, in the leg's currency, converted at the rate on or before p_date.<br>• **paid:** Σ `amount_pkr` of "Supplier payment" expenses on that leg dated ≤ p_date.<br>• **owed:** ≈ committed − paid.<br>• Rows with owed within 3% of committed are shown as "settled (≈)"; negative owed is clamped at 0 with a flag. |
-| `v_gst_month` (admin **and sales**) | Per invoice month:<br>• Invoice count, net, GST.<br>• PSID set count; deposited count and amount.<br>• GST still to deposit.<br>• `input_tax` from expenses by `paid_on` month, shown separately as "input tax paid (for Wasif & Co)". This one column is shown to admin only, so the view's input-tax column is NULL for sales.<br>Output GST and input tax are never netted together here; the filing stays with the tax agent. |
+| `v_gst_month` (admin **and sales**) | Per invoice month:<br>• Invoice count, net, GST.<br>• PSID set count; deposited count and amount.<br>• GST still to deposit.<br>• `input_tax` from expenses by `paid_on` month, shown separately as "input tax paid (for the tax agent)". This one column is shown to admin only, so the view's input-tax column is NULL for sales.<br>Output GST and input tax are never netted together here; the filing stays with the tax agent. |
 | `v_month_team` | Per month and per credited user: net cash credited. Next to it, quarter-to-date from `v_target_progress`. |
 | `month_end_status(p_month)` | Returns the checklist counts below. |
 
@@ -1717,12 +1717,12 @@ Add rows for: `expense_categories`, `closed_months`, the attachment expense pare
 
 ### Critical Files for Implementation
 
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\supabase\migrations\seed_historical_data.sql
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\src\types\database.types.ts
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\supabase\migrations\20260729_t0_step2a_users_policy.sql
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\src\lib\finance\reconciliation.ts
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\supabase\functions\create-user\index.ts
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\supabase\migrations\20260729_t0_step2b_core_crm_policies.sql
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\supabase\migrations\20260731_gst_receipt_uploads.sql
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\src\lib\gst\fbr.ts
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\src\pages\DashboardPage.tsx
+- old CRM repo: supabase/migrations/seed_historical_data.sql
+- old CRM repo: src/types/database.types.ts
+- old CRM repo: supabase/migrations/20260729_t0_step2a_users_policy.sql
+- old CRM repo: src/lib/finance/reconciliation.ts
+- old CRM repo: supabase/functions/create-user/index.ts
+- old CRM repo: supabase/migrations/20260729_t0_step2b_core_crm_policies.sql
+- old CRM repo: supabase/migrations/20260731_gst_receipt_uploads.sql
+- old CRM repo: src/lib/gst/fbr.ts
+- old CRM repo: src/pages/DashboardPage.tsx

@@ -241,7 +241,7 @@ I01–I05 start after S06 and run in parallel with P2–P7.
 | I01 | Import framework (Node TS):<br>• **extract**: old project REST API with an admin session, or the dump<br>• **transform**: pure functions<br>• **load**: service role, deterministic UUIDv5 from old ids; idempotent: delete only rows with a legacy source, reinsert; never touches rows created in v2; companies matched by normalised name<br>• **report**: counts, totals, review CSVs<br>Fixtures built from `seed_historical_data.sql`. | A run against the fixtures twice gives identical ids and counts. Rows created in v2 survive. | S06 | m | |
 | I02 | Transforms: companies, sites, contacts, prospects, vendors (driven by the reviewed `mappings/company_merge.csv` and `vendor_parse.csv`) | Ghani's 3 rows become 1 company with 2 sites. "Red Lion USA (via Four Stars)" becomes Four Stars carrying Red Lion. | I01 | m | |
 | I03 | Transforms: RFQs (due-date parse, flags, owner reliability), items, inquiries, quote lines (`item_guessed`, `currency_unverified`) | The "31/01/2024" fixture gets the `due_before_received` flag. | I01 | m | |
-| I04 | Transforms: orders → items, legs, order_costs; basis resolution against GST invoices; **merge PO 253074 Unit A/B into one order with 2 invoices**; Sapphire A/B kept separate; other flags | 17 seed orders become 16 orders. Invoice totals reconcile. | I01 | m | |
+| I04 | Transforms: orders → items, legs, order_costs; basis resolution against GST invoices; **merge PO 000001 Unit A/B into one order with 2 invoices**; batch A/B kept separate; other flags | 17 seed orders become 16 orders. Invoice totals reconcile. | I01 | m | |
 | I05 | Transforms: invoices (from gst_invoices, bookkeeping invoices, `orders.invoice_number`), payments (credited user), expenses (supplier_payments, payable_payments, double-count flag), recurring, order_engineers, storage file copy, `fbr_status` mapping | Money totals: old Σ equals new Σ, per category, on the fixtures. | I01 | m | |
 | I06 | §8 assumption checklist (22 items) answered from the dump's schema and from queries | Every item marked confirmed, or adjusted with a linked fix. | I01 | | **DUMP**, OWNER runs |
 | I07 | Dry run 1 against live data into the new project; review CSVs produced: company merges, vendor parse, PO clashes, RFQs quoted more than 180 days ago, possible duplicates with trial RFQs, FBR mismatches, possible cost double counts, basis unknown, unparseable dates | Report reconciles row counts per table and Σ money in and out. | I02–I06 | | **LIVE**, OWNER runs the extraction |
@@ -288,7 +288,7 @@ I01–I05 start after S06 and run in parallel with P2–P7.
 | When | Step |
 |---|---|
 | T-21 | The owner provides the dump (**DUMP**). I06 checklist. Dry run 1. Review CSVs to the owner. |
-| T-14 | The owner returns the reviewed lists: company merges, vendor parse, PO clashes (253074 is already decided), bulk close of stale RFQs with a default reason, FBR mismatches, possible duplicates of trial RFQs. Dry run 2. |
+| T-14 | The owner returns the reviewed lists: company merges, vendor parse, PO clashes (000001 is already decided), bulk close of stale RFQs with a default reason, FBR mismatches, possible duplicates of trial RFQs. Dry run 2. |
 | T-7 | Dry run 3 must equal dry run 2 (two clean runs in a row). Rehearse the runbook. Create real staff accounts (names and emails from the owner). Train people at a desk, in person; passwords are handed over in person. |
 | T-0 | 1. Announce the freeze.<br>2. **Freeze the old project:** the owner runs, in the SQL editor, a statement revoking INSERT, UPDATE and DELETE on all public tables from `authenticated`. Reversible with GRANT.<br>3. The owner takes the final `pg_dump` and downloads the storage files. These two are the **permanent archive**; store them in 2 places.<br>4. Final import.<br>5. Verification report: counts, Σ payments in, Σ expenses, Σ invoices net and GST, open receivables, spot-check of the 17 seed orders.<br>6. The owner signs off.<br>7. Point the `qtech-crm.vercel.app` alias at the v2 Vercel project; update the Edge Function's `ALLOWED_ORIGINS`.<br>8. Deactivate the test accounts. |
 | T+0…T+3 | **Rollback window.** Re-grant writes on the old project and point the alias back. Anything entered in v2 during the window is re-keyed by hand, which is why the window is kept short. After T+3: fix forward only. |
@@ -307,7 +307,7 @@ The free tier's two-project limit is respected throughout: old (frozen) plus new
 | a. Supabase Pro | US$25/month | Daily backups kept 7 days, restorable from the dashboard; no pausing | No | Removes the pause risk entirely. |
 | b. Nightly GitHub Action: `supabase db dump` (schema + data) plus storage sync, **encrypted with age** to the owner's key and a CI drill key; kept as a 90-day artifact, copied weekly to a private backup repo or the owner's Drive | Free | Full, proven by the weekly drill | Yes | Needs the DB URL as a GitHub secret (Q2). Also keeps the project awake. |
 | c. Owner's PC, Windows Task Scheduler, same dump to OneDrive | Free | Full | Yes | The password stays local, but the PC must be on. No automatic drill. |
-| d. Admin CSV export of money tables each month | Free | **Not a restore**; human-readable only | Yes | Useful for Wasif & Co regardless. |
+| d. Admin CSV export of money tables each month | Free | **Not a restore**; human-readable only | Yes | Useful for the tax agent regardless. |
 
 **Recommendation:**
 - **(b) from the P4 milestone onward.** It becomes mandatory as soon as real data exists.
@@ -359,11 +359,11 @@ Everything else has defaults: Supabase region (Mumbai), the report list (P01), a
 ---
 
 ### Critical files for implementation
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\src\test\rls.integration.test.ts
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\.github\workflows\ci.yml
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\supabase\functions\create-user\index.ts
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\supabase\migrations\seed_historical_data.sql
-- C:\Users\ABDULLAH SAJID\Desktop\Qtech-CRM-fresh\src\lib\dates.ts
+- old CRM repo: src/test/rls.integration.test.ts
+- old CRM repo: .github/workflows/ci.yml
+- old CRM repo: supabase/functions/create-user/index.ts
+- old CRM repo: supabase/migrations/seed_historical_data.sql
+- old CRM repo: src/lib/dates.ts
 
 ---
 

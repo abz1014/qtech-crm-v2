@@ -38,7 +38,7 @@ Rules:
 Set in `--font-mono` with `font-variant-numeric: tabular-nums` (class `.num`):
 
 - PKR amounts, quantities, percentages, margins.
-- RFQ, PO, invoice, challan, quotation numbers and customer refs (`RFQ-0177`, `PO 253074`, `RFQ #74037`).
+- RFQ, PO, invoice, challan, quotation numbers and customer refs (`RFQ-0177`, `PO 000001`, `RFQ #74037`).
 - Part numbers and model codes.
 - Dates and times in tables, lists and rails (`Tue 1 Dec`, `17:00`).
 - Phone numbers, NTN, STRN.
