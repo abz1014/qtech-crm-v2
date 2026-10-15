@@ -1,5 +1,5 @@
 begin;
-select plan(30);
+select plan(36);
 
 -- R12: search_all. Fixture users come from supabase/seed.sql (a0..01 admin, a0..02 sales, a0..03 engineer, a0..04 deactivated).
 
@@ -26,7 +26,8 @@ insert into public.companies (id, name, country) values
 insert into public.contacts (id, company_id, name, phone, email) values
   ('c1000000-0000-4000-8000-0000000000e1', 'c0000000-0000-4000-8000-0000000000e1', 'Naveed Akhtar', '+92 300 555 0142', 'naveed@zqxtextile.example'),
   ('c1000000-0000-4000-8000-0000000000e2', 'c0000000-0000-4000-8000-0000000000e2', 'Greta Vogel', '+49 30 1234567', 'greta.vogel@zqxenergy.example'),
-  ('c1000000-0000-4000-8000-0000000000e3', 'c0000000-0000-4000-8000-0000000000e4', 'Hira Naveed', null, null);
+  ('c1000000-0000-4000-8000-0000000000e3', 'c0000000-0000-4000-8000-0000000000e4', 'Hira Naveed', null, null),
+  ('c1000000-0000-4000-8000-0000000000e4', 'c0000000-0000-4000-8000-0000000000e4', 'Local Format', '0321 7654321', null);
 insert into public.rfqs (id, company_id, owner_id, customer_ref) values
   ('d1000000-0000-4000-8000-0000000000e1', 'c0000000-0000-4000-8000-0000000000e1', 'a0000000-0000-4000-8000-000000000002', 'ENQ-ZQX-2211'),
   ('d1000000-0000-4000-8000-0000000000e2', 'c0000000-0000-4000-8000-0000000000e2', 'a0000000-0000-4000-8000-000000000002', null);
@@ -63,8 +64,20 @@ select is((select id from public.search_all('greta.vogel@zqx', 8) where kind = '
   'a contact is found by part of the e-mail');
 select is((select id from public.search_all('300 555 0142', 8) where kind = 'contact'), 'c1000000-0000-4000-8000-0000000000e1'::uuid,
   'a contact is found by phone digits, however the number is spaced');
-select is((select id from public.search_all('0300-555-0142', 8) where kind = 'contact'), null::uuid,
-  'a local leading 0 is not guessed: only the digits typed are matched (0300... is not in +92 300...)');
+select is((select id from public.search_all('0300 555 0142', 8) where kind = 'contact'), 'c1000000-0000-4000-8000-0000000000e1'::uuid,
+  'a local leading 0 finds a stored +92 number');
+select is((select id from public.search_all('923005550142', 8) where kind = 'contact'), 'c1000000-0000-4000-8000-0000000000e1'::uuid,
+  '92 and no plus finds it');
+select is((select id from public.search_all('3005550142', 8) where kind = 'contact'), 'c1000000-0000-4000-8000-0000000000e1'::uuid,
+  'the bare national number finds it');
+select is((select id from public.search_all('300555', 8) where kind = 'contact'), 'c1000000-0000-4000-8000-0000000000e1'::uuid,
+  'a partial national number matches by contains');
+select is((select id from public.search_all('+92 321 7654321', 8) where kind = 'contact'), 'c1000000-0000-4000-8000-0000000000e4'::uuid,
+  'a +92 query finds a stored local 0321 number');
+select is((select id from public.search_all('923217654321', 8) where kind = 'contact'), 'c1000000-0000-4000-8000-0000000000e4'::uuid,
+  '92 digits find a stored local number');
+select is((select id from public.search_all('0321-7654', 8) where kind = 'contact'), 'c1000000-0000-4000-8000-0000000000e4'::uuid,
+  'a partial local number with dashes matches by contains');
 select is((select id from public.search_all('(30) 123', 8) where kind = 'contact'), 'c1000000-0000-4000-8000-0000000000e2'::uuid,
   'phone digits ignore brackets and spaces, so "(30) 123" finds +49 30 1234567');
 select is((select count(*)::int from public.search_all('55', 8) where kind = 'contact'), 0,

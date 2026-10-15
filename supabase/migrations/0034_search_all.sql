@@ -11,15 +11,16 @@
 --
 -- Matching is a case-insensitive substring (ILIKE) so every word fragment works, served by pg_trgm GIN indexes:
 --   companies.name, contacts.name, contacts.email, rfqs.customer_ref (gin_trgm_ops) and the digits of contacts.phone.
--- LIKE wildcards typed by the person are escaped. Phones are matched on digits only ("0300 1234" finds "+92 300 1234"
--- when 3 or more digits are typed and the text has no letters). An RFQ number is matched exactly: "177" or "RFQ-0177".
+-- LIKE wildcards typed by the person are escaped. Phones are matched on the national number: both sides lose non-digits
+-- and one leading 0092, 92 or 0, so "0300 1234567", "+92 300 1234567", "923001234567" and "3001234567" find each other
+-- and "300123" matches by contains (3 or more digits after that, and no letters typed). An RFQ number is matched exactly: "177" or "RFQ-0177".
 -- Ranking inside a kind: exact, then starts-with, then contains; ties by name (RFQs: newest number first).
 
 create index companies_name_trgm_idx on public.companies using gin (name extensions.gin_trgm_ops);
 create index contacts_name_trgm_idx on public.contacts using gin (name extensions.gin_trgm_ops);
 create index contacts_email_trgm_idx on public.contacts using gin (email extensions.gin_trgm_ops);
 create index contacts_phone_digits_trgm_idx on public.contacts
-  using gin ((regexp_replace(phone, '\D', '', 'g')) extensions.gin_trgm_ops);
+  using gin ((regexp_replace(regexp_replace(phone, '\D', '', 'g'), '^(0092|92|0)', '')) extensions.gin_trgm_ops);
 create index rfqs_customer_ref_trgm_idx on public.rfqs using gin (customer_ref extensions.gin_trgm_ops);
 create index rfqs_company_number_idx on public.rfqs (company_id, number desc);
 
@@ -36,9 +37,9 @@ as $$
     select t, n,
            '%' || replace(replace(replace(t, '\', '\'), '%', '\%'), '_', '\_') || '%' as pat,
            replace(replace(replace(t, '\', '\'), '%', '\%'), '_', '\_') || '%' as pre,
-           regexp_replace(t, '\D', '', 'g') as digits,
+           regexp_replace(regexp_replace(t, '\D', '', 'g'), '^(0092|92|0)', '') as digits,
            case when t ~* '^(rfq[-[:space:]]*)?[0-9]{1,15}$' then regexp_replace(t, '\D', '', 'g')::bigint end as num,
-           (t ~ '^[0-9+()[:space:]-]+$' and length(regexp_replace(t, '\D', '', 'g')) >= 3) as phoneish
+           (t ~ '^[0-9+()[:space:]-]+$' and length(regexp_replace(regexp_replace(t, '\D', '', 'g'), '^(0092|92|0)', '')) >= 3) as phoneish
     from p
     where btrim(coalesce(q, '')) <> '' and length(btrim(coalesce(q, ''))) <= 100 and public.current_user_role() is not null
   ), cm as materialized (
@@ -56,7 +57,7 @@ as $$
     from public.contacts k, x
     where k.name ilike x.pat
        or k.email ilike x.pat
-       or (x.phoneish and regexp_replace(k.phone, '\D', '', 'g') like '%' || x.digits || '%')
+       or (x.phoneish and regexp_replace(regexp_replace(k.phone, '\D', '', 'g'), '^(0092|92|0)', '') like '%' || x.digits || '%')
     order by score desc, k.name
     limit (select n from x)
   ), rq as (
