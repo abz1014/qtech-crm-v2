@@ -240,7 +240,7 @@ export function RecentQuotes({
 // ------------------------------------------------------------------------------------------------ deliveries
 
 const DHEAD = 'hidden border-b bg-sunken px-5 py-2 text-xs text-fg-muted md:grid md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] md:gap-4'
-const DROW = 'grid gap-x-4 gap-y-2 border-t px-5 py-3 first:border-t-0 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)]'
+const DROW = 'grid grid-cols-2 gap-x-4 gap-y-2 border-t px-5 py-3 first:border-t-0 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)]'
 
 function ResultCell({ r }: { r: DeliveryRow }) {
   const x = r.result
@@ -305,8 +305,8 @@ export function Deliveries({ view, loading, error, onRetry, today }: { view: Sup
                   <Label>Received</Label>
                   <DateText iso={r.receivedOn} today={today} estimated={r.estimated} />
                 </div>
-                <div className="grid content-start gap-1">
-                  <Label>Result</Label>
+                <div className="col-span-2 grid content-start gap-1 md:col-span-1">
+                  <Label phone={false}>Result</Label>
                   <ResultCell r={r} />
                 </div>
               </li>
