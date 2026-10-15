@@ -61,7 +61,7 @@ async function seed(): Promise<Seed> {
   const customer = uniqueName('Quote Customer')
   const co = await createCompany(customer)
   const contacts = await must(
-    rest<{ id: string; name: string }[]>('admin', 'contacts', { method: 'POST', body: [{ company_id: co.id, name: 'Mr. Tariq Mehmood', job_title: 'Procurement Manager' }, { company_id: co.id, name: 'Ms. Sana Iqbal' }] }),
+    rest<{ id: string; name: string }[]>('admin', 'contacts', { method: 'POST', body: [{ company_id: co.id, name: 'Mr. Tariq Mehmood', job_title: 'Procurement Manager' }, { company_id: co.id, name: 'Ms. Sana Iqbal', job_title: null }] }),
   )
   const model = `FM${tag}1`
 
