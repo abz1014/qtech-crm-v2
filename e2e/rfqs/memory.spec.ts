@@ -124,10 +124,10 @@ async function seedMemory(): Promise<Seed> {
   })
 
   // s3: imported, another model of the same brand, 19 months ago, no captured rate.
-  const q3 = await pastRfq(s3.id, { description: `${brand.name} YY${rnd(4)} sensor`, brandId: brand.id, sentAgo: 580, legacy: true })
+  const q3 = await pastRfq(s3.id, { description: `${brand.name} YY${rnd(4)} ultrasonic open channel level transmitter with remote display`, brandId: brand.id, sentAgo: 580, legacy: true })
   await quote(q3, { price: 640, currency: 'USD', ago: 1, rate: null, legacy: true })
   // s4: imported, another model, currency never verified.
-  const q4 = await pastRfq(s4.id, { description: `${brand.name} WW${rnd(4)} probe`, brandId: brand.id, sentAgo: 60, legacy: true })
+  const q4 = await pastRfq(s4.id, { description: `${brand.name} WW${rnd(4)} gold plated conductivity electrode cable assembly`, brandId: brand.id, sentAgo: 60, legacy: true })
   await quote(q4, { price: 99, currency: 'USD', ago: 1, rate: null, legacy: true, flags: ['currency_unverified'] })
   return { tag, brand, model, desc, customer, s1, s2, s3, s4 }
 }
@@ -252,12 +252,12 @@ test.describe('R17 memory in intake', () => {
     const sL = await createCompany(uniqueName('Actuator Mem'))
     const sM = await createCompany(uniqueName('Code Mem'))
     await must(rest('admin', 'company_brands', { method: 'POST', body: [{ company_id: sM.id, brand_id: brandB.id }] }))
-    const hl = await pastRfq(sL.id, { description: `${brandL.name} 24V actuator`, brandId: brandL.id, sentAgo: 30 })
+    const hl = await pastRfq(sL.id, { description: `${brandL.name} 24V actuator for ball valve`, brandId: brandL.id, sentAgo: 30 })
     await quote(hl, { price: 60, currency: 'PKR', ago: 30, rate: 1 })
     const past = await createCompany(uniqueName('Earlier Buyer'))
     const order = await post('orders', { company_id: past.id })
     const leg = await post('supplier_orders', { order_id: order.id, supplier_id: sL.id, currency: 'PKR' })
-    await post('order_items', { order_id: order.id, description: `${brandL.name} 24V actuator`, brand_id: brandL.id, unit_price_net: 100, supplier_order_id: leg.id, supplier_unit_price: 60 })
+    await post('order_items', { order_id: order.id, description: `${brandL.name} 24V actuator for ball valve`, brand_id: brandL.id, unit_price_net: 100, supplier_order_id: leg.id, supplier_unit_price: 60 })
     const hm = await pastRfq(sM.id, { description: `${brandA.name} XK2040 relay`, brandId: brandA.id, sentAgo: 30 })
     await quote(hm, { price: 70, currency: 'PKR', ago: 30, rate: 1 })
     const seed = { customer } as Seed
