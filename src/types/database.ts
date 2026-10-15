@@ -1787,6 +1787,9 @@ isOneToOne: false
 "brand_tokens":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
+"brand_words":
+{ Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
 "can_access_bucket":
 { Args: { "bucket": string }; Returns: boolean
                            },
@@ -1877,6 +1880,9 @@ isOneToOne: false
 "set_rfq_floated":
 { Args: { "p_floated": boolean,"p_rfq_id": string }; Returns: number
                            },
+"similar_enough":
+{ Args: { "p_a": string,"p_b": string,"p_threshold": number }; Returns: boolean
+                           },
 "stamp_clarification_ask":
 { Args: { "p_clarification_ids": (string)[] }; Returns: number
                            },
@@ -1897,6 +1903,9 @@ isOneToOne: false
                            },
 "stamp_tcs_sent":
 { Args: { "p_invoice_ids": (string)[],"p_on"?: string,"p_tcs_number"?: string }; Returns: number
+                           },
+"strip_words":
+{ Args: { "p_drop": (string)[],"p_norm": string }; Returns: string
                            },
 "supplier_item_memory":
 { Args: { "p_brand_id": string,"p_description": string,"p_exclude_rfq_id"?: string,"p_family_id": string,"p_supplier_ids": (string)[] }; Returns: {
