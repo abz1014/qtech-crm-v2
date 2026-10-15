@@ -41,6 +41,7 @@ function at(path: string, role: string) {
               }
             />
             <Route path="company" element={<p>Company screen</p>} />
+            <Route path="details" element={<p>Details screen</p>} />
             <Route path="rates" element={<p>Rates screen</p>} />
             <Route path="password" element={<p>Password screen</p>} />
           </Route>
@@ -105,6 +106,15 @@ describe('settings access (A04, A06)', () => {
       const r = at('/settings/password', role)
       expect(screen.getByText('Password screen')).toBeInTheDocument()
       expect(screen.getByRole('link', { name: 'Change password' })).toBeInTheDocument()
+      r.unmount()
+    }
+  })
+
+  it('every role is offered Your details and can open it', () => {
+    for (const role of ['admin', 'sales', 'engineer']) {
+      const r = at('/settings/details', role)
+      expect(screen.getByText('Details screen')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Your details' })).toBeInTheDocument()
       r.unmount()
     }
   })

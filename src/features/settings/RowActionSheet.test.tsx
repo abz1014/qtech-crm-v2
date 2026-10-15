@@ -10,6 +10,7 @@ const person = (extra: Partial<TeamMember> = {}): TeamMember => ({
   email: 'ayesha@qtech.example',
   role: 'sales',
   job_title: 'Sales engineer',
+  phone: null,
   deactivated_at: null,
   created_at: '2026-01-01T00:00:00Z',
   ...extra,
@@ -23,7 +24,7 @@ describe('Team row actions on a phone (bottom sheet)', () => {
     expect(screen.getByRole('dialog', { name: 'Ayesha Rana' })).toBeInTheDocument()
     expect(screen.getByText('Sales · Sales engineer')).toBeInTheDocument()
     const labels = screen.getAllByRole('button').map(b => b.textContent)
-    expect(labels).toEqual(['Edit job title', 'Change role', 'Reset password', 'Deactivate'])
+    expect(labels).toEqual(['Edit job title', 'Edit phone', 'Change role', 'Reset password', 'Deactivate'])
     await user.click(screen.getByRole('button', { name: 'Reset password' }))
     expect(onPick).toHaveBeenCalledWith('reset', expect.objectContaining({ id: 'ayesha' }))
   })

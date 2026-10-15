@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate, NavLink, Outlet } from 'react-router-dom'
-import { Building2, KeyRound, Receipt, RefreshCw, Target, Users, type LucideIcon } from 'lucide-react'
+import { Building2, KeyRound, Receipt, RefreshCw, Target, User, Users, type LucideIcon } from 'lucide-react'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { useSession } from '@/app/session'
 import { InstallBanner } from '@/features/settings/InstallBanner'
@@ -26,6 +26,7 @@ const SETTINGS_LINKS: readonly SettingsLink[] = [
   { to: '/settings/targets', label: 'Targets', icon: Target, adminOnly: true },
   { to: '/settings/categories', label: 'Expense categories', icon: Receipt, adminOnly: true },
   { to: '/settings/company', label: 'Company profile', icon: Building2, tagForOthers: 'View only' },
+  { to: '/settings/details', label: 'Your details', icon: User },
   { to: '/settings/rates', label: 'Exchange rates', icon: RefreshCw },
   { to: '/settings/password', label: 'Change password', icon: KeyRound },
 ]

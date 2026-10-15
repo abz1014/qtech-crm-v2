@@ -17,6 +17,7 @@ const h = vi.hoisted(() => ({
   resetPassword: vi.fn(),
   setRole: vi.fn(),
   setJobTitle: vi.fn(),
+  setPhone: vi.fn(),
   deactivate: vi.fn(),
   reactivate: vi.fn(),
 }))
@@ -26,6 +27,7 @@ vi.mock('@/features/settings/api', () => ({
   resetPassword: h.resetPassword,
   setRole: h.setRole,
   setJobTitle: h.setJobTitle,
+  setPhone: h.setPhone,
   deactivatePerson: h.deactivate,
   reactivatePerson: h.reactivate,
 }))
@@ -36,6 +38,7 @@ const member = (id: string, name: string, role: TeamMember['role'], extra: Parti
   email: `${id}@qtech.example`,
   role,
   job_title: null,
+  phone: null,
   deactivated_at: null,
   created_at: '2026-01-01T00:00:00Z',
   ...extra,
@@ -324,6 +327,38 @@ describe('Team screen', () => {
     await user.clear(within(again).getByLabelText('Job title'))
     await user.click(within(again).getByRole('button', { name: 'Save' }))
     expect(h.setJobTitle).toHaveBeenLastCalledWith('ayesha', null)
+  })
+
+  it('edits and clears a phone number (optional, mono)', async () => {
+    h.setPhone.mockResolvedValue(null)
+    const user = setupUser()
+    mount()
+    await openRowMenu(user, 'Ayesha Rana', 'Edit phone')
+    const dialog = await screen.findByRole('dialog', { name: 'Edit phone' })
+    const input = within(dialog).getByLabelText(/Phone/)
+    expect(input).toHaveValue('')
+    expect(input).toHaveClass('num')
+    await user.type(input, '0300 1234567')
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(h.setPhone).toHaveBeenCalledWith('ayesha', '0300 1234567')
+    expect(await screen.findByText('Phone saved')).toBeInTheDocument()
+
+    await openRowMenu(user, 'Ayesha Rana', 'Edit phone')
+    const again = await screen.findByRole('dialog', { name: 'Edit phone' })
+    await user.click(within(again).getByRole('button', { name: 'Save' }))
+    expect(h.setPhone).toHaveBeenLastCalledWith('ayesha', null)
+    expect(await screen.findByText('Phone cleared')).toBeInTheDocument()
+  })
+
+  it('refuses a phone number over 30 characters', async () => {
+    const user = setupUser()
+    mount()
+    await openRowMenu(user, 'Ayesha Rana', 'Edit phone')
+    const dialog = await screen.findByRole('dialog', { name: 'Edit phone' })
+    await user.type(within(dialog).getByLabelText(/Phone/), '1'.repeat(31))
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(await within(dialog).findByText('Keep the phone number under 30 characters.')).toBeInTheDocument()
+    expect(h.setPhone).not.toHaveBeenCalled()
   })
 
   it('has no accessibility violations', async () => {

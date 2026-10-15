@@ -102,6 +102,8 @@ function settings() {
     all,
     team: () => [...all, 'team'] as const,
     profile: () => [...all, 'company-profile'] as const,
+    /** The signed-in person's own users row (Your details). */
+    myDetails: () => [...all, 'my-details'] as const,
     /** M06: every targets read (rows and progress); invalidate this one after any target write. */
     targets: () => [...all, 'targets'] as const,
     targetRows: (year: number) => [...all, 'targets', 'rows', year] as const,

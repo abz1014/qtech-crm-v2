@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Ellipsis, KeyRound, Pencil, Search, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
+import { Ellipsis, KeyRound, Pencil, Phone, Search, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import type { CreatedUser, Role, TeamMember } from '@/features/settings/api'
@@ -10,6 +10,7 @@ import {
   ChangeRoleDialog,
   DeactivateDialog,
   EditJobTitleDialog,
+  EditPhoneDialog,
   ReactivateDialog,
   ResetPasswordDialog,
 } from '@/features/settings/TeamDialogs'
@@ -250,6 +251,7 @@ export function TeamPage() {
         />
       ) : null}
       {dialog?.kind === 'title' ? <EditJobTitleDialog member={dialog.member} onClose={close} /> : null}
+      {dialog?.kind === 'phone' ? <EditPhoneDialog member={dialog.member} onClose={close} /> : null}
       {dialog?.kind === 'role' ? <ChangeRoleDialog member={dialog.member} members={members} onClose={close} /> : null}
       {dialog?.kind === 'reset' ? (
         <ResetPasswordDialog
@@ -279,6 +281,9 @@ function RowMenu({ member, onPick }: { member: TeamMember; onPick: (kind: RowAct
       <PopoverContent variant="menu" align="end" aria-label={`Actions for ${member.name}`}>
         <MenuItem icon={Pencil} onClick={() => onPick('title', member)}>
           Edit job title
+        </MenuItem>
+        <MenuItem icon={Phone} onClick={() => onPick('phone', member)}>
+          Edit phone
         </MenuItem>
         <MenuItem icon={Shield} onClick={() => onPick('role', member)}>
           Change role
