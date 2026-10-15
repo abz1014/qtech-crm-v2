@@ -10,15 +10,17 @@ export interface Draft {
   files: AddedFile[]
 }
 
-/** The notice at the top of the sheet: the item came back after sign-in, or it was removed after 7 days. */
-export type CaptureNotice = 'back' | 'expired' | null
+/** The notice in the sheet: the shared item was removed after 7 days. ("Your shared item is back" is a toast.) */
+export type CaptureNotice = 'expired' | null
 
 export interface CaptureApi {
   open: boolean
   draft: Draft
   notice: CaptureNotice
-  /** Files are being dragged over the window. */
-  dragging: boolean
+  /** Files are being dragged over the window, and how many. */
+  dragging: number
+  /** Photos being shrunk right now ("Resizing" rows). */
+  resizing: { id: string; name: string }[]
   /** Items kept on this device (waiting to be saved). */
   openCapture: () => void
   close: () => void

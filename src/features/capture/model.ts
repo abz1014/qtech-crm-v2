@@ -24,6 +24,8 @@ export interface OpenQuestion {
   id: string
   question: string
   asked: boolean
+  /** When it was last put to the customer (ISO), for the "Asked Sat 21 Nov" line. */
+  askedAt: string | null
   createdAt: string
 }
 
@@ -32,6 +34,8 @@ export interface Candidate {
   number: number
   companyName: string
   ownerId: string | null
+  /** The site the RFQ is for ("Faisalabad"), shown after the company name. */
+  site: string | null
   /** When this person last opened the RFQ on this device, if ever. */
   openedAt: number | null
   /** Unanswered, not withdrawn; asked ones first, then by creation. */
@@ -152,9 +156,28 @@ export function savedSummary(dest: Dest, n: { questions: number; photos: number 
   }
 }
 
-export function countsText(text: string, files: number): string {
+/** "1 message · 1 photo", "1 text", "1 photo", "1 text · 2 files" (g2-capture.html). A shared text is a message; pasted or typed is text. */
+export function countsText(source: string, text: string, files: readonly { type: string }[]): string {
   const parts: string[] = []
-  if (text.trim()) parts.push('1 text')
-  if (files > 0) parts.push(`${files} ${files === 1 ? 'file' : 'files'}`)
+  if (text.trim()) parts.push(source === 'share' ? '1 message' : '1 text')
+  if (files.length > 0) {
+    const photos = files.every(f => f.type.startsWith('image/'))
+    const word = photos ? 'photo' : 'file'
+    parts.push(`${files.length} ${word}${files.length === 1 ? '' : 's'}`)
+  }
   return parts.join(' · ')
+}
+
+/** The short form of a question for the line under the RFQ list: "line size and flange rating". Cut at the first detail clause. */
+export function shortQuestion(q: string): string {
+  const cut = q.split(/\s+(?:on|for|at|in|of)\s+the\s+|,\s+(?:and|or)\s+|\s+\(|[?.:;]\s/i)[0].trim()
+  const s = cut.length > 48 ? `${cut.slice(0, 47).trimEnd()}…` : cut
+  return /^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s
+}
+
+/** "Sat 21 Nov" in Karachi time. */
+export function shortDay(iso: string): string {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Karachi', weekday: 'short', day: 'numeric', month: 'short' }).formatToParts(new Date(iso))
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? ''
+  return `${get('weekday')} ${get('day')} ${get('month')}`
 }

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   appendNote,
+  countsText,
+  shortDay,
+  shortQuestion,
   availability,
   defaultRfq,
   defaultTicks,
@@ -14,8 +17,8 @@ import {
   type OpenQuestion,
 } from '@/features/capture/model'
 
-const q = (id: string, asked = true): OpenQuestion => ({ id, question: `Question ${id}`, asked, createdAt: `2026-10-1${id}` })
-const cand = (n: number, o: Partial<Candidate> = {}): Candidate => ({ id: `r${n}`, number: n, companyName: `Co ${n}`, ownerId: 'u1', openedAt: null, open: [], ...o })
+const q = (id: string, asked = true): OpenQuestion => ({ id, question: `Question ${id}`, asked, askedAt: asked ? '2026-11-21T08:00:00Z' : null, createdAt: `2026-10-1${id}` })
+const cand = (n: number, o: Partial<Candidate> = {}): Candidate => ({ id: `r${n}`, number: n, companyName: `Co ${n}`, ownerId: 'u1', site: null, openedAt: null, open: [], ...o })
 const HOUR = 3_600_000
 const NOW = 100 * 24 * HOUR
 
@@ -92,5 +95,21 @@ describe('notes are appended as written, with who and when', () => {
     expect(stamp).toBe('Ayesha Rana, Fri 27 Nov, 09:41')
     expect(appendNote(null, ' Plant shutdown 12 Dec ', stamp)).toBe(`${stamp}\nPlant shutdown 12 Dec`)
     expect(appendNote('Earlier note', 'More', stamp)).toBe(`Earlier note\n\n${stamp}\nMore`)
+  })
+})
+
+describe('the words under the capture and the RFQ list (g2-capture.html)', () => {
+  it('counts: a shared text is a message; photos are photos, anything else files', () => {
+    expect(countsText('share', 'x', [{ type: 'image/jpeg' }])).toBe('1 message · 1 photo')
+    expect(countsText('paste', 'x', [])).toBe('1 text')
+    expect(countsText('share', '', [{ type: 'image/png' }])).toBe('1 photo')
+    expect(countsText('paste', 'x', [{ type: 'image/png' }, { type: 'application/pdf' }])).toBe('1 text · 2 files')
+  })
+  it('a question is shortened to its subject', () => {
+    expect(shortQuestion('Line size and flange rating on the process line for item 2')).toBe('line size and flange rating')
+    expect(shortQuestion('Fluid temperature range, and whether the meter sees CIP cleaning')).toBe('fluid temperature range')
+  })
+  it('the asked day reads like Sat 21 Nov', () => {
+    expect(shortDay('2026-11-21T08:00:00Z')).toBe('Sat 21 Nov')
   })
 })

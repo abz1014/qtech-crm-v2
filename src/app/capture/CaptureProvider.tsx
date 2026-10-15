@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { intakeFiles, type AddedFile } from '@/lib/fileIntake'
+import { useToast } from '@/ui/useToast'
 import {
   createCapture,
   deleteCapture,
@@ -46,7 +47,9 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<Draft>(emptyDraft)
   const [notice, setNotice] = useState<CaptureNotice>(null)
-  const [dragging, setDragging] = useState(false)
+  const [dragging, setDragging] = useState(0)
+  const [resizing, setResizing] = useState<{ id: string; name: string }[]>([])
+  const { toast } = useToast()
   const draftRef = useRef(draft)
   draftRef.current = draft
   const pathRef = useRef(pathname)
@@ -104,7 +107,11 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
       setDraft(d => ({ ...d, source: d.text || d.files.length ? d.source : source, text: text ? (d.text.trim() ? `${d.text.trimEnd()}\n${text}` : text) : d.text }))
     }
     if (input.files?.length) {
-      void intakeFiles(input.files, { accept: RFQ_FILE_ACCEPT }).then(added => setDraft(d => ({ ...d, files: [...d.files, ...added] })))
+      const marks = input.files.map(f => ({ id: crypto.randomUUID(), name: f.name }))
+      setResizing(r => [...r, ...marks])
+      void intakeFiles(input.files, { accept: RFQ_FILE_ACCEPT })
+        .then(added => setDraft(d => ({ ...d, files: [...d.files, ...added] })))
+        .finally(() => setResizing(r => r.filter(m => !marks.some(k => k.id === m.id))))
     }
   }, [])
 
@@ -141,18 +148,18 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
           if (item) {
             dirty.current = false
             await load(item)
-            setNotice(takeBackFromSignIn() ? 'back' : null)
+            setNotice(null)
+            if (takeBackFromSignIn()) toast({ title: 'Your shared item is back', body: 'Choose where it goes to finish.' })
           } else {
             setNotice('expired')
           }
         } else if (draftRef.current.text.trim() || draftRef.current.files.length) {
-          takeBackFromSignIn()
-          setNotice('back')
+          if (takeBackFromSignIn()) toast({ title: 'Your shared item is back', body: 'Choose where it goes to finish.' })
         }
         setOpen(true)
       })()
     },
-    [load],
+    [load, toast],
   )
 
   // Paste, drop and the C key, anywhere in the app.
@@ -172,7 +179,7 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
     const onEnter = (e: DragEvent) => {
       if (!hasFiles(e) || inFileDrop(e.target) || pathRef.current.startsWith('/rfqs/new')) return
       depth += 1
-      setDragging(true)
+      setDragging(e.dataTransfer?.items.length || 1)
     }
     const onOver = (e: DragEvent) => {
       if (!hasFiles(e) || inFileDrop(e.target) || pathRef.current.startsWith('/rfqs/new')) return
@@ -180,11 +187,11 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
     }
     const onLeave = () => {
       depth = Math.max(0, depth - 1)
-      if (depth === 0) setDragging(false)
+      if (depth === 0) setDragging(0)
     }
     const onDrop = (e: DragEvent) => {
       depth = 0
-      setDragging(false)
+      setDragging(0)
       if (!hasFiles(e) || inFileDrop(e.target) || pathRef.current.startsWith('/rfqs/new')) return
       e.preventDefault()
       add({ files: [...(e.dataTransfer?.files ?? [])] }, 'drop')
@@ -213,8 +220,8 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
   }, [add])
 
   const api = useMemo<CaptureApi>(
-    () => ({ open, draft, notice, dragging, openCapture, close, setText, add, removeFile, discard, openShared }),
-    [open, draft, notice, dragging, openCapture, close, setText, add, removeFile, discard, openShared],
+    () => ({ open, draft, notice, dragging, resizing, openCapture, close, setText, add, removeFile, discard, openShared }),
+    [open, draft, notice, dragging, resizing, openCapture, close, setText, add, removeFile, discard, openShared],
   )
 
   return (

@@ -168,7 +168,7 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await page.getByRole('button', { name: 'Sign in' }).click()
     await expect(sheet(page)).toBeVisible()
     await expect(sheet(page).getByRole('textbox', { name: 'Captured text' })).toHaveValue('Reply: line size is 4 inch.')
-    await expect(sheet(page).getByText('Your shared item is back')).toBeVisible()
+    await expect(page.getByText('Your shared item is back')).toBeVisible()
   })
 
   test('an item older than 7 days is gone, and the sheet says so', async ({ page }) => {
@@ -191,7 +191,9 @@ test.describe('Android share target: the service worker takes the POST', () => {
     )
     await page.goto(`/capture?share=${id}`)
     await expect(sheet(page).getByText('The shared item is no longer on this phone')).toBeVisible()
-    await expect(sheet(page).getByRole('textbox', { name: 'Captured text' })).toHaveValue('')
+    await review(page, 'capture-expired-1440')
+    await sheet(page).getByRole('button', { name: 'Open Capture' }).click()
+    await expect(sheet(page).getByText('Drop text, photos or files here')).toBeVisible()
   })
 })
 
@@ -237,7 +239,7 @@ test.describe('desktop: paste and drop anywhere', () => {
     const s = await seed()
     await ready(page, s.rfq.id)
     await page.getByRole('button', { name: 'Capture' }).first().click()
-    await sheet(page).getByLabel('Choose files').setInputFiles([
+    await sheet(page).locator('input[aria-label="Choose files"]:visible').setInputFiles([
       { name: 'datasheet-scan.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(5 * 1024 * 1024 + 2048) },
       { name: 'nameplate.png', mimeType: 'image/png', buffer: PNG },
     ])
@@ -251,6 +253,8 @@ test.describe('desktop: paste and drop anywhere', () => {
 })
 
 test.describe('iPhone: Capture button, paste, photo pick', () => {
+  test.use({ viewport: { width: 375, height: 812 } })
+
   test('Capture, Choose photos, Save: a photo answer with nothing typed', async ({ page }) => {
     const s = await seed()
     await ready(page, s.rfq.id)
@@ -259,7 +263,8 @@ test.describe('iPhone: Capture button, paste, photo pick', () => {
     taps++
     await expect(sheet(page)).toBeVisible()
     await expect(sheet(page).getByRole('button', { name: 'Add something first' })).toBeDisabled()
-    await sheet(page).getByLabel('Choose photos').setInputFiles({ name: 'IMG_0412.png', mimeType: 'image/png', buffer: PNG })
+    await expect(page.getByRole('radio', { name: /Answer a question/ })).toBeDisabled()
+    await sheet(page).locator('input[aria-label="Choose photos"]:visible').setInputFiles({ name: 'IMG_0412.png', mimeType: 'image/png', buffer: PNG })
     taps++ // Choose photos, then the system picker
     await expect(page.getByRole('radio', { name: /Answer with photo/ })).toBeChecked()
     await sheet(page).getByRole('button', { name: 'Save photo as the answer' }).click()
@@ -269,6 +274,25 @@ test.describe('iPhone: Capture button, paste, photo pick', () => {
     const [first] = await clarsOf(s.rfq.id)
     expect(first.answered_at).not.toBeNull()
     expect((await attsOf(s.rfq.id))[0].clarification_id).toBe(first.id)
+  })
+
+  test('Copy, open the app, Capture, Paste, Save: 5 taps for a text answer, 2 more than Android', async ({ page }) => {
+    const s = await seed()
+    await ready(page, s.rfq.id)
+    let taps = 2 // Copy in WhatsApp (press and hold, then Copy), open Q-Tech CRM from the home screen
+    await page.getByRole('button', { name: 'Capture' }).first().click()
+    taps++
+    await expect(sheet(page)).toBeVisible()
+    await review(page, 'capture-iphone-empty')
+    await sheet(page).getByRole('textbox', { name: 'Captured text' }).fill('1. Line size is 4 inch, flange PN16.' + String.fromCharCode(10) + '2. Fluid is hot water, 5 to 85 C.') // press and hold, then Paste
+    taps++
+    await expect(page.getByRole('radio', { name: /Answer a question/ })).toBeChecked()
+    await review(page, 'capture-iphone-pasted')
+    await sheet(page).getByRole('button', { name: 'Save answer to 2 questions' }).click()
+    taps++
+    await expect(toast(page, `Saved to ${rfqRef(s.rfq.number)}`)).toBeVisible()
+    expect(taps).toBe(5)
+    expect((await clarsOf(s.rfq.id)).every(r => r.answered_at !== null)).toBe(true)
   })
 
   test('the C key and the command palette open Capture too', async ({ page }) => {
@@ -302,7 +326,7 @@ test.describe('the other destinations', () => {
     const s = await seed()
     await ready(page, s.rfq.id)
     await paste(page, { text: 'Dear Sir, price for item 1 is USD 1,200 each, delivery 3 weeks, ex stock.' })
-    await page.getByRole('radio', { name: /Supplier reply/ }).click()
+    await page.getByRole('button', { name: 'This is a supplier’s reply' }).click()
     await expect(sheet(page).getByRole('radio', { name: s.supplier.name })).toBeChecked()
     await sheet(page).getByRole('button', { name: 'Read the reply' }).click()
     await expect(page).toHaveURL(new RegExp(`/rfqs/${s.rfq.id}$`))

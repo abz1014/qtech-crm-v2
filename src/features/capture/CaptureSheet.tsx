@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CircleAlert, Import, WifiOff } from 'lucide-react'
+import * as RadixDialog from '@radix-ui/react-dialog'
+import { ArrowRight, ClipboardPaste, Clock, FileWarning, Share2, WifiOff, X } from 'lucide-react'
 import { mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
 import { deleteCapture, safely } from '@/lib/capture/store'
@@ -12,7 +13,6 @@ import { useSession } from '@/app/session'
 import { listCandidates, getRfqNotes, setRfqNotes } from '@/features/capture/api'
 import {
   appendNote,
-  availability,
   countsText,
   defaultRfq,
   defaultTicks,
@@ -22,10 +22,11 @@ import {
   payloadKind,
   saveLabel,
   savedSummary,
+  shortQuestion,
   type Candidate,
   type Dest,
 } from '@/features/capture/model'
-import { CaptureArea, RfqPicker, SavedPanel, Tiles } from '@/features/capture/CaptureParts'
+import { CapNote, CaptureArea, QuestionPick, RfqPicker, SavedPanel, Section, SplitRows, Tiles } from '@/features/capture/CaptureParts'
 import { useCapture } from '@/app/capture/useCapture'
 import { useCompanyMatches, useRfqInquiries } from '@/features/rfqs/hooks'
 import {
@@ -38,25 +39,26 @@ import {
   type AttachmentRow,
 } from '@/features/rfqs/api'
 import { attachmentPath, clarState, splitQuestions } from '@/features/rfqs/lib/clarifications'
+import { formatBytes } from '@/lib/fileIntake'
+import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
-import { Dialog, DialogContent } from '@/ui/Dialog'
+import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
-import { Checkbox } from '@/ui/form/Checkbox'
 import { Combobox } from '@/ui/form/Combobox'
-import { Field } from '@/ui/form/Field'
 import { Radio, RadioGroup } from '@/ui/form/Radio'
 import { useToast } from '@/ui/useToast'
 
 /*
- * The Capture sheet (R22; docs/design/mockups/g2-capture.html). A modal on desktop, a bottom sheet on a phone.
+ * The Capture sheet (R22; docs/design/mockups/g2-capture.html). A 960 px modal on desktop with two columns, a full-screen sheet on a
+ * phone with the Save button at the bottom.
  *
- * Two short questions on one screen: what to do with it, and on which RFQ. The most likely answer to each is already chosen,
- * so the common case is one tap on the primary button:
+ * Two short questions on one screen: what to do with it, and on which RFQ. The most likely answer to each is already chosen, so
+ * the common case is one tap on the primary button:
  *   photo that answers a question   Share, Q-Tech CRM, then "Save photo as the answer": nothing typed.
  *   text that answers questions     the same, "Save answer to 2 questions".
  * Every destination ends within 3 taps once the sheet is open: choose what to do, choose the RFQ, Save.
- * Saves keep a 10 second Undo that puts the draft back.
+ * Saves keep a 10 second Undo that puts the capture back.
  */
 const subscribeOnline = (cb: () => void) => {
   window.addEventListener('online', cb)
@@ -69,10 +71,12 @@ const subscribeOnline = (cb: () => void) => {
 const useOnline = () => useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true)
 
 interface Result {
-  dest: Dest
   rfq: Candidate
   summary: string
+  answered?: number
 }
+
+const sizeOf = (error: string) => /^([\d.]+ [KM]B)/.exec(error)?.[1] ?? ''
 
 export default function CaptureSheet() {
   const cap = useCapture()
@@ -85,6 +89,7 @@ export default function CaptureSheet() {
   const online = useOnline()
 
   const goodFiles = draft.files.filter(f => !f.error)
+  const badFiles = draft.files.filter(f => f.error)
   const kind = payloadKind(draft.text, goodFiles.length)
   const now = useRef(Date.now()).current
 
@@ -123,21 +128,13 @@ export default function CaptureSheet() {
   const inquiryList = inquiries.data ?? []
   const inquiryId = inquiryPick ?? (inquiryList.find(i => i.lines.length === 0)?.id ?? inquiryList[0]?.id ?? null)
 
-  const unavailable: Partial<Record<Dest, string>> = {}
-  const noRfq = ordered.length === 0
-  for (const d of ['answer', 'questions', 'notes', 'new-rfq', 'reply'] as const) {
-    const a = availability(d, kind, null)
-    if (!a.ok) unavailable[d] = a.reason
-  }
-
   // ---- saving
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(false)
   const [result, setResult] = useState<Result | null>(null)
   const inFlight = useRef(false)
   const uploaded = useRef(new Map<string, AttachmentRow>())
 
-  const needsRfq = dest !== 'new-rfq'
   const ready =
     kind !== 'empty' &&
     online &&
@@ -146,6 +143,8 @@ export default function CaptureSheet() {
     (dest === 'questions' ? keptLines.length > 0 : true) &&
     (dest === 'reply' ? Boolean(inquiryId) : true)
   const label = saveLabel({ dest, kind, ticked: tickedList.length, questionLines: keptLines.length })
+  const emptyAnswerOpen = (defaultRfq('answer', ordered) ?? ordered[0])?.open.length ?? 0
+  const emptyLabel = emptyAnswerOpen ? `Save answer to ${emptyAnswerOpen} ${emptyAnswerOpen === 1 ? 'question' : 'questions'}` : 'Save'
 
   async function attachFiles(rfqId: string, clarificationId: string | null): Promise<AttachmentRow[]> {
     const out: AttachmentRow[] = []
@@ -172,7 +171,7 @@ export default function CaptureSheet() {
     if (inFlight.current || !ready || !user) return
     inFlight.current = true
     setBusy(true)
-    setError(null)
+    setError(false)
     const text = draft.text.trim()
     const keep = { text: draft.text, files: goodFiles.map(f => f.file), source: draft.source }
     // Put the capture back after an Undo, so nothing the person gave us is lost by a tap.
@@ -198,6 +197,7 @@ export default function CaptureSheet() {
 
       let undo: () => Promise<void>
       let summary: string
+      let answered: number | undefined
       if (dest === 'answer') {
         const ids = tickedList.map(q => q.id)
         const rows = await attachFiles(rfqId, ids[0])
@@ -205,6 +205,7 @@ export default function CaptureSheet() {
         for (const id of ids) await setClarificationAnswer({ id, answer: text || null, answeredAt: at })
         await refresh(rfqId, ['clarification.answer', ...(rows.length ? (['attachment.add'] as const) : [])])
         summary = savedSummary('answer', { questions: ids.length, photos: rows.length })
+        answered = ids.length
         undo = async () => {
           for (const id of ids) await setClarificationAnswer({ id, answer: null, answeredAt: null })
           for (const r of rows) await deleteAttachment(r)
@@ -237,11 +238,11 @@ export default function CaptureSheet() {
 
       await safely(() => deleteCapture(draft.id), undefined)
       uploaded.current.clear()
-      setResult({ dest, rfq, summary })
+      setResult({ rfq, summary, answered })
       cap.discard()
       toast({
         title: `Saved to ${ref}`,
-        body: summary.replace(/\.$/, ''),
+        body: summary.replace(/\.$/, '').replace(/ and \d+ photos? attached/, ''),
         tone: 'success',
         undo: {
           onUndo: async () => {
@@ -255,8 +256,8 @@ export default function CaptureSheet() {
           },
         },
       })
-    } catch (err) {
-      setError(mapPgError(err, { entity: 'capture' }).message)
+    } catch {
+      setError(true)
     } finally {
       inFlight.current = false
       setBusy(false)
@@ -276,226 +277,321 @@ export default function CaptureSheet() {
     if (!ordered.some(o => o.id === c.id)) {
       // Found by search: read its questions so an answer can be given to it too.
       const clars = await listClarifications(c.id).catch(() => [])
-      const open = clars
+      const openQs = clars
         .filter(q => !q.withdrawnAt && !q.answeredAt)
-        .map(q => ({ id: q.id, question: q.question, asked: clarState(q) === 'asked', createdAt: q.createdAt }))
-      setExtra({ ...c, open })
+        .map(q => ({ id: q.id, question: q.question, asked: clarState(q) === 'asked', askedAt: q.lastAskedAt, createdAt: q.createdAt }))
+      setExtra({ ...c, open: openQs })
     }
   }
 
-  const onChoose = (d: Dest) => {
+  const choose = (d: Dest) => {
     setUserDest(d)
     setTickState(null)
   }
+  const toggleTick = (id: string, on: boolean) => {
+    if (!rfq) return
+    const ids = new Set(ticked)
+    if (on) ids.add(id)
+    else ids.delete(id)
+    setTickState({ rfqId: rfq.id, ids })
+  }
 
-  const sourceNote = draft.source === 'share' ? 'Shared from WhatsApp' : draft.source === 'drop' ? 'Dropped' : draft.source === 'paste' ? 'Pasted' : null
+  const via = draft.source === 'share' ? { icon: Share2, text: 'Shared from WhatsApp' } : draft.source === 'drop' ? { icon: ClipboardPaste, text: 'Dropped' } : draft.source === 'paste' ? { icon: ClipboardPaste, text: 'Pasted' } : null
+  const empty = kind === 'empty' && cap.resizing.length === 0
+  const ref = rfq ? rfqRef(rfq.number) : ''
+  const shorts = tickedList.map(q => shortQuestion(q.question)).join(', ')
+
+  const body = (
+    <>
+      {badFiles.map(f => {
+        const isImage = f.file.type.startsWith('image/')
+        const typeError = !/^[\d.]+ [KM]B/.test(f.error ?? '')
+        return (
+          <div key={f.id}>
+            <Banner tone="danger" icon={FileWarning} title={typeError ? `${f.file.name} can’t be added` : `${f.file.name} is ${sizeOf(f.error ?? '')}. Files can be up to 5 MB.`} className="max-md:hidden">
+              {typeError ? f.error : 'Photos are shrunk for you; PDFs are not. Remove it, or add a smaller file. The rest can still be saved.'}
+            </Banner>
+            <Banner tone="danger" title={typeError ? `${f.file.name} can’t be added` : `${f.file.name} is too large`} className="md:hidden">
+              {typeError ? f.error : isImage ? 'Remove it, or take the photo again at a lower quality.' : 'PDFs are not shrunk. Remove it, or scan at a lower quality.'}
+            </Banner>
+          </div>
+        )
+      })}
+      {!online ? (
+        <Banner tone="warning" icon={WifiOff} title="You are offline">
+          Your capture is kept on this phone. Save when you are back online.
+        </Banner>
+      ) : null}
+      {error ? (
+        <Banner
+          tone="danger"
+          title="Couldn’t save"
+          action={
+            <Button size="sm" onClick={() => void save()} disabled={busy}>
+              Try again
+            </Button>
+          }
+        >
+          Nothing was changed and your capture is still here.
+        </Banner>
+      ) : null}
+    </>
+  )
+
+  const left = (
+    <div className="grid min-w-0 content-start gap-4">
+      <CaptureArea
+        text={draft.text}
+        files={draft.files.map(f => (f.error && f.file.type.startsWith('image/') ? { ...f, error: `Still ${sizeOf(f.error) || formatBytes(f.file.size)} after resizing. The limit is 5 MB.` } : f))}
+        resizing={cap.resizing}
+        dragging={cap.dragging}
+        autoFocus={draft.source === 'pick'}
+        onText={cap.setText}
+        onFiles={files => cap.add({ files }, 'pick')}
+        onRemove={cap.removeFile}
+        count={countsText(draft.source, draft.text, goodFiles.map(f => f.file))}
+      />
+      {!empty ? (
+        <Button
+          variant="quiet"
+          size="sm"
+          onClick={() => {
+            cap.discard()
+            setUserDest(null)
+            setUserRfqId(null)
+            setTickState(null)
+          }}
+          className="w-fit text-fg-muted"
+        >
+          Start over
+        </Button>
+      ) : null}
+    </div>
+  )
+
+  const right = (
+    <div className="grid min-w-0 content-start gap-4">
+      <div className={cn('grid gap-2', empty && 'opacity-[0.55]')}>
+        <Section title="What should we do with it?">
+          <Tiles chosen={dest} kind={kind} off={empty} onChoose={choose} />
+        </Section>
+        {empty ? <span className="text-xs text-fg-muted">You choose after you add something.</span> : null}
+        {!empty ? (
+          <button
+            type="button"
+            onClick={() => choose('reply')}
+            aria-pressed={dest === 'reply'}
+            className={cn('w-fit rounded text-xs text-fg-muted underline decoration-1 underline-offset-2 hover:text-fg', dest === 'reply' && 'font-medium text-fg no-underline')}
+          >
+            {dest === 'reply' ? 'Reading it as a supplier’s reply' : 'This is a supplier’s reply'}
+          </button>
+        ) : null}
+      </div>
+
+      {!empty && dest !== 'new-rfq' ? (
+        <>
+          {ordered.length === 0 && !candidatesQuery.isPending ? <p className="text-sm text-fg-muted">No RFQ opened lately and none of yours has a question waiting. Search all RFQs to choose one.</p> : null}
+          <RfqPicker list={ordered} chosenId={rfq?.id ?? null} now={now} onPick={pickRfq} />
+
+          {rfq && dest === 'answer' ? (
+            <>
+              <CapNote>
+                {open.length === 0 ? (
+                  <>
+                    <b>{ref}</b> has no open questions. Choose another RFQ, or add this to its notes.
+                  </>
+                ) : kind === 'files' ? (
+                  <>
+                    Answers {tickedList.length === 1 ? '1 open question' : `${tickedList.length} open questions`} on <b>{ref}</b>: {shorts}. The photo is attached as the reply. Tick another to answer it too.
+                  </>
+                ) : (
+                  <>
+                    Answers {tickedList.length === 1 ? '1 open question' : `${tickedList.length} open questions`} on <b>{ref}</b>: {shorts}. Untick any that this does not answer.
+                  </>
+                )}
+              </CapNote>
+              {open.length ? <QuestionPick open={open} ticked={ticked} onToggle={toggleTick} /> : null}
+            </>
+          ) : null}
+
+          {rfq && dest === 'questions' ? (
+            <Section title={`Split into ${lines.length} ${lines.length === 1 ? 'question' : 'questions'}`} aside="Tick the ones to keep">
+              <SplitRows lines={lines} off={lineOff} onToggle={(l, on) => setLineOff(prev => { const next = new Set(prev); if (on) next.delete(l); else next.add(l); return next })} />
+              <CapNote>Each line becomes one question on the RFQ, ready to put to the customer.</CapNote>
+            </Section>
+          ) : null}
+
+          {rfq && dest === 'notes' ? (
+            <CapNote>
+              {draft.text.trim() ? (
+                <>
+                  Added to the notes of <b>{ref}</b> as written, with your name and the time: “{noteStamp(user?.name ?? 'You', new Date())}”.
+                </>
+              ) : (
+                <>The files are kept with {ref}.</>
+              )}
+            </CapNote>
+          ) : null}
+
+          {rfq && dest === 'reply' ? (
+            <Section title="Which supplier replied?">
+              {inquiryList.length === 0 && !inquiries.isPending ? <p className="text-sm text-fg-muted">No supplier has been asked on this RFQ yet.</p> : null}
+              <RadioGroup value={inquiryId ?? ''} onValueChange={setInquiryPick} aria-label="Supplier">
+                {inquiryList.map(i => (
+                  <Radio key={i.id} value={i.id} label={i.supplierName} help={i.lines.length ? 'Has a reply saved' : undefined} />
+                ))}
+              </RadioGroup>
+              <CapNote>The RFQ opens with the reply read out. Nothing is saved until you accept.</CapNote>
+            </Section>
+          ) : null}
+        </>
+      ) : null}
+
+      {!empty && dest === 'new-rfq' ? (
+        <Section title="Which company?">
+          <div>
+            <Combobox
+              aria-label="Which company?"
+              options={(companies.data ?? []).map(c => ({ value: c.id, label: c.name, meta: [c.role, c.country].filter(Boolean).join(' · ') || undefined }))}
+              value={company?.id ?? ''}
+              onChange={id => {
+                const hit = (companies.data ?? []).find(c => c.id === id)
+                setCompany(hit ? { id: hit.id, name: hit.name } : null)
+              }}
+              onQueryChange={setCompanyText}
+              loading={companies.isFetching}
+              placeholder="Start typing the company"
+            />
+          </div>
+          <CapNote>Intake opens with this text and the company already filled in. Nothing is saved until you create the RFQ.</CapNote>
+        </Section>
+      ) : null}
+    </div>
+  )
 
   return (
-    <Dialog open onOpenChange={o => !o && cap.close()} busy={busy}>
-      <DialogContent
-        title="Capture"
-        context="Text, photos and files from WhatsApp or anywhere else. Choose where they go."
-        icon={Import}
-        size="lg"
-        className="md:w-[920px]"
-        lead={result ? undefined : <span className="hidden items-center gap-1 text-xs text-fg-muted md:inline-flex"><Kbd>⌘</Kbd><Kbd>↵</Kbd> saves</span>}
-        footer={
-          result ? undefined : (
-            <>
-              <Button data-cancel onClick={cap.close}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={() => void save()} disabled={!ready} busy={busy} busyLabel="Saving">
-                {kind === 'empty' ? 'Add something first' : label}
-              </Button>
-            </>
-          )
-        }
-      >
-        <div data-capture-body onKeyDown={onKey} className="grid gap-4">
-          {cap.notice === 'back' ? (
-            <Banner tone="info" title="Your shared item is back">
-              Choose where it goes to finish.
-            </Banner>
-          ) : null}
-          {cap.notice === 'expired' ? (
-            <Banner tone="warning" title="The shared item is no longer on this phone">
-              Shared items are kept for 7 days. Share it again from WhatsApp, or paste it.
-            </Banner>
-          ) : null}
-          {!online ? (
-            <div role="status" className="flex items-start gap-3 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-4 py-3 text-sm">
-              <WifiOff aria-hidden="true" size={16} className="mt-[2px] shrink-0 text-tone-warning-fg" />
-              <div className="grid">
-                <b className="font-semibold">You are offline</b>
-                <span className="text-fg-2">Your capture is kept on this phone. Save when you are back online.</span>
+    <RadixDialog.Root open onOpenChange={o => !o && !busy && cap.close()}>
+      <RadixDialog.Portal>
+        <RadixDialog.Overlay className="fixed inset-0 z-40 grid animate-fade-in place-items-center bg-scrim p-4 max-md:p-0">
+          <RadixDialog.Content
+            aria-describedby={undefined}
+            onKeyDown={onKey}
+            onOpenAutoFocus={e => {
+              e.preventDefault()
+              const el = (e.currentTarget as HTMLElement).querySelector<HTMLElement>('textarea')
+              el?.focus()
+            }}
+            className="grid max-h-[calc(100dvh-64px)] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal focus:outline-none md:w-[960px] max-md:h-dvh max-md:max-h-none max-md:animate-sheet-in max-md:rounded-none md:animate-rise-6"
+          >
+            {/* Desktop header: tile, title, one sentence. */}
+            <header className="flex items-start gap-3 px-5 pt-5 max-md:hidden">
+              <span aria-hidden="true" className="grid size-[36px] shrink-0 place-items-center rounded bg-selected text-fg-2">
+                <Icon icon={ClipboardPaste} size="lg" />
+              </span>
+              <div className="grid min-w-0 flex-1 gap-[2px]">
+                <RadixDialog.Title className="text-lg font-semibold tracking-snug">Capture</RadixDialog.Title>
+                <p className="text-sm text-fg-muted">Text, photos and files from WhatsApp or anywhere else. Choose where they go.</p>
               </div>
+              <RadixDialog.Close asChild>
+                <Button variant="quiet" size="sm" icon={X} aria-label="Close" disabled={busy} className="-mr-2 -mt-1 text-fg-muted" />
+              </RadixDialog.Close>
+            </header>
+            {/* Phone header: close, title, where it came from. */}
+            <header className="flex items-center gap-3 border-b px-4 py-3 md:hidden">
+              <RadixDialog.Close asChild>
+                <Button variant="quiet" size="touch" icon={X} aria-label="Close" disabled={busy} className="-ml-2 text-fg-muted" />
+              </RadixDialog.Close>
+              <h2 className="flex-1 text-lg font-semibold tracking-snug">Capture</h2>
+              {via ? (
+                <span className="inline-flex items-center gap-[6px] text-xs text-fg-muted">
+                  <Icon icon={via.icon} size="sm" />
+                  {via.text}
+                </span>
+              ) : null}
+            </header>
+
+            <div data-capture-body className="min-h-0 overflow-y-auto text-sm text-fg-2">
+              {cap.notice === 'expired' ? (
+                <div className="grid gap-4 p-4 md:p-5">
+                  <Banner tone="warning" icon={Clock} title="The shared item is no longer on this phone">
+                    Shared items are kept for 7 days. Share it again from WhatsApp, or paste it.
+                  </Banner>
+                  <Button variant="primary" icon={ClipboardPaste} onClick={cap.openCapture} className="h-touch w-full">
+                    Open Capture
+                  </Button>
+                </div>
+              ) : result ? (
+                <SavedPanel
+                  title={`Saved to ${rfqRef(result.rfq.number)}`}
+                  summary={result.answered ? `${result.summary} They now wait on Today to be relayed.` : result.summary}
+                  rfq={`${rfqRef(result.rfq.number)} · ${result.rfq.companyName}`}
+                  answered={result.answered}
+                >
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      cap.close()
+                      navigate(`/rfqs/${result.rfq.id}`)
+                    }}
+                  >
+                    {`Open ${rfqRef(result.rfq.number)}`}
+                  </Button>
+                  <Button icon={ClipboardPaste} onClick={() => setResult(null)}>
+                    Capture another
+                  </Button>
+                  <Button variant="quiet" onClick={cap.close}>
+                    Done
+                  </Button>
+                </SavedPanel>
+              ) : (
+                <>
+                  <div className="grid gap-3 px-4 pt-4 empty:hidden md:px-5">{body}</div>
+                  <div className="grid gap-5 p-4 md:grid-cols-2 md:gap-0 md:p-0">
+                    <div className="md:p-5">{left}</div>
+                    <div className="md:border-l md:p-5">{right}</div>
+                  </div>
+                </>
+              )}
             </div>
-          ) : null}
-          {error ? (
-            <div role="alert" className="flex items-start gap-3 rounded border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3 text-sm">
-              <CircleAlert aria-hidden="true" size={16} className="mt-[2px] shrink-0 text-tone-danger-fg" />
-              <div className="grid flex-1">
-                <b className="font-semibold">Couldn’t save</b>
-                <span className="text-fg-2">{error} Nothing was changed and your capture is still here.</span>
-              </div>
-              <Button size="sm" onClick={() => void save()} disabled={busy}>
-                Try again
-              </Button>
-            </div>
-          ) : null}
 
-          {result ? (
-            <SavedPanel
-              title={`Saved to ${rfqRef(result.rfq.number)}`}
-              summary={result.summary}
-              rows={[
-                ['RFQ', `${rfqRef(result.rfq.number)} · ${result.rfq.companyName}`],
-                ...(result.dest === 'answer' ? ([['Next', 'Answers to relay']] as [string, string][]) : []),
-              ]}
-            >
-              <Button
-                variant="primary"
-                onClick={() => {
-                  cap.close()
-                  navigate(`/rfqs/${result.rfq.id}`)
-                }}
-              >
-                {`Open ${rfqRef(result.rfq.number)}`}
-              </Button>
-              <Button onClick={() => setResult(null)}>Capture another</Button>
-              <Button variant="quiet" onClick={cap.close}>
-                Done
-              </Button>
-            </SavedPanel>
-          ) : (
-            <div className="grid gap-5 md:grid-cols-2">
-              <div className="grid content-start gap-2">
-                {sourceNote ? <p className="text-xs text-fg-muted md:hidden">{sourceNote}</p> : null}
-                <CaptureArea
-                  text={draft.text}
-                  files={draft.files}
-                  dragging={cap.dragging}
-                  autoFocus={draft.source === 'pick'}
-                  onText={cap.setText}
-                  onFiles={files => cap.add({ files }, 'pick')}
-                  onRemove={cap.removeFile}
-                  onDiscard={() => {
-                    cap.discard()
-                    setUserDest(null)
-                    setUserRfqId(null)
-                    setTickState(null)
-                  }}
-                  count={countsText(draft.text, goodFiles.length)}
-                />
-              </div>
-
-              <div className="grid content-start gap-4">
-                <section aria-label="What to do" className="grid gap-2">
-                  <h3 className="text-sm font-semibold text-fg">What should we do with it?</h3>
-                  <Tiles chosen={dest} kind={kind} unavailable={unavailable} onChoose={onChoose} />
-                  {kind === 'empty' ? <p className="text-xs text-fg-muted">You choose after you add something.</p> : null}
-                </section>
-
-                {kind !== 'empty' && needsRfq ? (
-                  <>
-                    {noRfq && !candidatesQuery.isPending ? (
-                      <p className="text-sm text-fg-muted">No RFQ opened lately and none of yours has a question waiting. Search all RFQs to choose one.</p>
-                    ) : null}
-                    <RfqPicker list={ordered} chosenId={rfq?.id ?? null} now={now} onPick={pickRfq} />
-                    {rfq && dest === 'answer' ? (
-                      <>
-                        <p className="flex gap-2 text-xs text-fg-muted">
-                          {open.length === 0
-                            ? `${rfqRef(rfq.number)} has no open questions. Choose another RFQ, or add this to its notes.`
-                            : `Answers ${open.length === 1 ? '1 open question' : `${ticked.size} of ${open.length} open questions`} on ${rfqRef(rfq.number)}. Untick any this does not answer.`}
-                        </p>
-                        <ul className="grid gap-1">
-                          {open.map(q => (
-                            <li key={q.id} className="rounded border bg-surface px-3 py-2 data-[on=true]:bg-sunken" data-on={ticked.has(q.id)}>
-                              <Checkbox
-                                label={q.question}
-                                checked={ticked.has(q.id)}
-                                onCheckedChange={on => {
-                                  const ids = new Set(ticked)
-                                  if (on) ids.add(q.id)
-                                  else ids.delete(q.id)
-                                  setTickState({ rfqId: rfq.id, ids })
-                                }}
-                              />
-                            </li>
-                          ))}
-                        </ul>
-                      </>
-                    ) : null}
-                    {rfq && dest === 'questions' ? (
-                      <>
-                        <h3 className="text-sm font-semibold text-fg">{`Split into ${lines.length} ${lines.length === 1 ? 'question' : 'questions'}`}</h3>
-                        <ul className="grid gap-1">
-                          {lines.map(l => (
-                            <li key={l} className="rounded border bg-surface px-3 py-2">
-                              <Checkbox
-                                label={l}
-                                checked={!lineOff.has(l)}
-                                onCheckedChange={on =>
-                                  setLineOff(prev => {
-                                    const next = new Set(prev)
-                                    if (on) next.delete(l)
-                                    else next.add(l)
-                                    return next
-                                  })
-                                }
-                              />
-                            </li>
-                          ))}
-                        </ul>
-                      </>
-                    ) : null}
-                    {rfq && dest === 'notes' ? (
-                      <p className="text-xs text-fg-muted">
-                        {draft.text.trim()
-                          ? `Added to the notes of ${rfqRef(rfq.number)} as written, with your name and the time: “${noteStamp(user?.name ?? 'You', new Date())}”.`
-                          : `The files are kept with ${rfqRef(rfq.number)}.`}
-                      </p>
-                    ) : null}
-                    {rfq && dest === 'reply' ? (
-                      <section aria-label="Which supplier replied" className="grid gap-2">
-                        <h3 className="text-sm font-semibold text-fg">Which supplier replied?</h3>
-                        {inquiryList.length === 0 && !inquiries.isPending ? <p className="text-sm text-fg-muted">No supplier has been asked on this RFQ yet.</p> : null}
-                        <RadioGroup value={inquiryId ?? ''} onValueChange={setInquiryPick} aria-label="Supplier">
-                          {inquiryList.map(i => (
-                            <Radio key={i.id} value={i.id} label={i.supplierName} help={i.lines.length ? 'Has a reply saved' : undefined} />
-                          ))}
-                        </RadioGroup>
-                        <p className="text-xs text-fg-muted">The RFQ opens with the reply read out. Nothing is saved until you accept.</p>
-                      </section>
-                    ) : null}
-                  </>
-                ) : null}
-
-                {kind !== 'empty' && dest === 'new-rfq' ? (
-                  <section aria-label="Which company" className="grid gap-2">
-                    <Field label="Which company?" id="capture-company">
-                      <Combobox
-                        options={(companies.data ?? []).map(c => ({ value: c.id, label: c.name, meta: c.country ?? undefined }))}
-                        value={company?.id ?? ''}
-                        onChange={id => {
-                          const hit = (companies.data ?? []).find(c => c.id === id)
-                          setCompany(hit ? { id: hit.id, name: hit.name } : null)
-                        }}
-                        onQueryChange={setCompanyText}
-                        loading={companies.isFetching}
-                        placeholder="Start typing the company"
-                      />
-                    </Field>
-                    <p className="text-xs text-fg-muted">Intake opens with this text and the company already filled. Nothing is saved until you create the RFQ.</p>
-                  </section>
-                ) : null}
-              </div>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+            {cap.notice === 'expired' || result ? null : (
+              <footer className="flex items-center gap-2 border-t bg-surface px-4 py-3 md:rounded-b md:bg-sunken md:px-5">
+                <span className="mr-auto hidden items-center gap-[6px] text-xs text-fg-muted md:inline-flex">
+                  {empty ? (
+                    'Nothing to save yet'
+                  ) : (
+                    <>
+                      <Kbd>⌘</Kbd>
+                      <Kbd>↵</Kbd> saves
+                    </>
+                  )}
+                </span>
+                <Button data-cancel onClick={cap.close} className="max-md:hidden">
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => void save()}
+                  disabled={!ready}
+                  busy={busy}
+                  busyLabel="Saving"
+                  icon={dest === 'new-rfq' && !empty ? ArrowRight : undefined}
+                  className="max-md:h-touch max-md:flex-1"
+                >
+                  {empty ? (
+                    <>
+                      <span className="md:hidden">Add something first</span>
+                      <span className="max-md:hidden">{emptyLabel}</span>
+                    </>
+                  ) : (
+                    label
+                  )}
+                </Button>
+              </footer>
+            )}
+          </RadixDialog.Content>
+        </RadixDialog.Overlay>
+      </RadixDialog.Portal>
+    </RadixDialog.Root>
   )
 }

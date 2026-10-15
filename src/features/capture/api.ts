@@ -6,7 +6,7 @@ import { sortOpenQuestions, type Candidate } from '@/features/capture/model'
  * Capture reads and the one write of its own (R22). The destinations reuse the RFQ writes (answer a question, add questions,
  * attach a file in src/features/rfqs/api.ts); this file only lists the RFQs to offer and appends to an RFQ's notes.
  */
-type Row = { id: string; number: number; company_id: string; owner_id: string | null }
+type Row = { id: string; number: number; company_id: string; owner_id: string | null; site_id: string | null }
 
 /**
  * The RFQs Capture offers: those opened recently on this device (always), and the person's own open RFQs that have a question
@@ -16,22 +16,25 @@ export async function listCandidates(recents: readonly RecentVisit[], userId: st
   const db = requireSupabase()
   const recentIds = recents.map(r => r.id)
   const [byRecent, mine] = await Promise.all([
-    recentIds.length ? db.from('rfqs').select('id, number, company_id, owner_id').in('id', recentIds) : Promise.resolve({ data: [] as Row[], error: null }),
-    db.from('rfqs').select('id, number, company_id, owner_id').eq('owner_id', userId).is('closed_on', null).order('number', { ascending: false }).limit(40),
+    recentIds.length ? db.from('rfqs').select('id, number, company_id, owner_id, site_id').in('id', recentIds) : Promise.resolve({ data: [] as Row[], error: null }),
+    db.from('rfqs').select('id, number, company_id, owner_id, site_id').eq('owner_id', userId).is('closed_on', null).order('number', { ascending: false }).limit(40),
   ])
   const rows = new Map<string, Row>()
   for (const r of [...unwrap(byRecent), ...unwrap(mine)]) rows.set(r.id, r)
   const ids = [...rows.keys()]
   if (ids.length === 0) return []
-  const [companies, clars] = await Promise.all([
+  const siteIds = [...new Set([...rows.values()].map(r => r.site_id).filter((x): x is string => Boolean(x)))]
+  const [companies, sites, clars] = await Promise.all([
     db.from('companies').select('id, name').in('id', [...new Set([...rows.values()].map(r => r.company_id))]),
+    siteIds.length ? db.from('company_sites').select('id, name').in('id', siteIds) : Promise.resolve({ data: [] as { id: string; name: string }[], error: null }),
     db.from('clarifications').select('id, rfq_id, question, created_at, last_asked_at, ask_count').in('rfq_id', ids).is('answered_at', null).is('withdrawn_at', null),
   ])
   const names = new Map(unwrap(companies).map(c => [c.id, c.name]))
+  const siteName = new Map(unwrap(sites).map(x => [x.id, x.name]))
   const openBy = new Map<string, Candidate['open']>()
   for (const c of unwrap(clars)) {
     const list = openBy.get(c.rfq_id) ?? []
-    list.push({ id: c.id, question: c.question, asked: Boolean(c.last_asked_at) || c.ask_count > 0, createdAt: c.created_at })
+    list.push({ id: c.id, question: c.question, asked: Boolean(c.last_asked_at) || c.ask_count > 0, askedAt: c.last_asked_at, createdAt: c.created_at })
     openBy.set(c.rfq_id, list)
   }
   const visited = new Map(recents.map(r => [r.id, r.at]))
@@ -41,6 +44,7 @@ export async function listCandidates(recents: readonly RecentVisit[], userId: st
       number: r.number,
       companyName: names.get(r.company_id) ?? 'Unknown company',
       ownerId: r.owner_id,
+      site: r.site_id ? (siteName.get(r.site_id) ?? null) : null,
       openedAt: visited.get(r.id) ?? null,
       open: sortOpenQuestions(openBy.get(r.id) ?? []),
     }))
