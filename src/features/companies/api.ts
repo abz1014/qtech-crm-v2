@@ -498,7 +498,7 @@ export async function createCompany(input: NewCompany): Promise<{ id: string; na
         id: input.id,
         name: input.name.trim(),
         country: input.country?.trim() || null,
-        city: input.city?.trim() || null,
+        ...(input.city !== undefined ? { city: input.city?.trim() || null } : {}),
         notes: input.notes?.trim() || null,
       })
       .select('id, name')
