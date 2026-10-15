@@ -137,7 +137,8 @@ function ExpenseForm(props: FormProps) {
   const cats = useCategories(enabled)
   const used = useMostUsedCategory(!expense)
   const last = useLastCategoryForOrder(!expense && !props.fromLeg ? context?.orderId : null)
-  const ready = cats.data && !used.isPending && (!context?.orderId || props.fromLeg || expense || !last.isPending)
+  // a query that is switched off stays `pending`, so only the ones that run are waited for
+  const ready = cats.data && (expense || !used.isPending) && (!context?.orderId || props.fromLeg || expense || !last.isPending)
   if (cats.isError) return <p role="alert" className="text-sm text-tone-danger-fg">The categories could not be loaded. Close this and try again.</p>
   if (!ready || !cats.data)
     return (

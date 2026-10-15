@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { AddExpenseDialog, type ExpenseContext } from '@/features/money/expenses/ExpenseDialog'
-import { SUPPLIER_PAYMENT_ID } from '@/features/money/expenses/model'
+import { SUPPLIER_PAYMENT_ID, type ListedExpense } from '@/features/money/expenses/model'
 import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
@@ -13,7 +13,7 @@ const CATEGORIES = [
   { id: SUPPLIER_PAYMENT_ID, name: 'Supplier payment', grp: 'order_cost', default_paid_via: 'bank', sort: 110, active: true },
 ]
 
-function setup(opts: { upsert?: () => FakeResult; context?: ExpenseContext; lastForOrder?: string } = {}) {
+function setup(opts: { upsert?: () => FakeResult; context?: ExpenseContext; lastForOrder?: string; expense?: ListedExpense } = {}) {
   const db = installFakeDb((c: FakeCall) => {
     if (c.target === 'expense_categories') return { data: CATEGORIES }
     if (c.target === 'expenses' && c.verb === 'select') {
@@ -28,7 +28,7 @@ function setup(opts: { upsert?: () => FakeResult; context?: ExpenseContext; last
   render(
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <AddExpenseDialog open onOpenChange={() => {}} context={opts.context} />
+        <AddExpenseDialog open onOpenChange={() => {}} context={opts.context} expense={opts.expense} />
       </ToastProvider>
     </QueryClientProvider>,
   )
@@ -99,5 +99,25 @@ describe('Add expense dialog (M03)', () => {
     expect(await screen.findByText('September 2026 is closed. An admin can reopen it.')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('450')
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+
+  it('edits an existing expense: opens on its values and saves an update, not an insert', async () => {
+    const user = userEvent.setup()
+    const expense: ListedExpense = {
+      id: 'e1', paidOn: '2026-11-03', amount: 1111, inputTax: 0, categoryId: 'c-rent', paidVia: 'bank', note: 'Office, November',
+      orderId: null, legId: null, payeeId: null, recurringId: null, bankMonth: null,
+    }
+    const db = setup({ expense })
+    const amount = await screen.findByRole('textbox', { name: 'Amount, PKR' })
+    expect(amount).toHaveValue('1,111')
+    expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('Rent')
+    expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('Office, November')
+    await user.clear(amount)
+    await user.type(amount, '1500')
+    await user.click(screen.getByRole('button', { name: 'Save expense' }))
+    await waitFor(() => expect(db.calls.some(c => c.target === 'expenses' && c.verb === 'update')).toBe(true))
+    const call = db.calls.find(c => c.target === 'expenses' && c.verb === 'update')!
+    expect(opArgs(call, 'update')?.[0]).toMatchObject({ amount_pkr: 1500, category_id: 'c-rent', paid_on: '2026-11-03' })
+    expect(saves(db)).toHaveLength(0)
   })
 })

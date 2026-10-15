@@ -22,6 +22,8 @@ const SUPPLIER_PAYMENT = 'ca7e0000-0000-4000-8000-000000000011'
 
 const today = () => karachiDay(0)
 const unique = () => Math.random().toString(36).slice(2, 8)
+/** A per-run base for amounts, so a retried test never meets the rows of its first attempt. */
+const base = () => 20000 + Math.floor(Math.random() * 7000) * 10
 
 interface ExpenseRow {
   id: string
@@ -110,7 +112,8 @@ test.describe('expenses (M03, M11)', () => {
     await expect(page.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Office supplies & snacks')
     await expect(page.getByText('most used')).toBeVisible()
     await startCounting(page)
-    const amounts = [5001, 5002, 5003, 5004, 5005]
+    const b = base()
+    const amounts = [b + 1, b + 2, b + 3, b + 4, b + 5]
     for (const [i, a] of amounts.entries()) {
       await page.keyboard.type(String(a))
       if (i < amounts.length - 1) await page.keyboard.press('Enter')
@@ -127,7 +130,7 @@ test.describe('expenses (M03, M11)', () => {
     expect(c.mouse).toBe(0)
     // one atomic request, five rows, each with its own client id
     expect(posts).toHaveLength(1)
-    const rows = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=gte.5001&amount_pkr=lte.5005&select=*&order=amount_pkr`))
+    const rows = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=gte.${b + 1}&amount_pkr=lte.${b + 5}&select=*&order=amount_pkr`))
     expect(rows.map(r => r.amount_pkr)).toEqual(amounts)
     expect(rows.every(r => r.category_id === SNACKS && r.paid_via === 'cash' && r.paid_on === today())).toBe(true)
   })
@@ -138,7 +141,8 @@ test.describe('expenses (M03, M11)', () => {
     await page.getByRole('button', { name: 'Add expenses' }).click()
     await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
     await startCounting(page)
-    await page.keyboard.type('6001')
+    const a = base() + 6
+    await page.keyboard.type(String(a))
     await page.keyboard.press('Tab')
     await page.keyboard.type('fu')
     await expect(page.getByRole('option', { name: /Fuel & travel/ })).toBeVisible()
@@ -150,19 +154,20 @@ test.describe('expenses (M03, M11)', () => {
     await page.keyboard.press('Control+Enter')
     await expect(page.getByRole('dialog')).toBeHidden()
     expect((await counted(page)).mouse).toBe(0)
-    const [row] = await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=eq.6001&select=*'))
+    const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${a}&select=*`))
     expect(row).toMatchObject({ category_id: FUEL, paid_via: 'cash' })
   })
 
   test('a receipt photo from the burst sheet is stored in expense-receipts and recorded', async ({ page }) => {
     await openAs(page, 'admin', '/money/expenses')
+    const a = base() + 7
     await page.getByRole('button', { name: 'Add expenses' }).click()
-    await page.getByRole('textbox', { name: 'Amount, row 1' }).fill('7001')
+    await page.getByRole('textbox', { name: 'Amount, row 1' }).fill(String(a))
     await page.locator('input[type=file]').first().setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: PNG })
     await expect(page.getByRole('button', { name: 'Remove receipt photo, row 1' })).toBeVisible()
     await page.keyboard.press('Control+Enter')
     await expect(page.getByRole('dialog')).toBeHidden()
-    const [row] = await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=eq.7001&select=*'))
+    const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${a}&select=*`))
     await expect
       .poll(async () => (await must(rest<{ bucket: string; path: string }[]>('admin', `attachments?expense_id=eq.${row.id}&select=bucket,path`))).length)
       .toBe(1)
@@ -172,6 +177,7 @@ test.describe('expenses (M03, M11)', () => {
   })
 
   test('input tax is collapsed, optional, and only on Supplier payment, Freight and Clearing', async ({ page }) => {
+    const amt = 590000 + base() + 8
     await openAs(page, 'admin', '/money/expenses')
     await page.getByRole('button', { name: 'Add expense', exact: true }).click()
     await expect(page.getByText('Input tax, optional')).toHaveCount(0)
@@ -182,12 +188,12 @@ test.describe('expenses (M03, M11)', () => {
     await expect(category).toHaveValue('Supplier payment')
     await page.getByRole('button', { name: /Input tax, optional/ }).click()
     await page.getByRole('textbox', { name: 'Input tax, PKR' }).fill('90,000')
-    await page.getByRole('textbox', { name: 'Amount, PKR' }).fill('590,000')
+    await page.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(amt))
     await expect(page.getByText('Cost in margin and P&L')).toBeVisible()
     await review(page, 'm03-input-tax-1440')
     await page.getByRole('button', { name: 'Save expense' }).click()
     await expect(page.getByRole('dialog')).toBeHidden()
-    const [row] = await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=eq.590000&select=*'))
+    const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amt}&select=*`))
     expect(row).toMatchObject({ category_id: SUPPLIER_PAYMENT, input_tax_pkr: 90000, paid_via: 'bank' })
     // a category without input tax never offers it
     await page.getByRole('button', { name: 'Add expense', exact: true }).click()
@@ -232,9 +238,10 @@ test.describe('expenses (M03, M11)', () => {
 
   test('the list: by month with totals, filters by group, category and paid via, edit and delete', async ({ page }) => {
     const tag = `list-${unique()}`
-    await addExpense({ amount_pkr: 1111, category_id: RENT, paid_via: 'bank', description: `${tag} a` })
-    await addExpense({ amount_pkr: 2222, category_id: SNACKS, paid_via: 'cash', description: `${tag} b` })
-    await addExpense({ amount_pkr: 3333, category_id: SUPPLIER_PAYMENT, paid_via: 'bank', input_tax_pkr: 333, description: `${tag} c` })
+    const [x1, x2, x3] = [base() + 11, base() + 12, base() + 13]
+    await addExpense({ amount_pkr: x1, category_id: RENT, paid_via: 'bank', description: `${tag} a` })
+    await addExpense({ amount_pkr: x2, category_id: SNACKS, paid_via: 'cash', description: `${tag} b` })
+    await addExpense({ amount_pkr: x3, category_id: SUPPLIER_PAYMENT, paid_via: 'bank', input_tax_pkr: 333, description: `${tag} c` })
     await openAs(page, 'admin', '/money/expenses')
     await expect(page.getByText(`${tag} a`)).toBeVisible()
     await expect(page.getByText(`${tag} c`)).toBeVisible()
@@ -255,16 +262,16 @@ test.describe('expenses (M03, M11)', () => {
     // totals under the list: paid, input tax and cost
     await expect(page.getByText(/All \d+ expenses shown/)).toBeVisible()
     // edit
-    await page.getByRole('button', { name: /^Edit Rent of 1111/ }).click()
+    await page.getByRole('button', { name: new RegExp(`^Edit Rent of ${x1}$`) }).click()
     const amount = page.getByRole('textbox', { name: 'Amount, PKR' })
-    await expect(amount).toHaveValue('1,111')
+    await expect(amount).toHaveValue(x1.toLocaleString('en-US'))
     await amount.fill('1,500')
     await page.getByRole('button', { name: 'Save expense' }).click()
     await expect(page.getByRole('dialog')).toBeHidden()
     await expect(page.getByText(`${tag} a`)).toBeVisible()
     expect((await byNote(`${tag} a`))[0].amount_pkr).toBe(1500)
     // delete asks first
-    await page.getByRole('button', { name: /^Delete Office supplies & snacks of 2222/ }).click()
+    await page.getByRole('button', { name: new RegExp(`^Delete Office supplies & snacks of ${x2}$`) }).click()
     await page.getByRole('button', { name: 'Delete expense' }).click()
     await expect(page.getByText(`${tag} b`)).toHaveCount(0)
     expect(await byNote(`${tag} b`)).toHaveLength(0)
@@ -391,14 +398,15 @@ test.describe('expenses (M03, M11)', () => {
 
     test('the burst sheet shows the sentence on the offending row; the other rows stay; nothing is saved', async ({ page }) => {
       const tag = `closed-${unique()}`
+      const [c1, c2, c3] = [base() + 21, base() + 22, base() + 23]
       await openAs(page, 'admin', '/money/expenses')
       await page.getByRole('button', { name: 'Add expenses' }).click()
       await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
-      await page.keyboard.type('8001')
+      await page.keyboard.type(String(c1))
       await page.keyboard.press('Enter')
-      await page.keyboard.type('8002')
+      await page.keyboard.type(String(c2))
       await page.keyboard.press('Enter')
-      await page.keyboard.type('100000')
+      await page.keyboard.type(String(c3))
       await page.keyboard.press('Tab') // category
       await page.keyboard.type('sal')
       await page.keyboard.press('Tab') // date
@@ -413,13 +421,13 @@ test.describe('expenses (M03, M11)', () => {
       await expect(alert).toContainText('The other 2 rows are still here')
       await expect(page.getByText('1 row needs a change')).toBeVisible()
       // every row keeps what it held
-      await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toHaveValue('8,001')
-      await expect(page.getByRole('textbox', { name: 'Amount, row 2' })).toHaveValue('8,002')
-      await expect(page.getByRole('textbox', { name: 'Amount, row 3' })).toHaveValue('100,000')
+      await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toHaveValue(c1.toLocaleString('en-US'))
+      await expect(page.getByRole('textbox', { name: 'Amount, row 2' })).toHaveValue(c2.toLocaleString('en-US'))
+      await expect(page.getByRole('textbox', { name: 'Amount, row 3' })).toHaveValue(c3.toLocaleString('en-US'))
       await expect(page.getByRole('textbox', { name: 'Note, row 3' })).toHaveValue(tag)
       await review(page, 'm11-burst-closed-month-1440')
       // the whole save was refused
-      expect((await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=in.(8001,8002)&select=id'))).length).toBe(0)
+      expect((await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=in.(${c1},${c2})&select=id`))).length).toBe(0)
       expect(await byNote(tag)).toHaveLength(0)
       // fixing the date (today) lets the same sheet save all three
       await page.getByRole('textbox', { name: 'Date, row 3' }).fill('today')
@@ -427,23 +435,24 @@ test.describe('expenses (M03, M11)', () => {
       await expect(alert).toBeHidden() // the date was read on leaving it, which clears the row's error
       await page.keyboard.press('Control+Enter')
       await expect(page.getByRole('dialog')).toBeHidden()
-      expect((await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=in.(8001,8002,100000)&select=id'))).length).toBeGreaterThanOrEqual(3)
+      expect((await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=in.(${c1},${c2},${c3})&select=id`))).length).toBeGreaterThanOrEqual(3)
     })
 
     test('the single dialog shows the plain sentence under the date and keeps every entry', async ({ page }) => {
+      const z = base() + 31
       await openAs(page, 'admin', '/money/expenses')
       await page.getByRole('button', { name: 'Add expense', exact: true }).click()
-      await page.getByRole('textbox', { name: 'Amount, PKR' }).fill('9001')
+      await page.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(z))
       await page.getByRole('textbox', { name: 'Date paid' }).fill(prev.typed)
       await page.getByRole('button', { name: 'Add a note' }).click()
       await page.getByRole('textbox', { name: 'Note' }).fill('kept in the form')
       await page.getByRole('button', { name: 'Save expense' }).click()
       await expect(page.getByText(sentence)).toBeVisible()
-      await expect(page.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('9,001')
+      await expect(page.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue(z.toLocaleString('en-US'))
       await expect(page.getByRole('textbox', { name: 'Note' })).toHaveValue('kept in the form')
       await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
       await review(page, 'm03-closed-month-dialog-1440')
-      expect((await must(rest<ExpenseRow[]>('admin', 'expenses?amount_pkr=eq.9001&select=id'))).length).toBe(0)
+      expect((await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${z}&select=id`))).length).toBe(0)
     })
 
     test('editing or deleting an expense in the closed month shows the same sentence', async ({ page }) => {
