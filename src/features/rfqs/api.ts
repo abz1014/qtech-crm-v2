@@ -148,17 +148,19 @@ export interface RfqHeader {
   customerRef: string | null
   receivedOn: string
   dueOn: string | null
+  /** The bid deadline's time (HH:MM), when one was given. */
+  dueTime?: string | null
   isPriority: boolean
   quotedOn: string | null
   closedOn: string | null
   closeReason: string | null
   closeNote: string | null
   notes: string | null
-  company: { id: string; name: string; country: string | null; createdAt: string | null }
+  company: { id: string; name: string; country: string | null; city?: string | null; createdAt: string | null }
   site: { name: string; address: string | null } | null
   contactId: string | null
-  contact: { name: string; phone: string | null } | null
-  owner: { id: string; name: string; role: string } | null
+  contact: { name: string; phone: string | null; jobTitle?: string | null } | null
+  owner: { id: string; name: string; role: string; phone?: string | null } | null
   state: RfqStateRow | null
 }
 
@@ -171,7 +173,7 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
   const [rfqRes, stateRes] = await Promise.all([
     db
       .from('rfqs')
-      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, owner_id, is_priority, quoted_on, closed_on, close_reason, close_note, notes')
+      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, due_time, owner_id, is_priority, quoted_on, closed_on, close_reason, close_note, notes')
       .eq('id', id)
       .maybeSingle(),
     db.from('v_rfq_state').select('*').eq('rfq_id', id).maybeSingle(),
@@ -179,29 +181,31 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
   const r = unwrap(rfqRes)
   if (!r) return null
   const [company, site, contact, owner] = await Promise.all([
-    db.from('companies').select('id, name, country, created_at').eq('id', r.company_id).maybeSingle(),
+    db.from('companies').select('id, name, country, city, created_at').eq('id', r.company_id).maybeSingle(),
     r.site_id ? db.from('company_sites').select('name, address').eq('id', r.site_id).maybeSingle() : none,
-    r.contact_id ? db.from('contacts').select('name, phone').eq('id', r.contact_id).maybeSingle() : none,
-    r.owner_id ? db.from('users').select('id, name, role').eq('id', r.owner_id).maybeSingle() : none,
+    r.contact_id ? db.from('contacts').select('name, phone, job_title').eq('id', r.contact_id).maybeSingle() : none,
+    r.owner_id ? db.from('users').select('id, name, role, phone').eq('id', r.owner_id).maybeSingle() : none,
   ])
   const c = unwrap(company)
+  const ct0 = unwrap(contact as Maybe<{ name: string; phone: string | null; job_title: string | null }>)
   return {
     id: r.id,
     number: r.number,
     customerRef: r.customer_ref,
     receivedOn: r.received_on,
     dueOn: r.due_on,
+    dueTime: r.due_time ? r.due_time.slice(0, 5) : null,
     isPriority: r.is_priority,
     quotedOn: r.quoted_on,
     closedOn: r.closed_on,
     closeReason: r.close_reason,
     closeNote: r.close_note,
     notes: r.notes,
-    company: { id: r.company_id, name: c?.name ?? 'Unknown company', country: c?.country ?? null, createdAt: c?.created_at ?? null },
+    company: { id: r.company_id, name: c?.name ?? 'Unknown company', country: c?.country ?? null, city: c?.city ?? null, createdAt: c?.created_at ?? null },
     contactId: r.contact_id,
     site: unwrap(site as Maybe<{ name: string; address: string | null }>),
-    contact: unwrap(contact as Maybe<{ name: string; phone: string | null }>),
-    owner: unwrap(owner as Maybe<{ id: string; name: string; role: string }>),
+    contact: ct0 ? { name: ct0.name, phone: ct0.phone, jobTitle: ct0.job_title } : null,
+    owner: unwrap(owner as Maybe<{ id: string; name: string; role: string; phone: string | null }>),
     state: unwrap(stateRes) as RfqStateRow | null,
   }
 }
@@ -258,6 +262,8 @@ export interface InquiryRow {
   supplierId: string
   supplierName: string
   supplierCountry: string | null
+  /** The supplier's city (companies.city), shown under its name beside the country. */
+  supplierCity?: string | null
   sentOn: string | null
   lastChasedOn: string | null
   lastRelayedAt: string | null
@@ -271,6 +277,7 @@ export interface InquiryRow {
   contactName: string | null
   contactPhone: string | null
   contactEmail?: string | null
+  contactTitle?: string | null
   /** The currency of this supplier's most recent quote line on any RFQ, or null. */
   lastCurrency: string | null
   /** v_inquiry_state values. */
@@ -296,9 +303,9 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
   const supplierIds = [...new Set(inq.map(i => i.supplier_id))]
   const inquiryIds = inq.map(i => i.id)
   const [companies, states, contacts, lines, recent, declines] = await Promise.all([
-    db.from('companies').select('id, name, country').in('id', supplierIds),
+    db.from('companies').select('id, name, country, city').in('id', supplierIds),
     db.from('v_inquiry_state').select('inquiry_id, response_state, contact_state, items_quoted, quote_received_on').eq('rfq_id', rfqId),
-    db.from('contacts').select('company_id, name, phone, email, created_at').in('company_id', supplierIds).order('created_at'),
+    db.from('contacts').select('company_id, name, phone, email, job_title, created_at').in('company_id', supplierIds).order('created_at'),
     db
       .from('supplier_quote_lines')
       .select('id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, in_stock, fx_rate_pkr, fx_rate_on')
@@ -315,8 +322,8 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
   for (const d of unwrap(declines)) declinesBy.set(d.inquiry_id, { ...(declinesBy.get(d.inquiry_id) ?? {}), [d.rfq_item_id]: d.reason })
   const byCompany = new Map(unwrap(companies).map(c => [c.id, c]))
   const stateBy = new Map(unwrap(states).map(s => [s.inquiry_id, s]))
-  const contactBy = new Map<string, { name: string; phone: string | null; email: string | null }>()
-  for (const c of unwrap(contacts)) if (!contactBy.has(c.company_id)) contactBy.set(c.company_id, { name: c.name, phone: c.phone, email: c.email })
+  const contactBy = new Map<string, { name: string; phone: string | null; email: string | null; title: string | null }>()
+  for (const c of unwrap(contacts)) if (!contactBy.has(c.company_id)) contactBy.set(c.company_id, { name: c.name, phone: c.phone, email: c.email, title: c.job_title })
   const lastCurrency = new Map<string, string>()
   type Recent = { currency: string; supplier_inquiries: { supplier_id: string } | { supplier_id: string }[] }
   for (const r of unwrap(recent) as unknown as Recent[]) {
@@ -347,6 +354,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
       supplierId: i.supplier_id,
       supplierName: c?.name ?? 'Unknown supplier',
       supplierCountry: c?.country ?? null,
+      supplierCity: c?.city ?? null,
       sentOn: i.sent_on,
       lastChasedOn: i.last_chased_on,
       lastRelayedAt: i.last_relayed_at,
@@ -358,6 +366,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
       contactName: ct?.name ?? null,
       contactPhone: ct?.phone ?? null,
       contactEmail: ct?.email ?? null,
+      contactTitle: ct?.title ?? null,
       lastCurrency: lastCurrency.get(i.supplier_id) ?? null,
       responseState: s?.response_state ?? null,
       contactState: s?.contact_state ?? null,
@@ -728,4 +737,11 @@ export async function removeInquiries(ids: readonly string[]): Promise<void> {
   if (e1) throw e1
   const { error: e2 } = await db.from('supplier_inquiries').delete().in('id', [...ids])
   if (e2) throw e2
+}
+
+/** The signed-in person's job title and phone (users.job_title, users.phone), printed under a chase text's signature. */
+export async function getMySignature(userId: string): Promise<{ jobTitle: string | null; phone: string | null }> {
+  const db = requireSupabase()
+  const row = unwrap(await db.from('users').select('job_title, phone').eq('id', userId).maybeSingle()) as { job_title: string | null; phone: string | null } | null
+  return { jobTitle: row?.job_title ?? null, phone: row?.phone ?? null }
 }

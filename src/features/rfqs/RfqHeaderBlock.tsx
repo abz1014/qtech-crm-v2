@@ -278,16 +278,28 @@ export function RfqHeaderBlock({ rfq, hasPrices }: { rfq: RfqHeader; hasPrices: 
             {rfq.company.name}
           </Link>
         </Meta>
-        <Meta icon={MapPin} label="Site" sub={rfq.site?.address ?? undefined}>
+        <Meta icon={MapPin} label="Site" sub={rfq.company.city ?? rfq.site?.address ?? undefined}>
           {rfq.site?.name ?? 'Not set'}
         </Meta>
-        <Meta icon={UserRound} label="Contact" phone sub={rfq.contact?.phone ? <span className="num">{rfq.contact.phone}</span> : undefined}>
+        <Meta
+          icon={UserRound}
+          label="Contact"
+          phone
+          sub={
+            rfq.contact?.phone || rfq.contact?.jobTitle ? (
+              <>
+                {rfq.contact.jobTitle ? <span className="block">{rfq.contact.jobTitle}</span> : null}
+                {rfq.contact.phone ? <span className="num">{rfq.contact.phone}</span> : null}
+              </>
+            ) : undefined
+          }
+        >
           {rfq.contact?.name ?? 'Not set'}
         </Meta>
         <Meta icon={Calendar} label="Bid due" phone tone={due ? 'warn' : undefined} sub={open ? (dueSubLabel(dueIn) ?? undefined) : undefined}>
-          <span className="num">{rfq.dueOn ? formatDay(rfq.dueOn) : 'No date'}</span>
+          <span className="num">{rfq.dueOn ? `${formatDay(rfq.dueOn)}${rfq.dueTime ? `, ${rfq.dueTime}` : ''}` : 'No date'}</span>
         </Meta>
-        <Meta icon={Users} label="Owner" phone sub={rfq.owner ? (ROLE_LABEL[rfq.owner.role] ?? rfq.owner.role) : undefined}>
+        <Meta icon={Users} label="Owner" phone sub={rfq.owner ? [ROLE_LABEL[rfq.owner.role] ?? rfq.owner.role, rfq.owner.phone].filter(Boolean).join(' · ') : undefined}>
           {rfq.owner ? (
             <span className="flex items-center gap-2">
               <Avatar name={rfq.owner.name} />

@@ -20,6 +20,14 @@ const violations = (page: Page): Promise<string[]> => axeViolations(page)
 
 const today = () => karachiDay(0)
 
+/** "Tue 1 Dec", the way the page writes a day. */
+const formatLong = (iso: string) => {
+  const d = new Date(`${iso}T00:00:00Z`)
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  return `${days[d.getUTCDay()]} ${d.getUTCDate()} ${months[d.getUTCMonth()]}`
+}
+
 /** Manual rates: USD fresh today, EUR 12 days old (stale). CNY and AED are left without a rate on purpose. */
 async function setRates(): Promise<void> {
   for (const r of [
@@ -32,6 +40,8 @@ async function setRates(): Promise<void> {
 
 interface Seed {
   tag: string
+  /** The bid due date (YYYY-MM-DD). */
+  dueDate: string
   /** A supplier that carries the brand of item 1 and has not been asked: it is suggested. Only with { brand: true }. */
   carrier?: { id: string; name: string }
   rfq: { id: string; number: number }
@@ -77,7 +87,7 @@ async function seed(opts: { dueInDays?: number; brand?: boolean; asked?: boolean
     await must(rest('admin', 'company_brands', { method: 'POST', body: { company_id: c.id, brand_id: brand.id } }))
     carrier = { id: c.id, name: c.name }
   }
-  return { tag, carrier, rfq, customer, items, china, usd, germany }
+  return { tag, dueDate: karachiDay(opts.dueInDays ?? 6), carrier, rfq, customer, items, china, usd, germany }
 }
 
 const row = (page: Page, name: string) => page.getByRole('region', { name })
@@ -610,6 +620,33 @@ test.describe('Suppliers asked, Float to another supplier, and the empty state (
     expect(text).not.toContain(s.items[1].description) // this item only
     const made = await must(rest<{ id: string }[]>('admin', `supplier_inquiries?rfq_id=eq.${s.rfq.id}&supplier_id=eq.${s.carrier!.id}&select=id`))
     expect(made).toHaveLength(1)
+  })
+})
+
+test.describe('optional fields (migration 0039): bid time, company city, contact title, owner phone', () => {
+  test('they appear where the mockup shows them, and the phone prints under an email chase signature', async ({ page }) => {
+    const s = await seed()
+    const ADMIN = 'a0000000-0000-4000-8000-000000000001'
+    const co = (await must(rest<{ company_id: string }[]>('admin', `rfqs?id=eq.${s.rfq.id}&select=company_id`)))[0].company_id
+    const contact = (await must(rest<{ id: string }[]>('admin', 'contacts', { method: 'POST', body: { company_id: co, name: 'Mr. Tariq Mehmood', phone: '+92 300 555 0142', job_title: 'Procurement Manager' } })))[0]
+    await must(rest('admin', `rfqs?id=eq.${s.rfq.id}`, { method: 'PATCH', body: { due_time: '17:00', contact_id: contact.id } }))
+    await must(rest('admin', `companies?id=eq.${co}`, { method: 'PATCH', body: { city: 'Faisalabad' } }))
+    await must(rest('admin', `companies?id=eq.${s.china.id}`, { method: 'PATCH', body: { city: 'Shenzhen' } }))
+    await must(rest('admin', `users?id=eq.${ADMIN}`, { method: 'PATCH', body: { phone: '+92 300 555 0188', job_title: 'Sales' } }))
+    try {
+      await openAs(page, 'admin', `/rfqs/${s.rfq.id}`)
+      const meta = page.locator('dl').first()
+      await expect(meta).toContainText(`${formatLong(s.dueDate)}, 17:00`) // the bid time
+      await expect(meta).toContainText('Faisalabad') // under the site
+      await expect(meta).toContainText('Procurement Manager') // under the contact
+      await expect(meta).toContainText('+92 300 555 0188') // the owner's phone, beside the role
+      await expect(row(page, s.china.name)).toContainText('Shenzhen, China')
+      const card = page.locator(`[data-chase-card="${s.china.id}"]`)
+      await card.getByRole('radio', { name: 'Email' }).click()
+      await expect(card.locator('pre')).toContainText('Sales, Q-Tech Solutions\n+92 300 555 0188')
+    } finally {
+      await rest('admin', `users?id=eq.${ADMIN}`, { method: 'PATCH', body: { phone: null, job_title: null } })
+    }
   })
 })
 

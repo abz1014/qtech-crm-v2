@@ -12,7 +12,7 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
-import { useStampSupplierChase } from '@/features/rfqs/hooks'
+import { useMySignature, useStampSupplierChase } from '@/features/rfqs/hooks'
 import { canChaseInquiry, outstandingItems } from '@/features/rfqs/replyFocus'
 import { daysSince, generateSupplierChase, sentLine, supplierMemoryLine, type EnquiryVariant, type SupplierFacts } from '@/features/rfqs/lib'
 
@@ -96,6 +96,7 @@ function ChaseCard({ rfq, items, inquiry }: { rfq: RfqHeader; items: RfqItemRow[
   const session = useSession()
   const user = session.status === 'signed-in' ? session.user : null
   const stamp = useStampSupplierChase(rfq.id)
+  const mine = useMySignature(user?.id)
   const [variant, setVariant] = useState<EnquiryVariant>('whatsapp')
   const outstanding = outstandingItems(inquiry, items)
   const pricedNumbers = items.filter(it => inquiry.lines.some(l => l.itemId === it.id)).map(it => it.number)
@@ -108,7 +109,7 @@ function ChaseCard({ rfq, items, inquiry }: { rfq: RfqHeader; items: RfqItemRow[
     contactName: inquiry.contactName,
     pricedNumbers,
     items: outstanding.map(it => ({ number: it.number, description: it.description, brandName: it.brandName, qty: it.qty, unit: it.unit })),
-    signature: { name: user?.name ?? 'Q-Tech Solutions', company: 'Q-Tech Solutions' },
+    signature: { name: user?.name ?? 'Q-Tech Solutions', company: 'Q-Tech Solutions', jobTitle: mine.data?.jobTitle, phone: mine.data?.phone },
     variant,
   })
   const text = chase.subject ? `Subject: ${chase.subject}\n\n${chase.body}` : chase.body
@@ -129,8 +130,8 @@ function ChaseCard({ rfq, items, inquiry }: { rfq: RfqHeader; items: RfqItemRow[
 
   const recipient =
     variant === 'whatsapp'
-      ? { icon: Phone, text: [inquiry.contactName, inquiry.contactPhone].filter(Boolean).join('  ') }
-      : { icon: Mail, text: [inquiry.contactName, inquiry.contactEmail].filter(Boolean).join('  ') }
+      ? { icon: Phone, text: [inquiry.contactTitle ? `${inquiry.contactName}, ${inquiry.contactTitle}` : inquiry.contactName, inquiry.contactPhone].filter(Boolean).join('  ') }
+      : { icon: Mail, text: [inquiry.contactTitle ? `${inquiry.contactName}, ${inquiry.contactTitle}` : inquiry.contactName, inquiry.contactEmail].filter(Boolean).join('  ') }
 
   return (
     <div className="mt-2 grid gap-3 rounded border bg-surface p-3" data-chase-card={inquiry.supplierId} aria-label={`Chase ${inquiry.supplierName}`} role="group">

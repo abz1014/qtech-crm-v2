@@ -393,7 +393,7 @@ export function ItemsPanel({
                             <div className="grid gap-[2px]">
                               <Label>Supplier</Label>
                               <span className="min-w-0 break-words text-sm font-medium">{inquiry.supplierName}</span>
-                              {inquiry.supplierCountry ? <span className="text-xs text-fg-muted">{inquiry.supplierCountry}</span> : null}
+                              {inquiry.supplierCity || inquiry.supplierCountry ? <span className="text-xs text-fg-muted">{[inquiry.supplierCity, inquiry.supplierCountry].filter(Boolean).join(', ')}</span> : null}
                             </div>
                             <div className="grid gap-1 md:justify-items-end">
                               <Label>Price</Label>

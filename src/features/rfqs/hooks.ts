@@ -248,3 +248,8 @@ export function useRemoveInquiries(rfqId: string) {
     onSuccess: () => invalidateAfter(client, 'inquiry.add', { rfqId }),
   })
 }
+
+/** The signed-in person's job title and phone for a chase signature. Absent while loading: the signature then has the name only. */
+export function useMySignature(userId: string | undefined) {
+  return useQuery({ queryKey: qk.rfqs.signature(userId ?? ''), queryFn: () => api.getMySignature(userId as string), enabled: Boolean(userId), staleTime: 5 * 60_000 })
+}

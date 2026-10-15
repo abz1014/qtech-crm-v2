@@ -227,7 +227,7 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
             {inquiry.supplierName}
           </h4>
           <p className="text-sm text-fg-muted">
-            {[inquiry.supplierCountry, inquiry.contactName].filter(Boolean).join(' · ') || 'No country or contact on file'}
+            {[[inquiry.supplierCity, inquiry.supplierCountry].filter(Boolean).join(', '), inquiry.contactTitle ? `${inquiry.contactName}, ${inquiry.contactTitle}` : inquiry.contactName].filter(Boolean).join(' · ') || 'No country or contact on file'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
