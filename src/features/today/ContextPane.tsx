@@ -101,7 +101,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   const header = useRfqHeader(isRfq ? item.rfqId : undefined)
   const customerRule = item.rule === 'chase_customer'
   const supplierRule = item.rule === 'chase_supplier'
-  const items = useRfqItems(supplierRule ? item.rfqId : undefined)
+  const items = useRfqItems(supplierRule || customerRule ? item.rfqId : undefined)
   const inquiries = useRfqInquiries(supplierRule || customerRule ? item.rfqId : undefined)
   const leg = useLegDraft(item.rule === 'goods_late' ? item.legId : undefined)
   const isMoney = user?.role === 'admin' || user?.role === 'sales'
@@ -113,7 +113,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   const inquiryFact = data.inquiries.find(i => i.id === item.inquiryId)
   const legFact = data.legs.find(l => l.id === item.legId)
   const receivable = data.receivables.find(r => r.orderId === item.orderId)
-  const signature = { name: user?.name ?? COMPANY_NAME, company: COMPANY_NAME, jobTitle: data.jobTitle }
+  const signature = { name: user?.name ?? COMPANY_NAME, company: COMPANY_NAME, jobTitle: data.jobTitle, phone: data.phone }
 
   const draftReady = customerRule
     ? Boolean(rfq) && !header.isPending
@@ -127,7 +127,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
 
   const draft: Draft | null = useMemo(() => {
     if (!draftReady) return null
-    if (customerRule && rfq) return buildCustomerDraft({ rfq, contact: header.data?.contact ?? null, questions, today, signature })
+    if (customerRule && rfq) return buildCustomerDraft({ rfq, contact: header.data?.contact ?? null, questions, items: items.data, today, signature })
     if (supplierRule && rfq && items.data && inquiries.data) {
       const inquiry = inquiries.data.find(i => i.id === item.inquiryId)
       return inquiry ? buildSupplierDraft({ rfq, inquiry, items: items.data, today, signature }) : null
@@ -137,7 +137,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
     return null
     // signature is rebuilt from user and data each render; its parts are the dependencies
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftReady, item.rule, item.inquiryId, rfq, header.data, questions, items.data, inquiries.data, legFact, leg.data, receivable, payment.data, today, user?.name, data.jobTitle])
+  }, [draftReady, item.rule, item.inquiryId, rfq, header.data, questions, items.data, inquiries.data, legFact, leg.data, receivable, payment.data, today, user?.name, data.jobTitle, data.phone])
 
   const wasCopied = copied.has(item.key)
   const verb = item.rule === 'payment_overdue' ? 'reminded' : 'chased'

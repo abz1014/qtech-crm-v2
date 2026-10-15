@@ -89,11 +89,22 @@ describe('customer clarification chase', () => {
     const t = generateCustomerChase({ ...base, dueOn: '2026-11-30' })
     expect(t.kind).toBe('bid_close')
     expect(t.body).toContain('Our bid for your RFQ *#74037* is due *Monday 30 November*.')
-    expect(t.body).toContain('Kindly confirm by *the end of today*.')
+    expect(t.body).toContain('Kindly confirm by *5:00 pm today*.')
     const tomorrow = generateCustomerChase({ ...base, dueOn: '2026-11-28', today: '2026-11-27' })
     expect(tomorrow.body).toContain('is due *tomorrow, Saturday 28 November*')
   })
 
+  it('names the bid time and tags each question with its item when the data is there', () => {
+    const t = generateCustomerChase({ ...base, dueOn: '2026-11-28', dueTime: '12:00:00', itemTags: [{ number: 2, label: 'Endress+Hauser Proline Promag 400' }, null] })
+    expect(t.body).toContain('is due *tomorrow, Saturday 28 November, 12:00*.')
+    expect(t.body).toContain('1. Line size and flange rating on the process line (item 2)')
+    const e = generateCustomerChase({ ...base, variant: 'email', itemTags: [{ number: 2, label: 'Endress+Hauser Proline Promag 400' }, null] })
+    expect(e.body).toContain('(item 2, Endress+Hauser Proline Promag 400)')
+  })
+  it('the email signature carries the job title and phone', () => {
+    const e = generateCustomerChase({ ...base, variant: 'email', signature: { ...sig, jobTitle: 'Sales', phone: '+92 300 555 0188' } })
+    expect(e.body.endsWith(['With best regards,', 'Ayesha Rana', 'Sales, Q-Tech Solutions', '+92 300 555 0188'].join(String.fromCharCode(10)))).toBe(true)
+  })
   it('the third ask offers a way out and gives the dates of the earlier messages', () => {
     const t = generateCustomerChase({ ...base, askCount: 2, lastAskedOn: '2026-11-25', dueOn: '2026-12-11' })
     expect(t.kind).toBe('third')

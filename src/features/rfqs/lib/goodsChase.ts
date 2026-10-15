@@ -94,6 +94,6 @@ export function generateGoodsChase(input: GoodsChaseInput): GoodsChase {
     lines.push('', 'Thank you for your continued support.', ...signOff(variant, input.signature))
   }
 
-  const subject = email ? `${ref ? `Order ${ref}` : 'Our order'}: delivery date needed by ${by === 'the end of today' ? 'today' : by}` : null
+  const subject = email ? `${ref ? `Order ${ref}` : 'Our order'}: delivery date needed by ${by === '5:00 pm today' ? 'today' : by}` : null
   return { variant, subject, body: lines.join('\n'), confirmBy, daysLate }
 }

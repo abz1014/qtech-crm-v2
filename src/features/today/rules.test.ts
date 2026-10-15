@@ -37,6 +37,7 @@ const rfq = (o: Partial<RfqFact> = {}): RfqFact => ({
   customerRef: '74037',
   receivedOn: '2026-11-17',
   dueOn: '2026-12-11',
+  dueTime: null,
   quotedOn: null,
   isPriority: false,
   bidState: 'to_bid',
@@ -48,6 +49,7 @@ const clar = (o: Partial<ClarificationFact> = {}): ClarificationFact => ({
   id: 'c1',
   rfqId: 'r1',
   question: 'Line size?',
+  rfqItemId: null,
   firstAskedOn: '2026-11-20',
   lastAskedOn: '2026-11-20',
   lastAskedAt: '2026-11-20T09:00:00+05:00',
@@ -270,6 +272,11 @@ describe('rule: bid due', () => {
     expect(rows.map(r => r.subjectId)).toEqual(['a', 'b', 'c'])
     expect(rows.map(r => r.title)).toEqual(['Bid due today', 'Bid 2 days overdue', 'Bid due Wednesday 2 December'])
     expect(rows[0].badge).toEqual({ text: 'today', tone: 'danger' })
+  })
+  it('names the bid time when the RFQ has one (rfqs.due_time)', () => {
+    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: TODAY, dueTime: '17:00:00' })] }))[0].title).toBe('Bid due today, 17:00')
+    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-11-28', dueTime: '12:00:00' })] }))[0].title).toBe('Bid due tomorrow, 12:00')
+    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-12-02', dueTime: '09:30:00' })] }))[0].title).toBe('Bid due Wednesday 2 December, 09:30')
   })
   it('words tomorrow, and skips RFQs already bid, without a date or owned by someone else', () => {
     expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-11-28' })] }))[0].title).toBe('Bid due tomorrow')

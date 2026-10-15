@@ -38,7 +38,7 @@ export interface SupplierChaseInput {
   pricedNumbers: readonly number[]
   /** The items still without a price or a "cannot offer". */
   items: readonly ChaseItem[]
-  signature: { name: string; company: string; jobTitle?: string | null }
+  signature: { name: string; company: string; jobTitle?: string | null; phone?: string | null }
   variant: EnquiryVariant
   /** Calendar days since the enquiry went out. More than 30 (FIRM_AFTER_DAYS) switches to the firmer wording. Omitted: never firm. */
   ageDays?: number | null
@@ -187,7 +187,7 @@ export function generateSupplierChase(input: SupplierChaseInput): SupplierChase 
       )
       lines.push('', 'Thank you.')
     }
-    lines.push('With best regards,', input.signature.name, input.signature.jobTitle ? `${input.signature.jobTitle}, ${input.signature.company}` : input.signature.company)
+    lines.push('With best regards,', input.signature.name, input.signature.jobTitle ? `${input.signature.jobTitle}, ${input.signature.company}` : input.signature.company, ...(input.signature.phone ? [input.signature.phone] : []))
   }
 
   const n = items.length

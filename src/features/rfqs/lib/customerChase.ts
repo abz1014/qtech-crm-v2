@@ -5,12 +5,12 @@
 //  - One message carries every open question, numbered, so the customer can answer by number. The questions are the ones
 //    captured; the generator never invents a question, an answer or a spec.
 //  - Always asks the customer to "kindly confirm by" a date: one working day before the bid is due, three working days
-//    from today with no bid date, and never earlier than today ("the end of today").
+//    from today with no bid date, and never earlier than today ("5:00 pm today").
 //  - The first message after the first ask is a "gentle reminder", never "overdue". The third ask offers a way out and sets
 //    a last date. A bid due within three working days names the bid date. More than 30 days since the first ask is firmer.
 
 import { addBusinessDays, businessDaysBetween, daysBetween, longDay, subtractBusinessDays } from './dateText'
-import { boldFor, byDayText, greetingFor, isFirm, oneLine, signOff, twoDaysText, type ChaseSignature, type ChaseText } from './chaseCommon'
+import { boldFor, byDayText, greetingFor, isFirm, oneLine, signOff, timeText, twoDaysText, type ChaseSignature, type ChaseText } from './chaseCommon'
 import type { EnquiryVariant } from './enquiryDraft'
 
 export interface CustomerChaseInput {
@@ -27,6 +27,10 @@ export interface CustomerChaseInput {
   lastAskedOn: string | null
   /** rfqs.due_on, or null. */
   dueOn: string | null
+  /** rfqs.due_time ("17:00:00"), named in the "bid is close" text when known. */
+  dueTime?: string | null
+  /** The item each question is about (clarifications.rfq_item_id), aligned with `questions`; null for a question about nothing in particular. */
+  itemTags?: ReadonlyArray<{ number: number; label?: string | null } | null>
   /** Today in the business timezone. */
   today: string
   signature: ChaseSignature
@@ -57,11 +61,12 @@ export function isBidClose(dueOn: string | null | undefined, today: string): boo
   return d >= today && businessDaysBetween(today, d) <= 3
 }
 
-function whenText(due: string, today: string): string {
+function whenText(due: string, today: string, time?: string | null): string {
   const days = daysBetween(today, due)
-  if (days === 0) return 'today'
-  if (days === 1) return `tomorrow, ${longDay(due)}`
-  return longDay(due)
+  const at = timeText(time)
+  if (days === 0) return at ? `today, ${at}` : 'today'
+  if (days === 1) return `tomorrow, ${longDay(due)}${at ? `, ${at}` : ''}`
+  return `${longDay(due)}${at ? `, ${at}` : ''}`
 }
 
 export function generateCustomerChase(input: CustomerChaseInput): CustomerChase {
@@ -86,7 +91,12 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
   else if (askCount >= 1) kind = 'gentle'
   else kind = 'first'
 
-  const list = questions.map((q, i) => `${i + 1}. ${oneLine(q)}`).join('\n')
+  const tag = (i: number): string => {
+    const t = input.itemTags?.[i]
+    if (!t) return ''
+    return email && t.label ? ` (item ${t.number}, ${oneLine(t.label)})` : ` (item ${t.number})`
+  }
+  const list = questions.map((q, i) => `${i + 1}. ${oneLine(q)}${tag(i)}`).join('\n')
   const lines: string[] = [greetingFor(variant, input.contactName), '']
 
   if (!email) {
@@ -98,7 +108,7 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
         lines.push(`A gentle reminder about ${yourRfq}. To complete our quotation we still need your confirmation on:`)
         break
       case 'bid_close':
-        lines.push(`Our bid for ${yourRfq} is due ${bold(input.dueOn ? whenText(input.dueOn.slice(0, 10), today) : 'soon')}. To include these items we still need:`)
+        lines.push(`Our bid for ${yourRfq} is due ${bold(input.dueOn ? whenText(input.dueOn.slice(0, 10), today, input.dueTime) : 'soon')}. To include these items we still need:`)
         break
       case 'third':
         lines.push(`We are writing once more about ${yourRfq}. The points below are still open${priorDates}:`)
@@ -129,7 +139,7 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
         )
         break
       case 'bid_close':
-        lines.push(`Our bid for ${yourRfqPlain} is due ${input.dueOn ? whenText(input.dueOn.slice(0, 10), today) : 'soon'}. To include these items we still need your confirmation on:`)
+        lines.push(`Our bid for ${yourRfqPlain} is due ${input.dueOn ? whenText(input.dueOn.slice(0, 10), today, input.dueTime) : 'soon'}. To include these items we still need your confirmation on:`)
         break
       case 'third':
         lines.push(`We are writing once more about ${yourRfqPlain}. The points below are still open${priorDates}:`)
@@ -156,7 +166,7 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
     lines.push(...signOff(variant, input.signature))
   }
 
-  const byShort = by === 'the end of today' ? 'today' : by
+  const byShort = by === '5:00 pm today' ? 'today' : by
   const subject = email
     ? kind === 'third' || kind === 'firm'
       ? `${ref ? `RFQ ${ref}` : rfqRef}: reply needed by ${byShort}`

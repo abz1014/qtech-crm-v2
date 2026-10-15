@@ -34,27 +34,33 @@ export interface TodayData {
   snoozes: SnoozeFact[]
   /** users.role by id (everyone is readable by every staff role). */
   roles: Record<string, Role>
-  /** The caller's own job title, for the email signature. */
+  /** The caller's own job title and phone, for the email signature. */
   jobTitle: string | null
+  phone: string | null
 }
 
-type RfqStateRow = ViewRow<'v_rfq_state'> & { companies: { name: string } | null }
+type RfqStateRow = ViewRow<'v_rfq_state'> & { companies: { name: string; city: string | null } | null }
+
+/** "Indus Textile Mills — Faisalabad": a company with its city, as the mockups write it. */
+export const withCity = (name: string, city: string | null | undefined): string => (city?.trim() ? `${name} — ${city.trim()}` : name)
 
 async function loadRfqs(): Promise<{ rfqs: RfqFact[]; open: Set<string> }> {
   const db = requireSupabase()
   const [states, refs] = await Promise.all([
-    fetchAll<RfqStateRow>((from, to) => db.from('v_rfq_state').select('*, companies(name)').eq('outcome', 'open').order('number').range(from, to) as unknown as Page<RfqStateRow>),
-    fetchAll<{ id: string; customer_ref: string | null }>((from, to) => db.from('rfqs').select('id, customer_ref').is('closed_on', null).order('number').range(from, to)),
+    fetchAll<RfqStateRow>((from, to) => db.from('v_rfq_state').select('*, companies(name, city)').eq('outcome', 'open').order('number').range(from, to) as unknown as Page<RfqStateRow>),
+    fetchAll<{ id: string; customer_ref: string | null; due_time: string | null }>((from, to) => db.from('rfqs').select('id, customer_ref, due_time').is('closed_on', null).order('number').range(from, to)),
   ])
   const refBy = new Map(refs.map(r => [r.id, r.customer_ref]))
+  const timeBy = new Map(refs.map(r => [r.id, r.due_time]))
   const rfqs = states.map<RfqFact>(r => ({
     id: r.rfq_id as string,
     number: num(r.number),
     ownerId: r.owner_id,
-    companyName: r.companies?.name ?? 'Unknown company',
+    companyName: r.companies ? withCity(r.companies.name, r.companies.city) : 'Unknown company',
     customerRef: refBy.get(r.rfq_id as string) ?? null,
     receivedOn: r.received_on as string,
     dueOn: r.due_on,
+    dueTime: timeBy.get(r.rfq_id as string) ?? null,
     quotedOn: r.quoted_on,
     isPriority: Boolean(r.is_priority),
     bidState: (r.bid_state ?? 'to_bid') as RfqFact['bidState'],
@@ -69,7 +75,7 @@ async function loadClarifications(open: Set<string>): Promise<ClarificationFact[
   const rows = await fetchAll((from, to) =>
     db
       .from('clarifications')
-      .select('id, rfq_id, question, first_asked_at, last_asked_at, ask_count')
+      .select('id, rfq_id, question, rfq_item_id, first_asked_at, last_asked_at, ask_count')
       .is('answered_at', null)
       .is('withdrawn_at', null)
       .not('first_asked_at', 'is', null)
@@ -82,6 +88,7 @@ async function loadClarifications(open: Set<string>): Promise<ClarificationFact[
       id: c.id,
       rfqId: c.rfq_id,
       question: c.question,
+      rfqItemId: c.rfq_item_id,
       firstAskedOn: toBusinessDate(new Date(c.first_asked_at as string)),
       lastAskedOn: toBusinessDate(new Date((c.last_asked_at ?? c.first_asked_at) as string)),
       lastAskedAt: (c.last_asked_at ?? c.first_asked_at) as string,
@@ -155,7 +162,7 @@ type LegRow = {
   orders: { number: number; owner_id: string | null; ordered_on: string | null; company_id: string } | null
 }
 
-async function loadLegs(names: Map<string, string>): Promise<LegFact[]> {
+async function loadLegs(names: Map<string, string>, labels: Map<string, string>): Promise<LegFact[]> {
   const db = requireSupabase()
   const rows = await fetchAll<LegRow>(
     (from, to) =>
@@ -174,7 +181,7 @@ async function loadLegs(names: Map<string, string>): Promise<LegFact[]> {
       orderId: l.order_id,
       orderNumber: num(l.orders?.number),
       ownerId: l.orders?.owner_id ?? null,
-      customerName: names.get(l.orders?.company_id as string) ?? 'Unknown company',
+      customerName: labels.get(l.orders?.company_id as string) ?? 'Unknown company',
       supplierName: names.get(l.supplier_id) ?? 'Unknown supplier',
       reference: l.reference,
       orderedOn: l.orders?.ordered_on ?? null,
@@ -230,17 +237,19 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
   const db = requireSupabase()
   const [{ rfqs, open }, companies, users, snoozes] = await Promise.all([
     loadRfqs(),
-    fetchAll((from, to) => db.from('companies').select('id, name').order('name').range(from, to)),
-    db.from('users').select('id, role, job_title'),
+    fetchAll((from, to) => db.from('companies').select('id, name, city').order('name').range(from, to)),
+    db.from('users').select('id, role, job_title, phone'),
     loadSnoozes(today),
   ])
   const names = new Map(companies.map(c => [c.id, c.name]))
+  /** Customers read "Name — City"; suppliers stay plain. */
+  const labels = new Map(companies.map(c => [c.id, withCity(c.name, c.city)]))
   const money = role === 'admin' || role === 'sales'
   const [clarifications, inquiries, legs, receivables, monthEnd] = await Promise.all([
     loadClarifications(open),
     loadInquiries(open, names),
-    loadLegs(names),
-    money ? loadReceivables(names) : Promise.resolve<ReceivableFact[]>([]),
+    loadLegs(names, labels),
+    money ? loadReceivables(labels) : Promise.resolve<ReceivableFact[]>([]),
     role === 'admin' ? loadMonthEnd(today) : Promise.resolve<MonthEndFact | null>(null),
   ])
   const userRows = unwrap(users)
@@ -254,6 +263,7 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
     snoozes,
     roles: Object.fromEntries(userRows.map(u => [u.id, u.role as Role])),
     jobTitle: userRows.find(u => u.id === user.id)?.job_title ?? null,
+    phone: userRows.find(u => u.id === user.id)?.phone ?? null,
   }
 }
 

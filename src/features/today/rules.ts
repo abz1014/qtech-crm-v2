@@ -10,6 +10,7 @@
 
 import { addBusinessDays, businessDaysBetween, daysBetween, longDay, parseDay } from '@/features/rfqs/lib/dateText'
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
+import { timeText } from '@/features/rfqs/lib/chaseCommon'
 import { supplierReplyBy } from '@/features/rfqs/lib/supplierChase'
 import { orderRef, rfqRef } from '@/lib/refs'
 import {
@@ -280,12 +281,13 @@ export function ruleChaseSupplier(ctx: TodayInputs): Entry[] {
   return out
 }
 
-function dueWords(dueOn: string, today: string): string {
+function dueWords(dueOn: string, today: string, dueTime?: string | null): string {
   const d = daysBetween(today, dueOn)
+  const at = timeText(dueTime)
   if (d < 0) return `Bid ${-d} ${-d === 1 ? 'day' : 'days'} overdue`
-  if (d === 0) return 'Bid due today'
-  if (d === 1) return 'Bid due tomorrow'
-  return `Bid due ${longDay(dueOn)}`
+  if (d === 0) return `Bid due today${at ? `, ${at}` : ''}`
+  if (d === 1) return `Bid due tomorrow${at ? `, ${at}` : ''}`
+  return `Bid due ${longDay(dueOn)}${at ? `, ${at}` : ''}`
 }
 
 /** Bid due: still to bid, and due within 5 days (or already late). */
@@ -300,7 +302,7 @@ export function ruleBidDue(ctx: TodayInputs): Entry[] {
           rule: 'bid_due',
           subjectId: r.id,
           tab: tabFor('bid_due'),
-          title: dueWords(r.dueOn, ctx.today),
+          title: dueWords(r.dueOn, ctx.today, r.dueTime),
           ref: rfqRef(r.number),
           party: r.companyName,
           actionDueOn: r.dueOn,

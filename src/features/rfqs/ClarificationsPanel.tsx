@@ -15,7 +15,7 @@ import { Panel } from '@/features/companies/CompanyParts'
 import type { ClarificationRow, InquiryRow, RfqHeader } from '@/features/rfqs/api'
 import { AddQuestions, QuestionRow, WithdrawnRow } from '@/features/rfqs/ClarificationParts'
 import { ChaseNote, FormattedMessage, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
-import { useClarifications, useFileUrls, useRestoreClarificationAsk, useRfqAttachments, useSetInquiryRelayed, useStampClarificationAsk } from '@/features/rfqs/hooks'
+import { useClarifications, useFileUrls, useRestoreClarificationAsk, useRfqAttachments, useRfqItems, useSetInquiryRelayed, useStampClarificationAsk } from '@/features/rfqs/hooks'
 import { useSignature } from '@/features/rfqs/useSignature'
 import {
   agoText,
@@ -51,6 +51,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
   const atts = useRfqAttachments(rfq.id)
   const urls = useFileUrls(rfq.id, (atts.data ?? []).map(a => a.path))
   const signature = useSignature()
+  const rfqItems = useRfqItems(rfq.id)
   const { toast } = useToast()
   const stamp = useStampClarificationAsk(rfq.id)
   const restore = useRestoreClarificationAsk(rfq.id)
@@ -190,6 +191,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                 repeat={false}
                 variant={variant}
                 signature={signature}
+                items={rfqItems.data}
                 today={today}
                 header={<StatusBadge dimension="clarification" value="to-ask" />}
                 hint={`${groups.toAsk.length} ${groups.toAsk.length === 1 ? 'question' : 'questions'}`}
@@ -210,6 +212,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                 repeat
                 variant={variant}
                 signature={signature}
+                items={rfqItems.data}
                 today={today}
                 header={<StatusBadge dimension="clarification" value="waiting-customer" label={`Asked ×${Math.max(...groups.asked.map(c => c.askCount))}`} />}
                 hint={askedHint(groups.asked, today)}
@@ -281,6 +284,7 @@ function ChaseGroup({
   repeat,
   variant,
   signature,
+  items,
   today,
   header,
   hint,
@@ -294,7 +298,8 @@ function ChaseGroup({
   rows: ClarificationRow[]
   repeat: boolean
   variant: EnquiryVariant
-  signature: { name: string; company: string; jobTitle?: string | null }
+  signature: { name: string; company: string; jobTitle?: string | null; phone?: string | null }
+  items?: ReadonlyArray<{ id: string; number: number; description: string; brandName: string | null }>
   today: string
   header: React.ReactNode
   hint: string
@@ -323,6 +328,11 @@ function ChaseGroup({
       firstAskedOn: firsts[0] ? toBusinessDate(new Date(firsts[0])) : null,
       lastAskedOn: lasts.at(-1) ? toBusinessDate(new Date(lasts.at(-1) as string)) : null,
       dueOn: rfq.dueOn,
+      dueTime: rfq.dueTime,
+      itemTags: selected.map(c => {
+        const it = c.rfqItemId ? items?.find(i => i.id === c.rfqItemId) : undefined
+        return it ? { number: it.number, label: `${it.brandName && !it.description.toLowerCase().includes(it.brandName.toLowerCase()) ? `${it.brandName} ` : ''}${it.description}` } : null
+      }),
       today,
       signature,
       variant: v,
@@ -331,7 +341,7 @@ function ChaseGroup({
     return { whatsapp: make('whatsapp'), email: make('email') }
     // selected is derived from rows and off; its ids are the dependency
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedKey, rfq.number, rfq.customerRef, rfq.contact?.name, rfq.dueOn, today, signature.name, signature.jobTitle, repeat, chosen])
+  }, [selectedKey, rfq.number, rfq.customerRef, rfq.contact?.name, rfq.dueOn, today, signature.name, signature.jobTitle, repeat, chosen, items])
   const shown = draft ? draft[variant] : null
   const count = Math.max(0, ...rows.map(c => c.askCount)) + 1
   const returnsOn = customerReturnsOn(today, rfq.dueOn)

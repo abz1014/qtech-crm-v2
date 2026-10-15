@@ -43,6 +43,8 @@ export interface RfqFact {
   customerRef: string | null
   receivedOn: string
   dueOn: string | null
+  /** rfqs.due_time ("17:00:00"), when the bid has a deadline time. */
+  dueTime: string | null
   quotedOn: string | null
   isPriority: boolean
   /** v_rfq_state.bid_state */
@@ -58,6 +60,8 @@ export interface ClarificationFact {
   id: string
   rfqId: string
   question: string
+  /** clarifications.rfq_item_id: the item the question is about. */
+  rfqItemId: string | null
   firstAskedOn: string
   lastAskedOn: string
   /** The latest ask as a timestamp, for "copied at 14:32". */

@@ -148,6 +148,8 @@ export interface RfqHeader {
   customerRef: string | null
   receivedOn: string
   dueOn: string | null
+  /** rfqs.due_time ("17:00:00"): the bid's deadline time, when known. */
+  dueTime: string | null
   isPriority: boolean
   quotedOn: string | null
   closedOn: string | null
@@ -171,7 +173,7 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
   const [rfqRes, stateRes] = await Promise.all([
     db
       .from('rfqs')
-      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, owner_id, is_priority, quoted_on, closed_on, close_reason, close_note, notes')
+      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, due_time, owner_id, is_priority, quoted_on, closed_on, close_reason, close_note, notes')
       .eq('id', id)
       .maybeSingle(),
     db.from('v_rfq_state').select('*').eq('rfq_id', id).maybeSingle(),
@@ -191,6 +193,7 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
     customerRef: r.customer_ref,
     receivedOn: r.received_on,
     dueOn: r.due_on,
+    dueTime: r.due_time,
     isPriority: r.is_priority,
     quotedOn: r.quoted_on,
     closedOn: r.closed_on,
@@ -482,6 +485,8 @@ export interface ClarificationRow {
   id: string
   question: string
   raisedByInquiryId: string | null
+  /** The item the question is about (clarifications.rfq_item_id), if tagged. */
+  rfqItemId: string | null
   firstAskedAt: string | null
   lastAskedAt: string | null
   askCount: number
@@ -499,7 +504,7 @@ export async function listClarifications(rfqId: string): Promise<ClarificationRo
   const rows = unwrap(
     await db
       .from('clarifications')
-      .select('id, question, raised_by_inquiry_id, first_asked_at, last_asked_at, ask_count, answer, answered_at, withdrawn_at, created_at')
+      .select('id, question, raised_by_inquiry_id, rfq_item_id, first_asked_at, last_asked_at, ask_count, answer, answered_at, withdrawn_at, created_at')
       .eq('rfq_id', rfqId)
       .order('created_at')
       .order('id'),
@@ -508,6 +513,7 @@ export async function listClarifications(rfqId: string): Promise<ClarificationRo
     id: r.id,
     question: r.question,
     raisedByInquiryId: r.raised_by_inquiry_id,
+    rfqItemId: r.rfq_item_id,
     firstAskedAt: r.first_asked_at,
     lastAskedAt: r.last_asked_at,
     askCount: r.ask_count,
@@ -660,13 +666,14 @@ export async function signFileUrls(paths: readonly string[], seconds = 600): Pro
 
 export interface MyProfile {
   jobTitle: string | null
+  phone: string | null
 }
 
-/** The signed-in person's job title, for the "Sales, Q-Tech Solutions" signature line of an email. */
+/** The signed-in person's job title and phone, for the "Sales, Q-Tech Solutions" signature of an email. */
 export async function getMyProfile(userId: string): Promise<MyProfile> {
   const db = requireSupabase()
-  const row = unwrap<{ job_title: string | null } | null>(await db.from('users').select('job_title').eq('id', userId).maybeSingle())
-  return { jobTitle: row?.job_title ?? null }
+  const row = unwrap<{ job_title: string | null; phone: string | null } | null>(await db.from('users').select('job_title, phone').eq('id', userId).maybeSingle())
+  return { jobTitle: row?.job_title ?? null, phone: row?.phone ?? null }
 }
 
 // ================================================================ shortlisting more suppliers (the "float elsewhere" escalation)

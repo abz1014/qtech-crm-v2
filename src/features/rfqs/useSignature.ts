@@ -14,5 +14,5 @@ export function useSignature(): ChaseSignature {
     enabled: Boolean(user),
     staleTime: 5 * 60_000,
   })
-  return { name: user?.name ?? COMPANY_NAME, company: COMPANY_NAME, jobTitle: profile.data?.jobTitle ?? null }
+  return { name: user?.name ?? COMPANY_NAME, company: COMPANY_NAME, jobTitle: profile.data?.jobTitle ?? null, phone: profile.data?.phone ?? null }
 }
