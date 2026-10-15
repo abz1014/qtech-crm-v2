@@ -19,7 +19,6 @@ concurrency:
 
 jobs:
   db:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

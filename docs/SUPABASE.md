@@ -117,7 +117,7 @@ writes an `audit_log` row with the acting admin as `changed_by`.
 
 Secret to set before deploying (names only; deployment is a separate, owner-run step):
 `ALLOWED_ORIGINS` = comma-separated site origins allowed to call it from a browser (for example the
-Vercel production URL). Local dev origins (`localhost:5173`, `localhost:4173`) are always allowed.
+Cloudflare Pages production URL). Local dev origins (`localhost:5173`, `localhost:4173`) are always allowed.
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided by the platform.
 
 CI (`functions.yml`) runs the Deno unit tests and an integration test against `supabase functions serve`.

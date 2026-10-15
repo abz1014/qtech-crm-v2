@@ -3,7 +3,6 @@ name: E2E
 # ONE Supabase stack boot and ONE build for every database-backed suite (auth, companies, rfq-board,
 # rfq-intake, rfq-detail). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
 # once and runs only those, one after another, with a database reset between them.
-# Branch pushes skip this workflow unless the commit message contains [full]; it always runs on main and manual runs.
 # Pushes to main and manual runs (Actions, E2E, Run workflow) run every suite. See docs/CI.md.
 # No pull_request trigger: a push to a PR branch already runs this, and a second run doubled the minutes.
 on:
@@ -30,7 +29,6 @@ concurrency:
 
 jobs:
   changes:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[full]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
