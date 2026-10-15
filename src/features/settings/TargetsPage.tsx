@@ -18,6 +18,7 @@ import {
   quarterOfDate,
   quarterPhase,
   quarterStartText,
+  targetsFooter,
   type ProgressRow,
   type Quarter,
   type TargetRow,
@@ -207,6 +208,11 @@ export function TargetsPage() {
           ))}
         </div>
       )}
+      {!loading && !failed && people.length > 0 ? (
+        <p className="text-xs text-fg-muted" data-testid="targets-footer">
+          {targetsFooter(people.map(p => p.id), targets.data ?? [], year, year === now.year ? now.quarter : null)}
+        </p>
+      ) : null}
       <p className="max-w-prose text-xs text-fg-muted">
         Achieved is net cash received and credited to the person in that quarter. On pace is the target spread evenly over the days of the quarter, counting today.
       </p>

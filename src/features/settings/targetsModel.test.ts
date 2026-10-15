@@ -6,6 +6,7 @@ import {
   indexTargets,
   MAX_TARGET,
   planCopy,
+  targetsFooter,
   previousQuarter,
   quarterMonths,
   quarterOfDate,
@@ -109,6 +110,17 @@ describe('cellProgress: amounts, never a bare percentage', () => {
   })
   it('carries the count of payments that cannot count yet', () => {
     expect(cellProgress(target, prog({ excluded_count: 2 }), 'past').excluded).toBe(2)
+  })
+})
+
+describe('targetsFooter', () => {
+  const rows = [t('a', 2026, 4, 1), t('b', 2026, 4, 1), t('a', 2026, 3, 1), t('c', 2025, 4, 1), t('x', 2026, 4, 1)]
+  it('counts people and who has a target in the current quarter', () => {
+    expect(targetsFooter(['a', 'b', 'c'], rows, 2026, 4)).toBe('3 people · 2 with Q4 targets')
+    expect(targetsFooter(['a'], rows, 2026, 4)).toBe('1 person · 1 with Q4 target')
+  })
+  it('for another year counts anyone with a target that year', () => {
+    expect(targetsFooter(['a', 'b', 'c'], rows, 2026, null)).toBe('3 people · 2 with targets in 2026')
   })
 })
 

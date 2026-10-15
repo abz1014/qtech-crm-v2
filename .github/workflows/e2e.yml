@@ -1,7 +1,7 @@
 name: E2E
 
 # ONE Supabase stack boot and ONE build for every database-backed suite (auth, companies, rfq-board,
-# rfq-intake, rfq-detail, rfq-quotation, today, search, rfq-memory, settings-admin). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
+# rfq-intake, rfq-detail, rfq-quotation, today, search, rfq-memory, settings-admin, pwa). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
 # once and runs only those, one after another, with a database reset between them.
 # Pushes to main and manual runs (Actions, E2E, Run workflow) run every suite. See docs/CI.md.
 # No pull_request trigger: a push to a PR branch already runs this, and a second run doubled the minutes.
@@ -16,6 +16,10 @@ on:
       - "supabase/config.toml"
       - "supabase/functions/admin-users/**"
       - "playwright.config.ts"
+      - "vite.config.ts"
+      - "index.html"
+      - "public/**"
+      - "vercel.json"
       - "package*.json"
       - ".github/workflows/e2e.yml"
   workflow_dispatch:
@@ -42,6 +46,7 @@ jobs:
       today: ${{ steps.final.outputs.today }}
       search: ${{ steps.final.outputs.search }}
       settings_admin: ${{ steps.final.outputs.settings_admin }}
+      pwa: ${{ steps.final.outputs.pwa }}
       any: ${{ steps.final.outputs.any }}
     steps:
       - uses: actions/checkout@v4
@@ -80,6 +85,12 @@ jobs:
               - 'e2e/search/**'
             settings_admin:
               - 'e2e/settings/**'
+            pwa:
+              - 'e2e/pwa/**'
+              - 'public/manifest.webmanifest'
+              - 'vite.config.ts'
+              - 'index.html'
+              - 'public/**'
       - id: final
         env:
           SHARED: ${{ steps.filter.outputs.shared }}
@@ -93,6 +104,7 @@ jobs:
           S_TODAY: ${{ steps.filter.outputs.today }}
           S_SEARCH: ${{ steps.filter.outputs.search }}
           S_SETTINGS_ADMIN: ${{ steps.filter.outputs.settings_admin }}
+          S_PWA: ${{ steps.filter.outputs.pwa }}
         run: |
           all=false
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$GITHUB_REF" = "refs/heads/main" ] || [ "$SHARED" = "true" ]; then all=true; fi
@@ -117,6 +129,8 @@ jobs:
           echo "search=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_SETTINGS_ADMIN; if [ "$all" = "true" ]; then v=true; fi
           echo "settings_admin=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_PWA; if [ "$all" = "true" ]; then v=true; fi
+          echo "pwa=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           echo "any=$any" >> "$GITHUB_OUTPUT"
 
   e2e:
@@ -273,6 +287,11 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=settings-admin REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/settings-admin npx playwright test --project=settings-admin --output=test-results/settings-admin
+
+      - name: Playwright (pwa project, no database reset needed)
+        if: ${{ !cancelled() && needs.changes.outputs.pwa == 'true' }}
+        run: |
+          E2E_SUITE=pwa PLAYWRIGHT_HTML_REPORT=playwright-report/pwa npx playwright test --project=pwa --output=test-results/pwa
 
       - name: Upload reports and review screenshots
         if: always()

@@ -98,6 +98,12 @@ describe('Targets (M06)', () => {
     expect(document.body.textContent).not.toMatch(/\d\s?%/)
   })
 
+  it('ends with the count footer', async () => {
+    mount()
+    await screen.findByText('Ayesha Rana')
+    expect(screen.getByTestId('targets-footer')).toHaveTextContent('3 people · 1 with Q4 target')
+  })
+
   it('a quarter that has not started says when it starts', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     h.targets.mockResolvedValue([target('ayesha', 2027, 2, 6_000_000)])

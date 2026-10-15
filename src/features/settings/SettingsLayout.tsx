@@ -3,6 +3,7 @@ import { Navigate, NavLink, Outlet } from 'react-router-dom'
 import { Building2, KeyRound, Receipt, Target, Users, type LucideIcon } from 'lucide-react'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { useSession } from '@/app/session'
+import { InstallBanner } from '@/features/settings/InstallBanner'
 import { Icon } from '@/ui/Icon'
 import { cn } from '@/lib/utils'
 
@@ -63,6 +64,7 @@ export function SettingsLayout() {
       </nav>
       <div className="min-w-0 px-4 pb-12 pt-6 md:px-8">
         <div className="mx-auto max-w-table">
+          <InstallBanner />
           <Outlet />
         </div>
       </div>

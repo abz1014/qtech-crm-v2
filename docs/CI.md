@@ -9,7 +9,7 @@ so runs stay fast and quick to read: a docs-only push runs nothing.
 | `ci.yml` gallery job (visual + axe) | main, manual, or when `src/ui`, `src/dev`, `src/index.css`, `tailwind.config.ts`, `e2e/gallery*`, `e2e/__screenshots__`, `playwright.config.ts`, `package*.json` change | about 4 min |
 | `db.yml` | every push, only if `supabase/**`, `src/types/database.ts`, `package*.json` or the workflow changed | about 6 min |
 | `functions.yml` | every push; paths `supabase/functions/**`, `supabase/migrations/**` | about 6 min |
-| `e2e.yml` (all DB suites, incl. `search`) | every push, path-gated; one stack boot, only suites whose paths changed | about 8 to 14 min |
+| `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | every push, path-gated; one stack boot, only suites whose paths changed | about 8 to 14 min |
 | `remote.yml`, `deploy-functions.yml` | manual only, owner approval | not part of the budget |
 
 Rules applied everywhere:
@@ -25,6 +25,8 @@ A `changes` job (`dorny/paths-filter@v3.0.2`) decides per suite. Shared paths (`
 `playwright.config.ts`, `package*.json`, the workflow) run every suite; `e2e/auth/**`, `e2e/companies/**`, `e2e/rfqs/board.spec.ts`,
 `intake.spec.ts`, `detail.spec.ts`, `memory.spec.ts`, `quotation.spec.ts` (suite `rfq-quotation`, which also installs poppler to read and render the stored PDFs) and `e2e/today/**` and `e2e/settings/**` (suite `settings-admin`) run just their own. Then ONE job starts Supabase once, builds once, and runs the chosen suites
 one after another, resetting the database between them.
+
+The `pwa` suite (R21, `e2e/pwa/`) needs no database and no reset: it reuses the same production build to check the manifest, the service worker, its shell-only precache, offline open and Chrome's installability. It is the only project with service workers allowed. Lighthouse is not run (version 12 dropped the PWA audit); Chrome's own installability check replaces it.
 
 Add a suite: a project in `playwright.config.ts`, a filter and an output in `e2e.yml`, a step.
 Locally, several at once: `E2E_SUITE=db npx playwright test --project=auth --project=companies`.

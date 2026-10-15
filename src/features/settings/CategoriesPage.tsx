@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import { useSession } from '@/app/session'
 import {
+  categoriesFooter,
   checkCategoryName,
   deleteAdvice,
   GROUP_LABEL,
@@ -121,6 +122,11 @@ export function CategoriesPage() {
           ))}
         </ul>
       )}
+      {q.data ? (
+        <p className="text-xs text-fg-muted" data-testid="categories-footer">
+          {categoriesFooter(q.data)}
+        </p>
+      ) : null}
     </div>
   )
 }

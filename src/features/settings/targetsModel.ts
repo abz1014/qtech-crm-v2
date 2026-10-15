@@ -73,6 +73,15 @@ export function checkTargetAmount(n: number | null): AmountCheck {
   return { ok: true, amount: Math.round(n * 100) / 100 }
 }
 
+/** The footer line under the grid, like the Team list's: "3 people · 2 with Q4 targets". `quarter` is the current quarter when the year shown is this year. */
+export function targetsFooter(userIds: readonly string[], targets: readonly TargetRow[], year: number, quarter: number | null): string {
+  const ids = new Set(userIds)
+  const mine = targets.filter(t => t.year === year && ids.has(t.user_id) && (quarter === null || t.quarter === quarter))
+  const withTarget = new Set(mine.map(t => t.user_id)).size
+  const people = `${userIds.length} ${userIds.length === 1 ? 'person' : 'people'}`
+  return `${people} · ${withTarget} with ${quarter === null ? `targets in ${year}` : `Q${quarter} ${withTarget === 1 ? 'target' : 'targets'}`}`
+}
+
 export interface CopyPlan {
   from: { year: number; quarter: Quarter }
   into: { year: number; quarter: Quarter }

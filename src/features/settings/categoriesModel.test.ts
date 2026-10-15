@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkCategoryName, deleteAdvice, moveCategory, nextSort, sortCategories, usageText, type Category } from '@/features/settings/categoriesModel'
+import { categoriesFooter, checkCategoryName, deleteAdvice, moveCategory, nextSort, sortCategories, usageText, type Category } from '@/features/settings/categoriesModel'
 
 const c = (id: string, name: string, sort: number, over: Partial<Category> = {}): Category => ({
   id,
@@ -58,6 +58,13 @@ describe('checkCategoryName', () => {
   })
   it('lets a category keep its own name', () => {
     expect(checkCategoryName('Rent', rows, 'b').ok).toBe(true)
+  })
+})
+
+describe('categoriesFooter', () => {
+  it('counts the categories and the active ones', () => {
+    expect(categoriesFooter([c('a', 'A', 1), c('b', 'B', 2, { active: false }), c('c', 'C', 3)])).toBe('3 categories · 2 active')
+    expect(categoriesFooter([c('a', 'A', 1)])).toBe('1 category · 1 active')
   })
 })
 

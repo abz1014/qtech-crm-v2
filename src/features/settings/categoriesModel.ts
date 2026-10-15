@@ -75,4 +75,8 @@ export function deleteAdvice(c: Pick<Category, 'name' | 'used' | 'active'>): { c
   }
 }
 
+/** The footer line under the list: "17 categories · 15 active". */
+export const categoriesFooter = (rows: readonly Pick<Category, 'active'>[]): string =>
+  `${rows.length} ${rows.length === 1 ? 'category' : 'categories'} · ${rows.filter(r => r.active).length} active`
+
 export const usageText = (used: number) => (used === 0 ? 'Not used yet' : `${used} ${used === 1 ? 'use' : 'uses'}`)

@@ -70,6 +70,12 @@ describe('Expense categories (M13)', () => {
     expect(screen.getByText('Categories in use cannot be deleted')).toBeInTheDocument()
   })
 
+  it('ends with the count footer', async () => {
+    mount()
+    await screen.findByDisplayValue('Rent')
+    expect(screen.getByTestId('categories-footer')).toHaveTextContent('4 categories · 3 active')
+  })
+
   it('renames on Enter, trimmed', async () => {
     const user = userEvent.setup()
     mount()
