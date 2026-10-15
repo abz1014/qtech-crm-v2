@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
-import { axeViolations } from '../support/axe'
+import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
 import { fetchStoredPdf, pdfIsValid, pdfText, renderPdfPng } from '../support/pdf'
 
 /*
@@ -100,6 +100,11 @@ const openIssue = async (page: Page) => {
   await page.locator('[data-slot="issue-quotation"]').getByRole('button', { name: /Issue/ }).click()
   await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible()
 }
+/** A review screenshot, taken once the dialog has finished rising (otherwise it is caught half transparent). */
+const shot = async (page: Page, name: string) => {
+  await waitForAnimationsToFinish(page)
+  await review(page, name)
+}
 const dialog = (page: Page) => page.getByRole('dialog')
 const price = (page: Page, n: number) => dialog(page).getByLabel(`Unit price, net PKR, item ${n}`)
 const noShareApi = (page: Page) => page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'share', { value: undefined, configurable: true }))
@@ -112,7 +117,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     await expect(page.locator('[data-slot="quotations"]')).toContainText('No quotation has been issued yet')
     await openIssue(page)
     await expect(dialog(page).getByRole('heading', { name: 'Issue quotation' })).toBeVisible()
-    await review(page, 'rfq-quotation-01-issue-dialog-1440')
+    await shot(page, 'rfq-quotation-01-issue-dialog-1440')
 
     // The chips: last sold to this customer (1,000) and last quoted (1,200), same model, same customer only.
     const sold = dialog(page).getByTestId('chip-sold-1')
@@ -151,7 +156,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     taps++
     const done = dialog(page).getByTestId('pdf-ready')
     await expect(done).toBeVisible({ timeout: 30_000 })
-    await review(page, 'rfq-quotation-02-issued-share-1440')
+    await shot(page, 'rfq-quotation-02-issued-share-1440')
 
     const [q] = await quotationsOf(s.rfq.id)
     expect(q.revision).toBe(0)
@@ -190,7 +195,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     await expect(row).toContainText(`${refOf(q)} R0`)
     await expect(row).toContainText('Current')
     await expect(row).toContainText('PKR 2,891.50')
-    await review(page, 'rfq-quotation-03-list-1440')
+    await shot(page, 'rfq-quotation-03-list-1440')
   })
 
   test('Share hands the PDF file to the share sheet where the browser supports it', async ({ page }) => {
@@ -249,7 +254,7 @@ test.describe('re-issue', () => {
     await expect(dialog(page).getByLabel('Delivery')).toHaveValue('Ex works Lahore')
     await expect(dialog(page).getByLabel('Payment terms')).toHaveValue('50% advance')
     await expect(dialog(page).getByLabel('Lead time we quote, item 1')).toHaveValue('2 weeks from PO')
-    await review(page, 'rfq-quotation-04-reissue-dialog-1440')
+    await shot(page, 'rfq-quotation-04-reissue-dialog-1440')
     await price(page, 2).fill('650')
     await dialog(page).getByRole('button', { name: 'Issue R1' }).click()
     await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 30_000 })
@@ -280,7 +285,7 @@ test.describe('re-issue', () => {
     // The list: both revisions, the latest current, the earlier superseded.
     await expect(page.getByTestId('quotation-1')).toContainText('Current')
     await expect(page.getByTestId('quotation-0')).toContainText('Superseded')
-    await review(page, 'rfq-quotation-05-list-two-revisions-1440')
+    await shot(page, 'rfq-quotation-05-list-two-revisions-1440')
   })
 })
 
@@ -293,7 +298,7 @@ test.describe('expired state', () => {
     const row = page.getByTestId('quotation-0')
     await expect(row).toContainText('Expired')
     await expect(row).toContainText('expired')
-    await review(page, 'rfq-quotation-06-expired-1440')
+    await shot(page, 'rfq-quotation-06-expired-1440')
   })
 })
 
@@ -307,7 +312,7 @@ test.describe('company profile incomplete (the PDF is blocked, saving never is)'
       const gap = dialog(page).getByText("The PDF needs the company's legal name and address")
       await expect(gap).toBeVisible()
       await expect(dialog(page).getByRole('link', { name: 'Open Settings, Company' })).toHaveAttribute('href', '/settings/company')
-      await review(page, 'rfq-quotation-07-profile-incomplete-dialog-1440')
+      await shot(page, 'rfq-quotation-07-profile-incomplete-dialog-1440')
 
       await dialog(page).getByTestId('chip-sold-1').click()
       await price(page, 2).fill('300')
@@ -315,7 +320,7 @@ test.describe('company profile incomplete (the PDF is blocked, saving never is)'
       await expect(dialog(page).getByText('The PDF was not made')).toBeVisible()
       await expect(dialog(page).getByRole('button', { name: 'Share' })).toHaveCount(0)
       await expect(dialog(page).getByRole('link', { name: 'Open Settings, Company' })).toHaveAttribute('href', '/settings/company')
-      await review(page, 'rfq-quotation-08-profile-incomplete-issued-1440')
+      await shot(page, 'rfq-quotation-08-profile-incomplete-issued-1440')
 
       const [q] = await quotationsOf(s.rfq.id)
       expect(q.revision).toBe(0)
@@ -325,7 +330,7 @@ test.describe('company profile incomplete (the PDF is blocked, saving never is)'
       await dialog(page).getByRole('button', { name: 'Done' }).click()
       await expect(page.locator('[data-slot="quotations"]').getByText(/A PDF needs the company's legal name and address/)).toBeVisible()
       await expect(page.getByTestId('quotation-0').getByRole('button', { name: 'Open PDF' })).toBeDisabled()
-      await review(page, 'rfq-quotation-09-profile-incomplete-list-1440')
+      await shot(page, 'rfq-quotation-09-profile-incomplete-list-1440')
 
       // Once the profile is complete, opening the quotation makes its PDF and stores it.
       await setProfile(true)
@@ -382,18 +387,18 @@ for (const width of [1440, 375]) {
     await openIssue(page)
     await expect(dialog(page).getByTestId('chip-sold-1')).toBeVisible()
     expect(await violations(page)).toEqual([])
-    await review(page, `rfq-quotation-dialog-${width}`)
+    await shot(page, `rfq-quotation-dialog-${width}`)
 
     await dialog(page).getByTestId('chip-sold-1').click()
     await price(page, 2).fill('300')
     await dialog(page).getByRole('button', { name: 'Issue quotation' }).click()
     await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 30_000 })
     expect(await violations(page)).toEqual([])
-    await review(page, `rfq-quotation-issued-${width}`)
+    await shot(page, `rfq-quotation-issued-${width}`)
 
     await dialog(page).getByRole('button', { name: 'Done' }).click()
     await expect(page.getByTestId('quotation-0')).toBeVisible()
     expect(await pageViolations(page)).toEqual([])
-    await review(page, `rfq-quotation-list-${width}`)
+    await shot(page, `rfq-quotation-list-${width}`)
   })
 }
