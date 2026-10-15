@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { Import, Search } from 'lucide-react'
 import { navItemsForRole, type NavKey } from '@/app/navConfig'
 import { ROLE_LABEL, type SessionUser } from '@/app/session'
 import { AccountMenu } from '@/app/shell/AccountMenu'
@@ -12,6 +12,7 @@ interface TopBarProps {
   /** Optional counts beside a destination ("RFQs 14"). Supplied by the data layer; nothing is shown when absent. */
   counts?: Partial<Record<NavKey, number>>
   onSearch?: () => void
+  onCapture?: () => void
 }
 
 /**
@@ -20,7 +21,7 @@ interface TopBarProps {
  * 1280 and up shows labels; 768 to 1279 shows icons and the active label only
  * (as in money-12-tablet-768); below 768 the mobile bar and tab bar take over.
  */
-export function TopBar({ user, counts, onSearch }: TopBarProps) {
+export function TopBar({ user, counts, onSearch, onCapture }: TopBarProps) {
   const items = navItemsForRole(user.role)
   return (
     <header className="hidden h-topbar items-center gap-6 border-b bg-surface px-5 max-xl:px-4 md:flex">
@@ -70,6 +71,22 @@ export function TopBar({ user, counts, onSearch }: TopBarProps) {
         <span className="flex-1 max-xl:hidden">Search or jump to</span>
         <Kbd className="max-xl:hidden">⌘K</Kbd>
       </button>
+
+      {onCapture ? (
+        <button
+          type="button"
+          onClick={onCapture}
+          className={cn(
+            'flex h-control items-center gap-2 rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground',
+            'transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover active:bg-primary-active',
+            'max-xl:w-control max-xl:justify-center max-xl:px-0',
+          )}
+        >
+          <Icon icon={Import} />
+          <span className="max-xl:sr-only">Capture</span>
+          <Kbd className="max-xl:hidden border-primary-foreground/40 bg-transparent text-primary-foreground">C</Kbd>
+        </button>
+      ) : null}
 
       <div className="flex items-center gap-3">
         <span className="text-xs font-medium text-fg-muted max-xl:hidden">{ROLE_LABEL[user.role] ?? user.role}</span>

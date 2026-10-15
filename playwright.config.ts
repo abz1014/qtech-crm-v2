@@ -50,6 +50,10 @@ import { defineConfig, devices } from '@playwright/test'
  *    10 s Undo, the Waiting group, role-aware items, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e.yml):
  *      E2E_SUITE=today REVIEW_DIR=review-shots npx playwright test --project=today
  *
+ *  - capture (R22): the Capture sheet on the production build WITH the service worker (the share-target POST, paste, drop, the
+ *    Capture button and the C key), the destinations, the tap counts and axe at 1440 and 375, on the same stack and build:
+ *      E2E_SUITE=capture REVIEW_DIR=review-shots npx playwright test --project=capture
+ *
  *  - pwa (R21): the production build's manifest (valid, icons real), the service worker registering, its app-shell-only
  *    precache (nothing from Supabase), the offline shell and Chrome's own installability check. No database needed:
  *      E2E_SUITE=pwa npx playwright test --project=pwa
@@ -60,7 +64,7 @@ import { defineConfig, devices } from '@playwright/test'
  */
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search', 'pwa']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search', 'capture', 'pwa']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -189,6 +193,13 @@ export default defineConfig({
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
+    },
+    {
+      name: 'capture',
+      testMatch: /capture\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, serviceWorkers: 'allow', screenshot: 'only-on-failure' },
     },
     {
       name: 'pwa',

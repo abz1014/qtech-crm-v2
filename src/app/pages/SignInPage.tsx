@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff, KeyRound } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useSession, useSignInNotice } from '@/app/session'
 import { getSupabase } from '@/lib/supabase'
+import { listCaptures, safely } from '@/lib/capture/store'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Field } from '@/ui/form/Field'
@@ -31,6 +32,11 @@ export function SignInPage() {
   const [submitting, setSubmitting] = useState(false)
   const [attempted, setAttempted] = useState(false)
   const [reveal, setReveal] = useState(false)
+  // A shared item is saved on this device before the app checks the session, so signing in again cannot lose it (R22).
+  const [kept, setKept] = useState(0)
+  useEffect(() => {
+    void safely(() => listCaptures(), []).then(items => setKept(items.length))
+  }, [])
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: '', password: '' } })
   const { errors } = form.formState
 
@@ -79,6 +85,11 @@ export function SignInPage() {
         {shown === 'unreachable' ? (
           <Banner tone="danger" title="Can’t reach the server">
             Check your connection and try again.
+          </Banner>
+        ) : null}
+        {kept > 0 ? (
+          <Banner tone="success" title="Your shared item is safe">
+            Sign in and the Capture sheet opens with it.
           </Banner>
         ) : null}
         {notice === 'unconfigured' ? (

@@ -23,6 +23,8 @@ function companies() {
     search: (text: string) => [...all, 'list', 'search', text.trim().toLowerCase()] as const,
     byName: (name: string) => [...all, 'list', 'by-name', name.trim().toLowerCase()] as const,
     detail,
+    /** R22: the RFQs Capture offers (recents and your own with open questions), with their open questions. */
+    capture: (signature = '') => [...all, 'capture', signature] as const,
     /** One slice of a company. `slice` is a fixed word, so a typo is a type error. */
     part: (id: string, slice: CompanyPart) => [...detail(id), slice] as const,
   }
@@ -59,6 +61,8 @@ function rfqs() {
     /** R06: palette search by number, customer ref or company. */
     search: (text: string) => [...all, 'list', 'search', text.trim().toLowerCase()] as const,
     detail,
+    /** R22: the RFQs Capture offers (recents and your own with open questions), with their open questions. */
+    capture: (signature = '') => [...all, 'capture', signature] as const,
     /** R10: short-lived signed links for the RFQ's files; `signature` changes when the set of files does. */
     fileUrls: (id: string, signature: string) => [...detail(id), 'file-urls', signature] as const,
     /** One slice of an RFQ page (R07). `slice` is a fixed word, so a typo is a type error. */

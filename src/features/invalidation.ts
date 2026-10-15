@@ -40,6 +40,8 @@ export interface WriteVars {
   'inquiry.chase': { rfqId: string }
   'rfq.markBidSent': { rfqId: string }
   'rfq.close': { rfqId: string }
+  /** R22: Capture appends to, or restores, an RFQ's notes. */
+  'rfq.notes': { rfqId: string }
   'clarification.add': { rfqId: string }
   'clarification.ask': { rfqId: string }
   'clarification.answer': { rfqId: string }
@@ -97,6 +99,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Bid sent, closed and re-opened only move the RFQ itself (and the board's lists).
   'rfq.markBidSent': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
   'rfq.close': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
+  'rfq.notes': v => [qk.rfqs.detail(v.rfqId)],
   // Questions and their stamps change the RFQ page, its derived clarification state (header) and the board's chips.
   'clarification.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
   'clarification.ask': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],

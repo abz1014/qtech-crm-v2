@@ -57,6 +57,7 @@ describe('invalidation map (R01)', () => {
     'inquiry.chase': { rfqId: 'r1' },
     'rfq.markBidSent': { rfqId: 'r1' },
     'rfq.close': { rfqId: 'r1' },
+    'rfq.notes': { rfqId: 'r1' },
     'clarification.add': { rfqId: 'r1' },
     'clarification.ask': { rfqId: 'r1' },
     'clarification.answer': { rfqId: 'r1' },

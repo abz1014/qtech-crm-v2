@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { ChevronRight, Copy, Save } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
@@ -11,6 +11,8 @@ import { CreateCompanyDialog } from '@/features/companies/CreateCompanyDialog'
 import { useBrands, useCompany, useCompanyContacts, useCompanySites } from '@/features/companies/hooks'
 import type { CompanyRole } from '@/features/companies/api'
 import type { FloatInput, SavedRfq } from '@/features/rfqs/api'
+import { uploadAttachment } from '@/features/rfqs/api'
+import { deleteCapture, safely } from '@/lib/capture/store'
 import { findRfqByCustomerRef, useCompanyMatches, useFloatRfq, useSetRfqFloated, useSupplierCandidates, useSupplierMemory } from '@/features/rfqs/hooks'
 import {
   computeReplyBy,
@@ -171,6 +173,18 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     },
     [addItems],
   )
+  // Capture's "Start a new RFQ" (R22) arrives with the text and the files. The text is read as if it had been pasted here;
+  // the files are attached once the RFQ exists (it has no id on the server before that).
+  const location = useLocation()
+  const captured = (location.state as { capture?: { id: string; text: string; files: File[] } } | null)?.capture
+  const capturedFiles = useRef<File[]>(captured?.files ?? [])
+  const takenCapture = useRef(false)
+  useEffect(() => {
+    if (!captured || takenCapture.current) return
+    takenCapture.current = true
+    if (captured.text.trim()) takePaste(captured.text)
+  }, [captured, takePaste])
+
   // A paste made with nothing focused (Ctrl+V anywhere on the page) is handled here; the paste zone handles its own.
   useEffect(() => {
     if (step !== 'build') return
@@ -214,6 +228,25 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     setItems(list => [...list, { key, description: '', qty: null, unit: '', brandId: null, familyId: null }])
     setFocusKey(key)
   }
+
+  // Once saved: attach the captured files to the new RFQ and forget the captured item.
+  useEffect(() => {
+    if (!saved || !captured) return
+    const files = capturedFiles.current
+    capturedFiles.current = []
+    void (async () => {
+      try {
+        for (const file of files) {
+          const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin'
+          await uploadAttachment({ rfqId: saved.id, clarificationId: null, file, path: `${saved.id}/${crypto.randomUUID()}.${(ext ?? 'bin').toLowerCase()}` })
+        }
+        await safely(() => deleteCapture(captured.id), undefined)
+        if (files.length) toast({ title: `${files.length} ${files.length === 1 ? 'file' : 'files'} attached`, body: rfqRef(saved.number), tone: 'success' })
+      } catch {
+        toast({ title: 'Could not attach the files', body: 'The RFQ is saved. Add them from its Files panel.', tone: 'danger' })
+      }
+    })()
+  }, [saved, captured, toast])
 
   const real = realItems(items)
   const ready = Boolean(company) && real.length > 0

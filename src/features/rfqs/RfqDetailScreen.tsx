@@ -1,6 +1,7 @@
-import { useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { FileQuestion } from 'lucide-react'
+import { recordRfqVisit } from '@/lib/capture/recents'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Skeleton } from '@/ui/Skeleton'
@@ -68,6 +69,12 @@ export default function RfqDetailScreen() {
   )
   const memorySuppliers = useMemo(() => [...new Set((inquiries.data ?? []).filter(i => i.lines.length > 0).map(i => i.supplierId))].sort(), [inquiries.data])
   const memory = useSupplierMemory(memoryItems, memorySuppliers, memorySuppliers.length > 0 && Boolean(id), id)
+
+  // Capture offers recently opened RFQs first (R22): note this visit, on this device only.
+  const openedId = header.data?.id
+  useEffect(() => {
+    if (openedId) recordRfqVisit(openedId)
+  }, [openedId])
 
   if (header.isPending) return <PageSkeleton />
   if (header.isError) {
