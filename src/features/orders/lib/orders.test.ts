@@ -133,3 +133,24 @@ describe('convert: supplier per line from the lowest comparable quote (O01)', ()
     expect(unpricedItems(items, { i3: 125 })).toEqual([])
   })
 })
+
+describe('cancel reasons are fixed keys (migration 0038)', () => {
+  it('has exactly the keys the database accepts, each with a plain phrase', async () => {
+    const { CANCEL_REASONS, cancelReasonLabel } = await import('@/features/orders/lib/cancel')
+    expect(CANCEL_REASONS.map(r => r.value)).toEqual(['customer_cancelled', 'lost_to_competitor', 'supplier_cannot_supply', 'price_or_terms', 'duplicate_or_mistake', 'other'])
+    expect(cancelReasonLabel('customer_cancelled')).toBe('The customer cancelled the PO')
+    expect(cancelReasonLabel(null)).toBeNull()
+    expect(cancelReasonLabel('something_old')).toBe('Another reason')
+  })
+})
+
+describe('resolve price basis preview (admin, legacy orders)', () => {
+  it('shows what each choice would do: prices include GST, or are before it', async () => {
+    const { basisChoices } = await import('@/features/orders/lib/basis')
+    const lines = [{ qty: 2, unitPriceNet: 590000, gstRate: 18 }]
+    const c = basisChoices(lines, 640000)
+    expect(c.net).toMatchObject({ net: 1180000, gst: 212400, gross: 1392400, margin: 540000 })
+    expect(c.gross).toMatchObject({ net: 1000000, gst: 180000, gross: 1180000, margin: 360000 })
+    expect(basisChoices(lines, null).net.margin).toBeNull()
+  })
+})

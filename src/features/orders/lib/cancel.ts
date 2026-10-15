@@ -1,21 +1,19 @@
-// Cancelling an order (O03). The orders table has no reason column, so the reason is written into the order notes as one
-// dated line (the audit log records the change as well). Pure and framework-free.
+// Cancelling an order (O03). The reason is a fixed key in orders.cancel_reason (migration 0038), never text in the notes: reports read
+// it and notes belong to people. The words the screen shows are built here from the key. Pure and framework-free.
 
-export type CancelReason = 'customer_cancelled' | 'entered_twice' | 'could_not_supply' | 'other'
+export type CancelReason = 'customer_cancelled' | 'lost_to_competitor' | 'supplier_cannot_supply' | 'price_or_terms' | 'duplicate_or_mistake' | 'other'
 
 export const CANCEL_REASONS: ReadonlyArray<{ value: CancelReason; label: string }> = [
   { value: 'customer_cancelled', label: 'The customer cancelled the PO' },
-  { value: 'entered_twice', label: 'Entered twice or by mistake' },
-  { value: 'could_not_supply', label: 'We could not supply it' },
+  { value: 'lost_to_competitor', label: 'Lost to a competitor' },
+  { value: 'supplier_cannot_supply', label: 'The supplier cannot supply it' },
+  { value: 'price_or_terms', label: 'Price or terms could not be agreed' },
+  { value: 'duplicate_or_mistake', label: 'Entered twice or by mistake' },
   { value: 'other', label: 'Another reason' },
 ]
 
-export function cancelReasonLabel(reason: CancelReason): string {
+/** The readable phrase for a stored key. Null (no reason given, or an order cancelled before the column existed) reads as no reason. */
+export function cancelReasonLabel(reason: string | null | undefined): string | null {
+  if (!reason) return null
   return CANCEL_REASONS.find(r => r.value === reason)?.label ?? 'Another reason'
-}
-
-/** "Cancelled 2026-11-27: The customer cancelled the PO (they changed the plant)". */
-export function cancelNote(onISO: string, reason: CancelReason, note: string): string {
-  const extra = note.trim()
-  return `Cancelled ${onISO}: ${cancelReasonLabel(reason)}${extra ? ` (${extra})` : ''}`
 }

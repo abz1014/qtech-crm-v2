@@ -106,10 +106,12 @@ function orders() {
     /** Active engineers who can be put on a commissioning job. */
     engineers: () => [...all, 'list', 'engineers'] as const,
     /** The signed-in person's job title (the sign-off of a chase message). */
+    /** Suppliers a leg can be added for. */
+    supplierChoices: () => [...all, 'list', 'supplier-choices'] as const,
     jobTitle: (userId: string) => [...all, 'list', 'job-title', userId] as const,
   }
 }
-export type OrderPart = 'header' | 'items' | 'legs' | 'engineers'
+export type OrderPart = 'header' | 'items' | 'legs' | 'engineers' | 'money' | 'pos'
 
 /** Settings (A04, A06): the team list (read through the admin-users function) and the one company-profile row. */
 function settings() {

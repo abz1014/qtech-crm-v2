@@ -24,6 +24,10 @@ export interface OrderHeader {
   plannedOn: string | null
   doneOn: string | null
   cancelledOn: string | null
+  /** orders.cancel_reason: a fixed key (lib/cancel.ts builds the words). */
+  cancelReason: string | null
+  /** Imported from the old CRM (orders.legacy_source is set). */
+  imported: boolean
   notes: string | null
   site: { name: string; address: string | null } | null
   contact: { name: string; phone: string | null } | null
@@ -38,6 +42,7 @@ export interface OrderHeader {
     net: number | null
     gst: number | null
     gross: number | null
+    invoiced: number | null
   } | null
 }
 
@@ -45,7 +50,7 @@ type Maybe<T> = { data: T | null; error: { code?: string; message: string } | nu
 const none = Promise.resolve({ data: null, error: null })
 
 const STATE_NO_MONEY = 'order_id, lifecycle, goods_state, commissioning_state, data_trust'
-const STATE_WITH_MONEY = 'order_id, lifecycle, goods_state, commissioning_state, invoicing_state, data_trust, net, gst, gross'
+const STATE_WITH_MONEY = 'order_id, lifecycle, goods_state, commissioning_state, invoicing_state, data_trust, net, gst, gross, invoiced'
 
 /** The order, its people and its derived states. Null when there is no such order. `money` is false for an engineer. */
 export async function getOrderHeader(id: string, money: boolean): Promise<OrderHeader | null> {
@@ -80,6 +85,8 @@ export async function getOrderHeader(id: string, money: boolean): Promise<OrderH
     plannedOn: o.commissioning_planned_on,
     doneOn: o.commissioning_done_on,
     cancelledOn: o.cancelled_on,
+    cancelReason: o.cancel_reason,
+    imported: o.legacy_source !== null,
     notes: o.notes,
     site: unwrap(site as Maybe<NonNullable<OrderHeader["site"]>>),
     contact: unwrap(contact as Maybe<NonNullable<OrderHeader["contact"]>>),
@@ -94,6 +101,7 @@ export async function getOrderHeader(id: string, money: boolean): Promise<OrderH
           net: s.net === undefined || s.net === null ? null : Number(s.net),
           gst: s.gst === undefined || s.gst === null ? null : Number(s.gst),
           gross: s.gross === undefined || s.gross === null ? null : Number(s.gross),
+          invoiced: s.invoiced === undefined || s.invoiced === null ? null : Number(s.invoiced),
         }
       : null,
   }
@@ -358,4 +366,141 @@ export async function searchOrders(text: string, signal?: AbortSignal, limit = 6
 export async function getMyJobTitle(userId: string): Promise<string | null> {
   const rows = unwrap(await requireSupabase().from('users').select('id, job_title').eq('id', userId))
   return rows[0]?.job_title ?? null
+}
+
+// ---------------------------------------------------------------- money shown on the order page (admin and sales only)
+
+export interface OrderMoney {
+  grossTarget: number
+  settled: number
+  balance: number
+  paymentState: string
+  dueOn: string | null
+  /** Admin only: the rest of v_order_money. Null for sales, who read order_receivables() and so get a balance and nothing else. */
+  netSale: number | null
+  actualCost: number | null
+  expectedCost: number | null
+  costsState: string | null
+  margin: number | null
+  marginState: string | null
+}
+
+const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v))
+
+/** Admin: v_order_money. Sales: order_receivables() (a balance, no payment rows, no cost, no margin). Never called for an engineer. */
+export async function getOrderMoney(orderId: string, role: 'admin' | 'sales'): Promise<OrderMoney | null> {
+  const db = requireSupabase()
+  if (role === 'admin') {
+    const m = unwrap(await db.from('v_order_money').select('order_id, gross_target, settled, receivable, payment_state, due_on, net_sale, actual_cost, expected_cost, costs_state, margin, margin_state').eq('order_id', orderId).maybeSingle()) as unknown as Record<string, unknown> | null
+    if (!m) return null
+    return {
+      grossTarget: num(m.gross_target) ?? 0,
+      settled: num(m.settled) ?? 0,
+      balance: num(m.receivable) ?? 0,
+      paymentState: (m.payment_state as string | null) ?? 'unpaid',
+      dueOn: (m.due_on as string | null) ?? null,
+      netSale: num(m.net_sale),
+      actualCost: num(m.actual_cost),
+      expectedCost: num(m.expected_cost),
+      costsState: (m.costs_state as string | null) ?? null,
+      margin: num(m.margin),
+      marginState: (m.margin_state as string | null) ?? null,
+    }
+  }
+  const rows = unwrap(await db.rpc('order_receivables', { p_order_id: orderId })) ?? []
+  const r = rows[0]
+  if (!r) return null
+  return {
+    grossTarget: num(r.gross_target) ?? 0,
+    settled: num(r.settled) ?? 0,
+    balance: num(r.balance) ?? 0,
+    paymentState: r.payment_state ?? 'unpaid',
+    dueOn: r.due_on,
+    netSale: null,
+    actualCost: null,
+    expectedCost: null,
+    costsState: null,
+    margin: null,
+    marginState: null,
+  }
+}
+
+export interface LegPo {
+  legId: string
+  number: number
+  revision: number
+  issuedOn: string
+}
+
+/** The latest PO revision of each leg (the "PO-26-0017 · R1" chip). A leg with none has no entry. */
+export async function listLegPos(legIds: readonly string[]): Promise<LegPo[]> {
+  if (legIds.length === 0) return []
+  const rows = unwrap(await requireSupabase().from('purchase_orders').select('supplier_order_id, number, revision, issued_on').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
+  const seen = new Set<string>()
+  const out: LegPo[] = []
+  for (const r of rows) {
+    if (seen.has(r.supplier_order_id)) continue
+    seen.add(r.supplier_order_id)
+    out.push({ legId: r.supplier_order_id, number: r.number, revision: r.revision, issuedOn: r.issued_on })
+  }
+  return out
+}
+
+// ---------------------------------------------------------------- add a line, add a leg, resolve a legacy price basis
+
+export interface NewLine {
+  orderId: string
+  position: number
+  description: string
+  qty: number
+  unit: string | null
+  unitPriceNet: number
+  gstRate: number
+  isService: boolean
+  legId: string | null
+  supplierUnitPrice: number | null
+}
+
+export async function addOrderItem(l: NewLine): Promise<void> {
+  const { error } = await requireSupabase()
+    .from('order_items')
+    .insert({
+      order_id: l.orderId,
+      position: l.position,
+      description: l.description,
+      qty: l.qty,
+      unit: l.unit,
+      unit_price_net: l.unitPriceNet,
+      gst_rate: l.gstRate,
+      is_service: l.isService,
+      supplier_order_id: l.isService ? null : l.legId,
+      supplier_unit_price: l.isService ? null : l.supplierUnitPrice,
+    })
+  if (error) throw error
+}
+
+export async function addOrderLeg(input: { id: string; orderId: string; supplierId: string; currency: string }): Promise<void> {
+  const { error } = await requireSupabase().from('supplier_orders').insert({ id: input.id, order_id: input.orderId, supplier_id: input.supplierId, currency: input.currency })
+  if (error && error.code !== '23505') throw error
+}
+
+/** Admin: legacy orders flagged value_basis_unknown. 'gross' divides each price by 1 + GST; a second call is refused by the database. */
+export async function resolveValueBasis(orderId: string, basis: 'net' | 'gross'): Promise<void> {
+  const { error } = await requireSupabase().rpc('resolve_value_basis', { p_order_id: orderId, p_basis: basis })
+  if (error) throw error
+}
+
+/** Companies that are suppliers (have an inquiry, a leg or a carried brand), for "Add leg", with the currency they last quoted or billed in. */
+export async function listSupplierChoices(): Promise<Array<{ id: string; name: string; lastCurrency: string | null }>> {
+  const db = requireSupabase()
+  const stats = unwrap(await db.from('v_supplier_stats').select('supplier_id'))
+  const ids = stats.map(s => s.supplier_id).filter((i): i is string => Boolean(i))
+  if (ids.length === 0) return []
+  const [companies, legs] = await Promise.all([
+    db.from('companies').select('id, name').in('id', ids).order('name'),
+    db.from('supplier_orders').select('supplier_id, currency, created_at').in('supplier_id', ids).not('currency', 'is', null).order('created_at', { ascending: false }).limit(500),
+  ])
+  const last = new Map<string, string>()
+  for (const l of unwrap(legs)) if (l.currency && !last.has(l.supplier_id)) last.set(l.supplier_id, l.currency.trim())
+  return unwrap(companies).map(c => ({ id: c.id, name: c.name, lastCurrency: last.get(c.id) ?? null }))
 }

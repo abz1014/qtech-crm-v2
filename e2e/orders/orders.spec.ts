@@ -103,6 +103,7 @@ interface OrderSeed {
   legB: string
   items: { id: string; description: string }[]
   engineer: { id: string; name: string }
+  rfqId: string
 }
 
 /**
@@ -168,7 +169,7 @@ async function seedOrder(extra: Record<string, unknown> = {}): Promise<OrderSeed
   items.sort((a, b) => a.position - b.position)
   const engineer = (await get<{ id: string; name: string }>('users?role=eq.engineer&deactivated_at=is.null&select=id,name&order=created_at&limit=1'))[0]
   await must(rest('admin', 'order_engineers', { method: 'POST', body: { order_id: order.id, user_id: engineer.id } }))
-  return { tag, company, po, order, supplierA, supplierB, legA, legB, items, engineer }
+  return { tag, company, po, order, supplierA, supplierB, legA, legB, items, engineer, rfqId: rfq.id }
 }
 
 const orderRow = (id: string) => get<Record<string, unknown>>(`orders?id=eq.${id}&select=*`).then(r => r[0])
@@ -430,18 +431,25 @@ test.describe('O03: commissioning and cancel', () => {
     expect(t.count).toBe(2)
   })
 
-  test('admin or sales: the needs-it toggle and engineers, then Mark done today', async ({ page }) => {
+  test('admin or sales: Edit sets the needs-it toggle, the planned date and the engineers; then Mark done today', async ({ page }) => {
     const s = await seedOrder({ needs_commissioning: false, commissioning_planned_on: null })
     await openAs(page, 'admin', `/orders/${s.order.id}`)
     const section = page.getByRole('region', { name: 'Commissioning' })
     await expect(section).toContainText('This order has no commissioning')
-    await section.getByRole('checkbox', { name: 'This order needs commissioning' }).click()
-    await expect.poll(async () => (await orderRow(s.order.id)).needs_commissioning).toBe(true)
-    await expect(section.getByRole('list', { name: 'Engineers on this order' })).toContainText(s.engineer.name)
-    await section.getByRole('button', { name: `Remove ${s.engineer.name}` }).click()
+    await section.getByRole('button', { name: 'Edit', exact: true }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('checkbox', { name: 'This order needs commissioning' }).click()
+    await dialog.getByRole('textbox', { name: 'Planned on' }).fill(slashDate(karachiDay(15)))
+    await dialog.getByRole('textbox', { name: 'Planned on' }).press('Enter')
+    await expect(dialog.getByRole('list', { name: /Engineers on this order/ })).toContainText(s.engineer.name)
+    await dialog.getByRole('button', { name: `Remove ${s.engineer.name}` }).click()
     await expect.poll(async () => (await get(`order_engineers?order_id=eq.${s.order.id}&select=user_id`)).length).toBe(0)
-    await section.getByRole('combobox', { name: 'Assign an engineer' }).selectOption({ label: s.engineer.name })
+    await dialog.getByRole('combobox', { name: 'Assign an engineer' }).selectOption({ label: s.engineer.name })
     await expect.poll(async () => (await get(`order_engineers?order_id=eq.${s.order.id}&select=user_id`)).length).toBe(1)
+    await dialog.getByRole('button', { name: 'Save' }).click()
+    await expect.poll(async () => (await orderRow(s.order.id)).needs_commissioning).toBe(true)
+    expect((await orderRow(s.order.id)).commissioning_planned_on).toBe(karachiDay(15))
+    await expect(section.getByRole('list', { name: 'Engineers on this order' })).toContainText(s.engineer.name)
     await section.getByRole('button', { name: 'Mark done today' }).click()
     await expect.poll(async () => (await orderRow(s.order.id)).commissioning_done_on).toBe(karachiDay(0))
   })
@@ -455,19 +463,22 @@ test.describe('O03: commissioning and cancel', () => {
     // a reason is needed
     await expect(dialog.getByRole('button', { name: 'Cancel order' })).toBeDisabled()
     await dialog.getByRole('radio', { name: 'The customer cancelled the PO' }).click()
-    await dialog.getByLabel('Note').fill('plant shutdown moved')
+    await expect(dialog.getByRole('radio')).toHaveCount(6)
     await shot(page, 'o03-cancel-dialog-1440')
     await dialog.getByRole('button', { name: 'Cancel order' }).click()
     await expect.poll(async () => (await orderRow(s.order.id)).cancelled_on).toBe(karachiDay(0))
     const row = await orderRow(s.order.id)
-    expect(String(row.notes)).toContain('Gate pass needed 2 days ahead.')
-    expect(String(row.notes)).toContain(`Cancelled ${karachiDay(0)}: The customer cancelled the PO (plant shutdown moved)`)
+    // the reason is a structured key; the notes are exactly what people wrote and are never appended to
+    expect(row.cancel_reason).toBe('customer_cancelled')
+    expect(row.notes).toBe('Gate pass needed 2 days ahead.')
     await expect(page.getByText(/^Cancelled /).first()).toBeVisible()
+    await expect(page.getByText(/The customer cancelled the PO./)).toBeVisible()
     // nothing can be stamped while it is cancelled
     await expect(page.getByRole('button', { name: /Mark placed/ })).toHaveCount(0)
     await page.getByRole('button', { name: 'More actions' }).click()
     await page.getByRole('menuitem', { name: 'Reopen order' }).click()
     await expect.poll(async () => (await orderRow(s.order.id)).cancelled_on).toBeNull()
+    expect((await orderRow(s.order.id)).cancel_reason).toBeNull()
   })
 })
 
@@ -487,7 +498,7 @@ test.describe('O03: role views', () => {
     await page.waitForLoadState('networkidle')
 
     const text = await page.locator('#main').innerText()
-    expect(text).not.toMatch(/PKR|48,500|96,500|135,000|GST|Invoic|Margin|Payment|Terms|Exempt/i)
+    expect(text).not.toMatch(/PKR|48,500|96,500|135,000|GST|Invoic|Margin|Payment|Terms|Exempt|Costs|Balance|Add line|Add leg|Issue PO|Record payment|Add expense|Create invoice/i)
     await expect(page.getByRole('checkbox', { name: /Exempt|Service/ })).toHaveCount(0)
     await expect(page.getByLabel(/GST rate/)).toHaveCount(0)
     await expect(page.getByText('Not set')).toHaveCount(0)
@@ -504,31 +515,105 @@ test.describe('O03: role views', () => {
     await shot(page, 'o03-engineer-1440')
   })
 
-  test('admin and sales see prices, GST and the invoicing state; the money panels are marked slots, not built here', async ({ page }) => {
+  test('admin sees five dimension chips, prices, the margin and the invoices and payments panels, and the money actions drawn for their tasks', async ({ page }) => {
     const s = await seedOrder()
     await openAs(page, 'admin', `/orders/${s.order.id}`)
     const items = page.getByRole('table', { name: 'Order items' })
     await expect(items).toContainText('48,500')
     await expect(items).toContainText('291,000')
     await expect(items.getByLabel('GST rate, line 1')).toHaveValue('18')
-    await expect(page.getByLabel('State of this order')).toContainText('Invoicing')
-    await expect(page.getByLabel('State of this order')).toContainText('Not invoiced')
+    const dims = page.getByLabel('State of this order')
+    for (const d of ['Goods', 'Commissioning', 'Invoicing', 'Payment', 'Costs']) await expect(dims.getByRole('heading', { name: d })).toBeVisible()
+    await expect(dims).toContainText('Not invoiced')
+    await expect(dims).toContainText('Unpaid')
+    await expect(dims).toContainText('Provisional')
     await expect(leg(page, 'A')).toContainText('EUR')
     await expect(page.getByTestId('leg-A-total')).toContainText('1,284')
-    await expect(page.locator('[data-slot="margin-costs"]')).toHaveCount(1)
-    await expect(page.locator('[data-slot="invoices-payments"]')).toHaveCount(1)
+    await expect(page.getByTestId('leg-A-po')).toHaveText('No PO yet')
+    await expect(page.getByRole('region', { name: 'Margin' })).toContainText('Admin only')
+    await expect(page.getByTestId('margin-expenses-empty')).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Invoices and payments' })).toContainText('Nothing yet')
+    await expect(page.getByTestId('order-balance')).toHaveText('730,420')
+    await expect(page.getByTestId('payments-empty')).toBeVisible()
+    // drawn where the mockup puts them, disabled until their task (M01 to M04, O07)
+    for (const name of ['Record payment', 'Add expense', 'Create invoice']) await expect(page.locator('[data-slot="order-actions"]').getByRole('button', { name })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Issue PO, leg A' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Add expense, leg A' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Add line' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add leg' })).toBeVisible()
     await expect(page.getByText(s.po).first()).toBeVisible()
     await expect(page.getByText('Terms 30 days from invoice')).toBeVisible()
     await shot(page, 'o03-admin-1440')
   })
 
-  test('sales see the same page without the margin slot', async ({ page }) => {
+  test('sales see four chips (no Costs), the balance and no margin; sales read the balance, never payment rows', async ({ page }) => {
     const s = await seedOrder()
+    await must(rest('admin', 'payments_in', { method: 'POST', body: { order_id: s.order.id, amount: 100000, received_on: karachiDay(-2) }, prefer: 'return=minimal' }))
+    const urls: string[] = []
+    page.on('request', r => urls.push(decodeURIComponent(r.url())))
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     await expect(page.getByRole('table', { name: 'Order items' })).toContainText('48,500')
+    const dims = page.getByLabel('State of this order')
+    for (const d of ['Goods', 'Commissioning', 'Invoicing', 'Payment']) await expect(dims.getByRole('heading', { name: d })).toBeVisible()
+    await expect(dims.getByRole('heading', { name: 'Costs' })).toHaveCount(0)
+    await expect(dims).toContainText('Part paid')
+    await expect(page.getByRole('region', { name: 'Margin' })).toHaveCount(0)
     await expect(page.locator('[data-slot="margin-costs"]')).toHaveCount(0)
-    await expect(page.locator('[data-slot="invoices-payments"]')).toHaveCount(1)
+    await expect(page.getByTestId('order-balance')).toHaveText('630,420')
+    await expect(page.getByRole('button', { name: 'Record payment' })).toHaveCount(0)
+    await page.waitForLoadState('networkidle')
+    expect(urls.filter(u => /payments_in|v_order_money|expenses|order_costs/.test(u))).toEqual([])
+    expect(urls.some(u => u.includes('order_receivables'))).toBe(true)
     await shot(page, 'o03-sales-1440')
+  })
+
+  test('a legacy order with an unknown price basis: the banner, question marks, and the resolver shows what each choice does before it rewrites anything', async ({ page }) => {
+    const s = await seedOrder({ legacy_flags: ['value_basis_unknown'] })
+    await openAs(page, 'admin', `/orders/${s.order.id}`)
+    await expect(page.getByText('Price basis unknown').first()).toBeVisible()
+    await expect(page.getByLabel('State of this order')).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Margin' })).toContainText('Basis unknown')
+    await expect(page.getByRole('columnheader', { name: /Unit price as typed/ })).toBeVisible()
+    await expect(page.getByLabel(/GST rate/)).toHaveCount(0)
+    await shot(page, 'o03-basis-unknown-1440')
+    await page.getByRole('button', { name: 'Resolve price basis' }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByRole('button', { name: 'Apply basis' })).toBeDisabled()
+    await expect(dialog).toContainText('Net 619,000 + GST 111,420 = 730,420 gross.')
+    await shot(page, 'o03-resolve-basis-dialog-1440')
+    await dialog.getByRole('radio', { name: /The prices are before GST/ }).click()
+    await dialog.getByRole('button', { name: 'Apply basis' }).click()
+    await expect.poll(async () => ((await orderRow(s.order.id)).legacy_flags as string[]).includes('value_basis_unknown')).toBe(false)
+    await expect(page.getByText('Price basis unknown')).toHaveCount(0)
+  })
+
+  test('Add line and Add leg', async ({ page }) => {
+    const s = await seedOrder()
+    const supplierC = await createCompany(uniqueName('Lahore Automation'))
+    await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: s.rfqId, supplier_id: supplierC.id, sent_on: karachiDay(-2) }, prefer: 'return=minimal' }))
+    await openAs(page, 'sales', `/orders/${s.order.id}`)
+    const t = tapper()
+
+    await t.tap(page.getByRole('button', { name: 'Add line' }))
+    let dialog = page.getByRole('dialog')
+    await expect(dialog.getByRole('button', { name: 'Add line' })).toBeDisabled()
+    await dialog.getByLabel('Description').fill('Terminal and cable gland kit, IP67')
+    await dialog.getByLabel('Unit price, net PKR').fill('5600')
+    await shot(page, 'o03-add-line-dialog-1440')
+    await dialog.getByRole('button', { name: 'Add line' }).click()
+    await expect.poll(async () => (await itemRows(s.order.id)).length).toBe(4)
+    const added = (await itemRows(s.order.id))[3]
+    expect(Number(added.gst_rate)).toBe(18)
+    expect(added.is_service).toBe(false)
+    await expect(page.getByRole('table', { name: 'Order items' })).toContainText('Terminal and cable gland kit, IP67')
+
+    await t.tap(page.getByRole('button', { name: 'Add leg' }))
+    dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Supplier').selectOption({ label: supplierC.name })
+    await expect(dialog.getByLabel('Currency')).toHaveValue('PKR')
+    await dialog.getByRole('button', { name: 'Add leg' }).click()
+    await expect.poll(async () => (await get(`supplier_orders?order_id=eq.${s.order.id}&select=supplier_id,currency`)).length).toBe(3)
+    await expect(page.getByTestId('leg-C')).toContainText(supplierC.name)
   })
 
   test('an order that is not there says so, with a way back', async ({ page }) => {

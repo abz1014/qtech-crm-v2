@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Ban, CalendarDays, CircleCheck, Ellipsis, RotateCcw } from 'lucide-react'
+import { Ban, Banknote, CalendarDays, CircleCheck, Ellipsis, FilePlus2, Receipt, RotateCcw, Scale } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay } from '@/lib/formatDay'
@@ -10,32 +10,34 @@ import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
-import { Field } from '@/ui/form/Field'
 import { Radio, RadioGroup } from '@/ui/form/Radio'
-import { TextField } from '@/ui/form/TextField'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
-import type { OrderHeader, OrderLegRow, PersonRow } from '@/features/orders/api'
+import type { OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
 import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
 import { useMarkDone, useSetPlanned } from '@/features/orders/commissioningActions'
+import { ResolveBasisDialog } from '@/features/orders/ResolveBasisDialog'
 import { legState } from '@/features/orders/lib/legModel'
-import { CANCEL_REASONS, cancelNote, type CancelReason } from '@/features/orders/lib/cancel'
+import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features/orders/lib/cancel'
 
 /*
- * The top of the order page (O03): who it is for, where it stands (the state chips from v_order_state) and the actions that belong
- * to the whole order. Admin and sales get the menu (Cancel order); an engineer gets the two commissioning actions: "Mark done today"
- * (1 tap, nothing typed) and "Change planned date" (optional).
+ * The top of the order page (O03; g2-order-detail.html): who it is for, where it stands (one chip per dimension from v_order_state and,
+ * for admin and sales, the money views) and the actions that belong to the whole order.
  *
- * Slots, not built here: data-slot="order-actions" is where Record payment, Add expense and Create invoice go (M01, M02, M03).
+ * Admin and sales get the menu (Cancel order) and the money actions. An engineer gets the two commissioning actions: "Mark done today"
+ * (1 tap, nothing typed) and "Change planned date" (optional). Five chips for admin (Goods, Commissioning, Invoicing, Payment, Costs),
+ * four for sales (no Costs), two for an engineer.
+ *
+ * TRACKED GAPS: "Record payment" (M02), "Add expense" (M03) and "Create invoice" (M01) are drawn in the data-slot="order-actions" place
+ * the mockup gives them, disabled and naming the task that wires them.
  */
 
-function Dim({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
+function Dim({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="grid min-w-0 content-start justify-items-start gap-2 px-5 py-4">
-      <h2 className="flex items-center gap-2 text-sm text-fg-muted">{title}</h2>
-      {icon}
+      <h2 className="text-sm text-fg-muted">{title}</h2>
       {children}
     </div>
   )
@@ -47,14 +49,10 @@ function goodsSentence(legs: readonly OrderLegRow[], today: string): string {
   const count = (s: string) => states.filter(x => x === s).length
   const parts: string[] = []
   if (count('to-place')) parts.push(`${count('to-place')} of ${legs.length} ${legs.length === 1 ? 'leg' : 'legs'} not ordered yet`)
-  const received = count('received')
-  const delivered = count('delivered')
-  const late = count('late')
-  const onOrder = count('on-order')
-  if (received) parts.push(`${received} received`)
-  if (delivered) parts.push(`${delivered} delivered`)
-  if (late) parts.push(`${late} late`)
-  if (onOrder) parts.push(`${onOrder} on order`)
+  if (count('received')) parts.push(`${count('received')} received`)
+  if (count('delivered')) parts.push(`${count('delivered')} delivered`)
+  if (count('late')) parts.push(`${count('late')} late`)
+  if (count('on-order')) parts.push(`${count('on-order')} on order`)
   const text = parts.join(', ')
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`
 }
@@ -62,32 +60,40 @@ function goodsSentence(legs: readonly OrderLegRow[], today: string): string {
 export function OrderHeaderBlock({
   order,
   legs,
+  items,
   engineers,
-  isEngineer,
-  money,
+  role,
+  orderMoney,
 }: {
   order: OrderHeader
   legs: readonly OrderLegRow[]
+  items: readonly OrderItemRow[]
   engineers: readonly PersonRow[]
-  isEngineer: boolean
-  money: boolean
+  role: string
+  orderMoney: OrderMoney | null | undefined
 }) {
   const { toast } = useToast()
   const today = businessToday()
+  const isEngineer = role === 'engineer'
+  const isAdmin = role === 'admin'
+  const money = role === 'admin' || role === 'sales'
   const update = useUpdateOrder(order.id)
   const cancel = useCancelOrder(order.id)
   const markDone = useMarkDone(order)
   const setPlanned = useSetPlanned(order)
   const [cancelling, setCancelling] = useState(false)
+  const [resolving, setResolving] = useState(false)
   const s = order.state
   const cancelled = order.cancelledOn !== null
   const ref = orderRef(order.number)
   const showDone = order.needsCommissioning && !order.doneOn && !cancelled
+  const basisUnknown = s?.dataTrust === 'basis_unknown'
 
   const reopen = async () => {
-    const before = { cancelled_on: order.cancelledOn }
+    const before = { cancelled_on: order.cancelledOn, cancel_reason: order.cancelReason }
     try {
-      await cancel.mutateAsync({ cancelled_on: null })
+      // the reason goes with the date: the database refuses a reason on an active order
+      await cancel.mutateAsync({ cancelled_on: null, cancel_reason: null })
       toast({
         title: 'Order reopened',
         body: ref,
@@ -123,6 +129,17 @@ export function OrderHeaderBlock({
       : s?.gross !== null && s?.gross !== undefined
         ? `Invoiced against PKR ${formatAmount(s.gross)} gross.`
         : ''
+  const m = orderMoney
+  const paymentDetail = !m
+    ? ''
+    : m.settled <= 0
+      ? `Nothing received yet. PKR ${formatAmount(m.grossTarget)} to collect.`
+      : `PKR ${formatAmount(m.settled)} of ${formatAmount(m.grossTarget)} received.`
+  const costsDetail = !m
+    ? ''
+    : `PKR ${formatAmount(m.actualCost ?? 0)} paid out${m.expectedCost !== null ? ` of ${formatAmount(m.expectedCost)} expected` : ''}.${m.costsState === 'complete' ? '' : ' Not marked complete.'}`
+
+  const cols = isAdmin ? 'lg:grid-cols-5' : money ? 'lg:grid-cols-4' : 'lg:grid-cols-2'
 
   return (
     <header>
@@ -136,6 +153,7 @@ export function OrderHeaderBlock({
             <span className="num text-lg text-fg-2">{ref}</span>
             {s?.lifecycle ? <StatusBadge dimension="order" value={s.lifecycle} /> : null}
             {s && s.dataTrust && s.dataTrust !== 'ok' ? <StatusBadge dimension="trust" value={s.dataTrust} /> : null}
+            {order.imported ? <span className="text-sm font-regular text-fg-muted">Imported from the old CRM</span> : null}
           </h1>
           <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg-2">
             {order.site ? <span>{order.site.name}</span> : null}
@@ -163,8 +181,29 @@ export function OrderHeaderBlock({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* data-slot="order-actions": Record payment, Add expense, Create invoice (M01, M02, M03). */}
-          <span data-slot="order-actions" className="contents" />
+          {/* data-slot="order-actions": Record payment (M02), Add expense (M03), Create invoice (M01). Drawn as the mockup places them, disabled until their task. */}
+          <span data-slot="order-actions" className="contents">
+            {isAdmin && !cancelled ? (
+              <>
+                <Button icon={Banknote} disabled title="Arrives with Payments (M02)">
+                  Record payment
+                </Button>
+                <Button icon={Receipt} disabled title="Arrives with Expenses (M03)">
+                  Add expense
+                </Button>
+              </>
+            ) : null}
+            {money && !cancelled ? (
+              <Button icon={FilePlus2} disabled title="Arrives with Invoices (M01)">
+                Create invoice
+              </Button>
+            ) : null}
+            {isAdmin && basisUnknown ? (
+              <Button variant="primary" icon={Scale} onClick={() => setResolving(true)}>
+                Resolve price basis
+              </Button>
+            ) : null}
+          </span>
           {isEngineer && showDone ? (
             <>
               <Button variant="primary" icon={CircleCheck} onClick={() => void markDone.run()} busy={markDone.pending} busyLabel="Saving">
@@ -196,14 +235,17 @@ export function OrderHeaderBlock({
 
       {cancelled ? (
         <Banner tone="warning" title={`Cancelled ${order.cancelledOn ? formatDay(order.cancelledOn) : ''}`} className="mt-4">
-          Nothing on this order can be changed while it is cancelled. The reason is in the order notes.
+          {cancelReasonLabel(order.cancelReason) ? `${cancelReasonLabel(order.cancelReason)}. ` : ''}Nothing on this order can be changed while it is cancelled.
         </Banner>
       ) : null}
 
-      <div
-        className={`mt-4 grid divide-y rounded border bg-surface md:divide-x md:divide-y-0 ${money ? 'md:grid-cols-3' : 'md:grid-cols-2'} [&>*]:border-line`}
-        aria-label="State of this order"
-      >
+      {basisUnknown ? (
+        <Banner tone="warning" title="Price basis unknown" className="mt-4">
+          The old CRM did not record whether these prices include GST. Until you choose, this order is left out of margin, GST totals and the net cash that counts towards targets. Its payments still count in gross cash.
+        </Banner>
+      ) : null}
+
+      <div className={`mt-4 grid divide-y rounded border bg-surface sm:grid-cols-2 sm:divide-y-0 lg:divide-x ${cols} [&>*]:border-line`} aria-label="State of this order">
         <Dim title="Goods">
           {s?.goods ? <StatusBadge dimension="goods" value={s.goods} /> : null}
           <p className="text-sm text-fg-2">{goodsDetail}</p>
@@ -218,6 +260,18 @@ export function OrderHeaderBlock({
             <p className="text-sm text-fg-2">{invoicingDetail}</p>
           </Dim>
         ) : null}
+        {money ? (
+          <Dim title="Payment">
+            {m ? <StatusBadge dimension="payment" value={m.paymentState} /> : null}
+            <p className="text-sm text-fg-2">{paymentDetail}</p>
+          </Dim>
+        ) : null}
+        {isAdmin ? (
+          <Dim title="Costs">
+            {m?.costsState ? <StatusBadge dimension="costs" value={m.costsState} /> : null}
+            <p className="text-sm text-fg-2">{costsDetail}</p>
+          </Dim>
+        ) : null}
       </div>
 
       {cancelling ? (
@@ -225,11 +279,10 @@ export function OrderHeaderBlock({
           order={order}
           busy={cancel.isPending}
           onClose={() => setCancelling(false)}
-          onConfirm={async (reason, note) => {
-            const before = { cancelled_on: order.cancelledOn, notes: order.notes }
-            const line = cancelNote(today, reason, note)
+          onConfirm={async reason => {
+            const before = { cancelled_on: order.cancelledOn, cancel_reason: order.cancelReason }
             try {
-              await cancel.mutateAsync({ cancelled_on: today, notes: order.notes ? `${order.notes}\n${line}` : line })
+              await cancel.mutateAsync({ cancelled_on: today, cancel_reason: reason })
               setCancelling(false)
               toast({
                 title: 'Order cancelled',
@@ -252,6 +305,7 @@ export function OrderHeaderBlock({
           }}
         />
       ) : null}
+      {resolving ? <ResolveBasisDialog order={order} items={items} money={orderMoney} onClose={() => setResolving(false)} /> : null}
     </header>
   )
 }
@@ -265,11 +319,9 @@ function CancelDialog({
   order: OrderHeader
   busy: boolean
   onClose: () => void
-  onConfirm: (reason: CancelReason, note: string) => void | Promise<void>
+  onConfirm: (reason: CancelReason) => void | Promise<void>
 }) {
   const [reason, setReason] = useState<CancelReason | null>(null)
-  const [note, setNote] = useState('')
-  const needsNote = reason === 'other' && note.trim() === ''
   return (
     <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
@@ -283,22 +335,19 @@ function CancelDialog({
             <Button data-cancel onClick={onClose} disabled={busy}>
               Keep the order
             </Button>
-            <Button variant="danger" busy={busy} busyLabel="Cancelling" disabled={!reason || needsNote} onClick={() => reason && void onConfirm(reason, note)}>
+            <Button variant="danger" busy={busy} busyLabel="Cancelling" disabled={!reason} onClick={() => reason && void onConfirm(reason)}>
               Cancel order
             </Button>
           </>
         }
       >
         <div className="grid gap-4">
-          <p className="text-sm text-fg-muted">The reason is kept in the order notes. The order stays on record and can be reopened.</p>
+          <p className="text-sm text-fg-muted">The order stays on record and can be reopened. Reports use the reason.</p>
           <RadioGroup aria-label="Reason" value={reason ?? ''} onValueChange={v => setReason(v as CancelReason)} className="gap-2">
             {CANCEL_REASONS.map(r => (
               <Radio key={r.value} value={r.value} label={r.label} />
             ))}
           </RadioGroup>
-          <Field label="Note" requirement={reason === 'other' ? 'required' : 'optional'}>
-            <TextField value={note} onChange={e => setNote(e.target.value)} placeholder="Anything worth remembering" />
-          </Field>
         </div>
       </DialogContent>
     </Dialog>

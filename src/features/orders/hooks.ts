@@ -111,3 +111,40 @@ export function useRemoveEngineer(orderId: string) {
 export function useMyJobTitle(userId: string | undefined) {
   return useQuery({ queryKey: qk.orders.jobTitle(userId ?? ''), queryFn: () => api.getMyJobTitle(userId as string), enabled: Boolean(userId), staleTime: 300_000 })
 }
+
+/** Admin and sales only: the caller passes a role only for them, so an engineer never makes this request. */
+export function useOrderMoney(id: string | undefined, role: 'admin' | 'sales' | null) {
+  return useQuery({ queryKey: qk.orders.part(id ?? '', 'money'), queryFn: () => api.getOrderMoney(id as string, role as 'admin' | 'sales'), enabled: Boolean(id) && role !== null })
+}
+
+export function useLegPos(id: string | undefined, legIds: readonly string[]) {
+  return useQuery({ queryKey: qk.orders.part(id ?? '', 'pos'), queryFn: () => api.listLegPos(legIds), enabled: Boolean(id) && legIds.length > 0 })
+}
+
+export function useAddItem(orderId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (l: api.NewLine) => api.addOrderItem(l),
+    onSuccess: () => invalidateAfter(client, 'order.update', { orderId }),
+  })
+}
+
+export function useAddLeg(orderId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; supplierId: string; currency: string }) => api.addOrderLeg({ ...v, orderId }),
+    onSuccess: () => invalidateAfter(client, 'order.update', { orderId }),
+  })
+}
+
+export function useResolveBasis(orderId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (basis: 'net' | 'gross') => api.resolveValueBasis(orderId, basis),
+    onSuccess: () => invalidateAfter(client, 'order.update', { orderId }),
+  })
+}
+
+export function useSupplierChoices(enabled: boolean) {
+  return useQuery({ queryKey: qk.orders.supplierChoices(), queryFn: api.listSupplierChoices, enabled, staleTime: 60_000 })
+}
