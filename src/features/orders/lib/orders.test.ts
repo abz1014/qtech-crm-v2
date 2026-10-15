@@ -135,7 +135,7 @@ describe('convert: supplier per line from the lowest comparable quote (O01)', ()
   })
 })
 
-describe('cancel reasons are fixed keys (migration 0039)', () => {
+describe('cancel reasons are fixed keys (migration 0040)', () => {
   it('has exactly the keys the database accepts, each with a plain phrase', async () => {
     const { CANCEL_REASONS, cancelReasonLabel } = await import('@/features/orders/lib/cancel')
     expect(CANCEL_REASONS.map(r => r.value)).toEqual(['customer_cancelled', 'lost_to_competitor', 'supplier_cannot_supply', 'price_or_terms', 'duplicate_or_mistake', 'other'])
