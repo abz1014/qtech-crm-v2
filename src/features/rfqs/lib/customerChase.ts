@@ -31,6 +31,8 @@ export interface CustomerChaseInput {
   today: string
   signature: ChaseSignature
   variant: EnquiryVariant
+  /** A date the person chose to be answered by (YYYY-MM-DD). Omitted: the default, one working day before the bid. */
+  confirmByOverride?: string | null
 }
 
 export type CustomerChaseKind = 'first' | 'gentle' | 'bid_close' | 'third' | 'firm'
@@ -66,9 +68,10 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
   const { variant, rfqRef, today, questions, askCount } = input
   const email = variant === 'email'
   const bold = boldFor(variant)
-  const confirmBy = customerConfirmBy(input.dueOn, today)
+  const confirmBy = input.confirmByOverride && /^\d{4}-\d{2}-\d{2}$/.test(input.confirmByOverride) ? input.confirmByOverride : customerConfirmBy(input.dueOn, today)
   const by = byDayText(confirmBy, today)
-  const ref = input.customerRef ? `#${input.customerRef.replace(/^#\s*/, '').trim()}` : null
+  const refText = input.customerRef?.replace(/^\s*(?:RFQ\s*)?#?\s*/i, '').trim()
+  const ref = refText ? `#${refText}` : null
   const yourRfq = ref ? `your RFQ ${bold(ref)}` : `your enquiry (our ref ${bold(rfqRef)})`
   const yourRfqPlain = ref ? `your RFQ ${ref}` : `your enquiry (our ref ${rfqRef})`
   const dueLong = input.dueOn ? longDay(input.dueOn.slice(0, 10)) : null

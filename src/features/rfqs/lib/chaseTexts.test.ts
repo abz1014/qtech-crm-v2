@@ -199,7 +199,7 @@ describe('supplier goods chase', () => {
       [
         'Assalam o Alaikum Mr. Imran,',
         '',
-        'Following up on our order *PO 253102* of Monday 2 November. It was due on *Sunday 22 November* and we have not yet received the goods:',
+        'Following up on our order *PO 253102* of Monday 2 November. It was due on *Sunday 22 November* and the goods have not yet been delivered:',
         '1. Yokogawa EJA530E pressure transmitter, 0-1 MPa, 3 nos',
         '2. Endress+Hauser Cerabar PMC71, 2 nos',
         '',
@@ -244,7 +244,7 @@ describe('supplier goods chase', () => {
   it('lists nothing it was not given', () => {
     const t = generateGoodsChase({ ...base, items: [] })
     expect(t.body).not.toMatch(/^\d\. /m)
-    expect(t.body).toContain('we have not yet received the goods.')
+    expect(t.body).toContain('the goods have not yet been delivered.')
   })
 })
 

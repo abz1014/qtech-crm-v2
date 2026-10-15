@@ -299,10 +299,9 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: s.china.inquiryId, rfq_item_id: s.items[0].id, unit_price: 5, currency: 'CNY' } }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = row(page, s.china.name)
-    await r.getByRole('button', { name: 'Preview text' }).click()
     await expect(r.getByText('Thank you for pricing item 1.')).toBeVisible()
-    await expect(r.locator('pre')).toContainText(s.items[1].description)
-    await expect(r.locator('pre')).not.toContainText(s.items[0].description)
+    await expect(r.getByTestId('chase-text')).toContainText(s.items[1].description)
+    await expect(r.getByTestId('chase-text')).not.toContainText(s.items[0].description)
   })
 })
 
@@ -367,7 +366,6 @@ for (const width of [1440, 375]) {
     expect(await violations(page)).toEqual([])
     await review(page, `rfq-detail-populated-${width}`)
 
-    await row(page, s.china.name).getByRole('button', { name: 'Preview text' }).click().catch(() => undefined)
     await page.getByRole('button', { name: 'Close or lose' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await violations(page)).toEqual([])

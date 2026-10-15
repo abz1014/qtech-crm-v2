@@ -157,7 +157,7 @@ export interface RfqHeader {
   company: { id: string; name: string; country: string | null }
   site: { name: string; address: string | null } | null
   contactId: string | null
-  contact: { name: string; phone: string | null } | null
+  contact: { name: string; phone: string | null; email: string | null } | null
   owner: { id: string; name: string; role: string } | null
   state: RfqStateRow | null
 }
@@ -181,7 +181,7 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
   const [company, site, contact, owner] = await Promise.all([
     db.from('companies').select('id, name, country').eq('id', r.company_id).maybeSingle(),
     r.site_id ? db.from('company_sites').select('name, address').eq('id', r.site_id).maybeSingle() : none,
-    r.contact_id ? db.from('contacts').select('name, phone').eq('id', r.contact_id).maybeSingle() : none,
+    r.contact_id ? db.from('contacts').select('name, phone, email').eq('id', r.contact_id).maybeSingle() : none,
     r.owner_id ? db.from('users').select('id, name, role').eq('id', r.owner_id).maybeSingle() : none,
   ])
   const c = unwrap(company)
@@ -200,7 +200,7 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
     company: { id: r.company_id, name: c?.name ?? 'Unknown company', country: c?.country ?? null },
     contactId: r.contact_id,
     site: unwrap(site as Maybe<{ name: string; address: string | null }>),
-    contact: unwrap(contact as Maybe<{ name: string; phone: string | null }>),
+    contact: unwrap(contact as Maybe<{ name: string; phone: string | null; email: string | null }>),
     owner: unwrap(owner as Maybe<{ id: string; name: string; role: string }>),
     state: unwrap(stateRes) as RfqStateRow | null,
   }
@@ -267,6 +267,7 @@ export interface InquiryRow {
   notes: string | null
   contactName: string | null
   contactPhone: string | null
+  contactEmail: string | null
   /** The currency of this supplier's most recent quote line on any RFQ, or null. */
   lastCurrency: string | null
   /** v_inquiry_state values. */
@@ -292,7 +293,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
   const [companies, states, contacts, lines, recent, declines] = await Promise.all([
     db.from('companies').select('id, name, country').in('id', supplierIds),
     db.from('v_inquiry_state').select('inquiry_id, response_state, contact_state, items_quoted').eq('rfq_id', rfqId),
-    db.from('contacts').select('company_id, name, phone, created_at').in('company_id', supplierIds).order('created_at'),
+    db.from('contacts').select('company_id, name, phone, email, created_at').in('company_id', supplierIds).order('created_at'),
     db
       .from('supplier_quote_lines')
       .select('id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, in_stock, fx_rate_pkr, fx_rate_on')
@@ -309,8 +310,8 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
   for (const d of unwrap(declines)) declinesBy.set(d.inquiry_id, { ...(declinesBy.get(d.inquiry_id) ?? {}), [d.rfq_item_id]: d.reason })
   const byCompany = new Map(unwrap(companies).map(c => [c.id, c]))
   const stateBy = new Map(unwrap(states).map(s => [s.inquiry_id, s]))
-  const contactBy = new Map<string, { name: string; phone: string | null }>()
-  for (const c of unwrap(contacts)) if (!contactBy.has(c.company_id)) contactBy.set(c.company_id, { name: c.name, phone: c.phone })
+  const contactBy = new Map<string, { name: string; phone: string | null; email: string | null }>()
+  for (const c of unwrap(contacts)) if (!contactBy.has(c.company_id)) contactBy.set(c.company_id, { name: c.name, phone: c.phone, email: c.email })
   const lastCurrency = new Map<string, string>()
   type Recent = { currency: string; supplier_inquiries: { supplier_id: string } | { supplier_id: string }[] }
   for (const r of unwrap(recent) as unknown as Recent[]) {
@@ -351,6 +352,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
       notes: i.notes,
       contactName: ct?.name ?? null,
       contactPhone: ct?.phone ?? null,
+      contactEmail: ct?.email ?? null,
       lastCurrency: lastCurrency.get(i.supplier_id) ?? null,
       responseState: s?.response_state ?? null,
       contactState: s?.contact_state ?? null,
@@ -562,6 +564,29 @@ export async function stampClarificationAsk(ids: readonly string[]): Promise<num
   return data ?? 0
 }
 
+export interface ClarificationAskBefore {
+  id: string
+  firstAskedAt: string | null
+  lastAskedAt: string | null
+  askCount: number
+}
+
+/** Take an ask back: put each question's asked fields back to what they were before the stamp (the Undo of "Copy questions"). */
+export async function restoreClarificationAsk(before: readonly ClarificationAskBefore[]): Promise<void> {
+  const db = requireSupabase()
+  for (const b of before) {
+    const { error } = await db.from('clarifications').update({ first_asked_at: b.firstAskedAt, last_asked_at: b.lastAskedAt, ask_count: b.askCount }).eq('id', b.id)
+    if (error) throw error
+  }
+}
+
+/** Take a supplier chase back (the Undo of "Copy & mark chased"). */
+export async function restoreSupplierChase(inquiryId: string, before: { lastChasedOn: string | null; chaseCount: number }): Promise<void> {
+  const db = requireSupabase()
+  const { error } = await db.from('supplier_inquiries').update({ last_chased_on: before.lastChasedOn, chase_count: before.chaseCount }).eq('id', inquiryId)
+  if (error) throw error
+}
+
 /** An answer: text, or none (a photo answers alone), stamped now. All null takes the answer back. */
 export async function setClarificationAnswer(input: { id: string; answer: string | null; answeredAt: string | null }): Promise<void> {
   const db = requireSupabase()
@@ -629,4 +654,38 @@ export async function signFileUrls(paths: readonly string[], seconds = 600): Pro
   const out: Record<string, string> = {}
   for (const d of data ?? []) if (d.path && d.signedUrl) out[d.path] = d.signedUrl
   return out
+}
+
+// ================================================================ the caller's own profile (message signatures)
+
+export interface MyProfile {
+  jobTitle: string | null
+}
+
+/** The signed-in person's job title, for the "Sales, Q-Tech Solutions" signature line of an email. */
+export async function getMyProfile(userId: string): Promise<MyProfile> {
+  const db = requireSupabase()
+  const row = unwrap<{ job_title: string | null } | null>(await db.from('users').select('job_title').eq('id', userId).maybeSingle())
+  return { jobTitle: row?.job_title ?? null }
+}
+
+// ================================================================ shortlisting more suppliers (the "float elsewhere" escalation)
+
+/** Shortlist suppliers on an RFQ (inquiries not yet sent: sent_on stays empty). Suppliers already on the RFQ are skipped. Returns the ids created. */
+export async function addInquiries(rfqId: string, supplierIds: readonly string[]): Promise<string[]> {
+  const db = requireSupabase()
+  const existing = unwrap(await db.from('supplier_inquiries').select('supplier_id').eq('rfq_id', rfqId))
+  const have = new Set(existing.map(e => e.supplier_id))
+  const fresh = [...new Set(supplierIds)].filter(id => !have.has(id))
+  if (fresh.length === 0) return []
+  const rows = unwrap(await db.from('supplier_inquiries').insert(fresh.map(supplier_id => ({ rfq_id: rfqId, supplier_id }))).select('id'))
+  return rows.map(r => r.id)
+}
+
+/** Take back shortlisted suppliers (only unsent inquiries can be deleted by staff). */
+export async function removeInquiries(ids: readonly string[]): Promise<void> {
+  if (ids.length === 0) return
+  const db = requireSupabase()
+  const { error } = await db.from('supplier_inquiries').delete().in('id', [...ids])
+  if (error) throw error
 }

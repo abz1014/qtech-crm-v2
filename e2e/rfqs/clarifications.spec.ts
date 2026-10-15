@@ -135,7 +135,7 @@ test.describe('copy for the customer (FE-2: 1 tap)', () => {
     await panel(page).getByRole('button', { name: 'Copy questions for customer' }).click()
     await expect(toast(page, 'Questions copied')).toBeVisible()
     const text = await clipboard(page)
-    expect(text).toContain('Thank you for your RFQ *#')
+    expect(text).toContain('To complete our quotation for your RFQ *#')
     expect(text).toContain('1. Line size and flange rating on the process line\n2. Fluid temperature range')
     expect(text).toContain('Kindly confirm by *')
     await expect.poll(async () => (await clarsOf(s.rfq.id)).map(r => r.ask_count)).toEqual([1, 1])
@@ -147,8 +147,8 @@ test.describe('copy for the customer (FE-2: 1 tap)', () => {
     await expect(panel(page).getByText('Asked ×1')).toBeVisible()
     await expect(panel(page).getByText(/last asked today/)).toBeVisible()
     await panel(page).getByRole('radio', { name: 'Email' }).click()
-    await panel(page).getByRole('button', { name: 'Preview text' }).click()
-    await expect(panel(page).getByText(/^Subject: RFQ #/)).toBeVisible()
+    await expect(panel(page).getByRole('button', { name: 'Copy subject' })).toBeVisible()
+    await expect(panel(page).getByText(/^RFQ #.*your confirmation needed by/)).toBeVisible()
     await panel(page).getByRole('button', { name: 'Copy chase text' }).click()
     await expect(toast(page, 'Chase text copied')).toBeVisible()
     expect(await clipboard(page)).toContain('Thank you for your RFQ #')
@@ -362,7 +362,6 @@ for (const width of [1440, 375]) {
     await review(page, `r09-clarifications-populated-${width}`)
 
     await panel(page).getByRole('textbox', { name: 'Add questions' }).fill('Which cable gland size?\nHow long a cable?')
-    await panel(page).getByRole('button', { name: 'Preview text' }).first().click()
     expect(await violations(page)).toEqual([])
     await review(page, `r09-clarifications-adding-${width}`)
 

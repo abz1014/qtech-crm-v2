@@ -162,7 +162,6 @@ async function loadLegs(names: Map<string, string>): Promise<LegFact[]> {
         .from('supplier_orders')
         .select('id, order_id, supplier_id, reference, placed_on, expected_on, received_on, delivered_on, last_chased_on, chase_count, orders!inner(number, owner_id, ordered_on, company_id, cancelled_on)')
         .is('orders.cancelled_on', null)
-        .is('received_on', null)
         .is('delivered_on', null)
         .order('created_at')
         .range(from, to) as unknown as Page<LegRow>,

@@ -38,7 +38,7 @@ describe('drafts', () => {
   ]
   const inquiry = (o: Partial<InquiryRow> = {}): InquiryRow => ({
     id: 'q1', supplierId: 's1', supplierName: 'Metro', supplierCountry: null, sentOn: '2026-11-23', lastChasedOn: null, lastRelayedAt: null, noOfferOn: null, noOfferReason: null,
-    itemDeclines: {}, chaseCount: 0, notes: null, contactName: 'Mr. Imran', contactPhone: '0321', lastCurrency: null, responseState: 'awaiting', contactState: 'sent', itemsQuoted: 0, lines: [], ...o,
+    itemDeclines: {}, chaseCount: 0, notes: null, contactName: 'Mr. Imran', contactPhone: '0321', contactEmail: null, lastCurrency: null, responseState: 'awaiting', contactState: 'sent', itemsQuoted: 0, lines: [], ...o,
   })
   it('supplier: lists the unpriced items only and thanks for the priced one', () => {
     const d = buildSupplierDraft({ rfq, inquiry: inquiry({ lines: [{ id: 'l', inquiryId: 'q1', itemId: 'i1', unitPrice: 1, currency: 'USD', leadTime: null, inStock: null, fxRatePkr: null, fxRateOn: null }] }), items, today: TODAY, signature: sig })

@@ -1,11 +1,10 @@
-import { useState } from 'react'
-import { Copy, Eye, EyeOff, Send } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Copy, Send } from 'lucide-react'
 import { businessToday, toBusinessDate } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
-import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { SegmentedControl } from '@/ui/SegmentedControl'
@@ -15,15 +14,20 @@ import { useToast } from '@/ui/useToast'
 import { Panel } from '@/features/companies/CompanyParts'
 import type { ClarificationRow, InquiryRow, RfqHeader } from '@/features/rfqs/api'
 import { AddQuestions, QuestionRow, WithdrawnRow } from '@/features/rfqs/ClarificationParts'
-import { useClarifications, useFileUrls, useRfqAttachments, useSetInquiryRelayed, useStampClarificationAsk } from '@/features/rfqs/hooks'
+import { ChaseNote, FormattedMessage, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
+import { useClarifications, useFileUrls, useRestoreClarificationAsk, useRfqAttachments, useSetInquiryRelayed, useStampClarificationAsk } from '@/features/rfqs/hooks'
+import { useSignature } from '@/features/rfqs/useSignature'
 import {
   agoText,
   answersToRelay,
   chaseDue,
   daysBetween,
-  generateCustomerAsk,
+  customerConfirmBy,
+  customerReturnsOn,
+  generateCustomerChase,
   groupClarifications,
   relayText,
+  type ChaseText,
   type EnquiryVariant,
 } from '@/features/rfqs/lib'
 
@@ -46,10 +50,10 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
   const clars = useClarifications(rfq.id)
   const atts = useRfqAttachments(rfq.id)
   const urls = useFileUrls(rfq.id, (atts.data ?? []).map(a => a.path))
-  const session = useSession()
-  const user = session.status === 'signed-in' ? session.user : null
+  const signature = useSignature()
   const { toast } = useToast()
   const stamp = useStampClarificationAsk(rfq.id)
+  const restore = useRestoreClarificationAsk(rfq.id)
   const relayStamp = useSetInquiryRelayed(rfq.id)
   const [variant, setVariant] = useState<EnquiryVariant>('whatsapp')
 
@@ -61,33 +65,33 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
   const open = groups.toAsk.length + groups.asked.length
   const options = inquiries.map(i => ({ id: i.id, name: i.supplierName }))
 
-  const signature = { name: user?.name ?? 'Q-Tech Solutions', company: 'Q-Tech Solutions' }
-  const askText = (group: ClarificationRow[], repeat: boolean) => {
-    const firsts = group.map(c => c.firstAskedAt).filter((x): x is string => Boolean(x)).sort()
-    const ask = generateCustomerAsk({
-      variant,
-      rfqRef: rfqRef(rfq.number),
-      customerRef: rfq.customerRef,
-      contactName: rfq.contact?.name ?? null,
-      questions: group.map(c => c.question),
-      repeat,
-      firstAskedDay: firsts[0] ? toBusinessDate(new Date(firsts[0])) : null,
-      dueOn: rfq.dueOn,
-      today,
-      signature,
-    })
-    return { ask, text: ask.subject ? `Subject: ${ask.subject}\n\n${ask.body}` : ask.body }
-  }
-
-  const copyAsk = async (group: ClarificationRow[], repeat: boolean) => {
-    const { text } = askText(group, repeat)
+  /** "Copy message and mark chased": the text goes on the clipboard, the questions are stamped, and an Undo toast offers to take it back. */
+  const copyAsk = async (group: ClarificationRow[], repeat: boolean, text: string) => {
     if (!(await copyToClipboard(text))) {
-      toast({ title: 'Could not copy the text', body: 'Open Preview text and copy it by hand. The questions were not marked as asked.', tone: 'danger' })
+      toast({ title: 'Could not copy the text', body: 'Select the text in the message and copy it by hand. The questions were not marked as asked.', tone: 'danger' })
       return
     }
+    const before = group.map(c => ({ id: c.id, firstAskedAt: c.firstAskedAt, lastAskedAt: c.lastAskedAt, askCount: c.askCount }))
     try {
       await stamp.mutateAsync(group.map(c => c.id))
-      toast({ title: repeat ? 'Chase text copied' : 'Questions copied', body: `${group.length} ${group.length === 1 ? 'question' : 'questions'} · marked as asked today`, tone: 'success' })
+      toast({
+        title: repeat ? 'Chase text copied' : 'Questions copied',
+        body: `${group.length} ${group.length === 1 ? 'question' : 'questions'} · marked as asked today`,
+        tone: 'success',
+        undo: {
+          onUndo: async () => {
+            try {
+              await restore.mutateAsync(before)
+            } catch (err) {
+              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
+            }
+          },
+          settledTitle: repeat ? 'Chase text copied' : 'Questions copied',
+          settledBody: `${rfqRef(rfq.number)} marked chased`,
+          undoneTitle: 'Undone.',
+          undoneBody: 'The questions are not marked as asked.',
+        },
+      })
     } catch (err) {
       toast({ title: 'Copied, but not marked as asked', body: mapPgError(err).message, tone: 'danger' })
     }
@@ -179,40 +183,45 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
             ))}
 
             {groups.toAsk.length > 0 ? (
-              <Group
+              <ChaseGroup
                 key="to-ask"
+                rfq={rfq}
+                rows={groups.toAsk}
+                repeat={false}
+                variant={variant}
+                signature={signature}
+                today={today}
                 header={<StatusBadge dimension="clarification" value="to-ask" />}
                 hint={`${groups.toAsk.length} ${groups.toAsk.length === 1 ? 'question' : 'questions'}`}
-                footer={({ preview }) => (
-                  <>
-                    <Button variant="primary" size="sm" icon={Copy} busy={stamp.isPending} busyLabel="Marking asked" onClick={() => void copyAsk(groups.toAsk, false)}>
-                      Copy questions for customer
-                    </Button>
-                    {preview}
-                  </>
-                )}
-                preview={askText(groups.toAsk, false).text}
-                note={`Copying marks them as asked today. Reply-by ${formatDay(askText(groups.toAsk, false).ask.replyBy)}.`}
+                copyLabel="Copy questions for customer"
+                stamping={stamp.isPending}
+                onCopy={(selected, text) => void copyAsk(selected, false, text)}
               >
                 {groups.toAsk.map(c => (
                   <QuestionRow key={c.id} rfqId={rfq.id} c={c} raisedBy={c.raisedByInquiryId ? (nameOf.get(c.raisedByInquiryId) ?? 'a supplier') : null} files={filesFor(c.id)} urls={urls.data} />
                 ))}
-              </Group>
+              </ChaseGroup>
             ) : null}
 
             {groups.asked.length > 0 ? (
-              <AskedGroup
+              <ChaseGroup
                 rfq={rfq}
-                today={today}
                 rows={groups.asked}
+                repeat
+                variant={variant}
+                signature={signature}
+                today={today}
+                header={<StatusBadge dimension="clarification" value="waiting-customer" label={`Asked ×${Math.max(...groups.asked.map(c => c.askCount))}`} />}
+                hint={askedHint(groups.asked, today)}
+                copyLabel="Copy chase text"
                 stamping={stamp.isPending}
-                onCopy={() => void copyAsk(groups.asked, true)}
-                preview={askText(groups.asked, true).text}
+                onCopy={(selected, text) => void copyAsk(selected, true, text)}
+                dueNote={chaseDueNote(groups.asked, rfq.dueOn, today)}
               >
                 {groups.asked.map(c => (
                   <QuestionRow key={c.id} rfqId={rfq.id} c={c} raisedBy={c.raisedByInquiryId ? (nameOf.get(c.raisedByInquiryId) ?? 'a supplier') : null} files={filesFor(c.id)} urls={urls.data} />
                 ))}
-              </AskedGroup>
+              </ChaseGroup>
             ) : null}
 
             {groups.answered.length > 0 ? (
@@ -247,65 +256,86 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
   )
 }
 
-function AskedGroup({
+function askedHint(rows: ClarificationRow[], today: string): string {
+  const last = rows.map(c => c.lastAskedAt).filter((x): x is string => Boolean(x)).sort().at(-1)
+  const days = last ? daysBetween(toBusinessDate(new Date(last)), today) : 0
+  return `${rows.length} ${rows.length === 1 ? 'question' : 'questions'} · last asked ${agoText(days)}`
+}
+
+function chaseDueNote(rows: ClarificationRow[], dueOn: string | null, today: string): string | null {
+  const last = rows.map(c => c.lastAskedAt).filter((x): x is string => Boolean(x)).sort().at(-1)
+  const days = last ? daysBetween(toBusinessDate(new Date(last)), today) : 0
+  if (!chaseDue(days, dueOn, today)) return null
+  const soon = dueOn ? daysBetween(today, dueOn.slice(0, 10)) <= 3 && dueOn.slice(0, 10) >= today : false
+  return `A chase is due: ${days} ${days === 1 ? 'day' : 'days'} since the last ask${soon ? ' and the bid is due within 3 days' : ''}.`
+}
+
+/**
+ * One group of questions with the same state: a header with its chip, the questions, and for the ones still to ask or
+ * waiting, the message (g2-chase-texts "Customer clarification chase"): every open question ticked, "Kindly confirm by"
+ * a date the person can change, the recipient, the subject for an email, the text, and one tap to copy and mark it.
+ */
+function ChaseGroup({
   rfq,
-  today,
   rows,
+  repeat,
+  variant,
+  signature,
+  today,
+  header,
+  hint,
+  copyLabel,
   stamping,
   onCopy,
-  preview,
+  dueNote,
   children,
 }: {
   rfq: RfqHeader
-  today: string
   rows: ClarificationRow[]
-  stamping: boolean
-  onCopy: () => void
-  preview: string
-  children: React.ReactNode
-}) {
-  const times = Math.max(...rows.map(c => c.askCount))
-  const last = rows.map(c => c.lastAskedAt).filter((x): x is string => Boolean(x)).sort().at(-1)
-  const days = last ? daysBetween(toBusinessDate(new Date(last)), today) : 0
-  const due = chaseDue(days, rfq.dueOn, today)
-  const soon = rfq.dueOn ? daysBetween(today, rfq.dueOn.slice(0, 10)) <= 3 && rfq.dueOn.slice(0, 10) >= today : false
-  return (
-    <Group
-      header={<StatusBadge dimension="clarification" value="waiting-customer" label={`Asked ×${times}`} />}
-      hint={`${rows.length} ${rows.length === 1 ? 'question' : 'questions'} · last asked ${agoText(days)}`}
-      footer={({ preview: p }) => (
-        <>
-          <Button size="sm" icon={Copy} busy={stamping} busyLabel="Marking chased" onClick={onCopy}>
-            Copy chase text
-          </Button>
-          {p}
-        </>
-      )}
-      preview={preview}
-      note={due ? `A chase is due: ${days} ${days === 1 ? 'day' : 'days'} since the last ask${soon ? ' and the bid is due within 3 days' : ''}.` : 'Copying records another ask today.'}
-    >
-      {children}
-    </Group>
-  )
-}
-
-/** One group of questions with the same state: a header with its chip, the questions, and an optional footer with the copy action and a text preview. */
-function Group({
-  header,
-  hint,
-  children,
-  footer,
-  preview,
-  note,
-}: {
+  repeat: boolean
+  variant: EnquiryVariant
+  signature: { name: string; company: string; jobTitle?: string | null }
+  today: string
   header: React.ReactNode
   hint: string
+  copyLabel: string
+  stamping: boolean
+  onCopy: (selected: ClarificationRow[], text: string) => void
+  dueNote?: string | null
   children: React.ReactNode
-  footer?: (parts: { preview: React.ReactNode }) => React.ReactNode
-  preview?: string
-  note?: string
 }) {
-  const [show, setShow] = useState(false)
+  const [off, setOff] = useState<ReadonlySet<string>>(new Set())
+  const [chosen, setChosen] = useState<string | null>(null)
+  const selected = rows.filter(c => !off.has(c.id))
+  const defaultBy = customerConfirmBy(rfq.dueOn, today)
+  const by = chosen ?? defaultBy
+  const selectedKey = selected.map(c => c.id).join(',')
+  const draft = useMemo(() => {
+    if (selected.length === 0) return null
+    const firsts = selected.map(c => c.firstAskedAt).filter((x): x is string => Boolean(x)).sort()
+    const lasts = selected.map(c => c.lastAskedAt).filter((x): x is string => Boolean(x)).sort()
+    const make = (v: EnquiryVariant): ChaseText => generateCustomerChase({
+      rfqRef: rfqRef(rfq.number),
+      customerRef: rfq.customerRef,
+      contactName: rfq.contact?.name ?? null,
+      questions: selected.map(c => c.question),
+      askCount: repeat ? Math.max(...selected.map(c => c.askCount)) : 0,
+      firstAskedOn: firsts[0] ? toBusinessDate(new Date(firsts[0])) : null,
+      lastAskedOn: lasts.at(-1) ? toBusinessDate(new Date(lasts.at(-1) as string)) : null,
+      dueOn: rfq.dueOn,
+      today,
+      signature,
+      variant: v,
+      confirmByOverride: chosen,
+    })
+    return { whatsapp: make('whatsapp'), email: make('email') }
+    // selected is derived from rows and off; its ids are the dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedKey, rfq.number, rfq.customerRef, rfq.contact?.name, rfq.dueOn, today, signature.name, signature.jobTitle, repeat, chosen])
+  const shown = draft ? draft[variant] : null
+  const count = Math.max(0, ...rows.map(c => c.askCount)) + 1
+  const returnsOn = customerReturnsOn(today, rfq.dueOn)
+  const text = shown ? shown.body : ''
   return (
     <div className="border-t first:border-t-0">
       <header className="flex items-center justify-between gap-2 px-4 pb-1 pt-3">
@@ -313,21 +343,53 @@ function Group({
         <span className="text-right text-xs text-fg-muted">{hint}</span>
       </header>
       <div className="divide-y divide-dashed">{children}</div>
-      {footer ? (
-        <footer className="grid gap-2 px-4 pb-3 pt-2">
-          <div className="flex flex-wrap items-center gap-2">
-            {footer({
-              preview: (
-                <Button size="sm" variant="quiet" icon={show ? EyeOff : Eye} aria-expanded={show} onClick={() => setShow(s => !s)}>
-                  {show ? 'Hide text' : 'Preview text'}
-                </Button>
-              ),
-            })}
-          </div>
-          {show && preview ? <pre className="whitespace-pre-wrap break-words rounded border bg-sunken p-3 font-sans text-sm text-fg-2">{preview}</pre> : null}
-          {note ? <p className="text-xs text-fg-muted">{note}</p> : null}
-        </footer>
-      ) : null}
+      <div className="mx-4 mb-3 mt-2 grid overflow-hidden rounded border bg-surface">
+        <TickList
+          title="Questions in this message"
+          rows={rows.map(c => ({ id: c.id, label: c.question, checked: !off.has(c.id) }))}
+          onToggle={(id, on) =>
+            setOff(o => {
+              const n = new Set(o)
+              if (on) n.delete(id)
+              else n.add(id)
+              return n
+            })
+          }
+        />
+        <ReplyByField
+          label="Kindly confirm by"
+          value={by}
+          onChange={v => setChosen(v && v !== defaultBy ? v : null)}
+          note={`${rfq.dueOn ? 'One working day before the bid is due.' : 'Three working days from today.'} You can change it.`}
+        />
+        <RecipientRow channel={variant} lead={variant === 'email' ? 'Email to' : 'WhatsApp to'} contact={rfq.contact} />
+        {variant === 'email' && shown?.subject ? <SubjectRow subject={shown.subject} /> : null}
+        <div className="px-4 py-3">
+          {shown ? <FormattedMessage text={text} testId="chase-text" /> : <p className="text-sm text-fg-muted">Tick at least one question to write the message.</p>}
+        </div>
+        <ChaseNote className="border-t">
+          Copying records {repeat ? 'a chase today' : 'the ask today'} (asked ×{count}). {rfqRef(rfq.number)} moves to Waiting and returns on {formatDay(returnsOn)}.
+          {dueNote ? ` ${dueNote}` : ''}
+        </ChaseNote>
+        <div className="flex flex-wrap items-center gap-2 border-t bg-sunken px-4 py-3">
+          <Button variant="primary" size="sm" icon={Copy} disabled={!shown} busy={stamping} busyLabel="Marking asked" onClick={() => onCopy(selected, text)}>
+            {copyLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** A plain group of questions (answered). */
+function Group({ header, hint, children }: { header: React.ReactNode; hint: string; children: React.ReactNode }) {
+  return (
+    <div className="border-t first:border-t-0">
+      <header className="flex items-center justify-between gap-2 px-4 pb-1 pt-3">
+        {header}
+        <span className="text-right text-xs text-fg-muted">{hint}</span>
+      </header>
+      <div className="divide-y divide-dashed">{children}</div>
     </div>
   )
 }

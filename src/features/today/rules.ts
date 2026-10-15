@@ -417,11 +417,11 @@ export function rulePaymentOverdue(ctx: TodayInputs): Entry[] {
   return out
 }
 
-/** Goods late: the order was placed, the expected date has passed and nothing has arrived. Cooldown 3 working days after a chase. */
+/** Goods late: the order was placed, the expected date has passed and the leg is not delivered (there is no separate "received" step: received follows delivered). Cooldown 3 working days after a chase. */
 export function ruleGoodsLate(ctx: TodayInputs): Entry[] {
   const out: Entry[] = []
   for (const l of ctx.legs) {
-    if (!l.placedOn || !l.expectedOn || l.receivedOn || l.deliveredOn || l.expectedOn >= ctx.today || !routesToUser(l.ownerId, ctx)) continue
+    if (!l.placedOn || !l.expectedOn || l.deliveredOn || l.expectedOn >= ctx.today || !routesToUser(l.ownerId, ctx)) continue
     const late = daysBetween(l.expectedOn, ctx.today)
     const w = chaseState({
       lastTouchOn: l.lastChasedOn ?? l.expectedOn,

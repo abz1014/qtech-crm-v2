@@ -1,11 +1,11 @@
 import { useId, useState } from 'react'
-import { ClipboardPaste, Copy, Eye, EyeOff, Info, Undo2 } from 'lucide-react'
+import { ClipboardPaste, Copy, Info, Undo2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
+import { daysBetween } from '@/features/rfqs/lib/dateText'
 import { copyToClipboard } from '@/lib/clipboard'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
-import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { SegmentedControl } from '@/ui/SegmentedControl'
@@ -17,7 +17,11 @@ import { useToast } from '@/ui/useToast'
 import { Panel } from '@/features/companies/CompanyParts'
 import { PasteBox, PasteReplyPanel } from '@/features/rfqs/PasteReply'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
-import { useSaveReply, useSetInquiryNoOffer, useSetItemDecline, useStampSupplierChase } from '@/features/rfqs/hooks'
+import { ChaseNote, FormattedMessage, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
+import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
+import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
+import { useRestoreSupplierChase, useSaveReply, useSetInquiryNoOffer, useSetItemDecline, useStampSupplierChase } from '@/features/rfqs/hooks'
+import { useSignature } from '@/features/rfqs/useSignature'
 import {
   CANT_QUOTE_REASONS,
   currencyForSupplier,
@@ -25,6 +29,8 @@ import {
   draftFromLines,
   draftFromSuggestions,
   generateSupplierChase,
+  supplierReplyBy,
+  supplierReturnsOn,
   isReplyDirty,
   parseSupplierReply,
   planReplySave,
@@ -52,6 +58,7 @@ import {
 
 export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHeader; items: RfqItemRow[]; inquiries: InquiryRow[]; rates: RateTable }) {
   const replied = inquiries.filter(i => i.lines.length > 0).length
+  const askedIds = new Set(inquiries.map(i => i.supplierId))
   return (
     <Panel
       title="Supplier replies"
@@ -65,7 +72,7 @@ export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHead
         <ul className="divide-y">
           {inquiries.map(i => (
             <li key={`${i.id}:${i.lines.map(l => `${l.itemId}=${l.unitPrice}${l.currency}${l.leadTime}${l.inStock}`).join('|')}`}>
-              <ReplyRow rfq={rfq} items={items} inquiry={i} rates={rates} />
+              <ReplyRow rfq={rfq} items={items} inquiry={i} rates={rates} askedIds={askedIds} />
             </li>
           ))}
         </ul>
@@ -74,20 +81,18 @@ export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHead
   )
 }
 
-function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqItemRow[]; inquiry: InquiryRow; rates: RateTable }) {
+function ReplyRow({ rfq, items, inquiry, rates, askedIds }: { rfq: RfqHeader; items: RfqItemRow[]; inquiry: InquiryRow; rates: RateTable; askedIds: ReadonlySet<string> }) {
   const { toast } = useToast()
-  const session = useSession()
-  const user = session.status === 'signed-in' ? session.user : null
   const headingId = useId()
   const save = useSaveReply(rfq.id)
   const noOffer = useSetInquiryNoOffer(rfq.id)
   const itemReason = useSetItemDecline(rfq.id)
   const stamp = useStampSupplierChase(rfq.id)
+  const restoreChase = useRestoreSupplierChase(rfq.id)
 
   const prefill = currencyForSupplier(inquiry.lastCurrency, inquiry.supplierCountry)
   const existing = inquiry.lines.map(l => ({ itemId: l.itemId, unitPrice: l.unitPrice, currency: l.currency, leadTime: l.leadTime, inStock: l.inStock }))
   const [draft, setDraft] = useState<ReplyDraft>(() => draftFromLines(existing, prefill.currency))
-  const [showText, setShowText] = useState(false)
   const [variant, setVariant] = useState<EnquiryVariant>('whatsapp')
   const [pasteMode, setPasteMode] = useState<null | 'box' | 'suggest'>(null)
   const [suggestions, setSuggestions] = useState<SuggestionSet | null>(null)
@@ -200,34 +205,66 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
   }
 
   // ---- chase: the items still without a price from this supplier, and not declined for a reason of their own
-  const pricedNumbers = items.filter(it => inquiry.lines.some(l => l.itemId === it.id)).map(it => it.number)
-  const outstanding = items.filter(it => !inquiry.lines.some(l => l.itemId === it.id) && !inquiry.itemDeclines[it.id])
-  const canChase = Boolean(inquiry.sentOn) && !inquiry.noOfferOn && outstanding.length > 0
-  const chase = canChase
-    ? generateSupplierChase({
-        rfqRef: rfqRef(rfq.number),
-        sentOn: inquiry.sentOn,
-        dueOn: rfq.dueOn,
-        today: businessToday(),
-        chaseCount: inquiry.chaseCount,
-        contactName: inquiry.contactName,
-        pricedNumbers,
-        items: outstanding.map(it => ({ number: it.number, description: it.description, brandName: it.brandName, qty: it.qty, unit: it.unit })),
-        signature: { name: user?.name ?? 'Q-Tech Solutions', company: 'Q-Tech Solutions' },
-        variant,
-      })
-    : null
-  const chaseText = chase ? (chase.subject ? `Subject: ${chase.subject}\n\n${chase.body}` : chase.body) : ''
+  const today = businessToday()
+  const signature = useSignature()
+  const [offItems, setOffItems] = useState<ReadonlySet<string>>(new Set())
+  const [replyChosen, setReplyChosen] = useState<string | null>(null)
+  const [escalationDismissed, setEscalationDismissed] = useState(false)
+  const choose = useChooseSuppliers(rfq.id, rfqRef(rfq.number))
+  const pricedItems = items.filter(it => inquiry.lines.some(l => l.itemId === it.id))
+  const pricedNumbers = pricedItems.map(it => it.number)
+  const outstandingAll = items.filter(it => !inquiry.lines.some(l => l.itemId === it.id) && !inquiry.itemDeclines[it.id])
+  const outstanding = outstandingAll.filter(it => !offItems.has(it.id))
+  const canChase = Boolean(inquiry.sentOn) && !inquiry.noOfferOn && outstandingAll.length > 0
+  const defaultReplyBy = supplierReplyBy(rfq.dueOn, today) ?? today
+  const chaseFor = (v: EnquiryVariant) =>
+    canChase && outstanding.length > 0
+      ? generateSupplierChase({
+          rfqRef: rfqRef(rfq.number),
+          sentOn: inquiry.sentOn,
+          dueOn: rfq.dueOn,
+          today,
+          chaseCount: inquiry.chaseCount,
+          contactName: inquiry.contactName,
+          pricedNumbers,
+          items: outstanding.map(it => ({ number: it.number, description: it.description, brandName: it.brandName, qty: it.qty, unit: it.unit })),
+          signature,
+          variant: v,
+          ageDays: inquiry.sentOn ? daysBetween(inquiry.sentOn, today) : null,
+          replyByOverride: replyChosen,
+        })
+      : null
+  const chase = chaseFor(variant)
+  const chaseText = chase ? chase.body : ''
+  const returnsOn = supplierReturnsOn(today, rfq.dueOn)
 
   const doChase = async () => {
     const ok = await copyToClipboard(chaseText)
     if (!ok) {
-      toast({ title: 'Could not copy the text', body: 'Open Preview text and copy it by hand. The chase was not recorded.', tone: 'danger' })
+      toast({ title: 'Could not copy the text', body: 'Select the text in the message and copy it by hand. The chase was not recorded.', tone: 'danger' })
       return
     }
+    const before = { lastChasedOn: inquiry.lastChasedOn, chaseCount: inquiry.chaseCount }
     try {
       const n = await stamp.mutateAsync(inquiry.id)
-      toast({ title: 'Chase text copied', body: `${inquiry.supplierName} · chased ${n} ${n === 1 ? 'time' : 'times'}`, tone: 'success' })
+      toast({
+        title: 'Chase text copied',
+        body: `${inquiry.supplierName} · chased ${n} ${n === 1 ? 'time' : 'times'}`,
+        tone: 'success',
+        undo: {
+          onUndo: async () => {
+            try {
+              await restoreChase.mutateAsync({ inquiryId: inquiry.id, before })
+            } catch (err) {
+              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
+            }
+          },
+          settledTitle: 'Chase text copied',
+          settledBody: `${rfqRef(rfq.number)} marked chased`,
+          undoneTitle: 'Undone.',
+          undoneBody: `${inquiry.supplierName} is not marked chased.`,
+        },
+      })
     } catch (err) {
       toast({ title: 'Copied, but the chase was not recorded', body: mapPgError(err).message, tone: 'danger' })
     }
@@ -417,41 +454,85 @@ function ReplyRow({ rfq, items, inquiry, rates }: { rfq: RfqHeader; items: RfqIt
       )}
 
       {inquiry.sentOn || inquiry.chaseCount > 0 ? (
-        <div className="grid gap-2 border-t pt-3">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <p className="min-w-0 flex-1 basis-48 text-xs text-fg-muted">
-              {inquiry.sentOn ? `Sent ${formatDay(inquiry.sentOn)}` : 'Not sent yet'}
-              {inquiry.lastChasedOn ? ` · chased ${inquiry.chaseCount} ${inquiry.chaseCount === 1 ? 'time' : 'times'}, last ${formatDay(inquiry.lastChasedOn)}` : ' · not chased yet'}
-              {inquiry.chaseCount >= 2 && canChase ? ' · chased twice already: it may be time to ask someone else' : ''}
-            </p>
-            {canChase ? (
-              <>
-                <Button size="sm" variant="quiet" icon={showText ? EyeOff : Eye} onClick={() => setShowText(s => !s)} aria-expanded={showText}>
-                  {showText ? 'Hide text' : 'Preview text'}
-                </Button>
-                <Button icon={Copy} onClick={() => void doChase()} busy={stamp.isPending} busyLabel="Marking chased" aria-label={`Copy & mark chased, ${inquiry.supplierName}`}>
+        <div className="grid gap-3 border-t pt-3">
+          <p className="text-xs text-fg-muted">
+            {inquiry.sentOn ? `Sent ${formatDay(inquiry.sentOn)}` : 'Not sent yet'}
+            {inquiry.lastChasedOn ? ` · chased ${inquiry.chaseCount} ${inquiry.chaseCount === 1 ? 'time' : 'times'}, last ${formatDay(inquiry.lastChasedOn)}` : ' · not chased yet'}
+          </p>
+          {inquiry.chaseCount >= 2 && canChase && !escalationDismissed ? (
+            <FloatElsewhere
+              supplierName={inquiry.supplierName}
+              items={outstandingAll.map(it => ({ id: it.id, number: it.number, description: it.description, brandId: it.brandId, brandName: it.brandName }))}
+              askedIds={askedIds}
+              today={today}
+              busy={choose.busy}
+              onChoose={ids => void choose.choose(ids)}
+              onChaseAgain={() => setEscalationDismissed(true)}
+            />
+          ) : null}
+          {canChase ? (
+            <section aria-label={`Chase ${inquiry.supplierName}`} className="grid overflow-hidden rounded border bg-surface">
+              <TickList
+                title="Items still without a price from this supplier"
+                rows={items
+                  .filter(it => !inquiry.itemDeclines[it.id])
+                  .map(it => {
+                    const priced = inquiry.lines.some(l => l.itemId === it.id)
+                    return {
+                      id: it.id,
+                      label: `${it.brandName && !it.description.toLowerCase().includes(it.brandName.toLowerCase()) ? `${it.brandName} ` : ''}${it.description}`,
+                      sub: `item ${it.number} · ${qtyText(it.qty, it.unit) ?? ''}`,
+                      checked: !priced && !offItems.has(it.id),
+                      disabled: priced,
+                      note: priced ? 'priced' : undefined,
+                    }
+                  })}
+                onToggle={(id, on) =>
+                  setOffItems(o => {
+                    const n = new Set(o)
+                    if (on) n.delete(id)
+                    else n.add(id)
+                    return n
+                  })
+                }
+              />
+              <ReplyByField
+                label="Reply by"
+                value={replyChosen ?? defaultReplyBy}
+                onChange={v => setReplyChosen(v && v !== defaultReplyBy ? v : null)}
+                note={`${rfq.dueOn ? 'Two working days before our bid.' : 'Three working days from today.'} You can change it.`}
+              />
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2">
+                <span className="text-sm text-fg-muted">Message</span>
+                <SegmentedControl
+                  aria-label="Message channel"
+                  value={variant}
+                  onValueChange={v => setVariant(v as EnquiryVariant)}
+                  options={[
+                    { value: 'whatsapp', label: 'WhatsApp' },
+                    { value: 'email', label: 'Email' },
+                  ]}
+                />
+              </div>
+              <RecipientRow
+                channel={variant}
+                lead={variant === 'email' ? 'Email to' : 'WhatsApp to'}
+                contact={inquiry.contactName ? { name: inquiry.contactName, phone: inquiry.contactPhone, email: inquiry.contactEmail } : null}
+              />
+              {variant === 'email' && chase?.subject ? <SubjectRow subject={chase.subject} /> : null}
+              <div className="px-4 py-3">
+                {chase ? <FormattedMessage text={chaseText} testId="chase-text" /> : <p className="text-sm text-fg-muted">Tick at least one item to write the message.</p>}
+              </div>
+              <ChaseNote className="border-t">
+                Copying records chase {inquiry.chaseCount + 1} for this supplier. {rfqRef(rfq.number)} moves to Waiting and returns if still silent after {formatDay(returnsOn)}. It lists only the
+                items this supplier has not priced, and never names the customer or our price.
+              </ChaseNote>
+              <div className="flex flex-wrap items-center gap-2 border-t bg-sunken px-4 py-3">
+                <Button icon={Copy} disabled={!chase} onClick={() => void doChase()} busy={stamp.isPending} busyLabel="Marking chased" aria-label={`Copy & mark chased, ${inquiry.supplierName}`}>
                   Copy &amp; mark chased
                 </Button>
-              </>
-            ) : null}
-          </div>
-          {canChase && showText ? (
-            <div className="grid gap-2 rounded border bg-sunken p-3">
-              <SegmentedControl
-                aria-label="Message channel"
-                value={variant}
-                onValueChange={v => setVariant(v as EnquiryVariant)}
-                options={[
-                  { value: 'whatsapp', label: 'WhatsApp' },
-                  { value: 'email', label: 'Email' },
-                ]}
-              />
-              <pre className="whitespace-pre-wrap break-words font-sans text-sm text-fg-2">{chaseText}</pre>
-              <p className="text-xs text-fg-muted">
-                Copying records a chase today. It lists only the items this supplier has not priced, and never names the customer or our price.
-                {chase?.replyBy ? ` Reply by ${formatDay(chase.replyBy)}.` : ''}
-              </p>
-            </div>
+              </div>
+            </section>
           ) : null}
         </div>
       ) : null}

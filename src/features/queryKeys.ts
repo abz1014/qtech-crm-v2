@@ -115,7 +115,14 @@ function today() {
   }
 }
 
+/** The signed-in person's own profile (job title for message signatures). */
+function me() {
+  const all = root('me')
+  return { all, profile: (userId: string) => [...all, 'profile', userId] as const }
+}
+
 export const qk = {
+  me: me(),
   today: today(),
   settings: settings(),
   companies: companies(),

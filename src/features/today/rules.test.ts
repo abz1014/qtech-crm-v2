@@ -332,8 +332,7 @@ describe('rule: goods late', () => {
     expect(ruleGoodsLate(ctx({ legs: [leg({ reference: 'PO 253102' })] }))[0].ref).toBe('PO 253102')
     expect(ruleGoodsLate(ctx({ legs: [leg({ reference: 'POLEQWPA' })] }))[0].ref).toBe('PO POLEQWPA') // a reference that merely starts with PO keeps it
   })
-  it('is not raised for goods received or delivered, on time, or not yet placed', () => {
-    expect(ruleGoodsLate(ctx({ legs: [leg({ receivedOn: '2026-11-25' })] }))).toEqual([])
+  it('is not raised for goods delivered, on time, or not yet placed (delivered is the only end state; received_on follows it)', () => {
     expect(ruleGoodsLate(ctx({ legs: [leg({ deliveredOn: '2026-11-25' })] }))).toEqual([])
     expect(ruleGoodsLate(ctx({ legs: [leg({ expectedOn: '2026-11-27' })] }))).toEqual([])
     expect(ruleGoodsLate(ctx({ legs: [leg({ placedOn: null })] }))).toEqual([])

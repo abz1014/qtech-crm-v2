@@ -42,6 +42,8 @@ export interface SupplierChaseInput {
   variant: EnquiryVariant
   /** Calendar days since the enquiry went out. More than 30 (FIRM_AFTER_DAYS) switches to the firmer wording. Omitted: never firm. */
   ageDays?: number | null
+  /** A reply-by date the person chose (YYYY-MM-DD). Omitted: two working days before the bid. */
+  replyByOverride?: string | null
 }
 
 export interface SupplierChase {
@@ -102,7 +104,7 @@ const ordinal = (n: number) => (n === 1 ? 'second' : n === 2 ? 'third' : 'furthe
 
 export function generateSupplierChase(input: SupplierChaseInput): SupplierChase {
   const { variant, rfqRef, items, chaseCount } = input
-  const replyBy = supplierReplyBy(input.dueOn, input.today)
+  const replyBy = input.replyByOverride && /^\d{4}-\d{2}-\d{2}$/.test(input.replyByOverride) ? input.replyByOverride : supplierReplyBy(input.dueOn, input.today)
   const by = replyBy ? longDay(replyBy) : null
   const sent = input.sentOn ? longDay(input.sentOn) : null
   const email = variant === 'email'

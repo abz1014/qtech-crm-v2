@@ -108,6 +108,22 @@ export function useStampSupplierChase(rfqId: string) {
   })
 }
 
+export function useAddInquiries(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (supplierIds: readonly string[]) => api.addInquiries(rfqId, supplierIds),
+    onSuccess: () => invalidateAfter(client, 'quote.save', { rfqId }),
+  })
+}
+
+export function useRemoveInquiries(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: readonly string[]) => api.removeInquiries(ids),
+    onSuccess: () => invalidateAfter(client, 'quote.save', { rfqId }),
+  })
+}
+
 export function useSetBidSent(rfqId: string) {
   const client = useQueryClient()
   return useMutation({
@@ -158,6 +174,22 @@ export function useStampClarificationAsk(rfqId: string) {
   return useMutation({
     mutationFn: (ids: readonly string[]) => api.stampClarificationAsk(ids),
     onSuccess: () => invalidateAfter(client, 'clarification.ask', { rfqId }),
+  })
+}
+
+export function useRestoreClarificationAsk(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (before: readonly api.ClarificationAskBefore[]) => api.restoreClarificationAsk(before),
+    onSuccess: () => invalidateAfter(client, 'clarification.ask', { rfqId }),
+  })
+}
+
+export function useRestoreSupplierChase(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { inquiryId: string; before: { lastChasedOn: string | null; chaseCount: number } }) => api.restoreSupplierChase(v.inquiryId, v.before),
+    onSuccess: () => invalidateAfter(client, 'inquiry.chase', { rfqId }),
   })
 }
 
