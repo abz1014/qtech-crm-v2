@@ -193,7 +193,7 @@ export function BoardPage() {
 
   const filterBox = (
     <div className="relative w-[220px] max-w-full">
-      <span className="pointer-events-none absolute inset-y-0 left-2.5 grid place-items-center text-fg-muted">
+      <span className="pointer-events-none absolute inset-y-0 left-[10px] grid place-items-center text-fg-muted">
         <Icon icon={Search} />
       </span>
       <TextField
@@ -274,8 +274,12 @@ export function BoardPage() {
             error={open.isError ? errorProps(open) : null}
             summary={open.isSuccess ? `Showing ${shown.length} of ${total} open RFQs` : undefined}
             toolbar={
-              <>
-                {listBar}
+              <div className="grid w-full gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  {listBar}
+                  {densityBar}
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <SegmentedControl
                   aria-label="Whose RFQs"
                   value={owner}
@@ -291,8 +295,8 @@ export function BoardPage() {
                   onValueChange={v => change({ state: v === 'all' ? null : v })}
                   options={STATE_FILTERS.map(s => ({ ...s, count: open.isSuccess ? counts[s.value] : undefined }))}
                 />
-                {densityBar}
-              </>
+                </div>
+              </div>
             }
             empty={emptyOpen}
           />
@@ -311,10 +315,10 @@ export function BoardPage() {
             error={closed.isError ? errorProps(closed) : null}
             summary={closed.isSuccess ? pageSummary(page, PAGE_SIZE, closed.data.total) : undefined}
             toolbar={
-              <>
+              <div className="flex w-full flex-wrap items-center gap-3">
                 {listBar}
                 {densityBar}
-              </>
+              </div>
             }
             empty={
               q && (closed.data?.rows.length ?? 0) > 0 ? (
