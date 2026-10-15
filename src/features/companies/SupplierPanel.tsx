@@ -1,7 +1,8 @@
 import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Info } from 'lucide-react'
-import { useSupplierActivity, useSupplierStats } from '@/features/companies/hooks'
+import { useCompanyBrands, useSupplierActivity, useSupplierBrandQuotes, useSupplierRecordView, useSupplierStats } from '@/features/companies/hooks'
+import { Deliveries, RecentQuotes } from '@/features/companies/SupplierRecordPanels'
 import { supplierFacts, type SupplierFacts } from '@/features/companies/supplierFacts'
 import type { SupplierEnquiry } from '@/features/companies/api'
 import { Fine, Panel, UnitChart, type Unit } from '@/features/companies/CompanyParts'
@@ -27,6 +28,7 @@ export function SupplierPanel({ companyId }: { companyId: string }) {
   const stats = useSupplierStats(companyId)
   const activity = useSupplierActivity(companyId)
   const facts = useMemo(() => supplierFacts(stats.data ?? null), [stats.data])
+  const record = useSupplierRecordView(companyId)
 
   if (stats.isPending) return <PanelSkeleton />
   if (stats.isError) {
@@ -63,7 +65,10 @@ export function SupplierPanel({ companyId }: { companyId: string }) {
           </div>
         ) : (
           <div className="grid md:grid-cols-2">
-            <Section title="Enquiries" sub={facts.enquirySummary} className="md:border-r">
+            <Section title="Brands" sub="Evidence we hold, not what the supplier claims." className="md:border-r">
+              <BrandFacts companyId={companyId} />
+            </Section>
+            <Section title="Enquiries" sub={facts.enquirySummary} className="border-t md:border-t-0">
               <EnquiryUnits facts={facts} />
               <FactRows
                 rows={[
@@ -72,13 +77,23 @@ export function SupplierPanel({ companyId }: { companyId: string }) {
                 ]}
               />
             </Section>
-            <Section title="Deliveries" sub={deliverySub(facts)}>
+            <Section title="Deliveries" sub={deliverySub(facts)} className="border-t md:border-r">
               <DeliveryUnits facts={facts} />
-              <FactRows rows={[{ key: 'Last contacted', value: <LastContact facts={facts} /> }]} />
+            </Section>
+            <Section title="Last contacted" className="border-t">
+              <FactRows rows={[{ key: facts.lastContact ? formatDay(facts.lastContact) : 'No contact', value: <LastContact facts={facts} what={record.view?.lastContactText ?? null} /> }]} />
             </Section>
           </div>
         )}
       </Panel>
+      <RecentQuotes
+        view={record.view}
+        loading={record.query.isPending}
+        error={record.query.isError}
+        onRetry={() => void record.query.refetch()}
+        enquiriesAnchor="enquiries"
+      />
+      <Deliveries view={record.view} loading={record.query.isPending} error={record.query.isError} onRetry={() => void record.query.refetch()} today={record.today} />
       <EnquiryList rows={activity.data} loading={activity.isPending} error={activity.isError} onRetry={() => void activity.refetch()} />
     </>
   )
@@ -218,8 +233,42 @@ function Chosen({ facts }: { facts: SupplierFacts }) {
   )
 }
 
-function LastContact({ facts }: { facts: SupplierFacts }) {
-  return facts.lastContact ? <span>{formatDay(facts.lastContact)}</span> : <span className="text-fg-muted">No contact recorded.</span>
+function LastContact({ facts, what }: { facts: SupplierFacts; what: string | null }) {
+  if (!facts.lastContact) return <span className="text-fg-muted">Nothing recorded yet.</span>
+  return <span>{what ?? 'Contact on record.'}</span>
+}
+
+/** The brands and families they carry, each with how many times they quoted one of its items. A count, never a rating. */
+function BrandFacts({ companyId }: { companyId: string }) {
+  const carried = useCompanyBrands(companyId)
+  const counts = useSupplierBrandQuotes(companyId)
+  if (carried.isPending) return <Skeleton className="h-5 w-2/3" />
+  if (carried.isError) return <Fine>The brands did not load. Reload the page to try again.</Fine>
+  if (carried.data.length === 0) return <Fine>No brand listed yet. One is added by itself when they quote an item of it.</Fine>
+  return (
+    <ul className="grid">
+      {carried.data.map(b => {
+        const n = counts.data?.[b.brandId] ?? 0
+        return (
+          <li key={b.brandId} className="flex items-baseline justify-between gap-3 border-t py-[9px] text-sm first:border-t-0">
+            <span className="min-w-0 break-words font-medium">
+              {b.name}
+              {b.kind === 'family' ? <span className="sr-only"> (product family)</span> : null}
+            </span>
+            <span className="shrink-0 text-fg-muted">
+              {counts.isPending ? '' : n > 0 ? (
+                <>
+                  quoted <span className="num text-fg-2">{n}</span>×
+                </>
+              ) : (
+                'listed, no quote yet'
+              )}
+            </span>
+          </li>
+        )
+      })}
+    </ul>
+  )
 }
 
 function Provenance({ facts }: { facts: SupplierFacts }) {
@@ -291,6 +340,7 @@ function EnquiryList({ rows, loading, error, onRetry }: { rows: SupplierEnquiry[
     [today],
   )
   return (
+    <div id="enquiries" className="scroll-mt-20">
     <Panel title="Recent enquiries" meta="Every enquiry sent to them in the last 24 months">
       <DataTable
         label="Recent enquiries"
@@ -303,6 +353,7 @@ function EnquiryList({ rows, loading, error, onRetry }: { rows: SupplierEnquiry[
         density="compact"
       />
     </Panel>
+    </div>
   )
 }
 
