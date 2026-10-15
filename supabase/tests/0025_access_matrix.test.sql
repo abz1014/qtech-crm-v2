@@ -110,8 +110,8 @@ $$;
 insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) values
   ('table', 'users',               '',           'S',    'S',    'S'),    -- s10 "users"; writes only via admin-users (service role)
   ('table', 'users',               'job_title',  '',     '',     ''),     -- s10 "users.job_title": via admin-users only, nothing direct
-  ('table', 'users',               'phone',      'U',    'U',    'U'),    -- A7 (0038): everyone changes their own phone
-  ('table', 'users',               'phone_other','U',    '',     ''),     -- A7 (0038): only an admin changes someone else's phone
+  ('table', 'users',               'phone',      'U',    'U',    'U'),    -- A7 (0039): everyone changes their own phone
+  ('table', 'users',               'phone_other','U',    '',     ''),     -- A7 (0039): only an admin changes someone else's phone
   ('table', 'companies',           '',           'SIUD', 'SIU',  'SIU'),  -- s10 "companies"
   ('table', 'company_sites',       '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "company_sites"
   ('table', 'contacts',            '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "contacts"
@@ -142,6 +142,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'audit_log',           '',           'S',    '',     ''),     -- s10 "audit_log": append-only, written only by triggers
   ('table', 'fx_rates',            'manual',     'SIUD', 'SIU',  'SIU'),  -- s10 "fx_rates" note 2: I and U only where source = manual
   ('table', 'fx_rates',            'auto',       'SIUD', 'S',    'S'),    -- s10 "fx_rates" note 2: automatic rows are written by the nightly job (service role)
+  ('table', 'fx_fetch_log',        '',           'S',    '',     ''),     -- R23 (0038): journal of the nightly FX job, admin reads, written only by the definer functions
   ('table', 'quotations',          '',           'SIUD', 'SIU',  'SIU'),  -- s10 "quotations" (U limited to pdf_path by the lock trigger)
   ('table', 'purchase_orders',     '',           'SIUD', 'SIU',  'SIU'),  -- s10 "purchase_orders" (U limited to pdf_path by the lock trigger)
   ('table', 'company_profile',     '',           'SU',   'S',    'S'),    -- s10 "company_profile": singleton, no insert or delete
@@ -193,6 +194,11 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'stamp_fbr_psid',          '',    'X',    'X',    ''),     -- A4: admin and sales
   ('function', 'stamp_tax_deposited',     '',    'X',    'X',    ''),     -- A4: admin and sales
   ('function', 'set_fx_rate',             '',    'X',    'X',    'X'),    -- A5: all staff
+  ('function', 'fetch_fx_rates',          '',    '',     '',     ''),     -- R23 (0038): queues the nightly HTTP calls; pg_cron only, granted to nobody
+  ('function', 'ingest_fx_response',      '',    '',     '',     ''),     -- R23 (0038): applies the answers; pg_cron only, granted to nobody
+  ('function', 'apply_fx_payload',        '',    '',     '',     ''),     -- R23 (0038): parse and upsert auto rates; granted to nobody
+  ('function', 'fx_wanted_currencies',    '',    '',     '',     ''),     -- R23 (0038): helper of the nightly job; granted to nobody
+  ('function', 'schedule_fx_cron',        '',    '',     '',     ''),     -- R23 (0038): (re)creates the cron jobs; granted to nobody
   ('function', 'current_user_role',       '',    'X',    'X',    'X'),    -- NOT in s10: the role lookup behind every policy (answers NULL for deactivated)
   ('function', 'can_access_bucket',       '',    'X',    'X',    'X'),    -- NOT in s10: storage policy helper (true for the caller's own buckets)
   ('function', 'today_pkt',               '',    'X',    'X',    'X'),    -- NOT in s10: pure date helper
@@ -279,6 +285,7 @@ from unnest(array['a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-80
 insert into public.fx_rates (id, currency, rate_pkr, as_of, source) values
   (pg_temp.f('38'), 'USD', 280, public.today_pkt() - 5, 'manual'),
   (pg_temp.f('39'), 'EUR', 300, public.today_pkt() - 5, 'auto');
+insert into public.fx_fetch_log (id, kind, detail) values (pg_temp.f('3e'), 'info', 'fixture');
 insert into public.quotations (id, rfq_id, number, revision, valid_until, lines) values
   (pg_temp.f('3a'), pg_temp.f('15'), 7001, 0, public.today_pkt() + 5, '[{"qty":1,"unit_price_net":1,"gst_rate":0}]');
 insert into public.purchase_orders (id, supplier_order_id, number, revision, currency, total, lines) values
@@ -295,8 +302,8 @@ create temp table spec (obj text, variant text, where_clause text, touch text, i
 insert into spec values
   ('users', '', $q$id = '{uid}'$q$, 'name', $q$insert into public.users (id, name, role) values (@a0, 'x', 'sales')$q$),
   ('users', 'job_title', $q$id = '{uid}'$q$, 'job_title', null),
-  ('users', 'phone', $q$id = '{uid}'$q$, 'phone', null),   -- A7 (0038)
-  ('users', 'phone_other', $q$id = '{other}'$q$, 'phone', null),   -- A7 (0038)
+  ('users', 'phone', $q$id = '{uid}'$q$, 'phone', null),   -- A7 (0039)
+  ('users', 'phone_other', $q$id = '{other}'$q$, 'phone', null),   -- A7 (0039)
   ('companies', '', 'id = @02', 'name', $q$insert into public.companies (id, name) values (@a1, 'probe co')$q$),
   ('company_sites', '', 'id = @11', 'name', $q$insert into public.company_sites (id, company_id, name) values (@a2, @01, 'probe')$q$),
   ('contacts', '', 'id = @12', 'name', $q$insert into public.contacts (id, company_id, name) values (@a3, @01, 'probe')$q$),
@@ -330,6 +337,7 @@ insert into spec values
   ('audit_log', '', 'true', 'table_name', $q$insert into public.audit_log (table_name, record_id, action) values ('t', @b3, 'insert')$q$),
   ('fx_rates', 'manual', 'id = @38', 'rate_pkr', $q$insert into public.fx_rates (currency, rate_pkr, source, as_of) values ('GBP', 350, 'manual', current_date - 100)$q$),
   ('fx_rates', 'auto', 'id = @39', 'rate_pkr', $q$insert into public.fx_rates (currency, rate_pkr, source, as_of) values ('GBP', 350, 'auto', current_date - 100)$q$),
+  ('fx_fetch_log', '', 'id = @3e', 'detail', $q$insert into public.fx_fetch_log (kind, detail) values ('info', 'probe')$q$),   -- R23 (0038)
   ('quotations', '', 'id = @3a', 'pdf_path', $q$insert into public.quotations (id, rfq_id, number, revision, valid_until, lines) values (@b4, @16, 7101, 0, current_date + 1, '[{"qty":1,"unit_price_net":1,"gst_rate":0}]')$q$),
   ('purchase_orders', '', 'id = @3b', 'pdf_path', $q$insert into public.purchase_orders (id, supplier_order_id, number, revision, currency, total, lines) values (@b5, @24, 7102, 0, 'USD', 0, '[{"qty":1,"unit_price":1}]')$q$),
   ('company_profile', '', 'id = 1', 'phone', $q$insert into public.company_profile (id) values (2)$q$);
@@ -400,6 +408,11 @@ insert into probes values
   ('current_user_role', '', 'X', 'select 1 where public.current_user_role() is not null'),
   ('can_access_bucket', '', 'X', $q$select 1 where public.can_access_bucket('rfq-files')$q$),
   ('today_pkt', '', 'X', 'select public.today_pkt()'),
+  ('fetch_fx_rates', '', 'X', 'select public.fetch_fx_rates()'),   -- R23 (0038)
+  ('ingest_fx_response', '', 'X', 'select public.ingest_fx_response()'),
+  ('apply_fx_payload', '', 'X', $q$select public.apply_fx_payload('{}'::jsonb, 'probe')$q$),
+  ('fx_wanted_currencies', '', 'X', 'select public.fx_wanted_currencies()'),
+  ('schedule_fx_cron', '', 'X', 'select public.schedule_fx_cron()'),
   ('close_month', '', 'X', $q$select public.close_month(date '2020-01-01')$q$),                -- A6
   ('close_months_through', '', 'X', $q$select public.close_months_through(date '2020-01-01')$q$),   -- A6
   ('reopen_month', '', 'X', $q$select public.reopen_month(date '2019-01-01')$q$),               -- A6
@@ -432,8 +445,8 @@ from unnest(array['rfq-files','gst-receipts','generated-docs','expense-receipts'
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
-  'coverage: the matrix lists every table in schema public (31)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 31, 'coverage: 31 tables');
+  'coverage: the matrix lists every table in schema public (32)');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 32, 'coverage: 32 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');

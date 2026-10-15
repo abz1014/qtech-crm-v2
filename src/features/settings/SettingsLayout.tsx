@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate, NavLink, Outlet } from 'react-router-dom'
-import { Building2, KeyRound, Users, type LucideIcon } from 'lucide-react'
+import { Building2, KeyRound, Receipt, Target, Users, type LucideIcon } from 'lucide-react'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { useSession } from '@/app/session'
 import { InstallBanner } from '@/features/settings/InstallBanner'
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 
 /*
  * Settings (A04, A06). Reached from the account menu, not the six main destinations. A left list on
- * tablet and desktop, a row of links above the page on a phone. Team is shown to admins only; the
+ * tablet and desktop, a row of links above the page on a phone. Team, Targets and Expense categories are shown to admins only; the
  * company profile is shown to everyone (read-only unless admin).
  */
 interface SettingsLink {
@@ -20,6 +20,8 @@ interface SettingsLink {
 }
 const SETTINGS_LINKS: readonly SettingsLink[] = [
   { to: '/settings/team', label: 'Team', icon: Users, adminOnly: true },
+  { to: '/settings/targets', label: 'Targets', icon: Target, adminOnly: true },
+  { to: '/settings/categories', label: 'Expense categories', icon: Receipt, adminOnly: true },
   { to: '/settings/company', label: 'Company profile', icon: Building2 },
   { to: '/settings/password', label: 'Change password', icon: KeyRound },
 ]
@@ -36,7 +38,7 @@ export function SettingsLayout() {
     <div className="grid min-h-full md:grid-cols-[200px_minmax(0,1fr)]">
       <nav aria-label="Settings" className="border-b bg-canvas px-4 py-3 md:border-b-0 md:border-r md:px-3 md:py-6">
         <p className="mb-2 hidden px-3 text-xs font-medium text-fg-muted md:block">Settings</p>
-        <ul className="flex gap-1 md:grid">
+        <ul className="flex flex-wrap gap-1 md:grid">
           {links.map(l => (
             <li key={l.to}>
               <NavLink

@@ -1,4 +1,4 @@
--- 0038_parity_data (A7 parity fields): the optional data the approved mockups show and the schema lacked. Every column is nullable and
+-- 0039_parity_data (A7 parity fields): the optional data the approved mockups show and the schema lacked. Every column is nullable and
 -- nothing is required of anyone (FE-2): a screen shows the value when it is there and nothing when it is not.
 --
 --   contacts.job_title          "Procurement Manager" under a contact's name (quotation "Attention", chase signatures)
@@ -18,7 +18,7 @@ alter table public.clarifications
   add column rfq_item_id uuid references public.rfq_items (id) on delete set null;
 create index clarifications_item_idx on public.clarifications (rfq_item_id) where rfq_item_id is not null;
 
-comment on column public.users.phone is 'Optional. Printed in signatures. Own row or admin may change it (column grant and policy 0038).';
+comment on column public.users.phone is 'Optional. Printed in signatures. Own row or admin may change it (column grant and policy 0039).';
 
 -- ---------------------------------------------------------------- users.phone is the only writable column
 grant update (phone) on table public.users to authenticated;

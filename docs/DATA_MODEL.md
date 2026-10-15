@@ -1718,7 +1718,7 @@ Add rows for: `expense_categories`, `closed_months`, the attachment expense pare
 
 ---
 
-## Amendment A7: parity fields (migration 0038)
+## Amendment A7: parity fields (migration 0039)
 
 Optional data the approved mockups show. Every column is nullable; nothing is required of anyone and a screen shows the value only when it is there.
 

@@ -1,7 +1,7 @@
 begin;
 select plan(36);
 
--- A7 parity fields (0038). Fixture users come from supabase/seed.sql: admin a0..01, sales a0..02, engineer a0..03, deactivated a0..04.
+-- A7 parity fields (0039). Fixture users come from supabase/seed.sql: admin a0..01, sales a0..02, engineer a0..03, deactivated a0..04.
 
 -- ------------------------------------------------------------------ the new columns exist, are the right type, and are optional
 select has_column('public', 'contacts', 'job_title', 'contacts.job_title exists');
