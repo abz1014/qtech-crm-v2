@@ -1,6 +1,6 @@
-import { mkdirSync, readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
+import { mkdirSync } from 'node:fs'
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { axeViolations } from '../support/axe'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
 
 /*
@@ -10,19 +10,7 @@ import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqu
  * 5c (Amendment A2b) are named in the test titles. Each test makes its own brands, models and companies.
  */
 
-const axeSource = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8')
-
-async function violations(page: Page): Promise<string[]> {
-  await page.evaluate(axeSource)
-  return page.evaluate(async () => {
-    const axe = (window as unknown as { axe: { run: (ctx: Document, opts: object) => Promise<{ violations: Array<{ id: string; impact: string | null; help: string; nodes: Array<{ target: unknown; failureSummary?: string }> }> }> } }).axe
-    const result = await axe.run(document, {
-      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] },
-      resultTypes: ['violations'],
-    })
-    return result.violations.flatMap(v => v.nodes.map(n => `${v.id} (${v.impact}) ${JSON.stringify(n.target)}: ${(n.failureSummary ?? v.help).replace(/\s+/g, ' ')}`))
-  })
-}
+const violations = (page: Page): Promise<string[]> => axeViolations(page)
 
 async function shot(target: Locator, name: string): Promise<void> {
   const dir = process.env.REVIEW_DIR
@@ -43,6 +31,8 @@ type Id = { id: string }
 const post = async <T = Id>(table: string, body: unknown): Promise<T> => (await must(rest<T[]>('admin', table, { method: 'POST', body })))[0]
 /** Noon in Karachi, n days ago, as a timestamp (rows are dated in the past through created_at). */
 const noon = (daysAgo: number) => `${karachiDay(-daysAgo)}T12:00:00+05:00`
+/** A tag with no digits: a brand name that mixes letters and digits is itself a model token (model_tokens), which would make every item of the brand "same model". */
+const letters = () => Math.random().toString(36).slice(2, 6).replace(/[0-9]/g, c => 'abcdefghij'[Number(c)])
 const rnd = (n: number) => Math.floor(10 ** (n - 1) + Math.random() * 9 * 10 ** (n - 1))
 
 interface History {
@@ -93,7 +83,7 @@ interface Seed {
 }
 
 async function seedMemory(): Promise<Seed> {
-  const tag = Math.random().toString(36).slice(2, 6)
+  const tag = letters()
   const brand = await post<{ id: string; name: string }>('brands', { name: `Hachlike${tag}`, kind: 'brand' })
   const model = `ZQ${rnd(4)}`
   const desc = `${brand.name} ${model} portable meter`
@@ -244,7 +234,7 @@ test.describe('R17 memory in intake', () => {
   })
 
   test('(l) no model tokens: a 24V actuator is never "same model"; (m) the same code under another brand is not a match', async ({ page }) => {
-    const tag = Math.random().toString(36).slice(2, 6)
+    const tag = letters()
     const brandL = await post<{ id: string; name: string }>('brands', { name: `Qmeter${tag}`, kind: 'brand' })
     const brandA = await post<{ id: string; name: string }>('brands', { name: `Alphaco${tag}`, kind: 'brand' })
     const brandB = await post<{ id: string; name: string }>('brands', { name: `Betaco${tag}`, kind: 'brand' })
@@ -316,7 +306,7 @@ test.describe('R17 last price chip on RFQ reply rows', () => {
 
 test.describe('R18 company page: What we know', () => {
   test('recent quotes with PKR at the time, deliveries, quoted N times per brand and Open with them', async ({ page }) => {
-    const tag = Math.random().toString(36).slice(2, 6)
+    const tag = letters()
     const brand = await post<{ id: string; name: string }>('brands', { name: `Belimo${tag}`, kind: 'brand' })
     const listed = await post<{ id: string; name: string }>('brands', { name: `Siemens${tag}`, kind: 'brand' })
     const sup = await createCompany(uniqueName('Alpenmark Mem'), { country: 'Austria' })
