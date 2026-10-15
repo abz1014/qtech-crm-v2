@@ -33,9 +33,13 @@ import { defineConfig, devices } from '@playwright/test'
  *  - rfq-detail (R07): the RFQ detail page on the same stack and build. Reply capture, can't quote, the lowest mark, chase, close,
  *    the FE-2 counts, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e-rfq-detail.yml):
  *      E2E_SUITE=rfq-detail REVIEW_DIR=review-shots npx playwright test --project=rfq-detail
+ *
+ *  - rfq-memory (R17, R18): supplier memory in intake (one-liner, Memory card), the last-price chip on RFQ reply rows and the company
+ *    page's What we know panels, with fixtures (k) to (n), the 200 ms card budget and axe at 1440 and 375 (.github/workflows/e2e-rfq-memory.yml):
+ *      E2E_SUITE=rfq-memory REVIEW_DIR=review-shots npx playwright test --project=rfq-memory
  */
-const dbSuites = ['auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail']
-const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? (process.env.E2E_SUITE as 'auth' | 'companies' | 'rfq-board' | 'rfq-intake' | 'rfq-detail') : 'gallery'
+const dbSuites = ['auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-memory']
+const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? (process.env.E2E_SUITE as 'auth' | 'companies' | 'rfq-board' | 'rfq-intake' | 'rfq-detail' | 'rfq-memory') : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
 
@@ -122,6 +126,13 @@ export default defineConfig({
         permissions: ['clipboard-read', 'clipboard-write'],
         screenshot: 'only-on-failure',
       },
+    },
+    {
+      name: 'rfq-memory',
+      testMatch: /rfqs\/memory\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
     },
     { name: 'w1440', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 1440, height: 900 } } },
     { name: 'w375', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 375, height: 812 } } },

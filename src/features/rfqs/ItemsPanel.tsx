@@ -7,6 +7,8 @@ import { Icon } from '@/ui/Icon'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { Tag } from '@/ui/Tag'
 import { Panel } from '@/features/companies/CompanyParts'
+import { LastPriceChipView } from '@/features/rfqs/LastPriceChip'
+import { lastPriceChip, type MemoryRow } from '@/lib/memory'
 import type { InquiryRow, QuoteLineRow, RfqItemRow } from '@/features/rfqs/api'
 import { comparePrices, reasonForItem, reasonLabel, type ComparedLine, type RateTable } from '@/features/rfqs/lib'
 import { qtyText } from '@/features/rfqs/lib'
@@ -74,10 +76,23 @@ function PkrCell({ line, c, rates }: { line: QuoteLineRow; c: ComparedLine; rate
 interface Entry {
   line: QuoteLineRow
   supplier: string
+  supplierId: string
   c: ComparedLine
 }
 
-export function ItemsPanel({ items, inquiries, rates }: { items: RfqItemRow[]; inquiries: InquiryRow[]; rates: RateTable }) {
+export function ItemsPanel({
+  items,
+  inquiries,
+  rates,
+  memory,
+}: {
+  items: RfqItemRow[]
+  inquiries: InquiryRow[]
+  rates: RateTable
+  /** supplier_item_memory() rows by item id (R17). Absent while loading or if the read failed: the chips are then left out. */
+  memory?: Readonly<Record<string, readonly MemoryRow[] | undefined>>
+}) {
+  const today = businessToday()
   const responders = inquiries.filter(i => i.lines.length > 0)
   const pricedItems = items.filter(it => inquiries.some(i => i.lines.some(l => l.itemId === it.id))).length
   return (
@@ -95,12 +110,12 @@ export function ItemsPanel({ items, inquiries, rates }: { items: RfqItemRow[]; i
         <div className="divide-y">
           {items.map(item => {
             const entries: Entry[] = []
-            const lines = inquiries.flatMap(i => i.lines.filter(l => l.itemId === item.id).map(l => ({ l, supplier: i.supplierName })))
+            const lines = inquiries.flatMap(i => i.lines.filter(l => l.itemId === item.id).map(l => ({ l, supplier: i.supplierName, supplierId: i.supplierId })))
             const cmp = comparePrices(
               lines.map(({ l }) => ({ id: l.id, amount: l.unitPrice, currency: l.currency })),
               rates,
             )
-            for (const { l, supplier } of lines) entries.push({ line: l, supplier, c: cmp.lines.find(x => x.id === l.id) as ComparedLine })
+            for (const { l, supplier, supplierId } of lines) entries.push({ line: l, supplier, supplierId, c: cmp.lines.find(x => x.id === l.id) as ComparedLine })
             // Cheapest first among the compared, then the lines left out of the comparison.
             entries.sort((a, b) => {
               if (a.c.compared !== b.c.compared) return a.c.compared ? -1 : 1
@@ -156,7 +171,9 @@ export function ItemsPanel({ items, inquiries, rates }: { items: RfqItemRow[]; i
                       <span>Stock</span>
                     </div>
                     <ul>
-                      {entries.map(({ line, supplier, c }) => (
+                      {entries.map(({ line, supplier, supplierId, c }) => {
+                        const chip = lastPriceChip(memory?.[item.id]?.find(r => r.supplier_id === supplierId), today)
+                        return (
                         <li key={line.id} className={ROW} data-lowest={c.lowest ? '' : undefined} data-compared={c.compared && c.pkrPaisa !== null ? '' : undefined}>
                           <div className="grid gap-1">
                             <Label>Supplier</Label>
@@ -193,8 +210,10 @@ export function ItemsPanel({ items, inquiries, rates }: { items: RfqItemRow[]; i
                               )}
                             </span>
                           </div>
+                          {chip ? <LastPriceChipView chip={chip} /> : null}
                         </li>
-                      ))}
+                        )
+                      })}
                       {declined.map(({ i, reason }) => (
                         <li key={i.id} className={`${ROW} text-fg-muted`}>
                           <span className="min-w-0 break-words text-sm font-medium text-fg-2">{i.supplierName}</span>

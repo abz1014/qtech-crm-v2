@@ -38,7 +38,29 @@ function respond(call: FakeCall) {
       }
     case 'rpc:supplier_item_memory': {
       const args = (opArgs(call, 'args')?.[0] ?? {}) as { p_description?: string }
-      return { data: /hach/i.test(args.p_description ?? '') ? [{ supplier_id: 's-orient', best_tier: 0, supplied_before: true }] : [] }
+      return {
+        data: /hach/i.test(args.p_description ?? '')
+          ? [
+              {
+                supplier_id: 's-orient',
+                best_tier: 0,
+                best_tier_label: 'same model',
+                supplied_before: true,
+                last_quote_tier: 0,
+                last_quote_on: '2026-06-14',
+                last_quote_price: 1980,
+                last_quote_currency: 'USD',
+                last_quote_fx_rate_pkr: 278.3,
+                last_quote_fx_rate_on: '2026-06-14',
+                last_quote_price_pkr: 551034,
+                last_quote_qty: 1,
+                last_quote_unit: 'pcs',
+                last_quote_lead_time: '6 weeks',
+                recent_lead_times: ['6 weeks'],
+              },
+            ]
+          : [],
+      }
     }
     case 'rpc:float_rfq':
       return { data: 'rfq-id' }
@@ -125,6 +147,42 @@ describe('intake screen', () => {
     await user.click(screen.getByRole('button', { name: 'Looks right: find suppliers' }))
     expect(await screen.findByRole('checkbox', { name: 'Orient Analytical' })).toBeChecked()
     expect(screen.getByText(/Item 2, .* has no supplier ticked\./)).toBeInTheDocument()
+  })
+
+  it('opens a Memory card per supplier: tier label, last quote at the time, brands, replies; one memory call per item, none per row', async () => {
+    const db = installFakeDb(respond)
+    const user = setup()
+    renderScreen()
+    await user.type(screen.getByRole('combobox', { name: 'Company' }), 'Acme')
+    await user.click(await screen.findByRole('option', { name: /Acme Plastics/ }))
+    fireEvent.paste(document.body, { clipboardData: { getData: () => EMAIL } })
+    expect(await screen.findByText('2 items found')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Looks right: find suppliers' }))
+    await screen.findByRole('checkbox', { name: 'Orient Analytical' })
+
+    // One supplier_item_memory call per item (two items), each carrying the whole supplier list: nothing per supplier or per row.
+    expect(db.calls.filter(c => c.target === 'rpc:supplier_item_memory')).toHaveLength(2)
+
+    expect(screen.queryByLabelText('What we know about Orient Analytical')).not.toBeInTheDocument()
+    const button = screen.getByRole('button', { name: 'Memory, Orient Analytical' })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    await user.click(button)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    const card = screen.getByLabelText('What we know about Orient Analytical')
+    expect(within(card).getByText('same model')).toBeInTheDocument()
+    expect(within(card).getByText('Matched on model code.', { exact: false })).toBeInTheDocument()
+    expect(within(card).getByText('USD 1,980')).toBeInTheDocument()
+    expect(within(card).getByText(/≈ PKR 551,034/)).toBeInTheDocument()
+    expect(within(card).getByText('at the time')).toBeInTheDocument()
+    expect(within(card).getByText('6 weeks')).toBeInTheDocument()
+    expect(within(card).getByText('Hach')).toBeInTheDocument()
+    expect(within(card).getByText('answered 7 of 8')).toBeInTheDocument()
+    expect(card.textContent).not.toMatch(/%|score/i)
+    // Opening the card asks for nothing more, and does not tick or untick the supplier.
+    expect(db.calls.filter(c => c.target === 'rpc:supplier_item_memory')).toHaveLength(2)
+    expect(screen.getByRole('checkbox', { name: 'Orient Analytical' })).toBeChecked()
+    await user.click(button)
+    expect(screen.queryByLabelText('What we know about Orient Analytical')).not.toBeInTheDocument()
   })
 
   it('Copy & mark floated copies the text with the real RFQ number and floats once, even on a double tap', async () => {

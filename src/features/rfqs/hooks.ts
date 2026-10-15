@@ -25,12 +25,15 @@ export function useSupplierCandidates(enabled: boolean) {
   return useQuery({ queryKey: qk.intake.suppliers(), queryFn: api.listSupplierCandidates, enabled, staleTime: 60_000 })
 }
 
-/** What each candidate remembers about each item. `signature` changes when an item's description, brand or family does. */
-export function useSupplierMemory(items: readonly api.MemoryQuery[], supplierIds: readonly string[], enabled: boolean) {
-  const signature = JSON.stringify([items.map(i => [i.key, i.description, i.brandId, i.familyId]), supplierIds.length])
+/**
+ * What each candidate remembers about each item. `signature` changes when an item's description, brand or family does.
+ * `excludeRfqId` (the RFQ detail page) leaves the open RFQ out of its own memory.
+ */
+export function useSupplierMemory(items: readonly api.MemoryQuery[], supplierIds: readonly string[], enabled: boolean, excludeRfqId?: string) {
+  const signature = JSON.stringify([items.map(i => [i.key, i.description, i.brandId, i.familyId]), excludeRfqId ? supplierIds.join(',') : supplierIds.length, excludeRfqId ?? null])
   return useQuery({
-    queryKey: qk.intake.memory(signature),
-    queryFn: () => api.getSupplierMemory(items, supplierIds),
+    queryKey: excludeRfqId ? qk.memory.rfq(excludeRfqId, signature) : qk.intake.memory(signature),
+    queryFn: () => api.getSupplierMemory(items, supplierIds, excludeRfqId),
     enabled: enabled && items.length > 0,
     staleTime: 60_000,
   })

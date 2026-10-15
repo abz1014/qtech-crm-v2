@@ -8,6 +8,7 @@ import {
   useCompanyMoney,
   useCompanySites,
   useRemoveContact,
+  useSupplierRecordView,
 } from '@/features/companies/hooks'
 import type { CompanyDetail, CompanyRole, ContactRow, SiteRow } from '@/features/companies/api'
 import { ContactDialog, EditCompanyDialog, SiteDialog } from '@/features/companies/CompanyDialogs'
@@ -17,6 +18,7 @@ import { BrandsPanel } from '@/features/companies/BrandsPanel'
 import { MergeCompanyDialog } from '@/features/companies/MergeCompanyDialog'
 import { SitesPanel } from '@/features/companies/SitesPanel'
 import { SupplierPanel } from '@/features/companies/SupplierPanel'
+import { OpenWithThem } from '@/features/companies/SupplierRecordPanels'
 import { useSession } from '@/app/session'
 import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
@@ -120,6 +122,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
   const contacts = useCompanyContacts(company.id)
   const history = useCompanyHistory(company.id)
   const money = useCompanyMoney(company.id, isAdmin)
+  const record = useSupplierRecordView(company.id, company.isSupplier)
 
   // 'site' and 'contact' are the add dialogs; editSite and editContact open the same dialogs filled in.
   const [dialog, setDialog] = useState<null | 'edit' | 'site' | 'contact' | 'merge'>(null)
@@ -230,6 +233,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
                 setDialog('contact')
               }}
             />
+            {supplierSide ? <OpenWithThem view={record.view} loading={record.query.isPending} error={record.query.isError} onRetry={() => void record.query.refetch()} /> : null}
             {supplierSide || !company.isCustomer ? <BrandsPanel companyId={company.id} /> : null}
             <RolesPanel company={company} />
             {isAdmin && money.data && money.data.orders > 0 ? (

@@ -14,6 +14,7 @@
 //    match tier 0 vs 1) NEVER enter the ordering: they only fill the memory line. A test pins this.
 
 import { monthYear, shortDay } from './dateText'
+import type { MemoryRow, MemoryStats } from '@/lib/memory'
 
 // ------------------------------------------------------------------------------------------------ input shapes
 
@@ -29,8 +30,8 @@ export interface SuggestionItem {
   modelTokens?: readonly string[] | null
 }
 
-/** The columns of v_supplier_stats that this module reads (nullable: a company with no activity has NULLs). */
-export interface SupplierStatsRow {
+/** The columns of v_supplier_stats that this module reads (nullable: a company with no activity has NULLs). The memory card reads the rest. */
+export interface SupplierStatsRow extends MemoryStats {
   supplier_id: string
   asked: number | null
   replied: number | null
@@ -50,14 +51,8 @@ export interface SupplierRecord {
   stats: SupplierStatsRow | null
 }
 
-/** The columns of supplier_item_memory() that this module reads. */
-export interface SupplierItemMemoryRow {
-  supplier_id: string
-  best_tier: number | null
-  supplied_before: boolean | null
-  last_ordered_on?: string | null
-  last_po_on?: string | null
-}
+/** One row of supplier_item_memory(): the suggestion reads best_tier and supplied_before, the memory card reads the rest. */
+export type SupplierItemMemoryRow = MemoryRow
 
 export interface SupplierHistory {
   suppliers: readonly SupplierRecord[]
@@ -103,6 +98,8 @@ export interface SupplierSuggestion {
   coversItemIds: string[]
   /** v_supplier_stats.last_contact (YYYY-MM-DD) or null. The only statistic the ranking looks at. */
   lastContact: string | null
+  /** The whole v_supplier_stats row, for the memory card only. Nothing in it is used to order the list. */
+  stats: SupplierStatsRow | null
 }
 
 export interface SuggestionGroupResult {
@@ -277,6 +274,7 @@ export function suggestSuppliers(
       memoryLine: memoryLine(sup.stats, today),
       coversItemIds: items.filter((i) => covers.includes(i)).map((i) => i.id),
       lastContact: dateKey(sup.stats?.last_contact),
+      stats: sup.stats,
     })
   }
 

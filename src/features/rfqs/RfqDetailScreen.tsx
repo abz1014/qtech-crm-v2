@@ -4,7 +4,7 @@ import { FileQuestion } from 'lucide-react'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Skeleton } from '@/ui/Skeleton'
-import { useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems } from '@/features/rfqs/hooks'
+import { useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierMemory } from '@/features/rfqs/hooks'
 import { toRateTable } from '@/features/rfqs/lib'
 import { RfqHeaderBlock } from '@/features/rfqs/RfqHeaderBlock'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
@@ -58,6 +58,14 @@ export default function RfqDetailScreen() {
   const inquiries = useRfqInquiries(id)
   const fx = useFxLatest()
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
+  // "Last price for this item" (R17): one batched read per distinct item, for every supplier asked at once, leaving this RFQ out.
+  // It never blocks the page: if it fails, the chips are simply absent.
+  const memoryItems = useMemo(
+    () => (items.data ?? []).map(i => ({ key: i.id, description: i.description, brandId: i.brandId, familyId: i.familyId })),
+    [items.data],
+  )
+  const memorySuppliers = useMemo(() => [...new Set((inquiries.data ?? []).filter(i => i.lines.length > 0).map(i => i.supplierId))].sort(), [inquiries.data])
+  const memory = useSupplierMemory(memoryItems, memorySuppliers, memorySuppliers.length > 0 && Boolean(id), id)
 
   if (header.isPending) return <PageSkeleton />
   if (header.isError) {
@@ -128,7 +136,7 @@ export default function RfqDetailScreen() {
           ) : (
             <>
               <SupplierReplies rfq={rfq} items={items.data} inquiries={inquiries.data} rates={rates} />
-              <ItemsPanel items={items.data} inquiries={inquiries.data} rates={rates} />
+              <ItemsPanel items={items.data} inquiries={inquiries.data} rates={rates} memory={memory.data} />
             </>
           )}
         </div>
