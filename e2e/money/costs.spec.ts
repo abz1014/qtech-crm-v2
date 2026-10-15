@@ -221,7 +221,7 @@ test.describe('who sees money', () => {
         await page.goto(path)
         await page.waitForLoadState('networkidle')
         await expect(page.getByRole('heading', { name: 'Order margins' })).toHaveCount(0)
-        await expect(page.getByRole('heading', { name: 'Exceptions' })).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Export CSV' })).toHaveCount(0) // the page's own content, not the no-access page's title
       }
       expect(seen, `${role}: no money table or view is requested`).toEqual([])
       await context.close()
