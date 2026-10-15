@@ -18,7 +18,7 @@ $f$;
 select columns_are('public', 'orders',
   array['id', 'created_at', 'created_by', 'updated_at', 'number', 'company_id', 'site_id', 'contact_id', 'rfq_id',
         'owner_id', 'customer_po_number', 'ordered_on', 'payment_terms_days', 'needs_commissioning',
-        'commissioning_planned_on', 'commissioning_done_on', 'cancelled_on', 'notes', 'legacy_flags',
+        'commissioning_planned_on', 'commissioning_done_on', 'cancelled_on', 'cancel_reason', 'notes', 'legacy_flags',
         'legacy_source'],
   'orders has the section 2.12 columns and no money columns');
 select columns_are('public', 'order_items',

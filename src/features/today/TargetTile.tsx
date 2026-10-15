@@ -34,7 +34,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
       <section aria-label={`Your Q${quarter} target`} className={cn('grid gap-1 p-4', className)}>
         <p className="text-sm text-fg-muted">Your Q{quarter} target</p>
         <p className="text-base font-semibold">No target set for Q{quarter}</p>
-        <p className="text-sm text-fg-muted">Ask an admin to set one on the Team screen. Nothing else on Today depends on it.</p>
+        <p className="text-sm text-fg-muted">Ask an admin to set one in Settings, under Targets. Nothing else on Today depends on it.</p>
       </section>
     )
   }

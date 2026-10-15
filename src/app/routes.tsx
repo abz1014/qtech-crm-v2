@@ -20,9 +20,12 @@ const screens: Partial<Record<NavKey, ComponentType>> = {
   companies: lazy(() => import('@/features/companies/CompaniesScreen')),
   rfqs: lazy(() => import('@/features/rfqs/board/RfqsScreen')),
   money: lazy(() => import('@/features/money/MoneyScreen')),
+  orders: lazy(() => import('@/features/orders/OrdersScreen')),
 }
 
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
+const TargetsPage = lazy(() => import('@/features/settings/TargetsPage').then(m => ({ default: m.TargetsPage })))
+const CategoriesPage = lazy(() => import('@/features/settings/CategoriesPage').then(m => ({ default: m.CategoriesPage })))
 const ChangePasswordPage = lazy(() => import('@/features/settings/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })))
 const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfilePage').then(m => ({ default: m.CompanyProfilePage })))
 /** New RFQ (R05): its own route, so it works under whichever screen owns the rest of /rfqs. */
@@ -64,6 +67,26 @@ export function AppRoutes() {
                 <AdminOnly area="Team">
                   <Suspense fallback={null}>
                     <TeamPage />
+                  </Suspense>
+                </AdminOnly>
+              }
+            />
+            <Route
+              path="targets"
+              element={
+                <AdminOnly area="Targets">
+                  <Suspense fallback={null}>
+                    <TargetsPage />
+                  </Suspense>
+                </AdminOnly>
+              }
+            />
+            <Route
+              path="categories"
+              element={
+                <AdminOnly area="Expense categories">
+                  <Suspense fallback={null}>
+                    <CategoriesPage />
                   </Suspense>
                 </AdminOnly>
               }

@@ -92,13 +92,42 @@ function memory() {
 }
 function orders() {
   const all = root('orders')
-  return { all, lists: () => [...all, 'list'] as const, detail: (id: string) => [...all, 'detail', id] as const }
+  const detail = (id: string) => [...all, 'detail', id] as const
+  return {
+    all,
+    lists: () => [...all, 'list'] as const,
+    detail,
+    /** One slice of an order page (O03). `slice` is a fixed word, so a typo is a type error. */
+    part: (id: string, slice: OrderPart) => [...detail(id), slice] as const,
+    /** The orders an RFQ produced (the RFQ page shows 'Open ORD-0039' once it is won). */
+    forRfq: (rfqId: string) => [...all, 'list', 'for-rfq', rfqId] as const,
+    /** The company's last payment terms, the default for the next order (O01). */
+    lastTerms: (companyId: string) => [...all, 'list', 'last-terms', companyId] as const,
+    /** Active engineers who can be put on a commissioning job. */
+    engineers: () => [...all, 'list', 'engineers'] as const,
+    /** The signed-in person's job title (the sign-off of a chase message). */
+    /** Suppliers a leg can be added for. */
+    supplierChoices: () => [...all, 'list', 'supplier-choices'] as const,
+    jobTitle: (userId: string) => [...all, 'list', 'job-title', userId] as const,
+  }
 }
+export type OrderPart = 'header' | 'items' | 'legs' | 'engineers' | 'money' | 'pos'
 
 /** Settings (A04, A06): the team list (read through the admin-users function) and the one company-profile row. */
 function settings() {
   const all = root('settings')
-  return { all, team: () => [...all, 'team'] as const, profile: () => [...all, 'company-profile'] as const }
+  return {
+    all,
+    team: () => [...all, 'team'] as const,
+    profile: () => [...all, 'company-profile'] as const,
+    /** M06: every targets read (rows and progress); invalidate this one after any target write. */
+    targets: () => [...all, 'targets'] as const,
+    targetRows: (year: number) => [...all, 'targets', 'rows', year] as const,
+    targetProgress: (year: number) => [...all, 'targets', 'progress', year] as const,
+    /** M13: the category list with usage counts, and the active-only list new expenses choose from. */
+    categories: () => [...all, 'categories'] as const,
+    activeCategories: () => [...all, 'categories', 'active'] as const,
+  }
 }
 
 /** Today (R11): the whole work-list input (one read), the target tile, and the draft data of the selected item. */

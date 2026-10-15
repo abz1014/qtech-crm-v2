@@ -33,6 +33,10 @@ export interface WriteVars {
   'team.deactivate': Record<string, never>
   'team.reactivate': Record<string, never>
   'company-profile.update': Record<string, never>
+  /** M06: setting, clearing or copying targets. Today's own tile reads the same numbers. */
+  'target.save': Record<string, never>
+  /** M13: any change to a category (name, group, paid via, order, active, add, delete). */
+  'category.save': Record<string, never>
   'rfq.float': { companyId: string }
   'rfq.setFloated': { rfqId: string }
   'quote.save': { rfqId: string }
@@ -50,6 +54,12 @@ export interface WriteVars {
   /** R19: issuing a quotation (or attaching its PDF) changes the RFQ page, the board and Today (quoted_on is stamped). */
   'quotation.issue': { rfqId: string }
   'quotation.pdf': { rfqId: string }
+  /** O01: converting an RFQ creates an order and legs, and the RFQ becomes won. */
+  'order.convert': { rfqId: string }
+  /** O03: any edit on the order page (items, legs, commissioning, notes). */
+  'order.update': { orderId: string }
+  /** O03: cancelling (or taking the cancel back) also moves the RFQ between won and open and the company role. */
+  'order.cancel': { orderId: string }
   /** R11/R16: a chase stamp on Today (customer ask, supplier chase, goods chase, payment reminder) or taking it back. */
   'today.chase': Record<string, never>
   'today.snooze': Record<string, never>
@@ -91,6 +101,8 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'team.deactivate': () => [qk.settings.team()],
   'team.reactivate': () => [qk.settings.team()],
   'company-profile.update': () => [qk.settings.profile()],
+  'target.save': () => [qk.settings.targets(), qk.today.target()],
+  'category.save': () => [qk.settings.categories()],
   // Floating creates an RFQ (and inquiries): the RFQ lists, the customer's history and every supplier's activity change.
   'rfq.float': () => [qk.rfqs.all, qk.intake.all, qk.companies.all],
   // Floating or un-floating moves inquiries between shortlisted and sent: the RFQ and the suppliers' counts.
@@ -113,6 +125,10 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'attachment.delete': v => [qk.rfqs.detail(v.rfqId)],
   'quotation.issue': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.today.all, qk.companies.all],
   'quotation.pdf': v => [qk.rfqs.part(v.rfqId, 'quotations')],
+  // A new order changes the RFQ (won), every list that shows orders or states, Today (place PO, goods late) and the customer's history.
+  'order.convert': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.all, qk.orders.all, qk.today.all, qk.companies.all],
+  'order.update': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all],
+  'order.cancel': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.rfqs.all, qk.today.all, qk.companies.all],
   // A chase stamp changes the asked/chased fields the RFQ page, the board and the order screens read, and every Today read.
   'today.chase': () => [qk.today.all, qk.rfqs.all, qk.orders.all],
   // A snooze is read only by Today.

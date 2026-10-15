@@ -45,6 +45,8 @@ describe('invalidation map (R01)', () => {
     'team.deactivate': {},
     'team.reactivate': {},
     'company-profile.update': {},
+    'target.save': {},
+    'category.save': {},
     'site.update': { companyId: 'c1' },
     'site.remove': { companyId: 'c1' },
     'contact.update': { companyId: 'c1' },
@@ -66,6 +68,9 @@ describe('invalidation map (R01)', () => {
     'attachment.delete': { rfqId: 'r1' },
     'quotation.issue': { rfqId: 'r1' },
     'quotation.pdf': { rfqId: 'r1' },
+    'order.convert': { rfqId: 'r1' },
+    'order.update': { orderId: 'o1' },
+    'order.cancel': { orderId: 'o1' },
     'today.chase': {},
     'today.snooze': {},
     'expense.save': {},
@@ -96,6 +101,14 @@ describe('invalidation map (R01)', () => {
       expect(keysFor(n, {})).toEqual([qk.settings.team()])
     }
     expect(keysFor('company-profile.update', {})).toEqual([qk.settings.profile()])
+  })
+
+  it('a target write refreshes the admin grid and the signed-in person\'s own Today tile; a category write refreshes the category list', () => {
+    expect(keysFor('target.save', {})).toEqual([qk.settings.targets(), qk.today.target()])
+    expect(keysFor('category.save', {})).toEqual([qk.settings.categories()])
+    // the grid's two reads sit under the one prefix that is invalidated
+    expect(qk.settings.targetRows(2026).slice(0, 2)).toEqual(qk.settings.targets())
+    expect(qk.settings.targetProgress(2026).slice(0, 2)).toEqual(qk.settings.targets())
   })
 
   it('editing or removing a site or contact refreshes that company only; unlinking a brand also refreshes the roster', () => {

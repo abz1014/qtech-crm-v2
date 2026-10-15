@@ -22,6 +22,22 @@ function at(path: string, role: string) {
                 </AdminOnly>
               }
             />
+            <Route
+              path="targets"
+              element={
+                <AdminOnly area="Targets">
+                  <p>Targets screen</p>
+                </AdminOnly>
+              }
+            />
+            <Route
+              path="categories"
+              element={
+                <AdminOnly area="Expense categories">
+                  <p>Categories screen</p>
+                </AdminOnly>
+              }
+            />
             <Route path="company" element={<p>Company screen</p>} />
             <Route path="password" element={<p>Password screen</p>} />
           </Route>
@@ -49,6 +65,34 @@ describe('settings access (A04, A06)', () => {
       at('/settings/team', role)
       expect(screen.queryByText('Team screen')).toBeNull()
       expect(screen.getByText('Team is not available to your role')).toBeInTheDocument()
+    })
+  }
+
+  it('an admin is offered Targets and Expense categories and can open both', () => {
+    const a = at('/settings/targets', 'admin')
+    expect(screen.getByText('Targets screen')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Targets' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Expense categories' })).toBeInTheDocument()
+    a.unmount()
+    at('/settings/categories', 'admin')
+    expect(screen.getByText('Categories screen')).toBeInTheDocument()
+  })
+
+  for (const role of ['sales', 'engineer']) {
+    it(`${role}: Targets and Expense categories are not offered, and typed addresses show the no-access page`, () => {
+      const first = at('/settings/company', role)
+      expect(screen.queryByRole('link', { name: 'Targets' })).toBeNull()
+      expect(screen.queryByRole('link', { name: 'Expense categories' })).toBeNull()
+      first.unmount()
+
+      const second = at('/settings/targets', role)
+      expect(screen.queryByText('Targets screen')).toBeNull()
+      expect(screen.getByText('Targets is not available to your role')).toBeInTheDocument()
+      second.unmount()
+
+      at('/settings/categories', role)
+      expect(screen.queryByText('Categories screen')).toBeNull()
+      expect(screen.getByText('Expense categories is not available to your role')).toBeInTheDocument()
     })
   }
 
