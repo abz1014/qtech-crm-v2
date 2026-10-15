@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, FileCheck2, FilePlus2, FileText, Share2 } from 'lucide-react'
+import { Circle, CircleCheck, Clock, ExternalLink, FileCheck2, FilePlus2, Share2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { formatPaisa, toPaisa } from '@/lib/money'
@@ -7,6 +7,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { Skeleton } from '@/ui/Skeleton'
 import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
@@ -38,21 +39,27 @@ function StateChip({ kind }: { kind: 'current' | 'superseded' | 'expired' }) {
     expired: 'border-tone-warning-fg/25 bg-tone-warning-bg text-tone-warning-fg',
   }[kind]
   const text = { current: 'Current', superseded: 'Superseded', expired: 'Expired' }[kind]
-  return <span className={`inline-flex h-5 items-center rounded border px-2 text-xs font-medium ${look}`}>{text}</span>
+  const glyph = { current: CircleCheck, superseded: Circle, expired: Clock }[kind]
+  return (
+    <span className={`inline-flex h-5 items-center gap-[5px] rounded border pl-[6px] pr-2 text-xs font-medium ${look}`}>
+      <Icon icon={glyph} size="chip" />
+      {text}
+    </span>
+  )
 }
 
-export function IssueQuotationButton({ rfqId, className }: { rfqId: string; className?: string }) {
+/** The header's Issue quotation: always that label (the revision is in the panel's own button and in the dialog), and off until some item has a price (C-12). */
+export function IssueQuotationButton({ rfqId, className, disabled }: { rfqId: string; className?: string; disabled?: boolean }) {
   const quotations = useQuotations(rfqId)
   const [, setOpen] = useIssueDialog()
-  const latest = quotations.data?.[0]
   return (
-    <Button icon={FilePlus2} className={className} onClick={() => setOpen(true)} disabled={quotations.isPending}>
-      {latest ? `Issue R${latest.revision + 1}` : 'Issue quotation'}
+    <Button icon={FilePlus2} className={className} onClick={() => setOpen(true)} disabled={quotations.isPending || disabled}>
+      Issue quotation
     </Button>
   )
 }
 
-export function QuotationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquiries: InquiryRow[] }) {
+export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader; inquiries: InquiryRow[]; itemCount: number }) {
   const { toast } = useToast()
   const quotations = useQuotations(rfq.id)
   const profileQ = useCompanyProfile()
@@ -106,81 +113,116 @@ export function QuotationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquiries:
     }
   }
 
+  const GRID = 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_72px_minmax(0,1.1fr)_minmax(0,1.4fr)]'
   return (
-    <section data-slot="quotations" aria-label="Quotations" className="rounded border bg-surface">
-      <div className="flex items-center gap-2 px-4 pt-4 text-sm font-semibold text-fg-2">
-        <Icon icon={FileText} className="text-fg-muted" />
-        Quotations
-        {isOpen && rows.length > 0 ? (
-          <Button size="sm" className="ml-auto" icon={FilePlus2} onClick={() => setOpen(true)}>
+    <DetailPanel
+      title="Quotations"
+      dataSlot="quotations"
+      meta={rows.length > 0 ? 'Re-issuing makes a new revision under the same number. Earlier revisions and their PDFs never change.' : undefined}
+      actions={
+        isOpen && rows.length > 0 ? (
+          <Button icon={FilePlus2} onClick={() => setOpen(true)}>
             Issue R{rows[0].revision + 1}
           </Button>
-        ) : null}
-      </div>
-      <div className="grid gap-3 px-4 pb-4 pt-2">
-        {quotations.isPending ? (
+        ) : undefined
+      }
+    >
+      {quotations.isPending ? (
+        <div className="p-5">
           <Skeleton className="h-16 w-full" />
-        ) : quotations.isError ? (
+        </div>
+      ) : quotations.isError ? (
+        <div className="p-5">
           <Banner tone="danger" title="Couldn't load the quotations" action={<Button onClick={() => void quotations.refetch()}>Try again</Button>}>
             Nothing was changed.
           </Banner>
-        ) : rows.length === 0 ? (
-          <>
-            <p className="text-sm text-fg-muted">No quotation has been issued yet. Re-issuing later makes a new revision under the same number.</p>
-            {isOpen ? (
-              <Button variant="primary" icon={FilePlus2} className="justify-self-start" onClick={() => setOpen(true)}>
-                Issue quotation
-              </Button>
-            ) : null}
-          </>
-        ) : (
-          <>
-            {lacksPdf && gaps.length > 0 ? (
-              <Banner
-                tone="warning"
-                title={`A PDF needs the company's ${gaps.join(' and ')}`}
-              >
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="px-5 py-5 text-sm text-fg-muted">Nothing issued. Once supplier prices are in, set your price on each item and issue the first quotation.</p>
+      ) : (
+        <>
+          {lacksPdf && gaps.length > 0 ? (
+            <div className="px-5 pt-4">
+              <Banner tone="warning" title={`A PDF needs the company's ${gaps.join(' and ')}`}>
                 Quotations are saved without one. Their PDFs are made when you open them after the profile is complete. <SettingsLink />
               </Banner>
-            ) : null}
-            <p className="text-xs text-fg-muted">Re-issuing makes a new revision under the same number. Earlier revisions and their PDFs never change.</p>
-            <ul className="grid gap-2" aria-label="Issued quotations">
+            </div>
+          ) : null}
+          <div role="table" aria-label="Issued quotations" className="text-sm">
+            <div role="row" className={`hidden gap-4 px-5 py-2 text-xs text-fg-muted sm:grid ${GRID}`}>
+              <span role="columnheader">Quotation</span>
+              <span role="columnheader">Issued</span>
+              <span role="columnheader">Valid until</span>
+              <span role="columnheader">Items</span>
+              <span role="columnheader" className="text-right">
+                Gross, PKR
+              </span>
+              <span role="columnheader" className="sr-only">
+                Actions
+              </span>
+            </div>
+            <div role="rowgroup">
               {rows.map((q, i) => {
                 const latest = i === 0
                 const expired = latest && isExpired(q.validUntil, today) && isOpen
                 const ref = quotationRef(q.number, first, q.revision)
+                const gp = gross(q)
                 return (
-                  <li key={q.id} className="grid gap-2 rounded border p-3" data-testid={`quotation-${q.revision}`} aria-label={ref}>
-                    <div className="flex flex-wrap items-center gap-2">
+                  <div key={q.id} role="row" data-testid={`quotation-${q.revision}`} aria-label={ref} className={`grid items-center gap-x-4 gap-y-2 border-t px-5 py-3 ${GRID}`}>
+                    <span role="cell" className="flex flex-wrap items-center gap-2">
                       <Tag>{ref}</Tag>
                       <StateChip kind={expired ? 'expired' : latest ? 'current' : 'superseded'} />
-                      <span className="num ml-auto text-sm font-medium text-fg">PKR {formatPaisa(gross(q), 'auto')}</span>
-                    </div>
-                    <p className="text-xs text-fg-muted">
-                      Issued {formatDay(q.issuedOn)} · {expired ? 'expired' : 'valid until'} <span className={expired ? 'font-medium text-tone-warning-fg' : ''}>{formatDay(q.validUntil)}</span> · {q.lines.length}{' '}
-                      {q.lines.length === 1 ? 'item' : 'items'}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
+                    </span>
+                    <span role="cell" className="num text-sm">
+                      <span className="text-xs text-fg-muted sm:sr-only">Issued </span>
+                      {formatDay(q.issuedOn)}
+                    </span>
+                    <span role="cell" className={`num text-sm ${expired ? 'font-medium text-tone-warning-fg' : ''}`}>
+                      <span className="text-xs font-regular text-fg-muted sm:sr-only">{expired ? 'Expired ' : 'Valid until '}</span>
+                      {formatDay(q.validUntil)}
+                    </span>
+                    <span role="cell" className="num text-sm">
+                      {q.lines.length} of {itemCount}
+                      <span className="text-xs text-fg-muted sm:sr-only">{q.lines.length === 1 ? ' item' : ' items'}</span>
+                    </span>
+                    <span role="cell" className="grid sm:justify-items-end sm:text-right">
+                      <span className="num text-sm font-medium">
+                        <span className="mr-1 font-sans text-xs font-regular text-fg-muted sm:sr-only">PKR{' '}</span>
+                        {formatPaisa(gp, 'auto')}
+                      </span>
+                      <span className="num text-xs text-fg-muted">net {formatPaisa(toPaisa(q.netTotal), 'auto')}</span>
+                    </span>
+                    <span role="cell" className="flex flex-wrap items-center gap-2 sm:justify-end">
                       {latest && isOpen ? (
                         <Button size="sm" variant="primary" icon={FileCheck2} onClick={() => setWon(true)}>
                           Mark won
                         </Button>
                       ) : null}
-                      <Button size="sm" icon={ExternalLink} busy={working === `open-${q.id}`} busyLabel="Opening" disabled={!q.pdfPath && gaps.length > 0} onClick={() => void run(q, 'open')}>
+                      <Button
+                        size="sm"
+                        variant={latest ? 'secondary' : 'quiet'}
+                        icon={ExternalLink}
+                        busy={working === `open-${q.id}`}
+                        busyLabel="Opening"
+                        disabled={!q.pdfPath && gaps.length > 0}
+                        onClick={() => void run(q, 'open')}
+                      >
                         Open PDF
                       </Button>
-                      <Button size="sm" icon={Share2} busy={working === `share-${q.id}`} busyLabel="Sharing" disabled={!q.pdfPath && gaps.length > 0} onClick={() => void run(q, 'share')}>
-                        Share
-                      </Button>
-                    </div>
-                  </li>
+                      {latest ? (
+                        <Button size="sm" icon={Share2} busy={working === `share-${q.id}`} busyLabel="Sharing" disabled={!q.pdfPath && gaps.length > 0} onClick={() => void run(q, 'share')}>
+                          Share
+                        </Button>
+                      ) : null}
+                    </span>
+                  </div>
                 )
               })}
-            </ul>
-          </>
-        )}
-      </div>
+            </div>
+          </div>
+        </>
+      )}
       {open ? <IssueQuotationDialog rfq={rfq} inquiries={inquiries} onClose={() => setOpen(false)} /> : null}
-    </section>
+    </DetailPanel>
   )
 }

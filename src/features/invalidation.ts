@@ -39,6 +39,9 @@ export interface WriteVars {
   'category.save': Record<string, never>
   'rfq.float': { companyId: string }
   'rfq.setFloated': { rfqId: string }
+  'fx.set': Record<string, never>
+  'item.add': { rfqId: string }
+  'inquiry.add': { rfqId: string }
   'quote.save': { rfqId: string }
   'inquiry.cantQuote': { rfqId: string }
   'inquiry.chase': { rfqId: string }
@@ -108,6 +111,12 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'rfq.float': () => [qk.rfqs.all, qk.intake.all, qk.companies.all],
   // Floating or un-floating moves inquiries between shortlisted and sent: the RFQ and the suppliers' counts.
   'rfq.setFloated': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all],
+  // A rate entered by hand changes every comparison (today's rate), so the RFQ pages refresh with the rate lists.
+  'fx.set': () => [qk.fx.all, qk.rfqs.all],
+  // A new item changes the page, the board's counts and the coverage.
+  'item.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
+  // Asking another supplier adds an inquiry: the page, the board and the supplier's own counts.
+  'inquiry.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all],
   // A price, a "can't quote" or a chase changes the RFQ page and the board's states, and the supplier's own counts.
   'quote.save': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all, qk.intake.all],
   'inquiry.cantQuote': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all, qk.intake.all],

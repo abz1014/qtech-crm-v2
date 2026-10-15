@@ -24,6 +24,7 @@ const screens: Partial<Record<NavKey, ComponentType>> = {
 }
 
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
+const ExchangeRatesPage = lazy(() => import('@/features/fx/ExchangeRatesPage').then(m => ({ default: m.ExchangeRatesPage })))
 const TargetsPage = lazy(() => import('@/features/settings/TargetsPage').then(m => ({ default: m.TargetsPage })))
 const CategoriesPage = lazy(() => import('@/features/settings/CategoriesPage').then(m => ({ default: m.CategoriesPage })))
 const ChangePasswordPage = lazy(() => import('@/features/settings/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })))
@@ -96,6 +97,14 @@ export function AppRoutes() {
               element={
                 <Suspense fallback={null}>
                   <CompanyProfilePage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="exchange-rates"
+              element={
+                <Suspense fallback={null}>
+                  <ExchangeRatesPage />
                 </Suspense>
               }
             />
