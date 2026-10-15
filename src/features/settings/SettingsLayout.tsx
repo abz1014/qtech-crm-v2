@@ -40,7 +40,7 @@ export function SettingsLayout() {
   const isAdmin = useIsAdmin()
   const links = SETTINGS_LINKS.filter(l => isAdmin || !l.adminOnly)
   return (
-    <div className="grid min-h-full md:grid-cols-[220px_minmax(0,1fr)]">
+    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)]">
       <nav aria-label="Settings" className="border-b bg-surface px-4 py-3 md:border-b-0 md:border-r md:px-3 md:py-6">
         <p className="mb-2 hidden px-3 text-xs font-semibold text-fg-muted md:block">Settings</p>
         <ul className="flex gap-1 overflow-x-auto md:grid md:gap-[2px] md:overflow-visible">
