@@ -27,6 +27,7 @@ export interface CompanyDetail {
   id: string
   name: string
   country: string | null
+  city: string | null
   notes: string | null
   createdAt: string
   role: CompanyRole | null
@@ -75,14 +76,22 @@ export interface CompanyHit {
   id: string
   name: string
   country: string | null
-  city: string | null
+  city?: string | null
   role: CompanyRole | null
+  /** How many RFQs we have with them (pickers show "2 RFQs"). */
+  rfqCount?: number
+  /** Found by its first word only, not by the whole text typed: a name that is close, not the same ("similar name"). */
+  similar?: boolean
 }
 
 /** Escape the characters that mean something to ilike, so typing "50%" searches for "50%". */
 const likeEscape = (s: string) => s.replace(/[\\%_]/g, c => `\\${c}`)
 
-/** Name search for the command palette and pickers. Up to `limit` companies whose name contains the text. */
+/**
+ * Name search for the command palette and pickers. Up to `limit` companies whose name contains the text; when the text is
+ * several words and there is room, companies that share only its first word follow, marked `similar` ("Mianwali Polymers"
+ * finds "Mianwali Plastics Ltd"), so a near duplicate is noticed before a new company is added.
+ */
 export async function searchCompanies(text: string, limit = 8): Promise<CompanyHit[]> {
   const db = requireSupabase()
   const q = text.trim()
@@ -90,10 +99,23 @@ export async function searchCompanies(text: string, limit = 8): Promise<CompanyH
   const rows = unwrap(
     await db.from('companies').select('id, name, country, city').ilike('name', `%${likeEscape(q)}%`).order('name').limit(limit),
   )
-  const ids = rows.map(r => r.id)
-  const roles = ids.length ? unwrap(await db.from('v_company_roles').select('company_id, role').in('company_id', ids)) : []
-  const roleBy = new Map(roles.map(r => [r.company_id, asRole(r.role)]))
-  return rows.map(r => ({ id: r.id, name: r.name, country: r.country, city: r.city, role: roleBy.get(r.id) ?? null }))
+  const first = q.split(/\s+/)[0]
+  const similarRows =
+    q.includes(' ') && first.length >= 3 && rows.length < limit
+      ? unwrap(await db.from('companies').select('id, name, country, city').ilike('name', `%${likeEscape(first)}%`).order('name').limit(limit))
+          .filter(r => !rows.some(x => x.id === r.id))
+          .slice(0, limit - rows.length)
+      : []
+  const all = [...rows.map(r => ({ ...r, similar: false })), ...similarRows.map(r => ({ ...r, similar: true }))]
+  const ids = all.map(r => r.id)
+  const [roles, rfqs] = ids.length
+    ? await Promise.all([db.from('v_company_roles').select('company_id, role').in('company_id', ids), db.from('rfqs').select('company_id').in('company_id', ids)])
+    : [null, null]
+  const roleBy = new Map(unwrap(roles ?? { data: [], error: null }).map(r => [r.company_id, asRole(r.role)]))
+  const rfqCount = new Map<string, number>()
+  const rfqRows = unwrap(rfqs ?? { data: [], error: null })
+  for (const r of Array.isArray(rfqRows) ? rfqRows : []) rfqCount.set(r.company_id, (rfqCount.get(r.company_id) ?? 0) + 1)
+  return all.map(r => ({ id: r.id, name: r.name, country: r.country, city: r.city, role: roleBy.get(r.id) ?? null, rfqCount: rfqCount.get(r.id) ?? 0, similar: r.similar }))
 }
 
 /** The company whose name equals `name` ignoring case and surrounding spaces, as the unique index sees it. */
@@ -101,15 +123,15 @@ export async function findCompanyByName(name: string): Promise<CompanyHit | null
   const db = requireSupabase()
   const wanted = name.trim()
   if (!wanted) return null
-  const rows = unwrap(await db.from('companies').select('id, name, country, city').ilike('name', likeEscape(wanted)).limit(5))
+  const rows = unwrap(await db.from('companies').select('id, name, country').ilike('name', likeEscape(wanted)).limit(5))
   const hit = rows.find(r => r.name.trim().toLowerCase() === wanted.toLowerCase())
-  return hit ? { id: hit.id, name: hit.name, country: hit.country, city: hit.city, role: null } : null
+  return hit ? { id: hit.id, name: hit.name, country: hit.country, role: null } : null
 }
 
 export async function getCompany(id: string): Promise<CompanyDetail | null> {
   const db = requireSupabase()
   const [company, role] = await Promise.all([
-    db.from('companies').select('id, name, country, notes, created_at, legacy_flags, legacy_source').eq('id', id).maybeSingle(),
+    db.from('companies').select('id, name, country, city, notes, created_at, legacy_flags, legacy_source').eq('id', id).maybeSingle(),
     db.from('v_company_roles').select('role, is_customer, is_supplier').eq('company_id', id).maybeSingle(),
   ])
   const c = unwrap(company)
@@ -119,6 +141,7 @@ export async function getCompany(id: string): Promise<CompanyDetail | null> {
     id: c.id,
     name: c.name,
     country: c.country,
+    city: c.city,
     notes: c.notes,
     createdAt: c.created_at,
     role: asRole(r?.role),
@@ -144,6 +167,8 @@ export interface ContactRow {
   name: string
   phone: string | null
   email: string | null
+  /** The role line under the name in the Contacts panel ("Finance", "Procurement Manager"). */
+  job_title: string | null
   notes: string | null
   site_id: string | null
 }
@@ -151,7 +176,7 @@ export interface ContactRow {
 export async function listContacts(companyId: string): Promise<ContactRow[]> {
   const db = requireSupabase()
   return unwrap(
-    await db.from('contacts').select('id, name, phone, email, notes, site_id').eq('company_id', companyId).order('name'),
+    await db.from('contacts').select('id, name, phone, email, job_title, notes, site_id').eq('company_id', companyId).order('name'),
   )
 }
 
@@ -275,7 +300,7 @@ export async function getSupplierRecord(companyId: string): Promise<SupplierReco
   const [inqRes, legRes] = await Promise.all([
     db
       .from('supplier_inquiries')
-      .select('id, rfq_id, sent_on, last_chased_on, no_offer_on, no_offer_reason, legacy_source')
+      .select('id, rfq_id, sent_on, last_chased_on, chase_count, no_offer_on, no_offer_reason, legacy_source')
       .eq('supplier_id', companyId)
       .not('sent_on', 'is', null)
       .order('sent_on', { ascending: false })
@@ -292,6 +317,7 @@ export async function getSupplierRecord(companyId: string): Promise<SupplierReco
     rfqId: i.rfq_id,
     sentOn: i.sent_on,
     lastChasedOn: i.last_chased_on,
+    chaseCount: i.chase_count,
     noOfferOn: i.no_offer_on,
     noOfferReason: i.no_offer_reason,
     legacy: i.legacy_source !== null,
@@ -395,7 +421,11 @@ export interface HistoryRfq {
   dueOn: string | null
   customerRef: string | null
   outcome: string | null
+  closeReason: string | null
   orderNumber: number | null
+  /** The first item's description, and how many more there are: the "What" column. */
+  what: string | null
+  moreItems: number
 }
 export interface HistoryOrder {
   id: string
@@ -404,20 +434,29 @@ export interface HistoryOrder {
   orderedOn: string | null
   rfqId: string | null
   lifecycle: string | null
+  goods: string | null
   invoicing: string | null
+  /** True when the order is past its payment due date with a balance (admin and sales only; null for engineers). */
+  paymentOverdue: boolean | null
+  what: string | null
+  moreItems: number
 }
 export interface CompanyHistory {
   rfqs: HistoryRfq[]
   orders: HistoryOrder[]
 }
 
-/** The company's RFQs and orders, for the site-by-site list. Status values come straight from the state views. */
-export async function getCompanyHistory(companyId: string): Promise<CompanyHistory> {
+/**
+ * The company's RFQs and orders, for the site-by-site list. Status values come straight from the state views.
+ * `withPayment` (admin and sales) also reads order_receivables() for the "Payment overdue" chip; an engineer's call to it is
+ * refused by the database, so it is never made for them.
+ */
+export async function getCompanyHistory(companyId: string, withPayment = false): Promise<CompanyHistory> {
   const db = requireSupabase()
   const [rfqs, rfqState, orders, orderState] = await Promise.all([
     db
       .from('rfqs')
-      .select('id, number, site_id, received_on, due_on, customer_ref')
+      .select('id, number, site_id, received_on, due_on, customer_ref, close_reason')
       .eq('company_id', companyId)
       .order('received_on', { ascending: false }),
     db.from('v_rfq_state').select('rfq_id, outcome').eq('company_id', companyId),
@@ -426,14 +465,45 @@ export async function getCompanyHistory(companyId: string): Promise<CompanyHisto
       .select('id, number, site_id, ordered_on, rfq_id')
       .eq('company_id', companyId)
       .order('ordered_on', { ascending: false, nullsFirst: false }),
-    db.from('v_order_state').select('order_id, lifecycle, invoicing_state').eq('company_id', companyId),
+    db.from('v_order_state').select('order_id, lifecycle, goods_state, invoicing_state').eq('company_id', companyId),
   ])
   const outcomeBy = new Map(unwrap(rfqState).map(s => [s.rfq_id, s.outcome]))
   const stateBy = new Map(unwrap(orderState).map(s => [s.order_id, s]))
   const orderRows = unwrap(orders)
+  const rfqRows = unwrap(rfqs)
   const orderNumberByRfq = new Map(orderRows.filter(o => o.rfq_id).map(o => [o.rfq_id as string, o.number]))
+
+  // "What": the first item of each RFQ and of each order (by position), with how many more there are.
+  const [rfqItems, orderItems, receivables] = await Promise.all([
+    inBatches(
+      rfqRows.map(r => r.id),
+      b => db.from('rfq_items').select('rfq_id, description, position').in('rfq_id', b),
+    ),
+    inBatches(
+      orderRows.map(o => o.id),
+      b => db.from('order_items').select('order_id, description, position, is_service').in('order_id', b),
+    ),
+    withPayment && orderRows.length > 0 ? db.rpc('order_receivables', {}) : Promise.resolve(null),
+  ])
+  const firstOf = <T extends { description: string; position: number }>(rows: T[], key: (r: T) => string) => {
+    const by = new Map<string, T[]>()
+    for (const r of rows) by.set(key(r), [...(by.get(key(r)) ?? []), r])
+    return (id: string) => {
+      const list = (by.get(id) ?? []).sort((a, b) => a.position - b.position)
+      return { what: list[0]?.description ?? null, more: Math.max(list.length - 1, 0) }
+    }
+  }
+  const rfqWhat = firstOf(rfqItems, r => r.rfq_id)
+  const orderWhat = firstOf(
+    orderItems.filter(i => !i.is_service),
+    r => r.order_id,
+  )
+  const overdue = new Set<string>()
+  if (receivables && !receivables.error) {
+    for (const r of receivables.data ?? []) if (r.is_overdue && r.order_id) overdue.add(r.order_id)
+  }
   return {
-    rfqs: unwrap(rfqs).map(r => ({
+    rfqs: rfqRows.map(r => ({
       id: r.id,
       number: r.number,
       siteId: r.site_id,
@@ -441,7 +511,10 @@ export async function getCompanyHistory(companyId: string): Promise<CompanyHisto
       dueOn: r.due_on,
       customerRef: r.customer_ref,
       outcome: outcomeBy.get(r.id) ?? null,
+      closeReason: r.close_reason,
       orderNumber: orderNumberByRfq.get(r.id) ?? null,
+      what: rfqWhat(r.id).what,
+      moreItems: rfqWhat(r.id).more,
     })),
     orders: orderRows.map(o => ({
       id: o.id,
@@ -450,7 +523,11 @@ export async function getCompanyHistory(companyId: string): Promise<CompanyHisto
       orderedOn: o.ordered_on,
       rfqId: o.rfq_id,
       lifecycle: stateBy.get(o.id)?.lifecycle ?? null,
+      goods: stateBy.get(o.id)?.goods_state ?? null,
       invoicing: stateBy.get(o.id)?.invoicing_state ?? null,
+      paymentOverdue: withPayment && receivables && !receivables.error ? overdue.has(o.id) : null,
+      what: orderWhat(o.id).what,
+      moreItems: orderWhat(o.id).more,
     })),
   }
 }
@@ -483,6 +560,7 @@ export interface NewCompany {
   name: string
   country?: string | null
   notes?: string | null
+  city?: string | null
 }
 
 export async function createCompany(input: NewCompany): Promise<{ id: string; name: string }> {
@@ -495,17 +573,19 @@ export async function createCompany(input: NewCompany): Promise<{ id: string; na
         name: input.name.trim(),
         country: input.country?.trim() || null,
         notes: input.notes?.trim() || null,
+        city: input.city?.trim() || null,
       })
       .select('id, name')
       .single(),
   )
 }
 
-export async function updateCompany(id: string, patch: { name?: string; country?: string | null; notes?: string | null }) {
+export async function updateCompany(id: string, patch: { name?: string; country?: string | null; city?: string | null; notes?: string | null }) {
   const db = requireSupabase()
   const next = {
     ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
     ...(patch.country !== undefined ? { country: patch.country?.trim() || null } : {}),
+    ...(patch.city !== undefined ? { city: patch.city?.trim() || null } : {}),
     ...(patch.notes !== undefined ? { notes: patch.notes?.trim() || null } : {}),
   }
   unwrap(await db.from('companies').update(next).eq('id', id).select('id').single())
@@ -529,6 +609,7 @@ export async function addContact(input: {
   name: string
   phone?: string | null
   email?: string | null
+  jobTitle?: string | null
   notes?: string | null
 }) {
   const db = requireSupabase()
@@ -542,6 +623,7 @@ export async function addContact(input: {
         name: input.name.trim(),
         phone: input.phone?.trim() || null,
         email: input.email?.trim() || null,
+        job_title: input.jobTitle?.trim() || null,
         notes: input.notes?.trim() || null,
       })
       .select('id')
@@ -556,7 +638,7 @@ export async function updateSite(id: string, patch: { name: string; address?: st
 
 export async function updateContact(
   id: string,
-  patch: { name: string; siteId?: string | null; phone?: string | null; email?: string | null; notes?: string | null },
+  patch: { name: string; siteId?: string | null; phone?: string | null; email?: string | null; jobTitle?: string | null; notes?: string | null },
 ) {
   const db = requireSupabase()
   unwrap(
@@ -567,6 +649,7 @@ export async function updateContact(
         site_id: patch.siteId || null,
         phone: patch.phone?.trim() || null,
         email: patch.email?.trim() || null,
+        job_title: patch.jobTitle?.trim() || null,
         notes: patch.notes?.trim() || null,
       })
       .eq('id', id)
