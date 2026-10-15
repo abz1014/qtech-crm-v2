@@ -3,10 +3,18 @@ name: Functions
 on:
   push:
     branches: ["**"]
-  pull_request:
+    paths:
+      - "supabase/functions/**"
+      - "supabase/migrations/**"
+      - ".github/workflows/functions.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   admin-users:
