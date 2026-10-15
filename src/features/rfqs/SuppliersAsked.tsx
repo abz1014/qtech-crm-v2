@@ -73,11 +73,14 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, onFloat }: Props)
               </div>
               {mem ? <p className={mem.late ? 'text-xs text-tone-warning-fg' : 'text-xs text-fg-muted'}>{mem.text}</p> : null}
               <p className="text-xs text-fg-muted">{sentLine(i)}</p>
-              {can && open?.id !== i.id ? (
-                <div>
-                  <Button size="sm" variant="quiet" onClick={() => setPicked(i.id)} aria-label={`Chase ${i.supplierName}`}>
-                    Chase
-                  </Button>
+              {can ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <ChaseNow rfq={rfq} items={items} inquiry={i} />
+                  {open?.id !== i.id ? (
+                    <Button size="sm" variant="quiet" onClick={() => setPicked(i.id)} aria-label={`Show text, ${i.supplierName}`}>
+                      Show text
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
               {open?.id === i.id ? <ChaseCard rfq={rfq} items={items} inquiry={i} inquiries={inquiries} /> : null}
@@ -94,22 +97,20 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, onFloat }: Props)
   )
 }
 
-function ChaseCard({ rfq, items, inquiry, inquiries }: { rfq: RfqHeader; items: RfqItemRow[]; inquiry: InquiryRow; inquiries: InquiryRow[] }) {
+/**
+ * The chase for one supplier: the text for a channel, and the one action that copies it and stamps the chase together
+ * (stamp_supplier_chase), with an Undo toast that takes the stamp back. Used by the chase card and by the "Chase" button on
+ * every supplier asked (FE-2: chase = 1 tap). The card can leave items out and change the reply-by date; the button never asks.
+ */
+function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryRow, variant: EnquiryVariant, opts: { off?: ReadonlySet<string>; replyBy?: string | null } = {}) {
   const { toast } = useToast()
   const signature = useSignature()
   const stamp = useStampSupplierChase(rfq.id)
   const restore = useRestoreSupplierChase(rfq.id)
-  const choose = useChooseSuppliers(rfq, inquiries)
-  const [variant, setVariant] = useState<EnquiryVariant>('whatsapp')
-  const [off, setOff] = useState<ReadonlySet<string>>(new Set())
-  const [chosen, setChosen] = useState<string | null>(null)
-  const [dismissed, setDismissed] = useState(false)
   const today = businessToday()
-  const outstandingAll = outstandingItems(inquiry, items)
-  const outstanding = outstandingAll.filter(it => !off.has(it.id))
+  const outstanding = outstandingItems(inquiry, items).filter(it => !opts.off?.has(it.id))
   const pricedNumbers = items.filter(it => inquiry.lines.some(l => l.itemId === it.id)).map(it => it.number)
-  const defaultBy = supplierReplyBy(rfq.dueOn, today) ?? today
-  const make = (v: EnquiryVariant) =>
+  const chase =
     outstanding.length === 0
       ? null
       : generateSupplierChase({
@@ -122,18 +123,18 @@ function ChaseCard({ rfq, items, inquiry, inquiries }: { rfq: RfqHeader; items: 
           pricedNumbers,
           items: outstanding.map(it => ({ number: it.number, description: it.description, brandName: it.brandName, qty: it.qty, unit: it.unit })),
           signature,
-          variant: v,
+          variant,
           ageDays: inquiry.sentOn ? daysSince(inquiry.sentOn, today) : null,
-          replyByOverride: chosen,
+          replyByOverride: opts.replyBy ?? null,
         })
-  const chase = make(variant)
+  // The clipboard gets the body: an email's subject has its own row and its own copy button.
   const text = chase ? chase.body : ''
-  const returnsOn = supplierReturnsOn(today, rfq.dueOn)
 
   const doChase = async () => {
+    if (!chase) return
     const ok = await copyToClipboard(text)
     if (!ok) {
-      toast({ title: 'Could not copy the text', body: 'Select the text in the card and copy it by hand. The chase was not recorded.', tone: 'danger' })
+      toast({ title: 'Could not copy the text', body: 'Show the text and copy it by hand. The chase was not recorded.', tone: 'danger' })
       return
     }
     const before = { lastChasedOn: inquiry.lastChasedOn, chaseCount: inquiry.chaseCount }
@@ -162,6 +163,30 @@ function ChaseCard({ rfq, items, inquiry, inquiries }: { rfq: RfqHeader; items: 
     }
   }
 
+  return { chase, text, doChase, busy: stamp.isPending }
+}
+
+/** "Chase": 1 tap on any supplier asked. Copies the WhatsApp text and marks the chase. */
+function ChaseNow({ rfq, items, inquiry }: { rfq: RfqHeader; items: RfqItemRow[]; inquiry: InquiryRow }) {
+  const c = useSupplierChase(rfq, items, inquiry, 'whatsapp')
+  return (
+    <Button size="sm" icon={Copy} onClick={() => void c.doChase()} busy={c.busy} busyLabel="Marking chased" aria-label={`Chase ${inquiry.supplierName}`}>
+      Chase
+    </Button>
+  )
+}
+
+function ChaseCard({ rfq, items, inquiry, inquiries }: { rfq: RfqHeader; items: RfqItemRow[]; inquiry: InquiryRow; inquiries: InquiryRow[] }) {
+  const choose = useChooseSuppliers(rfq, inquiries)
+  const [variant, setVariant] = useState<EnquiryVariant>('whatsapp')
+  const [off, setOff] = useState<ReadonlySet<string>>(new Set())
+  const [chosen, setChosen] = useState<string | null>(null)
+  const [dismissed, setDismissed] = useState(false)
+  const today = businessToday()
+  const { chase, doChase, busy, text } = useSupplierChase(rfq, items, inquiry, variant, { off, replyBy: chosen })
+  const outstandingAll = outstandingItems(inquiry, items)
+  const defaultBy = supplierReplyBy(rfq.dueOn, today) ?? today
+  const returnsOn = supplierReturnsOn(today, rfq.dueOn)
   const recipient = inquiry.contactName
     ? { name: inquiry.contactTitle ? `${inquiry.contactName}, ${inquiry.contactTitle}` : inquiry.contactName, phone: inquiry.contactPhone, email: inquiry.contactEmail }
     : null
@@ -232,7 +257,7 @@ function ChaseCard({ rfq, items, inquiry, inquiries }: { rfq: RfqHeader; items: 
           supplier has not priced, and never names the customer or our price.
         </ChaseNote>
         <div className="flex flex-wrap items-center gap-3 border-t bg-sunken px-4 py-3">
-          <Button variant="primary" icon={Copy} disabled={!chase} onClick={() => void doChase()} busy={stamp.isPending} busyLabel="Marking chased">
+          <Button variant="primary" icon={Copy} disabled={!chase} onClick={() => void doChase()} busy={busy} busyLabel="Marking chased">
             Copy and mark chased
           </Button>
           <span className="text-xs text-fg-muted">{inquiry.chaseCount === 0 ? 'Not chased yet' : `Chased ${inquiry.chaseCount === 1 ? 'once' : `${inquiry.chaseCount} times`} already`}</span>

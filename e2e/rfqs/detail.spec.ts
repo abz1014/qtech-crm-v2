@@ -10,8 +10,8 @@ import { axeViolations } from '../support/axe'
  *   Supplier reply   at most 1 typed price per item, currency never typed (then one Save reply)
  *   Paste reply      paste + accept, at most 2 actions (nothing is saved until Accept)
  *   Can't quote      1 tap
- *   Chase            1 tap (Copy and mark chased, on the supplier shown in the Suppliers asked card)
- *   Mark bid sent    2 taps (open Bid and close, choose)
+ *   Chase            1 tap for EVERY supplier asked (its own Chase button copies the text and marks it chased)
+ *   Mark bid sent    1 tap (a direct button in the header while the bid is open and not sent)
  *   Lose / close     at most 2 taps (open Bid and close, choose the reason; the suggested one is marked)
  */
 
@@ -339,25 +339,49 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await expect(card.getByText('li@hengxin.example')).toBeVisible()
     await expect(card.getByRole('button', { name: 'Copy subject' })).toBeVisible()
     await expect(card.getByText(/^RFQ-\d+: price needed/)).toBeVisible()
-    // Another supplier: one tap opens its card.
-    await page.getByRole('button', { name: `Chase ${s.usd.name}` }).click()
+    // Another supplier: "Show text" opens its card.
+    await page.getByRole('button', { name: `Show text, ${s.usd.name}` }).click()
     await expect(page.locator(`[data-chase-card="${s.usd.id}"]`)).toBeVisible()
+  })
+
+  test('every supplier asked has its own Chase button: 1 tap copies its text and marks it chased (FE-2)', async ({ page }) => {
+    const s = await seed({ dueInDays: 8 })
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    let taps = 0
+    // Not the supplier shown in the card: the Germany supplier, straight from its entry in Suppliers asked.
+    await page.getByRole('button', { name: `Chase ${s.germany.name}`, exact: true }).click()
+    taps++
+    expect(taps).toBe(1)
+    await expect(page.getByRole('status').filter({ hasText: 'Chase text copied' })).toBeVisible()
+    const text = await page.evaluate(() => navigator.clipboard.readText())
+    expect(text).toContain('Following up on our enquiry')
+    expect(text).toContain(s.items[0].description)
+    expect(text).not.toContain(s.customer)
+    const after = await inquiryOf(s.germany.inquiryId)
+    expect(after.chase_count).toBe(1)
+    expect(after.last_chased_on).toBe(today())
+    expect((await inquiryOf(s.usd.inquiryId)).chase_count).toBe(0) // only that supplier
+    // And the next one, 1 tap again.
+    await page.getByRole('button', { name: `Chase ${s.usd.name}`, exact: true }).click()
+    await expect.poll(async () => (await inquiryOf(s.usd.inquiryId)).chase_count).toBe(1)
   })
 })
 
 const bidAndClose = (page: Page) => page.getByRole('button', { name: 'Bid and close' })
 
 test.describe('bid sent and close or lose (Bid and close menu)', () => {
-  test('mark bid sent is in the Bid and close menu, with an Undo; Sent the offer again updates the date', async ({ page }) => {
+  test('mark bid sent is 1 tap (a header button), with an Undo; the menu keeps Sent the offer again', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await bidAndClose(page).click()
-    await expect(page.getByRole('menuitem', { name: /Mark bid sent/ })).toBeEnabled()
-    await expect(page.getByRole('menuitem', { name: /Sent the offer again/ })).toBeVisible()
-    await page.getByRole('menuitem', { name: /Mark bid sent/ }).click()
+    let taps = 0
+    await page.getByRole('button', { name: 'Mark bid sent' }).click() // the one tap
+    taps++
+    expect(taps).toBe(1)
     await expect(page.getByRole('status').filter({ hasText: 'Marked bid sent' })).toBeVisible()
     await expect.poll(async () => (await rfqOf(s.rfq.id)).quoted_on).toBe(today())
+    await expect(page.getByRole('button', { name: 'Mark bid sent' })).toHaveCount(0) // sent: the button is gone
     await bidAndClose(page).click()
+    await expect(page.getByRole('menuitem', { name: /Sent the offer again/ })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: /Mark bid sent/ })).toBeDisabled() // already sent
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Undo' }).click()
@@ -425,7 +449,7 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     // The header: Issue quotation (off until a price exists) and one Bid and close menu.
     await expect(page.getByRole('button', { name: 'Issue quotation' }).first()).toBeDisabled()
     await expect(bidAndClose(page)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Mark bid sent' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Mark bid sent' })).toBeVisible() // 1 tap while the bid is open and not sent
     await expect(page.getByRole('button', { name: 'Close or lose' })).toHaveCount(0)
     // Owner role and customer since sit under their values.
     await expect(page.locator('dl').first()).toContainText('Customer since')
@@ -681,6 +705,7 @@ test.describe('the phone layout (C-100 to C-105)', () => {
     await page.getByRole('menuitem', { name: /Chase suppliers/ }).click()
     await expect(page.locator('[data-slot="suppliers-asked"]')).toBeInViewport()
     await actions.getByRole('button', { name: 'More actions' }).click()
+    await expect(page.getByRole('menuitem', { name: 'Mark won' })).toBeVisible() // as in the mockup's phone menu
     await expect(page.getByRole('menuitem', { name: /Sent the offer again/ })).toBeVisible()
     await page.keyboard.press('Escape')
     await review(page, 'rfq-detail-mobile-bar-375')
