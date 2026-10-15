@@ -36,7 +36,7 @@ export function InputTax({ amount, value, onChange, defaultOpen = false, label =
   }
   const tax = value ?? 0
   const paid = amount ?? 0
-  const tooHigh = tax > paid
+  const tooHigh = amount !== null && tax > paid
   return (
     <div className={`grid gap-3 rounded border bg-canvas px-4 py-3 ${className ?? ''}`}>
       <div className="grid grid-cols-[112px_minmax(0,1fr)] items-center gap-2">
