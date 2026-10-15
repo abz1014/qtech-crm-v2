@@ -92,9 +92,9 @@ export interface TickRow {
 /** "Questions in this message / Untick to leave one out": every row ticked by default. */
 export function TickList({ title, hint = 'Untick to leave one out', rows, onToggle }: { title: string; hint?: string; rows: readonly TickRow[]; onToggle: (id: string, on: boolean) => void }) {
   return (
-    <section aria-label={title} className="grid gap-2 border-b px-4 py-3">
+    <div role="group" aria-label={title} className="grid gap-2 border-b px-4 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h4 className="text-sm font-semibold">{title}</h4>
+        <p className="text-sm font-semibold">{title}</p>
         <span className="text-xs text-fg-muted">{hint}</span>
       </div>
       <ul className="grid gap-2">
@@ -111,7 +111,7 @@ export function TickList({ title, hint = 'Untick to leave one out', rows, onTogg
           </li>
         ))}
       </ul>
-    </section>
+    </div>
   )
 }
 

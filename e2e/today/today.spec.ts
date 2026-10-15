@@ -129,7 +129,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     // ---- just chased: the title stays, the bar says where it went, the cells and the card switch, "Chase again now" is there
     await expect(pane.getByRole('heading', { level: 2, name: 'Chase customer for clarifications' })).toBeVisible()
     await expect(pane.getByText('Moved to Waiting.')).toBeVisible()
-    await expect(pane.getByText('Chased customer')).toBeVisible()
+    await expect(pane.getByText('Chased customer', { exact: true })).toBeVisible()
     await expect(pane.getByText('Next nudge', { exact: true })).toBeVisible()
     await expect(pane.getByRole('region', { name: 'Chased today' })).toBeVisible()
     await expect(pane.getByRole('button', { name: 'Copy message and mark chased' })).toHaveCount(0)

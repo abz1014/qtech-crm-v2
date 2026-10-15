@@ -471,7 +471,7 @@ function ReplyRow({ rfq, items, inquiry, rates, askedIds }: { rfq: RfqHeader; it
             />
           ) : null}
           {canChase ? (
-            <section aria-label={`Chase ${inquiry.supplierName}`} className="grid overflow-hidden rounded border bg-surface">
+            <div role="group" aria-label={`Chase ${inquiry.supplierName}`} className="grid overflow-hidden rounded border bg-surface">
               <TickList
                 title="Items still without a price from this supplier"
                 rows={items
@@ -532,7 +532,7 @@ function ReplyRow({ rfq, items, inquiry, rates, askedIds }: { rfq: RfqHeader; it
                   Copy &amp; mark chased
                 </Button>
               </div>
-            </section>
+            </div>
           ) : null}
         </div>
       ) : null}
