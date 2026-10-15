@@ -14,6 +14,8 @@ export interface ChaseSignature {
   name: string
   company: string
   jobTitle?: string | null
+  /** users.phone: printed on its own line under an email signature. */
+  phone?: string | null
 }
 
 export interface ChaseText {
@@ -40,7 +42,7 @@ export function greetingFor(variant: EnquiryVariant, contactName: string | null)
 }
 
 export function signOff(variant: EnquiryVariant, sig: ChaseSignature): string[] {
-  if (variant === 'email') return ['With best regards,', sig.name, sig.jobTitle ? `${sig.jobTitle}, ${sig.company}` : sig.company]
+  if (variant === 'email') return ['With best regards,', sig.name, sig.jobTitle ? `${sig.jobTitle}, ${sig.company}` : sig.company, ...(sig.phone ? [sig.phone] : [])]
   return ['Regards,', sig.name, sig.company]
 }
 
