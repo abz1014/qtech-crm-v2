@@ -213,7 +213,8 @@ test.describe('Team (A04)', () => {
       await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible()
       await expect(page.getByRole('menuitem', { name: 'Team' })).toHaveCount(0)
       await page.getByRole('menuitem', { name: 'Settings' }).click()
-      await expect(page).toHaveURL(/\/settings\/company$/)
+      await expect(page).toHaveURL(/\/settings$/)
+      await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible()
       await expect(page.getByRole('link', { name: 'Team' })).toHaveCount(0)
 
       await page.goto('/settings/team')
