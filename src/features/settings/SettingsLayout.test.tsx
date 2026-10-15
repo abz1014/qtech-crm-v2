@@ -91,12 +91,12 @@ describe('settings access (A04, A06)', () => {
 
       const second = at('/settings/targets', role)
       expect(screen.queryByText('Targets screen')).toBeNull()
-      expect(screen.getByText('Targets is not available to your role')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Targets is for admins' })).toBeInTheDocument()
       second.unmount()
 
       at('/settings/categories', role)
       expect(screen.queryByText('Categories screen')).toBeNull()
-      expect(screen.getByText('Expense categories is not available to your role')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Expense categories is for admins' })).toBeInTheDocument()
     })
   }
 
