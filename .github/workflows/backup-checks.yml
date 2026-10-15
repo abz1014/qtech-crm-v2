@@ -1,0 +1,74 @@
+name: Backup checks
+
+# R13 tests. No secrets, no live project: lints backup.yml, round-trips the encryption with a throwaway key, and runs
+# the dump/restore scripts against the CI local Supabase stack.
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "scripts/backup/**"
+      - ".github/workflows/backup.yml"
+      - ".github/workflows/backup-checks.yml"
+      - "supabase/migrations/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: YAML parses
+        run: python3 -c "import sys,yaml; [yaml.safe_load(open(f)) for f in sys.argv[1:]]; print('yaml ok')" .github/workflows/backup.yml .github/workflows/backup-checks.yml
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color .github/workflows/backup.yml .github/workflows/backup-checks.yml
+      - name: shellcheck the scripts
+        run: shellcheck -S warning scripts/backup/*.sh || true
+      - name: Policy - the backup workflow must stay safe
+        run: |
+          set -euo pipefail
+          f=.github/workflows/backup.yml
+          ! grep -nE 'pull_request|SERVICE_ROLE|service_role|SUPABASE_ACCESS_TOKEN' "$f" || { echo "::error::backup.yml must not use pull_request, a service-role key or an access token"; exit 1; }
+          grep -q 'environment: backup' "$f"
+          grep -q 'retention-days: 30' "$f"
+          grep -q 'scripts/backup/encrypt.sh' "$f"
+          # the plain dump directory must never be the upload path
+          ! grep -nE 'path:.*plain' "$f" || { echo "::error::do not upload the plain dump"; exit 1; }
+          grep -q 'yafbphagorydbitfgfmg' "$f"
+          grep -q 'vptyhluvgnjpvkcbhxsf' "$f"
+          echo "policy ok"
+
+  crypto:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+      - run: bash scripts/backup/selftest-crypto.sh
+
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Start local Supabase and apply the migrations plus seed
+        run: |
+          npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime
+          npx supabase db reset --local
+      - name: Dump, wipe, restore, compare
+        run: bash scripts/backup/selftest-restore.sh
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop --no-backup
