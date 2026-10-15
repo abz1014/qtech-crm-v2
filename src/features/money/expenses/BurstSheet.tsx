@@ -291,8 +291,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
           <div ref={bodyRef} className={cn('min-h-0', compact && 'overflow-y-auto')}>
             {!ready || !categories ? (
               <div className="grid gap-3 p-6" aria-busy="true">
-                <Skeleton className="h-9" />
-                <Skeleton className="h-9" />
+                <Skeleton className="h-[36px]" />
+                <Skeleton className="h-[36px]" />
               </div>
             ) : cats.isError ? (
               <p role="alert" className="p-6 text-sm text-tone-danger-fg">The categories could not be loaded. Close this and try again.</p>
@@ -322,7 +322,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
               </div>
             ) : (
               <div role="group" aria-label="Expense rows">
-                <div className={cn(GRID, 'h-9 items-end pb-[6px] text-xs font-medium text-fg-muted')} aria-hidden="true">
+                <div className={cn(GRID, 'h-[36px] items-end pb-[6px] text-xs font-medium text-fg-muted')} aria-hidden="true">
                   <span />
                   <span className="text-right">Amount, PKR</span>
                   <span>Category</span>
@@ -392,8 +392,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
               <Button variant="primary" icon={Check} busy={pending} busyLabel="Saving" onClick={() => void save()}>
                 {label}
                 <span className="inline-flex items-center gap-[2px]" aria-hidden="true">
-                  <Kbd className="h-[18px] min-w-[18px] border-on-primary/40 bg-on-primary/15 text-on-primary">Ctrl</Kbd>
-                  <Kbd className="h-[18px] min-w-[18px] border-on-primary/40 bg-on-primary/15 text-on-primary">↵</Kbd>
+                  <Kbd className="h-[18px] min-w-[18px] border-primary-foreground/40 bg-primary-foreground/15 text-primary-foreground">Ctrl</Kbd>
+                  <Kbd className="h-[18px] min-w-[18px] border-primary-foreground/40 bg-primary-foreground/15 text-primary-foreground">↵</Kbd>
                 </span>
               </Button>
             </footer>
@@ -426,7 +426,7 @@ function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, cou
   const err = row.error
   return (
     <div data-row={row.id} role="group" aria-label={`Row ${index}`} onKeyDown={onKey} className={cn(GRID, 'py-2', err && 'bg-tone-danger-bg/40')}>
-      <div className="num grid h-9 place-items-center text-xs text-fg-muted" aria-hidden="true">
+      <div className="num grid h-[36px] place-items-center text-xs text-fg-muted" aria-hidden="true">
         {index}
       </div>
       <NumberInput
@@ -435,7 +435,7 @@ function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, cou
         value={row.amount}
         min={0.01}
         onChange={v => onPatch({ amount: v })}
-        className="h-9"
+        className="h-[36px]"
       />
       <CategoryPicker
         categories={categories}
@@ -459,13 +459,13 @@ function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, cou
           value={paid}
           options={(Object.keys(PAID_VIA_LABEL) as PaidVia[]).map(v => ({ value: v, label: PAID_VIA_LABEL[v] }))}
           onChange={e => onPatch({ paidVia: e.target.value as PaidVia })}
-          className={cn('h-9', row.paidVia === null && defaultEdge)}
+          className={cn('h-[36px]', row.paidVia === null && defaultEdge)}
         />
         {row.paidVia === null ? (
           <span className="pointer-events-none absolute right-[28px] top-1/2 -translate-y-1/2 whitespace-nowrap text-xs leading-none text-fg-muted">from category</span>
         ) : null}
       </div>
-      <TextField aria-label={`Note, row ${index}`} value={row.note} onChange={e => onPatch({ note: e.target.value })} className="h-9" />
+      <TextField aria-label={`Note, row ${index}`} value={row.note} onChange={e => onPatch({ note: e.target.value })} className="h-[36px]" />
       <div>
         {row.photo && !row.photo.error ? (
           <button
@@ -473,9 +473,9 @@ function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, cou
             title="Remove this photo"
             aria-label={`Remove receipt photo, row ${index}`}
             onClick={() => onPatch({ photo: null })}
-            className="inline-flex h-9 w-full items-center justify-start gap-2 rounded border border-line-strong bg-surface pl-1 pr-3 text-xs font-medium hover:border-line-input hover:bg-sunken"
+            className="inline-flex h-[36px] w-full items-center justify-start gap-2 rounded border border-line-strong bg-surface pl-1 pr-3 text-xs font-medium hover:border-line-input hover:bg-sunken"
           >
-            <PhotoThumb file={row.photo.file} className="size-7 rounded-[3px]" />
+            <PhotoThumb file={row.photo.file} className="size-[28px] rounded-[3px]" />
             Receipt
           </button>
         ) : (
@@ -483,7 +483,7 @@ function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, cou
             type="button"
             aria-label={`Add receipt photo, row ${index}`}
             onClick={() => fileRef.current?.click()}
-            className="inline-flex h-9 w-full items-center justify-center gap-2 rounded border border-line-strong bg-surface px-3 text-xs font-medium hover:border-line-input hover:bg-sunken"
+            className="inline-flex h-[36px] w-full items-center justify-center gap-2 rounded border border-line-strong bg-surface px-3 text-xs font-medium hover:border-line-input hover:bg-sunken"
           >
             <Icon icon={Camera} className="text-fg-muted" />
             Photo
@@ -510,7 +510,7 @@ function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, cou
           type="button"
           aria-label={`Remove row ${index}`}
           onClick={onRemove}
-          className="grid h-9 w-8 place-items-center rounded text-fg-muted hover:bg-sunken hover:text-fg"
+          className="grid h-[36px] w-8 place-items-center rounded text-fg-muted hover:bg-sunken hover:text-fg"
         >
           <Icon icon={Trash2} />
         </button>
@@ -609,7 +609,7 @@ function CellDate({
           window.setTimeout(commit, 0)
         }}
         className={cn(
-          'num h-9 w-full min-w-0 rounded border border-line-input bg-surface px-3 text-sm text-fg transition-colors duration-fast ease-out hover:border-fg-muted focus-visible:border-fg',
+          'num h-[36px] w-full min-w-0 rounded border border-line-input bg-surface px-3 text-sm text-fg transition-colors duration-fast ease-out hover:border-fg-muted focus-visible:border-fg',
           'aria-[invalid=true]:border-tone-danger-fg aria-[invalid=true]:bg-tone-danger-bg',
           isDefault && defaultEdge,
           isDefault && 'pr-14',
@@ -648,7 +648,7 @@ function PhoneCard({ row, index, categories, today, onPatch, onKey, onRemove }: 
       className={cn('grid gap-3 rounded border bg-surface px-3 pb-4 pt-3', err && 'border-tone-danger-fg/45')}
     >
       <div className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-3">
-        <label className="flex h-11 items-center gap-2 rounded border border-line-input px-3 focus-within:border-fg">
+        <label className="flex h-[44px] items-center gap-2 rounded border border-line-input px-3 focus-within:border-fg">
           <span className="text-xs text-fg-muted">PKR</span>
           <NumberInput
             data-cell="amount"
@@ -664,14 +664,14 @@ function PhoneCard({ row, index, categories, today, onPatch, onKey, onRemove }: 
           aria-label={hasPhoto ? `Remove receipt photo, expense ${index}` : `Take a receipt photo, expense ${index}`}
           onClick={() => (hasPhoto ? onPatch({ photo: null }) : fileRef.current?.click())}
           className={cn(
-            'relative grid size-11 place-items-center rounded border',
-            hasPhoto ? 'overflow-hidden border-tone-success-fg text-white' : 'border-line-strong bg-surface text-fg-2',
+            'relative grid size-[44px] place-items-center rounded border',
+            hasPhoto ? 'overflow-hidden border-tone-success-fg text-primary-foreground' : 'border-line-strong bg-surface text-fg-2',
           )}
         >
           {hasPhoto && row.photo ? <PhotoThumb file={row.photo.file} className="absolute inset-0 size-full" /> : null}
           <Icon icon={Camera} size="lg" className="relative" />
           {hasPhoto ? (
-            <span className="absolute -right-[6px] -top-[6px] grid size-[18px] place-items-center rounded-round bg-tone-success-fg text-white ring-2 ring-surface">
+            <span className="absolute -right-[6px] -top-[6px] grid size-[18px] place-items-center rounded-round bg-tone-success-fg text-primary-foreground ring-2 ring-surface">
               <Check className="size-[11px]" strokeWidth={3} aria-hidden="true" />
             </span>
           ) : null}
