@@ -3,6 +3,7 @@ import { DestinationPage } from '@/app/pages/DestinationPage'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
+import { BankTickPage } from '@/features/money/bank/BankTickPage'
 import { ExpensesPage } from '@/features/money/expenses/ExpensesPage'
 
 /**
@@ -16,6 +17,8 @@ export default function MoneyScreen() {
     <Routes>
       <Route index element={isAdmin ? <Navigate to="expenses" replace /> : <DestinationPage navKey="money" />} />
       <Route path="expenses" element={isAdmin ? <ExpensesPage /> : <NoAccessPage area="Expenses" />} />
+      <Route path="month-end" element={isAdmin ? <Navigate to="bank" replace /> : <NoAccessPage area="Month-end" />} />
+      <Route path="month-end/bank" element={isAdmin ? <BankTickPage /> : <NoAccessPage area="Bank tick" />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
