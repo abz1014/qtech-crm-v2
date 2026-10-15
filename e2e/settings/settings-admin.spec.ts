@@ -120,7 +120,7 @@ test.describe('Settings › Targets (M06)', () => {
     const prev = QUARTER === 1 ? { year: YEAR - 1, quarter: 4 } : { year: YEAR, quarter: QUARTER - 1 }
     const ADMIN = 'a0000000-0000-4000-8000-000000000001'
     await must(
-      rest('admin', 'targets', {
+      rest('admin', 'targets?on_conflict=user_id,year,quarter', {
         method: 'POST',
         prefer: 'resolution=ignore-duplicates,return=minimal',
         body: [
@@ -145,7 +145,7 @@ test.describe('Settings › Targets (M06)', () => {
     await openAs(page, 'admin', '/settings/targets')
     await page.getByRole('button', { name: 'Next year' }).click()
     await expect(page.getByTestId('targets-year')).toHaveText(String(YEAR + 1))
-    await expect(page.getByRole('button', { name: /Q1 \d{4} target: not set/ }).first()).toBeVisible() // nothing set next year yet
+    await expect(page.getByRole('button', { name: /Q1 \d{4} target: Set target/ }).first()).toBeVisible() // nothing set next year yet
     await page.getByRole('button', { name: 'Previous year' }).click()
     await page.getByRole('button', { name: 'Previous year' }).click()
     await expect(page.getByTestId('targets-year')).toHaveText(String(YEAR - 1))

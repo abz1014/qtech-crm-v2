@@ -245,12 +245,13 @@ function TargetCell({ member, year, quarter, target, progress, today, editing, o
           <button
             type="button"
             onClick={onEdit}
-            aria-label={`${what} target: ${target ? `PKR ${new Intl.NumberFormat('en-US').format(target.target_net_pkr)}` : 'not set'}. Edit`}
             className={cn(
               'flex h-control min-w-0 items-center justify-end rounded border px-3 text-sm max-md:h-touch',
               target ? 'border-transparent hover:border-line-input hover:bg-sunken' : 'border-dashed border-line-input text-fg-muted hover:bg-sunken',
             )}
           >
+            {/* The name is the visible text with the person and quarter in front, so what is read out contains what is shown. */}
+            <span className="sr-only">{what} target: </span>
             {target ? <Money value={target.target_net_pkr} className="text-fg" /> : <span>Set target</span>}
           </button>
         )}
