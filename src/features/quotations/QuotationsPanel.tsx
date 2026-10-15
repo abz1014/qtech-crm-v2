@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, FilePlus2, FileText, Share2 } from 'lucide-react'
+import { ExternalLink, FileCheck2, FilePlus2, FileText, Share2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { formatPaisa, toPaisa } from '@/lib/money'
@@ -15,6 +15,7 @@ import { useCompanyProfile } from '@/features/settings/hooks'
 import { SettingsLink } from '@/features/quotations/SettingsLink'
 import { downloadStoredPdf, loadPdfData, type QuotationRow } from '@/features/quotations/api'
 import { useQuotations, useStorePdf } from '@/features/quotations/hooks'
+import { useWonDialog } from '@/features/orders/useWonDialog'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
 import { IssueQuotationDialog } from '@/features/quotations/IssueQuotationDialog'
 import { generateQuotationPdf } from '@/features/quotations/pdf/generate'
@@ -57,6 +58,7 @@ export function QuotationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquiries:
   const profileQ = useCompanyProfile()
   const storePdf = useStorePdf(rfq.id)
   const [open, setOpen] = useIssueDialog()
+  const [, setWon] = useWonDialog()
   const [working, setWorking] = useState<string | null>(null)
   const today = businessToday()
   const profile = profileQ.data
@@ -159,6 +161,11 @@ export function QuotationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquiries:
                       {q.lines.length === 1 ? 'item' : 'items'}
                     </p>
                     <div className="flex flex-wrap gap-2">
+                      {latest && isOpen ? (
+                        <Button size="sm" variant="primary" icon={FileCheck2} onClick={() => setWon(true)}>
+                          Mark won
+                        </Button>
+                      ) : null}
                       <Button size="sm" icon={ExternalLink} busy={working === `open-${q.id}`} busyLabel="Opening" disabled={!q.pdfPath && gaps.length > 0} onClick={() => void run(q, 'open')}>
                         Open PDF
                       </Button>

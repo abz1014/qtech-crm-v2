@@ -23,7 +23,7 @@ Rules applied everywhere:
 
 A `changes` job (`dorny/paths-filter@v3.0.2`) decides per suite. Shared paths (`src/**`, `e2e/support/**`, migrations, seed, config,
 `playwright.config.ts`, `package*.json`, the workflow) run every suite; `e2e/auth/**`, `e2e/companies/**`, `e2e/rfqs/board.spec.ts`,
-`intake.spec.ts`, `detail.spec.ts`, `memory.spec.ts`, `quotation.spec.ts` (suite `rfq-quotation`, which also installs poppler to read and render the stored PDFs) and `e2e/today/**` run just their own. Then ONE job starts Supabase once, builds once, and runs the chosen suites
+`intake.spec.ts`, `detail.spec.ts`, `memory.spec.ts`, `quotation.spec.ts` (suite `rfq-quotation`, which also installs poppler to read and render the stored PDFs) `e2e/today/**`, `e2e/search/**` and `e2e/orders/**` (suite `orders`) run just their own. Then ONE job starts Supabase once, builds once, and runs the chosen suites
 one after another, resetting the database between them.
 
 Add a suite: a project in `playwright.config.ts`, a filter and an output in `e2e.yml`, a step.
