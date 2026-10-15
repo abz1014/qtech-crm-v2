@@ -101,6 +101,24 @@ async function loadInquiries(open: Set<string>, names: Map<string, string>): Pro
     fetchAll((from, to) => db.from('v_supplier_stats').select('supplier_id, replied, median_reply_days').range(from, to)),
   ])
   const statBy = new Map(stats.map(s => [s.supplier_id, s]))
+  // When did the answers that wait to be relayed come in? Answered after the inquiry's last relay.
+  const relayIds = rows.filter(r => num(r.answers_to_relay) > 0 && r.inquiry_id).map(r => r.inquiry_id as string)
+  const answeredOn = new Map<string, string>()
+  if (relayIds.length > 0) {
+    const [inqs, answered] = await Promise.all([
+      db.from('supplier_inquiries').select('id, last_relayed_at').in('id', relayIds),
+      db.from('clarifications').select('raised_by_inquiry_id, answered_at').in('raised_by_inquiry_id', relayIds).not('answered_at', 'is', null).is('withdrawn_at', null),
+    ])
+    const relayedAt = new Map(unwrap(inqs).map(i => [i.id, i.last_relayed_at]))
+    for (const a of unwrap(answered)) {
+      const id = a.raised_by_inquiry_id as string
+      const at = a.answered_at as string
+      const last = relayedAt.get(id)
+      if (last && at <= last) continue
+      const day = toBusinessDate(new Date(at))
+      if (!answeredOn.has(id) || day > (answeredOn.get(id) as string)) answeredOn.set(id, day)
+    }
+  }
   return rows
     .filter(r => r.rfq_id && open.has(r.rfq_id) && r.inquiry_id && r.supplier_id)
     .map(r => {
@@ -115,6 +133,7 @@ async function loadInquiries(open: Set<string>, names: Map<string, string>): Pro
         chaseCount: num(r.chase_count),
         responseState: r.response_state ?? 'awaiting',
         answersToRelay: num(r.answers_to_relay),
+        answeredOn: answeredOn.get(r.inquiry_id as string) ?? null,
         replied: num(s?.replied),
         medianReplyDays: s?.median_reply_days === null || s?.median_reply_days === undefined ? null : Number(s.median_reply_days),
       }

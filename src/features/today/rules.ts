@@ -8,7 +8,7 @@
 // down). An item that has never been chased and is not due yet is not returned at all. Snoozes are subtracted after the
 // rules (applySnoozes), so a snoozed item is gone entirely: Waiting is the system's cooldown, a snooze is the person's choice.
 
-import { addBusinessDays, daysBetween, longDay, parseDay } from '@/features/rfqs/lib/dateText'
+import { addBusinessDays, businessDaysBetween, daysBetween, longDay, parseDay } from '@/features/rfqs/lib/dateText'
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
 import { supplierReplyBy } from '@/features/rfqs/lib/supplierChase'
 import { orderRef, rfqRef } from '@/lib/refs'
@@ -73,7 +73,7 @@ export function dueBadge(dueOn: string, today: string): { text: string; tone: To
   const d = daysBetween(today, dueOn)
   if (d < 0) return { text: `${-d}d late`, tone: 'danger' }
   if (d === 0) return { text: 'today', tone: 'danger' }
-  return { text: `${d}d`, tone: d <= 3 ? 'warning' : 'neutral' }
+  return { text: `in ${d}d`, tone: d <= 3 ? 'warning' : 'neutral' }
 }
 
 function ageBadge(since: string | null, today: string): { text: string; tone: Tone } {
@@ -82,11 +82,10 @@ function ageBadge(since: string | null, today: string): { text: string; tone: To
 }
 
 /** Where an item sits in the list, from the date it is sorted by. */
-export function groupFor(sortDate: string | null, today: string): TodayGroup {
-  if (!sortDate) return 'ready'
-  const d = daysBetween(today, sortDate)
-  if (d <= 0) return 'now'
-  if (d <= THRESHOLDS.soonDays) return 'soon'
+export function groupFor(actionDueOn: string | null, today: string): TodayGroup {
+  if (!actionDueOn) return 'ready'
+  if (actionDueOn <= today) return 'now'
+  if (businessDaysBetween(today, actionDueOn) <= THRESHOLDS.soonDays) return 'soon'
   return 'ready'
 }
 
@@ -109,7 +108,7 @@ export function chaseState(input: { lastTouchOn: string; waitDays: number; chase
 }
 
 function build(partial: Omit<TodayItem, 'key' | 'group'> & { group?: TodayGroup }, today: string): TodayItem {
-  return { ...partial, key: `${partial.rule}:${partial.subjectId}`, group: partial.group ?? groupFor(partial.sortDate, today) }
+  return { ...partial, key: `${partial.rule}:${partial.subjectId}`, group: partial.group ?? groupFor(partial.actionDueOn, today) }
 }
 
 function withWaiting(item: TodayItem, w: { state: ChaseState; nextNudgeOn: string }, chasedOn: string): TodayItem | null {
@@ -155,8 +154,8 @@ export function ruleChaseCustomer(ctx: TodayInputs): Entry[] {
         waitingTitle: 'Customer chased',
         ref: rfqRef(r.number),
         party: r.companyName,
-        sortDate: r.dueOn,
-        badge: r.dueOn ? dueBadge(r.dueOn, ctx.today) : { text: `${qs.length}q`, tone: 'neutral' },
+        actionDueOn: w.nextNudgeOn, // last ask + the wait
+        badge: dueBadge(w.nextNudgeOn, ctx.today),
         isPriority: r.isPriority,
         rfqId: r.id,
         href: RFQ_HREF(r.id),
@@ -188,8 +187,8 @@ export function ruleRelayAnswers(ctx: TodayInputs): Entry[] {
           title: `Answer received on ${n} ${n === 1 ? 'question' : 'questions'}: relay to ${i.supplierName}`,
           ref: rfqRef(r.number),
           party: r.companyName,
-          sortDate: r.dueOn,
-          badge: r.dueOn ? dueBadge(r.dueOn, ctx.today) : { text: 'now', tone: 'neutral' },
+          actionDueOn: i.answeredOn ?? ctx.today, // the day the customer answered
+          badge: dueBadge(i.answeredOn ?? ctx.today, ctx.today),
           isPriority: r.isPriority,
           rfqId: r.id,
           inquiryId: i.id,
@@ -217,8 +216,8 @@ export function ruleNotFloated(ctx: TodayInputs): Entry[] {
           title: 'Not floated to suppliers yet',
           ref: rfqRef(r.number),
           party: r.companyName,
-          sortDate: r.dueOn,
-          badge: r.dueOn ? dueBadge(r.dueOn, ctx.today) : ageBadge(r.receivedOn, ctx.today),
+          actionDueOn: r.receivedOn, // due the day it arrived (+0): floating is the first thing to do
+          badge: dueBadge(r.receivedOn, ctx.today),
           isPriority: r.isPriority,
           rfqId: r.id,
           href: RFQ_HREF(r.id),
@@ -246,10 +245,15 @@ export function ruleChaseSupplier(ctx: TodayInputs): Entry[] {
     const base = Math.max(THRESHOLDS.supplierChaseMinDays, median)
     const lastTouchOn = i.lastChasedOn ?? i.sentOn
     let w = chaseState({ lastTouchOn, waitDays: cooldownDays(base, r.dueOn, ctx.today), chased: i.chaseCount > 0, today: ctx.today })
+    let replyByHit: string | null = null
     if (w.state !== 'active') {
       const replyBy = supplierReplyBy(r.dueOn, i.sentOn)
-      if (replyBy && ctx.today > replyBy && (i.lastChasedOn === null || i.lastChasedOn <= replyBy)) w = { state: 'active', nextNudgeOn: ctx.today }
+      if (replyBy && ctx.today > replyBy && (i.lastChasedOn === null || i.lastChasedOn <= replyBy)) {
+        replyByHit = replyBy
+        w = { state: 'active', nextNudgeOn: ctx.today }
+      }
     }
+    const actionOn = replyByHit ?? w.nextNudgeOn // last contact + the wait, or the reply-by date once it has passed
     const item = build(
       {
         rule: 'chase_supplier',
@@ -259,8 +263,8 @@ export function ruleChaseSupplier(ctx: TodayInputs): Entry[] {
         waitingTitle: 'Supplier chased',
         ref: rfqRef(r.number),
         party: i.supplierName,
-        sortDate: r.dueOn,
-        badge: r.dueOn ? dueBadge(r.dueOn, ctx.today) : ageBadge(i.sentOn, ctx.today),
+        actionDueOn: actionOn,
+        badge: dueBadge(actionOn, ctx.today),
         isPriority: r.isPriority,
         rfqId: r.id,
         inquiryId: i.id,
@@ -299,7 +303,7 @@ export function ruleBidDue(ctx: TodayInputs): Entry[] {
           title: dueWords(r.dueOn, ctx.today),
           ref: rfqRef(r.number),
           party: r.companyName,
-          sortDate: r.dueOn,
+          actionDueOn: r.dueOn,
           badge: dueBadge(r.dueOn, ctx.today),
           isPriority: r.isPriority,
           rfqId: r.id,
@@ -328,7 +332,7 @@ export function ruleDecisionOverdue(ctx: TodayInputs): Entry[] {
             title: 'Quotation expired: re-confirm prices before re-issuing',
             ref: rfqRef(r.number),
             party: r.companyName,
-            sortDate: r.quotationValidUntil,
+            actionDueOn: r.quotationValidUntil,
             badge: dueBadge(r.quotationValidUntil, ctx.today),
             isPriority: r.isPriority,
             rfqId: r.id,
@@ -353,7 +357,7 @@ export function ruleDecisionOverdue(ctx: TodayInputs): Entry[] {
           title: `No decision yet: bid sent ${since} days ago`,
           ref: rfqRef(r.number),
           party: r.companyName,
-          sortDate: decisionDue,
+          actionDueOn: decisionDue,
           badge: dueBadge(decisionDue, ctx.today),
           isPriority: r.isPriority,
           rfqId: r.id,
@@ -388,6 +392,7 @@ export function rulePaymentOverdue(ctx: TodayInputs): Entry[] {
     })
     // An order never reminded is due at once (it is already overdue); the cooldown only applies after a reminder.
     const state = p.lastRemindedOn === null ? { state: 'active' as ChaseState, nextNudgeOn: ctx.today } : w
+    const actionOn = p.lastRemindedOn === null ? p.dueOn : w.nextNudgeOn
     const item = build(
       {
         rule: 'payment_overdue',
@@ -397,8 +402,8 @@ export function rulePaymentOverdue(ctx: TodayInputs): Entry[] {
         waitingTitle: 'Payment reminded',
         ref: orderRef(p.orderNumber),
         party: p.customerName,
-        sortDate: p.dueOn,
-        badge: dueBadge(p.dueOn, ctx.today),
+        actionDueOn: actionOn, // the due date for the first reminder; the last reminder plus the cooldown after that
+        badge: dueBadge(actionOn, ctx.today),
         isPriority: false,
         orderId: p.orderId,
         href: `/orders/${p.orderId}`,
@@ -425,6 +430,7 @@ export function ruleGoodsLate(ctx: TodayInputs): Entry[] {
       today: ctx.today,
     })
     const state = l.lastChasedOn === null ? { state: 'active' as ChaseState, nextNudgeOn: ctx.today } : w
+    const actionOn = l.lastChasedOn === null ? l.expectedOn : w.nextNudgeOn
     const item = build(
       {
         rule: 'goods_late',
@@ -434,8 +440,8 @@ export function ruleGoodsLate(ctx: TodayInputs): Entry[] {
         waitingTitle: 'Supplier chased for goods',
         ref: l.reference ? `PO ${l.reference.replace(/^PO\s+/i, '')}` : orderRef(l.orderNumber),
         party: l.supplierName,
-        sortDate: l.expectedOn,
-        badge: dueBadge(l.expectedOn, ctx.today),
+        actionDueOn: actionOn, // the expected date for the first chase; the last chase plus the cooldown after that
+        badge: dueBadge(actionOn, ctx.today),
         isPriority: false,
         orderId: l.orderId,
         legId: l.id,
@@ -464,7 +470,7 @@ export function rulePlacePo(ctx: TodayInputs): Entry[] {
           title: `Place PO with ${l.supplierName}`,
           ref: orderRef(l.orderNumber),
           party: l.customerName,
-          sortDate: null,
+          actionDueOn: l.orderedOn, // placeable from the day the order was confirmed; always shown as ready to move
           group: 'ready',
           badge: ageBadge(l.orderedOn, ctx.today),
           isPriority: false,
@@ -483,6 +489,9 @@ export function rulePlacePo(ctx: TodayInputs): Entry[] {
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 /** A uuid for the polymorphic snoozes.subject_id of the close-month item: the month's digits, so it is stable and unique. */
+/** The first day of the month `today` is in. */
+export const today1 = (today: string): string => `${today.slice(0, 7)}-01`
+
 export function closeMonthSubjectId(month: string): string {
   const digits = month.slice(0, 7).replace('-', '')
   return `00000000-0000-4000-8000-${digits.padStart(12, '0')}`
@@ -514,7 +523,7 @@ export function ruleCloseMonth(ctx: TodayInputs): Entry[] {
         title: n > 0 ? `Close ${name}: ${n} ${n === 1 ? 'check' : 'checks'}` : `Close ${name}: no checks open`,
         ref: 'Month end',
         party: `${name} ${ctx.monthEnd.month.slice(0, 4)}`,
-        sortDate: null,
+        actionDueOn: `${today1(ctx.today)}`, // the 1st of the month it is shown in; always shown as ready to move
         group: 'ready',
         badge: { text: n > 0 ? `${n}` : 'ready', tone: 'neutral' },
         isPriority: false,
@@ -535,10 +544,10 @@ export function applySnoozes(items: readonly Entry[], snoozes: readonly SnoozeFa
 }
 
 const byDate = (a: Entry, b: Entry) => {
-  if (a.sortDate !== b.sortDate) {
-    if (a.sortDate === null) return 1
-    if (b.sortDate === null) return -1
-    return a.sortDate < b.sortDate ? -1 : 1
+  if (a.actionDueOn !== b.actionDueOn) {
+    if (a.actionDueOn === null) return 1
+    if (b.actionDueOn === null) return -1
+    return a.actionDueOn < b.actionDueOn ? -1 : 1
   }
   if (a.isPriority !== b.isPriority) return a.isPriority ? -1 : 1
   if ((a.rule === 'close_month') !== (b.rule === 'close_month')) return a.rule === 'close_month' ? 1 : -1 // the month-end chore goes last

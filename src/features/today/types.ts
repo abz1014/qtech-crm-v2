@@ -74,6 +74,8 @@ export interface InquiryFact {
   /** v_inquiry_state.response_state: awaiting / quoted / no_offer */
   responseState: string
   answersToRelay: number
+  /** The day the latest not-yet-relayed answer came in (clarifications.answered_at, business date), or null when none. */
+  answeredOn: string | null
   /** v_supplier_stats: how many inquiries they answered, and the median days they took (null when not enough). */
   replied: number
   medianReplyDays: number | null
@@ -168,8 +170,11 @@ export interface TodayItem {
   ref: string
   /** Who it concerns: the customer, or the supplier for a supplier chase. */
   party: string
-  /** The date the row is sorted and grouped by (a bid or payment date), or null. */
-  sortDate: string | null
+  /**
+   * The day the rule fired: when the action became due (a chase's last ask plus its wait, a bid's date, an expected date).
+   * The row is grouped, sorted and badged by it. The bid date is shown in the pane only. Null: no date (ready to move).
+   */
+  actionDueOn: string | null
   group: TodayGroup
   /** Right-hand chip: "12d late", "today", "3d", "3d old". */
   badge: { text: string; tone: Tone }

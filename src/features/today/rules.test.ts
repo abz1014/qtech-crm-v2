@@ -63,6 +63,7 @@ const inq = (o: Partial<InquiryFact> = {}): InquiryFact => ({
   chaseCount: 0,
   responseState: 'awaiting',
   answersToRelay: 0,
+  answeredOn: null,
   replied: 0,
   medianReplyDays: null,
   ...o,
@@ -117,15 +118,15 @@ describe('helpers', () => {
   it('dueBadge words the distance', () => {
     expect(dueBadge('2026-11-15', TODAY)).toEqual({ text: '12d late', tone: 'danger' })
     expect(dueBadge(TODAY, TODAY)).toEqual({ text: 'today', tone: 'danger' })
-    expect(dueBadge('2026-11-28', TODAY)).toEqual({ text: '1d', tone: 'warning' })
-    expect(dueBadge('2026-12-01', TODAY)).toEqual({ text: '4d', tone: 'neutral' })
+    expect(dueBadge('2026-11-28', TODAY)).toEqual({ text: 'in 1d', tone: 'warning' })
+    expect(dueBadge('2026-12-01', TODAY)).toEqual({ text: 'in 4d', tone: 'neutral' })
   })
   it('groups by the date', () => {
     expect(groupFor('2026-11-26', TODAY)).toBe('now')
     expect(groupFor(TODAY, TODAY)).toBe('now')
     expect(groupFor('2026-11-28', TODAY)).toBe('soon')
-    expect(groupFor('2026-12-02', TODAY)).toBe('soon') // 5 days
-    expect(groupFor('2026-12-03', TODAY)).toBe('ready') // 6 days
+    expect(groupFor('2026-12-04', TODAY)).toBe('soon') // 5 working days: Mon to Fri
+    expect(groupFor('2026-12-07', TODAY)).toBe('ready') // 6 working days
     expect(groupFor(null, TODAY)).toBe('ready')
   })
   it('shortens the wait when the bid is due within three working days, and only then', () => {
@@ -214,8 +215,9 @@ describe('rule: not floated', () => {
   })
   it('without a bid date shows its age instead', () => {
     const [e] = ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'not_floated', dueOn: null })] }))
-    expect(e.badge.text).toBe('10d old')
-    expect(e.group).toBe('ready')
+    expect(e.actionDueOn).toBe('2026-11-17') // due the day it arrived
+    expect(e.badge).toEqual({ text: '10d late', tone: 'danger' })
+    expect(e.group).toBe('now')
   })
 })
 
@@ -419,9 +421,9 @@ describe('the whole list', () => {
         'sales',
       ),
     )
-    expect(v.now.map(i => i.key)).toEqual(['bid_due:a'])
+    expect(v.now.map(i => i.key)).toEqual(['not_floated:c', 'bid_due:a']) // c arrived 17 Nov and is not floated: due since then
     expect(v.soon.map(i => i.key)).toEqual(['bid_due:b'])
-    expect(v.ready.map(i => i.key)).toEqual(['not_floated:c', 'place_po:l1'])
+    expect(v.ready.map(i => i.key)).toEqual(['place_po:l1'])
     expect(v.waiting.map(i => i.key)).toEqual(['chase_customer:b'])
     expect(v.active).toHaveLength(4)
   })
@@ -528,5 +530,63 @@ describe('fake clock: chase, wait, return', () => {
     expect(day()).toEqual([])
     at('2026-11-30')
     expect(day()).toHaveLength(1)
+  })
+})
+
+// ------------------------------------------------------------------ actionDueOn: the day each rule fired
+
+describe('actionDueOn per rule', () => {
+  it('chase customer: the last ask plus the wait (so a 9-day-old ask is long overdue, whatever the bid date)', () => {
+    const [e] = ruleChaseCustomer(ctx({ rfqs: [rfq({ dueOn: '2026-12-11' })], clarifications: [clar({ lastAskedOn: '2026-11-18' })] }))
+    expect(e.actionDueOn).toBe('2026-11-23') // Wed 18 + 3 working days = Mon 23
+    expect(e.group).toBe('now')
+    expect(e.badge).toEqual({ text: '4d late', tone: 'danger' })
+    // with the bid close the wait is 1 working day
+    expect(ruleChaseCustomer(ctx({ rfqs: [rfq({ dueOn: '2026-12-01' })], clarifications: [clar({ lastAskedOn: '2026-11-25' })] }))[0].actionDueOn).toBe('2026-11-26')
+  })
+  it('chase supplier: the last contact plus the wait, or the send plus the wait when never chased', () => {
+    expect(ruleChaseSupplier(ctx({ rfqs: [rfq()], inquiries: [inq({ sentOn: '2026-11-20' })] }))[0].actionDueOn).toBe('2026-11-24') // Fri + 2
+    expect(ruleChaseSupplier(ctx({ rfqs: [rfq()], inquiries: [inq({ sentOn: '2026-11-10', lastChasedOn: '2026-11-20', chaseCount: 1 })] }))[0].actionDueOn).toBe('2026-11-24')
+  })
+  it('relay answers: the day the customer answered', () => {
+    const [e] = ruleRelayAnswers(ctx({ rfqs: [rfq()], inquiries: [inq({ answersToRelay: 2, answeredOn: '2026-11-25' })] }))
+    expect(e.actionDueOn).toBe('2026-11-25')
+    expect(e.badge).toEqual({ text: '2d late', tone: 'danger' })
+  })
+  it('not floated: the day the RFQ was received', () => {
+    expect(ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'not_floated', receivedOn: '2026-11-27' })] }))[0]).toMatchObject({ actionDueOn: '2026-11-27', group: 'now', badge: { text: 'today' } })
+  })
+  it('bid due: the bid date, in the next 5 working days when ahead', () => {
+    const [e] = ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-12-02' })] }))
+    expect(e.actionDueOn).toBe('2026-12-02')
+    expect(e.group).toBe('soon')
+    expect(e.badge.text).toBe('in 5d')
+  })
+  it('decision overdue: ten working days after the bid; for an expired quotation, the valid-until date', () => {
+    expect(ruleDecisionOverdue(ctx({ rfqs: [rfq({ bidState: 'bid_sent', quotedOn: '2026-11-13' })] }))[0].actionDueOn).toBe('2026-11-27')
+    expect(ruleDecisionOverdue(ctx({ rfqs: [rfq({ bidState: 'quotation_expired', quotedOn: '2026-10-01', quotationValidUntil: '2026-11-20' })] }))[0].actionDueOn).toBe('2026-11-20')
+  })
+  it('payment overdue: the due date for the first reminder, the last reminder plus the cooldown after that', () => {
+    expect(rulePaymentOverdue(ctx({ receivables: [rec()] }))[0].actionDueOn).toBe('2026-11-15')
+    expect(rulePaymentOverdue(ctx({ receivables: [rec({ lastRemindedOn: '2026-11-10', reminderCount: 1 })] }))[0].actionDueOn).toBe('2026-11-19') // Tue 10 + 7 working days
+  })
+  it('goods late: the expected date for the first chase, the last chase plus the cooldown after that', () => {
+    expect(ruleGoodsLate(ctx({ legs: [leg()] }))[0]).toMatchObject({ actionDueOn: '2026-11-22', badge: { text: '5d late' } })
+    expect(ruleGoodsLate(ctx({ legs: [leg({ lastChasedOn: '2026-11-20', chaseCount: 1 })] }))[0].actionDueOn).toBe('2026-11-25')
+  })
+  it('place PO: the day the order was confirmed, and always ready to move', () => {
+    const [e] = rulePlacePo(ctx({ legs: [leg({ placedOn: null, orderedOn: '2026-11-10' })] }))
+    expect(e.actionDueOn).toBe('2026-11-10')
+    expect(e.group).toBe('ready')
+  })
+  it('close month: the 1st of the month it is shown in, and always ready to move', () => {
+    const [e] = ruleCloseMonth(ctx({ today: '2026-11-05', monthEnd: { month: '2026-10-01', checks: 2, closed: false } }, 'admin'))
+    expect(e.actionDueOn).toBe('2026-11-01')
+    expect(e.group).toBe('ready')
+  })
+  it('an overdue chase lands in "overdue or due today" and is counted as due now', () => {
+    const v = buildToday(ctx({ rfqs: [rfq({ dueOn: '2026-12-11' })], clarifications: [clar({ lastAskedOn: '2026-11-18' })] }))
+    expect(v.now.map(i => i.key)).toEqual(['chase_customer:r1'])
+    expect(v.ready).toEqual([])
   })
 })
