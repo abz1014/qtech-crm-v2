@@ -116,7 +116,6 @@ function ItemCell({ r }: { r: QuoteRow }) {
       </span>
       <span className="flex flex-wrap items-center gap-x-2 text-xs text-fg-muted">
         {r.brand ? <span>{r.brand}</span> : null}
-        {r.price.state === 'none' && r.note && r.outcome !== 'declined' ? <span>{r.note}</span> : null}
         {r.imported ? <Tag dashed>Imported</Tag> : null}
       </span>
       {r.ago ? <span className="text-xs text-tone-warning-fg">{`${r.dateText}, ${r.ago}`}</span> : null}
