@@ -118,9 +118,13 @@ export function TickList({ title, hint = 'Untick to leave one out', rows, onTogg
 /** "Kindly confirm by [Mon 30 Nov]  One working day before the bid is due. You can change it." */
 export function ReplyByField({ label, value, onChange, note }: { label: string; value: string; onChange: (v: string) => void; note: string }) {
   return (
-    <div className="grid gap-1 border-b px-4 py-3 sm:grid-cols-[auto_12rem_minmax(0,1fr)] sm:items-center sm:gap-3">
-      <span className="text-sm font-medium">{label}</span>
-      <DateInput value={value} onChange={onChange} defaultToday={false} aria-label={label} />
+    <div className="grid gap-1.5 border-b px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm font-medium">{label}</span>
+        <div className="w-48 max-w-full">
+          <DateInput value={value} onChange={onChange} defaultToday={false} aria-label={label} />
+        </div>
+      </div>
       <span className="text-xs text-fg-muted">{note}</span>
     </div>
   )

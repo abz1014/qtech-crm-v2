@@ -42,7 +42,7 @@ import { addBusinessDays, addDays, nextMonday } from '@/features/rfqs/lib/dateTe
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
 import type { TodayData } from '@/features/today/api'
 import { buildCustomerDraft, buildGoodsDraft, buildPaymentDraft, buildSupplierDraft, type Draft } from '@/features/today/chaseDraft'
-import { chaseMemo, clockText, forgetChase, rememberChase } from '@/features/today/chaseMemory'
+import { chaseMemo, clockText, excerptOf, forgetChase, rememberChase } from '@/features/today/chaseMemory'
 import { performChase, useLegDraft, usePaymentDraft, useRefreshAfterChase, useSnooze, useUnsnooze, type ChaseSpec } from '@/features/today/hooks'
 import { SNOOZE_RULE, type TodayItem } from '@/features/today/types'
 import { agoText, distanceText } from '@/features/today/text'
@@ -776,7 +776,7 @@ function ChasedCard({
       : item.rule === 'chase_supplier'
         ? 'Chased twice with no reply suggests floating to someone else.'
         : null
-  const excerpt = memo ? memo.text.split('\n').filter(Boolean).slice(1, 4).join(' ') : null
+  const excerpt = memo ? excerptOf(memo.text) : null
   return (
     <section aria-label={title} className="grid overflow-hidden rounded border bg-surface">
       <div className="flex items-start justify-between gap-3 px-4 py-3">

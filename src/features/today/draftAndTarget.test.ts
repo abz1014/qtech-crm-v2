@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { InquiryRow, RfqItemRow } from '@/features/rfqs/api'
 import { buildCustomerDraft, buildGoodsDraft, buildPaymentDraft, buildSupplierDraft } from './chaseDraft'
+import { excerptOf } from './chaseMemory'
 import { agoText, chasedAgo, distanceText, headerDate, waitingLine } from './text'
 import { millions, quarterStart, roundToTile, targetWorking } from './targetModel'
 import type { TargetProgress } from './api'
@@ -113,5 +114,12 @@ describe('target tile working', () => {
   it('no target means no tile numbers', () => {
     expect(targetWorking({ ...t, targetNet: null }, TODAY)).toBeNull()
     expect(roundToTile(14_999)).toBe(10_000)
+  })
+})
+
+describe('the Chased today excerpt', () => {
+  it('keeps the opening paragraph and stops at the first numbered line', () => {
+    const text = ['Assalam o Alaikum Mr. Tariq,', '', 'A gentle reminder about your RFQ *#74037*. To complete our quotation we still need your confirmation on:', '1. Line size?', '2. Temperature?', '', 'Thank you.'].join(String.fromCharCode(10))
+    expect(excerptOf(text)).toBe('A gentle reminder about your RFQ *#74037*. To complete our quotation we still need your confirmation on:')
   })
 })

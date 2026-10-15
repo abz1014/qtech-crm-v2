@@ -41,7 +41,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
   return (
     <section aria-label={`Your ${w.label} target`} className={cn('grid gap-2 p-4', className)}>
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-sm text-fg-muted">Your {w.label} target</p>
+        <p className="whitespace-nowrap text-sm text-fg-muted">Your {w.label} target</p>
         <Status w={w} />
       </div>
       <p className="text-lg">
@@ -106,14 +106,14 @@ export function TargetTile({ today, className }: { today: string; className?: st
 function Status({ w }: { w: TargetWorking }) {
   if (w.status === 'ahead') {
     return (
-      <span className="num inline-flex items-center gap-1 text-sm text-tone-success-fg">
+      <span className="num inline-flex items-center gap-1 whitespace-nowrap text-xs text-tone-success-fg sm:text-sm">
         <Icon icon={CircleCheck} size="sm" /> {pkr(w.ahead)} ahead of pace
       </span>
     )
   }
   if (w.status === 'on_pace') return <span className="inline-flex items-center gap-1 text-sm text-tone-success-fg"><Icon icon={CircleCheck} size="sm" /> On pace</span>
   return (
-    <span className="num inline-flex items-center gap-1 text-sm text-tone-warning-fg">
+    <span className="num inline-flex items-center gap-1 whitespace-nowrap text-xs text-tone-warning-fg sm:text-sm">
       <Icon icon={Clock} size="sm" /> {pkr(w.behind)} behind pace
     </span>
   )

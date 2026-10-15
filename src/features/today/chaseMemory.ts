@@ -36,3 +36,14 @@ const timeFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Karachi', hou
 export function clockText(at: number | string | Date): string {
   return timeFmt.format(new Date(at))
 }
+
+/** The opening paragraph of a message, without the greeting and without the numbered list: what the "Chased today" card shows. */
+export function excerptOf(text: string): string {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean).slice(1)
+  const out: string[] = []
+  for (const l of lines) {
+    if (/^\d+\. /.test(l)) break
+    out.push(l)
+  }
+  return out.join(' ')
+}
