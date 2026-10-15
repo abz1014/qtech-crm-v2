@@ -251,7 +251,7 @@ test.describe('Today: accessibility and mobile', () => {
     // the undo window closes: the row joins Waiting and the accordion shows the compact "Chased today" card
     await expect(page.getByRole('status').filter({ hasText: `${s.ref} marked chased` })).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('region', { name: 'Waiting' }).locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })).toBeVisible({ timeout: 15_000 })
-    await page.getByRole('region', { name: 'Waiting' }).locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref }).getByRole('button').first().click()
+    // (the row was open when it was chased, so it stays open in Waiting)
     await expect(page.getByRole('region', { name: 'Chased today' })).toBeVisible()
     await review(page, 'today-10-mobile-waiting-375')
   })
