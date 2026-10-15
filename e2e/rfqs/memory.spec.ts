@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { axeViolations } from '../support/axe'
-import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
+import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 
 /*
  * R17 and R18 end to end, against the local CI stack: supplier memory in intake (one-liner, Memory card), the "last price
@@ -17,6 +17,14 @@ async function shot(target: Locator, name: string): Promise<void> {
   if (!dir) return
   mkdirSync(dir, { recursive: true })
   await target.screenshot({ path: `${dir}/${name}.png` })
+}
+
+/** The whole page, not just the first screen: the chips and the lower panels sit below the fold. */
+async function full(page: Page, name: string): Promise<void> {
+  const dir = process.env.REVIEW_DIR
+  if (!dir) return
+  mkdirSync(dir, { recursive: true })
+  await page.screenshot({ path: `${dir}/${name}.png`, fullPage: true })
 }
 
 async function paste(page: Page, text: string): Promise<void> {
@@ -199,7 +207,7 @@ test.describe('R17 memory in intake', () => {
 
     // Memory never reorders.
     expect(await order(page)).toEqual(before)
-    await review(page, 'r17-intake-memory-cards-1440')
+    await full(page, 'r17-intake-memory-cards-1440')
     expect(await violations(page), 'axe at 1440').toEqual([])
 
     // The card renders in under 200 ms once the data is there (it is already loaded: opening asks for nothing).
@@ -229,7 +237,7 @@ test.describe('R17 memory in intake', () => {
 
     await page.setViewportSize({ width: 375, height: 812 })
     await expect(page.getByLabel(`What we know about ${s.s2.name}`)).toBeVisible()
-    await review(page, 'r17-intake-memory-cards-375')
+    await full(page, 'r17-intake-memory-cards-375')
     expect(await violations(page), 'axe at 375').toEqual([])
   })
 
@@ -296,10 +304,10 @@ test.describe('R17 last price chip on RFQ reply rows', () => {
     // A same-brand price is not a price for this item: s3 has no chip.
     await expect(page.locator('li', { hasText: s.s3.name }).locator('[data-last-price]')).toHaveCount(0)
     await expect(rows).toHaveCount(2)
-    await review(page, 'r17-rfq-detail-last-price-chip-1440')
+    await full(page, 'r17-rfq-detail-last-price-chip-1440')
     expect(await violations(page), 'axe at 1440').toEqual([])
     await page.setViewportSize({ width: 375, height: 812 })
-    await review(page, 'r17-rfq-detail-last-price-chip-375')
+    await full(page, 'r17-rfq-detail-last-price-chip-375')
     expect(await violations(page), 'axe at 375').toEqual([])
   })
 })
@@ -369,10 +377,10 @@ test.describe('R18 company page: What we know', () => {
     await expect(openPanel).toContainText('EUR')
     void open
 
-    await review(page, 'r18-company-what-we-know-1440')
+    await full(page, 'r18-company-what-we-know-1440')
     expect(await violations(page), 'axe at 1440').toEqual([])
     await page.setViewportSize({ width: 375, height: 812 })
-    await review(page, 'r18-company-what-we-know-375')
+    await full(page, 'r18-company-what-we-know-375')
     expect(await violations(page), 'axe at 375').toEqual([])
   })
 })
