@@ -79,8 +79,8 @@ function Foundations() {
           <Kbd>Enter</Kbd>
         </Row>
         <Row title="Avatar" note="28 in lists and the top bar, 22 inside key figures.">
-          <Avatar name="Abdullah Sajid" />
-          <Avatar name="Wasif Ahmed" size="sm" />
+          <Avatar name="Asad Saleem" />
+          <Avatar name="Waqar Anwar" size="sm" />
         </Row>
         <Row title="Tag, CountPill" note="Mono identifiers, dashed when not firm. Counts beside tab names.">
           <Tag>ORD-0038</Tag>
