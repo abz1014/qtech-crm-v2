@@ -1863,6 +1863,11 @@ isOneToOne: false
 "revoke_user_sessions":
 { Args: { "p_user_id": string }; Returns: undefined
                            },
+"search_all":
+{ Args: { "lim"?: number,"q": string }; Returns: {
+              "company_id": string,"id": string,"kind": string,"label": string,"meta": string,"role": string,"score": number
+            }[]
+                           },
 "set_fx_rate":
 { Args: { "p_as_of"?: string,"p_currency": string,"p_rate_pkr": number }; Returns: string
                            },

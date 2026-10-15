@@ -4,8 +4,7 @@ import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { navItemForPath, type NavKey } from '@/app/navConfig'
 import { useSession, type SessionUser } from '@/app/session'
 import { ToastProvider } from '@/ui/Toast'
-import { useCompaniesPaletteSource } from '@/features/companies/paletteSource'
-import { useRfqsPaletteSource } from '@/features/rfqs/board/paletteSource'
+import { useSearchPaletteSource } from '@/features/search/paletteSource'
 import { PaletteHost } from '@/app/palette/PaletteHost'
 import { usePalette } from '@/app/palette/usePalette'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
@@ -36,8 +35,7 @@ export function AppShell({ counts }: AppShellProps) {
 
 function Frame({ user, counts }: { user: SessionUser; counts?: Partial<Record<NavKey, number>> }) {
   const palette = usePalette()
-  useCompaniesPaletteSource()
-  useRfqsPaletteSource()
+  useSearchPaletteSource()
   const { pathname } = useLocation()
   const active = navItemForPath(pathname)
   const inSettings = pathname === '/settings' || pathname.startsWith('/settings/')

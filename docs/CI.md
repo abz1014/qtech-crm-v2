@@ -9,7 +9,7 @@ so runs stay fast and quick to read: a docs-only push runs nothing.
 | `ci.yml` gallery job (visual + axe) | main, manual, or when `src/ui`, `src/dev`, `src/index.css`, `tailwind.config.ts`, `e2e/gallery*`, `e2e/__screenshots__`, `playwright.config.ts`, `package*.json` change | about 4 min |
 | `db.yml` | every push, only if `supabase/**`, `src/types/database.ts`, `package*.json` or the workflow changed | about 6 min |
 | `functions.yml` | every push; paths `supabase/functions/**`, `supabase/migrations/**` | about 6 min |
-| `e2e.yml` (all DB suites) | every push, path-gated; one stack boot, only suites whose paths changed | about 8 to 14 min |
+| `e2e.yml` (all DB suites, incl. `search`) | every push, path-gated; one stack boot, only suites whose paths changed | about 8 to 14 min |
 | `remote.yml`, `deploy-functions.yml` | manual only, owner approval | not part of the budget |
 
 Rules applied everywhere:

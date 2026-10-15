@@ -50,6 +50,11 @@ jobs:
           psql "$URL" -v ON_ERROR_STOP=1 -c "create extension if not exists pgtap with schema extensions"
           PGOPTIONS='-c search_path=public,extensions' psql "$URL"             -v ON_ERROR_STOP=1 -f supabase/tests/0024_supplier_memory_perf.test.sql
 
+      - name: R12 search timing (prints the p95 numbers)
+        run: |
+          URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          PGOPTIONS='-c search_path=public,extensions' psql "$URL" -v ON_ERROR_STOP=1 -f supabase/tests/0034_search_all_perf.test.sql
+
       - name: Generate types
         run: npx supabase gen types typescript --local > "$RUNNER_TEMP/types.ts"
 
