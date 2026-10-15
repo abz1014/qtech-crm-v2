@@ -1,7 +1,7 @@
 import { test, type Page } from '@playwright/test'
 import { karachiDay, must, openAs, rest } from '../support/stack'
 import { axeViolations } from '../support/axe'
-import { fetchStoredPdf, pdfIsValid, pdfText } from '../support/pdf'
+import { fetchStoredPdf, pdfIsValid, pdfText, renderPdfPng } from '../support/pdf'
 import { expect, get, legLoc, seedPo, setProfile, shot, tapper } from './fixtures'
 
 /*
@@ -115,6 +115,7 @@ test.describe('O07: Issue PO', () => {
       expect(text).toContain('DAP')
       expect(text).toContain('Attention: Mr. Rashid Al Mansoori')
     }
+    if (stored && process.env.REVIEW_DIR) renderPdfPng(stored, process.env.REVIEW_DIR, 'o07-po-pdf-r0-page1')
 
     // the leg shows the PO chip, View PO and the next revision
     await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/^PO-\d\d-\d{4} · R0$/)
