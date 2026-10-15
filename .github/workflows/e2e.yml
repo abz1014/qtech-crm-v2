@@ -1,7 +1,7 @@
 name: E2E
 
 # ONE Supabase stack boot and ONE build for every database-backed suite (auth, companies, rfq-board,
-# rfq-intake, rfq-detail, rfq-quotation, today, search, rfq-memory, settings-admin, orders, pwa). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
+# rfq-intake, rfq-detail, rfq-quotation, today, search, rfq-memory, settings-admin, orders, capture, pwa). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
 # once and runs only those, one after another, with a database reset between them.
 # Pushes to main and manual runs (Actions, E2E, Run workflow) run every suite. See docs/CI.md.
 # No pull_request trigger: a push to a PR branch already runs this, and a second run doubled the minutes.
@@ -45,6 +45,7 @@ jobs:
       rfq_memory: ${{ steps.final.outputs.rfq_memory }}
       today: ${{ steps.final.outputs.today }}
       search: ${{ steps.final.outputs.search }}
+      capture: ${{ steps.final.outputs.capture }}
       orders: ${{ steps.final.outputs.orders }}
       settings_admin: ${{ steps.final.outputs.settings_admin }}
       pwa: ${{ steps.final.outputs.pwa }}
@@ -85,6 +86,8 @@ jobs:
               - 'e2e/today/**'
             search:
               - 'e2e/search/**'
+            capture:
+              - 'e2e/capture/**'
             expenses:
               - 'e2e/expenses/**'
             orders:
@@ -109,6 +112,7 @@ jobs:
           S_RFQ_MEMORY: ${{ steps.filter.outputs.rfq_memory }}
           S_TODAY: ${{ steps.filter.outputs.today }}
           S_SEARCH: ${{ steps.filter.outputs.search }}
+          S_CAPTURE: ${{ steps.filter.outputs.capture }}
           S_ORDERS: ${{ steps.filter.outputs.orders }}
           S_SETTINGS_ADMIN: ${{ steps.filter.outputs.settings_admin }}
           S_PWA: ${{ steps.filter.outputs.pwa }}
@@ -135,6 +139,8 @@ jobs:
           echo "today=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_SEARCH; if [ "$all" = "true" ]; then v=true; fi
           echo "search=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_CAPTURE; if [ "$all" = "true" ]; then v=true; fi
+          echo "capture=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_ORDERS; if [ "$all" = "true" ]; then v=true; fi
           echo "orders=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_SETTINGS_ADMIN; if [ "$all" = "true" ]; then v=true; fi
@@ -318,6 +324,16 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=settings-admin REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/settings-admin npx playwright test --project=settings-admin --output=test-results/settings-admin
+
+      - name: Reset database (capture)
+        if: ${{ !cancelled() && needs.changes.outputs.capture == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (capture project)
+        if: ${{ !cancelled() && needs.changes.outputs.capture == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=capture REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/capture npx playwright test --project=capture --output=test-results/capture
 
       - name: Playwright (pwa project, no database reset needed)
         if: ${{ !cancelled() && needs.changes.outputs.pwa == 'true' }}

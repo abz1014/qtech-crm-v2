@@ -47,6 +47,8 @@ export interface WriteVars {
   'inquiry.chase': { rfqId: string }
   'rfq.markBidSent': { rfqId: string }
   'rfq.close': { rfqId: string }
+  /** R22: Capture appends to, or restores, an RFQ's notes. */
+  'rfq.notes': { rfqId: string }
   'clarification.add': { rfqId: string }
   'clarification.ask': { rfqId: string }
   'clarification.answer': { rfqId: string }
@@ -54,6 +56,8 @@ export interface WriteVars {
   'clarification.relay': { rfqId: string }
   'attachment.add': { rfqId: string }
   'attachment.delete': { rfqId: string }
+  /** R22: files on an order (the Files panel on the order page, Capture's attach to order). */
+  'order.files': { orderId: string }
   /** R19: issuing a quotation (or attaching its PDF) changes the RFQ page, the board and Today (quoted_on is stamped). */
   'quotation.issue': { rfqId: string }
   'quotation.pdf': { rfqId: string }
@@ -123,6 +127,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Bid sent, closed and re-opened only move the RFQ itself (and the board's lists).
   'rfq.markBidSent': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
   'rfq.close': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
+  'rfq.notes': v => [qk.rfqs.detail(v.rfqId)],
   // Questions and their stamps change the RFQ page, its derived clarification state (header) and the board's chips.
   'clarification.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
   'clarification.ask': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
@@ -132,6 +137,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Files only change this RFQ's page (the list of files, the photos under answers, the signed links).
   'attachment.add': v => [qk.rfqs.detail(v.rfqId)],
   'attachment.delete': v => [qk.rfqs.detail(v.rfqId)],
+  'order.files': v => [qk.orders.part(v.orderId, 'files')],
   'quotation.issue': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.today.all, qk.companies.all],
   'quotation.pdf': v => [qk.rfqs.part(v.rfqId, 'quotations')],
   // A new order changes the RFQ (won), every list that shows orders or states, Today (place PO, goods late) and the customer's history.

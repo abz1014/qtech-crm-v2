@@ -130,6 +130,10 @@ export function useClarifications(rfqId: string | undefined) {
   return useQuery({ queryKey: qk.rfqs.part(rfqId ?? '', 'clarifications'), queryFn: () => api.listClarifications(rfqId as string), enabled: Boolean(rfqId) })
 }
 
+export function useOrderAttachments(orderId: string | undefined) {
+  return useQuery({ queryKey: qk.orders.part(orderId ?? '', 'files'), queryFn: () => api.listOrderAttachments(orderId as string), enabled: Boolean(orderId) })
+}
+
 export function useRfqAttachments(rfqId: string | undefined) {
   return useQuery({ queryKey: qk.rfqs.part(rfqId ?? '', 'attachments'), queryFn: () => api.listAttachments(rfqId as string), enabled: Boolean(rfqId) })
 }
@@ -185,19 +189,20 @@ export function useSetInquiryRelayed(rfqId: string) {
   })
 }
 
-export function useUploadAttachment(rfqId: string) {
+/** Upload a file to an RFQ, or to an order when `orderId` is given (the Files panel serves both). */
+export function useUploadAttachment(rfqId: string | undefined, orderId?: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (v: { clarificationId: string | null; file: File; path: string }) => api.uploadAttachment({ rfqId, ...v }),
-    onSuccess: () => invalidateAfter(client, 'attachment.add', { rfqId }),
+    mutationFn: (v: { clarificationId: string | null; file: File; path: string }) => api.uploadAttachment(orderId ? { orderId, ...v } : { rfqId, ...v }),
+    onSuccess: () => (orderId ? invalidateAfter(client, 'order.files', { orderId }) : invalidateAfter(client, 'attachment.add', { rfqId: rfqId as string })),
   })
 }
 
-export function useDeleteAttachment(rfqId: string) {
+export function useDeleteAttachment(rfqId: string | undefined, orderId?: string) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (att: Pick<api.AttachmentRow, 'id' | 'path'>) => api.deleteAttachment(att),
-    onSuccess: () => invalidateAfter(client, 'attachment.delete', { rfqId }),
+    onSuccess: () => (orderId ? invalidateAfter(client, 'order.files', { orderId }) : invalidateAfter(client, 'attachment.delete', { rfqId: rfqId as string })),
   })
 }
 

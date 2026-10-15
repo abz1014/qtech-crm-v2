@@ -1,4 +1,5 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 import { ClipboardPaste, Info, Undo2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
@@ -190,6 +191,19 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
     setSuggestions(suggestFromReply(parseSupplierReply(text, suggestItems, { today: businessToday() }), suggestItems, draft.currency))
     setPasteMode('suggest')
   }
+  // Capture's "This is a supplier's reply" opens this RFQ with the text and the supplier chosen: read it out as if it had been pasted here.
+  const location = useLocation()
+  const navigate = useNavigate()
+  const handedOver = useRef(false)
+  useEffect(() => {
+    const reply = (location.state as { reply?: { inquiryId: string; text: string } } | null)?.reply
+    if (!reply || reply.inquiryId !== inquiry.id || handedOver.current) return
+    handedOver.current = true
+    readText(reply.text)
+    navigate(location.pathname, { replace: true, state: null })
+    // readText only reads props and state set above
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, inquiry.id])
   const startPaste = async () => {
     let text = ''
     try {
