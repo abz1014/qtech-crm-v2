@@ -124,6 +124,8 @@ export function cellProgress(target: TargetRow | undefined, p: ProgressRow | und
   const excluded = p ? Number(p.excluded_count) : 0
   if (!target) return { kind: 'none', achieved, onPace: 0, ahead: 0, excluded }
   if (phase === 'future') return { kind: 'not-started', achieved, onPace: 0, ahead: 0, excluded }
-  const onPace = p?.on_pace_net == null ? 0 : Number(p.on_pace_net)
-  return { kind: 'running', achieved, onPace, ahead: Math.round((achieved - onPace) * 100) / 100, excluded }
+  // Whole rupees for the pace line: the gap is then plainly achieved minus on pace, as shown.
+  const onPace = p?.on_pace_net == null ? 0 : Math.round(Number(p.on_pace_net))
+  const got = Math.round(achieved)
+  return { kind: 'running', achieved: got, onPace, ahead: got - onPace, excluded }
 }

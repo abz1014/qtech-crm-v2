@@ -37,7 +37,7 @@ export function SettingsLayout() {
     <div className="grid min-h-full md:grid-cols-[200px_minmax(0,1fr)]">
       <nav aria-label="Settings" className="border-b bg-canvas px-4 py-3 md:border-b-0 md:border-r md:px-3 md:py-6">
         <p className="mb-2 hidden px-3 text-xs font-medium text-fg-muted md:block">Settings</p>
-        <ul className="flex gap-1 md:grid">
+        <ul className="flex flex-wrap gap-1 md:grid">
           {links.map(l => (
             <li key={l.to}>
               <NavLink

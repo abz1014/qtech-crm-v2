@@ -44,7 +44,7 @@ import { Select } from '@/ui/form/Select'
  * whole edit. Beside each target the grid shows what was achieved and where on-pace is, as rupee figures straight from
  * v_target_progress; a bare percentage is never shown. Each person sees only their own target, on Today.
  */
-const COLS = 'md:grid-cols-[minmax(170px,1.1fr)_repeat(4,minmax(0,1fr))]'
+const COLS = 'grid-cols-[minmax(0,1fr)] md:grid-cols-[minmax(170px,1.1fr)_repeat(4,minmax(0,1fr))]'
 
 export function TargetsPage() {
   const session = useSession()
