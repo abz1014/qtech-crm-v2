@@ -1,0 +1,188 @@
+name: Backup
+
+# R13: nightly encrypted database backup and a weekly restore drill, for the live Supabase project (Free plan: no
+# platform backups). Design and owner steps: docs/SUPABASE.md, "Backups".
+#
+# - Runs only from main, in the `backup` environment (secrets only, branch-restricted to main, no reviewer, because a
+#   schedule cannot wait for approval).
+# - The repository is public and artifacts are downloadable by any signed-in GitHub user, so the dump is encrypted with
+#   age to a PUBLIC key before it leaves the runner. The private key is held only by the owner, offline.
+# - No service-role key and no access token are used. The connection is the database password over the session pooler.
+# - Drill: dumps the live database again, never uploads that dump, restores it into the CI local Supabase stack and
+#   compares row counts. Only counts of mismatching tables are ever printed.
+on:
+  schedule:
+    - cron: "30 20 * * *"   # nightly, 01:30 Asia/Karachi
+    - cron: "0 22 * * 0"    # weekly drill, Monday 03:00 Asia/Karachi
+  workflow_dispatch:
+    inputs:
+      run:
+        description: "backup = encrypted dump + artifact. drill = restore drill. both = run both."
+        type: choice
+        options: [backup, drill, both]
+        default: backup
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-supabase
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run != 'drill' || github.event.schedule == '30 20 * * *' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: backup
+    env:
+      PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_POOLER_HOST: ${{ vars.SUPABASE_POOLER_HOST }}
+      BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+    steps:
+      - name: Guard - main only, and the target must be the new CRM project
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Refusing: backups run from main only (ref is $GITHUB_REF)."; exit 1
+          fi
+          if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
+            echo "::error::SUPABASE_PROJECT_REF is empty"; exit 1
+          fi
+          echo "::add-mask::$SUPABASE_PROJECT_REF"
+          if [ "$SUPABASE_PROJECT_REF" = "vptyhluvgnjpvkcbhxsf" ]; then
+            echo "::error::Refusing: ref is the OLD CRM project. Never target it."; exit 1
+          fi
+          if [ "$SUPABASE_PROJECT_REF" != "yafbphagorydbitfgfmg" ]; then
+            echo "::error::Refusing: ref is not the expected Q-Tech CRM v2 project."; exit 1
+          fi
+          if [ -z "${PGPASSWORD:-}" ]; then echo "::error::SUPABASE_DB_PASSWORD is empty"; exit 1; fi
+          if [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
+            echo "::error::BACKUP_AGE_RECIPIENT is empty: refusing to make an unencrypted backup"; exit 1
+          fi
+          echo "Guard passed."
+
+      - uses: actions/checkout@v4
+
+      - name: Install age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Find the session pooler (IPv4; the direct host is IPv6 only on the Free plan)
+        run: |
+          set -euo pipefail
+          host="$(bash scripts/backup/find-pooler.sh)"
+          echo "::add-mask::$host"
+          echo "PGHOST=$host" >> "$GITHUB_ENV"
+          echo "PGPORT=5432" >> "$GITHUB_ENV"
+          echo "PGUSER=postgres.$SUPABASE_PROJECT_REF" >> "$GITHUB_ENV"
+          echo "PGSSLMODE=require" >> "$GITHUB_ENV"
+
+      - name: Dump the live database
+        run: |
+          set -euo pipefail
+          stamp="$(date -u +%Y%m%d-%H%M%S)"
+          echo "STAMP=$stamp" >> "$GITHUB_ENV"
+          bash scripts/backup/dump.sh "$RUNNER_TEMP/plain/qtech-crm-$stamp"
+
+      - name: Encrypt (age, public key only) and delete the plain files
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/out"
+          bash scripts/backup/encrypt.sh "$RUNNER_TEMP/plain/qtech-crm-$STAMP" "$RUNNER_TEMP/out/qtech-crm-$STAMP.tar.gz.age"
+          rm -rf "$RUNNER_TEMP/plain"
+          ls -l "$RUNNER_TEMP/out"
+
+      - name: Upload the encrypted backup (30 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-${{ env.STAMP }}
+          path: ${{ runner.temp }}/out/*.age
+          retention-days: 30
+          if-no-files-found: error
+          compression-level: 0
+
+  drill:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run != 'backup' || github.event.schedule == '0 22 * * 0' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: backup
+    env:
+      PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_POOLER_HOST: ${{ vars.SUPABASE_POOLER_HOST }}
+    steps:
+      - name: Guard - main only, and the target must be the new CRM project
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Refusing: the drill runs from main only (ref is $GITHUB_REF)."; exit 1
+          fi
+          if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
+            echo "::error::SUPABASE_PROJECT_REF is empty"; exit 1
+          fi
+          echo "::add-mask::$SUPABASE_PROJECT_REF"
+          if [ "$SUPABASE_PROJECT_REF" = "vptyhluvgnjpvkcbhxsf" ]; then
+            echo "::error::Refusing: ref is the OLD CRM project. Never target it."; exit 1
+          fi
+          if [ "$SUPABASE_PROJECT_REF" != "yafbphagorydbitfgfmg" ]; then
+            echo "::error::Refusing: ref is not the expected Q-Tech CRM v2 project."; exit 1
+          fi
+          if [ -z "${PGPASSWORD:-}" ]; then echo "::error::SUPABASE_DB_PASSWORD is empty"; exit 1; fi
+          echo "Guard passed."
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      # Supabase CLI version is pinned by package-lock.json, same as db.yml.
+      - run: npm ci
+
+      - name: Find the session pooler
+        run: |
+          set -euo pipefail
+          host="$(bash scripts/backup/find-pooler.sh)"
+          echo "::add-mask::$host"
+          echo "LIVE_HOST=$host" >> "$GITHUB_ENV"
+
+      - name: Fresh dump of the live database (stays on the runner, never uploaded)
+        env:
+          PGPORT: "5432"
+          PGSSLMODE: require
+        run: |
+          set -euo pipefail
+          export PGHOST="$LIVE_HOST" PGUSER="postgres.$SUPABASE_PROJECT_REF"
+          bash scripts/backup/dump.sh "$RUNNER_TEMP/drill"
+
+      - name: Match the local schema to the live migrations
+        run: |
+          set -euo pipefail
+          # The live project may be behind main (migrations not pushed yet). Drop the newer files in this throwaway
+          # checkout so the local stack has the same schema as the dump.
+          for f in supabase/migrations/*.sql; do
+            v="$(basename "$f" | sed -E 's/^([0-9]+)_.*/\1/')"
+            grep -qx "$v" "$RUNNER_TEMP/drill/migrations.txt" || { echo "not live yet, skipped: $(basename "$f")"; rm "$f"; }
+          done
+          for v in $(cat "$RUNNER_TEMP/drill/migrations.txt"); do
+            ls supabase/migrations/${v}_*.sql > /dev/null 2>&1 || { echo "::error::live has migration $v that main does not"; exit 1; }
+          done
+
+      - name: Start the local Supabase stack
+        run: |
+          npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime
+          npx supabase db reset --local
+
+      - name: Restore into the local stack and compare row counts
+        run: |
+          set -euo pipefail
+          # Local credentials only. The live PG* variables are not exported in this step.
+          export PGHOST=127.0.0.1 PGPORT=54322 PGUSER=supabase_admin PGPASSWORD=postgres PGDATABASE=postgres
+          unset PGSSLMODE
+          bash scripts/backup/restore.sh "$RUNNER_TEMP/drill"
+
+      - name: Delete the dump and stop Supabase
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/drill"
+          npx supabase stop --no-backup || true

@@ -11,6 +11,8 @@ so runs stay fast and quick to read: a docs-only push runs nothing.
 | `functions.yml` | every push; paths `supabase/functions/**`, `supabase/migrations/**` | about 6 min |
 | `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | every push, path-gated; one stack boot, only suites whose paths changed | about 8 to 14 min |
 | `remote.yml`, `deploy-functions.yml` | manual only, owner approval | not part of the budget |
+| `backup.yml` (R13) | nightly 20:30 UTC, drill weekly, manual; `backup` environment, main only | about 3 min nightly, 15 min drill |
+| `backup-checks.yml` | push touching `scripts/backup/**` or the backup workflows | about 8 min |
 
 Rules applied everywhere:
 
@@ -39,5 +41,5 @@ Actions, pick the workflow (CI, E2E, DB or Functions), Run workflow on the branc
 ## Secrets and forks
 
 Push workflows (`ci`, `db`, `functions`, `e2e`) use no secrets and only `contents: read`. The only workflows that read secrets are
-`remote.yml` and `deploy-functions.yml`: `workflow_dispatch` only, behind the `production` environment's approval. Do not add `pull_request_target`
+`remote.yml` and `deploy-functions.yml` (`workflow_dispatch` only, behind the `production` environment's approval) and `backup.yml` (schedule or dispatch, `backup` environment limited to main; it holds only the database password and project ref, and encrypts before uploading anything). Do not add `pull_request_target`
 or put a secret in a push or PR workflow. In the repository settings, keep "Run workflows from fork pull requests" requiring approval.
