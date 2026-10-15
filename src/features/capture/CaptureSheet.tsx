@@ -1,8 +1,8 @@
-import { useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import * as RadixDialog from '@radix-ui/react-dialog'
-import { ArrowRight, ClipboardPaste, Clock, FileWarning, Share2, WifiOff, X } from 'lucide-react'
+import { ArrowRight, Check, ClipboardPaste, Clock, FileWarning, Share2, WifiOff, X } from 'lucide-react'
 import { mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
 import { deleteCapture, safely } from '@/lib/capture/store'
@@ -298,6 +298,14 @@ export default function CaptureSheet() {
 
   const via = draft.source === 'share' ? { icon: Share2, text: 'Shared from WhatsApp' } : draft.source === 'drop' ? { icon: ClipboardPaste, text: 'Dropped' } : draft.source === 'paste' ? { icon: ClipboardPaste, text: 'Pasted' } : null
   const empty = kind === 'empty' && cap.resizing.length === 0
+  // Emptied (the text cleared, the files removed): forget the choices, so the next capture starts from the suggestions.
+  useEffect(() => {
+    if (empty) {
+      setUserDest(null)
+      setUserRfqId(null)
+      setTickState(null)
+    }
+  }, [empty])
   const ref = rfq ? rfqRef(rfq.number) : ''
   const shorts = tickedList.map(q => shortQuestion(q.question)).join(', ')
 
@@ -351,27 +359,12 @@ export default function CaptureSheet() {
         onRemove={cap.removeFile}
         count={countsText(draft.source, draft.text, goodFiles.map(f => f.file))}
       />
-      {!empty ? (
-        <Button
-          variant="quiet"
-          size="sm"
-          onClick={() => {
-            cap.discard()
-            setUserDest(null)
-            setUserRfqId(null)
-            setTickState(null)
-          }}
-          className="w-fit text-fg-muted"
-        >
-          Start over
-        </Button>
-      ) : null}
     </div>
   )
 
   const right = (
     <div className="grid min-w-0 content-start gap-4">
-      <div className={cn('grid gap-2', empty && 'opacity-[0.55]')}>
+      <div className="grid gap-2">
         <Section title="What should we do with it?">
           <Tiles chosen={dest} kind={kind} off={empty} onChoose={choose} />
         </Section>
@@ -470,16 +463,19 @@ export default function CaptureSheet() {
   )
 
   return (
-    <RadixDialog.Root open onOpenChange={o => !o && !busy && cap.close()}>
+    // Once saved the sheet is not modal: the Undo toast must stay reachable by keyboard and screen reader (a modal hides everything outside it).
+    <RadixDialog.Root open modal={!result} onOpenChange={o => !o && !busy && cap.close()}>
       <RadixDialog.Portal>
-        <RadixDialog.Overlay className="fixed inset-0 z-40 grid animate-fade-in place-items-center bg-scrim p-4 max-md:p-0">
+        <div className="fixed inset-0 z-40 grid animate-fade-in place-items-center bg-scrim p-4 max-md:p-0">
           <RadixDialog.Content
             aria-describedby={undefined}
             onKeyDown={onKey}
+            onInteractOutside={e => result && e.preventDefault()}
             onOpenAutoFocus={e => {
               e.preventDefault()
-              const el = (e.currentTarget as HTMLElement).querySelector<HTMLElement>('textarea')
-              el?.focus()
+              // The paste zone takes focus when there is nothing yet (iPhone: press and hold, then Paste); otherwise the sheet itself.
+              const root = e.currentTarget as HTMLElement
+              ;(root.querySelector<HTMLElement>('textarea[placeholder]') ?? root).focus()
             }}
             className="grid max-h-[calc(100dvh-64px)] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal focus:outline-none md:w-[960px] max-md:h-dvh max-md:max-h-none max-md:animate-sheet-in max-md:rounded-none md:animate-rise-6"
           >
@@ -575,7 +571,7 @@ export default function CaptureSheet() {
                   disabled={!ready}
                   busy={busy}
                   busyLabel="Saving"
-                  icon={dest === 'new-rfq' && !empty ? ArrowRight : undefined}
+                  icon={empty ? Check : dest === 'new-rfq' ? ArrowRight : dest === 'reply' ? undefined : Check}
                   className="max-md:h-touch max-md:flex-1"
                 >
                   {empty ? (
@@ -590,7 +586,7 @@ export default function CaptureSheet() {
               </footer>
             )}
           </RadixDialog.Content>
-        </RadixDialog.Overlay>
+        </div>
       </RadixDialog.Portal>
     </RadixDialog.Root>
   )

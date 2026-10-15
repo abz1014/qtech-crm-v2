@@ -128,7 +128,7 @@ for (const [name, size] of [
       await expect(sheet(page).getByRole('button', { name: 'Save photo as the answer' })).toBeEnabled()
       await settle(page)
       await review(page, `capture-frame-destination-photo-${name}`)
-      await sheet(page).getByRole('button', { name: 'Start over' }).click()
+      await page.getByRole('button', { name: 'Remove nameplate-photo.png' }).click()
       // b: several questions
       await paste(page, 'Dear Sir, for the Belimo quote please confirm:\n1. Valve size and Kvs\n2. Actuator torque and supply voltage\n3. Fail-safe position on power loss\n4. Medium and maximum temperature')
       await page.getByRole('radio', { name: /New supplier questions/ }).click()
@@ -136,7 +136,7 @@ for (const [name, size] of [
       await expect(sheet(page).getByText('Each line becomes one question on the RFQ, ready to put to the customer.')).toBeVisible()
       await settle(page)
       await review(page, `capture-frame-destination-questions-${name}`)
-      await sheet(page).getByRole('button', { name: 'Start over' }).click()
+      await sheet(page).getByRole('textbox', { name: 'Captured text' }).fill('')
       // c: notes
       await paste(page, 'Customer will send the P&ID on Monday. Plant shutdown is 12 to 14 Dec, so delivery must be before 10 Dec.')
       await page.getByRole('radio', { name: /Add to RFQ notes/ }).click()
@@ -180,7 +180,7 @@ for (const [name, size] of [
       const dlg = sheet(page)
       if (name === '1440') {
         await expect(dlg.getByText(/datasheet-scan\.pdf is 7\.2 MB\. Files can be up to 5 MB\./)).toBeVisible()
-        await expect(dlg.getByText('Photos are shrunk for you; PDFs are not. Remove it, or add a smaller file. The rest can still be saved.')).toBeVisible()
+        await expect(dlg.getByText('Photos are shrunk for you; PDFs are not. Remove it, or add a smaller file. The rest can still be saved.').first()).toBeVisible()
       } else {
         await expect(dlg.getByText('datasheet-scan.pdf is too large')).toBeVisible()
         await expect(dlg.getByText('PDFs are not shrunk. Remove it, or scan at a lower quality.')).toBeVisible()
@@ -226,8 +226,8 @@ test.describe('desktop frames at 1440', () => {
     await expect(dlg.getByText('You choose after you add something.')).toBeVisible()
     await expect(dlg.getByText('Nothing to save yet')).toBeVisible()
     await expect(dlg.getByRole('button', { name: 'Save answer to 2 questions' })).toBeDisabled()
-    await expect(dlg.getByRole('button', { name: 'Choose photos' })).toBeVisible()
-    await expect(dlg.getByRole('button', { name: 'Choose files' })).toBeVisible()
+    await expect(dlg.getByRole('button', { name: 'Choose photos' }).first()).toBeVisible()
+    await expect(dlg.getByRole('button', { name: 'Choose files' }).first()).toBeVisible()
     await settle(page)
     await review(page, 'capture-frame-desktop-empty-1440')
 

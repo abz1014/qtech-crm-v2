@@ -192,9 +192,8 @@ export function CaptureArea({
             <Icon icon={Upload} size="lg" />
           </span>
           <b className="font-medium text-fg">Drop text, photos or files here</b>
-          <span className="inline-flex flex-wrap items-center justify-center gap-1 text-fg-muted">
-            or press <Kbd>{isMac ? '⌘' : 'Ctrl'}</Kbd>
-            <Kbd>V</Kbd> to paste what you copied in WhatsApp Desktop
+          <span className="text-fg-muted">
+            or press <Kbd>{isMac ? '⌘' : 'Ctrl'}</Kbd> <Kbd>V</Kbd> to paste what you copied in WhatsApp Desktop
           </span>
           {pickers}
         </div>
@@ -232,8 +231,6 @@ export function CaptureArea({
         <Icon icon={Upload} />
         Drop or paste more. Up to 5 MB each.
       </button>
-      <div className="md:hidden">{pickers}</div>
-      <p className="text-xs text-fg-muted md:hidden">Photos are resized before saving. Each file can be up to 5 MB.</p>
       {input(docs, 'Add more files', RFQ_FILE_ACCEPT.join(','))}
     </Section>
   )
