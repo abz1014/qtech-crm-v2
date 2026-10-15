@@ -74,3 +74,61 @@ export function monthYear(iso: string): string {
   if (!p) return iso
   return `${MONTHS[p.m - 1].slice(0, 3)} ${p.y}`
 }
+
+/** The working day `n` working days after `iso`, stepping over Saturdays and Sundays. `n` of 0 returns `iso` itself. */
+export function addBusinessDays(iso: string, n: number): string {
+  let d = iso
+  for (let i = 0; i < n; i++) {
+    d = addDays(d, 1) as string
+    while (isWeekend(d)) d = addDays(d, 1) as string
+  }
+  return d
+}
+
+/** The working day `n` working days before `iso`. */
+export function subtractBusinessDays(iso: string, n: number): string {
+  let d = iso
+  for (let i = 0; i < n; i++) {
+    d = addDays(d, -1) as string
+    while (isWeekend(d)) d = addDays(d, -1) as string
+  }
+  return d
+}
+
+/** Whole calendar days from `from` to `to` (negative when `to` is earlier). */
+export function daysBetween(from: string, to: string): number {
+  const a = parseDay(from)
+  const b = parseDay(to)
+  if (!a || !b) return 0
+  return Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / 86_400_000)
+}
+
+/** Working days elapsed from `from` to `to`: how many Monday-to-Friday days lie after `from` up to and including `to`. Zero when `to` is not after `from`. */
+export function businessDaysBetween(from: string, to: string): number {
+  let n = 0
+  let d = from
+  while (d < to) {
+    d = addDays(d, 1) as string
+    if (!isWeekend(d)) n++
+  }
+  return n
+}
+
+/** The next Monday strictly after `iso`. */
+export function nextMonday(iso: string): string {
+  let d = addDays(iso, 1) as string
+  while (weekdayOf(d) !== 1) d = addDays(d, 1) as string
+  return d
+}
+
+/** "20 October 2026". */
+export function dayMonthYear(iso: string): string {
+  const p = parseDay(iso)
+  return p ? `${p.d} ${MONTHS[p.m - 1]} ${p.y}` : iso
+}
+
+/** "14 November". */
+export function dayMonth(iso: string): string {
+  const p = parseDay(iso)
+  return p ? `${p.d} ${MONTHS[p.m - 1]}` : iso
+}

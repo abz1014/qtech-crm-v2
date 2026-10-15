@@ -57,6 +57,7 @@ describe('invalidation map (R01)', () => {
     'inquiry.chase': { rfqId: 'r1' },
     'rfq.markBidSent': { rfqId: 'r1' },
     'rfq.close': { rfqId: 'r1' },
+<<<<<<< HEAD
     'clarification.add': { rfqId: 'r1' },
     'clarification.ask': { rfqId: 'r1' },
     'clarification.answer': { rfqId: 'r1' },
@@ -64,6 +65,10 @@ describe('invalidation map (R01)', () => {
     'clarification.relay': { rfqId: 'r1' },
     'attachment.add': { rfqId: 'r1' },
     'attachment.delete': { rfqId: 'r1' },
+=======
+    'today.chase': {},
+    'today.snooze': {},
+>>>>>>> origin/main
   }
 
   it('names at least one key for every write', () => {

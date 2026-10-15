@@ -1183,14 +1183,14 @@ isOneToOne: false
                   ]
                 },"supplier_orders": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"currency": string | null,"delivered_on": string | null,"expected_on": string | null,"id": string,"inquiry_id": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"placed_on": string | null,"received_on": string | null,"reference": string | null,"supplier_id": string
+                    "chase_count": number,"created_at": string,"created_by": string | null,"currency": string | null,"delivered_on": string | null,"expected_on": string | null,"id": string,"inquiry_id": string | null,"last_chased_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"placed_on": string | null,"received_on": string | null,"reference": string | null,"supplier_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id": string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id": string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id"?: string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id"?: string
                   }
                   Relationships: [
                     {
@@ -1874,6 +1874,9 @@ isOneToOne: false
                            },
 "stamp_fbr_psid":
 { Args: { "p_invoice_ids": (string)[],"p_psid": string }; Returns: number
+                           },
+"stamp_goods_chase":
+{ Args: { "p_leg_id": string }; Returns: number
                            },
 "stamp_payment_reminder":
 { Args: { "p_invoice_ids": (string)[] }; Returns: number
