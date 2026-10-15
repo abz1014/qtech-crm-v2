@@ -373,33 +373,33 @@ Evidence: mockups g2-today-b2 / g2-intake-float / g2-chase-texts (HTML read in f
 |---|---|---|---|---|---|---|
 | B-100 | Page head | crumb "RFQs > New RFQ", h2, lede "Paste what the customer sent. Nothing is saved until you continue." | same crumb/h1; "...until you copy the enquiry or save." | DIFFERENT | low | Dec R05. O-8 |
 | B-101 | Company field | search icon, "Search, or type a new company name", focused | Combobox autoFocus, same placeholder | MATCH | - | - |
-| B-102 | Option meta | "Mianwali · customer · 2 RFQs · similar name" | "customer · Pakistan" (role · country) | DIFFERENT | medium | add RFQ count + similar-name flag (R05) |
-| B-103 | Add-new row | "Add “X” as a new company" + "Saved as a prospect until the first order" + ⏎ | label + plus icon only | DIFFERENT | low | R05 |
-| B-104 | Inline create | in-page row: Company name, City, Contact, [Create and use][Cancel], "City and contact can wait..." | modal "New company": Company name, Country; [Cancel][Add company] | DIFFERENT | medium | Dec R02. O-9 |
-| B-105 | Items zone before company | faded until company chosen | heading greyed only | DIFFERENT | low | R05 |
+| B-102 | Option meta | "Mianwali · customer · 2 RFQs · similar name" | "customer · Pakistan" (role · country) | FIXED 416637d | medium | add RFQ count + similar-name flag (R05) |
+| B-103 | Add-new row | "Add “X” as a new company" + "Saved as a prospect until the first order" + ⏎ | label + plus icon only | FIXED 416637d | low | R05 |
+| B-104 | Inline create | in-page row: Company name, City, Contact, [Create and use][Cancel], "City and contact can wait..." | modal "New company": Company name, Country; [Cancel][Add company] | FIXED 416637d | medium | Dec R02. O-9 |
+| B-105 | Items zone before company | faded until company chosen | heading greyed only | FIXED 416637d | low | R05 |
 | B-106 | Paste zone | clipboard icon, "Paste the customer's email or item list", "Press Ctrl V anywhere on this page. Each line becomes an item, with quantity and brand picked out." | same copy; real textarea with extra placeholder; "Add an item by hand" | MATCH | - | extras EXTRA low |
-| B-107 | Customer chip | avatar MP, name, "Mianwali · contact not added yet", "New prospect", [Change] | Avatar, name, "No country on file", role badge, [Change] | DIFFERENT | low | Dec R05 (no city) |
+| B-107 | Customer chip | avatar MP, name, "Mianwali · contact not added yet", "New prospect", [Change] | Avatar, name, "No country on file", role badge, [Change] | FIXED 416637d | low | Dec R05 (no city) |
 | B-108 | Site / Contact selects | absent | Site and Contact selects, "Only site on file" | EXTRA | low | Dec R05 |
 | B-109 | Pasted panel | "Pasted just now · 6 lines", chip "4 items found", mark highlight, skipped lines tinted | same | MATCH | - | - |
-| B-110 | Item grid | columns "# / Qty / Description / Brand / Family", qty "2 nos", brand chip with check or "no brand", family text; footer "4 items found in 6 lines. Edit any cell to fix a split." + Add item | columns "# / Qty / Unit / Description, brand and family" as input fields with brand/family Selects on a second row, remove X; same footer text | DIFFERENT | medium | R05 |
+| B-110 | Item grid | columns "# / Qty / Description / Brand / Family", qty "2 nos", brand chip with check or "no brand", family text; footer "4 items found in 6 lines. Edit any cell to fix a split." + Add item | columns "# / Qty / Unit / Description, brand and family" as input fields with brand/family Selects on a second row, remove X; same footer text | FIXED 416637d | medium | R05 |
 | B-111 | Bid due / Customer ref | "Bid due (optional)" "Thu 3 Dec" with calendar icon; "Customer reference (optional)" "Their RFQ number" | same labels, DateInput "e.g. 3 dec", same placeholder | MATCH | - | - |
 | B-112 | Top priority | absent | checkbox "Top priority" | EXTRA | low | Dec R05 |
-| B-113 | Bottom bar, step 1 | "Creates RFQ-0185 for X with 4 items." [Looks right: find suppliers >] | "Saves as a new RFQ for X with N items." + [Save without floating] + [Looks right: find suppliers >] (sticky) | DIFFERENT | low | Dec R05 |
+| B-113 | Bottom bar, step 1 | "Creates RFQ-0185 for X with 4 items." [Looks right: find suppliers >] | "Saves as a new RFQ for X with N items." + [Save without floating] + [Looks right: find suppliers >] (sticky) | FIXED 416637d | low | Dec R05 |
 | B-114 | Side card | Number RFQ-0185, Customer, Items, Bid due, Sourcing chip | same rows; Number "Given when saved" | DIFFERENT | low | Dec R05 |
 | B-115 | Progress list | Customer/Items/Suppliers (n)/Enquiry (date) | same; hidden below lg | MATCH | - | - |
 | B-116 | Step 4 item chips | "1 Endress+Hauser Proline... × 2" truncated | same | MATCH | - | - |
-| B-117 | Supplier groups/rows | 3 groups with counts; checkbox, name, city, pill "2 same model", reason, memory line, Memory v | same; shows country not city | DIFFERENT | low | Dec R05 |
+| B-117 | Supplier groups/rows | 3 groups with counts; checkbox, name, city, pill "2 same model", reason, memory line, Memory v | same; shows country not city | FIXED 416637d | low | Dec R05 |
 | B-118 | Tick rules + order footnote | only first group ticked; "Order follows the reason, then the most recent contact. What we know about a supplier never changes the order." | same | MATCH | - | - |
-| B-119 | Step 4 bar | "3 suppliers ticked", warning "Item 4, the actuator, has no supplier ticked." with triangle icon, [Back to items][Write the enquiry >] | no icon; "Item 4, <description>, has no supplier ticked."; + [Save without floating] | DIFFERENT | low | R05 |
+| B-119 | Step 4 bar | "3 suppliers ticked", warning "Item 4, the actuator, has no supplier ticked." with triangle icon, [Back to items][Write the enquiry >] | no icon; "Item 4, <description>, has no supplier ticked."; + [Save without floating] | FIXED 416637d | low | R05 |
 | B-120 | "Ask someone who is not listed" | absent | combobox for any company | EXTRA | low | Dec R05 |
 | B-121 | Supplier loading/error/empty | not drawn | skeleton; "Suggestions did not load"; "No supplier on file for these items yet" | EXTRA | low | - |
-| B-122 | Enquiry hint | info-style "Spec lines are blank on purpose. Type what the customer gave you under any item, or leave it. The app never writes a spec for you, and a blank one is fine to send." | same text in warning-tone Banner | DIFFERENT | low | R05 |
+| B-122 | Enquiry hint | info-style "Spec lines are blank on purpose. Type what the customer gave you under any item, or leave it. The app never writes a spec for you, and a blank one is fine to send." | same text in warning-tone Banner | FIXED 416637d | low | R05 |
 | B-123 | Enquiry card | "Enquiry to 3 suppliers / One text for all three. Each supplier skips what they cannot offer." channel tabs, "Send to" chips with x | same | MATCH | - | - |
-| B-124 | Spec blanks | "Spec: [left blank]" highlighted pill | plain "Spec: left blank" in an editable textarea | DIFFERENT | medium | R05 |
+| B-124 | Spec blanks | "Spec: [left blank]" highlighted pill | plain "Spec: left blank" in an editable textarea | FIXED 416637d | medium | R05 |
 | B-125 | WhatsApp enquiry body | greeting, "Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):", items+Spec, "Kindly reply by *Tuesday 1 December*. If you cannot offer an item...", Thank you., Regards | adds "Please include in your reply: - Unit price and currency - Lead time - Origin and authenticity... - Stock position - MOQ, offer validity and payment terms"; ref is RFQ-#### until copy (Dec R05) | DIFFERENT | medium | BUILD_PLAN R04 requires the asks. O-10 |
 | B-126 | Draft editable | static | editable textarea | EXTRA | low | - |
-| B-127 | Footer | [Copy & mark floated to 3] [Back to suppliers] … "You paste it into each supplier's chat." | same + [Save without floating]; sentence sits under the textarea | DIFFERENT | low | R05 |
-| B-128 | Floated panel | "Floated to 3 suppliers on Fri 27 Nov", "RFQ-0185 is out for prices", clipboard line, reply-by + bid-due rows, info "Item 4 has no supplier yet. … Float item 4 to them" (link), [Open RFQ-0185][Start another RFQ] | same panel and copy; no "Float item 4 to them" link; adds copy-failed fallback and "No bid due date…" | DIFFERENT | medium | link to float the item (R05) |
+| B-127 | Footer | [Copy & mark floated to 3] [Back to suppliers] … "You paste it into each supplier's chat." | same + [Save without floating]; sentence sits under the textarea | FIXED 416637d | low | R05 |
+| B-128 | Floated panel | "Floated to 3 suppliers on Fri 27 Nov", "RFQ-0185 is out for prices", clipboard line, reply-by + bid-due rows, info "Item 4 has no supplier yet. … Float item 4 to them" (link), [Open RFQ-0185][Start another RFQ] | same panel and copy; no "Float item 4 to them" link; adds copy-failed fallback and "No bid due date…" | FIXED 416637d | medium | link to float the item (R05) |
 | B-129 | Float toast | "Floated to 3. Copied, and RFQ-0185 marked floated." Undo | same, 10 s, settled/undone texts | MATCH | - | - |
 | B-130 | After undo | not drawn | "Float undone" banner and back to enquiry | EXTRA | low | Dec R05 |
 | B-131 | Mobile 375 | no intake 375 frame in mockup | single column, sticky bar, side panels hidden | MISSING | low | no mockup |

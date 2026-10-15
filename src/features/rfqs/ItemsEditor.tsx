@@ -243,9 +243,9 @@ export function ItemRows({
                     placeholder="What the customer asked for"
                     autoComplete="off"
                     title={it.description}
-                    className={cn(cell, 'order-last col-span-3 truncate md:order-none md:col-span-1')}
+                    className={cn(cell, 'order-2 col-span-3 truncate md:order-none md:col-span-1')}
                   />
-                  <div className="col-span-3 flex flex-wrap items-center gap-3 md:contents">
+                  <div className="order-3 col-span-3 flex flex-wrap items-center gap-3 md:order-none md:contents">
                     <PickCell
                       chip
                       label={`Brand of item ${n}`}
@@ -268,7 +268,7 @@ export function ItemRows({
                     icon={X}
                     aria-label={`Remove item ${n}`}
                     onClick={() => onRemove(it.key)}
-                    className="justify-self-end md:opacity-0 md:transition-opacity md:focus-visible:opacity-100 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+                    className="order-1 justify-self-end md:order-none md:opacity-0 md:transition-opacity md:focus-visible:opacity-100 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
                   />
                 </li>
               )
