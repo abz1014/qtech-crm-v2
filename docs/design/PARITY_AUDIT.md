@@ -294,7 +294,7 @@ Evidence: mockups g2-today-b2 / g2-intake-float / g2-chase-texts (HTML read in f
 | B-08 | Other row icons | banknote, file-check, truck, send, message-circle-question, share-2, shopping-cart | same | MATCH | - | - |
 | B-09 | Row on mobile | trailing chevron on each row | none | MISSING | low | add chevron at 375 (R11) |
 | B-10 | "Copied" row state | frame 2: row unchanged, nothing moved yet | due chip replaced by green "Copied" pill until undo closes | EXTRA | low | Dec R11. O-2 |
-| B-11 | Top-bar counts | "Today 9, RFQs 14, Orders 7, Money 3" | AppShell `counts` prop never passed | MISSING | medium | Dec R11 "not wired". Wire counts (shell/R11) |
+| B-11 | Top-bar counts | "Today 9, RFQs 14, Orders 7, Money 3" | AppShell `counts` prop never passed | FIXED 1e18a24 | medium | Dec R11 "not wired". Wire counts (shell/R11) |
 | B-12 | Collision line | not drawn in b2 (INVENTORY, BUILD_PLAN R11/D02 name it) | not built | MISSING | low | O-3 |
 
 ### 1b. Waiting group
@@ -445,19 +445,19 @@ No dedicated mockup exists (BUILD_PLAN line 464: RFQ board is "composed from DES
 |---|---|---|---|---|---|---|
 | B-150 | Dedicated mockup | none | composed from DataTable | n/a | - | O-11 |
 | B-151 | Page head | not drawn | "RFQs", "7 open, 2 overdue. Earliest due date first, priority RFQs ahead of the rest.", [+ New RFQ] | EXTRA | low | - |
-| B-152 | Open / Closed switch | "Open 6 | Closed 1" segmented | Tabs "Open 7", "Closed and won 27" | DIFFERENT | low | - |
-| B-153 | Filter box | "Filter RFQs" (search icon, `/` focuses, Esc clears) | none | MISSING | medium | R06 |
-| B-154 | Density toggle | Comfortable / Compact | none | MISSING | low | R06/U04 |
+| B-152 | Open / Closed switch | "Open 6 | Closed 1" segmented | Tabs "Open 7", "Closed and won 27" | FIXED 1e18a24 | low | - |
+| B-153 | Filter box | "Filter RFQs" (search icon, `/` focuses, Esc clears) | none | FIXED 1e18a24 | medium | R06 |
+| B-154 | Density toggle | Comfortable / Compact | none | FIXED 1e18a24 | low | R06/U04 |
 | B-155 | Columns | RFQ number, Customer, Items count, Bid due (with time), Sourcing, Status, Value (PKR net) | Company (+ "RFQ-0001 · their ref X"), Due (date + "3 days overdue"), Sourcing (+ "N uncovered"), Questions, Bid, Owner | DIFFERENT | medium | no Items or Value column; O-11 |
 | B-156 | Sourcing chips | Covered / Partly covered / Awaiting offers / Not floated / No offer anywhere | registry chips with "1 of 2" detail | MATCH | - | - |
 | B-157 | Owner + state filters | not drawn | Mine/All and 5 sourcing segments with counts, kept in the URL | EXTRA | low | Dec R06 |
 | B-158 | Sort + footer | sortable headers; "Showing 7 of 7 RFQs" + move/open hints | Company/Due/Owner sortable; "Showing 7 of 7 open RFQs" + hints | MATCH | - | - |
 | B-159 | Priority flag | not drawn | flag icon by company | EXTRA | low | - |
-| B-160 | Goal empty | "Every bid is in. Nothing is open and nothing is due in the next 5 days. New RFQs appear here as soon as you start one." [New RFQ][Capture a message] | "No open RFQs. Nice." + [New RFQ] | DIFFERENT | low | R06 |
-| B-161 | No-match empty | 'No RFQs match “Belimo”… [Clear filter]' | "No RFQs in this view… [Show all open RFQs]" | DIFFERENT | low | with B-153 |
-| B-162 | Loading / error | skeleton; "Couldn't load RFQs", "Your changes are safe…", Try again, "Request failed · date · reference 4f1c9a" | skeleton; "Couldn't load the RFQs", "Nothing was changed…", retry; no reference line | DIFFERENT | low | R06 |
+| B-160 | Goal empty | "Every bid is in. Nothing is open and nothing is due in the next 5 days. New RFQs appear here as soon as you start one." [New RFQ][Capture a message] | "No open RFQs. Nice." + [New RFQ] | FIXED 1e18a24 | low | R06 |
+| B-161 | No-match empty | 'No RFQs match “Belimo”… [Clear filter]' | "No RFQs in this view… [Show all open RFQs]" | FIXED 1e18a24 | low | with B-153 |
+| B-162 | Loading / error | skeleton; "Couldn't load RFQs", "Your changes are safe…", Try again, "Request failed · date · reference 4f1c9a" | skeleton; "Couldn't load the RFQs", "Nothing was changed…", retry; no reference line | FIXED 1e18a24 | low | R06 |
 | B-163 | Mobile 375 | touch rows 48px | cards (company, ref, due, chips, owner) | MATCH | - | no frame |
-| B-164 | Nav count "RFQs 14" | top bar | not wired | MISSING | medium | = B-11 |
+| B-164 | Nav count "RFQs 14" | top bar | not wired | FIXED 1e18a24 | medium | = B-11 |
 
 ## OWNER DECISION needed
 - O-1 (B-06, B-79): mockup shows clock times ("Bid due today, 17:00", "12:00", "5:00 pm today"); data has a due date only (Dec R11). Add a due time or accept dates only?
