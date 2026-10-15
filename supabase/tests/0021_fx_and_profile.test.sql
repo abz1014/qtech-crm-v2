@@ -18,7 +18,7 @@ $f$;
 
 -- ------------------------------------------------------------------ structure
 select columns_are('public', 'fx_rates',
-  array['id', 'created_at', 'created_by', 'currency', 'rate_pkr', 'as_of', 'source'],
+  array['id', 'created_at', 'created_by', 'currency', 'rate_pkr', 'as_of', 'source', 'provider'],
   'fx_rates has the section 2.24 columns');
 select ok((select relrowsecurity from pg_class where oid = 'public.fx_rates'::regclass), 'RLS is enabled on fx_rates');
 select is((select array_agg(policyname::text order by policyname) from pg_policies
