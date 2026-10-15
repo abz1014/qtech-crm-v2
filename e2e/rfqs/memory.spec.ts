@@ -279,6 +279,38 @@ test.describe('R17 memory in intake', () => {
   })
 })
 
+test.describe('R17 a brand whose name has digits (migration 0035)', () => {
+  test('its name is not a model code: other models of the brand are "same brand", never "same model", and do not pre-tick; a real shared model still does', async ({ page }) => {
+    const brand = await post<{ id: string; name: string }>('brands', { name: `Xyz${rnd(4)}${letters()}`, kind: 'brand' }) // "XYZ2041ABCD" is model-shaped
+    const code = `QX${rnd(4)}`
+    const customer = await createCompany(uniqueName('Mem Customer'))
+    const sOther = await createCompany(uniqueName('Other Model Mem'))
+    const sReal = await createCompany(uniqueName('Real Model Mem'))
+    await must(rest('admin', 'company_brands', { method: 'POST', body: [{ company_id: sOther.id, brand_id: brand.id }, { company_id: sReal.id, brand_id: brand.id }] }))
+    const buyer = await createCompany(uniqueName('Earlier Buyer'))
+    const order = await post('orders', { company_id: buyer.id })
+    const supplied = async (supplierId: string, description: string) => {
+      const leg = await post('supplier_orders', { order_id: order.id, supplier_id: supplierId, currency: 'PKR' })
+      await post('order_items', { order_id: order.id, description, brand_id: brand.id, unit_price_net: 100, supplier_order_id: leg.id, supplier_unit_price: 60 })
+    }
+    await supplied(sOther.id, `${brand.name} ultrasonic open channel level transmitter`) // another model of the brand
+    await supplied(sReal.id, `${brand.name} ${code} flow meter`) // the very model asked for below
+    await reachSuppliers(page, { customer } as Seed, `Please quote:
+1) ${brand.name} conductivity electrode cable assembly - 1 no
+2) ${brand.name} ${code} pump kit - 1 no
+Regards`)
+
+    await expect(page.getByRole('checkbox', { name: sReal.name })).toBeChecked()
+    await expect(page.getByRole('checkbox', { name: sOther.name })).not.toBeChecked()
+    await memoryButton(page, sOther.name).click()
+    const other = page.getByLabel(`What we know about ${sOther.name}`)
+    await expect(other.getByText('same brand', { exact: true })).toBeVisible()
+    await expect(other.getByText('same model')).toHaveCount(0)
+    await memoryButton(page, sReal.name).click()
+    await expect(page.getByLabel(`What we know about ${sReal.name}`).getByText('same model', { exact: true })).toBeVisible()
+  })
+})
+
 test.describe('R17 last price chip on RFQ reply rows', () => {
   test('(n) shows the supplier\'s last price for the same item at the time; an imported line with no rate shows the original currency only', async ({ page }) => {
     const s = await seedMemory()

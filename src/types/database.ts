@@ -1784,6 +1784,9 @@ isOneToOne: false
               "advance_held": number,"age_days": number,"applied": number,"bucket": string,"company_id": string,"gross": number,"invoice_date": string,"invoice_id": string,"invoice_number": string,"kind": string,"order_id": string,"order_number": number,"remaining": number
             }[]
                            },
+"brand_tokens":
+{ Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
 "can_access_bucket":
 { Args: { "bucket": string }; Returns: boolean
                            },
@@ -1902,6 +1905,9 @@ isOneToOne: false
                            },
 "today_pkt":
 { Args: { "ts"?: string }; Returns: string
+                           },
+"tokens_without":
+{ Args: { "p_drop": (string)[],"p_tokens": (string)[] }; Returns: (string)[]
                            }
           }
           Enums: {
