@@ -45,7 +45,7 @@ export function SettingsHomePage() {
         id="fxh"
         title="Exchange rates"
         text="Updated every night. Anyone on the team can enter today’s rate by hand, for example the bank’s rate."
-        to="/settings/rates"
+        to="/settings/exchange-rates"
         cta="Open exchange rates"
       >
         <RatesTable label="Exchange rates summary" />

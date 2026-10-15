@@ -78,7 +78,7 @@ describe('Settings home', () => {
     )
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
     expect(screen.getByText('Company details for documents, and the rates used to compare prices in other currencies.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Open exchange rates/ })).toHaveAttribute('href', '/settings/rates')
+    expect(screen.getByRole('link', { name: /Open exchange rates/ })).toHaveAttribute('href', '/settings/exchange-rates')
     expect(screen.getByRole('link', { name: /^View/ })).toHaveAttribute('href', '/settings/company')
     expect(screen.getByRole('heading', { name: 'Company profile' })).toBeInTheDocument()
   })

@@ -27,7 +27,7 @@ const SETTINGS_LINKS: readonly SettingsLink[] = [
   { to: '/settings/categories', label: 'Expense categories', icon: Receipt, adminOnly: true },
   { to: '/settings/company', label: 'Company profile', icon: Building2, tagForOthers: 'View only' },
   { to: '/settings/details', label: 'Your details', icon: User },
-  { to: '/settings/rates', label: 'Exchange rates', icon: RefreshCw },
+  { to: '/settings/exchange-rates', label: 'Exchange rates', icon: RefreshCw },
   { to: '/settings/password', label: 'Change password', icon: KeyRound },
 ]
 

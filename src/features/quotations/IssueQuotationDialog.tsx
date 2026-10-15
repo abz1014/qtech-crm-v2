@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Download, FileText, Share2, TriangleAlert } from 'lucide-react'
+import { Download, Eye, FileCheck, FileText, Info, RotateCcw, Share2, TriangleAlert } from 'lucide-react'
+import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { formatPaisa } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
-import { rfqRef } from '@/lib/refs'
+import { orderRef, rfqRef } from '@/lib/refs'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
+import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
+import { Checkbox } from '@/ui/form/Checkbox'
 import { DateInput } from '@/ui/form/DateInput'
 import { Field } from '@/ui/form/Field'
 import { NumberInput } from '@/ui/form/NumberInput'
@@ -16,31 +19,38 @@ import { Select } from '@/ui/form/Select'
 import { TextArea, TextField } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader, InquiryRow } from '@/features/rfqs/api'
+import { useFxLatest } from '@/features/rfqs/hooks'
+import { comparePrices, toRateTable } from '@/features/rfqs/lib'
 import { useCompanyProfile } from '@/features/settings/hooks'
-import { SettingsLink } from '@/features/quotations/SettingsLink'
-import { loadPdfData, type QuotationRow, type PriceMemory, type QuoteItem } from '@/features/quotations/api'
+import { loadPdfData, loadSignatory, type PdfData, type QuotationRow, type PriceMemory, type QuoteItem } from '@/features/quotations/api'
 import { useCompanyContacts, useIssueQuotation, usePriceMemory, useQuoteItems, useQuotations, useStorePdf } from '@/features/quotations/hooks'
 import { generateQuotationPdf } from '@/features/quotations/pdf/generate'
 import { addDays, quotationRef } from '@/features/quotations/lib/refs'
 import { profileGaps } from '@/features/quotations/lib/profileGaps'
 import { downloadBlob, sharePdf } from '@/features/quotations/lib/sharePdf'
 import { computeTotals } from '@/features/quotations/lib/totals'
+import { SettingsLink } from '@/features/quotations/SettingsLink'
 
 /*
- * Issue quotation (R19; g2-rfq-detail "Issue quotation" dialog). Opened from the RFQ page for a first issue or a re-issue.
+ * Issue quotation (R19; g2-rfq-detail "Issue quotation" dialog, then the parity pass). Opened from the RFQ page for a first
+ * issue or a re-issue. A re-issue is titled with the NEW revision and carries a "Re-issue" chip.
  *
  * FE-2 entry burden, listed for the commit:
- *   required     a net unit price for every item (nothing else). A price is one tap on a chip (last sold to this customer,
- *                last quoted) or one typed number; a price already on the RFQ from the last issue is kept.
- *   pre-filled   GST 18 % (or the item's last rate; 0 % is the exemption), validity (company default, in days from today),
- *                the contact (the RFQ's, or the previous revision's), delivery and payment terms (the previous revision),
- *                the standard terms (the company profile), the issue date (today), the signatory (the signed-in person).
- *   optional     the lead time we quote per line (the suppliers' lead times are shown as a hint and never filled in),
- *                validity, contact, delivery, payment terms, terms text.
+ *   required     a net unit price for every INCLUDED item (nothing else), and at least one included item. A price is one tap
+ *                on a chip (last sold to this customer, last quoted) or one typed number; a price already on the RFQ from the
+ *                last issue is kept.
+ *   pre-filled   which items are included (those with a price source: a supplier reply, a chip or a price from the last
+ *                issue), GST 18 % (or the item's last rate; 0 % is the exemption), validity (company default, in days from
+ *                today), the contact (the RFQ's, or the previous revision's), delivery and payment terms (the previous
+ *                revision), the standard terms (the company profile), the issue date (today), the signatory (the signed-in
+ *                person).
+ *   optional     the lead time we quote per line (the suppliers' lead times are a hint and are never filled in), validity,
+ *                contact, delivery, payment terms, terms text.
  *   interactions at most one price per item (0 when a chip is tapped), then Issue (tap 1) and Share (tap 2).
  *
- * Issue saves the quotation first. The PDF is a separate step that never blocks saving: with the legal name or address
- * missing from the company profile the quotation is still issued, and a plain banner links to Settings, Company.
+ * Partial quotations (owner decision, 2026-10-15): only ticked items are priced, snapshotted and printed (issue_quotation's
+ * p_item_ids). Issue saves the quotation first. The PDF is a separate step that never blocks saving: with the legal name or
+ * address missing from the company profile the quotation is still issued, and a plain banner links to Settings, Company.
  */
 
 type Stage =
@@ -58,20 +68,22 @@ function LeadHint({ item, inquiries }: { item: QuoteItem; inquiries: InquiryRow[
   const said = inquiries.flatMap(i => i.lines.filter(l => l.itemId === item.id && l.leadTime?.trim()).map(l => ({ who: i.supplierName, text: l.leadTime as string })))
   if (said.length === 0) return null
   return (
-    <p className="text-xs text-fg-muted" data-testid="lead-hint">
-      Suppliers say {said.map(s => `${s.text} (${s.who})`).join(', ')}
+    <p className="flex items-start gap-1 text-xs text-fg-muted" data-testid="lead-hint">
+      <Icon icon={Info} size="chip" className="mt-[1px] shrink-0" />
+      <span>Suppliers say {said.map(s => `${s.text} (${s.who})`).join(', ')}</span>
     </p>
   )
 }
 
-function Chip({ label, value, selected, onPick, testId }: { label: string; value: string; selected: boolean; onPick: () => void; testId: string }) {
+function Chip({ label, value, selected, onPick, testId, disabled }: { label: string; value: string; selected: boolean; onPick: () => void; testId: string; disabled: boolean }) {
   return (
     <button
       type="button"
       data-testid={testId}
       aria-pressed={selected}
+      disabled={disabled}
       onClick={onPick}
-      className={`inline-flex min-h-[28px] max-w-full flex-wrap items-baseline gap-x-1 rounded border px-2 py-1 text-left text-xs transition-colors duration-fast max-md:min-h-touch max-md:items-center ${
+      className={`inline-flex min-h-[28px] max-w-full flex-wrap items-baseline gap-x-1 rounded border px-2 py-1 text-left text-xs transition-colors duration-fast max-md:min-h-touch max-md:items-center disabled:cursor-not-allowed ${
         selected ? 'border-primary bg-selected text-fg' : 'border-line-input bg-surface text-fg-2 hover:border-fg-muted hover:bg-sunken'
       }`}
     >
@@ -81,15 +93,20 @@ function Chip({ label, value, selected, onPick, testId }: { label: string; value
   )
 }
 
+const GRID = 'md:grid-cols-[28px_minmax(0,1.7fr)_44px_120px_88px_minmax(0,1.3fr)_112px]'
+
 export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHeader; inquiries: InquiryRow[]; onClose: () => void }) {
   const { toast } = useToast()
+  const session = useSession()
   const items = useQuoteItems(rfq.id, true)
   const memory = usePriceMemory(rfq.id, true)
   const quotations = useQuotations(rfq.id)
   const contacts = useCompanyContacts(rfq.company.id, true)
   const profileQ = useCompanyProfile()
+  const fx = useFxLatest()
   const issue = useIssueQuotation(rfq.id)
   const storePdf = useStorePdf(rfq.id)
+  const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
 
   const previous = quotations.data?.[0] ?? null
   const firstIssuedOn = quotations.data && quotations.data.length > 0 ? quotations.data[quotations.data.length - 1].issuedOn : null
@@ -98,8 +115,9 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const gaps = profileGaps(profile)
 
   const [stage, setStage] = useState<Stage>({ kind: 'edit' })
+  const [included, setIncluded] = useState<Record<string, boolean>>({})
   const [prices, setPrices] = useState<Record<string, number | null>>({})
-  const [rates, setRates] = useState<Record<string, string>>({})
+  const [rateOf, setRateOf] = useState<Record<string, string>>({})
   const [leads, setLeads] = useState<Record<string, string>>({})
   const [validUntil, setValidUntil] = useState('')
   const [contactId, setContactId] = useState('')
@@ -107,18 +125,42 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const [payment, setPayment] = useState('')
   const [terms, setTerms] = useState('')
   const [sharing, setSharing] = useState(false)
+  const [previewing, setPreviewing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [validEdited, setValidEdited] = useState(false)
   const seeded = useRef(false)
   const claimId = useRef(crypto.randomUUID())
 
+  const byItem = useMemo(() => new Map((memory.data ?? []).map(m => [m.itemId, m] as const)), [memory.data])
+
+  /** The lowest supplier reply for an item, in PKR at today's rate (the mockup's "Best reply"), per unit. Null when none can be converted. */
+  const bestReply = (itemId: string): bigint | null => {
+    const lines = inquiries.flatMap(i => i.lines.filter(l => l.itemId === itemId).map(l => ({ id: l.id, amount: l.unitPrice, currency: l.currency })))
+    if (lines.length === 0) return null
+    const cmp = comparePrices(lines, rates)
+    const pkr = cmp.lines.map(l => l.pkrPaisa).filter((p): p is bigint => p !== null)
+    return pkr.length ? pkr.reduce((a, b) => (b < a ? b : a)) : null
+  }
+  const hasSupplierPrice = (itemId: string) => inquiries.some(i => i.lines.some(l => l.itemId === itemId))
+
   // Seed once, when everything the defaults come from has arrived. Nothing here overwrites what is later typed.
   useEffect(() => {
-    if (seeded.current || !items.data || !quotations.data || !profile || !contacts.data) return
+    if (seeded.current || !items.data || !quotations.data || !profile || !contacts.data || !memory.data) return
     seeded.current = true
     const p = quotations.data[0] ?? null
+    const mem = new Map(memory.data.map(m => [m.itemId, m] as const))
     setPrices(Object.fromEntries(items.data.map(i => [i.id, i.quotedUnitPriceNet])))
-    setRates(Object.fromEntries(items.data.map(i => [i.id, Number(i.gstRate) === 0 ? '0' : '18'])))
+    // An item is quotable when something prices it: a supplier reply, a chip, or the price from the last issue. The rest start unticked.
+    setIncluded(
+      Object.fromEntries(
+        items.data.map(i => {
+          const m = mem.get(i.id)
+          const quotable = i.quotedUnitPriceNet !== null || hasSupplierPrice(i.id) || Boolean(m?.soldPrice !== null && m?.soldPrice !== undefined) || Boolean(m?.quotedPrice !== null && m?.quotedPrice !== undefined)
+          return [i.id, quotable]
+        }),
+      ),
+    )
+    setRateOf(Object.fromEntries(items.data.map(i => [i.id, Number(i.gstRate) === 0 ? '0' : '18'])))
     setLeads(Object.fromEntries(items.data.map(i => [i.id, i.quotedLeadTime ?? ''])))
     setValidUntil(addDays(businessToday(), profile.quotation_validity_days))
     setDelivery(p?.deliveryText ?? '')
@@ -127,19 +169,37 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
     const known = new Set(contacts.data.map(c => c.id))
     const wanted = p?.contactId ?? rfq.contactId
     setContactId(wanted && known.has(wanted) ? wanted : '')
-  }, [items.data, quotations.data, profile, contacts.data, rfq.contactId])
+    // hasSupplierPrice reads inquiries, which are fixed for the life of the dialog
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.data, quotations.data, profile, contacts.data, memory.data, rfq.contactId])
 
-  const byItem = useMemo(() => new Map((memory.data ?? []).map(m => [m.itemId, m] as const)), [memory.data])
+  /** A chip is the price in one tap, and it ticks the item. */
+  const pick = (id: string, value: number) => {
+    setPrices(p => ({ ...p, [id]: value }))
+    setIncluded(s => ({ ...s, [id]: true }))
+  }
+
   const firstYear = firstIssuedOn ?? businessToday()
   const refOf = (m: PriceMemory) => (m.quotedNumber !== null && m.quotedOn ? quotationRef(m.quotedNumber, m.quotedOn) : null)
 
   const list = items.data ?? []
-  const totals = computeTotals(list.map(i => ({ qty: i.qty, unitPrice: prices[i.id] ?? null, gstRate: rates[i.id] ?? '18' })))
-  const missing = list.filter(i => prices[i.id] === null || prices[i.id] === undefined)
-  const ready = seeded.current && list.length > 0 && missing.length === 0 && validUntil !== ''
-  const loading = items.isPending || quotations.isPending || profileQ.isPending || contacts.isPending
+  const isIn = (id: string) => included[id] === true
+  const totals = computeTotals(list.map(i => ({ qty: i.qty, unitPrice: isIn(i.id) ? (prices[i.id] ?? null) : null, gstRate: rateOf[i.id] ?? '18' })))
+  const chosen = list.filter(i => isIn(i.id))
+  const missing = chosen.filter(i => prices[i.id] === null || prices[i.id] === undefined)
+  const ready = seeded.current && chosen.length > 0 && missing.length === 0 && validUntil !== ''
+  const loading = items.isPending || quotations.isPending || profileQ.isPending || contacts.isPending || memory.isPending
   const loadFailed = items.isError || quotations.isError || profileQ.isError || contacts.isError
   const busy = issue.isPending || storePdf.isPending
+
+  // GST lines of the totals: one per rate, "GST 18% on 3 lines".
+  const gstRows = [...totals.gstByRate.keys()]
+    .sort((a, b) => Number(b) - Number(a))
+    .map(r => ({
+      rate: r,
+      count: chosen.filter(i => (rateOf[i.id] ?? '18') === r && prices[i.id] !== null && prices[i.id] !== undefined).length,
+      gst: totals.gstByRate.get(r) ?? 0n,
+    }))
 
   const makePdf = async (q: QuotationRow): Promise<{ pdf: Blob | null; pdfError: string | null }> => {
     if (!profile || profileGaps(profile).length > 0) return { pdf: null, pdfError: null }
@@ -159,10 +219,10 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
       const q = await issue.mutateAsync({
         id: claimId.current,
         rfqId: rfq.id,
-        items: list.map(i => ({
+        items: chosen.map(i => ({
           id: i.id,
           unitPrice: prices[i.id] as number,
-          gstRate: Number(rates[i.id] ?? 18),
+          gstRate: Number(rateOf[i.id] ?? 18),
           leadTime: leads[i.id]?.trim() ? leads[i.id].trim() : null,
         })),
         validUntil,
@@ -175,6 +235,66 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
       setStage({ kind: 'done', quotation: q, pdf: made.pdf, pdfError: made.pdfError })
     } catch (err) {
       setError(mapPgError(err, { entity: 'quotation' }).message)
+    }
+  }
+
+  /** Preview PDF: the document as it would be issued now, built from the form, nothing saved. Opens in a tab opened inside the tap. */
+  const preview = async () => {
+    if (!profile || gaps.length > 0) return
+    const tab = window.open('', '_blank')
+    setPreviewing(true)
+    try {
+      const picked = chosen.filter(i => prices[i.id] !== null && prices[i.id] !== undefined)
+      const contact = (contacts.data ?? []).find(c => c.id === contactId)
+      const sig = session.status === 'signed-in' ? await loadSignatory(session.user.id) : null
+      const today = businessToday()
+      const data: PdfData = {
+        preview: true,
+        quotation: {
+          id: 'preview',
+          number: previous?.number ?? 0,
+          revision: nextRevision,
+          issuedOn: today,
+          validUntil,
+          contactId: contactId || null,
+          lines: picked.map(i => ({
+            rfq_item_id: i.id,
+            description: i.description,
+            qty: i.qty,
+            unit: i.unit,
+            unit_price_net: prices[i.id] as number,
+            gst_rate: Number(rateOf[i.id] ?? 18),
+            lead_time: leads[i.id]?.trim() ? leads[i.id].trim() : null,
+          })),
+          netTotal: 0,
+          gstTotal: 0,
+          deliveryText: delivery.trim() || null,
+          paymentTerms: payment.trim() || null,
+          notes: terms.trim() || null,
+          signatoryId: session.status === 'signed-in' ? session.user.id : '',
+          pdfPath: null,
+        },
+        previous: previous ? { revision: previous.revision, issuedOn: previous.issuedOn } : null,
+        firstIssuedOn: firstIssuedOn ?? today,
+        customer: { name: rfq.company.name, country: rfq.company.country },
+        siteName: rfq.site?.name ?? null,
+        siteAddress: rfq.site?.address ?? null,
+        attention: contact?.name ?? null,
+        attentionTitle: contact?.jobTitle ?? null,
+        customerRef: rfq.customerRef,
+        rfqNumber: rfq.number,
+        signatory: sig,
+      }
+      const blob = await generateQuotationPdf(data, profile)
+      const url = URL.createObjectURL(blob)
+      if (tab) tab.location.href = url
+      else downloadBlob(blob, 'quotation-preview.pdf')
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (err) {
+      tab?.close()
+      toast({ title: 'Could not make the preview', body: mapPgError(err, { entity: 'PDF' }).message, tone: 'danger' })
+    } finally {
+      setPreviewing(false)
     }
   }
 
@@ -195,7 +315,8 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
     }
   }
 
-  const title = `Issue quotation ${previous ? `${quotationRef(previous.number, firstYear)} R${nextRevision}` : ''}`.trim()
+  // The new revision is what the title names: "Issue quotation QT-26-0042 R2".
+  const title = previous ? `Issue quotation ${quotationRef(previous.number, firstYear, nextRevision)}` : 'Issue quotation'
 
   if (stage.kind === 'done') {
     const { quotation: q, pdf, pdfError } = stage
@@ -227,10 +348,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
           }
         >
           {gaps.length > 0 ? (
-            <Banner
-              tone="warning"
-              title="The PDF was not made"
-            >
+            <Banner tone="warning" title="The PDF was not made">
               Add the {gaps.join(' and ')} in Settings, Company. The quotation itself is saved; make its PDF from the list once that is done. <SettingsLink />
             </Banner>
           ) : null}
@@ -253,22 +371,39 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
     )
   }
 
+  const addressedOptions = (contacts.data ?? []).map(c => ({ value: c.id, label: [c.name, c.jobTitle].filter(Boolean).join(', ') }))
+
   return (
     <Dialog open onOpenChange={o => (o ? null : onClose())} busy={busy}>
       <DialogContent
         title={title}
-        context={`${rfqRef(rfq.number)} · ${rfq.company.name}${rfq.customerRef ? ` · customer ref ${rfq.customerRef}` : ''}`}
+        titleChip={
+          previous ? (
+            <span className="inline-flex h-5 items-center gap-1 rounded border border-line-strong bg-surface px-[6px] text-xs font-medium text-fg-2">
+              <Icon icon={RotateCcw} size="chip" />
+              Re-issue
+            </span>
+          ) : null
+        }
+        context={
+          previous
+            ? `R${previous.revision} stays exactly as it was sent. This creates R${nextRevision} under the same number.${rfq.customerRef ? ` Customer ref ${rfq.customerRef}.` : ''}`
+            : `${rfqRef(rfq.number)} · ${rfq.company.name}${rfq.customerRef ? ` · customer ref ${rfq.customerRef}` : ''}`
+        }
         icon={FileText}
         size="lg"
-        className="md:w-[860px]"
-        lead={previous ? `R${previous.revision} stays exactly as it was sent. This creates R${nextRevision} under the same number.` : 'Issuing marks the bid as sent today.'}
+        className="md:w-[900px]"
+        lead="Issuing sets the bid as sent today."
         footer={
           <>
             <Button data-cancel onClick={onClose} disabled={busy}>
               Cancel
             </Button>
-            <Button variant="primary" icon={FileText} disabled={!ready} busy={busy} busyLabel={storePdf.isPending ? 'Making the PDF' : 'Issuing'} onClick={() => void submit()}>
-              {previous ? `Issue R${nextRevision}` : 'Issue quotation'}
+            <Button icon={Eye} onClick={() => void preview()} busy={previewing} busyLabel="Making the preview" disabled={busy || gaps.length > 0 || chosen.length === 0 || missing.length > 0}>
+              Preview PDF
+            </Button>
+            <Button variant="primary" icon={FileCheck} disabled={!ready} busy={busy} busyLabel={storePdf.isPending ? 'Making the PDF' : 'Issuing'} onClick={() => void submit()}>
+              {previous ? `Issue quotation R${nextRevision}` : 'Issue quotation'}
             </Button>
           </>
         }
@@ -285,10 +420,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         ) : (
           <>
             {gaps.length > 0 ? (
-              <Banner
-                tone="warning"
-                title={`The PDF needs the company's ${gaps.join(' and ')}`}
-              >
+              <Banner tone="warning" title={`The PDF needs the company's ${gaps.join(' and ')}`}>
                 You can still issue the quotation. Its PDF is made once the profile is complete. <SettingsLink />
               </Banner>
             ) : null}
@@ -298,16 +430,11 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
               </Banner>
             ) : null}
 
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
               <Field label="Addressed to" requirement="optional" source={previous?.contactId === contactId && contactId ? `from ${quotationRef(previous.number, firstYear, previous.revision)}` : undefined}>
-                <Select value={contactId} onChange={e => setContactId(e.target.value)} placeholder="No contact" options={(contacts.data ?? []).map(c => ({ value: c.id, label: c.name }))} />
+                <Select value={contactId} onChange={e => setContactId(e.target.value)} placeholder="No contact" options={addressedOptions} />
               </Field>
-              <Field
-                label="Valid until"
-                requirement="optional"
-                source={validEdited ? undefined : `${profile?.quotation_validity_days ?? 30} days from today, the company default`}
-                edited={validEdited}
-              >
+              <Field label="Valid until" requirement="optional" edited={validEdited}>
                 <DateInput
                   value={validUntil}
                   defaultToday={false}
@@ -317,29 +444,84 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                   }}
                 />
               </Field>
+              <div className="grid min-w-0 content-start gap-[6px]">
+                <p className="text-sm font-medium leading-5 text-fg">Validity</p>
+                <p className="flex h-control items-center text-sm text-fg-muted">
+                  {validEdited ? 'Set by you for this quotation' : `${profile?.quotation_validity_days ?? 30} days from today, the company default`}
+                </p>
+              </div>
             </div>
 
-            <ul className="grid gap-3" aria-label="Items to quote">
-              {list.map((it, idx) => {
-                const m = byItem.get(it.id)
-                const a = totals.lines[idx]
-                const price = prices[it.id] ?? null
-                const sold = m?.soldPrice ?? null
-                const quoted = m?.quotedPrice ?? null
-                const n = idx + 1
-                return (
-                  <li key={it.id} className="grid gap-3 rounded border bg-surface p-3 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.6fr)_minmax(0,1fr)] md:gap-4" data-testid={`quote-line-${n}`}>
-                    <div className="min-w-0">
-                      <p className="break-words font-medium text-fg">{it.description}</p>
-                      <p className="num text-xs text-fg-muted">
+            <div className="rounded border">
+              <div className={`hidden gap-3 border-b bg-sunken px-3 py-2 text-xs font-medium text-fg-muted md:grid ${GRID}`} aria-hidden="true">
+                <span />
+                <span>Item</span>
+                <span className="text-right">Qty</span>
+                <span>Unit price, net PKR</span>
+                <span>GST</span>
+                <span>Lead time we quote</span>
+                <span className="text-right">Line net, PKR</span>
+              </div>
+              <ul aria-label="Items to quote" className="divide-y">
+                {list.map((it, idx) => {
+                  const m = byItem.get(it.id)
+                  const a = totals.lines[idx]
+                  const on = isIn(it.id)
+                  const price = prices[it.id] ?? null
+                  const sold = m?.soldPrice ?? null
+                  const quoted = m?.quotedPrice ?? null
+                  const best = bestReply(it.id)
+                  const n = idx + 1
+                  const nothingToQuote = !on && price === null && !hasSupplierPrice(it.id) && sold === null && quoted === null
+                  return (
+                    <li key={it.id} className={`grid gap-3 px-3 py-3 md:items-start ${GRID} ${on ? '' : 'bg-sunken'}`} data-testid={`quote-line-${n}`}>
+                      <div className="pt-[1px]">
+                        <Checkbox
+                          aria-label={`Include item ${n}`}
+                          checked={on}
+                          onCheckedChange={v => setIncluded(s => ({ ...s, [it.id]: v === true }))}
+                        />
+                      </div>
+                      <div className={`grid min-w-0 content-start gap-1 ${on ? '' : 'text-fg-muted'}`}>
+                        <p className={`break-words font-medium ${on ? 'text-fg' : ''}`}>{it.description}</p>
+                        <p className="num text-xs text-fg-muted md:hidden">
+                          {it.qty}
+                          {it.unit ? ` ${it.unit}` : ''}
+                        </p>
+                        {best !== null ? <p className="text-xs text-fg-muted">Best reply ≈ PKR {formatPaisa(best, 'auto')} each</p> : null}
+                        {nothingToQuote ? <p className="text-xs">No supplier price yet, so there is nothing to quote. Add a reply to include it, or type a price.</p> : null}
+                        {sold !== null || quoted !== null ? (
+                          <div className="mt-1 grid justify-items-start gap-2">
+                            {sold !== null ? (
+                              <Chip
+                                testId={`chip-sold-${n}`}
+                                label="Last sold to this customer"
+                                value={`PKR ${money(sold)}${m?.soldOrderNumber ? ` (${orderRef(m.soldOrderNumber)})` : m?.soldOn ? `, ${formatShortDate(m.soldOn, businessToday())}` : ''}`}
+                                selected={on && price === sold}
+                                disabled={false}
+                                onPick={() => pick(it.id, sold)}
+                              />
+                            ) : null}
+                            {quoted !== null ? (
+                              <Chip
+                                testId={`chip-quoted-${n}`}
+                                label="Last quoted"
+                                value={`PKR ${money(quoted)}${m && refOf(m) ? ` (${refOf(m)})` : ''}`}
+                                selected={on && price === quoted}
+                                disabled={false}
+                                onPick={() => pick(it.id, quoted)}
+                              />
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                      <p className="num hidden text-right text-sm md:block">
                         {it.qty}
-                        {it.unit ? ` ${it.unit}` : ''}
+                        {it.unit ? <span className="block text-xs text-fg-muted">{it.unit}</span> : null}
                       </p>
-                    </div>
-                    <div className="grid min-w-0 content-start gap-2">
-                      <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2">
-                        <div className="grid gap-1">
-                          <span className="text-xs text-fg-muted" aria-hidden="true">
+                      <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2 md:contents">
+                        <div className="grid gap-1 md:block">
+                          <span className="text-xs text-fg-muted md:hidden" aria-hidden="true">
                             Unit price, net PKR
                           </span>
                           <NumberInput
@@ -347,84 +529,80 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                             value={price}
                             decimals={2}
                             min={0}
-                            onChange={v => setPrices(p => ({ ...p, [it.id]: v }))}
+                            onChange={v => {
+                              setPrices(p => ({ ...p, [it.id]: v }))
+                              if (v !== null) setIncluded(s => ({ ...s, [it.id]: true }))
+                            }}
                           />
                         </div>
-                        <div className="grid gap-1">
-                          <span className="text-xs text-fg-muted" aria-hidden="true">
+                        <div className="grid gap-1 md:block">
+                          <span className="text-xs text-fg-muted md:hidden" aria-hidden="true">
                             GST
                           </span>
-                          <Select aria-label={`GST rate, item ${n}`} value={rates[it.id] ?? '18'} onChange={e => setRates(r => ({ ...r, [it.id]: e.target.value }))} options={GST_OPTIONS} />
+                          <Select aria-label={`GST rate, item ${n}`} value={rateOf[it.id] ?? '18'} onChange={e => setRateOf(r => ({ ...r, [it.id]: e.target.value }))} options={GST_OPTIONS} />
                         </div>
                       </div>
-                      {sold !== null || quoted !== null ? (
-                        <div className="flex flex-wrap gap-2">
-                          {sold !== null ? (
-                            <Chip
-                              testId={`chip-sold-${n}`}
-                              label="Last sold to this customer"
-                              value={`PKR ${money(sold)}${m?.soldOn ? `, ${formatShortDate(m.soldOn, businessToday())}` : ''}`}
-                              selected={price === sold}
-                              onPick={() => setPrices(p => ({ ...p, [it.id]: sold }))}
-                            />
-                          ) : null}
-                          {quoted !== null ? (
-                            <Chip
-                              testId={`chip-quoted-${n}`}
-                              label="Last quoted"
-                              value={`PKR ${money(quoted)}${m && refOf(m) ? `, ${refOf(m)}` : ''}`}
-                              selected={price === quoted}
-                              onPick={() => setPrices(p => ({ ...p, [it.id]: quoted }))}
-                            />
-                          ) : null}
+                      <div className="grid min-w-0 content-start gap-2">
+                        <div className="grid gap-1">
+                          <span className="text-xs text-fg-muted md:hidden" aria-hidden="true">
+                            Lead time we quote
+                          </span>
+                          <TextField
+                            aria-label={`Lead time we quote, item ${n}`}
+                            value={leads[it.id] ?? ''}
+                            placeholder="e.g. 8 to 10 weeks from PO"
+                            onChange={e => setLeads(l => ({ ...l, [it.id]: e.target.value }))}
+                          />
                         </div>
-                      ) : null}
-                    </div>
-                    <div className="grid min-w-0 content-start gap-2">
-                      <div className="grid gap-1">
-                        <span className="text-xs text-fg-muted" aria-hidden="true">
-                          Lead time we quote
-                        </span>
-                        <TextField
-                          aria-label={`Lead time we quote, item ${n}`}
-                          value={leads[it.id] ?? ''}
-                          placeholder="e.g. 8 to 10 weeks from PO"
-                          onChange={e => setLeads(l => ({ ...l, [it.id]: e.target.value }))}
-                        />
+                        <LeadHint item={it} inquiries={inquiries} />
                       </div>
-                      <LeadHint item={it} inquiries={inquiries} />
-                      <p className="num text-right text-sm font-medium text-fg" aria-label={`Line net, item ${n}`}>
-                        {a.priced ? `PKR ${formatPaisa(a.net, 'auto')}` : 'No price yet'}
+                      <p className="num text-right text-sm font-medium text-fg md:pt-2" aria-label={`Line net, item ${n}`}>
+                        {on && a.priced ? `PKR ${formatPaisa(a.net, 'auto')}` : on ? 'No price yet' : 'Not included'}
                       </p>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-
-            <dl className="ml-auto grid w-full max-w-[320px] gap-1 rounded bg-sunken px-4 py-3 text-sm" aria-label="Totals">
-              <div className="flex justify-between">
-                <dt className="text-fg-muted">Net</dt>
-                <dd className="num" data-testid="total-net">
-                  PKR {formatPaisa(totals.net, 'always')}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-fg-muted">GST</dt>
-                <dd className="num" data-testid="total-gst">
-                  PKR {formatPaisa(totals.gst, 'always')}
-                </dd>
-              </div>
-              <div className="flex justify-between border-t pt-2 font-medium text-fg">
-                <dt>Gross</dt>
-                <dd className="num" data-testid="total-gross">
-                  PKR {formatPaisa(totals.gross, 'always')}
-                </dd>
-              </div>
-            </dl>
-            {missing.length > 0 ? (
+                    </li>
+                  )
+                })}
+              </ul>
+              <dl className="ml-auto grid w-full max-w-[380px] gap-1 bg-sunken px-4 py-3 text-sm md:max-w-none md:justify-items-end" aria-label="Totals">
+                <div className="flex w-full justify-between md:w-[340px]">
+                  <dt className="text-fg-muted">Net</dt>
+                  <dd className="num" data-testid="total-net">
+                    PKR {formatPaisa(totals.net, 'auto')}
+                  </dd>
+                </div>
+                {gstRows.map(g => (
+                  <div key={g.rate} className="flex w-full justify-between md:w-[340px]">
+                    <dt className="text-fg-muted">
+                      {Number(g.rate) === 0 ? 'GST exempt' : `GST ${g.rate}%`} on {g.count} {g.count === 1 ? 'line' : 'lines'}
+                    </dt>
+                    <dd className="num" data-testid={Number(g.rate) === 0 ? 'total-gst-exempt' : 'total-gst'}>
+                      PKR {formatPaisa(g.gst, 'auto')}
+                    </dd>
+                  </div>
+                ))}
+                {gstRows.length === 0 ? (
+                  <div className="flex w-full justify-between md:w-[340px]">
+                    <dt className="text-fg-muted">GST</dt>
+                    <dd className="num" data-testid="total-gst">
+                      PKR 0
+                    </dd>
+                  </div>
+                ) : null}
+                <div className="flex w-full justify-between border-t pt-2 font-medium text-fg md:w-[340px]">
+                  <dt>Gross</dt>
+                  <dd className="num" data-testid="total-gross">
+                    PKR {formatPaisa(totals.gross, 'auto')}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+            {chosen.length === 0 ? (
               <p className="text-xs text-fg-muted" role="status">
-                {missing.length === 1 ? '1 item still needs a price.' : `${missing.length} items still need a price.`}
+                Tick at least one item to quote.
+              </p>
+            ) : missing.length > 0 ? (
+              <p className="text-xs text-fg-muted" role="status">
+                {missing.length === 1 ? '1 ticked item still needs a price.' : `${missing.length} ticked items still need a price.`}
               </p>
             ) : null}
 

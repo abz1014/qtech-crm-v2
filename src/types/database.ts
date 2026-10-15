@@ -1833,7 +1833,7 @@ isOneToOne: false
                            },
 "customer_price_memory":
 { Args: { "p_rfq_id": string }; Returns: {
-              "quoted_number": number,"quoted_on": string,"quoted_price": number,"quoted_revision": number,"quoted_tier": number,"rfq_item_id": string,"sold_on": string,"sold_price": number,"sold_tier": number
+              "quoted_number": number,"quoted_on": string,"quoted_price": number,"quoted_revision": number,"quoted_tier": number,"rfq_item_id": string,"sold_on": string,"sold_order_number": number,"sold_price": number,"sold_tier": number
             }[]
                            },
 "fetch_fx_rates":
