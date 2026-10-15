@@ -111,7 +111,8 @@ export async function searchCompanies(text: string, limit = 8): Promise<CompanyH
     : [null, null]
   const roleBy = new Map(unwrap(roles ?? { data: [], error: null }).map(r => [r.company_id, asRole(r.role)]))
   const rfqCount = new Map<string, number>()
-  for (const r of unwrap(rfqs ?? { data: [], error: null })) rfqCount.set(r.company_id, (rfqCount.get(r.company_id) ?? 0) + 1)
+  const rfqRows = unwrap(rfqs ?? { data: [], error: null })
+  for (const r of Array.isArray(rfqRows) ? rfqRows : []) rfqCount.set(r.company_id, (rfqCount.get(r.company_id) ?? 0) + 1)
   return all.map(r => ({ id: r.id, name: r.name, country: r.country, role: roleBy.get(r.id) ?? null, rfqCount: rfqCount.get(r.id) ?? 0, similar: r.similar }))
 }
 
