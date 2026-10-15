@@ -47,7 +47,7 @@ select 'company', (array['indus', 'text', 'works 4', 'kohi', 'sugar mills', 'ste
 union all
 select 'contact', (array['naveed', 'khan 1', 'contact12', '@company7', '300', '3007', 'ayesha m'])[1 + g % 7] from generate_series(0, 69) g
 union all
-select 'rfq', (array['RFQ-0042', '42', 'ENQ-20', 'enq-2999', '777', 'rfq 1000', 'ENQ'])[1 + g % 7] from generate_series(0, 69) g;
+select 'rfq', (array['RFQ-' || lpad(n0::text, 4, '0'), n0::text, 'ENQ-20', 'enq-2999', '777', 'rfq ' || (n0 + 10), 'ENQ'])[1 + g % 7] from generate_series(0, 69) g, (select min(number) n0 from public.rfqs where id::text like 'c9200000%') f;
 grant select on perf_terms to authenticated;
 
 set local role authenticated;
@@ -80,7 +80,7 @@ select ok((select percentile_cont(0.95) within group (order by ms) < 300 from pe
 select ok((select bool_and(p95 < 300) from (select percentile_cont(0.95) within group (order by ms) p95 from perf_runs where kind <> 'all' group by kind) x),
   (select 'per kind of search, p95 ms: ' || string_agg(kind || ' ' || round(p95::numeric, 1), ', ' order by kind)
    from (select kind, percentile_cont(0.95) within group (order by ms) p95 from perf_runs where kind <> 'all' group by kind) x));
-select ok((select count(*) from public.search_all('indus', 8)) > 0 and (select count(*) from public.search_all('RFQ-0042', 8) where kind = 'rfq') > 0,
+select ok((select count(*) from public.search_all('indus', 8)) > 0 and (select count(*) from public.search_all('RFQ-' || lpad((select min(number)::text from public.rfqs where id::text like 'c9200000%'), 4, '0'), 8) where kind = 'rfq') > 0,
   'the fixture queries return rows (the timing is of real work)');
 
 select * from finish();
