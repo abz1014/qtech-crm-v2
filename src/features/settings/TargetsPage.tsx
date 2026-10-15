@@ -122,11 +122,11 @@ export function TargetsPage() {
 
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
         <div className="flex items-center gap-1" role="group" aria-label="Year">
-          <Button variant="secondary" icon={ChevronLeft} className="max-md:size-touch" aria-label="Previous year" disabled={year <= MIN_YEAR} onClick={() => moveYear(-1)} />
+          <Button variant="secondary" icon={ChevronLeft} className="max-md:h-touch max-md:w-touch" aria-label="Previous year" disabled={year <= MIN_YEAR} onClick={() => moveYear(-1)} />
           <span className="num min-w-[4.5rem] text-center text-lg font-semibold" aria-live="polite" data-testid="targets-year">
             {year}
           </span>
-          <Button variant="secondary" icon={ChevronRight} className="max-md:size-touch" aria-label="Next year" disabled={year >= MAX_YEAR} onClick={() => moveYear(1)} />
+          <Button variant="secondary" icon={ChevronRight} className="max-md:h-touch max-md:w-touch" aria-label="Next year" disabled={year >= MAX_YEAR} onClick={() => moveYear(1)} />
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Copy into" className="w-[120px]">

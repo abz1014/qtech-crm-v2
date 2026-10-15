@@ -234,8 +234,8 @@ function CategoryRow({ c, all, first, last, busy, asking, onAsk, onMove, onPatch
     <li data-category={c.name} className={cn('grid gap-3 border-b px-3 py-3 last:border-b-0', !c.active && 'bg-sunken')}>
       <div className="grid items-start gap-3 md:grid-cols-[64px_minmax(0,1fr)_150px_110px_120px_auto]">
         <div className="flex gap-1">
-          <Button icon={ArrowUp} variant="quiet" className="max-md:size-touch" aria-label={`Move ${c.name} up`} disabled={first || busy} onClick={() => onMove(-1)} />
-          <Button icon={ArrowDown} variant="quiet" className="max-md:size-touch" aria-label={`Move ${c.name} down`} disabled={last || busy} onClick={() => onMove(1)} />
+          <Button icon={ArrowUp} variant="quiet" className="max-md:h-touch max-md:w-touch" aria-label={`Move ${c.name} up`} disabled={first || busy} onClick={() => onMove(-1)} />
+          <Button icon={ArrowDown} variant="quiet" className="max-md:h-touch max-md:w-touch" aria-label={`Move ${c.name} down`} disabled={last || busy} onClick={() => onMove(1)} />
         </div>
         <div className="grid min-w-0 gap-1">
           <TextField
@@ -287,7 +287,7 @@ function CategoryRow({ c, all, first, last, busy, asking, onAsk, onMove, onPatch
             checked={c.active}
             onCheckedChange={v => void onPatch({ active: v === true }, v === true ? 'Category activated' : 'Category deactivated')}
           />
-          <Button icon={Trash2} variant="quiet" className="max-md:size-touch" aria-label={`Delete ${c.name}`} aria-expanded={asking} onClick={() => onAsk(!asking)} />
+          <Button icon={Trash2} variant="quiet" className="max-md:h-touch max-md:w-touch" aria-label={`Delete ${c.name}`} aria-expanded={asking} onClick={() => onAsk(!asking)} />
         </div>
       </div>
       {!c.active ? (
