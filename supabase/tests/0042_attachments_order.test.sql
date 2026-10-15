@@ -1,7 +1,7 @@
 begin;
 select plan(15);
 
--- R22: attachments.order_id (0041). Fixture users come from supabase/seed.sql.
+-- R22: attachments.order_id (0042). Fixture users come from supabase/seed.sql.
 -- admin a0..01, sales a0..02, engineer a0..03
 
 create function public.t_rows(q text) returns int language plpgsql as $f$

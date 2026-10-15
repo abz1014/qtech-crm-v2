@@ -389,7 +389,7 @@ for (const [name, size] of [
   })
 }
 
-test.describe('attach to an order (migration 0041)', () => {
+test.describe('attach to an order (migration 0042)', () => {
   async function seedOrder() {
     const s = await seed()
     const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: s.co.id } })))[0]

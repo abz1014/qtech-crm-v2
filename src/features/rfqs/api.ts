@@ -516,7 +516,7 @@ export async function listClarifications(rfqId: string): Promise<ClarificationRo
   }))
 }
 
-/** Files on an order (R22, migration 0041): same bucket and columns, the parent is order_id. */
+/** Files on an order (R22, migration 0042): same bucket and columns, the parent is order_id. */
 export async function listOrderAttachments(orderId: string): Promise<AttachmentRow[]> {
   const db = requireSupabase()
   const rows = unwrap(
