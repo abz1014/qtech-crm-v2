@@ -28,9 +28,10 @@ describe('lead time (A3/O03: the upper bound)', () => {
 })
 
 describe('leg stamps (one next-step button)', () => {
-  it('goes placed, received, delivered, then nothing', () => {
+  it('goes placed, delivered, then nothing (there is no receiving step)', () => {
     expect(nextStamp(none)).toEqual({ step: 'place', label: 'Mark placed' })
-    expect(nextStamp({ ...none, placedOn: '2026-11-01' })).toEqual({ step: 'receive', label: 'Received today' })
+    expect(nextStamp({ ...none, placedOn: '2026-11-01' })).toEqual({ step: 'deliver', label: 'Delivered today' })
+    // an imported leg that only has a received date still offers delivery, never a receiving step
     expect(nextStamp({ ...none, placedOn: '2026-11-01', receivedOn: '2026-11-05' })).toEqual({ step: 'deliver', label: 'Delivered today' })
     expect(nextStamp({ placedOn: 'a', expectedOn: null, receivedOn: 'b', deliveredOn: 'c' })).toBeNull()
   })
@@ -39,11 +40,11 @@ describe('leg stamps (one next-step button)', () => {
     expect(stampPatch('place', { ...none, expectedOn: '2026-12-01' }, '2026-11-06', ['2 wks'])).toEqual({ placed_on: '2026-11-06' })
     expect(stampPatch('place', none, '2026-11-06', [])).toEqual({ placed_on: '2026-11-06' })
   })
-  it('delivered fills received_on when it is empty, and only then', () => {
+  it('delivering sets received_on to the same day, editing delivered moves received with it, clearing clears both', () => {
     expect(stampPatch('deliver', { ...none, placedOn: 'x' }, '2026-11-20', [])).toEqual({ delivered_on: '2026-11-20', received_on: '2026-11-20' })
-    expect(stampPatch('deliver', { ...none, placedOn: 'x', receivedOn: '2026-11-19' }, '2026-11-20', [])).toEqual({ delivered_on: '2026-11-20' })
-    expect(editPatch('deliveredOn', '2026-11-20', { ...none, placedOn: 'x' }, [])).toEqual({ delivered_on: '2026-11-20', received_on: '2026-11-20' })
-    expect(editPatch('deliveredOn', null, { ...none, receivedOn: 'y' }, [])).toEqual({ delivered_on: null })
+    expect(stampPatch('deliver', { ...none, placedOn: 'x', receivedOn: '2026-11-19' }, '2026-11-20', [])).toEqual({ delivered_on: '2026-11-20', received_on: '2026-11-20' })
+    expect(editPatch('deliveredOn', '2026-11-22', { ...none, placedOn: 'x', receivedOn: '2026-11-20', deliveredOn: '2026-11-20' }, [])).toEqual({ delivered_on: '2026-11-22', received_on: '2026-11-22' })
+    expect(editPatch('deliveredOn', null, { ...none, receivedOn: 'y', deliveredOn: 'y' }, [])).toEqual({ delivered_on: null, received_on: null })
   })
   it('a typed placed date suggests expected too; clearing a date clears only it', () => {
     expect(editPatch('placedOn', '2026-11-02', none, ['1 week'])).toEqual({ placed_on: '2026-11-02', expected_on: '2026-11-09' })

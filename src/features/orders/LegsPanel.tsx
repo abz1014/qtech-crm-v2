@@ -22,8 +22,8 @@ import { TapDate, TapText } from '@/features/orders/TapEdit'
 /*
  * Procurement legs (O03; g2-order-detail.html "Procurement legs"). One supplier in one currency per leg.
  *
- * FE-2 / A3: each leg has ONE next-step button: Mark placed, then Received today, then Delivered today. One tap each, nothing typed.
- * Delivered fills the received date when it is empty. The stamped date reads as text and edits on tap (optional). When the leg is placed,
+ * FE-2 / A3 (owner decision 2026-10-15: no receiving step): each leg has ONE next-step button, Mark placed and then Delivered today. One tap
+ * each, nothing typed. Delivering also sets the stored received date to the same day. The stamped date reads as text and edits on tap (optional). When the leg is placed,
  * the expected date is suggested from the placed date plus the upper bound of the supplier's lead time and written then, so
  * "goods late" on Today works without anyone typing a date; it shows where it came from and can be changed.
  * A placed leg that has not arrived has "Chase goods": the R16 message and stamp.
@@ -174,7 +174,7 @@ function Leg({
   const doStamp = () => {
     if (!stamp) return
     const patch = stampPatch(stamp.step, dates, today, leg.leadTimes)
-    const verb = stamp.step === 'place' ? 'Marked placed' : stamp.step === 'receive' ? 'Marked received' : 'Marked delivered'
+    const verb = stamp.step === 'place' ? 'Marked placed' : 'Marked delivered'
     const extra = patch.expected_on ? `expected ${formatDay(patch.expected_on)}, from lead time ${leadHint ?? ''}`.replace(/, from lead time $/, '') : ''
     void run(patch, verb, [leg.supplierName, extra].filter(Boolean).join(' · '))
   }
@@ -239,10 +239,9 @@ function Leg({
         {lines ? <p className="line-clamp-2 text-sm text-fg-muted">{lines}</p> : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="group" aria-label={`Dates, ${label}`}>
+      <div className="grid grid-cols-3 gap-3" role="group" aria-label={`Dates, ${label}`}>
         {col('Placed', 'placedOn')}
         {col('Expected', 'expectedOn', expectedHint)}
-        {col('Received', 'receivedOn')}
         {col('Delivered', 'deliveredOn')}
       </div>
 
@@ -266,7 +265,7 @@ function Leg({
                 {stamp.label}
               </Button>
             ) : null}
-            {leg.placedOn && !leg.receivedOn && !leg.deliveredOn && leg.expectedOn ? (
+            {leg.placedOn && !leg.deliveredOn && leg.expectedOn ? (
               <Button icon={MessageSquareWarning} onClick={onChase} aria-label={`Chase goods, ${label}`}>
                 Chase goods
               </Button>

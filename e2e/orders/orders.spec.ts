@@ -8,7 +8,7 @@ import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
  *
  * FE-2 targets asserted here (BUILD_PLAN FE-2 and A3):
  *   win an RFQ                       2 taps: Mark won, Create order (nothing typed)
- *   mark a leg placed / received / delivered   1 tap each
+ *   mark a leg placed / delivered   1 tap each (there is no receiving step: owner decision 2026-10-15)
  *   engineer: commissioning done    1 tap, 0 typed
  * and the rule that an engineer is never sent a price, a receivable or a cost.
  */
@@ -281,7 +281,7 @@ test.describe('O01: Mark won creates the order', () => {
 // ------------------------------------------------------------------------------------------------ O03 legs
 
 test.describe('O03: legs, one next-step stamp each', () => {
-  test('Mark placed, Received today, Delivered today: 1 tap each, expected date suggested from the lead time, every stamp has an Undo', async ({ page }) => {
+  test('Mark placed, Delivered today: 1 tap each, no receiving step, expected date suggested from the lead time, every stamp has an Undo', async ({ page }) => {
     const s = await seedOrder()
     const t = tapper()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
@@ -293,7 +293,7 @@ test.describe('O03: legs, one next-step stamp each', () => {
 
     await t.tap(a.getByRole('button', { name: 'Mark placed, leg A' }))
     await expect(page.getByTestId('leg-A-state')).toContainText('On order')
-    let row = await legRow(s.legA)
+    const row = await legRow(s.legA)
     expect(row.placed_on).toBe(karachiDay(0))
     expect(row.expected_on).toBe(karachiDay(14))
     await expect(a).toContainText('from lead time 2 wks')
@@ -303,21 +303,26 @@ test.describe('O03: legs, one next-step stamp each', () => {
     await expect.poll(async () => (await legRow(s.legA)).placed_on).toBeNull()
     expect((await legRow(s.legA)).expected_on).toBeNull()
     await t.tap(a.getByRole('button', { name: 'Mark placed, leg A' }))
-    await expect(a.getByRole('button', { name: 'Received today, leg A' })).toBeVisible()
-    await t.tap(a.getByRole('button', { name: 'Received today, leg A' }))
-    await expect(page.getByTestId('leg-A-state')).toContainText('Received')
-    row = await legRow(s.legA)
-    expect(row.received_on).toBe(karachiDay(0))
+    await expect(a.getByRole('button', { name: 'Delivered today, leg A' })).toBeVisible()
+    // there is no receiving step or date anywhere on the leg
+    await expect(page.getByRole('button', { name: /Received today/ })).toHaveCount(0)
+    await expect(a.getByText('Received', { exact: true })).toHaveCount(0)
     await t.tap(a.getByRole('button', { name: 'Delivered today, leg A' }))
     await expect(page.getByTestId('leg-A-state')).toContainText('Delivered')
     expect((await legRow(s.legA)).delivered_on).toBe(karachiDay(0))
+    // received_on is set by the app to the delivered date
+    expect((await legRow(s.legA)).received_on).toBe(karachiDay(0))
     await expect(a.getByRole('button', { name: /today, leg A|Mark placed, leg A/ })).toHaveCount(0)
-    // 4 taps in all for the three stamps: placed (undone), placed again, received, delivered. Each stamp is exactly 1.
-    expect(t.count).toBe(4)
+    // 3 taps in all: placed (undone), placed again, delivered. Each stamp is exactly 1.
+    expect(t.count).toBe(3)
+    await page.getByRole('button', { name: /Undo/ }).last().click()
+    await expect.poll(async () => (await legRow(s.legA)).delivered_on).toBeNull()
+    // undo clears both
+    expect((await legRow(s.legA)).received_on).toBeNull()
     await shot(page, 'o03-legs-stamped-1440')
   })
 
-  test('a stamped date reads as text and edits on tap; Delivered fills an empty Received date', async ({ page }) => {
+  test('a stamped date reads as text and edits on tap; editing Delivered moves the stored received date with it', async ({ page }) => {
     const s = await seedOrder()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     const b = leg(page, 'B')
@@ -328,8 +333,14 @@ test.describe('O03: legs, one next-step stamp each', () => {
     await page.getByRole('textbox', { name: 'Delivered date, leg B' }).press('Enter')
     await page.getByRole('button', { name: 'Save' }).click()
     await expect.poll(async () => (await legRow(s.legB)).delivered_on).toBe(karachiDay(0))
-    // received was empty, so delivering fills it
     expect((await legRow(s.legB)).received_on).toBe(karachiDay(0))
+    // editing delivered moves received too
+    await b.getByRole('button', { name: /^Delivered date, leg B/ }).click()
+    await page.getByRole('textbox', { name: 'Delivered date, leg B' }).fill(slashDate(karachiDay(-1)))
+    await page.getByRole('textbox', { name: 'Delivered date, leg B' }).press('Enter')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect.poll(async () => (await legRow(s.legB)).delivered_on).toBe(karachiDay(-1))
+    expect((await legRow(s.legB)).received_on).toBe(karachiDay(-1))
     // and a date can be fixed
     await b.getByRole('button', { name: /^Placed date, leg B/ }).click()
     await page.getByRole('textbox', { name: 'Placed date, leg B' }).fill(slashDate(karachiDay(-9)))
@@ -420,14 +431,16 @@ test.describe('O03: commissioning and cancel', () => {
     await expect.poll(async () => (await orderRow(s.order.id)).commissioning_planned_on).toBe(karachiDay(20))
   })
 
-  test('the engineer marks a leg placed, received or delivered in 1 tap each', async ({ page }) => {
+  test('the engineer marks a leg placed or delivered in 1 tap each', async ({ page }) => {
     const s = await seedOrder()
     const t = tapper()
     await openAs(page, 'engineer', `/orders/${s.order.id}`)
     await t.tap(leg(page, 'A').getByRole('button', { name: 'Mark placed, leg A' }))
     await expect.poll(async () => (await legRow(s.legA)).placed_on).toBe(karachiDay(0))
-    await t.tap(leg(page, 'B').getByRole('button', { name: 'Received today, leg B' }))
-    await expect.poll(async () => (await legRow(s.legB)).received_on).toBe(karachiDay(0))
+    await t.tap(leg(page, 'B').getByRole('button', { name: 'Delivered today, leg B' }))
+    await expect.poll(async () => (await legRow(s.legB)).delivered_on).toBe(karachiDay(0))
+    expect((await legRow(s.legB)).received_on).toBe(karachiDay(0))
+    await expect(page.getByRole('button', { name: /Received today/ })).toHaveCount(0)
     expect(t.count).toBe(2)
   })
 

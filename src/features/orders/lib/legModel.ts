@@ -1,6 +1,7 @@
 // Procurement legs (O03): the next-step stamp, what a stamp writes, the leg's state and its supplier total.
-// Pure and framework-free. DATA_MODEL 2.14 and the A3 notes: Mark placed, then Received today, then Delivered today;
-// Delivered fills received_on when it is empty; expected_on is suggested from placed_on plus the lead time.
+// Pure and framework-free. DATA_MODEL 2.14 and the A3 notes, as amended by the owner (2026-10-15): there is no "received" step to tap.
+// A leg is Mark placed, then Delivered today. supplier_orders.received_on stays in the database and is set by the app to the delivered
+// date, whenever delivered is stamped or edited; expected_on is suggested from placed_on plus the lead time.
 
 import { suggestExpected } from '@/features/orders/lib/leadTime'
 
@@ -13,7 +14,7 @@ export interface LegDates {
   deliveredOn: string | null
 }
 
-export type LegStep = 'place' | 'receive' | 'deliver'
+export type LegStep = 'place' | 'deliver'
 
 export interface LegStamp {
   step: LegStep
@@ -24,7 +25,6 @@ export interface LegStamp {
 /** The one next-step button for a leg, or null when it is delivered. */
 export function nextStamp(d: LegDates): LegStamp | null {
   if (!d.placedOn) return { step: 'place', label: 'Mark placed' }
-  if (!d.receivedOn && !d.deliveredOn) return { step: 'receive', label: 'Received today' }
   if (!d.deliveredOn) return { step: 'deliver', label: 'Delivered today' }
   return null
 }
@@ -41,12 +41,11 @@ export function stampPatch(step: LegStep, d: LegDates, today: string, lead: Read
     }
     return patch
   }
-  if (step === 'receive') return { received_on: today }
-  // Delivered fills received_on when it is empty (the goods cannot reach the customer before Q-Tech has them).
-  return d.receivedOn ? { delivered_on: today } : { delivered_on: today, received_on: today }
+  // Delivered also sets received_on to the same day: nobody types a receiving date, and "goods received" is derived from delivery.
+  return { delivered_on: today, received_on: today }
 }
 
-/** A hand edit of one date. Delivered still fills an empty received_on; clearing a date clears only that date. */
+/** A hand edit of one date. Editing delivered moves received_on with it (clearing delivered clears both); the other dates are alone. */
 export function editPatch(field: keyof LegDates, value: string | null, d: LegDates, lead: ReadonlyArray<string | null | undefined>): LegPatch {
   if (field === 'placedOn') {
     const patch: LegPatch = { placed_on: value }
@@ -57,8 +56,8 @@ export function editPatch(field: keyof LegDates, value: string | null, d: LegDat
     return patch
   }
   if (field === 'expectedOn') return { expected_on: value }
-  if (field === 'receivedOn') return { received_on: value }
-  return value && !d.receivedOn ? { delivered_on: value, received_on: value } : { delivered_on: value }
+  // received_on is never edited on its own: it follows delivered_on
+  return { delivered_on: value, received_on: value }
 }
 
 /** The values a patch overwrites, so an Undo restores them exactly. */
