@@ -6,7 +6,7 @@ Changes to `DATA_MODEL.md` need an entry here first.
 - 2026-10-14: Governing goal (owner): reduce work and logging, while still keeping the detail that helps sales and engineers and keeping proper bookkeeping. Detail is captured as a by-product of actions the user takes anyway (paste, photo, one-tap stamps, issuing documents), not by separate logging. The books must stay complete and accurate. Money records are never skipped, only pre-filled. Owner: "our goal is to reduce work and logging so that we can actually keep information detail and help the sales engineer and have a proper book keeping for us".
 - 2026-10-13: Brand-new codebase in `qtech-crm-v2/` with its own git repo; the old repo is kept beside it as a read-only reference.
 - 2026-10-13: New Supabase project on the free plan; Mumbai region recommended; whether to go Pro or rely on exports is decided before go-live.
-- 2026-10-13: Project created in Singapore (ref yafbphagorydbitfgfmg) at the owner's choice; the earlier project gufnutjoapgbqeqtayst was deleted.
+- 2026-10-13: Project created in Singapore (ref yafbphagorydbitfgfmg) at the owner's choice; the earlier project a deleted earlier project was deleted.
 - 2026-10-13: Minimal logging is a standing rule. Required fields are the true minimum, dates default to today, context pre-fills, and every flow has an interaction-count target (Amendment A3 / FE-2). Owner: "if the engineers waste time logging every detail to the site its gonna be useless again".
 - 2026-10-13: Owner delegated the A3 calls: drop invoices.tax_deposit_bank; keep invoices.client_received_on but out of the entry flow; GST/FBR steps stamped in monthly batches (single-invoice stamping still possible).
 - 2026-10-13: Stack kept: React, Vite, TypeScript, Tailwind, shadcn/Radix, TanStack Query, react-hook-form, Zod, Supabase, Vercel.
@@ -20,7 +20,7 @@ Changes to `DATA_MODEL.md` need an entry here first.
 - 2026-10-13: Engineers work the full CRM. Money (payments, expenses, costs, margin, cash) is admin-only. Sales see invoices, the GST register and each order's balance.
 - 2026-10-13: Removed from scope: costing engine, follow-up task table, prospects table, employees and attendance (the Salaries expense category stays), budgets, payables module, email and WhatsApp sending, product catalog, PDF generation, general ledger, AI features, and quote versioning (for the MVP).
 - 2026-10-13: One RFQ may produce several orders. Orders need no RFQ (WhatsApp and repeat orders).
-- 2026-10-13: Legacy PO 253074 Unit A and Unit B are merged into one order with two invoices; Sapphire batch A stays a separate order.
+- 2026-10-13: Legacy PO 000001 Unit A and Unit B are merged into one order with two invoices; batch A stays a separate order.
 - 2026-10-13: The old company-level quarterly targets are dropped; per-person targets are entered at cutover.
 - 2026-10-13: The Phase 4 trial uses real data, which is kept; backups are live before the trial starts.
 - 2026-10-13: The new project's credentials are stored as GitHub protected-environment secrets.
@@ -28,7 +28,7 @@ Changes to `DATA_MODEL.md` need an entry here first.
 - 2026-10-13: Frontend quality: every UI task invokes the `frontend-design` skill. Design comes before code: the owner approves mockups (Claude Design artifacts) at two gates before UI primitives are built. Target feel is calm, precise and refined (Linear / Stripe / Vercel), not a default template and not the old glass/glow look.
 - 2026-10-13: Any webfont is self-hosted; the CSP keeps `font-src 'self'`. The Google Fonts allowances in `vercel.json` are removed in P7 if unused.
 - 2026-10-13: CSP `connect-src` and `img-src` currently allow `*.supabase.co`; P7 tightens them to the exact new project host.
-- 2026-10-13: The FBR exception rule in `src/lib/fbr.ts` also flags "deposited without Wasif receipt". Whether the receipt always precedes the deposit is unverified; check against live data in import task I06 and narrow the rule if it produces false exceptions.
+- 2026-10-13: The FBR exception rule in `src/lib/fbr.ts` also flags "deposited without tax agent receipt". Whether the receipt always precedes the deposit is unverified; check against live data in import task I06 and narrow the rule if it produces false exceptions.
 - 2026-10-13: Brand colours: deep green #1a7b46 for primary and green text; brand green #429446 for non-text only; success is teal.
 - 2026-10-13: G1 passed: Today direction **B**. Top bar; 420 px list plus a context pane with key figures, a date rail and a prepared WhatsApp/email chase draft with "Copy and mark chased"; target tile as the list footer; on mobile the pane folds into an accordion.
 - 2026-10-13: Design system v1 approved: Geist and Geist Mono (self-hosted via @fontsource), Lucide icons at stroke 1.75, 81 tokens, AA contrast throughout. "PKR" is used instead of the ₨ glyph in dense tables and PDFs.
