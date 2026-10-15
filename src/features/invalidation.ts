@@ -33,6 +33,10 @@ export interface WriteVars {
   'team.deactivate': Record<string, never>
   'team.reactivate': Record<string, never>
   'company-profile.update': Record<string, never>
+  /** M06: setting, clearing or copying targets. Today's own tile reads the same numbers. */
+  'target.save': Record<string, never>
+  /** M13: any change to a category (name, group, paid via, order, active, add, delete). */
+  'category.save': Record<string, never>
   'rfq.float': { companyId: string }
   'rfq.setFloated': { rfqId: string }
   'fx.set': Record<string, never>
@@ -89,6 +93,8 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'team.deactivate': () => [qk.settings.team()],
   'team.reactivate': () => [qk.settings.team()],
   'company-profile.update': () => [qk.settings.profile()],
+  'target.save': () => [qk.settings.targets(), qk.today.target()],
+  'category.save': () => [qk.settings.categories()],
   // Floating creates an RFQ (and inquiries): the RFQ lists, the customer's history and every supplier's activity change.
   'rfq.float': () => [qk.rfqs.all, qk.intake.all, qk.companies.all],
   // Floating or un-floating moves inquiries between shortlisted and sent: the RFQ and the suppliers' counts.

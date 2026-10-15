@@ -100,7 +100,18 @@ function orders() {
 /** Settings (A04, A06): the team list (read through the admin-users function) and the one company-profile row. */
 function settings() {
   const all = root('settings')
-  return { all, team: () => [...all, 'team'] as const, profile: () => [...all, 'company-profile'] as const }
+  return {
+    all,
+    team: () => [...all, 'team'] as const,
+    profile: () => [...all, 'company-profile'] as const,
+    /** M06: every targets read (rows and progress); invalidate this one after any target write. */
+    targets: () => [...all, 'targets'] as const,
+    targetRows: (year: number) => [...all, 'targets', 'rows', year] as const,
+    targetProgress: (year: number) => [...all, 'targets', 'progress', year] as const,
+    /** M13: the category list with usage counts, and the active-only list new expenses choose from. */
+    categories: () => [...all, 'categories'] as const,
+    activeCategories: () => [...all, 'categories', 'active'] as const,
+  }
 }
 
 /** Today (R11): the whole work-list input (one read), the target tile, and the draft data of the selected item. */
