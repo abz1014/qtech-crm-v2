@@ -93,20 +93,53 @@ test.describe('inline create (FE-2: name only, three actions)', () => {
 })
 
 test.describe('company page', () => {
-  test('a customer shows its sites with their RFQs, contacts and an honest history placeholder', async ({ page }) => {
-    const company = await createCompany(uniqueName('Page Customer'), { country: 'Pakistan' })
+  test('a customer shows its sites with their RFQs, contacts and roles', async ({ page }) => {
+    const company = await createCompany(uniqueName('Page Customer'), { country: 'Pakistan', city: 'Karachi' })
     const site = (await must(rest<{ id: string }[]>('admin', 'company_sites', { method: 'POST', body: { company_id: company.id, name: 'Main plant', address: 'Plot 14, Landhi' } })))[0]
-    await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: company.id, site_id: site.id, name: 'Naveed Akhtar', notes: 'Finance' } }))
+    await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: company.id, site_id: site.id, name: 'Naveed Akhtar', job_title: 'Finance' } }))
     const rfq = await createRfq(company.id, { site_id: site.id, customer_ref: 'ENQ-2211' })
 
     await openAs(page, 'sales', `/companies/${company.id}`)
     await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
     await expect(page.getByText('Customer', { exact: true }).first()).toBeVisible()
     await expect(page.getByRole('region', { name: 'Main plant' }).getByText(rfqRef(rfq.number))).toBeVisible()
+    await expect(page.getByText('Karachi, Pakistan')).toBeVisible() // the place under the name: city, country
     await expect(page.getByText('Naveed Akhtar')).toBeVisible()
-    await expect(page.getByText('Nothing to show yet.')).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Contacts' }).getByText('Finance')).toBeVisible() // the job title under the name
+    await expect(page.getByRole('region', { name: 'Roles' }).getByText('Customer since')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'History' })).toHaveCount(0) // no placeholder panel: the mockup has none
     await expect(page.getByRole('heading', { name: 'Money with them' })).toHaveCount(0)
     await review(page, 'company-customer-1440')
+  })
+
+  test('site history reads What, the order chips (Delivered, invoicing, Payment overdue), the RFQ state words and the Repeat order slot', async ({ page }) => {
+    const company = await createCompany(uniqueName('History Customer'), { country: 'Pakistan' })
+    const site = (await must(rest<{ id: string }[]>('admin', 'company_sites', { method: 'POST', body: { company_id: company.id, name: 'Main plant', address: 'Plot 14, Landhi' } })))[0]
+    const supplier = await createCompany(uniqueName('History Supplier'))
+    // An open RFQ with a bid date, a closed one with a reason, and a delivered order.
+    const open = await createRfq(company.id, { site_id: site.id, due_on: karachiDay(9) })
+    await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: open.id, description: 'Furnace zone thermocouples and transmitters' } }))
+    const closed = await createRfq(company.id, { site_id: site.id, closed_on: karachiDay(-1), close_reason: 'no_reply_to_clarification' })
+    await must(rest('admin', 'rfq_items', { method: 'POST', body: [{ rfq_id: closed.id, description: 'Compressed air flow meters' }, { rfq_id: closed.id, description: 'Flow meter cable' }] }))
+    const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: company.id, site_id: site.id } })))[0]
+    const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: supplier.id, currency: 'PKR', placed_on: karachiDay(-5), expected_on: karachiDay(-2), received_on: karachiDay(-2), delivered_on: karachiDay(-1) } })))[0]
+    await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, description: 'Annealing lehr instrumentation', unit_price_net: 100, supplier_order_id: leg.id } }))
+
+    await openAs(page, 'sales', `/companies/${company.id}`)
+    const siteRegion = page.getByRole('region', { name: 'Main plant' })
+    await expect(siteRegion.getByRole('columnheader', { name: 'What' })).toBeVisible()
+    await expect(siteRegion.getByText('Furnace zone thermocouples and transmitters')).toBeVisible()
+    await expect(siteRegion.getByText(/bid due \w{3} \d/)).toBeVisible() // weekday and day, as drawn
+    await expect(siteRegion.getByText('Compressed air flow meters')).toBeVisible()
+    await expect(siteRegion.getByText('+ 1 more')).toBeVisible()
+    await expect(siteRegion.getByText('no reply from customer')).toBeVisible()
+    const orderRow = siteRegion.getByRole('row', { name: /Annealing lehr instrumentation/ })
+    await expect(orderRow.getByText('Delivered')).toBeVisible()
+    await expect(orderRow.getByText('Not invoiced')).toBeVisible()
+    // The Repeat order slot is drawn (the action itself is O02) but cannot be used yet.
+    await expect(orderRow.getByRole('button', { name: /Repeat order/ })).toBeDisabled()
+    await expect(siteRegion.getByRole('columnheader', { name: 'Their reference' })).toHaveCount(0)
+    await review(page, 'parity-d-company-customer-1440')
   })
 
   test('a supplier shows what we know from its enquiries, with counts and no score', async ({ page }) => {
@@ -118,9 +151,9 @@ test.describe('company page', () => {
     await openAs(page, 'engineer', `/companies/${supplier.id}`)
     await expect(page.getByRole('heading', { name: supplier.name, level: 1 })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'What we know' })).toBeVisible()
-    await expect(page.getByText('Asked once, no replies')).toBeVisible()
+    await expect(page.getByText('Asked once · no replies')).toBeVisible()
     await expect(page.getByText('Low data')).toBeVisible()
-    await expect(page.getByText('Nothing here is typed in.')).toBeVisible()
+    await expect(page.getByText('With so few enquiries the page shows facts only')).toBeVisible()
     await expect(page.getByRole('row', { name: new RegExp(rfqRef(rfq.number)) })).toContainText('No reply')
     expect(await page.getByRole('region', { name: 'What we know' }).innerText()).not.toMatch(/score|rating|rank|%/i)
     await review(page, 'company-supplier-1440')
@@ -228,8 +261,10 @@ test.describe('access by role (DATA_MODEL section 10)', () => {
       await openAs(page, role, `/companies/${company.id}`)
       await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
       await page.waitForLoadState('networkidle')
-      const more = await page.getByRole('button', { name: 'More actions' }).count()
-      expect(more, `${role} merge menu`).toBe(role === 'admin' ? 1 : 0)
+      // Everyone has the "..." menu the design draws; only an admin finds Merge in it.
+      await page.getByRole('button', { name: 'More actions' }).click()
+      await expect(page.getByRole('menuitem', { name: 'Copy link to this company' })).toBeVisible()
+      expect(await page.getByRole('menuitem', { name: 'Merge into another company' }).count(), `${role} merge menu`).toBe(role === 'admin' ? 1 : 0)
       money[role] = seen
       await context.close()
     }
