@@ -38,3 +38,32 @@ export function ProgressSegments({ done, total, className }: { done: number; tot
     </span>
   )
 }
+
+/*
+ * ProgressBar (components-01, "3 of 5 items covered"): the continuous 6px bar for a card or a panel, where
+ * ProgressSegments is the n-of-m form for a table row. The fill is brand green on the selected track; an
+ * optional marker (a 2px ink tick, such as "today" on a schedule) sits at `marker` percent. The bar is an image
+ * to assistive tech, named by `label` ("3 of 5 items covered"), so the sentence is always on the page too.
+ */
+export function ProgressBar({
+  done,
+  total,
+  label,
+  marker,
+  className,
+}: {
+  done: number
+  total: number
+  label?: string
+  /** 0 to 100: a tick on the track. */
+  marker?: number
+  className?: string
+}) {
+  const pct = total <= 0 ? 0 : Math.min(100, Math.max(0, (done / total) * 100))
+  return (
+    <div role="img" aria-label={label ?? `${done} of ${total}`} className={cn('relative h-[6px] rounded-round bg-selected', className)}>
+      <i className="absolute inset-y-0 left-0 rounded-round bg-brand-green" style={{ width: `${pct}%` }} />
+      {marker !== undefined ? <b className="absolute -bottom-1 -top-1 -ml-px w-[2px] rounded-[1px] bg-fg" style={{ left: `${marker}%` }} /> : null}
+    </div>
+  )
+}

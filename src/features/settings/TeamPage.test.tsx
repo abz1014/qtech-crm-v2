@@ -92,7 +92,8 @@ describe('Team screen', () => {
     expect(await screen.findByText('Ayesha Rana')).toBeInTheDocument()
     expect(screen.getByText('You')).toBeInTheDocument()
     expect(within(screen.getByRole('table')).getAllByText('Deactivated').length).toBeGreaterThan(0)
-    expect(screen.getByText('4 people, 3 active, 1 deactivated')).toBeInTheDocument()
+    expect(screen.getByText('4 people · 3 active, 1 deactivated')).toBeInTheDocument()
+    expect(screen.getByText('Deactivated people keep their name on everything they created.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reactivate Saad Hussain' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Actions for Saad Hussain' })).toBeNull()
   })
@@ -114,8 +115,9 @@ describe('Team screen', () => {
     h.list.mockRejectedValueOnce(new PlainError('Only an active admin can manage people.'))
     const user = setupUser()
     mount()
-    expect(await screen.findByText('Could not load the team')).toBeInTheDocument()
-    expect(screen.getByText('Only an active admin can manage people.')).toBeInTheDocument()
+    expect(await screen.findByText('Couldn’t load the team')).toBeInTheDocument()
+    expect(screen.getByText('Nothing has changed. Check your connection, then try again.')).toBeInTheDocument()
+    expect(screen.queryByText('Only an active admin can manage people.')).toBeNull() // never the raw error text
     await user.click(screen.getByRole('button', { name: /try again|retry/i }))
     expect(await screen.findByText('Ayesha Rana')).toBeInTheDocument()
   })
@@ -261,7 +263,7 @@ describe('Team screen', () => {
     await openRowMenu(user, 'Bilal Chaudhry', 'Deactivate')
     const dialog = await screen.findByRole('dialog', { name: 'Deactivate Bilal Chaudhry?' })
     expect(within(dialog).getByText("You can't deactivate the only active admin")).toBeInTheDocument()
-    expect(within(dialog).getByRole('button', { name: /Deactivate Bilal/ })).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: 'Deactivate' })).toBeDisabled() // plain while blocked
     expect(h.deactivate).not.toHaveBeenCalled()
   })
 

@@ -33,6 +33,17 @@ const STEPS: Record<string, Steps> = {
   'toast-settled': async page => {
     await page.clock.runFor(1300)
   },
+  // Paused: four seconds of the countdown go by, then the pointer rests on the toast and it stops at 6 s.
+  'toast-paused': async page => {
+    await page.clock.runFor(4000)
+    await page.getByRole('status').first().hover()
+  },
+  'toast-two': async page => {
+    await page.clock.runFor(2000)
+  },
+  'toast-phone': async page => {
+    await page.clock.runFor(1000)
+  },
   'combobox-open': async page => {
     await page.locator('[data-preview-combo]').click()
     await page.keyboard.type('Ind')
@@ -54,13 +65,30 @@ const OVERLAY_VARIANTS: Scene[] = [
   { name: 'info-popover-open', scene: 'overlays', steps: async page => void (await page.locator('[data-preview-info]').click()) },
 ]
 
+/** The 'tooltips' scene holds four tooltips that each open on their own: photographed once per tooltip. */
+const TOOLTIP_VARIANTS: Scene[] = (
+  [
+    ['tooltip-disabled', '[data-preview-disabled] [tabindex="0"]'],
+    ['tooltip-long', '[data-preview-long]'],
+    ['tooltip-status', '[data-preview-status] [tabindex="0"]'],
+    ['tooltip-twoline', '[data-preview-twoline]'],
+  ] as const
+).map(([name, hook]) => ({
+  name,
+  scene: 'tooltips',
+  steps: async (page: Page) => {
+    await page.locator(hook).focus()
+    await page.clock.runFor(600)
+  },
+}))
+
 for (const key of Object.keys(STEPS)) {
   if (!SCENE_LIST.some(s => s.scene === key)) throw new Error(`e2e/support.ts has steps for a scene that does not exist: ${key}`)
 }
 
 /** Every scene in SCENE_LIST (src/dev/gallery/sceneList.ts), with the interaction that opens it. */
 export const SCENES: Scene[] = SCENE_LIST.flatMap(s =>
-  s.scene === 'overlays' ? OVERLAY_VARIANTS : [{ name: s.scene, scene: s.scene, steps: STEPS[s.scene] }],
+  s.scene === 'overlays' ? OVERLAY_VARIANTS : s.scene === 'tooltips' ? TOOLTIP_VARIANTS : [{ name: s.scene, scene: s.scene, steps: STEPS[s.scene] }],
 )
 
 /**

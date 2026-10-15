@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, ChevronsUpDown, Download, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
@@ -7,20 +7,25 @@ import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { Money } from '@/ui/Money'
+import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
+import { TruncateTip } from '@/ui/Tooltip'
+import { useTableDensity } from '@/ui/useTableDensity'
 import { downloadCSV, generateCSV } from '@/lib/csvExport'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { paisaToFixed } from '@/lib/money'
 import {
   columnShowsPaisa,
   columnTotal,
+  ERROR_MESSAGE,
+  formatStamp,
   sortRows,
   tableCsvRows,
   type Column,
   type SortState,
 } from '@/ui/dataTableModel'
 
-export type { Column, SortState } from '@/ui/dataTableModel'
+export type { Column, Density, SortState } from '@/ui/dataTableModel'
 
 /*
  * DataTable (D08 section 06; U04). Dense, sortable, keyboard-driven, with group
@@ -43,6 +48,13 @@ export type { Column, SortState } from '@/ui/dataTableModel'
  *
  * Keyboard: Up/Down or J/K move the focus row, Home/End jump, PageUp/PageDown move
  * 10, Enter opens, Space ticks. Focus is a roving tabindex: one Tab stop for the body.
+ * `/` focuses the filter (the field marked data-table-filter: see TableFilter, which also clears on Esc), and the row
+ * you opened is focused again when you come back from its detail view (kept in sessionStorage per table label).
+ *
+ * Density: a table with a toolbar draws the Comfortable / Compact switch at its right edge, remembered per person
+ * and per table (useTableDensity). `density` is the starting value; `densitySwitch={false}` leaves it out.
+ * Truncation: a column with `width` cuts long text with an ellipsis and shows the whole text in a tooltip.
+ * Footer: "Showing 7 of 7 RFQs" (give `noun`, or your own `summary`) and the key legend, whenever rows can be focused.
  */
 const GROUP_H = 36
 const HEAD_H = 36
@@ -59,7 +71,10 @@ export interface DataTableProps<T> {
   getRowId: (row: T) => string
   /** Names the table for assistive tech ("GST register"). */
   label: string
+  /** Starting density; the switch (and the person's saved choice) takes over. Default comfortable. */
   density?: 'comfortable' | 'compact'
+  /** Draw the Comfortable / Compact switch. Default: yes when the table has a toolbar or an export button. */
+  densitySwitch?: boolean
   /** Controlled sort. Omit to let the table hold it (starting from `defaultSort`). */
   sort?: SortState | null
   defaultSort?: SortState | null
@@ -77,13 +92,18 @@ export interface DataTableProps<T> {
   group?: (row: T) => { key: string; label: ReactNode }
   /** Totals footer label ("All 9 invoices shown"). The footer shows when any column has `total`. */
   footerLabel?: ReactNode
-  /** Left of the bottom bar: "Showing 7 of 7 RFQs". */
+  /** What the rows are, plural ("RFQs"): names the loading line, the default error title and the default summary. */
+  noun?: string
+  /** All rows that match, when more than `rows` (a paged list): "Showing 25 of 61 RFQs". Default: rows.length. */
+  total?: number
+  /** Left of the bottom bar. Default with `noun`: "Showing 7 of 7 RFQs". */
   summary?: ReactNode
   /** Filters and actions above the table. A function receives the ticked count (batch bar). */
   toolbar?: ReactNode | ((ctx: { selectedCount: number }) => ReactNode)
   exportCsv?: { filename: string; label?: string }
   loading?: boolean
-  error?: { title: string; message?: ReactNode; onRetry?: () => void; reference?: string } | null
+  /** title, message and the stamp have defaults ("Couldn’t load RFQs", "Your changes are safe...", the time the error first showed). */
+  error?: { title?: string; message?: ReactNode; onRetry?: () => void; reference?: string; at?: Date } | null
   /** The empty-state slot. Say what is true and what happens next ("Every bid is in"). */
   empty?: ReactNode
   /** Scroll height once virtualised. Default 70vh. */
@@ -102,13 +122,13 @@ export function DataTable<T>(props: DataTableProps<T>) {
     rows,
     getRowId,
     label,
-    density = 'comfortable',
     selection,
     activeRowId,
     onRowOpen,
     group,
     footerLabel,
-    summary,
+    noun,
+    total,
     toolbar,
     exportCsv,
     loading,
@@ -122,6 +142,14 @@ export function DataTable<T>(props: DataTableProps<T>) {
   } = props
   const phone = useMediaQuery('(max-width: 639px)')
   const cards = !!mobileRow && phone
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [savedDensity, setDensity] = useTableDensity(label, props.density ?? 'comfortable')
+  const toolbarGiven = !!props.toolbar || !!exportCsv
+  const densityOn = (props.densitySwitch ?? toolbarGiven) && !cards
+  const density = densityOn ? savedDensity : (props.density ?? 'comfortable')
+  const hasError = !!error
+  const errorAt = useMemo(() => (hasError ? new Date() : null), [hasError])
+  const what = noun ?? label.toLowerCase()
 
   // ---- sort ---------------------------------------------------------------
   const [innerSort, setInnerSort] = useState<SortState | null>(props.defaultSort ?? null)
@@ -236,6 +264,52 @@ export function DataTable<T>(props: DataTableProps<T>) {
     }
   }
 
+  // ---- "/" focuses the filter; the opened row is focused again on the way back ----------------------
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== '/' || e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName))) return
+      if (document.querySelector('[role="dialog"],[role="alertdialog"]')) return
+      const field = rootRef.current?.querySelector<HTMLInputElement>('[data-table-filter]')
+      if (!field) return
+      e.preventDefault()
+      field.focus()
+      field.select()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
+
+  const memoryKey = `qtech.table.focus.${label}`
+  const openRow = (row: T) => {
+    try {
+      window.sessionStorage.setItem(memoryKey, getRowId(row))
+    } catch {
+      /* not remembered */
+    }
+    onRowOpen?.(row)
+  }
+  const restored = useRef(false)
+  useEffect(() => {
+    if (restored.current || loading || dataRows.length === 0) return
+    restored.current = true
+    let id: string | null = null
+    try {
+      id = window.sessionStorage.getItem(memoryKey)
+      window.sessionStorage.removeItem(memoryKey)
+    } catch {
+      /* nothing remembered */
+    }
+    const di = id === null ? -1 : dataRows.findIndex(r => getRowId(r) === id)
+    if (di < 0) return
+    const idle = !document.activeElement || document.activeElement === document.body
+    if (idle) moveTo(di)
+    else setFocusDi(di)
+    // Runs once, when the first rows arrive: moveTo and the row ids are read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, dataRows.length])
+
   // ---- selection ----------------------------------------------------------
   const selected = selection?.selected
   const lastTicked = useRef<string | null>(null)
@@ -292,7 +366,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
       case 'Enter':
         if (onRowOpen) {
           e.preventDefault()
-          onRowOpen(row)
+          openRow(row)
         }
         return
       case ' ':
@@ -422,10 +496,10 @@ export function DataTable<T>(props: DataTableProps<T>) {
           onFocus={e => e.target === e.currentTarget && setFocusDi(di)}
           onKeyDown={e => onRowKey(e, di, row)}
           onClick={e => {
-            if (onRowOpen && !(e.target as HTMLElement).closest('a,button,input,label,select,textarea')) onRowOpen(row)
+            if (onRowOpen && !(e.target as HTMLElement).closest('a,button,input,label,select,textarea')) openRow(row)
           }}
           className={cn(
-            'relative block border-b border-line transition-colors focus-visible:bg-sunken focus-visible:-outline-offset-2',
+            'relative block border-b border-line transition-colors focus-visible:bg-sunken focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-green',
             onRowOpen && 'cursor-pointer',
             ticked || active ? 'bg-selected' : 'active:bg-sunken',
             active && 'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green',
@@ -448,10 +522,10 @@ export function DataTable<T>(props: DataTableProps<T>) {
         onFocus={e => e.target === e.currentTarget && setFocusDi(di)}
         onKeyDown={e => onRowKey(e, di, row)}
         onClick={e => {
-          if (onRowOpen && !(e.target as HTMLElement).closest('a,button,input,label,select,textarea')) onRowOpen(row)
+          if (onRowOpen && !(e.target as HTMLElement).closest('a,button,input,label,select,textarea')) openRow(row)
         }}
         className={cn(
-          'transition-colors focus-visible:bg-sunken focus-visible:-outline-offset-2',
+          'transition-colors focus-visible:bg-sunken focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-green',
           onRowOpen && 'cursor-pointer',
           ticked || active ? 'bg-selected' : 'hover:bg-sunken',
         )}
@@ -475,7 +549,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
               active && !selection && ci === 0 && 'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green',
             )}
           >
-            {renderCell(c, row)}
+            {c.width !== undefined ? <TruncateTip style={{ maxWidth: c.width }}>{renderCell(c, row)}</TruncateTip> : renderCell(c, row)}
           </td>
         ))}
       </tr>
@@ -489,11 +563,21 @@ export function DataTable<T>(props: DataTableProps<T>) {
           <td colSpan={colCount}>
             <EmptyState
               mood="error"
-              title={error.title}
+              title={error.title ?? `Couldn’t load ${what}`}
               actions={error.onRetry ? <Button variant="primary" icon={RefreshCw} onClick={error.onRetry}>Try again</Button> : undefined}
-              meta={error.reference ? `Reference ${error.reference}` : undefined}
+              meta={
+                <>
+                  {`Request failed · ${formatStamp(error.at ?? errorAt ?? new Date())}`}
+                  {error.reference ? (
+                    <>
+                      {' · reference '}
+                      <span className="num">{error.reference}</span>
+                    </>
+                  ) : null}
+                </>
+              }
             >
-              {error.message}
+              {error.message ?? ERROR_MESSAGE}
             </EmptyState>
           </td>
         </tr>
@@ -543,16 +627,35 @@ export function DataTable<T>(props: DataTableProps<T>) {
   })()
 
   const showFoot = !cards && hasTotals && !loading && !error && items.length > 0
-  const hints = !!(onRowOpen || selection)
+  // The key legend and "Showing n of n" are for rows that can be focused, so whenever there are rows to move through.
+  const hints = !cards && !loading && !error && dataRows.length > 0
+  const shown = props.summary ?? (noun && !loading && !error && dataRows.length > 0 ? (
+    <>
+      Showing <span className="num">{dataRows.length}</span> of <span className="num">{total ?? dataRows.length}</span> {noun}
+    </>
+  ) : undefined)
 
   return (
     <div
+      ref={rootRef}
       data-density={density === 'compact' ? 'compact' : undefined}
       className={cn('overflow-hidden rounded border bg-surface', className)}
     >
       {toolbarNode || exportCsv ? (
         <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{toolbarNode}</div>
+          {loading ? <span className="text-xs text-fg-muted">{`Loading ${what}`}</span> : null}
+          {densityOn ? (
+            <SegmentedControl
+              aria-label="Density"
+              value={density}
+              onValueChange={v => setDensity(v === 'compact' ? 'compact' : 'comfortable')}
+              options={[
+                { value: 'comfortable', label: 'Comfortable' },
+                { value: 'compact', label: 'Compact' },
+              ]}
+            />
+          ) : null}
           {exportCsv ? (
             <Button variant="quiet" size="sm" icon={Download} onClick={csv} disabled={loading || !!error || dataRows.length === 0}>
               {exportCsv.label ?? 'Export CSV'}
@@ -626,14 +729,14 @@ export function DataTable<T>(props: DataTableProps<T>) {
         </table>
       </div>
 
-      {summary || hints ? (
-        <div className="flex items-center justify-between gap-3 border-t bg-surface px-4 py-2 text-xs text-fg-muted">
-          <span>{summary}</span>
+      {shown || hints || loading ? (
+        <div className="flex min-h-10 items-center justify-between gap-3 border-t bg-surface px-4 py-2 text-xs text-fg-muted">
+          {loading && !shown ? <Skeleton className="w-32" /> : <span>{shown}</span>}
           {hints ? (
-            <span className="hidden items-center gap-3 md:flex" aria-hidden="true">
-              <span className="inline-flex items-center gap-1"><Kbd>{'↑'}</Kbd><Kbd>{'↓'}</Kbd> move</span>
-              {onRowOpen ? <span className="inline-flex items-center gap-1"><Kbd>{'↵'}</Kbd> open</span> : null}
-              {selection ? <span className="inline-flex items-center gap-1"><Kbd>Space</Kbd> select</span> : null}
+            <span className="flex flex-wrap items-center justify-end gap-3 max-sm:hidden" aria-hidden="true">
+              <span className="inline-flex items-center gap-[6px]"><Kbd>{'↑'}</Kbd><Kbd>{'↓'}</Kbd> move</span>
+              {onRowOpen ? <span className="inline-flex items-center gap-[6px]"><Kbd>{'↵'}</Kbd> open</span> : null}
+              {selection ? <span className="inline-flex items-center gap-[6px]"><Kbd>Space</Kbd> select</span> : null}
             </span>
           ) : null}
         </div>

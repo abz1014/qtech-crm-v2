@@ -1,5 +1,6 @@
-import { useRef, type ReactNode } from 'react'
-import { Lock } from 'lucide-react'
+import { useRef, type ReactElement, type ReactNode } from 'react'
+import { CircleDot, Lock, TriangleAlert } from 'lucide-react'
+import { useController, useFormContext, type ControllerRenderProps } from 'react-hook-form'
 import { useSession } from '@/app/session'
 import {
   missingForPdf,
@@ -13,10 +14,12 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
+import { cn } from '@/lib/utils'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
 import { Form, FormField } from '@/ui/form/Form'
 import { NumberInput } from '@/ui/form/NumberInput'
+import { Field } from '@/ui/form/Field'
 import { TextArea, TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 
@@ -47,7 +50,7 @@ export function CompanyProfilePage() {
   const q = useCompanyProfile()
 
   return (
-    <div className="grid max-w-list content-start gap-4">
+    <div className="grid content-start gap-4">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Company profile</h1>
@@ -58,8 +61,8 @@ export function CompanyProfilePage() {
           </p>
         </div>
         {!isAdmin ? (
-          <span className="inline-flex h-5 items-center gap-2 rounded border border-line-strong bg-surface px-2 text-xs text-fg-2">
-            <Icon icon={Lock} size="chip" />
+          <span className="inline-flex h-6 items-center gap-[6px] rounded bg-selected px-[6px] text-xs font-medium text-fg-2">
+            <Icon icon={Lock} size="sm" />
             Only an admin can edit
           </span>
         ) : null}
@@ -109,12 +112,12 @@ function MissingBanner({ missing, onAdd }: { missing: string[]; onAdd?: () => vo
   )
 }
 
-function Section({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
+function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
     <section className="grid gap-4 rounded border bg-surface p-5">
       <div className="grid gap-[2px]">
         <h2 className="text-base font-semibold">{title}</h2>
-        <p className="text-xs text-fg-muted">{hint}</p>
+        {hint ? <p className="max-w-[62ch] text-sm text-fg-muted text-pretty">{hint}</p> : null}
       </div>
       {children}
     </section>
@@ -122,6 +125,40 @@ function Section({ title, hint, children }: { title: string; hint: string; child
 }
 
 const NEEDED = <span className="ml-2 text-xs font-regular text-fg-muted">Needed for PDFs</span>
+
+/**
+ * The two fields a PDF cannot be issued without. While one is empty it is drawn invalid with its own
+ * sentence (the mockup's "Admin, not yet complete"), before any submit; saving is still never blocked.
+ */
+function NeededField({
+  name,
+  label,
+  message,
+  children,
+}: {
+  name: 'legal_name' | 'address'
+  label: string
+  message: string
+  children: (f: ControllerRenderProps<ProfileValues, 'legal_name' | 'address'>) => ReactElement
+}) {
+  const { control } = useFormContext<ProfileValues>()
+  const { field, fieldState } = useController({ control, name })
+  const blank = String(field.value ?? '').trim() === ''
+  return (
+    <Field
+      label={
+        <>
+          {label}
+          {NEEDED}
+        </>
+      }
+      error={fieldState.error?.message ?? (blank ? message : undefined)}
+      edited={fieldState.isDirty}
+    >
+      {children(field)}
+    </Field>
+  )
+}
 
 function ProfileForm({ profile }: { profile: CompanyProfile }) {
   const { toast } = useToast()
@@ -153,23 +190,23 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
       <MissingBanner missing={missing} onAdd={() => sf.form.setFocus(missing[0] ?? 'legal_name')} />
       <Form sf={sf} labels={LABELS} className="grid gap-4">
         <Section title="Business details" hint="Printed in the letterhead of every quotation and purchase order.">
-          <FormField name="legal_name" label={<>Legal name{NEEDED}</>}>
+          <NeededField name="legal_name" label="Legal name" message="Add the legal name before issuing a PDF.">
             {f => <TextField {...f} placeholder="As registered with SECP" autoComplete="organization" />}
-          </FormField>
-          <FormField name="address" label={<>Address{NEEDED}</>}>
-            {f => <TextArea {...f} rows={3} autoComplete="street-address" />}
-          </FormField>
+          </NeededField>
+          <NeededField name="address" label="Address" message="Add the address before issuing a PDF.">
+            {f => <TextArea {...f} rows={2} autoComplete="street-address" />}
+          </NeededField>
           <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
             <FormField name="phone" label="Phone" requirement="optional">
-              {f => <TextField {...f} type="tel" autoComplete="tel" />}
+              {f => <TextField {...f} type="tel" className="num" autoComplete="tel" />}
             </FormField>
             <FormField name="email" label="Email" requirement="optional">
               {f => <TextField {...f} type="email" autoComplete="email" />}
             </FormField>
+            <FormField name="website" label="Website" requirement="optional">
+              {f => <TextField {...f} autoComplete="url" />}
+            </FormField>
           </div>
-          <FormField name="website" label="Website" requirement="optional" className="sm:max-w-[320px]">
-            {f => <TextField {...f} autoComplete="url" />}
-          </FormField>
         </Section>
 
         <Section title="Tax registration" hint="Printed on quotations and purchase orders.">
@@ -213,18 +250,19 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             {f => <TextArea {...f} rows={5} />}
           </FormField>
           <FormField name="po_terms" label="Purchase order terms" requirement="optional">
-            {f => <TextArea {...f} rows={5} />}
+            {f => <TextArea {...f} rows={4} />}
           </FormField>
         </Section>
       </Form>
 
-      <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded border bg-surface px-5 py-3">
+      <div className="flex flex-wrap items-center gap-3 rounded border bg-surface px-5 py-3">
+        {dirty.length > 0 ? <Icon icon={CircleDot} size="sm" className="text-fg-muted" /> : null}
         <p role="status" className="text-sm text-fg-muted">
           {dirty.length === 0
             ? 'Nothing to save yet'
             : `${dirty.length} unsaved ${dirty.length === 1 ? 'change' : 'changes'}: ${dirty.map(k => LABELS[k]).join(', ')}`}
         </p>
-        <div className="flex gap-2">
+        <div className="ml-auto flex gap-2">
           <Button disabled={dirty.length === 0 || sf.pending} onClick={() => sf.form.reset(toFormValues(profile))}>
             Discard
           </Button>
@@ -247,21 +285,28 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
 function Row({ label, value, mono }: { label: string; value: string | number | null; mono?: boolean }) {
   const empty = value === null || value === ''
   return (
-    <div className="grid gap-1 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-4">
-      <dt className="text-sm text-fg-muted">{label}</dt>
-      <dd className={empty ? 'text-sm text-fg-muted' : mono ? 'num whitespace-pre-line text-sm' : 'whitespace-pre-line text-sm'}>
-        {empty ? 'Not set' : value}
-      </dd>
-    </div>
+    <>
+      <dt className="text-fg-muted">{label}</dt>
+      {empty ? (
+        <dd className="inline-flex min-w-0 items-center gap-[6px] font-medium text-tone-warning-fg">
+          <Icon icon={TriangleAlert} size="sm" />
+          Not set
+        </dd>
+      ) : (
+        <dd className={cn('min-w-0 whitespace-pre-line [overflow-wrap:anywhere]', mono && 'num')}>{value}</dd>
+      )}
+    </>
   )
 }
+
+const KV = 'grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[160px_minmax(0,1fr)]'
 
 function ProfileReadOnly({ profile: p }: { profile: CompanyProfile }) {
   return (
     <>
       <MissingBanner missing={missingForPdf(p)} />
-      <Section title="Business details" hint="Printed in the letterhead of every quotation and purchase order.">
-        <dl className="grid gap-3">
+      <Section title="Business details">
+        <dl className={KV}>
           <Row label="Legal name" value={p.legal_name} />
           <Row label="Address" value={p.address} />
           <Row label="Phone" value={p.phone} mono />
@@ -269,21 +314,21 @@ function ProfileReadOnly({ profile: p }: { profile: CompanyProfile }) {
           <Row label="Website" value={p.website} />
         </dl>
       </Section>
-      <Section title="Tax registration" hint="Printed on quotations and purchase orders.">
-        <dl className="grid gap-3">
+      <Section title="Tax registration">
+        <dl className={KV}>
           <Row label="NTN" value={p.ntn} mono />
           <Row label="STRN" value={p.strn} mono />
         </dl>
       </Section>
-      <Section title="Bank details" hint="Printed on quotations only when filled in.">
-        <dl className="grid gap-3">
+      <Section title="Bank details">
+        <dl className={KV}>
           <Row label="Bank" value={p.bank_name} />
           <Row label="Account title" value={p.bank_account_title} />
           <Row label="IBAN" value={p.bank_iban} mono />
         </dl>
       </Section>
-      <Section title="Quotations and purchase orders" hint="Standard wording that is added to every document.">
-        <dl className="grid gap-3">
+      <Section title="Quotations and purchase orders">
+        <dl className={KV}>
           <Row label="Quotation validity" value={`${p.quotation_validity_days} days`} />
           <Row label="Quotation terms" value={p.quotation_terms} />
           <Row label="Purchase order terms" value={p.po_terms} />

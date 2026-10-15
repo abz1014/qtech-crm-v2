@@ -103,7 +103,7 @@ test.describe('Team (A04)', () => {
     await expect(newbie.page.getByRole('menuitem', { name: 'Team' })).toHaveCount(0)
     await newbie.page.keyboard.press('Escape')
     await newbie.page.goto('/settings/team')
-    await expect(newbie.page.getByText('Team is not available to your role')).toBeVisible()
+    await expect(newbie.page.getByText('Team is for admins')).toBeVisible()
 
     // ---- Job title.
     await rowAction(page, name, 'Edit job title')
@@ -217,7 +217,7 @@ test.describe('Team (A04)', () => {
       await expect(page.getByRole('link', { name: 'Team' })).toHaveCount(0)
 
       await page.goto('/settings/team')
-      await expect(page.getByText('Team is not available to your role')).toBeVisible()
+      await expect(page.getByText('Team is for admins')).toBeVisible()
       await expect(page.getByRole('button', { name: 'Add person' })).toHaveCount(0)
     })
   }

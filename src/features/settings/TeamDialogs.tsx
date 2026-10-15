@@ -299,7 +299,7 @@ export function DeactivateDialog({ member, members, onClose }: Base & { member: 
     defaultValues: {},
     onSubmit: () => deactivate.mutateAsync(member.id),
     onSuccess: () => {
-      toast({ title: `${member.name} deactivated`, body: 'Signed out everywhere.', tone: 'success' })
+      toast({ title: `${member.name} deactivated`, body: 'They are signed out everywhere.', tone: 'success' })
       onClose()
     },
   })
@@ -324,7 +324,7 @@ export function DeactivateDialog({ member, members, onClose }: Base & { member: 
               busyLabel="Deactivating"
               disabled={locked}
             >
-              {sf.failed ? 'Try again' : `Deactivate ${first}`}
+              {sf.failed ? 'Try again' : locked ? 'Deactivate' : `Deactivate ${first}`}
             </Button>
           </>
         }

@@ -102,13 +102,13 @@ describe('routing and role landing', () => {
 
   it('an engineer who opens /money sees no-access inside the shell, not Money', () => {
     render(signedIn('engineer'), '/money')
-    expect(el.querySelector('main h1')?.textContent).toBe('Money is not available to your role')
+    expect(el.querySelector('main h1')?.textContent).toBe('Money is for admins and sales')
     expect(el.querySelector('nav[aria-label="Main"]')).not.toBeNull()
   })
 
   it('an engineer who opens a Money sub-route is also blocked', () => {
     render(signedIn('engineer'), '/money/gst-register')
-    expect(el.querySelector('main h1')?.textContent).toContain('not available')
+    expect(el.querySelector('main h1')?.textContent).toContain('is for admins and sales')
   })
 
   it('an unknown role lands on /no-access', () => {

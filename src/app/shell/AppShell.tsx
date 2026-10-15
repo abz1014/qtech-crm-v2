@@ -8,6 +8,7 @@ import { useSearchPaletteSource } from '@/features/search/paletteSource'
 import { PaletteHost } from '@/app/palette/PaletteHost'
 import { usePalette } from '@/app/palette/usePalette'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
+import { MobileBarProvider } from '@/app/shell/MobileBarProvider'
 import { PwaPrompts } from '@/app/shell/PwaPrompts'
 import { TopBar } from '@/app/shell/TopBar'
 
@@ -29,7 +30,9 @@ export function AppShell({ counts }: AppShellProps) {
     <ToastProvider>
       <PwaPrompts />
       <PaletteHost role={session.user.role}>
-        <Frame user={session.user} counts={counts} />
+        <MobileBarProvider>
+          <Frame user={session.user} counts={counts} />
+        </MobileBarProvider>
       </PaletteHost>
     </ToastProvider>
   )

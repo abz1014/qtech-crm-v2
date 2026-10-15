@@ -109,3 +109,23 @@ export function tableCsvRows<T>(columns: Column<T>[], rows: readonly T[], opts: 
   }
   return { headers: columns.map(c => c.header), rows: body }
 }
+
+export type Density = 'comfortable' | 'compact'
+
+/** "Fri 27 Nov, 09:41" in the business timezone (Asia/Karachi): the stamp under a table that could not load. */
+export function formatStamp(at: Date): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Karachi',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(at)
+  const p = (t: string) => parts.find(x => x.type === t)?.value ?? ''
+  return `${p('weekday')} ${p('day')} ${p('month')}, ${p('hour')}:${p('minute')}`
+}
+
+/** The default sentence under a table that failed to load, with the stamp and the request reference. */
+export const ERROR_MESSAGE = 'Your changes are safe. Check your connection and try again.'

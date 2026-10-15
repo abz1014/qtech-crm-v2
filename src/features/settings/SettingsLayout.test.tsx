@@ -1,9 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { AppRoutes } from '@/app/routes'
 import { SessionProvider } from '@/app/SessionProvider'
 import { AdminOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
+
+vi.mock('@/features/settings/SettingsHomePage', () => ({ SettingsHomePage: () => <p>Settings home</p> }))
 
 const as = (role: string) => ({ status: 'signed-in' as const, user: { id: 'u', name: 'Someone', role } })
 
@@ -39,6 +41,7 @@ function at(path: string, role: string) {
               }
             />
             <Route path="company" element={<p>Company screen</p>} />
+            <Route path="rates" element={<p>Rates screen</p>} />
             <Route path="password" element={<p>Password screen</p>} />
           </Route>
           <Route path="/no-access" element={null} />
@@ -49,7 +52,7 @@ function at(path: string, role: string) {
 }
 
 describe('settings access (A04, A06)', () => {
-  it('/settings opens Team for an admin and the company profile for everyone else', () => {
+  it('/settings opens Team for an admin and the Settings home for everyone else', () => {
     at('/settings', 'admin')
     expect(screen.getByText('Team screen')).toBeInTheDocument()
   })
@@ -57,14 +60,15 @@ describe('settings access (A04, A06)', () => {
   for (const role of ['sales', 'engineer']) {
     it(`${role}: Team is not offered and a typed /settings/team address shows the no-access page`, () => {
       const first = at('/settings', role)
-      expect(screen.getByText('Company screen')).toBeInTheDocument()
+      expect(screen.getByText('Settings home')).toBeInTheDocument()
       expect(screen.queryByRole('link', { name: 'Team' })).toBeNull()
-      expect(screen.getByRole('link', { name: 'Company profile' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /Company profile/ })).toHaveTextContent('View only')
+      expect(screen.getByRole('link', { name: 'Exchange rates' })).toBeInTheDocument()
       first.unmount()
 
       at('/settings/team', role)
       expect(screen.queryByText('Team screen')).toBeNull()
-      expect(screen.getByText('Team is not available to your role')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Team is for admins' })).toBeInTheDocument()
     })
   }
 
@@ -108,7 +112,8 @@ describe('settings access (A04, A06)', () => {
   it('an admin sees both links', () => {
     at('/settings/company', 'admin')
     expect(screen.getByRole('link', { name: 'Team' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Company profile' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Company profile' })).toBeInTheDocument() // no View only tag for an admin
+    expect(screen.getByRole('link', { name: 'Exchange rates' })).toBeInTheDocument()
   })
 
   it('the real route table mounts Settings inside the shell guard', () => {
