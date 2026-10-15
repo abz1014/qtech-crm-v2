@@ -77,6 +77,11 @@ describe('invalidation map (R01)', () => {
     'expense.receipt': { expenseId: 'e1' },
     'recurring.save': {},
     'recurring.record': {},
+    'invoice.create': {},
+    'invoice.update': { invoiceId: 'i1' },
+    'invoice.stamp': {},
+    'invoice.receipt': { invoiceId: 'i1' },
+    'payment.record': { orderId: 'o1' },
   }
 
   it('names at least one key for every write', () => {

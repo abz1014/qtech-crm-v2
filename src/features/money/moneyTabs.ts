@@ -1,9 +1,15 @@
 export interface MoneyTab {
   key: string
   label: string
+  /** What sales call it, when different ("Order balances" for Receivables, money-10). */
+  salesLabel?: string
   to: string
   adminOnly?: boolean
 }
 
-export const MONEY_TABS: readonly MoneyTab[] = [{ key: 'expenses', label: 'Expenses', to: '/money/expenses', adminOnly: true }]
-
+/** The Money views, in the order of the mockups (g2-money, g2-month-end). A view task adds its entry and renders <MoneyFrame>. */
+export const MONEY_TABS: readonly MoneyTab[] = [
+  { key: 'gst-register', label: 'GST register', to: '/money/gst-register' },
+  { key: 'receivables', label: 'Receivables', salesLabel: 'Order balances', to: '/money/receivables' },
+  { key: 'expenses', label: 'Expenses', to: '/money/expenses', adminOnly: true },
+]

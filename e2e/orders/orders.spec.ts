@@ -548,8 +548,9 @@ test.describe('O03: role views', () => {
     await expect(page.getByRole('region', { name: 'Invoices and payments' })).toContainText('Nothing yet')
     await expect(page.getByTestId('order-balance')).toHaveText('730,420')
     await expect(page.getByTestId('payments-empty')).toBeVisible()
-    // drawn where the mockup puts them, disabled until their task (M01 to M04, O07)
-    for (const name of ['Record payment', 'Add expense', 'Create invoice']) await expect(page.locator('[data-slot="order-actions"]').getByRole('button', { name })).toBeDisabled()
+    // drawn where the mockup puts them: Record payment (M02) and Create invoice (M01) are live, Add expense waits for its wiring
+    for (const name of ['Record payment', 'Create invoice']) await expect(page.locator('[data-slot="order-actions"]').getByRole('button', { name })).toBeEnabled()
+    await expect(page.locator('[data-slot="order-actions"]').getByRole('button', { name: 'Add expense' })).toBeDisabled()
     await expect(page.getByRole('button', { name: 'Issue PO, leg A' })).toBeDisabled()
     await expect(page.getByRole('button', { name: 'Add expense, leg A' })).toBeDisabled()
     await expect(page.getByRole('button', { name: 'Add line' })).toBeVisible()
