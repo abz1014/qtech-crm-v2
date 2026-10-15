@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom'
-import { KeyRound, LogOut, Settings, Users } from 'lucide-react'
+import { Download, KeyRound, LogOut, Settings, Users } from 'lucide-react'
 import { ROLE_LABEL, session, type SessionUser } from '@/app/session'
 import { cn } from '@/lib/utils'
+import { promptInstall, useInstall } from '@/lib/pwa/install'
 import { Avatar } from '@/ui/Avatar'
 import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 
@@ -11,6 +12,7 @@ import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from
  */
 export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?: boolean }) {
   const navigate = useNavigate()
+  const { canPrompt } = useInstall()
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -42,6 +44,11 @@ export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?
         <MenuItem icon={KeyRound} onClick={() => navigate('/settings/password')}>
           Change password
         </MenuItem>
+        {canPrompt ? (
+          <MenuItem icon={Download} onClick={() => void promptInstall()}>
+            Install app
+          </MenuItem>
+        ) : null}
         <MenuSeparator />
         <MenuItem icon={LogOut} onClick={() => void session.signOut()}>
           Sign out

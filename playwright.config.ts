@@ -50,13 +50,17 @@ import { defineConfig, devices } from '@playwright/test'
  *    10 s Undo, the Waiting group, role-aware items, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e.yml):
  *      E2E_SUITE=today REVIEW_DIR=review-shots npx playwright test --project=today
  *
+ *  - pwa (R21): the production build's manifest (valid, icons real), the service worker registering, its app-shell-only
+ *    precache (nothing from Supabase), the offline shell and Chrome's own installability check. No database needed:
+ *      E2E_SUITE=pwa npx playwright test --project=pwa
+ *
  *  - search (R12): the command-palette search over companies, contacts, RFQ numbers and customer refs. One request per burst of
  *    keystrokes, stale requests dropped, engineer sees nothing money-related, and axe (WCAG 2.2 AA) at 1440 and 375:
  *      E2E_SUITE=search REVIEW_DIR=review-shots npx playwright test --project=search
  */
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search', 'pwa']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -83,7 +87,8 @@ export default defineConfig({
   expect: {
     toHaveScreenshot: { animations: 'disabled', caret: 'hide', scale: 'css', maxDiffPixelRatio: 0.002 },
   },
-  use: { trace: 'retain-on-failure' },
+  // The worker is blocked everywhere except the 'pwa' project, so no other suite runs behind a cache.
+  use: { trace: 'retain-on-failure', serviceWorkers: 'block' },
   projects: [
     {
       name: 'auth',
@@ -184,6 +189,13 @@ export default defineConfig({
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
+    },
+    {
+      name: 'pwa',
+      testMatch: /pwa\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, serviceWorkers: 'allow', screenshot: 'only-on-failure' },
     },
     { name: 'w1440', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 1440, height: 900 } } },
     { name: 'w375', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 375, height: 812 } } },

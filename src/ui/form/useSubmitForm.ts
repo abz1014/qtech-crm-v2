@@ -3,6 +3,7 @@ import { useForm, type DefaultValues, type FieldValues, type Path, type Resolver
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { z } from 'zod'
 import { mapPgError, type MappedError } from '@/lib/pgErrors'
+import { useDirtyFlag } from '@/lib/pwa/dirtyForms'
 
 /*
  * Form (INVENTORY: U07; D08 section 04). React Hook Form + Zod, with:
@@ -72,6 +73,7 @@ export function useSubmitForm<S extends z.ZodTypeAny>({
     resolver: zodResolver(schema) as unknown as Resolver<TIn, unknown, z.output<S>>,
     defaultValues: defaultValues as DefaultValues<TIn>,
   })
+  useDirtyFlag(form.formState.isDirty)
   const formId = useId()
   const lock = useRef(false)
   const attempt = useRef<{ id: string; signature: string } | null>(null)
