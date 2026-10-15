@@ -66,6 +66,7 @@ jobs:
               - 'e2e/rfqs/intake.spec.ts'
             rfq_detail:
               - 'e2e/rfqs/detail.spec.ts'
+              - 'e2e/rfqs/clarifications.spec.ts'
             today:
               - 'e2e/today/**'
             search:

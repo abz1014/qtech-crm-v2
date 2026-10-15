@@ -53,7 +53,7 @@ export interface SupplierChase {
 }
 
 /** The working day `n` days before `date`, stepping over Saturdays and Sundays. */
-function workingDaysBefore(date: string, n: number): string {
+export function workingDaysBefore(date: string, n: number): string {
   let d = date
   for (let i = 0; i < n; i++) {
     d = addDays(d, -1) as string
@@ -62,7 +62,7 @@ function workingDaysBefore(date: string, n: number): string {
   return d
 }
 
-function workingDaysAfter(date: string, n: number): string {
+export function workingDaysAfter(date: string, n: number): string {
   let d = date
   for (let i = 0; i < n; i++) {
     d = addDays(d, 1) as string

@@ -117,7 +117,7 @@ writes an `audit_log` row with the acting admin as `changed_by`.
 
 Secret to set before deploying (names only; deployment is a separate, owner-run step):
 `ALLOWED_ORIGINS` = comma-separated site origins allowed to call it from a browser (for example the
-Cloudflare Pages production URL). Local dev origins (`localhost:5173`, `localhost:4173`) are always allowed.
+production URL (Vercel)). Local dev origins (`localhost:5173`, `localhost:4173`) are always allowed.
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided by the platform.
 
 CI (`functions.yml`) runs the Deno unit tests and an integration test against `supabase functions serve`.
@@ -128,7 +128,7 @@ Manual only: Actions, Deploy functions, Run workflow. The `production` environme
 There is no push or schedule trigger.
 
 1. Inputs: `allowed_origins` = comma-separated https origins that may call the function from a browser
-   (for example `https://crm.example.com`), and `function` = `admin-users`. Each origin must match
+   (for example the production URL (Vercel), `https://<name>.vercel.app`, or `https://crm.example.com`), and `function` = `admin-users`. Each origin must match
    `^https://[a-z0-9.-]+(:[0-9]+)?$`: no trailing slash, no wildcard, no path. The run fails before touching Supabase otherwise.
 2. Guard: same as `remote.yml`. `SUPABASE_PROJECT_REF` must be `yafbphagorydbitfgfmg`; the old CRM project fails explicitly.
 3. The job runs `supabase secrets set ALLOWED_ORIGINS=...`, then `supabase functions deploy admin-users`
