@@ -307,14 +307,14 @@ test.describe('files (R10)', () => {
     const png = atts.find(a => a.mime_type.startsWith('image/') && a.mime_type !== 'image/heic') as (typeof atts)[number]
 
     // An image opens in a lightbox.
-    await files.getByRole('button', { name: `Open ${png.file_name}` }).click()
+    await files.getByRole('button', { name: /^tiny./ }).click()
     const dialog = page.getByRole('dialog')
     await expect(dialog.getByRole('img', { name: png.file_name })).toBeVisible()
     await dialog.getByRole('button', { name: 'Close' }).first().click()
     await expect(dialog).toHaveCount(0)
 
     // A PDF opens in a new tab through a short-lived signed link.
-    const pdfLink = files.getByRole('link', { name: /Open enquiry\.pdf/ })
+    const pdfLink = files.getByRole('link', { name: /^enquiry\.pdf/ })
     await expect(pdfLink).toHaveAttribute('target', '_blank')
     expect(await pdfLink.getAttribute('href')).toContain('/storage/v1/object/sign/rfq-files/')
 
@@ -333,7 +333,7 @@ test.describe('files (R10)', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await fileInput(page).setInputFiles({ name: 'big-datasheet.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(6 * 1024 * 1024, 1) })
     await expect(page.getByRole('list', { name: 'Files that were not added' })).toContainText('6 MB. The limit is 5 MB.')
-    await expect(toast(page, 'A file was not added')).toBeVisible()
+    await expect(page.getByRole('alert').filter({ hasText: 'A file was not added' })).toBeVisible()
     await review(page, 'r10-file-refused-1440')
     await page.getByRole('button', { name: 'Remove big-datasheet.pdf' }).click()
     await expect(page.getByRole('list', { name: 'Files that were not added' })).toHaveCount(0)
@@ -379,7 +379,7 @@ for (const width of [1440, 375]) {
     expect(await violations(page)).toEqual([])
     await review(page, `r09-clarifications-adding-${width}`)
 
-    await page.getByRole('button', { name: 'Open nameplate-old-meter.png' }).first().click()
+    await page.getByRole('button', { name: /^nameplate-old-meter\.png/ }).first().click()
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await violations(page)).toEqual([])
     await review(page, `r10-viewer-${width}`)

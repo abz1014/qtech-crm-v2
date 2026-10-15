@@ -57,12 +57,12 @@ export function AttachmentItem({ rfqId, att, url, note, removable = true }: { rf
   return (
     <div className="flex min-w-0 items-center gap-2 rounded border border-line bg-surface p-1">
       {previewable ? (
-        <button type="button" className={openClass} onClick={() => setViewing(true)} aria-label={`Open ${att.fileName}`}>
+        <button type="button" className={openClass} onClick={() => setViewing(true)}>
           {thumb}
           {text}
         </button>
       ) : url ? (
-        <a className={openClass} href={url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${att.fileName} in a new tab`}>
+        <a className={openClass} href={url} target="_blank" rel="noopener noreferrer">
           {thumb}
           {text}
         </a>

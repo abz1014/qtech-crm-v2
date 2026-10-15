@@ -552,10 +552,12 @@ export interface NewQuestion {
 export async function addClarifications(rfqId: string, questions: readonly NewQuestion[]): Promise<number> {
   const db = requireSupabase()
   if (questions.length === 0) return 0
+  // One statement gives every row the same created_at; stagger it by a millisecond so the pasted order is the shown order.
+  const base = Date.now()
   const { error } = await db
     .from('clarifications')
     .upsert(
-      questions.map(q => ({ id: q.id, rfq_id: rfqId, question: q.question, raised_by_inquiry_id: q.inquiryId })),
+      questions.map((q, i) => ({ id: q.id, rfq_id: rfqId, question: q.question, raised_by_inquiry_id: q.inquiryId, created_at: new Date(base + i).toISOString() })),
       { onConflict: 'id', ignoreDuplicates: true },
     )
   if (error) throw error
