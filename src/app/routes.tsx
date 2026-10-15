@@ -22,6 +22,7 @@ const screens: Partial<Record<NavKey, ComponentType>> = {
 }
 
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
+const ChangePasswordPage = lazy(() => import('@/features/settings/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })))
 const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfilePage').then(m => ({ default: m.CompanyProfilePage })))
 /** New RFQ (R05): its own route, so it works under whichever screen owns the rest of /rfqs. */
 const IntakeScreen = lazy(() => import('@/features/rfqs/IntakeScreen'))
@@ -71,6 +72,14 @@ export function AppRoutes() {
               element={
                 <Suspense fallback={null}>
                   <CompanyProfilePage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="password"
+              element={
+                <Suspense fallback={null}>
+                  <ChangePasswordPage />
                 </Suspense>
               }
             />

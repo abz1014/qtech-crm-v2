@@ -84,3 +84,7 @@ export function useSaveCompanyProfile() {
     },
   })
 }
+
+export function useChangePassword() {
+  return useMutation({ mutationFn: (v: { current: string; next: string }) => api.changeOwnPassword(v.current, v.next) })
+}
