@@ -3,6 +3,7 @@ import { invalidateAfter } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
 import * as api from '@/features/settings/api'
 import type { Role } from '@/features/settings/api'
+import type { CategoryGroup, PaidVia } from '@/features/settings/categoriesModel'
 import type { ProfileValues } from '@/features/settings/companyProfile'
 
 /*
@@ -87,4 +88,71 @@ export function useSaveCompanyProfile() {
 
 export function useChangePassword() {
   return useMutation({ mutationFn: (v: { current: string; next: string }) => api.changeOwnPassword(v.current, v.next) })
+}
+
+// ---------------------------------------------------------------- targets (M06)
+
+/** Both reads are admin only, so the page passes `enabled` and no one else makes the request. */
+export function useTargets(year: number, enabled: boolean) {
+  return useQuery({ queryKey: qk.settings.targetRows(year), queryFn: () => api.listTargets(year), enabled })
+}
+export function useTargetProgress(year: number, enabled: boolean) {
+  return useQuery({ queryKey: qk.settings.targetProgress(year), queryFn: () => api.listTargetProgress(year), enabled })
+}
+
+export function useSaveTarget() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { userId: string; year: number; quarter: number; amount: number }) => api.saveTarget(v),
+    onSuccess: () => invalidateAfter(client, 'target.save', {}),
+  })
+}
+export function useRemoveTargets() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: readonly string[]) => api.removeTargets(ids),
+    onSuccess: () => invalidateAfter(client, 'target.save', {}),
+  })
+}
+export function useAddTargets() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (rows: Parameters<typeof api.addTargets>[0]) => api.addTargets(rows),
+    onSuccess: () => invalidateAfter(client, 'target.save', {}),
+  })
+}
+
+// ---------------------------------------------------------------- expense categories (M13)
+
+export function useCategories(enabled: boolean) {
+  return useQuery({ queryKey: qk.settings.categories(), queryFn: () => api.listCategories(), enabled })
+}
+
+export function useUpdateCategory() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; patch: api.CategoryPatch }) => api.updateCategory(v.id, v.patch),
+    onSuccess: () => invalidateAfter(client, 'category.save', {}),
+  })
+}
+export function useCreateCategory() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { name: string; grp: CategoryGroup; default_paid_via: PaidVia; sort: number }) => api.createCategory(v),
+    onSuccess: () => invalidateAfter(client, 'category.save', {}),
+  })
+}
+export function useReorderCategories() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (changes: readonly { id: string; sort: number }[]) => api.reorderCategories(changes),
+    onSuccess: () => invalidateAfter(client, 'category.save', {}),
+  })
+}
+export function useDeleteCategory() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.deleteCategory(id),
+    onSuccess: () => invalidateAfter(client, 'category.save', {}),
+  })
 }

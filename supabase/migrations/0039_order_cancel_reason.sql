@@ -1,4 +1,4 @@
--- 0038_order_cancel_reason (O03): why an order was cancelled is a structured record, not text in the notes.
+-- 0039_order_cancel_reason (O03): why an order was cancelled is a structured record, not text in the notes.
 --
 -- Same rule as the "can't quote" reasons (0032): reports read the reason, and notes belong to people, so the reason is a column with a
 -- fixed list of keys and the words the screen shows are built from the key in the app. Notes stay free text and are never written by a

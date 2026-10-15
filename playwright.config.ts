@@ -62,10 +62,15 @@ import { defineConfig, devices } from '@playwright/test'
  *    tap counts, the engineer's one-tap commissioning, no price or money request for an engineer, the palette by order number and PO, and axe
  *    (WCAG 2.2 AA) at 1440 and 375:
  *      E2E_SUITE=orders REVIEW_DIR=review-shots npx playwright test --project=orders
+ *
+ *  - settings-admin (M06, M13): Settings > Targets (admin grid, copy last quarter, the person's own tile on Today, no access for sales and
+ *    engineer) and Settings > Expense categories (rename, reorder, activate, group, paid via, in-use delete advice, deactivate hides it from
+ *    new expenses), with axe at 1440 and 375:
+ *      E2E_SUITE=settings-admin REVIEW_DIR=review-shots npx playwright test --project=settings-admin
  */
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search', 'orders', 'pwa']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search', 'settings-admin', 'orders', 'pwa']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -208,6 +213,13 @@ export default defineConfig({
         permissions: ['clipboard-read', 'clipboard-write'],
         screenshot: 'only-on-failure',
       },
+    },
+    {
+      name: 'settings-admin',
+      testMatch: /settings\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
     },
     {
       name: 'pwa',

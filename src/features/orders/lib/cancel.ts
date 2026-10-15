@@ -1,4 +1,4 @@
-// Cancelling an order (O03). The reason is a fixed key in orders.cancel_reason (migration 0038), never text in the notes: reports read
+// Cancelling an order (O03). The reason is a fixed key in orders.cancel_reason (migration 0039), never text in the notes: reports read
 // it and notes belong to people. The words the screen shows are built here from the key. Pure and framework-free.
 
 export type CancelReason = 'customer_cancelled' | 'lost_to_competitor' | 'supplier_cannot_supply' | 'price_or_terms' | 'duplicate_or_mistake' | 'other'
