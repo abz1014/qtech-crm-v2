@@ -1,6 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
+import { MapPin, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { useSession } from '@/app/session'
+import { NewOrderDialog } from '@/features/orders/NewOrderDialog'
 import type { CompanyHistory, SiteRow } from '@/features/companies/api'
 import { ConfirmRemove, Fine, Panel } from '@/features/companies/CompanyParts'
 import { useRemoveSite } from '@/features/companies/hooks'
@@ -32,6 +34,8 @@ interface Item {
   state: string | null
   extra: string | null
   invoicing: string | null
+  /** Orders only: the order's id, for "Repeat order" (O02). */
+  orderId?: string
 }
 
 function itemsFor(history: CompanyHistory, siteId: string | null): Item[] {
@@ -60,6 +64,7 @@ function itemsFor(history: CompanyHistory, siteId: string | null): Item[] {
       state: o.lifecycle,
       extra: null,
       invoicing: o.invoicing,
+      orderId: o.id,
     }))
   return [...rfqs, ...orders].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
 }
@@ -84,6 +89,10 @@ export function SitesPanel({
   const today = businessToday()
   const { toast } = useToast()
   const remove = useRemoveSite(companyId)
+  const session = useSession()
+  const canRepeat = session.status === 'signed-in' && session.user.role !== 'engineer'
+  /** The order a "Repeat order" was tapped on (O02): its dialog opens with that order already chosen. */
+  const [repeating, setRepeating] = useState<string | null>(null)
   const [removing, setRemoving] = useState<SiteRow | null>(null)
   const [removeError, setRemoveError] = useState<string | null>(null)
   const cancelRemove = () => {
@@ -129,8 +138,23 @@ export function SitesPanel({
             </span>
           ) : null,
       },
+      ...(canRepeat
+        ? ([
+            {
+              id: 'repeat',
+              header: 'Repeat order',
+              width: 150,
+              cell: (r: Item) =>
+                r.orderId ? (
+                  <Button size="sm" variant="quiet" icon={RefreshCw} aria-label={`Repeat order ${orderRef(r.number)}`} onClick={() => setRepeating(r.orderId as string)}>
+                    Repeat order
+                  </Button>
+                ) : null,
+            },
+          ] satisfies Column<Item>[])
+        : []),
     ],
-    [today],
+    [today, canRepeat],
   )
 
   const unfiled = history ? itemsFor(history, null) : []
@@ -194,6 +218,7 @@ export function SitesPanel({
           {unfiled.length > 0 ? <SiteBlock name="Not filed under a site" items={unfiled} columns={columns} muted /> : null}
         </div>
       )}
+      {repeating ? <NewOrderDialog sourceId={repeating} onClose={() => setRepeating(null)} /> : null}
     </Panel>
   )
 }

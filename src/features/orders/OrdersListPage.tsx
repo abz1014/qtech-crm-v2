@@ -186,9 +186,7 @@ export default function OrdersListPage() {
         placeholder={`${LABEL[dim]}: all`}
         onChange={e => change({ [dim]: e.target.value || null })}
         className="h-control w-auto min-w-[160px]"
-        options={DIMENSION_VALUES[dim]
-          .filter(v => (dimCounts[dim].get(v) ?? 0) > 0 || v === current)
-          .map(v => ({ value: v, label: `${valueLabel(dim, v)} (${dimCounts[dim].get(v) ?? 0})` }))}
+        options={DIMENSION_VALUES[dim].map(v => ({ value: v, label: `${valueLabel(dim, v)} (${dimCounts[dim].get(v) ?? 0})` }))}
       />
     )
   }
