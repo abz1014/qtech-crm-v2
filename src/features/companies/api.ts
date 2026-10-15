@@ -27,6 +27,8 @@ export interface CompanyDetail {
   id: string
   name: string
   country: string | null
+  /** companies.city (0038): optional, shown beside the name where a mockup shows a place. */
+  city?: string | null
   notes: string | null
   createdAt: string
   role: CompanyRole | null
@@ -75,6 +77,7 @@ export interface CompanyHit {
   id: string
   name: string
   country: string | null
+  city?: string | null
   role: CompanyRole | null
 }
 
@@ -87,12 +90,12 @@ export async function searchCompanies(text: string, limit = 8): Promise<CompanyH
   const q = text.trim()
   if (!q) return []
   const rows = unwrap(
-    await db.from('companies').select('id, name, country').ilike('name', `%${likeEscape(q)}%`).order('name').limit(limit),
+    await db.from('companies').select('id, name, country, city').ilike('name', `%${likeEscape(q)}%`).order('name').limit(limit),
   )
   const ids = rows.map(r => r.id)
   const roles = ids.length ? unwrap(await db.from('v_company_roles').select('company_id, role').in('company_id', ids)) : []
   const roleBy = new Map(roles.map(r => [r.company_id, asRole(r.role)]))
-  return rows.map(r => ({ id: r.id, name: r.name, country: r.country, role: roleBy.get(r.id) ?? null }))
+  return rows.map(r => ({ id: r.id, name: r.name, country: r.country, city: r.city, role: roleBy.get(r.id) ?? null }))
 }
 
 /** The company whose name equals `name` ignoring case and surrounding spaces, as the unique index sees it. */
@@ -108,7 +111,7 @@ export async function findCompanyByName(name: string): Promise<CompanyHit | null
 export async function getCompany(id: string): Promise<CompanyDetail | null> {
   const db = requireSupabase()
   const [company, role] = await Promise.all([
-    db.from('companies').select('id, name, country, notes, created_at, legacy_flags, legacy_source').eq('id', id).maybeSingle(),
+    db.from('companies').select('id, name, country, city, notes, created_at, legacy_flags, legacy_source').eq('id', id).maybeSingle(),
     db.from('v_company_roles').select('role, is_customer, is_supplier').eq('company_id', id).maybeSingle(),
   ])
   const c = unwrap(company)
@@ -118,6 +121,7 @@ export async function getCompany(id: string): Promise<CompanyDetail | null> {
     id: c.id,
     name: c.name,
     country: c.country,
+    city: c.city,
     notes: c.notes,
     createdAt: c.created_at,
     role: asRole(r?.role),
@@ -481,6 +485,7 @@ export interface NewCompany {
   id: string
   name: string
   country?: string | null
+  city?: string | null
   notes?: string | null
 }
 
@@ -493,6 +498,7 @@ export async function createCompany(input: NewCompany): Promise<{ id: string; na
         id: input.id,
         name: input.name.trim(),
         country: input.country?.trim() || null,
+        city: input.city?.trim() || null,
         notes: input.notes?.trim() || null,
       })
       .select('id, name')

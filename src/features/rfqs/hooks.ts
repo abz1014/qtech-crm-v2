@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/rfqs/api'
-import { searchCompanies } from '@/features/companies/api'
+import { addContact } from '@/features/companies/api'
+import { useCreateCompany } from '@/features/companies/hooks'
 
 /*
  * RFQ hooks for intake (R05). Same shape as companies (src/features/README.md): one hook per read, one per write,
@@ -14,7 +15,7 @@ export function useCompanyMatches(text: string) {
   const q = text.trim()
   return useQuery({
     queryKey: qk.companies.search(q),
-    queryFn: () => searchCompanies(q, 8),
+    queryFn: () => api.searchIntakeCompanies(q),
     enabled: q.length > 0,
     staleTime: 30_000,
   })
@@ -51,6 +52,15 @@ export function useSetRfqFloated() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (v: { rfqId: string; floated: boolean }) => api.setRfqFloated(v.rfqId, v.floated),
+    onSuccess: (_n, v) => invalidateAfter(client, 'rfq.setFloated', { rfqId: v.rfqId }),
+  })
+}
+
+/** "Float item 4 to them": ask one more supplier on a saved RFQ and stamp it sent today. */
+export function useFloatToSupplier() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { rfqId: string; supplierId: string; today: string }) => api.floatToSupplier(v.rfqId, v.supplierId, v.today),
     onSuccess: (_n, v) => invalidateAfter(client, 'rfq.setFloated', { rfqId: v.rfqId }),
   })
 }
@@ -198,5 +208,32 @@ export function useDeleteAttachment(rfqId: string) {
   return useMutation({
     mutationFn: (att: Pick<api.AttachmentRow, 'id' | 'path'>) => api.deleteAttachment(att),
     onSuccess: () => invalidateAfter(client, 'attachment.delete', { rfqId }),
+  })
+}
+
+/**
+ * "Create and use" in the company picker (g2-intake-float frame 2): the company with its optional city, and the
+ * optional first contact. The contact is a by-product: if it cannot be saved the company still stands, and the
+ * company page is where it is added later.
+ */
+export function useCreateCustomer() {
+  const create = useCreateCompany()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: string; name: string; city: string; contact: string }) => {
+      const company = await create.mutateAsync({ id: input.id, name: input.name, city: input.city || null })
+      let contactId: string | null = null
+      if (input.contact.trim()) {
+        const id = crypto.randomUUID()
+        try {
+          await addContact({ id, companyId: company.id, name: input.contact.trim() })
+          contactId = id
+        } catch {
+          contactId = null
+        }
+      }
+      return { ...company, contactId }
+    },
+    onSuccess: created => invalidateAfter(client, 'contact.add', { companyId: created.id }),
   })
 }

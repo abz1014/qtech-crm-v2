@@ -1,4 +1,5 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import { searchCompanies, type CompanyHit } from '@/features/companies/api'
 import type { ViewRow } from '@/features/dbTypes'
 import type { FloatItemPayload } from '@/features/rfqs/lib/intakeModel'
 import type { SupplierItemMemoryRow, SupplierRecord } from '@/features/rfqs/lib/supplierSuggestion'
@@ -18,7 +19,7 @@ export async function listSupplierCandidates(): Promise<SupplierRecord[]> {
   const [stats, companies] = await Promise.all([
     // Every column the memory card quotes comes from this one read, so opening a card asks for nothing more.
     fetchAll((from, to) => db.from('v_supplier_stats').select('*').range(from, to)),
-    fetchAll((from, to) => db.from('companies').select('id, name, country').order('name').range(from, to)),
+    fetchAll((from, to) => db.from('companies').select('id, name, country, city').order('name').range(from, to)),
   ])
   const byId = new Map(companies.map(c => [c.id, c]))
   const out: SupplierRecord[] = []
@@ -28,12 +29,42 @@ export async function listSupplierCandidates(): Promise<SupplierRecord[]> {
     out.push({
       id: c.id,
       name: c.name,
-      // The screen shows a place beside the name; a company has a country, not a city, so that is what it shows.
-      city: c.country,
+      // The place beside the name: the city when one is on file (0038), the country until then.
+      city: c.city ?? c.country,
       stats: { ...s, supplier_id: s.supplier_id },
     })
   }
   return out
+}
+
+/** A company in the intake picker: what it is, how many RFQs it has, and whether it only has a similar name. */
+export interface IntakeCompanyHit extends CompanyHit {
+  rfqCount: number
+  /** Found by the first word of the typed name, not by all of it: the "similar name" flag that prevents duplicates. */
+  similar: boolean
+}
+
+/**
+ * The company picker's search (g2-intake-float frame 2): names containing the typed text, then, for a name of several
+ * words, other companies sharing its first word (flagged similar), each with its RFQ count. Nothing is requested for
+ * an empty text.
+ */
+export async function searchIntakeCompanies(text: string): Promise<IntakeCompanyHit[]> {
+  const q = text.trim()
+  if (!q) return []
+  const exact = await searchCompanies(q, 8)
+  const first = q.split(/\s+/).find(w => w.length >= 4)
+  const near =
+    first && first.toLowerCase() !== q.toLowerCase()
+      ? (await searchCompanies(first, 6)).filter(c => !exact.some(e => e.id === c.id))
+      : []
+  const all = [...exact.map(h => ({ h, similar: false })), ...near.map(h => ({ h, similar: true }))]
+  if (all.length === 0) return []
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('rfqs').select('company_id').in('company_id', all.map(x => x.h.id)))
+  const counts = new Map<string, number>()
+  for (const r of rows) counts.set(r.company_id, (counts.get(r.company_id) ?? 0) + 1)
+  return all.map(({ h, similar }) => ({ ...h, rfqCount: counts.get(h.id) ?? 0, similar }))
 }
 
 export interface MemoryQuery {
@@ -126,6 +157,20 @@ export async function setRfqFloated(rfqId: string, floated: boolean): Promise<nu
   const { data, error } = await db.rpc('set_rfq_floated', { p_rfq_id: rfqId, p_floated: floated })
   if (error) throw error
   return data ?? 0
+}
+
+/**
+ * Ask one more supplier on a saved RFQ and mark it sent on `today` (the "Float item 4 to them" link). An inquiry is per
+ * supplier, so a supplier already shortlisted is stamped, and a new one is added already sent.
+ */
+export async function floatToSupplier(rfqId: string, supplierId: string, today: string): Promise<void> {
+  const db = requireSupabase()
+  unwrap(
+    await db
+      .from('supplier_inquiries')
+      .upsert({ rfq_id: rfqId, supplier_id: supplierId, sent_on: today }, { onConflict: 'rfq_id,supplier_id' })
+      .select('id'),
+  )
 }
 
 /** The RFQ a customer reference already belongs to, so a duplicate can offer "Open it". */

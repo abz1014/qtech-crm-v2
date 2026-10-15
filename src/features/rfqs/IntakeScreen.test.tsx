@@ -65,7 +65,7 @@ function respond(call: FakeCall) {
     case 'rpc:float_rfq':
       return { data: 'rfq-id' }
     case 'rfqs':
-      return { data: { id: 'rfq-id', number: 185 } }
+      return call.ops.some(([n]) => n === 'in') ? { data: [] } : { data: { id: 'rfq-id', number: 185 } }
     case 'rpc:set_rfq_floated':
       return { data: 1 }
     default:
@@ -140,7 +140,7 @@ describe('intake screen', () => {
     fireEvent.paste(document.body, { clipboardData: { getData: () => EMAIL } })
 
     expect(await screen.findByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Hach HQ1110 portable meter')
-    expect(screen.getByRole('textbox', { name: 'Quantity of item 2' })).toHaveValue('2')
+    expect(screen.getByRole('textbox', { name: 'Quantity of item 2' })).toHaveValue('2 nos')
     // Brand picked from the description.
     await waitFor(() => expect(within(screen.getByRole('combobox', { name: 'Brand of item 1' })).getByRole('option', { selected: true })).toHaveTextContent('Hach'))
 
