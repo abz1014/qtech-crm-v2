@@ -151,7 +151,13 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
         .then(() => (q ? (s.search as NonNullable<typeof s.search>)(q, ctl.signal) : (s.idle as NonNullable<typeof s.idle>)()))
         .then(items => {
           if (ctl.signal.aborted) return
-          slots[idx] = [{ key: s.id, heading: s.group, items }]
+          // A source may split its rows into several groups (item.group), keeping the order it gave them.
+          const byHeading = new Map<string, PaletteItem[]>()
+          for (const it of items) {
+            const heading = it.group ?? s.group
+            byHeading.set(heading, [...(byHeading.get(heading) ?? []), it])
+          }
+          slots[idx] = [...byHeading].map(([heading, rows]) => ({ key: byHeading.size > 1 || heading !== s.group ? `${s.id}/${heading}` : s.id, heading, items: rows }))
           publish()
         })
         .catch(() => {
@@ -251,7 +257,11 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
                       <span className="min-w-0 flex-1 truncate">
                         <Highlight text={item.label} q={q} />
                       </span>
-                      {item.meta ? <span className="shrink-0 text-xs text-fg-muted">{item.meta}</span> : null}
+                      {item.meta ? (
+                        <span className="min-w-0 max-w-[45%] shrink-0 truncate text-xs text-fg-muted">
+                          <Highlight text={item.meta} q={g.key === 'recent' ? '' : q} />
+                        </span>
+                      ) : null}
                       {item.shortcut?.length ? (
                         <span className="inline-flex gap-1">
                           {item.shortcut.map(k => (

@@ -41,10 +41,14 @@ import { defineConfig, devices } from '@playwright/test'
  *  - today (R11, R16): the Today screen for all three roles on the same stack and build. The 1-tap chase (copy and mark chased), its
  *    10 s Undo, the Waiting group, role-aware items, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e.yml):
  *      E2E_SUITE=today REVIEW_DIR=review-shots npx playwright test --project=today
+ *
+ *  - search (R12): the command-palette search over companies, contacts, RFQ numbers and customer refs. One request per burst of
+ *    keystrokes, stale requests dropped, engineer sees nothing money-related, and axe (WCAG 2.2 AA) at 1440 and 375:
+ *      E2E_SUITE=search REVIEW_DIR=review-shots npx playwright test --project=search
  */
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'today']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'today', 'search']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -146,6 +150,13 @@ export default defineConfig({
         permissions: ['clipboard-read', 'clipboard-write'],
         screenshot: 'only-on-failure',
       },
+    },
+    {
+      name: 'search',
+      testMatch: /search\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
     },
     { name: 'w1440', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 1440, height: 900 } } },
     { name: 'w375', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 375, height: 812 } } },

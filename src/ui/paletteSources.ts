@@ -4,6 +4,8 @@ import type { LucideIcon } from 'lucide-react'
 export interface PaletteItem {
   id: string
   label: string
+  /** Heading to group this row under, when a source returns several kinds at once (a search across companies, contacts and RFQs). Default: the source's own group. */
+  group?: string
   /** Muted text on the right: "RFQ · bid due Tue 1 Dec". */
   meta?: string
   icon?: LucideIcon

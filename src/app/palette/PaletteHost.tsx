@@ -52,7 +52,7 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
         onOpenChange={setOpen}
         sources={sources}
         onNavigate={(href, { newTab }) => (newTab ? window.open(href, '_blank', 'noopener') : navigate(href))}
-        emptyHint="Search covers places you can open from here. More (RFQs, orders, companies and items) arrives with search."
+        emptyHint="Search finds companies, contacts (name, phone, e-mail), RFQ numbers and customer references, and the places you can open from here."
       />
     </PaletteContext.Provider>
   )
