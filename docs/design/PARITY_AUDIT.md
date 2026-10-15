@@ -289,10 +289,10 @@ Evidence: mockups g2-today-b2 / g2-intake-float / g2-chase-texts (HTML read in f
 | B-03 | Group titles + counts | "Overdue or due today 3", "Due in the next 5 days 5", "Ready to move 1" | identical | MATCH | - | - |
 | B-04 | Row layout | icon tile, title, mono ref · party, right chip | same grid | MATCH | - | - |
 | B-05 | Row due chip wording | "12d late", "today", "1d", "3d", "4d", "5d", "3d old" | "Nd late", "today", "in Nd" (warning <=3), "Nd old" | DIFFERENT | low | Dec "R11 correction" chose "in Nd"; owner to confirm, else drop "in " (R11) |
-| B-06 | Bid row title | "Bid due today, 17:00", "Bid due tomorrow, 12:00" | rules.ts dueWords: "Bid due today" / "Bid due tomorrow" (no times) | DIFFERENT | low | Dec R11 (no clock times). O-1 |
-| B-07 | Relay-answers icon | `reply` arrow | lucide Undo2 | DIFFERENT | low | swap icon (R11) |
+| B-06 | Bid row title | "Bid due today, 17:00", "Bid due tomorrow, 12:00" | rules.ts dueWords: "Bid due today" / "Bid due tomorrow" (no times) | FIXED f47f95f | low | Dec R11 (no clock times). O-1 |
+| B-07 | Relay-answers icon | `reply` arrow | lucide Undo2 | FIXED f47f95f | low | swap icon (R11) |
 | B-08 | Other row icons | banknote, file-check, truck, send, message-circle-question, share-2, shopping-cart | same | MATCH | - | - |
-| B-09 | Row on mobile | trailing chevron on each row | none | MISSING | low | add chevron at 375 (R11) |
+| B-09 | Row on mobile | trailing chevron on each row | none | FIXED f47f95f | low | add chevron at 375 (R11) |
 | B-10 | "Copied" row state | frame 2: row unchanged, nothing moved yet | due chip replaced by green "Copied" pill until undo closes | EXTRA | low | Dec R11. O-2 |
 | B-11 | Top-bar counts | "Today 9, RFQs 14, Orders 7, Money 3" | AppShell `counts` prop never passed | FIXED 1e18a24 | medium | Dec R11 "not wired". Wire counts (shell/R11) |
 | B-12 | Collision line | not drawn in b2 (INVENTORY, BUILD_PLAN R11/D02 name it) | not built | MISSING | low | O-3 |
@@ -301,46 +301,46 @@ Evidence: mockups g2-today-b2 / g2-intake-float / g2-chase-texts (HTML read in f
 | ID | element | mockup | built | status | sev | fix / task |
 |---|---|---|---|---|---|---|
 | B-13 | Header | chevron + "Waiting" + count; note "comes back when its date arrives" / collapsed "next nudge Mon 30 Nov" | same strings | MATCH | - | - |
-| B-14 | Collapse rule | >5 collapsed and user can open; toggle live at 5 too | toggle `disabled` at <=5; session memory kept | DIFFERENT | low | allow collapsing at <=5 (R16) |
+| B-14 | Collapse rule | >5 collapsed and user can open; toggle live at 5 too | toggle `disabled` at <=5; session memory kept | FIXED f47f95f | low | allow collapsing at <=5 (R16) |
 | B-15 | Waiting row | "Customer chased"/"Supplier chased", ref · party, "chased 2 days ago · next nudge on Mon 30 Nov", dimmed, no right chip | same text; dim via bg-sunken + muted | MATCH | - | - |
-| B-16 | New item highlight | first in its date, "chased just now", r-new style | sorted by date, "chased just now", no highlight | DIFFERENT | low | R16 |
+| B-16 | New item highlight | first in its date, "chased just now", r-new style | sorted by date, "chased just now", no highlight | FIXED f47f95f | low | R16 |
 | B-17 | Payment/goods waiting titles | none | "Payment reminded", "Supplier chased for goods" | EXTRA | low | - |
 
 ### 1c. Context pane: draft state
 | ID | element | mockup | built | status | sev | fix / task |
 |---|---|---|---|---|---|---|
-| B-18 | Crumb, h2, sub-line | "Today > RFQ-0177", h2, "Indus Textile Mills — Faisalabad · customer ref RFQ #74037" | crumb ok; sub-line adds "RFQ-0001 · " in front | DIFFERENT | low | drop repeated ref (R16) |
-| B-19 | Status chips | Waiting on customer / Due soon / Partly covered; "· asked ×2" after chase | StatusBadges, no "asked ×N" | DIFFERENT | low | R16 |
-| B-20 | Situation cells (4, with icons) | Unanswered 2; Asked customer 6 days ago Sat 21 Nov; Bid due in 4 days Tue 1 Dec; Waiting: Endress+Hauser via ABC Traders | same grid, no icons; 4th is "Asked so far ×N" | DIFFERENT | medium | Dec R11. Add icons; O-4 |
+| B-18 | Crumb, h2, sub-line | "Today > RFQ-0177", h2, "Indus Textile Mills — Faisalabad · customer ref RFQ #74037" | crumb ok; sub-line adds "RFQ-0001 · " in front | FIXED f47f95f | low | drop repeated ref (R16) |
+| B-19 | Status chips | Waiting on customer / Due soon / Partly covered; "· asked ×2" after chase | StatusBadges, no "asked ×N" | FIXED f47f95f | low | R16 |
+| B-20 | Situation cells (4, with icons) | Unanswered 2; Asked customer 6 days ago Sat 21 Nov; Bid due in 4 days Tue 1 Dec; Waiting: Endress+Hauser via ABC Traders | same grid, no icons; 4th is "Asked so far ×N" | FIXED f47f95f | medium | Dec R11. Add icons; O-4 |
 | B-21 | Date rail | "Today · Fri 27 Nov", "Asked Sat 21 Nov" / "Bid due Tue 1 Dec" | same | MATCH | - | - |
-| B-22 | "Prepared for you" sub-text | "Written from the two open questions. Edit anything before you send." | "Written from what is on record. Edit anything before you send." | DIFFERENT | low | R16 |
+| B-22 | "Prepared for you" sub-text | "Written from the two open questions. Edit anything before you send." | "Written from what is on record. Edit anything before you send." | FIXED f47f95f | low | R16 |
 | B-23 | Channel switch | WhatsApp / Email | same | MATCH | - | - |
-| B-24 | Recipient row | WhatsApp: phone icon, "To Mr. Tariq Mehmood", mono phone. Email: mail icon, address shown | always phone icon; "To {name}" or "No contact on record"; phone only; email never shown (contacts.email exists, api.ts selects only name, phone) | DIFFERENT | medium | select contacts.email, show on Email tab (R16) |
+| B-24 | Recipient row | WhatsApp: phone icon, "To Mr. Tariq Mehmood", mono phone. Email: mail icon, address shown | always phone icon; "To {name}" or "No contact on record"; phone only; email never shown (contacts.email exists, api.ts selects only name, phone) | FIXED f47f95f | medium | select contacts.email, show on Email tab (R16) |
 | B-25 | Salutation | "Assalam o Alaikum Mr. Tariq," | full stored name ("Assalam o Alaikum Tariq Mehmood,") | DIFFERENT | medium | O-5 |
-| B-26 | Email subject | separate "Subject" row + "Copy subject" button | "Subject: ..." line inside the text; no Copy subject | DIFFERENT | medium | R16 |
-| B-27 | Draft text styling | *…* markers faint, keywords bold | plain pre, asterisks plain | DIFFERENT | low | R16 |
-| B-28 | Draft body detail | "your RFQ *#74037* (flow meters, Faisalabad plant)", "(item 2)", "(items 2 and 3)" | no parenthetical, no item tags | MISSING | medium | Dec R09/R11 (generator never invents; no item link). O-6 |
-| B-29 | Email sign-off | "Sales, Q-Tech Solutions, +92 300 555 0188" | job title yes, phone no | DIFFERENT | low | Dec R07. O-7 |
+| B-26 | Email subject | separate "Subject" row + "Copy subject" button | "Subject: ..." line inside the text; no Copy subject | FIXED f47f95f | medium | R16 |
+| B-27 | Draft text styling | *…* markers faint, keywords bold | plain pre, asterisks plain | FIXED f47f95f | low | R16 |
+| B-28 | Draft body detail | "your RFQ *#74037* (flow meters, Faisalabad plant)", "(item 2)", "(items 2 and 3)" | no parenthetical, no item tags | FIXED f47f95f | medium | Dec R09/R11 (generator never invents; no item link). O-6 |
+| B-29 | Email sign-off | "Sales, Q-Tech Solutions, +92 300 555 0188" | job title yes, phone no | FIXED f47f95f | low | Dec R07. O-7 |
 | B-30 | Action footer | [Copy message and mark chased] [Open RFQ-0177] ... [Snooze, alarm-clock-off icon] | same labels; BellOff icon | MATCH | - | icon low |
-| B-31 | Snooze menu | "Tomorrow morning · Sat 28", "Monday · Mon 30 Nov", "Pick a date >" | "Tomorrow, Sat 28 Nov", "Monday, Mon 30 Nov", "Pick a date" (dialog "Snooze until") | DIFFERENT | low | R11 |
+| B-31 | Snooze menu | "Tomorrow morning · Sat 28", "Monday · Mon 30 Nov", "Pick a date >" | "Tomorrow, Sat 28 Nov", "Monday, Mon 30 Nov", "Pick a date" (dialog "Snooze until") | FIXED f47f95f | low | R11 |
 | B-32 | Footnote under actions | none in draft state | "Copying records a chase today (asked ×2). Asks for a reply by Wed 28 Oct." plus firm note | EXTRA | low | cf. B-74 |
 | B-33 | One-tap copy + stamp | one tap | one tap | MATCH | - | - |
 | B-34 | Open questions card | numbered, "asked 21 Nov · no reply" | same | MATCH | - | - |
-| B-35 | "What happened" | 17 Nov received; 19 Nov Floated to 3 suppliers; 21 Nov 2 questions sent; 27 Nov Not chased yet | no "Floated to N suppliers" event; adds "Customer asked again" | MISSING | low | R16 |
+| B-35 | "What happened" | 17 Nov received; 19 Nov Floated to 3 suppliers; 21 Nov 2 questions sent; 27 Nov Not chased yet | no "Floated to N suppliers" event; adds "Customer asked again" | FIXED f47f95f | low | R16 |
 
 ### 1d. Copied (frame 2) and Just chased (frame 3)
 | ID | element | mockup | built | status | sev | fix / task |
 |---|---|---|---|---|---|---|
-| B-36 | Copied bar | green bar "Copied. Paste it into WhatsApp." replaces header/tabs | same strip but header and tabs remain | DIFFERENT | low | R16 |
-| B-37 | Copied footer | "Chased today. Moves to Waiting when the undo closes." + Open | disabled "Marked chased today" + footnote | DIFFERENT | low | R16 |
+| B-36 | Copied bar | green bar "Copied. Paste it into WhatsApp." replaces header/tabs | same strip but header and tabs remain | FIXED f47f95f | low | R16 |
+| B-37 | Copied footer | "Chased today. Moves to Waiting when the undo closes." + Open | disabled "Marked chased today" + footnote | FIXED f47f95f | low | R16 |
 | B-38 | Undo toast | "Copied. RFQ-0177 marked chased." ring "Undo 7s" | same wording, ring, 10s, Cmd/Ctrl+Z | MATCH | - | - |
-| B-39 | Just-chased title | h2 stays "Chase customer for clarifications" | h2 becomes "Customer chased" | DIFFERENT | medium | R16 |
-| B-40 | Note bar | "Moved to Waiting. It comes back to your list on Mon 30 Nov, or sooner if the customer replies." + "Next: RFQ-0184" | info Banner "chased just now · next nudge on …" / "It is in Waiting and returns to the list on that day. You can still copy the message again." | DIFFERENT | medium | R16 |
-| B-41 | Cells after chase | "Chased customer Today Fri 27 Nov · asked ×2"; "Next nudge Mon 30 Nov · short wait: bid is close" | unchanged cells | MISSING | medium | R16 |
-| B-42 | Rail after chase | extra "Next nudge · Mon 30 Nov" marker | none | MISSING | medium | R16 |
-| B-43 | "Chased today" card | "Chased today", "WhatsApp to Mr. Tariq Mehmood, copied at 14:32. Asked ×2 now.", stamp "In Waiting", message excerpt, [Open RFQ-0177] [Chase again now], "A third ask suggests closing as no reply." | full draft and big "Copy message and mark chased" still shown for a waiting item | DIFFERENT | high | R16 |
-| B-44 | "Chase again now" | present | absent | MISSING | high | R16 |
-| B-45 | Open questions / history after chase | "asked 21 Nov · chased 27 Nov · no reply"; "27 Nov Chased customer, asked ×2"; "30 Nov Next nudge if no reply" | plain "asked … · no reply"; "Chased {n days ago}"; no next-nudge line | MISSING | low | R16 |
+| B-39 | Just-chased title | h2 stays "Chase customer for clarifications" | h2 becomes "Customer chased" | FIXED f47f95f | medium | R16 |
+| B-40 | Note bar | "Moved to Waiting. It comes back to your list on Mon 30 Nov, or sooner if the customer replies." + "Next: RFQ-0184" | info Banner "chased just now · next nudge on …" / "It is in Waiting and returns to the list on that day. You can still copy the message again." | FIXED f47f95f | medium | R16 |
+| B-41 | Cells after chase | "Chased customer Today Fri 27 Nov · asked ×2"; "Next nudge Mon 30 Nov · short wait: bid is close" | unchanged cells | FIXED f47f95f | medium | R16 |
+| B-42 | Rail after chase | extra "Next nudge · Mon 30 Nov" marker | none | FIXED f47f95f | medium | R16 |
+| B-43 | "Chased today" card | "Chased today", "WhatsApp to Mr. Tariq Mehmood, copied at 14:32. Asked ×2 now.", stamp "In Waiting", message excerpt, [Open RFQ-0177] [Chase again now], "A third ask suggests closing as no reply." | full draft and big "Copy message and mark chased" still shown for a waiting item | FIXED f47f95f | high | R16 |
+| B-44 | "Chase again now" | present | absent | FIXED f47f95f | high | R16 |
+| B-45 | Open questions / history after chase | "asked 21 Nov · chased 27 Nov · no reply"; "27 Nov Chased customer, asked ×2"; "30 Nov Next nudge if no reply" | plain "asked … · no reply"; "Chased {n days ago}"; no next-nudge line | FIXED f47f95f | low | R16 |
 | B-46 | Header counts after chase | 8 need you, All 8, Bids 2 | Waiting excluded from counts | MATCH | - | - |
 
 ### 1e. Target tile
@@ -348,8 +348,8 @@ Evidence: mockups g2-today-b2 / g2-intake-float / g2-chase-texts (HTML read in f
 |---|---|---|---|---|---|---|
 | B-50 | Head | "Your Q4 target" + "PKR 330,000 behind pace" (clock-alert, warning) / "PKR 320,000 ahead of pace" (circle-check) | same; plus "On pace" state | MATCH | - | - |
 | B-51 | Figures | "PKR 3,450,000 of PKR 6,000,000" | same | MATCH | - | - |
-| B-52 | Pace label | "on pace PKR 3.78M" | "on pace 3.78M" (millions() omits PKR) | DIFFERENT | low | R11 |
-| B-53 | Bar | green fill, hatched shortfall, black marker | green fill, solid warning-tinted gap with borders, marker | DIFFERENT | low | R11 |
+| B-52 | Pace label | "on pace PKR 3.78M" | "on pace 3.78M" (millions() omits PKR) | FIXED f47f95f | low | R11 |
+| B-53 | Bar | green fill, hatched shortfall, black marker | green fill, solid warning-tinted gap with borders, marker | FIXED f47f95f | low | R11 |
 | B-54 | Day line + working | "Day 58 of 92 v · 34 days left" opens the dl and foot note | identical rows and foot note; extra "N payments are not counted yet (basis unknown)" when relevant | MATCH | - | extra sentence EXTRA low |
 | B-55 | No-target state | "No target set for Q4 / Ask an admin to set one on the Team screen. Nothing else on Today depends on it." | same | MATCH | - | - |
 | B-56 | Placement + exact on hover | foot of list; hover carries exact values | same (title attrs) | MATCH | - | - |
@@ -358,11 +358,11 @@ Evidence: mockups g2-today-b2 / g2-intake-float / g2-chase-texts (HTML read in f
 ### 1f. Mobile 375
 | ID | element | mockup | built | status | sev | fix / task |
 |---|---|---|---|---|---|---|
-| B-58 | Top of page | app bar title "Today"; no second heading | page draws its own big h1 "Today" under the app bar (visible in r11 mobile PNG) | DIFFERENT | medium | R11 |
-| B-59 | Date line | "Friday 27 November · 9 need you, 3 due now" | middle-dot form | DIFFERENT | low | - |
-| B-60 | Tile | boxed compact card, then filter tabs, then groups | flat strip above the header | DIFFERENT | low | R11 |
-| B-61 | Accordion content | 2x2 situation grid (short labels), rail ("Today", "Sat 21 Nov"/"Tue 1 Dec"), prep with tabs, clipped message + "Show full message" | full desktop pane (h2, chips, facts, rail, draft) | DIFFERENT | medium | R11 |
-| B-62 | Mobile actions | full-width [Copy and mark chased] + icon-only snooze, 44px | "Copy message and mark chased", "Open RFQ-…", "Snooze" text buttons | DIFFERENT | medium | R11 |
+| B-58 | Top of page | app bar title "Today"; no second heading | page draws its own big h1 "Today" under the app bar (visible in r11 mobile PNG) | FIXED f47f95f | medium | R11 |
+| B-59 | Date line | "Friday 27 November · 9 need you, 3 due now" | middle-dot form | FIXED f47f95f | low | - |
+| B-60 | Tile | boxed compact card, then filter tabs, then groups | flat strip above the header | FIXED f47f95f | low | R11 |
+| B-61 | Accordion content | 2x2 situation grid (short labels), rail ("Today", "Sat 21 Nov"/"Tue 1 Dec"), prep with tabs, clipped message + "Show full message" | full desktop pane (h2, chips, facts, rail, draft) | FIXED f47f95f | medium | R11 |
+| B-62 | Mobile actions | full-width [Copy and mark chased] + icon-only snooze, 44px | "Copy message and mark chased", "Open RFQ-…", "Snooze" text buttons | FIXED f47f95f | medium | R11 |
 | B-63 | Mobile copied | green bar, disabled "Marked chased today", toast | same | MATCH | - | - |
 | B-64 | Mobile just-chased | Waiting collapsed (>5) | same rule | MATCH | - | - |
 | B-65 | Loading / error / goal-empty | no b2 frame (INVENTORY lists them) | skeleton, "Today could not load", "Nothing needs you today" | MATCH | - | - |
@@ -418,24 +418,24 @@ Surfaces: (a) Today pane (chaseDraft.ts → generateCustomerChase / generateSupp
 
 | ID | element | mockup | built | status | sev | fix / task |
 |---|---|---|---|---|---|---|
-| B-70 | Panel framing + context chips | standalone panel with chip "Waiting on customer", "2 open questions · asked 21 Nov · bid due Tue 1 Dec" | lives in Today pane (facts grid) | DIFFERENT | low | see B-18..B-21 |
-| B-71 | Customer: question tick list + editable date | "Questions in this message / Untick to leave one out"; "Kindly confirm by [Mon 30 Nov] One working day before the bid is due. You can change it." | none; text editable only in the pasted copy; date computed | MISSING | high | Dec R09/R11. O-6 |
-| B-72 | Supplier: item tick list + date | "Items still without a price from this supplier", priced item greyed, "Reply by [Tue 1 Dec] Two working days before our bid. You can change it." | none | MISSING | high | Dec R07 note. R07/R16 |
-| B-73 | Recipient row | "WhatsApp to Mr. Tariq Mehmood +92…" / "Email to … procurement@…" | "To {name}" + phone in Today only; none on RFQ page | DIFFERENT | medium | B-24 |
-| B-74 | Copy banner | "Copying records a chase today (asked ×2). RFQ-0177 moves to Waiting and returns on Mon 30 Nov." / "Copying records chase 1 for this supplier. RFQ-0179 moves to Waiting and returns if still silent after Mon 30 Nov." (hourglass) | "Copying records a chase today (asked ×2). Asks for a reply by Wed 28 Oct." ; RFQ page: "Copying records a chase today. It lists only the items this supplier has not priced…" | DIFFERENT | medium | use mockup wording + return date (R16) |
-| B-75 | Copied inline state | footer "Copied. Marked as chased today." + Undo | Today: toast with Undo; RFQ page chase toasts ("Chase text copied") have no Undo | DIFFERENT | medium | R07/R09 |
-| B-76 | Customer first/gentle WhatsApp | "A gentle reminder about your RFQ *#74037* (flow meters, Faisalabad plant). To complete our quotation we still need your confirmation on:" | "A gentle reminder about your RFQ *#x*. To complete…" ; first ask (askCount 0) "To complete our quotation for your RFQ *#x* we need your confirmation on:" | DIFFERENT | low | parenthetical O-6 |
+| B-70 | Panel framing + context chips | standalone panel with chip "Waiting on customer", "2 open questions · asked 21 Nov · bid due Tue 1 Dec" | lives in Today pane (facts grid) | FIXED f47f95f | low | see B-18..B-21 |
+| B-71 | Customer: question tick list + editable date | "Questions in this message / Untick to leave one out"; "Kindly confirm by [Mon 30 Nov] One working day before the bid is due. You can change it." | none; text editable only in the pasted copy; date computed | FIXED f47f95f | high | Dec R09/R11. O-6 |
+| B-72 | Supplier: item tick list + date | "Items still without a price from this supplier", priced item greyed, "Reply by [Tue 1 Dec] Two working days before our bid. You can change it." | none | FIXED f47f95f | high | Dec R07 note. R07/R16 |
+| B-73 | Recipient row | "WhatsApp to Mr. Tariq Mehmood +92…" / "Email to … procurement@…" | "To {name}" + phone in Today only; none on RFQ page | FIXED f47f95f | medium | B-24 |
+| B-74 | Copy banner | "Copying records a chase today (asked ×2). RFQ-0177 moves to Waiting and returns on Mon 30 Nov." / "Copying records chase 1 for this supplier. RFQ-0179 moves to Waiting and returns if still silent after Mon 30 Nov." (hourglass) | "Copying records a chase today (asked ×2). Asks for a reply by Wed 28 Oct." ; RFQ page: "Copying records a chase today. It lists only the items this supplier has not priced…" | FIXED f47f95f | medium | use mockup wording + return date (R16) |
+| B-75 | Copied inline state | footer "Copied. Marked as chased today." + Undo | Today: toast with Undo; RFQ page chase toasts ("Chase text copied") have no Undo | FIXED f47f95f | medium | R07/R09 |
+| B-76 | Customer first/gentle WhatsApp | "A gentle reminder about your RFQ *#74037* (flow meters, Faisalabad plant). To complete our quotation we still need your confirmation on:" | "A gentle reminder about your RFQ *#x*. To complete…" ; first ask (askCount 0) "To complete our quotation for your RFQ *#x* we need your confirmation on:" | FIXED f47f95f | low | parenthetical O-6 |
 | B-77 | Customer confirm line + close | "Kindly confirm by *Monday 30 November*; our bid is due on Tuesday 1 December." "Thank you for your support." | same | MATCH | - | - |
-| B-78 | Customer email | Dear Mr. Tariq / "further to our message of Saturday 21 November" / call offer / "With best regards, … Sales, Q-Tech Solutions, +92…" / subject "RFQ #74037: your confirmation needed by Monday 30 November" | same sentences and subject form; no phone; full contact name; no item tags | DIFFERENT | low | O-5, O-7 |
-| B-79 | Customer: bid is close | "…is due *tomorrow, Tuesday 1 December, 12:00*…" ; "Kindly confirm by *5:00 pm today*." | "…due *tomorrow, Tuesday 1 December*…" ; "Kindly confirm by *the end of today*." | DIFFERENT | low | Dec R11. O-1 |
+| B-78 | Customer email | Dear Mr. Tariq / "further to our message of Saturday 21 November" / call offer / "With best regards, … Sales, Q-Tech Solutions, +92…" / subject "RFQ #74037: your confirmation needed by Monday 30 November" | same sentences and subject form; no phone; full contact name; no item tags | FIXED f47f95f | low | O-5, O-7 |
+| B-79 | Customer: bid is close | "…is due *tomorrow, Tuesday 1 December, 12:00*…" ; "Kindly confirm by *5:00 pm today*." | "…due *tomorrow, Tuesday 1 December*…" ; "Kindly confirm by *the end of today*." | FIXED f47f95f | low | Dec R11. O-1 |
 | B-80 | Customer: third ask | "We are writing once more… still open from our messages of 21 and 27 November… If these items are no longer required… Otherwise, kindly confirm by *Thursday 3 December*." | identical sentences | MATCH | - | - |
 | B-81 | Firm (>30 days) wording | not in mockup | firm text in all generators | EXTRA | low | Dec 2026-10-14 |
 | B-82 | Supplier chase 1st/2nd, WhatsApp + email | "Following up on our enquiry of *Monday 23 November* (ref *RFQ-0179*). Thank you for pricing item 1…", "A second reminder on…", "Could you please reply by *Tuesday 1 December*?…", subject "RFQ-0179: price needed for 2 items by Tuesday 1 December" | same, line for line (supplierChase.ts) | MATCH | - | - |
-| B-83 | Signature on RFQ page | "Sales, Q-Tech Solutions" | SupplierReplies and ClarificationsPanel pass {name, company} without jobTitle, so email omits "Sales," (Today passes data.jobTitle) | DIFFERENT | medium | R07/R09 |
-| B-84 | Two customer generators | one wording set | Clarifications panel generateCustomerAsk has only first/repeat; no bid-close, third-ask or firm text; its first-ask sentence differs ("Thank you for your RFQ… we need your confirmation") | DIFFERENT | high | route through generateCustomerChase (R09/R16) |
-| B-85 | Customer ref format | "#74037" | `#`+ref; a stored "RFQ #74037" would read "#RFQ #74037" | DIFFERENT | low | R16 |
+| B-83 | Signature on RFQ page | "Sales, Q-Tech Solutions" | SupplierReplies and ClarificationsPanel pass {name, company} without jobTitle, so email omits "Sales," (Today passes data.jobTitle) | FIXED f47f95f | medium | R07/R09 |
+| B-84 | Two customer generators | one wording set | Clarifications panel generateCustomerAsk has only first/repeat; no bid-close, third-ask or firm text; its first-ask sentence differs ("Thank you for your RFQ… we need your confirmation") | FIXED f47f95f | high | route through generateCustomerChase (R09/R16) |
+| B-85 | Customer ref format | "#74037" | `#`+ref; a stored "RFQ #74037" would read "#RFQ #74037" | FIXED f47f95f | low | R16 |
 | B-86 | Customer escalation | "3 chases, no answer / This is a suggestion. Nothing is closed for you. [Close as no reply][Keep waiting] / Closing asks for a reason, pre-filled with “No reply from customer”." | same title and lead; closes in one tap with reason no_reply_to_clarification + Undo; says "Closing records the reason “No reply to our questions”." | DIFFERENT | low | Dec R11 |
-| B-87 | Supplier escalation | "Chased twice, no reply from Metro Process Controls / Float items 2 and 3 to someone else? Next in line, by reason:" list with memory lines; [Choose suppliers for items 2 and 3][Chase again] | same title; "Float these items to someone else? Nothing is changed until you choose."; no list; [Choose another supplier][Chase again] | MISSING | high | Dec R11. R16/R17 |
+| B-87 | Supplier escalation | "Chased twice, no reply from Metro Process Controls / Float items 2 and 3 to someone else? Next in line, by reason:" list with memory lines; [Choose suppliers for items 2 and 3][Chase again] | same title; "Float these items to someone else? Nothing is changed until you choose."; no list; [Choose another supplier][Chase again] | FIXED f47f95f | high | Dec R11. R16/R17 |
 | B-88 | Goods / payment texts | no frame (payment in g2-money) | generators exist | EXTRA | low | money part |
 
 ## 4. RFQ board (/rfqs)
@@ -741,7 +741,7 @@ Companies list, create dialog, merge dialog: NO dedicated mockup exists (INVENTO
 | D-66 | Deliveries table | Purchase order (mono, "PO-26-0017 · R1"), Order, Expected, Received, Result; legacy rows show an "Imported" tag in PO col; "est." after dates | same columns/format and "est."; legacy rows read "No PO issued" | FIXED (2c352f1) | low | show "Imported" tag for legacy. R18 |
 | D-67 | Delivery result | "On time" + "1 day early"; "Late 6 days"; "On time" + "dates estimated" | same (plus extra states "Not received, N days past", "Not received yet") | MATCH | - | - |
 | D-68 | Contacts panel | name, role, phone mono; "+ Add" | same plus site name, e-mail, edit and trash buttons; empty "No contacts yet. Every field is optional, so a name alone is enough." | KEPT: R02 follow-up edit and remove (job title now shown, a198ee3) | low | additions from R02 follow-up |
-| D-69 | Open with them | Enquiry ("RFQ-0171 waiting, 3 days"), Order leg ("ORD-0038 A received"), Currency ("EUR"; low data "CNY, rate 38.85, 8 days old" with orange age) | Enquiry same; Order leg shows "expected 20 Oct"-style text or "None open"; Currency code only (no rate, no age); extra footnote "Enquiries still unanswered and order legs not yet received. ..." | PARTLY FIXED 2c352f1: rate and age added, footnote removed. OPEN (owner): "A received" wording on the Order leg row | medium | add rate + age (staleness) ; OWNER on "A received" wording. R18 |
+| D-69 | Open with them | Enquiry ("RFQ-0171 waiting, 3 days"), Order leg ("ORD-0038 A received"), Currency ("EUR"; low data "CNY, rate 38.85, 8 days old" with orange age) | Enquiry same; Order leg shows "expected 20 Oct"-style text or "None open"; Currency code only (no rate, no age); extra footnote "Enquiries still unanswered and order legs not yet received. ..." | FIXED (rate and age 2c352f1; "received" wording now Delivered, branch p4/parity-d69) | medium | add rate + age (staleness) ; OWNER on "A received" wording. R18 |
 | D-70 | Brands panel in rail | none (brands live inside What we know) | extra "Brands carried" rail panel (tags, remove X, Add combobox) shown for suppliers | KEPT (owner): rail panel, same panel and tag treatment as Contacts | medium | duplicates the Brands cell; OWNER DECISION. R02 |
 | D-71 | Roles panel | customer board only: Customer chip, "Also a supplier?" No, "Customer since" 2024 | shown for all roles: rows "Customer"/"Supplier" (chip or No) + sentence | FIXED (2c352f1) | medium | use mockup labels; add "Customer since"; hide on supplier boards. R02 |
 
@@ -807,7 +807,7 @@ Companies list, create dialog, merge dialog: NO dedicated mockup exists (INVENTO
 - D-65, D-95: keep the extra "Recent enquiries" table and the "History" placeholder panel (neither in the mockup)?
 - D-93, D-94: keep admin "Money with them" and "Notes" panels?
 - D-52, D-62: "Not ordered" wording and dropped tier label are an approved deviation (DECISIONS 2026-10-15 R17/R18); confirm.
-- D-69: mockup Order leg reads "ORD-0038 A received" (ambiguous); confirm intended wording.
+- D-69 (decided by the owner): the Received step is removed. Supplier legs go Placed, then Delivered, and received_on follows delivered_on, so the supplier panels say Delivered (column, results, copy).
 
 ## UNDONE (not built / not matching)
 D-01, D-03, D-04, D-05, D-06, D-21, D-22, D-27, D-28, D-34, D-35, D-37, D-38, D-39, D-40, D-41, D-50, D-53, D-54, D-56, D-57, D-58, D-62, D-66, D-69, D-71, D-82, D-83 (O02, later), D-84 (O06, later), D-85 (O03/O04, later), D-86, D-89, D-121, D-122, D-123.
@@ -833,7 +833,6 @@ Every non-MATCH row above now says FIXED with the commit that did it, or why it 
 
 Open after this branch:
 - D-83 the "Repeat order" action (O02, another worker): the slot is in place and disabled.
-- D-69 the "A received" wording on the Order leg row (owner).
 - D-85 the order link target (Orders screen, O03/O04).
 - D-10 nav count badges (shell).
 - users.phone (0039) is not shown anywhere on the company page in the mockups; it is for signatures on chase texts and quotations.

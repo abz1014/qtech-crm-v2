@@ -19,6 +19,7 @@ const screens: Partial<Record<NavKey, ComponentType>> = {
   today: lazy(() => import('@/features/today/TodayScreen')),
   companies: lazy(() => import('@/features/companies/CompaniesScreen')),
   rfqs: lazy(() => import('@/features/rfqs/board/RfqsScreen')),
+  money: lazy(() => import('@/features/money/MoneyScreen')),
   orders: lazy(() => import('@/features/orders/OrdersScreen')),
 }
 

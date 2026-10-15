@@ -125,6 +125,8 @@ export interface PriceMemory {
   itemId: string
   soldPrice: number | null
   soldOn: string | null
+  /** ORD-0031 for the sold chip. */
+  soldOrderNumber: number | null
   quotedPrice: number | null
   quotedOn: string | null
   quotedNumber: number | null
@@ -137,6 +139,7 @@ export async function getPriceMemory(rfqId: string): Promise<PriceMemory[]> {
     itemId: r.rfq_item_id,
     soldPrice: r.sold_price === null ? null : Number(r.sold_price),
     soldOn: r.sold_on,
+    soldOrderNumber: r.sold_order_number,
     quotedPrice: r.quoted_price === null ? null : Number(r.quoted_price),
     quotedOn: r.quoted_on,
     quotedNumber: r.quoted_number,
@@ -147,11 +150,12 @@ export async function getPriceMemory(rfqId: string): Promise<PriceMemory[]> {
 export interface ContactChoice {
   id: string
   name: string
+  jobTitle: string | null
 }
 
 export async function listCompanyContacts(companyId: string): Promise<ContactChoice[]> {
-  const rows = unwrap(await requireSupabase().from('contacts').select('id, name').eq('company_id', companyId).order('name'))
-  return rows.map(r => ({ id: r.id, name: r.name }))
+  const rows = unwrap(await requireSupabase().from('contacts').select('id, name, job_title').eq('company_id', companyId).order('name'))
+  return rows.map(r => ({ id: r.id, name: r.name, jobTitle: r.job_title }))
 }
 
 // ---------------------------------------------------------------- issue
@@ -167,6 +171,7 @@ export interface IssueInput {
   /** Client-generated: a second call with the same id changes nothing, so a double tap cannot issue twice. */
   id: string
   rfqId: string
+  /** The included items. Only these are priced into rfq_items and snapshotted (partial quotations, 0039). */
   items: IssueItemInput[]
   validUntil: string
   contactId: string | null
@@ -198,6 +203,7 @@ export async function issueQuotation(input: IssueInput): Promise<QuotationRow> {
     p_delivery_text: input.deliveryText ?? undefined,
     p_payment_terms: input.paymentTerms ?? undefined,
     p_notes: input.notes ?? undefined,
+    p_item_ids: input.items.map(i => i.id),
   })
   if (error) throw error
   return getQuotation(input.id)
@@ -215,9 +221,12 @@ export interface PdfData {
   siteName: string | null
   siteAddress: string | null
   attention: string | null
+  attentionTitle: string | null
   customerRef: string | null
   rfqNumber: number
-  signatory: { name: string; jobTitle: string | null } | null
+  signatory: { name: string; jobTitle: string | null; phone: string | null } | null
+  /** A preview of a quotation that has not been issued: the PDF says so and prints no real number. */
+  preview?: boolean
 }
 
 /** Everything the PDF prints besides the company profile (which has its own query). */
@@ -239,14 +248,14 @@ export async function loadPdfData(quotationId: string): Promise<PdfData> {
   const [company, site, contact, signatory, revs] = await Promise.all([
     db.from('companies').select('name, country').eq('id', rfq.company_id).single(),
     rfq.site_id ? db.from('company_sites').select('name, address').eq('id', rfq.site_id).maybeSingle() : Promise.resolve(null),
-    contactId ? db.from('contacts').select('name').eq('id', contactId).maybeSingle() : Promise.resolve(null),
-    db.from('users').select('name, job_title').eq('id', quotation.signatoryId).maybeSingle(),
+    contactId ? db.from('contacts').select('name, job_title').eq('id', contactId).maybeSingle() : Promise.resolve(null),
+    loadSignatory(quotation.signatoryId),
     db.from('quotations').select('revision, issued_on').eq('rfq_id', rfq.id).order('revision'),
   ])
   const c = unwrap(company)
   const s = site ? unwrap(site) : null
   const k = contact ? unwrap(contact) : null
-  const u = unwrap(signatory)
+  const u = signatory
   const all = unwrap(revs) ?? []
   const prev = [...all].reverse().find(r => r.revision < quotation.revision) ?? null
   return {
@@ -257,10 +266,21 @@ export async function loadPdfData(quotationId: string): Promise<PdfData> {
     siteName: s?.name ?? null,
     siteAddress: s?.address ?? null,
     attention: k?.name ?? null,
+    attentionTitle: k?.job_title ?? null,
     customerRef: rfq.customer_ref,
     rfqNumber: rfq.number,
-    signatory: u ? { name: u.name, jobTitle: u.job_title } : null,
+    signatory: u,
   }
+}
+
+/** The signed-in person as the PDF prints them: name, job title and phone (all optional but the name). */
+export async function loadSignatory(userId: string): Promise<{ name: string; jobTitle: string | null; phone: string | null } | null> {
+  const row = unwrap(await requireSupabase().from('users').select('name, job_title, phone').eq('id', userId).maybeSingle()) as {
+    name: string
+    job_title: string | null
+    phone: string | null
+  } | null
+  return row ? { name: row.name, jobTitle: row.job_title, phone: row.phone } : null
 }
 
 export const pdfPathFor = (quotationId: string, revision: number) => `${quotationId}/${revision}.pdf`

@@ -258,7 +258,7 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
   }
   rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : a.key < b.key ? -1 : 1))
 
-  // ---- deliveries: legs with an expected or a received date
+  // ---- deliveries: legs with an expected or a delivered date (a leg goes Placed, then Delivered; received_on follows delivered_on)
   const legRows: { row: DeliveryRow; sort: string }[] = []
   for (const leg of raw.legs) {
     if (leg.cancelled || (!leg.expectedOn && !leg.receivedOn)) continue
@@ -268,7 +268,7 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
       result = d > 0 ? { kind: 'late', days: d, text: `Late ${plural(d, 'day')}` } : { kind: 'ontime', days: Math.max(0, -d), text: 'On time' }
     } else if (leg.expectedOn) {
       const over = daysBetween(leg.expectedOn, today)
-      result = over > 0 ? { kind: 'overdue', days: over, text: `Not received, ${plural(over, 'day')} past` } : { kind: 'expected', days: Math.max(0, -over), text: 'Not received yet' }
+      result = over > 0 ? { kind: 'overdue', days: over, text: `Not delivered, ${plural(over, 'day')} past` } : { kind: 'expected', days: Math.max(0, -over), text: 'Not delivered yet' }
     } else {
       result = { kind: 'undated', days: 0, text: 'No expected date' }
     }
