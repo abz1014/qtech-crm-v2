@@ -105,7 +105,7 @@ export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompa
             onFocus={e => e.currentTarget.select()}
             onClick={() => setOpen(true)}
             onKeyDown={onKeyDown}
-            className={cn(controlClass, 'pl-9')}
+            className={cn(controlClass, 'pl-[36px]')}
           />
         </div>
       </Field>

@@ -731,7 +731,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                   </span>
                 ) : null}
                 <span className="flex-1" />
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="ml-auto flex flex-wrap items-center gap-2">
                   {step === 'suppliers' ? <Button onClick={() => setStep('build')}>Back to items</Button> : null}
                   <Button
                     variant={step === 'suppliers' && ticked.length === 0 ? 'primary' : 'quiet'}

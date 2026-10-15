@@ -434,6 +434,7 @@ for (const width of [1440, 375]) {
     await paste(page, s.email)
     await expect(page.getByText('2 items found').first()).toBeVisible()
     expect(await violations(page)).toEqual([])
+    await page.getByRole('textbox', { name: 'Description of item 1' }).scrollIntoViewIfNeeded()
     await review(page, `intake-float-03-items-pasted-${width}`)
 
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()

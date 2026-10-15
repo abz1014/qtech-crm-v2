@@ -91,9 +91,9 @@ export function SidePanels({
 
 function Row({ k, children }: { k: string; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-[6px] text-sm">
+    <div className="grid grid-cols-[98px_minmax(0,1fr)] items-center py-[6px] text-sm">
       <dt className="text-fg-muted">{k}</dt>
-      <dd className="m-0 min-w-0 text-right">{children}</dd>
+      <dd className="m-0 min-w-0">{children}</dd>
     </div>
   )
 }

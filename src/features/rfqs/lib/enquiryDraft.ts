@@ -195,8 +195,8 @@ export function generateEnquiryDraft(input: EnquiryInput): EnquiryDraft {
   else out.push('Thank you for your continued support.')
   out.push(...signatureLines(signature, variant))
 
-  // Email gets a blank line between paragraphs; WhatsApp stays compact like the mockup.
-  const body = variant === 'whatsapp' ? out.join('\n') : paragraphs(out)
+  // Both variants get a blank line between paragraphs, as the mockup draws the WhatsApp text (g2-intake-float frame 5).
+  const body = paragraphs(out, variant)
 
   const subject =
     variant === 'email'
@@ -206,14 +206,16 @@ export function generateEnquiryDraft(input: EnquiryInput): EnquiryDraft {
   return { variant, subject, body, replyBy }
 }
 
-/** Email layout: blank lines before the asks, the closing and the sign-off; item lines stay together. */
-function paragraphs(lines: string[]): string {
+/** Blank lines before the asks, the closing and the sign-off (and the reply line on WhatsApp); item lines stay together. */
+function paragraphs(lines: string[], variant: EnquiryVariant): string {
   const breakBefore = (l: string) =>
     l === 'Please include in your reply:' ||
     l.startsWith('Kindly reply') ||
+    l === 'Thank you.' ||
     l === 'Thank you for your continued support.' ||
     l === 'With best regards,' ||
-    l.startsWith('1. ')
+    l.startsWith('1. ') ||
+    (variant === 'whatsapp' && l.startsWith('Please quote'))
   const res: string[] = []
   for (const l of lines) {
     if (breakBefore(l) && res.length > 0 && res[res.length - 1] !== '') res.push('')
