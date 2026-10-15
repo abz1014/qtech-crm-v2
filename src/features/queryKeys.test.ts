@@ -76,6 +76,10 @@ describe('invalidation map (R01)', () => {
     'po.pdf': { orderId: 'o1' },
     'today.chase': {},
     'today.snooze': {},
+    'expense.save': {},
+    'expense.receipt': { expenseId: 'e1' },
+    'recurring.save': {},
+    'recurring.record': {},
   }
 
   it('names at least one key for every write', () => {

@@ -195,6 +195,16 @@ test.describe('O07: Issue PO', () => {
     await tab.close()
   })
 
+  test('Add expense on a leg opens the M03 dialog with this order and leg, the supplier as payee', async ({ page }) => {
+    const s = await seedPo({ allPriced: true })
+    await openAs(page, 'admin', `/orders/${s.order.id}`)
+    await legLoc(page, 'A').getByRole('button', { name: 'Add expense, leg A' }).click()
+    const d = dialog(page)
+    await expect(d.getByRole('heading', { name: /expense/i })).toBeVisible()
+    await expect(d).toContainText(s.supplier.name)
+    await expect(d).toContainText(/leg A/)
+  })
+
   test('an engineer never sees Issue PO, View PO or a price, but does see the PO chip', async ({ page }) => {
     const s = await seedPo({ allPriced: true })
     await must(rest('admin', 'rpc/issue_purchase_order', { method: 'POST', body: { p_po_id: crypto.randomUUID(), p_supplier_order_id: s.leg } }))

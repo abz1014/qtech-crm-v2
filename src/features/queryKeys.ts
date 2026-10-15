@@ -161,6 +161,32 @@ function purchaseOrders() {
   }
 }
 
+/** Money, expenses (M03, M11). Admin only; the hooks pass `enabled` so no one else makes the request. */
+function money() {
+  const all = root('money')
+  const expenses = [...all, 'expenses'] as const
+  return {
+    all,
+    expenses: {
+      all: expenses,
+      /** One month's list ("2026-11") with the payee and order names beside it. */
+      month: (month: string) => [...expenses, 'month', month] as const,
+      /** Category tally of the last 30 days; `day` keeps it from outliving the day it was read. */
+      recentUse: (day: string) => [...expenses, 'recent-use', day] as const,
+      lastCategory: (orderId: string) => [...expenses, 'last-category', orderId] as const,
+      receipts: (expenseId: string) => [...expenses, 'receipts', expenseId] as const,
+    },
+    categories: () => [...all, 'expense-categories'] as const,
+    orderOptions: () => [...all, 'order-options'] as const,
+    legOptions: (orderId: string) => [...all, 'leg-options', orderId] as const,
+    recurring: {
+      all: [...all, 'recurring'] as const,
+      list: () => [...all, 'recurring', 'list'] as const,
+      recorded: (period: string) => [...all, 'recurring', 'recorded', period] as const,
+    },
+  }
+}
+
 export const qk = {
   today: today(),
   settings: settings(),
@@ -172,6 +198,7 @@ export const qk = {
   intake: intake(),
   memory: memory(),
   fx: fx(),
+  money: money(),
 }
 
 export type QueryKeyRoot = keyof typeof qk
