@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { EyeOff } from 'lucide-react'
+import { Circle, CircleAlert, CircleCheck, CircleDashed, CircleDot, Lock, type LucideIcon } from 'lucide-react'
+import { useFxLatest } from '@/features/rfqs/hooks'
+import { formatRate } from '@/lib/money'
 import type { DeliveryRow, QuoteOutcome, QuoteRow, SupplierRecord } from '@/features/companies/supplierRecord'
-import { Fine, Panel } from '@/features/companies/CompanyParts'
+import { Panel } from '@/features/companies/CompanyParts'
 import { formatShortDate } from '@/lib/formatDay'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
@@ -17,18 +19,32 @@ import { Tag } from '@/ui/Tag'
  * ranking and no percentage. What each row says is decided in supplierRecord.ts (pure, tested); this file lays it out.
  */
 
-const CHIP = 'inline-flex h-5 w-fit items-center gap-1 whitespace-nowrap rounded-round px-2 text-xs'
-const OUTCOME: Record<QuoteOutcome, { label: string; cls: string }> = {
-  'ordered-here': { label: 'Ordered here', cls: 'bg-tone-success-bg text-tone-success-fg' },
-  'ordered-elsewhere': { label: 'Ordered elsewhere', cls: 'border border-line-strong text-fg-2' },
-  'not-ordered': { label: 'Not ordered', cls: 'border border-line-strong text-fg-2' },
-  waiting: { label: 'Waiting for a reply', cls: 'bg-tone-info-bg text-tone-info-fg' },
-  'no-reply': { label: 'No reply', cls: 'border border-dashed border-line-strong text-fg-muted' },
-  declined: { label: "Couldn't offer", cls: 'border border-line-strong text-fg-2' },
+const CHIP = 'inline-flex h-5 w-fit items-center gap-[6px] whitespace-nowrap rounded-round px-2 text-xs'
+const OUTCOME: Record<QuoteOutcome, { label: string; icon: LucideIcon; cls: string }> = {
+  quoted: { label: 'Quoted', icon: CircleCheck, cls: 'bg-tone-success-bg text-tone-success-fg' },
+  'ordered-here': { label: 'Ordered here', icon: CircleCheck, cls: 'bg-tone-success-bg text-tone-success-fg' },
+  'ordered-elsewhere': { label: 'Ordered elsewhere', icon: Circle, cls: 'border border-line-strong text-fg-2' },
+  'not-ordered': { label: 'Not ordered', icon: Circle, cls: 'border border-line-strong text-fg-2' },
+  'quoted-open': { label: 'Quoted, RFQ open', icon: CircleDot, cls: 'bg-tone-info-bg text-tone-info-fg' },
+  waiting: { label: 'Waiting for a reply', icon: CircleDot, cls: 'bg-tone-info-bg text-tone-info-fg' },
+  'no-reply': { label: 'No reply', icon: CircleDashed, cls: 'border border-dashed border-line-strong text-fg-muted' },
+  declined: { label: "Couldn't offer", icon: Circle, cls: 'border border-line-strong text-fg-2' },
 }
 
-function Label({ children }: { children: string }) {
-  return <span className="text-xs text-fg-muted md:sr-only">{children}</span>
+/** One outcome chip with its icon, as drawn in the company mockup. Used by the quotes and the enquiries lists. */
+export function OutcomeChip({ outcome, label }: { outcome: QuoteOutcome; label?: string }) {
+  const o = OUTCOME[outcome]
+  return (
+    <span className={cn(CHIP, o.cls)}>
+      <Icon icon={o.icon} size="chip" />
+      {label ?? o.label}
+    </span>
+  )
+}
+
+/** The label above a field. On a phone only the numbers need one; date, RFQ, item and outcome read on their own. */
+function Label({ children, phone = true }: { children: string; phone?: boolean }) {
+  return <span className={cn('text-xs text-fg-muted md:sr-only', !phone && 'sr-only')}>{children}</span>
 }
 
 function LoadError({ title, onRetry }: { title: string; onRetry: () => void }) {
@@ -62,45 +78,41 @@ function ListSkeleton({ label }: { label: string }) {
 // ------------------------------------------------------------------------------------------------ recent quotes
 
 const QHEAD = 'hidden border-b bg-sunken px-5 py-2 text-xs text-fg-muted md:grid md:grid-cols-[84px_92px_minmax(0,1.5fr)_minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)] md:gap-4'
-const QROW = 'grid gap-x-4 gap-y-2 border-t px-5 py-3 first:border-t-0 md:grid-cols-[84px_92px_minmax(0,1.5fr)_minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)]'
+const QROW = 'grid grid-cols-2 gap-x-4 gap-y-2 border-t px-5 py-3 first:border-t-0 md:grid-cols-[84px_92px_minmax(0,1.5fr)_minmax(0,0.9fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)]'
 
 function PriceCell({ r }: { r: QuoteRow }) {
   const p = r.price
   if (p.state === 'hidden') {
     return (
-      <span className="inline-flex items-start gap-2 text-sm text-fg-muted">
-        <Icon icon={EyeOff} size="sm" className="mt-[2px]" />
+      <span className="inline-flex items-start gap-2 text-sm text-fg-muted md:text-right">
+        <Icon icon={Lock} size="sm" className="mt-[2px]" />
         Price on file, currency unverified
       </span>
     )
   }
   if (p.state === 'none') return <span className="text-sm text-fg-muted">—</span>
-  const [cur, ...rest] = (p.amount ?? '').split(' ')
+  const cur = (p.amount ?? '').split(' ')[0]
   return (
     <span className="num whitespace-nowrap text-sm">
       <span className="mr-1 font-sans text-xs text-fg-muted">{cur}</span>
-      {rest.join(' ')}
+      {p.figure}
     </span>
   )
 }
 
 function PkrCell({ r }: { r: QuoteRow }) {
   const p = r.price
-  if (p.state === 'hidden') return <span className="text-sm text-fg-muted">Not shown</span>
-  if (p.state === 'none') {
-    return <span className="text-sm text-fg-muted">{r.outcome === 'declined' ? (r.note ?? "Couldn't offer") : (r.note ?? 'Awaiting a quote')}</span>
-  }
+  if (p.state === 'hidden') return <span className="text-sm text-fg-muted">No rate was captured</span>
+  if (p.state === 'none') return <span className="text-sm text-fg-muted text-pretty">{r.pkrNote}</span>
   if (p.inPkr) return <span className="text-sm text-fg-muted">Already in PKR</span>
   if (p.pkr) {
     return (
       <span className="grid gap-[2px]">
         <span className="num text-sm">
-          <span className="mr-1 font-sans text-xs text-fg-muted">≈ PKR</span>
+          <span className="mr-1 font-sans text-xs text-fg-muted">≈</span>
           {p.pkr}
         </span>
-        <span className="text-xs text-fg-muted">
-          at the time{p.rate ? <span className="num">{`, rate ${p.rate}`}</span> : null}
-        </span>
+        {p.rate ? <span className="num text-xs text-fg-muted">{`at ${p.rate}`}</span> : null}
       </span>
     )
   }
@@ -118,26 +130,41 @@ function ItemCell({ r }: { r: QuoteRow }) {
         {r.brand ? <span>{r.brand}</span> : null}
         {r.imported ? <Tag dashed>Imported</Tag> : null}
       </span>
+      {r.itemNote ? <span className="text-xs text-fg-muted">{r.itemNote}</span> : null}
       {r.ago ? <span className="text-xs text-tone-warning-fg">{`${r.dateText}, ${r.ago}`}</span> : null}
     </span>
   )
 }
 
 function OutcomeCell({ r }: { r: QuoteRow }) {
-  const o = OUTCOME[r.outcome]
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <span className={cn(CHIP, o.cls)}>{o.label}</span>
+      <OutcomeChip outcome={r.outcome} />
       {r.orderRef ? <Tag>{r.orderRef}</Tag> : null}
     </span>
   )
 }
 
-export function RecentQuotes({ view, loading, error, onRetry, enquiriesAnchor }: { view: SupplierRecord | null; loading: boolean; error: boolean; onRetry: () => void; enquiriesAnchor: string }) {
+export function RecentQuotes({
+  view,
+  loading,
+  error,
+  onRetry,
+  enquiriesAnchor,
+  meta,
+}: {
+  view: SupplierRecord | null
+  loading: boolean
+  error: boolean
+  onRetry: () => void
+  enquiriesAnchor: string
+  /** Per state: populated, "Everything we have from them" (low data), "Imported rows are marked" (imported only). */
+  meta: string
+}) {
   return (
     <Panel
       title="Recent quotes"
-      meta='Original currency first. "At the time" is the rate captured when the quote was logged.'
+      meta={meta}
       actions={
         <a href={`#${enquiriesAnchor}`} className="rounded text-sm font-medium text-primary hover:underline">
           All enquiries
@@ -172,17 +199,17 @@ export function RecentQuotes({ view, loading, error, onRetry, enquiriesAnchor }:
             {view.quotes.map(r => (
               <li key={r.key} className={QROW}>
                 <div className="grid content-start gap-1">
-                  <Label>Date</Label>
+                  <Label phone={false}>Date</Label>
                   <span className="num text-sm">{r.dateText}</span>
                 </div>
-                <div className="grid content-start gap-1">
-                  <Label>RFQ</Label>
+                <div className="grid content-start justify-items-start gap-1">
+                  <Label phone={false}>RFQ</Label>
                   <Link to={`/rfqs/${r.rfqId}`} className="w-fit rounded hover:underline" aria-label={`Open ${r.rfqRef}`}>
                     <Tag>{r.rfqRef}</Tag>
                   </Link>
                 </div>
-                <div className="grid content-start gap-1">
-                  <Label>Item</Label>
+                <div className="col-span-2 grid content-start gap-1 md:col-span-1">
+                  <Label phone={false}>Item</Label>
                   <ItemCell r={r} />
                 </div>
                 <div className="grid content-start gap-1 md:justify-items-end">
@@ -193,12 +220,12 @@ export function RecentQuotes({ view, loading, error, onRetry, enquiriesAnchor }:
                   <Label>≈ PKR at the time</Label>
                   <PkrCell r={r} />
                 </div>
-                <div className="grid content-start gap-1">
+                <div className="col-span-2 grid content-start gap-1 md:col-span-1">
                   <Label>Lead time, as written</Label>
                   <span className="text-sm text-pretty">{r.leadTime ?? <span className="text-fg-muted">—</span>}</span>
                 </div>
-                <div className="grid content-start gap-1">
-                  <Label>Outcome</Label>
+                <div className="col-span-2 grid content-start gap-1 md:col-span-1">
+                  <Label phone={false}>Outcome</Label>
                   <OutcomeCell r={r} />
                 </div>
               </li>
@@ -221,7 +248,10 @@ function ResultCell({ r }: { r: DeliveryRow }) {
   const aside = x.kind === 'ontime' && x.days > 0 ? `${x.days} ${x.days === 1 ? 'day' : 'days'} early` : null
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <span className={cn(CHIP, cls)}>{x.text}</span>
+      <span className={cn(CHIP, cls)}>
+        <Icon icon={x.kind === 'late' || x.kind === 'overdue' ? CircleAlert : x.kind === 'ontime' ? CircleCheck : Circle} size="chip" />
+        {x.text}
+      </span>
       {aside ? <span className="text-xs text-fg-muted">{aside}</span> : null}
       {r.estimated ? <span className="text-xs text-fg-muted">dates estimated</span> : null}
     </span>
@@ -261,7 +291,7 @@ export function Deliveries({ view, loading, error, onRetry, today }: { view: Sup
               <li key={r.key} className={DROW}>
                 <div className="grid content-start gap-1">
                   <Label>Purchase order</Label>
-                  {r.po ? <Tag className="w-fit">{r.po}</Tag> : <span className="text-sm text-fg-muted">No PO issued</span>}
+                  {r.po ? <Tag className="w-fit">{r.po}</Tag> : r.estimated ? <Tag dashed className="w-fit">Imported</Tag> : <span className="text-sm text-fg-muted">No PO issued</span>}
                 </div>
                 <div className="grid content-start gap-1">
                   <Label>Order</Label>
@@ -352,12 +382,26 @@ export function OpenWithThem({ view, loading, error, onRetry }: { view: Supplier
             </div>
             <div className={row}>
               <span className="text-fg-muted">Currency</span>
-              {view.open.currency ? <span className="num">{view.open.currency}</span> : <span className="text-fg-muted">Not known yet</span>}
+              <CurrencyValue currency={view.open.currency} />
             </div>
           </div>
         ) : null}
-        <Fine className="pt-2">Enquiries still unanswered and order legs not yet received. Closed RFQs and cancelled orders are left out.</Fine>
       </div>
     </Panel>
+  )
+}
+
+/** "EUR", or "CNY, rate 38.85, 8 days old" with the age in the warning colour once the rate is no longer fresh (the mockup's low-data board). */
+function CurrencyValue({ currency }: { currency: string | null }) {
+  const fx = useFxLatest()
+  if (!currency) return <span className="text-fg-muted">Not known yet</span>
+  const rate = currency === 'PKR' ? null : fx.data?.find(r => r.currency === currency)
+  if (!rate) return <span className="num">{currency}</span>
+  const age = rate.ageDays === 0 ? 'today' : `${rate.ageDays} ${rate.ageDays === 1 ? 'day' : 'days'} old`
+  return (
+    <span className="text-right">
+      <span className="num">{currency}</span>, rate <span className="num">{formatRate(rate.ratePkr)}</span>,{' '}
+      <span className={cn('num', rate.staleness !== 'fresh' && 'text-tone-warning-fg')}>{age}</span>
+    </span>
   )
 }

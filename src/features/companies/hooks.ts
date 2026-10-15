@@ -100,10 +100,11 @@ export function useSupplierBrandQuotes(id: string | undefined, enabled = true) {
   })
 }
 
-export function useCompanyHistory(id: string | undefined) {
+/** `withPayment`: admin and sales also read which orders are past their payment date (engineers cannot, so it is never asked). */
+export function useCompanyHistory(id: string | undefined, withPayment = false) {
   return useQuery({
-    queryKey: qk.companies.part(id ?? '', 'history'),
-    queryFn: () => api.getCompanyHistory(id as string),
+    queryKey: [...qk.companies.part(id ?? '', 'history'), withPayment] as const,
+    queryFn: () => api.getCompanyHistory(id as string, withPayment),
     enabled: Boolean(id),
   })
 }

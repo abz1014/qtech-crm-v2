@@ -29,7 +29,7 @@ describe('supplierFacts (5c display rules)', () => {
 
   it('states raw facts below three enquiries, with no pattern implied', () => {
     const f = supplierFacts({ ...base, asked: 2, replied: 1, quoted: 1 })!
-    expect(f.enquirySummary).toBe('Asked twice, 1 reply')
+    expect(f.enquirySummary).toBe('Asked twice · 1 reply')
     expect(f.lowData).toBe(true)
     expect(f.replyTime).toEqual({ kind: 'withheld', logged: 0, importedOnly: false })
   })

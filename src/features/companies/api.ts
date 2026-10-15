@@ -274,7 +274,7 @@ export async function getSupplierRecord(companyId: string): Promise<SupplierReco
   const [inqRes, legRes] = await Promise.all([
     db
       .from('supplier_inquiries')
-      .select('id, rfq_id, sent_on, last_chased_on, no_offer_on, no_offer_reason, legacy_source')
+      .select('id, rfq_id, sent_on, last_chased_on, chase_count, no_offer_on, no_offer_reason, legacy_source')
       .eq('supplier_id', companyId)
       .not('sent_on', 'is', null)
       .order('sent_on', { ascending: false })
@@ -291,6 +291,7 @@ export async function getSupplierRecord(companyId: string): Promise<SupplierReco
     rfqId: i.rfq_id,
     sentOn: i.sent_on,
     lastChasedOn: i.last_chased_on,
+    chaseCount: i.chase_count,
     noOfferOn: i.no_offer_on,
     noOfferReason: i.no_offer_reason,
     legacy: i.legacy_source !== null,
@@ -394,7 +395,11 @@ export interface HistoryRfq {
   dueOn: string | null
   customerRef: string | null
   outcome: string | null
+  closeReason: string | null
   orderNumber: number | null
+  /** The first item's description, and how many more there are: the "What" column. */
+  what: string | null
+  moreItems: number
 }
 export interface HistoryOrder {
   id: string
@@ -403,20 +408,29 @@ export interface HistoryOrder {
   orderedOn: string | null
   rfqId: string | null
   lifecycle: string | null
+  goods: string | null
   invoicing: string | null
+  /** True when the order is past its payment due date with a balance (admin and sales only; null for engineers). */
+  paymentOverdue: boolean | null
+  what: string | null
+  moreItems: number
 }
 export interface CompanyHistory {
   rfqs: HistoryRfq[]
   orders: HistoryOrder[]
 }
 
-/** The company's RFQs and orders, for the site-by-site list. Status values come straight from the state views. */
-export async function getCompanyHistory(companyId: string): Promise<CompanyHistory> {
+/**
+ * The company's RFQs and orders, for the site-by-site list. Status values come straight from the state views.
+ * `withPayment` (admin and sales) also reads order_receivables() for the "Payment overdue" chip; an engineer's call to it is
+ * refused by the database, so it is never made for them.
+ */
+export async function getCompanyHistory(companyId: string, withPayment = false): Promise<CompanyHistory> {
   const db = requireSupabase()
   const [rfqs, rfqState, orders, orderState] = await Promise.all([
     db
       .from('rfqs')
-      .select('id, number, site_id, received_on, due_on, customer_ref')
+      .select('id, number, site_id, received_on, due_on, customer_ref, close_reason')
       .eq('company_id', companyId)
       .order('received_on', { ascending: false }),
     db.from('v_rfq_state').select('rfq_id, outcome').eq('company_id', companyId),
@@ -425,14 +439,45 @@ export async function getCompanyHistory(companyId: string): Promise<CompanyHisto
       .select('id, number, site_id, ordered_on, rfq_id')
       .eq('company_id', companyId)
       .order('ordered_on', { ascending: false, nullsFirst: false }),
-    db.from('v_order_state').select('order_id, lifecycle, invoicing_state').eq('company_id', companyId),
+    db.from('v_order_state').select('order_id, lifecycle, goods_state, invoicing_state').eq('company_id', companyId),
   ])
   const outcomeBy = new Map(unwrap(rfqState).map(s => [s.rfq_id, s.outcome]))
   const stateBy = new Map(unwrap(orderState).map(s => [s.order_id, s]))
   const orderRows = unwrap(orders)
+  const rfqRows = unwrap(rfqs)
   const orderNumberByRfq = new Map(orderRows.filter(o => o.rfq_id).map(o => [o.rfq_id as string, o.number]))
+
+  // "What": the first item of each RFQ and of each order (by position), with how many more there are.
+  const [rfqItems, orderItems, receivables] = await Promise.all([
+    inBatches(
+      rfqRows.map(r => r.id),
+      b => db.from('rfq_items').select('rfq_id, description, position').in('rfq_id', b),
+    ),
+    inBatches(
+      orderRows.map(o => o.id),
+      b => db.from('order_items').select('order_id, description, position, is_service').in('order_id', b),
+    ),
+    withPayment && orderRows.length > 0 ? db.rpc('order_receivables', {}) : Promise.resolve(null),
+  ])
+  const firstOf = <T extends { description: string; position: number }>(rows: T[], key: (r: T) => string) => {
+    const by = new Map<string, T[]>()
+    for (const r of rows) by.set(key(r), [...(by.get(key(r)) ?? []), r])
+    return (id: string) => {
+      const list = (by.get(id) ?? []).sort((a, b) => a.position - b.position)
+      return { what: list[0]?.description ?? null, more: Math.max(list.length - 1, 0) }
+    }
+  }
+  const rfqWhat = firstOf(rfqItems, r => r.rfq_id)
+  const orderWhat = firstOf(
+    orderItems.filter(i => !i.is_service),
+    r => r.order_id,
+  )
+  const overdue = new Set<string>()
+  if (receivables && !receivables.error) {
+    for (const r of receivables.data ?? []) if (r.is_overdue && r.order_id) overdue.add(r.order_id)
+  }
   return {
-    rfqs: unwrap(rfqs).map(r => ({
+    rfqs: rfqRows.map(r => ({
       id: r.id,
       number: r.number,
       siteId: r.site_id,
@@ -440,7 +485,10 @@ export async function getCompanyHistory(companyId: string): Promise<CompanyHisto
       dueOn: r.due_on,
       customerRef: r.customer_ref,
       outcome: outcomeBy.get(r.id) ?? null,
+      closeReason: r.close_reason,
       orderNumber: orderNumberByRfq.get(r.id) ?? null,
+      what: rfqWhat(r.id).what,
+      moreItems: rfqWhat(r.id).more,
     })),
     orders: orderRows.map(o => ({
       id: o.id,
@@ -449,7 +497,11 @@ export async function getCompanyHistory(companyId: string): Promise<CompanyHisto
       orderedOn: o.ordered_on,
       rfqId: o.rfq_id,
       lifecycle: stateBy.get(o.id)?.lifecycle ?? null,
+      goods: stateBy.get(o.id)?.goods_state ?? null,
       invoicing: stateBy.get(o.id)?.invoicing_state ?? null,
+      paymentOverdue: withPayment && receivables && !receivables.error ? overdue.has(o.id) : null,
+      what: orderWhat(o.id).what,
+      moreItems: orderWhat(o.id).more,
     })),
   }
 }

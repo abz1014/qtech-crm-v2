@@ -5,7 +5,7 @@ const TODAY = '2026-11-27'
 const ME = 'sup-1'
 
 const raw = (over: Partial<SupplierRecordRaw> = {}): SupplierRecordRaw => ({ supplierId: ME, inquiries: [], lines: [], items: [], rfqs: [], orderItems: [], legs: [], ...over })
-const inq = (id: string, rfqId: string, over: object = {}) => ({ id, rfqId, sentOn: '2026-11-24', lastChasedOn: null, noOfferOn: null, noOfferReason: null, legacy: false, ...over })
+const inq = (id: string, rfqId: string, over: object = {}) => ({ id, rfqId, sentOn: '2026-11-24', lastChasedOn: null, chaseCount: 0, noOfferOn: null, noOfferReason: null, legacy: false, ...over })
 const item = (id: string, rfqId: string, over: object = {}) => ({ id, rfqId, position: 1, description: `Item ${id}`, qty: 2, unit: null, brandName: 'Belimo', ...over })
 const line = (id: string, inquiryId: string, itemId: string, over: object = {}) => ({
   id,
@@ -71,7 +71,7 @@ describe('recent quotes', () => {
       raw({
         inquiries: [inq('i1', 'r1')],
         items: [item('t1', 'r1', { position: 1 }), item('t2', 'r1', { position: 2 }), item('t3', 'r1', { position: 3 }), item('t4', 'r1', { position: 4 })],
-        rfqs: [rfq('r1', 5)],
+        rfqs: [rfq('r1', 5, '2026-11-20')],
         lines: [line('l1', 'i1', 't1'), line('l2', 'i1', 't2'), line('l3', 'i1', 't3'), line('l4', 'i1', 't4')],
         orderItems: [
           { itemId: 't1', orderNumber: 38, cancelled: false, supplierId: ME },
@@ -88,6 +88,11 @@ describe('recent quotes', () => {
     expect(by['q-l4'].outcome).toBe('not-ordered')
   })
 
+  it('a quote on an RFQ that is still open, not ordered anywhere, reads "Quoted, RFQ open"', () => {
+    const r = buildSupplierRecord(raw({ inquiries: [inq('i1', 'r1')], items: [item('t1', 'r1')], rfqs: [rfq('r1', 5)], lines: [line('l1', 'i1', 't1')] }), TODAY)
+    expect(r.quotes[0].outcome).toBe('quoted-open')
+  })
+
   it('lists an enquiry with no price as waiting, no reply or declined, never as a price', () => {
     const r = buildSupplierRecord(
       raw({
@@ -102,9 +107,9 @@ describe('recent quotes', () => {
       TODAY,
     )
     const by = Object.fromEntries(r.quotes.map(q => [q.rfqRef, q]))
-    expect(by['RFQ-0171']).toMatchObject({ outcome: 'waiting', note: 'Sent 24 Nov, 3 days ago' })
-    expect(by['RFQ-0088']).toMatchObject({ outcome: 'no-reply', note: 'Sent 2 Jun, never answered' })
-    expect(by['RFQ-0104']).toMatchObject({ outcome: 'declined', note: "Doesn't carry this brand", qty: '+ 1 more item' })
+    expect(by['RFQ-0171']).toMatchObject({ outcome: 'waiting', itemNote: 'Sent 24 Nov, 3 days ago', pkrNote: 'Awaiting a quote' })
+    expect(by['RFQ-0088']).toMatchObject({ outcome: 'no-reply', itemNote: null, pkrNote: 'Sent 2 Jun, never answered' })
+    expect(by['RFQ-0104']).toMatchObject({ outcome: 'declined', pkrNote: "Doesn't carry this brand", qty: '+ 1 more item' })
     expect(by['RFQ-0171'].price.state).toBe('none')
   })
 
@@ -186,6 +191,36 @@ describe('open with them', () => {
 
   it('says what the last contact was', () => {
     const r = buildSupplierRecord(raw({ inquiries: [inq('open', 'r1', { sentOn: '2026-11-24' })], rfqs: [rfq('r1', 171)] }), TODAY)
-    expect(r.lastContactText).toBe('Enquiry sent for RFQ-0171. No reply yet.')
+    expect(r.lastContact).toEqual(['Enquiry sent for ', { rfqId: 'r1', ref: 'RFQ-0171' }, '. No reply yet.'])
+  })
+
+  it('says how often it was chased and when, and marks an imported leg', () => {
+    const chased = buildSupplierRecord(
+      raw({ inquiries: [inq('i1', 'r1', { sentOn: '2026-11-12', lastChasedOn: '2026-11-19', chaseCount: 1 })], rfqs: [rfq('r1', 165)] }),
+      TODAY,
+    )
+    expect(chased.lastContact).toEqual(['Enquiry sent for ', { rfqId: 'r1', ref: 'RFQ-0165' }, '. Chased once on 19 Nov.'])
+    const imported = buildSupplierRecord(raw({ legs: [leg('g', 20, { placedOn: '2026-09-07', legacy: true })] }), TODAY)
+    expect(imported.lastContact).toEqual(['Order leg for ORD-0020. Imported.'])
+  })
+
+  it('names how long it went unanswered, with the chases', () => {
+    const r = buildSupplierRecord(raw({ inquiries: [inq('i1', 'r1', { sentOn: '2026-10-09', chaseCount: 1 })], items: [item('a', 'r1')], rfqs: [rfq('r1', 152)] }), TODAY)
+    expect(r.quotes[0].pkrNote).toBe('Sent 9 Oct, chased once, never answered')
+  })
+
+  it('counts delivery squares from the legs: an imported on-time delivery is drawn as estimated', () => {
+    const r = buildSupplierRecord(
+      raw({
+        legs: [
+          leg('a', 1, { expectedOn: '2026-11-20', receivedOn: '2026-11-19' }),
+          leg('b', 2, { expectedOn: '2026-10-08', receivedOn: '2026-10-14' }),
+          leg('c', 3, { expectedOn: '2026-06-12', receivedOn: '2026-06-12', legacy: true }),
+        ],
+      }),
+      TODAY,
+    )
+    expect(r.deliveryUnits).toEqual({ ontime: 1, late: 1, estimatedOntime: 1 })
+    expect(r.span).toEqual({ from: '2026-06-12', to: '2026-11-20' })
   })
 })
