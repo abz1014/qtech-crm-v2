@@ -37,6 +37,7 @@ jobs:
       rfq_board: ${{ steps.final.outputs.rfq_board }}
       rfq_intake: ${{ steps.final.outputs.rfq_intake }}
       rfq_detail: ${{ steps.final.outputs.rfq_detail }}
+      today: ${{ steps.final.outputs.today }}
       any: ${{ steps.final.outputs.any }}
     steps:
       - uses: actions/checkout@v4
@@ -64,6 +65,8 @@ jobs:
               - 'e2e/rfqs/intake.spec.ts'
             rfq_detail:
               - 'e2e/rfqs/detail.spec.ts'
+            today:
+              - 'e2e/today/**'
       - id: final
         env:
           SHARED: ${{ steps.filter.outputs.shared }}
@@ -72,6 +75,7 @@ jobs:
           S_RFQ_BOARD: ${{ steps.filter.outputs.rfq_board }}
           S_RFQ_INTAKE: ${{ steps.filter.outputs.rfq_intake }}
           S_RFQ_DETAIL: ${{ steps.filter.outputs.rfq_detail }}
+          S_TODAY: ${{ steps.filter.outputs.today }}
         run: |
           all=false
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$GITHUB_REF" = "refs/heads/main" ] || [ "$SHARED" = "true" ]; then all=true; fi
@@ -86,6 +90,8 @@ jobs:
           echo "rfq_intake=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_RFQ_DETAIL; if [ "$all" = "true" ]; then v=true; fi
           echo "rfq_detail=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_TODAY; if [ "$all" = "true" ]; then v=true; fi
+          echo "today=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           echo "any=$any" >> "$GITHUB_OUTPUT"
 
   e2e:
@@ -189,6 +195,16 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=rfq-detail REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-detail npx playwright test --project=rfq-detail --output=test-results/rfq-detail
+
+      - name: Reset database (today)
+        if: ${{ !cancelled() && needs.changes.outputs.today == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (today project)
+        if: ${{ !cancelled() && needs.changes.outputs.today == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=today REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/today npx playwright test --project=today --output=test-results/today
 
       - name: Upload reports and review screenshots
         if: always()

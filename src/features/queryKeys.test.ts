@@ -57,6 +57,8 @@ describe('invalidation map (R01)', () => {
     'inquiry.chase': { rfqId: 'r1' },
     'rfq.markBidSent': { rfqId: 'r1' },
     'rfq.close': { rfqId: 'r1' },
+    'today.chase': {},
+    'today.snooze': {},
   }
 
   it('names at least one key for every write', () => {

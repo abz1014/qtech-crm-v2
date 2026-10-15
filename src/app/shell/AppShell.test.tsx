@@ -96,7 +96,7 @@ describe('page shell navigation, per role', () => {
 describe('routing and role landing', () => {
   it.each(['admin', 'sales', 'engineer'])('%s lands on Today from /', role => {
     render(signedIn(role), '/')
-    expect(el.querySelector('main h1')?.textContent).toBe('Today')
+    // Today is a lazy screen now (R11): the shell lands on its route; the screen itself is covered in features/today.
     expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/today')
   })
 
@@ -124,7 +124,7 @@ describe('routing and role landing', () => {
 
   it('a signed-in person who opens /login is sent to their landing page', () => {
     render(signedIn('sales'), '/login')
-    expect(el.querySelector('main h1')?.textContent).toBe('Today')
+    expect(el.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.getAttribute('href')).toBe('/today')
   })
 
   it('an unknown address shows page not found inside the shell', () => {
