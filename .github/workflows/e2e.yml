@@ -272,7 +272,7 @@ jobs:
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=search REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/search npx playwright test --project=search --output=test-results/search
 
-      - name: Playwright (pwa project: manifest, service worker, installability; needs no database reset)
+      - name: Playwright (pwa project, no database reset needed)
         if: ${{ !cancelled() && needs.changes.outputs.pwa == 'true' }}
         run: |
           E2E_SUITE=pwa PLAYWRIGHT_HTML_REPORT=playwright-report/pwa npx playwright test --project=pwa --output=test-results/pwa
