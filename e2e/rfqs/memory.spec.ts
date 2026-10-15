@@ -181,7 +181,7 @@ test.describe('R17 memory in intake', () => {
     // s2: carries the brand, nothing recorded: brands only, no zero counts.
     await memoryButton(page, s.s2.name).click()
     const empty = page.getByLabel(`What we know about ${s.s2.name}`)
-    await expect(empty.getByText('None on file')).toHaveCount(2)
+    await expect(empty.getByText('None on file')).toHaveCount(3) // last quote, last ordered, lead time
     await expect(empty).toContainText('No history yet')
     await expect(empty).toContainText('Nothing recorded or imported for this supplier yet.')
     await expect(empty.getByText('same brand')).toBeVisible()
@@ -293,9 +293,11 @@ test.describe('R17 last price chip on RFQ reply rows', () => {
     const rows = page.locator('li', { has: page.locator('[data-last-price]') })
     const chip1 = page.locator('li', { hasText: s.s1.name }).locator('[data-last-price]')
     await expect(chip1).toContainText('Last price for this item:')
-    await expect(chip1).toContainText('USD 412')
-    await expect(chip1).toContainText('≈ PKR 114,742')
+    // The PO (101 days ago) is newer than the quote (120 days ago) and both are the same model: the newer wins.
+    await expect(chip1).toContainText('USD 395')
+    await expect(chip1).toContainText('≈ PKR 110,205')
     await expect(chip1).toContainText('at the time')
+    await expect(chip1).toContainText('ordered')
     await expect(chip1).toContainText('same model')
     const chip7 = page.locator('li', { hasText: s7.name }).locator('[data-last-price]')
     await expect(chip7).toContainText('USD 640')
@@ -350,8 +352,8 @@ test.describe('R18 company page: What we know', () => {
 
     const quotes = page.getByRole('region', { name: 'Recent quotes' })
     const rowA = quotes.locator('li', { hasText: 'NM24A-SR' })
-    await expect(rowA).toContainText('EUR 214')
-    await expect(rowA).toContainText('≈ PKR 69,935')
+    await expect(rowA).toContainText(/EUR\s*214/)
+    await expect(rowA).toContainText(/≈ PKR\s*69,935/)
     await expect(rowA).toContainText('at the time')
     await expect(rowA).toContainText('rate 326.80')
     await expect(rowA).toContainText('2 to 3 weeks ex stock')
