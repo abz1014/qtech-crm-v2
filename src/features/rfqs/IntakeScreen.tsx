@@ -500,10 +500,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                   <CustomerChip company={company} contacts={contactList.map(c => c.name)} onChange={() => setCompany(null)} />
                 ) : (
                   <CompanyPicker
-                    onPick={c => {
-                      setCompany(c)
-                      if (c.contactId) setContactOverride(c.contactId)
-                    }}
+                    onPick={c => setCompany(c)}
                     loadingName={Boolean(wantedId) && wanted.isPending}
                   />
                 )}

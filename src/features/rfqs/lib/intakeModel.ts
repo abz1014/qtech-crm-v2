@@ -144,13 +144,13 @@ export function optionMeta(h: {
   city?: string | null
   country: string | null
   role: CompanyRole | null
-  rfqCount: number
-  similar: boolean
+  rfqCount?: number
+  similar?: boolean
 }): string {
   return [
     h.city ?? h.country,
     h.role ? ROLE_WORD[h.role] : null,
-    h.rfqCount > 0 ? `${h.rfqCount} ${h.rfqCount === 1 ? 'RFQ' : 'RFQs'}` : null,
+    h.rfqCount ? `${h.rfqCount} ${h.rfqCount === 1 ? 'RFQ' : 'RFQs'}` : null,
     h.similar ? 'similar name' : null,
   ]
     .filter(Boolean)

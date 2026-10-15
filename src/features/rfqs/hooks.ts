@@ -2,8 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/rfqs/api'
-import { addContact } from '@/features/companies/api'
-import { useCreateCompany } from '@/features/companies/hooks'
+import { searchCompanies } from '@/features/companies/api'
 
 /*
  * RFQ hooks for intake (R05). Same shape as companies (src/features/README.md): one hook per read, one per write,
@@ -15,7 +14,7 @@ export function useCompanyMatches(text: string) {
   const q = text.trim()
   return useQuery({
     queryKey: qk.companies.search(q),
-    queryFn: () => api.searchIntakeCompanies(q),
+    queryFn: () => searchCompanies(q, 8),
     enabled: q.length > 0,
     staleTime: 30_000,
   })
@@ -208,32 +207,5 @@ export function useDeleteAttachment(rfqId: string) {
   return useMutation({
     mutationFn: (att: Pick<api.AttachmentRow, 'id' | 'path'>) => api.deleteAttachment(att),
     onSuccess: () => invalidateAfter(client, 'attachment.delete', { rfqId }),
-  })
-}
-
-/**
- * "Create and use" in the company picker (g2-intake-float frame 2): the company with its optional city, and the
- * optional first contact. The contact is a by-product: if it cannot be saved the company still stands, and the
- * company page is where it is added later.
- */
-export function useCreateCustomer() {
-  const create = useCreateCompany()
-  const client = useQueryClient()
-  return useMutation({
-    mutationFn: async (input: { id: string; name: string; city: string; contact: string }) => {
-      const company = await create.mutateAsync({ id: input.id, name: input.name, city: input.city || null })
-      let contactId: string | null = null
-      if (input.contact.trim()) {
-        const id = crypto.randomUUID()
-        try {
-          await addContact({ id, companyId: company.id, name: input.contact.trim() })
-          contactId = id
-        } catch {
-          contactId = null
-        }
-      }
-      return { ...company, contactId }
-    },
-    onSuccess: created => invalidateAfter(client, 'contact.add', { companyId: created.id }),
   })
 }

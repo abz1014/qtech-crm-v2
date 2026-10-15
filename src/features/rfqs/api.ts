@@ -1,5 +1,4 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
-import { searchCompanies, type CompanyHit } from '@/features/companies/api'
 import type { ViewRow } from '@/features/dbTypes'
 import type { FloatItemPayload } from '@/features/rfqs/lib/intakeModel'
 import type { SupplierItemMemoryRow, SupplierRecord } from '@/features/rfqs/lib/supplierSuggestion'
@@ -35,36 +34,6 @@ export async function listSupplierCandidates(): Promise<SupplierRecord[]> {
     })
   }
   return out
-}
-
-/** A company in the intake picker: what it is, how many RFQs it has, and whether it only has a similar name. */
-export interface IntakeCompanyHit extends CompanyHit {
-  rfqCount: number
-  /** Found by the first word of the typed name, not by all of it: the "similar name" flag that prevents duplicates. */
-  similar: boolean
-}
-
-/**
- * The company picker's search (g2-intake-float frame 2): names containing the typed text, then, for a name of several
- * words, other companies sharing its first word (flagged similar), each with its RFQ count. Nothing is requested for
- * an empty text.
- */
-export async function searchIntakeCompanies(text: string): Promise<IntakeCompanyHit[]> {
-  const q = text.trim()
-  if (!q) return []
-  const exact = await searchCompanies(q, 8)
-  const first = q.split(/\s+/).find(w => w.length >= 4)
-  const near =
-    first && first.toLowerCase() !== q.toLowerCase()
-      ? (await searchCompanies(first, 6)).filter(c => !exact.some(e => e.id === c.id))
-      : []
-  const all = [...exact.map(h => ({ h, similar: false })), ...near.map(h => ({ h, similar: true }))]
-  if (all.length === 0) return []
-  const db = requireSupabase()
-  const rows = unwrap(await db.from('rfqs').select('company_id').in('company_id', all.map(x => x.h.id)))
-  const counts = new Map<string, number>()
-  for (const r of rows) counts.set(r.company_id, (counts.get(r.company_id) ?? 0) + 1)
-  return all.map(({ h, similar }) => ({ ...h, rfqCount: counts.get(h.id) ?? 0, similar }))
 }
 
 export interface MemoryQuery {

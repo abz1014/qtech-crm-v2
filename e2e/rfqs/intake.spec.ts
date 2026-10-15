@@ -346,7 +346,7 @@ test.describe('company picker', () => {
     await expect(add).toContainText('Saved as a prospect until the first order')
     await add.click()
     actions++
-    const form = page.getByRole('group', { name: 'New company' })
+    const form = page.getByRole('region', { name: 'New company' })
     await expect(form.getByRole('textbox', { name: 'Company name' })).toHaveValue(name)
     await expect(page.getByText('City and contact can wait. Add them from the company page later.')).toBeVisible()
     expect(page.url()).toMatch(/\/rfqs\/new/)
@@ -426,7 +426,7 @@ for (const width of [1440, 375]) {
     const typed = `Mianwali${tag} Polymers`
     await page.getByRole('combobox', { name: 'Company' }).fill(typed)
     await page.getByRole('option', { name: new RegExp(`Add “${typed}” as a new company`) }).click()
-    await expect(page.getByRole('group', { name: 'New company' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'New company' })).toBeVisible()
     expect(await violations(page)).toEqual([])
     await review(page, `intake-float-02-company-typed-${width}`)
 

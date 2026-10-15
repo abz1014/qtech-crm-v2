@@ -100,10 +100,11 @@ export function useSupplierBrandQuotes(id: string | undefined, enabled = true) {
   })
 }
 
-export function useCompanyHistory(id: string | undefined) {
+/** `withPayment`: admin and sales also read which orders are past their payment date (engineers cannot, so it is never asked). */
+export function useCompanyHistory(id: string | undefined, withPayment = false) {
   return useQuery({
-    queryKey: qk.companies.part(id ?? '', 'history'),
-    queryFn: () => api.getCompanyHistory(id as string),
+    queryKey: [...qk.companies.part(id ?? '', 'history'), withPayment] as const,
+    queryFn: () => api.getCompanyHistory(id as string, withPayment),
     enabled: Boolean(id),
   })
 }
@@ -130,12 +131,15 @@ export class DuplicateCompanyError extends Error {
   }
 }
 
+/** `contactName` (optional) adds a first contact in the same gesture, as the inline create in intake draws it. */
 export function useCreateCompany() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: async (input: api.NewCompany) => {
+    mutationFn: async (input: api.NewCompany & { contactName?: string | null }) => {
       try {
-        return await api.createCompany(input)
+        const created = await api.createCompany(input)
+        if (input.contactName?.trim()) await api.addContact({ id: crypto.randomUUID(), companyId: created.id, name: input.contactName })
+        return created
       } catch (err) {
         const e = err as { code?: string; message?: string }
         if (e?.code === '23505' && /companies_name_key/.test(e.message ?? '')) {
@@ -151,7 +155,7 @@ export function useCreateCompany() {
 export function useUpdateCompany(id: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (patch: { name?: string; country?: string | null; notes?: string | null }) => api.updateCompany(id, patch),
+    mutationFn: (patch: { name?: string; country?: string | null; city?: string | null; notes?: string | null }) => api.updateCompany(id, patch),
     onSuccess: () => invalidateAfter(client, 'company.update', { id }),
   })
 }
@@ -167,7 +171,7 @@ export function useAddSite(companyId: string) {
 export function useAddContact(companyId: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (input: { id: string; name: string; siteId?: string | null; phone?: string | null; email?: string | null; notes?: string | null }) =>
+    mutationFn: (input: { id: string; name: string; siteId?: string | null; phone?: string | null; email?: string | null; jobTitle?: string | null; notes?: string | null }) =>
       api.addContact({ ...input, companyId }),
     onSuccess: () => invalidateAfter(client, 'contact.add', { companyId }),
   })
@@ -184,7 +188,7 @@ export function useUpdateSite(companyId: string) {
 export function useUpdateContact(companyId: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (input: { id: string; name: string; siteId?: string | null; phone?: string | null; email?: string | null; notes?: string | null }) =>
+    mutationFn: (input: { id: string; name: string; siteId?: string | null; phone?: string | null; email?: string | null; jobTitle?: string | null; notes?: string | null }) =>
       api.updateContact(input.id, input),
     onSuccess: () => invalidateAfter(client, 'contact.update', { companyId }),
   })

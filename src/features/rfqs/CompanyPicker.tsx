@@ -1,17 +1,13 @@
 import { useId, useRef, useState, type KeyboardEvent } from 'react'
-import { Building2, Check, Plus, Search } from 'lucide-react'
+import { Building2, Plus, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { DuplicateCompanyError } from '@/features/companies/hooks'
-import type { CompanyRole } from '@/features/companies/api'
-import { useCompanyMatches, useCreateCustomer } from '@/features/rfqs/hooks'
+import type { CompanyHit, CompanyRole } from '@/features/companies/api'
+import { CreateCompanyInline } from '@/features/companies/CreateCompanyInline'
+import { useCompanyMatches } from '@/features/rfqs/hooks'
 import { optionMeta } from '@/features/rfqs/lib/intakeModel'
-import type { IntakeCompanyHit } from '@/features/rfqs/api'
-import { Button } from '@/ui/Button'
 import { controlClass } from '@/ui/form/fieldContext'
 import { Field } from '@/ui/form/Field'
-import { TextField } from '@/ui/form/TextField'
 import { Icon } from '@/ui/Icon'
-import { mapPgError } from '@/lib/pgErrors'
 
 /*
  * The company picker of the intake screen (g2-intake-float frames 1 and 2). One search field; the matches carry
@@ -27,8 +23,6 @@ export interface IntakeCompany {
   country: string | null
   city: string | null
   role: CompanyRole | null
-  /** The first contact typed in the create form, already saved with the company; the screen selects it. */
-  contactId?: string | null
 }
 
 export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompany) => void; loadingName: boolean }) {
@@ -48,7 +42,7 @@ export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompa
   const showList = open && typed !== ''
   const optionId = (i: number) => `${listId}-o${i}`
 
-  const pick = (h: IntakeCompanyHit) => {
+  const pick = (h: CompanyHit) => {
     onPick({ id: h.id, name: h.name, country: h.country, city: h.city ?? null, role: h.role })
     setOpen(false)
   }
@@ -162,98 +156,17 @@ export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompa
             ) : null}
           </ul>
           {creating && canCreate ? (
-            <CreateInline
+            <CreateCompanyInline
               initialName={typed}
               onCancel={() => {
                 setCreating(false)
                 input.current?.focus()
               }}
-              onCreated={onPick}
-              onUseExisting={pick}
+              onCreated={c => onPick({ id: c.id, name: c.name, country: null, city: c.city ?? null, role: 'prospect' })}
             />
           ) : null}
         </div>
       ) : null}
-    </div>
-  )
-}
-
-function CreateInline({
-  initialName,
-  onCancel,
-  onCreated,
-  onUseExisting,
-}: {
-  initialName: string
-  onCancel: () => void
-  onCreated: (c: IntakeCompany) => void
-  onUseExisting: (h: IntakeCompanyHit) => void
-}) {
-  const [name, setName] = useState(initialName)
-  const [city, setCity] = useState('')
-  const [contact, setContact] = useState('')
-  const [error, setError] = useState<{ message: string; existing: IntakeCompanyHit | null } | null>(null)
-  const create = useCreateCustomer()
-  const requestId = useRef(crypto.randomUUID())
-
-  const submit = async () => {
-    const n = name.trim()
-    if (!n || create.isPending) return
-    setError(null)
-    try {
-      const c = await create.mutateAsync({ id: requestId.current, name: n, city: city.trim(), contact })
-      onCreated({ id: c.id, name: c.name, country: null, city: city.trim() || null, role: 'prospect', contactId: c.contactId })
-    } catch (err) {
-      if (err instanceof DuplicateCompanyError) {
-        const ex = err.existing
-        setError({
-          message: 'A company with this name already exists.',
-          existing: ex ? { ...ex, rfqCount: 0, similar: false } : null,
-        })
-      } else {
-        setError({ message: mapPgError(err, { entity: 'company' }).message, existing: null })
-      }
-    }
-  }
-  const onEnter = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      void submit()
-    }
-  }
-
-  return (
-    <div role="group" aria-label="New company" className="m-1 grid gap-3 rounded border bg-sunken p-4">
-      <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr_1fr]">
-        <Field label="Company name" error={!name.trim() ? 'Enter the company name.' : undefined}>
-          <TextField value={name} onChange={e => setName(e.target.value)} onKeyDown={onEnter} autoComplete="off" autoCapitalize="words" />
-        </Field>
-        <Field label="City">
-          <TextField value={city} onChange={e => setCity(e.target.value)} onKeyDown={onEnter} placeholder="Optional" autoComplete="off" autoFocus />
-        </Field>
-        <Field label="Contact">
-          <TextField value={contact} onChange={e => setContact(e.target.value)} onKeyDown={onEnter} placeholder="Optional" autoComplete="off" />
-        </Field>
-      </div>
-      {error ? (
-        <p role="alert" className="m-0 text-sm text-tone-danger-fg">
-          {error.message}{' '}
-          {error.existing ? (
-            <button type="button" className="font-medium underline underline-offset-2" onClick={() => onUseExisting(error.existing as IntakeCompanyHit)}>
-              Use it
-            </button>
-          ) : null}
-        </p>
-      ) : null}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="primary" size="sm" icon={Check} onClick={() => void submit()} busy={create.isPending} busyLabel="Adding" disabled={!name.trim()}>
-          Create and use
-        </Button>
-        <Button variant="quiet" size="sm" onClick={onCancel} disabled={create.isPending}>
-          Cancel
-        </Button>
-        <span className="text-xs text-fg-muted sm:ml-auto">City and contact can wait. Add them from the company page later.</span>
-      </div>
     </div>
   )
 }

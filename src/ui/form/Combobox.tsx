@@ -21,6 +21,8 @@ export interface ComboOption {
   label: string
   /** Muted trailing text: "Faisalabad · customer". */
   meta?: string
+  /** Always listed, whatever is typed (a near match found by something other than the typed text). */
+  keep?: boolean
 }
 
 interface ComboboxProps
@@ -32,6 +34,10 @@ interface ComboboxProps
   /** Show an "Add “text” …" row when something is typed. Receives the typed text. */
   onCreate?: (text: string) => void
   createLabel?: (text: string) => string
+  /** A second line under the "Add ..." row ("Saved as a prospect until the first order"). */
+  createHint?: string
+  /** Put each option's meta on a second line under its label instead of at the right. */
+  metaBelow?: boolean
   onQueryChange?: (query: string) => void
   /** The list is being fetched: shown instead of "no match". */
   loading?: boolean
@@ -47,7 +53,7 @@ function rank(o: ComboOption, q: string): number {
 }
 
 export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Combobox(
-  { options, value, onChange, onCreate, createLabel, onQueryChange, loading = false, className, onBlur, placeholder, ...rest },
+  { options, value, onChange, onCreate, createLabel, createHint, metaBelow = false, onQueryChange, loading = false, className, onBlur, placeholder, ...rest },
   ref,
 ) {
   const a11y = useControlProps(rest)
@@ -65,7 +71,8 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
     if (!q) return options.slice()
     return options
       .map(o => ({ o, r: rank(o, q) }))
-      .filter(x => x.r >= 0)
+      .filter(x => x.r >= 0 || x.o.keep)
+      .map(x => (x.r < 0 ? { ...x, r: 4 } : x))
       .sort((a, b) => a.r - b.r)
       .map(x => x.o)
   }, [options, q])
@@ -201,14 +208,22 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
               onMouseMove={() => setActive(i)}
               onClick={() => pick(o)}
               className={cn(
-                'flex h-control cursor-pointer items-center gap-3 rounded px-2 text-sm',
+                'flex cursor-pointer items-center gap-3 rounded px-2 text-sm',
+                metaBelow ? 'min-h-control py-[6px]' : 'h-control',
                 i === activeIndex && 'bg-selected',
               )}
             >
-              <span className="min-w-0 truncate">
-                {o.label}
-              </span>
-              {o.meta ? <span className="shrink-0 text-xs text-fg-muted">{o.meta}</span> : null}
+              {metaBelow ? (
+                <span className="grid min-w-0">
+                  <span className="min-w-0 truncate">{o.label}</span>
+                  {o.meta ? <span className="min-w-0 truncate text-xs text-fg-muted">{o.meta}</span> : null}
+                </span>
+              ) : (
+                <>
+                  <span className="min-w-0 truncate">{o.label}</span>
+                  {o.meta ? <span className="shrink-0 text-xs text-fg-muted">{o.meta}</span> : null}
+                </>
+              )}
             </li>
           ))}
           {rows === 0 ? (
@@ -226,13 +241,17 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
               onMouseMove={() => setActive(matches.length)}
               onClick={create}
               className={cn(
-                'flex h-control cursor-pointer items-center gap-2 rounded px-2 text-sm text-primary',
+                'flex cursor-pointer items-center gap-2 rounded px-2 text-sm text-primary',
+                createHint ? 'min-h-control py-[6px]' : 'h-control',
                 matches.length > 0 && 'mt-1 border-t border-line pt-1',
                 matches.length === activeIndex && 'bg-selected',
               )}
             >
               <Icon icon={Plus} className="text-fg-muted" />
-              {createLabel ? createLabel(typed.trim()) : `Add “${typed.trim()}” as new`}
+              <span className="grid min-w-0">
+                <span className="min-w-0 truncate">{createLabel ? createLabel(typed.trim()) : `Add “${typed.trim()}” as new`}</span>
+                {createHint ? <span className="text-xs text-fg-muted">{createHint}</span> : null}
+              </span>
             </li>
           ) : null}
         </ul>
