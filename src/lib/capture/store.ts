@@ -128,3 +128,25 @@ export async function safely<T>(work: () => Promise<T>, fallback: T): Promise<T>
     return fallback
   }
 }
+
+const SIGNED_OUT_KEY = 'qtech.capture.signedOutWithItem'
+
+/** The sign-in page notes that an item is waiting, so the sheet can say "Your shared item is back" after the person signs in. */
+export function markCaptureBeforeSignIn(): void {
+  try {
+    window.sessionStorage.setItem(SIGNED_OUT_KEY, '1')
+  } catch {
+    /* no session storage: the sheet just opens without the note */
+  }
+}
+
+/** True once, when the sheet opens after a sign-in that happened while an item was waiting. */
+export function takeBackFromSignIn(): boolean {
+  try {
+    const was = window.sessionStorage.getItem(SIGNED_OUT_KEY) === '1'
+    window.sessionStorage.removeItem(SIGNED_OUT_KEY)
+    return was
+  } catch {
+    return false
+  }
+}

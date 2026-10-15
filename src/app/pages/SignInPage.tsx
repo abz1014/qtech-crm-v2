@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useSession, useSignInNotice } from '@/app/session'
 import { getSupabase } from '@/lib/supabase'
-import { listCaptures, safely } from '@/lib/capture/store'
+import { listCaptures, markCaptureBeforeSignIn, safely } from '@/lib/capture/store'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Field } from '@/ui/form/Field'
@@ -35,7 +35,10 @@ export function SignInPage() {
   // A shared item is saved on this device before the app checks the session, so signing in again cannot lose it (R22).
   const [kept, setKept] = useState(0)
   useEffect(() => {
-    void safely(() => listCaptures(), []).then(items => setKept(items.length))
+    void safely(() => listCaptures(), []).then(items => {
+      setKept(items.length)
+      if (items.length) markCaptureBeforeSignIn()
+    })
   }, [])
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: '', password: '' } })
   const { errors } = form.formState

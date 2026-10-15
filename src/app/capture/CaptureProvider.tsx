@@ -8,6 +8,7 @@ import {
   listCaptures,
   purgeExpired,
   safely,
+  takeBackFromSignIn,
   type CaptureItem,
 } from '@/lib/capture/store'
 import { RFQ_FILE_ACCEPT } from '@/features/rfqs/lib/clarifications'
@@ -140,11 +141,12 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
           if (item) {
             dirty.current = false
             await load(item)
-            setNotice(null)
+            setNotice(takeBackFromSignIn() ? 'back' : null)
           } else {
             setNotice('expired')
           }
         } else if (draftRef.current.text.trim() || draftRef.current.files.length) {
+          takeBackFromSignIn()
           setNotice('back')
         }
         setOpen(true)

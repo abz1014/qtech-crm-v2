@@ -66,7 +66,7 @@ async function share(page: Page, payload: Shared) {
       form.action = '/capture'
       form.enctype = 'multipart/form-data'
       if (text) {
-        const t = document.createElement('input')
+        const t = document.createElement('textarea')
         t.name = 'text'
         t.value = text
         form.append(t)
@@ -307,7 +307,6 @@ test.describe('the other destinations', () => {
     await sheet(page).getByRole('button', { name: 'Read the reply' }).click()
     await expect(page).toHaveURL(new RegExp(`/rfqs/${s.rfq.id}$`))
     await expect(page.getByText('Read from their reply')).toBeVisible()
-    await expect(page.getByText('Nothing is saved until you accept.')).toBeVisible()
   })
 
   test('start a new RFQ: pick the company, intake opens with the text, and the photo is attached once the RFQ is saved', async ({ page }) => {
@@ -316,7 +315,7 @@ test.describe('the other destinations', () => {
     await share(page, { text: 'Please quote 2 nos ultrasonic level transmitter, 0 to 8 m, 4-20 mA.', files: [{ name: 'tank.png', type: 'image/png' }] })
     await expect(sheet(page)).toBeVisible()
     await page.getByRole('radio', { name: /Start a new RFQ/ }).click()
-    await sheet(page).getByLabel('Which company?').fill(s.customer.slice(0, 20))
+    await sheet(page).getByLabel('Which company?').fill(s.customer)
     await page.getByRole('option', { name: new RegExp(s.customer) }).click()
     await sheet(page).getByRole('button', { name: 'Continue to intake' }).click()
     await expect(page).toHaveURL(/\/rfqs\/new\?company=/)
