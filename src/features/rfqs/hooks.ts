@@ -55,6 +55,15 @@ export function useSetRfqFloated() {
   })
 }
 
+/** "Float item 4 to them": ask one more supplier on a saved RFQ and stamp it sent today. */
+export function useFloatToSupplier() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { rfqId: string; supplierId: string; today: string }) => api.floatToSupplier(v.rfqId, v.supplierId, v.today),
+    onSuccess: (_n, v) => invalidateAfter(client, 'rfq.setFloated', { rfqId: v.rfqId }),
+  })
+}
+
 export { findRfqByCustomerRef } from '@/features/rfqs/api'
 
 // ================================================================ RFQ detail (R07)

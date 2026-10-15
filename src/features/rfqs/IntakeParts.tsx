@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Circle, CircleCheck, CircleDot, Copy, Info, X } from 'lucide-react'
+import { Circle, CircleCheck, CircleDot, Copy, Info, Pencil, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDay } from '@/lib/formatDay'
 import { rfqRef } from '@/lib/refs'
@@ -91,10 +91,62 @@ export function SidePanels({
 
 function Row({ k, children }: { k: string; children: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-[6px] text-sm">
+    <div className="grid grid-cols-[98px_minmax(0,1fr)] items-center py-[6px] text-sm">
       <dt className="text-fg-muted">{k}</dt>
-      <dd className="m-0 min-w-0 text-right">{children}</dd>
+      <dd className="m-0 min-w-0">{children}</dd>
     </div>
+  )
+}
+
+/**
+ * The mockup's hint strip (g2-a.css .hint): an info glyph, a bold lead and one sentence, in the warning tint by default
+ * or the info tint (`is-info`). Not a Banner: no title line above the text.
+ */
+export function Hint({ tone = 'warning', children, className }: { tone?: 'warning' | 'info'; children: ReactNode; className?: string }) {
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-3 rounded border px-4 py-3 text-sm text-fg-2',
+        tone === 'info' ? 'border-tone-info-fg/25 bg-tone-info-bg' : 'border-tone-warning-fg/25 bg-tone-warning-bg',
+        className,
+      )}
+    >
+      <Icon icon={Info} className={cn('mt-[2px] shrink-0', tone === 'info' ? 'text-tone-info-fg' : 'text-tone-warning-fg')} />
+      <p className="m-0 min-w-0 text-pretty">{children}</p>
+    </div>
+  )
+}
+
+/** One line of the text as drawn: "*bold*" markers stay visible and muted, and a blank "Spec:" is a highlighted blank. */
+function PreviewLine({ line }: { line: string }) {
+  const blank = /^(\s*Spec:\s)left blank$/.exec(line)
+  if (blank) {
+    return (
+      <>
+        {blank[1]}
+        <span
+          data-spec-blank
+          className="ml-1 inline-block h-[18px] min-w-[190px] rounded-t-[2px] border-b-[1.5px] border-dashed border-tone-warning-fg bg-tone-warning-bg px-[6px] align-[-3px] text-xs leading-[18px] text-tone-warning-fg"
+        >
+          left blank
+        </span>
+      </>
+    )
+  }
+  return (
+    <>
+      {line.split(/(\*[^*\n]+\*)/).map((part, i) =>
+        /^\*[^*\n]+\*$/.test(part) ? (
+          <span key={i}>
+            <span className="text-fg-muted">*</span>
+            <b className="font-semibold">{part.slice(1, -1)}</b>
+            <span className="text-fg-muted">*</span>
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
   )
 }
 
@@ -124,6 +176,8 @@ export function EnquiryCard({
   /** The RFQ is already saved: the recipients are fixed here. */
   locked: boolean
 }) {
+  // The text is shown as drawn (blank specs highlighted); "Edit the text" swaps it for a text area.
+  const [editing, setEditing] = useState(false)
   return (
     <section aria-label="The enquiry" className="overflow-hidden rounded border bg-surface">
       <header className="flex flex-wrap items-start gap-3 border-b px-5 py-4">
@@ -156,6 +210,9 @@ export function EnquiryCard({
             )}
           </span>
         ))}
+        <Button variant="quiet" size="sm" icon={Pencil} className="ml-auto" aria-pressed={editing} onClick={() => setEditing(e => !e)}>
+          {editing ? 'Done editing' : 'Edit the text'}
+        </Button>
       </div>
       <div className="grid gap-2 px-5 py-4">
         {subject ? (
@@ -164,20 +221,37 @@ export function EnquiryCard({
             {subject}
           </p>
         ) : null}
-        <label htmlFor="enquiry-text" className="sr-only">
-          Enquiry text
-        </label>
-        <textarea
-          id="enquiry-text"
-          value={body}
-          onChange={e => onBody(e.target.value)}
-          rows={Math.min(Math.max(body.split('\n').length + 1, 10), 26)}
-          spellCheck={false}
-          className="w-full resize-y rounded border border-line-input bg-surface px-3 py-3 text-sm leading-5 text-fg hover:border-fg-muted focus-visible:border-fg"
-        />
-        <p className="m-0 text-xs text-fg-muted">{note}</p>
+        {editing ? (
+          <>
+            <label htmlFor="enquiry-text" className="sr-only">
+              Enquiry text
+            </label>
+            <textarea
+              id="enquiry-text"
+              value={body}
+              onChange={e => onBody(e.target.value)}
+              rows={Math.min(Math.max(body.split('\n').length + 1, 10), 26)}
+              spellCheck={false}
+              className="w-full resize-y rounded border border-line-input bg-surface px-3 py-3 text-sm leading-5 text-fg hover:border-fg-muted focus-visible:border-fg"
+            />
+          </>
+        ) : (
+          <div role="group" aria-label="Enquiry text" data-enquiry-preview className="py-1">
+            <pre className="m-0 whitespace-pre-wrap break-words font-sans text-sm leading-[21px] text-fg">
+              {body.split('\n').map((line, i, all) => (
+                <span key={i}>
+                  <PreviewLine line={line} />
+                  {i < all.length - 1 ? '\n' : null}
+                </span>
+              ))}
+            </pre>
+          </div>
+        )}
       </div>
-      <footer className="flex flex-wrap items-center gap-3 border-t bg-sunken px-5 py-3">{actions}</footer>
+      <footer className="flex flex-wrap items-center gap-3 border-t bg-sunken px-5 py-3">
+        {actions}
+        <span className="ml-auto text-xs text-fg-muted">{note}</span>
+      </footer>
     </section>
   )
 }
@@ -204,8 +278,8 @@ export function FloatedPanel({
   copied: boolean
   text: string
   onCopyAgain: () => void
-  /** Items with no supplier ticked, as short sentences ("Item 4 has no supplier yet. ..."). */
-  unfloated: ReactNode[]
+  /** Items with no supplier ticked, as short sentences ("Item 4 has no supplier yet. ..."), with the link that floats the item. */
+  unfloated: { key: string; text: ReactNode; action?: { label: string; onClick: () => void; busy: boolean } }[]
   onAnother: () => void
 }) {
   const n = names.length
@@ -256,11 +330,23 @@ export function FloatedPanel({
         </dl>
       ) : null}
       {dueOn ? null : <p className="m-0 text-sm text-fg-2">No bid due date was given, so nothing is chased until you add one.</p>}
-      {unfloated.map((u, i) => (
-        <div key={i} className="flex items-start gap-3 rounded border border-tone-info-fg/25 bg-tone-info-bg px-4 py-3 text-sm">
-          <Icon icon={Info} className="mt-[2px] text-tone-info-fg" />
-          <p className="m-0 min-w-0 text-pretty">{u}</p>
-        </div>
+      {unfloated.map(u => (
+        <Hint key={u.key} tone="info">
+          {u.text}
+          {u.action ? (
+            <>
+              {' '}
+              <button
+                type="button"
+                onClick={u.action.onClick}
+                disabled={u.action.busy}
+                className="font-medium text-primary underline-offset-2 hover:underline disabled:text-fg-muted"
+              >
+                {u.action.label}
+              </button>
+            </>
+          ) : null}
+        </Hint>
       ))}
       <div className="flex flex-wrap gap-2">
         <Link

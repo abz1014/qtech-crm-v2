@@ -6,6 +6,8 @@ import { Deliveries, RecentQuotes } from '@/features/companies/SupplierRecordPan
 import { supplierFacts, type SupplierFacts } from '@/features/companies/supplierFacts'
 import type { SupplierEnquiry } from '@/features/companies/api'
 import { Fine, Panel, UnitChart, type Unit } from '@/features/companies/CompanyParts'
+import { OutcomeChip } from '@/features/companies/SupplierRecordPanels'
+import type { LastContactPart, SupplierRecord } from '@/features/companies/supplierRecord'
 import { businessToday } from '@/lib/dates'
 import { formatDay, formatShortDate } from '@/lib/formatDay'
 import { rfqRef } from '@/lib/refs'
@@ -15,7 +17,6 @@ import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
-import { StatusBadge } from '@/ui/StatusBadge'
 import { Tag } from '@/ui/Tag'
 
 /*
@@ -54,9 +55,9 @@ export function SupplierPanel({ companyId }: { companyId: string }) {
     <>
       <Panel
         title="What we know"
-        meta="From our own enquiries, quotes and deliveries, last 24 months"
+        meta={facts.provenance.importedOnly ? 'From enquiries, quotes and deliveries, last 24 months' : facts.lowData ? 'From our own enquiries, quotes and deliveries' : 'From our own enquiries, quotes and deliveries, last 24 months'}
         actions={tag ? <Tag dashed>{tag}</Tag> : null}
-        footer={<Provenance facts={facts} />}
+        footer={<Provenance facts={facts} span={record.view?.span ?? null} />}
       >
         {facts.empty ? (
           <div className="grid gap-1 px-5 py-6 text-sm">
@@ -68,7 +69,7 @@ export function SupplierPanel({ companyId }: { companyId: string }) {
             <Section title="Brands" sub="Evidence we hold, not what the supplier claims." className="md:border-r">
               <BrandFacts companyId={companyId} />
             </Section>
-            <Section title="Enquiries" sub={facts.enquirySummary} className="border-t md:border-t-0">
+            <Section title="Enquiries" sub={<BoldCounts text={facts.enquirySummary} />} className="border-t md:border-t-0">
               <EnquiryUnits facts={facts} />
               <FactRows
                 rows={[
@@ -78,10 +79,10 @@ export function SupplierPanel({ companyId }: { companyId: string }) {
               />
             </Section>
             <Section title="Deliveries" sub={deliverySub(facts)} className="border-t md:border-r">
-              <DeliveryUnits facts={facts} />
+              <DeliveryUnits facts={facts} units={record.view?.deliveryUnits ?? null} />
             </Section>
             <Section title="Last contacted" className="border-t">
-              <FactRows rows={[{ key: facts.lastContact ? formatDay(facts.lastContact) : 'No contact', value: <LastContact facts={facts} what={record.view?.lastContactText ?? null} /> }]} />
+              <FactRows rows={[{ key: facts.lastContact ? formatDay(facts.lastContact) : 'No contact', value: <LastContact facts={facts} what={record.view?.lastContact ?? null} importedOnly={facts.provenance.importedOnly} /> }]} />
             </Section>
           </div>
         )}
@@ -92,6 +93,7 @@ export function SupplierPanel({ companyId }: { companyId: string }) {
         error={record.query.isError}
         onRetry={() => void record.query.refetch()}
         enquiriesAnchor="enquiries"
+        meta={facts.provenance.importedOnly ? 'Imported rows are marked' : facts.lowData ? 'Everything we have from them' : 'Original currency first. "At the time" uses the rate captured when the quote was logged.'}
       />
       <Deliveries view={record.view} loading={record.query.isPending} error={record.query.isError} onRetry={() => void record.query.refetch()} today={record.today} />
       <EnquiryList rows={activity.data} loading={activity.isPending} error={activity.isError} onRetry={() => void activity.refetch()} />
@@ -111,7 +113,7 @@ function PanelSkeleton() {
   )
 }
 
-function Section({ title, sub, children, className }: { title: string; sub?: string; children: ReactNode; className?: string }) {
+function Section({ title, sub, children, className }: { title: string; sub?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section className={cn('grid min-w-0 content-start gap-3 px-5 pb-5 pt-4', className)}>
       <div className="grid gap-[2px]">
@@ -157,27 +159,50 @@ function EnquiryUnits({ facts }: { facts: SupplierFacts }) {
 }
 
 function deliverySub(f: SupplierFacts) {
-  return f.deliveries.kind === 'known' ? `Late ${f.deliveries.late} of ${f.deliveries.total}` : undefined
+  if (f.deliveries.kind !== 'known') return undefined
+  return `Late ${f.deliveries.late} of ${f.deliveries.total}${f.provenance.importedOnly ? ', dates estimated' : ''}`
 }
 
-function DeliveryUnits({ facts }: { facts: SupplierFacts }) {
+/** "Asked 6 · replied 5 of 6": the counts are set in bold, as drawn. */
+function BoldCounts({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\d+)/).map((part, i) =>
+        /^\d+$/.test(part) ? (
+          <b key={i} className="num font-semibold text-fg-2">
+            {part}
+          </b>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  )
+}
+
+function DeliveryUnits({ facts, units }: { facts: SupplierFacts; units: SupplierRecord['deliveryUnits'] | null }) {
   const d = facts.deliveries
   if (d.kind === 'none') {
     return (
       <Fine>
-        <span className="font-medium text-fg">No deliveries recorded yet.</span> The first purchase order to this supplier starts the count.
+        <span className="font-medium text-fg">No deliveries recorded yet.</span> The first PO to this supplier starts the count.
       </Fine>
     )
   }
-  const onTime = d.total - d.late
+  // One square per delivery. The squares come from the legs themselves when they add up to the stats row, so an imported
+  // on-time delivery can be drawn dashed ("on time, dates estimated"); otherwise from the stats' counts alone.
+  const fromLegs = units && units.ontime + units.late + units.estimatedOntime === d.total && units.late === d.late ? units : null
+  const onTime = fromLegs ? fromLegs.ontime : d.total - d.late
+  const estimated = fromLegs ? fromLegs.estimatedOntime : 0
   return (
     <div className="grid gap-2">
       <UnitChart
-        units={[...Array<Unit>(onTime).fill('ontime'), ...Array<Unit>(d.late).fill('late')]}
-        label={`${d.total} deliveries: ${onTime} on time, ${d.late} late`}
+        units={[...Array<Unit>(onTime).fill('ontime'), ...Array<Unit>(estimated).fill('estimated'), ...Array<Unit>(d.late).fill('late')]}
+        label={`${d.total} deliveries: ${onTime + estimated} on time, ${d.late} late`}
         legend={[
           { unit: 'ontime', text: 'on time', count: onTime },
           { unit: 'late', text: 'late', count: d.late },
+          { unit: 'estimated', text: 'on time, dates estimated', count: estimated },
         ]}
       />
       {d.medianDaysLate !== null ? <Fine>Late ones usually ran about {Math.round(d.medianDaysLate)} days over.</Fine> : null}
@@ -233,9 +258,23 @@ function Chosen({ facts }: { facts: SupplierFacts }) {
   )
 }
 
-function LastContact({ facts, what }: { facts: SupplierFacts; what: string | null }) {
+/** "Enquiry sent for RFQ-0171. No reply yet." with the RFQ as a link; "Imported." marks an imported leg. */
+function LastContact({ facts, what, importedOnly }: { facts: SupplierFacts; what: LastContactPart[] | null; importedOnly: boolean }) {
   if (!facts.lastContact) return <span className="text-fg-muted">Nothing recorded yet.</span>
-  return <span>{what ?? 'Contact on record.'}</span>
+  if (!what) return <span>{importedOnly ? 'Imported.' : 'Contact on record.'}</span>
+  return (
+    <span>
+      {what.map((p, i) =>
+        typeof p === 'string' ? (
+          <span key={i}>{p}</span>
+        ) : (
+          <Link key={i} to={`/rfqs/${p.rfqId}`} className="num rounded text-primary hover:underline" aria-label={`Open ${p.ref}`}>
+            {p.ref}
+          </Link>
+        ),
+      )}
+    </span>
+  )
 }
 
 /** The brands and families they carry, each with how many times they quoted one of its items. A count, never a rating. */
@@ -271,28 +310,46 @@ function BrandFacts({ companyId }: { companyId: string }) {
   )
 }
 
-function Provenance({ facts }: { facts: SupplierFacts }) {
+function monthYear(iso: string): string {
+  const M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  return `${M[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`
+}
+
+/** Where the numbers come from: three variants (populated, low data, imported only), worded as in g2-company.html. */
+function Provenance({ facts, span }: { facts: SupplierFacts; span: { from: string; to: string } | null }) {
   const p = facts.provenance
+  const hidden = p.pricesHidden > 0 ? (
+    <>
+      <span className="num">{p.pricesHidden}</span> {p.pricesHidden === 1 ? 'price is' : 'prices are'} hidden because {p.pricesHidden === 1 ? 'its' : 'their'} currency was never verified.{' '}
+    </>
+  ) : null
   return (
     <div className="flex items-start gap-3">
       <Icon icon={Info} size="sm" className="mt-[1px]" />
-      <p className="text-pretty">
-        <b className="font-medium text-fg-2">Where this comes from.</b> Counts are derived from enquiries, quote lines, purchase orders and received dates. Nothing here is typed in.{' '}
-        {p.hasImported ? (
-          <>
-            <b className="font-medium text-fg-2">Includes imported history:</b> <span className="num">{p.legacyAsked}</span> of <span className="num">{facts.asked}</span>{' '}
-            enquiries came from the old CRM
-            {p.pricesHidden > 0 ? (
-              <>
-                , <span className="num">{p.pricesHidden}</span> {p.pricesHidden === 1 ? 'price is' : 'prices are'} hidden because the currency was never verified
-              </>
-            ) : null}
-            , and imported replies are left out of reply times.
-          </>
-        ) : (
-          <>Everything here was logged in this CRM. With few enquiries the page shows facts only, and no pattern is implied.</>
-        )}
-      </p>
+      {p.importedOnly ? (
+        <p className="text-pretty">
+          <b className="font-medium text-fg-2">All of this was imported from the old CRM{span ? `, ${monthYear(span.from)} to ${monthYear(span.to)}` : ''}.</b> {hidden}
+          Imported delivery dates are estimates, so lateness is indicative. Nothing has been logged here since the move.
+        </p>
+      ) : p.hasImported ? (
+        <p className="text-pretty">
+          <b className="font-medium text-fg-2">Where this comes from.</b> Counts are derived from enquiries, quote lines, purchase orders and received dates. Nothing here is typed in.{' '}
+          <b className="font-medium text-fg-2">Includes imported history:</b> <span className="num">{p.legacyAsked}</span> of <span className="num">{facts.asked}</span> enquiries came from the old CRM
+          {p.pricesHidden > 0 ? (
+            <>
+              , <span className="num">{p.pricesHidden}</span> {p.pricesHidden === 1 ? 'price is' : 'prices are'} hidden because the currency was never verified
+            </>
+          ) : null}
+          , and imported replies are left out of reply times.
+        </p>
+      ) : (
+        <p className="text-pretty">
+          <b className="font-medium text-fg-2">Where this comes from.</b>{' '}
+          {facts.lowData
+            ? 'Everything here was logged in this CRM. There is no imported history. With so few enquiries the page shows facts only, and no pattern is implied.'
+            : 'Counts are derived from enquiries, quote lines, purchase orders and received dates. Nothing here is typed in. Everything here was logged in this CRM.'}
+        </p>
+      )}
     </div>
   )
 }
@@ -321,7 +378,7 @@ function EnquiryList({ rows, loading, error, onRetry }: { rows: SupplierEnquiry[
           const o = outcome(r, today)
           return (
             <span className="inline-flex items-center gap-2">
-              <StatusBadge dimension="inquiry" value={o.value} label={o.label} />
+              <OutcomeChip outcome={o.value} label={o.label} />
               {r.isLegacy ? <Tag dashed>Imported</Tag> : null}
             </span>
           )
@@ -362,8 +419,8 @@ function daysBetween(a: string, b: string) {
   return Math.round((d(b) - d(a)) / 86_400_000)
 }
 
-function outcome(r: SupplierEnquiry, today: string): { value: 'quoted' | 'no-offer' | 'awaiting'; label: string } {
+function outcome(r: SupplierEnquiry, today: string): { value: 'quoted' | 'declined' | 'waiting' | 'no-reply'; label: string } {
   if (r.quoted) return { value: 'quoted', label: 'Quoted' }
-  if (r.noOffer) return { value: 'no-offer', label: "Couldn't offer" }
-  return { value: 'awaiting', label: r.sentOn && daysBetween(r.sentOn, today) >= 7 ? 'No reply' : 'Waiting for a reply' }
+  if (r.noOffer) return { value: 'declined', label: "Couldn't offer" }
+  return r.sentOn && daysBetween(r.sentOn, today) >= 7 ? { value: 'no-reply', label: 'No reply' } : { value: 'waiting', label: 'Waiting for a reply' }
 }

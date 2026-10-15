@@ -18,7 +18,7 @@ export async function listSupplierCandidates(): Promise<SupplierRecord[]> {
   const [stats, companies] = await Promise.all([
     // Every column the memory card quotes comes from this one read, so opening a card asks for nothing more.
     fetchAll((from, to) => db.from('v_supplier_stats').select('*').range(from, to)),
-    fetchAll((from, to) => db.from('companies').select('id, name, country').order('name').range(from, to)),
+    fetchAll((from, to) => db.from('companies').select('id, name, country, city').order('name').range(from, to)),
   ])
   const byId = new Map(companies.map(c => [c.id, c]))
   const out: SupplierRecord[] = []
@@ -28,8 +28,8 @@ export async function listSupplierCandidates(): Promise<SupplierRecord[]> {
     out.push({
       id: c.id,
       name: c.name,
-      // The screen shows a place beside the name; a company has a country, not a city, so that is what it shows.
-      city: c.country,
+      // The place beside the name: the city when one is on file (0038), the country until then.
+      city: c.city ?? c.country,
       stats: { ...s, supplier_id: s.supplier_id },
     })
   }
@@ -126,6 +126,20 @@ export async function setRfqFloated(rfqId: string, floated: boolean): Promise<nu
   const { data, error } = await db.rpc('set_rfq_floated', { p_rfq_id: rfqId, p_floated: floated })
   if (error) throw error
   return data ?? 0
+}
+
+/**
+ * Ask one more supplier on a saved RFQ and mark it sent on `today` (the "Float item 4 to them" link). An inquiry is per
+ * supplier, so a supplier already shortlisted is stamped, and a new one is added already sent.
+ */
+export async function floatToSupplier(rfqId: string, supplierId: string, today: string): Promise<void> {
+  const db = requireSupabase()
+  unwrap(
+    await db
+      .from('supplier_inquiries')
+      .upsert({ rfq_id: rfqId, supplier_id: supplierId, sent_on: today }, { onConflict: 'rfq_id,supplier_id' })
+      .select('id'),
+  )
 }
 
 /** The RFQ a customer reference already belongs to, so a duplicate can offer "Open it". */

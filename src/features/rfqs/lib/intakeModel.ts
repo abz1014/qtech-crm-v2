@@ -4,6 +4,7 @@
 import type { EnquiryItem } from './enquiryDraft'
 import type { SuggestionItem, SupplierSuggestion } from './supplierSuggestion'
 import { modelTokens, type BrandRef } from './parseItems'
+import type { CompanyRole } from '@/features/companies/api'
 
 /** One item row as the screen holds it. `key` is a client id; the database numbers the rows by position. */
 export interface DraftItem {
@@ -125,4 +126,33 @@ export function joinNames(names: string[]): string {
   if (names.length <= 1) return names.join('')
   if (names.length === 2) return `${names[0]} and ${names[1]}`
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+}
+
+// ------------------------------------------------------------------------------------------------ cells and options
+
+/** "2 nos" typed into the Qty cell of the item grid: the number, and the unit when one follows it ("150 m"). */
+export function parseQtyCell(text: string): { qty: number | null; unit: string } {
+  const m = /^\s*(\d[\d,]*(?:\.\d+)?)\s*(.*)$/.exec(text)
+  if (!m) return { qty: null, unit: '' }
+  return { qty: Number(m[1].replace(/,/g, '')), unit: m[2].trim() }
+}
+
+const ROLE_WORD: Record<CompanyRole, string> = { customer: 'customer', supplier: 'supplier', both: 'customer and supplier', prospect: 'prospect' }
+
+/** The muted line under a company in the picker: "Mianwali · customer · 2 RFQs · similar name". The city shows once known, else the country. */
+export function optionMeta(h: {
+  city?: string | null
+  country: string | null
+  role: CompanyRole | null
+  rfqCount?: number
+  similar?: boolean
+}): string {
+  return [
+    h.city ?? h.country,
+    h.role ? ROLE_WORD[h.role] : null,
+    h.rfqCount ? `${h.rfqCount} ${h.rfqCount === 1 ? 'RFQ' : 'RFQs'}` : null,
+    h.similar ? 'similar name' : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 }

@@ -141,6 +141,8 @@ export interface PriceFact {
   state: 'none' | 'hidden' | 'price'
   /** "USD 1,980" (the original currency first), or the bare number when no currency was recorded. */
   amount: string | null
+  /** The figure alone with two decimals ("214.00"), for tables where every price lines up. */
+  figure: string | null
   /** The PKR value at the rate captured that day, "551,000". Null when no rate was captured, or the price is in PKR. */
   pkr: string | null
   /** The rate behind `pkr`, "326.80 · 11 Oct". */
@@ -156,7 +158,7 @@ export interface PriceFact {
   inPkr: boolean
 }
 
-const NONE: PriceFact = { state: 'none', amount: null, pkr: null, rate: null, note: null, date: null, qty: null, source: null, imported: false, inPkr: false }
+const NONE: PriceFact = { state: 'none', amount: null, figure: null, pkr: null, rate: null, note: null, date: null, qty: null, source: null, imported: false, inPkr: false }
 
 function qtyText(qty: number | null | undefined, unit: string | null | undefined): string | null {
   if (qty === null || qty === undefined) return null
@@ -201,7 +203,7 @@ export function priceFactOf(p: PriceIn, today: string): PriceFact {
   } else {
     note = 'PKR value not captured at the time'
   }
-  return { state: 'price', amount, pkr, rate, note, date, qty: qtyText(p.qty, p.unit), source: p.source ?? null, imported: Boolean(p.imported), inPkr: cur === 'PKR' }
+  return { state: 'price', amount, figure: formatAmount(p.price, 'always'), pkr, rate, note, date, qty: qtyText(p.qty, p.unit), source: p.source ?? null, imported: Boolean(p.imported), inPkr: cur === 'PKR' }
 }
 
 export function lastQuoteFact(r: MemoryRow | null | undefined, today: string): PriceFact {
