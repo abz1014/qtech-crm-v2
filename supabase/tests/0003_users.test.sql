@@ -6,12 +6,12 @@ select plan(24);
 
 -- Structure
 select columns_are('public', 'users',
-  array['id', 'name', 'role', 'deactivated_at', 'created_at', 'job_title'],
-  'users has exactly the section 2.1 columns');
+  array['id', 'name', 'role', 'deactivated_at', 'created_at', 'job_title', 'phone'],
+  'users has exactly the section 2.1 columns (phone from A7, 0038)');
 select ok((select relrowsecurity from pg_class where oid = 'public.users'::regclass), 'RLS is enabled on users');
 select is((select array_agg(policyname::text order by policyname) from pg_policies
            where schemaname = 'public' and tablename = 'users'),
-  array['users_select_active_staff'], 'users has only the SELECT policy');
+  array['users_select_active_staff', 'users_update_phone'], 'users has the SELECT policy and the phone-only UPDATE policy (0038)');
 select ok(exists (select 1 from pg_constraint
                   where conrelid = 'public.users'::regclass and contype = 'f'
                     and confrelid = 'auth.users'::regclass and confdeltype = 'r'),
