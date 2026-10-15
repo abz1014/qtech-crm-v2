@@ -1,5 +1,5 @@
 begin;
-select plan(12);
+select plan(13);
 
 -- R19: customer_price_memory(rfq_id), the two price chips of the issue-quotation dialog. Fixture users come from supabase/seed.sql.
 
