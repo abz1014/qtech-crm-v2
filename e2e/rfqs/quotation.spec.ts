@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
+import { createCompany, createRfq, karachiDay, login, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
 import { fetchStoredPdf, pdfIsValid, pdfText, renderPdfPng } from '../support/pdf'
 
@@ -52,11 +52,16 @@ const issueViaRpc = (rfqId: string, extra: Record<string, unknown> = {}) =>
 /** A customer with: an earlier quotation (1,200) and an earlier order (1,000) for the same model, a contact, and a supplier lead time. */
 async function seed(): Promise<Seed> {
   await setProfile(true)
+  // USD at 280 today, so the supplier's USD 50 reply reads "Best reply ≈ PKR 14,000 each".
+  await must(rest('admin', 'fx_rates?on_conflict=currency,as_of,source', { method: 'POST', body: { currency: 'USD', rate_pkr: 280, as_of: karachiDay(0), source: 'manual' }, prefer: 'resolution=merge-duplicates,return=minimal' }))
+  // The signed-in sales person's phone (users.phone, own row) prints on the PDF.
+  const me = (await login('sales')).user as { id: string }
+  await must(rest('sales', `users?id=eq.${me.id}`, { method: 'PATCH', body: { phone: '+92 300 1234567' }, prefer: 'return=minimal' }))
   const tag = Math.random().toString(36).slice(2, 6)
   const customer = uniqueName('Quote Customer')
   const co = await createCompany(customer)
   const contacts = await must(
-    rest<{ id: string; name: string }[]>('admin', 'contacts', { method: 'POST', body: [{ company_id: co.id, name: 'Mr. Tariq Mehmood' }, { company_id: co.id, name: 'Ms. Sana Iqbal' }] }),
+    rest<{ id: string; name: string }[]>('admin', 'contacts', { method: 'POST', body: [{ company_id: co.id, name: 'Mr. Tariq Mehmood', job_title: 'Procurement Manager' }, { company_id: co.id, name: 'Ms. Sana Iqbal' }] }),
   )
   const model = `FM${tag}1`
 
@@ -124,8 +129,16 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     const quoted = dialog(page).getByTestId('chip-quoted-1')
     await expect(sold).toContainText('Last sold to this customer')
     await expect(sold).toContainText('PKR 1,000')
+    await expect(sold).toContainText(/\(ORD-\d{4}\)/)
     await expect(quoted).toContainText('Last quoted')
     await expect(quoted).toContainText('PKR 1,200')
+    await expect(quoted).toContainText(/\(QT-\d\d-\d{4}\)/)
+    await expect(dialog(page).getByTestId('quote-line-1')).toContainText('Best reply ≈ PKR 14,000 each')
+    // Include ticks: item 1 has price sources and starts ticked; item 2 has none, starts unticked and says why.
+    await expect(dialog(page).getByRole('checkbox', { name: 'Include item 1' })).toBeChecked()
+    await expect(dialog(page).getByRole('checkbox', { name: 'Include item 2' })).not.toBeChecked()
+    await expect(dialog(page).getByTestId('quote-line-2')).toContainText('No supplier price yet, so there is nothing to quote')
+    await expect(dialog(page).getByLabel('Addressed to')).toContainText('Mr. Tariq Mehmood, Procurement Manager')
     await expect(dialog(page).getByTestId('chip-sold-2')).toHaveCount(0)
 
     // The supplier's lead time is a hint and is never filled in (A2b).
@@ -147,7 +160,9 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
 
     // 2 x 1,000 + 1 x 450.50 net; GST per line to whole rupees: 360 + 81 (81.09) ; gross 2,891.50.
     await expect(dialog(page).getByTestId('total-net')).toHaveText('PKR 2,450.50')
-    await expect(dialog(page).getByTestId('total-gst')).toHaveText('PKR 441.00')
+    await expect(dialog(page).getByRole('checkbox', { name: 'Include item 2' })).toBeChecked() // typing a price ticks the item
+    await expect(dialog(page).getByTestId('total-gst')).toHaveText('PKR 441')
+    await expect(dialog(page).getByText('GST 18% on 2 lines')).toBeVisible()
     await expect(dialog(page).getByTestId('total-gross')).toHaveText('PKR 2,891.50')
     await dialog(page).getByLabel('Lead time we quote, item 2').fill('Ex-stock')
     await dialog(page).getByLabel('Delivery').fill('To your site, within the lead time on each line')
@@ -179,6 +194,9 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
       expect(text).toContain('Q-Tech Solutions (Pvt) Ltd')
       expect(text).toContain('PKR 2,891.50')
       expect(text).toContain('Pakistani rupees (PKR)')
+      expect(text).toContain('Procurement Manager') // Attention: name, job title
+      expect(text).toContain('+92 300 1234567') // users.phone in the signature and Prepared by
+      expect(text).toContain('First issue')
       expect(text).not.toContain('₨')
     }
     if (stored && process.env.REVIEW_DIR) renderPdfPng(stored, process.env.REVIEW_DIR, 'rfq-quotation-pdf-r0-page1')
@@ -247,6 +265,7 @@ test.describe('re-issue', () => {
     // The button now offers the next revision.
     await page.locator('[data-slot="issue-quotation"]').getByRole('button', { name: 'Issue R1' }).click()
     await expect(dialog(page).getByRole('heading', { name: `Issue quotation ${refOf(r0)} R1` })).toBeVisible()
+    await expect(dialog(page).getByText('Re-issue', { exact: true })).toBeVisible()
     await expect(dialog(page).getByText('R0 stays exactly as it was sent. This creates R1 under the same number.')).toBeVisible()
     // Everything from R0 is carried over, so a re-issue with one changed price is one typed number and two taps.
     await expect(price(page, 1)).toHaveValue('1,200.00')
@@ -256,7 +275,7 @@ test.describe('re-issue', () => {
     await expect(dialog(page).getByLabel('Lead time we quote, item 1')).toHaveValue('2 weeks from PO')
     await shot(page, 'rfq-quotation-04-reissue-dialog-1440')
     await price(page, 2).fill('650')
-    await dialog(page).getByRole('button', { name: 'Issue R1' }).click()
+    await dialog(page).getByRole('button', { name: `Issue quotation R1` }).click()
     await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 30_000 })
     await dialog(page).getByRole('button', { name: 'Done' }).click()
 
@@ -372,6 +391,48 @@ test.describe('a long quotation', () => {
       expect(text).toContain('item 30')
     }
     if (pdf && process.env.REVIEW_DIR) renderPdfPng(pdf, process.env.REVIEW_DIR, 'rfq-quotation-pdf-long-page1')
+  })
+})
+
+test.describe('partial quotations and Preview PDF', () => {
+  test('an unticked item is not priced, not snapshotted and not printed; Preview PDF opens the unsaved document', async ({ page, context }) => {
+    await noShareApi(page)
+    const s = await seed()
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await openIssue(page)
+    // Quote only item 2: untick item 1 (it has price sources, so it started ticked) and type a price for item 2.
+    await dialog(page).getByRole('checkbox', { name: 'Include item 1' }).click()
+    await expect(dialog(page).getByTestId('quote-line-1')).toContainText('Not included')
+    await price(page, 2).fill('300')
+    await expect(dialog(page).getByTestId('total-net')).toHaveText('PKR 300')
+    await expect(dialog(page).getByText('GST 18% on 1 line')).toBeVisible()
+    await expect(dialog(page).getByTestId('total-gross')).toHaveText('PKR 354')
+
+    // Preview PDF: a new tab with the document as it would be issued now. Nothing is saved.
+    const popup = context.waitForEvent('page')
+    await dialog(page).getByRole('button', { name: 'Preview PDF' }).click()
+    const tab = await popup
+    await expect.poll(() => tab.url(), { timeout: 30_000 }).toMatch(/^blob:/)
+    expect(await quotationsOf(s.rfq.id)).toHaveLength(0)
+    await tab.close()
+
+    await dialog(page).getByRole('button', { name: 'Issue quotation' }).click()
+    await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 30_000 })
+    const [q] = await quotationsOf(s.rfq.id)
+    expect(q.lines).toHaveLength(1)
+    expect(Number(q.net_total)).toBe(300)
+    expect(q.lines[0].rfq_item_id).toBe(s.items[1].id)
+    const pdf = await fetchStoredPdf('sales', 'generated-docs', q.pdf_path as string)
+    expect(pdfIsValid(pdf)).toBe(true)
+    const text = pdf ? pdfText(pdf) : null
+    if (text) {
+      expect(text).toContain('Pressure transmitter')
+      expect(text).not.toContain('Flow meter')
+    }
+    // Item 1 was left alone: no price was written to it.
+    const rows = await must(rest<{ id: string; quoted_unit_price_net: number | null }[]>('admin', `rfq_items?id=eq.${s.items[0].id}&select=id,quoted_unit_price_net`))
+    expect(rows[0].quoted_unit_price_net).toBeNull()
+    if (pdf && process.env.REVIEW_DIR) renderPdfPng(pdf, process.env.REVIEW_DIR, 'rfq-quotation-pdf-partial-page1')
   })
 })
 

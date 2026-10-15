@@ -1,5 +1,5 @@
 begin;
-select plan(13);
+select plan(14);
 
 -- R19: customer_price_memory(rfq_id), the two price chips of the issue-quotation dialog. Fixture users come from supabase/seed.sql.
 
@@ -53,6 +53,8 @@ select is((select sold_on from public.customer_price_memory('b1000000-0000-4000-
   'last sold carries the order date');
 select is((select sold_tier from public.customer_price_memory('b1000000-0000-4000-8000-0000000000d2')), 0::smallint,
   'a shared model code is tier 0 (same model)');
+select is((select sold_order_number from public.customer_price_memory('b1000000-0000-4000-8000-0000000000d2')),
+  (select number from public.orders where id = 'e1000000-0000-4000-8000-0000000000d1'), 'last sold carries the order number (0040)');
 select is((select quoted_price from public.customer_price_memory('b1000000-0000-4000-8000-0000000000d2')), 1200::numeric,
   'last quoted: this customer''s earlier quotation line, not the other customer''s 9999');
 select is((select quoted_revision from public.customer_price_memory('b1000000-0000-4000-8000-0000000000d2')), 0::smallint,
