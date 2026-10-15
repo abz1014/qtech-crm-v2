@@ -11,6 +11,7 @@
 
 import { addDays, isWeekend, longDay } from './dateText'
 import { qtyText, type EnquiryVariant } from './enquiryDraft'
+import { isFirm } from './chaseCommon'
 
 export interface ChaseItem {
   /** The item's number on the RFQ (1-based). */
@@ -39,6 +40,8 @@ export interface SupplierChaseInput {
   items: readonly ChaseItem[]
   signature: { name: string; company: string; jobTitle?: string | null }
   variant: EnquiryVariant
+  /** Calendar days since the enquiry went out. More than 30 (FIRM_AFTER_DAYS) switches to the firmer wording. Omitted: never firm. */
+  ageDays?: number | null
 }
 
 export interface SupplierChase {
@@ -50,7 +53,7 @@ export interface SupplierChase {
 }
 
 /** The working day `n` days before `date`, stepping over Saturdays and Sundays. */
-function workingDaysBefore(date: string, n: number): string {
+export function workingDaysBefore(date: string, n: number): string {
   let d = date
   for (let i = 0; i < n; i++) {
     d = addDays(d, -1) as string
@@ -59,7 +62,7 @@ function workingDaysBefore(date: string, n: number): string {
   return d
 }
 
-function workingDaysAfter(date: string, n: number): string {
+export function workingDaysAfter(date: string, n: number): string {
   let d = date
   for (let i = 0; i < n; i++) {
     d = addDays(d, 1) as string
@@ -103,6 +106,7 @@ export function generateSupplierChase(input: SupplierChaseInput): SupplierChase 
   const by = replyBy ? longDay(replyBy) : null
   const sent = input.sentOn ? longDay(input.sentOn) : null
   const email = variant === 'email'
+  const firm = isFirm(input.ageDays)
   const bold = (t: string) => (email ? t : `*${t}*`)
   const greeting = input.contactName
     ? email
@@ -121,13 +125,21 @@ export function generateSupplierChase(input: SupplierChaseInput): SupplierChase 
   const lines: string[] = []
   if (!email) {
     lines.push(greeting, '')
-    if (chaseCount === 0) {
+    if (firm) {
+      lines.push(`It is now over a month since ${sentRef}, and we have still not received your price for:`)
+    } else if (chaseCount === 0) {
       lines.push(`Following up on ${sentRef}.${thanks} We are still awaiting your price for:`)
     } else {
       lines.push(`A ${ordinal(chaseCount)} reminder on ${sentRef}. We have not yet received your price for:`)
     }
     lines.push(list, '')
-    if (chaseCount === 0) {
+    if (firm) {
+      lines.push(
+        by
+          ? `Please send your price by ${bold(by)}, or tell us today that you cannot offer these items. Without a reply we will take it that you cannot offer them and move on.`
+          : 'Please send your price, or tell us today that you cannot offer these items. Without a reply we will take it that you cannot offer them and move on.',
+      )
+    } else if (chaseCount === 0) {
       lines.push(
         by
           ? `Kindly send your price and lead time by ${bold(by)}. If you cannot offer an item, a short note will help us approach others.`
@@ -143,13 +155,22 @@ export function generateSupplierChase(input: SupplierChaseInput): SupplierChase 
     lines.push('', 'Thank you.', 'Regards,', input.signature.name, input.signature.company)
   } else {
     lines.push(greeting, '')
-    if (chaseCount === 0) {
+    if (firm) {
+      lines.push(`It is now more than a month since ${sentRefPlain}, and we have still not received your price for the following items:`)
+    } else if (chaseCount === 0) {
       lines.push(`We refer to ${sentRefPlain}.${pricedEmail} We have not yet received your price for the following items:`)
     } else {
       lines.push(`This is a ${ordinal(chaseCount)} reminder on ${sentRefPlain}. We have not yet received your price for:`)
     }
     lines.push(list, '')
-    if (chaseCount === 0) {
+    if (firm) {
+      lines.push(
+        by
+          ? `Please send your price, availability and lead time by ${by}, or let us know today that you are unable to offer these items. Without a reply we will take it that you cannot offer them and approach other sources.`
+          : 'Please send your price, availability and lead time, or let us know today that you are unable to offer these items. Without a reply we will take it that you cannot offer them and approach other sources.',
+      )
+      lines.push('', 'Thank you.')
+    } else if (chaseCount === 0) {
       lines.push(
         by
           ? `Kindly send your price, availability and lead time by ${by}, ahead of our own submission date. If you are unable to offer an item, a short note to that effect would be appreciated so that we can approach other sources.`

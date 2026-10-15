@@ -123,3 +123,80 @@ export function useSetRfqClosed(rfqId: string) {
     onSuccess: () => invalidateAfter(client, 'rfq.close', { rfqId }),
   })
 }
+
+// ================================================================ Clarifications and files (R09, R10)
+
+export function useClarifications(rfqId: string | undefined) {
+  return useQuery({ queryKey: qk.rfqs.part(rfqId ?? '', 'clarifications'), queryFn: () => api.listClarifications(rfqId as string), enabled: Boolean(rfqId) })
+}
+
+export function useRfqAttachments(rfqId: string | undefined) {
+  return useQuery({ queryKey: qk.rfqs.part(rfqId ?? '', 'attachments'), queryFn: () => api.listAttachments(rfqId as string), enabled: Boolean(rfqId) })
+}
+
+/** Signed links for these files. Re-signed when the set changes; good for 10 minutes, refreshed a little before. */
+export function useFileUrls(rfqId: string | undefined, paths: readonly string[]) {
+  const signature = [...paths].sort().join('|')
+  return useQuery({
+    queryKey: qk.rfqs.fileUrls(rfqId ?? '', signature),
+    queryFn: () => api.signFileUrls(paths),
+    enabled: Boolean(rfqId) && paths.length > 0,
+    staleTime: 8 * 60_000,
+  })
+}
+
+export function useAddClarifications(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (questions: readonly api.NewQuestion[]) => api.addClarifications(rfqId, questions),
+    onSuccess: () => invalidateAfter(client, 'clarification.add', { rfqId }),
+  })
+}
+
+export function useStampClarificationAsk(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: readonly string[]) => api.stampClarificationAsk(ids),
+    onSuccess: () => invalidateAfter(client, 'clarification.ask', { rfqId }),
+  })
+}
+
+export function useSetClarificationAnswer(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; answer: string | null; answeredAt: string | null }) => api.setClarificationAnswer(v),
+    onSuccess: () => invalidateAfter(client, 'clarification.answer', { rfqId }),
+  })
+}
+
+export function useSetClarificationWithdrawn(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; at: string | null }) => api.setClarificationWithdrawn(v.id, v.at),
+    onSuccess: () => invalidateAfter(client, 'clarification.withdraw', { rfqId }),
+  })
+}
+
+export function useSetInquiryRelayed(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { inquiryId: string; at: string | null }) => api.setInquiryRelayed(v.inquiryId, v.at),
+    onSuccess: () => invalidateAfter(client, 'clarification.relay', { rfqId }),
+  })
+}
+
+export function useUploadAttachment(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { clarificationId: string | null; file: File; path: string }) => api.uploadAttachment({ rfqId, ...v }),
+    onSuccess: () => invalidateAfter(client, 'attachment.add', { rfqId }),
+  })
+}
+
+export function useDeleteAttachment(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (att: Pick<api.AttachmentRow, 'id' | 'path'>) => api.deleteAttachment(att),
+    onSuccess: () => invalidateAfter(client, 'attachment.delete', { rfqId }),
+  })
+}
