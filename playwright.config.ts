@@ -33,9 +33,13 @@ import { defineConfig, devices } from '@playwright/test'
  *  - rfq-detail (R07): the RFQ detail page on the same stack and build. Reply capture, can't quote, the lowest mark, chase, close,
  *    the FE-2 counts, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e-rfq-detail.yml):
  *      E2E_SUITE=rfq-detail REVIEW_DIR=review-shots npx playwright test --project=rfq-detail
+ *
+ *  - today (R11, R16): the Today screen for all three roles on the same stack and build. The 1-tap chase (copy and mark chased), its
+ *    10 s Undo, the Waiting group, role-aware items, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e-today.yml):
+ *      E2E_SUITE=today REVIEW_DIR=review-shots npx playwright test --project=today
  */
-const dbSuites = ['auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail']
-const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? (process.env.E2E_SUITE as 'auth' | 'companies' | 'rfq-board' | 'rfq-intake' | 'rfq-detail') : 'gallery'
+const dbSuites = ['auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'today']
+const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? (process.env.E2E_SUITE as 'auth' | 'companies' | 'rfq-board' | 'rfq-intake' | 'rfq-detail' | 'today') : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
 
@@ -112,6 +116,20 @@ export default defineConfig({
     {
       name: 'rfq-detail',
       testMatch: /rfqs\/detail\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://127.0.0.1:${AUTH_PORT}`,
+        viewport: { width: 1440, height: 900 },
+        // The chase text is copied to the clipboard and read back to prove it.
+        permissions: ['clipboard-read', 'clipboard-write'],
+        screenshot: 'only-on-failure',
+      },
+    },
+    {
+      name: 'today',
+      testMatch: /today\/.*\.spec\.ts/,
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: {

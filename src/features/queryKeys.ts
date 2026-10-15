@@ -88,7 +88,22 @@ function settings() {
   return { all, team: () => [...all, 'team'] as const, profile: () => [...all, 'company-profile'] as const }
 }
 
+/** Today (R11): the whole work-list input (one read), the target tile, and the draft data of the selected item. */
+function today() {
+  const all = root('today')
+  return {
+    all,
+    board: () => [...all, 'board'] as const,
+    target: () => [...all, 'target'] as const,
+    /** Goods-chase draft: the items on one leg and the supplier's contact. */
+    leg: (legId: string) => [...all, 'leg', legId] as const,
+    /** Payment-reminder draft: the order's invoices, PO number and contact. */
+    payment: (orderId: string) => [...all, 'payment', orderId] as const,
+  }
+}
+
 export const qk = {
+  today: today(),
   settings: settings(),
   companies: companies(),
   brands: brands(),

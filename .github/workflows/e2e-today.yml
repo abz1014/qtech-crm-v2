@@ -1,0 +1,55 @@
+name: E2E today
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  today:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Start local Supabase (db, auth, rest, storage)
+        run: npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime
+
+      - name: Rebuild database (migrations and seed fixtures)
+        run: npx supabase db reset --local
+
+      - name: Build the app against the local stack
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY" npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright (today project, local stack only)
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=today REVIEW_DIR=review-shots npx playwright test --project=today
+
+      - name: Upload report and review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-today
+          path: |
+            playwright-report
+            test-results
+            review-shots
+          if-no-files-found: ignore
+
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop --no-backup

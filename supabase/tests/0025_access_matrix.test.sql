@@ -178,6 +178,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'issue_purchase_order',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_clarification_ask', '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_supplier_chase',    '',    'X',    'X',    'X'),    -- s10 (same row)
+  ('function', 'stamp_goods_chase',      '',    'X',    'X',    'X'),    -- R16 (0033): goods-chase stamp on a supplier leg, all staff
   ('function', 'stamp_payment_reminder',  '',    'X',    'X',    ''),     -- s10 "RPC stamp_payment_reminder"
   ('function', 'stamp_tcs_sent',          '',    'X',    'X',    ''),     -- A4: admin and sales
   ('function', 'stamp_fbr_psid',          '',    'X',    'X',    ''),     -- A4: admin and sales
@@ -372,6 +373,7 @@ insert into probes values
   ('issue_purchase_order', '', 'X', 'select public.issue_purchase_order(@c4, @23)'),
   ('stamp_clarification_ask', '', 'X', 'select 1 from (select public.stamp_clarification_ask(array[@1d]) r) x where r > 0'),
   ('stamp_supplier_chase', '', 'X', 'select public.stamp_supplier_chase(@19)'),
+  ('stamp_goods_chase', '', 'X', 'select public.stamp_goods_chase(@23)'),
   ('stamp_payment_reminder', '', 'X', 'select 1 from (select public.stamp_payment_reminder(array[@26]) r) x where r > 0'),
   ('stamp_tcs_sent', '', 'X', 'select 1 from (select public.stamp_tcs_sent(array[@26]) r) x where r > 0'),
   ('stamp_fbr_psid', '', 'X', $q$select 1 from (select public.stamp_fbr_psid(array[@26], 'P1') r) x where r > 0$q$),

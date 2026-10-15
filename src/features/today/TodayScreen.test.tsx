@@ -1,0 +1,85 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { afterEach, describe, expect, it } from 'vitest'
+import { SessionContext, type SessionState } from '@/app/session'
+import { ToastProvider } from '@/ui/Toast'
+import { installFakeDb, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
+import TodayScreen from '@/features/today/TodayScreen'
+
+/* Smoke test of the screen over a fake database: the states render and the money reads are gated by role. The real
+ * queries are proven against the real database by e2e/today. */
+const rfqState = {
+  rfq_id: 'r1', number: 184, company_id: 'c1', owner_id: 'me', received_on: '2026-01-01', due_on: null, is_priority: false, quoted_on: null, closed_on: null,
+  outcome: 'open', sourcing_state: 'not_floated', bid_state: 'to_bid', quotation_valid_until: null, companies: { name: 'Mehran Paper Board' },
+}
+
+function install(opts: { rfqs?: unknown[]; fail?: boolean } = {}) {
+  return installFakeDb((c: FakeCall): FakeResult => {
+    if (opts.fail && c.target === 'v_rfq_state') return { error: { message: 'boom' } }
+    if (c.target === 'v_rfq_state') return { data: opts.rfqs ?? [rfqState] }
+    if (c.target === 'rpc:my_target_progress') return { data: [] }
+    return { data: [] }
+  })
+}
+
+function renderAs(role: 'admin' | 'sales' | 'engineer') {
+  const session: SessionState = { status: 'signed-in', user: { id: 'me', name: 'Ayesha Rana', role } }
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={client}>
+      <SessionContext.Provider value={session}>
+        <MemoryRouter>
+          <ToastProvider>
+            <TodayScreen />
+          </ToastProvider>
+        </MemoryRouter>
+      </SessionContext.Provider>
+    </QueryClientProvider>,
+  )
+}
+
+let fake: ReturnType<typeof install> | null = null
+afterEach(() => fake?.uninstall())
+
+describe('Today screen', () => {
+  it('lists an item with its title and reference', async () => {
+    fake = install()
+    renderAs('sales')
+    expect(await screen.findByText('Not floated to suppliers yet')).toBeInTheDocument()
+    expect(screen.getAllByText('RFQ-0184').length).toBeGreaterThan(0)
+    expect(screen.getByRole('radio', { name: /Money/ })).toBeInTheDocument()
+  })
+
+  it('reads as the goal state when nothing needs you', async () => {
+    fake = install({ rfqs: [] })
+    renderAs('sales')
+    expect(await screen.findByText('Nothing needs you today')).toBeInTheDocument()
+  })
+
+  it('says so and offers a retry when it cannot load', async () => {
+    fake = install({ fail: true })
+    renderAs('sales')
+    expect(await screen.findByText('Today could not load')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  })
+
+  it('an engineer has no Money tab and never requests receivables, invoices or the month-end checks', async () => {
+    fake = install()
+    renderAs('engineer')
+    await screen.findByText('Not floated to suppliers yet')
+    expect(screen.queryByRole('radio', { name: /Money/ })).toBeNull()
+    await waitFor(() => expect(fake?.calls.length).toBeGreaterThan(0))
+    const targets = fake?.calls.map(c => c.target) ?? []
+    expect(targets).not.toContain('rpc:order_receivables')
+    expect(targets).not.toContain('rpc:month_end_status')
+    expect(targets).not.toContain('invoices')
+  })
+
+  it('admin and sales do request the receivables', async () => {
+    fake = install()
+    renderAs('admin')
+    await screen.findByText('Not floated to suppliers yet')
+    expect(fake?.calls.map(c => c.target)).toContain('rpc:order_receivables')
+  })
+})

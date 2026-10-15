@@ -28,8 +28,8 @@ select columns_are('public', 'order_items',
   'order_items has the section 2.13 columns (with supplier_unit_price, model_tokens)');
 select columns_are('public', 'supplier_orders',
   array['id', 'created_at', 'created_by', 'order_id', 'supplier_id', 'inquiry_id', 'reference', 'placed_on',
-        'expected_on', 'received_on', 'delivered_on', 'currency', 'legacy_flags', 'legacy_source'],
-  'supplier_orders has the section 2.14 columns (with currency)');
+        'expected_on', 'received_on', 'delivered_on', 'currency', 'legacy_flags', 'legacy_source', 'last_chased_on', 'chase_count'],
+  'supplier_orders has the section 2.14 columns (with currency, and the goods-chase stamp from 0033)');
 select columns_are('public', 'order_engineers', array['order_id', 'user_id'],
   'order_engineers has the section 2.15 columns');
 select columns_are('public', 'order_costs',
