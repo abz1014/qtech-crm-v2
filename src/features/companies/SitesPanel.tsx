@@ -181,7 +181,8 @@ export function SitesPanel({
       },
       {
         id: 'repeat',
-        header: '',
+        header: 'Row actions',
+        hiddenHeader: true,
         width: 150,
         cell: r =>
           r.kind === 'order' ? <RepeatOrderSlot orderNumber={r.number} /> : null,

@@ -611,6 +611,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
                           className={cn(!dir && 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100')}
                         />
                       </button>
+                    ) : c.hiddenHeader ? (
+                      <span className="sr-only">{c.header}</span>
                     ) : (
                       c.header
                     )}

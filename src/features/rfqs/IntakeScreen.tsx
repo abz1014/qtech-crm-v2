@@ -764,7 +764,7 @@ function CompanyPicker({
           label: h.name,
           keep: h.similar,
           meta:
-            [h.country, h.role ? ROLE_WORD[h.role] : null, h.rfqCount ? `${h.rfqCount} ${h.rfqCount === 1 ? 'RFQ' : 'RFQs'}` : null, h.similar ? 'similar name' : null]
+            [h.city || h.country, h.role ? ROLE_WORD[h.role] : null, h.rfqCount ? `${h.rfqCount} ${h.rfqCount === 1 ? 'RFQ' : 'RFQs'}` : null, h.similar ? 'similar name' : null]
               .filter(Boolean)
               .join(' · ') || undefined,
         }))}

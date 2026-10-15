@@ -341,7 +341,8 @@ test.describe('company picker', () => {
     actions++
     const inline = page.getByRole('region', { name: 'New company' })
     await expect(inline.getByRole('textbox', { name: /Company name/ })).toHaveValue(name)
-    await expect(inline.getByText('can wait. Add it')).toBeVisible()
+    await expect(inline.getByText('City and contact can wait. Add them from the company page later.')).toBeVisible()
+    await inline.getByRole('textbox', { name: /City/ }).fill('Mianwali')
     await inline.getByRole('textbox', { name: /Contact/ }).fill('Kamran Zafar')
     await inline.getByRole('button', { name: 'Create and use' }).click()
     actions++
@@ -351,6 +352,7 @@ test.describe('company picker', () => {
     expect(page.url()).toMatch(/\/rfqs\/new/)
     const rows = await must(rest<{ id: string }[]>('admin', `companies?name=eq.${encodeURIComponent(name)}`))
     expect(rows).toHaveLength(1)
+    expect(await must(rest<{ city: string | null }[]>('admin', `companies?id=eq.${rows[0].id}&select=city`))).toEqual([{ city: 'Mianwali' }])
     const contacts = await must(rest<{ name: string }[]>('admin', `contacts?company_id=eq.${rows[0].id}`))
     expect(contacts.map(c => c.name)).toEqual(['Kamran Zafar'])
   })

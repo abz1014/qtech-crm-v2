@@ -27,6 +27,7 @@ export interface CompanyDetail {
   id: string
   name: string
   country: string | null
+  city: string | null
   notes: string | null
   createdAt: string
   role: CompanyRole | null
@@ -75,6 +76,7 @@ export interface CompanyHit {
   id: string
   name: string
   country: string | null
+  city?: string | null
   role: CompanyRole | null
   /** How many RFQs we have with them (pickers show "2 RFQs"). */
   rfqCount?: number
@@ -95,12 +97,12 @@ export async function searchCompanies(text: string, limit = 8): Promise<CompanyH
   const q = text.trim()
   if (!q) return []
   const rows = unwrap(
-    await db.from('companies').select('id, name, country').ilike('name', `%${likeEscape(q)}%`).order('name').limit(limit),
+    await db.from('companies').select('id, name, country, city').ilike('name', `%${likeEscape(q)}%`).order('name').limit(limit),
   )
   const first = q.split(/\s+/)[0]
   const similarRows =
     q.includes(' ') && first.length >= 3 && rows.length < limit
-      ? unwrap(await db.from('companies').select('id, name, country').ilike('name', `%${likeEscape(first)}%`).order('name').limit(limit))
+      ? unwrap(await db.from('companies').select('id, name, country, city').ilike('name', `%${likeEscape(first)}%`).order('name').limit(limit))
           .filter(r => !rows.some(x => x.id === r.id))
           .slice(0, limit - rows.length)
       : []
@@ -113,7 +115,7 @@ export async function searchCompanies(text: string, limit = 8): Promise<CompanyH
   const rfqCount = new Map<string, number>()
   const rfqRows = unwrap(rfqs ?? { data: [], error: null })
   for (const r of Array.isArray(rfqRows) ? rfqRows : []) rfqCount.set(r.company_id, (rfqCount.get(r.company_id) ?? 0) + 1)
-  return all.map(r => ({ id: r.id, name: r.name, country: r.country, role: roleBy.get(r.id) ?? null, rfqCount: rfqCount.get(r.id) ?? 0, similar: r.similar }))
+  return all.map(r => ({ id: r.id, name: r.name, country: r.country, city: r.city, role: roleBy.get(r.id) ?? null, rfqCount: rfqCount.get(r.id) ?? 0, similar: r.similar }))
 }
 
 /** The company whose name equals `name` ignoring case and surrounding spaces, as the unique index sees it. */
@@ -129,7 +131,7 @@ export async function findCompanyByName(name: string): Promise<CompanyHit | null
 export async function getCompany(id: string): Promise<CompanyDetail | null> {
   const db = requireSupabase()
   const [company, role] = await Promise.all([
-    db.from('companies').select('id, name, country, notes, created_at, legacy_flags, legacy_source').eq('id', id).maybeSingle(),
+    db.from('companies').select('id, name, country, city, notes, created_at, legacy_flags, legacy_source').eq('id', id).maybeSingle(),
     db.from('v_company_roles').select('role, is_customer, is_supplier').eq('company_id', id).maybeSingle(),
   ])
   const c = unwrap(company)
@@ -139,6 +141,7 @@ export async function getCompany(id: string): Promise<CompanyDetail | null> {
     id: c.id,
     name: c.name,
     country: c.country,
+    city: c.city,
     notes: c.notes,
     createdAt: c.created_at,
     role: asRole(r?.role),
@@ -164,6 +167,8 @@ export interface ContactRow {
   name: string
   phone: string | null
   email: string | null
+  /** The role line under the name in the Contacts panel ("Finance", "Procurement Manager"). */
+  job_title: string | null
   notes: string | null
   site_id: string | null
 }
@@ -171,7 +176,7 @@ export interface ContactRow {
 export async function listContacts(companyId: string): Promise<ContactRow[]> {
   const db = requireSupabase()
   return unwrap(
-    await db.from('contacts').select('id, name, phone, email, notes, site_id').eq('company_id', companyId).order('name'),
+    await db.from('contacts').select('id, name, phone, email, job_title, notes, site_id').eq('company_id', companyId).order('name'),
   )
 }
 
@@ -555,15 +560,8 @@ export interface NewCompany {
   name: string
   country?: string | null
   notes?: string | null
-  /** The city, when the companies.city column exists (migration 0038 / A7; see HAS_CITY_COLUMN). */
   city?: string | null
 }
-
-/**
- * Whether companies.city exists in the database this build talks to. The migration that adds it (0038, parity data) lands
- * separately; until it does the screens do not ask for a city, so no request names a column that is not there.
- */
-export const HAS_CITY_COLUMN = false
 
 export async function createCompany(input: NewCompany): Promise<{ id: string; name: string }> {
   const db = requireSupabase()
@@ -575,19 +573,19 @@ export async function createCompany(input: NewCompany): Promise<{ id: string; na
         name: input.name.trim(),
         country: input.country?.trim() || null,
         notes: input.notes?.trim() || null,
-        // The generated types do not know companies.city until migration 0038 lands.
-        ...((HAS_CITY_COLUMN && input.city?.trim() ? { city: input.city.trim() } : {}) as Record<string, never>),
+        city: input.city?.trim() || null,
       })
       .select('id, name')
       .single(),
   )
 }
 
-export async function updateCompany(id: string, patch: { name?: string; country?: string | null; notes?: string | null }) {
+export async function updateCompany(id: string, patch: { name?: string; country?: string | null; city?: string | null; notes?: string | null }) {
   const db = requireSupabase()
   const next = {
     ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
     ...(patch.country !== undefined ? { country: patch.country?.trim() || null } : {}),
+    ...(patch.city !== undefined ? { city: patch.city?.trim() || null } : {}),
     ...(patch.notes !== undefined ? { notes: patch.notes?.trim() || null } : {}),
   }
   unwrap(await db.from('companies').update(next).eq('id', id).select('id').single())
@@ -611,6 +609,7 @@ export async function addContact(input: {
   name: string
   phone?: string | null
   email?: string | null
+  jobTitle?: string | null
   notes?: string | null
 }) {
   const db = requireSupabase()
@@ -624,6 +623,7 @@ export async function addContact(input: {
         name: input.name.trim(),
         phone: input.phone?.trim() || null,
         email: input.email?.trim() || null,
+        job_title: input.jobTitle?.trim() || null,
         notes: input.notes?.trim() || null,
       })
       .select('id')
@@ -638,7 +638,7 @@ export async function updateSite(id: string, patch: { name: string; address?: st
 
 export async function updateContact(
   id: string,
-  patch: { name: string; siteId?: string | null; phone?: string | null; email?: string | null; notes?: string | null },
+  patch: { name: string; siteId?: string | null; phone?: string | null; email?: string | null; jobTitle?: string | null; notes?: string | null },
 ) {
   const db = requireSupabase()
   unwrap(
@@ -649,6 +649,7 @@ export async function updateContact(
         site_id: patch.siteId || null,
         phone: patch.phone?.trim() || null,
         email: patch.email?.trim() || null,
+        job_title: patch.jobTitle?.trim() || null,
         notes: patch.notes?.trim() || null,
       })
       .eq('id', id)

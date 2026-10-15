@@ -155,7 +155,7 @@ export function useCreateCompany() {
 export function useUpdateCompany(id: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (patch: { name?: string; country?: string | null; notes?: string | null }) => api.updateCompany(id, patch),
+    mutationFn: (patch: { name?: string; country?: string | null; city?: string | null; notes?: string | null }) => api.updateCompany(id, patch),
     onSuccess: () => invalidateAfter(client, 'company.update', { id }),
   })
 }
@@ -171,7 +171,7 @@ export function useAddSite(companyId: string) {
 export function useAddContact(companyId: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (input: { id: string; name: string; siteId?: string | null; phone?: string | null; email?: string | null; notes?: string | null }) =>
+    mutationFn: (input: { id: string; name: string; siteId?: string | null; phone?: string | null; email?: string | null; jobTitle?: string | null; notes?: string | null }) =>
       api.addContact({ ...input, companyId }),
     onSuccess: () => invalidateAfter(client, 'contact.add', { companyId }),
   })
@@ -188,7 +188,7 @@ export function useUpdateSite(companyId: string) {
 export function useUpdateContact(companyId: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (input: { id: string; name: string; siteId?: string | null; phone?: string | null; email?: string | null; notes?: string | null }) =>
+    mutationFn: (input: { id: string; name: string; siteId?: string | null; phone?: string | null; email?: string | null; jobTitle?: string | null; notes?: string | null }) =>
       api.updateContact(input.id, input),
     onSuccess: () => invalidateAfter(client, 'contact.update', { companyId }),
   })

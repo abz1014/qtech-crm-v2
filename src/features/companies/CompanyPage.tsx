@@ -142,7 +142,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
   const lowData = (record.query.data?.inquiries.length ?? 0) < 3
   const sinceYear = earliestYear(record.query.data, company.createdAt)
   const meta = companyMeta({
-    city: (company as { city?: string | null }).city ?? null,
+    city: company.city,
     country: company.country,
     isSupplier: supplierSide,
     isCustomer: company.isCustomer,
@@ -385,6 +385,7 @@ function ContactsPanel({
                     />
                   </span>
                 </div>
+                {c.job_title ? <span className="text-xs text-fg-muted">{c.job_title}</span> : null}
                 {c.notes ? <span className="text-xs text-fg-muted">{c.notes}</span> : null}
                 {c.site_id && siteName.get(c.site_id) ? <span className="text-xs text-fg-muted">{siteName.get(c.site_id)}</span> : null}
                 {c.phone ? (

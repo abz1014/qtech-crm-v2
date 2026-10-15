@@ -94,16 +94,18 @@ test.describe('inline create (FE-2: name only, three actions)', () => {
 
 test.describe('company page', () => {
   test('a customer shows its sites with their RFQs, contacts and roles', async ({ page }) => {
-    const company = await createCompany(uniqueName('Page Customer'), { country: 'Pakistan' })
+    const company = await createCompany(uniqueName('Page Customer'), { country: 'Pakistan', city: 'Karachi' })
     const site = (await must(rest<{ id: string }[]>('admin', 'company_sites', { method: 'POST', body: { company_id: company.id, name: 'Main plant', address: 'Plot 14, Landhi' } })))[0]
-    await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: company.id, site_id: site.id, name: 'Naveed Akhtar', notes: 'Finance' } }))
+    await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: company.id, site_id: site.id, name: 'Naveed Akhtar', job_title: 'Finance' } }))
     const rfq = await createRfq(company.id, { site_id: site.id, customer_ref: 'ENQ-2211' })
 
     await openAs(page, 'sales', `/companies/${company.id}`)
     await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
     await expect(page.getByText('Customer', { exact: true }).first()).toBeVisible()
     await expect(page.getByRole('region', { name: 'Main plant' }).getByText(rfqRef(rfq.number))).toBeVisible()
+    await expect(page.getByText('Karachi, Pakistan')).toBeVisible() // the place under the name: city, country
     await expect(page.getByText('Naveed Akhtar')).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Contacts' }).getByText('Finance')).toBeVisible() // the job title under the name
     await expect(page.getByRole('region', { name: 'Roles' }).getByText('Customer since')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'History' })).toHaveCount(0) // no placeholder panel: the mockup has none
     await expect(page.getByRole('heading', { name: 'Money with them' })).toHaveCount(0)
@@ -259,8 +261,10 @@ test.describe('access by role (DATA_MODEL section 10)', () => {
       await openAs(page, role, `/companies/${company.id}`)
       await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
       await page.waitForLoadState('networkidle')
-      const more = await page.getByRole('button', { name: 'More actions' }).count()
-      expect(more, `${role} merge menu`).toBe(role === 'admin' ? 1 : 0)
+      // Everyone has the "..." menu the design draws; only an admin finds Merge in it.
+      await page.getByRole('button', { name: 'More actions' }).click()
+      await expect(page.getByRole('menuitem', { name: 'Copy link to this company' })).toBeVisible()
+      expect(await page.getByRole('menuitem', { name: 'Merge into another company' }).count(), `${role} merge menu`).toBe(role === 'admin' ? 1 : 0)
       money[role] = seen
       await context.close()
     }

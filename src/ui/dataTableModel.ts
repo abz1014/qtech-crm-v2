@@ -20,6 +20,8 @@ export interface Column<T> {
   sortable?: boolean
   /** Fixed width in px (or any CSS length). Text then truncates with an ellipsis. */
   width?: number | string
+  /** The header is read by screen readers only (a column of row actions has no visible title in the design). */
+  hiddenHeader?: boolean
   /** Hide below the md breakpoint (tablet portrait and phones). */
   hideBelowMd?: boolean
   /** true: sum of `value` (exact, in paisa, for money). A function draws a custom total from the rows. */

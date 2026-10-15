@@ -62,6 +62,7 @@ function Shell<TIn extends FieldValues, TOut>({
 const editSchema = z.object({
   name: z.string().trim().min(1, 'Enter the company name.'),
   country: z.string().trim().optional(),
+  city: z.string().trim().optional(),
   notes: z.string().trim().optional(),
 })
 
@@ -74,8 +75,8 @@ function EditBody({ onOpenChange, company }: { onOpenChange: (o: boolean) => voi
   const sf = useSubmitForm({
     schema: editSchema,
     entity: 'company',
-    defaultValues: { name: company.name, country: company.country ?? '', notes: company.notes ?? '' },
-    onSubmit: v => update.mutateAsync({ name: v.name, country: v.country || null, notes: v.notes || null }),
+    defaultValues: { name: company.name, country: company.country ?? '', city: company.city ?? '', notes: company.notes ?? '' },
+    onSubmit: v => update.mutateAsync({ name: v.name, country: v.country || null, city: v.city || null, notes: v.notes || null }),
     routeError: e =>
       e.kind === 'unique' ? { field: 'name', message: 'Another company already has this name. Merge them from the other company instead.' } : undefined,
     onSuccess: () => onOpenChange(false),
@@ -85,6 +86,9 @@ function EditBody({ onOpenChange, company }: { onOpenChange: (o: boolean) => voi
       <Form sf={sf} labels={{ name: 'Company name' }}>
         <FormField name="name" label="Company name" requirement="required">
           {f => <TextField {...f} autoComplete="off" />}
+        </FormField>
+        <FormField name="city" label="City" requirement="optional">
+          {f => <TextField {...f} autoComplete="off" placeholder="Karachi" />}
         </FormField>
         <FormField name="country" label="Country" requirement="optional">
           {f => <TextField {...f} autoComplete="off" />}
@@ -139,6 +143,7 @@ const contactSchema = z.object({
   name: z.string().trim().min(1, 'Enter the contact name.'),
   phone: z.string().trim().optional(),
   email: z.string().trim().optional(),
+  jobTitle: z.string().trim().optional(),
   notes: z.string().trim().optional(),
   siteId: z.string().optional(),
 })
@@ -178,11 +183,12 @@ function ContactBody({ onOpenChange, companyId, companyName, sites, contact }: {
       name: contact?.name ?? '',
       phone: contact?.phone ?? '',
       email: contact?.email ?? '',
+      jobTitle: contact?.job_title ?? '',
       notes: contact?.notes ?? '',
       siteId: contact?.site_id ?? onlySite?.id ?? '',
     },
     onSubmit: (v, { requestId }) => {
-      const fields = { name: v.name, phone: v.phone || null, email: v.email || null, notes: v.notes || null, siteId: v.siteId || null }
+      const fields = { name: v.name, phone: v.phone || null, email: v.email || null, jobTitle: v.jobTitle || null, notes: v.notes || null, siteId: v.siteId || null }
       return contact ? update.mutateAsync({ id: contact.id, ...fields }) : add.mutateAsync({ id: requestId, ...fields })
     },
     onSuccess: () => onOpenChange(false),
@@ -206,7 +212,10 @@ function ContactBody({ onOpenChange, companyId, companyName, sites, contact }: {
             {f => <Select {...f} placeholder="Any site" options={sites.map(s => ({ value: s.id, label: s.name }))} />}
           </FormField>
         ) : null}
-        <FormField name="notes" label="Role or note" requirement="optional" help="For example: Finance, or WhatsApp is fine.">
+        <FormField name="jobTitle" label="Job title" requirement="optional" help="Shown under the name: Finance, Procurement Manager.">
+          {f => <TextField {...f} autoComplete="off" />}
+        </FormField>
+        <FormField name="notes" label="Note" requirement="optional" help="For example: WhatsApp is fine.">
           {f => <TextField {...f} autoComplete="off" />}
         </FormField>
       </Form>
