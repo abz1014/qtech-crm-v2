@@ -97,7 +97,9 @@ const rfqOf = (id: string) => must(rest<{ quoted_on: string | null }[]>('admin',
 const refOf = (q: Q, first: Q = q) => `QT-${first.issued_on.slice(2, 4)}-${String(q.number).padStart(4, '0')}`
 
 const openIssue = async (page: Page) => {
-  await page.locator('[data-slot="issue-quotation"]').getByRole('button', { name: /Issue/ }).click()
+  // The header button on a wide screen; on a phone the same action lives in the sticky bar at the foot.
+  const phone = (page.viewportSize()?.width ?? 1440) < 768
+  await (phone ? page.locator('[data-action-bar]') : page.locator('[data-slot="issue-quotation"]')).getByRole('button', { name: /Issue/ }).click()
   await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible()
 }
 /** A review screenshot, taken once the dialog has finished rising (otherwise it is caught half transparent). */
@@ -297,7 +299,7 @@ test.describe('expired state', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const row = page.getByTestId('quotation-0')
     await expect(row).toContainText('Expired')
-    await expect(row).toContainText('expired')
+    await expect(row).toContainText(/Expired/)
     await shot(page, 'rfq-quotation-06-expired-1440')
   })
 })

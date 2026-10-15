@@ -315,8 +315,9 @@ export function RfqHeaderBlock({ rfq, hasPrices }: { rfq: RfqHeader; hasPrices: 
   )
 }
 
+/** Go to a panel on the page. A beat after the menu has closed, so closing it (which returns focus) cannot cancel the scroll. */
 function scrollTo(slot: string) {
-  document.querySelector(`[data-slot="${slot}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  window.setTimeout(() => document.querySelector(`[data-slot="${slot}"]`)?.scrollIntoView({ block: 'start' }), 60)
 }
 
 /** Phone: the sticky bar at the foot of the page. The primary Issue quotation, a Chase menu (suppliers, customer) and the same "..." menu as the page bar. */

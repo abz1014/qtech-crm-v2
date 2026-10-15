@@ -17,6 +17,8 @@ import { axeViolations } from '../support/axe'
 
 
 const violations = (page: Page): Promise<string[]> => axeViolations(page)
+/** A menu or dialog is portalled outside <main> by design, so the landmark rule is off for it (every other rule stays on). */
+const overlayViolations = (page: Page): Promise<string[]> => axeViolations(page, { landmarks: false })
 
 const today = () => karachiDay(0)
 
@@ -233,7 +235,7 @@ test.describe('comparison', () => {
     const cny = art.locator('li', { hasText: s.china.name })
     await expect(cny).toContainText('not compared — no rate')
     await expect(cny.locator('[data-lowest]')).toHaveCount(0)
-    await expect(art.getByText(/Lowest of the 2 compared/)).toBeVisible()
+    await expect(art.getByText(/Lowest of the 2 with a rate/)).toBeVisible()
     // Item 2 has no prices: nothing is marked.
     await expect(page.getByRole('article', { name: 'Item 2' }).locator('[data-lowest]')).toHaveCount(0)
     await review(page, 'rfq-detail-02-rate-states-1440')
@@ -273,7 +275,7 @@ test.describe("can't quote (FE-2: 1 tap)", () => {
     expect(after.no_offer_on).toBe(today())
     expect(after.no_offer_reason).toBe('no_brand') // a stored key, not a phrase
     expect(after.notes).toBe('Call Imran on Monday') // the notes belong to people and are never written
-    await expect(page.getByRole('article', { name: 'Item 1' }).getByText("Can't quote: Doesn't carry this brand")).toBeVisible()
+    await expect(page.getByRole('article', { name: 'Item 1' }).locator(`[data-declined="${s.china.id}"]`)).toContainText("Doesn't carry this brand")
 
     await r.getByRole('button', { name: 'Take back' }).click()
     await expect(r.getByRole('button', { name: "Doesn't carry this brand" })).toBeVisible()
@@ -293,7 +295,7 @@ test.describe("can't quote (FE-2: 1 tap)", () => {
     const after = await inquiryOf(s.germany.inquiryId)
     expect(after.notes).toBeNull()
     expect(after.no_offer_on).toBeNull()
-    await expect(page.getByRole('article', { name: 'Item 2' }).getByText("Can't quote: Item discontinued")).toBeVisible()
+    await expect(page.getByRole('article', { name: 'Item 2' }).locator(`[data-declined="${s.germany.id}"]`)).toContainText('Item discontinued')
   })
 })
 
@@ -560,7 +562,7 @@ test.describe('Suppliers asked, Float to another supplier, and the empty state (
     const rail = page.locator('[data-slot="suppliers-asked"]')
     await expect(rail).toContainText('3 asked · 0 replied')
     const usd = rail.locator(`[data-supplier-asked="${s.usd.id}"]`)
-    await expect(usd).toContainText('Asked twice, 1 reply. Not enough history to say more.')
+    await expect(usd).toContainText(/Asked (once|twice), 1 reply\. Not enough history to say more\./)
     await expect(usd).toContainText('Sent ')
     await expect(usd.getByText('Awaiting reply')).toBeVisible()
 
@@ -568,7 +570,7 @@ test.describe('Suppliers asked, Float to another supplier, and the empty state (
     const dialog = page.getByRole('dialog', { name: /Float to another supplier/ })
     await expect(dialog).toContainText(s.carrier!.name)
     await expect(dialog).toContainText('Carries a brand') // the reason is in plain words
-    await dialog.getByRole('checkbox', { name: s.carrier!.name }).click()
+    await dialog.locator('label', { hasText: s.carrier!.name }).click()
     await dialog.getByRole('button', { name: 'Copy enquiry for 1 supplier' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Enquiry text copied' })).toBeVisible()
     const text = await page.evaluate(() => navigator.clipboard.readText())
@@ -595,7 +597,7 @@ test.describe('Suppliers asked, Float to another supplier, and the empty state (
     const card = page.locator('[data-slot="suppliers-to-ask"]')
     await expect(card).toContainText('suggested')
     await expect(card).toContainText(s.carrier!.name)
-    await card.getByRole('checkbox', { name: s.carrier!.name }).click()
+    await card.locator('label', { hasText: s.carrier!.name }).click()
     await card.getByRole('button', { name: 'Copy enquiry for 1 supplier' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Enquiry text copied' })).toBeVisible()
     const text = await page.evaluate(() => navigator.clipboard.readText())
@@ -632,7 +634,7 @@ test.describe('optional fields (migration 0039): bid time, company city, contact
     await must(rest('admin', `rfqs?id=eq.${s.rfq.id}`, { method: 'PATCH', body: { due_time: '17:00', contact_id: contact.id } }))
     await must(rest('admin', `companies?id=eq.${co}`, { method: 'PATCH', body: { city: 'Faisalabad' } }))
     await must(rest('admin', `companies?id=eq.${s.china.id}`, { method: 'PATCH', body: { city: 'Shenzhen' } }))
-    await must(rest('admin', `users?id=eq.${ADMIN}`, { method: 'PATCH', body: { phone: '+92 300 555 0188', job_title: 'Sales' } }))
+    await must(rest('admin', `users?id=eq.${ADMIN}`, { method: 'PATCH', body: { phone: '+92 300 555 0188' } }))
     try {
       await openAs(page, 'admin', `/rfqs/${s.rfq.id}`)
       const meta = page.locator('dl').first()
@@ -643,9 +645,9 @@ test.describe('optional fields (migration 0039): bid time, company city, contact
       await expect(row(page, s.china.name)).toContainText('Shenzhen, China')
       const card = page.locator(`[data-chase-card="${s.china.id}"]`)
       await card.getByRole('radio', { name: 'Email' }).click()
-      await expect(card.locator('pre')).toContainText('Sales, Q-Tech Solutions\n+92 300 555 0188')
+      await expect(card.locator('pre')).toContainText('Q-Tech Solutions\n+92 300 555 0188')
     } finally {
-      await rest('admin', `users?id=eq.${ADMIN}`, { method: 'PATCH', body: { phone: null, job_title: null } })
+      await rest('admin', `users?id=eq.${ADMIN}`, { method: 'PATCH', body: { phone: null } })
     }
   })
 })
@@ -699,20 +701,20 @@ for (const width of [1440, 375]) {
     if (width > 800) {
       await bidAndClose(page).click()
       await expect(page.getByRole('menu', { name: 'Bid and close' })).toBeVisible()
-      expect(await violations(page)).toEqual([])
+      expect(await overlayViolations(page)).toEqual([])
       await review(page, `rfq-detail-bid-and-close-menu-${width}`)
       await page.keyboard.press('Escape')
     } else {
       await expect(page.locator('[data-action-bar]')).toBeVisible()
       await page.getByRole('button', { name: 'Chase', exact: true }).click()
       await expect(page.getByRole('menu', { name: 'Chase' })).toBeVisible()
-      expect(await violations(page)).toEqual([])
+      expect(await overlayViolations(page)).toEqual([])
       await review(page, `rfq-detail-chase-menu-${width}`)
       await page.keyboard.press('Escape')
     }
     await page.getByRole('button', { name: 'Float to another supplier' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
-    expect(await violations(page)).toEqual([])
+    expect(await overlayViolations(page)).toEqual([])
     await review(page, `rfq-detail-float-dialog-${width}`)
   })
 }

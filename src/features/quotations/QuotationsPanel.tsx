@@ -185,7 +185,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                     </span>
                     <span role="cell" className="grid sm:justify-items-end sm:text-right">
                       <span className="num text-sm font-medium">
-                        <span className="mr-1 font-sans text-xs font-regular text-fg-muted sm:sr-only">PKR</span>
+                        <span className="mr-1 font-sans text-xs font-regular text-fg-muted sm:sr-only">PKR{' '}</span>
                         {formatPaisa(gp, 'auto')}
                       </span>
                       <span className="num text-xs text-fg-muted">net {formatPaisa(toPaisa(q.netTotal), 'auto')}</span>
