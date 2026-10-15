@@ -65,12 +65,9 @@ jobs:
               - 'e2e/rfqs/intake.spec.ts'
             rfq_detail:
               - 'e2e/rfqs/detail.spec.ts'
-<<<<<<< HEAD
               - 'e2e/rfqs/clarifications.spec.ts'
-=======
             today:
               - 'e2e/today/**'
->>>>>>> origin/main
       - id: final
         env:
           SHARED: ${{ steps.filter.outputs.shared }}

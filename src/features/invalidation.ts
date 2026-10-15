@@ -40,7 +40,6 @@ export interface WriteVars {
   'inquiry.chase': { rfqId: string }
   'rfq.markBidSent': { rfqId: string }
   'rfq.close': { rfqId: string }
-<<<<<<< HEAD
   'clarification.add': { rfqId: string }
   'clarification.ask': { rfqId: string }
   'clarification.answer': { rfqId: string }
@@ -48,11 +47,9 @@ export interface WriteVars {
   'clarification.relay': { rfqId: string }
   'attachment.add': { rfqId: string }
   'attachment.delete': { rfqId: string }
-=======
   /** R11/R16: a chase stamp on Today (customer ask, supplier chase, goods chase, payment reminder) or taking it back. */
   'today.chase': Record<string, never>
   'today.snooze': Record<string, never>
->>>>>>> origin/main
 }
 
 export type WriteName = keyof WriteVars
@@ -97,7 +94,6 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Bid sent, closed and re-opened only move the RFQ itself (and the board's lists).
   'rfq.markBidSent': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
   'rfq.close': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
-<<<<<<< HEAD
   // Questions and their stamps change the RFQ page, its derived clarification state (header) and the board's chips.
   'clarification.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
   'clarification.ask': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
@@ -107,12 +103,10 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Files only change this RFQ's page (the list of files, the photos under answers, the signed links).
   'attachment.add': v => [qk.rfqs.detail(v.rfqId)],
   'attachment.delete': v => [qk.rfqs.detail(v.rfqId)],
-=======
   // A chase stamp changes the asked/chased fields the RFQ page, the board and the order screens read, and every Today read.
   'today.chase': () => [qk.today.all, qk.rfqs.all, qk.orders.all],
   // A snooze is read only by Today.
   'today.snooze': () => [qk.today.all],
->>>>>>> origin/main
 }
 
 /** The keys a write makes stale. Pure, so it can be tested without a QueryClient. */

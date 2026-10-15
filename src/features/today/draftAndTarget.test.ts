@@ -37,7 +37,7 @@ describe('drafts', () => {
     { id: 'i2', number: 2, description: 'Transmitter', brandId: null, brandName: null, qty: 3, unit: 'nos' },
   ]
   const inquiry = (o: Partial<InquiryRow> = {}): InquiryRow => ({
-    id: 'q1', supplierId: 's1', supplierName: 'Metro', supplierCountry: null, sentOn: '2026-11-23', lastChasedOn: null, noOfferOn: null, noOfferReason: null,
+    id: 'q1', supplierId: 's1', supplierName: 'Metro', supplierCountry: null, sentOn: '2026-11-23', lastChasedOn: null, lastRelayedAt: null, noOfferOn: null, noOfferReason: null,
     itemDeclines: {}, chaseCount: 0, notes: null, contactName: 'Mr. Imran', contactPhone: '0321', lastCurrency: null, responseState: 'awaiting', contactState: 'sent', itemsQuoted: 0, lines: [], ...o,
   })
   it('supplier: lists the unpriced items only and thanks for the priced one', () => {

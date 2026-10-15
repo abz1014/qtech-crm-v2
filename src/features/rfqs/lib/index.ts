@@ -10,11 +10,8 @@ export * from './closeDefaults'
 export * from './replySave'
 export * from './replyParse'
 export * from './replySuggest'
-<<<<<<< HEAD
 export * from './clarifications'
-=======
 export * from './chaseCommon'
 export * from './customerChase'
 export * from './goodsChase'
 export * from './paymentReminder'
->>>>>>> origin/main
