@@ -34,6 +34,8 @@ export type CompanyPart =
   | 'role'
   | 'supplier-stats'
   | 'supplier-activity'
+  | 'supplier-record'
+  | 'supplier-brand-quotes'
   | 'history'
   | 'money'
 
@@ -80,6 +82,14 @@ function intake() {
     memory: (signature: string) => [...all, 'memory', signature] as const,
   }
 }
+/**
+ * "Last price for this item" on an RFQ page (R17). Its own root on purpose: it leaves the open RFQ out of its own memory, so
+ * saving a reply on that RFQ changes nothing in it, and it must not be refetched by every write the RFQ page makes.
+ */
+function memory() {
+  const all = root('memory')
+  return { all, rfq: (rfqId: string, signature: string) => [...all, 'rfq', rfqId, signature] as const }
+}
 function orders() {
   const all = root('orders')
   return { all, lists: () => [...all, 'list'] as const, detail: (id: string) => [...all, 'detail', id] as const }
@@ -113,6 +123,7 @@ export const qk = {
   rfqs: rfqs(),
   orders: orders(),
   intake: intake(),
+  memory: memory(),
   fx: fx(),
 }
 

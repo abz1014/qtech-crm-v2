@@ -1,5 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { TableRow, ViewRow } from '@/features/dbTypes'
+import { toBusinessDate } from '@/lib/dates'
+import type { RawInquiry, RawItem, RawLeg, RawLine, RawOrderItem, RawRfq, SupplierRecordRaw } from '@/features/companies/supplierRecord'
 
 /*
  * Companies: every database call for this area (R01 reference implementation). This is the only
@@ -223,6 +225,165 @@ export async function getSupplierActivity(companyId: string): Promise<SupplierEn
     replyDays: r.reply_days,
     isLegacy: r.is_legacy ?? false,
   }))
+}
+
+const IN_CHUNK = 80
+function chunks<T>(list: readonly T[], size = IN_CHUNK): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size))
+  return out
+}
+/** Several `in (...)` reads of at most IN_CHUNK ids each, run together, so a long list never makes a request line too long. */
+async function inBatches<T>(
+  ids: readonly string[],
+  read: (batch: string[]) => PromiseLike<{ data: T[] | null; error: { code?: string; message: string } | null }>,
+): Promise<T[]> {
+  const parts = await Promise.all(chunks([...new Set(ids)]).map(async b => unwrap(await read(b)) ?? []))
+  return parts.flat()
+}
+
+type Rel<T> = T | T[] | null | undefined
+const one = <T>(v: Rel<T>): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null))
+
+/** How many times this supplier quoted an item of each brand or family ("quoted 4x"). Guessed imported items are left out. */
+export async function getSupplierBrandQuotes(companyId: string): Promise<Record<string, number>> {
+  const db = requireSupabase()
+  type Row = { legacy_flags: string[]; rfq_items: Rel<{ brand_id: string | null; family_id: string | null }> }
+  const rows = (await fetchAll((from, to) =>
+    db
+      .from('supplier_quote_lines')
+      .select('legacy_flags, rfq_items!inner(brand_id, family_id), supplier_inquiries!inner(supplier_id)')
+      .eq('supplier_inquiries.supplier_id', companyId)
+      .range(from, to),
+  )) as unknown as Row[]
+  const counts: Record<string, number> = {}
+  for (const r of rows) {
+    if (r.legacy_flags?.includes('item_guessed')) continue
+    const it = one(r.rfq_items)
+    for (const id of [it?.brand_id, it?.family_id]) if (id) counts[id] = (counts[id] ?? 0) + 1
+  }
+  return counts
+}
+
+/**
+ * Everything the supplier's recent quotes, deliveries and "Open with them" panels say, as plain rows
+ * (supplierRecord.ts turns them into the display). Reads the newest 60 enquiries and 60 legs with this supplier.
+ */
+export async function getSupplierRecord(companyId: string): Promise<SupplierRecordRaw> {
+  const db = requireSupabase()
+  const [inqRes, legRes] = await Promise.all([
+    db
+      .from('supplier_inquiries')
+      .select('id, rfq_id, sent_on, last_chased_on, no_offer_on, no_offer_reason, legacy_source')
+      .eq('supplier_id', companyId)
+      .not('sent_on', 'is', null)
+      .order('sent_on', { ascending: false })
+      .limit(60),
+    db
+      .from('supplier_orders')
+      .select('id, placed_on, expected_on, received_on, currency, legacy_source, orders!inner(number, cancelled_on)')
+      .eq('supplier_id', companyId)
+      .order('created_at', { ascending: false })
+      .limit(60),
+  ])
+  const inquiries: RawInquiry[] = unwrap(inqRes).map(i => ({
+    id: i.id,
+    rfqId: i.rfq_id,
+    sentOn: i.sent_on,
+    lastChasedOn: i.last_chased_on,
+    noOfferOn: i.no_offer_on,
+    noOfferReason: i.no_offer_reason,
+    legacy: i.legacy_source !== null,
+  }))
+  type OrdRef = { number: number; cancelled_on: string | null }
+  type LegRow = {
+    id: string
+    placed_on: string | null
+    expected_on: string | null
+    received_on: string | null
+    currency: string | null
+    legacy_source: unknown
+    orders: Rel<OrdRef>
+  }
+  const legRows = unwrap(legRes) as unknown as LegRow[]
+  const rfqIds = [...new Set(inquiries.map(i => i.rfqId))]
+
+  const [lineRows, itemRows, rfqRows, poRows] = await Promise.all([
+    inBatches(
+      inquiries.map(i => i.id),
+      b =>
+        db
+          .from('supplier_quote_lines')
+          .select('id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, fx_rate_pkr, fx_rate_on, created_at, legacy_flags, legacy_source')
+          .in('inquiry_id', b),
+    ),
+    inBatches(rfqIds, b => db.from('rfq_items').select('id, rfq_id, position, description, qty, unit, brand_id').in('rfq_id', b)),
+    inBatches(rfqIds, b => db.from('rfqs').select('id, number, closed_on').in('id', b)),
+    inBatches(
+      legRows.map(l => l.id),
+      b => db.from('purchase_orders').select('supplier_order_id, number, revision, issued_on').in('supplier_order_id', b),
+    ),
+  ])
+  const brandIds = itemRows.map(i => i.brand_id).filter((x): x is string => !!x)
+  type OiRow = { rfq_item_id: string | null; orders: Rel<OrdRef>; supplier_orders: Rel<{ supplier_id: string }> }
+  const [brandRows, orderItemRows] = await Promise.all([
+    inBatches(brandIds, b => db.from('brands').select('id, name').in('id', b)),
+    inBatches(
+      lineRows.map(l => l.rfq_item_id),
+      b => db.from('order_items').select('rfq_item_id, orders!inner(number, cancelled_on), supplier_orders(supplier_id)').in('rfq_item_id', b),
+    ),
+  ])
+  const brandName = new Map(brandRows.map(b => [b.id, b.name]))
+
+  const lines: RawLine[] = lineRows.map(l => ({
+    id: l.id,
+    inquiryId: l.inquiry_id,
+    itemId: l.rfq_item_id,
+    unitPrice: Number(l.unit_price),
+    currency: l.currency.trim(),
+    leadTime: l.lead_time,
+    fxRatePkr: l.fx_rate_pkr === null ? null : Number(l.fx_rate_pkr),
+    fxRateOn: l.fx_rate_on,
+    enteredOn: toBusinessDate(new Date(l.created_at)),
+    hidden: l.legacy_flags.includes('currency_unverified'),
+    legacy: l.legacy_source !== null,
+  }))
+  const items: RawItem[] = itemRows.map(i => ({
+    id: i.id,
+    rfqId: i.rfq_id,
+    position: i.position,
+    description: i.description,
+    qty: Number(i.qty),
+    unit: i.unit,
+    brandName: i.brand_id ? (brandName.get(i.brand_id) ?? null) : null,
+  }))
+  const rfqs: RawRfq[] = rfqRows.map(r => ({ id: r.id, number: r.number, closedOn: r.closed_on }))
+  const orderItems: RawOrderItem[] = (orderItemRows as unknown as OiRow[])
+    .filter(o => o.rfq_item_id)
+    .map(o => {
+      const ord = one(o.orders)
+      return { itemId: o.rfq_item_id as string, orderNumber: ord?.number ?? 0, cancelled: Boolean(ord?.cancelled_on), supplierId: one(o.supplier_orders)?.supplier_id ?? null }
+    })
+  const latestPo = new Map<string, { number: number; revision: number; issuedOn: string }>()
+  for (const p of poRows) {
+    const cur = latestPo.get(p.supplier_order_id)
+    if (!cur || p.revision > cur.revision) latestPo.set(p.supplier_order_id, { number: p.number, revision: p.revision, issuedOn: p.issued_on })
+  }
+  const legs: RawLeg[] = legRows.map(l => {
+    const ord = one(l.orders)
+    return {
+      id: l.id,
+      orderNumber: ord?.number ?? 0,
+      cancelled: Boolean(ord?.cancelled_on),
+      placedOn: l.placed_on,
+      expectedOn: l.expected_on,
+      receivedOn: l.received_on,
+      legacy: l.legacy_source !== null,
+      currency: l.currency?.trim() ?? null,
+      po: latestPo.get(l.id) ?? null,
+    }
+  })
+  return { supplierId: companyId, inquiries, lines, items, rfqs, orderItems, legs }
 }
 
 export interface HistoryRfq {

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Building2, Search } from 'lucide-react'
+import { useId, useMemo, useState } from 'react'
+import { Building2, ChevronDown, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DraftItem } from '@/features/rfqs/lib/intakeModel'
 import { effectiveQty } from '@/features/rfqs/lib/intakeModel'
@@ -10,6 +10,9 @@ import { Combobox } from '@/ui/form/Combobox'
 import { EmptyState } from '@/ui/EmptyState'
 import { Button } from '@/ui/Button'
 import { Skeleton } from '@/ui/Skeleton'
+import { SegmentedControl } from '@/ui/SegmentedControl'
+import { buildMemoryCard, type MemoryRow } from '@/lib/memory'
+import { MemoryCardView } from '@/features/rfqs/MemoryCard'
 
 /*
  * Suppliers (g2-intake-float frame 4): reasons first. Every suggestion says why in a sentence, with the counts from
@@ -33,8 +36,51 @@ export function ItemChips({ items }: { items: readonly DraftItem[] }) {
   )
 }
 
-function SupplierRow({ s, ticked, onToggle }: { s: SupplierSuggestion; ticked: boolean; onToggle: (id: string, on: boolean) => void }) {
+/** What the Memory card needs besides the suggestion itself: the rows supplier_item_memory() returned per item, and the items. */
+export interface MemoryContext {
+  rows: Readonly<Record<string, readonly MemoryRow[] | undefined>>
+  items: readonly { id: string; number: number; description: string }[]
+  today: string
+}
+
+function MemoryPanel({ s, ctx, panelId }: { s: SupplierSuggestion; ctx: MemoryContext; panelId: string }) {
+  // The items this supplier was suggested for, strongest history first (then item order).
+  const covered = useMemo(() => {
+    const list = ctx.items.filter(i => s.coversItemIds.includes(i.id))
+    const tierOf = (id: string) => ctx.rows[id]?.find(r => r.supplier_id === s.supplierId)?.best_tier ?? 9
+    return [...list].sort((a, b) => tierOf(a.id) - tierOf(b.id) || a.number - b.number)
+  }, [ctx, s])
+  const [picked, setPicked] = useState<string | null>(null)
+  const item = covered.find(i => i.id === picked) ?? covered[0]
+  const row = item ? ctx.rows[item.id]?.find(r => r.supplier_id === s.supplierId) : undefined
+  const card = useMemo(() => buildMemoryCard(row, s.stats, ctx.today), [row, s.stats, ctx.today])
+  if (!item) return null
+  const desc = item.description.length > 90 ? `${item.description.slice(0, 89).trimEnd()}…` : item.description
+  return (
+    <div id={panelId} className="relative z-10 mt-2 grid gap-2 pl-[30px] pr-0">
+      {covered.length > 1 ? (
+        <SegmentedControl
+          aria-label={`Item for the memory of ${s.name}`}
+          value={item.id}
+          onValueChange={setPicked}
+          options={covered.map(i => ({ value: i.id, label: `Item ${i.number}` }))}
+        />
+      ) : null}
+      <MemoryCardView
+        supplierName={s.name}
+        itemLine={`For item ${item.number}, ${desc}.`}
+        card={card}
+        today={ctx.today}
+        fallbackTier={s.tierLabel}
+      />
+    </div>
+  )
+}
+
+function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; ticked: boolean; onToggle: (id: string, on: boolean) => void; memory?: MemoryContext }) {
   const id = `sup-${s.supplierId}`
+  const panelId = useId()
+  const [open, setOpen] = useState(false)
   const n = s.coversItemIds.length
   return (
     <li className={cn('relative grid gap-1 border-t px-5 py-3 first:border-t-0', ticked && 'bg-selected')} data-ticked={ticked || undefined}>
@@ -50,12 +96,30 @@ function SupplierRow({ s, ticked, onToggle }: { s: SupplierSuggestion; ticked: b
         </span>
       </div>
       <p className="m-0 pl-[30px] text-sm text-fg-2">{s.reason}</p>
-      <p className="m-0 pl-[30px] text-xs text-fg-muted">{s.memoryLine}</p>
+      <div className="flex min-w-0 items-center gap-3 pl-[30px]">
+        <p className={cn('m-0 min-w-0 flex-1 text-xs text-fg-muted',)} data-memory-line>
+          {s.memoryLine}
+        </p>
+        {memory ? (
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={panelId}
+            aria-label={`Memory, ${s.name}`}
+            onClick={() => setOpen(o => !o)}
+            className="relative z-10 inline-flex h-6 shrink-0 items-center gap-1 rounded px-2 text-xs font-medium text-fg-2 hover:bg-selected"
+          >
+            Memory
+            <ChevronDown aria-hidden="true" size={14} strokeWidth={1.75} className={cn('transition-transform', open && 'rotate-180')} />
+          </button>
+        ) : null}
+      </div>
+      {memory && open ? <MemoryPanel s={s} ctx={memory} panelId={panelId} /> : null}
     </li>
   )
 }
 
-function Group({ g, ticked, onToggle }: { g: SuggestionGroupResult; ticked: ReadonlySet<string>; onToggle: (id: string, on: boolean) => void }) {
+function Group({ g, ticked, onToggle, memory }: { g: SuggestionGroupResult; ticked: ReadonlySet<string>; onToggle: (id: string, on: boolean) => void; memory?: MemoryContext }) {
   return (
     <section aria-label={g.label} className="overflow-hidden rounded border bg-surface">
       <header className="flex items-baseline gap-3 border-b bg-sunken px-5 py-3">
@@ -66,7 +130,7 @@ function Group({ g, ticked, onToggle }: { g: SuggestionGroupResult; ticked: Read
       </header>
       <ul className="m-0 grid list-none p-0">
         {g.suppliers.map(s => (
-          <SupplierRow key={s.supplierId} s={s} ticked={ticked.has(s.supplierId)} onToggle={onToggle} />
+          <SupplierRow key={s.supplierId} s={s} ticked={ticked.has(s.supplierId)} onToggle={onToggle} memory={memory} />
         ))}
       </ul>
     </section>
@@ -88,6 +152,7 @@ export function SupplierPicker({
   loading,
   error,
   onRetry,
+  memory,
 }: {
   groups: readonly SuggestionGroupResult[]
   ticked: ReadonlySet<string>
@@ -99,6 +164,8 @@ export function SupplierPicker({
   loading: boolean
   error: boolean
   onRetry: () => void
+  /** When given, every suggestion gets a Memory button that opens its card. */
+  memory?: MemoryContext
 }) {
   const [text, setText] = useState('')
   const matches = useCompanyMatches(text)
@@ -133,7 +200,7 @@ export function SupplierPicker({
           save the RFQ and come back to it.
         </EmptyState>
       ) : (
-        groups.map(g => <Group key={g.group} g={g} ticked={ticked} onToggle={onToggle} />)
+        groups.map(g => <Group key={g.group} g={g} ticked={ticked} onToggle={onToggle} memory={memory} />)
       )}
 
       {manual.length > 0 ? (

@@ -45,6 +45,25 @@ describe('account menu (U03, on Popover)', () => {
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
   })
 
+  it('Change password is in the menu and goes to /settings/password', async () => {
+    const user = userEvent.setup()
+    render(
+      <SessionProvider value={signedIn}>
+        <MemoryRouter initialEntries={['/today']}>
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route path="/today" element={<p>Today page</p>} />
+              <Route path="/settings/password" element={<p>Password page</p>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </SessionProvider>,
+    )
+    await user.click(screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0])
+    await user.click(await screen.findByRole('menuitem', { name: 'Change password' }))
+    expect(await screen.findByText('Password page')).toBeInTheDocument()
+  })
+
   it('keyboard only: Enter opens, first item is focused, Esc returns focus to the avatar', async () => {
     const user = userEvent.setup()
     shell()

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate, NavLink, Outlet } from 'react-router-dom'
-import { Building2, Users, type LucideIcon } from 'lucide-react'
+import { Building2, KeyRound, Users, type LucideIcon } from 'lucide-react'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { useSession } from '@/app/session'
 import { Icon } from '@/ui/Icon'
@@ -20,6 +20,7 @@ interface SettingsLink {
 const SETTINGS_LINKS: readonly SettingsLink[] = [
   { to: '/settings/team', label: 'Team', icon: Users, adminOnly: true },
   { to: '/settings/company', label: 'Company profile', icon: Building2 },
+  { to: '/settings/password', label: 'Change password', icon: KeyRound },
 ]
 
 const useIsAdmin = () => {

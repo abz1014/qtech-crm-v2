@@ -16,12 +16,8 @@ import type { SupplierItemMemoryRow, SupplierRecord } from '@/features/rfqs/lib/
 export async function listSupplierCandidates(): Promise<SupplierRecord[]> {
   const db = requireSupabase()
   const [stats, companies] = await Promise.all([
-    fetchAll((from, to) =>
-      db
-        .from('v_supplier_stats')
-        .select('supplier_id, asked, replied, no_offer, median_reply_days, last_contact, brand_ids, brand_names')
-        .range(from, to),
-    ),
+    // Every column the memory card quotes comes from this one read, so opening a card asks for nothing more.
+    fetchAll((from, to) => db.from('v_supplier_stats').select('*').range(from, to)),
     fetchAll((from, to) => db.from('companies').select('id, name, country').order('name').range(from, to)),
   ])
   const byId = new Map(companies.map(c => [c.id, c]))
@@ -34,16 +30,7 @@ export async function listSupplierCandidates(): Promise<SupplierRecord[]> {
       name: c.name,
       // The screen shows a place beside the name; a company has a country, not a city, so that is what it shows.
       city: c.country,
-      stats: {
-        supplier_id: s.supplier_id,
-        asked: s.asked,
-        replied: s.replied,
-        no_offer: s.no_offer,
-        median_reply_days: s.median_reply_days,
-        last_contact: s.last_contact,
-        brand_ids: s.brand_ids,
-        brand_names: s.brand_names,
-      },
+      stats: { ...s, supplier_id: s.supplier_id },
     })
   }
   return out
@@ -58,37 +45,36 @@ export interface MemoryQuery {
 
 /**
  * supplier_item_memory() for each item against the same supplier list, in the caller's order (memory never
- * reorders). Keyed by the item's client key, the shape the suggestion function reads.
+ * reorders). One call per DISTINCT item (the function takes the whole supplier list at once), all in flight together;
+ * two items with the same description, brand and family share a call. Keyed by the item's client key.
+ * `excludeRfqId` leaves out the RFQ being worked on (and the orders made from it), so it does not remember itself.
  */
 export async function getSupplierMemory(
   items: readonly MemoryQuery[],
   supplierIds: readonly string[],
+  excludeRfqId?: string,
 ): Promise<Record<string, SupplierItemMemoryRow[]>> {
   const db = requireSupabase()
   if (supplierIds.length === 0) return {}
-  const entries = await Promise.all(
-    items.map(async it => {
-      // The generated argument types do not admit NULL for the optional brand and family; the function does.
+  const sig = (it: MemoryQuery) => JSON.stringify([it.description.trim(), it.brandId, it.familyId])
+  const distinct = new Map<string, MemoryQuery>()
+  for (const it of items) if (!distinct.has(sig(it))) distinct.set(sig(it), it)
+  const bySig = new Map<string, SupplierItemMemoryRow[]>()
+  await Promise.all(
+    [...distinct.entries()].map(async ([key, it]) => {
+      // The generated argument types do not admit NULL for the optional ids; the function does.
       const args = {
         p_supplier_ids: [...supplierIds],
         p_brand_id: it.brandId,
         p_family_id: it.familyId,
         p_description: it.description,
+        p_exclude_rfq_id: excludeRfqId ?? null,
       } as unknown as { p_supplier_ids: string[]; p_brand_id: string; p_family_id: string; p_description: string }
       const rows = unwrap(await db.rpc('supplier_item_memory', args)) ?? []
-      return [
-        it.key,
-        rows.map(r => ({
-          supplier_id: r.supplier_id,
-          best_tier: r.best_tier,
-          supplied_before: r.supplied_before,
-          last_ordered_on: r.last_ordered_on,
-          last_po_on: r.last_po_on,
-        })),
-      ] as const
+      bySig.set(key, rows as unknown as SupplierItemMemoryRow[])
     }),
   )
-  return Object.fromEntries(entries)
+  return Object.fromEntries(items.map(it => [it.key, bySig.get(sig(it)) ?? []]))
 }
 
 // ---------------------------------------------------------------- writes
@@ -227,6 +213,7 @@ export interface RfqItemRow {
   description: string
   brandId: string | null
   brandName: string | null
+  familyId: string | null
   qty: number
   unit: string | null
 }
@@ -234,7 +221,7 @@ export interface RfqItemRow {
 export async function listRfqItems(rfqId: string): Promise<RfqItemRow[]> {
   const db = requireSupabase()
   const rows = unwrap(
-    await db.from('rfq_items').select('id, position, description, brand_id, qty, unit, created_at').eq('rfq_id', rfqId).order('position').order('created_at'),
+    await db.from('rfq_items').select('id, position, description, brand_id, family_id, qty, unit, created_at').eq('rfq_id', rfqId).order('position').order('created_at'),
   )
   const brandIds = [...new Set(rows.map(r => r.brand_id).filter((b): b is string => Boolean(b)))]
   const brands = brandIds.length ? unwrap(await db.from('brands').select('id, name').in('id', brandIds)) : []
@@ -245,6 +232,7 @@ export async function listRfqItems(rfqId: string): Promise<RfqItemRow[]> {
     description: r.description,
     brandId: r.brand_id,
     brandName: r.brand_id ? (names.get(r.brand_id) ?? null) : null,
+    familyId: r.family_id,
     qty: Number(r.qty),
     unit: r.unit,
   }))

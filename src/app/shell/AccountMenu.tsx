@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Settings, Users } from 'lucide-react'
+import { KeyRound, LogOut, Settings, Users } from 'lucide-react'
 import { ROLE_LABEL, session, type SessionUser } from '@/app/session'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/ui/Avatar'
@@ -39,6 +39,9 @@ export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?
             Team
           </MenuItem>
         ) : null}
+        <MenuItem icon={KeyRound} onClick={() => navigate('/settings/password')}>
+          Change password
+        </MenuItem>
         <MenuSeparator />
         <MenuItem icon={LogOut} onClick={() => void session.signOut()}>
           Sign out

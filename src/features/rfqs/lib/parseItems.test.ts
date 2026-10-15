@@ -142,4 +142,13 @@ describe('modelTokens (mirrors the database function)', () => {
     expect(modelTokens('24V actuator')).toEqual([])
     expect(modelTokens('Relay 420MA, 24VDC')).toEqual([])
   })
+
+  it('leaves out a word that is really a brand or family name (migration 0035)', () => {
+    expect(modelTokens('XYZ2000 ultrasonic level transmitter')).toEqual(['XYZ2000'])
+    expect(modelTokens('XYZ2000 ultrasonic level transmitter', ['XYZ2000'])).toEqual([])
+    expect(modelTokens('XYZ2000 QX9100 flow meter', ['XYZ2000'])).toEqual(['QX9100'])
+    expect(modelTokens('EH2000 pressure switch', ['E+H 2000'])).toEqual([])
+    expect(modelTokens('Siemens S7-1200 PLC', ['S7-1200 Series', 'Siemens'])).toEqual([])
+    expect(modelTokens('Hach HQ1110 portable meter', ['Hach'])).toEqual(['HQ1110'])
+  })
 })

@@ -64,9 +64,28 @@ Each row is `local | remote | time`. Green means every file in
 `::error::` lines name the version that is missing or extra.
 
 The drift step runs `supabase db diff --linked --schema public,storage`
-(shadow database on the runner) and fails if anything is printed. The remote
+(shadow database on the runner) and fails if anything is left after the
+allowlist filter (below). The remote
 types are generated and uploaded as the `remote-types` artifact for reference only;
 they do not gate the run (hosted and local generators format differently).
+
+### Drift allowlist
+
+`supabase/drift-allowlist.txt` lists platform-managed objects that the drift
+step ignores. Each entry is `schema.name` of a function, with a comment above
+it saying why. `scripts/filter-drift.sh` removes only the statements for those
+functions (the `CREATE FUNCTION` block and its `GRANT`/`REVOKE` lines, plus the
+`SET local check_function_bodies = off;` preamble when nothing else remains),
+prints what it removed, and everything else still fails the run.
+
+The first entry is `public.rls_auto_enable`. Supabase creates this event
+trigger function when the "Automatic RLS" project option is on (it was enabled
+at project creation). It enables RLS on new tables in `public`, is not in our
+migrations, and is harmless. Do not add our own objects to the allowlist: put
+them in a migration instead.
+
+Test the filter locally with `bash scripts/drift-filter.test.sh`. It uses the
+real output of run 38708549583 (`scripts/fixtures/drift-rls-auto-enable.sql`).
 
 S15 acceptance: migration list matches; schema drift = none; remote types
 artifact for reference.
@@ -103,7 +122,29 @@ $env:SUPABASE_SERVICE_ROLE_KEY = "<paste here>"
 node scripts/bootstrap-admin.mjs --name "Your Name" --email you@company.pk --allow-remote
 ```
 
-3. Copy the printed password into your password manager, sign in, and set up everyone else from Team.
+   That prints a generated password once. To choose your own instead, add `--prompt-password`: the script asks
+   for the password in your terminal with nothing shown except `*` per character, asks a second time to confirm,
+   and prints "Password set (not shown)." The password never appears in the command line, the output, a file or
+   the audit log. It needs a real terminal (PowerShell or Windows Terminal); piped input is refused.
+
+```powershell
+node scripts/bootstrap-admin.mjs --name "Your Name" --email you@company.pk --allow-remote --prompt-password
+```
+
+   The password must be at least 12 characters and must not contain a common pattern (such as `password`,
+   `123456` or `qtech`); otherwise it says why in plain words and asks again.
+
+   If you deliberately want a short or simple first password and plan to change it straight after signing in,
+   add `--allow-weak` (only valid together with `--prompt-password`). A weak password is then accepted with one
+   warning line. The 8 character minimum still applies:
+
+```powershell
+node scripts/bootstrap-admin.mjs --name "Your Name" --email you@company.pk --allow-remote --prompt-password --allow-weak
+```
+
+3. Without `--prompt-password`, copy the printed password into your password manager. Either way, sign in, then
+   change your password under Account menu > Change password (a weak one especially), and set up everyone else
+   from Team.
 4. Close the window (or `Remove-Item Env:SUPABASE_SERVICE_ROLE_KEY`). A second run refuses.
 
 Nothing here ever runs in CI against a remote project.
@@ -117,7 +158,7 @@ writes an `audit_log` row with the acting admin as `changed_by`.
 
 Secret to set before deploying (names only; deployment is a separate, owner-run step):
 `ALLOWED_ORIGINS` = comma-separated site origins allowed to call it from a browser (for example the
-Cloudflare Pages production URL). Local dev origins (`localhost:5173`, `localhost:4173`) are always allowed.
+production URL (Vercel)). Local dev origins (`localhost:5173`, `localhost:4173`) are always allowed.
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided by the platform.
 
 CI (`functions.yml`) runs the Deno unit tests and an integration test against `supabase functions serve`.
@@ -128,7 +169,7 @@ Manual only: Actions, Deploy functions, Run workflow. The `production` environme
 There is no push or schedule trigger.
 
 1. Inputs: `allowed_origins` = comma-separated https origins that may call the function from a browser
-   (for example `https://crm.example.com`), and `function` = `admin-users`. Each origin must match
+   (for example the production URL (Vercel), `https://<name>.vercel.app`, or `https://crm.example.com`), and `function` = `admin-users`. Each origin must match
    `^https://[a-z0-9.-]+(:[0-9]+)?$`: no trailing slash, no wildcard, no path. The run fails before touching Supabase otherwise.
 2. Guard: same as `remote.yml`. `SUPABASE_PROJECT_REF` must be `yafbphagorydbitfgfmg`; the old CRM project fails explicitly.
 3. The job runs `supabase secrets set ALLOWED_ORIGINS=...`, then `supabase functions deploy admin-users`

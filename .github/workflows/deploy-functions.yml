@@ -57,7 +57,7 @@ jobs:
           IFS=',' read -ra items <<< "$ALLOWED_ORIGINS"
           for o in "${items[@]}"; do
             if ! printf '%s' "$o" | grep -Eq '^https://[a-z0-9.-]+(:[0-9]+)?$'; then
-              echo "::error::bad origin '$o': must be https://host[:port] (a pages.dev or custom domain), lowercase, no trailing slash, no wildcard, no spaces"; exit 1
+              echo "::error::bad origin '$o': must be https://host[:port] (a vercel.app, pages.dev or custom domain), lowercase, no trailing slash, no wildcard, no spaces"; exit 1
             fi
           done
           echo "Validated ${#items[@]} origin(s)."

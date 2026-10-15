@@ -1,4 +1,7 @@
+import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { businessToday } from '@/lib/dates'
+import { buildSupplierRecord, type SupplierRecord } from '@/features/companies/supplierRecord'
 import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/companies/api'
@@ -67,6 +70,32 @@ export function useSupplierActivity(id: string | undefined, enabled = true) {
   return useQuery({
     queryKey: qk.companies.part(id ?? '', 'supplier-activity'),
     queryFn: () => api.getSupplierActivity(id as string),
+    enabled: Boolean(id) && enabled,
+  })
+}
+
+/** Quotes, deliveries and open items with this supplier (R18). Plain rows; supplierRecord.ts builds the display. */
+export function useSupplierRecord(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: qk.companies.part(id ?? '', 'supplier-record'),
+    queryFn: () => api.getSupplierRecord(id as string),
+    enabled: Boolean(id) && enabled,
+  })
+}
+
+/** The one supplier-record read, turned into display rows once, for every panel that shows it (they share the cache entry). */
+export function useSupplierRecordView(companyId: string, enabled = true) {
+  const query = useSupplierRecord(companyId, enabled)
+  const today = businessToday()
+  const view = useMemo<SupplierRecord | null>(() => (query.data ? buildSupplierRecord(query.data, today) : null), [query.data, today])
+  return { query, view, today }
+}
+
+/** How many times each of their brands was quoted ("quoted 4x"). */
+export function useSupplierBrandQuotes(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: qk.companies.part(id ?? '', 'supplier-brand-quotes'),
+    queryFn: () => api.getSupplierBrandQuotes(id as string),
     enabled: Boolean(id) && enabled,
   })
 }

@@ -1,4 +1,5 @@
 import { COLS, toRow, type CompanyProfile, type ProfileValues } from '@/features/settings/companyProfile'
+import { WEAK_NEW, WRONG_CURRENT } from '@/features/settings/passwordModel'
 import { PlainError } from '@/lib/pgErrors'
 import { requireSupabase, unwrap } from '@/lib/supabase'
 
@@ -86,4 +87,31 @@ export async function saveCompanyProfile(values: ProfileValues): Promise<Company
   const rows = unwrap(await requireSupabase().from('company_profile').update(toRow(values)).eq('id', 1).select(COLS))
   if (!rows || rows.length === 0) throw new PlainError('Only an admin can change the company profile.')
   return rows[0] as unknown as CompanyProfile
+}
+
+// ---------------------------------------------------------------- own password
+
+/**
+ * Changes the signed-in person's own password: re-checks the current one by signing in again with it
+ * (the same account, so the session simply refreshes), then sets the new one. Neither password is
+ * stored, logged or put in an error message. There is no audit row: audit_log is written only by the
+ * service role, and a browser session cannot (and should not) insert into it.
+ */
+export async function changeOwnPassword(current: string, next: string): Promise<void> {
+  const db = requireSupabase()
+  const email = (await db.auth.getSession()).data.session?.user.email
+  if (!email) throw new PlainError('You are signed out. Sign in again, then change your password.')
+
+  const check = await db.auth.signInWithPassword({ email, password: current })
+  if (check.error) {
+    if (check.error.name === 'AuthRetryableFetchError') throw new TypeError(check.error.message)
+    throw new PlainError(WRONG_CURRENT, 'wrong_current')
+  }
+  const res = await db.auth.updateUser({ password: next })
+  if (res.error) {
+    if (res.error.name === 'AuthRetryableFetchError') throw new TypeError(res.error.message)
+    if (res.error.code === 'weak_password') throw new PlainError(WEAK_NEW, 'weak_new')
+    if (res.error.code === 'same_password') throw new PlainError('Choose a password different from your current one.', 'weak_new')
+    throw new PlainError('Could not change the password. Nothing was changed. Try again.')
+  }
 }

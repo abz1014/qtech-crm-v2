@@ -242,6 +242,10 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     () => suggestSuppliers(suggestionItems, { suppliers: candidateList, memory: memory.data ?? {} }, { today }),
     [suggestionItems, candidateList, memory.data, today],
   )
+  const memoryContext = useMemo(
+    () => ({ rows: memory.data ?? {}, items: suggestionItems.map((i, n) => ({ id: i.id, number: n + 1, description: i.description })), today }),
+    [memory.data, suggestionItems, today],
+  )
   const suppliersLoading = wantSuppliers && (candidates.isPending || (candidates.isSuccess && memory.isPending && suggestionItems.length > 0 && candidateList.length > 0))
   const suppliersError = candidates.isError || memory.isError
 
@@ -572,6 +576,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                   onToggle={toggleSupplier}
                   manual={manual}
                   onAddManual={addManual}
+                  memory={memoryContext}
                   excludeIds={new Set([...(company ? [company.id] : []), ...suggestions.suppliers.map(s => s.supplierId)])}
                   loading={suppliersLoading}
                   error={suppliersError}

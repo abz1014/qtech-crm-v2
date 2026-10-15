@@ -173,13 +173,19 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'model_tokens',            '',    'X',    'X',    'X'),    -- s10 "model_tokens()"
   ('function', 'item_text_norm',          '',    'X',    'X',    'X'),    -- A5: helper, all staff
   ('function', 'item_match_tier',         '',    'X',    'X',    'X'),    -- S19 helper, all staff (not in s10; same class as model_tokens)
+  ('function', 'brand_tokens',            '',    'X',    'X',    'X'),    -- 0035 helper: tokens that are brand or family names, all staff (same class as model_tokens)
+  ('function', 'tokens_without',          '',    'X',    'X',    'X'),    -- 0035 pure helper, all staff
+  ('function', 'brand_words',             '',    'X',    'X',    'X'),    -- 0036 helper: words of brand and family names, all staff
+  ('function', 'strip_words',             '',    'X',    'X',    'X'),    -- 0036 pure helper, all staff
+  ('function', 'similar_enough',          '',    'X',    'X',    'X'),    -- 0036 pure helper, all staff
   ('function', 'supplier_item_memory',    '',    'X',    'X',    'X'),    -- s10 "supplier_item_memory()"
-  ('function', 'customer_price_memory',  '',    'X',    'X',    'X'),    -- R19 (0034): the two price chips of the issue-quotation dialog, all staff
+  ('function', 'customer_price_memory',  '',    'X',    'X',    'X'),    -- R19 (0037): the two price chips of the issue-quotation dialog, all staff
   ('function', 'issue_quotation',         '',    'X',    'X',    'X'),    -- s10 "RPCs issue_quotation, issue_purchase_order, stamp_clarification_ask, stamp_supplier_chase"
   ('function', 'issue_purchase_order',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_clarification_ask', '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_supplier_chase',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_goods_chase',      '',    'X',    'X',    'X'),    -- R16 (0033): goods-chase stamp on a supplier leg, all staff
+  ('function', 'search_all',            '',    'X',    'X',    'X'),    -- R12 (0034): palette search, SECURITY INVOKER, all staff; deactivated gets zero rows
   ('function', 'stamp_payment_reminder',  '',    'X',    'X',    ''),     -- s10 "RPC stamp_payment_reminder"
   ('function', 'stamp_tcs_sent',          '',    'X',    'X',    ''),     -- A4: admin and sales
   ('function', 'stamp_fbr_psid',          '',    'X',    'X',    ''),     -- A4: admin and sales
@@ -369,6 +375,11 @@ insert into probes values
   ('model_tokens', '', 'X', $q$select public.model_tokens('ABC123')$q$),
   ('item_text_norm', '', 'X', $q$select public.item_text_norm('ABC 123')$q$),
   ('item_match_tier', '', 'X', $q$select public.item_match_tier('{}', 'x', null, null, '{}', 'x', null, null)$q$),
+  ('brand_tokens', '', 'X', $q$select public.brand_tokens()$q$),
+  ('tokens_without', '', 'X', $q$select public.tokens_without('{AB12}', '{}')$q$),
+  ('brand_words', '', 'X', $q$select public.brand_words()$q$),
+  ('strip_words', '', 'X', $q$select public.strip_words('a b', '{a}')$q$),
+  ('similar_enough', '', 'X', $q$select public.similar_enough('a b c', 'a b c', 0.45)$q$),
   ('supplier_item_memory', '', 'X', $q$select 1 from public.supplier_item_memory(array[@03], @13, null, 'Fixture item') where best_tier is not null$q$),
   ('customer_price_memory', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.customer_price_memory(@15)) >= 0'),   -- R19: returns no rows for the fixture, so the probe also needs the RFQ to be visible (a deactivated user sees none)
   ('issue_quotation', '', 'X', 'select public.issue_quotation(@c3, @15)'),
@@ -376,6 +387,7 @@ insert into probes values
   ('stamp_clarification_ask', '', 'X', 'select 1 from (select public.stamp_clarification_ask(array[@1d]) r) x where r > 0'),
   ('stamp_supplier_chase', '', 'X', 'select public.stamp_supplier_chase(@19)'),
   ('stamp_goods_chase', '', 'X', 'select public.stamp_goods_chase(@23)'),
+  ('search_all', '', 'X', $q$select * from public.search_all('Contact', 5)$q$),
   ('stamp_payment_reminder', '', 'X', 'select 1 from (select public.stamp_payment_reminder(array[@26]) r) x where r > 0'),
   ('stamp_tcs_sent', '', 'X', 'select 1 from (select public.stamp_tcs_sent(array[@26]) r) x where r > 0'),
   ('stamp_fbr_psid', '', 'X', $q$select 1 from (select public.stamp_fbr_psid(array[@26], 'P1') r) x where r > 0$q$),
@@ -446,6 +458,11 @@ insert into known values
   ('model_tokens', '', 'deactivated'),
   ('item_text_norm', '', 'deactivated'),
   ('item_match_tier', '', 'deactivated'),
+  ('brand_tokens', '', 'deactivated'),
+  ('tokens_without', '', 'deactivated'),
+  ('brand_words', '', 'deactivated'),
+  ('strip_words', '', 'deactivated'),
+  ('similar_enough', '', 'deactivated'),
   ('today_pkt', '', 'deactivated');
 
 -- ------------------------------------------------------------------ the matrix, line by line and persona by persona

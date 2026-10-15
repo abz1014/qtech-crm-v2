@@ -23,6 +23,7 @@ export const effectiveQty = (i: DraftItem): number => (i.qty != null && Number.i
 
 export function toSuggestionItems(items: readonly DraftItem[], brands: readonly BrandRef[]): SuggestionItem[] {
   const byId = new Map(brands.map(b => [b.id, b.name]))
+  const brandNames = brands.map(b => b.name)
   return realItems(items).map(i => ({
     id: i.key,
     description: i.description.trim(),
@@ -30,7 +31,7 @@ export function toSuggestionItems(items: readonly DraftItem[], brands: readonly 
     brandName: i.brandId ? (byId.get(i.brandId) ?? null) : null,
     familyId: i.familyId,
     familyName: i.familyId ? (byId.get(i.familyId) ?? null) : null,
-    modelTokens: modelTokens(i.description),
+    modelTokens: modelTokens(i.description, brandNames),
   }))
 }
 
