@@ -75,6 +75,12 @@ async function startCounting(page: Page) {
 }
 const mouse = (page: Page) => page.evaluate(() => (window as unknown as { __mouse: number }).__mouse)
 
+/** The "Ticked, money in" figure in rupees. */
+async function tickedTotal(page: Page): Promise<number> {
+  const text = await page.getByRole('region', { name: 'Running ticked totals' }).getByText('Ticked, money in').locator('..').innerText()
+  return Number((/PKR\s*([\d,.]+)/.exec(text)?.[1] ?? 'NaN').replace(/,/g, ''))
+}
+
 function writes(page: Page) {
   const seen: string[] = []
   page.on('request', r => {
@@ -96,6 +102,7 @@ test.describe('bank tick (M12)', () => {
     const row = page.getByRole('checkbox', { name: new RegExp(customer.name) })
     await expect(row).toHaveAttribute('aria-checked', 'false')
     const seen = writes(page)
+    const before = await tickedTotal(page)
     await startCounting(page)
     await row.click()
     await expect(row).toHaveAttribute('aria-checked', 'true')
@@ -104,9 +111,8 @@ test.describe('bank tick (M12)', () => {
       .toBe(STMT.start)
     expect(await mouse(page)).toBe(1)
     expect(seen).toEqual(['PATCH /rest/v1/payments_in'])
-    // the ticked total includes it, to the rupee
-    const tickedIn = page.getByRole('region', { name: 'Running ticked totals' }).getByText('Ticked, money in').locator('..')
-    await expect(tickedIn).toContainText(amount.toLocaleString('en-US'))
+    // the ticked total moved by exactly this amount
+    await expect.poll(async () => (await tickedTotal(page)) - before).toBe(amount)
     // undo is the same tap
     await row.click()
     await expect(row).toHaveAttribute('aria-checked', 'false')
@@ -249,7 +255,8 @@ test.describe('bank tick (M12)', () => {
 
     test('ticking still works: the tick is not part of the lock', async ({ page }) => {
       await openAs(page, 'admin', '/money/month-end/bank')
-      const row = page.getByTestId('bank-in').getByRole('checkbox', { checked: false }).first()
+      const key = await page.getByTestId('bank-in').getByRole('checkbox', { checked: false }).first().getAttribute('data-key')
+      const row = page.locator(`[data-key="${key}"]`)
       await row.click()
       await expect(row).toHaveAttribute('aria-checked', 'true')
       await page.waitForLoadState('networkidle')
