@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Calendar, Building2, ChevronDown, Ellipsis, FileText, MapPin, MessageCircle, RotateCcw, UserRound, Users, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Calendar, Building2, ChevronDown, Ellipsis, FileCheck2, FileText, MapPin, MessageCircle, Package, RotateCcw, UserRound, Users, type LucideIcon } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
-import { rfqRef } from '@/lib/refs'
+import { orderRef, rfqRef } from '@/lib/refs'
 import { ROLE_LABEL } from '@/app/session'
 import { Avatar } from '@/ui/Avatar'
 import { Breadcrumb } from '@/ui/Breadcrumb'
@@ -14,6 +14,8 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader } from '@/features/rfqs/api'
 import { useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
+import { useOrdersForRfq } from '@/features/orders/hooks'
+import { useWonDialog } from '@/features/orders/useWonDialog'
 import { IssueQuotationButton } from '@/features/quotations/QuotationsPanel'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
 import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, dueChipLabel, dueSubLabel, type CloseReason } from '@/features/rfqs/lib'
@@ -186,6 +188,9 @@ function Meta({
 
 export function RfqHeaderBlock({ rfq, hasPrices }: { rfq: RfqHeader; hasPrices: boolean }) {
   const actions = useBidAndClose(rfq)
+  const [, setWon] = useWonDialog()
+  const orders = useOrdersForRfq(rfq.id)
+  const liveOrders = (orders.data ?? []).filter(o => !o.cancelledOn)
   const s = rfq.state
   const ref = rfqRef(rfq.number)
   const open = (s?.outcome ?? 'open') === 'open'
@@ -235,20 +240,32 @@ export function RfqHeaderBlock({ rfq, hasPrices }: { rfq: RfqHeader; hasPrices: 
             ) : null}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 max-md:hidden">
+        <div className="flex flex-wrap items-center gap-2">
           {/* data-slot="issue-quotation" (R19): the Issue quotation action. */}
           <span data-slot="issue-quotation" className="contents">
-            {open ? <IssueQuotationButton rfqId={rfq.id} disabled={!hasPrices} /> : null}
+            {open ? <IssueQuotationButton rfqId={rfq.id} disabled={!hasPrices} className="max-md:hidden" /> : null}
           </span>
-          {/* data-slot="mark-won" (O01): Mark won, and once there is an order, the way to it. */}
-          <span data-slot="mark-won" className="contents" />
+          {/* data-slot="mark-won" (O01): Mark won opens the Create order dialog; once there is an order, the way to it. */}
+          <span data-slot="mark-won" className="contents">
+            {s?.outcome !== 'won' && liveOrders.length === 0 ? (
+              <Button variant={bidSent ? 'primary' : 'secondary'} icon={FileCheck2} onClick={() => setWon(true)}>
+                Mark won
+              </Button>
+            ) : null}
+            {liveOrders.map(o => (
+              <Link key={o.id} to={`/orders/${o.id}`} className="inline-flex h-control items-center gap-2 rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
+                <Icon icon={Package} />
+                Open {orderRef(o.number)}
+              </Link>
+            ))}
+          </span>
           {open ? (
             <BidAndCloseMenu
               rfq={rfq}
               actions={actions}
               label="Bid and close"
               trigger={
-                <Button aria-haspopup="menu">
+                <Button aria-haspopup="menu" className="max-md:hidden">
                   Bid and close
                   <Icon icon={ChevronDown} size="sm" />
                 </Button>
@@ -256,7 +273,7 @@ export function RfqHeaderBlock({ rfq, hasPrices }: { rfq: RfqHeader; hasPrices: 
             />
           ) : null}
           {s?.outcome === 'closed' ? (
-            <Button icon={RotateCcw} onClick={() => void actions.reopen()} busy={actions.busy} busyLabel="Reopening">
+            <Button icon={RotateCcw} className="max-md:hidden" onClick={() => void actions.reopen()} busy={actions.busy} busyLabel="Reopening">
               Reopen
             </Button>
           ) : null}

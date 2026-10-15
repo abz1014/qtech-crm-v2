@@ -17,6 +17,7 @@ export interface RawInquiry {
   rfqId: string
   sentOn: string | null
   lastChasedOn: string | null
+  chaseCount: number
   noOfferOn: string | null
   noOfferReason: string | null
   legacy: boolean
@@ -79,7 +80,7 @@ export interface SupplierRecordRaw {
 
 // ------------------------------------------------------------------------------------------------ output
 
-export type QuoteOutcome = 'ordered-here' | 'ordered-elsewhere' | 'not-ordered' | 'waiting' | 'no-reply' | 'declined'
+export type QuoteOutcome = 'quoted' | 'ordered-here' | 'ordered-elsewhere' | 'not-ordered' | 'quoted-open' | 'waiting' | 'no-reply' | 'declined'
 
 export interface QuoteRow {
   key: string
@@ -99,8 +100,10 @@ export interface QuoteRow {
   outcome: QuoteOutcome
   /** "ORD-0038" when the item was ordered on a leg with them. */
   orderRef: string | null
-  /** Small print under the item: "Sent 24 Nov, 3 days ago", "Doesn't carry this brand". */
-  note: string | null
+  /** Small print under the item: "Sent 24 Nov, 3 days ago" (an enquiry still waiting). */
+  itemNote: string | null
+  /** What the PKR column says when there is no price: "Awaiting a quote", "Sent 2 Jun, never answered", the reason it was declined. */
+  pkrNote: string | null
   imported: boolean
 }
 
@@ -129,14 +132,20 @@ export interface OpenWithThem {
   currency: string | null
 }
 
+export type LastContactPart = string | { rfqId: string; ref: string }
+
 export interface SupplierRecord {
   quotes: QuoteRow[]
   quoteCount: number
   deliveries: DeliveryRow[]
   deliveryCount: number
   open: OpenWithThem
-  /** What the last contact was, in a sentence ("Enquiry sent for RFQ-0171. No reply yet."), or null. */
-  lastContactText: string | null
+  /** What the last contact was, as a sentence in pieces so an RFQ reference can be a link ("Enquiry sent for RFQ-0171. No reply yet."). */
+  lastContact: LastContactPart[] | null
+  /** One unit per delivery with both dates, for the squares: imported on-time ones are drawn dashed ("dates estimated"). */
+  deliveryUnits: { ontime: number; late: number; estimatedOntime: number }
+  /** First and last dates in what was fetched, for the imported-only footnote ("Jan 2024 to Sep 2026"). */
+  span: { from: string; to: string } | null
 }
 
 // ------------------------------------------------------------------------------------------------ helpers
@@ -208,9 +217,10 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
         today,
       ),
       leadTime: l.leadTime && l.leadTime.trim() ? l.leadTime.trim() : null,
-      outcome: here ? 'ordered-here' : orders.length > 0 ? 'ordered-elsewhere' : 'not-ordered',
+      outcome: here ? 'ordered-here' : orders.length > 0 ? 'ordered-elsewhere' : rfqById.get(it.rfqId)?.closedOn ? 'not-ordered' : 'quoted-open',
       orderRef: here ? orderRef(here.orderNumber) : null,
-      note: null,
+      itemNote: null,
+      pkrNote: null,
       imported: l.legacy,
     })
   }
@@ -234,13 +244,15 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
       leadTime: null,
       outcome,
       orderRef: null,
-      note: inq.noOfferOn
-        ? inq.noOfferReason
-          ? reasonLabel(inq.noOfferReason)
-          : 'No offer'
-        : outcome === 'no-reply'
-          ? `Sent ${formatShortDate(inq.sentOn, today)}, never answered`
-          : `Sent ${formatShortDate(inq.sentOn, today)}, ${plural(waited, 'day')} ago`,
+      itemNote: outcome === 'waiting' ? `Sent ${formatShortDate(inq.sentOn, today)}, ${plural(waited, 'day')} ago` : null,
+      pkrNote:
+        outcome === 'declined'
+          ? inq.noOfferReason
+            ? reasonLabel(inq.noOfferReason)
+            : 'No offer'
+          : outcome === 'no-reply'
+            ? `Sent ${formatShortDate(inq.sentOn, today)}, ${inq.chaseCount > 0 ? `chased ${inq.chaseCount === 1 ? 'once' : `${inq.chaseCount} times`}, ` : ''}never answered`
+            : 'Awaiting a quote',
       imported: inq.legacy,
     })
   }
@@ -302,16 +314,38 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
   const currency = lastLine?.currency ?? lastLeg?.currency ?? null
 
   // ---- what the last contact was
-  const dates: { on: string; text: string }[] = []
+  const events: { on: string; parts: LastContactPart[] }[] = []
   for (const i of raw.inquiries) {
     if (i.sentOn) {
       const replied = (linesByInquiry.get(i.id)?.length ?? 0) > 0 || Boolean(i.noOfferOn)
-      dates.push({ on: i.sentOn, text: `Enquiry sent for ${ref(i.rfqId)}.${replied ? '' : ' No reply yet.'}` })
+      const tail =
+        i.chaseCount > 0 && i.lastChasedOn
+          ? ` Chased ${i.chaseCount === 1 ? 'once' : i.chaseCount === 2 ? 'twice' : `${i.chaseCount} times`} on ${formatShortDate(i.lastChasedOn, today)}.`
+          : replied
+            ? ''
+            : ' No reply yet.'
+      events.push({ on: i.lastChasedOn && i.lastChasedOn > i.sentOn ? i.lastChasedOn : i.sentOn, parts: ['Enquiry sent for ', { rfqId: i.rfqId, ref: ref(i.rfqId) }, `.${tail}`] })
     }
-    if (i.lastChasedOn) dates.push({ on: i.lastChasedOn, text: `Chased for ${ref(i.rfqId)}.` })
   }
-  for (const l of raw.legs) if (l.po) dates.push({ on: l.po.issuedOn, text: `${poRef(l.po.number, l.po.issuedOn)} issued for ${orderRef(l.orderNumber)}.` })
-  dates.sort((a, b) => (a.on < b.on ? 1 : a.on > b.on ? -1 : 0))
+  for (const l of raw.legs) {
+    if (l.po) events.push({ on: l.po.issuedOn, parts: [`${poRef(l.po.number, l.po.issuedOn)} issued for ${orderRef(l.orderNumber)}.`] })
+    else if (l.placedOn ?? l.expectedOn) events.push({ on: (l.placedOn ?? l.expectedOn) as string, parts: [`Order leg for ${orderRef(l.orderNumber)}.${l.legacy ? ' Imported.' : ''}`] })
+  }
+  events.sort((a, b) => (a.on < b.on ? 1 : a.on > b.on ? -1 : 0))
+
+  // ---- delivery squares and the span of what we hold
+  const units = { ontime: 0, late: 0, estimatedOntime: 0 }
+  for (const leg of raw.legs) {
+    if (leg.cancelled || !leg.expectedOn || !leg.receivedOn) continue
+    if (daysBetween(leg.expectedOn, leg.receivedOn) > 0) units.late += 1
+    else if (leg.legacy) units.estimatedOntime += 1
+    else units.ontime += 1
+  }
+  const allDates = [
+    ...raw.inquiries.map(i => i.sentOn),
+    ...raw.legs.flatMap(l => [l.placedOn, l.expectedOn, l.receivedOn]),
+  ].filter((d): d is string => Boolean(d))
+  allDates.sort()
 
   return {
     quotes: rows.slice(0, QUOTE_ROWS_SHOWN),
@@ -319,6 +353,21 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
     deliveries: legRows.slice(0, DELIVERY_ROWS_SHOWN).map(x => x.row),
     deliveryCount: legRows.length,
     open: { enquiries: waiting, legs: openLegs, currency },
-    lastContactText: dates[0]?.text ?? null,
+    lastContact: events[0]?.parts ?? null,
+    deliveryUnits: units,
+    span: allDates.length > 0 ? { from: allDates[0], to: allDates[allDates.length - 1] } : null,
   }
+}
+
+/** The earliest year we dealt with this supplier: its first enquiry or leg, else the year the company was added. */
+export function earliestYear(raw: SupplierRecordRaw | undefined, createdAt: string): number | null {
+  if (!raw) return null
+  const years = [
+    ...raw.inquiries.map(i => i.sentOn),
+    ...raw.legs.map(l => l.placedOn ?? l.expectedOn ?? l.receivedOn),
+  ]
+    .filter((d): d is string => Boolean(d))
+    .map(d => Number(d.slice(0, 4)))
+  years.push(Number(createdAt.slice(0, 4)))
+  return Math.min(...years)
 }

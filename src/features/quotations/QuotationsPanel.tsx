@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Circle, CircleCheck, Clock, ExternalLink, FilePlus2, Share2 } from 'lucide-react'
+import { Circle, CircleCheck, Clock, ExternalLink, FileCheck2, FilePlus2, Share2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { formatPaisa, toPaisa } from '@/lib/money'
@@ -16,6 +16,7 @@ import { useCompanyProfile } from '@/features/settings/hooks'
 import { SettingsLink } from '@/features/quotations/SettingsLink'
 import { downloadStoredPdf, loadPdfData, type QuotationRow } from '@/features/quotations/api'
 import { useQuotations, useStorePdf } from '@/features/quotations/hooks'
+import { useWonDialog } from '@/features/orders/useWonDialog'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
 import { IssueQuotationDialog } from '@/features/quotations/IssueQuotationDialog'
 import { generateQuotationPdf } from '@/features/quotations/pdf/generate'
@@ -64,6 +65,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
   const profileQ = useCompanyProfile()
   const storePdf = useStorePdf(rfq.id)
   const [open, setOpen] = useIssueDialog()
+  const [, setWon] = useWonDialog()
   const [working, setWorking] = useState<string | null>(null)
   const today = businessToday()
   const profile = profileQ.data
@@ -191,6 +193,11 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                       <span className="num text-xs text-fg-muted">net {formatPaisa(toPaisa(q.netTotal), 'auto')}</span>
                     </span>
                     <span role="cell" className="flex flex-wrap items-center gap-2 sm:justify-end">
+                      {latest && isOpen ? (
+                        <Button size="sm" variant="primary" icon={FileCheck2} onClick={() => setWon(true)}>
+                          Mark won
+                        </Button>
+                      ) : null}
                       <Button
                         size="sm"
                         variant={latest ? 'secondary' : 'quiet'}

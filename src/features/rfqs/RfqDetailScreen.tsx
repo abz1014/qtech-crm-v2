@@ -19,6 +19,8 @@ import { useAskSuppliers } from '@/features/rfqs/useAskSuppliers'
 import { QuotationsPanel } from '@/features/quotations/QuotationsPanel'
 import { ClarificationsPanel } from '@/features/rfqs/ClarificationsPanel'
 import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
+import { ConvertDialog } from '@/features/orders/ConvertDialog'
+import { useWonDialog } from '@/features/orders/useWonDialog'
 
 /*
  * RFQ detail (R07; g2-rfq-detail.html; the parity audit's Part C). Left column: "Items and supplier replies" (with Add item,
@@ -146,6 +148,7 @@ function Loaded({
   items: ReturnType<typeof useRfqItems>
   inquiries: ReturnType<typeof useRfqInquiries>
 }) {
+  const [wonOpen, setWonOpen] = useWonDialog()
   const fx = useFxLatest()
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
   const itemList = useMemo<RfqItemRow[]>(() => items.data ?? [], [items.data])
@@ -191,6 +194,8 @@ function Loaded({
   return (
     <Shell>
       <RfqHeaderBlock rfq={rfq} hasPrices={hasPrices} />
+      {/* data-slot="convert-dialog" (O01): the Create order dialog, open while the address carries ?won=1. */}
+      {wonOpen && inquiries.data ? <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} /> : null}
       {loadError ? (
         <p className="mt-3 text-sm text-fg-muted" role="status">
           {`Showing the details saved on this device at ${timeOf(headerAt)}. Replies and questions did not load.`}
