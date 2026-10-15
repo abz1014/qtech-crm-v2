@@ -23,7 +23,7 @@ Rules applied everywhere:
 
 A `changes` job (`dorny/paths-filter@v3.0.2`) decides per suite. Shared paths (`src/**`, `e2e/support/**`, migrations, seed, config,
 `playwright.config.ts`, `package*.json`, the workflow) run every suite; `e2e/auth/**`, `e2e/companies/**`, `e2e/rfqs/board.spec.ts`,
-`intake.spec.ts`, `detail.spec.ts`, `memory.spec.ts`, `quotation.spec.ts` (suite `rfq-quotation`, which also installs poppler to read and render the stored PDFs) and `e2e/today/**` run just their own. Then ONE job starts Supabase once, builds once, and runs the chosen suites
+`intake.spec.ts`, `detail.spec.ts`, `memory.spec.ts`, `quotation.spec.ts` (suite `rfq-quotation`, which also installs poppler to read and render the stored PDFs) and `e2e/today/**` and `e2e/settings/**` (suite `settings-admin`) run just their own. Then ONE job starts Supabase once, builds once, and runs the chosen suites
 one after another, resetting the database between them.
 
 The `pwa` suite (R21, `e2e/pwa/`) needs no database and no reset: it reuses the same production build to check the manifest, the service worker, its shell-only precache, offline open and Chrome's installability. It is the only project with service workers allowed. Lighthouse is not run (version 12 dropped the PWA audit); Chrome's own installability check replaces it.

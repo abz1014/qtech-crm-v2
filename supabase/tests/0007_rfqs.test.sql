@@ -19,7 +19,7 @@ select columns_are('public', 'rfqs',
   array['id', 'created_at', 'created_by', 'updated_at', 'number', 'company_id', 'site_id', 'contact_id',
         'customer_ref', 'received_on', 'due_on', 'owner_id', 'is_priority', 'quoted_on', 'closed_on',
         'close_reason', 'close_note', 'notes', 'legacy_flags', 'legacy_source', 'due_time'],
-  'rfqs has the section 2.7 columns (due_time from A7, 0038)');
+  'rfqs has the section 2.7 columns (due_time from A7, 0039)');
 select columns_are('public', 'rfq_items',
   array['id', 'created_at', 'created_by', 'rfq_id', 'position', 'description', 'brand_id', 'family_id', 'qty',
         'unit', 'quoted_unit_price_net', 'gst_rate', 'quoted_lead_time', 'model_tokens', 'legacy_flags',
