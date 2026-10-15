@@ -91,7 +91,9 @@ test.describe('change your own password', () => {
     await expect(page.getByText('Email or password is incorrect')).toBeVisible()
     await expect(page).toHaveURL(/\/login$/)
 
+    // The app returns a person to the page they were on, so any signed-in page proves the new password worked.
     await signIn(page, email, NEW)
-    await expect(page).toHaveURL(/\/today$/)
+    await expect(page.getByRole('button', { name: `Account menu, ${name}` })).toBeVisible()
+    await expect(page).not.toHaveURL(/\/login$/)
   })
 })
