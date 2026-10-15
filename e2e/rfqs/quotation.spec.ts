@@ -397,6 +397,15 @@ test.describe('a long quotation', () => {
 test.describe('partial quotations and Preview PDF', () => {
   test('an unticked item is not priced, not snapshotted and not printed; Preview PDF opens the unsaved document', async ({ page, context }) => {
     await noShareApi(page)
+    await page.addInitScript(() => {
+      const w = window as unknown as { __blobs: { type: string; size: number }[] }
+      w.__blobs = []
+      const real = URL.createObjectURL.bind(URL)
+      URL.createObjectURL = (o: Blob | MediaSource) => {
+        if (o instanceof Blob) w.__blobs.push({ type: o.type, size: o.size })
+        return real(o)
+      }
+    })
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await openIssue(page)
@@ -412,7 +421,13 @@ test.describe('partial quotations and Preview PDF', () => {
     const popup = context.waitForEvent('page')
     await dialog(page).getByRole('button', { name: 'Preview PDF' }).click()
     const tab = await popup
-    await expect.poll(() => tab.url(), { timeout: 30_000 }).toMatch(/^blob:/)
+    // A headless browser downloads a PDF instead of showing it, so the tab's address proves nothing: the blob handed to it does.
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __blobs?: { type: string; size: number }[] }).__blobs?.length ?? 0), { timeout: 30_000 })
+      .toBeGreaterThan(0)
+    const blob = await page.evaluate(() => (window as unknown as { __blobs: { type: string; size: number }[] }).__blobs[0])
+    expect(blob.type).toBe('application/pdf')
+    expect(blob.size).toBeGreaterThan(2000)
     expect(await quotationsOf(s.rfq.id)).toHaveLength(0)
     await tab.close()
 
