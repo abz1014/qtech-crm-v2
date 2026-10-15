@@ -72,6 +72,9 @@ const s = StyleSheet.create({
   sign: { marginTop: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   thanks: { width: 230, color: C.muted, fontSize: 8 },
   signBox: { width: 230, borderTopWidth: 0.75, borderTopColor: C.ink, paddingTop: 4 },
+  run: { position: 'absolute', top: 14, left: 36, right: 36 },
+  runInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  runLogo: { width: 60, height: 14.6, objectFit: 'contain' },
   foot: { position: 'absolute', left: 36, right: 36, bottom: 20, width: 523, flexDirection: 'row', borderTopWidth: 0.5, borderTopColor: C.strong, paddingTop: 5, fontSize: 7.5, color: C.muted },
 })
 
@@ -95,8 +98,11 @@ function splitDescription(text: string): { title: string; detail: string | null 
 
 export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; profile: CompanyProfile; logoSrc: string }) {
   const q = data.quotation
-  const ref = quotationRef(q.number, data.firstIssuedOn)
-  const refRev = quotationRef(q.number, data.firstIssuedOn, q.revision)
+  // A preview of a first issue has no number yet: it prints QT-YY-NNNN.
+  const refOf = (rev?: number): string =>
+    q.number === 0 ? `QT-${data.firstIssuedOn.slice(2, 4)}-NNNN${rev === undefined ? '' : ` R${rev}`}` : quotationRef(q.number, data.firstIssuedOn, rev)
+  const ref = refOf()
+  const refRev = refOf(q.revision)
   const totals = computeTotals(q.lines.map(l => ({ qty: l.qty, unitPrice: l.unit_price_net, gstRate: l.gst_rate })))
   const rates = [...totals.gstByRate.keys()].sort((a, b) => Number(b) - Number(a))
   const contactLine = [profile.phone, profile.email, profile.website].filter(Boolean).join('   ')
@@ -108,6 +114,21 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
   return (
     <Document title={refRev} author={companyName} subject={`Quotation ${refRev} for ${data.customer.name}`}>
       <Page size="A4" style={s.page}>
+        {/* From page 2 on: a slim running header (small wordmark; document, customer, date). */}
+        <View
+          fixed
+          style={s.run}
+          render={({ pageNumber }) =>
+            pageNumber > 1 ? (
+              <View style={s.runInner}>
+                <Image src={logoSrc} style={s.runLogo} />
+                <Text style={[s.muted, { fontSize: 7.5, textAlign: 'right' }]}>
+                  Quotation {refRev}  {data.customer.name}  {plainDay(q.issuedOn)}
+                </Text>
+              </View>
+            ) : null
+          }
+        />
         <View style={s.head}>
           <Image src={logoSrc} style={s.logo} />
           <View style={s.company}>
@@ -121,9 +142,11 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
         <View style={s.titleRow}>
           <View>
             <Text style={s.h1}>Quotation</Text>
+            {data.preview ? <Text style={[s.muted, { marginTop: 3 }]}>Preview, not issued yet</Text> : null}
+            {!data.previous && !data.preview ? <Text style={[s.muted, { marginTop: 3 }]}>First issue</Text> : null}
             {data.previous ? (
               <Text style={[s.muted, { marginTop: 3 }]}>
-                Supersedes <Text style={s.mono}>{quotationRef(q.number, data.firstIssuedOn, data.previous.revision)}</Text> of {plainDay(data.previous.issuedOn)}
+                Supersedes <Text style={s.mono}>{refOf(data.previous.revision)}</Text> of {plainDay(data.previous.issuedOn)}
               </Text>
             ) : null}
           </View>
@@ -142,7 +165,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
             </View>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Valid until</Text>
-              <Text style={s.metaValue}>{longDay(q.validUntil)}</Text>
+              <Text style={[s.metaValue, s.strongText]}>{longDay(q.validUntil)}</Text>
             </View>
           </View>
         </View>
@@ -153,7 +176,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
             <Text style={[s.strongText, { fontSize: 10 }]}>{data.customer.name}</Text>
             {data.siteName ? <Text>{data.siteName}</Text> : null}
             {data.siteAddress ? <Text>{data.siteAddress}</Text> : null}
-            {data.attention ? <Text style={{ marginTop: 3 }}>Attention: {data.attention}</Text> : null}
+            {data.attention ? <Text style={{ marginTop: 3 }}>Attention: {[data.attention, data.attentionTitle].filter(Boolean).join(', ')}</Text> : null}
           </View>
           <View style={[s.box, s.boxR]}>
             <Text style={s.boxLabel}>References</Text>
@@ -174,7 +197,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
             {data.signatory ? (
               <View style={s.refRow}>
                 <Text style={s.refLabel}>Prepared by</Text>
-                <Text style={s.strongText}>{data.signatory.name}</Text>
+                <Text style={s.strongText}>{[data.signatory.name, data.signatory.phone].filter(Boolean).join(', ')}</Text>
               </View>
             ) : null}
           </View>
@@ -216,7 +239,9 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
           )
         })}
 
-        <View style={s.totals} wrap={false}>
+        {/* Totals, terms and the signature stay together on the last page with the final lines. */}
+        <View wrap={false}>
+        <View style={s.totals}>
           <View style={s.totRow}>
             <Text>Total net</Text>
             <Text style={s.mono}>PKR {money(totals.net)}</Text>
@@ -285,9 +310,12 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
               <>
                 <Text style={[s.strongText, { fontSize: 10, marginTop: 6 }]}>{data.signatory.name}</Text>
                 <Text style={s.muted}>{data.signatory.jobTitle ? `${data.signatory.jobTitle}, ` : ''}authorised signatory</Text>
+                {data.signatory.phone ? <Text style={[s.muted, s.mono]}>{data.signatory.phone}</Text> : null}
               </>
             ) : null}
           </View>
+        </View>
+
         </View>
 
         <View style={s.foot} fixed>

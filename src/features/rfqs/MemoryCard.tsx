@@ -164,7 +164,7 @@ export function MemoryCardView({
 
       <footer className="flex items-start gap-2 border-t bg-sunken px-4 py-3 text-xs text-fg-muted">
         <Icon icon={Info} size="sm" className="mt-[1px]" />
-        <p className="text-pretty">{card.footnote || 'Counts come from enquiries, quote lines, purchase orders and received dates. Nothing here is typed in.'}</p>
+        <p className="text-pretty">{card.footnote || 'Counts come from enquiries, quote lines, purchase orders and delivery dates. Nothing here is typed in.'}</p>
       </footer>
     </section>
   )
