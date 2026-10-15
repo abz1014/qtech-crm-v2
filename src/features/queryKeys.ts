@@ -110,12 +110,15 @@ function orders() {
     /** Active engineers who can be put on a commissioning job. */
     engineers: () => [...all, 'list', 'engineers'] as const,
     /** The signed-in person's job title (the sign-off of a chase message). */
+    /** R22: the orders Capture offers (opened lately), and its search. */
+    captureRecent: () => [...all, 'list', 'capture-recent'] as const,
+    captureSearch: (text: string, includePo: boolean) => [...all, 'list', 'capture-search', text.trim().toLowerCase(), includePo] as const,
     /** Suppliers a leg can be added for. */
     supplierChoices: () => [...all, 'list', 'supplier-choices'] as const,
     jobTitle: (userId: string) => [...all, 'list', 'job-title', userId] as const,
   }
 }
-export type OrderPart = 'header' | 'items' | 'legs' | 'engineers' | 'money' | 'pos'
+export type OrderPart = 'header' | 'items' | 'legs' | 'engineers' | 'money' | 'pos' | 'files'
 
 /** Settings (A04, A06): the team list (read through the admin-users function) and the one company-profile row. */
 function settings() {

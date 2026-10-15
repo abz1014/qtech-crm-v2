@@ -7,9 +7,9 @@ import { splitQuestions } from '@/features/rfqs/lib/clarifications'
  *
  * Decisions (DECISIONS 2026-10-14, Gate 2 question 3): Capture pre-selects the most likely destination, and one tap confirms it.
  */
-export type Dest = 'answer' | 'questions' | 'notes' | 'new-rfq' | 'reply'
+export type Dest = 'answer' | 'questions' | 'notes' | 'new-rfq' | 'reply' | 'order'
 
-export const DESTS: readonly Dest[] = ['answer', 'questions', 'notes', 'new-rfq', 'reply']
+export const DESTS: readonly Dest[] = ['answer', 'questions', 'notes', 'new-rfq', 'reply', 'order']
 
 export type PayloadKind = 'empty' | 'text' | 'files' | 'both'
 
@@ -34,12 +34,20 @@ export interface Candidate {
   number: number
   companyName: string
   ownerId: string | null
-  /** The site the RFQ is for ("Faisalabad"), shown after the company name. */
-  site: string | null
+  /** The company's city ("Faisalabad"), shown after its name. */
+  city: string | null
   /** When this person last opened the RFQ on this device, if ever. */
   openedAt: number | null
   /** Unanswered, not withdrawn; asked ones first, then by creation. */
   open: OpenQuestion[]
+}
+
+/** An order Capture can attach to: opened lately on this device, or found by search. */
+export interface OrderCandidate {
+  id: string
+  number: number
+  companyName: string
+  openedAt: number | null
 }
 
 export const RECENT_MS = 24 * 60 * 60 * 1000
@@ -126,6 +134,8 @@ export function saveLabel({ dest, kind, ticked, questionLines }: SaveLabelInput)
       return 'Continue to intake'
     case 'reply':
       return 'Read the reply'
+    case 'order':
+      return kind === 'text' ? 'Add to order notes' : 'Attach to order'
   }
 }
 

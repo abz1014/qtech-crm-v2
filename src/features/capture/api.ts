@@ -1,12 +1,12 @@
 import { requireSupabase, unwrap } from '@/lib/supabase'
 import type { RecentVisit } from '@/lib/capture/recents'
-import { sortOpenQuestions, type Candidate } from '@/features/capture/model'
+import { sortOpenQuestions, type Candidate, type OrderCandidate } from '@/features/capture/model'
 
 /*
  * Capture reads and the one write of its own (R22). The destinations reuse the RFQ writes (answer a question, add questions,
  * attach a file in src/features/rfqs/api.ts); this file only lists the RFQs to offer and appends to an RFQ's notes.
  */
-type Row = { id: string; number: number; company_id: string; owner_id: string | null; site_id: string | null }
+type Row = { id: string; number: number; company_id: string; owner_id: string | null }
 
 /**
  * The RFQs Capture offers: those opened recently on this device (always), and the person's own open RFQs that have a question
@@ -16,21 +16,20 @@ export async function listCandidates(recents: readonly RecentVisit[], userId: st
   const db = requireSupabase()
   const recentIds = recents.map(r => r.id)
   const [byRecent, mine] = await Promise.all([
-    recentIds.length ? db.from('rfqs').select('id, number, company_id, owner_id, site_id').in('id', recentIds) : Promise.resolve({ data: [] as Row[], error: null }),
-    db.from('rfqs').select('id, number, company_id, owner_id, site_id').eq('owner_id', userId).is('closed_on', null).order('number', { ascending: false }).limit(40),
+    recentIds.length ? db.from('rfqs').select('id, number, company_id, owner_id').in('id', recentIds) : Promise.resolve({ data: [] as Row[], error: null }),
+    db.from('rfqs').select('id, number, company_id, owner_id').eq('owner_id', userId).is('closed_on', null).order('number', { ascending: false }).limit(40),
   ])
   const rows = new Map<string, Row>()
   for (const r of [...unwrap(byRecent), ...unwrap(mine)]) rows.set(r.id, r)
   const ids = [...rows.keys()]
   if (ids.length === 0) return []
-  const siteIds = [...new Set([...rows.values()].map(r => r.site_id).filter((x): x is string => Boolean(x)))]
-  const [companies, sites, clars] = await Promise.all([
-    db.from('companies').select('id, name').in('id', [...new Set([...rows.values()].map(r => r.company_id))]),
-    siteIds.length ? db.from('company_sites').select('id, name').in('id', siteIds) : Promise.resolve({ data: [] as { id: string; name: string }[], error: null }),
+  const [companies, clars] = await Promise.all([
+    db.from('companies').select('id, name, city').in('id', [...new Set([...rows.values()].map(r => r.company_id))]),
     db.from('clarifications').select('id, rfq_id, question, created_at, last_asked_at, ask_count').in('rfq_id', ids).is('answered_at', null).is('withdrawn_at', null),
   ])
-  const names = new Map(unwrap(companies).map(c => [c.id, c.name]))
-  const siteName = new Map(unwrap(sites).map(x => [x.id, x.name]))
+  const companyRows = unwrap(companies)
+  const names = new Map(companyRows.map(c => [c.id, c.name]))
+  const cityOf = new Map(companyRows.map(c => [c.id, c.city]))
   const openBy = new Map<string, Candidate['open']>()
   for (const c of unwrap(clars)) {
     const list = openBy.get(c.rfq_id) ?? []
@@ -44,7 +43,7 @@ export async function listCandidates(recents: readonly RecentVisit[], userId: st
       number: r.number,
       companyName: names.get(r.company_id) ?? 'Unknown company',
       ownerId: r.owner_id,
-      site: r.site_id ? (siteName.get(r.site_id) ?? null) : null,
+      city: cityOf.get(r.company_id) ?? null,
       openedAt: visited.get(r.id) ?? null,
       open: sortOpenQuestions(openBy.get(r.id) ?? []),
     }))
@@ -61,5 +60,35 @@ export async function getRfqNotes(rfqId: string): Promise<string | null> {
 export async function setRfqNotes(rfqId: string, notes: string | null): Promise<void> {
   const db = requireSupabase()
   const { error } = await db.from('rfqs').update({ notes }).eq('id', rfqId)
+  if (error) throw error
+}
+
+/** The orders opened lately on this device (R22), newest first. */
+export async function listOrderCandidates(recents: readonly RecentVisit[]): Promise<OrderCandidate[]> {
+  const ids = recents.map(r => r.id)
+  if (ids.length === 0) return []
+  const db = requireSupabase()
+  const { data, error } = await db.from('orders').select('id, number, companies(name)').in('id', ids)
+  if (error) throw error
+  type Row = { id: string; number: number; companies: { name: string } | { name: string }[] | null }
+  const visited = new Map(recents.map(r => [r.id, r.at]))
+  return ((data ?? []) as unknown as Row[])
+    .map(r => {
+      const c = Array.isArray(r.companies) ? r.companies[0] : r.companies
+      return { id: r.id, number: r.number, companyName: c?.name ?? 'Unknown company', openedAt: visited.get(r.id) ?? null }
+    })
+    .sort((a, b) => (b.openedAt ?? 0) - (a.openedAt ?? 0))
+}
+
+export async function getOrderNotes(orderId: string): Promise<string | null> {
+  const db = requireSupabase()
+  const { data, error } = await db.from('orders').select('notes').eq('id', orderId).maybeSingle()
+  if (error) throw error
+  return (data as { notes: string | null } | null)?.notes ?? null
+}
+
+export async function setOrderNotes(orderId: string, notes: string | null): Promise<void> {
+  const db = requireSupabase()
+  const { error } = await db.from('orders').update({ notes }).eq('id', orderId)
   if (error) throw error
 }

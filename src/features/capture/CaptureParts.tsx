@@ -1,14 +1,15 @@
 import { useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 import { ChevronRight, CircleCheck, FileText, ImageIcon, Info, Paperclip, Search, Upload } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { rfqRef } from '@/lib/refs'
+import { orderRef, rfqRef } from '@/lib/refs'
 import { qk } from '@/features/queryKeys'
 import { RFQ_FILE_ACCEPT } from '@/features/rfqs/lib/clarifications'
 import { searchRfqs, type RfqHit } from '@/features/rfqs/board/api'
+import { searchOrders, type OrderHit } from '@/features/orders/api'
 import { openedAgo } from '@/lib/capture/recents'
 import type { AddedFile } from '@/lib/fileIntake'
 import { cn } from '@/lib/utils'
-import { shortDay, type Candidate, type Dest, type OpenQuestion, type PayloadKind } from '@/features/capture/model'
+import { shortDay, type Candidate, type Dest, type OpenQuestion, type OrderCandidate, type PayloadKind } from '@/features/capture/model'
 import { TILES } from '@/features/capture/tiles'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
@@ -46,7 +47,7 @@ export function CapNote({ children }: { children: ReactNode }) {
 }
 
 export function Tiles({ chosen, kind, off, onChoose }: { chosen: Dest; kind: PayloadKind; off: boolean; onChoose: (d: Dest) => void }) {
-  const order = Object.keys(TILES) as Exclude<Dest, 'reply'>[]
+  const order = Object.keys(TILES) as Exclude<Dest, 'reply' | 'order'>[]
   const move = (e: KeyboardEvent, i: number) => {
     const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
     if (!step || off) return
@@ -252,7 +253,7 @@ function Row({ c, on, onPick, hint }: { c: Candidate; on: boolean; onPick: () =>
       <span className="grid min-w-0 flex-1">
         <b className="truncate text-sm font-medium leading-[18px]">
           <span className="num">{rfqRef(c.number)}</span> · {c.companyName}
-          {c.site ? ` — ${c.site}` : ''}
+          {c.city ? ` — ${c.city}` : ''}
         </b>
         <span className="truncate text-xs leading-4 text-fg-muted">{hint}</span>
       </span>
@@ -276,7 +277,7 @@ export function RfqPicker({ list, chosenId, now, onPick }: { list: readonly Cand
   const pickHit = (h: RfqHit) => {
     setSearching(false)
     setText('')
-    void onPick({ id: h.id, number: h.number, companyName: h.companyName, ownerId: null, site: null, openedAt: null, open: [] })
+    void onPick({ id: h.id, number: h.number, companyName: h.companyName, ownerId: null, city: null, openedAt: null, open: [] })
   }
   return (
     <Section title="On which RFQ" aside="Recent, and yours with open questions">
@@ -313,6 +314,80 @@ export function RfqPicker({ list, chosenId, now, onPick }: { list: readonly Cand
               <Icon icon={Search} />
             </span>
             <span className="flex-1 font-medium">Search all RFQs</span>
+            <Icon icon={ChevronRight} className="text-fg-muted" />
+          </button>
+        )}
+      </div>
+    </Section>
+  )
+}
+
+/** "On which order": the orders opened lately and a search, in the same list style as the RFQs. */
+export function OrderPicker({ list, chosenId, now, includePo, onPick }: { list: readonly OrderCandidate[]; chosenId: string | null; now: number; includePo: boolean; onPick: (c: OrderCandidate) => void }) {
+  const [searching, setSearching] = useState(false)
+  const [text, setText] = useState('')
+  const hits = useQuery({ queryKey: qk.orders.captureSearch(text, includePo), queryFn: () => searchOrders(text, undefined, 8, includePo), enabled: searching && text.trim().length > 0, staleTime: 30_000 })
+  const pickHit = (h: OrderHit) => {
+    setSearching(false)
+    setText('')
+    onPick({ id: h.id, number: h.number, companyName: h.companyName, openedAt: null })
+  }
+  return (
+    <Section title="On which order" aside="Recently opened">
+      <div className="overflow-hidden rounded border bg-surface">
+        <h4 className="flex items-center justify-between border-b bg-sunken px-3 py-2 text-xs font-semibold text-fg-muted">
+          <span>Recent</span>
+          <span>
+            {list.length} {list.length === 1 ? 'order' : 'orders'}
+          </span>
+        </h4>
+        <div role="radiogroup" aria-label="Order" className="divide-y">
+          {list.map(c => (
+            <button
+              key={c.id}
+              type="button"
+              role="radio"
+              aria-checked={c.id === chosenId}
+              onClick={() => onPick(c)}
+              className={cn('relative flex min-h-[52px] w-full items-center gap-3 px-3 py-2 text-left hover:bg-sunken', c.id === chosenId && 'bg-selected')}
+            >
+              {c.id === chosenId ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-brand-green" /> : null}
+              <span aria-hidden="true" className="grid size-[32px] shrink-0 place-items-center rounded border bg-surface text-fg-2">
+                <Icon icon={FileText} />
+              </span>
+              <span className="grid min-w-0 flex-1">
+                <b className="truncate text-sm font-medium leading-[18px]">
+                  <span className="num">{orderRef(c.number)}</span> · {c.companyName}
+                </b>
+                <span className="truncate text-xs leading-4 text-fg-muted">{c.openedAt ? `Opened ${openedAgo(c.openedAt, now)}` : 'Found by search'}</span>
+              </span>
+              <span aria-hidden="true" className={cn('grid size-[16px] shrink-0 place-items-center rounded-round border', c.id === chosenId ? 'border-brand-green bg-brand-green' : 'border-line-input bg-surface')}>
+                {c.id === chosenId ? <span className="size-[6px] rounded-round bg-surface" /> : null}
+              </span>
+            </button>
+          ))}
+        </div>
+        {searching ? (
+          <div className="grid gap-1 border-t p-2">
+            <TextField autoFocus aria-label="Search orders" placeholder={includePo ? 'Order number or customer PO' : 'Order number'} value={text} onChange={e => setText(e.target.value)} prefix={<Icon icon={Search} size="sm" />} />
+            <ul>
+              {(hits.data ?? []).map(h => (
+                <li key={h.id}>
+                  <button type="button" onClick={() => pickHit(h)} className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm hover:bg-sunken">
+                    <b className="num font-medium">{orderRef(h.number)}</b>
+                    <span className="truncate text-fg-muted">{h.companyName}</span>
+                  </button>
+                </li>
+              ))}
+              {hits.isSuccess && (hits.data?.length ?? 0) === 0 ? <li className="px-2 py-2 text-sm text-fg-muted">No order matches.</li> : null}
+            </ul>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setSearching(true)} className="flex min-h-[52px] w-full items-center gap-3 border-t px-3 py-2 text-left text-sm hover:bg-sunken">
+            <span aria-hidden="true" className="grid size-[32px] shrink-0 place-items-center rounded border bg-surface text-fg-2">
+              <Icon icon={Search} />
+            </span>
+            <span className="flex-1 font-medium">Search all orders</span>
             <Icon icon={ChevronRight} className="text-fg-muted" />
           </button>
         )}
@@ -364,12 +439,14 @@ export function SavedPanel({
   title,
   summary,
   rfq,
+  rfqLabel = 'RFQ',
   answered,
   children,
 }: {
   title: string
   summary: string
   rfq: string
+  rfqLabel?: string
   answered?: number
   children: ReactNode
 }) {
@@ -382,7 +459,7 @@ export function SavedPanel({
       <p className="max-w-[34ch] text-pretty text-sm text-fg-muted">{summary}</p>
       <dl className="grid w-full max-w-[420px] gap-2 rounded border bg-surface px-4 py-3 text-left text-sm">
         <div className="flex justify-between gap-3">
-          <dt className="text-fg-muted">RFQ</dt>
+          <dt className="text-fg-muted">{rfqLabel}</dt>
           <dd className="min-w-0 text-right">{rfq}</dd>
         </div>
         {answered !== undefined ? (

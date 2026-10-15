@@ -4,13 +4,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import * as RadixDialog from '@radix-ui/react-dialog'
 import { ArrowRight, Check, ClipboardPaste, Clock, FileWarning, Share2, WifiOff, X } from 'lucide-react'
 import { mapPgError } from '@/lib/pgErrors'
-import { rfqRef } from '@/lib/refs'
+import { orderRef, rfqRef } from '@/lib/refs'
 import { deleteCapture, safely } from '@/lib/capture/store'
-import { readRecents } from '@/lib/capture/recents'
+import { readRecentOrders, readRecents } from '@/lib/capture/recents'
 import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
 import { useSession } from '@/app/session'
-import { listCandidates, getRfqNotes, setRfqNotes } from '@/features/capture/api'
+import { getOrderNotes, getRfqNotes, listCandidates, listOrderCandidates, setOrderNotes, setRfqNotes } from '@/features/capture/api'
 import {
   appendNote,
   countsText,
@@ -25,8 +25,9 @@ import {
   shortQuestion,
   type Candidate,
   type Dest,
+  type OrderCandidate,
 } from '@/features/capture/model'
-import { CapNote, CaptureArea, QuestionPick, RfqPicker, SavedPanel, Section, SplitRows, Tiles } from '@/features/capture/CaptureParts'
+import { CapNote, CaptureArea, OrderPicker, QuestionPick, RfqPicker, SavedPanel, Section, SplitRows, Tiles } from '@/features/capture/CaptureParts'
 import { useCapture } from '@/app/capture/useCapture'
 import { useCompanyMatches, useRfqInquiries } from '@/features/rfqs/hooks'
 import {
@@ -71,7 +72,10 @@ const subscribeOnline = (cb: () => void) => {
 const useOnline = () => useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true)
 
 interface Result {
-  rfq: Candidate
+  kind: 'rfq' | 'order'
+  id: string
+  ref: string
+  companyName: string
   summary: string
   answered?: number
 }
@@ -106,6 +110,22 @@ export default function CaptureSheet() {
     return orderCandidates(extra ? [{ ...extra, openedAt: now }, ...base] : base, now)
   }, [candidatesQuery.data, extra, now])
 
+  // ---- the orders on offer (only when "attach to an order" is chosen)
+  const [orderMode, setOrderMode] = useState(false)
+  const ordersQuery = useQuery({
+    queryKey: qk.orders.captureRecent(),
+    queryFn: () => listOrderCandidates(readRecentOrders()),
+    enabled: Boolean(user) && orderMode,
+    staleTime: 10_000,
+  })
+  const [extraOrder, setExtraOrder] = useState<OrderCandidate | null>(null)
+  const [userOrderId, setUserOrderId] = useState<string | null>(null)
+  const orders = useMemo(() => {
+    const base = (ordersQuery.data ?? []).filter(o => o.id !== extraOrder?.id)
+    return extraOrder ? [{ ...extraOrder, openedAt: now }, ...base] : base
+  }, [ordersQuery.data, extraOrder, now])
+  const order = orders.find(o => o.id === userOrderId) ?? orders[0] ?? null
+
   // ---- what the person has chosen so far (nothing, until they change the pre-selection)
   const [userDest, setUserDest] = useState<Dest | null>(null)
   const [userRfqId, setUserRfqId] = useState<string | null>(null)
@@ -115,8 +135,8 @@ export default function CaptureSheet() {
   const [companyText, setCompanyText] = useState('')
   const [inquiryPick, setInquiryPick] = useState<string | null>(null)
 
-  const dest: Dest = userDest ?? guessDestination(kind, draft.text, ordered)
-  const rfq = ordered.find(c => c.id === userRfqId) ?? defaultRfq(dest, ordered)
+  const dest: Dest = orderMode ? 'order' : (userDest ?? guessDestination(kind, draft.text, ordered))
+  const rfq = dest === 'order' ? null : (ordered.find(c => c.id === userRfqId) ?? defaultRfq(dest, ordered))
   const open = rfq?.open ?? []
   const ticked = tickState && rfq && tickState.rfqId === rfq.id ? tickState.ids : new Set(defaultTicks(kind, open))
   const tickedList = open.filter(q => ticked.has(q.id))
@@ -138,7 +158,7 @@ export default function CaptureSheet() {
   const ready =
     kind !== 'empty' &&
     online &&
-    (dest === 'new-rfq' ? Boolean(company) : Boolean(rfq)) &&
+    (dest === 'new-rfq' ? Boolean(company) : dest === 'order' ? Boolean(order) : Boolean(rfq)) &&
     (dest === 'answer' ? tickedList.length > 0 : true) &&
     (dest === 'questions' ? keptLines.length > 0 : true) &&
     (dest === 'reply' ? Boolean(inquiryId) : true)
@@ -180,6 +200,47 @@ export default function CaptureSheet() {
       if (dest === 'new-rfq' && company) {
         cap.close()
         navigate(`/rfqs/new?company=${company.id}`, { state: { capture: { id: draft.id, text: draft.text, files: keep.files } } })
+        return
+      }
+      if (dest === 'order' && order) {
+        const orderId = order.id
+        const ref = orderRef(order.number)
+        const rows: AttachmentRow[] = []
+        for (const f of goodFiles) {
+          let row = uploaded.current.get(f.id)
+          if (!row) {
+            row = await uploadAttachment({ orderId, clarificationId: null, file: f.file, path: attachmentPath(orderId, crypto.randomUUID(), f.file.name, f.file.type) })
+            uploaded.current.set(f.id, row)
+          }
+          rows.push(row)
+        }
+        const before = text ? await getOrderNotes(orderId) : null
+        if (text) await setOrderNotes(orderId, appendNote(before, text, noteStamp(user.name, new Date())))
+        await Promise.all([invalidateAfter(client, 'order.files', { orderId }), invalidateAfter(client, 'order.update', { orderId })])
+        const photos = rows.length
+        const summary = [text ? 'Added to the notes' : '', photos ? `${photos} ${photos === 1 ? 'file' : 'files'} attached` : ''].filter(Boolean).join(' and ') + '.'
+        await safely(() => deleteCapture(draft.id), undefined)
+        uploaded.current.clear()
+        setResult({ kind: 'order', id: orderId, ref, companyName: order.companyName, summary })
+        cap.discard()
+        toast({
+          title: `Saved to ${ref}`,
+          body: summary.replace(/\.$/, ''),
+          tone: 'success',
+          undo: {
+            onUndo: async () => {
+              try {
+                if (text) await setOrderNotes(orderId, before)
+                for (const r of rows) await deleteAttachment(r)
+                await Promise.all([invalidateAfter(client, 'order.files', { orderId }), invalidateAfter(client, 'order.update', { orderId })])
+                setResult(null)
+                restore()
+              } catch (err) {
+                toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
+              }
+            },
+          },
+        })
         return
       }
       if (!rfq) return
@@ -238,7 +299,7 @@ export default function CaptureSheet() {
 
       await safely(() => deleteCapture(draft.id), undefined)
       uploaded.current.clear()
-      setResult({ rfq, summary, answered })
+      setResult({ kind: 'rfq', id: rfq.id, ref, companyName: rfq.companyName, summary, answered })
       cap.discard()
       toast({
         title: `Saved to ${ref}`,
@@ -366,22 +427,70 @@ export default function CaptureSheet() {
     <div className="grid min-w-0 content-start gap-4">
       <div className="grid gap-2">
         <Section title="What should we do with it?">
-          <Tiles chosen={dest} kind={kind} off={empty} onChoose={choose} />
+          <Tiles
+            chosen={dest}
+            kind={kind}
+            off={empty}
+            onChoose={d => {
+              setOrderMode(false)
+              choose(d)
+            }}
+          />
         </Section>
         {empty ? <span className="text-xs text-fg-muted">You choose after you add something.</span> : null}
         {!empty ? (
-          <button
-            type="button"
-            onClick={() => choose('reply')}
-            aria-pressed={dest === 'reply'}
-            className={cn('w-fit rounded text-xs text-fg-muted underline decoration-1 underline-offset-2 hover:text-fg', dest === 'reply' && 'font-medium text-fg no-underline')}
-          >
-            {dest === 'reply' ? 'Reading it as a supplier’s reply' : 'This is a supplier’s reply'}
-          </button>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <button
+              type="button"
+              onClick={() => {
+                setOrderMode(false)
+                choose('reply')
+              }}
+              aria-pressed={dest === 'reply'}
+              className={cn('w-fit rounded text-xs text-fg-muted underline decoration-1 underline-offset-2 hover:text-fg', dest === 'reply' && 'font-medium text-fg no-underline')}
+            >
+              {dest === 'reply' ? 'Reading it as a supplier’s reply' : 'This is a supplier’s reply'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrderMode(m => !m)}
+              aria-pressed={dest === 'order'}
+              className={cn('w-fit rounded text-xs text-fg-muted underline decoration-1 underline-offset-2 hover:text-fg', dest === 'order' && 'font-medium text-fg no-underline')}
+            >
+              {dest === 'order' ? 'Attaching to an order' : 'Attach to an order'}
+            </button>
+          </div>
         ) : null}
       </div>
 
-      {!empty && dest !== 'new-rfq' ? (
+      {!empty && dest === 'order' ? (
+        <>
+          <OrderPicker
+            list={orders}
+            chosenId={order?.id ?? null}
+            now={now}
+            includePo={user?.role !== 'engineer'}
+            onPick={o => {
+              setUserOrderId(o.id)
+              if (!orders.some(x => x.id === o.id)) setExtraOrder(o)
+            }}
+          />
+          {orders.length === 0 && !ordersQuery.isPending ? <p className="text-sm text-fg-muted">No order opened lately. Search all orders to choose one.</p> : null}
+          <CapNote>
+            {draft.text.trim() ? (
+              <>
+                The files are kept with <b>{order ? orderRef(order.number) : 'the order'}</b>, and the text is added to its notes as written, with your name and the time.
+              </>
+            ) : (
+              <>
+                The files are kept with <b>{order ? orderRef(order.number) : 'the order'}</b>.
+              </>
+            )}
+          </CapNote>
+        </>
+      ) : null}
+
+      {!empty && dest !== 'new-rfq' && dest !== 'order' ? (
         <>
           {ordered.length === 0 && !candidatesQuery.isPending ? <p className="text-sm text-fg-muted">No RFQ opened lately and none of yours has a question waiting. Search all RFQs to choose one.</p> : null}
           <RfqPicker list={ordered} chosenId={rfq?.id ?? null} now={now} onPick={pickRfq} />
@@ -445,7 +554,7 @@ export default function CaptureSheet() {
           <div>
             <Combobox
               aria-label="Which company?"
-              options={(companies.data ?? []).map(c => ({ value: c.id, label: c.name, meta: [c.role, c.country].filter(Boolean).join(' · ') || undefined }))}
+              options={(companies.data ?? []).map(c => ({ value: c.id, label: c.city ? `${c.name} — ${c.city}` : c.name, meta: c.role ?? undefined }))}
               value={company?.id ?? ''}
               onChange={id => {
                 const hit = (companies.data ?? []).find(c => c.id === id)
@@ -518,19 +627,20 @@ export default function CaptureSheet() {
                 </div>
               ) : result ? (
                 <SavedPanel
-                  title={`Saved to ${rfqRef(result.rfq.number)}`}
+                  title={`Saved to ${result.ref}`}
                   summary={result.answered ? `${result.summary} They now wait on Today to be relayed.` : result.summary}
-                  rfq={`${rfqRef(result.rfq.number)} · ${result.rfq.companyName}`}
+                  rfq={`${result.ref} · ${result.companyName}`}
+                  rfqLabel={result.kind === 'order' ? 'Order' : 'RFQ'}
                   answered={result.answered}
                 >
                   <Button
                     variant="primary"
                     onClick={() => {
                       cap.close()
-                      navigate(`/rfqs/${result.rfq.id}`)
+                      navigate(`${result.kind === 'order' ? '/orders' : '/rfqs'}/${result.id}`)
                     }}
                   >
-                    {`Open ${rfqRef(result.rfq.number)}`}
+                    {`Open ${result.ref}`}
                   </Button>
                   <Button icon={ClipboardPaste} onClick={() => setResult(null)}>
                     Capture another

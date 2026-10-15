@@ -18,7 +18,7 @@ import {
 } from '@/features/capture/model'
 
 const q = (id: string, asked = true): OpenQuestion => ({ id, question: `Question ${id}`, asked, askedAt: asked ? '2026-11-21T08:00:00Z' : null, createdAt: `2026-10-1${id}` })
-const cand = (n: number, o: Partial<Candidate> = {}): Candidate => ({ id: `r${n}`, number: n, companyName: `Co ${n}`, ownerId: 'u1', site: null, openedAt: null, open: [], ...o })
+const cand = (n: number, o: Partial<Candidate> = {}): Candidate => ({ id: `r${n}`, number: n, companyName: `Co ${n}`, ownerId: 'u1', city: null, openedAt: null, open: [], ...o })
 const HOUR = 3_600_000
 const NOW = 100 * 24 * HOUR
 
@@ -85,6 +85,8 @@ describe('what can be chosen, and what the buttons say', () => {
     expect(saveLabel({ dest: 'answer', kind: 'files', ticked: 1, questionLines: 0 })).toBe('Save photo as the answer')
     expect(saveLabel({ dest: 'questions', kind: 'text', ticked: 0, questionLines: 4 })).toBe('Add 4 questions')
     expect(saveLabel({ dest: 'new-rfq', kind: 'text', ticked: 0, questionLines: 0 })).toBe('Continue to intake')
+    expect(saveLabel({ dest: 'order', kind: 'files', ticked: 0, questionLines: 0 })).toBe('Attach to order')
+    expect(saveLabel({ dest: 'order', kind: 'text', ticked: 0, questionLines: 0 })).toBe('Add to order notes')
     expect(savedSummary('answer', { questions: 2, photos: 1 })).toBe('2 questions answered and 1 photo attached.')
   })
 })

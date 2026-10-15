@@ -75,6 +75,7 @@ export interface CompanyHit {
   id: string
   name: string
   country: string | null
+  city: string | null
   role: CompanyRole | null
 }
 
@@ -87,12 +88,12 @@ export async function searchCompanies(text: string, limit = 8): Promise<CompanyH
   const q = text.trim()
   if (!q) return []
   const rows = unwrap(
-    await db.from('companies').select('id, name, country').ilike('name', `%${likeEscape(q)}%`).order('name').limit(limit),
+    await db.from('companies').select('id, name, country, city').ilike('name', `%${likeEscape(q)}%`).order('name').limit(limit),
   )
   const ids = rows.map(r => r.id)
   const roles = ids.length ? unwrap(await db.from('v_company_roles').select('company_id, role').in('company_id', ids)) : []
   const roleBy = new Map(roles.map(r => [r.company_id, asRole(r.role)]))
-  return rows.map(r => ({ id: r.id, name: r.name, country: r.country, role: roleBy.get(r.id) ?? null }))
+  return rows.map(r => ({ id: r.id, name: r.name, country: r.country, city: r.city, role: roleBy.get(r.id) ?? null }))
 }
 
 /** The company whose name equals `name` ignoring case and surrounding spaces, as the unique index sees it. */
@@ -100,9 +101,9 @@ export async function findCompanyByName(name: string): Promise<CompanyHit | null
   const db = requireSupabase()
   const wanted = name.trim()
   if (!wanted) return null
-  const rows = unwrap(await db.from('companies').select('id, name, country').ilike('name', likeEscape(wanted)).limit(5))
+  const rows = unwrap(await db.from('companies').select('id, name, country, city').ilike('name', likeEscape(wanted)).limit(5))
   const hit = rows.find(r => r.name.trim().toLowerCase() === wanted.toLowerCase())
-  return hit ? { id: hit.id, name: hit.name, country: hit.country, role: null } : null
+  return hit ? { id: hit.id, name: hit.name, country: hit.country, city: hit.city, role: null } : null
 }
 
 export async function getCompany(id: string): Promise<CompanyDetail | null> {

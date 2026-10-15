@@ -39,3 +39,25 @@ export function openedAgo(at: number, now = Date.now()): string {
   const days = Math.round(hours / 24)
   return days === 1 ? 'yesterday' : `${days} days ago`
 }
+
+/** Recently opened orders (R22), same idea as the RFQs: ids and times only. */
+const ORDER_KEY = 'qtech.recentOrders'
+
+export function readRecentOrders(): RecentVisit[] {
+  try {
+    const raw = JSON.parse(window.localStorage.getItem(ORDER_KEY) ?? '[]') as unknown
+    if (!Array.isArray(raw)) return []
+    return raw.filter((r): r is RecentVisit => Boolean(r) && typeof (r as RecentVisit).id === 'string' && typeof (r as RecentVisit).at === 'number')
+  } catch {
+    return []
+  }
+}
+
+export function recordOrderVisit(id: string, now = Date.now()): void {
+  try {
+    const next = [{ id, at: now }, ...readRecentOrders().filter(r => r.id !== id)].slice(0, MAX)
+    window.localStorage.setItem(ORDER_KEY, JSON.stringify(next))
+  } catch {
+    /* private window: recents are a convenience */
+  }
+}

@@ -30,7 +30,7 @@ const notesOf = async (rfqId: string) => (await must(rest<{ notes: string | null
 /** An RFQ with two questions already asked of the customer, as in the design: the customer is about to reply. */
 async function seed() {
   const customer = uniqueName('Capture Customer')
-  const co = await createCompany(customer)
+  const co = await createCompany(customer, { city: 'Faisalabad' })
   const rfq = await createRfq(co.id, { due_on: karachiDay(6), customer_ref: `C${Math.floor(Math.random() * 90000 + 10000)}` })
   await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: rfq.id, position: 0, description: 'Flow meter DN50', qty: 1 } }))
   const asked = new Date(Date.now() - 86_400_000).toISOString()
@@ -388,3 +388,58 @@ for (const [name, size] of [
     })
   })
 }
+
+test.describe('attach to an order (migration 0041)', () => {
+  async function seedOrder() {
+    const s = await seed()
+    const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: s.co.id } })))[0]
+    return { ...s, order }
+  }
+  const orderFiles = (orderId: string) => must(rest<{ path: string; file_name: string; bucket: string; rfq_id: string | null }[]>('admin', `attachments?order_id=eq.${orderId}&select=path,file_name,bucket,rfq_id&order=created_at`))
+
+  test('Capture attaches a photo and a note to the order that was just opened, with Undo', async ({ page }) => {
+    const s = await seedOrder()
+    await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await expect(page.getByRole('heading', { name: 'Files' })).toBeVisible() // the order page records the visit
+    await page.waitForFunction(() => navigator.serviceWorker?.controller !== null)
+    await page.goto('/today')
+    await page.locator('#main').waitFor()
+    await paste(page, { text: 'Customer PO attached, delivery to site gate 2.', files: [{ name: 'po-scan.png', type: 'image/png' }] })
+    await expect(sheet(page)).toBeVisible()
+    await sheet(page).getByRole('button', { name: 'Attach to an order' }).click()
+    await expect(sheet(page).getByRole('radio', { name: new RegExp(`ORD-${String(s.order.number).padStart(4, '0')} · ${s.customer}`) })).toBeChecked()
+    await page.waitForTimeout(450)
+    await review(page, 'capture-attach-to-order')
+    await sheet(page).getByRole('button', { name: 'Attach to order' }).click()
+    await expect(toast(page, 'Saved to ORD-')).toBeVisible()
+    const files = await orderFiles(s.order.id)
+    expect(files).toHaveLength(1)
+    expect(files[0]).toMatchObject({ file_name: 'po-scan.png', bucket: 'rfq-files', rfq_id: null })
+    expect(files[0].path).toMatch(new RegExp(`^${s.order.id}/`))
+    const notes = (await must(rest<{ notes: string | null }[]>('admin', `orders?id=eq.${s.order.id}&select=notes`)))[0].notes
+    expect(notes).toContain('Customer PO attached, delivery to site gate 2.')
+    await toast(page, 'Saved to ORD-').getByRole('button', { name: /Undo/ }).click()
+    await expect.poll(async () => (await orderFiles(s.order.id)).length).toBe(0)
+  })
+
+  test('the Files panel on the order page adds, lists and deletes a file', async ({ page }) => {
+    const s = await seedOrder()
+    await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await expect(page.getByText('No files yet. The customer’s PO or a photo from site goes here.')).toBeVisible()
+    await page.locator('input[type="file"][aria-label="Choose files"]').setInputFiles({ name: 'delivery-note.png', mimeType: 'image/png', buffer: PNG })
+    await expect(page.getByRole('list', { name: 'Files on this order' }).getByText('delivery-note.png')).toBeVisible()
+    expect((await orderFiles(s.order.id)).map(f => f.file_name)).toEqual(['delivery-note.png'])
+    expect(await axeViolations(page)).toEqual([])
+    await page.getByRole('button', { name: 'Delete delivery-note.png' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click()
+    await expect.poll(async () => (await orderFiles(s.order.id)).length).toBe(0)
+  })
+
+  test('an engineer can attach to an order too (all staff)', async ({ page }) => {
+    const s = await seedOrder()
+    await openAs(page, 'engineer', `/orders/${s.order.id}`)
+    await page.locator('input[type="file"][aria-label="Choose files"]').setInputFiles({ name: 'site-photo.png', mimeType: 'image/png', buffer: PNG })
+    await expect(page.getByRole('list', { name: 'Files on this order' }).getByText('site-photo.png')).toBeVisible()
+    expect((await orderFiles(s.order.id)).map(f => f.file_name)).toEqual(['site-photo.png'])
+  })
+})

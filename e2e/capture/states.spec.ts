@@ -16,7 +16,7 @@ const PNG = Buffer.from(PNG_B64, 'base64')
 
 async function seed() {
   const customer = uniqueName('Capture Frames')
-  const co = await createCompany(customer)
+  const co = await createCompany(customer, { city: 'Faisalabad' })
   const rfq = await createRfq(co.id, { due_on: karachiDay(6), customer_ref: `F${Math.floor(Math.random() * 90000 + 10000)}` })
   await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: rfq.id, position: 0, description: 'Flow meter DN50', qty: 1 } }))
   const asked = new Date(Date.now() - 6 * 86_400_000).toISOString()
@@ -102,6 +102,7 @@ for (const [name, size] of [
       await expect(page.getByRole('radio', { name: /Answer a question/ })).toBeChecked()
       await expect(dlg.getByText('Recent', { exact: true })).toBeVisible()
       await expect(dlg.getByText(/Opened .* · 2 open questions/)).toBeVisible()
+      await expect(dlg.getByText(/RFQ-\d+ · Capture Frames .* — Faisalabad/)).toBeVisible()
       await expect(dlg.getByText('Search all RFQs')).toBeVisible()
       await expect(dlg.getByText(/Answers 2 open questions on RFQ-\d+: line size and flange rating, fluid temperature range\. Untick any that this does not answer\./)).toBeVisible()
       await expect(dlg.getByText(/Asked \w{3} \d{1,2} \w{3}/).first()).toBeVisible()
@@ -147,7 +148,7 @@ for (const [name, size] of [
       // d: a new RFQ
       await page.getByRole('radio', { name: /Start a new RFQ/ }).click()
       await sheet(page).getByLabel('Which company?').fill(s.customer)
-      await expect(page.getByRole('option', { name: new RegExp(s.customer) })).toBeVisible()
+      await expect(page.getByRole('option', { name: new RegExp(`${s.customer} — Faisalabad`) })).toBeVisible()
       await settle(page)
       await review(page, `capture-frame-destination-new-rfq-${name}`)
       await page.getByRole('option', { name: new RegExp(s.customer) }).click()

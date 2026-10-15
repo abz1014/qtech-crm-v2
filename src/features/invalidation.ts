@@ -53,6 +53,8 @@ export interface WriteVars {
   'clarification.relay': { rfqId: string }
   'attachment.add': { rfqId: string }
   'attachment.delete': { rfqId: string }
+  /** R22: files on an order (the Files panel on the order page, Capture's attach to order). */
+  'order.files': { orderId: string }
   /** R19: issuing a quotation (or attaching its PDF) changes the RFQ page, the board and Today (quoted_on is stamped). */
   'quotation.issue': { rfqId: string }
   'quotation.pdf': { rfqId: string }
@@ -121,6 +123,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Files only change this RFQ's page (the list of files, the photos under answers, the signed links).
   'attachment.add': v => [qk.rfqs.detail(v.rfqId)],
   'attachment.delete': v => [qk.rfqs.detail(v.rfqId)],
+  'order.files': v => [qk.orders.part(v.orderId, 'files')],
   'quotation.issue': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.today.all, qk.companies.all],
   'quotation.pdf': v => [qk.rfqs.part(v.rfqId, 'quotations')],
   // A new order changes the RFQ (won), every list that shows orders or states, Today (place PO, goods late) and the customer's history.
