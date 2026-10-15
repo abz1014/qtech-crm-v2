@@ -64,9 +64,28 @@ Each row is `local | remote | time`. Green means every file in
 `::error::` lines name the version that is missing or extra.
 
 The drift step runs `supabase db diff --linked --schema public,storage`
-(shadow database on the runner) and fails if anything is printed. The remote
+(shadow database on the runner) and fails if anything is left after the
+allowlist filter (below). The remote
 types are generated and uploaded as the `remote-types` artifact for reference only;
 they do not gate the run (hosted and local generators format differently).
+
+### Drift allowlist
+
+`supabase/drift-allowlist.txt` lists platform-managed objects that the drift
+step ignores. Each entry is `schema.name` of a function, with a comment above
+it saying why. `scripts/filter-drift.sh` removes only the statements for those
+functions (the `CREATE FUNCTION` block and its `GRANT`/`REVOKE` lines, plus the
+`SET local check_function_bodies = off;` preamble when nothing else remains),
+prints what it removed, and everything else still fails the run.
+
+The first entry is `public.rls_auto_enable`. Supabase creates this event
+trigger function when the "Automatic RLS" project option is on (it was enabled
+at project creation). It enables RLS on new tables in `public`, is not in our
+migrations, and is harmless. Do not add our own objects to the allowlist: put
+them in a migration instead.
+
+Test the filter locally with `bash scripts/drift-filter.test.sh`. It uses the
+real output of run 38708549583 (`scripts/fixtures/drift-rls-auto-enable.sql`).
 
 S15 acceptance: migration list matches; schema drift = none; remote types
 artifact for reference.

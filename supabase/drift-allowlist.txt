@@ -1,0 +1,10 @@
+# Platform-managed database objects that `supabase db diff --linked` reports as
+# drift but that are not ours and are not in migrations. One object per line,
+# as schema.name. Only FUNCTIONS are supported (the filter removes the
+# CREATE FUNCTION block and its GRANT/REVOKE lines). Every entry needs a comment
+# above it saying why it is safe to ignore. Keep this list short.
+
+# Created by Supabase when the "Automatic RLS" project option is on (it was
+# turned on at project creation). Event trigger function that enables RLS on new
+# tables in public. Platform-managed, harmless, absent from migrations.
+public.rls_auto_enable
