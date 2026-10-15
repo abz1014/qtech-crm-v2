@@ -1,7 +1,7 @@
 name: E2E
 
 # ONE Supabase stack boot and ONE build for every database-backed suite (auth, companies, rfq-board,
-# rfq-intake, rfq-detail, rfq-quotation, today, search, rfq-memory, capture, pwa). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
+# rfq-intake, rfq-detail, rfq-quotation, today, search, rfq-memory, settings-admin, orders, capture, pwa). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
 # once and runs only those, one after another, with a database reset between them.
 # Pushes to main and manual runs (Actions, E2E, Run workflow) run every suite. See docs/CI.md.
 # No pull_request trigger: a push to a PR branch already runs this, and a second run doubled the minutes.
@@ -46,6 +46,8 @@ jobs:
       today: ${{ steps.final.outputs.today }}
       search: ${{ steps.final.outputs.search }}
       capture: ${{ steps.final.outputs.capture }}
+      orders: ${{ steps.final.outputs.orders }}
+      settings_admin: ${{ steps.final.outputs.settings_admin }}
       pwa: ${{ steps.final.outputs.pwa }}
       any: ${{ steps.final.outputs.any }}
     steps:
@@ -85,6 +87,10 @@ jobs:
               - 'e2e/search/**'
             capture:
               - 'e2e/capture/**'
+            orders:
+              - 'e2e/orders/**'
+            settings_admin:
+              - 'e2e/settings/**'
             pwa:
               - 'e2e/pwa/**'
               - 'public/manifest.webmanifest'
@@ -104,6 +110,8 @@ jobs:
           S_TODAY: ${{ steps.filter.outputs.today }}
           S_SEARCH: ${{ steps.filter.outputs.search }}
           S_CAPTURE: ${{ steps.filter.outputs.capture }}
+          S_ORDERS: ${{ steps.filter.outputs.orders }}
+          S_SETTINGS_ADMIN: ${{ steps.filter.outputs.settings_admin }}
           S_PWA: ${{ steps.filter.outputs.pwa }}
         run: |
           all=false
@@ -129,6 +137,10 @@ jobs:
           echo "search=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_CAPTURE; if [ "$all" = "true" ]; then v=true; fi
           echo "capture=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_ORDERS; if [ "$all" = "true" ]; then v=true; fi
+          echo "orders=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_SETTINGS_ADMIN; if [ "$all" = "true" ]; then v=true; fi
+          echo "settings_admin=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_PWA; if [ "$all" = "true" ]; then v=true; fi
           echo "pwa=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           echo "any=$any" >> "$GITHUB_OUTPUT"
@@ -277,6 +289,25 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=search REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/search npx playwright test --project=search --output=test-results/search
+
+      - name: Reset database (orders)
+        if: ${{ !cancelled() && needs.changes.outputs.orders == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (orders project)
+        if: ${{ !cancelled() && needs.changes.outputs.orders == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=orders REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/orders npx playwright test --project=orders --output=test-results/orders
+      - name: Reset database (settings-admin)
+        if: ${{ !cancelled() && needs.changes.outputs.settings_admin == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (settings-admin project)
+        if: ${{ !cancelled() && needs.changes.outputs.settings_admin == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=settings-admin REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/settings-admin npx playwright test --project=settings-admin --output=test-results/settings-admin
 
       - name: Reset database (capture)
         if: ${{ !cancelled() && needs.changes.outputs.capture == 'true' }}
