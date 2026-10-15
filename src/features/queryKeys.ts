@@ -63,7 +63,8 @@ function rfqs() {
     part: (id: string, slice: RfqPart) => [...detail(id), slice] as const,
   }
 }
-export type RfqPart = 'header' | 'items' | 'inquiries' | 'clarifications' | 'attachments'
+/** R19 adds the quotation slices: the issued quotations, the items with their quoted prices, the price chips. */
+export type RfqPart = 'header' | 'items' | 'inquiries' | 'clarifications' | 'attachments' | 'quotations' | 'quote-items' | 'price-memory'
 
 /** Exchange rates (R07 reads today's rate per currency; R15 owns editing them). */
 function fx() {

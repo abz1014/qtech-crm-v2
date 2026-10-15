@@ -170,6 +170,7 @@ export interface RfqHeader {
   notes: string | null
   company: { id: string; name: string; country: string | null }
   site: { name: string; address: string | null } | null
+  contactId: string | null
   contact: { name: string; phone: string | null } | null
   owner: { id: string; name: string; role: string } | null
   state: RfqStateRow | null
@@ -211,6 +212,7 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
     closeNote: r.close_note,
     notes: r.notes,
     company: { id: r.company_id, name: c?.name ?? 'Unknown company', country: c?.country ?? null },
+    contactId: r.contact_id,
     site: unwrap(site as Maybe<{ name: string; address: string | null }>),
     contact: unwrap(contact as Maybe<{ name: string; phone: string | null }>),
     owner: unwrap(owner as Maybe<{ id: string; name: string; role: string }>),

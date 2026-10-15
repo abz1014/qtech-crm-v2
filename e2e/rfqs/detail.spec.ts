@@ -345,11 +345,11 @@ test.describe('states', () => {
     await expect(page.getByText("This RFQ isn't here")).toBeVisible()
   })
 
-  test('the clarifications panel is built (R09) and the quotations slot is still marked', async ({ page }) => {
+  test('the clarifications panel (R09) and the quotations block (R19) are both built', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'engineer', `/rfqs/${s.rfq.id}`)
     await expect(page.locator('[data-slot="clarifications"]')).toContainText('Questions for the customer')
-    await expect(page.locator('[data-slot="quotations"]')).toContainText('R19')
+    await expect(page.locator('[data-slot="quotations"]')).toContainText('No quotation has been issued yet')
   })
 })
 

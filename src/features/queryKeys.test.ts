@@ -64,6 +64,8 @@ describe('invalidation map (R01)', () => {
     'clarification.relay': { rfqId: 'r1' },
     'attachment.add': { rfqId: 'r1' },
     'attachment.delete': { rfqId: 'r1' },
+    'quotation.issue': { rfqId: 'r1' },
+    'quotation.pdf': { rfqId: 'r1' },
     'today.chase': {},
     'today.snooze': {},
   }

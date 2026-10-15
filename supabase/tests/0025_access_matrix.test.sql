@@ -174,6 +174,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'item_text_norm',          '',    'X',    'X',    'X'),    -- A5: helper, all staff
   ('function', 'item_match_tier',         '',    'X',    'X',    'X'),    -- S19 helper, all staff (not in s10; same class as model_tokens)
   ('function', 'supplier_item_memory',    '',    'X',    'X',    'X'),    -- s10 "supplier_item_memory()"
+  ('function', 'customer_price_memory',  '',    'X',    'X',    'X'),    -- R19 (0034): the two price chips of the issue-quotation dialog, all staff
   ('function', 'issue_quotation',         '',    'X',    'X',    'X'),    -- s10 "RPCs issue_quotation, issue_purchase_order, stamp_clarification_ask, stamp_supplier_chase"
   ('function', 'issue_purchase_order',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_clarification_ask', '',    'X',    'X',    'X'),    -- s10 (same row)
@@ -369,6 +370,7 @@ insert into probes values
   ('item_text_norm', '', 'X', $q$select public.item_text_norm('ABC 123')$q$),
   ('item_match_tier', '', 'X', $q$select public.item_match_tier('{}', 'x', null, null, '{}', 'x', null, null)$q$),
   ('supplier_item_memory', '', 'X', $q$select 1 from public.supplier_item_memory(array[@03], @13, null, 'Fixture item') where best_tier is not null$q$),
+  ('customer_price_memory', '', 'X', 'select 1 from (select count(*) c from public.customer_price_memory(@15)) x'),   -- R19: the count row proves the call ran
   ('issue_quotation', '', 'X', 'select public.issue_quotation(@c3, @15)'),
   ('issue_purchase_order', '', 'X', 'select public.issue_purchase_order(@c4, @23)'),
   ('stamp_clarification_ask', '', 'X', 'select 1 from (select public.stamp_clarification_ask(array[@1d]) r) x where r > 0'),

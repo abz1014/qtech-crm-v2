@@ -1441,6 +1441,7 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | purchase_orders | SIUD | SIU¹ | SIU¹ | Supplier prices are visible to engineers, consistent with §10. |
 | bucket `generated-docs` | SIUD | SIU | SIU | Private. |
 | v_fx_latest, v_supplier_activity, v_supplier_stats, `supplier_item_memory()` | S | S | S | Security invoker. Every underlying table is already readable by all staff. |
+| `customer_price_memory(rfq_id)` (R19, migration 0034) | X | X | X | Security invoker. The issue-quotation price chips: last sold to this customer and last quoted, same model or same item. Reads orders, order items, quotations and RFQ items, all readable by all staff. |
 | RPCs `issue_quotation`, `issue_purchase_order`, `stamp_clarification_ask`, `stamp_supplier_chase` | ✓ | ✓ | ✓ | |
 | RPC `stamp_payment_reminder` | ✓ | ✓ | — | |
 | users.job_title | via `admin-users` | — | — | |
