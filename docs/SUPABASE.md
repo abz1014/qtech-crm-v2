@@ -178,3 +178,25 @@ There is no push or schedule trigger.
    OPTIONS from `https://evil.example` returns no allow-origin header.
 4. Needs the `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` secrets in the `production` environment.
    Run it again after changing the origin list; the secret is replaced, not merged. Local dev origins stay allowed regardless.
+
+## Nightly FX rates (R23, migration 0038)
+
+Runs inside Postgres with `pg_cron` + `pg_net` (free on the Free plan). No GitHub job, no service-role key anywhere
+outside Supabase. The migration tries `create extension if not exists pg_net` and `pg_cron` itself; if the project
+refuses, it only prints a notice. Then enable both under Database, Extensions, and run
+`select public.schedule_fx_cron();` once in the SQL editor (safe to repeat; it replaces the two jobs).
+
+- `fx-fetch` at 21:00 UTC (02:00 Karachi): queues two GETs, open.er-api.com first and the jsDelivr currency-api file as fallback.
+- `fx-ingest` at 21:05 and 21:20 UTC: copies the answers out of `net._http_response`, uses the first source that gives
+  sane rates, writes `source = 'auto'` rows (never touches manual rows) and records the provider in `fx_rates.provider`.
+- A value is skipped when it is missing, not positive, or more than 50% away from the previous auto rate.
+
+Checking it (Dashboard):
+
+1. Database, Cron (Integrations, Cron): jobs `fx-fetch` and `fx-ingest`; open a job to see each run's status and message.
+   Or SQL: `select jobname, schedule from cron.job;` and `select * from cron.job_run_details order by start_time desc limit 10;`
+2. Raw HTTP answers (kept a few hours only): `select id, status_code, timed_out, error_msg, created from net._http_response order by created desc limit 5;`
+3. What the job decided (admin): `select created_at, kind, source, currency, detail from public.fx_fetch_log where kind <> 'request' order by created_at desc limit 50;`
+   An `error` row reading "no source gave usable rates" means tonight's refresh failed; the staleness bands in the app then age the rates.
+4. The rates: `select * from public.v_fx_latest;`
+5. Test now without waiting: `select public.fetch_fx_rates();` then, a minute later, `select public.ingest_fx_response();`.

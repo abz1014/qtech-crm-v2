@@ -467,16 +467,30 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"fx_rates": {
+                },"fx_fetch_log": {
                   Row: {
-                    "as_of": string,"created_at": string,"created_by": string | null,"currency": string,"id": string,"rate_pkr": number,"source": string
+                    "batch_id": string | null,"created_at": string,"currency": string | null,"detail": string | null,"id": string,"kind": string,"priority": number | null,"processed_at": string | null,"request_id": number | null,"response_at": string | null,"response_body": string | null,"response_status": number | null,"source": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "as_of"?: string,"created_at"?: string,"created_by"?: string | null,"currency": string,"id"?: string,"rate_pkr": number,"source"?: string
+                    "batch_id"?: string | null,"created_at"?: string,"currency"?: string | null,"detail"?: string | null,"id"?: string,"kind": string,"priority"?: number | null,"processed_at"?: string | null,"request_id"?: number | null,"response_at"?: string | null,"response_body"?: string | null,"response_status"?: number | null,"source"?: string | null
                   }
                   Update: {
-                    "as_of"?: string,"created_at"?: string,"created_by"?: string | null,"currency"?: string,"id"?: string,"rate_pkr"?: number,"source"?: string
+                    "batch_id"?: string | null,"created_at"?: string,"currency"?: string | null,"detail"?: string | null,"id"?: string,"kind"?: string,"priority"?: number | null,"processed_at"?: string | null,"request_id"?: number | null,"response_at"?: string | null,"response_body"?: string | null,"response_status"?: number | null,"source"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"fx_rates": {
+                  Row: {
+                    "as_of": string,"created_at": string,"created_by": string | null,"currency": string,"id": string,"provider": string | null,"rate_pkr": number,"source": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "as_of"?: string,"created_at"?: string,"created_by"?: string | null,"currency": string,"id"?: string,"provider"?: string | null,"rate_pkr": number,"source"?: string
+                  }
+                  Update: {
+                    "as_of"?: string,"created_at"?: string,"created_by"?: string | null,"currency"?: string,"id"?: string,"provider"?: string | null,"rate_pkr"?: number,"source"?: string
                   }
                   Relationships: [
                     {
@@ -1784,6 +1798,9 @@ isOneToOne: false
               "advance_held": number,"age_days": number,"applied": number,"bucket": string,"company_id": string,"gross": number,"invoice_date": string,"invoice_id": string,"invoice_number": string,"kind": string,"order_id": string,"order_number": number,"remaining": number
             }[]
                            },
+"apply_fx_payload":
+{ Args: { "p_batch"?: string,"p_payload": Json,"p_source": string }; Returns: Json
+                           },
 "brand_tokens":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
@@ -1813,8 +1830,17 @@ isOneToOne: false
               "quoted_number": number,"quoted_on": string,"quoted_price": number,"quoted_revision": number,"quoted_tier": number,"rfq_item_id": string,"sold_on": string,"sold_price": number,"sold_tier": number
             }[]
                            },
+"fetch_fx_rates":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "float_rfq":
 { Args: { "p_company_id": string,"p_contact_id"?: string,"p_customer_ref"?: string,"p_due_on"?: string,"p_is_priority"?: boolean,"p_items": Json,"p_mark_sent"?: boolean,"p_rfq_id": string,"p_site_id"?: string,"p_supplier_ids"?: (string)[] }; Returns: string
+                           },
+"fx_wanted_currencies":
+{ Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
+"ingest_fx_response":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "issue_purchase_order":
 { Args: { "p_delivery_terms"?: string,"p_incoterm"?: string,"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_po_id": string,"p_ship_to"?: string,"p_supplier_order_id": string }; Returns: string
@@ -1873,6 +1899,9 @@ isOneToOne: false
                            },
 "revoke_user_sessions":
 { Args: { "p_user_id": string }; Returns: undefined
+                           },
+"schedule_fx_cron":
+{ Args: Record<PropertyKey, never>; Returns: string
                            },
 "search_all":
 { Args: { "lim"?: number,"q": string }; Returns: {
