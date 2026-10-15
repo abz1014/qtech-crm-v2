@@ -432,7 +432,7 @@ export function ruleGoodsLate(ctx: TodayInputs): Entry[] {
         tab: tabFor('goods_late'),
         title: `Goods ${late} ${late === 1 ? 'day' : 'days'} late from supplier`,
         waitingTitle: 'Supplier chased for goods',
-        ref: l.reference ? `PO ${l.reference.replace(/^PO\s*/i, '')}` : orderRef(l.orderNumber),
+        ref: l.reference ? `PO ${l.reference.replace(/^PO\s+/i, '')}` : orderRef(l.orderNumber),
         party: l.supplierName,
         sortDate: l.expectedOn,
         badge: dueBadge(l.expectedOn, ctx.today),

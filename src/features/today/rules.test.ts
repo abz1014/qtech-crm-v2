@@ -327,6 +327,8 @@ describe('rule: goods late', () => {
     const [e] = ruleGoodsLate(ctx({ legs: [leg()] }))
     expect(e).toMatchObject({ rule: 'goods_late', title: 'Goods 5 days late from supplier', ref: 'PO 253102', party: 'Hengxin', legId: 'l1' })
     expect(ruleGoodsLate(ctx({ legs: [leg({ reference: null })] }))[0].ref).toBe('ORD-0038')
+    expect(ruleGoodsLate(ctx({ legs: [leg({ reference: 'PO 253102' })] }))[0].ref).toBe('PO 253102')
+    expect(ruleGoodsLate(ctx({ legs: [leg({ reference: 'POLEQWPA' })] }))[0].ref).toBe('PO POLEQWPA') // a reference that merely starts with PO keeps it
   })
   it('is not raised for goods received or delivered, on time, or not yet placed', () => {
     expect(ruleGoodsLate(ctx({ legs: [leg({ receivedOn: '2026-11-25' })] }))).toEqual([])

@@ -10,6 +10,7 @@ import { formatDay } from '@/lib/formatDay'
 import { cn } from '@/lib/utils'
 import { deadlineValue } from '@/lib/status'
 import { Banner } from '@/ui/Banner'
+import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { DateInput } from '@/ui/form/DateInput'
@@ -170,6 +171,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased }:
   return (
     <section aria-label={`${item.title}, ${item.ref}`} className="grid content-start gap-4">
       <header className="grid gap-1">
+        <Breadcrumb className="mb-1 hidden md:block" items={[{ label: 'Today', to: '/today' }, { label: item.ref, mono: true }]} />
         <h2 className="text-xl font-semibold tracking-snug">{item.waiting ? (item.waitingTitle ?? item.title) : item.title}</h2>
         <p className="text-sm text-fg-2">
           <span className="num">{item.ref}</span> · {item.party}
