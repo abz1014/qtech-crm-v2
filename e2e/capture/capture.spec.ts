@@ -90,7 +90,8 @@ async function share(page: Page, payload: Shared) {
 }
 
 const sheet = (page: Page) => page.getByRole('dialog', { name: 'Capture' })
-const toast = (page: Page, text: string) => page.getByRole('status').filter({ hasText: text })
+// The Undo toast (the saved panel is a status too, so the toast is the one with an Undo button).
+const toast = (page: Page, text: string) => page.getByRole('status').filter({ hasText: text }).filter({ has: page.getByRole('button', { name: /Undo/ }) })
 
 /** A paste event as the browser makes it from the clipboard, with text and/or a photo. */
 async function paste(page: Page, payload: Shared) {
