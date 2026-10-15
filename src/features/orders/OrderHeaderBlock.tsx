@@ -33,7 +33,7 @@ import { CANCEL_REASONS, cancelNote, type CancelReason } from '@/features/orders
 
 function Dim({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="grid min-w-0 content-start gap-2 px-5 py-4">
+    <div className="grid min-w-0 content-start justify-items-start gap-2 px-5 py-4">
       <h2 className="flex items-center gap-2 text-sm text-fg-muted">{title}</h2>
       {icon}
       {children}
@@ -147,7 +147,7 @@ export function OrderHeaderBlock({
                 empty="add"
                 placeholder="Not yet received"
                 disabled={isEngineer || cancelled}
-                className="num"
+                render={v => <span className="num">{v}</span>}
                 onSave={async v => {
                   try {
                     await update.mutateAsync({ customer_po_number: v })

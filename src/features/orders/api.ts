@@ -164,7 +164,7 @@ export interface OrderLegRow {
   leadTimes: string[]
 }
 
-export async function listOrderLegs(orderId: string, itemRows: readonly Pick<OrderItemRow, 'legId' | 'rfqItemId'>[]): Promise<OrderLegRow[]> {
+export async function listOrderLegs(orderId: string, itemRows: readonly Pick<OrderItemRow, 'legId' | 'rfqItemId' | 'number'>[]): Promise<OrderLegRow[]> {
   const db = requireSupabase()
   const legs = unwrap(await db.from('supplier_orders').select('*').eq('order_id', orderId).order('created_at').order('id'))
   if (legs.length === 0) return []
@@ -178,7 +178,11 @@ export async function listOrderLegs(orderId: string, itemRows: readonly Pick<Ord
   ])
   const names = new Map(unwrap(companies).map(c => [c.id, c.name]))
   const quoteLines = unwrap(lines) ?? []
-  return legs.map(l => {
+  // Leg letters (A, B, ...) must not depend on the order the database happens to return rows in: a leg comes in the order of its
+  // first line on the order, then by its creation time.
+  const firstLine = (legId: string) => Math.min(...itemRows.filter(i => i.legId === legId).map(i => i.number), Number.MAX_SAFE_INTEGER)
+  const ordered = [...legs].sort((a, b) => firstLine(a.id) - firstLine(b.id) || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
+  return ordered.map(l => {
     const itemIds = new Set(itemRows.filter(i => i.legId === l.id && i.rfqItemId).map(i => i.rfqItemId as string))
     return {
       id: l.id,

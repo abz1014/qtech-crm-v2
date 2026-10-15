@@ -111,11 +111,9 @@ export function TapText({ value, label, empty, render, onSave, disabled, placeho
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`${label}: ${value ?? 'not set'}. Edit`}
-          className={cn('inline-flex min-h-[28px] items-center rounded text-left text-sm underline-offset-2 hover:underline', value ? 'text-fg' : 'text-primary', className)}
-        >
+        <button type="button" className={cn('inline-flex min-h-[28px] items-center rounded text-left text-sm underline-offset-2 hover:underline', value ? 'text-fg' : 'text-primary', className)}>
+          {/* the visible words stay inside the accessible name (WCAG 2.5.3): the label is added before them, not instead of them */}
+          <span className="sr-only">{label}: </span>
           {value ? (render ? render(value) : value) : empty}
         </button>
       </PopoverTrigger>

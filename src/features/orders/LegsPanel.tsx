@@ -184,7 +184,7 @@ function Leg({
               empty="Add reference"
               placeholder="Our PO or the supplier's PI"
               disabled={!canEdit}
-              className="num"
+              render={v => <span className="num">{v}</span>}
               onSave={v => run({ reference: v }, v ? 'Reference saved' : 'Reference cleared', leg.supplierName)}
             />
           </span>
