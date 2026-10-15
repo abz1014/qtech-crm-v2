@@ -1,4 +1,4 @@
--- 0040_customer_price_memory_order_ref (R19 parity): customer_price_memory gains sold_order_number, so the chip can read "ORD-0031" as the mockup draws it.
+-- 0041_customer_price_memory_order_ref (R19 parity): customer_price_memory gains sold_order_number, so the chip can read "ORD-0031" as the mockup draws it.
 -- The rest is unchanged from 0037 (R19). The function is dropped and re-created because its result columns change.
 -- (was 0037_customer_price_memory (R19): the two price chips of the issue-quotation dialog (BUILD_PLAN Amendment A3, R19).
 --   last sold    the newest order line for the SAME company whose item matches (item_match_tier 0 = same model or
