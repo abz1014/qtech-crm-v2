@@ -9,6 +9,10 @@ import { defineConfig, devices } from '@playwright/test'
  *    (no DB, no HMR socket). Baselines are Linux-only, produced by CI on ubuntu-24.04, with no
  *    platform suffix. See docs/design/VISUAL_TESTS.md. Run: npx playwright test --project=w1440 --project=w375
  *
+ *  CI (.github/workflows/e2e.yml) boots ONE stack and runs the database suites one after another, each as its own
+ *  invocation with a database reset between them (E2E_SUITE=db, or the suite's own name). To run several locally in one go:
+ *      E2E_SUITE=db npx playwright test --project=auth --project=companies
+ *
  *  - auth (A03): signs in as the seeded fixture users against the local CI Supabase stack, using the
  *    production build made with the stack's URL and anon key (.github/workflows/e2e.yml):
  *      eval "$(npx supabase status -o env | sed 's/^/export /')"
@@ -17,29 +21,31 @@ import { defineConfig, devices } from '@playwright/test'
  *    The tests read API_URL and SERVICE_ROLE_KEY from the environment (local keys only).
  *
  *  - rfq-board (R06): the RFQ board over a fixture set of RFQs, with axe at 1440 and 375 and the review screenshots.
- *    Same server, build and stack as 'companies' (.github/workflows/e2e-rfq-board.yml):
+ *    Same server, build and stack as 'companies' (.github/workflows/e2e.yml):
  *      E2E_SUITE=rfq-board REVIEW_DIR=review-shots npx playwright test --project=rfq-board
  *
  *  - companies (R02): the Companies screens, signed in through the login form as the fixture users, with its data
- *    set up through the REST API as those users. Same server and build as 'auth' (.github/workflows/e2e-companies.yml):
+ *    set up through the REST API as those users. Same server and build as 'auth' (.github/workflows/e2e.yml):
  *      E2E_SUITE=companies REVIEW_DIR=review-shots npx playwright test --project=companies
  *    The tests read API_URL and ANON_KEY from the environment (local keys only). REVIEW_DIR, when set, collects the
  *    review screenshots.
  *
  *  - rfq-intake (R05): the intake = float screen on the same stack and build. Asserts the FE-2 interaction counts, the
- *    Undo, the double-tap guard and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e-rfq-intake.yml):
+ *    Undo, the double-tap guard and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e.yml):
  *      E2E_SUITE=rfq-intake REVIEW_DIR=review-shots npx playwright test --project=rfq-intake
  *
  *  - rfq-detail (R07): the RFQ detail page on the same stack and build. Reply capture, can't quote, the lowest mark, chase, close,
- *    the FE-2 counts, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e-rfq-detail.yml):
+ *    the FE-2 counts, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e.yml):
  *      E2E_SUITE=rfq-detail REVIEW_DIR=review-shots npx playwright test --project=rfq-detail
  *
  *  - rfq-memory (R17, R18): supplier memory in intake (one-liner, Memory card), the last-price chip on RFQ reply rows and the company
- *    page's What we know panels, with fixtures (k) to (n), the 200 ms card budget and axe at 1440 and 375 (.github/workflows/e2e-rfq-memory.yml):
+ *    page's What we know panels, with fixtures (k) to (n), the 200 ms card budget and axe at 1440 and 375 (.github/workflows/e2e.yml):
  *      E2E_SUITE=rfq-memory REVIEW_DIR=review-shots npx playwright test --project=rfq-memory
  */
-const dbSuites = ['auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-memory']
-const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? (process.env.E2E_SUITE as 'auth' | 'companies' | 'rfq-board' | 'rfq-intake' | 'rfq-detail' | 'rfq-memory') : 'gallery'
+// 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
+// ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-memory']
+const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
 
@@ -60,7 +66,7 @@ export default defineConfig({
   outputDir: 'test-results',
   forbidOnly: Boolean(process.env.CI),
   // The database suites share one database: one worker, in order. The gallery suite is stateless.
-  workers: suite !== 'gallery' ? 1 : process.env.CI ? 2 : undefined,
+  workers: suite === 'db' ? 1 : process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   expect: {
     toHaveScreenshot: { animations: 'disabled', caret: 'hide', scale: 'css', maxDiffPixelRatio: 0.002 },
@@ -138,7 +144,7 @@ export default defineConfig({
     { name: 'w375', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 375, height: 812 } } },
   ],
   webServer:
-    suite !== 'gallery'
+    suite === 'db'
       ? {
           command: `npx vite preview --host 127.0.0.1 --port ${AUTH_PORT} --strictPort`,
           url: `http://127.0.0.1:${AUTH_PORT}/login`,

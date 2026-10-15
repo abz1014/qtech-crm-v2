@@ -1,9 +1,13 @@
 name: CI
 
+# One run per push: no pull_request trigger, because a push to a PR branch already runs this
+# (a second run on the merge ref doubled the minutes). Docs-only pushes are skipped.
 on:
   push:
     branches: ["**"]
-  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
   workflow_dispatch:
     inputs:
       update_baselines:
@@ -14,8 +18,46 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # Decides whether the gallery job is needed. Pushes to main and manual runs always run it.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      gallery: ${{ steps.final.outputs.gallery }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3.0.2
+        id: filter
+        with:
+          filters: |
+            gallery:
+              - 'src/ui/**'
+              - 'src/dev/**'
+              - 'src/index.css'
+              - 'tailwind.config.ts'
+              - 'e2e/gallery.*.spec.ts'
+              - 'e2e/gallery/**'
+              - 'e2e/__screenshots__/**'
+              - 'playwright.config.ts'
+              - 'package*.json'
+              - '.github/workflows/ci.yml'
+      - id: final
+        env:
+          CHANGED: ${{ steps.filter.outputs.gallery }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            echo "gallery=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "gallery=$CHANGED" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +80,10 @@ jobs:
   # U09: visual regression and axe over /dev/gallery, in real Chromium on Ubuntu.
   # Baselines are Linux-only and live in e2e/__screenshots__.
   e2e:
+    needs: changes
+    if: ${{ needs.changes.outputs.gallery == 'true' }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,8 +91,21 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: pwcache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
       - name: Install Chromium with system dependencies
+        if: steps.pwcache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+      - name: Install system dependencies only (browser restored from cache)
+        if: steps.pwcache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - name: Regenerate baselines (manual run with update_baselines)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_baselines }}
         run: npx playwright test e2e/gallery.visual.spec.ts --project=w1440 --project=w375 --update-snapshots
