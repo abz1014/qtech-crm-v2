@@ -87,7 +87,7 @@ create temp table r2 as select public.apply_fx_payload(
 select is((select r from r2), '{"usable": true, "written": 1, "skipped": 5}'::jsonb, 'zero, negative, text, null and absent values are skipped (AED is absent)');
 select is((select array_agg(currency order by currency) from public.fx_fetch_log where batch_id = 'b0000000-0000-4000-8000-000000000001' and kind = 'skip'),
   array['AED', 'CNY', 'EUR', 'GBP', 'USD'], 'every skipped currency is logged');
-select is((select array_agg(currency) from public.fx_rates where source = 'auto'), array['JPY'], 'only the sane value was written');
+select is((select array_agg(currency::text) from public.fx_rates where source = 'auto'), array['JPY'], 'only the sane value was written');
 
 -- ------------------------------------------------------------------ jump guard (more than 50% from the previous auto value)
 delete from public.fx_rates where source = 'auto';
