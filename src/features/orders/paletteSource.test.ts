@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { OrderHit } from '@/features/orders/api'
 
-const searchOrders = vi.fn<(text: string, signal?: AbortSignal) => Promise<OrderHit[]>>()
-vi.mock('@/features/orders/api', () => ({ searchOrders: (t: string, s?: AbortSignal) => searchOrders(t, s) }))
+const searchOrders = vi.fn<(text: string, signal?: AbortSignal, limit?: number, includePo?: boolean) => Promise<OrderHit[]>>()
+vi.mock('@/features/orders/api', () => ({ searchOrders: (t: string, s?: AbortSignal, l?: number, p?: boolean) => searchOrders(t, s, l, p) }))
+vi.mock('@/app/session', () => ({ useSession: () => ({ status: 'signed-out' }) }))
 vi.mock('@/app/palette/usePalette', () => ({ usePaletteSource: () => undefined }))
 
 import { ordersPaletteSource } from '@/features/orders/paletteSource'
@@ -40,6 +41,14 @@ describe('orders palette source (O03)', () => {
     await Promise.all(runs)
     expect(searchOrders).toHaveBeenCalledTimes(1)
     expect(searchOrders.mock.calls[0][0]).toBe('253')
+  })
+
+  it('an engineers source asks for the number only', async () => {
+    searchOrders.mockResolvedValue([])
+    const run = ordersPaletteSource(0, false).search!('38', new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(5)
+    await run
+    expect(searchOrders.mock.calls[0][3]).toBe(false)
   })
 
   it('empty text asks for nothing', async () => {

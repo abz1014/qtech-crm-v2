@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Package } from 'lucide-react'
+import { useSession } from '@/app/session'
 import { usePaletteSource } from '@/app/palette/usePalette'
 import { searchOrders, type OrderHit } from '@/features/orders/api'
 import { orderRef } from '@/lib/refs'
@@ -9,7 +10,7 @@ import type { PaletteItem, PaletteSource } from '@/ui/paletteSources'
  * The Orders source of the command palette (O03): an order is found by its number ("38", "ORD-0038") or by the customer's PO
  * number (any part of it). It opens the order. It reads orders only, so no price or invoice number is involved and an engineer
  * may use it. Like the R12 search it waits for the keystroke burst to end and the palette cancels a request a newer
- * keystroke has replaced.
+ * keystroke has replaced. An engineer finds an order by its number only (the palette shows an engineer no PO or invoice number, R12).
  */
 export const ORDERS_DEBOUNCE_MS = 150
 
@@ -38,7 +39,7 @@ export function toOrderItem(h: OrderHit): PaletteItem {
   }
 }
 
-export function ordersPaletteSource(debounceMs = ORDERS_DEBOUNCE_MS): PaletteSource {
+export function ordersPaletteSource(debounceMs = ORDERS_DEBOUNCE_MS, includePo = true): PaletteSource {
   return {
     id: 'orders',
     group: 'Orders',
@@ -47,7 +48,7 @@ export function ordersPaletteSource(debounceMs = ORDERS_DEBOUNCE_MS): PaletteSou
       const q = query.trim()
       if (!q) return []
       if (!(await pause(debounceMs, signal))) return []
-      const hits = await searchOrders(q, signal)
+      const hits = await searchOrders(q, signal, 6, includePo)
       if (signal.aborted) return []
       return hits.map(toOrderItem)
     },
@@ -56,6 +57,8 @@ export function ordersPaletteSource(debounceMs = ORDERS_DEBOUNCE_MS): PaletteSou
 
 /** Register the Orders source for as long as the caller is mounted (the app shell mounts it for the whole session). */
 export function useOrdersPaletteSource() {
-  const source = useMemo(() => ordersPaletteSource(), [])
+  const session = useSession()
+  const role = session.status === 'signed-in' ? session.user.role : ''
+  const source = useMemo(() => ordersPaletteSource(ORDERS_DEBOUNCE_MS, role !== 'engineer'), [role])
   usePaletteSource(source)
 }

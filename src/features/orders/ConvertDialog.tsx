@@ -57,6 +57,8 @@ export function ConvertDialog({ rfq, inquiries, rates, onClose }: { rfq: RfqHead
   const [terms, setTerms] = useState<number | null>(null)
   const [termsTouched, setTermsTouched] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** The supplier list opens by itself while a line still needs a price, and stays as the person left it once they toggle it. */
+  const [listOpen, setListOpen] = useState<boolean | null>(null)
 
   useEffect(() => {
     if (!termsTouched && termsQ.data) setTerms(termsQ.data.days)
@@ -161,7 +163,7 @@ export function ConvertDialog({ rfq, inquiries, rates, onClose }: { rfq: RfqHead
           </Field>
 
           {itemsQ.isSuccess && items.length > 0 ? (
-            <details className="rounded border" open={missing.length > 0 ? true : undefined}>
+            <details className="rounded border" open={listOpen ?? missing.length > 0} onToggle={e => setListOpen((e.currentTarget as HTMLDetailsElement).open)}>
               <summary className="cursor-pointer px-3 py-2 text-sm font-medium">
                 Suppliers by line
                 <span className="ml-2 text-xs font-regular text-fg-muted">

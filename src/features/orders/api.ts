@@ -321,21 +321,32 @@ export interface OrderHit {
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, m => `\\${m}`)
 
-export async function searchOrders(text: string, signal?: AbortSignal, limit = 6): Promise<OrderHit[]> {
+/**
+ * Admin and sales match the number and any part of the customer PO. An engineer matches the number only: the R12 rule is that the
+ * palette shows an engineer no PO or invoice number, so the PO column is neither searched nor read for them.
+ */
+export async function searchOrders(text: string, signal?: AbortSignal, limit = 6, includePo = true): Promise<OrderHit[]> {
   const q = text.trim()
   if (!q) return []
   const db = requireSupabase()
   const digits = /^(ord[-\s]*)?(\d{1,9})$/i.exec(q)
-  const filters = [`customer_po_number.ilike.%${escapeLike(q).replace(/[,()]/g, ' ')}%`]
+  const filters: string[] = []
+  if (includePo) filters.push(`customer_po_number.ilike.%${escapeLike(q).replace(/[,()]/g, ' ')}%`)
   if (digits) filters.push(`number.eq.${Number(digits[2])}`)
-  let req = db.from('orders').select('id, number, customer_po_number, companies(name)').or(filters.join(',')).order('number', { ascending: false }).limit(limit)
+  if (filters.length === 0) return []
+  let req = db
+    .from('orders')
+    .select(includePo ? 'id, number, customer_po_number, companies(name)' : 'id, number, companies(name)')
+    .or(filters.join(','))
+    .order('number', { ascending: false })
+    .limit(limit)
   if (signal) req = req.abortSignal(signal)
   const { data, error } = await req
   if (error) throw new Error(error.message)
-  type Row = { id: string; number: number; customer_po_number: string | null; companies: { name: string } | { name: string }[] | null }
+  type Row = { id: string; number: number; customer_po_number?: string | null; companies: { name: string } | { name: string }[] | null }
   return ((data ?? []) as unknown as Row[]).map(r => {
     const c = Array.isArray(r.companies) ? r.companies[0] : r.companies
-    return { id: r.id, number: r.number, customerPo: r.customer_po_number, companyName: c?.name ?? 'Unknown company' }
+    return { id: r.id, number: r.number, customerPo: includePo ? (r.customer_po_number ?? null) : null, companyName: c?.name ?? 'Unknown company' }
   })
 }
 

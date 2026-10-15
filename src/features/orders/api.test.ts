@@ -54,6 +54,11 @@ describe('orders api: convert and search', () => {
     expect(filter).toContain('number.eq.38')
     expect(filter).toContain('customer_po_number.ilike.%ORD-0038%')
     await searchOrders('50%_x')
+    // an engineer: the number only, and the PO column is neither filtered nor selected
+    await searchOrders('ORD-0038', undefined, 6, false)
+    expect(String(opArgs(db.calls[2], 'or')?.[0])).toBe('number.eq.38')
+    expect(String(opArgs(db.calls[2], 'select')?.[0])).not.toMatch(/po/)
+    expect(await searchOrders('253074', undefined, 6, false)).toBeDefined()
     expect(String(opArgs(db.calls[1], 'or')?.[0])).toContain('50\\%\\_x')
     expect(String(opArgs(db.calls[1], 'or')?.[0])).not.toContain('number.eq')
   })

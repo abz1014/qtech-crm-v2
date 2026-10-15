@@ -70,7 +70,7 @@ export function CommissioningPanel({
           <div className="grid gap-5 md:grid-cols-3">
             <div className="grid content-start gap-1">
               <span className="text-xs text-fg-muted">Planned on</span>
-              <TapDate value={order.plannedOn} label="Planned date" today={today} disabled={!canEdit} onSave={setPlanned} empty="Not planned" />
+              <TapDate value={order.plannedOn} label="Planned date" today={today} disabled={!canEdit || isEngineer} onSave={setPlanned} empty="Not planned" />
               <span className="text-xs text-fg-muted">{isEngineer ? 'Moved with “Change planned date”.' : 'Known at order time.'}</span>
             </div>
             <div className="grid content-start gap-1">

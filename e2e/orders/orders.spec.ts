@@ -148,8 +148,8 @@ async function seedOrder(extra: Record<string, unknown> = {}): Promise<OrderSeed
     rest<{ id: string; supplier_id: string }[]>('admin', 'supplier_orders', {
       method: 'POST',
       body: [
-        { order_id: order.id, supplier_id: supplierA.id, currency: 'EUR', inquiry_id: inquiry.id },
-        { order_id: order.id, supplier_id: supplierB.id, currency: 'USD', placed_on: karachiDay(-10), expected_on: karachiDay(-3), reference: 'PI-123' },
+        { order_id: order.id, supplier_id: supplierA.id, currency: 'EUR', inquiry_id: inquiry.id, placed_on: null, expected_on: null, reference: null },
+        { order_id: order.id, supplier_id: supplierB.id, currency: 'USD', inquiry_id: null, placed_on: karachiDay(-10), expected_on: karachiDay(-3), reference: 'PI-123' },
       ],
     }),
   )
@@ -159,9 +159,9 @@ async function seedOrder(extra: Record<string, unknown> = {}): Promise<OrderSeed
     rest<{ id: string; description: string; position: number }[]>('admin', 'order_items', {
       method: 'POST',
       body: [
-        { order_id: order.id, position: 0, description: `Belimo actuator ${tag}`, qty: 6, unit: 'ea', unit_price_net: 48500, supplier_unit_price: 214, supplier_order_id: legA, rfq_item_id: rfqItem.id },
-        { order_id: order.id, position: 1, description: `Memosens pH sensor ${tag}`, qty: 2, unit: 'ea', unit_price_net: 96500, supplier_order_id: legB },
-        { order_id: order.id, position: 2, description: `Loop check and commissioning ${tag}`, qty: 1, unit: 'job', unit_price_net: 135000, is_service: true },
+        { order_id: order.id, position: 0, description: `Belimo actuator ${tag}`, qty: 6, unit: 'ea', unit_price_net: 48500, supplier_unit_price: 214, supplier_order_id: legA, rfq_item_id: rfqItem.id, is_service: false },
+        { order_id: order.id, position: 1, description: `Memosens pH sensor ${tag}`, qty: 2, unit: 'ea', unit_price_net: 96500, supplier_unit_price: null, supplier_order_id: legB, rfq_item_id: null, is_service: false },
+        { order_id: order.id, position: 2, description: `Loop check and commissioning ${tag}`, qty: 1, unit: 'job', unit_price_net: 135000, supplier_unit_price: null, supplier_order_id: null, rfq_item_id: null, is_service: true },
       ],
     }),
   )
@@ -549,20 +549,36 @@ test.describe('O03: the command palette finds an order by number and customer PO
     }).toPass({ timeout: 10_000 })
   }
 
+  const ref = (n: number) => `ORD-${String(n).padStart(4, '0')}`
+
   test('by customer PO, and by order number', async ({ page }) => {
+    const s = await seedOrder()
+    await openAs(page, 'sales', '/today')
+    await openPalette(page)
+    const input = page.getByRole('combobox')
+    await input.fill(s.po.slice(0, 9))
+    const hit = page.getByRole('option', { name: new RegExp(`${ref(s.order.number)} ${s.company.name}`) })
+    await expect(hit).toBeVisible()
+    await expect(hit).toContainText(`Customer PO ${s.po}`)
+    await shot(page, 'o03-palette-po-1440')
+    await input.fill(ref(s.order.number))
+    await expect(hit).toBeVisible()
+    await hit.click()
+    await expect(page).toHaveURL(new RegExp(`/orders/${s.order.id}$`))
+  })
+
+  test('an engineer finds an order by its number only, never by the PO number (R12: no PO or invoice number for an engineer)', async ({ page }) => {
     const s = await seedOrder()
     await openAs(page, 'engineer', '/today')
     await openPalette(page)
     const input = page.getByRole('combobox')
-    await input.fill(s.po.slice(0, 9))
-    const hit = page.getByRole('option', { name: new RegExp(`ORD-${String(s.order.number).padStart(4, '0')} ${s.company.name}`) })
+    await input.fill(s.po)
+    await expect(page.getByRole('option', { name: new RegExp(`Add “${s.po}”`) })).toBeVisible()
+    await expect(page.getByRole('option')).toHaveCount(1)
+    await input.fill(ref(s.order.number))
+    const hit = page.getByRole('option', { name: new RegExp(`${ref(s.order.number)} ${s.company.name}`) })
     await expect(hit).toBeVisible()
-    await expect(hit).toContainText(`Customer PO ${s.po}`)
-    await shot(page, 'o03-palette-po-1440')
-    await input.fill(`ORD-${String(s.order.number).padStart(4, '0')}`)
-    await expect(hit).toBeVisible()
-    await hit.click()
-    await expect(page).toHaveURL(new RegExp(`/orders/${s.order.id}$`))
+    await expect(hit).not.toContainText(s.po)
   })
 })
 
