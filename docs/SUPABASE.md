@@ -200,3 +200,87 @@ Checking it (Dashboard):
    An `error` row reading "no source gave usable rates" means tonight's refresh failed; the staleness bands in the app then age the rates.
 4. The rates: `select * from public.v_fx_latest;`
 5. Test now without waiting: `select public.fetch_fx_rates();` then, a minute later, `select public.ingest_fx_response();`.
+
+## Backups (R13, `backup.yml`)
+
+The Free plan has no platform backups, so the repository makes its own. Cost: $0 (public repo, standard runners).
+
+**What is backed up.** The whole `public` schema, structure and data (`public.dump`: tables, sequences such as the quotation numbers,
+views, functions, policies, grants), plus the data of `auth.users`, `auth.identities`, `storage.buckets` and `storage.objects`
+(`authstorage.dump`). It also holds `counts.tsv` (a row count per table), `migrations.txt` (applied migration versions),
+`roles.txt` and `manifest.txt`. Hosted Postgres does not allow a roles dump, and the platform roles are managed by Supabase,
+so only custom roles are listed.
+
+**What is NOT backed up: the files themselves.** Storage objects (RFQ files, GST receipts, expense receipts, generated PDFs)
+live in object storage, not in the database. Downloading them needs either the service-role key (we do not put that in GitHub)
+or a signed-in user session (that would mean an admin password in GitHub). Neither was accepted, so only the object
+metadata is saved: after a loss you can see exactly which files existed (bucket, path, size, who, when). Generated PDFs
+(quotations, purchase orders) can be regenerated from their stored lines. For the rest, download the buckets by hand from the dashboard
+(Storage) now and then, until a read-only backup user exists (a possible follow-up: a dedicated role plus a signed-in-user mirror step).
+
+**Where and how long.** Nightly at 01:30 Karachi (20:30 UTC), `backup.yml` makes one workflow artifact
+`backup-<UTC date>`: `qtech-crm-<stamp>.tar.gz.age`, kept 30 days (about 30 copies; the cap on a public repo is 90 days). Artifacts of a
+public repo can be downloaded by any signed-in GitHub user, which is why the file is encrypted with `age` to a PUBLIC key
+before it leaves the runner. Without the private key it is unreadable. The workflow refuses to run with no recipient, and
+refuses a recipient that is a private key. Size is small (the Free database is capped at 500 MB, and a custom-format dump is compressed);
+artifact storage on a public repo is not billed. GitHub turns scheduled workflows off after 60 days without repository activity:
+re-enable under Actions if that happens. A Release asset would be public and never expire, so it was not chosen.
+
+**Connection.** Plain `pg_dump` (the postgres:17 image, so the version matches the server) through the Supabase session pooler,
+`aws-N-<region>.pooler.supabase.com:5432` as user `postgres.<ref>`. The direct host `db.<ref>.supabase.co` is IPv6 only on the
+Free plan and GitHub runners have no IPv6; the session pooler is IPv4 and keeps pg_dump's session semantics (the transaction
+pooler on 6543 does not). The CLI's `supabase db dump` was not used: it needs `link`, which needs an access token (one more secret),
+and it skips `auth`. `scripts/backup/find-pooler.sh` finds the host by trying the known regions; set the `SUPABASE_POOLER_HOST`
+variable to skip the search.
+
+**Restore drill (weekly, Monday 03:00 Karachi, and on dispatch).** The drill cannot decrypt (no private key on GitHub), so it makes its
+own fresh dump of the live database, never uploads it, restores it into the CI local Supabase stack (migrations that are not live yet
+are left out so the schema matches), and compares every row count with `counts.tsv`. The log prints only tables that differ.
+The scripts themselves are tested on every change by `backup-checks.yml` (encryption round trip with a throwaway key, and
+dump, wipe, restore, compare against the local stack with the seed), so a green drill means the live data restores with the same code.
+Run the check on a quiet moment: a write between the dump and the count would show as a one-row difference; run it again.
+
+### Orchestrator: create the `backup` environment (once)
+
+```bash
+R=abz1014/qtech-crm-v2
+# environment limited to main, no required reviewers (a schedule cannot wait for approval)
+gh api -X PUT repos/$R/environments/backup --input - <<'JSON'
+{"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}
+JSON
+gh api -X POST repos/$R/environments/backup/deployment-branches -f name=main -f type=branch
+# secrets (values supplied by the owner; gh prompts, nothing goes in the shell history)
+gh secret set SUPABASE_DB_PASSWORD  --env backup --repo $R
+gh secret set SUPABASE_PROJECT_REF  --env backup --repo $R      # yafbphagorydbitfgfmg
+# variables (not secret): the PUBLIC age key, and optionally the pooler host
+gh variable set BACKUP_AGE_RECIPIENT  --env backup --repo $R --body 'age1....'
+gh variable set SUPABASE_POOLER_HOST  --env backup --repo $R --body 'aws-0-<region>.pooler.supabase.com'   # optional
+# first run, after the owner has made the key:
+gh workflow run backup.yml --repo $R -f run=both
+```
+
+The pooler host is on the dashboard: Connect, Session pooler. The environment never holds a service-role key or an access token.
+
+### Owner: make the key pair (Windows, once)
+
+1. Download `age` for Windows (amd64 zip) from https://github.com/FiloSottile/age/releases, unzip to e.g. `C:\age\`.
+2. In PowerShell: `cd C:\age; .\age-keygen.exe -o backup-key.txt`. It prints `Public key: age1...`. Give ONLY that line to the orchestrator (it is not secret).
+3. `backup-key.txt` is the private key. Copy it to two places that are not GitHub and not this repo: a password manager entry (paste the file content) and
+   an offline USB stick. Never email it, never commit it. If it is lost, every backup is unreadable; if it leaks, make a new pair and change the variable.
+4. Test it once the first artifact exists: Actions, Backup, the run, download `backup-<date>`, unzip to get the `.age` file, then
+   `.\age.exe -d -i backup-key.txt -o backup.tar.gz qtech-crm-<stamp>.tar.gz.age` and `tar -xzf backup.tar.gz` (Windows 10+ has `tar`).
+   Inside is a folder with `public.dump`, `authstorage.dump`, `counts.tsv`, `migrations.txt`, `roles.txt`, `manifest.txt`.
+
+### Restore, step by step (owner, real file)
+
+Needs Docker Desktop (the same one the Supabase CLI uses) and the key.
+
+1. Decrypt and unpack as above (or with Git Bash: `bash scripts/backup/decrypt.sh FILE.age backup-key.txt out`).
+2. Practice locally first (recommended every few months): `npx supabase start`, `npx supabase db reset --local`, then in Git Bash
+   `PGHOST=127.0.0.1 PGPORT=54322 PGUSER=supabase_admin PGPASSWORD=postgres bash scripts/backup/restore.sh out/qtech-crm-<stamp>`.
+   The last line must read `restore ok: N tables, every row count matches`. Check the app against it.
+3. Real recovery into a NEW Supabase project: create the project, `npx supabase link`, `npx supabase db push` (migrations up to the versions in
+   `migrations.txt`), then run `restore.sh` with that project's session-pooler details (`PGHOST`, `PGPORT=5432`, `PGUSER=postgres.<newref>`,
+   `PGPASSWORD`, `PGSSLMODE=require`). Then re-deploy the Edge Function, point the app's env at the new project and re-upload files from your own copies.
+   `restore.sh` replaces public, `auth.users`, `auth.identities` and `storage.*` rows, so never point it at a project you want to keep.
+4. Users keep their passwords (the hashes are in `auth.users`).
