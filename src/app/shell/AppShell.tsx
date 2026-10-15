@@ -9,6 +9,7 @@ import { useOrdersPaletteSource } from '@/features/orders/paletteSource'
 import { PaletteHost } from '@/app/palette/PaletteHost'
 import { usePalette } from '@/app/palette/usePalette'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
+import { PwaPrompts } from '@/app/shell/PwaPrompts'
 import { TopBar } from '@/app/shell/TopBar'
 
 interface AppShellProps {
@@ -27,6 +28,7 @@ export function AppShell({ counts }: AppShellProps) {
   if (session.status !== 'signed-in') return null
   return (
     <ToastProvider>
+      <PwaPrompts />
       <PaletteHost role={session.user.role}>
         <Frame user={session.user} counts={counts} />
       </PaletteHost>

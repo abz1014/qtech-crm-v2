@@ -40,6 +40,10 @@
     "react-hook-form": "^7.90.0",
     "react-router-dom": "^6.30.6",
     "tailwind-merge": "^2.6.1",
+    "workbox-core": "7.3.0",
+    "workbox-precaching": "7.3.0",
+    "workbox-routing": "7.3.0",
+    "workbox-window": "7.3.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -68,6 +72,8 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.71.2",
     "vite": "^5.4.21",
-    "vitest": "^3.2.7"
+    "vite-plugin-pwa": "1.0.3",
+    "vitest": "^3.2.7",
+    "workbox-build": "7.3.0"
   }
 }
