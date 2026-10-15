@@ -1,8 +1,39 @@
-# Hosting: Cloudflare Pages
+# Hosting: Vercel (primary), Cloudflare Pages (fallback)
 
-The app is a static Vite build. It is hosted on Cloudflare Pages (free, commercial use allowed). Vercel was dropped because its free tier is non-commercial.
+The app is a static Vite build. It is hosted on Vercel (Hobby plan). The owner accepted the risk that Vercel's free tier has a non-commercial clause (see docs/DECISIONS.md, 2026-10-15). If Vercel ever suspends the project, switch to Cloudflare Pages (section below); its config stays in the repo.
 
-## Pages project settings
+## Deploy on Vercel
+
+1. In Vercel, Add New, Project, import the GitHub repo `abz1014/qtech-crm-v2`.
+2. Framework preset: **Vite**. Build command `npm run build`, output directory `dist` (the preset's defaults). Production branch `main`.
+3. Environment variables (Production and Preview):
+
+   | Name | Value |
+   |---|---|
+   | `VITE_SUPABASE_URL` | `https://yafbphagorydbitfgfmg.supabase.co` |
+   | `VITE_SUPABASE_ANON_KEY` | the project's anon (public) key |
+
+   Never put the service-role key in Vercel.
+4. Deploy.
+5. Paste the `https://<name>.vercel.app` address (or the custom domain) to the team; it is the production URL used below.
+
+### Headers and routing (`vercel.json`)
+
+- `vercel.json` holds the security headers (HSTS, CSP, Permissions-Policy, nosniff, X-Frame-Options, Referrer-Policy), long immutable caching for `/assets/*`, and an SPA rewrite that serves `/index.html` for every path that is not a file.
+- The CSP allows only `'self'` plus the Supabase project `https://yafbphagorydbitfgfmg.supabase.co` (and `wss://` on the same host). If the Supabase project or a custom API domain changes, edit the CSP.
+- `public/_headers` carries the same headers for Cloudflare Pages. Keep both files in step: `scripts/hosting-headers.test.mjs` runs in CI (`npm test`) and fails if they drift.
+
+### After the first deploy
+
+1. Note the site origin (`https://<name>.vercel.app`, or the custom domain).
+2. Run Actions, Deploy functions with `allowed_origins` set to that origin (docs/SUPABASE.md). `*.vercel.app` hostnames and custom domains pass validation; wildcards do not.
+   Preview deployments (`<name>-<hash>-<team>.vercel.app`) are not allowed unless listed.
+3. Add the origin to Supabase Auth, Site URL and redirect URLs, if auth redirects are used.
+4. Check the headers on the live site (securityheaders.com) and that a deep link such as `/rfqs` loads after a hard refresh.
+
+## Fallback: switch to Cloudflare Pages in 10 minutes
+
+Cloudflare Pages is free with commercial use allowed. Use it if Vercel suspends the project.
 
 | Setting | Value |
 |---|---|
@@ -14,20 +45,5 @@ The app is a static Vite build. It is hosted on Cloudflare Pages (free, commerci
 | `VITE_SUPABASE_URL` | `https://yafbphagorydbitfgfmg.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | the project's anon (public) key |
 
-Set the variables for both Production and Preview. Never put the service-role key in Pages.
-
-## Headers and routing
-
-- `public/_headers` is copied to `dist/_headers` by the build and holds the security headers (HSTS, CSP, Permissions-Policy, nosniff, X-Frame-Options, Referrer-Policy).
-  The CSP allows only `'self'` plus the Supabase project `https://yafbphagorydbitfgfmg.supabase.co` (and `wss://` on the same host, for realtime if used).
-  If the Supabase project or a custom API domain changes, edit the CSP there.
-- SPA routing needs no rule. Pages serves `index.html` for unknown paths as long as the build has no `404.html`; there is none. Do not add one.
-- `vercel.json` has been removed.
-
-## After the first deploy
-
-1. Note the site origin (`https://<name>.pages.dev`, or the custom domain).
-2. Run Actions, Deploy functions with `allowed_origins` set to that origin (docs/SUPABASE.md). `*.pages.dev` hostnames and custom domains both pass validation; wildcards do not.
-   Preview deployments (`<hash>.<name>.pages.dev`) are not allowed unless listed.
-3. Add the origin to Supabase Auth, Site URL and redirect URLs, if auth redirects are used.
-4. Check the headers on the live site (securityheaders.com) and that a deep link such as `/rfqs` loads after a hard refresh.
+- `public/_headers` is copied to `dist/_headers` by the build. SPA routing needs no rule: Pages serves `index.html` for unknown paths as long as the build has no `404.html`; there is none. Do not add one.
+- Then repeat "After the first deploy" with the `https://<name>.pages.dev` origin: re-run Deploy functions with the new `allowed_origins` (the secret is replaced, not merged) and update Supabase Auth URLs.
