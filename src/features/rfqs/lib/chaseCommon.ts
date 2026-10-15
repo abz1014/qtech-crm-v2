@@ -14,7 +14,7 @@ export interface ChaseSignature {
   name: string
   company: string
   jobTitle?: string | null
-  /** users.phone: printed under the email signature. */
+  /** users.phone: printed on its own line under an email signature. */
   phone?: string | null
 }
 

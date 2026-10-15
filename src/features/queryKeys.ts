@@ -63,6 +63,10 @@ function rfqs() {
     fileUrls: (id: string, signature: string) => [...detail(id), 'file-urls', signature] as const,
     /** One slice of an RFQ page (R07). `slice` is a fixed word, so a typo is a type error. */
     part: (id: string, slice: RfqPart) => [...detail(id), slice] as const,
+    /** Supplier stats for the memory lines on the RFQ page, by the suppliers' ids. */
+    stats: (suppliers: string) => [...all, 'stats', suppliers] as const,
+    /** The signed-in person's job title and phone (chase signatures). */
+    signature: (userId: string) => [...all, 'signature', userId] as const,
   }
 }
 /** R19 adds the quotation slices: the issued quotations, the items with their quoted prices, the price chips. */
@@ -71,7 +75,7 @@ export type RfqPart = 'header' | 'items' | 'inquiries' | 'clarifications' | 'att
 /** Exchange rates (R07 reads today's rate per currency; R15 owns editing them). */
 function fx() {
   const all = root('fx')
-  return { all, latest: () => [...all, 'latest'] as const }
+  return { all, latest: () => [...all, 'latest'] as const, history: (currency: string) => [...all, 'history', currency] as const }
 }
 /** Intake (R05): who can be asked for a price, and what each of them remembers about the items being entered. */
 function intake() {
@@ -144,12 +148,6 @@ function today() {
   }
 }
 
-/** The signed-in person's own profile (job title for message signatures). */
-function me() {
-  const all = root('me')
-  return { all, profile: (userId: string) => [...all, 'profile', userId] as const }
-}
-
 /** Money, expenses (M03, M11). Admin only; the hooks pass `enabled` so no one else makes the request. */
 function money() {
   const all = root('money')
@@ -177,7 +175,6 @@ function money() {
 }
 
 export const qk = {
-  me: me(),
   today: today(),
   settings: settings(),
   companies: companies(),

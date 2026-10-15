@@ -106,7 +106,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   const leg = useLegDraft(item.rule === 'goods_late' ? item.legId : undefined)
   const isMoney = user?.role === 'admin' || user?.role === 'sales'
   const payment = usePaymentDraft(item.rule === 'payment_overdue' ? item.orderId : undefined, Boolean(isMoney))
-  const choose = useChooseSuppliers(item.rfqId ?? '', item.ref)
+  const choose = useChooseSuppliers(header.data ?? undefined, inquiries.data ?? [])
 
   const rfq = data.rfqs.find(r => r.id === item.rfqId)
   const questions = useMemo(() => data.clarifications.filter(c => c.rfqId === item.rfqId), [data.clarifications, item.rfqId])
@@ -299,13 +299,11 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       {item.escalation === 'float_elsewhere' && !justChased && supplierRule && items.data && inquiries.data ? (
         <FloatElsewhere
           supplierName={item.party}
-          items={items.data
-            .filter(it => !inquiries.data?.find(i => i.id === item.inquiryId)?.lines.some(l => l.itemId === it.id))
-            .map(it => ({ id: it.id, number: it.number, description: it.description, brandId: it.brandId, brandName: it.brandName }))}
+          items={items.data.filter(it => !inquiries.data?.find(i => i.id === item.inquiryId)?.lines.some(l => l.itemId === it.id))}
           askedIds={new Set(inquiries.data.map(i => i.supplierId))}
           today={today}
           busy={choose.busy}
-          onChoose={ids => void choose.choose(ids)}
+          onChoose={input => void choose.choose(input)}
           onChaseAgain={() => setAgain(true)}
         />
       ) : null}

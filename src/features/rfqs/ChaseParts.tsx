@@ -15,10 +15,10 @@ import { useToast } from '@/ui/useToast'
  */
 
 /** Text between asterisks is bold when pasted into WhatsApp: here the asterisks are drawn faint and the words bold. */
-export function FormattedMessage({ text, className, testId }: { text: string; className?: string; testId?: string }) {
+export function FormattedMessage({ text, className, testId, chaseText = false }: { text: string; className?: string; testId?: string; chaseText?: boolean }) {
   const parts = text.split(/(\*[^*\n]+\*)/g)
   return (
-    <pre data-testid={testId} className={cn('whitespace-pre-wrap break-words font-sans text-sm text-fg', className)}>
+    <pre data-testid={testId} data-chase-text={chaseText ? '' : undefined} className={cn('whitespace-pre-wrap break-words font-sans text-sm text-fg', className)}>
       {parts.map((p, i) =>
         /^\*[^*\n]+\*$/.test(p) ? (
           <span key={i}>

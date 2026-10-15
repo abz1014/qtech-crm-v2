@@ -187,7 +187,8 @@ export function generateSupplierChase(input: SupplierChaseInput): SupplierChase 
       )
       lines.push('', 'Thank you.')
     }
-    lines.push('With best regards,', input.signature.name, input.signature.jobTitle ? `${input.signature.jobTitle}, ${input.signature.company}` : input.signature.company, ...(input.signature.phone ? [input.signature.phone] : []))
+    lines.push('With best regards,', input.signature.name, input.signature.jobTitle ? `${input.signature.jobTitle}, ${input.signature.company}` : input.signature.company)
+    if (input.signature.phone) lines.push(input.signature.phone)
   }
 
   const n = items.length

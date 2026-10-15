@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
+import type { RfqItemRow } from '@/features/rfqs/api'
 import { useSupplierCandidates, useSupplierMemory } from '@/features/rfqs/hooks'
 import { nextInLine, numbersText } from '@/features/rfqs/escalationLogic'
 import { suggestSuppliers } from '@/features/rfqs/lib/supplierSuggestion'
@@ -11,13 +12,7 @@ import { suggestSuppliers } from '@/features/rfqs/lib/supplierSuggestion'
  * someone else? Next in line, by reason, each with its memory line (the same facts the intake suggestions show; memory
  * never scores or reorders). A suggestion only: nothing changes until the person chooses.
  */
-export interface EscalationItem {
-  id: string
-  number: number
-  description: string
-  brandId: string | null
-  brandName: string | null
-}
+export type EscalationItem = RfqItemRow
 
 export function FloatElsewhere({
   supplierName,
@@ -33,8 +28,8 @@ export function FloatElsewhere({
   askedIds: ReadonlySet<string>
   today: string
   busy?: boolean
-  /** Shortlist the suggested suppliers on this RFQ. */
-  onChoose: (supplierIds: string[]) => void
+  /** Ask the suggested suppliers about these items (Float to another supplier). */
+  onChoose: (input: { supplierIds: string[]; names: string[]; items: readonly RfqItemRow[] }) => void
   onChaseAgain: () => void
 }) {
   const candidates = useSupplierCandidates(true)
@@ -59,7 +54,7 @@ export function FloatElsewhere({
       title={`Chased twice, no reply from ${supplierName}`}
       action={
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" icon={TriangleAlert} busy={busy} busyLabel="Choosing" disabled={next.length === 0} onClick={() => onChoose(next.map(s => s.supplierId))}>
+          <Button size="sm" icon={TriangleAlert} busy={busy} busyLabel="Choosing" disabled={next.length === 0} onClick={() => onChoose({ supplierIds: next.map(s => s.supplierId), names: next.map(s => s.name), items })}>
             Choose suppliers for {all}
           </Button>
           <Button size="sm" onClick={onChaseAgain}>
