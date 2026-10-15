@@ -10,9 +10,12 @@ import { axeViolations } from '../support/axe'
  */
 
 async function openPalette(page: Page) {
-  await expect(page.getByRole('button', { name: 'Search or jump to' }).first()).toBeEnabled()
-  await page.keyboard.press('Control+k')
-  await expect(page.getByRole('dialog', { name: 'Search or jump to' })).toBeVisible()
+  // The phone layout has no search button; the shortcut works at every width once the shell has mounted.
+  await page.locator('#main').waitFor()
+  await expect(async () => {
+    if (!(await page.getByRole('dialog', { name: 'Search or jump to' }).isVisible())) await page.keyboard.press('Control+k')
+    await expect(page.getByRole('dialog', { name: 'Search or jump to' })).toBeVisible({ timeout: 1000 })
+  }).toPass({ timeout: 10_000 })
 }
 
 const unique = () => Math.random().toString(36).slice(2, 8)
@@ -45,7 +48,7 @@ test.describe('palette search (R12)', () => {
     await page.getByRole('combobox').fill(`qadir${f.tag}`)
     const hit = page.getByRole('option', { name: new RegExp(`Qadir${f.tag} Hussain`) })
     await expect(hit).toBeVisible()
-    await expect(page.getByText('Contacts', { exact: true })).toBeVisible()
+    await expect(page.getByRole('dialog').getByText('Contacts', { exact: true })).toBeVisible()
     // the matched part is bold
     await expect(hit.locator('b').first()).toHaveText(new RegExp(`qadir${f.tag}`, 'i'))
     await review(page, 'search-contact-1440')
@@ -89,7 +92,7 @@ test.describe('palette search (R12)', () => {
     await expect(page).toHaveURL(new RegExp(`/companies/${f.company.id}$`))
     await page.goto('/today')
     await openPalette(page)
-    await expect(page.getByText('Recent', { exact: true })).toBeVisible()
+    await expect(page.getByRole('dialog').getByText('Recent', { exact: true })).toBeVisible()
     await expect(page.getByRole('option', { name: new RegExp(f.company.name) })).toBeVisible()
   })
 
@@ -158,7 +161,7 @@ test.describe('palette search (R12)', () => {
       await openPalette(page)
       await page.getByRole('combobox').fill(`srch${f.tag}`)
       await expect(page.getByRole('option', { name: new RegExp(f.company.name) }).first()).toBeVisible()
-      await expect(page.getByText('RFQs', { exact: true })).toBeVisible()
+      await expect(page.getByRole('dialog').getByText('RFQs', { exact: true })).toBeVisible()
       await review(page, `search-results-${name}`)
       expect(await axeViolations(page, { landmarks: false })).toEqual([])
     })
