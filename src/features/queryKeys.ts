@@ -190,6 +190,11 @@ function money() {
       receipts: (expenseId: string) => [...expenses, 'receipts', expenseId] as const,
     },
     categories: () => [...all, 'expense-categories'] as const,
+    /** One order's costs for the Margin panel (M04): expenses, expected cost, the supplier-price inputs. */
+    orderCosts: (orderId: string) => [...all, 'order-costs', orderId] as const,
+    /** Every order's margin row (M04) and the reconciliation exceptions (M07). Admin only. */
+    margins: () => [...all, 'margins'] as const,
+    exceptions: () => [...all, 'exceptions'] as const,
     orderOptions: () => [...all, 'order-options'] as const,
     legOptions: (orderId: string) => [...all, 'leg-options', orderId] as const,
     /** M01: the GST register (every invoice, all months), one invoice with its steps, the order amounts a new invoice starts from. */

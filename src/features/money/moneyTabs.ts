@@ -12,4 +12,7 @@ export const MONEY_TABS: readonly MoneyTab[] = [
   { key: 'gst-register', label: 'GST register', to: '/money/gst-register' },
   { key: 'receivables', label: 'Receivables', salesLabel: 'Order balances', to: '/money/receivables' },
   { key: 'expenses', label: 'Expenses', to: '/money/expenses', adminOnly: true },
+  { key: 'margins', label: 'Margins', to: '/money/margins', adminOnly: true },
+  { key: 'exceptions', label: 'Exceptions', to: '/money/exceptions', adminOnly: true },
 ]
+
