@@ -16,7 +16,7 @@
 -- ranking) is unchanged.
 
 create index orders_customer_po_trgm_idx on public.orders using gin (customer_po_number extensions.gin_trgm_ops);
-create index order_items_description_trgm_idx on public.order_items using gin (description extensions.gin_trgm_ops);
+create index order_items_description_search_trgm_idx on public.order_items using gin (description extensions.gin_trgm_ops);
 create index invoices_number_trgm_idx on public.invoices using gin (number extensions.gin_trgm_ops);
 
 drop function public.search_all(text, integer);
