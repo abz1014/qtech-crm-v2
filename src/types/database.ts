@@ -168,6 +168,12 @@ isOneToOne: false
       referencedRelation: "users"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "clarifications_last_asked_by_fkey"
+      columns: ["last_asked_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "clarifications_raised_by_inquiry_id_fkey"
       columns: ["raised_by_inquiry_id"]
 isOneToOne: false
@@ -1200,6 +1206,12 @@ isOneToOne: false
       referencedRelation: "users"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "supplier_inquiries_last_chased_by_fkey"
+      columns: ["last_chased_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "supplier_inquiries_rfq_id_fkey"
       columns: ["rfq_id"]
 isOneToOne: false
@@ -1267,6 +1279,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_supplier_activity"
       referencedColumns: ["inquiry_id"]
+    },{
+      foreignKeyName: "supplier_orders_last_chased_by_fkey"
+      columns: ["last_chased_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
     },{
       foreignKeyName: "supplier_orders_order_id_fkey"
       columns: ["order_id"]
