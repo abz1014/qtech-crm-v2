@@ -61,11 +61,16 @@ const expense = (orderId: string, amount: number, note = 'test cost') =>
 const ordRef = (n: number) => `ORD-${String(n).padStart(4, '0')}`
 const digits = (s: string) => Number(s.replace(/[^0-9.]/g, ''))
 
+/** The app scrolls inside its own main area, so a full-page capture would cut off: the viewport is made tall for the shot, then put back. */
+/** The app scrolls inside its own main area, so a full-page capture would cut off: the viewport is made tall for the shot, then put back. */
 async function shot(page: Page, name: string): Promise<void> {
   const dir = process.env.REVIEW_DIR
   if (!dir) return
   mkdirSync(dir, { recursive: true })
-  await page.screenshot({ path: `${dir}/${name}.png`, fullPage: true })
+  const before = page.viewportSize() ?? { width: 1440, height: 900 }
+  await page.setViewportSize({ width: before.width, height: before.width < 600 ? 3600 : 2000 })
+  await page.screenshot({ path: `${dir}/${name}.png` })
+  await page.setViewportSize(before)
 }
 
 test.describe('Margin panel on the order page (admin)', () => {
