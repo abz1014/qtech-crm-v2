@@ -53,6 +53,7 @@ jobs:
       expenses: ${{ steps.final.outputs.expenses }}
       bank: ${{ steps.final.outputs.bank }}
       month_end: ${{ steps.final.outputs.month_end }}
+      money_costs: ${{ steps.final.outputs.money_costs }}
       any: ${{ steps.final.outputs.any }}
     steps:
       - uses: actions/checkout@v4
@@ -97,6 +98,8 @@ jobs:
               - 'e2e/bank/**'
             month_end:
               - 'e2e/month-end/**'
+            money_costs:
+              - 'e2e/money/**'
             orders:
               - 'e2e/orders/**'
             settings_admin:
@@ -129,6 +132,7 @@ jobs:
           S_EXPENSES: ${{ steps.filter.outputs.expenses }}
           S_BANK: ${{ steps.filter.outputs.bank }}
           S_MONTH_END: ${{ steps.filter.outputs.month_end }}
+          S_MONEY_COSTS: ${{ steps.filter.outputs.money_costs }}
         run: |
           all=false
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$GITHUB_REF" = "refs/heads/main" ] || [ "$SHARED" = "true" ]; then all=true; fi
@@ -167,6 +171,8 @@ jobs:
           echo "bank=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_MONTH_END; if [ "$all" = "true" ]; then v=true; fi
           echo "month_end=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_MONEY_COSTS; if [ "$all" = "true" ]; then v=true; fi
+          echo "money_costs=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           echo "any=$any" >> "$GITHUB_OUTPUT"
 
   e2e:
@@ -347,6 +353,16 @@ jobs:
       - name: PDF tools for the orders suite (poppler, to read and render the stored supplier PO PDFs)
         if: ${{ !cancelled() && needs.changes.outputs.orders == 'true' }}
         run: command -v pdftoppm && command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils)
+
+      - name: Reset database (money-costs)
+        if: ${{ !cancelled() && needs.changes.outputs.money_costs == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (money-costs project)
+        if: ${{ !cancelled() && needs.changes.outputs.money_costs == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=money-costs REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/money-costs npx playwright test --project=money-costs --output=test-results/money-costs
 
       - name: Reset database (orders)
         if: ${{ !cancelled() && needs.changes.outputs.orders == 'true' }}

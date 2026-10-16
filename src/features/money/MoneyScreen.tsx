@@ -8,6 +8,8 @@ import { GstRegisterPage } from '@/features/money/invoices/GstRegisterPage'
 import { ReceivablesPage } from '@/features/money/payments/ReceivablesPage'
 import { ChecklistPage } from '@/features/money/monthEnd/ChecklistPage'
 import { AgingPage, CategoriesPage, GstFbrPage, OwePage, PnlPage, TeamPage } from '@/features/money/monthEnd/ReportPages'
+import { ExceptionsPage } from '@/features/money/exceptions/ExceptionsPage'
+import { MarginsPage } from '@/features/money/margins/MarginsPage'
 
 /**
  * Everything under /money. Admin and sales may enter Money: the GST register (M01) and Receivables / Order balances (M02) are
@@ -30,6 +32,8 @@ export default function MoneyScreen() {
       <Route path="month-end/owe" element={isAdmin ? <OwePage /> : <NoAccessPage area="Month-end" />} />
       <Route path="month-end/gst" element={isAdmin ? <GstFbrPage /> : <NoAccessPage area="Month-end" />} />
       <Route path="month-end/team" element={isAdmin ? <TeamPage /> : <NoAccessPage area="Month-end" />} />
+      <Route path="margins" element={isAdmin ? <MarginsPage /> : <NoAccessPage area="Margins" />} />
+      <Route path="exceptions" element={isAdmin ? <ExceptionsPage /> : <NoAccessPage area="Exceptions" />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )

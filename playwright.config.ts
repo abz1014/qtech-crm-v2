@@ -68,6 +68,10 @@ import { defineConfig, devices } from '@playwright/test'
  *  - month-end (M10, M05): Money > Month-end for the admin: the checklist and its links, the six reports (one tap each, one tap to CSV), close and reopen
  *    (two taps each) with the closed-month sentence, no access (and no request) for sales and engineer, axe at 1440 and 375:
  *      E2E_SUITE=month-end REVIEW_DIR=review-shots npx playwright test --project=month-end
+ *  - money-costs (M04, M07): the Margin panel on the order page (supplier-price estimate that never overwrites, Provisional until costs are
+ *    marked complete), Money > Margins, Money > Exceptions, and that sales and engineers get no money data (network log and Row Level
+ *    Security), with axe at 1440 and 375:
+ *      E2E_SUITE=money-costs REVIEW_DIR=review-shots npx playwright test --project=money-costs
  *
  *  - pwa (R21): the production build's manifest (valid, icons real), the service worker registering, its app-shell-only
  *    precache (nothing from Supabase), the offline shell and Chrome's own installability check. No database needed:
@@ -89,7 +93,7 @@ import { defineConfig, devices } from '@playwright/test'
  */
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money', 'bank', 'month-end', 'pwa']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money', 'money-costs', 'bank', 'month-end', 'pwa']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -246,6 +250,13 @@ export default defineConfig({
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, serviceWorkers: 'allow', screenshot: 'only-on-failure' },
+    },
+    {
+      name: 'money-costs',
+      testMatch: /money\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
     },
     {
       name: 'orders',

@@ -195,6 +195,11 @@ function money() {
       all: [...all, 'bank'] as const,
       month: (month: string) => [...all, 'bank', month] as const,
     },
+    /** One order's costs for the Margin panel (M04): expenses, expected cost, the supplier-price inputs. */
+    orderCosts: (orderId: string) => [...all, 'order-costs', orderId] as const,
+    /** Every order's margin row (M04) and the reconciliation exceptions (M07). Admin only. */
+    margins: () => [...all, 'margins'] as const,
+    exceptions: () => [...all, 'exceptions'] as const,
     /** M10: Month-end. The checklist counts, the closed months and every report for one month ("2026-10") or as-of date. */
     monthEnd: {
       all: [...all, 'month-end'] as const,
