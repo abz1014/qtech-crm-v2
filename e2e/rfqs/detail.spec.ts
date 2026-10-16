@@ -236,7 +236,7 @@ test.describe('comparison', () => {
     await expect(cny).toContainText('not compared — no rate')
     await expect(cny.locator('[data-lowest]')).toHaveCount(0)
     // A8: the ranking note replaces the old footnote; the CNY line is listed after the ranked ones.
-    await expect(art.locator('[data-rank-note]')).toContainText("Ranked by price in PKR at today's rate.")
+    await expect(art.locator('[data-rank-note]')).toContainText('the ranking is price only.')
     await expect(cny).toContainText('Not ranked: no current CNY rate. Add one.')
     // Item 2 has no prices: nothing is marked.
     await expect(page.getByRole('article', { name: 'Item 2' }).locator('[data-lowest]')).toHaveCount(0)

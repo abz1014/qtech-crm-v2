@@ -119,6 +119,8 @@ async function seed(): Promise<Seed> {
     rfq_item_id: item.id,
     unit_price,
     currency,
+    lead_time: null,
+    in_stock: null,
     ...extra,
   })
   await must(
