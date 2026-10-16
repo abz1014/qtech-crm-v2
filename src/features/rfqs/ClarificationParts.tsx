@@ -272,6 +272,7 @@ export function QuestionRow({
               }}
             />
           </div>
+          <p className="text-xs text-fg-muted">Pick or take a photo. No text needed.</p>
           {typing ? (
             <div className="mt-1 grid gap-2">
               <TextArea

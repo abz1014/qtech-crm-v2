@@ -130,6 +130,10 @@ export function useClarifications(rfqId: string | undefined) {
   return useQuery({ queryKey: qk.rfqs.part(rfqId ?? '', 'clarifications'), queryFn: () => api.listClarifications(rfqId as string), enabled: Boolean(rfqId) })
 }
 
+export function useOrderAttachments(orderId: string | undefined) {
+  return useQuery({ queryKey: qk.orders.part(orderId ?? '', 'files'), queryFn: () => api.listOrderAttachments(orderId as string), enabled: Boolean(orderId) })
+}
+
 export function useRfqAttachments(rfqId: string | undefined) {
   return useQuery({ queryKey: qk.rfqs.part(rfqId ?? '', 'attachments'), queryFn: () => api.listAttachments(rfqId as string), enabled: Boolean(rfqId) })
 }
@@ -185,18 +189,72 @@ export function useSetInquiryRelayed(rfqId: string) {
   })
 }
 
-export function useUploadAttachment(rfqId: string) {
+/** Upload a file to an RFQ, or to an order when `orderId` is given (the Files panel serves both). */
+export function useUploadAttachment(rfqId: string | undefined, orderId?: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (v: { clarificationId: string | null; file: File; path: string }) => api.uploadAttachment({ rfqId, ...v }),
-    onSuccess: () => invalidateAfter(client, 'attachment.add', { rfqId }),
+    mutationFn: (v: { clarificationId: string | null; file: File; path: string }) => api.uploadAttachment(orderId ? { orderId, ...v } : { rfqId, ...v }),
+    onSuccess: () => (orderId ? invalidateAfter(client, 'order.files', { orderId }) : invalidateAfter(client, 'attachment.add', { rfqId: rfqId as string })),
   })
 }
 
-export function useDeleteAttachment(rfqId: string) {
+export function useDeleteAttachment(rfqId: string | undefined, orderId?: string) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (att: Pick<api.AttachmentRow, 'id' | 'path'>) => api.deleteAttachment(att),
-    onSuccess: () => invalidateAfter(client, 'attachment.delete', { rfqId }),
+    onSuccess: () => (orderId ? invalidateAfter(client, 'order.files', { orderId }) : invalidateAfter(client, 'attachment.delete', { rfqId: rfqId as string })),
   })
+}
+
+// ================================================================ RFQ detail parity (Part C of the parity audit)
+
+export function useAddRfqItem(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { id: string; description: string; qty?: number; unit?: string | null }) => api.addRfqItem({ rfqId, ...input }),
+    onSuccess: () => invalidateAfter(client, 'item.add', { rfqId }),
+  })
+}
+
+export function useRemoveQuoteLine(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { inquiryId: string; itemId: string }) => api.removeQuoteLine(input),
+    onSuccess: () => invalidateAfter(client, 'quote.save', { rfqId }),
+  })
+}
+
+export function useRestoreQuoteLine(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (line: api.QuoteLineRow) => api.restoreQuoteLine(line),
+    onSuccess: () => invalidateAfter(client, 'quote.save', { rfqId }),
+  })
+}
+
+/** The stats behind the memory line under each supplier asked. Never blocks the page: if it fails the line is simply absent. */
+export function useSupplierStatsFor(supplierIds: readonly string[]) {
+  const key = [...supplierIds].sort().join(',')
+  return useQuery({ queryKey: qk.rfqs.stats(key), queryFn: () => api.listSupplierStatsFor(supplierIds), enabled: supplierIds.length > 0, staleTime: 60_000 })
+}
+
+export function useAddInquiries(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { supplierIds: readonly string[]; sentOn: string }) => api.addInquiries({ rfqId, ...input }),
+    onSuccess: () => invalidateAfter(client, 'inquiry.add', { rfqId }),
+  })
+}
+
+export function useRemoveInquiries(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: readonly string[]) => api.removeInquiries(ids),
+    onSuccess: () => invalidateAfter(client, 'inquiry.add', { rfqId }),
+  })
+}
+
+/** The signed-in person's job title and phone for a chase signature. Absent while loading: the signature then has the name only. */
+export function useMySignature(userId: string | undefined) {
+  return useQuery({ queryKey: qk.rfqs.signature(userId ?? ''), queryFn: () => api.getMySignature(userId as string), enabled: Boolean(userId), staleTime: 5 * 60_000 })
 }

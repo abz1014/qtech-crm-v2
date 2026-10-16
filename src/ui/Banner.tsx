@@ -24,14 +24,16 @@ interface BannerProps {
   children?: ReactNode
   /** An optional action, usually a small secondary Button. */
   action?: ReactNode
+  /** A glyph that says more than the tone's own (wifi-off, clock). */
+  icon?: LucideIcon
   className?: string
 }
 
-export function Banner({ tone = 'info', title, children, action, className }: BannerProps) {
+export function Banner({ tone = 'info', title, children, action, icon, className }: BannerProps) {
   const t = TONES[tone]
   return (
     <div role={t.live} className={cn('flex items-start gap-3 rounded border px-4 py-3 text-sm', t.box, className)}>
-      <Icon icon={t.icon} className={cn('mt-[2px]', t.glyph)} />
+      <Icon icon={icon ?? t.icon} className={cn('mt-[2px]', t.glyph)} />
       <div className="grid min-w-0 flex-1 gap-[2px] text-pretty">
         <p className="font-semibold">{title}</p>
         {children ? <p className="text-fg-2">{children}</p> : null}

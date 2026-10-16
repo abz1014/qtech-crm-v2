@@ -1,14 +1,14 @@
 import { NavLink } from 'react-router-dom'
 import { navItemsForRole } from '@/app/navConfig'
 import type { SessionUser } from '@/app/session'
-import { Search } from 'lucide-react'
+import { Import, Search } from 'lucide-react'
 import { AccountMenu } from '@/app/shell/AccountMenu'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { cn } from '@/lib/utils'
 
 /** Phone header (below 768): logo mark, the current destination as the title, search, avatar. 52px. */
-export function MobileBar({ user, title, onSearch }: { user: SessionUser; title: string; onSearch?: () => void }) {
+export function MobileBar({ user, title, onSearch, onCapture }: { user: SessionUser; title: string; onSearch?: () => void; onCapture?: () => void }) {
   return (
     <header className="flex h-topbar items-center gap-1 border-b bg-surface pl-4 pr-2 md:hidden">
       <NavLink to="/" aria-label="Q-Tech, home" className="mr-2 shrink-0 rounded">
@@ -17,6 +17,11 @@ export function MobileBar({ user, title, onSearch }: { user: SessionUser; title:
       {/* Not a heading: every screen draws its own h1, and two h1s on a phone is wrong. */}
       <p className="flex-1 truncate text-lg font-semibold tracking-snug">{title}</p>
       <Button variant="quiet" size="touch" icon={Search} aria-label="Search" onClick={onSearch} />
+      {onCapture ? (
+        <Button variant="primary" size="touch" icon={Import} onClick={onCapture}>
+          Capture
+        </Button>
+      ) : null}
       <AccountMenu user={user} touch />
     </header>
   )
