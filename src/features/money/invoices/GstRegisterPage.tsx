@@ -50,7 +50,7 @@ export function GstRegisterPage() {
   const toast = useToast()
   const stamps = useStamps()
   const [params, setParams] = useSearchParams()
-  const [attention, setAttention] = useState(false)
+  const [attention, setAttention] = useState(() => params.get('attention') === '1') // Today's "FBR attention" item opens it filtered
   const [search, setSearch] = useState('')
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set())
   const [psid, setPsid] = useState('')

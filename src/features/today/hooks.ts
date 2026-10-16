@@ -44,6 +44,9 @@ export function useTodayView(user: { id: string; role: Role }, today: string): {
       legs: data.legs,
       receivables: data.receivables,
       monthEnd: data.monthEnd,
+      costs: data.costs,
+      invoices: data.invoices,
+      recurring: data.recurring,
       snoozes: data.snoozes,
     })
     // user is a fresh object each render in the caller; its id and role are what matter

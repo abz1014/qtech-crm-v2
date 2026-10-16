@@ -361,6 +361,14 @@ function howTo(item: TodayItem): string {
       return 'This order has a supplier leg with no purchase order yet. Open the order to place it.'
     case 'close_month':
       return 'Review the month-end checks and close the month. Nothing blocks closing; each check is a warning.'
+    case 'costs_incomplete':
+      return 'These orders are paid in full but their costs are not marked complete, so their margin is still provisional. Open Margins, check the costs and mark each order complete.'
+    case 'fbr_attention':
+      return 'The tax on these invoices is not deposited and the month is over, or an FBR step was recorded out of order. Open the GST register, which is filtered to them.'
+    case 'tcs_not_sent':
+      return 'These invoices have no courier date three working days after the invoice. Open the GST register, tick them and stamp "sent by TCS" in one go.'
+    case 'recurring_due':
+      return 'These recurring expenses have no entry for this month yet. Open Expenses and record each one; it is one tap.'
     default:
       return 'Open the record.'
   }

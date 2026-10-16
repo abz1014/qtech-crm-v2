@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Banknote, CalendarCheck, ChevronDown, ChevronRight, FileCheck, Hourglass, MessageCircleQuestion, Send, Share2, ShoppingCart, Truck, Undo2, type LucideIcon } from 'lucide-react'
+import { Banknote, CalendarCheck, ChevronDown, ChevronRight, Calculator, FileCheck, Hourglass, Landmark, MessageCircleQuestion, Package, Repeat, Send, Share2, ShoppingCart, Truck, Undo2, type LucideIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -31,6 +31,10 @@ const ICON: Record<RuleKey, LucideIcon> = {
   goods_late: Truck,
   place_po: ShoppingCart,
   close_month: CalendarCheck,
+  costs_incomplete: Calculator,
+  fbr_attention: Landmark,
+  tcs_not_sent: Package,
+  recurring_due: Repeat,
 }
 
 const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Bids', sourcing: 'Sourcing', money: 'Money' }
