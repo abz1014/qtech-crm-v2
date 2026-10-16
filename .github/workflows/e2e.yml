@@ -49,6 +49,7 @@ jobs:
       orders: ${{ steps.final.outputs.orders }}
       settings_admin: ${{ steps.final.outputs.settings_admin }}
       pwa: ${{ steps.final.outputs.pwa }}
+      money_books: ${{ steps.final.outputs.money_books }}
       expenses: ${{ steps.final.outputs.expenses }}
       reports: ${{ steps.final.outputs.reports }}
       money_costs: ${{ steps.final.outputs.money_costs }}
@@ -100,6 +101,8 @@ jobs:
               - 'e2e/orders/**'
             settings_admin:
               - 'e2e/settings/**'
+            money_books:
+              - 'e2e/money-books/**'
             pwa:
               - 'e2e/pwa/**'
               - 'public/manifest.webmanifest'
@@ -122,6 +125,7 @@ jobs:
           S_ORDERS: ${{ steps.filter.outputs.orders }}
           S_SETTINGS_ADMIN: ${{ steps.filter.outputs.settings_admin }}
           S_PWA: ${{ steps.filter.outputs.pwa }}
+          S_MONEY_BOOKS: ${{ steps.filter.outputs.money_books }}
           S_EXPENSES: ${{ steps.filter.outputs.expenses }}
           S_REPORTS: ${{ steps.filter.outputs.reports }}
           S_MONEY_COSTS: ${{ steps.filter.outputs.money_costs }}
@@ -161,6 +165,8 @@ jobs:
           echo "reports=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_MONEY_COSTS; if [ "$all" = "true" ]; then v=true; fi
           echo "money_costs=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_MONEY_BOOKS; if [ "$all" = "true" ]; then v=true; fi
+          echo "money_books=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           echo "any=$any" >> "$GITHUB_OUTPUT"
 
   e2e:
@@ -370,6 +376,16 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=capture REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/capture npx playwright test --project=capture --output=test-results/capture
+
+      - name: Reset database (money-books)
+        if: ${{ !cancelled() && needs.changes.outputs.money_books == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (money-books project)
+        if: ${{ !cancelled() && needs.changes.outputs.money_books == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=money-books REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/money-books npx playwright test --project=money-books --output=test-results/money-books
 
       - name: Playwright (pwa project, no database reset needed)
         if: ${{ !cancelled() && needs.changes.outputs.pwa == 'true' }}

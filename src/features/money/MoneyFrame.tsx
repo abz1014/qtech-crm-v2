@@ -2,18 +2,33 @@ import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { businessToday } from '@/lib/dates'
 import { cn } from '@/lib/utils'
+import { useSession } from '@/app/session'
+import { useGstRegister } from '@/features/money/invoices/hooks'
 import { MONEY_TABS } from '@/features/money/moneyTabs'
+import { useReceivables } from '@/features/money/payments/hooks'
+import { isOpen } from '@/features/money/payments/model'
 
 /*
  * The frame every Money tab sits in (g2-month-end, g2-money): the title, the date and currency line, the page actions
  * and the strip of Money views. Each view task adds its own entry to MONEY_TABS and renders <MoneyFrame> around itself.
- * Only the views that exist are listed; the mockup's others (GST register, Receivables, Month-end, Margins, Exchange
- * rates) arrive with their own tasks.
+ * Only the views that exist are listed; the mockup's others (Month-end, Margins, Exchange rates) arrive with their own
+ * tasks. GST register and Receivables carry their counts (invoices, open orders), read through the same queries their
+ * pages use, so the numbers cost no extra request. Sales see "Order balances" in place of Receivables and no Expenses.
  */
 const longDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Karachi', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-export function MoneyFrame({ active, actions, children, isAdmin = true }: { active: string; actions?: ReactNode; children: ReactNode; isAdmin?: boolean }) {
+export function MoneyFrame({ active, actions, children }: { active: string; actions?: ReactNode; children: ReactNode }) {
+  const session = useSession()
+  const role = session.status === 'signed-in' ? session.user.role : ''
+  const isAdmin = role === 'admin'
+  const money = role === 'admin' || role === 'sales'
   const tabs = MONEY_TABS.filter(t => isAdmin || !t.adminOnly)
+  const register = useGstRegister(money)
+  const receivables = useReceivables(money)
+  const counts: Record<string, number | undefined> = {
+    'gst-register': register.data?.length,
+    receivables: receivables.data?.filter(isOpen).length,
+  }
   return (
     <div className="mx-auto grid w-full max-w-table content-start gap-4 px-4 pb-12 pt-6 md:px-8">
       <header className="grid gap-4">
@@ -39,7 +54,8 @@ export function MoneyFrame({ active, actions, children, isAdmin = true }: { acti
               )}
               aria-current={t.key === active ? 'page' : undefined}
             >
-              {t.label}
+              {isAdmin ? t.label : (t.salesLabel ?? t.label)}
+              {counts[t.key] !== undefined ? <span className="num ml-2 font-regular">{counts[t.key]}</span> : null}
             </NavLink>
           ))}
         </nav>
