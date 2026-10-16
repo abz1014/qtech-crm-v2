@@ -10,7 +10,7 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
-import { ChaseNote, FormattedMessage, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
+import { ChasedByNote, ChaseNote, FormattedMessage, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
 import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
 import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
 import { useRestoreSupplierChase, useStampSupplierChase } from '@/features/rfqs/hooks'
@@ -73,6 +73,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, onFloat }: Props)
               </div>
               {mem ? <p className={mem.late ? 'text-xs text-tone-warning-fg' : 'text-xs text-fg-muted'}>{mem.text}</p> : null}
               <p className="text-xs text-fg-muted">{sentLine(i)}</p>
+              <ChasedByNote byId={i.lastChasedBy} at={i.lastChasedOn} />
               {can ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <ChaseNow rfq={rfq} items={items} inquiry={i} />
@@ -137,7 +138,7 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
       toast({ title: 'Could not copy the text', body: 'Show the text and copy it by hand. The chase was not recorded.', tone: 'danger' })
       return
     }
-    const before = { lastChasedOn: inquiry.lastChasedOn, chaseCount: inquiry.chaseCount }
+    const before = { lastChasedOn: inquiry.lastChasedOn, lastChasedBy: inquiry.lastChasedBy ?? null, chaseCount: inquiry.chaseCount }
     try {
       const n = await stamp.mutateAsync(inquiry.id)
       toast({

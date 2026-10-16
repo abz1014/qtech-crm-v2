@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Hourglass,
   MessageCircleQuestion,
+  Users,
   type LucideIcon,
 } from 'lucide-react'
 import { useSession } from '@/app/session'
@@ -40,6 +41,7 @@ import { useRfqHeader, useRfqInquiries, useRfqItems, useSetRfqClosed } from '@/f
 import { COMPANY_NAME, customerReturnsOn, supplierReturnsOn } from '@/features/rfqs/lib'
 import { addBusinessDays, addDays, nextMonday } from '@/features/rfqs/lib/dateText'
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
+import { chasedByText } from '@/features/rfqs/lib/collision'
 import type { TodayData } from '@/features/today/api'
 import { buildCustomerDraft, buildGoodsDraft, buildPaymentDraft, buildSupplierDraft, type Draft } from '@/features/today/chaseDraft'
 import { chaseMemo, clockText, excerptOf, forgetChase, rememberChase } from '@/features/today/chaseMemory'
@@ -149,8 +151,8 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
 
   const spec = (): ChaseSpec | null => {
     if (customerRule) return questions.length ? { kind: 'customer', ids: questions.map(q => q.id) } : null
-    if (supplierRule && inquiryFact) return { kind: 'supplier', inquiryId: inquiryFact.id, before: { lastChasedOn: inquiryFact.lastChasedOn, chaseCount: inquiryFact.chaseCount } }
-    if (item.rule === 'goods_late' && legFact) return { kind: 'goods', legId: legFact.id, before: { lastChasedOn: legFact.lastChasedOn, chaseCount: legFact.chaseCount } }
+    if (supplierRule && inquiryFact) return { kind: 'supplier', inquiryId: inquiryFact.id, before: { lastChasedOn: inquiryFact.lastChasedOn, lastChasedBy: inquiryFact.lastChasedBy ?? null, chaseCount: inquiryFact.chaseCount } }
+    if (item.rule === 'goods_late' && legFact) return { kind: 'goods', legId: legFact.id, before: { lastChasedOn: legFact.lastChasedOn, lastChasedBy: legFact.lastChasedBy ?? null, chaseCount: legFact.chaseCount } }
     if (item.rule === 'payment_overdue' && payment.data && payment.data.invoices.length > 0) {
       return { kind: 'payment', invoiceIds: payment.data.invoices.map(i => i.id), before: payment.data.invoices }
     }
@@ -256,6 +258,12 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           ) : null}
         </header>
       )}
+
+      {item.collision && data.names[item.collision.by] ? (
+        <p data-collision className="flex items-center gap-2 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm text-tone-warning-fg">
+          <Icon icon={Users} size="sm" /> {chasedByText(data.names[item.collision.by], item.collision.at, Date.now())}. Check with them before you chase it again.
+        </p>
+      ) : null}
 
       {justChased && item.waiting ? (
         <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded border border-tone-success-fg/25 bg-tone-success-bg px-4 py-3 text-sm text-tone-success-fg">

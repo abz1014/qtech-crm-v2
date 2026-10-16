@@ -334,3 +334,42 @@ test.describe('accessibility (axe, WCAG 2.2 AA)', () => {
     })
   }
 })
+
+test.describe('Items and Value columns (O-11)', () => {
+  test('sales sees the item count and the quoted net; an engineer sees the count only and no money is requested for them', async ({ page }) => {
+    const users = await must(rest<{ id: string; role: string }[]>('admin', 'users?select=id,role'))
+    const owner = users.find(u => u.role === 'sales')!.id
+    const name = uniqueName('Board value')
+    const company = await createCompany(name)
+    const rfq = (await must(rest<{ id: string; number: number }[]>('admin', 'rfqs', { method: 'POST', body: { company_id: company.id, owner_id: owner, due_on: karachiDay(4) } })))[0]
+    await must(
+      rest('admin', 'rfq_items', {
+        method: 'POST',
+        body: [
+          { rfq_id: rfq.id, position: 0, description: 'Priced item', qty: 2, quoted_unit_price_net: 1500 },
+          { rfq_id: rfq.id, position: 1, description: 'Unpriced item', qty: 1 },
+        ],
+        prefer: 'return=minimal',
+      }),
+    )
+
+    await openAs(page, 'sales', '/rfqs?owner=all')
+    await expect(page.getByRole('columnheader', { name: 'Items' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Value (PKR net)' })).toBeVisible()
+    const row = page.getByRole('row').filter({ hasText: name })
+    await expect(row.getByText('3,000')).toBeVisible()
+    await review(page, 'board-value-1440')
+  })
+
+  test('engineer: Items yes, Value never, and the quoted prices are not even fetched', async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+    const page = await ctx.newPage()
+    const urls: string[] = []
+    page.on('request', r => urls.push(r.url()))
+    await openAs(page, 'engineer', '/rfqs?owner=all')
+    await expect(page.getByRole('columnheader', { name: 'Items' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Value (PKR net)' })).toHaveCount(0)
+    expect(urls.some(u => u.includes('quoted_unit_price_net'))).toBe(false)
+    await ctx.close()
+  })
+})

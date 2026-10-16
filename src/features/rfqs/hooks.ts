@@ -185,7 +185,7 @@ export function useRestoreClarificationAsk(rfqId: string) {
 export function useRestoreSupplierChase(rfqId: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (v: { inquiryId: string; before: { lastChasedOn: string | null; chaseCount: number } }) => api.restoreSupplierChase(v.inquiryId, v.before),
+    mutationFn: (v: { inquiryId: string; before: { lastChasedOn: string | null; lastChasedBy?: string | null; chaseCount: number } }) => api.restoreSupplierChase(v.inquiryId, v.before),
     onSuccess: () => invalidateAfter(client, 'inquiry.chase', { rfqId }),
   })
 }
@@ -282,4 +282,9 @@ export function useRemoveInquiries(rfqId: string) {
 /** The signed-in person's job title and phone for a chase signature. Absent while loading: the signature then has the name only. */
 export function useMySignature(userId: string | undefined) {
   return useQuery({ queryKey: qk.rfqs.signature(userId ?? ''), queryFn: () => api.getMySignature(userId as string), enabled: Boolean(userId), staleTime: 5 * 60_000 })
+}
+
+/** Everyone's name by id, for the collision line. Cached for the session; the line is absent while it loads. */
+export function useUserNames() {
+  return useQuery({ queryKey: qk.rfqs.userNames(), queryFn: api.listUserNames, staleTime: 10 * 60_000 })
 }

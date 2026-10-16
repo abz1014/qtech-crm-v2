@@ -53,6 +53,7 @@ const clar = (o: Partial<ClarificationFact> = {}): ClarificationFact => ({
   firstAskedOn: '2026-11-20',
   lastAskedOn: '2026-11-20',
   lastAskedAt: '2026-11-20T09:00:00+05:00',
+  lastAskedBy: null,
   askCount: 1,
   ...o,
 })
@@ -192,6 +193,21 @@ describe('rule: chase customer', () => {
     const inputs = { rfqs: [rfq({ ownerId: null })], clarifications: [clar()] }
     expect(ruleChaseCustomer(ctx(inputs, 'admin'))).toHaveLength(1)
     expect(ruleChaseCustomer(ctx(inputs, 'sales'))).toHaveLength(0)
+  })
+})
+
+describe('collision line (O-3)', () => {
+  it('a customer chase made by a colleague carries who and when; one made by you carries nothing', () => {
+    const theirs = ruleChaseCustomer(ctx({ rfqs: [rfq()], clarifications: [clar({ lastAskedOn: '2026-11-26', lastAskedAt: '2026-11-26T09:00:00+05:00', lastAskedBy: OTHER, askCount: 2 })] }))[0]
+    expect(theirs.collision).toEqual({ by: OTHER, at: '2026-11-26T09:00:00+05:00' })
+    const mine = ruleChaseCustomer(ctx({ rfqs: [rfq()], clarifications: [clar({ lastAskedOn: '2026-11-26', lastAskedBy: ME })] }))[0]
+    expect(mine.collision).toBeUndefined()
+    const none = ruleChaseCustomer(ctx({ rfqs: [rfq()], clarifications: [clar({ lastAskedOn: '2026-11-26' })] }))[0]
+    expect(none.collision).toBeUndefined()
+  })
+  it('a supplier chase and a goods chase carry it too', () => {
+    expect(ruleChaseSupplier(ctx({ rfqs: [rfq()], inquiries: [inq({ sentOn: '2026-11-10', lastChasedOn: '2026-11-26', chaseCount: 1, lastChasedBy: OTHER })] }))[0].collision).toEqual({ by: OTHER, at: '2026-11-26' })
+    expect(ruleGoodsLate(ctx({ legs: [leg({ lastChasedOn: '2026-11-26', chaseCount: 1, lastChasedBy: OTHER })] }))[0].collision).toEqual({ by: OTHER, at: '2026-11-26' })
   })
 })
 

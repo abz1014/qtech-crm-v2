@@ -280,6 +280,8 @@ export interface InquiryRow {
   supplierCity?: string | null
   sentOn: string | null
   lastChasedOn: string | null
+  /** users.id of whoever made the last chase (0048). */
+  lastChasedBy?: string | null
   lastRelayedAt: string | null
   noOfferOn: string | null
   /** Why the supplier cannot quote (a stored key, see lib/cantQuote.ts); set together with noOfferOn. */
@@ -309,7 +311,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
   const inq = unwrap(
     await db
       .from('supplier_inquiries')
-      .select('id, supplier_id, sent_on, last_chased_on, last_relayed_at, no_offer_on, no_offer_reason, chase_count, notes, created_at')
+      .select('id, supplier_id, sent_on, last_chased_on, last_chased_by, last_relayed_at, no_offer_on, no_offer_reason, chase_count, notes, created_at')
       .eq('rfq_id', rfqId)
       .order('created_at'),
   )
@@ -371,6 +373,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
       supplierCity: c?.city ?? null,
       sentOn: i.sent_on,
       lastChasedOn: i.last_chased_on,
+      lastChasedBy: i.last_chased_by,
       lastRelayedAt: i.last_relayed_at,
       noOfferOn: i.no_offer_on,
       noOfferReason: i.no_offer_reason,
@@ -515,6 +518,8 @@ export interface ClarificationRow {
   rfqItemId: string | null
   firstAskedAt: string | null
   lastAskedAt: string | null
+  /** users.id of whoever last asked the customer (0048). */
+  lastAskedBy?: string | null
   askCount: number
   answer: string | null
   answeredAt: string | null
@@ -530,7 +535,7 @@ export async function listClarifications(rfqId: string): Promise<ClarificationRo
   const rows = unwrap(
     await db
       .from('clarifications')
-      .select('id, question, raised_by_inquiry_id, rfq_item_id, first_asked_at, last_asked_at, ask_count, answer, answered_at, withdrawn_at, created_at')
+      .select('id, question, raised_by_inquiry_id, rfq_item_id, first_asked_at, last_asked_at, last_asked_by, ask_count, answer, answered_at, withdrawn_at, created_at')
       .eq('rfq_id', rfqId)
       .order('created_at')
       .order('id'),
@@ -542,6 +547,7 @@ export async function listClarifications(rfqId: string): Promise<ClarificationRo
     rfqItemId: r.rfq_item_id,
     firstAskedAt: r.first_asked_at,
     lastAskedAt: r.last_asked_at,
+    lastAskedBy: r.last_asked_by,
     askCount: r.ask_count,
     answer: r.answer,
     answeredAt: r.answered_at,
@@ -617,6 +623,7 @@ export interface ClarificationAskBefore {
   id: string
   firstAskedAt: string | null
   lastAskedAt: string | null
+  lastAskedBy?: string | null
   askCount: number
 }
 
@@ -624,15 +631,15 @@ export interface ClarificationAskBefore {
 export async function restoreClarificationAsk(before: readonly ClarificationAskBefore[]): Promise<void> {
   const db = requireSupabase()
   for (const b of before) {
-    const { error } = await db.from('clarifications').update({ first_asked_at: b.firstAskedAt, last_asked_at: b.lastAskedAt, ask_count: b.askCount }).eq('id', b.id)
+    const { error } = await db.from('clarifications').update({ first_asked_at: b.firstAskedAt, last_asked_at: b.lastAskedAt, last_asked_by: b.lastAskedBy ?? null, ask_count: b.askCount }).eq('id', b.id)
     if (error) throw error
   }
 }
 
 /** Take a supplier chase back (the Undo of "Copy & mark chased"). */
-export async function restoreSupplierChase(inquiryId: string, before: { lastChasedOn: string | null; chaseCount: number }): Promise<void> {
+export async function restoreSupplierChase(inquiryId: string, before: { lastChasedOn: string | null; lastChasedBy?: string | null; chaseCount: number }): Promise<void> {
   const db = requireSupabase()
-  const { error } = await db.from('supplier_inquiries').update({ last_chased_on: before.lastChasedOn, chase_count: before.chaseCount }).eq('id', inquiryId)
+  const { error } = await db.from('supplier_inquiries').update({ last_chased_on: before.lastChasedOn, last_chased_by: before.lastChasedBy ?? null, chase_count: before.chaseCount }).eq('id', inquiryId)
   if (error) throw error
 }
 
@@ -802,4 +809,11 @@ export async function getMySignature(userId: string): Promise<{ jobTitle: string
   const db = requireSupabase()
   const row = unwrap(await db.from('users').select('job_title, phone').eq('id', userId).maybeSingle()) as { job_title: string | null; phone: string | null } | null
   return { jobTitle: row?.job_title ?? null, phone: row?.phone ?? null }
+}
+
+/** Everyone's name by id (users are readable by every staff role): for "Ali chased this 1h ago". */
+export async function listUserNames(): Promise<Record<string, string>> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('users').select('id, name'))
+  return Object.fromEntries(rows.map(r => [r.id, r.name]))
 }

@@ -4,6 +4,7 @@ import { generateGoodsChase, type GoodsChaseInput } from './goodsChase'
 import { generatePaymentReminder, type PaymentReminderInput } from './paymentReminder'
 import { generateSupplierChase, type SupplierChaseInput } from './supplierChase'
 import { chaseClipboardText, FIRM_AFTER_DAYS } from './chaseCommon'
+import { agoWhen, chasedByText } from './collision'
 import { addBusinessDays, businessDaysBetween, subtractBusinessDays, nextMonday } from './dateText'
 
 // 2026-11-27 is a Friday.
@@ -325,5 +326,25 @@ describe('payment reminder', () => {
 
   it('keeps paisa when there are any', () => {
     expect(generatePaymentReminder({ ...base, balance: '1111600.50' }).body).toContain('PKR 1,111,600.50')
+  })
+})
+
+describe('the collision line (O-3)', () => {
+  // 2026-11-27 10:00 in Karachi
+  const now = new Date('2026-11-27T10:00:00+05:00').getTime()
+  it('says how long ago, down to the hour', () => {
+    expect(agoWhen('2026-11-27T09:00:00+05:00', now)).toBe('1h ago')
+    expect(agoWhen('2026-11-27T09:40:00+05:00', now)).toBe('20 min ago')
+    expect(agoWhen('2026-11-27T09:59:00+05:00', now)).toBe('just now')
+    expect(agoWhen('2026-11-26T18:00:00+05:00', now)).toBe('yesterday')
+    expect(agoWhen('2026-11-24T10:00:00+05:00', now)).toBe('3 days ago')
+  })
+  it('says the day when only the day is known', () => {
+    expect(agoWhen('2026-11-27', now)).toBe('today')
+    expect(agoWhen('2026-11-26', now)).toBe('yesterday')
+    expect(agoWhen('2026-11-20', now)).toBe('7 days ago')
+  })
+  it('names the colleague by first name', () => {
+    expect(chasedByText('Ali Raza', '2026-11-27T09:00:00+05:00', now)).toBe('Ali chased this 1h ago')
   })
 })

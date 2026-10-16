@@ -138,6 +138,20 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(pane.getByRole('button', { name: 'Copy message and mark chased' })).toBeVisible()
   })
 
+  test('the collision line: a colleague already chased it, so you are told who and when before you chase it again', async ({ page }) => {
+    const s = await seedCustomerChase(SALES)
+    // the admin chases it first (the same stamp the Copy buttons make)
+    await must(rest('admin', 'rpc/stamp_clarification_ask', { method: 'POST', body: { p_clarification_ids: [s.clarificationId] }, prefer: 'return=minimal' }))
+    await openAs(page, 'sales', '/today')
+    const waiting = page.getByRole('region', { name: 'Waiting' })
+    const row = waiting.locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })
+    await expect(row).toBeVisible()
+    await expect(row.locator('[data-collision]')).toContainText(/Test chased this (just now|\d+ min ago|\d+h ago|today)/)
+    await row.getByRole('button').first().click()
+    await expect(page.getByRole('region', { name: new RegExp(s.ref) }).locator('[data-collision]').first()).toContainText('chased this')
+    await review(page, 'today-11-collision-1440')
+  })
+
   test('snooze: Tomorrow hides the item, Undo brings it back', async ({ page }) => {
     const s = await seedCustomerChase(SALES)
     await openAs(page, 'sales', '/today')

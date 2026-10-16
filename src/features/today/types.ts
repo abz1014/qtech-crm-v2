@@ -66,6 +66,8 @@ export interface ClarificationFact {
   lastAskedOn: string
   /** The latest ask as a timestamp, for "copied at 14:32". */
   lastAskedAt: string
+  /** Who made it (users.id), for the collision line. */
+  lastAskedBy: string | null
   askCount: number
 }
 
@@ -76,6 +78,7 @@ export interface InquiryFact {
   supplierName: string
   sentOn: string | null
   lastChasedOn: string | null
+  lastChasedBy?: string | null
   chaseCount: number
   /** v_inquiry_state.response_state: awaiting / quoted / no_offer */
   responseState: string
@@ -102,6 +105,7 @@ export interface LegFact {
   receivedOn: string | null
   deliveredOn: string | null
   lastChasedOn: string | null
+  lastChasedBy?: string | null
   chaseCount: number
 }
 
@@ -195,6 +199,8 @@ export interface TodayItem {
   escalation?: 'close_no_reply' | 'float_elsewhere'
   /** Present on Waiting items only. */
   waiting?: WaitingInfo
+  /** A colleague made the last chase (O-3): who (users.id) and when (a timestamp or a date). The pane and the row say so. */
+  collision?: { by: string; at: string }
   /** Number the list breaks ties with (RFQ or order number). */
   number: number
 }

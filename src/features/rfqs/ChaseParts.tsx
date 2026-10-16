@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react'
-import { Copy, Hourglass, Mail, Phone } from 'lucide-react'
+import { Copy, Hourglass, Mail, Phone, Users } from 'lucide-react'
 import { copyToClipboard } from '@/lib/clipboard'
+import { useSession } from '@/app/session'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { DateInput } from '@/ui/form/DateInput'
 import { Icon } from '@/ui/Icon'
 import { useToast } from '@/ui/useToast'
+import { useUserNames } from '@/features/rfqs/hooks'
+import { chasedByText } from '@/features/rfqs/lib/collision'
 
 /*
  * The pieces every chase surface shares (g2-chase-texts, g2-today-b2): the message with its *bold* markers drawn faint,
@@ -140,3 +143,20 @@ export function ChaseNote({ children, className }: { children: ReactNode; classN
   )
 }
 
+
+/**
+ * The collision line (O-3): "Ali chased this 1h ago", shown when somebody other than you made the last chase, so the same customer or
+ * supplier is not chased twice. `at` is a timestamp or a date. Nothing is drawn when it was you, or when nobody is on record.
+ */
+export function ChasedByNote({ byId, at, className }: { byId: string | null | undefined; at: string | null | undefined; className?: string }) {
+  const session = useSession()
+  const names = useUserNames()
+  const me = session.status === 'signed-in' ? session.user.id : null
+  const name = byId ? names.data?.[byId] : undefined
+  if (!byId || byId === me || !at || !name) return null
+  return (
+    <p data-collision className={cn('flex items-center gap-2 text-xs text-tone-warning-fg', className)}>
+      <Icon icon={Users} size="sm" /> {chasedByText(name, at, Date.now())}
+    </p>
+  )
+}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Banknote, CalendarCheck, ChevronDown, ChevronRight, FileCheck, Hourglass, MessageCircleQuestion, Reply, Send, Share2, ShoppingCart, Truck, type LucideIcon } from 'lucide-react'
+import { Banknote, CalendarCheck, ChevronDown, ChevronRight, FileCheck, Hourglass, MessageCircleQuestion, Reply, Send, Share2, ShoppingCart, Truck, Users, type LucideIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -13,6 +13,7 @@ import { ContextPane } from '@/features/today/ContextPane'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import { TargetTile } from '@/features/today/TargetTile'
 import { isFreshChase } from '@/features/today/chaseMemory'
+import { chasedByText } from '@/features/rfqs/lib/collision'
 import { headerDate, waitingLine } from '@/features/today/text'
 import type { Role, RuleKey, TodayItem, TodayTab } from '@/features/today/types'
 
@@ -150,7 +151,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                 </h2>
                 <ul>
                   {g.items.map(i => (
-                    <Row key={i.key} item={i} today={today} open={openId === i.key} copied={copied.has(i.key)} wide={wide} onPick={() => pick(i.key)}>
+                    <Row key={i.key} item={i} today={today} names={data?.names} open={openId === i.key} copied={copied.has(i.key)} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
                         <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
                           <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
@@ -184,7 +185,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
               {waitingOpen ? (
                 <ul>
                   {waiting.map(i => (
-                    <Row key={i.key} item={i} today={today} waiting open={openId === i.key} copied={false} wide={wide} onPick={() => pick(i.key)}>
+                    <Row key={i.key} item={i} today={today} names={data?.names} waiting open={openId === i.key} copied={false} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
                         <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
                           <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
@@ -223,7 +224,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   )
 }
 
-function Row({ item, today, waiting = false, open, copied, wide, onPick, children }: { item: TodayItem; today: string; waiting?: boolean; open: boolean; copied: boolean; wide: boolean; onPick: () => void; children?: React.ReactNode }) {
+function Row({ item, today, names, waiting = false, open, copied, wide, onPick, children }: { item: TodayItem; today: string; names?: Record<string, string>; waiting?: boolean; open: boolean; copied: boolean; wide: boolean; onPick: () => void; children?: React.ReactNode }) {
   const tone = item.badge.tone === 'danger' ? 'text-tone-danger-fg' : item.badge.tone === 'warning' ? 'text-tone-warning-fg' : 'text-fg-muted'
   return (
     <li data-rule={item.rule} data-waiting={waiting || undefined} className="border-b last:border-b-0">
@@ -248,6 +249,11 @@ function Row({ item, today, waiting = false, open, copied, wide, onPick, childre
           <span className="truncate text-xs text-fg-muted">
             <span className="num">{item.ref}</span> · {item.party}
           </span>
+          {item.collision && names?.[item.collision.by] ? (
+            <span data-collision className="flex items-center gap-1 text-xs text-tone-warning-fg">
+              <Icon icon={Users} size="chip" /> {chasedByText(names[item.collision.by], item.collision.at, Date.now())}
+            </span>
+          ) : null}
           {item.waiting ? (
             <span className="text-xs text-fg-muted">{waitingLine(item.waiting.chasedOn, item.waiting.nextNudgeOn, today, item.rule === 'payment_overdue' ? 'reminded' : 'chased')}</span>
           ) : null}

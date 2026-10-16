@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, CircleCheck, Plus, Search, Users, X } from 'lucide-react'
-import { useClosedCount, useClosedRfqs, useOpenRfqs } from '@/features/rfqs/board/hooks'
+import { useClosedCount, useClosedRfqs, useOpenRfqs, useRfqValues } from '@/features/rfqs/board/hooks'
 import {
   applyOwner,
   applyQuery,
@@ -103,6 +103,9 @@ export function BoardPage() {
   }
 
   const open = useOpenRfqs()
+  // Value is money: engineers never see it, and for them the request is never made.
+  const canSeeMoney = user?.role === 'admin' || user?.role === 'sales'
+  const values = useRfqValues(canSeeMoney)
   const closed = useClosedRfqs(page, tab === 'closed')
   const closedCount = useClosedCount()
 
@@ -117,12 +120,16 @@ export function BoardPage() {
     () => [
       { id: 'company', header: 'Company', value: r => r.companyName, sortable: true, cell: r => <CompanyCell row={r} compact={compact} /> },
       { id: 'due', header: 'Due', kind: 'date', value: r => r.dueOn, sortable: true, width: compact ? 230 : 150, cell: r => <DueCell row={r} compact={compact} /> },
+      { id: 'items', header: 'Items', kind: 'num', value: r => r.itemsTotal, width: 80, hideBelowMd: true, cell: r => <span className="num">{r.itemsTotal}</span> },
       { id: 'sourcing', header: 'Sourcing', value: r => r.sourcingState, width: compact ? 260 : 190, cell: r => <SourcingCell row={r} compact={compact} /> },
       { id: 'clarification', header: 'Questions', value: r => r.clarificationState, width: 240, hideBelowMd: true, cell: r => <ClarificationCell row={r} /> },
       { id: 'bid', header: 'Bid', value: r => r.bidState, width: 160, hideBelowMd: true, cell: r => <BidCell row={r} /> },
+      ...(canSeeMoney
+        ? [{ id: 'value', header: 'Value (PKR net)', kind: 'money' as const, value: (r: BoardRow) => values.data?.[r.rfqId] ?? null, width: 150, hideBelowMd: true, sortable: true }]
+        : []),
       { id: 'owner', header: 'Owner', value: r => r.ownerName, sortable: true, width: 130, hideBelowMd: true, cell: r => <OwnerCell row={r} /> },
     ],
-    [compact],
+    [compact, canSeeMoney, values.data],
   )
   const closedColumns = useMemo<Column<BoardRow>[]>(
     () => [

@@ -14,7 +14,7 @@ import { useToast } from '@/ui/useToast'
 import { Panel } from '@/features/companies/CompanyParts'
 import type { ClarificationRow, InquiryRow, RfqHeader } from '@/features/rfqs/api'
 import { AddQuestions, QuestionRow, WithdrawnRow } from '@/features/rfqs/ClarificationParts'
-import { ChaseNote, FormattedMessage, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
+import { ChasedByNote, ChaseNote, FormattedMessage, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
 import { useClarifications, useFileUrls, useRestoreClarificationAsk, useRfqAttachments, useRfqItems, useSetInquiryRelayed, useStampClarificationAsk } from '@/features/rfqs/hooks'
 import { useSignature } from '@/features/rfqs/useSignature'
 import {
@@ -72,7 +72,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
       toast({ title: 'Could not copy the text', body: 'Select the text in the message and copy it by hand. The questions were not marked as asked.', tone: 'danger' })
       return
     }
-    const before = group.map(c => ({ id: c.id, firstAskedAt: c.firstAskedAt, lastAskedAt: c.lastAskedAt, askCount: c.askCount }))
+    const before = group.map(c => ({ id: c.id, firstAskedAt: c.firstAskedAt, lastAskedAt: c.lastAskedAt, lastAskedBy: c.lastAskedBy ?? null, askCount: c.askCount }))
     try {
       await stamp.mutateAsync(group.map(c => c.id))
       toast({
@@ -312,6 +312,11 @@ function ChaseGroup({
   const [off, setOff] = useState<ReadonlySet<string>>(new Set())
   const [chosen, setChosen] = useState<string | null>(null)
   const selected = rows.filter(c => !off.has(c.id))
+  const lastBy = rows
+    .filter(c => c.lastAskedAt)
+    .map(c => ({ by: c.lastAskedBy, at: c.lastAskedAt as string }))
+    .sort((a, b) => a.at.localeCompare(b.at))
+    .at(-1)
   const defaultBy = customerConfirmBy(rfq.dueOn, today)
   const by = chosen ?? defaultBy
   const selectedKey = selected.map(c => c.id).join(',')
@@ -353,6 +358,7 @@ function ChaseGroup({
         <span className="text-right text-xs text-fg-muted">{hint}</span>
       </header>
       <div className="divide-y divide-dashed">{children}</div>
+      {repeat ? <ChasedByNote byId={lastBy?.by} at={lastBy?.at} className="px-4 pt-2" /> : null}
       <div className="mx-4 mb-3 mt-2 grid overflow-hidden rounded border bg-surface">
         <TickList
           title="Questions in this message"

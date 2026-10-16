@@ -151,14 +151,14 @@ isOneToOne: false
                   ]
                 },"clarifications": {
                   Row: {
-                    "answer": string | null,"answered_at": string | null,"ask_count": number,"created_at": string,"created_by": string | null,"first_asked_at": string | null,"id": string,"last_asked_at": string | null,"question": string,"raised_by_inquiry_id": string | null,"rfq_id": string,"rfq_item_id": string | null,"withdrawn_at": string | null
+                    "answer": string | null,"answered_at": string | null,"ask_count": number,"created_at": string,"created_by": string | null,"first_asked_at": string | null,"id": string,"last_asked_at": string | null,"last_asked_by": string | null,"question": string,"raised_by_inquiry_id": string | null,"rfq_id": string,"rfq_item_id": string | null,"withdrawn_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"question": string,"raised_by_inquiry_id"?: string | null,"rfq_id": string,"rfq_item_id"?: string | null,"withdrawn_at"?: string | null
+                    "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"last_asked_by"?: string | null,"question": string,"raised_by_inquiry_id"?: string | null,"rfq_id": string,"rfq_item_id"?: string | null,"withdrawn_at"?: string | null
                   }
                   Update: {
-                    "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"question"?: string,"raised_by_inquiry_id"?: string | null,"rfq_id"?: string,"rfq_item_id"?: string | null,"withdrawn_at"?: string | null
+                    "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"last_asked_by"?: string | null,"question"?: string,"raised_by_inquiry_id"?: string | null,"rfq_id"?: string,"rfq_item_id"?: string | null,"withdrawn_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -1183,14 +1183,14 @@ isOneToOne: false
                   ]
                 },"supplier_inquiries": {
                   Row: {
-                    "chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_on": string | null,"supplier_id": string
+                    "chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_by": string | null,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_on": string | null,"supplier_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_on"?: string | null,"supplier_id": string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_on"?: string | null,"supplier_id": string
                   }
                   Update: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id"?: string,"sent_on"?: string | null,"supplier_id"?: string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id"?: string,"sent_on"?: string | null,"supplier_id"?: string
                   }
                   Relationships: [
                     {
@@ -1233,14 +1233,14 @@ isOneToOne: false
                   ]
                 },"supplier_orders": {
                   Row: {
-                    "chase_count": number,"created_at": string,"created_by": string | null,"currency": string | null,"delivered_on": string | null,"expected_on": string | null,"id": string,"inquiry_id": string | null,"last_chased_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"placed_on": string | null,"received_on": string | null,"reference": string | null,"supplier_id": string
+                    "chase_count": number,"created_at": string,"created_by": string | null,"currency": string | null,"delivered_on": string | null,"expected_on": string | null,"id": string,"inquiry_id": string | null,"last_chased_by": string | null,"last_chased_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"placed_on": string | null,"received_on": string | null,"reference": string | null,"supplier_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id": string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id": string
                   }
                   Update: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id"?: string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id"?: string
                   }
                   Relationships: [
                     {

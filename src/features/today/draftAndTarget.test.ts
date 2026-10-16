@@ -14,7 +14,7 @@ const rfq: RfqFact = {
   dueTime: null,
   quotedOn: null, isPriority: false, bidState: 'to_bid', sourcingState: 'floated_awaiting', quotationValidUntil: null,
 }
-const q = (o: Partial<ClarificationFact> = {}): ClarificationFact => ({ id: 'c1', rfqId: 'r1', question: 'Line size?', rfqItemId: null, firstAskedOn: '2026-11-21', lastAskedOn: '2026-11-21', lastAskedAt: '2026-11-21T09:00:00+05:00', askCount: 1, ...o })
+const q = (o: Partial<ClarificationFact> = {}): ClarificationFact => ({ id: 'c1', rfqId: 'r1', question: 'Line size?', rfqItemId: null, firstAskedOn: '2026-11-21', lastAskedOn: '2026-11-21', lastAskedAt: '2026-11-21T09:00:00+05:00', lastAskedBy: null, askCount: 1, ...o })
 
 describe('drafts', () => {
   it('customer: both channels, from the open questions only, with the count after the stamp', () => {
