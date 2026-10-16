@@ -295,7 +295,7 @@ Evidence: mockups g2-today-b2 / g2-intake-float / g2-chase-texts (HTML read in f
 | B-09 | Row on mobile | trailing chevron on each row | none | FIXED f47f95f | low | add chevron at 375 (R11) |
 | B-10 | "Copied" row state | frame 2: row unchanged, nothing moved yet | due chip replaced by green "Copied" pill until undo closes | EXTRA | low | Dec R11. O-2 |
 | B-11 | Top-bar counts | "Today 9, RFQs 14, Orders 7, Money 3" | AppShell `counts` prop never passed | FIXED 1e18a24 | medium | Dec R11 "not wired". Wire counts (shell/R11) |
-| B-12 | Collision line | not drawn in b2 (INVENTORY, BUILD_PLAN R11/D02 name it) | not built | MISSING | low | O-3 |
+| B-12 | Collision line | not drawn in b2 (INVENTORY, BUILD_PLAN R11/D02 name it) | not built | FIXED 880565c | low | O-3 |
 
 ### 1b. Waiting group
 | ID | element | mockup | built | status | sev | fix / task |
@@ -316,7 +316,7 @@ Evidence: mockups g2-today-b2 / g2-intake-float / g2-chase-texts (HTML read in f
 | B-22 | "Prepared for you" sub-text | "Written from the two open questions. Edit anything before you send." | "Written from what is on record. Edit anything before you send." | FIXED f47f95f | low | R16 |
 | B-23 | Channel switch | WhatsApp / Email | same | MATCH | - | - |
 | B-24 | Recipient row | WhatsApp: phone icon, "To Mr. Tariq Mehmood", mono phone. Email: mail icon, address shown | always phone icon; "To {name}" or "No contact on record"; phone only; email never shown (contacts.email exists, api.ts selects only name, phone) | FIXED f47f95f | medium | select contacts.email, show on Email tab (R16) |
-| B-25 | Salutation | "Assalam o Alaikum Mr. Tariq," | full stored name ("Assalam o Alaikum Tariq Mehmood,") | DIFFERENT | medium | O-5 |
+| B-25 | Salutation | "Assalam o Alaikum Mr. Tariq," | full stored name ("Assalam o Alaikum Tariq Mehmood,") | KEPT (owner) | medium | O-5 |
 | B-26 | Email subject | separate "Subject" row + "Copy subject" button | "Subject: ..." line inside the text; no Copy subject | FIXED f47f95f | medium | R16 |
 | B-27 | Draft text styling | *…* markers faint, keywords bold | plain pre, asterisks plain | FIXED f47f95f | low | R16 |
 | B-28 | Draft body detail | "your RFQ *#74037* (flow meters, Faisalabad plant)", "(item 2)", "(items 2 and 3)" | no parenthetical, no item tags | FIXED f47f95f | medium | Dec R09/R11 (generator never invents; no item link). O-6 |
@@ -371,7 +371,7 @@ Evidence: mockups g2-today-b2 / g2-intake-float / g2-chase-texts (HTML read in f
 ## 2. Intake + float (g2-intake-float)
 | ID | element | mockup | built | status | sev | fix / task |
 |---|---|---|---|---|---|---|
-| B-100 | Page head | crumb "RFQs > New RFQ", h2, lede "Paste what the customer sent. Nothing is saved until you continue." | same crumb/h1; "...until you copy the enquiry or save." | DIFFERENT | low | Dec R05. O-8 |
+| B-100 | Page head | crumb "RFQs > New RFQ", h2, lede "Paste what the customer sent. Nothing is saved until you continue." | same crumb/h1; "...until you copy the enquiry or save." | KEPT (owner) | low | Dec R05. O-8 |
 | B-101 | Company field | search icon, "Search, or type a new company name", focused | Combobox autoFocus, same placeholder | MATCH | - | - |
 | B-102 | Option meta | "Mianwali · customer · 2 RFQs · similar name" | "customer · Pakistan" (role · country) | FIXED 416637d | medium | add RFQ count + similar-name flag (R05) |
 | B-103 | Add-new row | "Add “X” as a new company" + "Saved as a prospect until the first order" + ⏎ | label + plus icon only | FIXED 416637d | low | R05 |
@@ -396,7 +396,7 @@ Evidence: mockups g2-today-b2 / g2-intake-float / g2-chase-texts (HTML read in f
 | B-122 | Enquiry hint | info-style "Spec lines are blank on purpose. Type what the customer gave you under any item, or leave it. The app never writes a spec for you, and a blank one is fine to send." | same text in warning-tone Banner | FIXED 416637d | low | R05 |
 | B-123 | Enquiry card | "Enquiry to 3 suppliers / One text for all three. Each supplier skips what they cannot offer." channel tabs, "Send to" chips with x | same | MATCH | - | - |
 | B-124 | Spec blanks | "Spec: [left blank]" highlighted pill | plain "Spec: left blank" in an editable textarea | FIXED 416637d | medium | R05 |
-| B-125 | WhatsApp enquiry body | greeting, "Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):", items+Spec, "Kindly reply by *Tuesday 1 December*. If you cannot offer an item...", Thank you., Regards | adds "Please include in your reply: - Unit price and currency - Lead time - Origin and authenticity... - Stock position - MOQ, offer validity and payment terms"; ref is RFQ-#### until copy (Dec R05) | DIFFERENT | medium | BUILD_PLAN R04 requires the asks. O-10 |
+| B-125 | WhatsApp enquiry body | greeting, "Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):", items+Spec, "Kindly reply by *Tuesday 1 December*. If you cannot offer an item...", Thank you., Regards | adds "Please include in your reply: - Unit price and currency - Lead time - Origin and authenticity... - Stock position - MOQ, offer validity and payment terms"; ref is RFQ-#### until copy (Dec R05) | KEPT (owner) | medium | BUILD_PLAN R04 requires the asks. O-10 |
 | B-126 | Draft editable | static | editable textarea | EXTRA | low | - |
 | B-127 | Footer | [Copy & mark floated to 3] [Back to suppliers] … "You paste it into each supplier's chat." | same + [Save without floating]; sentence sits under the textarea | FIXED 416637d | low | R05 |
 | B-128 | Floated panel | "Floated to 3 suppliers on Fri 27 Nov", "RFQ-0185 is out for prices", clipboard line, reply-by + bid-due rows, info "Item 4 has no supplier yet. … Float item 4 to them" (link), [Open RFQ-0185][Start another RFQ] | same panel and copy; no "Float item 4 to them" link; adds copy-failed fallback and "No bid due date…" | FIXED 416637d | medium | link to float the item (R05) |
@@ -448,7 +448,7 @@ No dedicated mockup exists (BUILD_PLAN line 464: RFQ board is "composed from DES
 | B-152 | Open / Closed switch | "Open 6 | Closed 1" segmented | Tabs "Open 7", "Closed and won 27" | FIXED 1e18a24 | low | - |
 | B-153 | Filter box | "Filter RFQs" (search icon, `/` focuses, Esc clears) | none | FIXED 1e18a24 | medium | R06 |
 | B-154 | Density toggle | Comfortable / Compact | none | FIXED 1e18a24 | low | R06/U04 |
-| B-155 | Columns | RFQ number, Customer, Items count, Bid due (with time), Sourcing, Status, Value (PKR net) | Company (+ "RFQ-0001 · their ref X"), Due (date + "3 days overdue"), Sourcing (+ "N uncovered"), Questions, Bid, Owner | DIFFERENT | medium | no Items or Value column; O-11 |
+| B-155 | Columns | RFQ number, Customer, Items count, Bid due (with time), Sourcing, Status, Value (PKR net) | Company (+ "RFQ-0001 · their ref X"), Due (date + "3 days overdue"), Sourcing (+ "N uncovered"), Questions, Bid, Owner | FIXED 880565c | medium | no Items or Value column; O-11 |
 | B-156 | Sourcing chips | Covered / Partly covered / Awaiting offers / Not floated / No offer anywhere | registry chips with "1 of 2" detail | MATCH | - | - |
 | B-157 | Owner + state filters | not drawn | Mine/All and 5 sourcing segments with counts, kept in the URL | EXTRA | low | Dec R06 |
 | B-158 | Sort + footer | sortable headers; "Showing 7 of 7 RFQs" + move/open hints | Company/Due/Owner sortable; "Showing 7 of 7 open RFQs" + hints | MATCH | - | - |
@@ -462,15 +462,15 @@ No dedicated mockup exists (BUILD_PLAN line 464: RFQ board is "composed from DES
 ## OWNER DECISION needed
 - O-1 (B-06, B-79): mockup shows clock times ("Bid due today, 17:00", "12:00", "5:00 pm today"); data has a due date only (Dec R11). Add a due time or accept dates only?
 - O-2 (B-10): Dec R11 marks the row "Copied"; mockup frame 2 leaves it unchanged. Keep?
-- O-3 (B-12): collision line is in BUILD_PLAN R11/D02 and INVENTORY but not drawn in g2-today-b2. Does it exist?
-- O-4 (B-20): 4th figure "Waiting: Endress+Hauser via ABC Traders" (needs the supplier brand/agent behind a question) vs built "Asked so far ×N" (Dec R11). Keep?
-- O-5 (B-25, B-78): "Mr. Tariq" needs a title/short-name field; contacts have one name. Add one or accept full names?
+- O-3 (B-12): collision line is in BUILD_PLAN R11/D02 and INVENTORY but not drawn in g2-today-b2. Does it exist? DECIDED: yes, as "Ali chased this 1h ago" so nobody chases the same customer twice; built with migration 0048 (FIXED 880565c).
+- O-4 (B-20) KEPT per owner ("Asked so far ×N"): 4th figure "Waiting: Endress+Hauser via ABC Traders" (needs the supplier brand/agent behind a question) vs built "Asked so far ×N" (Dec R11). Keep?
+- O-5 (B-25, B-78) KEPT per owner (full names in salutations): "Mr. Tariq" needs a title/short-name field; contacts have one name. Add one or accept full names?
 - O-6 (B-28, B-71, B-76): item tags "(item 2)", the "(flow meters, Faisalabad plant)" context, the untick list and editable confirm-by date. Dec R09/R11: no item link in `clarifications`, generator never invents. Add the item link (migration) and controls, or accept?
 - O-7 (B-29, B-78): email phone line needs users.phone.
-- O-8 (B-100): "Nothing is saved until you continue" vs saved on copy/save.
+- O-8 (B-100) KEPT per owner (accurate wording): "Nothing is saved until you continue" vs saved on copy/save.
 - O-9 (B-104): create company inline with City + Contact (mockup) vs shared modal with Country (Dec R02).
-- O-10 (B-125): BUILD_PLAN R04 requires the "please include in your reply" asks; mockup enquiry has none.
-- O-11 (B-150..B-155): board has no mockup; BUILD_PLAN R06 says "state columns", built is table + filters. Approve the column set (Items, Value, Owner, Questions, Bid).
+- O-10 (B-125) KEPT per owner (the asks stay): BUILD_PLAN R04 requires the "please include in your reply" asks; mockup enquiry has none.
+- O-11 (B-150..B-155) DECIDED: add Items and Value (PKR net), no money for engineers; FIXED 880565c: board has no mockup; BUILD_PLAN R06 says "state columns", built is table + filters. Approve the column set (Items, Value, Owner, Questions, Bid).
 
 ## UNDONE (not built or not matching; no decision blocks it)
 B-07, B-09, B-11, B-14, B-16, B-18, B-19, B-22, B-24, B-26, B-27, B-31, B-35, B-36, B-37, B-39..B-45, B-52, B-53, B-58, B-61, B-62, B-73, B-74, B-75, B-83, B-84, B-85, B-87, B-102, B-103, B-105, B-107, B-110, B-119, B-122, B-124, B-127, B-128, B-153, B-154, B-160..B-162, B-164.
