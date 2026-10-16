@@ -284,15 +284,15 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
 
           <div className="flex flex-wrap gap-2">
             {complete ? (
-              <Button icon={RotateCcw} onClick={() => void mark(false)} busy={setComplete.isPending} busyLabel="Reopening">
+              <Button size="sm" icon={RotateCcw} onClick={() => void mark(false)} busy={setComplete.isPending} busyLabel="Reopening">
                 Reopen costs
               </Button>
             ) : (
-              <Button icon={ClipboardCheck} onClick={() => void mark(true)} busy={setComplete.isPending} busyLabel="Marking" disabled={unknown}>
+              <Button size="sm" icon={ClipboardCheck} onClick={() => void mark(true)} busy={setComplete.isPending} busyLabel="Marking" disabled={unknown}>
                 Mark costs complete
               </Button>
             )}
-            <Button variant="quiet" icon={Plus} onClick={() => setAdding(true)}>
+            <Button size="sm" variant="quiet" icon={Plus} onClick={() => setAdding(true)}>
               Add expense
             </Button>
           </div>
