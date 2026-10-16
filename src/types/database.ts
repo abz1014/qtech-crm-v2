@@ -1875,6 +1875,12 @@ isOneToOne: false
 "fx_wanted_currencies":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
+"import_purge_audit":
+{ Args: { "p_ids": (string)[] }; Returns: number
+                           },
+"import_reset_numbers":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "ingest_fx_response":
 { Args: Record<PropertyKey, never>; Returns: number
                            },

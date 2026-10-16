@@ -5,9 +5,9 @@ so runs stay fast and quick to read: a docs-only push runs nothing.
 
 | Workflow | Runs on | Cost when it runs |
 |---|---|---|
-| `ci.yml` (lint, tokens, typecheck, unit, build) | every push except docs-only (`docs/**`, `*.md`) | about 3 min |
+| `ci.yml` (lint, tokens, typecheck, unit, import transforms and guard, build) | every push except docs-only (`docs/**`, `*.md`) | about 3 min |
 | `ci.yml` gallery job (visual + axe) | main, manual, or when `src/ui`, `src/dev`, `src/index.css`, `tailwind.config.ts`, `e2e/gallery*`, `e2e/__screenshots__`, `playwright.config.ts`, `package*.json` change | about 4 min |
-| `db.yml` | every push, only if `supabase/**`, `src/types/database.ts`, `package*.json` or the workflow changed | about 6 min |
+| `db.yml` | every push, only if `supabase/**`, `src/types/database.ts`, `import/**`, `package*.json` or the workflow changed (its last step is the import load test, I01) | about 6 min |
 | `functions.yml` | every push; paths `supabase/functions/**`, `supabase/migrations/**` | about 6 min |
 | `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | every push, path-gated; one stack boot, only suites whose paths changed | about 8 to 14 min |
 | `remote.yml`, `deploy-functions.yml` | manual only, owner approval | not part of the budget |
