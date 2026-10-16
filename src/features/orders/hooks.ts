@@ -148,3 +148,26 @@ export function useResolveBasis(orderId: string) {
 export function useSupplierChoices(enabled: boolean) {
   return useQuery({ queryKey: qk.orders.supplierChoices(), queryFn: api.listSupplierChoices, enabled, staleTime: 60_000 })
 }
+
+/** O04: the orders list. `role` is in the key because the request itself differs by role. */
+export function useOrdersList(role: 'admin' | 'sales' | 'engineer' | null) {
+  return useQuery({ queryKey: qk.orders.board(role ?? ''), queryFn: () => api.listOrders(role as 'admin' | 'sales' | 'engineer'), enabled: role !== null })
+}
+
+/** O02: past orders matching what is typed (nothing typed: the most recent). Read only while the dialog is open. */
+export function usePastOrders(text: string, enabled: boolean) {
+  return useQuery({ queryKey: qk.orders.past(text), queryFn: ({ signal }) => api.searchPastOrders(text, signal), enabled, staleTime: 0 })
+}
+
+/** One confirm creates the order from a past one. The id is made by the caller and kept for a retry, so a double submit makes one order. */
+export function useCreateRepeatOrder() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: api.RepeatInput & { companyId: string }) => api.createRepeatOrder(input),
+    onSuccess: (_id, v) => invalidateAfter(client, 'order.repeat', { companyId: v.companyId }),
+  })
+}
+
+export function usePastOrder(id: string | undefined) {
+  return useQuery({ queryKey: qk.orders.pastOne(id ?? ''), queryFn: () => api.getPastOrder(id as string), enabled: Boolean(id) })
+}
