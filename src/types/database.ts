@@ -1740,6 +1740,38 @@ isOneToOne: false
       referencedColumns: ["order_id"]
     }
                   ]
+                },"v_report_clarification_turnaround": {
+                  Row: {
+                    "answered": number | null,"asked": number | null,"avg_days": number | null,"month": string | null,"slowest_days": number | null,"still_open": number | null,"total_days": number | null,"withdrawn": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_report_float": {
+                  Row: {
+                    "closed": number | null,"items_quoted": number | null,"items_total": number | null,"rfqs": number | null,"sourcing_state": string | null,"still_open": number | null,"won": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_report_repeat_customers": {
+                  Row: {
+                    "company_id": string | null,"first_order_on": string | null,"is_repeat": boolean | null,"last_order_on": string | null,"name": string | null,"orders": number | null,"rfqs": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_report_rfq_outcomes": {
+                  Row: {
+                    "close_reason": string | null,"outcome": string | null,"rfqs": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
                 },"v_rfq_state": {
                   Row: {
                     "bid_state": string | null,"clarification_state": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string | null,"days_to_due": number | null,"due_on": string | null,"floated": number | null,"is_overdue": boolean | null,"is_priority": boolean | null,"items_quoted": number | null,"items_total": number | null,"items_uncovered": number | null,"number": number | null,"outcome": string | null,"outcome_clash": boolean | null,"owner_id": string | null,"quotation_valid_until": string | null,"quoted_on": string | null,"received_on": string | null,"responders": number | null,"rfq_id": string | null,"sourcing_state": string | null,"to_ask": number | null,"to_relay": number | null,"waiting": number | null,"waiting_days": number | null

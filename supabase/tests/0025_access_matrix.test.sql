@@ -211,6 +211,10 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('view',  'v_month_expense_category', '',      'S',    '',     ''),     -- A6 A6.3: admin only
   ('view',  'v_month_team',             '',      'S',    '',     ''),     -- A6 A6.3: admin only
   ('view',  'v_gst_month',              '',      'S',    'S',    ''),     -- A6 A6.3: admin and sales (input tax is NULL for sales)
+  ('view',  'v_report_rfq_outcomes', '', 'S', 'S', ''),     -- P01 (0053): reports, admin and sales; engineers get zero rows, no money column
+  ('view',  'v_report_float', '', 'S', 'S', ''),     -- P01 (0053): reports, admin and sales; engineers get zero rows, no money column
+  ('view',  'v_report_clarification_turnaround', '', 'S', 'S', ''),     -- P01 (0053): reports, admin and sales; engineers get zero rows, no money column
+  ('view',  'v_report_repeat_customers', '', 'S', 'S', ''),     -- P01 (0053): reports, admin and sales; engineers get zero rows, no money column
   ('function', 'close_month',           '',      'X',    '',     ''),     -- A6 A6.1: admin RPC
   ('function', 'close_months_through',  '',      'X',    '',     ''),     -- A6 A6.1: admin RPC
   ('function', 'reopen_month',          '',      'X',    '',     ''),     -- A6 A6.1: admin RPC
@@ -252,6 +256,7 @@ insert into public.inquiry_item_declines (inquiry_id, rfq_item_id, reason) value
   (pg_temp.f('19'), pg_temp.f('18'), 'other');
 insert into public.clarifications (id, rfq_id, question) values
   (pg_temp.f('1d'), pg_temp.f('15'), 'Main q'), (pg_temp.f('1e'), pg_temp.f('15'), 'Leaf q');
+update public.clarifications set first_asked_at = now(), last_asked_at = now() where id = pg_temp.f('1e');   -- P01 (0053): one asked question, so v_report_clarification_turnaround has a row to probe
 insert into public.orders (id, company_id, owner_id) values
   (pg_temp.f('20'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002'),
   (pg_temp.f('21'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');
@@ -373,7 +378,8 @@ select v, '', 'S', format('select 1 from public.%s limit 1', v)
 from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_state','v_invoice_state','v_gst_register',
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_stats',
-                  'v_month_pnl','v_month_expense_category','v_month_team','v_gst_month']) v;   -- A6
+                  'v_month_pnl','v_month_expense_category','v_month_team','v_gst_month',
+                  'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)
 -- Each call is valid for an authorised caller and rolled back. A call counts as allowed when it returns rows (or a

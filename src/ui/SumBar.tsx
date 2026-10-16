@@ -18,6 +18,8 @@ export interface SumBarItem {
   amount?: Amount | null
   /** The figure is a count, not money. */
   count?: number
+  /** The figure is text that is neither money nor a plain count ("57%", "3.5 days"). Reports use it. */
+  figure?: string
   /** One line of context: "6 payments received". */
   sub?: ReactNode
   provisional?: boolean
@@ -37,8 +39,8 @@ export function SumBar({ items, label, className }: { items: SumBarItem[]; label
       {items.map(item => (
         <div key={item.label} className="grid min-w-0 content-start gap-[2px] bg-surface px-5 py-4">
           <span className="text-xs font-medium text-fg-muted">{item.label}</span>
-          {item.count !== undefined ? (
-            <span className="num text-xl font-medium tracking-snug">{item.count}</span>
+          {item.count !== undefined || item.figure !== undefined ? (
+            <span className="num text-xl font-medium tracking-snug">{item.figure ?? item.count}</span>
           ) : (
             <Money value={item.amount} size="xl" provisional={item.provisional} paisa={item.paisa ?? 'never'} />
           )}
