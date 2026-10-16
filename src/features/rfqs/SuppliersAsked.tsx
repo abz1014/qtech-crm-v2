@@ -1,20 +1,23 @@
 import { useState } from 'react'
-import { Copy, Mail, Phone, Plus } from 'lucide-react'
+import { Copy, Plus } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
 import { mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
-import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
-import { Icon } from '@/ui/Icon'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
-import { useMySignature, useStampSupplierChase } from '@/features/rfqs/hooks'
+import { ChasedByNote, ChaseNote, FormattedMessage, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
+import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
+import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
+import { useRestoreSupplierChase, useStampSupplierChase } from '@/features/rfqs/hooks'
+import { useSignature } from '@/features/rfqs/useSignature'
 import { canChaseInquiry, outstandingItems } from '@/features/rfqs/replyFocus'
-import { daysSince, generateSupplierChase, sentLine, supplierMemoryLine, type EnquiryVariant, type SupplierFacts } from '@/features/rfqs/lib'
+import { daysSince, generateSupplierChase, qtyText, sentLine, supplierMemoryLine, supplierReplyBy, supplierReturnsOn, type EnquiryVariant, type SupplierFacts } from '@/features/rfqs/lib'
+import { formatDay } from '@/lib/formatDay'
 
 /*
  * "Suppliers asked" (g2-rfq-detail rail): who was asked, what they answered, what we know about them, and the chase.
@@ -70,6 +73,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, onFloat }: Props)
               </div>
               {mem ? <p className={mem.late ? 'text-xs text-tone-warning-fg' : 'text-xs text-fg-muted'}>{mem.text}</p> : null}
               <p className="text-xs text-fg-muted">{sentLine(i)}</p>
+              <ChasedByNote byId={i.lastChasedBy} at={i.lastChasedOn} />
               {can ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <ChaseNow rfq={rfq} items={items} inquiry={i} />
@@ -80,7 +84,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, onFloat }: Props)
                   ) : null}
                 </div>
               ) : null}
-              {open?.id === i.id ? <ChaseCard rfq={rfq} items={items} inquiry={i} /> : null}
+              {open?.id === i.id ? <ChaseCard rfq={rfq} items={items} inquiry={i} inquiries={inquiries} /> : null}
             </li>
           )
         })}
@@ -96,45 +100,71 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, onFloat }: Props)
 
 /**
  * The chase for one supplier: the text for a channel, and the one action that copies it and stamps the chase together
- * (stamp_supplier_chase). Used by the chase card and by the "Chase" button on every supplier asked (FE-2: chase = 1 tap).
+ * (stamp_supplier_chase), with an Undo toast that takes the stamp back. Used by the chase card and by the "Chase" button on
+ * every supplier asked (FE-2: chase = 1 tap). The card can leave items out and change the reply-by date; the button never asks.
  */
-function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryRow, variant: EnquiryVariant) {
+function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryRow, variant: EnquiryVariant, opts: { off?: ReadonlySet<string>; replyBy?: string | null } = {}) {
   const { toast } = useToast()
-  const session = useSession()
-  const user = session.status === 'signed-in' ? session.user : null
+  const signature = useSignature()
   const stamp = useStampSupplierChase(rfq.id)
-  const mine = useMySignature(user?.id)
-  const outstanding = outstandingItems(inquiry, items)
+  const restore = useRestoreSupplierChase(rfq.id)
+  const today = businessToday()
+  const outstanding = outstandingItems(inquiry, items).filter(it => !opts.off?.has(it.id))
   const pricedNumbers = items.filter(it => inquiry.lines.some(l => l.itemId === it.id)).map(it => it.number)
-  const chase = generateSupplierChase({
-    rfqRef: rfqRef(rfq.number),
-    sentOn: inquiry.sentOn,
-    dueOn: rfq.dueOn,
-    today: businessToday(),
-    chaseCount: inquiry.chaseCount,
-    contactName: inquiry.contactName,
-    pricedNumbers,
-    items: outstanding.map(it => ({ number: it.number, description: it.description, brandName: it.brandName, qty: it.qty, unit: it.unit })),
-    signature: { name: user?.name ?? 'Q-Tech Solutions', company: 'Q-Tech Solutions', jobTitle: mine.data?.jobTitle, phone: mine.data?.phone },
-    variant,
-  })
-  const text = chase.subject ? `Subject: ${chase.subject}\n\n${chase.body}` : chase.body
+  const chase =
+    outstanding.length === 0
+      ? null
+      : generateSupplierChase({
+          rfqRef: rfqRef(rfq.number),
+          sentOn: inquiry.sentOn,
+          dueOn: rfq.dueOn,
+          today,
+          chaseCount: inquiry.chaseCount,
+          contactName: inquiry.contactName,
+          pricedNumbers,
+          items: outstanding.map(it => ({ number: it.number, description: it.description, brandName: it.brandName, qty: it.qty, unit: it.unit })),
+          signature,
+          variant,
+          ageDays: inquiry.sentOn ? daysSince(inquiry.sentOn, today) : null,
+          replyByOverride: opts.replyBy ?? null,
+        })
+  // The clipboard gets the body: an email's subject has its own row and its own copy button.
+  const text = chase ? chase.body : ''
 
   const doChase = async () => {
+    if (!chase) return
     const ok = await copyToClipboard(text)
     if (!ok) {
       toast({ title: 'Could not copy the text', body: 'Show the text and copy it by hand. The chase was not recorded.', tone: 'danger' })
       return
     }
+    const before = { lastChasedOn: inquiry.lastChasedOn, lastChasedBy: inquiry.lastChasedBy ?? null, chaseCount: inquiry.chaseCount }
     try {
       const n = await stamp.mutateAsync(inquiry.id)
-      toast({ title: 'Chase text copied', body: `${inquiry.supplierName} · chased ${n} ${n === 1 ? 'time' : 'times'}`, tone: 'success' })
+      toast({
+        title: 'Chase text copied',
+        body: `${inquiry.supplierName} · chased ${n} ${n === 1 ? 'time' : 'times'}`,
+        tone: 'success',
+        undo: {
+          onUndo: async () => {
+            try {
+              await restore.mutateAsync({ inquiryId: inquiry.id, before })
+            } catch (err) {
+              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
+            }
+          },
+          settledTitle: 'Chase text copied',
+          settledBody: `${rfqRef(rfq.number)} marked chased`,
+          undoneTitle: 'Undone.',
+          undoneBody: `${inquiry.supplierName} is not marked chased.`,
+        },
+      })
     } catch (err) {
       toast({ title: 'Copied, but the chase was not recorded', body: mapPgError(err).message, tone: 'danger' })
     }
   }
 
-  return { text, doChase, busy: stamp.isPending }
+  return { chase, text, doChase, busy: stamp.isPending }
 }
 
 /** "Chase": 1 tap on any supplier asked. Copies the WhatsApp text and marks the chase. */
@@ -147,43 +177,92 @@ function ChaseNow({ rfq, items, inquiry }: { rfq: RfqHeader; items: RfqItemRow[]
   )
 }
 
-function ChaseCard({ rfq, items, inquiry }: { rfq: RfqHeader; items: RfqItemRow[]; inquiry: InquiryRow }) {
+function ChaseCard({ rfq, items, inquiry, inquiries }: { rfq: RfqHeader; items: RfqItemRow[]; inquiry: InquiryRow; inquiries: InquiryRow[] }) {
+  const choose = useChooseSuppliers(rfq, inquiries)
   const [variant, setVariant] = useState<EnquiryVariant>('whatsapp')
-  const { text, doChase, busy } = useSupplierChase(rfq, items, inquiry, variant)
-
-  const recipient =
-    variant === 'whatsapp'
-      ? { icon: Phone, text: [inquiry.contactTitle ? `${inquiry.contactName}, ${inquiry.contactTitle}` : inquiry.contactName, inquiry.contactPhone].filter(Boolean).join('  ') }
-      : { icon: Mail, text: [inquiry.contactTitle ? `${inquiry.contactName}, ${inquiry.contactTitle}` : inquiry.contactName, inquiry.contactEmail].filter(Boolean).join('  ') }
+  const [off, setOff] = useState<ReadonlySet<string>>(new Set())
+  const [chosen, setChosen] = useState<string | null>(null)
+  const [dismissed, setDismissed] = useState(false)
+  const today = businessToday()
+  const { chase, doChase, busy, text } = useSupplierChase(rfq, items, inquiry, variant, { off, replyBy: chosen })
+  const outstandingAll = outstandingItems(inquiry, items)
+  const defaultBy = supplierReplyBy(rfq.dueOn, today) ?? today
+  const returnsOn = supplierReturnsOn(today, rfq.dueOn)
+  const recipient = inquiry.contactName
+    ? { name: inquiry.contactTitle ? `${inquiry.contactName}, ${inquiry.contactTitle}` : inquiry.contactName, phone: inquiry.contactPhone, email: inquiry.contactEmail }
+    : null
 
   return (
-    <div className="mt-2 grid gap-3 rounded border bg-surface p-3" data-chase-card={inquiry.supplierId} aria-label={`Chase ${inquiry.supplierName}`} role="group">
-      <div className="flex flex-wrap items-center gap-2">
-        <b className="min-w-0 flex-1 basis-40 text-sm font-semibold">{`Chase ${inquiry.supplierName}`}</b>
-        <SegmentedControl
-          aria-label="Message channel"
-          value={variant}
-          onValueChange={v => setVariant(v as EnquiryVariant)}
-          options={[
-            { value: 'whatsapp', label: 'WhatsApp' },
-            { value: 'email', label: 'Email' },
-          ]}
+    <div className="mt-2 grid gap-3" data-chase-card={inquiry.supplierId}>
+      {inquiry.chaseCount >= 2 && !dismissed ? (
+        <FloatElsewhere
+          supplierName={inquiry.supplierName}
+          items={outstandingAll}
+          askedIds={new Set(inquiries.map(i => i.supplierId))}
+          today={today}
+          busy={choose.busy}
+          onChoose={input => void choose.choose(input)}
+          onChaseAgain={() => setDismissed(true)}
         />
-      </div>
-      <p className="flex items-center gap-2 text-xs text-fg-muted">
-        <Icon icon={recipient.icon} size="sm" />
-        <span className="num min-w-0 break-words">{recipient.text || (variant === 'whatsapp' ? 'No phone number on file' : 'No email address on file')}</span>
-      </p>
-      <pre className="m-0 whitespace-pre-wrap break-words rounded bg-sunken p-3 font-sans text-sm text-fg-2" data-chase-text>
-        {text}
-      </pre>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="primary" icon={Copy} onClick={() => void doChase()} busy={busy} busyLabel="Marking chased">
-          Copy and mark chased
-        </Button>
-        <span className="text-xs text-fg-muted">
-          {inquiry.chaseCount === 0 ? 'Not chased yet' : `Chased ${inquiry.chaseCount === 1 ? 'once' : `${inquiry.chaseCount} times`} already`}
-        </span>
+      ) : null}
+      <div role="group" aria-label={`Chase ${inquiry.supplierName}`} className="grid overflow-hidden rounded border bg-surface">
+        <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
+          <b className="min-w-0 flex-1 basis-40 text-sm font-semibold">{`Chase ${inquiry.supplierName}`}</b>
+          <SegmentedControl
+            aria-label="Message channel"
+            value={variant}
+            onValueChange={v => setVariant(v as EnquiryVariant)}
+            options={[
+              { value: 'whatsapp', label: 'WhatsApp' },
+              { value: 'email', label: 'Email' },
+            ]}
+          />
+        </div>
+        <TickList
+          title="Items still without a price from this supplier"
+          rows={items
+            .filter(it => !inquiry.itemDeclines[it.id])
+            .map(it => {
+              const priced = inquiry.lines.some(l => l.itemId === it.id)
+              return {
+                id: it.id,
+                label: `${it.brandName && !it.description.toLowerCase().includes(it.brandName.toLowerCase()) ? `${it.brandName} ` : ''}${it.description}`,
+                sub: `item ${it.number} · ${qtyText(it.qty, it.unit) ?? ''}`,
+                checked: !priced && !off.has(it.id),
+                disabled: priced,
+                note: priced ? 'priced' : undefined,
+              }
+            })}
+          onToggle={(id, on) =>
+            setOff(o => {
+              const n = new Set(o)
+              if (on) n.delete(id)
+              else n.add(id)
+              return n
+            })
+          }
+        />
+        <ReplyByField
+          label="Reply by"
+          value={chosen ?? defaultBy}
+          onChange={v => setChosen(v && v !== defaultBy ? v : null)}
+          note={`${rfq.dueOn ? 'Two working days before our bid.' : 'Three working days from today.'} You can change it.`}
+        />
+        <RecipientRow channel={variant} lead={variant === 'email' ? 'Email to' : 'WhatsApp to'} contact={recipient} />
+        {variant === 'email' && chase?.subject ? <SubjectRow subject={chase.subject} /> : null}
+        <div className="px-4 py-3">
+          {chase ? <FormattedMessage text={text} testId="chase-text" chaseText /> : <p className="text-sm text-fg-muted">Tick at least one item to write the message.</p>}
+        </div>
+        <ChaseNote className="border-t">
+          Copying records chase {inquiry.chaseCount + 1} for this supplier. {rfqRef(rfq.number)} moves to Waiting and returns if still silent after {formatDay(returnsOn)}. It lists only the items this
+          supplier has not priced, and never names the customer or our price.
+        </ChaseNote>
+        <div className="flex flex-wrap items-center gap-3 border-t bg-sunken px-4 py-3">
+          <Button variant="primary" icon={Copy} disabled={!chase} onClick={() => void doChase()} busy={busy} busyLabel="Marking chased">
+            Copy and mark chased
+          </Button>
+          <span className="text-xs text-fg-muted">{inquiry.chaseCount === 0 ? 'Not chased yet' : `Chased ${inquiry.chaseCount === 1 ? 'once' : `${inquiry.chaseCount} times`} already`}</span>
+        </div>
       </div>
     </div>
   )

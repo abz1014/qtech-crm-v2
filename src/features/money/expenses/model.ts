@@ -99,6 +99,8 @@ export interface BurstRow {
   categoryId: string
   /** Where the category came from: the 30-day favourite, the row above, or typed by the person. */
   categorySource: 'most-used' | 'carried' | 'typed'
+  /** Text left in the category box that matches no category: the row is unfinished until it is replaced or cleared. */
+  categoryText?: string
   date: string
   dateTyped: boolean
   /** null: follows the category's own default. */
@@ -135,7 +137,7 @@ export const effectivePaidVia = (row: BurstRow, categories: readonly Category[])
 /** A row with no amount is an empty row: it is skipped on save rather than refused. */
 export const isFilled = (row: BurstRow): boolean => row.amount !== null && row.amount !== 0
 
-export const isSavable = (row: BurstRow): boolean => row.amount !== null && row.amount > 0 && !!row.categoryId && !!row.date
+export const isSavable = (row: BurstRow): boolean => row.amount !== null && row.amount > 0 && !!row.categoryId && !!row.date && !row.categoryText
 
 export function burstTotals(rows: readonly BurstRow[]): { count: number; total: number } {
   const filled = rows.filter(isFilled)

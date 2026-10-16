@@ -141,6 +141,31 @@ describe('burst entry sheet (M11)', () => {
       expect(savedRows(db)[0]).toMatchObject({ amount_pkr: 500, category_id: 'c-sal' })
     })
 
+    it('clicking Save with a category half-typed accepts the highlighted match, as Tab does', async () => {
+      const user = userEvent.setup()
+      const db = setup()
+      const first = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(first).toHaveFocus())
+      await user.keyboard('500{Tab}sa')
+      expect(screen.getByText('1 of 3')).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: /^Save/ }))
+      await waitFor(() => expect(saves(db)).toHaveLength(1))
+      expect(savedRows(db)[0]).toMatchObject({ amount_pkr: 500, category_id: 'c-sal' })
+    })
+
+    it('clicking Save with category text that matches nothing saves nothing and says so on the row', async () => {
+      const user = userEvent.setup()
+      const db = setup()
+      const first = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(first).toHaveFocus())
+      await user.keyboard('500{Tab}zzz')
+      await user.click(screen.getByRole('button', { name: /^Save/ }))
+      await new Promise(r => setTimeout(r, 50))
+      expect(saves(db)).toHaveLength(0)
+      expect(screen.getByText(/No category matches "zzz"/)).toBeInTheDocument()
+      expect(screen.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('zzz') // still on screen, not thrown away
+    })
+
     it('an amount and a note typed on the last keystroke before Ctrl+Enter are saved', async () => {
       const user = userEvent.setup()
       const db = setup()

@@ -13,9 +13,10 @@ import { PwaPrompts } from '@/app/shell/PwaPrompts'
 import { CaptureProvider } from '@/app/capture/CaptureProvider'
 import { useCapture } from '@/app/capture/useCapture'
 import { TopBar } from '@/app/shell/TopBar'
+import { useNavCounts } from '@/app/shell/useNavCounts'
 
 interface AppShellProps {
-  /** Counts beside the destinations. Supplied by the data layer in later tasks. */
+  /** Counts beside the destinations. Today and RFQs are read from the shared cache; a value passed here wins. */
   counts?: Partial<Record<NavKey, number>>
 }
 
@@ -42,7 +43,8 @@ export function AppShell({ counts }: AppShellProps) {
   )
 }
 
-function Frame({ user, counts }: { user: SessionUser; counts?: Partial<Record<NavKey, number>> }) {
+function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Record<NavKey, number>> }) {
+  const counts = { ...useNavCounts(user), ...given }
   const palette = usePalette()
   const { openCapture } = useCapture()
   useSearchPaletteSource()

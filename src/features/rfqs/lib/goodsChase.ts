@@ -69,9 +69,9 @@ export function generateGoodsChase(input: GoodsChaseInput): GoodsChase {
   const lines: string[] = [greetingFor(variant, input.contactName), '']
 
   if (!email) {
-    if (firm) lines.push(`It is now over a month since ${order} was due. It was expected on ${bold(expected)} and has still not reached us${hasList ? ':' : '.'}`)
-    else if (chaseCount === 0) lines.push(`Following up on ${order}. It was due on ${bold(expected)} and we have not yet received the goods${hasList ? ':' : '.'}`)
-    else lines.push(`A further reminder on ${order}, due on ${bold(expected)}. The goods have still not reached us${hasList ? ':' : '.'}`)
+    if (firm) lines.push(`It is now over a month since ${order} was due. It was expected on ${bold(expected)} and has still not been delivered${hasList ? ':' : '.'}`)
+    else if (chaseCount === 0) lines.push(`Following up on ${order}. It was due on ${bold(expected)} and the goods have not yet been delivered${hasList ? ':' : '.'}`)
+    else lines.push(`A further reminder on ${order}, due on ${bold(expected)}. The goods have still not been delivered${hasList ? ':' : '.'}`)
     if (hasList) lines.push(list)
     lines.push('')
     lines.push(
@@ -81,9 +81,9 @@ export function generateGoodsChase(input: GoodsChaseInput): GoodsChase {
     )
     lines.push('', 'Thank you.', ...signOff(variant, input.signature))
   } else {
-    if (firm) lines.push(`It is now more than a month since ${order} was due. It was expected on ${expected} and has still not reached us${hasList ? ':' : '.'}`)
-    else if (chaseCount === 0) lines.push(`We refer to ${order}. The delivery was due on ${expected} and we have not yet received the goods${hasList ? ':' : '.'}`)
-    else lines.push(`This is a further reminder on ${order}, due on ${expected}. The goods have still not reached us${hasList ? ':' : '.'}`)
+    if (firm) lines.push(`It is now more than a month since ${order} was due. It was expected on ${expected} and has still not been delivered${hasList ? ':' : '.'}`)
+    else if (chaseCount === 0) lines.push(`We refer to ${order}. The delivery was due on ${expected} and the goods have not yet been delivered${hasList ? ':' : '.'}`)
+    else lines.push(`This is a further reminder on ${order}, due on ${expected}. The goods have still not been delivered${hasList ? ':' : '.'}`)
     if (hasList) lines.push(list)
     lines.push('')
     lines.push(
@@ -94,6 +94,6 @@ export function generateGoodsChase(input: GoodsChaseInput): GoodsChase {
     lines.push('', 'Thank you for your continued support.', ...signOff(variant, input.signature))
   }
 
-  const subject = email ? `${ref ? `Order ${ref}` : 'Our order'}: delivery date needed by ${by === 'the end of today' ? 'today' : by}` : null
+  const subject = email ? `${ref ? `Order ${ref}` : 'Our order'}: delivery date needed by ${by === '5:00 pm today' ? 'today' : by}` : null
   return { variant, subject, body: lines.join('\n'), confirmBy, daysLate }
 }

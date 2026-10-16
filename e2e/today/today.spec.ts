@@ -125,7 +125,31 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(waiting.getByText(/chased just now · next nudge on/).first()).toBeVisible()
     await expect(page.locator('li[data-rule="chase_customer"]:not([data-waiting])').filter({ hasText: s.ref })).toHaveCount(0)
     expect((await askOf(s.clarificationId)).ask_count).toBe(2)
+
+    // ---- just chased: the title stays, the bar says where it went, the cells and the card switch, "Chase again now" is there
+    await expect(pane.getByRole('heading', { level: 2, name: 'Chase customer for clarifications' })).toBeVisible()
+    await expect(pane.getByText('Moved to Waiting.')).toBeVisible()
+    await expect(pane.getByText('Chased customer', { exact: true })).toBeVisible()
+    await expect(pane.getByText('Next nudge', { exact: true })).toBeVisible()
+    await expect(pane.getByRole('region', { name: 'Chased today' })).toBeVisible()
+    await expect(pane.getByRole('button', { name: 'Copy message and mark chased' })).toHaveCount(0)
     await review(page, 'today-03-waiting-1440')
+    await pane.getByRole('button', { name: 'Chase again now' }).click()
+    await expect(pane.getByRole('button', { name: 'Copy message and mark chased' })).toBeVisible()
+  })
+
+  test('the collision line: a colleague already chased it, so you are told who and when before you chase it again', async ({ page }) => {
+    const s = await seedCustomerChase(SALES)
+    // the admin chases it first (the same stamp the Copy buttons make)
+    await must(rest('admin', 'rpc/stamp_clarification_ask', { method: 'POST', body: { p_clarification_ids: [s.clarificationId] }, prefer: 'return=minimal' }))
+    await openAs(page, 'sales', '/today')
+    const waiting = page.getByRole('region', { name: 'Waiting' })
+    const row = waiting.locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })
+    await expect(row).toBeVisible()
+    await expect(row.locator('[data-collision]')).toContainText(/Test chased this (just now|\d+ min ago|\d+h ago|today)/)
+    await row.getByRole('button').first().click()
+    await expect(page.getByRole('region', { name: new RegExp(s.ref) }).locator('[data-collision]').first()).toContainText('chased this')
+    await review(page, 'today-11-collision-1440')
   })
 
   test('snooze: Tomorrow hides the item, Undo brings it back', async ({ page }) => {
@@ -231,13 +255,20 @@ test.describe('Today: accessibility and mobile', () => {
     await expect(row.getByText('Prepared for you')).toBeVisible()
     await review(page, 'today-08-mobile-accordion-375')
     expect(await violations(page), 'axe at 375, accordion open').toEqual([])
-    const hit = await row.getByRole('button', { name: 'Copy message and mark chased' }).boundingBox()
+    const hit = await row.getByRole('button', { name: 'Copy and mark chased' }).boundingBox()
     expect(hit?.height ?? 0).toBeGreaterThanOrEqual(44) // actions are 44 px on a phone
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
-    await row.getByRole('button', { name: 'Copy message and mark chased' }).click()
+    await row.getByRole('button', { name: 'Copy and mark chased' }).click()
     await expect(page.getByRole('status').filter({ hasText: `Copied. ${s.ref} marked chased.` })).toBeVisible()
     await review(page, 'today-09-mobile-copied-375')
+    // the undo window closes: the row joins Waiting and the accordion shows the compact "Chased today" card
+    await expect(page.getByRole('status').filter({ hasText: `${s.ref} marked chased` })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('region', { name: 'Waiting' }).locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })).toBeVisible({ timeout: 15_000 })
+    // (the row was open when it was chased, so it stays open in Waiting)
+    await expect(page.getByRole('region', { name: 'Chased today' })).toBeVisible()
+    await page.getByRole('region', { name: 'Chased today' }).scrollIntoViewIfNeeded()
+    await review(page, 'today-10-mobile-waiting-375')
   })
 
   test('an empty Today reads as the goal state', async ({ page }) => {

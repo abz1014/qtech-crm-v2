@@ -41,16 +41,15 @@ export function CreateCompanyInline({ initialName, onCreated, onCancel }: { init
     },
     routeError: e =>
       e.kind === 'unique' && /companies_name_key/.test(e.constraint ?? '') ? { field: 'name', message: 'A company with this name already exists.' } : undefined,
-    onSuccess: v => onCreated({ id: savedId.current, name: v.name }),
+    onSuccess: v => onCreated({ id: savedId.current, name: v.name, city: v.city || null }),
   })
   return (
-    <section aria-label="New company" className="grid gap-3 rounded border bg-surface p-4">
+    <section aria-label="New company" className="m-1 grid gap-3 rounded border bg-sunken p-4">
       <Form sf={sf} labels={{ name: 'Company name' }}>
         <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
           <FormField
             name="name"
             label="Company name"
-            requirement="required"
             renderError={message =>
               duplicate ? (
                 <>
@@ -66,10 +65,10 @@ export function CreateCompanyInline({ initialName, onCreated, onCancel }: { init
           >
             {f => <TextField {...f} autoComplete="off" autoCapitalize="words" autoFocus />}
           </FormField>
-          <FormField name="city" label="City" requirement="optional">
+          <FormField name="city" label="City">
             {f => <TextField {...f} autoComplete="off" placeholder="Optional" />}
           </FormField>
-          <FormField name="contact" label="Contact" requirement="optional">
+          <FormField name="contact" label="Contact">
             {f => <TextField {...f} autoComplete="off" placeholder="Optional" />}
           </FormField>
         </div>

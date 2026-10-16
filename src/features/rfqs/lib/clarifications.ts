@@ -2,15 +2,10 @@
 //
 //  - splitQuestions: a pasted message becomes one question per line (numbering and bullets stripped).
 //  - states and groups: to ask / asked / answered / withdrawn, derived from the timestamps (DATA_MODEL 2.11).
-//  - customer text: the approved wording of docs/design/mockups/g2-chase-texts.html ("Customer clarification chase"),
-//    WhatsApp and email. The first ask uses the same sentences with "Thank you for your RFQ" in place of "a gentle
-//    reminder" / "further to our message of"; it never invents a spec or an answer.
 //  - relay text for a supplier; a photo-only answer reads "see attached photo" (BUILD_PLAN A3 R09).
 //  - storage path format {parent_id}/{uuid}.{ext} (DATA_MODEL 2.20).
 
-import { longDay, parseDay } from './dateText'
-import type { EnquiryVariant } from './enquiryDraft'
-import { workingDaysAfter, workingDaysBefore } from './supplierChase'
+import { parseDay } from './dateText'
 
 // ---------------------------------------------------------------- paste to questions
 
@@ -131,94 +126,8 @@ export function relayText(input: { rfqRef: string; contactName: string | null; l
   return out.join('\n')
 }
 
-// ---------------------------------------------------------------- customer text
-
-/** One working day before our bid; three working days from today when there is no bid date. Never earlier than the next working day. */
-export function customerReplyBy(dueOn: string | null | undefined, today: string): string {
-  const tomorrow = workingDaysAfter(today, 1)
-  if (!dueOn || !parseDay(dueOn.slice(0, 10))) return workingDaysAfter(today, 3)
-  const d = workingDaysBefore(dueOn.slice(0, 10), 1)
-  return d < tomorrow ? tomorrow : d
-}
-
-export interface CustomerAskInput {
-  variant: EnquiryVariant
-  /** Our number, RFQ-0177. Used when the customer gave no reference of their own. */
-  rfqRef: string
-  customerRef: string | null
-  contactName: string | null
-  questions: readonly string[]
-  /** Has any of these been asked before (a reminder rather than a first ask)? */
-  repeat: boolean
-  /** YYYY-MM-DD of the first ask, for the email's "further to our message of". */
-  firstAskedDay: string | null
-  dueOn: string | null
-  today: string
-  signature: { name: string; company: string; jobTitle?: string | null }
-}
-
-export interface CustomerAsk {
-  variant: EnquiryVariant
-  subject: string | null
-  body: string
-  replyBy: string
-}
-
-export function generateCustomerAsk(input: CustomerAskInput): CustomerAsk {
-  const { variant, questions } = input
-  const email = variant === 'email'
-  const replyBy = customerReplyBy(input.dueOn, input.today)
-  const by = longDay(replyBy)
-  const due = input.dueOn ? input.dueOn.slice(0, 10) : null
-  const ref = input.customerRef?.trim() ? `#${input.customerRef.trim().replace(/^#/, '')}` : input.rfqRef
-  const bold = (t: string) => (email ? t : `*${t}*`)
-  const list = questions.map((q, i) => `${i + 1}. ${q.replace(/\s+/g, ' ').trim()}`).join('\n')
-  const greeting = input.contactName
-    ? email
-      ? `Dear ${input.contactName},\n\nAssalam o Alaikum.`
-      : `Assalam o Alaikum ${input.contactName},`
-    : email
-      ? 'Dear Sir or Madam,\n\nAssalam o Alaikum.'
-      : 'Assalam o Alaikum,'
-
-  const lines: string[] = [greeting, '']
-  if (!email) {
-    lines.push(
-      input.repeat
-        ? `A gentle reminder about your RFQ ${bold(ref)}. To complete our quotation we still need your confirmation on:`
-        : `Thank you for your RFQ ${bold(ref)}. To complete our quotation we need your confirmation on:`,
-      '',
-      list,
-      '',
-      due ? `Kindly confirm by ${bold(by)}; our bid is due on ${longDay(due)}.` : `Kindly confirm by ${bold(by)}.`,
-      '',
-      'Thank you for your support.',
-      'Regards,',
-      input.signature.name,
-      input.signature.company,
-    )
-  } else {
-    const further = input.repeat && input.firstAskedDay ? `, further to our message of ${longDay(input.firstAskedDay)},` : ','
-    lines.push(
-      input.repeat
-        ? `Thank you for your RFQ ${ref}. We are preparing our quotation and${further} still need your confirmation on the following points:`
-        : `Thank you for your RFQ ${ref}. We are preparing our quotation and need your confirmation on the following points:`,
-      '',
-      list,
-      '',
-      due
-        ? `Kindly confirm by ${by}. Our bid is due on ${longDay(due)}, and a reply by then will allow us to hold the supplier's price.`
-        : `Kindly confirm by ${by}.`,
-      '',
-      'If it is easier to discuss these over a call, please let me know a convenient time.',
-      '',
-      'With best regards,',
-      input.signature.name,
-      input.signature.jobTitle ? `${input.signature.jobTitle}, ${input.signature.company}` : input.signature.company,
-    )
-  }
-  return { variant, subject: email ? `RFQ ${ref}: your confirmation needed by ${by}` : null, body: lines.join('\n'), replyBy }
-}
+// The customer text (first ask, reminder, bid close, third ask, firm) is generateCustomerChase in ./customerChase: one
+// generator for every surface (Today, the clarifications panel).
 
 // ---------------------------------------------------------------- files
 

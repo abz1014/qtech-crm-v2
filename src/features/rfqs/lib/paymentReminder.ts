@@ -103,7 +103,7 @@ export function generatePaymentReminder(input: PaymentReminderInput): PaymentRem
     )
   }
   const sig = input.signature
-  lines.push('', ...(email ? ['With best regards,', sig.name, sig.jobTitle ? `${sig.jobTitle}, ${sig.company}` : sig.company] : ['Regards,', sig.name, sig.company]))
+  lines.push('', ...(email ? ['With best regards,', sig.name, sig.jobTitle ? `${sig.jobTitle}, ${sig.company}` : sig.company, ...(sig.phone ? [sig.phone] : [])] : ['Regards,', sig.name, sig.company]))
 
   const subject = email
     ? `${input.invoiceNumber ? `Invoice ${input.invoiceNumber}` : 'Our invoice'}: ${firm ? 'payment overdue' : 'payment due'}, PKR ${formatAmount(input.balance)} outstanding`

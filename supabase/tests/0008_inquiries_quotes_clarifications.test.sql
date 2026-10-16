@@ -17,7 +17,7 @@ $f$;
 -- ------------------------------------------------------------------ structure
 select columns_are('public', 'supplier_inquiries',
   array['id', 'created_at', 'created_by', 'rfq_id', 'supplier_id', 'sent_on', 'last_chased_on', 'no_offer_on',
-        'last_relayed_at', 'notes', 'chase_count', 'legacy_flags', 'legacy_source', 'no_offer_reason'],
+        'last_relayed_at', 'notes', 'chase_count', 'legacy_flags', 'legacy_source', 'no_offer_reason', 'last_chased_by'],
   'supplier_inquiries has the section 2.9 columns (with chase_count, and no_offer_reason from 0032)');
 select columns_are('public', 'supplier_quote_lines',
   array['id', 'created_at', 'created_by', 'inquiry_id', 'rfq_item_id', 'unit_price', 'currency', 'lead_time',
@@ -26,7 +26,7 @@ select columns_are('public', 'supplier_quote_lines',
   'supplier_quote_lines has the section 2.10 columns (FX columns from S17)');
 select columns_are('public', 'clarifications',
   array['id', 'created_at', 'created_by', 'rfq_id', 'raised_by_inquiry_id', 'question', 'first_asked_at',
-        'last_asked_at', 'ask_count', 'answer', 'answered_at', 'withdrawn_at', 'rfq_item_id'],
+        'last_asked_at', 'ask_count', 'answer', 'answered_at', 'withdrawn_at', 'rfq_item_id', 'last_asked_by'],
   'clarifications has the section 2.11 columns (with ask_count; rfq_item_id from A7, 0039)');
 select ok((select bool_and(relrowsecurity) from pg_class
            where oid in ('public.supplier_inquiries'::regclass, 'public.supplier_quote_lines'::regclass,

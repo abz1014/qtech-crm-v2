@@ -89,8 +89,8 @@ export function useUnsnooze() {
 /** What a chase tap records, so the stamp can be made and, inside 10 seconds, taken back exactly. */
 export type ChaseSpec =
   | { kind: 'customer'; ids: string[] }
-  | { kind: 'supplier'; inquiryId: string; before: { lastChasedOn: string | null; chaseCount: number } }
-  | { kind: 'goods'; legId: string; before: { lastChasedOn: string | null; chaseCount: number } }
+  | { kind: 'supplier'; inquiryId: string; before: { lastChasedOn: string | null; lastChasedBy?: string | null; chaseCount: number } }
+  | { kind: 'goods'; legId: string; before: { lastChasedOn: string | null; lastChasedBy?: string | null; chaseCount: number } }
   | { kind: 'payment'; invoiceIds: string[]; before: Array<{ id: string; lastRemindedOn: string | null; reminderCount: number }> }
 
 export interface ChaseResult {

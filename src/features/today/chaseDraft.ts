@@ -38,6 +38,8 @@ export function buildCustomerDraft(input: {
   /** The RFQ's contact (name and phone), when one is set. */
   contact: { name: string; phone: string | null } | null
   questions: readonly ClarificationFact[]
+  /** The RFQ's items, to tag each question with its item ("(item 2)"). */
+  items?: ReadonlyArray<{ id: string; number: number; description: string; brandName: string | null }>
   today: string
   signature: ChaseSignature
 }): Draft | null {
@@ -56,6 +58,11 @@ export function buildCustomerDraft(input: {
       firstAskedOn: first,
       lastAskedOn: last,
       dueOn: rfq.dueOn,
+      dueTime: rfq.dueTime,
+      itemTags: questions.map(q => {
+        const it = q.rfqItemId ? input.items?.find(i => i.id === q.rfqItemId) : undefined
+        return it ? { number: it.number, label: `${it.brandName && !it.description.toLowerCase().includes(it.brandName.toLowerCase()) ? `${it.brandName} ` : ''}${it.description}` } : null
+      }),
       today: input.today,
       signature: input.signature,
       variant,

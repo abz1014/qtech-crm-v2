@@ -11,6 +11,7 @@ import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { suggestSuppliers, toRateTable, type SuggestionItem } from '@/features/rfqs/lib'
 import { RfqActionBar, RfqHeaderBlock } from '@/features/rfqs/RfqHeaderBlock'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
+import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { AddItemDialog } from '@/features/rfqs/AddItemDialog'
 import { SuppliersAsked } from '@/features/rfqs/SuppliersAsked'
@@ -189,6 +190,8 @@ function Loaded({
   const stats = useSupplierStatsFor(useMemo(() => inquiryList.map(i => i.supplierId), [inquiryList]))
 
   const hasPrices = inquiryList.some(i => i.lines.length > 0)
+  // A8 (R25): the ranking of every quote (the order, the reasons). Asked for once there is a price; the page works without it.
+  const ranking = useRankedQuotes(rfq.id, hasPrices)
   const chaseSuppliers = inquiryList.filter(i => canChaseInquiry(i, itemList)).length
   const chaseCustomer = rfq.state?.waiting ?? 0
   const loadError = items.isError || inquiries.isError
@@ -267,6 +270,7 @@ function Loaded({
               fxRows={fx.data ?? []}
               memory={memory.data}
               suggestions={suggestions}
+              ranking={ranking.byLine}
               onAddItem={() => setAdding(true)}
               onCopyEnquiry={(s, item) => void askFrom([s], [item])}
             />

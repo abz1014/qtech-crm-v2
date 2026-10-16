@@ -2,11 +2,9 @@ import { useEffect, useState, type RefObject } from 'react'
 import { ClipboardPaste, Plus, Scissors, X, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { BrandRef, ParseResult } from '@/features/rfqs/lib/parseItems'
-import type { DraftItem } from '@/features/rfqs/lib/intakeModel'
+import { parseQtyCell, type DraftItem } from '@/features/rfqs/lib/intakeModel'
+import { qtyText } from '@/features/rfqs/lib/enquiryDraft'
 import { Button } from '@/ui/Button'
-import { NumberInput } from '@/ui/form/NumberInput'
-import { Select } from '@/ui/form/Select'
-import { TextField } from '@/ui/form/TextField'
 import { Icon } from '@/ui/Icon'
 
 /*
@@ -19,7 +17,85 @@ export interface PastedBlock {
   result: ParseResult
 }
 
-const GRID = 'md:grid md:grid-cols-[28px_72px_64px_minmax(0,1fr)_32px] md:items-start md:gap-3'
+// g2-a.css .sp-r: # 28, Qty 76, Description 1fr, Brand 148, Family 120; the remove control gets its own narrow column.
+const GRID = 'md:grid md:grid-cols-[28px_76px_minmax(0,1fr)_148px_120px_28px] md:items-center md:gap-3'
+
+const cell =
+  'h-8 -mx-2 w-[calc(100%+1rem)] max-w-none min-w-0 rounded border border-line-input bg-surface px-2 text-sm text-fg md:border-transparent md:bg-transparent ' +
+  'placeholder:text-fg-muted hover:border-line-input focus-visible:border-fg focus-visible:bg-surface'
+
+function QtyCell({ item, n, onChange }: { item: DraftItem; n: number; onChange: (patch: Partial<DraftItem>) => void }) {
+  // While the cell has focus it shows exactly what is typed; the tidy "2 nos" returns when it loses it.
+  const [typing, setTyping] = useState<string | null>(null)
+  const shown = item.qty == null ? '' : (qtyText(item.qty, item.unit) ?? String(item.qty))
+  return (
+    <input
+      aria-label={`Quantity of item ${n}`}
+      value={typing ?? shown}
+      placeholder="1 no"
+      autoComplete="off"
+      onFocus={e => {
+        setTyping(shown)
+        e.currentTarget.select()
+      }}
+      onChange={e => {
+        setTyping(e.target.value)
+        onChange(parseQtyCell(e.target.value))
+      }}
+      onBlur={() => setTyping(null)}
+      className={cn(cell, 'num')}
+    />
+  )
+}
+
+/** A native select drawn as the mockup's chip or plain text: the visible label sits under an invisible, full-size select. */
+function PickCell({
+  label,
+  value,
+  onChange,
+  options,
+  empty,
+  chip,
+}: {
+  label: string
+  value: string | null
+  onChange: (v: string | null) => void
+  options: { value: string; label: string }[]
+  empty: string
+  chip?: boolean
+}) {
+  const chosen = options.find(o => o.value === value)
+  return (
+    <span className="relative inline-flex min-w-0 max-w-full">
+      <span
+        className={cn(
+          chip
+            ? cn(
+                'inline-flex h-[22px] w-fit max-w-full items-center gap-[5px] rounded border px-2 text-xs',
+                chosen ? 'border-line-strong bg-surface text-fg-2' : 'border-dashed border-line-strong text-fg-muted',
+              )
+            : cn('truncate text-xs', chosen ? 'text-fg-2' : 'text-fg-muted'),
+        )}
+      >
+        {chip && chosen ? <Icon icon={Check} size="chip" /> : null}
+        <span className="truncate">{chosen ? chosen.label : empty}</span>
+      </span>
+      <select
+        aria-label={label}
+        value={value ?? ''}
+        onChange={e => onChange(e.target.value || null)}
+        className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded opacity-0"
+      >
+        <option value="">{empty}</option>
+        {options.map(o => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </span>
+  )
+}
 
 export function PasteZone({
   zoneRef,
@@ -135,11 +211,12 @@ export function ItemRows({
     <div className="overflow-hidden rounded border bg-surface">
       {items.length > 0 ? (
         <>
-          <div className={cn('hidden border-b bg-sunken px-4 py-2 text-xs font-medium text-fg-muted', GRID)} aria-hidden="true">
+          <div className={cn('hidden min-h-8 border-b bg-sunken px-4 text-xs font-medium text-fg-muted', GRID)} aria-hidden="true">
             <span>#</span>
             <span>Qty</span>
-            <span>Unit</span>
-            <span>Description, brand and family</span>
+            <span>Description</span>
+            <span>Brand</span>
+            <span>Family</span>
             <span />
           </div>
           <ol className="m-0 grid list-none p-0">
@@ -149,58 +226,49 @@ export function ItemRows({
                 <li
                   key={it.key}
                   className={cn(
-                    'grid grid-cols-2 gap-2 border-b px-4 py-3 last:border-b-0 md:py-2',
+                    'group grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b px-4 py-3 last:border-b-0 md:min-h-12 md:py-0',
                     GRID,
                     flagged.includes(it.key) && 'bg-tone-warning-bg',
                   )}
                 >
-                  <span className="num col-span-2 text-xs text-fg-muted md:col-span-1 md:text-sm">{n}</span>
-                  <NumberInput
-                    aria-label={`Quantity of item ${n}`}
-                    value={it.qty}
-                    onChange={v => onChange(it.key, { qty: v })}
-                    min={0}
-                    placeholder="1"
-                  />
-                  <TextField
-                    aria-label={`Unit of item ${n}`}
-                    value={it.unit}
-                    onChange={e => onChange(it.key, { unit: e.target.value })}
-                    placeholder="nos"
-                    autoComplete="off"
-                  />
-                  <TextField
+                  <span className="num text-xs text-fg-muted">{n}</span>
+                  <div className="min-w-0 pl-2 md:pl-0">
+                    <QtyCell item={it} n={n} onChange={patch => onChange(it.key, patch)} />
+                  </div>
+                  <input
                     id={`item-desc-${it.key}`}
                     aria-label={`Description of item ${n}`}
                     value={it.description}
                     onChange={e => onChange(it.key, { description: e.target.value })}
                     placeholder="What the customer asked for"
                     autoComplete="off"
-                    className="col-span-2 md:col-span-1"
                     title={it.description}
+                    className={cn(cell, 'order-2 col-span-3 truncate md:order-none md:col-span-1')}
                   />
-                  <div className="col-span-2 grid grid-cols-2 gap-2 md:col-span-1 md:col-start-4 md:row-start-2">
-                    <Select
-                      aria-label={`Brand of item ${n}`}
-                      value={it.brandId ?? ''}
-                      onChange={e => onChange(it.key, { brandId: e.target.value || null })}
+                  <div className="order-3 col-span-3 flex flex-wrap items-center gap-3 md:order-none md:contents">
+                    <PickCell
+                      chip
+                      label={`Brand of item ${n}`}
+                      value={it.brandId}
+                      onChange={v => onChange(it.key, { brandId: v })}
                       options={brandOptions}
-                      placeholder="No brand"
+                      empty="no brand"
                     />
-                    <Select
-                      aria-label={`Family of item ${n}`}
-                      value={it.familyId ?? ''}
-                      onChange={e => onChange(it.key, { familyId: e.target.value || null })}
+                    <PickCell
+                      label={`Family of item ${n}`}
+                      value={it.familyId}
+                      onChange={v => onChange(it.key, { familyId: v })}
                       options={familyOptions}
-                      placeholder="No family"
+                      empty="no family"
                     />
                   </div>
                   <Button
                     variant="quiet"
+                    size="sm"
                     icon={X}
                     aria-label={`Remove item ${n}`}
                     onClick={() => onRemove(it.key)}
-                    className="col-span-2 justify-self-end md:col-span-1"
+                    className="order-1 justify-self-end md:order-none md:opacity-0 md:transition-opacity md:focus-visible:opacity-100 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
                   />
                 </li>
               )
@@ -208,16 +276,10 @@ export function ItemRows({
           </ol>
         </>
       ) : null}
-      <div className="flex items-center gap-3 bg-sunken px-4 py-2 text-xs text-fg-muted">
+      <div className="flex items-center gap-3 border-t bg-sunken px-4 py-3 text-xs text-fg-muted">
         <Icon icon={Scissors} size="sm" />
         <span className="min-w-0 text-pretty">{note}</span>
-        <Button
-          variant="quiet"
-          size="sm"
-          icon={Plus}
-          className="ml-auto shrink-0"
-          onClick={onAdd}
-        >
+        <Button variant="quiet" size="sm" icon={Plus} className="ml-auto shrink-0" onClick={onAdd}>
           Add item
         </Button>
       </div>

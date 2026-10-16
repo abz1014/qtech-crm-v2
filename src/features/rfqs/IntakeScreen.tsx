@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
-import { ChevronRight, Copy, Save } from 'lucide-react'
+import { ChevronRight, Copy, Save, TriangleAlert } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { copyToClipboard } from '@/lib/clipboard'
 import { constraintOf, mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
 import { useSession } from '@/app/session'
-import { CreateCompanyInline } from '@/features/companies/CreateCompanyInline'
 import { useBrands, useCompany, useCompanyContacts, useCompanySites } from '@/features/companies/hooks'
-import type { CompanyRole } from '@/features/companies/api'
 import type { FloatInput, SavedRfq } from '@/features/rfqs/api'
 import { uploadAttachment } from '@/features/rfqs/api'
 import { deleteCapture, safely } from '@/lib/capture/store'
-import { findRfqByCustomerRef, useCompanyMatches, useFloatRfq, useSetRfqFloated, useSupplierCandidates, useSupplierMemory } from '@/features/rfqs/hooks'
+import { findRfqByCustomerRef, useFloatRfq, useFloatToSupplier, useSetRfqFloated, useSupplierCandidates, useSupplierMemory } from '@/features/rfqs/hooks'
 import {
   computeReplyBy,
   copyText,
@@ -34,13 +32,13 @@ import {
   type EnquiryVariant,
 } from '@/features/rfqs/lib'
 import { ItemRows, PastedPanel, PasteZone, type PastedBlock } from '@/features/rfqs/ItemsEditor'
-import { EnquiryCard, FloatedPanel, SidePanels, type Step } from '@/features/rfqs/IntakeParts'
+import { EnquiryCard, FloatedPanel, Hint, SidePanels, type Step } from '@/features/rfqs/IntakeParts'
 import { ItemChips, SupplierPicker, type ManualSupplier } from '@/features/rfqs/SupplierPicker'
+import { CompanyPicker, type IntakeCompany } from '@/features/rfqs/CompanyPicker'
 import { Avatar } from '@/ui/Avatar'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Checkbox } from '@/ui/form/Checkbox'
-import { Combobox } from '@/ui/form/Combobox'
 import { DateInput } from '@/ui/form/DateInput'
 import { Field } from '@/ui/form/Field'
 import { Select } from '@/ui/form/Select'
@@ -66,12 +64,7 @@ import { useToast } from '@/ui/useToast'
  * the database when it is saved, so the draft carries a placeholder that is replaced in the copy.
  */
 
-interface Company {
-  id: string
-  name: string
-  country: string | null
-  role: CompanyRole | null
-}
+type Company = IntakeCompany
 
 type Variant = EnquiryVariant
 
@@ -108,7 +101,6 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   const [items, setItems] = useState<DraftItem[]>([])
   const [pasted, setPasted] = useState<PastedBlock | null>(null)
   const [focusKey, setFocusKey] = useState<string | null>(null)
-  const [creating, setCreating] = useState<string | null>(null)
   const zoneRef = useRef<HTMLTextAreaElement>(null)
 
   // ---- the flow
@@ -130,6 +122,9 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
 
   const float = useFloatRfq()
   const setFloated = useSetRfqFloated()
+  const floatToSupplier = useFloatToSupplier()
+  const [itemFloats, setItemFloats] = useState<Record<string, string>>({})
+  const [floating, setFloating] = useState<string | null>(null)
 
   // ---- data
   const brandsQuery = useBrands()
@@ -145,7 +140,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   const wanted = useCompany(company ? undefined : (wantedId ?? undefined))
   useEffect(() => {
     if (!company && wanted.data) {
-      setCompany({ id: wanted.data.id, name: wanted.data.name, country: wanted.data.country, role: wanted.data.role })
+      setCompany({ id: wanted.data.id, name: wanted.data.name, country: wanted.data.country, city: wanted.data.city ?? null, role: wanted.data.role })
     }
   }, [company, wanted.data])
 
@@ -276,7 +271,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     [suggestionItems, candidateList, memory.data, today],
   )
   const memoryContext = useMemo(
-    () => ({ rows: memory.data ?? {}, items: suggestionItems.map((i, n) => ({ id: i.id, number: n + 1, description: i.description })), today }),
+    () => ({ rows: memory.data ?? {}, items: suggestionItems.map((i, n) => ({ id: i.id, number: n + 1, description: i.description, brandName: i.brandName ?? null, familyName: i.familyName ?? null })), today }),
     [memory.data, suggestionItems, today],
   )
   const suppliersLoading = wantSuppliers && (candidates.isPending || (candidates.isSuccess && memory.isPending && suggestionItems.length > 0 && candidateList.length > 0))
@@ -430,7 +425,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
         ? 'Check the split, then find suppliers.'
         : 'Paste what the customer sent. Nothing is saved until you copy the enquiry or save.'
       : step === 'suppliers'
-        ? 'Suggestions come with a reason. Nothing is ranked by how well a supplier has done.'
+        ? 'Suggestions come with a reason. Inside each reason, the supplier with the better record comes first, and the last order from them is shown.'
         : step === 'enquiry'
           ? 'Check the text, then copy it once.'
           : step === 'saved'
@@ -471,14 +466,49 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
 
   const floatedNames = recipients.map(r => r.name)
   const replyBy = computeReplyBy(dueOn || null, today)
-  const unfloated: ReactNode[] = flaggedKeys.slice(0, 3).map(k => {
+  async function floatItem(key: string, supplierId: string, supplierName: string) {
+    const item = items.find(i => i.key === key)
+    if (!saved || !item || floating) return
+    setFloating(key)
+    try {
+      await floatToSupplier.mutateAsync({ rfqId: saved.id, supplierId, today })
+      const one = generateEnquiryDraft({
+        rfqRef: rfqRef(saved.number),
+        items: toEnquiryItems([item], brands),
+        dueOn: dueOn || null,
+        today,
+        signature: { name: user?.name ?? 'Q-Tech', company: TEAM_COMPANY },
+        variant: 'whatsapp',
+      })
+      const ok = await copyToClipboard(copyText({ subject: null, body: one.body }, rfqRef(saved.number)))
+      setItemFloats(f => ({ ...f, [key]: supplierName }))
+      toast({
+        title: `Item ${itemNumber(key)} floated to ${supplierName}`,
+        body: ok ? 'Copied: paste it into their chat.' : 'The text did not copy. Open the RFQ to copy it.',
+      })
+    } catch (err) {
+      toast({ title: 'Could not float the item', body: mapPgError(err).message, tone: 'danger' })
+    } finally {
+      setFloating(null)
+    }
+  }
+  const unfloated = flaggedKeys.slice(0, 3).map(k => {
     const alt = suggestions.suppliers.find(s => !tickedSet.has(s.supplierId) && s.coversItemIds.includes(k))
-    return (
-      <span key={k}>
-        <strong className="font-medium">Item {itemNumber(k)} has no supplier yet.</strong>{' '}
-        {alt ? `${alt.name} is on your shortlist for it. ${alt.memoryLine === 'no history yet' ? 'It has no history with us.' : ''}` : 'Nothing on file carries it. Add a supplier from the RFQ.'}
-      </span>
-    )
+    const done = itemFloats[k]
+    return {
+      key: k,
+      text: done ? (
+        <>
+          <strong className="font-medium text-fg">Item {itemNumber(k)} floated to {done}.</strong> The text for it is on your clipboard.
+        </>
+      ) : (
+        <>
+          <strong className="font-medium text-fg">Item {itemNumber(k)} has no supplier yet.</strong>{' '}
+          {alt ? `${alt.name} is on your shortlist for it.${alt.memoryLine === 'no history yet' ? ' It has no history with us.' : ''}` : 'Nothing on file carries it. Add a supplier from the RFQ.'}
+        </>
+      ),
+      action: !done && alt ? { label: `Float item ${itemNumber(k)} to them`, onClick: () => void floatItem(k, alt.supplierId, alt.name), busy: floating === k } : undefined,
+    }
   })
 
   return (
@@ -500,25 +530,12 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
               <section aria-labelledby="h-customer" className="grid gap-3">
                 <h2 id="h-customer" className="text-lg font-semibold tracking-snug">Customer</h2>
                 {company ? (
-                  <CustomerChip company={company} onChange={() => setCompany(null)} />
+                  <CustomerChip company={company} contacts={contactList.map(c => c.name)} onChange={() => setCompany(null)} />
                 ) : (
-                  <>
-                    <CompanyPicker
-                      onPick={c => setCompany(c)}
-                      onCreate={text => setCreating(text)}
-                      loadingName={Boolean(wantedId) && wanted.isPending}
-                    />
-                    {creating !== null ? (
-                      <CreateCompanyInline
-                        initialName={creating}
-                        onCancel={() => setCreating(null)}
-                        onCreated={c => {
-                          setCompany({ id: c.id, name: c.name, country: null, role: 'prospect' })
-                          setCreating(null)
-                        }}
-                      />
-                    ) : null}
-                  </>
+                  <CompanyPicker
+                    onPick={c => setCompany(c)}
+                    loadingName={Boolean(wantedId) && wanted.isPending}
+                  />
                 )}
                 {company && (siteList.length > 0 || contactList.length > 0) ? (
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -556,9 +573,16 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                 ) : null}
               </section>
 
-              <section aria-labelledby="h-items" className="grid gap-3">
+              <section
+                aria-labelledby="h-items"
+                // Faded and out of reach until a company is chosen (the mockup's "waits"); a paste anywhere on the page still works.
+                ref={el => {
+                  if (el) el.inert = !company
+                }}
+                className={`grid gap-3 ${company ? '' : 'opacity-50'}`}
+              >
                 <div className="flex items-baseline justify-between gap-4">
-                  <h2 id="h-items" className={`text-lg font-semibold tracking-snug ${company ? '' : 'text-fg-muted'}`}>Items</h2>
+                  <h2 id="h-items" className="text-lg font-semibold tracking-snug">Items</h2>
                   <p className="text-sm text-fg-muted">{pasted ? 'Split from the pasted text' : 'Paste once. We split it.'}</p>
                 </div>
                 {pasted ? <PastedPanel block={pasted} /> : null}
@@ -630,7 +654,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                     void memory.refetch()
                   }}
                 />
-                <p className="text-xs text-fg-muted">Order follows the reason, then the most recent contact. What we know about a supplier never changes the order.</p>
+                <p className="text-xs text-fg-muted">Order follows the reason, then the track record: on time or not, how often we have ordered, how often they reply, then the most recent contact. A supplier marked late is still listed. The ticks are unchanged: only suppliers who supplied this item before.</p>
               </section>
             </>
           ) : null}
@@ -642,9 +666,9 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                   {rfqRef(saved.number)} is saved with {ticked.length} {ticked.length === 1 ? 'supplier' : 'suppliers'} shortlisted. Copy the text again when you send it.
                 </Banner>
               ) : null}
-              <Banner tone="warning" title="Spec lines are blank on purpose.">
-                Type what the customer gave you under any item, or leave it. The app never writes a spec for you, and a blank one is fine to send.
-              </Banner>
+              <Hint>
+                <b className="font-medium text-fg">Spec lines are blank on purpose.</b> Type what the customer gave you under any item, or leave it. The app never writes a spec for you, and a blank one is fine to send.
+              </Hint>
               <EnquiryCard
                 count={ticked.length}
                 variant={variant}
@@ -654,7 +678,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                 subject={draft.subject}
                 body={body}
                 onBody={text => setEdit(e => ({ sig, text: { ...(e.sig === sig ? e.text : {}), [variant]: text } }))}
-                note={saved ? `${rfqRef(saved.number)} is saved. You paste the text into each supplier’s chat.` : 'The RFQ number is filled in when you copy. You paste the text into each supplier’s chat.'}
+                note={saved ? `${rfqRef(saved.number)} is saved. You paste it into each supplier’s chat.` : 'The RFQ number is filled in when you copy. You paste it into each supplier’s chat.'}
                 locked={Boolean(saved)}
                 actions={
                   <>
@@ -717,21 +741,27 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                 aria-label="Next step"
                 className="sticky bottom-3 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 rounded border bg-surface px-4 py-3 shadow-pop"
               >
-                <p className="m-0 min-w-0 flex-1 text-sm text-fg-2">
+                <p className="m-0 min-w-0 text-sm text-fg-2">
                   {step === 'build' ? (
                     ready ? (
-                      <>Saves as a new RFQ for <strong className="font-medium">{company?.name}</strong> with <strong className="num font-medium">{real.length}</strong> {real.length === 1 ? 'item' : 'items'}.</>
+                      <>Creates a new RFQ for <strong className="font-medium text-fg">{company?.name}</strong> with <strong className="num font-medium text-fg">{real.length}</strong> {real.length === 1 ? 'item' : 'items'}.</>
                     ) : (
                       'Choose the company and paste or add at least one item.'
                     )
                   ) : (
                     <>
-                      <strong className="num font-medium">{ticked.length}</strong> {ticked.length === 1 ? 'supplier' : 'suppliers'} ticked
-                      {noSupplierLine ? <span className="ml-2 text-tone-warning-fg">{noSupplierLine}</span> : null}
+                      <strong className="num font-medium text-fg">{ticked.length}</strong> {ticked.length === 1 ? 'supplier' : 'suppliers'} ticked
                     </>
                   )}
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
+                {step === 'suppliers' && noSupplierLine ? (
+                  <span className="inline-flex min-w-0 items-center gap-[6px] text-xs text-tone-warning-fg">
+                    <Icon icon={TriangleAlert} size="sm" />
+                    {noSupplierLine}
+                  </span>
+                ) : null}
+                <span className="flex-1" />
+                <div className="ml-auto flex flex-wrap items-center gap-2">
                   {step === 'suppliers' ? <Button onClick={() => setStep('build')}>Back to items</Button> : null}
                   <Button
                     variant={step === 'suppliers' && ticked.length === 0 ? 'primary' : 'quiet'}
@@ -771,65 +801,23 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
           floatedOn={floatedOn}
         />
       </div>
+
     </div>
   )
 }
 
-function CompanyPicker({
-  onPick,
-  onCreate,
-  loadingName,
-}: {
-  onPick: (c: Company) => void
-  onCreate: (text: string) => void
-  loadingName: boolean
-}) {
-  const [text, setText] = useState('')
-  const matches = useCompanyMatches(text)
-  const hits = matches.data ?? []
+function CustomerChip({ company, contacts, onChange }: { company: Company; contacts: string[]; onChange: () => void }) {
+  const contactNote = contacts.length === 0 ? 'contact not added yet' : contacts.length === 1 ? contacts[0] : `${contacts.length} contacts`
   return (
-    <Field label="Company" id="intake-company">
-      <Combobox
-        autoFocus
-        metaBelow
-        options={hits.map(h => ({
-          value: h.id,
-          label: h.name,
-          keep: h.similar,
-          meta:
-            [h.city || h.country, h.role ? ROLE_WORD[h.role] : null, h.rfqCount ? `${h.rfqCount} ${h.rfqCount === 1 ? 'RFQ' : 'RFQs'}` : null, h.similar ? 'similar name' : null]
-              .filter(Boolean)
-              .join(' · ') || undefined,
-        }))}
-        value=""
-        onChange={id => {
-          const hit = hits.find(h => h.id === id)
-          if (hit) onPick({ id: hit.id, name: hit.name, country: hit.country, role: hit.role })
-        }}
-        onQueryChange={setText}
-        onCreate={onCreate}
-        createLabel={t => `Add “${t}” as a new company`}
-        createHint="Saved as a prospect until the first order"
-        loading={matches.isFetching}
-        placeholder={loadingName ? 'Opening the customer' : 'Search, or type a new company name'}
-      />
-    </Field>
-  )
-}
-
-const ROLE_WORD: Record<CompanyRole, string> = { customer: 'customer', supplier: 'supplier', both: 'customer and supplier', prospect: 'prospect' }
-
-function CustomerChip({ company, onChange }: { company: Company; onChange: () => void }) {
-  return (
-    <div className="flex flex-wrap items-center gap-3 rounded border bg-surface px-4 py-3">
-      <Avatar name={company.name} />
+    <div className="flex min-h-12 flex-wrap items-center gap-3 rounded border bg-surface px-3 py-2">
+      <Avatar name={company.name} className="!bg-selected !text-fg-2" />
       <div className="min-w-0">
         <p className="m-0 truncate text-sm font-medium">{company.name}</p>
-        <p className="m-0 text-xs text-fg-muted">{company.country ?? 'No country on file'}</p>
+        <p className="m-0 text-xs text-fg-muted">{[company.city ?? company.country, contactNote].filter(Boolean).join(' · ')}</p>
       </div>
       <span className="ml-auto" />
-      {company.role ? <StatusBadge dimension="company-role" value={company.role} /> : null}
-      <Button variant="quiet" onClick={onChange} aria-label={`Change company, now ${company.name}`}>
+      {company.role ? <StatusBadge dimension="company-role" value={company.role} label={company.role === 'prospect' ? 'New prospect' : undefined} /> : null}
+      <Button variant="quiet" size="sm" onClick={onChange} aria-label={`Change company, now ${company.name}`}>
         Change
       </Button>
     </div>

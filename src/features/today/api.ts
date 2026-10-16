@@ -46,27 +46,35 @@ export interface TodayData {
   snoozes: SnoozeFact[]
   /** users.role by id (everyone is readable by every staff role). */
   roles: Record<string, Role>
-  /** The caller's own job title, for the email signature. */
+  /** The caller's own job title and phone, for the email signature. */
   jobTitle: string | null
+  phone: string | null
+  /** users.name by id, for the collision line. */
+  names: Record<string, string>
 }
 
-type RfqStateRow = ViewRow<'v_rfq_state'> & { companies: { name: string } | null }
+type RfqStateRow = ViewRow<'v_rfq_state'> & { companies: { name: string; city: string | null } | null }
+
+/** "Indus Textile Mills — Faisalabad": a company with its city, as the mockups write it. */
+export const withCity = (name: string, city: string | null | undefined): string => (city?.trim() ? `${name} — ${city.trim()}` : name)
 
 async function loadRfqs(): Promise<{ rfqs: RfqFact[]; open: Set<string> }> {
   const db = requireSupabase()
   const [states, refs] = await Promise.all([
-    fetchAll<RfqStateRow>((from, to) => db.from('v_rfq_state').select('*, companies(name)').eq('outcome', 'open').order('number').range(from, to) as unknown as Page<RfqStateRow>),
-    fetchAll<{ id: string; customer_ref: string | null }>((from, to) => db.from('rfqs').select('id, customer_ref').is('closed_on', null).order('number').range(from, to)),
+    fetchAll<RfqStateRow>((from, to) => db.from('v_rfq_state').select('*, companies(name, city)').eq('outcome', 'open').order('number').range(from, to) as unknown as Page<RfqStateRow>),
+    fetchAll<{ id: string; customer_ref: string | null; due_time: string | null }>((from, to) => db.from('rfqs').select('id, customer_ref, due_time').is('closed_on', null).order('number').range(from, to)),
   ])
   const refBy = new Map(refs.map(r => [r.id, r.customer_ref]))
+  const timeBy = new Map(refs.map(r => [r.id, r.due_time]))
   const rfqs = states.map<RfqFact>(r => ({
     id: r.rfq_id as string,
     number: num(r.number),
     ownerId: r.owner_id,
-    companyName: r.companies?.name ?? 'Unknown company',
+    companyName: r.companies ? withCity(r.companies.name, r.companies.city) : 'Unknown company',
     customerRef: refBy.get(r.rfq_id as string) ?? null,
     receivedOn: r.received_on as string,
     dueOn: r.due_on,
+    dueTime: timeBy.get(r.rfq_id as string) ?? null,
     quotedOn: r.quoted_on,
     isPriority: Boolean(r.is_priority),
     bidState: (r.bid_state ?? 'to_bid') as RfqFact['bidState'],
@@ -81,7 +89,7 @@ async function loadClarifications(open: Set<string>): Promise<ClarificationFact[
   const rows = await fetchAll((from, to) =>
     db
       .from('clarifications')
-      .select('id, rfq_id, question, first_asked_at, last_asked_at, ask_count')
+      .select('id, rfq_id, question, rfq_item_id, first_asked_at, last_asked_at, last_asked_by, ask_count')
       .is('answered_at', null)
       .is('withdrawn_at', null)
       .not('first_asked_at', 'is', null)
@@ -94,8 +102,11 @@ async function loadClarifications(open: Set<string>): Promise<ClarificationFact[
       id: c.id,
       rfqId: c.rfq_id,
       question: c.question,
+      rfqItemId: c.rfq_item_id,
       firstAskedOn: toBusinessDate(new Date(c.first_asked_at as string)),
       lastAskedOn: toBusinessDate(new Date((c.last_asked_at ?? c.first_asked_at) as string)),
+      lastAskedAt: (c.last_asked_at ?? c.first_asked_at) as string,
+      lastAskedBy: c.last_asked_by,
       askCount: num(c.ask_count),
     }))
 }
@@ -113,6 +124,9 @@ async function loadInquiries(open: Set<string>, names: Map<string, string>): Pro
     fetchAll((from, to) => db.from('v_supplier_stats').select('supplier_id, replied, median_reply_days').range(from, to)),
   ])
   const statBy = new Map(stats.map(s => [s.supplier_id, s]))
+  // v_inquiry_state does not carry who chased; the table does (0048).
+  const actors = unwrap(await db.from('supplier_inquiries').select('id, last_chased_by').not('last_chased_by', 'is', null))
+  const actorBy = new Map(actors.map(a => [a.id, a.last_chased_by]))
   // When did the answers that wait to be relayed come in? Answered after the inquiry's last relay.
   const relayIds = rows.filter(r => num(r.answers_to_relay) > 0 && r.inquiry_id).map(r => r.inquiry_id as string)
   const answeredOn = new Map<string, string>()
@@ -142,6 +156,7 @@ async function loadInquiries(open: Set<string>, names: Map<string, string>): Pro
         supplierName: names.get(r.supplier_id as string) ?? 'Unknown supplier',
         sentOn: r.sent_on,
         lastChasedOn: r.last_chased_on,
+        lastChasedBy: actorBy.get(r.inquiry_id as string) ?? null,
         chaseCount: num(r.chase_count),
         responseState: r.response_state ?? 'awaiting',
         answersToRelay: num(r.answers_to_relay),
@@ -162,19 +177,19 @@ type LegRow = {
   received_on: string | null
   delivered_on: string | null
   last_chased_on: string | null
+  last_chased_by: string | null
   chase_count: number
   orders: { number: number; owner_id: string | null; ordered_on: string | null; company_id: string } | null
 }
 
-async function loadLegs(names: Map<string, string>): Promise<LegFact[]> {
+async function loadLegs(names: Map<string, string>, labels: Map<string, string>): Promise<LegFact[]> {
   const db = requireSupabase()
   const rows = await fetchAll<LegRow>(
     (from, to) =>
       db
         .from('supplier_orders')
-        .select('id, order_id, supplier_id, reference, placed_on, expected_on, received_on, delivered_on, last_chased_on, chase_count, orders!inner(number, owner_id, ordered_on, company_id, cancelled_on)')
+        .select('id, order_id, supplier_id, reference, placed_on, expected_on, received_on, delivered_on, last_chased_on, last_chased_by, chase_count, orders!inner(number, owner_id, ordered_on, company_id, cancelled_on)')
         .is('orders.cancelled_on', null)
-        .is('received_on', null)
         .is('delivered_on', null)
         .order('created_at')
         .range(from, to) as unknown as Page<LegRow>,
@@ -186,7 +201,7 @@ async function loadLegs(names: Map<string, string>): Promise<LegFact[]> {
       orderId: l.order_id,
       orderNumber: num(l.orders?.number),
       ownerId: l.orders?.owner_id ?? null,
-      customerName: names.get(l.orders?.company_id as string) ?? 'Unknown company',
+      customerName: labels.get(l.orders?.company_id as string) ?? 'Unknown company',
       supplierName: names.get(l.supplier_id) ?? 'Unknown supplier',
       reference: l.reference,
       orderedOn: l.orders?.ordered_on ?? null,
@@ -195,6 +210,7 @@ async function loadLegs(names: Map<string, string>): Promise<LegFact[]> {
       receivedOn: l.received_on,
       deliveredOn: l.delivered_on,
       lastChasedOn: l.last_chased_on,
+      lastChasedBy: l.last_chased_by,
       chaseCount: num(l.chase_count),
     }))
 }
@@ -212,7 +228,8 @@ async function loadOrders(role: Role, names: Map<string, string>): Promise<Order
     (from, to) =>
       db
         .from('v_order_state')
-        .select('order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state')
+        // invoicing_state is money-gated: an engineer's request never names it
+        .select((money ? 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state' : 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state') as 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state')
         .eq('lifecycle', 'active')
         .or(money ? 'commissioning_state.eq.to_plan,invoicing_state.eq.not_invoiced' : 'commissioning_state.eq.to_plan')
         .order('number')
@@ -374,18 +391,20 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
   const db = requireSupabase()
   const [{ rfqs, open }, companies, users, snoozes] = await Promise.all([
     loadRfqs(),
-    fetchAll((from, to) => db.from('companies').select('id, name').order('name').range(from, to)),
-    db.from('users').select('id, role, job_title'),
+    fetchAll((from, to) => db.from('companies').select('id, name, city').order('name').range(from, to)),
+    db.from('users').select('id, role, name, job_title, phone'),
     loadSnoozes(today),
   ])
   const names = new Map(companies.map(c => [c.id, c.name]))
+  /** Customers read "Name — City"; suppliers stay plain. */
+  const labels = new Map(companies.map(c => [c.id, withCity(c.name, c.city)]))
   const money = role === 'admin' || role === 'sales'
   const [clarifications, inquiries, legs, orders, receivables, monthEnd, costs, invoices, recurring] = await Promise.all([
     loadClarifications(open),
     loadInquiries(open, names),
-    loadLegs(names),
+    loadLegs(names, labels),
     loadOrders(role, names),
-    money ? loadReceivables(names) : Promise.resolve<ReceivableFact[]>([]),
+    money ? loadReceivables(labels) : Promise.resolve<ReceivableFact[]>([]),
     role === 'admin' ? loadMonthEnd(today) : Promise.resolve<MonthEndFact | null>(null),
     role === 'admin' ? loadCosts() : Promise.resolve<CostFact[]>([]),
     money ? loadInvoiceFacts(today) : Promise.resolve<InvoiceFact[]>([]),
@@ -406,6 +425,8 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
     snoozes,
     roles: Object.fromEntries(userRows.map(u => [u.id, u.role as Role])),
     jobTitle: userRows.find(u => u.id === user.id)?.job_title ?? null,
+    phone: userRows.find(u => u.id === user.id)?.phone ?? null,
+    names: Object.fromEntries(userRows.map(u => [u.id, u.name])),
   }
 }
 
@@ -510,6 +531,7 @@ export interface ClarificationBefore {
   id: string
   firstAskedAt: string | null
   lastAskedAt: string | null
+  lastAskedBy: string | null
   askCount: number
 }
 
@@ -524,14 +546,14 @@ export async function stampCustomerChase(ids: string[]): Promise<number> {
 /** The values a questions held before the stamp, read at the moment of the tap so an Undo restores exactly them. */
 export async function readClarificationsBefore(ids: string[]): Promise<ClarificationBefore[]> {
   const db = requireSupabase()
-  const rows = unwrap(await db.from('clarifications').select('id, first_asked_at, last_asked_at, ask_count').in('id', ids))
-  return rows.map(r => ({ id: r.id, firstAskedAt: r.first_asked_at, lastAskedAt: r.last_asked_at, askCount: num(r.ask_count) }))
+  const rows = unwrap(await db.from('clarifications').select('id, first_asked_at, last_asked_at, last_asked_by, ask_count').in('id', ids))
+  return rows.map(r => ({ id: r.id, firstAskedAt: r.first_asked_at, lastAskedAt: r.last_asked_at, lastAskedBy: r.last_asked_by, askCount: num(r.ask_count) }))
 }
 
 export async function undoCustomerChase(before: readonly ClarificationBefore[]): Promise<void> {
   const db = requireSupabase()
   for (const b of before) {
-    const { error } = await db.from('clarifications').update({ first_asked_at: b.firstAskedAt, last_asked_at: b.lastAskedAt, ask_count: b.askCount }).eq('id', b.id)
+    const { error } = await db.from('clarifications').update({ first_asked_at: b.firstAskedAt, last_asked_at: b.lastAskedAt, last_asked_by: b.lastAskedBy, ask_count: b.askCount }).eq('id', b.id)
     if (error) throw error
   }
 }
@@ -543,9 +565,9 @@ export async function stampSupplierChaseOnToday(inquiryId: string): Promise<numb
   return data ?? 0
 }
 
-export async function undoSupplierChase(inquiryId: string, before: { lastChasedOn: string | null; chaseCount: number }): Promise<void> {
+export async function undoSupplierChase(inquiryId: string, before: { lastChasedOn: string | null; lastChasedBy?: string | null; chaseCount: number }): Promise<void> {
   const db = requireSupabase()
-  const { error } = await db.from('supplier_inquiries').update({ last_chased_on: before.lastChasedOn, chase_count: before.chaseCount }).eq('id', inquiryId)
+  const { error } = await db.from('supplier_inquiries').update({ last_chased_on: before.lastChasedOn, last_chased_by: before.lastChasedBy ?? null, chase_count: before.chaseCount }).eq('id', inquiryId)
   if (error) throw error
 }
 
@@ -557,9 +579,9 @@ export async function stampGoodsChase(legId: string): Promise<number> {
   return data ?? 0
 }
 
-export async function undoGoodsChase(legId: string, before: { lastChasedOn: string | null; chaseCount: number }): Promise<void> {
+export async function undoGoodsChase(legId: string, before: { lastChasedOn: string | null; lastChasedBy?: string | null; chaseCount: number }): Promise<void> {
   const db = requireSupabase()
-  const { error } = await db.from('supplier_orders').update({ last_chased_on: before.lastChasedOn, chase_count: before.chaseCount }).eq('id', legId)
+  const { error } = await db.from('supplier_orders').update({ last_chased_on: before.lastChasedOn, last_chased_by: before.lastChasedBy ?? null, chase_count: before.chaseCount }).eq('id', legId)
   if (error) throw error
 }
 

@@ -151,19 +151,25 @@ isOneToOne: false
                   ]
                 },"clarifications": {
                   Row: {
-                    "answer": string | null,"answered_at": string | null,"ask_count": number,"created_at": string,"created_by": string | null,"first_asked_at": string | null,"id": string,"last_asked_at": string | null,"question": string,"raised_by_inquiry_id": string | null,"rfq_id": string,"rfq_item_id": string | null,"withdrawn_at": string | null
+                    "answer": string | null,"answered_at": string | null,"ask_count": number,"created_at": string,"created_by": string | null,"first_asked_at": string | null,"id": string,"last_asked_at": string | null,"last_asked_by": string | null,"question": string,"raised_by_inquiry_id": string | null,"rfq_id": string,"rfq_item_id": string | null,"withdrawn_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"question": string,"raised_by_inquiry_id"?: string | null,"rfq_id": string,"rfq_item_id"?: string | null,"withdrawn_at"?: string | null
+                    "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"last_asked_by"?: string | null,"question": string,"raised_by_inquiry_id"?: string | null,"rfq_id": string,"rfq_item_id"?: string | null,"withdrawn_at"?: string | null
                   }
                   Update: {
-                    "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"question"?: string,"raised_by_inquiry_id"?: string | null,"rfq_id"?: string,"rfq_item_id"?: string | null,"withdrawn_at"?: string | null
+                    "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"last_asked_by"?: string | null,"question"?: string,"raised_by_inquiry_id"?: string | null,"rfq_id"?: string,"rfq_item_id"?: string | null,"withdrawn_at"?: string | null
                   }
                   Relationships: [
                     {
       foreignKeyName: "clarifications_created_by_fkey"
       columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "clarifications_last_asked_by_fkey"
+      columns: ["last_asked_by"]
 isOneToOne: false
       referencedRelation: "users"
       referencedColumns: ["id"]
@@ -279,6 +285,12 @@ isOneToOne: false
       foreignKeyName: "company_brands_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "company_brands_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     },{
@@ -337,6 +349,12 @@ isOneToOne: false
       foreignKeyName: "company_sites_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "company_sites_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     },{
@@ -370,6 +388,12 @@ isOneToOne: false
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "contacts_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "contacts_company_id_fkey"
@@ -482,6 +506,12 @@ isOneToOne: false
       columns: ["payee_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "expenses_payee_id_fkey"
+      columns: ["payee_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "expenses_payee_id_fkey"
@@ -604,6 +634,12 @@ isOneToOne: false
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "invoices_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "invoices_company_id_fkey"
@@ -852,6 +888,12 @@ isOneToOne: false
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "orders_company_id_fkey"
@@ -1133,6 +1175,12 @@ isOneToOne: false
       foreignKeyName: "rfqs_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "rfqs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     },{
@@ -1183,19 +1231,25 @@ isOneToOne: false
                   ]
                 },"supplier_inquiries": {
                   Row: {
-                    "chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_on": string | null,"supplier_id": string
+                    "chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_by": string | null,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_on": string | null,"supplier_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_on"?: string | null,"supplier_id": string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_on"?: string | null,"supplier_id": string
                   }
                   Update: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id"?: string,"sent_on"?: string | null,"supplier_id"?: string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id"?: string,"sent_on"?: string | null,"supplier_id"?: string
                   }
                   Relationships: [
                     {
       foreignKeyName: "supplier_inquiries_created_by_fkey"
       columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "supplier_inquiries_last_chased_by_fkey"
+      columns: ["last_chased_by"]
 isOneToOne: false
       referencedRelation: "users"
       referencedColumns: ["id"]
@@ -1227,20 +1281,26 @@ isOneToOne: false
       foreignKeyName: "supplier_inquiries_supplier_id_fkey"
       columns: ["supplier_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     }
                   ]
                 },"supplier_orders": {
                   Row: {
-                    "chase_count": number,"created_at": string,"created_by": string | null,"currency": string | null,"delivered_on": string | null,"expected_on": string | null,"id": string,"inquiry_id": string | null,"last_chased_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"placed_on": string | null,"received_on": string | null,"reference": string | null,"supplier_id": string
+                    "chase_count": number,"created_at": string,"created_by": string | null,"currency": string | null,"delivered_on": string | null,"expected_on": string | null,"id": string,"inquiry_id": string | null,"last_chased_by": string | null,"last_chased_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"placed_on": string | null,"received_on": string | null,"reference": string | null,"supplier_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id": string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id": string
                   }
                   Update: {
-                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id"?: string
+                    "chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id"?: string
                   }
                   Relationships: [
                     {
@@ -1267,6 +1327,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_supplier_activity"
       referencedColumns: ["inquiry_id"]
+    },{
+      foreignKeyName: "supplier_orders_last_chased_by_fkey"
+      columns: ["last_chased_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
     },{
       foreignKeyName: "supplier_orders_order_id_fkey"
       columns: ["order_id"]
@@ -1308,6 +1374,12 @@ isOneToOne: false
       columns: ["supplier_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "supplier_orders_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "supplier_orders_supplier_id_fkey"
@@ -1508,6 +1580,12 @@ isOneToOne: false
       foreignKeyName: "supplier_inquiries_supplier_id_fkey"
       columns: ["supplier_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     }
@@ -1529,6 +1607,12 @@ isOneToOne: false
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "invoices_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "invoices_company_id_fkey"
@@ -1636,6 +1720,12 @@ isOneToOne: false
       foreignKeyName: "orders_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     },{
@@ -1663,6 +1753,12 @@ isOneToOne: false
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "orders_company_id_fkey"
@@ -1740,6 +1836,38 @@ isOneToOne: false
       referencedColumns: ["order_id"]
     }
                   ]
+                },"v_report_clarification_turnaround": {
+                  Row: {
+                    "answered": number | null,"asked": number | null,"avg_days": number | null,"month": string | null,"slowest_days": number | null,"still_open": number | null,"total_days": number | null,"withdrawn": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_report_float": {
+                  Row: {
+                    "closed": number | null,"items_quoted": number | null,"items_total": number | null,"rfqs": number | null,"sourcing_state": string | null,"still_open": number | null,"won": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_report_repeat_customers": {
+                  Row: {
+                    "company_id": string | null,"first_order_on": string | null,"is_repeat": boolean | null,"last_order_on": string | null,"name": string | null,"orders": number | null,"rfqs": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_report_rfq_outcomes": {
+                  Row: {
+                    "close_reason": string | null,"outcome": string | null,"rfqs": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
                 },"v_rfq_state": {
                   Row: {
                     "bid_state": string | null,"clarification_state": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string | null,"days_to_due": number | null,"due_on": string | null,"floated": number | null,"is_overdue": boolean | null,"is_priority": boolean | null,"items_quoted": number | null,"items_total": number | null,"items_uncovered": number | null,"number": number | null,"outcome": string | null,"outcome_clash": boolean | null,"owner_id": string | null,"quotation_valid_until": string | null,"quoted_on": string | null,"received_on": string | null,"responders": number | null,"rfq_id": string | null,"sourcing_state": string | null,"to_ask": number | null,"to_relay": number | null,"waiting": number | null,"waiting_days": number | null
@@ -1757,6 +1885,12 @@ isOneToOne: false
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "rfqs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "rfqs_company_id_fkey"
@@ -1801,6 +1935,12 @@ isOneToOne: false
       columns: ["supplier_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "supplier_inquiries_supplier_id_fkey"

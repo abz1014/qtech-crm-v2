@@ -134,10 +134,10 @@ describe('RFQ board', () => {
     expect(await screen.findByTestId('where')).toHaveTextContent('/rfqs/b')
   })
 
-  it('says "No open RFQs. Nice." when everything is done, with New RFQ in the empty view too', async () => {
+  it('says "Every bid is in" when everything is done, with New RFQ in the empty view too', async () => {
     db([])
     renderBoard('admin')
-    expect(await screen.findByText('No open RFQs. Nice.')).toBeInTheDocument()
+    expect(await screen.findByText('Every bid is in')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'New RFQ' })).toHaveLength(2)
   })
 
@@ -160,8 +160,52 @@ describe('RFQ board', () => {
   it('shows a skeleton while loading, then an error with Try again', async () => {
     db(new Error('boom'))
     renderBoard('admin')
-    expect(await screen.findByText("Couldn't load the RFQs")).toBeInTheDocument()
+    expect(await screen.findByText("Couldn’t load RFQs")).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Try again/ })).toBeInTheDocument()
+  })
+})
+
+describe('RFQ board toolbar', () => {
+  it('filters by company, number or customer ref; Esc clears; a miss names the filter and offers Clear filter', async () => {
+    db()
+    const user = userEvent.setup()
+    renderBoard('admin')
+    await screen.findByText('Indus Textile Mills')
+    const box = screen.getByRole('textbox', { name: 'Filter RFQs' })
+    await user.type(box, 'rfq-0178')
+    expect(bodyRows()).toHaveLength(1)
+    expect(bodyRows()[0]).toHaveTextContent('Punjab Cement')
+    await user.clear(box)
+    await user.type(box, 'Belimo')
+    expect(await screen.findByText('No RFQs match “Belimo”')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Clear filter' }))
+    expect(box).toHaveValue('')
+    expect(bodyRows()).toHaveLength(3)
+    await user.type(box, 'dairy{Escape}')
+    expect(box).toHaveValue('')
+  })
+
+  it('/ focuses the filter box', async () => {
+    db()
+    const user = userEvent.setup()
+    renderBoard('admin')
+    await screen.findByText('Indus Textile Mills')
+    await user.keyboard('/')
+    expect(screen.getByRole('textbox', { name: 'Filter RFQs' })).toHaveFocus()
+  })
+
+  it('switches Open and Closed as a segmented control with counts, and remembers the density', async () => {
+    db()
+    const user = userEvent.setup()
+    renderBoard('admin')
+    await screen.findByText('Indus Textile Mills')
+    expect(screen.getByRole('radio', { name: /^Open\s*3$/ })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: 'Compact' }))
+    expect(localStorage.getItem('qtech.rfqs.density')).toBe('compact')
+    expect(screen.getByRole('radio', { name: 'Compact' })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: /^Closed/ }))
+    expect(await screen.findByRole('table', { name: 'Closed and won RFQs' })).toBeInTheDocument()
+    localStorage.removeItem('qtech.rfqs.density')
   })
 })
 
