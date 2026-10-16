@@ -24,7 +24,7 @@ interface BannerProps {
   children?: ReactNode
   /** An optional action, usually a small secondary Button. */
   action?: ReactNode
-  /** A glyph that says more than the tone's own (wifi-off, clock). */
+  /** A Lucide glyph that replaces the tone's default (info, triangle-alert, circle-alert, circle-check). The tone still sets the colour. */
   icon?: LucideIcon
   className?: string
 }

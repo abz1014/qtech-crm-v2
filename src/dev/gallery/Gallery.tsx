@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Bell, Download, Plus, Search, Trash2 } from 'lucide-react'
 import { Panel, Row, Section } from '@/dev/gallery/layout'
 import { ComboScene, CompanyForm, Controls, Feedback, Files, Misc, Overlays, SCENES, SceneView } from '@/dev/gallery/scenes'
+import { DateRailSection, EmptyCards, MorePrimitivesSection, TooltipSection } from '@/dev/gallery/primitives'
 import { StatusMoneyTableSections } from '@/dev/gallery/tables'
 import { Avatar } from '@/ui/Avatar'
 import { Banner } from '@/ui/Banner'
@@ -11,13 +12,13 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Icon, type IconSize } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
 import { Skeleton } from '@/ui/Skeleton'
-import { CountPill, ProgressSegments, Tag } from '@/ui/Tag'
+import { CountPill, ProgressBar, ProgressSegments, Tag } from '@/ui/Tag'
 
 /*
  * /dev/gallery (U09): every built primitive and every D08 state on one page, dev builds only.
  * Overlays that cannot sit on the page (dialogs, palette, toasts, open combobox) are scenes at
  * ?scene=<name>. Playwright photographs the page and each scene at 1440 and 375 wide, and runs axe on them.
- * Not built yet (INVENTORY): DateRail, StepList, InlineEditRow.
+ * DateRail, StepList, ProgressBar and InlineEditRow are in dev/gallery/primitives.tsx.
  */
 const ICON_SIZES: IconSize[] = ['chip', 'sm', 'md', 'lg', 'xl']
 
@@ -31,8 +32,10 @@ const NAV = [
   ['sumbar', 'SumBar'],
   ['rfq', 'DataTable'],
   ['cards', 'Phone cards'],
+  ['rail', 'DateRail'],
+  ['more', 'Progress, steps, inline edit'],
+  ['tooltip', 'Tooltip'],
   ['overlays', 'Overlays'],
-  ['not-built', 'Not built'],
 ] as const
 
 function Foundations() {
@@ -87,6 +90,14 @@ function Foundations() {
           <Tag dashed>no PO yet</Tag>
           <CountPill>4</CountPill>
           <CountPill>12</CountPill>
+        </Row>
+        <Row title="ProgressBar" note="The continuous bar, named by its sentence.">
+          <div className="grid w-full max-w-[420px] gap-2">
+            <ProgressBar done={3} total={5} label="3 of 5 items covered" />
+            <p className="text-xs text-fg-muted">
+              <span className="num">3</span> of <span className="num">5</span> items covered
+            </p>
+          </div>
         </Row>
         <Row title="ProgressSegments" note="n of m, with the count in words.">
           <ProgressSegments done={0} total={5} />
@@ -146,7 +157,7 @@ function Forms() {
 function FeedbackSection() {
   const [retried, setRetried] = useState(false)
   return (
-    <Section id="feedback" title="Feedback" note="Banner, ToggleButton, Callout, InlineConfirm, EmptyState.">
+    <Section id="feedback" title="Feedback" note="Banner, ToggleButton, Callout, InlineConfirm, and the four EmptyState cards (goal, first use, no results, not available to this role).">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Banner tone="info" title="Rates are set by an admin">
           Only admins can change them on Money.
@@ -162,13 +173,14 @@ function FeedbackSection() {
         </Banner>
       </div>
       <Feedback />
+      <EmptyCards />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Panel title="EmptyState: goal">
+        <Panel title="EmptyState: goal (in a container)">
           <EmptyState mood="goal" title="Every bid is in" actions={<Button variant="primary">New RFQ</Button>}>
             Nothing is open and nothing is due in the next 5 days.
           </EmptyState>
         </Panel>
-        <Panel title="EmptyState: neutral">
+        <Panel title="EmptyState: neutral (in a container)">
           <EmptyState title={'No RFQs match “Belimo”'} actions={<Button>Clear filter</Button>}>
             Try fewer words or clear the filter.
           </EmptyState>
@@ -223,24 +235,6 @@ function OverlayIndex() {
   )
 }
 
-function NotBuilt() {
-  return (
-    <Section id="not-built" title="Not built yet" note="INVENTORY lists these as built with the first screen that needs them. When one lands, add its states here and update the baselines.">
-      <ul className="grid max-w-prose gap-1 text-sm">
-        <li>
-          <b className="font-medium">DateRail</b>: start-to-due rail with a today marker.
-        </li>
-        <li>
-          <b className="font-medium">StepList</b>: process steps.
-        </li>
-        <li>
-          <b className="font-medium">InlineEditRow</b>: table row edited in place.
-        </li>
-      </ul>
-    </Section>
-  )
-}
-
 export default function Gallery() {
   const [params] = useSearchParams()
   const scene = params.get('scene')
@@ -271,8 +265,10 @@ export default function Gallery() {
       </Section>
       <FeedbackSection />
       <StatusMoneyTableSections />
+      <DateRailSection />
+      <MorePrimitivesSection />
+      <TooltipSection />
       <OverlayIndex />
-      <NotBuilt />
     </main>
   )
 }

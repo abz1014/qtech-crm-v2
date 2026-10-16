@@ -50,7 +50,7 @@ export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?
           </MenuItem>
         ) : null}
         <MenuSeparator />
-        <MenuItem icon={LogOut} onClick={() => void session.signOut()}>
+        <MenuItem icon={LogOut} danger onClick={() => void session.signOut()}>
           Sign out
         </MenuItem>
       </PopoverContent>

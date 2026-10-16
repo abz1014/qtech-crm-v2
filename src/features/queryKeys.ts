@@ -107,6 +107,11 @@ function orders() {
     detail,
     /** One slice of an order page (O03). `slice` is a fixed word, so a typo is a type error. */
     part: (id: string, slice: OrderPart) => [...detail(id), slice] as const,
+    /** O02: past orders found to start a new one from (cached a moment; the search text is part of the key). */
+    past: (text: string) => [...all, 'list', 'past', text.trim().toLowerCase()] as const,
+    pastOne: (id: string) => [...all, 'list', 'past-one', id] as const,
+    /** O04: every order with its state dimensions, shaped by the caller's role (an engineer's has no money in it). */
+    board: (role: string) => [...all, 'list', 'board', role] as const,
     /** The orders an RFQ produced (the RFQ page shows 'Open ORD-0039' once it is won). */
     forRfq: (rfqId: string) => [...all, 'list', 'for-rfq', rfqId] as const,
     /** The company's last payment terms, the default for the next order (O01). */
@@ -131,6 +136,8 @@ function settings() {
     all,
     team: () => [...all, 'team'] as const,
     profile: () => [...all, 'company-profile'] as const,
+    /** The signed-in person's own users row (Your details). */
+    myDetails: () => [...all, 'my-details'] as const,
     /** M06: every targets read (rows and progress); invalidate this one after any target write. */
     targets: () => [...all, 'targets'] as const,
     targetRows: (year: number) => [...all, 'targets', 'rows', year] as const,
@@ -152,6 +159,18 @@ function today() {
     leg: (legId: string) => [...all, 'leg', legId] as const,
     /** Payment-reminder draft: the order's invoices, PO number and contact. */
     payment: (orderId: string) => [...all, 'payment', orderId] as const,
+  }
+}
+
+/** Supplier POs (O07): the dialog's pre-fill, the supplier's last PO, a leg's latest PO and the next number. */
+function purchaseOrders() {
+  const all = root('purchaseOrders')
+  return {
+    all,
+    prefill: (legId: string) => [...all, 'prefill', legId] as const,
+    lastToSupplier: (supplierId: string) => [...all, 'last-to-supplier', supplierId] as const,
+    leg: (legId: string) => [...all, 'leg', legId] as const,
+    nextNumber: () => [...all, 'next-number'] as const,
   }
 }
 
@@ -193,6 +212,7 @@ export const qk = {
   brands: brands(),
   rfqs: rfqs(),
   orders: orders(),
+  purchaseOrders: purchaseOrders(),
   intake: intake(),
   memory: memory(),
   fx: fx(),

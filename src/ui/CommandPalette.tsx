@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
 import { Command } from 'cmdk'
-import { ArrowDown, ArrowUp, CornerDownLeft, FileText, Search } from 'lucide-react'
+import { ArrowDown, ArrowUp, Building2, CornerDownLeft, FileText, Package, Search, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
-import type { PaletteItem, PaletteSource } from '@/ui/paletteSources'
+import { modKeyLabel, type PaletteItem, type PaletteSource } from '@/ui/paletteSources'
 
 /*
  * CommandPalette (INVENTORY: U08; D08 section 07). Cmd+K or Ctrl+K from anywhere,
@@ -58,6 +58,13 @@ function saveRecent(item: PaletteItem) {
   }
 }
 
+/** Recent rows keep only their route, so the icon follows the kind of place it opens: RFQ, company, order. */
+function recentIcon(href: string): LucideIcon {
+  if (href.startsWith('/companies')) return Building2
+  if (href.startsWith('/orders')) return Package
+  return FileText
+}
+
 function ago(at: number): string {
   const mins = Math.round((Date.now() - at) / 60_000)
   const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
@@ -83,8 +90,6 @@ interface CommandPaletteProps {
   /** What the search covers, shown when nothing matched. */
   emptyHint?: ReactNode
 }
-
-const mod = () => (typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform) ? '⌘' : 'Ctrl')
 
 export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyHint }: CommandPaletteProps) {
   const [query, setQuery] = useState('')
@@ -128,7 +133,7 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
     const recentGroup = (): Group[] => {
       const r = loadRecents()
       return r.length
-        ? [{ key: 'recent', heading: 'Recent', items: r.map(x => ({ id: x.id, label: x.label, meta: ago(x.at), href: x.href, icon: FileText })) }]
+        ? [{ key: 'recent', heading: 'Recent', items: r.map(x => ({ id: x.id, label: x.label, meta: ago(x.at), href: x.href, icon: recentIcon(x.href) })) }]
         : []
     }
 
@@ -198,7 +203,7 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
 
   const total = groups.reduce((n, g) => n + g.items.length, 0)
   const q = query.trim()
-  const m = mod()
+  const m = modKeyLabel()
 
   return (
     <RadixDialog.Root

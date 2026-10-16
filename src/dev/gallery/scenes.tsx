@@ -32,6 +32,7 @@ import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Tab, TabList, TabPanel, Tabs } from '@/ui/Tabs'
 import { Tooltip } from '@/ui/Tooltip'
+import { TooltipVariants } from '@/dev/gallery/primitives'
 
 /*
  * Overlay and interaction scenes for /dev/gallery (U09). Dialogs, the palette and toasts cannot sit
@@ -488,7 +489,9 @@ function MoneyDialog() {
   )
 }
 
-function ToastScene({ kind }: { kind: 'undo' | 'error' | 'settled' | 'plain' }) {
+type ToastKind = 'undo' | 'error' | 'settled' | 'plain' | 'two'
+
+function ToastScene({ kind }: { kind: ToastKind }) {
   const { toast } = useToast()
   const fired = useRef(false)
   useEffect(() => {
@@ -498,6 +501,10 @@ function ToastScene({ kind }: { kind: 'undo' | 'error' | 'settled' | 'plain' }) 
     if (kind === 'settled') toast({ title: 'Marked floated', undo: { onUndo: noop, seconds: 1, settledTitle: 'Floated to 4 suppliers', settledBody: 'Sent today, Fri 27 Nov' } })
     if (kind === 'error') toast({ title: 'Couldn’t save the answer', body: 'Nothing was changed.', tone: 'danger', action: { label: 'Try again', onClick: noop } })
     if (kind === 'plain') toast({ title: 'Copied', body: 'Message is on your clipboard', tone: 'success' })
+    if (kind === 'two') {
+      toast({ title: 'Reminder sent to Karachi Glassworks', body: 'INV-2291 · marked as reminded today', tone: 'success', undo: { onUndo: noop } })
+      toast({ title: 'Copied', body: 'Message is on your clipboard', tone: 'success' })
+    }
   }, [kind, toast])
   return <div className="h-[60px]" />
 }
@@ -563,8 +570,16 @@ const NODES: Record<SceneName, () => ReactNode> = {
   'toast-settled': () => <ToastHost kind="settled" />,
   'toast-error': () => <ToastHost kind="error" />,
   'toast-plain': () => <ToastHost kind="plain" />,
+  'toast-paused': () => <ToastHost kind="undo" />,
+  'toast-two': () => <ToastHost kind="two" />,
+  'toast-phone': () => <ToastHost kind="undo" />,
   'combobox-open': () => <ComboScene />,
   'overlays': () => <Overlays />,
+  'tooltips': () => (
+    <div className="w-[760px] max-w-full rounded border bg-surface p-6 pb-[140px]">
+      <TooltipVariants />
+    </div>
+  ),
 }
 
 /** Name to group, label and node, in the order of SCENE_LIST (the order on the gallery page). */
@@ -572,7 +587,7 @@ export const SCENES: Record<string, { label: string; group: string; node: () => 
   SCENE_LIST.map(s => [s.scene, { group: s.group, label: s.label, node: NODES[s.scene] }]),
 )
 
-function ToastHost({ kind }: { kind: 'undo' | 'error' | 'settled' | 'plain' }) {
+function ToastHost({ kind }: { kind: ToastKind }) {
   return (
     <ToastProvider>
       <ToastScene kind={kind} />

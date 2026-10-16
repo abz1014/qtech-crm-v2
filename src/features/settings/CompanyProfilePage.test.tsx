@@ -127,6 +127,28 @@ describe('Company profile screen', () => {
     expect(screen.getByText('Nothing to save yet')).toBeInTheDocument()
   })
 
+  it('draws an empty legal name and address invalid with their own sentences, before any save', async () => {
+    h.row = { ...EMPTY }
+    const user = userEvent.setup()
+    mount('admin')
+    const name = await screen.findByLabelText(/Legal name/)
+    expect(name).toBeInvalid()
+    expect(screen.getByText('Add the legal name before issuing a PDF.')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Address/)).toBeInvalid()
+    expect(screen.getByText('Add the address before issuing a PDF.')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Address/)).toHaveAttribute('rows', '2')
+    await user.type(name, 'Q-Tech')
+    expect(screen.queryByText('Add the legal name before issuing a PDF.')).toBeNull()
+  })
+
+  it('keeps the save bar a static card (not sticky) and sets the purchase order terms to 4 rows', async () => {
+    mount('admin')
+    const bar = (await screen.findByText('Nothing to save yet')).parentElement as HTMLElement
+    expect(bar.className).not.toContain('sticky')
+    expect(screen.getByLabelText('Purchase order terms')).toHaveAttribute('rows', '4')
+    expect(screen.getByLabelText('Quotation terms')).toHaveAttribute('rows', '5')
+  })
+
   it('says so when the database refuses the change (not an admin) instead of showing success', async () => {
     h.updated = [] // RLS: an update that matches no allowed row returns no rows, and no error
     const user = userEvent.setup()
@@ -164,6 +186,7 @@ describe('Company profile screen', () => {
       expect(screen.queryByRole('textbox')).toBeNull()
       expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull()
       expect(screen.getAllByText('Not set').length).toBeGreaterThan(0) // blank values are flagged, not empty
+      expect(screen.queryByText(/Printed in the letterhead/)).toBeNull() // read-only view carries titles only
     })
   }
 

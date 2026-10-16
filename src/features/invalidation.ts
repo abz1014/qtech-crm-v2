@@ -30,6 +30,8 @@ export interface WriteVars {
   'team.reset-password': Record<string, never>
   'team.set-role': Record<string, never>
   'team.set-job-title': Record<string, never>
+  /** users.phone, written straight to the users row (own row, or any row for an admin). */
+  'team.set-phone': Record<string, never>
   'team.deactivate': Record<string, never>
   'team.reactivate': Record<string, never>
   'company-profile.update': Record<string, never>
@@ -65,10 +67,16 @@ export interface WriteVars {
   'quotation.pdf': { rfqId: string }
   /** O01: converting an RFQ creates an order and legs, and the RFQ becomes won. */
   'order.convert': { rfqId: string }
+  /** O02: a repeat order creates an order, its lines and legs; the customer's history and Today change. */
+  'order.repeat': { companyId: string }
   /** O03: any edit on the order page (items, legs, commissioning, notes). */
   'order.update': { orderId: string }
   /** O03: cancelling (or taking the cancel back) also moves the RFQ between won and open and the company role. */
   'order.cancel': { orderId: string }
+  /** O07: issuing a supplier PO stamps the leg placed, writes the prices back to the order lines and moves Today's place-PO rule. */
+  'po.issue': { orderId: string }
+  /** O07: attaching a PO's PDF changes only the PO chips and View PO. */
+  'po.pdf': { orderId: string }
   /** R11/R16: a chase stamp on Today (customer ask, supplier chase, goods chase, payment reminder) or taking it back. */
   'today.chase': Record<string, never>
   'today.snooze': Record<string, never>
@@ -107,6 +115,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'team.reset-password': () => [qk.settings.team()],
   'team.set-role': () => [qk.settings.team()],
   'team.set-job-title': () => [qk.settings.team()],
+  'team.set-phone': () => [qk.settings.team(), qk.settings.myDetails()],
   'team.deactivate': () => [qk.settings.team()],
   'team.reactivate': () => [qk.settings.team()],
   'company-profile.update': () => [qk.settings.profile()],
@@ -147,8 +156,12 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'quotation.pdf': v => [qk.rfqs.part(v.rfqId, 'quotations')],
   // A new order changes the RFQ (won), every list that shows orders or states, Today (place PO, goods late) and the customer's history.
   'order.convert': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.all, qk.orders.all, qk.today.all, qk.companies.all],
+  'order.repeat': v => [qk.orders.all, qk.today.all, qk.companies.all, qk.companies.detail(v.companyId)],
   'order.update': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all],
   'order.cancel': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.rfqs.all, qk.today.all, qk.companies.all],
+  // An issued PO changes the order page (leg placed, prices written back), the order lists, Today and every PO read.
+  'po.issue': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.purchaseOrders.all],
+  'po.pdf': v => [qk.orders.part(v.orderId, 'pos'), qk.purchaseOrders.all],
   // A chase stamp changes the asked/chased fields the RFQ page, the board and the order screens read, and every Today read.
   'today.chase': () => [qk.today.all, qk.rfqs.all, qk.orders.all],
   // A snooze is read only by Today.

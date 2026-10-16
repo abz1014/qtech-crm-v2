@@ -24,6 +24,7 @@ export interface TeamMember {
   email: string | null
   role: Role
   job_title: string | null
+  phone: string | null
   deactivated_at: string | null
   created_at: string
 }
@@ -76,6 +77,35 @@ export const setJobTitle = (userId: string, jobTitle: string | null) =>
   call<{ user_id: string; job_title: string | null }>({ action: 'set_job_title', user_id: userId, job_title: jobTitle })
 export const deactivatePerson = (userId: string) => call<{ user_id: string }>({ action: 'deactivate', user_id: userId })
 export const reactivatePerson = (userId: string) => call<{ user_id: string }>({ action: 'reactivate', user_id: userId })
+
+// ---------------------------------------------------------------- phone (users.phone, migration 0039)
+
+/**
+ * Phone is the one users column a browser may write (column grant plus policy users_update_phone: own row,
+ * or any row for an admin). It is a plain table update, not the admin-users function. select() after the
+ * update: a row RLS hides affects nothing and returns no error, which must not look like success.
+ */
+export async function setPhone(userId: string, phone: string | null): Promise<string | null> {
+  const rows = unwrap(await requireSupabase().from('users').update({ phone }).eq('id', userId).select('id, phone'))
+  if (!rows || rows.length === 0) throw new PlainError('You can only change your own phone number.')
+  return (rows[0] as unknown as { phone: string | null }).phone
+}
+
+export interface MyDetails {
+  id: string
+  name: string
+  email: string | null
+  job_title: string | null
+  phone: string | null
+}
+
+/** The signed-in person's own row. The email is the sign-in address (Auth), not a users column. */
+export async function getMyDetails(userId: string): Promise<MyDetails> {
+  const db = requireSupabase()
+  const row = unwrap(await db.from('users').select('id, name, job_title, phone').eq('id', userId).single()) as unknown as Omit<MyDetails, 'email'>
+  const email = (await db.auth.getSession()).data.session?.user.email ?? null
+  return { id: String(row.id), name: String(row.name), job_title: row.job_title ?? null, phone: row.phone ?? null, email }
+}
 
 // ---------------------------------------------------------------- company profile
 

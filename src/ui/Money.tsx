@@ -156,7 +156,7 @@ export function Margin({ value, state, size, prefix, mark, className }: MarginPr
         basisUnknown={basisUnknown}
         mark={mark}
       />
-      {below ? <span className="text-sm text-tone-danger-fg">below cost</span> : null}
+      {below ? <span className="text-sm font-medium text-tone-danger-fg">below cost</span> : null}
     </span>
   )
 }
@@ -164,7 +164,8 @@ export function Margin({ value, state, size, prefix, mark, className }: MarginPr
 /*
  * MoneyFx: a foreign amount, original first, then the PKR conversion at the rate
  * with its date. Fresh up to 7 days; stale 8 to 30 (still converted, amber, with
- * its age); unusable over 30 (no PKR figure, not compared); no rate yet (quiet).
+ * its age); unusable over 30 (no PKR figure, not compared); no rate yet (a quiet line and a
+ * separate quiet chip "not compared, no rate").
  * "Captured" shows the rate recorded on the quote line ("at the time") beside
  * today's, clearly labelled.
  */
@@ -208,10 +209,19 @@ export function MoneyFx({ amount, currency, rate, rateOn, ageDays, staleness, ca
     )
   } else if (!hasRate) {
     line = (
-      <span className="flex items-center gap-1 text-xs text-fg-muted">
-        <Icon icon={Info} size="chip" />
-        {`No ${currency} rate yet · not compared`}
-      </span>
+      <>
+        <span className="flex items-center gap-1 text-xs text-fg-muted">
+          <Icon icon={Info} size="chip" />
+          {`No ${currency} rate yet`}
+        </span>
+        <span
+          data-quiet-chip=""
+          className="inline-flex items-center gap-1 justify-self-start rounded-round bg-selected px-2 py-px text-xs leading-[18px] text-fg-muted"
+        >
+          <Icon icon={Info} size="chip" />
+          not compared, no rate
+        </span>
+      </>
     )
   } else if (band === 'unusable') {
     line = (

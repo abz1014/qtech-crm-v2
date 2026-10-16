@@ -36,12 +36,12 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 | `EmptyState` | Heading, what happens next, optional action; role-limited variant | 09 | U04 (built; goal, neutral and error moods; the role-limited wording is a screen concern) |
 | `Tooltip` | Short hover and focus hint; also carries exact values behind rounded figures | 10 | U03 (built) |
 | `SegmentedControl` | 2 to 5 options, counts, large size; tablist or radiogroup semantics | 11 | U03 (built) |
-| `DateRail` | Start-to-due rail with today marker; tones on track, due soon, due today, overdue, done, no date | 12 | U05 NOT built (not in the U05 brief; build with the first screen that needs it) |
+| `DateRail` | Start-to-due rail with today marker; tones on track, due soon, due today, overdue, done, no date | 12 | Built (`src/ui/DateRail.tsx`, parity pass); Today's context pane uses it |
 | `Popover` | `Menu` variant (actions, 32 px items) and information variant | 13 | U03 (built) |
 | `InlineConfirm` | In-place "Copied. Marked as chased today. Undo" line | 13 | U03 (built) |
 | `Callout` | Dashed quiet note; no tone | 13 | U03 (built) |
-| `StepList`, `ProgressSegments` | "n of m" segments and process steps | 13 | U05 (`ProgressSegments` built; `StepList` NOT built) |
-| `InlineEditRow` | Table row edited in place: resting, editing, saving, error; Enter saves, Esc cancels | 13 | U04 NOT built (not in the U04 brief; build with the first inline-edit screen) |
+| `StepList`, `ProgressSegments` | "n of m" segments and process steps | 13 | Built: `ProgressSegments`, `ProgressBar` (both in `Tag.tsx`) and `StepList` (`src/ui/StepList.tsx`) |
+| `InlineEditRow` | Table row edited in place: resting, editing, saving, error; Enter saves, Esc cancels | 13 | Built (`src/ui/InlineEditRow.tsx`, parity pass): the caller owns the fields and validation |
 
 ## 2. Composites (built from the primitives; screen tasks own them)
 
