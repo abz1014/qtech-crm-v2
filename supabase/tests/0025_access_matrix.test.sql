@@ -193,6 +193,10 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'stamp_supplier_chase',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_goods_chase',      '',    'X',    'X',    'X'),    -- R16 (0033): goods-chase stamp on a supplier leg, all staff
   ('function', 'search_all',            '',    'X',    'X',    'X'),    -- R12 (0034): palette search, SECURITY INVOKER, all staff; deactivated gets zero rows
+  ('function', 'search_all',            'invoice',     'X', 'X', ''),   -- P02 (0054): an invoice number is found by admin and sales, never by an engineer
+  ('function', 'search_all',            'customer_po', 'X', 'X', ''),   -- P02 (0054): the customer PO text is searched and shown to admin and sales only
+  ('function', 'search_all',            'order_item',  'X', 'X', 'X'),  -- P02 (0054): order lines, no price
+  ('function', 'search_all',            'supplier_po', 'X', 'X', 'X'),  -- P02 (0054): our PO numbers, all staff (RLS: purchase_orders is all staff)
   ('function', 'next_invoice_number',    '',    'X',    'X',    ''),     -- M01 (0044): the next number in the invoice series, admin and sales
   ('function', 'stamp_payment_reminder',  '',    'X',    'X',    ''),     -- s10 "RPC stamp_payment_reminder"
   ('function', 'stamp_tcs_sent',          '',    'X',    'X',    ''),     -- A4: admin and sales
@@ -260,6 +264,7 @@ insert into public.clarifications (id, rfq_id, question) values
 insert into public.orders (id, company_id, owner_id) values
   (pg_temp.f('20'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002'),
   (pg_temp.f('21'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002');
+update public.orders set customer_po_number = 'PO-M1' where id = pg_temp.f('20');   -- P02 (0054): search_all customer PO
 insert into public.supplier_orders (id, order_id, supplier_id, currency) values
   (pg_temp.f('23'), pg_temp.f('20'), pg_temp.f('03'), 'USD'),
   (pg_temp.f('24'), pg_temp.f('20'), pg_temp.f('03'), 'USD');
@@ -413,6 +418,10 @@ insert into probes values
   ('stamp_supplier_chase', '', 'X', 'select public.stamp_supplier_chase(@19)'),
   ('stamp_goods_chase', '', 'X', 'select public.stamp_goods_chase(@23)'),
   ('search_all', '', 'X', $q$select * from public.search_all('Contact', 5)$q$),
+  ('search_all', 'invoice', 'X', $q$select 1 from public.search_all('INV-M1', 5) where kind = 'invoice'$q$),
+  ('search_all', 'customer_po', 'X', $q$select 1 from public.search_all('PO-M1', 5) where kind = 'order' and meta = 'Customer PO PO-M1'$q$),
+  ('search_all', 'order_item', 'X', $q$select 1 from public.search_all('Fixture order item', 5) where kind = 'item'$q$),
+  ('search_all', 'supplier_po', 'X', $q$select 1 from public.search_all('PO-7002', 5) where kind = 'po'$q$),
   ('next_invoice_number', '', 'X', 'select * from public.next_invoice_number()'),
   ('stamp_payment_reminder', '', 'X', 'select 1 from (select public.stamp_payment_reminder(array[@26]) r) x where r > 0'),
   ('stamp_tcs_sent', '', 'X', 'select 1 from (select public.stamp_tcs_sent(array[@26]) r) x where r > 0'),

@@ -1962,7 +1962,7 @@ isOneToOne: false
                            },
 "search_all":
 { Args: { "lim"?: number,"q": string }; Returns: {
-              "company_id": string,"id": string,"kind": string,"label": string,"meta": string,"role": string,"score": number
+              "company_id": string,"id": string,"kind": string,"label": string,"meta": string,"order_id": string,"role": string,"score": number
             }[]
                            },
 "set_fx_rate":
