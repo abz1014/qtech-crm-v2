@@ -135,7 +135,9 @@ test.describe('payment-reminder panel (M09)', () => {
     page.on('request', r => {
       if (/stamp_payment_reminder|rpc\/order_receivables|\/rest\/v1\/invoices/.test(r.url())) seen.push(r.url())
     })
-    await openAs(page, 'engineer', '/money/receivables')
+    await openAs(page, 'engineer', '/money/gst-register')
+    await expect(page.getByRole('heading', { name: /not available to your role/ })).toBeVisible()
+    await page.goto('/money/receivables')
     await expect(page.getByRole('heading', { name: /not available to your role/ })).toBeVisible()
     expect(seen, 'engineer must not fetch money data').toEqual([])
     const refused = await rest('engineer', 'rpc/stamp_payment_reminder', { method: 'POST', body: { p_invoice_ids: [s.invoiceId] } })
