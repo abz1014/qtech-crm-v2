@@ -52,6 +52,7 @@ jobs:
       pwa: ${{ steps.final.outputs.pwa }}
       money_books: ${{ steps.final.outputs.money_books }}
       expenses: ${{ steps.final.outputs.expenses }}
+      bank: ${{ steps.final.outputs.bank }}
       money_costs: ${{ steps.final.outputs.money_costs }}
       any: ${{ steps.final.outputs.any }}
     steps:
@@ -95,6 +96,8 @@ jobs:
               - 'e2e/capture/**'
             expenses:
               - 'e2e/expenses/**'
+            bank:
+              - 'e2e/bank/**'
             money_costs:
               - 'e2e/money/**'
             orders:
@@ -128,6 +131,7 @@ jobs:
           S_PWA: ${{ steps.filter.outputs.pwa }}
           S_MONEY_BOOKS: ${{ steps.filter.outputs.money_books }}
           S_EXPENSES: ${{ steps.filter.outputs.expenses }}
+          S_BANK: ${{ steps.filter.outputs.bank }}
           S_MONEY_COSTS: ${{ steps.filter.outputs.money_costs }}
         run: |
           all=false
@@ -163,6 +167,8 @@ jobs:
           echo "pwa=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_EXPENSES; if [ "$all" = "true" ]; then v=true; fi
           echo "expenses=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_BANK; if [ "$all" = "true" ]; then v=true; fi
+          echo "bank=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_MONEY_COSTS; if [ "$all" = "true" ]; then v=true; fi
           echo "money_costs=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_MONEY_BOOKS; if [ "$all" = "true" ]; then v=true; fi
@@ -333,6 +339,16 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=expenses REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/expenses npx playwright test --project=expenses --output=test-results/expenses
+
+      - name: Reset database (bank)
+        if: ${{ !cancelled() && needs.changes.outputs.bank == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (bank project)
+        if: ${{ !cancelled() && needs.changes.outputs.bank == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=bank REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/bank npx playwright test --project=bank --output=test-results/bank
 
       - name: PDF tools for the orders suite (poppler, to read and render the stored supplier PO PDFs)
         if: ${{ !cancelled() && needs.changes.outputs.orders == 'true' }}

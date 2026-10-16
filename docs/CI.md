@@ -5,9 +5,9 @@ so runs stay fast and quick to read: a docs-only push runs nothing.
 
 | Workflow | Runs on | Cost when it runs |
 |---|---|---|
-| `ci.yml` (lint, tokens, typecheck, unit, build) | every push except docs-only (`docs/**`, `*.md`) | about 3 min |
+| `ci.yml` (lint, tokens, typecheck, unit, import transforms and guard, build) | every push except docs-only (`docs/**`, `*.md`) | about 3 min |
 | `ci.yml` gallery job (visual + axe) | main, manual, or when `src/ui`, `src/dev`, `src/index.css`, `tailwind.config.ts`, `e2e/gallery*`, `e2e/__screenshots__`, `playwright.config.ts`, `package*.json` change | about 4 min |
-| `db.yml` | every push, only if `supabase/**`, `src/types/database.ts`, `package*.json` or the workflow changed | about 6 min |
+| `db.yml` | every push, only if `supabase/**`, `src/types/database.ts`, `import/**`, `package*.json` or the workflow changed (its last step is the import load test, I01) | about 6 min |
 | `functions.yml` | every push; paths `supabase/functions/**`, `supabase/migrations/**` | about 6 min |
 | `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | every push, path-gated; one stack boot, only suites whose paths changed | about 8 to 14 min |
 | `remote.yml`, `deploy-functions.yml` | manual only, owner approval | not part of the budget |
@@ -25,7 +25,7 @@ Rules applied everywhere:
 
 A `changes` job (`dorny/paths-filter@v3.0.2`) decides per suite. Shared paths (`src/**`, `e2e/support/**`, migrations, seed, config,
 `playwright.config.ts`, `package*.json`, the workflow) run every suite; `e2e/auth/**`, `e2e/companies/**`, `e2e/rfqs/board.spec.ts`,
-`intake.spec.ts`, `detail.spec.ts`, `memory.spec.ts`, `quotation.spec.ts` (suite `rfq-quotation`, which also installs poppler to read and render the stored PDFs) `e2e/today/**`, `e2e/money-books/**` (suite `money-books`: M01, M02), `e2e/money-books/**` (suite `money-books`: M01, M02), `e2e/expenses/**` (suite `expenses`, M03 and M11: the Add expense dialog, burst entry, recurring, the closed-month refusal, role access), `e2e/search/**`, `e2e/orders/**` (suite `orders`, which also installs poppler to read and render the stored supplier PO PDFs) and `e2e/settings/**` (suite `settings-admin`) run just their own. Then ONE job starts Supabase once, builds once, and runs the chosen suites
+`intake.spec.ts`, `detail.spec.ts`, `memory.spec.ts`, `quotation.spec.ts` (suite `rfq-quotation`, which also installs poppler to read and render the stored PDFs) `e2e/today/**`, `e2e/money-books/**` (suite `money-books`: M01, M02), `e2e/money-books/**` (suite `money-books`: M01, M02), `e2e/expenses/**` (suite `expenses`, M03 and M11: the Add expense dialog, burst entry, recurring, the closed-month refusal, role access), `e2e/search/**`, `e2e/bank/**` (suite `bank`, M12: the bank tick, role access, closed-month ticking), `e2e/orders/**` (suite `orders`, which also installs poppler to read and render the stored supplier PO PDFs) and `e2e/settings/**` (suite `settings-admin`) run just their own. Then ONE job starts Supabase once, builds once, and runs the chosen suites
 one after another, resetting the database between them.
 
 The `capture` suite (R22, `e2e/capture/`) is a database suite like the others (reset, then the same build) but runs with service workers allowed, because the Android share target is a POST the worker answers. The `pwa` suite (R21, `e2e/pwa/`) needs no database and no reset: it reuses the same production build to check the manifest, the service worker, its shell-only precache, offline open and Chrome's installability. It is the only project with service workers allowed. Lighthouse is not run (version 12 dropped the PWA audit); Chrome's own installability check replaces it.

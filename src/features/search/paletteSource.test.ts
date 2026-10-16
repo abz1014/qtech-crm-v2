@@ -5,10 +5,10 @@ const searchAll = vi.fn<(text: string, signal?: AbortSignal) => Promise<SearchHi
 vi.mock('@/features/search/api', () => ({ searchAll: (t: string, s?: AbortSignal) => searchAll(t, s) }))
 vi.mock('@/app/palette/usePalette', () => ({ usePaletteSource: () => undefined }))
 
-import { searchPaletteSource } from '@/features/search/paletteSource'
+import { kindOrder, searchPaletteSource } from '@/features/search/paletteSource'
 
 const hit = (kind: SearchHit['kind'], id: string, label: string, extra: Partial<SearchHit> = {}): SearchHit => ({
-  kind, id, label, meta: null, companyId: null, role: null, score: 1, ...extra,
+  kind, id, label, meta: null, companyId: null, orderId: null, role: null, score: 1, ...extra,
 })
 
 describe('search palette source (R12)', () => {
@@ -86,5 +86,33 @@ describe('search palette source (R12)', () => {
     const p = searchPaletteSource(0).search!('abc ltd', new AbortController().signal)
     await vi.advanceTimersByTimeAsync(5)
     expect((await p).some(i => i.id === 'company-new-typed')).toBe(false)
+  })
+
+  it('P02: orders, items, supplier POs and invoices open the order, the order, the order and the invoice', async () => {
+    searchAll.mockResolvedValue([
+      hit('invoice', 'v1', 'INV-2311', { meta: 'Hazara · ORD-0041', orderId: 'o1' }),
+      hit('item', 'i1', 'Siemens 6ES7', { meta: 'ORD-0041 · Hazara', orderId: 'o1' }),
+      hit('po', 'p1', 'PO-26-0017 Belimo', { orderId: 'o1' }),
+      hit('order', 'o1', 'ORD-0041 Hazara', { meta: 'Customer PO 253074', orderId: 'o1' }),
+    ])
+    const p = searchPaletteSource(0).search!('zz1', new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(5)
+    const items = (await p).filter(i => i.group !== 'Actions')
+    expect(items.map(i => [i.group, i.href])).toEqual([
+      ['Orders', '/orders/o1'],
+      ['Invoices', '/money/gst-register?invoice=v1'],
+      ['Purchase orders', '/orders/o1'],
+      ['Order items', '/orders/o1'],
+    ])
+  })
+
+  it('P02: a typed prefix puts what it names first', () => {
+    expect(kindOrder('PO-26-0017')[0]).toBe('po')
+    expect(kindOrder('po 17')[0]).toBe('po')
+    expect(kindOrder('ORD-0041')[0]).toBe('order')
+    expect(kindOrder('inv-23')[0]).toBe('invoice')
+    expect(kindOrder('177').slice(0, 2)).toEqual(['rfq', 'order'])
+    expect(kindOrder('indus')[0]).toBe('company')
+    expect(new Set(kindOrder('x')).size).toBe(7)
   })
 })

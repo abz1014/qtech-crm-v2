@@ -7,6 +7,7 @@ on:
       - "supabase/**"
       - "src/types/database.ts"
       - "package*.json"
+      - "import/**"
       - ".github/workflows/db.yml"
   workflow_dispatch:
 
@@ -68,6 +69,11 @@ jobs:
 
       - name: Generated types match src/types/database.ts
         run: diff -u src/types/database.ts "$RUNNER_TEMP/types.ts"
+
+      - name: Import load test (I01, fixtures into this stack twice, same ids and counts, v2 rows survive, row security holds)
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          IMPORT_LOAD_TEST=1 npm run test:import
 
       - name: Stop Supabase
         if: always()

@@ -190,6 +190,11 @@ function money() {
       receipts: (expenseId: string) => [...expenses, 'receipts', expenseId] as const,
     },
     categories: () => [...all, 'expense-categories'] as const,
+    /** M12: the bank tick for one statement month ("2026-10"). */
+    bank: {
+      all: [...all, 'bank'] as const,
+      month: (month: string) => [...all, 'bank', month] as const,
+    },
     /** One order's costs for the Margin panel (M04): expenses, expected cost, the supplier-price inputs. */
     orderCosts: (orderId: string) => [...all, 'order-costs', orderId] as const,
     /** Every order's margin row (M04) and the reconciliation exceptions (M07). Admin only. */
