@@ -86,11 +86,11 @@ export function RankedPicker({
         <button
           type="button"
           aria-haspopup="listbox"
-          aria-label={label}
           className="grid min-h-[36px] w-full grid-cols-[24px_minmax(0,1fr)_16px] items-center gap-2 rounded border border-line-input bg-surface px-2 py-1 text-left hover:border-fg-muted"
         >
           <RankBadge rank={chosen?.rank ?? null} />
           <span className="grid min-w-0 leading-[17px]">
+            <span className="sr-only">{label}: </span>
             <b className="truncate text-sm font-medium">{chosen ? chosen.supplierName : (extra?.label ?? 'Choose a supplier')}</b>
             {chosen ? <span className="truncate text-xs text-fg-muted">{shortReason(chosen, quotes)}</span> : null}
           </span>

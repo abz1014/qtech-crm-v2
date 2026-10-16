@@ -376,7 +376,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
 
                     {canSplit ? (
                       <div className="flex flex-wrap items-center gap-2 px-4 pb-3 pt-1">
-                        <Button size="sm" icon={Split} onClick={() => split(it.id)} aria-label={`Split item ${n}`}>
+                        <Button size="sm" icon={Split} onClick={() => split(it.id)} aria-label={`Split this item, line ${n}`}>
                           Split this item
                         </Button>
                         <span className="text-xs text-fg-muted">Adds a part with the next supplier in the ranking. Type its quantity; the first part takes the rest.</span>

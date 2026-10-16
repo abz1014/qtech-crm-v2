@@ -118,6 +118,8 @@ export function longReason(q: RankedQuote, among: readonly RankedQuote[]): strin
   if (!q.comparable || q.rank === null) parts.push('Not ranked: no current rate')
   else if (q.rank > 1 && q.pkrUnit !== null && best?.pkrUnit != null && q.pctAboveBest !== null) {
     parts.push(`≈ PKR ${formatAmount(Math.round(q.pkrUnit - best.pkrUnit))} each above the best (${q.pctAboveBest.toLocaleString('en-GB', { maximumFractionDigits: 1 })}%)`)
+  } else if (q.rank > 1 && q.pctAboveBest !== null) {
+    parts.push(`${q.pctAboveBest.toLocaleString('en-GB', { maximumFractionDigits: 1 })}% above the best`)
   } else if (q.rank === 1) parts.push('Best price')
   if (q.rank !== null && q.rank > 1 && q.withinBand) parts.push('Within 2% of the best: by delivery record')
   parts.push(recordText(q))

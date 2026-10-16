@@ -52,6 +52,10 @@ describe('reasons', () => {
     expect(longReason(rows[1], rows)).toContain('Spread ≈ PKR 15,500 each')
     expect(longReason({ ...rows[1], spreadUnit: null }, rows)).not.toContain('Spread')
   })
+  it('with no rate to convert at, the gap is still cited as a percentage', () => {
+    const rows = mapRankRows([row({ quote_line_id: 'a' }), row({ quote_line_id: 'b', rank: 2, supplier_id: 't', pkr_unit_price: null, pct_above_best: 12.5, within_band: false })], names)
+    expect(longReason(rows[1], rows)).toContain('12.5% above the best')
+  })
   it('an engineer row (no sell, no spread) never produces money words about our margin', () => {
     const rows = mapRankRows([row({ sell_unit_net: null, spread_unit: null })], names)
     expect(longReason(rows[0], rows)).not.toMatch(/Spread|sell/i)
