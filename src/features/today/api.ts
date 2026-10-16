@@ -417,10 +417,12 @@ export async function getLegDraft(legId: string): Promise<LegDraftData> {
 
 export interface PaymentDraftData {
   customerPo: string | null
-  contact: { name: string; phone: string | null } | null
+  contact: { name: string; phone: string | null; email?: string | null; jobTitle?: string | null } | null
   /** The earliest invoice that is still open, and every invoice of the order with the reminder fields before a stamp. */
   invoiceNumber: string | null
   invoiceDate: string | null
+  /** Every invoice number on the order, oldest first (the reminder names them all when there are two or more). */
+  invoiceNumbers?: string[]
   invoices: Array<{ id: string; lastRemindedOn: string | null; reminderCount: number }>
 }
 
@@ -433,15 +435,16 @@ export async function getPaymentDraft(orderId: string): Promise<PaymentDraftData
   ])
   const o = unwrap(order)
   const inv = unwrap(invoices) ?? []
-  const contactRes = o?.contact_id ? await db.from('contacts').select('name, phone').eq('id', o.contact_id).maybeSingle() : null
-  const contactRow = contactRes ? unwrap<{ name: string; phone: string | null } | null>(contactRes) : null
-  const contact: { name: string; phone: string | null } | null = contactRow ? { name: contactRow.name, phone: contactRow.phone } : null
+  const contactRes = o?.contact_id ? await db.from('contacts').select('name, phone, email, job_title').eq('id', o.contact_id).maybeSingle() : null
+  const contactRow = contactRes ? unwrap<{ name: string; phone: string | null; email: string | null; job_title: string | null } | null>(contactRes) : null
+  const contact: PaymentDraftData['contact'] = contactRow ? { name: contactRow.name, phone: contactRow.phone, email: contactRow.email, jobTitle: contactRow.job_title } : null
   const first = inv[0]
   return {
     customerPo: o?.customer_po_number ?? null,
     contact,
     invoiceNumber: first?.number ?? null,
     invoiceDate: first?.invoice_date ?? null,
+    invoiceNumbers: inv.map(i => i.number).filter((n): n is string => Boolean(n)),
     invoices: inv.map(i => ({ id: i.id, lastRemindedOn: i.last_reminded_on, reminderCount: num(i.reminder_count) })),
   }
 }

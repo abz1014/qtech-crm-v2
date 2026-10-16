@@ -90,6 +90,8 @@ export interface WriteVars {
   'invoice.receipt': { invoiceId: string }
   /** M02: a payment recorded against an order. */
   'payment.record': { orderId: string }
+  /** M09: a payment reminder stamped on the invoices of an order (or taken back): Receivables' "Last reminder" and Today's payment item. */
+  'payment.remind': Record<string, never>
 }
 
 export type WriteName = keyof WriteVars
@@ -182,6 +184,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'invoice.receipt': v => [qk.money.invoices.receipts(v.invoiceId), qk.money.invoices.detail(v.invoiceId), qk.money.invoices.register(), qk.today.all],
   // A payment moves balances (receivables, the order page's panel, its payment chip) and Today's overdue items.
   'payment.record': v => [qk.money.receivables.all, qk.money.receivables.payments(v.orderId), qk.orders.all, qk.today.all],
+  'payment.remind': () => [qk.money.receivables.all, qk.money.invoices.all, qk.today.all],
 }
 
 /** The keys a write makes stale. Pure, so it can be tested without a QueryClient. */

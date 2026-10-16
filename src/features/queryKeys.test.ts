@@ -91,6 +91,7 @@ describe('invalidation map (R01)', () => {
     'invoice.stamp': {},
     'invoice.receipt': { invoiceId: 'i1' },
     'payment.record': { orderId: 'o1' },
+    'payment.remind': {},
   }
 
   it('names at least one key for every write', () => {
