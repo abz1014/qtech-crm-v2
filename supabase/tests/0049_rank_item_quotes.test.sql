@@ -160,147 +160,147 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
 -- (a) same currency
-select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-4000-8000-000000000001'::uuid)),
-  array['c7000000-4000-8000-000000000002'::uuid, 'c7000000-4000-8000-000000000001'::uuid], '(a) lines in one currency rank on the raw price, cheapest first');
-select ok((select bool_and(comparable and fx_state = 'same_currency' and pkr_unit_price is null) from public.rank_item_quotes('d7000000-4000-8000-000000000001'::uuid)),
+select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-0000-4000-8000-000000000001'::uuid)),
+  array['c7000000-0000-4000-8000-000000000002'::uuid, 'c7000000-0000-4000-8000-000000000001'::uuid], '(a) lines in one currency rank on the raw price, cheapest first');
+select ok((select bool_and(comparable and fx_state = 'same_currency' and pkr_unit_price is null) from public.rank_item_quotes('d7000000-0000-4000-8000-000000000001'::uuid)),
   '(a) and need no rate: comparable, fx_state same_currency, no PKR figure');
-select is((select within_band from public.rank_item_quotes('d7000000-4000-8000-000000000001'::uuid) where supplier_id = 'c7000000-4000-8000-000000000001'::uuid), false,
+select is((select within_band from public.rank_item_quotes('d7000000-0000-4000-8000-000000000001'::uuid) where supplier_id = 'c7000000-0000-4000-8000-000000000001'::uuid), false,
   '(a) a line 11% above the best is outside the band');
 
 -- (b) mixed currencies
-select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-4000-8000-000000000002'::uuid) where rank is not null),
-  array['c7000000-4000-8000-000000000003'::uuid, 'c7000000-4000-8000-000000000005'::uuid, 'c7000000-4000-8000-000000000004'::uuid], '(b) USD, EUR (stale) and CNY rank on PKR at today''s rates');
-select is((select array[pkr_unit_price, fx_rate_pkr] from public.rank_item_quotes('d7000000-4000-8000-000000000002'::uuid) where supplier_id = 'c7000000-4000-8000-000000000003'::uuid),
+select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-0000-4000-8000-000000000002'::uuid) where rank is not null),
+  array['c7000000-0000-4000-8000-000000000003'::uuid, 'c7000000-0000-4000-8000-000000000005'::uuid, 'c7000000-0000-4000-8000-000000000004'::uuid], '(b) USD, EUR (stale) and CNY rank on PKR at today''s rates');
+select is((select array[pkr_unit_price, fx_rate_pkr] from public.rank_item_quotes('d7000000-0000-4000-8000-000000000002'::uuid) where supplier_id = 'c7000000-0000-4000-8000-000000000003'::uuid),
   array[112000.00, 280]::numeric[], '(b) USD 400 at 280 is PKR 112,000');
-select is((select fx_state from public.rank_item_quotes('d7000000-4000-8000-000000000002'::uuid) where supplier_id = 'c7000000-4000-8000-000000000003'::uuid), 'fresh', '(b) a rate from today is fresh');
-select is((select fx_state from public.rank_item_quotes('d7000000-4000-8000-000000000002'::uuid) where supplier_id = 'c7000000-4000-8000-000000000005'::uuid), 'stale', '(b) a 15-day-old rate is stale');
-select is((select array[pkr_unit_price, fx_age_days::numeric] from public.rank_item_quotes('d7000000-4000-8000-000000000002'::uuid) where supplier_id = 'c7000000-4000-8000-000000000005'::uuid),
+select is((select fx_state from public.rank_item_quotes('d7000000-0000-4000-8000-000000000002'::uuid) where supplier_id = 'c7000000-0000-4000-8000-000000000003'::uuid), 'fresh', '(b) a rate from today is fresh');
+select is((select fx_state from public.rank_item_quotes('d7000000-0000-4000-8000-000000000002'::uuid) where supplier_id = 'c7000000-0000-4000-8000-000000000005'::uuid), 'stale', '(b) a 15-day-old rate is stale');
+select is((select array[pkr_unit_price, fx_age_days::numeric] from public.rank_item_quotes('d7000000-0000-4000-8000-000000000002'::uuid) where supplier_id = 'c7000000-0000-4000-8000-000000000005'::uuid),
   array[114000.00, 15]::numeric[], '(b) a stale rate still ranks, and its age is returned');
-select is((select pct_above_best from public.rank_item_quotes('d7000000-4000-8000-000000000002'::uuid) where supplier_id = 'c7000000-4000-8000-000000000005'::uuid), 1.79::numeric,
+select is((select pct_above_best from public.rank_item_quotes('d7000000-0000-4000-8000-000000000002'::uuid) where supplier_id = 'c7000000-0000-4000-8000-000000000005'::uuid), 1.79::numeric,
   '(b) EUR is 1.79% above the best');
 select ok((select bool_and(not comparable and rank is null and pkr_unit_price is null)
-           from public.rank_item_quotes('d7000000-4000-8000-000000000002'::uuid) where supplier_id in ('c7000000-4000-8000-000000000006'::uuid, 'c7000000-4000-8000-000000000007'::uuid)),
+           from public.rank_item_quotes('d7000000-0000-4000-8000-000000000002'::uuid) where supplier_id in ('c7000000-0000-4000-8000-000000000006'::uuid, 'c7000000-0000-4000-8000-000000000007'::uuid)),
   '(b) a line with an unusable or missing rate is not comparable, has no rank and no PKR figure');
-select is((select array_agg(fx_state order by supplier_id) from public.rank_item_quotes('d7000000-4000-8000-000000000002'::uuid) where supplier_id in ('c7000000-4000-8000-000000000006'::uuid, 'c7000000-4000-8000-000000000007'::uuid)),
+select is((select array_agg(fx_state order by supplier_id) from public.rank_item_quotes('d7000000-0000-4000-8000-000000000002'::uuid) where supplier_id in ('c7000000-0000-4000-8000-000000000006'::uuid, 'c7000000-0000-4000-8000-000000000007'::uuid)),
   array['unusable', 'none'], '(b) and says why: unusable (over 30 days) or none');
-select is((select supplier_id from public.rank_item_quotes('d7000000-4000-8000-000000000002'::uuid) offset 4 limit 1), 'c7000000-4000-8000-000000000007'::uuid,
+select is((select supplier_id from public.rank_item_quotes('d7000000-0000-4000-8000-000000000002'::uuid) offset 4 limit 1), 'c7000000-0000-4000-8000-000000000007'::uuid,
   '(b) not-ranked lines are listed after the ranked ones');
 
 -- (c) near-tie band
-select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-4000-8000-000000000003'::uuid)),
-  array['c7000000-4000-8000-000000000009'::uuid, 'c7000000-4000-8000-000000000008'::uuid], '(c) 1.5% apart: the proven supplier ranks first although it is dearer');
-select ok((select bool_and(within_band) from public.rank_item_quotes('d7000000-4000-8000-000000000003'::uuid)), '(c) both lines are inside the band');
-select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-4000-8000-000000000004'::uuid)),
-  array['c7000000-4000-8000-000000000008'::uuid, 'c7000000-4000-8000-000000000009'::uuid], '(c) 3% apart: the cheaper supplier ranks first');
-select is((select within_band from public.rank_item_quotes('d7000000-4000-8000-000000000004'::uuid) where supplier_id = 'c7000000-4000-8000-000000000009'::uuid), false,
+select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-0000-4000-8000-000000000003'::uuid)),
+  array['c7000000-0000-4000-8000-000000000009'::uuid, 'c7000000-0000-4000-8000-000000000008'::uuid], '(c) 1.5% apart: the proven supplier ranks first although it is dearer');
+select ok((select bool_and(within_band) from public.rank_item_quotes('d7000000-0000-4000-8000-000000000003'::uuid)), '(c) both lines are inside the band');
+select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-0000-4000-8000-000000000004'::uuid)),
+  array['c7000000-0000-4000-8000-000000000008'::uuid, 'c7000000-0000-4000-8000-000000000009'::uuid], '(c) 3% apart: the cheaper supplier ranks first');
+select is((select within_band from public.rank_item_quotes('d7000000-0000-4000-8000-000000000004'::uuid) where supplier_id = 'c7000000-0000-4000-8000-000000000009'::uuid), false,
   '(c) and the dearer one is outside the band');
 
 -- (d) reliability bands
-select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-4000-8000-000000000005'::uuid)),
-  array['c7000000-4000-8000-00000000000b'::uuid, 'c7000000-4000-8000-00000000000a'::uuid, 'c7000000-4000-8000-00000000000c'::uuid], '(d) at one price: proven, then unproven, then often late');
-select is((select array[reliability_band, deliveries, on_time, late]::int[] from public.rank_item_quotes('d7000000-4000-8000-000000000005'::uuid) where supplier_id = 'c7000000-4000-8000-00000000000a'::uuid),
+select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-0000-4000-8000-000000000005'::uuid)),
+  array['c7000000-0000-4000-8000-00000000000b'::uuid, 'c7000000-0000-4000-8000-00000000000a'::uuid, 'c7000000-0000-4000-8000-00000000000c'::uuid], '(d) at one price: proven, then unproven, then often late');
+select is((select array[reliability_band, deliveries, on_time, late]::int[] from public.rank_item_quotes('d7000000-0000-4000-8000-000000000005'::uuid) where supplier_id = 'c7000000-0000-4000-8000-00000000000a'::uuid),
   array[2, 2, 2, 0], '(d) 2 of 2 on time is band 2 (unproven), and a leg without expected_on is not a delivery');
-select is((select array[reliability_band, deliveries, on_time, late]::int[] from public.rank_item_quotes('d7000000-4000-8000-000000000005'::uuid) where supplier_id = 'c7000000-4000-8000-00000000000b'::uuid),
+select is((select array[reliability_band, deliveries, on_time, late]::int[] from public.rank_item_quotes('d7000000-0000-4000-8000-000000000005'::uuid) where supplier_id = 'c7000000-0000-4000-8000-00000000000b'::uuid),
   array[1, 6, 5, 1], '(d) 5 of 6 on time is band 1 (proven)');
-select is((select array[reliability_band, deliveries, on_time, late]::int[] from public.rank_item_quotes('d7000000-4000-8000-000000000005'::uuid) where supplier_id = 'c7000000-4000-8000-00000000000c'::uuid),
+select is((select array[reliability_band, deliveries, on_time, late]::int[] from public.rank_item_quotes('d7000000-0000-4000-8000-000000000005'::uuid) where supplier_id = 'c7000000-0000-4000-8000-00000000000c'::uuid),
   array[3, 6, 2, 4], '(d) 2 of 6 on time is band 3 (often late)');
-select is((select median_days_late from public.rank_item_quotes('d7000000-4000-8000-000000000005'::uuid) where supplier_id = 'c7000000-4000-8000-00000000000c'::uuid), 3.5::numeric,
+select is((select median_days_late from public.rank_item_quotes('d7000000-0000-4000-8000-000000000005'::uuid) where supplier_id = 'c7000000-0000-4000-8000-00000000000c'::uuid), 3.5::numeric,
   '(d) the median days late is shown with 3 or more late deliveries');
-select is((select median_days_late from public.rank_item_quotes('d7000000-4000-8000-000000000005'::uuid) where supplier_id = 'c7000000-4000-8000-00000000000b'::uuid), null,
+select is((select median_days_late from public.rank_item_quotes('d7000000-0000-4000-8000-000000000005'::uuid) where supplier_id = 'c7000000-0000-4000-8000-00000000000b'::uuid), null,
   '(d) and not with fewer');
 
 -- (e) history tie-break
-select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-4000-8000-000000000006'::uuid)),
-  array['c7000000-4000-8000-00000000000d'::uuid, 'c7000000-4000-8000-00000000000e'::uuid, 'c7000000-4000-8000-00000000000f'::uuid, 'c7000000-4000-8000-000000000010'::uuid], '(e) equal price and band: more orders first, then the more recent order');
-select is((select orders_count from public.rank_item_quotes('d7000000-4000-8000-000000000006'::uuid) where supplier_id = 'c7000000-4000-8000-00000000000f'::uuid), 2,
+select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-0000-4000-8000-000000000006'::uuid)),
+  array['c7000000-0000-4000-8000-00000000000d'::uuid, 'c7000000-0000-4000-8000-00000000000e'::uuid, 'c7000000-0000-4000-8000-00000000000f'::uuid, 'c7000000-0000-4000-8000-000000000010'::uuid], '(e) equal price and band: more orders first, then the more recent order');
+select is((select orders_count from public.rank_item_quotes('d7000000-0000-4000-8000-000000000006'::uuid) where supplier_id = 'c7000000-0000-4000-8000-00000000000f'::uuid), 2,
   '(e) a cancelled order does not count');
-select is((select last_order_on from public.rank_item_quotes('d7000000-4000-8000-000000000006'::uuid) where supplier_id = 'c7000000-4000-8000-00000000000f'::uuid), public.today_pkt() - 35,
+select is((select last_order_on from public.rank_item_quotes('d7000000-0000-4000-8000-000000000006'::uuid) where supplier_id = 'c7000000-0000-4000-8000-00000000000f'::uuid), public.today_pkt() - 35,
   '(e) and is not the last order');
-select is((select last_order_number from public.rank_item_quotes('d7000000-4000-8000-000000000006'::uuid) where supplier_id = 'c7000000-4000-8000-00000000000e'::uuid),
-  (select number from public.orders where id = 'e7000000-4000-8000-000000000018'::uuid), '(e) the last order is named by its number');
+select is((select last_order_number from public.rank_item_quotes('d7000000-0000-4000-8000-000000000006'::uuid) where supplier_id = 'c7000000-0000-4000-8000-00000000000e'::uuid),
+  (select number from public.orders where id = 'e7000000-0000-4000-8000-000000000018'::uuid), '(e) the last order is named by its number');
 
 -- (f) spread
-select is((select array[sell_unit_net, pkr_unit_price, spread_unit, spread_total] from public.rank_item_quotes('d7000000-4000-8000-000000000007'::uuid)),
+select is((select array[sell_unit_net, pkr_unit_price, spread_unit, spread_total] from public.rank_item_quotes('d7000000-0000-4000-8000-000000000007'::uuid)),
   array[134000, 112000, 22000, 66000]::numeric[], '(f) the quoted price is used: spread 22,000 each, 66,000 for 3');
-select is((select sell_source from public.rank_item_quotes('d7000000-4000-8000-000000000007'::uuid)), 'quoted', '(f) and it says so');
-select is((select array[sell_unit_net, spread_unit, spread_total] from public.rank_item_quotes('d7000000-4000-8000-000000000008'::uuid)),
+select is((select sell_source from public.rank_item_quotes('d7000000-0000-4000-8000-000000000007'::uuid)), 'quoted', '(f) and it says so');
+select is((select array[sell_unit_net, spread_unit, spread_total] from public.rank_item_quotes('d7000000-0000-4000-8000-000000000008'::uuid)),
   array[131000, 19000, 57000]::numeric[], '(f) without a quoted price, the last price sold to this company is used');
-select is((select sell_source from public.rank_item_quotes('d7000000-4000-8000-000000000008'::uuid)), 'last_sold', '(f) and says so');
-select is((select sell_order_number from public.rank_item_quotes('d7000000-4000-8000-000000000008'::uuid)), (select number from public.orders where id = 'e7000000-4000-8000-000000000028'::uuid),
+select is((select sell_source from public.rank_item_quotes('d7000000-0000-4000-8000-000000000008'::uuid)), 'last_sold', '(f) and says so');
+select is((select sell_order_number from public.rank_item_quotes('d7000000-0000-4000-8000-000000000008'::uuid)), (select number from public.orders where id = 'e7000000-0000-4000-8000-000000000028'::uuid),
   '(f) naming that order');
-select is((select sell_on from public.rank_item_quotes('d7000000-4000-8000-000000000008'::uuid)), public.today_pkt() - 100, '(f) and its date');
+select is((select sell_on from public.rank_item_quotes('d7000000-0000-4000-8000-000000000008'::uuid)), public.today_pkt() - 100, '(f) and its date');
 select ok((select sell_unit_net is null and spread_unit is null and spread_total is null and sell_source = 'none'
-           from public.rank_item_quotes('d7000000-4000-8000-000000000009'::uuid)),
+           from public.rank_item_quotes('d7000000-0000-4000-8000-000000000009'::uuid)),
   '(f) with neither, there is no spread and sell_source is none');
 
 -- (g) item coverage
-select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-4000-8000-00000000000a'::uuid) where rfq_item_id = 'd8000000-4000-8000-00000000000a'::uuid),
-  array['c7000000-4000-8000-000000000012'::uuid, 'c7000000-4000-8000-000000000013'::uuid], '(g) item 1 ranks both quoting suppliers');
-select is((select array_agg(supplier_id) from public.rank_item_quotes('d7000000-4000-8000-00000000000a'::uuid) where rfq_item_id = 'd8000000-4000-8000-00000000000b'::uuid),
-  array['c7000000-4000-8000-000000000013'::uuid], '(g) item 2 ranks only the supplier that quoted it');
-select is((select rank from public.rank_item_quotes('d7000000-4000-8000-00000000000a'::uuid) where rfq_item_id = 'd8000000-4000-8000-00000000000b'::uuid), 1, '(g) as rank 1');
-select is((select count(*)::int from public.rank_item_quotes('d7000000-4000-8000-00000000000a'::uuid) where supplier_id = 'c7000000-4000-8000-000000000012'::uuid), 1,
+select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-0000-4000-8000-00000000000a'::uuid) where rfq_item_id = 'd8000000-0000-4000-8000-00000000000a'::uuid),
+  array['c7000000-0000-4000-8000-000000000012'::uuid, 'c7000000-0000-4000-8000-000000000013'::uuid], '(g) item 1 ranks both quoting suppliers');
+select is((select array_agg(supplier_id) from public.rank_item_quotes('d7000000-0000-4000-8000-00000000000a'::uuid) where rfq_item_id = 'd8000000-0000-4000-8000-00000000000b'::uuid),
+  array['c7000000-0000-4000-8000-000000000013'::uuid], '(g) item 2 ranks only the supplier that quoted it');
+select is((select rank from public.rank_item_quotes('d7000000-0000-4000-8000-00000000000a'::uuid) where rfq_item_id = 'd8000000-0000-4000-8000-00000000000b'::uuid), 1, '(g) as rank 1');
+select is((select count(*)::int from public.rank_item_quotes('d7000000-0000-4000-8000-00000000000a'::uuid) where supplier_id = 'c7000000-0000-4000-8000-000000000012'::uuid), 1,
   '(g) a partial quote has no row for the items it did not cover');
 
 -- (h) memory evidence
 select is((select array[evidence_tier::int, evidence_delivered_after_days, evidence_count_at_tier]
-           from public.supplier_item_memory(array['c7000000-4000-8000-000000000015'::uuid], null::uuid, 'b7000000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
+           from public.supplier_item_memory(array['c7000000-0000-4000-8000-000000000015'::uuid], null::uuid, 'b7000000-0000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
   array[0, 19, 2], '(h) newest order at the best tier: tier 0, delivered after 19 days, 2 legs at that tier (the cancelled one is out)');
-select is((select evidence_order_id from public.supplier_item_memory(array['c7000000-4000-8000-000000000015'::uuid], null::uuid, 'b7000000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
-  'e7000000-4000-8000-00000000003f'::uuid, '(h) and it is the newer of the two orders');
+select is((select evidence_order_id from public.supplier_item_memory(array['c7000000-0000-4000-8000-000000000015'::uuid], null::uuid, 'b7000000-0000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
+  'e7000000-0000-4000-8000-00000000003f'::uuid, '(h) and it is the newer of the two orders');
 select is((select array[evidence_placed_on, evidence_expected_on, evidence_delivered_on]
-           from public.supplier_item_memory(array['c7000000-4000-8000-000000000015'::uuid], null::uuid, 'b7000000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
+           from public.supplier_item_memory(array['c7000000-0000-4000-8000-000000000015'::uuid], null::uuid, 'b7000000-0000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
   array[public.today_pkt() - 30, public.today_pkt() - 16, public.today_pkt() - 11], '(h) with the leg''s placed, expected and delivered dates');
-select is((select evidence_order_number from public.supplier_item_memory(array['c7000000-4000-8000-000000000015'::uuid], null::uuid, 'b7000000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
-  (select number from public.orders where id = 'e7000000-4000-8000-00000000003f'::uuid), '(h) and the order number');
-select is((select evidence_item_desc from public.supplier_item_memory(array['c7000000-4000-8000-000000000015'::uuid], null::uuid, 'b7000000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
+select is((select evidence_order_number from public.supplier_item_memory(array['c7000000-0000-4000-8000-000000000015'::uuid], null::uuid, 'b7000000-0000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
+  (select number from public.orders where id = 'e7000000-0000-4000-8000-00000000003f'::uuid), '(h) and the order number');
+select is((select evidence_item_desc from public.supplier_item_memory(array['c7000000-0000-4000-8000-000000000015'::uuid], null::uuid, 'b7000000-0000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
   'Cerabar PMC51 transmitter', '(h) and the ordered line');
-select is((select evidence_tier::int from public.supplier_item_memory(array['c7000000-4000-8000-000000000014'::uuid], null::uuid, 'b7000000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
+select is((select evidence_tier::int from public.supplier_item_memory(array['c7000000-0000-4000-8000-000000000014'::uuid], null::uuid, 'b7000000-0000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
   3, '(h) a family-only match gives evidence_tier 3');
-select ok((select evidence_order_id = 'e7000000-4000-8000-00000000003d'::uuid and evidence_delivered_on is null and evidence_delivered_after_days is null
+select ok((select evidence_order_id = 'e7000000-0000-4000-8000-00000000003d'::uuid and evidence_delivered_on is null and evidence_delivered_after_days is null
                   and evidence_expected_on = public.today_pkt() - 6 and evidence_count_at_tier = 2
-           from public.supplier_item_memory(array['c7000000-4000-8000-000000000014'::uuid], null::uuid, 'b7000000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
+           from public.supplier_item_memory(array['c7000000-0000-4000-8000-000000000014'::uuid], null::uuid, 'b7000000-0000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
   '(h) an order not delivered yet gives NULL days (and no delivered date)');
 select ok((select evidence_tier is null and evidence_order_id is null and evidence_count_at_tier is null
-           from public.supplier_item_memory(array['c7000000-4000-8000-000000000016'::uuid], null::uuid, 'b7000000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
+           from public.supplier_item_memory(array['c7000000-0000-4000-8000-000000000016'::uuid], null::uuid, 'b7000000-0000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
   '(h) a supplier with no orders has no evidence');
 
 -- (i) access: admin can execute; the per-role runs are below
 select lives_ok($$select * from public.rank_item_quotes('d7000000-0000-4000-8000-000000000007')$$, '(i) admin can call rank_item_quotes');
 select is((select count(*)::int from public.rank_item_quotes('00000000-0000-4000-8000-00000000dead')), 0,
   '(i) an unknown RFQ gives no rows');
-select ok((select bool_and(sell_unit_net is not null and spread_unit is not null) from public.rank_item_quotes('d7000000-4000-8000-000000000007'::uuid)),
+select ok((select bool_and(sell_unit_net is not null and spread_unit is not null) from public.rank_item_quotes('d7000000-0000-4000-8000-000000000007'::uuid)),
   '(i) money safety: admin gets the selling price and the spread');
 
 -- ------------------------------------------------------------------ as sales
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
-select is((select array[sell_unit_net, spread_unit, spread_total] from public.rank_item_quotes('d7000000-4000-8000-000000000007'::uuid)),
+select is((select array[sell_unit_net, spread_unit, spread_total] from public.rank_item_quotes('d7000000-0000-4000-8000-000000000007'::uuid)),
   array[134000, 22000, 66000]::numeric[], '(i) money safety: sales gets the selling price and the spread');
-select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-4000-8000-000000000003'::uuid)),
-  array['c7000000-4000-8000-000000000009'::uuid, 'c7000000-4000-8000-000000000008'::uuid], '(i) and the same ranking');
+select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-0000-4000-8000-000000000003'::uuid)),
+  array['c7000000-0000-4000-8000-000000000009'::uuid, 'c7000000-0000-4000-8000-000000000008'::uuid], '(i) and the same ranking');
 
 -- ------------------------------------------------------------------ as engineer
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
-select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-4000-8000-000000000003'::uuid)),
-  array['c7000000-4000-8000-000000000009'::uuid, 'c7000000-4000-8000-000000000008'::uuid], '(i) an engineer gets the same ranking');
-select is((select count(*)::int from public.rank_item_quotes('d7000000-4000-8000-000000000007'::uuid)
+select is((select array_agg(supplier_id order by rank) from public.rank_item_quotes('d7000000-0000-4000-8000-000000000003'::uuid)),
+  array['c7000000-0000-4000-8000-000000000009'::uuid, 'c7000000-0000-4000-8000-000000000008'::uuid], '(i) an engineer gets the same ranking');
+select is((select count(*)::int from public.rank_item_quotes('d7000000-0000-4000-8000-000000000007'::uuid)
            where sell_unit_net is not null or sell_source is not null or sell_order_number is not null or sell_on is not null
               or spread_unit is not null or spread_total is not null), 0,
   '(i) money safety: an engineer gets no selling price and no spread, though the RFQ item has a quoted price');
-select is((select count(*)::int from public.rank_item_quotes('d7000000-4000-8000-000000000008'::uuid)
+select is((select count(*)::int from public.rank_item_quotes('d7000000-0000-4000-8000-000000000008'::uuid)
            where sell_unit_net is not null or sell_source is not null or sell_order_number is not null or sell_on is not null
               or spread_unit is not null or spread_total is not null), 0,
   '(i) money safety: nor from the last price sold to the customer');
 select ok((select bool_and(pkr_unit_price is not null and reliability_band is not null and orders_count is not null)
-           from public.rank_item_quotes('d7000000-4000-8000-000000000007'::uuid)),
+           from public.rank_item_quotes('d7000000-0000-4000-8000-000000000007'::uuid)),
   '(i) an engineer still sees the supplier prices and the reliability and history facts');
-select is((select sell_unit_net from public.rank_item_quotes('d7000000-4000-8000-000000000009'::uuid)), null, '(i) and no selling price on an item without one either');
-select is((select evidence_delivered_after_days from public.supplier_item_memory(array['c7000000-4000-8000-000000000015'::uuid], null::uuid, 'b7000000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
+select is((select sell_unit_net from public.rank_item_quotes('d7000000-0000-4000-8000-000000000009'::uuid)), null, '(i) and no selling price on an item without one either');
+select is((select evidence_delivered_after_days from public.supplier_item_memory(array['c7000000-0000-4000-8000-000000000015'::uuid], null::uuid, 'b7000000-0000-4000-8000-000000000001'::uuid, 'Cerabar PMC51 transmitter')),
   19, '(i) an engineer reads the memory evidence');
 
 -- ------------------------------------------------------------------ deactivated
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000004","role":"authenticated"}', true);
-select is((select count(*)::int from public.rank_item_quotes('d7000000-4000-8000-000000000002'::uuid)), 0, '(i) a deactivated user gets no rows');
+select is((select count(*)::int from public.rank_item_quotes('d7000000-0000-4000-8000-000000000002'::uuid)), 0, '(i) a deactivated user gets no rows');
 reset role;
 
 -- ------------------------------------------------------------------ anon
