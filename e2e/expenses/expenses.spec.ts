@@ -389,7 +389,10 @@ test.describe('expenses (M03, M11)', () => {
     const sentence = `${prev.label} is closed. An admin can reopen it.`
 
     test.beforeAll(async () => {
-      await addExpense({ amount_pkr: 11, category_id: RENT, paid_on: prev.day, paid_via: 'bank', description: 'before the close' })
+      // beforeAll runs again when a failed test restarts the worker; a second seed row would make the list ambiguous
+      // ("before the close" twice), so the row is made only if the month does not hold it already.
+      const seeded = await must(rest<ExpenseRow[]>('admin', `expenses?description=eq.${encodeURIComponent('before the close')}&paid_on=eq.${prev.day}&select=id`))
+      if (seeded.length === 0) await addExpense({ amount_pkr: 11, category_id: RENT, paid_on: prev.day, paid_via: 'bank', description: 'before the close' })
       await must(rest('admin', 'rpc/close_months_through', { method: 'POST', body: { p_month: prev.start }, prefer: 'return=minimal' }))
     })
     test.afterAll(async () => {
@@ -402,6 +405,8 @@ test.describe('expenses (M03, M11)', () => {
       await openAs(page, 'admin', '/money/expenses')
       await page.getByRole('button', { name: 'Add expenses' }).click()
       await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
+      // categories must have loaded before the keystrokes: "sal" resolves against that list
+      await expect(page.getByRole('combobox', { name: 'Category, row 1' })).not.toHaveValue('')
       await page.keyboard.type(String(c1))
       await page.keyboard.press('Enter')
       await page.keyboard.type(String(c2))
@@ -410,8 +415,14 @@ test.describe('expenses (M03, M11)', () => {
       await page.keyboard.press('Tab') // category
       await page.keyboard.type('sal')
       await page.keyboard.press('Tab') // date
+      await expect(page.getByRole('combobox', { name: 'Category, row 3' })).toHaveValue('Salaries')
+      await expect(page.getByRole('textbox', { name: 'Date, row 3' })).toBeFocused()
       await page.keyboard.type(prev.typed)
+      await expect(page.getByRole('textbox', { name: 'Date, row 3' })).toHaveValue(prev.typed)
       await page.keyboard.press('Tab') // paid via
+      // The cell reads the typed date one tick after it loses focus and then shows it in words ("Sat 5 Sep", in the closed month's own name). Saving before
+      // that tick saves the old date, so wait for the words: input events are served before timers on a busy runner.
+      await expect(page.getByRole('textbox', { name: 'Date, row 3' })).toHaveValue(new RegExp(`\\b5 ${prev.label.slice(0, 3)}`))
       await page.keyboard.press('Tab') // note
       await page.keyboard.type(tag)
       await page.keyboard.press('Control+Enter')
@@ -458,7 +469,7 @@ test.describe('expenses (M03, M11)', () => {
     test('editing or deleting an expense in the closed month shows the same sentence', async ({ page }) => {
       await openAs(page, 'admin', '/money/expenses')
       await page.getByRole('button', { name: 'Previous month' }).click()
-      await expect(page.getByText('before the close')).toBeVisible()
+      await expect(page.getByText('before the close')).toHaveCount(1)
       await page.getByRole('button', { name: /^Delete Rent of 11/ }).click()
       await page.getByRole('button', { name: 'Delete expense' }).click()
       await expect(page.getByText(sentence)).toBeVisible()
