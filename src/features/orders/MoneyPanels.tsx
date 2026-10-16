@@ -1,8 +1,7 @@
-import { Banknote } from 'lucide-react'
 import { formatDay } from '@/lib/formatDay'
 import { formatAmount } from '@/lib/money'
+import { RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
 import { cn } from '@/lib/utils'
-import { Button } from '@/ui/Button'
 import { Skeleton } from '@/ui/Skeleton'
 import type { OrderHeader, OrderMoney } from '@/features/orders/api'
 
@@ -41,9 +40,7 @@ export function InvoicesPanel({ order, money, loading, error, isAdmin }: { order
       <div className="flex items-center gap-3 border-b px-5 py-4">
         <h2 className="text-base font-semibold">Invoices and payments</h2>
         {isAdmin ? (
-          <Button size="sm" variant="quiet" icon={Banknote} className="ml-auto" disabled title="Arrives with Payments (M02)">
-            Record payment
-          </Button>
+          <RecordPaymentButton orderId={order.id} size="sm" variant="quiet" className="ml-auto" />
         ) : null}
       </div>
       {loading ? (

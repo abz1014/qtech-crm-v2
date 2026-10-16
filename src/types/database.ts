@@ -1917,6 +1917,11 @@ isOneToOne: false
               "achieved_net": number,"behind_pace": number,"excluded_count": number,"gap": number,"on_pace_net": number,"quarter": number,"quarter_end": string,"target_net": number,"year": number
             }[]
                            },
+"next_invoice_number":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "last_date": string,"last_number": string,"next_number": string
+            }[]
+                           },
 "order_receivables":
 { Args: { "p_order_id"?: string }; Returns: {
               "balance": number,"company_id": string,"data_trust": string,"due_on": string,"gross_target": number,"is_overdue": boolean,"last_reminded_on": string,"order_id": string,"order_number": number,"overpaid_by": number,"owner_id": string,"payment_state": string,"reminder_count": number,"settled": number
