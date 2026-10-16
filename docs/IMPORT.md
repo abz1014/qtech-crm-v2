@@ -73,12 +73,11 @@ loader also requires it to be set before it deletes.
 8. Inserts, in foreign-key order, in batches. A failing batch is retried row by row so the message names the row.
 9. Copies the receipt files into the `gst-receipts` bucket (from `storage/gst-receipts/` next to the dump).
 10. Removes the audit rows its own writes caused (`import_purge_audit`: only version 5 ids, only rows written with no signed-in user).
-    Audit rows of a person's later edits are kept.
+    That includes the rows of the tables with no id column (brand links, engineer links), found through the import id they contain. Audit rows of a person's later edits are kept.
 11. **Reads everything back** and compares row counts and Σ payments, Σ expenses, Σ invoice net and GST with the transform.
 
 A run is **not atomic** (the API has no multi-statement transaction). Re-running is always safe: step 4 removes whatever a run that
-stopped half way left behind. Known small leftover: when the imported brands link to a company v2 already holds, the audit row of
-that link names the v2 company, which the purge cannot touch (it only accepts version 5 ids).
+stopped half way left behind. 
 
 ### The guard
 

@@ -46,6 +46,26 @@ select is((select count(*)::int from public.audit_log where record_id = 'c000000
 select throws_ok($$select public.import_purge_audit(array['c0000000-0000-5000-8000-0000000000e1'::uuid, 'c0000000-0000-4000-8000-0000000000e2'::uuid])$$,
   '22023', null, 'one bad id in a list refuses the whole list');
 
+-- Tables with no id column keep a different record_id: the order id (order_costs), or a JSON object of the key columns.
+insert into public.brands (id, name) values
+  ('b0000000-0000-5000-8000-0000000000b1', 'Import Brand'),
+  ('b0000000-0000-4000-8000-0000000000b2', 'V2 Brand');
+insert into public.company_brands (company_id, brand_id) values
+  ('c0000000-0000-5000-8000-0000000000e1', 'b0000000-0000-5000-8000-0000000000b1'),
+  ('c0000000-0000-4000-8000-0000000000e2', 'b0000000-0000-4000-8000-0000000000b2'),
+  ('c0000000-0000-4000-8000-0000000000e2', 'b0000000-0000-5000-8000-0000000000b1');
+insert into public.orders (id, company_id, legacy_flags) values
+  ('d0000000-0000-5000-8000-0000000000b1', 'c0000000-0000-5000-8000-0000000000e1', array['owner_unknown']);
+insert into public.order_engineers (order_id, user_id) values ('d0000000-0000-5000-8000-0000000000b1', 'a0000000-0000-4000-8000-000000000003');
+select is((select count(*)::int from public.audit_log where table_name = 'company_brands' and changed_by is null), 3, 'setup: three company_brands links were audited');
+select is((select count(*)::int from public.audit_log where table_name = 'order_engineers' and changed_by is null), 1, 'setup: the engineer link was audited');
+select lives_ok($$select public.import_purge_audit(array['c0000000-0000-5000-8000-0000000000e1'::uuid, 'b0000000-0000-5000-8000-0000000000b1'::uuid, 'd0000000-0000-5000-8000-0000000000b1'::uuid])$$,
+  'purging by import ids also finds the rows of tables without an id column');
+select is((select count(*)::int from public.audit_log where table_name = 'company_brands' and changed_by is null), 1,
+  'the links that contain an import company or brand are gone; the link between two v2 records stays');
+select is((select count(*)::int from public.audit_log where table_name = 'order_engineers' and changed_by is null), 0, 'the engineer link of an import order is gone');
+select is((select count(*)::int from public.audit_log where record_id = 'b0000000-0000-4000-8000-0000000000b2'), 1, 'the v2 brand keeps its audit row');
+
 -- ------------------------------------------------------------------ import_reset_numbers
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 insert into public.rfqs (id, company_id) values

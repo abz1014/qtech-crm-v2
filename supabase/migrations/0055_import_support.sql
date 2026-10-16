@@ -11,6 +11,9 @@
 --     named by mistake: anything else is refused;
 --   * only rows written without a signed-in user (changed_by is null), so an edit a person made to an imported row after
 --     go-live stays on record.
+-- audit_log.record_id is text (0013). Three tables have no id column, so their record_id is not the id itself:
+-- order_costs holds the order id, and company_brands and order_engineers hold a JSON object of their key columns. A row of
+-- those is matched through the import id it contains (a company or brand; an order).
 create function public.import_purge_audit(p_ids uuid[])
 returns bigint
 language plpgsql
@@ -20,12 +23,19 @@ as $$
 declare
   v_bad integer;
   v_removed bigint;
+  v_ids text[] := p_ids::text[];
 begin
   select count(*) into v_bad from unnest(p_ids) as i (id) where substr(i.id::text, 15, 1) <> '5';
   if v_bad > 0 then
     raise exception 'import_purge_audit: % id(s) are not import ids (version 5 UUIDs)', v_bad using errcode = '22023';
   end if;
-  delete from public.audit_log a where a.record_id = any (p_ids) and a.changed_by is null;
+  -- CASE keeps the json cast away from rows of the other tables (their record_id is not json).
+  delete from public.audit_log a
+  where a.changed_by is null
+    and (a.record_id = any (v_ids)
+         or (case when a.table_name = 'company_brands' then a.record_id::jsonb ->> 'company_id' end) = any (v_ids)
+         or (case when a.table_name = 'company_brands' then a.record_id::jsonb ->> 'brand_id' end) = any (v_ids)
+         or (case when a.table_name = 'order_engineers' then a.record_id::jsonb ->> 'order_id' end) = any (v_ids));
   get diagnostics v_removed = row_count;
   return v_removed;
 end;
