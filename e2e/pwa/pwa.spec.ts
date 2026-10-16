@@ -41,6 +41,10 @@ test.describe('manifest', () => {
     expect(m.theme_color).toBe('#1a7b46')
     expect(m.background_color).toMatch(/^#[0-9a-f]{6}$/i)
 
+    // Android share target (R22): WhatsApp's Share sheet posts text, images and PDFs to /capture.
+    expect(m.share_target).toMatchObject({ action: '/capture', method: 'POST', enctype: 'multipart/form-data' })
+    expect(m.share_target.params.files[0]).toMatchObject({ name: 'files', accept: ['image/*', 'application/pdf'] })
+
     const icons: Icon[] = m.icons
     const has = (size: string, purpose: string) => icons.some(i => i.sizes === size && (i.purpose ?? 'any') === purpose && i.type === 'image/png')
     expect(has('192x192', 'any')).toBe(true)
@@ -117,6 +121,45 @@ test.describe('service worker', () => {
       return urls.filter(u => u.includes('supabase.co'))
     })
     expect(leaked).toEqual([])
+  })
+
+  test('a share-target POST is kept on the device before the app checks the session, and survives the login redirect (R22)', async ({ page }) => {
+    await activeWorker(page)
+    await page.evaluate(() => {
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = '/capture'
+      form.enctype = 'multipart/form-data'
+      const text = document.createElement('input')
+      text.name = 'text'
+      text.value = 'Line size is 4 inch, flange PN16.'
+      form.append(text)
+      const file = document.createElement('input')
+      file.type = 'file'
+      file.name = 'files'
+      const dt = new DataTransfer()
+      dt.items.add(new File([new Uint8Array([1, 2, 3])], 'nameplate-photo.png', { type: 'image/png' }))
+      file.files = dt.files
+      form.append(file)
+      document.body.append(form)
+      form.submit()
+    })
+    // Signed out: the app sends the person to sign in, and says their item is safe.
+    await page.waitForURL(/\/login/)
+    await expect(page.getByText('Your shared item is safe')).toBeVisible()
+    const kept = await page.evaluate(
+      () =>
+        new Promise<{ text: string; files: string[]; ttlDays: number }[]>((resolve, reject) => {
+          const open = indexedDB.open('qtech-capture', 1)
+          open.onerror = () => reject(open.error)
+          open.onsuccess = () => {
+            const all = open.result.transaction('items').objectStore('items').getAll()
+            all.onsuccess = () =>
+              resolve((all.result as { text: string; files: { name: string }[]; createdAt: number; expiresAt: number }[]).map(i => ({ text: i.text, files: i.files.map(f => f.name), ttlDays: Math.round((i.expiresAt - i.createdAt) / 86_400_000) })))
+          }
+        }),
+    )
+    expect(kept).toEqual([{ text: 'Line size is 4 inch, flange PN16.', files: ['nameplate-photo.png'], ttlDays: 7 }])
   })
 
   test('the shell opens offline', async ({ page, context }) => {

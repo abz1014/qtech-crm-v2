@@ -47,6 +47,8 @@ export interface WriteVars {
   'inquiry.chase': { rfqId: string }
   'rfq.markBidSent': { rfqId: string }
   'rfq.close': { rfqId: string }
+  /** R22: Capture appends to, or restores, an RFQ's notes. */
+  'rfq.notes': { rfqId: string }
   'clarification.add': { rfqId: string }
   'clarification.ask': { rfqId: string }
   'clarification.answer': { rfqId: string }
@@ -54,15 +56,23 @@ export interface WriteVars {
   'clarification.relay': { rfqId: string }
   'attachment.add': { rfqId: string }
   'attachment.delete': { rfqId: string }
+  /** R22: files on an order (the Files panel on the order page, Capture's attach to order). */
+  'order.files': { orderId: string }
   /** R19: issuing a quotation (or attaching its PDF) changes the RFQ page, the board and Today (quoted_on is stamped). */
   'quotation.issue': { rfqId: string }
   'quotation.pdf': { rfqId: string }
   /** O01: converting an RFQ creates an order and legs, and the RFQ becomes won. */
   'order.convert': { rfqId: string }
+  /** O02: a repeat order creates an order, its lines and legs; the customer's history and Today change. */
+  'order.repeat': { companyId: string }
   /** O03: any edit on the order page (items, legs, commissioning, notes). */
   'order.update': { orderId: string }
   /** O03: cancelling (or taking the cancel back) also moves the RFQ between won and open and the company role. */
   'order.cancel': { orderId: string }
+  /** O07: issuing a supplier PO stamps the leg placed, writes the prices back to the order lines and moves Today's place-PO rule. */
+  'po.issue': { orderId: string }
+  /** O07: attaching a PO's PDF changes only the PO chips and View PO. */
+  'po.pdf': { orderId: string }
   /** R11/R16: a chase stamp on Today (customer ask, supplier chase, goods chase, payment reminder) or taking it back. */
   'today.chase': Record<string, never>
   'today.snooze': Record<string, never>
@@ -124,6 +134,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Bid sent, closed and re-opened only move the RFQ itself (and the board's lists).
   'rfq.markBidSent': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
   'rfq.close': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
+  'rfq.notes': v => [qk.rfqs.detail(v.rfqId)],
   // Questions and their stamps change the RFQ page, its derived clarification state (header) and the board's chips.
   'clarification.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
   'clarification.ask': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
@@ -133,12 +144,17 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Files only change this RFQ's page (the list of files, the photos under answers, the signed links).
   'attachment.add': v => [qk.rfqs.detail(v.rfqId)],
   'attachment.delete': v => [qk.rfqs.detail(v.rfqId)],
+  'order.files': v => [qk.orders.part(v.orderId, 'files')],
   'quotation.issue': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.today.all, qk.companies.all],
   'quotation.pdf': v => [qk.rfqs.part(v.rfqId, 'quotations')],
   // A new order changes the RFQ (won), every list that shows orders or states, Today (place PO, goods late) and the customer's history.
   'order.convert': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.all, qk.orders.all, qk.today.all, qk.companies.all],
+  'order.repeat': v => [qk.orders.all, qk.today.all, qk.companies.all, qk.companies.detail(v.companyId)],
   'order.update': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all],
   'order.cancel': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.rfqs.all, qk.today.all, qk.companies.all],
+  // An issued PO changes the order page (leg placed, prices written back), the order lists, Today and every PO read.
+  'po.issue': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.purchaseOrders.all],
+  'po.pdf': v => [qk.orders.part(v.orderId, 'pos'), qk.purchaseOrders.all],
   // A chase stamp changes the asked/chased fields the RFQ page, the board and the order screens read, and every Today read.
   'today.chase': () => [qk.today.all, qk.rfqs.all, qk.orders.all],
   // A snooze is read only by Today.

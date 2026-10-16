@@ -23,6 +23,8 @@ function companies() {
     search: (text: string) => [...all, 'list', 'search', text.trim().toLowerCase()] as const,
     byName: (name: string) => [...all, 'list', 'by-name', name.trim().toLowerCase()] as const,
     detail,
+    /** R22: the RFQs Capture offers (recents and your own with open questions), with their open questions. */
+    capture: (signature = '') => [...all, 'capture', signature] as const,
     /** One slice of a company. `slice` is a fixed word, so a typo is a type error. */
     part: (id: string, slice: CompanyPart) => [...detail(id), slice] as const,
   }
@@ -59,6 +61,8 @@ function rfqs() {
     /** R06: palette search by number, customer ref or company. */
     search: (text: string) => [...all, 'list', 'search', text.trim().toLowerCase()] as const,
     detail,
+    /** R22: the RFQs Capture offers (recents and your own with open questions), with their open questions. */
+    capture: (signature = '') => [...all, 'capture', signature] as const,
     /** R10: short-lived signed links for the RFQ's files; `signature` changes when the set of files does. */
     fileUrls: (id: string, signature: string) => [...detail(id), 'file-urls', signature] as const,
     /** One slice of an RFQ page (R07). `slice` is a fixed word, so a typo is a type error. */
@@ -103,6 +107,11 @@ function orders() {
     detail,
     /** One slice of an order page (O03). `slice` is a fixed word, so a typo is a type error. */
     part: (id: string, slice: OrderPart) => [...detail(id), slice] as const,
+    /** O02: past orders found to start a new one from (cached a moment; the search text is part of the key). */
+    past: (text: string) => [...all, 'list', 'past', text.trim().toLowerCase()] as const,
+    pastOne: (id: string) => [...all, 'list', 'past-one', id] as const,
+    /** O04: every order with its state dimensions, shaped by the caller's role (an engineer's has no money in it). */
+    board: (role: string) => [...all, 'list', 'board', role] as const,
     /** The orders an RFQ produced (the RFQ page shows 'Open ORD-0039' once it is won). */
     forRfq: (rfqId: string) => [...all, 'list', 'for-rfq', rfqId] as const,
     /** The company's last payment terms, the default for the next order (O01). */
@@ -110,12 +119,15 @@ function orders() {
     /** Active engineers who can be put on a commissioning job. */
     engineers: () => [...all, 'list', 'engineers'] as const,
     /** The signed-in person's job title (the sign-off of a chase message). */
+    /** R22: the orders Capture offers (opened lately), and its search. */
+    captureRecent: () => [...all, 'list', 'capture-recent'] as const,
+    captureSearch: (text: string, includePo: boolean) => [...all, 'list', 'capture-search', text.trim().toLowerCase(), includePo] as const,
     /** Suppliers a leg can be added for. */
     supplierChoices: () => [...all, 'list', 'supplier-choices'] as const,
     jobTitle: (userId: string) => [...all, 'list', 'job-title', userId] as const,
   }
 }
-export type OrderPart = 'header' | 'items' | 'legs' | 'engineers' | 'money' | 'pos'
+export type OrderPart = 'header' | 'items' | 'legs' | 'engineers' | 'money' | 'pos' | 'files'
 
 /** Settings (A04, A06): the team list (read through the admin-users function) and the one company-profile row. */
 function settings() {
@@ -145,6 +157,18 @@ function today() {
     leg: (legId: string) => [...all, 'leg', legId] as const,
     /** Payment-reminder draft: the order's invoices, PO number and contact. */
     payment: (orderId: string) => [...all, 'payment', orderId] as const,
+  }
+}
+
+/** Supplier POs (O07): the dialog's pre-fill, the supplier's last PO, a leg's latest PO and the next number. */
+function purchaseOrders() {
+  const all = root('purchaseOrders')
+  return {
+    all,
+    prefill: (legId: string) => [...all, 'prefill', legId] as const,
+    lastToSupplier: (supplierId: string) => [...all, 'last-to-supplier', supplierId] as const,
+    leg: (legId: string) => [...all, 'leg', legId] as const,
+    nextNumber: () => [...all, 'next-number'] as const,
   }
 }
 
@@ -186,6 +210,7 @@ export const qk = {
   brands: brands(),
   rfqs: rfqs(),
   orders: orders(),
+  purchaseOrders: purchaseOrders(),
   intake: intake(),
   memory: memory(),
   fx: fx(),

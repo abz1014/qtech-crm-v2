@@ -136,8 +136,8 @@ test.describe('company page', () => {
     const orderRow = siteRegion.getByRole('row', { name: /Annealing lehr instrumentation/ })
     await expect(orderRow.getByText('Delivered')).toBeVisible()
     await expect(orderRow.getByText('Not invoiced')).toBeVisible()
-    // The Repeat order slot is drawn (the action itself is O02) but cannot be used yet.
-    await expect(orderRow.getByRole('button', { name: /Repeat order/ })).toBeDisabled()
+    // Repeat order is live (O02): it opens the New order dialog with this order already chosen (its journey is in e2e/orders/repeat.spec.ts).
+    await expect(orderRow.getByRole('button', { name: /Repeat order/ })).toBeEnabled()
     await expect(siteRegion.getByRole('columnheader', { name: 'Their reference' })).toHaveCount(0)
     await review(page, 'parity-d-company-customer-1440')
   })

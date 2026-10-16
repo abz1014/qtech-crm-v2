@@ -135,6 +135,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'recurring_expenses',  '',           'SIUD', '',     ''),     -- s10 "recurring_expenses"
   ('table', 'attachments',         'rfq',        'SIUD', 'SIUD', 'SIUD'), -- s10 "attachments (parent is an RFQ or clarification)"
   ('table', 'attachments',         'invoice',    'SIUD', 'SIUD', ''),     -- s10 "attachments (parent is an invoice)"
+  ('table', 'attachments',         'order',      'SIUD', 'SIUD', 'SIUD'), -- R22 (0042) s10 "attachments (parent is an order)": bucket rfq-files, all staff
   ('table', 'snoozes',             'own',        'SIUD', 'SIUD', 'SIUD'), -- s10 "snoozes": own SIUD
   ('table', 'snoozes',             'other',      '',     '',     ''),     -- s10 "snoozes": "own" means other people's rows are closed to everyone
   ('table', 'targets',             'own',        'SIUD', 'S',    'S'),    -- s10 "targets": admin SIUD, S own (admin's own row is covered by admin SIUD)
@@ -185,6 +186,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'customer_price_memory',  '',    'X',    'X',    'X'),    -- R19 (0037): the two price chips of the issue-quotation dialog, all staff
   ('function', 'issue_quotation',         '',    'X',    'X',    'X'),    -- s10 "RPCs issue_quotation, issue_purchase_order, stamp_clarification_ask, stamp_supplier_chase"
   ('function', 'issue_purchase_order',    '',    'X',    'X',    'X'),    -- s10 (same row)
+  ('function', 'po_line_prefill',         '',    'X',    'X',    'X'),    -- O07 (0043): what Issue PO would pre-fill, SECURITY INVOKER, all staff; writes nothing
   ('function', 'stamp_clarification_ask', '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_supplier_chase',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_goods_chase',      '',    'X',    'X',    'X'),    -- R16 (0033): goods-chase stamp on a supplier leg, all staff
@@ -271,6 +273,8 @@ insert into public.attachments (id, bucket, path, file_name, mime_type, size_byt
   (pg_temp.f('2c'), 'gst-receipts', 'm/2.pdf', 'b.pdf', 'application/pdf', 10, pg_temp.f('26'));
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values   -- A6
   (pg_temp.f('3c'), 'expense-receipts', 'm/3.jpg', 'c.jpg', 'image/jpeg', 10, pg_temp.f('29'));
+insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id) values   -- R22 (0042)
+  (pg_temp.f('3f'), 'rfq-files', 'm/4.jpg', 'd.jpg', 'image/jpeg', 10, pg_temp.f('20'));
 insert into public.expense_categories (id, name, grp) values (pg_temp.f('3d'), 'M Category', 'overhead');   -- A6
 insert into public.closed_months (month, closed_by) values ('2019-01-01', 'a0000000-0000-4000-8000-000000000001');   -- A6
 update public.supplier_orders set placed_on = public.today_pkt() where id = pg_temp.f('23');   -- A6: payables_as_of needs a placed leg
@@ -328,6 +332,7 @@ insert into spec values
   ('expense_categories', '', 'id = @3d', 'name', $q$insert into public.expense_categories (id, name, grp) values (@b6, 'probe category', 'overhead')$q$),   -- A6
   ('closed_months', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.closed_months (month, closed_by) values ('2019-02-01', '{uid}')$q$),   -- A6
   ('attachments', 'expense', 'id = @3c', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values (@b7, 'expense-receipts', 'p/3.jpg', 'c.jpg', 'image/jpeg', 10, @29)$q$),   -- A6
+  ('attachments', 'order', 'id = @3f', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id) values (@b8, 'rfq-files', 'p/4.jpg', 'd.jpg', 'image/jpeg', 10, @20)$q$),   -- R22 (0042)
   ('attachments', 'rfq', 'id = @2b', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values (@b0, 'rfq-files', 'p/1.pdf', 'a.pdf', 'application/pdf', 10, @15)$q$),
   ('attachments', 'invoice', 'id = @2c', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, invoice_id) values (@b1, 'gst-receipts', 'p/2.pdf', 'b.pdf', 'application/pdf', 10, @26)$q$),
   ('snoozes', 'own', $q$user_id = '{uid}'$q$, 'until_on', $q$insert into public.snoozes (user_id, rule, subject_id, until_on) values ('{uid}', 'r2', @b2, current_date)$q$),
@@ -396,6 +401,7 @@ insert into probes values
   ('customer_price_memory', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.customer_price_memory(@15)) >= 0'),   -- R19: returns no rows for the fixture, so the probe also needs the RFQ to be visible (a deactivated user sees none)
   ('issue_quotation', '', 'X', 'select public.issue_quotation(@c3, @15)'),
   ('issue_purchase_order', '', 'X', 'select public.issue_purchase_order(@c4, @23)'),
+  ('po_line_prefill', '', 'X', 'select 1 where exists (select 1 from public.supplier_orders where id = @23) and (select count(*) from public.po_line_prefill(@23)) >= 0'),   -- O07: read-only; needs the leg to be visible, so a deactivated user is denied
   ('stamp_clarification_ask', '', 'X', 'select 1 from (select public.stamp_clarification_ask(array[@1d]) r) x where r > 0'),
   ('stamp_supplier_chase', '', 'X', 'select public.stamp_supplier_chase(@19)'),
   ('stamp_goods_chase', '', 'X', 'select public.stamp_goods_chase(@23)'),

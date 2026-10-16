@@ -25,14 +25,14 @@ export type Database = {
           Tables: {
             "attachments": {
                   Row: {
-                    "bucket": string,"clarification_id": string | null,"created_at": string,"created_by": string | null,"expense_id": string | null,"file_name": string,"id": string,"invoice_id": string | null,"mime_type": string,"path": string,"rfq_id": string | null,"size_bytes": number
+                    "bucket": string,"clarification_id": string | null,"created_at": string,"created_by": string | null,"expense_id": string | null,"file_name": string,"id": string,"invoice_id": string | null,"mime_type": string,"order_id": string | null,"path": string,"rfq_id": string | null,"size_bytes": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "bucket": string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"expense_id"?: string | null,"file_name": string,"id"?: string,"invoice_id"?: string | null,"mime_type": string,"path": string,"rfq_id"?: string | null,"size_bytes": number
+                    "bucket": string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"expense_id"?: string | null,"file_name": string,"id"?: string,"invoice_id"?: string | null,"mime_type": string,"order_id"?: string | null,"path": string,"rfq_id"?: string | null,"size_bytes": number
                   }
                   Update: {
-                    "bucket"?: string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"expense_id"?: string | null,"file_name"?: string,"id"?: string,"invoice_id"?: string | null,"mime_type"?: string,"path"?: string,"rfq_id"?: string | null,"size_bytes"?: number
+                    "bucket"?: string,"clarification_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"expense_id"?: string | null,"file_name"?: string,"id"?: string,"invoice_id"?: string | null,"mime_type"?: string,"order_id"?: string | null,"path"?: string,"rfq_id"?: string | null,"size_bytes"?: number
                   }
                   Relationships: [
                     {
@@ -71,6 +71,36 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_invoice_state"
       referencedColumns: ["invoice_id"]
+    },{
+      foreignKeyName: "attachments_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "attachments_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "attachments_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "attachments_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "attachments_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
     },{
       foreignKeyName: "attachments_rfq_id_fkey"
       columns: ["rfq_id"]
@@ -1895,6 +1925,11 @@ isOneToOne: false
 "payables_as_of":
 { Args: { "p_date": string }; Returns: {
               "committed": number,"committed_pkr": number,"currency": string,"flag": string,"fx_rate": number,"order_id": string,"order_number": number,"owed_pkr": number,"paid_pkr": number,"state": string,"supplier_id": string,"supplier_name": string,"supplier_order_id": string
+            }[]
+                           },
+"po_line_prefill":
+{ Args: { "p_supplier_order_id": string }; Returns: {
+              "description": string,"order_item_id": string,"position": number,"price_source": string,"qty": number,"source_number": number,"source_on": string,"source_revision": number,"unit": string,"unit_price": number
             }[]
                            },
 "reopen_month":
