@@ -143,14 +143,17 @@ test.describe('palette search (R12)', () => {
 
     // the same through the API as the engineer: no row, and no money column in any row
     const session = await login('engineer')
-    for (const q of [invoiceNumber, `POSEC${tag}`, '123456']) {
+    const invoiceRequests: string[] = []
+    for (const q of [invoiceNumber, invoiceNumber.slice(0, 7), `POSEC${tag}`, '123456']) {
       const res = await fetch(`${API_URL}/rest/v1/rpc/search_all`, { method: 'POST', headers: rpcHeaders(session.access_token), body: JSON.stringify({ q, lim: 8 }) })
       expect(await res.json()).toEqual([])
+      invoiceRequests.push(q)
     }
+    expect(invoiceRequests).toHaveLength(4)
     const res = await fetch(`${API_URL}/rest/v1/rpc/search_all`, { method: 'POST', headers: rpcHeaders(session.access_token), body: JSON.stringify({ q: f.company.name, lim: 8 }) })
     const rows = (await res.json()) as Array<Record<string, unknown>>
     expect(rows.length).toBeGreaterThan(0)
-    for (const r of rows) expect(Object.keys(r).sort()).toEqual(['company_id', 'id', 'kind', 'label', 'meta', 'role', 'score'])
+    for (const r of rows) expect(Object.keys(r).sort()).toEqual(['company_id', 'id', 'kind', 'label', 'meta', 'order_id', 'role', 'score'])
   })
 
   for (const [name, size] of [['1440', { width: 1440, height: 900 }], ['375', { width: 375, height: 812 }]] as const) {
@@ -166,4 +169,95 @@ test.describe('palette search (R12)', () => {
       expect(await axeViolations(page, { landmarks: false })).toEqual([])
     })
   }
+})
+
+test.describe('palette search v2 (P02): orders, items, POs, invoices', () => {
+  interface V2 {
+    tag: string
+    company: { id: string; name: string }
+    order: { id: string; number: number }
+    po: string
+    item: string
+    invoice: string
+    supplierPo: number
+  }
+
+  async function seedV2(): Promise<V2> {
+    const tag = unique()
+    const company = await createCompany(uniqueName(`Orderco${tag}`))
+    const supplier = await createCompany(uniqueName(`Supplyco${tag}`), { country: 'Germany' })
+    const po = `CPO${tag.toUpperCase()}77`
+    const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: company.id, customer_po_number: po } })))[0]
+    const item = `Pressure transmitter ${tag}x9`
+    await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, description: item, unit_price_net: 4321 }, prefer: 'return=minimal' }))
+    const invoice = `INV${tag.toUpperCase()}5`
+    await must(rest('admin', 'invoices', { method: 'POST', body: { order_id: order.id, company_id: company.id, number: invoice, net_amount: 50000, gst_amount: 9000 }, prefer: 'return=minimal' }))
+    const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: supplier.id, currency: 'EUR' } })))[0]
+    const supplierPo = 200000 + Math.floor(Math.random() * 700000)
+    await must(rest('admin', 'purchase_orders', { method: 'POST', body: { supplier_order_id: leg.id, number: supplierPo, revision: 0, currency: 'EUR', total: 0, lines: [{ qty: 1, unit_price: 1 }] }, prefer: 'return=minimal' }))
+    return { tag, company, order, po, item, invoice, supplierPo }
+  }
+
+  test('sales find an order by customer PO, an item by description, a supplier PO and an invoice by number, each opening the right place', async ({ page }) => {
+    const f = await seedV2()
+    await openAs(page, 'sales', '/today')
+    await openPalette(page)
+    const input = page.getByRole('combobox')
+
+    await input.fill(f.po.slice(0, 8))
+    const order = page.getByRole('option', { name: new RegExp(`ORD-${String(f.order.number).padStart(4, '0')} ${f.company.name}`) })
+    await expect(order).toBeVisible()
+    await expect(order).toContainText(`Customer PO ${f.po}`)
+
+    await input.fill(`transmitter ${f.tag}x9`)
+    const item = page.getByRole('option', { name: new RegExp(f.item) })
+    await expect(item).toBeVisible()
+    await expect(page.getByRole('dialog').getByText('Order items', { exact: true })).toBeVisible()
+    await expect(item).not.toContainText('4321')
+
+    await input.fill(`PO-${f.supplierPo}`)
+    const po = page.getByRole('option', { name: new RegExp('PO-[0-9]{2}-' + f.supplierPo) })
+    await expect(po).toBeVisible()
+    await po.click()
+    await expect(page).toHaveURL(new RegExp(`/orders/${f.order.id}$`))
+
+    await openPalette(page)
+    await page.getByRole('combobox').fill(f.invoice.slice(0, 8))
+    const inv = page.getByRole('option', { name: new RegExp(f.invoice) })
+    await expect(inv).toBeVisible()
+    await expect(inv).not.toContainText('50000')
+    await inv.click()
+    await expect(page).toHaveURL(/\/money\/gst-register\?invoice=/)
+    await expect(page.getByRole('dialog', { name: new RegExp(`Invoice ${f.invoice}`) })).toBeVisible()
+  })
+
+  test('an engineer: the order and the item and the supplier PO are found, the invoice and the customer PO are not, at the API too', async ({ page }) => {
+    const f = await seedV2()
+    await openAs(page, 'engineer', '/today')
+    await openPalette(page)
+    const input = page.getByRole('combobox')
+    await input.fill(`ORD-${String(f.order.number).padStart(4, '0')}`)
+    const order = page.getByRole('option', { name: new RegExp(`ORD-${String(f.order.number).padStart(4, '0')} ${f.company.name}`) })
+    await expect(order).toBeVisible()
+    await expect(order).not.toContainText(f.po)
+    await input.fill(`transmitter ${f.tag}x9`)
+    await expect(page.getByRole('option', { name: new RegExp(f.item) })).toBeVisible()
+    for (const q of [f.invoice, f.invoice.slice(0, 8), f.po]) {
+      await input.fill(q)
+      await expect(page.getByRole('option', { name: new RegExp(`Add “${q}”`) })).toBeVisible()
+      await expect(page.getByRole('option')).toHaveCount(1)
+    }
+
+    // network assertion: the response to an invoice-number search contains no invoice row for an engineer, and does for sales
+    const call = async (role: 'engineer' | 'sales', q: string) => {
+      const session = await login(role)
+      const res = await fetch(`${API_URL}/rest/v1/rpc/search_all`, { method: 'POST', headers: rpcHeaders(session.access_token), body: JSON.stringify({ q, lim: 25 }) })
+      return (await res.json()) as Array<{ kind: string; label: string; meta: string | null }>
+    }
+    expect(await call('engineer', f.invoice)).toEqual([])
+    expect((await call('engineer', f.company.name)).filter(r => r.kind === 'invoice')).toEqual([])
+    expect((await call('engineer', f.po)).some(r => `${r.label} ${r.meta ?? ''}`.includes(f.po))).toBe(false)
+    expect((await call('sales', f.invoice)).filter(r => r.kind === 'invoice').map(r => r.label)).toEqual([f.invoice])
+    expect((await call('engineer', `PO-${f.supplierPo}`)).some(r => r.kind === 'po')).toBe(true)
+  })
 })

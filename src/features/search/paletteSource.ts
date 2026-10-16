@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
-import { Building2, FileText, Plus, UserRound } from 'lucide-react'
+import { Building2, FileText, Package, Plus, Receipt, ShoppingCart, UserRound, Wrench } from 'lucide-react'
 import { usePaletteSource } from '@/app/palette/usePalette'
 import { searchAll, type SearchHit, type SearchKind, type SearchRole } from '@/features/search/api'
 import type { PaletteItem, PaletteSource } from '@/ui/paletteSources'
 
 /*
- * The one search source of the command palette (R12): companies, contacts (open the company), RFQ numbers and customer
- * references. A burst of keystrokes becomes one request: the source waits DEBOUNCE_MS after the last keystroke, and the
+ * The one search source of the command palette (R12, P02): companies, contacts (open the company), RFQ numbers and customer
+ * references, orders (ORD number, customer PO for admin and sales), order items, supplier PO numbers ("PO-26-0017") and
+ * invoice numbers (admin and sales: the database returns none to an engineer, see migration 0054). A burst of keystrokes becomes one request: the source waits DEBOUNCE_MS after the last keystroke, and the
  * palette cancels the signal on the next one, which drops both the wait and a request already in flight.
  * Groups come from the database kind; an RFQ number ("177", "RFQ-0177") puts RFQs first, otherwise companies lead.
  * After the places come the Actions: "New RFQ for <company>" (the best company match, opens intake with it chosen) and
@@ -15,9 +16,25 @@ import type { PaletteItem, PaletteSource } from '@/ui/paletteSources'
 export const DEBOUNCE_MS = 150
 
 const ROLE_META: Record<SearchRole, string> = { customer: 'Customer', supplier: 'Supplier', both: 'Customer and supplier', prospect: 'Prospect' }
-const HEADING: Record<SearchKind, string> = { company: 'Companies', contact: 'Contacts', rfq: 'RFQs' }
+const HEADING: Record<SearchKind, string> = {
+  company: 'Companies',
+  contact: 'Contacts',
+  rfq: 'RFQs',
+  order: 'Orders',
+  item: 'Order items',
+  po: 'Purchase orders',
+  invoice: 'Invoices',
+}
 const ACTIONS = 'Actions'
 const looksLikeRfqNumber = (q: string) => /^(rfq[-\s]*)?\d{1,15}$/i.test(q.trim())
+const BASE: readonly SearchKind[] = ['company', 'contact', 'rfq', 'order', 'invoice', 'po', 'item']
+
+/** The kinds in the order the person most likely means: a typed number or prefix puts what it names first. */
+export function kindOrder(q: string): SearchKind[] {
+  const t = q.trim()
+  const first: SearchKind[] = /^po[-\s]*\d/i.test(t) ? ['po'] : /^ord/i.test(t) ? ['order'] : /^inv/i.test(t) ? ['invoice'] : /^rfq/i.test(t) || looksLikeRfqNumber(t) ? ['rfq', 'order'] : []
+  return [...first, ...BASE.filter(k => !first.includes(k))]
+}
 
 /** Resolves true after `ms`, or false at once if the signal aborts first. */
 function pause(ms: number, signal: AbortSignal): Promise<boolean> {
@@ -49,6 +66,10 @@ function toItem(h: SearchHit): PaletteItem {
   if (h.kind === 'contact') {
     return { id: `contact-${h.id}`, group, label: h.label, meta: h.meta ?? undefined, icon: UserRound, href: h.companyId ? `/companies/${h.companyId}` : undefined }
   }
+  if (h.kind === 'order') return { id: `order-${h.id}`, group, label: h.label, meta: h.meta ?? undefined, icon: Package, href: `/orders/${h.id}` }
+  if (h.kind === 'item') return { id: `item-${h.id}`, group, label: h.label, meta: h.meta ?? undefined, icon: Wrench, href: h.orderId ? `/orders/${h.orderId}` : undefined }
+  if (h.kind === 'po') return { id: `po-${h.id}`, group, label: h.label, meta: h.meta ?? undefined, icon: ShoppingCart, href: h.orderId ? `/orders/${h.orderId}` : undefined }
+  if (h.kind === 'invoice') return { id: `invoice-${h.id}`, group, label: h.label, meta: h.meta ?? undefined, icon: Receipt, href: `/money/gst-register?invoice=${encodeURIComponent(h.id)}` }
   return { id: `rfq-${h.id}`, group, label: h.label, meta: h.meta ?? undefined, icon: FileText, href: `/rfqs/${h.id}` }
 }
 
@@ -63,8 +84,7 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS): PaletteSource {
       if (!(await pause(debounceMs, signal))) return []
       const hits = await searchAll(q, signal)
       if (signal.aborted) return []
-      const order: SearchKind[] = looksLikeRfqNumber(q) ? ['rfq', 'company', 'contact'] : ['company', 'contact', 'rfq']
-      const items = order.flatMap(kind =>
+      const items = kindOrder(q).flatMap(kind =>
         hits
           .filter(h => h.kind === kind)
           .sort((a, b) => b.score - a.score)
