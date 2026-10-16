@@ -51,6 +51,7 @@ jobs:
       pwa: ${{ steps.final.outputs.pwa }}
       money: ${{ steps.final.outputs.money }}
       expenses: ${{ steps.final.outputs.expenses }}
+      bank: ${{ steps.final.outputs.bank }}
       any: ${{ steps.final.outputs.any }}
     steps:
       - uses: actions/checkout@v4
@@ -91,6 +92,8 @@ jobs:
               - 'e2e/capture/**'
             expenses:
               - 'e2e/expenses/**'
+            bank:
+              - 'e2e/bank/**'
             orders:
               - 'e2e/orders/**'
             settings_admin:
@@ -121,6 +124,7 @@ jobs:
           S_PWA: ${{ steps.filter.outputs.pwa }}
           S_MONEY: ${{ steps.filter.outputs.money }}
           S_EXPENSES: ${{ steps.filter.outputs.expenses }}
+          S_BANK: ${{ steps.filter.outputs.bank }}
         run: |
           all=false
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$GITHUB_REF" = "refs/heads/main" ] || [ "$SHARED" = "true" ]; then all=true; fi
@@ -155,6 +159,8 @@ jobs:
           echo "expenses=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_MONEY; if [ "$all" = "true" ]; then v=true; fi
           echo "money=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_BANK; if [ "$all" = "true" ]; then v=true; fi
+          echo "bank=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           echo "any=$any" >> "$GITHUB_OUTPUT"
 
   e2e:
@@ -311,6 +317,16 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=expenses REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/expenses npx playwright test --project=expenses --output=test-results/expenses
+
+      - name: Reset database (bank)
+        if: ${{ !cancelled() && needs.changes.outputs.bank == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (bank project)
+        if: ${{ !cancelled() && needs.changes.outputs.bank == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=bank REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/bank npx playwright test --project=bank --output=test-results/bank
 
       - name: PDF tools for the orders suite (poppler, to read and render the stored supplier PO PDFs)
         if: ${{ !cancelled() && needs.changes.outputs.orders == 'true' }}

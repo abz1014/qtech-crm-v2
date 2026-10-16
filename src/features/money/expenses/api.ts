@@ -76,14 +76,14 @@ export async function listExpenses(month: string): Promise<ExpenseListing> {
   return { rows, payees, orders }
 }
 
-async function companyNames(ids: string[]): Promise<Record<string, string>> {
+export async function companyNames(ids: string[]): Promise<Record<string, string>> {
   if (ids.length === 0) return {}
   const db = requireSupabase()
   const rows = unwrap(await db.from('companies').select('id, name').in('id', ids)) ?? []
   return Object.fromEntries(rows.map(r => [r.id, r.name]))
 }
 
-async function orderRefs(ids: string[]): Promise<Record<string, string>> {
+export async function orderRefs(ids: string[]): Promise<Record<string, string>> {
   if (ids.length === 0) return {}
   const db = requireSupabase()
   const rows = unwrap(await db.from('orders').select('id, number').in('id', ids)) ?? []

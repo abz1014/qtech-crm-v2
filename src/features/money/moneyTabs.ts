@@ -12,4 +12,6 @@ export const MONEY_TABS: readonly MoneyTab[] = [
   { key: 'gst-register', label: 'GST register', to: '/money/gst-register' },
   { key: 'receivables', label: 'Receivables', salesLabel: 'Order balances', to: '/money/receivables' },
   { key: 'expenses', label: 'Expenses', to: '/money/expenses', adminOnly: true },
+  // Month-end opens on the Bank tick until the checklist (M10) exists; the tab stays lit on every Month-end view.
+  { key: 'month-end', label: 'Month-end', to: '/money/month-end/bank', adminOnly: true },
 ]
