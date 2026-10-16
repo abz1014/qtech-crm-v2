@@ -9,12 +9,14 @@ import type { PaletteItem, PaletteSource } from '@/ui/paletteSources'
  * references. A burst of keystrokes becomes one request: the source waits DEBOUNCE_MS after the last keystroke, and the
  * palette cancels the signal on the next one, which drops both the wait and a request already in flight.
  * Groups come from the database kind; an RFQ number ("177", "RFQ-0177") puts RFQs first, otherwise companies lead.
- * Idle, the palette offers "New company" (the companies source of R02 is folded in here).
+ * After the places come the Actions: "New RFQ for <company>" (the best company match, opens intake with it chosen) and
+ * "Add <x> as a new company" when no company has exactly that name. Idle rows (Recent, Actions) live in PaletteHost.
  */
 export const DEBOUNCE_MS = 150
 
 const ROLE_META: Record<SearchRole, string> = { customer: 'Customer', supplier: 'Supplier', both: 'Customer and supplier', prospect: 'Prospect' }
 const HEADING: Record<SearchKind, string> = { company: 'Companies', contact: 'Contacts', rfq: 'RFQs' }
+const ACTIONS = 'Actions'
 const looksLikeRfqNumber = (q: string) => /^(rfq[-\s]*)?\d{1,15}$/i.test(q.trim())
 
 /** Resolves true after `ms`, or false at once if the signal aborts first. */
@@ -55,7 +57,6 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS): PaletteSource {
     id: 'search',
     group: 'Results',
     order: 10,
-    idle: () => [{ id: 'company-new', group: 'Companies', label: 'New company', meta: 'Action', icon: Plus, href: '/companies?new=1' }],
     search: async (query, signal) => {
       const q = query.trim()
       if (!q) return []
@@ -69,8 +70,12 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS): PaletteSource {
           .sort((a, b) => b.score - a.score)
           .map(toItem),
       )
+      const topCompany = hits.filter(h => h.kind === 'company').sort((a, b) => b.score - a.score)[0]
+      if (topCompany) {
+        items.push({ id: `rfq-new-${topCompany.id}`, group: ACTIONS, label: `New RFQ for ${topCompany.label}`, meta: 'Go to intake', icon: Plus, href: `/rfqs/new?company=${encodeURIComponent(topCompany.id)}` })
+      }
       if (!hits.some(h => h.kind === 'company' && h.label.trim().toLowerCase() === q.toLowerCase())) {
-        items.push({ id: 'company-new-typed', group: 'Companies', label: `Add “${q}” as a new company`, meta: 'Action', icon: Plus, href: `/companies?new=1&name=${encodeURIComponent(q)}` })
+        items.push({ id: 'company-new-typed', group: ACTIONS, label: `Add “${q}” as a new company`, meta: 'Action', icon: Plus, href: `/companies?new=1&name=${encodeURIComponent(q)}` })
       }
       return items
     },

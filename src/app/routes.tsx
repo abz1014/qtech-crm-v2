@@ -28,6 +28,7 @@ const ExchangeRatesPage = lazy(() => import('@/features/fx/ExchangeRatesPage').t
 const TargetsPage = lazy(() => import('@/features/settings/TargetsPage').then(m => ({ default: m.TargetsPage })))
 const CategoriesPage = lazy(() => import('@/features/settings/CategoriesPage').then(m => ({ default: m.CategoriesPage })))
 const ChangePasswordPage = lazy(() => import('@/features/settings/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })))
+const MyDetailsPage = lazy(() => import('@/features/settings/MyDetailsPage').then(m => ({ default: m.MyDetailsPage })))
 const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfilePage').then(m => ({ default: m.CompanyProfilePage })))
 /** New RFQ (R05): its own route, so it works under whichever screen owns the rest of /rfqs. */
 const IntakeScreen = lazy(() => import('@/features/rfqs/IntakeScreen'))
@@ -107,6 +108,14 @@ export function AppRoutes() {
               element={
                 <Suspense fallback={null}>
                   <CompanyProfilePage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="details"
+              element={
+                <Suspense fallback={null}>
+                  <MyDetailsPage />
                 </Suspense>
               }
             />

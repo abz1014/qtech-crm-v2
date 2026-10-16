@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Building2, Plus, Search, X } from 'lucide-react'
+import { Building2, Plus, X } from 'lucide-react'
 import { useCompanyList } from '@/features/companies/hooks'
 import type { CompanyListRow } from '@/features/companies/api'
 import { CreateCompanyDialog } from '@/features/companies/CreateCompanyDialog'
@@ -9,9 +9,8 @@ import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusBadge } from '@/ui/StatusBadge'
+import { TableFilter } from '@/ui/TableFilter'
 import { useToast } from '@/ui/useToast'
-import { Icon } from '@/ui/Icon'
-import { TextField } from '@/ui/form/TextField'
 
 /*
  * Companies list (R02). One table of every company, customer or supplier, with the role derived from
@@ -118,6 +117,8 @@ export function CompaniesPage() {
 
       <DataTable
         label="Companies"
+        noun="companies"
+        total={counts.all}
         columns={columns}
         rows={shown}
         getRowId={r => r.id}
@@ -129,21 +130,9 @@ export function CompaniesPage() {
             ? { title: "Couldn't load the companies", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void list.refetch() }
             : null
         }
-        summary={list.isSuccess ? `Showing ${shown.length} of ${counts.all} companies` : undefined}
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
-            <label className="relative block w-full max-w-[320px] sm:w-[320px]">
-              <span className="sr-only">Search companies</span>
-              <Icon icon={Search} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
-              <TextField
-                type="search"
-                value={text}
-                onChange={e => setText(e.target.value)}
-                placeholder="Search by name or country"
-                autoComplete="off"
-                className="pl-8"
-              />
-            </label>
+            <TableFilter label="Search companies" placeholder="Search by name or country" value={text} onChange={setText} className="sm:w-[320px]" />
             <SegmentedControl
               aria-label="Show"
               value={filter}

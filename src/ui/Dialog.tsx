@@ -69,6 +69,8 @@ interface DialogContentProps {
   size?: keyof typeof WIDTH
   /** Buttons for the footer band, Cancel first and the primary last (right-aligned). */
   footer?: ReactNode
+  /** A mono tag at the right of the header, beside the close button (the PO number in the Issue purchase order dialog). */
+  meta?: ReactNode
   /** Small text at the left of the footer ("Body scrolls. Header and footer stay."). */
   lead?: ReactNode
   /** The body. Scrolls on its own; header and footer stay put. */
@@ -85,6 +87,7 @@ export function DialogContent({
   size = 'md',
   footer,
   lead,
+  meta,
   children,
   className,
 }: DialogContentProps) {
@@ -119,13 +122,15 @@ export function DialogContent({
           // return to whatever had focus when it opened.
           onCloseAutoFocus={() => openerRef.current?.isConnected && openerRef.current.focus()}
           className={cn(
-            'grid max-h-[calc(100dvh-64px)] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal',
+            'relative grid max-h-[calc(100dvh-64px)] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal',
             'animate-rise-6 focus:outline-none max-md:max-h-[calc(100dvh-16px)] max-md:animate-sheet-in max-md:rounded-b-none',
             WIDTH[size],
             className,
           )}
         >
-          <header className="flex items-start gap-3 px-5 pt-5">
+          {/* Bottom sheet below 768: the 36 by 4 grab handle (g2-components "Bottom sheet on a phone"). */}
+          <span aria-hidden="true" data-grab className="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-round bg-line-strong md:hidden" />
+          <header className="flex items-start gap-3 px-5 pt-5 max-md:pt-6">
             {icon ? (
               <span aria-hidden="true" className={cn('grid size-[36px] shrink-0 place-items-center rounded', TILE[tone])}>
                 <Icon icon={icon} size="lg" />
@@ -140,6 +145,7 @@ export function DialogContent({
                 <RadixDialog.Description className="text-sm text-fg-muted">{context}</RadixDialog.Description>
               ) : null}
             </div>
+            {meta ? <div className="mr-2 shrink-0 self-start">{meta}</div> : null}
             <RadixDialog.Close asChild>
               <Button variant="quiet" size="sm" icon={X} aria-label="Close" disabled={busy} className="-mr-2 -mt-1 text-fg-muted" />
             </RadixDialog.Close>

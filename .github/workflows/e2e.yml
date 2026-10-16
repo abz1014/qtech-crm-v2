@@ -306,6 +306,10 @@ jobs:
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=expenses REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/expenses npx playwright test --project=expenses --output=test-results/expenses
 
+      - name: PDF tools for the orders suite (poppler, to read and render the stored supplier PO PDFs)
+        if: ${{ !cancelled() && needs.changes.outputs.orders == 'true' }}
+        run: command -v pdftoppm && command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils)
+
       - name: Reset database (orders)
         if: ${{ !cancelled() && needs.changes.outputs.orders == 'true' }}
         run: npx supabase db reset --local

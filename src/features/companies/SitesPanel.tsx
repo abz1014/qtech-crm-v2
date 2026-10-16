@@ -1,7 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { MapPin, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { useSession } from '@/app/session'
 import type { CompanyHistory, SiteRow } from '@/features/companies/api'
+import { NewOrderDialog } from '@/features/orders/NewOrderDialog'
 import { ConfirmRemove, Fine, Panel } from '@/features/companies/CompanyParts'
 import { useRemoveSite } from '@/features/companies/hooks'
 import { removeErrorMessage } from '@/features/companies/removeError'
@@ -35,6 +37,8 @@ interface Item {
   goods: string | null
   invoicing: string | null
   paymentOverdue: boolean
+  /** Orders only: the order's id, for "Repeat order" (O02). */
+  orderId?: string
   extra: string | null
 }
 
@@ -87,6 +91,7 @@ function itemsFor(history: CompanyHistory, siteId: string | null): Item[] {
       goods: o.goods,
       invoicing: o.invoicing,
       paymentOverdue: o.paymentOverdue === true,
+      orderId: o.id,
       extra: null,
     }))
   return [...rfqs, ...orders].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
@@ -185,7 +190,7 @@ export function SitesPanel({
         hiddenHeader: true,
         width: 150,
         cell: r =>
-          r.kind === 'order' ? <RepeatOrderSlot orderNumber={r.number} /> : null,
+          r.kind === 'order' && r.orderId ? <RepeatOrderSlot orderId={r.orderId} orderNumber={r.number} /> : null,
       },
     ],
     [today],
@@ -261,11 +266,21 @@ export function SitesPanel({
  * (create_repeat_order, built by another worker): until it lands the slot is drawn as the design has it, but disabled and
  * labelled. Replace the disabled button with the real action when O02 merges. Tracked in docs/design/PARITY_AUDIT.md (D-83).
  */
-function RepeatOrderSlot({ orderNumber }: { orderNumber: number }) {
+/**
+ * "Repeat order" on an order row (O02; D-83): opens the New order dialog with this order already chosen, so a repeat is Create order and
+ * nothing else. Engineers are not offered it: a repeat copies prices.
+ */
+function RepeatOrderSlot({ orderId, orderNumber }: { orderId: string; orderNumber: number }) {
+  const session = useSession()
+  const [open, setOpen] = useState(false)
+  if (session.status !== 'signed-in' || session.user.role === 'engineer') return null
   return (
-    <Button variant="quiet" size="sm" icon={RefreshCw} disabled title="Available with the order screens (O02)" aria-label={`Repeat order ${orderRef(orderNumber)}, available with the order screens`}>
-      Repeat order
-    </Button>
+    <>
+      <Button variant="quiet" size="sm" icon={RefreshCw} aria-label={`Repeat order ${orderRef(orderNumber)}`} onClick={() => setOpen(true)}>
+        Repeat order
+      </Button>
+      {open ? <NewOrderDialog sourceId={orderId} onClose={() => setOpen(false)} /> : null}
+    </>
   )
 }
 

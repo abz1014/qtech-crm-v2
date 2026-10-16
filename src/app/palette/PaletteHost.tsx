@@ -1,9 +1,26 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Building2, CalendarCheck, Import, Plus } from 'lucide-react'
 import { navItemsForRole } from '@/app/navConfig'
+import { CaptureContext } from '@/app/capture/useCapture'
 import { PaletteContext, type PaletteApi } from '@/app/palette/usePalette'
 import { CommandPalette } from '@/ui/CommandPalette'
+import { Kbd } from '@/ui/Kbd'
 import { filterItems, type PaletteItem, type PaletteSource } from '@/ui/paletteSources'
+
+/** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
+const INTAKE_ROUTE = '/rfqs/new'
+const TODAY_ROUTE = '/today'
+
+/** True when a key press belongs to something the person is typing into or a dialog they are in. */
+function isTypingContext(e: KeyboardEvent): boolean {
+  const t = e.target
+  if (t instanceof HTMLElement) {
+    if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return true
+    if (t.closest('[role="textbox"],[role="combobox"],[role="searchbox"],[role="listbox"],[role="menu"]')) return true
+  }
+  return Boolean(document.querySelector('[role="dialog"],[role="alertdialog"]'))
+}
 
 /*
  * Palette host (U08). Owns the open state of the one command palette in the
@@ -17,6 +34,7 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
   const [open, setOpen] = useState(false)
   const [extra, setExtra] = useState<PaletteSource[]>([])
   const seq = useRef(0)
+  const openCapture = useContext(CaptureContext)?.openCapture
 
   const register = useCallback((source: PaletteSource) => {
     const tagged = { ...source, id: `${source.id}#${seq.current++}` }
@@ -35,13 +53,51 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
     return {
       id: 'go-to',
       group: 'Jump to',
-      order: 100,
-      idle: () => items,
+      order: 5,
       search: q => filterItems(items, q),
     }
   }, [role])
 
-  const sources = useMemo(() => [...extra, goTo], [extra, goTo])
+  // Actions (A-89): idle rows in the palette, and the same keys work anywhere outside a text field: N, C, G then T.
+  const actions = useMemo<PaletteSource>(() => {
+    const captureItem: PaletteItem = { id: 'capture', label: 'Capture', meta: 'Action', icon: Import, shortcut: ['C'], onSelect: () => openCapture?.() }
+    const items: PaletteItem[] = [
+      { id: 'new-rfq', label: 'New RFQ', meta: 'Go to intake', icon: Plus, shortcut: ['N'], href: INTAKE_ROUTE },
+      captureItem,
+      { id: 'go-today', label: 'Go to Today', icon: CalendarCheck, shortcut: ['G T'], href: TODAY_ROUTE },
+      { id: 'new-company', label: 'New company', icon: Building2, href: '/companies?new=1' },
+    ]
+    // Typing "capture" still finds the Capture action; the other actions are idle-only (destinations answer typed text).
+    return { id: 'actions', group: 'Actions', order: 90, idle: () => items, search: q => filterItems([captureItem], q) }
+  }, [openCapture])
+
+  useEffect(() => {
+    let armedAt = 0
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.repeat || e.metaKey || e.ctrlKey || e.altKey || isTypingContext(e)) return
+      const k = e.key.toLowerCase()
+      if (k === 'g') {
+        armedAt = Date.now()
+        return
+      }
+      const armed = Date.now() - armedAt < 1000
+      armedAt = 0
+      if (k === 'n') {
+        e.preventDefault()
+        navigate(INTAKE_ROUTE)
+      } else if (k === 'c' && openCapture) {
+        e.preventDefault()
+        openCapture()
+      } else if (k === 't' && armed) {
+        e.preventDefault()
+        navigate(TODAY_ROUTE)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [navigate, openCapture])
+
+  const sources = useMemo(() => [...extra, actions, goTo], [extra, actions, goTo])
   const api = useMemo<PaletteApi>(() => ({ open: () => setOpen(true), register }), [register])
 
   return (
@@ -52,7 +108,7 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
         onOpenChange={setOpen}
         sources={sources}
         onNavigate={(href, { newTab }) => (newTab ? window.open(href, '_blank', 'noopener') : navigate(href))}
-        emptyHint="Search finds companies, contacts (name, phone, e-mail), RFQ numbers and customer references, and the places you can open from here."
+        emptyHint={<>Search covers RFQs, orders, companies and items. Try one word, or press <Kbd>N</Kbd> to start an RFQ.</>}
       />
     </PaletteContext.Provider>
   )

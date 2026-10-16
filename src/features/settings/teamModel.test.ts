@@ -16,6 +16,7 @@ const m = (id: string, name: string, role: TeamMember['role'], deactivated = fal
   email,
   role,
   job_title: null,
+  phone: null,
   deactivated_at: deactivated ? '2026-01-01T00:00:00Z' : null,
   created_at: '2026-01-01T00:00:00Z',
 })

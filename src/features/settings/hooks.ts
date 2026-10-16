@@ -55,6 +55,18 @@ export function useSetJobTitle() {
   })
 }
 
+export function useSetPhone() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { userId: string; phone: string | null }) => api.setPhone(v.userId, v.phone),
+    onSuccess: () => invalidateAfter(client, 'team.set-phone', {}),
+  })
+}
+
+export function useMyDetails(userId: string) {
+  return useQuery({ queryKey: qk.settings.myDetails(), queryFn: () => api.getMyDetails(userId), enabled: userId !== '' })
+}
+
 export function useDeactivatePerson() {
   const client = useQueryClient()
   return useMutation({

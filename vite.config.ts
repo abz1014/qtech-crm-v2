@@ -20,9 +20,17 @@ export default defineConfig(({ command }) => ({
             injectManifest: {
               // App shell only: built JS, CSS, HTML, fonts, and the brand and icon images.
               globPatterns: ['index.html', 'assets/**/*.{js,css,woff2}', '*.{png,ico,webmanifest}', 'brand/*.png'],
-              // The quotation PDF renderer (react-pdf, 1.5 MB) is a lazy chunk used by few screens; it is fetched on demand, not precached.
+              // The PDF renderer (react-pdf, 1.5 MB: the quotation and the supplier PO share it) is a lazy chunk used by few screens; it is
+              // fetched on demand, not precached. Its file name follows whichever module the bundler picks to name the shared chunk, so it is
+              // recognised by size, not by name: anything over 1 MB is left out of the precache list (the largest shell chunk is about half of that; the renderer is 1.5 MB or more).
               globIgnores: ['**/assets/render-*'],
-              maximumFileSizeToCacheInBytes: 1_500_000,
+              maximumFileSizeToCacheInBytes: 5_000_000,
+              manifestTransforms: [
+                async entries => ({
+                  manifest: entries.filter(e => e.size <= 1_000_000),
+                  warnings: [],
+                }),
+              ],
             },
           }),
         ]

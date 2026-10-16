@@ -103,7 +103,7 @@ test.describe('Team (A04)', () => {
     await expect(newbie.page.getByRole('menuitem', { name: 'Team' })).toHaveCount(0)
     await newbie.page.keyboard.press('Escape')
     await newbie.page.goto('/settings/team')
-    await expect(newbie.page.getByText('Team is not available to your role')).toBeVisible()
+    await expect(newbie.page.getByRole('heading', { name: 'Team is for admins' })).toBeVisible()
 
     // ---- Job title.
     await rowAction(page, name, 'Edit job title')
@@ -182,7 +182,7 @@ test.describe('Team (A04)', () => {
     await rowAction(page, 'Test Admin', 'Deactivate')
     const dialog = page.getByRole('dialog', { name: 'Deactivate Test Admin?' })
     await expect(dialog.getByText("You can't deactivate the only active admin")).toBeVisible()
-    await expect(dialog.getByRole('button', { name: /^Deactivate Test$/ })).toBeDisabled()
+    await expect(dialog.getByRole('button', { name: /^Deactivate$/ })).toBeDisabled()
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await ctx.close()
   })
@@ -213,11 +213,12 @@ test.describe('Team (A04)', () => {
       await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible()
       await expect(page.getByRole('menuitem', { name: 'Team' })).toHaveCount(0)
       await page.getByRole('menuitem', { name: 'Settings' }).click()
-      await expect(page).toHaveURL(/\/settings\/company$/)
+      await expect(page).toHaveURL(/\/settings$/)
+      await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible()
       await expect(page.getByRole('link', { name: 'Team' })).toHaveCount(0)
 
       await page.goto('/settings/team')
-      await expect(page.getByText('Team is not available to your role')).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Team is for admins' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Add person' })).toHaveCount(0)
     })
   }

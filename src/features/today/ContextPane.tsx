@@ -12,6 +12,7 @@ import { deadlineValue } from '@/lib/status'
 import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
+import { DateRail } from '@/ui/DateRail'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { DateInput } from '@/ui/form/DateInput'
 import { Icon } from '@/ui/Icon'
@@ -204,7 +205,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased }:
         </dl>
       ) : null}
 
-      <DateRail item={item} rfqDue={rfq?.dueOn ?? null} questions={questions} inquirySent={inquiryFact?.sentOn ?? null} today={today} />
+      <ChaseRail item={item} rfqDue={rfq?.dueOn ?? null} questions={questions} inquirySent={inquiryFact?.sentOn ?? null} today={today} />
 
       {item.escalation ? <Escalation item={item} today={today} /> : null}
 
@@ -459,29 +460,22 @@ function factsFor(
   return out.filter((f): f is Fact => f !== null)
 }
 
-function DateRail({ item, rfqDue, questions, inquirySent, today }: { item: TodayItem; rfqDue: string | null; questions: TodayData['clarifications']; inquirySent: string | null; today: string }) {
+/** The chase rail: asked (or sent) to bid due, on the shared DateRail. Always due-soon (warning), as on the approved Today B. */
+function ChaseRail({ item, rfqDue, questions, inquirySent, today }: { item: TodayItem; rfqDue: string | null; questions: TodayData['clarifications']; inquirySent: string | null; today: string }) {
   const start = item.rule === 'chase_customer' ? questions.map(q => q.lastAskedOn).sort().at(-1) : item.rule === 'chase_supplier' ? inquirySent : null
   if (!start || !rfqDue || rfqDue <= start) return null
-  const total = Math.max(1, daysSpan(start, rfqDue))
-  const pos = Math.min(100, Math.max(0, (daysSpan(start, today) / total) * 100))
   return (
-    <div className="grid gap-1" aria-hidden="true">
-      <div className="relative h-4">
-        <span className="num absolute top-0 text-xs text-tone-warning-fg" style={{ left: `min(${pos}%, calc(100% - 7rem))` }}>Today · {formatDay(today)}</span>
-      </div>
-      <div className="relative h-1 rounded bg-selected">
-        <span className="absolute inset-y-0 left-0 rounded bg-fg-muted" style={{ width: `${pos}%` }} />
-        <span className="absolute -top-1 size-3 -translate-x-1/2 rounded-round bg-tone-warning-fg" style={{ left: `${pos}%` }} />
-      </div>
-      <div className="num flex justify-between text-xs text-fg-muted">
-        <span>{item.rule === 'chase_customer' ? 'Asked' : 'Sent'} {formatDay(start)}</span>
-        <span>Bid due {formatDay(rfqDue)}</span>
-      </div>
-    </div>
+    <DateRail
+      decorative
+      state="due-soon"
+      start={start}
+      due={rfqDue}
+      today={today}
+      startLabel={item.rule === 'chase_customer' ? 'Asked' : 'Sent'}
+      className="[&_em]:ring-canvas"
+    />
   )
 }
-
-const daysSpan = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000)
 
 /** Escalations are suggestions beside the text, never part of it, and never automatic. */
 function Escalation({ item, today }: { item: TodayItem; today: string }) {

@@ -314,7 +314,7 @@ test.describe('expenses (M03, M11)', () => {
         if (/\/rest\/v1\/(expenses|expense_categories|recurring_expenses)/.test(r.url())) seen.push(r.url())
       })
       await openAs(page, role, '/money/expenses')
-      await expect(page.getByRole('heading', { name: /not available to your role/ })).toBeVisible()
+      await expect(page.getByRole('heading', { name: / is for / })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Add expenses' })).toHaveCount(0)
       expect(seen, `${role} must not fetch expense data`).toEqual([])
       await page.close()
