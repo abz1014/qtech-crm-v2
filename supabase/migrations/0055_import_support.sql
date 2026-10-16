@@ -4,7 +4,7 @@
 -- its own rows on every run, and every one of those writes is audited, so without a way to take them out again each dry
 -- run would bury the history in thousands of "inserted by nobody" rows (BUILD_PLAN section 5: "audit rows written during
 -- an import are removed afterwards by a service-role cleanup step"). These two functions are that step. Nothing else in
--- the database changes, and no client role can run either of them.
+-- the database changes, and no client role can run either of them (S14 matrix rows: granted to no staff role).
 
 -- Removes the audit rows the import itself caused. Deliberately narrow:
 --   * only ids that are version 5 UUIDs (the import's own ids; v2 makes random version 4 ids), so v2 history cannot be
