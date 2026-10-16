@@ -74,6 +74,8 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm test
+      - name: Import transforms and safety guard (fixtures only; the load test runs in db.yml)
+        run: npm run test:import
       - name: Build
         run: npm run build
 

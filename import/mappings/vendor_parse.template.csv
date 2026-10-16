@@ -1,0 +1,6 @@
+# vendor_parse.csv: one line per OLD vendor name that holds a brand or a dealer.
+# company = the supplier that sells it.  brand = the maker (empty if none).  country = overrides the old country (empty = keep it).
+old_name,company,brand,country
+# Red Lion USA (via Four Stars),Four Stars,Red Lion,USA
+# DEAO China (Siemens Distributor),DEAO,Siemens,China
+# XIAMEN TONGKONG (Moxa Taiwan),XIAMEN TONGKONG,Moxa,China / Taiwan
