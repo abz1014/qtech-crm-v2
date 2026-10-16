@@ -83,6 +83,7 @@ describe('invalidation map (R01)', () => {
     'today.chase': {},
     'today.snooze': {},
     'expense.save': {},
+    'costs.save': { orderId: 'o1' },
     'expense.receipt': { expenseId: 'e1' },
     'recurring.save': {},
     'recurring.record': {},

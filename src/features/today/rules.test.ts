@@ -15,14 +15,16 @@ import {
   ruleChaseSupplier,
   ruleCloseMonth,
   ruleDecisionOverdue,
+  ruleDeliveredNotInvoiced,
   ruleGoodsLate,
   ruleNotFloated,
   rulePaymentOverdue,
+  rulePlanCommissioning,
   rulePlacePo,
   ruleRelayAnswers,
   THRESHOLDS,
 } from './rules'
-import type { ClarificationFact, InquiryFact, LegFact, ReceivableFact, RfqFact, Role, TodayInputs } from './types'
+import type { ClarificationFact, InquiryFact, LegFact, OrderFact, ReceivableFact, RfqFact, Role, TodayInputs } from './types'
 
 // 2026-11-27 is a Friday.
 const TODAY = '2026-11-27'
@@ -85,6 +87,18 @@ const leg = (o: Partial<LegFact> = {}): LegFact => ({
   chaseCount: 0,
   ...o,
 })
+const ord = (o: Partial<OrderFact> = {}): OrderFact => ({
+  id: 'ord1',
+  number: 38,
+  ownerId: ME,
+  customerName: 'Karachi Glassworks',
+  orderedOn: '2026-11-10',
+  goodsState: 'delivered',
+  commissioningState: 'n_a',
+  invoicingState: 'not_invoiced',
+  deliveredOn: '2026-11-20',
+  ...o,
+})
 const rec = (o: Partial<ReceivableFact> = {}): ReceivableFact => ({
   orderId: 'o1',
   orderNumber: 31,
@@ -108,6 +122,7 @@ const ctx = (o: Partial<TodayInputs> = {}, role: Role = 'sales'): TodayInputs =>
   clarifications: [],
   inquiries: [],
   legs: [],
+  orders: [],
   receivables: [],
   monthEnd: null,
   snoozes: [],
@@ -588,5 +603,66 @@ describe('actionDueOn per rule', () => {
     const v = buildToday(ctx({ rfqs: [rfq({ dueOn: '2026-12-11' })], clarifications: [clar({ lastAskedOn: '2026-11-18' })] }))
     expect(v.now.map(i => i.key)).toEqual(['chase_customer:r1'])
     expect(v.ready).toEqual([])
+  })
+})
+
+describe('rule: order rules (O05)', () => {
+  it('plan commissioning: raised for a to-plan order, routed to its owner, ready to move', () => {
+    const [e] = rulePlanCommissioning(ctx({ orders: [ord({ commissioningState: 'to_plan', invoicingState: null })] }))
+    expect(e).toMatchObject({ rule: 'plan_commissioning', title: 'Plan commissioning', ref: 'ORD-0038', orderId: 'ord1', group: 'ready' })
+    expect(rulePlanCommissioning(ctx({ orders: [ord({ commissioningState: 'planned' })] }))).toEqual([])
+    expect(rulePlanCommissioning(ctx({ orders: [ord({ commissioningState: 'done' })] }))).toEqual([])
+    expect(rulePlanCommissioning(ctx({ orders: [ord({ commissioningState: 'to_plan', ownerId: OTHER })] }, 'sales'))).toEqual([])
+  })
+  it('plan commissioning reaches an engineer for their own orders only', () => {
+    const o = ord({ commissioningState: 'to_plan', invoicingState: null, ownerId: ME })
+    expect(rulePlanCommissioning(ctx({ orders: [o] }, 'engineer'))).toHaveLength(1)
+    expect(rulePlanCommissioning(ctx({ orders: [{ ...o, ownerId: OTHER }] }, 'engineer'))).toEqual([])
+  })
+  it('delivered, not invoiced: due a working day after the last delivery', () => {
+    const [e] = ruleDeliveredNotInvoiced(ctx({ orders: [ord()] }))
+    expect(e).toMatchObject({ rule: 'delivered_not_invoiced', tab: 'money', ref: 'ORD-0038', actionDueOn: '2026-11-23' })
+  })
+  it('delivered, not invoiced waits for commissioning, skips part and fully invoiced, and orders with nothing to deliver', () => {
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ commissioningState: 'to_plan' })] }))).toEqual([])
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ commissioningState: 'planned' })] }))).toEqual([])
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ commissioningState: 'done' })] }))).toHaveLength(1)
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ goodsState: 'on_order' })] }))).toEqual([])
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ goodsState: 'partly_delivered' })] }))).toEqual([])
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ invoicingState: 'part' })] }))).toEqual([])
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ invoicingState: 'fully_invoiced' })] }))).toEqual([])
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ goodsState: 'n_a', commissioningState: 'n_a' })] }))).toEqual([])
+  })
+  it('delivered, not invoiced is never given to an engineer, whoever owns the order or whatever the state says', () => {
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ ownerId: ME })] }, 'engineer'))).toEqual([])
+    const v = buildToday(ctx({ orders: [ord({ ownerId: ME })] }, 'engineer'))
+    expect([...v.now, ...v.soon, ...v.ready, ...v.waiting].some(i => i.rule === 'delivered_not_invoiced')).toBe(false)
+  })
+  it('delivered, not invoiced routes to the sales owner, and to admin when the owner is not sales', () => {
+    const orders = [ord({ id: 'a', ownerId: ME }), ord({ id: 'b', ownerId: OTHER }), ord({ id: 'c', ownerId: 'u-eng' }), ord({ id: 'd', ownerId: 'u-admin' })]
+    expect(ruleDeliveredNotInvoiced(ctx({ orders }, 'sales')).map(e => e.subjectId)).toEqual(['a'])
+    expect(ruleDeliveredNotInvoiced(ctx({ orders }, 'admin')).map(e => e.subjectId).sort()).toEqual(['c', 'd'])
+  })
+  it('delivered, not invoiced does not nag on the delivery day, and can be snoozed', () => {
+    const [e] = ruleDeliveredNotInvoiced(ctx({ orders: [ord({ deliveredOn: '2026-11-27' })] }))
+    expect(e).toMatchObject({ actionDueOn: '2026-11-30', group: 'soon' }) // Friday plus one working day
+    const snoozed = buildToday(ctx({ orders: [ord()], snoozes: [{ rule: 'delivered_not_invoiced', subjectId: 'ord1', untilOn: '2026-12-01' }] }))
+    expect(snoozed.active).toEqual([])
+  })
+  it('delivered, not invoiced: received goods count as delivered, a service-only order is delivered when commissioning is done, ownerless goes to admin', () => {
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ goodsState: 'received' })] }))).toHaveLength(1)
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ goodsState: 'n_a', commissioningState: 'done' })] }))).toHaveLength(1)
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ ownerId: null })] }, 'admin'))).toHaveLength(1)
+    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ ownerId: null })] }, 'sales'))).toEqual([])
+  })
+  it('goods late has no Received step: it is judged on the expected date against delivered_on (which also fills received_on)', () => {
+    expect(ruleGoodsLate(ctx({ legs: [leg({ expectedOn: '2026-11-26' })] }))).toHaveLength(1)
+    expect(ruleGoodsLate(ctx({ legs: [leg({ expectedOn: '2026-11-26', deliveredOn: '2026-11-27', receivedOn: '2026-11-27' })] }))).toEqual([])
+    expect(ruleGoodsLate(ctx({ legs: [leg({ expectedOn: '2026-11-27' })] }))).toEqual([])
+  })
+  it('place PO and goods late: a delivered leg is never late, and a leg with a PO is not "place PO"', () => {
+    expect(ruleGoodsLate(ctx({ legs: [leg({ deliveredOn: '2026-11-25' })] }))).toEqual([])
+    expect(rulePlacePo(ctx({ legs: [leg({ placedOn: '2026-11-10' })] }))).toEqual([])
+    expect(rulePlacePo(ctx({ legs: [leg({ placedOn: null })] }, 'engineer'))).toHaveLength(1)
   })
 })
