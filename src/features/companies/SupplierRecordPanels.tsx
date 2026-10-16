@@ -15,7 +15,7 @@ import { Tag } from '@/ui/Tag'
 
 /*
  * The supplier panels R02 left out (R18; g2-company.html): recent quotes with the PKR value at the time, deliveries from
- * purchase orders and received dates, and "Open with them". Every line is a fact with its count; there is no score, no
+ * purchase orders and delivery dates, and "Open with them". Every line is a fact with its count; there is no score, no
  * ranking and no percentage. What each row says is decided in supplierRecord.ts (pure, tested); this file lays it out.
  */
 
@@ -262,7 +262,7 @@ export function Deliveries({ view, loading, error, onRetry, today }: { view: Sup
   return (
     <Panel
       title="Deliveries"
-      meta="Expected against received, from purchase orders and received dates"
+      meta="Expected against delivered, from purchase orders and delivery dates"
       footer={
         view && view.deliveryCount > view.deliveries.length ? (
           <>
@@ -283,7 +283,7 @@ export function Deliveries({ view, loading, error, onRetry, today }: { view: Sup
             <span>Purchase order</span>
             <span>Order</span>
             <span>Expected</span>
-            <span>Received</span>
+            <span>Delivered</span>
             <span>Result</span>
           </div>
           <ul>
@@ -302,7 +302,7 @@ export function Deliveries({ view, loading, error, onRetry, today }: { view: Sup
                   <DateText iso={r.expectedOn} today={today} estimated={r.estimated} />
                 </div>
                 <div className="grid content-start gap-1">
-                  <Label>Received</Label>
+                  <Label>Delivered</Label>
                   <DateText iso={r.receivedOn} today={today} estimated={r.estimated} />
                 </div>
                 <div className="col-span-2 grid content-start gap-1 md:col-span-1">

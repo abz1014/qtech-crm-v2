@@ -18,11 +18,11 @@ import { canPreview } from '@/features/rfqs/lib'
 
 const isImage = (mime: string) => mime.startsWith('image/')
 
-export function AttachmentItem({ rfqId, att, url, note, removable = true }: { rfqId: string; att: AttachmentRow; url: string | undefined; note?: string; removable?: boolean }) {
+export function AttachmentItem({ rfqId, orderId, att, url, note, removable = true }: { rfqId?: string; orderId?: string; att: AttachmentRow; url: string | undefined; note?: string; removable?: boolean }) {
   const [viewing, setViewing] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [broken, setBroken] = useState(false)
-  const del = useDeleteAttachment(rfqId)
+  const del = useDeleteAttachment(rfqId, orderId)
   const { toast } = useToast()
   const previewable = canPreview(att.mimeType)
 

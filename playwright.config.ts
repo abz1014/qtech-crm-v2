@@ -50,6 +50,9 @@ import { defineConfig, devices } from '@playwright/test'
  *    10 s Undo, the Waiting group, role-aware items, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e.yml):
  *      E2E_SUITE=today REVIEW_DIR=review-shots npx playwright test --project=today
  *
+ *  - capture (R22): the Capture sheet on the production build WITH the service worker (the share-target POST, paste, drop, the
+ *    Capture button and the C key), the destinations, the tap counts and axe at 1440 and 375, on the same stack and build:
+ *      E2E_SUITE=capture REVIEW_DIR=review-shots npx playwright test --project=capture
  *  - expenses (M03, M11): Money > Expenses for the admin: the one Add expense dialog (pre-fills from a leg and an order), the burst sheet
  *    (keyboard only, one atomic insert, receipt photo), input tax, recurring in one tap, the closed-month refusal (a month is closed
  *    first and reopened after), no access for sales and engineer, FE-2 tap counts, and axe at 1440 and 375:
@@ -78,7 +81,7 @@ import { defineConfig, devices } from '@playwright/test'
  */
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'money', 'pwa']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money', 'pwa']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -214,6 +217,13 @@ export default defineConfig({
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
+    },
+    {
+      name: 'capture',
+      testMatch: /capture\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, serviceWorkers: 'allow', screenshot: 'only-on-failure' },
     },
     {
       name: 'orders',
