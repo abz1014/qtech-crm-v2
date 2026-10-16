@@ -422,7 +422,7 @@ test.describe('expenses (M03, M11)', () => {
       await page.keyboard.press('Tab') // paid via
       // The cell reads the typed date one tick after it loses focus and then shows it in words ("Sat 5 Sep", in the closed month's own name). Saving before
       // that tick saves the old date, so wait for the words: input events are served before timers on a busy runner.
-      await expect(page.getByRole('textbox', { name: 'Date, row 3' })).toHaveValue(new RegExp(`\b5 ${prev.label.slice(0, 3)}`))
+      await expect(page.getByRole('textbox', { name: 'Date, row 3' })).toHaveValue(new RegExp(`\\b5 ${prev.label.slice(0, 3)}`))
       await page.keyboard.press('Tab') // note
       await page.keyboard.type(tag)
       await page.keyboard.press('Control+Enter')
