@@ -347,7 +347,7 @@ test.describe('Items and Value columns (O-11)', () => {
         method: 'POST',
         body: [
           { rfq_id: rfq.id, position: 0, description: 'Priced item', qty: 2, quoted_unit_price_net: 1500 },
-          { rfq_id: rfq.id, position: 1, description: 'Unpriced item', qty: 1 },
+          { rfq_id: rfq.id, position: 1, description: 'Unpriced item', qty: 1, quoted_unit_price_net: null },
         ],
         prefer: 'return=minimal',
       }),
