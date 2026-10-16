@@ -117,8 +117,8 @@ export function useOrderMoney(id: string | undefined, role: 'admin' | 'sales' | 
   return useQuery({ queryKey: qk.orders.part(id ?? '', 'money'), queryFn: () => api.getOrderMoney(id as string, role as 'admin' | 'sales'), enabled: Boolean(id) && role !== null })
 }
 
-export function useLegPos(id: string | undefined, legIds: readonly string[]) {
-  return useQuery({ queryKey: qk.orders.part(id ?? '', 'pos'), queryFn: () => api.listLegPos(legIds), enabled: Boolean(id) && legIds.length > 0 })
+export function useLegPos(id: string | undefined, legIds: readonly string[], money = false) {
+  return useQuery({ queryKey: qk.orders.part(id ?? '', 'pos'), queryFn: () => api.listLegPos(legIds, money), enabled: Boolean(id) && legIds.length > 0 })
 }
 
 export function useAddItem(orderId: string) {
@@ -170,4 +170,27 @@ export function useCreateRepeatOrder() {
 
 export function usePastOrder(id: string | undefined) {
   return useQuery({ queryKey: qk.orders.pastOne(id ?? ''), queryFn: () => api.getPastOrder(id as string), enabled: Boolean(id) })
+}
+
+/** A8: the ranked quotes of an RFQ. `role` is in the key because the answer differs by role (an engineer's has no selling price or spread). */
+export function useRankedQuotes(rfqId: string | undefined, role: string, enabled = true) {
+  return useQuery({ queryKey: qk.orders.ranked(rfqId ?? '', role), queryFn: () => api.listRankedQuotes(rfqId as string), enabled: enabled && Boolean(rfqId), staleTime: 30_000 })
+}
+
+/** A8 (O09): split a line by quantity onto another or a new leg. */
+export function useSplitOrderItem(orderId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: api.SplitInput) => api.splitOrderItem(input),
+    onSuccess: () => invalidateAfter(client, 'order.update', { orderId }),
+  })
+}
+
+/** A8 (O09): one selling price for all parts of a split item. */
+export function useSetGroupPrice(orderId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { ids: readonly string[]; unitPriceNet: number }) => api.setGroupPrice(v.ids, v.unitPriceNet),
+    onSuccess: () => invalidateAfter(client, 'order.update', { orderId }),
+  })
 }

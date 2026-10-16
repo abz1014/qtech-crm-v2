@@ -78,7 +78,7 @@ export default function OrderDetailScreen() {
   const legs = useOrderLegs(id, items.data)
   const engineers = useOrderEngineers(id)
   const orderMoney = useOrderMoney(id, role === 'admin' ? 'admin' : role === 'sales' ? 'sales' : null)
-  const pos = useLegPos(id, (legs.data ?? []).map(l => l.id))
+  const pos = useLegPos(id, (legs.data ?? []).map(l => l.id), money)
 
   if (header.isPending) return <PageSkeleton />
   if (header.isError) {
@@ -161,7 +161,7 @@ export default function OrderDetailScreen() {
           </div>
         ) : (
           <>
-            <OrderItemsPanel order={order} items={items.data} legs={legs.data} money={money} canEdit={canEdit && money} basisUnknown={basisUnknown} />
+            <OrderItemsPanel order={order} items={items.data} legs={legs.data} money={money} canEdit={canEdit && money} basisUnknown={basisUnknown} pos={pos.data ?? []} />
             <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="grid min-w-0 gap-6">
                 <LegsPanel order={order} legs={legs.data} items={items.data} pos={pos.data ?? []} money={money} isAdmin={isAdmin} canEdit={canEdit} />
