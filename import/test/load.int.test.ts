@@ -145,8 +145,9 @@ describe.skipIf(!ENABLED)('the import against the local stack', () => {
     const v2Numbers = (await rows(db, 'rfqs', 'id,number')).filter(x => !isLegacyId(String(x['id']))).map(x => Number(x['number']))
     const importNumbers = firstRfqNumbers.map(x => Number((x as unknown[])[1]))
     expect(Math.min(...importNumbers)).toBeGreaterThan(Math.max(...v2Numbers))
-    // our own series continue after the highest imported Q-Tech number (RFQ-0177): the first imported RFQ is 178
-    expect(Math.min(...importNumbers)).toBe(178)
+    // our own series continue after the highest of v2's numbers and the highest imported Q-Tech number (RFQ-0177). The
+    // counters were moved by earlier tests, so v2's own numbers are not small here.
+    expect(Math.min(...importNumbers)).toBe(Math.max(...v2Numbers, 177) + 1)
   })
 
   it('does not touch rows v2 made, and reuses what v2 already holds', async () => {
