@@ -1,5 +1,5 @@
 begin;
-select plan(22);
+select plan(21);
 
 -- P01: the four report views, against a fixture whose answers were worked out by hand (see the comment on each
 -- assertion). Fixture users come from supabase/seed.sql: admin a0..01, sales a0..02, engineer a0..03, deactivated a0..04.
@@ -141,7 +141,7 @@ select throws_ok($$select 1 from public.v_report_float$$, '42501', null, 'anon: 
 reset role;
 select is((select count(*)::int from information_schema.columns
            where table_schema = 'public' and table_name like 'v\_report\_%'
-             and column_name ~ '(price|amount|net|gross|gst|margin|cost|pkr|total)' and column_name <> 'items_total'), 0,
+             and column_name ~ '(price|amount|net|gross|gst|margin|cost|pkr|total)' and column_name not in ('items_total', 'total_days')), 0,
   'no report view has a money-looking column');
 
 select * from finish();
