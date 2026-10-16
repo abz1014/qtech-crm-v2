@@ -384,6 +384,30 @@ export function OrderItemsPanel({
                 <span className="num">{r.qty}</span>
                 {r.unit ? ` ${r.unit}` : ''} · split across {r.members?.length ?? 0} suppliers
               </span>
+              {money && canEdit && !basisUnknown ? (
+                editingGroup === r.id ? (
+                  <span className="flex items-center gap-2">
+                    <NumberInput value={groupDraft} onChange={setGroupDraft} aria-label={`Selling price, net PKR, ${r.description}`} onKeyDown={e => e.key === 'Enter' && void saveGroup(r)} />
+                    <Button size="sm" variant="primary" onClick={() => void saveGroup(r)} busy={setGroupPrice.isPending} busyLabel="Saving" aria-label={`Save price, ${r.description}`}>
+                      Save
+                    </Button>
+                  </span>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="quiet"
+                    icon={Pencil}
+                    className="justify-self-start"
+                    aria-label={`Edit price, ${r.description}`}
+                    onClick={() => {
+                      setGroupDraft(typeof r.groupPrice === 'number' ? r.groupPrice : null)
+                      setEditingGroup(r.id)
+                    }}
+                  >
+                    Edit price
+                  </Button>
+                )
+              ) : null}
             </span>
           ) : (
           <span className="grid gap-1">
@@ -397,6 +421,11 @@ export function OrderItemsPanel({
               {r.isService ? ' · Service' : r.brandName ? ` · ${r.brandName}` : ''}
               {money && r.unitPriceNet !== null ? ` · PKR ${formatAmount(r.unitPriceNet)} ${basisUnknown ? 'as typed' : `net · GST ${rate(r)}%`}` : ''}
             </span>
+            {canSplit(r) ? (
+              <Button size="sm" variant="quiet" icon={Split} className="justify-self-start" aria-label={`Split line ${r.no}`} onClick={() => setSplitting(r)}>
+                Split line
+              </Button>
+            ) : null}
           </span>
           )
         }
