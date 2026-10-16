@@ -4,6 +4,8 @@ import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
 import { ExpensesPage } from '@/features/money/expenses/ExpensesPage'
+import { ExceptionsPage } from '@/features/money/exceptions/ExceptionsPage'
+import { MarginsPage } from '@/features/money/margins/MarginsPage'
 
 /**
  * Everything under /money. Admin and sales may enter Money (invoices, the GST register and balances arrive with M01/M02);
@@ -16,6 +18,8 @@ export default function MoneyScreen() {
     <Routes>
       <Route index element={isAdmin ? <Navigate to="expenses" replace /> : <DestinationPage navKey="money" />} />
       <Route path="expenses" element={isAdmin ? <ExpensesPage /> : <NoAccessPage area="Expenses" />} />
+      <Route path="margins" element={isAdmin ? <MarginsPage /> : <NoAccessPage area="Margins" />} />
+      <Route path="exceptions" element={isAdmin ? <ExceptionsPage /> : <NoAccessPage area="Exceptions" />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
