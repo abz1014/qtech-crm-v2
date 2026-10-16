@@ -359,6 +359,10 @@ function howTo(item: TodayItem): string {
       return 'No decision since the bid went out. Open the RFQ to chase the customer, or close it with a reason.'
     case 'place_po':
       return 'This order has a supplier leg with no purchase order yet. Open the order to place it.'
+    case 'plan_commissioning':
+      return 'This order needs commissioning and has no planned date. Open the order and set the planned date.'
+    case 'delivered_not_invoiced':
+      return 'Everything on this order has been delivered and no invoice exists. Open the order to invoice it.'
     case 'close_month':
       return 'Review the month-end checks and close the month. Nothing blocks closing; each check is a warning.'
     default:
