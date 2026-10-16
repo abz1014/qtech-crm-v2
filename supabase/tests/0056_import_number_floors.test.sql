@@ -24,16 +24,23 @@ insert into public.purchase_orders (id, supplier_order_id, number, revision, cur
 select set_config('request.jwt.claims', '', true);
 
 -- ------------------------------------------------------------------ the floor wins where the tables are lower
-select lives_ok($$select public.import_reset_numbers(177, 40, 0, 0)$$, 'reset with floors for RFQ and order');
+-- The identity counters are global and earlier tests (and rolled-back rows) have moved them, so the floors are set
+-- relative to what the tables hold now.
+create temp table floors as
+  select (select max(number) from public.rfqs) + 100 as rfq, (select max(number) from public.orders) + 40 as ord;
+select lives_ok(format('select public.import_reset_numbers(%s, %s, 0, 0)', (select rfq from floors), (select ord from floors)),
+  'reset with floors for RFQ and order');
 insert into public.rfqs (id, company_id, owner_id) values ('f0000000-0000-5000-8000-0000000000f2', 'c0000000-0000-5000-8000-0000000000f1', 'a0000000-0000-4000-8000-000000000001');
 insert into public.orders (id, company_id, owner_id) values ('d0000000-0000-5000-8000-0000000000f2', 'c0000000-0000-5000-8000-0000000000f1', 'a0000000-0000-4000-8000-000000000001');
-select is((select number from public.rfqs where id = 'f0000000-0000-5000-8000-0000000000f2'), 178::bigint, 'the next RFQ is 178 after an imported RFQ-0177');
-select is((select number from public.orders where id = 'd0000000-0000-5000-8000-0000000000f2'), 41::bigint, 'the next order follows the order floor');
+select is((select number from public.rfqs where id = 'f0000000-0000-5000-8000-0000000000f2'), (select rfq + 1 from floors)::bigint,
+  'the next RFQ follows the floor (an imported RFQ-0177 makes the next one 178)');
+select is((select number from public.orders where id = 'd0000000-0000-5000-8000-0000000000f2'), (select ord + 1 from floors)::bigint, 'the next order follows the order floor');
 
 -- ------------------------------------------------------------------ the tables win where they are higher than the floor
 select lives_ok($$select public.import_reset_numbers(1, 1, 42, 7)$$, 'reset with low floors');
 insert into public.rfqs (id, company_id, owner_id) values ('f0000000-0000-5000-8000-0000000000f3', 'c0000000-0000-5000-8000-0000000000f1', 'a0000000-0000-4000-8000-000000000001');
-select is((select number from public.rfqs where id = 'f0000000-0000-5000-8000-0000000000f3'), 179::bigint, 'a low floor never takes a number below the highest RFQ in use (178)');
+select is((select number from public.rfqs where id = 'f0000000-0000-5000-8000-0000000000f3'), (select rfq + 2 from floors)::bigint,
+  'a low floor never takes a number below the highest RFQ in use');
 select is(nextval('public.quotation_number_seq'), 7102::bigint, 'the next quotation follows the highest quotation (7101), not the floor 42');
 select is(nextval('public.po_number_seq'), 7103::bigint, 'the next supplier PO follows the highest PO (7102), not the floor 7');
 
