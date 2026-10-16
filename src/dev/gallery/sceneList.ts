@@ -17,8 +17,12 @@ export const SCENE_LIST = [
   { scene: 'toast-settled', group: 'Toast', label: 'Settled after the countdown' },
   { scene: 'toast-error', group: 'Toast', label: 'Error with retry' },
   { scene: 'toast-plain', group: 'Toast', label: 'Plain' },
+  { scene: 'toast-paused', group: 'Toast', label: 'Paused on hover' },
+  { scene: 'toast-two', group: 'Toast', label: 'Two at once' },
+  { scene: 'toast-phone', group: 'Toast', label: 'Phone: full width, 44px Undo (see the 375 photo)' },
   { scene: 'combobox-open', group: 'Combobox', label: 'Open with the Add new row' },
   { scene: 'overlays', group: 'Tooltip and Popover', label: 'Tooltip, menu and information popover' },
+  { scene: 'tooltips', group: 'Tooltip and Popover', label: 'Tooltip variants: disabled why, long label, status, two lines' },
 ] as const
 
 export type SceneName = (typeof SCENE_LIST)[number]['scene']

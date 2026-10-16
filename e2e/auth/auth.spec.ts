@@ -42,7 +42,7 @@ test.describe('sign-in and role landing', () => {
     await signIn(page, 'engineer@test.invalid')
     await expect(page).toHaveURL(/\/today$/)
     await page.goto('/money')
-    await expect(page.getByText(/not available to your role|no access|don.t have access/i).first()).toBeVisible()
+    await expect(page.getByText(/is for admins|not available to your role|no access|don.t have access/i).first()).toBeVisible()
   })
 
   test('a wrong password shows one message and stays on /login', async ({ page }) => {

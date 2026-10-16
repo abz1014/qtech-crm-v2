@@ -8,7 +8,7 @@ const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUP
   auth: { autoRefreshToken: false, persistSession: false },
 })
 
-const COLS = 'id, name, role, job_title, deactivated_at, created_at'
+const COLS = 'id, name, role, job_title, phone, deactivated_at, created_at'
 // About 100 years; 'none' lifts the ban.
 const BAN = '876000h'
 

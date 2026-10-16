@@ -30,6 +30,8 @@ export interface WriteVars {
   'team.reset-password': Record<string, never>
   'team.set-role': Record<string, never>
   'team.set-job-title': Record<string, never>
+  /** users.phone, written straight to the users row (own row, or any row for an admin). */
+  'team.set-phone': Record<string, never>
   'team.deactivate': Record<string, never>
   'team.reactivate': Record<string, never>
   'company-profile.update': Record<string, never>
@@ -112,6 +114,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'team.reset-password': () => [qk.settings.team()],
   'team.set-role': () => [qk.settings.team()],
   'team.set-job-title': () => [qk.settings.team()],
+  'team.set-phone': () => [qk.settings.team(), qk.settings.myDetails()],
   'team.deactivate': () => [qk.settings.team()],
   'team.reactivate': () => [qk.settings.team()],
   'company-profile.update': () => [qk.settings.profile()],
