@@ -47,6 +47,8 @@ export interface RfqFact {
   customerRef: string | null
   receivedOn: string
   dueOn: string | null
+  /** rfqs.due_time ("17:00:00"), when the bid has a deadline time. */
+  dueTime: string | null
   quotedOn: string | null
   isPriority: boolean
   /** v_rfq_state.bid_state */
@@ -62,8 +64,14 @@ export interface ClarificationFact {
   id: string
   rfqId: string
   question: string
+  /** clarifications.rfq_item_id: the item the question is about. */
+  rfqItemId: string | null
   firstAskedOn: string
   lastAskedOn: string
+  /** The latest ask as a timestamp, for "copied at 14:32". */
+  lastAskedAt: string
+  /** Who made it (users.id), for the collision line. */
+  lastAskedBy: string | null
   askCount: number
 }
 
@@ -74,6 +82,7 @@ export interface InquiryFact {
   supplierName: string
   sentOn: string | null
   lastChasedOn: string | null
+  lastChasedBy?: string | null
   chaseCount: number
   /** v_inquiry_state.response_state: awaiting / quoted / no_offer */
   responseState: string
@@ -100,6 +109,7 @@ export interface LegFact {
   receivedOn: string | null
   deliveredOn: string | null
   lastChasedOn: string | null
+  lastChasedBy?: string | null
   chaseCount: number
 }
 
@@ -215,6 +225,8 @@ export interface TodayItem {
   escalation?: 'close_no_reply' | 'float_elsewhere'
   /** Present on Waiting items only. */
   waiting?: WaitingInfo
+  /** A colleague made the last chase (O-3): who (users.id) and when (a timestamp or a date). The pane and the row say so. */
+  collision?: { by: string; at: string }
   /** Number the list breaks ties with (RFQ or order number). */
   number: number
 }

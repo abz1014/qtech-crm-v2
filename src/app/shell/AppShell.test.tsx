@@ -5,6 +5,12 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { AppRoutes } from '@/app/routes'
 import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { installFakeDb } from '@/test/fakeSupabase'
+
+/* The shell reads the Today and RFQ counts for the top bar: an empty database, and a fresh cache per render. */
+const qc = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
+installFakeDb(() => ({ data: [] }))
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -19,11 +25,13 @@ function render(session: SessionState, path: string) {
   root = createRoot(el)
   act(() =>
     root!.render(
-      <SessionProvider value={session}>
+      <QueryClientProvider client={qc()}>
+        <SessionProvider value={session}>
         <MemoryRouter initialEntries={[path]}>
           <AppRoutes />
         </MemoryRouter>
-      </SessionProvider>,
+      </SessionProvider>
+      </QueryClientProvider>,
     ),
   )
 }

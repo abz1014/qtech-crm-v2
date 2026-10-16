@@ -6,10 +6,8 @@ import {
   canPreview,
   chaseDue,
   clarState,
-  customerReplyBy,
   daysBetween,
   fileExtension,
-  generateCustomerAsk,
   groupClarifications,
   PATH_FORMAT,
   relayText,
@@ -117,59 +115,6 @@ describe('relay', () => {
     expect(t).toContain('2. HART?\n   Plain 4-20 mA')
     expect(t).toContain('3. Probe?\n   PHC101 (see attached photo)')
     expect(t).toContain('Assalam o Alaikum Bilal,')
-  })
-})
-
-describe('customer text', () => {
-  const base = {
-    rfqRef: 'RFQ-0177',
-    customerRef: '74037',
-    contactName: 'Mr. Tariq Mehmood',
-    questions: ['Line size and flange rating on the process line', 'Fluid temperature range'],
-    firstAskedDay: '2026-11-21',
-    dueOn: '2026-12-01',
-    today: '2026-11-27',
-    signature: { name: 'Ayesha Rana', company: 'Q-Tech Solutions', jobTitle: 'Sales' },
-  }
-  it('reply-by is one working day before the bid, and never before tomorrow', () => {
-    expect(customerReplyBy('2026-12-01', '2026-11-27')).toBe('2026-11-30')
-    expect(customerReplyBy('2026-11-28', '2026-11-27')).toBe('2026-11-30')
-    expect(customerReplyBy(null, '2026-11-27')).toBe('2026-12-02')
-  })
-  it('WhatsApp: first ask and reminder wording', () => {
-    const first = generateCustomerAsk({ ...base, variant: 'whatsapp', repeat: false })
-    expect(first.subject).toBeNull()
-    expect(first.body).toBe(
-      [
-        'Assalam o Alaikum Mr. Tariq Mehmood,',
-        '',
-        'Thank you for your RFQ *#74037*. To complete our quotation we need your confirmation on:',
-        '',
-        '1. Line size and flange rating on the process line',
-        '2. Fluid temperature range',
-        '',
-        'Kindly confirm by *Monday 30 November*; our bid is due on Tuesday 1 December.',
-        '',
-        'Thank you for your support.',
-        'Regards,',
-        'Ayesha Rana',
-        'Q-Tech Solutions',
-      ].join('\n'),
-    )
-    const again = generateCustomerAsk({ ...base, variant: 'whatsapp', repeat: true })
-    expect(again.body).toContain('A gentle reminder about your RFQ *#74037*. To complete our quotation we still need your confirmation on:')
-  })
-  it('email: subject, further-to line, signature with job title', () => {
-    const e = generateCustomerAsk({ ...base, variant: 'email', repeat: true })
-    expect(e.subject).toBe('RFQ #74037: your confirmation needed by Monday 30 November')
-    expect(e.body).toContain('further to our message of Saturday 21 November, still need your confirmation on the following points:')
-    expect(e.body).toContain('Kindly confirm by Monday 30 November. Our bid is due on Tuesday 1 December')
-    expect(e.body).toContain('Sales, Q-Tech Solutions')
-  })
-  it('uses our number when the customer gave none, and omits the bid sentence with no bid date', () => {
-    const t = generateCustomerAsk({ ...base, customerRef: null, dueOn: null, variant: 'whatsapp', repeat: false })
-    expect(t.body).toContain('your RFQ *RFQ-0177*')
-    expect(t.body).toContain('Kindly confirm by *Wednesday 2 December*.')
   })
 })
 

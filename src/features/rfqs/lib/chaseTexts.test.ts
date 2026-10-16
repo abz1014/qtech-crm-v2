@@ -4,6 +4,7 @@ import { generateGoodsChase, type GoodsChaseInput } from './goodsChase'
 import { generatePaymentReminder, type PaymentReminderInput } from './paymentReminder'
 import { generateSupplierChase, type SupplierChaseInput } from './supplierChase'
 import { chaseClipboardText, FIRM_AFTER_DAYS } from './chaseCommon'
+import { agoWhen, chasedByText } from './collision'
 import { addBusinessDays, businessDaysBetween, subtractBusinessDays, nextMonday } from './dateText'
 
 // 2026-11-27 is a Friday.
@@ -89,11 +90,22 @@ describe('customer clarification chase', () => {
     const t = generateCustomerChase({ ...base, dueOn: '2026-11-30' })
     expect(t.kind).toBe('bid_close')
     expect(t.body).toContain('Our bid for your RFQ *#74037* is due *Monday 30 November*.')
-    expect(t.body).toContain('Kindly confirm by *the end of today*.')
+    expect(t.body).toContain('Kindly confirm by *5:00 pm today*.')
     const tomorrow = generateCustomerChase({ ...base, dueOn: '2026-11-28', today: '2026-11-27' })
     expect(tomorrow.body).toContain('is due *tomorrow, Saturday 28 November*')
   })
 
+  it('names the bid time and tags each question with its item when the data is there', () => {
+    const t = generateCustomerChase({ ...base, dueOn: '2026-11-28', dueTime: '12:00:00', itemTags: [{ number: 2, label: 'Endress+Hauser Proline Promag 400' }, null] })
+    expect(t.body).toContain('is due *tomorrow, Saturday 28 November, 12:00*.')
+    expect(t.body).toContain('1. Line size and flange rating on the process line (item 2)')
+    const e = generateCustomerChase({ ...base, variant: 'email', itemTags: [{ number: 2, label: 'Endress+Hauser Proline Promag 400' }, null] })
+    expect(e.body).toContain('(item 2, Endress+Hauser Proline Promag 400)')
+  })
+  it('the email signature carries the job title and phone', () => {
+    const e = generateCustomerChase({ ...base, variant: 'email', signature: { ...sig, jobTitle: 'Sales', phone: '+92 300 555 0188' } })
+    expect(e.body.endsWith(['With best regards,', 'Ayesha Rana', 'Sales, Q-Tech Solutions', '+92 300 555 0188'].join(String.fromCharCode(10)))).toBe(true)
+  })
   it('the third ask offers a way out and gives the dates of the earlier messages', () => {
     const t = generateCustomerChase({ ...base, askCount: 2, lastAskedOn: '2026-11-25', dueOn: '2026-12-11' })
     expect(t.kind).toBe('third')
@@ -199,7 +211,7 @@ describe('supplier goods chase', () => {
       [
         'Assalam o Alaikum Mr. Imran,',
         '',
-        'Following up on our order *PO 253102* of Monday 2 November. It was due on *Sunday 22 November* and we have not yet received the goods:',
+        'Following up on our order *PO 253102* of Monday 2 November. It was due on *Sunday 22 November* and the goods have not yet been delivered:',
         '1. Yokogawa EJA530E pressure transmitter, 0-1 MPa, 3 nos',
         '2. Endress+Hauser Cerabar PMC71, 2 nos',
         '',
@@ -244,7 +256,7 @@ describe('supplier goods chase', () => {
   it('lists nothing it was not given', () => {
     const t = generateGoodsChase({ ...base, items: [] })
     expect(t.body).not.toMatch(/^\d\. /m)
-    expect(t.body).toContain('we have not yet received the goods.')
+    expect(t.body).toContain('the goods have not yet been delivered.')
   })
 })
 
@@ -314,5 +326,25 @@ describe('payment reminder', () => {
 
   it('keeps paisa when there are any', () => {
     expect(generatePaymentReminder({ ...base, balance: '1111600.50' }).body).toContain('PKR 1,111,600.50')
+  })
+})
+
+describe('the collision line (O-3)', () => {
+  // 2026-11-27 10:00 in Karachi
+  const now = new Date('2026-11-27T10:00:00+05:00').getTime()
+  it('says how long ago, down to the hour', () => {
+    expect(agoWhen('2026-11-27T09:00:00+05:00', now)).toBe('1h ago')
+    expect(agoWhen('2026-11-27T09:40:00+05:00', now)).toBe('20 min ago')
+    expect(agoWhen('2026-11-27T09:59:00+05:00', now)).toBe('just now')
+    expect(agoWhen('2026-11-26T18:00:00+05:00', now)).toBe('yesterday')
+    expect(agoWhen('2026-11-24T10:00:00+05:00', now)).toBe('3 days ago')
+  })
+  it('says the day when only the day is known', () => {
+    expect(agoWhen('2026-11-27', now)).toBe('today')
+    expect(agoWhen('2026-11-26', now)).toBe('yesterday')
+    expect(agoWhen('2026-11-20', now)).toBe('7 days ago')
+  })
+  it('names the colleague by first name', () => {
+    expect(chasedByText('Ali Raza', '2026-11-27T09:00:00+05:00', now)).toBe('Ali chased this 1h ago')
   })
 })

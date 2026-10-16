@@ -18,7 +18,7 @@ export async function listSupplierCandidates(): Promise<SupplierRecord[]> {
   const [stats, companies] = await Promise.all([
     // Every column the memory card quotes comes from this one read, so opening a card asks for nothing more.
     fetchAll((from, to) => db.from('v_supplier_stats').select('*').range(from, to)),
-    fetchAll((from, to) => db.from('companies').select('id, name, country').order('name').range(from, to)),
+    fetchAll((from, to) => db.from('companies').select('id, name, country, city').order('name').range(from, to)),
   ])
   const byId = new Map(companies.map(c => [c.id, c]))
   const out: SupplierRecord[] = []
@@ -28,8 +28,8 @@ export async function listSupplierCandidates(): Promise<SupplierRecord[]> {
     out.push({
       id: c.id,
       name: c.name,
-      // The screen shows a place beside the name; a company has a country, not a city, so that is what it shows.
-      city: c.country,
+      // The place beside the name: the city when one is on file (0038), the country until then.
+      city: c.city ?? c.country,
       stats: { ...s, supplier_id: s.supplier_id },
     })
   }
@@ -128,6 +128,20 @@ export async function setRfqFloated(rfqId: string, floated: boolean): Promise<nu
   return data ?? 0
 }
 
+/**
+ * Ask one more supplier on a saved RFQ and mark it sent on `today` (the "Float item 4 to them" link). An inquiry is per
+ * supplier, so a supplier already shortlisted is stamped, and a new one is added already sent.
+ */
+export async function floatToSupplier(rfqId: string, supplierId: string, today: string): Promise<void> {
+  const db = requireSupabase()
+  unwrap(
+    await db
+      .from('supplier_inquiries')
+      .upsert({ rfq_id: rfqId, supplier_id: supplierId, sent_on: today }, { onConflict: 'rfq_id,supplier_id' })
+      .select('id'),
+  )
+}
+
 /** The RFQ a customer reference already belongs to, so a duplicate can offer "Open it". */
 export async function findRfqByCustomerRef(companyId: string, customerRef: string): Promise<SavedRfq | null> {
   const db = requireSupabase()
@@ -159,7 +173,7 @@ export interface RfqHeader {
   company: { id: string; name: string; country: string | null; city?: string | null; createdAt: string | null }
   site: { name: string; address: string | null } | null
   contactId: string | null
-  contact: { name: string; phone: string | null; jobTitle?: string | null } | null
+  contact: { name: string; phone: string | null; email?: string | null; jobTitle?: string | null } | null
   owner: { id: string; name: string; role: string; phone?: string | null } | null
   state: RfqStateRow | null
 }
@@ -183,11 +197,11 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
   const [company, site, contact, owner] = await Promise.all([
     db.from('companies').select('id, name, country, city, created_at').eq('id', r.company_id).maybeSingle(),
     r.site_id ? db.from('company_sites').select('name, address').eq('id', r.site_id).maybeSingle() : none,
-    r.contact_id ? db.from('contacts').select('name, phone, job_title').eq('id', r.contact_id).maybeSingle() : none,
+    r.contact_id ? db.from('contacts').select('name, phone, email, job_title').eq('id', r.contact_id).maybeSingle() : none,
     r.owner_id ? db.from('users').select('id, name, role, phone').eq('id', r.owner_id).maybeSingle() : none,
   ])
   const c = unwrap(company)
-  const ct0 = unwrap(contact as Maybe<{ name: string; phone: string | null; job_title: string | null }>)
+  const ct0 = unwrap(contact as Maybe<{ name: string; phone: string | null; email: string | null; job_title: string | null }>)
   return {
     id: r.id,
     number: r.number,
@@ -204,7 +218,7 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
     company: { id: r.company_id, name: c?.name ?? 'Unknown company', country: c?.country ?? null, city: c?.city ?? null, createdAt: c?.created_at ?? null },
     contactId: r.contact_id,
     site: unwrap(site as Maybe<{ name: string; address: string | null }>),
-    contact: ct0 ? { name: ct0.name, phone: ct0.phone, jobTitle: ct0.job_title } : null,
+    contact: ct0 ? { name: ct0.name, phone: ct0.phone, email: ct0.email, jobTitle: ct0.job_title } : null,
     owner: unwrap(owner as Maybe<{ id: string; name: string; role: string; phone: string | null }>),
     state: unwrap(stateRes) as RfqStateRow | null,
   }
@@ -266,6 +280,8 @@ export interface InquiryRow {
   supplierCity?: string | null
   sentOn: string | null
   lastChasedOn: string | null
+  /** users.id of whoever made the last chase (0048). */
+  lastChasedBy?: string | null
   lastRelayedAt: string | null
   noOfferOn: string | null
   /** Why the supplier cannot quote (a stored key, see lib/cantQuote.ts); set together with noOfferOn. */
@@ -295,7 +311,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
   const inq = unwrap(
     await db
       .from('supplier_inquiries')
-      .select('id, supplier_id, sent_on, last_chased_on, last_relayed_at, no_offer_on, no_offer_reason, chase_count, notes, created_at')
+      .select('id, supplier_id, sent_on, last_chased_on, last_chased_by, last_relayed_at, no_offer_on, no_offer_reason, chase_count, notes, created_at')
       .eq('rfq_id', rfqId)
       .order('created_at'),
   )
@@ -357,6 +373,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
       supplierCity: c?.city ?? null,
       sentOn: i.sent_on,
       lastChasedOn: i.last_chased_on,
+      lastChasedBy: i.last_chased_by,
       lastRelayedAt: i.last_relayed_at,
       noOfferOn: i.no_offer_on,
       noOfferReason: i.no_offer_reason,
@@ -497,8 +514,12 @@ export interface ClarificationRow {
   id: string
   question: string
   raisedByInquiryId: string | null
+  /** The item the question is about (clarifications.rfq_item_id), if tagged. */
+  rfqItemId: string | null
   firstAskedAt: string | null
   lastAskedAt: string | null
+  /** users.id of whoever last asked the customer (0048). */
+  lastAskedBy?: string | null
   askCount: number
   answer: string | null
   answeredAt: string | null
@@ -514,7 +535,7 @@ export async function listClarifications(rfqId: string): Promise<ClarificationRo
   const rows = unwrap(
     await db
       .from('clarifications')
-      .select('id, question, raised_by_inquiry_id, first_asked_at, last_asked_at, ask_count, answer, answered_at, withdrawn_at, created_at')
+      .select('id, question, raised_by_inquiry_id, rfq_item_id, first_asked_at, last_asked_at, last_asked_by, ask_count, answer, answered_at, withdrawn_at, created_at')
       .eq('rfq_id', rfqId)
       .order('created_at')
       .order('id'),
@@ -523,8 +544,10 @@ export async function listClarifications(rfqId: string): Promise<ClarificationRo
     id: r.id,
     question: r.question,
     raisedByInquiryId: r.raised_by_inquiry_id,
+    rfqItemId: r.rfq_item_id,
     firstAskedAt: r.first_asked_at,
     lastAskedAt: r.last_asked_at,
+    lastAskedBy: r.last_asked_by,
     askCount: r.ask_count,
     answer: r.answer,
     answeredAt: r.answered_at,
@@ -594,6 +617,30 @@ export async function stampClarificationAsk(ids: readonly string[]): Promise<num
   const { data, error } = await db.rpc('stamp_clarification_ask', { p_clarification_ids: [...ids] })
   if (error) throw error
   return data ?? 0
+}
+
+export interface ClarificationAskBefore {
+  id: string
+  firstAskedAt: string | null
+  lastAskedAt: string | null
+  lastAskedBy?: string | null
+  askCount: number
+}
+
+/** Take an ask back: put each question's asked fields back to what they were before the stamp (the Undo of "Copy questions"). */
+export async function restoreClarificationAsk(before: readonly ClarificationAskBefore[]): Promise<void> {
+  const db = requireSupabase()
+  for (const b of before) {
+    const { error } = await db.from('clarifications').update({ first_asked_at: b.firstAskedAt, last_asked_at: b.lastAskedAt, last_asked_by: b.lastAskedBy ?? null, ask_count: b.askCount }).eq('id', b.id)
+    if (error) throw error
+  }
+}
+
+/** Take a supplier chase back (the Undo of "Copy & mark chased"). */
+export async function restoreSupplierChase(inquiryId: string, before: { lastChasedOn: string | null; lastChasedBy?: string | null; chaseCount: number }): Promise<void> {
+  const db = requireSupabase()
+  const { error } = await db.from('supplier_inquiries').update({ last_chased_on: before.lastChasedOn, last_chased_by: before.lastChasedBy ?? null, chase_count: before.chaseCount }).eq('id', inquiryId)
+  if (error) throw error
 }
 
 /** An answer: text, or none (a photo answers alone), stamped now. All null takes the answer back. */
@@ -762,4 +809,11 @@ export async function getMySignature(userId: string): Promise<{ jobTitle: string
   const db = requireSupabase()
   const row = unwrap(await db.from('users').select('job_title, phone').eq('id', userId).maybeSingle()) as { job_title: string | null; phone: string | null } | null
   return { jobTitle: row?.job_title ?? null, phone: row?.phone ?? null }
+}
+
+/** Everyone's name by id (users are readable by every staff role): for "Ali chased this 1h ago". */
+export async function listUserNames(): Promise<Record<string, string>> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('users').select('id, name'))
+  return Object.fromEntries(rows.map(r => [r.id, r.name]))
 }

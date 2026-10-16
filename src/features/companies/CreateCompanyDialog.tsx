@@ -32,6 +32,8 @@ const schema = z.object({
 export interface CreatedCompany {
   id: string
   name: string
+  /** Set by the inline create in the intake picker, which asks for it. */
+  city?: string | null
 }
 
 interface Props {

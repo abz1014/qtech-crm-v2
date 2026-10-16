@@ -129,3 +129,18 @@ export async function searchRfqs(text: string): Promise<RfqHit[]> {
   const rows = unwrap(res as unknown as { data: Hit[] | null; error: PgError | null }) ?? []
   return rows.map(r => ({ id: r.id, number: Number(r.number), customerRef: r.customer_ref, companyName: r.companies?.name ?? '', closed: r.closed_on !== null }))
 }
+
+/**
+ * The board's Value (PKR net) column: for each open RFQ, the net of the prices we have put on its items (quantity x quoted unit
+ * price net). An RFQ with no price on any item has no entry (the cell shows a dash). This is money: the caller never makes this
+ * request for an engineer, and the column is not drawn for one.
+ */
+export async function listRfqValues(): Promise<Record<string, number>> {
+  const db = requireSupabase()
+  const rows = await fetchAll<{ rfq_id: string; qty: number | string; quoted_unit_price_net: number | string | null }>(
+    (from, to) => db.from('rfq_items').select('rfq_id, qty, quoted_unit_price_net').not('quoted_unit_price_net', 'is', null).order('rfq_id').range(from, to) as unknown as Page<{ rfq_id: string; qty: number | string; quoted_unit_price_net: number | string | null }>,
+  )
+  const out: Record<string, number> = {}
+  for (const r of rows) out[r.rfq_id] = Math.round(((out[r.rfq_id] ?? 0) + Number(r.qty) * Number(r.quoted_unit_price_net)) * 100) / 100
+  return out
+}

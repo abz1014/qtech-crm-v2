@@ -55,6 +55,9 @@ function rfqs() {
     lists: () => [...all, 'list'] as const,
     /** R06: every open RFQ with its state, owner and company name. */
     board: () => [...all, 'list', 'board'] as const,
+    /** The board's Value (PKR net) column: quoted net per open RFQ. Money: never requested for an engineer. */
+    values: () => [...all, 'list', 'values'] as const,
+    userNames: () => [...all, 'user-names'] as const,
     /** R06: one page of won and closed RFQs. */
     closed: (page: number) => [...all, 'list', 'closed', page] as const,
     closedCount: () => [...all, 'list', 'closed-count'] as const,

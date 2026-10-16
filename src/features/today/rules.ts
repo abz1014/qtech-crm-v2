@@ -10,6 +10,7 @@
 
 import { addBusinessDays, businessDaysBetween, daysBetween, longDay, parseDay } from '@/features/rfqs/lib/dateText'
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
+import { timeText } from '@/features/rfqs/lib/chaseCommon'
 import { supplierReplyBy } from '@/features/rfqs/lib/supplierChase'
 import { orderRef, rfqRef } from '@/lib/refs'
 import {
@@ -83,6 +84,11 @@ function ageBadge(since: string | null, today: string): { text: string; tone: To
   return { text: since ? `${d}d old` : 'new', tone: 'neutral' }
 }
 
+/** The collision line (O-3): somebody else made the last chase. Nothing when it was you or nobody is on record. */
+export function collisionOf(by: string | null | undefined, at: string | null | undefined, ctx: TodayInputs): { by: string; at: string } | undefined {
+  return by && at && by !== ctx.user.id ? { by, at } : undefined
+}
+
 /** Where an item sits in the list, from the date it is sorted by. */
 export function groupFor(actionDueOn: string | null, today: string): TodayGroup {
   if (!actionDueOn) return 'ready'
@@ -148,6 +154,7 @@ export function ruleChaseCustomer(ctx: TodayInputs): Entry[] {
     const lastAskedOn = maxDate(qs.map(q => q.lastAskedOn))
     const askCount = Math.max(...qs.map(q => q.askCount))
     const w = chaseState({ lastTouchOn: lastAskedOn, waitDays: cooldownDays(THRESHOLDS.customerChaseDays, r.dueOn, ctx.today), chased: true, today: ctx.today })
+    const lastAsk = [...qs].sort((a, b) => a.lastAskedAt.localeCompare(b.lastAskedAt)).at(-1)
     const item = build(
       {
         rule: 'chase_customer',
@@ -163,6 +170,7 @@ export function ruleChaseCustomer(ctx: TodayInputs): Entry[] {
         rfqId: r.id,
         href: RFQ_HREF(r.id),
         escalation: askCount >= THRESHOLDS.customerEscalationAsks ? 'close_no_reply' : undefined,
+        collision: collisionOf(lastAsk?.lastAskedBy, lastAsk?.lastAskedAt, ctx),
         number: r.number,
       },
       ctx.today,
@@ -273,6 +281,7 @@ export function ruleChaseSupplier(ctx: TodayInputs): Entry[] {
         inquiryId: i.id,
         href: RFQ_HREF(r.id),
         escalation: i.chaseCount >= THRESHOLDS.supplierEscalationChases ? 'float_elsewhere' : undefined,
+        collision: collisionOf(i.lastChasedBy, i.lastChasedOn, ctx),
         number: r.number,
       },
       ctx.today,
@@ -283,12 +292,13 @@ export function ruleChaseSupplier(ctx: TodayInputs): Entry[] {
   return out
 }
 
-function dueWords(dueOn: string, today: string): string {
+function dueWords(dueOn: string, today: string, dueTime?: string | null): string {
   const d = daysBetween(today, dueOn)
+  const at = timeText(dueTime)
   if (d < 0) return `Bid ${-d} ${-d === 1 ? 'day' : 'days'} overdue`
-  if (d === 0) return 'Bid due today'
-  if (d === 1) return 'Bid due tomorrow'
-  return `Bid due ${longDay(dueOn)}`
+  if (d === 0) return `Bid due today${at ? `, ${at}` : ''}`
+  if (d === 1) return `Bid due tomorrow${at ? `, ${at}` : ''}`
+  return `Bid due ${longDay(dueOn)}${at ? `, ${at}` : ''}`
 }
 
 /** Bid due: still to bid, and due within 5 days (or already late). */
@@ -303,7 +313,7 @@ export function ruleBidDue(ctx: TodayInputs): Entry[] {
           rule: 'bid_due',
           subjectId: r.id,
           tab: tabFor('bid_due'),
-          title: dueWords(r.dueOn, ctx.today),
+          title: dueWords(r.dueOn, ctx.today, r.dueTime),
           ref: rfqRef(r.number),
           party: r.companyName,
           actionDueOn: r.dueOn,
@@ -420,11 +430,11 @@ export function rulePaymentOverdue(ctx: TodayInputs): Entry[] {
   return out
 }
 
-/** Goods late: the order was placed, the expected date has passed and nothing has arrived. Cooldown 3 working days after a chase. */
+/** Goods late: the order was placed, the expected date has passed and the leg is not delivered (there is no separate "received" step: received follows delivered). Cooldown 3 working days after a chase. */
 export function ruleGoodsLate(ctx: TodayInputs): Entry[] {
   const out: Entry[] = []
   for (const l of ctx.legs) {
-    if (!l.placedOn || !l.expectedOn || l.receivedOn || l.deliveredOn || l.expectedOn >= ctx.today || !routesToUser(l.ownerId, ctx)) continue
+    if (!l.placedOn || !l.expectedOn || l.deliveredOn || l.expectedOn >= ctx.today || !routesToUser(l.ownerId, ctx)) continue
     const late = daysBetween(l.expectedOn, ctx.today)
     const w = chaseState({
       lastTouchOn: l.lastChasedOn ?? l.expectedOn,
@@ -449,6 +459,7 @@ export function ruleGoodsLate(ctx: TodayInputs): Entry[] {
         orderId: l.orderId,
         legId: l.id,
         href: `/orders/${l.orderId}`,
+        collision: collisionOf(l.lastChasedBy, l.lastChasedOn, ctx),
         number: l.orderNumber,
       },
       ctx.today,
