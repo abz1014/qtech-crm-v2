@@ -69,6 +69,8 @@ interface DialogContentProps {
   size?: keyof typeof WIDTH
   /** Buttons for the footer band, Cancel first and the primary last (right-aligned). */
   footer?: ReactNode
+  /** A mono tag at the right of the header, beside the close button (the PO number in the Issue purchase order dialog). */
+  meta?: ReactNode
   /** Small text at the left of the footer ("Body scrolls. Header and footer stay."). */
   lead?: ReactNode
   /** The body. Scrolls on its own; header and footer stay put. */
@@ -85,6 +87,7 @@ export function DialogContent({
   size = 'md',
   footer,
   lead,
+  meta,
   children,
   className,
 }: DialogContentProps) {
@@ -142,6 +145,7 @@ export function DialogContent({
                 <RadixDialog.Description className="text-sm text-fg-muted">{context}</RadixDialog.Description>
               ) : null}
             </div>
+            {meta ? <div className="mr-2 shrink-0 self-start">{meta}</div> : null}
             <RadixDialog.Close asChild>
               <Button variant="quiet" size="sm" icon={X} aria-label="Close" disabled={busy} className="-mr-2 -mt-1 text-fg-muted" />
             </RadixDialog.Close>
