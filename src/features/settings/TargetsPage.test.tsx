@@ -35,6 +35,7 @@ const member = (id: string, name: string, role: TeamMember['role'], extra: Parti
   email: `${id}@qtech.example`,
   role,
   job_title: null,
+  phone: null,
   deactivated_at: null,
   created_at: '2026-01-01T00:00:00Z',
   ...extra,

@@ -58,11 +58,13 @@ describe('search palette source (R12)', () => {
       ['Companies', 'Abc Ltd'],
       ['Contacts', 'Abid Khan'],
       ['RFQs', 'RFQ-0042 Abc Ltd'],
-      ['Companies', 'Add “ab” as a new company'],
+      ['Actions', 'New RFQ for Abc Ltd'],
+      ['Actions', 'Add “ab” as a new company'],
     ])
     expect(items[0]).toMatchObject({ href: '/companies/c1', meta: 'Customer · Pakistan' })
     expect(items[1].href).toBe('/companies/c1')
     expect(items[2].href).toBe('/rfqs/r1')
+    expect(items[3]).toMatchObject({ href: '/rfqs/new?company=c1', meta: 'Go to intake' })
   })
 
   it('an RFQ number puts RFQs first', async () => {
@@ -70,6 +72,13 @@ describe('search palette source (R12)', () => {
     const p = searchPaletteSource(0).search!('RFQ-0042', new AbortController().signal)
     await vi.advanceTimersByTimeAsync(5)
     expect((await p).map(i => i.group)[0]).toBe('RFQs')
+  })
+
+  it('no company match means no New RFQ for action', async () => {
+    searchAll.mockResolvedValue([hit('rfq', 'r1', 'RFQ-0042 Co')])
+    const p = searchPaletteSource(0).search!('zzz', new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(5)
+    expect((await p).some(i => i.label.startsWith('New RFQ for'))).toBe(false)
   })
 
   it('an exact company name does not offer to add it again', async () => {

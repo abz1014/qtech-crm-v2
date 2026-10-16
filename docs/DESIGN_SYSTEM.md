@@ -233,7 +233,7 @@ Patterns: menus fade and rise 4px; a selected detail pane fades in and rises 6px
 
 **Lucide** (`lucide-react`, ISC licence), one stroke width: **1.75**, round caps and joins, `currentColor`, no fills. Sizes: 12 inside chips (stroke 2 for legibility), 14 for inline facts, **16 default** (buttons, nav, inputs), 20 for list-row icons and the mobile tab bar, 24 for empty and error illustrations. Icons are muted (`--fg-muted`) until they carry an action or a tone. Never an icon-only control without an `aria-label`.
 
-Set in use in the mockups: calendar-check, file-text, package, building-2, banknote, chart-column, search, message-circle-question, send, reply, inbox, truck, alarm-clock-off, clock, circle-alert, triangle-alert, circle-check, check, x, chevron-right, chevron-down, chevron-left, refresh-cw, cloud-off and others (see the spec sheet).
+Set in use in the mockups: calendar-check, file-text, package, building-2, wallet (Money), chart-column, search, message-circle-question, send, reply, inbox, truck, alarm-clock-off, clock, circle-alert, triangle-alert, circle-check, check, x, chevron-right, chevron-down, chevron-left, refresh-cw, cloud-off and others (see the spec sheet).
 
 ## 11. Density
 

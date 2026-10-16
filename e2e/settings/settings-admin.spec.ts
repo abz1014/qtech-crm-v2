@@ -171,9 +171,9 @@ test.describe('Settings › Targets (M06)', () => {
       await expect(page.getByRole('link', { name: 'Targets' })).toHaveCount(0)
       await expect(page.getByRole('link', { name: 'Expense categories' })).toHaveCount(0)
       await page.goto('/settings/targets')
-      await expect(page.getByText('Targets is not available to your role')).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Targets is for admins' })).toBeVisible()
       await page.goto('/settings/categories')
-      await expect(page.getByText('Expense categories is not available to your role')).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Expense categories is for admins' })).toBeVisible()
       if (role === 'sales') await review(page, 'm06-05-sales-no-access-1440')
       expect(requested.filter(u => /^(targets|v_target_progress|expense_categories)/.test(u))).toEqual([])
       await context.close()
@@ -336,7 +336,7 @@ test.describe('Settings › Expense categories (M13)', () => {
   test('sales and engineer cannot read or change categories', async ({ browser }) => {
     for (const role of ['sales', 'engineer'] as const) {
       const page = await asRole(browser, role, '/settings/categories')
-      await expect(page.getByText('Expense categories is not available to your role')).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Expense categories is for admins' })).toBeVisible()
       await page.context().close()
       expect(await must(rest<unknown[]>(role, 'expense_categories?select=id'))).toEqual([])
       const patch = await rest(role, 'expense_categories?name=eq.Rent', { method: 'PATCH', body: { active: false } })

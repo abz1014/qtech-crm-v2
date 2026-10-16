@@ -90,12 +90,15 @@ export default {
         'rise-4': { from: { opacity: '0', transform: 'translateY(4px)' }, to: { opacity: '1', transform: 'none' } },
         'rise-6': { from: { opacity: '0', transform: 'translateY(6px)' }, to: { opacity: '1', transform: 'none' } },
         'sheet-in': { from: { transform: 'translateY(24px)', opacity: '0' }, to: { transform: 'none', opacity: '1' } },
+        // DateRail fill draws once from the left (g2-d.css rail-grow); the duration token goes to ~0 under reduced motion.
+        'rail-grow': { from: { transform: 'scaleX(0)' }, to: { transform: 'none' } },
       },
       animation: {
         'fade-in': 'fade-in var(--dur-base) var(--ease-out) both',
         'rise-4': 'rise-4 var(--dur-base) var(--ease-out) both',
         'rise-6': 'rise-6 var(--dur-base) var(--ease-out) both',
         'sheet-in': 'sheet-in var(--dur-base) var(--ease-out) both',
+        'rail-grow': 'rail-grow var(--dur-slow) var(--ease-out) both',
       },
       height: { control: v('control-h'), row: v('row-h'), topbar: v('topbar-h'), touch: v('hit-touch'), indicator: '2px' },
       minHeight: { control: v('control-h'), row: v('row-h'), touch: v('hit-touch') },

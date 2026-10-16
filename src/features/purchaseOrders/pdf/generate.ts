@@ -1,0 +1,11 @@
+import type { PoPdfData } from '@/features/purchaseOrders/api'
+import type { CompanyProfile } from '@/features/settings/companyProfile'
+
+/**
+ * The only way the app makes a supplier PO PDF. @react-pdf/renderer is large, so it is behind a dynamic import: the main bundle does
+ * not contain it and the chunk is fetched the first time someone previews, issues or opens a PO.
+ */
+export async function generatePurchaseOrderPdf(data: PoPdfData, profile: CompanyProfile): Promise<Blob> {
+  const { renderPurchaseOrderPdf } = await import('@/features/purchaseOrders/pdf/render')
+  return renderPurchaseOrderPdf(data, profile)
+}

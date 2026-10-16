@@ -1932,6 +1932,11 @@ isOneToOne: false
               "committed": number,"committed_pkr": number,"currency": string,"flag": string,"fx_rate": number,"order_id": string,"order_number": number,"owed_pkr": number,"paid_pkr": number,"state": string,"supplier_id": string,"supplier_name": string,"supplier_order_id": string
             }[]
                            },
+"po_line_prefill":
+{ Args: { "p_supplier_order_id": string }; Returns: {
+              "description": string,"order_item_id": string,"position": number,"price_source": string,"qty": number,"source_number": number,"source_on": string,"source_revision": number,"unit": string,"unit_price": number
+            }[]
+                           },
 "reopen_month":
 { Args: { "p_month": string,"p_note"?: string }; Returns: undefined
                            },

@@ -33,29 +33,33 @@ export function ChangePasswordPage() {
   })
 
   return (
-    <div className="grid max-w-list content-start gap-4">
+    <div className="grid content-start gap-4">
       <header className="grid gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Change password</h1>
-        <p className="max-w-prose text-sm text-fg-muted">Change the password for your own sign-in. You stay signed in on this device.</p>
+        <p className="max-w-[62ch] text-sm text-fg-muted">Change the password for your own sign-in. You stay signed in on this device.</p>
       </header>
-      <section className="grid gap-4 rounded border bg-surface p-5 sm:max-w-[480px]">
-        <Form sf={sf} labels={LABELS} className="grid gap-4">
-          <FormField name="current" label="Current password">
-            {f => <TextField {...f} type="password" autoComplete="current-password" />}
-          </FormField>
-          <FormField name="next" label="New password" help="At least 12 characters.">
-            {f => <TextField {...f} type="password" autoComplete="new-password" />}
-          </FormField>
-          <FormField name="confirm" label="Confirm new password">
-            {f => <TextField {...f} type="password" autoComplete="new-password" />}
-          </FormField>
-        </Form>
-        <div className="flex justify-end">
+      <Form sf={sf} labels={LABELS} className="grid gap-4">
+        <section className="grid gap-4 rounded border bg-surface p-5">
+          <div className="grid gap-4 sm:max-w-[480px]">
+            <FormField name="current" label="Current password">
+              {f => <TextField {...f} type="password" autoComplete="current-password" />}
+            </FormField>
+            <FormField name="next" label="New password" help="At least 12 characters.">
+              {f => <TextField {...f} type="password" autoComplete="new-password" />}
+            </FormField>
+            <FormField name="confirm" label="Confirm new password">
+              {f => <TextField {...f} type="password" autoComplete="new-password" />}
+            </FormField>
+          </div>
+        </section>
+      </Form>
+      <div className="flex items-center gap-3 rounded border bg-surface px-5 py-3">
+        <div className="ml-auto flex gap-2">
           <Button variant="primary" type="submit" form={sf.formId} busy={sf.pending} busyLabel="Changing">
             {sf.failed ? 'Try again' : 'Change password'}
           </Button>
         </div>
-      </section>
+      </div>
     </div>
   )
 }

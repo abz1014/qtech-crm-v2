@@ -1,5 +1,6 @@
-import type { ReactElement, ReactNode } from 'react'
+import { useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react'
 import * as RadixTooltip from '@radix-ui/react-tooltip'
+import { cn } from '@/lib/utils'
 import { Kbd } from '@/ui/Kbd'
 
 /*
@@ -71,5 +72,46 @@ function KeyRow({ keys }: { keys: string[] }) {
         </Kbd>
       ))}
     </span>
+  )
+}
+
+/*
+ * TruncateTip (components-10 "Long label, revealed"; DataTable cells with a fixed width): text that truncates with an
+ * ellipsis and shows the full text in a tooltip on hover, but only when it is actually cut off. The tooltip text is the
+ * element's own text, so pass plain text as children. The full text is also what a screen reader reads (nothing is removed).
+ */
+export function TruncateTip({ children, className, style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  return (
+    <RadixTooltip.Provider delayDuration={400} skipDelayDuration={150}>
+      <RadixTooltip.Root
+        open={open}
+        onOpenChange={next => {
+          const el = ref.current
+          if (next && el && el.scrollWidth > el.clientWidth) {
+            setText(el.textContent ?? '')
+            setOpen(true)
+          } else setOpen(false)
+        }}
+      >
+        <RadixTooltip.Trigger asChild>
+          <span ref={ref} data-truncate="" style={style} className={cn('block truncate', className)}>
+            {children}
+          </span>
+        </RadixTooltip.Trigger>
+        <RadixTooltip.Portal>
+          <RadixTooltip.Content
+            side="bottom"
+            sideOffset={6}
+            collisionPadding={8}
+            className="z-50 max-w-[260px] animate-fade-in rounded bg-tone-ink-bg px-2 py-[6px] text-xs font-medium text-tone-ink-fg shadow-pop"
+          >
+            {text}
+          </RadixTooltip.Content>
+        </RadixTooltip.Portal>
+      </RadixTooltip.Root>
+    </RadixTooltip.Provider>
   )
 }

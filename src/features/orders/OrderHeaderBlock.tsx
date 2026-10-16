@@ -20,6 +20,7 @@ import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
 import { useMarkDone, useSetPlanned } from '@/features/orders/commissioningActions'
 import { ResolveBasisDialog } from '@/features/orders/ResolveBasisDialog'
+import { AddExpenseDialog } from '@/features/money/expenses/ExpenseDialog'
 import { legState } from '@/features/orders/lib/legModel'
 import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features/orders/lib/cancel'
 
@@ -31,8 +32,8 @@ import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features
  * (1 tap, nothing typed) and "Change planned date" (optional). Five chips for admin (Goods, Commissioning, Invoicing, Payment, Costs),
  * four for sales (no Costs), two for an engineer.
  *
- * TRACKED GAPS: "Record payment" (M02), "Add expense" (M03) and "Create invoice" (M01) are drawn in the data-slot="order-actions" place
- * the mockup gives them, disabled and naming the task that wires them.
+ * "Add expense" opens the M03 dialog with this order as its context. TRACKED GAPS: "Record payment" (M02) and "Create invoice" (M01) are
+ * drawn in the data-slot="order-actions" place the mockup gives them, disabled and naming the task that wires them.
  */
 
 function Dim({ title, children }: { title: string; children: React.ReactNode }) {
@@ -84,6 +85,7 @@ export function OrderHeaderBlock({
   const setPlanned = useSetPlanned(order)
   const [cancelling, setCancelling] = useState(false)
   const [resolving, setResolving] = useState(false)
+  const [addingExpense, setAddingExpense] = useState(false)
   const s = order.state
   const cancelled = order.cancelledOn !== null
   const ref = orderRef(order.number)
@@ -187,7 +189,7 @@ export function OrderHeaderBlock({
             {isAdmin && !cancelled ? (
               <>
                 <RecordPaymentButton orderId={order.id} />
-                <Button icon={Receipt} disabled title="Arrives with Expenses (M03)">
+                <Button icon={Receipt} onClick={() => setAddingExpense(true)}>
                   Add expense
                 </Button>
               </>
@@ -302,6 +304,7 @@ export function OrderHeaderBlock({
           }}
         />
       ) : null}
+      {addingExpense ? <AddExpenseDialog open onOpenChange={o => !o && setAddingExpense(false)} context={{ orderId: order.id, orderLabel: ref }} /> : null}
       {resolving ? <ResolveBasisDialog order={order} items={items} money={orderMoney} onClose={() => setResolving(false)} /> : null}
     </header>
   )

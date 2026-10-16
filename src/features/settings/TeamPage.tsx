@@ -1,21 +1,27 @@
 import { useMemo, useState } from 'react'
-import { Ellipsis, KeyRound, Pencil, Search, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
+import { Ellipsis, KeyRound, Pencil, Phone, Search, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
 import { useSession } from '@/app/session'
+import { useMobileBar } from '@/app/shell/MobileBarContext'
 import type { CreatedUser, Role, TeamMember } from '@/features/settings/api'
 import { PasswordDialog } from '@/features/settings/PasswordDialog'
+import { RowActionSheet, type RowAction } from '@/features/settings/RowActionSheet'
 import {
   AddPersonDialog,
   ChangeRoleDialog,
   DeactivateDialog,
   EditJobTitleDialog,
+  EditPhoneDialog,
   ReactivateDialog,
   ResetPasswordDialog,
 } from '@/features/settings/TeamDialogs'
 import { filterTeam, isActive, roleLabel, teamCounts, type TeamFilter } from '@/features/settings/teamModel'
 import { useTeam } from '@/features/settings/hooks'
+import { useMediaQuery } from '@/lib/useMediaQuery'
+import { cn } from '@/lib/utils'
 import { Avatar } from '@/ui/Avatar'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
+import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { SegmentedControl } from '@/ui/SegmentedControl'
@@ -26,13 +32,14 @@ import { TextField } from '@/ui/form/TextField'
 type Open =
   | null
   | { kind: 'add' }
-  | { kind: 'title' | 'role' | 'reset' | 'deactivate' | 'reactivate'; member: TeamMember }
+  | { kind: RowAction | 'sheet'; member: TeamMember }
   | { kind: 'secret'; variant: 'created' | 'reset'; person: { name: string; email: string; role: Role }; password: string }
 
 /**
  * Team (A04, admin only; the route guard sends everyone else to the no-access page). Lists everyone
  * with role and status. Add, change role, reset password, edit job title, deactivate and reactivate
- * are each a dialog, and each one calls the admin-users function.
+ * are each a dialog, and each one calls the admin-users function. On a phone the rows are 60px cards,
+ * pressing one opens the actions as a bottom sheet, and the shared bar becomes the back bar with Add.
  */
 export function TeamPage() {
   const session = useSession()
@@ -42,12 +49,33 @@ export function TeamPage() {
   const [dialog, setDialog] = useState<Open>(null)
   const [filter, setFilter] = useState<TeamFilter>('all')
   const [query, setQuery] = useState('')
+  const phone = useMediaQuery('(max-width: 639px)')
 
   const members = useMemo(() => team.data ?? [], [team.data])
   const counts = teamCounts(members)
   const rows = useMemo(() => filterTeam(members, filter, query), [members, filter, query])
   const close = () => setDialog(null)
-  const open = (kind: 'title' | 'role' | 'reset' | 'deactivate' | 'reactivate', member: TeamMember) => setDialog({ kind, member })
+  const open = (kind: RowAction, member: TeamMember) => setDialog({ kind, member })
+  const openAdd = () => setDialog({ kind: 'add' })
+  const clearFilter = () => {
+    setQuery('')
+    setFilter('all')
+  }
+
+  // Phone: the shared bar becomes the back bar of the mockup (chevron, "Team", a primary Add).
+  useMobileBar({
+    title: 'Team',
+    back: { to: '/' },
+    action: (
+      <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading} className="h-9">
+        Add
+      </Button>
+    ),
+  })
+
+  // A deactivated person's row is quiet: muted ink in every cell and a neutral avatar (the mockup's is-dim row).
+  const dim = (m: TeamMember) => (isActive(m) ? undefined : 'text-fg-muted')
+  const avatarTone = (m: TeamMember) => (isActive(m) ? undefined : 'bg-[var(--neutral-400)]')
 
   const columns: Column<TeamMember>[] = [
     {
@@ -55,31 +83,33 @@ export function TeamPage() {
       header: 'Name',
       sortable: true,
       value: m => m.name,
+      width: '34%',
       cell: m => (
-        <span className="flex min-w-0 items-center gap-3">
-          <Avatar name={m.name} className={isActive(m) ? undefined : 'opacity-60'} />
-          <span className="grid min-w-0 max-md:max-w-[150px]">
-            <span className="flex items-center gap-2">
+        <span className={cn('flex min-w-0 items-center gap-3', dim(m))}>
+          <Avatar name={m.name} className={avatarTone(m)} />
+          <span className="grid min-w-0">
+            <span className="flex items-center gap-1">
               <span className="truncate font-medium">{m.name}</span>
-              {m.id === me ? <Tag>You</Tag> : null}
+              {m.id === me ? <Tag className="ml-1">You</Tag> : null}
             </span>
-            <span className="num truncate text-xs text-fg-muted max-md:hidden">{m.email ?? 'No email on record'}</span>
-            {/* Phone: role and title under the name replace the columns that are hidden there. */}
-            <span className="truncate text-xs text-fg-muted md:hidden">
-              {isActive(m) ? '' : 'Deactivated · '}
-              {roleLabel(m.role)}
-              {m.job_title ? ` · ${m.job_title}` : ''}
-            </span>
+            <span className="num truncate text-xs leading-4 text-fg-muted">{m.email ?? 'No email on record'}</span>
           </span>
         </span>
       ),
     },
-    { id: 'role', header: 'Role', sortable: true, value: m => roleLabel(m.role), hideBelowMd: true },
+    {
+      id: 'role',
+      header: 'Role',
+      sortable: false,
+      value: m => roleLabel(m.role),
+      cell: m => <span className={dim(m)}>{roleLabel(m.role)}</span>,
+      hideBelowMd: true,
+    },
     {
       id: 'job',
       header: 'Job title',
       value: m => m.job_title ?? '',
-      cell: m => (m.job_title ? m.job_title : <span className="text-fg-muted">Not set</span>),
+      cell: m => (m.job_title ? <span className={dim(m)}>{m.job_title}</span> : <span className="text-fg-muted">Not set</span>),
       hideBelowMd: true,
     },
     {
@@ -91,7 +121,7 @@ export function TeamPage() {
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: 'Actions', // hidden from sight by the table's className below, still the column's name for assistive tech
       align: 'right',
       width: 132,
       cell: m =>
@@ -105,16 +135,20 @@ export function TeamPage() {
     },
   ]
 
+  const errorCode =
+    team.error && typeof team.error === 'object' && 'code' in team.error ? String((team.error as { code?: unknown }).code ?? '') : ''
+  const filtered = query !== '' || filter !== 'all'
+
   return (
     <div className="grid content-start gap-4">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <header className="flex flex-wrap items-start justify-between gap-4 max-md:hidden">
         <div className="grid gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
-          <p className="max-w-prose text-sm text-fg-muted">
+          <p className="max-w-[62ch] text-sm text-fg-muted">
             Everyone who can sign in to Q-Tech CRM. Passwords are created and reset here, and shown once.
           </p>
         </div>
-        <Button variant="primary" icon={UserPlus} onClick={() => setDialog({ kind: 'add' })} disabled={team.isLoading}>
+        <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading}>
           Add person
         </Button>
       </header>
@@ -126,23 +160,55 @@ export function TeamPage() {
         getRowId={m => m.id}
         defaultSort={null}
         loading={team.isLoading}
+        // The Actions header is for assistive tech only. The row whose menu is open takes the selected background.
+        // The footer carries the count on the left and the note on the right; on a phone it goes (the note sits under the list).
+        className={cn(
+          '[&_thead_th:last-child]:text-transparent',
+          '[&_tbody_tr:has([data-state=open])]:bg-selected',
+          'max-sm:[&>div:last-child]:hidden',
+          '[&>div:last-child>span:first-child]:flex [&>div:last-child>span:first-child]:flex-1 [&>div:last-child>span:first-child]:justify-between',
+          '[&>div:last-child>span:not(:first-child)]:hidden', // no key legend in this footer (the mockup draws none)
+        )}
         error={
           team.isError
             ? {
-                title: 'Could not load the team',
-                message: team.error instanceof Error ? team.error.message : undefined,
+                title: 'Couldn’t load the team',
+                message: 'Nothing has changed. Check your connection, then try again.',
                 onRetry: () => void team.refetch(),
+                reference: errorCode || undefined,
               }
             : null
         }
         empty={
-          <p className="px-6 py-10 text-center text-sm text-fg-muted">
-            {query ? `No one matches "${query}".` : filter === 'deactivated' ? 'No one is deactivated.' : 'No people yet.'}
-          </p>
+          filtered ? (
+            <EmptyState
+              title={query ? `No one matches “${query}”` : 'No one is deactivated'}
+              actions={<Button onClick={clearFilter}>Clear filter</Button>}
+            >
+              {query ? 'Check the spelling, or search by email.' : 'Everyone on the team can sign in.'}
+            </EmptyState>
+          ) : (
+            <EmptyState title="No people yet">Add the first person to give them a way to sign in.</EmptyState>
+          )
         }
+        onRowOpen={phone ? m => setDialog({ kind: 'sheet', member: m }) : undefined}
+        mobileRow={m => (
+          <span className={cn('flex items-center gap-3', dim(m))}>
+            <Avatar name={m.name} size="xl" className={avatarTone(m)} />
+            <span className="grid min-w-0 flex-1">
+              <span className="truncate text-sm font-medium">{m.name}</span>
+              <span className="truncate text-xs text-fg-muted">
+                {roleLabel(m.role)}
+                {m.job_title ? ` · ${m.job_title}` : ''}
+              </span>
+            </span>
+            {isActive(m) ? null : <StatusBadge dimension="user" value="deactivated" />}
+            <Icon icon={Ellipsis} className="shrink-0 text-fg-muted" />
+          </span>
+        )}
         toolbar={
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative w-[240px] max-sm:w-full">
+          <div className="flex w-full flex-wrap items-center gap-3">
+            <div className="relative w-[260px] max-sm:hidden">
               <Icon icon={Search} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
               <TextField
                 aria-label="Search name or email"
@@ -162,13 +228,19 @@ export function TeamPage() {
                 { value: 'deactivated', label: 'Deactivated', count: counts.deactivated },
               ]}
             />
-            <span className="ml-auto text-xs text-fg-muted">At least one active admin is always required.</span>
+            <span className="ml-auto text-xs text-fg-muted max-sm:hidden">At least one active admin is always required.</span>
           </div>
         }
-        summary={`${counts.all} ${counts.all === 1 ? 'person' : 'people'}, ${counts.active} active, ${counts.deactivated} deactivated`}
+        summary={
+          <>
+            <span>{`${counts.all} ${counts.all === 1 ? 'person' : 'people'} · ${counts.active} active, ${counts.deactivated} deactivated`}</span>
+            <span>Deactivated people keep their name on everything they created.</span>
+          </>
+        }
       />
-      <p className="text-right text-xs text-fg-muted">Deactivated people keep their name on everything they created.</p>
+      <p className="px-1 text-xs text-fg-muted sm:hidden">At least one active admin is always required.</p>
 
+      {dialog?.kind === 'sheet' ? <RowActionSheet member={dialog.member} onClose={close} onPick={open} /> : null}
       {dialog?.kind === 'add' ? (
         <AddPersonDialog
           members={members}
@@ -179,6 +251,7 @@ export function TeamPage() {
         />
       ) : null}
       {dialog?.kind === 'title' ? <EditJobTitleDialog member={dialog.member} onClose={close} /> : null}
+      {dialog?.kind === 'phone' ? <EditPhoneDialog member={dialog.member} onClose={close} /> : null}
       {dialog?.kind === 'role' ? <ChangeRoleDialog member={dialog.member} members={members} onClose={close} /> : null}
       {dialog?.kind === 'reset' ? (
         <ResetPasswordDialog
@@ -199,7 +272,7 @@ export function TeamPage() {
   )
 }
 
-function RowMenu({ member, onPick }: { member: TeamMember; onPick: (kind: 'title' | 'role' | 'reset' | 'deactivate', m: TeamMember) => void }) {
+function RowMenu({ member, onPick }: { member: TeamMember; onPick: (kind: RowAction, m: TeamMember) => void }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -208,6 +281,9 @@ function RowMenu({ member, onPick }: { member: TeamMember; onPick: (kind: 'title
       <PopoverContent variant="menu" align="end" aria-label={`Actions for ${member.name}`}>
         <MenuItem icon={Pencil} onClick={() => onPick('title', member)}>
           Edit job title
+        </MenuItem>
+        <MenuItem icon={Phone} onClick={() => onPick('phone', member)}>
+          Edit phone
         </MenuItem>
         <MenuItem icon={Shield} onClick={() => onPick('role', member)}>
           Change role

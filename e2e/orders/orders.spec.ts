@@ -548,11 +548,11 @@ test.describe('O03: role views', () => {
     await expect(page.getByRole('region', { name: 'Invoices and payments' })).toContainText('Nothing yet')
     await expect(page.getByTestId('order-balance')).toHaveText('730,420')
     await expect(page.getByTestId('payments-empty')).toBeVisible()
-    // drawn where the mockup puts them: Record payment (M02) and Create invoice (M01) are live, Add expense waits for its wiring
-    for (const name of ['Record payment', 'Create invoice']) await expect(page.locator('[data-slot="order-actions"]').getByRole('button', { name })).toBeEnabled()
-    await expect(page.locator('[data-slot="order-actions"]').getByRole('button', { name: 'Add expense' })).toBeDisabled()
-    await expect(page.getByRole('button', { name: 'Issue PO, leg A' })).toBeDisabled()
-    await expect(page.getByRole('button', { name: 'Add expense, leg A' })).toBeDisabled()
+    // drawn where the mockup puts them: Record payment (M02), Create invoice (M01) and Add expense (M03) are live
+    for (const name of ['Record payment', 'Create invoice', 'Add expense']) await expect(page.locator('[data-slot="order-actions"]').getByRole('button', { name })).toBeEnabled()
+    // Issue PO (O07) and the leg's Add expense are live
+    await expect(page.getByRole('button', { name: 'Issue PO, leg A' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Add expense, leg A' })).toBeEnabled()
     await expect(page.getByRole('button', { name: 'Add line' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Add leg' })).toBeVisible()
     await expect(page.getByText(s.po).first()).toBeVisible()
@@ -574,6 +574,11 @@ test.describe('O03: role views', () => {
     await expect(page.getByRole('region', { name: 'Margin' })).toHaveCount(0)
     await expect(page.locator('[data-slot="margin-costs"]')).toHaveCount(0)
     await expect(page.getByTestId('order-balance')).toHaveText('630,420')
+    // sales: Create invoice (M01) only; Record payment and Add expense are admin's
+    const actions = page.locator('[data-slot="order-actions"]')
+    await expect(actions.getByRole('button', { name: 'Create invoice' })).toBeEnabled()
+    await expect(actions.getByRole('button', { name: 'Record payment' })).toHaveCount(0)
+    await expect(actions.getByRole('button', { name: 'Add expense' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Record payment' })).toHaveCount(0)
     await page.waitForLoadState('networkidle')
     expect(urls.filter(u => /payments_in|v_order_money|expenses|order_costs/.test(u))).toEqual([])

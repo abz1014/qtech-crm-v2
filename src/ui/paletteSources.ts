@@ -36,3 +36,14 @@ export function filterItems<T extends { label: string; meta?: string }>(items: r
     return words.every(w => hay.includes(w))
   })
 }
+
+/** The platform's command key as shown in hints: the command sign on Apple devices, "Ctrl" elsewhere. */
+export function modKeyLabel(): string {
+  return typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform) ? '⌘' : 'Ctrl'
+}
+
+/** Search-field hint: "⌘K" on Apple devices, "Ctrl K" elsewhere. */
+export function searchKeyHint(): string {
+  const m = modKeyLabel()
+  return m === '⌘' ? '⌘K' : `${m} K`
+}
