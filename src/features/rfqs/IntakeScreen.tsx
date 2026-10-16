@@ -276,7 +276,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     [suggestionItems, candidateList, memory.data, today],
   )
   const memoryContext = useMemo(
-    () => ({ rows: memory.data ?? {}, items: suggestionItems.map((i, n) => ({ id: i.id, number: n + 1, description: i.description })), today }),
+    () => ({ rows: memory.data ?? {}, items: suggestionItems.map((i, n) => ({ id: i.id, number: n + 1, description: i.description, brandName: i.brandName ?? null, familyName: i.familyName ?? null })), today }),
     [memory.data, suggestionItems, today],
   )
   const suppliersLoading = wantSuppliers && (candidates.isPending || (candidates.isSuccess && memory.isPending && suggestionItems.length > 0 && candidateList.length > 0))
@@ -430,7 +430,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
         ? 'Check the split, then find suppliers.'
         : 'Paste what the customer sent. Nothing is saved until you copy the enquiry or save.'
       : step === 'suppliers'
-        ? 'Suggestions come with a reason. Nothing is ranked by how well a supplier has done.'
+        ? 'Suggestions come with a reason. Inside each reason, the supplier with the better record comes first, and the last order from them is shown.'
         : step === 'enquiry'
           ? 'Check the text, then copy it once.'
           : step === 'saved'
@@ -630,7 +630,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                     void memory.refetch()
                   }}
                 />
-                <p className="text-xs text-fg-muted">Order follows the reason, then the most recent contact. What we know about a supplier never changes the order.</p>
+                <p className="text-xs text-fg-muted">Order follows the reason, then the track record: on time or not, how often we have ordered, how often they reply, then the most recent contact. A supplier marked late is still listed. The ticks are unchanged: only suppliers who supplied this item before.</p>
               </section>
             </>
           ) : null}

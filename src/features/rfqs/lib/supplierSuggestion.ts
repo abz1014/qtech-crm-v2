@@ -9,11 +9,14 @@
 //      3. family_shortlist  the supplier's company_brands include the family of at least one item
 //    A supplier takes the strongest group it qualifies for across all items. A supplier that qualifies for none is
 //    not suggested.
-//  - Order: group, then most recent contact (newest first, never-contacted last), then name (case-insensitive),
-//    then id so the result is total and deterministic. Memory statistics (asked/replied/median days/chosen/late,
-//    match tier 0 vs 1) NEVER enter the ordering: they only fill the memory line. A test pins this.
+//  - Order (Amendment A8, which supersedes the A2b rule "memory never reorders"): the group stays the outer order. Inside a
+//    group the supplier with the better track record comes first: delivery reliability (proven, unproven, often late), then
+//    how often we have ordered at the strongest tier of the match, then how often they reply, then the most recent contact
+//    (never-contacted last), then name (case-insensitive), then id so the result is total and deterministic. Every key is a
+//    count and is printed (the record, the evidence line); there is no score. The pre-tick rule is unchanged.
 
 import { monthYear, shortDay } from './dateText'
+import { evidenceOf, evidenceReason, recordFromStats, reliabilityBand, type Evidence, type Reason } from './ranking/reasons'
 import type { MemoryRow, MemoryStats } from '@/lib/memory'
 
 // ------------------------------------------------------------------------------------------------ input shapes
@@ -98,7 +101,11 @@ export interface SupplierSuggestion {
   coversItemIds: string[]
   /** v_supplier_stats.last_contact (YYYY-MM-DD) or null. The only statistic the ranking looks at. */
   lastContact: string | null
-  /** The whole v_supplier_stats row, for the memory card only. Nothing in it is used to order the list. */
+  /** The delivery record from v_supplier_stats ("on time 5 of 6 deliveries"); null when the supplier has no delivery on record. */
+  record: Reason | null
+  /** The newest order at the strongest tier of the match, in the owner's words (order number, placed date, delivered after N days). Null when none. */
+  evidence: Reason | null
+  /** The whole v_supplier_stats row, for the memory card only. */
   stats: SupplierStatsRow | null
 }
 
@@ -182,9 +189,19 @@ function bestOrderedDate(rows: SupplierItemMemoryRow[]): string | null {
   return best
 }
 
-function compareSuggestions(a: SupplierSuggestion, b: SupplierSuggestion): number {
+/** The keys behind a suggestion's place inside its group. Kept off the suggestion itself: nothing numeric is exposed, and each key is printed as a count. */
+interface SortKeys {
+  band: 1 | 2 | 3
+  ordered: number
+  replied: number
+}
+
+function compareSuggestions(a: SupplierSuggestion, ka: SortKeys, b: SupplierSuggestion, kb: SortKeys): number {
   const g = GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group)
   if (g !== 0) return g
+  if (ka.band !== kb.band) return ka.band - kb.band
+  if (ka.ordered !== kb.ordered) return kb.ordered - ka.ordered
+  if (ka.replied !== kb.replied) return kb.replied - ka.replied
   // Most recent contact first; a supplier never contacted sorts after every contacted one.
   if (a.lastContact !== b.lastContact) {
     if (a.lastContact === null) return 1
@@ -197,6 +214,17 @@ function compareSuggestions(a: SupplierSuggestion, b: SupplierSuggestion): numbe
   return a.supplierId < b.supplierId ? -1 : a.supplierId > b.supplierId ? 1 : 0
 }
 
+/** The best order evidence among the rows of the items a supplier was suggested for: the strongest tier, then the newest order. */
+function bestEvidence(rows: { item: SuggestionItem; row: SupplierItemMemoryRow }[]): { ev: Evidence; item: SuggestionItem } | null {
+  let best: { ev: Evidence; item: SuggestionItem } | null = null
+  for (const { item, row } of rows) {
+    const ev = evidenceOf(row)
+    if (!ev) continue
+    if (!best || ev.tier < best.ev.tier || (ev.tier === best.ev.tier && (ev.placedOn ?? '') > (best.ev.placedOn ?? ''))) best = { ev, item }
+  }
+  return best
+}
+
 // ------------------------------------------------------------------------------------------------ main
 
 export function suggestSuppliers(
@@ -206,6 +234,7 @@ export function suggestSuppliers(
 ): SuggestionResult {
   const today = options.today ?? null
   const out: SupplierSuggestion[] = []
+  const keys = new Map<SupplierSuggestion, SortKeys>()
   const seen = new Set<string>()
 
   for (const sup of history.suppliers) {
@@ -262,7 +291,15 @@ export function suggestSuppliers(
       continue
     }
 
-    out.push({
+    // The memory rows of the items this supplier was suggested for (any tier: a brand or family order is evidence too).
+    const coveredRows = covers.flatMap(item => {
+      const row = history.memory[item.id]?.find(r => r.supplier_id === sup.id)
+      return row ? [{ item, row }] : []
+    })
+    const found = bestEvidence(coveredRows)
+    const record = recordFromStats(sup.stats)
+    const deliveries = sup.stats?.deliveries ?? 0
+    const suggestion: SupplierSuggestion = {
       supplierId: sup.id,
       name: sup.name,
       city: sup.city ?? null,
@@ -274,11 +311,19 @@ export function suggestSuppliers(
       memoryLine: memoryLine(sup.stats, today),
       coversItemIds: items.filter((i) => covers.includes(i)).map((i) => i.id),
       lastContact: dateKey(sup.stats?.last_contact),
+      record,
+      evidence: found ? evidenceReason(found.ev, { brand: found.item.brandName, family: found.item.familyName }) : null,
       stats: sup.stats,
+    }
+    out.push(suggestion)
+    keys.set(suggestion, {
+      band: reliabilityBand({ deliveries, onTime: deliveries - Math.min(sup.stats?.late ?? 0, deliveries) }),
+      ordered: found?.ev.count ?? 0,
+      replied: sup.stats?.replied ?? 0,
     })
   }
 
-  out.sort(compareSuggestions)
+  out.sort((a, b) => compareSuggestions(a, keys.get(a) as SortKeys, b, keys.get(b) as SortKeys))
 
   const groups: SuggestionGroupResult[] = []
   for (const g of GROUP_ORDER) {

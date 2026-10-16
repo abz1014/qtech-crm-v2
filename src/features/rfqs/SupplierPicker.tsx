@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from 'react'
-import { Building2, ChevronDown, Search } from 'lucide-react'
+import { Building2, ChevronDown, FileCheck, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DraftItem } from '@/features/rfqs/lib/intakeModel'
 import { effectiveQty } from '@/features/rfqs/lib/intakeModel'
@@ -13,11 +13,15 @@ import { Skeleton } from '@/ui/Skeleton'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { buildMemoryCard, type MemoryRow } from '@/lib/memory'
 import { MemoryCardView } from '@/features/rfqs/MemoryCard'
+import { ReasonParts } from '@/features/rfqs/ranking/RankParts'
+import { evidenceBlock, evidenceOf } from '@/features/rfqs/lib/ranking/reasons'
+import { Icon } from '@/ui/Icon'
 
 /*
  * Suppliers (g2-intake-float frame 4): reasons first. Every suggestion says why in a sentence, with the counts from
- * its history beneath. Only "supplied this item before" is ticked when the step opens. Nothing is scored, and the
- * history never reorders the list. The whole row is the tap target.
+ * its history beneath. Only "supplied this item before" is ticked when the step opens. Nothing is scored. Inside a reason
+ * group the supplier with the better record comes first (A8), and the order behind it is cited: number, the date we placed it,
+ * days to delivery. The whole row is the tap target.
  */
 
 const pill = 'inline-flex h-5 shrink-0 items-center gap-[6px] whitespace-nowrap rounded border border-line-strong bg-surface px-[6px] text-xs text-fg-2'
@@ -39,7 +43,7 @@ export function ItemChips({ items }: { items: readonly DraftItem[] }) {
 /** What the Memory card needs besides the suggestion itself: the rows supplier_item_memory() returned per item, and the items. */
 export interface MemoryContext {
   rows: Readonly<Record<string, readonly MemoryRow[] | undefined>>
-  items: readonly { id: string; number: number; description: string }[]
+  items: readonly { id: string; number: number; description: string; brandName?: string | null; familyName?: string | null }[]
   today: string
 }
 
@@ -54,6 +58,10 @@ function MemoryPanel({ s, ctx, panelId }: { s: SupplierSuggestion; ctx: MemoryCo
   const item = covered.find(i => i.id === picked) ?? covered[0]
   const row = item ? ctx.rows[item.id]?.find(r => r.supplier_id === s.supplierId) : undefined
   const card = useMemo(() => buildMemoryCard(row, s.stats, ctx.today), [row, s.stats, ctx.today])
+  const ev = useMemo(() => {
+    const e = evidenceOf(row)
+    return e ? evidenceBlock(e, { supplier: s.name, brand: item?.brandName, family: item?.familyName }, s.stats, ctx.today) : null
+  }, [row, item, ctx.today, s])
   if (!item) return null
   const desc = item.description.length > 90 ? `${item.description.slice(0, 89).trimEnd()}…` : item.description
   return (
@@ -72,6 +80,7 @@ function MemoryPanel({ s, ctx, panelId }: { s: SupplierSuggestion; ctx: MemoryCo
         card={card}
         today={ctx.today}
         fallbackTier={s.tierLabel}
+        evidence={ev}
       />
     </div>
   )
@@ -96,9 +105,25 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
         </span>
       </div>
       <p className="m-0 pl-[30px] text-sm text-fg-2">{s.reason}</p>
+      {s.evidence ? (
+        <p className="m-0 flex items-start gap-[6px] pl-[30px] text-xs text-fg-2" data-evidence>
+          <Icon icon={FileCheck} size="chip" className="mt-[2px] text-fg-muted" />
+          <span className="text-pretty">
+            <ReasonParts reason={s.evidence} />
+          </span>
+        </p>
+      ) : null}
       <div className="flex min-w-0 items-center gap-3 pl-[30px]">
-        <p className={cn('m-0 min-w-0 flex-1 text-xs text-fg-muted',)} data-memory-line>
-          {s.memoryLine}
+        <p className={cn('m-0 min-w-0 flex-1 text-xs text-fg-muted',)}>
+          {s.record ? (
+            <>
+              <span className={cn('text-fg-2', s.record.tone === 'warn' && 'font-medium text-tone-warning-fg')} data-record>
+                <ReasonParts reason={s.record} />
+              </span>
+              {' · '}
+            </>
+          ) : null}
+          <span data-memory-line>{s.memoryLine}</span>
         </p>
         {memory ? (
           <button
@@ -125,7 +150,7 @@ function Group({ g, ticked, onToggle, memory }: { g: SuggestionGroupResult; tick
       <header className="flex items-baseline gap-3 border-b bg-sunken px-5 py-3">
         <h3 className="m-0 text-sm font-semibold">{g.label}</h3>
         <span className="ml-auto text-xs text-fg-muted">
-          <span className="num">{g.suppliers.length}</span> {g.suppliers.length === 1 ? 'supplier' : 'suppliers'}
+          <span className="num">{g.suppliers.length}</span> {g.suppliers.length === 1 ? 'supplier' : `suppliers · best record first`}
         </span>
       </header>
       <ul className="m-0 grid list-none p-0">
