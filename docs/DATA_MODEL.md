@@ -1745,3 +1745,54 @@ Optional data the approved mockups show. Every column is nullable; nothing is re
 - old CRM repo: supabase/migrations/20260731_gst_receipt_uploads.sql
 - old CRM repo: src/lib/gst/fbr.ts
 - old CRM repo: src/pages/DashboardPage.tsx
+
+## Amendment A8: splitting an item across suppliers, and ranking supplier quotes (migrations 0049 and 0050)
+
+No new table, no new column on an existing table. Owner overrides of 2026-10-15 are applied: no "Received" step on a leg (a leg goes Placed then Delivered; `supplier_orders.received_on` is kept equal to `delivered_on` by the app), and the selling price and spread are never returned to engineers.
+
+### How a split is stored
+
+Several `order_items` rows for one RFQ item (same `rfq_item_id`), each with its own `qty` and `supplier_order_id`. Nothing stops two lines sharing an `rfq_item_id`; the only rule added is in `convert_rfq_to_order` (below). Invoices, `v_order_money`, `v_order_basis`, `v_payment_net`, goods state, PO lines, `supplier_item_memory`, `customer_price_memory` and `create_repeat_order` need no change: they sum or copy lines and legs, so the parts add up to the same totals and a split is copied as a split.
+
+### `rank_item_quotes(p_rfq_id uuid)` (0049)
+
+SQL, STABLE, SECURITY INVOKER, fixed `search_path`. Every table it reads is readable by all active staff; `anon` has no execute. Section 10: X for admin, sales and engineer. One row per (RFQ item, quote line), ordered by item position, then rank (NULL last), then supplier name.
+
+| Column | Meaning |
+|---|---|
+| `rfq_item_id`, `quote_line_id`, `supplier_id`, `item_qty` | The quote line and the quantity of the RFQ item. |
+| `price`, `currency` | As quoted. |
+| `fx_state` | `same_currency` (no conversion needed: PKR, or every line of the item in one currency), `fresh` (rate 7 days old or less), `stale` (8 to 30), `unusable` (over 30), `none` (no rate ever set). |
+| `fx_rate_pkr`, `fx_rate_on`, `fx_age_days` | Today's rate from `v_fx_latest` used for the line (NULL for PKR or when none). |
+| `pkr_unit_price` | `price` x rate, rounded to 2 places; PKR lines as quoted; NULL when no usable rate. |
+| `comparable`, `rank` | `comparable` is false only when the item mixes currencies and this line has no usable rate. `rank` 1, 2, 3 among comparable lines; NULL otherwise. |
+| `within_band`, `pct_above_best` | Within 2% of the lowest comparable price; the percentage above that price (0 for the best). |
+| `sell_unit_net`, `sell_source`, `sell_order_number`, `sell_on` | **Admin and sales only; NULL for engineers.** `rfq_items.quoted_unit_price_net` (`quoted`), else the last price sold to this customer from `customer_price_memory` (`last_sold`, with that order's number and date), else `none`. |
+| `spread_unit`, `spread_total` | **Admin and sales only; NULL for engineers.** `sell_unit_net - pkr_unit_price`, and that times `item_qty`. NULL without a selling price or a PKR figure. Before freight and duty; not the order margin. |
+| `reliability_band`, `deliveries`, `on_time`, `late`, `median_days_late` | The supplier's legs with `expected_on` and a delivery date (`coalesce(delivered_on, received_on)`), all time. Band 1 proven (3 or more deliveries, on time at least 2/3), 2 unproven (fewer than 3), 3 often late. `median_days_late` only with 3 or more late. |
+| `orders_count`, `orders_value_pkr`, `last_order_number`, `last_order_on`, `last_order_delivered_after_days` | Non-cancelled orders (not from this RFQ) with a leg for the supplier; value is qty x supplier price at today's rate where a usable rate exists (shown, never ranked on); the last order's leg days from placed to delivered (NULL if not delivered or not placed). |
+| `replied`, `asked` | From `v_supplier_stats`. |
+| `lead_time`, `in_stock` | For information; never used to rank. |
+
+Ranking per item: comparable lines are sorted by (1) in the 2% band first; (2) inside the band by reliability band, then `orders_count` descending, then `last_order_on` descending (nulls last); outside the band by price; (3) price ascending, supplier name. The price compared is the raw price when the item has one currency, otherwise the PKR price.
+
+### `supplier_item_memory` evidence columns (0049)
+
+Appended to the result (the function is dropped and re-created because the result type changes; parameters and existing columns are unchanged):
+
+| Column | Meaning |
+|---|---|
+| `evidence_tier` | The best tier (0 model, 1 item, 2 brand, 3 family) with a non-cancelled order that has a leg for the supplier. NULL when none. |
+| `evidence_order_id`, `evidence_order_number` | The most recent such order at that tier. |
+| `evidence_item_desc`, `evidence_qty` | The ordered line. |
+| `evidence_placed_on`, `evidence_expected_on`, `evidence_delivered_on` | From the leg (delivered is `coalesce(delivered_on, received_on)`). |
+| `evidence_delivered_after_days` | `delivered - placed`; NULL unless both exist. |
+| `evidence_count_at_tier` | Legs with this supplier at that tier. |
+
+### `convert_rfq_to_order` (0050)
+
+Signature unchanged. New rules: when `quote_line_id` is left out the rank-1 line from `rank_item_quotes` is used (it was "the item's only line"); two entries for the same item that resolve to the same quote line are refused (22023, "split parts of an item must use different suppliers"). An item with no selling price is still refused. A split is two entries for one item, each with its own `qty` and `quote_line_id`.
+
+### `split_order_item(p_item_id, p_qty, p_supplier_order_id default null, p_supplier_id default null, p_currency default null, p_supplier_unit_price default null) returns uuid` (0050)
+
+SECURITY INVOKER. Moves `p_qty` of an order line to an existing leg of the same order (`p_supplier_order_id`), or to the leg for `p_supplier_id` and `p_currency` (the order's existing leg for that supplier and currency if there is one, else a new leg linked to the supplier's inquiry on the order's RFQ when it has one). Exactly one of the two is given. Needs `0 < p_qty < qty`; a service line is refused; the new line copies description, brand, family, unit, selling price, GST rate and `rfq_item_id`, and takes `p_supplier_unit_price` (NULL when not given: the source line's price belongs to another supplier); the source line keeps the remainder. Returns the new order line's id. Allowed after a PO was issued for the source leg (O07 shows "lines changed since PO"). Section 10: X for all staff.
