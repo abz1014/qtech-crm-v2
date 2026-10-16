@@ -202,6 +202,23 @@ function money() {
     exceptions: () => [...all, 'exceptions'] as const,
     orderOptions: () => [...all, 'order-options'] as const,
     legOptions: (orderId: string) => [...all, 'leg-options', orderId] as const,
+    /** M01: the GST register (every invoice, all months), one invoice with its steps, the order amounts a new invoice starts from. */
+    invoices: {
+      all: [...all, 'invoices'] as const,
+      register: () => [...all, 'invoices', 'register'] as const,
+      detail: (id: string) => [...all, 'invoices', 'detail', id] as const,
+      receipts: (id: string) => [...all, 'invoices', 'receipts', id] as const,
+      nextNumber: () => [...all, 'invoices', 'next-number'] as const,
+      forOrder: (orderId: string) => [...all, 'invoices', 'for-order', orderId] as const,
+      invoiceable: () => [...all, 'invoices', 'invoiceable-orders'] as const,
+    },
+    /** M02: order balances through order_receivables() (admin and sales) and one order's payments (admin). */
+    receivables: {
+      all: [...all, 'receivables'] as const,
+      list: () => [...all, 'receivables', 'list'] as const,
+      order: (orderId: string) => [...all, 'receivables', 'order', orderId] as const,
+      payments: (orderId: string) => [...all, 'receivables', 'payments', orderId] as const,
+    },
     recurring: {
       all: [...all, 'recurring'] as const,
       list: () => [...all, 'recurring', 'list'] as const,

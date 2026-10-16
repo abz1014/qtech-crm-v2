@@ -86,6 +86,13 @@ export interface WriteVars {
   'expense.receipt': { expenseId: string }
   'recurring.save': Record<string, never>
   'recurring.record': Record<string, never>
+  /** M01: an invoice created or edited, a step stamped (TCS, PSID, deposited) or taken back, a receipt added or removed. */
+  'invoice.create': Record<string, never>
+  'invoice.update': { invoiceId: string }
+  'invoice.stamp': Record<string, never>
+  'invoice.receipt': { invoiceId: string }
+  /** M02: a payment recorded against an order. */
+  'payment.record': { orderId: string }
 }
 
 export type WriteName = keyof WriteVars
@@ -175,6 +182,14 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'recurring.save': () => [qk.money.recurring.all, qk.today.all],
   // Recording makes an expense (and a recurring item leaves Today).
   'recurring.record': () => [qk.money.expenses.all, qk.money.bank.all, qk.money.recurring.all, qk.today.all],
+  // A new invoice moves the register, the order's invoicing state and balance, receivables and Today (a payment reminder can become due).
+  'invoice.create': () => [qk.money.invoices.all, qk.money.bank.all, qk.money.receivables.all, qk.orders.all, qk.today.all],
+  'invoice.update': v => [qk.money.invoices.register(), qk.money.bank.all, qk.money.invoices.detail(v.invoiceId), qk.money.receivables.all, qk.orders.all, qk.today.all],
+  // Stamps move the register's tracks and the FBR / TCS items on Today.
+  'invoice.stamp': () => [qk.money.invoices.all, qk.money.bank.all, qk.today.all],
+  'invoice.receipt': v => [qk.money.invoices.receipts(v.invoiceId), qk.money.invoices.detail(v.invoiceId), qk.money.invoices.register(), qk.today.all],
+  // A payment moves balances (receivables, the order page's panel, its payment chip) and Today's overdue items.
+  'payment.record': v => [qk.money.receivables.all, qk.money.bank.all, qk.money.receivables.payments(v.orderId), qk.orders.all, qk.today.all],
 }
 
 /** The keys a write makes stale. Pure, so it can be tested without a QueryClient. */
