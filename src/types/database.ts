@@ -279,6 +279,12 @@ isOneToOne: false
       foreignKeyName: "company_brands_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "company_brands_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     },{
@@ -337,6 +343,12 @@ isOneToOne: false
       foreignKeyName: "company_sites_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "company_sites_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     },{
@@ -370,6 +382,12 @@ isOneToOne: false
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "contacts_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "contacts_company_id_fkey"
@@ -482,6 +500,12 @@ isOneToOne: false
       columns: ["payee_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "expenses_payee_id_fkey"
+      columns: ["payee_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "expenses_payee_id_fkey"
@@ -604,6 +628,12 @@ isOneToOne: false
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "invoices_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "invoices_company_id_fkey"
@@ -852,6 +882,12 @@ isOneToOne: false
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "orders_company_id_fkey"
@@ -1133,6 +1169,12 @@ isOneToOne: false
       foreignKeyName: "rfqs_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "rfqs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     },{
@@ -1227,6 +1269,12 @@ isOneToOne: false
       foreignKeyName: "supplier_inquiries_supplier_id_fkey"
       columns: ["supplier_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     }
@@ -1308,6 +1356,12 @@ isOneToOne: false
       columns: ["supplier_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "supplier_orders_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "supplier_orders_supplier_id_fkey"
@@ -1508,6 +1562,12 @@ isOneToOne: false
       foreignKeyName: "supplier_inquiries_supplier_id_fkey"
       columns: ["supplier_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     }
@@ -1529,6 +1589,12 @@ isOneToOne: false
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "invoices_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "invoices_company_id_fkey"
@@ -1636,6 +1702,12 @@ isOneToOne: false
       foreignKeyName: "orders_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     },{
@@ -1663,6 +1735,12 @@ isOneToOne: false
       columns: ["company_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "orders_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "orders_company_id_fkey"
@@ -1794,6 +1872,12 @@ isOneToOne: false
       foreignKeyName: "rfqs_company_id_fkey"
       columns: ["company_id"]
 isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "rfqs_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
       referencedRelation: "v_supplier_stats"
       referencedColumns: ["supplier_id"]
     },{
@@ -1833,6 +1917,12 @@ isOneToOne: false
       columns: ["supplier_id"]
 isOneToOne: false
       referencedRelation: "v_company_roles"
+      referencedColumns: ["company_id"]
+    },{
+      foreignKeyName: "supplier_inquiries_supplier_id_fkey"
+      columns: ["supplier_id"]
+isOneToOne: false
+      referencedRelation: "v_report_repeat_customers"
       referencedColumns: ["company_id"]
     },{
       foreignKeyName: "supplier_inquiries_supplier_id_fkey"
