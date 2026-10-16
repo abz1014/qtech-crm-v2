@@ -9,9 +9,9 @@ import { useOrdersPaletteSource } from '@/features/orders/paletteSource'
 import { PaletteHost } from '@/app/palette/PaletteHost'
 import { usePalette } from '@/app/palette/usePalette'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
+import { MobileBarProvider } from '@/app/shell/MobileBarProvider'
 import { PwaPrompts } from '@/app/shell/PwaPrompts'
 import { CaptureProvider } from '@/app/capture/CaptureProvider'
-import { useCapturePaletteSource } from '@/features/capture/paletteSource'
 import { useCapture } from '@/app/capture/useCapture'
 import { TopBar } from '@/app/shell/TopBar'
 import { useNavCounts } from '@/app/shell/useNavCounts'
@@ -35,7 +35,9 @@ export function AppShell({ counts }: AppShellProps) {
       <PwaPrompts />
       <CaptureProvider>
         <PaletteHost role={session.user.role}>
-          <Frame user={session.user} counts={counts} />
+          <MobileBarProvider>
+            <Frame user={session.user} counts={counts} />
+          </MobileBarProvider>
         </PaletteHost>
       </CaptureProvider>
     </ToastProvider>
@@ -46,7 +48,6 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
   const counts = { ...useNavCounts(user), ...given }
   const palette = usePalette()
   const { openCapture } = useCapture()
-  useCapturePaletteSource(openCapture)
   useSearchPaletteSource()
   useOrdersPaletteSource()
   const { pathname } = useLocation()

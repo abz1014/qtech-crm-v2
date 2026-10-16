@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Ban, Banknote, CalendarDays, CircleCheck, Ellipsis, FilePlus2, Receipt, RotateCcw, Scale } from 'lucide-react'
+import { Ban, CalendarDays, CircleCheck, Ellipsis, Receipt, RotateCcw, Scale } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay } from '@/lib/formatDay'
@@ -14,6 +14,7 @@ import { Radio, RadioGroup } from '@/ui/form/Radio'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
+import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
 import type { OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
 import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
@@ -183,22 +184,18 @@ export function OrderHeaderBlock({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* data-slot="order-actions": Record payment (M02), Add expense (M03), Create invoice (M01). Drawn as the mockup places them, disabled until their task. */}
+          {/* data-slot="order-actions": Record payment (M02), Add expense (M03), Create invoice (M01). Record payment (M02) and Create invoice (M01) open their own dialogs; Add expense is still disabled until its task. */}
           <span data-slot="order-actions" className="contents">
             {isAdmin && !cancelled ? (
               <>
-                <Button icon={Banknote} disabled title="Arrives with Payments (M02)">
-                  Record payment
-                </Button>
+                <RecordPaymentButton orderId={order.id} />
                 <Button icon={Receipt} onClick={() => setAddingExpense(true)}>
                   Add expense
                 </Button>
               </>
             ) : null}
             {money && !cancelled ? (
-              <Button icon={FilePlus2} disabled title="Arrives with Invoices (M01)">
-                Create invoice
-              </Button>
+              <CreateInvoiceButton orderId={order.id} />
             ) : null}
             {isAdmin && basisUnknown ? (
               <Button variant="primary" icon={Scale} onClick={() => setResolving(true)}>

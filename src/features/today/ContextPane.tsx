@@ -26,6 +26,7 @@ import { deadlineValue } from '@/lib/status'
 import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
+import { DateRail } from '@/ui/DateRail'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { DateInput } from '@/ui/form/DateInput'
 import { Icon } from '@/ui/Icon'
@@ -301,7 +302,11 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
         </dl>
       ) : null}
 
-      <DateRail item={item} rfqDue={rfq?.dueOn ?? null} questions={questions} inquirySent={inquiryFact?.sentOn ?? null} today={today} nudgeOn={justChased ? (item.waiting?.nextNudgeOn ?? null) : null} />
+      {justChased ? (
+        <NudgeRail item={item} rfqDue={rfq?.dueOn ?? null} questions={questions} inquirySent={inquiryFact?.sentOn ?? null} today={today} nudgeOn={item.waiting?.nextNudgeOn ?? null} />
+      ) : (
+        <ChaseRail item={item} rfqDue={rfq?.dueOn ?? null} questions={questions} inquirySent={inquiryFact?.sentOn ?? null} today={today} />
+      )}
 
       {item.escalation === 'close_no_reply' && !justChased ? <CloseNoReply item={item} today={today} /> : null}
       {item.escalation === 'float_elsewhere' && !justChased && supplierRule && items.data && inquiries.data ? (
@@ -564,6 +569,10 @@ function howTo(item: TodayItem): string {
       return 'No decision since the bid went out. Open the RFQ to chase the customer, or close it with a reason.'
     case 'place_po':
       return 'This order has a supplier leg with no purchase order yet. Open the order to place it.'
+    case 'plan_commissioning':
+      return 'This order needs commissioning and has no planned date. Open the order and set the planned date.'
+    case 'delivered_not_invoiced':
+      return 'Everything on this order has been delivered and no invoice exists. Open the order to invoice it.'
     case 'close_month':
       return 'Review the month-end checks and close the month. Nothing blocks closing; each check is a warning.'
     default:
@@ -695,8 +704,8 @@ function factsFor(
   return out.filter((f): f is Fact => f !== null)
 }
 
-/** The rail: asked or sent, today, and once chased the "Next nudge" ring, up to the bid date. */
-function DateRail({
+/** The rail once chased: asked or sent, today, and the "Next nudge" ring, up to the bid date. */
+function NudgeRail({
   item,
   rfqDue,
   questions,
@@ -812,8 +821,26 @@ function ChasedCard({
   )
 }
 
+/** The chase rail: asked (or sent) to bid due, on the shared DateRail. Always due-soon (warning), as on the approved Today B. */
+function ChaseRail({ item, rfqDue, questions, inquirySent, today }: { item: TodayItem; rfqDue: string | null; questions: TodayData['clarifications']; inquirySent: string | null; today: string }) {
+  const start = item.rule === 'chase_customer' ? questions.map(q => q.lastAskedOn).sort().at(-1) : item.rule === 'chase_supplier' ? inquirySent : null
+  if (!start || !rfqDue || rfqDue <= start) return null
+  return (
+    <DateRail
+      decorative
+      state="due-soon"
+      start={start}
+      due={rfqDue}
+      today={today}
+      startLabel={item.rule === 'chase_customer' ? 'Asked' : 'Sent'}
+      className="[&_em]:ring-canvas"
+    />
+  )
+}
+
 /** Escalation for a customer: a suggestion, never automatic. */
 function CloseNoReply({ item, today }: { item: TodayItem; today: string }) {
+
   const { toast } = useToast()
   const close = useSetRfqClosed(item.rfqId ?? '')
   const [dismissed, setDismissed] = useState(false)

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Banknote, CalendarCheck, ChevronDown, ChevronRight, FileCheck, Hourglass, MessageCircleQuestion, Reply, Send, Share2, ShoppingCart, Truck, Users, type LucideIcon } from 'lucide-react'
+import { Banknote, CalendarCheck, ChevronDown, ChevronRight, FileCheck, Hourglass, MessageCircleQuestion, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -32,6 +32,8 @@ const ICON: Record<RuleKey, LucideIcon> = {
   payment_overdue: Banknote,
   goods_late: Truck,
   place_po: ShoppingCart,
+  plan_commissioning: Wrench,
+  delivered_not_invoiced: ReceiptText,
   close_month: CalendarCheck,
 }
 

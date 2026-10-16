@@ -1,0 +1,228 @@
+import { useRef, useState } from 'react'
+import { Camera, Check, ExternalLink } from 'lucide-react'
+import { z } from 'zod'
+import { businessToday } from '@/lib/dates'
+import { intakeFiles, DEFAULT_ACCEPT } from '@/lib/fileIntake'
+import { formatDay } from '@/lib/formatDay'
+import { mapPgError } from '@/lib/pgErrors'
+import { Banner } from '@/ui/Banner'
+import { Button } from '@/ui/Button'
+import { Dialog, DialogContent } from '@/ui/Dialog'
+import { Money } from '@/ui/Money'
+import { Skeleton } from '@/ui/Skeleton'
+import { useToast } from '@/ui/useToast'
+import { DateInput } from '@/ui/form/DateInput'
+import { Form, FormField } from '@/ui/form/Form'
+import { NumberInput } from '@/ui/form/NumberInput'
+import { TextField } from '@/ui/form/TextField'
+import { useSubmitForm } from '@/ui/form/useSubmitForm'
+import { signReceipt, type InvoiceRow } from '@/features/money/invoices/api'
+import { useDeleteInvoiceReceipt, useInvoice, useInvoiceReceipts, useUpdateInvoice, useUploadInvoiceReceipt } from '@/features/money/invoices/hooks'
+
+/*
+ * One invoice's steps (M01): the dates the register's tracks are built from, the TCS consignment number, the PSID, the receipt
+ * (uploaded to gst-receipts) and a note. Nothing here is required; the monthly stamps on the register do the usual work and this
+ * is where a single step is corrected or filled in ("Client received" is set here, when the customer confirms).
+ * The invoice number, date and amounts are not edited here; a closed month freezes them in the database as well.
+ */
+const optionalDate = z.string()
+const schema = z.object({
+  copyReceivedOn: optionalDate,
+  tcsSentOn: optionalDate,
+  tcsNumber: z.string(),
+  clientReceivedOn: optionalDate,
+  psid: z.string(),
+  receiptOn: optionalDate,
+  depositedOn: optionalDate,
+  depositAmount: z.number().min(0).nullable(),
+  notes: z.string(),
+})
+type Values = z.input<typeof schema>
+type DateField = 'copyReceivedOn' | 'tcsSentOn' | 'clientReceivedOn' | 'receiptOn' | 'depositedOn'
+
+export function InvoiceDetailDialog({ invoiceId, onClose }: { invoiceId: string; onClose: () => void }) {
+  const q = useInvoice(invoiceId)
+  const [busy, setBusy] = useState(false)
+  return (
+    <Dialog open onOpenChange={o => !o && !busy && onClose()} busy={busy}>
+      <DialogContent title={q.data?.number ? `Invoice ${q.data.number}` : 'Invoice'} context={q.data?.invoice_date ? `Dated ${formatDay(q.data.invoice_date)}` : undefined} size="lg">
+        {q.isError ? (
+          <p role="alert" className="text-sm text-tone-danger-fg">The invoice could not be loaded. Close this and try again.</p>
+        ) : q.isPending ? (
+          <div className="grid gap-3" aria-busy="true">
+            <Skeleton className="h-8" />
+            <Skeleton className="h-24" />
+          </div>
+        ) : q.data ? (
+          <DetailForm invoice={q.data} onBusy={setBusy} onClose={onClose} />
+        ) : (
+          <p className="text-sm text-fg-muted">This invoice is not here any more.</p>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+const val = (s: string): string | null => (s.trim() === '' ? null : s)
+
+function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy: (b: boolean) => void; onClose: () => void }) {
+  const toast = useToast()
+  const update = useUpdateInvoice(invoice.id)
+  const receipts = useInvoiceReceipts(invoice.id)
+  const upload = useUploadInvoiceReceipt(invoice.id)
+  const remove = useDeleteInvoiceReceipt(invoice.id)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
+  const net = Number(invoice.net_amount)
+  const gst = Number(invoice.gst_amount)
+
+  const sf = useSubmitForm({
+    schema,
+    entity: 'invoice',
+    defaultValues: {
+      copyReceivedOn: invoice.copy_received_on ?? '',
+      tcsSentOn: invoice.tcs_sent_on ?? '',
+      tcsNumber: invoice.tcs_number ?? '',
+      clientReceivedOn: invoice.client_received_on ?? '',
+      psid: invoice.psid ?? '',
+      receiptOn: invoice.wasif_receipt_on ?? '',
+      depositedOn: invoice.tax_deposited_on ?? '',
+      depositAmount: invoice.tax_deposit_amount === null ? null : Number(invoice.tax_deposit_amount),
+      notes: invoice.notes ?? '',
+    } satisfies Partial<Values>,
+    onSubmit: async v => {
+      onBusy(true)
+      try {
+        await update.mutateAsync({
+          copy_received_on: val(v.copyReceivedOn),
+          tcs_sent_on: val(v.tcsSentOn),
+          tcs_number: val(v.tcsNumber),
+          client_received_on: val(v.clientReceivedOn),
+          psid: val(v.psid),
+          wasif_receipt_on: val(v.receiptOn),
+          tax_deposited_on: val(v.depositedOn),
+          tax_deposit_amount: v.depositAmount,
+          notes: val(v.notes),
+        })
+      } finally {
+        onBusy(false)
+      }
+    },
+    onSuccess: () => {
+      toast.toast({ title: 'Saved invoice', body: invoice.number ?? undefined, tone: 'success' })
+      onClose()
+    },
+  })
+
+  const addFile = async (list: FileList | null) => {
+    const f = list?.[0]
+    if (!f) return
+    setFileError(null)
+    const [one] = await intakeFiles([f], { accept: DEFAULT_ACCEPT })
+    if (one.error) {
+      setFileError(one.error)
+      return
+    }
+    try {
+      await upload.mutateAsync({ file: one.file, today: businessToday() })
+      sf.form.setValue('receiptOn', sf.form.getValues('receiptOn') || businessToday())
+    } catch (err) {
+      setFileError(mapPgError(err).message)
+    }
+  }
+  const open = async (path: string) => {
+    try {
+      window.open(await signReceipt(path), '_blank', 'noopener')
+    } catch (err) {
+      setFileError(mapPgError(err).message)
+    }
+  }
+
+  const date = (name: DateField, label: string) => (
+    <FormField<Values, DateField> name={name} label={label} requirement="optional">
+      {f => <DateInput name={f.name} ref={f.ref} onBlur={f.onBlur} value={f.value as string} onChange={f.onChange as (v: string) => void} defaultToday={false} />}
+    </FormField>
+  )
+
+  return (
+    <>
+      <dl className="grid grid-cols-3 gap-px overflow-hidden rounded border bg-line text-sm">
+        {[
+          ['Net', net],
+          ['GST', gst],
+          ['Gross', net + gst],
+        ].map(([k, v]) => (
+          <div key={String(k)} className="grid gap-[2px] bg-surface px-4 py-3">
+            <dt className="text-xs text-fg-muted">{k}</dt>
+            <dd>
+              <Money value={Number(v)} size="lg" />
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <Form sf={sf} labels={{}} className="grid gap-5">
+        <button type="submit" hidden tabIndex={-1} />
+        <fieldset className="grid gap-4 md:grid-cols-2">
+          <legend className="mb-2 text-sm font-semibold">Courier (TCS)</legend>
+          {date('copyReceivedOn', 'Copy received')}
+          {date('tcsSentOn', 'Sent by TCS')}
+          <FormField<Values, 'tcsNumber'> name="tcsNumber" label="Consignment number" requirement="optional">
+            {f => <TextField {...f} autoComplete="off" className="num" />}
+          </FormField>
+          {date('clientReceivedOn', 'Client received')}
+        </fieldset>
+        <fieldset className="grid gap-4 md:grid-cols-2">
+          <legend className="mb-2 text-sm font-semibold">FBR</legend>
+          <FormField<Values, 'psid'> name="psid" label="PSID" requirement="optional">
+            {f => <TextField {...f} autoComplete="off" spellCheck={false} className="num" />}
+          </FormField>
+          {date('receiptOn', 'Receipt received')}
+          {date('depositedOn', 'Tax deposited')}
+          <FormField<Values, 'depositAmount'> name="depositAmount" label="Deposit amount, PKR" requirement="optional" help="Defaults to the GST amount when you stamp the month.">
+            {f => <NumberInput {...f} />}
+          </FormField>
+        </fieldset>
+        <FormField<Values, 'notes'> name="notes" label="Notes" requirement="optional">
+          {f => <TextField {...f} autoComplete="off" />}
+        </FormField>
+      </Form>
+
+      <section aria-label="Receipts" className="grid gap-2">
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-semibold">FBR receipt</h3>
+          <Button size="sm" icon={Camera} onClick={() => fileRef.current?.click()}>
+            Add receipt
+          </Button>
+          <input ref={fileRef} type="file" accept="image/*,application/pdf" tabIndex={-1} aria-label="Receipt file" className="sr-only" onChange={e => { void addFile(e.target.files); e.target.value = '' }} />
+        </div>
+        {fileError ? <Banner tone="danger" title="That file was not added">{fileError}</Banner> : null}
+        {(receipts.data ?? []).length === 0 ? (
+          <p className="text-xs text-fg-muted">No receipt uploaded yet. A photo or a PDF, up to 5 MB.</p>
+        ) : (
+          <ul className="grid gap-1">
+            {(receipts.data ?? []).map(r => (
+              <li key={r.id} className="flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm">
+                <button type="button" onClick={() => void open(r.path)} className="inline-flex min-w-0 items-center gap-2 text-left font-medium text-primary hover:underline">
+                  <ExternalLink className="size-4 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{r.fileName}</span>
+                </button>
+                <Button size="sm" variant="quiet" aria-label={`Remove ${r.fileName}`} onClick={() => remove.mutate(r)}>
+                  Remove
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
+        <Button variant="quiet" onClick={onClose} data-cancel>
+          Close
+        </Button>
+        <Button variant="primary" type="submit" form={sf.formId} icon={Check} busy={sf.pending} busyLabel="Saving">
+          {sf.failed ? 'Try again' : 'Save'}
+        </Button>
+      </div>
+    </>
+  )
+}

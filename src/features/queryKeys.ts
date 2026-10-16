@@ -139,6 +139,8 @@ function settings() {
     all,
     team: () => [...all, 'team'] as const,
     profile: () => [...all, 'company-profile'] as const,
+    /** The signed-in person's own users row (Your details). */
+    myDetails: () => [...all, 'my-details'] as const,
     /** M06: every targets read (rows and progress); invalidate this one after any target write. */
     targets: () => [...all, 'targets'] as const,
     targetRows: (year: number) => [...all, 'targets', 'rows', year] as const,
@@ -191,8 +193,30 @@ function money() {
       receipts: (expenseId: string) => [...expenses, 'receipts', expenseId] as const,
     },
     categories: () => [...all, 'expense-categories'] as const,
+    /** One order's costs for the Margin panel (M04): expenses, expected cost, the supplier-price inputs. */
+    orderCosts: (orderId: string) => [...all, 'order-costs', orderId] as const,
+    /** Every order's margin row (M04) and the reconciliation exceptions (M07). Admin only. */
+    margins: () => [...all, 'margins'] as const,
+    exceptions: () => [...all, 'exceptions'] as const,
     orderOptions: () => [...all, 'order-options'] as const,
     legOptions: (orderId: string) => [...all, 'leg-options', orderId] as const,
+    /** M01: the GST register (every invoice, all months), one invoice with its steps, the order amounts a new invoice starts from. */
+    invoices: {
+      all: [...all, 'invoices'] as const,
+      register: () => [...all, 'invoices', 'register'] as const,
+      detail: (id: string) => [...all, 'invoices', 'detail', id] as const,
+      receipts: (id: string) => [...all, 'invoices', 'receipts', id] as const,
+      nextNumber: () => [...all, 'invoices', 'next-number'] as const,
+      forOrder: (orderId: string) => [...all, 'invoices', 'for-order', orderId] as const,
+      invoiceable: () => [...all, 'invoices', 'invoiceable-orders'] as const,
+    },
+    /** M02: order balances through order_receivables() (admin and sales) and one order's payments (admin). */
+    receivables: {
+      all: [...all, 'receivables'] as const,
+      list: () => [...all, 'receivables', 'list'] as const,
+      order: (orderId: string) => [...all, 'receivables', 'order', orderId] as const,
+      payments: (orderId: string) => [...all, 'receivables', 'payments', orderId] as const,
+    },
     recurring: {
       all: [...all, 'recurring'] as const,
       list: () => [...all, 'recurring', 'list'] as const,

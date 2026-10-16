@@ -26,6 +26,41 @@ beforeEach(() => {
 
 afterEach(() => setSupabaseForTests(null))
 
+describe('settings api: phone (direct users update)', () => {
+  const chain = (data: unknown) => {
+    const calls: unknown[] = []
+    const db = {
+      from: () => ({
+        update: (patch: unknown) => {
+          calls.push(patch)
+          return { eq: (c: string, v: string) => (calls.push([c, v]), { select: () => Promise.resolve({ data, error: null }) }) }
+        },
+        select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { id: 'u1', name: 'Ayesha', job_title: null, phone: '0300' }, error: null }) }) }),
+      }),
+      auth: { getSession: () => Promise.resolve({ data: { session: { user: { email: 'a@x.test' } } } }) },
+    }
+    setSupabaseForTests(db as unknown as Db)
+    return calls
+  }
+
+  it('writes users.phone straight to the table, not through the function', async () => {
+    const calls = chain([{ id: 'u1', phone: '0300' }])
+    expect(await api.setPhone('u1', '0300')).toBe('0300')
+    expect(calls).toEqual([{ phone: '0300' }, ['id', 'u1']])
+    expect(h.invoke).not.toHaveBeenCalled()
+  })
+
+  it('says so when no row changed, instead of looking like success', async () => {
+    chain([])
+    expect(await fail(api.setPhone('u2', null))).toBeInstanceOf(PlainError)
+  })
+
+  it('reads the own row and takes the email from the session', async () => {
+    chain([])
+    expect(await api.getMyDetails('u1')).toEqual({ id: 'u1', name: 'Ayesha', job_title: null, phone: '0300', email: 'a@x.test' })
+  })
+})
+
 describe('settings api: admin-users calls', () => {
   it('sends every action to the admin-users function with the right body', async () => {
     h.invoke.mockResolvedValue({ data: { users: [] }, error: null })

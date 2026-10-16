@@ -1,5 +1,5 @@
 // Ported from src/lib/navConfig.ts @ 7a29f3a (Q-Tech CRM v1). Rewritten for the v2 navigation (direction B, 6 items, 3 roles) with Lucide icons per DESIGN_SYSTEM section 10.
-import { Banknote, Building2, CalendarCheck, ChartColumn, FileText, Package, type LucideIcon } from 'lucide-react'
+import { Building2, CalendarCheck, ChartColumn, FileText, Package, Wallet, type LucideIcon } from 'lucide-react'
 
 export type Role = 'admin' | 'sales' | 'engineer'
 
@@ -27,7 +27,7 @@ export const navItems: readonly NavItem[] = [
   { key: 'rfqs', label: 'RFQs', path: '/rfqs', icon: FileText, roles: ['admin', 'sales', 'engineer'] },
   { key: 'orders', label: 'Orders', path: '/orders', icon: Package, roles: ['admin', 'sales', 'engineer'] },
   { key: 'companies', label: 'Companies', path: '/companies', icon: Building2, roles: ['admin', 'sales', 'engineer'] },
-  { key: 'money', label: 'Money', path: '/money', icon: Banknote, roles: ['admin', 'sales'] },
+  { key: 'money', label: 'Money', path: '/money', icon: Wallet, roles: ['admin', 'sales'] },
   { key: 'reports', label: 'Reports', path: '/reports', icon: ChartColumn, roles: ['admin', 'sales'] },
 ]
 

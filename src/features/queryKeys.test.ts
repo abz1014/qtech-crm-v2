@@ -42,6 +42,7 @@ describe('invalidation map (R01)', () => {
     'team.reset-password': {},
     'team.set-role': {},
     'team.set-job-title': {},
+    'team.set-phone': {},
     'team.deactivate': {},
     'team.reactivate': {},
     'company-profile.update': {},
@@ -82,9 +83,15 @@ describe('invalidation map (R01)', () => {
     'today.chase': {},
     'today.snooze': {},
     'expense.save': {},
+    'costs.save': { orderId: 'o1' },
     'expense.receipt': { expenseId: 'e1' },
     'recurring.save': {},
     'recurring.record': {},
+    'invoice.create': {},
+    'invoice.update': { invoiceId: 'i1' },
+    'invoice.stamp': {},
+    'invoice.receipt': { invoiceId: 'i1' },
+    'payment.record': { orderId: 'o1' },
   }
 
   it('names at least one key for every write', () => {

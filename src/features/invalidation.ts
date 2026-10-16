@@ -30,6 +30,8 @@ export interface WriteVars {
   'team.reset-password': Record<string, never>
   'team.set-role': Record<string, never>
   'team.set-job-title': Record<string, never>
+  /** users.phone, written straight to the users row (own row, or any row for an admin). */
+  'team.set-phone': Record<string, never>
   'team.deactivate': Record<string, never>
   'team.reactivate': Record<string, never>
   'company-profile.update': Record<string, never>
@@ -78,9 +80,17 @@ export interface WriteVars {
   'today.snooze': Record<string, never>
   /** M03/M11: an expense added, edited, deleted, or a receipt photo added or taken off. */
   'expense.save': Record<string, never>
+  'costs.save': { orderId: string }
   'expense.receipt': { expenseId: string }
   'recurring.save': Record<string, never>
   'recurring.record': Record<string, never>
+  /** M01: an invoice created or edited, a step stamped (TCS, PSID, deposited) or taken back, a receipt added or removed. */
+  'invoice.create': Record<string, never>
+  'invoice.update': { invoiceId: string }
+  'invoice.stamp': Record<string, never>
+  'invoice.receipt': { invoiceId: string }
+  /** M02: a payment recorded against an order. */
+  'payment.record': { orderId: string }
 }
 
 export type WriteName = keyof WriteVars
@@ -111,6 +121,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'team.reset-password': () => [qk.settings.team()],
   'team.set-role': () => [qk.settings.team()],
   'team.set-job-title': () => [qk.settings.team()],
+  'team.set-phone': () => [qk.settings.team(), qk.settings.myDetails()],
   'team.deactivate': () => [qk.settings.team()],
   'team.reactivate': () => [qk.settings.team()],
   'company-profile.update': () => [qk.settings.profile()],
@@ -159,11 +170,21 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // A snooze is read only by Today.
   'today.snooze': () => [qk.today.all],
   // An expense changes every month list, the recent-use tally, the order's own cost panel and Today (a recurring item leaves it).
-  'expense.save': () => [qk.money.expenses.all, qk.money.recurring.all, qk.orders.all, qk.today.all],
+  'expense.save': () => [qk.money.expenses.all, qk.money.recurring.all, qk.money.margins(), qk.money.exceptions(), [...qk.money.all, 'order-costs'] as const, qk.orders.all, qk.today.all],
+  // The expected cost or the costs-complete mark changes the order's margin, the margins list and the exceptions.
+  'costs.save': v => [qk.money.orderCosts(v.orderId), qk.money.margins(), qk.money.exceptions(), qk.orders.detail(v.orderId), qk.today.all],
   'expense.receipt': v => [qk.money.expenses.receipts(v.expenseId)],
   'recurring.save': () => [qk.money.recurring.all, qk.today.all],
   // Recording makes an expense (and a recurring item leaves Today).
   'recurring.record': () => [qk.money.expenses.all, qk.money.recurring.all, qk.today.all],
+  // A new invoice moves the register, the order's invoicing state and balance, receivables and Today (a payment reminder can become due).
+  'invoice.create': () => [qk.money.invoices.all, qk.money.receivables.all, qk.orders.all, qk.today.all],
+  'invoice.update': v => [qk.money.invoices.register(), qk.money.invoices.detail(v.invoiceId), qk.money.receivables.all, qk.orders.all, qk.today.all],
+  // Stamps move the register's tracks and the FBR / TCS items on Today.
+  'invoice.stamp': () => [qk.money.invoices.all, qk.today.all],
+  'invoice.receipt': v => [qk.money.invoices.receipts(v.invoiceId), qk.money.invoices.detail(v.invoiceId), qk.money.invoices.register(), qk.today.all],
+  // A payment moves balances (receivables, the order page's panel, its payment chip) and Today's overdue items.
+  'payment.record': v => [qk.money.receivables.all, qk.money.receivables.payments(v.orderId), qk.orders.all, qk.today.all],
 }
 
 /** The keys a write makes stale. Pure, so it can be tested without a QueryClient. */

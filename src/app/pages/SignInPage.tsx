@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Eye, EyeOff, KeyRound, Smartphone } from 'lucide-react'
+import { Eye, EyeOff, KeyRound, Smartphone, UserX } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useSession, useSignInNotice } from '@/app/session'
@@ -86,7 +86,7 @@ export function SignInPage() {
           </Banner>
         ) : null}
         {shown === 'deactivated' ? (
-          <Banner tone="warning" title="This account is deactivated">
+          <Banner tone="warning" icon={UserX} title="This account is deactivated">
             Ask your admin to reactivate it.
           </Banner>
         ) : null}
@@ -125,7 +125,6 @@ export function SignInPage() {
               placeholder="name@company.pk"
               inputMode="email"
               readOnly={busy}
-              className="max-sm:h-touch"
               {...form.register('email')}
             />
           </Field>
@@ -136,7 +135,7 @@ export function SignInPage() {
                 autoComplete="current-password"
                 readOnly={busy}
                 aria-invalid={shown === 'invalid' || undefined}
-                className="pr-10 max-sm:h-touch"
+                className="pr-10"
                 {...form.register('password')}
               />
               <button
@@ -144,13 +143,13 @@ export function SignInPage() {
                 aria-label={reveal ? 'Hide password' : 'Show password'}
                 aria-pressed={reveal}
                 onClick={() => setReveal(r => !r)}
-                className="absolute inset-y-0 right-0 grid w-control place-items-center rounded text-fg-muted hover:text-fg max-sm:w-touch"
+                className="absolute inset-y-0 right-0 grid w-control place-items-center rounded text-fg-muted hover:text-fg"
               >
                 <Icon icon={reveal ? EyeOff : Eye} />
               </button>
             </div>
           </Field>
-          <Button type="submit" variant="primary" size="lg" busy={busy} busyLabel="Signing in" className="w-full max-sm:h-touch">
+          <Button type="submit" variant="primary" size="lg" busy={busy} busyLabel="Signing in" className="w-full">
             Sign in
           </Button>
         </form>

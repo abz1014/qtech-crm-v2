@@ -275,6 +275,7 @@ export function BoardPage() {
             getRowId={r => r.rfqId}
             twoLine={!compact}
             density={density}
+            densitySwitch={false}
             mobileRow={r => <OpenCard row={r} />}
             onRowOpen={openRow}
             loading={open.isPending}
@@ -316,6 +317,7 @@ export function BoardPage() {
             getRowId={r => r.rfqId}
             twoLine={!compact}
             density={density}
+            densitySwitch={false}
             mobileRow={r => <ClosedCard row={r} />}
             onRowOpen={openRow}
             loading={closed.isPending}

@@ -42,6 +42,7 @@ export function useTodayView(user: { id: string; role: Role }, today: string): {
       clarifications: data.clarifications,
       inquiries: data.inquiries,
       legs: data.legs,
+      orders: data.orders,
       receivables: data.receivables,
       monthEnd: data.monthEnd,
       snoozes: data.snoozes,

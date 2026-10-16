@@ -14,6 +14,8 @@ export type RuleKey =
   | 'payment_overdue'
   | 'goods_late'
   | 'place_po'
+  | 'plan_commissioning'
+  | 'delivered_not_invoiced'
   | 'close_month'
 
 /** The rule key written to snoozes.rule (DATA_MODEL 2.21 gives `chase_customer_clarification` as the example). */
@@ -27,6 +29,8 @@ export const SNOOZE_RULE: Record<RuleKey, string> = {
   payment_overdue: 'payment_overdue',
   goods_late: 'goods_late',
   place_po: 'place_po',
+  plan_commissioning: 'plan_commissioning',
+  delivered_not_invoiced: 'delivered_not_invoiced',
   close_month: 'close_month',
 }
 
@@ -109,6 +113,26 @@ export interface LegFact {
   chaseCount: number
 }
 
+/**
+ * One live order, for the two order rules (O05). Read from v_order_state, so the states are the database's, not recomputed.
+ * `invoicingState` is null for an engineer (the view hides it), and the invoicing rule never runs for one.
+ */
+export interface OrderFact {
+  id: string
+  number: number
+  ownerId: string | null
+  customerName: string
+  orderedOn: string | null
+  /** v_order_state.goods_state: n_a / to_source / to_place / on_order / late / received / partly_delivered / delivered. */
+  goodsState: string
+  /** v_order_state.commissioning_state: n_a / to_plan / planned / done. */
+  commissioningState: string
+  /** v_order_state.invoicing_state: not_invoiced / part / fully_invoiced; null when the caller is an engineer. */
+  invoicingState: string | null
+  /** The latest leg delivered_on, or the commissioning done date: the day the order became deliverable-complete. Null when unknown. */
+  deliveredOn: string | null
+}
+
 export interface ReceivableFact {
   orderId: string
   orderNumber: number
@@ -148,6 +172,8 @@ export interface TodayInputs {
   clarifications: readonly ClarificationFact[]
   inquiries: readonly InquiryFact[]
   legs: readonly LegFact[]
+  /** Live orders in the states the order rules read (needs planning, delivered and not invoiced). */
+  orders: readonly OrderFact[]
   /** Admin and sales only; empty for an engineer (never requested). */
   receivables: readonly ReceivableFact[]
   /** Admin only; null otherwise. */

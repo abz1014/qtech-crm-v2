@@ -6,6 +6,7 @@ import { generateCSV } from '@/lib/csvExport'
 import { paisaToFixed, sumPaisa } from '@/lib/money'
 import { tableCsvRows } from '@/ui/dataTableModel'
 import { StatusBadge } from '@/ui/StatusBadge'
+import { TableFilter } from '@/ui/TableFilter'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -261,5 +262,104 @@ describe('DataTable: CSV (U04)', () => {
     expect(body.at(-1)![0]).toBe('Total')
     expect(body.at(-1)![2]).toBe(-83500.25)
     expect(generateCSV(['n'], [[-84500.5]])).toBe('"n"\n"-84500.5"')
+  })
+})
+
+describe('DataTable: density, filter keys, focus memory, footer (A-108 to A-113)', () => {
+  const toolbar = <TableFilter label="Filter invoices" value="" onChange={() => undefined} />
+  const density = () => el.querySelector('[data-density]')?.getAttribute('data-density')
+  const radio = (name: string) => [...el.querySelectorAll<HTMLButtonElement>('[role="radio"]')].find(b => b.textContent === name)!
+
+  it('a table with a toolbar offers Comfortable / Compact and remembers the choice per table', () => {
+    window.localStorage.clear()
+    mount(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} />)
+    expect(density()).toBeUndefined()
+    act(() => radio('Compact').click())
+    expect(density()).toBe('compact')
+    expect(window.localStorage.getItem('qtech.density.anon.Invoices')).toBe('compact')
+    act(() => root!.unmount())
+    el.remove()
+    mount(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} />)
+    expect(density()).toBe('compact')
+    expect(radio('Compact').getAttribute('aria-checked')).toBe('true')
+    window.localStorage.clear()
+  })
+
+  it('still works when storage throws, and has no switch without a toolbar or with densitySwitch off', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+    mount(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} />)
+    act(() => radio('Compact').click())
+    expect(density()).toBe('compact')
+    spy.mockRestore()
+    act(() => root!.render(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} />))
+    expect(el.querySelector('[role="radiogroup"]')).toBeNull()
+    act(() => root!.render(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} densitySwitch={false} />))
+    expect(el.querySelector('[role="radiogroup"]')).toBeNull()
+    window.localStorage.clear()
+  })
+
+  it('/ focuses the filter, and Esc clears it', () => {
+    function Harness() {
+      const [q, setQ] = useState('abc')
+      return <DataTable label="x" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={<TableFilter label="Filter invoices" value={q} onChange={setQ} />} />
+    }
+    mount(<Harness />)
+    const field = el.querySelector<HTMLInputElement>('[data-table-filter]')!
+    key(rows()[0], '/')
+    expect(document.activeElement).toBe(field)
+    key(field, 'Escape')
+    expect(field.value).toBe('')
+    // typing a slash into the field is just a slash
+    const ev = new KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true })
+    act(() => void field.dispatchEvent(ev))
+    expect(ev.defaultPrevented).toBe(false)
+  })
+
+  it('the row you opened is focused again when the table comes back', () => {
+    window.sessionStorage.clear()
+    const open = vi.fn()
+    mount(<DataTable label="Invoices back" columns={columns} rows={INVOICES} getRowId={r => r.id} onRowOpen={open} />)
+    act(() => rows()[1].focus())
+    key(rows()[1], 'Enter')
+    expect(open).toHaveBeenCalledTimes(1)
+    act(() => root!.unmount())
+    el.remove()
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    mount(<DataTable label="Invoices back" columns={columns} rows={INVOICES} getRowId={r => r.id} onRowOpen={open} />)
+    expect(document.activeElement).toBe(rows()[1])
+    expect(rows()[1].tabIndex).toBe(0)
+    expect(window.sessionStorage.getItem('qtech.table.focus.Invoices back')).toBeNull()
+  })
+
+  it('the footer says "Showing n of n" with the noun, and the key legend shows whenever there are rows', () => {
+    mount(<DataTable label="x" noun="invoices" total={9} columns={columns} rows={INVOICES} getRowId={r => r.id} />)
+    expect(el.textContent).toContain('Showing 3 of 9 invoices')
+    expect(el.textContent).toContain('move')
+    expect(el.textContent).not.toContain('open')
+    expect(el.textContent).not.toContain('select')
+  })
+
+  it('loading says what is loading and keeps a skeleton footer; the error has a default sentence and a stamp', () => {
+    mount(<DataTable label="x" noun="RFQs" columns={columns} rows={[]} getRowId={r => r.id} loading toolbar={toolbar} />)
+    expect(el.textContent).toContain('Loading RFQs')
+    expect(el.querySelector('.border-t .skeleton')).not.toBeNull()
+    act(() =>
+      root!.render(
+        <DataTable label="x" noun="RFQs" columns={columns} rows={[]} getRowId={r => r.id} error={{ reference: '4f1c9a', at: new Date('2026-11-27T09:41:00+05:00') }} />,
+      ),
+    )
+    expect(el.textContent).toContain('Couldn’t load RFQs')
+    expect(el.textContent).toContain('Your changes are safe. Check your connection and try again.')
+    expect(el.textContent).toContain('Request failed · Fri 27 Nov, 09:41 · reference 4f1c9a')
+  })
+
+  it('a column with a width truncates through a tooltip trigger', () => {
+    const wide: Column<Inv>[] = [{ id: 'customer', header: 'Customer', value: r => r.customer, width: 230 }]
+    mount(<DataTable label="x" columns={wide} rows={INVOICES} getRowId={r => r.id} />)
+    const t = el.querySelector<HTMLElement>('tbody td [data-truncate]')!
+    expect(t.textContent).toBe('Punjab Cement')
+    expect(t.style.maxWidth).toBe('230px')
   })
 })

@@ -1,5 +1,5 @@
 import { useRef, type ReactNode } from 'react'
-import { FileText, History, KeyRound, LogOut, Pencil, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
+import { FileText, History, KeyRound, LogOut, Pencil, Phone, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
 import { z } from 'zod'
 import type { CreatedUser, Role, TeamMember } from '@/features/settings/api'
 import {
@@ -8,9 +8,10 @@ import {
   useReactivatePerson,
   useResetPassword,
   useSetJobTitle,
+  useSetPhone,
   useSetRole,
 } from '@/features/settings/hooks'
-import { firstName, isOnlyActiveAdmin, ROLE_OPTIONS, roleLabel } from '@/features/settings/teamModel'
+import { firstName, isOnlyActiveAdmin, PHONE_MAX, ROLE_OPTIONS, roleLabel } from '@/features/settings/teamModel'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
@@ -172,6 +173,51 @@ export function EditJobTitleDialog({ member, onClose }: Base & { member: TeamMem
   )
 }
 
+// ---------------------------------------------------------------- Edit phone
+
+const phoneSchema = z.object({ phone: z.string().trim().max(PHONE_MAX, `Keep the phone number under ${PHONE_MAX} characters.`) })
+
+export function EditPhoneDialog({ member, onClose }: Base & { member: TeamMember }) {
+  const { toast } = useToast()
+  const setPhone = useSetPhone()
+  const sf = useSubmitForm({
+    schema: phoneSchema,
+    entity: 'phone',
+    defaultValues: { phone: member.phone ?? '' },
+    onSubmit: v => setPhone.mutateAsync({ userId: member.id, phone: v.phone || null }),
+    onSuccess: v => {
+      toast({ title: v.phone ? 'Phone saved' : 'Phone cleared', body: member.name, tone: 'success' })
+      onClose()
+    },
+  })
+  return (
+    <Dialog open onOpenChange={open => !open && !sf.pending && onClose()} busy={sf.pending}>
+      <DialogContent
+        title="Edit phone"
+        context={member.name}
+        icon={Phone}
+        size="sm"
+        footer={
+          <>
+            <Button data-cancel disabled={sf.pending} onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" form={sf.formId} busy={sf.pending} busyLabel="Saving">
+              {sf.failed ? 'Try again' : 'Save'}
+            </Button>
+          </>
+        }
+      >
+        <Form sf={sf} labels={{ phone: 'Phone' }}>
+          <FormField name="phone" label="Phone" requirement="optional" help="Printed under the signature on chase texts and quotations.">
+            {f => <TextField {...f} type="tel" className="num" placeholder="0300 1234567" autoComplete="off" />}
+          </FormField>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ---------------------------------------------------------------- Change role
 
 const roleSchema = z.object({ role: z.enum(['admin', 'sales', 'engineer']) })
@@ -299,7 +345,7 @@ export function DeactivateDialog({ member, members, onClose }: Base & { member: 
     defaultValues: {},
     onSubmit: () => deactivate.mutateAsync(member.id),
     onSuccess: () => {
-      toast({ title: `${member.name} deactivated`, body: 'Signed out everywhere.', tone: 'success' })
+      toast({ title: `${member.name} deactivated`, body: 'They are signed out everywhere.', tone: 'success' })
       onClose()
     },
   })
@@ -324,7 +370,7 @@ export function DeactivateDialog({ member, members, onClose }: Base & { member: 
               busyLabel="Deactivating"
               disabled={locked}
             >
-              {sf.failed ? 'Try again' : `Deactivate ${first}`}
+              {sf.failed ? 'Try again' : locked ? 'Deactivate' : `Deactivate ${first}`}
             </Button>
           </>
         }
