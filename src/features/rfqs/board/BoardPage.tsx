@@ -7,7 +7,7 @@ import {
   applyQuery,
   applyState,
   defaultOwner,
-  failureLine,
+  failureReference,
   PAGE_SIZE,
   pageSummary,
   STATE_FILTERS,
@@ -52,7 +52,8 @@ const errorProps = (q: { refetch: () => unknown; error: Error | null; errorUpdat
   title: 'Couldn’t load RFQs',
   message: 'Your changes are safe. Check your connection and try again.',
   onRetry: () => void q.refetch(),
-  meta: failureLine(q.errorUpdatedAt, q.error?.message ?? ''),
+  at: new Date(q.errorUpdatedAt || Date.now()),
+  reference: failureReference(q.errorUpdatedAt, q.error?.message ?? ''),
 })
 
 export function BoardPage() {

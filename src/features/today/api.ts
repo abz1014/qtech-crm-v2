@@ -218,7 +218,8 @@ async function loadOrders(role: Role, names: Map<string, string>): Promise<Order
     (from, to) =>
       db
         .from('v_order_state')
-        .select('order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state')
+        // invoicing_state is money-gated: an engineer's request never names it
+        .select((money ? 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state' : 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state') as 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state')
         .eq('lifecycle', 'active')
         .or(money ? 'commissioning_state.eq.to_plan,invoicing_state.eq.not_invoiced' : 'commissioning_state.eq.to_plan')
         .order('number')

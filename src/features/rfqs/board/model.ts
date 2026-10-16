@@ -177,11 +177,16 @@ export function pageSummary(page: number, size: number, total: number): string {
  * The reference is six hex digits derived from the time and the error text, so the same failure reads
  * the same on screen and in a screenshot someone sends to support.
  */
+/** The six hex digits of a failure's reference: derived from the time and the error text. */
+export function failureReference(at: number, message: string): string {
+  let h = 2166136261
+  for (const c of `${at}|${message}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619)
+  return (h >>> 0).toString(16).padStart(8, '0').slice(0, 6)
+}
+
 export function failureLine(at: number, message: string): string {
   const when = new Date(at || Date.now())
   const day = formatDay(when.toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' }))
   const time = when.toLocaleTimeString('en-GB', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: false })
-  let h = 2166136261
-  for (const c of `${at}|${message}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619)
-  return `Request failed · ${day}, ${time} · reference ${(h >>> 0).toString(16).padStart(8, '0').slice(0, 6)}`
+  return `Request failed · ${day}, ${time} · reference ${failureReference(at, message)}`
 }
