@@ -60,13 +60,15 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
 
   // Actions (A-89): idle rows in the palette, and the same keys work anywhere outside a text field: N, C, G then T.
   const actions = useMemo<PaletteSource>(() => {
+    const captureItem: PaletteItem = { id: 'capture', label: 'Capture', meta: 'Action', icon: Import, shortcut: ['C'], onSelect: () => openCapture?.() }
     const items: PaletteItem[] = [
       { id: 'new-rfq', label: 'New RFQ', meta: 'Go to intake', icon: Plus, shortcut: ['N'], href: INTAKE_ROUTE },
-      { id: 'capture', label: 'Capture', meta: 'Action', icon: Import, shortcut: ['C'], onSelect: () => openCapture?.() },
+      captureItem,
       { id: 'go-today', label: 'Go to Today', icon: CalendarCheck, shortcut: ['G T'], href: TODAY_ROUTE },
       { id: 'new-company', label: 'New company', icon: Building2, href: '/companies?new=1' },
     ]
-    return { id: 'actions', group: 'Actions', order: 90, idle: () => items }
+    // Typing "capture" still finds the Capture action; the other actions are idle-only (destinations answer typed text).
+    return { id: 'actions', group: 'Actions', order: 90, idle: () => items, search: q => filterItems([captureItem], q) }
   }, [openCapture])
 
   useEffect(() => {
