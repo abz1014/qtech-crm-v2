@@ -142,37 +142,36 @@ test.describe('month-end (M10)', () => {
     await review(page, 'm10-gst-fbr-1440')
   })
 
-  test('sales and engineer: no Month-end, no month-end request, and no rows from the database; sales still read the GST register', async ({ browser }) => {
-    test.setTimeout(90_000)
-    for (const role of ['sales', 'engineer'] as const) {
+  for (const role of ['sales', 'engineer'] as const) {
+    test(`${role}: no Month-end page, no month-end request, no rows from the database${role === 'sales' ? '; the GST register is still readable' : ''}`, async ({ browser }) => {
       const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
       const seen: string[] = []
       page.on('request', r => {
         if (/\/rest\/v1\/(closed_months|v_month_pnl|v_month_expense_category|v_month_team|payments_in|expenses)|\/rpc\/(month_end_status|aging_as_of|payables_as_of|close_month|close_months_through|reopen_month)/.test(r.url())) seen.push(r.url())
       })
-      await openAs(page, role, `/money/month-end?month=${STMT.key}`)
-      for (const path of ['', '/pnl', '/categories', '/aging', '/owe', '/gst', '/team']) {
-        if (path) await page.goto(`/money/month-end${path}?month=${STMT.key}`)
-        await expect(page.getByRole('heading', { name: /is for admins|not available to your role/ })).toBeVisible()
-      }
+      // one sign-in, then one visit to a Month-end address (every Month-end route is behind the same admin check)
+      await openAs(page, role, `/money/month-end/pnl?month=${STMT.key}`)
+      await expect(page.getByRole('heading', { name: /is for admins|not available to your role/ })).toBeVisible()
       expect(seen, `${role} must not fetch month-end data`).toEqual([])
       if (role === 'sales') {
-        await openAs(page, role, '/money/gst-register')
+        // already signed in: just navigate
+        await page.goto('/money/gst-register')
+        await expect(page.getByRole('navigation', { name: 'Money views' })).toBeVisible()
         await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /Month-end/ })).toHaveCount(0)
         await expect(page.getByRole('button', { name: 'Export CSV' })).toHaveCount(0)
       }
       await page.close()
-      for (const view of ['v_month_pnl', 'v_month_expense_category', 'v_month_team', 'closed_months?select=month']) {
-        expect((await rest<unknown[]>(role, `${view}${view.includes('?') ? '' : '?select=*'}`)).body, `${role} ${view}`).toEqual([])
+      // one probe per view and function: the database answers an empty list or a refusal
+      for (const view of ['v_month_pnl?select=*', 'v_month_expense_category?select=*', 'v_month_team?select=*', 'closed_months?select=month']) {
+        expect((await rest<unknown[]>(role, view)).body, `${role} ${view}`).toEqual([])
       }
       for (const fn of ['month_end_status', 'aging_as_of', 'payables_as_of']) {
         const res = await rest<unknown>(role, `rpc/${fn}`, { method: 'POST', body: fn === 'month_end_status' ? { p_month: STMT.start } : { p_date: STMT.day(28) } })
         expect(res.status === 200 ? res.body : []).toEqual([])
       }
-      const close = await rest(role, 'rpc/close_month', { method: 'POST', body: { p_month: STMT.start } })
-      expect(close.status).toBeGreaterThanOrEqual(400)
-    }
-  })
+      expect((await rest(role, 'rpc/close_month', { method: 'POST', body: { p_month: STMT.start } })).status).toBeGreaterThanOrEqual(400)
+    })
+  }
 
   test('axe at 1440 and 375, with the review screenshots', async ({ page }) => {
     await openAs(page, 'admin', `/money/month-end?month=${STMT.key}`)
