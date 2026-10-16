@@ -107,6 +107,8 @@ export interface SourceCount {
 export interface TransformResult {
   tables: Record<ImportTable, NewRow[]>
   storageCopies: StorageCopy[]
+  /** Highest Q-Tech own number seen per series; the loader makes v2's counters continue after them. */
+  numberFloors: { rfq: number; order: number; quotation: number; po: number }
   review: ReviewItem[]
   recon: Reconciliation
   sourceCounts: SourceCount[]

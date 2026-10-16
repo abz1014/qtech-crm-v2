@@ -939,7 +939,7 @@
    },
    {
     "id": "f1000000-0000-4000-8000-000000000011",
-    "rfq_number": null,
+    "rfq_number": "RFQ-0177",
     "client_id": "c1000000-0000-4000-8000-000000000001",
     "company_name": "",
     "contact_person": "",
@@ -1008,7 +1008,7 @@
    },
    {
     "id": "f1000000-0000-4000-8000-000000000014",
-    "rfq_number": null,
+    "rfq_number": "QT-0042",
     "client_id": "c1000000-0000-4000-8000-000000000006",
     "company_name": "",
     "contact_person": "",
@@ -1782,6 +1782,21 @@
     "amount_paid": 0,
     "payment_method": null,
     "created_at": "2024-10-01T09:24:00+00:00",
+    "notes": null
+   },
+   {
+    "invoice_id": "04000000-0000-4000-8000-000000000006",
+    "invoice_number": "INV-B-77",
+    "client_id": "c1000000-0000-4000-8000-000000000006",
+    "order_id": null,
+    "rfq_id": null,
+    "invoice_amount": 5000,
+    "issued_date": "2025-02-10",
+    "due_date": "",
+    "payment_status": "Pending",
+    "amount_paid": 0,
+    "payment_method": null,
+    "created_at": "2024-10-01T09:26:00+00:00",
     "notes": null
    },
    {

@@ -3,6 +3,7 @@ import { reconciles } from '../src/report/report'
 import { parseMappings } from '../src/mappings'
 import { transformAll } from '../src/transform'
 import { itemDescription } from '../src/transform/orders'
+import { qtechNumber } from '../src/transform/rfqs'
 import type { LegacyDump, NewRow } from '../src/types'
 import { AS_OF, cloneDump, fixtureDump, run, V2_USERS, violations } from './support'
 
@@ -186,11 +187,11 @@ describe('I03 RFQs', () => {
     expect(flagsOf(r)).toContain('customer_ref_duplicate')
   })
 
-  it('maps priority high to is_priority and the assignee to the owner, with reliability', () => {
+  it('maps priority high to is_priority and the assignee to the owner (no reliability flag: the old attribution carries no credit)', () => {
     expect(rfqOf(1)['is_priority']).toBe(true)
     expect(rfqOf(14)['is_priority']).toBe(false)
     expect(rfqOf(1)['owner_id']).toBe(V2_USERS[0]!.id)
-    expect(flagsOf(rfqOf(1))).toContain('owner_unreliable')
+    expect(flagsOf(rfqOf(1))).not.toContain('owner_unreliable')
     expect(rfqOf(14)['owner_id']).toBe(V2_USERS[1]!.id)
     expect(flagsOf(rfqOf(14))).not.toContain('owner_unreliable')
     const none = rfqOf(16)
@@ -260,6 +261,22 @@ describe('I03 RFQs', () => {
     expect(bad['currency']).toBe('PKR')
     expect(flagsOf(bad)).toContain('currency_invalid')
     expect(t.supplier_inquiries.some(i => flagsOf(i).includes('inquiry_created_for_quote'))).toBe(true)
+  })
+})
+
+describe('Q-Tech own numbers', () => {
+  it('finds the highest of our own numbers, so the counters can continue after them', () => {
+    expect(result.numberFloors).toEqual({ rfq: 177, order: 0, quotation: 42, po: 0 })
+  })
+  it('does not treat a customer reference as one of ours', () => {
+    expect(qtechNumber('PR-4521')).toBeNull()
+    expect(qtechNumber('rfq-0009')).toEqual({ series: 'rfq', n: 9 })
+    expect(qtechNumber('QT 12')).toEqual({ series: 'quotation', n: 12 })
+    expect(qtechNumber('RFQ-0177A')).toBeNull()
+  })
+  it('keeps no customer_ref for the RFQ-0177 and QT-0042 rows', () => {
+    expect(rfqOf(11)['customer_ref']).toBeNull()
+    expect(rfqOf(14)['customer_ref']).toBeNull()
   })
 })
 
@@ -416,13 +433,14 @@ describe('I04 orders', () => {
     expect(at['site_id']).toBe(t.company_sites.find(s => s['name'] === 'Head Office')!['id'])
     expect(at['owner_id']).toBe(V2_USERS[1]!.id)
     expect(flagsOf(at)).not.toContain('owner_unreliable')
-    expect(flagsOf(orderOf('251809'))).toContain('owner_unreliable')
+    expect(flagsOf(orderOf('251809'))).not.toContain('owner_unreliable')
     expect(orderOf('252446')['rfq_id']).toBe(rfqOf(1)['id'])
     expect(orderOf('PO250105')['rfq_id']).toBe(rfqOf(5)['id'])
   })
 
-  it('names the seed attribution in a review list', () => {
-    expect(result.review.some(i => i.list === 'owner_attribution' && i.label === 'Old Admin')).toBe(true)
+  it('has no owner_attribution list any more: nobody is credited, so attribution reliability does not matter', () => {
+    expect(result.review.some(i => i.list === 'owner_attribution')).toBe(false)
+    for (const table of ['rfqs', 'orders'] as const) for (const r of t[table]) expect(flagsOf(r)).not.toContain('owner_unreliable')
   })
 
   it('builds item text from the notes without the PO prefix, and labels batches and units', () => {
@@ -437,13 +455,25 @@ describe('I05 invoices', () => {
   const inv = (n: string) => t.invoices.find(i => i['number'] === n)!
 
   it('takes invoices from three sources: GST register, bookkeeping invoices, orders.invoice_number', () => {
-    expect(t.invoices).toHaveLength(12)
+    expect(t.invoices).toHaveLength(13)
     expect(inv('INV-2024-0101')).toMatchObject({ net_amount: 370000, gst_amount: 66600, order_id: orderOf('251809')['id'] })
     // orders.invoice_number, where there is no GST row
     expect(inv('INV-0004')).toMatchObject({ net_amount: 650163, gst_amount: 0, invoice_date: '2024-08-20', order_id: orderOf('248504')['id'] })
     expect(flagsOf(inv('INV-0004'))).toContain('invoice_basis_unknown')
     // bookkeeping invoice, where there is neither
     expect(inv('INV-B-11')).toMatchObject({ net_amount: 617258, invoice_date: '2024-10-20' })
+  })
+
+  it('asks whether the amount includes GST (invoice_basis_unknown) only of invoices tied to an order', () => {
+    const noOrder = inv('INV-B-77')
+    expect(noOrder['order_id']).toBeNull()
+    expect(noOrder['company_id']).toBe(byName('Gamma Cement')['id'])
+    expect(flagsOf(noOrder)).toEqual([])
+    expect(JSON.stringify(noOrder['legacy_source'])).toContain('INV-B-77')
+    for (const i of t.invoices.filter(x => x['order_id'] !== null && (x['legacy_source'] as { table: string }).table !== 'gst_invoices')) {
+      expect(flagsOf(i)).toContain('invoice_basis_unknown')
+    }
+    expect(t.invoices.filter(x => x['order_id'] === null && flagsOf(x).includes('invoice_basis_unknown'))).toHaveLength(0)
   })
 
   it('does not import a bookkeeping invoice twice when the order has a GST row or an invoice number', () => {
@@ -514,11 +544,20 @@ describe('I05 payments', () => {
     expect(p).not.toHaveProperty('payment_method')
   })
 
-  it('credits the order owner only when the owner is known and reliable', () => {
-    // 225 belongs to the unreliable seed admin: unattributed
-    expect(t.payments_in.find(x => x['reference'] === 'REF-1')!['credited_user_id']).toBeNull()
-    // AT-501 belongs to the reliable sales user
-    expect(t.payments_in.find(x => x['reference'] === 'REF-12')!['credited_user_id']).toBe(V2_USERS[1]!.id)
+  it('credits NOBODY for an old payment (the owner decides later), whoever owns the order', () => {
+    expect(t.payments_in.length).toBeGreaterThan(0)
+    for (const p of t.payments_in) expect(p['credited_user_id']).toBeNull()
+    // AT-501 belongs to a known sales user and its payment still carries no credit
+    expect(t.orders.find(o => o['customer_po_number'] === 'AT-501')!['owner_id']).toBe(V2_USERS[1]!.id)
+    expect(t.payments_in.find(x => x['reference'] === 'REF-12')!['credited_user_id']).toBeNull()
+  })
+
+  it('imports a payment the old system holds as received, by bank, even when the old method says Cash', () => {
+    const cash = t.payments_in.find(p => flagsOf(p).includes('from_payment_records'))!
+    expect(JSON.stringify(cash['legacy_source'])).toContain('Cash')
+    expect(cash).toMatchObject({ paid_via: 'bank', bank_month: null })
+    expect(flagsOf(cash).join(' ')).not.toMatch(/cash/i)
+    for (const p of t.payments_in) expect(p['paid_via']).toBe('bank')
   })
 
   it('flags an unparseable payment date and keeps the payment', () => {

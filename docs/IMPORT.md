@@ -22,8 +22,9 @@ These are conditions, not suggestions. If one is not true, stop.
    shell that runs the command. The program reads no `.env` file and takes neither value as an argument (shell history).
 6. **Backups are live** (R13) before the first live load, and **no month is closed** in the target (the loader refuses otherwise:
    there is no service-role bypass of the month lock). Close months only after sign-off: `close_months_through(last month)`.
-7. **Migration 0055 is on the target project.** It adds the two service-role-only helpers the loader needs (`import_purge_audit`,
-   `import_reset_numbers`). Push it through the protected `remote.yml` job like any migration.
+7. **Migrations 0055 and 0056 are on the target project.** They add the two service-role-only helpers the loader needs
+   (`import_purge_audit`, and `import_reset_numbers` with a floor per number series). Push them through the protected
+   `remote.yml` job like any migration.
 
 ## What is built
 
@@ -68,8 +69,12 @@ loader also requires it to be set before it deletes.
    imported rows point at the v2 record, which is never edited or deleted.
 6. Handles unique keys v2 already uses: an RFQ customer reference, a PO number, an invoice number. The imported row is flagged
    (`customer_ref_duplicate`, `po_shared`, `number_duplicate`), still imported, and listed in `trial_duplicates.csv` or `po_clashes.csv`.
-7. Restarts the RFQ and order number counters after the highest number v2 holds (`import_reset_numbers`), so a dry run does not
-   use up numbers: RFQ-0177 is RFQ-0177 on every run.
+7. Makes Q-Tech's own number series continue (`import_reset_numbers`, 0056): the RFQ, order, quotation and supplier PO counters
+   are each set to max(highest number in use, highest imported Q-Tech number) + 1. The transform finds the highest imported
+   number from the old `rfq_number` values shaped like ours (`RFQ-0177` is RFQ 177, `QT-0042` is quotation 42), so after an
+   import whose highest RFQ was RFQ-0177 the next RFQ is RFQ-0178, and a dry run does not use up numbers. Orders and supplier
+   POs have no old number to read, so their floor is 0 (they continue after whatever v2 holds; the PO start value is the
+   owner's Q5 setting).
 8. Inserts, in foreign-key order, in batches. A failing batch is retried row by row so the message names the row.
 9. Copies the receipt files into the `gst-receipts` bucket (from `storage/gst-receipts/` next to the dump).
 10. Removes the audit rows its own writes caused (`import_purge_audit`: only version 5 ids, only rows written with no signed-in user).
@@ -117,7 +122,7 @@ rebuilds `import/fixtures/legacy/dump.json` from `build-legacy-dump.mjs`.
 3. Download the `gst-receipts` bucket's files from the old dashboard into `import/.data/dump/storage/gst-receipts/<same path>`.
 4. **I06:** answer the assumption checklist (below) from the dump and the report.
 5. Fill in the mapping files (copy each `import/mappings/*.template.csv` to the name without `.template`, in `import/.data/mappings/`
-   for now): `users.csv` first (it names who is who and which owners are only the seed attribution), then the rest as the review
+   for now): `users.csv` first (it names who is who), then the rest as the review
    lists suggest.
 6. **Dry run first on a local stack** with the real dump (the data never leaves the laptop), then read the lists.
 7. **I07, dry run 1 into the new project.** With the owner present:
@@ -190,7 +195,6 @@ phone numbers, e-mail addresses or amounts), which are then committed; the sign-
 | `no_offer_phrases` | RFQ notes that say a supplier "could not find offer" | Tag it | in the app |
 | `category_unmapped` | Expense categories with no new category (they land in Other, flagged) | Which category | `expense_categories.csv` (`legacy_category,category`) |
 | `margin_anomalies` | Sale about equal to, or below, cost | Is the cost right | in the app |
-| `owner_attribution` | A person who owns most of the records (probably the seed attribution) | Are their attributions real | `users.csv` (`owner_reliable`) |
 | `storage_missing` | Receipt files not in the dump, or over 5 MB | Fetch them | the dump folder |
 | `dropped_rows` | Every row that could not be imported, with the reason | Nothing, unless it matters | |
 | `warnings` | For example a non-empty `documents` table | Look | |
@@ -229,12 +233,23 @@ Only the dump can settle: #2 (date formats and how many fail), #3 and #4 (duplic
 
 Each is one small rule in `import/src/transform/`, covered by a test.
 
-1. **Which RFQ numbers are the customer's own.** `rfq_number` becomes `customer_ref` unless it looks like Q-Tech's own series (`RFQ-12`, `QT-12`, `QTECH12`). A repeat of a customer reference on the same company keeps only the first (`customer_ref_duplicate`).
-2. **Composite vendor names.** A vendor name is flagged `name_unparsed` only when it looks composite (brackets, "via", a slash) and is not in `vendor_parse.csv`; plain names import as they are without a flag, so the list stays short.
-3. **Invoices with no GST row** (bookkeeping invoices, `orders.invoice_number`): net = the old amount, GST = 0, flag `invoice_basis_unknown`, because nothing says whether the old amount included GST. Their orders are flagged `value_basis_unknown` too. Resolving the basis on an order rewrites its item prices, not these invoices, so the admin may need to correct the invoice as well.
-4. **`paid_via` of legacy payments in is 'bank'** (the old `payment_method` is kept only in `legacy_source`), as for expenses (A6.2). If cash receipts matter for the bank tick, say so.
-5. **Owner reliability** comes from `users.csv` (`owner_reliable`), not guessed. A person who owns 70% or more of the records is listed in `owner_attribution`.
-6. **One quote line per supplier and item.** The old quotes are RFQ-level, so several quotes from one supplier on one RFQ land on the same item; the newest wins and the others are listed in `dropped_rows`.
+1. **Which RFQ numbers are the customer's own (confirmed).** `rfq_number` becomes `customer_ref` unless it looks like Q-Tech's own series (`RFQ-12`, `QT-12`, `QTECH12`). A repeat of a customer reference on the same company keeps only the first (`customer_ref_duplicate`).
+2. **Composite vendor names (confirmed).** A vendor name is flagged `name_unparsed` only when it looks composite (brackets, "via", a slash) and is not in `vendor_parse.csv`; plain names import as they are without a flag, so the list stays short.
+3. **Old invoices with no GST split** (bookkeeping invoices, `orders.invoice_number`) import with net = the old amount and GST = 0.
+   The review flag `invoice_basis_unknown` ("check whether this amount includes GST") is put **only on invoices linked to an
+   order (customer PO)**. An invoice with no order link (a bookkeeping invoice that names only a customer) imports without that
+   flag; its original row stays in `legacy_source`, so it is still traceable. *This is my reading of the owner's rule; correct it
+   here if it is wrong.* The orders those invoices belong to carry `value_basis_unknown` as before, and resolving an order's basis
+   rewrites its item prices, not these invoices, so the admin may need to correct the invoice as well.
+4. **A payment the old database holds is a payment received**, imported with `paid_via` = bank and `bank_month` empty. Cash is
+   not flagged, even where the old `payment_method` says Cash (it stays in `legacy_source`). Same for expenses (A6.2).
+5. **Credit for old sales: nobody, for now.** `credited_user_id` is NULL on every imported payment, so none of them counts toward
+   anyone's target (`v_payment_net` marks them `unattributed`; a load-test checks this). The `owner_reliable` column of `users.csv`
+   and the `owner_unreliable` flag and `owner_attribution` list are gone: `users.csv` now only says who is who (an old `owner_reliable`
+   column is ignored). The owner's `owner_id` on old RFQs and orders is kept as recorded and carries no credit.
+   **TODO (owner decision, later):** who gets credit for old sales; the admin can assign credit per payment afterwards.
+6. **One quote line per supplier and item.** The old quotes are RFQ-level, so several quotes from one supplier on one RFQ land on
+   the same item; the newest wins and the others are listed in `dropped_rows` (confirmed by the owner).
 7. **Payable payments that repeat a supplier payment** (same amount, same day, same supplier) are counted once.
 8. **Mixed-status merged orders** (PO 000001): the merged leg counts as delivered only when every member order was; its date is the latest.
 9. **Received.** There is no Received step (owner, 2026-10-15): the leg's `received_on` is its `delivered_on`.

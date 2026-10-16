@@ -1879,7 +1879,7 @@ isOneToOne: false
 { Args: { "p_ids": (string)[] }; Returns: number
                            },
 "import_reset_numbers":
-{ Args: Record<PropertyKey, never>; Returns: undefined
+{ Args: { "p_order_min"?: number,"p_po_min"?: number,"p_quotation_min"?: number,"p_rfq_min"?: number }; Returns: undefined
                            },
 "ingest_fx_response":
 { Args: Record<PropertyKey, never>; Returns: number

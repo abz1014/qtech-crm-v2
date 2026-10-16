@@ -1,5 +1,5 @@
-old_name,new_name,owner_reliable
-Old Admin,Test Admin,no
-Old Sales,Test Sales,yes
-Old Engineer,Test Engineer,yes
-Former Staff,,yes
+old_name,new_name
+Old Admin,Test Admin
+Old Sales,Test Sales
+Old Engineer,Test Engineer
+Former Staff,
