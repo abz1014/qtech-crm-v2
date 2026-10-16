@@ -16,6 +16,7 @@ import { axeViolations } from '../support/axe'
  */
 const SNACKS = 'ca7e0000-0000-4000-8000-000000000005' // Office supplies & snacks (cash)
 const FUEL = 'ca7e0000-0000-4000-8000-000000000004' // Fuel & travel (cash)
+const SALARIES = 'ca7e0000-0000-4000-8000-000000000001'
 const RENT = 'ca7e0000-0000-4000-8000-000000000002'
 const UTILITIES = 'ca7e0000-0000-4000-8000-000000000003'
 const SUPPLIER_PAYMENT = 'ca7e0000-0000-4000-8000-000000000011'
@@ -166,6 +167,27 @@ test.describe('expenses (M03, M11)', () => {
     await page.keyboard.press('Control+Enter')
     await expect(page.getByRole('dialog')).toBeHidden()
     expect((await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amount2}&select=paid_on`))).map(r => r.paid_on)).toEqual([iso])
+  })
+
+  test('a click on Save with a category half-typed saves the highlighted category; text that matches nothing is not saved', async ({ page }) => {
+    const amount = base() + 88
+    await openAs(page, 'admin', '/money/expenses')
+    await page.getByRole('button', { name: 'Add expenses' }).click()
+    await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
+    await page.keyboard.type(String(amount))
+    await page.keyboard.press('Tab')
+    await page.keyboard.type('zzz')
+    await page.getByRole('button', { name: /^Save/ }).click()
+    await expect(page.getByText('No category matches "zzz"')).toBeVisible()
+    await expect(page.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('zzz')
+    expect(await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amount}&select=id`))).toHaveLength(0)
+    // now half-type a real one and click Save: the highlighted match is taken, as Tab takes it
+    await page.getByRole('combobox', { name: 'Category, row 1' }).fill('sal')
+    await page.getByRole('button', { name: /^Save/ }).click()
+    await expect(page.getByRole('dialog')).toBeHidden()
+    const rows = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amount}&select=category_id`))
+    expect(rows).toHaveLength(1)
+    expect(rows[0].category_id).toBe(SALARIES)
   })
 
   test('a different category is two or three letters, and paid via follows it', async ({ page }) => {

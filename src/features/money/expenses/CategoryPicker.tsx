@@ -28,6 +28,11 @@ interface CategoryPickerProps {
   className?: string
   /** Show the chevron of a select (the dialog's field). */
   chevron?: boolean
+  /**
+   * Called with the typed text when the field is left holding text that matches no category (the box keeps showing it),
+   * and with null once that is resolved. A caller that saves must treat a non-null text as an unfinished field.
+   */
+  onUnmatched?: (text: string | null) => void
 }
 
 function rank(label: string, q: string): number {
@@ -56,7 +61,7 @@ function Highlight({ label, q }: { label: string; q: string }) {
 }
 
 export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(function CategoryPicker(
-  { categories, value, onChange, tag, size = 'field', id: idProp, disabled, className, chevron, ...rest },
+  { categories, value, onChange, tag, size = 'field', id: idProp, disabled, className, chevron, onUnmatched, ...rest },
   ref,
 ) {
   const a11y = useControlProps({ id: idProp })
@@ -86,6 +91,20 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
   }
   const pick = (c: Category) => {
     onChange(c.id)
+    onUnmatched?.(null)
+    close()
+  }
+  // Leaving the field (a click on Save, on another cell) is the same as Tab: a highlighted match is accepted. Text that
+  // matches nothing is never dropped quietly: the box keeps showing it and the caller is told.
+  const leave = () => {
+    if (query !== null && typed) {
+      if (matches.length > 0) pick(matches[activeIndex])
+      else if (onUnmatched) {
+        setOpen(false)
+        onUnmatched(typed)
+      } else close()
+      return
+    }
     close()
   }
 
@@ -147,6 +166,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
             {...a11y}
             value={query ?? selected?.name ?? ''}
             onChange={e => {
+              onUnmatched?.(null)
               setQuery(e.target.value)
               setOpen(true)
               setActive(0)
@@ -154,7 +174,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
             onFocus={e => e.currentTarget.select()}
             onClick={() => setOpen(true)}
             onKeyDown={onKeyDown}
-            onBlur={close}
+            onBlur={leave}
             className={cn(
               controlClass,
               size === 'cell' && 'h-[36px]',
