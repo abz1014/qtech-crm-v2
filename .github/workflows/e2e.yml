@@ -52,6 +52,7 @@ jobs:
       money: ${{ steps.final.outputs.money }}
       expenses: ${{ steps.final.outputs.expenses }}
       bank: ${{ steps.final.outputs.bank }}
+      month_end: ${{ steps.final.outputs.month_end }}
       any: ${{ steps.final.outputs.any }}
     steps:
       - uses: actions/checkout@v4
@@ -94,6 +95,8 @@ jobs:
               - 'e2e/expenses/**'
             bank:
               - 'e2e/bank/**'
+            month_end:
+              - 'e2e/month-end/**'
             orders:
               - 'e2e/orders/**'
             settings_admin:
@@ -125,6 +128,7 @@ jobs:
           S_MONEY: ${{ steps.filter.outputs.money }}
           S_EXPENSES: ${{ steps.filter.outputs.expenses }}
           S_BANK: ${{ steps.filter.outputs.bank }}
+          S_MONTH_END: ${{ steps.filter.outputs.month_end }}
         run: |
           all=false
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$GITHUB_REF" = "refs/heads/main" ] || [ "$SHARED" = "true" ]; then all=true; fi
@@ -161,6 +165,8 @@ jobs:
           echo "money=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_BANK; if [ "$all" = "true" ]; then v=true; fi
           echo "bank=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_MONTH_END; if [ "$all" = "true" ]; then v=true; fi
+          echo "month_end=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           echo "any=$any" >> "$GITHUB_OUTPUT"
 
   e2e:
@@ -327,6 +333,16 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=bank REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/bank npx playwright test --project=bank --output=test-results/bank
+
+      - name: Reset database (month-end)
+        if: ${{ !cancelled() && needs.changes.outputs.month_end == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (month-end project)
+        if: ${{ !cancelled() && needs.changes.outputs.month_end == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=month-end REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/month-end npx playwright test --project=month-end --output=test-results/month-end
 
       - name: PDF tools for the orders suite (poppler, to read and render the stored supplier PO PDFs)
         if: ${{ !cancelled() && needs.changes.outputs.orders == 'true' }}
