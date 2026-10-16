@@ -15,3 +15,4 @@ export const MONEY_TABS: readonly MoneyTab[] = [
   { key: 'margins', label: 'Margins', to: '/money/margins', adminOnly: true },
   { key: 'exceptions', label: 'Exceptions', to: '/money/exceptions', adminOnly: true },
 ]
+
