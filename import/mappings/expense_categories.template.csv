@@ -1,0 +1,5 @@
+# expense_categories.csv: the old free-text expense category -> the name of a category in the new system.
+# A legacy category that already has exactly a new category name needs no line. Anything unlisted becomes "Other" and is flagged category_unmapped.
+legacy_category,category
+# Petrol,Fuel & travel
+# Inventory/Procurement,Supplier payment

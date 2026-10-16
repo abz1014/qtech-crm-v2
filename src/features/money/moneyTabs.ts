@@ -14,5 +14,7 @@ export const MONEY_TABS: readonly MoneyTab[] = [
   { key: 'expenses', label: 'Expenses', to: '/money/expenses', adminOnly: true },
   { key: 'margins', label: 'Margins', to: '/money/margins', adminOnly: true },
   { key: 'exceptions', label: 'Exceptions', to: '/money/exceptions', adminOnly: true },
+  // Month-end opens on the Bank tick until the checklist (M10) exists; the tab stays lit on every Month-end view.
+  { key: 'month-end', label: 'Month-end', to: '/money/month-end/bank', adminOnly: true },
 ]
 

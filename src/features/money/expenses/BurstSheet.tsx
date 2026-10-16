@@ -81,11 +81,27 @@ function BurstContent({ onClose }: { onClose: () => void }) {
     return { categoryId: used.data?.id ?? first?.id ?? '', today }
   }, [categories, used.data, today])
 
-  const [rows, setRows] = useState<BurstRow[]>([])
+  const [rows, setRowsState] = useState<BurstRow[]>([])
+  /**
+   * The latest rows, updated the instant a cell changes them. Ctrl+Enter is read in the same keystroke as the cell's own
+   * change (a category accepted by Enter), before React has rendered it, so Save reads this, never the render's copy.
+   */
+  const rowsRef = useRef<BurstRow[]>([])
+  const setRows = useCallback((next: BurstRow[] | ((list: BurstRow[]) => BurstRow[])) => {
+    rowsRef.current = typeof next === 'function' ? next(rowsRef.current) : next
+    setRowsState(rowsRef.current)
+  }, [])
   const [pending, setPending] = useState(false)
   const [banner, setBanner] = useState<string | null>(null)
   const lock = useRef(false)
   const focusId = useRef<string | null>(null)
+  /**
+   * What each desktop date cell holds that the rows do not hold yet. A typed date is read one tick after the cell loses focus
+   * (the focus trap needs that tick), and not at all while the cell still has focus; a fast typist saves before either. Save
+   * asks every cell for its text first, so the date saved is always the date on screen. Returns the ISO date, '' for text
+   * that is not a date, or null when the cell has nothing pending.
+   */
+  const dateFlushers = useRef(new Map<string, () => string | null>())
   const bodyRef = useRef<HTMLDivElement | null>(null)
 
   useDirtyFlag(rows.some(isFilled))
@@ -97,7 +113,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
       focusId.current = r.id
       setRows([r])
     }
-  }, [ready, rows.length, defaults])
+  }, [ready, rows.length, defaults, setRows])
 
   // Focus follows a new row's amount.
   useEffect(() => {
@@ -112,7 +128,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
   const patch = useCallback((id: string, p: Partial<BurstRow>) => {
     setRows(list => list.map(r => (r.id === id ? { ...r, ...p, error: p.error ?? undefined } : r)))
     setBanner(null)
-  }, [])
+  }, [setRows])
 
   const addRowAfter = (id: string) => {
     setRows(list => {
@@ -135,9 +151,23 @@ function BurstContent({ onClose }: { onClose: () => void }) {
 
   const save = async () => {
     if (lock.current || !categories) return
-    const filled = rows.filter(isFilled)
+    const latest = rowsRef.current
+    const settled = latest.map(r => {
+      const typed = dateFlushers.current.get(r.id)?.()
+      return typed === null || typed === undefined || typed === r.date ? r : { ...r, date: typed, dateTyped: typed !== today }
+    })
+    if (settled.some((r, i) => r !== latest[i])) setRows(settled)
+    const filled = settled.filter(isFilled)
     if (filled.length === 0) {
       setBanner('Type an amount on at least one row.')
+      return
+    }
+    const unsavable = invalidRows(settled)
+    if (unsavable.length > 0) {
+      // Never save the others and quietly leave this one behind: nothing goes until every filled row has a date and a category.
+      setBanner(unsavable.length === 1 ? 'One row has no valid date. Fix it, then save.' : `${unsavable.length} rows have no valid date. Fix them, then save.`)
+      const id = unsavable[0].id
+      requestAnimationFrame(() => bodyRef.current?.querySelector<HTMLElement>(`[data-row="${id}"] [data-cell="date"]`)?.focus())
       return
     }
     lock.current = true
@@ -145,10 +175,10 @@ function BurstContent({ onClose }: { onClose: () => void }) {
     setBanner(null)
     setRows(clearRowErrors)
     try {
-      const inserts = burstInserts(rows, categories)
+      const inserts = burstInserts(settled, categories)
       await insert.mutateAsync(inserts)
       // Photos go after the rows are in. A photo that fails never undoes an expense.
-      const withPhoto = rows.filter(r => r.photo && !r.photo.error && inserts.some(i => i.id === r.id))
+      const withPhoto = settled.filter(r => r.photo && !r.photo.error && inserts.some(i => i.id === r.id))
       const failed = (await Promise.all(withPhoto.map(r => uploadReceipt.mutateAsync({ expenseId: r.id, file: (r.photo as { file: File }).file }).then(() => false, () => true)))).filter(Boolean).length
       const n = inserts.length
       toast.toast({
@@ -160,7 +190,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
     } catch (err) {
       const m = mapPgError(err, { entity: 'expense' })
       if (m.kind === 'closed-month') {
-        const marked = markClosedRows(rows, m.message)
+        const marked = markClosedRows(settled, m.message)
         if (marked.some(r => r.error)) setRows(marked)
         else setBanner(m.message)
         focusFirstError(marked)
@@ -343,6 +373,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                     onKey={e => rowKey(e, r)}
                     onRemove={rows.length > 1 ? () => removeRow(r.id) : undefined}
                     count={rows.length}
+                    dateFlushers={dateFlushers}
                   />
                 ))}
                 <button
@@ -416,11 +447,13 @@ interface RowProps {
   onRemove?: () => void
   /** How many rows the sheet holds, for "the other 4 rows are still here". */
   count: number
+  /** Desktop only: where the row's date cell registers what it holds before the rows do. */
+  dateFlushers?: React.MutableRefObject<Map<string, () => string | null>>
 }
 
 const defaultEdge = 'border-dashed bg-surface text-fg-2'
 
-function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, count }: RowProps) {
+function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, count, dateFlushers }: RowProps) {
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const err = row.error
@@ -447,6 +480,8 @@ function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, cou
       />
       <CellDate
         index={index}
+        rowId={row.id}
+        flushers={dateFlushers}
         value={row.date}
         today={today}
         typed={row.dateTyped}
@@ -547,6 +582,8 @@ function ClosedError({ message, others }: { message: string; others: number }) {
 /** The date cell: "Fri 6 Nov" in mono, dashed with a "today" tag until it is typed over. Type 30 sep, 27/11, yesterday. */
 function CellDate({
   index,
+  rowId,
+  flushers,
   value,
   today,
   typed,
@@ -554,6 +591,8 @@ function CellDate({
   onChange,
 }: {
   index: number
+  rowId: string
+  flushers?: React.MutableRefObject<Map<string, () => string | null>>
   value: string
   today: string
   typed: boolean
@@ -568,8 +607,28 @@ function CellDate({
     if (!editing && !bad) setText(show(value))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, editing, bad])
+  // What the cell holds, read by Save before the rows hear of it.
+  const latest = useRef({ text, value, today })
+  latest.current = { text, value, today }
+  // What was typed and has not been read yet; survives the blur render, which puts the row's own date back in the box.
+  const unread = useRef<string | null>(null)
+  useEffect(() => {
+    if (!flushers) return
+    const map = flushers.current
+    map.set(rowId, () => {
+      const { text: t, value: v, today: d } = latest.current
+      const trimmed = (unread.current ?? t).trim()
+      if (trimmed === show(v)) return null // the cell shows the row's own date: nothing pending
+      return (trimmed ? parseDateText(trimmed, d) : null) ?? ''
+    })
+    return () => {
+      map.delete(rowId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flushers, rowId])
   const commit = () => {
-    const t = text.trim()
+    const t = (unread.current ?? text).trim()
+    unread.current = null
     const parsed = t ? parseDateText(t, today) : null
     if (parsed) {
       setBad(false)
@@ -596,6 +655,7 @@ function CellDate({
           e.currentTarget.select()
         }}
         onChange={e => {
+          unread.current = e.target.value
           setText(e.target.value)
           setBad(false)
         }}
