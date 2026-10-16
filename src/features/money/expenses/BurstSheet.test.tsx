@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { BurstSheet } from '@/features/money/expenses/BurstSheet'
@@ -91,6 +91,65 @@ describe('burst entry sheet (M11)', () => {
     await user.keyboard('{Tab}')
     expect(screen.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Salaries')
     expect(screen.getByRole('combobox', { name: 'Paid via, row 1' })).toHaveValue('bank')
+  })
+
+  describe('the saved values are the ones on screen, however fast the keys come', () => {
+    type Row = { amount_pkr: number; paid_on: string; category_id: string; description: string | null }
+    const savedRows = (db: ReturnType<typeof installFakeDb>) => opArgs(saves(db)[0], 'upsert')?.[0] as Row[]
+
+    it('a date typed and Ctrl+Enter pressed with the cursor still in the date cell saves the typed date', async () => {
+      const user = userEvent.setup()
+      const db = setup()
+      const first = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(first).toHaveFocus())
+      await user.keyboard('500{Tab}{Tab}05/09/2024{Control>}{Enter}{/Control}')
+      await waitFor(() => expect(saves(db)).toHaveLength(1))
+      expect(savedRows(db)[0]).toMatchObject({ amount_pkr: 500, paid_on: '2024-09-05' })
+    })
+
+    it('a date typed, Tab and Ctrl+Enter with no tick between them (the blur read has not run) saves the typed date', async () => {
+      const user = userEvent.setup()
+      const db = setup()
+      const first = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(first).toHaveFocus())
+      await user.keyboard('500{Tab}{Tab}05/09/2024')
+      const date = screen.getByRole('textbox', { name: 'Date, row 1' })
+      // the blur schedules the read for the next tick; the keys arrive before it
+      fireEvent.blur(date)
+      fireEvent.keyDown(document.body, { key: 'Enter', ctrlKey: true })
+      await waitFor(() => expect(saves(db)).toHaveLength(1))
+      expect(savedRows(db)[0]).toMatchObject({ amount_pkr: 500, paid_on: '2024-09-05' })
+    })
+
+    it('text that is not a date is not saved as today: the row waits for a date', async () => {
+      const user = userEvent.setup()
+      const db = setup()
+      const first = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(first).toHaveFocus())
+      await user.keyboard('500{Tab}{Tab}garbage{Control>}{Enter}{/Control}')
+      await new Promise(r => setTimeout(r, 50))
+      expect(saves(db)).toHaveLength(0)
+    })
+
+    it('a category typed and Ctrl+Enter pressed with the list still open saves the highlighted category', async () => {
+      const user = userEvent.setup()
+      const db = setup()
+      const first = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(first).toHaveFocus())
+      await user.keyboard('500{Tab}sa{Control>}{Enter}{/Control}')
+      await waitFor(() => expect(saves(db)).toHaveLength(1))
+      expect(savedRows(db)[0]).toMatchObject({ amount_pkr: 500, category_id: 'c-sal' })
+    })
+
+    it('an amount and a note typed on the last keystroke before Ctrl+Enter are saved', async () => {
+      const user = userEvent.setup()
+      const db = setup()
+      const first = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(first).toHaveFocus())
+      await user.keyboard('1234{Tab}{Tab}{Tab}{Tab}tea{Control>}{Enter}{/Control}')
+      await waitFor(() => expect(saves(db)).toHaveLength(1))
+      expect(savedRows(db)[0]).toMatchObject({ amount_pkr: 1234, description: 'tea' })
+    })
   })
 
   it('a closed month shows its sentence on the offending row; every row keeps what it holds and nothing is lost', async () => {

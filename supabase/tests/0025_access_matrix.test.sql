@@ -201,6 +201,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'set_fx_rate',             '',    'X',    'X',    'X'),    -- A5: all staff
   ('function', 'fetch_fx_rates',          '',    '',     '',     ''),     -- R23 (0038): queues the nightly HTTP calls; pg_cron only, granted to nobody
   ('function', 'ingest_fx_response',      '',    '',     '',     ''),     -- R23 (0038): applies the answers; pg_cron only, granted to nobody
+  ('function', 'import_purge_audit',      '',    '',     '',     ''),     -- I01 (0055): import cleanup of audit rows; service role only, granted to no staff role
+  ('function', 'import_reset_numbers',     '',    '',     '',     ''),     -- I01 (0055): import cleanup of the RFQ and order counters; service role only
   ('function', 'apply_fx_payload',        '',    '',     '',     ''),     -- R23 (0038): parse and upsert auto rates; granted to nobody
   ('function', 'fx_wanted_currencies',    '',    '',     '',     ''),     -- R23 (0038): helper of the nightly job; granted to nobody
   ('function', 'schedule_fx_cron',        '',    '',     '',     ''),     -- R23 (0038): (re)creates the cron jobs; granted to nobody
@@ -428,6 +430,8 @@ insert into probes values
   ('today_pkt', '', 'X', 'select public.today_pkt()'),
   ('fetch_fx_rates', '', 'X', 'select public.fetch_fx_rates()'),   -- R23 (0038)
   ('ingest_fx_response', '', 'X', 'select public.ingest_fx_response()'),
+  ('import_purge_audit', '', 'X', $q$select public.import_purge_audit(array['00000000-0000-5000-8000-000000000000'::uuid])$q$),   -- I01 (0055): a version 5 id, so only the grant can refuse it
+  ('import_reset_numbers', '', 'X', 'select public.import_reset_numbers()'),   -- I01 (0055)
   ('apply_fx_payload', '', 'X', $q$select public.apply_fx_payload('{}'::jsonb, 'probe')$q$),
   ('fx_wanted_currencies', '', 'X', 'select public.fx_wanted_currencies()'),
   ('schedule_fx_cron', '', 'X', 'select public.schedule_fx_cron()'),
