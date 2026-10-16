@@ -185,6 +185,8 @@ export interface RepeatRow {
 export interface RepeatSummary {
   rows: RepeatRow[]
   customers: number
+  /** Live orders across all of them. */
+  orders: number
   repeat: number
   share: number | null
 }
@@ -192,5 +194,5 @@ export interface RepeatSummary {
 export function summariseRepeat(rows: readonly RepeatRow[]): RepeatSummary {
   const sorted = [...rows].sort((a, b) => b.orders - a.orders || a.name.localeCompare(b.name))
   const repeat = sorted.filter(r => r.isRepeat).length
-  return { rows: sorted, customers: sorted.length, repeat, share: pct(repeat, sorted.length) }
+  return { rows: sorted, customers: sorted.length, orders: sorted.reduce((n, r) => n + r.orders, 0), repeat, share: pct(repeat, sorted.length) }
 }

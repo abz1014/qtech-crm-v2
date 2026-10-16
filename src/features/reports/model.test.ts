@@ -114,7 +114,7 @@ describe('repeat customers', () => {
   it('lists the most orders first and finds 1 repeat customer of 2 (50%)', () => {
     const s = summariseRepeat(rows)
     expect(s.rows.map(r => r.name)).toEqual(['P01 A', 'P01 B'])
-    expect([s.customers, s.repeat, s.share]).toEqual([2, 1, 50])
+    expect([s.customers, s.orders, s.repeat, s.share]).toEqual([2, 3, 1, 50])
   })
   it('has no share with no customers', () => {
     expect(summariseRepeat([]).share).toBeNull()

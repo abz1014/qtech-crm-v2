@@ -50,7 +50,7 @@ describe('Reports screen', () => {
     const db = show()
     expect(await screen.findByText('Price too high')).toBeInTheDocument()
     const outcomes = screen.getByRole('region', { name: 'RFQ outcome totals' })
-    expect(within(outcomes).getByText('7')).toBeInTheDocument()
+    expect(within(outcomes).getByText("7")).toBeInTheDocument()
     expect(within(outcomes).getByText('25% of those answered')).toBeInTheDocument()
     const float = await screen.findByRole('region', { name: 'Float totals' })
     expect(within(float).getByText('57%')).toBeInTheDocument()

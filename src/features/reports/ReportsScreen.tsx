@@ -72,9 +72,10 @@ function OutcomesReport() {
         <SumBar
           label="RFQ outcome totals"
           items={[
-            { label: 'RFQs', count: s.total, sub: `${s.open} still open` },
+            { label: 'RFQs', count: s.total, sub: 'All time' },
             { label: 'Won', count: s.won, sub: s.winRate === null ? 'None answered yet' : `${s.winRate}% of those answered` },
             { label: 'Closed', count: s.closed, sub: 'Lost or given up' },
+            { label: 'Open', count: s.open, sub: 'Not decided yet' },
           ]}
         />
       ) : q.isLoading ? (
@@ -174,7 +175,8 @@ function TurnaroundReport() {
           label="Clarification totals"
           items={[
             { label: 'Questions asked', count: s.asked },
-            { label: 'Answered', count: s.answered, sub: `${s.open} still waiting` },
+            { label: 'Answered', count: s.answered },
+            { label: 'Still waiting', count: s.open },
             { label: 'Average to answer', figure: daysText(s.avgDays), sub: 'First asked to answered' },
           ]}
         />
@@ -242,6 +244,7 @@ function RepeatReport() {
           label="Repeat customer totals"
           items={[
             { label: 'Customers with orders', count: s.customers },
+            { label: 'Orders', count: s.orders, sub: 'Not cancelled' },
             { label: 'Came back', count: s.repeat, sub: 'Two or more orders' },
             { label: 'Repeat share', figure: showPct(s.share) },
           ]}
