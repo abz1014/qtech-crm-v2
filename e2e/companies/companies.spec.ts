@@ -142,6 +142,33 @@ test.describe('company page', () => {
     await review(page, 'parity-d-company-customer-1440')
   })
 
+  test('O06: two sites of one company (Karachi and Lahore) keep their RFQs and orders apart on the one company page', async ({ page }) => {
+    const company = await createCompany(uniqueName('Two Site Customer'), { country: 'Pakistan' })
+    const [khi, lhr] = await Promise.all(
+      ['KHI plant', 'LHR plant'].map(async name => (await must(rest<{ id: string }[]>('admin', 'company_sites', { method: 'POST', body: { company_id: company.id, name } })))[0]),
+    )
+    const khiRfq = await createRfq(company.id, { site_id: khi.id })
+    const lhrRfq = await createRfq(company.id, { site_id: lhr.id })
+    await must(rest('admin', 'rfq_items', { method: 'POST', body: [{ rfq_id: khiRfq.id, description: 'Karachi furnace sensors' }, { rfq_id: lhrRfq.id, description: 'Lahore boiler gauges' }] }))
+    const orders = await Promise.all(
+      [khi, lhr].map(async s => (await must(rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: company.id, site_id: s.id } })))[0]),
+    )
+    await must(rest('admin', 'order_items', { method: 'POST', body: [{ order_id: orders[0].id, description: 'Karachi calibration kit', unit_price_net: 100 }, { order_id: orders[1].id, description: 'Lahore pressure switches', unit_price_net: 100 }] }))
+
+    await openAs(page, 'sales', `/companies/${company.id}`)
+    await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
+    const k = page.getByRole('region', { name: 'KHI plant' })
+    const l = page.getByRole('region', { name: 'LHR plant' })
+    await expect(k.getByText('Karachi furnace sensors')).toBeVisible()
+    await expect(k.getByText('Karachi calibration kit')).toBeVisible()
+    await expect(l.getByText('Lahore boiler gauges')).toBeVisible()
+    await expect(l.getByText('Lahore pressure switches')).toBeVisible()
+    await expect(k.getByText('Lahore boiler gauges')).toHaveCount(0)
+    await expect(k.getByText('Lahore pressure switches')).toHaveCount(0)
+    await expect(l.getByText('Karachi furnace sensors')).toHaveCount(0)
+    await expect(l.getByText('Karachi calibration kit')).toHaveCount(0)
+  })
+
   test('a supplier shows what we know from its enquiries, with counts and no score', async ({ page }) => {
     const supplier = await createCompany(uniqueName('Alpenmark Test'), { country: 'Austria' })
     const customer = await createCompany(uniqueName('Enquiring Customer'))
