@@ -12,7 +12,7 @@ select * from no_plan();
 
 -- ------------------------------------------------------------------ helpers (used while inserting fixtures only)
 create function pg_temp.u(p text, n int) returns uuid language sql immutable as
-  $$ select (p || '-4000-8000-' || lpad(to_hex(n), 12, '0'))::uuid $$;
+  $$ select (p || '-0000-4000-8000-' || lpad(to_hex(n), 12, '0'))::uuid $$;
 -- one quote line (and the inquiry, once) for supplier n_sup on item n_item of RFQ n_rfq
 create function pg_temp.q(n_rfq int, n_item int, n_sup int, price numeric, cur text) returns void language sql as $$
   insert into public.supplier_inquiries (rfq_id, supplier_id, sent_on)
