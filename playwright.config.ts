@@ -91,7 +91,7 @@ import { defineConfig, devices } from '@playwright/test'
  */
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'pwa']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'pwa', 'reports']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -262,6 +262,13 @@ export default defineConfig({
         permissions: ['clipboard-read', 'clipboard-write'],
         screenshot: 'only-on-failure',
       },
+    },
+    {
+      name: 'reports',
+      testMatch: /reports\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
     },
     {
       name: 'settings-admin',

@@ -227,6 +227,18 @@ function money() {
   }
 }
 
+/** P01: the four read-only report views. Nothing writes to them, so no write invalidates them. */
+function reports() {
+  const all = root('reports')
+  return {
+    all,
+    outcomes: () => [...all, 'outcomes'] as const,
+    float: () => [...all, 'float'] as const,
+    turnaround: () => [...all, 'turnaround'] as const,
+    repeatCustomers: () => [...all, 'repeat-customers'] as const,
+  }
+}
+
 export const qk = {
   today: today(),
   settings: settings(),
@@ -239,6 +251,7 @@ export const qk = {
   memory: memory(),
   fx: fx(),
   money: money(),
+  reports: reports(),
 }
 
 export type QueryKeyRoot = keyof typeof qk
