@@ -11,6 +11,7 @@
 --   invoice  any part of an invoice number. ADMIN AND SALES ONLY: an engineer gets no invoice row and no customer PO text,
 --            twice over: the invoices table has no policy for an engineer, and the function checks the role itself
 --            (so it keeps working if a policy is ever widened).
+-- Numbers print as at least 4 digits and are never cut (lpad would cut a 5-digit number to 4).
 -- Money columns (amounts, GST, margins) are never read. SECURITY INVOKER as before: row security decides what is visible,
 -- a deactivated user (current_user_role() is NULL) gets nothing. 0034 behaviour (phone normalisation, LIKE escaping,
 -- ranking) is unchanged.
@@ -112,29 +113,29 @@ as $$
          nullif(concat_ws(' · ', ct.phone, ct.email), ''), ct.company_id, null::uuid, null::text, ct.score
   from ct
   union all
-  select 'rfq'::text, rq.id, 'RFQ-' || lpad(rq.number::text, 4, '0') || ' ' || coalesce(cn.name, ''),
+  select 'rfq'::text, rq.id, 'RFQ-' || repeat('0', greatest(0, 4 - length(rq.number::text))) || rq.number::text || ' ' || coalesce(cn.name, ''),
          concat_ws(' · ', case when rq.customer_ref is not null then 'Ref ' || rq.customer_ref end,
                    case when rq.closed_on is not null then 'Closed' else 'Open' end),
          rq.company_id, null::uuid, null::text, rq.score
   from rq left join public.companies cn on cn.id = rq.company_id
   union all
-  select 'order'::text, od.id, 'ORD-' || lpad(od.number::text, 4, '0') || ' ' || coalesce(cn.name, 'Unknown company'),
+  select 'order'::text, od.id, 'ORD-' || repeat('0', greatest(0, 4 - length(od.number::text))) || od.number::text || ' ' || coalesce(cn.name, 'Unknown company'),
          case when od.po is not null then 'Customer PO ' || od.po end,
          od.company_id, od.id, null::text, od.score
   from od left join public.companies cn on cn.id = od.company_id
   union all
   select 'item'::text, it.id, it.description,
-         concat_ws(' · ', 'ORD-' || lpad(o.number::text, 4, '0'), cn.name),
+         concat_ws(' · ', 'ORD-' || repeat('0', greatest(0, 4 - length(o.number::text))) || o.number::text, cn.name),
          o.company_id, it.order_id, null::text, it.score
   from it join public.orders o on o.id = it.order_id left join public.companies cn on cn.id = o.company_id
   union all
-  select 'po'::text, po.id, 'PO-' || po.yy || '-' || lpad(po.number::text, 4, '0') || ' ' || coalesce(sn.name, ''),
-         concat_ws(' · ', 'Supplier PO', 'ORD-' || lpad(o.number::text, 4, '0')),
+  select 'po'::text, po.id, 'PO-' || po.yy || '-' || repeat('0', greatest(0, 4 - length(po.number::text))) || po.number::text || ' ' || coalesce(sn.name, ''),
+         concat_ws(' · ', 'Supplier PO', 'ORD-' || repeat('0', greatest(0, 4 - length(o.number::text))) || o.number::text),
          po.supplier_id, po.order_id, null::text, po.score
   from po join public.orders o on o.id = po.order_id left join public.companies sn on sn.id = po.supplier_id
   union all
   select 'invoice'::text, iv.id, coalesce(iv.number, ''),
-         concat_ws(' · ', cn.name, case when o.number is not null then 'ORD-' || lpad(o.number::text, 4, '0') end),
+         concat_ws(' · ', cn.name, case when o.number is not null then 'ORD-' || repeat('0', greatest(0, 4 - length(o.number::text))) || o.number::text end),
          coalesce(iv.company_id, o.company_id), iv.order_id, null::text, iv.score
   from iv left join public.orders o on o.id = iv.order_id left join public.companies cn on cn.id = coalesce(iv.company_id, o.company_id);
 $$;
