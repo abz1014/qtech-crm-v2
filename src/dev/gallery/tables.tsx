@@ -1,7 +1,7 @@
 // Gallery sections for U04 DataTable, U05 status module and U06 Money (part of /dev/gallery, dev only).
 // Data below is the mockups' own (money-01, money-07, money-08, components-06).
 import { useState, type ReactNode } from 'react'
-import { Truck } from 'lucide-react'
+import { ClipboardPaste, Plus, Truck } from 'lucide-react'
 import { Row, Section } from '@/dev/gallery/layout'
 import { STATUS, type StatusDimension } from '@/lib/status'
 import { DataTable, type Column } from '@/ui/DataTable'
@@ -9,6 +9,7 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Button } from '@/ui/Button'
 import { Margin, Money, MoneyFx, NetGstGross } from '@/ui/Money'
 import { StatusBadge } from '@/ui/StatusBadge'
+import { TableFilter } from '@/ui/TableFilter'
 import { StatusTrack } from '@/ui/StatusTrack'
 import { AfterDrawings, ExactEquation, SumBar } from '@/ui/SumBar'
 import { formatDay } from '@/lib/formatDay'
@@ -33,7 +34,7 @@ const RFQS: Rfq[] = [
 ]
 const rfqCols: Column<Rfq>[] = [
   { id: 'no', header: 'RFQ', kind: 'date', value: r => r.no, width: 110 },
-  { id: 'customer', header: 'Customer', value: r => r.customer },
+  { id: 'customer', header: 'Customer', value: r => r.customer, width: 230 },
   { id: 'items', header: 'Items', kind: 'num', value: r => r.items },
   { id: 'due', header: 'Bid due', kind: 'date', value: r => r.due, cell: r => `${formatDay(r.due)}, 17:00` },
   { id: 'sourcing', header: 'Sourcing', cell: r => <StatusBadge dimension="sourcing" value={r.sourcing} />, sortable: false },
@@ -117,6 +118,29 @@ const payCols: Column<Pay>[] = [
   { id: 'net', header: 'Net portion', kind: 'money', value: r => r.net, total: true, cell: r => (r.net === null ? <StatusBadge dimension="trust" value="basis_unknown" label="Net unresolved" /> : <Money value={r.net} prefix={false} paisa="always" />) },
 ]
 
+/** The components-06 table: filter, density switch, truncating customer column, "Showing n of n RFQs" and the key legend. */
+function RfqTable({ label, density, activeRowId, onOpen }: { label: string; density?: 'compact'; activeRowId: string | null; onOpen: (id: string) => void }) {
+  const [text, setText] = useState('')
+  const q = text.trim().toLowerCase()
+  const shown = q ? RFQS.filter(r => `${r.no} ${r.customer}`.toLowerCase().includes(q)) : RFQS
+  return (
+    <DataTable
+      label={label}
+      noun="RFQs"
+      total={RFQS.length}
+      density={density}
+      columns={rfqCols}
+      rows={shown}
+      getRowId={r => r.id}
+      defaultSort={{ id: 'due', dir: 'asc' }}
+      onRowOpen={r => onOpen(r.id)}
+      activeRowId={activeRowId}
+      toolbar={<TableFilter label="Filter RFQs" value={text} onChange={setText} />}
+      empty={<EmptyState title={`No RFQs match “${text}”`} actions={<Button onClick={() => setText('')}>Clear filter</Button>}>Try fewer words or clear the filter.</EmptyState>}
+    />
+  )
+}
+
 export function StatusMoneyTableSections() {
   const [sel, setSel] = useState<ReadonlySet<string>>(new Set(['i1', 'i2', 'i3']))
   const [open, setOpen] = useState<string | null>('3')
@@ -142,7 +166,7 @@ export function StatusMoneyTableSections() {
           <Row title="Foreign currency, fresh rate" note="Original first, then the conversion at the rate and its date."><MoneyFx amount="4820" currency="USD" rate="278.40" rateOn="2026-11-26" ageDays={1} /></Row>
           <Row title="Foreign currency, stale rate" note="Rate 8 to 30 days old: still converted, amber, with its age."><MoneyFx amount="18600" currency="CNY" rate="38.42" ageDays={14} /></Row>
           <Row title="Rate unusable" note="Older than 30 days: no PKR figure, left out of comparisons."><MoneyFx amount="12400" currency="AED" rate="75.8" ageDays={52} /></Row>
-          <Row title="No rate yet" note="A quiet line; admin sets rates on Money."><MoneyFx amount="2200" currency="GBP" /></Row>
+          <Row title="No rate yet" note="A quiet line and a separate quiet chip; admin sets rates on Money."><MoneyFx amount="2200" currency="GBP" /></Row>
           <Row title="Captured rate, at the time" note="The rate stored on the quote line, beside today's."><MoneyFx amount="17900" currency="CNY" rate="38.42" ageDays={2} captured={{ rate: '39.10', on: '2026-10-03' }} /></Row>
           <Row title="Provisional" note="Costs are still estimates. Dashed underline and the chip."><Money value="412300" size="xl" provisional /></Row>
           <Row title="Basis unknown" note="Legacy value, shown as typed."><Money value="3640000" size="xl" basisUnknown /></Row>
@@ -165,14 +189,14 @@ export function StatusMoneyTableSections() {
         <div className="max-w-[560px]"><AfterDrawings result="2280635.60" notInPnl="300000" /></div>
       </Section>
 
-      <Section id="rfq" title="DataTable: comfortable, then compact with a selected row" note="Press Tab, then the arrow keys, Enter and Space.">
-        <DataTable label="RFQs" columns={rfqCols} rows={RFQS} getRowId={r => r.id} defaultSort={{ id: 'due', dir: 'asc' }} onRowOpen={r => setOpen(r.id)} activeRowId={null} summary="Showing 7 of 7 RFQs" />
-        <DataTable label="RFQs, compact" density="compact" columns={rfqCols} rows={RFQS} getRowId={r => r.id} defaultSort={{ id: 'due', dir: 'asc' }} onRowOpen={r => setOpen(r.id)} activeRowId={open} summary="Showing 7 of 7 RFQs" />
+      <Section id="rfq" title="DataTable: comfortable, then compact with a selected row" note="Press Tab, then the arrow keys, Enter and Space. / focuses the filter, Esc clears it. Comfortable / Compact is remembered per person. Long customer names truncate with a tooltip.">
+        <RfqTable label="RFQs" activeRowId={null} onOpen={setOpen} />
+        <RfqTable label="RFQs, compact" density="compact" activeRowId={open} onOpen={setOpen} />
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <DataTable label="Loading" columns={rfqCols.slice(0, 5)} rows={[]} getRowId={r => r.id} loading />
-          <DataTable label="Error" columns={rfqCols.slice(0, 5)} rows={[]} getRowId={r => r.id} error={{ title: 'Couldn’t load RFQs', message: 'Your changes are safe. Check your connection and try again.', onRetry: () => undefined, reference: '4f1c9a' }} />
-          <DataTable label="Goal state" columns={rfqCols.slice(0, 5)} rows={[]} getRowId={r => r.id} empty={<EmptyState mood="goal" title="Every bid is in" actions={<Button variant="primary">New RFQ</Button>}>Nothing is open and nothing is due in the next 5 days. New RFQs appear here as soon as you start one.</EmptyState>} />
-          <DataTable label="No match" columns={rfqCols.slice(0, 5)} rows={[]} getRowId={r => r.id} empty={<EmptyState title={'No RFQs match “Belimo”'} actions={<Button>Clear filter</Button>}>Search covers RFQ number, customer, customer ref and item text. Try fewer words or clear the filter.</EmptyState>} />
+          <DataTable label="Loading" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} loading toolbar={<TableFilter label="Filter RFQs" value="" onChange={() => undefined} />} />
+          <DataTable label="Error" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Filter RFQs" value="" onChange={() => undefined} />} error={{ onRetry: () => undefined, reference: '4f1c9a', at: new Date('2026-11-27T09:41:00+05:00') }} />
+          <DataTable label="Goal state" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Filter RFQs" value="" onChange={() => undefined} />} empty={<EmptyState mood="goal" title="Every bid is in" actions={<><Button variant="primary" icon={Plus}>New RFQ</Button><Button icon={ClipboardPaste}>Capture a message</Button></>}>Nothing is open and nothing is due in the next 5 days. New RFQs appear here as soon as you start one.</EmptyState>} />
+          <DataTable label="No match" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Filter RFQs" value="Belimo" onChange={() => undefined} />} empty={<EmptyState title={'No RFQs match “Belimo”'} actions={<Button>Clear filter</Button>}>Search covers RFQ number, customer, customer ref and item text. Try fewer words or clear the filter.</EmptyState>} />
         </div>
       </Section>
 

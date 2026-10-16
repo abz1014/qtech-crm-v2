@@ -75,7 +75,7 @@ test.describe('inline create (FE-2: name only, three actions)', () => {
     await openAs(page, 'sales', '/today')
     await openPalette(page)
     await page.getByRole('combobox').fill(company.name.slice(0, 18))
-    const hit = page.getByRole('option', { name: new RegExp(company.name) })
+    const hit = page.getByRole('option', { name: company.name, exact: true })
     await expect(hit).toBeVisible()
     await hit.click()
     await expect(page).toHaveURL(new RegExp(`/companies/${company.id}$`))

@@ -12,6 +12,9 @@ export const ROLE_OPTIONS: readonly { value: Role; label: string; help: string }
   { value: 'engineer', label: 'Engineer', help: 'RFQs, orders and companies. No invoices, payments or margins.' },
 ]
 
+/** The longest phone number the Team and Your details screens accept. */
+export const PHONE_MAX = 30
+
 export const roleLabel = (role: Role): string => ROLE_OPTIONS.find(r => r.value === role)?.label ?? role
 
 export type TeamFilter = 'all' | 'active' | 'deactivated'

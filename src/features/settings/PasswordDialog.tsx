@@ -78,7 +78,7 @@ export function PasswordDialog({ kind, person, password, onClose }: SecretDialog
         }
       >
         <div className="flex items-center gap-3 border-b pb-4">
-          <Avatar name={person.name} />
+          <Avatar name={person.name} size="lg" />
           <div className="grid min-w-0">
             <span className="truncate font-medium text-fg">{person.name}</span>
             <span className="flex min-w-0 gap-2 text-xs text-fg-muted">
@@ -91,11 +91,11 @@ export function PasswordDialog({ kind, person, password, onClose }: SecretDialog
         <div
           data-copied={copy === 'copied' || undefined}
           className={cn(
-            'grid gap-2 rounded border border-dashed px-4 py-3 transition-colors duration-fast ease-out',
-            copy === 'copied' ? 'border-tone-success-fg/40 bg-tone-success-bg' : 'border-line-strong bg-surface',
+            'grid gap-2 rounded border px-4 py-3 transition-colors duration-fast ease-out',
+            copy === 'copied' ? 'border-solid border-tone-success-fg bg-tone-success-bg' : 'border-dashed border-line-input bg-sunken',
           )}
         >
-          <span className="flex items-center gap-2 text-xs text-fg-muted">
+          <span className="flex items-center gap-2 text-xs font-medium text-fg-muted">
             <Icon icon={KeyRound} size="sm" />
             {kind === 'created' ? 'Password' : 'New password'}
           </span>
