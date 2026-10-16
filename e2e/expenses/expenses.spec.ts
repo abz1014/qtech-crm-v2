@@ -135,6 +135,39 @@ test.describe('expenses (M03, M11)', () => {
     expect(rows.every(r => r.category_id === SNACKS && r.paid_via === 'cash' && r.paid_on === today())).toBe(true)
   })
 
+  test('the date typed is the date saved, with no waiting between the last key and Ctrl+Enter', async ({ page }) => {
+    // A day of this month that is not today, so a lost date would show as today's.
+    const t = today()
+    const day = t.endsWith('-02') ? '03' : '02'
+    const typed = `${day}/${t.slice(5, 7)}/${t.slice(0, 4)}`
+    const iso = `${t.slice(0, 8)}${day}`
+    const amount = base() + 77
+    await openAs(page, 'admin', '/money/expenses')
+    await page.getByRole('button', { name: 'Add expenses' }).click()
+    await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
+    // no assertion between these keys: the save must read what is on screen, not what the rows have heard of
+    await page.keyboard.type(String(amount))
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Tab')
+    await page.keyboard.type(typed)
+    await page.keyboard.press('Control+Enter') // still inside the date cell
+    await expect(page.getByRole('dialog')).toBeHidden()
+    expect((await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amount}&select=paid_on`))).map(r => r.paid_on)).toEqual([iso])
+
+    // and the same with the cursor already out of the cell
+    const amount2 = amount + 1
+    await page.getByRole('button', { name: 'Add expenses' }).click()
+    await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
+    await page.keyboard.type(String(amount2))
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Tab')
+    await page.keyboard.type(typed)
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Control+Enter')
+    await expect(page.getByRole('dialog')).toBeHidden()
+    expect((await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amount2}&select=paid_on`))).map(r => r.paid_on)).toEqual([iso])
+  })
+
   test('a different category is two or three letters, and paid via follows it', async ({ page }) => {
     await seedFavourite()
     await openAs(page, 'admin', '/money/expenses')

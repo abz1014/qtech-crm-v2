@@ -1,0 +1,4 @@
+# po_clashes.csv: orders of one company that share a PO number. decision = merge (one order, several invoices) or po_shared (kept apart).
+# PO 000001 is already decided (merge) and needs no line. A clash with no line is kept apart with the flag po_shared and listed for you.
+customer_po_number,decision
+# 000001,merge

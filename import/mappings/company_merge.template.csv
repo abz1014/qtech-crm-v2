@@ -1,0 +1,10 @@
+# company_merge.csv: one line per OLD customer name that must land somewhere other than "a company of the same name".
+# old_name = the name exactly as the old system holds it (client, prospect or RFQ company name).
+# company  = the company it becomes in the new system.   site = the plant or office (leave empty for the company itself).
+# Names only: no phone numbers, e-mail addresses or amounts.
+# Copy this file to company_merge.csv, delete these comment lines you do not need, and add one line per decision.
+old_name,company,site
+# Ghani Glass (KHI),Ghani Glass,Karachi
+# Ghani Glass (LHR),Ghani Glass,Lahore
+# Ghani Glass,Ghani Glass,
+# IFL Head Office,IFL,Head Office

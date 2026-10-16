@@ -5,7 +5,6 @@ import { navItemForPath, type NavKey } from '@/app/navConfig'
 import { useSession, type SessionUser } from '@/app/session'
 import { ToastProvider } from '@/ui/Toast'
 import { useSearchPaletteSource } from '@/features/search/paletteSource'
-import { useOrdersPaletteSource } from '@/features/orders/paletteSource'
 import { PaletteHost } from '@/app/palette/PaletteHost'
 import { usePalette } from '@/app/palette/usePalette'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
@@ -47,7 +46,6 @@ function Frame({ user, counts }: { user: SessionUser; counts?: Partial<Record<Na
   const palette = usePalette()
   const { openCapture } = useCapture()
   useSearchPaletteSource()
-  useOrdersPaletteSource()
   const { pathname } = useLocation()
   const active = navItemForPath(pathname)
   const inSettings = pathname === '/settings' || pathname.startsWith('/settings/')
