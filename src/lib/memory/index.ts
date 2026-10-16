@@ -7,7 +7,8 @@
 //    shows its own currency only;
 //  - a price older than 18 months carries its age; a price whose currency is unverified is hidden;
 //  - imported history is marked wherever it feeds a number.
-// Nothing here orders anything: memory never reorders the suggestions.
+// Nothing here orders anything. (A8 supersedes the old "memory never reorders" rule: the float suggestions are ordered by track record
+// inside each reason group, in features/rfqs/lib/supplierSuggestion.ts.)
 
 import { formatAmount, formatRate } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
@@ -52,6 +53,17 @@ export interface MemoryRow {
   last_ordered_price_pkr?: number | null
   last_ordered_qty?: number | null
   last_ordered_unit?: string | null
+  /** A8 (0049): the most recent non-cancelled order at the best tier with a leg for this supplier. Null when there is none. */
+  evidence_tier?: number | null
+  evidence_order_id?: string | null
+  evidence_order_number?: number | null
+  evidence_item_desc?: string | null
+  evidence_qty?: number | null
+  evidence_placed_on?: string | null
+  evidence_expected_on?: string | null
+  evidence_delivered_on?: string | null
+  evidence_delivered_after_days?: number | null
+  evidence_count_at_tier?: number | null
 }
 
 /** The columns of v_supplier_stats the card reads. A company with no activity has none of them (all null). */

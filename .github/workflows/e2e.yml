@@ -1,7 +1,7 @@
 name: E2E
 
 # ONE Supabase stack boot and ONE build for every database-backed suite (auth, companies, rfq-board,
-# rfq-intake, rfq-detail, rfq-quotation, today, search, rfq-memory, settings-admin, orders, capture, pwa). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
+# rfq-intake, rfq-detail, rfq-quotation, today, search, rfq-memory, rfq-ranking, settings-admin, orders, capture, pwa). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
 # once and runs only those, one after another, with a database reset between them.
 # Pushes to main and manual runs (Actions, E2E, Run workflow) run every suite. See docs/CI.md.
 # No pull_request trigger: a push to a PR branch already runs this, and a second run doubled the minutes.
@@ -43,6 +43,7 @@ jobs:
       rfq_detail: ${{ steps.final.outputs.rfq_detail }}
       rfq_quotation: ${{ steps.final.outputs.rfq_quotation }}
       rfq_memory: ${{ steps.final.outputs.rfq_memory }}
+      rfq_ranking: ${{ steps.final.outputs.rfq_ranking }}
       today: ${{ steps.final.outputs.today }}
       search: ${{ steps.final.outputs.search }}
       capture: ${{ steps.final.outputs.capture }}
@@ -82,6 +83,8 @@ jobs:
               - 'e2e/rfqs/quotation.spec.ts'
             rfq_memory:
               - 'e2e/rfqs/memory.spec.ts'
+            rfq_ranking:
+              - 'e2e/rfqs/ranking.spec.ts'
             today:
               - 'e2e/today/**'
             search:
@@ -110,6 +113,7 @@ jobs:
           S_RFQ_DETAIL: ${{ steps.filter.outputs.rfq_detail }}
           S_RFQ_QUOTATION: ${{ steps.filter.outputs.rfq_quotation }}
           S_RFQ_MEMORY: ${{ steps.filter.outputs.rfq_memory }}
+          S_RFQ_RANKING: ${{ steps.filter.outputs.rfq_ranking }}
           S_TODAY: ${{ steps.filter.outputs.today }}
           S_SEARCH: ${{ steps.filter.outputs.search }}
           S_CAPTURE: ${{ steps.filter.outputs.capture }}
@@ -135,6 +139,8 @@ jobs:
           echo "rfq_quotation=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_RFQ_MEMORY; if [ "$all" = "true" ]; then v=true; fi
           echo "rfq_memory=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_RFQ_RANKING; if [ "$all" = "true" ]; then v=true; fi
+          echo "rfq_ranking=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_TODAY; if [ "$all" = "true" ]; then v=true; fi
           echo "today=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_SEARCH; if [ "$all" = "true" ]; then v=true; fi
@@ -276,6 +282,16 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=rfq-memory REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-memory npx playwright test --project=rfq-memory --output=test-results/rfq-memory
+      - name: Reset database (rfq-ranking)
+        if: ${{ !cancelled() && needs.changes.outputs.rfq_ranking == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (rfq-ranking project)
+        if: ${{ !cancelled() && needs.changes.outputs.rfq_ranking == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=rfq-ranking REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-ranking npx playwright test --project=rfq-ranking --output=test-results/rfq-ranking
+
       - name: Reset database (today)
         if: ${{ !cancelled() && needs.changes.outputs.today == 'true' }}
         run: npx supabase db reset --local

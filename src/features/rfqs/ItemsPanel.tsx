@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { Ban, ChevronDown, Clock, Copy, Ellipsis, Info, Pencil, Plus, Trash2, TriangleAlert } from 'lucide-react'
+import { useSession } from '@/app/session'
+import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
 import { formatDay } from '@/lib/formatDay'
@@ -15,6 +18,8 @@ import { RateBar } from '@/features/rfqs/RateBar'
 import { SupplierReplies } from '@/features/rfqs/SupplierReplies'
 import { focusReplyInput } from '@/features/rfqs/replyFocus'
 import { buildRateBar } from '@/features/fx/ratesModel'
+import { RankBadge, RankNoteBar, ReasonBlock } from '@/features/rfqs/ranking/RankParts'
+import { bandSizeOf, evidenceOf, rankChip, reasonsFor, type RankRow } from '@/features/rfqs/lib/ranking/reasons'
 import { lastPriceChip, type MemoryRow } from '@/lib/memory'
 import type { FxLatestRow, InquiryRow, QuoteLineRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useRemoveQuoteLine, useRestoreQuoteLine, useSetItemDecline } from '@/features/rfqs/hooks'
@@ -45,6 +50,12 @@ const daysBetween = (from: string, to: string) => Math.round((Date.UTC(+to.slice
 const COLS = 'md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,0.9fr)_104px_32px]'
 const HEAD = `hidden px-5 py-2 text-xs text-fg-muted md:grid md:gap-4 ${COLS}`
 const ROW = `grid gap-x-4 gap-y-2 border-t px-5 py-3 ${COLS}`
+/** A8 (R25): with the ranking there is a column for the rank before the supplier, and one more tap target (the reasons) in the last. */
+const RCOLS = 'md:grid-cols-[30px_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,0.9fr)_104px_72px]'
+const RHEAD = `hidden px-5 py-2 text-xs text-fg-muted md:grid md:gap-4 ${RCOLS}`
+const RROW = `relative grid gap-x-4 gap-y-2 border-t px-5 py-3 max-md:grid-cols-[26px_minmax(0,1fr)] ${RCOLS}`
+/** On the phone every cell but the rank sits in the second column; the reasons and the last-price chip run under the whole row. */
+const IN2 = 'max-md:col-start-2'
 
 function Label({ children }: { children: string }) {
   return <span className="text-xs text-fg-muted md:sr-only">{children}</span>
@@ -231,6 +242,7 @@ export function ItemsPanel({
   fxRows,
   memory,
   suggestions,
+  ranking,
   onAddItem,
   onCopyEnquiry,
 }: {
@@ -243,10 +255,16 @@ export function ItemsPanel({
   memory?: Readonly<Record<string, readonly MemoryRow[] | undefined>>
   /** Suppliers worth asking that have not been asked yet (R03). Absent while loading: the uncovered block then has no list. */
   suggestions?: readonly SupplierSuggestion[]
+  /** rank_item_quotes() rows by quote line id (R25). Absent while loading or if the read failed: the plain comparison is shown. */
+  ranking?: ReadonlyMap<string, RankRow>
   onAddItem: () => void
   onCopyEnquiry: (supplier: SupplierSuggestion, item: RfqItemRow) => void
 }) {
   const today = businessToday()
+  const session = useSession()
+  // The selling price and the spread are for admin and sales only. The database sends an engineer NULLs; this also keeps their notes off the page.
+  const showSell = session.status === 'signed-in' && (session.user.role === 'admin' || session.user.role === 'sales')
+  const [opened, setOpened] = useState<Readonly<Record<string, boolean>>>({})
   const responders = inquiries.filter(i => i.lines.length > 0)
   const pricedItems = items.filter(it => inquiries.some(i => i.lines.some(l => l.itemId === it.id))).length
   const rateBar = buildRateBar(
@@ -292,12 +310,26 @@ export function ItemsPanel({
               rates,
             )
             for (const { l, i } of lines) entries.push({ line: l, inquiry: i, c: cmp.lines.find(x => x.id === l.id) as ComparedLine })
-            // Cheapest first among the compared, then the lines left out of the comparison.
-            entries.sort((a, b) => {
-              if (a.c.compared !== b.c.compared) return a.c.compared ? -1 : 1
-              if (a.c.pkrPaisa !== null && b.c.pkrPaisa !== null) return a.c.pkrPaisa < b.c.pkrPaisa ? -1 : a.c.pkrPaisa > b.c.pkrPaisa ? 1 : 0
-              return a.line.unitPrice - b.line.unitPrice
-            })
+            // The database's ranking (R25) when it has every line of this item; else the plain order: cheapest first among the compared, then the lines left out.
+            const rankOf = (l: QuoteLineRow) => ranking?.get(l.id)
+            const ranked = lines.length >= 2 && lines.every(({ l }) => rankOf(l) !== undefined)
+            if (ranked) {
+              entries.sort((a, b) => {
+                const ra = rankOf(a.line) as RankRow
+                const rb = rankOf(b.line) as RankRow
+                if ((ra.rank === null) !== (rb.rank === null)) return ra.rank === null ? 1 : -1
+                if (ra.rank !== null && rb.rank !== null && ra.rank !== rb.rank) return ra.rank - rb.rank
+                return a.inquiry.supplierName.localeCompare(b.inquiry.supplierName)
+              })
+            } else {
+              entries.sort((a, b) => {
+                if (a.c.compared !== b.c.compared) return a.c.compared ? -1 : 1
+                if (a.c.pkrPaisa !== null && b.c.pkrPaisa !== null) return a.c.pkrPaisa < b.c.pkrPaisa ? -1 : a.c.pkrPaisa > b.c.pkrPaisa ? 1 : 0
+                return a.line.unitPrice - b.line.unitPrice
+              })
+            }
+            const itemRanks = ranked ? entries.map(e => rankOf(e.line) as RankRow) : []
+            const bandSize = bandSizeOf(itemRanks)
             const declined = inquiries
               .filter(i => !i.lines.some(l => l.itemId === item.id))
               .map(i => ({ i, reason: reasonForItem(item.id, i) }))
@@ -306,6 +338,7 @@ export function ItemsPanel({
             // and left this one is not waiting on it (the chase card still asks for it).
             const waiting = inquiries.filter(i => i.sentOn && !i.noOfferOn && i.lines.length === 0 && !i.itemDeclines[item.id])
             const cov = itemCoverage(lines.length, waiting.length, responders.length)
+            const chipLabel = ranked && cov.kind === 'covered' ? rankChip(itemRanks) : null
             const q = qtyText(item.qty, item.unit)
             const left = cmp.lines.filter(x => x.pkrPaisa === null).map(x => lines.find(({ l }) => l.id === x.id)?.l.currency as string)
             const stale = cmp.lines.filter(x => x.band === 'stale' && x.rateAgeDays !== null).map(x => ({ currency: lines.find(({ l }) => l.id === x.id)?.l.currency as string, days: x.rateAgeDays as number }))
@@ -326,7 +359,7 @@ export function ItemsPanel({
                   <StatusBadge
                     dimension={cov.kind === 'none' ? 'inquiry' : 'sourcing'}
                     value={cov.kind === 'covered' ? 'covered' : cov.kind === 'partly' ? 'partly-covered' : cov.kind === 'uncovered' ? 'no-offer' : 'awaiting'}
-                    label={cov.label}
+                    label={chipLabel ?? cov.label}
                   />
                   {inquiries.length > 0 ? (
                     <Button
@@ -374,8 +407,10 @@ export function ItemsPanel({
                   <p className="px-5 pb-4 pt-3 text-sm text-fg-muted">No supplier has been asked about this item.</p>
                 ) : entries.length > 0 || declined.length > 0 || waiting.length > 0 ? (
                   <div className="mt-3">
+                    {ranked ? <RankNoteBar rows={itemRanks} showSell={showSell} /> : null}
                     {entries.length > 0 ? (
-                      <div className={HEAD} aria-hidden="true">
+                      <div className={ranked ? RHEAD : HEAD} aria-hidden="true">
+                        {ranked ? <span /> : null}
                         <span>Supplier</span>
                         <span className="text-right">Price</span>
                         <span>In PKR at today&apos;s rate</span>
@@ -387,33 +422,45 @@ export function ItemsPanel({
                     <ul>
                       {entries.map(entry => {
                         const { line, inquiry, c } = entry
-                        const chip = lastPriceChip(memory?.[item.id]?.find(r => r.supplier_id === inquiry.supplierId), today)
+                        const memRow = memory?.[item.id]?.find(r => r.supplier_id === inquiry.supplierId)
+                        const chip = lastPriceChip(memRow, today)
+                        const rk = ranked ? (rankOf(line) as RankRow) : null
+                        const reasons = rk ? reasonsFor(rk, { showSell, bandSize, evidence: evidenceOf(memRow), names: { brand: item.brandName, family: item.familyName } }) : null
+                        const open = rk ? (opened[line.id] ?? (bandSize >= 2 && rk.within_band === true)) : false
+                        const cell = rk ? IN2 : ''
                         return (
-                          <li key={line.id} className={ROW} data-lowest={c.lowest ? '' : undefined} data-compared={c.compared && c.pkrPaisa !== null ? '' : undefined}>
-                            <div className="grid gap-[2px]">
+                          <li
+                            key={line.id}
+                            className={cn(rk ? RROW : ROW, rk && rk.rank === null && 'bg-canvas')}
+                            data-lowest={c.lowest ? '' : undefined}
+                            data-compared={c.compared && c.pkrPaisa !== null ? '' : undefined}
+                            data-ranked={rk ? (rk.rank ?? 'none') : undefined}
+                          >
+                            {rk ? <RankBadge row={rk} className="mt-[2px] max-md:row-start-1" /> : null}
+                            <div className={cn('grid gap-[2px]', cell)}>
                               <Label>Supplier</Label>
                               <span className="min-w-0 break-words text-sm font-medium">{inquiry.supplierName}</span>
                               {inquiry.supplierCity || inquiry.supplierCountry ? <span className="text-xs text-fg-muted">{[inquiry.supplierCity, inquiry.supplierCountry].filter(Boolean).join(', ')}</span> : null}
                             </div>
-                            <div className="grid gap-1 md:justify-items-end">
+                            <div className={cn('grid gap-1 md:justify-items-end', cell)}>
                               <Label>Price</Label>
                               <span className="num whitespace-nowrap text-sm font-medium">
                                 <span className="mr-1 font-sans text-xs font-regular text-fg-muted">{line.currency}</span>
                                 {formatAmount(line.unitPrice, 'always')}
                               </span>
                             </div>
-                            <div className="grid content-start gap-1">
+                            <div className={cn('grid content-start gap-1', cell)}>
                               <Label>In PKR at today&apos;s rate</Label>
                               <span className="flex flex-wrap items-start gap-2">
                                 {c.lowest ? <StatusBadge dimension="sourcing" value="covered" label="Lowest" /> : null}
                                 <PkrCell line={line} c={c} rates={rates} />
                               </span>
                             </div>
-                            <div className="grid content-start gap-1">
+                            <div className={cn('grid content-start gap-1', cell)}>
                               <Label>Lead time</Label>
                               <span className="text-sm">{line.leadTime ?? <span className="text-fg-muted">—</span>}</span>
                             </div>
-                            <div className="grid content-start gap-1">
+                            <div className={cn('grid content-start gap-1', cell)}>
                               <Label>Stock</Label>
                               <span className="flex items-center gap-2 text-sm">
                                 {line.inStock === null ? (
@@ -426,15 +473,32 @@ export function ItemsPanel({
                                 )}
                               </span>
                             </div>
-                            <div className="flex justify-end max-md:order-first">
+                            <div className={cn('flex justify-end', rk ? 'max-md:absolute max-md:right-3 max-md:top-2' : 'max-md:order-first')}>
+                              {rk ? (
+                                <Button
+                                  variant="quiet"
+                                  size="sm"
+                                  aria-expanded={open}
+                                  aria-label={`${open ? 'Hide' : 'Show'} reasons for ${inquiry.supplierName}`}
+                                  onClick={() => setOpened(o => ({ ...o, [line.id]: !open }))}
+                                  icon={ChevronDown}
+                                  className={cn('[&_svg]:transition-transform', open && '[&_svg]:rotate-180')}
+                                />
+                              ) : null}
                               <RowMenu rfqId={rfq.id} entry={entry} item={item} />
                             </div>
-                            {chip ? <LastPriceChipView chip={chip} /> : null}
+                            {rk && reasons ? (
+                              <div className="col-[2/-1]">
+                                <ReasonBlock set={reasons} open={open} supplier={inquiry.supplierName} unrankedCurrency={rk.rank === null ? line.currency : null} />
+                              </div>
+                            ) : null}
+                            {chip ? rk ? <div className="col-[2/-1]"><LastPriceChipView chip={chip} /></div> : <LastPriceChipView chip={chip} /> : null}
                           </li>
                         )
                       })}
                       {declined.map(({ i, reason }) => (
-                        <li key={i.id} className={`${ROW} text-fg-muted`} data-declined={i.supplierId}>
+                        <li key={i.id} className={`${ranked ? `grid gap-x-4 gap-y-2 border-t px-5 py-3 ${RCOLS}` : ROW} text-fg-muted`} data-declined={i.supplierId}>
+                          {ranked ? <span aria-hidden="true" className="max-md:hidden" /> : null}
                           <span className="min-w-0 break-words text-sm font-medium text-fg-2">{i.supplierName}</span>
                           <span className="flex flex-wrap items-center gap-2 text-sm md:col-span-5">
                             <span className="inline-flex h-5 items-center gap-[5px] rounded border border-line-strong bg-surface px-2 text-xs font-medium text-fg-2">
@@ -450,7 +514,7 @@ export function ItemsPanel({
                         <WaitingRow key={w.id} rfqId={rfq.id} inquiry={w} item={item} />
                       ))}
                     </ul>
-                    {entries.length > 0 ? (
+                    {entries.length > 0 && !ranked ? (
                       <p className="flex items-start gap-2 border-t px-5 py-3 text-xs text-fg-muted">
                         <Icon icon={Info} size="sm" className="mt-[1px]" />
                         <span>{comparisonNote({ comparable: cmp.comparableCount, basis: cmp.basis, notCompared: left, staleRates: stale, lines: entries.length })}</span>

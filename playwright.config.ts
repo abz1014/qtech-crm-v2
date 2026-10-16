@@ -46,6 +46,11 @@ import { defineConfig, devices } from '@playwright/test'
  *    page's What we know panels, with fixtures (k) to (n), the 200 ms card budget and axe at 1440 and 375 (.github/workflows/e2e.yml):
  *      E2E_SUITE=rfq-memory REVIEW_DIR=review-shots npx playwright test --project=rfq-memory
 
+ *  - rfq-ranking (R25, R26): the ranked comparison on the RFQ page (rank order, the 2% band, reliability, order history, the spread for sales and
+ *    none for an engineer, no Received step), the float suggestions ordered by track record with the evidence line, and the memory card's
+ *    evidence block, with the tap counts and axe at 1440 and 375 (.github/workflows/e2e.yml):
+ *      E2E_SUITE=rfq-ranking REVIEW_DIR=review-shots npx playwright test --project=rfq-ranking
+ *
  *  - today (R11, R16): the Today screen for all three roles on the same stack and build. The 1-tap chase (copy and mark chased), its
  *    10 s Undo, the Waiting group, role-aware items, and axe (WCAG 2.2 AA) at 1440 and 375 (.github/workflows/e2e.yml):
  *      E2E_SUITE=today REVIEW_DIR=review-shots npx playwright test --project=today
@@ -78,7 +83,7 @@ import { defineConfig, devices } from '@playwright/test'
  */
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'pwa']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'pwa']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -179,6 +184,13 @@ export default defineConfig({
         viewport: { width: 1440, height: 900 },
         screenshot: 'only-on-failure',
       },
+    },
+    {
+      name: 'rfq-ranking',
+      testMatch: /rfqs\/ranking\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
     },
     {
       name: 'today',

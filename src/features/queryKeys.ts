@@ -73,8 +73,8 @@ function rfqs() {
     signature: (userId: string) => [...all, 'signature', userId] as const,
   }
 }
-/** R19 adds the quotation slices: the issued quotations, the items with their quoted prices, the price chips. */
-export type RfqPart = 'header' | 'items' | 'inquiries' | 'clarifications' | 'attachments' | 'quotations' | 'quote-items' | 'price-memory'
+/** R19 adds the quotation slices: the issued quotations, the items with their quoted prices, the price chips. A8 (R25) adds the ranking of the quotes. */
+export type RfqPart = 'header' | 'items' | 'inquiries' | 'clarifications' | 'attachments' | 'quotations' | 'quote-items' | 'price-memory' | 'ranking'
 
 /** Exchange rates (R07 reads today's rate per currency; R15 owns editing them). */
 function fx() {
