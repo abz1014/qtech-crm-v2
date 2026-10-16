@@ -98,7 +98,7 @@ test.describe('month-end (M10)', () => {
     await openAs(page, 'admin', `/money/month-end?month=${STMT.key}`)
     const nav = page.getByRole('navigation', { name: 'Month-end views' })
     const reports: { tab: string; file: string; header: string; shows: RegExp }[] = [
-      { tab: 'P&L', file: `profit-and-loss-${STMT.key}.csv`, header: 'Section', shows: new RegExp(`Result for ${STMT.label}`) },
+      { tab: 'P&L', file: `profit-and-loss-${STMT.key}.csv`, header: 'Section', shows: new RegExp(`Result for ${STMT.name}`) },
       { tab: 'Expenses by category', file: `expenses-by-category-${STMT.key}.csv`, header: 'Month', shows: /Overheads/ },
       { tab: 'Aging', file: `aging-${STMT.key}.csv`, header: 'As of', shows: /Aging of what customers owe/ },
       { tab: 'We owe', file: `we-owe-${STMT.key}.csv`, header: 'As of', shows: /What we owe suppliers/ },
@@ -151,7 +151,7 @@ test.describe('month-end (M10)', () => {
       })
       for (const path of ['', '/pnl', '/categories', '/aging', '/owe', '/gst', '/team']) {
         await openAs(page, role, `/money/month-end${path}?month=${STMT.key}`)
-        await expect(page.getByRole('heading', { name: /not available to your role/ })).toBeVisible()
+        await expect(page.getByRole('heading', { name: /is for admins|not available to your role/ })).toBeVisible()
       }
       expect(seen, `${role} must not fetch month-end data`).toEqual([])
       if (role === 'sales') {

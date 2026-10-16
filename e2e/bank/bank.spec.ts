@@ -209,7 +209,7 @@ test.describe('bank tick (M12)', () => {
         if (/\/rest\/v1\/(payments_in|expenses|expense_categories)/.test(r.url())) seen.push(r.url())
       })
       await openAs(page, role, '/money/month-end/bank')
-      await expect(page.getByRole('heading', { name: /not available to your role/ })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /is for admins|not available to your role/ })).toBeVisible()
       await expect(page.getByTestId('bank-in')).toHaveCount(0)
       expect(seen, `${role} must not fetch bank data`).toEqual([])
       await page.close()
