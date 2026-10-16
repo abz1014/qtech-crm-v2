@@ -65,9 +65,9 @@ export function ReminderPanel({ row, today }: { row: ReceivableRow | null; today
 
 function PanelShell({ title, meta, aside, children }: { title: string; meta?: React.ReactNode; aside?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section aria-label={title} data-testid="reminder-panel" className="grid content-start overflow-hidden rounded border bg-surface xl:sticky xl:top-4">
-      <header className="flex items-start justify-between gap-3 border-b px-5 py-4">
-        <div className="min-w-0 flex-1">
+    <section aria-label={title} data-testid="reminder-panel" className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start overflow-hidden rounded border bg-surface xl:sticky xl:top-4">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b px-5 py-4">
+        <div className="min-w-[9rem] flex-1">
           <h2 className="text-base font-semibold">{title}</h2>
           {meta ? <span className="block truncate text-sm text-fg-muted">{meta}</span> : null}
         </div>

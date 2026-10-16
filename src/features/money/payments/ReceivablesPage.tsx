@@ -160,9 +160,7 @@ export function ReceivablesPage() {
         sortable: false,
         cell: r =>
           r.state === 'settled' ? null : (
-            <Button size="sm" icon={Banknote} aria-label={`Record payment for ${orderRef(r.orderNumber)}`} onClick={() => setPaying(r.orderId)}>
-              Record payment
-            </Button>
+            <Button size="sm" icon={Banknote} aria-label={`Record payment for ${orderRef(r.orderNumber)}`} title="Record payment" onClick={() => setPaying(r.orderId)} />
           ),
       })
     return cols
@@ -181,7 +179,7 @@ export function ReceivablesPage() {
           { label: 'Not invoiced yet', amount: totals.notInvoiced, sub: `${totals.notInvoicedCount} ${totals.notInvoicedCount === 1 ? 'order' : 'orders'}, balance from items` },
         ]}
       />
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_392px]">
         <div className="min-w-0">
           <DataTable
             label={tabLabel}
