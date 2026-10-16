@@ -186,7 +186,7 @@ test.describe('month-end (M10)', () => {
     }
     await page.setViewportSize({ width: 375, height: 812 })
     await page.goto(`/money/month-end?month=${STMT.key}`)
-    await expect(page.getByTestId('check-bank_unticked').or(page.getByRole('navigation', { name: 'Checklist' }))).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Checklist' })).toBeVisible()
     await page.waitForLoadState('networkidle')
     await review(page, 'm10-checklist-375')
     expect(await axeViolations(page)).toEqual([])
