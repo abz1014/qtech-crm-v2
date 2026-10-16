@@ -63,7 +63,7 @@ jobs:
           fi
           echo "Guard passed."
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install age
         run: sudo apt-get update -qq && sudo apt-get install -y -qq age
@@ -96,7 +96,7 @@ jobs:
           ls -l "$RUNNER_TEMP/out"
 
       - name: Upload the encrypted backup (30 days)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backup-${{ env.STAMP }}
           path: ${{ runner.temp }}/out/*.age
@@ -133,8 +133,8 @@ jobs:
           if [ -z "${PGPASSWORD:-}" ]; then echo "::error::SUPABASE_DB_PASSWORD is empty"; exit 1; fi
           echo "Guard passed."
 
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: npm
