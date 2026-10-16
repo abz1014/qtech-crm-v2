@@ -347,7 +347,7 @@ export function ItemsPanel({
               <article key={item.id} aria-label={`Item ${item.number}`} className="min-w-0">
                 <header className="flex flex-wrap items-start gap-x-3 gap-y-2 px-5 pt-4">
                   <span className="num mt-[2px] grid h-6 min-w-6 place-items-center rounded border border-line-strong px-1 text-xs">{item.number}</span>
-                  <div className="min-w-0 flex-1 basis-64">
+                  <div className="min-w-0 flex-1 basis-[16rem]">
                     <h3 className="text-base font-medium text-pretty">{item.description}</h3>
                     <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-fg-muted">
                       {q ? <span className="num">{q}</span> : null}

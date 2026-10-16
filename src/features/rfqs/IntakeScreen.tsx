@@ -430,7 +430,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
         ? 'Check the split, then find suppliers.'
         : 'Paste what the customer sent. Nothing is saved until you copy the enquiry or save.'
       : step === 'suppliers'
-        ? 'Suggestions come with a reason. Nothing is ranked by how well a supplier has done.'
+        ? 'Suggestions come with a reason. Inside each reason, the supplier with the better record comes first, and the last order from them is shown.'
         : step === 'enquiry'
           ? 'Check the text, then copy it once.'
           : step === 'saved'

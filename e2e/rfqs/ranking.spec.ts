@@ -28,7 +28,7 @@ async function full(page: Page, name: string, height = 2600): Promise<void> {
   if (!dir) return
   mkdirSync(dir, { recursive: true })
   const before = page.viewportSize() ?? { width: 1440, height: 900 }
-  await page.setViewportSize({ width: before.width, height: before.width < 600 ? 4200 : height })
+  await page.setViewportSize({ width: before.width, height: before.width < 600 ? 7000 : height })
   await page.screenshot({ path: `${dir}/${name}.png` })
   await page.setViewportSize(before)
 }

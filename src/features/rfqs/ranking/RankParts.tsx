@@ -130,7 +130,7 @@ export function RankNoteBar({ rows, showSell }: { rows: readonly RankRow[]; show
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b bg-surface px-5 py-2 text-xs text-fg-muted" data-rank-note={note.kind}>
       <Icon icon={NoteIcon} size="chip" />
-      <span className="min-w-0 flex-1 basis-64">
+      <span className="min-w-0 flex-1 basis-[16rem]">
         <b className="font-medium text-fg-2">{note.title}</b> {note.body}
       </span>
       {sell ? (
