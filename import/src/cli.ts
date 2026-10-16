@@ -1,3 +1,4 @@
+import './lib/ws-shim'
 import { createClient } from '@supabase/supabase-js'
 import { join } from 'node:path'
 import { pktDate } from './lib/dates'
