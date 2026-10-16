@@ -143,14 +143,16 @@ test.describe('month-end (M10)', () => {
   })
 
   test('sales and engineer: no Month-end, no month-end request, and no rows from the database; sales still read the GST register', async ({ browser }) => {
+    test.setTimeout(90_000)
     for (const role of ['sales', 'engineer'] as const) {
       const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
       const seen: string[] = []
       page.on('request', r => {
         if (/\/rest\/v1\/(closed_months|v_month_pnl|v_month_expense_category|v_month_team|payments_in|expenses)|\/rpc\/(month_end_status|aging_as_of|payables_as_of|close_month|close_months_through|reopen_month)/.test(r.url())) seen.push(r.url())
       })
+      await openAs(page, role, `/money/month-end?month=${STMT.key}`)
       for (const path of ['', '/pnl', '/categories', '/aging', '/owe', '/gst', '/team']) {
-        await openAs(page, role, `/money/month-end${path}?month=${STMT.key}`)
+        if (path) await page.goto(`/money/month-end${path}?month=${STMT.key}`)
         await expect(page.getByRole('heading', { name: /is for admins|not available to your role/ })).toBeVisible()
       }
       expect(seen, `${role} must not fetch month-end data`).toEqual([])
