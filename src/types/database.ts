@@ -1875,6 +1875,12 @@ isOneToOne: false
 "fx_wanted_currencies":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
+"import_purge_audit":
+{ Args: { "p_ids": (string)[] }; Returns: number
+                           },
+"import_reset_numbers":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "ingest_fx_response":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
@@ -1956,7 +1962,7 @@ isOneToOne: false
                            },
 "search_all":
 { Args: { "lim"?: number,"q": string }; Returns: {
-              "company_id": string,"id": string,"kind": string,"label": string,"meta": string,"role": string,"score": number
+              "company_id": string,"id": string,"kind": string,"label": string,"meta": string,"order_id": string,"role": string,"score": number
             }[]
                            },
 "set_fx_rate":

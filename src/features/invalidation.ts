@@ -39,6 +39,8 @@ export interface WriteVars {
   'target.save': Record<string, never>
   /** M13: any change to a category (name, group, paid via, order, active, add, delete). */
   'category.save': Record<string, never>
+  /** M12: a bank tick (or untick) of a payment, an expense or an FBR deposit group. */
+  'bank.tick': Record<string, never>
   'rfq.float': { companyId: string }
   'rfq.setFloated': { rfqId: string }
   'fx.set': Record<string, never>
@@ -128,7 +130,10 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'team.reactivate': () => [qk.settings.team()],
   'company-profile.update': () => [qk.settings.profile()],
   'target.save': () => [qk.settings.targets(), qk.today.target()],
-  'category.save': () => [qk.settings.categories()],
+  // Money's own category list (new expense forms, the Expenses list) reads the same rows, so it goes stale too.
+  'category.save': () => [qk.settings.categories(), qk.money.categories()],
+  // A tick changes only the bank screen (the month-end checklist counts arrive with M10 and read through this prefix too).
+  'bank.tick': () => [qk.money.bank.all],
   // Floating creates an RFQ (and inquiries): the RFQ lists, the customer's history and every supplier's activity change.
   'rfq.float': () => [qk.rfqs.all, qk.intake.all, qk.companies.all],
   // Floating or un-floating moves inquiries between shortlisted and sent: the RFQ and the suppliers' counts.
@@ -172,21 +177,21 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // A snooze is read only by Today.
   'today.snooze': () => [qk.today.all],
   // An expense changes every month list, the recent-use tally, the order's own cost panel and Today (a recurring item leaves it).
-  'expense.save': () => [qk.money.expenses.all, qk.money.recurring.all, qk.money.margins(), qk.money.exceptions(), [...qk.money.all, 'order-costs'] as const, qk.orders.all, qk.today.all],
+  'expense.save': () => [qk.money.expenses.all, qk.money.bank.all, qk.money.recurring.all, qk.money.margins(), qk.money.exceptions(), [...qk.money.all, 'order-costs'] as const, qk.orders.all, qk.today.all],
   // The expected cost or the costs-complete mark changes the order's margin, the margins list and the exceptions.
   'costs.save': v => [qk.money.orderCosts(v.orderId), qk.money.margins(), qk.money.exceptions(), qk.orders.detail(v.orderId), qk.today.all],
   'expense.receipt': v => [qk.money.expenses.receipts(v.expenseId)],
   'recurring.save': () => [qk.money.recurring.all, qk.today.all],
   // Recording makes an expense (and a recurring item leaves Today).
-  'recurring.record': () => [qk.money.expenses.all, qk.money.recurring.all, qk.today.all],
+  'recurring.record': () => [qk.money.expenses.all, qk.money.bank.all, qk.money.recurring.all, qk.today.all],
   // A new invoice moves the register, the order's invoicing state and balance, receivables and Today (a payment reminder can become due).
-  'invoice.create': () => [qk.money.invoices.all, qk.money.receivables.all, qk.orders.all, qk.today.all],
-  'invoice.update': v => [qk.money.invoices.register(), qk.money.invoices.detail(v.invoiceId), qk.money.receivables.all, qk.orders.all, qk.today.all],
+  'invoice.create': () => [qk.money.invoices.all, qk.money.bank.all, qk.money.receivables.all, qk.orders.all, qk.today.all],
+  'invoice.update': v => [qk.money.invoices.register(), qk.money.bank.all, qk.money.invoices.detail(v.invoiceId), qk.money.receivables.all, qk.orders.all, qk.today.all],
   // Stamps move the register's tracks and the FBR / TCS items on Today.
-  'invoice.stamp': () => [qk.money.invoices.all, qk.today.all],
+  'invoice.stamp': () => [qk.money.invoices.all, qk.money.bank.all, qk.today.all],
   'invoice.receipt': v => [qk.money.invoices.receipts(v.invoiceId), qk.money.invoices.detail(v.invoiceId), qk.money.invoices.register(), qk.today.all],
   // A payment moves balances (receivables, the order page's panel, its payment chip) and Today's overdue items.
-  'payment.record': v => [qk.money.receivables.all, qk.money.receivables.payments(v.orderId), qk.orders.all, qk.today.all],
+  'payment.record': v => [qk.money.receivables.all, qk.money.bank.all, qk.money.receivables.payments(v.orderId), qk.orders.all, qk.today.all],
   'payment.remind': () => [qk.money.receivables.all, qk.money.invoices.all, qk.today.all],
 }
 

@@ -72,6 +72,16 @@ export function GstRegisterPage() {
   // /money/gst-register?new=1&order=<id> opens the create dialog for that order (the order page can link here).
   const linkedNew = params.get('new') !== null
   const linkedOrder = params.get('order') ?? undefined
+  // /money/gst-register?invoice=<id> opens that invoice (the command palette links here, P02).
+  const linkedInvoice = params.get('invoice')
+  const closeInvoice = () => {
+    setOpening(null)
+    if (linkedInvoice) {
+      const next = new URLSearchParams(params)
+      next.delete('invoice')
+      setParams(next, { replace: true })
+    }
+  }
   const closeLinked = () => {
     const next = new URLSearchParams(params)
     next.delete('new')
@@ -311,7 +321,7 @@ export function GstRegisterPage() {
       ) : null}
 
       <CreateInvoiceDialog open={creating || linkedNew} onOpenChange={o => { if (!o) { setCreating(false); if (linkedNew) closeLinked() } }} orderId={creating ? undefined : linkedOrder} />
-      {opening ? <InvoiceDetailDialog invoiceId={opening} onClose={() => setOpening(null)} /> : null}
+      {opening ?? linkedInvoice ? <InvoiceDetailDialog invoiceId={(opening ?? linkedInvoice) as string} onClose={closeInvoice} /> : null}
     </MoneyFrame>
   )
 }
