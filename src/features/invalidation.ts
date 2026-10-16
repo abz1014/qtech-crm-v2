@@ -80,6 +80,7 @@ export interface WriteVars {
   'today.snooze': Record<string, never>
   /** M03/M11: an expense added, edited, deleted, or a receipt photo added or taken off. */
   'expense.save': Record<string, never>
+  'costs.save': { orderId: string }
   'expense.receipt': { expenseId: string }
   'recurring.save': Record<string, never>
   'recurring.record': Record<string, never>
@@ -171,7 +172,9 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // A snooze is read only by Today.
   'today.snooze': () => [qk.today.all],
   // An expense changes every month list, the recent-use tally, the order's own cost panel and Today (a recurring item leaves it).
-  'expense.save': () => [qk.money.expenses.all, qk.money.recurring.all, qk.orders.all, qk.today.all],
+  'expense.save': () => [qk.money.expenses.all, qk.money.recurring.all, qk.money.margins(), qk.money.exceptions(), [...qk.money.all, 'order-costs'] as const, qk.orders.all, qk.today.all],
+  // The expected cost or the costs-complete mark changes the order's margin, the margins list and the exceptions.
+  'costs.save': v => [qk.money.orderCosts(v.orderId), qk.money.margins(), qk.money.exceptions(), qk.orders.detail(v.orderId), qk.today.all],
   'expense.receipt': v => [qk.money.expenses.receipts(v.expenseId)],
   'recurring.save': () => [qk.money.recurring.all, qk.today.all],
   // Recording makes an expense (and a recurring item leaves Today).
