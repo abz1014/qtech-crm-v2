@@ -121,13 +121,16 @@ test.describe('payment-reminder panel (M09)', () => {
     await expect(panel.getByTestId('reminder-text')).toHaveCount(0)
   })
 
-  test('sales get the panel on Order balances; an engineer reaches neither the screen nor the RPC', async ({ page }) => {
+  test('sales get the panel on Order balances', async ({ page }) => {
     const s = await seedOverdue()
     await openAs(page, 'sales', '/money/receivables')
     await pick(page, s)
     await expect(page.getByTestId('reminder-text')).toContainText(s.invoiceNumber)
     await review(page, 'm09-order-balances-reminder-sales-1440')
+  })
 
+  test('an engineer reaches neither the screen nor the RPC', async ({ page }) => {
+    const s = await seedOverdue()
     const seen: string[] = []
     page.on('request', r => {
       if (/stamp_payment_reminder|rpc\/order_receivables|\/rest\/v1\/invoices/.test(r.url())) seen.push(r.url())
@@ -159,22 +162,28 @@ test.describe('payment-reminder panel (M09)', () => {
 })
 
 test.describe('Today v3 money rules (M08)', () => {
-  test('admin and sales see the TCS item; the engineer sees no money item and no money request', async ({ page }) => {
+  const tcs = 'li[data-rule="tcs_not_sent"]'
+
+  test('admin sees the TCS item as one rolled-up row that opens the register', async ({ page }) => {
     // An invoice from 10 days ago with no courier date: "n invoices not sent by TCS" (one rolled-up item).
     await seedOverdue({ invoiceDate: karachiDay(-10) })
-    for (const role of ['admin', 'sales'] as const) {
-      await openAs(page, role, '/today')
-      await expect(page.locator('li[data-rule="tcs_not_sent"]')).toHaveCount(1)
-      await expect(page.locator('li[data-rule="tcs_not_sent"]')).toContainText(/\d+ invoices? not sent by TCS/)
-      if (role === 'sales') for (const rule of ['costs_incomplete', 'recurring_due']) await expect(page.locator(`li[data-rule="${rule}"]`)).toHaveCount(0)
-    }
     await openAs(page, 'admin', '/today')
     await page.getByRole('radio', { name: /^Money/ }).click()
+    await expect(page.locator(tcs)).toHaveCount(1)
+    await expect(page.locator(tcs)).toContainText(/\d+ invoices? not sent by TCS/)
     await review(page, 'm08-today-money-1440')
-    await page.locator('li[data-rule="tcs_not_sent"] button').click()
+    await page.locator(`${tcs} button`).click()
     await expect(page.getByRole('button', { name: /Open GST register/ })).toBeVisible()
     await review(page, 'm08-today-money-pane-1440')
+  })
 
+  test('sales see the TCS item but not the admin-only money items', async ({ page }) => {
+    await openAs(page, 'sales', '/today')
+    await expect(page.locator(tcs)).toHaveCount(1)
+    for (const rule of ['costs_incomplete', 'recurring_due', 'close_month']) await expect(page.locator(`li[data-rule="${rule}"]`)).toHaveCount(0)
+  })
+
+  test('the engineer sees no money item and makes no money request', async ({ page }) => {
     const seen: string[] = []
     page.on('request', r => {
       if (/v_invoice_state|v_order_money|recurring_expenses|rpc\/order_receivables|rpc\/month_end_status/.test(r.url())) seen.push(r.url())
@@ -191,7 +200,7 @@ test.describe('Today v3 money rules (M08)', () => {
     await page.setViewportSize({ width: 375, height: 812 })
     await openAs(page, 'admin', '/today')
     await page.getByRole('radio', { name: /^Money/ }).click()
-    await expect(page.locator('li[data-rule="tcs_not_sent"]')).toHaveCount(1)
+    await expect(page.locator(tcs)).toHaveCount(1)
     await review(page, 'm08-today-money-375')
     expect(await axeViolations(page)).toEqual([])
   })
