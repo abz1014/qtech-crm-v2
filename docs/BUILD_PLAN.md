@@ -863,3 +863,75 @@ S20–S23 don't block any current work. They run on their own branch from main a
   - Not-in-P&L lines visually set apart below the result.
 
 ---
+
+# Amendment A8: splitting an item across suppliers, and ranking supplier quotes (approved 2026-10-15)
+
+> Schema and function details are in `DATA_MODEL.md` Amendment A8. Decisions are in `DECISIONS.md` (2026-10-16). Migration numbers: **0049** (S24) and **0050** (S25); 0043 to 0048 belong to other branches. The owner approved the D16 ranking mockup (`docs/design/mockups/g2-ranking-split.html`, "ranking ok") and four overrides, which win over anything else in this amendment:
+>
+> - Ranking: best margin first (the same as the lowest landed PKR price per item), a 2% tie band, then delivery reliability, then order history. Evidence lines cite order number, date and days to delivery ("delivered after N days").
+> - The spread and the selling price are visible to admin and sales only. Engineers see the supplier prices plus the reliability and history reasons, but no selling price and no spread.
+> - There is no "Received" step on a supplier leg: a leg goes Placed, then Delivered. `received_on` is set equal to `delivered_on` (the app already writes both). Every "received after N days" is "delivered after N days" (`delivered_on - placed_on`); on time means `delivered_on <= expected_on`; "not received yet" is "not delivered yet".
+> - Splitting needs no new table: several `order_items` rows for one RFQ item, each with its own quantity and leg.
+
+## A8.1 What changes
+
+| Area | Change |
+|---|---|
+| Split storage | Several `order_items` rows share one `rfq_item_id`, each with its own `qty` and `supplier_order_id`. Invoices, money views, goods state, PO lines, supplier memory, `customer_price_memory` and `create_repeat_order` are unchanged (a split is copied as a split). |
+| `rank_item_quotes(p_rfq_id)` | New SQL function (S24): every quote line of the RFQ with its PKR price at today's rate, its rank, the near-tie band, delivery reliability, order history and (admin and sales only) the selling price and spread. One source of truth for convert, the RFQ page and the convert dialog. |
+| `supplier_item_memory` | Gains evidence columns (S24): the most recent non-cancelled order at the best tier with a leg for the supplier, with order number, placed and delivered dates and the days from placed to delivered. New output columns only. |
+| `convert_rfq_to_order` | Signature unchanged (S25). Gains a duplicate guard (two entries for one item may not use the same quote line) and infers the rank-1 quote line instead of "the only line". |
+| `split_order_item` | New RPC (S25): splits an order line by quantity onto another or a new leg, for orders with no RFQ and for splitting after conversion. |
+| Suggestion order | Float suggestions are re-ordered by track record inside the reason groups. This supersedes the A2b rule "memory never reorders". The pre-tick rule is unchanged: only "supplied this item before" is ticked. |
+
+## A8.2 Ranking rules (per RFQ item)
+
+1. **Price in PKR.** If every line on the item is in one currency, compare the raw prices (no rate needed). Otherwise convert each line at today's rate from `v_fx_latest`: fresh (7 days or less) and stale (8 to 30) are used, a stale one with a note. Unusable (over 30 days) or no rate: `comparable = false`, rank NULL, listed last.
+2. **Margin (primary).** Lowest comparable price first. Our selling price is the same whichever supplier we buy from, so this is the same order as best margin.
+3. **Near-tie band.** A line within **2%** of the best price is tied with it.
+4. **Reliability (first tie-break), inside the band and for exact ties outside it.** From the supplier's legs with `expected_on` and a delivery date, all time. Band 1 proven (3 or more deliveries, on time at least 2/3), band 2 unproven (fewer than 3 deliveries, no claim made), band 3 often late (3 or more, on time under 2/3).
+5. **Order history (second tie-break).** Non-cancelled orders with the supplier, other than orders from this RFQ: order count descending, then last order date descending. Order value is shown, never ranked on.
+6. **Final.** Price ascending, then supplier name.
+7. **Selling price and spread (admin and sales only).** `rfq_items.quoted_unit_price_net`, else the last price sold to this customer (`customer_price_memory`), else none. Spread is the selling price minus the PKR supplier price, before freight and duty.
+
+No combined score is computed or shown; the rank is a sort order and every key is printed as a reason.
+
+## A8.3 Tasks (amended)
+
+| ID | Deliverable | Deps | Acceptance |
+|---|---|---|---|
+| **D16** | Done: `docs/design/mockups/g2-ranking-split.html`, approved by the owner ("ranking ok"). | | |
+| **S24** | Migration **0049**: `rank_item_quotes()` and the evidence columns on `supplier_item_memory`; S14 rows; the money-safety assertion (an engineer's result has no selling price and no spread). | 0038/0039 merged | pgTAP named fixtures (a) to (i), see below. |
+| **S25** | Migration **0050**: `convert_rfq_to_order` duplicate guard and rank-1 inference; `split_order_item()`; S14 rows. | S24 | pgTAP named fixtures (a) to (f), see below. |
+| **R25** | Ranked comparison on RFQ detail plus `lib/ranking/reasons.ts` (the one module that composes the reason strings). Selling price and spread shown to admin and sales only. | S24, D16 | 0 extra taps to see the ranking. |
+| **R26** | Float suggestion re-order plus evidence lines in intake and the memory card (extends R17). | S24, D16 | Pre-ticks unchanged. |
+| **O08** | Convert dialog: split editor and rank-1 pre-assignment (O01 amended). | S25, D16, O01 merged | Split is 3 taps or fewer plus 1 quantity typed; convert with no changes is still 2 taps. |
+| **O09** | Order detail: split grouping ("split across N suppliers"), a "Split line" action running `split_order_item`, selling price edited once for the group, the "changed since PO" indicator (shared with O07). Legs show Placed and Delivered only. | S25, D16, O03 merged | Split line is 3 taps or fewer plus 1 quantity typed. |
+| **P03 (amended)** | Adds interaction-count assertions for the split and the convert. | O08 | Green in `db.yml`. |
+
+### S24 acceptance (named fixtures)
+
+| Fixture | Expected |
+|---|---|
+| (a) Same currency | Lines in one currency rank on the raw price with no rate. |
+| (b) Mixed currencies | USD and CNY with fresh rates rank on PKR. A stale rate still ranks, `fx_state = 'stale'`. No rate (or an unusable one): `comparable = false`, rank NULL. |
+| (c) Near-tie band | 1.5% apart: the proven supplier ranks first although dearer. 3% apart: the cheaper ranks first. |
+| (d) Reliability bands | 2 of 2 on time is band 2; 5 of 6 is band 1; 2 of 6 is band 3; a leg with no `expected_on` is not a delivery. |
+| (e) History tie-break | Equal price and band: more orders wins, then the more recent order. A cancelled order does not count. |
+| (f) Spread | The quoted price is used; without it the last price sold to this company; with neither, spread NULL and `sell_source = 'none'`. |
+| (g) Item coverage | A partial quote ranks only the items the supplier quoted. |
+| (h) Memory evidence | The newest order at the best tier with the right days to delivery; family-only match gives `evidence_tier = 3`; not delivered yet gives NULL days. |
+| (i) Access | Every active role can execute it; anonymous cannot. **Money safety:** for an engineer `sell_*` and `spread_*` are NULL; for admin and sales they are filled. |
+
+### S25 acceptance (named fixtures)
+
+| Fixture | Expected |
+|---|---|
+| (a) Two-part convert | Item X x6 from quote A and x4 from quote B: two lines, two legs, order net equals the unsplit total. |
+| (b) Same quote twice | The same quote line used twice for one item is refused (22023). |
+| (c) Inference | With `p_items` NULL the rank-1 line is chosen per item. |
+| (d) `split_order_item` | 4 of 10 moved to a new leg: quantities 6 and 4, selling price copied, totals unchanged. |
+| (e) Refusals | A quantity of the whole line or more, a service line, and a quantity of 0 or less are refused. |
+| (f) Repeat order | Copies the split. |
+
+Playwright (with R25, R26, O08): the ranking and reason strings as in the fixtures; a split convert within 3 taps plus 1 quantity creates two legs and each PO gets one line per part; float suggestions in the D16 order citing the evidence string.

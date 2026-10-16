@@ -1937,6 +1937,11 @@ isOneToOne: false
               "description": string,"order_item_id": string,"position": number,"price_source": string,"qty": number,"source_number": number,"source_on": string,"source_revision": number,"unit": string,"unit_price": number
             }[]
                            },
+"rank_item_quotes":
+{ Args: { "p_rfq_id": string }; Returns: {
+              "asked": number,"comparable": boolean,"currency": string,"deliveries": number,"fx_age_days": number,"fx_rate_on": string,"fx_rate_pkr": number,"fx_state": string,"in_stock": boolean,"item_qty": number,"last_order_delivered_after_days": number,"last_order_number": number,"last_order_on": string,"late": number,"lead_time": string,"median_days_late": number,"on_time": number,"orders_count": number,"orders_value_pkr": number,"pct_above_best": number,"pkr_unit_price": number,"price": number,"quote_line_id": string,"rank": number,"reliability_band": number,"replied": number,"rfq_item_id": string,"sell_on": string,"sell_order_number": number,"sell_source": string,"sell_unit_net": number,"spread_total": number,"spread_unit": number,"supplier_id": string,"within_band": boolean
+            }[]
+                           },
 "reopen_month":
 { Args: { "p_month": string,"p_note"?: string }; Returns: undefined
                            },
@@ -1962,6 +1967,9 @@ isOneToOne: false
                            },
 "similar_enough":
 { Args: { "p_a": string,"p_b": string,"p_threshold": number }; Returns: boolean
+                           },
+"split_order_item":
+{ Args: { "p_currency"?: string,"p_item_id": string,"p_qty": number,"p_supplier_id"?: string,"p_supplier_order_id"?: string,"p_supplier_unit_price"?: number }; Returns: string
                            },
 "stamp_clarification_ask":
 { Args: { "p_clarification_ids": (string)[] }; Returns: number
@@ -1989,7 +1997,7 @@ isOneToOne: false
                            },
 "supplier_item_memory":
 { Args: { "p_brand_id": string,"p_description": string,"p_exclude_rfq_id"?: string,"p_family_id": string,"p_supplier_ids": (string)[] }; Returns: {
-              "best_tier": number,"best_tier_label": string,"last_ordered_currency": string,"last_ordered_fx_rate_on": string,"last_ordered_fx_rate_pkr": number,"last_ordered_on": string,"last_ordered_price": number,"last_ordered_price_pkr": number,"last_ordered_qty": number,"last_ordered_source": string,"last_ordered_tier": number,"last_ordered_unit": string,"last_po_currency": string,"last_po_fx_rate_on": string,"last_po_fx_rate_pkr": number,"last_po_on": string,"last_po_price": number,"last_po_price_pkr": number,"last_po_qty": number,"last_po_tier": number,"last_po_unit": string,"last_quote_currency": string,"last_quote_fx_rate_on": string,"last_quote_fx_rate_pkr": number,"last_quote_is_legacy": boolean,"last_quote_lead_time": string,"last_quote_on": string,"last_quote_price": number,"last_quote_price_hidden": boolean,"last_quote_price_pkr": number,"last_quote_qty": number,"last_quote_tier": number,"last_quote_unit": string,"recent_lead_times": (string)[],"supplied_before": boolean,"supplier_id": string
+              "best_tier": number,"best_tier_label": string,"evidence_count_at_tier": number,"evidence_delivered_after_days": number,"evidence_delivered_on": string,"evidence_expected_on": string,"evidence_item_desc": string,"evidence_order_id": string,"evidence_order_number": number,"evidence_placed_on": string,"evidence_qty": number,"evidence_tier": number,"last_ordered_currency": string,"last_ordered_fx_rate_on": string,"last_ordered_fx_rate_pkr": number,"last_ordered_on": string,"last_ordered_price": number,"last_ordered_price_pkr": number,"last_ordered_qty": number,"last_ordered_source": string,"last_ordered_tier": number,"last_ordered_unit": string,"last_po_currency": string,"last_po_fx_rate_on": string,"last_po_fx_rate_pkr": number,"last_po_on": string,"last_po_price": number,"last_po_price_pkr": number,"last_po_qty": number,"last_po_tier": number,"last_po_unit": string,"last_quote_currency": string,"last_quote_fx_rate_on": string,"last_quote_fx_rate_pkr": number,"last_quote_is_legacy": boolean,"last_quote_lead_time": string,"last_quote_on": string,"last_quote_price": number,"last_quote_price_hidden": boolean,"last_quote_price_pkr": number,"last_quote_qty": number,"last_quote_tier": number,"last_quote_unit": string,"recent_lead_times": (string)[],"supplied_before": boolean,"supplier_id": string
             }[]
                            },
 "today_pkt":
