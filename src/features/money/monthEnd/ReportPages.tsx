@@ -8,7 +8,7 @@ import { Money } from '@/ui/Money'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { SumBar } from '@/ui/SumBar'
-import { Tag } from '@/ui/Tag'
+import { ProgressBar, Tag } from '@/ui/Tag'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Avatar } from '@/ui/Avatar'
 import { formatPaisa, toPaisa, type Amount } from '@/lib/money'
@@ -788,7 +788,7 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
       <aside className="flex items-start gap-3 rounded bg-sunken px-4 py-3 text-xs text-fg-muted">
         <Icon icon={Lock} size="md" className="mt-px" />
         <p>
-          Sales see the register and its CSV without the input-tax column. Output GST and input tax are shown here side by side and never netted.{' '}
+          Sales see the GST register only, never input tax or this report. Output GST and input tax are shown here side by side and never netted.{' '}
           <Link to="/money/gst-register" className="font-medium text-primary hover:underline">
             Open the GST register
           </Link>
@@ -838,8 +838,11 @@ function TeamBody({ ctx }: { ctx: MonthEndCtx }) {
           r.quarterTarget === null ? (
             <span className="text-fg-muted">No target set</span>
           ) : (
-            <span className="num text-xs text-fg-2">
-              {formatPaisa(toPaisa(r.quarterNet ?? 0))} of {formatPaisa(toPaisa(r.quarterTarget))}
+            <span className="grid gap-1">
+              <ProgressBar done={Number(r.quarterNet ?? 0)} total={Number(r.quarterTarget)} label={`${formatPaisa(toPaisa(r.quarterNet ?? 0))} of ${formatPaisa(toPaisa(r.quarterTarget))}`} />
+              <span className="num text-xs text-fg-2">
+                {formatPaisa(toPaisa(r.quarterNet ?? 0))} of {formatPaisa(toPaisa(r.quarterTarget))}
+              </span>
             </span>
           ),
       },

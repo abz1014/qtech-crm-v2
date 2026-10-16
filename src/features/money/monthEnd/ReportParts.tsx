@@ -60,7 +60,7 @@ export function AsOfField({ value, onChange }: { value: string; onChange: (iso: 
   return (
     <label className="inline-flex items-center gap-2 text-xs text-fg-muted">
       As of
-      <span className="w-[150px]">
+      <span className="w-[200px]">
         <DateInput aria-label="As of date" value={value} onChange={v => v && onChange(v)} defaultToday={false} className="h-[28px] text-xs" />
       </span>
     </label>
