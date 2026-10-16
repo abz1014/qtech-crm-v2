@@ -5,6 +5,8 @@ import { useSession } from '@/app/session'
 import { ExpensesPage } from '@/features/money/expenses/ExpensesPage'
 import { GstRegisterPage } from '@/features/money/invoices/GstRegisterPage'
 import { ReceivablesPage } from '@/features/money/payments/ReceivablesPage'
+import { ExceptionsPage } from '@/features/money/exceptions/ExceptionsPage'
+import { MarginsPage } from '@/features/money/margins/MarginsPage'
 
 /**
  * Everything under /money. Admin and sales may enter Money: the GST register (M01) and Receivables / Order balances (M02) are
@@ -19,6 +21,8 @@ export default function MoneyScreen() {
       <Route path="gst-register" element={<GstRegisterPage />} />
       <Route path="receivables" element={<ReceivablesPage />} />
       <Route path="expenses" element={isAdmin ? <ExpensesPage /> : <NoAccessPage area="Expenses" />} />
+      <Route path="margins" element={isAdmin ? <MarginsPage /> : <NoAccessPage area="Margins" />} />
+      <Route path="exceptions" element={isAdmin ? <ExceptionsPage /> : <NoAccessPage area="Exceptions" />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )

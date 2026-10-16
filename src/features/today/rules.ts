@@ -52,6 +52,8 @@ export const THRESHOLDS = {
   customerEscalationAsks: 3,
   /** Escalation: supplier chases with no price. */
   supplierEscalationChases: 2,
+  /** An order delivered (goods and commissioning) is due an invoice this many working days after the delivery. */
+  invoiceAfterDeliveryDays: 1,
   /** The close-month item shows on these days of the month. */
   closeMonthFromDay: 1,
   closeMonthToDay: 10,
@@ -125,6 +127,7 @@ function tabFor(rule: RuleKey): TodayTab {
     case 'decision_overdue':
       return 'bids'
     case 'payment_overdue':
+    case 'delivered_not_invoiced':
     case 'close_month':
       return 'money'
     default:
@@ -486,6 +489,83 @@ export function rulePlacePo(ctx: TodayInputs): Entry[] {
   return out
 }
 
+/**
+ * Plan commissioning (O05): the order needs commissioning and no date is planned yet. Goes to the order owner, like the rest
+ * of the goods and commissioning side; engineers see it for orders they own. One item per order, always ready to move: it
+ * never turns red by itself (no date is promised), and it leaves the moment a planned or done date is set.
+ */
+export function rulePlanCommissioning(ctx: TodayInputs): Entry[] {
+  const out: Entry[] = []
+  for (const o of ctx.orders) {
+    if (o.commissioningState !== 'to_plan' || !routesToUser(o.ownerId, ctx)) continue
+    out.push(
+      build(
+        {
+          rule: 'plan_commissioning',
+          subjectId: o.id,
+          tab: tabFor('plan_commissioning'),
+          title: 'Plan commissioning',
+          ref: orderRef(o.number),
+          party: o.customerName,
+          actionDueOn: o.orderedOn,
+          group: 'ready',
+          badge: ageBadge(o.orderedOn, ctx.today),
+          isPriority: false,
+          orderId: o.id,
+          href: `/orders/${o.id}`,
+          number: o.number,
+        },
+        ctx.today,
+      ),
+    )
+  }
+  return out
+}
+
+/**
+ * Delivered but not invoiced (O05, admin and sales only): every goods leg is delivered and any commissioning is done, yet no
+ * invoice exists. Due one working day after the last delivery, so it does not nag on the day the goods arrive. Routed like
+ * payment: to the order owner when the owner is sales, otherwise to admin. An engineer never gets it (the invoicing state is
+ * hidden from them by the view and the rule returns nothing for the role). A part-invoiced order is not raised: someone is
+ * already invoicing it.
+ */
+export function ruleDeliveredNotInvoiced(ctx: TodayInputs): Entry[] {
+  if (ctx.user.role === 'engineer') return []
+  const out: Entry[] = []
+  for (const o of ctx.orders) {
+    if (o.invoicingState !== 'not_invoiced') continue
+    const goodsDone = o.goodsState === 'delivered' || o.goodsState === 'received' || o.goodsState === 'n_a'
+    const commissioningDone = o.commissioningState === 'done' || o.commissioningState === 'n_a'
+    // Nothing was ever delivered on an order with neither goods nor commissioning: there is no delivery to invoice.
+    if (!goodsDone || !commissioningDone || (o.goodsState === 'n_a' && o.commissioningState === 'n_a')) continue
+    const ownerRole = ctx.roleOf(o.ownerId)
+    const mine = ctx.user.role === 'sales' ? o.ownerId === ctx.user.id : ownerRole !== 'sales'
+    if (!mine) continue
+    const since = o.deliveredOn ?? o.orderedOn ?? ctx.today
+    const dueOn = addBusinessDays(since, THRESHOLDS.invoiceAfterDeliveryDays)
+    out.push(
+      build(
+        {
+          rule: 'delivered_not_invoiced',
+          subjectId: o.id,
+          tab: tabFor('delivered_not_invoiced'),
+          title: 'Delivered, not invoiced',
+          ref: orderRef(o.number),
+          party: o.customerName,
+          actionDueOn: dueOn,
+          badge: dueBadge(dueOn, ctx.today),
+          isPriority: false,
+          orderId: o.id,
+          href: `/orders/${o.id}`,
+          number: o.number,
+        },
+        ctx.today,
+      ),
+    )
+  }
+  return out
+}
+
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 /** A uuid for the polymorphic snoozes.subject_id of the close-month item: the month's digits, so it is stable and unique. */
@@ -580,6 +660,8 @@ export const RULES: Record<RuleKey, (ctx: TodayInputs) => Entry[]> = {
   payment_overdue: rulePaymentOverdue,
   goods_late: ruleGoodsLate,
   place_po: rulePlacePo,
+  plan_commissioning: rulePlanCommissioning,
+  delivered_not_invoiced: ruleDeliveredNotInvoiced,
   close_month: ruleCloseMonth,
 }
 
