@@ -25,6 +25,7 @@ const ctx = (o: Partial<TodayInputs> = {}, role: Role = 'admin'): TodayInputs =>
   clarifications: [],
   inquiries: [],
   legs: [],
+  orders: [],
   receivables: [],
   monthEnd: null,
   snoozes: [],

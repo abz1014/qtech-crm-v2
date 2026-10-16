@@ -3,10 +3,10 @@ import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
 import { ExpensesPage } from '@/features/money/expenses/ExpensesPage'
-import { ExceptionsPage } from '@/features/money/exceptions/ExceptionsPage'
-import { MarginsPage } from '@/features/money/margins/MarginsPage'
 import { GstRegisterPage } from '@/features/money/invoices/GstRegisterPage'
 import { ReceivablesPage } from '@/features/money/payments/ReceivablesPage'
+import { ExceptionsPage } from '@/features/money/exceptions/ExceptionsPage'
+import { MarginsPage } from '@/features/money/margins/MarginsPage'
 
 /**
  * Everything under /money. Admin and sales may enter Money: the GST register (M01) and Receivables / Order balances (M02) are

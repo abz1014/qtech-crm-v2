@@ -11,6 +11,7 @@ import type {
   InquiryFact,
   LegFact,
   MonthEndFact,
+  OrderFact,
   ReceivableFact,
   RfqFact,
   Role,
@@ -33,6 +34,7 @@ export interface TodayData {
   clarifications: ClarificationFact[]
   inquiries: InquiryFact[]
   legs: LegFact[]
+  orders: OrderFact[]
   receivables: ReceivableFact[]
   monthEnd: MonthEndFact | null
   /** M08. Admin only; empty otherwise. */
@@ -197,6 +199,57 @@ async function loadLegs(names: Map<string, string>): Promise<LegFact[]> {
     }))
 }
 
+/**
+ * The live orders the two order rules read (O05): needs planning, or fully delivered and not invoiced. States come from
+ * v_order_state, which hides invoicing from an engineer (the column is null for them), so an engineer's list is the
+ * to-plan orders only and no invoicing read is asked for. The dates (ordered, last delivery, commissioning done) are
+ * read in a second step, for just those orders.
+ */
+async function loadOrders(role: Role, names: Map<string, string>): Promise<OrderFact[]> {
+  const db = requireSupabase()
+  const money = role === 'admin' || role === 'sales'
+  const states = await fetchAll(
+    (from, to) =>
+      db
+        .from('v_order_state')
+        .select('order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state')
+        .eq('lifecycle', 'active')
+        .or(money ? 'commissioning_state.eq.to_plan,invoicing_state.eq.not_invoiced' : 'commissioning_state.eq.to_plan')
+        .order('number')
+        .range(from, to),
+  )
+  const live = states.filter(r => r.order_id)
+  const dates = new Map<string, { orderedOn: string | null; commissioningDoneOn: string | null; deliveredOn: string | null }>()
+  const ids = live.map(r => r.order_id as string)
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100)
+    const [orders, legs] = await Promise.all([
+      db.from('orders').select('id, ordered_on, commissioning_done_on').in('id', chunk),
+      db.from('supplier_orders').select('order_id, delivered_on').in('order_id', chunk).not('delivered_on', 'is', null),
+    ])
+    for (const o of unwrap(orders)) dates.set(o.id, { orderedOn: o.ordered_on, commissioningDoneOn: o.commissioning_done_on, deliveredOn: null })
+    for (const l of unwrap(legs)) {
+      const d = dates.get(l.order_id)
+      if (d && l.delivered_on && (!d.deliveredOn || l.delivered_on > d.deliveredOn)) d.deliveredOn = l.delivered_on
+    }
+  }
+  return live.map(r => {
+    const d = dates.get(r.order_id as string)
+    const deliveredOn = [d?.deliveredOn ?? null, d?.commissioningDoneOn ?? null].filter((x): x is string => Boolean(x)).sort().at(-1) ?? null
+    return {
+      id: r.order_id as string,
+      number: num(r.number),
+      ownerId: r.owner_id,
+      customerName: names.get(r.company_id as string) ?? 'Unknown company',
+      orderedOn: d?.orderedOn ?? null,
+      goodsState: r.goods_state ?? 'n_a',
+      commissioningState: r.commissioning_state ?? 'n_a',
+      invoicingState: money ? (r.invoicing_state ?? null) : null,
+      deliveredOn,
+    }
+  })
+}
+
 async function loadReceivables(names: Map<string, string>): Promise<ReceivableFact[]> {
   const db = requireSupabase()
   const rows = unwrap(await db.rpc('order_receivables')) ?? []
@@ -327,10 +380,11 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
   ])
   const names = new Map(companies.map(c => [c.id, c.name]))
   const money = role === 'admin' || role === 'sales'
-  const [clarifications, inquiries, legs, receivables, monthEnd, costs, invoices, recurring] = await Promise.all([
+  const [clarifications, inquiries, legs, orders, receivables, monthEnd, costs, invoices, recurring] = await Promise.all([
     loadClarifications(open),
     loadInquiries(open, names),
     loadLegs(names),
+    loadOrders(role, names),
     money ? loadReceivables(names) : Promise.resolve<ReceivableFact[]>([]),
     role === 'admin' ? loadMonthEnd(today) : Promise.resolve<MonthEndFact | null>(null),
     role === 'admin' ? loadCosts() : Promise.resolve<CostFact[]>([]),
@@ -343,6 +397,7 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
     clarifications,
     inquiries,
     legs,
+    orders,
     receivables,
     monthEnd,
     costs,
