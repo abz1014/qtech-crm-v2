@@ -169,6 +169,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'my_target_progress_at',   '',    '',     '',     ''),     -- A4: test seam granted to nobody
   ('function', 'convert_rfq_to_order',    '',    'X',    'X',    'X'),    -- s10 "RPCs convert_rfq_to_order, create_repeat_order"
   ('function', 'create_repeat_order',     '',    'X',    'X',    'X'),    -- s10 (same row)
+  ('function', 'split_order_item',       '',    'X',    'X',    'X'),    -- A8 (0050): split an order line across legs, all staff (SECURITY INVOKER: the caller's own row security applies)
   ('function', 'float_rfq',               '',    'X',    'X',    'X'),    -- A4: S13 RPC, all staff
   ('function', 'set_rfq_floated',         '',    'X',    'X',    'X'),    -- R05: Undo of a float / float a saved RFQ, all staff
   ('function', 'merge_companies',         '',    'X',    '',     ''),     -- s10 "RPCs merge_companies, merge_brands, resolve_value_basis"
@@ -184,6 +185,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'similar_enough',          '',    'X',    'X',    'X'),    -- 0036 pure helper, all staff
   ('function', 'supplier_item_memory',    '',    'X',    'X',    'X'),    -- s10 "supplier_item_memory()"
   ('function', 'customer_price_memory',  '',    'X',    'X',    'X'),    -- R19 (0037): the two price chips of the issue-quotation dialog, all staff
+  ('function', 'rank_item_quotes',       '',    'X',    'X',    'X'),    -- A8 (0049): supplier quote ranking, all staff; the selling price and spread inside it are NULL for engineers (own pgTAP test)
   ('function', 'issue_quotation',         '',    'X',    'X',    'X'),    -- s10 "RPCs issue_quotation, issue_purchase_order, stamp_clarification_ask, stamp_supplier_chase"
   ('function', 'issue_purchase_order',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_clarification_ask', '',    'X',    'X',    'X'),    -- s10 (same row)
@@ -385,6 +387,7 @@ insert into probes values
   ('set_rfq_floated', '', 'X', 'select 1 from (select public.set_rfq_floated(@15, false) r) x where r > 0'),   -- R05: @1a is sent today, unchased, no quote line
   ('convert_rfq_to_order', '', 'X', 'select public.convert_rfq_to_order(@c1, @15)'),
   ('create_repeat_order', '', 'X', 'select public.create_repeat_order(@c2, @20)'),
+  ('split_order_item', '', 'X', 'select public.split_order_item(@25, 0.5, @24)'),   -- A8 (0050): moves half of the fixture line to the order's other leg
   ('merge_companies', '', 'X', 'select public.merge_companies(@01, @02)'),
   ('merge_brands', '', 'X', 'select public.merge_brands(@13, @14)'),
   ('resolve_value_basis', '', 'X', $q$select public.resolve_value_basis(@21, 'net')$q$),
@@ -398,6 +401,7 @@ insert into probes values
   ('similar_enough', '', 'X', $q$select public.similar_enough('a b c', 'a b c', 0.45)$q$),
   ('supplier_item_memory', '', 'X', $q$select 1 from public.supplier_item_memory(array[@03], @13, null, 'Fixture item') where best_tier is not null$q$),
   ('customer_price_memory', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.customer_price_memory(@15)) >= 0'),   -- R19: returns no rows for the fixture, so the probe also needs the RFQ to be visible (a deactivated user sees none)
+  ('rank_item_quotes', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.rank_item_quotes(@15)) >= 0'),   -- A8 (0049): same shape as the customer_price_memory probe (the fixture RFQ must be visible; a deactivated user sees none)
   ('issue_quotation', '', 'X', 'select public.issue_quotation(@c3, @15)'),
   ('issue_purchase_order', '', 'X', 'select public.issue_purchase_order(@c4, @23)'),
   ('stamp_clarification_ask', '', 'X', 'select 1 from (select public.stamp_clarification_ask(array[@1d]) r) x where r > 0'),
