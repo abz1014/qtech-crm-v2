@@ -784,7 +784,7 @@ test.describe('reply currency for a supplier with no country (audit R1)', () => 
     const other = await createRfq((await createCompany(uniqueName('Another Customer'))).id)
     await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: other.id, position: 0, description: 'Another item', qty: 1 } }))
     await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: other.id, supplier_id: bare.id, sent_on: karachiDay(-1) } }))
-    await openAs(page, 'sales', `/rfqs/${other.id}`)
+    await page.goto(`/rfqs/${other.id}`)
     await expect(row(page, bare.name).getByText(/USD, their last reply/)).toBeVisible()
     await expect(row(page, bare.name).getByRole('group', { name: `Currency for ${bare.name}` })).toHaveCount(0)
   })
