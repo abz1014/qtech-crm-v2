@@ -13,7 +13,7 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { Tag } from '@/ui/Tag'
 import { ToggleButton } from '@/ui/ToggleButton'
 import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
-import { Tip } from '@/features/money/Tip'
+import { InfoTip } from '@/ui/InfoTip'
 import { useOrderMargins } from '@/features/money/hooks'
 import { isPaidProvisional, marginTotals, sortMargins, type MarginRow } from '@/features/money/margins/model'
 
@@ -98,10 +98,10 @@ export function MarginsPage() {
         back={fromReports ? { to: '/money/reports', label: 'Reports' } : { to: '/money/month-end', label: 'Month end' }}
         title="Order margins"
         meta={
-          <Tip label="margins">
+          <InfoTip label="About margins">
             Margin is the net sale less the expenses tagged to the order; GST is outside both sides. Only orders whose costs are marked
             complete are added up. &ldquo;Margin not final&rdquo; means costs may still come in.
-          </Tip>
+          </InfoTip>
         }
       />
       <section aria-labelledby="margins-h" className="min-w-0 rounded border bg-surface">

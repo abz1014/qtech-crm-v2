@@ -22,6 +22,7 @@ import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay } from '@/lib/formatDay'
 import { cn } from '@/lib/utils'
+import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPreference'
 import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
@@ -97,7 +98,8 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   const navigate = useNavigate()
   const { toast } = useToast()
   const refresh = useRefreshAfterChase()
-  const [channel, setChannel] = useState<'whatsapp' | 'email'>('whatsapp')
+  // the person's last WhatsApp / Email choice, remembered on this device
+  const [channel, setChannel] = useChannelPreference()
   const [busy, setBusy] = useState(false)
   const [full, setFull] = useState(false)
   const [again, setAgain] = useState(false)
@@ -332,7 +334,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               <SegmentedControl
                 aria-label="Message channel"
                 value={channel}
-                onValueChange={v => setChannel(v as 'whatsapp' | 'email')}
+                onValueChange={v => setChannel(v as ContactChannel)}
                 options={[
                   { value: 'whatsapp', label: 'WhatsApp' },
                   { value: 'email', label: 'Email' },

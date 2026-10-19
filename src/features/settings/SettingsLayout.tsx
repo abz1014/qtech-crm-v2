@@ -115,7 +115,7 @@ export function SettingsLayout() {
 
 /** The phone bar's back arrow to the Settings list, with the page's name. */
 function BackToSettings({ title }: { title: string }) {
-  useMobileBar({ title, back: { to: '/settings', label: 'Settings' } })
+  useMobileBar({ title, back: '/settings' })
   return null
 }
 

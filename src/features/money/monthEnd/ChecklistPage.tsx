@@ -11,7 +11,7 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { monthKeyLabel } from '@/features/money/expenses/model'
 import { useReconciliationInput } from '@/features/money/hooks'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
-import { Tip } from '@/features/money/Tip'
+import { InfoTip } from '@/ui/InfoTip'
 import { CloseMonthDialog, ReopenMonthDialog } from '@/features/money/monthEnd/MonthDialogs'
 import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
 import { useMonthEnd, type MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
@@ -168,13 +168,13 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
             >
               {state ? closeButtonLabel(ctx.month, state) : `Close ${name}`}
             </Button>
-            <Tip label="closing a month">
+            <InfoTip label="About closing a month">
               {state?.kind === 'not-ended' ? (
                 <>{name} can be closed once it has ended. </>
               ) : null}
               Closing freezes payments, expenses and invoices dated in {name}. Bank matching and the TCS and FBR stamps stay open. You can reopen
               it any time; both are written to the audit log. An earlier open month with money in it is closed in the same step.
-            </Tip>
+            </InfoTip>
             <CloseMonthDialog open={open} onOpenChange={setOpen} ctx={ctx} />
           </>
         )}

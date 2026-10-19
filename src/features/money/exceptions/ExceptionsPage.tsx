@@ -10,7 +10,7 @@ import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { Tag } from '@/ui/Tag'
 import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
-import { Tip } from '@/features/money/Tip'
+import { InfoTip } from '@/ui/InfoTip'
 import { useReconciliationInput } from '@/features/money/hooks'
 
 /*
@@ -56,11 +56,11 @@ export function ExceptionsPage() {
         back={{ to: '/money/month-end', label: 'Month end' }}
         title="Things to check"
         meta={
-          <Tip label="things to check">
+          <InfoTip label="About things to check">
             Checked, in every month: customer payments against the order total, invoices against the order, costs against the expected cost
             and the POs, dates in sequence, the GST on each invoice, the TCS trail and tax deposit, and orders where nobody has said whether
             GST is included in the price.
-          </Tip>
+          </InfoTip>
         }
         actions={
           <Button icon={Download} onClick={exportCsv} disabled={list.length === 0}>

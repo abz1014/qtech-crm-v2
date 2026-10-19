@@ -1,6 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { Info, Lock, Wallet } from 'lucide-react'
+import { Lock, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
@@ -11,6 +10,7 @@ import { SumBar } from '@/ui/SumBar'
 import { Tag } from '@/ui/Tag'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Avatar } from '@/ui/Avatar'
+import { InfoTip } from '@/ui/InfoTip'
 import { formatPaisa, paisaToFixed, sumPaisa, toPaisa, type Amount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
 import { monthKeyLabel } from '@/features/money/expenses/model'
@@ -209,6 +209,9 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
             meta={
               <>
                 <ClockTag>By payment date</ClockTag>
+                <InfoTip label="About the payment date">
+                  This counts money on the day it moved. It will not match Invoices &amp; GST, which counts invoices on their date.
+                </InfoTip>
                 {v.frozenAt ? <span className="text-xs text-fg-muted" data-testid="pnl-frozen">Frozen when the month was closed</span> : null}
               </>
             }
@@ -337,11 +340,6 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
               ))}
             </dl>
           </Panel>
-
-          <aside className="flex items-start gap-3 rounded bg-sunken px-4 py-3 text-xs text-fg-muted">
-            <Icon icon={Info} size="md" className="mt-px" />
-            <p>This counts money on the day it moved. It will not match the GST register, which counts invoices on their date.</p>
-          </aside>
         </div>
       </div>
     </>
@@ -565,6 +563,9 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
             <div className="flex flex-wrap items-center gap-3">
               <h3 className="text-base font-semibold">What customers owe, by how late</h3>
               <ClockTag>As of {asOfLabel}</ClockTag>
+              <InfoTip label="About overdue by age">
+                Payments are applied first in, first out to the oldest invoice of each order. Invoices dated after {asOfLabel} are left out.
+              </InfoTip>
               <span className="flex-1" />
               <AsOfField value={asOf} onChange={d => setAsOf(d)} />
               {chosen ? (
@@ -593,9 +594,8 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
             ))}
           </ul>
         ) : null}
-        <p className="mt-2 text-xs text-fg-muted">
-          Payments are applied first in, first out to the oldest invoice of each order. Invoices dated after {asOfLabel} are left out. Total outstanding{' '}
-          <Num>{rupees(v.outstanding)}</Num>.
+        <p className="mt-2 text-sm text-fg-2">
+          Total outstanding <Num>PKR {rupees(v.outstanding)}</Num>
         </p>
       </div>
     </>
@@ -679,6 +679,11 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
           <div className="flex flex-wrap items-center gap-3">
             <h3 className="text-base font-semibold">What we owe suppliers</h3>
             <ClockTag>As of {asOfLabel}</ClockTag>
+            <InfoTip label="About what we owe">
+              Owed is approximate: the committed amount at the rate on or before {asOfLabel}, less what was paid. Open supplier orders{' '}
+              <Num>{rupees(v.owed)}</Num> + settled (≈) <Num>{rupees(v.settledLeft)}</Num> − paid over <Num>{rupees(v.paidOver)}</Num> ={' '}
+              <Num>{rupees(toPaisa(v.committed) - toPaisa(v.paid))}</Num> committed less paid.
+            </InfoTip>
             <span className="flex-1" />
             <AsOfField value={asOf} onChange={d => setAsOf(d)} />
             {chosen ? (
@@ -691,11 +696,6 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
         }
         empty={<EmptyState mood="goal" title="Nothing is owed to suppliers">No placed supplier order has a price to pay on {asOfLabel}.</EmptyState>}
       />
-      <p className="text-xs text-fg-muted">
-        Owed is approximate: the committed amount at the rate on or before {asOfLabel}, less what was paid. Open supplier orders{' '}
-        <Num>{rupees(v.owed)}</Num> + settled (≈) <Num>{rupees(v.settledLeft)}</Num> − paid over <Num>{rupees(v.paidOver)}</Num> ={' '}
-        <Num>{rupees(toPaisa(v.committed) - toPaisa(v.paid))}</Num> committed less paid.
-      </p>
     </>
   )
 }
@@ -775,6 +775,10 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
           <div className="flex flex-wrap items-center gap-3">
             <h3 className="text-base font-semibold">GST and FBR, by invoice month</h3>
             <ClockTag>By invoice date</ClockTag>
+            <InfoTip label="About GST and FBR">
+              FBR is the tax office: the GST on every invoice is deposited with it, and a PSID is the payment slip number of one deposit.
+              Sales see Invoices &amp; GST only, never input tax or this report.
+            </InfoTip>
             <span className="flex-1" />
             {v.showInputTax ? (
               <span className="inline-flex h-6 items-center gap-[6px] rounded bg-tone-ink-bg px-2 text-xs font-medium text-tone-ink-fg">
@@ -788,7 +792,18 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
         empty={<EmptyState title="No invoices yet">Invoices appear here by their date, with their PSID sets and deposits.</EmptyState>}
       />
       {v.showInputTax ? (
-        <Panel title="Output GST and input tax, side by side" meta={<span className="text-xs text-fg-muted">Never netted on this page</span>}>
+        <Panel
+          title="Output GST and input tax, side by side"
+          meta={
+            <>
+              <span className="text-sm text-fg-muted">Never netted on this page</span>
+              <InfoTip label="About input tax">
+                Filing stays with the tax agent. Input tax is the part of a Supplier payment, Clearing or Freight amount that Q-Tech can claim; the
+                profit and loss and the margins use the amount without it.
+              </InfoTip>
+            </>
+          }
+        >
           <div className="grid gap-4 px-5 py-4">
             <div className="grid divide-y rounded border md:grid-cols-2 md:divide-x md:divide-y-0">
               <div className="grid gap-1 px-4 py-3">
@@ -808,21 +823,9 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
                 <span className="num text-base">{pkr(sel?.inputTax ?? 0)}</span>
               </div>
             </div>
-            <p className="text-xs text-fg-muted">
-              Filing stays with the tax agent. Input tax is the part of a Supplier payment, Clearing or Freight amount that Q-Tech can claim; the P&amp;L and margins use the amount without it.
-            </p>
           </div>
         </Panel>
       ) : null}
-      <aside className="flex items-start gap-3 rounded bg-sunken px-4 py-3 text-xs text-fg-muted">
-        <Icon icon={Lock} size="md" className="mt-px" />
-        <p>
-          Sales see Invoices &amp; GST only, never input tax or this report. Output GST and input tax are shown here side by side and never netted.{' '}
-          <Link to="/money/gst-register" className="font-medium text-primary hover:underline">
-            Open Invoices &amp; GST
-          </Link>
-        </p>
-      </aside>
     </>
   )
 }
@@ -908,15 +911,16 @@ function TeamBody({ ctx }: { ctx: MonthEndCtx }) {
           <div className="flex flex-wrap items-center gap-3">
             <h3 className="text-base font-semibold">Net cash credited to each person</h3>
             <ClockTag>By payment date</ClockTag>
+            <InfoTip label="About sales by person">
+              The total matches Net in on the Profit and loss report. The <Num>{rupees(v.unresolved)}</Num> not yet split into net and GST has no net,
+              so nobody is credited for it.
+            </InfoTip>
             <span className="flex-1" />
             <ExportCsvButton onClick={() => downloadReport(teamCsv(v, ctx.month), csvFile('sales-by-person', ctx.month))} />
           </div>
         }
         empty={<EmptyState title="Nobody is credited">No payment counted towards a person in {monthName(ctx.month)}.</EmptyState>}
       />
-      <p className="text-xs text-fg-muted">
-        The total matches Net in on the Profit and loss report. The unresolved <Num>{rupees(v.unresolved)}</Num> has no net yet, so nobody is credited for it.
-      </p>
     </>
   )
 }

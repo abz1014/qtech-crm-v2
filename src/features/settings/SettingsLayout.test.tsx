@@ -14,7 +14,8 @@ const as = (role: string) => ({ status: 'signed-in' as const, user: { id: 'u', n
 /** What the phone bar would show: its title and where its back arrow goes. */
 function BarProbe() {
   const c = useMobileBarConfig()
-  return <output data-testid="bar">{c ? `${c.title ?? ''} <- ${c.back?.to ?? ''}` : 'default'}</output>
+  const back = typeof c?.back === 'string' ? c.back : c?.back?.to
+  return <output data-testid="bar">{c ? `${c.title ?? ''} <- ${back ?? ''}` : 'default'}</output>
 }
 
 function at(path: string, role: string) {

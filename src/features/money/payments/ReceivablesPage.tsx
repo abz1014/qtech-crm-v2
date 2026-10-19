@@ -14,7 +14,7 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { SumBar } from '@/ui/SumBar'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
-import { Tip } from '@/features/money/Tip'
+import { InfoTip } from '@/ui/InfoTip'
 import { useReceivables } from '@/features/money/payments/hooks'
 import { RecordPaymentDialog } from '@/features/money/payments/RecordPaymentDialog'
 import { ReminderPanel } from '@/features/money/payments/ReminderPanel'
@@ -203,10 +203,10 @@ export function ReceivablesPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-base font-semibold">{tabLabel}</h2>
                 <span className="text-sm text-fg-muted">Balance is gross, GST included</span>
-                <Tip label="reminders">
+                <InfoTip label="About reminders">
                   A reminder is due when an order is overdue and has not been reminded in the last 7 days. Copying the reminder records it,
                   and the order moves to Waiting on Today. {isAdmin ? 'Record a payment with the button on its row.' : 'Payments are recorded by an admin.'}
-                </Tip>
+                </InfoTip>
                 <span className="flex-1" />
                 <SegmentedControl
                   aria-label="Filter"

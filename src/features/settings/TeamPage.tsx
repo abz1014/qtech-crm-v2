@@ -65,8 +65,8 @@ export function TeamPage() {
   // Phone: the shared bar becomes the back bar of the mockup (chevron back to the Settings list, "Team", a primary Add).
   useMobileBar({
     title: 'Team',
-    back: { to: '/settings', label: 'Settings' },
-    action: (
+    back: '/settings',
+    actions: (
       <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading} className="h-9">
         Add
       </Button>

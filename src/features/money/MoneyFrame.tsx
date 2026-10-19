@@ -4,6 +4,7 @@ import { ChartColumn, ChevronLeft } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import { useSession } from '@/app/session'
+import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Icon } from '@/ui/Icon'
 import { useGstRegister } from '@/features/money/invoices/hooks'
 import { needsAttention } from '@/features/money/invoices/model'
@@ -108,6 +109,7 @@ export function MoneyFrame({ active, actions, children }: { active: string | nul
 /**
  * The heading of a view reached from a Money tab rather than being one (Match bank statement, Margins, Things to check, a
  * report): a back link to where it was opened from, the title and its actions. It replaces the old third strip of tabs.
+ * On a phone the back link is the phone bar's own back arrow (one bar, UX audit 2026-10-19), so it is not drawn twice.
  */
 export function MoneySubHeader({
   back,
@@ -120,9 +122,10 @@ export function MoneySubHeader({
   meta?: ReactNode
   actions?: ReactNode
 }) {
+  useMobileBar({ title, back: back.to })
   return (
     <div className="grid gap-2">
-      <Link to={back.to} className="inline-flex min-h-touch items-center gap-1 justify-self-start text-sm font-medium text-fg-2 hover:text-fg hover:underline md:min-h-0">
+      <Link to={back.to} className="inline-flex items-center gap-1 justify-self-start text-sm font-medium text-fg-2 hover:text-fg hover:underline max-md:hidden">
         <Icon icon={ChevronLeft} size="sm" />
         <span className="sr-only">Back to </span>
         {back.label}

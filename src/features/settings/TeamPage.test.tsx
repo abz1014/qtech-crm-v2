@@ -57,7 +57,7 @@ const me: SessionState = { status: 'signed-in', user: { id: 'bilal', name: 'Bila
 
 function BackProbe() {
   const c = useMobileBarConfig()
-  return <output data-testid="bar-back">{c?.back?.to ?? ''}</output>
+  return <output data-testid="bar-back">{typeof c?.back === 'string' ? c.back : (c?.back?.to ?? '')}</output>
 }
 
 function mount() {

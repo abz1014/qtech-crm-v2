@@ -18,7 +18,7 @@ import { ToggleButton } from '@/ui/ToggleButton'
 import { useToast } from '@/ui/useToast'
 import { TextField } from '@/ui/form/TextField'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
-import { Tip } from '@/features/money/Tip'
+import { InfoTip } from '@/ui/InfoTip'
 import { CreateInvoiceDialog } from '@/features/money/invoices/CreateInvoiceDialog'
 import { useGstRegister, useStamps } from '@/features/money/invoices/hooks'
 import { InvoiceDetailDialog } from '@/features/money/invoices/InvoiceDetailDialog'
@@ -215,11 +215,11 @@ export function GstRegisterPage() {
         By invoice date
       </span>
       {all.length > 0 ? <span className="text-sm text-fg-muted">{rangeLabel(all)}</span> : null}
-      <Tip label="TCS, FBR and PSID">
+      <InfoTip label="About TCS, FBR and PSID">
         <b className="font-medium text-fg">TCS</b> is the courier that takes the invoice to the customer. <b className="font-medium text-fg">FBR</b> is the
         tax office: the GST on every invoice is deposited with FBR. <b className="font-medium text-fg">PSID</b> is the payment slip number FBR gives a deposit;
         one PSID can cover several invoices. Dates here are invoice dates; money actually received is under Who owes us.
-      </Tip>
+      </InfoTip>
       <span className="flex-1" />
       {isAdmin ? (
         <>
@@ -295,7 +295,7 @@ export function GstRegisterPage() {
                   Sent by TCS today
                 </Button>
                 <span className="inline-flex items-center gap-2">
-                  <Tip label="PSID">PSID is the payment slip number FBR gives a tax deposit. Paste it once: it is written to every ticked invoice.</Tip>
+                  <InfoTip label="About PSID">PSID is the payment slip number FBR gives a tax deposit. Paste it once: it is written to every ticked invoice.</InfoTip>
                   <TextField
                     aria-label="PSID"
                     value={psid}

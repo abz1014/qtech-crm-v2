@@ -17,6 +17,7 @@ import { daysBetween as daysBetweenText } from '@/features/rfqs/lib/dateText'
 import { usePaymentDraft, performChase } from '@/features/today/hooks'
 import { buildPaymentDraft } from '@/features/today/chaseDraft'
 import { useMyJobTitle } from '@/features/orders/hooks'
+import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPreference'
 import type { ReceivableRow } from '@/features/money/payments/model'
 
 /*
@@ -95,7 +96,8 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
   const client = useQueryClient()
   const jobTitle = useMyJobTitle(user?.id).data
   const draftQ = usePaymentDraft(row.orderId, true)
-  const [channel, setChannel] = useState<'whatsapp' | 'email'>('whatsapp')
+  // the person's last WhatsApp / Email choice, remembered on this device (the same one Today and the RFQ page use)
+  const [channel, setChannel] = useChannelPreference()
   const [busy, setBusy] = useState(false)
   // After the tap: what the strip and footer say until the undo window closes and the screen re-reads.
   const [done, setDone] = useState<{ count: number; undo: () => Promise<void>; open: boolean } | null>(null)
@@ -140,7 +142,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
     <SegmentedControl
       aria-label="Channel"
       value={channel}
-      onValueChange={v => setChannel(v as 'whatsapp' | 'email')}
+      onValueChange={v => setChannel(v as ContactChannel)}
       options={[
         { value: 'whatsapp', label: 'WhatsApp' },
         { value: 'email', label: 'Email' },
