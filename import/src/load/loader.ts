@@ -402,5 +402,12 @@ export async function verify(db: Db, tables: Record<ImportTable, NewRow[]>, resu
     ['invoices.gst_amount', await sum('invoices', 'gst_amount'), result.recon.invoiceGst.neu],
   ]
   for (const [name, got, want] of checks) if (got !== want) bad.push(`${name}: database ${got}, transform ${want}`)
+  // settled before cutover (owner decision 2026-10-19): exactly the invoices the transform marked, no more, no fewer
+  const settledWant = new Set(tables.invoices.filter(r => r['settled_before_cutover'] === true).map(r => String(r['id'])))
+  const settledGot = new Set(
+    (await fetchAll(db, 'invoices', 'id,settled_before_cutover')).filter(r => isLegacyId(String(r['id'])) && r['settled_before_cutover'] === true).map(r => String(r['id'])),
+  )
+  const settledOff = [...settledWant].filter(id => !settledGot.has(id)).length + [...settledGot].filter(id => !settledWant.has(id)).length
+  if (settledOff) bad.push(`invoices.settled_before_cutover: database ${settledGot.size} marked, transform ${settledWant.size}, ${settledOff} differ`)
   return bad
 }

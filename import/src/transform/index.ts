@@ -76,6 +76,7 @@ export function transformAll(dump: LegacyDump, maps: Mappings, opts: TransformOp
     payments: ledger.line('payments'),
     paymentsFromStatus: ledger.line('paymentsFromStatus'),
     paymentsFromStatusCount: money.paymentsFromStatusCount,
+    settledBeforeCutover: money.settledBeforeCutover,
     expensesByCategory: ledger.keysWithPrefix('expense:').map(k => ({ ...ledger.line(k), key: k.slice('expense:'.length) })),
     expensesTotal: ledger.line('expensesTotal'),
     orderValue: ledger.line('orderValue'),

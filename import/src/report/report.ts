@@ -50,12 +50,13 @@ export function renderReport(r: TransformResult, title = 'Import report'): strin
     '',
     '## Money: old against new',
     '',
-    'Old = new + left out must hold on every line. Left out = rows that could not be imported (listed in dropped_rows).',
+    'Old = new + left out (+ settled before cutover, on the paid-status line) must hold on every line. Left out = rows that could not be imported (listed in dropped_rows).',
     '',
     '| Line | Old | New | Left out | Difference |',
     '|---|---:|---:|---:|---:|',
     moneyRow(r.recon.payments, 'Payments in (gross), from payment rows'),
     moneyRow(r.recon.paymentsFromStatus, 'Payments in (gross), from paid status'),
+    `|   plus settled before cutover (no order, no payment) | | | ${fmt(r.recon.paymentsFromStatus.settled ?? 0)} | |`,
     moneyRow(r.recon.expensesTotal, 'Expenses, all categories'),
     ...r.recon.expensesByCategory.map(l => moneyRow(l, `  ${l.key}`)),
     moneyRow(r.recon.orderValue, 'Order value / item net'),
@@ -69,7 +70,12 @@ export function renderReport(r: TransformResult, title = 'Import report'): strin
       '(each of its invoices with no payment yet, in full), and invoices you marked paid in legacy_invoice_status.csv. Each is a bank payment, ' +
       'not ticked, credited to nobody, flagged payment_date_estimated (date = the old due date, else the order payment due date, else invoice ' +
       'date + terms, never after the run date). None is made where payment rows exist. Old = what the status says was paid; left out = paid ' +
-      'on an invoice with no order (payments_not_placed.csv). Old invoices still open are in still_owed.csv.',
+      'in part on an invoice with no order (payments_not_placed.csv). Old invoices still open are in still_owed.csv.',
+    '',
+    `Settled before cutover: ${r.recon.settledBeforeCutover.count} invoices (gross ${fmt(r.recon.settledBeforeCutover.gross)}) have no order but are paid ` +
+      'in full per the old status or legacy_invoice_status.csv. A payment needs an order, so none is made: the invoice is marked ' +
+      'settled_before_cutover and counts as fully received (not owed, not overdue, never reminded). It stays a sale and output GST. ' +
+      'Listed in settled_before_cutover.csv.',
   )
 
   if (r.recon.orderInvoice.length) {

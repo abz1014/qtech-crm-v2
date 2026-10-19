@@ -19,7 +19,7 @@ select columns_are('public', 'invoices',
   array['id', 'created_at', 'created_by', 'updated_at', 'order_id', 'company_id', 'number', 'invoice_date',
         'net_amount', 'gst_amount', 'copy_received_on', 'tcs_sent_on', 'tcs_number', 'client_received_on', 'psid',
         'wasif_receipt_on', 'tax_deposited_on', 'tax_deposit_amount', 'notes', 'last_reminded_on', 'reminder_count',
-        'legacy_flags', 'legacy_source', 'tax_bank_month'],
+        'legacy_flags', 'legacy_source', 'tax_bank_month', 'settled_before_cutover'],
   'invoices has the section 2.16 columns (reminder stamps, no tax_deposit_bank)');
 select hasnt_column('public', 'invoices', 'tax_deposit_bank', 'invoices.tax_deposit_bank is dropped (A3-2)');
 select columns_are('public', 'payments_in',

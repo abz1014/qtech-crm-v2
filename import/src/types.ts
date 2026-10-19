@@ -85,6 +85,8 @@ export interface MoneyLine {
   old: number
   neu: number
   excluded: number
+  /** Paid before the new system on an invoice with no order (settled_before_cutover): only on the paid-status line. */
+  settled?: number
   diff: number
 }
 
@@ -94,11 +96,14 @@ export interface Reconciliation {
   /**
    * Payments derived from the old paid STATUS (invoices.payment_status Paid/Partial, orders.status payment_received) and
    * from the owner's legacy_invoice_status.csv: old = what the status says was paid, new = payments created, left out =
-   * paid on an invoice with no order (a payment needs an order).
+   * paid in part on an invoice with no order (a payment needs an order), settled = paid in full on an invoice with no
+   * order: the invoice is settled_before_cutover (owner decision 2026-10-19).
    */
   paymentsFromStatus: MoneyLine
   /** How many payments_in rows paymentsFromStatus.neu is made of. */
   paymentsFromStatusCount: number
+  /** Invoices marked settled_before_cutover: how many, and their gross. */
+  settledBeforeCutover: { count: number; gross: number }
   expensesByCategory: MoneyLine[]
   expensesTotal: MoneyLine
   /** Σ order_value (old) against Σ item net (new). */
