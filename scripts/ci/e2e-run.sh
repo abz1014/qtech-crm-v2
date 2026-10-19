@@ -5,7 +5,7 @@
 set -u
 fail=0
 first=1
-case " $* " in *" rfq-quotation "*|*" orders "*)
+case " $* " in *" rfq-quotation "*|*" orders "*|*" journeys "*)
   command -v pdftoppm >/dev/null && command -v pdftotext >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils) ;;
 esac
 for s in "$@"; do

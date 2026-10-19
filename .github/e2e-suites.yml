@@ -61,3 +61,5 @@ pwa: # weight=10 (no database reset)
   - 'vite.config.ts'
   - 'index.html'
   - 'public/**'
+journeys: # weight=120 (installs poppler; also runs on every change under src/** through `shared`)
+  - 'e2e/journeys/**'
