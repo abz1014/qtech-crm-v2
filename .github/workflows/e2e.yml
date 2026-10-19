@@ -95,11 +95,19 @@ jobs:
       - name: Start local Supabase (db, auth, rest, storage); a fresh start applies migrations and seed
         run: npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime
 
-      - name: Serve the admin-users function (the Team screen calls it)
+      - name: Start the admin-users function (the Team screen calls it); it warms up while the app builds
         run: |
           # --no-verify-jwt: the function authenticates the bearer token itself and then requires an
           # active admin (same as functions.yml). The preview server's origin is on its allow-list.
           nohup npx supabase functions serve admin-users --no-verify-jwt > "$RUNNER_TEMP/functions-serve.log" 2>&1 &
+
+      - name: Build the app against the local stack
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY" npm run build
+
+      - name: Wait for the admin-users function
+        run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           for i in $(seq 1 60); do
             code=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H 'Origin: http://127.0.0.1:4173' "$API_URL/functions/v1/admin-users" || true)
@@ -107,11 +115,6 @@ jobs:
             sleep 2
           done
           echo "admin-users did not become ready"; cat "$RUNNER_TEMP/functions-serve.log" || true; exit 1
-
-      - name: Build the app against the local stack
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY" npm run build
 
       - name: Playwright suites for this shard (${{ matrix.suites }})
         run: bash scripts/ci/e2e-run.sh ${{ matrix.suites }}
