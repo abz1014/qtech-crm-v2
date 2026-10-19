@@ -939,7 +939,7 @@ Main at `778084b` (Merge p8/import-rules). Read-only; no product code changed. O
 ### RFQ detail
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-RD-01 | Header has two buttons: Issue quotation and Bid and close; Mark won lives in the menus | Header also carries a direct "Mark won" button beside "Mark bid sent" (only Mark bid sent was KEPT for FE-2, C-07) | low | NEW (owner to confirm; same one-tap argument as Mark bid sent) |
+| E-RD-01 | Header has two buttons: Issue quotation and Bid and close; Mark won lives in the menus | Header also carries a direct "Mark won" button beside "Mark bid sent" (only Mark bid sent was KEPT for FE-2, C-07) | low | KEPT (direct Mark won button: fewer taps; owner to confirm, same argument as Mark bid sent) |
 
 ### Quotation dialog and PDF
 | id | mockup | built | sev | status |
@@ -949,18 +949,18 @@ Main at `778084b` (Merge p8/import-rules). Read-only; no product code changed. O
 ### Convert dialog (Mark won)
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-CV-01 | Title "Mark won QT-26-0058 R1" with the quotation number in mono; sub-line "Customer · 3 quoted lines · gross PKR" | Title "Mark won"; sub-line names the RFQ customer, not the quotation | low | NEW |
-| E-CV-02 | Neutral grey one-line note "Creates order ORD-0043. Each item is assigned to the best-ranked quote; ..." | Blue info callout with a bold heading and a different sentence; the order number is not announced | low | NEW |
-| E-CV-03 | Label "Customer PO number" with a helper line above the input ("optional, add it from the order later"); brand and family sub-line under each item | "Optional" tag beside the label and the helper below; no brand sub-line | low | NEW |
+| E-CV-01 | Title "Mark won QT-26-0058 R1" with the quotation number in mono; sub-line "Customer · 3 quoted lines · gross PKR" | Title "Mark won"; sub-line names the RFQ customer, not the quotation | low | FIXED f895f93 (quotation number chip beside the title; sub-line counts quoted lines) |
+| E-CV-02 | Neutral grey one-line note "Creates order ORD-0043. Each item is assigned to the best-ranked quote; ..." | Blue info callout with a bold heading and a different sentence; the order number is not announced | low | FIXED f895f93 (grey one-line note naming the order number) |
+| E-CV-03 | Label "Customer PO number" with a helper line above the input ("optional, add it from the order later"); brand and family sub-line under each item | "Optional" tag beside the label and the helper below; no brand sub-line | low | PARTLY FIXED f895f93 (label with the helper beside it, no Optional tag; the brand and family sub-line under each item is still missing: the quote-items read does not carry them) |
 
 ### Order detail
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-OD-01 | Item rows carry a sub-line "Brand · model" (for example "Belimo · NM24A-SR") | Description only | medium | NEW |
-| E-OD-02 | "Unit net" shows the unit price on every line | Unit net column is blank on plain lines in the admin shots (o03-admin, o03-legs-stamped, m04 margin panel) while line net is filled. Only head rows draw a value (`OrderItemsPanel.tsx`, the `unit` column cell returns nothing for other kinds). Verify with real data | medium | NEW |
-| E-OD-03 | Phone: dimension strip wraps to two rows ("Same content, one column. Dimension strip wraps to two rows") | Five dimension cards stack in one column, so the first screen is all status text | medium | NEW |
-| E-OD-04 | Each dimension label has an icon (package, wrench, file-text, banknote, clipboard-check) | Labels have no icons | low | NEW |
-| E-OD-05 | Items table has a group header band: "Sale to customer, PKR" over the sale columns and "Supplier, in the leg currency" over the supplier columns | One header row, no band | low | NEW |
+| E-OD-01 | Item rows carry a sub-line "Brand · model" (for example "Belimo · NM24A-SR") | Description only | medium | FIXED f895f93 (brand and model words under the description) |
+| E-OD-02 | "Unit net" shows the unit price on every line | Unit net column is blank on plain lines in the admin shots (o03-admin, o03-legs-stamped, m04 margin panel) while line net is filled. Only head rows draw a value (`OrderItemsPanel.tsx`, the `unit` column cell returns nothing for other kinds). Verify with real data | medium | FIXED f895f93 (a real bug: the unit column cell returned nothing for plain lines; it now draws the price) |
+| E-OD-03 | Phone: dimension strip wraps to two rows ("Same content, one column. Dimension strip wraps to two rows") | Five dimension cards stack in one column, so the first screen is all status text | medium | FIXED f895f93 (two columns on the phone) |
+| E-OD-04 | Each dimension label has an icon (package, wrench, file-text, banknote, clipboard-check) | Labels have no icons | low | FIXED f895f93 |
+| E-OD-05 | Items table has a group header band: "Sale to customer, PKR" over the sale columns and "Supplier, in the leg currency" over the supplier columns | One header row, no band | low | FIXED f895f93 (DataTable gained an optional columnBands prop; drawn from 1024 up) |
 | E-OD-06 | GST column is plain text "18%" | An editable select on every line; plus a "Service" tick column, "Split line", "Exempt the whole order from GST", density toggle and move hints | low | KEPT extra (A8 split and O03 line editing are in DECISIONS; the always-open GST select is new, owner to confirm) |
 
 ### Money: GST register, Receivables, Expenses, Margins, Exceptions, Bank tick
