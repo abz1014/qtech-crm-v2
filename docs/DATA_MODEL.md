@@ -1439,9 +1439,9 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | `model_tokens()` | ✓ | ✓ | ✓ | Immutable helper with no data access. |
 | order_items.supplier_unit_price, supplier_orders.currency | SIU | SIU | SIU | Covered by the existing rules on those tables. Supplier prices are visible to engineers. |
 | company_profile | SU | S | S | Singleton row, no insert or delete. |
-| quotations | SIUD | SIU¹ | SIU¹ | ¹ UPDATE limited to `pdf_path` by the trigger. |
+| quotations | SIUD | SIU¹ | SIU¹ | ¹ UPDATE limited to `pdf_path` by the trigger. *(0057)* Staff attach the first PDF; re-pointing or clearing an attached `pdf_path` is admin only. Same for `purchase_orders`. |
 | purchase_orders | SIUD | SIU¹ | SIU¹ | Supplier prices are visible to engineers, consistent with §10. |
-| bucket `generated-docs` | SIUD | SIU | SIU | Private. |
+| bucket `generated-docs` | SIUD | SIU | SIU | Private. *(0057)* PDF only; an object an issued document points at is updated by an admin only. |
 | v_fx_latest, v_supplier_activity, v_supplier_stats, `supplier_item_memory()` | S | S | S | Security invoker. Every underlying table is already readable by all staff. |
 | `customer_price_memory(rfq_id)` (R19, migration 0037) | X | X | X | Security invoker. The issue-quotation price chips: last sold to this customer and last quoted, same model or same item. Reads orders, order items, quotations and RFQ items, all readable by all staff. |
 | RPCs `issue_quotation`, `issue_purchase_order`, `stamp_clarification_ask`, `stamp_supplier_chase` | ✓ | ✓ | ✓ | |

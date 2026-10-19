@@ -12,6 +12,7 @@ import { addBusinessDays, businessDaysBetween, daysBetween, longDay, parseDay } 
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
 import { timeText } from '@/features/rfqs/lib/chaseCommon'
 import { supplierReplyBy } from '@/features/rfqs/lib/supplierChase'
+import { formatAmount } from '@/lib/money'
 import { orderRef, rfqRef } from '@/lib/refs'
 import {
   SNOOZE_RULE,
@@ -55,6 +56,10 @@ export const THRESHOLDS = {
   supplierEscalationChases: 2,
   /** An order delivered (goods and commissioning) is due an invoice this many working days after the delivery. */
   invoiceAfterDeliveryDays: 1,
+  /** Goods delivered but commissioning not marked done: the invoice is still due, after this many working days. */
+  invoiceDespiteCommissioningDays: 5,
+  /** A part-invoiced, delivered order is reminded this many working days after its last invoice. */
+  invoicePartDays: 3,
   /** The close-month item shows on these days of the month. */
   closeMonthFromDay: 1,
   closeMonthToDay: 10,
@@ -534,33 +539,88 @@ export function rulePlanCommissioning(ctx: TodayInputs): Entry[] {
 }
 
 /**
- * Delivered but not invoiced (O05, admin and sales only): every goods leg is delivered and any commissioning is done, yet no
- * invoice exists. Due one working day after the last delivery, so it does not nag on the day the goods arrive. Routed like
- * payment: to the order owner when the owner is sales, otherwise to admin. An engineer never gets it (the invoicing state is
- * hidden from them by the view and the rule returns nothing for the role). A part-invoiced order is not raised: someone is
- * already invoicing it.
+ * To source: a won order with goods lines that have no supplier leg yet. One item per order saying how many lines still
+ * need a supplier. Routed like place PO and plan commissioning (the order owner; ownerless to admin; an engineer sees the
+ * orders they own). Always "ready to move" with the order's age and snoozable, so it is a reminder, not an alarm. The count
+ * comes from the lines themselves; an order whose state says to source but whose lines count 0 (read in between) is quiet.
+ */
+export function ruleToSource(ctx: TodayInputs): Entry[] {
+  const out: Entry[] = []
+  for (const o of ctx.orders) {
+    if (o.goodsState !== 'to_source' || o.unsourced <= 0 || !routesToUser(o.ownerId, ctx)) continue
+    out.push(
+      build(
+        {
+          rule: 'to_source',
+          subjectId: o.id,
+          tab: tabFor('to_source'),
+          title: o.unsourced === 1 ? '1 item still needs a supplier' : `${o.unsourced} items still need a supplier`,
+          ref: orderRef(o.number),
+          party: o.customerName,
+          actionDueOn: o.orderedOn,
+          group: 'ready',
+          badge: ageBadge(o.orderedOn, ctx.today),
+          isPriority: false,
+          orderId: o.id,
+          href: `/orders/${o.id}`,
+          number: o.number,
+        },
+        ctx.today,
+      ),
+    )
+  }
+  return out
+}
+
+/**
+ * Delivered but not invoiced (O05, admin and sales only). Three cases, one item per order (the snooze key is the order):
+ *  - Goods delivered and any commissioning done, no invoice yet: due one working day after the last delivery.
+ *  - Goods delivered but commissioning not marked done (an engineer who never taps "Mark done" must not stop the invoice):
+ *    due `invoiceDespiteCommissioningDays` working days after the delivery, and the title says commissioning is not marked.
+ *  - Part-invoiced (invoiced gross below the order gross) with the goods delivered: "Partly invoiced, PKR X still to
+ *    invoice", due `invoicePartDays` working days after the last invoice, so the rest is not forgotten.
+ * Routed like payment: the order owner when the owner is sales, otherwise admin. An engineer never gets it (the view hides
+ * the invoicing state from them and the rule returns nothing for the role). Snooze applies as to every item.
  */
 export function ruleDeliveredNotInvoiced(ctx: TodayInputs): Entry[] {
   if (ctx.user.role === 'engineer') return []
   const out: Entry[] = []
   for (const o of ctx.orders) {
-    if (o.invoicingState !== 'not_invoiced') continue
+    const part = o.invoicingState === 'part'
+    if (o.invoicingState !== 'not_invoiced' && !part) continue
     const goodsDone = o.goodsState === 'delivered' || o.goodsState === 'received' || o.goodsState === 'n_a'
     const commissioningDone = o.commissioningState === 'done' || o.commissioningState === 'n_a'
+    if (!goodsDone) continue
     // Nothing was ever delivered on an order with neither goods nor commissioning: there is no delivery to invoice.
-    if (!goodsDone || !commissioningDone || (o.goodsState === 'n_a' && o.commissioningState === 'n_a')) continue
+    if (o.goodsState === 'n_a' && o.commissioningState === 'n_a') continue
+    // A service-only order has no delivery date to count from until its commissioning is marked done.
+    if (o.goodsState === 'n_a' && !commissioningDone) continue
     const ownerRole = ctx.roleOf(o.ownerId)
     const mine = ctx.user.role === 'sales' ? o.ownerId === ctx.user.id : ownerRole !== 'sales'
     if (!mine) continue
     const since = o.deliveredOn ?? o.orderedOn ?? ctx.today
-    const dueOn = addBusinessDays(since, THRESHOLDS.invoiceAfterDeliveryDays)
+    let dueOn: string
+    let title: string
+    if (part) {
+      dueOn = addBusinessDays(o.lastInvoicedOn ?? since, THRESHOLDS.invoicePartDays)
+      title = o.toInvoice && o.toInvoice > 0 ? `Partly invoiced: PKR ${formatAmount(o.toInvoice)} still to invoice` : 'Partly invoiced: the rest is still to invoice'
+    } else if (commissioningDone) {
+      dueOn = addBusinessDays(since, THRESHOLDS.invoiceAfterDeliveryDays)
+      title = 'Delivered, not invoiced'
+    } else {
+      dueOn = addBusinessDays(since, THRESHOLDS.invoiceDespiteCommissioningDays)
+      title = 'Delivered, not invoiced (commissioning not marked done)'
+    }
+    // The two fallbacks (commissioning not marked, part-invoiced) appear only once their wait is over: they exist to catch
+    // what was forgotten, not to announce what is still in time.
+    if ((part || !commissioningDone) && ctx.today < dueOn) continue
     out.push(
       build(
         {
           rule: 'delivered_not_invoiced',
           subjectId: o.id,
           tab: tabFor('delivered_not_invoiced'),
-          title: 'Delivered, not invoiced',
+          title,
           ref: orderRef(o.number),
           party: o.customerName,
           actionDueOn: dueOn,
@@ -672,6 +732,7 @@ export const RULES: Record<RuleKey, (ctx: TodayInputs) => Entry[]> = {
   goods_late: ruleGoodsLate,
   place_po: rulePlacePo,
   plan_commissioning: rulePlanCommissioning,
+  to_source: ruleToSource,
   delivered_not_invoiced: ruleDeliveredNotInvoiced,
   close_month: ruleCloseMonth,
 }
