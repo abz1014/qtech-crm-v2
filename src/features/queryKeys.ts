@@ -205,6 +205,20 @@ function money() {
     /** Every order's margin row (M04) and the reconciliation exceptions (M07). Admin only. */
     margins: () => [...all, 'margins'] as const,
     exceptions: () => [...all, 'exceptions'] as const,
+    /** M10: Month-end. The checklist counts, the closed months and every report for one month ("2026-10") or as-of date. */
+    monthEnd: {
+      all: [...all, 'month-end'] as const,
+      status: (month: string) => [...all, 'month-end', 'status', month] as const,
+      closed: () => [...all, 'month-end', 'closed'] as const,
+      pnl: () => [...all, 'month-end', 'pnl'] as const,
+      payments: (month: string) => [...all, 'month-end', 'payments', month] as const,
+      expenseLines: (month: string) => [...all, 'month-end', 'expense-lines', month] as const,
+      categories: (month: string) => [...all, 'month-end', 'categories', month] as const,
+      aging: (asOf: string) => [...all, 'month-end', 'aging', asOf] as const,
+      payables: (asOf: string) => [...all, 'month-end', 'payables', asOf] as const,
+      gst: () => [...all, 'month-end', 'gst'] as const,
+      team: (month: string) => [...all, 'month-end', 'team', month] as const,
+    },
     orderOptions: () => [...all, 'order-options'] as const,
     legOptions: (orderId: string) => [...all, 'leg-options', orderId] as const,
     /** M01: the GST register (every invoice, all months), one invoice with its steps, the order amounts a new invoice starts from. */
