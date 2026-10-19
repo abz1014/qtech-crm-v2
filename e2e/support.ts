@@ -44,6 +44,9 @@ const STEPS: Record<string, Steps> = {
   'toast-phone': async page => {
     await page.clock.runFor(1000)
   },
+  'infotip-open': async page => {
+    await page.locator('[data-infotip]').first().click()
+  },
   'combobox-open': async page => {
     await page.locator('[data-preview-combo]').click()
     await page.keyboard.type('Ind')

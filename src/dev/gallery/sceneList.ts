@@ -23,6 +23,7 @@ export const SCENE_LIST = [
   { scene: 'combobox-open', group: 'Combobox', label: 'Open with the Add new row' },
   { scene: 'overlays', group: 'Tooltip and Popover', label: 'Tooltip, menu and information popover' },
   { scene: 'tooltips', group: 'Tooltip and Popover', label: 'Tooltip variants: disabled why, long label, status, two lines' },
+  { scene: 'infotip-open', group: 'Tooltip and Popover', label: 'InfoTip, open' },
 ] as const
 
 export type SceneName = (typeof SCENE_LIST)[number]['scene']

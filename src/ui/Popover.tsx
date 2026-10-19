@@ -18,12 +18,14 @@ export const PopoverClose = RadixPopover.Close
 
 type ContentProps = Omit<ComponentPropsWithoutRef<typeof RadixPopover.Content>, 'role'> & {
   variant?: 'menu' | 'information'
+  /** information only: 'dialog' names it as one (InfoTip). The menu variant is always role="menu". */
+  role?: 'dialog'
 }
 
 const FOCUSABLE_ITEM = '[role="menuitem"]:not([disabled])'
 
 export const PopoverContent = forwardRef<ElementRef<typeof RadixPopover.Content>, ContentProps>(function PopoverContent(
-  { variant = 'information', className, sideOffset = 4, align = 'start', onKeyDown, onOpenAutoFocus, children, ...rest },
+  { variant = 'information', role, className, sideOffset = 4, align = 'start', onKeyDown, onOpenAutoFocus, children, ...rest },
   ref,
 ) {
   const isMenu = variant === 'menu'
@@ -52,7 +54,7 @@ export const PopoverContent = forwardRef<ElementRef<typeof RadixPopover.Content>
           if (typeof ref === 'function') ref(node)
           else if (ref) ref.current = node
         }}
-        role={isMenu ? 'menu' : undefined}
+        role={isMenu ? 'menu' : role}
         sideOffset={sideOffset}
         align={align}
         collisionPadding={8}
