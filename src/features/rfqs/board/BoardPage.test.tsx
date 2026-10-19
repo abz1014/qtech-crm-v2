@@ -50,18 +50,18 @@ const OPEN = [
 function db(openRows: unknown[] | Error = OPEN, closedRows: unknown[] = []) {
   return installFakeDb((c: FakeCall): FakeResult => {
     if (c.target === 'v_rfq_state') {
-      if (opArgs(c, 'in')) return { data: closedRows }
+      if (opArgs(c, 'in')) return { data: closedRows, count: closedRows.length }
       if (openRows instanceof Error) return { error: { message: openRows.message } }
       return { data: openRows }
     }
-    if (c.target === 'rfqs') return { data: [{ id: 'a', customer_ref: 'ENQ-2211' }] }
+    if (c.target === 'rfqs') return { data: [{ id: 'a', customer_ref: 'ENQ-2211', rfq_items: [{ description: 'Cerabar PMC71 pressure transmitter', position: 0 }] }] }
     return { data: [] }
   })
 }
 
-function Where() {
+function Where({ id = 'where' }: { id?: string }) {
   const l = useLocation()
-  return <p data-testid="where">{l.pathname + l.search}</p>
+  return <p data-testid={id}>{l.pathname + l.search}</p>
 }
 
 function renderBoard(role: string, url = '/rfqs') {
@@ -76,7 +76,15 @@ function renderBoard(role: string, url = '/rfqs') {
   )
   return render(
     <Routes>
-      <Route path="/rfqs" element={<BoardPage />} />
+      <Route
+        path="/rfqs"
+        element={
+          <>
+            <BoardPage />
+            <Where id="where-board" />
+          </>
+        }
+      />
       <Route path="/rfqs/:id" element={<Where />} />
       <Route path="/rfqs/new" element={<Where />} />
     </Routes>,
@@ -109,20 +117,31 @@ describe('RFQ board', () => {
     expect(rows).toHaveLength(3)
     expect(rows[0]).toHaveTextContent('Punjab Cement')
     expect(within(rows[0]).getByText('3 days overdue')).toHaveClass('text-tone-danger-fg')
-    expect(within(rows[0]).getByText('Quotation expired')).toBeInTheDocument()
+    // one plain next step per row, not three chips
+    expect(within(rows[0]).getByText('Quotation sent')).toBeInTheDocument()
+    expect(within(rows[0]).getByText('The quotation has expired')).toBeInTheDocument()
+    expect(within(rows[1]).getByText('Needs suppliers')).toBeInTheDocument()
+    expect(within(rows[2]).getByText('Waiting for prices')).toBeInTheDocument()
+    expect(within(rows[2]).getByText('2 of 5 items priced · waiting on the customer for 2 answers')).toBeInTheDocument()
+    // the row leads with the company and what was asked, then the code and their ref
+    expect(within(rows[2]).getByText('Cerabar PMC71 pressure transmitter + 4 more')).toBeInTheDocument()
+    expect(within(rows[2]).getByText('· RFQ-0177')).toBeInTheDocument()
     expect(within(rows[2]).getByText('their ref ENQ-2211', { exact: false })).toBeInTheDocument()
-    expect(within(rows[2]).getByText('Waiting on customer')).toBeInTheDocument()
-    expect(within(rows[2]).getByText('Partly covered')).toBeInTheDocument()
+    expect(screen.getAllByRole('columnheader').map(h => h.textContent)).toEqual(['RFQ', 'Next step', 'Due', 'Owner'])
   })
 
-  it('narrows by state and keeps the choice in the address', async () => {
+  it('narrows by the next step and keeps the choice in the address', async () => {
     db()
     const user = userEvent.setup()
     renderBoard('engineer')
     await screen.findByText('Punjab Cement')
-    await user.click(screen.getByRole('radio', { name: /^Covered\s*1/ }))
+    expect(screen.getByRole('radio', { name: /^All open\s*3$/ })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: /^Quotation sent\s*1/ }))
     await waitFor(() => expect(bodyRows()).toHaveLength(1))
     expect(bodyRows()[0]).toHaveTextContent('Punjab Cement')
+    await user.click(screen.getByRole('radio', { name: /^Needs suppliers\s*1/ }))
+    await waitFor(() => expect(bodyRows()[0]).toHaveTextContent('Sargodha Dairy'))
+    expect(screen.queryByRole('radio', { name: 'Compact' })).toBeNull() // no density switch any more
   })
 
   it('opens the RFQ from a row', async () => {
@@ -134,10 +153,10 @@ describe('RFQ board', () => {
     expect(await screen.findByTestId('where')).toHaveTextContent('/rfqs/b')
   })
 
-  it('says "Every bid is in" when everything is done, with New RFQ in the empty view too', async () => {
+  it('says "No open RFQs" when everything is done, with New RFQ in the empty view too', async () => {
     db([])
     renderBoard('admin')
-    expect(await screen.findByText('Every bid is in')).toBeInTheDocument()
+    expect(await screen.findByText('No open RFQs')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'New RFQ' })).toHaveLength(2)
   })
 
@@ -194,18 +213,42 @@ describe('RFQ board toolbar', () => {
     expect(screen.getByRole('textbox', { name: 'Filter RFQs' })).toHaveFocus()
   })
 
-  it('switches Open and Closed as a segmented control with counts, and remembers the density', async () => {
+  it('Closed is one more choice of the same filter', async () => {
     db()
     const user = userEvent.setup()
     renderBoard('admin')
     await screen.findByText('Indus Textile Mills')
-    expect(screen.getByRole('radio', { name: /^Open\s*3$/ })).toBeChecked()
-    await user.click(screen.getByRole('radio', { name: 'Compact' }))
-    expect(localStorage.getItem('qtech.rfqs.density')).toBe('compact')
-    expect(screen.getByRole('radio', { name: 'Compact' })).toBeChecked()
     await user.click(screen.getByRole('radio', { name: /^Closed/ }))
     expect(await screen.findByRole('table', { name: 'Closed and won RFQs' })).toBeInTheDocument()
-    localStorage.removeItem('qtech.rfqs.density')
+    expect(screen.getByTestId('where-board')).toHaveTextContent('show=closed')
+  })
+
+  it('on Closed the filter box searches the server: number, reference, company and item text, over every closed RFQ', async () => {
+    const closedRow = state({ rfq_id: 'z', number: 12, outcome: 'closed', close_reason: 'price', companies: { name: 'Old Mill' } })
+    const d = installFakeDb((c: FakeCall): FakeResult => {
+      if (c.target === 'companies') return { data: [{ id: 'c9' }] }
+      if (c.target === 'rfqs' && opArgs(c, 'or')) return { data: [{ id: 'z', number: 12 }] }
+      if (c.target === 'rfqs' && opArgs(c, 'ilike')) return { data: [{ id: 'y', number: 11 }] }
+      if (c.target === 'rfqs') return { data: [{ id: 'z', customer_ref: 'OLD-1', rfq_items: [{ description: 'Belimo actuator', position: 0 }] }] }
+      if (c.target === 'v_rfq_state') return opArgs(c, 'in') ? { data: [closedRow], count: 1 } : { data: OPEN }
+      return { data: [] }
+    })
+    const user = userEvent.setup()
+    renderBoard('admin', '/rfqs?show=closed')
+    await screen.findByRole('table', { name: 'Closed and won RFQs' })
+    await user.type(screen.getByRole('textbox', { name: 'Filter RFQs' }), 'belimo')
+    await waitFor(() => expect(d.calls.some(c => c.target === 'rfqs' && opArgs(c, 'ilike')?.[0] === 'rfq_items.description')).toBe(true))
+    const byItem = d.calls.find(c => c.target === 'rfqs' && opArgs(c, 'ilike'))!
+    expect(opArgs(byItem, 'ilike')).toEqual(['rfq_items.description', '%belimo%'])
+    expect(opArgs(byItem, 'select')?.[0]).toContain('rfq_items!inner')
+    const own = d.calls.find(c => c.target === 'rfqs' && opArgs(c, 'or'))!
+    expect(opArgs(own, 'or')?.[0]).toBe('customer_ref.ilike.%belimo%,company_id.in.(c9)')
+    // the closed page is read for exactly the matching RFQs, newest first
+    await waitFor(() => {
+      const page = d.calls.filter(c => c.target === 'v_rfq_state' && c.ops.filter(([n]) => n === 'in').length === 2).at(-1)
+      expect(page?.ops.filter(([n]) => n === 'in')[1][1]).toEqual(['rfq_id', ['z', 'y']])
+    })
+    expect(await screen.findByText('Belimo actuator + 3 more')).toBeInTheDocument()
   })
 })
 
