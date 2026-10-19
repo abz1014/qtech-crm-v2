@@ -113,7 +113,7 @@ test('Lighthouse accessibility is at least 95 on the main screens (desktop and p
     }
     mkdirSync('test-results', { recursive: true })
     writeFileSync('test-results/lighthouse-a11y.json', JSON.stringify(out, null, 2))
-    summary(rows.join('\n'))
+    summary([...rows, '', ...notes.map(n => `- ${n}`)].join('\n'))
     expect(failures, failures.join('\n')).toEqual([])
   } finally {
     await ctx.close()
