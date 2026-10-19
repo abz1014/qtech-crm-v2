@@ -302,7 +302,7 @@ rules in `expectations.mjs`).
   the live database is behind `main` (a migration was not pushed, see "Remote push runbook"). A manual run can set `missing = warn`
   to report instead of fail.
 - The anon key is public (it ships in the browser bundle). The workflow uses the repository variable `SMOKE_SUPABASE_ANON_KEY` if
-  you set one, and otherwise reads it from the deployed app's public bundle (`SMOKE_APP_URL`, default `https://qtechcrm.vercel.app`).
+  you set one, and otherwise reads it from the deployed app's public bundle (`SMOKE_APP_URL`, default `https://qtech-crm-v2.vercel.app`).
   The key must say role `anon` for project `yafbphagorydbitfgfmg`. If a `service_role` key is ever found in that bundle, the run
   fails with "SERVICE-ROLE KEY EXPOSED": rotate it at once.
 - It refuses the old project (`vptyhluvgnjpvkcbhxsf`) and any URL that is not the new project.

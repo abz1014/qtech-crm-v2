@@ -8,7 +8,7 @@
 // Env:
 //   SMOKE_SUPABASE_URL        optional; must be the new project's URL (default below)
 //   SMOKE_SUPABASE_ANON_KEY   optional public anon key. If absent it is read from the deployed app's public bundle
-//                             (SMOKE_APP_URL, default https://qtechcrm.vercel.app), where the app itself gets it.
+//                             (SMOKE_APP_URL, default https://qtech-crm-v2.vercel.app), where the app itself gets it.
 //   SMOKE_MISSING             fail (default) | warn. What to do with an object the types name but the live project lacks
 //                             (live is behind main: a migration is not pushed yet). Every other problem always fails.
 //   SMOKE_{ADMIN,SALES,ENGINEER}_{EMAIL,PASSWORD}   Part 2 test accounts (secrets)
@@ -83,7 +83,7 @@ async function resolveAnonKey() {
   const candidates = []
   if (given) candidates.push(given)
   else {
-    const app = (process.env.SMOKE_APP_URL || 'https://qtechcrm.vercel.app').replace(/\/+$/, '')
+    const app = (process.env.SMOKE_APP_URL || 'https://qtech-crm-v2.vercel.app').replace(/\/+$/, '')
     const page = await http(app + '/')
     if (page.status !== 200) {
       die('anon key unavailable', `Could not load ${app}/ (status ${page.status} ${page.error ?? ''}) and SMOKE_SUPABASE_ANON_KEY is not set.`)
