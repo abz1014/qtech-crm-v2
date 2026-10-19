@@ -22,7 +22,7 @@ for line in open(sys.argv[1], encoding="utf-8"):
     weights[name] = int(w.group(1)) if w else 50
 
 changed = json.loads(os.environ.get("CHANGED") or "[]")
-chosen = ["orders"]  # TEMP-PROOF
+chosen = suites if os.environ.get("RUN_ALL") == "true" else [s for s in suites if s in changed]
 
 total = sum(weights[s] for s in chosen)
 n = min(SHARDS_MAX, len(chosen), max(1, math.ceil(total / TARGET_SECONDS))) if chosen else 0
