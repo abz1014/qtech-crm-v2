@@ -7,6 +7,8 @@ import { useGstRegister } from '@/features/money/invoices/hooks'
 import { MONEY_TABS } from '@/features/money/moneyTabs'
 import { useReceivables } from '@/features/money/payments/hooks'
 import { isOpen } from '@/features/money/payments/model'
+import { useMonthEndStatus } from '@/features/money/monthEnd/hooks'
+import { buildChecklist, checksWithItems, defaultMonthEndMonth } from '@/features/money/monthEnd/model'
 
 /*
  * The frame every Money tab sits in (g2-month-end, g2-money): the title, the date and currency line, the page actions
@@ -25,9 +27,13 @@ export function MoneyFrame({ active, actions, children }: { active: string; acti
   const tabs = MONEY_TABS.filter(t => isAdmin || !t.adminOnly)
   const register = useGstRegister(money)
   const receivables = useReceivables(money)
+  // Month-end carries the number of checks that have items for the month that just ended (admin only: no request for anyone else).
+  const monthEnd = defaultMonthEndMonth(businessToday())
+  const checks = useMonthEndStatus(monthEnd, isAdmin)
   const counts: Record<string, number | undefined> = {
     'gst-register': register.data?.length,
     receivables: receivables.data?.filter(isOpen).length,
+    'month-end': checks.data ? checksWithItems(buildChecklist(checks.data, monthEnd)) : undefined,
   }
   return (
     <div className="mx-auto grid w-full max-w-table content-start gap-4 px-4 pb-12 pt-6 md:px-8">
