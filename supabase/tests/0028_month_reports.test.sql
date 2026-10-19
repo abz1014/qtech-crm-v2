@@ -363,15 +363,6 @@ select is((select jsonb_object_agg(check_key, n) from public.month_end_status('2
   '{"bank_unticked": 1, "fbr_deposits_unticked": 0, "uncategorised": 0, "recurring_not_recorded": 2,
     "provisional_margins": 0, "fbr_pending": 0, "unresolved_payments": 0}'::jsonb,
   'F-CHECKLIST November: unticked items accumulate, the rest are bound to the month');
--- ticking clears the warnings
-update public.payments_in set bank_month = '2025-12-01'
-where order_id in ('a1000000-0000-4000-8000-000000000031', 'a1000000-0000-4000-8000-000000000035', 'a1000000-0000-4000-8000-000000000036');
-update public.invoices set tax_bank_month = '2025-12-01' where number = 'CK-I1';
-select is((select n from public.month_end_status('2025-12-01') where check_key = 'bank_unticked'), 6,
-  'F-CHECKLIST: ticking three payments leaves the six expenses');
-select is((select n from public.month_end_status('2025-12-01') where check_key = 'fbr_deposits_unticked'), 0,
-  'F-CHECKLIST: ticking the FBR deposit clears that warning');
-
 -- ================================================================== F-CHECKLIST-DETAILS: month_end_check_details (0064)
 select is((select count(*)::int from public.month_end_check_details('2025-12-01')), 7, 'F-CHECKLIST-DETAILS: one row per check');
 select is((select ((detail->>'in_n')::int + (detail->>'out_n')::int) from public.month_end_check_details('2025-12-01') where check_key = 'bank_unticked'),
@@ -391,6 +382,15 @@ select is((select jsonb_array_length(detail->'invoices') from public.month_end_c
 select ok((select (detail->>'amount')::numeric > 0 and (detail->'first'->>'order_number') is not null
            from public.month_end_check_details('2025-12-01') where check_key = 'unresolved_payments'),
   'F-CHECKLIST-DETAILS: unresolved payments carry an amount and the order to open');
+
+-- ticking clears the warnings
+update public.payments_in set bank_month = '2025-12-01'
+where order_id in ('a1000000-0000-4000-8000-000000000031', 'a1000000-0000-4000-8000-000000000035', 'a1000000-0000-4000-8000-000000000036');
+update public.invoices set tax_bank_month = '2025-12-01' where number = 'CK-I1';
+select is((select n from public.month_end_status('2025-12-01') where check_key = 'bank_unticked'), 6,
+  'F-CHECKLIST: ticking three payments leaves the six expenses');
+select is((select n from public.month_end_status('2025-12-01') where check_key = 'fbr_deposits_unticked'), 0,
+  'F-CHECKLIST: ticking the FBR deposit clears that warning');
 
 -- ================================================================== access: sales
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
