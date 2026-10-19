@@ -71,7 +71,7 @@ export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHead
 
 /** What a typed price reads as in PKR at today's rate, and whether it would be the lowest (C-40). */
 function PricePreview({ itemId, amount, currency, others, rates }: { itemId: string; amount: number; currency: string; others: InquiryRow[]; rates: RateTable }) {
-  if (currency === 'PKR') return null
+  if (!currency || currency === 'PKR') return null
   const rate = rates[currency]
   const usable = rate && rate.staleness !== 'unusable' && rate.ageDays <= 30
   if (!usable) {
@@ -98,6 +98,9 @@ function PricePreview({ itemId, amount, currency, others, rates }: { itemId: str
   )
 }
 
+/** The one-tap chips for a supplier with no currency on file: the usual four first, then the rest. */
+const CURRENCY_CHIPS = ['USD', 'EUR', 'CNY', 'PKR', ...REPLY_CURRENCIES.filter(c => !['USD', 'EUR', 'CNY', 'PKR'].includes(c))]
+
 function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; items: RfqItemRow[]; inquiry: InquiryRow; inquiries: InquiryRow[]; rates: RateTable }) {
   const { toast } = useToast()
   const headingId = useId()
@@ -118,10 +121,11 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
   const typed = Object.values(draft.prices).filter(p => typeof p === 'number' && p > 0).length
   const others = inquiries.filter(i => i.id !== inquiry.id)
 
-  const currencyNote = hasLines && existing[0].currency === draft.currency ? `${draft.currency}, as saved` : draft.currency === prefill.currency ? currencySourceNote(prefill, inquiry.supplierCountry) : `${draft.currency}, changed by you`
-  const currencyOptions = [...new Set([draft.currency, prefill.currency, ...REPLY_CURRENCIES])].map(c => ({ value: c, label: c }))
+  const currencyNote = hasLines && existing[0].currency === draft.currency ? `${draft.currency}, as saved` : draft.currency === prefill.currency ? currencySourceNote(prefill, inquiry.supplierCountry) : prefill.source === 'none' ? `${draft.currency}, picked by you` : `${draft.currency}, changed by you`
+  const currencyOptions = [...new Set([draft.currency, prefill.currency, ...REPLY_CURRENCIES].filter(Boolean))].map(c => ({ value: c, label: c }))
 
   const doSave = async (d: ReplyDraft = draft) => {
+    if (!d.currency) return // no currency picked yet: nothing is saved (audit R1)
     const plan = planReplySave(existing, d)
     if (plan.prices.length === 0 && plan.removeItemIds.length === 0) return
     try {
@@ -271,6 +275,22 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
         </div>
       ) : (
         <>
+          {!draft.currency ? (
+            <div role="group" aria-label={`Currency for ${inquiry.supplierName}`} className="flex flex-wrap items-center gap-2 rounded border border-line bg-sunken px-3 py-2 text-sm">
+              <span className="text-fg-2">Which currency are they quoting in? Asked once, then remembered.</span>
+              {CURRENCY_CHIPS.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  aria-pressed={false}
+                  onClick={() => setDraft(d => ({ ...d, currency: c }))}
+                  className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken"
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <ul className="grid gap-x-6 gap-y-3 md:grid-cols-2">
             {items.map(it => {
               const q = qtyText(it.qty, it.unit)
@@ -300,7 +320,7 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
                         placeholder="Price"
                         min={0}
                         onKeyDown={e => {
-                          if (e.key === 'Enter' && dirty && typed > 0) {
+                          if (e.key === 'Enter' && dirty && typed > 0 && draft.currency) {
                             e.preventDefault()
                             void doSave()
                           }
@@ -345,7 +365,7 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
               <Button
                 variant="primary"
                 onClick={() => void doSave()}
-                disabled={!dirty || (typed === 0 && planReplySave(existing, draft).removeItemIds.length === 0)}
+                disabled={!draft.currency || !dirty || (typed === 0 && planReplySave(existing, draft).removeItemIds.length === 0)}
                 busy={save.isPending}
                 busyLabel="Saving"
               >
@@ -353,8 +373,9 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
               </Button>
             </div>
           </div>
+          {draft.currency ? (
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-muted">
-            <span>{`The currency follows the supplier: ${currencyNote}. There is nothing to pick.`}</span>
+            <span>{prefill.source === 'none' && !hasLines ? `Currency: ${currencyNote}. It is remembered for this supplier once the reply is saved.` : `The currency follows the supplier: ${currencyNote}. There is nothing to pick.`}</span>
             <button type="button" onClick={() => setChangeCurrency(c => !c)} aria-expanded={changeCurrency} className="rounded font-medium underline underline-offset-2 hover:text-fg">
               {changeCurrency ? 'Keep it' : 'Change currency'}
             </button>
@@ -368,6 +389,7 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
               />
             ) : null}
           </p>
+          ) : null}
 
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" icon={ClipboardPaste} onClick={() => void startPaste()} disabled={pasteMode !== null}>
