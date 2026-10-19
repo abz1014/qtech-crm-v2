@@ -1,4 +1,4 @@
--- 0057_p9_gaps (P9): three database gaps left by earlier work. (Numbered 0057: 0056 was taken by the import number floors
+-- 0058_p9_gaps (P9): three database gaps left by earlier work. (Numbered 0058: 0056 and 0057 were taken
 -- while this was in flight.)
 --
 --   v_supplier_stats            gains orders_count: non-cancelled orders with a procurement leg for the supplier (a count of
