@@ -259,7 +259,9 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
       ledger.add('invoiceNet', 'excluded', amount)
       continue
     }
-    const flags = ['invoice_basis_unknown']
+    // "Check whether this amount includes GST" is asked only of invoices tied to an order (customer PO).
+    // An invoice with no order link imports without it; legacy_source keeps it traceable.
+    const flags = group ? ['invoice_basis_unknown'] : []
     const invoiceDate = dateOrFlag(inv, 'issued_date', 'invoices', label, flags)
     if (invoiceDate === null) flags.push('invoice_date_missing')
     // amount_paid is NOT turned into payments; it is flagged when the payments we do have disagree.
@@ -309,8 +311,9 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
 
   // ---------------------------------------------------------------- payments_in
   const seenPayment = new Set<string>() // group|amount|date, to spot payment_records that repeat an order_payments row
-  const creditedFor = (group: OrderGroup): string | null =>
-    group.flags.has('owner_unknown') || group.flags.has('owner_unreliable') ? null : group.ownerId
+  // TODO(owner decision, later): who gets credit for old sales. Until then NOBODY does: credited_user_id is NULL on every
+  // imported payment, so no legacy payment counts toward anyone's target (v_payment_net: excluded_reason 'unattributed').
+  // The admin can assign credit afterwards; this run must not guess it.
 
   const addPayment = (table: 'order_payments' | 'payment_records', r: Row, oldId: string, group: OrderGroup | null, extraFlag: string | null): void => {
     const amount = num(r['amount']) ?? 0
@@ -346,8 +349,10 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
       order_id: group.newId,
       received_on: receivedOn,
       amount,
-      credited_user_id: creditedFor(group),
+      credited_user_id: null,
       reference: str(r, 'reference') ?? str(r, 'notes'),
+      // A payment the old system holds is a payment received. Always bank: the old payment_method (even "Cash") stays in
+      // legacy_source and is not flagged.
       paid_via: 'bank',
       bank_month: null,
       legacy_flags: [...new Set(flags)].sort(),

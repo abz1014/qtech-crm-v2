@@ -1,0 +1,74 @@
+import { describe, expect, it } from 'vitest'
+import type { ConvertItem } from '@/features/orders/lib/convert'
+import type { RankedQuote } from '@/features/orders/lib/ranking'
+import { buildSplitPayload, checkSplit, nextRanked, orderLineCount, partQuantities, type Part } from '@/features/orders/lib/splitConvert'
+
+const item = (id: string, qty: number, price: number | null = 100): ConvertItem => ({ id, description: id, qty, unit: null, quotedUnitPriceNet: price })
+const q = (lineId: string, rank: number | null): RankedQuote => ({
+  lineId,
+  itemId: 'i',
+  supplierId: lineId,
+  supplierName: lineId,
+  price: 1,
+  currency: 'PKR',
+  rank,
+  comparable: rank !== null,
+  withinBand: false,
+  pctAboveBest: null,
+  pkrUnit: 1,
+  fxState: 'same_currency',
+  fxAgeDays: null,
+  reliabilityBand: 2,
+  deliveries: 0,
+  onTime: 0,
+  late: 0,
+  medianDaysLate: null,
+  ordersCount: 0,
+  inStock: false,
+  sellUnit: null,
+  spreadUnit: null,
+})
+const part = (key: string, lineId: string, qty: Part['qty']): Part => ({ key, lineId, qty })
+
+describe('split quantities', () => {
+  it('the first part takes the remainder as the second is typed', () => {
+    expect(partQuantities(4, [part('a', 'A', null), part('b', 'B', 1)])).toEqual([3, 1])
+  })
+  it('a remainder never goes below zero', () => {
+    expect(partQuantities(4, [part('a', 'A', null), part('b', 'B', 6)])).toEqual([0, 6])
+  })
+  it('parts that add up are fine; parts that do not are flagged but not blocked', () => {
+    expect(checkSplit(4, [part('a', 'A', 3), part('b', 'B', 1)])).toMatchObject({ mismatch: false, incomplete: false, total: 4 })
+    expect(checkSplit(4, [part('a', 'A', 3), part('b', 'B', 2)])).toMatchObject({ mismatch: true, incomplete: false, total: 5 })
+  })
+  it('a part with no quantity yet is incomplete', () => {
+    expect(checkSplit(4, [part('a', 'A', null), part('b', 'B', undefined)]).incomplete).toBe(true)
+  })
+})
+
+describe('next ranked supplier', () => {
+  it('offers the best-ranked quote that is not used, unranked last', () => {
+    const quotes = [q('U', null), q('B', 2), q('A', 1), q('C', 3)]
+    expect(nextRanked(quotes, new Set(['A']))?.lineId).toBe('B')
+    expect(nextRanked(quotes, new Set(['A', 'B', 'C']))?.lineId).toBe('U')
+    expect(nextRanked([q('A', 1)], new Set(['A']))).toBeUndefined()
+  })
+})
+
+describe('payload', () => {
+  const items = [item('i1', 2), item('i2', 4), item('i3', 1, null)]
+  const splits = { i2: [part('a', 'L2', null), part('b', 'L9', 1)] }
+  it('an unsplit item sends what it did before; a split sends one entry per part with its quantity', () => {
+    const p = buildSplitPayload(items, { i1: 'L1', i2: 'L2', i3: 'service' }, { i3: 650 }, splits)
+    expect(p).toEqual([
+      { rfq_item_id: 'i1', quote_line_id: 'L1' },
+      { rfq_item_id: 'i2', quote_line_id: 'L2', qty: 3 },
+      { rfq_item_id: 'i2', quote_line_id: 'L9', qty: 1 },
+      { rfq_item_id: 'i3', unit_price_net: 650, is_service: true },
+    ])
+  })
+  it('counts the order lines', () => {
+    expect(orderLineCount(items, {})).toBe(3)
+    expect(orderLineCount(items, splits)).toBe(4)
+  })
+})

@@ -203,12 +203,11 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(dialog.getByLabel('Customer PO number')).toHaveValue('')
     await expect(dialog.getByLabel('Payment terms in days')).toHaveValue('45')
     await expect(dialog).toContainText('from the last order')
-    // supplier per line from the lowest comparable quote (B, 40 USD, beats A, 50 USD); the person may change it
-    await dialog.getByText('Suppliers by line').click()
-    await expect(dialog.getByLabel('Supplier for line 1')).toHaveValue(s.lines.b1)
-    await expect(dialog.getByLabel('Supplier for line 1')).toContainText('(lowest)')
-    await expect(dialog.getByLabel('Supplier for line 2')).toHaveValue(s.lines.a2)
-    await expect(dialog.getByLabel('Supplier for line 3')).toHaveValue('none')
+    // supplier per line is its rank-1 quote (B, 40 USD, beats A, 50 USD), with the reason under the name; the person may change it
+    await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.supplierB.name)
+    await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
+    await expect(dialog.getByRole('button', { name: 'Supplier for line 2' })).toContainText(s.supplierA.name)
+    await expect(dialog.getByRole('button', { name: 'Supplier for line 3' })).toContainText('Not sourced yet')
     await shot(page, 'o01-convert-dialog-1440')
 
     // a double submit: two clicks in the same gesture; the client-made order id makes it one order
@@ -254,7 +253,8 @@ test.describe('O01: Mark won creates the order', () => {
     await dialog.getByLabel('Selling price, net PKR, line 3').fill('650')
     await expect(dialog.getByRole('button', { name: 'Create order' })).toBeEnabled()
     // line 1: take supplier A instead of the lowest
-    await dialog.getByLabel('Supplier for line 1').selectOption(s.lines.a1)
+    await dialog.getByRole('button', { name: 'Supplier for line 1' }).click()
+    await page.getByRole('option', { name: new RegExp(s.supplierA.name) }).click()
     await dialog.getByLabel('Customer PO number').fill(`CPO-${s.tag}`)
     await dialog.getByRole('button', { name: 'Create order' }).click()
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
@@ -717,7 +717,6 @@ for (const width of [1440, 375]) {
     await openAs(page, 'sales', `/rfqs/${r.rfq.id}`)
     await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
     await expect(page.getByRole('dialog').getByRole('heading', { name: 'Mark won' })).toBeVisible()
-    await page.getByRole('dialog').getByText('Suppliers by line').click()
     expect(await dialogViolations(page)).toEqual([])
     await shot(page, `o01-convert-dialog-open-${width}`)
   })

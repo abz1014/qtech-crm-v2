@@ -5,17 +5,17 @@ select * from no_plan();
 
 -- ------------------------------------------------------------------ shape and grants
 select has_function('public', 'import_purge_audit', array['uuid[]'], 'import_purge_audit exists');
-select has_function('public', 'import_reset_numbers', array[]::text[], 'import_reset_numbers exists');
+select has_function('public', 'import_reset_numbers', array['bigint', 'bigint', 'bigint', 'bigint'], 'import_reset_numbers exists (0056 added the floors)');
 select is((select bool_and(p.prosecdef) from pg_proc p where p.pronamespace = 'public'::regnamespace
            and p.proname in ('import_purge_audit', 'import_reset_numbers')), true, 'both are security definer');
 select is((select bool_and(p.proconfig @> array['search_path=""']) from pg_proc p where p.pronamespace = 'public'::regnamespace
            and p.proname in ('import_purge_audit', 'import_reset_numbers')), true, 'both fix an empty search_path');
 select is(has_function_privilege('service_role', 'public.import_purge_audit(uuid[])', 'execute'), true, 'service_role may purge audit rows of the import');
-select is(has_function_privilege('service_role', 'public.import_reset_numbers()', 'execute'), true, 'service_role may reset the numbers');
+select is(has_function_privilege('service_role', 'public.import_reset_numbers(bigint,bigint,bigint,bigint)', 'execute'), true, 'service_role may reset the numbers');
 select is(has_function_privilege('authenticated', 'public.import_purge_audit(uuid[])', 'execute'), false, 'a signed-in user may not purge audit rows');
-select is(has_function_privilege('authenticated', 'public.import_reset_numbers()', 'execute'), false, 'a signed-in user may not reset the numbers');
+select is(has_function_privilege('authenticated', 'public.import_reset_numbers(bigint,bigint,bigint,bigint)', 'execute'), false, 'a signed-in user may not reset the numbers');
 select is(has_function_privilege('anon', 'public.import_purge_audit(uuid[])', 'execute'), false, 'anon may not purge audit rows');
-select is(has_function_privilege('anon', 'public.import_reset_numbers()', 'execute'), false, 'anon may not reset the numbers');
+select is(has_function_privilege('anon', 'public.import_reset_numbers(bigint,bigint,bigint,bigint)', 'execute'), false, 'anon may not reset the numbers');
 
 -- ------------------------------------------------------------------ import_purge_audit
 -- Rows written with no signed-in user (as the import does): one for an import id (version 5), one for a v2 id (version 4).
