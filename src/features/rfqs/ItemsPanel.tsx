@@ -493,7 +493,7 @@ export function ItemsPanel({
                               <div id={detailId} className="col-span-full grid gap-2 pb-1 md:col-start-2">
                                 <PriceDetail line={line} inquiry={inquiry} c={c} rates={rates} />
                                 {chip ? <LastPriceChipView chip={chip} /> : null}
-                                {rk && reasons ? <ReasonBlock set={reasons} open supplier={inquiry.supplierName} unrankedCurrency={rk.rank === null ? line.currency : null} /> : null}
+                                {rk && reasons ? <ReasonBlock set={reasons} supplier={inquiry.supplierName} unrankedCurrency={rk.rank === null ? line.currency : null} /> : null}
                               </div>
                             ) : null}
                           </li>

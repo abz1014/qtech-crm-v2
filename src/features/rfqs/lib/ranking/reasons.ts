@@ -413,25 +413,8 @@ export function bandSizeOf(rows: readonly Pick<RankRow, 'comparable' | 'within_b
   return rows.filter(r => r.comparable && r.within_band === true).length
 }
 
-/** The sentence above an item's rows: how it was ranked, and what the selling price is (admin and sales only). */
-export function rankNote(rows: readonly RankRow[]): { title: string; body: string; kind: 'ranked' | 'none' | 'few' } {
-  const ranked = rows.filter(r => r.rank !== null).length
-  if (ranked === 0) return { title: 'Nothing can be ranked yet.', body: 'Add the missing rate and the list sorts itself.', kind: 'none' }
-  if (ranked === 1) return { title: 'One ranked quote.', body: 'Nothing to compare it with yet.', kind: 'few' }
-  const unproven = rows.filter(r => r.rank !== null).every(r => (r.deliveries ?? 0) === 0)
-  if (unproven) return { title: 'No supplier has a record yet.', body: 'Nobody is called proven; the ranking is price only.', kind: 'few' }
-  return { title: "Ranked by price in PKR at today's rate.", body: 'Lines within 2% of the best are ordered by delivery record, then by order history.', kind: 'ranked' }
-}
-
-/** "Ranked, 3 prices" / "Ranked 2 of 3": the chip on an item. Null below two ranked lines (a single price is not a ranking; the coverage chip stays). */
-export function rankChip(rows: readonly Pick<RankRow, 'rank'>[]): string | null {
-  const ranked = rows.filter(r => r.rank !== null).length
-  if (ranked < 2) return null
-  return ranked === rows.length ? `Ranked, ${plural(ranked, 'price', 'prices')}` : `Ranked ${ranked} of ${rows.length}`
-}
-
 /**
- * What we would sell the item for, for the right of the note (admin and sales only). Null for an engineer, whatever the rows hold.
+ * What we would sell the item for, on the item's line (admin and sales only). Null for an engineer, whatever the rows hold.
  * "Selling price PKR 612,000 each, quoted", "..., last sold on ORD-0027", or "No selling price yet".
  */
 export function sellNote(rows: readonly RankRow[], showSell: boolean): { kind: 'quoted' | 'last_sold' | 'none'; text: string; amount: string | null } | null {

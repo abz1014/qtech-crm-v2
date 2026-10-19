@@ -7,8 +7,6 @@ import {
   evidenceOf,
   evidenceReason,
   pkrTotal,
-  rankChip,
-  rankNote,
   reasonsFor,
   recordFromStats,
   recordReason,
@@ -253,18 +251,8 @@ describe('lines that cannot be ranked', () => {
 
 describe('the item header', () => {
   const rows = [row(), row({ quote_line_id: 'q2', rank: 2 }), row({ quote_line_id: 'q3', rank: null, comparable: false })]
-  it('counts the band and the chip', () => {
+  it('counts the band', () => {
     expect(bandSizeOf(rows)).toBe(3 - 1)
-    expect(rankChip(rows)).toBe('Ranked 2 of 3')
-    expect(rankChip(rows.slice(0, 2))).toBe('Ranked, 2 prices')
-    expect(rankChip([{ rank: null }])).toBeNull()
-    expect(rankChip([{ rank: 1 }])).toBeNull()
-    expect(rankChip([{ rank: 1 }, { rank: null }])).toBeNull()
-  })
-  it('the note says how it was ranked, or that nobody has a record, or that nothing can be ranked', () => {
-    expect(rankNote(rows.slice(0, 2)).title).toBe("Ranked by price in PKR at today's rate.")
-    expect(rankNote(rows.slice(0, 2).map(r => ({ ...r, deliveries: 0 }))).title).toBe('No supplier has a record yet.')
-    expect(rankNote([rows[2]]).kind).toBe('none')
   })
   it('the selling price note: quoted, last sold or none', () => {
     expect(sellNote([row()], true)).toEqual({ kind: 'quoted', amount: 'PKR 612,000', text: 'each, quoted' })

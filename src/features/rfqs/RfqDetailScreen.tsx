@@ -31,10 +31,13 @@ import { ConvertDialog } from '@/features/orders/ConvertDialog'
 import { useWonDialog } from '@/features/orders/useWonDialog'
 
 /*
- * RFQ detail (R07; g2-rfq-detail.html; the parity audit's Part C). Left column: "Items and supplier replies" (with Add item,
- * the rate bar, one reply box per supplier, then each item with every supplier's price and the lowest marked) and the
- * Quotations table. Right rail: "Suppliers asked" (memory lines, the chase, Float to another supplier) or, while nobody has been
- * asked, "Suppliers to ask"; then the questions for the customer (R09) and the files (R10).
+ * RFQ detail (R07; g2-rfq-detail.html; the parity audit's Part C; the UX audit of 2026-10-19). The header has the company, at most
+ * two chips and ONE green button chosen by state (lib/nextAction.ts: Ask suppliers, Issue quotation, Mark won; the supplier chase
+ * while waiting for prices), with everything else in More. Left column: "Items and supplier prices" (Add item, the rate bar,
+ * then each item with one line per price, best first, one Recommended mark), "Replies from suppliers" (one row per supplier, open
+ * while a reply is expected) and the Quotations table. Right rail: "Suppliers asked" (memory lines, the chase as a short preview,
+ * Ask more suppliers) or, while nobody has been asked, "Suppliers to ask"; then the questions for the customer (R09) and the files
+ * (R10). Phone: one bar (back, the number) and a sticky action bar with the same green action, Chase and More.
  *
  * FE-2 entry burden, listed for the commit:
  *   required     a price (greater than zero) for each item the supplier quoted. Nothing else is required.
@@ -42,9 +45,9 @@ import { useWonDialog } from '@/features/orders/useWonDialog'
  *   pre-filled   currency (supplier's last currency, else the country map, else PKR), the supplier's lead time and stock
  *                when they were saved before, quantity 1 for a new item, the date (today).
  *   optional     lead time, stock, a per-item "can't quote" reason.
- *   interactions supplier reply: one typed price per item, then "Save reply" (currency never typed).
- *                can't quote: 1 tap. chase: 1 tap for the supplier shown (Copy and mark chased), one more to pick another.
- *                mark bid sent: 2 taps (open Bid and close, choose). close or lose: 2 taps (open, choose the reason).
+ *   interactions supplier reply: one typed price per item, then "Save reply" (currency never typed; the reply is open while expected).
+ *                can't quote: 1 tap. chase: 1 tap for the supplier shown (Copy and mark chased), 1 tap Chase on any other.
+ *                mark quotation sent (no PDF): 2 taps (More, choose). close or lose: 2 taps (More, choose the reason).
  *
  * A missing exchange rate never blocks anything (BUILD_PLAN A3/A4): the line shows "not compared, no rate".
  */
