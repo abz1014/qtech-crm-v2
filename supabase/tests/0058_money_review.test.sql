@@ -127,7 +127,7 @@ select is((select net_in from public.v_month_pnl where month = '2026-01-01'), 10
 reset role;
 create temp table jan_status_before as select check_key, n from public.month_end_status('2026-01-01');
 set local role authenticated;
-select lives_ok($select public.close_month('2026-01-01')$, 'D-MR2: January closes');
+select lives_ok($$select public.close_month('2026-01-01')$$, 'D-MR2: January closes');
 select ok((select frozen and frozen_at is not null and net_in = 1000.00 and overheads = 100.00 and result = 900.00
            from public.v_month_pnl where month = '2026-01-01'),
   'D-MR2: the closed month reads its snapshot: net in 1,000, result 900');
@@ -154,13 +154,13 @@ select ok((select (s.payments ->> 'count')::int = 1 and jsonb_array_length(s.cat
   'D-MR2: the snapshot holds the month''s payments and expense categories for the reports');
 
 -- reopen: the snapshot is discarded and January recalculates; closing again saves the new figures
-select lives_ok($select public.reopen_month('2026-01-01', 'review test')$, 'D-MR2: January reopens');
+select lives_ok($$select public.reopen_month('2026-01-01', 'review test')$$, 'D-MR2: January reopens');
 select is((select count(*)::int from public.month_snapshots where month = '2026-01-01'), 0, 'D-MR2: reopening discards the snapshot');
 select ok((select net_in = 1180.00 and result = 1080.00 and not frozen from public.v_month_pnl where month = '2026-01-01'),
   'D-MR2: the reopened month recalculates: net in 1,180');
 select is((select count(*)::int from public.v_month_pnl where month = '2026-02-01'), 0,
   'D-MR2: and February no longer carries an adjustment');
-select lives_ok($select public.close_month('2026-01-01')$, 'D-MR2: January closes again');
+select lives_ok($$select public.close_month('2026-01-01')$$, 'D-MR2: January closes again');
 select ok((select frozen and net_in = 1180.00 and adjust_result = 0 from public.v_month_pnl where month = '2026-01-01'),
   'D-MR2: closing again saves the new figures');
 

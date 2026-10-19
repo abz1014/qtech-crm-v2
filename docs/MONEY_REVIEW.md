@@ -20,7 +20,16 @@ reports pgTAP `0058_money_review` failing 6 of 9), then fixed with the smallest 
 | MR-6 | `next_invoice_number()` (0044) | `lpad()` truncates: after `INV-9999` it suggested `INV-1000` (an existing number; the unique index then refuses every save). A legacy bare series `99` suggested `10`. | pgTAP `MR-6` (tests 1, 2; test 3 guards the padding) | 0058: pad to `greatest(width, length)`. |
 | MR-7 | `v_invoice_state.needs_fbr_attention` (0014), `month_end_status` `fbr_pending` (0028) | An exempt invoice (GST 0) has no tax to deposit, but every one from a past month was flagged "tax not deposited" in the GST register for ever, and counted on the month-end checklist and Today's close-month item. | pgTAP `MR-7` (tests 5, 6, 7, 9; tests 4 and 8 guard the 18% case and `gst_to_deposit`) | 0058: both also need `gst_amount > 0`. Same columns and signatures, so grants, the access matrix (S14) and the generated types are unchanged. |
 
-## Needs an owner decision (not changed)
+## Owner decisions (2026-10-19) and what was built
+
+| # | Decision | Built (migration 0058 unless noted) | Proof |
+|---|---|---|---|
+| D-MR1 | Accept per-line GST rounding; a split may move GST by about Rs 1. | Split line dialog wording: "Order totals stay the same, give or take Rs 1 of GST rounding". DECISIONS entry. | (wording only) |
+| D-MR2 | Freeze a closed month's figures at close. | `month_snapshots` (written by a trigger on `closed_months`, deleted with it on reopen); `v_month_pnl` and `month_end_status` serve a closed month from it; `v_month_pnl_live` keeps the live figures; drift after a close is shown in the first open month after the last closed one as "Changes to closed months" (`adj_*`, `adjust_result`); `close_months_through` closes oldest first. The Month-end screens and CSVs read the snapshot for payments, categories, how paid, team, aging and we owe (as of the month's last day) and the GST month (filing columns stay live). | pgTAP `0058_money_review` D-MR2 (close, later edit, closed P&L unchanged, change shown in February, books still sum, frozen checklist, reopen recalculates, close again re-saves, sales read nothing); unit `MR-8` (P&L CSV adjustment row) |
+| D-MR3 | A cancelled order stays in receivables only when it has an invoice. | `order_receivables()` filters; the Receivables page no longer drops cancelled orders itself, so it and Today agree. | pgTAP D-MR3 |
+| D-MR4 | We owe is strict. | `payables_as_of`: paid is net cost; a rate over 30 days before the as-of date is unusable ("Needs a rate"). | pgTAP D-MR4 |
+
+The four questions as they were put to the owner:
 
 1. **Splitting a line can change the order's GST by a rupee.** GST is rounded to whole rupees per line (DATA_MODEL 2.13, still
    marked PROPOSED). A split makes two lines, each rounded: 2 x 25.00 at 18% is GST 9 on one line, but 5 + 5 = 10 on two. A8 and

@@ -1,4 +1,6 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import type { Database } from '@/types/database'
+import type { ViewRow } from '@/features/dbTypes'
 import { orderRef } from '@/lib/refs'
 import { paisaToFixed, toPaisa, type Amount } from '@/lib/money'
 import { companyNames } from '@/features/money/expenses/api'
@@ -22,9 +24,54 @@ import type {
  * (admin only, enforced twice: the explicit role check inside each and Row Level Security under it), so a non-admin
  * gets zero rows even if a request is made; the hooks pass `enabled` and no request is made at all.
  * Closing and reopening are the admin RPCs of migration 0027 (close_month, close_months_through, reopen_month).
+ *
+ * A CLOSED month is frozen (owner decision 2026-10-19, migration 0058): its P&L comes from v_month_pnl, which serves the snapshot,
+ * and every other report of the month (payments, categories, how paid, team, aging and we owe as of its last day, the GST
+ * figures) is read from its month_snapshots row instead of the live views. So the screens and their CSVs show what was closed.
  */
+type Fn = Database['public']['Functions']
+type FnRow<F extends keyof Fn> = Fn[F]['Returns'] extends (infer R)[] ? R : never
+type CategoryRaw = ViewRow<'v_month_expense_category'>
+type TeamRaw = ViewRow<'v_month_team'>
+type GstRaw = ViewRow<'v_gst_month'>
+type AgingRaw = FnRow<'aging_as_of'>
+type PayableRaw = FnRow<'payables_as_of'>
+
 const fx = (n: Amount | null | undefined): string => paisaToFixed(toPaisa(n ?? 0))
 const monthOf = (isoDate: string): string => isoDate.slice(0, 7)
+
+// ------------------------------------------------------------------------------------------------ the frozen snapshot
+
+interface SnapshotPayments {
+  count: number
+  unresolved: { payment_id: string | null; order_id: string | null; order_number: number | null; amount: Amount | null; reference: string | null }[]
+}
+interface SnapshotVia {
+  cash_count: number
+  cash_amount: Amount
+  bank_count: number
+  bank_amount: Amount
+}
+/** One closed month's frozen figures. The rows inside have the same columns as the live views and functions they came from. */
+interface Snapshot {
+  payments: SnapshotPayments
+  via: SnapshotVia
+  categories: CategoryRaw[]
+  team: TeamRaw[]
+  aging: AgingRaw[]
+  payables: PayableRaw[]
+  gst: GstRaw | null
+}
+
+/** The month's snapshot, or null when the month is open (admin only, by row security). */
+async function loadSnapshot(month: string): Promise<Snapshot | null> {
+  const db = requireSupabase()
+  const row = unwrap(await db.from('month_snapshots').select('payments, via, categories, team, aging, payables, gst').eq('month', monthStart(month)).maybeSingle())
+  return row ? (row as unknown as Snapshot) : null
+}
+
+/** Aging and we owe are frozen only when read as of the closed month's last day; any other date is read live. */
+const snapshotAsOf = (asOf: string): Promise<Snapshot | null> => (monthEnd(monthOf(asOf)) === asOf ? loadSnapshot(monthOf(asOf)) : Promise.resolve(null))
 
 // ------------------------------------------------------------------------------------------------ checklist and closing
 
@@ -75,6 +122,9 @@ export async function loadPnlMonths(): Promise<Record<string, RawPnl>> {
       afterDrawings: fx(r.after_drawings),
       cashOutTotal: fx(r.cash_out_total),
       inputTax: fx(r.input_tax),
+      adjustResult: fx(r.adjust_result),
+      adjustNonPnl: fx(r.adj_non_pnl_out),
+      frozenAt: r.frozen_at ?? null,
     }
   }
   return out
@@ -83,6 +133,16 @@ export async function loadPnlMonths(): Promise<Record<string, RawPnl>> {
 /** The payments of one month by received date: how many, and the ones with no net split. */
 export async function loadPaymentStats(month: string): Promise<PaymentStats> {
   const db = requireSupabase()
+  const snap = await loadSnapshot(month)
+  if (snap)
+    return {
+      count: Number(snap.payments.count) || 0,
+      unresolved: snap.payments.unresolved.map(u => ({
+        orderRef: u.order_number !== null && u.order_number !== undefined ? orderRef(Number(u.order_number)) : null,
+        amount: fx(u.amount),
+        reference: u.reference ?? null,
+      })),
+    }
   const rows = await fetchAll<{ payment_id: string | null; order_id: string | null; amount: number | null; excluded_reason: string | null }>((from, to) =>
     db
       .from('v_payment_net')
@@ -111,7 +171,8 @@ export async function loadPaymentStats(month: string): Promise<PaymentStats> {
 /** One month's categories (v_month_expense_category) with the default way each is paid. */
 export async function loadCategoryLines(month: string): Promise<CategoryLine[]> {
   const db = requireSupabase()
-  const rows = unwrap(await db.from('v_month_expense_category').select('*').eq('month', monthStart(month))) ?? []
+  const snap = await loadSnapshot(month)
+  const rows: CategoryRaw[] = snap ? snap.categories : (unwrap(await db.from('v_month_expense_category').select('*').eq('month', monthStart(month))) ?? [])
   const cats = unwrap(await db.from('expense_categories').select('id, default_paid_via')) ?? []
   const via = Object.fromEntries(cats.map(c => [c.id, c.default_paid_via]))
   return rows.map(r => ({
@@ -130,6 +191,14 @@ export async function loadCategoryLines(month: string): Promise<CategoryLine[]> 
 /** How the month's expenses were paid, counted from the expenses themselves (a category's default is not what was done). */
 export async function loadViaStat(month: string): Promise<ViaStat> {
   const db = requireSupabase()
+  const snap = await loadSnapshot(month)
+  if (snap)
+    return {
+      cashCount: Number(snap.via.cash_count) || 0,
+      cashAmount: fx(snap.via.cash_amount),
+      bankCount: Number(snap.via.bank_count) || 0,
+      bankAmount: fx(snap.via.bank_amount),
+    }
   const rows = await fetchAll<{ paid_via: string; amount_pkr: number }>((from, to) =>
     db.from('expenses').select('paid_via, amount_pkr').gte('paid_on', monthStart(month)).lte('paid_on', monthEnd(month)).range(from, to),
   )
@@ -143,7 +212,8 @@ export async function loadViaStat(month: string): Promise<ViaStat> {
 
 export async function loadAging(asOf: string): Promise<{ rows: AgingRow[]; advances: AdvanceRow[] }> {
   const db = requireSupabase()
-  const data = unwrap(await db.rpc('aging_as_of', { p_date: asOf })) ?? []
+  const snap = await snapshotAsOf(asOf)
+  const data: AgingRaw[] = snap ? snap.aging : (unwrap(await db.rpc('aging_as_of', { p_date: asOf })) ?? [])
   const names = await companyNames([...new Set(data.map(r => r.company_id).filter((x): x is string => !!x))])
   const rows: AgingRow[] = data
     .filter(r => r.kind === 'invoice')
@@ -172,7 +242,8 @@ export async function loadAging(asOf: string): Promise<{ rows: AgingRow[]; advan
 
 export async function loadPayables(asOf: string): Promise<PayableRow[]> {
   const db = requireSupabase()
-  const data = unwrap(await db.rpc('payables_as_of', { p_date: asOf })) ?? []
+  const snap = await snapshotAsOf(asOf)
+  const data: PayableRaw[] = snap ? snap.payables : (unwrap(await db.rpc('payables_as_of', { p_date: asOf })) ?? [])
   const legs = await legLabels(data.map(r => r.supplier_order_id).filter((x): x is string => !!x))
   return data.map(r => ({
     legId: r.supplier_order_id,
@@ -194,7 +265,15 @@ export async function loadPayables(asOf: string): Promise<PayableRow[]> {
 
 export async function loadGstMonths(): Promise<GstMonthRow[]> {
   const db = requireSupabase()
-  const rows = unwrap(await db.from('v_gst_month').select('*').order('month', { ascending: false })) ?? []
+  const live = unwrap(await db.from('v_gst_month').select('*').order('month', { ascending: false })) ?? []
+  // A closed month's invoices, net, GST and input tax are the ones frozen at close. The filing columns (PSIDs, deposits, still to
+  // deposit) stay live: October's filing happens in November, after the close (A6.1). Sales read no snapshot (row security).
+  const snaps = unwrap(await db.from('month_snapshots').select('month, gst')) ?? []
+  const frozen = new Map(snaps.filter(x => x.gst).map(x => [x.month, x.gst as unknown as GstRaw]))
+  const rows = live.map(r => {
+    const f = r.month ? frozen.get(r.month) : undefined
+    return f ? { ...r, invoice_count: f.invoice_count, net: f.net, gst: f.gst, input_tax: f.input_tax } : r
+  })
   const out: GstMonthRow[] = []
   for (const r of rows) {
     if (!r.month) continue
@@ -220,7 +299,8 @@ export interface TeamData {
 
 export async function loadTeamMonth(month: string): Promise<TeamData> {
   const db = requireSupabase()
-  const credited = unwrap(await db.from('v_month_team').select('*').eq('month', monthStart(month))) ?? []
+  const snap = await loadSnapshot(month)
+  const credited: TeamRaw[] = snap ? snap.team : (unwrap(await db.from('v_month_team').select('*').eq('month', monthStart(month))) ?? [])
   const staff = unwrap(await db.from('users').select('id, name, role, deactivated_at')) ?? []
   return {
     credited: credited

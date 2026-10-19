@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { estimateExpectedCost } from '@/features/money/lib/costEstimate'
 import { gstForNet, invoiceStart } from '@/features/money/invoices/model'
+import { buildPnl, PAYABLE_STATE_LABEL, pnlCsv, ZERO_PNL } from '@/features/money/monthEnd/model'
 import { lineGstPaisa, lineNetPaisa, orderTotals } from '@/features/orders/lib/orderMath'
 import { lineTotal, poLineAmounts, poTotal, type PrefillRow } from '@/features/purchaseOrders/lib/prefill'
 import { gstWholeRupeesPaisa, productPaisa } from '@/lib/money'
@@ -101,5 +102,25 @@ describe('MR-5 part invoice on a mixed-rate order (money/invoices/model)', () =>
     expect(gstForNet(1000, 'mixed', start)).toBe(90)
     expect(gstForNet(500, '18', start)).toBe(90)
     expect(gstForNet(500, 'exempt', start)).toBe(0)
+  })
+})
+
+describe('MR-8 a change to a closed month is shown where it lands (owner decision D-MR2, money/monthEnd/model)', () => {
+  const via = { cashCount: 0, cashAmount: '0.00', bankCount: 0, bankAmount: '0.00' }
+  const raw = { ...ZERO_PNL, netIn: '0.00', result: '180.00', afterDrawings: '180.00', adjustResult: '180.00', adjustNonPnl: '0.00', frozenAt: null }
+  it('the P&L carries the adjustment, and its CSV has a line for it so the rows add up to the result', () => {
+    const v = buildPnl('2026-02', raw, { count: 0, unresolved: [] }, [], via)
+    expect(v.adjustResult).toBe('180.00')
+    const row = pnlCsv(v).rows.find(r => r[1] === 'Changes to closed months, counted this month')
+    expect(row).toEqual(['Adjustment', 'Changes to closed months, counted this month', '', '', '', 180])
+  })
+  it('a closed month says it is frozen; an open month with no change has no adjustment line', () => {
+    expect(buildPnl('2026-01', { ...ZERO_PNL, frozenAt: '2026-02-03T10:00:00Z' }, { count: 0, unresolved: [] }, [], via).frozenAt).toBe('2026-02-03T10:00:00Z')
+    const plain = buildPnl('2026-03', ZERO_PNL, { count: 0, unresolved: [] }, [], via)
+    expect(plain.adjustResult).toBe('0.00')
+    expect(pnlCsv(plain).rows.some(r => r[0] === 'Adjustment')).toBe(false)
+  })
+  it('we owe calls a leg with no usable rate "Needs a rate" (D-MR4)', () => {
+    expect(PAYABLE_STATE_LABEL.no_rate).toBe('Needs a rate')
   })
 })
