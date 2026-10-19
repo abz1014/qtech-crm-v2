@@ -35,7 +35,46 @@ export interface ParseResult {
 const MARKER = /^\s*(?:\(?\d{1,3}\)\s*|\d{1,3}[.:]\s+|[-•*·–]\s+|#\s*\d{1,3}[.:)]?\s+)/
 
 const SKIP =
-  /^(?:dear\b|hi\b|hello\b|hey\b|salam\b|assalam|asalam|aoa\b|good (?:morning|afternoon|evening)\b|regards\b|best regards\b|kind regards\b|warm regards\b|thanks\b|thank you\b|thankyou\b|sincerely\b|yours\b|please\b|kindly\b|sent from\b|from:|to:|cc:|bcc:|subject:|sent:|date:|on .{3,80} wrote:)/i
+  /^(?:dear\b|hi\b|hello\b|hey\b|salam\b|assalam|asalam|aoa\b|good (?:morning|afternoon|evening)\b|regards\b|best regards\b|kind regards\b|warm regards\b|thanks\b|thank you\b|thankyou\b|sincerely\b|yours\b|sent from\b|from:|to:|cc:|bcc:|subject:|sent:|date:|on .{3,80} wrote:)/i
+
+// Audit E1: polite openers ("Please quote 2 nos ...", "Sir plz send rate for ...") are stripped, not skipped. What is left is an
+// item when it carries a number or reads like a product; pure courtesy ("Please reply soon") is skipped.
+const POLITE =
+  /^(?:(?:assalam[a-z ]{0,20}|asalam[a-z ]{0,20}|aoa|salam|hi|hello|hey|dear(?: sir| madam)?|good (?:morning|afternoon|evening)|sir|madam|bhai|sahib|janab|boss|we request you to|i request you to|request you to|can you|could you|please|plz+|pls|kindly)\b[\s,.:!-]*)+/i
+const ASK_VERB =
+  /^(?:(?:provide|send|share|arrange|give)\s+(?:us\s+)?(?:the\s+)?)?(?:(?:best\s+)?(?:quotation|quote|rates?|prices?|offer)\b\s*)*(?:(?:for|of)\b)?\s*/i
+const COURTESY =
+  /^(?:the following|following|the below|below|the items|our |reply|revert|respond|confirm|let me|let us|at the earliest|asap|today|soon|urgent|find|note|acknowledge|check|call|advise|update|do the needful|share|send|provide|bata|batao|thanks|thank)/i
+
+/** The line without its polite opener, or null when nothing item-like is left (a courtesy line). Lines with no opener pass through. */
+function stripPolite(line: string): string | null {
+  const m = POLITE.exec(line)
+  if (!m) return line
+  const rest0 = line.slice(m[0].length)
+  const rest = rest0.slice(ASK_VERB.exec(rest0)![0].length).replace(/^[\s,.:!-]+/, '').trim()
+  if (!rest) return null
+  if (/\d/.test(rest)) return COURTESY.test(rest) && !/\d\s*(?:x|×|nos|pcs?)\b/i.test(rest) ? null : rest
+  if (COURTESY.test(rest) || rest.split(' ').length < 2) return null
+  return rest
+}
+
+/** Rows pasted from Excel (tab separated) become "description qty N unit"; a header row is dropped. */
+function fromSheetRow(line: string): string | null {
+  if (!line.includes('\t')) return line
+  let cells = line.split('\t').map(c => c.trim()).filter(Boolean)
+  if (cells.length < 2) return cells[0] ?? null
+  if (!cells.some(c => /\d/.test(c)) && cells.some(c => /^(?:desc\w*|qty|quantity|item\w*|s\.?\s?no\.?|sr\.?\s?no\.?|unit)$/i.test(c))) return null
+  if (/^\d{1,3}\.?$/.test(cells[0]) && cells.length > 2) cells = cells.slice(1)
+  let unit = ''
+  const last = cells[cells.length - 1].toLowerCase()
+  if (cells.length > 2 && (last in SAFE_UNITS || last in AMBIGUOUS_UNITS) && /^\d[\d,.]*$/.test(cells[cells.length - 2])) {
+    unit = ` ${last}`
+    cells = cells.slice(0, -1)
+  }
+  const q = cells[cells.length - 1]
+  if (cells.length > 1 && /^\d[\d,.]*$/.test(q)) return `${cells.slice(0, -1).join(' ')} qty ${q}${unit}`
+  return cells.join(' ')
+}
 
 /** Units as written -> the unit stored. Safe units may follow a number after a space; ambiguous ones need a separator. */
 const SAFE_UNITS: Record<string, string> = {
@@ -90,9 +129,13 @@ export function parseItemLine(line: string): ParsedItem {
 export function parsePaste(raw: string): ParseResult {
   const lines = raw
     .split(/\r?\n/)
-    .map(l => l.replace(/\s+/g, ' ').trim())
+    .map(fromSheetRow)
+    .map(l => (l ?? '').replace(/\s+/g, ' ').trim())
     .filter(Boolean)
-  const looksSkipped = (l: string) => SKIP.test(l.replace(MARKER, '')) || /:$/.test(l)
+  const looksSkipped = (l: string) => {
+    const body = l.replace(MARKER, '')
+    return SKIP.test(body) || /:$/.test(l) || stripPolite(body) === null
+  }
   const marked = lines.filter(l => MARKER.test(l) && !looksSkipped(l))
   const useMarkers = marked.length > 0
 
@@ -105,7 +148,7 @@ export function parsePaste(raw: string): ParseResult {
       out.push({ text: l, kind: 'skipped', marker: null })
       continue
     }
-    const body = m ? l.slice(m[0].length) : l
+    const body = stripPolite(m ? l.slice(m[0].length) : l) ?? ''
     const parsed = parseItemLine(body)
     if (!parsed.description) {
       out.push({ text: l, kind: 'skipped', marker: null })
