@@ -66,6 +66,17 @@ export function invoiceStart(a: OrderAmounts): InvoiceStart {
   }
 }
 
+/**
+ * The GST row when the net amount is typed. 18% or exempt: from the net. An order that mixes 18% and exempt lines has no single
+ * rate, so the GST left to invoice is shared out in proportion to the net typed (whole rupees): invoicing half of what is left
+ * carries half of its GST, never all of it.
+ */
+export function gstForNet(net: number, option: GstOption | 'mixed', start: Pick<InvoiceStart, 'net' | 'gst'>): number {
+  if (option !== 'mixed') return gstOn(net, option)
+  if (!(net > 0) || !(start.net > 0)) return 0
+  return Math.round((start.gst * net) / start.net)
+}
+
 /** Due date: the invoice date plus the order's payment terms. Null without terms. */
 export function dueOn(invoiceDate: string, terms: number | null): string | null {
   if (terms === null || !/^\d{4}-\d{2}-\d{2}$/.test(invoiceDate)) return null

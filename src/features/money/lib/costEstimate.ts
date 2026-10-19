@@ -1,8 +1,8 @@
 /*
  * The expected-cost SUGGESTION (DATA_MODEL 5c item 4, Amendment A2b; M04). Pure.
  *
- *   Σ qty × supplier price × today's rate, per leg currency; a line that is on an issued PO uses that PO's line instead
- *   (the PO is what was actually agreed: its latest revision wins).
+ *   Σ qty × supplier price × today's rate, per leg currency; a line that is on an issued PO uses that PO's price instead
+ *   (the PO is what was actually agreed: its latest revision wins), times the line's current quantity.
  *
  * It is "supplier price only": no freight, duty or service. It never writes anything. The panel offers it as a one-tap fill
  * for an expected cost that is still empty, and a value that was entered is never touched. Cost is counted per ORDER ITEM
@@ -73,7 +73,9 @@ export function estimateExpectedCost(input: { items: readonly EstItem[]; legs: r
     let amount: number | null = null
     let fromPo = false
     if (poLine) {
-      amount = poLine.qty * poLine.unitPrice
+      // The PO's price, for the quantity the line holds NOW: a split after the PO (A8) moves quantity to another leg, which counts it
+      // there. Using the PO's own quantity would count the moved part twice.
+      amount = it.qty * poLine.unitPrice
       fromPo = true
     } else if (it.supplierUnitPrice !== null && it.legId) {
       amount = it.qty * it.supplierUnitPrice

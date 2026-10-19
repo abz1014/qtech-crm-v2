@@ -83,6 +83,36 @@ export function convertToPaisa(foreign: Amount, rate: Amount): bigint {
   return prod >= 0n ? (prod + half) / RATE_SCALE : -((-prod + half) / RATE_SCALE)
 }
 
+/** A number or decimal text as an integer scaled by 10^decimals (beyond that, half away from zero). */
+function scaledAmount(value: Amount, decimals: number): bigint {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new Error(`Not a finite amount: ${value}`)
+    // two spare digits: 1.005 (binary 1.00499999...) reads as "1.005000", the decimal it was typed as
+    return scaled(value.toFixed(decimals + 2), decimals)
+  }
+  return scaled(value, decimals)
+}
+
+/** n / d rounded half away from zero (d > 0). */
+function divRound(n: bigint, d: bigint): bigint {
+  return n >= 0n ? (n * 2n + d) / (d * 2n) : -((-n * 2n + d) / (d * 2n))
+}
+
+/**
+ * round(qty x price, 2) in paisa, exactly as Postgres numeric does it (half away from zero). Quantity up to 3 decimals
+ * (numeric(12,3)), price up to 6 (supplier prices are numeric(14,4); a typed PO price may carry more). A float product
+ * cannot be used: 1 x 1.005 x 100 is 100.49999999999999 in floating point and would round to 1.00 where the database
+ * stores 1.01.
+ */
+export function productPaisa(qty: Amount, price: Amount): bigint {
+  return divRound(scaledAmount(qty, 3) * scaledAmount(price, 6), 10_000_000n)
+}
+
+/** GST on a line net, rounded to whole rupees (DATA_MODEL 2.13), in paisa: round(net x rate / 100, 0) x 100. */
+export function gstWholeRupeesPaisa(netPaisa: bigint, ratePercent: Amount): bigint {
+  return divRound(netPaisa * scaledAmount(ratePercent, 2), 1_000_000n) * 100n
+}
+
 /** Rate text for display: trailing zeros kept to two decimals ("278.40"), more only if present ("0.0034"). */
 export function formatRate(rate: Amount): string {
   const s = typeof rate === 'number' ? String(rate) : rate.trim()
