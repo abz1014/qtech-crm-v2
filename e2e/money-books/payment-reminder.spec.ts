@@ -116,7 +116,7 @@ test.describe('payment-reminder panel (M09)', () => {
     await expect(page.locator('li[data-rule="payment_overdue"]:not([data-waiting])').filter({ hasText: s.company.name })).toHaveCount(0)
   })
 
-  test('Receivables beside the panel has no sideways scroll at 1440 (all seven columns) or at 1280 (Gross and Settled folded)', async ({ page }) => {
+  test('Receivables has no sideways scroll at 1440 (all columns beside the panel), 1360 (Gross and Settled folded) or 1280 (panel under the table)', async ({ page }) => {
     await seedOverdue()
     await openAs(page, 'admin', '/money/receivables')
     await expect(page.getByTestId('reminder-text')).toBeVisible()
@@ -126,14 +126,14 @@ test.describe('payment-reminder panel (M09)', () => {
         const w = t?.parentElement
         return { scroll: w?.scrollWidth ?? 0, client: w?.clientWidth ?? 0, columns: Array.from(document.querySelectorAll('table thead th')).filter(th => (th as HTMLElement).offsetParent !== null).length, page: document.documentElement.scrollWidth, view: window.innerWidth }
       })
-    for (const width of [1440, 1280]) {
+    for (const [width, columns] of [[1440, 8], [1360, 6], [1280, 8]] as const) {
       await page.setViewportSize({ width, height: 900 })
       await page.waitForTimeout(300)
       const m = await measure()
       console.log(`MEASURE ${width}`, JSON.stringify(m))
       expect(m.scroll, `table scrolls sideways at ${width}`).toBeLessThanOrEqual(m.client + 1)
       expect(m.page, `page scrolls sideways at ${width}`).toBeLessThanOrEqual(m.view)
-      expect(m.columns).toBe(width >= 1440 ? 8 : 6)
+      expect(m.columns, `visible columns at ${width}`).toBe(columns)
     }
   })
 

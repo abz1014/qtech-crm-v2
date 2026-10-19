@@ -33,13 +33,13 @@ import {
  * screen) and only admin can record a payment. Open, Overdue and Settled filter the list; the four figures on top split the
  * outstanding balance by status. The payment-reminder panel beside the table is M09 (ReminderPanel): picking a row
  * selects it (the 3 px green edge) and shows its reminder; the order opens from the order number. Beside the table from
- * 1280 px, under it below that.
+ * 1360 px, under it below that.
  *
  *   /money/receivables?pay=1&order=<id>   opens Record payment for that order (admin)
  */
-// Gross and Settled fold away on a phone, and again between 1280 and 1439 px, where the reminder panel sits beside the table and the
+// Gross and Settled fold away on a phone, and again between 1360 and 1439 px, where the reminder panel sits beside the table and the
 // Balance column carries the figure that matters; the table then fits without a sideways scroll. They show everywhere else.
-const GROSS_SETTLED = 'hidden md:table-cell xl:hidden min-[1440px]:table-cell'
+const GROSS_SETTLED = 'hidden md:table-cell min-[1360px]:hidden min-[1440px]:table-cell'
 const DUE_WORD = (d: number) => `${d} ${d === 1 ? 'day' : 'days'}`
 
 export function ReceivablesPage() {
@@ -65,8 +65,8 @@ export function ReceivablesPage() {
   const selected = shown.find(r => r.orderId === picked) ?? mostOverdue
   const pick = (r: ReceivableRow) => {
     setPicked(r.orderId)
-    // Under 1280 px the panel is below the table: bring it into view.
-    if (typeof window !== 'undefined' && !window.matchMedia?.('(min-width: 1280px)').matches) panelRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+    // Under 1360 px the panel is below the table: bring it into view.
+    if (typeof window !== 'undefined' && !window.matchMedia?.('(min-width: 1360px)').matches) panelRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
   }
 
   const linkedPay = isAdmin && params.get('pay') !== null ? params.get('order') : null
@@ -183,7 +183,7 @@ export function ReceivablesPage() {
           { label: 'Not invoiced yet', amount: totals.notInvoiced, sub: `${totals.notInvoicedCount} ${totals.notInvoicedCount === 1 ? 'order' : 'orders'}, balance from items` },
         ]}
       />
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_392px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 min-[1360px]:grid-cols-[minmax(0,1fr)_392px]">
         <div className="min-w-0">
           <DataTable
             label={tabLabel}
