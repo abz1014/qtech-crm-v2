@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { InquiryRow, RfqItemRow } from '@/features/rfqs/api'
 import { buildCustomerDraft, buildGoodsDraft, buildPaymentDraft, buildSupplierDraft } from './chaseDraft'
+import { excerptOf } from './chaseMemory'
 import { agoText, chasedAgo, distanceText, headerDate, waitingLine } from './text'
 import { millions, quarterStart, roundToTile, targetWorking } from './targetModel'
 import type { TargetProgress } from './api'
@@ -10,9 +11,10 @@ const TODAY = '2026-11-27'
 const sig = { name: 'Ayesha Rana', company: 'Q-Tech Solutions', jobTitle: 'Sales' }
 const rfq: RfqFact = {
   id: 'r1', number: 177, ownerId: 'me', companyName: 'Indus Textile Mills', customerRef: '74037', receivedOn: '2026-11-17', dueOn: '2026-12-11',
+  dueTime: null,
   quotedOn: null, isPriority: false, bidState: 'to_bid', sourcingState: 'floated_awaiting', quotationValidUntil: null,
 }
-const q = (o: Partial<ClarificationFact> = {}): ClarificationFact => ({ id: 'c1', rfqId: 'r1', question: 'Line size?', firstAskedOn: '2026-11-21', lastAskedOn: '2026-11-21', askCount: 1, ...o })
+const q = (o: Partial<ClarificationFact> = {}): ClarificationFact => ({ id: 'c1', rfqId: 'r1', question: 'Line size?', rfqItemId: null, firstAskedOn: '2026-11-21', lastAskedOn: '2026-11-21', lastAskedAt: '2026-11-21T09:00:00+05:00', lastAskedBy: null, askCount: 1, ...o })
 
 describe('drafts', () => {
   it('customer: both channels, from the open questions only, with the count after the stamp', () => {
@@ -38,7 +40,7 @@ describe('drafts', () => {
   ]
   const inquiry = (o: Partial<InquiryRow> = {}): InquiryRow => ({
     id: 'q1', supplierId: 's1', supplierName: 'Metro', supplierCountry: null, sentOn: '2026-11-23', lastChasedOn: null, lastRelayedAt: null, noOfferOn: null, noOfferReason: null,
-    itemDeclines: {}, chaseCount: 0, notes: null, contactName: 'Mr. Imran', contactPhone: '0321', lastCurrency: null, responseState: 'awaiting', contactState: 'sent', itemsQuoted: 0, lines: [], ...o,
+    itemDeclines: {}, chaseCount: 0, notes: null, contactName: 'Mr. Imran', contactPhone: '0321', contactEmail: null, lastCurrency: null, responseState: 'awaiting', contactState: 'sent', itemsQuoted: 0, lines: [], ...o,
   })
   it('supplier: lists the unpriced items only and thanks for the priced one', () => {
     const d = buildSupplierDraft({ rfq, inquiry: inquiry({ lines: [{ id: 'l', inquiryId: 'q1', itemId: 'i1', unitPrice: 1, currency: 'USD', leadTime: null, inStock: null, fxRatePkr: null, fxRateOn: null }] }), items, today: TODAY, signature: sig })
@@ -112,5 +114,12 @@ describe('target tile working', () => {
   it('no target means no tile numbers', () => {
     expect(targetWorking({ ...t, targetNet: null }, TODAY)).toBeNull()
     expect(roundToTile(14_999)).toBe(10_000)
+  })
+})
+
+describe('the Chased today excerpt', () => {
+  it('keeps the opening paragraph and stops at the first numbered line', () => {
+    const text = ['Assalam o Alaikum Mr. Tariq,', '', 'A gentle reminder about your RFQ *#74037*. To complete our quotation we still need your confirmation on:', '1. Line size?', '2. Temperature?', '', 'Thank you.'].join(String.fromCharCode(10))
+    expect(excerptOf(text)).toBe('A gentle reminder about your RFQ *#74037*. To complete our quotation we still need your confirmation on:')
   })
 })

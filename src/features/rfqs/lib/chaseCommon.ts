@@ -30,9 +30,9 @@ export const isFirm = (days: number | null | undefined): boolean => days !== nul
 /** WhatsApp bolds with asterisks; email does not. */
 export const boldFor = (variant: EnquiryVariant) => (t: string) => (variant === 'email' ? t : `*${t}*`)
 
-/** "Monday 30 November", or "the end of today" when the date is today (or earlier). */
+/** "Monday 30 November", or "5:00 pm today" when the date is today (or earlier). */
 export function byDayText(iso: string, today: string): string {
-  return iso <= today ? 'the end of today' : longDay(iso)
+  return iso <= today ? '5:00 pm today' : longDay(iso)
 }
 
 /** Greeting in the approved shapes. Email has the salutation on two lines. */
@@ -49,6 +49,12 @@ export function signOff(variant: EnquiryVariant, sig: ChaseSignature): string[] 
 /** What goes on the clipboard: an email carries its subject on the first line. */
 export function chaseClipboardText(t: Pick<ChaseText, 'subject' | 'body'>): string {
   return t.subject ? `Subject: ${t.subject}\n\n${t.body}` : t.body
+}
+
+/** "17:00:00" from the database, "17:00" on screen. Null for no time. */
+export function timeText(t: string | null | undefined): string | null {
+  const m = t ? /^(\d{2}):(\d{2})/.exec(t) : null
+  return m ? `${m[1]}:${m[2]}` : null
 }
 
 export function oneLine(s: string): string {

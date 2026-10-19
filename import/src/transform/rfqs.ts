@@ -8,6 +8,20 @@ import type { Ctx } from './context'
 
 // I03: RFQs, items, supplier inquiries, quote lines. DATA_MODEL section 7, "rfqs rules".
 
+export interface NumberFloors {
+  rfq: number
+  order: number
+  quotation: number
+  po: number
+}
+
+/** "RFQ-0177" -> rfq 177; "QT-0042" -> quotation 42. Anything else is the customer's own reference. */
+export function qtechNumber(raw: string): { series: 'rfq' | 'quotation'; n: number } | null {
+  const m = /^(rfq|qt|qtech)[-_ ]?(\d{1,6})$/i.exec(raw.trim())
+  if (!m) return null
+  return { series: m[1]!.toLowerCase() === 'rfq' ? 'rfq' : 'quotation', n: Number(m[2]) }
+}
+
 export interface RfqOutput {
   rfqs: NewRow[]
   rfq_items: NewRow[]
@@ -17,6 +31,8 @@ export interface RfqOutput {
   rfqIds: Map<string, string>
   /** old rfq id -> its company and site, so an order without a client can take the RFQ's */
   rfqRefs: Map<string, CustomerRef>
+  /** highest Q-Tech own number found, per series, so v2's counters can continue after it */
+  numberFloors: NumberFloors
 }
 
 const STALE_DAYS = 180
@@ -30,7 +46,7 @@ const LOSS_REASONS: Record<string, string> = {
 
 /** The customer's own RFQ number, as opposed to one Q-Tech's old system made up. */
 export function looksCustomerIssued(rfqNumber: string): boolean {
-  return !/^(rfq|qt|qtech)[-_ ]?\d{1,6}$/i.test(rfqNumber)
+  return qtechNumber(rfqNumber) === null
 }
 
 const NO_OFFER_PHRASE = /(could\s*n[o']?t find|couldn'?t find|no offer|not able to (find|source)|unable to (find|source)|can'?t source|no quote from)/i
@@ -46,6 +62,7 @@ export function transformRfqs(ctx: Ctx, book: CompanyBook): RfqOutput {
   const rfqIds = new Map<string, string>()
   const rfqRefs = new Map<string, CustomerRef>()
   const seenRef = new Set<string>()
+  const numberFloors: NumberFloors = { rfq: 0, order: 0, quotation: 0, po: 0 }
 
   const dateOf = (r: Row, col: string, table: string, label: string, flags: string[]): string | null => {
     const p = parseLegacyDate(r[col])
@@ -123,6 +140,8 @@ export function transformRfqs(ctx: Ctx, book: CompanyBook): RfqOutput {
     // customer_ref
     let customerRef: string | null = null
     const number = str(r, 'rfq_number')
+    const own = number !== null ? qtechNumber(number) : null
+    if (own) numberFloors[own.series] = Math.max(numberFloors[own.series], own.n)
     if (number !== null && looksCustomerIssued(number)) {
       const key = `${ref.companyId}|${normName(number)}`
       if (seenRef.has(key)) flags.push('customer_ref_duplicate')
@@ -327,5 +346,5 @@ export function transformRfqs(ctx: Ctx, book: CompanyBook): RfqOutput {
   }
   const supplier_quote_lines = [...lineByKey.values()].map(v => v.row)
 
-  return { rfqs, rfq_items, supplier_inquiries, supplier_quote_lines, rfqIds, rfqRefs }
+  return { rfqs, rfq_items, supplier_inquiries, supplier_quote_lines, rfqIds, rfqRefs, numberFloors }
 }

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
+import { createCompany, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
 
 /*
@@ -125,10 +125,10 @@ test.describe('canonical scenario (FE-2 counts)', () => {
     await paste(page, s.email)
     pastes++
     await expect(page.getByText('2 items found').first()).toBeVisible()
-    await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue('2')
+    await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue('2 nos')
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue(`${s.brand1} ${s.model} electromagnetic flow meter DN50`)
     await expect(page.getByRole('combobox', { name: 'Brand of item 1' }).locator('option:checked')).toHaveText(s.brand1) // picked from the text
-    await expect(page.getByRole('textbox', { name: 'Quantity of item 2' })).toHaveValue('4')
+    await expect(page.getByRole('textbox', { name: 'Quantity of item 2' })).toHaveValue('4 nos')
     await review(page, 'intake-float-03-items-pasted-1440')
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     actions++ // 3
@@ -152,7 +152,9 @@ test.describe('canonical scenario (FE-2 counts)', () => {
     floatTaps++ // 1
     actions++
     await expect(page.getByRole('heading', { name: /Enquiry to 1 supplier/ })).toBeVisible()
-    await expect(page.getByLabel('Enquiry text')).toHaveValue(/Spec: left blank/)
+    await expect(page.getByLabel('Enquiry text')).toContainText(/Spec:\s+left blank/)
+    // A blank Spec is drawn as a highlighted blank, not as plain text.
+    await expect(page.locator('[data-spec-blank]')).toHaveCount(2)
     await review(page, 'intake-float-05-enquiry-1440')
     await page.getByRole('button', { name: 'Copy & mark floated to 1' }).click()
     floatTaps++ // 2
@@ -182,6 +184,10 @@ test.describe('canonical scenario (FE-2 counts)', () => {
     expect(items[0].brand_id).not.toBeNull()
     let inquiries = await inquiriesOf(rfq.id)
     expect(inquiries).toEqual([{ supplier_id: s.supplied.id, sent_on: karachiDay() }])
+
+    // Item 2 has no supplier ticked, and a shortlisted supplier carries it: the panel offers to float it to them.
+    await expect(page.getByText('Item 2 has no supplier yet.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Float item 2 to them' })).toBeVisible()
 
     // Undo within the toast: the RFQ stays, the inquiry goes back to shortlisted.
     await expect(page.getByRole('status').filter({ hasText: 'Floated to 1' })).toBeVisible()
@@ -306,7 +312,7 @@ test.describe('save only, and no supplier ticked', () => {
     expect(shortlisted.map(i => i.supplier_id).sort()).toEqual([s.supplied.id, s.carries.id].sort())
 
     await page.getByRole('button', { name: 'Write the enquiry' }).click()
-    await expect(page.getByLabel('Enquiry text')).toHaveValue(new RegExp(rfqRef(rfq.number)))
+    await expect(page.getByLabel('Enquiry text')).toContainText(rfqRef(rfq.number))
     await page.getByRole('button', { name: 'Copy & mark floated to 2' }).click()
     await expect(page.getByText(/is out for prices/)).toBeVisible()
     const floated = await inquiriesOf(rfq.id)
@@ -330,44 +336,78 @@ test.describe('save only, and no supplier ticked', () => {
 })
 
 test.describe('company picker', () => {
-  test('a company that is not on file is added inline (name, optional contact) without leaving the page', async ({ page }) => {
+  test('a company that is not on file is added inline, with its city and first contact, without leaving the page', async ({ page }) => {
     const name = uniqueName('Brand New Works')
     await openAs(page, 'sales', '/rfqs/new')
     let actions = 0
     await page.getByRole('combobox', { name: 'Company' }).fill(name)
     actions++
-    await expect(page.getByText('Saved as a prospect until the first order')).toBeVisible()
-    await page.getByRole('option', { name: new RegExp(`Add “${name}” as a new company`) }).click()
+    const add = page.getByRole('option', { name: new RegExp(`Add “${name}” as a new company`) })
+    await expect(add).toContainText('Saved as a prospect until the first order')
+    await add.click()
     actions++
-    const inline = page.getByRole('region', { name: 'New company' })
-    await expect(inline.getByRole('textbox', { name: /Company name/ })).toHaveValue(name)
-    await expect(inline.getByText('City and contact can wait. Add them from the company page later.')).toBeVisible()
-    await inline.getByRole('textbox', { name: /City/ }).fill('Mianwali')
-    await inline.getByRole('textbox', { name: /Contact/ }).fill('Kamran Zafar')
-    await inline.getByRole('button', { name: 'Create and use' }).click()
+    const form = page.getByRole('region', { name: 'New company' })
+    await expect(form.getByRole('textbox', { name: 'Company name' })).toHaveValue(name)
+    await expect(page.getByText('City and contact can wait. Add them from the company page later.')).toBeVisible()
+    expect(page.url()).toMatch(/\/rfqs\/new/)
+    await form.getByRole('textbox', { name: 'City' }).fill('Mianwali')
+    await form.getByRole('textbox', { name: 'Contact' }).fill('Kamran Zafar')
+    await form.getByRole('button', { name: 'Create and use' }).click()
     actions++
     await expect(page.getByText(name).first()).toBeVisible()
-    await expect(page.getByText('Prospect')).toBeVisible()
-    expect(actions).toBeLessThanOrEqual(3) // the optional contact is typed, not a required action
+    await expect(page.getByText('New prospect')).toBeVisible()
+    await expect(page.getByText('Mianwali · Kamran Zafar')).toBeVisible()
+    expect(actions).toBeLessThanOrEqual(3)
     expect(page.url()).toMatch(/\/rfqs\/new/)
-    const rows = await must(rest<{ id: string }[]>('admin', `companies?name=eq.${encodeURIComponent(name)}`))
+    const rows = await must(rest<{ id: string; city: string | null }[]>('admin', `companies?name=eq.${encodeURIComponent(name)}&select=id,city`))
     expect(rows).toHaveLength(1)
-    expect(await must(rest<{ city: string | null }[]>('admin', `companies?id=eq.${rows[0].id}&select=city`))).toEqual([{ city: 'Mianwali' }])
-    const contacts = await must(rest<{ name: string }[]>('admin', `contacts?company_id=eq.${rows[0].id}`))
+    expect(rows[0].city).toBe('Mianwali')
+    const contacts = await must(rest<{ name: string }[]>('admin', `contacts?company_id=eq.${rows[0].id}&select=name`))
     expect(contacts.map(c => c.name)).toEqual(['Kamran Zafar'])
   })
 
-  test('a near name is listed as a similar name, with its RFQ count, before a new company is added', async ({ page }) => {
+  test('a similar existing name is listed with its RFQ count and a similar-name flag before a new company is made', async ({ page }) => {
     const tag = Math.random().toString(36).slice(2, 8)
     const near = await createCompany(`Mianwali${tag} Plastics Ltd`)
-    await createRfq(near.id)
+    await must(rest('admin', 'rfqs', { method: 'POST', body: { company_id: near.id } }))
+    const typed = `Mianwali${tag} Polymers`
     await openAs(page, 'sales', '/rfqs/new')
-    await page.getByRole('combobox', { name: 'Company' }).fill(`Mianwali${tag} Polymers`)
-    const option = page.getByRole('option', { name: new RegExp(`Mianwali${tag} Plastics Ltd`) })
-    await expect(option).toBeVisible()
-    await expect(option).toContainText('similar name')
-    await expect(option).toContainText('1 RFQ')
-    await expect(page.getByRole('option', { name: /as a new company/ })).toBeVisible()
+    await page.getByRole('combobox', { name: 'Company' }).fill(typed)
+    const similar = page.getByRole('option', { name: new RegExp(near.name) })
+    await expect(similar).toContainText('1 RFQ')
+    await expect(similar).toContainText('similar name')
+    await expect(page.getByRole('option', { name: new RegExp(`Add “${typed}” as a new company`) })).toBeVisible()
+  })
+
+  test('the items zone is faded until a company is chosen', async ({ page }) => {
+    const s = await seed()
+    await openAs(page, 'sales', '/rfqs/new')
+    const zone = page.locator('section[aria-labelledby="h-items"]')
+    await expect(zone).toHaveCSS('opacity', '0.5')
+    await pickCompany(page, s.customer.name)
+    await expect(zone).toHaveCSS('opacity', '1')
+  })
+})
+
+test.describe('float one item to the supplier who is not ticked', () => {
+  test('"Float item 2 to them" asks that supplier, marks it sent and copies a text for that item only', async ({ page }) => {
+    const s = await seed()
+    await openAs(page, 'sales', '/rfqs/new')
+    await pickCompany(page, s.customer.name)
+    await paste(page, s.email)
+    await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
+    await page.getByRole('button', { name: 'Write the enquiry' }).click()
+    await page.getByRole('button', { name: 'Copy & mark floated to 1' }).click()
+    await expect(page.getByText(/is out for prices/)).toBeVisible()
+    await page.getByRole('button', { name: 'Float item 2 to them' }).click()
+    await expect(page.getByText(/Item 2 floated to /).first()).toBeVisible()
+    const [rfq] = await rfqsOf(s.customer.id)
+    const inquiries = await inquiriesOf(rfq.id)
+    expect(inquiries.map(i => i.supplier_id).sort()).toEqual([s.supplied.id, s.other.id].sort())
+    expect(inquiries.every(i => i.sent_on === karachiDay())).toBe(true)
+    const text = await clipboard(page)
+    expect(text).toContain(s.brand2)
+    expect(text).not.toContain(s.model)
   })
 })
 
@@ -379,10 +419,22 @@ for (const width of [1440, 375]) {
     expect(await violations(page)).toEqual([])
     await review(page, `intake-float-01-empty-${width}`)
 
+    // Frame 2: a name that is not on file, a similar one listed first, the inline create form open.
+    const tag = Math.random().toString(36).slice(2, 8)
+    const near = await createCompany(`Mianwali${tag} Plastics Ltd`, { city: 'Mianwali' })
+    await must(rest('admin', 'rfqs', { method: 'POST', body: [{ company_id: near.id }, { company_id: near.id }] }))
+    const typed = `Mianwali${tag} Polymers`
+    await page.getByRole('combobox', { name: 'Company' }).fill(typed)
+    await page.getByRole('option', { name: new RegExp(`Add “${typed}” as a new company`) }).click()
+    await expect(page.getByRole('region', { name: 'New company' })).toBeVisible()
+    expect(await violations(page)).toEqual([])
+    await review(page, `intake-float-02-company-typed-${width}`)
+
     await pickCompany(page, s.customer.name)
     await paste(page, s.email)
     await expect(page.getByText('2 items found').first()).toBeVisible()
     expect(await violations(page)).toEqual([])
+    await page.getByRole('textbox', { name: 'Description of item 1' }).scrollIntoViewIfNeeded()
     await review(page, `intake-float-03-items-pasted-${width}`)
 
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()

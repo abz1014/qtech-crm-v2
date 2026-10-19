@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Copy } from 'lucide-react'
+import { Copy, FileCheck } from 'lucide-react'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Checkbox } from '@/ui/form/Checkbox'
+import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
+import { ReasonParts } from '@/features/rfqs/ranking/RankParts'
 import type { RfqItemRow } from '@/features/rfqs/api'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import type { SupplierSuggestion } from '@/features/rfqs/lib'
@@ -13,7 +15,8 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib'
  * "Suppliers to ask" (g2-rfq-detail, empty state): the suggested suppliers with the reason for each, the ones who supplied the
  * item before already ticked, and one button that copies an enquiry listing every item and records the asking. The same list
  * is what "Float to another supplier" opens in a dialog once suppliers have been asked. Suggestions come from R03 (the reasons)
- * and R17 (the memory); nothing is scored and the history never reorders the list.
+ * and R17 (the memory); nothing is scored. Inside a reason the supplier with the better record comes first (A8), and the order
+ * behind it is cited (number, the date we placed it, days to delivery).
  */
 
 /** The ticked suppliers, starting with the pre-ticked ones; a tick or untick by hand is kept. */
@@ -47,6 +50,19 @@ function PickList({
               </label>
             </div>
             <p className="pl-[30px] text-xs text-fg-muted">{s.reason}</p>
+            {s.evidence ? (
+              <p className="flex items-start gap-[6px] pl-[30px] text-xs text-fg-2" data-evidence>
+                <Icon icon={FileCheck} size="chip" className="mt-[2px] text-fg-muted" />
+                <span className="text-pretty">
+                  <ReasonParts reason={s.evidence} />
+                </span>
+              </p>
+            ) : null}
+            {s.record ? (
+              <p className={s.record.tone === 'warn' ? 'pl-[30px] text-xs font-medium text-tone-warning-fg' : 'pl-[30px] text-xs text-fg-2'} data-record>
+                <ReasonParts reason={s.record} />
+              </p>
+            ) : null}
           </li>
         )
       })}

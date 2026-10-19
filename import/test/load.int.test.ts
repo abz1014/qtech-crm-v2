@@ -127,7 +127,7 @@ describe.skipIf(!ENABLED)('the import against the local stack', () => {
     expect(first['rfqs']).toHaveLength(expected('rfqs'))
     expect(first['orders']).toHaveLength(16)
     expect(first['order_items']).toHaveLength(17)
-    expect(first['invoices']).toHaveLength(12)
+    expect(first['invoices']).toHaveLength(13)
     expect(first['payments_in']).toHaveLength(expected('payments_in'))
     expect(first['expenses']).toHaveLength(expected('expenses'))
     expect(first['brands']).toHaveLength(expected('brands', 1))
@@ -145,6 +145,9 @@ describe.skipIf(!ENABLED)('the import against the local stack', () => {
     const v2Numbers = (await rows(db, 'rfqs', 'id,number')).filter(x => !isLegacyId(String(x['id']))).map(x => Number(x['number']))
     const importNumbers = firstRfqNumbers.map(x => Number((x as unknown[])[1]))
     expect(Math.min(...importNumbers)).toBeGreaterThan(Math.max(...v2Numbers))
+    // our own series continue after the highest of v2's numbers and the highest imported Q-Tech number (RFQ-0177). The
+    // counters were moved by earlier tests, so v2's own numbers are not small here.
+    expect(Math.min(...importNumbers)).toBe(Math.max(...v2Numbers, 177) + 1)
   })
 
   it('does not touch rows v2 made, and reuses what v2 already holds', async () => {
@@ -176,6 +179,16 @@ describe.skipIf(!ENABLED)('the import against the local stack', () => {
     const invs = await rows(db, 'invoices', 'id,number,legacy_flags')
     const noNumber = invs.filter(i => isLegacyId(String(i['id'])) && i['number'] === null && (i['legacy_flags'] as string[]).includes('number_duplicate'))
     expect(noNumber.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('credits nobody: every imported payment has no credited user, and no legacy payment counts toward a target', async () => {
+    const admin = await signedIn('admin@test.invalid')
+    const pays = (await rows(admin, 'payments_in', 'id,credited_user_id')).filter(p => isLegacyId(String(p['id'])))
+    expect(pays.length).toBeGreaterThan(5)
+    expect(pays.every(p => p['credited_user_id'] === null)).toBe(true)
+    const net = (await rows(admin, 'v_payment_net', 'payment_id,counts_in_target')).filter(p => isLegacyId(String(p['payment_id'])))
+    expect(net.length).toBe(pays.length)
+    expect(net.every(p => p['counts_in_target'] === false)).toBe(true)
   })
 
   it('leaves no audit rows behind for the import, and keeps the audit rows of v2 records', async () => {

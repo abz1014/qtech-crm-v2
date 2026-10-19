@@ -124,10 +124,10 @@ tables.rfqs = [
   rfq(8, { client_id: C.eta, rfq_date: 'garbage', status: 'new' }),
   rfq(9, { client_id: C.epsilon, rfq_date: '2024-11-01', status: 'lost', loss_reason: 'poor_follow_up' }),
   rfq(10, { client_id: C.theta, rfq_date: '2024-11-03', status: 'lost', loss_reason: 'price', quote_sent_date: '2024-11-09' }),
-  rfq(11, { client_id: C.alpha, rfq_date: '2024-11-04', status: 'lost', loss_reason: null, assigned_to: SALES }),
+  rfq(11, { rfq_number: 'RFQ-0177', client_id: C.alpha, rfq_date: '2024-11-04', status: 'lost', loss_reason: null, assigned_to: SALES }),
   rfq(12, { client_id: C.beta, rfq_date: '2025-01-20', status: 'in_progress', notes: 'Floated to 3 suppliers, could not find offer for item 2.' }),
   rfq(13, { client_id: C.zeta, rfq_number: 'PR-4521', rfq_date: '2025-01-22', status: 'new', notes: 'Same customer number as RFQ 1.' }),
-  rfq(14, { client_id: C.gamma, rfq_date: '2025-02-03', status: 'new', priority: 'low', assigned_to: SALES }),
+  rfq(14, { rfq_number: 'QT-0042', client_id: C.gamma, rfq_date: '2025-02-03', status: 'new', priority: 'low', assigned_to: SALES }),
   rfq(15, { client_id: C.delta, rfq_date: '2025-02-04', status: 'in_progress', assigned_to: SALES }),
   rfq(16, { client_id: C.eta, rfq_date: '2025-02-05', status: 'new', assigned_to: null }),
   rfq(17, { client_id: C.theta, rfq_date: '2025-02-06', status: 'quoted', quote_sent_date: '2025-02-10', assigned_to: SALES }),
@@ -210,6 +210,7 @@ tables.invoices = [
   inv(2, { invoice_number: 'INV-B-11', order_id: O.o11, client_id: C.gamma, invoice_amount: 617258, issued_date: '2024-10-20', amount_paid: 357360, payment_status: 'Partial' }),
   inv(3, { invoice_number: 'INV-0001', order_id: O.o14, client_id: C.epsilon, invoice_amount: 95000, issued_date: '2025-01-25' }),
   inv(4, { invoice_number: 'INV-B-01', order_id: O.o1, client_id: C.zeta, invoice_amount: 370000, issued_date: '2024-10-15' }),
+  inv(6, { invoice_number: 'INV-B-77', client_id: C.gamma, invoice_amount: 5000, issued_date: '2025-02-10' }), // no order link
   inv(5, { invoice_number: 'INV-B-05', order_id: O.o5, client_id: C.zeta, invoice_amount: 650163, issued_date: '2024-08-20' }),
 ]
 const pay = (n, order, amount, payment_date, extra = {}) => ({ id: id('pay', n), order_id: order, amount, payment_date, payment_method: 'Bank Transfer', reference: `REF-${n}`, notes: null, recorded_by: ADMIN, created_at: ts(900 + n), ...extra })

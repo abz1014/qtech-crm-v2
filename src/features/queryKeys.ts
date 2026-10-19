@@ -55,6 +55,9 @@ function rfqs() {
     lists: () => [...all, 'list'] as const,
     /** R06: every open RFQ with its state, owner and company name. */
     board: () => [...all, 'list', 'board'] as const,
+    /** The board's Value (PKR net) column: quoted net per open RFQ. Money: never requested for an engineer. */
+    values: () => [...all, 'list', 'values'] as const,
+    userNames: () => [...all, 'user-names'] as const,
     /** R06: one page of won and closed RFQs. */
     closed: (page: number) => [...all, 'list', 'closed', page] as const,
     closedCount: () => [...all, 'list', 'closed-count'] as const,
@@ -73,8 +76,8 @@ function rfqs() {
     signature: (userId: string) => [...all, 'signature', userId] as const,
   }
 }
-/** R19 adds the quotation slices: the issued quotations, the items with their quoted prices, the price chips. */
-export type RfqPart = 'header' | 'items' | 'inquiries' | 'clarifications' | 'attachments' | 'quotations' | 'quote-items' | 'price-memory'
+/** R19 adds the quotation slices: the issued quotations, the items with their quoted prices, the price chips. A8 (R25) adds the ranking of the quotes. */
+export type RfqPart = 'header' | 'items' | 'inquiries' | 'clarifications' | 'attachments' | 'quotations' | 'quote-items' | 'price-memory' | 'ranking'
 
 /** Exchange rates (R07 reads today's rate per currency; R15 owns editing them). */
 function fx() {
@@ -122,6 +125,8 @@ function orders() {
     /** R22: the orders Capture offers (opened lately), and its search. */
     captureRecent: () => [...all, 'list', 'capture-recent'] as const,
     captureSearch: (text: string, includePo: boolean) => [...all, 'list', 'capture-search', text.trim().toLowerCase(), includePo] as const,
+    /** A8: the ranked quotes of an RFQ for the convert dialog and the Split line dialog (the role is in the key: an engineer's rows carry no selling price). */
+    ranked: (rfqId: string, role: string) => [...all, 'list', 'ranked', rfqId, role] as const,
     /** Suppliers a leg can be added for. */
     supplierChoices: () => [...all, 'list', 'supplier-choices'] as const,
     jobTitle: (userId: string) => [...all, 'list', 'job-title', userId] as const,
@@ -241,6 +246,18 @@ function money() {
   }
 }
 
+/** P01: the four read-only report views. Nothing writes to them, so no write invalidates them. */
+function reports() {
+  const all = root('reports')
+  return {
+    all,
+    outcomes: () => [...all, 'outcomes'] as const,
+    float: () => [...all, 'float'] as const,
+    turnaround: () => [...all, 'turnaround'] as const,
+    repeatCustomers: () => [...all, 'repeat-customers'] as const,
+  }
+}
+
 export const qk = {
   today: today(),
   settings: settings(),
@@ -253,6 +270,7 @@ export const qk = {
   memory: memory(),
   fx: fx(),
   money: money(),
+  reports: reports(),
 }
 
 export type QueryKeyRoot = keyof typeof qk

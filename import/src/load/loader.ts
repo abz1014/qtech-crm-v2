@@ -314,9 +314,15 @@ export async function loadLegacy(opts: LoadOptions): Promise<LoadSummary> {
     }
   }
 
-  // ---------------------------------------------------------------- 5. numbering starts after what v2 holds
+  // ---------------------------------------------------------------- 5. our own numbers continue after the highest one in use (v2's, or imported Q-Tech numbers)
   {
-    const { error } = await db.rpc('import_reset_numbers')
+    const f = result.numberFloors
+    const { error } = await db.rpc('import_reset_numbers', {
+      p_rfq_min: f.rfq,
+      p_order_min: f.order,
+      p_quotation_min: f.quotation,
+      p_po_min: f.po,
+    })
     if (error) fail('import_reset_numbers', error)
   }
 

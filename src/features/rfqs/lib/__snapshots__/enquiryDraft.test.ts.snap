@@ -2,7 +2,9 @@
 
 exports[`snapshots > 20 items, WhatsApp 1`] = `
 "Assalam o Alaikum,
+
 Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):
+
 1. Pressure gauge model PG-100, 1 m
    Spec: left blank
 2. Pressure gauge model PG-101, 2 nos
@@ -43,13 +45,16 @@ Please quote your best price, availability and lead time for the following (our 
    Spec: left blank
 20. Pressure gauge model PG-119, 20 nos
    Spec: left blank
+
 Please include in your reply:
 - Unit price and currency
 - Lead time
 - Origin and authenticity (country of origin; original and genuine)
 - Stock position
 - MOQ, offer validity and payment terms
+
 Kindly reply by *Monday 30 November*. If you cannot offer an item, please say so and we will look elsewhere.
+
 Thank you.
 Regards,
 Ayesha Rana
@@ -58,7 +63,9 @@ Q-Tech Solutions"
 
 exports[`snapshots > WhatsApp, the four mockup items 1`] = `
 "Assalam o Alaikum,
+
 Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):
+
 1. Endress+Hauser Proline Promag 400 electromagnetic flow meter, DN50, 2 nos
    Spec: left blank
 2. Hach HQ1110 portable pH/EC meter with probes, 1 no
@@ -67,13 +74,16 @@ Please quote your best price, availability and lead time for the following (our 
    Spec: left blank
 4. 24V actuator for ball valve, DN40, 2 nos
    Spec: left blank
+
 Please include in your reply:
 - Unit price and currency
 - Lead time
 - Origin and authenticity (country of origin; original and genuine)
 - Stock position
 - MOQ, offer validity and payment terms
+
 Kindly reply by *Monday 30 November*. If you cannot offer an item, please say so and we will look elsewhere.
+
 Thank you.
 Regards,
 Ayesha Rana
@@ -117,7 +127,9 @@ ayesha@q-tech.example"
 
 exports[`snapshots > missing brand, brand given separately, and a spec carried by the item 1`] = `
 "Assalam o Alaikum,
+
 Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):
+
 1. Ball valve DN40, PN16, 6 nos
    Spec: left blank
 2. Belimo LF24-SR actuator, 3 nos
@@ -127,13 +139,16 @@ Please quote your best price, availability and lead time for the following (our 
 4. Cable 4x1.5 mm2, 150 m
    Spec: Armoured, copper
    600/1000 V
+
 Please include in your reply:
 - Unit price and currency
 - Lead time
 - Origin and authenticity (country of origin; original and genuine)
 - Stock position
 - MOQ, offer validity and payment terms
+
 Kindly reply by *Monday 30 November*. If you cannot offer an item, please say so and we will look elsewhere.
+
 Thank you.
 Regards,
 Ayesha Rana
@@ -142,7 +157,9 @@ Q-Tech Solutions"
 
 exports[`snapshots > no due date, WhatsApp and email 1`] = `
 "Assalam o Alaikum,
+
 Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):
+
 1. Endress+Hauser Proline Promag 400 electromagnetic flow meter, DN50, 2 nos
    Spec: left blank
 2. Hach HQ1110 portable pH/EC meter with probes, 1 no
@@ -151,13 +168,16 @@ Please quote your best price, availability and lead time for the following (our 
    Spec: left blank
 4. 24V actuator for ball valve, DN40, 2 nos
    Spec: left blank
+
 Please include in your reply:
 - Unit price and currency
 - Lead time
 - Origin and authenticity (country of origin; original and genuine)
 - Stock position
 - MOQ, offer validity and payment terms
+
 Kindly reply at your earliest convenience. If you cannot offer an item, please say so and we will look elsewhere.
+
 Thank you.
 Regards,
 Ayesha Rana
@@ -201,16 +221,21 @@ ayesha@q-tech.example"
 
 exports[`snapshots > single item, WhatsApp and email 1`] = `
 "Assalam o Alaikum,
+
 Please quote your best price, availability and lead time for the following (our ref *RFQ-0185*):
+
 1. Hach HQ1110 portable pH/EC meter with probes, 1 no
    Spec: left blank
+
 Please include in your reply:
 - Unit price and currency
 - Lead time
 - Origin and authenticity (country of origin; original and genuine)
 - Stock position
 - MOQ, offer validity and payment terms
+
 Kindly reply by *Monday 30 November*. If you cannot offer an item, please say so and we will look elsewhere.
+
 Thank you.
 Regards,
 Ayesha Rana

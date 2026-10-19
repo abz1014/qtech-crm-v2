@@ -165,9 +165,16 @@ function BurstContent({ onClose }: { onClose: () => void }) {
     const unsavable = invalidRows(settled)
     if (unsavable.length > 0) {
       // Never save the others and quietly leave this one behind: nothing goes until every filled row has a date and a category.
-      setBanner(unsavable.length === 1 ? 'One row has no valid date. Fix it, then save.' : `${unsavable.length} rows have no valid date. Fix them, then save.`)
-      const id = unsavable[0].id
-      requestAnimationFrame(() => bodyRef.current?.querySelector<HTMLElement>(`[data-row="${id}"] [data-cell="date"]`)?.focus())
+      const noCategory = unsavable.filter(r => r.categoryText)
+      setBanner(
+        noCategory.length > 0
+          ? `No category matches "${noCategory[0].categoryText}". Pick one from the list, then save.`
+          : unsavable.length === 1
+            ? 'One row has no valid date. Fix it, then save.'
+            : `${unsavable.length} rows have no valid date. Fix them, then save.`,
+      )
+      const first = noCategory[0] ?? unsavable[0]
+      requestAnimationFrame(() => bodyRef.current?.querySelector<HTMLElement>(first.categoryText ? `[data-row="${first.id}"] [role="combobox"]` : `[data-row="${first.id}"] [data-cell="date"]`)?.focus())
       return
     }
     lock.current = true
@@ -476,7 +483,8 @@ function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, cou
         aria-label={`Category, row ${index}`}
         size="cell"
         tag={row.categorySource === 'typed' ? undefined : row.categorySource === 'most-used' ? 'most used' : 'carried'}
-        onChange={id => onPatch({ categoryId: id, categorySource: 'typed' })}
+        onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
+        onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
       />
       <CellDate
         index={index}

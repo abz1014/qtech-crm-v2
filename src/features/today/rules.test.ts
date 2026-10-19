@@ -39,6 +39,7 @@ const rfq = (o: Partial<RfqFact> = {}): RfqFact => ({
   customerRef: '74037',
   receivedOn: '2026-11-17',
   dueOn: '2026-12-11',
+  dueTime: null,
   quotedOn: null,
   isPriority: false,
   bidState: 'to_bid',
@@ -50,8 +51,11 @@ const clar = (o: Partial<ClarificationFact> = {}): ClarificationFact => ({
   id: 'c1',
   rfqId: 'r1',
   question: 'Line size?',
+  rfqItemId: null,
   firstAskedOn: '2026-11-20',
   lastAskedOn: '2026-11-20',
+  lastAskedAt: '2026-11-20T09:00:00+05:00',
+  lastAskedBy: null,
   askCount: 1,
   ...o,
 })
@@ -207,6 +211,21 @@ describe('rule: chase customer', () => {
   })
 })
 
+describe('collision line (O-3)', () => {
+  it('a customer chase made by a colleague carries who and when; one made by you carries nothing', () => {
+    const theirs = ruleChaseCustomer(ctx({ rfqs: [rfq()], clarifications: [clar({ lastAskedOn: '2026-11-26', lastAskedAt: '2026-11-26T09:00:00+05:00', lastAskedBy: OTHER, askCount: 2 })] }))[0]
+    expect(theirs.collision).toEqual({ by: OTHER, at: '2026-11-26T09:00:00+05:00' })
+    const mine = ruleChaseCustomer(ctx({ rfqs: [rfq()], clarifications: [clar({ lastAskedOn: '2026-11-26', lastAskedBy: ME })] }))[0]
+    expect(mine.collision).toBeUndefined()
+    const none = ruleChaseCustomer(ctx({ rfqs: [rfq()], clarifications: [clar({ lastAskedOn: '2026-11-26' })] }))[0]
+    expect(none.collision).toBeUndefined()
+  })
+  it('a supplier chase and a goods chase carry it too', () => {
+    expect(ruleChaseSupplier(ctx({ rfqs: [rfq()], inquiries: [inq({ sentOn: '2026-11-10', lastChasedOn: '2026-11-26', chaseCount: 1, lastChasedBy: OTHER })] }))[0].collision).toEqual({ by: OTHER, at: '2026-11-26' })
+    expect(ruleGoodsLate(ctx({ legs: [leg({ lastChasedOn: '2026-11-26', chaseCount: 1, lastChasedBy: OTHER })] }))[0].collision).toEqual({ by: OTHER, at: '2026-11-26' })
+  })
+})
+
 describe('rule: relay answers', () => {
   it('names the count and the supplier', () => {
     const [e] = ruleRelayAnswers(ctx({ rfqs: [rfq()], inquiries: [inq({ answersToRelay: 3, supplierName: 'Beli Valves' })] }))
@@ -285,6 +304,11 @@ describe('rule: bid due', () => {
     expect(rows.map(r => r.title)).toEqual(['Bid due today', 'Bid 2 days overdue', 'Bid due Wednesday 2 December'])
     expect(rows[0].badge).toEqual({ text: 'today', tone: 'danger' })
   })
+  it('names the bid time when the RFQ has one (rfqs.due_time)', () => {
+    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: TODAY, dueTime: '17:00:00' })] }))[0].title).toBe('Bid due today, 17:00')
+    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-11-28', dueTime: '12:00:00' })] }))[0].title).toBe('Bid due tomorrow, 12:00')
+    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-12-02', dueTime: '09:30:00' })] }))[0].title).toBe('Bid due Wednesday 2 December, 09:30')
+  })
   it('words tomorrow, and skips RFQs already bid, without a date or owned by someone else', () => {
     expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-11-28' })] }))[0].title).toBe('Bid due tomorrow')
     expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-11-28', bidState: 'bid_sent' })] }))).toEqual([])
@@ -347,8 +371,7 @@ describe('rule: goods late', () => {
     expect(ruleGoodsLate(ctx({ legs: [leg({ reference: 'PO 253102' })] }))[0].ref).toBe('PO 253102')
     expect(ruleGoodsLate(ctx({ legs: [leg({ reference: 'POLEQWPA' })] }))[0].ref).toBe('PO POLEQWPA') // a reference that merely starts with PO keeps it
   })
-  it('is not raised for goods received or delivered, on time, or not yet placed', () => {
-    expect(ruleGoodsLate(ctx({ legs: [leg({ receivedOn: '2026-11-25' })] }))).toEqual([])
+  it('is not raised for goods delivered, on time, or not yet placed (delivered is the only end state; received_on follows it)', () => {
     expect(ruleGoodsLate(ctx({ legs: [leg({ deliveredOn: '2026-11-25' })] }))).toEqual([])
     expect(ruleGoodsLate(ctx({ legs: [leg({ expectedOn: '2026-11-27' })] }))).toEqual([])
     expect(ruleGoodsLate(ctx({ legs: [leg({ placedOn: null })] }))).toEqual([])

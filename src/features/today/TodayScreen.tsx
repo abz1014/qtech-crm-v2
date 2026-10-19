@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Banknote, CalendarCheck, ChevronDown, ChevronRight, FileCheck, Hourglass, MessageCircleQuestion, ReceiptText, Send, Share2, ShoppingCart, Truck, Undo2, Wrench, type LucideIcon } from 'lucide-react'
+import { Banknote, CalendarCheck, ChevronDown, ChevronRight, FileCheck, Hourglass, MessageCircleQuestion, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -12,6 +12,8 @@ import { Skeleton } from '@/ui/Skeleton'
 import { ContextPane } from '@/features/today/ContextPane'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import { TargetTile } from '@/features/today/TargetTile'
+import { isFreshChase } from '@/features/today/chaseMemory'
+import { chasedByText } from '@/features/rfqs/lib/collision'
 import { headerDate, waitingLine } from '@/features/today/text'
 import type { Role, RuleKey, TodayItem, TodayTab } from '@/features/today/types'
 
@@ -22,7 +24,7 @@ import type { Role, RuleKey, TodayItem, TodayTab } from '@/features/today/types'
  */
 const ICON: Record<RuleKey, LucideIcon> = {
   chase_customer: MessageCircleQuestion,
-  relay_answers: Undo2,
+  relay_answers: Reply,
   not_floated: Share2,
   chase_supplier: Send,
   bid_due: FileCheck,
@@ -38,8 +40,8 @@ const ICON: Record<RuleKey, LucideIcon> = {
 const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Bids', sourcing: 'Sourcing', money: 'Money' }
 const WAITING_OPEN_MAX = 5
 
-/** Whether the Waiting group was opened, kept for this browser session only. */
-let waitingOpenedThisSession = false
+/** Whether the person opened or closed the Waiting group, kept for this browser session only (null: not touched, the size decides). */
+let waitingToggledThisSession: boolean | null = null
 
 export default function TodayScreen() {
   const session = useSession()
@@ -55,7 +57,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const [selected, setSelected] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [copied, setCopied] = useState<ReadonlySet<string>>(new Set())
-  const [waitingOpen, setWaitingOpen] = useState(waitingOpenedThisSession)
+  const [waitingToggled, setWaitingToggled] = useState<boolean | null>(waitingToggledThisSession)
   const markCopied = (k: string) => setCopied(s => new Set(s).add(k))
   const release = (k: string) =>
     setCopied(s => {
@@ -91,6 +93,10 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const dueNow = view?.now.length ?? 0
   const tabs: Array<'all' | TodayTab> = user.role === 'engineer' ? ['all', 'bids', 'sourcing'] : ['all', 'bids', 'sourcing', 'money']
 
+  // Five or fewer: open. More than five: collapsed, and opening it is the person's choice (remembered for the session).
+  const waitingOpen = waitingToggled ?? waiting.length <= WAITING_OPEN_MAX
+  const nextOf = (key: string) => active.find(i => i.key !== key)
+
   const pick = (k: string) => {
     if (wide) setSelected(k)
     else setExpanded(e => (e === k ? null : k))
@@ -99,11 +105,18 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const list = (
     <div className="grid content-start">
       <header className="grid gap-1 px-5 pb-3 pt-5">
-        <h1 className="text-2xl font-semibold tracking-tight">Today</h1>
+        <h1 className={wide ? 'text-2xl font-semibold tracking-tight' : 'sr-only'}>Today</h1>
         <p className="text-sm text-fg-muted">
           {headerDate(today)}
-          {view ? <> · <b className="num font-medium text-fg">{counts.all}</b> need you · <b className="num font-medium text-fg">{dueNow}</b> due now</> : null}
+          {view ? (
+            <>
+              {wide ? ' · ' : ' · '}
+              <b className="num font-medium text-fg">{counts.all}</b> need you{wide ? ' · ' : ', '}
+              <b className="num font-medium text-fg">{dueNow}</b> due now
+            </>
+          ) : null}
         </p>
+        {wide ? null : <TargetTile today={today} className="mt-2 rounded border bg-surface" />}
         <SegmentedControl
           aria-label="Show"
           className="mt-2 justify-self-start"
@@ -140,10 +153,10 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                 </h2>
                 <ul>
                   {g.items.map(i => (
-                    <Row key={i.key} item={i} today={today} open={openId === i.key} copied={copied.has(i.key)} wide={wide} onPick={() => pick(i.key)}>
+                    <Row key={i.key} item={i} today={today} names={data?.names} open={openId === i.key} copied={copied.has(i.key)} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
                         <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
-                          <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} />
+                          <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
                         </div>
                       ) : null}
                     </Row>
@@ -156,29 +169,28 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
             <section aria-label="Waiting" className="border-t bg-sunken">
               <button
                 type="button"
-                aria-expanded={waitingOpen || waiting.length <= WAITING_OPEN_MAX}
-                disabled={waiting.length <= WAITING_OPEN_MAX}
+                aria-expanded={waitingOpen}
                 onClick={() => {
-                  waitingOpenedThisSession = !waitingOpen
-                  setWaitingOpen(!waitingOpen)
+                  waitingToggledThisSession = !waitingOpen
+                  setWaitingToggled(!waitingOpen)
                 }}
-                className="flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-medium text-fg-2 disabled:cursor-default"
+                className="flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-medium text-fg-2"
               >
-                <Icon icon={waitingOpen || waiting.length <= WAITING_OPEN_MAX ? ChevronDown : ChevronRight} size="sm" />
+                <Icon icon={waitingOpen ? ChevronDown : ChevronRight} size="sm" />
                 Waiting <span className="num font-regular text-fg-muted">{waiting.length}</span>
                 <span className="ml-auto text-xs font-regular text-fg-muted">
-                  {waitingOpen || waiting.length <= WAITING_OPEN_MAX
+                  {waitingOpen
                     ? 'comes back when its date arrives'
                     : `next nudge ${formatDay(waiting[0].waiting?.nextNudgeOn ?? today)}`}
                 </span>
               </button>
-              {waitingOpen || waiting.length <= WAITING_OPEN_MAX ? (
+              {waitingOpen ? (
                 <ul>
                   {waiting.map(i => (
-                    <Row key={i.key} item={i} today={today} waiting open={openId === i.key} copied={false} wide={wide} onPick={() => pick(i.key)}>
+                    <Row key={i.key} item={i} today={today} names={data?.names} waiting open={openId === i.key} copied={false} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
                         <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
-                          <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} />
+                          <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
                         </div>
                       ) : null}
                     </Row>
@@ -196,7 +208,6 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
     <div className="grid min-h-full md:h-full md:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
       <div className="flex min-h-0 flex-col border-r bg-surface">
         {/* On a phone the target tile sits above the list; on desktop it is the foot of the list column. */}
-        {wide ? null : <div className="border-b"><TargetTile today={today} /></div>}
         <div className="min-h-0 flex-1 md:overflow-y-auto">{list}</div>
         {wide ? <div className="border-t bg-surface"><TargetTile today={today} /></div> : null}
       </div>
@@ -204,7 +215,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
         <div className="min-h-0 overflow-y-auto px-8 py-6">
           {current && data ? (
             <div className="mx-auto max-w-[860px]">
-              <ContextPane key={current.key} item={current} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} />
+              <ContextPane key={current.key} item={current} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} nextItem={nextOf(current.key)} onSelect={setSelected} />
             </div>
           ) : query.isPending ? null : (
             <div className="grid h-full place-items-center text-sm text-fg-muted">Select an item to see what to do about it.</div>
@@ -215,7 +226,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   )
 }
 
-function Row({ item, today, waiting = false, open, copied, wide, onPick, children }: { item: TodayItem; today: string; waiting?: boolean; open: boolean; copied: boolean; wide: boolean; onPick: () => void; children?: React.ReactNode }) {
+function Row({ item, today, names, waiting = false, open, copied, wide, onPick, children }: { item: TodayItem; today: string; names?: Record<string, string>; waiting?: boolean; open: boolean; copied: boolean; wide: boolean; onPick: () => void; children?: React.ReactNode }) {
   const tone = item.badge.tone === 'danger' ? 'text-tone-danger-fg' : item.badge.tone === 'warning' ? 'text-tone-warning-fg' : 'text-fg-muted'
   return (
     <li data-rule={item.rule} data-waiting={waiting || undefined} className="border-b last:border-b-0">
@@ -225,9 +236,11 @@ function Row({ item, today, waiting = false, open, copied, wide, onPick, childre
         aria-expanded={wide ? undefined : open}
         aria-current={wide && open ? 'true' : undefined}
         className={cn(
-          'grid w-full grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-3 border-l-2 px-5 py-3 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken',
+          'grid w-full items-start gap-3 border-l-2 px-5 py-3 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken',
           open ? 'border-brand-green bg-selected' : 'border-transparent',
+          wide ? 'grid-cols-[2rem_minmax(0,1fr)_auto]' : 'grid-cols-[2rem_minmax(0,1fr)_auto_auto]',
           waiting && 'bg-sunken',
+          waiting && item.waiting?.chasedOn === today && isFreshChase(item.key) && 'row-settle',
         )}
       >
         <span className={cn('grid size-8 place-items-center rounded border bg-surface', waiting ? 'text-fg-muted' : 'text-fg-2')}>
@@ -238,6 +251,11 @@ function Row({ item, today, waiting = false, open, copied, wide, onPick, childre
           <span className="truncate text-xs text-fg-muted">
             <span className="num">{item.ref}</span> · {item.party}
           </span>
+          {item.collision && names?.[item.collision.by] ? (
+            <span data-collision className="flex items-center gap-1 text-xs text-tone-warning-fg">
+              <Icon icon={Users} size="chip" /> {chasedByText(names[item.collision.by], item.collision.at, Date.now())}
+            </span>
+          ) : null}
           {item.waiting ? (
             <span className="text-xs text-fg-muted">{waitingLine(item.waiting.chasedOn, item.waiting.nextNudgeOn, today, item.rule === 'payment_overdue' ? 'reminded' : 'chased')}</span>
           ) : null}
@@ -247,8 +265,9 @@ function Row({ item, today, waiting = false, open, copied, wide, onPick, childre
         ) : copied ? (
           <span className="inline-flex h-5 items-center rounded bg-tone-success-bg px-2 text-xs font-medium text-tone-success-fg">Copied</span>
         ) : (
-          <span className={cn('num whitespace-nowrap pt-0.5 text-xs', tone)}>{item.badge.text}</span>
+          <span className={cn('num whitespace-nowrap pt-1 text-xs', tone)}>{item.badge.text}</span>
         )}
+        {wide ? null : <Icon icon={ChevronRight} size="sm" className={cn('mt-1 text-fg-muted transition-transform duration-fast', open && 'rotate-90')} />}
       </button>
       {children}
     </li>

@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -7,6 +8,10 @@ import type { SessionState } from '@/app/session'
 import { AppShell } from '@/app/shell/AppShell'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Avatar } from '@/ui/Avatar'
+import { installFakeDb } from '@/test/fakeSupabase'
+
+installFakeDb(() => ({ data: [] })) // the shell reads the nav counts
+const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
 vi.mock('@/features/capture/CaptureSheet', () => ({ default: () => <div role="dialog" aria-label="Capture" /> }))
 vi.mock('@/features/search/api', () => ({ searchAll: () => Promise.resolve([]) }))
@@ -25,6 +30,7 @@ function BarPage() {
 
 function shell(path = '/today') {
   return render(
+    <QueryClientProvider client={client}>
     <SessionProvider value={signedIn}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
@@ -43,7 +49,8 @@ function shell(path = '/today') {
           </Route>
         </Routes>
       </MemoryRouter>
-    </SessionProvider>,
+    </SessionProvider>
+    </QueryClientProvider>,
   )
 }
 

@@ -41,7 +41,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
   return (
     <section aria-label={`Your ${w.label} target`} className={cn('grid gap-2 p-4', className)}>
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-sm text-fg-muted">Your {w.label} target</p>
+        <p className="whitespace-nowrap text-sm text-fg-muted">Your {w.label} target</p>
         <Status w={w} />
       </div>
       <p className="text-lg">
@@ -50,7 +50,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
       </p>
       <div className="grid gap-1">
         <p className="num text-xs" style={{ paddingLeft: `min(${w.markerPct}%, calc(100% - 9rem))` }}>
-          on pace {millions(w.onPace)}
+          on pace PKR {millions(w.onPace)}
         </p>
         <div
           role="img"
@@ -61,8 +61,13 @@ export function TargetTile({ today, className }: { today: string; className?: st
           <span className="absolute inset-y-0 left-0 bg-brand-green" style={{ width: `${w.fillPct}%` }} />
           {w.markerPct > w.fillPct ? (
             <span
-              className="absolute inset-y-0 border-y border-tone-warning-fg bg-tone-warning-bg"
-              style={{ left: `${w.fillPct}%`, width: `${w.markerPct - w.fillPct}%` }}
+              className="absolute inset-y-0"
+              style={{
+                left: `${w.fillPct}%`,
+                width: `${w.markerPct - w.fillPct}%`,
+                // the shortfall is hatched: the gap to where you should be, not a second amount
+                backgroundImage: 'repeating-linear-gradient(135deg, var(--tone-warning-fg) 0 1.5px, transparent 1.5px 4px)',
+              }}
             />
           ) : null}
           <span className="absolute inset-y-0 w-px bg-fg" style={{ left: `${w.markerPct}%` }} />
@@ -101,14 +106,14 @@ export function TargetTile({ today, className }: { today: string; className?: st
 function Status({ w }: { w: TargetWorking }) {
   if (w.status === 'ahead') {
     return (
-      <span className="num inline-flex items-center gap-1 text-sm text-tone-success-fg">
+      <span className="num inline-flex items-center gap-1 whitespace-nowrap text-xs text-tone-success-fg sm:text-sm">
         <Icon icon={CircleCheck} size="sm" /> {pkr(w.ahead)} ahead of pace
       </span>
     )
   }
   if (w.status === 'on_pace') return <span className="inline-flex items-center gap-1 text-sm text-tone-success-fg"><Icon icon={CircleCheck} size="sm" /> On pace</span>
   return (
-    <span className="num inline-flex items-center gap-1 text-sm text-tone-warning-fg">
+    <span className="num inline-flex items-center gap-1 whitespace-nowrap text-xs text-tone-warning-fg sm:text-sm">
       <Icon icon={Clock} size="sm" /> {pkr(w.behind)} behind pace
     </span>
   )

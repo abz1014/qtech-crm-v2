@@ -21,6 +21,7 @@ const screens: Partial<Record<NavKey, ComponentType>> = {
   rfqs: lazy(() => import('@/features/rfqs/board/RfqsScreen')),
   money: lazy(() => import('@/features/money/MoneyScreen')),
   orders: lazy(() => import('@/features/orders/OrdersScreen')),
+  reports: lazy(() => import('@/features/reports/ReportsScreen')),
 }
 
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))

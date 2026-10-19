@@ -174,10 +174,62 @@ test.describe('open RFQs', () => {
   })
 })
 
+test.describe('toolbar: filter box, Open and Closed switch, density, nav counts', () => {
+  for (const [w, h] of [
+    [1440, 900],
+    [375, 812],
+  ] as const) {
+    test(`filter, no-match, compact and the top-bar RFQs count at ${w}`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h })
+      await openAs(page, 'admin', '/rfqs')
+      await expect(row(page, 'covered')).toBeVisible()
+      await review(page, `board-toolbar-${w}`)
+
+      if (w >= 1280) {
+        // B-11 / B-164: the top bar reads "RFQs <open count>", and Money stays bare.
+        const link = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs\s*\d+$/ })
+        await expect(link).toBeVisible()
+        const open = Number(/(\d+)$/.exec((await link.innerText()).trim())?.[1])
+        expect(open).toBeGreaterThanOrEqual(6)
+        const seg = page.getByRole('radio', { name: /^Open\s*\d+$/ })
+        await expect(seg).toBeChecked()
+        expect(Number(/(\d+)$/.exec((await seg.innerText()).trim())?.[1])).toBe(open)
+        await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Today\s*\d+$/ })).toBeVisible()
+      }
+
+      const box = page.getByRole('textbox', { name: 'Filter RFQs' })
+      await page.keyboard.press('/')
+      await expect(box).toBeFocused()
+      await box.fill(String(fx.numbers.covered))
+      await expect(row(page, 'covered')).toBeVisible()
+      await expect(row(page, 'awaiting')).toHaveCount(0)
+      await review(page, `board-filter-${w}`)
+      await box.press('Escape')
+      await expect(box).toHaveValue('')
+      await expect(row(page, 'awaiting')).toBeVisible()
+
+      await box.fill('Belimo zzz')
+      await expect(page.getByText('No RFQs match “Belimo zzz”')).toBeVisible()
+      await review(page, `board-nomatch-${w}`)
+      expect(await axeViolations(page)).toEqual([])
+      await page.getByRole('button', { name: 'Clear filter' }).click()
+      await expect(row(page, 'covered')).toBeVisible()
+
+      await page.getByRole('radio', { name: 'Compact' }).click()
+      await expect(page.getByRole('radio', { name: 'Compact' })).toBeChecked()
+      await review(page, `board-compact-${w}`)
+      expect(await axeViolations(page)).toEqual([])
+      await page.reload()
+      await expect(page.getByRole('radio', { name: 'Compact' })).toBeChecked() // remembered on this device
+      await page.getByRole('radio', { name: 'Comfortable' }).click()
+    })
+  }
+})
+
 test.describe('closed and won', () => {
   test('pages through closed RFQs 25 at a time', async ({ page }) => {
     await openAs(page, 'sales', '/rfqs')
-    await page.getByRole('tab', { name: /Closed and won/ }).click()
+    await page.getByRole('radio', { name: /^Closed/ }).click()
     await expect(page).toHaveURL(/tab=closed/)
     await expect(page.getByText(/^Showing 1 to 25 of \d+$/)).toBeVisible()
     const body = page.getByRole('table', { name: 'Closed and won RFQs' }).locator('tbody tr[data-di]')
@@ -222,7 +274,7 @@ test.describe('loading, empty and error states', () => {
   test('goal state: nothing open', async ({ page }) => {
     await page.route(/\/rest\/v1\/(v_rfq_state|rfqs)\?.*(outcome=eq\.open|closed_on=is\.null)/, route => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
     await openAs(page, 'admin', '/rfqs')
-    await expect(page.getByText('No open RFQs. Nice.')).toBeVisible()
+    await expect(page.getByText('Every bid is in')).toBeVisible()
     await review(page, 'board-empty-1440')
     expect(await axeViolations(page)).toEqual([])
   })
@@ -239,14 +291,18 @@ test.describe('loading, empty and error states', () => {
     await expect(row(page, 'covered')).toBeVisible({ timeout: 15_000 })
   })
 
-  test('error says nothing was changed and Try again recovers', async ({ page }) => {
+  test('error says the changes are safe, shows a reference, and Try again recovers', async ({ page }) => {
     let fail = true
     await page.route(/\/rest\/v1\/v_rfq_state\?.*outcome=eq\.open/, route =>
       fail ? route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'down' }) }) : route.continue(),
     )
     await openAs(page, 'admin', '/rfqs')
-    await expect(page.getByText("Couldn't load the RFQs")).toBeVisible()
+    await expect(page.getByText('Couldn’t load RFQs')).toBeVisible()
+    await expect(page.getByText('Your changes are safe. Check your connection and try again.')).toBeVisible()
+    await expect(page.getByText(/^Request failed · .+ · reference [0-9a-f]{6}$/)).toBeVisible()
     await review(page, 'board-error-1440')
+    await page.setViewportSize({ width: 375, height: 812 })
+    await review(page, 'board-error-375')
     fail = false
     await page.getByRole('button', { name: /Try again/ }).click()
     await expect(row(page, 'covered')).toBeVisible()
@@ -271,10 +327,49 @@ test.describe('accessibility (axe, WCAG 2.2 AA)', () => {
       }
       expect(await axeViolations(page)).toEqual([])
 
-      await page.getByRole('tab', { name: /Closed and won/ }).click()
+      await page.getByRole('radio', { name: /^Closed/ }).click()
       await expect(page.getByRole('table', { name: 'Closed and won RFQs' }).locator('tbody tr[data-di]').first()).toBeVisible()
       if (w === 375) await review(page, 'board-closed-375')
       expect(await axeViolations(page)).toEqual([])
     })
   }
+})
+
+test.describe('Items and Value columns (O-11)', () => {
+  test('sales sees the item count and the quoted net; an engineer sees the count only and no money is requested for them', async ({ page }) => {
+    const users = await must(rest<{ id: string; role: string }[]>('admin', 'users?select=id,role'))
+    const owner = users.find(u => u.role === 'sales')!.id
+    const name = uniqueName('Board value')
+    const company = await createCompany(name)
+    const rfq = (await must(rest<{ id: string; number: number }[]>('admin', 'rfqs', { method: 'POST', body: { company_id: company.id, owner_id: owner, due_on: karachiDay(4) } })))[0]
+    await must(
+      rest('admin', 'rfq_items', {
+        method: 'POST',
+        body: [
+          { rfq_id: rfq.id, position: 0, description: 'Priced item', qty: 2, quoted_unit_price_net: 1500 },
+          { rfq_id: rfq.id, position: 1, description: 'Unpriced item', qty: 1, quoted_unit_price_net: null },
+        ],
+        prefer: 'return=minimal',
+      }),
+    )
+
+    await openAs(page, 'sales', '/rfqs?owner=all')
+    await expect(page.getByRole('columnheader', { name: 'Items' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Value (PKR net)' })).toBeVisible()
+    const row = page.getByRole('row').filter({ hasText: name })
+    await expect(row.getByText('3,000')).toBeVisible()
+    await review(page, 'board-value-1440')
+  })
+
+  test('engineer: Items yes, Value never, and the quoted prices are not even fetched', async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+    const page = await ctx.newPage()
+    const urls: string[] = []
+    page.on('request', r => urls.push(r.url()))
+    await openAs(page, 'engineer', '/rfqs?owner=all')
+    await expect(page.getByRole('columnheader', { name: 'Items' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Value (PKR net)' })).toHaveCount(0)
+    expect(urls.some(u => u.includes('quoted_unit_price_net'))).toBe(false)
+    await ctx.close()
+  })
 })

@@ -228,18 +228,60 @@ describe('ranking: tier first, then recency, then name', () => {
     expect(ids(run([list[2], list[0], list[3], list[1]], memory))).toEqual(base)
   })
 
-  it('memory statistics never reorder: reply rates, medians, tier 0 vs 1 and order dates do not matter', () => {
-    const mk = (over1: Partial<SupplierStatsRow>, over2: Partial<SupplierStatsRow>, t1: number, t2: number) =>
+  it('A8: inside a group the better track record comes first, and recency only breaks the remaining ties', () => {
+    const mk = (over1: Partial<SupplierStatsRow>, over2: Partial<SupplierStatsRow>, rows: SupplierItemMemoryRow[] = []) =>
       run(
         [
-          sup('old', 'Old Friend', { last_contact: '2026-01-05', asked: 10, replied: 10, median_reply_days: 1, ...over1 }),
-          sup('new', 'New Contact', { last_contact: '2026-11-05', asked: 8, replied: 1, median_reply_days: null, ...over2 }),
+          sup('old', 'Old Friend', { brand_ids: [EH], last_contact: '2026-01-05', asked: 10, replied: 10, ...over1 }),
+          sup('new', 'New Contact', { brand_ids: [EH], last_contact: '2026-11-05', asked: 8, replied: 1, ...over2 }),
         ],
-        { i2: [mem('old', { best_tier: t1, last_ordered_on: '2026-10-01' }), mem('new', { best_tier: t2, last_ordered_on: '2024-01-01' })] },
+        rows.length ? { i1: rows } : {},
       )
-    // "old" is better on every statistic and has the stronger tier, and still comes second: recency decides.
-    expect(ids(mk({}, {}, 0, 1))).toEqual(['new', 'old'])
-    expect(ids(mk({ replied: 0 }, { replied: 8, median_reply_days: 1 }, 1, 0))).toEqual(['new', 'old'])
+    // Same record, same orders, same replies: recency decides, as before.
+    expect(ids(mk({ replied: 1 }, {}))).toEqual(['new', 'old'])
+    // Reliability first: proven (3 of 3 on time) beats unproven, and "often late" goes last, however recent the contact.
+    expect(ids(mk({ deliveries: 4, late: 0, replied: 1 }, {}))).toEqual(['old', 'new'])
+    expect(ids(mk({ deliveries: 6, late: 4, replied: 10 }, { deliveries: 0 }))).toEqual(['new', 'old'])
+    // Then how often we have ordered at the strongest tier, then how often they reply.
+    const ev = (n: number) => ({ best_tier: 2, supplied_before: false, evidence_tier: 2, evidence_order_number: 5, evidence_count_at_tier: n, evidence_placed_on: '2026-02-03', evidence_delivered_after_days: 9 })
+    expect(ids(mk({}, {}, [mem('old', ev(1)), mem('new', ev(3))]))).toEqual(['new', 'old'])
+    expect(ids(mk({ replied: 2 }, { replied: 6 }, [mem('old', ev(2)), mem('new', ev(2))]))).toEqual(['new', 'old'])
+    expect(ids(mk({ replied: 6 }, { replied: 2 }, [mem('old', ev(2)), mem('new', ev(2))]))).toEqual(['old', 'new'])
+  })
+
+  it('A8: the groups stay the outer order and the pre-ticks do not move', () => {
+    const r = run(
+      [
+        sup('carrier', 'Great Record', { brand_ids: [EH], deliveries: 9, late: 0, replied: 9, asked: 9 }),
+        sup('supplied', 'Supplied Before', { deliveries: 0, last_contact: '2020-01-01' }),
+      ],
+      { i2: [mem('supplied')] },
+    )
+    expect(ids(r)).toEqual(['supplied', 'carrier'])
+    expect(r.preTickedIds).toEqual(['supplied'])
+  })
+
+  it('A8: cites the order behind a supplier (number, placed date, days to delivery) and prints its delivery record', () => {
+    const r = run([sup('s1', 'Metro', { deliveries: 6, late: 1 })], {
+      i3: [
+        mem('s1', {
+          best_tier: 1,
+          evidence_tier: 1,
+          evidence_order_number: 31,
+          evidence_item_desc: 'Siemens SITRANS P320',
+          evidence_qty: 4,
+          evidence_placed_on: '2026-03-12',
+          evidence_expected_on: '2026-03-26',
+          evidence_delivered_on: '2026-03-31',
+          evidence_delivered_after_days: 19,
+          evidence_count_at_tier: 3,
+        }),
+      ],
+    })
+    const s = r.suppliers[0]
+    expect(s.evidence?.text).toBe('Ordered Siemens SITRANS P320 ×4 for ORD-0031, placed 12 Mar 2026, delivered after 19 days (expected 14)')
+    expect(s.record?.text).toBe('On time 5 of 6 deliveries')
+    expect(run([sup('s2', 'None', { brand_ids: [EH] })]).suppliers[0]).toMatchObject({ evidence: null, record: null })
   })
 
   it('exposes no numeric score or rank field', () => {

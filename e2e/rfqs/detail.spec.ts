@@ -235,7 +235,9 @@ test.describe('comparison', () => {
     const cny = art.locator('li', { hasText: s.china.name })
     await expect(cny).toContainText('not compared — no rate')
     await expect(cny.locator('[data-lowest]')).toHaveCount(0)
-    await expect(art.getByText(/Lowest of the 2 with a rate/)).toBeVisible()
+    // A8: the ranking note replaces the old footnote; the CNY line is listed after the ranked ones.
+    await expect(art.locator('[data-rank-note]')).toContainText('the ranking is price only.')
+    await expect(cny).toContainText('Not ranked: no current CNY rate. Add one.')
     // Item 2 has no prices: nothing is marked.
     await expect(page.getByRole('article', { name: 'Item 2' }).locator('[data-lowest]')).toHaveCount(0)
     await review(page, 'rfq-detail-02-rate-states-1440')
@@ -332,10 +334,13 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await expect(card.getByText('Thank you for pricing item 1.')).toBeVisible()
     await expect(card.locator('pre')).toContainText(s.items[1].description)
     await expect(card.locator('pre')).not.toContainText(s.items[0].description)
-    await expect(card.getByText('Mr. Li Wei +86 138 0000 0000')).toBeVisible()
+    await expect(card.getByText('WhatsApp to Mr. Li Wei')).toBeVisible()
+    await expect(card.getByText('+86 138 0000 0000')).toBeVisible()
     await card.getByRole('radio', { name: 'Email' }).click()
-    await expect(card.getByText('Mr. Li Wei li@hengxin.example')).toBeVisible()
-    await expect(card.locator('pre')).toContainText('Subject: RFQ-')
+    await expect(card.getByText('Email to Mr. Li Wei')).toBeVisible()
+    await expect(card.getByText('li@hengxin.example')).toBeVisible()
+    await expect(card.getByRole('button', { name: 'Copy subject' })).toBeVisible()
+    await expect(card.getByText(/^RFQ-\d+: price needed/)).toBeVisible()
     // Another supplier: "Show text" opens its card.
     await page.getByRole('button', { name: `Show text, ${s.usd.name}` }).click()
     await expect(page.locator(`[data-chase-card="${s.usd.id}"]`)).toBeVisible()
