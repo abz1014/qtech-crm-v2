@@ -129,6 +129,10 @@ export function useAddItem(orderId: string) {
   })
 }
 
+export function useNextOrderNumber(enabled: boolean) {
+  return useQuery({ queryKey: qk.orders.nextNumber(), queryFn: api.getNextOrderNumber, enabled, staleTime: 0, gcTime: 0 })
+}
+
 export function useSupplierMedianDays(supplierId: string | undefined) {
   return useQuery({ queryKey: qk.orders.supplierMedian(supplierId ?? ''), queryFn: () => api.getSupplierMedianDays(supplierId as string), enabled: Boolean(supplierId), staleTime: 300_000 })
 }

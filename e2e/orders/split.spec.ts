@@ -300,6 +300,10 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     await expect(items.getByText('Part 2 of 2')).toBeVisible()
     await expect(items.getByText('1a')).toBeVisible()
     await expect(items.getByText('1b')).toBeVisible()
+    // E-OD-05 the group header band, E-OD-02 the unit net on a plain line
+    await expect(items.getByText('Sale to customer, PKR')).toBeVisible()
+    await expect(items.getByText('Supplier, in the leg currency')).toBeVisible()
+    await expect(items.getByRole('row', { name: /Flow meter/ })).toContainText('612,000')
     await shot(page, 'a8-order-split-group-1440')
 
     // one tap on Edit price, one value typed (Enter saves): both parts change in one statement

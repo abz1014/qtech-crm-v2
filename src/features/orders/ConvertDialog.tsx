@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { EyeOff, FileCheck2, Split, TriangleAlert, Truck, X } from 'lucide-react'
+import { EyeOff, FileCheck2, Info, Split, TriangleAlert, Truck, X } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { formatAmount } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
@@ -16,7 +16,9 @@ import { TextField } from '@/ui/form/TextField'
 import { Skeleton } from '@/ui/Skeleton'
 import type { RfqHeader } from '@/features/rfqs/api'
 import { useQuoteItems } from '@/features/quotations/hooks'
-import { useConvertRfq, useLastTerms, useRankedQuotes } from '@/features/orders/hooks'
+import { useConvertRfq, useLastTerms, useNextOrderNumber, useRankedQuotes } from '@/features/orders/hooks'
+import { useQuotations } from '@/features/quotations/hooks'
+import { quotationRef } from '@/features/quotations/lib/refs'
 import { RankedPicker } from '@/features/orders/RankedPicker'
 import { guessCommissioning, type ConvertItem, type SupplierChoice } from '@/features/orders/lib/convert'
 import { orderTotals } from '@/features/orders/lib/orderMath'
@@ -64,6 +66,8 @@ export function ConvertDialog({ rfq, onClose }: Props) {
   const itemsQ = useQuoteItems(rfq.id, true)
   const rankQ = useRankedQuotes(rfq.id, role)
   const termsQ = useLastTerms(rfq.company.id, true)
+  const quotesQ = useQuotations(rfq.id)
+  const nextNo = useNextOrderNumber(true)
   const convert = useConvertRfq(rfq.id)
   /** Made once per open dialog and kept for any retry: the database returns the same order for the same id. */
   const orderId = useRef(crypto.randomUUID())
@@ -125,6 +129,14 @@ export function ConvertDialog({ rfq, onClose }: Props) {
     Object.fromEntries(items.map((it, i) => [i + 1, it.id])),
   )
   const needs = needsTouched ?? guess.needs
+  /** The latest quotation revision the order follows: "QT-26-0058 R1". */
+  const latestQuote = (() => {
+    const qs = quotesQ.data ?? []
+    if (qs.length === 0) return null
+    const last = qs.reduce((a, b) => (b.revision > a.revision ? b : a))
+    const first = qs.find(q => q.revision === 0) ?? last
+    return quotationRef(last.number, first.issuedOn, last.revision)
+  })()
 
   const ready = itemsQ.isSuccess && ordered.length > 0 && rankQ.isSuccess && !anyIncomplete
   const busy = convert.isPending
@@ -172,7 +184,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
 
   const context = (
     <>
-      {rfq.company.name} · {items.length} {items.length === 1 ? 'line' : 'lines'}
+      {rfq.company.name} · {ordered.length} quoted {ordered.length === 1 ? 'line' : 'lines'}
       {totals.gross > 0 ? (
         <>
           {' '}
@@ -210,6 +222,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
     <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
         title="Mark won"
+        titleChip={latestQuote ? <span className="num rounded border border-line-strong px-[6px] text-xs leading-5 text-fg-2">{latestQuote}</span> : undefined}
         context={itemsQ.isSuccess ? context : rfq.company.name}
         icon={FileCheck2}
         className="md:w-[min(1080px,calc(100vw-32px))]"
@@ -226,9 +239,12 @@ export function ConvertDialog({ rfq, onClose }: Props) {
         }
       >
         <div className="grid gap-4">
-          <Banner tone="info" title="Each item is assigned to its best-ranked quote">
-            Change it from the list, or split an item between two suppliers. Prices and terms copy from the quotation. The quotation revisions stay on the RFQ as they were sent.
-          </Banner>
+          <p className="flex items-start gap-2 rounded bg-sunken px-3 py-2 text-sm text-fg-2">
+            <Icon icon={Info} size="sm" className="mt-[3px] shrink-0 text-fg-muted" />
+            <span>
+              Creates order {nextNo.data ? <b className="num font-medium">{orderRef(nextNo.data)}</b> : 'a new order'}. Each item is assigned to the best-ranked quote; change it from the list, or split an item between two suppliers. Prices and terms copy from the quotation.
+            </span>
+          </p>
 
           {itemsQ.isPending || rankQ.isPending ? (
             <div className="grid gap-2" aria-busy="true" aria-label="Loading the lines">
@@ -443,9 +459,12 @@ export function ConvertDialog({ rfq, onClose }: Props) {
             onCheckedChange={v => setNeedsTouched(v === true)}
           />
 
-          <Field label="Customer PO number" requirement="optional" help="Add it from the order later if it has not arrived.">
-            <TextField value={po} onChange={e => setPo(e.target.value)} placeholder="Not yet received" autoComplete="off" className="max-w-[360px]" />
-          </Field>
+          <div className="grid max-w-[360px] gap-1.5">
+            <label htmlFor="convert-po" className="text-sm font-medium">
+              Customer PO number <span className="font-regular text-xs text-fg-muted">optional, add it from the order later</span>
+            </label>
+            <TextField id="convert-po" value={po} onChange={e => setPo(e.target.value)} placeholder="Not yet received" autoComplete="off" />
+          </div>
 
           <Field
             label="Payment terms"
