@@ -129,7 +129,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
       >
         <div className="grid gap-3">
           {!leg.expectedOn ? (
-            <Banner tone="warning" title="No expected date on this leg">
+            <Banner tone="warning" title="No expected date for these goods">
               The message asks about the expected date, so set one on the leg first.
             </Banner>
           ) : draftData.isPending ? (

@@ -427,7 +427,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const letter = (await legLoc(page, 'A').innerText()).includes(s.alpen.name) ? 'A' : 'B'
     expect((await legLoc(page, letter).innerText()).includes(s.alpen.name)).toBe(true)
     await resetCount(page)
-    await legLoc(page, letter).getByRole('button', { name: `Issue PO, leg ${letter}` }).click()
+    await legLoc(page, letter).getByRole('button', { name: `Issue PO, ${s.alpen.name}` }).click()
     const d = dialog(page)
     await expect(d.getByRole('heading', { name: 'Issue purchase order' })).toBeVisible()
     await expect(d.getByTestId('po-missing')).toHaveCount(0) // the supplier price came with the rank-1 quote
@@ -467,16 +467,16 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const lLetter = await letterOf(s.lahore.name)
     const aLetter = await letterOf(s.alpen.name)
     await resetCount(page)
-    await legLoc(page, lLetter).getByRole('button', { name: `Mark placed, leg ${lLetter}` }).click()
+    await legLoc(page, lLetter).getByRole('button', { name: `Mark placed, ${s.lahore.name}` }).click()
     await expect.poll(async () => (await must(rest<{ placed_on: string | null }[]>('admin', `supplier_orders?id=eq.${lahoreLeg}&select=placed_on`)))[0].placed_on).toBe(today)
     fe2('Mark placed', (await readCount(page)).mouse, 1)
     await todayHas(salesCtx, 'place_po', [ordRef(order.number), s.lahore.name], false)
     await must(rest('admin', `supplier_orders?id=eq.${lahoreLeg}`, { method: 'PATCH', body: { expected_on: karachiDay(-2) }, prefer: 'return=minimal' }))
     await todayHas(salesCtx, 'goods_late', [s.lahore.name], true)
     // Delivered: one tap each, and nothing is late any more.
-    for (const [letter, id] of [[aLetter, alpenLeg], [lLetter, lahoreLeg]] as const) {
+    for (const [letter, id, name] of [[aLetter, alpenLeg, s.alpen.name], [lLetter, lahoreLeg, s.lahore.name]] as const) {
       await resetCount(page)
-      await legLoc(page, letter).getByRole('button', { name: `Delivered today, leg ${letter}` }).click()
+      await legLoc(page, letter).getByRole('button', { name: `Delivered today, ${name}` }).click()
       await expect.poll(async () => (await must(rest<{ delivered_on: string | null }[]>('admin', `supplier_orders?id=eq.${id}&select=delivered_on`)))[0].delivered_on).toBe(today)
       fe2('Mark delivered', (await readCount(page)).mouse, 1)
     }
@@ -488,7 +488,9 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   // ---- 11. The invoice ----------------------------------------------------------------------------------------------------------------------
   await test.step('create the invoice: 2 taps, nothing typed', async () => {
     await resetCount(page)
-    await page.locator('[data-slot="order-actions"]').getByRole('button', { name: 'Create invoice' }).click()
+    // everything is delivered, so Create invoice is the page's one green button
+    await expect(page.locator('#main button.bg-primary:visible')).toHaveText(['Create invoice'])
+    await page.getByRole('button', { name: 'Create invoice' }).click()
     const d = page.getByRole('dialog', { name: 'Create invoice' })
     await expect(d.getByRole('textbox', { name: 'Invoice number' })).toHaveValue(/.+/)
     await expect(d.getByText('GST, 18%')).toBeVisible()
@@ -514,7 +516,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const admin = await openPage(adminCtx, `/orders/${order.id}`)
     await expect(admin.getByText(ordRef(order.number)).first()).toBeVisible()
     await resetCount(admin)
-    await admin.locator('[data-slot="order-actions"]').getByRole('button', { name: 'Record payment' }).click()
+    await admin.getByRole('button', { name: 'Record payment' }).click()
     const d = admin.getByRole('dialog', { name: 'Record payment' })
     await expect(d.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue('316,240')
     await d.getByRole('button', { name: 'Save payment' }).click()

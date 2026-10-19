@@ -128,7 +128,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
       await setComplete.mutateAsync({ complete: next, userId })
       toast({
         title: next ? 'Costs marked complete' : 'Costs reopened',
-        body: next ? `${ref} · the margin is final` : `${ref} · the margin is provisional again`,
+        body: next ? `${ref} · the margin is final` : `${ref} · the margin is not final again`,
         tone: 'success',
         undo: {
           onUndo: async () => {
@@ -171,12 +171,12 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
             </div>
             <p className="text-sm text-fg-2">
               {unknown
-                ? `Net sale is unknown while the price basis is unknown.${actual > 0 ? ` Imported costs of PKR ${formatAmount(actual)} are on file.` : ''} Resolve it from the order header.`
+                ? `Not worked out until someone answers "Is GST included?" at the top of the page.${actual > 0 ? ` Imported costs of PKR ${formatAmount(actual)} are on file.` : ''}`
                 : complete
                   ? 'Final. Costs are marked complete.'
                   : expected !== null
-                    ? `Provisional. Only ${formatAmount(actual)} of an expected ${formatAmount(expected)} has been paid out. It becomes final when you mark costs complete.`
-                    : 'Provisional. No expected cost is set, so only costs paid so far are counted. It becomes final when you mark costs complete.'}
+                    ? `Not final: ${formatAmount(actual)} of an expected ${formatAmount(expected)} paid out so far.`
+                    : 'Not final: no expected cost is set, so only what is paid so far counts.'}
             </p>
           </div>
 

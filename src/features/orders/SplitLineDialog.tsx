@@ -16,7 +16,6 @@ import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/o
 import { useRankedQuotes, useSplitOrderItem, useSupplierChoices } from '@/features/orders/hooks'
 import { RankBadge, RankedOptionRow } from '@/features/orders/RankedPicker'
 import { forItem, priceTexts, type RankedQuote } from '@/features/orders/lib/ranking'
-import { legLetter } from '@/features/orders/lib/legModel'
 import { CURRENCIES } from '@/features/orders/lib/currencies'
 import { supplierTargetProblem } from '@/features/orders/lib/splitLine'
 
@@ -53,7 +52,7 @@ export function SplitLineDialog({
   const role = session.status === 'signed-in' ? session.user.role : ''
   const split = useSplitOrderItem(order.id)
   const sourceLeg = legs.find(l => l.id === item.legId)
-  const sourceIndex = Math.max(0, legs.findIndex(l => l.id === item.legId))
+  const sourceName = sourceLeg?.supplierName ?? 'this supplier'
   const fromRfq = Boolean(order.rfqId && item.rfqItemId)
   const rankQ = useRankedQuotes(order.rfqId ?? undefined, role, fromRfq)
   const quotes = useMemo(() => (fromRfq ? forItem(rankQ.data ?? [], item.rfqItemId as string) : []), [fromRfq, rankQ.data, item.rfqItemId])
@@ -80,13 +79,13 @@ export function SplitLineDialog({
   const resultText = (() => {
     if (!valid || !effective || targetProblem || qty === null) return null
     const stay = Number((item.qty - qty).toFixed(6))
-    if (effective.kind === 'quote') return `${stay} stay on leg ${legLetter(sourceIndex)}, ${qty} ${qty === 1 ? 'moves' : 'move'} to ${effective.q.supplierName} at ${priceTexts(effective.q).price}.`
+    if (effective.kind === 'quote') return `${stay} stay with ${sourceName}, ${qty} ${qty === 1 ? 'moves' : 'move'} to ${effective.q.supplierName} at ${priceTexts(effective.q).price}.`
     if (effective.kind === 'leg') {
-      const i = legs.findIndex(l => l.id === effective.legId)
-      return `${stay} stay on leg ${legLetter(sourceIndex)}, ${qty} ${qty === 1 ? 'moves' : 'move'} to leg ${legLetter(i)}, ${legs[i]?.supplierName ?? ''}.`
+      const to = legs.find(l => l.id === effective.legId)
+      return `${stay} stay with ${sourceName}, ${qty} ${qty === 1 ? 'moves' : 'move'} to ${to?.supplierName ?? 'the other supplier'}${to?.currency ? ` (${to.currency})` : ''}.`
     }
     const name = choices.data?.find(c => c.id === supplierId)?.name ?? 'the supplier'
-    return `${stay} stay on leg ${legLetter(sourceIndex)}, ${qty} ${qty === 1 ? 'moves' : 'move'} to ${name} in ${currency}.`
+    return `${stay} stay with ${sourceName}, ${qty} ${qty === 1 ? 'moves' : 'move'} to ${name} in ${currency}.`
   })()
 
   const submit = async () => {
@@ -108,7 +107,7 @@ export function SplitLineDialog({
     <Dialog open busy={split.isPending} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
         title={`Split line ${item.number}`}
-        context={`${item.description} ×${item.qty}${sourceLeg ? ` · leg ${legLetter(sourceIndex)}, ${sourceLeg.supplierName}` : ''}`}
+        context={`${item.description} ×${item.qty}${sourceLeg ? ` · from ${sourceLeg.supplierName}` : ''}`}
         icon={Split}
         size="lg"
         footer={
@@ -197,7 +196,7 @@ export function SplitLineDialog({
                               <RankBadge rank={q.rank} />
                               <span className="grid">
                                 <b className="text-sm font-medium">{q.supplierName}</b>
-                                <span className="text-xs text-fg-muted">Where it is now: this leg</span>
+                                <span className="text-xs text-fg-muted">Where it is now</span>
                               </span>
                               <span className="num text-right text-xs">{priceTexts(q).price}</span>
                             </span>
@@ -210,8 +209,8 @@ export function SplitLineDialog({
                   </div>
                   {otherLegs.length > 0 ? (
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
-                      <span>Or one of this order&apos;s other legs:</span>
-                      <div role="radiogroup" aria-label="Other legs" className="flex flex-wrap gap-2">
+                      <span>Or another supplier on this order:</span>
+                      <div role="radiogroup" aria-label="Other suppliers on this order" className="flex flex-wrap gap-2">
                       {otherLegs.map(l => {
                         const on = target?.kind === 'leg' && target.legId === l.id
                         return (
@@ -220,12 +219,12 @@ export function SplitLineDialog({
                             type="button"
                             role="radio"
                             aria-checked={on}
-                            aria-label={`Move to leg ${legLetter(legs.findIndex(x => x.id === l.id))}`}
+                            aria-label={`Move to ${l.supplierName}${l.currency ? ` (${l.currency})` : ''}`}
                             onClick={() => setTarget({ kind: 'leg', legId: l.id })}
                             className={cn('rounded border px-2 py-1 text-sm text-fg hover:bg-sunken', on ? 'border-primary bg-selected' : 'border-line-strong')}
                           >
-                            <span className="mr-1 font-medium">{legLetter(legs.findIndex(x => x.id === l.id))}</span>
                             {l.supplierName}
+                            {l.currency ? <span className="ml-1 text-fg-muted">{l.currency}</span> : null}
                           </button>
                         )
                       })}
@@ -250,7 +249,7 @@ export function SplitLineDialog({
             <div className="flex items-start gap-3 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
               <Icon icon={TriangleAlert} className="mt-0.5 text-tone-warning-fg" />
               <p>
-                Leg {legLetter(sourceIndex)}&apos;s PO{' '}
+                The PO to {sourceName}{' '}
                 <b className="num font-semibold">
                   {poRef(sourcePo.number, sourcePo.firstIssuedOn)} · R{sourcePo.revision}
                 </b>{' '}

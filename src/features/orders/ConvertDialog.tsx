@@ -414,7 +414,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                             of <span className="num font-medium">{it.qty}</span>
                           </span>
                           <span className="text-xs text-fg-muted">
-                            {chk.incomplete ? 'Type a quantity for every part to create the order.' : "Each part becomes its own line on its supplier's leg, at the same selling price."}
+                            {chk.incomplete ? 'Type a quantity for every part to create the order.' : 'Each part becomes its own line with its supplier, at the same selling price.'}
                           </span>
                         </div>
                       </>
@@ -452,7 +452,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
             <p className="flex items-center gap-2 text-xs text-fg-muted">
               <Icon icon={Truck} size="sm" />
               <span>
-                {legs.length} {legs.length === 1 ? 'leg' : 'legs'}: {legs.join(', ')}.
+                {legs.length === 1 ? '1 supplier order' : `${legs.length} supplier orders`}: {legs.join(', ')}.
               </span>
             </p>
           ) : null}

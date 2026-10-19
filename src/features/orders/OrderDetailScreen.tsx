@@ -7,10 +7,12 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Skeleton } from '@/ui/Skeleton'
 import { useLegPos, useOrderEngineers, useOrderHeader, useOrderItems, useOrderLegs, useOrderMoney } from '@/features/orders/hooks'
 import { OrderHeaderBlock } from '@/features/orders/OrderHeaderBlock'
+import { orderPrimary } from '@/features/orders/lib/primaryAction'
+import { businessToday } from '@/lib/dates'
 import { OrderItemsPanel } from '@/features/orders/OrderItemsPanel'
 import { LegsPanel } from '@/features/orders/LegsPanel'
 import { CommissioningPanel } from '@/features/orders/CommissioningPanel'
-import { InvoicesPanel, MarginPanel } from '@/features/orders/MoneyPanels'
+import { MarginPanel } from '@/features/orders/MoneyPanels'
 import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
 
 /*
@@ -131,15 +133,28 @@ export default function OrderDetailScreen() {
   const loadError = items.isError || legs.isError
   const lists = items.data && legs.data
   const basisUnknown = order.state?.dataTrust === 'basis_unknown'
+  // The page's ONE primary (green) button, chosen by the order's state (lib/primaryAction.ts). Worked out once, here, so the header draws it
+  // and the panels below know not to repeat it.
+  const primary = orderPrimary(order, legs.data ?? [], pos.data ?? [], role, orderMoney.data, businessToday())
   return (
     <Shell>
-      <OrderHeaderBlock order={order} legs={legs.data ?? []} items={items.data ?? []} engineers={engineers.data ?? []} role={role} orderMoney={orderMoney.data} />
+      <OrderHeaderBlock
+        order={order}
+        legs={legs.data ?? []}
+        items={items.data ?? []}
+        engineers={engineers.data ?? []}
+        role={role}
+        orderMoney={orderMoney.data}
+        moneyLoading={money && orderMoney.isPending}
+        pos={pos.data ?? []}
+        primary={primary}
+      />
 
       <div className="mt-6 grid gap-6">
         {loadError ? (
           <EmptyState
             mood="error"
-            title="Couldn't load the items and legs"
+            title="Couldn't load the items and supplier orders"
             actions={
               <Button
                 variant="primary"
@@ -155,38 +170,26 @@ export default function OrderDetailScreen() {
             Nothing was changed. Check your connection and try again.
           </EmptyState>
         ) : !lists ? (
-          <div className="grid gap-4" aria-busy="true" aria-label="Loading items and legs">
+          <div className="grid gap-4" aria-busy="true" aria-label="Loading items and supplier orders">
             <Skeleton className="h-56 w-full" />
             <Skeleton className="h-56 w-full" />
           </div>
         ) : (
           <>
             <OrderItemsPanel order={order} items={items.data} legs={legs.data} money={money} canEdit={canEdit && money} basisUnknown={basisUnknown} pos={pos.data ?? []} />
-            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className={isAdmin ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]' : 'grid gap-6'}>
               <div className="grid min-w-0 gap-6">
                 <LegsPanel order={order} legs={legs.data} items={items.data} pos={pos.data ?? []} money={money} isAdmin={isAdmin} canEdit={canEdit} />
-                <CommissioningPanel order={order} engineers={engineers.data ?? []} isEngineer={isEngineer} canEdit={canEdit} />
+                <CommissioningPanel order={order} engineers={engineers.data ?? []} isEngineer={isEngineer} canEdit={canEdit} markDoneAbove={primary?.kind === 'mark-done'} />
                 <AttachmentsPanel orderId={order.id} />
               </div>
-              <aside className="grid min-w-0 gap-6 lg:row-start-1 lg:col-start-2" aria-label="Site and money">
-                {isEngineer ? (
-                  <section aria-label="Site" className="rounded border bg-surface">
-                    <h2 className="border-b px-5 py-4 text-base font-semibold">Site</h2>
-                    <dl className="grid gap-3 px-5 py-4 text-sm">
-                      <div className="flex justify-between gap-4 border-b pb-3">
-                        <dt className="text-fg-muted">Delivery site</dt>
-                        <dd className="min-w-0 text-right">{order.site?.name ?? <span className="text-fg-muted">Not set</span>}</dd>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <dt className="text-fg-muted">Address</dt>
-                        <dd className="min-w-0 text-right">{order.site?.address ?? <span className="text-fg-muted">Not set</span>}</dd>
-                      </div>
-                    </dl>
-                  </section>
-                ) : null}
-                {isAdmin ? <MarginPanel order={order} money={orderMoney.data} loading={orderMoney.isPending} error={orderMoney.isError} /> : null}
-                {money ? <InvoicesPanel order={order} money={orderMoney.data} loading={orderMoney.isPending} error={orderMoney.isError} isAdmin={isAdmin} /> : null}
-              </aside>
+              {/* The side column is admin's Margin (with the one order-level Add expense). Invoices and payments are in the header's status
+                  strip, and the engineer's site is in the header's "Your job". */}
+              {isAdmin ? (
+                <aside className="grid min-w-0 gap-6 lg:col-start-2 lg:row-start-1" aria-label="Margin and costs">
+                  <MarginPanel order={order} money={orderMoney.data} loading={orderMoney.isPending} error={orderMoney.isError} />
+                </aside>
+              ) : null}
             </div>
           </>
         )}

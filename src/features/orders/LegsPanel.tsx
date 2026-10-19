@@ -1,23 +1,21 @@
 import { useMemo, useState } from 'react'
-import { FileText, MessageSquareWarning, Plus, Receipt, Split, TriangleAlert } from 'lucide-react'
+import { Ellipsis, FileText, MessageSquareWarning, Plus, Receipt, RefreshCw, Split, TriangleAlert } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
-import { formatDay } from '@/lib/formatDay'
 import { convertToPaisa, formatAmount, formatPaisa } from '@/lib/money'
-import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, poRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { EmptyState } from '@/ui/EmptyState'
+import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { StatusBadge } from '@/ui/StatusBadge'
-import { useToast } from '@/ui/useToast'
 import { useFxLatest } from '@/features/rfqs/hooks'
 import { toRateTable } from '@/features/rfqs/lib'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
-import { useSupplierMedianDays, useUpdateLeg } from '@/features/orders/hooks'
 import { isFreshSplitLeg, splitRfqItemIds } from '@/features/orders/lib/splitGroups'
 import { poChange } from '@/features/orders/lib/poChange'
-import { before, editPatch, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, defaultExpected, type LegDates, type LegPatch } from '@/features/orders/lib/legModel'
+import { defaultExpected, legLetter, legState, legSupplierTotal, type LegDates } from '@/features/orders/lib/legModel'
+import { useLegActions } from '@/features/orders/useLegActions'
 import { AddLegDialog } from '@/features/orders/AddDialogs'
 import { IssuePoDialog } from '@/features/purchaseOrders/IssuePoDialog'
 import { AddExpenseDialog } from '@/features/money/expenses/ExpenseDialog'
@@ -26,17 +24,17 @@ import { GoodsChaseDialog } from '@/features/orders/GoodsChaseDialog'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
 
 /*
- * Procurement legs (O03; g2-order-detail.html "Procurement legs"). One supplier in one currency per leg.
+ * Supplier orders (O03; g2-order-detail.html "Procurement legs"; called "legs" in the database and the code, "supplier orders" on screen
+ * since the plain-words decision of 2026-10-19). One supplier in one currency each.
  *
- * FE-2 / A3 (owner decision 2026-10-15: no receiving step): each leg has ONE next-step button, Mark placed and then Delivered today. One tap
- * each, nothing typed. Delivering also sets the stored received date to the same day. The stamped date reads as text and edits on tap (optional). When the leg is placed,
- * the expected date is suggested from the placed date plus the upper bound of the supplier's lead time and written then, so
- * "goods late" on Today works without anyone typing a date; it shows where it came from and can be changed.
- * A placed leg that has not arrived has "Chase goods": the R16 message and stamp.
+ * FE-2 / A3 (owner decision 2026-10-15: no receiving step): each has ONE next-step button, Mark placed and then Delivered today. One tap
+ * each, nothing typed, Undo in the toast. Delivering also sets the stored received date to the same day. The dates read as one line of
+ * text that edits on tap (optional). When placed, the expected date is suggested from the placed date plus the supplier's lead time.
  *
- * Also on a leg, as the mockup draws them: the PO chip ("No PO yet", or "PO-26-0017 · R1" from purchase_orders), "Add expense" (admin) and
- * "Issue PO" / "View PO" (admin and sales; O07, the supplier PO dialog and its PDF), and "Add expense" (admin; the M03 dialog with the leg as its context:
- * the supplier is the payee, the category is Supplier payment).
+ * The page has one green button (the order header's next step, lib/primaryAction.ts); here every button is secondary. Visible on the row:
+ * the stamp, "Issue PO" while there is no PO (admin and sales: a PO carries prices) and "Chase goods" once the goods are late. The rest is
+ * in the row's menu: View PO, Revise PO, Chase goods (before they are late) and Add expense (admin; the M03 dialog with this supplier as
+ * the payee and Supplier payment as the category: the one Add expense per supplier order).
  */
 const STATE_DIM: Record<string, string> = { 'to-place': 'to-place', 'on-order': 'on-order', late: 'late', received: 'received', delivered: 'delivered' }
 
@@ -64,32 +62,25 @@ export function LegsPanel({
   const [issuing, setIssuing] = useState<OrderLegRow | null>(null)
   const poPdf = useOpenPoPdf(order.id)
   const today = businessToday()
-  const currencies = new Set(legs.map(l => l.currency).filter(Boolean)).size
   const imported = order.imported
 
   return (
-    <section aria-label="Procurement legs" className="min-w-0 rounded border bg-surface">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-5 py-4">
-        <h2 className="text-base font-semibold">Procurement legs</h2>
-        <span className="text-sm text-fg-muted">
-          {legs.length === 0 && imported
-            ? 'None recorded for imported orders'
-            : `${legs.length} ${legs.length === 1 ? 'leg' : 'legs'}${legs.length > 0 ? ` · ${currencies} ${currencies === 1 ? 'currency' : 'currencies'} · one currency per supplier` : ''}`}
-        </span>
-        {/* data-slot="add-leg": adds a supplier leg by hand. */}
+    <section aria-label="Supplier orders" className="min-w-0 rounded border bg-surface">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3 md:px-5">
+        <h2 className="text-base font-semibold">Supplier orders</h2>
+        <span className="text-sm text-fg-muted">{legs.length === 0 ? (imported ? 'None recorded for imported orders' : 'None yet') : legs.length === 1 ? '1 supplier' : `${legs.length} suppliers`}</span>
+        {/* data-slot="add-leg": adds a supplier by hand. */}
         <span data-slot="add-leg" className="ml-auto contents">
           {money && canEdit ? (
-            <Button icon={Plus} className="ml-auto" onClick={() => setAdding(true)}>
-              Add leg
+            <Button icon={Plus} size="sm" className="ml-auto" onClick={() => setAdding(true)}>
+              Add supplier
             </Button>
           ) : null}
         </span>
       </div>
       {legs.length === 0 ? (
-        <EmptyState title="No legs on this order">
-          {imported
-            ? 'Imported orders arrive without suppliers. Add a leg only if you need to track a reorder.'
-            : 'Lines with a supplier appear here, one leg per supplier. A service has none.'}
+        <EmptyState title="No supplier orders yet">
+          {imported ? 'Imported orders arrive without suppliers. Add a supplier only if you need to track a reorder.' : 'Lines with a supplier appear here, one per supplier. A service has none.'}
         </EmptyState>
       ) : (
         <ul className="divide-y">
@@ -117,7 +108,7 @@ export function LegsPanel({
       )}
       {chasing ? <GoodsChaseDialog order={order} leg={legs.find(l => l.id === chasing.id) ?? chasing} onClose={() => setChasing(null)} /> : null}
       {adding ? <AddLegDialog order={order} legs={legs} onClose={() => setAdding(false)} /> : null}
-      {issuing ? <IssuePoDialog order={order} leg={legs.find(l => l.id === issuing.id) ?? issuing} legIndex={Math.max(0, legs.findIndex(l => l.id === issuing.id))} onClose={() => setIssuing(null)} /> : null}
+      {issuing ? <IssuePoDialog order={order} leg={legs.find(l => l.id === issuing.id) ?? issuing} onClose={() => setIssuing(null)} /> : null}
     </section>
   )
 }
@@ -141,9 +132,10 @@ function Leg({
 }: {
   order: OrderHeader
   leg: OrderLegRow
+  /** Only for the test ids (leg-A, leg-B): the letters are no longer shown. */
   letter: string
   items: OrderItemRow[]
-  /** A8: a new leg that exists for the parts of split items. */
+  /** A8: a new supplier order that exists for the parts of split items. */
   fromSplit: boolean
   po: LegPo | undefined
   money: boolean
@@ -156,66 +148,31 @@ function Leg({
   onViewPo: () => void
   viewingPo: boolean
 }) {
-  const { toast } = useToast()
-  const update = useUpdateLeg(order.id)
+  const actions = useLegActions(order, leg)
   const [addingExpense, setAddingExpense] = useState(false)
   const dates: LegDates = { placedOn: leg.placedOn, expectedOn: leg.expectedOn, receivedOn: leg.receivedOn, deliveredOn: leg.deliveredOn }
   const state = legState(dates, today)
-  const stamp = nextStamp(dates)
-  const median = useSupplierMedianDays(leg.supplierId)
-  const medianDays = median.data ?? null
-  /** The default expected date for this leg (lead time, else this supplier's usual days, else 30). Dated from today until the leg is placed. */
-  const suggestion = defaultExpected(leg.placedOn ?? today, leg.leadTimes, medianDays)
-  const leadHint = leg.leadTimes.length > 0 ? [...leg.leadTimes].sort((a, b) => b.length - a.length)[0] : null
+  const stamp = actions.stamp
+  /** The default expected date (lead time, else this supplier's usual days, else 30). Dated from today until the order is placed. */
+  const suggestion = defaultExpected(leg.placedOn ?? today, leg.leadTimes, actions.medianDays)
   const total = legSupplierTotal(items.map(it => ({ qty: it.qty, supplierUnitPrice: it.supplierUnitPrice, isService: it.isService })))
   const ccy = leg.currency
   const rate = ccy && ccy !== 'PKR' ? rates[ccy] : undefined
   const pkr = rate && rate.staleness !== 'unusable' && total.priced > 0 ? convertToPaisa(total.total, rate.rate) : null
-  const label = `leg ${letter}`
-  /** A8 (O09): the latest PO revision lists lines this leg no longer matches (a split moved quantity). Admin and sales only: a PO carries prices. */
+  const name = leg.supplierName
+  /** A8 (O09): the latest PO revision lists lines this supplier order no longer matches (a split moved quantity). Admin and sales only: a PO carries prices. */
   const changed = money && po ? poChange(po.lines, items.map(it => ({ id: it.id, description: it.description, qty: it.qty, isService: it.isService }))) : null
-
-  const run = async (patch: LegPatch & { reference?: string | null }, title: string, body: string) => {
-    const prev: LegPatch & { reference?: string | null } = { ...before(dates, patch), ...('reference' in patch ? { reference: leg.reference } : {}) }
-    try {
-      await update.mutateAsync({ id: leg.id, patch })
-      toast({
-        title,
-        body,
-        undo: {
-          onUndo: async () => {
-            await update.mutateAsync({ id: leg.id, patch: prev })
-          },
-          settledTitle: title,
-          undoneTitle: 'Taken back',
-        },
-      })
-    } catch (err) {
-      toast({ title: 'Could not save', body: mapPgError(err, { entity: 'leg' }).message, tone: 'danger' })
-    }
-  }
-
-  const doStamp = () => {
-    if (!stamp) return
-    const patch = stampPatch(stamp.step, dates, today, leg.leadTimes, medianDays)
-    const verb = stamp.step === 'place' ? 'Marked placed' : 'Marked delivered'
-    const extra = patch.expected_on ? `expected ${formatDay(patch.expected_on)}, from lead time ${leadHint ?? ''}`.replace(/, from lead time $/, '') : ''
-    void run(patch, verb, [leg.supplierName, extra].filter(Boolean).join(' · '))
-  }
-  const saveDate = (field: keyof LegDates, name: string) => (value: string | null) =>
-    run(editPatch(field, value, dates, leg.leadTimes, medianDays), value ? `${name} date set` : `${name} date cleared`, leg.supplierName)
+  const canChase = Boolean(leg.placedOn && !leg.deliveredOn && leg.expectedOn)
+  const late = state === 'late'
 
   const lines = items.map(it => `${it.description} ×${it.qty}`).join(', ')
-  const col = (name: string, field: keyof LegDates, hint?: string) => {
-    const value = dates[field]
-    return (
-      <div className={cn('grid min-w-0 content-start gap-1 border-t-2 pt-2', value ? 'border-brand-green' : 'border-line')}>
-        <span className="text-xs text-fg-muted">{name}</span>
-        <TapDate value={value} label={`${name} date, ${label}`} today={today} disabled={!canEdit} onSave={saveDate(field, name)} />
-        {hint ? <span className="text-xs text-fg-muted">{hint}</span> : null}
-      </div>
-    )
-  }
+  const date = (label: string, field: keyof LegDates, hint?: string) => (
+    <span className="inline-flex flex-wrap items-baseline gap-x-1">
+      <span className="text-fg-muted">{label}</span>
+      <TapDate value={dates[field]} label={`${label} date, ${name}`} today={today} disabled={!canEdit} onSave={actions.saveDate(field, label)} />
+      {hint ? <span className="text-xs text-fg-muted">{hint}</span> : null}
+    </span>
+  )
   const expectedHint = leg.expectedOn
     ? leg.placedOn && suggestion && suggestion.on === leg.expectedOn
       ? suggestion.label
@@ -225,22 +182,18 @@ function Leg({
         ? `suggested: ${suggestion.label}`
         : suggestion.source === 'lead_time'
           ? `suggested from lead time ${suggestion.from}`
-          : `${suggestion.days} days after it is placed (${suggestion.label})`
+          : `${suggestion.days} days after it is placed`
       : undefined
 
-  // The default expected date of a leg placed by any route (a PO issued, a typed date) is written by the database (0067); the stamp below sends the same date at once.
+  // The default expected date of an order placed by any route (a PO issued, a typed date) is written by the database (0067); the stamp sends the same date at once.
+  const menu = Boolean(money && po) || (canChase && !late) || isAdmin
 
   return (
-    <li aria-label={`Leg ${letter}, ${leg.supplierName}`} data-testid={`leg-${letter}`} className="grid gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.5fr)_minmax(0,0.9fr)]">
+    <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className="grid gap-3 px-4 py-4 md:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-6">
       <div className="grid min-w-0 content-start gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <span aria-hidden="true" className="inline-grid size-5 place-items-center rounded bg-fg text-xs font-medium text-surface">
-            {letter}
-          </span>
-          <span className="min-w-0 break-words font-medium">{leg.supplierName}</span>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="min-w-0 break-words font-medium">{name}</span>
           {ccy ? <span className="num inline-flex h-5 items-center rounded border border-line-strong px-[6px] text-xs text-fg-2">{ccy}</span> : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span data-testid={`leg-${letter}-state`}>
             <StatusBadge dimension="goods" value={STATE_DIM[state]} />
           </span>
@@ -251,34 +204,30 @@ function Leg({
           {fromSplit ? (
             <span data-testid={`leg-${letter}-from-split`} className="inline-flex items-center gap-1 text-xs text-fg-muted">
               <Split size={12} aria-hidden="true" />
-              New leg from the split
+              New, from the split
             </span>
           ) : null}
-          <span className="text-sm text-fg-muted">
-            Ref{' '}
+        </div>
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm" role="group" aria-label={`Dates, ${name}`}>
+          {date('Placed', 'placedOn')}
+          {date('Expected', 'expectedOn', expectedHint)}
+          {date('Delivered', 'deliveredOn')}
+          <span className="inline-flex items-baseline gap-x-1">
+            <span className="text-fg-muted">Ref</span>
             <TapText
               value={leg.reference}
-              label={`Reference, ${label}`}
-              empty="Add reference"
+              label={`Reference, ${name}`}
+              empty="add"
               placeholder="Our PO or the supplier's PI"
               disabled={!canEdit}
               render={v => <span className="num">{v}</span>}
-              onSave={v => run({ reference: v }, v ? 'Reference saved' : 'Reference cleared', leg.supplierName)}
+              onSave={v => actions.run({ reference: v }, v ? 'Reference saved' : 'Reference cleared', name)}
             />
           </span>
-          {isAdmin && canEdit ? (
-            <Button size="sm" variant="quiet" icon={Receipt} onClick={() => setAddingExpense(true)} aria-label={`Add expense, ${label}`}>
-              Add expense
-            </Button>
-          ) : null}
         </div>
         {lines ? <p className="line-clamp-2 text-sm text-fg-muted">{lines}</p> : null}
         {changed && po ? (
-          <div
-            role="status"
-            data-testid={`leg-${letter}-changed`}
-            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm"
-          >
+          <div role="status" data-testid={`leg-${letter}-changed`} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
             <Icon icon={TriangleAlert} className="text-tone-warning-fg" />
             <span className="min-w-0 flex-1 text-pretty">
               <b className="font-semibold">
@@ -287,18 +236,12 @@ function Leg({
               <span className="text-fg-2">{changed.notes.join('. ')}. The PO still lists the earlier lines.</span>
             </span>
             {canEdit ? (
-              <Button size="sm" variant="primary" icon={FileText} onClick={onIssue} aria-label={`Re-issue PO, ${label}`}>
+              <Button size="sm" icon={FileText} onClick={onIssue} aria-label={`Re-issue PO, ${name}`}>
                 Re-issue PO
               </Button>
             ) : null}
           </div>
         ) : null}
-      </div>
-
-      <div className="grid grid-cols-3 gap-3" role="group" aria-label={`Dates, ${label}`}>
-        {col('Placed', 'placedOn')}
-        {col('Expected', 'expectedOn', expectedHint)}
-        {col('Delivered', 'deliveredOn')}
       </div>
 
       <div className="grid min-w-0 content-start justify-items-start gap-2 lg:justify-items-end">
@@ -308,45 +251,71 @@ function Leg({
               <span className="mr-1 text-xs font-regular text-fg-muted">{ccy ?? ''}</span>
               {total.priced > 0 ? formatAmount(total.total) : 'Not set'}
             </span>
-            <span className="text-xs text-fg-muted">
-              {total.of === 0 ? 'No goods lines' : total.priced === total.of ? `${total.of === 1 ? 'The 1 line is' : `All ${total.of} lines`} priced` : `${total.priced} of ${total.of} lines priced`}
-            </span>
-            {pkr !== null ? <span className="num text-xs text-fg-muted">≈ PKR {formatPaisa(pkr, 'auto')} at today&apos;s rate</span> : null}
+            {total.of > 0 && total.priced < total.of ? <span className="text-xs text-fg-muted">{`${total.priced} of ${total.of} lines priced`}</span> : null}
+            {pkr !== null ? <span className="num text-xs text-fg-muted">≈ PKR {formatPaisa(pkr, 'auto')} today</span> : null}
           </div>
         ) : null}
         {canEdit ? (
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             {stamp ? (
-              <Button variant="primary" onClick={doStamp} busy={update.isPending} busyLabel="Saving" aria-label={`${stamp.label}, ${label}`}>
+              <Button size="sm" onClick={actions.doStamp} busy={actions.pending} busyLabel="Saving" aria-label={`${stamp.label}, ${name}`}>
                 {stamp.label}
               </Button>
             ) : null}
-            {leg.placedOn && !leg.deliveredOn && leg.expectedOn ? (
-              <Button icon={MessageSquareWarning} onClick={onChase} aria-label={`Chase goods, ${label}`}>
+            {/* data-slot="issue-po" (O07): Issue PO opens the dialog (1 tap, then Issue PO in it: 2 taps). Admin and sales only: a PO carries prices. */}
+            {money && !po ? (
+              <span data-slot="issue-po" className="contents">
+                <Button size="sm" icon={FileText} onClick={onIssue} aria-label={`Issue PO, ${name}`}>
+                  Issue PO
+                </Button>
+              </span>
+            ) : null}
+            {canChase && late ? (
+              <Button size="sm" icon={MessageSquareWarning} onClick={onChase} aria-label={`Chase goods, ${name}`}>
                 Chase goods
               </Button>
             ) : null}
+            {menu ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="quiet" icon={Ellipsis} aria-label={`More for ${name}`} />
+                </PopoverTrigger>
+                <PopoverContent variant="menu" align="end">
+                  {money && po ? (
+                    <MenuItem icon={FileText} onClick={onViewPo} disabled={viewingPo}>
+                      View PO
+                    </MenuItem>
+                  ) : null}
+                  {money && po ? (
+                    <MenuItem icon={RefreshCw} onClick={onIssue}>
+                      {`Revise PO (R${po.revision + 1})`}
+                    </MenuItem>
+                  ) : null}
+                  {canChase && !late ? (
+                    <MenuItem icon={MessageSquareWarning} onClick={onChase}>
+                      Chase goods
+                    </MenuItem>
+                  ) : null}
+                  {isAdmin ? (
+                    <MenuItem icon={Receipt} onClick={() => setAddingExpense(true)}>
+                      Add expense
+                    </MenuItem>
+                  ) : null}
+                </PopoverContent>
+              </Popover>
+            ) : null}
           </div>
+        ) : money && po ? (
+          <Button size="sm" variant="quiet" icon={FileText} onClick={onViewPo} busy={viewingPo} busyLabel="Opening" aria-label={`View PO, ${name}`}>
+            View PO
+          </Button>
         ) : null}
-        {/* data-slot="issue-po" (O07): Issue PO opens the dialog (1 tap, then Issue PO in it: 2 taps); View PO opens the PDF; a PO that exists can be re-issued as the next revision. Admin and sales only: a PO carries prices. */}
-        <span data-slot="issue-po" className="contents">
-          {money && po ? (
-            <Button size="sm" variant="quiet" icon={FileText} onClick={onViewPo} busy={viewingPo} busyLabel="Opening" aria-label={`View PO, ${label}`}>
-              View PO
-            </Button>
-          ) : null}
-          {money && canEdit ? (
-            <Button size="sm" variant={po ? 'quiet' : 'secondary'} icon={FileText} onClick={onIssue} aria-label={`${po ? `Issue R${po.revision + 1}` : 'Issue PO'}, ${label}`}>
-              {po ? `Issue R${po.revision + 1}` : 'Issue PO'}
-            </Button>
-          ) : null}
-        </span>
       </div>
       {addingExpense ? (
         <AddExpenseDialog
           open
           onOpenChange={o => !o && setAddingExpense(false)}
-          context={{ orderId: order.id, orderLabel: orderRef(order.number), legId: leg.id, legLabel: label, payeeId: leg.supplierId, payeeName: leg.supplierName }}
+          context={{ orderId: order.id, orderLabel: orderRef(order.number), legId: leg.id, payeeId: leg.supplierId, payeeName: leg.supplierName }}
         />
       ) : null}
     </li>

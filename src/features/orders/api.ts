@@ -659,6 +659,15 @@ export interface OrderListRow {
   balance: number | null
   /** The engineers assigned (order_engineers), so an engineer's "My jobs" view can be a filter. */
   engineerIds: string[]
+  /** orders.commissioning_planned_on: the "Next step" column says when the job is. */
+  plannedOn: string | null
+  /** Admin and sales: when the balance falls due (v_order_money / order_receivables()). Null for an engineer. */
+  dueOn: string | null
+  /** Admin only (v_order_money): 'complete' once costs are marked complete. Null for sales and engineers. */
+  costsState: string | null
+  /** What was ordered, no prices: "Belimo actuator ×6, Memosens pH sensor ×2" and whether there are more lines. */
+  what: string
+  moreLines: boolean
 }
 
 /**
@@ -674,8 +683,11 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
       (from, to) =>
         db
           .from('orders')
-          .select('id, number, customer_po_number, ordered_on, owner_id, company_id, companies(name), company_sites(name)')
+          // the first three lines of each order (description and quantity, never a price) say what was ordered
+          .select('id, number, customer_po_number, ordered_on, owner_id, company_id, commissioning_planned_on, companies(name), company_sites(name), order_items(description, qty, position)')
           .order('number', { ascending: false })
+          .order('position', { referencedTable: 'order_items' })
+          .limit(LIST_LINES + 1, { referencedTable: 'order_items' })
           .range(from, to) as unknown as PromiseLike<{ data: OrdersJoin[] | null; error: { code?: string; message: string } | null }>,
     ),
     fetchAll(
@@ -690,7 +702,7 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
     role === 'admin'
       ? fetchAll(
           (from, to) =>
-            db.from('v_order_money').select('order_id, payment_state, receivable').range(from, to) as unknown as PromiseLike<{ data: Array<Record<string, unknown>> | null; error: { code?: string; message: string } | null }>,
+            db.from('v_order_money').select('order_id, payment_state, receivable, due_on, costs_state').range(from, to) as unknown as PromiseLike<{ data: Array<Record<string, unknown>> | null; error: { code?: string; message: string } | null }>,
         )
       : role === 'sales'
         ? db.rpc('order_receivables').then(r => {
@@ -727,8 +739,27 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
       payment: money ? ((p?.payment_state as string | null | undefined) ?? null) : null,
       balance: money && p ? Number(p.receivable ?? p.balance ?? 0) : null,
       engineerIds: engBy.get(o.id) ?? [],
+      plannedOn: o.commissioning_planned_on ?? null,
+      dueOn: money && p ? ((p.due_on as string | null | undefined) ?? null) : null,
+      costsState: role === 'admin' && p ? ((p.costs_state as string | null | undefined) ?? null) : null,
+      ...listWhat(o.order_items ?? []),
     }
   })
+}
+
+/** How many lines the orders list names per order; one more is read to know whether there are others. */
+const LIST_LINES = 2
+
+/** "Belimo actuator ×6, Memosens pH sensor ×2", and whether the order has more lines than that. */
+export function listWhat(lines: ReadonlyArray<{ description: string; qty: number | string; position?: number | null }>): { what: string; moreLines: boolean } {
+  const sorted = [...lines].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+  return {
+    what: sorted
+      .slice(0, LIST_LINES)
+      .map(l => `${l.description} ×${Number(l.qty)}`)
+      .join(', '),
+    moreLines: sorted.length > LIST_LINES,
+  }
 }
 
 type OrdersJoin = {
@@ -739,8 +770,10 @@ type OrdersJoin = {
   owner_id?: string | null
   company_id: string
   site_id?: string | null
+  commissioning_planned_on?: string | null
   companies: { name: string } | { name: string }[] | null
   company_sites: { name: string } | { name: string }[] | null
+  order_items?: Array<{ description: string; qty: number | string; position: number | null }> | null
 }
 
 // ---------------------------------------------------------------- a repeat order, or an order that came in without an RFQ (O02)

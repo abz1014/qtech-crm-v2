@@ -40,7 +40,8 @@ test('overpayment and advance: an advance before the invoice, then more than is 
   const page = await openPage(ctx, `/orders/${o.order.id}`)
   const payments = () => must(rest<{ amount: number }[]>('admin', `payments_in?order_id=eq.${o.order.id}&select=amount&order=created_at`))
   const record = async (amount: string) => {
-    await page.locator('[data-slot="order-actions"]').getByRole('button', { name: 'Record payment' }).click()
+    // one Record payment on the page (the status strip, or the green next step): never two
+    await page.getByRole('button', { name: 'Record payment' }).click()
     const d = page.getByRole('dialog', { name: 'Record payment' })
     await expect(d.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue(/.+/) // the balance due is pre-filled
     await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill(amount)
@@ -77,7 +78,7 @@ test.describe('cancelling an order after its PO was issued', () => {
     const ctx = await roleContext(browser, info, 'admin')
     const page = await openPage(ctx, `/orders/${s.order.id}`)
     await resetCount(page)
-    await legLoc(page, 'A').getByRole('button', { name: 'Issue PO, leg A' }).click()
+    await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Issue PO' }).click()
     await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 30_000 })
     fe2('Issue PO (every line priced)', (await readCount(page)).mouse, 2)
@@ -104,7 +105,7 @@ test.describe('cancelling an order after its PO was issued', () => {
     const s = await seedPo({ allPriced: true })
     const ctx = await roleContext(browser, info, 'admin')
     const page = await openPage(ctx, `/orders/${s.order.id}`)
-    await legLoc(page, 'A').getByRole('button', { name: 'Issue PO, leg A' }).click()
+    await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Issue PO' }).click()
     await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 30_000 })
     const [po] = await must(rest<{ number: number; issued_on: string }[]>('admin', `purchase_orders?supplier_order_id=eq.${s.leg}&select=number,issued_on`))
@@ -148,7 +149,7 @@ test.describe('the closed-month refusal, in the screens, for a payment and an in
     const o = await newOrder('Locked Payer', 50000)
     const ctx = await roleContext(browser, info, 'admin')
     const page = await openPage(ctx, `/orders/${o.order.id}`)
-    await page.locator('[data-slot="order-actions"]').getByRole('button', { name: 'Record payment' }).click()
+    await page.getByRole('button', { name: 'Record payment' }).click()
     const d = page.getByRole('dialog', { name: 'Record payment' })
     await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill('10,000')
     await d.getByRole('textbox', { name: 'Date received' }).fill(typed)
@@ -163,7 +164,7 @@ test.describe('the closed-month refusal, in the screens, for a payment and an in
     const o = await newOrder('Locked Invoicer', 50000)
     const ctx = await roleContext(browser, info, 'sales')
     const page = await openPage(ctx, `/orders/${o.order.id}`)
-    await page.locator('[data-slot="order-actions"]').getByRole('button', { name: 'Create invoice' }).click()
+    await page.getByRole('button', { name: 'Create invoice' }).click()
     const d = page.getByRole('dialog', { name: 'Create invoice' })
     await d.getByRole('textbox', { name: 'Invoice date' }).fill(typed)
     await d.getByRole('button', { name: 'Create invoice' }).click()
@@ -181,7 +182,7 @@ test.describe('the closed-month refusal, in the screens, for a payment and an in
 })
 
 test('goods late on a repeat order: late goods are raised even though no quote ever gave the leg an expected date', async ({ browser }, info) => {
-  // A past order, delivered, with one supplier leg; the repeat is made on screen from "New order".
+  // A past order, delivered, with one supplier order; the repeat is made on screen from "Repeat a past order".
   const tag = unique()
   const company = await createCompany(uniqueName(`Repeatco${tag}`))
   const supplier = await createCompany(uniqueName('Alpenmark'), { country: 'Germany' })
@@ -191,7 +192,7 @@ test('goods late on a repeat order: late goods are raised even though no quote e
 
   const ctx = await roleContext(browser, info, 'sales')
   const page = await openPage(ctx, '/orders?owner=all')
-  await page.getByRole('button', { name: 'New order' }).first().click()
+  await page.getByRole('button', { name: 'Repeat a past order' }).first().click()
   const d = page.getByRole('dialog')
   await d.getByLabel('Find a past order').fill(company.name)
   await d.getByRole('button', { name: new RegExp(`${company.name}.*ORD-${String(past.number).padStart(4, '0')}`) }).click()
@@ -200,7 +201,7 @@ test('goods late on a repeat order: late goods are raised even though no quote e
   const id = page.url().split('/').pop() as string
 
   // The supplier is ordered from with one tap; the goods have not come twenty days later (the date is moved back).
-  await legLoc(page, 'A').getByRole('button', { name: 'Mark placed, leg A' }).click()
+  await legLoc(page, 'A').getByRole('button', { name: `Mark placed, ${supplier.name}` }).click()
   const legs = await must(rest<{ id: string }[]>('admin', `supplier_orders?order_id=eq.${id}&select=id`))
   await expect.poll(async () => (await must(rest<{ placed_on: string | null }[]>('admin', `supplier_orders?id=eq.${legs[0].id}&select=placed_on`)))[0].placed_on).toBe(today)
   // The leg got its expected date when it was placed (0067: no lead time on a repeat leg, so the supplier's record or 30 days), not by a person.

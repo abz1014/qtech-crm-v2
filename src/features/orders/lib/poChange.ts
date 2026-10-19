@@ -33,6 +33,6 @@ export function poChange(poLines: readonly PoLine[] | null, legLines: readonly L
     else if (Math.abs(was - l.qty) > EPS) notes.push(`${l.description} was ×${was}, now ×${l.qty}`)
   }
   const ids = new Set(now.map(l => l.id))
-  for (const p of poLines) if (!ids.has(p.orderItemId)) notes.push('A line on the PO is no longer on this leg')
+  for (const p of poLines) if (!ids.has(p.orderItemId)) notes.push('A line on the PO is no longer with this supplier')
   return notes.length > 0 ? { notes } : null
 }

@@ -19,12 +19,26 @@ import { useMarkDone } from '@/features/orders/commissioningActions'
 
 /*
  * Commissioning (O03; g2-order-detail.html "Commissioning"): planned on, done on, the engineers, and the order notes and site contact.
- * Admin and sales have an Edit button (needs-it, planned date, engineers); an engineer has none ("Nothing to type here") and works from the
- * page header: "Mark done today" (1 tap, nothing typed) and "Change planned date".
+ * Admin and sales have an Edit button (needs-it, planned date, engineers) and a secondary "Mark done today" (the page's one green button
+ * is in the header: when that is "Mark done today" it is not repeated here). An engineer has no button here and works from "Your job" at
+ * the top of the page: "Mark done today" (1 tap, nothing typed) and "Change planned date".
  *
  * A3: scope, gate pass and site phone are not fields; they live in the order notes and the site contact, shown read only to an engineer.
  */
-export function CommissioningPanel({ order, engineers, isEngineer, canEdit }: { order: OrderHeader; engineers: readonly PersonRow[]; isEngineer: boolean; canEdit: boolean }) {
+export function CommissioningPanel({
+  order,
+  engineers,
+  isEngineer,
+  canEdit,
+  markDoneAbove = false,
+}: {
+  order: OrderHeader
+  engineers: readonly PersonRow[]
+  isEngineer: boolean
+  canEdit: boolean
+  /** The header's primary button is already "Mark done today". */
+  markDoneAbove?: boolean
+}) {
   const markDone = useMarkDone(order)
   const [editing, setEditing] = useState(false)
   const [editingNotes, setEditingNotes] = useState(false)
@@ -32,36 +46,31 @@ export function CommissioningPanel({ order, engineers, isEngineer, canEdit }: { 
 
   return (
     <section aria-label="Commissioning" className="min-w-0 rounded border bg-surface">
-      <div className="flex flex-wrap items-center gap-3 border-b px-5 py-4">
+      <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3 md:px-5">
         <h2 className="text-base font-semibold">Commissioning</h2>
         {state ? <StatusBadge dimension="commissioning" value={state} /> : null}
-        {isEngineer ? (
-          <span className="ml-auto text-sm text-fg-muted">Nothing to type here</span>
-        ) : canEdit ? (
+        {!isEngineer && canEdit ? (
           <Button size="sm" variant="quiet" icon={Pencil} className="ml-auto" onClick={() => setEditing(true)}>
             Edit
           </Button>
         ) : null}
       </div>
 
-      <div className="grid gap-5 px-5 py-4">
+      <div className="grid gap-5 px-4 py-4 md:px-5">
         {order.needsCommissioning ? (
           <div className="grid gap-5 md:grid-cols-3">
             <div className="grid content-start gap-1">
               <span className="text-xs text-fg-muted">Planned on</span>
               <span className={order.plannedOn ? 'num text-sm' : 'text-sm text-fg-muted'}>{order.plannedOn ? formatDay(order.plannedOn) : 'Not planned'}</span>
-              <span className="text-xs text-fg-muted">{isEngineer ? 'Moved with “Change planned date”.' : 'Known at order time.'}</span>
             </div>
             <div className="grid content-start gap-1">
               <span className="text-xs text-fg-muted">Done on</span>
               <span className={order.doneOn ? 'num text-sm' : 'text-sm text-fg-muted'}>{order.doneOn ? formatDay(order.doneOn) : 'Not yet'}</span>
-              {!order.doneOn && canEdit && !isEngineer ? (
-                <Button variant="primary" icon={CircleCheck} className="mt-1 justify-self-start" onClick={() => void markDone.run()} busy={markDone.pending} busyLabel="Saving">
+              {!order.doneOn && canEdit && !isEngineer && !markDoneAbove ? (
+                <Button size="sm" icon={CircleCheck} className="mt-1 justify-self-start" onClick={() => void markDone.run()} busy={markDone.pending} busyLabel="Saving">
                   Mark done today
                 </Button>
-              ) : (
-                <span className="text-xs text-fg-muted">{order.doneOn ? '' : '“Mark done today” stamps today’s date.'}</span>
-              )}
+              ) : null}
             </div>
             <div className="grid content-start gap-2">
               <span className="text-xs text-fg-muted">Engineers</span>
