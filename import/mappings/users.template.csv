@@ -1,4 +1,4 @@
 # users.csv: old user (by name) -> the person in the new system (by name). Leave new_name empty for someone who has left.
-# owner_reliable = no for a person whose attribution is just the seed (every historical row names them): their payments then stay unattributed.
-old_name,new_name,owner_reliable
-# Some Old Name,Some New Name,yes
+# (The old attribution carries no credit: imported payments are credited to nobody until the owner decides.)
+old_name,new_name
+# Some Old Name,Some New Name

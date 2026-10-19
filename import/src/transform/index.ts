@@ -50,7 +50,6 @@ export function transformAll(dump: LegacyDump, maps: Mappings, opts: TransformOp
   const rfq = transformRfqs(ctx, book)
   const orders = transformOrders(ctx, book, rfq.rfqIds, rfq.rfqRefs, ledger)
   const money = transformMoney(ctx, book, orders, ledger)
-  ctx.ownerConcentration()
 
   const companyTables = book.finish()
 
@@ -121,6 +120,7 @@ export function transformAll(dump: LegacyDump, maps: Mappings, opts: TransformOp
   return {
     tables,
     storageCopies: money.storageCopies,
+    numberFloors: rfq.numberFloors,
     review: ctx.review,
     recon,
     sourceCounts: sourceNames.map(table => ({ table, rows: (dump.tables[table] ?? []).length, dropped: ctx.droppedCount.get(table) ?? 0 })),

@@ -7,7 +7,7 @@ import { clean, normName } from './lib/text'
 //   company_merge.csv        old_name,company,site
 //   vendor_parse.csv         old_name,company,brand,country
 //   expense_categories.csv   legacy_category,category
-//   users.csv                old_name,new_name,owner_reliable
+//   users.csv                old_name,new_name
 //   po_clashes.csv           customer_po_number,decision            (merge | po_shared)
 
 export interface CompanyTarget {
@@ -22,7 +22,6 @@ export interface VendorTarget {
 export interface UserTarget {
   /** The person's name in the new project; null means "left the company" (records are unattributed). */
   newName: string | null
-  ownerReliable: boolean
 }
 export type PoDecision = 'merge' | 'po_shared'
 
@@ -80,8 +79,7 @@ export function parseMappings(t: MappingTexts): Mappings {
   for (const r of parseCsv(t.users ?? '')) {
     const key = normName(r['old_name'])
     if (!key) continue
-    const reliable = (clean(r['owner_reliable']) ?? 'yes').toLowerCase()
-    m.users.set(key, { newName: clean(r['new_name']), ownerReliable: !['no', 'false', '0', 'n'].includes(reliable) })
+    m.users.set(key, { newName: clean(r['new_name']) })
   }
   for (const r of parseCsv(t.poClashes ?? '')) {
     const po = normPo(r['customer_po_number'])
