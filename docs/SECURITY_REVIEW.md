@@ -19,20 +19,22 @@ engineers never see money (payments, expenses, costs, margins, cash, invoices); 
 | ID | Severity | Finding | Status |
 |---|---|---|---|
 | H-1 | High | Any staff member could replace or re-point the PDF of an issued quotation or supplier PO, with any content type | **Fixed in 0057** |
-| M-1 | Medium | A closed month's net income, team credit and target progress still change when order data changes, including by engineers | Recommendation (todo test) |
-| M-2 | Medium | Any staff member can reassign an order's owner, which decides who is credited with the next payment (targets) | Recommendation |
-| M-3 | Medium | Selling prices are hidden from engineers by the app only; the database grants them to all staff (section 10) | Owner decision |
-| L-1 | Low | Actor columns can be named by the caller: the chase actor (0048) and every `created_by` | Recommendation (todo test) |
-| L-2 | Low | anon keeps Supabase's default grants on the sequences in `public` | Recommendation (todo test) |
-| L-3 | Low | pg_net's `net.http_get` keeps Supabase's execute grant to anon and authenticated | Recommendation (todo test) |
-| L-4 | Low | The share target accepts a cross-site form POST to `/capture` | Recommendation |
-| L-5 | Low | Capture drafts and RFQ recents stay on the device after sign-out | Recommendation |
-| L-6 | Low | Files attached to a closed month (GST receipts, expense receipts) are not locked | Recommendation |
-| L-7 | Low | `rfq-files`, `gst-receipts` and `expense-receipts` accept any content type | Recommendation |
-| I-1 | Info | Auth settings in `config.toml` are weak; the live values are set in the dashboard and were not checked | Check before go-live |
+| M-1 | Medium | A closed month's net income, team credit and target progress still change when order data changes, including by engineers | **Fixed in 0065** (closed-month P&L also frozen at close by 0058) |
+| M-2 | Medium | Any staff member can reassign an order's owner, which decides who is credited with the next payment (targets) | **Fixed in 0065** |
+| M-3 | Medium | Selling prices are hidden from engineers by the app only; the database grants them to all staff (section 10) | **Accepted** by the owner, 2026-10-19 |
+| L-1 | Low | Actor columns can be named by the caller: the chase actor (0048) and every `created_by` | **Fixed in 0065** |
+| L-2 | Low | anon keeps Supabase's default grants on the sequences in `public` | **Fixed in 0065** |
+| L-3 | Low | pg_net's `net.http_get` keeps Supabase's execute grant to anon and authenticated | **Cannot be changed by the project** (platform grant); not reachable |
+| L-4 | Low | The share target accepts a cross-site form POST to `/capture` | **Mitigated** (draft only, capped; app) |
+| L-5 | Low | Capture drafts and RFQ recents stay on the device after sign-out | **Fixed** (app) |
+| L-6 | Low | Files attached to a closed month (GST receipts, expense receipts) are not locked | **Fixed in 0065** |
+| L-7 | Low | `rfq-files`, `gst-receipts` and `expense-receipts` accept any content type | **Fixed in 0065** |
+| I-1 | Info | Auth settings in `config.toml` are weak; the live values are set in the dashboard and were not checked | Owner checklist in Round 2 |
 | I-2 | Info | No secrets and no real customer data found in the committed tree | No action |
 
-No critical finding. Checked and found sound: see "Reviewed and clean" at the end.
+No critical finding. Checked and found sound: see "Reviewed and clean" at the end. Round 2 (migration 0065, the app changes for
+L-4 and L-5, and the owner's M-3 decision) is in "Round 2: the fixes" below; the finding sections keep the original
+evidence.
 
 ## H-1 (High, fixed): issued quotation and PO PDFs could be replaced by any staff member
 
@@ -185,6 +187,89 @@ range or zeros, emails are `.example` / `.test` / `.invalid`. Company names in m
 fixture data. The mockup company profile shows NTN `3827149-5`: the owner should confirm it is not Q-Tech's real NTN
 (an NTN is public registration data, so this is not a secret either way). `.env*`, `import/.data/` and `backups/` are
 git-ignored, and `supabase/.temp` is ignored by `supabase/.gitignore`.
+
+## Round 2: the fixes (migration 0065, 2026-10-19)
+
+One rule decides who is limited: the database role `authenticated`, which is a signed-in person calling through the
+API, directly or through a SECURITY INVOKER function. The new triggers do not limit the service role (import,
+`admin-users`), postgres (pg_cron, migrations) or SECURITY DEFINER functions, the same as every other trigger in this
+schema. pgTAP `0065_security_recommendations.test.sql` proves each fix. The four todo tests in 0057 are now real tests,
+and S14 has the new rows.
+
+- **M-1.** `orders.legacy_flags`: adding or removing `value_basis_unknown` on an order happens only inside
+  `resolve_value_basis`, for everyone including an admin. It marks its own transaction with a setting the API cannot
+  reach. Any other legacy flag, and an insert that carries flags, is admin only. On `order_items`, the money fields
+  (`qty`, `unit_price_net`, `gst_rate`, `is_service`, `order_id`, `supplier_order_id`, `supplier_unit_price`) and all
+  inserts and deletes are limited to admin and sales. The order page only offers these edits to those two roles
+  (`OrderItemsPanel`, `canEdit && money`). An engineer can write them only in the transaction that created the order.
+  That is what `convert_rfq_to_order` and `create_repeat_order` do when an engineer marks an RFQ won or repeats an
+  order: `orders.created_at` equals that transaction's `now()`, which no later request can reproduce. Descriptions,
+  units and positions stay open to everyone. As a result `split_order_item` is admin and sales only (S14). Sales can
+  still edit a line on an order whose payment falls in a closed month, or invoice it later. That no longer moves a
+  closed month, because the 0058 snapshot freezes the P&L at close.
+- **M-2.** `orders.owner_id` and `rfqs.owner_id` are changed by an admin only. The RFQ is included because convert
+  copies the RFQ owner into the order. Sales may take an order or RFQ that has no owner (NULL to themselves). The app
+  only sets owners when it creates a row.
+- **M-3.** Accepted. On 2026-10-19 the owner decided that engineers may see selling prices on quotation screens, so the
+  database keeps section 10 as it is. `rank_item_quotes` returning NULL selling price and spread to engineers stays as
+  a display rule.
+- **L-1.**
+  - `created_by`, on every table that has it, is set to the caller on insert and can never be rewritten (one trigger
+    per table, `<table>_force_created_by`).
+  - `order_costs.costs_complete_by` is the caller when costs are marked complete, and NULL when they are reopened.
+  - The chase actor (0048):
+    - On insert it is kept only if the caller names themselves; otherwise it is NULL.
+    - A chase records the caller, whatever name the update gives.
+    - An Undo (the count goes down, or the stamp moves back or is cleared) leaves NULL. The earlier chaser cannot be
+      proven, and no name is better than a wrong one.
+    - No other update can change it.
+  - `signatory_id` on quotations and POs is left as chosen, because a document may be signed by someone else.
+- **L-2.** anon loses every privilege on the sequences in `public`, and the default privileges no longer give it any on
+  new sequences.
+- **L-3.** This cannot be changed from the project. Supabase's pg_net install grants execute on the `net` functions,
+  and USAGE on schema `net`, to anon and authenticated, as `supabase_admin`. CI showed the ACL of `net.http_get` is
+  `supabase_admin`'s. Migrations, and the dashboard SQL editor, run as `postgres`, which is not a superuser and cannot
+  revoke a grant it did not make. The `net` schema is not in the API's exposed schemas, so no client can call these
+  functions. The pgTAP test now holds that this project never adds such a grant itself. If the owner wants it removed,
+  only Supabase support can do it; it is not worth a ticket while the schema stays unexposed.
+- **L-4.** Nothing changed for the request itself. A `Sec-Fetch-Site` check cannot be tested against Android's share
+  sheet in CI, and a wrong guess would break WhatsApp share. What a POST to `/capture` stores is only a draft on that
+  device; nothing reaches the database until the signed-in person picks a destination and taps Save. The service worker
+  now keeps at most 10 files, 25 MB and 20,000 characters per share (`src/lib/capture/shareTarget.ts`, unit tested).
+- **L-5.** Sign-out first clears every Capture draft in IndexedDB and the recent RFQs and orders in localStorage
+  (`src/lib/capture/forget.ts`, unit tested). This applies both to the account menu's Sign out and to the automatic
+  sign-out of a deactivated person. A share that arrives while nobody is signed in is still kept for the next sign-in,
+  as designed.
+- **L-6.** Receipts are locked once the month of their invoice (`invoice_date`) or expense (`paid_on`) is closed:
+  - The attachment cannot be changed or removed. It fails with P0001, the month-lock message.
+  - Its stored file cannot be overwritten or deleted. The storage policies enforce this through the new
+    `receipt_locked(bucket, name)`, which answers NULL to anyone who cannot use the bucket.
+  - A new receipt can still be added, because October's tax receipt arrives in November.
+  - Like the 0027 lock, this binds an admin too: reopen the month first.
+- **L-7.** `rfq-files`, `gst-receipts` and `expense-receipts` accept JPEG, PNG, WebP, GIF, HEIC, HEIF, PDF, Word,
+  Excel, PowerPoint, plain text, CSV and `application/octet-stream`. The last one stays because a phone often sends
+  HEIC with no type and legacy receipts may have none; a browser downloads such a file instead of rendering it. HTML,
+  SVG and script types are refused.
+
+### I-1: live Auth settings for the owner to check
+
+These are on the Supabase dashboard for project yafbphagorydbitfgfmg, under Authentication, on the pages named below.
+The values are what this project needs; change any setting that differs.
+
+- [ ] **Sign In / Providers, Email:** "Allow new users to sign up" **off**, because only an admin creates people.
+- [ ] **Sign In / Providers, Email:** "Confirm email" can stay off, because `admin-users` creates accounts already
+      confirmed. "Secure email change" **on**, so an email change needs both addresses to confirm.
+- [ ] **Sign In / Providers:** anonymous sign-ins **off**, and every provider other than Email **off**.
+- [ ] **Attack Protection (passwords):** minimum password length **12** (generated passwords are 16); password
+      requirements at least **letters and digits**.
+- [ ] **Attack Protection:** "Prevent use of leaked passwords" **on**. This is the HaveIBeenPwned check. If the plan
+      does not offer it, note that here; the generated passwords still apply.
+- [ ] **Attack Protection:** secure password change (reauthentication) **on**, so a stolen session cannot change the
+      password without a recent sign-in.
+- [ ] **Sessions:** JWT expiry **3600 s** (1 hour) or less; refresh-token reuse detection **on**.
+- [ ] **URL Configuration:** the Site URL is the live app URL, and the redirect URLs list only the live app (no
+      localhost).
+- [ ] **Rate Limits:** keep the defaults for sign-in and token refresh (the app sends no email).
 
 ## Reviewed and clean
 

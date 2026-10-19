@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { LegacyDump, LegacyTables, StorageObjectMeta } from '../types'
 import type { Extractor } from './extractor'
@@ -59,16 +59,38 @@ export function parseDump(text: string): ParsedDump {
     }
   }
   const meta = o['meta'] && typeof o['meta'] === 'object' ? (o['meta'] as Record<string, unknown>) : {}
-  return { dump: { tables, storage, meta }, warnings }
+  const cat = o['catalog']
+  const catalog = cat && typeof cat === 'object' && !Array.isArray(cat) ? (cat as LegacyDump['catalog']) : undefined
+  return { dump: { tables, storage, meta, ...(catalog ? { catalog } : {}) }, warnings }
 }
 
-/** Reads a dump from a .json file, or from a folder that holds dump.json (and storage/). */
+/** Two halves of one dump (dump.sql run with parts 'a' and 'b'): tables and storage joined, catalog details joined. */
+export function mergeDumps(a: ParsedDump, b: ParsedDump): ParsedDump {
+  const tables: LegacyTables = { ...a.dump.tables }
+  for (const [k, v] of Object.entries(b.dump.tables)) if (v && (v.length > 0 || !(k in tables))) tables[k] = v
+  const catalog = {
+    counts: { ...(a.dump.catalog?.counts ?? {}), ...(b.dump.catalog?.counts ?? {}) },
+    details: { ...(a.dump.catalog?.details ?? {}), ...(b.dump.catalog?.details ?? {}) },
+  }
+  return {
+    dump: { tables, storage: [...a.dump.storage, ...b.dump.storage], meta: { ...a.dump.meta, ...b.dump.meta }, catalog },
+    warnings: [...a.warnings, ...b.warnings],
+  }
+}
+
+/** Reads a dump from a .json file, or from a folder that holds dump.json (plus dump-b.json etc., merged) and storage/. */
 export function readDump(path: string): ParsedDump & { storageDir: string | null } {
   if (!existsSync(path)) throw new Error(`No such file or folder: ${path}`)
   const isDir = statSync(path).isDirectory()
-  const file = isDir ? join(path, 'dump.json') : path
-  if (!existsSync(file)) throw new Error(`No dump.json in ${path}`)
-  const parsed = parseDump(readFileSync(file, 'utf8'))
+  const files = isDir
+    ? readdirSync(path)
+        .filter(f => /^dump.*\.json$/.test(f))
+        .sort()
+        .map(f => join(path, f))
+    : [path]
+  if (files.length === 0) throw new Error(`No dump.json in ${path}`)
+  const parts = files.map(f => parseDump(readFileSync(f, 'utf8')))
+  const parsed = parts.slice(1).reduce(mergeDumps, parts[0]!)
   const storageDir = isDir && existsSync(join(path, 'storage')) ? join(path, 'storage') : null
   return { ...parsed, storageDir }
 }

@@ -317,6 +317,14 @@ export interface RawPnl {
   afterDrawings: string
   cashOutTotal: string
   inputTax: string
+  /**
+   * Changes to closed months shown in this month (owner decision 2026-10-19: a closed month is frozen; a later change that would
+   * move it lands here): their effect on the result, and on Not in P&L. Included in result and afterDrawings. Absent: none.
+   */
+  adjustResult?: string
+  adjustNonPnl?: string
+  /** When the month was closed and its figures frozen; null or absent for an open month. */
+  frozenAt?: string | null
 }
 
 /** One month's payments as the P&L's "money in" lines count them. */
@@ -431,6 +439,11 @@ export interface PnlView {
   result: string
   notInPnl: { lines: CategoryLine[]; total: GroupTotal }
   afterDrawings: string
+  /** Changes to closed months counted in this month's result (0.00 when none), and in Not in P&L. */
+  adjustResult: string
+  adjustNonPnl: string
+  /** Frozen at close: the figures are the ones saved when the month was closed. */
+  frozenAt: string | null
   payments: PaymentStats
   cash: { allPaidCount: number; allPaid: string; inputTax: string } & ViaStat
 }
@@ -450,6 +463,9 @@ export function buildPnl(month: string, pnl: RawPnl | null, payments: PaymentSta
     result: p.result,
     notInPnl: { lines: lines.filter(l => l.grp === 'non_pnl'), total: groupTotal(lines, 'non_pnl') },
     afterDrawings: p.afterDrawings,
+    adjustResult: p.adjustResult ?? '0.00',
+    adjustNonPnl: p.adjustNonPnl ?? '0.00',
+    frozenAt: p.frozenAt ?? null,
     payments,
     cash: { allPaidCount: all, allPaid: p.cashOutTotal, inputTax: p.inputTax, ...via },
   }
@@ -473,8 +489,10 @@ export function pnlCsv(v: PnlView): { headers: string[]; rows: unknown[][] } {
     ['Money in', 'Payments received, all', v.payments.count, csvNum(v.grossReceived), csvNum(v.gstIn), csvNum(v.netIn)],
     ['Money out', 'Order costs', v.orderCosts.count, csvNum(v.orderCosts.gross), csvNum(v.orderCosts.inputTax), csvNum(negate(v.orderCosts.net))],
     ['Money out', 'Overheads', v.overheads.count, csvNum(v.overheads.gross), csvNum(v.overheads.inputTax), csvNum(negate(v.overheads.net))],
+    ...(toPaisa(v.adjustResult) !== 0n ? [['Adjustment', 'Changes to closed months, counted this month', '', '', '', csvNum(v.adjustResult)]] : []),
     ['Result', `Result for ${monthKeyLabel(v.month)}`, '', '', '', csvNum(v.result)],
     ...v.notInPnl.lines.map(l => ['Not in P&L', l.category, l.count, csvNum(l.gross), csvNum(l.inputTax), csvNum(negate(l.net))]),
+    ...(toPaisa(v.adjustNonPnl) !== 0n ? [['Not in P&L', 'Changes to closed months, counted this month', '', '', '', csvNum(negate(v.adjustNonPnl))]] : []),
     ['Not in P&L', 'Not in P&L, total', v.notInPnl.total.count, csvNum(v.notInPnl.total.gross), csvNum(v.notInPnl.total.inputTax), csvNum(negate(v.notInPnl.total.net))],
     ['After drawings', 'Result less Not in P&L', '', '', '', csvNum(v.afterDrawings)],
   ]
@@ -652,7 +670,7 @@ export const PAYABLE_STATE_LABEL: Record<PayableRow['state'], string> = {
   owing: 'Owed',
   settled: 'Settled (≈)',
   unpriced: 'No price yet',
-  no_rate: 'No rate',
+  no_rate: 'Needs a rate',
 }
 
 export function payablesCsv(v: PayablesView): { headers: string[]; rows: unknown[][] } {

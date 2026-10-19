@@ -1,7 +1,7 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { CompanyProfile } from '@/features/settings/companyProfile'
 import type { PoPdfData } from '@/features/purchaseOrders/api'
-import { currencyInWords, STANDARD_TERMS } from '@/features/purchaseOrders/lib/prefill'
+import { currencyInWords, poLineAmounts, STANDARD_TERMS } from '@/features/purchaseOrders/lib/prefill'
 import { termLines } from '@/features/quotations/lib/termLines'
 import { wholeInWords } from '@/features/quotations/lib/totals'
 import { formatPaisa, toPaisa } from '@/lib/money'
@@ -94,8 +94,10 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
   const ref = poRef(po.number, data.firstIssuedOn)
   const refRev = `${ref} R${po.revision}`
   const ccy = po.currency
-  const lines = po.lines.map(l => ({ ...l, amount: Math.round(Number(l.qty) * Number(l.unit_price) * 100) / 100 }))
-  const total = lines.reduce((n, l) => n + Math.round(l.amount * 100), 0) / 100
+  // exact decimals, the same rounding as the stored purchase_orders.total (0022)
+  const amounts = poLineAmounts(po.lines.map(l => ({ qty: l.qty, unit_price: l.unit_price })))
+  const lines = po.lines.map((l, i) => ({ ...l, amount: amounts.amounts[i] }))
+  const total = amounts.total
   const contactLine = [profile.phone, profile.email, profile.website].filter(Boolean).join('   ')
   const taxLine = [profile.ntn ? `NTN ${profile.ntn}` : null, profile.strn ? `STRN ${profile.strn}` : null].filter(Boolean).join('   ')
   const companyName = profile.legal_name ?? ''

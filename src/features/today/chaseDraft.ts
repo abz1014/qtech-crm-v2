@@ -126,7 +126,14 @@ export function buildGoodsDraft(input: { leg: LegFact; data: LegDraftData; today
   return { kind: 'goods', contact: data.contact, ...t, countAfter: leg.chaseCount + 1, answerBy: t.whatsapp.confirmBy, firm: t.whatsapp.daysLate > 30 }
 }
 
-export function buildPaymentDraft(input: { receivable: ReceivableFact; data: PaymentDraftData; today: string; signature: ChaseSignature }): Draft | null {
+export function buildPaymentDraft(input: {
+  receivable: ReceivableFact
+  data: PaymentDraftData
+  today: string
+  signature: ChaseSignature
+  /** The order's gross, when the caller has it (the Receivables panel does): the email then carries the table of figures. */
+  gross?: number
+}): Draft | null {
   const { receivable, data } = input
   if (!receivable.dueOn) return null
   const t = both<PaymentReminder>(variant =>
@@ -143,6 +150,8 @@ export function buildPaymentDraft(input: { receivable: ReceivableFact; data: Pay
       contactName: data.contact?.name ?? null,
       signature: input.signature,
       variant,
+      invoiceNumbers: data.invoiceNumbers,
+      gross: input.gross,
     }),
   )
   return { kind: 'payment', contact: data.contact, ...t, countAfter: receivable.reminderCount + 1, answerBy: t.whatsapp.confirmBy, firm: t.whatsapp.firm }

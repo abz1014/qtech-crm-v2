@@ -111,6 +111,8 @@ export interface DataTableProps<T> {
   /** Scroll height once virtualised. Default 70vh. */
   maxHeight?: string
   virtualAfter?: number
+  /** A band above the column headers that names runs of columns ("Sale to customer, PKR"). Drawn from lg up, where every column shows. Columns outside a band stay unlabelled. */
+  columnBands?: ReadonlyArray<{ label: ReactNode; from: string; to: string }>
   /** Rows hold two-line cells (name over reference): 48 px as in the mockups. Required for virtualised tables with two-line cells. */
   twoLine?: boolean
   /** Below 640px, draw each row as a stacked card with this content instead of columns. */
@@ -129,6 +131,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     onRowOpen,
     group,
     groupStyle,
+    columnBands,
     footerLabel,
     noun,
     total,
@@ -689,6 +692,32 @@ export function DataTable<T>(props: DataTableProps<T>) {
           className={cn('w-full border-separate border-spacing-0 text-table', cards && 'block')}
         >
           <thead role={cards ? 'rowgroup' : undefined} className={cn(cards && 'sr-only')}>
+            {columnBands && !cards ? (
+              <tr className="hidden lg:table-row" data-testid="column-bands">
+                {selection ? <th aria-hidden="true" className="h-[28px] border-b border-line bg-sunken" /> : null}
+                {(() => {
+                  const out: ReactNode[] = []
+                  let i = 0
+                  while (i < columns.length) {
+                    const band = columnBands.find(b => b.from === columns[i].id)
+                    if (band) {
+                      const end = columns.findIndex(c => c.id === band.to)
+                      const span = Math.max(1, (end < 0 ? i : end) - i + 1)
+                      out.push(
+                        <th key={`band-${band.from}`} colSpan={span} scope="colgroup" className="h-[28px] whitespace-nowrap border-b border-l border-line bg-sunken px-[var(--cell-px)] text-left text-xs font-medium text-fg-muted">
+                          {band.label}
+                        </th>,
+                      )
+                      i += span
+                    } else {
+                      out.push(<td key={`gap-${columns[i].id}`} className="h-[28px] border-b border-line bg-sunken" />)
+                      i += 1
+                    }
+                  }
+                  return out
+                })()}
+              </tr>
+            ) : null}
             <tr aria-rowindex={virtual ? 1 : undefined}>
               {selection ? (
                 <th className="sticky top-0 z-[1] h-[36px] w-10 border-b border-line bg-sunken px-[var(--cell-px)] first:pl-5 last:pr-5">
