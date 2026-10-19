@@ -68,6 +68,9 @@ import { defineConfig, devices } from '@playwright/test'
  *    no access (and no request) for sales and engineer, and axe at 1440 and 375:
  *      E2E_SUITE=bank REVIEW_DIR=review-shots npx playwright test --project=bank
  *
+ *  - month-end (M10, M05): Money > Month-end for the admin: the checklist and its links, the six reports (one tap each, one tap to CSV), close and reopen
+ *    (two taps each) with the closed-month sentence, no access (and no request) for sales and engineer, axe at 1440 and 375:
+ *      E2E_SUITE=month-end REVIEW_DIR=review-shots npx playwright test --project=month-end
  *  - money-costs (M04, M07): the Margin panel on the order page (supplier-price estimate that never overwrites, Provisional until costs are
  *    marked complete), Money > Margins, Money > Exceptions, and that sales and engineers get no money data (network log and Row Level
  *    Security), with axe at 1440 and 375:
@@ -96,7 +99,7 @@ import { defineConfig, devices } from '@playwright/test'
  */
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'pwa', 'reports']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -243,6 +246,13 @@ export default defineConfig({
     {
       name: 'bank',
       testMatch: /bank\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
+    },
+    {
+      name: 'month-end',
+      testMatch: /month-end\/.*\.spec\.ts/,
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
