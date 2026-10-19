@@ -137,6 +137,10 @@ export interface OrderFact {
   commissioningState: string
   /** v_order_state.invoicing_state: not_invoiced / part / fully_invoiced; null when the caller is an engineer. */
   invoicingState: string | null
+  /** Gross still to invoice (order gross less invoiced gross) when the order is part-invoiced; otherwise null. Admin and sales only. */
+  toInvoice: number | null
+  /** The date of the latest invoice on a part-invoiced order, or null. */
+  lastInvoicedOn: string | null
   /** The latest leg delivered_on, or the commissioning done date: the day the order became deliverable-complete. Null when unknown. */
   deliveredOn: string | null
 }
