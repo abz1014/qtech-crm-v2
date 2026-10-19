@@ -750,21 +750,51 @@ for (const width of [1440, 375]) {
 }
 
 test.describe('reply currency for a supplier with no country (audit R1)', () => {
-  test('the currency of its procurement leg pre-fills the reply; with nothing on file it falls back to PKR and says so', async ({ page }) => {
+  test('the procurement leg currency pre-fills the reply', async ({ page }) => {
     const s = await seed()
     const buyer = await createCompany(uniqueName('Leg Buyer'))
     const order = (await must(rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: buyer.id } })))[0]
     const withLeg = await createCompany(uniqueName('Legsup'))
-    const bare = await createCompany(uniqueName('Baresup'))
     await must(rest('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: withLeg.id, currency: 'CNY' } }))
-    for (const c of [withLeg, bare]) {
-      await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: s.rfq.id, supplier_id: c.id, sent_on: karachiDay(-1) } }))
-    }
+    await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: s.rfq.id, supplier_id: withLeg.id, sent_on: karachiDay(-1) } }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    // No country and no earlier reply, but we bought from them in CNY: not PKR.
     await expect(row(page, withLeg.name).getByText(/CNY, their last reply/)).toBeVisible()
-    await expect(row(page, withLeg.name).getByText(/PKR, no earlier reply/)).toHaveCount(0)
-    // Nothing at all on file: PKR, and the note says why (the person can change it).
-    await expect(row(page, bare.name).getByText(/PKR, no earlier reply/)).toBeVisible()
+    await expect(row(page, withLeg.name).getByRole('group', { name: `Currency for ${withLeg.name}` })).toHaveCount(0)
+  })
+
+  test('nothing on file: no silent PKR. A chip row, no preselection, no save until one is picked; the pick is remembered', async ({ page }) => {
+    const s = await seed()
+    const bare = await createCompany(uniqueName('Baresup'))
+    const inq = (await must(rest<{ id: string }[]>('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: s.rfq.id, supplier_id: bare.id, sent_on: karachiDay(-1) } })))[0]
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    const r = row(page, bare.name)
+    const chips = r.getByRole('group', { name: `Currency for ${bare.name}` })
+    await expect(chips).toBeVisible()
+    for (const c of ['USD', 'EUR', 'CNY', 'PKR']) await expect(chips.getByRole('button', { name: c, exact: true })).toBeVisible()
+    await expect(chips.getByRole('button', { pressed: true })).toHaveCount(0) // nothing is preselected
+    await r.getByLabel(`Price for item 1 from ${bare.name}`).fill('90')
+    await expect(r.getByRole('button', { name: 'Save reply' })).toBeDisabled()
+    expect(await linesOf(inq.id)).toEqual([])
+    await chips.getByRole('button', { name: 'USD', exact: true }).click()
+    await expect(r.getByRole('button', { name: 'Save reply' })).toBeEnabled()
+    await r.getByRole('button', { name: 'Save reply' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
+    expect((await linesOf(inq.id)).map(l => l.currency)).toEqual(['USD'])
+    // Remembered: on another RFQ, this supplier is pre-filled from that reply and is never asked again.
+    const other = await createRfq((await createCompany(uniqueName('Another Customer'))).id)
+    await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: other.id, position: 0, description: 'Another item', qty: 1 } }))
+    await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: other.id, supplier_id: bare.id, sent_on: karachiDay(-1) } }))
+    await openAs(page, 'sales', `/rfqs/${other.id}`)
+    await expect(row(page, bare.name).getByText(/USD, their last reply/)).toBeVisible()
+    await expect(row(page, bare.name).getByRole('group', { name: `Currency for ${bare.name}` })).toHaveCount(0)
+  })
+
+  test('a supplier whose country is Pakistan keeps PKR, with no chip row', async ({ page }) => {
+    const s = await seed()
+    const pk = await createCompany(uniqueName('Pksup'), { country: 'Pakistan' })
+    await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: s.rfq.id, supplier_id: pk.id, sent_on: karachiDay(-1) } }))
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await expect(row(page, pk.name).getByText(/PKR, usual for Pakistan/)).toBeVisible()
+    await expect(row(page, pk.name).getByRole('group', { name: `Currency for ${pk.name}` })).toHaveCount(0)
   })
 })
