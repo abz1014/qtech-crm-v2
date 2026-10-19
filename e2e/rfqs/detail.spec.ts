@@ -754,3 +754,23 @@ for (const width of [1440, 375]) {
     await review(page, `rfq-detail-float-dialog-${width}`)
   })
 }
+
+test.describe('reply currency for a supplier with no country (audit R1)', () => {
+  test('the currency of its procurement leg pre-fills the reply; with nothing on file it falls back to PKR and says so', async ({ page }) => {
+    const s = await seed()
+    const buyer = await createCompany(uniqueName('Leg Buyer'))
+    const order = (await must(rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: buyer.id } })))[0]
+    const withLeg = await createCompany(uniqueName('Legsup'))
+    const bare = await createCompany(uniqueName('Baresup'))
+    await must(rest('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: withLeg.id, currency: 'CNY' } }))
+    for (const c of [withLeg, bare]) {
+      await must(rest('admin', 'supplier_inquiries', { method: 'POST', body: { rfq_id: s.rfq.id, supplier_id: c.id, sent_on: karachiDay(-1) } }))
+    }
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    // No country and no earlier reply, but we bought from them in CNY: not PKR.
+    await expect(row(page, withLeg.name).getByText(/CNY, their last reply/)).toBeVisible()
+    await expect(row(page, withLeg.name).getByText(/PKR, no earlier reply/)).toHaveCount(0)
+    // Nothing at all on file: PKR, and the note says why (the person can change it).
+    await expect(row(page, bare.name).getByText(/PKR, no earlier reply/)).toBeVisible()
+  })
+})

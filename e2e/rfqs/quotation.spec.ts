@@ -197,7 +197,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
       expect(text).toContain('PKR 2,891.50')
       expect(text).toContain('Pakistani rupees (PKR)')
       expect(text).toContain('Procurement Manager') // Attention: name, job title
-      expect(text).toContain('+92 300 1234567') // users.phone in the signature and Prepared by
+      expect(text).toContain('+92 300 1234567') // users.phone in the signature block; Prepared by is the name only (E-QT-01)
       expect(text).toContain('First issue')
       expect(text).not.toContain('₨')
     }
@@ -480,3 +480,31 @@ for (const width of [1440, 375]) {
     await shot(page, `rfq-quotation-list-${width}`)
   })
 }
+
+// Owner decision 2026-10-19 (DECISIONS.md): engineers MAY see selling prices on the quotation screens and issue quotations.
+// They never see the spread, the margin or the Money pages. This documents that line.
+test.describe('what an engineer sees on the quotation screens (owner decision 2026-10-19)', () => {
+  test('selling prices are visible and an engineer can issue; there is no spread, margin or money request', async ({ page }) => {
+    await noShareApi(page)
+    const s = await seed()
+    const urls: string[] = []
+    page.on('request', r => urls.push(r.url()))
+    await openAs(page, 'engineer', `/rfqs/${s.rfq.id}`)
+    await openIssue(page)
+    // Selling prices: the memory chips and the price boxes are there.
+    await expect(dialog(page).getByTestId('chip-sold-1')).toContainText('PKR 1,000')
+    await expect(dialog(page).getByTestId('chip-quoted-1')).toContainText('PKR 1,200')
+    await expect(price(page, 1)).toBeVisible()
+    // No spread, margin, sell-versus-cost or markup wording anywhere in the dialog or on the page.
+    const text = `${await dialog(page).innerText()}\n${await page.locator('main').innerText()}`
+    expect(text).not.toMatch(/spread|margin|markup|profit|sell(?:ing)? (?:vs|versus) cost/i)
+    // And an engineer can issue.
+    await dialog(page).getByTestId('chip-sold-1').click()
+    await price(page, 2).fill('300')
+    await dialog(page).getByRole('button', { name: 'Issue quotation' }).click()
+    await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 30_000 })
+    expect(await quotationsOf(s.rfq.id)).toHaveLength(1)
+    // No money page or money view was requested.
+    expect(urls.filter(u => /v_order_money|v_payment|v_margin|payments_in|order_costs|v_receivable|order_receivables/.test(u))).toEqual([])
+  })
+})

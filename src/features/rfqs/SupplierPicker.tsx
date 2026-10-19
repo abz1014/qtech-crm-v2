@@ -30,8 +30,8 @@ export function ItemChips({ items }: { items: readonly DraftItem[] }) {
   return (
     <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
       {items.map((it, i) => (
-        <li key={it.key} title={it.description} className="inline-flex h-6 max-w-full items-center gap-2 rounded border bg-surface px-2 text-xs text-fg-2">
-          <span className="num text-fg-muted">{i + 1}</span>
+        <li key={it.key} title={it.description} className="inline-flex h-[22px] max-w-full items-center gap-[6px] rounded border border-line-strong bg-surface pl-[6px] pr-2 text-xs text-fg-2">
+          <span className="num grid size-4 shrink-0 place-items-center rounded-full bg-selected text-xs leading-none text-fg">{i + 1}</span>
           <span className="truncate">{it.description}</span>
           <span className="num shrink-0 text-fg-muted">× {effectiveQty(it)}</span>
         </li>

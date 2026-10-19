@@ -397,3 +397,45 @@ test.describe('R26 intake: evidence in the list and in the memory card', () => {
     expect(await violations(page)).toEqual([])
   })
 })
+
+test.describe('R25 stale and missing exchange rates (audit K1)', () => {
+  test('a 12-day-old rate still ranks, labelled; a rate over 30 days old is not used: the row is unranked with an Add rate link', async ({ page }) => {
+    await setRates()
+    await must(rest('admin', 'fx_rates?on_conflict=currency,as_of,source', { method: 'POST', body: { currency: 'SAR', rate_pkr: 74, as_of: karachiDay(-45), source: 'manual' }, prefer: 'resolution=merge-duplicates,return=minimal' }))
+    const customer = await createCompany(uniqueName('Stale Rate Customer'))
+    const rfq = await createRfq(customer.id, { due_on: karachiDay(6) })
+    const item = await post<{ id: string }>('rfq_items', { rfq_id: rfq.id, position: 0, description: `Level switch LS${letters()} float`, qty: 1 })
+    const mk = async (prefix: string) => {
+      const c = await createCompany(uniqueName(prefix))
+      const inq = await post<{ id: string }>('supplier_inquiries', { rfq_id: rfq.id, supplier_id: c.id, sent_on: karachiDay(-3) })
+      return { name: c.name, inquiryId: inq.id }
+    }
+    const fresh = await mk('Fresh Usd')
+    const stale = await mk('Stale Eur')
+    const old = await mk('Old Sar')
+    await must(
+      rest('admin', 'supplier_quote_lines', {
+        method: 'POST',
+        body: [
+          { inquiry_id: fresh.inquiryId, rfq_item_id: item.id, unit_price: 100, currency: 'USD' },
+          { inquiry_id: stale.inquiryId, rfq_item_id: item.id, unit_price: 96, currency: 'EUR' },
+          { inquiry_id: old.inquiryId, rfq_item_id: item.id, unit_price: 200, currency: 'SAR' },
+        ],
+        prefer: 'return=minimal',
+      }),
+    )
+    await openAs(page, 'sales', `/rfqs/${rfq.id}`)
+    const art = page.getByRole('article', { name: 'Item 1' })
+    await expect(art.locator('li[data-ranked]')).toHaveCount(3)
+    // EUR 96 at 300 = PKR 28,800 (2.9% above, outside the 2% band) against USD 100 at 280 = PKR 28,000: both rank; the EUR row says its rate is 12 days old.
+    await expect(rowOf(page, 'Item 1', fresh.name)).toHaveAttribute('data-ranked', '1')
+    await expect(rowOf(page, 'Item 1', stale.name)).toHaveAttribute('data-ranked', '2')
+    await rowOf(page, 'Item 1', stale.name).getByRole('button', { name: `Show reasons for ${stale.name}` }).click()
+    await expect(rowOf(page, 'Item 1', stale.name)).toContainText('Rate 12 days old')
+    // SAR: the only rate is 45 days old, so it is not used. Unranked, with the reason and the one link.
+    const oldRow = rowOf(page, 'Item 1', old.name)
+    await expect(oldRow).toHaveAttribute('data-ranked', 'none')
+    await expect(oldRow).toContainText(/Not ranked: the SAR rate is 45 days old\. Add a current one\./)
+    await expect(oldRow.getByRole('link', { name: 'Add SAR rate' })).toHaveAttribute('href', '/settings/exchange-rates')
+  })
+})
