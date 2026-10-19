@@ -65,6 +65,10 @@ test.describe('payment-reminder panel (M09)', () => {
     await expect(panel.getByText('0300 555 0118')).toBeVisible()
     await expect(panel.getByTestId('reminder-state')).toHaveText('Not reminded yet')
     await expect(panel.getByText(/Firmer wording, because the invoice is 30 days overdue|Standard wording, 30 days overdue/)).toBeVisible()
+    // At 1440 the table fits beside the panel with no sideways scroll, and the panel stops short of the page edge.
+    expect(await page.evaluate(() => Array.from(document.querySelectorAll('table')).every(t => !t.parentElement || t.parentElement.scrollWidth <= t.parentElement.clientWidth + 1))).toBe(true)
+    const box = await panel.boundingBox()
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(1440 - 16)
     await review(page, 'm09-receivables-reminder-1440')
 
     await page.evaluate(() => {

@@ -37,6 +37,9 @@ import {
  *
  *   /money/receivables?pay=1&order=<id>   opens Record payment for that order (admin)
  */
+// Gross and Settled fold away on a phone, and again between 1280 and 1535 px, where the reminder panel sits beside the table and the
+// Balance column carries the figure that matters; the table then fits without a sideways scroll. They show everywhere else.
+const GROSS_SETTLED = 'hidden md:table-cell xl:hidden 2xl:table-cell'
 const DUE_WORD = (d: number) => `${d} ${d === 1 ? 'day' : 'days'}`
 
 export function ReceivablesPage() {
@@ -96,7 +99,7 @@ export function ReceivablesPage() {
         id: 'gross',
         header: 'Gross due',
         kind: 'money',
-        hideBelowMd: true,
+        hideClass: GROSS_SETTLED,
         value: r => String(r.gross),
         total: true,
         cell: r => (
@@ -106,7 +109,7 @@ export function ReceivablesPage() {
           </span>
         ),
       },
-      { id: 'settled', header: 'Settled', kind: 'money', hideBelowMd: true, value: r => String(r.settled), total: true },
+      { id: 'settled', header: 'Settled', kind: 'money', hideClass: GROSS_SETTLED, value: r => String(r.settled), total: true },
       { id: 'balance', header: 'Balance', kind: 'money', value: r => String(r.balance), total: true, cell: r => <Money value={r.balance} prefix={false} strong /> },
       {
         id: 'due',
