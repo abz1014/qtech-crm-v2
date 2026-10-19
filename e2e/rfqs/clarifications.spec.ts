@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { axeViolations } from '../support/axe'
 import { API_URL, ANON_KEY, createCompany, createRfq, karachiDay, login, must, openAs, review, rest, uniqueName } from '../support/stack'
+import { readClipboardWhen } from '../support/clipboard'
 
 /*
  * R09 (clarifications) and R10 (attachments) end to end, against the local CI stack: the RFQ detail page as the fixture users,
@@ -89,7 +90,6 @@ async function seedPhoto(rfqId: string, clarificationId: string | null, name: st
 }
 
 const panel = (page: Page) => page.locator('[data-slot="clarifications"]')
-const clipboard = (page: Page) => page.evaluate(() => navigator.clipboard.readText())
 const toast = (page: Page, text: string) => page.getByRole('status').filter({ hasText: text })
 
 test.describe('adding questions (FE-2: 1 paste + 1 tap)', () => {
@@ -134,8 +134,7 @@ test.describe('copy for the customer (FE-2: 1 tap)', () => {
 
     await panel(page).getByRole('button', { name: 'Copy questions for customer' }).click()
     await expect(toast(page, 'Questions copied')).toBeVisible()
-    const text = await clipboard(page)
-    expect(text).toContain('To complete our quotation for your RFQ *#')
+    const text = await readClipboardWhen(page, 'To complete our quotation for your RFQ *#')
     expect(text).toContain('1. Line size and flange rating on the process line\n2. Fluid temperature range')
     expect(text).toContain('Kindly confirm by *')
     await expect.poll(async () => (await clarsOf(s.rfq.id)).map(r => r.ask_count)).toEqual([1, 1])
@@ -151,7 +150,7 @@ test.describe('copy for the customer (FE-2: 1 tap)', () => {
     await expect(panel(page).getByText(/^RFQ #.*your confirmation needed by/)).toBeVisible()
     await panel(page).getByRole('button', { name: 'Copy chase text' }).click()
     await expect(toast(page, 'Chase text copied')).toBeVisible()
-    expect(await clipboard(page)).toContain('Thank you for your RFQ #')
+    await readClipboardWhen(page, 'Thank you for your RFQ #')
     await expect.poll(async () => (await clarsOf(s.rfq.id)).map(r => r.ask_count)).toEqual([2, 2])
     await expect(panel(page).getByText('Asked ×2')).toBeVisible()
   })
@@ -216,7 +215,7 @@ test.describe('answers', () => {
     await expect(panel(page).getByRole('button', { name: `Copy answers for supplier ${s.abc.name}` })).toHaveCount(0)
     await panel(page).getByRole('button', { name: `Copy answers for supplier ${s.lpc.name}` }).click()
     await expect(toast(page, 'Answers copied')).toBeVisible()
-    const text = await clipboard(page)
+    const text = await readClipboardWhen(page, 'Which probe kit comes with the HQ1110?')
     expect(text).toContain('1. Which probe kit comes with the HQ1110?\n   Same as the old meter')
     expect(text).toContain('2. What flange size on the LR250?\n   see attached photo')
     expect(text).not.toContain('Cable length')

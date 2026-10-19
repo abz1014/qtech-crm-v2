@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
+import { readClipboardWhen } from '../support/clipboard'
 
 /*
  * M09 (payment-reminder panel beside Receivables) and M08 (Today v3 money rules), end to end on the local CI stack.
@@ -82,7 +83,7 @@ test.describe('payment-reminder panel (M09)', () => {
     await expect(panel.getByText(/Reminder 1 recorded today/)).toBeVisible()
     const c = await page.evaluate(() => ({ keys: (window as unknown as { __keys: string[] }).__keys, mouse: (window as unknown as { __mouse: number }).__mouse }))
     expect(c).toEqual({ keys: [], mouse: 1 })
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain(`Sales Tax Invoice ${s.invoiceNumber}`)
+    await readClipboardWhen(page, `Sales Tax Invoice ${s.invoiceNumber}`)
     expect(await invoiceRow(s.invoiceId)).toEqual({ last_reminded_on: today(), reminder_count: 1 })
     await review(page, 'm09-receivables-reminder-copied-1440')
   })

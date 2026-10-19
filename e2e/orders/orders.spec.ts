@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
+import { readClipboardWhen } from '../support/clipboard'
 
 /*
  * O01 (convert an RFQ to an order) and O03 (the order page), end to end against the local CI stack, as the fixture users through the
@@ -383,7 +384,7 @@ test.describe('O03: legs, one next-step stamp each', () => {
     await dialog.getByRole('button', { name: 'Copy message and mark chased' }).click()
     await expect.poll(async () => (await legRow(s.legB)).chase_count).toBe(1)
     expect((await legRow(s.legB)).last_chased_on).toBe(karachiDay(0))
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('PI-123')
+    await readClipboardWhen(page, 'PI-123')
     await page.getByRole('button', { name: /Undo/ }).first().click()
     await expect.poll(async () => (await legRow(s.legB)).chase_count).toBe(0)
   })
