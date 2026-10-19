@@ -175,6 +175,8 @@ test('the production CSP is never violated, and Today and the RFQ page make no r
   const lines: string[] = ['### Request shape (P04)', '', '| Page | Data requests | Waves | Repeated |', '|---|---|---|---|']
   const repeated: string[] = []
   for (const [name, path] of screens(s)) {
+    // Leave the previous page first, so a late request of the old document is not counted against this one.
+    await page.goto('about:blank')
     const log = trace(page)
     await page.goto(path)
     await page.locator('#main').waitFor()
