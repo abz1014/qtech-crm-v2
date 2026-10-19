@@ -56,6 +56,8 @@ export interface MoneyProps {
   mark?: 'chip' | 'underline'
   /** Medium weight for emphasised figures (totals, gross). */
   strong?: boolean
+  /** A statement line that is negative by design (a cost under "money out"): the minus is kept, the danger colour is not. */
+  plainNegative?: boolean
   className?: string
 }
 
@@ -68,6 +70,7 @@ export function Money({
   basisUnknown,
   mark = 'chip',
   strong,
+  plainNegative,
   className,
 }: MoneyProps) {
   const missing = value === null || value === undefined
@@ -80,7 +83,7 @@ export function Money({
           'num whitespace-nowrap',
           size && SIZE[size],
           (strong || size === 'display') && 'font-medium',
-          negative && 'text-tone-danger-fg',
+          negative && !plainNegative && 'text-tone-danger-fg',
           (missing || (provisional && mark === 'underline')) && 'text-fg-muted',
         )}
       >

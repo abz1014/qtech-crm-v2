@@ -28,6 +28,9 @@ export const usePaymentStats = (month: string, enabled = true) =>
 export const useCategoryLines = (month: string, enabled = true) =>
   useQuery({ queryKey: qk.money.monthEnd.categories(month), queryFn: () => api.loadCategoryLines(month), enabled, ...live })
 
+export const useCategoryNotes = (month: string, enabled = true) =>
+  useQuery({ queryKey: [...qk.money.monthEnd.categories(month), 'notes'], queryFn: () => api.loadCategoryNotes(month), enabled, ...live })
+
 export const useViaStat = (month: string, enabled = true) =>
   useQuery({ queryKey: qk.money.monthEnd.expenseLines(month), queryFn: () => api.loadViaStat(month), enabled, ...live })
 

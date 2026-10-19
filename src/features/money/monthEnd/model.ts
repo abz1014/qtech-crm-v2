@@ -340,6 +340,21 @@ export interface CategoryLine {
   paidVia: 'bank' | 'cash'
 }
 
+/** A line under a category in the report: its payees or, with none, what its expenses were described as, the commonest three. */
+export function categoryNotes(rows: readonly { categoryId: string; label: string | null }[]): Record<string, string> {
+  const by = new Map<string, Map<string, number>>()
+  for (const r of rows) {
+    const label = r.label?.trim()
+    if (!label) continue
+    const m = by.get(r.categoryId) ?? new Map<string, number>()
+    m.set(label, (m.get(label) ?? 0) + 1)
+    by.set(r.categoryId, m)
+  }
+  return Object.fromEntries(
+    [...by].map(([id, m]) => [id, [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 3).map(([l]) => l).join(', ')]),
+  )
+}
+
 export interface ViaStat {
   cashCount: number
   cashAmount: string

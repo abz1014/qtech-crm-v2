@@ -90,6 +90,8 @@ export interface DataTableProps<T> {
   onRowOpen?: (row: T) => void
   /** Group rows (month, leg...): label, subtotals for columns with `total`, and a group checkbox. */
   group?: (row: T) => { key: string; label: ReactNode }
+  /** 'big': group rows are 40 px, semibold, on the sunken band (g2-month-end "Expenses by category"). Default: the quiet month row. */
+  groupStyle?: 'quiet' | 'big'
   /** Totals footer label ("All 9 invoices shown"). The footer shows when any column has `total`. */
   footerLabel?: ReactNode
   /** What the rows are, plural ("RFQs"): names the loading line, the default error title and the default summary. */
@@ -126,6 +128,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     activeRowId,
     onRowOpen,
     group,
+    groupStyle,
     footerLabel,
     noun,
     total,
@@ -442,7 +445,13 @@ export function DataTable<T>(props: DataTableProps<T>) {
       key={key}
       data-row-kind={kind}
       style={kind === 'group' && virtual ? { height: GROUP_H } : undefined}
-      className={cn(kind === 'group' ? 'bg-canvas text-xs font-medium text-fg-muted [&_.num]:text-fg-2' : 'bg-sunken font-medium')}
+      className={cn(
+        kind === 'group'
+          ? groupStyle === 'big'
+            ? 'bg-sunken text-sm font-semibold text-fg'
+            : 'bg-canvas text-xs font-medium text-fg-muted [&_.num]:text-fg-2'
+          : 'bg-sunken font-medium',
+      )}
     >
       {selection ? (
         <td className="h-9 w-10 border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5">
@@ -457,7 +466,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
       ) : null}
       <td
         colSpan={labelCols}
-        className={cn('h-9 whitespace-nowrap border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5', kind === 'foot' && 'border-t border-line-strong')}
+        className={cn('h-9 whitespace-nowrap border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5', kind === 'foot' && 'border-t border-line-strong', kind === 'group' && groupStyle === 'big' && 'h-10 border-t border-line-strong')}
       >
         {labelNode}
       </td>
@@ -467,6 +476,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
           className={cn(
             'h-9 whitespace-nowrap border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5',
             kind === 'foot' && 'border-t border-line-strong',
+            kind === 'group' && groupStyle === 'big' && 'h-10 border-t border-line-strong',
             alignRight(c) && 'text-right',
             hide(c),
           )}
