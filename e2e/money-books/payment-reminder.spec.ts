@@ -124,7 +124,7 @@ test.describe('payment-reminder panel (M09)', () => {
       page.evaluate(() => {
         const t = document.querySelector('table')
         const w = t?.parentElement
-        return { scroll: w?.scrollWidth ?? 0, client: w?.clientWidth ?? 0, columns: document.querySelectorAll('table thead th').length, page: document.documentElement.scrollWidth, view: window.innerWidth }
+        return { scroll: w?.scrollWidth ?? 0, client: w?.clientWidth ?? 0, columns: Array.from(document.querySelectorAll('table thead th')).filter(th => (th as HTMLElement).offsetParent !== null).length, page: document.documentElement.scrollWidth, view: window.innerWidth }
       })
     for (const width of [1440, 1280]) {
       await page.setViewportSize({ width, height: 900 })
