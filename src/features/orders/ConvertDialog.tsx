@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileCheck2, Split, TriangleAlert, Truck, X } from 'lucide-react'
+import { EyeOff, FileCheck2, Split, TriangleAlert, Truck, X } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { formatAmount } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
@@ -32,7 +32,7 @@ import { orderRef } from '@/lib/refs'
  * record, then order history), with the reason printed under the supplier. Splitting an item's quantity across suppliers is opt-in.
  *
  * FE-2 entry burden, listed for the commit:
- *   required     nothing typed when the quotation priced every line. A line the quotation never priced needs a selling price.
+ *   required     nothing. A line the quotation never priced was never sold, so it is left out of the order (as g2-ranking-split draws it).
  *   pre-filled   the supplier on each line (its rank-1 quote), the payment terms (the company's last order), prices, delivery and the
  *                rest from the RFQ, the date (today) and the owner (the RFQ's).
  *   optional     the customer PO number (it can be added from the order later), a different supplier on any line, splitting an item.
@@ -77,7 +77,6 @@ export function ConvertDialog({ rfq, onClose }: Props) {
 
   const [choices, setChoices] = useState<Record<string, SupplierChoice>>({})
   const [splits, setSplits] = useState<Record<string, Part[]>>({})
-  const [typed, setTyped] = useState<Record<string, number | null>>({})
   const [po, setPo] = useState('')
   const [terms, setTerms] = useState<number | null>(null)
   const [termsTouched, setTermsTouched] = useState(false)
@@ -97,16 +96,17 @@ export function ConvertDialog({ rfq, onClose }: Props) {
   const checks: Record<string, SplitCheck | null> = Object.fromEntries(items.map(i => [i.id, isSplit(splits[i.id]) ? checkSplit(i.qty, splits[i.id]) : null]))
   const anyIncomplete = Object.values(checks).some(c => c?.incomplete)
 
-  const missing = items.filter(it => it.quotedUnitPriceNet === null && !((typed[it.id] ?? 0) > 0))
+  /** Only quoted lines are ordered. An item the quotation never priced is shown and left out: the database refuses a line with no selling price. */
+  const ordered = items.filter(it => it.quotedUnitPriceNet !== null)
   const gstOf = (id: string) => itemsQ.data?.find(q => q.id === id)?.gstRate ?? 18
-  const unitOf = (it: ConvertItem) => it.quotedUnitPriceNet ?? (typed[it.id] ?? 0)
+  const unitOf = (it: ConvertItem) => it.quotedUnitPriceNet ?? 0
   const totals = orderTotals(items.filter(it => unitOf(it) > 0).map(it => ({ qty: checks[it.id]?.total ?? it.qty, unitPriceNet: unitOf(it), gstRate: gstOf(it.id) })))
-  const lineCount = orderLineCount(items, splits)
+  const lineCount = orderLineCount(ordered, splits)
 
   /** The legs this will make: one per supplier and currency. */
   const legs: string[] = (() => {
     const seen = new Map<string, string>()
-    for (const it of items) {
+    for (const it of ordered) {
       const lineIds = isSplit(splits[it.id]) ? splits[it.id].map(p => p.lineId) : [effective[it.id]]
       for (const lid of lineIds) {
         const q = (byItem[it.id] ?? []).find(x => x.lineId === lid)
@@ -116,7 +116,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
     return [...seen.values()]
   })()
 
-  const ready = itemsQ.isSuccess && items.length > 0 && missing.length === 0 && rankQ.isSuccess && !anyIncomplete
+  const ready = itemsQ.isSuccess && ordered.length > 0 && rankQ.isSuccess && !anyIncomplete
   const busy = convert.isPending
 
   const split = (itemId: string) => {
@@ -148,7 +148,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
       const id = await convert.mutateAsync({
         orderId: orderId.current,
         rfqId: rfq.id,
-        items: buildSplitPayload(items, effective, typed, splits),
+        items: buildSplitPayload(ordered, effective, {}, splits),
         customerPo: po.trim() || null,
         paymentTermsDays: terms,
       })
@@ -172,7 +172,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
   )
 
   /** The price columns of a line: what we pay (in the quote's currency, then PKR) and what we sell at. */
-  const priceCells = (it: ConvertItem, q: RankedQuote | undefined, n: number, editable: boolean) => (
+  const priceCells = (it: ConvertItem, q: RankedQuote | undefined) => (
     <>
       <div className="num text-sm lg:text-right">
         {q ? (
@@ -188,10 +188,8 @@ export function ConvertDialog({ rfq, onClose }: Props) {
       <div className="num text-sm lg:text-right">
         {it.quotedUnitPriceNet !== null ? (
           formatAmount(it.quotedUnitPriceNet)
-        ) : editable ? (
-          <NumberInput value={typed[it.id] ?? null} onChange={v => setTyped(t => ({ ...t, [it.id]: v }))} aria-label={`Selling price, net PKR, line ${n}`} placeholder="Required" />
         ) : (
-          formatAmount(typed[it.id] ?? 0)
+          <span className="text-fg-muted">No selling price</span>
         )}
       </div>
     </>
@@ -204,7 +202,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
         context={itemsQ.isSuccess ? context : rfq.company.name}
         icon={FileCheck2}
         className="md:w-[min(1080px,calc(100vw-32px))]"
-        lead={itemsQ.isSuccess && items.length > 0 ? `Creates ${lineCount} order ${lineCount === 1 ? 'line' : 'lines'}.` : undefined}
+        lead={itemsQ.isSuccess && ordered.length > 0 ? `Creates ${lineCount} order ${lineCount === 1 ? 'line' : 'lines'}.` : undefined}
         footer={
           <>
             <Button data-cancel onClick={onClose} disabled={busy}>
@@ -259,6 +257,22 @@ export function ConvertDialog({ rfq, onClose }: Props) {
               </div>
               {items.map((it, idx) => {
                 const n = idx + 1
+                if (it.quotedUnitPriceNet === null)
+                  return (
+                    <div key={it.id} className="border-t border-line-strong first:border-t-0" data-testid={`convert-item-${n}`}>
+                      <div className={cn('grid gap-2 bg-canvas px-4 py-3 text-sm leading-5 text-fg-muted', GRID)}>
+                        <span className="num pt-px">{n}</span>
+                        <b className="font-medium">{it.description}</b>
+                        <span className="num lg:pt-1.5 lg:text-right">{it.qty}</span>
+                        <span className="flex items-center gap-1.5 text-xs lg:pt-1" data-testid={`convert-item-${n}-left-out`}>
+                          <Icon icon={EyeOff} size="sm" />
+                          Not in the quotation. Left out of the order.
+                        </span>
+                        <span className="lg:text-right">—</span>
+                        <span className="lg:text-right">No selling price</span>
+                      </div>
+                    </div>
+                  )
                 const qs = byItem[it.id] ?? []
                 const parts = splits[it.id]
                 const isSplitItem = isSplit(parts)
@@ -295,7 +309,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                             extras={EXTRAS.filter(e => e.value === 'service' || qs.length !== 1)}
                             onChange={v => setChoices(c => ({ ...c, [it.id]: v }))}
                           />
-                          {priceCells(it, q, n, true)}
+                          {priceCells(it, q)}
                         </>
                       )}
                     </div>
@@ -340,7 +354,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                                 header={`Ranked quotes for item ${n}, with the reason`}
                                 onChange={v => patchPart(it.id, p.key, { lineId: v })}
                               />
-                              {priceCells(it, pq, n, false)}
+                              {priceCells(it, pq)}
                             </div>
                           )
                         })

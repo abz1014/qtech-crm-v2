@@ -17,6 +17,19 @@ export type DisplayRow<T extends Groupable> =
 
 const letter = (i: number) => String.fromCharCode(97 + (i % 26))
 
+/** The RFQ items that are split (two or more goods lines share one). */
+export function splitRfqItemIds<T extends Groupable>(items: readonly T[]): Set<string> {
+  const count = new Map<string, number>()
+  for (const it of items) if (it.rfqItemId && !it.isService) count.set(it.rfqItemId, (count.get(it.rfqItemId) ?? 0) + 1)
+  return new Set([...count.entries()].filter(([, c]) => c >= 2).map(([k]) => k))
+}
+
+/** A leg that exists only for parts of split items and has not been started: no PO, not placed. The page labels it "New leg from the split". */
+export function isFreshSplitLeg<T extends Groupable>(legItems: readonly T[], split: ReadonlySet<string>, hasPo: boolean, placed: boolean): boolean {
+  const goods = legItems.filter(i => !i.isService)
+  return !hasPo && !placed && goods.length > 0 && goods.every(i => i.rfqItemId !== null && split.has(i.rfqItemId))
+}
+
 export function groupItems<T extends Groupable>(items: readonly T[]): DisplayRow<T>[] {
   const byRfq = new Map<string, T[]>()
   for (const it of items) if (it.rfqItemId && !it.isService) byRfq.set(it.rfqItemId, [...(byRfq.get(it.rfqItemId) ?? []), it])

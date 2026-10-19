@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { FileText, MessageSquareWarning, Plus, Receipt, TriangleAlert } from 'lucide-react'
+import { FileText, MessageSquareWarning, Plus, Receipt, Split, TriangleAlert } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { convertToPaisa, formatAmount, formatPaisa } from '@/lib/money'
@@ -15,6 +15,7 @@ import { useFxLatest } from '@/features/rfqs/hooks'
 import { toRateTable } from '@/features/rfqs/lib'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { useUpdateLeg } from '@/features/orders/hooks'
+import { isFreshSplitLeg, splitRfqItemIds } from '@/features/orders/lib/splitGroups'
 import { poChange } from '@/features/orders/lib/poChange'
 import { before, editPatch, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, suggestExpected, type LegDates, type LegPatch } from '@/features/orders/lib/legModel'
 import { AddLegDialog } from '@/features/orders/AddDialogs'
@@ -99,6 +100,7 @@ export function LegsPanel({
               leg={leg}
               letter={legLetter(i)}
               items={items.filter(it => it.legId === leg.id)}
+              fromSplit={isFreshSplitLeg(items.filter(it => it.legId === leg.id), splitRfqItemIds(items), pos.some(p => p.legId === leg.id), leg.placedOn !== null)}
               po={pos.find(p => p.legId === leg.id)}
               money={money}
               isAdmin={isAdmin}
@@ -125,6 +127,7 @@ function Leg({
   leg,
   letter,
   items,
+  fromSplit,
   po,
   money,
   isAdmin,
@@ -140,6 +143,8 @@ function Leg({
   leg: OrderLegRow
   letter: string
   items: OrderItemRow[]
+  /** A8: a new leg that exists for the parts of split items. */
+  fromSplit: boolean
   po: LegPo | undefined
   money: boolean
   isAdmin: boolean
@@ -238,6 +243,12 @@ function Leg({
           <span data-testid={`leg-${letter}-po`} className={cn('num inline-flex h-5 items-center rounded border px-[6px] text-xs', po ? 'border-line-strong text-fg-2' : 'border-dashed border-line-strong text-fg-muted')}>
             {po ? `${poRef(po.number, po.issuedOn)} · R${po.revision}` : 'No PO yet'}
           </span>
+          {fromSplit ? (
+            <span data-testid={`leg-${letter}-from-split`} className="inline-flex items-center gap-1 text-xs text-fg-muted">
+              <Split size={12} aria-hidden="true" />
+              New leg from the split
+            </span>
+          ) : null}
           <span className="text-sm text-fg-muted">
             Ref{' '}
             <TapText

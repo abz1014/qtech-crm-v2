@@ -1,7 +1,8 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { TableUpdate, ViewRow } from '@/features/dbTypes'
 import type { ConvertPayloadLine } from '@/features/orders/lib/convert'
-import { mapRankRows, type RankedQuote, type RankRow } from '@/features/orders/lib/ranking'
+import { mapRankRows, type RankedQuote } from '@/features/orders/lib/ranking'
+import type { RankRow } from '@/features/rfqs/lib/ranking/reasons'
 import type { LegPatch } from '@/features/orders/lib/legModel'
 
 /*

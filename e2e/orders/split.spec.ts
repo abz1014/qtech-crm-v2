@@ -116,7 +116,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
 
     // rank 1 by price; s2 is inside the 2% band, so s1 reads "Within 2%" (a tie decided by record), and the single-quote item reads "Best price"
     await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.s1.name)
-    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Within 2%')
+    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
     await expect(d.getByRole('button', { name: 'Supplier for line 2' })).toContainText(s.s1.name)
     await expect(d.getByRole('button', { name: 'Supplier for line 2' })).toContainText('Best price')
     await expect(d.getByText('Creates 2 order lines.')).toBeVisible()
@@ -298,6 +298,8 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     expect(moved.rfq_item_id).toBe(s.items[0].id)
     // the item is now split across 3 suppliers
     await expect(page.getByText('split across 3 suppliers')).toBeVisible()
+    // the supplier that was not on the order before has a new leg, labelled as coming from the split
+    await expect(page.getByText('New leg from the split').first()).toBeVisible()
   })
 
   test('a refused split says why and changes nothing (a quantity of the whole line)', async ({ page }) => {

@@ -241,16 +241,15 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(page.locator('[data-slot="mark-won"]').getByRole('link', { name: /Open ORD-\d{4}/ })).toBeVisible()
   })
 
-  test('the supplier on a line can be changed, the customer PO is kept, and a line the quotation never priced needs a price', async ({ page }) => {
+  test('the supplier on a line can be changed, the customer PO is kept, and a line the quotation never priced is left out of the order', async ({ page }) => {
     const s = await seedRfq()
     await must(rest('admin', `rfq_items?id=eq.${s.items[2].id}`, { method: 'PATCH', body: { quoted_unit_price_net: null }, prefer: 'return=minimal' }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }).click()
     const dialog = page.getByRole('dialog')
-    // the unpriced line opens the list and holds the button until it has a price
-    await expect(dialog.getByRole('button', { name: 'Create order' })).toBeDisabled()
-    await expect(dialog.getByLabel('Selling price, net PKR, line 3')).toBeVisible()
-    await dialog.getByLabel('Selling price, net PKR, line 3').fill('650')
+    // the unpriced line was never sold: it is shown, marked left out, and asks for nothing
+    await expect(dialog.getByTestId('convert-item-3-left-out')).toContainText('Left out of the order')
+    await expect(dialog.getByText('Creates 2 order lines.')).toBeVisible()
     await expect(dialog.getByRole('button', { name: 'Create order' })).toBeEnabled()
     // line 1: take supplier A instead of the lowest
     await dialog.getByRole('button', { name: 'Supplier for line 1' }).click()
@@ -262,7 +261,7 @@ test.describe('O01: Mark won creates the order', () => {
     expect(order.customer_po_number).toBe(`CPO-${s.tag}`)
     const items = await get<{ unit_price_net: number; supplier_unit_price: number; supplier_order_id: string }>(`order_items?order_id=eq.${order.id}&select=unit_price_net,supplier_unit_price,supplier_order_id&order=position`)
     expect(Number(items[0].supplier_unit_price)).toBe(50)
-    expect(Number(items[2].unit_price_net)).toBe(650)
+    expect(items).toHaveLength(2)
     await expect(page.getByText(`CPO-${s.tag}`).first()).toBeVisible()
   })
 
