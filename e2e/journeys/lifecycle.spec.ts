@@ -116,8 +116,10 @@ test.describe('cancelling an order after its PO was issued', () => {
     await resetCount(page)
     await d.getByRole('button', { name: 'Copy cancellation message' }).click()
     fe2('Copy the cancellation message', (await readCount(page)).mouse, 1)
+    // The copy is asynchronous (the handler awaits the clipboard, then toasts), so a read straight after the click can see the old, empty
+    // clipboard (run 39228025992 read ""). Wait for the message to be there; the product handler is correct, the test raced it.
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText()), { message: 'the cancellation message reaches the clipboard' }).toContain(`*${ref}*`)
     const text = await page.evaluate(() => navigator.clipboard.readText())
-    expect(text).toContain(`*${ref}*`)
     expect(text).toContain('Endress+Hauser Cerabar PMC51 pressure transmitter')
     expect(text).toMatch(/ask you to cancel/)
     expect(text).not.toMatch(/PKR|USD|\d+\.\d\d/) // no price
