@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { TableUpdate, ViewRow } from '@/features/dbTypes'
 import type { ConvertPayloadLine } from '@/features/orders/lib/convert'
+import { mapRankRows, type RankedQuote, type RankRow } from '@/features/orders/lib/ranking'
 import type { LegPatch } from '@/features/orders/lib/legModel'
 
 /*
@@ -293,6 +294,44 @@ export async function updateOrder(id: string, patch: TableUpdate<'orders'>): Pro
   if (error) throw error
 }
 
+/** The ranked quotes of an RFQ (rank_item_quotes), with supplier names. Selling price and spread come back NULL for an engineer (the database decides). */
+export async function listRankedQuotes(rfqId: string): Promise<RankedQuote[]> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.rpc('rank_item_quotes', { p_rfq_id: rfqId })) ?? []
+  const ids = [...new Set(rows.map(r => r.supplier_id))]
+  const names = new Map<string, string>()
+  if (ids.length > 0) for (const c of unwrap(await db.from('companies').select('id, name').in('id', ids))) names.set(c.id, c.name)
+  return mapRankRows(rows as unknown as RankRow[], names)
+}
+
+export interface SplitInput {
+  itemId: string
+  qty: number
+  /** Exactly one of legId / (supplierId + currency). */
+  legId?: string
+  supplierId?: string
+  currency?: string
+  supplierUnitPrice?: number | null
+}
+
+/** Moves part of an order line to another leg (split_order_item). Returns the new line's id. */
+export async function splitOrderItem(i: SplitInput): Promise<string> {
+  const { data, error } = await requireSupabase().rpc('split_order_item', {
+    p_item_id: i.itemId,
+    p_qty: i.qty,
+    ...(i.legId ? { p_supplier_order_id: i.legId } : { p_supplier_id: i.supplierId, p_currency: i.currency }),
+    ...(i.supplierUnitPrice !== null && i.supplierUnitPrice !== undefined ? { p_supplier_unit_price: i.supplierUnitPrice } : {}),
+  })
+  if (error) throw error
+  return data as string
+}
+
+/** One selling price for every part of a split item, in one statement so the parts can never disagree. */
+export async function setGroupPrice(ids: readonly string[], unitPriceNet: number): Promise<void> {
+  const { error } = await requireSupabase().from('order_items').update({ unit_price_net: unitPriceNet }).in('id', [...ids])
+  if (error) throw error
+}
+
 export async function updateItem(id: string, patch: { gst_rate?: number; is_service?: boolean; supplier_order_id?: string | null }): Promise<void> {
   const { error } = await requireSupabase().from('order_items').update(patch).eq('id', id)
   if (error) throw error
@@ -430,18 +469,32 @@ export interface LegPo {
   number: number
   revision: number
   issuedOn: string
+  /** What the latest revision listed (order line and quantity), to tell whether the leg's lines have changed since. */
+  lines: Array<{ orderItemId: string; qty: number }>
+}
+
+function poLines(json: unknown): LegPo['lines'] {
+  if (!Array.isArray(json)) return []
+  return json.flatMap(l => {
+    const o = l as { order_item_id?: unknown; qty?: unknown }
+    return typeof o.order_item_id === 'string' ? [{ orderItemId: o.order_item_id, qty: Number(o.qty) }] : []
+  })
 }
 
 /** The latest PO revision of each leg (the "PO-26-0017 · R1" chip). A leg with none has no entry. */
-export async function listLegPos(legIds: readonly string[]): Promise<LegPo[]> {
+/** `money` is false for an engineer: the PO's lines carry unit prices, so they are not even requested for him (the leg then never shows "lines changed"). */
+export async function listLegPos(legIds: readonly string[], money = false): Promise<LegPo[]> {
   if (legIds.length === 0) return []
-  const rows = unwrap(await requireSupabase().from('purchase_orders').select('supplier_order_id, number, revision, issued_on').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
+  const db = requireSupabase()
+  const rows: Array<{ supplier_order_id: string; number: number; revision: number; issued_on: string; lines?: unknown }> = money
+    ? unwrap(await db.from('purchase_orders').select('supplier_order_id, number, revision, issued_on, lines').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
+    : unwrap(await db.from('purchase_orders').select('supplier_order_id, number, revision, issued_on').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
   const seen = new Set<string>()
   const out: LegPo[] = []
   for (const r of rows) {
     if (seen.has(r.supplier_order_id)) continue
     seen.add(r.supplier_order_id)
-    out.push({ legId: r.supplier_order_id, number: r.number, revision: r.revision, issuedOn: r.issued_on })
+    out.push({ legId: r.supplier_order_id, number: r.number, revision: r.revision, issuedOn: r.issued_on, lines: 'lines' in r ? poLines(r.lines) : [] })
   }
   return out
 }

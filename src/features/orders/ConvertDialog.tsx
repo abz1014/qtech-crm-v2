@@ -1,40 +1,67 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileCheck2 } from 'lucide-react'
+import { FileCheck2, Split, TriangleAlert, Truck, X } from 'lucide-react'
+import { useSession } from '@/app/session'
 import { formatAmount } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
+import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
+import { Icon } from '@/ui/Icon'
 import { Field } from '@/ui/form/Field'
 import { NumberInput } from '@/ui/form/NumberInput'
-import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { Skeleton } from '@/ui/Skeleton'
-import type { InquiryRow, RfqHeader } from '@/features/rfqs/api'
-import type { RateTable } from '@/features/rfqs/lib'
+import type { RfqHeader } from '@/features/rfqs/api'
 import { useQuoteItems } from '@/features/quotations/hooks'
-import { useConvertRfq, useLastTerms } from '@/features/orders/hooks'
-import { buildPayload, defaultChoices, unpricedItems, type ConvertItem, type ConvertQuote, type SupplierChoice } from '@/features/orders/lib/convert'
+import { useConvertRfq, useLastTerms, useRankedQuotes } from '@/features/orders/hooks'
+import { RankedPicker } from '@/features/orders/RankedPicker'
+import type { ConvertItem, SupplierChoice } from '@/features/orders/lib/convert'
 import { orderTotals } from '@/features/orders/lib/orderMath'
+import { forItem, priceTexts, rankOne, type RankedQuote } from '@/features/orders/lib/ranking'
+import { buildSplitPayload, checkSplit, isSplit, nextRanked, orderLineCount, type Part, type SplitCheck } from '@/features/orders/lib/splitConvert'
 import { orderRef } from '@/lib/refs'
 
 /*
- * "Mark won" (O01; g2-rfq-detail.html, frame "Won: create the order"). One confirm creates the order through
- * convert_rfq_to_order with an id made here, so a double submit (a double click, Enter twice, a retry after a dropped connection)
- * creates one order. Afterwards the order opens.
+ * "Mark won" (O01 + O08; g2-ranking-split.html frames "Convert dialog, nothing changed / splitting an item / parts that do not add up").
+ * One confirm creates the order through convert_rfq_to_order with an id made here, so a double submit (a double click, Enter twice, a
+ * retry after a dropped connection) creates one order. Afterwards the order opens.
+ *
+ * Every item arrives already assigned to its rank-1 quote (rank_item_quotes: lowest PKR price at today's rate, a 2% tie band, then delivery
+ * record, then order history), with the reason printed under the supplier. Splitting an item's quantity across suppliers is opt-in.
  *
  * FE-2 entry burden, listed for the commit:
  *   required     nothing typed when the quotation priced every line. A line the quotation never priced needs a selling price.
- *   pre-filled   the supplier on each line (the lowest comparable quote, today's rates), the payment terms (the company's last order),
- *                prices, delivery and the rest from the RFQ, the date (today) and the owner (the RFQ's).
- *   optional     the customer PO number (it can be added from the order later), a different supplier on any line.
- *   interactions Mark won (1), Create order (2).
+ *   pre-filled   the supplier on each line (its rank-1 quote), the payment terms (the company's last order), prices, delivery and the
+ *                rest from the RFQ, the date (today) and the owner (the RFQ's).
+ *   optional     the customer PO number (it can be added from the order later), a different supplier on any line, splitting an item.
+ *   interactions Mark won (1), Create order (2). A split adds: Split this item (1), the supplier picker (2), a supplier (3) and one
+ *                quantity typed; if the next-ranked supplier it offers is fine, 1 tap and 1 quantity. The first part takes the remainder.
+ *   not blocked  parts that do not add up to the RFQ quantity: a warning only (the backend allows a partial order). A part with no
+ *                quantity yet holds Create order, because a line of nothing cannot be ordered.
  */
 
-export function ConvertDialog({ rfq, inquiries, rates, onClose }: { rfq: RfqHeader; inquiries: InquiryRow[]; rates: RateTable; onClose: () => void }) {
+type Props = {
+  rfq: RfqHeader
+  /** Passed by the caller; the ranking replaces the old client-side lowest-quote rule, so these are no longer read here. */
+  inquiries?: unknown
+  rates?: unknown
+  onClose: () => void
+}
+
+const GRID = 'lg:grid lg:grid-cols-[26px_minmax(0,1.25fr)_64px_minmax(0,1.65fr)_124px_104px] lg:items-start lg:gap-x-3'
+const EXTRAS = [
+  { value: 'none', label: 'Not sourced yet' },
+  { value: 'service', label: 'Service, no supplier' },
+]
+
+export function ConvertDialog({ rfq, onClose }: Props) {
   const navigate = useNavigate()
+  const session = useSession()
+  const role = session.status === 'signed-in' ? session.user.role : ''
   const itemsQ = useQuoteItems(rfq.id, true)
+  const rankQ = useRankedQuotes(rfq.id, role)
   const termsQ = useLastTerms(rfq.company.id, true)
   const convert = useConvertRfq(rfq.id)
   /** Made once per open dialog and kept for any retry: the database returns the same order for the same id. */
@@ -45,37 +72,73 @@ export function ConvertDialog({ rfq, inquiries, rates, onClose }: { rfq: RfqHead
     () => (itemsQ.data ?? []).map(i => ({ id: i.id, description: i.description, qty: i.qty, unit: i.unit, quotedUnitPriceNet: i.quotedUnitPriceNet })),
     [itemsQ.data],
   )
-  const quotes: ConvertQuote[] = useMemo(
-    () => inquiries.flatMap(inq => inq.lines.map(l => ({ lineId: l.id, itemId: l.itemId, supplierName: inq.supplierName, unitPrice: l.unitPrice, currency: l.currency }))),
-    [inquiries],
-  )
-  const defaults = useMemo(() => defaultChoices(items, quotes, rates), [items, quotes, rates])
+  const ranked = useMemo<readonly RankedQuote[]>(() => rankQ.data ?? [], [rankQ.data])
+  const byItem = useMemo(() => Object.fromEntries(items.map(i => [i.id, forItem(ranked, i.id)])) as Record<string, RankedQuote[]>, [items, ranked])
 
   const [choices, setChoices] = useState<Record<string, SupplierChoice>>({})
+  const [splits, setSplits] = useState<Record<string, Part[]>>({})
   const [typed, setTyped] = useState<Record<string, number | null>>({})
   const [po, setPo] = useState('')
   const [terms, setTerms] = useState<number | null>(null)
   const [termsTouched, setTermsTouched] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  /** The supplier list opens by itself while a line still needs a price, and stays as the person left it once they toggle it. */
-  const [listOpen, setListOpen] = useState<boolean | null>(null)
 
   useEffect(() => {
     if (!termsTouched && termsQ.data) setTerms(termsQ.data.days)
   }, [termsQ.data, termsTouched])
 
-  const choiceOf = (id: string): SupplierChoice => choices[id] ?? defaults.find(d => d.itemId === id)?.choice ?? 'none'
-  const effective = useMemo(() => Object.fromEntries(items.map(i => [i.id, choices[i.id] ?? defaults.find(d => d.itemId === i.id)?.choice ?? 'none'])), [items, choices, defaults])
-  const missing = unpricedItems(items, typed)
-  const priced = items.filter(i => i.quotedUnitPriceNet !== null)
-  const gross = orderTotals([
-    ...priced.map(i => ({ qty: i.qty, unitPriceNet: i.quotedUnitPriceNet as number, gstRate: itemsQ.data?.find(q => q.id === i.id)?.gstRate ?? 18 })),
-    ...items.filter(i => i.quotedUnitPriceNet === null && (typed[i.id] ?? 0) > 0).map(i => ({ qty: i.qty, unitPriceNet: typed[i.id] as number, gstRate: itemsQ.data?.find(q => q.id === i.id)?.gstRate ?? 18 })),
-  ]).gross
-  const sourced = items.filter(i => effective[i.id] !== 'none' && effective[i.id] !== 'service').length
+  /** What an item is assigned to when nobody chooses: its rank-1 quote; a lone quote that cannot be ranked; otherwise nothing yet. */
+  const defaultOf = (id: string): SupplierChoice => {
+    const qs = byItem[id] ?? []
+    return rankOne(qs)?.lineId ?? (qs.length === 1 ? qs[0].lineId : 'none')
+  }
+  const choiceOf = (id: string): SupplierChoice => choices[id] ?? defaultOf(id)
+  const effective = Object.fromEntries(items.map(i => [i.id, choiceOf(i.id)])) as Record<string, SupplierChoice>
+  const checks: Record<string, SplitCheck | null> = Object.fromEntries(items.map(i => [i.id, isSplit(splits[i.id]) ? checkSplit(i.qty, splits[i.id]) : null]))
+  const anyIncomplete = Object.values(checks).some(c => c?.incomplete)
 
-  const ready = itemsQ.isSuccess && items.length > 0 && missing.length === 0
+  const missing = items.filter(it => it.quotedUnitPriceNet === null && !((typed[it.id] ?? 0) > 0))
+  const gstOf = (id: string) => itemsQ.data?.find(q => q.id === id)?.gstRate ?? 18
+  const unitOf = (it: ConvertItem) => it.quotedUnitPriceNet ?? (typed[it.id] ?? 0)
+  const totals = orderTotals(items.filter(it => unitOf(it) > 0).map(it => ({ qty: checks[it.id]?.total ?? it.qty, unitPriceNet: unitOf(it), gstRate: gstOf(it.id) })))
+  const lineCount = orderLineCount(items, splits)
+
+  /** The legs this will make: one per supplier and currency. */
+  const legs: string[] = (() => {
+    const seen = new Map<string, string>()
+    for (const it of items) {
+      const lineIds = isSplit(splits[it.id]) ? splits[it.id].map(p => p.lineId) : [effective[it.id]]
+      for (const lid of lineIds) {
+        const q = (byItem[it.id] ?? []).find(x => x.lineId === lid)
+        if (q) seen.set(`${q.supplierId}:${q.currency}`, `${q.supplierName} (${q.currency})`)
+      }
+    }
+    return [...seen.values()]
+  })()
+
+  const ready = itemsQ.isSuccess && items.length > 0 && missing.length === 0 && rankQ.isSuccess && !anyIncomplete
   const busy = convert.isPending
+
+  const split = (itemId: string) => {
+    const qs = byItem[itemId] ?? []
+    setSplits(s => {
+      const parts: Part[] = s[itemId] ? [...s[itemId]] : [{ key: crypto.randomUUID(), lineId: choiceOf(itemId), qty: null }]
+      const next = nextRanked(qs, new Set(parts.map(p => p.lineId)))
+      if (!next) return s
+      return { ...s, [itemId]: [...parts, { key: crypto.randomUUID(), lineId: next.lineId, qty: undefined }] }
+    })
+  }
+  const patchPart = (itemId: string, key: string, patch: Partial<Part>) =>
+    setSplits(s => ({ ...s, [itemId]: (s[itemId] ?? []).map(p => (p.key === key ? { ...p, ...patch } : p)) }))
+  const removePart = (itemId: string, key: string) => {
+    const rest = (splits[itemId] ?? []).filter(p => p.key !== key)
+    if (rest.length >= 2) {
+      setSplits(s => ({ ...s, [itemId]: rest.map((p, i) => (i === 0 && p.qty === undefined ? { ...p, qty: null } : p)) }))
+      return
+    }
+    setChoices(c => ({ ...c, [itemId]: rest[0]?.lineId ?? 'none' }))
+    setSplits(s => Object.fromEntries(Object.entries(s).filter(([k]) => k !== itemId)))
+  }
 
   const submit = async () => {
     if (!ready || submitting.current) return
@@ -85,7 +148,7 @@ export function ConvertDialog({ rfq, inquiries, rates, onClose }: { rfq: RfqHead
       const id = await convert.mutateAsync({
         orderId: orderId.current,
         rfqId: rfq.id,
-        items: buildPayload(items, effective, typed),
+        items: buildSplitPayload(items, effective, typed, splits),
         customerPo: po.trim() || null,
         paymentTermsDays: terms,
       })
@@ -99,7 +162,38 @@ export function ConvertDialog({ rfq, inquiries, rates, onClose }: { rfq: RfqHead
   const context = (
     <>
       {rfq.company.name} · {items.length} {items.length === 1 ? 'line' : 'lines'}
-      {gross > 0 ? <> · gross PKR <span className="num">{formatAmount(gross)}</span></> : null}
+      {totals.gross > 0 ? (
+        <>
+          {' '}
+          · gross PKR <span className="num">{formatAmount(totals.gross)}</span>
+        </>
+      ) : null}
+    </>
+  )
+
+  /** The price columns of a line: what we pay (in the quote's currency, then PKR) and what we sell at. */
+  const priceCells = (it: ConvertItem, q: RankedQuote | undefined, n: number, editable: boolean) => (
+    <>
+      <div className="num text-sm lg:text-right">
+        {q ? (
+          <>
+            {priceTexts(q).price}
+            <br />
+            <span className="text-xs text-fg-muted">{priceTexts(q).pkr}</span>
+          </>
+        ) : (
+          <span className="text-fg-muted">—</span>
+        )}
+      </div>
+      <div className="num text-sm lg:text-right">
+        {it.quotedUnitPriceNet !== null ? (
+          formatAmount(it.quotedUnitPriceNet)
+        ) : editable ? (
+          <NumberInput value={typed[it.id] ?? null} onChange={v => setTyped(t => ({ ...t, [it.id]: v }))} aria-label={`Selling price, net PKR, line ${n}`} placeholder="Required" />
+        ) : (
+          formatAmount(typed[it.id] ?? 0)
+        )}
+      </div>
     </>
   )
 
@@ -109,6 +203,8 @@ export function ConvertDialog({ rfq, inquiries, rates, onClose }: { rfq: RfqHead
         title="Mark won"
         context={itemsQ.isSuccess ? context : rfq.company.name}
         icon={FileCheck2}
+        className="md:w-[min(1080px,calc(100vw-32px))]"
+        lead={itemsQ.isSuccess && items.length > 0 ? `Creates ${lineCount} order ${lineCount === 1 ? 'line' : 'lines'}.` : undefined}
         footer={
           <>
             <Button data-cancel onClick={onClose} disabled={busy}>
@@ -121,27 +217,202 @@ export function ConvertDialog({ rfq, inquiries, rates, onClose }: { rfq: RfqHead
         }
       >
         <div className="grid gap-4">
-          <p className="text-sm text-fg-2">
-            Creates an order with the quoted lines, prices and payment terms. Each line takes its supplier from the lowest quote. The quotation revisions stay on the RFQ as they were sent.
-          </p>
+          <Banner tone="info" title="Each item is assigned to its best-ranked quote">
+            Change it from the list, or split an item between two suppliers. Prices and terms copy from the quotation. The quotation revisions stay on the RFQ as they were sent.
+          </Banner>
 
-          {itemsQ.isPending ? (
+          {itemsQ.isPending || rankQ.isPending ? (
             <div className="grid gap-2" aria-busy="true" aria-label="Loading the lines">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
-          ) : itemsQ.isError ? (
-            <Banner tone="danger" title="Couldn't load the lines" action={<Button onClick={() => void itemsQ.refetch()}>Try again</Button>}>
+          ) : itemsQ.isError || rankQ.isError ? (
+            <Banner
+              tone="danger"
+              title="Couldn't load the lines"
+              action={
+                <Button
+                  onClick={() => {
+                    void itemsQ.refetch()
+                    void rankQ.refetch()
+                  }}
+                >
+                  Try again
+                </Button>
+              }
+            >
               Nothing was changed.
             </Banner>
           ) : items.length === 0 ? (
             <Banner tone="warning" title="This RFQ has no lines">
               Add the items to the RFQ first.
             </Banner>
+          ) : (
+            <div className="overflow-hidden rounded border" role="group" aria-label="Suppliers by line">
+              <div className={cn('hidden border-b bg-sunken px-4 py-2 text-xs font-medium leading-4 text-fg-muted', GRID)}>
+                <span />
+                <span>Item</span>
+                <span className="text-right">Qty</span>
+                <span>Buy from, ranked</span>
+                <span className="text-right">Supplier price</span>
+                <span className="text-right">Sell at, net</span>
+              </div>
+              {items.map((it, idx) => {
+                const n = idx + 1
+                const qs = byItem[it.id] ?? []
+                const parts = splits[it.id]
+                const isSplitItem = isSplit(parts)
+                const chk = checks[it.id]
+                const choice = choiceOf(it.id)
+                const q = qs.find(x => x.lineId === choice)
+                const canSplit = qs.length >= 2 && (isSplitItem ? nextRanked(qs, new Set(parts.map(p => p.lineId))) !== undefined : choice !== 'none' && choice !== 'service')
+                return (
+                  <div key={it.id} className="border-t border-line-strong first:border-t-0" data-testid={`convert-item-${n}`}>
+                    <div className={cn('grid gap-2 px-4 py-3 text-sm leading-5', GRID)}>
+                      <span className="num pt-px text-fg-muted">{n}</span>
+                      <div className="grid min-w-0 gap-0.5">
+                        <b className="font-medium">{it.description}</b>
+                        {isSplitItem ? <span className="text-xs text-fg-2">split across {parts.length} suppliers</span> : null}
+                      </div>
+                      <span className="num text-sm lg:pt-1.5 lg:text-right">
+                        {it.qty}
+                        {it.unit ? <span className="text-fg-muted"> {it.unit}</span> : null}
+                      </span>
+                      {isSplitItem ? (
+                        <>
+                          <span className="text-xs text-fg-muted lg:pt-1">
+                            Parts below must add up to <span className="num">{it.qty}</span>
+                          </span>
+                          <span />
+                          <span />
+                        </>
+                      ) : (
+                        <>
+                          <RankedPicker
+                            label={`Supplier for line ${n}`}
+                            value={choice}
+                            quotes={qs}
+                            extras={EXTRAS.filter(e => e.value === 'service' || qs.length !== 1)}
+                            onChange={v => setChoices(c => ({ ...c, [it.id]: v }))}
+                          />
+                          {priceCells(it, q, n, true)}
+                        </>
+                      )}
+                    </div>
+
+                    {isSplitItem
+                      ? parts.map((p, i) => {
+                          const pq = qs.find(x => x.lineId === p.lineId)
+                          const qty = chk?.qtys[i] ?? 0
+                          const auto = p.qty === null
+                          return (
+                            <div
+                              key={p.key}
+                              className={cn('grid gap-2 border-t border-dashed border-line-input bg-canvas px-4 pb-3 pt-2 text-sm', GRID)}
+                              data-testid={`convert-item-${n}-part-${i + 1}`}
+                            >
+                              <span aria-hidden="true" className="hidden lg:block" />
+                              <div className="grid min-w-0 content-start justify-items-start gap-0.5 text-xs text-fg-muted">
+                                <span>
+                                  Part {i + 1} of {parts.length}
+                                </span>
+                                {i > 0 ? (
+                                  <Button size="sm" variant="quiet" icon={X} onClick={() => removePart(it.id, p.key)} aria-label={`Remove part ${i + 1}, line ${n}`}>
+                                    Remove part
+                                  </Button>
+                                ) : null}
+                              </div>
+                              <div className="grid justify-items-end gap-0.5">
+                                <NumberInput
+                                  value={p.qty === undefined ? null : qty}
+                                  onChange={v => patchPart(it.id, p.key, { qty: v === null ? (i === 0 ? null : undefined) : v })}
+                                  aria-label={`Quantity, part ${i + 1}, line ${n}`}
+                                  className={cn('w-16', auto && 'border-dashed bg-sunken')}
+                                />
+                                <span className="text-xs leading-[14px] text-fg-muted">{auto ? 'remainder, auto' : p.qty === undefined ? 'type it' : 'typed'}</span>
+                              </div>
+                              <RankedPicker
+                                label={`Supplier for part ${i + 1}, line ${n}`}
+                                value={p.lineId}
+                                quotes={qs}
+                                usedLineIds={new Set(parts.filter(x => x.key !== p.key).map(x => x.lineId))}
+                                usedNote="A supplier used by another part of this item cannot be picked twice. Quotes from other suppliers can be added from the RFQ."
+                                header={`Ranked quotes for item ${n}, with the reason`}
+                                onChange={v => patchPart(it.id, p.key, { lineId: v })}
+                              />
+                              {priceCells(it, pq, n, false)}
+                            </div>
+                          )
+                        })
+                      : null}
+
+                    {isSplitItem && chk ? (
+                      <>
+                        {chk.mismatch && !chk.incomplete ? (
+                          <div role="alert" className="mx-4 mb-3 flex items-start gap-3 rounded border border-tone-warning-fg/30 bg-tone-warning-bg px-3 py-2 text-xs leading-4">
+                            <Icon icon={TriangleAlert} size="sm" className="mt-px text-tone-warning-fg" />
+                            <span>
+                              <b className="font-medium">
+                                Parts add up to {chk.total}, but the item is {it.qty}.
+                              </b>{' '}
+                              Check the quantities. Nothing is blocked: you can still create the order, and {chk.total > it.qty ? 'the extra is ordered as typed' : 'only what is typed is ordered'}.
+                            </span>
+                          </div>
+                        ) : null}
+                        <div className="flex flex-wrap gap-x-5 gap-y-1 border-t bg-sunken px-4 py-3 text-sm">
+                          <span data-testid={`convert-item-${n}-sum`}>
+                            Parts:{' '}
+                            <span className="num font-medium">
+                              {chk.qtys.join(' + ')} = {chk.total}
+                            </span>{' '}
+                            of <span className="num font-medium">{it.qty}</span>
+                          </span>
+                          <span className="text-xs text-fg-muted">
+                            {chk.incomplete ? 'Type a quantity for every part to create the order.' : "Each part becomes its own line on its supplier's leg, at the same selling price."}
+                          </span>
+                        </div>
+                      </>
+                    ) : null}
+
+                    {canSplit ? (
+                      <div className="flex flex-wrap items-center gap-2 px-4 pb-3 pt-1">
+                        <Button size="sm" icon={Split} onClick={() => split(it.id)} aria-label={`Split this item, line ${n}`}>
+                          Split this item
+                        </Button>
+                        <span className="text-xs text-fg-muted">Adds a part with the next supplier in the ranking. Type its quantity; the first part takes the rest.</span>
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })}
+              <div className="grid justify-end gap-1 border-t bg-sunken px-4 py-3 text-sm" aria-label="Order totals">
+                <div className="flex justify-between gap-8">
+                  <span className="text-fg-muted">Net</span>
+                  <span className="num">{formatAmount(totals.net)}</span>
+                </div>
+                <div className="flex justify-between gap-8">
+                  <span className="text-fg-muted">GST</span>
+                  <span className="num">{formatAmount(totals.gst)}</span>
+                </div>
+                <div className="flex justify-between gap-8 font-medium">
+                  <span>Gross</span>
+                  <span className="num">{formatAmount(totals.gross)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {itemsQ.isSuccess && rankQ.isSuccess && legs.length > 0 ? (
+            <p className="flex items-center gap-2 text-xs text-fg-muted">
+              <Icon icon={Truck} size="sm" />
+              <span>
+                {legs.length} {legs.length === 1 ? 'leg' : 'legs'}: {legs.join(', ')}.
+              </span>
+            </p>
           ) : null}
 
           <Field label="Customer PO number" requirement="optional" help="Add it from the order later if it has not arrived.">
-            <TextField value={po} onChange={e => setPo(e.target.value)} placeholder="Not yet received" autoComplete="off" />
+            <TextField value={po} onChange={e => setPo(e.target.value)} placeholder="Not yet received" autoComplete="off" className="max-w-[360px]" />
           </Field>
 
           <Field
@@ -161,51 +432,6 @@ export function ConvertDialog({ rfq, inquiries, rates, onClose }: { rfq: RfqHead
               aria-label="Payment terms in days"
             />
           </Field>
-
-          {itemsQ.isSuccess && items.length > 0 ? (
-            <details className="rounded border" open={listOpen ?? missing.length > 0} onToggle={e => setListOpen((e.currentTarget as HTMLDetailsElement).open)}>
-              <summary className="cursor-pointer px-3 py-2 text-sm font-medium">
-                Suppliers by line
-                <span className="ml-2 text-xs font-regular text-fg-muted">
-                  {sourced} of {items.length} sourced
-                  {missing.length > 0 ? `, ${missing.length} need a price` : ''}
-                </span>
-              </summary>
-              <ul className="grid gap-3 border-t p-3" aria-label="Suppliers by line">
-                {items.map((it, n) => {
-                  const d = defaults.find(x => x.itemId === it.id)
-                  return (
-                    <li key={it.id} className="grid gap-2">
-                      <p className="text-sm">
-                        <span className="num mr-2 text-fg-muted">{n + 1}</span>
-                        {it.description}
-                        <span className="num ml-2 text-fg-muted">
-                          {it.qty}
-                          {it.unit ? ` ${it.unit}` : ''}
-                        </span>
-                      </p>
-                      <Select
-                        aria-label={`Supplier for line ${n + 1}`}
-                        value={choiceOf(it.id)}
-                        onChange={e => setChoices(c => ({ ...c, [it.id]: e.target.value }))}
-                        options={(d?.options ?? []).map(o => ({ value: o.value, label: o.lowest ? `${o.label} (lowest)` : o.label }))}
-                      />
-                      {it.quotedUnitPriceNet === null ? (
-                        <Field label="Selling price, net PKR" requirement="required" help="The quotation did not price this line.">
-                          <NumberInput
-                            value={typed[it.id] ?? null}
-                            onChange={v => setTyped(t => ({ ...t, [it.id]: v }))}
-                            prefix="PKR"
-                            aria-label={`Selling price, net PKR, line ${n + 1}`}
-                          />
-                        </Field>
-                      ) : null}
-                    </li>
-                  )
-                })}
-              </ul>
-            </details>
-          ) : null}
 
           {error ? (
             <Banner tone="danger" title="Couldn't create the order">

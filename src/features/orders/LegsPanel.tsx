@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { FileText, MessageSquareWarning, Plus, Receipt } from 'lucide-react'
+import { FileText, MessageSquareWarning, Plus, Receipt, TriangleAlert } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { convertToPaisa, formatAmount, formatPaisa } from '@/lib/money'
@@ -7,6 +7,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, poRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
+import { Icon } from '@/ui/Icon'
 import { EmptyState } from '@/ui/EmptyState'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
@@ -14,6 +15,7 @@ import { useFxLatest } from '@/features/rfqs/hooks'
 import { toRateTable } from '@/features/rfqs/lib'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { useUpdateLeg } from '@/features/orders/hooks'
+import { poChange } from '@/features/orders/lib/poChange'
 import { before, editPatch, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, suggestExpected, type LegDates, type LegPatch } from '@/features/orders/lib/legModel'
 import { AddLegDialog } from '@/features/orders/AddDialogs'
 import { IssuePoDialog } from '@/features/purchaseOrders/IssuePoDialog'
@@ -162,6 +164,8 @@ function Leg({
   const rate = ccy && ccy !== 'PKR' ? rates[ccy] : undefined
   const pkr = rate && rate.staleness !== 'unusable' && total.priced > 0 ? convertToPaisa(total.total, rate.rate) : null
   const label = `leg ${letter}`
+  /** A8 (O09): the latest PO revision lists lines this leg no longer matches (a split moved quantity). Admin and sales only: a PO carries prices. */
+  const changed = money && po ? poChange(po.lines, items.map(it => ({ id: it.id, description: it.description, qty: it.qty, isService: it.isService }))) : null
 
   const run = async (patch: LegPatch & { reference?: string | null }, title: string, body: string) => {
     const prev: LegPatch & { reference?: string | null } = { ...before(dates, patch), ...('reference' in patch ? { reference: leg.reference } : {}) }
@@ -253,6 +257,26 @@ function Leg({
           ) : null}
         </div>
         {lines ? <p className="line-clamp-2 text-sm text-fg-muted">{lines}</p> : null}
+        {changed && po ? (
+          <div
+            role="status"
+            data-testid={`leg-${letter}-changed`}
+            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm"
+          >
+            <Icon icon={TriangleAlert} className="text-tone-warning-fg" />
+            <span className="min-w-0 flex-1 text-pretty">
+              <b className="font-semibold">
+                Lines changed since {poRef(po.number, po.issuedOn)} · R{po.revision}.
+              </b>{' '}
+              <span className="text-fg-2">{changed.notes.join('. ')}. The PO still lists the earlier lines.</span>
+            </span>
+            {canEdit ? (
+              <Button size="sm" variant="primary" icon={FileText} onClick={onIssue} aria-label={`Re-issue PO, ${label}`}>
+                Re-issue PO
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-3 gap-3" role="group" aria-label={`Dates, ${label}`}>

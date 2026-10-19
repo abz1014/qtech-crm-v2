@@ -125,6 +125,8 @@ function orders() {
     /** R22: the orders Capture offers (opened lately), and its search. */
     captureRecent: () => [...all, 'list', 'capture-recent'] as const,
     captureSearch: (text: string, includePo: boolean) => [...all, 'list', 'capture-search', text.trim().toLowerCase(), includePo] as const,
+    /** A8: the ranked quotes of an RFQ for the convert dialog and the Split line dialog (the role is in the key: an engineer's rows carry no selling price). */
+    ranked: (rfqId: string, role: string) => [...all, 'list', 'ranked', rfqId, role] as const,
     /** Suppliers a leg can be added for. */
     supplierChoices: () => [...all, 'list', 'supplier-choices'] as const,
     jobTitle: (userId: string) => [...all, 'list', 'job-title', userId] as const,
