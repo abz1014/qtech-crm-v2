@@ -10,7 +10,8 @@ import { openAs } from '../support/stack'
 const SCREENS = ['/today', '/rfqs', '/orders', '/companies', '/money/receivables', '/money/gst-register', '/reports']
 
 const measure = () => {
-  const bars = Array.from(document.querySelectorAll('header')).filter(h => h.getBoundingClientRect().width > 0)
+  // The shell's bars only: a page may draw its own <header> inside #main.
+  const bars = Array.from(document.querySelectorAll('header')).filter(h => !h.closest('#main') && h.getBoundingClientRect().width > 0)
   const ends = (el: Element) => Math.max(el.getBoundingClientRect().right, ...Array.from(el.querySelectorAll('*')).map(e => e.getBoundingClientRect().right))
   return {
     page: document.documentElement.scrollWidth,

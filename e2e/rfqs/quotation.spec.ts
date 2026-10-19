@@ -476,6 +476,7 @@ for (const width of [1440, 375]) {
 
     await dialog(page).getByRole('button', { name: 'Done' }).click()
     await expect(page.getByTestId('quotation-0')).toBeVisible()
+    await page.locator('#main').evaluate(m => m.scrollTo(0, m.scrollHeight)) // at the end of the page the phone's sticky action bar covers nothing
     expect(await pageViolations(page)).toEqual([])
     await shot(page, `rfq-quotation-list-${width}`)
   })

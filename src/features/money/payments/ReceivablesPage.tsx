@@ -183,7 +183,7 @@ export function ReceivablesPage() {
           { label: 'Not invoiced yet', amount: totals.notInvoiced, sub: `${totals.notInvoicedCount} ${totals.notInvoicedCount === 1 ? 'order' : 'orders'}, balance from items` },
         ]}
       />
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 min-[1360px]:grid-cols-[minmax(0,1fr)_392px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 min-[1360px]:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0">
           <DataTable
             label={tabLabel}

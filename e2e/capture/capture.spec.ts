@@ -306,7 +306,7 @@ test.describe('iPhone: Paste or photo button, paste, photo pick', () => {
     await page.keyboard.press('Escape')
     await expect(sheet(page)).toHaveCount(0)
     await page.keyboard.press('Control+k')
-    await page.getByRole('combobox').fill('captu')
+    await page.getByRole('combobox').fill('photo')
     await page.getByRole('option', { name: /Paste or photo/ }).first().click()
     await expect(sheet(page)).toBeVisible()
   })
