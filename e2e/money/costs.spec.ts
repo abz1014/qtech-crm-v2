@@ -79,7 +79,7 @@ test.describe('Margin panel on the order page (admin)', () => {
     const o = await seedOrder()
     await openAs(page, 'admin', `/orders/${o.id}`)
     const panel = page.getByRole('region', { name: 'Margin' })
-    await expect(panel.getByText('Provisional', { exact: true }).first()).toBeVisible()
+    await expect(panel.getByText('Not final', { exact: true }).first()).toBeVisible()
 
     // Supplier price x today's rate: 2 x EUR 100 x 300 = PKR 60,000; the line with no supplier price is counted, not guessed.
     const estimate = panel.getByTestId('cost-estimate')
@@ -158,10 +158,10 @@ test.describe('Money > Margins (admin)', () => {
     await expect(d).toContainText('300,000') // margin 1,000,000 - 700,000
     await expect(d).toContainText('Complete')
     const p = rowOf(prov)
-    await expect(p).toContainText('Provisional')
+    await expect(p).toContainText('Not final')
     await expect(p.locator('[data-provisional]')).toHaveCount(1) // the dashed underline on the margin
     const u = rowOf(unknown)
-    await expect(u).toContainText('Basis unknown')
+    await expect(u).toContainText('Is GST included?')
     await expect(u).not.toContainText('150,000') // no margin is calculated
 
     // The footer adds up exactly the complete orders (read from the views, so other orders in the database count too).

@@ -55,7 +55,7 @@ export function EmptyState({ mood = 'neutral', icon, title, children, actions, m
         <Icon icon={icon ?? m.icon} size="xl" />
       </span>
       <p className="text-balance text-lg font-semibold tracking-snug">{title}</p>
-      {children ? <p className="max-w-[46ch] text-pretty text-sm text-fg-muted">{children}</p> : null}
+      {children ? <p className="max-w-[46ch] text-pretty text-sm text-fg-2">{children}</p> : null}
       {actions ? <div className="mt-1 flex flex-wrap justify-center gap-2">{actions}</div> : null}
       {meta ? <p className="text-xs text-fg-muted">{meta}</p> : null}
     </div>

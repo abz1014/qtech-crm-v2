@@ -1,5 +1,6 @@
 // Gallery sections for the primitives added after U09: DateRail, StepList, ProgressBar, InlineEditRow, the four
-// EmptyState cards and the Tooltip variants (g2-components "Date rail", "More primitives", "Empty state", "Tooltip").
+// EmptyState cards and the Tooltip variants (g2-components "Date rail", "More primitives", "Empty state", "Tooltip"),
+// and the two text sizes side by side (DECISIONS 2026-10-19).
 import { useState } from 'react'
 import { ClipboardPaste, FileText, Info, Plus, Send } from 'lucide-react'
 import { Panel, Section } from '@/dev/gallery/layout'
@@ -7,12 +8,15 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { DateRail, type DateRailState } from '@/ui/DateRail'
 import { EmptyState } from '@/ui/EmptyState'
+import { Field } from '@/ui/form/Field'
 import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { InlineEditRow, type InlineEditColumn } from '@/ui/InlineEditRow'
+import { Kbd } from '@/ui/Kbd'
+import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { StepList } from '@/ui/StepList'
-import { ProgressBar, ProgressSegments } from '@/ui/Tag'
+import { ProgressBar, ProgressSegments, Tag } from '@/ui/Tag'
 import { Tooltip } from '@/ui/Tooltip'
 
 const noop = () => {}
@@ -154,9 +158,9 @@ export function MorePrimitivesSection() {
           <StepList
             label="Progress of RFQ-0177"
             steps={[
-              { label: 'Floated to 4 suppliers', state: 'done', note: 'Mon 23 Nov' },
+              { label: 'Sent to 4 suppliers', state: 'done', note: 'Mon 23 Nov' },
               { label: 'Waiting for quotes', state: 'now', note: '2 of 4 back' },
-              { label: 'Bid sent', state: 'todo', note: 'due Tue 1 Dec' },
+              { label: 'Quotation sent', state: 'todo', note: 'due Tue 1 Dec' },
             ]}
           />
         </Panel>
@@ -179,7 +183,7 @@ export function EmptyCards() {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
       <EmptyState bordered mood="goal" title="Nothing is waiting on you">
-        Every bid is in and every chase is up to date. The next date that matters is Tue 1 Dec.
+        Every quotation is sent and every chase is up to date. The next date that matters is Tue 1 Dec.
       </EmptyState>
       <EmptyState
         bordered
@@ -188,7 +192,7 @@ export function EmptyCards() {
         actions={
           <>
             <Button variant="primary" icon={Plus}>New RFQ</Button>
-            <Button icon={ClipboardPaste}>Capture a message</Button>
+            <Button icon={ClipboardPaste}>Paste or photo</Button>
           </>
         }
       >
@@ -211,8 +215,8 @@ export function TooltipVariants() {
     <div className="grid w-full gap-6 sm:grid-cols-2 lg:grid-cols-3">
       <div className="grid content-start gap-2">
         <p className="text-sm font-medium">Icon button label</p>
-        <Tooltip content="Capture" shortcut="C">
-          <Button icon={ClipboardPaste} aria-label="Capture" />
+        <Tooltip content="Paste or photo" shortcut="C">
+          <Button icon={ClipboardPaste} aria-label="Paste or photo" />
         </Tooltip>
       </div>
       <div className="grid content-start gap-2" data-preview-disabled>
@@ -242,6 +246,61 @@ export function TooltipVariants() {
         </Tooltip>
       </div>
     </div>
+  )
+}
+
+// ---------------------------------------------------------------- text size: Normal (default) and Smaller
+/** The same few primitives at both text sizes. The Smaller side sets data-text="small" on its own box, which is the token block <html> gets. */
+function TextSample({ small }: { small?: boolean }) {
+  const [filter, setFilter] = useState('all')
+  return (
+    <div data-text={small ? 'small' : undefined} className="grid min-w-0 content-start gap-4 rounded border bg-surface p-4 text-base">
+      <h3 className="text-lg font-semibold tracking-snug">{small ? 'Smaller' : 'Normal (default)'}</h3>
+      <p className="text-sm text-fg-2">
+        RFQ-0177 for Indus Textile Mills is due <span className="num">Tue 1 Dec</span>. Two of four suppliers have sent prices.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="primary" size="lg">Send quotation</Button>
+        <Button>Ask suppliers</Button>
+        <Button size="sm">Add line</Button>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusBadge dimension="sourcing" value="partly-covered" />
+        <StatusBadge dimension="bid" value="to-bid" />
+        <StatusBadge dimension="rfq-outcome" value="won" />
+        <StatusBadge dimension="deadline" value="overdue" />
+        <Tag>ORD-0038</Tag>
+        <Kbd>C</Kbd>
+      </div>
+      <SegmentedControl
+        aria-label={small ? 'Filter, smaller text' : 'Filter, normal text'}
+        value={filter}
+        onValueChange={setFilter}
+        options={[
+          { value: 'all', label: 'All', count: 9 },
+          { value: 'quotes', label: 'Quotations', count: 3 },
+          { value: 'suppliers', label: 'Suppliers & delivery', count: 4 },
+        ]}
+      />
+      <Field label="Customer reference" help="As printed on their enquiry." id={small ? 'ts-ref-small' : 'ts-ref-normal'}>
+        <TextField defaultValue="PO-4471/26" />
+      </Field>
+    </div>
+  )
+}
+
+export function TextSizeSection() {
+  return (
+    <Section
+      id="textsize"
+      title="Text size"
+      note="Normal is the default since 2026-10-19 (xs 14, sm 15, base 16; controls 40, rows 48). Smaller restores 12, 13, 14 with 32 and 40, for anyone who picks it under Your details or in the account menu."
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <TextSample />
+        <TextSample small />
+      </div>
+    </Section>
   )
 }
 

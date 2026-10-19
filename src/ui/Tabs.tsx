@@ -33,7 +33,7 @@ export const Tab = forwardRef<ElementRef<typeof RadixTabs.Trigger>, TabProps>(fu
     <RadixTabs.Trigger
       ref={ref}
       className={cn(
-        'group relative inline-flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded px-3 text-sm font-medium text-fg-muted',
+        'group relative inline-flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded px-3 text-sm font-medium text-fg-2',
         'transition-colors duration-fast ease-out hover:text-fg data-[state=active]:text-fg disabled:text-fg-disabled',
         className,
       )}
@@ -41,7 +41,7 @@ export const Tab = forwardRef<ElementRef<typeof RadixTabs.Trigger>, TabProps>(fu
     >
       {children}
       {count !== undefined ? (
-        <span className="num inline-grid h-[18px] min-w-[18px] place-items-center rounded-round bg-selected px-1 text-xs text-fg-2">
+        <span className="num inline-grid h-[var(--lh-xs)] min-w-[var(--lh-xs)] place-items-center rounded-round bg-selected px-[6px] text-xs leading-none text-fg-2">
           {count}
         </span>
       ) : null}

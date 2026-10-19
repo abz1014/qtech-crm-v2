@@ -112,7 +112,7 @@ describe('RFQ board', () => {
     expect(within(rows[0]).getByText('Quotation expired')).toBeInTheDocument()
     expect(within(rows[2]).getByText('their ref ENQ-2211', { exact: false })).toBeInTheDocument()
     expect(within(rows[2]).getByText('Waiting on customer')).toBeInTheDocument()
-    expect(within(rows[2]).getByText('Partly covered')).toBeInTheDocument()
+    expect(within(rows[2]).getByText('Partly priced')).toBeInTheDocument()
   })
 
   it('narrows by state and keeps the choice in the address', async () => {

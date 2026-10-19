@@ -194,13 +194,13 @@ function ToastCard({
       <Icon icon={tone === 'danger' ? CircleAlert : phase === 'undone' ? Undo2 : CircleCheck} className={cn('shrink-0', tone === 'success' && 'text-tone-success-bg')} />
       <div className="grid min-w-0 flex-1 text-pretty">
         <span className="font-medium">{title}</span>
-        {body ? <span className={cn('text-xs leading-4', tone === 'danger' ? 'opacity-90' : 'opacity-80')}>{body}</span> : null}
+        {body ? <span className={cn('text-xs', tone === 'danger' ? 'opacity-90' : 'opacity-80')}>{body}</span> : null}
       </div>
       {undoable ? (
         <button
           type="button"
           onClick={onUndo}
-          className="inline-flex h-[28px] items-center gap-[6px] rounded border border-tone-ink-fg/30 pl-3 pr-2 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 max-md:h-touch"
+          className="inline-flex h-control-sm items-center gap-[6px] rounded border border-tone-ink-fg/30 pl-3 pr-2 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 max-md:h-touch"
         >
           <svg viewBox="0 0 18 18" aria-hidden="true" className="size-[18px] -rotate-90">
             <circle cx="9" cy="9" r="7" fill="none" strokeWidth="2" className="stroke-tone-ink-fg opacity-30" />
@@ -226,7 +226,7 @@ function ToastCard({
             input.action?.onClick()
             onDismiss()
           }}
-          className="inline-flex h-[28px] items-center rounded border border-tone-ink-fg/30 px-3 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 max-md:h-touch"
+          className="inline-flex h-control-sm items-center rounded border border-tone-ink-fg/30 px-3 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 max-md:h-touch"
         >
           {input.action.label}
         </button>
@@ -235,7 +235,7 @@ function ToastCard({
         type="button"
         aria-label="Dismiss"
         onClick={onDismiss}
-        className="grid size-6 shrink-0 place-items-center rounded opacity-70 transition-opacity duration-fast ease-out hover:bg-tone-ink-fg/10 hover:opacity-100 max-md:size-touch"
+        className="grid size-control-sm shrink-0 place-items-center rounded opacity-70 transition-opacity duration-fast ease-out hover:bg-tone-ink-fg/10 hover:opacity-100 max-md:size-touch"
       >
         <Icon icon={X} />
       </button>

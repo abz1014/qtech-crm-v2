@@ -67,11 +67,13 @@
   --neutral-50: #f4f4f6;
   --neutral-100: #eeeef1;
   --neutral-150: #e3e3e7;
+  --neutral-175: #c8c8cf;   /* readable hairline, 1.66:1 on white (2026-10-19) */
   --neutral-200: #d2d2d8;
   --neutral-300: #b3b3bb;
   --neutral-400: #8a8a93;
   --neutral-500: #6e6e77;
   --neutral-600: #5a5a63;
+  --neutral-650: #4d4d55;   /* secondary text, 8.37:1 on white (2026-10-19) */
   --neutral-700: #3d3d44;
   --neutral-800: #26262b;
   --neutral-900: #111113;
@@ -93,27 +95,27 @@
   /* ---- 2c. Text ---------------------------------------------------------- */
   --fg: var(--neutral-900);
   --fg-2: var(--neutral-700);
-  --fg-muted: var(--neutral-600);       /* labels, captions, placeholders (≥ 5.7:1 on every surface) */
+  --fg-muted: var(--neutral-650);       /* captions, hints, placeholders (8.37 surface, 7.62 sunken, 7.23 selected) */
   --fg-disabled: var(--neutral-300);    /* disabled controls only (WCAG-exempt) */
 
   /* ---- 2d. Lines & focus ------------------------------------------------- */
-  --border: var(--neutral-150);         /* hairline: panels, rows, dividers */
-  --border-strong: var(--neutral-200);  /* hover/active hairline, popover edge */
+  --border: var(--neutral-175);         /* hairline: panels, rows, dividers (1.66:1 on white) */
+  --border-strong: var(--neutral-300);  /* hover/active hairline, popover edge, secondary button (2.08:1) */
   --border-input: var(--neutral-400);   /* form control edge (3.42:1 on white, WCAG 1.4.11) */
   --hairline: 1px;
   --focus-width: 2px;
   --focus-offset: 2px;                  /* ring colour is --brand-green */
 
-  /* ---- 2e. Semantic tones (text on its own tint ≥ 4.5:1) ----------------- */
+  /* ---- 2e. Semantic tones (text ≥ 5.4:1 on its own tint, on white and on --bg-selected) */
   --tone-neutral-fg: var(--neutral-700);
   --tone-neutral-bg: var(--neutral-100);
-  --tone-info-fg: #1d6fb8;
+  --tone-info-fg: #185f9e;
   --tone-info-bg: #e3f0fb;
-  --tone-success-fg: #0f766e;
+  --tone-success-fg: #0b625b;
   --tone-success-bg: #e0f2f1;
-  --tone-warning-fg: #b45309;
+  --tone-warning-fg: #92400e;
   --tone-warning-bg: #fef3c7;
-  --tone-danger-fg: #c62828;
+  --tone-danger-fg: #b21f1f;
   --tone-danger-bg: #fde8e8;
   --tone-ink-fg: var(--neutral-0);
   --tone-ink-bg: var(--neutral-800);
@@ -122,13 +124,14 @@
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 
-  --text-xs: 12px;   --lh-xs: 16px;
-  --text-sm: 13px;   --lh-sm: 20px;
-  --text-base: 14px; --lh-base: 22px;
-  --text-lg: 16px;   --lh-lg: 24px;
-  --text-xl: 20px;   --lh-xl: 28px;
-  --text-2xl: 28px;  --lh-2xl: 34px;
-  --text-display: 36px; --lh-display: 40px;
+  /* Normal text (owner decision 2026-10-19). [data-text="small"] below restores the old 12/13/14 scale. */
+  --text-xs: 14px;   --lh-xs: 20px;
+  --text-sm: 15px;   --lh-sm: 22px;
+  --text-base: 16px; --lh-base: 24px;
+  --text-lg: 18px;   --lh-lg: 26px;
+  --text-xl: 22px;   --lh-xl: 30px;
+  --text-2xl: 30px;  --lh-2xl: 36px;
+  --text-display: 38px; --lh-display: 44px;
 
   --weight-regular: 400;
   --weight-medium: 500;
@@ -154,9 +157,16 @@
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* ---- 7. Density (default; compact overrides below) --------------------- */
-  --control-h: 32px;     /* buttons, inputs, selects */
-  --row-h: 40px;         /* table / list rows */
+  /* ---- 7. Density (default; compact and small text override below) ------- */
+  --control-h: 40px;     /* buttons, inputs, selects */
+  --control-sm-h: 36px;  /* small buttons, row actions */
+  --control-lg-h: 44px;  /* large buttons */
+  --segment-h: 36px;     /* one segment of a SegmentedControl (filter chips) */
+  --chip-h: 24px;        /* status chip, tag, key hint */
+  --icon-chip: 16px;     /* the glyph inside a status chip */
+  --row-h: 48px;         /* table / list rows */
+  --row-h-tall: 56px;    /* two-line table rows (name over reference) */
+  --head-h: 40px;        /* table header row */
   --cell-px: var(--sp-3);
   --text-table: var(--text-sm);
   --lh-table: var(--lh-sm);
@@ -164,18 +174,50 @@
 
   /* ---- 8. Layout --------------------------------------------------------- */
   --nav-w: 224px;        /* left navigation */
+  --topbar-h: 56px;
+}
+
+/* "Smaller text" (Settings > Your details, the account menu): the pre-2026-10-19 scale and heights.
+   Set on <html> before the first paint (src/ui/useTextSize.ts). Derived tokens are restated so the
+   block also works on an inner element (the gallery's side-by-side preview). */
+[data-text="small"] {
+  --text-xs: 12px;   --lh-xs: 16px;
+  --text-sm: 13px;   --lh-sm: 20px;
+  --text-base: 14px; --lh-base: 22px;
+  --text-lg: 16px;   --lh-lg: 24px;
+  --text-xl: 20px;   --lh-xl: 28px;
+  --text-2xl: 28px;  --lh-2xl: 34px;
+  --text-display: 36px; --lh-display: 40px;
+  --control-h: 32px;
+  --control-sm-h: 28px;
+  --control-lg-h: 40px;
+  --segment-h: 26px;
+  --chip-h: 20px;
+  --icon-chip: 12px;
+  --row-h: 40px;
+  --row-h-tall: 48px;
+  --head-h: 36px;
+  --text-table: var(--text-sm);
+  --lh-table: var(--lh-sm);
   --topbar-h: 52px;
 }
 
 [data-density="compact"] {
-  --row-h: 32px;
+  --row-h: 40px;
   --cell-px: var(--sp-2);
   --text-table: var(--text-xs);
   --lh-table: var(--lh-xs);
 }
 
+[data-text="small"] [data-density="compact"],
+[data-text="small"][data-density="compact"] {
+  --row-h: 32px;
+}
+
+/* Phones and tablets: 44px controls, 40px small buttons and segments; small text keeps its old 40 / 48. */
 @media (pointer: coarse) {
-  :root { --control-h: 40px; --row-h: 48px; }
+  :root { --control-h: 44px; --control-sm-h: 40px; --segment-h: 40px; --row-h: 48px; }
+  [data-text="small"] { --control-h: 40px; --control-sm-h: 28px; --segment-h: 26px; --row-h: 48px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

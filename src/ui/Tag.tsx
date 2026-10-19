@@ -6,7 +6,7 @@ export function Tag({ children, dashed, className }: { children: ReactNode; dash
   return (
     <span
       className={cn(
-        'num inline-flex h-5 items-center whitespace-nowrap rounded border px-[6px] text-xs leading-none',
+        'num inline-flex min-h-chip items-center whitespace-nowrap rounded border px-[6px] py-px text-xs leading-none',
         dashed ? 'border-dashed border-line-strong text-fg-muted' : 'border-line-strong bg-surface text-fg-2',
         className,
       )}
@@ -19,8 +19,29 @@ export function Tag({ children, dashed, className }: { children: ReactNode; dash
 /** CountPill: a count beside a tab or group name. */
 export function CountPill({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <span className={cn('num inline-grid h-4 min-w-4 place-items-center rounded-round bg-selected px-1 text-xs leading-none text-fg', className)}>
+    <span className={cn('num inline-grid h-[var(--lh-xs)] min-w-[var(--lh-xs)] place-items-center rounded-round bg-selected px-[6px] text-xs leading-none text-fg', className)}>
       {children}
+    </span>
+  )
+}
+
+/**
+ * CountBadge: a count pinned to the top-right of an icon (the phone tabs show the top bar's counts this way).
+ * Two px under the xs size so it stays small beside a 20px glyph; over 99 reads "99+". Decorative: the
+ * control it sits in says the count in words for screen readers.
+ */
+export function CountBadge({ count, className }: { count: number; className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-count=""
+      className={cn(
+        'num absolute -top-[6px] left-[calc(100%-7px)] inline-grid h-[calc(var(--lh-xs)-2px)] min-w-[calc(var(--lh-xs)-2px)] place-items-center',
+        'rounded-round bg-primary px-[5px] text-[length:calc(var(--text-xs)-2px)] font-medium leading-none text-primary-foreground ring-2 ring-surface',
+        className,
+      )}
+    >
+      {count > 99 ? '99+' : count}
     </span>
   )
 }
@@ -34,7 +55,7 @@ export function ProgressSegments({ done, total, className }: { done: number; tot
           <i key={i} className={cn('h-1 w-[14px] rounded-[1px]', i < done ? 'bg-brand-green' : 'bg-selected ring-1 ring-inset ring-line')} />
         ))}
       </span>
-      <span className="num text-xs text-fg-muted">{`${done} of ${total}`}</span>
+      <span className="num text-xs text-fg-2">{`${done} of ${total}`}</span>
     </span>
   )
 }

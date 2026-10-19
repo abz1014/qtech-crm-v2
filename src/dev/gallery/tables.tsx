@@ -36,7 +36,7 @@ const rfqCols: Column<Rfq>[] = [
   { id: 'no', header: 'RFQ', kind: 'date', value: r => r.no, width: 110 },
   { id: 'customer', header: 'Customer', value: r => r.customer, width: 230 },
   { id: 'items', header: 'Items', kind: 'num', value: r => r.items },
-  { id: 'due', header: 'Bid due', kind: 'date', value: r => r.due, cell: r => `${formatDay(r.due)}, 17:00` },
+  { id: 'due', header: 'Quotation due', kind: 'date', value: r => r.due, cell: r => `${formatDay(r.due)}, 17:00` },
   { id: 'sourcing', header: 'Sourcing', cell: r => <StatusBadge dimension="sourcing" value={r.sourcing} />, sortable: false },
   {
     id: 'status',
@@ -168,8 +168,8 @@ export function StatusMoneyTableSections() {
           <Row title="Rate unusable" note="Older than 30 days: no PKR figure, left out of comparisons."><MoneyFx amount="12400" currency="AED" rate="75.8" ageDays={52} /></Row>
           <Row title="No rate yet" note="A quiet line and a separate quiet chip; admin sets rates on Money."><MoneyFx amount="2200" currency="GBP" /></Row>
           <Row title="Captured rate, at the time" note="The rate stored on the quote line, beside today's."><MoneyFx amount="17900" currency="CNY" rate="38.42" ageDays={2} captured={{ rate: '39.10', on: '2026-10-03' }} /></Row>
-          <Row title="Provisional" note="Costs are still estimates. Dashed underline and the chip."><Money value="412300" size="xl" provisional /></Row>
-          <Row title="Basis unknown" note="Legacy value, shown as typed."><Money value="3640000" size="xl" basisUnknown /></Row>
+          <Row title="Not final" note="Costs are still estimates. Dashed underline and the chip."><Money value="412300" size="xl" provisional /></Row>
+          <Row title="Is GST included?" note="Legacy value whose net or gross was never recorded, shown as typed."><Money value="3640000" size="xl" basisUnknown /></Row>
           <Row title="Below cost" note="True minus, red, and the words."><Margin value="-84500" state="final" size="xl" /></Row>
           <Row title="Not set" note="An em dash in muted text, never 0."><Money value={null} /></Row>
         </div>
@@ -195,7 +195,7 @@ export function StatusMoneyTableSections() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <DataTable label="Loading" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} loading toolbar={<TableFilter label="Filter RFQs" value="" onChange={() => undefined} />} />
           <DataTable label="Error" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Filter RFQs" value="" onChange={() => undefined} />} error={{ onRetry: () => undefined, reference: '4f1c9a', at: new Date('2026-11-27T09:41:00+05:00') }} />
-          <DataTable label="Goal state" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Filter RFQs" value="" onChange={() => undefined} />} empty={<EmptyState mood="goal" title="Every bid is in" actions={<><Button variant="primary" icon={Plus}>New RFQ</Button><Button icon={ClipboardPaste}>Capture a message</Button></>}>Nothing is open and nothing is due in the next 5 days. New RFQs appear here as soon as you start one.</EmptyState>} />
+          <DataTable label="Goal state" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Filter RFQs" value="" onChange={() => undefined} />} empty={<EmptyState mood="goal" title="Every quotation is sent" actions={<><Button variant="primary" icon={Plus}>New RFQ</Button><Button icon={ClipboardPaste}>Paste or photo</Button></>}>Nothing is open and nothing is due in the next 5 days. New RFQs appear here as soon as you start one.</EmptyState>} />
           <DataTable label="No match" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Filter RFQs" value="Belimo" onChange={() => undefined} />} empty={<EmptyState title={'No RFQs match “Belimo”'} actions={<Button>Clear filter</Button>}>Search covers RFQ number, customer, customer ref and item text. Try fewer words or clear the filter.</EmptyState>} />
         </div>
       </Section>
@@ -248,7 +248,7 @@ export function StatusMoneyTableSections() {
         <DataTable twoLine label="Money in" columns={payCols} rows={PAY} getRowId={r => r.id} footerLabel="Total" />
       </Section>
 
-      <Section id="margins" title="Order margins" note="Only costs-complete orders are totalled. Provisional margins carry dashed underlines.">
+      <Section id="margins" title="Order margins" note="Only costs-complete orders are totalled. Margins that are not final carry dashed underlines.">
         <DataTable twoLine
           label="Order margins"
           columns={ordCols.map(c => (['net', 'expected', 'actual', 'margin'].includes(c.id) ? { ...c, total: (rows: Ord[]) => {

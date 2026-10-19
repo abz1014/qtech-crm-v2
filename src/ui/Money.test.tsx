@@ -103,13 +103,13 @@ describe('a margin is never shown without the provisional mark when costs are in
   const values = ['553600', '0', '-84500', '0.01', '1250000.99']
   const states: Array<MarginState | null | undefined> = ['provisional', null, undefined, 'bogus' as MarginState]
 
-  it('every value in every non-final state carries the dashed underline and the Provisional chip', () => {
+  it('every value in every non-final state carries the dashed underline and the Not final chip', () => {
     for (const value of values) {
       for (const state of states) {
         const out = html(<Margin value={value} state={state} />)
         expect(out, `${value} / ${String(state)}`).toContain('data-provisional')
         expect(out, `${value} / ${String(state)}`).toContain('decoration-dashed')
-        expect(out, `${value} / ${String(state)}`).toContain('Provisional')
+        expect(out, `${value} / ${String(state)}`).toContain('Not final')
       }
     }
   })
@@ -118,19 +118,19 @@ describe('a margin is never shown without the provisional mark when costs are in
     const out = html(<Margin value="100" state="provisional" mark="underline" />)
     expect(out).toContain('decoration-dashed')
     expect(out).toContain('sr-only')
-    expect(out).toContain('Provisional')
+    expect(out).toContain('Not final')
   })
 
   it('only a final margin renders unmarked', () => {
     const out = html(<Margin value="553600" state="final" />)
     expect(out).not.toContain('data-provisional')
-    expect(out).not.toContain('Provisional')
+    expect(out).not.toContain('Not final')
   })
 
-  it('basis unknown shows no number, only the dashed Basis unknown chip', () => {
+  it('basis unknown shows no number, only the dashed "Is GST included?" chip', () => {
     const out = html(<Margin value="553600" state="basis_unknown" />)
     expect(out).not.toContain('553,600')
-    expect(out).toContain('Basis unknown')
+    expect(out).toContain('Is GST included?')
   })
 
   it('a negative margin says "below cost" in words as well as colour', () => {

@@ -50,5 +50,5 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   ref,
 ) {
   const a11y = useControlProps(rest)
-  return <textarea ref={ref} rows={rows} {...rest} {...a11y} className={cn(controlClass, 'h-auto min-h-[80px] resize-y py-2 leading-5', className)} />
+  return <textarea ref={ref} rows={rows} {...rest} {...a11y} className={cn(controlClass, 'h-auto min-h-[calc(var(--lh-sm)*3+18px)] resize-y py-2', className)} />
 })

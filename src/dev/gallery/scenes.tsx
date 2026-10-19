@@ -33,6 +33,7 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Tab, TabList, TabPanel, Tabs } from '@/ui/Tabs'
 import { Tooltip } from '@/ui/Tooltip'
 import { TooltipVariants } from '@/dev/gallery/primitives'
+import { ShellScene } from '@/dev/gallery/shell'
 
 /*
  * Overlay and interaction scenes for /dev/gallery (U09). Dialogs, the palette and toasts cannot sit
@@ -107,7 +108,7 @@ function DialogDefault({ state }: { state: 'default' | 'busy' | 'error' | 'confi
   return (
     <Dialog open onOpenChange={noop} busy={busy}>
       <DialogContent
-        title="Mark as floated"
+        title="Mark as sent to suppliers"
         context={
           <>
             <span className="num">RFQ-0177</span> · Indus Textile Mills
@@ -121,7 +122,7 @@ function DialogDefault({ state }: { state: 'default' | 'busy' | 'error' | 'confi
               Cancel
             </Button>
             <Button variant="primary" busy={busy} busyLabel="Marking">
-              {state === 'error' ? 'Try again' : 'Mark as floated'}
+              {state === 'error' ? 'Try again' : 'Mark as sent'}
             </Button>
           </>
         }
@@ -198,7 +199,7 @@ export function CompanyForm({ mode }: { mode: 'validation' | 'unique' | 'submitt
           >
             {f => <TextField {...f} />}
           </FormField>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4">
             <FormField<CompanyIn, 'city'> name="city" label="City" requirement="required">
               {f => (
                 <Select
@@ -273,7 +274,7 @@ export function Controls() {
     <div className="grid w-full gap-6 rounded border bg-surface p-6 grid-cols-1 md:grid-cols-3">
       <div className="grid content-start gap-4">
         <Field label="Default">
-          <TextField placeholder="Placeholder, 5.7:1" />
+          <TextField placeholder="Placeholder, 8.4:1" />
         </Field>
         <Field label="Filled">
           <TextField defaultValue="Karachi Glassworks" />
@@ -316,7 +317,7 @@ export function Controls() {
 }
 
 const places = [
-  { id: 'rfq', label: 'Indus Textile Mills — Faisalabad · RFQ-0177', meta: 'RFQ · bid due Tue 1 Dec', icon: FileText, href: '/rfqs/177' },
+  { id: 'rfq', label: 'Indus Textile Mills — Faisalabad · RFQ-0177', meta: 'RFQ · quotation due Tue 1 Dec', icon: FileText, href: '/rfqs/177' },
   { id: 'po', label: 'PO 253102 · Indus Valve Traders', meta: 'Order · goods late', icon: Package, href: '/orders/2' },
   { id: 'co1', label: 'Indus Textile Mills — Faisalabad', meta: 'Company · customer', icon: Building2, href: '/companies/3' },
   { id: 'co2', label: 'Indus Valve Traders', meta: 'Company · supplier', icon: Building2, href: '/companies/4' },
@@ -329,7 +330,7 @@ const previewSources: PaletteSource[] = [
     order: 2,
     idle: () => [
       { id: 'new', label: 'New RFQ', meta: 'Go to intake', icon: Plus, shortcut: ['N'], onSelect: noop },
-      { id: 'cap', label: 'Capture a message or photo', shortcut: ['C'], onSelect: noop },
+      { id: 'cap', label: 'Paste or photo', shortcut: ['C'], onSelect: noop },
     ],
     search: q => filterItems([{ id: 'new', label: 'New RFQ for Indus Textile Mills', meta: 'Go to intake', icon: Plus, onSelect: noop }], q),
   },
@@ -378,7 +379,7 @@ export function Misc() {
               onValueChange={setFilter}
               options={[
                 { value: 'all', label: 'All', count: 9 },
-                { value: 'bids', label: 'Bids', count: 3 },
+                { value: 'bids', label: 'Quotations', count: 3 },
                 { value: 'chases', label: 'Chases', count: 4 },
                 { value: 'orders', label: 'Orders', count: 2 },
               ]}
@@ -413,8 +414,8 @@ export function Overlays() {
     <div className="grid w-[420px] max-w-full gap-3 rounded border bg-surface p-6">
       <section className="grid gap-3 pb-[170px]">
         <div className="flex flex-wrap items-start gap-6">
-          <Tooltip content="Capture" shortcut="C" side="bottom">
-            <Button icon={Copy} aria-label="Capture" variant="secondary" data-preview-tip />
+          <Tooltip content="Paste or photo" shortcut="C" side="bottom">
+            <Button icon={Copy} aria-label="Paste or photo" variant="secondary" data-preview-tip />
           </Tooltip>
           <Popover>
             <PopoverTrigger asChild>
@@ -497,8 +498,8 @@ function ToastScene({ kind }: { kind: ToastKind }) {
   useEffect(() => {
     if (fired.current) return
     fired.current = true
-    if (kind === 'undo') toast({ title: 'Marked floated', body: '4 suppliers · RFQ-0177', tone: 'success', undo: { onUndo: noop } })
-    if (kind === 'settled') toast({ title: 'Marked floated', undo: { onUndo: noop, seconds: 1, settledTitle: 'Floated to 4 suppliers', settledBody: 'Sent today, Fri 27 Nov' } })
+    if (kind === 'undo') toast({ title: 'Sent to suppliers', body: '4 suppliers · RFQ-0177', tone: 'success', undo: { onUndo: noop } })
+    if (kind === 'settled') toast({ title: 'Sent to suppliers', undo: { onUndo: noop, seconds: 1, settledTitle: 'Sent to 4 suppliers', settledBody: 'Sent today, Fri 27 Nov' } })
     if (kind === 'error') toast({ title: 'Couldn’t save the answer', body: 'Nothing was changed.', tone: 'danger', action: { label: 'Try again', onClick: noop } })
     if (kind === 'plain') toast({ title: 'Copied', body: 'Message is on your clipboard', tone: 'success' })
     if (kind === 'two') {
@@ -580,6 +581,7 @@ const NODES: Record<SceneName, () => ReactNode> = {
       <TooltipVariants />
     </div>
   ),
+  'shell': () => <ShellScene />,
 }
 
 /** Name to group, label and node, in the order of SCENE_LIST (the order on the gallery page). */

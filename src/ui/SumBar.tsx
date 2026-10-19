@@ -40,7 +40,7 @@ export function SumBar({ items, label, className }: { items: SumBarItem[]; label
     >
       {items.map(item => (
         <div key={item.label} className={cn('grid min-w-0 content-start gap-[2px] bg-surface px-5 py-4', item.tone === 'danger' && 'text-tone-danger-fg')}>
-          <span className="text-xs font-medium text-fg-muted">{item.label}</span>
+          <span className="text-sm font-medium text-fg-2">{item.label}</span>
           {item.count !== undefined || item.figure !== undefined ? (
             <span className="num text-xl font-medium tracking-snug">{item.figure ?? item.count}</span>
           ) : (

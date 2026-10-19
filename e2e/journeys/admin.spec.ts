@@ -163,7 +163,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     await expect(d).toContainText('Complete')
     const p = rowOf(m.prov)
     await expect(p).toContainText(ordRef(m.prov.order.number))
-    await expect(p).toContainText('Provisional')
+    await expect(p).toContainText('Not final')
     await expect(p.locator('[data-provisional]')).toHaveCount(1)
     // Margins and exceptions are each one tap from the other Money tabs.
     await resetCount(page)

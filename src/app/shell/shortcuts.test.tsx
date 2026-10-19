@@ -62,14 +62,14 @@ const press = (key: string, target: EventTarget = window) =>
 afterEach(() => window.localStorage.clear())
 
 describe('palette Actions and global shortcuts (A-89)', () => {
-  it('idle lists Actions: New RFQ (N), Capture (C), Go to Today (G T)', async () => {
+  it('idle lists Actions: New RFQ (N), Paste or photo (C), Go to Today (G T)', async () => {
     const user = userEvent.setup()
     shell()
     await user.click(screen.getAllByRole('button', { name: /^Search or jump to/ })[0])
     const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
     expect(await within(dlg).findByText('Actions')).toBeInTheDocument()
     const text = within(dlg).getAllByRole('option').map(r => r.textContent)
-    expect(text).toEqual(expect.arrayContaining(['New RFQGo to intakeN', 'CaptureActionC', 'Go to TodayG T']))
+    expect(text).toEqual(expect.arrayContaining(['New RFQGo to intakeN', 'Paste or photoActionC', 'Go to TodayG T']))
   })
 
   it('N opens intake, C opens the capture surface, G then T goes to Today', async () => {
@@ -111,7 +111,7 @@ describe('phone bar (A-82)', () => {
 
 describe('Avatar sizes (A-84)', () => {
   it.each([
-    ['sm', 'size-[22px]'],
+    ['sm', 'size-[24px]'],
     ['md', 'size-[28px]'],
     ['lg', 'size-[32px]'],
     ['xl', 'size-[36px]'],

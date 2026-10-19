@@ -183,8 +183,8 @@ describe('DataTable: keyboard', () => {
 
 describe('DataTable: states', () => {
   it('shows the empty-state slot and keeps the header', () => {
-    mount(<DataTable label="x" columns={columns} rows={[]} getRowId={r => r.id} empty={<p>Every bid is in</p>} />)
-    expect(el.textContent).toContain('Every bid is in')
+    mount(<DataTable label="x" columns={columns} rows={[]} getRowId={r => r.id} empty={<p>Every quotation is sent</p>} />)
+    expect(el.textContent).toContain('Every quotation is sent')
     expect(el.querySelector('thead')).not.toBeNull()
     expect(el.querySelector('tfoot')).toBeNull()
   })

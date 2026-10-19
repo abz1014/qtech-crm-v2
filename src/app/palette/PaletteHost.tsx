@@ -1,9 +1,10 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, CalendarCheck, Import, Plus } from 'lucide-react'
+import { Building2, CalendarCheck, Import, Plus, Receipt, RefreshCw, Settings, Target, User, Users, type LucideIcon } from 'lucide-react'
 import { navItemsForRole } from '@/app/navConfig'
 import { CaptureContext } from '@/app/capture/useCapture'
 import { PaletteContext, type PaletteApi } from '@/app/palette/usePalette'
+import { CAPTURE_LABEL } from '@/app/shell/TopBar'
 import { CommandPalette } from '@/ui/CommandPalette'
 import { Kbd } from '@/ui/Kbd'
 import { filterItems, type PaletteItem, type PaletteSource } from '@/ui/paletteSources'
@@ -11,6 +12,19 @@ import { filterItems, type PaletteItem, type PaletteSource } from '@/ui/paletteS
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
 const INTAKE_ROUTE = '/rfqs/new'
 const TODAY_ROUTE = '/today'
+
+/**
+ * Settings pages people look for by name (audit: they were only in the avatar menu). Searched, not shown idle.
+ * Admin-only pages are left out for other roles, as the Settings menu does.
+ */
+const SETTINGS_PLACES: ReadonlyArray<{ id: string; label: string; href: string; icon: LucideIcon; adminOnly?: boolean }> = [
+  { id: 'settings', label: 'Settings', href: '/settings', icon: Settings },
+  { id: 'settings-details', label: 'Your details', href: '/settings/details', icon: User },
+  { id: 'settings-team', label: 'Team', href: '/settings/team', icon: Users, adminOnly: true },
+  { id: 'settings-rates', label: 'Exchange rates', href: '/settings/exchange-rates', icon: RefreshCw, adminOnly: true },
+  { id: 'settings-targets', label: 'Targets', href: '/settings/targets', icon: Target, adminOnly: true },
+  { id: 'settings-categories', label: 'Expense categories', href: '/settings/categories', icon: Receipt, adminOnly: true },
+]
 
 /** True when a key press belongs to something the person is typing into or a dialog they are in. */
 function isTypingContext(e: KeyboardEvent): boolean {
@@ -43,13 +57,16 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
   }, [])
 
   const goTo = useMemo<PaletteSource>(() => {
-    const items: PaletteItem[] = navItemsForRole(role).map(n => ({
-      id: n.key,
-      label: n.label,
-      icon: n.icon,
-      meta: 'Go to',
-      href: n.path,
-    }))
+    const items: PaletteItem[] = [
+      ...navItemsForRole(role).map(n => ({ id: n.key, label: n.label, icon: n.icon, meta: 'Go to', href: n.path })),
+      ...SETTINGS_PLACES.filter(p => !p.adminOnly || role === 'admin').map(p => ({
+        id: p.id,
+        label: p.label,
+        icon: p.icon,
+        meta: p.id === 'settings' ? 'Go to' : 'Settings',
+        href: p.href,
+      })),
+    ]
     return {
       id: 'go-to',
       group: 'Jump to',
@@ -60,14 +77,14 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
 
   // Actions (A-89): idle rows in the palette, and the same keys work anywhere outside a text field: N, C, G then T.
   const actions = useMemo<PaletteSource>(() => {
-    const captureItem: PaletteItem = { id: 'capture', label: 'Capture', meta: 'Action', icon: Import, shortcut: ['C'], onSelect: () => openCapture?.() }
+    const captureItem: PaletteItem = { id: 'capture', label: CAPTURE_LABEL, meta: 'Action', icon: Import, shortcut: ['C'], onSelect: () => openCapture?.() }
     const items: PaletteItem[] = [
       { id: 'new-rfq', label: 'New RFQ', meta: 'Go to intake', icon: Plus, shortcut: ['N'], href: INTAKE_ROUTE },
       captureItem,
       { id: 'go-today', label: 'Go to Today', icon: CalendarCheck, shortcut: ['G T'], href: TODAY_ROUTE },
       { id: 'new-company', label: 'New company', icon: Building2, href: '/companies?new=1' },
     ]
-    // Typing "capture" still finds the Capture action; the other actions are idle-only (destinations answer typed text).
+    // Typing "paste" or "photo" finds the paste-or-photo action; the other actions are idle-only (destinations answer typed text).
     return { id: 'actions', group: 'Actions', order: 90, idle: () => items, search: q => filterItems([captureItem], q) }
   }, [openCapture])
 

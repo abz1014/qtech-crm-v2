@@ -45,23 +45,23 @@ export function Field({ label, requirement, help, error, source, edited = false,
     <FieldContext.Provider value={{ id, invalid: Boolean(error), describedBy }}>
       <div className={cn('grid min-w-0 content-start gap-[6px]', className)}>
         <div className="flex items-baseline gap-2">
-          <label htmlFor={id} className="text-sm font-medium leading-5 text-fg">
+          <label htmlFor={id} className="text-sm font-medium text-fg">
             {label}
           </label>
           {requirement ? (
-            <span className="text-xs font-regular leading-4 text-fg-muted">{requirement === 'required' ? 'Required' : 'Optional'}</span>
+            <span className="text-xs font-regular text-fg-muted">{requirement === 'required' ? 'Required' : 'Optional'}</span>
           ) : null}
         </div>
         {children}
         {error ? (
-          <p id={errId} className="flex items-start gap-[6px] text-xs font-medium leading-4 text-tone-danger-fg">
-            <Icon icon={CircleAlert} size="sm" className="mt-[1px]" />
+          <p id={errId} className="flex items-start gap-[6px] text-xs font-medium text-tone-danger-fg">
+            <Icon icon={CircleAlert} size="sm" className="mt-[calc((var(--lh-xs)-14px)/2)]" />
             <span className="min-w-0 text-pretty">{error}</span>
           </p>
         ) : null}
         {source ? <SourceNote id={srcId} source={source} edited={edited} /> : null}
         {help ? (
-          <p id={helpId} className="text-xs leading-4 text-fg-muted">
+          <p id={helpId} className="text-xs text-fg-muted">
             {help}
           </p>
         ) : null}
@@ -75,7 +75,7 @@ export function SourceNote({ source, edited = false, id }: { source: FieldSource
   const { label, plain } = typeof source === 'string' ? { label: source, plain: false } : source
   const shown = edited ? 'Typed by you' : label
   return (
-    <span id={id} data-source={edited ? 'typed' : 'prefill'} className="inline-flex items-center gap-[5px] text-xs leading-4 text-fg-2">
+    <span id={id} data-source={edited ? 'typed' : 'prefill'} className="inline-flex items-center gap-[5px] text-xs text-fg-2">
       {edited || plain ? null : <Icon icon={History} size="chip" className="text-fg-muted" />}
       {shown}
     </span>

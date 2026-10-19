@@ -1,13 +1,14 @@
-import { forwardRef, useRef, type ComponentPropsWithoutRef, type ElementRef, type KeyboardEvent, type ReactNode } from 'react'
+import { forwardRef, useId, useRef, type ComponentPropsWithoutRef, type ElementRef, type KeyboardEvent, type ReactNode } from 'react'
 import * as RadixPopover from '@radix-ui/react-popover'
-import type { LucideIcon } from 'lucide-react'
+import { Check, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 
 /*
  * Popover (INVENTORY: U03; D08 section 13). Two variants on one Radix primitive:
- *   menu         actions, 32px items, hint on the right, one divider at most. role="menu";
- *                Up/Down/Home/End move, Enter or Space runs the item, Esc closes.
+ *   menu         actions, --control-h items, hint on the right, one divider at most. role="menu";
+ *                Up/Down/Home/End move, Enter or Space runs the item, Esc closes. A MenuItem with `checked`
+ *                is a menuitemradio (one choice of a few, such as Text size), shown with a tick.
  *   information  anchored detail that needs more than a tooltip but less than a panel. No form inside.
  * Opens 4px below its trigger. Esc, outside click and selecting an item close it; focus returns to the trigger.
  */
@@ -20,7 +21,7 @@ type ContentProps = Omit<ComponentPropsWithoutRef<typeof RadixPopover.Content>, 
   variant?: 'menu' | 'information'
 }
 
-const FOCUSABLE_ITEM = '[role="menuitem"]:not([disabled])'
+const FOCUSABLE_ITEM = '[role="menuitem"]:not([disabled]),[role="menuitemradio"]:not([disabled])'
 
 export const PopoverContent = forwardRef<ElementRef<typeof RadixPopover.Content>, ContentProps>(function PopoverContent(
   { variant = 'information', className, sideOffset = 4, align = 'start', onKeyDown, onOpenAutoFocus, children, ...rest },
@@ -84,18 +85,22 @@ interface MenuItemProps extends Omit<ComponentPropsWithoutRef<'button'>, 'childr
   danger?: boolean
   /** Keep the popover open after the item runs. Default closes it. */
   keepOpen?: boolean
+  /** One choice of a few (role menuitemradio): true shows the tick. Put the choices in a MenuGroup. */
+  checked?: boolean
 }
 
-/** A 32px menu row. Put the items inside `PopoverContent variant="menu"`. */
+/** A --control-h menu row (40, 32 with smaller text). Put the items inside `PopoverContent variant="menu"`. */
 export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(function MenuItem(
-  { children, icon, hint, danger, keepOpen, className, onClick, ...rest },
+  { children, icon, hint, danger, keepOpen, checked, className, onClick, ...rest },
   ref,
 ) {
+  const radio = checked !== undefined
   const row = (
     <button
       ref={ref}
       type="button"
-      role="menuitem"
+      role={radio ? 'menuitemradio' : 'menuitem'}
+      aria-checked={radio ? checked : undefined}
       tabIndex={-1}
       onClick={onClick}
       className={cn(
@@ -109,10 +114,24 @@ export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(function Me
       {icon ? <Icon icon={icon} className={danger ? '' : 'text-fg-muted'} /> : null}
       <span className="min-w-0 flex-1 truncate">{children}</span>
       {hint ? <span className="shrink-0 text-xs text-fg-muted">{hint}</span> : null}
+      {radio ? <Icon icon={Check} className={cn('text-primary', !checked && 'invisible')} /> : null}
     </button>
   )
   return keepOpen ? row : <RadixPopover.Close asChild>{row}</RadixPopover.Close>
 })
+
+/** A named run of menuitemradio choices inside a menu ("Text size: Normal, Smaller"), with its name shown above them. */
+export function MenuGroup({ label, children }: { label: string; children: ReactNode }) {
+  const id = useId()
+  return (
+    <div role="group" aria-labelledby={id} className="grid">
+      <span id={id} className="px-2 pb-1 pt-2 text-xs font-medium text-fg-muted">
+        {label}
+      </span>
+      {children}
+    </div>
+  )
+}
 
 /** The single divider a menu may carry. */
 export function MenuSeparator() {
