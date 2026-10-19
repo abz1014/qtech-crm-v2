@@ -82,7 +82,7 @@ export type RfqPart = 'header' | 'items' | 'inquiries' | 'clarifications' | 'att
 /** Exchange rates (R07 reads today's rate per currency; R15 owns editing them). */
 function fx() {
   const all = root('fx')
-  return { all, latest: () => [...all, 'latest'] as const, history: (currency: string) => [...all, 'history', currency] as const }
+  return { all, latest: () => [...all, 'latest'] as const, history: (currency: string) => [...all, 'history', currency] as const, lastAuto: () => [...all, 'last-auto'] as const }
 }
 /** Intake (R05): who can be asked for a price, and what each of them remembers about the items being entered. */
 function intake() {

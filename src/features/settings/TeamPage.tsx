@@ -123,7 +123,7 @@ export function TeamPage() {
       id: 'actions',
       header: 'Actions', // hidden from sight by the table's className below, still the column's name for assistive tech
       align: 'right',
-      width: 132,
+      width: 164,
       cell: m =>
         isActive(m) ? (
           <RowMenu member={m} onPick={open} />
