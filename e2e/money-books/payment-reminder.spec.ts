@@ -116,6 +116,27 @@ test.describe('payment-reminder panel (M09)', () => {
     await expect(page.locator('li[data-rule="payment_overdue"]:not([data-waiting])').filter({ hasText: s.company.name })).toHaveCount(0)
   })
 
+  test('Receivables beside the panel has no sideways scroll at 1440 (all seven columns) or at 1280 (Gross and Settled folded)', async ({ page }) => {
+    await seedOverdue()
+    await openAs(page, 'admin', '/money/receivables')
+    await expect(page.getByTestId('reminder-text')).toBeVisible()
+    const measure = () =>
+      page.evaluate(() => {
+        const t = document.querySelector('table')
+        const w = t?.parentElement
+        return { scroll: w?.scrollWidth ?? 0, client: w?.clientWidth ?? 0, columns: document.querySelectorAll('table thead th').length, page: document.documentElement.scrollWidth, view: window.innerWidth }
+      })
+    for (const width of [1440, 1280]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.waitForTimeout(300)
+      const m = await measure()
+      console.log(`MEASURE ${width}`, JSON.stringify(m))
+      expect(m.scroll, `table scrolls sideways at ${width}`).toBeLessThanOrEqual(m.client + 1)
+      expect(m.page, `page scrolls sideways at ${width}`).toBeLessThanOrEqual(m.view)
+      expect(m.columns).toBe(width >= 1440 ? 8 : 6)
+    }
+  })
+
   test('an order not yet overdue gets the plain sentence and no message', async ({ page }) => {
     const s = await seedOverdue({ invoiceDate: karachiDay(-5) })
     await openAs(page, 'admin', '/money/receivables')

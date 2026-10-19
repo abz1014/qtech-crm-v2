@@ -37,9 +37,9 @@ import {
  *
  *   /money/receivables?pay=1&order=<id>   opens Record payment for that order (admin)
  */
-// Gross and Settled fold away on a phone, and again between 1280 and 1535 px, where the reminder panel sits beside the table and the
+// Gross and Settled fold away on a phone, and again between 1280 and 1439 px, where the reminder panel sits beside the table and the
 // Balance column carries the figure that matters; the table then fits without a sideways scroll. They show everywhere else.
-const GROSS_SETTLED = 'hidden md:table-cell xl:hidden 2xl:table-cell'
+const GROSS_SETTLED = 'hidden md:table-cell xl:hidden min-[1440px]:table-cell'
 const DUE_WORD = (d: number) => `${d} ${d === 1 ? 'day' : 'days'}`
 
 export function ReceivablesPage() {
