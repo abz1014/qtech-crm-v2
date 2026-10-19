@@ -35,18 +35,22 @@ const PAGES: { role: Role; path: string; name: string }[] = [
 
 for (const p of PAGES) {
   test(`photograph ${p.name}`, async ({ page }) => {
+    await openAs(page, p.role, p.path)
     for (const { w, h } of WIDTHS) {
       await page.setViewportSize({ width: w, height: h })
-      await openAs(page, p.role, p.path)
+      await page.goto(p.path)
+      await page.locator('#main').waitFor()
       await shoot(page, p.name, w)
     }
   })
 }
 
 test('photograph company profile, complete with an unsaved change', async ({ page }) => {
+  await openAs(page, 'admin', '/settings/company')
   for (const { w, h } of WIDTHS) {
     await page.setViewportSize({ width: w, height: h })
-    await openAs(page, 'admin', '/settings/company')
+    await page.goto('/settings/company')
+    await page.locator('#main').waitFor()
     await page.getByLabel(/Legal name/).fill('Q Tech Solutions (Private) Limited')
     await page.getByLabel(/^Address/).fill('Plot 14, Sector 12-B, Korangi Industrial Area, Karachi 74900, Pakistan')
     await page.getByLabel(/^Phone/).fill('+92 21 3555 0188')
