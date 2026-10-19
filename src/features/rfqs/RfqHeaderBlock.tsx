@@ -1,6 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
-  ArrowLeft,
   Calendar,
   Building2,
   ChevronDown,
@@ -24,6 +23,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { ROLE_LABEL } from '@/app/session'
+import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Avatar } from '@/ui/Avatar'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
@@ -299,7 +299,6 @@ const CHIP_TONE = {
 export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFacts }) {
   const actions = useQuoteAndClose(rfq)
   const main = useMainActions(rfq, facts)
-  const navigate = useNavigate()
   const s = rfq.state
   const ref = rfqRef(rfq.number)
   const open = (s?.outcome ?? 'open') === 'open'
@@ -307,23 +306,14 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
   const due = open ? dueChipLabel(dueIn, Boolean(s?.is_overdue)) : null
   const since = rfq.company.createdAt ? rfq.company.createdAt.slice(0, 4) : null
   const stage = stageChip({ outcome: s?.outcome ?? 'open', hasOrder: main.liveOrders.length > 0, sourcingState: s?.sourcing_state, bidState: s?.bid_state, quotationCount: facts.quotationCount })
-  // Back goes where the person came from (Today, an order, a company); with no history in this tab, to the RFQ list.
-  const back = () => (window.history.state && (window.history.state as { idx?: number }).idx ? navigate(-1) : navigate('/rfqs'))
+
+  // Phone: ONE bar (UX audit rec. 17): back to where the person came from (Today, an order, a company; the RFQ list when there is
+  // no earlier screen) and the number. While the RFQ is open its sticky action bar at the foot carries the green action, Chase and
+  // More (in thumb reach, so More is not repeated up here), and the bottom tabs step aside.
+  useMobileBar({ title: ref, back: 'history', fallback: '/rfqs', hideTabs: open })
 
   return (
     <header>
-      {/* Phone: the page bar (back, the number, more). */}
-      <div className="-mx-4 mb-3 flex h-11 items-center border-b px-2 md:hidden" data-page-bar>
-        <button type="button" onClick={back} aria-label="Back" className="inline-grid size-touch place-items-center rounded hover:bg-sunken">
-          <Icon icon={ArrowLeft} size="lg" />
-        </button>
-        <span className="num flex-1 text-center font-semibold">{ref}</span>
-        {open ? (
-          <MoreMenu rfq={rfq} facts={facts} actions={actions} label="More" trigger={<Button variant="quiet" size="touch" icon={Ellipsis} aria-label="More" />} />
-        ) : (
-          <span className="size-touch" />
-        )}
-      </div>
       <Breadcrumb className="max-md:hidden" items={[{ label: 'RFQs', to: '/rfqs' }, { label: ref, mono: true }]} />
       <div className="mt-2 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
@@ -451,7 +441,7 @@ export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rf
   return (
     <div
       data-action-bar
-      className="sticky bottom-0 z-20 -mx-4 mt-6 flex items-center gap-2 border-t bg-surface px-4 py-2 md:hidden"
+      className="sticky bottom-0 z-20 -mx-4 mt-6 flex items-center gap-2 border-t bg-surface px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 md:hidden"
       role="toolbar"
       aria-label="RFQ actions"
     >

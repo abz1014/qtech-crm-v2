@@ -108,7 +108,7 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
         lines.push(`A gentle reminder about ${yourRfq}. To complete our quotation we still need your confirmation on:`)
         break
       case 'bid_close':
-        lines.push(`Our bid for ${yourRfq} is due ${bold(input.dueOn ? whenText(input.dueOn.slice(0, 10), today, input.dueTime) : 'soon')}. To include these items we still need:`)
+        lines.push(`Our quotation for ${yourRfq} is due ${bold(input.dueOn ? whenText(input.dueOn.slice(0, 10), today, input.dueTime) : 'soon')}. To include these items we still need:`)
         break
       case 'third':
         lines.push(`We are writing once more about ${yourRfq}. The points below are still open${priorDates}:`)
@@ -123,7 +123,7 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
     } else if (kind === 'firm') {
       lines.push(`Without your reply by ${bold(by)} we will close the enquiry. If it is still live, please confirm the points above.`)
     } else if (kind === 'first' || kind === 'gentle') {
-      lines.push(`Kindly confirm by ${bold(by)}${dueLong ? `; our bid is due on ${dueLong}` : ''}.`)
+      lines.push(`Kindly confirm by ${bold(by)}${dueLong ? `; our quotation is due on ${dueLong}` : ''}.`)
     } else {
       lines.push(`Kindly confirm by ${bold(by)}.`)
     }
@@ -139,7 +139,7 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
         )
         break
       case 'bid_close':
-        lines.push(`Our bid for ${yourRfqPlain} is due ${input.dueOn ? whenText(input.dueOn.slice(0, 10), today, input.dueTime) : 'soon'}. To include these items we still need your confirmation on:`)
+        lines.push(`Our quotation for ${yourRfqPlain} is due ${input.dueOn ? whenText(input.dueOn.slice(0, 10), today, input.dueTime) : 'soon'}. To include these items we still need your confirmation on:`)
         break
       case 'third':
         lines.push(`We are writing once more about ${yourRfqPlain}. The points below are still open${priorDates}:`)
@@ -157,7 +157,7 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
       lines.push(`Kindly confirm by ${by}.`)
     } else {
       lines.push(
-        `Kindly confirm by ${by}.${dueLong ? ` Our bid is due on ${dueLong}, and a reply by then will allow us to hold the supplier's price.` : ''}`,
+        `Kindly confirm by ${by}.${dueLong ? ` Our quotation is due on ${dueLong}, and a reply by then will allow us to hold the supplier's price.` : ''}`,
         '',
         'If it is easier to discuss these over a call, please let me know a convenient time.',
       )

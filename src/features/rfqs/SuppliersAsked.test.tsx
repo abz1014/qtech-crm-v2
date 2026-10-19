@@ -133,7 +133,7 @@ describe('SuppliersAsked chase', () => {
 
   it('shows a short preview; the whole message, with its items and reply-by date, opens on request; Email is one link away', async () => {
     const user = userEvent.setup()
-    localStorage.removeItem('qtech.channel')
+    localStorage.removeItem('qtech.channel.u1')
     renderWith([{ id: 'it-1', number: 1, description: 'Hach HQ1110 meter', brandId: 'b-hach', brandName: 'Hach', familyId: null, qty: 1, unit: 'pcs' }], { ...inquiry, chaseCount: 0, lastChasedOn: null })
     const card = screen.getByRole('group', { name: 'Chase Silent Traders' })
     expect(within(card).getByTestId('chase-text')).toHaveClass('line-clamp-4')
@@ -145,7 +145,7 @@ describe('SuppliersAsked chase', () => {
     await user.click(within(card).getByRole('button', { name: 'Email instead' }))
     expect(within(card).getByRole('button', { name: 'WhatsApp instead' })).toBeInTheDocument()
     expect(within(card).getByRole('button', { name: 'Copy subject' })).toBeInTheDocument() // an email has its subject row
-    expect(localStorage.getItem('qtech.channel')).toBe('email') // remembered for the next message
-    localStorage.removeItem('qtech.channel')
+    expect(localStorage.getItem('qtech.channel.u1')).toBe('email') // remembered for the next message
+    localStorage.removeItem('qtech.channel.u1')
   })
 })

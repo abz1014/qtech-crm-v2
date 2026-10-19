@@ -14,7 +14,7 @@ import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
 import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
 import { useRestoreSupplierChase, useStampSupplierChase } from '@/features/rfqs/hooks'
 import { useSignature } from '@/features/rfqs/useSignature'
-import { useChannel } from '@/features/rfqs/useChannel'
+import { useChannelPreference } from '@/lib/useChannelPreference'
 import { canChaseInquiry, outstandingItems } from '@/features/rfqs/replyFocus'
 import { daysSince, generateSupplierChase, qtyText, sentLine, supplierMemoryLine, supplierReplyBy, supplierReturnsOn, type EnquiryVariant, type SupplierFacts } from '@/features/rfqs/lib'
 import { formatDay } from '@/lib/formatDay'
@@ -45,7 +45,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, chaseIsMain = fal
   const replied = inquiries.filter(i => i.lines.length > 0).length
   const chaseable = inquiries.filter(i => canChaseInquiry(i, items))
   const [picked, setPicked] = useState<string | null>(null)
-  const [channel, setChannel] = useChannel()
+  const [channel, setChannel] = useChannelPreference()
   const open = chaseable.find(i => i.id === picked) ?? chaseable[0]
   const today = businessToday()
 

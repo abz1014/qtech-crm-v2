@@ -51,14 +51,14 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
     }).body
     const copied = await copyToClipboard(text)
     if (!copied) {
-      toast({ title: 'Could not copy the enquiry', body: 'The browser refused the clipboard. Nothing was recorded.', tone: 'danger' })
+      toast({ title: 'Could not copy the message', body: 'The browser refused the clipboard. Nothing was recorded.', tone: 'danger' })
       return false
     }
     try {
       const ids = await add.mutateAsync({ supplierIds: fresh, sentOn: businessToday() })
       const who = input.names.length === 1 ? input.names[0] : `${input.names.length} suppliers`
       toast({
-        title: 'Enquiry text copied',
+        title: 'Message copied',
         body: ids.length > 0 ? `${who} added to the suppliers asked` : `${who} already asked`,
         tone: 'success',
         undo:
@@ -67,7 +67,7 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
                 onUndo: async () => {
                   await remove.mutateAsync(ids)
                 },
-                settledTitle: 'Enquiry text copied',
+                settledTitle: 'Message copied',
                 undoneTitle: 'Taken back',
               }
             : undefined,

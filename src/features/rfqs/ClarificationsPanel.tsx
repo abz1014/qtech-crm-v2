@@ -16,7 +16,7 @@ import { AddQuestions, QuestionRow, WithdrawnRow } from '@/features/rfqs/Clarifi
 import { ChannelLink, ChasedByNote, ChaseNote, FormattedMessage, MoreToggle, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
 import { useClarifications, useFileUrls, useRestoreClarificationAsk, useRfqAttachments, useRfqItems, useSetInquiryRelayed, useStampClarificationAsk } from '@/features/rfqs/hooks'
 import { useSignature } from '@/features/rfqs/useSignature'
-import { useChannel } from '@/features/rfqs/useChannel'
+import { useChannelPreference } from '@/lib/useChannelPreference'
 import {
   agoText,
   answersToRelay,
@@ -56,7 +56,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
   const stamp = useStampClarificationAsk(rfq.id)
   const restore = useRestoreClarificationAsk(rfq.id)
   const relayStamp = useSetInquiryRelayed(rfq.id)
-  const [variant, setVariant] = useChannel()
+  const [variant, setVariant] = useChannelPreference()
 
   const rows = clars.data ?? []
   const groups = groupClarifications(rows)

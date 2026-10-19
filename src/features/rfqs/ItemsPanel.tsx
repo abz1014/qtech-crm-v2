@@ -15,7 +15,7 @@ import { useToast } from '@/ui/useToast'
 import { LastPriceChipView } from '@/features/rfqs/LastPriceChip'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { RateBar } from '@/features/rfqs/RateBar'
-import { Tip } from '@/features/rfqs/Tip'
+import { InfoTip } from '@/ui/InfoTip'
 import { focusReplyInput } from '@/features/rfqs/replyFocus'
 import { buildRateBar } from '@/features/fx/ratesModel'
 import { ReasonBlock } from '@/features/rfqs/ranking/RankParts'
@@ -228,13 +228,13 @@ function Dot({ children }: { children: React.ReactNode }) {
 /** The panel's one explanation of how the order is decided (was a note above every item). */
 function HowCompared() {
   return (
-    <Tip label="How are prices compared?">
+    <InfoTip label="How are prices compared?">
       <p>Every price is turned into PKR at today&apos;s rate, and the list for each item starts with the best.</p>
       <p className="mt-2">
         The cheapest is recommended, unless another supplier is within 2% of it and has the better delivery record (then the order history decides).
       </p>
       <p className="mt-2">A price with no current rate is shown but not compared. Add the rate in Exchange rates and the list sorts itself.</p>
-    </Tip>
+    </InfoTip>
   )
 }
 

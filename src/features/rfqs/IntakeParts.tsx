@@ -8,7 +8,7 @@ import { joinNames } from '@/features/rfqs/lib/intakeModel'
 import type { EnquiryVariant, ReplyBy } from '@/features/rfqs/lib/enquiryDraft'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
-import { SegmentedControl } from '@/ui/SegmentedControl'
+import { ChannelLink } from '@/features/rfqs/ChaseParts'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { Icon } from '@/ui/Icon'
 
@@ -20,6 +20,36 @@ import { Icon } from '@/ui/Icon'
 export type Step = 'build' | 'suppliers' | 'enquiry' | 'floated' | 'saved'
 
 const STEP_INDEX: Record<Step, number> = { build: 1, suppliers: 2, enquiry: 3, floated: 4, saved: 4 }
+
+/** The four steps in the words of the phone line (the desktop Progress box uses the same order). */
+const STEP_LINE = ['Items', 'Suppliers', 'Message', 'Done'] as const
+
+/**
+ * Phones and tablets (below 1024, where the Progress box is not drawn): one compact line with the four steps and the current one
+ * in bold, so the person always knows which of the four they are on (UX audit S1 and recommendation 16). It wraps rather than
+ * scrolling sideways at 320.
+ */
+export function StepLine({ step }: { step: Step }) {
+  const at = STEP_INDEX[step]
+  return (
+    <ol aria-label={`Step ${at} of 4`} className="m-0 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0 text-sm lg:hidden" data-step-line>
+      {STEP_LINE.map((label, i) => {
+        const n = i + 1
+        const state = n < at || (step !== 'build' && step !== 'suppliers' && step !== 'enquiry' && n === 4) ? 'done' : n === at ? 'now' : 'todo'
+        return (
+          <li key={label} className="flex items-center gap-2" aria-current={state === 'now' ? 'step' : undefined}>
+            {i > 0 ? <span aria-hidden="true" className="h-px w-3 bg-line-strong" /> : null}
+            <span className={cn('inline-flex items-center gap-1', state === 'now' ? 'font-semibold text-fg' : state === 'done' ? 'text-fg-2' : 'text-fg-muted')}>
+              <Icon icon={state === 'done' ? CircleCheck : state === 'now' ? CircleDot : Circle} size="sm" className={state === 'todo' ? 'text-fg-muted' : 'text-brand-green'} />
+              {label}
+              <span className="sr-only">{state === 'done' ? ', done' : state === 'now' ? ', now' : ''}</span>
+            </span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
 
 export function SidePanels({
   step,
@@ -46,7 +76,7 @@ export function SidePanels({
     { label: 'Customer', state: customer ? 'done' : at === 1 ? 'now' : 'todo' },
     { label: 'Items', state: itemCount > 0 && at > 1 ? 'done' : at === 1 && customer ? 'now' : 'todo' },
     { label: 'Suppliers', state: done(2) ? 'done' : at === 2 ? 'now' : 'todo', note: at >= 2 && tickedCount > 0 ? String(tickedCount) : undefined },
-    { label: 'Enquiry', state: floated ? 'done' : at === 3 ? 'now' : 'todo', note: floated && floatedOn ? formatDay(floatedOn).slice(4) : undefined },
+    { label: 'Message', state: floated ? 'done' : at === 3 ? 'now' : 'todo', note: floated && floatedOn ? formatDay(floatedOn).slice(4) : undefined },
   ]
   return (
     <aside aria-label="This RFQ" className="hidden content-start gap-4 lg:grid">
@@ -56,12 +86,12 @@ export function SidePanels({
           <Row k="Number">{number != null ? <span className="num">{rfqRef(number)}</span> : <span className="text-fg-muted">Given when saved</span>}</Row>
           <Row k="Customer">{customer ?? <span className="text-fg-muted">Not yet</span>}</Row>
           <Row k="Items">{itemCount > 0 ? <><span className="num">{itemCount}</span> {itemCount === 1 ? 'item' : 'items'}</> : <span className="text-fg-muted">Not yet</span>}</Row>
-          <Row k="Bid due">{dueOn ? <span className="num">{formatDay(dueOn)}</span> : <span className="text-fg-muted">Optional</span>}</Row>
-          <Row k="Sourcing">
+          <Row k="Due">{dueOn ? <span className="num">{formatDay(dueOn)}</span> : <span className="text-fg-muted">Optional</span>}</Row>
+          <Row k="Suppliers">
             {floated ? (
-              <StatusBadge dimension="sourcing" value="awaiting" label={`Floated to ${tickedCount}, awaiting`} />
+              <StatusBadge dimension="sourcing" value="awaiting" label={`Asked ${tickedCount}, waiting for prices`} />
             ) : (
-              <StatusBadge dimension="sourcing" value="not-floated" />
+              <StatusBadge dimension="sourcing" value="not-floated" label="Not sent to suppliers" />
             )}
           </Row>
         </dl>
@@ -183,22 +213,13 @@ export function EnquiryCard({
       <header className="flex flex-wrap items-start gap-3 border-b px-5 py-4">
         <div className="min-w-0 flex-1">
           <h2 className="m-0 text-base font-semibold">
-            Enquiry to <span className="num">{count}</span> {count === 1 ? 'supplier' : 'suppliers'}
+            {variant === 'email' ? 'Email' : 'WhatsApp message'} to <span className="num">{count}</span> {count === 1 ? 'supplier' : 'suppliers'}
           </h2>
           <p className="m-0 mt-1 text-sm text-fg-muted">
-            {count === 1 ? 'The text for this supplier.' : `One text for all ${count}. Each supplier skips what they cannot offer.`}
+            {count === 1 ? 'The message for this supplier.' : `One message for all ${count}. Each supplier skips what they cannot offer.`}
           </p>
         </div>
-        <SegmentedControl
-          aria-label="Message channel"
-          large
-          value={variant}
-          onValueChange={v => onVariant(v as EnquiryVariant)}
-          options={[
-            { value: 'whatsapp', label: 'WhatsApp' },
-            { value: 'email', label: 'Email' },
-          ]}
-        />
+        <ChannelLink value={variant} onChange={v => onVariant(v as EnquiryVariant)} className="self-center" />
       </header>
       <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3 text-sm">
         <span className="text-fg-muted">Send to</span>
@@ -224,7 +245,7 @@ export function EnquiryCard({
         {editing ? (
           <>
             <label htmlFor="enquiry-text" className="sr-only">
-              Enquiry text
+              Message text
             </label>
             <textarea
               id="enquiry-text"
@@ -236,7 +257,7 @@ export function EnquiryCard({
             />
           </>
         ) : (
-          <div role="group" aria-label="Enquiry text" data-enquiry-preview className="py-1">
+          <div role="group" aria-label="Message text" data-enquiry-preview className="py-1">
             <pre className="m-0 whitespace-pre-wrap break-words font-sans text-sm leading-[21px] text-fg">
               {body.split('\n').map((line, i, all) => (
                 <span key={i}>
@@ -284,26 +305,26 @@ export function FloatedPanel({
 }) {
   const n = names.length
   return (
-    <section aria-label="Floated" className="grid gap-4 rounded border bg-surface p-6">
+    <section aria-label="Sent to suppliers" className="grid gap-4 rounded border bg-surface p-6">
       <p className="m-0 flex items-center gap-2 text-sm text-tone-success-fg">
         <Icon icon={CircleCheck} />
-        Floated to <span className="num">{n}</span> {n === 1 ? 'supplier' : 'suppliers'} on {formatDay(floatedOn)}
+        Asked <span className="num">{n}</span> {n === 1 ? 'supplier' : 'suppliers'} on {formatDay(floatedOn)}
       </p>
       <h2 className="m-0 text-xl font-semibold tracking-snug">
-        <span className="num">{refText}</span> is out for prices
+        <span className="num">{refText}</span> is waiting for prices
       </h2>
       {copied ? (
         <p className="m-0 flex items-start gap-2 text-sm text-fg-2">
           <Icon icon={Copy} className="mt-[2px] text-fg-muted" />
-          <span>The text is on your clipboard. Paste it into {joinNames(names)}.</span>
+          <span>The message is on your clipboard. Paste it into {joinNames(names)}.</span>
         </p>
       ) : (
         <div className="grid gap-2">
-          <Banner tone="warning" title="The text did not copy">
-            The RFQ is floated. Copy the text below, then paste it into {joinNames(names)}.
+          <Banner tone="warning" title="The message did not copy">
+            The RFQ is marked as sent. Copy the message below, then paste it into {joinNames(names)}.
           </Banner>
           <label htmlFor="floated-text" className="sr-only">
-            Enquiry text to copy
+            Message to copy
           </label>
           <textarea id="floated-text" readOnly value={text} rows={10} className="w-full rounded border border-line-input bg-sunken px-3 py-3 text-sm leading-5" />
           <div>
@@ -324,12 +345,12 @@ export function FloatedPanel({
           {dueOn ? (
             <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-4">
               <dt className="num m-0">{formatDay(dueOn)}</dt>
-              <dd className="m-0 text-fg-2">Bid due. Replies you log appear on this RFQ with the lowest price marked.</dd>
+              <dd className="m-0 text-fg-2">Quotation due. Prices you enter appear on this RFQ with the best one marked.</dd>
             </div>
           ) : null}
         </dl>
       ) : null}
-      {dueOn ? null : <p className="m-0 text-sm text-fg-2">No bid due date was given, so nothing is chased until you add one.</p>}
+      {dueOn ? null : <p className="m-0 text-sm text-fg-2">No quotation due date was given, so nothing is chased until you add one.</p>}
       {unfloated.map(u => (
         <Hint key={u.key} tone="info">
           {u.text}

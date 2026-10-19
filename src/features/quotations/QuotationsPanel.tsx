@@ -17,7 +17,7 @@ import { SettingsLink } from '@/features/quotations/SettingsLink'
 import { downloadStoredPdf, loadPdfData, type QuotationRow } from '@/features/quotations/api'
 import { useQuotations, useStorePdf } from '@/features/quotations/hooks'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
-import { Tip } from '@/features/rfqs/Tip'
+import { InfoTip } from '@/ui/InfoTip'
 import { IssueQuotationDialog } from '@/features/quotations/IssueQuotationDialog'
 import { generateQuotationPdf } from '@/features/quotations/pdf/generate'
 import { profileGaps } from '@/features/quotations/lib/profileGaps'
@@ -110,7 +110,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
         <span className="inline-flex items-center gap-1">
           Quotations
           {rows.length > 0 ? (
-            <Tip label="What revising does">Revising makes a new version under the same number. Earlier versions and their PDFs never change.</Tip>
+            <InfoTip label="What revising does">Revising makes a new version under the same number. Earlier versions and their PDFs never change.</InfoTip>
           ) : null}
         </span>
       }

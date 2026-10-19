@@ -14,7 +14,7 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { PasteBox, PasteReplyPanel } from '@/features/rfqs/PasteReply'
-import { Tip } from '@/features/rfqs/Tip'
+import { InfoTip } from '@/ui/InfoTip'
 import { awaitingReply, focusReplyInput, OPEN_REPLY_EVENT, replyInputId, type OpenReplyDetail } from '@/features/rfqs/replyFocus'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useSaveReply, useSetInquiryNoOffer, useSetItemDecline } from '@/features/rfqs/hooks'
@@ -98,10 +98,10 @@ export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHead
       title={
         <span className="inline-flex items-center gap-1">
           Replies from suppliers
-          <Tip label="How to enter a reply">
+          <InfoTip label="How to enter a reply">
             Type the price for each item the supplier quoted, or tap Paste reply to read the message they sent. The currency follows the supplier, so there is nothing to pick. Nothing is
             compared until it is saved.
-          </Tip>
+          </InfoTip>
         </span>
       }
       meta={`${replied} of ${inquiries.length} replied`}
