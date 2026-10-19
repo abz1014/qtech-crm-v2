@@ -8,13 +8,13 @@ select * from no_plan();
 -- ------------------------------------------------------------------ fixtures
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 insert into public.companies (id, name) values ('65000000-0000-4000-8000-000000000001', '0065 Customer');
-insert into public.rfqs (id, company_id, owner_id) values
-  ('65000000-0000-4000-8000-000000000010', '65000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002'),
-  ('65000000-0000-4000-8000-000000000011', '65000000-0000-4000-8000-000000000001', null);
+insert into public.rfqs (id, company_id, owner_id, legacy_flags) values
+  ('65000000-0000-4000-8000-000000000010', '65000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', '{}'),
+  ('65000000-0000-4000-8000-000000000011', '65000000-0000-4000-8000-000000000001', null, '{owner_unknown}');   -- an imported RFQ with no owner
 -- Orders made yesterday (not in the transaction that writes their lines).
 insert into public.orders (id, company_id, owner_id, created_at, legacy_flags) values
   ('65000000-0000-4000-8000-000000000020', '65000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', now() - interval '1 day', '{}'),
-  ('65000000-0000-4000-8000-000000000021', '65000000-0000-4000-8000-000000000001', null, now() - interval '1 day', '{}'),
+  ('65000000-0000-4000-8000-000000000021', '65000000-0000-4000-8000-000000000001', null, now() - interval '1 day', '{owner_unknown}'),
   ('65000000-0000-4000-8000-000000000022', '65000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', now() - interval '1 day', '{value_basis_unknown}');
 insert into public.order_items (id, order_id, description, qty, unit_price_net, gst_rate) values
   ('65000000-0000-4000-8000-000000000030', '65000000-0000-4000-8000-000000000020', 'Line A', 2, 100, 18),
@@ -173,6 +173,13 @@ select is((select count(*)::int from u), 0, 'L-6: the lock binds an admin too (r
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000003","role":"authenticated"}', true);   -- engineer
 select is(public.receipt_locked('gst-receipts', '0065/r1.pdf'), null::boolean, 'receipt_locked tells an engineer nothing');
 reset role;
+
+-- diagnostics for L-3 (kept: they show where the pg_net grants come from)
+select diag('net.http_get acl: ' || coalesce((select coalesce(p.proacl::text, 'default') || ' owner ' || p.proowner::regrole::text
+            from pg_proc p where p.oid = to_regprocedure('net.http_get(text,jsonb,jsonb,integer)')), 'absent'));
+select diag('schema net acl: ' || coalesce((select coalesce(n.nspacl::text, 'default') || ' owner ' || n.nspowner::regrole::text
+            from pg_namespace n where n.nspname = 'net'), 'absent'));
+select diag('current_user in migrations is ' || current_user || ', superuser: ' || (select rolsuper::text from pg_roles where rolname = current_user));
 
 -- ================================================================== L-7: content types
 select ok((select allowed_mime_types @> array['image/jpeg', 'image/png', 'image/heic', 'image/heif', 'application/pdf', 'text/plain',
