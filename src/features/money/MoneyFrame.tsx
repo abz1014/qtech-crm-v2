@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
+import { useScrollActiveIntoView } from '@/lib/useScrollActiveIntoView'
 import { businessToday } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import { useSession } from '@/app/session'
@@ -21,6 +22,7 @@ const longDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Karachi', wee
 
 export function MoneyFrame({ active, actions, children }: { active: string; actions?: ReactNode; children: ReactNode }) {
   const session = useSession()
+  const strip = useScrollActiveIntoView<HTMLElement>()
   const role = session.status === 'signed-in' ? session.user.role : ''
   const isAdmin = role === 'admin'
   const money = role === 'admin' || role === 'sales'
@@ -49,7 +51,7 @@ export function MoneyFrame({ active, actions, children }: { active: string; acti
           </div>
           {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
-        <nav aria-label="Money views" className="inline-flex max-w-full gap-[2px] justify-self-start overflow-x-auto rounded bg-selected p-[2px]">
+        <nav ref={strip} aria-label="Money views" className="inline-flex max-w-full gap-[2px] justify-self-start overflow-x-auto rounded bg-selected p-[2px]">
           {tabs.map(t => (
             <NavLink
               key={t.key}

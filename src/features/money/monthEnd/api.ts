@@ -13,6 +13,7 @@ import type {
   PayableRow,
   PaymentStats,
   RawPnl,
+  CheckDetails,
   StatusRow,
   ViaStat,
 } from '@/features/money/monthEnd/model'
@@ -32,6 +33,13 @@ export async function loadStatus(month: string): Promise<StatusRow[]> {
   const db = requireSupabase()
   const rows = unwrap(await db.rpc('month_end_status', { p_month: monthStart(month) })) ?? []
   return rows.map(r => ({ check_key: r.check_key, n: Number(r.n) || 0 }))
+}
+
+/** The figures behind each check (migration 0064). Optional: a failure here leaves the cards on their fixed wording. */
+export async function loadCheckDetails(month: string): Promise<CheckDetails> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.rpc('month_end_check_details', { p_month: monthStart(month) })) ?? []
+  return Object.fromEntries(rows.map(r => [r.check_key, (r.detail ?? {}) as Record<string, unknown>]))
 }
 
 export async function loadClosedMonths(): Promise<ClosedMonth[]> {

@@ -120,15 +120,15 @@ export function BoardPage() {
   const openColumns = useMemo<Column<BoardRow>[]>(
     () => [
       { id: 'company', header: 'Company', value: r => r.companyName, sortable: true, cell: r => <CompanyCell row={r} compact={compact} /> },
-      { id: 'due', header: 'Due', kind: 'date', value: r => r.dueOn, sortable: true, width: compact ? 230 : 150, cell: r => <DueCell row={r} compact={compact} /> },
-      { id: 'items', header: 'Items', kind: 'num', value: r => r.itemsTotal, width: 80, hideBelowMd: true, cell: r => <span className="num">{r.itemsTotal}</span> },
-      { id: 'sourcing', header: 'Sourcing', value: r => r.sourcingState, width: compact ? 260 : 190, cell: r => <SourcingCell row={r} compact={compact} /> },
-      { id: 'clarification', header: 'Questions', value: r => r.clarificationState, width: 240, hideBelowMd: true, cell: r => <ClarificationCell row={r} /> },
-      { id: 'bid', header: 'Bid', value: r => r.bidState, width: 160, hideBelowMd: true, cell: r => <BidCell row={r} /> },
+      { id: 'due', header: 'Due', kind: 'date', value: r => r.dueOn, sortable: true, width: compact ? 210 : 130, cell: r => <DueCell row={r} compact={compact} /> },
+      { id: 'items', header: 'Items', kind: 'num', value: r => r.itemsTotal, width: 64, hideBelowMd: true, cell: r => <span className="num">{r.itemsTotal}</span> },
+      { id: 'sourcing', header: 'Sourcing', value: r => r.sourcingState, width: compact ? 240 : 175, cell: r => <SourcingCell row={r} compact={compact} /> },
+      { id: 'clarification', header: 'Questions', value: r => r.clarificationState, width: 210, hideBelowMd: true, cell: r => <ClarificationCell row={r} /> },
+      { id: 'bid', header: 'Bid', value: r => r.bidState, width: 120, hideBelowMd: true, cell: r => <BidCell row={r} /> },
       ...(canSeeMoney
-        ? [{ id: 'value', header: 'Value (PKR net)', kind: 'money' as const, value: (r: BoardRow) => values.data?.[r.rfqId] ?? null, width: 150, hideBelowMd: true, sortable: true }]
+        ? [{ id: 'value', header: 'Value (PKR net)', kind: 'money' as const, value: (r: BoardRow) => values.data?.[r.rfqId] ?? null, width: 120, hideBelowMd: true, sortable: true }]
         : []),
-      { id: 'owner', header: 'Owner', value: r => r.ownerName, sortable: true, width: 130, hideBelowMd: true, cell: r => <OwnerCell row={r} /> },
+      { id: 'owner', header: 'Owner', value: r => r.ownerName, sortable: true, width: 110, hideBelowMd: true, cell: r => <OwnerCell row={r} /> },
     ],
     [compact, canSeeMoney, values.data],
   )
@@ -200,7 +200,7 @@ export function BoardPage() {
   const closedShown = useMemo(() => applyQuery(closed.data?.rows ?? [], q), [closed.data, q])
 
   const filterBox = (
-    <div className="relative w-[220px] max-w-full">
+    <div className="relative w-[220px] max-w-full max-sm:w-full">
       <span className="pointer-events-none absolute inset-y-0 left-[10px] grid place-items-center text-fg-muted">
         <Icon icon={Search} />
       </span>
@@ -227,6 +227,7 @@ export function BoardPage() {
       {filterBox}
       <SegmentedControl
         aria-label="Which RFQs"
+        className="max-sm:w-full"
         value={tab}
         onValueChange={v => change({ tab: v === 'closed' ? 'closed' : null, page: null })}
         options={[
@@ -239,7 +240,7 @@ export function BoardPage() {
   const densityBar = (
     <SegmentedControl
       aria-label="Density"
-      className="ml-auto"
+      className="ml-auto max-sm:hidden"
       value={density}
       onValueChange={pickDensity}
       options={[
@@ -291,6 +292,7 @@ export function BoardPage() {
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <SegmentedControl
                   aria-label="Whose RFQs"
+                  className="max-sm:w-full"
                   value={owner}
                   onValueChange={v => change({ owner: v })}
                   options={[
@@ -300,6 +302,7 @@ export function BoardPage() {
                 />
                 <SegmentedControl
                   aria-label="Sourcing state"
+                  className="max-sm:w-full"
                   value={state}
                   onValueChange={v => change({ state: v === 'all' ? null : v })}
                   options={STATE_FILTERS.map(s => ({ ...s, count: open.isSuccess ? counts[s.value] : undefined }))}

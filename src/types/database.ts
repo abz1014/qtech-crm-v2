@@ -2050,6 +2050,11 @@ isOneToOne: false
               "check_key": string,"n": number
             }[]
                            },
+"month_end_check_details":
+{ Args: { "p_month": string }; Returns: {
+              "check_key": string,"detail": Json
+            }[]
+                           },
 "month_is_closed":
 { Args: { "d": string }; Returns: boolean
                            },

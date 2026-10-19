@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { useScrollActiveIntoView } from '@/lib/useScrollActiveIntoView'
 import { MONTH_END_VIEWS } from '@/features/money/monthEnd/monthEndViews'
 
 /*
@@ -17,8 +18,10 @@ export function MonthEndNav({
   counts?: Partial<Record<string, number>>
   search?: string
 }) {
+  const strip = useScrollActiveIntoView<HTMLElement>()
   return (
     <nav
+      ref={strip}
       aria-label="Month-end views"
       className="inline-flex max-w-full items-center gap-[2px] justify-self-start overflow-x-auto rounded bg-selected p-[2px] max-md:gap-2 max-md:bg-transparent max-md:p-0"
     >

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ChartColumn,
@@ -250,7 +250,17 @@ function CheckCardView({ card }: { card: CheckCard }) {
         <span className="num text-display font-medium tracking-tight">{card.n}</span>
         <span className="text-sm text-fg-muted">{card.unit}</span>
       </div>
-      <p className="text-pretty text-xs text-fg-2">{card.sub}</p>
+      <p className="text-pretty text-xs text-fg-2">
+        {card.parts.map((p, i) =>
+          typeof p === 'string' ? (
+            <Fragment key={i}>{p}</Fragment>
+          ) : (
+            <span key={i} className="num">
+              {p.mono}
+            </span>
+          ),
+        )}
+      </p>
       <div className="flex items-center justify-between gap-2 border-t pt-3 text-sm font-medium">
         {card.clear ? (
           <span className="inline-flex items-center gap-[6px] text-tone-success-fg">
@@ -323,7 +333,7 @@ function PhoneList({ cards }: { cards: CheckCard[] }) {
           <i className={cn('self-stretch', c.clear ? 'bg-tone-success-fg' : 'bg-tone-warning-fg')} />
           <span className="grid min-w-0 gap-[2px] py-2">
             <span className="text-sm font-medium">{c.label}</span>
-            <span className="truncate text-xs text-fg-muted">{c.clear ? 'Nothing to do' : c.linkLabel}</span>
+            <span className="truncate text-xs text-fg-muted">{c.clear ? 'Nothing to do' : c.sub}</span>
           </span>
           <span className={cn('num text-base font-medium', c.clear && 'text-fg-muted')}>{c.n}</span>
           <Icon icon={ChevronRight} size="sm" className="text-fg-muted" />
