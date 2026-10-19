@@ -174,7 +174,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
             {relays.map(({ inq, answered }) => (
               <div key={inq.id} className="mx-4 mb-3 mt-3 flex flex-wrap items-center gap-2 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
                 <Icon icon={Send} className="text-tone-warning-fg" />
-                <span className="min-w-0 flex-1 basis-40">
+                <span className="min-w-0 flex-1 basis-[10rem]">
                   <b className="font-medium">{inq.supplierName}</b> is waiting for <span className="num">{answered.length}</span> {answered.length === 1 ? 'answer' : 'answers'}.
                 </span>
                 <Button size="sm" icon={Copy} onClick={() => void copyRelay(inq, answered)} busy={relayStamp.isPending} aria-label={`Copy answers for supplier ${inq.supplierName}`}>

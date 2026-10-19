@@ -91,6 +91,8 @@ function intake() {
     all,
     suppliers: () => [...all, 'suppliers'] as const,
     memory: (signature: string) => [...all, 'memory', signature] as const,
+    /** The up to three evidence orders of one supplier for one item (the memory card). */
+    evidence: (signature: string) => [...all, 'evidence', signature] as const,
   }
 }
 /**

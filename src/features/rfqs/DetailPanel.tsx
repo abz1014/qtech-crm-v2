@@ -28,7 +28,7 @@ export function DetailPanel({
   return (
     <section aria-labelledby={id} data-slot={dataSlot} className={cn('min-w-0 rounded border bg-surface', className)}>
       <header className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b px-5 py-4">
-        <div className="min-w-0 flex-1 basis-48">
+        <div className="min-w-0 flex-1 basis-[12rem]">
           <h2 id={id} className="text-base font-semibold">
             {title}
           </h2>

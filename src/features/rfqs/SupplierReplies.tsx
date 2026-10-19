@@ -236,7 +236,7 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
   return (
     <section aria-labelledby={headingId} className="grid gap-3 rounded border border-line-strong bg-surface p-4">
       <header className="flex flex-wrap items-start gap-x-3 gap-y-2">
-        <div className="min-w-0 flex-1 basis-56">
+        <div className="min-w-0 flex-1 basis-[14rem]">
           <h4 id={headingId} className="break-words text-sm font-semibold">
             {inquiry.supplierName}
           </h4>

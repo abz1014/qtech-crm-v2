@@ -373,11 +373,19 @@ test.describe('R26 intake: evidence in the list and in the memory card', () => {
     await expect(page.getByRole('checkbox', { name: supplier.name })).toBeChecked()
     await expect(row.locator('[data-evidence]')).toContainText(`Ordered ${desc} ×1 for ${ref}, placed ${dmy(last.placed)}, delivered after ${last.deliveredIn} days (expected 14)`)
     await expect(row.locator('[data-record]')).toHaveText('On time 3 of 3 deliveries')
+    await expect(row.locator('[data-memory-line]')).toContainText('ordered from 3 times') // P9: v_supplier_stats.orders_count, and no "last contacted" beside the cited order
+    await expect(row.locator('[data-memory-line]')).not.toContainText('last contacted')
 
     // The card: 1 optional tap, the latest order with its days, then the counts.
     await page.getByRole('button', { name: `Memory, ${supplier.name}` }).click()
     const block = page.getByLabel(`What we know about ${supplier.name}`).locator('[data-evidence-block]')
-    await expect(block).toContainText('Latest order of this item from')
+    await expect(block).toContainText('Recent orders of this item from')
+    // P9: up to three orders, each with its own days (the mockup's evidence block), and the supplier's order count.
+    await expect(block.locator('[data-evidence-order]')).toHaveCount(3)
+    for (const o of orders) await expect(block).toContainText(`ORD-${String(o.number).padStart(4, '0')}`)
+    await expect(block).toContainText('3 of 3')
+    await expect(block).toContainText('Ordered from')
+    await expect(block).toContainText('3 times')
     await expect(block).toContainText(ref)
     await expect(block).toContainText(`placed ${dmy(last.placed)}`)
     await expect(block).toContainText(`delivered after ${last.deliveredIn} days`)

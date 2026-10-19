@@ -57,7 +57,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, onFloat }: Props)
           return (
             <li key={i.id} className="grid gap-1 border-t px-5 py-3 first:border-t-0" data-supplier-asked={i.supplierId}>
               <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
-                <b className="min-w-0 flex-1 basis-40 break-words text-sm font-semibold">{i.supplierName}</b>
+                <b className="min-w-0 flex-1 basis-[10rem] break-words text-sm font-semibold">{i.supplierName}</b>
                 <span className="flex flex-wrap items-center gap-1">
                   {i.chaseCount > 0 && i.lines.length === 0 ? <StatusBadge dimension="inquiry" value="chased" detail={`×${i.chaseCount}`} /> : null}
                   {i.lines.length > 0 ? (
@@ -207,7 +207,7 @@ function ChaseCard({ rfq, items, inquiry, inquiries }: { rfq: RfqHeader; items: 
       ) : null}
       <div role="group" aria-label={`Chase ${inquiry.supplierName}`} className="grid overflow-hidden rounded border bg-surface">
         <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
-          <b className="min-w-0 flex-1 basis-40 text-sm font-semibold">{`Chase ${inquiry.supplierName}`}</b>
+          <b className="min-w-0 flex-1 basis-[10rem] text-sm font-semibold">{`Chase ${inquiry.supplierName}`}</b>
           <SegmentedControl
             aria-label="Message channel"
             value={variant}

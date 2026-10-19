@@ -710,6 +710,12 @@ test.describe('the phone layout (C-100 to C-105)', () => {
     await expect(page.getByRole('menuitem', { name: 'Mark won' })).toBeVisible() // as in the mockup's phone menu
     await expect(page.getByRole('menuitem', { name: /Sent the offer again/ })).toBeVisible()
     await page.keyboard.press('Escape')
+    // P9: a flex title with a basis class that is not a token (basis-48, basis-64) has no basis at all, so on a phone it is squeezed
+    // to the width of its neighbours. Every title that sets a basis must keep at least 10rem of its row.
+    const squeezed = await page.evaluate(() =>
+      Array.from(document.querySelectorAll<HTMLElement>('[class*="basis-["]')).filter(e => e.offsetParent !== null && e.getBoundingClientRect().width < 150).map(e => `${e.tagName} ${e.className}`),
+    )
+    expect(squeezed, 'no title with a flex basis is squeezed at 375').toEqual([])
     await review(page, 'rfq-detail-mobile-bar-375')
   })
 })

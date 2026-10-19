@@ -170,6 +170,14 @@ describe('v2 checks', () => {
     expect(e.map(x => x.category)).toEqual(['Payment on a cancelled order'])
   })
 
+  it('uses legPaid (summed in the database) instead of summing the expense rows it was given', () => {
+    const pos: RcPo[] = [{ legId: 'l1', total: 1000, currency: 'PKR' }]
+    const over = run({ legs: [leg()], pos, legPaid: [{ legId: 'l1', paid: 1500 }] })
+    expect(over.some(x => x.message.includes('Supplier payments (1,500) exceed the PO total (1,000)'))).toBe(true)
+    const within = run({ legs: [leg()], pos, legPaid: [{ legId: 'l1', paid: 900 }], expenses: [{ id: 'x1', orderId: 'o1', legId: 'l1', cost: 5000, paidOn: '2026-07-05' }] })
+    expect(within.some(x => x.message.includes('Supplier payments'))).toBe(false)
+  })
+
   it('lists critical items first, in a stable order', () => {
     const e = run({
       orders: [order({ basisUnknown: true })],

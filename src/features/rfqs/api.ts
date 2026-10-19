@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { ViewRow } from '@/features/dbTypes'
 import type { FloatItemPayload } from '@/features/rfqs/lib/intakeModel'
+import type { EvidenceFeedRow } from '@/features/rfqs/lib/ranking/reasons'
 import type { SupplierItemMemoryRow, SupplierRecord, SupplierStatsRow } from '@/features/rfqs/lib/supplierSuggestion'
 
 /*
@@ -75,6 +76,24 @@ export async function getSupplierMemory(
     }),
   )
   return Object.fromEntries(items.map(it => [it.key, bySig.get(sig(it)) ?? []]))
+}
+
+/**
+ * supplier_item_evidence(): up to three recent orders of one supplier at the best tier for the item (the memory card's evidence
+ * block, g2-ranking-split.html). Opened on demand, one supplier and one item at a time.
+ */
+export async function getSupplierEvidence(item: Omit<MemoryQuery, 'key'>, supplierId: string, excludeRfqId?: string): Promise<EvidenceFeedRow[]> {
+  const db = requireSupabase()
+  // The generated argument types do not admit NULL for the optional ids; the function does.
+  const args = {
+    p_supplier_ids: [supplierId],
+    p_brand_id: item.brandId,
+    p_family_id: item.familyId,
+    p_description: item.description,
+    p_exclude_rfq_id: excludeRfqId ?? null,
+    p_limit: 3,
+  } as unknown as { p_supplier_ids: string[]; p_brand_id: string; p_family_id: string; p_description: string }
+  return (unwrap(await db.rpc('supplier_item_evidence', args)) ?? []) as unknown as EvidenceFeedRow[]
 }
 
 // ---------------------------------------------------------------- writes

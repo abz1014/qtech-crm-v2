@@ -195,7 +195,7 @@ function WaitingRow({ rfqId, inquiry, item }: { rfqId: string; inquiry: InquiryR
   }
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t bg-sunken px-5 py-3 text-sm" data-waiting={inquiry.supplierId}>
-      <span className="flex min-w-0 flex-1 basis-64 items-center gap-2 text-fg-2">
+      <span className="flex min-w-0 flex-1 basis-[16rem] items-center gap-2 text-fg-2">
         <Icon icon={Clock} className="text-fg-muted" />
         <span className="min-w-0">
           Waiting on <b className="font-semibold text-fg">{inquiry.supplierName}</b>
@@ -389,7 +389,7 @@ export function ItemsPanel({
                       <ul className="rounded-b border border-t-0 bg-surface">
                         {forThis.map(s => (
                           <li key={s.supplierId} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-4 py-3 first:border-t-0">
-                            <span className="min-w-0 flex-1 basis-56">
+                            <span className="min-w-0 flex-1 basis-[14rem]">
                               <b className="block text-sm font-semibold">{s.name}</b>
                               <span className="text-xs text-fg-muted">{s.reason}</span>
                             </span>
