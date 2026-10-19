@@ -155,6 +155,8 @@ test.describe('the closed-month refusal, in the screens, for a payment and an in
     expect(await must(rest<{ id: string }[]>('admin', `invoices?order_id=eq.${o.order.id}&select=id`))).toHaveLength(0)
     // dated today it goes through: the lock is about the month, not the order
     await d.getByRole('textbox', { name: 'Invoice date' }).fill(typedDate(today))
+    await d.getByRole('textbox', { name: 'Invoice date' }).press('Tab') // the date is read when the cell is left
+    await expect(d.getByText(sentence)).toBeHidden() // changing the date clears the refusal
     await d.getByRole('button', { name: /Create invoice|Try again/ }).click()
     await expect(page.getByRole('dialog')).toBeHidden()
     expect(await must(rest<{ id: string }[]>('admin', `invoices?order_id=eq.${o.order.id}&select=id`))).toHaveLength(1)

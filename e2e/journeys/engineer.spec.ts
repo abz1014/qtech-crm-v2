@@ -144,7 +144,7 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
     await expect(sheet.getByRole('radio', { name: new RegExp(`${ref} · ${s.customer.name}`) })).toBeChecked()
     await waitForAnimationsToFinish(page)
     await sheet.getByRole('button', { name: 'Attach to order' }).click()
-    await expect(page.getByRole('status').filter({ hasText: 'Saved to ORD-' })).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: 'Saved to ORD-' }).filter({ has: page.getByRole('button', { name: /Undo/ }) })).toBeVisible()
     fe2('Capture a photo and a note into the order (after the paste)', (await readCount(page)).mouse, 4)
     const files = await must(rest<{ file_name: string; bucket: string }[]>('admin', `attachments?order_id=eq.${s.order.id}&select=file_name,bucket`))
     expect(files).toEqual([{ file_name: 'nameplate.png', bucket: 'rfq-files' }])

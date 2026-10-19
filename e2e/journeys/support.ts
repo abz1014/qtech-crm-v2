@@ -161,7 +161,7 @@ export type Rule = 'not_floated' | 'chase_supplier' | 'bid_due' | 'chase_custome
 export async function todayHas(context: BrowserContext, rule: Rule, text: string[], listed: boolean): Promise<void> {
   const page = await openPage(context, '/today')
   await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
-  await expect(page.getByText(/need you/)).toBeVisible() // the list has loaded
+  await expect(page.getByText(/\d+ due now/)).toBeVisible() // the list has loaded
   let row = page.locator(`li[data-rule="${rule}"]`)
   for (const t of text) row = row.filter({ hasText: t })
   if (listed) await expect(row.first(), `Today should list ${rule} for ${text.join(' ')}`).toBeVisible()
