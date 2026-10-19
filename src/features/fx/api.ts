@@ -27,6 +27,13 @@ export async function listFxHistory(currency: string, limit = 12): Promise<FxHis
   return rows.map(r => ({ asOf: r.as_of, ratePkr: Number(r.rate_pkr), source: r.source === 'manual' ? 'manual' : 'auto' }))
 }
 
+/** When the nightly job last stored an automatic rate (fx_rates.created_at of the newest automatic row), or null if it never has. */
+export async function getLastAutoRun(): Promise<string | null> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('fx_rates').select('created_at').eq('source', 'auto').order('created_at', { ascending: false }).limit(1))
+  return rows[0]?.created_at ?? null
+}
+
 /** set_fx_rate: a manual rate for the day (today when `asOf` is omitted). Entering it twice for the same day replaces it. */
 export async function setFxRate(input: { currency: string; ratePkr: number; asOf?: string }): Promise<string> {
   const db = requireSupabase()

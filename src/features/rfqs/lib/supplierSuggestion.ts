@@ -156,12 +156,15 @@ function joinList(parts: string[]): string {
 }
 
 /** The memory line of the mockup, built from counts only (DATA_MODEL 5c display rules). */
-export function memoryLine(stats: SupplierStatsRow | null, today?: string | null): string {
+export function memoryLine(stats: SupplierStatsRow | null, today?: string | null, options: { hasEvidence?: boolean } = {}): string {
   const asked = stats?.asked ?? 0
   const replied = stats?.replied ?? 0
+  const ordered = stats?.orders_count ?? 0
   const parts: string[] = []
+  // "ordered from 4 times" comes first once there is an order (g2-ranking-split.html, Float).
+  if (ordered > 0) parts.push(`ordered from ${ordered === 1 ? 'once' : `${ordered} times`}`)
   if (asked <= 0) {
-    parts.push('no history yet')
+    if (ordered <= 0) parts.push('no history yet')
   } else if (asked < 3) {
     // Below 3 asks: raw facts only, no rate and no usual reply time.
     const a = asked === 1 ? 'asked once' : 'asked twice'
@@ -175,7 +178,8 @@ export function memoryLine(stats: SupplierStatsRow | null, today?: string | null
       parts.push(days < 1 ? 'usually replies the same day' : `usually replies in ~${days} ${days === 1 ? 'day' : 'days'}`)
     }
   }
-  const last = dateKey(stats?.last_contact)
+  // The order evidence line replaces "last contacted" wherever an order is cited.
+  const last = options.hasEvidence ? null : dateKey(stats?.last_contact)
   if (last) parts.push(`last contacted ${shortDay(last, today)}`)
   return parts.join(' · ')
 }
@@ -308,7 +312,7 @@ export function suggestSuppliers(
       preTicked: group === 'supplied_before',
       tierLabel: tier,
       reason,
-      memoryLine: memoryLine(sup.stats, today),
+      memoryLine: memoryLine(sup.stats, today, { hasEvidence: found !== null }),
       coversItemIds: items.filter((i) => covers.includes(i)).map((i) => i.id),
       lastContact: dateKey(sup.stats?.last_contact),
       record,
@@ -318,7 +322,7 @@ export function suggestSuppliers(
     out.push(suggestion)
     keys.set(suggestion, {
       band: reliabilityBand({ deliveries, onTime: deliveries - Math.min(sup.stats?.late ?? 0, deliveries) }),
-      ordered: found?.ev.count ?? 0,
+      ordered: sup.stats?.orders_count ?? found?.ev.count ?? 0,
       replied: sup.stats?.replied ?? 0,
     })
   }

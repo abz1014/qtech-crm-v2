@@ -63,6 +63,15 @@ export function unusableWarning(r: RateRow): string | null {
   return `${r.currency} has not been updated for ${r.ageDays} days. A rate older than 30 days is unusable, so ${r.currency} quotes show in ${r.currency} only and are left out of price comparisons until someone adds a current rate. Fresh is up to 7 days, stale is 8 to 30.`
 }
 
+const runDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Karachi', weekday: 'short', day: 'numeric', month: 'short' })
+const runTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: false })
+
+/** "Automatic update ran Fri 27 Nov, 02:10" (Karachi time), from the newest automatic rate row's created_at. */
+export function autoRunStamp(createdAt: string): string {
+  const d = new Date(createdAt)
+  return `Automatic update ran ${runDay.format(d).replace(',', '')}, ${runTime.format(d)}`
+}
+
 /** The words for where a rate came from. */
 export function sourceText(source: 'auto' | 'manual' | null): string {
   return source === 'manual' ? 'Entered by hand' : source === 'auto' ? 'Automatic' : 'No rate yet'
