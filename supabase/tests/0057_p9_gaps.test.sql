@@ -52,6 +52,7 @@ values (pg_temp.u('e9000000', 8), pg_temp.u('c9000000', 4), public.today_pkt() -
 select pg_temp.leg(9, 4, -15, -5, -2, true);
 
 -- ------------------------------------------------------------------ fixtures: money exceptions
+-- The PO total is computed from the lines by a trigger (qty times unit_price), so the lines carry a quantity.
 -- Orders: A overpaid; B clean; C cancelled with a payment; D payment dated before the order; E price basis unknown;
 -- F a PKR leg paid above its PO; G a leg expected before it was placed; H an invoice whose GST is far from 18%;
 -- I an expense dated before the order.
@@ -77,8 +78,8 @@ insert into public.supplier_orders (id, order_id, supplier_id, placed_on, expect
   (pg_temp.u('e9900000', 2), pg_temp.u('e9100000', 2), pg_temp.u('c9000000', 3), '2026-05-02', '2026-05-20', 'PKR'),   -- B: paid 500 of 1000
   (pg_temp.u('e9900000', 3), pg_temp.u('e9100000', 7), pg_temp.u('c9000000', 3), '2026-05-10', '2026-05-05', 'PKR');   -- G: expected before placed
 insert into public.purchase_orders (supplier_order_id, number, revision, currency, lines, total) values
-  (pg_temp.u('e9900000', 1), 990001, 0, 'PKR', '[{"unit_price": 1000}]'::jsonb, 1000),
-  (pg_temp.u('e9900000', 2), 990002, 0, 'PKR', '[{"unit_price": 1000}]'::jsonb, 1000);
+  (pg_temp.u('e9900000', 1), 990001, 0, 'PKR', '[{"qty": 1, "unit_price": 1000}]'::jsonb, 1000),
+  (pg_temp.u('e9900000', 2), 990002, 0, 'PKR', '[{"qty": 1, "unit_price": 1000}]'::jsonb, 1000);
 insert into public.expenses (id, paid_on, amount_pkr, category_id, order_id, supplier_order_id) values
   (pg_temp.u('f9100000', 1), '2026-05-20', 900, 'ca7e0000-0000-4000-8000-000000000011', pg_temp.u('e9100000', 6), pg_temp.u('e9900000', 1)),
   (pg_temp.u('f9100000', 2), '2026-05-21', 600, 'ca7e0000-0000-4000-8000-000000000011', pg_temp.u('e9100000', 6), pg_temp.u('e9900000', 1)),
