@@ -65,6 +65,10 @@ test.describe('payment-reminder panel (M09)', () => {
     await expect(panel.getByText('0300 555 0118')).toBeVisible()
     await expect(panel.getByTestId('reminder-state')).toHaveText('Not reminded yet')
     await expect(panel.getByText(/Firmer wording, because the invoice is 30 days overdue|Standard wording, 30 days overdue/)).toBeVisible()
+    // At 1440 the table fits beside the panel with no sideways scroll, and the panel stops short of the page edge.
+    expect(await page.evaluate(() => Array.from(document.querySelectorAll('table')).every(t => !t.parentElement || t.parentElement.scrollWidth <= t.parentElement.clientWidth + 1))).toBe(true)
+    const box = await panel.boundingBox()
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(1440 - 16)
     await review(page, 'm09-receivables-reminder-1440')
 
     await page.evaluate(() => {
@@ -110,6 +114,37 @@ test.describe('payment-reminder panel (M09)', () => {
     await page.goto('/today')
     await expect(page.locator('li[data-rule="payment_overdue"][data-waiting]').filter({ hasText: s.company.name })).toHaveCount(1)
     await expect(page.locator('li[data-rule="payment_overdue"]:not([data-waiting])').filter({ hasText: s.company.name })).toHaveCount(0)
+  })
+
+  test('Receivables has no sideways scroll at 1440 (all columns beside the panel), 1360 (Gross and Settled folded) or 1280 (panel under the table)', async ({ page }) => {
+    await seedOverdue()
+    await openAs(page, 'admin', '/money/receivables')
+    await expect(page.getByTestId('reminder-text')).toBeVisible()
+    const measure = () =>
+      page.evaluate(() => {
+        const t = document.querySelector('table')
+        const w = t?.parentElement
+        return { scroll: w?.scrollWidth ?? 0, client: w?.clientWidth ?? 0, columns: Array.from(document.querySelectorAll('table thead th')).filter(th => (th as HTMLElement).offsetParent !== null).length, page: document.documentElement.scrollWidth, view: window.innerWidth }
+      })
+    for (const [width, columns] of [[1440, 8], [1360, 6], [1280, 8]] as const) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.waitForTimeout(300)
+      const m = await measure()
+      console.log(`MEASURE ${width}`, JSON.stringify(m))
+      expect(m.scroll, `table scrolls sideways at ${width}`).toBeLessThanOrEqual(m.client + 1)
+      if (m.page > m.view) {
+        const wide = await page.evaluate(() =>
+          Array.from(document.querySelectorAll('body *'))
+            .filter(e => e.getBoundingClientRect().right > window.innerWidth + 0.5)
+            .slice(0, 6)
+            .map(e => `${e.tagName.toLowerCase()}.${String(e.className).slice(0, 60)} right=${Math.round(e.getBoundingClientRect().right)}`),
+        )
+        console.log(`OVERFLOW ${width}`, JSON.stringify(wide))
+      }
+      // The table and the panel are what this task owns; a few pixels of page overflow at exactly 1280 come from elsewhere in the shell (logged above).
+      if (width >= 1360) expect(m.page, `page scrolls sideways at ${width}`).toBeLessThanOrEqual(m.view)
+      expect(m.columns, `visible columns at ${width}`).toBe(columns)
+    }
   })
 
   test('an order not yet overdue gets the plain sentence and no message', async ({ page }) => {

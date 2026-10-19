@@ -26,6 +26,8 @@ export interface Column<T> {
   hideBelowMd?: boolean
   /** Hide below the lg breakpoint (1024): tablet portrait, where the same facts are folded into another cell. */
   hideBelowLg?: boolean
+  /** Responsive visibility classes for this column, replacing hideBelowMd and hideBelowLg (for a column that must also hide in a middle range). */
+  hideClass?: string
   /** true: sum of `value` (exact, in paisa, for money). A function draws a custom total from the rows. */
   total?: true | ((rows: T[]) => ReactNode)
   /** Money columns: 'column-auto' (default) shows two decimals on every row when any row has paisa. */
