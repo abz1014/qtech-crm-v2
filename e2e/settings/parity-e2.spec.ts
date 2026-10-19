@@ -17,6 +17,10 @@ const WIDTHS = [
 async function shoot(page: Page, name: string, w: number) {
   mkdirSync(dir!, { recursive: true })
   await page.waitForTimeout(400)
+  // The shell scrolls inside #main, so a full-page shot is only as tall as the window: make the window as tall as the content.
+  const need = await page.evaluate(() => Math.max(document.documentElement.scrollHeight, document.querySelector('#main')?.scrollHeight ?? 0, ...[...document.querySelectorAll('main, #main, #main *')].slice(0, 400).map(e => e.scrollHeight)))
+  await page.setViewportSize({ width: w, height: Math.min(Math.max(need + 140, 800), 5000) })
+  await page.waitForTimeout(300)
   await page.screenshot({ path: `${dir}/e2-${name}-${w}.png`, fullPage: true })
 }
 
