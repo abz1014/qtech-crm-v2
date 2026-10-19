@@ -217,6 +217,31 @@ export async function listOrderOptions(): Promise<OrderOption[]> {
   return rows.map(r => ({ id: r.id, ref: orderRef(r.number), company: names[r.company_id] ?? '' }))
 }
 
+/**
+ * A supplier payment tagged to an order whose only leg is obvious: tag the leg and the payee too, so "we owe" on that leg is right
+ * without another cell to fill. An order with two or more legs stays tagged to the order alone (the margin is right either way).
+ * Best effort: if the legs cannot be read the payment is still saved, tagged to the order.
+ */
+export async function withSingleLeg<T extends { order_id?: string | null; category_id: string }>(
+  rows: readonly T[],
+  supplierPaymentId: string,
+): Promise<(T & Partial<Pick<TagColumns, 'supplier_order_id' | 'payee_id'>>)[]> {
+  const orderIds = [...new Set(rows.filter(r => r.order_id && r.category_id === supplierPaymentId).map(r => r.order_id as string))]
+  if (orderIds.length === 0) return [...rows]
+  try {
+    const db = requireSupabase()
+    const legs = unwrap(await db.from('supplier_orders').select('id, order_id, supplier_id').in('order_id', orderIds)) ?? []
+    const byOrder = new Map<string, typeof legs>()
+    for (const l of legs) byOrder.set(l.order_id, [...(byOrder.get(l.order_id) ?? []), l])
+    return rows.map(r => {
+      const own = r.order_id && r.category_id === supplierPaymentId ? byOrder.get(r.order_id) : undefined
+      return own && own.length === 1 ? { ...r, supplier_order_id: own[0].id, payee_id: own[0].supplier_id } : r
+    })
+  } catch {
+    return [...rows]
+  }
+}
+
 export interface LegOption {
   id: string
   /** "leg A": by order of creation. */

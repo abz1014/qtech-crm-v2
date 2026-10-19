@@ -35,6 +35,7 @@ const LABELS: Partial<Record<keyof ProfileValues, string>> = {
   bank_account_title: 'Account title',
   bank_iban: 'IBAN',
   quotation_validity_days: 'Quotation validity',
+  default_payment_terms_days: 'Default payment terms',
   quotation_terms: 'Quotation terms',
   po_terms: 'Purchase order terms',
 }
@@ -235,6 +236,20 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
         </Section>
 
         <Section
+          title="Payment terms"
+          hint="Used for any order that has no terms of its own, so the payment-overdue reminder always has a due date."
+        >
+          <FormField
+            name="default_payment_terms_days"
+            label="Default payment terms"
+            help="Days after the invoice date. An order with its own terms keeps them."
+            className="sm:max-w-[200px]"
+          >
+            {f => <NumberInput {...f} suffix="days" min={0} decimals={0} />}
+          </FormField>
+        </Section>
+
+        <Section
           title="Quotations and purchase orders"
           hint="Standard wording that is added to every document. You can still edit it on each document before issuing."
         >
@@ -325,6 +340,11 @@ function ProfileReadOnly({ profile: p }: { profile: CompanyProfile }) {
           <Row label="Bank" value={p.bank_name} />
           <Row label="Account title" value={p.bank_account_title} />
           <Row label="IBAN" value={p.bank_iban} mono />
+        </dl>
+      </Section>
+      <Section title="Payment terms">
+        <dl className={KV}>
+          <Row label="Default payment terms" value={`${p.default_payment_terms_days} days`} />
         </dl>
       </Section>
       <Section title="Quotations and purchase orders">

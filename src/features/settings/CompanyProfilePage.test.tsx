@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
 import { CompanyProfilePage } from '@/features/settings/CompanyProfilePage'
-import { missingForPdf, profileSchema, toFormValues, toRow, type CompanyProfile } from '@/features/settings/companyProfile'
+import { effectiveTerms, missingForPdf, profileSchema, termsLabel, toFormValues, toRow, type CompanyProfile } from '@/features/settings/companyProfile'
 import { setSupabaseForTests, type Db } from '@/lib/supabase'
 import { ToastProvider } from '@/ui/Toast'
 import { axeViolations } from '@/test/axe'
@@ -36,6 +36,7 @@ const EMPTY: CompanyProfile = {
   bank_account_title: null,
   bank_iban: null,
   quotation_validity_days: 30,
+  default_payment_terms_days: 30,
   quotation_terms: null,
   po_terms: null,
   updated_at: '2026-01-01T00:00:00Z',
@@ -86,6 +87,23 @@ describe('company profile rules', () => {
     expect(row.quotation_validity_days).toBe(45)
   })
 
+  it('the default payment terms (audit Y1) are saved, whole days from 0 to a year', () => {
+    expect(toRow({ ...toFormValues(EMPTY), default_payment_terms_days: 45 }).default_payment_terms_days).toBe(45)
+    expect(profileSchema.safeParse({ ...toFormValues(EMPTY), default_payment_terms_days: 0 }).success).toBe(true)
+    expect(profileSchema.safeParse({ ...toFormValues(EMPTY), default_payment_terms_days: -1 }).success).toBe(false)
+    expect(profileSchema.safeParse({ ...toFormValues(EMPTY), default_payment_terms_days: 366 }).success).toBe(false)
+    expect(profileSchema.safeParse({ ...toFormValues(EMPTY), default_payment_terms_days: 2.5 }).success).toBe(false)
+  })
+
+  it('own terms on an order win (including 0); with none the company default applies and is labelled', () => {
+    expect(effectiveTerms(10, 30)).toEqual({ days: 10, isDefault: false })
+    expect(effectiveTerms(0, 30)).toEqual({ days: 0, isDefault: false })
+    expect(effectiveTerms(null, 45)).toEqual({ days: 45, isDefault: true })
+    expect(effectiveTerms(null, undefined)).toEqual({ days: 30, isDefault: true })
+    expect(termsLabel(null, 30)).toBe('Terms 30 days from invoice (default terms)')
+    expect(termsLabel(14, 30)).toBe('Terms 14 days from invoice')
+  })
+
   it('every text field is optional; only the validity days has a rule', () => {
     expect(profileSchema.safeParse(toFormValues(EMPTY)).success).toBe(true)
     expect(profileSchema.safeParse({ ...toFormValues(EMPTY), quotation_validity_days: 0 }).success).toBe(false)
@@ -125,6 +143,21 @@ describe('Company profile screen', () => {
     expect(await screen.findByText('Company profile saved')).toBeInTheDocument()
     expect(screen.getByText('PDFs can be issued now.')).toBeInTheDocument()
     expect(screen.getByText('Nothing to save yet')).toBeInTheDocument()
+  })
+
+  it('shows the default payment terms (30 days) and saves a new value (audit Y1)', async () => {
+    h.row = { ...EMPTY }
+    h.updated = [{ ...EMPTY, default_payment_terms_days: 45 }]
+    const user = userEvent.setup()
+    mount('admin')
+    const field = await screen.findByLabelText('Default payment terms')
+    expect(field).toHaveValue('30')
+    await user.clear(field)
+    await user.type(field, '45')
+    expect(screen.getByText('1 unsaved change: Default payment terms')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(h.update).toHaveBeenCalledTimes(1))
+    expect(h.update.mock.calls[0][0]).toMatchObject({ default_payment_terms_days: 45 })
   })
 
   it('draws an empty legal name and address invalid with their own sentences, before any save', async () => {

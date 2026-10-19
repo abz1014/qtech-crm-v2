@@ -223,19 +223,41 @@ export async function restoreStamp(before: readonly StampSnapshot[], fields: Rea
 
 export interface InvoiceReceipt {
   id: string
+  /** The invoice the file is attached to. Not the one being viewed when the receipt covers a PSID group. */
+  invoiceId: string
   path: string
   fileName: string
   sizeBytes: number | null
 }
 
-export async function listReceipts(invoiceId: string): Promise<InvoiceReceipt[]> {
-  const db = requireSupabase()
-  const rows = unwrap(await db.from('attachments').select('id, path, file_name, size_bytes').eq('invoice_id', invoiceId).order('created_at')) ?? []
-  return rows.map(r => ({ id: r.id, path: r.path, fileName: r.file_name, sizeBytes: r.size_bytes }))
+/** The PSID as a group key: trimmed, and null when empty (an invoice with no PSID is a group of one). */
+export const psidKey = (psid: string | null | undefined): string | null => {
+  const t = psid?.trim()
+  return t ? t : null
 }
 
-/** Object first, then its row; a row that cannot be written takes the object back out. The receipt date is stamped when it was empty. */
-export async function uploadReceipt(invoiceId: string, file: File, today: string): Promise<void> {
+/**
+ * Receipts for an invoice. One FBR deposit (one PSID) covers every invoice of that PSID, so the receipt uploaded on any of them is
+ * listed on all of them (audit T1). Without a PSID it is this invoice's own files only.
+ */
+export async function listReceipts(invoiceId: string, psid?: string | null): Promise<InvoiceReceipt[]> {
+  const db = requireSupabase()
+  const key = psidKey(psid)
+  let ids = [invoiceId]
+  if (key) {
+    const group = unwrap(await db.from('invoices').select('id').eq('psid', key)) ?? []
+    ids = Array.from(new Set([invoiceId, ...group.map(g => g.id)]))
+  }
+  const rows = unwrap(await db.from('attachments').select('id, invoice_id, path, file_name, size_bytes').in('invoice_id', ids).order('created_at')) ?? []
+  return rows.map(r => ({ id: r.id, invoiceId: r.invoice_id as string, path: r.path, fileName: r.file_name, sizeBytes: r.size_bytes }))
+}
+
+/**
+ * Object first, then its row; a row that cannot be written takes the object back out. The receipt date is stamped when it was empty,
+ * on this invoice and on every other invoice with the same PSID (one receipt per PSID group, audit T1), so the FBR-attention item
+ * clears for the whole deposit with one upload.
+ */
+export async function uploadReceipt(invoiceId: string, file: File, today: string, psid?: string | null): Promise<void> {
   const db = requireSupabase()
   const ext = (/\.([a-z0-9]{1,5})$/i.exec(file.name)?.[1] ?? (file.type === 'application/pdf' ? 'pdf' : 'jpg')).toLowerCase()
   const path = `${invoiceId}/${crypto.randomUUID()}.${ext}`
@@ -253,8 +275,15 @@ export async function uploadReceipt(invoiceId: string, file: File, today: string
     await db.storage.from(RECEIPT_BUCKET).remove([path])
     throw res.error
   }
-  const { error } = await db.from('invoices').update({ wasif_receipt_on: today }).eq('id', invoiceId).is('wasif_receipt_on', null)
+  const key = psidKey(psid)
+  const stamp = db.from('invoices').update({ wasif_receipt_on: today }).is('wasif_receipt_on', null)
+  const { error } = await (key ? stamp.eq('psid', key) : stamp.eq('id', invoiceId))
   if (error) throw error
+  if (key) {
+    // The invoice the file hangs on is stamped even if its saved PSID is not the one typed in the open form.
+    const own = await db.from('invoices').update({ wasif_receipt_on: today }).eq('id', invoiceId).is('wasif_receipt_on', null)
+    if (own.error) throw own.error
+  }
 }
 
 export async function deleteReceipt(r: Pick<InvoiceReceipt, 'id' | 'path'>): Promise<void> {
