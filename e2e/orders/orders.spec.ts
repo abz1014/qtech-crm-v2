@@ -299,7 +299,7 @@ test.describe('O03: legs, one next-step stamp each', () => {
     await expect(a).toContainText('from lead time 2 wks')
 
     // the Undo restores exactly what was there, including the suggested expected date
-    await page.getByRole('button', { name: /Undo/ }).first().click()
+    await page.getByRole('status').filter({ hasText: 'Marked placed' }).getByRole('button', { name: /Undo/ }).click()
     await expect.poll(async () => (await legRow(s.legA)).placed_on).toBeNull()
     expect((await legRow(s.legA)).expected_on).toBeNull()
     await t.tap(a.getByRole('button', { name: 'Mark placed, leg A' }))
@@ -315,7 +315,8 @@ test.describe('O03: legs, one next-step stamp each', () => {
     await expect(a.getByRole('button', { name: /today, leg A|Mark placed, leg A/ })).toHaveCount(0)
     // 3 taps in all: placed (undone), placed again, delivered. Each stamp is exactly 1.
     expect(t.count).toBe(3)
-    await page.getByRole('button', { name: /Undo/ }).last().click()
+    // the toast is added after the save returns, which can be a beat after the leg already reads Delivered: click this stamp's own Undo
+    await page.getByRole('status').filter({ hasText: 'Marked delivered' }).getByRole('button', { name: /Undo/ }).click()
     await expect.poll(async () => (await legRow(s.legA)).delivered_on).toBeNull()
     // undo clears both
     expect((await legRow(s.legA)).received_on).toBeNull()
