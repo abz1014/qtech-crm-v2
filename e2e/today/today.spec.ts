@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName, type Role } from '../support/stack'
 import { axeViolations } from '../support/axe'
-import { readClipboardWhen } from '../support/clipboard'
+import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
 /*
  * R11 and R16 end to end, against the local CI stack: Today for the three fixture roles, through the real login form.
@@ -101,6 +101,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
 
     // ---- the chase: one tap
     let taps = 0
+    await resetClipboard(page)
     await pane.getByRole('button', { name: 'Copy message and mark chased' }).click()
     taps++
     const toast = page.getByRole('status').filter({ hasText: `Copied. ${s.ref} marked chased.` })
@@ -204,6 +205,7 @@ test.describe('Today: role-aware', () => {
     await goods.getByRole('button').first().click()
     const pane = paneFor(page, g.reference)
     await expect(pane.getByTestId('draft-text')).toContainText(g.reference)
+    await resetClipboard(page)
     await pane.getByRole('button', { name: 'Copy message and mark chased' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'marked chased' })).toBeVisible()
     const leg = (await must(rest<{ chase_count: number }[]>('admin', `supplier_orders?id=eq.${g.leg.id}&select=chase_count`)))[0]

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
-import { readClipboardWhen } from '../support/clipboard'
+import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
 /*
  * R05 end to end, against the local CI stack: the intake = float screen, as the fixture users, through the real
@@ -156,6 +156,7 @@ test.describe('canonical scenario (FE-2 counts)', () => {
     // A blank Spec is drawn as a highlighted blank, not as plain text.
     await expect(page.locator('[data-spec-blank]')).toHaveCount(2)
     await review(page, 'intake-float-05-enquiry-1440')
+    await resetClipboard(page)
     await page.getByRole('button', { name: 'Copy & mark floated to 1' }).click()
     floatTaps++ // 2
     actions++
@@ -414,6 +415,7 @@ test.describe('float one item to the supplier who is not ticked', () => {
     await paste(page, s.email)
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     await page.getByRole('button', { name: 'Write the enquiry' }).click()
+    await resetClipboard(page)
     await page.getByRole('button', { name: 'Copy & mark floated to 1' }).click()
     await expect(page.getByText(/is out for prices/)).toBeVisible()
     await page.getByRole('button', { name: 'Float item 2 to them' }).click()

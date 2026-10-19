@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
-import { readClipboardWhen } from '../support/clipboard'
+import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
 /*
  * M09 (payment-reminder panel beside Receivables) and M08 (Today v3 money rules), end to end on the local CI stack.
@@ -79,6 +79,7 @@ test.describe('payment-reminder panel (M09)', () => {
       document.addEventListener('keydown', e => e.key.length > 1 && w.__keys.push(e.key), true)
       document.addEventListener('mousedown', () => (w.__mouse += 1), true)
     })
+    await resetClipboard(page)
     await panel.getByRole('button', { name: 'Copy and mark reminded' }).click() // the one tap
     await expect(panel.getByText(/Reminder 1 recorded today/)).toBeVisible()
     const c = await page.evaluate(() => ({ keys: (window as unknown as { __keys: string[] }).__keys, mouse: (window as unknown as { __mouse: number }).__mouse }))

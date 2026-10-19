@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
-import { readClipboardWhen } from '../support/clipboard'
+import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
 /*
  * R07 end to end, against the local CI stack: the RFQ detail page, as the fixture users through the real login form.
@@ -307,6 +307,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     const s = await seed({ dueInDays: 8 })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const card = page.locator(`[data-chase-card="${s.china.id}"]`) // the supplier shown in the Suppliers asked card
+    await resetClipboard(page)
     await card.getByRole('button', { name: 'Copy and mark chased' }).click() // the one tap
     await expect(page.getByRole('status').filter({ hasText: 'Chase text copied' })).toBeVisible()
     const text = await readClipboardWhen(page, `ref *RFQ-${String(s.rfq.number).padStart(4, '0')}*`)
@@ -321,6 +322,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await expect(card.getByText('Chased once already')).toBeVisible()
 
     // The second chase uses the second-reminder wording.
+    await resetClipboard(page)
     await card.getByRole('button', { name: 'Copy and mark chased' }).click()
     await readClipboardWhen(page, 'A second reminder')
     expect((await inquiryOf(s.china.inquiryId)).chase_count).toBe(2)
@@ -352,6 +354,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     let taps = 0
     // Not the supplier shown in the card: the Germany supplier, straight from its entry in Suppliers asked.
+    await resetClipboard(page)
     await page.getByRole('button', { name: `Chase ${s.germany.name}`, exact: true }).click()
     taps++
     expect(taps).toBe(1)
@@ -498,6 +501,7 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const menu = () => page.getByRole('button', { name: `More for ${s.usd.name}` }).click()
     await menu()
+    await resetClipboard(page)
     await page.getByRole('menuitem', { name: 'Copy price' }).click()
     await readClipboardWhen(page, t => t === 'USD 100.00')
 
@@ -601,6 +605,7 @@ test.describe('Suppliers asked, Float to another supplier, and the empty state (
     await expect(dialog).toContainText(s.carrier!.name)
     await expect(dialog).toContainText('Carries ') // the reason is in plain words (Carries the brand ...)
     await dialog.locator('label', { hasText: s.carrier!.name }).click()
+    await resetClipboard(page)
     await dialog.getByRole('button', { name: 'Copy enquiry for 1 supplier' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Enquiry text copied' })).toBeVisible()
     const text = await readClipboardWhen(page, s.items[0].description)
@@ -628,6 +633,7 @@ test.describe('Suppliers asked, Float to another supplier, and the empty state (
     await expect(card).toContainText('suggested')
     await expect(card).toContainText(s.carrier!.name)
     await card.locator('label', { hasText: s.carrier!.name }).click()
+    await resetClipboard(page)
     await card.getByRole('button', { name: 'Copy enquiry for 1 supplier' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Enquiry text copied' })).toBeVisible()
     const text = await readClipboardWhen(page, s.items[0].description)
@@ -645,6 +651,7 @@ test.describe('Suppliers asked, Float to another supplier, and the empty state (
     await expect(one.getByText('Uncovered item')).toBeVisible()
     await expect(one.getByText(/None of the 1 supplier who replied quoted this item/)).toBeVisible()
     await expect(one.getByText("Float it to someone else before the customer's bid is due.")).toBeVisible()
+    await resetClipboard(page)
     await one.getByRole('button', { name: `Copy enquiry text for ${s.carrier!.name}` }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Enquiry text copied' })).toBeVisible()
     const text = await readClipboardWhen(page, s.items[0].description)
