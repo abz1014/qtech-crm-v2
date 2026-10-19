@@ -26,6 +26,7 @@ import {
   cleanPsid,
   matchesSearch,
   needsAttention,
+  tcsNotSent,
   rangeLabel,
   registerTotals,
   rowMonth,
@@ -50,7 +51,8 @@ export function GstRegisterPage() {
   const toast = useToast()
   const stamps = useStamps()
   const [params, setParams] = useSearchParams()
-  const [attention, setAttention] = useState(false)
+  const [attention, setAttention] = useState(() => params.get('attention') === '1') // Today's "FBR attention" item opens it filtered
+  const [tcs, setTcs] = useState(() => params.get('tcs') === '1') // and so does "not sent by TCS"
   const [search, setSearch] = useState('')
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set())
   const [psid, setPsid] = useState('')
@@ -60,7 +62,8 @@ export function GstRegisterPage() {
 
   const all = useMemo(() => register.data ?? [], [register.data])
   const attentionCount = useMemo(() => all.filter(needsAttention).length, [all])
-  const shown = useMemo(() => all.filter(r => (!attention || needsAttention(r)) && matchesSearch(r, search)), [all, attention, search])
+  const tcsCount = useMemo(() => all.filter(tcsNotSent).length, [all])
+  const shown = useMemo(() => all.filter(r => (!attention || needsAttention(r)) && (!tcs || tcsNotSent(r)) && matchesSearch(r, search)), [all, attention, tcs, search])
   const totals = registerTotals(shown)
   const monthCounts = useMemo(() => {
     const m = new Map<string, number>()
@@ -187,7 +190,7 @@ export function GstRegisterPage() {
   const header = (
     <div className="flex flex-wrap items-center gap-3">
       <h2 className="text-base font-semibold">GST register</h2>
-      <span className="inline-flex items-center gap-[6px] text-xs text-fg-muted">
+      <span className="inline-flex h-6 items-center gap-[6px] rounded border border-line-strong bg-selected px-2 text-xs text-fg-2">
         <Icon icon={CalendarDays} size="chip" />
         By invoice date
       </span>
@@ -195,6 +198,9 @@ export function GstRegisterPage() {
       <span className="flex-1" />
       <ToggleButton pressed={attention} onPressedChange={setAttention} icon={TriangleAlert}>
         Needs attention <span className="num">{attentionCount}</span>
+      </ToggleButton>
+      <ToggleButton pressed={tcs} onPressedChange={setTcs} icon={Truck}>
+        Not sent by TCS <span className="num">{tcsCount}</span>
       </ToggleButton>
       <label className="relative block w-[200px]">
         <span className="sr-only">Search invoices</span>
@@ -280,9 +286,9 @@ export function GstRegisterPage() {
           </div>
         )}
         empty={
-          attention || search ? (
+          attention || tcs || search ? (
             <EmptyState mood="neutral" title="No invoices match">
-              <Button size="sm" onClick={() => { setAttention(false); setSearch('') }}>
+              <Button size="sm" onClick={() => { setAttention(false); setTcs(false); setSearch('') }}>
                 Clear filters
               </Button>
             </EmptyState>

@@ -2,8 +2,12 @@ import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { toBusinessDate } from '@/lib/dates'
 import type { ViewRow } from '@/features/dbTypes'
 import { previousMonthStart } from '@/features/today/rules'
+import { addDays } from '@/features/rfqs/lib/dateText'
 import type {
   ClarificationFact,
+  CostFact,
+  InvoiceFact,
+  RecurringFact,
   InquiryFact,
   LegFact,
   MonthEndFact,
@@ -33,6 +37,12 @@ export interface TodayData {
   orders: OrderFact[]
   receivables: ReceivableFact[]
   monthEnd: MonthEndFact | null
+  /** M08. Admin only; empty otherwise. */
+  costs: CostFact[]
+  /** M08. Admin and sales only; empty for an engineer (the read is never made). */
+  invoices: InvoiceFact[]
+  /** M08. Admin only; empty otherwise. */
+  recurring: RecurringFact[]
   snoozes: SnoozeFact[]
   /** users.role by id (everyone is readable by every staff role). */
   roles: Record<string, Role>
@@ -304,6 +314,87 @@ async function loadMonthEnd(today: string): Promise<MonthEndFact | null> {
   return { month, checks: rows.reduce((n, r) => n + num(r.n), 0), closed: Boolean(closedRow) }
 }
 
+/**
+ * M08, admin only: paid orders whose costs are still provisional, from v_order_money (the margin contract: payment_state,
+ * costs_state, expected_cost, actual_cost, data_trust). Cancelled orders are dropped with one read of `orders`.
+ */
+async function loadCosts(): Promise<CostFact[]> {
+  const db = requireSupabase()
+  const rows = await fetchAll((from, to) =>
+    db
+      .from('v_order_money')
+      .select('order_id, order_number, expected_cost, actual_cost, payment_state, costs_state, data_trust')
+      .eq('payment_state', 'settled')
+      .eq('costs_state', 'provisional')
+      .order('order_number')
+      .range(from, to),
+  )
+  const ids = rows.map(r => r.order_id).filter((id): id is string => Boolean(id))
+  const cancelled = new Set<string>()
+  for (let i = 0; i < ids.length; i += 150) {
+    const slice = ids.slice(i, i + 150)
+    const found = unwrap(await db.from('orders').select('id').in('id', slice).not('cancelled_on', 'is', null)) ?? []
+    for (const o of found) cancelled.add(o.id)
+  }
+  return rows
+    .filter(r => r.order_id)
+    .map(r => ({
+      orderId: r.order_id as string,
+      orderNumber: num(r.order_number),
+      expectedCost: r.expected_cost === null || r.expected_cost === undefined ? null : Number(r.expected_cost),
+      actualCost: num(r.actual_cost),
+      paymentState: r.payment_state ?? '',
+      costsState: r.costs_state ?? '',
+      basisUnknown: r.data_trust === 'basis_unknown',
+      cancelled: cancelled.has(r.order_id as string),
+    }))
+}
+
+/** M08, admin and sales: the invoices the FBR and TCS rules read (v_invoice_state), narrowed on the server to the ones that can raise an item. */
+async function loadInvoiceFacts(today: string): Promise<InvoiceFact[]> {
+  const db = requireSupabase()
+  const earliest = addDays(today, -60) ?? today
+  const rows = await fetchAll((from, to) =>
+    db
+      .from('v_invoice_state')
+      .select('invoice_id, order_id, number, invoice_date, courier_state, fbr_state, fbr_exception, needs_fbr_attention')
+      .or(`needs_fbr_attention.eq.true,fbr_exception.eq.true,and(courier_state.in.(not_started,copy_received),invoice_date.gte.${earliest})`)
+      .order('invoice_date')
+      .range(from, to),
+  )
+  return rows
+    .filter(r => r.invoice_id)
+    .map(r => ({
+      id: r.invoice_id as string,
+      number: r.number,
+      orderId: r.order_id,
+      invoiceDate: r.invoice_date,
+      courierState: r.courier_state ?? 'not_started',
+      fbrState: r.fbr_state ?? 'pending',
+      fbrException: Boolean(r.fbr_exception),
+      needsFbrAttention: Boolean(r.needs_fbr_attention),
+    }))
+}
+
+/** M08, admin only: the active recurring templates and whether an expense exists for each this month. */
+async function loadRecurringFacts(today: string): Promise<RecurringFact[]> {
+  const db = requireSupabase()
+  const period = today.slice(0, 7)
+  const [templates, recorded] = await Promise.all([
+    db.from('recurring_expenses').select('id, label, day_of_month, active, start_month').eq('active', true).order('label'),
+    db.from('expenses').select('recurring_id').eq('period', period).not('recurring_id', 'is', null),
+  ])
+  const done = new Set((unwrap(recorded) ?? []).map(r => r.recurring_id as string))
+  return (unwrap(templates) ?? []).map(t => ({
+    id: t.id,
+    label: t.label,
+    dayOfMonth: t.day_of_month,
+    active: t.active,
+    startMonth: t.start_month,
+    recorded: done.has(t.id),
+  }))
+}
+
 async function loadSnoozes(today: string): Promise<SnoozeFact[]> {
   const db = requireSupabase()
   const rows = unwrap(await db.from('snoozes').select('rule, subject_id, until_on').gt('until_on', today))
@@ -324,13 +415,16 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
   /** Customers read "Name — City"; suppliers stay plain. */
   const labels = new Map(companies.map(c => [c.id, withCity(c.name, c.city)]))
   const money = role === 'admin' || role === 'sales'
-  const [clarifications, inquiries, legs, orders, receivables, monthEnd] = await Promise.all([
+  const [clarifications, inquiries, legs, orders, receivables, monthEnd, costs, invoices, recurring] = await Promise.all([
     loadClarifications(open),
     loadInquiries(open, names),
     loadLegs(names, labels),
     loadOrders(role, names),
     money ? loadReceivables(labels) : Promise.resolve<ReceivableFact[]>([]),
     role === 'admin' ? loadMonthEnd(today) : Promise.resolve<MonthEndFact | null>(null),
+    role === 'admin' ? loadCosts() : Promise.resolve<CostFact[]>([]),
+    money ? loadInvoiceFacts(today) : Promise.resolve<InvoiceFact[]>([]),
+    role === 'admin' ? loadRecurringFacts(today) : Promise.resolve<RecurringFact[]>([]),
   ])
   const userRows = unwrap(users)
   return {
@@ -341,6 +435,9 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
     orders,
     receivables,
     monthEnd,
+    costs,
+    invoices,
+    recurring,
     snoozes,
     roles: Object.fromEntries(userRows.map(u => [u.id, u.role as Role])),
     jobTitle: userRows.find(u => u.id === user.id)?.job_title ?? null,
@@ -412,10 +509,12 @@ export async function getLegDraft(legId: string): Promise<LegDraftData> {
 
 export interface PaymentDraftData {
   customerPo: string | null
-  contact: { name: string; phone: string | null } | null
+  contact: { name: string; phone: string | null; email?: string | null; jobTitle?: string | null } | null
   /** The earliest invoice that is still open, and every invoice of the order with the reminder fields before a stamp. */
   invoiceNumber: string | null
   invoiceDate: string | null
+  /** Every invoice number on the order, oldest first (the reminder names them all when there are two or more). */
+  invoiceNumbers?: string[]
   invoices: Array<{ id: string; lastRemindedOn: string | null; reminderCount: number }>
 }
 
@@ -428,15 +527,16 @@ export async function getPaymentDraft(orderId: string): Promise<PaymentDraftData
   ])
   const o = unwrap(order)
   const inv = unwrap(invoices) ?? []
-  const contactRes = o?.contact_id ? await db.from('contacts').select('name, phone').eq('id', o.contact_id).maybeSingle() : null
-  const contactRow = contactRes ? unwrap<{ name: string; phone: string | null } | null>(contactRes) : null
-  const contact: { name: string; phone: string | null } | null = contactRow ? { name: contactRow.name, phone: contactRow.phone } : null
+  const contactRes = o?.contact_id ? await db.from('contacts').select('name, phone, email, job_title').eq('id', o.contact_id).maybeSingle() : null
+  const contactRow = contactRes ? unwrap<{ name: string; phone: string | null; email: string | null; job_title: string | null } | null>(contactRes) : null
+  const contact: PaymentDraftData['contact'] = contactRow ? { name: contactRow.name, phone: contactRow.phone, email: contactRow.email, jobTitle: contactRow.job_title } : null
   const first = inv[0]
   return {
     customerPo: o?.customer_po_number ?? null,
     contact,
     invoiceNumber: first?.number ?? null,
     invoiceDate: first?.invoice_date ?? null,
+    invoiceNumbers: inv.map(i => i.number).filter((n): n is string => Boolean(n)),
     invoices: inv.map(i => ({ id: i.id, lastRemindedOn: i.last_reminded_on, reminderCount: num(i.reminder_count) })),
   }
 }

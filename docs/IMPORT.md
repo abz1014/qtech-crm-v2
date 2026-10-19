@@ -37,7 +37,10 @@ import/
     load/guard.ts           decides whether the loader may talk to a database
     load/loader.ts          delete the previous run's rows, insert, purge its audit rows, read back
     report/report.ts        report.md, report.json, one CSV per review list
+    i06/checklist.ts        the section 8 assumptions as confirmed / adjusted / unknown, from a dump
     mappings.ts             reads the reviewed lists
+  dump/dump.sql            the read-only script the owner runs in the old project's SQL editor
+  dump/make-old-schema.mjs a stand-in old schema from a dump (for the load test of dump.sql)
   mappings/*.template.csv   the lists the owner fills in (names only)
   fixtures/legacy/          a SYNTHETIC copy of the old database (dump.json + a receipt file)
   fixtures/mappings/        the reviewed lists for the fixtures
@@ -114,13 +117,11 @@ rebuilds `import/fixtures/legacy/dump.json` from `build-legacy-dump.mjs`.
 
 ## I06 and I07: making the dump and the first dry run (owner)
 
-1. Rotate the legacy key (precondition 1). Restore the old project from the dashboard if it has paused.
-2. In the **old** project's SQL editor (a read-only query; it changes nothing), run the query below and save the result as
-   `import/.data/dump/dump.json`. It leaves out `users.password` on purpose. If the editor cannot return one value that large,
-   run it once per table (change the outer object to hold one table) and merge the pieces; `parseDump` only needs `{ "tables": { ... } }`.
-   A table that does not exist in the old project (for example `documents`) is simply deleted from the list.
+1. Rotate the legacy key (precondition 1; the steps are in "Rotating the old project's keys" below). Restore the old project from the dashboard if it has paused.
+2. In the **old** project's SQL editor, paste and run `import/dump/dump.sql` (read-only, one SELECT; see "The dump script" below) and save the
+   result as `import/.data/dump/dump.json`.
 3. Download the `gst-receipts` bucket's files from the old dashboard into `import/.data/dump/storage/gst-receipts/<same path>`.
-4. **I06:** answer the assumption checklist (below) from the dump and the report.
+4. **I06:** run `npm run import:i06 -- --dump import/.data/dump` (see "The I06 checklist" below) and settle every adjusted or unknown item.
 5. Fill in the mapping files (copy each `import/mappings/*.template.csv` to the name without `.template`, in `import/.data/mappings/`
    for now): `users.csv` first (it names who is who), then the rest as the review
    lists suggest.
@@ -138,43 +139,84 @@ unset IMPORT_SERVICE_ROLE_KEY
 The program refuses unless the money reconciles (old = new + left out on every line), and exits non-zero if the read-back
 disagrees. Dry runs 2 and 3 (I09) are the same command; two in a row must produce no new review items and unchanged totals.
 
-### The query for the dump
+### The dump script
 
-```sql
-select json_build_object(
-  'meta', json_build_object('made_on', now(), 'note', 'dump for the v2 import'),
-  'tables', json_build_object(
-    'users',               (select coalesce(json_agg(t), '[]'::json) from (select id, name, email, role from public.users) t),
-    'clients',             (select coalesce(json_agg(t), '[]'::json) from public.clients t),
-    'prospects',           (select coalesce(json_agg(t), '[]'::json) from public.prospects t),
-    'vendors',             (select coalesce(json_agg(t), '[]'::json) from public.vendors t),
-    'rfqs',                (select coalesce(json_agg(t), '[]'::json) from public.rfqs t),
-    'rfq_line_items',      (select coalesce(json_agg(t), '[]'::json) from public.rfq_line_items t),
-    'supplier_inquiries',  (select coalesce(json_agg(t), '[]'::json) from public.supplier_inquiries t),
-    'supplier_quotes',     (select coalesce(json_agg(t), '[]'::json) from public.supplier_quotes t),
-    'orders',              (select coalesce(json_agg(t), '[]'::json) from public.orders t),
-    'order_engineers',     (select coalesce(json_agg(t), '[]'::json) from public.order_engineers t),
-    'gst_invoices',        (select coalesce(json_agg(t), '[]'::json) from public.gst_invoices t),
-    'invoices',            (select coalesce(json_agg(t), '[]'::json) from public.invoices t),
-    'payment_records',     (select coalesce(json_agg(t), '[]'::json) from public.payment_records t),
-    'order_payments',      (select coalesce(json_agg(t), '[]'::json) from public.order_payments t),
-    'supplier_payments',   (select coalesce(json_agg(t), '[]'::json) from public.supplier_payments t),
-    'payables',            (select coalesce(json_agg(t), '[]'::json) from public.payables t),
-    'payable_payments',    (select coalesce(json_agg(t), '[]'::json) from public.payable_payments t),
-    'expenses',            (select coalesce(json_agg(t), '[]'::json) from public.expenses t),
-    'recurring_expenses',  (select coalesce(json_agg(t), '[]'::json) from public.recurring_expenses t),
-    'follow_up_actions',   (select coalesce(json_agg(t), '[]'::json) from public.follow_up_actions t),
-    'quarterly_targets',   (select coalesce(json_agg(t), '[]'::json) from public.quarterly_targets t),
-    'documents',           (select coalesce(json_agg(t), '[]'::json) from public.documents t)
-  ),
-  'storage', (select coalesce(json_agg(json_build_object('bucket', bucket_id, 'path', name,
-                'size_bytes', (metadata ->> 'size')::bigint, 'mime_type', metadata ->> 'mimetype')), '[]'::json)
-              from storage.objects where bucket_id = 'gst-receipts')
-) as dump;
+`import/dump/dump.sql` is one script: paste the whole file into the old project's SQL editor and run it. It is a single `SELECT`
+(a test checks that it contains no statement that writes or changes anything) and returns one row with one column, `dump`: the
+JSON the reader expects.
+
+* It reads each table with `to_jsonb(row)`, so whatever columns the old table really has are the columns you get. Nothing is named,
+  so a column that drifted into production without a migration comes through, and a missing one cannot stop the script.
+* A table the old project does not have comes out empty and is listed under `meta.tables_missing`.
+* `users.password` (a plain-text password in the old schema) is removed. `employees`, `attendance`, `follow_up_actions`,
+  `cost_lines` and `audit_log` are counted, not copied (HR data and machine-generated rows the new model drops).
+* `catalog` records the shape of the old database for the I06 checklist: columns and types, check and unique constraints, triggers,
+  functions, views, cron jobs (name and schedule only), login providers (counts only), storage buckets. No keys, passwords, e-mail
+  addresses or cron command text.
+* If the result is too big for the editor, edit the line `'all'::text as parts` to `'a'`, run, save as `dump.json`; change it to
+  `'b'`, run, save as `dump-b.json` in the same folder. The reader joins them. (A few hundred orders is well under a megabyte, so one
+  run is normal.)
+
+Save the cell's value as `import/.data/dump/dump.json` (in the results grid, click the cell and use the copy button, or export
+the result as JSON). Never commit it. The load test in `db.yml` proves the script: it builds a stand-in "old" schema from the
+fixtures in the CI database, runs `dump.sql` against it in a read-only transaction, reads the output with the real reader, and
+checks that the transform of it equals the transform of the fixtures.
+
+### The I06 checklist
+
+```
+npm run import:i06 -- --dump import/.data/dump
 ```
 
-(The query was written from the old repository's types and migrations, not run against the live schema. If a column or table is
-missing, the editor says so; fix the line.)
+prints each of the 25 section 8 assumptions as **confirmed** (the data agrees), **adjusted** (the data disagrees; the evidence says
+what and what the import does about it) or **unknown** (the dump cannot tell; the evidence says what to check by hand: the Postgres
+version of the new project, the free-tier slot, the exchange-rate terms), each with the numbers behind it, and writes `i06.md` next to
+the report. Every item must end confirmed, or adjusted with the fix linked, before I07.
+
+### Performance
+
+`import/test/perf.test.ts` (in `ci.yml`) builds a dump 50 times the size of the fixture (about 7,000 source rows), runs the whole
+transform, the report and the checklist, and fails if that takes more than two minutes. It takes well under a second today; the
+budget is there to catch an accidental quadratic loop.
+
+## Rotating the old project's keys (do this before any extraction)
+
+Why: the old project's `service_role` key sat in the old repository's history. Anyone who ever saw it can read and change all the
+old data. Rotating makes every old key stop working. It takes about 15 minutes and you can do it in the same sitting as the
+dump. **Do it with the old CRM's users warned**: it signs everyone out.
+
+**Before you start**
+1. Tell the team the old CRM will sign everyone out for a few minutes. Nobody should be mid-entry.
+2. Open the old project's dashboard (the one that is not `yafbphagorydbitfgfmg`) and the old CRM's project in Vercel in two tabs.
+3. If the old project has paused, press Restore project and wait until it says Healthy.
+
+**In the Supabase dashboard (old project)**
+There are two layouts; use the one you see.
+* *If Project Settings has an **API Keys** page with two tabs, "Publishable and secret API keys" and "Legacy anon, service_role API keys":*
+  1. Open Project Settings, API Keys.
+  2. On the "Publishable and secret API keys" tab, create a publishable key and a secret key. Copy the publishable key; you will give it to Vercel below. You do not need the secret key at all.
+  3. On the "Legacy anon, service_role API keys" tab, switch the legacy keys off (Disable). This is what kills the old leaked `service_role` and `anon` keys.
+  4. If the page also offers to change the JWT signing keys or "JWT secret", do it as well: open Project Settings, JWT Keys (or API, JWT Settings), and Generate a new secret / rotate. This signs everyone out and makes any key signed with the old secret useless.
+* *If Project Settings, API shows "JWT Settings" and "Project API keys" on one page:*
+  1. Open Project Settings, API.
+  2. Under JWT Settings, press Generate a new JWT secret and confirm. Supabase issues a new `anon` and a new `service_role` key at the same time; the old ones stop working.
+  3. Copy the new `anon` key (the "public" one). Do not copy or save the `service_role` key anywhere.
+
+**What stops working, and what to fix**
+* **Everyone is signed out of the old CRM.** Their sessions were signed with the old secret. They sign in again with the same e-mail and password. Nothing is lost.
+* **The old CRM on Vercel stops loading data** until it has the new anon (or publishable) key. In Vercel: the old CRM's project, Settings, Environment Variables, find the variable that holds the Supabase anon key (it is named like `VITE_SUPABASE_ANON_KEY`; the URL variable does not change), edit its value to the new key for Production (and Preview if it has one), save, then Deployments, the latest one, the three dots, Redeploy. The key is baked into the build, so a redeploy is required.
+* **Edge Functions of the old project** (for example the user-creation function) read the project's keys from the platform, so they pick up the new ones. If creating a user from the Team page fails afterwards, redeploy that function from the dashboard (Edge Functions, the function, Deploy).
+* **Your own copies**: any local `.env` file of the old repo, any script or note that holds the old keys. Delete the old keys there; they no longer work and must not be reused. Never paste the new `service_role` key into a chat, an issue, or this repository.
+* **The import does not need any key**: the dump is made in the SQL editor, which uses your dashboard login.
+
+**Check that it worked** (five minutes)
+1. *The old keys are dead.* In PowerShell, with the old project URL and an OLD anon key you still have (from a note or the old Vercel settings screen history):
+   `Invoke-WebRequest -Uri "https://<old-project-ref>.supabase.co/rest/v1/clients?select=id&limit=1" -Headers @{ apikey = "<old anon key>"; Authorization = "Bearer <old anon key>" }`
+   It must fail with 401 (Invalid API key or JWT). Do the same with the old `service_role` key if you have it: also 401.
+2. *The new key works.* The same request with the new anon key must NOT be 401. It returns an empty list `[]` (or 401/permission-style "no access" for a table that anonymous users may not read, which is also correct): the point is that it is not "Invalid API key".
+3. *The old CRM works again.* Open the old CRM in a private window, sign in, and open the RFQs page: data loads. If it shows an empty app or "Invalid API key", the Vercel variable or the redeploy was missed.
+4. *Nothing else still uses the old key.* In the old project's dashboard, Logs, API Edge / Postgres logs: after the rotation there should be no requests with the old key succeeding.
+5. Write the date and that all four checks passed in the I08 sign-off note in `docs/`.
 
 ## What the owner reviews (I08)
 

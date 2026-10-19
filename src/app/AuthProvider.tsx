@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { SessionContext, SignInNoticeContext, type SessionState, type SessionUser, type SignInNotice } from '@/app/session'
 import { getSupabase, onApiActivity } from '@/lib/supabase'
+import { forgetDeviceCaptures } from '@/lib/capture/forget'
 
 /** A person who is signed in to Auth but has no active users row has been deactivated (or never set up). */
 type Resolved = { user: SessionUser } | { user: null }
@@ -86,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!deactivated || !supabase) return
     setDeactivated(true)
-    void supabase.auth.signOut()
+    void forgetDeviceCaptures().finally(() => void supabase.auth.signOut())
   }, [deactivated, supabase])
 
   const { state, notice } = useMemo((): { state: SessionState; notice: SignInNotice } => {

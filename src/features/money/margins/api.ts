@@ -8,7 +8,7 @@ import type { MarginRow, MarginState } from '@/features/money/margins/model'
 export async function listOrderMargins(): Promise<MarginRow[]> {
   const db = requireSupabase()
   const [money, orders] = await Promise.all([
-    fetchAll((from, to) => db.from('v_order_money').select('order_id, order_number, company_id, basis, net_sale, actual_cost, expected_cost, margin, margin_state').range(from, to)),
+    fetchAll((from, to) => db.from('v_order_money').select('order_id, order_number, company_id, basis, net_sale, actual_cost, expected_cost, margin, margin_state, payment_state').range(from, to)),
     fetchAll((from, to) => db.from('orders').select('id, ordered_on, cancelled_on').range(from, to)),
   ])
   const live = new Map(orders.filter(o => !o.cancelled_on).map(o => [o.id, o.ordered_on]))
@@ -32,6 +32,7 @@ export async function listOrderMargins(): Promise<MarginRow[]> {
         actualCost: Number(m.actual_cost ?? 0),
         margin: m.margin == null ? null : Number(m.margin),
         state,
+        paymentState: m.payment_state ?? undefined,
       }
     })
 }

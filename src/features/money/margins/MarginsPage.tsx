@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { Info, Layers } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Info, Layers, ListFilter } from 'lucide-react'
 import { orderRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
@@ -11,9 +11,10 @@ import { Money } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { Tag } from '@/ui/Tag'
+import { ToggleButton } from '@/ui/ToggleButton'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { useOrderMargins } from '@/features/money/hooks'
-import { marginNote, marginTotals, sortMargins, type MarginRow } from '@/features/money/margins/model'
+import { isPaidProvisional, marginNote, marginTotals, sortMargins, type MarginRow } from '@/features/money/margins/model'
 
 /*
  * Money > Margins (g2-money board "Admin: order margins"; M04). Whole-life margin per order, from v_order_money. Admin only.
@@ -77,8 +78,13 @@ function MarginRowView({ r }: { r: MarginRow }) {
 
 export function MarginsPage() {
   const q = useOrderMargins(true)
-  const rows = useMemo(() => sortMargins(q.data ?? []), [q.data])
-  const totals = useMemo(() => marginTotals(rows), [rows])
+  const [params] = useSearchParams()
+  // Today's "Costs not marked complete" item opens this list filtered to the orders it counts.
+  const [onlyPaid, setOnlyPaid] = useState(() => params.get('filter') === 'paid-provisional')
+  const all = useMemo(() => sortMargins(q.data ?? []), [q.data])
+  const totals = useMemo(() => marginTotals(all), [all])
+  const paidCount = useMemo(() => all.filter(isPaidProvisional).length, [all])
+  const rows = useMemo(() => (onlyPaid ? all.filter(isPaidProvisional) : all), [all, onlyPaid])
   return (
     <MoneyFrame active="margins">
       <section aria-labelledby="margins-h" className="min-w-0 rounded border bg-surface">
@@ -91,6 +97,10 @@ export function MarginsPage() {
             Whole life of the order
           </span>
           <p className="text-sm text-fg-muted">Net sale less expenses tagged to the order. GST is outside both sides.</p>
+          <span className="flex-1" />
+          <ToggleButton pressed={onlyPaid} onPressedChange={setOnlyPaid} icon={ListFilter}>
+            Paid, costs provisional <span className="num">{paidCount}</span>
+          </ToggleButton>
         </header>
         {q.isPending ? (
           <div className="grid gap-3 p-5" aria-busy="true" aria-label="Loading order margins">
@@ -112,7 +122,7 @@ export function MarginsPage() {
               Nothing was changed. Check your connection and try again.
             </Banner>
           </div>
-        ) : rows.length === 0 ? (
+        ) : all.length === 0 ? (
           <EmptyState title="No order to show yet">An order appears here as soon as it is made, with its margin once costs are paid.</EmptyState>
         ) : (
           <div>
@@ -129,6 +139,7 @@ export function MarginsPage() {
                 <MarginRowView key={r.orderId} r={r} />
               ))}
             </ul>
+            {onlyPaid && rows.length === 0 ? <p className="px-5 py-6 text-sm text-fg-muted">Every paid order has its costs marked complete.</p> : null}
             <div className={`grid grid-cols-2 gap-x-4 gap-y-1 border-t bg-sunken px-5 py-3 text-sm font-medium md:gap-4 ${COLS}`} data-testid="margin-totals">
               <span className="col-span-2 md:col-span-1">
                 Costs complete · <span className="num">{totals.orders}</span> {totals.orders === 1 ? 'order' : 'orders'}
@@ -150,7 +161,7 @@ export function MarginsPage() {
           </div>
         )}
       </section>
-      {rows.length > 0 ? (
+      {all.length > 0 ? (
         <div className="flex items-start gap-3 rounded bg-sunken px-5 py-4 text-sm text-fg-2">
           <Icon icon={Info} size="sm" className="mt-[2px] shrink-0 text-fg-muted" />
           <p className="max-w-[62ch] text-pretty">{marginNote(totals)}</p>

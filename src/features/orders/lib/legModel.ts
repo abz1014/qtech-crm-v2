@@ -3,9 +3,9 @@
 // A leg is Mark placed, then Delivered today. supplier_orders.received_on stays in the database and is set by the app to the delivered
 // date, whenever delivered is stamped or edited; expected_on is suggested from placed_on plus the lead time.
 
-import { suggestExpected } from '@/features/orders/lib/leadTime'
+import { defaultExpected } from '@/features/orders/lib/leadTime'
 
-export { suggestExpected, type ExpectedSuggestion } from '@/features/orders/lib/leadTime'
+export { defaultExpected, suggestExpected, type ExpectedSuggestion } from '@/features/orders/lib/leadTime'
 
 export interface LegDates {
   placedOn: string | null
@@ -32,11 +32,11 @@ export function nextStamp(d: LegDates): LegStamp | null {
 export type LegPatch = Partial<{ placed_on: string | null; expected_on: string | null; received_on: string | null; delivered_on: string | null }>
 
 /** What a stamp writes. `lead` is the leg's quote-line lead times, used to suggest expected_on once, when it is empty. */
-export function stampPatch(step: LegStep, d: LegDates, today: string, lead: ReadonlyArray<string | null | undefined>): LegPatch {
+export function stampPatch(step: LegStep, d: LegDates, today: string, lead: ReadonlyArray<string | null | undefined>, medianDays: number | null = null): LegPatch {
   if (step === 'place') {
     const patch: LegPatch = { placed_on: today }
     if (!d.expectedOn) {
-      const s = suggestExpected(today, lead)
+      const s = defaultExpected(today, lead, medianDays)
       if (s) patch.expected_on = s.on
     }
     return patch
@@ -55,11 +55,11 @@ export function expectedAfterIssue(leg: { placedOn: string | null; expectedOn: s
 }
 
 /** A hand edit of one date. Editing delivered moves received_on with it (clearing delivered clears both); the other dates are alone. */
-export function editPatch(field: keyof LegDates, value: string | null, d: LegDates, lead: ReadonlyArray<string | null | undefined>): LegPatch {
+export function editPatch(field: keyof LegDates, value: string | null, d: LegDates, lead: ReadonlyArray<string | null | undefined>, medianDays: number | null = null): LegPatch {
   if (field === 'placedOn') {
     const patch: LegPatch = { placed_on: value }
     if (value && !d.expectedOn) {
-      const s = suggestExpected(value, lead)
+      const s = defaultExpected(value, lead, medianDays)
       if (s) patch.expected_on = s.on
     }
     return patch

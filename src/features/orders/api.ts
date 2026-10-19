@@ -1,7 +1,9 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { TableUpdate, ViewRow } from '@/features/dbTypes'
 import type { ConvertPayloadLine } from '@/features/orders/lib/convert'
-import { mapRankRows, type RankedQuote, type RankRow } from '@/features/orders/lib/ranking'
+import { medianDeliveryDays } from '@/features/orders/lib/leadTime'
+import { mapRankRows, type RankedQuote } from '@/features/orders/lib/ranking'
+import type { RankRow } from '@/features/rfqs/lib/ranking/reasons'
 import type { LegPatch } from '@/features/orders/lib/legModel'
 
 /*
@@ -114,6 +116,8 @@ export interface OrderItemRow {
   number: number
   description: string
   brandName: string | null
+  /** The model words the line was matched on (order_items.model_tokens), upper-cased for the sub-line. */
+  model: string | null
   qty: number
   unit: string | null
   isService: boolean
@@ -127,7 +131,7 @@ export interface OrderItemRow {
 
 export async function listOrderItems(orderId: string, money: boolean): Promise<OrderItemRow[]> {
   const db = requireSupabase()
-  const base = 'id, position, description, brand_id, qty, unit, is_service, supplier_order_id, rfq_item_id, created_at'
+  const base = 'id, position, description, brand_id, model_tokens, qty, unit, is_service, supplier_order_id, rfq_item_id, created_at'
   const rows = unwrap(
     await db
       .from('order_items')
@@ -145,6 +149,7 @@ export async function listOrderItems(orderId: string, money: boolean): Promise<O
     number: i + 1,
     description: r.description as string,
     brandName: r.brand_id ? (names.get(r.brand_id as string) ?? null) : null,
+    model: Array.isArray(r.model_tokens) && r.model_tokens.length > 0 ? (r.model_tokens as string[]).join(' ').toUpperCase() : null,
     qty: Number(r.qty),
     unit: (r.unit as string | null) ?? null,
     isService: Boolean(r.is_service),
@@ -305,6 +310,8 @@ export interface ConvertInput {
   items: ConvertPayloadLine[]
   customerPo: string | null
   paymentTermsDays: number | null
+  /** orders.needs_commissioning: the plan-commissioning and engineer-done rules depend on it. */
+  needsCommissioning?: boolean
 }
 
 export async function convertRfqToOrder(input: ConvertInput): Promise<string> {
@@ -314,6 +321,7 @@ export async function convertRfqToOrder(input: ConvertInput): Promise<string> {
     p_items: input.items as unknown as never,
     ...(input.customerPo ? { p_customer_po_number: input.customerPo } : {}),
     ...(input.paymentTermsDays !== null ? { p_payment_terms_days: input.paymentTermsDays } : {}),
+    ...(input.needsCommissioning !== undefined ? { p_needs_commissioning: input.needsCommissioning } : {}),
   })
   if (error) throw error
   return (data as string | null) ?? input.orderId
@@ -570,6 +578,20 @@ export async function addOrderItem(l: NewLine): Promise<void> {
   if (error) throw error
 }
 
+/** The number the next order will most likely take (the highest so far plus one), for the convert dialog's "Creates order ORD-0043". The issued number is the database's. */
+export async function getNextOrderNumber(): Promise<number> {
+  const rows = unwrap(await requireSupabase().from('orders').select('number').order('number', { ascending: false }).limit(1))
+  return (rows[0]?.number ?? 0) + 1
+}
+
+/** Median days from placed to delivered over the supplier's finished legs (null with fewer than two): the default expected date's second source. */
+export async function getSupplierMedianDays(supplierId: string): Promise<number | null> {
+  const rows = unwrap(
+    await requireSupabase().from('supplier_orders').select('placed_on, delivered_on').eq('supplier_id', supplierId).not('placed_on', 'is', null).not('delivered_on', 'is', null).order('delivered_on', { ascending: false }).limit(50),
+  )
+  return medianDeliveryDays(rows.map(r => ({ placedOn: r.placed_on, deliveredOn: r.delivered_on })))
+}
+
 export async function addOrderLeg(input: { id: string; orderId: string; supplierId: string; currency: string }): Promise<void> {
   const { error } = await requireSupabase().from('supplier_orders').insert({ id: input.id, order_id: input.orderId, supplier_id: input.supplierId, currency: input.currency })
   if (error && error.code !== '23505') throw error
@@ -587,16 +609,32 @@ export async function listSupplierChoices(): Promise<Array<{ id: string; name: s
   const stats = unwrap(await db.from('v_supplier_stats').select('supplier_id'))
   const ids = stats.map(s => s.supplier_id).filter((i): i is string => Boolean(i))
   if (ids.length === 0) return []
-  const [companies, legs] = await Promise.all([
-    db.from('companies').select('id, name').in('id', ids).order('name'),
-    db.from('supplier_orders').select('supplier_id, currency, created_at').in('supplier_id', ids).not('currency', 'is', null).order('created_at', { ascending: false }).limit(500),
+  // The ids go in the request URL, so ask in chunks: one `in (...)` with every supplier overflows the URL limit (a 400 and an empty
+  // picker) once there are a few hundred suppliers.
+  const chunks: string[][] = []
+  for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100))
+  const [companyRes, legRes] = await Promise.all([
+    Promise.all(chunks.map(c => db.from('companies').select('id, name').in('id', c))),
+    Promise.all(chunks.map(c => db.from('supplier_orders').select('supplier_id, currency, created_at').in('supplier_id', c).not('currency', 'is', null).order('created_at', { ascending: false }).limit(500))),
   ])
   const last = new Map<string, string>()
-  for (const l of unwrap(legs)) if (l.currency && !last.has(l.supplier_id)) last.set(l.supplier_id, l.currency.trim())
-  return unwrap(companies).map(c => ({ id: c.id, name: c.name, lastCurrency: last.get(c.id) ?? null }))
+  for (const l of legRes.flatMap(r => unwrap(r)).sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))) {
+    if (l.currency && !last.has(l.supplier_id)) last.set(l.supplier_id, l.currency.trim())
+  }
+  return companyRes
+    .flatMap(r => unwrap(r))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(c => ({ id: c.id, name: c.name, lastCurrency: last.get(c.id) ?? null }))
 }
 
 // ---------------------------------------------------------------- the orders list (O04)
+
+/** The number beside Orders in the top bar: one head request that counts the active orders (v_order_state is readable by every staff role, and carries no money). */
+export async function countActiveOrders(): Promise<number | null> {
+  const { count, error } = await requireSupabase().from('v_order_state').select('order_id', { count: 'exact', head: true }).eq('lifecycle', 'active')
+  if (error) throw error
+  return count ?? null
+}
 
 export interface OrderListRow {
   id: string

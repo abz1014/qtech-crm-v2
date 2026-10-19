@@ -43,3 +43,50 @@ export function suggestExpected(placedOn: string | null, leadTimes: ReadonlyArra
   const on = addDays(placedOn, best.days)
   return on ? { on, from: best.from, days: best.days } : null
 }
+
+/** What a leg's expected date falls back to when no quoted lead time gives one and the supplier has no delivery record. */
+export const FALLBACK_EXPECTED_DAYS = 30
+
+export interface DefaultExpected extends ExpectedSuggestion {
+  source: 'lead_time' | 'supplier_median' | 'fallback'
+  /** Plain words for the hint under the date: "from lead time 2 wks", "this supplier usually takes 18 days", "30 days assumed". */
+  label: string
+}
+
+/**
+ * The expected date every placed leg should carry, so "goods late" can fire on it: placed_on plus the quoted lead time (the longest on the
+ * leg's quote lines), else the supplier's median days from placed to delivered, else 30 days. Always returns a date when placed_on is known.
+ * The person can edit it; this is only the starting point.
+ */
+export function defaultExpected(placedOn: string | null, leadTimes: ReadonlyArray<string | null | undefined>, supplierMedianDays: number | null): DefaultExpected | null {
+  if (!placedOn) return null
+  const lead = suggestExpected(placedOn, leadTimes)
+  if (lead) return { ...lead, source: 'lead_time', label: `from lead time ${lead.from}` }
+  const pick =
+    supplierMedianDays !== null && supplierMedianDays > 0
+      ? { days: Math.round(supplierMedianDays), source: 'supplier_median' as const }
+      : { days: FALLBACK_EXPECTED_DAYS, source: 'fallback' as const }
+  const on = addDays(placedOn, pick.days)
+  if (!on) return null
+  return {
+    on,
+    from: '',
+    days: pick.days,
+    source: pick.source,
+    label: pick.source === 'supplier_median' ? `this supplier usually takes ${pick.days} days` : `${pick.days} days assumed, no lead time quoted`,
+  }
+}
+
+/** Median days from placed to delivered over a supplier's finished legs; null with fewer than two to go on. */
+export function medianDeliveryDays(legs: ReadonlyArray<{ placedOn: string | null; deliveredOn: string | null }>): number | null {
+  const days: number[] = []
+  for (const l of legs) {
+    if (!l.placedOn || !l.deliveredOn) continue
+    const d = Math.round((Date.parse(l.deliveredOn) - Date.parse(l.placedOn)) / 86_400_000)
+    if (Number.isFinite(d) && d >= 0) days.push(d)
+  }
+  if (days.length < 2) return null
+  days.sort((a, b) => a - b)
+  const mid = Math.floor(days.length / 2)
+  return days.length % 2 ? days[mid] : Math.round((days[mid - 1] + days[mid]) / 2)
+}

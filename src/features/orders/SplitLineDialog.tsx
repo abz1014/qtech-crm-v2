@@ -23,7 +23,8 @@ import { supplierTargetProblem } from '@/features/orders/lib/splitLine'
 /*
  * "Split line" (O09; g2-ranking-split.html "Order detail: the Split line dialog"). Moves part of one order line to another supplier.
  * split_order_item does the work: the new line copies the description, brand, unit, selling price and GST rate, takes the chosen supplier's
- * price, and lands on that supplier's leg (the order's existing leg for the supplier and currency, else a new one). Order totals do not change.
+ * price, and lands on that supplier's leg (the order's existing leg for the supplier and currency, else a new one). GST is rounded to whole
+ * rupees per line (DATA_MODEL 2.13, owner decision 2026-10-19), so the order total may move by rounding, about Rs 1 per split.
  *
  * FE-2: Split line on the row (1), choose the supplier (2), Split line in the dialog (3), and the quantity typed.
  * Where the order came from an RFQ the choices are that item's ranked quotes (the same rows the convert dialog shows) and the order's other
@@ -241,7 +242,7 @@ export function SplitLineDialog({
               <span>
                 <b className="font-medium">Result:</b> {resultText}
               </span>
-              <span className="text-xs text-fg-muted">The new line copies the description, brand, unit, selling price and GST rate. Order totals do not change.</span>
+              <span className="text-xs text-fg-muted">The new line copies the description, brand, unit, selling price and GST rate. Order totals stay the same, give or take Rs 1 of GST rounding.</span>
             </div>
           ) : null}
 

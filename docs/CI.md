@@ -9,7 +9,7 @@ so runs stay fast and quick to read: a docs-only push runs nothing.
 | `ci.yml` gallery job (visual + axe) | main, manual, or when `src/ui`, `src/dev`, `src/index.css`, `tailwind.config.ts`, `e2e/gallery*`, `e2e/__screenshots__`, `playwright.config.ts`, `package*.json` change | about 4 min |
 | `db.yml` | every push, only if `supabase/**`, `src/types/database.ts`, `import/**`, `package*.json` or the workflow changed (its last step is the import load test, I01) | about 6 min |
 | `functions.yml` | every push; paths `supabase/functions/**`, `supabase/migrations/**` | about 6 min |
-| `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | every push, path-gated; one stack boot, only suites whose paths changed | about 8 to 14 min |
+| `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | every push, path-gated; up to 5 parallel shards, each with its own stack boot, only suites whose paths changed; the final job `E2E` is the one result | about 7 min on a full run (was 20 to 40) |
 | `remote.yml`, `deploy-functions.yml` | manual only, owner approval | not part of the budget |
 | `backup.yml` (R13) | nightly 20:30 UTC, drill weekly, manual; `backup` environment, main only | about 3 min nightly, 15 min drill |
 | `smoke.yml` (S16) | nightly 21:17 UTC (02:17 Karachi), manual; `smoke` environment (Part 2 secrets only); read-only against the live project | about 1 min |
@@ -24,14 +24,24 @@ Rules applied everywhere:
 
 ## e2e.yml
 
-A `changes` job (`dorny/paths-filter@v3.0.2`) decides per suite. Shared paths (`src/**`, `e2e/support/**`, migrations, seed, config,
-`playwright.config.ts`, `package*.json`, the workflow) run every suite; `e2e/auth/**`, `e2e/companies/**`, `e2e/rfqs/board.spec.ts`,
-`intake.spec.ts`, `detail.spec.ts`, `memory.spec.ts`, `quotation.spec.ts` (suite `rfq-quotation`, which also installs poppler to read and render the stored PDFs) `e2e/today/**`, `e2e/money-books/**` (suite `money-books`: M01, M02), `e2e/money-books/**` (suite `money-books`: M01, M02), `e2e/month-end/**` (suite `month-end`, M10 and M05: the checklist, the six reports and their CSV, close and reopen with the closed-month sentence, role access), `e2e/expenses/**` (suite `expenses`, M03 and M11: the Add expense dialog, burst entry, recurring, the closed-month refusal, role access), `e2e/search/**`, `e2e/bank/**` (suite `bank`, M12: the bank tick, role access, closed-month ticking), `e2e/reports/**` (suite `reports`: P01, the four report views as admin, sales and engineer, with the network-log money check), `e2e/orders/**` (suite `orders`, which also installs poppler to read and render the stored supplier PO PDFs) and `e2e/settings/**` (suite `settings-admin`) run just their own. Then ONE job starts Supabase once, builds once, and runs the chosen suites
-one after another, resetting the database between them.
+Suites are defined in ONE file, `.github/e2e-suites.yml`: each key is a Playwright project, its paths say when it runs, an optional `# weight=N`
+(rough seconds) balances shards. The `shared` key (`src/**`, `e2e/support/**`, migrations, seed, config, `playwright.config.ts`, `package*.json`, the workflow,
+this file, `scripts/ci/e2e-*`) runs every suite; anything else runs just the suites whose own paths changed. `dorny/paths-filter` reads that file, then
+`scripts/ci/e2e-matrix.py` packs the chosen suites into up to 5 shards (longest first, about 200 s of tests each). Every shard is its own job
+(`E2E shard N`): it boots its own Supabase stack, builds once, and runs its suites one after another with `supabase db reset` between them
+(`scripts/ci/e2e-run.sh`; a failing suite does not stop the others, the shard fails at the end). A final job named `E2E` needs all shards and is the single
+result to read or require (green also when no suite needed to run). Reports upload per shard as `playwright-e2e-shard-N`.
+
+Suites defined there include `month-end` (M10, M05: the checklist, the six reports and their CSV, close and reopen, role access) next to the ones named in `playwright.config.ts`.
+
+Why shards: a stack boot is about 80 s and every reset about 27 s, but the tests themselves are about 8 min in total, so running them in
+5 parallel jobs (free on a public repo) cuts a full run from 20+ min to about 7. Suites still run with `E2E_SUITE=db` (one worker, one database per stack), so tests are unchanged.
 
 The `capture` suite (R22, `e2e/capture/`) is a database suite like the others (reset, then the same build) but runs with service workers allowed, because the Android share target is a POST the worker answers. The `pwa` suite (R21, `e2e/pwa/`) needs no database and no reset: it reuses the same production build to check the manifest, the service worker, its shell-only precache, offline open and Chrome's installability. It is the only project with service workers allowed. Lighthouse is not run (version 12 dropped the PWA audit); Chrome's own installability check replaces it.
 
-Add a suite: a project in `playwright.config.ts`, a filter and an output in `e2e.yml`, a step.
+Add a suite: a project in `playwright.config.ts` (`testMatch`, viewport and so on), and ONE key in `.github/e2e-suites.yml` named exactly like the project, with its paths and a `# weight=`. Nothing in `e2e.yml` changes. (A suite needing extra tools, like poppler, is added by name in `scripts/ci/e2e-run.sh`.)
+The `journeys` suite (P03, `e2e/journeys/`) is the regression net: three whole working days, one spec per role (sales: a pasted enquiry to a payment on the books; engineer: Today to delivered, with a network-log check that no money is ever requested or returned; admin: burst expenses, bank tick, margins, close and reopen a month), each holding every step to its FE-2 interaction count. It runs whenever `src/**` or any other shared path changes (the `all` rule above), or when `e2e/journeys/**` changes, after its own database reset, and installs poppler to read the stored PDFs. Each role signs in once and the saved session is reused (`e2e/journeys/support.ts`). A count over its target is reported as a soft failure naming the step, the count and the target.
+
 Locally, several at once: `E2E_SUITE=db npx playwright test --project=auth --project=companies`.
 
 ## Forcing a full run

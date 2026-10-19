@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { FileText, MessageSquareWarning, Plus, Receipt, TriangleAlert } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { FileText, MessageSquareWarning, Plus, Receipt, Split, TriangleAlert } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { convertToPaisa, formatAmount, formatPaisa } from '@/lib/money'
@@ -14,9 +14,10 @@ import { useToast } from '@/ui/useToast'
 import { useFxLatest } from '@/features/rfqs/hooks'
 import { toRateTable } from '@/features/rfqs/lib'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
-import { useUpdateLeg } from '@/features/orders/hooks'
+import { useSupplierMedianDays, useUpdateLeg } from '@/features/orders/hooks'
+import { isFreshSplitLeg, splitRfqItemIds } from '@/features/orders/lib/splitGroups'
 import { poChange } from '@/features/orders/lib/poChange'
-import { before, editPatch, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, suggestExpected, type LegDates, type LegPatch } from '@/features/orders/lib/legModel'
+import { before, editPatch, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, defaultExpected, type LegDates, type LegPatch } from '@/features/orders/lib/legModel'
 import { AddLegDialog } from '@/features/orders/AddDialogs'
 import { IssuePoDialog } from '@/features/purchaseOrders/IssuePoDialog'
 import { AddExpenseDialog } from '@/features/money/expenses/ExpenseDialog'
@@ -99,6 +100,7 @@ export function LegsPanel({
               leg={leg}
               letter={legLetter(i)}
               items={items.filter(it => it.legId === leg.id)}
+              fromSplit={isFreshSplitLeg(items.filter(it => it.legId === leg.id), splitRfqItemIds(items), pos.some(p => p.legId === leg.id), leg.placedOn !== null)}
               po={pos.find(p => p.legId === leg.id)}
               money={money}
               isAdmin={isAdmin}
@@ -125,6 +127,7 @@ function Leg({
   leg,
   letter,
   items,
+  fromSplit,
   po,
   money,
   isAdmin,
@@ -140,6 +143,8 @@ function Leg({
   leg: OrderLegRow
   letter: string
   items: OrderItemRow[]
+  /** A8: a new leg that exists for the parts of split items. */
+  fromSplit: boolean
   po: LegPo | undefined
   money: boolean
   isAdmin: boolean
@@ -157,7 +162,11 @@ function Leg({
   const dates: LegDates = { placedOn: leg.placedOn, expectedOn: leg.expectedOn, receivedOn: leg.receivedOn, deliveredOn: leg.deliveredOn }
   const state = legState(dates, today)
   const stamp = nextStamp(dates)
-  const suggestion = suggestExpected(leg.placedOn, leg.leadTimes)
+  const median = useSupplierMedianDays(leg.supplierId)
+  const medianDays = median.data ?? null
+  /** The default expected date for this leg (lead time, else this supplier's usual days, else 30). Dated from today until the leg is placed. */
+  const suggestion = defaultExpected(leg.placedOn ?? today, leg.leadTimes, medianDays)
+  const filled = useRef(false)
   const leadHint = leg.leadTimes.length > 0 ? [...leg.leadTimes].sort((a, b) => b.length - a.length)[0] : null
   const total = legSupplierTotal(items.map(it => ({ qty: it.qty, supplierUnitPrice: it.supplierUnitPrice, isService: it.isService })))
   const ccy = leg.currency
@@ -189,13 +198,13 @@ function Leg({
 
   const doStamp = () => {
     if (!stamp) return
-    const patch = stampPatch(stamp.step, dates, today, leg.leadTimes)
+    const patch = stampPatch(stamp.step, dates, today, leg.leadTimes, medianDays)
     const verb = stamp.step === 'place' ? 'Marked placed' : 'Marked delivered'
     const extra = patch.expected_on ? `expected ${formatDay(patch.expected_on)}, from lead time ${leadHint ?? ''}`.replace(/, from lead time $/, '') : ''
     void run(patch, verb, [leg.supplierName, extra].filter(Boolean).join(' · '))
   }
   const saveDate = (field: keyof LegDates, name: string) => (value: string | null) =>
-    run(editPatch(field, value, dates, leg.leadTimes), value ? `${name} date set` : `${name} date cleared`, leg.supplierName)
+    run(editPatch(field, value, dates, leg.leadTimes, medianDays), value ? `${name} date set` : `${name} date cleared`, leg.supplierName)
 
   const lines = items.map(it => `${it.description} ×${it.qty}`).join(', ')
   const col = (name: string, field: keyof LegDates, hint?: string) => {
@@ -209,12 +218,24 @@ function Leg({
     )
   }
   const expectedHint = leg.expectedOn
-    ? suggestion && suggestion.on === leg.expectedOn
-      ? `from lead time ${suggestion.from}`
+    ? leg.placedOn && suggestion && suggestion.on === leg.expectedOn
+      ? suggestion.label
       : undefined
-    : leadHint
-      ? `suggested from lead time ${leadHint}`
+    : suggestion
+      ? leg.placedOn
+        ? `suggested: ${suggestion.label}`
+        : suggestion.source === 'lead_time'
+          ? `suggested from lead time ${suggestion.from}`
+          : `${suggestion.days} days after it is placed (${suggestion.label})`
       : undefined
+
+  // A leg placed by any route (a PO issued, a date typed, an import-free manual leg) with no expected date gets the default once, so goods late can fire.
+  // It is written as an ordinary edit: the date reads as text and changes on tap, and an Undo is not needed because nothing was replaced.
+  useEffect(() => {
+    if (filled.current || !canEdit || order.imported || !leg.placedOn || leg.expectedOn || leg.deliveredOn || !suggestion || median.isPending) return
+    filled.current = true
+    update.mutate({ id: leg.id, patch: { expected_on: suggestion.on } })
+  }, [canEdit, order.imported, leg.placedOn, leg.expectedOn, leg.deliveredOn, leg.id, suggestion, median.isPending, update])
 
   return (
     <li aria-label={`Leg ${letter}, ${leg.supplierName}`} data-testid={`leg-${letter}`} className="grid gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.5fr)_minmax(0,0.9fr)]">
@@ -234,6 +255,12 @@ function Leg({
           <span data-testid={`leg-${letter}-po`} className={cn('num inline-flex h-5 items-center rounded border px-[6px] text-xs', po ? 'border-line-strong text-fg-2' : 'border-dashed border-line-strong text-fg-muted')}>
             {po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision}` : 'No PO yet'}
           </span>
+          {fromSplit ? (
+            <span data-testid={`leg-${letter}-from-split`} className="inline-flex items-center gap-1 text-xs text-fg-muted">
+              <Split size={12} aria-hidden="true" />
+              New leg from the split
+            </span>
+          ) : null}
           <span className="text-sm text-fg-muted">
             Ref{' '}
             <TapText

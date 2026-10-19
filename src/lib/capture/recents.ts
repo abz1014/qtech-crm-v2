@@ -61,3 +61,13 @@ export function recordOrderVisit(id: string, now = Date.now()): void {
     /* private window: recents are a convenience */
   }
 }
+
+/** Forget the recently opened RFQs and orders on this device (sign-out). */
+export function clearRecents(): void {
+  try {
+    window.localStorage.removeItem(KEY)
+    window.localStorage.removeItem(ORDER_KEY)
+  } catch {
+    /* private window: nothing was kept */
+  }
+}

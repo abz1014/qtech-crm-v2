@@ -136,6 +136,14 @@ export function useAddItem(orderId: string) {
   })
 }
 
+export function useNextOrderNumber(enabled: boolean) {
+  return useQuery({ queryKey: qk.orders.nextNumber(), queryFn: api.getNextOrderNumber, enabled, staleTime: 0, gcTime: 0 })
+}
+
+export function useSupplierMedianDays(supplierId: string | undefined) {
+  return useQuery({ queryKey: qk.orders.supplierMedian(supplierId ?? ''), queryFn: () => api.getSupplierMedianDays(supplierId as string), enabled: Boolean(supplierId), staleTime: 300_000 })
+}
+
 export function useAddLeg(orderId: string) {
   const client = useQueryClient()
   return useMutation({
@@ -154,6 +162,11 @@ export function useResolveBasis(orderId: string) {
 
 export function useSupplierChoices(enabled: boolean) {
   return useQuery({ queryKey: qk.orders.supplierChoices(), queryFn: api.listSupplierChoices, enabled, staleTime: 60_000 })
+}
+
+/** The top-bar Orders count. */
+export function useActiveOrderCount() {
+  return useQuery({ queryKey: qk.orders.activeCount(), queryFn: api.countActiveOrders, staleTime: 60_000 })
 }
 
 /** O04: the orders list. `role` is in the key because the request itself differs by role. */

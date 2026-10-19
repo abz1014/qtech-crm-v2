@@ -18,6 +18,8 @@ export interface LegacyDump {
   storage: StorageObjectMeta[]
   /** Free-text provenance (when and how the dump was made). Never contains credentials. */
   meta: Record<string, unknown>
+  /** The shape of the old database, from dump.sql: row counts of tables not copied, and catalog details. */
+  catalog?: { counts?: Record<string, number>; details?: Record<string, unknown> }
 }
 
 /** Insert order = foreign-key order. Deletion runs in the reverse. */
