@@ -18,8 +18,9 @@ import { NumberInput } from '@/ui/form/NumberInput'
 import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { CategoryPicker } from '@/features/money/expenses/CategoryPicker'
-import { useCategories, useInsertExpenses, useMostUsedCategory, useUploadReceipt } from '@/features/money/expenses/hooks'
+import { useCategories, useInsertExpenses, useMostUsedCategory, useOrderOptions, useUploadReceipt } from '@/features/money/expenses/hooks'
 import { InputTax } from '@/features/money/expenses/InputTax'
+import { OrderTagPicker } from '@/features/money/expenses/OrderTagPicker'
 import {
   PAID_VIA_LABEL,
   burstInserts,
@@ -33,6 +34,7 @@ import {
   showsInputTax,
   type BurstRow,
   type Category,
+  type OrderTagOption,
   type PaidVia,
 } from '@/features/money/expenses/model'
 
@@ -45,11 +47,14 @@ import {
  *
  * The first row's category is the most used in the last 30 days, the date is today, paid via is the category's own.
  * A closed month refuses the whole save; the sentence appears on the rows dated in it and every row keeps what it holds.
+ * The Order cell (audit X1) is optional: a supplier payment typed here with no order is never counted against that order's margin,
+ * so it is one Tab away after the note. Empty is fine; a number or a customer name narrows the list and Tab takes the first match.
  * Below 1024 px the grid becomes a list of cards with a 44 px camera button (the photo is compressed before upload).
  */
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif']
-const GRID = 'grid grid-cols-[28px_128px_minmax(0,1.25fr)_148px_164px_minmax(0,1.4fr)_112px_32px] items-start gap-2 px-6'
+const GRID = 'grid grid-cols-[28px_128px_minmax(0,1.25fr)_148px_164px_minmax(0,1.4fr)_132px_112px_32px] items-start gap-2 px-6'
 
+const NO_ORDERS: readonly OrderTagOption[] = []
 const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 })
 
 interface BurstSheetProps {
@@ -74,6 +79,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
   const compact = useMediaQuery('(max-width: 1023px)')
   const toast = useToast()
   const insert = useInsertExpenses()
+  const orderQ = useOrderOptions(true)
+  const orders: readonly OrderTagOption[] = orderQ.data ?? NO_ORDERS
   const uploadReceipt = useUploadReceipt()
 
   const defaults = useMemo(() => {
@@ -166,15 +173,19 @@ function BurstContent({ onClose }: { onClose: () => void }) {
     if (unsavable.length > 0) {
       // Never save the others and quietly leave this one behind: nothing goes until every filled row has a date and a category.
       const noCategory = unsavable.filter(r => r.categoryText)
+      const noOrder = unsavable.filter(r => r.orderText)
       setBanner(
         noCategory.length > 0
           ? `No category matches "${noCategory[0].categoryText}". Pick one from the list, then save.`
-          : unsavable.length === 1
+          : noOrder.length > 0
+            ? `No order matches "${noOrder[0].orderText}". Pick one from the list or clear the Order cell, then save.`
+            : unsavable.length === 1
             ? 'One row has no valid date. Fix it, then save.'
             : `${unsavable.length} rows have no valid date. Fix them, then save.`,
       )
-      const first = noCategory[0] ?? unsavable[0]
-      requestAnimationFrame(() => bodyRef.current?.querySelector<HTMLElement>(first.categoryText ? `[data-row="${first.id}"] [role="combobox"]` : `[data-row="${first.id}"] [data-cell="date"]`)?.focus())
+      const first = noCategory[0] ?? noOrder[0] ?? unsavable[0]
+      const target = first.categoryText ? '[role="combobox"]' : first.orderText ? '[data-cell="order"]' : '[data-cell="date"]'
+      requestAnimationFrame(() => bodyRef.current?.querySelector<HTMLElement>(`[data-row="${first.id}"] ${target}`)?.focus())
       return
     }
     lock.current = true
@@ -283,7 +294,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
             'grid w-full grid-rows-[auto_auto_minmax(0,1fr)_auto] bg-surface focus:outline-none',
             compact
               ? 'min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto]'
-              : 'mb-10 max-w-[1240px] rounded shadow-modal md:w-[1240px]',
+              : 'mb-10 max-w-[calc(100vw-2rem)] rounded shadow-modal md:w-[1320px]',
           )}
         >
           {compact ? (
@@ -341,6 +352,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                     row={r}
                     index={i + 1}
                     categories={categories}
+                    orders={orders}
                     today={today}
                     onPatch={p => patch(r.id, p)}
                     onKey={e => rowKey(e, r)}
@@ -366,6 +378,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                   <span>Date</span>
                   <span>Paid via</span>
                   <span>Note</span>
+                  <span>Order</span>
                   <span>Receipt photo</span>
                   <span />
                 </div>
@@ -375,6 +388,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                     row={r}
                     index={i + 1}
                     categories={categories}
+                    orders={orders}
                     today={today}
                     onPatch={p => patch(r.id, p)}
                     onKey={e => rowKey(e, r)}
@@ -448,6 +462,7 @@ interface RowProps {
   row: BurstRow
   index: number
   categories: readonly Category[]
+  orders: readonly OrderTagOption[]
   today: string
   onPatch: (p: Partial<BurstRow>) => void
   onKey: (e: React.KeyboardEvent) => void
@@ -460,7 +475,7 @@ interface RowProps {
 
 const defaultEdge = 'border-dashed bg-surface text-fg-2'
 
-function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, count, dateFlushers }: RowProps) {
+function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRemove, count, dateFlushers }: RowProps) {
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const err = row.error
@@ -509,6 +524,13 @@ function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, cou
         ) : null}
       </div>
       <TextField aria-label={`Note, row ${index}`} value={row.note} onChange={e => onPatch({ note: e.target.value })} className="h-[36px]" />
+      <OrderTagPicker
+        orders={orders}
+        value={row.orderId}
+        aria-label={`Order, row ${index}`}
+        onChange={id => onPatch({ orderId: id, orderText: undefined })}
+        onUnmatched={text => onPatch({ orderText: text ?? undefined })}
+      />
       <div>
         {row.photo && !row.photo.error ? (
           <button
@@ -561,7 +583,7 @@ function SheetRow({ row, index, categories, today, onPatch, onKey, onRemove, cou
         <span />
       )}
       {showsInputTax(row.categoryId) ? (
-        <div className="col-start-3 col-end-8">
+        <div className="col-start-3 col-end-9">
           <InputTax amount={row.amount} value={row.inputTax} onChange={v => onPatch({ inputTax: v })} />
         </div>
       ) : null}
@@ -574,7 +596,7 @@ function ClosedError({ message, others }: { message: string; others: number }) {
   return (
     <div
       role="alert"
-      className="col-start-3 col-end-8 -mt-[2px] mb-2 flex items-start gap-3 rounded border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3"
+      className="col-start-3 col-end-9 -mt-[2px] mb-2 flex items-start gap-3 rounded border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3"
     >
       <Icon icon={CircleAlert} className="mt-[2px] text-tone-danger-fg" />
       <div className="grid gap-0">
@@ -701,7 +723,7 @@ function PhotoThumb({ file, className }: { file: File; className?: string }) {
 
 // ====================================================================== phone card
 
-function PhoneCard({ row, index, categories, today, onPatch, onKey, onRemove }: RowProps) {
+function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRemove }: RowProps) {
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const hasPhoto = !!row.photo && !row.photo.error
@@ -812,6 +834,15 @@ function PhoneCard({ row, index, categories, today, onPatch, onKey, onRemove }: 
         value={row.note}
         onChange={e => onPatch({ note: e.target.value })}
         className="w-full rounded border-0 bg-transparent p-0 text-sm text-fg-2 placeholder:text-fg-muted focus-visible:outline-offset-4"
+      />
+      <OrderTagPicker
+        orders={orders}
+        value={row.orderId}
+        size="phone"
+        placeholder="Order, optional"
+        aria-label={`Order, expense ${index}`}
+        onChange={id => onPatch({ orderId: id, orderText: undefined })}
+        onUnmatched={text => onPatch({ orderText: text ?? undefined })}
       />
       {showsInputTax(row.categoryId) ? <InputTax amount={row.amount} value={row.inputTax} onChange={v => onPatch({ inputTax: v })} /> : null}
       {err ? (

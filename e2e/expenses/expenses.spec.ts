@@ -136,6 +136,45 @@ test.describe('expenses (M03, M11)', () => {
     expect(rows.every(r => r.category_id === SNACKS && r.paid_via === 'cash' && r.paid_on === today())).toBe(true)
   })
 
+  test('X1: a supplier payment typed in the burst sheet is tagged to its order from the keyboard; the tag is optional and Tab skips it', async ({ page }) => {
+    const customer = await createCompany(uniqueName('Tag Customer'))
+    const supplier = await createCompany(uniqueName('Tag Supplier'))
+    const [order] = await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id } }))
+    const [leg] = await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: supplier.id, reference: `PO${unique()}` } }))
+    const tagged = base() + 31
+    const untagged = base() + 32
+    await openAs(page, 'admin', '/money/expenses')
+    await page.getByRole('button', { name: 'Add expenses' }).click()
+    await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
+    await expect(page.getByRole('combobox', { name: 'Category, row 1' })).not.toHaveValue('')
+    await startCounting(page)
+    await page.keyboard.type(String(tagged))
+    await page.keyboard.press('Tab') // category
+    await page.keyboard.type('supplier')
+    await page.keyboard.press('Tab') // date (the highlighted category is taken)
+    await page.keyboard.press('Tab') // paid via
+    await page.keyboard.press('Tab') // note
+    await page.keyboard.press('Tab') // order
+    await expect(page.getByRole('combobox', { name: 'Order, row 1' })).toBeFocused()
+    await page.keyboard.type(String(order.number))
+    await expect(page.getByRole('option', { name: new RegExp(`ORD-0*${order.number}(?![0-9])`) }).first()).toBeVisible()
+    await page.keyboard.press('Tab') // takes the first match and moves on
+    await expect(page.getByRole('combobox', { name: 'Order, row 1' })).toHaveValue(new RegExp(`^ORD-0*${order.number}$`))
+    await page.keyboard.press('Shift+Tab') // back into the order cell, which now holds a tag
+    await page.keyboard.press('Enter') // an Enter in a filled row adds the next one
+    await expect(page.getByRole('textbox', { name: 'Amount, row 2' })).toBeFocused()
+    await page.keyboard.type(String(untagged))
+    for (let i = 0; i < 6; i++) await page.keyboard.press('Tab') // category, date, paid via, note, the empty Order cell, then the photo button
+    await expect(page.getByRole('button', { name: 'Add receipt photo, row 2' })).toBeFocused()
+    await page.keyboard.press('Control+Enter')
+    await expect(page.getByRole('dialog')).toBeHidden()
+    expect((await counted(page)).mouse).toBe(0)
+    const [t] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${tagged}&select=*`))
+    expect(t).toMatchObject({ category_id: SUPPLIER_PAYMENT, order_id: order.id, supplier_order_id: leg.id, payee_id: supplier.id })
+    const [u] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${untagged}&select=*`))
+    expect(u).toMatchObject({ order_id: null, supplier_order_id: null })
+  })
+
   test('the date typed is the date saved, with no waiting between the last key and Ctrl+Enter', async ({ page }) => {
     // A day of this month that is not today, so a lost date would show as today's.
     const t = today()

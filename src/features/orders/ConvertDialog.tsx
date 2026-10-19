@@ -16,6 +16,8 @@ import { TextField } from '@/ui/form/TextField'
 import { Skeleton } from '@/ui/Skeleton'
 import type { RfqHeader } from '@/features/rfqs/api'
 import { useQuoteItems } from '@/features/quotations/hooks'
+import { useCompanyProfile } from '@/features/settings/hooks'
+import { FALLBACK_PAYMENT_TERMS_DAYS } from '@/features/settings/companyProfile'
 import { useConvertRfq, useLastTerms, useNextOrderNumber, useRankedQuotes } from '@/features/orders/hooks'
 import { useQuotations } from '@/features/quotations/hooks'
 import { quotationRef } from '@/features/quotations/lib/refs'
@@ -66,6 +68,8 @@ export function ConvertDialog({ rfq, onClose }: Props) {
   const itemsQ = useQuoteItems(rfq.id, true)
   const rankQ = useRankedQuotes(rfq.id, role)
   const termsQ = useLastTerms(rfq.company.id, true)
+  const profileQ = useCompanyProfile()
+  const defaultTerms = profileQ.data?.default_payment_terms_days ?? FALLBACK_PAYMENT_TERMS_DAYS
   const quotesQ = useQuotations(rfq.id)
   const nextNo = useNextOrderNumber(true)
   const convert = useConvertRfq(rfq.id)
@@ -469,7 +473,13 @@ export function ConvertDialog({ rfq, onClose }: Props) {
           <Field
             label="Payment terms"
             requirement="optional"
-            source={termsQ.data && !termsTouched ? `from the last order, ${orderRef(termsQ.data.orderNumber)}` : undefined}
+            source={
+              termsQ.data && !termsTouched
+                ? `from the last order, ${orderRef(termsQ.data.orderNumber)}`
+                : !termsTouched && terms === null && termsQ.isSuccess
+                  ? `default terms, ${defaultTerms} days`
+                  : undefined
+            }
             edited={termsTouched}
           >
             <NumberInput
@@ -479,7 +489,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                 setTerms(v === null ? null : Math.max(0, Math.round(v)))
               }}
               suffix="days from invoice"
-              placeholder="Not set"
+              placeholder={`${defaultTerms} (default)`}
               aria-label="Payment terms in days"
             />
           </Field>
