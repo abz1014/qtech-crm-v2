@@ -1,8 +1,9 @@
 name: E2E
 
-# ONE Supabase stack boot and ONE build for every database-backed suite (auth, companies, rfq-board,
-# rfq-intake, rfq-detail, rfq-quotation, today, search, rfq-memory, rfq-ranking, settings-admin, orders, capture, pwa). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
-# once and runs only those, one after another, with a database reset between them.
+# The database-backed suites are listed in ONE place, .github/e2e-suites.yml (paths that trigger each suite, plus a rough weight).
+# A small `changes` job picks the suites to run and balances them across up to 4 parallel shard jobs (scripts/ci/e2e-matrix.py).
+# Each shard boots its own Supabase stack and its own build, then runs its suites one after another with a database reset between
+# them (scripts/ci/e2e-run.sh). The final job, "E2E", needs every shard and is the single result to read (and to require).
 # Pushes to main and manual runs (Actions, E2E, Run workflow) run every suite. See docs/CI.md.
 # No pull_request trigger: a push to a PR branch already runs this, and a second run doubled the minutes.
 on:
@@ -22,6 +23,8 @@ on:
       - "vercel.json"
       - "package*.json"
       - ".github/workflows/e2e.yml"
+      - ".github/e2e-suites.yml"
+      - "scripts/ci/e2e-*"
   workflow_dispatch:
 
 permissions:
@@ -36,156 +39,32 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      auth: ${{ steps.final.outputs.auth }}
-      companies: ${{ steps.final.outputs.companies }}
-      rfq_board: ${{ steps.final.outputs.rfq_board }}
-      rfq_intake: ${{ steps.final.outputs.rfq_intake }}
-      rfq_detail: ${{ steps.final.outputs.rfq_detail }}
-      rfq_quotation: ${{ steps.final.outputs.rfq_quotation }}
-      rfq_memory: ${{ steps.final.outputs.rfq_memory }}
-      rfq_ranking: ${{ steps.final.outputs.rfq_ranking }}
-      today: ${{ steps.final.outputs.today }}
-      search: ${{ steps.final.outputs.search }}
-      capture: ${{ steps.final.outputs.capture }}
-      orders: ${{ steps.final.outputs.orders }}
-      settings_admin: ${{ steps.final.outputs.settings_admin }}
-      pwa: ${{ steps.final.outputs.pwa }}
-      money_books: ${{ steps.final.outputs.money_books }}
-      expenses: ${{ steps.final.outputs.expenses }}
-      reports: ${{ steps.final.outputs.reports }}
-      bank: ${{ steps.final.outputs.bank }}
-      money_costs: ${{ steps.final.outputs.money_costs }}
-      any: ${{ steps.final.outputs.any }}
+      any: ${{ steps.matrix.outputs.any }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4.0.2
         id: filter
         with:
-          filters: |
-            shared:
-              - 'src/**'
-              - 'e2e/support/**'
-              - 'e2e/support.ts'
-              - 'supabase/migrations/**'
-              - 'supabase/seed.sql'
-              - 'supabase/config.toml'
-              - 'playwright.config.ts'
-              - 'package*.json'
-              - '.github/workflows/e2e.yml'
-            auth:
-              - 'e2e/auth/**'
-            companies:
-              - 'e2e/companies/**'
-            rfq_board:
-              - 'e2e/rfqs/board.spec.ts'
-            rfq_intake:
-              - 'e2e/rfqs/intake.spec.ts'
-            rfq_detail:
-              - 'e2e/rfqs/detail.spec.ts'
-              - 'e2e/rfqs/clarifications.spec.ts'
-            rfq_quotation:
-              - 'e2e/rfqs/quotation.spec.ts'
-            rfq_memory:
-              - 'e2e/rfqs/memory.spec.ts'
-            rfq_ranking:
-              - 'e2e/rfqs/ranking.spec.ts'
-            today:
-              - 'e2e/today/**'
-            search:
-              - 'e2e/search/**'
-            capture:
-              - 'e2e/capture/**'
-            expenses:
-              - 'e2e/expenses/**'
-            reports:
-              - 'e2e/reports/**'
-            bank:
-              - 'e2e/bank/**'
-            money_costs:
-              - 'e2e/money/**'
-            orders:
-              - 'e2e/orders/**'
-            settings_admin:
-              - 'e2e/settings/**'
-            money_books:
-              - 'e2e/money-books/**'
-            pwa:
-              - 'e2e/pwa/**'
-              - 'public/manifest.webmanifest'
-              - 'vite.config.ts'
-              - 'index.html'
-              - 'public/**'
-      - id: final
+          filters: .github/e2e-suites.yml
+      - id: matrix
         env:
+          CHANGED: ${{ steps.filter.outputs.changes }}
           SHARED: ${{ steps.filter.outputs.shared }}
-          S_AUTH: ${{ steps.filter.outputs.auth }}
-          S_COMPANIES: ${{ steps.filter.outputs.companies }}
-          S_RFQ_BOARD: ${{ steps.filter.outputs.rfq_board }}
-          S_RFQ_INTAKE: ${{ steps.filter.outputs.rfq_intake }}
-          S_RFQ_DETAIL: ${{ steps.filter.outputs.rfq_detail }}
-          S_RFQ_QUOTATION: ${{ steps.filter.outputs.rfq_quotation }}
-          S_RFQ_MEMORY: ${{ steps.filter.outputs.rfq_memory }}
-          S_RFQ_RANKING: ${{ steps.filter.outputs.rfq_ranking }}
-          S_TODAY: ${{ steps.filter.outputs.today }}
-          S_SEARCH: ${{ steps.filter.outputs.search }}
-          S_CAPTURE: ${{ steps.filter.outputs.capture }}
-          S_ORDERS: ${{ steps.filter.outputs.orders }}
-          S_SETTINGS_ADMIN: ${{ steps.filter.outputs.settings_admin }}
-          S_PWA: ${{ steps.filter.outputs.pwa }}
-          S_MONEY_BOOKS: ${{ steps.filter.outputs.money_books }}
-          S_EXPENSES: ${{ steps.filter.outputs.expenses }}
-          S_REPORTS: ${{ steps.filter.outputs.reports }}
-          S_BANK: ${{ steps.filter.outputs.bank }}
-          S_MONEY_COSTS: ${{ steps.filter.outputs.money_costs }}
         run: |
-          all=false
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$GITHUB_REF" = "refs/heads/main" ] || [ "$SHARED" = "true" ]; then all=true; fi
-          any=false
-          v=$S_AUTH; if [ "$all" = "true" ]; then v=true; fi
-          echo "auth=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_COMPANIES; if [ "$all" = "true" ]; then v=true; fi
-          echo "companies=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_RFQ_BOARD; if [ "$all" = "true" ]; then v=true; fi
-          echo "rfq_board=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_RFQ_INTAKE; if [ "$all" = "true" ]; then v=true; fi
-          echo "rfq_intake=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_RFQ_DETAIL; if [ "$all" = "true" ]; then v=true; fi
-          echo "rfq_detail=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_RFQ_QUOTATION; if [ "$all" = "true" ]; then v=true; fi
-          echo "rfq_quotation=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_RFQ_MEMORY; if [ "$all" = "true" ]; then v=true; fi
-          echo "rfq_memory=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_RFQ_RANKING; if [ "$all" = "true" ]; then v=true; fi
-          echo "rfq_ranking=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_TODAY; if [ "$all" = "true" ]; then v=true; fi
-          echo "today=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_SEARCH; if [ "$all" = "true" ]; then v=true; fi
-          echo "search=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_CAPTURE; if [ "$all" = "true" ]; then v=true; fi
-          echo "capture=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_ORDERS; if [ "$all" = "true" ]; then v=true; fi
-          echo "orders=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_SETTINGS_ADMIN; if [ "$all" = "true" ]; then v=true; fi
-          echo "settings_admin=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_PWA; if [ "$all" = "true" ]; then v=true; fi
-          echo "pwa=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_EXPENSES; if [ "$all" = "true" ]; then v=true; fi
-          echo "expenses=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_REPORTS; if [ "$all" = "true" ]; then v=true; fi
-          echo "reports=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_BANK; if [ "$all" = "true" ]; then v=true; fi
-          echo "bank=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_MONEY_COSTS; if [ "$all" = "true" ]; then v=true; fi
-          echo "money_costs=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          v=$S_MONEY_BOOKS; if [ "$all" = "true" ]; then v=true; fi
-          echo "money_books=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
-          echo "any=$any" >> "$GITHUB_OUTPUT"
+          RUN_ALL=false
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$GITHUB_REF" = "refs/heads/main" ] || [ "$SHARED" = "true" ]; then RUN_ALL=true; fi
+          RUN_ALL=$RUN_ALL python3 scripts/ci/e2e-matrix.py .github/e2e-suites.yml
 
-  e2e:
+  shard:
+    name: E2E shard ${{ matrix.shard }}
     needs: changes
     if: ${{ needs.changes.outputs.any == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -213,11 +92,8 @@ jobs:
         if: steps.pwcache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Start local Supabase (db, auth, rest, storage) - the only boot
+      - name: Start local Supabase (db, auth, rest, storage); a fresh start applies migrations and seed
         run: npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime
-
-      - name: Rebuild database (migrations and seed fixtures)
-        run: npx supabase db reset --local
 
       - name: Serve the admin-users function (the Team screen calls it)
         run: |
@@ -237,197 +113,14 @@ jobs:
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY" npm run build
 
-      - name: Playwright (auth project)
-        if: ${{ !cancelled() && needs.changes.outputs.auth == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=auth REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/auth npx playwright test --project=auth --output=test-results/auth
-
-      - name: Reset database (companies)
-        if: ${{ !cancelled() && needs.changes.outputs.companies == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (companies project)
-        if: ${{ !cancelled() && needs.changes.outputs.companies == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=companies REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/companies npx playwright test --project=companies --output=test-results/companies
-
-      - name: Reset database (rfq-board)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_board == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (rfq-board project)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_board == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=rfq-board REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-board npx playwright test --project=rfq-board --output=test-results/rfq-board
-
-      - name: Reset database (rfq-intake)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_intake == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (rfq-intake project)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_intake == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=rfq-intake REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-intake npx playwright test --project=rfq-intake --output=test-results/rfq-intake
-
-      - name: Reset database (rfq-detail)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_detail == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (rfq-detail project)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_detail == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=rfq-detail REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-detail npx playwright test --project=rfq-detail --output=test-results/rfq-detail
-
-      - name: Reset database (rfq-quotation)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_quotation == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: PDF tools (poppler, to read and render the stored quotation PDFs)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_quotation == 'true' }}
-        run: command -v pdftoppm && command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils)
-
-      - name: Playwright (rfq-quotation project)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_quotation == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=rfq-quotation REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-quotation npx playwright test --project=rfq-quotation --output=test-results/rfq-quotation
-
-      - name: Reset database (rfq-memory)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_memory == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (rfq-memory project)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_memory == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=rfq-memory REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-memory npx playwright test --project=rfq-memory --output=test-results/rfq-memory
-      - name: Reset database (rfq-ranking)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_ranking == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (rfq-ranking project)
-        if: ${{ !cancelled() && needs.changes.outputs.rfq_ranking == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=rfq-ranking REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/rfq-ranking npx playwright test --project=rfq-ranking --output=test-results/rfq-ranking
-
-      - name: Reset database (today)
-        if: ${{ !cancelled() && needs.changes.outputs.today == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (today project)
-        if: ${{ !cancelled() && needs.changes.outputs.today == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=today REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/today npx playwright test --project=today --output=test-results/today
-
-      - name: Reset database (search)
-        if: ${{ !cancelled() && needs.changes.outputs.search == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (search project)
-        if: ${{ !cancelled() && needs.changes.outputs.search == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=search REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/search npx playwright test --project=search --output=test-results/search
-
-      - name: Reset database (expenses)
-        if: ${{ !cancelled() && needs.changes.outputs.expenses == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (expenses project)
-        if: ${{ !cancelled() && needs.changes.outputs.expenses == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=expenses REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/expenses npx playwright test --project=expenses --output=test-results/expenses
-
-      - name: Reset database (reports)
-        if: ${{ !cancelled() && needs.changes.outputs.reports == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (reports project)
-        if: ${{ !cancelled() && needs.changes.outputs.reports == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=reports REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/reports npx playwright test --project=reports --output=test-results/reports
-      - name: Reset database (bank)
-        if: ${{ !cancelled() && needs.changes.outputs.bank == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (bank project)
-        if: ${{ !cancelled() && needs.changes.outputs.bank == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=bank REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/bank npx playwright test --project=bank --output=test-results/bank
-
-      - name: PDF tools for the orders suite (poppler, to read and render the stored supplier PO PDFs)
-        if: ${{ !cancelled() && needs.changes.outputs.orders == 'true' }}
-        run: command -v pdftoppm && command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils)
-
-      - name: Reset database (money-costs)
-        if: ${{ !cancelled() && needs.changes.outputs.money_costs == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (money-costs project)
-        if: ${{ !cancelled() && needs.changes.outputs.money_costs == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=money-costs REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/money-costs npx playwright test --project=money-costs --output=test-results/money-costs
-
-      - name: Reset database (orders)
-        if: ${{ !cancelled() && needs.changes.outputs.orders == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (orders project)
-        if: ${{ !cancelled() && needs.changes.outputs.orders == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=orders REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/orders npx playwright test --project=orders --output=test-results/orders
-      - name: Reset database (settings-admin)
-        if: ${{ !cancelled() && needs.changes.outputs.settings_admin == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (settings-admin project)
-        if: ${{ !cancelled() && needs.changes.outputs.settings_admin == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=settings-admin REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/settings-admin npx playwright test --project=settings-admin --output=test-results/settings-admin
-
-      - name: Reset database (capture)
-        if: ${{ !cancelled() && needs.changes.outputs.capture == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (capture project)
-        if: ${{ !cancelled() && needs.changes.outputs.capture == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=capture REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/capture npx playwright test --project=capture --output=test-results/capture
-
-      - name: Reset database (money-books)
-        if: ${{ !cancelled() && needs.changes.outputs.money_books == 'true' }}
-        run: npx supabase db reset --local
-
-      - name: Playwright (money-books project)
-        if: ${{ !cancelled() && needs.changes.outputs.money_books == 'true' }}
-        run: |
-          eval "$(npx supabase status -o env | sed 's/^/export /')"
-          E2E_SUITE=money-books REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/money-books npx playwright test --project=money-books --output=test-results/money-books
-
-      - name: Playwright (pwa project, no database reset needed)
-        if: ${{ !cancelled() && needs.changes.outputs.pwa == 'true' }}
-        run: |
-          E2E_SUITE=pwa PLAYWRIGHT_HTML_REPORT=playwright-report/pwa npx playwright test --project=pwa --output=test-results/pwa
+      - name: Playwright suites for this shard (${{ matrix.suites }})
+        run: scripts/ci/e2e-run.sh ${{ matrix.suites }}
 
       - name: Upload reports and review screenshots
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-e2e
+          name: playwright-e2e-shard-${{ matrix.shard }}
           path: |
             playwright-report
             test-results
@@ -441,3 +134,16 @@ jobs:
       - name: Stop Supabase
         if: always()
         run: npx supabase stop --no-backup
+
+  # The one result to read (and to require): green when every shard passed or nothing needed to run.
+  e2e:
+    name: E2E
+    needs: [changes, shard]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All shards passed (or none needed)
+        run: |
+          echo "changes=${{ needs.changes.result }} shards=${{ needs.shard.result }}"
+          [ "${{ needs.changes.result }}" = "success" ] && { [ "${{ needs.shard.result }}" = "success" ] || [ "${{ needs.shard.result }}" = "skipped" ]; }
