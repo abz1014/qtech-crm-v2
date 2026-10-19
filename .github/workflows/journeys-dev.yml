@@ -2,7 +2,7 @@ name: Journeys dev (temporary, deleted before merge)
 
 on:
   push:
-    branches: ["p9/p03-journeys"]
+    branches: ["p9/p03-journeys", "p9/p03-with-m10"]
     paths:
       - "e2e/journeys/**"
       - "src/**"

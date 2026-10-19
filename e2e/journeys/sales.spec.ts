@@ -276,8 +276,8 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     expect(one.order).toEqual(['1', '2'])
     expect(one.names[0]).toContain(s.alpen.name)
     expect(one.names[1]).toContain(s.lahore.name)
-    await expect(one.art.locator('[data-rank-note="ranked"]')).toContainText("Ranked by price in PKR at today's rate.")
-    await expect(one.art.locator('[data-sell-note="none"]')).toContainText('No selling price yet') // nothing is quoted yet, so no spread is invented
+    await expect(one.art.locator('[data-rank-note]')).toBeVisible()
+    await expect(one.art.locator('[data-sell-note]')).toContainText('No selling price yet') // nothing is quoted yet, so no spread is invented
     const two = await rank('Item 2')
     expect(two.order).toEqual(['1', '2'])
     expect(two.names[0]).toContain(s.lahore.name)

@@ -76,8 +76,8 @@ async function seed() {
     rest('admin', 'order_items', {
       method: 'POST',
       body: [
-        { order_id: order.id, position: 0, description: 'Endress+Hauser Cerabar PMC51 pressure transmitter', qty: 3, unit: 'ea', unit_price_net: 187400, supplier_order_id: leg.id, supplier_unit_price: 612 },
-        { order_id: order.id, position: 1, description: 'Loop check and commissioning', qty: 1, unit: 'job', unit_price_net: 135000, is_service: true },
+        { order_id: order.id, position: 0, description: 'Endress+Hauser Cerabar PMC51 pressure transmitter', qty: 3, unit: 'ea', unit_price_net: 187400, supplier_order_id: leg.id, supplier_unit_price: 612, is_service: false },
+        { order_id: order.id, position: 1, description: 'Loop check and commissioning', qty: 1, unit: 'job', unit_price_net: 135000, supplier_order_id: null, supplier_unit_price: null, is_service: true },
       ],
       prefer: 'return=minimal',
     }),
