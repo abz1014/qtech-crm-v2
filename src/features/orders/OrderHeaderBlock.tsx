@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Ban, CalendarDays, CircleCheck, Ellipsis, Receipt, RotateCcw, Scale } from 'lucide-react'
+import { Icon } from '@/ui/Icon'
+import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, Ellipsis, FileText, Package, Receipt, RotateCcw, Scale, Wrench, type LucideIcon } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay } from '@/lib/formatDay'
@@ -38,10 +39,13 @@ import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features
  * drawn in the data-slot="order-actions" place the mockup gives them, disabled and naming the task that wires them.
  */
 
-function Dim({ title, children }: { title: string; children: React.ReactNode }) {
+function Dim({ title, icon, children }: { title: string; icon: LucideIcon; children: React.ReactNode }) {
   return (
     <div className="grid min-w-0 content-start justify-items-start gap-2 px-5 py-4">
-      <h2 className="text-sm text-fg-muted">{title}</h2>
+      <h2 className="flex items-center gap-1.5 text-sm text-fg-muted">
+        <Icon icon={icon} size="sm" />
+        {title}
+      </h2>
       {children}
     </div>
   )
@@ -248,29 +252,29 @@ export function OrderHeaderBlock({
         </Banner>
       ) : null}
 
-      <div className={`mt-4 grid divide-y rounded border bg-surface sm:grid-cols-2 sm:divide-y-0 lg:divide-x ${cols} [&>*]:border-line`} aria-label="State of this order">
-        <Dim title="Goods">
+      <div className={`mt-4 grid grid-cols-2 rounded border bg-surface lg:divide-x ${cols} [&>*]:border-b [&>*]:border-line lg:[&>*]:border-b-0 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1`} aria-label="State of this order">
+        <Dim title="Goods" icon={Package}>
           {s?.goods ? <StatusBadge dimension="goods" value={s.goods} /> : null}
           <p className="text-sm text-fg-2">{goodsDetail}</p>
         </Dim>
-        <Dim title="Commissioning">
+        <Dim title="Commissioning" icon={Wrench}>
           {s?.commissioning ? <StatusBadge dimension="commissioning" value={s.commissioning} /> : null}
           <p className="text-sm text-fg-2">{commissioningDetail}</p>
         </Dim>
         {money ? (
-          <Dim title="Invoicing">
+          <Dim title="Invoicing" icon={FileText}>
             {s?.invoicing ? <StatusBadge dimension="invoicing" value={s.invoicing} /> : null}
             <p className="text-sm text-fg-2">{invoicingDetail}</p>
           </Dim>
         ) : null}
         {money ? (
-          <Dim title="Payment">
+          <Dim title="Payment" icon={Banknote}>
             {m ? <StatusBadge dimension="payment" value={m.paymentState} /> : null}
             <p className="text-sm text-fg-2">{paymentDetail}</p>
           </Dim>
         ) : null}
         {isAdmin ? (
-          <Dim title="Costs">
+          <Dim title="Costs" icon={ClipboardCheck}>
             {m?.costsState ? <StatusBadge dimension="costs" value={m.costsState} /> : null}
             <p className="text-sm text-fg-2">{costsDetail}</p>
           </Dim>

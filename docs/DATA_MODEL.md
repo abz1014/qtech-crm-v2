@@ -1402,13 +1402,13 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | contacts | SIUD | SIUD | SIUD | |
 | brands | SIUD | SIU | SIU | Delete is admin-only, through `merge_brands`. |
 | company_brands | SIUD | SIUD | SIUD | |
-| rfqs | SIUD | SIU | SIU | |
+| rfqs | SIUD | SIU | SIU | *(0065)* `owner_id` is changed by an admin; sales may take an RFQ that has no owner. |
 | rfq_items | SIUD | SIUD | SIUD | |
 | supplier_inquiries | SIUD | SIU + D¹ | SIU + D¹ | ¹ Staff can delete only while `sent_on` is empty. |
 | supplier_quote_lines | SIUD | SIUD | SIUD | Supplier prices are visible to engineers (owner (a)). |
 | clarifications | SIUD | SIUD | SIUD | |
-| orders | SIUD | SIU | SIU | No money columns are left on `orders`. Delete is also blocked once money is attached. |
-| order_items | SIUD | SIUD | SIUD | Sale prices are visible to all staff. |
+| orders | SIUD | SIU | SIU | No money columns are left on `orders`. Delete is also blocked once money is attached. *(0065)* `owner_id` is changed by an admin (sales may take an unowned order); `legacy_flags` is admin only, and `value_basis_unknown` changes only through `resolve_value_basis`. |
+| order_items | SIUD | SIUD | SU¹ | Sale prices are visible to all staff (owner, 2026-10-19). ¹ *(0065)* An engineer writes quantities, prices, GST, the service flag, the leg and the supplier price, and adds or deletes lines, only in the transaction that creates the order (convert, repeat). |
 | supplier_orders | SIUD | SIUD | SIUD | Delete is blocked if expenses are attached (FK). |
 | order_engineers | SIUD | SIUD | SIUD | |
 | **order_costs** | SIUD | — | — | |
@@ -1419,8 +1419,8 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | **expense_categories** *(A6)* | SIUD | — | — | Delete blocked while in use (RESTRICT); deactivate instead. |
 | **closed_months** *(A6)* | S | — | — | Written only through the admin RPCs `close_month`, `close_months_through`, `reopen_month`. Audited. |
 | attachments (parent is an RFQ or clarification) | SIUD | SIUD | SIUD | Storage bucket `rfq-files`: same rules. |
-| attachments (parent is an invoice) | SIUD | SIUD | — | Storage bucket `gst-receipts`: admin and sales, as today. |
-| attachments (parent is an expense) *(A6)* | SIUD | — | — | Storage bucket `expense-receipts`: admin only, private, 5 MB. |
+| attachments (parent is an invoice) | SIUD | SIUD | — | Storage bucket `gst-receipts`: admin and sales, as today. *(0065)* Once the invoice's month is closed, the attachment and its file cannot be changed or removed (a receipt can still be added). |
+| attachments (parent is an expense) *(A6)* | SIUD | — | — | Storage bucket `expense-receipts`: admin only, private, 5 MB. *(0065)* Locked like invoice receipts once the expense's month is closed. |
 | attachments (parent is an order) *(R22)* | SIUD | SIUD | SIUD | Storage bucket `rfq-files`: same rules as RFQ files. One parent per row: RFQ, order, invoice or expense. |
 | snoozes | own SIUD | own SIUD | own SIUD | |
 | **targets** | SIUD | S own | S own | |
@@ -1437,7 +1437,7 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | RPCs `merge_companies`, `merge_brands`, `resolve_value_basis` | ✓ | — | — | |
 | fx_rates | SIUD | SIU² | SIU² | ² Insert and update are allowed only where `source = 'manual'`. Automatic rows are written by the R23 nightly job using the service-role key, which bypasses RLS. |
 | `model_tokens()` | ✓ | ✓ | ✓ | Immutable helper with no data access. |
-| order_items.supplier_unit_price, supplier_orders.currency | SIU | SIU | SIU | Covered by the existing rules on those tables. Supplier prices are visible to engineers. |
+| order_items.supplier_unit_price, supplier_orders.currency | SIU | SIU | SIU¹ | Covered by the existing rules on those tables. Supplier prices are visible to engineers. ¹ *(0065)* An engineer writes `supplier_unit_price` only on a new order (see order_items). |
 | company_profile | SU | S | S | Singleton row, no insert or delete. |
 | quotations | SIUD | SIU¹ | SIU¹ | ¹ UPDATE limited to `pdf_path` by the trigger. *(0057)* Staff attach the first PDF; re-pointing or clearing an attached `pdf_path` is admin only. Same for `purchase_orders`. |
 | purchase_orders | SIUD | SIU¹ | SIU¹ | Supplier prices are visible to engineers, consistent with §10. |

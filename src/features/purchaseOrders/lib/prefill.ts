@@ -6,6 +6,7 @@
 // labels it when the issued price differs from the pre-fill.
 
 import { formatDay, formatShortDate } from '@/lib/formatDay'
+import { paisaToFixed, productPaisa, type Amount } from '@/lib/money'
 import { poRef, rfqRef } from '@/lib/refs'
 
 export type PriceSource = 'order' | 'quote' | 'last_po' | 'typed'
@@ -63,13 +64,26 @@ export function sourceText(row: PrefillRow, typed: Typed, today: string): Source
   return { chip: 'typed', detail: priceOf(row, typed) === null ? 'Type a price' : 'Typed by you, check it' }
 }
 
-/** Qty times price in the leg's currency, to 2 decimals (the database rounds the same way when it totals the PO). */
+/**
+ * Qty times price in the leg's currency, to 2 decimals, exactly as purchase_order_set_total (0022) rounds it: exact decimals, half away
+ * from zero. A float product would print 1.00 for 1 x 1.005 where the stored total says 1.01.
+ */
 export function lineTotal(qty: number, price: number | null): number | null {
-  return price === null ? null : Math.round(qty * price * 100) / 100
+  return price === null ? null : Number(paisaToFixed(productPaisa(qty, price)))
 }
 
 export function poTotal(rows: readonly PrefillRow[], typed: Typed): number {
-  return rows.reduce((n, r) => n + Math.round((lineTotal(r.qty, priceOf(r, typed)) ?? 0) * 100), 0) / 100
+  const p = rows.reduce((n, r) => {
+    const price = priceOf(r, typed)
+    return price === null ? n : n + productPaisa(r.qty, price)
+  }, 0n)
+  return Number(paisaToFixed(p))
+}
+
+/** The amounts printed on an issued PO (the PDF): each line to the paisa and their sum, the same figures as purchase_orders.total. */
+export function poLineAmounts(lines: readonly { qty: Amount; unit_price: Amount }[]): { amounts: number[]; total: number } {
+  const paisa = lines.map(l => productPaisa(l.qty, l.unit_price))
+  return { amounts: paisa.map(p => Number(paisaToFixed(p))), total: Number(paisaToFixed(paisa.reduce((n, p) => n + p, 0n))) }
 }
 
 /** Lines still without a price: the PO cannot be issued until each has one. */

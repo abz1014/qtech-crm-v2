@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { groupItems, type Groupable } from '@/features/orders/lib/splitGroups'
+import { groupItems, isFreshSplitLeg, splitRfqItemIds, type Groupable } from '@/features/orders/lib/splitGroups'
 
 const it_ = (id: string, rfqItemId: string | null, qty: number, price: number | null = 100, isService = false): Groupable => ({ id, rfqItemId, qty, unitPriceNet: price, isService })
+
+describe('fresh split leg', () => {
+  const all = [it_('a', 'r1', 3), it_('b', 'r1', 1), it_('c', 'r2', 2)]
+  it('is a not-started leg holding only parts of split items', () => {
+    const split = splitRfqItemIds(all)
+    expect(isFreshSplitLeg([all[1]], split, false, false)).toBe(true)
+    expect(isFreshSplitLeg([all[1]], split, true, false)).toBe(false)
+    expect(isFreshSplitLeg([all[1]], split, false, true)).toBe(false)
+    expect(isFreshSplitLeg([all[2]], split, false, false)).toBe(false)
+  })
+})
 
 describe('split groups', () => {
   it('lines with one RFQ item become a head and its parts, numbered 2, 2a, 2b', () => {

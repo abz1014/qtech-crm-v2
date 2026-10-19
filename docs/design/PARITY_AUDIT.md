@@ -928,7 +928,7 @@ Main at `778084b` (Merge p8/import-rules). Read-only; no product code changed. O
 ### Shell
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-SH-01 | Top bar counts on all four: "Today 9, RFQs 14, Orders 7, Money 3" | `useNavCounts` sets only Today and RFQs; its comment says Orders and Money "are not built yet", but both are now. Orders and Money show no number | medium | NEW (continues B-11 / D-10) |
+| E-SH-01 | Top bar counts on all four: "Today 9, RFQs 14, Orders 7, Money 3" | `useNavCounts` sets only Today and RFQs; its comment says Orders and Money "are not built yet", but both are now. Orders and Money show no number | medium | FIXED a86f71b (Orders = active orders, one head count; Money = Money items on Today, admin and sales only; an engineer gets no Money entry and no money request; asserted in vitest and e2e) |
 
 ### RFQ intake
 | id | mockup | built | sev | status |
@@ -949,28 +949,28 @@ Main at `778084b` (Merge p8/import-rules). Read-only; no product code changed. O
 ### Convert dialog (Mark won)
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-CV-01 | Title "Mark won QT-26-0058 R1" with the quotation number in mono; sub-line "Customer · 3 quoted lines · gross PKR" | Title "Mark won"; sub-line names the RFQ customer, not the quotation | low | NEW |
-| E-CV-02 | Neutral grey one-line note "Creates order ORD-0043. Each item is assigned to the best-ranked quote; ..." | Blue info callout with a bold heading and a different sentence; the order number is not announced | low | NEW |
-| E-CV-03 | Label "Customer PO number" with a helper line above the input ("optional, add it from the order later"); brand and family sub-line under each item | "Optional" tag beside the label and the helper below; no brand sub-line | low | NEW |
+| E-CV-01 | Title "Mark won QT-26-0058 R1" with the quotation number in mono; sub-line "Customer · 3 quoted lines · gross PKR" | Title "Mark won"; sub-line names the RFQ customer, not the quotation | low | FIXED f895f93 (quotation number chip beside the title; sub-line counts quoted lines) |
+| E-CV-02 | Neutral grey one-line note "Creates order ORD-0043. Each item is assigned to the best-ranked quote; ..." | Blue info callout with a bold heading and a different sentence; the order number is not announced | low | FIXED f895f93 (grey one-line note naming the order number) |
+| E-CV-03 | Label "Customer PO number" with a helper line above the input ("optional, add it from the order later"); brand and family sub-line under each item | "Optional" tag beside the label and the helper below; no brand sub-line | low | PARTLY FIXED f895f93 (label with the helper beside it, no Optional tag; the brand and family sub-line under each item is still missing: the quote-items read does not carry them) |
 
 ### Order detail
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-OD-01 | Item rows carry a sub-line "Brand · model" (for example "Belimo · NM24A-SR") | Description only | medium | NEW |
-| E-OD-02 | "Unit net" shows the unit price on every line | Unit net column is blank on plain lines in the admin shots (o03-admin, o03-legs-stamped, m04 margin panel) while line net is filled. Only head rows draw a value (`OrderItemsPanel.tsx`, the `unit` column cell returns nothing for other kinds). Verify with real data | medium | NEW |
-| E-OD-03 | Phone: dimension strip wraps to two rows ("Same content, one column. Dimension strip wraps to two rows") | Five dimension cards stack in one column, so the first screen is all status text | medium | NEW |
-| E-OD-04 | Each dimension label has an icon (package, wrench, file-text, banknote, clipboard-check) | Labels have no icons | low | NEW |
-| E-OD-05 | Items table has a group header band: "Sale to customer, PKR" over the sale columns and "Supplier, in the leg currency" over the supplier columns | One header row, no band | low | NEW |
+| E-OD-01 | Item rows carry a sub-line "Brand · model" (for example "Belimo · NM24A-SR") | Description only | medium | FIXED f895f93 (brand and model words under the description) |
+| E-OD-02 | "Unit net" shows the unit price on every line | Unit net column is blank on plain lines in the admin shots (o03-admin, o03-legs-stamped, m04 margin panel) while line net is filled. Only head rows draw a value (`OrderItemsPanel.tsx`, the `unit` column cell returns nothing for other kinds). Verify with real data | medium | FIXED f895f93 (a real bug: the unit column cell returned nothing for plain lines; it now draws the price) |
+| E-OD-03 | Phone: dimension strip wraps to two rows ("Same content, one column. Dimension strip wraps to two rows") | Five dimension cards stack in one column, so the first screen is all status text | medium | FIXED f895f93 (two columns on the phone) |
+| E-OD-04 | Each dimension label has an icon (package, wrench, file-text, banknote, clipboard-check) | Labels have no icons | low | FIXED f895f93 |
+| E-OD-05 | Items table has a group header band: "Sale to customer, PKR" over the sale columns and "Supplier, in the leg currency" over the supplier columns | One header row, no band | low | FIXED f895f93 (DataTable gained an optional columnBands prop; drawn from 1024 up) |
 | E-OD-06 | GST column is plain text "18%" | An editable select on every line; plus a "Service" tick column, "Split line", "Exempt the whole order from GST", density toggle and move hints | low | KEPT extra (A8 split and O03 line editing are in DECISIONS; the always-open GST select is new, owner to confirm) |
 
 ### Money: GST register, Receivables, Expenses, Margins, Exceptions, Bank tick
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-MN-03 | Receivables opens with the most overdue row selected and the Payment reminder panel beside the table | No row selected on open, so the panel (the main thing on this screen) is not seen; table is full width | medium | NEW |
-| E-MN-04 | "Overdue" figure in red | Same colour as the other figures | low | NEW |
-| E-MN-05 | Footnote: "...Copying the text records the reminder and moves the item to Waiting on Today." | First sentence only | low | NEW |
+| E-MN-03 | Receivables opens with the most overdue row selected and the Payment reminder panel beside the table | No row selected on open, so the panel (the main thing on this screen) is not seen; table is full width | medium | FIXED a86f71b (opens on the most overdue row; panel beside the table from 1280 px) |
+| E-MN-04 | "Overdue" figure in red | Same colour as the other figures | low | FIXED a86f71b |
+| E-MN-05 | Footnote: "...Copying the text records the reminder and moves the item to Waiting on Today." | First sentence only | low | FIXED a86f71b |
 | E-MN-06 | Money content spans the full page (40 px gutters at 1440; 1328 px of content) | All Money views sit in a centred column of about 1216 px with 112 px side margins; Orders, RFQs and Settings are wider | low | NEW |
-| E-MN-07 | "By invoice date" is a shaded chip with a calendar icon | Plain text with an icon, no chip background | low | NEW |
+| E-MN-07 | "By invoice date" is a shaded chip with a calendar icon | Plain text with an icon, no chip background | low | FIXED a86f71b |
 | E-MN-08 | GST register footnote: "...see Cash month." | "...see Receivables." (the Cash month tab does not exist yet; follows E-MN-01) | low | NEW (resolves with M10) |
 
 ### Money: Month-end (not built)

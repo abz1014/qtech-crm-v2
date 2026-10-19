@@ -99,13 +99,13 @@ begin
   cross join lateral (
     select (iv.first_invoice_date + coalesce(o.payment_terms_days, cp.days)::int) as due_on
   ) d
-  where p_order_id is null or o.id = p_order_id
+  where (p_order_id is null or o.id = p_order_id)
+    and (o.cancelled_on is null or iv.invoice_count > 0)
   order by o.number;
 end;
 $$;
 
-revoke all on function public.order_receivables(uuid) from public, anon, authenticated;
-grant execute on function public.order_receivables(uuid) to authenticated;
+-- (0058: a cancelled order is kept only when it has an invoice; unchanged here.)
 
 -- ================================================================ v_order_money
 create or replace view public.v_order_money with (security_invoker = true) as
