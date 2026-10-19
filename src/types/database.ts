@@ -2045,14 +2045,14 @@ isOneToOne: false
 "model_tokens":
 { Args: { "t": string }; Returns: (string)[]
                            },
-"month_end_status":
-{ Args: { "p_month": string }; Returns: {
-              "check_key": string,"n": number
-            }[]
-                           },
 "month_end_check_details":
 { Args: { "p_month": string }; Returns: {
               "check_key": string,"detail": Json
+            }[]
+                           },
+"month_end_status":
+{ Args: { "p_month": string }; Returns: {
+              "check_key": string,"n": number
             }[]
                            },
 "month_is_closed":
