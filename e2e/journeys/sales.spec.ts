@@ -369,7 +369,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await panel.getByRole('button', { name: 'Copy chase text' }).click()
     await expect(toast(page, 'Chase text copied')).toBeVisible()
     fe2('Chase the customer', (await readCount(page)).mouse, 1)
-    expect(await clipboardText(page)).toContain('Thank you for your RFQ #')
+    expect(await clipboardText(page)).toContain(`our ref *${rfqRef(rfq.number)}*`)
     await expect.poll(async () => (await must(rest<{ ask_count: number }[]>('admin', `clarifications?rfq_id=eq.${rfq.id}&select=ask_count`)))[0].ask_count).toBe(3)
   })
 
