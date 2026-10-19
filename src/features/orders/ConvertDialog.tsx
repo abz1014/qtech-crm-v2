@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { EyeOff, FileCheck2, Info, Split, TriangleAlert, Truck, X } from 'lucide-react'
+import { EyeOff, FileCheck2, Split, TriangleAlert, Truck, X } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { formatAmount } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
+import { InfoTip } from '@/ui/InfoTip'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Icon } from '@/ui/Icon'
@@ -243,11 +244,13 @@ export function ConvertDialog({ rfq, onClose }: Props) {
         }
       >
         <div className="grid gap-4">
-          <p className="flex items-start gap-2 rounded bg-sunken px-3 py-2 text-sm text-fg-2">
-            <Icon icon={Info} size="sm" className="mt-[3px] shrink-0 text-fg-muted" />
+          <p className="flex items-center gap-1 text-sm text-fg-2">
             <span>
-              Creates order {nextNo.data ? <b className="num font-medium">{orderRef(nextNo.data)}</b> : 'a new order'}. Each item is assigned to the best-ranked quote; change it from the list, or split an item between two suppliers. Prices and terms copy from the quotation.
+              Creates order {nextNo.data ? <b className="num font-medium">{orderRef(nextNo.data)}</b> : 'a new order'}, each item with its best-ranked supplier.
             </span>
+            <InfoTip label="How the order is made">
+              Each item is assigned to the best-ranked quote: change it from the list, or split an item between two suppliers. Prices and terms copy from the quotation.
+            </InfoTip>
           </p>
 
           {itemsQ.isPending || rankQ.isPending ? (

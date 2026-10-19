@@ -5,6 +5,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, poRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
+import { InfoTip } from '@/ui/InfoTip'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Icon } from '@/ui/Icon'
@@ -238,10 +239,14 @@ export function SplitLineDialog({
 
           {resultText ? (
             <div className="grid gap-0.5 rounded bg-sunken px-3 py-2 text-sm" data-testid="split-result">
-              <span>
-                <b className="font-medium">Result:</b> {resultText}
+              <span className="flex items-start gap-1">
+                <span>
+                  <b className="font-medium">Result:</b> {resultText}
+                </span>
+                <InfoTip label="What the new line copies" side="top" align="end">
+                  The new line copies the description, brand, unit, selling price and GST rate. Order totals stay the same, give or take Rs 1 of GST rounding.
+                </InfoTip>
               </span>
-              <span className="text-xs text-fg-muted">The new line copies the description, brand, unit, selling price and GST rate. Order totals stay the same, give or take Rs 1 of GST rounding.</span>
             </div>
           ) : null}
 

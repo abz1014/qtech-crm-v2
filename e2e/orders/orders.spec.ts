@@ -735,6 +735,12 @@ for (const width of [1440, 375]) {
     expect(await violations(page)).toEqual([])
     // nothing scrolls sideways, at 375 as at 1440
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
+    if (width < 768) {
+      // one bar with back and the order number; the next step sits in a bar at the bottom instead of the tabs
+      await expect(page.getByRole('button', { name: 'Back' })).toBeVisible()
+      await expect(page.getByTestId('order-sticky-action').getByRole('button', { name: 'Issue PO' })).toBeVisible()
+      await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0)
+    }
     await review(page, `o03-order-admin-${width}`)
 
     await page.getByRole('button', { name: 'More actions' }).click()

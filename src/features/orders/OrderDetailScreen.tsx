@@ -6,7 +6,10 @@ import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Skeleton } from '@/ui/Skeleton'
 import { useLegPos, useOrderEngineers, useOrderHeader, useOrderItems, useOrderLegs, useOrderMoney } from '@/features/orders/hooks'
-import { OrderHeaderBlock } from '@/features/orders/OrderHeaderBlock'
+import { OrderHeaderBlock, OrderMoreMenu } from '@/features/orders/OrderHeaderBlock'
+import { useMobileBar } from '@/app/shell/MobileBarContext'
+import { orderRef } from '@/lib/refs'
+import { cn } from '@/lib/utils'
 import { orderPrimary } from '@/features/orders/lib/primaryAction'
 import { businessToday } from '@/lib/dates'
 import { OrderItemsPanel } from '@/features/orders/OrderItemsPanel'
@@ -35,8 +38,9 @@ import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
  * invoices-payments (M01, M02), issue-po on each leg (O07).
  */
 
-function Shell({ children }: { children: ReactNode }) {
-  return <div className="mx-auto w-full max-w-[1440px] px-4 pb-16 pt-6 md:px-8">{children}</div>
+/** `sticky`: the phone shows the next step in a bar fixed to the bottom, so the page leaves room for it. */
+function Shell({ children, sticky = false }: { children: ReactNode; sticky?: boolean }) {
+  return <div className={cn('mx-auto w-full max-w-[1440px] px-4 pb-16 pt-4 md:px-8 md:pt-6', sticky && 'max-md:pb-32')}>{children}</div>
 }
 
 /** The loading state in the final layout, so nothing jumps when the data arrives. */
@@ -81,6 +85,17 @@ export default function OrderDetailScreen() {
   const engineers = useOrderEngineers(id)
   const orderMoney = useOrderMoney(id, role === 'admin' ? 'admin' : role === 'sales' ? 'sales' : null)
   const pos = useLegPos(id, (legs.data ?? []).map(l => l.id), money)
+  // The page's ONE primary (green) button, chosen by the order's state (lib/primaryAction.ts). Worked out once, here, so the header draws it,
+  // the panels below know not to repeat it, and the phone knows to show it in a bar at the bottom instead of the tabs.
+  const primary = header.data ? orderPrimary(header.data, legs.data ?? [], pos.data ?? [], role, orderMoney.data, businessToday()) : null
+  // Phones get one bar: back (to where the person came from, else the orders list), the order number, and the order's menu.
+  useMobileBar({
+    title: header.data ? orderRef(header.data.number) : 'Order',
+    back: 'history',
+    fallback: '/orders',
+    actions: header.data && !isEngineer ? <OrderMoreMenu order={header.data} touch /> : undefined,
+    hideTabs: primary !== null,
+  })
 
   if (header.isPending) return <PageSkeleton />
   if (header.isError) {
@@ -133,11 +148,8 @@ export default function OrderDetailScreen() {
   const loadError = items.isError || legs.isError
   const lists = items.data && legs.data
   const basisUnknown = order.state?.dataTrust === 'basis_unknown'
-  // The page's ONE primary (green) button, chosen by the order's state (lib/primaryAction.ts). Worked out once, here, so the header draws it
-  // and the panels below know not to repeat it.
-  const primary = orderPrimary(order, legs.data ?? [], pos.data ?? [], role, orderMoney.data, businessToday())
   return (
-    <Shell>
+    <Shell sticky={primary !== null}>
       <OrderHeaderBlock
         order={order}
         legs={legs.data ?? []}

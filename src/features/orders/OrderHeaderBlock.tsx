@@ -8,6 +8,7 @@ import { formatDay, formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
@@ -104,8 +105,6 @@ export function OrderHeaderBlock({
   const profileQ = useCompanyProfile()
   const termsText = termsLabel(order.paymentTermsDays, profileQ.data?.default_payment_terms_days)
   const update = useUpdateOrder(order.id)
-  const cancel = useCancelOrder(order.id)
-  const [cancelling, setCancelling] = useState(false)
   const [resolving, setResolving] = useState(false)
   const s = order.state
   const cancelled = order.cancelledOn !== null
@@ -116,27 +115,6 @@ export function OrderHeaderBlock({
   const invoiced = s?.invoiced ?? null
 
   const primary = primaryProp === undefined ? orderPrimary(order, legs, pos, role, orderMoney, today) : primaryProp
-
-  const reopen = async () => {
-    const before = { cancelled_on: order.cancelledOn, cancel_reason: order.cancelReason }
-    try {
-      // the reason goes with the date: the database refuses a reason on an active order
-      await cancel.mutateAsync({ cancelled_on: null, cancel_reason: null })
-      toast({
-        title: 'Order reopened',
-        body: ref,
-        undo: {
-          onUndo: async () => {
-            await cancel.mutateAsync(before)
-          },
-          settledTitle: 'Order reopened',
-          undoneTitle: 'Cancelled again',
-        },
-      })
-    } catch (err) {
-      toast({ title: 'Could not reopen', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
-    }
-  }
 
   const commissioningLine =
     s?.commissioning === 'n_a' || !order.needsCommissioning
@@ -191,24 +169,7 @@ export function OrderHeaderBlock({
             {order.imported ? <span className="text-fg-muted">Imported from the old CRM</span> : null}
           </p>
         </div>
-        {!isEngineer ? (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button icon={Ellipsis} variant="quiet" aria-label="More actions" />
-            </PopoverTrigger>
-            <PopoverContent variant="menu" align="end">
-              {cancelled ? (
-                <MenuItem icon={RotateCcw} onClick={() => void reopen()}>
-                  Reopen order
-                </MenuItem>
-              ) : (
-                <MenuItem icon={Ban} danger onClick={() => setCancelling(true)}>
-                  Cancel order
-                </MenuItem>
-              )}
-            </PopoverContent>
-          </Popover>
-        ) : null}
+        {!isEngineer ? <OrderMoreMenu order={order} className="max-md:hidden" /> : null}
       </div>
 
       {cancelled ? (
@@ -290,6 +251,62 @@ export function OrderHeaderBlock({
         ) : null}
       </div>
 
+      {resolving ? <ResolveBasisDialog order={order} items={items} money={orderMoney} onClose={() => setResolving(false)} /> : null}
+    </header>
+  )
+}
+
+/**
+ * The order's "more" menu: Cancel order (with a reason, and Undo) or Reopen order. Drawn beside the title from tablet up, and in the
+ * phone's one bar (useMobileBar) below 768. Engineers have none.
+ */
+export function OrderMoreMenu({ order, className, touch = false }: { order: OrderHeader; className?: string; touch?: boolean }) {
+  const { toast } = useToast()
+  const cancel = useCancelOrder(order.id)
+  const [cancelling, setCancelling] = useState(false)
+  const cancelled = order.cancelledOn !== null
+  const ref = orderRef(order.number)
+  const today = businessToday()
+
+  const reopen = async () => {
+    const before = { cancelled_on: order.cancelledOn, cancel_reason: order.cancelReason }
+    try {
+      // the reason goes with the date: the database refuses a reason on an active order
+      await cancel.mutateAsync({ cancelled_on: null, cancel_reason: null })
+      toast({
+        title: 'Order reopened',
+        body: ref,
+        undo: {
+          onUndo: async () => {
+            await cancel.mutateAsync(before)
+          },
+          settledTitle: 'Order reopened',
+          undoneTitle: 'Cancelled again',
+        },
+      })
+    } catch (err) {
+      toast({ title: 'Could not reopen', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
+    }
+  }
+
+  return (
+    <>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button icon={Ellipsis} variant="quiet" size={touch ? 'touch' : undefined} aria-label="More actions" className={className} />
+        </PopoverTrigger>
+        <PopoverContent variant="menu" align="end" aria-label="More actions">
+          {cancelled ? (
+            <MenuItem icon={RotateCcw} onClick={() => void reopen()}>
+              Reopen order
+            </MenuItem>
+          ) : (
+            <MenuItem icon={Ban} danger onClick={() => setCancelling(true)}>
+              Cancel order
+            </MenuItem>
+          )}
+        </PopoverContent>
+      </Popover>
       {cancelling ? (
         <CancelDialog
           order={order}
@@ -317,8 +334,21 @@ export function OrderHeaderBlock({
           }}
         />
       ) : null}
-      {resolving ? <ResolveBasisDialog order={order} items={items} money={orderMoney} onClose={() => setResolving(false)} /> : null}
-    </header>
+    </>
+  )
+}
+
+/**
+ * Where the page's one primary button sits: in place on a laptop; on a phone (below 768) in a bar fixed to the bottom of the screen, above
+ * the home indicator, so the next step is always one tap away. The page hides the bottom tabs while it shows (useMobileBar hideTabs).
+ */
+function PhoneSticky({ children }: { children: ReactNode }) {
+  const phone = useMediaQuery('(max-width: 767px)')
+  if (!phone) return <>{children}</>
+  return (
+    <div data-testid="order-sticky-action" className="fixed inset-x-0 bottom-0 z-20 flex border-t bg-surface px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 shadow-pop [&>*]:flex-1">
+      {children}
+    </div>
   )
 }
 
@@ -334,7 +364,11 @@ function NextStep({ order, primary, legs, onResolve, waiting }: { order: OrderHe
         <span className="mr-2 text-sm text-fg-muted">Next step</span>
         <span className={cn('font-medium', primary?.late && 'text-tone-danger-fg', !primary && 'font-regular text-fg-2')}>{primary ? primary.why : waiting}</span>
       </p>
-      {primary ? <PrimaryButton order={order} action={primary} legs={legs} onResolve={onResolve} /> : null}
+      {primary ? (
+        <PhoneSticky>
+          <PrimaryButton order={order} action={primary} legs={legs} onResolve={onResolve} />
+        </PhoneSticky>
+      ) : null}
     </section>
   )
 }
@@ -427,7 +461,9 @@ function EngineerJob({ order, engineers, primary, legs, today }: { order: OrderH
           {primary ? (
             <>
               {primary.kind === 'deliver' ? <span className={cn('mr-2 text-sm', primary.late ? 'font-medium text-tone-danger-fg' : 'text-fg-2')}>{primary.why}</span> : null}
-              <PrimaryButton order={order} action={primary} legs={legs} />
+              <PhoneSticky>
+                <PrimaryButton order={order} action={primary} legs={legs} />
+              </PhoneSticky>
             </>
           ) : null}
           {showDate ? <TapDate value={order.plannedOn} label="Planned date" today={today} onSave={setPlanned} button={{ text: 'Change planned date', icon: CalendarDays }} /> : null}

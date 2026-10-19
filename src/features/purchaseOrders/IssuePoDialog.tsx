@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FileCheck2, FileText, Info, Lock, TriangleAlert } from 'lucide-react'
+import { FileCheck2, FileText, Lock, TriangleAlert } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { convertToPaisa, formatAmount, formatPaisa, formatRate } from '@/lib/money'
@@ -8,6 +8,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, poRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
+import { InfoTip } from '@/ui/InfoTip'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Dialog, DialogContent } from '@/ui/Dialog'
@@ -422,13 +423,13 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
               </>
             )}
 
-            <div className="flex items-start gap-3 rounded bg-sunken px-4 py-3 text-sm text-fg-2">
-              <Icon icon={Info} className="mt-[2px] text-fg-muted" />
-              <p>
-                Incoterm and terms are copied from this supplier&rsquo;s last PO; change them only if this order differs. Issuing saves these prices back to the order items, so the order keeps one
-                working price, and marks the order with {leg.supplierName} as placed today. The PO is a snapshot; later edits to the order do not change it.
-              </p>
-            </div>
+            <p className="flex items-center gap-1 text-sm text-fg-2">
+              Issuing marks the order with {leg.supplierName} as placed today.
+              <InfoTip label="What issuing does" side="top">
+                Incoterm and terms are copied from this supplier&rsquo;s last PO: change them only if this order differs. Issuing saves these prices back to the order items, so the order keeps one working
+                price. The PO is a snapshot: later edits to the order do not change it.
+              </InfoTip>
+            </p>
 
             {missing.length > 0 ? (
               <p className="flex items-center gap-2 text-sm text-tone-warning-fg" data-testid="po-missing">
