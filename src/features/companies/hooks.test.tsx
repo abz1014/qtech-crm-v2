@@ -124,6 +124,32 @@ describe('companies writes', () => {
     expect((caught as DuplicateCompanyError).code).toBe('23505')
   })
 
+  it('a retry after the company saved but its first contact failed adds the contact and refreshes the lists', async () => {
+    let contactTries = 0
+    const { wrapper, db, client } = setup(c => {
+      if (c.target === 'companies' && c.verb === 'insert') {
+        // The retry reuses the request id, so the company row is already there.
+        return { error: { code: '23505', message: 'duplicate key value violates unique constraint "companies_pkey"' } }
+      }
+      if (c.target === 'contacts' && c.verb === 'insert') {
+        contactTries++
+        return { data: { id: 'k1' } }
+      }
+      return { data: [] }
+    })
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    const { result } = renderHook(() => useCreateCompany(), { wrapper })
+    let created: unknown
+    await act(async () => {
+      created = await result.current.mutateAsync({ id: 'req-1', name: 'Indus Textile', contactName: 'Bilal' })
+    })
+    expect(created).toEqual({ id: 'req-1', name: 'Indus Textile' })
+    expect(contactTries).toBe(1)
+    const contact = db.calls.find(c => c.target === 'contacts' && c.verb === 'insert')!
+    expect((opArgs(contact, 'insert')?.[0] as { company_id: string }).company_id).toBe('req-1')
+    expect(spy).toHaveBeenCalledWith({ queryKey: qk.companies.lists() })
+  })
+
   it('any other create error is passed through untouched', async () => {
     const { wrapper } = setup(() => ({ error: { code: '42501', message: 'denied' } }))
     const { result } = renderHook(() => useCreateCompany(), { wrapper })

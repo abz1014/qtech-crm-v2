@@ -100,11 +100,7 @@ export function OrderItemsPanel({
         body: `${items.length} ${items.length === 1 ? 'line' : 'lines'}`,
         undo: {
           onUndo: async () => {
-            try {
-              await setRates.mutateAsync(before)
-            } catch (err) {
-              fail('Could not undo')(err)
-            }
+            await setRates.mutateAsync(before)
           },
           settledTitle: on ? 'Order exempted from GST' : 'GST restored on every line',
           undoneTitle: 'Put back as it was',
@@ -134,14 +130,14 @@ export function OrderItemsPanel({
   const itemCell = (r: Row) =>
     r.kind === 'head' ? (
       <span className="grid min-w-0 gap-px">
-        <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="truncate font-medium">{r.description}</span>
-          <span className="inline-flex h-5 items-center gap-1 rounded border border-line-strong px-[6px] text-xs font-medium text-fg-2">
+        <span className="truncate font-medium">{r.description}</span>
+        <span className="flex min-w-0 items-center gap-2 text-xs text-fg-muted">
+          <span className="inline-flex h-5 shrink-0 items-center gap-1 rounded border border-line-strong px-[6px] font-medium text-fg-2">
             <Split size={12} aria-hidden="true" />
             split across {r.members?.length ?? 0} suppliers
           </span>
+          {money && canEdit ? <span className="truncate">One selling price for all parts</span> : null}
         </span>
-        {money && canEdit ? <span className="truncate text-xs text-fg-muted">Change the selling price once: all parts update</span> : null}
       </span>
     ) : r.kind === 'part' ? (
       <span className="grid min-w-0 gap-px">

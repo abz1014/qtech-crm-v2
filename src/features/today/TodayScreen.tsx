@@ -63,7 +63,12 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const [expanded, setExpanded] = useState<string | null>(null)
   const [copied, setCopied] = useState<ReadonlySet<string>>(new Set())
   const [waitingToggled, setWaitingToggled] = useState<boolean | null>(waitingToggledThisSession)
-  const markCopied = (k: string) => setCopied(s => new Set(s).add(k))
+  const markCopied = (k: string) => {
+    setCopied(s => new Set(s).add(k))
+    // On desktop the first item is shown without being picked; pin it, so the pane stays on it ("Moved to Waiting")
+    // when the refresh moves it out of the active list instead of jumping to the next item.
+    if (wide) setSelected(k)
+  }
   const release = (k: string) =>
     setCopied(s => {
       const n = new Set(s)

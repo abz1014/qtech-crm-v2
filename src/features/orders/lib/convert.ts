@@ -12,6 +12,8 @@ export interface ConvertItem {
   unit: string | null
   /** rfq_items.quoted_unit_price_net: what the customer was quoted. Null when no quotation priced it. */
   quotedUnitPriceNet: number | null
+  brandName?: string | null
+  familyName?: string | null
 }
 
 export interface ConvertQuote {
@@ -108,6 +110,8 @@ export function unpricedItems(items: readonly ConvertItem[], typedPrices: Readon
   return items.filter(it => it.quotedUnitPriceNet === null && !(typedPrices[it.id] !== null && typedPrices[it.id] !== undefined && (typedPrices[it.id] as number) > 0))
 }
 
+/** Item families that are normally installed and commissioned by us (analysers, control and automation systems); the family name is read, so a new family needs no code. */
+const FAMILY_WORDS = /\b(analy[sz]ers?|plc|dcs|scada|control systems?|automation|commissioning|installation)\b/i
 const COMMISSIONING_WORDS = /\b(commission(ing)?|install(ation|ed)?|calibrat(e|ion)|start[-\s]?up|loop check|site acceptance|SAT)\b/i
 
 export interface CommissioningGuess {
@@ -121,12 +125,13 @@ export interface CommissioningGuess {
  * On when an ordered line is a service, or its description speaks of commissioning, installation or calibration. A wrong guess is one tap.
  */
 export function guessCommissioning(
-  lines: ReadonlyArray<{ number: number; description: string }>,
+  lines: ReadonlyArray<{ number: number; description: string; familyName?: string | null }>,
   choices: Readonly<Record<string, SupplierChoice>>,
   ids: Readonly<Record<number, string>>,
 ): CommissioningGuess {
   for (const l of lines) {
     if (choices[ids[l.number]] === 'service') return { needs: true, reason: `line ${l.number} is a service` }
+    if (l.familyName && FAMILY_WORDS.test(l.familyName)) return { needs: true, reason: `line ${l.number} is in the ${l.familyName} family` }
     if (COMMISSIONING_WORDS.test(l.description)) return { needs: true, reason: `line ${l.number} mentions commissioning or installation` }
   }
   return { needs: false, reason: null }

@@ -534,3 +534,37 @@ describe('robustness', () => {
     expect(Date.now() - t0).toBeLessThan(3000)
   })
 })
+
+describe('Pakistani (lakh) grouping and lakh / crore words', () => {
+  const PUMP: ReplyItemRef[] = [{ id: 'p1', description: 'Pressure transmitter', qty: 1 }]
+  const priceOf = (text: string) => {
+    const r = parseSupplierReply(text, PUMP, { today: '2026-10-19' })
+    return r.offers.map(o => [o.unitPrice, o.currency])
+  }
+  it.each([
+    ['Rs 1,25,000 each', 125000, 'PKR'],
+    ['PKR 12,50,000/-', 1250000, 'PKR'],
+    ['Price: 1,25,000 PKR', 125000, 'PKR'],
+    ['Rs. 1,00,00,000', 10000000, 'PKR'],
+    ['Price PKR 2.5 lakh', 250000, 'PKR'],
+    ['PKR 3 lac', 300000, 'PKR'],
+    ['Rs 1.2 crore', 12000000, 'PKR'],
+  ])('reads %s as %d, never as a decimal of it', (text, value, cur) => {
+    expect(priceOf(text)).toEqual([[value, cur]])
+  })
+  it('keeps western grouping as it was', () => {
+    expect(priceOf('USD 1,250.50')).toEqual([[1250.5, 'USD']])
+    expect(priceOf('USD 1,234,567')).toEqual([[1234567, 'USD']])
+  })
+})
+
+describe('validity date written without a year', () => {
+  it('reads "valid till 15 Jan" sent in December as next January, not as a date already past', () => {
+    const r = parseSupplierReply(`P320 transmitter USD 400, valid till 15 Jan`, ITEMS, { today: '2026-12-10' })
+    expect(r.offers[0]?.validityDays).toBe(36)
+  })
+  it('keeps a yearless date later this year in this year', () => {
+    const r = parseSupplierReply(`P320 transmitter USD 400, valid till 30 Dec`, ITEMS, { today: '2026-12-10' })
+    expect(r.offers[0]?.validityDays).toBe(20)
+  })
+})

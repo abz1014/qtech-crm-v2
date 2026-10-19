@@ -165,11 +165,7 @@ export function GstRegisterPage() {
         tone: 'success',
         undo: {
           onUndo: async () => {
-            try {
-              await res.undo()
-            } catch (err) {
-              toast.toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await res.undo()
           },
           settledTitle: `Marked ${res.n} ${word} ${what}`,
           undoneTitle: 'Stamp taken back',

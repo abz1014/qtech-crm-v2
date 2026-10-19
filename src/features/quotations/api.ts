@@ -97,18 +97,26 @@ export interface QuoteItem {
   quotedUnitPriceNet: number | null
   gstRate: number
   quotedLeadTime: string | null
+  brandName: string | null
+  familyName: string | null
 }
 
 export async function listQuoteItems(rfqId: string): Promise<QuoteItem[]> {
+  const db = requireSupabase()
   const rows = unwrap(
-    await requireSupabase()
+    await db
       .from('rfq_items')
-      .select('id, position, description, qty, unit, quoted_unit_price_net, gst_rate, quoted_lead_time, created_at')
+      .select('id, position, description, brand_id, family_id, qty, unit, quoted_unit_price_net, gst_rate, quoted_lead_time, created_at')
       .eq('rfq_id', rfqId)
       .order('position')
       .order('created_at'),
   )
+  // brands and families are both rows of `brands`
+  const nameIds = [...new Set(rows.flatMap(r => [r.brand_id, r.family_id]).filter((b): b is string => Boolean(b)))]
+  const names = new Map((nameIds.length ? unwrap(await db.from('brands').select('id, name').in('id', nameIds)) : []).map(b => [b.id, b.name]))
   return rows.map(r => ({
+    brandName: r.brand_id ? (names.get(r.brand_id) ?? null) : null,
+    familyName: r.family_id ? (names.get(r.family_id) ?? null) : null,
     id: r.id,
     position: r.position,
     description: r.description,
@@ -153,11 +161,6 @@ export interface ContactChoice {
   jobTitle: string | null
 }
 
-export async function listCompanyContacts(companyId: string): Promise<ContactChoice[]> {
-  const rows = unwrap(await requireSupabase().from('contacts').select('id, name, job_title').eq('company_id', companyId).order('name'))
-  return rows.map(r => ({ id: r.id, name: r.name, jobTitle: r.job_title }))
-}
-
 // ---------------------------------------------------------------- issue
 
 export interface IssueItemInput {
@@ -200,9 +203,10 @@ export async function issueQuotation(input: IssueInput): Promise<QuotationRow> {
     p_rfq_id: input.rfqId,
     p_valid_until: input.validUntil,
     p_contact_id: input.contactId ?? undefined,
-    p_delivery_text: input.deliveryText ?? undefined,
-    p_payment_terms: input.paymentTerms ?? undefined,
-    p_notes: input.notes ?? undefined,
+    // The RPC coalesces a NULL text with the previous revision's, so an emptied field is sent as '' to stay empty.
+    p_delivery_text: input.deliveryText ?? '',
+    p_payment_terms: input.paymentTerms ?? '',
+    p_notes: input.notes ?? '',
     p_item_ids: input.items.map(i => i.id),
   })
   if (error) throw error

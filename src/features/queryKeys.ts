@@ -135,6 +135,9 @@ function orders() {
     nextNumber: () => [...all, 'list', 'next-number'] as const,
     /** The supplier's median days from placed to delivered (the default expected date). */
     supplierMedian: (supplierId: string) => [...all, 'list', 'supplier-median', supplierId] as const,
+    /** Every role's ranked quotes of one RFQ: what a write to that RFQ's quotes (or a rate) makes stale. */
+    rankedFor: (rfqId: string) => [...all, 'list', 'ranked', rfqId] as const,
+    rankedAll: () => [...all, 'list', 'ranked'] as const,
     /** Suppliers a leg can be added for. */
     supplierChoices: () => [...all, 'list', 'supplier-choices'] as const,
     jobTitle: (userId: string) => [...all, 'list', 'job-title', userId] as const,

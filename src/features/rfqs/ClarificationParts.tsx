@@ -151,11 +151,7 @@ export function QuestionRow({
         tone: 'success',
         undo: {
           onUndo: async () => {
-            try {
-              await setAnswer.mutateAsync({ id: c.id, answer: null, answeredAt: null })
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await setAnswer.mutateAsync({ id: c.id, answer: null, answeredAt: null })
           },
           settledTitle: 'Answer saved',
           undoneTitle: 'Answer taken back',
@@ -186,12 +182,8 @@ export function QuestionRow({
         tone: 'success',
         undo: {
           onUndo: async () => {
-            try {
-              await setAnswer.mutateAsync({ id: c.id, answer: null, answeredAt: null })
-              await delFile.mutateAsync({ id: photo.id, path: photo.path })
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await setAnswer.mutateAsync({ id: c.id, answer: null, answeredAt: null })
+            await delFile.mutateAsync({ id: photo.id, path: photo.path })
           },
           settledTitle: 'Answered with photo',
           undoneTitle: 'Photo answer taken back',
@@ -213,11 +205,7 @@ export function QuestionRow({
         body: c.question,
         undo: {
           onUndo: async () => {
-            try {
-              await withdraw.mutateAsync({ id: c.id, at: null })
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await withdraw.mutateAsync({ id: c.id, at: null })
           },
           settledTitle: 'Question withdrawn',
           undoneTitle: 'Question put back',

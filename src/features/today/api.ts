@@ -574,6 +574,29 @@ export async function undoCustomerChase(before: readonly ClarificationBefore[]):
   }
 }
 
+type ChaseStampRow = { last_chased_on: string | null; last_chased_by: string | null; chase_count: number }
+
+/** A supplier inquiry's chase stamp as it is now, read at the tap so an Undo restores exactly it (the Today facts may be stale). */
+export async function readSupplierChaseBefore(inquiryId: string): Promise<{ lastChasedOn: string | null; lastChasedBy: string | null; chaseCount: number } | null> {
+  const db = requireSupabase()
+  const r = unwrap<ChaseStampRow | null>(await db.from('supplier_inquiries').select('id, last_chased_on, last_chased_by, chase_count').eq('id', inquiryId).maybeSingle())
+  return r ? { lastChasedOn: r.last_chased_on, lastChasedBy: r.last_chased_by, chaseCount: num(r.chase_count) } : null
+}
+
+/** A supplier leg's goods-chase stamp as it is now, read at the tap. */
+export async function readGoodsChaseBefore(legId: string): Promise<{ lastChasedOn: string | null; lastChasedBy: string | null; chaseCount: number } | null> {
+  const db = requireSupabase()
+  const r = unwrap<ChaseStampRow | null>(await db.from('supplier_orders').select('id, last_chased_on, last_chased_by, chase_count').eq('id', legId).maybeSingle())
+  return r ? { lastChasedOn: r.last_chased_on, lastChasedBy: r.last_chased_by, chaseCount: num(r.chase_count) } : null
+}
+
+/** The invoices' reminder stamps as they are now, read at the tap. */
+export async function readPaymentRemindersBefore(invoiceIds: string[]): Promise<Array<{ id: string; lastRemindedOn: string | null; reminderCount: number }>> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('invoices').select('id, last_reminded_on, reminder_count').in('id', invoiceIds)) ?? []
+  return rows.map(r => ({ id: r.id, lastRemindedOn: r.last_reminded_on, reminderCount: num(r.reminder_count) }))
+}
+
 export async function stampSupplierChaseOnToday(inquiryId: string): Promise<number> {
   const db = requireSupabase()
   const { data, error } = await db.rpc('stamp_supplier_chase', { p_inquiry_id: inquiryId })

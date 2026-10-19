@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Copy, Send } from 'lucide-react'
 import { businessToday, toBusinessDate } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
@@ -66,6 +66,21 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
   const open = groups.toAsk.length + groups.asked.length
   const options = inquiries.map(i => ({ id: i.id, name: i.supplierName }))
 
+  // The copy runs before the stamp, so no mutation is pending yet while it does: a double tap must not stamp twice.
+  const inFlight = useRef(false)
+  const [copying, setCopying] = useState(false)
+  const once = async (run: () => Promise<void>) => {
+    if (inFlight.current) return
+    inFlight.current = true
+    setCopying(true)
+    try {
+      await run()
+    } finally {
+      inFlight.current = false
+      setCopying(false)
+    }
+  }
+
   /** "Copy message and mark chased": the text goes on the clipboard, the questions are stamped, and an Undo toast offers to take it back. */
   const copyAsk = async (group: ClarificationRow[], repeat: boolean, text: string) => {
     if (!(await copyToClipboard(text))) {
@@ -81,11 +96,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
         tone: 'success',
         undo: {
           onUndo: async () => {
-            try {
-              await restore.mutateAsync(before)
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await restore.mutateAsync(before)
           },
           settledTitle: repeat ? 'Chase text copied' : 'Questions copied',
           settledBody: `${rfqRef(rfq.number)} marked chased`,
@@ -118,11 +129,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
         tone: 'success',
         undo: {
           onUndo: async () => {
-            try {
-              await relayStamp.mutateAsync({ inquiryId: inq.id, at: before })
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await relayStamp.mutateAsync({ inquiryId: inq.id, at: before })
           },
           settledTitle: 'Answers copied',
           undoneTitle: 'Marked as not told',
@@ -177,7 +184,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                 <span className="min-w-0 flex-1 basis-[10rem]">
                   <b className="font-medium">{inq.supplierName}</b> is waiting for <span className="num">{answered.length}</span> {answered.length === 1 ? 'answer' : 'answers'}.
                 </span>
-                <Button size="sm" icon={Copy} onClick={() => void copyRelay(inq, answered)} busy={relayStamp.isPending} aria-label={`Copy answers for supplier ${inq.supplierName}`}>
+                <Button size="sm" icon={Copy} onClick={() => void once(() => copyRelay(inq, answered))} busy={copying || relayStamp.isPending} aria-label={`Copy answers for supplier ${inq.supplierName}`}>
                   Copy answers
                 </Button>
               </div>
@@ -196,8 +203,8 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                 header={<StatusBadge dimension="clarification" value="to-ask" />}
                 hint={`${groups.toAsk.length} ${groups.toAsk.length === 1 ? 'question' : 'questions'}`}
                 copyLabel="Copy questions for customer"
-                stamping={stamp.isPending}
-                onCopy={(selected, text) => void copyAsk(selected, false, text)}
+                stamping={copying || stamp.isPending}
+                onCopy={(selected, text) => void once(() => copyAsk(selected, false, text))}
               >
                 {groups.toAsk.map(c => (
                   <QuestionRow key={c.id} rfqId={rfq.id} c={c} raisedBy={c.raisedByInquiryId ? (nameOf.get(c.raisedByInquiryId) ?? 'a supplier') : null} files={filesFor(c.id)} urls={urls.data} />
@@ -217,8 +224,8 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                 header={<StatusBadge dimension="clarification" value="waiting-customer" label={`Asked ×${Math.max(...groups.asked.map(c => c.askCount))}`} />}
                 hint={askedHint(groups.asked, today)}
                 copyLabel="Copy chase text"
-                stamping={stamp.isPending}
-                onCopy={(selected, text) => void copyAsk(selected, true, text)}
+                stamping={copying || stamp.isPending}
+                onCopy={(selected, text) => void once(() => copyAsk(selected, true, text))}
                 dueNote={chaseDueNote(groups.asked, rfq.dueOn, today)}
               >
                 {groups.asked.map(c => (
@@ -319,7 +326,8 @@ function ChaseGroup({
     .at(-1)
   const defaultBy = customerConfirmBy(rfq.dueOn, today)
   const by = chosen ?? defaultBy
-  const selectedKey = selected.map(c => c.id).join(',')
+  // Everything of the selected questions the text reads: a chase stamped on the same questions (ask count, dates) rewrites it.
+  const selectedKey = JSON.stringify(selected.map(c => [c.id, c.question, c.askCount, c.firstAskedAt, c.lastAskedAt, c.rfqItemId]))
   const draft = useMemo(() => {
     if (selected.length === 0) return null
     const firsts = selected.map(c => c.firstAskedAt).filter((x): x is string => Boolean(x)).sort()
@@ -344,9 +352,9 @@ function ChaseGroup({
       confirmByOverride: chosen,
     })
     return { whatsapp: make('whatsapp'), email: make('email') }
-    // selected is derived from rows and off; its ids are the dependency
+    // selected is derived from rows and off; selectedKey carries every field of it the text reads
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedKey, rfq.number, rfq.customerRef, rfq.contact?.name, rfq.dueOn, today, signature.name, signature.jobTitle, repeat, chosen, items])
+  }, [selectedKey, rfq.number, rfq.customerRef, rfq.contact?.name, rfq.dueOn, rfq.dueTime, today, signature.name, signature.jobTitle, signature.phone, repeat, chosen, items])
   const shown = draft ? draft[variant] : null
   const count = Math.max(0, ...rows.map(c => c.askCount)) + 1
   const returnsOn = customerReturnsOn(today, rfq.dueOn)

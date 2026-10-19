@@ -6,7 +6,10 @@ import {
   CircleDashed,
   CircleDot,
   Clock,
+  Hourglass,
+  Landmark,
   Layers,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -142,7 +145,15 @@ export const STATUS = {
     'advance-held': def('Advance held', 'info'),
   },
   bank: { unticked: def('Not on statement', 'warning'), ticked: def('On statement', 'success') },
-  'paid-via': { bank: def('Bank', 'neutral'), cash: def('Cash', 'neutral') },
+  'paid-via': { bank: def('Bank', 'info', { icon: Landmark }), cash: def('Cash', 'neutral', { icon: Wallet }) },
+  // What we owe (Month-end): the state of a supplier leg against what was paid (g2-month-end "leg:owed", "leg:settled", "leg:flag").
+  payable: {
+    owing: def('Owed', 'info', { icon: Hourglass }),
+    settled: def('Settled (≈)', 'success', { icon: CircleCheck }),
+    'paid-over': def('Paid over', 'warning', { icon: CircleAlert }),
+    unpriced: def('No price yet', 'neutral'),
+    'no-rate': def('No rate', 'neutral'),
+  },
   'expense-group': {
     overhead: def('Overhead', 'neutral'),
     'order-cost': def('Order cost', 'neutral'),
@@ -176,6 +187,7 @@ const ALIASES: Partial<Record<StatusDimension, Record<string, string>>> = {
   tcs: { 'delivered-to-client': 'delivered' },
   fbr: { 'receipt-received': 'receipt' },
   reminder: { 'not-reminded': 'none' },
+  'expense-group': { 'non-pnl': 'not-in-pnl' },
 }
 
 export class UnknownStatusError extends Error {

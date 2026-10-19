@@ -6,6 +6,7 @@ import { paisaToFixed, toPaisa, type Amount } from '@/lib/money'
 import { companyNames } from '@/features/money/expenses/api'
 import { legLabels } from '@/features/money/bank/api'
 import { monthEnd, monthStart } from '@/features/money/expenses/model'
+import { categoryNotes } from '@/features/money/monthEnd/model'
 import type {
   AdvanceRow,
   AgingRow,
@@ -15,6 +16,7 @@ import type {
   PayableRow,
   PaymentStats,
   RawPnl,
+  CheckDetails,
   StatusRow,
   ViaStat,
 } from '@/features/money/monthEnd/model'
@@ -79,6 +81,13 @@ export async function loadStatus(month: string): Promise<StatusRow[]> {
   const db = requireSupabase()
   const rows = unwrap(await db.rpc('month_end_status', { p_month: monthStart(month) })) ?? []
   return rows.map(r => ({ check_key: r.check_key, n: Number(r.n) || 0 }))
+}
+
+/** The figures behind each check (migration 0064). Optional: a failure here leaves the cards on their fixed wording. */
+export async function loadCheckDetails(month: string): Promise<CheckDetails> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.rpc('month_end_check_details', { p_month: monthStart(month) })) ?? []
+  return Object.fromEntries(rows.map(r => [r.check_key, (r.detail ?? {}) as Record<string, unknown>]))
 }
 
 export async function loadClosedMonths(): Promise<ClosedMonth[]> {
@@ -186,6 +195,16 @@ export async function loadCategoryLines(month: string): Promise<CategoryLine[]> 
     inputTax: paisaToFixed(toPaisa(r.gross_paid ?? 0) - toPaisa(r.net_cost ?? 0)),
     paidVia: via[r.category_id as string] === 'cash' ? 'cash' : 'bank',
   }))
+}
+
+/** What each category's expenses of the month were for: the payee's name, else the description (migration-free: the expenses themselves). */
+export async function loadCategoryNotes(month: string): Promise<Record<string, string>> {
+  const db = requireSupabase()
+  const rows = await fetchAll<{ category_id: string; description: string | null; payee_id: string | null }>((from, to) =>
+    db.from('expenses').select('category_id, description, payee_id').gte('paid_on', monthStart(month)).lte('paid_on', monthEnd(month)).range(from, to),
+  )
+  const names = await companyNames([...new Set(rows.map(r => r.payee_id).filter((x): x is string => !!x))])
+  return categoryNotes(rows.map(r => ({ categoryId: r.category_id, label: (r.payee_id ? names[r.payee_id] : null) ?? r.description })))
 }
 
 /** How the month's expenses were paid, counted from the expenses themselves (a category's default is not what was done). */

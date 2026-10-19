@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { guessCommissioning } from '@/features/orders/lib/convert'
 import { defaultExpected, leadTimeUpperDays, medianDeliveryDays, suggestExpected } from '@/features/orders/lib/leadTime'
-import { before, editPatch, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, type LegDates } from '@/features/orders/lib/legModel'
+import { before, editPatch, expectedAfterIssue, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, type LegDates } from '@/features/orders/lib/legModel'
 import { isExemptAll, lineGstPaisa, orderTotals } from '@/features/orders/lib/orderMath'
 import { buildPayload, defaultChoices, unpricedItems, type ConvertItem, type ConvertQuote } from '@/features/orders/lib/convert'
 
@@ -159,6 +159,20 @@ describe('resolve price basis preview (admin, legacy orders)', () => {
   })
 })
 
+describe('expected date after a PO is issued (O07)', () => {
+  it('counts the lead time from the day the leg was placed, not from the issue day, when the leg was placed before the PO', () => {
+    // issue_purchase_order stamps placed_on only when it is empty: a leg marked placed on 1 Oct and given its PO on 19 Oct is still placed 1 Oct
+    expect(expectedAfterIssue({ placedOn: '2026-10-01', expectedOn: null, leadTimes: ['2 weeks'] }, '2026-10-19')).toBe('2026-10-15')
+  })
+  it('counts from today when the issue is what places the leg', () => {
+    expect(expectedAfterIssue({ placedOn: null, expectedOn: null, leadTimes: ['2 weeks'] }, '2026-10-19')).toBe('2026-11-02')
+  })
+  it('leaves an expected date that is already set, and suggests nothing without a lead time', () => {
+    expect(expectedAfterIssue({ placedOn: null, expectedOn: '2026-12-01', leadTimes: ['2 weeks'] }, '2026-10-19')).toBeNull()
+    expect(expectedAfterIssue({ placedOn: null, expectedOn: null, leadTimes: [] }, '2026-10-19')).toBeNull()
+  })
+})
+
 describe('default expected date', () => {
   it('prefers the quoted lead time, then the supplier median, then 30 days', () => {
     expect(defaultExpected('2026-11-06', ['2 wks'], 18)).toMatchObject({ on: '2026-11-20', source: 'lead_time', label: 'from lead time 2 wks' })
@@ -179,6 +193,10 @@ describe('commissioning guess for the convert toggle', () => {
   it('is on for a service line or a line that speaks of commissioning, and says why', () => {
     expect(guessCommissioning([{ number: 1, description: 'Flow meter' }, { number: 2, description: 'Loop check' }], { a: 'q1', b: 'service' }, ids)).toEqual({ needs: true, reason: 'line 2 is a service' })
     expect(guessCommissioning([{ number: 1, description: 'Flow meter' }, { number: 2, description: 'Installation and commissioning' }], { a: 'q1', b: 'q2' }, ids)).toEqual({ needs: true, reason: 'line 2 mentions commissioning or installation' })
+  })
+  it('is on for an item in an analyser or control-system family, and says which', () => {
+    expect(guessCommissioning([{ number: 1, description: 'Hach HQ1110 meter', familyName: 'Process analysers' }], { a: 'q1' }, ids)).toEqual({ needs: true, reason: 'line 1 is in the Process analysers family' })
+    expect(guessCommissioning([{ number: 1, description: 'Pressure transmitter', familyName: 'Pressure transmitters' }], { a: 'q1' }, ids)).toEqual({ needs: false, reason: null })
   })
   it('is off for plain goods', () => {
     expect(guessCommissioning([{ number: 1, description: 'Pressure transmitter 0 to 10 bar' }], { a: 'q1' }, ids)).toEqual({ needs: false, reason: null })

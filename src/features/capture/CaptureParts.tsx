@@ -115,6 +115,11 @@ export function CaptureArea({
   const photos = useRef<HTMLInputElement>(null)
   const docs = useRef<HTMLInputElement>(null)
   const empty = !text.trim() && files.length === 0 && resizing.length === 0
+  // g2-capture frame "Answer with photo": a photo alone shows only its file row, no empty text box. Once there has been text the box stays (deleting the last
+  // letter must not take the box, and the cursor, away).
+  const hadText = useRef(false)
+  if (text.length > 0) hadText.current = true
+  const showText = text.length > 0 || hadText.current || (files.length === 0 && resizing.length === 0)
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform)
   const onPaste = (e: ClipboardEvent) => {
     const pasted = [...(e.clipboardData?.files ?? [])]
@@ -204,7 +209,7 @@ export function CaptureArea({
 
   return (
     <Section title="What you captured" aside={count}>
-      {textArea('rounded border border-line-input bg-surface p-3', undefined, 5)}
+      {showText ? textArea('rounded border border-line-input bg-surface p-3', undefined, 5) : null}
       <ul className="grid gap-2">
         {files.map(f => (
           <li key={f.id}>

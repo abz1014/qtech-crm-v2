@@ -78,7 +78,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
   const submitting = useRef(false)
 
   const items: ConvertItem[] = useMemo(
-    () => (itemsQ.data ?? []).map(i => ({ id: i.id, description: i.description, qty: i.qty, unit: i.unit, quotedUnitPriceNet: i.quotedUnitPriceNet })),
+    () => (itemsQ.data ?? []).map(i => ({ id: i.id, description: i.description, qty: i.qty, unit: i.unit, quotedUnitPriceNet: i.quotedUnitPriceNet, brandName: i.brandName, familyName: i.familyName })),
     [itemsQ.data],
   )
   const ranked = useMemo<readonly RankedQuote[]>(() => rankQ.data ?? [], [rankQ.data])
@@ -128,7 +128,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
   })()
 
   const guess = guessCommissioning(
-    ordered.map(it => ({ number: items.indexOf(it) + 1, description: it.description })),
+    ordered.map(it => ({ number: items.indexOf(it) + 1, description: it.description, familyName: it.familyName })),
     effective,
     Object.fromEntries(items.map((it, i) => [i + 1, it.id])),
   )
@@ -317,6 +317,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                       <span className="num pt-px text-fg-muted">{n}</span>
                       <div className="grid min-w-0 gap-0.5">
                         <b className="font-medium">{it.description}</b>
+                        {[it.brandName, it.familyName].filter(Boolean).length > 0 ? <span className="text-xs text-fg-muted">{[it.brandName, it.familyName].filter(Boolean).join(' · ')}</span> : null}
                         {isSplitItem ? <span className="text-xs text-fg-2">split across {parts.length} suppliers</span> : null}
                       </div>
                       <span className="num text-sm lg:pt-1.5 lg:text-right">

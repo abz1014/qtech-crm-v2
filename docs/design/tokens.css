@@ -237,8 +237,9 @@
 [data-status="fx-capture:none"],
 [data-status="user:deactivated"],
 [data-status="aging:0-30"],
-[data-status="paid-via:bank"],
 [data-status="paid-via:cash"],
+[data-status="payable:unpriced"],
+[data-status="payable:no-rate"],
 [data-status="expense-group:overhead"],
 [data-status="expense-group:order-cost"],
 [data-status="expense-group:not-in-pnl"],
@@ -252,6 +253,8 @@
 [data-status="inquiry:awaiting"],
 [data-status="reminder:reminded"],
 [data-status="aging:advance-held"],
+[data-status="paid-via:bank"],
+[data-status="payable:owing"],
 [data-status="month:open"] {
   --status-fg: var(--tone-info-fg);
   --status-bg: var(--tone-info-bg);
@@ -260,6 +263,7 @@
 [data-status="fx:fresh"],
 [data-status="user:active"],
 [data-status="month:closed"],
+[data-status="payable:settled"],
 [data-status="bank:ticked"] {
   --status-fg: var(--tone-success-fg);
   --status-bg: var(--tone-success-bg);
@@ -271,6 +275,7 @@
 [data-status="fx:stale"],
 [data-status="aging:31-60"],
 [data-status="aging:61-90"],
+[data-status="payable:paid-over"],
 [data-status="bank:unticked"],
 [data-status="excluded:basis-unknown"] {
   --status-fg: var(--tone-warning-fg);

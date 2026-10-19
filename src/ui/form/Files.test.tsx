@@ -74,6 +74,32 @@ describe('FileDrop and FileRow (U07)', () => {
     expect(onAdd).toHaveBeenCalledTimes(1)
   })
 
+  it('a page drop zone ignores a paste while a dialog it is not in is open (the capture sheet takes it)', async () => {
+    const onAdd = vi.fn<(f: AddedFile[]) => void>()
+    const inDialog = vi.fn<(f: AddedFile[]) => void>()
+    const { rerender } = render(
+      <>
+        <FileDrop onAdd={onAdd} />
+        <div role="dialog" aria-label="Capture" />
+      </>,
+    )
+    fireEvent.paste(document.body, { clipboardData: { files: [png('shot.png')] } })
+    await new Promise(r => setTimeout(r, 50))
+    expect(onAdd).not.toHaveBeenCalled()
+    // A drop zone inside the open dialog still takes it.
+    rerender(
+      <>
+        <FileDrop onAdd={onAdd} />
+        <div role="dialog" aria-label="Capture">
+          <FileDrop onAdd={inDialog} />
+        </div>
+      </>,
+    )
+    fireEvent.paste(document.body, { clipboardData: { files: [png('shot.png')] } })
+    await waitFor(() => expect(inDialog).toHaveBeenCalledTimes(1))
+    expect(onAdd).not.toHaveBeenCalled()
+  })
+
   it('FileRow shows the shrink note, the error reason, and a named remove button', async () => {
     const user = userEvent.setup()
     const onRemove = vi.fn()

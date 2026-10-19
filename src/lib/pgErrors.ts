@@ -5,6 +5,9 @@
  *   23505 unique_violation       "already exists"
  *   23503 foreign_key_violation  a linked record is missing, or still in use
  *   23514 check_violation        a value is outside what the table allows
+ *   42501 insufficient_privilege row-level security refused it: trying again will not help
+ *   PGRST116                     .single() found no row: it was removed meanwhile
+ *   ''    + "TypeError: ..."     postgrest-js resolves a failed fetch as an error object, not a throw
  *   P0001 raise_exception        the month-lock trigger: "<Month YYYY> is closed. An admin can
  *                                reopen it." is already plain, so it is passed through unchanged.
  *                                Any other P0001 text is not written for people and is not shown.
@@ -25,6 +28,8 @@ export type PgErrorKind =
   | 'reference-in-use' // 23503 on delete
   | 'check' // 23514
   | 'closed-month' // P0001 closed-month message
+  | 'permission' // 42501: row-level security or a missing grant
+  | 'not-found' // PGRST116: .single() found no row
   | 'network'
   | 'unknown'
 
@@ -57,6 +62,9 @@ export class PlainError extends Error {
 }
 
 const CLOSED_MONTH = /\bis closed\.\s*An admin can reopen it\.?$/i
+/** postgrest-js turns a rejected fetch into { code: '', message: `${err.name}: ${err.message}` }. */
+const FETCH_FAILED = /^(TypeError|FetchError):/
+const NETWORK = { kind: 'network', message: 'Check your connection and try again. Trying again will not create a duplicate.' } as const
 
 function isPgLike(e: unknown): e is PgLikeError {
   return typeof e === 'object' && e !== null && ('code' in e || 'message' in e)
@@ -70,14 +78,14 @@ export function constraintOf(err: PgLikeError): string | undefined {
 
 export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
   const exists = opts.entity ? `A ${opts.entity} with these details already exists.` : 'That already exists.'
-  if (err instanceof TypeError || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
-    return { kind: 'network', message: 'Check your connection and try again. Trying again will not create a duplicate.' }
-  }
+  if (err instanceof TypeError || (typeof navigator !== 'undefined' && navigator.onLine === false)) return { ...NETWORK }
   if (err instanceof PlainError) return { kind: 'unknown', message: err.message, code: err.code }
   if (!isPgLike(err)) {
     return { kind: 'unknown', message: 'Something went wrong. Nothing was saved. Try again.' }
   }
-  const constraint = constraintOf(err)
+  const text = typeof err.message === 'string' ? err.message : ''
+  if (!err.code && FETCH_FAILED.test(text)) return { ...NETWORK }
+  const constraint = constraintOf({ ...err, message: text })
   switch (err.code) {
     case '23505':
       if (constraint && /_pkey$/.test(constraint)) {
@@ -89,7 +97,7 @@ export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
         constraint,
       }
     case '23503': {
-      const inUse = /is still referenced/i.test(err.details ?? '') || /update or delete on table/i.test(err.message ?? '')
+      const inUse = /is still referenced/i.test(String(err.details ?? '')) || /update or delete on table/i.test(text)
       return inUse
         ? { kind: 'reference-in-use', message: 'This is still used by other records, so it cannot be removed. Nothing was changed.', constraint }
         : { kind: 'reference-missing', message: 'A record this one points to no longer exists. Reload the page, choose it again, then save.', constraint }
@@ -100,9 +108,13 @@ export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
         message: 'One of the values is not allowed. Check that amounts are above zero and dates are in order, then save again.',
         constraint,
       }
+    case '42501':
+      return { kind: 'permission', message: 'Your role cannot make this change. Nothing was saved. Ask an admin if it needs doing.' }
+    case 'PGRST116':
+      return { kind: 'not-found', message: 'This record is no longer there. It may have been removed. Reload the page.' }
     case 'P0001':
-      if (err.message && CLOSED_MONTH.test(err.message.trim())) {
-        return { kind: 'closed-month', message: err.message.trim() }
+      if (CLOSED_MONTH.test(text.trim())) {
+        return { kind: 'closed-month', message: text.trim() }
       }
       return { kind: 'unknown', message: 'This change was refused. Nothing was saved.' }
     default:

@@ -7,6 +7,7 @@ import { InstallBanner } from '@/features/settings/InstallBanner'
 import { SettingsHomePage } from '@/features/settings/SettingsHomePage'
 import { Icon } from '@/ui/Icon'
 import { cn } from '@/lib/utils'
+import { useScrollActiveIntoView } from '@/lib/useScrollActiveIntoView'
 
 /*
  * Settings (A04, A06). Reached from the account menu, not the six main destinations. A left list on
@@ -39,11 +40,12 @@ const useIsAdmin = () => {
 export function SettingsLayout() {
   const isAdmin = useIsAdmin()
   const links = SETTINGS_LINKS.filter(l => isAdmin || !l.adminOnly)
+  const strip = useScrollActiveIntoView<HTMLUListElement>()
   return (
-    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)]">
+    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] max-md:grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)]">
       <nav aria-label="Settings" className="border-b bg-surface px-4 py-3 md:border-b-0 md:border-r md:px-3 md:py-6">
         <p className="mb-2 hidden px-3 text-xs font-semibold text-fg-muted md:block">Settings</p>
-        <ul className="flex gap-1 overflow-x-auto md:grid md:gap-[2px] md:overflow-visible">
+        <ul ref={strip} className="flex gap-1 overflow-x-auto md:grid md:gap-[2px] md:overflow-visible">
           {links.map(l => (
             <li key={l.to}>
               <NavLink

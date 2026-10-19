@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import { businessToday } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
 import { mapPgError } from '@/lib/pgErrors'
@@ -22,7 +23,22 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
   const add = useAddInquiries(rfq.id)
   const remove = useRemoveInquiries(rfq.id)
 
+  // The copy runs before the insert, so nothing is pending yet while it does: a second tap then would ask the same suppliers again.
+  const inFlight = useRef(false)
+  const [copying, setCopying] = useState(false)
   const ask = async (input: { supplierIds: readonly string[]; items: readonly RfqItemRow[]; names: readonly string[] }): Promise<boolean> => {
+    if (inFlight.current) return false
+    inFlight.current = true
+    setCopying(true)
+    try {
+      return await askOnce(input)
+    } finally {
+      inFlight.current = false
+      setCopying(false)
+    }
+  }
+
+  const askOnce = async (input: { supplierIds: readonly string[]; items: readonly RfqItemRow[]; names: readonly string[] }): Promise<boolean> => {
     const fresh = input.supplierIds.filter(id => !inquiries.some(i => i.supplierId === id))
     if (input.items.length === 0 || input.supplierIds.length === 0) return false
     const text = generateEnquiryDraft({
@@ -49,11 +65,7 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
           ids.length > 0
             ? {
                 onUndo: async () => {
-                  try {
-                    await remove.mutateAsync(ids)
-                  } catch (err) {
-                    toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-                  }
+                  await remove.mutateAsync(ids)
                 },
                 settledTitle: 'Enquiry text copied',
                 undoneTitle: 'Taken back',
@@ -67,5 +79,5 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
     }
   }
 
-  return { ask, busy: add.isPending || remove.isPending }
+  return { ask, busy: copying || add.isPending || remove.isPending }
 }

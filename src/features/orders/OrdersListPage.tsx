@@ -146,25 +146,25 @@ export default function OrdersListPage() {
   const today = businessToday()
   const columns = useMemo<Column<OrderListRow>[]>(
     () => [
-      { id: 'order', header: 'Order', value: r => r.number, kind: 'num', align: 'left', sortable: true, width: 130, cell: r => <OrderCell row={r} /> },
+      { id: 'order', header: 'Order', value: r => r.number, kind: 'num', align: 'left', sortable: true, width: 140, cell: r => <OrderCell row={r} /> },
       { id: 'customer', header: 'Customer', value: r => r.companyName, sortable: true, cell: r => <CustomerCell row={r} /> },
-      { id: 'goods', header: 'Goods', value: r => r.goods, width: 160, cell: r => <Chip dim="goods" value={r.goods} /> },
-      { id: 'commissioning', header: 'Commissioning', value: r => r.commissioning, width: 150, hideBelowMd: true, cell: r => <Chip dim="commissioning" value={r.commissioning} /> },
+      { id: 'goods', header: 'Goods', value: r => r.goods, width: 130, cell: r => <Chip dim="goods" value={r.goods} /> },
+      { id: 'commissioning', header: 'Commissioning', value: r => r.commissioning, width: 140, hideBelowMd: true, cell: r => <Chip dim="commissioning" value={r.commissioning} /> },
       ...(money
         ? ([
-            { id: 'invoicing', header: 'Invoicing', value: (r: OrderListRow) => r.invoicing, width: 150, hideBelowLg: true, cell: (r: OrderListRow) => <Chip dim="invoicing" value={r.invoicing} /> },
-            { id: 'payment', header: 'Payment', value: (r: OrderListRow) => r.payment, width: 130, hideBelowLg: true, cell: (r: OrderListRow) => <Chip dim="payment" value={r.payment} /> },
-            { id: 'gross', header: 'Gross (PKR)', kind: 'money', value: (r: OrderListRow) => r.gross, sortable: true, width: 140, hideBelowLg: true },
+            { id: 'invoicing', header: 'Invoicing', value: (r: OrderListRow) => r.invoicing, width: 140, hideBelowLg: true, cell: (r: OrderListRow) => <Chip dim="invoicing" value={r.invoicing} /> },
+            { id: 'payment', header: 'Payment', value: (r: OrderListRow) => r.payment, width: 120, hideBelowLg: true, cell: (r: OrderListRow) => <Chip dim="payment" value={r.payment} /> },
+            { id: 'gross', header: 'Gross (PKR)', kind: 'money', value: (r: OrderListRow) => r.gross, sortable: true, width: 120, hideBelowLg: true },
           ] satisfies Column<OrderListRow>[])
         : []),
-      { id: 'owner', header: 'Owner', value: r => r.ownerName, sortable: true, width: 130, hideBelowMd: true, cell: r => <span className="truncate">{r.ownerName ?? <span className="text-fg-muted">—</span>}</span> },
+      { id: 'owner', header: 'Owner', value: r => r.ownerName, sortable: true, width: 110, hideBelowMd: true, cell: r => <span className="truncate">{r.ownerName ?? <span className="text-fg-muted">—</span>}</span> },
       {
         id: 'ordered',
         header: 'Ordered',
         kind: 'date',
         value: r => r.orderedOn,
         sortable: true,
-        width: 110,
+        width: 90,
         hideBelowMd: true,
         cell: r => (r.orderedOn ? <span className="num">{formatShortDate(r.orderedOn, today)}</span> : <span className="text-fg-muted">—</span>),
       },
@@ -186,7 +186,7 @@ export default function OrdersListPage() {
         value={current === ALL ? '' : current}
         placeholder={`${LABEL[dim]}: all`}
         onChange={e => change({ [dim]: e.target.value || null })}
-        className="h-control w-auto min-w-[160px]"
+        className="h-control w-auto min-w-[144px] max-sm:w-full"
         options={DIMENSION_VALUES[dim].map(v => ({ value: v, label: `${valueLabel(dim, v)} (${dimCounts[dim].get(v) ?? 0})` }))}
       />
     )
@@ -258,6 +258,7 @@ export default function OrdersListPage() {
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
           <SegmentedControl
             aria-label="Whose orders"
+            className="max-sm:w-full"
             value={filters.owner}
             onValueChange={v => change({ owner: v })}
             options={[
@@ -269,7 +270,7 @@ export default function OrdersListPage() {
           {dimSelect('commissioning')}
           {money ? dimSelect('invoicing') : null}
           {money ? dimSelect('payment') : null}
-          <div className="relative ml-auto min-w-[220px] max-w-[320px] flex-1">
+          <div className="relative ml-auto min-w-[200px] max-w-[320px] flex-1 max-sm:w-full max-sm:max-w-none">
             <Icon icon={Search} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
             <TextField
               aria-label="Search orders"

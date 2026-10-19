@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/quotations/api'
+import * as companiesApi from '@/features/companies/api'
 
 export function useQuotations(rfqId: string | undefined) {
   return useQuery({ queryKey: qk.rfqs.part(rfqId ?? '', 'quotations'), queryFn: () => api.listQuotations(rfqId as string), enabled: Boolean(rfqId) })
@@ -29,8 +30,11 @@ export function usePriceMemory(rfqId: string | undefined, enabled: boolean) {
 
 export function useCompanyContacts(companyId: string | undefined, enabled: boolean) {
   return useQuery({
+    // The same cache entry as the company page's Contacts panel, so it must hold the same rows: read them with the same
+    // query and shape them here (a different queryFn under one key served one screen the other's rows).
     queryKey: qk.companies.part(companyId ?? '', 'contacts'),
-    queryFn: () => api.listCompanyContacts(companyId as string),
+    queryFn: () => companiesApi.listContacts(companyId as string),
+    select: (rows: companiesApi.ContactRow[]): api.ContactChoice[] => rows.map(r => ({ id: r.id, name: r.name, jobTitle: r.job_title })),
     enabled: enabled && Boolean(companyId),
   })
 }

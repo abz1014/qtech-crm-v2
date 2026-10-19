@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlarmClock,
@@ -40,6 +40,8 @@ import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
 import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
 import { useRfqHeader, useRfqInquiries, useRfqItems, useSetRfqClosed } from '@/features/rfqs/hooks'
 import { COMPANY_NAME, customerReturnsOn, supplierReturnsOn } from '@/features/rfqs/lib'
+import { SUPPLIER_WAIT_DAYS } from '@/features/rfqs/lib/chaseWait'
+import { supplierChaseBaseDays } from '@/features/today/rules'
 import { addBusinessDays, addDays, nextMonday } from '@/features/rfqs/lib/dateText'
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
 import { chasedByText } from '@/features/rfqs/lib/collision'
@@ -212,7 +214,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
     }
   }
 
-  const nudge = nudgeInfo(item, rfq?.dueOn ?? null, today)
+  const nudge = nudgeInfo(item, rfq?.dueOn ?? null, today, inquiryFact)
   const facts = factsFor(item, { rfq, questions, inquiryFact, legFact, receivable, today, pricedOf: priced(items.data, inquiries.data, item.inquiryId), justChased, nudge })
   const hs = header.data?.state
   const deadline = hs ? deadlineValue(hs.days_to_due, Boolean(hs.is_overdue), 5) : null
@@ -537,13 +539,18 @@ function copyingNote(item: TodayItem, draft: Draft, returnsOn: string, chaseCoun
   }
 }
 
-function nudgeInfo(item: TodayItem, dueOn: string | null, today: string): { returnsOn: string; why: string } {
+// Exported for its unit test (nudgeInfo.test.ts); it is a pure helper beside the pane that uses it.
+// eslint-disable-next-line react-refresh/only-export-components
+export function nudgeInfo(item: TodayItem, dueOn: string | null, today: string, inquiry?: Pick<TodayData['inquiries'][number], 'replied' | 'medianReplyDays'>): { returnsOn: string; why: string } {
   const close = isBidClose(dueOn, today)
   switch (item.rule) {
     case 'chase_customer':
       return { returnsOn: customerReturnsOn(today, dueOn), why: close ? 'short wait: bid is close' : '3 working days' }
-    case 'chase_supplier':
-      return { returnsOn: supplierReturnsOn(today, dueOn), why: close ? 'short wait: bid is close' : '2 working days' }
+    case 'chase_supplier': {
+      // The same wait the rule uses: a slow supplier's own median plus one, not always 2.
+      const base = inquiry ? supplierChaseBaseDays(inquiry) : SUPPLIER_WAIT_DAYS
+      return { returnsOn: supplierReturnsOn(today, dueOn, base), why: close ? 'short wait: bid is close' : `${base} working days` }
+    }
     case 'goods_late':
       return { returnsOn: addBusinessDays(today, 3), why: '3 working days' }
     default:
@@ -738,14 +745,7 @@ function NudgeRail({
   const nudgePos = nudgeOn ? at(nudgeOn) : null
   return (
     <div className="grid gap-1" aria-hidden="true">
-      <div className="relative h-4">
-        <span className="num absolute top-0 text-xs text-tone-warning-fg" style={{ left: `min(${pos}%, calc(100% - 7rem))` }}>
-          Today · {formatDay(today)}
-        </span>
-        {nudgePos !== null && nudgeOn ? (
-          <span className="num absolute right-0 top-0 text-xs text-fg-muted">Next nudge · {formatDay(nudgeOn)}</span>
-        ) : null}
-      </div>
+      <RailLabels pos={pos} today={today} nudgeOn={nudgePos !== null ? nudgeOn : null} />
       <div className="relative h-1 rounded bg-selected">
         <span className="absolute inset-y-0 left-0 rounded bg-fg-muted" style={{ width: `${pos}%` }} />
         <span className="absolute -top-1 size-3 -translate-x-1/2 rounded-round bg-tone-warning-fg" style={{ left: `${pos}%` }} />
@@ -757,6 +757,48 @@ function NudgeRail({
         </span>
         <span>Bid due {formatDay(rfqDue)}</span>
       </div>
+    </div>
+  )
+}
+
+/**
+ * The two labels above the rail: "Today · day" at the marker and "Next nudge · day" at the right end. When the two would print on top of each
+ * other (the nudge is a few days away on a narrow rail, a phone), the nudge label drops to a second line instead of overlapping.
+ */
+function RailLabels({ pos, today, nudgeOn }: { pos: number; today: string; nudgeOn: string | null }) {
+  const wrap = useRef<HTMLDivElement>(null)
+  const a = useRef<HTMLSpanElement>(null)
+  const b = useRef<HTMLSpanElement>(null)
+  const [stacked, setStacked] = useState(false)
+  const [aw, setAw] = useState(0)
+  useLayoutEffect(() => {
+    const el = wrap.current
+    if (!el || !nudgeOn) return
+    const measure = () => {
+      const w = el.clientWidth
+      const wa = a.current?.offsetWidth ?? 0
+      const wb = b.current?.offsetWidth ?? 0
+      if (!w) return
+      const left = Math.min((pos / 100) * w, w - wa)
+      setAw(wa)
+      setStacked(left + wa + 12 > w - wb)
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [pos, nudgeOn, today])
+  return (
+    <div ref={wrap} className={cn('relative', stacked ? 'h-[36px]' : 'h-4')}>
+      <span ref={a} className="num absolute top-0 whitespace-nowrap text-xs text-tone-warning-fg" style={{ left: `min(${pos}%, calc(100% - ${aw ? `${aw}px` : '7rem'}))` }}>
+        Today · {formatDay(today)}
+      </span>
+      {nudgeOn ? (
+        <span ref={b} className={cn('num absolute right-0 whitespace-nowrap text-xs text-fg-muted', stacked ? 'top-[18px]' : 'top-0')}>
+          Next nudge · {formatDay(nudgeOn)}
+        </span>
+      ) : null}
     </div>
   )
 }

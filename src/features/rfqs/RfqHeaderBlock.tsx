@@ -49,11 +49,7 @@ function useBidAndClose(rfq: RfqHeader) {
         body: `${ref} · ${rfq.company.name}`,
         undo: {
           onUndo: async () => {
-            try {
-              await bid.mutateAsync(before)
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await bid.mutateAsync(before)
           },
           settledTitle: again ? 'Offer sent again' : 'Marked bid sent',
           undoneTitle: again ? 'Date put back' : 'Bid sent taken back',
@@ -72,11 +68,7 @@ function useBidAndClose(rfq: RfqHeader) {
         body: `${ref} · ${closeReasonLabel(reason)}`,
         undo: {
           onUndo: async () => {
-            try {
-              await closeRfq.mutateAsync({ closedOn: null, reason: null, note: null })
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await closeRfq.mutateAsync({ closedOn: null, reason: null, note: null })
           },
           settledTitle: 'Closed',
           undoneTitle: 'Reopened',
@@ -96,11 +88,7 @@ function useBidAndClose(rfq: RfqHeader) {
         body: `${ref} is open again`,
         undo: {
           onUndo: async () => {
-            try {
-              await closeRfq.mutateAsync(before)
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await closeRfq.mutateAsync(before)
           },
           settledTitle: 'Reopened',
           undoneTitle: 'Closed again',
