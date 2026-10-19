@@ -12,6 +12,7 @@ so runs stay fast and quick to read: a docs-only push runs nothing.
 | `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | every push, path-gated; one stack boot, only suites whose paths changed | about 8 to 14 min |
 | `remote.yml`, `deploy-functions.yml` | manual only, owner approval | not part of the budget |
 | `backup.yml` (R13) | nightly 20:30 UTC, drill weekly, manual; `backup` environment, main only | about 3 min nightly, 15 min drill |
+| `smoke.yml` (S16) | nightly 21:17 UTC (02:17 Karachi), manual; `smoke` environment (Part 2 secrets only); read-only against the live project | about 1 min |
 | `backup-checks.yml` | push touching `scripts/backup/**` or the backup workflows | about 8 min |
 
 Rules applied everywhere:

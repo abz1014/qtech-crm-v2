@@ -284,3 +284,61 @@ Needs Docker Desktop (the same one the Supabase CLI uses) and the key.
    `PGPASSWORD`, `PGSSLMODE=require`). Then re-deploy the Edge Function, point the app's env at the new project and re-upload files from your own copies.
    `restore.sh` replaces public, `auth.users`, `auth.identities` and `storage.*` rows, so never point it at a project you want to keep.
 4. Users keep their passwords (the hashes are in `auth.users`).
+
+## Smoke test (S16, `smoke.yml`)
+
+A read-only check of the LIVE project, every night at 02:17 Pakistan time (and on demand: Actions, Smoke, Run workflow).
+Cost: $0 (public repo, standard runners). Code: `scripts/smoke/` (`smoke.mjs`, the object list in `objects.mjs`, the role
+rules in `expectations.mjs`).
+
+**Part 1, needs nothing from you.**
+
+- Pre-flight: the project must answer (auth health, then PostgREST with JSON). A paused, wrong or unreachable project FAILS the
+  run; an unreachable project never counts as "denied".
+- Anonymous denial: with only the public anon key, every public table, view and RPC must refuse (permission denied). The list is
+  generated from `src/types/database.ts` on every run, so a new table or function is covered without editing anything. Two
+  anonymous write attempts (role change on `users`, delete on `orders`) aim at an id that cannot exist.
+- A table or function that the types name but the live project lacks fails with "object missing on the live project". That means
+  the live database is behind `main` (a migration was not pushed, see "Remote push runbook"). A manual run can set `missing = warn`
+  to report instead of fail.
+- The anon key is public (it ships in the browser bundle). The workflow uses the repository variable `SMOKE_SUPABASE_ANON_KEY` if
+  you set one, and otherwise reads it from the deployed app's public bundle (`SMOKE_APP_URL`, default `https://qtechcrm.vercel.app`).
+  The key must say role `anon` for project `yafbphagorydbitfgfmg`. If a `service_role` key is ever found in that bundle, the run
+  fails with "SERVICE-ROLE KEY EXPOSED": rotate it at once.
+- It refuses the old project (`vptyhluvgnjpvkcbhxsf`) and any URL that is not the new project.
+
+**Part 2, needs the three test accounts (task A05, owner).** It signs in as an admin, a sales and an engineer test account and
+checks the access matrix (DATA_MODEL section 10) for reads: staff-wide objects readable by all three, invoices and the GST views
+not readable by the engineer, money objects (payments, expenses, audit log, month-end views) returning nothing to sales and
+engineer. It also checks each account really has the role it is meant to have. Until the secrets exist it is skipped with a
+notice and the run still passes on Part 1.
+
+### Owner: make the three test accounts (once)
+
+Use dedicated test people, never a real staff member. Use plausible private addresses you control, for example `smoke-admin@`,
+`smoke-sales@`, `smoke-engineer@` on a domain you own, or plus-addresses of one mailbox (`you+smoke-admin@gmail.com`).
+
+1. Sign in to the app as the admin. Open Team, then add three people: role Admin, role Sales, role Engineer, named
+   "Smoke Admin", "Smoke Sales", "Smoke Engineer". The app shows each generated password once; copy it straight into your
+   password manager. (If the Team screen is not available yet, the first admin can be made with `scripts/bootstrap-admin.mjs`
+   as in "First admin (A02)"; the other two roles must come from Team.)
+2. Add the six secrets to the `smoke` environment. Each command prompts locally for the value; nothing goes in chat or a file:
+
+```powershell
+gh secret set SMOKE_ADMIN_EMAIL --env smoke -R abz1014/qtech-crm-v2
+gh secret set SMOKE_ADMIN_PASSWORD --env smoke -R abz1014/qtech-crm-v2
+gh secret set SMOKE_SALES_EMAIL --env smoke -R abz1014/qtech-crm-v2
+gh secret set SMOKE_SALES_PASSWORD --env smoke -R abz1014/qtech-crm-v2
+gh secret set SMOKE_ENGINEER_EMAIL --env smoke -R abz1014/qtech-crm-v2
+gh secret set SMOKE_ENGINEER_PASSWORD --env smoke -R abz1014/qtech-crm-v2
+```
+
+   (Or in the browser: Settings, Environments, `smoke`, Add environment secret.) The first workflow run creates the `smoke`
+   environment if it does not exist yet. Afterwards, optionally restrict it to the `main` branch (Settings, Environments, `smoke`,
+   Deployment branches), like `backup`. Do not add required reviewers: a schedule cannot wait for approval.
+3. Run Smoke once by hand (Run workflow on `main`). The log line `Part 2: admin N/N read checks as expected` (and sales, engineer)
+   confirms it. Task A05 is then done.
+4. When the real team goes live, deactivate these three in Team only if you stop wanting the check; a deactivated account makes
+   Part 2 fail at sign-in on purpose.
+
+The workflow hands the secrets to the script on `main` only, masks the passwords in the log, and the script only reads.
