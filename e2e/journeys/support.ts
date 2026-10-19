@@ -151,3 +151,20 @@ export function monthBefore(iso: string, back: number) {
   const d = new Date(Date.UTC(y, m - 1 - back, 1))
   return monthOf(d.toISOString().slice(0, 10))
 }
+
+export type Rule = 'not_floated' | 'chase_supplier' | 'bid_due' | 'chase_customer' | 'place_po' | 'goods_late' | 'delivered_not_invoiced' | 'payment_overdue'
+
+/**
+ * A hand-off check (lifecycle audit): open Today fresh, as the salesperson, and say whether the item for this record is listed. `text` is
+ * what the row carries (the RFQ or order number, plus a supplier name where one RFQ or order has several rows of the same rule).
+ */
+export async function todayHas(context: BrowserContext, rule: Rule, text: string[], listed: boolean): Promise<void> {
+  const page = await openPage(context, '/today')
+  await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
+  await expect(page.getByText(/need you/)).toBeVisible() // the list has loaded
+  let row = page.locator(`li[data-rule="${rule}"]`)
+  for (const t of text) row = row.filter({ hasText: t })
+  if (listed) await expect(row.first(), `Today should list ${rule} for ${text.join(' ')}`).toBeVisible()
+  else await expect(row, `Today should not list ${rule} for ${text.join(' ')}`).toHaveCount(0)
+  await page.close()
+}

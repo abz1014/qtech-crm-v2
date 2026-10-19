@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, rest, rfqRef, uniqueName } from '../support/stack'
 import { fetchStoredPdf, pdfIsValid, pdfText } from '../support/pdf'
 import { legLoc, setProfile } from '../orders/fixtures'
-import { clipboardText, fe2, monthOf, noShareApi, openPage, ordRef, pastePage, readCount, resetCount, roleContext } from './support'
+import { clipboardText, fe2, todayHas, monthOf, noShareApi, openPage, ordRef, pastePage, readCount, resetCount, roleContext } from './support'
 
 /*
  * P03, the sales journey: one working day from a WhatsApp enquiry to a payment on the books, through the real screens, on the CI stack.
@@ -30,6 +30,8 @@ const toast = (page: Page, text: string) => page.getByRole('status').filter({ ha
 const region = (page: Page, name: string) => page.getByRole('region', { name })
 
 type Co = { id: string; name: string }
+
+const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString()
 
 async function post<T = { id: string }>(table: string, body: unknown): Promise<T> {
   return (await must(rest<T[]>('admin', table, { method: 'POST', body })))[0]
@@ -164,6 +166,12 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const inquiries = await must(rest<{ supplier_id: string; sent_on: string | null }[]>('admin', `supplier_inquiries?rfq_id=eq.${rfq.id}&select=supplier_id,sent_on`))
     expect(inquiries.map(i => i.supplier_id).sort()).toEqual([s.alpen.id, s.lahore.id].sort())
     expect(inquiries.every(i => i.sent_on === today)).toBe(true)
+
+    // Hand-off: floated, so "not floated" is gone. The enquiries went out three days ago (the date is moved back), so both suppliers are due a chase.
+    await todayHas(salesCtx, 'not_floated', [rfqRef(rfq.number)], false)
+    await must(rest('admin', `supplier_inquiries?rfq_id=eq.${rfq.id}`, { method: 'PATCH', body: { sent_on: karachiDay(-3) }, prefer: 'return=minimal' }))
+    await todayHas(salesCtx, 'chase_supplier', [rfqRef(rfq.number), s.alpen.name], true)
+    await todayHas(salesCtx, 'chase_supplier', [rfqRef(rfq.number), s.lahore.name], true)
   })
 
   // ---- 3. The RFQ page: ask the customer a question ----------------------------------------------------------------------------
@@ -185,6 +193,9 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     expect(await clipboardText(page)).toContain('Flange rating and line size on the process line')
     const [q] = await must(rest<{ ask_count: number }[]>('admin', `clarifications?rfq_id=eq.${rfq.id}&select=ask_count`))
     expect(q.ask_count).toBe(1)
+    // Hand-off: asked five days ago (moved back), so the customer is due a chase.
+    await must(rest('admin', `clarifications?rfq_id=eq.${rfq.id}`, { method: 'PATCH', body: { first_asked_at: daysAgo(5), last_asked_at: daysAgo(5) }, prefer: 'return=minimal' }))
+    await todayHas(salesCtx, 'chase_customer', [rfqRef(rfq.number)], true)
   })
 
   // ---- 4. Supplier replies: one typed, one pasted -------------------------------------------------------------------------------
@@ -230,6 +241,22 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
       [100, 'USD', 280],
       [190, 'USD', 280],
     ])
+  })
+
+  await test.step('hand-off: both suppliers replied, so no supplier chase; the customer chase is one tap on Today', async () => {
+    await todayHas(salesCtx, 'chase_supplier', [rfqRef(rfq.number)], false)
+    const t = await openPage(salesCtx, '/today')
+    const row = t.locator('li[data-rule="chase_customer"]').filter({ hasText: rfqRef(rfq.number) })
+    await expect(row).toBeVisible()
+    await row.getByRole('button').first().click() // selecting a row is not a chase
+    const pane = t.getByRole('region', { name: new RegExp(rfqRef(rfq.number)) })
+    await expect(pane.getByTestId('draft-text')).toContainText('Flange rating and line size')
+    await resetCount(t)
+    await pane.getByRole('button', { name: 'Copy message and mark chased' }).click()
+    await expect(t.getByRole('status').filter({ hasText: `Copied. ${rfqRef(rfq.number)} marked chased.` })).toBeVisible()
+    fe2('Chase the customer from Today', (await readCount(t)).mouse, 1)
+    expect(await clipboardText(t)).toContain('Flange rating and line size')
+    await t.close()
   })
 
   // ---- 5. The ranked comparison: 0 taps -----------------------------------------------------------------------------------------
@@ -310,6 +337,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
 
   // ---- 7. The bid is sent -------------------------------------------------------------------------------------------------------------
   await test.step('mark bid sent: issuing the PDF already marked it, a verbal bid is one tap', async () => {
+    for (const rule of ['not_floated', 'chase_supplier', 'bid_due', 'chase_customer'] as const) await todayHas(salesCtx, rule, [rfqRef(rfq.number)], false)
     const quoted = await must(rest<{ quoted_on: string | null }[]>('admin', `rfqs?id=eq.${rfq.id}&select=quoted_on`))
     expect(quoted[0].quoted_on).toBe(today) // issuing the quotation sent the bid: no further tap is needed
     await expect(page.getByRole('button', { name: 'Mark bid sent' })).toHaveCount(0)
@@ -317,6 +345,9 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     // The sales person also quotes by phone: that bid has no PDF, and "Mark bid sent" is the one tap.
     const verbal = await createRfq(s.customer.id, { due_on: karachiDay(5) })
     await post('rfq_items', { rfq_id: verbal.id, position: 0, description: `Spare gasket set ${letters()}`, qty: 1 })
+    // Hand-off: it has not been floated and its bid is due in five days: both reminders are listed until the bid is sent.
+    await todayHas(salesCtx, 'not_floated', [rfqRef(verbal.number)], true)
+    await todayHas(salesCtx, 'bid_due', [rfqRef(verbal.number)], true)
     const side = await openPage(salesCtx, `/rfqs/${verbal.id}`)
     await resetCount(side)
     await side.getByRole('button', { name: 'Mark bid sent' }).click()
@@ -325,18 +356,21 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const after = await must(rest<{ quoted_on: string | null }[]>('admin', `rfqs?id=eq.${verbal.id}&select=quoted_on`))
     expect(after[0].quoted_on).toBe(today)
     await side.close()
+    await todayHas(salesCtx, 'not_floated', [rfqRef(verbal.number)], false)
+    await todayHas(salesCtx, 'bid_due', [rfqRef(verbal.number)], false)
   })
 
   // ---- 8. Chase the customer -------------------------------------------------------------------------------------------------------
   await test.step('chase the customer: Copy chase text is one tap', async () => {
+    await page.reload() // the Today chase was made on another page
     const panel = page.locator('[data-slot="clarifications"]')
-    await expect(panel.getByText('Asked ×1')).toBeVisible()
+    await expect(panel.getByText('Asked ×2')).toBeVisible() // the Today chase was the second ask
     await resetCount(page)
     await panel.getByRole('button', { name: 'Copy chase text' }).click()
     await expect(toast(page, 'Chase text copied')).toBeVisible()
     fe2('Chase the customer', (await readCount(page)).mouse, 1)
     expect(await clipboardText(page)).toContain('Thank you for your RFQ #')
-    await expect.poll(async () => (await must(rest<{ ask_count: number }[]>('admin', `clarifications?rfq_id=eq.${rfq.id}&select=ask_count`)))[0].ask_count).toBe(2)
+    await expect.poll(async () => (await must(rest<{ ask_count: number }[]>('admin', `clarifications?rfq_id=eq.${rfq.id}&select=ask_count`)))[0].ask_count).toBe(3)
   })
 
   // ---- 9. Won: convert with rank 1 pre-picked and one split ------------------------------------------------------------------------
@@ -379,6 +413,9 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const legs = await must(rest<{ id: string; supplier_id: string }[]>('admin', `supplier_orders?order_id=eq.${order.id}&select=id,supplier_id`))
     expect(legs.map(l => l.supplier_id).sort()).toEqual([s.alpen.id, s.lahore.id].sort())
     await expect(page.getByText('split across 2 suppliers').first()).toBeVisible()
+    // Hand-off: two legs, neither ordered from the supplier yet.
+    await todayHas(salesCtx, 'place_po', [ordRef(order.number), s.alpen.name], true)
+    await todayHas(salesCtx, 'place_po', [ordRef(order.number), s.lahore.name], true)
   })
 
   // ---- 10. The supplier PO ---------------------------------------------------------------------------------------------------------------
@@ -410,6 +447,38 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
       expect(text).toContain('EUR 270.00')
     }
     await expect(legLoc(page, letter).getByTestId(`leg-${letter}-state`)).toContainText('On order')
+    // Hand-off: Alpenmark is placed, Lahore is still to place.
+    await todayHas(salesCtx, 'place_po', [ordRef(order.number), s.alpen.name], false)
+    await todayHas(salesCtx, 'place_po', [ordRef(order.number), s.lahore.name], true)
+  })
+
+  await test.step('goods: late is raised, delivered clears it, and delivered-not-invoiced takes over', async () => {
+    const alpenLeg = await legIdOf(order.id, s.alpen.id)
+    const lahoreLeg = await legIdOf(order.id, s.lahore.id)
+    // The expected date of the goods passes (moved back three days).
+    await must(rest('admin', `supplier_orders?id=eq.${alpenLeg}`, { method: 'PATCH', body: { expected_on: karachiDay(-3) }, prefer: 'return=minimal' }))
+    await todayHas(salesCtx, 'goods_late', [s.alpen.name], true)
+    // Lahore is ordered with one tap, then it is late too.
+    const letterOf = async (name: string) => ((await legLoc(page, 'A').innerText()).includes(name) ? 'A' : 'B')
+    const lLetter = await letterOf(s.lahore.name)
+    const aLetter = await letterOf(s.alpen.name)
+    await resetCount(page)
+    await legLoc(page, lLetter).getByRole('button', { name: `Mark placed, leg ${lLetter}` }).click()
+    await expect.poll(async () => (await must(rest<{ placed_on: string | null }[]>('admin', `supplier_orders?id=eq.${lahoreLeg}&select=placed_on`)))[0].placed_on).toBe(today)
+    fe2('Mark placed', (await readCount(page)).mouse, 1)
+    await todayHas(salesCtx, 'place_po', [ordRef(order.number), s.lahore.name], false)
+    await must(rest('admin', `supplier_orders?id=eq.${lahoreLeg}`, { method: 'PATCH', body: { expected_on: karachiDay(-2) }, prefer: 'return=minimal' }))
+    await todayHas(salesCtx, 'goods_late', [s.lahore.name], true)
+    // Delivered: one tap each, and nothing is late any more.
+    for (const [letter, id] of [[aLetter, alpenLeg], [lLetter, lahoreLeg]] as const) {
+      await resetCount(page)
+      await legLoc(page, letter).getByRole('button', { name: `Delivered today, leg ${letter}` }).click()
+      await expect.poll(async () => (await must(rest<{ delivered_on: string | null }[]>('admin', `supplier_orders?id=eq.${id}&select=delivered_on`)))[0].delivered_on).toBe(today)
+      fe2('Mark delivered', (await readCount(page)).mouse, 1)
+    }
+    await todayHas(salesCtx, 'goods_late', [s.alpen.name], false)
+    await todayHas(salesCtx, 'goods_late', [s.lahore.name], false)
+    await todayHas(salesCtx, 'delivered_not_invoiced', [ordRef(order.number)], true)
   })
 
   // ---- 11. The invoice ----------------------------------------------------------------------------------------------------------------------
@@ -429,6 +498,11 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     expect(inv).toMatchObject({ invoice_date: today })
     expect(Number(inv.net_amount)).toBe(268000)
     expect(Number(inv.gst_amount)).toBe(48240)
+    await todayHas(salesCtx, 'delivered_not_invoiced', [ordRef(order.number)], false)
+    // Hand-off: the invoice is dated forty-five days back on thirty-day terms (the dates are moved), so the payment is fifteen days overdue.
+    await must(rest('admin', `orders?id=eq.${order.id}`, { method: 'PATCH', body: { payment_terms_days: 30 }, prefer: 'return=minimal' }))
+    await must(rest('admin', `invoices?order_id=eq.${order.id}`, { method: 'PATCH', body: { invoice_date: karachiDay(-45) }, prefer: 'return=minimal' }))
+    await todayHas(salesCtx, 'payment_overdue', [ordRef(order.number), 'Payment 15 days overdue'], true)
   })
 
   // ---- 12. Admin records the payment ---------------------------------------------------------------------------------------------------------
@@ -448,6 +522,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     expect(pays.map(p => [Number(p.amount), p.received_on])).toEqual([[316240, today]])
     const rec = await must(rest<{ balance: number; payment_state: string }[]>('admin', 'rpc/order_receivables', { method: 'POST', body: { p_order_id: order.id } }))
     expect(rec[0]).toMatchObject({ balance: 0, payment_state: 'settled' })
+    await todayHas(salesCtx, 'payment_overdue', [ordRef(order.number)], false)
 
     // ---- 13. The month-end checklist shows it -----------------------------------------------------------------------------------------------
     const month = monthOf(today)
