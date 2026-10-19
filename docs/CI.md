@@ -10,6 +10,8 @@ so runs stay fast and quick to read: a docs-only push runs nothing.
 | `db.yml` | every push, only if `supabase/**`, `src/types/database.ts`, `import/**`, `package*.json` or the workflow changed (its last step is the import load test, I01) | about 6 min |
 | `functions.yml` | every push; paths `supabase/functions/**`, `supabase/migrations/**` | about 6 min |
 | `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | every push, path-gated; up to 5 parallel shards, each with its own stack boot, only suites whose paths changed; the final job `E2E` is the one result | about 7 min on a full run (was 20 to 40) |
+| `ci.yml` build job, bundle budget step (P04) | every push except docs-only | seconds; fails if the initial JS is over 300 KB gzip, and prints the PDF chunk and service-worker precache sizes in the run summary |
+| `e2e.yml` suite `perf` (P04, registered in `.github/e2e-suites.yml`) | when `e2e/perf/**` or a shared path changes | about 5 min (Lighthouse, 7 screens, desktop and phone) |
 | `remote.yml`, `deploy-functions.yml` | manual only, owner approval | not part of the budget |
 | `backup.yml` (R13) | nightly 20:30 UTC, drill weekly, manual; `backup` environment, main only | about 3 min nightly, 15 min drill |
 | `smoke.yml` (S16) | nightly 21:17 UTC (02:17 Karachi), manual; `smoke` environment (Part 2 secrets only); read-only against the live project | about 1 min |
@@ -43,6 +45,13 @@ Add a suite: a project in `playwright.config.ts` (`testMatch`, viewport and so o
 The `journeys` suite (P03, `e2e/journeys/`) is the regression net: three whole working days, one spec per role (sales: a pasted enquiry to a payment on the books; engineer: Today to delivered, with a network-log check that no money is ever requested or returned; admin: burst expenses, bank tick, margins, close and reopen a month), each holding every step to its FE-2 interaction count. It runs whenever `src/**` or any other shared path changes (the `all` rule above), or when `e2e/journeys/**` changes, after its own database reset, and installs poppler to read the stored PDFs. Each role signs in once and the saved session is reused (`e2e/journeys/support.ts`). A count over its target is reported as a soft failure naming the step, the count and the target.
 
 Locally, several at once: `E2E_SUITE=db npx playwright test --project=auth --project=companies`.
+
+## Performance and accessibility (P04)
+
+- **Bundle budget:** `scripts/bundle-budget.mjs` (run in the `ci.yml` build job after `npm run build`) walks `dist/index.html` and its static imports, gzips them and fails above 300 KB. It also reports the lazy PDF chunk (not on first load, not precached) and the service worker precache, and fails if the PDF chunk ever enters the precache.
+- **Accessibility:** the `perf` suite runs the real Lighthouse accessibility category (lighthouse 12.8.2, installed with `npm i --no-save` in that step so it is not a project dependency) on Today, RFQ board, RFQ detail, order detail, Money GST register, Month-end and Settings, desktop and phone, and fails below 95. Lighthouse cannot sign in, so Playwright signs in inside a persistent Chromium profile with the debugging port open and Lighthouse attaches to it with storage kept. The axe checks (WCAG 2.2 AA plus best practice) in every other suite stay as they were.
+- **CSP:** `scripts/ci/e2e-run.sh` exports `E2E_CSP=1` for every suite, so every suite runs under the production Content-Security-Policy (see docs/HOSTING.md).
+- Locally: `npm i --no-save lighthouse@12.8.2`, then `E2E_CSP=1 E2E_SUITE=perf npx playwright test --project=perf` against a stack-backed build.
 
 ## Forcing a full run
 

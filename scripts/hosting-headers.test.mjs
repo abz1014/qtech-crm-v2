@@ -44,11 +44,16 @@ describe('hosting headers parity', () => {
     expect(vc).toEqual(cf)
   })
 
-  it('pins the CSP to the Supabase project, with wss on the same host', () => {
+  it('pins the CSP to the Supabase project and keeps it minimal (P04)', () => {
     const csp = vc['/*']['Content-Security-Policy']
-    expect(csp).toContain('https://yafbphagorydbitfgfmg.supabase.co')
-    expect(csp).toContain('wss://yafbphagorydbitfgfmg.supabase.co')
-    expect(csp).not.toContain('*.supabase.co')
+    const dir = Object.fromEntries(csp.split(';').map((d) => d.trim().split(/\s+/)).map(([k, ...v]) => [k, v]))
+    const supabase = 'https://yafbphagorydbitfgfmg.supabase.co'
+    expect(dir['connect-src']).toEqual(["'self'", supabase])
+    expect(dir['img-src']).toEqual(["'self'", 'blob:', supabase])
+    expect(dir['script-src']).toEqual(["'self'", "'wasm-unsafe-eval'"])
+    expect(csp).not.toContain('*')
+    expect(csp).not.toMatch(/'unsafe-eval'/)
+    expect(csp).not.toContain('wss:')
     expect(csp).toContain("frame-ancestors 'none'")
   })
 

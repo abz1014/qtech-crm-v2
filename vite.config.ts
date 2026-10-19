@@ -1,7 +1,23 @@
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import react from '@vitejs/plugin-react-swc'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vitest/config'
+
+/*
+ * P04: with E2E_CSP=1 the preview server sends the production security headers from vercel.json (the real Content-Security-Policy
+ * included), with the Supabase project origin swapped for the local CI stack (API_URL). The e2e suites then run under the policy
+ * that production enforces, and the perf suite fails on any violation. Off by default: nothing else changes.
+ */
+function previewHeaders(): Record<string, string> | undefined {
+  if (!process.env.E2E_CSP) return undefined
+  const json = JSON.parse(readFileSync(path.resolve(__dirname, 'vercel.json'), 'utf8')) as { headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }> }
+  const api = new URL(process.env.API_URL ?? 'http://127.0.0.1:54321').origin
+  const all = json.headers.find(h => h.source === '/(.*)')?.headers ?? []
+  return Object.fromEntries(
+    all.filter(h => h.key !== 'Strict-Transport-Security').map(h => [h.key, h.value.replaceAll('https://yafbphagorydbitfgfmg.supabase.co', api)]),
+  )
+}
 
 export default defineConfig(({ command }) => ({
   plugins: [
@@ -36,6 +52,7 @@ export default defineConfig(({ command }) => ({
         ]
       : []),
   ],
+  preview: { headers: previewHeaders() },
   resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
   test: {
     environment: 'jsdom',

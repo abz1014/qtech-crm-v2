@@ -267,3 +267,31 @@ export async function downloadStoredPoPdf(path: string): Promise<Blob> {
   if (error) throw error
   return data
 }
+
+/** The latest PO of each leg of an order, with its supplier and the lines it covers: what the cancel dialog needs to say who must be told. */
+export async function listSentPos(orderId: string): Promise<import('@/features/purchaseOrders/lib/cancelText').SentPo[]> {
+  const db = requireSupabase()
+  const legs = unwrap(await db.from('supplier_orders').select('id, supplier_id').eq('order_id', orderId))
+  if (legs.length === 0) return []
+  const [pos, items, companies] = await Promise.all([
+    db.from('purchase_orders').select('number, revision, issued_on, supplier_order_id, lines').in('supplier_order_id', legs.map(l => l.id)).order('revision', { ascending: false }),
+    db.from('order_items').select('id, description, unit').eq('order_id', orderId),
+    db.from('companies').select('id, name').in('id', [...new Set(legs.map(l => l.supplier_id))]),
+  ])
+  const byItem = new Map(unwrap(items).map(i => [i.id, i]))
+  const names = new Map(unwrap(companies).map(c => [c.id, c.name]))
+  const seen = new Set<string>()
+  const out: import('@/features/purchaseOrders/lib/cancelText').SentPo[] = []
+  for (const p of unwrap(pos)) {
+    if (seen.has(p.supplier_order_id)) continue // the latest revision of the leg's PO only
+    seen.add(p.supplier_order_id)
+    const leg = legs.find(l => l.id === p.supplier_order_id)
+    const lines = (Array.isArray(p.lines) ? p.lines : []) as Array<{ order_item_id: string; qty: number }>
+    out.push({
+      ref: `PO-${p.issued_on.slice(2, 4)}-${String(p.number).padStart(4, '0')}`,
+      supplierName: names.get(leg?.supplier_id ?? '') ?? 'the supplier',
+      items: lines.map(l => ({ description: byItem.get(l.order_item_id)?.description ?? 'Item', qty: Number(l.qty), unit: byItem.get(l.order_item_id)?.unit ?? null })),
+    })
+  }
+  return out
+}
