@@ -58,7 +58,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
   }, [active, inSettings])
 
   return (
-    <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas">
+    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas">
       <a
         href="#main"
         className="sr-only rounded border bg-surface px-3 py-2 text-sm font-medium focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-50"

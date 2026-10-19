@@ -82,7 +82,7 @@ test.describe('payment-reminder panel (M09)', () => {
     await expect(panel.getByText(/Reminder 1 recorded today/)).toBeVisible()
     const c = await page.evaluate(() => ({ keys: (window as unknown as { __keys: string[] }).__keys, mouse: (window as unknown as { __mouse: number }).__mouse }))
     expect(c).toEqual({ keys: [], mouse: 1 })
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(`Sales Tax Invoice ${s.invoiceNumber}`)
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain(`Sales Tax Invoice ${s.invoiceNumber}`)
     expect(await invoiceRow(s.invoiceId)).toEqual({ last_reminded_on: today(), reminder_count: 1 })
     await review(page, 'm09-receivables-reminder-copied-1440')
   })
@@ -141,8 +141,7 @@ test.describe('payment-reminder panel (M09)', () => {
         )
         console.log(`OVERFLOW ${width}`, JSON.stringify(wide))
       }
-      // The table and the panel are what this task owns; a few pixels of page overflow at exactly 1280 come from elsewhere in the shell (logged above).
-      if (width >= 1360) expect(m.page, `page scrolls sideways at ${width}`).toBeLessThanOrEqual(m.view)
+      expect(m.page, `page scrolls sideways at ${width}`).toBeLessThanOrEqual(m.view)
       expect(m.columns, `visible columns at ${width}`).toBe(columns)
     }
   })
