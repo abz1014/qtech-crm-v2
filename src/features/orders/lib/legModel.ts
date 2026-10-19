@@ -45,6 +45,15 @@ export function stampPatch(step: LegStep, d: LegDates, today: string, lead: Read
   return { delivered_on: today, received_on: today }
 }
 
+/**
+ * The expected date to write once a PO is issued, or null to leave it. issue_purchase_order stamps placed_on only when it is empty, so
+ * the lead time counts from the leg's own placed date when it has one, and from today when the issue is what placed it.
+ */
+export function expectedAfterIssue(leg: { placedOn: string | null; expectedOn: string | null; leadTimes: ReadonlyArray<string | null | undefined> }, today: string): string | null {
+  if (leg.expectedOn) return null
+  return suggestExpected(leg.placedOn ?? today, leg.leadTimes)?.on ?? null
+}
+
 /** A hand edit of one date. Editing delivered moves received_on with it (clearing delivered clears both); the other dates are alone. */
 export function editPatch(field: keyof LegDates, value: string | null, d: LegDates, lead: ReadonlyArray<string | null | undefined>): LegPatch {
   if (field === 'placedOn') {

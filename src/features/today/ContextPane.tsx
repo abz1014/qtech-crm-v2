@@ -40,6 +40,8 @@ import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
 import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
 import { useRfqHeader, useRfqInquiries, useRfqItems, useSetRfqClosed } from '@/features/rfqs/hooks'
 import { COMPANY_NAME, customerReturnsOn, supplierReturnsOn } from '@/features/rfqs/lib'
+import { SUPPLIER_WAIT_DAYS } from '@/features/rfqs/lib/chaseWait'
+import { supplierChaseBaseDays } from '@/features/today/rules'
 import { addBusinessDays, addDays, nextMonday } from '@/features/rfqs/lib/dateText'
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
 import { chasedByText } from '@/features/rfqs/lib/collision'
@@ -212,7 +214,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
     }
   }
 
-  const nudge = nudgeInfo(item, rfq?.dueOn ?? null, today)
+  const nudge = nudgeInfo(item, rfq?.dueOn ?? null, today, inquiryFact)
   const facts = factsFor(item, { rfq, questions, inquiryFact, legFact, receivable, today, pricedOf: priced(items.data, inquiries.data, item.inquiryId), justChased, nudge })
   const hs = header.data?.state
   const deadline = hs ? deadlineValue(hs.days_to_due, Boolean(hs.is_overdue), 5) : null
@@ -537,13 +539,18 @@ function copyingNote(item: TodayItem, draft: Draft, returnsOn: string, chaseCoun
   }
 }
 
-function nudgeInfo(item: TodayItem, dueOn: string | null, today: string): { returnsOn: string; why: string } {
+// Exported for its unit test (nudgeInfo.test.ts); it is a pure helper beside the pane that uses it.
+// eslint-disable-next-line react-refresh/only-export-components
+export function nudgeInfo(item: TodayItem, dueOn: string | null, today: string, inquiry?: Pick<TodayData['inquiries'][number], 'replied' | 'medianReplyDays'>): { returnsOn: string; why: string } {
   const close = isBidClose(dueOn, today)
   switch (item.rule) {
     case 'chase_customer':
       return { returnsOn: customerReturnsOn(today, dueOn), why: close ? 'short wait: bid is close' : '3 working days' }
-    case 'chase_supplier':
-      return { returnsOn: supplierReturnsOn(today, dueOn), why: close ? 'short wait: bid is close' : '2 working days' }
+    case 'chase_supplier': {
+      // The same wait the rule uses: a slow supplier's own median plus one, not always 2.
+      const base = inquiry ? supplierChaseBaseDays(inquiry) : SUPPLIER_WAIT_DAYS
+      return { returnsOn: supplierReturnsOn(today, dueOn, base), why: close ? 'short wait: bid is close' : `${base} working days` }
+    }
     case 'goods_late':
       return { returnsOn: addBusinessDays(today, 3), why: '3 working days' }
     default:

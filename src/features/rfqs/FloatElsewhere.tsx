@@ -34,12 +34,12 @@ export function FloatElsewhere({
 }) {
   const candidates = useSupplierCandidates(true)
   const list = useMemo(() => (candidates.data ?? []).filter(c => !askedIds.has(c.id)), [candidates.data, askedIds])
-  const query = useMemo(() => items.map(i => ({ key: i.id, description: i.description, brandId: i.brandId, familyId: null })), [items])
+  const query = useMemo(() => items.map(i => ({ key: i.id, description: i.description, brandId: i.brandId, familyId: i.familyId })), [items])
   const memory = useSupplierMemory(query, list.map(c => c.id), candidates.isSuccess && items.length > 0)
   const result = useMemo(
     () =>
       suggestSuppliers(
-        items.map(i => ({ id: i.id, description: i.description, brandId: i.brandId, brandName: i.brandName, familyId: null })),
+        items.map(i => ({ id: i.id, description: i.description, brandId: i.brandId, brandName: i.brandName, familyId: i.familyId, familyName: i.familyName })),
         { suppliers: list, memory: memory.data ?? {} },
         { today },
       ),

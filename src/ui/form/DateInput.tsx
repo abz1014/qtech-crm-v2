@@ -44,26 +44,37 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Follow outside changes (reset, a pre-fill arriving), never rewrite what is being typed.
+  // Follow outside changes (reset, a pre-fill arriving), never rewrite what is being typed. Unreadable text stays
+  // on screen only until the value changes from outside (the '' this field reported for it is not a change).
+  const reported = useRef(value ?? '')
+  const report = (v: string) => {
+    reported.current = v
+    onChange(v)
+  }
   useEffect(() => {
-    if (!editing && !unreadable) setText(formatDateText(value))
+    if (editing) return
+    const v = value ?? ''
+    if (unreadable && v === reported.current) return
+    reported.current = v
+    setUnreadable(false)
+    setText(formatDateText(value))
   }, [value, editing, unreadable])
 
   const commit = () => {
     const t = text.trim()
     if (t === '') {
       setUnreadable(false)
-      onChange('')
+      report('')
       return
     }
     const parsed = parseDateText(t, businessToday())
     if (parsed) {
       setUnreadable(false)
       setText(formatDateText(parsed))
-      onChange(parsed)
+      report(parsed)
     } else {
       setUnreadable(true)
-      onChange('')
+      report('')
     }
   }
 
@@ -131,7 +142,7 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
           if (!e.target.value) return
           setUnreadable(false)
           setText(formatDateText(e.target.value))
-          onChange(e.target.value)
+          report(e.target.value)
         }}
       />
     </div>

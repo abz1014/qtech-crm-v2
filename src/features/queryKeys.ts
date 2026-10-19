@@ -127,6 +127,9 @@ function orders() {
     captureSearch: (text: string, includePo: boolean) => [...all, 'list', 'capture-search', text.trim().toLowerCase(), includePo] as const,
     /** A8: the ranked quotes of an RFQ for the convert dialog and the Split line dialog (the role is in the key: an engineer's rows carry no selling price). */
     ranked: (rfqId: string, role: string) => [...all, 'list', 'ranked', rfqId, role] as const,
+    /** Every role's ranked quotes of one RFQ: what a write to that RFQ's quotes (or a rate) makes stale. */
+    rankedFor: (rfqId: string) => [...all, 'list', 'ranked', rfqId] as const,
+    rankedAll: () => [...all, 'list', 'ranked'] as const,
     /** Suppliers a leg can be added for. */
     supplierChoices: () => [...all, 'list', 'supplier-choices'] as const,
     jobTitle: (userId: string) => [...all, 'list', 'job-title', userId] as const,

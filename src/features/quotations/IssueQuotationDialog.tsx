@@ -144,11 +144,13 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const hasSupplierPrice = (itemId: string) => inquiries.some(i => i.lines.some(l => l.itemId === itemId))
 
   // Seed once, when everything the defaults come from has arrived. Nothing here overwrites what is later typed.
+  // The price chips are a convenience: when their read fails the dialog seeds without them instead of never seeding.
+  const memoryRows = memory.data ?? (memory.isError ? [] : undefined)
   useEffect(() => {
-    if (seeded.current || !items.data || !quotations.data || !profile || !contacts.data || !memory.data) return
+    if (seeded.current || !items.data || !quotations.data || !profile || !contacts.data || !memoryRows) return
     seeded.current = true
     const p = quotations.data[0] ?? null
-    const mem = new Map(memory.data.map(m => [m.itemId, m] as const))
+    const mem = new Map(memoryRows.map(m => [m.itemId, m] as const))
     setPrices(Object.fromEntries(items.data.map(i => [i.id, i.quotedUnitPriceNet])))
     // An item is quotable when something prices it: a supplier reply, a chip, or the price from the last issue. The rest start unticked.
     setIncluded(
@@ -171,7 +173,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
     setContactId(wanted && known.has(wanted) ? wanted : '')
     // hasSupplierPrice reads inquiries, which are fixed for the life of the dialog
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.data, quotations.data, profile, contacts.data, memory.data, rfq.contactId])
+  }, [items.data, quotations.data, profile, contacts.data, memoryRows, rfq.contactId])
 
   /** A chip is the price in one tap, and it ticks the item. */
   const pick = (id: string, value: number) => {

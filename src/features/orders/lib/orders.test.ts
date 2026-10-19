@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { leadTimeUpperDays, suggestExpected } from '@/features/orders/lib/leadTime'
-import { before, editPatch, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, type LegDates } from '@/features/orders/lib/legModel'
+import { before, editPatch, expectedAfterIssue, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, type LegDates } from '@/features/orders/lib/legModel'
 import { isExemptAll, lineGstPaisa, orderTotals } from '@/features/orders/lib/orderMath'
 import { buildPayload, defaultChoices, unpricedItems, type ConvertItem, type ConvertQuote } from '@/features/orders/lib/convert'
 
@@ -153,5 +153,19 @@ describe('resolve price basis preview (admin, legacy orders)', () => {
     expect(c.net).toMatchObject({ net: 1180000, gst: 212400, gross: 1392400, margin: 540000 })
     expect(c.gross).toMatchObject({ net: 1000000, gst: 180000, gross: 1180000, margin: 360000 })
     expect(basisChoices(lines, null).net.margin).toBeNull()
+  })
+})
+
+describe('expected date after a PO is issued (O07)', () => {
+  it('counts the lead time from the day the leg was placed, not from the issue day, when the leg was placed before the PO', () => {
+    // issue_purchase_order stamps placed_on only when it is empty: a leg marked placed on 1 Oct and given its PO on 19 Oct is still placed 1 Oct
+    expect(expectedAfterIssue({ placedOn: '2026-10-01', expectedOn: null, leadTimes: ['2 weeks'] }, '2026-10-19')).toBe('2026-10-15')
+  })
+  it('counts from today when the issue is what places the leg', () => {
+    expect(expectedAfterIssue({ placedOn: null, expectedOn: null, leadTimes: ['2 weeks'] }, '2026-10-19')).toBe('2026-11-02')
+  })
+  it('leaves an expected date that is already set, and suggests nothing without a lead time', () => {
+    expect(expectedAfterIssue({ placedOn: null, expectedOn: '2026-12-01', leadTimes: ['2 weeks'] }, '2026-10-19')).toBeNull()
+    expect(expectedAfterIssue({ placedOn: null, expectedOn: null, leadTimes: [] }, '2026-10-19')).toBeNull()
   })
 })

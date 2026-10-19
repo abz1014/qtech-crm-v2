@@ -18,6 +18,7 @@ import { RankBadge, RankedOptionRow } from '@/features/orders/RankedPicker'
 import { forItem, priceTexts, type RankedQuote } from '@/features/orders/lib/ranking'
 import { legLetter } from '@/features/orders/lib/legModel'
 import { CURRENCIES } from '@/features/orders/lib/currencies'
+import { supplierTargetProblem } from '@/features/orders/lib/splitLine'
 
 /*
  * "Split line" (O09; g2-ranking-split.html "Order detail: the Split line dialog"). Moves part of one order line to another supplier.
@@ -71,11 +72,12 @@ export function SplitLineDialog({
 
   // With no quotes to choose from the person picks a supplier and currency; that is the one target.
   const effective: Target | null = noQuotes && supplierId ? { kind: 'supplier' } : target
+  const targetProblem = effective?.kind === 'supplier' ? supplierTargetProblem(sourceLeg, supplierId, currency) : null
   const valid = qty !== null && qty > 0 && qty < item.qty
   const qtyError = qty !== null && !valid ? `Between 0 and ${item.qty}, not including either: some stay with this supplier.` : undefined
 
   const resultText = (() => {
-    if (!valid || !effective || qty === null) return null
+    if (!valid || !effective || targetProblem || qty === null) return null
     const stay = Number((item.qty - qty).toFixed(6))
     if (effective.kind === 'quote') return `${stay} stay on leg ${legLetter(sourceIndex)}, ${qty} ${qty === 1 ? 'moves' : 'move'} to ${effective.q.supplierName} at ${priceTexts(effective.q).price}.`
     if (effective.kind === 'leg') {
@@ -87,7 +89,7 @@ export function SplitLineDialog({
   })()
 
   const submit = async () => {
-    if (!valid || !effective || qty === null || split.isPending) return
+    if (!valid || !effective || targetProblem || qty === null || split.isPending) return
     setError(null)
     try {
       const common = { itemId: item.id, qty }
@@ -113,7 +115,7 @@ export function SplitLineDialog({
             <Button data-cancel onClick={onClose} disabled={split.isPending}>
               Cancel
             </Button>
-            <Button variant="primary" icon={Split} busy={split.isPending} busyLabel="Splitting" disabled={!valid || !effective} onClick={() => void submit()}>
+            <Button variant="primary" icon={Split} busy={split.isPending} busyLabel="Splitting" disabled={!valid || !effective || targetProblem !== null} onClick={() => void submit()}>
               Split line
             </Button>
           </>
@@ -151,7 +153,7 @@ export function SplitLineDialog({
               </Field>
               {supplierId ? (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Currency">
+                  <Field label="Currency" error={targetProblem ?? undefined}>
                     <Select value={currency} onChange={e => setCurrency(e.target.value)} options={CURRENCIES.map(c => ({ value: c, label: c }))} aria-label="Currency" />
                   </Field>
                   <Field label={`Supplier unit price, ${currency}`} requirement="optional">
@@ -249,7 +251,7 @@ export function SplitLineDialog({
               <p>
                 Leg {legLetter(sourceIndex)}&apos;s PO{' '}
                 <b className="num font-semibold">
-                  {poRef(sourcePo.number, sourcePo.issuedOn)} · R{sourcePo.revision}
+                  {poRef(sourcePo.number, sourcePo.firstIssuedOn)} · R{sourcePo.revision}
                 </b>{' '}
                 is already issued. After the split it shows &ldquo;lines changed since R{sourcePo.revision}, re-issue&rdquo;. Nothing is sent to the supplier automatically.
               </p>

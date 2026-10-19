@@ -153,11 +153,6 @@ export interface ContactChoice {
   jobTitle: string | null
 }
 
-export async function listCompanyContacts(companyId: string): Promise<ContactChoice[]> {
-  const rows = unwrap(await requireSupabase().from('contacts').select('id, name, job_title').eq('company_id', companyId).order('name'))
-  return rows.map(r => ({ id: r.id, name: r.name, jobTitle: r.job_title }))
-}
-
 // ---------------------------------------------------------------- issue
 
 export interface IssueItemInput {
@@ -200,9 +195,10 @@ export async function issueQuotation(input: IssueInput): Promise<QuotationRow> {
     p_rfq_id: input.rfqId,
     p_valid_until: input.validUntil,
     p_contact_id: input.contactId ?? undefined,
-    p_delivery_text: input.deliveryText ?? undefined,
-    p_payment_terms: input.paymentTerms ?? undefined,
-    p_notes: input.notes ?? undefined,
+    // The RPC coalesces a NULL text with the previous revision's, so an emptied field is sent as '' to stay empty.
+    p_delivery_text: input.deliveryText ?? '',
+    p_payment_terms: input.paymentTerms ?? '',
+    p_notes: input.notes ?? '',
     p_item_ids: input.items.map(i => i.id),
   })
   if (error) throw error

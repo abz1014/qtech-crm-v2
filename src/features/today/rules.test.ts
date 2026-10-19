@@ -283,6 +283,18 @@ describe('rule: chase supplier', () => {
     // chased yesterday, bid within 3 days: wait 1 working day, so due today anyway
     expect(ruleChaseSupplier(ctx({ rfqs: [r], inquiries: [quiet] }))[0].waiting).toBeUndefined()
   })
+  it('the reply-by date alone makes it due, even while the (slow supplier\'s) cooldown has not passed', () => {
+    // Sent Thu 19 Nov, bid due Wed 25 Nov: reply-by = Mon 23 Nov. A supplier with a 9-day median waits 10 working days
+    // (Thu 3 Dec), so only the passed reply-by date can raise it today (Fri 27).
+    const r = rfq({ dueOn: '2026-11-25' })
+    const slow = inq({ sentOn: '2026-11-19', replied: 3, medianReplyDays: 9 })
+    const [e] = ruleChaseSupplier(ctx({ rfqs: [r], inquiries: [slow] }))
+    expect(e?.waiting).toBeUndefined()
+    expect(e?.actionDueOn).toBe('2026-11-23')
+    // chased after the reply-by date: back to the cooldown, so it waits
+    const [w] = ruleChaseSupplier(ctx({ rfqs: [r], inquiries: [{ ...slow, lastChasedOn: '2026-11-24', chaseCount: 1 }] }))
+    expect(w?.waiting).toBeDefined()
+  })
   it('suggests floating elsewhere from the second chase', () => {
     const at = (n: number) => ruleChaseSupplier(ctx({ rfqs: [rfq()], inquiries: [inq({ sentOn: '2026-11-10', lastChasedOn: '2026-11-18', chaseCount: n })] }))[0]
     expect(at(1).escalation).toBeUndefined()

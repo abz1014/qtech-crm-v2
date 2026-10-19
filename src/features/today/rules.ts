@@ -246,14 +246,19 @@ export function ruleNotFloated(ctx: TodayInputs): Entry[] {
  * send) is at least max(2, the supplier's median reply days + 1 when it has 3 or more replies); or the reply-by date has
  * passed without a chase since. A bid due within 3 working days shortens the wait to 1.
  */
+/** The base wait after a supplier chase: max(2, the supplier's median reply days + 1 when it has 3 or more replies). */
+export function supplierChaseBaseDays(i: { replied: number; medianReplyDays: number | null }): number {
+  const median = i.replied >= THRESHOLDS.supplierMedianMinReplies && i.medianReplyDays !== null ? Math.ceil(i.medianReplyDays) + 1 : 0
+  return Math.max(THRESHOLDS.supplierChaseMinDays, median)
+}
+
 export function ruleChaseSupplier(ctx: TodayInputs): Entry[] {
   const rfqs = new Map(ctx.rfqs.map(r => [r.id, r]))
   const out: Entry[] = []
   for (const i of ctx.inquiries) {
     const r = rfqs.get(i.rfqId)
     if (!r || !i.sentOn || i.responseState !== 'awaiting' || r.bidState !== 'to_bid' || !routesToUser(r.ownerId, ctx)) continue
-    const median = i.replied >= THRESHOLDS.supplierMedianMinReplies && i.medianReplyDays !== null ? Math.ceil(i.medianReplyDays) + 1 : 0
-    const base = Math.max(THRESHOLDS.supplierChaseMinDays, median)
+    const base = supplierChaseBaseDays(i)
     const lastTouchOn = i.lastChasedOn ?? i.sentOn
     let w = chaseState({ lastTouchOn, waitDays: cooldownDays(base, r.dueOn, ctx.today), chased: i.chaseCount > 0, today: ctx.today })
     let replyByHit: string | null = null

@@ -132,11 +132,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
         tone: 'success',
         undo: {
           onUndo: async () => {
-            try {
-              await setComplete.mutateAsync({ complete: !next, userId })
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await setComplete.mutateAsync({ complete: !next, userId })
           },
           settledTitle: next ? 'Costs marked complete' : 'Costs reopened',
           undoneTitle: next ? 'Costs reopened' : 'Costs marked complete',

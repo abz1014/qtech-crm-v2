@@ -68,6 +68,16 @@ export function lineTotal(qty: number, price: number | null): number | null {
   return price === null ? null : Math.round(qty * price * 100) / 100
 }
 
+/**
+ * A unit price as the PO prints it: two decimals at least, up to the four a supplier price is stored at (numeric(14,4)), with grouping.
+ * Rounding 0.125 to 0.13 would make qty x unit price disagree with the line amount on the PDF.
+ */
+export function unitPriceText(price: number): string {
+  const [whole, frac] = Math.abs(price).toFixed(4).split('.')
+  const kept = frac.replace(/0+$/, '').padEnd(2, '0')
+  return `${price < 0 ? '−' : ''}${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${kept}`
+}
+
 export function poTotal(rows: readonly PrefillRow[], typed: Typed): number {
   return rows.reduce((n, r) => n + Math.round((lineTotal(r.qty, priceOf(r, typed)) ?? 0) * 100), 0) / 100
 }

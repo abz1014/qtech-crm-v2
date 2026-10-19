@@ -99,11 +99,7 @@ export function OrderItemsPanel({
         body: `${items.length} ${items.length === 1 ? 'line' : 'lines'}`,
         undo: {
           onUndo: async () => {
-            try {
-              await setRates.mutateAsync(before)
-            } catch (err) {
-              fail('Could not undo')(err)
-            }
+            await setRates.mutateAsync(before)
           },
           settledTitle: on ? 'Order exempted from GST' : 'GST restored on every line',
           undoneTitle: 'Put back as it was',

@@ -151,3 +151,64 @@ describe('invalidation map (R01)', () => {
     expect(client.getQueryState(qk.companies.part('c2', 'sites'))?.isInvalidated).toBe(false)
   })
 })
+
+// Code review (p9): writes whose stale screens were reachable in one or two clicks.
+describe('invalidation map: stale screens found in review', () => {
+  async function staleAfter<N extends WriteName>(name: N, vars: Parameters<typeof keysFor<N>>[1], key: readonly unknown[]) {
+    const client = new QueryClient()
+    client.setQueryData(key, [])
+    await invalidateAfter(client, name, vars)
+    return client.getQueryState(key)?.isInvalidated
+  }
+
+  it('closing an RFQ from Today ("Close as no reply") takes it off the Today list', async () => {
+    expect(await staleAfter('rfq.close', { rfqId: 'r1' }, qk.today.board())).toBe(true)
+  })
+
+  it('closing an RFQ refreshes the customer history, which shows its outcome', async () => {
+    expect(await staleAfter('rfq.close', { rfqId: 'r1' }, [...qk.companies.part('c1', 'history'), false])).toBe(true)
+  })
+
+  it('asking more suppliers from a Today item refreshes the Today list', async () => {
+    expect(await staleAfter('inquiry.add', { rfqId: 'r1' }, qk.today.board())).toBe(true)
+  })
+
+  it('saving a supplier price refreshes the Mark won ranking of that RFQ (and only that RFQ)', async () => {
+    expect(await staleAfter('quote.save', { rfqId: 'r1' }, qk.orders.ranked('r1', 'admin'))).toBe(true)
+    expect(await staleAfter('quote.save', { rfqId: 'r1' }, qk.orders.ranked('r2', 'admin'))).toBe(false)
+    expect(await staleAfter('inquiry.cantQuote', { rfqId: 'r1' }, qk.orders.ranked('r1', 'sales'))).toBe(true)
+    expect(await staleAfter('item.add', { rfqId: 'r1' }, qk.orders.ranked('r1', 'engineer'))).toBe(true)
+  })
+
+  it('a hand-entered rate refreshes every Mark won ranking (they compare in PKR)', async () => {
+    expect(await staleAfter('fx.set', {}, qk.orders.ranked('r9', 'admin'))).toBe(true)
+  })
+
+  it('an order edit refreshes the customer history, which shows the order state', async () => {
+    expect(await staleAfter('order.update', { orderId: 'o1' }, [...qk.companies.part('c1', 'history'), true])).toBe(true)
+  })
+
+  it('issuing a quotation refreshes the ranked quotes (they show the quoted selling price)', async () => {
+    expect(await staleAfter('quotation.issue', { rfqId: 'r1' }, qk.orders.ranked('r1', 'admin'))).toBe(true)
+  })
+
+  it('a merge refreshes every read that shows the dropped company: Today, intake suppliers, memory, POs, money', async () => {
+    const v = { keepId: 'k', dropId: 'd' }
+    for (const key of [qk.today.board(), qk.intake.suppliers(), qk.memory.rfq('r1', 's'), qk.purchaseOrders.lastToSupplier('d'), qk.money.margins()]) {
+      expect(await staleAfter('company.merge', v, key)).toBe(true)
+    }
+  })
+
+  it('closing an RFQ stops Capture offering it', async () => {
+    expect(await staleAfter('rfq.close', { rfqId: 'r1' }, qk.rfqs.capture('u1'))).toBe(true)
+  })
+
+  it('a chase from Today refreshes the supplier record and the invoice reminders Money shows', async () => {
+    expect(await staleAfter('today.chase', {}, qk.companies.part('s1', 'supplier-activity'))).toBe(true)
+    expect(await staleAfter('today.chase', {}, qk.money.invoices.register())).toBe(true)
+  })
+
+  it('issuing a PO refreshes the supplier record (it shows the leg PO and placed date)', async () => {
+    expect(await staleAfter('po.issue', { orderId: 'o1' }, qk.companies.part('s1', 'supplier-record'))).toBe(true)
+  })
+})

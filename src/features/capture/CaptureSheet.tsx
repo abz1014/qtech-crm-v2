@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import * as RadixDialog from '@radix-ui/react-dialog'
 import { ArrowRight, Check, ClipboardPaste, Clock, FileWarning, Share2, WifiOff, X } from 'lucide-react'
-import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { deleteCapture, safely } from '@/lib/capture/store'
 import { readRecentOrders, readRecents } from '@/lib/capture/recents'
@@ -183,7 +182,8 @@ export default function CaptureSheet() {
     await Promise.all([
       ...writes.map(w => invalidateAfter(client, w, { rfqId })),
       client.invalidateQueries({ queryKey: qk.today.all }),
-      client.invalidateQueries({ queryKey: qk.rfqs.capture() }),
+      // The candidates are cached under the person's id: the bare prefix (signature '') would match nothing.
+      client.invalidateQueries({ queryKey: qk.rfqs.capture(user?.id ?? '') }),
     ])
   }
 
@@ -229,15 +229,11 @@ export default function CaptureSheet() {
           tone: 'success',
           undo: {
             onUndo: async () => {
-              try {
-                if (text) await setOrderNotes(orderId, before)
-                for (const r of rows) await deleteAttachment(r)
-                await Promise.all([invalidateAfter(client, 'order.files', { orderId }), invalidateAfter(client, 'order.update', { orderId })])
-                setResult(null)
-                restore()
-              } catch (err) {
-                toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-              }
+              if (text) await setOrderNotes(orderId, before)
+              for (const r of rows) await deleteAttachment(r)
+              await Promise.all([invalidateAfter(client, 'order.files', { orderId }), invalidateAfter(client, 'order.update', { orderId })])
+              setResult(null)
+              restore()
             },
           },
         })
@@ -273,9 +269,10 @@ export default function CaptureSheet() {
           await refresh(rfqId, ['clarification.answer', 'attachment.add'])
         }
       } else if (dest === 'questions') {
+        // Files first: they are remembered across a retry, so a failed upload cannot leave the questions added twice.
+        const rows = await attachFiles(rfqId, null)
         const qs = keptLines.map(question => ({ id: crypto.randomUUID(), question, inquiryId: null }))
         await addClarifications(rfqId, qs)
-        const rows = await attachFiles(rfqId, null)
         await refresh(rfqId, ['clarification.add', ...(rows.length ? (['attachment.add'] as const) : [])])
         summary = savedSummary('questions', { questions: qs.length, photos: rows.length })
         undo = async () => {
@@ -285,9 +282,10 @@ export default function CaptureSheet() {
           await refresh(rfqId, ['clarification.add', 'attachment.add'])
         }
       } else {
+        // Files first (as for an order): a failed upload after the note was written would append it again on Try again.
+        const rows = await attachFiles(rfqId, null)
         const before = await getRfqNotes(rfqId)
         if (text) await setRfqNotes(rfqId, appendNote(before, text, noteStamp(user.name, new Date())))
-        const rows = await attachFiles(rfqId, null)
         await refresh(rfqId, ['rfq.notes', ...(rows.length ? (['attachment.add'] as const) : [])])
         summary = savedSummary('notes', { questions: 0, photos: rows.length })
         undo = async () => {
@@ -307,13 +305,9 @@ export default function CaptureSheet() {
         tone: 'success',
         undo: {
           onUndo: async () => {
-            try {
-              await undo()
-              setResult(null)
-              restore()
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await undo()
+            setResult(null)
+            restore()
           },
         },
       })

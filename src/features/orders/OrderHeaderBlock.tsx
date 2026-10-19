@@ -102,11 +102,7 @@ export function OrderHeaderBlock({
         body: ref,
         undo: {
           onUndo: async () => {
-            try {
-              await cancel.mutateAsync(before)
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await cancel.mutateAsync(before)
           },
           settledTitle: 'Order reopened',
           undoneTitle: 'Cancelled again',
@@ -288,11 +284,7 @@ export function OrderHeaderBlock({
                 body: ref,
                 undo: {
                   onUndo: async () => {
-                    try {
-                      await cancel.mutateAsync(before)
-                    } catch (err) {
-                      toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-                    }
+                    await cancel.mutateAsync(before)
                   },
                   settledTitle: 'Order cancelled',
                   undoneTitle: 'Order is active again',

@@ -126,9 +126,10 @@ export interface ParsedAmount {
 export function parseAmount(raw: string, currency?: string | null): ParsedAmount | null {
   let s = raw.trim()
   let mult = 1
-  const k = /\s?[kK]$/.exec(s)
+  const k = /\s?([kK]|[lL]akhs?|[lL]acs?|[cC]rores?)$/.exec(s)
   if (k) {
-    mult = 1000
+    const word = (k[1] ?? '').toLowerCase()
+    mult = word === 'k' ? 1000 : word.startsWith('c') ? 10_000_000 : 100_000
     s = s.slice(0, k.index)
   }
   s = s.replace(/[\s'’]/g, '')
@@ -183,8 +184,11 @@ const CUR_PREFIX_SRC = String.raw`(?<![A-Za-z])(US\s?\$|U\.S\.\s?\$|USD|\$|EUR|�
 const CUR_SUFFIX_SRC = String.raw`\s*(USD|US\$|\$|EUR|€|CNY|RMB|¥|￥|AED|GBP|£|PKR|₨|Rs\.?|dollars?|euros?|yuan|dirhams?|dhs|pounds?|rupees?|元|块)(?![A-Za-z])`
 const CUR_CODE_SRC = String.raw`(US\s?\$|USD|\$|EUR|€|CNY|RMB|¥|￥|AED|GBP|£|PKR|₨|Rs\.?|dollars?|euros?|yuan|dirhams?|pounds?|rupees?)`
 // An amount: with thousands groups (comma, dot, apostrophe, or space when SP) and up to four decimals, or plain; an optional k.
-const AMOUNT_SP = String.raw`(?<![A-Za-z0-9.,])(\d{1,3}(?:[ ,.'’]\d{3})+(?:[.,]\d{1,4})?|\d+(?:[.,]\d{1,4})?)(\s?[kK](?![A-Za-z]))?`
-const AMOUNT = String.raw`(?<![A-Za-z0-9.,])(\d{1,3}(?:[,.'’]\d{3})+(?:[.,]\d{1,4})?|\d+(?:[.,]\d{1,4})?)(\s?[kK](?![A-Za-z]))?`
+// Pakistani (lakh) grouping first: "1,25,000", "12,50,000", "1,00,00,000". A multiplier word may follow: k, lakh / lac, crore.
+const LAKH_GROUPS = String.raw`\d{1,2}(?:,\d{2})+,\d{3}(?:\.\d{1,4})?`
+const MULT_WORD = String.raw`(\s?(?:[kK]|[lL]akhs?|[lL]acs?|[cC]rores?)(?![A-Za-z]))?`
+const AMOUNT_SP = String.raw`(?<![A-Za-z0-9.,])(${LAKH_GROUPS}|\d{1,3}(?:[ ,.'’]\d{3})+(?:[.,]\d{1,4})?|\d+(?:[.,]\d{1,4})?)${MULT_WORD}`
+const AMOUNT = String.raw`(?<![A-Za-z0-9.,])(${LAKH_GROUPS}|\d{1,3}(?:[,.'’]\d{3})+(?:[.,]\d{1,4})?|\d+(?:[.,]\d{1,4})?)${MULT_WORD}`
 // What may follow a price without making it a size or code ("USD 120pcs", "USD 24V" is not a price).
 const AFTER_OK = /^(?:pc|pcs|piece|pieces|each|ea\b|per|only|net|ex\b|fob|cif|cfr|exw|ddp|dap|incl|excl|plus|vat|gst|unit|nos|no\b|set|lot|\/|\+)/i
 
@@ -287,7 +291,9 @@ function dateFromText(s: string, today?: string): string | null {
     const mon = MONTHS.indexOf((m[2] ?? '').toLowerCase()) + 1
     const y = m[3] ? (m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3])) : yearNow
     if (y === null) return null
-    return `${y}-${String(mon).padStart(2, '0')}-${String(Number(m[1])).padStart(2, '0')}`
+    const iso = `${y}-${String(mon).padStart(2, '0')}-${String(Number(m[1])).padStart(2, '0')}`
+    // No year written and the date has already passed this year: the supplier means next year ("valid till 15 Jan" sent in December).
+    return !m[3] && today && iso < today.slice(0, 10) ? `${y + 1}${iso.slice(4)}` : iso
   }
   m = /(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})/.exec(s)
   if (m) return `${m[3]}-${String(Number(m[2])).padStart(2, '0')}-${String(Number(m[1])).padStart(2, '0')}`
