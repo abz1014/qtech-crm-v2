@@ -323,33 +323,11 @@ create trigger supplier_orders_stamp_actor before insert or update on public.sup
 revoke all on all sequences in schema public from anon;
 alter default privileges in schema public revoke all on sequences from anon;
 
--- ================================================================ L-3: pg_net
--- Only the nightly FX job (pg_cron, as postgres) calls net.http_get. Supabase's pg_net install grants the HTTP functions
--- to anon and authenticated; take that back. Guarded: a stack without pg_net, or a function this role may not revoke on,
--- is reported and skipped (the pgTAP test then shows the outcome).
-do $$
-declare
-  r record;
-begin
-  if to_regnamespace('net') is null then
-    raise notice 'pg_net is not installed: nothing to revoke';
-    return;
-  end if;
-  for r in select p.oid::regprocedure as f from pg_proc p where p.pronamespace = 'net'::regnamespace loop
-    begin
-      execute format('revoke all on function %s from anon, authenticated', r.f);
-      -- PUBLIC too, but only where postgres (the pg_cron job owner) keeps its own right to run the function.
-      if exists (select 1 from pg_proc p cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
-                 where p.oid = r.f::oid and a.grantee = 'postgres'::regrole and a.privilege_type = 'EXECUTE')
-         or exists (select 1 from pg_proc p where p.oid = r.f::oid and p.proowner = 'postgres'::regrole) then
-        execute format('revoke all on function %s from public', r.f);
-      end if;
-    exception when others then
-      raise notice 'could not revoke on %: %', r.f, sqlerrm;
-    end;
-  end loop;
-end;
-$$;
+-- ================================================================ L-3: pg_net (not changeable here)
+-- Supabase's pg_net install grants execute on the net functions, and USAGE on schema net, to anon and authenticated as
+-- supabase_admin. postgres runs the migrations, is not a superuser and cannot revoke a grant it did not make (checked in
+-- CI: the ACL of net.http_get is supabase_admin's). The net schema is not exposed by the API, so no client reaches it;
+-- the pgTAP test holds that this project never adds such a grant itself. See SECURITY_REVIEW.md, L-3.
 
 -- ================================================================ L-6: receipts of a closed month
 -- A receipt is evidence for a closed month once its invoice (invoice_date) or expense (paid_on) is in one. It can still

@@ -174,13 +174,6 @@ select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-0000000
 select is(public.receipt_locked('gst-receipts', '0065/r1.pdf'), null::boolean, 'receipt_locked tells an engineer nothing');
 reset role;
 
--- diagnostics for L-3 (kept: they show where the pg_net grants come from)
-select diag('net.http_get acl: ' || coalesce((select coalesce(p.proacl::text, 'default') || ' owner ' || p.proowner::regrole::text
-            from pg_proc p where p.oid = to_regprocedure('net.http_get(text,jsonb,jsonb,integer)')), 'absent'));
-select diag('schema net acl: ' || coalesce((select coalesce(n.nspacl::text, 'default') || ' owner ' || n.nspowner::regrole::text
-            from pg_namespace n where n.nspname = 'net'), 'absent'));
-select diag('current_user in migrations is ' || current_user || ', superuser: ' || (select rolsuper::text from pg_roles where rolname = current_user));
-
 -- ================================================================== L-7: content types
 select ok((select allowed_mime_types @> array['image/jpeg', 'image/png', 'image/heic', 'image/heif', 'application/pdf', 'text/plain',
                                               'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']

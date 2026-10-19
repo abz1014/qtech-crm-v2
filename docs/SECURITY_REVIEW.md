@@ -24,7 +24,7 @@ engineers never see money (payments, expenses, costs, margins, cash, invoices); 
 | M-3 | Medium | Selling prices are hidden from engineers by the app only; the database grants them to all staff (section 10) | **Accepted** by the owner, 2026-10-19 |
 | L-1 | Low | Actor columns can be named by the caller: the chase actor (0048) and every `created_by` | **Fixed in 0065** |
 | L-2 | Low | anon keeps Supabase's default grants on the sequences in `public` | **Fixed in 0065** |
-| L-3 | Low | pg_net's `net.http_get` keeps Supabase's execute grant to anon and authenticated | **Fixed in 0065** |
+| L-3 | Low | pg_net's `net.http_get` keeps Supabase's execute grant to anon and authenticated | **Cannot be changed by the project** (platform grant); not reachable |
 | L-4 | Low | The share target accepts a cross-site form POST to `/capture` | **Mitigated** (draft only, capped; app) |
 | L-5 | Low | Capture drafts and RFQ recents stay on the device after sign-out | **Fixed** (app) |
 | L-6 | Low | Files attached to a closed month (GST receipts, expense receipts) are not locked | **Fixed in 0065** |
@@ -226,9 +226,12 @@ and S14 has the new rows.
   - `signatory_id` on quotations and POs is left as chosen, because a document may be signed by someone else.
 - **L-2.** anon loses every privilege on the sequences in `public`, and the default privileges no longer give it any on
   new sequences.
-- **L-3.** Execute on every function in the `net` schema is revoked from anon and authenticated. It is also revoked
-  from PUBLIC wherever postgres keeps its own right to run the function. pg_cron runs the FX jobs as postgres, so they
-  are not affected.
+- **L-3.** This cannot be changed from the project. Supabase's pg_net install grants execute on the `net` functions,
+  and USAGE on schema `net`, to anon and authenticated, as `supabase_admin`. CI showed the ACL of `net.http_get` is
+  `supabase_admin`'s. Migrations, and the dashboard SQL editor, run as `postgres`, which is not a superuser and cannot
+  revoke a grant it did not make. The `net` schema is not in the API's exposed schemas, so no client can call these
+  functions. The pgTAP test now holds that this project never adds such a grant itself. If the owner wants it removed,
+  only Supabase support can do it; it is not worth a ticket while the schema stays unexposed.
 - **L-4.** Nothing changed for the request itself. A `Sec-Fetch-Site` check cannot be tested against Android's share
   sheet in CI, and a wrong guess would break WhatsApp share. What a POST to `/capture` stores is only a draft on that
   device; nothing reaches the database until the signed-in person picks a destination and taps Save. The service worker

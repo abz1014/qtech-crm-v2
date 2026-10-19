@@ -151,10 +151,15 @@ select is((select coalesce(array_agg(c.relname::text order by 1), '{}') from pg_
              and case when c.relkind = 'S' then has_sequence_privilege('anon', c.oid, 'USAGE,SELECT,UPDATE') else false end),
           '{}'::text[], 'L-2: anon holds no privilege on any sequence in public');
 
-select ok(case when to_regprocedure('net.http_get(text,jsonb,jsonb,integer)') is null then true
-               else not (has_function_privilege('anon', to_regprocedure('net.http_get(text,jsonb,jsonb,integer)'), 'execute')
-                         or has_function_privilege('authenticated', to_regprocedure('net.http_get(text,jsonb,jsonb,integer)'), 'execute')) end,
-  'L-3: no client role can call net.http_get (only the nightly FX job needs it)');
+-- L-3 cannot be closed from this project: Supabase's pg_net install grants execute (and USAGE on schema net) to anon and
+-- authenticated as supabase_admin, and postgres, which runs the migrations, is not a superuser and cannot revoke a grant
+-- it did not make. The net schema is not exposed by the API, so no client can reach it. What this test holds is that
+-- this project never adds such a grant itself: every anon or authenticated entry on a net function is supabase_admin's.
+select is((select count(*)::int from pg_proc p cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+           where p.pronamespace = coalesce(to_regnamespace('net'), 0::oid)
+             and a.grantee in ('anon'::regrole, 'authenticated'::regrole)
+             and a.grantor <> coalesce((select oid from pg_roles where rolname = 'supabase_admin'), 0::oid)),
+          0, 'L-3: no grant to anon or authenticated on a net function comes from this project');
 
 select * from finish();
 rollback;
