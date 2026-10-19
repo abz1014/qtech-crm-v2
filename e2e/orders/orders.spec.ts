@@ -733,6 +733,8 @@ for (const width of [1440, 375]) {
     await expect(leg(page, 'A')).toBeVisible()
     await expect(page.getByRole('region', { name: 'Items' })).toBeVisible()
     expect(await violations(page)).toEqual([])
+    // nothing scrolls sideways, at 375 as at 1440
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
     await review(page, `o03-order-admin-${width}`)
 
     await page.getByRole('button', { name: 'More actions' }).click()

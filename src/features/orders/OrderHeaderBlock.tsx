@@ -162,7 +162,8 @@ export function OrderHeaderBlock({
             <span className="num text-lg font-regular text-fg-2">{ref}</span>
             {/* an active order needs no chip: only Done or Cancelled is news */}
             {s?.lifecycle && s.lifecycle !== 'active' ? <StatusBadge dimension="order" value={s.lifecycle} /> : null}
-            {s && s.dataTrust && s.dataTrust !== 'ok' ? <StatusBadge dimension="trust" value={s.dataTrust} /> : null}
+            {/* an unknown price basis is asked in words below ("Is GST included?"); other trust marks keep their chip */}
+            {s && s.dataTrust && s.dataTrust !== 'ok' && !basisUnknown ? <StatusBadge dimension="trust" value={s.dataTrust} /> : null}
           </h1>
           <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg-2">
             {order.site && !isEngineer ? <span>{order.site.name}</span> : null}

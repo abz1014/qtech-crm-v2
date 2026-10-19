@@ -147,7 +147,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
     <section aria-label="Margin" data-slot="margin-costs" className="rounded border bg-surface">
       <div className="flex items-center gap-3 border-b px-5 py-4">
         <h2 className="text-base font-semibold">Margin</h2>
-        {unknown ? <StatusBadge dimension="trust" value="basis-unknown" /> : m ? <StatusBadge dimension="costs" value={complete ? 'complete' : 'provisional'} /> : null}
+        {unknown ? <StatusBadge dimension="trust" value="basis-unknown" label="Is GST included?" /> : m ? <StatusBadge dimension="costs" value={complete ? 'complete' : 'provisional'} /> : null}
         <span className="ml-auto inline-flex items-center gap-1 text-xs text-fg-muted">
           <Icon icon={Lock} size="chip" /> Admin only
         </span>
