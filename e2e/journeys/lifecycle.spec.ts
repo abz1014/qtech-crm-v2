@@ -16,21 +16,6 @@ import { fe2, monthBefore, openPage, ordRef, readCount, resetCount, roleContext,
  * the gap is fixed (the call is then replaced by the plain assertion).
  */
 
-/**
- * Runs `assertion`, which states the behaviour the audit says is right. While it fails, that is the known finding and the test passes with an
- * annotation; if it passes, the gap has been fixed and the test fails until this call is replaced by the assertion itself.
- */
-async function knownGap(finding: string, assertion: () => Promise<void>): Promise<void> {
-  let failure: unknown = null
-  try {
-    await assertion()
-  } catch (e) {
-    failure = e
-  }
-  test.info().annotations.push({ type: 'known gap', description: finding })
-  expect(failure, `${finding} appears to be fixed: replace knownGap(...) with the assertion itself`).not.toBeNull()
-}
-
 const unique = () => Math.random().toString(36).slice(2, 8)
 const today = karachiDay(0)
 
