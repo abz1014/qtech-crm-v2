@@ -544,6 +544,40 @@ export function rulePlanCommissioning(ctx: TodayInputs): Entry[] {
 }
 
 /**
+ * To source: a won order with goods lines that have no supplier leg yet. One item per order saying how many lines still
+ * need a supplier. Routed like place PO and plan commissioning (the order owner; ownerless to admin; an engineer sees the
+ * orders they own). Always "ready to move" with the order's age and snoozable, so it is a reminder, not an alarm. The count
+ * comes from the lines themselves; an order whose state says to source but whose lines count 0 (read in between) is quiet.
+ */
+export function ruleToSource(ctx: TodayInputs): Entry[] {
+  const out: Entry[] = []
+  for (const o of ctx.orders) {
+    if (o.goodsState !== 'to_source' || o.unsourced <= 0 || !routesToUser(o.ownerId, ctx)) continue
+    out.push(
+      build(
+        {
+          rule: 'to_source',
+          subjectId: o.id,
+          tab: tabFor('to_source'),
+          title: o.unsourced === 1 ? '1 item still needs a supplier' : `${o.unsourced} items still need a supplier`,
+          ref: orderRef(o.number),
+          party: o.customerName,
+          actionDueOn: o.orderedOn,
+          group: 'ready',
+          badge: ageBadge(o.orderedOn, ctx.today),
+          isPriority: false,
+          orderId: o.id,
+          href: `/orders/${o.id}`,
+          number: o.number,
+        },
+        ctx.today,
+      ),
+    )
+  }
+  return out
+}
+
+/**
  * Delivered but not invoiced (O05, admin and sales only). Three cases, one item per order (the snooze key is the order):
  *  - Goods delivered and any commissioning done, no invoice yet: due one working day after the last delivery.
  *  - Goods delivered but commissioning not marked done (an engineer who never taps "Mark done" must not stop the invoice):
@@ -703,6 +737,7 @@ export const RULES: Record<RuleKey, (ctx: TodayInputs) => Entry[]> = {
   goods_late: ruleGoodsLate,
   place_po: rulePlacePo,
   plan_commissioning: rulePlanCommissioning,
+  to_source: ruleToSource,
   delivered_not_invoiced: ruleDeliveredNotInvoiced,
   close_month: ruleCloseMonth,
 }

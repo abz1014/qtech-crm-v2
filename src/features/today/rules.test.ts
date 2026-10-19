@@ -22,6 +22,7 @@ import {
   rulePlanCommissioning,
   rulePlacePo,
   ruleRelayAnswers,
+  ruleToSource,
   THRESHOLDS,
 } from './rules'
 import type { ClarificationFact, InquiryFact, LegFact, OrderFact, ReceivableFact, RfqFact, Role, TodayInputs } from './types'
@@ -100,6 +101,7 @@ const ord = (o: Partial<OrderFact> = {}): OrderFact => ({
   goodsState: 'delivered',
   commissioningState: 'n_a',
   invoicingState: 'not_invoiced',
+  unsourced: 0,
   toInvoice: null,
   lastInvoicedOn: null,
   deliveredOn: '2026-11-20',
@@ -411,6 +413,39 @@ describe('rule: place PO', () => {
     expect(rulePlacePo(ctx({ legs: [leg()] }))).toEqual([])
     expect(rulePlacePo(ctx({ legs: [leg({ placedOn: null, ownerId: OTHER })] }))).toEqual([])
     expect(rulePlacePo(ctx({ legs: [leg({ placedOn: null })] }, 'engineer'))).toHaveLength(1)
+  })
+})
+
+describe('rule: to source (a won order with items that have no supplier)', () => {
+  const toSource = (o: Partial<OrderFact> = {}) => ord({ goodsState: 'to_source', unsourced: 3, invoicingState: null, ...o })
+  it('says how many items still need a supplier, as ready to move with the order age', () => {
+    const [e] = ruleToSource(ctx({ orders: [toSource()] }))
+    expect(e).toMatchObject({ rule: 'to_source', title: '3 items still need a supplier', ref: 'ORD-0038', party: 'Karachi Glassworks', group: 'ready', tab: 'sourcing', orderId: 'ord1', href: '/orders/ord1' })
+    expect(e.badge.text).toBe('17d old')
+    expect(ruleToSource(ctx({ orders: [toSource({ unsourced: 1 })] }))[0].title).toBe('1 item still needs a supplier')
+  })
+  it('is not raised once every item has a leg, for services-only orders, or when the count is zero', () => {
+    for (const goodsState of ['to_place', 'on_order', 'delivered', 'n_a']) expect(ruleToSource(ctx({ orders: [toSource({ goodsState })] }))).toEqual([])
+    expect(ruleToSource(ctx({ orders: [toSource({ unsourced: 0 })] }))).toEqual([])
+  })
+  it('sales: only their own orders', () => {
+    expect(ruleToSource(ctx({ orders: [toSource()] }, 'sales'))).toHaveLength(1)
+    expect(ruleToSource(ctx({ orders: [toSource({ ownerId: OTHER })] }, 'sales'))).toEqual([])
+    expect(ruleToSource(ctx({ orders: [toSource({ ownerId: null })] }, 'sales'))).toEqual([])
+  })
+  it('admin: ownerless orders and their own; not orders owned by others', () => {
+    expect(ruleToSource(ctx({ orders: [toSource({ ownerId: null })] }, 'admin'))).toHaveLength(1)
+    expect(ruleToSource(ctx({ orders: [toSource({ ownerId: OTHER })] }, 'admin'))).toEqual([])
+  })
+  it('engineer: sees the orders they own, never orders owned by others', () => {
+    const eng = (o: Partial<OrderFact>) => ({ ...ctx({ orders: [toSource(o)] }, 'engineer'), user: { id: 'u-eng', role: 'engineer' as Role } })
+    expect(ruleToSource(eng({ ownerId: 'u-eng' }))).toHaveLength(1)
+    expect(ruleToSource(eng({ ownerId: ME }))).toEqual([])
+  })
+  it('can be snoozed, and never raises the money rules', () => {
+    const v = buildToday(ctx({ orders: [toSource()], snoozes: [{ rule: 'to_source', subjectId: 'ord1', untilOn: '2026-12-01' }] }))
+    expect(v.active).toEqual([])
+    expect(buildToday(ctx({ orders: [toSource()] })).active.map(i => i.rule)).toEqual(['to_source'])
   })
 })
 

@@ -347,8 +347,9 @@ test.describe('the other destinations', () => {
     await sheet(page).getByRole('button', { name: 'Continue to intake' }).click()
     await expect(page).toHaveURL(/\/rfqs\/new\?company=/)
     await expect(page.getByText(/ultrasonic level transmitter/).first()).toBeVisible()
-    // A sentence is not an item list: the pasted text is shown and the person adds the item, as with any paste on this screen.
-    await page.getByRole('button', { name: 'Add an item by hand' }).click()
+    // A polite line is now read (audit E1): the item and its quantity are already there. Tidy the description by hand.
+    await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue('2 nos')
+    await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue(/^ultrasonic level transmitter/)
     await page.getByRole('textbox', { name: 'Description of item 1' }).fill('Ultrasonic level transmitter 0 to 8 m')
     await page.getByRole('button', { name: 'Save without floating' }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
