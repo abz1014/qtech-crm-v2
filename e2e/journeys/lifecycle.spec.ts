@@ -11,10 +11,25 @@ import { fe2, monthBefore, openPage, ordRef, readCount, resetCount, roleContext,
  *   3. the closed-month refusal in the UI, for a payment and for an invoice
  *   4. goods late on a repeat order
  *
- * Where the product does not yet do what the audit says it must (G1, P2), the test states the right behaviour and is marked as an expected
- * failure with the audit's finding named, so CI stays green, the gap is visible in every report, and the test turns red the day the gap is
- * fixed (the marker is then deleted).
+ * Where the product does not yet do what the audit says it must (G1, P2), the test states the right behaviour, runs everything up to it, and
+ * records the gap with `knownGap`: CI stays green while the gap is there, the finding is named in every report, and the test turns red the day
+ * the gap is fixed (the call is then replaced by the plain assertion).
  */
+
+/**
+ * Runs `assertion`, which states the behaviour the audit says is right. While it fails, that is the known finding and the test passes with an
+ * annotation; if it passes, the gap has been fixed and the test fails until this call is replaced by the assertion itself.
+ */
+async function knownGap(finding: string, assertion: () => Promise<void>): Promise<void> {
+  let failure: unknown = null
+  try {
+    await assertion()
+  } catch (e) {
+    failure = e
+  }
+  test.info().annotations.push({ type: 'known gap', description: finding })
+  expect(failure, `${finding} appears to be fixed: replace knownGap(...) with the assertion itself`).not.toBeNull()
+}
 
 const unique = () => Math.random().toString(36).slice(2, 8)
 const today = karachiDay(0)
@@ -100,7 +115,6 @@ test.describe('cancelling an order after its PO was issued', () => {
   })
 
   test('the cancel dialog tells the person a PO was issued, so the supplier can be told (audit P2)', async ({ browser }, info) => {
-    test.fail(true, 'Audit P2: cancelling an order does nothing about issued POs and does not prompt "tell the supplier". Delete this marker when the dialog says so.')
     const s = await seedPo({ allPriced: true })
     const ctx = await roleContext(browser, info, 'admin')
     const page = await openPage(ctx, `/orders/${s.order.id}`)
@@ -109,7 +123,9 @@ test.describe('cancelling an order after its PO was issued', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 30_000 })
     await page.getByRole('button', { name: 'More actions' }).click()
     await page.getByRole('menuitem', { name: 'Cancel order' }).click()
-    await expect(page.getByRole('dialog')).toContainText(/PO.*(issued|sent)|tell the supplier/i, { timeout: 5000 })
+    await knownGap('Audit P2: cancelling an order does nothing about issued POs and does not prompt "tell the supplier"', () =>
+      expect(page.getByRole('dialog')).toContainText(/PO.*(issued|sent)|tell the supplier/i, { timeout: 3000 }),
+    )
     await ctx.close()
   })
 })
@@ -165,7 +181,6 @@ test.describe('the closed-month refusal, in the screens, for a payment and an in
 })
 
 test('goods late on a repeat order: late goods are raised even though no quote ever gave the leg an expected date', async ({ browser }, info) => {
-  test.fail(true, 'Audit G1: create_repeat_order copies no expected date and nothing defaults one, so goods late is silent for repeat orders. Delete this marker when a default expected date lands.')
   // A past order, delivered, with one supplier leg; the repeat is made on screen from "New order".
   const tag = unique()
   const company = await createCompany(uniqueName(`Repeatco${tag}`))
@@ -189,6 +204,6 @@ test('goods late on a repeat order: late goods are raised even though no quote e
   const legs = await must(rest<{ id: string }[]>('admin', `supplier_orders?order_id=eq.${id}&select=id`))
   await expect.poll(async () => (await must(rest<{ placed_on: string | null }[]>('admin', `supplier_orders?id=eq.${legs[0].id}&select=placed_on`)))[0].placed_on).toBe(today)
   await must(rest('admin', `supplier_orders?id=eq.${legs[0].id}`, { method: 'PATCH', body: { placed_on: karachiDay(-20) }, prefer: 'return=minimal' }))
-  await todayHas(ctx, 'goods_late', [supplier.name], true)
+  await knownGap('Audit G1: create_repeat_order copies no expected date and nothing defaults one, so goods late is silent for repeat orders', () => todayHas(ctx, 'goods_late', [supplier.name], true))
   await ctx.close()
 })

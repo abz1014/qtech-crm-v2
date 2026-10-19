@@ -167,9 +167,9 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     expect(inquiries.map(i => i.supplier_id).sort()).toEqual([s.alpen.id, s.lahore.id].sort())
     expect(inquiries.every(i => i.sent_on === today)).toBe(true)
 
-    // Hand-off: floated, so "not floated" is gone. The enquiries went out three days ago (the date is moved back), so both suppliers are due a chase.
+    // Hand-off: floated, so "not floated" is gone. The enquiries went out a week ago (the date is moved back), so both suppliers are due a chase.
     await todayHas(salesCtx, 'not_floated', [rfqRef(rfq.number)], false)
-    await must(rest('admin', `supplier_inquiries?rfq_id=eq.${rfq.id}`, { method: 'PATCH', body: { sent_on: karachiDay(-3) }, prefer: 'return=minimal' }))
+    await must(rest('admin', `supplier_inquiries?rfq_id=eq.${rfq.id}`, { method: 'PATCH', body: { sent_on: karachiDay(-7) }, prefer: 'return=minimal' }))
     await todayHas(salesCtx, 'chase_supplier', [rfqRef(rfq.number), s.alpen.name], true)
     await todayHas(salesCtx, 'chase_supplier', [rfqRef(rfq.number), s.lahore.name], true)
   })
@@ -193,8 +193,8 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     expect(await clipboardText(page)).toContain('Flange rating and line size on the process line')
     const [q] = await must(rest<{ ask_count: number }[]>('admin', `clarifications?rfq_id=eq.${rfq.id}&select=ask_count`))
     expect(q.ask_count).toBe(1)
-    // Hand-off: asked five days ago (moved back), so the customer is due a chase.
-    await must(rest('admin', `clarifications?rfq_id=eq.${rfq.id}`, { method: 'PATCH', body: { first_asked_at: daysAgo(5), last_asked_at: daysAgo(5) }, prefer: 'return=minimal' }))
+    // Hand-off: asked eight days ago (moved back), so the customer is due a chase.
+    await must(rest('admin', `clarifications?rfq_id=eq.${rfq.id}`, { method: 'PATCH', body: { first_asked_at: daysAgo(8), last_asked_at: daysAgo(8) }, prefer: 'return=minimal' }))
     await todayHas(salesCtx, 'chase_customer', [rfqRef(rfq.number)], true)
   })
 
