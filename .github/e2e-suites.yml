@@ -45,6 +45,8 @@ reports: # weight=45
   - 'e2e/reports/**'
 bank: # weight=40
   - 'e2e/bank/**'
+month-end: # weight=50
+  - 'e2e/month-end/**'
 money-costs: # weight=45
   - 'e2e/money/**'
 orders: # weight=115 (installs poppler)

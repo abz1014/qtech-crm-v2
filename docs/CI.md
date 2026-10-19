@@ -32,6 +32,8 @@ this file, `scripts/ci/e2e-*`) runs every suite; anything else runs just the sui
 (`scripts/ci/e2e-run.sh`; a failing suite does not stop the others, the shard fails at the end). A final job named `E2E` needs all shards and is the single
 result to read or require (green also when no suite needed to run). Reports upload per shard as `playwright-e2e-shard-N`.
 
+Suites defined there include `month-end` (M10, M05: the checklist, the six reports and their CSV, close and reopen, role access) next to the ones named in `playwright.config.ts`.
+
 Why shards: a stack boot is about 80 s and every reset about 27 s, but the tests themselves are about 8 min in total, so running them in
 4 parallel jobs (free on a public repo) cuts a full run from 20+ min to about 7. Suites still run with `E2E_SUITE=db` (one worker, one database per stack), so tests are unchanged.
 
