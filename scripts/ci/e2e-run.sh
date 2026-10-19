@@ -8,6 +8,10 @@ first=1
 case " $* " in *" rfq-quotation "*|*" orders "*|*" journeys "*)
   command -v pdftoppm >/dev/null && command -v pdftotext >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils) ;;
 esac
+# P04: every suite runs under the production Content-Security-Policy (the preview server reads vercel.json, see vite.config.ts).
+export E2E_CSP=1
+# The perf suite drives the real Lighthouse; it is pinned here and is not a project dependency.
+case " $* " in *" perf "*) npm i --no-save --no-audit --no-fund lighthouse@12.8.2 ;; esac
 for s in "$@"; do
   echo "::group::suite $s"
   if [ "$first" = 0 ] && [ "$s" != "pwa" ]; then npx supabase db reset --local || fail=1; fi

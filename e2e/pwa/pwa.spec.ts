@@ -6,7 +6,8 @@ import { expect, test, type Page } from '@playwright/test'
  * Chrome itself reports the app installable. Chrome's check (Page.getInstallabilityErrors) is the very test the
  * Lighthouse "installable" audit ran; Lighthouse 12 dropped its PWA category, so we ask the browser directly.
  */
-const SUPABASE = 'https://yafbphagorydbitfgfmg.supabase.co'
+// With E2E_CSP=1 (every e2e suite, P04) the page's Content-Security-Policy allows the local stack, not the production project, so the test calls that origin.
+const SUPABASE = process.env.E2E_CSP ? new URL(process.env.API_URL ?? 'http://127.0.0.1:54321').origin : 'https://yafbphagorydbitfgfmg.supabase.co'
 
 interface Icon {
   src: string

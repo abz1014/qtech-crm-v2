@@ -32,6 +32,11 @@ export function useLegPo(legId: string | undefined, enabled = true) {
   return useQuery({ queryKey: qk.purchaseOrders.leg(legId ?? ''), queryFn: () => api.getLegPo(legId as string), enabled: enabled && Boolean(legId) })
 }
 
+/** The POs already sent on an order, read when the cancel dialog opens. */
+export function useSentPos(orderId: string | undefined, enabled: boolean) {
+  return useQuery({ queryKey: qk.purchaseOrders.sentForOrder(orderId ?? ''), queryFn: () => api.listSentPos(orderId as string), enabled: enabled && Boolean(orderId), staleTime: 0 })
+}
+
 export function useNextPoNumber(enabled: boolean) {
   return useQuery({ queryKey: qk.purchaseOrders.nextNumber(), queryFn: api.getNextPoNumber, enabled, staleTime: 0, gcTime: 0 })
 }

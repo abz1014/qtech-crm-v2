@@ -83,6 +83,10 @@ import { defineConfig, devices } from '@playwright/test'
  *    precache (nothing from Supabase), the offline shell and Chrome's own installability check. No database needed:
  *      E2E_SUITE=pwa npx playwright test --project=pwa
  *
+ *  - perf (P04): Lighthouse accessibility (>= 95) on the seven main screens, no Content-Security-Policy violation and no repeated data
+ *    request on Today and the RFQ page. Needs E2E_CSP=1 (the preview server then sends vercel.json's policy) and `npm i --no-save lighthouse@12.8.2`:
+ *      E2E_CSP=1 E2E_SUITE=perf npx playwright test --project=perf
+ *
  *  - search (R12): the command-palette search over companies, contacts, RFQ numbers and customer refs. One request per burst of
  *    keystrokes, stale requests dropped, engineer sees nothing money-related, and axe (WCAG 2.2 AA) at 1440 and 375:
  *      E2E_SUITE=search REVIEW_DIR=review-shots npx playwright test --project=search
@@ -104,7 +108,7 @@ import { defineConfig, devices } from '@playwright/test'
  */
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -324,6 +328,13 @@ export default defineConfig({
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, serviceWorkers: 'allow', screenshot: 'only-on-failure' },
+    },
+    {
+      name: 'perf',
+      testMatch: /perf\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 } },
     },
     {
       name: 'journeys',

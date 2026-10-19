@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from '@/ui/Icon'
-import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, Ellipsis, FileText, Package, Receipt, RotateCcw, Scale, Wrench, type LucideIcon } from 'lucide-react'
+import { Ban, Banknote, Copy, CalendarDays, CircleCheck, ClipboardCheck, Ellipsis, FileText, Package, Receipt, RotateCcw, Scale, Wrench, type LucideIcon } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay } from '@/lib/formatDay'
@@ -23,6 +23,10 @@ import { useMarkDone, useSetPlanned } from '@/features/orders/commissioningActio
 import { ResolveBasisDialog } from '@/features/orders/ResolveBasisDialog'
 import { AddExpenseDialog } from '@/features/money/expenses/ExpenseDialog'
 import { legState } from '@/features/orders/lib/legModel'
+import { useSentPos } from '@/features/purchaseOrders/hooks'
+import { cancellationMessage, sentPoSentence } from '@/features/purchaseOrders/lib/cancelText'
+import { copyToClipboard } from '@/lib/clipboard'
+import { COMPANY_NAME } from '@/features/rfqs/lib'
 import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features/orders/lib/cancel'
 
 /*
@@ -326,6 +330,8 @@ function CancelDialog({
   onConfirm: (reason: CancelReason) => void | Promise<void>
 }) {
   const [reason, setReason] = useState<CancelReason | null>(null)
+  const { toast } = useToast()
+  const sent = useSentPos(order.id, true).data ?? []
   return (
     <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
@@ -347,6 +353,25 @@ function CancelDialog({
       >
         <div className="grid gap-4">
           <p className="text-sm text-fg-muted">The order stays on record and can be reopened. Reports use the reason.</p>
+          {sent.length > 0 ? (
+            <ul aria-label="Purchase orders already sent" data-testid="cancel-sent-pos" className="grid gap-3 rounded border border-tone-warning-fg/25 bg-tone-warning-bg p-3 text-sm text-tone-warning-fg">
+              {sent.map(po => (
+                <li key={po.ref} className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{sentPoSentence(po)}</span>
+                  <Button
+                    size="sm"
+                    icon={Copy}
+                    onClick={async () => {
+                      const ok = await copyToClipboard(cancellationMessage(po, COMPANY_NAME))
+                      toast(ok ? { title: 'Cancellation message copied', body: `For ${po.supplierName}, ${po.ref}.` } : { title: 'Could not copy the message', body: 'Nothing was changed.', tone: 'danger' })
+                    }}
+                  >
+                    Copy cancellation message
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <RadioGroup aria-label="Reason" value={reason ?? ''} onValueChange={v => setReason(v as CancelReason)} className="gap-2">
             {CANCEL_REASONS.map(r => (
               <Radio key={r.value} value={r.value} label={r.label} />
