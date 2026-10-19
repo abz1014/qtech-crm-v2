@@ -184,6 +184,7 @@ function purchaseOrders() {
     lastToSupplier: (supplierId: string) => [...all, 'last-to-supplier', supplierId] as const,
     leg: (legId: string) => [...all, 'leg', legId] as const,
     nextNumber: () => [...all, 'next-number'] as const,
+    sentForOrder: (orderId: string) => [...all, 'sent-for-order', orderId] as const,
   }
 }
 

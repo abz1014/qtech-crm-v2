@@ -114,18 +114,32 @@ test.describe('cancelling an order after its PO was issued', () => {
     await ctx.close()
   })
 
-  test('the cancel dialog tells the person a PO was issued, so the supplier can be told (audit P2)', async ({ browser }, info) => {
+  test('the cancel dialog says which PO went to whom and copies the cancellation message in one tap (audit P2)', async ({ browser }, info) => {
     const s = await seedPo({ allPriced: true })
     const ctx = await roleContext(browser, info, 'admin')
     const page = await openPage(ctx, `/orders/${s.order.id}`)
     await legLoc(page, 'A').getByRole('button', { name: 'Issue PO, leg A' }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Issue PO' }).click()
     await expect(page.getByRole('dialog')).toHaveCount(0, { timeout: 30_000 })
+    const [po] = await must(rest<{ number: number; issued_on: string }[]>('admin', `purchase_orders?supplier_order_id=eq.${s.leg}&select=number,issued_on`))
+    const ref = `PO-${po.issued_on.slice(2, 4)}-${String(po.number).padStart(4, '0')}`
+
     await page.getByRole('button', { name: 'More actions' }).click()
     await page.getByRole('menuitem', { name: 'Cancel order' }).click()
-    await knownGap('Audit P2: cancelling an order does nothing about issued POs and does not prompt "tell the supplier"', () =>
-      expect(page.getByRole('dialog')).toContainText(/PO.*(issued|sent)|tell the supplier/i, { timeout: 3000 }),
-    )
+    const d = page.getByRole('dialog')
+    await expect(d.getByTestId('cancel-sent-pos')).toContainText(`${ref} was sent to ${s.supplier.name}. Tell them it's cancelled.`)
+    await resetCount(page)
+    await d.getByRole('button', { name: 'Copy cancellation message' }).click()
+    fe2('Copy the cancellation message', (await readCount(page)).mouse, 1)
+    const text = await page.evaluate(() => navigator.clipboard.readText())
+    expect(text).toContain(`*${ref}*`)
+    expect(text).toContain('Endress+Hauser Cerabar PMC51 pressure transmitter')
+    expect(text).toMatch(/ask you to cancel/)
+    expect(text).not.toMatch(/PKR|USD|\d+\.\d\d/) // no price
+    // Telling the supplier is not a required step: the order cancels with the reason alone.
+    await d.getByRole('radio', { name: 'The customer cancelled the PO' }).click()
+    await d.getByRole('button', { name: 'Cancel order' }).click()
+    await expect.poll(async () => (await must(rest<{ cancelled_on: string | null }[]>('admin', `orders?id=eq.${s.order.id}&select=cancelled_on`)))[0].cancelled_on).toBe(today)
     await ctx.close()
   })
 })
