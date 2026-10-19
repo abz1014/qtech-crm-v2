@@ -1026,7 +1026,7 @@ Main at `8ac8983` plus Part E (`6a9fbde`). Read-only; no product code changed. T
 | E-SH-01 | STILL OPEN | Orders and Money still show no count (`useNavCounts.ts`) |
 | E-MN-06 | STILL OPEN | Money and the Month-end pages still sit in the centred 1216 px column; the Month-end frames span the page |
 | E-MN-08 | STILL OPEN | `GstRegisterPage.tsx:315` still says "see Receivables" ("Cash month" in the mockup, now P&L) |
-| E-ST-01 | WIDENED | See E2-ST-01 |
+| E-ST-01 | WIDENED | See E2-ST-01 (FIXED 3eb7054) |
 
 ## Counts of NEW items (Part E2)
 
@@ -1103,7 +1103,7 @@ All six reports match in header, key-figure row, Export CSV and the footnote cop
 ### Settings: Team
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E2-ST-01 | Name and email fully shown; "Reactivate" inside the Actions cell; table fills the card | In the current shot the Name column is about 60 px wide: "Test Adm", "admin@te:"; Reactivate is cut at the right edge; the table stops before the card edge; the density toggle sits in the toolbar over the filter note. Phone: the back bar, rows, chip and bottom sheet now match (A-34 to A-36 hold) | medium | NEW (replaces E-ST-01) |
+| E2-ST-01 | Name and email fully shown; "Reactivate" inside the Actions cell; table fills the card | In the current shot the Name column is about 60 px wide: "Test Adm", "admin@te:"; Reactivate is cut at the right edge; the table stops before the card edge; the density toggle sits in the toolbar over the filter note. Phone: the back bar, rows, chip and bottom sheet now match (A-34 to A-36 hold) | medium | FIXED 3eb7054 (replaces E-ST-01) |
 
 ### Settings: Company profile (admin incomplete, filled, sales read-only; 1440 and 375)
 Matches the mockup frame by frame: banner with Add them, red invalid fields with the two inline messages, "Needed for PDFs" notes, Business details, Tax, Bank, Quotations and purchase orders cards, the sales read-only list with "Not set" flags, the "Only an admin can edit" tag, the "View only" tag in the nav, and the save bar. No NEW item.
