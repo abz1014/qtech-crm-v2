@@ -1,0 +1,63 @@
+# The ONE place that defines an E2E suite (read by .github/workflows/e2e.yml and scripts/ci/e2e-matrix.py).
+#
+# Each key is a Playwright project name from playwright.config.ts. The paths under it decide when that suite runs on a push
+# (it always runs on main and on a manual dispatch). The optional "# weight=N" is the rough seconds the suite takes with its
+# database reset; it is only used to balance suites across the parallel shards (default 50). `shared` is special: a change there
+# runs every suite. Do NOT add anything else at column 0 except suite keys. See docs/CI.md.
+shared:
+  - 'src/**'
+  - 'e2e/support/**'
+  - 'e2e/support.ts'
+  - 'supabase/migrations/**'
+  - 'supabase/seed.sql'
+  - 'supabase/config.toml'
+  - 'playwright.config.ts'
+  - 'package*.json'
+  - '.github/workflows/e2e.yml'
+  - '.github/e2e-suites.yml'
+  - 'scripts/ci/e2e-*'
+auth: # weight=35
+  - 'e2e/auth/**'
+companies: # weight=70
+  - 'e2e/companies/**'
+rfq-board: # weight=45
+  - 'e2e/rfqs/board.spec.ts'
+rfq-intake: # weight=45
+  - 'e2e/rfqs/intake.spec.ts'
+rfq-detail: # weight=85
+  - 'e2e/rfqs/detail.spec.ts'
+  - 'e2e/rfqs/clarifications.spec.ts'
+rfq-quotation: # weight=70 (installs poppler)
+  - 'e2e/rfqs/quotation.spec.ts'
+rfq-memory: # weight=40
+  - 'e2e/rfqs/memory.spec.ts'
+rfq-ranking: # weight=45
+  - 'e2e/rfqs/ranking.spec.ts'
+today: # weight=50
+  - 'e2e/today/**'
+search: # weight=45
+  - 'e2e/search/**'
+capture: # weight=105
+  - 'e2e/capture/**'
+expenses: # weight=55
+  - 'e2e/expenses/**'
+reports: # weight=45
+  - 'e2e/reports/**'
+bank: # weight=40
+  - 'e2e/bank/**'
+month-end: # weight=50
+  - 'e2e/month-end/**'
+money-costs: # weight=45
+  - 'e2e/money/**'
+orders: # weight=165 (installs poppler)
+  - 'e2e/orders/**'
+settings-admin: # weight=45
+  - 'e2e/settings/**'
+money-books: # weight=45
+  - 'e2e/money-books/**'
+pwa: # weight=10 (no database reset)
+  - 'e2e/pwa/**'
+  - 'public/manifest.webmanifest'
+  - 'vite.config.ts'
+  - 'index.html'
+  - 'public/**'
