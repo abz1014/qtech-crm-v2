@@ -8,8 +8,8 @@ names from dorny/paths-filter (CHANGED), and RUN_ALL ("true" runs every suite). 
 """
 import json, math, os, re, sys
 
-SHARDS_MAX = int(os.environ.get("E2E_MAX_SHARDS", "4"))
-TARGET_SECONDS = 240  # one shard should not take more than about this much test time
+SHARDS_MAX = int(os.environ.get("E2E_MAX_SHARDS", "5"))
+TARGET_SECONDS = 200  # one shard should not take more than about this much test time
 
 suites, weights = [], {}
 for line in open(sys.argv[1], encoding="utf-8"):

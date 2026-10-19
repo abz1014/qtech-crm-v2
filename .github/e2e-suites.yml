@@ -49,7 +49,7 @@ month-end: # weight=50
   - 'e2e/month-end/**'
 money-costs: # weight=45
   - 'e2e/money/**'
-orders: # weight=115 (installs poppler)
+orders: # weight=165 (installs poppler)
   - 'e2e/orders/**'
 settings-admin: # weight=45
   - 'e2e/settings/**'
