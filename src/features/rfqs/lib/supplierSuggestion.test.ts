@@ -246,6 +246,8 @@ describe('ranking: tier first, then recency, then name', () => {
     const ev = (n: number) => ({ best_tier: 2, supplied_before: false, evidence_tier: 2, evidence_order_number: 5, evidence_count_at_tier: n, evidence_placed_on: '2026-02-03', evidence_delivered_after_days: 9 })
     expect(ids(mk({}, {}, [mem('old', ev(1)), mem('new', ev(3))]))).toEqual(['new', 'old'])
     expect(ids(mk({ replied: 2 }, { replied: 6 }, [mem('old', ev(2)), mem('new', ev(2))]))).toEqual(['new', 'old'])
+    // orders_count (v_supplier_stats) is the order key when the view has it: more orders first, whatever the tier counts say.
+    expect(ids(mk({ orders_count: 2 }, { orders_count: 5 }, [mem('old', ev(9)), mem('new', ev(1))]))).toEqual(['new', 'old'])
     expect(ids(mk({ replied: 6 }, { replied: 2 }, [mem('old', ev(2)), mem('new', ev(2))]))).toEqual(['old', 'new'])
   })
 
@@ -320,6 +322,15 @@ describe('memory line (counts, never a percentage)', () => {
 
   it('adds the year to a contact date from another year', () => {
     expect(memoryLine(stats('x', { last_contact: '2025-03-04' }), TODAY)).toBe('no history yet · last contacted 4 Mar 2025')
+  })
+
+  it('says "ordered from N times" first once there are orders (orders_count), and drops "last contacted" only when an order is cited', () => {
+    const s = stats('x', { orders_count: 4, asked: 6, replied: 4, last_contact: '2026-09-12' })
+    expect(memoryLine(s, TODAY)).toBe('ordered from 4 times · answered 4 of 6 · last contacted 12 Sep')
+    expect(memoryLine(s, TODAY, { hasEvidence: true })).toBe('ordered from 4 times · answered 4 of 6')
+    expect(memoryLine(stats('x', { orders_count: 1, asked: 2, replied: 1 }), TODAY)).toBe('ordered from once · asked twice, 1 reply')
+    expect(memoryLine(stats('x', { orders_count: 2 }), TODAY)).toBe('ordered from 2 times')
+    expect(memoryLine(stats('x', { orders_count: 0, asked: 1, replied: 0 }))).toBe('asked once, no reply')
   })
 
   it('is attached to every suggestion', () => {

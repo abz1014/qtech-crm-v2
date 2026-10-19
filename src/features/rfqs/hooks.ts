@@ -39,6 +39,17 @@ export function useSupplierMemory(items: readonly api.MemoryQuery[], supplierIds
   })
 }
 
+/** The recent orders behind one supplier's memory card for one item. Nothing is asked until the card is open. */
+export function useSupplierEvidence(item: Omit<api.MemoryQuery, 'key'> | null, supplierId: string, enabled: boolean, excludeRfqId?: string) {
+  const signature = JSON.stringify([item?.description.trim() ?? '', item?.brandId ?? null, item?.familyId ?? null, supplierId, excludeRfqId ?? null])
+  return useQuery({
+    queryKey: qk.intake.evidence(signature),
+    queryFn: () => api.getSupplierEvidence(item as Omit<api.MemoryQuery, 'key'>, supplierId, excludeRfqId),
+    enabled: enabled && item !== null,
+    staleTime: 60_000,
+  })
+}
+
 export function useFloatRfq() {
   const client = useQueryClient()
   return useMutation({
