@@ -233,7 +233,7 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
           className="fixed left-1/2 top-[96px] z-50 w-[640px] max-w-[calc(100vw-32px)] -translate-x-1/2 overflow-hidden rounded bg-surface shadow-modal focus:outline-none max-md:top-4"
         >
           <RadixDialog.Title className="sr-only">Search or jump to</RadixDialog.Title>
-          <Command shouldFilter={false} loop label="Search or jump to" onKeyDownCapture={onKeyDownCapture} className="grid">
+          <Command shouldFilter={false} loop label="Search or jump to" onKeyDownCapture={onKeyDownCapture} className="grid grid-cols-[minmax(0,1fr)]">
             <div className="flex min-h-[calc(var(--control-h)+16px)] items-center gap-3 border-b px-4">
               <Icon icon={Search} size="lg" className="text-fg-muted" />
               <Command.Input

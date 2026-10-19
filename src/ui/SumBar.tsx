@@ -10,7 +10,8 @@ const abs = (p: bigint) => (p < 0n ? -p : p)
 /*
  * SumBar: the summary strip at the top of a Money view (money-07, money-10):
  * a row of key figures, each a small label, a big mono figure and one line of
- * context. Hairlines between cells; two columns on a phone or tablet.
+ * context. Hairlines between cells; two columns on a phone or tablet, where the figure steps down to lg so
+ * an eight-digit amount still fits its half of the screen.
  */
 export interface SumBarItem {
   label: string
@@ -39,12 +40,12 @@ export function SumBar({ items, label, className }: { items: SumBarItem[]; label
       )}
     >
       {items.map(item => (
-        <div key={item.label} className={cn('grid min-w-0 content-start gap-[2px] bg-surface px-5 py-4', item.tone === 'danger' && 'text-tone-danger-fg')}>
+        <div key={item.label} className={cn('grid min-w-0 content-start gap-[2px] bg-surface px-5 py-4 max-sm:px-4', item.tone === 'danger' && 'text-tone-danger-fg')}>
           <span className="text-sm font-medium text-fg-2">{item.label}</span>
           {item.count !== undefined || item.figure !== undefined ? (
-            <span className="num text-xl font-medium tracking-snug">{item.figure ?? item.count}</span>
+            <span className="num text-xl font-medium tracking-snug max-sm:text-lg">{item.figure ?? item.count}</span>
           ) : (
-            <Money value={item.amount} size="xl" provisional={item.provisional} paisa={item.paisa ?? 'never'} />
+            <Money value={item.amount} size="xl" provisional={item.provisional} paisa={item.paisa ?? 'never'} className="max-sm:[&>span]:text-lg" />
           )}
           {item.sub ? <span className="text-xs text-fg-muted">{item.sub}</span> : null}
         </div>

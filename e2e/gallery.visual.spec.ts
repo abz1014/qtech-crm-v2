@@ -103,10 +103,15 @@ test.describe('shell widths', () => {
             navClient: tabsNav.clientWidth,
             cut: cut.map(a => a.textContent),
             barRight: bar ? Math.max(...Array.from(bar.querySelectorAll<HTMLElement>('*')).map(e => e.getBoundingClientRect().right)) : 0,
+            // Named, so a failure points at the element that pokes out.
+            offenders: Array.from(document.querySelectorAll<HTMLElement>('[data-shell-scene] *'))
+              .filter(e => e.getBoundingClientRect().width > 0 && e.getBoundingClientRect().right > document.documentElement.clientWidth + 0.5)
+              .map(e => `${e.tagName.toLowerCase()}.${String(e.className).slice(0, 60)} right=${Math.round(e.getBoundingClientRect().right)} w=${Math.round(e.getBoundingClientRect().width)}`)
+              .slice(0, 8),
           }
         })
         const at = `${tabs} tabs at ${width}`
-        expect(m.page, `page scrolls sideways, ${at}`).toBeLessThanOrEqual(m.view)
+        expect(m.page, `page scrolls sideways, ${at}: ${m.offenders.join(' | ')}`).toBeLessThanOrEqual(m.view)
         expect(m.navScroll, `tab bar overflows, ${at}`).toBeLessThanOrEqual(m.navClient)
         expect(m.cut, `labels wider than their tab, ${at}`).toEqual([])
         expect(m.barRight, `phone bar ends past the window, ${at}`).toBeLessThanOrEqual(m.view)

@@ -790,12 +790,12 @@ function RailLabels({ pos, today, nudgeOn }: { pos: number; today: string; nudge
     return () => ro.disconnect()
   }, [pos, nudgeOn, today])
   return (
-    <div ref={wrap} className={cn('relative', stacked ? 'h-[36px]' : 'h-4')}>
+    <div ref={wrap} className={cn('relative', stacked ? 'h-[calc(var(--lh-xs)*2+2px)]' : 'h-[var(--lh-xs)]')}>
       <span ref={a} className="num absolute top-0 whitespace-nowrap text-xs text-tone-warning-fg" style={{ left: `min(${pos}%, calc(100% - ${aw ? `${aw}px` : '7rem'}))` }}>
         Today · {formatDay(today)}
       </span>
       {nudgeOn ? (
-        <span ref={b} className={cn('num absolute right-0 whitespace-nowrap text-xs text-fg-muted', stacked ? 'top-[18px]' : 'top-0')}>
+        <span ref={b} className={cn('num absolute right-0 whitespace-nowrap text-xs text-fg-muted', stacked ? 'top-[calc(var(--lh-xs)+2px)]' : 'top-0')}>
           Next nudge · {formatDay(nudgeOn)}
         </span>
       ) : null}
