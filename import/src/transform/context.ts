@@ -37,8 +37,8 @@ export class Ctx {
     return stableOrder(this.dump.tables[table] ?? [])
   }
 
-  addReview(list: string, table: string, oldId: string, label: string, detail: string): void {
-    this.review.push({ list, table, oldId, label, detail })
+  addReview(list: string, table: string, oldId: string, label: string, detail: string, fields?: ReviewItem['fields']): void {
+    this.review.push(fields ? { list, table, oldId, label, detail, fields } : { list, table, oldId, label, detail })
   }
 
   /** A source row that cannot be imported. It is counted, listed in dropped_rows, and its amount (if any) is reconciled separately. */

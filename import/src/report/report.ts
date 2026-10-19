@@ -8,6 +8,13 @@ import type { MoneyLine, Reconciliation, ReviewItem, TransformResult } from '../
 
 const REVIEW_COLUMNS = ['table', 'old_id', 'label', 'detail']
 
+/** The extra columns of a list (invoice_duplicates, still_owed): every field key, in the order first seen. */
+function extraColumns(items: ReviewItem[]): string[] {
+  const cols: string[] = []
+  for (const it of items) for (const k of Object.keys(it.fields ?? {})) if (!cols.includes(k)) cols.push(k)
+  return cols
+}
+
 export function reviewLists(items: ReviewItem[]): Map<string, ReviewItem[]> {
   const m = new Map<string, ReviewItem[]>()
   for (const it of items) m.set(it.list, [...(m.get(it.list) ?? []), it])
@@ -24,7 +31,7 @@ function moneyRow(l: MoneyLine, label = l.key): string {
 
 /** Money reconciles when old = new + excluded on every line. */
 export function reconciles(r: Reconciliation): boolean {
-  const lines = [r.payments, r.expensesTotal, r.orderValue, r.invoiceNet, r.invoiceGst, ...r.expensesByCategory]
+  const lines = [r.payments, r.paymentsFromStatus, r.expensesTotal, r.orderValue, r.invoiceNet, r.invoiceGst, ...r.expensesByCategory]
   return lines.every(l => l.diff === 0)
 }
 
@@ -47,7 +54,8 @@ export function renderReport(r: TransformResult, title = 'Import report'): strin
     '',
     '| Line | Old | New | Left out | Difference |',
     '|---|---:|---:|---:|---:|',
-    moneyRow(r.recon.payments, 'Payments in (gross)'),
+    moneyRow(r.recon.payments, 'Payments in (gross), from payment rows'),
+    moneyRow(r.recon.paymentsFromStatus, 'Payments in (gross), from paid status'),
     moneyRow(r.recon.expensesTotal, 'Expenses, all categories'),
     ...r.recon.expensesByCategory.map(l => moneyRow(l, `  ${l.key}`)),
     moneyRow(r.recon.orderValue, 'Order value / item net'),
@@ -55,6 +63,13 @@ export function renderReport(r: TransformResult, title = 'Import report'): strin
     moneyRow(r.recon.invoiceGst, 'Invoice GST'),
     '',
     `Reconciles: **${reconciles(r.recon) ? 'yes' : 'NO'}**`,
+    '',
+    `Payments in, from paid status: the old database records most payments only as a status, not as payment rows. ${r.recon.paymentsFromStatusCount} ` +
+      'payments are DERIVED: an old invoice marked Paid (its amount paid) or Partial (the amount recorded), an order marked payment_received ' +
+      '(each of its invoices with no payment yet, in full), and invoices you marked paid in legacy_invoice_status.csv. Each is a bank payment, ' +
+      'not ticked, credited to nobody, flagged payment_date_estimated (date = the old due date, else the order payment due date, else invoice ' +
+      'date + terms, never after the run date). None is made where payment rows exist. Old = what the status says was paid; left out = paid ' +
+      'on an invoice with no order (payments_not_placed.csv). Old invoices still open are in still_owed.csv.',
   )
 
   if (r.recon.orderInvoice.length) {
@@ -84,7 +99,14 @@ export function writeReport(dir: string, r: TransformResult, title?: string): st
     JSON.stringify({ sourceCounts: r.sourceCounts, importedCounts: r.importedCounts, droppedByDesign: r.droppedByDesign, recon: r.recon }, null, 2) + '\n',
   )
   for (const [list, items] of reviewLists(r.review)) {
-    put(`${list}.csv`, toCsv(REVIEW_COLUMNS, items.map(i => ({ table: i.table, old_id: i.oldId, label: i.label, detail: i.detail }))))
+    const extra = extraColumns(items)
+    put(
+      `${list}.csv`,
+      toCsv(
+        [...REVIEW_COLUMNS, ...extra],
+        items.map(i => ({ ...i.fields, table: i.table, old_id: i.oldId, label: i.label, detail: i.detail })),
+      ),
+    )
   }
   return files
 }

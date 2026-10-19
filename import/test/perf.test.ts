@@ -56,8 +56,8 @@ describe('performance smoke test', () => {
     expect(ms).toBeLessThan(BUDGET_MS)
     expect(report).toContain('Reconciles: **yes**')
     expect(checklist).toHaveLength(25)
-    // still one merged PO 000001 order per copy (17 old orders -> 16 per copy), nothing lost, no database rule broken
-    expect(result.tables.orders).toHaveLength(16 * COPIES)
+    // still one merged PO 000001 order per copy (22 old orders -> 21 per copy), nothing lost, no database rule broken
+    expect(result.tables.orders).toHaveLength(21 * COPIES)
     expect(result.recon.payments.diff).toBe(0)
     expect(violations(result)).toEqual([])
   })

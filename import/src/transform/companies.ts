@@ -124,6 +124,18 @@ export class CompanyBook {
     return { companyId: d.id, siteId: site?.id ?? null }
   }
 
+  /** The id the company a customer-side name stands for has (or would have), without creating it. */
+  customerCompanyId(oldName: string): string {
+    return legacyId('company', normName(this.resolveCustomerName(oldName).name))
+  }
+
+  /** The display name of a company made so far, by id. */
+  companyName(id: string | null): string | null {
+    if (id === null) return null
+    for (const d of this.drafts.values()) if (d.id === id) return d.name
+    return null
+  }
+
   // ------------------------------------------------------------------ source tables
 
   addCustomer(table: 'clients' | 'prospects', row: Row): void {

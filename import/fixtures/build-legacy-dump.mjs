@@ -105,6 +105,12 @@ tables.orders = [
   ord('o15', 15, { client_id: C.eta, vendor_id: V.goffran, product_type: 'Sensors', order_value: 120000, cost_value: 80000, status: 'payment_received', notes: 'PO# EF-22. Position sensors x6.', confirmed_date: '2025-01-05', customer_po_number: 'EF-22' }),
   ord('o16', 16, { client_id: C.alpha, vendor_id: V.redlion, sales_person_id: SALES, product_type: 'Actuators', order_value: 88000, cost_value: 50000, status: 'completed', notes: 'PO# AT-501. Actuators x2 with commissioning.', confirmed_date: '2025-01-12', customer_po_number: 'AT-501', delivery_date: '2025-02-02' }),
   ord('o17', 17, { client_id: C.alpha, vendor_id: null, sales_person_id: SALES, product_type: 'Gauges', order_value: 40000, cost_value: 30000, status: 'po_received', notes: 'PO# AT-502. Pressure gauges x10.', confirmed_date: '2025-02-15', customer_po_number: 'AT-502' }),
+  // Paid status with no payment rows, and bookkeeping invoices that repeat the GST register (owner decision 2026-10-19).
+  ord('o18', 18, { client_id: C.ghlhr, product_type: 'Sensors', order_value: 100000, cost_value: 60000, status: 'payment_received', notes: 'PO# 7001. Level sensors x2.', confirmed_date: '2025-01-02', customer_po_number: '7001' }),
+  ord('o19', 19, { client_id: C.ghkhi, product_type: 'Sensors', order_value: 50000, cost_value: 30000, status: 'delivered', notes: 'PO# 7002. Flow switches x2.', confirmed_date: '2025-01-03', customer_po_number: '7002' }),
+  ord('o20', 20, { client_id: C.delta, product_type: 'Analyser', order_value: 30000, cost_value: 20000, status: 'delivered', notes: 'PO# 7003. pH probe x1.', confirmed_date: '2025-01-04', customer_po_number: '7003' }),
+  ord('o21', 21, { client_id: C.theta, product_type: 'Pumps', order_value: 80000, cost_value: 50000, status: 'payment_received', notes: 'PO# 8100. Pump seals x4.', confirmed_date: '2025-01-06', customer_po_number: '8100', payment_due_date: '2025-02-20' }),
+  ord('o22', 22, { client_id: C.epsilon, product_type: 'Valves', order_value: 60000, cost_value: 40000, status: 'payment_received', notes: 'PO# EW-9. Valve kits x3.', confirmed_date: '2025-01-07', customer_po_number: 'EW-9', payment_terms_days: 45 }),
 ]
 
 // ---------------------------------------------------------------- RFQs, items, inquiries, quotes
@@ -201,6 +207,9 @@ tables.gst_invoices = [
   gst(7, { order_id: null, gst_invoice_number: 'INV-0077', invoice_date: '2025-02-30', client_name: 'Gamma Cement', amount: 59000, gst_amount: 9000, fbr_status: 'Deposited', psid: 'PSID-100007' }),
   gst(8, { order_id: O.o13, gst_invoice_number: 'INV-2025-0105', invoice_date: '2025-01-30', amount: 177000, gst_amount: 27000, fbr_status: 'Pending' }),
   gst(9, { order_id: null, gst_invoice_number: 'INV-0099', invoice_date: '2025-02-01', client_name: '', amount: 1180, gst_amount: 180 }),
+  // One register row for three POs, typed loosely; the Delta PO 7003 belongs to another customer.
+  gst(10, { order_id: null, gst_invoice_number: 'INV-2025-0301', invoice_date: '2025-01-20', client_name: 'Ghani Glass (LHR)', customer_po_number: ' po 7001 &7002 & 7003', amount: 177000, gst_amount: 27000 }),
+  gst(11, { order_id: null, gst_invoice_number: 'INV-2025-0302', invoice_date: '2025-01-25', client_name: 'Theta Finishing Mills', customer_po_number: '8100', amount: 94400, gst_amount: 14400 }),
 ]
 
 // ---------------------------------------------------------------- bookkeeping invoices and payments
@@ -212,6 +221,12 @@ tables.invoices = [
   inv(4, { invoice_number: 'INV-B-01', order_id: O.o1, client_id: C.zeta, invoice_amount: 370000, issued_date: '2024-10-15' }),
   inv(6, { invoice_number: 'INV-B-77', client_id: C.gamma, invoice_amount: 5000, issued_date: '2025-02-10' }), // no order link
   inv(5, { invoice_number: 'INV-B-05', order_id: O.o5, client_id: C.zeta, invoice_amount: 650163, issued_date: '2024-08-20' }),
+  inv(7, { invoice_number: 'INV-B-701', order_id: O.o18, client_id: C.ghlhr, invoice_amount: 100000, issued_date: '2025-01-20', due_date: '2025-02-10', payment_status: 'Paid', amount_paid: 100000, notes: 'PO 7001. Level sensors.' }),
+  inv(8, { invoice_number: 'INV-B-702', order_id: O.o19, client_id: C.ghkhi, invoice_amount: 50000, issued_date: '2025-01-20', payment_status: 'Paid', amount_paid: 50000, notes: '  po#7002  ' }),
+  inv(9, { invoice_number: 'INV-B-703', order_id: O.o20, client_id: C.delta, invoice_amount: 30000, issued_date: '2025-01-21', notes: 'PO 7003.' }),
+  inv(10, { invoice_number: 'INV-B-810', order_id: O.o21, client_id: C.theta, invoice_amount: 80000, issued_date: '2025-01-25', due_date: '2025-04-15', payment_status: 'Partial', amount_paid: 50000, notes: 'PO 8100.' }),
+  inv(11, { invoice_number: 'INV-B-22', order_id: O.o22, client_id: C.epsilon, invoice_amount: 60000, issued_date: '2025-01-10' }),
+  inv(12, { invoice_number: 'INV-B-31', client_id: C.alpha, invoice_amount: 7000, issued_date: '2025-01-15', payment_status: 'Paid', amount_paid: 7000 }), // paid, no order
 ]
 const pay = (n, order, amount, payment_date, extra = {}) => ({ id: id('pay', n), order_id: order, amount, payment_date, payment_method: 'Bank Transfer', reference: `REF-${n}`, notes: null, recorded_by: ADMIN, created_at: ts(900 + n), ...extra })
 tables.order_payments = [

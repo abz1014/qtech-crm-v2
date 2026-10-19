@@ -220,7 +220,7 @@ There are two layouts; use the one you see.
 
 ## What the owner reviews (I08)
 
-Each list is a CSV in the report folder: `table, old_id, label, detail`. The decisions go into the mapping files (names only; no
+Each list is a CSV in the report folder: `table, old_id, label, detail` (`invoice_duplicates` and `still_owed` add their own columns). The decisions go into the mapping files (names only; no
 phone numbers, e-mail addresses or amounts), which are then committed; the sign-off is recorded in `docs/`.
 
 | List | What it is | Decide | Edit |
@@ -238,12 +238,15 @@ phone numbers, e-mail addresses or amounts), which are then committed; the sign-
 | `category_unmapped` | Expense categories with no new category (they land in Other, flagged) | Which category | `expense_categories.csv` (`legacy_category,category`) |
 | `margin_anomalies` | Sale about equal to, or below, cost | Is the cost right | in the app |
 | `storage_missing` | Receipt files not in the dump, or over 5 MB | Fetch them | the dump folder |
+| `invoice_duplicates` | Bookkeeping invoices matched to a GST invoice (not imported), and same-PO rows of another customer (not matched), with both amounts and their ratio | Is it the same sale? | `company_merge.csv` when a customer name is missing |
+| `still_owed` | Every imported old invoice with an open balance | Paid or still owed | `legacy_invoice_status.csv` (`invoice_number,status`) |
+| `payments_not_placed` | An invoice the old status says is paid but that has no order (a payment needs one) | Nothing, or link it in the app | |
 | `dropped_rows` | Every row that could not be imported, with the reason | Nothing, unless it matters | |
 | `warnings` | For example a non-empty `documents` table | Look | |
 
 ## The numbers that must agree
 
-`report.md` has one table: **payments in, expenses (in total and per category), order value against item net, invoice net and GST**,
+`report.md` has one table: **payments in (from payment rows, and from paid status), expenses (in total and per category), order value against item net, invoice net and GST**,
 each as old, new, left out, difference. The difference must be 0 on every line; "left out" lists only rows that cannot be imported
 (a zero or negative amount, a row linked to nothing). A second table lists every order that has invoices: item net against
 invoice net, which must agree wherever the basis is proven (it deliberately shows the difference for an order flagged
@@ -277,7 +280,17 @@ Each is one small rule in `import/src/transform/`, covered by a test.
 
 1. **Which RFQ numbers are the customer's own (confirmed).** `rfq_number` becomes `customer_ref` unless it looks like Q-Tech's own series (`RFQ-12`, `QT-12`, `QTECH12`). A repeat of a customer reference on the same company keeps only the first (`customer_ref_duplicate`).
 2. **Composite vendor names (confirmed).** A vendor name is flagged `name_unparsed` only when it looks composite (brackets, "via", a slash) and is not in `vendor_parse.csv`; plain names import as they are without a flag, so the list stays short.
-3. **Old invoices with no GST split** (bookkeeping invoices, `orders.invoice_number`) import with net = the old amount and GST = 0.
+3. **The GST register wins over a bookkeeping invoice of the same sale (owner, 2026-10-19).** A bookkeeping invoice (old
+   `invoices`, INV-2024-xxx) is a duplicate when, for the same customer (resolved through `company_merge.csv`, so the Ghani Glass
+   plants count as one), its PO equals one of the PO numbers of a `gst_invoices` row. Its PO comes from its notes ("PO 251809."),
+   else its order's `customer_po_number`, else the order's notes ("PO# 251809"); a register cell may list several ("253074 &
+   252993 & 254040"); "PO", "#", spaces and case are ignored. A duplicate is not imported: it is in `dropped_rows` ("duplicate of
+   GST invoice <n>") and in `invoice_duplicates.csv` (bookkeeping number, PO, its amount, GST number, GST gross, ratio) so you can
+   check each match; its amount is counted under "left out" on the Invoice net line. The same PO on a register row of a
+   **different** customer is not a match; it is listed there too (`match` = "not matched: customer differs") so a missing
+   `company_merge.csv` line shows up. A register row with no order link takes the order of its twin when all its twins point to
+   one order (`order_from_bookkeeping_twin`); one spanning several orders stays with the company.
+   **Old invoices with no GST split** (bookkeeping invoices with no GST twin, `orders.invoice_number`) import as before, with net = the old amount and GST = 0.
    The review flag `invoice_basis_unknown` ("check whether this amount includes GST") is put **only on invoices linked to an
    order (customer PO)**. An invoice with no order link (a bookkeeping invoice that names only a customer) imports without that
    flag; its original row stays in `legacy_source`, so it is still traceable. *This is my reading of the owner's rule; correct it
@@ -285,6 +298,23 @@ Each is one small rule in `import/src/transform/`, covered by a test.
    rewrites its item prices, not these invoices, so the admin may need to correct the invoice as well.
 4. **A payment the old database holds is a payment received**, imported with `paid_via` = bank and `bank_month` empty. Cash is
    not flagged, even where the old `payment_method` says Cash (it stays in `legacy_source`). Same for expenses (A6.2).
+   **So is a paid status (owner, 2026-10-19).** The old database has almost no payment rows; "paid" lives in
+   `invoices.payment_status` and `orders.status`. (a) A bookkeeping invoice marked Paid becomes a payment of its `amount_paid` on
+   the invoice it ends up as: itself, or its GST twin. If all twins of a GST invoice are Paid, the GST invoice is paid in full (its
+   gross); otherwise (Partial) the amount recorded, capped at the GST gross, flagged `payment_partial_legacy`. A register row
+   spanning several orders gets one payment per twin, on the twin's order (`payment_on_twin_order`). (b) An order marked
+   `payment_received`: every invoice of it with no payment yet is paid in full (`paid_per_order_status`). Never where payment rows
+   exist for that invoice or order (no double count). Date: the old invoice due date, else the order's `payment_due_date`, else
+   invoice date + payment terms, else invoice date, never after the run date; every such payment is flagged
+   `payment_date_estimated`. Bank, not ticked, credited to nobody (rule 5). A payment needs an order: a paid invoice with no order
+   is listed in `payments_not_placed.csv` and counted as left out. These payments have their own reconciliation line ("Payments
+   in, from paid status") and a note in `report.md`.
+   **Everything else old and unpaid is listed, not assumed:** `still_owed.csv` has every imported invoice left with an open
+   balance (number, customer, date, gross, open, PO, linked to an order or not). Answer it in the optional
+   `import/.data/mappings/legacy_invoice_status.csv` (template `import/mappings/legacy_invoice_status.template.csv`,
+   `invoice_number,status`): `paid` records a payment of what is open (`paid_per_owner_list`, date = invoice date + terms, never
+   after the run date, `payment_date_estimated`); `owed` keeps it open and off the list; an invoice with no line stays open and
+   listed. No file = no lines.
 5. **Credit for old sales: nobody, for now.** `credited_user_id` is NULL on every imported payment, so none of them counts toward
    anyone's target (`v_payment_net` marks them `unattributed`; a load-test checks this). The `owner_reliable` column of `users.csv`
    and the `owner_unreliable` flag and `owner_attribution` list are gone: `users.csv` now only says who is who (an old `owner_reliable`

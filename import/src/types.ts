@@ -56,6 +56,8 @@ export interface ReviewItem {
   oldId: string
   label: string
   detail: string
+  /** Extra columns for lists that need them (invoice_duplicates, still_owed). Written after the standard four. */
+  fields?: Record<string, string | number | null>
 }
 
 export interface StorageCopy {
@@ -87,7 +89,16 @@ export interface MoneyLine {
 }
 
 export interface Reconciliation {
+  /** Payment rows the old database holds (order_payments, payment_records). */
   payments: MoneyLine
+  /**
+   * Payments derived from the old paid STATUS (invoices.payment_status Paid/Partial, orders.status payment_received) and
+   * from the owner's legacy_invoice_status.csv: old = what the status says was paid, new = payments created, left out =
+   * paid on an invoice with no order (a payment needs an order).
+   */
+  paymentsFromStatus: MoneyLine
+  /** How many payments_in rows paymentsFromStatus.neu is made of. */
+  paymentsFromStatusCount: number
   expensesByCategory: MoneyLine[]
   expensesTotal: MoneyLine
   /** Σ order_value (old) against Σ item net (new). */

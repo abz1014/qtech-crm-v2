@@ -9,6 +9,7 @@ import { clean, normName } from './lib/text'
 //   expense_categories.csv   legacy_category,category
 //   users.csv                old_name,new_name
 //   po_clashes.csv           customer_po_number,decision            (merge | po_shared)
+//   legacy_invoice_status.csv invoice_number,status                 (paid | owed; optional)
 
 export interface CompanyTarget {
   company: string
@@ -24,6 +25,8 @@ export interface UserTarget {
   newName: string | null
 }
 export type PoDecision = 'merge' | 'po_shared'
+/** The owner's word on an old invoice left open: paid (a full payment is created) or owed (it stays open). */
+export type LegacyInvoiceStatus = 'paid' | 'owed'
 
 export interface Mappings {
   companyMerge: Map<string, CompanyTarget>
@@ -31,6 +34,8 @@ export interface Mappings {
   expenseCategories: Map<string, string>
   users: Map<string, UserTarget>
   poDecisions: Map<string, PoDecision>
+  /** normInvoiceNumber(invoice number) -> paid | owed */
+  legacyInvoiceStatus: Map<string, LegacyInvoiceStatus>
 }
 
 /** Owner decision (DECISIONS.md, 2026-10-13): legacy PO 000001 Unit A and Unit B are one order with two invoices. */
@@ -40,6 +45,11 @@ export function normPo(v: unknown): string {
   return (clean(v) ?? '').toUpperCase()
 }
 
+/** Invoice numbers are matched case- and space-insensitively. */
+export function normInvoiceNumber(v: unknown): string {
+  return (clean(v) ?? '').toUpperCase().replace(/\s+/g, '')
+}
+
 export function emptyMappings(): Mappings {
   return {
     companyMerge: new Map(),
@@ -47,6 +57,7 @@ export function emptyMappings(): Mappings {
     expenseCategories: new Map(),
     users: new Map(),
     poDecisions: new Map(BUILT_IN_PO_DECISIONS),
+    legacyInvoiceStatus: new Map(),
   }
 }
 
@@ -56,6 +67,7 @@ export interface MappingTexts {
   expenseCategories?: string
   users?: string
   poClashes?: string
+  legacyInvoiceStatus?: string
 }
 
 export function parseMappings(t: MappingTexts): Mappings {
@@ -86,6 +98,11 @@ export function parseMappings(t: MappingTexts): Mappings {
     const d = (clean(r['decision']) ?? '').toLowerCase()
     if (po && (d === 'merge' || d === 'po_shared')) m.poDecisions.set(po, d)
   }
+  for (const r of parseCsv(t.legacyInvoiceStatus ?? '')) {
+    const no = normInvoiceNumber(r['invoice_number'])
+    const s = (clean(r['status']) ?? '').toLowerCase()
+    if (no && (s === 'paid' || s === 'owed')) m.legacyInvoiceStatus.set(no, s)
+  }
   return m
 }
 
@@ -102,5 +119,6 @@ export function loadMappings(dir: string): Mappings {
     expenseCategories: read(dir, 'expense_categories.csv'),
     users: read(dir, 'users.csv'),
     poClashes: read(dir, 'po_clashes.csv'),
+    legacyInvoiceStatus: read(dir, 'legacy_invoice_status.csv'),
   })
 }

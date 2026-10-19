@@ -127,9 +127,9 @@ describe.skipIf(!ENABLED)('the import against the local stack', () => {
     const expected = (table: keyof TransformResult['tables'], reused = 0) => result.tables[table].length - reused
     expect(first['companies']).toHaveLength(expected('companies', 2))
     expect(first['rfqs']).toHaveLength(expected('rfqs'))
-    expect(first['orders']).toHaveLength(16)
-    expect(first['order_items']).toHaveLength(17)
-    expect(first['invoices']).toHaveLength(13)
+    expect(first['orders']).toHaveLength(21)
+    expect(first['order_items']).toHaveLength(22)
+    expect(first['invoices']).toHaveLength(18)
     expect(first['payments_in']).toHaveLength(expected('payments_in'))
     expect(first['expenses']).toHaveLength(expected('expenses'))
     expect(first['brands']).toHaveLength(expected('brands', 1))
@@ -216,7 +216,15 @@ describe.skipIf(!ENABLED)('the import against the local stack', () => {
     const sum = (xs: Record<string, unknown>[], col: string) => Math.round(xs.reduce((s, r) => s + Number(r[col]), 0) * 100) / 100
     const legacy = (xs: Record<string, unknown>[]) => xs.filter(r => isLegacyId(String(r['id'])))
 
-    expect(sum(legacy(await rows(admin, 'payments_in', 'id,amount')), 'amount')).toBe(result.recon.payments.neu)
+    // payments_in = the payment rows plus the payments derived from the old paid status
+    const paymentsTotal = Math.round((result.recon.payments.neu + result.recon.paymentsFromStatus.neu) * 100) / 100
+    expect(result.recon.paymentsFromStatusCount).toBeGreaterThan(0)
+    expect(sum(legacy(await rows(admin, 'payments_in', 'id,amount')), 'amount')).toBe(paymentsTotal)
+    const derived = (await rows(admin, 'payments_in', 'id,amount,paid_via,bank_month,credited_user_id,legacy_flags')).filter(
+      p => isLegacyId(String(p['id'])) && (p['legacy_flags'] as string[]).includes('payment_date_estimated'),
+    )
+    expect(derived).toHaveLength(result.recon.paymentsFromStatusCount)
+    expect(derived.every(p => p['paid_via'] === 'bank' && p['bank_month'] === null && p['credited_user_id'] === null)).toBe(true)
     expect(sum(legacy(await rows(admin, 'expenses', 'id,amount_pkr')), 'amount_pkr')).toBe(result.recon.expensesTotal.neu)
     expect(sum(legacy(await rows(admin, 'invoices', 'id,net_amount')), 'net_amount')).toBe(result.recon.invoiceNet.neu)
     expect(sum(legacy(await rows(admin, 'invoices', 'id,gst_amount')), 'gst_amount')).toBe(result.recon.invoiceGst.neu)
@@ -234,14 +242,17 @@ describe.skipIf(!ENABLED)('the import against the local stack', () => {
     // v_order_money works on imported data: settled = the payments, margin comes from the net sale less tagged cost
     const money = await rows(admin, 'v_order_money', 'order_id,net_sale,settled,actual_cost,margin,margin_state')
     const mine = money.filter(m => isLegacyId(String(m['order_id'])))
-    expect(mine).toHaveLength(16)
-    expect(sum(mine, 'settled')).toBe(result.recon.payments.neu)
+    expect(mine).toHaveLength(21)
+    expect(sum(mine, 'settled')).toBe(paymentsTotal)
+    // an order marked payment_received with no payment rows is settled by the derived payment
+    const ew9 = result.tables.orders.find(o => o['customer_po_number'] === 'EW-9')!
+    expect(Number(mine.find(m => m['order_id'] === ew9['id'])!['settled'])).toBe(60000)
     const o1 = result.tables.orders.find(o => o['customer_po_number'] === '252446')!
     const m1 = mine.find(m => m['order_id'] === o1['id'])!
     expect(Number(m1['net_sale'])).toBe(1244310)
     // the unproven orders show "basis unknown" and no margin, never a guessed one
     const unknown = mine.filter(m => m['margin_state'] === 'basis_unknown')
-    expect(unknown).toHaveLength(11)
+    expect(unknown).toHaveLength(16)
     expect(unknown.every(m => m['margin'] === null)).toBe(true)
   })
 
@@ -355,6 +366,6 @@ describe.skipIf(!ENABLED)('the import against the local stack', () => {
   })
 
   it('the fixture dump is unchanged by all of this', () => {
-    expect(fixtureDump().tables['orders']).toHaveLength(17)
+    expect(fixtureDump().tables['orders']).toHaveLength(22)
   })
 })
