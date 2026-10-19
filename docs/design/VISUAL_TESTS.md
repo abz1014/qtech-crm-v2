@@ -4,7 +4,8 @@
 
 ## What runs
 
-- `e2e/gallery.visual.spec.ts`: `toHaveScreenshot` for each gallery section and each scene, at 1440 and 375 wide (Playwright projects `w1440`, `w375`).
+- `e2e/gallery.visual.spec.ts`: `toHaveScreenshot` for each gallery section and each scene, at 1440 and 375 wide (Playwright projects `w1440`, `w375`). The baselines are at the Normal text size (the default since 2026-10-19); the `textsize` section shows a sample at Normal and at Smaller side by side, so both scales are photographed.
+- The same file checks the shell without screenshots (`shell widths`, run once, in `w1440`): the `shell` scene (the real top bar, phone bar and tabs with a fixed list of five, or six with `&tabs=6`) must not overflow or scroll sideways at 768, 1024, 1093, 1280, 1366, 1440, 1536 and 1920, every label must be in words from 1024 up, and the phone tabs must fit at 320, 360 and 375 without cutting a label. The database suite `e2e/money-books/shell-overflow.spec.ts` checks the real screens at 375, 1280, 1366 and 1440.
 - `e2e/gallery.axe.spec.ts`: axe-core in Chromium (colour contrast on), WCAG 2.2 AA plus best-practice rules, over the page and every scene. The bar is zero violations. The `region` rule is off for scenes only: Radix tooltips, pop-ups and listboxes portal outside `<main>`.
 - Determinism: clock frozen at Fri 27 Nov 2026 10:00 (Asia/Karachi) before the page loads, `Asia/Karachi` timezone, reduced motion, animations and transitions off, caret hidden, and the test fails if Geist Sans or Geist Mono has not loaded.
 - The server is a development-mode build (`npm run build:e2e`) served by `vite preview`, because the gallery route exists only when `import.meta.env.DEV` is true.
