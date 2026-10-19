@@ -195,7 +195,12 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
         <div className="grid gap-6">
           <Panel
             title="Profit and loss"
-            meta={<ClockTag>By payment date</ClockTag>}
+            meta={
+              <>
+                <ClockTag>By payment date</ClockTag>
+                {v.frozenAt ? <span className="text-xs text-fg-muted" data-testid="pnl-frozen">Frozen when the month was closed</span> : null}
+              </>
+            }
             actions={<ExportCsvButton onClick={() => downloadReport(pnlCsv(v), csvFile('profit-and-loss', ctx.month))} />}
           >
             <div role="table" aria-label="Profit and loss">
@@ -236,6 +241,9 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
                 amount={negate(v.orderCosts.net)}
               />
               <Line label="Overheads" basis={<><Num>{v.overheads.count}</Num> {v.overheads.count === 1 ? 'expense' : 'expenses'}</>} amount={negate(v.overheads.net)} />
+              {toPaisa(v.adjustResult) !== 0n ? (
+                <Line tone="sub" label="Changes to closed months" tag="counted this month" basis="Found after those months were closed" amount={v.adjustResult} />
+              ) : null}
               <Line tone="result" label={`Result for ${name}`} amount={v.result} />
             </div>
           </Panel>
@@ -252,6 +260,9 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
                 {v.notInPnl.lines.map(l => (
                   <Line key={l.categoryId} label={l.category} basis={<><Num>{l.count}</Num> {l.count === 1 ? 'expense' : 'expenses'}, {l.paidVia}</>} amount={negate(l.net)} />
                 ))}
+                {toPaisa(v.adjustNonPnl) !== 0n ? (
+                  <Line tone="sub" label="Changes to closed months" tag="counted this month" amount={negate(v.adjustNonPnl)} />
+                ) : null}
                 <Line tone="total" label="Not in P&L, total" basis={<><Num>{v.notInPnl.total.count}</Num> {v.notInPnl.total.count === 1 ? 'expense' : 'expenses'}</>} amount={negate(v.notInPnl.total.net)} />
               </div>
             )}
@@ -617,7 +628,7 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
           <span className="grid justify-items-start gap-px">
             <Tag>{PAYABLE_STATE_LABEL[r.state]}{r.flag === 'overpaid' ? ', paid over' : ''}</Tag>
             <span className="text-xs text-fg-muted">
-              {r.state === 'owing' ? (toPaisa(r.paidPkr) === 0n ? 'No payment yet' : 'Part paid') : r.state === 'settled' ? (r.flag === 'overpaid' ? 'Owed shown as 0' : 'Within 3% of paid, or paid') : r.state === 'unpriced' ? 'No price on the items yet' : 'No rate for this currency'}
+              {r.state === 'owing' ? (toPaisa(r.paidPkr) === 0n ? 'No payment yet' : 'Part paid') : r.state === 'settled' ? (r.flag === 'overpaid' ? 'Owed shown as 0' : 'Within 3% of paid, or paid') : r.state === 'unpriced' ? 'No price on the items yet' : 'No rate in the 30 days before; add one on Exchange rates'}
             </span>
           </span>
         ),

@@ -215,8 +215,10 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'today_pkt',               '',    'X',    'X',    'X'),    -- NOT in s10: pure date helper
   ('table', 'expense_categories',  '',           'SIUD', '',     ''),     -- A6 s10 "expense_categories": admin only, delete blocked while in use
   ('table', 'closed_months',       '',           'S',    '',     ''),     -- A6 s10 "closed_months": admin reads; written only through the admin RPCs
+  ('table', 'month_snapshots',     '',           'S',    '',     ''),     -- 0058 (owner decision D-MR2): a closed month's frozen figures; admin reads, written only by the close trigger
   ('table', 'attachments',         'expense',    'SIUD', '',     ''),     -- A6 s10 "attachments (parent is an expense)": admin only
   ('view',  'v_month_pnl',              '',      'S',    '',     ''),     -- A6 A6.3: admin only
+  ('view',  'v_month_pnl_live',         '',      'S',    '',     ''),     -- 0058 (D-MR2): the live P&L a snapshot is compared with, admin only
   ('view',  'v_month_expense_category', '',      'S',    '',     ''),     -- A6 A6.3: admin only
   ('view',  'v_month_team',             '',      'S',    '',     ''),     -- A6 A6.3: admin only
   ('view',  'v_gst_month',              '',      'S',    'S',    ''),     -- A6 A6.3: admin and sales (input tax is NULL for sales)
@@ -231,6 +233,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'aging_as_of',           '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'payables_as_of',        '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'month_end_status',      '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
+  ('function', 'month_pnl_drift',       '',      'X',    '',     ''),     -- 0058 (D-MR2): helper of v_month_pnl, NULL for non-admins
+  ('function', 'month_pnl_adjusted',    '',      'X',    '',     ''),     -- 0058 (D-MR2): helper of v_month_pnl, NULL for non-admins
   ('function', 'revoke_user_sessions', '',      '',     '',     ''),     -- A01: service role only (the admin-users Edge Function); no client persona
   ('bucket', 'rfq-files',        '',  'SIUD', 'SIUD', 'SIUD'),           -- s10 "attachments (RFQ/clarification)": bucket rfq-files, same rules
   ('bucket', 'gst-receipts',     '',  'SIUD', 'SIUD', ''),               -- s10 "attachments (invoice)": bucket gst-receipts, admin and sales
@@ -353,6 +357,7 @@ insert into spec values
   ('recurring_expenses', '', 'id = @2a', 'label', $q$insert into public.recurring_expenses (id, label, category_id, amount) values (@af, 'l', 'ca7e0000-0000-4000-8000-000000000002', 5)$q$),
   ('expense_categories', '', 'id = @3d', 'name', $q$insert into public.expense_categories (id, name, grp) values (@b6, 'probe category', 'overhead')$q$),   -- A6
   ('closed_months', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.closed_months (month, closed_by) values ('2019-02-01', '{uid}')$q$),   -- A6
+  ('month_snapshots', '', $q$month = '2019-01-01'$q$, 'taken_at', $q$insert into public.month_snapshots (month, pnl, adjust, status, categories, team, payments, via, aging, payables) values ('2019-01-01', '{}', '{}', '[]', '[]', '[]', '{}', '{}', '[]', '[]')$q$),   -- 0058 (D-MR2)
   ('attachments', 'expense', 'id = @3c', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values (@b7, 'expense-receipts', 'p/3.jpg', 'c.jpg', 'image/jpeg', 10, @29)$q$),   -- A6
   ('attachments', 'order', 'id = @3f', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id) values (@b8, 'rfq-files', 'p/4.jpg', 'd.jpg', 'image/jpeg', 10, @20)$q$),   -- R22 (0042)
   ('attachments', 'rfq', 'id = @2b', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values (@b0, 'rfq-files', 'p/1.pdf', 'a.pdf', 'application/pdf', 10, @15)$q$),
@@ -395,7 +400,7 @@ select v, '', 'S', format('select 1 from public.%s limit 1', v)
 from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_state','v_invoice_state','v_gst_register',
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_stats',
-                  'v_month_pnl','v_month_expense_category','v_month_team','v_gst_month',
+                  'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
                   'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)
@@ -458,6 +463,8 @@ insert into probes values
   ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
   ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6
   ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1'),   -- A6
+  ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)
+  ('month_pnl_adjusted', '', 'X', 'select 1 where public.month_pnl_adjusted() is not null'),   -- 0058 (D-MR2)
   ('revoke_user_sessions', '', 'X', $q$select public.revoke_user_sessions(gen_random_uuid())$q$);   -- A01
 
 -- ------------------------------------------------------------------ probes: storage buckets
@@ -490,8 +497,8 @@ insert into probes values
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
-  'coverage: the matrix lists every table in schema public (32)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 32, 'coverage: 32 tables');
+  'coverage: the matrix lists every table in schema public (33)');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 33, 'coverage: 33 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');

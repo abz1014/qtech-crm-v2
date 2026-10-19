@@ -71,13 +71,10 @@ export async function listReceivables(): Promise<ReceivableRow[]> {
   const raw = ((data ?? []) as unknown as ReceivableRaw[]).filter(r => num(r.gross_target) > 0)
   if (raw.length === 0) return []
   const ids = raw.map(r => r.order_id)
-  const [cancelled, names, invoices] = await Promise.all([
-    fetchAll<{ id: string; cancelled_on: string | null }>((from, to) => db.from('orders').select('id, cancelled_on').in('id', ids).range(from, to)),
-    companyNames([...new Set(raw.map(r => r.company_id))]),
-    invoiceNumbersByOrder(ids),
-  ])
-  const gone = new Set(cancelled.filter(o => o.cancelled_on !== null).map(o => o.id))
-  return raw.filter(r => !gone.has(r.order_id)).map(r => toRow(r, names, invoices))
+  // order_receivables() already leaves out a cancelled order with no invoice and keeps one that was invoiced (its balance is real;
+  // owner decision 2026-10-19), so this list and Today's "payment overdue" agree.
+  const [names, invoices] = await Promise.all([companyNames([...new Set(raw.map(r => r.company_id))]), invoiceNumbersByOrder(ids)])
+  return raw.map(r => toRow(r, names, invoices))
 }
 
 export interface PaymentOrder {
