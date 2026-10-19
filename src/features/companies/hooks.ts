@@ -137,7 +137,16 @@ export function useCreateCompany() {
   return useMutation({
     mutationFn: async (input: api.NewCompany & { contactName?: string | null }) => {
       try {
-        const created = await api.createCompany(input)
+        let created: { id: string; name: string }
+        try {
+          created = await api.createCompany(input)
+        } catch (err) {
+          // A retry reuses the request id: the company is already saved (an earlier attempt failed after it, e.g. on the
+          // contact), so carry on with the contact instead of ending as "already saved" without it.
+          const e = err as { code?: string; message?: string }
+          if (e?.code === '23505' && /companies_pkey/.test(e.message ?? '')) created = { id: input.id, name: input.name.trim() }
+          else throw err
+        }
         if (input.contactName?.trim()) await api.addContact({ id: crypto.randomUUID(), companyId: created.id, name: input.contactName })
         return created
       } catch (err) {

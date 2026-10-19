@@ -194,3 +194,16 @@ describe('ToggleButton and Radio (U07)', () => {
     expect(await axeViolations(container)).toEqual([])
   })
 })
+
+describe('Toast Undo that fails (code review p9)', () => {
+  it('does not claim "Undone." when the undo write fails; it says it could not undo, as an alert', async () => {
+    const user = userEvent.setup()
+    const onUndo = vi.fn(() => Promise.reject(new Error('network down')))
+    setup({ title: 'Closed RFQ-0101', undo: { onUndo } })
+    await user.click(screen.getByRole('button', { name: 'Fire' }))
+    await user.click(await screen.findByRole('button', { name: /Undo/ }))
+    expect(onUndo).toHaveBeenCalledTimes(1)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Could not undo/)
+    expect(screen.queryByText('Undone.')).toBeNull()
+  })
+})

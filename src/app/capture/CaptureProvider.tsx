@@ -69,9 +69,12 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
     ready.current = (async () => {
       await safely(() => purgeExpired(), 0)
       const kept = await safely(() => listCaptures(), [])
-      if (kept[0] && !dirty.current) await load(kept[0])
+      if (!kept[0] || dirty.current) return
+      // Shrinking the kept photos takes a while: anything typed, pasted or dropped meanwhile wins over the kept item.
+      const files = await toFiles(kept[0])
+      if (!dirty.current) setDraft({ id: kept[0].id, source: kept[0].source, text: kept[0].text, files })
     })()
-  }, [load])
+  }, [])
 
   // Keep the draft on the device once it has content (debounced), and forget it when it is emptied.
   const persist = useCallback(async (d: Draft) => {

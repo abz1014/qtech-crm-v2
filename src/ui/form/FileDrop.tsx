@@ -34,6 +34,7 @@ export function FileDrop({
   className,
 }: FileDropProps) {
   const input = useRef<HTMLInputElement>(null)
+  const zone = useRef<HTMLDivElement>(null)
   const depth = useRef(0)
   const [over, setOver] = useState<number | null>(null)
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform)
@@ -50,7 +51,10 @@ export function FileDrop({
     if (!pasteAnywhere) return
     const onPaste = (e: ClipboardEvent) => {
       const t = e.target as HTMLElement | null
-      if (t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName))) return
+      if (e.defaultPrevented || (t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName)))) return
+      // An open dialog this zone is not part of (the capture sheet over an order) owns the paste.
+      const modal = '[role="dialog"],[role="alertdialog"]'
+      if (document.querySelector(modal) && !zone.current?.closest(modal)) return
       const files = [...(e.clipboardData?.files ?? [])]
       if (files.length) {
         e.preventDefault()
@@ -80,6 +84,7 @@ export function FileDrop({
 
   return (
     <div
+      ref={zone}
       role="group"
       aria-label="Add files"
       onDragEnter={onDragEnter}

@@ -184,11 +184,7 @@ function Leg({
         body,
         undo: {
           onUndo: async () => {
-            try {
-              await update.mutateAsync({ id: leg.id, patch: prev })
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await update.mutateAsync({ id: leg.id, patch: prev })
           },
           settledTitle: title,
           undoneTitle: 'Taken back',
@@ -250,7 +246,7 @@ function Leg({
           </span>
           {/* the PO chip: the latest issued revision, or "No PO yet" */}
           <span data-testid={`leg-${letter}-po`} className={cn('num inline-flex h-5 items-center rounded border px-[6px] text-xs', po ? 'border-line-strong text-fg-2' : 'border-dashed border-line-strong text-fg-muted')}>
-            {po ? `${poRef(po.number, po.issuedOn)} · R${po.revision}` : 'No PO yet'}
+            {po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision}` : 'No PO yet'}
           </span>
           {fromSplit ? (
             <span data-testid={`leg-${letter}-from-split`} className="inline-flex items-center gap-1 text-xs text-fg-muted">
@@ -286,7 +282,7 @@ function Leg({
             <Icon icon={TriangleAlert} className="text-tone-warning-fg" />
             <span className="min-w-0 flex-1 text-pretty">
               <b className="font-semibold">
-                Lines changed since {poRef(po.number, po.issuedOn)} · R{po.revision}.
+                Lines changed since {poRef(po.number, po.firstIssuedOn)} · R{po.revision}.
               </b>{' '}
               <span className="text-fg-2">{changed.notes.join('. ')}. The PO still lists the earlier lines.</span>
             </span>

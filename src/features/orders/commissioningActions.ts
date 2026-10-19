@@ -22,11 +22,7 @@ export function useMarkDone(order: OrderHeader) {
           body: `${order.companyName}, today`,
           undo: {
             onUndo: async () => {
-              try {
-                await update.mutateAsync({ commissioning_done_on: previous })
-              } catch (err) {
-                toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-              }
+              await update.mutateAsync({ commissioning_done_on: previous })
             },
             settledTitle: 'Commissioning marked done',
             undoneTitle: 'Taken back',
@@ -52,11 +48,7 @@ export function useSetPlanned(order: OrderHeader) {
         body: value ? formatDay(value) : order.companyName,
         undo: {
           onUndo: async () => {
-            try {
-              await update.mutateAsync({ commissioning_planned_on: previous })
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await update.mutateAsync({ commissioning_planned_on: previous })
           },
           settledTitle: value ? 'Planned date changed' : 'Planned date cleared',
           undoneTitle: 'Taken back',

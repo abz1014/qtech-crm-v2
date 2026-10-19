@@ -133,6 +133,48 @@ describe('NumberInput (U07)', () => {
     await user.type(input, 'abc')
     expect(screen.getByTestId('n')).toHaveTextContent('null')
   })
+
+  it('leaving the field keeps typed text that is not a usable number (junk, or below min) on screen', async () => {
+    function Min() {
+      const [v, setV] = useState<number | null>(null)
+      return (
+        <Field label="Qty">
+          <NumberInput value={v} onChange={setV} min={0} />
+          <output data-testid="q">{String(v)}</output>
+        </Field>
+      )
+    }
+    const user = userEvent.setup()
+    render(<Min />)
+    const input = screen.getByLabelText('Qty')
+    await user.type(input, '-5')
+    await user.tab()
+    expect(screen.getByTestId('q')).toHaveTextContent('null')
+    expect(input).toHaveValue('-5')
+    await user.clear(input)
+    await user.type(input, '12abc')
+    await user.tab()
+    expect(input).toHaveValue('12abc')
+  })
+
+  it('still follows an outside change (form reset) after leaving the field', async () => {
+    function Reset() {
+      const [v, setV] = useState<number | null>(5)
+      return (
+        <Field label="Qty">
+          <NumberInput value={v} onChange={setV} />
+          <button type="button" onClick={() => setV(null)}>Reset</button>
+        </Field>
+      )
+    }
+    const user = userEvent.setup()
+    render(<Reset />)
+    const input = screen.getByLabelText('Qty')
+    await user.clear(input)
+    await user.type(input, '1200')
+    await user.click(screen.getByRole('button', { name: 'Reset' }))
+    expect(input).toHaveValue('')
+  })
 })
 
 describe('Select, TextField, TextArea, Checkbox (U07)', () => {
@@ -257,6 +299,28 @@ describe('DateInput (U07)', () => {
     expect(input).toHaveValue('31/02/2026')
     expect(input).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByTestId('iso').textContent).toBe('')
+  })
+
+  it('after unreadable text, an outside change (form reset) still replaces it and clears the invalid mark', async () => {
+    function R() {
+      const [v, setV] = useState('2026-01-01')
+      return (
+        <Field label="Date received">
+          <DateInput value={v} onChange={setV} />
+          <button type="button" onClick={() => setV('2026-03-05')}>Reset</button>
+        </Field>
+      )
+    }
+    const user = userEvent.setup()
+    render(<R />)
+    const input = screen.getByLabelText('Date received')
+    await user.click(input)
+    await user.keyboard('31/02/2026')
+    await user.tab()
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    await user.click(screen.getByRole('button', { name: 'Reset' }))
+    expect(input).toHaveValue(formatDateText('2026-03-05'))
+    expect(input).not.toHaveAttribute('aria-invalid', 'true')
   })
 
   it('has a calendar button for the native picker', () => {

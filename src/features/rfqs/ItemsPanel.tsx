@@ -126,11 +126,7 @@ function RowMenu({ rfqId, entry, item }: { rfqId: string; entry: Entry; item: Rf
         body: `${inquiry.supplierName} · item ${item.number} · ${price}`,
         undo: {
           onUndo: async () => {
-            try {
-              await restore.mutateAsync(line)
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await restore.mutateAsync(line)
           },
           settledTitle: 'Reply removed',
           undoneTitle: 'Reply put back',
@@ -179,11 +175,7 @@ function WaitingRow({ rfqId, inquiry, item }: { rfqId: string; inquiry: InquiryR
         body: `${inquiry.supplierName} · item ${item.number} · ${reasonLabel(reason)}`,
         undo: {
           onUndo: async () => {
-            try {
-              await decline.mutateAsync({ inquiryId: inquiry.id, itemId: item.id, reason: null })
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await decline.mutateAsync({ inquiryId: inquiry.id, itemId: item.id, reason: null })
           },
           settledTitle: "Marked can't quote",
           undoneTitle: "Can't quote taken back",

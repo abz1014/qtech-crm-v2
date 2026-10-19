@@ -56,6 +56,33 @@ describe('mapPgError (U07)', () => {
     expect(m.message).toMatch(/will not create a duplicate/)
   })
 
+  it('a dropped network as supabase-js returns it (an error object, code empty, "TypeError: Failed to fetch") is a network error', () => {
+    // postgrest-js catches the fetch rejection and resolves { error: { message: `${name}: ${message}`, code: '' } }.
+    for (const message of ['TypeError: Failed to fetch', 'TypeError: NetworkError when attempting to fetch resource.', 'TypeError: Load failed', 'FetchError: request failed']) {
+      const m = mapPgError({ code: '', message, details: '', hint: '' })
+      expect(m.kind, message).toBe('network')
+    }
+    // A real server answer with an empty code is not mistaken for one.
+    expect(mapPgError({ code: '', message: 'JWT expired' }).kind).toBe('unknown')
+  })
+
+  it('42501 (row-level security / permission) does not tell the person to try again', () => {
+    const m = mapPgError({ code: '42501', message: 'new row violates row-level security policy for table "expenses"' })
+    expect(m.kind).toBe('permission')
+    expect(m.message).not.toMatch(/Try again/)
+    expect(m.message).toMatch(/Nothing was saved/)
+  })
+
+  it('PGRST116 (no row came back) says the record is gone', () => {
+    const m = mapPgError({ code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned', details: 'The result contains 0 rows' })
+    expect(m.kind).toBe('not-found')
+    expect(m.message).toMatch(/Reload/)
+  })
+
+  it('a P0001 whose message is not a string does not crash', () => {
+    expect(() => mapPgError({ code: 'P0001', message: 42 as unknown as string })).not.toThrow()
+  })
+
   it('anything else gets a plain fallback', () => {
     expect(mapPgError({ code: '99999', message: 'boom' }).message).toBe('Something went wrong. Nothing was saved. Try again.')
     expect(mapPgError('nope').kind).toBe('unknown')

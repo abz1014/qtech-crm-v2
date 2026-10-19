@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { wholeInWords } from '@/features/quotations/lib/totals'
-import { currencyInWords, issueLines, lineTotal, missingPrices, poTotal, priceOf, sourceOf, sourceText, termsDefaults, type PrefillRow } from '@/features/purchaseOrders/lib/prefill'
+import { currencyInWords, unitPriceText, issueLines, lineTotal, missingPrices, poTotal, priceOf, sourceOf, sourceText, termsDefaults, type PrefillRow } from '@/features/purchaseOrders/lib/prefill'
 
 const row = (over: Partial<PrefillRow>): PrefillRow => ({
   orderItemId: 'i1',
@@ -90,4 +90,17 @@ describe('the total in words follows the leg currency', () => {
     [250050n, 'GBP', 'Two thousand five hundred pounds sterling and fifty pence only.'],
     [10000n, 'JPY', 'One hundred JPY only.'],
   ])('%s %s', (minor, ccy, text) => expect(currencyInWords(minor, ccy, wholeInWords)).toBe(text))
+})
+
+describe('the unit price on the PO PDF keeps the precision the price is stored at (numeric(14,4))', () => {
+  it('prints a sub-paisa unit price in full, so qty x unit price is the amount the supplier reads', () => {
+    // 10,000 pcs at 0.125: the amount is 1,250.00, and the unit price must not print as 0.13 (which would read 1,300.00)
+    expect(unitPriceText(0.125)).toBe('0.125')
+    expect(unitPriceText(12.3456)).toBe('12.3456')
+  })
+  it('keeps two decimals and the grouping for an ordinary price', () => {
+    expect(unitPriceText(612)).toBe('612.00')
+    expect(unitPriceText(1234.5)).toBe('1,234.50')
+    expect(unitPriceText(0.1 + 0.2)).toBe('0.30')
+  })
 })

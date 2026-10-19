@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Copy, Plus } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
@@ -131,7 +131,21 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
   // The clipboard gets the body: an email's subject has its own row and its own copy button.
   const text = chase ? chase.body : ''
 
+  // The copy comes before the stamp, so the button is not busy yet while it runs: a double tap must not stamp two chases.
+  const inFlight = useRef(false)
+  const [copying, setCopying] = useState(false)
   const doChase = async () => {
+    if (!chase || inFlight.current) return
+    inFlight.current = true
+    setCopying(true)
+    try {
+      await copyAndStamp()
+    } finally {
+      inFlight.current = false
+      setCopying(false)
+    }
+  }
+  const copyAndStamp = async () => {
     if (!chase) return
     const ok = await copyToClipboard(text)
     if (!ok) {
@@ -147,11 +161,7 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
         tone: 'success',
         undo: {
           onUndo: async () => {
-            try {
-              await restore.mutateAsync({ inquiryId: inquiry.id, before })
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await restore.mutateAsync({ inquiryId: inquiry.id, before })
           },
           settledTitle: 'Chase text copied',
           settledBody: `${rfqRef(rfq.number)} marked chased`,
@@ -164,7 +174,7 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
     }
   }
 
-  return { chase, text, doChase, busy: stamp.isPending }
+  return { chase, text, doChase, busy: copying || stamp.isPending }
 }
 
 /** "Chase": 1 tap on any supplier asked. Copies the WhatsApp text and marks the chase. */
@@ -198,7 +208,8 @@ function ChaseCard({ rfq, items, inquiry, inquiries }: { rfq: RfqHeader; items: 
         <FloatElsewhere
           supplierName={inquiry.supplierName}
           items={outstandingAll}
-          askedIds={new Set(inquiries.map(i => i.supplierId))}
+          // Everyone already asked, and the customer the RFQ is for (a company can be both): neither is someone else to float to.
+          askedIds={new Set([...inquiries.map(i => i.supplierId), rfq.company.id])}
           today={today}
           busy={choose.busy}
           onChoose={input => void choose.choose(input)}

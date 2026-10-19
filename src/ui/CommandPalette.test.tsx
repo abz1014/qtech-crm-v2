@@ -167,6 +167,26 @@ describe('CommandPalette (U08)', () => {
     expect(screen.getByRole('option', { name: /Punjab Cement Ltd/ })).toBeInTheDocument()
   })
 
+  it('opens empty again after a row was opened or it was closed with Ctrl+K (no stale query)', async () => {
+    const user = userEvent.setup()
+    render(<Host sources={[places()]} />)
+    await user.click(screen.getByRole('button'))
+    await screen.findByRole('dialog')
+    await user.keyboard('punjab{Enter}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await user.click(screen.getByRole('button'))
+    expect(await screen.findByRole('combobox')).toHaveValue('')
+    expect(await screen.findByText('Recent')).toBeInTheDocument()
+
+    await user.keyboard('indus')
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true, cancelable: true }))
+    })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await user.click(screen.getByRole('button'))
+    expect(await screen.findByRole('combobox')).toHaveValue('')
+  })
+
   it('has no axe violations open, with results', async () => {
     const user = userEvent.setup()
     render(<Host sources={[places(), actions()]} />)

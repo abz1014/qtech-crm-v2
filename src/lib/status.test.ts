@@ -98,6 +98,13 @@ describe('every section 5 value has an entry', () => {
     expect(resolveStatus('trust', 'estimated_dates').dashed).toBe(true)
   })
 
+  it('expense-group reads the expense_categories.grp values the database stores (overhead, order_cost, non_pnl)', () => {
+    // 0025_expense_categories.sql: check (grp in ('overhead', 'order_cost', 'non_pnl'))
+    expect(resolveStatus('expense-group', 'overhead').key).toBe('expense-group:overhead')
+    expect(resolveStatus('expense-group', 'order_cost').key).toBe('expense-group:order-cost')
+    expect(resolveStatus('expense-group', 'non_pnl').key).toBe('expense-group:not-in-pnl')
+  })
+
   it('derives deadline risk and aging buckets', () => {
     expect(deadlineValue(5, true)).toBe('overdue')
     expect(deadlineValue(1, false)).toBe('due-soon')

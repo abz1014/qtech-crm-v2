@@ -109,7 +109,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'company.create': () => [qk.companies.lists()],
   'company.update': v => [qk.companies.lists(), qk.companies.detail(v.id)],
   // The dropped company is gone; everything that pointed at it now points at the kept one.
-  'company.merge': v => [qk.companies.all, qk.rfqs.all, qk.orders.all, qk.companies.detail(v.keepId)],
+  'company.merge': v => [qk.companies.all, qk.rfqs.all, qk.orders.all, qk.companies.detail(v.keepId), qk.today.all, qk.intake.all, qk.memory.all, qk.purchaseOrders.all, qk.money.all],
   // Adding a site or contact changes the page, and the roster does not show them, so only the detail.
   'site.add': v => [qk.companies.detail(v.companyId)],
   'contact.add': v => [qk.companies.detail(v.companyId)],
@@ -146,18 +146,23 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Floating or un-floating moves inquiries between shortlisted and sent: the RFQ and the suppliers' counts.
   'rfq.setFloated': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all],
   // A rate entered by hand changes every comparison (today's rate), so the RFQ pages refresh with the rate lists.
-  'fx.set': () => [qk.fx.all, qk.rfqs.all],
+  // The Mark won dialog's ranking compares in PKR at today's rate, so it goes stale too.
+  'fx.set': () => [qk.fx.all, qk.rfqs.all, qk.orders.rankedAll()],
   // A new item changes the page, the board's counts and the coverage.
-  'item.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
+  'item.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.orders.rankedFor(v.rfqId)],
   // Asking another supplier adds an inquiry: the page, the board and the supplier's own counts.
-  'inquiry.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all],
+  // Today offers "ask more suppliers" from a supplier-chase item, so its list changes too.
+  'inquiry.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all, qk.today.all],
   // A price, a "can't quote" or a chase changes the RFQ page and the board's states, and the supplier's own counts.
-  'quote.save': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all, qk.intake.all],
-  'inquiry.cantQuote': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all, qk.intake.all],
+  // The Mark won and Split line dialogs read the ranked quotes under the orders root, so they go stale too.
+  'quote.save': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all, qk.intake.all, qk.orders.rankedFor(v.rfqId)],
+  'inquiry.cantQuote': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all, qk.intake.all, qk.orders.rankedFor(v.rfqId)],
   'inquiry.chase': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all],
-  // Bid sent, closed and re-opened only move the RFQ itself (and the board's lists).
+  // Bid sent only moves the RFQ itself (and the board's lists).
   'rfq.markBidSent': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
-  'rfq.close': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
+  // Closing also takes the RFQ off Today (Today itself offers "Close as no reply") and changes its outcome in the customer's history.
+  // Capture's RFQ list (qk.rfqs.capture, outside lists()) must stop offering a closed RFQ, so the whole RFQ root.
+  'rfq.close': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.all, qk.today.all, qk.companies.all],
   'rfq.notes': v => [qk.rfqs.detail(v.rfqId)],
   // Questions and their stamps change the RFQ page, its derived clarification state (header) and the board's chips.
   'clarification.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists()],
@@ -169,18 +174,21 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'attachment.add': v => [qk.rfqs.detail(v.rfqId)],
   'attachment.delete': v => [qk.rfqs.detail(v.rfqId)],
   'order.files': v => [qk.orders.part(v.orderId, 'files')],
-  'quotation.issue': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.today.all, qk.companies.all],
+  // Issuing also writes the quoted selling price, which the ranked quotes return as sell_net.
+  'quotation.issue': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.today.all, qk.companies.all, qk.orders.rankedFor(v.rfqId)],
   'quotation.pdf': v => [qk.rfqs.part(v.rfqId, 'quotations')],
   // A new order changes the RFQ (won), every list that shows orders or states, Today (place PO, goods late) and the customer's history.
   'order.convert': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.all, qk.orders.all, qk.today.all, qk.companies.all],
   'order.repeat': v => [qk.orders.all, qk.today.all, qk.companies.all, qk.companies.detail(v.companyId)],
-  'order.update': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all],
+  // The customer's history shows each order's lifecycle and goods state, so it goes stale too.
+  'order.update': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.companies.all],
   'order.cancel': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.rfqs.all, qk.today.all, qk.companies.all],
   // An issued PO changes the order page (leg placed, prices written back), the order lists, Today and every PO read.
-  'po.issue': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.purchaseOrders.all],
+  'po.issue': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.purchaseOrders.all, qk.companies.all],
   'po.pdf': v => [qk.orders.part(v.orderId, 'pos'), qk.purchaseOrders.all],
   // A chase stamp changes the asked/chased fields the RFQ page, the board and the order screens read, and every Today read.
-  'today.chase': () => [qk.today.all, qk.rfqs.all, qk.orders.all],
+  // A supplier chase moves the supplier's activity counts; a payment reminder moves the invoice reminder fields Money shows.
+  'today.chase': () => [qk.today.all, qk.rfqs.all, qk.orders.all, qk.companies.all, qk.money.invoices.all, qk.money.receivables.all],
   // A snooze is read only by Today.
   'today.snooze': () => [qk.today.all],
   // An expense changes every month list, the recent-use tally, the order's own cost panel and Today (a recurring item leaves it).

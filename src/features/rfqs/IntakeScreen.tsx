@@ -369,14 +369,10 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
         undo: {
           seconds: 10,
           onUndo: async () => {
-            try {
-              await setFloated.mutateAsync({ rfqId: s.id, floated: false })
-              setFloatedOn(null)
-              setUndone(true)
-              setStep('enquiry')
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await setFloated.mutateAsync({ rfqId: s.id, floated: false })
+            setFloatedOn(null)
+            setUndone(true)
+            setStep('enquiry')
           },
           settledTitle: `Floated to ${n}`,
           settledBody: `${rfqRef(s.number)} is out for prices.`,

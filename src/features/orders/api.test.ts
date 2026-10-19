@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
-import { convertRfqToOrder, getOrderHeader, listOrderItems, searchOrders } from '@/features/orders/api'
+import { convertRfqToOrder, getOrderHeader, listLegPos, listOrderItems, searchOrders } from '@/features/orders/api'
 
 let uninstall: (() => void) | undefined
 afterEach(() => uninstall?.())
@@ -61,5 +61,22 @@ describe('orders api: convert and search', () => {
     expect(await searchOrders('253074', undefined, 6, false)).toBeDefined()
     expect(String(opArgs(db.calls[1], 'or')?.[0])).toContain('50\\%\\_x')
     expect(String(opArgs(db.calls[1], 'or')?.[0])).not.toContain('number.eq')
+  })
+})
+
+describe('orders api: the PO chip carries the year of the first issue', () => {
+  it('listLegPos keeps revision 0\'s issue date for PO-YY-NNNN when a later revision crosses a year end', async () => {
+    const db = installFakeDb(() => ({
+      data: [
+        { supplier_order_id: 'leg1', number: 17, revision: 1, issued_on: '2027-01-05', lines: [] },
+        { supplier_order_id: 'leg1', number: 17, revision: 0, issued_on: '2026-12-28', lines: [] },
+      ],
+    }))
+    uninstall = db.uninstall
+    const [po] = await listLegPos(['leg1'], true)
+    expect(po.revision).toBe(1)
+    expect(po.issuedOn).toBe('2027-01-05')
+    // the PDF prints poRef(number, first issue): the chip must say the same PO-26-0017
+    expect(po.firstIssuedOn).toBe('2026-12-28')
   })
 })

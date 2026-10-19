@@ -50,18 +50,23 @@ export interface LegPoRow {
   number: number
   revision: number
   issuedOn: string
+  /** Revision 0's issue date: PO-YY-NNNN takes its year from the first issue (as the PDF prints it). */
+  firstIssuedOn: string
   currency: string
   total: number
   pdfPath: string | null
 }
 
-/** The latest issued revision of this leg's PO, or null when the leg has none yet. */
+/** The latest issued revision of this leg's PO, or null when the leg has none yet. Every revision is read (a handful) for the first issue date. */
 export async function getLegPo(legId: string): Promise<LegPoRow | null> {
   const rows = unwrap(
-    await requireSupabase().from('purchase_orders').select('id, number, revision, issued_on, currency, total, pdf_path').eq('supplier_order_id', legId).order('revision', { ascending: false }).limit(1),
+    await requireSupabase().from('purchase_orders').select('id, number, revision, issued_on, currency, total, pdf_path').eq('supplier_order_id', legId).order('revision', { ascending: false }),
   )
   const r = rows[0]
-  return r ? { id: r.id, number: r.number, revision: r.revision, issuedOn: r.issued_on, currency: r.currency.trim(), total: Number(r.total), pdfPath: r.pdf_path } : null
+  const first = rows.reduce<(typeof rows)[number] | undefined>((a, x) => (!a || x.revision < a.revision ? x : a), undefined)
+  return r
+    ? { id: r.id, number: r.number, revision: r.revision, issuedOn: r.issued_on, firstIssuedOn: first?.issued_on ?? r.issued_on, currency: r.currency.trim(), total: Number(r.total), pdfPath: r.pdf_path }
+    : null
 }
 
 /** The number the next first-issue PO will most likely take (the highest so far plus one). Shown as the dialog's tag; the issued number is the database's. */
@@ -95,7 +100,11 @@ export async function issuePurchaseOrder(input: IssueInput): Promise<LegPoRow> {
   const rows = unwrap(await requireSupabase().from('purchase_orders').select('id, number, revision, issued_on, currency, total, pdf_path').eq('id', input.id).limit(1))
   const r = rows[0]
   if (!r) throw new Error('The PO was issued but could not be read back.')
-  return { id: r.id, number: r.number, revision: r.revision, issuedOn: r.issued_on, currency: r.currency.trim(), total: Number(r.total), pdfPath: r.pdf_path }
+  const first =
+    r.revision === 0
+      ? r.issued_on
+      : (unwrap(await requireSupabase().from('purchase_orders').select('issued_on').eq('supplier_order_id', input.legId).eq('revision', 0).limit(1))[0]?.issued_on ?? r.issued_on)
+  return { id: r.id, number: r.number, revision: r.revision, issuedOn: r.issued_on, firstIssuedOn: first, currency: r.currency.trim(), total: Number(r.total), pdfPath: r.pdf_path }
 }
 
 /** A leg cannot be issued without a currency: this sets it (the dialog shows it locked once it is set). */

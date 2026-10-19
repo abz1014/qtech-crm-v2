@@ -24,7 +24,7 @@ import { profileGaps } from '@/features/quotations/lib/profileGaps'
 import { SettingsLink } from '@/features/quotations/SettingsLink'
 import type { OrderHeader, OrderLegRow } from '@/features/orders/api'
 import { useUpdateLeg } from '@/features/orders/hooks'
-import { legLetter, suggestExpected } from '@/features/orders/lib/legModel'
+import { expectedAfterIssue, legLetter } from '@/features/orders/lib/legModel'
 import { loadPoPdfData, loadPoPreviewData } from '@/features/purchaseOrders/api'
 import { useIssuePo, useLastPoToSupplier, useLegPo, useNextPoNumber, usePoPrefill, useSetLegCurrency, useStorePoPdf } from '@/features/purchaseOrders/hooks'
 import { generatePurchaseOrderPdf } from '@/features/purchaseOrders/pdf/generate'
@@ -118,7 +118,7 @@ export function IssuePoDialog({ order, leg, legIndex, onClose }: { order: OrderH
 
   const revision = existing.data ? existing.data.revision + 1 : 0
   const number = existing.data?.number ?? nextNumber.data
-  const firstYear = existing.data?.issuedOn ?? today
+  const firstYear = existing.data?.firstIssuedOn ?? today
   const tag = number !== undefined ? `${poRef(number, firstYear)} · R${revision}` : revision > 0 ? `R${revision}` : 'New PO · R0'
 
   const missing = missingPrices(rows, typed)
@@ -159,12 +159,10 @@ export function IssuePoDialog({ order, leg, legIndex, onClose }: { order: OrderH
         paymentTerms: payment.trim() || null,
         shipTo: shipTo.trim() || null,
       })
-      // The leg is placed today (the RPC stamped it). Suggest the expected date from the lead time, once, when it has none.
-      if (!leg.expectedOn) {
-        const s = suggestExpected(today, leg.leadTimes)
-        if (s) updateLeg.mutate({ id: leg.id, patch: { expected_on: s.on } })
-      }
-      const ref = `${poRef(po.number, po.revision === 0 ? po.issuedOn : (existing.data?.issuedOn ?? po.issuedOn))} · R${po.revision}`
+      // The leg is placed (the RPC stamped today if it was not placed yet). Suggest the expected date from the lead time, once, when it has none.
+      const expected = expectedAfterIssue(leg, today)
+      if (expected) updateLeg.mutate({ id: leg.id, patch: { expected_on: expected } })
+      const ref = `${poRef(po.number, po.firstIssuedOn)} · R${po.revision}`
       let pdf: Blob | null = null
       let pdfNote: string | null = null
       if (profile && gaps.length === 0) {

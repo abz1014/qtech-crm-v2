@@ -118,6 +118,11 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
     [sources],
   )
 
+  // However it closed (a row opened, Esc, Cmd+K again, the parent), it opens empty next time.
+  useEffect(() => {
+    if (!open) setQuery('')
+  }, [open])
+
   // Fill the list: idle rows for an empty box, search results otherwise.
   useEffect(() => {
     if (!open) return
@@ -208,10 +213,7 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
   return (
     <RadixDialog.Root
       open={open}
-      onOpenChange={next => {
-        onOpenChange(next)
-        if (!next) setQuery('')
-      }}
+      onOpenChange={onOpenChange}
     >
       <RadixDialog.Portal>
         <RadixDialog.Overlay className="fixed inset-0 z-40 animate-fade-in bg-scrim" />

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { businessToday } from '@/lib/dates'
 import { invalidateAfter } from '@/features/invalidation'
@@ -20,12 +20,23 @@ export function useBusinessToday(): string {
 }
 
 export function useTodayData(user: { id: string; role: Role }, today: string) {
-  return useQuery({
+  const client = useQueryClient()
+  const query = useQuery({
     // The date is part of the work (snoozes read it), but not of the key: the key is the cache slot, the date is re-read on refresh.
     queryKey: qk.today.board(),
     queryFn: () => api.loadTodayData(user, today),
     refetchOnMount: 'always',
   })
+  // The key has no date, so a tab left open across midnight would keep yesterday's reads (the server's overdue flags, the
+  // month-end item, the quarter). When the business date turns over, read everything on Today again. After useQuery, so
+  // the refetch runs with the new date.
+  const shownFor = useRef(today)
+  useEffect(() => {
+    if (shownFor.current === today) return
+    shownFor.current = today
+    void client.invalidateQueries({ queryKey: qk.today.all })
+  }, [client, today])
+  return query
 }
 
 /** The Today list for this person on this day: every rule, snoozes subtracted, grouped. Null until the data has loaded. */
@@ -107,17 +118,23 @@ export async function performChase(spec: ChaseSpec): Promise<ChaseResult> {
       await api.stampCustomerChase(spec.ids)
       return { count: Math.max(0, ...before.map(b => b.askCount)) + 1, undo: () => api.undoCustomerChase(before) }
     }
+    // Each "before" is read at the tap (like the customer's): the facts on screen may predate a colleague's chase, and an
+    // Undo that restored them would wipe that chase out.
     case 'supplier': {
+      const before = (await api.readSupplierChaseBefore(spec.inquiryId)) ?? spec.before
       const count = await api.stampSupplierChaseOnToday(spec.inquiryId)
-      return { count, undo: () => api.undoSupplierChase(spec.inquiryId, spec.before) }
+      return { count, undo: () => api.undoSupplierChase(spec.inquiryId, before) }
     }
     case 'goods': {
+      const before = (await api.readGoodsChaseBefore(spec.legId)) ?? spec.before
       const count = await api.stampGoodsChase(spec.legId)
-      return { count, undo: () => api.undoGoodsChase(spec.legId, spec.before) }
+      return { count, undo: () => api.undoGoodsChase(spec.legId, before) }
     }
     case 'payment': {
+      const read = await api.readPaymentRemindersBefore(spec.invoiceIds)
+      const before = read.length > 0 ? read : spec.before
       await api.stampPaymentReminder(spec.invoiceIds)
-      return { count: Math.max(0, ...spec.before.map(b => b.reminderCount)) + 1, undo: () => api.undoPaymentReminder(spec.before) }
+      return { count: Math.max(0, ...before.map(b => b.reminderCount)) + 1, undo: () => api.undoPaymentReminder(before) }
     }
   }
 }

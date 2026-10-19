@@ -1,7 +1,7 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { CompanyProfile } from '@/features/settings/companyProfile'
 import type { PoPdfData } from '@/features/purchaseOrders/api'
-import { currencyInWords, poLineAmounts, STANDARD_TERMS } from '@/features/purchaseOrders/lib/prefill'
+import { currencyInWords, poLineAmounts, STANDARD_TERMS, unitPriceText } from '@/features/purchaseOrders/lib/prefill'
 import { termLines } from '@/features/quotations/lib/termLines'
 import { wholeInWords } from '@/features/quotations/lib/totals'
 import { formatPaisa, toPaisa } from '@/lib/money'
@@ -199,7 +199,7 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
               </View>
               <Text style={[s.cQty, s.mono]}>{qtyText(Number(l.qty))}</Text>
               <Text style={s.cUnit}>{l.unit ?? ''}</Text>
-              <Text style={[s.cPrice, s.mono]}>{money(Number(l.unit_price))}</Text>
+              <Text style={[s.cPrice, s.mono]}>{unitPriceText(Number(l.unit_price))}</Text>
               <Text style={[s.cAmt, s.mono]}>{money(l.amount)}</Text>
             </View>
           )

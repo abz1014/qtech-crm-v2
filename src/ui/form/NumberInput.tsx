@@ -40,9 +40,14 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(functi
     if (focused) inner.current?.select()
   }, [focused])
 
-  // Follow outside changes (form reset, a pre-fill arriving) but never rewrite what is being typed.
+  // Follow outside changes (form reset, a pre-fill arriving) but never rewrite what is being typed, and never
+  // echo our own report back: text that reported null (junk, or below `min`) stays on screen after blur.
+  const reported = useRef<{ value: number | null; decimals: number | undefined }>({ value: value ?? null, decimals })
   useEffect(() => {
     if (focused) return
+    const v = value ?? null
+    if (v === reported.current.value && decimals === reported.current.decimals) return
+    reported.current = { value: v, decimals }
     setText(formatAmount(value, decimals))
   }, [value, decimals, focused])
 
@@ -68,7 +73,9 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(functi
           const next = e.target.value
           setText(next)
           const n = parseAmount(next)
-          onChange(n !== null && min !== undefined && n < min ? null : n)
+          const out = n !== null && min !== undefined && n < min ? null : n
+          reported.current = { value: out, decimals }
+          onChange(out)
         }}
         onBlur={e => {
           setFocused(false)

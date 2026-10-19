@@ -124,10 +124,14 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
   const currencyNote = hasLines && existing[0].currency === draft.currency ? `${draft.currency}, as saved` : draft.currency === prefill.currency ? currencySourceNote(prefill, inquiry.supplierCountry) : prefill.source === 'none' ? `${draft.currency}, picked by you` : `${draft.currency}, changed by you`
   const currencyOptions = [...new Set([draft.currency, prefill.currency, ...REPLY_CURRENCIES].filter(Boolean))].map(c => ({ value: c, label: c }))
 
+  // Enter in a price box saves too: a second Enter while the save is in flight must not send it again.
+  const saving = useRef(false)
   const doSave = async (d: ReplyDraft = draft) => {
     if (!d.currency) return // no currency picked yet: nothing is saved (audit R1)
     const plan = planReplySave(existing, d)
     if (plan.prices.length === 0 && plan.removeItemIds.length === 0) return
+    if (saving.current) return
+    saving.current = true
     try {
       const n = await save.mutateAsync({
         inquiryId: inquiry.id,
@@ -146,6 +150,8 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
       })
     } catch (err) {
       toast({ title: 'Could not save the reply', body: mapPgError(err, { entity: 'reply' }).message, tone: 'danger' })
+    } finally {
+      saving.current = false
     }
   }
 
@@ -158,11 +164,7 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
         body: `${inquiry.supplierName} · ${reasonLabel(reason)}`,
         undo: {
           onUndo: async () => {
-            try {
-              await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: before.noOfferOn, reason: before.reason })
-            } catch (err) {
-              toast({ title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' })
-            }
+            await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: before.noOfferOn, reason: before.reason })
           },
           settledTitle: "Marked can't quote",
           undoneTitle: "Can't quote taken back",

@@ -176,6 +176,7 @@ const ALIASES: Partial<Record<StatusDimension, Record<string, string>>> = {
   tcs: { 'delivered-to-client': 'delivered' },
   fbr: { 'receipt-received': 'receipt' },
   reminder: { 'not-reminded': 'none' },
+  'expense-group': { 'non-pnl': 'not-in-pnl' },
 }
 
 export class UnknownStatusError extends Error {

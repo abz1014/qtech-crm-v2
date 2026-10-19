@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
@@ -17,11 +18,17 @@ export function useOrderItems(id: string | undefined, money: boolean) {
   return useQuery({ queryKey: qk.orders.part(id ?? '', 'items'), queryFn: () => api.listOrderItems(id as string, money), enabled: Boolean(id) })
 }
 
-/** Legs need the items (which lines sit on which leg), so they wait for them. */
+/**
+ * Legs need the items (which lines sit on which leg) for their order and lead times, so they wait for them. The items are applied in
+ * `select`, not in the fetch: a write refreshes items and legs together, and a fetch would otherwise order the legs against the items
+ * from before the write and keep that until the next refresh.
+ */
 export function useOrderLegs(id: string | undefined, items: readonly api.OrderItemRow[] | undefined) {
+  const select = useCallback((raw: api.OrderLegsRaw) => api.shapeOrderLegs(raw, items ?? []), [items])
   return useQuery({
     queryKey: qk.orders.part(id ?? '', 'legs'),
-    queryFn: () => api.listOrderLegs(id as string, items as readonly api.OrderItemRow[]),
+    queryFn: () => api.fetchOrderLegs(id as string),
+    select,
     enabled: Boolean(id) && items !== undefined,
   })
 }

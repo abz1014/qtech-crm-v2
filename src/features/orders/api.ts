@@ -178,10 +178,30 @@ export interface OrderLegRow {
   leadTimes: string[]
 }
 
-export async function listOrderLegs(orderId: string, itemRows: readonly Pick<OrderItemRow, 'legId' | 'rfqItemId' | 'number'>[]): Promise<OrderLegRow[]> {
+/** The order's legs as stored, with supplier names and the quote lines' lead times: what shapeOrderLegs orders against the items. */
+export interface OrderLegsRaw {
+  legs: Array<{
+    id: string
+    supplier_id: string
+    currency: string | null
+    reference: string | null
+    placed_on: string | null
+    expected_on: string | null
+    received_on: string | null
+    delivered_on: string | null
+    last_chased_on: string | null
+    chase_count: number
+    inquiry_id: string | null
+    created_at: string
+  }>
+  names: ReadonlyMap<string, string>
+  quoteLines: ReadonlyArray<{ inquiry_id: string; rfq_item_id: string; lead_time: string | null }>
+}
+
+export async function fetchOrderLegs(orderId: string): Promise<OrderLegsRaw> {
   const db = requireSupabase()
-  const legs = unwrap(await db.from('supplier_orders').select('*').eq('order_id', orderId).order('created_at').order('id'))
-  if (legs.length === 0) return []
+  const legs = unwrap(await db.from('supplier_orders').select('*').eq('order_id', orderId).order('created_at').order('id')) as unknown as OrderLegsRaw['legs']
+  if (legs.length === 0) return { legs: [], names: new Map(), quoteLines: [] }
   const supplierIds = [...new Set(legs.map(l => l.supplier_id))]
   const inquiryIds = [...new Set(legs.map(l => l.inquiry_id).filter((i): i is string => Boolean(i)))]
   const [companies, lines] = await Promise.all([
@@ -190,18 +210,24 @@ export async function listOrderLegs(orderId: string, itemRows: readonly Pick<Ord
       ? db.from('supplier_quote_lines').select('inquiry_id, rfq_item_id, lead_time').in('inquiry_id', inquiryIds)
       : Promise.resolve({ data: [], error: null }),
   ])
-  const names = new Map(unwrap(companies).map(c => [c.id, c.name]))
-  const quoteLines = unwrap(lines) ?? []
+  return { legs, names: new Map(unwrap(companies).map(c => [c.id, c.name])), quoteLines: (unwrap(lines) ?? []) as OrderLegsRaw['quoteLines'] }
+}
+
+/**
+ * The legs in display order with their lead times, against the order's items as they are NOW. Kept apart from the fetch so a change to
+ * the items (a split, a line moved to another leg) re-orders the legs without waiting for them to be fetched again.
+ */
+export function shapeOrderLegs(raw: OrderLegsRaw, itemRows: readonly Pick<OrderItemRow, 'legId' | 'rfqItemId' | 'number'>[]): OrderLegRow[] {
   // Leg letters (A, B, ...) must not depend on the order the database happens to return rows in: a leg comes in the order of its
   // first line on the order, then by its creation time.
   const firstLine = (legId: string) => Math.min(...itemRows.filter(i => i.legId === legId).map(i => i.number), Number.MAX_SAFE_INTEGER)
-  const ordered = [...legs].sort((a, b) => firstLine(a.id) - firstLine(b.id) || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
+  const ordered = [...raw.legs].sort((a, b) => firstLine(a.id) - firstLine(b.id) || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
   return ordered.map(l => {
     const itemIds = new Set(itemRows.filter(i => i.legId === l.id && i.rfqItemId).map(i => i.rfqItemId as string))
     return {
       id: l.id,
       supplierId: l.supplier_id,
-      supplierName: names.get(l.supplier_id) ?? 'Unknown supplier',
+      supplierName: raw.names.get(l.supplier_id) ?? 'Unknown supplier',
       currency: l.currency ? l.currency.trim() : null,
       reference: l.reference,
       placedOn: l.placed_on,
@@ -211,9 +237,13 @@ export async function listOrderLegs(orderId: string, itemRows: readonly Pick<Ord
       lastChasedOn: l.last_chased_on,
       chaseCount: l.chase_count,
       inquiryId: l.inquiry_id,
-      leadTimes: quoteLines.filter(q => q.inquiry_id === l.inquiry_id && itemIds.has(q.rfq_item_id) && q.lead_time).map(q => q.lead_time as string),
+      leadTimes: raw.quoteLines.filter(q => q.inquiry_id === l.inquiry_id && itemIds.has(q.rfq_item_id) && q.lead_time).map(q => q.lead_time as string),
     }
   })
+}
+
+export async function listOrderLegs(orderId: string, itemRows: readonly Pick<OrderItemRow, 'legId' | 'rfqItemId' | 'number'>[]): Promise<OrderLegRow[]> {
+  return shapeOrderLegs(await fetchOrderLegs(orderId), itemRows)
 }
 
 export interface PersonRow {
@@ -477,6 +507,8 @@ export interface LegPo {
   number: number
   revision: number
   issuedOn: string
+  /** Revision 0's issue date: PO-YY-NNNN takes its year from the first issue (as the PDF prints it), not from this revision's. */
+  firstIssuedOn: string
   /** What the latest revision listed (order line and quantity), to tell whether the leg's lines have changed since. */
   lines: Array<{ orderItemId: string; qty: number }>
 }
@@ -498,11 +530,17 @@ export async function listLegPos(legIds: readonly string[], money = false): Prom
     ? unwrap(await db.from('purchase_orders').select('supplier_order_id, number, revision, issued_on, lines').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
     : unwrap(await db.from('purchase_orders').select('supplier_order_id, number, revision, issued_on').in('supplier_order_id', [...legIds]).order('revision', { ascending: false }))
   const seen = new Set<string>()
+  const first = new Map<string, { revision: number; issuedOn: string }>()
+  for (const r of rows) {
+    const f = first.get(r.supplier_order_id)
+    if (!f || r.revision < f.revision) first.set(r.supplier_order_id, { revision: r.revision, issuedOn: r.issued_on })
+  }
   const out: LegPo[] = []
   for (const r of rows) {
     if (seen.has(r.supplier_order_id)) continue
     seen.add(r.supplier_order_id)
-    out.push({ legId: r.supplier_order_id, number: r.number, revision: r.revision, issuedOn: r.issued_on, lines: 'lines' in r ? poLines(r.lines) : [] })
+    const firstIssuedOn = first.get(r.supplier_order_id)?.issuedOn ?? r.issued_on
+    out.push({ legId: r.supplier_order_id, number: r.number, revision: r.revision, issuedOn: r.issued_on, firstIssuedOn, lines: 'lines' in r ? poLines(r.lines) : [] })
   }
   return out
 }

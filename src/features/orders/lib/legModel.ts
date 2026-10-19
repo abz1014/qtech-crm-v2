@@ -3,7 +3,7 @@
 // A leg is Mark placed, then Delivered today. supplier_orders.received_on stays in the database and is set by the app to the delivered
 // date, whenever delivered is stamped or edited; expected_on is suggested from placed_on plus the lead time.
 
-import { defaultExpected } from '@/features/orders/lib/leadTime'
+import { defaultExpected, suggestExpected } from '@/features/orders/lib/leadTime'
 
 export { defaultExpected, suggestExpected, type ExpectedSuggestion } from '@/features/orders/lib/leadTime'
 
@@ -43,6 +43,15 @@ export function stampPatch(step: LegStep, d: LegDates, today: string, lead: Read
   }
   // Delivered also sets received_on to the same day: nobody types a receiving date, and "goods received" is derived from delivery.
   return { delivered_on: today, received_on: today }
+}
+
+/**
+ * The expected date to write once a PO is issued, or null to leave it. issue_purchase_order stamps placed_on only when it is empty, so
+ * the lead time counts from the leg's own placed date when it has one, and from today when the issue is what placed it.
+ */
+export function expectedAfterIssue(leg: { placedOn: string | null; expectedOn: string | null; leadTimes: ReadonlyArray<string | null | undefined> }, today: string): string | null {
+  if (leg.expectedOn) return null
+  return suggestExpected(leg.placedOn ?? today, leg.leadTimes)?.on ?? null
 }
 
 /** A hand edit of one date. Editing delivered moves received_on with it (clearing delivered clears both); the other dates are alone. */
