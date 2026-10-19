@@ -3,7 +3,7 @@ import { businessToday } from '@/lib/dates'
 import { invalidateAfter } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
 import * as api from '@/features/money/expenses/api'
-import { mostUsedCategory, type RecurringTemplate } from '@/features/money/expenses/model'
+import { SUPPLIER_PAYMENT_ID, mostUsedCategory, type RecurringTemplate } from '@/features/money/expenses/model'
 
 /*
  * Expense hooks (R01 pattern). Every read takes `enabled`: Money's expense data is admin only, so for anyone else the
@@ -66,7 +66,7 @@ export function useRecordedRecurring(period: string, enabled = true) {
 export function useInsertExpenses() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (rows: Parameters<typeof api.insertExpenses>[0]) => api.insertExpenses(rows),
+    mutationFn: async (rows: Parameters<typeof api.insertExpenses>[0]) => api.insertExpenses(await api.withSingleLeg(rows, SUPPLIER_PAYMENT_ID)),
     onSuccess: () => invalidateAfter(client, 'expense.save', {}),
   })
 }

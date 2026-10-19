@@ -32,8 +32,8 @@ export function useInvoiceableOrders(enabled = true) {
   return useQuery({ queryKey: qk.money.invoices.invoiceable(), queryFn: api.listInvoiceableOrders, enabled, staleTime: 30_000 })
 }
 
-export function useInvoiceReceipts(id: string | null | undefined) {
-  return useQuery({ queryKey: qk.money.invoices.receipts(id ?? ''), queryFn: () => api.listReceipts(id as string), enabled: Boolean(id) })
+export function useInvoiceReceipts(id: string | null | undefined, psid?: string | null) {
+  return useQuery({ queryKey: [...qk.money.invoices.receipts(id ?? ''), api.psidKey(psid)], queryFn: () => api.listReceipts(id as string, psid), enabled: Boolean(id) })
 }
 
 export function useCreateInvoice() {
@@ -52,10 +52,10 @@ export function useUpdateInvoice(invoiceId: string) {
   })
 }
 
-export function useUploadInvoiceReceipt(invoiceId: string) {
+export function useUploadInvoiceReceipt(invoiceId: string, psid?: string | null) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (v: { file: File; today: string }) => api.uploadReceipt(invoiceId, v.file, v.today),
+    mutationFn: (v: { file: File; today: string }) => api.uploadReceipt(invoiceId, v.file, v.today, psid),
     onSuccess: () => invalidateAfter(client, 'invoice.receipt', { invoiceId }),
   })
 }

@@ -18,6 +18,8 @@ function setup(upsert: () => FakeResult | Promise<FakeResult> = () => ({})) {
     if (c.target === 'expenses' && c.verb === 'select')
       return { data: [{ category_id: 'c-snacks', paid_on: '2026-11-01' }, { category_id: 'c-snacks', paid_on: '2026-11-02' }, { category_id: 'c-fuel', paid_on: '2026-11-03' }] }
     if (c.target === 'expenses' && c.verb === 'upsert') return upsert()
+    if (c.target === 'orders') return { data: [{ id: 'o-42', number: 42, company_id: 'co-1' }, { id: 'o-7', number: 7, company_id: 'co-2' }] }
+    if (c.target === 'companies') return { data: [{ id: 'co-1', name: 'Lahore Beverages' }, { id: 'co-2', name: 'Margalla Foods' }] }
     return { data: [] }
   })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -191,5 +193,55 @@ describe('burst entry sheet (M11)', () => {
     expect(screen.getByRole('textbox', { name: 'Amount, row 2' })).toHaveValue('100,000')
     expect(screen.getByText('1 row needs a change')).toBeInTheDocument()
     expect(saves(db)).toHaveLength(1)
+  })
+
+  describe('the optional Order tag (audit X1)', () => {
+    type Row = { amount_pkr: number; order_id?: string }
+    const savedRows = (db: ReturnType<typeof installFakeDb>) => opArgs(saves(db)[0], 'upsert')?.[0] as Row[]
+
+    it('is skippable: Tab passes over it empty and the expense saves untagged', async () => {
+      const user = userEvent.setup()
+      const db = setup()
+      const first = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(first).toHaveFocus())
+      // amount, category, date, paid via, note, order, then the photo button
+      await user.keyboard('500{Tab}{Tab}{Tab}{Tab}{Tab}')
+      expect(screen.getByRole('combobox', { name: 'Order, row 1' })).toHaveFocus()
+      await user.keyboard('{Tab}')
+      expect(screen.getByRole('button', { name: 'Add receipt photo, row 1' })).toHaveFocus()
+      await user.keyboard('{Control>}{Enter}{/Control}')
+      await waitFor(() => expect(saves(db)).toHaveLength(1))
+      expect('order_id' in savedRows(db)[0]).toBe(false)
+    })
+
+    it('type-ahead on the order number: Tab accepts the first match and the expense is saved with that order', async () => {
+      const user = userEvent.setup()
+      const db = setup()
+      const first = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(first).toHaveFocus())
+      await user.keyboard('2500{Tab}{Tab}{Tab}{Tab}{Tab}42')
+      expect(await screen.findByRole('option', { name: /ORD-0042/ })).toBeInTheDocument()
+      await user.keyboard('{Tab}')
+      expect(screen.getByRole('combobox', { name: 'Order, row 1' })).toHaveValue('ORD-0042')
+      expect(screen.getByRole('button', { name: 'Add receipt photo, row 1' })).toHaveFocus()
+      await user.keyboard('{Control>}{Enter}{/Control}')
+      await waitFor(() => expect(saves(db)).toHaveLength(1))
+      expect(savedRows(db)[0]).toMatchObject({ amount_pkr: 2500, order_id: 'o-42' })
+    })
+
+    it('an order that matches nothing is not dropped quietly: nothing is saved until it is fixed or cleared', async () => {
+      const user = userEvent.setup()
+      const db = setup()
+      const first = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(first).toHaveFocus())
+      await user.keyboard('500{Tab}{Tab}{Tab}{Tab}{Tab}9999{Tab}{Control>}{Enter}{/Control}')
+      expect(await screen.findByText(/No order matches "9999"/)).toBeInTheDocument()
+      expect(saves(db)).toHaveLength(0)
+      const box = screen.getByRole('combobox', { name: 'Order, row 1' })
+      await user.clear(box)
+      await user.keyboard('{Tab}{Control>}{Enter}{/Control}')
+      await waitFor(() => expect(saves(db)).toHaveLength(1))
+      expect('order_id' in savedRows(db)[0]).toBe(false)
+    })
   })
 })

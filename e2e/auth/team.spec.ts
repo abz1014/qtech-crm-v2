@@ -231,7 +231,7 @@ test.describe('Company profile (A06)', () => {
     const reset = await fetch(`${API_URL}/rest/v1/company_profile?id=eq.1`, {
       method: 'PATCH',
       headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ legal_name: null, address: null, quotation_validity_days: 30 }),
+      body: JSON.stringify({ legal_name: null, address: null, quotation_validity_days: 30, default_payment_terms_days: 30 }),
     })
     expect(reset.status).toBe(204)
     const admin = await person(browser)
@@ -267,6 +267,22 @@ test.describe('Company profile (A06)', () => {
     const [row] = (await res.json()) as Record<string, unknown>[]
     expect(row).toMatchObject({ legal_name: 'Q-Tech Solutions (Private) Limited', bank_iban: null, bank_name: null, quotation_validity_days: 30 })
     expect(row.updated_by).toBe('a0000000-0000-4000-8000-000000000001')
+
+    // Audit Y1: the default payment terms are 30 days, editable here, and stored.
+    await expect(page.getByLabel('Default payment terms')).toHaveValue('30')
+    await page.getByLabel('Default payment terms').fill('45')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect
+      .poll(async () => {
+        const r = await fetch(`${API_URL}/rest/v1/company_profile?id=eq.1&select=default_payment_terms_days`, {
+          headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` },
+        })
+        return ((await r.json()) as { default_payment_terms_days: number }[])[0].default_payment_terms_days
+      })
+      .toBe(45)
+    await page.getByLabel('Default payment terms').fill('30')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page.getByText('Nothing to save yet')).toBeVisible()
 
     // Change one more thing and discard it.
     await page.getByLabel('Quotation validity').fill('60')
