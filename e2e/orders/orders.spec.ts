@@ -481,13 +481,16 @@ test.describe('O03: commissioning and cancel', () => {
     await expect(dialog.getByRole('radio')).toHaveCount(6)
     await shot(page, 'o03-cancel-dialog-1440')
     await dialog.getByRole('button', { name: 'Cancel order' }).click()
+    // The dialog's own text carries the reason label too, and it is still on screen while it fades out: wait for it to go
+    // before reading the page behind it, or the sentence matches twice.
+    await expect(dialog).toBeHidden()
     await expect.poll(async () => (await orderRow(s.order.id)).cancelled_on).toBe(karachiDay(0))
     const row = await orderRow(s.order.id)
     // the reason is a structured key; the notes are exactly what people wrote and are never appended to
     expect(row.cancel_reason).toBe('customer_cancelled')
     expect(row.notes).toBe('Gate pass needed 2 days ahead.')
     await expect(page.getByText(/^Cancelled /).first()).toBeVisible()
-    await expect(page.getByText(/The customer cancelled the PO./)).toBeVisible()
+    await expect(page.locator('#main').getByText(/The customer cancelled the PO\./)).toBeVisible()
     // nothing can be stamped while it is cancelled
     await expect(page.getByRole('button', { name: /Mark placed/ })).toHaveCount(0)
     await page.getByRole('button', { name: 'More actions' }).click()
