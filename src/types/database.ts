@@ -685,6 +685,26 @@ isOneToOne: false
       referencedColumns: ["order_id"]
     }
                   ]
+                },"month_snapshots": {
+                  Row: {
+                    "adjust": NonNullable<Json>,"aging": NonNullable<Json>,"categories": NonNullable<Json>,"gst": Json | null,"month": string,"payables": NonNullable<Json>,"payments": NonNullable<Json>,"pnl": NonNullable<Json>,"status": NonNullable<Json>,"taken_at": string,"team": NonNullable<Json>,"via": NonNullable<Json>
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "adjust": NonNullable<Json>,"aging": NonNullable<Json>,"categories": NonNullable<Json>,"gst"?: Json | null,"month": string,"payables": NonNullable<Json>,"payments": NonNullable<Json>,"pnl": NonNullable<Json>,"status": NonNullable<Json>,"taken_at"?: string,"team": NonNullable<Json>,"via": NonNullable<Json>
+                  }
+                  Update: {
+                    "adjust"?: NonNullable<Json>,"aging"?: NonNullable<Json>,"categories"?: NonNullable<Json>,"gst"?: Json | null,"month"?: string,"payables"?: NonNullable<Json>,"payments"?: NonNullable<Json>,"pnl"?: NonNullable<Json>,"status"?: NonNullable<Json>,"taken_at"?: string,"team"?: NonNullable<Json>,"via"?: NonNullable<Json>
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "month_snapshots_month_fkey"
+      columns: ["month"]
+isOneToOne: true
+      referencedRelation: "closed_months"
+      referencedColumns: ["month"]
+    }
+                  ]
                 },"order_costs": {
                   Row: {
                     "costs_complete_at": string | null,"costs_complete_by": string | null,"created_at": string,"created_by": string | null,"expected_cost_pkr": number | null,"order_id": string,"updated_at": string
@@ -1662,7 +1682,15 @@ isOneToOne: false
                   ]
                 },"v_month_pnl": {
                   Row: {
-                    "after_drawings": number | null,"cash_out_total": number | null,"gst_in": number | null,"input_tax": number | null,"month": string | null,"net_in": number | null,"non_pnl_out": number | null,"order_costs": number | null,"overheads": number | null,"result": number | null,"unresolved_gross": number | null
+                    "adj_gst_in": number | null,"adj_net_in": number | null,"adj_non_pnl_out": number | null,"adj_order_costs": number | null,"adj_overheads": number | null,"adj_unresolved_gross": number | null,"adjust_result": number | null,"after_drawings": number | null,"cash_out_total": number | null,"frozen": boolean | null,"frozen_at": string | null,"gst_in": number | null,"input_tax": number | null,"month": string | null,"net_in": number | null,"non_pnl_out": number | null,"order_costs": number | null,"overheads": number | null,"result": number | null,"unresolved_gross": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_month_pnl_live": {
+                  Row: {
+                    "cash_out_total": number | null,"gst_in": number | null,"input_tax": number | null,"month": string | null,"net_in": number | null,"non_pnl_out": number | null,"order_costs": number | null,"overheads": number | null,"unresolved_gross": number | null
                   }
                   ComputedFields: never
                   Relationships: [
@@ -2052,6 +2080,12 @@ isOneToOne: false
                            },
 "month_is_closed":
 { Args: { "d": string }; Returns: boolean
+                           },
+"month_pnl_adjusted":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"month_pnl_drift":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "my_target_progress":
 { Args: Record<PropertyKey, never>; Returns: {
