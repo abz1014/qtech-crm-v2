@@ -74,8 +74,9 @@ export function TeamPage() {
   })
 
   // A deactivated person's row is quiet: muted ink in every cell and a neutral avatar (the mockup's is-dim row).
+  // Initials stay white on it, so it must be dark enough for 4.5:1 (neutral-400 gave 3.4:1 and failed Lighthouse color-contrast).
   const dim = (m: TeamMember) => (isActive(m) ? undefined : 'text-fg-muted')
-  const avatarTone = (m: TeamMember) => (isActive(m) ? undefined : 'bg-[var(--neutral-400)]')
+  const avatarTone = (m: TeamMember) => (isActive(m) ? undefined : 'bg-[var(--neutral-500)]')
 
   const columns: Column<TeamMember>[] = [
     {
