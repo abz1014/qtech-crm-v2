@@ -240,7 +240,7 @@ export function BoardPage() {
   const densityBar = (
     <SegmentedControl
       aria-label="Density"
-      className="ml-auto max-sm:hidden"
+      className="ml-auto max-sm:w-full"
       value={density}
       onValueChange={pickDensity}
       options={[
