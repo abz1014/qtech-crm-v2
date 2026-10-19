@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
 import { clearDevRole } from '@/app/devSession'
+import { forgetDeviceCaptures } from '@/lib/capture/forget'
 import { getSupabase } from '@/lib/supabase'
 
 /**
@@ -36,12 +37,13 @@ export function useSignInNotice(): SignInNotice {
 
 /**
  * Session actions. `signOut` ends the Supabase session; AuthProvider sees the change, clears the
- * query cache and the shell returns to /login. For a dev ?devRole= session
+ * query cache and the shell returns to /login. Capture drafts and recents on this device are forgotten first (L-5). For a dev ?devRole= session
  * it forgets the dev role and goes to /login.
  */
 export const session = {
   signOut: async (): Promise<void> => {
     const dev = clearDevRole()
+    await forgetDeviceCaptures()
     const supabase = getSupabase()
     if (supabase) await supabase.auth.signOut()
     if (dev) window.location.assign('/login')
