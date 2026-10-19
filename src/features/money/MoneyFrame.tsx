@@ -38,7 +38,7 @@ export function MoneyFrame({ active, actions, children }: { active: string; acti
     'month-end': checks.data ? checksWithItems(buildChecklist(checks.data, monthEnd)) : undefined,
   }
   return (
-    <div className="mx-auto grid w-full max-w-table content-start gap-4 px-4 pb-12 pt-6 md:px-8">
+    <div className="grid w-full min-w-0 content-start gap-4 px-4 pb-12 pt-6 md:px-10">
       <header className="grid gap-4">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
           <div className="grid gap-2">

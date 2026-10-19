@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import type { DraftItem } from '@/features/rfqs/lib/intakeModel'
 import { effectiveQty } from '@/features/rfqs/lib/intakeModel'
 import type { SuggestionGroupResult, SupplierSuggestion } from '@/features/rfqs/lib/supplierSuggestion'
-import { useCompanyMatches } from '@/features/rfqs/hooks'
+import { useCompanyMatches, useSupplierEvidence } from '@/features/rfqs/hooks'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { Combobox } from '@/ui/form/Combobox'
 import { EmptyState } from '@/ui/EmptyState'
@@ -14,7 +14,7 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { buildMemoryCard, type MemoryRow } from '@/lib/memory'
 import { MemoryCardView } from '@/features/rfqs/MemoryCard'
 import { ReasonParts } from '@/features/rfqs/ranking/RankParts'
-import { evidenceBlock, evidenceOf } from '@/features/rfqs/lib/ranking/reasons'
+import { evidenceBlock, evidenceFromFeed, evidenceOf } from '@/features/rfqs/lib/ranking/reasons'
 import { Icon } from '@/ui/Icon'
 
 /*
@@ -43,7 +43,7 @@ export function ItemChips({ items }: { items: readonly DraftItem[] }) {
 /** What the Memory card needs besides the suggestion itself: the rows supplier_item_memory() returned per item, and the items. */
 export interface MemoryContext {
   rows: Readonly<Record<string, readonly MemoryRow[] | undefined>>
-  items: readonly { id: string; number: number; description: string; brandName?: string | null; familyName?: string | null }[]
+  items: readonly { id: string; number: number; description: string; brandId?: string | null; familyId?: string | null; brandName?: string | null; familyName?: string | null }[]
   today: string
 }
 
@@ -58,10 +58,14 @@ function MemoryPanel({ s, ctx, panelId }: { s: SupplierSuggestion; ctx: MemoryCo
   const item = covered.find(i => i.id === picked) ?? covered[0]
   const row = item ? ctx.rows[item.id]?.find(r => r.supplier_id === s.supplierId) : undefined
   const card = useMemo(() => buildMemoryCard(row, s.stats, ctx.today), [row, s.stats, ctx.today])
+  const first = useMemo(() => evidenceOf(row), [row])
+  // Up to three recent orders (supplier_item_evidence), asked only for a card that is open and has an order behind it.
+  const feed = useSupplierEvidence(item ? { description: item.description, brandId: item.brandId ?? null, familyId: item.familyId ?? null } : null, s.supplierId, first !== null)
   const ev = useMemo(() => {
-    const e = evidenceOf(row)
-    return e ? evidenceBlock(e, { supplier: s.name, brand: item?.brandName, family: item?.familyName }, s.stats, ctx.today) : null
-  }, [row, item, ctx.today, s])
+    if (!first) return null
+    const more = evidenceFromFeed(feed.data)
+    return evidenceBlock(first, { supplier: s.name, brand: item?.brandName, family: item?.familyName }, s.stats, ctx.today, more)
+  }, [first, feed.data, item, ctx.today, s])
   if (!item) return null
   const desc = item.description.length > 90 ? `${item.description.slice(0, 89).trimEnd()}…` : item.description
   return (

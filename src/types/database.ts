@@ -1980,7 +1980,7 @@ isOneToOne: false
                   ]
                 },"v_supplier_stats": {
                   Row: {
-                    "asked": number | null,"brand_ids": (string)[] | null,"brand_names": (string)[] | null,"chosen": number | null,"chosen_of": number | null,"deliveries": number | null,"last_contact": string | null,"late": number | null,"legacy_asked": number | null,"median_days_late": number | null,"median_reply_days": number | null,"no_offer": number | null,"prices_hidden": number | null,"quoted": number | null,"replied": number | null,"reply_days_n": number | null,"supplier_id": string | null
+                    "asked": number | null,"brand_ids": (string)[] | null,"brand_names": (string)[] | null,"chosen": number | null,"chosen_of": number | null,"deliveries": number | null,"last_contact": string | null,"late": number | null,"legacy_asked": number | null,"median_days_late": number | null,"median_reply_days": number | null,"no_offer": number | null,"orders_count": number | null,"prices_hidden": number | null,"quoted": number | null,"replied": number | null,"reply_days_n": number | null,"supplier_id": string | null
                   }
                   ComputedFields: never
                   Relationships: [
@@ -2072,6 +2072,9 @@ isOneToOne: false
                            },
 "model_tokens":
 { Args: { "t": string }; Returns: (string)[]
+                           },
+"money_exceptions_input":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "month_end_check_details":
 { Args: { "p_month": string }; Returns: {
@@ -2182,6 +2185,11 @@ isOneToOne: false
                            },
 "strip_words":
 { Args: { "p_drop": (string)[],"p_norm": string }; Returns: string
+                           },
+"supplier_item_evidence":
+{ Args: { "p_brand_id": string,"p_description": string,"p_exclude_rfq_id"?: string,"p_family_id": string,"p_limit"?: number,"p_supplier_ids": (string)[] }; Returns: {
+              "count_at_tier": number,"delivered_after_days": number,"delivered_on": string,"evidence_rank": number,"expected_on": string,"item_desc": string,"order_id": string,"order_number": number,"placed_on": string,"qty": number,"supplier_id": string,"tier": number
+            }[]
                            },
 "supplier_item_memory":
 { Args: { "p_brand_id": string,"p_description": string,"p_exclude_rfq_id"?: string,"p_family_id": string,"p_supplier_ids": (string)[] }; Returns: {

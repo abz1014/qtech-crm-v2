@@ -184,6 +184,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'strip_words',             '',    'X',    'X',    'X'),    -- 0036 pure helper, all staff
   ('function', 'similar_enough',          '',    'X',    'X',    'X'),    -- 0036 pure helper, all staff
   ('function', 'supplier_item_memory',    '',    'X',    'X',    'X'),    -- s10 "supplier_item_memory()"
+  ('function', 'supplier_item_evidence',  '',    'X',    'X',    'X'),    -- P9 (0066): up to three recent orders at the best tier for the memory card; no price, all staff (SECURITY INVOKER)
+  ('function', 'money_exceptions_input',  '',    'X',    '',     ''),     -- P9 (0066): Money > Exceptions input, admin only (NULL for everyone else; SECURITY INVOKER with a role check inside)
   ('function', 'customer_price_memory',  '',    'X',    'X',    'X'),    -- R19 (0037): the two price chips of the issue-quotation dialog, all staff
   ('function', 'rank_item_quotes',       '',    'X',    'X',    'X'),    -- A8 (0049): supplier quote ranking, all staff; the selling price and spread inside it are NULL for engineers (own pgTAP test)
   ('function', 'issue_quotation',         '',    'X',    'X',    'X'),    -- s10 "RPCs issue_quotation, issue_purchase_order, stamp_clarification_ask, stamp_supplier_chase"
@@ -434,6 +436,8 @@ insert into probes values
   ('strip_words', '', 'X', $q$select public.strip_words('a b', '{a}')$q$),
   ('similar_enough', '', 'X', $q$select public.similar_enough('a b c', 'a b c', 0.45)$q$),
   ('supplier_item_memory', '', 'X', $q$select 1 from public.supplier_item_memory(array[@03], @13, null, 'Fixture item') where best_tier is not null$q$),
+  ('supplier_item_evidence', '', 'X', 'select 1 where exists (select 1 from public.supplier_orders where id = @23) and (select count(*) from public.supplier_item_evidence(array[@03], @13, null, $$Fixture order item$$)) >= 0'),   -- P9 (0066): same shape as po_line_prefill (the leg must be visible, so a deactivated user is denied)
+  ('money_exceptions_input', '', 'X', 'select 1 from public.money_exceptions_input() j where j is not null'),   -- P9 (0066): NULL unless admin
   ('customer_price_memory', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.customer_price_memory(@15)) >= 0'),   -- R19: returns no rows for the fixture, so the probe also needs the RFQ to be visible (a deactivated user sees none)
   ('rank_item_quotes', '', 'X', 'select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.rank_item_quotes(@15)) >= 0'),   -- A8 (0049): same shape as the customer_price_memory probe (the fixture RFQ must be visible; a deactivated user sees none)
   ('issue_quotation', '', 'X', 'select public.issue_quotation(@c3, @15)'),

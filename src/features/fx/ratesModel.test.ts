@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FxLatestRow } from '@/features/rfqs/api'
-import { ageText, bandLabel, buildRateBar, buildRateRows, rateBarNote, sourceText, unusableWarning } from './ratesModel'
+import { ageText, autoRunStamp, bandLabel, buildRateBar, buildRateRows, rateBarNote, sourceText, unusableWarning } from './ratesModel'
 
 const row = (currency: string, ratePkr: number, ageDays: number, source = 'auto'): FxLatestRow => ({
   currency,
@@ -49,5 +49,11 @@ describe('rate bar', () => {
     expect(rateBarNote(bar.find(b => b.currency === 'USD')!)).toBe('auto · today')
     expect(rateBarNote(bar.find(b => b.currency === 'CNY')!)).toBe('auto · 3 days ago')
     expect(rateBarNote(bar.find(b => b.currency === 'EUR')!)).toBe('auto · 12 days ago, stale')
+  })
+})
+
+describe('autoRunStamp', () => {
+  it('reads the nightly run in Karachi time, as the mockup does', () => {
+    expect(autoRunStamp('2026-11-26T21:10:00Z')).toBe('Automatic update ran Fri 27 Nov, 02:10')
   })
 })

@@ -445,36 +445,36 @@ export function sellNote(rows: readonly RankRow[], showSell: boolean): { kind: '
 
 // ------------------------------------------------------------------------------------------------ the memory card's evidence block
 
+/** One order row of the evidence block. */
+export interface EvidenceOrderRow {
+  ref: string
+  /** "Siemens SITRANS P320 ×4". */
+  what: string
+  /** "placed 12 Mar 2026 · expected 26 Mar 2026". */
+  when: string
+  /** "delivered after 19 days" or "not delivered yet". */
+  result: string
+  /** "expected in 14 · late", "expected in 14 · on time", "5 days past expected", or null. */
+  detail: string | null
+  tone: 'late' | 'wait' | null
+}
+
 export interface EvidenceBlock {
-  /** "Latest order of this item from Metro Process Controls" or "Ordered in Pressure transmitters, 3 times". */
+  /** "Recent orders of this item from Metro Process Controls" or "Ordered in Pressure transmitters, 3 times". */
   title: string
-  /** "1 of 4": the order shown out of the legs at this tier. Null when the count is unknown. */
+  /** "3 of 4": the orders shown out of the legs at this tier. Null when the count is unknown. */
   countText: string | null
-  order: {
-    ref: string
-    /** "Siemens SITRANS P320 ×4". */
-    what: string
-    /** "placed 12 Mar 2026 · expected 26 Mar 2026". */
-    when: string
-    /** "delivered after 19 days" or "not delivered yet". */
-    result: string
-    /** "expected in 14 · late", "expected in 14 · on time", "5 days past expected", or null. */
-    detail: string | null
-    tone: 'late' | 'wait' | null
-  }
+  /** The newest order at the best tier. Same as orders[0]. */
+  order: EvidenceOrderRow
+  /** Up to three recent orders at the best tier, newest first (supplier_item_evidence). */
+  orders: EvidenceOrderRow[]
   /** Counts out of counts from v_supplier_stats. */
   counts: { label: string; value: string; tone?: 'late' }[]
   /** The same evidence as the one sentence the float list and the RFQ rows print. */
   line: string
 }
 
-/** The evidence block of the memory card: the latest order at the best tier, then the supplier's delivery counts. */
-export function evidenceBlock(
-  ev: Evidence,
-  names: EvidenceNames & { supplier: string },
-  stats: { deliveries?: number | null; late?: number | null; median_days_late?: number | null } | null | undefined,
-  today: string,
-): EvidenceBlock {
+function orderRow(ev: Evidence, today: string): EvidenceOrderRow {
   const ref = ev.orderNumber !== null ? orderRef(ev.orderNumber) : 'Order'
   const state = deliveryState(ev, today)
   const exp = expectedDays(ev)
@@ -485,9 +485,57 @@ export function evidenceBlock(
   if (state.kind === 'on-time') detail = exp !== null ? `expected in ${exp} · on time` : 'on time'
   else if (state.kind === 'late') detail = exp !== null ? `expected in ${exp} · late` : 'late'
   else if (state.kind === 'waiting') detail = `${plural(state.daysPast ?? 0, 'day', 'days')} past expected`
+  return { ref, what, when: whenParts.join(' · '), result, detail, tone: state.kind === 'late' ? 'late' : state.kind === 'waiting' ? 'wait' : null }
+}
+
+/** The rows of supplier_item_evidence() for one supplier as Evidence, newest first. */
+export interface EvidenceFeedRow {
+  evidence_rank?: number | null
+  tier: number
+  order_number?: number | null
+  item_desc?: string | null
+  qty?: number | null
+  placed_on?: string | null
+  expected_on?: string | null
+  delivered_on?: string | null
+  delivered_after_days?: number | null
+  count_at_tier?: number | null
+}
+
+export function evidenceFromFeed(rows: readonly EvidenceFeedRow[] | null | undefined): Evidence[] {
+  return [...(rows ?? [])]
+    .sort((a, b) => (a.evidence_rank ?? 0) - (b.evidence_rank ?? 0))
+    .map(r => ({
+      tier: r.tier,
+      orderNumber: r.order_number ?? null,
+      itemDesc: r.item_desc ?? null,
+      qty: r.qty ?? null,
+      placedOn: r.placed_on ?? null,
+      expectedOn: r.expected_on ?? null,
+      deliveredOn: r.delivered_on ?? null,
+      deliveredAfterDays: r.delivered_after_days ?? null,
+      count: r.count_at_tier ?? null,
+    }))
+}
+
+/**
+ * The evidence block of the memory card: up to three recent orders at the best tier, then the supplier's delivery counts.
+ * `ev` is the newest order (supplier_item_memory); `more` is the full list from supplier_item_evidence (it starts with the same
+ * order). With no list the block shows the one order, as before.
+ */
+export function evidenceBlock(
+  ev: Evidence,
+  names: EvidenceNames & { supplier: string },
+  stats: { deliveries?: number | null; late?: number | null; median_days_late?: number | null; orders_count?: number | null } | null | undefined,
+  today: string,
+  more?: readonly Evidence[] | null,
+): EvidenceBlock {
+  const list = more && more.length > 0 ? more.slice(0, 3) : [ev]
+  const rows = list.map(e => orderRow(e, today))
+  const ref = ev.orderNumber !== null ? orderRef(ev.orderNumber) : 'Order'
   const title =
     ev.tier <= 1
-      ? `Latest order of this item from ${names.supplier}`
+      ? `${rows.length > 1 ? 'Recent orders' : 'Latest order'} of this item from ${names.supplier}`
       : ev.tier === 2
         ? `Ordered ${names.brand?.trim() || 'this brand'}, ${times(ev.count ?? 1)}`
         : `Ordered in ${names.family?.trim() || 'this family'}, ${times(ev.count ?? 1)}`
@@ -500,11 +548,14 @@ export function evidenceBlock(
     counts.push({ label: 'Late', value: `${late} of ${deliveries}`, tone: late > 0 && reliabilityBand({ deliveries, onTime: deliveries - late }) === 3 ? 'late' : undefined })
     if (stats?.median_days_late != null) counts.push({ label: 'Late ones', value: `median ${Math.round(stats.median_days_late)} days`, tone: 'late' })
   }
+  const ordered = stats?.orders_count ?? 0
+  if (ordered > 0) counts.push({ label: 'Ordered from', value: times(ordered) })
   if (ev.orderNumber !== null) counts.push({ label: 'Last order', value: `${ref}${ev.placedOn ? ` · ${dmy(ev.placedOn)}` : ''}` })
   return {
     title,
-    countText: ev.count !== null && ev.tier <= 1 ? `1 of ${ev.count}` : null,
-    order: { ref, what, when: whenParts.join(' · '), result, detail, tone: state.kind === 'late' ? 'late' : state.kind === 'waiting' ? 'wait' : null },
+    countText: ev.count !== null && ev.count > 0 ? `${Math.min(rows.length, ev.count)} of ${ev.count}` : null,
+    order: rows[0],
+    orders: rows,
     counts,
     line: evidenceReason(ev, names).text,
   }

@@ -80,24 +80,27 @@ function Price({ fact, source }: { fact: PriceFact; source?: boolean }) {
 
 /** A8: the orders behind the supplier (evidence_* of supplier_item_memory, and the delivery counts). "Delivered after N days": there is no Received step. */
 function EvidenceView({ block }: { block: EvidenceBlock }) {
-  const o = block.order
   return (
     <div className="border-t" data-evidence-block>
       <header className="flex items-center justify-between gap-3 border-b bg-canvas px-4 py-2 text-xs font-medium text-fg-muted">
         <h5 className="font-medium">{block.title}</h5>
         {block.countText ? <span className="num text-fg-2">{block.countText}</span> : null}
       </header>
-      <div className="grid grid-cols-[86px_minmax(0,1fr)_auto] gap-3 px-4 py-2 text-sm">
-        <span className="num pt-[2px] text-xs font-medium">{o.ref}</span>
-        <span className="grid min-w-0 gap-[1px]">
-          <span className="text-pretty">{o.what}</span>
-          {o.when ? <span className="num text-xs text-fg-muted">{o.when}</span> : null}
-        </span>
-        <span className="grid justify-items-end gap-[1px] text-right">
-          <b className={cn('text-sm font-medium', o.tone === 'late' && 'text-tone-warning-fg', o.tone === 'wait' && 'font-regular text-fg-muted')}>{o.result}</b>
-          {o.detail ? <span className="text-xs text-fg-muted">{o.detail}</span> : null}
-        </span>
-      </div>
+      <ul className="m-0 list-none p-0">
+        {block.orders.map((o, i) => (
+          <li key={`${i}-${o.ref}`} className="grid grid-cols-[86px_minmax(0,1fr)_auto] gap-3 border-t px-4 py-2 text-sm first:border-t-0" data-evidence-order>
+            <span className="num pt-[2px] text-xs font-medium">{o.ref}</span>
+            <span className="grid min-w-0 gap-[1px]">
+              <span className="text-pretty">{o.what}</span>
+              {o.when ? <span className="num text-xs text-fg-muted">{o.when}</span> : null}
+            </span>
+            <span className="grid justify-items-end gap-[1px] text-right">
+              <b className={cn('text-sm font-medium', o.tone === 'late' && 'text-tone-warning-fg', o.tone === 'wait' && 'font-regular text-fg-muted')}>{o.result}</b>
+              {o.detail ? <span className="text-xs text-fg-muted">{o.detail}</span> : null}
+            </span>
+          </li>
+        ))}
+      </ul>
       {block.counts.length > 0 ? (
         <dl className="m-0 flex flex-wrap gap-x-6 gap-y-2 border-t bg-surface px-4 py-3">
           {block.counts.map(c => (
@@ -138,7 +141,7 @@ export function MemoryCardView({
   return (
     <section id={id} aria-label={`What we know about ${supplierName}`} className="overflow-hidden rounded border bg-surface" data-memory-card>
       <header className="flex flex-wrap items-start gap-x-3 gap-y-1 border-b bg-sunken px-4 py-3">
-        <div className="min-w-0 flex-1 basis-60">
+        <div className="min-w-0 flex-1 basis-[15rem]">
           <h4 className="text-sm font-semibold">What we know about {supplierName}</h4>
           <p className="mt-1 text-xs text-fg-muted text-pretty">
             {itemLine} {card.matchedOn}

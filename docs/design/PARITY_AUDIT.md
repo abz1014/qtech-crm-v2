@@ -969,7 +969,7 @@ Main at `778084b` (Merge p8/import-rules). Read-only; no product code changed. O
 | E-MN-03 | Receivables opens with the most overdue row selected and the Payment reminder panel beside the table | No row selected on open, so the panel (the main thing on this screen) is not seen; table is full width | medium | FIXED a86f71b (opens on the most overdue row; panel beside the table from 1280 px) |
 | E-MN-04 | "Overdue" figure in red | Same colour as the other figures | low | FIXED a86f71b |
 | E-MN-05 | Footnote: "...Copying the text records the reminder and moves the item to Waiting on Today." | First sentence only | low | FIXED a86f71b |
-| E-MN-06 | Money content spans the full page (40 px gutters at 1440; 1328 px of content) | All Money views sit in a centred column of about 1216 px with 112 px side margins; Orders, RFQs and Settings are wider | low | NEW |
+| E-MN-06 | Money content spans the full page (40 px gutters at 1440; 1328 px of content) | All Money views sit in a centred column of about 1216 px with 112 px side margins; Orders, RFQs and Settings are wider | low | FIXED 7b3e65d |
 | E-MN-07 | "By invoice date" is a shaded chip with a calendar icon | Plain text with an icon, no chip background | low | FIXED a86f71b |
 | E-MN-08 | GST register footnote: "...see Cash month." | "...see Receivables." (the Cash month tab does not exist yet; follows E-MN-01) | low | NEW (resolves with M10) |
 
@@ -982,14 +982,14 @@ Main at `778084b` (Merge p8/import-rules). Read-only; no product code changed. O
 ### Settings: Exchange rates (`/settings/exchange-rates`)
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-XR-01 | Rate table fits its card; Band chip fully shown | At 1440 the table is clipped at the card edge: "Stale, 1" is cut off, Fresh touches the border; the card is narrower than the page | medium | NEW |
-| E-XR-02 | Right of the table header: "Automatic update ran Fri 27 Nov, 02:10"; per-row "Add rate" on stale and unusable rows; yellow banner "GBP has not been updated for 54 days..."; "Last automatic: 372.40 on 4 Oct" under the currency field | None of the four | low | NEW |
+| E-XR-01 | Rate table fits its card; Band chip fully shown | At 1440 the table is clipped at the card edge: "Stale, 1" is cut off, Fresh touches the border; the card is narrower than the page | medium | FIXED 7b3e65d |
+| E-XR-02 | Right of the table header: "Automatic update ran Fri 27 Nov, 02:10"; per-row "Add rate" on stale and unusable rows; yellow banner "GBP has not been updated for 54 days..."; "Last automatic: 372.40 on 4 Oct" under the currency field | None of the four | low | FIXED 7b3e65d |
 | E-XR-03 | "Recent USD rates" list on a full-width card | Same list, narrower card, currency select in the header | low | NEW (cosmetic) |
 
 ### Settings: Team
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-ST-01 | Deactivated row: "Reactivate" button sits inside the Actions column | The button is cut off at the right edge of the card at 1440 (the shot shows "Reactivate" clipped with a stray underscore) | low | NEW |
+| E-ST-01 | Deactivated row: "Reactivate" button sits inside the Actions column | The button is cut off at the right edge of the card at 1440 (the shot shows "Reactivate" clipped with a stray underscore) | low | FIXED 7b3e65d |
 
 ## Already approved or KEPT, seen again and not counted
 
@@ -1026,7 +1026,7 @@ Main at `8ac8983` plus Part E (`6a9fbde`). Read-only; no product code changed. T
 | E-SH-01 | STILL OPEN | Orders and Money still show no count (`useNavCounts.ts`) |
 | E-MN-06 | STILL OPEN | Money and the Month-end pages still sit in the centred 1216 px column; the Month-end frames span the page |
 | E-MN-08 | STILL OPEN | `GstRegisterPage.tsx:315` still says "see Receivables" ("Cash month" in the mockup, now P&L) |
-| E-ST-01 | WIDENED | See E2-ST-01 |
+| E-ST-01 | WIDENED | See E2-ST-01 (FIXED 3eb7054) |
 
 ## Counts of NEW items (Part E2)
 
@@ -1103,7 +1103,7 @@ All six reports match in header, key-figure row, Export CSV and the footnote cop
 ### Settings: Team
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E2-ST-01 | Name and email fully shown; "Reactivate" inside the Actions cell; table fills the card | In the current shot the Name column is about 60 px wide: "Test Adm", "admin@te:"; Reactivate is cut at the right edge; the table stops before the card edge; the density toggle sits in the toolbar over the filter note. Phone: the back bar, rows, chip and bottom sheet now match (A-34 to A-36 hold) | medium | NEW (replaces E-ST-01) |
+| E2-ST-01 | Name and email fully shown; "Reactivate" inside the Actions cell; table fills the card | In the current shot the Name column is about 60 px wide: "Test Adm", "admin@te:"; Reactivate is cut at the right edge; the table stops before the card edge; the density toggle sits in the toolbar over the filter note. Phone: the back bar, rows, chip and bottom sheet now match (A-34 to A-36 hold) | medium | FIXED 3eb7054 (replaces E-ST-01) |
 
 ### Settings: Company profile (admin incomplete, filled, sales read-only; 1440 and 375)
 Matches the mockup frame by frame: banner with Add them, red invalid fields with the two inline messages, "Needed for PDFs" notes, Business details, Tax, Bank, Quotations and purchase orders cards, the sales read-only list with "Not set" flags, the "Only an admin can edit" tag, the "View only" tag in the nav, and the save bar. No NEW item.

@@ -61,7 +61,7 @@ export function PasteReplyPanel({
 
       {set.regret ? (
         <div className="flex flex-wrap items-center gap-3 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
-          <span className="min-w-0 flex-1 basis-56">{`They say they can't quote. Reason: ${reasonLabel(set.regret.reason)}.`}</span>
+          <span className="min-w-0 flex-1 basis-[14rem]">{`They say they can't quote. Reason: ${reasonLabel(set.regret.reason)}.`}</span>
           <Button variant="primary" size="sm" busy={busy} busyLabel="Saving" onClick={() => onCantQuote(set.regret!.reason)}>
             {"Mark can't quote"}
           </Button>

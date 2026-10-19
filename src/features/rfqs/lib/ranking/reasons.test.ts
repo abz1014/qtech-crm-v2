@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   approxPkr,
   bandSizeOf,
+  evidenceBlock,
+  evidenceFromFeed,
   evidenceOf,
   evidenceReason,
   pkrTotal,
@@ -125,6 +127,42 @@ describe('evidence: order number, date, days to delivery', () => {
   it('reads the columns of supplier_item_memory, and null when there is no order', () => {
     expect(evidenceOf({ supplier_id: 's', best_tier: 1, supplied_before: true })).toBeNull()
     expect(evidenceOf({ supplier_id: 's', best_tier: 1, supplied_before: true, evidence_tier: 1, evidence_order_number: 31, evidence_delivered_after_days: 19, evidence_count_at_tier: 3 })).toMatchObject({ tier: 1, orderNumber: 31, deliveredAfterDays: 19, count: 3 })
+  })
+})
+
+describe('the memory card evidence block: up to three recent orders', () => {
+  const feed = [
+    { evidence_rank: 2, tier: 1, order_number: 24, item_desc: 'Siemens SITRANS P320', qty: 2, placed_on: '2025-12-09', expected_on: '2025-12-30', delivered_on: '2025-12-27', delivered_after_days: 18, count_at_tier: 4 },
+    { evidence_rank: 1, tier: 1, order_number: 31, item_desc: 'Siemens SITRANS P320', qty: 4, placed_on: '2026-03-12', expected_on: '2026-03-26', delivered_on: '2026-03-31', delivered_after_days: 19, count_at_tier: 4 },
+    { evidence_rank: 3, tier: 1, order_number: 16, item_desc: 'Siemens SITRANS P320', qty: 1, placed_on: '2025-09-02', expected_on: '2025-09-16', delivered_on: '2025-09-14', delivered_after_days: 12, count_at_tier: 4 },
+  ]
+  const names = { supplier: 'Metro Process Controls' }
+  it('orders the feed by rank and shows the three orders with their own days, the count out of the legs, and "Ordered from N times"', () => {
+    const list = evidenceFromFeed(feed)
+    expect(list.map(e => e.orderNumber)).toEqual([31, 24, 16])
+    const b = evidenceBlock(list[0], names, { deliveries: 6, late: 1, orders_count: 4 }, '2026-11-27', list)
+    expect(b.title).toBe('Recent orders of this item from Metro Process Controls')
+    expect(b.countText).toBe('3 of 4')
+    expect(b.orders.map(o => [o.ref, o.result, o.detail])).toEqual([
+      ['ORD-0031', 'delivered after 19 days', 'expected in 14 · late'],
+      ['ORD-0024', 'delivered after 18 days', 'expected in 21 · on time'],
+      ['ORD-0016', 'delivered after 12 days', 'expected in 14 · on time'],
+    ])
+    expect(b.order).toEqual(b.orders[0])
+    expect(b.counts.map(c => [c.label, c.value])).toContainEqual(['Ordered from', '4 times'])
+  })
+  it('without the feed it still shows the one order, as before, and says nothing about order counts it does not have', () => {
+    const b = evidenceBlock(ev, names, { deliveries: 3, late: 0 }, '2026-11-27')
+    expect(b.orders).toHaveLength(1)
+    expect(b.title).toBe('Latest order of this item from Metro Process Controls')
+    expect(b.counts.map(c => c.label)).not.toContain('Ordered from')
+  })
+  it('an order that is not delivered yet says so in the family-level block', () => {
+    const e = { ...ev, tier: 3, count: 6, deliveredOn: null, deliveredAfterDays: null, expectedOn: '2026-11-22', placedOn: '2026-11-01' }
+    const b = evidenceBlock(e, { supplier: 'X', family: 'Pressure transmitters' }, null, '2026-11-27', [e])
+    expect(b.title).toBe('Ordered in Pressure transmitters, 6 times')
+    expect(b.orders[0]).toMatchObject({ result: 'not delivered yet', detail: '5 days past expected', tone: 'wait' })
+    expect(JSON.stringify(b)).not.toMatch(/receiv/i)
   })
 })
 
