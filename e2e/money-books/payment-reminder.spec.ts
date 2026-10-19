@@ -173,6 +173,7 @@ test.describe('Today v3 money rules (M08)', () => {
     await page.getByRole('radio', { name: /^Money/ }).click()
     await expect(page.locator(tcs)).toHaveCount(1)
     await expect(page.locator(tcs)).toContainText(/\d+ invoices? not sent by TCS/)
+    await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Money\s*\d+$/ })).toBeVisible() // E-SH-01
     await review(page, 'm08-today-money-1440')
     await page.locator(`${tcs} button`).click()
     await expect(page.getByRole('button', { name: /Open GST register/ })).toBeVisible()
@@ -192,6 +193,7 @@ test.describe('Today v3 money rules (M08)', () => {
     })
     await openAs(page, 'engineer', '/today')
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /Money/ })).toHaveCount(0) // E-SH-01
     for (const rule of ['tcs_not_sent', 'fbr_attention', 'costs_incomplete', 'recurring_due', 'payment_overdue', 'close_month']) {
       await expect(page.locator(`li[data-rule="${rule}"]`)).toHaveCount(0)
     }

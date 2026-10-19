@@ -16,6 +16,8 @@ export interface FakeCall {
 
 export interface FakeResult {
   data?: unknown
+  /** The exact row count a `{ count: 'exact' }` read returns. */
+  count?: number | null
   error?: { code?: string; message: string; details?: string | null } | null
 }
 
@@ -37,7 +39,7 @@ export function installFakeDb(respond: (call: FakeCall) => FakeResult | Promise<
           if (prop === 'then') {
             return (resolve: (v: unknown) => void, reject: (e: unknown) => void) => {
               calls.push(call)
-              Promise.resolve(respond(call)).then(r => resolve({ data: r.data ?? null, error: r.error ?? null }), reject)
+              Promise.resolve(respond(call)).then(r => resolve({ data: r.data ?? null, error: r.error ?? null, count: r.count ?? null }), reject)
             }
           }
           return (...args: unknown[]) => {

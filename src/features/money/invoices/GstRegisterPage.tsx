@@ -194,7 +194,7 @@ export function GstRegisterPage() {
   const header = (
     <div className="flex flex-wrap items-center gap-3">
       <h2 className="text-base font-semibold">GST register</h2>
-      <span className="inline-flex items-center gap-[6px] text-xs text-fg-muted">
+      <span className="inline-flex h-6 items-center gap-[6px] rounded border border-line-strong bg-selected px-2 text-xs text-fg-2">
         <Icon icon={CalendarDays} size="chip" />
         By invoice date
       </span>

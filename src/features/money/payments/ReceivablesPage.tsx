@@ -57,8 +57,9 @@ export function ReceivablesPage() {
     [rows],
   )
   const shown = useMemo(() => sortReceivables(filterReceivables(rows, filter)), [rows, filter])
-  // The panel follows the picked row; before a pick (or when it leaves the list) it follows the first row.
-  const selected = shown.find(r => r.orderId === picked) ?? shown[0] ?? null
+  // The panel follows the picked row; before a pick (or when it leaves the list) it follows the most overdue row (E-MN-03), else the first.
+  const mostOverdue = shown.find(r => r.state === 'overdue') ?? shown[0] ?? null
+  const selected = shown.find(r => r.orderId === picked) ?? mostOverdue
   const pick = (r: ReceivableRow) => {
     setPicked(r.orderId)
     // Under 1280 px the panel is below the table: bring it into view.
@@ -174,7 +175,7 @@ export function ReceivablesPage() {
         label="Balance by status"
         items={[
           { label: 'Outstanding', amount: totals.outstanding, sub: `${totals.openCount} open ${totals.openCount === 1 ? 'order' : 'orders'}` },
-          { label: 'Overdue', amount: totals.overdue, sub: `${totals.overdueCount} ${totals.overdueCount === 1 ? 'order' : 'orders'}${totals.overdueCount ? `, ${reminderPhrase(totals.overdueCount, totals.reminderDueCount)}` : ''}` },
+          { label: 'Overdue', amount: totals.overdue, tone: totals.overdue > 0 ? 'danger' : undefined, sub: `${totals.overdueCount} ${totals.overdueCount === 1 ? 'order' : 'orders'}${totals.overdueCount ? `, ${reminderPhrase(totals.overdueCount, totals.reminderDueCount)}` : ''}` },
           { label: 'Not yet due', amount: totals.notYetDue, sub: `${totals.notYetDueCount} ${totals.notYetDueCount === 1 ? 'order' : 'orders'}, invoiced` },
           { label: 'Not invoiced yet', amount: totals.notInvoiced, sub: `${totals.notInvoicedCount} ${totals.notInvoicedCount === 1 ? 'order' : 'orders'}, balance from items` },
         ]}
