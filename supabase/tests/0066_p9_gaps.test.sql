@@ -1,7 +1,7 @@
 begin;
 select * from no_plan();
 
--- P9 (migration 0058): v_supplier_stats.orders_count, supplier_item_evidence() and money_exceptions_input().
+-- P9 (migration 0066): v_supplier_stats.orders_count, supplier_item_evidence() and money_exceptions_input().
 -- Fixture users come from supabase/seed.sql: admin a0..01, sales a0..02, engineer a0..03, deactivated a0..04.
 -- Fixtures are inserted as the table owner with the admin's claims; the functions are then called as each role.
 -- Ids are literal UUIDs in the assertions (pg_temp helpers are not callable after SET ROLE): the last group is the fixture number

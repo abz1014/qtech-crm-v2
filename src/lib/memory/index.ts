@@ -81,7 +81,7 @@ export interface MemoryStats {
   last_contact?: string | null
   legacy_asked?: number | null
   prices_hidden?: number | null
-  /** Non-cancelled orders with a leg for this supplier (v_supplier_stats.orders_count, 0058). */
+  /** Non-cancelled orders with a leg for this supplier (v_supplier_stats.orders_count, 0066). */
   orders_count?: number | null
   brand_names?: readonly string[] | null
 }

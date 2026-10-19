@@ -2,7 +2,7 @@ import { requireSupabase, unwrap } from '@/lib/supabase'
 import type { ReconciliationInput } from '@/lib/reconciliation'
 
 /*
- * The rows the reconciliation checks read (M07). ADMIN ONLY. The database does the heavy part: money_exceptions_input() (0058)
+ * The rows the reconciliation checks read (M07). ADMIN ONLY. The database does the heavy part: money_exceptions_input() (0066)
  * returns only the rows that can produce a finding, plus the orders and money rows those findings look up, in the shape of
  * ReconciliationInput; for anyone who is not an admin it returns NULL, which reads as "nothing to check". The checks themselves
  * stay pure (src/lib/reconciliation.ts) and decide exactly what is an exception.
