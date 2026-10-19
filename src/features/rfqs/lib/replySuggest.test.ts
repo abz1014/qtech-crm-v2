@@ -33,6 +33,20 @@ describe('suggestFromReply', () => {
     expect(set.currency).toBe('CNY')
   })
 
+  it('with no currency on file and none in the reply, a bare price is not selectable until one is picked (audit R1)', () => {
+    const text = 'Cerabar PMC71 price 2980 each, 10 days'
+    const set = suggestFromReply(parseSupplierReply(text, items, { inheritReplyLevel: false }), items, '')
+    const s = set.suggestions.find(x => x.itemId === 'a')
+    expect(s?.selectable).toBe(false)
+    expect(s?.blocked).toMatch(/pick the supplier/)
+  })
+
+  it('with no currency on file, a currency named in the reply picks it', () => {
+    const set = suggestFromReply(parseSupplierReply('Cerabar PMC71: USD 438', items), items, '')
+    expect(set.currency).toBe('USD')
+    expect(set.suggestions.find(x => x.itemId === 'a')?.selectable).toBe(true)
+  })
+
   it('an offer in another currency than the row is not selectable', () => {
     const text = ['Cerabar PMC71: USD 438', 'SITRANS LR250: USD 1390', 'extra: EUR 5'].join('\n')
     const set = suggestFromReply(parseSupplierReply(text, items), items, 'USD')
