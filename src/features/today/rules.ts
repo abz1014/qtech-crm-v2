@@ -67,6 +67,8 @@ export const THRESHOLDS = {
   tcsSendDays: 3,
   /** TCS not sent only looks at invoices this recent (calendar days), so old register rows never raise it. */
   tcsWindowDays: 60,
+  /** An engineer's planned commissioning shows from this many working days before the date (the "next 5 days" group). */
+  jobAheadDays: 5,
 } as const
 
 // ---------------------------------------------------------------- helpers
@@ -149,6 +151,9 @@ function tabFor(rule: RuleKey): TodayTab {
     case 'tcs_not_sent':
     case 'recurring_due':
       return 'money'
+    case 'job_commissioning':
+    case 'job_on_site':
+      return 'sourcing'
     default:
       return 'sourcing'
   }
@@ -208,7 +213,7 @@ export function ruleRelayAnswers(ctx: TodayInputs): Entry[] {
           rule: 'relay_answers',
           subjectId: i.id,
           tab: tabFor('relay_answers'),
-          title: `Answer received on ${n} ${n === 1 ? 'question' : 'questions'}: relay to ${i.supplierName}`,
+          title: `Answer received on ${n} ${n === 1 ? 'question' : 'questions'}: send it to ${i.supplierName}`,
           ref: rfqRef(r.number),
           party: r.companyName,
           actionDueOn: i.answeredOn ?? ctx.today, // the day the customer answered
@@ -237,7 +242,7 @@ export function ruleNotFloated(ctx: TodayInputs): Entry[] {
           rule: 'not_floated',
           subjectId: r.id,
           tab: tabFor('not_floated'),
-          title: 'Not floated to suppliers yet',
+          title: 'Not sent to suppliers yet',
           ref: rfqRef(r.number),
           party: r.companyName,
           actionDueOn: r.receivedOn, // due the day it arrived (+0): floating is the first thing to do
@@ -288,7 +293,7 @@ export function ruleChaseSupplier(ctx: TodayInputs): Entry[] {
         rule: 'chase_supplier',
         subjectId: i.id,
         tab: tabFor('chase_supplier'),
-        title: 'Chase supplier for a quote',
+        title: 'Chase supplier for a price',
         waitingTitle: 'Supplier chased',
         ref: rfqRef(r.number),
         party: i.supplierName,
@@ -313,10 +318,10 @@ export function ruleChaseSupplier(ctx: TodayInputs): Entry[] {
 function dueWords(dueOn: string, today: string, dueTime?: string | null): string {
   const d = daysBetween(today, dueOn)
   const at = timeText(dueTime)
-  if (d < 0) return `Bid ${-d} ${-d === 1 ? 'day' : 'days'} overdue`
-  if (d === 0) return `Bid due today${at ? `, ${at}` : ''}`
-  if (d === 1) return `Bid due tomorrow${at ? `, ${at}` : ''}`
-  return `Bid due ${longDay(dueOn)}${at ? `, ${at}` : ''}`
+  if (d < 0) return `Quotation ${-d} ${-d === 1 ? 'day' : 'days'} overdue`
+  if (d === 0) return `Quotation due today${at ? `, ${at}` : ''}`
+  if (d === 1) return `Quotation due tomorrow${at ? `, ${at}` : ''}`
+  return `Quotation due ${longDay(dueOn)}${at ? `, ${at}` : ''}`
 }
 
 /** Bid due: still to bid, and due within 5 days (or already late). */
@@ -360,7 +365,7 @@ export function ruleDecisionOverdue(ctx: TodayInputs): Entry[] {
             rule: 'decision_overdue',
             subjectId: r.id,
             tab: tabFor('decision_overdue'),
-            title: 'Quotation expired: re-confirm prices before re-issuing',
+            title: 'Quotation expired: check prices before you revise it',
             ref: rfqRef(r.number),
             party: r.companyName,
             actionDueOn: r.quotationValidUntil,
@@ -385,7 +390,7 @@ export function ruleDecisionOverdue(ctx: TodayInputs): Entry[] {
           rule: 'decision_overdue',
           subjectId: r.id,
           tab: tabFor('decision_overdue'),
-          title: `No decision yet: bid sent ${since} days ago`,
+          title: `No decision yet: quotation sent ${since} days ago`,
           ref: rfqRef(r.number),
           party: r.companyName,
           actionDueOn: decisionDue,
@@ -691,7 +696,8 @@ export function ruleCloseMonth(ctx: TodayInputs): Entry[] {
         group: 'ready',
         badge: { text: n > 0 ? `${n}` : 'ready', tone: 'neutral' },
         isPriority: false,
-        href: '/money',
+        // the month-end checklist for that month (it was /money, which opened the GST register: audit A5)
+        href: `/money/month-end?month=${ctx.monthEnd.month.slice(0, 7)}`,
         number: 0,
       },
       ctx.today,
@@ -737,7 +743,7 @@ export function ruleCostsIncomplete(ctx: TodayInputs): Entry[] {
         rule: 'costs_incomplete',
         subjectId: ROLLUP_SUBJECT.costs_incomplete,
         tab: tabFor('costs_incomplete'),
-        title: `Costs not marked complete on ${plural(rows.length, 'paid order', 'paid orders')}`,
+        title: `Margin not final on ${plural(rows.length, 'paid order', 'paid orders')}`,
         ref: 'Margins',
         party: noExpected > 0 ? `${noExpected} with no expected cost` : `Oldest ${orderRef(oldest.orderNumber)}`,
         actionDueOn: null,
@@ -770,7 +776,7 @@ export function ruleFbrAttention(ctx: TodayInputs): Entry[] {
         subjectId: ROLLUP_SUBJECT.fbr_attention,
         tab: tabFor('fbr_attention'),
         title: `FBR: ${plural(rows.length, 'invoice needs', 'invoices need')} attention`,
-        ref: 'GST register',
+        ref: 'Invoices & GST',
         party: exceptions > 0 ? `${plural(exceptions, 'step', 'steps')} recorded out of order` : oldest ? `Oldest ${MONTH_NAMES[Number(oldest.slice(5, 7)) - 1]} ${oldest.slice(0, 4)}` : 'Tax not deposited',
         actionDueOn: null,
         group: 'ready',
@@ -805,7 +811,7 @@ export function ruleTcsNotSent(ctx: TodayInputs): Entry[] {
         subjectId: ROLLUP_SUBJECT.tcs_not_sent,
         tab: tabFor('tcs_not_sent'),
         title: `${plural(rows.length, 'invoice', 'invoices')} not sent by TCS`,
-        ref: 'GST register',
+        ref: 'Invoices & GST',
         party: `Oldest invoice ${late} ${late === 1 ? 'day' : 'days'} ago`,
         actionDueOn: null,
         group: 'ready',
@@ -851,6 +857,87 @@ export function ruleRecurringDue(ctx: TodayInputs): Entry[] {
       ctx.today,
     ),
   ]
+}
+
+// ---------------------------------------------------------------- an engineer's own jobs
+
+/**
+ * Commissioning soon (engineers): an order the engineer is ASSIGNED to (order_engineers, not ownership) has commissioning planned
+ * within the next 5 working days, today, or on a day that has passed without "Mark done". One item per order, dated on the planned
+ * day, so it turns red on the day and stays red until it is marked done or moved.
+ */
+export function ruleJobCommissioning(ctx: TodayInputs): Entry[] {
+  if (ctx.user.role !== 'engineer') return []
+  const out: Entry[] = []
+  for (const j of ctx.jobs ?? []) {
+    if (j.commissioningState !== 'planned' || !j.plannedOn) continue
+    if (j.plannedOn > ctx.today && businessDaysBetween(ctx.today, j.plannedOn) > THRESHOLDS.jobAheadDays) continue
+    const d = daysBetween(ctx.today, j.plannedOn)
+    const title =
+      d < 0
+        ? `Commissioning was planned for ${longDay(j.plannedOn)}: mark it done or move it`
+        : d === 0
+          ? 'Commissioning today'
+          : d === 1
+            ? 'Commissioning tomorrow'
+            : `Commissioning on ${longDay(j.plannedOn)}`
+    out.push(
+      build(
+        {
+          rule: 'job_commissioning',
+          subjectId: j.orderId,
+          tab: tabFor('job_commissioning'),
+          title,
+          ref: orderRef(j.orderNumber),
+          party: j.siteName ? `${j.customerName}, ${j.siteName}` : j.customerName,
+          actionDueOn: j.plannedOn,
+          badge: dueBadge(j.plannedOn, ctx.today),
+          isPriority: false,
+          orderId: j.orderId,
+          href: `/orders/${j.orderId}`,
+          number: j.orderNumber,
+        },
+        ctx.today,
+      ),
+    )
+  }
+  return out
+}
+
+/**
+ * Goods on site (engineers): on an order the engineer is assigned to, the goods have reached the customer's site (all, or some)
+ * and commissioning has no date yet. Always "ready to move", aged from the delivery. An order the engineer also owns already
+ * shows "Plan commissioning", so it is not said twice.
+ */
+export function ruleJobOnSite(ctx: TodayInputs): Entry[] {
+  if (ctx.user.role !== 'engineer') return []
+  const out: Entry[] = []
+  for (const j of ctx.jobs ?? []) {
+    if (j.commissioningState !== 'to_plan') continue
+    if (j.goodsState !== 'delivered' && j.goodsState !== 'partly_delivered') continue
+    if (j.ownerId === ctx.user.id) continue
+    out.push(
+      build(
+        {
+          rule: 'job_on_site',
+          subjectId: j.orderId,
+          tab: tabFor('job_on_site'),
+          title: j.goodsState === 'delivered' ? 'Goods delivered to site: set the commissioning date' : 'Some goods delivered to site: set the commissioning date',
+          ref: orderRef(j.orderNumber),
+          party: j.siteName ? `${j.customerName}, ${j.siteName}` : j.customerName,
+          actionDueOn: j.deliveredOn,
+          group: 'ready',
+          badge: ageBadge(j.deliveredOn, ctx.today),
+          isPriority: false,
+          orderId: j.orderId,
+          href: `/orders/${j.orderId}`,
+          number: j.orderNumber,
+        },
+        ctx.today,
+      ),
+    )
+  }
+  return out
 }
 
 // ---------------------------------------------------------------- snoozes, grouping, the whole list
@@ -906,6 +993,8 @@ export const RULES: Record<RuleKey, (ctx: TodayInputs) => Entry[]> = {
   fbr_attention: ruleFbrAttention,
   tcs_not_sent: ruleTcsNotSent,
   recurring_due: ruleRecurringDue,
+  job_commissioning: ruleJobCommissioning,
+  job_on_site: ruleJobOnSite,
 }
 
 /** The whole Today list for one person on one day: every rule, snoozes subtracted, grouped. Engineers never get a money rule. */

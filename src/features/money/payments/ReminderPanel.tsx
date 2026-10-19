@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { CircleCheck, Copy, History, Mail, MessageCircle } from 'lucide-react'
+import { CircleCheck, Copy, ExternalLink, History, Mail, MessageCircle } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { copyToClipboard } from '@/lib/clipboard'
 import { formatDay } from '@/lib/formatDay'
@@ -247,10 +248,16 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
 
   return (
     <PanelShell title="Payment reminder" meta={meta} aside={channelControl}>
-      <p className="flex flex-wrap items-center gap-2 border-b px-5 py-3 text-xs text-fg-2 [&_.num]:text-fg" data-testid="reminder-state">
-        <Icon icon={History} size="sm" className="text-fg-muted" />
-        <span>{stateText}</span>
-      </p>
+      <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3 text-sm">
+        <p className="flex flex-wrap items-center gap-2 text-fg-2 [&_.num]:text-fg" data-testid="reminder-state">
+          <Icon icon={History} size="sm" className="text-fg-muted" />
+          <span>{stateText}</span>
+        </p>
+        <Link to={`/orders/${row.orderId}`} className="ml-auto inline-flex min-h-touch items-center gap-1 font-medium text-primary hover:underline md:min-h-0">
+          <Icon icon={ExternalLink} size="sm" />
+          Open order
+        </Link>
+      </div>
       <div className="px-5 py-4">
         <div className="mb-3 flex items-center gap-2 border-b pb-3 text-sm text-fg-2">
           <Icon icon={channel === 'whatsapp' ? MessageCircle : Mail} size="sm" className="text-fg-muted" />
@@ -287,7 +294,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
             <Button variant="primary" icon={Copy} busy={busy} busyLabel="Marking" onClick={() => void copyAndMark()} className="min-h-touch md:min-h-0">
               Copy and mark reminded
             </Button>
-            <span className="min-w-[10rem] flex-1 text-right text-xs text-fg-muted">{toneText}</span>
+            <span className="min-w-[10rem] flex-1 text-right text-sm text-fg-muted">{toneText}</span>
           </>
         )}
       </footer>

@@ -8,6 +8,8 @@ import type { SessionState } from '@/app/session'
 import { PlainError } from '@/lib/pgErrors'
 import type { TeamMember } from '@/features/settings/api'
 import { TeamPage } from '@/features/settings/TeamPage'
+import { useMobileBarConfig } from '@/app/shell/MobileBarContext'
+import { MobileBarProvider } from '@/app/shell/MobileBarProvider'
 import { ToastProvider } from '@/ui/Toast'
 import { axeViolations } from '@/test/axe'
 
@@ -53,18 +55,26 @@ const TEAM = [
 
 const me: SessionState = { status: 'signed-in', user: { id: 'bilal', name: 'Bilal Chaudhry', role: 'admin' } }
 
+function BackProbe() {
+  const c = useMobileBarConfig()
+  return <output data-testid="bar-back">{c?.back?.to ?? ''}</output>
+}
+
 function mount() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
       <SessionProvider value={me}>
-        <MemoryRouter>
-          <ToastProvider>
-            <div data-testid="page">
-              <TeamPage />
-            </div>
-          </ToastProvider>
-        </MemoryRouter>
+        <MobileBarProvider>
+          <BackProbe />
+          <MemoryRouter>
+            <ToastProvider>
+              <div data-testid="page">
+                <TeamPage />
+              </div>
+            </ToastProvider>
+          </MemoryRouter>
+        </MobileBarProvider>
       </SessionProvider>
     </QueryClientProvider>,
   )
@@ -99,6 +109,12 @@ describe('Team screen', () => {
     expect(screen.getByText('Deactivated people keep their name on everything they created.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reactivate Saad Hussain' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Actions for Saad Hussain' })).toBeNull()
+  })
+
+  it('on a phone the back arrow returns to the Settings list, not to Today', async () => {
+    mount()
+    await screen.findByText('Ayesha Rana')
+    expect(screen.getByTestId('bar-back')).toHaveTextContent('/settings')
   })
 
   it('searches by name or email and filters by status', async () => {

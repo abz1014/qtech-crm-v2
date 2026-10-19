@@ -244,7 +244,7 @@ export async function withSingleLeg<T extends { order_id?: string | null; catego
 
 export interface LegOption {
   id: string
-  /** "leg A": by order of creation. */
+  /** "supplier order A": by order of creation (owner glossary 2026-10-19; the database still calls it a leg). */
   label: string
   supplierId: string
   supplierName: string
@@ -254,7 +254,7 @@ export async function listLegOptions(orderId: string): Promise<LegOption[]> {
   const db = requireSupabase()
   const rows = unwrap(await db.from('supplier_orders').select('id, supplier_id, created_at').eq('order_id', orderId).order('created_at')) ?? []
   const names = await companyNames([...new Set(rows.map(r => r.supplier_id))])
-  return rows.map((r, i) => ({ id: r.id, label: `leg ${String.fromCharCode(65 + i)}`, supplierId: r.supplier_id, supplierName: names[r.supplier_id] ?? '' }))
+  return rows.map((r, i) => ({ id: r.id, label: `supplier order ${String.fromCharCode(65 + i)}`, supplierId: r.supplier_id, supplierName: names[r.supplier_id] ?? '' }))
 }
 
 // ------------------------------------------------------------------ recurring templates

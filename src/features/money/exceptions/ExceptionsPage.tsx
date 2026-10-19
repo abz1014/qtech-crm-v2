@@ -9,11 +9,13 @@ import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { Tag } from '@/ui/Tag'
-import { MoneyFrame } from '@/features/money/MoneyFrame'
+import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
+import { Tip } from '@/features/money/Tip'
 import { useReconciliationInput } from '@/features/money/hooks'
 
 /*
- * Money > Exceptions (M07): the reconciliation checks over the money views, for an admin. Each line is one fact with the order it
+ * Money > Month end > Things to check (M07; was "Exceptions", owner glossary 2026-10-19): the reconciliation checks over the money
+ * views, for an admin, reached from the Month end checklist. Each line is one fact with the order it
  * is about, newest category first by severity. It is not a data-quality score: it lists what needs a human look, and says "all in
  * balance" when nothing does. Always checks everything (no period filter): an old mistake is still a mistake.
  */
@@ -25,7 +27,7 @@ function Row({ e }: { e: ReconciliationException }) {
       <div className="grid min-w-0 flex-1 gap-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="sr-only">{critical ? 'Critical.' : 'Warning.'}</span>
-          <Tag className="h-6 px-2 font-sans text-xs">{e.category}</Tag>
+          <Tag className="h-6 px-2 font-sans text-sm">{e.category}</Tag>
           {e.orderId ? (
             <Link to={`/orders/${e.orderId}`} className="rounded text-sm font-medium text-primary hover:underline">
               View order
@@ -49,21 +51,29 @@ export function ExceptionsPage() {
   }
 
   return (
-    <MoneyFrame
-      active="exceptions"
-      actions={
-        <Button icon={Download} onClick={exportCsv} disabled={list.length === 0}>
-          Export CSV
-        </Button>
-      }
-    >
+    <MoneyFrame active="month-end">
+      <MoneySubHeader
+        back={{ to: '/money/month-end', label: 'Month end' }}
+        title="Things to check"
+        meta={
+          <Tip label="things to check">
+            Checked, in every month: customer payments against the order total, invoices against the order, costs against the expected cost
+            and the POs, dates in sequence, the GST on each invoice, the TCS trail and tax deposit, and orders where nobody has said whether
+            GST is included in the price.
+          </Tip>
+        }
+        actions={
+          <Button icon={Download} onClick={exportCsv} disabled={list.length === 0}>
+            Export CSV
+          </Button>
+        }
+      />
       <section aria-labelledby="exceptions-h" className="min-w-0 rounded border bg-surface">
         <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-5 py-4">
-          <h2 id="exceptions-h" className="text-base font-semibold">
-            Exceptions
-          </h2>
-          <p className="text-sm text-fg-muted">Cross-checks orders, payments, invoices and costs. What needs a human look, not a score.</p>
-          <div className="ml-auto flex flex-wrap items-center gap-2 text-xs" aria-live="polite">
+          <h3 id="exceptions-h" className="text-base font-semibold">
+            What does not add up
+          </h3>
+          <div className="ml-auto flex flex-wrap items-center gap-2 text-sm" aria-live="polite">
             {counts.critical > 0 ? (
               <span className="inline-flex h-6 items-center rounded-round bg-tone-danger-bg px-2 font-medium text-tone-danger-fg">
                 <span className="num mr-1">{counts.critical}</span> critical
@@ -99,19 +109,16 @@ export function ExceptionsPage() {
         ) : list.length === 0 ? (
           <p className="flex items-center gap-2 px-5 py-6 text-sm text-fg-2" data-testid="exceptions-clear">
             <Icon icon={CircleCheck} size="lg" className="text-tone-success-fg" />
-            No exceptions. Orders, payments, invoices and costs are in balance and in sequence.
+            Nothing to check. Orders, payments, invoices and costs are in balance and in sequence.
           </p>
         ) : (
-          <ul aria-label="Exceptions">
+          <ul aria-label="Things to check">
             {list.map(e => (
               <Row key={e.key} e={e} />
             ))}
           </ul>
         )}
       </section>
-      <p className="max-w-[72ch] text-xs text-fg-muted">
-        Checked: customer payments against the order total, invoices against the order, costs against the expected cost and the POs, dates in sequence, the GST on each invoice, the TCS trail and tax deposit, and orders with an unknown price basis.
-      </p>
     </MoneyFrame>
   )
 }
