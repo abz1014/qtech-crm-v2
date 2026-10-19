@@ -5,6 +5,7 @@ import { Panel, Row, Section } from '@/dev/gallery/layout'
 import { ComboScene, CompanyForm, Controls, Feedback, Files, Misc, Overlays, SCENES, SceneView } from '@/dev/gallery/scenes'
 import { DateRailSection, EmptyCards, MorePrimitivesSection, TooltipSection } from '@/dev/gallery/primitives'
 import { StatusMoneyTableSections } from '@/dev/gallery/tables'
+import { InfoTipSection, PhoneBarSection } from '@/dev/gallery/uxPrimitives'
 import { Avatar } from '@/ui/Avatar'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
@@ -35,6 +36,8 @@ const NAV = [
   ['rail', 'DateRail'],
   ['more', 'Progress, steps, inline edit'],
   ['tooltip', 'Tooltip'],
+  ['infotip', 'InfoTip'],
+  ['phonebar', 'Phone one-bar'],
   ['overlays', 'Overlays'],
 ] as const
 
@@ -268,6 +271,8 @@ export default function Gallery() {
       <DateRailSection />
       <MorePrimitivesSection />
       <TooltipSection />
+      <InfoTipSection />
+      <PhoneBarSection />
       <OverlayIndex />
     </main>
   )
