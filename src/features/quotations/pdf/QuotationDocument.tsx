@@ -197,7 +197,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
             {data.signatory ? (
               <View style={s.refRow}>
                 <Text style={s.refLabel}>Prepared by</Text>
-                <Text style={s.strongText}>{[data.signatory.name, data.signatory.phone].filter(Boolean).join(', ')}</Text>
+                <Text style={s.strongText}>{data.signatory.name}</Text>
               </View>
             ) : null}
           </View>
