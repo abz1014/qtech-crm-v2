@@ -114,7 +114,7 @@ jobs:
           VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY" npm run build
 
       - name: Playwright suites for this shard (${{ matrix.suites }})
-        run: scripts/ci/e2e-run.sh ${{ matrix.suites }}
+        run: bash scripts/ci/e2e-run.sh ${{ matrix.suites }}
 
       - name: Upload reports and review screenshots
         if: always()
