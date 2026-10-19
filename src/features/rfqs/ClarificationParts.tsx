@@ -224,7 +224,7 @@ export function QuestionRow({
       {c.answeredAt ? (
         <div className="mt-1 grid gap-2 rounded-r border-l-2 border-tone-success-fg bg-sunken px-3 py-2">
           <div>
-            <span className="block text-xs text-fg-muted">{c.answer ? 'Our answer, relayed to suppliers' : 'Answered with a photo'}</span>
+            <span className="block text-xs text-fg-muted">{c.answer ? 'Our answer' : 'Answered with a photo'}</span>
             {c.answer ? <span className="break-words">{c.answer}</span> : null}
           </div>
           {files.map(f => (

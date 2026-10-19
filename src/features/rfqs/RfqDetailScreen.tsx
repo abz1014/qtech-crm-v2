@@ -11,9 +11,12 @@ import { useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCan
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import * as rfqApi from '@/features/rfqs/api'
 import { qk } from '@/features/queryKeys'
-import { suggestSuppliers, toRateTable, type SuggestionItem } from '@/features/rfqs/lib'
-import { RfqActionBar, RfqHeaderBlock } from '@/features/rfqs/RfqHeaderBlock'
+import { primaryAction, suggestSuppliers, toRateTable, type RfqPrimary, type SuggestionItem } from '@/features/rfqs/lib'
+import { RfqActionBar, RfqHeaderBlock, type HeaderFacts } from '@/features/rfqs/RfqHeaderBlock'
+import { useQuotations } from '@/features/quotations/hooks'
+import { useOrdersForRfq } from '@/features/orders/hooks'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
+import { SupplierReplies } from '@/features/rfqs/SupplierReplies'
 import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { AddItemDialog } from '@/features/rfqs/AddItemDialog'
@@ -212,12 +215,31 @@ function Loaded({
   const loading = items.isPending || inquiries.isPending
   const nobodyAsked = !loading && !loadError && inquiryList.length === 0
 
+  // The one green button (owner decision 2026-10-19): chosen by state. Until the items and replies are in, there is none.
+  const quotations = useQuotations(rfq.id)
+  const orders = useOrdersForRfq(rfq.id)
+  const quotationCount = quotations.data?.length ?? 0
+  const primary: RfqPrimary =
+    loading || loadError
+      ? 'none'
+      : primaryAction({
+          outcome: rfq.state?.outcome ?? 'open',
+          hasOrder: (orders.data ?? []).some(o => !o.cancelledOn),
+          sourcingState: rfq.state?.sourcing_state,
+          bidState: rfq.state?.bid_state,
+          hasPrices,
+          quotationCount,
+          itemCount: itemList.length,
+          chaseable: chaseSuppliers,
+        })
+  const facts: HeaderFacts = { primary, itemCount: itemList.length, quotationCount, onAsk: () => setFloating(true) }
+
   const askFrom = async (ticked: readonly { supplierId: string; name: string }[], list: RfqItemRow[]) =>
     ask({ supplierIds: ticked.map(t => t.supplierId), names: ticked.map(t => t.name), items: list })
 
   return (
     <Shell>
-      <RfqHeaderBlock rfq={rfq} hasPrices={hasPrices} />
+      <RfqHeaderBlock rfq={rfq} facts={facts} />
       {/* data-slot="convert-dialog" (O01): the Create order dialog, open while the address carries ?won=1. */}
       {wonOpen && inquiries.data ? <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} /> : null}
       {loadError ? (
@@ -276,18 +298,21 @@ function Loaded({
               <Skeleton className="h-56 w-full" />
             </div>
           ) : (
-            <ItemsPanel
-              rfq={rfq}
-              items={itemList}
-              inquiries={inquiryList}
-              rates={rates}
-              fxRows={fx.data ?? []}
-              memory={memory.data}
-              suggestions={suggestions}
-              ranking={ranking.byLine}
-              onAddItem={() => setAdding(true)}
-              onCopyEnquiry={(s, item) => void askFrom([s], [item])}
-            />
+            <>
+              <ItemsPanel
+                rfq={rfq}
+                items={itemList}
+                inquiries={inquiryList}
+                rates={rates}
+                fxRows={fx.data ?? []}
+                memory={memory.data}
+                suggestions={suggestions}
+                ranking={ranking.byLine}
+                onAddItem={() => setAdding(true)}
+                onCopyEnquiry={(s, item) => void askFrom([s], [item])}
+              />
+              <SupplierReplies rfq={rfq} items={itemList} inquiries={inquiryList} rates={rates} />
+            </>
           )}
           <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />
         </div>
@@ -306,16 +331,17 @@ function Loaded({
               onAsk={ticked => void askFrom(ticked, itemList)}
             />
           ) : (
-            <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} onFloat={() => setFloating(true)} />
+            <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} chaseIsMain={primary === 'chase'} onFloat={() => setFloating(true)} />
           )}
           <ClarificationsPanel rfq={rfq} inquiries={inquiryList} />
           <AttachmentsPanel rfqId={rfq.id} />
         </aside>
       </div>
-      <RfqActionBar rfq={rfq} hasPrices={hasPrices} chaseSuppliers={chaseSuppliers} chaseCustomer={chaseCustomer} />
+      <RfqActionBar rfq={rfq} facts={facts} chaseSuppliers={chaseSuppliers} chaseCustomer={chaseCustomer} />
       {adding ? <AddItemDialog rfq={rfq} onClose={() => setAdding(false)} /> : null}
       {floating ? (
         <FloatDialog
+          title={inquiryList.length > 0 ? 'Ask more suppliers' : 'Ask suppliers'}
           suggestions={suggestions}
           itemCount={(itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id))).length || itemList.length) as number}
           busy={asking}

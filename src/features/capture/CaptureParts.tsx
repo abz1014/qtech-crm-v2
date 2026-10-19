@@ -158,7 +158,7 @@ export function CaptureArea({
   )
   const textArea = (cls: string, placeholder?: string, rows = 4) => (
     <textarea
-      aria-label="Captured text"
+      aria-label="Pasted text"
       value={text}
       rows={rows}
       placeholder={placeholder}
@@ -208,7 +208,7 @@ export function CaptureArea({
   }
 
   return (
-    <Section title="What you captured" aside={count}>
+    <Section title="What you added" aside={count}>
       {showText ? textArea('rounded border border-line-input bg-surface p-3', undefined, 5) : null}
       <ul className="grid gap-2">
         {files.map(f => (

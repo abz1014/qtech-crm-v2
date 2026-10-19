@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
 import { Copy, Send } from 'lucide-react'
 import { businessToday, toBusinessDate } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
@@ -7,16 +7,16 @@ import { mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
-import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import { Panel } from '@/features/companies/CompanyParts'
 import type { ClarificationRow, InquiryRow, RfqHeader } from '@/features/rfqs/api'
 import { AddQuestions, QuestionRow, WithdrawnRow } from '@/features/rfqs/ClarificationParts'
-import { ChasedByNote, ChaseNote, FormattedMessage, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
+import { ChannelLink, ChasedByNote, ChaseNote, FormattedMessage, MoreToggle, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
 import { useClarifications, useFileUrls, useRestoreClarificationAsk, useRfqAttachments, useRfqItems, useSetInquiryRelayed, useStampClarificationAsk } from '@/features/rfqs/hooks'
 import { useSignature } from '@/features/rfqs/useSignature'
+import { useChannel } from '@/features/rfqs/useChannel'
 import {
   agoText,
   answersToRelay,
@@ -56,14 +56,13 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
   const stamp = useStampClarificationAsk(rfq.id)
   const restore = useRestoreClarificationAsk(rfq.id)
   const relayStamp = useSetInquiryRelayed(rfq.id)
-  const [variant, setVariant] = useState<EnquiryVariant>('whatsapp')
+  const [variant, setVariant] = useChannel()
 
   const rows = clars.data ?? []
   const groups = groupClarifications(rows)
   const today = businessToday()
   const nameOf = new Map(inquiries.map(i => [i.id, i.supplierName]))
   const filesFor = (id: string) => (atts.data ?? []).filter(a => a.clarificationId === id)
-  const open = groups.toAsk.length + groups.asked.length
   const options = inquiries.map(i => ({ id: i.id, name: i.supplierName }))
 
   // The copy runs before the stamp, so no mutation is pending yet while it does: a double tap must not stamp twice.
@@ -148,19 +147,6 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
       <Panel
         title="Questions for the customer"
         meta={clars.isSuccess && count > 0 ? <span className="num">{count} {count === 1 ? 'question' : 'questions'}</span> : undefined}
-        actions={
-          open > 0 ? (
-            <SegmentedControl
-              aria-label="Message channel for the customer"
-              value={variant}
-              onValueChange={v => setVariant(v as EnquiryVariant)}
-              options={[
-                { value: 'whatsapp', label: 'WhatsApp' },
-                { value: 'email', label: 'Email' },
-              ]}
-            />
-          ) : undefined
-        }
       >
         {clars.isPending ? (
           <div className="grid gap-2 p-4" aria-busy="true" aria-label="Loading questions">
@@ -197,6 +183,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                 rows={groups.toAsk}
                 repeat={false}
                 variant={variant}
+                onVariant={setVariant}
                 signature={signature}
                 items={rfqItems.data}
                 today={today}
@@ -218,6 +205,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                 rows={groups.asked}
                 repeat
                 variant={variant}
+                onVariant={setVariant}
                 signature={signature}
                 items={rfqItems.data}
                 today={today}
@@ -277,19 +265,21 @@ function chaseDueNote(rows: ClarificationRow[], dueOn: string | null, today: str
   const days = last ? daysBetween(toBusinessDate(new Date(last)), today) : 0
   if (!chaseDue(days, dueOn, today)) return null
   const soon = dueOn ? daysBetween(today, dueOn.slice(0, 10)) <= 3 && dueOn.slice(0, 10) >= today : false
-  return `A chase is due: ${days} ${days === 1 ? 'day' : 'days'} since the last ask${soon ? ' and the bid is due within 3 days' : ''}.`
+  return `A chase is due: ${days} ${days === 1 ? 'day' : 'days'} since the last ask${soon ? ' and the quotation is due within 3 days' : ''}.`
 }
 
 /**
  * One group of questions with the same state: a header with its chip, the questions, and for the ones still to ask or
- * waiting, the message (g2-chase-texts "Customer clarification chase"): every open question ticked, "Kindly confirm by"
- * a date the person can change, the recipient, the subject for an email, the text, and one tap to copy and mark it.
+ * waiting, the message (g2-chase-texts "Customer clarification chase"): a short preview of the text, the recipient, and one tap to
+ * copy and mark it; under "Show the whole message", every open question ticked, "Kindly confirm by" a date the person can change,
+ * the subject for an email and the full text. The channel is the person's remembered one, with the other as a link.
  */
 function ChaseGroup({
   rfq,
   rows,
   repeat,
   variant,
+  onVariant,
   signature,
   items,
   today,
@@ -305,6 +295,7 @@ function ChaseGroup({
   rows: ClarificationRow[]
   repeat: boolean
   variant: EnquiryVariant
+  onVariant: (v: EnquiryVariant) => void
   signature: { name: string; company: string; jobTitle?: string | null; phone?: string | null }
   items?: ReadonlyArray<{ id: string; number: number; description: string; brandName: string | null }>
   today: string
@@ -318,6 +309,8 @@ function ChaseGroup({
 }) {
   const [off, setOff] = useState<ReadonlySet<string>>(new Set())
   const [chosen, setChosen] = useState<string | null>(null)
+  const [whole, setWhole] = useState(false)
+  const wholeId = useId()
   const selected = rows.filter(c => !off.has(c.id))
   const lastBy = rows
     .filter(c => c.lastAskedAt)
@@ -368,37 +361,52 @@ function ChaseGroup({
       <div className="divide-y divide-dashed">{children}</div>
       {repeat ? <ChasedByNote byId={lastBy?.by} at={lastBy?.at} className="px-4 pt-2" /> : null}
       <div className="mx-4 mb-3 mt-2 grid overflow-hidden rounded border bg-surface">
-        <TickList
-          title="Questions in this message"
-          rows={rows.map(c => ({ id: c.id, label: c.question, checked: !off.has(c.id) }))}
-          onToggle={(id, on) =>
-            setOff(o => {
-              const n = new Set(o)
-              if (on) n.delete(id)
-              else n.add(id)
-              return n
-            })
-          }
-        />
-        <ReplyByField
-          label="Kindly confirm by"
-          value={by}
-          onChange={v => setChosen(v && v !== defaultBy ? v : null)}
-          note={`${rfq.dueOn ? 'One working day before the bid is due.' : 'Three working days from today.'} You can change it.`}
-        />
         <RecipientRow channel={variant} lead={variant === 'email' ? 'Email to' : 'WhatsApp to'} contact={rfq.contact} />
-        {variant === 'email' && shown?.subject ? <SubjectRow subject={shown.subject} /> : null}
+        {whole ? (
+          <div id={wholeId} className="grid">
+            <TickList
+              title="Questions in this message"
+              rows={rows.map(c => ({ id: c.id, label: c.question, checked: !off.has(c.id) }))}
+              onToggle={(id, on) =>
+                setOff(o => {
+                  const n = new Set(o)
+                  if (on) n.delete(id)
+                  else n.add(id)
+                  return n
+                })
+              }
+            />
+            <ReplyByField
+              label="Kindly confirm by"
+              value={by}
+              onChange={v => setChosen(v && v !== defaultBy ? v : null)}
+              note={`${rfq.dueOn ? 'One working day before the quotation is due.' : 'Three working days from today.'} You can change it.`}
+            />
+            {variant === 'email' && shown?.subject ? <SubjectRow subject={shown.subject} /> : null}
+          </div>
+        ) : null}
         <div className="px-4 py-3">
-          {shown ? <FormattedMessage text={text} testId="chase-text" /> : <p className="text-sm text-fg-muted">Tick at least one question to write the message.</p>}
+          {shown ? (
+            <FormattedMessage text={text} testId="chase-text" className={whole ? undefined : 'line-clamp-4'} />
+          ) : (
+            <p className="text-sm text-fg-muted">Tick at least one question to write the message.</p>
+          )}
         </div>
-        <ChaseNote className="border-t">
-          Copying records {repeat ? 'a chase today' : 'the ask today'} (asked ×{count}). {rfqRef(rfq.number)} moves to Waiting and returns on {formatDay(returnsOn)}.
-          {dueNote ? ` ${dueNote}` : ''}
-        </ChaseNote>
-        <div className="flex flex-wrap items-center gap-2 border-t bg-sunken px-4 py-3">
-          <Button variant="primary" size="sm" icon={Copy} disabled={!shown} busy={stamping} busyLabel="Marking asked" onClick={() => onCopy(selected, text)}>
+        {whole ? (
+          <ChaseNote className="border-t">
+            Copying records {repeat ? 'a chase today' : 'the ask today'} (asked ×{count}). {rfqRef(rfq.number)} moves to Waiting and returns on {formatDay(returnsOn)}.
+            {dueNote ? ` ${dueNote}` : ''}
+          </ChaseNote>
+        ) : null}
+        <div className="grid gap-2 border-t bg-sunken px-4 py-3">
+          <Button size="sm" icon={Copy} disabled={!shown} busy={stamping} busyLabel="Marking asked" onClick={() => onCopy(selected, text)} className="w-fit">
             {copyLabel}
           </Button>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <MoreToggle open={whole} onToggle={() => setWhole(w => !w)} controls={wholeId} />
+            <ChannelLink value={variant} onChange={onVariant} />
+          </div>
+          {dueNote && !whole ? <p className="text-sm text-tone-warning-fg">{dueNote}</p> : null}
         </div>
       </div>
     </div>

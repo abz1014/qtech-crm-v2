@@ -8,44 +8,25 @@ export type CoverageKind = 'covered' | 'partly' | 'uncovered' | 'none'
 
 export interface Coverage {
   kind: CoverageKind
-  /** The chip's words: "Covered, 3 prices", "Partly covered, 1 price", "Uncovered item", "No replies yet". */
+  /** The chip's words (plain-words glossary, 2026-10-19): "3 prices", "1 price so far", "No price yet", "Waiting for prices". */
   label: string
 }
 
 /**
  * The chip on an item (C-23):
- *  - a price and nobody still to answer  -> Covered, n prices
- *  - a price and somebody still waiting  -> Partly covered, n price(s)     (the owner's partial-quote rule: it can still improve)
- *  - no price, but others replied        -> Uncovered item
- *  - no price and no replies             -> No replies yet
+ *  - a price and nobody still to answer  -> n prices
+ *  - a price and somebody still waiting  -> n price(s) so far     (the owner's partial-quote rule: it can still improve)
+ *  - no price, but others replied        -> No price yet
+ *  - no price and no replies             -> Waiting for prices
  * `waiting` is the number of suppliers asked about this item who have not answered it; `responders` the suppliers who quoted any item.
  */
 export function itemCoverage(prices: number, waiting: number, responders: number): Coverage {
   if (prices > 0) {
     const n = `${prices} ${prices === 1 ? 'price' : 'prices'}`
-    return waiting > 0 ? { kind: 'partly', label: `Partly covered, ${n}` } : { kind: 'covered', label: `Covered, ${n}` }
+    return waiting > 0 ? { kind: 'partly', label: `${n} so far` } : { kind: 'covered', label: n }
   }
-  if (responders > 0) return { kind: 'uncovered', label: 'Uncovered item' }
-  return { kind: 'none', label: 'No replies yet' }
-}
-
-/** The footnote under an item's price rows (C-35). */
-export function comparisonNote(input: {
-  comparable: number
-  basis: 'native' | 'pkr'
-  notCompared: readonly string[]
-  staleRates: ReadonlyArray<{ currency: string; days: number }>
-  lines: number
-}): string {
-  if (input.lines === 0) return 'Nobody has priced this item.'
-  if (input.comparable < 2) return 'One price so far. Nothing to compare yet.'
-  const parts = [`Lowest of the ${input.comparable} with a rate.`]
-  parts.push(input.basis === 'pkr' ? "Compared in PKR at today's rates." : 'Same currency, compared as quoted.')
-  const out = [...new Set(input.notCompared)]
-  if (out.length > 0) parts.push(out.length === 1 ? `The ${out[0]} line is not compared.` : `The ${out.join(' and ')} lines are not compared.`)
-  const stale = input.staleRates[0]
-  if (stale) parts.push(`The ${stale.currency} rate is ${stale.days} days old, so treat the gap as indicative.`)
-  return parts.join(' ')
+  if (responders > 0) return { kind: 'uncovered', label: 'No price yet' }
+  return { kind: 'none', label: 'Waiting for prices' }
 }
 
 // ------------------------------------------------------------------------------------------------ suppliers asked

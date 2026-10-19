@@ -1,9 +1,28 @@
-import { Link } from 'react-router-dom'
-import { ArrowLeft, Calendar, CalendarCheck, Building2, ChevronDown, Ellipsis, FileCheck2, FileText, MapPin, MessageCircle, Package, RotateCcw, UserRound, Users, type LucideIcon } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  ArrowLeft,
+  Calendar,
+  Building2,
+  ChevronDown,
+  Copy,
+  Ellipsis,
+  FileCheck2,
+  FilePlus2,
+  FileText,
+  Flag,
+  MapPin,
+  MessageCircle,
+  Package,
+  RotateCcw,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, rfqRef } from '@/lib/refs'
+import { cn } from '@/lib/utils'
 import { ROLE_LABEL } from '@/app/session'
 import { Avatar } from '@/ui/Avatar'
 import { Breadcrumb } from '@/ui/Breadcrumb'
@@ -16,47 +35,60 @@ import type { RfqHeader } from '@/features/rfqs/api'
 import { useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
 import { useOrdersForRfq } from '@/features/orders/hooks'
 import { useWonDialog } from '@/features/orders/useWonDialog'
-import { IssueQuotationButton } from '@/features/quotations/QuotationsPanel'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
-import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, dueChipLabel, dueSubLabel, type CloseReason } from '@/features/rfqs/lib'
+import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, dueChipLabel, dueSubLabel, quotationSent, stageChip, type CloseReason, type RfqPrimary } from '@/features/rfqs/lib'
 
 /*
- * The top of the RFQ page (g2-rfq-detail header, and the phone bar and action bar). Who it is for, where it stands (state chips
- * from v_rfq_state), and the actions that belong to the whole RFQ: Issue quotation, and one "Bid and close" menu holding
- * Mark bid sent ("no PDF"), Sent the offer again ("updates date") and the seven one-tap reasons to close the RFQ; the reason
- * the RFQ's own state points to is marked "suggested". Mark bid sent and closing both have an Undo.
+ * The top of the RFQ page (g2-rfq-detail header, the phone bar and the action bar), reworked by the UX audit of 2026-10-19:
+ *   - who it is for first (the company), then the code;
+ *   - at most two chips: the stage, in the board's next-step words, and the due date when it is close or past;
+ *   - exactly one green button, chosen by state (lib/nextAction.ts): Ask suppliers, then Issue quotation, then Mark won. Everything
+ *     else is in one "More" menu: the other two, Mark quotation sent (no PDF), Quotation sent again, and the reasons to close.
+ *     Mark won is never the button before a quotation exists, but stays in More for the odd case (a win by phone).
+ *   - Issue quotation is never silently disabled: it opens whenever the RFQ has an item (prices can be typed in the dialog); with no
+ *     item the menu says why.
+ * Mark quotation sent and closing both have an Undo.
  *
- * Phone (375): a page bar with back, the number and a "..." menu; the company on one line; four meta cells; and a sticky bar at
- * the foot with the primary Issue quotation, a Chase menu (suppliers, customer) and the "..." menu.
+ * Phone (375): a page bar with back, the number and More; the company on one line; four meta cells; and a sticky bar at the foot
+ * with the same one green action, a Chase menu (suppliers, customer) and More.
  */
+
+export interface HeaderFacts {
+  /** The green action (lib/nextAction.ts). */
+  primary: RfqPrimary
+  itemCount: number
+  quotationCount: number
+  /** Opens the "Ask suppliers" list. */
+  onAsk: () => void
+}
 
 // ------------------------------------------------------------------------------------------------ the actions
 
-/** Mark bid sent, Sent the offer again and Close RFQ because...: one set of actions, used by the header menu and both phone menus. */
-function useBidAndClose(rfq: RfqHeader) {
+/** Mark quotation sent, Quotation sent again and Close because...: one set of actions, used by the header menu and both phone menus. */
+function useQuoteAndClose(rfq: RfqHeader) {
   const { toast } = useToast()
   const bid = useSetBidSent(rfq.id)
   const closeRfq = useSetRfqClosed(rfq.id)
   const ref = rfqRef(rfq.number)
   const s = rfq.state
 
-  const markBidSent = async (again: boolean) => {
+  const markSent = async (again: boolean) => {
     const before = rfq.quotedOn
     try {
       await bid.mutateAsync(businessToday())
       toast({
-        title: again ? 'Offer sent again' : 'Marked bid sent',
+        title: again ? 'Quotation date updated' : 'Marked quotation sent',
         body: `${ref} · ${rfq.company.name}`,
         undo: {
           onUndo: async () => {
             await bid.mutateAsync(before)
           },
-          settledTitle: again ? 'Offer sent again' : 'Marked bid sent',
-          undoneTitle: again ? 'Date put back' : 'Bid sent taken back',
+          settledTitle: again ? 'Quotation date updated' : 'Marked quotation sent',
+          undoneTitle: again ? 'Date put back' : 'Quotation sent taken back',
         },
       })
     } catch (err) {
-      toast({ title: 'Could not mark the bid sent', body: mapPgError(err, { entity: 'RFQ' }).message, tone: 'danger' })
+      toast({ title: 'Could not mark the quotation sent', body: mapPgError(err, { entity: 'RFQ' }).message, tone: 'danger' })
     }
   }
 
@@ -102,29 +134,63 @@ function useBidAndClose(rfq: RfqHeader) {
   const suggested = s
     ? defaultCloseReason({ sourcingState: s.sourcing_state, clarificationState: s.clarification_state, bidState: s.bid_state, isOverdue: Boolean(s.is_overdue) })
     : 'other'
-  return { markBidSent, close, reopen, suggested, busy: bid.isPending || closeRfq.isPending }
+  return { markSent, close, reopen, suggested, busy: bid.isPending || closeRfq.isPending }
 }
 
-/** The menu items of "Bid and close". */
-function BidAndCloseItems({ rfq, actions, onMarkWon }: { rfq: RfqHeader; actions: ReturnType<typeof useBidAndClose>; onMarkWon?: () => void }) {
-  const bidSent = rfq.state?.bid_state === 'bid_sent' || rfq.state?.bid_state === 'quotation_expired'
+type Actions = ReturnType<typeof useQuoteAndClose>
+
+/** The three main actions and what each one does, so the header, the menus and the phone bar say the same thing. */
+function useMainActions(rfq: RfqHeader, facts: HeaderFacts) {
+  const [, setIssue] = useIssueDialog()
+  const [, setWon] = useWonDialog()
+  const orders = useOrdersForRfq(rfq.id)
+  const liveOrders = (orders.data ?? []).filter(o => !o.cancelledOn)
+  const asked = (rfq.state?.floated ?? 0) > 0
+  return {
+    liveOrders,
+    askLabel: asked ? 'Ask more suppliers' : 'Ask suppliers',
+    issueLabel: facts.quotationCount > 0 ? 'Revise quotation' : 'Issue quotation',
+    ask: facts.onAsk,
+    issue: () => setIssue(true),
+    won: () => setWon(true),
+    canWin: rfq.state?.outcome !== 'won' && liveOrders.length === 0,
+  }
+}
+
+/** The "More" menu: everything that is not the green button. */
+function MoreItems({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions }) {
+  const main = useMainActions(rfq, facts)
+  const sent = quotationSent({ bidState: rfq.state?.bid_state, quotationCount: facts.quotationCount })
+  const noItems = facts.itemCount === 0
   return (
     <>
-      {onMarkWon ? (
-        <>
-          <MenuItem onClick={onMarkWon}>Mark won</MenuItem>
-          <MenuSeparator />
-        </>
+      {facts.primary !== 'ask' ? (
+        <MenuItem icon={Copy} disabled={noItems} hint={noItems ? 'add an item first' : undefined} onClick={main.ask}>
+          {main.askLabel}
+        </MenuItem>
       ) : null}
-      <MenuItem hint="no PDF" disabled={bidSent} onClick={() => void actions.markBidSent(false)}>
-        Mark bid sent
-      </MenuItem>
-      <MenuItem hint="updates date" onClick={() => void actions.markBidSent(true)}>
-        Sent the offer again
-      </MenuItem>
+      {facts.primary !== 'issue' ? (
+        <MenuItem icon={FilePlus2} disabled={noItems} hint={noItems ? 'add an item first' : undefined} onClick={main.issue}>
+          {main.issueLabel}
+        </MenuItem>
+      ) : null}
+      {facts.primary !== 'won' && main.canWin ? (
+        <MenuItem icon={FileCheck2} hint={sent ? undefined : 'no quotation yet'} onClick={main.won}>
+          Mark won
+        </MenuItem>
+      ) : null}
+      {sent ? (
+        <MenuItem hint="updates the date" onClick={() => void actions.markSent(true)}>
+          Quotation sent again
+        </MenuItem>
+      ) : (
+        <MenuItem hint="no PDF" onClick={() => void actions.markSent(false)}>
+          Mark quotation sent
+        </MenuItem>
+      )}
       <MenuSeparator />
-      <p role="none" className="px-2 pb-1 pt-1 text-xs text-fg-muted">
-        Close RFQ because
+      <p role="none" className="px-2 pb-1 pt-1 text-sm text-fg-muted">
+        Close the RFQ because
       </p>
       {CLOSE_REASONS.map(r => (
         <MenuItem key={r.value} hint={r.value === actions.suggested ? 'suggested' : undefined} onClick={() => void actions.close(r.value)}>
@@ -135,15 +201,58 @@ function BidAndCloseItems({ rfq, actions, onMarkWon }: { rfq: RfqHeader; actions
   )
 }
 
-function BidAndCloseMenu({ rfq, actions, trigger, label, onMarkWon }: { rfq: RfqHeader; actions: ReturnType<typeof useBidAndClose>; trigger: React.ReactNode; label: string; onMarkWon?: () => void }) {
+function MoreMenu({ rfq, facts, actions, trigger, label, side }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; trigger: React.ReactNode; label: string; side?: 'top' | 'bottom' }) {
   return (
     <Popover>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent variant="menu" align="end" className="min-w-[280px]" aria-label={label}>
-        <BidAndCloseItems rfq={rfq} actions={actions} onMarkWon={onMarkWon} />
+      <PopoverContent variant="menu" align="end" side={side} className="min-w-[300px]" aria-label={label}>
+        <MoreItems rfq={rfq} facts={facts} actions={actions} />
       </PopoverContent>
     </Popover>
   )
+}
+
+/**
+ * The green button for the state. `size` is md in the header and touch in the phone bar. Only the header's carries the data-slot
+ * (issue-quotation R19, mark-won O01, ask-suppliers), so a slot always names one button.
+ */
+function PrimaryButton({ rfq, facts, size = 'md', className, slot = true }: { rfq: RfqHeader; facts: HeaderFacts; size?: 'md' | 'touch'; className?: string; slot?: boolean }) {
+  const main = useMainActions(rfq, facts)
+  const wrap = (name: string, button: React.ReactNode) =>
+    slot ? (
+      <span data-slot={name} className="contents">
+        {button}
+      </span>
+    ) : (
+      button
+    )
+  switch (facts.primary) {
+    case 'ask':
+      return wrap(
+        'ask-suppliers',
+        <Button variant="primary" size={size} icon={Copy} className={className} onClick={main.ask}>
+          {main.askLabel}
+        </Button>,
+      )
+    case 'issue':
+      return wrap(
+        'issue-quotation',
+        <Button variant="primary" size={size} icon={FilePlus2} className={className} onClick={main.issue}>
+          {main.issueLabel}
+        </Button>,
+      )
+    case 'won':
+      return main.canWin
+        ? wrap(
+            'mark-won',
+            <Button variant="primary" size={size} icon={FileCheck2} className={className} onClick={main.won}>
+              Mark won
+            </Button>,
+          )
+        : null
+    default:
+      return null
+  }
 }
 
 // ------------------------------------------------------------------------------------------------ the meta strip
@@ -166,115 +275,110 @@ function Meta({
 }) {
   return (
     <div className={`min-w-0 content-start gap-[2px] px-4 py-3 ${phone ? 'grid' : 'hidden md:grid'}`}>
-      <dt className={`flex items-center gap-1 text-xs ${tone === 'warn' ? 'text-tone-warning-fg' : 'text-fg-muted'}`}>
+      <dt className={`flex items-center gap-1 text-sm ${tone === 'warn' ? 'text-tone-warning-fg' : 'text-fg-muted'}`}>
         <span className="max-md:hidden">
           <Icon icon={icon} size="chip" />
         </span>
         {label}
       </dt>
-      <dd className="m-0 min-w-0 break-words text-sm font-medium">{children}</dd>
-      {sub ? <dd className="m-0 text-xs text-fg-muted">{sub}</dd> : null}
+      <dd className="m-0 min-w-0 break-words font-medium">{children}</dd>
+      {sub ? <dd className="m-0 text-sm text-fg-muted">{sub}</dd> : null}
     </div>
   )
 }
 
+const CHIP_TONE = {
+  warning: 'border-tone-warning-fg/25 bg-tone-warning-bg text-tone-warning-fg',
+  info: 'border-tone-info-fg/25 bg-tone-info-bg text-tone-info-fg',
+  success: 'border-tone-success-fg/25 bg-tone-success-bg text-tone-success-fg',
+  neutral: 'border-line-strong bg-surface text-fg-2',
+} as const
+
 // ------------------------------------------------------------------------------------------------ the header
 
-export function RfqHeaderBlock({ rfq, hasPrices }: { rfq: RfqHeader; hasPrices: boolean }) {
-  const actions = useBidAndClose(rfq)
-  const [, setWon] = useWonDialog()
-  const orders = useOrdersForRfq(rfq.id)
-  const liveOrders = (orders.data ?? []).filter(o => !o.cancelledOn)
+export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFacts }) {
+  const actions = useQuoteAndClose(rfq)
+  const main = useMainActions(rfq, facts)
+  const navigate = useNavigate()
   const s = rfq.state
   const ref = rfqRef(rfq.number)
   const open = (s?.outcome ?? 'open') === 'open'
-  const bidSent = s?.bid_state === 'bid_sent' || s?.bid_state === 'quotation_expired'
   const dueIn = s?.days_to_due
   const due = open ? dueChipLabel(dueIn, Boolean(s?.is_overdue)) : null
   const since = rfq.company.createdAt ? rfq.company.createdAt.slice(0, 4) : null
+  const stage = stageChip({ outcome: s?.outcome ?? 'open', hasOrder: main.liveOrders.length > 0, sourcingState: s?.sourcing_state, bidState: s?.bid_state, quotationCount: facts.quotationCount })
+  // Back goes where the person came from (Today, an order, a company); with no history in this tab, to the RFQ list.
+  const back = () => (window.history.state && (window.history.state as { idx?: number }).idx ? navigate(-1) : navigate('/rfqs'))
 
   return (
     <header>
       {/* Phone: the page bar (back, the number, more). */}
       <div className="-mx-4 mb-3 flex h-11 items-center border-b px-2 md:hidden" data-page-bar>
-        <Link to="/rfqs" aria-label="Back to RFQs" className="inline-grid size-touch place-items-center rounded hover:bg-sunken">
+        <button type="button" onClick={back} aria-label="Back" className="inline-grid size-touch place-items-center rounded hover:bg-sunken">
           <Icon icon={ArrowLeft} size="lg" />
-        </Link>
-        <span className="num flex-1 text-center text-sm font-semibold">{ref}</span>
-        <BidAndCloseMenu
-          rfq={rfq}
-          actions={actions}
-          label="More"
-          trigger={<Button variant="quiet" size="touch" icon={Ellipsis} aria-label="More" disabled={!open} />}
-          onMarkWon={s?.outcome !== 'won' && liveOrders.length === 0 ? () => setWon(true) : undefined}
-        />
+        </button>
+        <span className="num flex-1 text-center font-semibold">{ref}</span>
+        {open ? (
+          <MoreMenu rfq={rfq} facts={facts} actions={actions} label="More" trigger={<Button variant="quiet" size="touch" icon={Ellipsis} aria-label="More" />} />
+        ) : (
+          <span className="size-touch" />
+        )}
       </div>
       <Breadcrumb className="max-md:hidden" items={[{ label: 'RFQs', to: '/rfqs' }, { label: ref, mono: true }]} />
       <div className="mt-2 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
-          <h1 className="flex flex-wrap items-baseline gap-x-3 text-2xl font-semibold tracking-snug max-md:flex-col max-md:gap-0">
-            <span className="num">{ref}</span>
-            <span className="min-w-0 break-words max-md:text-base max-md:font-medium">{rfq.company.name}</span>
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2" aria-label="State of this RFQ">
-            <StatusBadge dimension="rfq-outcome" value={s?.outcome ?? 'open'} />
-            {s && s.sourcing_state ? <StatusBadge dimension="sourcing" value={s.sourcing_state} /> : null}
-            {s && s.clarification_state && s.clarification_state !== 'none' ? (
-              <StatusBadge
-                dimension="clarification"
-                value={s.clarification_state}
-                detail={s.clarification_state === 'to_ask' ? String(s.to_ask) : s.clarification_state === 'waiting_on_customer' ? String(s.waiting) : String(s.to_relay)}
-              />
-            ) : null}
-            {s && s.bid_state ? (
-              <StatusBadge dimension="bid" value={s.bid_state} detail={rfq.quotedOn && bidSent ? formatDay(rfq.quotedOn) : undefined} />
-            ) : null}
-            {due ? <StatusBadge dimension="deadline" value={s?.is_overdue ? 'overdue' : 'due-soon'} label={due} /> : null}
+          <h1 className="flex flex-wrap items-baseline gap-x-3 text-2xl font-semibold tracking-snug max-md:text-xl">
+            <span className="min-w-0 break-words">{rfq.company.name}</span>
+            <span className="num text-lg font-medium text-fg-muted max-md:hidden">{ref}</span>
             {rfq.isPriority ? (
-              <span className="inline-flex h-5 items-center rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-2 text-xs font-medium text-tone-warning-fg">Top priority</span>
+              <span className="inline-flex items-center gap-1 self-center text-sm font-medium text-tone-warning-fg">
+                <Icon icon={Flag} size="sm" />
+                Top priority
+              </span>
             ) : null}
+          </h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2" aria-label="Where this RFQ stands">
+            {s?.outcome === 'open' || !s ? (
+              <span data-stage className={cn('inline-flex h-6 items-center rounded border px-2 text-sm font-medium', CHIP_TONE[stage.tone])}>
+                {stage.label}
+              </span>
+            ) : (
+              <StatusBadge dimension="rfq-outcome" value={s.outcome as string} />
+            )}
+            {due ? <StatusBadge dimension="deadline" value={s?.is_overdue ? 'overdue' : 'due-soon'} label={due} /> : null}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* data-slot="issue-quotation" (R19): the Issue quotation action. */}
-          <span data-slot="issue-quotation" className="contents">
-            {open ? <IssueQuotationButton rfqId={rfq.id} disabled={!hasPrices} className="max-md:hidden" /> : null}
-          </span>
-          {/* Mark bid sent in 1 tap, while the bid is open and not yet sent (FE-2). The Bid and close menu keeps the rest. Issuing a quotation also marks it sent. */}
-          {open && !bidSent ? (
-            <Button icon={CalendarCheck} onClick={() => void actions.markBidSent(false)} busy={actions.busy} busyLabel="Marking">
-              Mark bid sent
-            </Button>
-          ) : null}
-          {/* data-slot="mark-won" (O01): Mark won opens the Create order dialog; once there is an order, the way to it. */}
-          <span data-slot="mark-won" className="contents">
-            {s?.outcome !== 'won' && liveOrders.length === 0 ? (
-              <Button variant={bidSent ? 'primary' : 'secondary'} icon={FileCheck2} onClick={() => setWon(true)}>
-                Mark won
-              </Button>
-            ) : null}
-            {liveOrders.map(o => (
-              <Link key={o.id} to={`/orders/${o.id}`} className="inline-flex h-control items-center gap-2 rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
-                <Icon icon={Package} />
-                Open {orderRef(o.number)}
-              </Link>
-            ))}
-          </span>
           {open ? (
-            <BidAndCloseMenu
-              rfq={rfq}
-              actions={actions}
-              label="Bid and close"
-              trigger={
-                <Button aria-haspopup="menu" className="max-md:hidden">
-                  Bid and close
-                  <Icon icon={ChevronDown} size="sm" />
-                </Button>
-              }
-            />
+            <>
+              <PrimaryButton rfq={rfq} facts={facts} className="max-md:hidden" />
+              <MoreMenu
+                rfq={rfq}
+                facts={facts}
+                actions={actions}
+                label="More"
+                trigger={
+                  <Button aria-haspopup="menu" className="max-md:hidden">
+                    More
+                    <Icon icon={ChevronDown} size="sm" />
+                  </Button>
+                }
+              />
+            </>
+          ) : null}
+          {/* data-slot="mark-won" (O01): once there is an order, the way to it. */}
+          {main.liveOrders.length > 0 ? (
+            <span data-slot="mark-won" className="contents">
+              {main.liveOrders.map(o => (
+                <Link key={o.id} to={`/orders/${o.id}`} className="inline-flex h-control items-center gap-2 rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
+                  <Icon icon={Package} />
+                  Open {orderRef(o.number)}
+                </Link>
+              ))}
+            </span>
           ) : null}
           {s?.outcome === 'closed' ? (
-            <Button icon={RotateCcw} className="max-md:hidden" onClick={() => void actions.reopen()} busy={actions.busy} busyLabel="Reopening">
+            <Button icon={RotateCcw} onClick={() => void actions.reopen()} busy={actions.busy} busyLabel="Reopening">
               Reopen
             </Button>
           ) : null}
@@ -282,7 +386,7 @@ export function RfqHeaderBlock({ rfq, hasPrices }: { rfq: RfqHeader; hasPrices: 
       </div>
 
       {s?.outcome === 'closed' ? (
-        <p className="mt-3 text-sm text-fg-2">
+        <p className="mt-3 text-fg-2">
           Closed {rfq.closedOn ? formatDay(rfq.closedOn) : ''}: {closeReasonLabel(rfq.closeReason)}.{rfq.closeNote ? ` ${rfq.closeNote}` : ''}
         </p>
       ) : null}
@@ -314,7 +418,7 @@ export function RfqHeaderBlock({ rfq, hasPrices }: { rfq: RfqHeader; hasPrices: 
         >
           {rfq.contact?.name ?? 'Not set'}
         </Meta>
-        <Meta icon={Calendar} label="Bid due" phone tone={due ? 'warn' : undefined} sub={open ? (dueSubLabel(dueIn) ?? undefined) : undefined}>
+        <Meta icon={Calendar} label="Quotation due" phone tone={due ? 'warn' : undefined} sub={open ? (dueSubLabel(dueIn) ?? undefined) : undefined}>
           <span className="num">{rfq.dueOn ? `${formatDay(rfq.dueOn)}${rfq.dueTime ? `, ${rfq.dueTime}` : ''}` : 'No date'}</span>
         </Meta>
         <Meta icon={Users} label="Owner" phone sub={rfq.owner ? [ROLE_LABEL[rfq.owner.role] ?? rfq.owner.role, rfq.owner.phone].filter(Boolean).join(' · ') : undefined}>
@@ -328,7 +432,6 @@ export function RfqHeaderBlock({ rfq, hasPrices }: { rfq: RfqHeader; hasPrices: 
           )}
         </Meta>
       </dl>
-
     </header>
   )
 }
@@ -338,13 +441,12 @@ function scrollTo(slot: string) {
   window.setTimeout(() => document.querySelector(`[data-slot="${slot}"]`)?.scrollIntoView({ block: 'start' }), 60)
 }
 
-/** Phone: the sticky bar at the foot of the page. The primary Issue quotation, a Chase menu (suppliers, customer) and the same "..." menu as the page bar. */
-export function RfqActionBar({ rfq, hasPrices, chaseSuppliers, chaseCustomer }: { rfq: RfqHeader; hasPrices: boolean; chaseSuppliers: number; chaseCustomer: number }) {
-  const actions = useBidAndClose(rfq)
-  const [, setIssue] = useIssueDialog()
-  const [, setWon] = useWonDialog()
-  const orders = useOrdersForRfq(rfq.id)
-  const canWin = (orders.data ?? []).filter(o => !o.cancelledOn).length === 0
+/**
+ * Phone: the sticky bar at the foot of the page. The same one green action as the header (while waiting for prices it is the supplier
+ * chase), a Chase menu (suppliers, customer) and the same More menu.
+ */
+export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rfq: RfqHeader; facts: HeaderFacts; chaseSuppliers: number; chaseCustomer: number }) {
+  const actions = useQuoteAndClose(rfq)
   if ((rfq.state?.outcome ?? 'open') !== 'open') return null
   return (
     <div
@@ -353,9 +455,15 @@ export function RfqActionBar({ rfq, hasPrices, chaseSuppliers, chaseCustomer }: 
       role="toolbar"
       aria-label="RFQ actions"
     >
-      <Button variant="primary" size="touch" className="flex-1" onClick={() => setIssue(true)} disabled={!hasPrices}>
-        Issue quotation
-      </Button>
+      {facts.primary === 'chase' ? (
+        <Button variant="primary" size="touch" icon={MessageCircle} className="flex-1" onClick={() => scrollTo('suppliers-asked')}>
+          Chase suppliers
+        </Button>
+      ) : facts.primary === 'none' ? (
+        <span className="flex-1" />
+      ) : (
+        <PrimaryButton rfq={rfq} facts={facts} size="touch" className="flex-1" slot={false} />
+      )}
       <Popover>
         <PopoverTrigger asChild>
           <Button size="touch" icon={MessageCircle} aria-label="Chase" />
@@ -369,15 +477,7 @@ export function RfqActionBar({ rfq, hasPrices, chaseSuppliers, chaseCustomer }: 
           </MenuItem>
         </PopoverContent>
       </Popover>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button size="touch" icon={Ellipsis} aria-label="More actions" />
-        </PopoverTrigger>
-        <PopoverContent variant="menu" align="end" side="top" className="min-w-[280px]" aria-label="More actions">
-          <BidAndCloseItems rfq={rfq} actions={actions} onMarkWon={canWin ? () => setWon(true) : undefined} />
-        </PopoverContent>
-      </Popover>
+      <MoreMenu rfq={rfq} facts={facts} actions={actions} label="More actions" side="top" trigger={<Button size="touch" icon={Ellipsis} aria-label="More actions" />} />
     </div>
   )
 }
-

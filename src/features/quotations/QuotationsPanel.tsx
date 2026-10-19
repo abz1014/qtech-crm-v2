@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Circle, CircleCheck, Clock, ExternalLink, FileCheck2, FilePlus2, Share2 } from 'lucide-react'
+import { Circle, CircleCheck, Clock, ExternalLink, FilePlus2, Share2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { formatPaisa, toPaisa } from '@/lib/money'
@@ -16,8 +16,8 @@ import { useCompanyProfile } from '@/features/settings/hooks'
 import { SettingsLink } from '@/features/quotations/SettingsLink'
 import { downloadStoredPdf, loadPdfData, type QuotationRow } from '@/features/quotations/api'
 import { useQuotations, useStorePdf } from '@/features/quotations/hooks'
-import { useWonDialog } from '@/features/orders/useWonDialog'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
+import { Tip } from '@/features/rfqs/Tip'
 import { IssueQuotationDialog } from '@/features/quotations/IssueQuotationDialog'
 import { generateQuotationPdf } from '@/features/quotations/pdf/generate'
 import { profileGaps } from '@/features/quotations/lib/profileGaps'
@@ -25,9 +25,11 @@ import { quotationRef, isExpired } from '@/features/quotations/lib/refs'
 import { sharePdf, downloadBlob } from '@/features/quotations/lib/sharePdf'
 
 /*
- * The RFQ page's Quotations block (R19; the slot data-slot="quotations"). Every revision with its validity and state, the
- * PDF of each (open, share), and the Issue action. The dialog is open while the address carries ?issue=1, so the header's
- * Issue button (another component) and this block's own button open the same dialog without sharing state.
+ * The RFQ page's Quotations block (R19; the slot data-slot="quotations"). Every version with its validity and state, the PDF of
+ * each (open, share), and "Revise quotation" once one is out. The dialog is open while the address carries ?issue=1, so the
+ * header's Issue quotation (another component) and this block's own button open the same dialog without sharing state.
+ * On screen a version is the number and "Revision 2" (plain words, 2026-10-19); the PDF and its file name keep "QT-26-0042 R2".
+ * Mark won is not repeated here: it is the page's one green button once a quotation is out.
  */
 
 const gross = (q: QuotationRow) => toPaisa(q.netTotal) + toPaisa(q.gstTotal)
@@ -38,24 +40,13 @@ function StateChip({ kind }: { kind: 'current' | 'superseded' | 'expired' }) {
     superseded: 'border-line-strong bg-surface text-fg-muted',
     expired: 'border-tone-warning-fg/25 bg-tone-warning-bg text-tone-warning-fg',
   }[kind]
-  const text = { current: 'Current', superseded: 'Superseded', expired: 'Expired' }[kind]
+  const text = { current: 'Current', superseded: 'Replaced', expired: 'Expired' }[kind]
   const glyph = { current: CircleCheck, superseded: Circle, expired: Clock }[kind]
   return (
-    <span className={`inline-flex h-5 items-center gap-[5px] rounded border pl-[6px] pr-2 text-xs font-medium ${look}`}>
+    <span className={`inline-flex h-6 items-center gap-[5px] rounded border pl-[6px] pr-2 text-sm font-medium ${look}`}>
       <Icon icon={glyph} size="chip" />
       {text}
     </span>
-  )
-}
-
-/** The header's Issue quotation: always that label (the revision is in the panel's own button and in the dialog), and off until some item has a price (C-12). */
-export function IssueQuotationButton({ rfqId, className, disabled }: { rfqId: string; className?: string; disabled?: boolean }) {
-  const quotations = useQuotations(rfqId)
-  const [, setOpen] = useIssueDialog()
-  return (
-    <Button icon={FilePlus2} className={className} onClick={() => setOpen(true)} disabled={quotations.isPending || disabled}>
-      Issue quotation
-    </Button>
   )
 }
 
@@ -65,7 +56,6 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
   const profileQ = useCompanyProfile()
   const storePdf = useStorePdf(rfq.id)
   const [open, setOpen] = useIssueDialog()
-  const [, setWon] = useWonDialog()
   const [working, setWorking] = useState<string | null>(null)
   const today = businessToday()
   const profile = profileQ.data
@@ -116,13 +106,19 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
   const GRID = 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_72px_minmax(0,1.1fr)_minmax(0,1.4fr)]'
   return (
     <DetailPanel
-      title="Quotations"
+      title={
+        <span className="inline-flex items-center gap-1">
+          Quotations
+          {rows.length > 0 ? (
+            <Tip label="What revising does">Revising makes a new version under the same number. Earlier versions and their PDFs never change.</Tip>
+          ) : null}
+        </span>
+      }
       dataSlot="quotations"
-      meta={rows.length > 0 ? 'Re-issuing makes a new revision under the same number. Earlier revisions and their PDFs never change.' : undefined}
       actions={
         isOpen && rows.length > 0 ? (
           <Button icon={FilePlus2} onClick={() => setOpen(true)}>
-            Issue R{rows[0].revision + 1}
+            Revise quotation
           </Button>
         ) : undefined
       }
@@ -138,7 +134,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
           </Banner>
         </div>
       ) : rows.length === 0 ? (
-        <p className="px-5 py-5 text-sm text-fg-muted">Nothing issued. Once supplier prices are in, set your price on each item and issue the first quotation.</p>
+        <p className="px-5 py-5 text-fg-muted">Nothing issued yet. Issue quotation sets your price on each item, from a supplier price or one you type, and makes the PDF.</p>
       ) : (
         <>
           {lacksPdf && gaps.length > 0 ? (
@@ -165,12 +161,19 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
               {rows.map((q, i) => {
                 const latest = i === 0
                 const expired = latest && isExpired(q.validUntil, today) && isOpen
-                const ref = quotationRef(q.number, first, q.revision)
+                const base = quotationRef(q.number, first)
                 const gp = gross(q)
                 return (
-                  <div key={q.id} role="row" data-testid={`quotation-${q.revision}`} aria-label={ref} className={`grid items-center gap-x-4 gap-y-2 border-t px-5 py-3 ${GRID}`}>
+                  <div
+                    key={q.id}
+                    role="row"
+                    data-testid={`quotation-${q.revision}`}
+                    aria-label={q.revision > 0 ? `${base}, revision ${q.revision}` : base}
+                    className={`grid items-center gap-x-4 gap-y-2 border-t px-5 py-3 ${GRID}`}
+                  >
                     <span role="cell" className="flex flex-wrap items-center gap-2">
-                      <Tag>{ref}</Tag>
+                      <Tag>{base}</Tag>
+                      {q.revision > 0 ? <span className="text-sm text-fg-2">Revision {q.revision}</span> : null}
                       <StateChip kind={expired ? 'expired' : latest ? 'current' : 'superseded'} />
                     </span>
                     <span role="cell" className="num text-sm">
@@ -193,11 +196,6 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                       <span className="num text-xs text-fg-muted">net {formatPaisa(toPaisa(q.netTotal), 'auto')}</span>
                     </span>
                     <span role="cell" className="flex flex-wrap items-center gap-2 sm:justify-end">
-                      {latest && isOpen ? (
-                        <Button size="sm" variant="primary" icon={FileCheck2} onClick={() => setWon(true)}>
-                          Mark won
-                        </Button>
-                      ) : null}
                       <Button
                         size="sm"
                         variant={latest ? 'secondary' : 'quiet'}
