@@ -1,0 +1,69 @@
+name: Smoke
+
+# S16: read-only smoke suite against the LIVE Q-Tech CRM v2 Supabase project. Design and owner steps:
+# docs/SUPABASE.md, "Smoke test (S16)".
+#
+# - Part 1 needs no secret: pre-flight (an unreachable project FAILS) and anonymous denial on every public table, view
+#   and RPC, generated from src/types/database.ts. It uses the PUBLIC anon key (repository variable
+#   SMOKE_SUPABASE_ANON_KEY if set, otherwise read from the deployed app's public bundle).
+# - Part 2 (three-role read checks) runs only when the `smoke` environment holds the test-account secrets, and only on
+#   main; otherwise it prints a notice and is skipped.
+# - Never writes: GET requests, plus two anonymous write attempts aimed at an id that cannot exist.
+# - No service-role key, no access token, no database password.
+on:
+  schedule:
+    - cron: "17 21 * * *"   # nightly, 02:17 Asia/Karachi (the backup runs at 01:30)
+  workflow_dispatch:
+    inputs:
+      missing:
+        description: "fail = an object the types name but the live project lacks fails the run. warn = report it only."
+        type: choice
+        options: [fail, warn]
+        default: fail
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-supabase
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Smoke - live project (read-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: smoke
+    env:
+      SMOKE_SUPABASE_URL: ${{ vars.SMOKE_SUPABASE_URL }}
+      SMOKE_SUPABASE_ANON_KEY: ${{ vars.SMOKE_SUPABASE_ANON_KEY }}
+      SMOKE_APP_URL: ${{ vars.SMOKE_APP_URL }}
+      SMOKE_MISSING: ${{ inputs.missing || 'fail' }}
+      # Test-account credentials are handed to the script on main only.
+      SMOKE_ADMIN_EMAIL: ${{ github.ref == 'refs/heads/main' && secrets.SMOKE_ADMIN_EMAIL || '' }}
+      SMOKE_ADMIN_PASSWORD: ${{ github.ref == 'refs/heads/main' && secrets.SMOKE_ADMIN_PASSWORD || '' }}
+      SMOKE_SALES_EMAIL: ${{ github.ref == 'refs/heads/main' && secrets.SMOKE_SALES_EMAIL || '' }}
+      SMOKE_SALES_PASSWORD: ${{ github.ref == 'refs/heads/main' && secrets.SMOKE_SALES_PASSWORD || '' }}
+      SMOKE_ENGINEER_EMAIL: ${{ github.ref == 'refs/heads/main' && secrets.SMOKE_ENGINEER_EMAIL || '' }}
+      SMOKE_ENGINEER_PASSWORD: ${{ github.ref == 'refs/heads/main' && secrets.SMOKE_ENGINEER_PASSWORD || '' }}
+    steps:
+      - name: Guard - target must be the new CRM project
+        run: |
+          set -euo pipefail
+          for v in "${SMOKE_SUPABASE_URL:-}" "${SMOKE_APP_URL:-}"; do
+            case "$v" in *vptyhluvgnjpvkcbhxsf*) echo "::error title=Smoke refused::a variable names the OLD CRM project. Never target it."; exit 1 ;; esac
+          done
+          if [ -n "${SMOKE_SUPABASE_URL:-}" ] && [ "$SMOKE_SUPABASE_URL" != "https://yafbphagorydbitfgfmg.supabase.co" ]; then
+            echo "::error title=Smoke refused::SMOKE_SUPABASE_URL is not the Q-Tech CRM v2 project."; exit 1
+          fi
+          echo "Guard passed."
+
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --ignore-scripts
+
+      - name: Smoke test (Part 1 anonymous denial, Part 2 three roles if configured)
+        run: node scripts/smoke/smoke.mjs
