@@ -31,6 +31,10 @@ export interface PaymentReminderInput {
   contactName: string | null
   signature: ChaseSignature
   variant: EnquiryVariant
+  /** Every invoice number on the order, oldest first. With two or more the text names them all (and drops the single invoice date). */
+  invoiceNumbers?: readonly string[]
+  /** The order's gross. When given, the email carries the small table of figures (invoice, total, received, outstanding, due, days overdue). */
+  gross?: Amount
 }
 
 export interface PaymentReminder extends ChaseText {
@@ -50,9 +54,13 @@ export function generatePaymentReminder(input: PaymentReminderInput): PaymentRem
   const confirmBy = addBusinessDays(today, firm ? 1 : 3)
   const balance = `PKR ${formatAmount(input.balance)}`
   const paid = Number(input.settled) > 0 ? ` (after your payment of PKR ${formatAmount(input.settled)})` : ''
-  const invoice = input.invoiceNumber
-    ? `Sales Tax Invoice ${input.invoiceNumber}${input.invoiceDate ? ` dated ${dayMonthYear(input.invoiceDate)}` : ''}${input.customerPo ? ` (your PO ${input.customerPo})` : ''}`
-    : `our order${input.customerPo ? ` (your PO ${input.customerPo})` : ''}`
+  const many = (input.invoiceNumbers?.length ?? 0) > 1
+  const po = input.customerPo ? ` (your PO ${input.customerPo})` : ''
+  const invoice = many
+    ? `Sales Tax Invoices ${(input.invoiceNumbers as readonly string[]).join(', ')}${po}`
+    : input.invoiceNumber
+      ? `Sales Tax Invoice ${input.invoiceNumber}${input.invoiceDate ? ` dated ${dayMonthYear(input.invoiceDate)}` : ''}${po}`
+      : `our order${po}`
   const hello = input.contactName ? `Assalamu alaikum ${input.contactName},` : 'Assalamu alaikum,'
   const greeting = email ? (input.contactName ? `Dear ${input.contactName},\nAssalamu alaikum.` : 'Dear Sir or Madam,\nAssalamu alaikum.') : hello
   const reminded =
@@ -68,6 +76,19 @@ export function generatePaymentReminder(input: PaymentReminderInput): PaymentRem
       ? `It fell due on ${dayMonthYear(input.dueOn)}.${reminded}`
       : `It fell due on ${dayMonthYear(input.dueOn)}, ${daysOverdue} days ago.${reminded}`
   lines.push(`Our records show that ${facts} ${due}`, '')
+  if (email && input.gross !== undefined) {
+    const ref = many ? `Invoices: ${(input.invoiceNumbers as readonly string[]).join(', ')}` : `Invoice: ${input.invoiceNumber ?? 'our order'}${input.invoiceDate ? ` dated ${dayMonthYear(input.invoiceDate)}` : ''}`
+    lines.push(
+      ref,
+      ...(input.customerPo ? [`Your PO: ${input.customerPo}`] : []),
+      `Invoice total: PKR ${formatAmount(input.gross)}`,
+      ...(Number(input.settled) > 0 ? [`Received: PKR ${formatAmount(input.settled)}`] : []),
+      `Outstanding: ${balance}`,
+      `Due date: ${dayMonthYear(input.dueOn)}`,
+      `Days overdue: ${daysOverdue}`,
+      '',
+    )
+  }
   if (firm) {
     lines.push(
       'We request you to treat this as a priority and confirm the payment date by return. If there is a query on the invoice, or a document you are waiting for from us, please tell us today so that we can resolve it at once.',

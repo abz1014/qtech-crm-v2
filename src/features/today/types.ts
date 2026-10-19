@@ -18,6 +18,10 @@ export type RuleKey =
   | 'to_source'
   | 'delivered_not_invoiced'
   | 'close_month'
+  | 'costs_incomplete'
+  | 'fbr_attention'
+  | 'tcs_not_sent'
+  | 'recurring_due'
 
 /** The rule key written to snoozes.rule (DATA_MODEL 2.21 gives `chase_customer_clarification` as the example). */
 export const SNOOZE_RULE: Record<RuleKey, string> = {
@@ -34,6 +38,10 @@ export const SNOOZE_RULE: Record<RuleKey, string> = {
   to_source: 'to_source',
   delivered_not_invoiced: 'delivered_not_invoiced',
   close_month: 'close_month',
+  costs_incomplete: 'costs_incomplete',
+  fbr_attention: 'fbr_attention',
+  tcs_not_sent: 'tcs_not_sent',
+  recurring_due: 'recurring_due',
 }
 
 export type TodayTab = 'bids' | 'sourcing' | 'money'
@@ -164,6 +172,49 @@ export interface MonthEndFact {
   closed: boolean
 }
 
+/** M08: one paid order whose costs are not marked complete (v_order_money: payment_state settled, costs_state provisional). Admin only. */
+export interface CostFact {
+  orderId: string
+  orderNumber: number
+  /** v_order_money.expected_cost; null when it was never entered. */
+  expectedCost: number | null
+  actualCost: number
+  /** v_order_money.payment_state */
+  paymentState: string
+  /** v_order_money.costs_state: complete or provisional */
+  costsState: string
+  /** The order is flagged value_basis_unknown: its margin is excluded, so it is not chased for costs. */
+  basisUnknown: boolean
+  /** The order was cancelled. */
+  cancelled: boolean
+}
+
+/** M08: one invoice, as v_invoice_state describes it. Admin and sales only. */
+export interface InvoiceFact {
+  id: string
+  number: string | null
+  orderId: string | null
+  invoiceDate: string | null
+  /** v_invoice_state.courier_state */
+  courierState: string
+  /** v_invoice_state.fbr_state */
+  fbrState: string
+  fbrException: boolean
+  needsFbrAttention: boolean
+}
+
+/** M08: one recurring expense template and whether this month's expense exists. Admin only. */
+export interface RecurringFact {
+  id: string
+  label: string
+  dayOfMonth: number | null
+  active: boolean
+  /** YYYY-MM, or null for "from the beginning". */
+  startMonth: string | null
+  /** An expense with (recurring_id, period) already exists for the current month. */
+  recorded: boolean
+}
+
 export interface SnoozeFact {
   rule: string
   subjectId: string
@@ -186,6 +237,12 @@ export interface TodayInputs {
   receivables: readonly ReceivableFact[]
   /** Admin only; null otherwise. */
   monthEnd: MonthEndFact | null
+  /** M08. Admin only: paid orders whose costs are provisional. Absent or empty for everyone else (never requested). */
+  costs?: readonly CostFact[]
+  /** M08. Admin and sales only: the invoices the FBR and TCS rules read. Absent or empty for an engineer (never requested). */
+  invoices?: readonly InvoiceFact[]
+  /** M08. Admin only: recurring templates. Absent or empty for everyone else. */
+  recurring?: readonly RecurringFact[]
   snoozes: readonly SnoozeFact[]
 }
 

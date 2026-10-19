@@ -23,6 +23,8 @@ export interface SumBarItem {
   /** One line of context: "6 payments received". */
   sub?: ReactNode
   provisional?: boolean
+  /** The figure in the danger colour (the Overdue figure on Receivables, money-06). */
+  tone?: 'danger'
   /** Headline rounding. Default 'never' (whole rupees, as in the approved mockup); the exact paisa stays in the rows and the equation line. */
   paisa?: PaisaMode
 }
@@ -37,7 +39,7 @@ export function SumBar({ items, label, className }: { items: SumBarItem[]; label
       )}
     >
       {items.map(item => (
-        <div key={item.label} className="grid min-w-0 content-start gap-[2px] bg-surface px-5 py-4">
+        <div key={item.label} className={cn('grid min-w-0 content-start gap-[2px] bg-surface px-5 py-4', item.tone === 'danger' && 'text-tone-danger-fg')}>
           <span className="text-xs font-medium text-fg-muted">{item.label}</span>
           {item.count !== undefined || item.figure !== undefined ? (
             <span className="num text-xl font-medium tracking-snug">{item.figure ?? item.count}</span>

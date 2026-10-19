@@ -261,7 +261,7 @@ test.describe('payments in and receivables (M02)', () => {
     await expect(row).toBeVisible()
     await expect(row).toContainText('118,000')
     await expect(row.getByText(/days overdue/)).toBeVisible()
-    await expect(page.getByText('Outstanding')).toBeVisible()
+    await expect(page.getByText('Outstanding', { exact: true })).toBeVisible()
     await review(page, 'm02-receivables-1440')
     await page.getByRole('radio', { name: /Overdue/ }).click()
     await expect(row).toBeVisible()

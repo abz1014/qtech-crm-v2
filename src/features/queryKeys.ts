@@ -113,6 +113,8 @@ function orders() {
     /** O02: past orders found to start a new one from (cached a moment; the search text is part of the key). */
     past: (text: string) => [...all, 'list', 'past', text.trim().toLowerCase()] as const,
     pastOne: (id: string) => [...all, 'list', 'past-one', id] as const,
+    /** The number beside Orders in the top bar: active orders (every staff role may count them). */
+    activeCount: () => [...all, 'list', 'active-count'] as const,
     /** O04: every order with its state dimensions, shaped by the caller's role (an engineer's has no money in it). */
     board: (role: string) => [...all, 'list', 'board', role] as const,
     /** The orders an RFQ produced (the RFQ page shows 'Open ORD-0039' once it is won). */

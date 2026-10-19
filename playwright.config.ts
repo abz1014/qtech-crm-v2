@@ -266,7 +266,7 @@ export default defineConfig({
     },
     {
       name: 'money-costs',
-      testMatch: /money\/.*\.spec\.ts/,
+      testMatch: /money\/costs\.spec\.ts/,
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
