@@ -107,3 +107,27 @@ export function buildPayload(
 export function unpricedItems(items: readonly ConvertItem[], typedPrices: Readonly<Record<string, number | null>>): ConvertItem[] {
   return items.filter(it => it.quotedUnitPriceNet === null && !(typedPrices[it.id] !== null && typedPrices[it.id] !== undefined && (typedPrices[it.id] as number) > 0))
 }
+
+const COMMISSIONING_WORDS = /\b(commission(ing)?|install(ation|ed)?|calibrat(e|ion)|start[-\s]?up|loop check|site acceptance|SAT)\b/i
+
+export interface CommissioningGuess {
+  needs: boolean
+  /** Plain words for the hint under the toggle: why it is on. Null when it is off. */
+  reason: string | null
+}
+
+/**
+ * Whether a converted order probably needs commissioning, so the toggle starts in the right place and the person usually taps nothing.
+ * On when an ordered line is a service, or its description speaks of commissioning, installation or calibration. A wrong guess is one tap.
+ */
+export function guessCommissioning(
+  lines: ReadonlyArray<{ number: number; description: string }>,
+  choices: Readonly<Record<string, SupplierChoice>>,
+  ids: Readonly<Record<number, string>>,
+): CommissioningGuess {
+  for (const l of lines) {
+    if (choices[ids[l.number]] === 'service') return { needs: true, reason: `line ${l.number} is a service` }
+    if (COMMISSIONING_WORDS.test(l.description)) return { needs: true, reason: `line ${l.number} mentions commissioning or installation` }
+  }
+  return { needs: false, reason: null }
+}

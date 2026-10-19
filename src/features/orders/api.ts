@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { TableUpdate, ViewRow } from '@/features/dbTypes'
 import type { ConvertPayloadLine } from '@/features/orders/lib/convert'
+import { medianDeliveryDays } from '@/features/orders/lib/leadTime'
 import { mapRankRows, type RankedQuote } from '@/features/orders/lib/ranking'
 import type { RankRow } from '@/features/rfqs/lib/ranking/reasons'
 import type { LegPatch } from '@/features/orders/lib/legModel'
@@ -276,6 +277,8 @@ export interface ConvertInput {
   items: ConvertPayloadLine[]
   customerPo: string | null
   paymentTermsDays: number | null
+  /** orders.needs_commissioning: the plan-commissioning and engineer-done rules depend on it. */
+  needsCommissioning?: boolean
 }
 
 export async function convertRfqToOrder(input: ConvertInput): Promise<string> {
@@ -285,6 +288,7 @@ export async function convertRfqToOrder(input: ConvertInput): Promise<string> {
     p_items: input.items as unknown as never,
     ...(input.customerPo ? { p_customer_po_number: input.customerPo } : {}),
     ...(input.paymentTermsDays !== null ? { p_payment_terms_days: input.paymentTermsDays } : {}),
+    ...(input.needsCommissioning !== undefined ? { p_needs_commissioning: input.needsCommissioning } : {}),
   })
   if (error) throw error
   return (data as string | null) ?? input.orderId
@@ -531,6 +535,14 @@ export async function addOrderItem(l: NewLine): Promise<void> {
       supplier_unit_price: l.isService ? null : l.supplierUnitPrice,
     })
   if (error) throw error
+}
+
+/** Median days from placed to delivered over the supplier's finished legs (null with fewer than two): the default expected date's second source. */
+export async function getSupplierMedianDays(supplierId: string): Promise<number | null> {
+  const rows = unwrap(
+    await requireSupabase().from('supplier_orders').select('placed_on, delivered_on').eq('supplier_id', supplierId).not('placed_on', 'is', null).not('delivered_on', 'is', null).order('delivered_on', { ascending: false }).limit(50),
+  )
+  return medianDeliveryDays(rows.map(r => ({ placedOn: r.placed_on, deliveredOn: r.delivered_on })))
 }
 
 export async function addOrderLeg(input: { id: string; orderId: string; supplierId: string; currency: string }): Promise<void> {

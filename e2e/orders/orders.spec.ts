@@ -203,6 +203,8 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(dialog.getByLabel('Customer PO number')).toHaveValue('')
     await expect(dialog.getByLabel('Payment terms in days')).toHaveValue('45')
     await expect(dialog).toContainText('from the last order')
+    // the item called "Commissioning ..." makes the toggle start on, so nothing is tapped to plan the job
+    await expect(dialog.getByRole('checkbox', { name: 'Needs commissioning' })).toBeChecked()
     // supplier per line is its rank-1 quote (B, 40 USD, beats A, 50 USD), with the reason under the name; the person may change it
     await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.supplierB.name)
     await expect(dialog.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
@@ -219,6 +221,7 @@ test.describe('O01: Mark won creates the order', () => {
     expect(orders).toHaveLength(1)
     expect(orders[0].customer_po_number).toBeNull()
     expect(orders[0].payment_terms_days).toBe(45)
+    expect((await get<{ needs_commissioning: boolean }>(`orders?id=eq.${orders[0].id}&select=needs_commissioning`))[0].needs_commissioning).toBe(true)
     const items = await get<{ description: string; supplier_order_id: string | null; unit_price_net: number; supplier_unit_price: number | null; is_service: boolean }>(
       `order_items?order_id=eq.${orders[0].id}&select=description,supplier_order_id,unit_price_net,supplier_unit_price,is_service&order=position`,
     )

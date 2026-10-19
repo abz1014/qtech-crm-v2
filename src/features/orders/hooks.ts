@@ -129,6 +129,10 @@ export function useAddItem(orderId: string) {
   })
 }
 
+export function useSupplierMedianDays(supplierId: string | undefined) {
+  return useQuery({ queryKey: qk.orders.supplierMedian(supplierId ?? ''), queryFn: () => api.getSupplierMedianDays(supplierId as string), enabled: Boolean(supplierId), staleTime: 300_000 })
+}
+
 export function useAddLeg(orderId: string) {
   const client = useQueryClient()
   return useMutation({

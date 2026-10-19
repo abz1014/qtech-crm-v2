@@ -9,6 +9,7 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Icon } from '@/ui/Icon'
+import { Checkbox } from '@/ui/form/Checkbox'
 import { Field } from '@/ui/form/Field'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { TextField } from '@/ui/form/TextField'
@@ -17,7 +18,7 @@ import type { RfqHeader } from '@/features/rfqs/api'
 import { useQuoteItems } from '@/features/quotations/hooks'
 import { useConvertRfq, useLastTerms, useRankedQuotes } from '@/features/orders/hooks'
 import { RankedPicker } from '@/features/orders/RankedPicker'
-import type { ConvertItem, SupplierChoice } from '@/features/orders/lib/convert'
+import { guessCommissioning, type ConvertItem, type SupplierChoice } from '@/features/orders/lib/convert'
 import { orderTotals } from '@/features/orders/lib/orderMath'
 import { forItem, priceTexts, rankOne, type RankedQuote } from '@/features/orders/lib/ranking'
 import { buildSplitPayload, checkSplit, isSplit, nextRanked, orderLineCount, type Part, type SplitCheck } from '@/features/orders/lib/splitConvert'
@@ -80,6 +81,8 @@ export function ConvertDialog({ rfq, onClose }: Props) {
   const [po, setPo] = useState('')
   const [terms, setTerms] = useState<number | null>(null)
   const [termsTouched, setTermsTouched] = useState(false)
+  /** null until the person taps it: the toggle then follows the guess from the lines. */
+  const [needsTouched, setNeedsTouched] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -116,6 +119,13 @@ export function ConvertDialog({ rfq, onClose }: Props) {
     return [...seen.values()]
   })()
 
+  const guess = guessCommissioning(
+    ordered.map(it => ({ number: items.indexOf(it) + 1, description: it.description })),
+    effective,
+    Object.fromEntries(items.map((it, i) => [i + 1, it.id])),
+  )
+  const needs = needsTouched ?? guess.needs
+
   const ready = itemsQ.isSuccess && ordered.length > 0 && rankQ.isSuccess && !anyIncomplete
   const busy = convert.isPending
 
@@ -151,6 +161,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
         items: buildSplitPayload(ordered, effective, {}, splits),
         customerPo: po.trim() || null,
         paymentTermsDays: terms,
+        needsCommissioning: needs,
       })
       navigate(`/orders/${id}`)
     } catch (err) {
@@ -424,6 +435,13 @@ export function ConvertDialog({ rfq, onClose }: Props) {
               </span>
             </p>
           ) : null}
+
+          <Checkbox
+            label="Needs commissioning"
+            help={needsTouched === null && guess.reason ? `Set because ${guess.reason}. Plans the engineer's job and holds the invoice reminder until it is done.` : "Plans the engineer's job and holds the invoice reminder until it is done."}
+            checked={needs}
+            onCheckedChange={v => setNeedsTouched(v === true)}
+          />
 
           <Field label="Customer PO number" requirement="optional" help="Add it from the order later if it has not arrived.">
             <TextField value={po} onChange={e => setPo(e.target.value)} placeholder="Not yet received" autoComplete="off" className="max-w-[360px]" />

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { leadTimeUpperDays, suggestExpected } from '@/features/orders/lib/leadTime'
+import { guessCommissioning } from '@/features/orders/lib/convert'
+import { defaultExpected, leadTimeUpperDays, medianDeliveryDays, suggestExpected } from '@/features/orders/lib/leadTime'
 import { before, editPatch, legLetter, legState, legSupplierTotal, nextStamp, stampPatch, type LegDates } from '@/features/orders/lib/legModel'
 import { isExemptAll, lineGstPaisa, orderTotals } from '@/features/orders/lib/orderMath'
 import { buildPayload, defaultChoices, unpricedItems, type ConvertItem, type ConvertQuote } from '@/features/orders/lib/convert'
@@ -38,7 +39,9 @@ describe('leg stamps (one next-step button)', () => {
   it('marking placed suggests expected_on from the lead time, once', () => {
     expect(stampPatch('place', none, '2026-11-06', ['2 wks'])).toEqual({ placed_on: '2026-11-06', expected_on: '2026-11-20' })
     expect(stampPatch('place', { ...none, expectedOn: '2026-12-01' }, '2026-11-06', ['2 wks'])).toEqual({ placed_on: '2026-11-06' })
-    expect(stampPatch('place', none, '2026-11-06', [])).toEqual({ placed_on: '2026-11-06' })
+    // no lead time and no delivery record: 30 days assumed, so goods late can still fire
+    expect(stampPatch('place', none, '2026-11-06', [])).toEqual({ placed_on: '2026-11-06', expected_on: '2026-12-06' })
+    expect(stampPatch('place', none, '2026-11-06', ['soon'], 18)).toEqual({ placed_on: '2026-11-06', expected_on: '2026-11-24' })
   })
   it('delivering sets received_on to the same day, editing delivered moves received with it, clearing clears both', () => {
     expect(stampPatch('deliver', { ...none, placedOn: 'x' }, '2026-11-20', [])).toEqual({ delivered_on: '2026-11-20', received_on: '2026-11-20' })
@@ -153,5 +156,31 @@ describe('resolve price basis preview (admin, legacy orders)', () => {
     expect(c.net).toMatchObject({ net: 1180000, gst: 212400, gross: 1392400, margin: 540000 })
     expect(c.gross).toMatchObject({ net: 1000000, gst: 180000, gross: 1180000, margin: 360000 })
     expect(basisChoices(lines, null).net.margin).toBeNull()
+  })
+})
+
+describe('default expected date', () => {
+  it('prefers the quoted lead time, then the supplier median, then 30 days', () => {
+    expect(defaultExpected('2026-11-06', ['2 wks'], 18)).toMatchObject({ on: '2026-11-20', source: 'lead_time', label: 'from lead time 2 wks' })
+    expect(defaultExpected('2026-11-06', ['ex-works, TBC'], 18)).toMatchObject({ on: '2026-11-24', source: 'supplier_median', label: 'this supplier usually takes 18 days' })
+    expect(defaultExpected('2026-11-06', [], null)).toMatchObject({ on: '2026-12-06', source: 'fallback', days: 30 })
+    expect(defaultExpected(null, ['2 wks'], 18)).toBeNull()
+  })
+  it('the supplier median needs two finished legs and ignores unfinished ones', () => {
+    const leg = (a: string, b: string | null) => ({ placedOn: a, deliveredOn: b })
+    expect(medianDeliveryDays([leg('2026-01-01', '2026-01-11')])).toBeNull()
+    expect(medianDeliveryDays([leg('2026-01-01', '2026-01-11'), leg('2026-02-01', '2026-02-21'), leg('2026-03-01', null)])).toBe(15)
+    expect(medianDeliveryDays([leg('2026-01-01', '2026-01-11'), leg('2026-02-01', '2026-02-21'), leg('2026-03-01', '2026-03-06')])).toBe(10)
+  })
+})
+
+describe('commissioning guess for the convert toggle', () => {
+  const ids = { 1: 'a', 2: 'b' }
+  it('is on for a service line or a line that speaks of commissioning, and says why', () => {
+    expect(guessCommissioning([{ number: 1, description: 'Flow meter' }, { number: 2, description: 'Loop check' }], { a: 'q1', b: 'service' }, ids)).toEqual({ needs: true, reason: 'line 2 is a service' })
+    expect(guessCommissioning([{ number: 1, description: 'Flow meter' }, { number: 2, description: 'Installation and commissioning' }], { a: 'q1', b: 'q2' }, ids)).toEqual({ needs: true, reason: 'line 2 mentions commissioning or installation' })
+  })
+  it('is off for plain goods', () => {
+    expect(guessCommissioning([{ number: 1, description: 'Pressure transmitter 0 to 10 bar' }], { a: 'q1' }, ids)).toEqual({ needs: false, reason: null })
   })
 })

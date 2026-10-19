@@ -248,6 +248,47 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
   })
 })
 
+test.describe('lifecycle audit fixes: commissioning toggle and default expected date', () => {
+  test('Needs commissioning starts off for plain goods and one tap turns it on; the order keeps it', async ({ page }) => {
+    const s = await seed()
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await markWon(page).click()
+    const d = dialog(page)
+    const box = d.getByRole('checkbox', { name: 'Needs commissioning' })
+    await expect(box).not.toBeChecked()
+    await box.click()
+    await d.getByRole('button', { name: 'Create order' }).click()
+    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    const order = await orderFor(s.rfq.id)
+    expect((await get<{ needs_commissioning: boolean }>(`orders?id=eq.${order.id}&select=needs_commissioning`))[0].needs_commissioning).toBe(true)
+  })
+
+  test('a hand-added leg gets an expected date when it is placed (30 days assumed, no lead time), shown as an editable date', async ({ page }) => {
+    const s = await seedSplitOrder()
+    const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: s.order.id, supplier_id: s.s3.id, currency: 'PKR' } })))[0]
+    await openAs(page, 'sales', `/orders/${s.order.id}`)
+    const legs = await get<{ id: string }>(`supplier_orders?order_id=eq.${s.order.id}&select=id&order=created_at`)
+    const letter = String.fromCharCode(65 + legs.findIndex(l => l.id === leg.id))
+    const card = legLoc(page, letter)
+    await card.getByRole('button', { name: new RegExp(`Mark placed, leg ${letter}`) }).click()
+    await expect(card).toContainText('30 days assumed')
+    await expect.poll(async () => (await get<{ expected_on: string | null }>(`supplier_orders?id=eq.${leg.id}&select=expected_on`))[0].expected_on).toBe(karachiDay(30))
+    // an editable date, like any other
+    await expect(card.getByRole('button', { name: new RegExp(`Expected date, leg ${letter}`) })).toBeVisible()
+  })
+
+  test('a leg placed by issuing its PO also gets the default expected date', async ({ page }) => {
+    await setProfile(true)
+    const s = await seedSplitOrder()
+    const legs = await get<{ id: string; supplier_id: string; expected_on: string | null }>(`supplier_orders?order_id=eq.${s.order.id}&select=id,supplier_id,expected_on&order=created_at`)
+    const leg = legs.find(l => l.supplier_id === s.s1.id)!
+    await must(rest('admin', `supplier_orders?id=eq.${leg.id}`, { method: 'PATCH', body: { expected_on: null }, prefer: 'return=minimal' }))
+    await must(rest('admin', 'rpc/issue_purchase_order', { method: 'POST', body: { p_po_id: crypto.randomUUID(), p_supplier_order_id: leg.id } }))
+    await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await expect.poll(async () => (await get<{ expected_on: string | null }>(`supplier_orders?id=eq.${leg.id}&select=expected_on`))[0].expected_on).not.toBeNull()
+  })
+})
+
 test.describe('O09: the order page shows a split item, splits a line, edits the group price and flags a changed PO', () => {
   test('the two parts are grouped under "split across 2 suppliers", numbered 1, 1a, 1b, and one selling price edits both', async ({ page }) => {
     const s = await seedSplitOrder()
