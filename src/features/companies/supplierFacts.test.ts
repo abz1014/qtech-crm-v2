@@ -9,6 +9,7 @@ const base: SupplierStats = {
   no_offer: 0,
   quoted: 0,
   legacy_asked: 0,
+  orders_count: 0,
   reply_days_n: 0,
   median_reply_days: null,
   chosen_of: 0,

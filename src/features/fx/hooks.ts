@@ -7,6 +7,10 @@ export function useFxHistory(currency: string | undefined) {
   return useQuery({ queryKey: qk.fx.history(currency ?? ''), queryFn: () => api.listFxHistory(currency as string), enabled: Boolean(currency) })
 }
 
+export function useFxLastAutoRun() {
+  return useQuery({ queryKey: qk.fx.lastAuto(), queryFn: api.getLastAutoRun, staleTime: 60_000 })
+}
+
 export function useSetFxRate() {
   const client = useQueryClient()
   return useMutation({

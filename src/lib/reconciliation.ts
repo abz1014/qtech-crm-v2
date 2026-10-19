@@ -110,6 +110,11 @@ export interface ReconciliationInput {
   invoices: readonly RcInvoice[]
   legs: readonly RcLeg[]
   pos: readonly RcPo[]
+  /**
+   * Supplier payments per leg, summed by the database (money_exceptions_input()). When given it replaces summing `expenses`,
+   * which then holds only the expenses that are findings by themselves. Absent: the sum is taken from `expenses`.
+   */
+  legPaid?: readonly { legId: string; paid: number }[]
 }
 
 // ------------------------------------------------------------------------------------------------ helpers
@@ -224,7 +229,8 @@ export function computeReconciliationExceptions(input: ReconciliationInput): Rec
   }
   // Supplier payments tagged to a leg against its PO: only for a PKR leg, because the expense is in PKR and no rate is guessed here.
   const paidByLeg = new Map<string, number>()
-  for (const e of input.expenses) if (e.legId) paidByLeg.set(e.legId, (paidByLeg.get(e.legId) ?? 0) + e.cost)
+  if (input.legPaid) for (const p of input.legPaid) paidByLeg.set(p.legId, p.paid)
+  else for (const e of input.expenses) if (e.legId) paidByLeg.set(e.legId, (paidByLeg.get(e.legId) ?? 0) + e.cost)
   for (const po of input.pos) {
     const paid = paidByLeg.get(po.legId) ?? 0
     const leg = input.legs.find(l => l.id === po.legId)
