@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { CloudOff, FileQuestion, RefreshCw } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { recordRfqVisit } from '@/lib/capture/recents'
@@ -8,6 +9,8 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Skeleton } from '@/ui/Skeleton'
 import { useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
+import * as rfqApi from '@/features/rfqs/api'
+import { qk } from '@/features/queryKeys'
 import { suggestSuppliers, toRateTable, type SuggestionItem } from '@/features/rfqs/lib'
 import { RfqActionBar, RfqHeaderBlock } from '@/features/rfqs/RfqHeaderBlock'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
@@ -95,6 +98,17 @@ export default function RfqDetailScreen() {
   const header = useRfqHeader(id)
   const items = useRfqItems(id)
   const inquiries = useRfqInquiries(id)
+
+  // Start the id-only reads now, in the same round as the header, instead of when the panels mount after it (P04: they were a second and
+  // third wave). The panels read the same query keys, so they find the data already there. Nothing here needs the header's data.
+  const client = useQueryClient()
+  useEffect(() => {
+    if (!id) return
+    void client.prefetchQuery({ queryKey: qk.rfqs.part(id, 'clarifications'), queryFn: () => rfqApi.listClarifications(id) })
+    void client.prefetchQuery({ queryKey: qk.rfqs.part(id, 'attachments'), queryFn: () => rfqApi.listAttachments(id) })
+    void client.prefetchQuery({ queryKey: qk.fx.latest(), queryFn: rfqApi.listFxLatest, staleTime: 60_000 })
+    void client.prefetchQuery({ queryKey: qk.intake.suppliers(), queryFn: rfqApi.listSupplierCandidates, staleTime: 60_000 })
+  }, [id, client])
 
   // Capture offers recently opened RFQs first (R22): note this visit, on this device only.
   const openedId = header.data?.id

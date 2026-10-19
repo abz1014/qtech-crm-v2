@@ -54,6 +54,7 @@ describe('hosting headers parity', () => {
     expect(csp).not.toContain('*')
     expect(csp).not.toMatch(/'unsafe-eval'/)
     expect(csp).not.toContain('wss:')
+    expect(dir['object-src']).toEqual(["'none'"])
     expect(csp).toContain("frame-ancestors 'none'")
   })
 
