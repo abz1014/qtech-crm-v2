@@ -264,7 +264,7 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
 
           <section aria-label="Not in P&L" className="overflow-hidden rounded border border-dashed border-line-input bg-canvas">
             <header className="flex flex-wrap items-center gap-3 border-b border-dashed border-line-input px-5 py-3">
-              <h3 className="text-sm font-semibold">Not in P&amp;L</h3>
+              <h4 className="text-sm font-semibold">Not in P&amp;L</h4>
               <span className="text-xs text-fg-muted">Owner drawings and loan repayment are money out, but not a cost of doing business</span>
             </header>
             {v.notInPnl.lines.length === 0 ? (

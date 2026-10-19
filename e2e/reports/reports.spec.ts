@@ -3,12 +3,14 @@ import { createCompany, createRfq, karachiDay, must, openAs, rest, review, uniqu
 import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
 
 /*
- * P01 end to end: the Reports page. Other suites' data is not in this database (it is reset first), but the seed and the other tests
+ * P01 end to end: the enquiry and customer reports, now part of Money > Reports (owner decision 2026-10-19: five main tabs, and
+ * /reports opens Money's Reports view). Other suites' data is not in this database (it is reset first), but the seed and the other tests
  * of this file are, so every assertion looks for this test's own uniquely named customer.
  *
  * What is proved here, beyond the numbers (those are pgTAP and unit tests):
  *  - admin and sales read the page; an engineer does not get the nav item, the page, or one report request;
- *  - the network log of a Reports visit contains no money table or view, and no money-looking column in any report answer.
+ *  - a sales visit asks for no money report, and no enquiry-report answer holds a money-looking column (the admin also sees the month's
+ *    money reports on the same page, by design).
  */
 
 // Not listed: expenses, v_order_money and v_invoice_state. The shell's Today badge (useNavCounts) reads them on every page for admin and sales
@@ -45,33 +47,50 @@ function watch(page: Page) {
   return { urls, bodies }
 }
 
+const QUESTIONS = [
+  'How many RFQs did we win, and why did we lose the others?',
+  'Does asking suppliers for prices help us win?',
+  'How fast do customers answer our questions?',
+  'Which customers come back?',
+]
+
+/** Each report is one line until it is opened: open all four. */
+async function openAll(page: Page) {
+  for (const q of QUESTIONS) await page.getByText(q, { exact: true }).click()
+}
+
 for (const role of ['admin', 'sales'] as const) {
   test.describe(`P01: Reports as ${role}`, () => {
-    test('shows the four reports, the seeded customer as a repeat customer, and no money anywhere', async ({ page }) => {
+    test('/reports opens Money > Reports: three numbers first, each report one line, the seeded customer a repeat customer', async ({ page }) => {
       const s = await seed()
       const log = watch(page)
       await openAs(page, role, '/reports')
-      await expect(page.getByRole('heading', { name: 'Reports', level: 1 })).toBeVisible()
-      for (const h of ['RFQ outcomes', 'Float coverage and conversion', 'Clarification turnaround', 'Repeat customers']) {
-        await expect(page.getByRole('heading', { name: h, level: 2 })).toBeVisible()
-      }
-      // the nav item is there and marked current
-      await expect(page.getByRole('link', { name: 'Reports' }).first()).toBeVisible()
+      // five main tabs: Reports is no longer one of them; the old address lands inside Money
+      await expect(page).toHaveURL(/\/money\/reports$/)
+      await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: 'Reports' })).toHaveCount(0)
+      await expect(page.getByRole('heading', { name: 'Reports', level: 2 })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Reports' }).first()).toHaveAttribute('aria-current', 'page')
+      await expect(page.getByRole('region', { name: 'At a glance' })).toContainText('Win rate')
+      for (const q of QUESTIONS) await expect(page.getByText(q, { exact: true })).toBeVisible()
+      await openAll(page)
       // the closed RFQ appears under its reason; the customer with two live orders shows 2 orders
-      await expect(page.getByRole('table', { name: 'RFQs closed by reason' }).getByRole('row', { name: new RegExp(s.reason) })).toBeVisible()
-      const row = page.getByRole('table', { name: 'Repeat customers' }).getByRole('row', { name: new RegExp(s.customer.name) })
+      await expect(page.getByRole('table', { name: 'RFQs lost, by reason' }).getByRole('row', { name: new RegExp(s.reason) })).toBeVisible()
+      const row = page.getByRole('table', { name: 'Customers who came back' }).getByRole('row', { name: new RegExp(s.customer.name) })
       await expect(row).toBeVisible()
       await expect(row).toContainText('Yes')
       await expect(row.getByRole('cell').nth(1)).toHaveText('2')
+      if (role === 'admin') await expect(page.getByRole('list', { name: 'Money reports' })).toBeVisible()
+      else await expect(page.getByRole('list', { name: 'Money reports' })).toHaveCount(0)
       await waitForAnimationsToFinish(page)
       await review(page, `p01-reports-${role}-1440`)
 
-      // network log: only the four report views were read for the page, and no answer holds a money-looking column
+      // network log: the four report views were read, and no report answer holds a money-looking column
       const mine = log.urls.filter(u => u.includes('/rest/v1/'))
-      for (const target of MONEY_TARGETS) expect(mine.filter(u => u.includes(`/rest/v1/${target}`)), target).toEqual([])
       for (const view of ['v_report_rfq_outcomes', 'v_report_float', 'v_report_clarification_turnaround', 'v_report_repeat_customers']) {
         expect(mine.some(u => u.includes(`/rest/v1/${view}`)), view).toBe(true)
       }
+      // sales: no money report is requested (the admin's month reports are the admin's)
+      if (role === 'sales') for (const target of MONEY_TARGETS) expect(mine.filter(u => u.includes(`/rest/v1/${target}`)), target).toEqual([])
       await expect.poll(() => log.bodies.length).toBeGreaterThanOrEqual(4)
       for (const body of log.bodies) expect(body).not.toMatch(/"(price|amount|net|gross|gst|margin|cost|pkr|total)[a-z_]*"/)
 
@@ -81,12 +100,14 @@ for (const role of ['admin', 'sales'] as const) {
     test('is usable at 375 px', async ({ page }) => {
       await seed()
       await page.setViewportSize({ width: 375, height: 812 })
-      await openAs(page, role, '/reports')
-      await expect(page.getByRole('heading', { name: 'Repeat customers', level: 2 })).toBeVisible()
+      await openAs(page, role, '/money/reports')
+      await openAll(page)
+      await expect(page.getByRole('table', { name: 'Customers who came back' })).toBeVisible()
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       expect(overflow).toBeLessThanOrEqual(0)
       await waitForAnimationsToFinish(page)
       await review(page, `p01-reports-${role}-375`)
+      expect(await axeViolations(page)).toEqual([])
     })
   })
 }
@@ -95,7 +116,7 @@ test.describe('P01: Reports as an engineer', () => {
   test('has no nav item, gets the no-access page, and makes no report request', async ({ page }) => {
     const log = watch(page)
     await openAs(page, 'engineer', '/reports')
-    await expect(page.getByRole('heading', { name: /Reports is for/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Money is for/ }).first()).toBeVisible()
     await expect(page.getByRole('link', { name: 'Reports' })).toHaveCount(0)
     expect(log.urls.filter(u => u.includes('/rest/v1/v_report_'))).toEqual([])
   })

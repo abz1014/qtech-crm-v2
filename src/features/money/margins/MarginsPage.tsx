@@ -174,6 +174,18 @@ export function MarginsPage() {
               </span>
               <span />
             </div>
+            {totals.provisional + totals.basisUnknown > 0 ? (
+              <p className="border-t px-5 py-3 text-sm text-fg-2" data-testid="margin-left-out">
+                Not added up:{' '}
+                {[
+                  totals.provisional > 0 ? `${totals.provisional} with margin not final` : null,
+                  totals.basisUnknown > 0 ? `${totals.basisUnknown} where nobody has said whether GST is included` : null,
+                ]
+                  .filter(Boolean)
+                  .join(', and ')}
+                .
+              </p>
+            ) : null}
           </div>
         )}
       </section>
