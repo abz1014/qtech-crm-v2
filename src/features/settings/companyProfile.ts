@@ -34,12 +34,13 @@ export interface CompanyProfile {
   bank_account_title: string | null
   bank_iban: string | null
   quotation_validity_days: number
+  default_payment_terms_days: number
   quotation_terms: string | null
   po_terms: string | null
   updated_at: string
 }
 
-export const COLS = [...TEXT_FIELDS, 'quotation_validity_days', 'updated_at'].join(', ')
+export const COLS = [...TEXT_FIELDS, 'quotation_validity_days', 'default_payment_terms_days', 'updated_at'].join(', ')
 
 const text = (max: number, what: string) => z.string().trim().max(max, `Keep ${what} under ${max} characters.`)
 
@@ -59,6 +60,11 @@ export const profileSchema = z.object({
     .int('Use whole days.')
     .min(1, 'A quotation must be valid for at least 1 day.')
     .max(365, 'Keep the validity to a year or less.'),
+  default_payment_terms_days: z
+    .number({ invalid_type_error: 'Enter the number of days customers have to pay.' })
+    .int('Use whole days.')
+    .min(0, 'Payment terms cannot be negative.')
+    .max(365, 'Keep the terms to a year or less.'),
   quotation_terms: text(4000, 'the terms'),
   po_terms: text(4000, 'the terms'),
 })
@@ -66,14 +72,20 @@ export type ProfileValues = z.infer<typeof profileSchema>
 
 /** Form values from a row: empty text instead of null, so inputs stay controlled. */
 export function toFormValues(p: CompanyProfile): ProfileValues {
-  const v: Record<string, unknown> = { quotation_validity_days: p.quotation_validity_days }
+  const v: Record<string, unknown> = {
+    quotation_validity_days: p.quotation_validity_days,
+    default_payment_terms_days: p.default_payment_terms_days,
+  }
   for (const f of TEXT_FIELDS) v[f] = p[f] ?? ''
   return v as ProfileValues
 }
 
 /** The update payload: blank text is stored as null, never as an empty string. */
 export function toRow(v: ProfileValues): TablesUpdate<'company_profile'> {
-  const row: TablesUpdate<'company_profile'> = { quotation_validity_days: v.quotation_validity_days }
+  const row: TablesUpdate<'company_profile'> = {
+    quotation_validity_days: v.quotation_validity_days,
+    default_payment_terms_days: v.default_payment_terms_days,
+  }
   for (const f of TEXT_FIELDS) row[f] = v[f].trim() === '' ? null : v[f].trim()
   return row
 }
@@ -86,3 +98,22 @@ export function missingForPdf(p: Pick<CompanyProfile, 'legal_name' | 'address'>)
   return out
 }
 
+
+/** What the database falls back to when the profile cannot be read yet (the column default in migration 0059). */
+export const FALLBACK_PAYMENT_TERMS_DAYS = 30
+
+/**
+ * The payment terms that apply to an order (audit Y1). An order's own terms always win, including 0; with none, the company
+ * default applies, so the due date and the payment-overdue reminder exist for every invoiced order. `isDefault` is what the
+ * screens print as "default terms".
+ */
+export function effectiveTerms(ownDays: number | null, defaultDays: number | null | undefined): { days: number; isDefault: boolean } {
+  if (ownDays !== null) return { days: ownDays, isDefault: false }
+  return { days: defaultDays ?? FALLBACK_PAYMENT_TERMS_DAYS, isDefault: true }
+}
+
+/** "Terms 30 days from invoice", with "(default terms)" when the order has none of its own. */
+export function termsLabel(ownDays: number | null, defaultDays: number | null | undefined): string {
+  const t = effectiveTerms(ownDays, defaultDays)
+  return `Terms ${t.days} days from invoice${t.isDefault ? ' (default terms)' : ''}`
+}

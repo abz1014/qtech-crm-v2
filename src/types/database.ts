@@ -303,14 +303,14 @@ isOneToOne: false
                   ]
                 },"company_profile": {
                   Row: {
-                    "address": string | null,"bank_account_title": string | null,"bank_iban": string | null,"bank_name": string | null,"email": string | null,"id": number,"legal_name": string | null,"ntn": string | null,"phone": string | null,"po_terms": string | null,"quotation_terms": string | null,"quotation_validity_days": number,"strn": string | null,"updated_at": string,"updated_by": string | null,"website": string | null
+                    "address": string | null,"bank_account_title": string | null,"bank_iban": string | null,"bank_name": string | null,"default_payment_terms_days": number,"email": string | null,"id": number,"legal_name": string | null,"ntn": string | null,"phone": string | null,"po_terms": string | null,"quotation_terms": string | null,"quotation_validity_days": number,"strn": string | null,"updated_at": string,"updated_by": string | null,"website": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "address"?: string | null,"bank_account_title"?: string | null,"bank_iban"?: string | null,"bank_name"?: string | null,"email"?: string | null,"id"?: number,"legal_name"?: string | null,"ntn"?: string | null,"phone"?: string | null,"po_terms"?: string | null,"quotation_terms"?: string | null,"quotation_validity_days"?: number,"strn"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"website"?: string | null
+                    "address"?: string | null,"bank_account_title"?: string | null,"bank_iban"?: string | null,"bank_name"?: string | null,"default_payment_terms_days"?: number,"email"?: string | null,"id"?: number,"legal_name"?: string | null,"ntn"?: string | null,"phone"?: string | null,"po_terms"?: string | null,"quotation_terms"?: string | null,"quotation_validity_days"?: number,"strn"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"website"?: string | null
                   }
                   Update: {
-                    "address"?: string | null,"bank_account_title"?: string | null,"bank_iban"?: string | null,"bank_name"?: string | null,"email"?: string | null,"id"?: number,"legal_name"?: string | null,"ntn"?: string | null,"phone"?: string | null,"po_terms"?: string | null,"quotation_terms"?: string | null,"quotation_validity_days"?: number,"strn"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"website"?: string | null
+                    "address"?: string | null,"bank_account_title"?: string | null,"bank_iban"?: string | null,"bank_name"?: string | null,"default_payment_terms_days"?: number,"email"?: string | null,"id"?: number,"legal_name"?: string | null,"ntn"?: string | null,"phone"?: string | null,"po_terms"?: string | null,"quotation_terms"?: string | null,"quotation_validity_days"?: number,"strn"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"website"?: string | null
                   }
                   Relationships: [
                     {

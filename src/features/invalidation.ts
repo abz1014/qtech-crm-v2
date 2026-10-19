@@ -126,7 +126,8 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'team.set-phone': () => [qk.settings.team(), qk.settings.myDetails()],
   'team.deactivate': () => [qk.settings.team()],
   'team.reactivate': () => [qk.settings.team()],
-  'company-profile.update': () => [qk.settings.profile()],
+  // The default payment terms move every due date for orders with no terms of their own.
+  'company-profile.update': () => [qk.settings.profile(), qk.money.receivables.all, qk.today.all],
   'target.save': () => [qk.settings.targets(), qk.today.target()],
   // Money's own category list (new expense forms, the Expenses list) reads the same rows, so it goes stale too.
   'category.save': () => [qk.settings.categories(), qk.money.categories()],
@@ -187,7 +188,8 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'invoice.update': v => [qk.money.invoices.register(), qk.money.bank.all, qk.money.invoices.detail(v.invoiceId), qk.money.receivables.all, qk.orders.all, qk.today.all],
   // Stamps move the register's tracks and the FBR / TCS items on Today.
   'invoice.stamp': () => [qk.money.invoices.all, qk.money.bank.all, qk.today.all],
-  'invoice.receipt': v => [qk.money.invoices.receipts(v.invoiceId), qk.money.invoices.detail(v.invoiceId), qk.money.invoices.register(), qk.today.all],
+  // One receipt covers a whole PSID group (audit T1): every invoice of the group is stamped, so all invoice reads go stale.
+  'invoice.receipt': () => [qk.money.invoices.all, qk.today.all],
   // A payment moves balances (receivables, the order page's panel, its payment chip) and Today's overdue items.
   'payment.record': v => [qk.money.receivables.all, qk.money.bank.all, qk.money.receivables.payments(v.orderId), qk.orders.all, qk.today.all],
 }

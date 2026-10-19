@@ -116,7 +116,11 @@ describe('invalidation map (R01)', () => {
     for (const n of ['team.create', 'team.reset-password', 'team.set-role', 'team.set-job-title', 'team.deactivate', 'team.reactivate'] as const) {
       expect(keysFor(n, {})).toEqual([qk.settings.team()])
     }
-    expect(keysFor('company-profile.update', {})).toEqual([qk.settings.profile()])
+    expect(keysFor('company-profile.update', {})).toEqual([qk.settings.profile(), qk.money.receivables.all, qk.today.all])
+  })
+
+  it('a receipt covers a whole PSID group, so it re-reads every invoice read and Today', () => {
+    expect(keysFor('invoice.receipt', { invoiceId: 'i1' })).toEqual([qk.money.invoices.all, qk.today.all])
   })
 
   it('a target write refreshes the admin grid and the signed-in person\'s own Today tile; a category write refreshes the category list', () => {

@@ -212,6 +212,42 @@ test.describe('invoices and the GST register (M01)', () => {
     const [after] = await must(rest<InvoiceRow[]>('admin', `invoices?id=eq.${inv.id}&select=wasif_receipt_on`))
     expect(after.wasif_receipt_on).toBe(today())
   })
+
+  test('T1: one receipt for a PSID covers every invoice of that PSID, so FBR attention clears for the whole group', async ({ page }) => {
+    const co = await createCompany(uniqueName('Group Receipt Customer'))
+    const psid = `PSID-${unique()}`.toUpperCase()
+    const group = { company_id: co.id, psid, tax_deposited_on: today(), tcs_sent_on: today() }
+    const a = await seedInvoice(null, group)
+    const b = await seedInvoice(null, group)
+    const lone = await seedInvoice(null, { company_id: co.id, psid: `${psid}-OTHER`, tax_deposited_on: today() })
+    const exceptions = async () =>
+      Object.fromEntries(
+        (await must(rest<{ invoice_id: string; fbr_exception: boolean }[]>('admin', `v_invoice_state?invoice_id=in.(${a.id},${b.id},${lone.id})&select=invoice_id,fbr_exception`))).map(r => [r.invoice_id, r.fbr_exception]),
+      )
+    // deposited with no receipt: all three are flagged
+    expect(await exceptions()).toEqual({ [a.id]: true, [b.id]: true, [lone.id]: true })
+
+    await openAs(page, 'admin', '/money/gst-register')
+    await page.getByRole('row', { name: new RegExp(a.number) }).getByText(co.name).click()
+    const dialog = page.getByRole('dialog', { name: `Invoice ${a.number}` })
+    await expect(dialog.getByText('One receipt covers every invoice with this PSID.')).toBeVisible()
+    await dialog.locator('input[type=file]').setInputFiles({ name: 'group-receipt.png', mimeType: 'image/png', buffer: PNG })
+    await expect(dialog.getByRole('button', { name: 'group-receipt.png', exact: true })).toBeVisible()
+
+    // one upload, one file, two invoices dated, the other PSID untouched
+    const stamped = await must(rest<InvoiceRow[]>('admin', `invoices?id=in.(${a.id},${b.id},${lone.id})&select=id,wasif_receipt_on`))
+    expect(Object.fromEntries(stamped.map(r => [r.id, r.wasif_receipt_on]))).toEqual({ [a.id]: today(), [b.id]: today(), [lone.id]: null })
+    expect(await must(rest<unknown[]>('admin', `attachments?invoice_id=in.(${a.id},${b.id})&select=id`))).toHaveLength(1)
+    expect(await exceptions()).toEqual({ [a.id]: false, [b.id]: false, [lone.id]: true })
+
+    // the other invoice of the group shows the same receipt, marked as shared
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    await page.getByRole('row', { name: new RegExp(b.number) }).getByText(co.name).click()
+    const second = page.getByRole('dialog', { name: `Invoice ${b.number}` })
+    await expect(second.getByRole('button', { name: 'group-receipt.png', exact: true })).toBeVisible()
+    await expect(second.getByText('same PSID')).toBeVisible()
+  })
 })
 
 test.describe('payments in and receivables (M02)', () => {

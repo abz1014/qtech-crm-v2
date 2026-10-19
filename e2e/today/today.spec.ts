@@ -62,11 +62,14 @@ async function seedLateGoods(ownerId: string) {
   return { customer, supplier, order, leg, reference }
 }
 
-/** An order owned by `ownerId` with one invoice dated 45 days ago on 30-day terms: overdue by 15 days. */
-async function seedOverdueOrder(ownerId: string) {
+/**
+ * An order owned by `ownerId` with one invoice dated 45 days ago on 30-day terms: overdue by 15 days. `terms: null` leaves the
+ * order without terms of its own, so the company default (30 days, audit Y1) decides.
+ */
+async function seedOverdueOrder(ownerId: string, terms: number | null = 30) {
   const customer = uniqueName('Debtor')
   const co = await createCompany(customer)
-  const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: co.id, owner_id: ownerId, ordered_on: iso(-50), payment_terms_days: 30 } })))[0]
+  const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: co.id, owner_id: ownerId, ordered_on: iso(-50), ...(terms === null ? {} : { payment_terms_days: terms }) } })))[0]
   await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, description: 'Service visit', qty: 1, unit_price_net: 100000, is_service: true }, prefer: 'return=minimal' }))
   await must(rest('admin', 'invoices', { method: 'POST', body: { order_id: order.id, number: `INV-${Date.now().toString(36)}`, invoice_date: iso(-45), net_amount: 100000, gst_amount: 18000 }, prefer: 'return=minimal' }))
   return { customer, order }
@@ -221,6 +224,20 @@ test.describe('Today: role-aware', () => {
     const inv = await must(rest<{ reminder_count: number }[]>('admin', `invoices?order_id=eq.${p.order.id}&select=reminder_count`))
     expect(inv[0].reminder_count).toBe(1)
     await review(page, 'today-06-sales-payment-1440')
+  })
+
+  test('Y1: an order with no payment terms is still overdue, on the company default terms', async ({ page }) => {
+    const p = await seedOverdueOrder(SALES, null)
+    const [o] = await must(rest<{ payment_terms_days: number | null }[]>('admin', `orders?id=eq.${p.order.id}&select=payment_terms_days`))
+    expect(o.payment_terms_days).toBeNull()
+    await openAs(page, 'sales', '/today')
+    // invoiced 45 days ago, default terms 30 days: 15 days overdue, the same as an order that carries 30 days itself
+    await expect(rowOf(page, p.customer).getByText(/Payment 15 days overdue/)).toBeVisible()
+    const [r] = await must(rest<{ is_overdue: boolean; payment_state: string }[]>('admin', 'rpc/order_receivables', { method: 'POST', body: { p_order_id: p.order.id } }))
+    expect(r).toMatchObject({ is_overdue: true, payment_state: 'overdue' })
+    // and the order page says which terms apply
+    await openAs(page, 'admin', `/orders/${p.order.id}`)
+    await expect(page.getByTestId('order-terms')).toHaveText('Terms 30 days from invoice (default terms)')
   })
 
   test('admin: sees money items for orders that are not sales-owned, plus everything of their own', async ({ page }) => {

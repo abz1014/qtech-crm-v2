@@ -17,6 +17,8 @@ import { useToast } from '@/ui/useToast'
 import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
 import type { OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
 import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
+import { useCompanyProfile } from '@/features/settings/hooks'
+import { termsLabel } from '@/features/settings/companyProfile'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
 import { useMarkDone, useSetPlanned } from '@/features/orders/commissioningActions'
 import { ResolveBasisDialog } from '@/features/orders/ResolveBasisDialog'
@@ -79,6 +81,8 @@ export function OrderHeaderBlock({
   const isEngineer = role === 'engineer'
   const isAdmin = role === 'admin'
   const money = role === 'admin' || role === 'sales'
+  const profileQ = useCompanyProfile()
+  const termsText = termsLabel(order.paymentTermsDays, profileQ.data?.default_payment_terms_days)
   const update = useUpdateOrder(order.id)
   const cancel = useCancelOrder(order.id)
   const markDone = useMarkDone(order)
@@ -180,7 +184,7 @@ export function OrderHeaderBlock({
             </span>
             {order.orderedOn ? <span>Ordered {formatDay(order.orderedOn)}</span> : null}
             {order.owner ? <span>Owner {order.owner.name}</span> : null}
-            {money ? <span>{order.paymentTermsDays !== null ? `Terms ${order.paymentTermsDays} days from invoice` : 'Terms not set'}</span> : null}
+            {money ? <span data-testid="order-terms">{termsText}</span> : null}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

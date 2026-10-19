@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { FilePlus2, Plus } from 'lucide-react'
+import { useCompanyProfile } from '@/features/settings/hooks'
+import { effectiveTerms } from '@/features/settings/companyProfile'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
@@ -153,7 +155,9 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
   const option = form.watch('option')
   const date = form.watch('invoiceDate')
   const gross = round2((typeof net === 'number' ? net : 0) + (gst ?? 0))
-  const due = dueOn(date, order.amounts.paymentTermsDays)
+  const profileQ = useCompanyProfile()
+  const terms = effectiveTerms(order.amounts.paymentTermsDays, profileQ.data?.default_payment_terms_days)
+  const due = dueOn(date, terms.days)
 
   const setNet = (v: number | null) => {
     form.setValue('net', v as number, { shouldDirty: true })
@@ -214,7 +218,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
           <Line label="Due" last>
             {due ? (
               <span className="num text-xs text-fg-2">
-                {formatDateText(due)} <span className="text-fg-muted">· {order.amounts.paymentTermsDays} days from invoice</span>
+                {formatDateText(due)} <span className="text-fg-muted">· {terms.days} days from invoice{terms.isDefault ? ' (default terms)' : ''}</span>
               </span>
             ) : (
               <span className="text-xs text-fg-muted">No payment terms on the order</span>

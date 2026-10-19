@@ -13,6 +13,7 @@ import {
   invalidRows,
   listTotals,
   markClosedRows,
+  matchOrders,
   monthEnd,
   monthLabel,
   mostUsedCategory,
@@ -24,6 +25,7 @@ import {
   type BurstRow,
   type Category,
   type ListedExpense,
+  type OrderTagOption,
   type RecurringTemplate,
 } from '@/features/money/expenses/model'
 
@@ -94,6 +96,16 @@ describe('burst rows to one bulk insert', () => {
     expect(burstInserts(rows, CATS).map(r => r.input_tax_pkr)).toEqual([90000, 0])
   })
 
+  it('the order tag (audit X1) is sent only when set; an order box holding text that matches nothing blocks the save', () => {
+    const rows = [row('t', 5000, { orderId: 'o-42' }), row('u', 700), row('v', 100, { orderText: 'zzz' })]
+    const out = burstInserts(rows, CATS)
+    expect(out.map(o => o.id)).toEqual(['t', 'u'])
+    expect(out[0]).toMatchObject({ order_id: 'o-42' })
+    expect('order_id' in out[1]).toBe(false)
+    expect(invalidRows(rows).map(r => r.id)).toEqual(['v'])
+    expect(newBurstRow(rows[0], D, 'n').orderId).toBeNull() // never carried from the row above
+  })
+
   it('totals count filled rows and a negative amount needs a change', () => {
     const rows = [row('a', 450), row('b', 600), row('c', null), row('d', -5)]
     expect(burstTotals(rows)).toEqual({ count: 3, total: 1045 })
@@ -159,5 +171,21 @@ describe('list filters and totals', () => {
 
   it('totals the paid amount, the input tax and the cost', () => {
     expect(listTotals(rows)).toEqual({ count: 3, total: 690450, inputTax: 90000, cost: 600450 })
+  })
+})
+
+describe('order tag type-ahead (audit X1)', () => {
+  const O = (n: number, company: string): OrderTagOption => ({ id: `o${n}`, ref: `ORD-${String(n).padStart(4, '0')}`, company })
+  const ORDERS = [O(142, 'Karachi Glass'), O(42, 'Lahore Beverages'), O(7, 'Margalla Foods'), O(8, 'Indus Beverages')]
+
+  it('a bare number finds that order first, then orders that contain the digits', () => {
+    expect(matchOrders(ORDERS, '42').map(o => o.id)).toEqual(['o42', 'o142'])
+    expect(matchOrders(ORDERS, 'ORD-0042').map(o => o.id)).toEqual(['o42'])
+  })
+  it('a customer name word finds its orders, newest first as listed', () => {
+    expect(matchOrders(ORDERS, 'bev').map(o => o.id)).toEqual(['o42', 'o8'])
+  })
+  it('nothing typed lists nothing to reject, and no match is an empty list', () => {
+    expect(matchOrders(ORDERS, 'zzz')).toEqual([])
   })
 })

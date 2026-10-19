@@ -1,4 +1,6 @@
 import { formatDay } from '@/lib/formatDay'
+import { useCompanyProfile } from '@/features/settings/hooks'
+import { effectiveTerms } from '@/features/settings/companyProfile'
 import { formatAmount } from '@/lib/money'
 import { RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
 import { cn } from '@/lib/utils'
@@ -34,7 +36,8 @@ export { MarginPanel } from '@/features/money/costs/MarginPanel'
 export function InvoicesPanel({ order, money, loading, error, isAdmin }: { order: OrderHeader; money: OrderMoney | null | undefined; loading: boolean; error: boolean; isAdmin: boolean }) {
   const m = money
   const invoiced = order.state?.invoiced ?? null
-  const terms = order.paymentTermsDays
+  const profileQ = useCompanyProfile()
+  const terms = effectiveTerms(order.paymentTermsDays, profileQ.data?.default_payment_terms_days)
   return (
     <section aria-label="Invoices and payments" data-slot="invoices-payments" className="rounded border bg-surface">
       <div className="flex items-center gap-3 border-b px-5 py-4">
@@ -71,7 +74,7 @@ export function InvoicesPanel({ order, money, loading, error, isAdmin }: { order
           <p className="text-xs text-fg-muted">
             {m.dueOn
               ? `Due ${formatDay(m.dueOn)}.`
-              : `Due date starts when the invoice is issued${terms !== null ? `, ${terms} days from its date` : ''}.`}
+              : `Due date starts when the invoice is issued, ${terms.days} days from its date${terms.isDefault ? ' (default terms)' : ''}.`}
           </p>
         </div>
       )}

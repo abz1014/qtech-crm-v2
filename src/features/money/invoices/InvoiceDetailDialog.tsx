@@ -68,8 +68,8 @@ const val = (s: string): string | null => (s.trim() === '' ? null : s)
 function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy: (b: boolean) => void; onClose: () => void }) {
   const toast = useToast()
   const update = useUpdateInvoice(invoice.id)
-  const receipts = useInvoiceReceipts(invoice.id)
-  const upload = useUploadInvoiceReceipt(invoice.id)
+  const receipts = useInvoiceReceipts(invoice.id, invoice.psid)
+  const upload = useUploadInvoiceReceipt(invoice.id, invoice.psid)
   const remove = useDeleteInvoiceReceipt(invoice.id)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
@@ -197,7 +197,10 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
         </div>
         {fileError ? <Banner tone="danger" title="That file was not added">{fileError}</Banner> : null}
         {(receipts.data ?? []).length === 0 ? (
-          <p className="text-xs text-fg-muted">No receipt uploaded yet. A photo or a PDF, up to 5 MB.</p>
+          <p className="text-xs text-fg-muted">
+            No receipt uploaded yet. A photo or a PDF, up to 5 MB.
+            {invoice.psid?.trim() ? ' One receipt covers every invoice with this PSID.' : ''}
+          </p>
         ) : (
           <ul className="grid gap-1">
             {(receipts.data ?? []).map(r => (
@@ -206,6 +209,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
                   <ExternalLink className="size-4 shrink-0" aria-hidden="true" />
                   <span className="truncate">{r.fileName}</span>
                 </button>
+                {r.invoiceId !== invoice.id ? <span className="shrink-0 text-xs text-fg-muted">same PSID</span> : null}
                 <Button size="sm" variant="quiet" aria-label={`Remove ${r.fileName}`} onClick={() => remove.mutate(r)}>
                   Remove
                 </Button>
