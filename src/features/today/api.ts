@@ -221,23 +221,29 @@ async function loadOrders(role: Role, names: Map<string, string>): Promise<Order
         // invoicing_state is money-gated: an engineer's request never names it
         .select((money ? 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state, gross, invoiced' : 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state') as 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state, gross, invoiced')
         .eq('lifecycle', 'active')
-        .or(money ? 'commissioning_state.eq.to_plan,invoicing_state.eq.not_invoiced,invoicing_state.eq.part' : 'commissioning_state.eq.to_plan')
+        .or(money ? 'commissioning_state.eq.to_plan,goods_state.eq.to_source,invoicing_state.eq.not_invoiced,invoicing_state.eq.part' : 'commissioning_state.eq.to_plan,goods_state.eq.to_source')
         .order('number')
         .range(from, to),
   )
   const live = states.filter(r => r.order_id)
   const dates = new Map<string, { orderedOn: string | null; commissioningDoneOn: string | null; deliveredOn: string | null }>()
   const lastInvoiced = new Map<string, string>()
+  const unsourced = new Map<string, number>()
+  const toSourceIds = new Set(live.filter(r => r.goods_state === 'to_source').map(r => r.order_id as string))
   const partIds = new Set(live.filter(r => r.invoicing_state === 'part').map(r => r.order_id as string))
   const ids = live.map(r => r.order_id as string)
   for (let i = 0; i < ids.length; i += 100) {
     const chunk = ids.slice(i, i + 100)
-    const [orders, legs, invoices] = await Promise.all([
+    const [orders, legs, invoices, lines] = await Promise.all([
       db.from('orders').select('id, ordered_on, commissioning_done_on').in('id', chunk),
       db.from('supplier_orders').select('order_id, delivered_on').in('order_id', chunk).not('delivered_on', 'is', null),
       // only part-invoiced orders need their last invoice date, and only admin and sales may read invoices
       money && chunk.some(id => partIds.has(id)) ? db.from('invoices').select('order_id, invoice_date').in('order_id', chunk.filter(id => partIds.has(id))) : Promise.resolve({ data: [], error: null }),
+      chunk.some(id => toSourceIds.has(id))
+        ? db.from('order_items').select('order_id').in('order_id', chunk.filter(id => toSourceIds.has(id))).eq('is_service', false).is('supplier_order_id', null)
+        : Promise.resolve({ data: [], error: null }),
     ])
+    for (const l of unwrap(lines) ?? []) unsourced.set(l.order_id, (unsourced.get(l.order_id) ?? 0) + 1)
     for (const v of unwrap(invoices) ?? []) {
       if (v.order_id && v.invoice_date && (!lastInvoiced.has(v.order_id) || v.invoice_date > (lastInvoiced.get(v.order_id) as string))) lastInvoiced.set(v.order_id, v.invoice_date)
     }
@@ -259,6 +265,7 @@ async function loadOrders(role: Role, names: Map<string, string>): Promise<Order
       goodsState: r.goods_state ?? 'n_a',
       commissioningState: r.commissioning_state ?? 'n_a',
       invoicingState: money ? (r.invoicing_state ?? null) : null,
+      unsourced: r.goods_state === 'to_source' ? (unsourced.get(r.order_id as string) ?? 0) : 0,
       toInvoice: money && r.invoicing_state === 'part' ? Math.max(0, num(r.gross) - num(r.invoiced)) : null,
       lastInvoicedOn: lastInvoiced.get(r.order_id as string) ?? null,
       deliveredOn,
