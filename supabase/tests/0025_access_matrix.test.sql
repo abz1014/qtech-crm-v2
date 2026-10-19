@@ -177,6 +177,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'resolve_value_basis',     '',    'X',    '',     ''),     -- s10 (same row)
   ('function', 'model_tokens',            '',    'X',    'X',    'X'),    -- s10 "model_tokens()"
   ('function', 'item_text_norm',          '',    'X',    'X',    'X'),    -- A5: helper, all staff
+  ('function', 'lead_time_upper_days',    '',    'X',    'X',    'X'),    -- 0067 helper: reads a lead-time text, all staff
+  ('function', 'supplier_median_delivery_days', '', 'X', 'X',    'X'),    -- 0067 helper: a supplier's median days to deliver, all staff
   ('function', 'item_match_tier',         '',    'X',    'X',    'X'),    -- S19 helper, all staff (not in s10; same class as model_tokens)
   ('function', 'brand_tokens',            '',    'X',    'X',    'X'),    -- 0035 helper: tokens that are brand or family names, all staff (same class as model_tokens)
   ('function', 'tokens_without',          '',    'X',    'X',    'X'),    -- 0035 pure helper, all staff
@@ -428,6 +430,8 @@ insert into probes values
   ('resolve_value_basis', '', 'X', $q$select public.resolve_value_basis(@21, 'net')$q$),
   ('model_tokens', '', 'X', $q$select public.model_tokens('ABC123')$q$),
   ('item_text_norm', '', 'X', $q$select public.item_text_norm('ABC 123')$q$),
+  ('lead_time_upper_days', '', 'X', $q$select public.lead_time_upper_days('2 wks')$q$),
+  ('supplier_median_delivery_days', '', 'X', $q$select public.supplier_median_delivery_days(@01)$q$),
   ('item_match_tier', '', 'X', $q$select public.item_match_tier('{}', 'x', null, null, '{}', 'x', null, null)$q$),
   ('brand_tokens', '', 'X', $q$select public.brand_tokens()$q$),
   ('tokens_without', '', 'X', $q$select public.tokens_without('{AB12}', '{}')$q$),
@@ -540,6 +544,8 @@ select is((select count(*)::int from pg_class c
 insert into known values
   ('model_tokens', '', 'deactivated'),
   ('item_text_norm', '', 'deactivated'),
+  ('lead_time_upper_days', '', 'deactivated'),
+  ('supplier_median_delivery_days', '', 'deactivated'),
   ('item_match_tier', '', 'deactivated'),
   ('brand_tokens', '', 'deactivated'),
   ('tokens_without', '', 'deactivated'),
