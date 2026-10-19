@@ -22,6 +22,7 @@ const item = (o: Partial<OrderItemRow>): OrderItemRow => ({
   number: 1,
   description: 'x',
   brandName: null,
+  model: null,
   qty: 1,
   unit: null,
   isService: false,

@@ -3,7 +3,7 @@
 // A leg is Mark placed, then Delivered today. supplier_orders.received_on stays in the database and is set by the app to the delivered
 // date, whenever delivered is stamped or edited; expected_on is suggested from placed_on plus the lead time.
 
-import { defaultExpected } from '@/features/orders/lib/leadTime'
+import { defaultExpected, suggestExpected } from '@/features/orders/lib/leadTime'
 
 export { defaultExpected, suggestExpected, type ExpectedSuggestion } from '@/features/orders/lib/leadTime'
 
