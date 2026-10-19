@@ -32,10 +32,11 @@ select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-0000000
 select is(public.stamp_supplier_chase('e0000000-0000-4000-8000-0000000000f1')::int, 2, 'the engineer chases next');
 select is((select last_chased_by from public.supplier_inquiries where id = 'e0000000-0000-4000-8000-0000000000f1'), 'a0000000-0000-4000-8000-000000000003'::uuid, 'and the name moves to them');
 
--- An Undo that restores the stamp and names the earlier actor keeps that actor.
+-- An Undo restores the stamp. Since 0065 (security review L-1) a signed-in caller cannot name the actor: the earlier
+-- chaser cannot be proven, so an Undo leaves no name rather than a possibly wrong one.
 update public.supplier_inquiries set last_chased_on = public.today_pkt() - 1, chase_count = 1, last_chased_by = 'a0000000-0000-4000-8000-000000000002'
   where id = 'e0000000-0000-4000-8000-0000000000f1';
-select is((select last_chased_by from public.supplier_inquiries where id = 'e0000000-0000-4000-8000-0000000000f1'), 'a0000000-0000-4000-8000-000000000002'::uuid, 'an Undo restores the earlier actor too');
+select is((select last_chased_by from public.supplier_inquiries where id = 'e0000000-0000-4000-8000-0000000000f1'), null::uuid, 'an Undo leaves no actor (0065: a named actor is ignored)');
 
 select * from finish();
 rollback;

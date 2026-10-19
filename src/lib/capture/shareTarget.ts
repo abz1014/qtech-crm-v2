@@ -8,6 +8,28 @@ import { createCapture, purgeExpired } from './store'
  */
 export const SHARE_PATH = '/capture'
 
+/*
+ * Security review L-4. Any page on the internet can POST a form to /capture, exactly as a share does (a check on
+ * Sec-Fetch-Site was not added: it cannot be tested against Android's share sheet in CI, and a wrong guess would break
+ * WhatsApp share). What arrives is only ever a DRAFT on this device: nothing reaches the database until the signed-in
+ * person picks a destination and taps Save. The caps below keep a hostile post from filling the device.
+ */
+export const MAX_SHARE_FILES = 10
+export const MAX_SHARE_BYTES = 25 * 1024 * 1024
+export const MAX_SHARE_TEXT = 20_000
+
+/** The first files that fit the caps, in the order they came. */
+export function capFiles<T extends { size: number }>(files: readonly T[]): T[] {
+  const out: T[] = []
+  let total = 0
+  for (const f of files) {
+    if (out.length >= MAX_SHARE_FILES || total + f.size > MAX_SHARE_BYTES) continue
+    out.push(f)
+    total += f.size
+  }
+  return out
+}
+
 export function isShareRequest(request: { method: string }, url: URL, ownOrigin: string): boolean {
   return request.method === 'POST' && url.origin === ownOrigin && url.pathname === SHARE_PATH
 }
@@ -29,11 +51,13 @@ export async function handleShareRequest(request: Request, ownOrigin: string, no
   let id = ''
   try {
     const form = await request.formData()
-    const files = form
-      .getAll('files')
-      .filter((f): f is File => typeof f !== 'string' && f.size > 0)
-      .map(f => ({ name: f.name || 'shared-file', type: f.type, size: f.size, blob: f as Blob }))
-    const text = sharedText(form)
+    const files = capFiles(
+      form
+        .getAll('files')
+        .filter((f): f is File => typeof f !== 'string' && f.size > 0)
+        .map(f => ({ name: f.name || 'shared-file', type: f.type, size: f.size, blob: f as Blob })),
+    )
+    const text = sharedText(form).slice(0, MAX_SHARE_TEXT)
     if (text || files.length) {
       const item = await createCapture({ source: 'share', text, files }, now)
       id = item.id

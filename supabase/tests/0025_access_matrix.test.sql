@@ -125,7 +125,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'inquiry_item_declines','',          'SIUD', 'SIUD', 'SIUD'), -- R07 (0032): same rules as supplier_quote_lines
   ('table', 'clarifications',      '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "clarifications"
   ('table', 'orders',              '',           'SIUD', 'SIU',  'SIU'),  -- s10 "orders"
-  ('table', 'order_items',         '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "order_items"
+  ('table', 'order_items',         '',           'SIUD', 'SIUD', 'SU'),   -- s10 "order_items"; 0065 (M-1): an engineer adds or deletes lines only inside the transaction that creates the order (convert, repeat)
   ('table', 'supplier_orders',     '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "supplier_orders"
   ('table', 'order_engineers',     '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "order_engineers"
   ('table', 'order_costs',         '',           'SIUD', '',     ''),     -- s10 "order_costs"
@@ -147,7 +147,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'quotations',          '',           'SIUD', 'SIU',  'SIU'),  -- s10 "quotations" (U limited to pdf_path by the lock trigger)
   ('table', 'purchase_orders',     '',           'SIUD', 'SIU',  'SIU'),  -- s10 "purchase_orders" (U limited to pdf_path by the lock trigger)
   ('table', 'company_profile',     '',           'SU',   'S',    'S'),    -- s10 "company_profile": singleton, no insert or delete
-  ('table', 'order_items',         'supplier_unit_price', 'SIU', 'SIU', 'SIU'), -- s10 "order_items.supplier_unit_price"
+  ('table', 'order_items',         'supplier_unit_price', 'SIU', 'SIU', 'SU'), -- s10 "order_items.supplier_unit_price"; 0065 (M-1): an engineer writes it only on a new order
   ('table', 'supplier_orders',     'currency',   'SIU',  'SIU',  'SIU'),  -- s10 "supplier_orders.currency"
   ('view',  'v_company_roles',     '',           'S',    'S',    'S'),    -- s10 "v_company_roles, v_rfq_state, v_inquiry_state, v_order_state"
   ('view',  'v_rfq_state',         '',           'S',    'S',    'S'),    -- s10 (same row)
@@ -169,7 +169,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'my_target_progress_at',   '',    '',     '',     ''),     -- A4: test seam granted to nobody
   ('function', 'convert_rfq_to_order',    '',    'X',    'X',    'X'),    -- s10 "RPCs convert_rfq_to_order, create_repeat_order"
   ('function', 'create_repeat_order',     '',    'X',    'X',    'X'),    -- s10 (same row)
-  ('function', 'split_order_item',       '',    'X',    'X',    'X'),    -- A8 (0050): split an order line across legs, all staff (SECURITY INVOKER: the caller's own row security applies)
+  ('function', 'split_order_item',       '',    'X',    'X',    ''), -- A8 (0050): split an order line across legs; 0065 (M-1): it moves quantities, so admin and sales only
   ('function', 'float_rfq',               '',    'X',    'X',    'X'),    -- A4: S13 RPC, all staff
   ('function', 'set_rfq_floated',         '',    'X',    'X',    'X'),    -- R05: Undo of a float / float a saved RFQ, all staff
   ('function', 'merge_companies',         '',    'X',    '',     ''),     -- s10 "RPCs merge_companies, merge_brands, resolve_value_basis"
@@ -242,7 +242,11 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('bucket', 'expense-receipts', '',  'SIUD', '',     ''),               -- A6 s10 "attachments (parent is an expense)": bucket expense-receipts, admin only
   ('bucket', 'generated-docs',   'issued',  'SU', 'S',  'S'),            -- 0057 (H-1): a PDF an issued quotation or PO points at is overwritten by an admin only
   ('table', 'quotations',        'pdf_attached', 'U', '', ''),           -- 0057 (H-1): once a PDF is attached, only an admin re-points or clears pdf_path
-  ('table', 'purchase_orders',   'pdf_attached', 'U', '', '');           -- 0057 (H-1): same for a supplier PO
+  ('table', 'purchase_orders',   'pdf_attached', 'U', '', ''),           -- 0057 (H-1): same for a supplier PO
+  ('table', 'orders',            'legacy_flags', '', '', ''),            -- 0065 (M-1): the value basis flag goes only through resolve_value_basis, for everyone
+  ('table', 'orders',            'owner_id', 'U', '', ''),               -- 0065 (M-2): who owns an order (and gets its payments' credit) is changed by an admin
+  ('table', 'rfqs',              'owner_id', 'U', '', ''),               -- 0065 (M-2): same for an RFQ (convert copies its owner into the order)
+  ('function', 'receipt_locked', '', 'X', 'X', '');                      -- 0065 (L-6): storage policy helper; NULL (no row) for anyone who cannot use the bucket
 
 -- ------------------------------------------------------------------ fixtures (as the table owner, admin claims)
 -- Row ids are written in hex and appear in the probes as @NN (same two hex digits).
@@ -325,6 +329,8 @@ insert into storage.objects (bucket_id, name) values
 insert into storage.objects (bucket_id, name) values ('generated-docs', 'm/q.pdf'), ('generated-docs', 'm/p.pdf');
 update public.quotations set pdf_path = 'm/q.pdf' where id = pg_temp.f('3a');
 update public.purchase_orders set pdf_path = 'm/p.pdf' where id = pg_temp.f('3b');
+-- 0065 (M-1): the fixture orders were created earlier, not in the transaction that writes their lines.
+update public.orders set created_at = now() - interval '1 day' where id in (pg_temp.f('20'), pg_temp.f('21'));
 
 -- ------------------------------------------------------------------ probes: tables
 -- Generated probes for the simple cases: S (select), U (touch one column to its own value), D (delete the leaf row).
@@ -492,7 +498,11 @@ insert into probes values
   ('generated-docs', 'issued', 'S', $q$select 1 from storage.objects where bucket_id = 'generated-docs' and name = 'm/q.pdf'$q$),
   ('generated-docs', 'issued', 'U', $q$update storage.objects set name = name where bucket_id = 'generated-docs' and name = 'm/q.pdf'$q$),
   ('quotations', 'pdf_attached', 'U', $q$update public.quotations set pdf_path = 'm/other.pdf' where id = @3a$q$),
-  ('purchase_orders', 'pdf_attached', 'U', $q$update public.purchase_orders set pdf_path = 'm/other.pdf' where id = @3b$q$);
+  ('purchase_orders', 'pdf_attached', 'U', $q$update public.purchase_orders set pdf_path = 'm/other.pdf' where id = @3b$q$),
+  ('orders', 'legacy_flags', 'U', $q$update public.orders set legacy_flags = '{}' where id = @21$q$),   -- 0065
+  ('orders', 'owner_id', 'U', $q$update public.orders set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @21$q$),
+  ('rfqs', 'owner_id', 'U', $q$update public.rfqs set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @16$q$),
+  ('receipt_locked', '', 'X', $q$select 1 where public.receipt_locked('gst-receipts', 'fixture.txt') is not null$q$);
 
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
