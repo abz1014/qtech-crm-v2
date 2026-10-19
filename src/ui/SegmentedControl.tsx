@@ -3,6 +3,7 @@ import * as RadixRadio from '@radix-ui/react-radio-group'
 import * as RadixTabs from '@radix-ui/react-tabs'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useScrollActiveIntoView } from '@/lib/useScrollActiveIntoView'
 import { Icon } from '@/ui/Icon'
 
 /*
@@ -50,6 +51,7 @@ export function SegmentedControl({
   className,
   ...aria
 }: SegmentedControlProps) {
+  const trackRef = useScrollActiveIntoView<HTMLDivElement>()
   const track = cn(
     'inline-flex max-w-full gap-[2px] overflow-x-auto rounded bg-selected p-[2px]',
     fill && 'flex w-full',
@@ -76,7 +78,7 @@ export function SegmentedControl({
   if (mode === 'tabs') {
     return (
       <RadixTabs.Root value={value} onValueChange={onValueChange} activationMode="manual">
-        <RadixTabs.List {...aria} className={track}>
+        <RadixTabs.List ref={trackRef} {...aria} className={track}>
           {options.map(o => (
             <RadixTabs.Trigger key={o.value} value={o.value} disabled={o.disabled} className={segClass}>
               {segment(o)}
@@ -88,7 +90,7 @@ export function SegmentedControl({
     )
   }
   return (
-    <RadixRadio.Root value={value} onValueChange={onValueChange} orientation="horizontal" {...aria} className={track}>
+    <RadixRadio.Root ref={trackRef} value={value} onValueChange={onValueChange} orientation="horizontal" {...aria} className={track}>
       {options.map(o => (
         <RadixRadio.Item key={o.value} value={o.value} disabled={o.disabled} className={segClass}>
           {segment(o)}

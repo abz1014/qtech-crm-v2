@@ -3,6 +3,7 @@ import {
   agingCsv,
   buildAging,
   buildChecklist,
+  categoryNotes,
   buildGst,
   buildPayables,
   buildPnl,
@@ -327,5 +328,61 @@ describe('team', () => {
   })
   it('the CSV writes blanks, not zeros, for a person with no credit and no target', () => {
     expect(teamCsv(v, '2026-10').rows[2]).toEqual(['October 2026', 'Bilal Chaudhry', 'engineer', 0, '', '', ''])
+  })
+})
+
+describe('the checklist data lines (migration 0064, g2-month-end "Checklist")', () => {
+  const DETAILS = {
+    bank_unticked: { in_n: 2, in_amount: 820000, out_n: 5, out_amount: 526100, prior_n: 1, prior_first: '2026-09', prior_last: '2026-09' },
+    fbr_deposits_unticked: { amount: 463500, groups: 1 },
+    uncategorised: { amount: 0 },
+    recurring_not_recorded: { total: 4, names: [] },
+    provisional_margins: { numbers: [34, 29, 26] },
+    fbr_pending: { amount: 481410, invoices: [{ number: 'INV-2291', month: '2026-10' }, { number: 'INV-2256', month: '2026-09' }] },
+    unresolved_payments: { amount: 120000, orders: 1, first: { order_id: 'o-12', order_number: 12, reference: 'cheque 118310' } },
+  }
+  const cards = buildChecklist(STATUS, '2026-10', DETAILS)
+  it('says what each count is made of, in the words of the mockup', () => {
+    expect(cards.map(c => c.sub)).toEqual([
+      '2 money in (PKR 820,000), 5 money out (PKR 526,100), 1 of it from September. Items still in transit are expected.',
+      'PKR 463,500 in 1 PSID group. One tick covers the whole group.',
+      'Every expense has a category, and an order where it needs one.',
+      'All 4 recurring templates have an October expense.',
+      'Settled by 31 October, costs not marked complete: ORD-0034, ORD-0029, ORD-0026.',
+      'PKR 481,410 GST not deposited: INV-2291 (Oct), INV-2256 (Sep).',
+      'PKR 120,000 counts in gross but is not split into net. ORD-0012, cheque 118310.',
+    ])
+  })
+  it('prints figures and references in the mono face', () => {
+    expect(cards[0].parts).toContainEqual({ mono: 'PKR 820,000' })
+    expect(cards[4].parts).toContainEqual({ mono: 'ORD-0034' })
+  })
+  it('opens the one order a single unresolved payment belongs to, and names the PSID groups', () => {
+    expect(cards[6].linkLabel).toBe('Open ORD-0012')
+    expect(cards[6].to).toBe('/orders/o-12')
+    expect(cards[1].linkLabel).toBe('Tick the PSID group')
+    expect(buildChecklist(STATUS, '2026-10', { ...DETAILS, fbr_deposits_unticked: { amount: 5, groups: 2 } })[1].linkLabel).toBe('Tick the PSID groups')
+  })
+  it('lists the commonest few and says how many more', () => {
+    const more = buildChecklist([{ check_key: 'provisional_margins', n: 5 }], '2026-10', { provisional_margins: { numbers: [9, 8, 7] } })
+    expect(more[4].sub).toBe('Settled by 31 October, costs not marked complete: ORD-0009, ORD-0008, ORD-0007 and 2 more.')
+    const rec = buildChecklist([{ check_key: 'recurring_not_recorded', n: 2 }], '2026-10', { recurring_not_recorded: { total: 4, names: ['Office rent', 'Internet'] } })
+    expect(rec[3].sub).toBe('No October expense yet for Office rent, Internet.')
+  })
+  it('falls back to the fixed wording when the figures did not load', () => {
+    const plainCards = buildChecklist(STATUS, '2026-10')
+    expect(plainCards[0].sub).toMatch(/^Bank payments and expenses dated up to month end/)
+    expect(plainCards[6].linkLabel).toBe('Open receivables')
+  })
+})
+
+describe('the category notes', () => {
+  it('lists the commonest three labels of a category, commonest first', () => {
+    const rows = [
+      ...['Tea', 'Tea', 'Tea', 'Biscuits', 'Biscuits', 'Water', 'Stationery'].map(label => ({ categoryId: 'c1', label })),
+      { categoryId: 'c2', label: null },
+      { categoryId: 'c2', label: '  ' },
+    ]
+    expect(categoryNotes(rows)).toEqual({ c1: 'Tea, Biscuits, Stationery' })
   })
 })

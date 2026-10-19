@@ -8,7 +8,7 @@ import { Money } from '@/ui/Money'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { SumBar } from '@/ui/SumBar'
-import { ProgressBar, Tag } from '@/ui/Tag'
+import { Tag } from '@/ui/Tag'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Avatar } from '@/ui/Avatar'
 import { formatPaisa, toPaisa, type Amount } from '@/lib/money'
@@ -34,11 +34,11 @@ import {
   usePnlReport,
   useTeamReport,
 } from '@/features/money/monthEnd/reportHooks'
+import { useCategoryNotes } from '@/features/money/monthEnd/hooks'
 import {
   AGING_BUCKETS,
   BUCKET_LABEL,
   BUCKET_TITLE,
-  PAYABLE_STATE_LABEL,
   agingCsv,
   barShare,
   categoriesCsv,
@@ -134,7 +134,7 @@ function Line({
         {basis}
       </span>
       <span role="cell" className="num text-right">
-        {amount !== undefined ? <Money value={amount} prefix={false} strong={tone === 'total' || tone === 'result'} /> : null}
+        {amount !== undefined ? <Money value={amount} prefix={false} paisa="always" plainNegative strong={tone === 'total' || tone === 'result'} /> : null}
       </span>
       {basis ? (
         <span role="presentation" className="col-span-2 -mt-1 pb-2 text-xs text-fg-muted md:hidden">
@@ -291,19 +291,19 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
                   <i className="size-[10px] rounded-[2px] bg-fg" />
                   Order costs <span className="text-xs text-fg-muted"><Num>{v.orderCosts.count}</Num> expenses</span>
                   <span className="flex-1" />
-                  <Money value={v.orderCosts.net} prefix={false} />
+                  <Money value={v.orderCosts.net} prefix={false} paisa="always" plainNegative />
                 </li>
                 <li className="flex items-center gap-2">
                   <i className="size-[10px] rounded-[2px] bg-fg-muted" />
                   Overheads <span className="text-xs text-fg-muted"><Num>{v.overheads.count}</Num> expenses</span>
                   <span className="flex-1" />
-                  <Money value={v.overheads.net} prefix={false} />
+                  <Money value={v.overheads.net} prefix={false} paisa="always" plainNegative />
                 </li>
                 <li className="flex items-center gap-2">
                   <i className="size-[10px] rounded-[2px] border border-line-strong bg-surface" />
                   Result
                   <span className="flex-1" />
-                  <Money value={v.result} prefix={false} />
+                  <Money value={v.result} prefix={false} paisa="always" plainNegative />
                 </li>
               </ul>
             </div>
@@ -320,7 +320,7 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
                 <div key={k} className="flex min-h-[40px] items-center justify-between gap-4 border-t px-5 first:border-t-0">
                   <dt className="text-fg-2">{k}</dt>
                   <dd>
-                    <Money value={amt} prefix={false} />
+                    <Money value={amt} prefix={false} paisa="always" />
                   </dd>
                 </div>
               ))}
@@ -351,6 +351,7 @@ export function CategoriesPage() {
 
 function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
   const q = useCategoryReport(ctx.month)
+  const notes = useCategoryNotes(ctx.month)
   const [via, setVia] = useState<ViaFilter>('all')
   const v = q.view
   const lines = useMemo(() => (v ? v.groups.flatMap(g => g.lines).filter(l => via === 'all' || l.paidVia === via) : []), [v, via])
@@ -360,7 +361,12 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
         id: 'category',
         header: 'Category',
         value: l => l.category,
-        cell: l => <span className="font-medium">{l.category}</span>,
+        cell: l => (
+          <span className="grid gap-px">
+            <span className="font-medium">{l.category}</span>
+            {notes.data?.[l.categoryId] ? <span className="truncate text-xs font-regular text-fg-muted">{notes.data[l.categoryId]}</span> : null}
+          </span>
+        ),
       },
       { id: 'count', header: 'Count', kind: 'num', value: l => l.count, total: true },
       {
@@ -390,7 +396,7 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
         },
       },
     ],
-    [v],
+    [v, notes.data],
   )
   if (q.isError) return <ReportError title="The expenses by category did not load" onRetry={q.refetch} />
   if (q.isPending || !v) return <ReportLoading label="Loading the expenses by category" />
@@ -441,9 +447,10 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
         rows={lines}
         getRowId={l => l.categoryId}
         group={l => ({ key: l.grp, label: v.groups.find(g => g.grp === l.grp)?.title ?? l.grp })}
+        groupStyle="big"
         footerLabel="All expenses"
         noun="categories"
-        twoLine={false}
+        twoLine
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-base font-semibold">Expenses by category</h2>
@@ -626,7 +633,7 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
         sortable: false,
         cell: r => (
           <span className="grid justify-items-start gap-px">
-            <Tag>{PAYABLE_STATE_LABEL[r.state]}{r.flag === 'overpaid' ? ', paid over' : ''}</Tag>
+            <StatusBadge dimension="payable" value={r.flag === 'overpaid' && r.state === 'settled' ? 'paid-over' : r.state === 'no_rate' ? 'no-rate' : r.state} />
             <span className="text-xs text-fg-muted">
               {r.state === 'owing' ? (toPaisa(r.paidPkr) === 0n ? 'No payment yet' : 'Part paid') : r.state === 'settled' ? (r.flag === 'overpaid' ? 'Owed shown as 0' : 'Within 3% of paid, or paid') : r.state === 'unpriced' ? 'No price on the items yet' : 'No rate in the 30 days before; add one on Exchange rates'}
             </span>
@@ -850,7 +857,13 @@ function TeamBody({ ctx }: { ctx: MonthEndCtx }) {
             <span className="text-fg-muted">No target set</span>
           ) : (
             <span className="grid gap-1">
-              <ProgressBar done={Number(r.quarterNet ?? 0)} total={Number(r.quarterTarget)} label={`${formatPaisa(toPaisa(r.quarterNet ?? 0))} of ${formatPaisa(toPaisa(r.quarterTarget))}`} />
+              <span
+                role="img"
+                aria-label={`${formatPaisa(toPaisa(r.quarterNet ?? 0))} of ${formatPaisa(toPaisa(r.quarterTarget))}`}
+                className="relative block h-[6px] w-full min-w-[96px] max-w-[220px] overflow-hidden rounded-round bg-selected"
+              >
+                <i className="absolute inset-y-0 left-0 block rounded-round bg-fg-muted" style={{ width: `${Math.min(100, Math.max(0, (Number(r.quarterNet ?? 0) / Math.max(1, Number(r.quarterTarget))) * 100))}%` }} />
+              </span>
               <span className="num text-xs text-fg-2">
                 {formatPaisa(toPaisa(r.quarterNet ?? 0))} of {formatPaisa(toPaisa(r.quarterTarget))}
               </span>

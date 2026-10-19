@@ -237,6 +237,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'aging_as_of',           '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'payables_as_of',        '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'month_end_status',      '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
+  ('function', 'month_end_check_details', '', 'X',    '',     ''),     -- 0064: admin only (zero rows for the others)
   ('function', 'month_pnl_drift',       '',      'X',    '',     ''),     -- 0058 (D-MR2): helper of v_month_pnl, NULL for non-admins
   ('function', 'month_pnl_adjusted',    '',      'X',    '',     ''),     -- 0058 (D-MR2): helper of v_month_pnl, NULL for non-admins
   ('function', 'revoke_user_sessions', '',      '',     '',     ''),     -- A01: service role only (the admin-users Edge Function); no client persona
@@ -477,6 +478,7 @@ insert into probes values
   ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
   ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6
   ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1'),   -- A6
+  ('month_end_check_details', '', 'X', 'select 1 from public.month_end_check_details(public.today_pkt()) limit 1'),   -- 0064
   ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)
   ('month_pnl_adjusted', '', 'X', 'select 1 where public.month_pnl_adjusted() is not null'),   -- 0058 (D-MR2)
   ('revoke_user_sessions', '', 'X', $q$select public.revoke_user_sessions(gen_random_uuid())$q$);   -- A01

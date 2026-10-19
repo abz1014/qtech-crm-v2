@@ -182,6 +182,7 @@ test.describe('month-end (M10)', () => {
     for (const path of ['pnl', 'categories', 'aging', 'owe', 'gst', 'team']) {
       await page.goto(`/money/month-end/${path}?month=${STMT.key}`)
       await page.waitForLoadState('networkidle')
+      await review(page, `m10-report-${path}-1440`)
       expect(await axeViolations(page), path).toEqual([])
     }
     await page.setViewportSize({ width: 375, height: 812 })
@@ -194,6 +195,11 @@ test.describe('month-end (M10)', () => {
     await page.waitForLoadState('networkidle')
     await review(page, 'm10-pnl-375')
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
+    for (const path of ['categories', 'aging', 'owe', 'gst', 'team']) {
+      await page.goto(`/money/month-end/${path}?month=${STMT.key}`)
+      await page.waitForLoadState('networkidle')
+      await review(page, `m10-report-${path}-375`)
+    }
   })
 
   // ---- last: close, see the sentence, reopen ------------------------------------------------------------------

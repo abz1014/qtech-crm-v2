@@ -1,4 +1,5 @@
-import { paisaToFixed, sumPaisa, toPaisa, type Amount } from '@/lib/money'
+import { formatPaisa, paisaToFixed, sumPaisa, toPaisa, type Amount } from '@/lib/money'
+import { orderRef } from '@/lib/refs'
 import { monthEnd, monthKeyLabel, monthKeyShort, shiftMonth } from '@/features/money/expenses/model'
 import { isMonthKey } from '@/features/money/bank/model'
 
@@ -131,6 +132,12 @@ export const CHECKS: readonly CheckDef[] = [
   },
 ]
 
+/** A piece of a card's data line: plain words, or a figure or reference printed in the mono face. */
+export type Fact = string | { mono: string }
+
+/** month_end_check_details (migration 0064): the facts behind each count, by check key. */
+export type CheckDetails = Partial<Record<string, Record<string, unknown>>>
+
 export interface CheckCard {
   key: CheckKey
   label: string
@@ -138,24 +145,119 @@ export interface CheckCard {
   unit: string
   clear: boolean
   sub: string
+  /** `sub` with its figures marked for the mono face; the card prints this one. */
+  parts: Fact[]
   linkLabel: string
   to: string
   glyph: CheckDef['glyph']
 }
 
-export function buildChecklist(rows: readonly StatusRow[], month: string): CheckCard[] {
+const pkr = (v: unknown): Fact => ({ mono: `PKR ${formatPaisa(toPaisa(Number(v) || 0))}` })
+const num = (v: unknown): number => Number(v) || 0
+const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+const monthWord = (key: unknown): string => (typeof key === 'string' && isMonthKey(key) ? monthName(key) : '')
+const plural = (n: number, one: string, many: string) => (n === 1 ? one : many)
+/** "A, B, C" or "A, B, C and 2 more": the first few of `n`. */
+function names(shown: Fact[], n: number): Fact[] {
+  const out: Fact[] = []
+  shown.forEach((s, i) => {
+    if (i > 0) out.push(', ')
+    out.push(s)
+  })
+  if (n > shown.length) out.push(` and ${n - shown.length} more`)
+  return out
+}
+
+/**
+ * The data line under a check's figure (g2-month-end "Checklist"): what the count is made of, and where the fix is. Falls back to the
+ * fixed definition when the figures are not there (the details did not load), so the card never shows less than it did.
+ */
+function describe(c: CheckDef, month: string, n: number, d: Record<string, unknown> | undefined): { parts: Fact[]; linkLabel: string; to: string } {
+  const base = { linkLabel: c.linkLabel, to: c.to(month) }
+  const fallback = { ...base, parts: [n === 0 ? c.none(month) : c.has(month)] as Fact[] }
+  if (!d) return fallback
+  const name = monthName(month)
+  switch (c.key) {
+    case 'bank_unticked': {
+      if (n === 0) return fallback
+      const inN = num(d.in_n)
+      const outN = num(d.out_n)
+      const prior = num(d.prior_n)
+      const first = monthWord(d.prior_first)
+      const last = monthWord(d.prior_last)
+      const parts: Fact[] = [{ mono: String(inN) }, ' money in (', pkr(d.in_amount), '), ', { mono: String(outN) }, ' money out (', pkr(d.out_amount), ')']
+      if (prior > 0 && last) parts.push(', ', { mono: String(prior) }, ` of ${prior === 1 ? 'it' : 'them'} from ${last}${first && first !== last ? ' or earlier' : ''}`)
+      parts.push('. Items still in transit are expected.')
+      return { ...base, parts }
+    }
+    case 'fbr_deposits_unticked': {
+      if (n === 0) return fallback
+      const groups = num(d.groups)
+      return {
+        linkLabel: plural(groups, 'Tick the PSID group', 'Tick the PSID groups'),
+        to: base.to,
+        parts: [pkr(d.amount), ' in ', { mono: String(groups) }, plural(groups, ' PSID group', ' PSID groups'), `. One tick covers ${plural(groups, 'the whole group', 'a whole group')}.`],
+      }
+    }
+    case 'uncategorised':
+      return n === 0 ? fallback : { ...base, parts: [`${name} expenses with no clear category, or an order cost with no order: `, pkr(d.amount), '.'] }
+    case 'recurring_not_recorded': {
+      const total = num(d.total)
+      if (n === 0) return total > 0 ? { ...base, parts: ['All ', { mono: String(total) }, ` recurring ${plural(total, 'template has', 'templates have')} ${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name} expense.`] } : fallback
+      const labels = list(d.names).map(String)
+      return { ...base, parts: [`No ${name} expense yet for `, ...names(labels, n), '.'] }
+    }
+    case 'provisional_margins': {
+      if (n === 0) return fallback
+      const [y, m] = month.split('-').map(Number)
+      const last = new Date(Date.UTC(y, m, 0)).getUTCDate()
+      const shown: Fact[] = list(d.numbers).map(x => ({ mono: orderRef(num(x)) }))
+      return { ...base, parts: [`Settled by ${last} ${name}, costs not marked complete: `, ...names(shown, n), '.'] }
+    }
+    case 'fbr_pending': {
+      if (n === 0) return fallback
+      const shown: Fact[] = list(d.invoices).map(x => {
+        const row = x as { number?: string | null; month?: string }
+        const label = row.number ?? 'invoice'
+        const mon = monthWord(row.month)
+        return { mono: `${label}${mon ? ` (${mon.slice(0, 3)})` : ''}` }
+      })
+      return { ...base, parts: [pkr(d.amount), ' GST not deposited: ', ...names(shown, n), '.'] }
+    }
+    case 'unresolved_payments': {
+      if (n === 0) return fallback
+      const orders = num(d.orders)
+      const first = (d.first ?? {}) as { order_id?: string; order_number?: number; reference?: string | null }
+      const ref = first.order_number != null ? orderRef(first.order_number) : null
+      const parts: Fact[] = [pkr(d.amount), ` counts in gross but ${n === 1 ? 'is' : 'are'} not split into net.`]
+      if (ref) {
+        parts.push(' ', { mono: ref })
+        if (orders > 1) parts.push(` and ${orders - 1} more`)
+        else if (first.reference) parts.push(', ', { mono: first.reference })
+        parts.push('.')
+      }
+      return orders === 1 && first.order_id && ref ? { linkLabel: `Open ${ref}`, to: `/orders/${first.order_id}`, parts } : { ...base, parts }
+    }
+  }
+}
+
+const plain = (parts: readonly Fact[]): string => parts.map(p => (typeof p === 'string' ? p : p.mono)).join('')
+
+export function buildChecklist(rows: readonly StatusRow[], month: string, details?: CheckDetails): CheckCard[] {
   const by = new Map(rows.map(r => [r.check_key, Number(r.n) || 0]))
   return CHECKS.map(c => {
     const n = by.get(c.key) ?? 0
+    const line = describe(c, month, n, details?.[c.key])
     return {
       key: c.key,
       label: c.label,
       n,
       unit: n === 1 ? c.unit[0] : c.unit[1],
       clear: n === 0,
-      sub: n === 0 ? c.none(month) : c.has(month),
-      linkLabel: c.linkLabel,
-      to: c.to(month),
+      sub: plain(line.parts),
+      parts: line.parts,
+      linkLabel: line.linkLabel,
+      to: line.to,
       glyph: c.glyph,
     }
   })
@@ -244,6 +346,21 @@ export interface CategoryLine {
   /** gross less net: the input tax taken out of the cost. */
   inputTax: string
   paidVia: 'bank' | 'cash'
+}
+
+/** A line under a category in the report: its payees or, with none, what its expenses were described as, the commonest three. */
+export function categoryNotes(rows: readonly { categoryId: string; label: string | null }[]): Record<string, string> {
+  const by = new Map<string, Map<string, number>>()
+  for (const r of rows) {
+    const label = r.label?.trim()
+    if (!label) continue
+    const m = by.get(r.categoryId) ?? new Map<string, number>()
+    m.set(label, (m.get(label) ?? 0) + 1)
+    by.set(r.categoryId, m)
+  }
+  return Object.fromEntries(
+    [...by].map(([id, m]) => [id, [...m].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 3).map(([l]) => l).join(', ')]),
+  )
 }
 
 export interface ViaStat {

@@ -363,6 +363,26 @@ select is((select jsonb_object_agg(check_key, n) from public.month_end_status('2
   '{"bank_unticked": 1, "fbr_deposits_unticked": 0, "uncategorised": 0, "recurring_not_recorded": 2,
     "provisional_margins": 0, "fbr_pending": 0, "unresolved_payments": 0}'::jsonb,
   'F-CHECKLIST November: unticked items accumulate, the rest are bound to the month');
+-- ================================================================== F-CHECKLIST-DETAILS: month_end_check_details (0064)
+select is((select count(*)::int from public.month_end_check_details('2025-12-01')), 7, 'F-CHECKLIST-DETAILS: one row per check');
+select is((select ((detail->>'in_n')::int + (detail->>'out_n')::int) from public.month_end_check_details('2025-12-01') where check_key = 'bank_unticked'),
+  (select n from public.month_end_status('2025-12-01') where check_key = 'bank_unticked'),
+  'F-CHECKLIST-DETAILS: money in and money out add up to the bank count');
+select is((select (detail->>'groups')::int from public.month_end_check_details('2025-12-01') where check_key = 'fbr_deposits_unticked'), 1,
+  'F-CHECKLIST-DETAILS: the one unticked FBR deposit is one PSID group');
+select is((select jsonb_array_length(detail->'names') from public.month_end_check_details('2025-12-01') where check_key = 'recurring_not_recorded'),
+  (select n from public.month_end_status('2025-12-01') where check_key = 'recurring_not_recorded'),
+  'F-CHECKLIST-DETAILS: the unrecorded recurring templates are named');
+select is((select jsonb_array_length(detail->'numbers') from public.month_end_check_details('2025-12-01') where check_key = 'provisional_margins'),
+  (select n from public.month_end_status('2025-12-01') where check_key = 'provisional_margins'),
+  'F-CHECKLIST-DETAILS: the provisional orders are listed');
+select is((select jsonb_array_length(detail->'invoices') from public.month_end_check_details('2025-12-01') where check_key = 'fbr_pending'),
+  (select n from public.month_end_status('2025-12-01') where check_key = 'fbr_pending'),
+  'F-CHECKLIST-DETAILS: the pending invoices are listed');
+select ok((select (detail->>'amount')::numeric > 0 and (detail->'first'->>'order_number') is not null
+           from public.month_end_check_details('2025-12-01') where check_key = 'unresolved_payments'),
+  'F-CHECKLIST-DETAILS: unresolved payments carry an amount and the order to open');
+
 -- ticking clears the warnings
 update public.payments_in set bank_month = '2025-12-01'
 where order_id in ('a1000000-0000-4000-8000-000000000031', 'a1000000-0000-4000-8000-000000000035', 'a1000000-0000-4000-8000-000000000036');
@@ -381,6 +401,7 @@ select is((select count(*)::int from public.v_month_team), 0, 'sales gets 0 rows
 select is((select count(*)::int from public.aging_as_of('2026-09-30')), 0, 'sales gets 0 rows from aging_as_of');
 select is((select count(*)::int from public.payables_as_of('2026-09-30')), 0, 'sales gets 0 rows from payables_as_of');
 select is((select count(*)::int from public.month_end_status('2025-12-01')), 0, 'sales gets 0 rows from month_end_status');
+select is((select count(*)::int from public.month_end_check_details('2025-12-01')), 0, 'sales gets 0 rows from month_end_check_details');
 select ok((select invoice_count = 3 and net = 3500.00 and gst = 540.00 and psid_set_count = 2 and deposited_count = 1
                   and deposited_amount = 180.00 and gst_to_deposit = 360.00
            from public.v_gst_month where month = '2026-04-01'),

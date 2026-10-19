@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { businessToday } from '@/lib/dates'
-import { useClosedMonths, useMonthEndStatus, usePnlMonths } from '@/features/money/monthEnd/hooks'
+import { useClosedMonths, useMonthEndDetails, useMonthEndStatus, usePnlMonths } from '@/features/money/monthEnd/hooks'
 import {
   buildChecklist,
   checksWithItems,
@@ -44,9 +44,10 @@ export function useMonthEnd(): MonthEndCtx {
   const asked = params.get('month')
   const month = isMonthKey(asked) ? asked : defaultMonthEndMonth(today)
   const status = useMonthEndStatus(month)
+  const details = useMonthEndDetails(month)
   const closedQ = useClosedMonths()
   const pnl = usePnlMonths()
-  const cards = useMemo(() => buildChecklist(status.data ?? [], month), [status.data, month])
+  const cards = useMemo(() => buildChecklist(status.data ?? [], month, details.data), [status.data, details.data, month])
   const closed = closedQ.data ?? []
   const state = useMemo(
     () => (closedQ.data && pnl.data ? closeState(month, today, new Set(closedQ.data.map(c => c.key)), Object.keys(pnl.data)) : null),
