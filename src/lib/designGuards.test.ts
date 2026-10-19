@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { ESLint } from 'eslint'
@@ -94,5 +94,29 @@ describe('token parity (U01)', () => {
     const r = run(index, tailwind.replace("transparent: 'transparent'", "transparent: '#123456'"))
     expect(r.status).toBe(1)
     expect(r.stderr).toContain('hard-codes a colour')
+  })
+})
+
+describe('flex bases (P9)', () => {
+  // The spacing scale has only the tokens in tailwind.config.ts, so basis-40, basis-48, basis-56, basis-60 and basis-64 generate no
+  // CSS. A flex-1 item with no basis class falls back to a 0% basis and is squeezed on a phone; use basis-[10rem] and the like.
+  it('every numeric basis-N class is a spacing token (otherwise it does nothing)', () => {
+    const tokens = new Set(['0', 'px', '1', '2', '3', '4', '5', '6', '8', '10', '12', '16'])
+    const files: string[] = []
+    const walk = (dir: string) => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name)
+        if (e.isDirectory()) walk(p)
+        else if (/\.tsx$/.test(e.name) && !/\.test\./.test(e.name)) files.push(p)
+      }
+    }
+    walk(path.join(root, 'src'))
+    const bad: string[] = []
+    for (const f of files) {
+      for (const m of readFileSync(f, 'utf8').matchAll(/(?<![\w-])basis-(\d+(?:\.\d+)?|px)(?![\w\]-])/g)) {
+        if (!tokens.has(m[1])) bad.push(`${path.relative(root, f)}: ${m[0]}`)
+      }
+    }
+    expect(bad).toEqual([])
   })
 })

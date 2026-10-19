@@ -271,7 +271,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     [suggestionItems, candidateList, memory.data, today],
   )
   const memoryContext = useMemo(
-    () => ({ rows: memory.data ?? {}, items: suggestionItems.map((i, n) => ({ id: i.id, number: n + 1, description: i.description, brandName: i.brandName ?? null, familyName: i.familyName ?? null })), today }),
+    () => ({ rows: memory.data ?? {}, items: suggestionItems.map((i, n) => ({ id: i.id, number: n + 1, description: i.description, brandId: i.brandId ?? null, familyId: i.familyId ?? null, brandName: i.brandName ?? null, familyName: i.familyName ?? null })), today }),
     [memory.data, suggestionItems, today],
   )
   const suppliersLoading = wantSuppliers && (candidates.isPending || (candidates.isSuccess && memory.isPending && suggestionItems.length > 0 && candidateList.length > 0))
