@@ -571,13 +571,22 @@ export async function listSupplierChoices(): Promise<Array<{ id: string; name: s
   const stats = unwrap(await db.from('v_supplier_stats').select('supplier_id'))
   const ids = stats.map(s => s.supplier_id).filter((i): i is string => Boolean(i))
   if (ids.length === 0) return []
-  const [companies, legs] = await Promise.all([
-    db.from('companies').select('id, name').in('id', ids).order('name'),
-    db.from('supplier_orders').select('supplier_id, currency, created_at').in('supplier_id', ids).not('currency', 'is', null).order('created_at', { ascending: false }).limit(500),
+  // The ids go in the request URL, so ask in chunks: one `in (...)` with every supplier overflows the URL limit (a 400 and an empty
+  // picker) once there are a few hundred suppliers.
+  const chunks: string[][] = []
+  for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100))
+  const [companyRes, legRes] = await Promise.all([
+    Promise.all(chunks.map(c => db.from('companies').select('id, name').in('id', c))),
+    Promise.all(chunks.map(c => db.from('supplier_orders').select('supplier_id, currency, created_at').in('supplier_id', c).not('currency', 'is', null).order('created_at', { ascending: false }).limit(500))),
   ])
   const last = new Map<string, string>()
-  for (const l of unwrap(legs)) if (l.currency && !last.has(l.supplier_id)) last.set(l.supplier_id, l.currency.trim())
-  return unwrap(companies).map(c => ({ id: c.id, name: c.name, lastCurrency: last.get(c.id) ?? null }))
+  for (const l of legRes.flatMap(r => unwrap(r)).sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))) {
+    if (l.currency && !last.has(l.supplier_id)) last.set(l.supplier_id, l.currency.trim())
+  }
+  return companyRes
+    .flatMap(r => unwrap(r))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(c => ({ id: c.id, name: c.name, lastCurrency: last.get(c.id) ?? null }))
 }
 
 // ---------------------------------------------------------------- the orders list (O04)

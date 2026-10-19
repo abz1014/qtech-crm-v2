@@ -14,7 +14,7 @@ for s in "$@"; do
   first=0
   eval "$(npx supabase status -o env | sed 's/^/export /')"
   E2E_SUITE=db REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT="playwright-report/$s" \
-    npx playwright test --project="$s" --output="test-results/$s" || { echo "::error::suite $s failed"; fail=1; }
+    npx playwright test --project="$s" --repeat-each=3 --retries=0 --output="test-results/$s" || { echo "::error::suite $s failed"; fail=1; }
   echo "::endgroup::"
 done
 exit $fail
