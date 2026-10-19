@@ -228,7 +228,9 @@ function Leg({
     : suggestion
       ? leg.placedOn
         ? `suggested: ${suggestion.label}`
-        : `${suggestion.days} days after it is placed (${suggestion.label.replace(/^from /, '')})`
+        : suggestion.source === 'lead_time'
+          ? `suggested from lead time ${suggestion.from}`
+          : `${suggestion.days} days after it is placed (${suggestion.label})`
       : undefined
 
   // A leg placed by any route (a PO issued, a date typed, an import-free manual leg) with no expected date gets the default once, so goods late can fire.
