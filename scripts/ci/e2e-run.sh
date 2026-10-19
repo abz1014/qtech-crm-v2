@@ -17,8 +17,10 @@ for s in "$@"; do
   if [ "$first" = 0 ] && [ "$s" != "pwa" ]; then npx supabase db reset --local || fail=1; fi
   first=0
   eval "$(npx supabase status -o env | sed 's/^/export /')"
+  # TEMP-PROOF repeat: stability check of the lifecycle cancel-dialog test (reverted before merge)
+  rep=""; [ "$s" = journeys ] && rep="--repeat-each=3 --grep=cancel.dialog.says"
   E2E_SUITE=db REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT="playwright-report/$s" \
-    npx playwright test --project="$s" --output="test-results/$s" || { echo "::error::suite $s failed"; fail=1; }
+    npx playwright test --project="$s" --output="test-results/$s" $rep || { echo "::error::suite $s failed"; fail=1; }
   echo "::endgroup::"
 done
 exit $fail
