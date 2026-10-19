@@ -19,8 +19,8 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import { Panel } from '@/features/companies/CompanyParts'
 import { useFxLatest } from '@/features/rfqs/hooks'
-import { useFxHistory, useSetFxRate } from '@/features/fx/hooks'
-import { ageText, bandLabel, buildRateRows, sourceText, unusableWarning, type RateRow } from '@/features/fx/ratesModel'
+import { useFxHistory, useFxLastAutoRun, useSetFxRate } from '@/features/fx/hooks'
+import { ageText, autoRunStamp, bandLabel, buildRateRows, sourceText, unusableWarning, type RateRow } from '@/features/fx/ratesModel'
 
 /*
  * Settings > Exchange rates (R15; g2-money "Admin: exchange rates" and g2-login-team-settings "Settings home, sales").
@@ -34,13 +34,14 @@ import { ageText, bandLabel, buildRateRows, sourceText, unusableWarning, type Ra
 export function ExchangeRatesPage() {
   const latest = useFxLatest()
   const rows = useMemo(() => buildRateRows(latest.data ?? []), [latest.data])
+  const lastRun = useFxLastAutoRun()
   const [picked, setPicked] = useState<string | null>(null)
   // The currency the history and the form show: the one chosen, else the first with a rate, else the first.
   const current = picked ?? rows.find(r => r.ratePkr !== null)?.currency ?? rows[0]?.currency
   const warnings = rows.map(unusableWarning).filter((w): w is string => w !== null)
 
   return (
-    <div className="grid max-w-table content-start gap-4">
+    <div className="grid min-w-0 content-start gap-4">
       <header className="grid gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Exchange rates</h1>
         <p className="max-w-prose text-sm text-fg-muted">
@@ -66,9 +67,13 @@ export function ExchangeRatesPage() {
           Nothing was changed. Check your connection and try again.
         </EmptyState>
       ) : (
-        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="grid min-w-0 gap-4">
-            <Panel title="Exchange rates" meta="PKR for 1 unit · latest rate per currency">
+            <Panel
+              title="Exchange rates"
+              meta="PKR for 1 unit · latest rate per currency"
+              actions={lastRun.data ? <span className="text-xs text-fg-muted" data-fx-auto-run>{autoRunStamp(lastRun.data)}</span> : undefined}
+            >
               <RatesTable rows={rows} onPick={setPicked} />
             </Panel>
             {warnings.map(w => (

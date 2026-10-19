@@ -83,7 +83,7 @@ export function TeamPage() {
       header: 'Name',
       sortable: true,
       value: m => m.name,
-      width: '34%',
+      width: 360,
       cell: m => (
         <span className={cn('flex min-w-0 items-center gap-3', dim(m))}>
           <Avatar name={m.name} className={avatarTone(m)} />
@@ -123,7 +123,7 @@ export function TeamPage() {
       id: 'actions',
       header: 'Actions', // hidden from sight by the table's className below, still the column's name for assistive tech
       align: 'right',
-      width: 132,
+      width: 164,
       cell: m =>
         isActive(m) ? (
           <RowMenu member={m} onPick={open} />
