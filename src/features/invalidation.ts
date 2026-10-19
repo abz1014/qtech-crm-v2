@@ -41,6 +41,9 @@ export interface WriteVars {
   'category.save': Record<string, never>
   /** M12: a bank tick (or untick) of a payment, an expense or an FBR deposit group. */
   'bank.tick': Record<string, never>
+  /** M10: closing a month, or reopening it. */
+  'month.close': { month: string }
+  'month.reopen': { month: string }
   'rfq.float': { companyId: string }
   'rfq.setFloated': { rfqId: string }
   'fx.set': Record<string, never>
@@ -133,7 +136,10 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Money's own category list (new expense forms, the Expenses list) reads the same rows, so it goes stale too.
   'category.save': () => [qk.settings.categories(), qk.money.categories()],
   // A tick changes only the bank screen (the month-end checklist counts arrive with M10 and read through this prefix too).
-  'bank.tick': () => [qk.money.bank.all],
+  'bank.tick': () => [qk.money.bank.all, qk.money.monthEnd.all],
+  // Closing or reopening a month changes the checklist and closed list; a lock also changes what the expense and bank screens may write.
+  'month.close': () => [qk.money.monthEnd.all, qk.money.bank.all, qk.money.expenses.all, qk.today.all],
+  'month.reopen': () => [qk.money.monthEnd.all, qk.money.bank.all, qk.money.expenses.all, qk.today.all],
   // Floating creates an RFQ (and inquiries): the RFQ lists, the customer's history and every supplier's activity change.
   'rfq.float': () => [qk.rfqs.all, qk.intake.all, qk.companies.all],
   // Floating or un-floating moves inquiries between shortlisted and sent: the RFQ and the suppliers' counts.
