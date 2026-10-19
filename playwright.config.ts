@@ -100,10 +100,15 @@ import { defineConfig, devices } from '@playwright/test'
  *    engineer) and Settings > Expense categories (rename, reorder, activate, group, paid via, in-use delete advice, deactivate hides it from
  *    new expenses), with axe at 1440 and 375:
  *      E2E_SUITE=settings-admin REVIEW_DIR=review-shots npx playwright test --project=settings-admin
+ *  - journeys (P03): whole working days for the three roles, one spec each under e2e/journeys/ (sales: enquiry to payment; engineer: Today to
+ *    delivered, with a network-log check that no money is ever fetched; admin: burst expenses, bank tick, margins, close and reopen a month),
+ *    each asserting the FE-2 interaction counts at every step. Each role signs in once and the saved session is reused. Run on every push that
+ *    touches src/** (the regression net), or when e2e/journeys/** changes:
+ *      E2E_SUITE=journeys REVIEW_DIR=review-shots npx playwright test --project=journeys
  */
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'perf']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -270,7 +275,7 @@ export default defineConfig({
     },
     {
       name: 'money-costs',
-      testMatch: /money\/.*\.spec\.ts/,
+      testMatch: /money\/costs\.spec\.ts/,
       fullyParallel: false,
       retries: process.env.CI ? 1 : 0,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
@@ -330,6 +335,22 @@ export default defineConfig({
       fullyParallel: false,
       retries: 0,
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 } },
+    },
+    {
+      name: 'journeys',
+      testMatch: /journeys\/.*\.spec\.ts/,
+      fullyParallel: false,
+      // A journey is one long test that signs in once per role; a retry starts a fresh journey with its own unique records.
+      retries: process.env.CI ? 1 : 0,
+      timeout: 300_000,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://127.0.0.1:${AUTH_PORT}`,
+        viewport: { width: 1440, height: 900 },
+        // Enquiry, chase and reply texts are copied to the clipboard and read back, and a reply is pasted from it, as a person would.
+        permissions: ['clipboard-read', 'clipboard-write'],
+        screenshot: 'only-on-failure',
+      },
     },
     { name: 'w1440', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 1440, height: 900 } } },
     { name: 'w375', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 375, height: 812 } } },

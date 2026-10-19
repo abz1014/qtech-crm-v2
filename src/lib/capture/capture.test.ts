@@ -1,8 +1,8 @@
 import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { CAPTURE_TTL_MS, createCapture, deleteCapture, getCapture, listCaptures, purgeExpired, updateCapture } from '@/lib/capture/store'
-import { handleShareRequest, isShareRequest, sharedText } from '@/lib/capture/shareTarget'
-import { openedAgo, readRecents, recordRfqVisit } from '@/lib/capture/recents'
+import { CAPTURE_TTL_MS, clearCaptures, createCapture, deleteCapture, getCapture, listCaptures, purgeExpired, updateCapture } from '@/lib/capture/store'
+import { capFiles, handleShareRequest, isShareRequest, MAX_SHARE_BYTES, MAX_SHARE_FILES, sharedText } from '@/lib/capture/shareTarget'
+import { clearRecents, openedAgo, readRecentOrders, readRecents, recordOrderVisit, recordRfqVisit } from '@/lib/capture/recents'
 
 const DAY = 24 * 60 * 60 * 1000
 let idb: IDBFactory
@@ -96,5 +96,26 @@ describe('recently opened RFQs', () => {
     expect(openedAgo(now - 30_000, now)).toBe('just now')
     expect(openedAgo(now - 2 * 3_600_000, now)).toBe('2 hours ago')
     expect(openedAgo(now - DAY, now)).toBe('yesterday')
+  })
+})
+
+describe('security review L-4 and L-5', () => {
+  it('a share keeps at most 10 files and 25 MB, in the order they came', () => {
+    const many = Array.from({ length: 14 }, (_, i) => ({ id: i, size: 1 }))
+    expect(capFiles(many).map(f => f.id)).toEqual(Array.from({ length: MAX_SHARE_FILES }, (_, i) => i))
+    const big = [{ id: 'a', size: MAX_SHARE_BYTES - 10 }, { id: 'b', size: 20 }, { id: 'c', size: 10 }]
+    expect(capFiles(big).map(f => f.id)).toEqual(['a', 'c'])
+  })
+
+  it('sign-out forgets every capture draft and the recent RFQs and orders', async () => {
+    await createCapture({ source: 'share', text: 'one' }, 0, idb)
+    await createCapture({ source: 'paste', text: 'two' }, 0, idb)
+    recordRfqVisit('r1', 1)
+    recordOrderVisit('o1', 1)
+    await clearCaptures(idb)
+    clearRecents()
+    expect(await listCaptures(0, idb)).toEqual([])
+    expect(readRecents()).toEqual([])
+    expect(readRecentOrders()).toEqual([])
   })
 })

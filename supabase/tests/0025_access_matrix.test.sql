@@ -125,7 +125,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'inquiry_item_declines','',          'SIUD', 'SIUD', 'SIUD'), -- R07 (0032): same rules as supplier_quote_lines
   ('table', 'clarifications',      '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "clarifications"
   ('table', 'orders',              '',           'SIUD', 'SIU',  'SIU'),  -- s10 "orders"
-  ('table', 'order_items',         '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "order_items"
+  ('table', 'order_items',         '',           'SIUD', 'SIUD', 'SU'),   -- s10 "order_items"; 0065 (M-1): an engineer adds or deletes lines only inside the transaction that creates the order (convert, repeat)
   ('table', 'supplier_orders',     '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "supplier_orders"
   ('table', 'order_engineers',     '',           'SIUD', 'SIUD', 'SIUD'), -- s10 "order_engineers"
   ('table', 'order_costs',         '',           'SIUD', '',     ''),     -- s10 "order_costs"
@@ -147,7 +147,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'quotations',          '',           'SIUD', 'SIU',  'SIU'),  -- s10 "quotations" (U limited to pdf_path by the lock trigger)
   ('table', 'purchase_orders',     '',           'SIUD', 'SIU',  'SIU'),  -- s10 "purchase_orders" (U limited to pdf_path by the lock trigger)
   ('table', 'company_profile',     '',           'SU',   'S',    'S'),    -- s10 "company_profile": singleton, no insert or delete
-  ('table', 'order_items',         'supplier_unit_price', 'SIU', 'SIU', 'SIU'), -- s10 "order_items.supplier_unit_price"
+  ('table', 'order_items',         'supplier_unit_price', 'SIU', 'SIU', 'SU'), -- s10 "order_items.supplier_unit_price"; 0065 (M-1): an engineer writes it only on a new order
   ('table', 'supplier_orders',     'currency',   'SIU',  'SIU',  'SIU'),  -- s10 "supplier_orders.currency"
   ('view',  'v_company_roles',     '',           'S',    'S',    'S'),    -- s10 "v_company_roles, v_rfq_state, v_inquiry_state, v_order_state"
   ('view',  'v_rfq_state',         '',           'S',    'S',    'S'),    -- s10 (same row)
@@ -169,7 +169,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'my_target_progress_at',   '',    '',     '',     ''),     -- A4: test seam granted to nobody
   ('function', 'convert_rfq_to_order',    '',    'X',    'X',    'X'),    -- s10 "RPCs convert_rfq_to_order, create_repeat_order"
   ('function', 'create_repeat_order',     '',    'X',    'X',    'X'),    -- s10 (same row)
-  ('function', 'split_order_item',       '',    'X',    'X',    'X'),    -- A8 (0050): split an order line across legs, all staff (SECURITY INVOKER: the caller's own row security applies)
+  ('function', 'split_order_item',       '',    'X',    'X',    ''), -- A8 (0050): split an order line across legs; 0065 (M-1): it moves quantities, so admin and sales only
   ('function', 'float_rfq',               '',    'X',    'X',    'X'),    -- A4: S13 RPC, all staff
   ('function', 'set_rfq_floated',         '',    'X',    'X',    'X'),    -- R05: Undo of a float / float a saved RFQ, all staff
   ('function', 'merge_companies',         '',    'X',    '',     ''),     -- s10 "RPCs merge_companies, merge_brands, resolve_value_basis"
@@ -215,8 +215,10 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'today_pkt',               '',    'X',    'X',    'X'),    -- NOT in s10: pure date helper
   ('table', 'expense_categories',  '',           'SIUD', '',     ''),     -- A6 s10 "expense_categories": admin only, delete blocked while in use
   ('table', 'closed_months',       '',           'S',    '',     ''),     -- A6 s10 "closed_months": admin reads; written only through the admin RPCs
+  ('table', 'month_snapshots',     '',           'S',    '',     ''),     -- 0058 (owner decision D-MR2): a closed month's frozen figures; admin reads, written only by the close trigger
   ('table', 'attachments',         'expense',    'SIUD', '',     ''),     -- A6 s10 "attachments (parent is an expense)": admin only
   ('view',  'v_month_pnl',              '',      'S',    '',     ''),     -- A6 A6.3: admin only
+  ('view',  'v_month_pnl_live',         '',      'S',    '',     ''),     -- 0058 (D-MR2): the live P&L a snapshot is compared with, admin only
   ('view',  'v_month_expense_category', '',      'S',    '',     ''),     -- A6 A6.3: admin only
   ('view',  'v_month_team',             '',      'S',    '',     ''),     -- A6 A6.3: admin only
   ('view',  'v_gst_month',              '',      'S',    'S',    ''),     -- A6 A6.3: admin and sales (input tax is NULL for sales)
@@ -231,6 +233,8 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'aging_as_of',           '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'payables_as_of',        '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
   ('function', 'month_end_status',      '',      'X',    '',     ''),     -- A6 A6.3: admin only (zero rows for the others)
+  ('function', 'month_pnl_drift',       '',      'X',    '',     ''),     -- 0058 (D-MR2): helper of v_month_pnl, NULL for non-admins
+  ('function', 'month_pnl_adjusted',    '',      'X',    '',     ''),     -- 0058 (D-MR2): helper of v_month_pnl, NULL for non-admins
   ('function', 'revoke_user_sessions', '',      '',     '',     ''),     -- A01: service role only (the admin-users Edge Function); no client persona
   ('bucket', 'rfq-files',        '',  'SIUD', 'SIUD', 'SIUD'),           -- s10 "attachments (RFQ/clarification)": bucket rfq-files, same rules
   ('bucket', 'gst-receipts',     '',  'SIUD', 'SIUD', ''),               -- s10 "attachments (invoice)": bucket gst-receipts, admin and sales
@@ -238,7 +242,11 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('bucket', 'expense-receipts', '',  'SIUD', '',     ''),               -- A6 s10 "attachments (parent is an expense)": bucket expense-receipts, admin only
   ('bucket', 'generated-docs',   'issued',  'SU', 'S',  'S'),            -- 0057 (H-1): a PDF an issued quotation or PO points at is overwritten by an admin only
   ('table', 'quotations',        'pdf_attached', 'U', '', ''),           -- 0057 (H-1): once a PDF is attached, only an admin re-points or clears pdf_path
-  ('table', 'purchase_orders',   'pdf_attached', 'U', '', '');           -- 0057 (H-1): same for a supplier PO
+  ('table', 'purchase_orders',   'pdf_attached', 'U', '', ''),           -- 0057 (H-1): same for a supplier PO
+  ('table', 'orders',            'legacy_flags', '', '', ''),            -- 0065 (M-1): the value basis flag goes only through resolve_value_basis, for everyone
+  ('table', 'orders',            'owner_id', 'U', '', ''),               -- 0065 (M-2): who owns an order (and gets its payments' credit) is changed by an admin
+  ('table', 'rfqs',              'owner_id', 'U', '', ''),               -- 0065 (M-2): same for an RFQ (convert copies its owner into the order)
+  ('function', 'receipt_locked', '', 'X', 'X', '');                      -- 0065 (L-6): storage policy helper; NULL (no row) for anyone who cannot use the bucket
 
 -- ------------------------------------------------------------------ fixtures (as the table owner, admin claims)
 -- Row ids are written in hex and appear in the probes as @NN (same two hex digits).
@@ -321,6 +329,8 @@ insert into storage.objects (bucket_id, name) values
 insert into storage.objects (bucket_id, name) values ('generated-docs', 'm/q.pdf'), ('generated-docs', 'm/p.pdf');
 update public.quotations set pdf_path = 'm/q.pdf' where id = pg_temp.f('3a');
 update public.purchase_orders set pdf_path = 'm/p.pdf' where id = pg_temp.f('3b');
+-- 0065 (M-1): the fixture orders were created earlier, not in the transaction that writes their lines.
+update public.orders set created_at = now() - interval '1 day' where id in (pg_temp.f('20'), pg_temp.f('21'));
 
 -- ------------------------------------------------------------------ probes: tables
 -- Generated probes for the simple cases: S (select), U (touch one column to its own value), D (delete the leaf row).
@@ -353,6 +363,7 @@ insert into spec values
   ('recurring_expenses', '', 'id = @2a', 'label', $q$insert into public.recurring_expenses (id, label, category_id, amount) values (@af, 'l', 'ca7e0000-0000-4000-8000-000000000002', 5)$q$),
   ('expense_categories', '', 'id = @3d', 'name', $q$insert into public.expense_categories (id, name, grp) values (@b6, 'probe category', 'overhead')$q$),   -- A6
   ('closed_months', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.closed_months (month, closed_by) values ('2019-02-01', '{uid}')$q$),   -- A6
+  ('month_snapshots', '', $q$month = '2019-01-01'$q$, 'taken_at', $q$insert into public.month_snapshots (month, pnl, adjust, status, categories, team, payments, via, aging, payables) values ('2019-01-01', '{}', '{}', '[]', '[]', '[]', '{}', '{}', '[]', '[]')$q$),   -- 0058 (D-MR2)
   ('attachments', 'expense', 'id = @3c', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values (@b7, 'expense-receipts', 'p/3.jpg', 'c.jpg', 'image/jpeg', 10, @29)$q$),   -- A6
   ('attachments', 'order', 'id = @3f', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id) values (@b8, 'rfq-files', 'p/4.jpg', 'd.jpg', 'image/jpeg', 10, @20)$q$),   -- R22 (0042)
   ('attachments', 'rfq', 'id = @2b', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values (@b0, 'rfq-files', 'p/1.pdf', 'a.pdf', 'application/pdf', 10, @15)$q$),
@@ -395,7 +406,7 @@ select v, '', 'S', format('select 1 from public.%s limit 1', v)
 from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_state','v_invoice_state','v_gst_register',
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_stats',
-                  'v_month_pnl','v_month_expense_category','v_month_team','v_gst_month',
+                  'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
                   'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)
@@ -458,6 +469,8 @@ insert into probes values
   ('aging_as_of', '', 'X', 'select 1 from public.aging_as_of(public.today_pkt()) limit 1'),        -- A6
   ('payables_as_of', '', 'X', 'select 1 from public.payables_as_of(public.today_pkt()) limit 1'),  -- A6
   ('month_end_status', '', 'X', 'select 1 from public.month_end_status(public.today_pkt()) limit 1'),   -- A6
+  ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)
+  ('month_pnl_adjusted', '', 'X', 'select 1 where public.month_pnl_adjusted() is not null'),   -- 0058 (D-MR2)
   ('revoke_user_sessions', '', 'X', $q$select public.revoke_user_sessions(gen_random_uuid())$q$);   -- A01
 
 -- ------------------------------------------------------------------ probes: storage buckets
@@ -485,13 +498,17 @@ insert into probes values
   ('generated-docs', 'issued', 'S', $q$select 1 from storage.objects where bucket_id = 'generated-docs' and name = 'm/q.pdf'$q$),
   ('generated-docs', 'issued', 'U', $q$update storage.objects set name = name where bucket_id = 'generated-docs' and name = 'm/q.pdf'$q$),
   ('quotations', 'pdf_attached', 'U', $q$update public.quotations set pdf_path = 'm/other.pdf' where id = @3a$q$),
-  ('purchase_orders', 'pdf_attached', 'U', $q$update public.purchase_orders set pdf_path = 'm/other.pdf' where id = @3b$q$);
+  ('purchase_orders', 'pdf_attached', 'U', $q$update public.purchase_orders set pdf_path = 'm/other.pdf' where id = @3b$q$),
+  ('orders', 'legacy_flags', 'U', $q$update public.orders set legacy_flags = '{}' where id = @21$q$),   -- 0065
+  ('orders', 'owner_id', 'U', $q$update public.orders set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @21$q$),
+  ('rfqs', 'owner_id', 'U', $q$update public.rfqs set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @16$q$),
+  ('receipt_locked', '', 'X', $q$select 1 where public.receipt_locked('gst-receipts', 'fixture.txt') is not null$q$);
 
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
-  'coverage: the matrix lists every table in schema public (32)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 32, 'coverage: 32 tables');
+  'coverage: the matrix lists every table in schema public (33)');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 33, 'coverage: 33 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');
