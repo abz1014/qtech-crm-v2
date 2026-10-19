@@ -928,7 +928,7 @@ Main at `778084b` (Merge p8/import-rules). Read-only; no product code changed. O
 ### Shell
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-SH-01 | Top bar counts on all four: "Today 9, RFQs 14, Orders 7, Money 3" | `useNavCounts` sets only Today and RFQs; its comment says Orders and Money "are not built yet", but both are now. Orders and Money show no number | medium | NEW (continues B-11 / D-10) |
+| E-SH-01 | Top bar counts on all four: "Today 9, RFQs 14, Orders 7, Money 3" | `useNavCounts` sets only Today and RFQs; its comment says Orders and Money "are not built yet", but both are now. Orders and Money show no number | medium | FIXED a86f71b (Orders = active orders, one head count; Money = Money items on Today, admin and sales only; an engineer gets no Money entry and no money request; asserted in vitest and e2e) |
 
 ### RFQ intake
 | id | mockup | built | sev | status |
@@ -966,11 +966,11 @@ Main at `778084b` (Merge p8/import-rules). Read-only; no product code changed. O
 ### Money: GST register, Receivables, Expenses, Margins, Exceptions, Bank tick
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-MN-03 | Receivables opens with the most overdue row selected and the Payment reminder panel beside the table | No row selected on open, so the panel (the main thing on this screen) is not seen; table is full width | medium | NEW |
-| E-MN-04 | "Overdue" figure in red | Same colour as the other figures | low | NEW |
-| E-MN-05 | Footnote: "...Copying the text records the reminder and moves the item to Waiting on Today." | First sentence only | low | NEW |
+| E-MN-03 | Receivables opens with the most overdue row selected and the Payment reminder panel beside the table | No row selected on open, so the panel (the main thing on this screen) is not seen; table is full width | medium | FIXED a86f71b (opens on the most overdue row; panel beside the table from 1280 px) |
+| E-MN-04 | "Overdue" figure in red | Same colour as the other figures | low | FIXED a86f71b |
+| E-MN-05 | Footnote: "...Copying the text records the reminder and moves the item to Waiting on Today." | First sentence only | low | FIXED a86f71b |
 | E-MN-06 | Money content spans the full page (40 px gutters at 1440; 1328 px of content) | All Money views sit in a centred column of about 1216 px with 112 px side margins; Orders, RFQs and Settings are wider | low | NEW |
-| E-MN-07 | "By invoice date" is a shaded chip with a calendar icon | Plain text with an icon, no chip background | low | NEW |
+| E-MN-07 | "By invoice date" is a shaded chip with a calendar icon | Plain text with an icon, no chip background | low | FIXED a86f71b |
 | E-MN-08 | GST register footnote: "...see Cash month." | "...see Receivables." (the Cash month tab does not exist yet; follows E-MN-01) | low | NEW (resolves with M10) |
 
 ### Money: Month-end (not built)
