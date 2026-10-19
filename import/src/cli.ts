@@ -1,5 +1,6 @@
 import './lib/ws-shim'
 import { createClient } from '@supabase/supabase-js'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pktDate } from './lib/dates'
 import { assertTargetAllowed, GuardError } from './load/guard'
@@ -7,10 +8,12 @@ import { LoadError, loadLegacy } from './load/loader'
 import { loadMappings } from './mappings'
 import { readDump } from './extract/dump'
 import { LiveExtractor } from './extract/live'
+import { renderChecklist, runChecklist } from './i06/checklist'
 import { reconciles, renderReport, writeReport } from './report/report'
 import { transformAll } from './transform'
 
 // Usage (see docs/IMPORT.md):
+//   npm run import:i06 -- --dump <file|folder>            (the section 8 checklist, from a dump)
 //   npm run import:report -- --dump <file|folder> --mappings <folder> [--out <folder>] [--as-of YYYY-MM-DD]
 //   IMPORT_TARGET_URL=... IMPORT_SERVICE_ROLE_KEY=... npm run import:load -- --dump ... --mappings ... [--i-know-this-is-live --allow-project-ref <ref>]
 //
@@ -62,13 +65,20 @@ async function main(): Promise<number> {
     await new LiveExtractor({ iKnowThisIsLive: args.iKnowThisIsLive, sourceUrl: '' }).extract()
     return 0
   }
-  if (args.command !== 'report' && args.command !== 'load') {
-    console.error('Usage: cli.ts report|load --dump <file|folder> --mappings <folder> [--out <folder>] [--as-of YYYY-MM-DD]')
+  if (args.command !== 'report' && args.command !== 'load' && args.command !== 'i06') {
+    console.error('Usage: cli.ts report|load|i06 --dump <file|folder> --mappings <folder> [--out <folder>] [--as-of YYYY-MM-DD]')
     return 2
   }
 
   const parsed = readDump(need(args.dump, '--dump'))
   parsed.warnings.forEach(w => console.warn(`warning: ${w}`))
+  if (args.command === 'i06') {
+    const text = renderChecklist(runChecklist(parsed.dump))
+    mkdirSync(out, { recursive: true })
+    writeFileSync(join(out, 'i06.md'), text, 'utf8')
+    console.log(text)
+    return 0
+  }
   const maps = loadMappings(need(args.mappings, '--mappings'))
 
   if (args.command === 'report') {
