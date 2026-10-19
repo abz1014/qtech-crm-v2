@@ -1119,3 +1119,27 @@ The Companies list, the supplier "What we know" page and the Reports screen were
 1. E2-SH-01 (tab strips), E2-ST-01 (Team table), E2-LS-01 (list columns), E2-ME-01 (check data lines), E2-RD-01 (phone comparison), E2-TD-01 (date rail).
 2. The Part E list (E-OD-01..03, E-SH-01, E-MN-03, E-XR-01).
 3. Everything low, by screen.
+
+## Fix log, Part E2 (branch p9/parity-e2-fix)
+
+Screenshots at 1440 and 375 are in `docs/design/review/p9-e2-fix/` (E2E run 39228024091). Every row below is FIXED unless it says otherwise.
+
+| id | status | commit | what changed |
+|---|---|---|---|
+| E2-SH-01 | FIXED | d8b8874, cc4dec8 | `useScrollActiveIntoView` brings the active tab into view on the Settings, Money, Month-end and SegmentedControl strips (company-admin-375 and the Money strips show the tab you are on) |
+| E2-SH-02 | FIXED | d8b8874 | the Settings layout's two grid rows no longer share the spare height on a phone: no blank band (e2-settings-team-375, e2-settings-details-admin-375) |
+| E2-LS-01 | FIXED | d8b8874, cc4dec8 | board column widths re-balanced: the Company column is about 230 px at 1440 (board-all-1440), Sourcing and Questions keep their whole chips |
+| E2-LS-02 | FIXED | d8b8874, cc4dec8 | phone board toolbar: each control is its own full-width scrolling row, and the toolbar grid has a `minmax(0,1fr)` track so nothing overflows the card (board-375) |
+| E2-LS-03 | FIXED | d8b8874, cc4dec8 | Orders list columns re-balanced and the filter selects narrowed so the search stays on the first row where it fits (o04-orders-list-1440) |
+| E2-RD-01 | FIXED | f2a5340, cc4dec8 | phone ranked rows are the mockup's compact block: rank, supplier left, price right with the PKR figure and rate under it, lead time left and stock right, the row's buttons on their own right-aligned line (a8-rfq-ranked-sales-375-crop) |
+| E2-TD-01 | FIXED | f2a5340, cc4dec8 | `RailLabels` measures the two rail labels and drops "Next nudge" onto a second line when they would overlap (today-10-mobile-waiting-375) |
+| E2-CP-01 | NOT A DIFFERENCE | | the g2-capture HTML renders the sheet header, the empty pane and the footer hint exactly as built (white, "command, enter saves"); the cream in `capture-06-desktop.png` is an artefact of that PNG (checked pixel by pixel on a fresh Chromium render) |
+| E2-CP-02 | FIXED | e34e05b | a photo alone shows only its file row; once text has been typed the box stays (capture-frame-destination-photo-375) |
+| E2-ME-01 | FIXED | 12adb6f | migration 0064 `month_end_check_details` (same predicates as `month_end_status`, admin only, S14 row and pgTAP added); the cards print the amounts, PSID groups, order and invoice lists and open the one order a single unresolved payment belongs to; figures and references in the mono face; fixed wording if the details do not load (m10-checklist-1440, m10-checklist-375) |
+| E2-RP-01 | FIXED | 12adb6f | P&L: two decimals and ink-coloured minus figures (`Money plainNegative`); cash lines at two decimals (m10-pnl-1440) |
+| E2-RP-02 | FIXED | 12adb6f | Expenses by category: a line under each category (its payees, else what the expenses were described as), the bigger group rows (`DataTable groupStyle="big"`), Bank a blue chip with a landmark icon, Cash grey with a wallet (`paid-via` status; tokens.css and its copy in step; visual baselines updated) |
+| E2-RP-03 | FIXED | 12adb6f | We owe: coloured state chips from a new `payable` status dimension (Owed blue, Settled teal, Paid over amber). The review fixture has no supplier legs, so m10-report-owe shows the empty state; unit-covered |
+| E2-RP-04 | FIXED | 12adb6f | the As-of field is 232 px wide and keeps the whole date (m10-report-aging-1440) |
+| E2-RP-05 | FIXED | 12adb6f | Team: a grey target bar under each figure. The fixture sets no targets, so the screenshot says "No target set" |
+
+Housekeeping: `model.ts` keeps its CRLF endings (b78eb01); the month-end spec now photographs all six reports at 1440 and 375.
