@@ -1,7 +1,9 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { TableUpdate, ViewRow } from '@/features/dbTypes'
 import type { ConvertPayloadLine } from '@/features/orders/lib/convert'
-import { mapRankRows, type RankedQuote, type RankRow } from '@/features/orders/lib/ranking'
+import { medianDeliveryDays } from '@/features/orders/lib/leadTime'
+import { mapRankRows, type RankedQuote } from '@/features/orders/lib/ranking'
+import type { RankRow } from '@/features/rfqs/lib/ranking/reasons'
 import type { LegPatch } from '@/features/orders/lib/legModel'
 
 /*
@@ -114,6 +116,8 @@ export interface OrderItemRow {
   number: number
   description: string
   brandName: string | null
+  /** The model words the line was matched on (order_items.model_tokens), upper-cased for the sub-line. */
+  model: string | null
   qty: number
   unit: string | null
   isService: boolean
@@ -127,7 +131,7 @@ export interface OrderItemRow {
 
 export async function listOrderItems(orderId: string, money: boolean): Promise<OrderItemRow[]> {
   const db = requireSupabase()
-  const base = 'id, position, description, brand_id, qty, unit, is_service, supplier_order_id, rfq_item_id, created_at'
+  const base = 'id, position, description, brand_id, model_tokens, qty, unit, is_service, supplier_order_id, rfq_item_id, created_at'
   const rows = unwrap(
     await db
       .from('order_items')
@@ -145,6 +149,7 @@ export async function listOrderItems(orderId: string, money: boolean): Promise<O
     number: i + 1,
     description: r.description as string,
     brandName: r.brand_id ? (names.get(r.brand_id as string) ?? null) : null,
+    model: Array.isArray(r.model_tokens) && r.model_tokens.length > 0 ? (r.model_tokens as string[]).join(' ').toUpperCase() : null,
     qty: Number(r.qty),
     unit: (r.unit as string | null) ?? null,
     isService: Boolean(r.is_service),
@@ -275,6 +280,8 @@ export interface ConvertInput {
   items: ConvertPayloadLine[]
   customerPo: string | null
   paymentTermsDays: number | null
+  /** orders.needs_commissioning: the plan-commissioning and engineer-done rules depend on it. */
+  needsCommissioning?: boolean
 }
 
 export async function convertRfqToOrder(input: ConvertInput): Promise<string> {
@@ -284,6 +291,7 @@ export async function convertRfqToOrder(input: ConvertInput): Promise<string> {
     p_items: input.items as unknown as never,
     ...(input.customerPo ? { p_customer_po_number: input.customerPo } : {}),
     ...(input.paymentTermsDays !== null ? { p_payment_terms_days: input.paymentTermsDays } : {}),
+    ...(input.needsCommissioning !== undefined ? { p_needs_commissioning: input.needsCommissioning } : {}),
   })
   if (error) throw error
   return (data as string | null) ?? input.orderId
@@ -530,6 +538,20 @@ export async function addOrderItem(l: NewLine): Promise<void> {
       supplier_unit_price: l.isService ? null : l.supplierUnitPrice,
     })
   if (error) throw error
+}
+
+/** The number the next order will most likely take (the highest so far plus one), for the convert dialog's "Creates order ORD-0043". The issued number is the database's. */
+export async function getNextOrderNumber(): Promise<number> {
+  const rows = unwrap(await requireSupabase().from('orders').select('number').order('number', { ascending: false }).limit(1))
+  return (rows[0]?.number ?? 0) + 1
+}
+
+/** Median days from placed to delivered over the supplier's finished legs (null with fewer than two): the default expected date's second source. */
+export async function getSupplierMedianDays(supplierId: string): Promise<number | null> {
+  const rows = unwrap(
+    await requireSupabase().from('supplier_orders').select('placed_on, delivered_on').eq('supplier_id', supplierId).not('placed_on', 'is', null).not('delivered_on', 'is', null).order('delivered_on', { ascending: false }).limit(50),
+  )
+  return medianDeliveryDays(rows.map(r => ({ placedOn: r.placed_on, deliveredOn: r.delivered_on })))
 }
 
 export async function addOrderLeg(input: { id: string; orderId: string; supplierId: string; currency: string }): Promise<void> {

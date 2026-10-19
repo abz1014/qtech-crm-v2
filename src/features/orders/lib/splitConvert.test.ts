@@ -13,20 +13,8 @@ const q = (lineId: string, rank: number | null): RankedQuote => ({
   currency: 'PKR',
   rank,
   comparable: rank !== null,
-  withinBand: false,
-  pctAboveBest: null,
-  pkrUnit: 1,
-  fxState: 'same_currency',
-  fxAgeDays: null,
-  reliabilityBand: 2,
-  deliveries: 0,
-  onTime: 0,
-  late: 0,
-  medianDaysLate: null,
-  ordersCount: 0,
   inStock: false,
-  sellUnit: null,
-  spreadUnit: null,
+  row: {} as RankedQuote['row'],
 })
 const part = (key: string, lineId: string, qty: Part['qty']): Part => ({ key, lineId, qty })
 

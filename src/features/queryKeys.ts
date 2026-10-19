@@ -129,6 +129,10 @@ function orders() {
     captureSearch: (text: string, includePo: boolean) => [...all, 'list', 'capture-search', text.trim().toLowerCase(), includePo] as const,
     /** A8: the ranked quotes of an RFQ for the convert dialog and the Split line dialog (the role is in the key: an engineer's rows carry no selling price). */
     ranked: (rfqId: string, role: string) => [...all, 'list', 'ranked', rfqId, role] as const,
+    /** The number the next order will most likely take (shown in the convert dialog). */
+    nextNumber: () => [...all, 'list', 'next-number'] as const,
+    /** The supplier's median days from placed to delivered (the default expected date). */
+    supplierMedian: (supplierId: string) => [...all, 'list', 'supplier-median', supplierId] as const,
     /** Suppliers a leg can be added for. */
     supplierChoices: () => [...all, 'list', 'supplier-choices'] as const,
     jobTitle: (userId: string) => [...all, 'list', 'job-title', userId] as const,

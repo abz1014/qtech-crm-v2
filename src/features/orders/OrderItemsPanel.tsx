@@ -6,6 +6,7 @@ import { Checkbox } from '@/ui/form/Checkbox'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { Select } from '@/ui/form/Select'
 import { DataTable, type Column } from '@/ui/DataTable'
+import { Money } from '@/ui/Money'
 import { useToast } from '@/ui/useToast'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { useSetGroupPrice, useSetItemRates, useUpdateItem } from '@/features/orders/hooks'
@@ -147,13 +148,13 @@ export function OrderItemsPanel({
         <span className="truncate">
           Part {(r.partIndex ?? 0) + 1} of {r.partCount}
         </span>
-        <span className="truncate text-xs text-fg-muted">{r.brandName ?? ' '}</span>
+        <span className="truncate text-xs text-fg-muted">{[r.brandName, r.model].filter(Boolean).join(' · ') || ' '}</span>
       </span>
     ) : (
     <span className="grid min-w-0 gap-px">
       <span className="truncate">{r.description}</span>
       <span className="truncate text-xs text-fg-muted">
-        {r.isService ? 'Service' : (r.brandName ?? ' ')}
+        {r.isService ? 'Service' : ([r.brandName, r.model].filter(Boolean).join(' · ') || ' ')}
         {/* tablet: quantity and unit price fold into the item line */}
         {money && r.unitPriceNet !== null ? (
           <span className="num lg:hidden">
@@ -192,7 +193,7 @@ export function OrderItemsPanel({
       kind: 'money',
       value: r => r.unitPriceNet,
       cell: r =>
-        r.kind !== 'head' ? undefined : editingGroup === r.id ? (
+        r.kind !== 'head' ? <Money value={r.unitPriceNet} prefix={false} /> : editingGroup === r.id ? (
           <NumberInput
             value={groupDraft}
             onChange={setGroupDraft}
@@ -354,6 +355,7 @@ export function OrderItemsPanel({
         getRowId={r => r.id}
         twoLine
         density="compact"
+        columnBands={money ? [{ label: 'Sale to customer, PKR', from: 'unit', to: 'gross' }, { label: 'Supplier, in the leg currency', from: 'supplier', to: 'supplier' }] : undefined}
         footerLabel={basisUnknown ? 'Total as typed' : `Order total, ${items.length} ${items.length === 1 ? 'line' : 'lines'}`}
         summary={summary}
         toolbar={
