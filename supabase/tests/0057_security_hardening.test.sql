@@ -6,8 +6,8 @@ select * from no_plan();
 --
 -- Part 1 proves the H-1 fix (issued PDFs). Part 2 is a set of schema-wide guards that keep the whole public schema
 -- closed to anon and to PUBLIC (S14 checks objects by name; these catch an overload or a new object nobody listed).
--- Part 3 holds the medium and low findings that are left as recommendations: each is written as the SECURE behaviour
--- inside todo_start/todo_end, so it demonstrates the gap today without failing the run, and turns green when fixed.
+-- Part 3 holds the medium and low findings. They were todo tests until migration 0065 closed them; they are real tests
+-- now (0065_security_recommendations.test.sql covers each fix in full).
 
 -- ------------------------------------------------------------------ fixtures (table owner, admin claims)
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
@@ -119,8 +119,7 @@ select is((select coalesce(array_agg(pl.policyname::text order by 1), '{}') from
              and (pl.roles && array['anon', 'public']::name[])),
           '{}'::text[], 'guard: no row-security policy in public or on storage objects is granted to anon or PUBLIC');
 
--- ================================================================== part 3: documented findings (todo until fixed)
-select todo_start('M-1 (SECURITY_REVIEW.md): figures of a closed month still move when order data changes');
+-- ================================================================== part 3: findings closed by 0065
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 insert into public.order_items (id, order_id, description, qty, unit_price_net, gst_rate) values
   ('57000000-0000-4000-8000-000000000032', '57000000-0000-4000-8000-000000000030', '0057 line', 1, 100, 18);
@@ -130,37 +129,37 @@ select public.close_months_through('2020-01-01');
 create temp table m1_before as select net_in from public.v_month_pnl where month = '2020-01-01';
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
-update public.orders set legacy_flags = array['value_basis_unknown'] where id = '57000000-0000-4000-8000-000000000030';
+select throws_ok($$update public.orders set legacy_flags = array['value_basis_unknown'] where id = '57000000-0000-4000-8000-000000000030'$$,
+  '42501', null, 'M-1: an engineer cannot set the value basis flag of an order');
 reset role;
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 select is((select net_in from public.v_month_pnl where month = '2020-01-01'), (select net_in from m1_before),
   'M-1: an engineer editing an order cannot change the net income of a closed month');
-select todo_end();
 
-select todo_start('L-1 (SECURITY_REVIEW.md): the chase actor (0048) can be named by the caller');
 insert into public.supplier_inquiries (id, rfq_id, supplier_id, sent_on) values
   ('57000000-0000-4000-8000-000000000060', '57000000-0000-4000-8000-000000000010', '57000000-0000-4000-8000-000000000002', public.today_pkt() - 3);
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
-select throws_ok($$update public.supplier_inquiries set last_chased_on = public.today_pkt(), chase_count = 1,
-                   last_chased_by = 'a0000000-0000-4000-8000-000000000002' where id = '57000000-0000-4000-8000-000000000060'$$,
-  '42501', null, 'L-1: an engineer cannot record a chase in the name of a colleague');
+update public.supplier_inquiries set last_chased_on = public.today_pkt(), chase_count = 1,
+  last_chased_by = 'a0000000-0000-4000-8000-000000000002' where id = '57000000-0000-4000-8000-000000000060';
+select is((select last_chased_by from public.supplier_inquiries where id = '57000000-0000-4000-8000-000000000060'),
+  'a0000000-0000-4000-8000-000000000003'::uuid, 'L-1: an engineer cannot record a chase in the name of a colleague (the caller is recorded)');
 reset role;
-select todo_end();
 
-select todo_start('L-2 (SECURITY_REVIEW.md): anon keeps the default Supabase grants on sequences in public');
 select is((select coalesce(array_agg(c.relname::text order by 1), '{}') from pg_class c
            where c.relnamespace = 'public'::regnamespace and c.relkind = 'S'
              and case when c.relkind = 'S' then has_sequence_privilege('anon', c.oid, 'USAGE,SELECT,UPDATE') else false end),
           '{}'::text[], 'L-2: anon holds no privilege on any sequence in public');
-select todo_end();
 
-select todo_start('L-3 (SECURITY_REVIEW.md): pg_net HTTP functions keep the Supabase grants to anon and authenticated');
-select ok(case when to_regprocedure('net.http_get(text,jsonb,jsonb,integer)') is null then true
-               else not (has_function_privilege('anon', to_regprocedure('net.http_get(text,jsonb,jsonb,integer)'), 'execute')
-                         or has_function_privilege('authenticated', to_regprocedure('net.http_get(text,jsonb,jsonb,integer)'), 'execute')) end,
-  'L-3: no client role can call net.http_get (only the nightly FX job needs it)');
-select todo_end();
+-- L-3 cannot be closed from this project: Supabase's pg_net install grants execute (and USAGE on schema net) to anon and
+-- authenticated as supabase_admin, and postgres, which runs the migrations, is not a superuser and cannot revoke a grant
+-- it did not make. The net schema is not exposed by the API, so no client can reach it. What this test holds is that
+-- this project never adds such a grant itself: every anon or authenticated entry on a net function is supabase_admin's.
+select is((select count(*)::int from pg_proc p cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+           where p.pronamespace = coalesce(to_regnamespace('net'), 0::oid)
+             and a.grantee in ('anon'::regrole, 'authenticated'::regrole)
+             and a.grantor <> coalesce((select oid from pg_roles where rolname = 'supabase_admin'), 0::oid)),
+          0, 'L-3: no grant to anon or authenticated on a net function comes from this project');
 
 select * from finish();
 rollback;

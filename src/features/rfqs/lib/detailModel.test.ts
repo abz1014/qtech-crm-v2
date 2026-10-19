@@ -13,9 +13,12 @@ describe('currencyForSupplier', () => {
     expect(currencyForSupplier(undefined, 'Germany')).toEqual({ currency: 'EUR', source: 'country' })
     expect(currencyForSupplier(null, 'UAE').currency).toBe('AED')
   })
-  it('falls back to PKR with no history and an unknown country', () => {
-    expect(currencyForSupplier(null, null)).toEqual({ currency: 'PKR', source: 'default' })
-    expect(currencyForSupplier(null, 'Atlantis').source).toBe('default')
+  it('never assumes PKR: no history and no known country gives no currency (audit R1)', () => {
+    expect(currencyForSupplier(null, null)).toEqual({ currency: '', source: 'none' })
+    expect(currencyForSupplier(null, 'Atlantis')).toEqual({ currency: '', source: 'none' })
+  })
+  it('a Pakistani supplier keeps PKR', () => {
+    expect(currencyForSupplier(null, 'Pakistan')).toEqual({ currency: 'PKR', source: 'country' })
   })
   it('ignores a malformed stored currency', () => {
     expect(currencyForSupplier('usd', 'China').source).toBe('country')

@@ -1,5 +1,5 @@
 import { requireSupabase, unwrap } from '@/lib/supabase'
-import type { LastPo, PrefillRow, PriceSource } from '@/features/purchaseOrders/lib/prefill'
+import { poLineAmounts, type LastPo, type PrefillRow, type PriceSource } from '@/features/purchaseOrders/lib/prefill'
 
 /*
  * Supplier POs (O07): every database and storage call for the Issue purchase order dialog, the PO's PDF and the View PO link.
@@ -242,7 +242,7 @@ export interface PoDraft {
 /** The same data for a PO that has not been issued yet (the dialog's Preview PDF). Nothing is written. */
 export async function loadPoPreviewData(d: PoDraft): Promise<PoPdfData> {
   const ctx = await loadLegContext(d.legId, d.signatoryId, null, d.issuedOn)
-  const total = d.lines.reduce((n, l) => n + Math.round(Number(l.qty) * Number(l.unit_price) * 100), 0) / 100
+  const total = poLineAmounts(d.lines).total
   return {
     ...ctx,
     po: { id: 'preview', number: d.number, revision: d.revision, issuedOn: d.issuedOn, currency: d.currency, total, lines: d.lines, incoterm: d.incoterm, deliveryTerms: d.deliveryTerms, paymentTerms: d.paymentTerms, shipTo: d.shipTo, notes: null },

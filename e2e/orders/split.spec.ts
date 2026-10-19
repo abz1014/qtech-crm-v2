@@ -116,7 +116,7 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
 
     // rank 1 by price; s2 is inside the 2% band, so s1 reads "Within 2%" (a tie decided by record), and the single-quote item reads "Best price"
     await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText(s.s1.name)
-    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Within 2%')
+    await expect(d.getByRole('button', { name: 'Supplier for line 1' })).toContainText('Best price')
     await expect(d.getByRole('button', { name: 'Supplier for line 2' })).toContainText(s.s1.name)
     await expect(d.getByRole('button', { name: 'Supplier for line 2' })).toContainText('Best price')
     await expect(d.getByText('Creates 2 order lines.')).toBeVisible()
@@ -248,6 +248,47 @@ test.describe('O08: the convert dialog ranks, pre-assigns and splits', () => {
   })
 })
 
+test.describe('lifecycle audit fixes: commissioning toggle and default expected date', () => {
+  test('Needs commissioning starts off for plain goods and one tap turns it on; the order keeps it', async ({ page }) => {
+    const s = await seed()
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    await markWon(page).click()
+    const d = dialog(page)
+    const box = d.getByRole('checkbox', { name: 'Needs commissioning' })
+    await expect(box).not.toBeChecked()
+    await box.click()
+    await d.getByRole('button', { name: 'Create order' }).click()
+    await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    const order = await orderFor(s.rfq.id)
+    expect((await get<{ needs_commissioning: boolean }>(`orders?id=eq.${order.id}&select=needs_commissioning`))[0].needs_commissioning).toBe(true)
+  })
+
+  test('a hand-added leg gets an expected date when it is placed (30 days assumed, no lead time), shown as an editable date', async ({ page }) => {
+    const s = await seedSplitOrder()
+    const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: s.order.id, supplier_id: s.s3.id, currency: 'PKR' } })))[0]
+    await openAs(page, 'sales', `/orders/${s.order.id}`)
+    const legs = await get<{ id: string }>(`supplier_orders?order_id=eq.${s.order.id}&select=id&order=created_at`)
+    const letter = String.fromCharCode(65 + legs.findIndex(l => l.id === leg.id))
+    const card = legLoc(page, letter)
+    await card.getByRole('button', { name: new RegExp(`Mark placed, leg ${letter}`) }).click()
+    await expect(card).toContainText('30 days assumed')
+    await expect.poll(async () => (await get<{ expected_on: string | null }>(`supplier_orders?id=eq.${leg.id}&select=expected_on`))[0].expected_on).toBe(karachiDay(30))
+    // an editable date, like any other
+    await expect(card.getByRole('button', { name: new RegExp(`Expected date, leg ${letter}`) })).toBeVisible()
+  })
+
+  test('a leg placed by issuing its PO also gets the default expected date', async ({ page }) => {
+    await setProfile(true)
+    const s = await seedSplitOrder()
+    const legs = await get<{ id: string; supplier_id: string; expected_on: string | null }>(`supplier_orders?order_id=eq.${s.order.id}&select=id,supplier_id,expected_on&order=created_at`)
+    const leg = legs.find(l => l.supplier_id === s.s1.id)!
+    await must(rest('admin', `supplier_orders?id=eq.${leg.id}`, { method: 'PATCH', body: { expected_on: null }, prefer: 'return=minimal' }))
+    await must(rest('admin', 'rpc/issue_purchase_order', { method: 'POST', body: { p_po_id: crypto.randomUUID(), p_supplier_order_id: leg.id } }))
+    await openAs(page, 'sales', `/orders/${s.order.id}`)
+    await expect.poll(async () => (await get<{ expected_on: string | null }>(`supplier_orders?id=eq.${leg.id}&select=expected_on`))[0].expected_on).not.toBeNull()
+  })
+})
+
 test.describe('O09: the order page shows a split item, splits a line, edits the group price and flags a changed PO', () => {
   test('the two parts are grouped under "split across 2 suppliers", numbered 1, 1a, 1b, and one selling price edits both', async ({ page }) => {
     const s = await seedSplitOrder()
@@ -259,6 +300,10 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     await expect(items.getByText('Part 2 of 2')).toBeVisible()
     await expect(items.getByText('1a')).toBeVisible()
     await expect(items.getByText('1b')).toBeVisible()
+    // E-OD-05 the group header band, E-OD-02 the unit net on a plain line
+    await expect(items.getByText('Sale to customer, PKR')).toBeVisible()
+    await expect(items.getByText('Supplier, in the leg currency')).toBeVisible()
+    await expect(items.getByRole('row', { name: /Flow meter/ })).toContainText('612,000')
     await shot(page, 'a8-order-split-group-1440')
 
     // one tap on Edit price, one value typed (Enter saves): both parts change in one statement
@@ -298,6 +343,8 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     expect(moved.rfq_item_id).toBe(s.items[0].id)
     // the item is now split across 3 suppliers
     await expect(page.getByText('split across 3 suppliers')).toBeVisible()
+    // the supplier that was not on the order before has a new leg, labelled as coming from the split
+    await expect(page.getByText('New leg from the split').first()).toBeVisible()
   })
 
   test('a refused split says why and changes nothing (a quantity of the whole line)', async ({ page }) => {

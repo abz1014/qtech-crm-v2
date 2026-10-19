@@ -115,6 +115,8 @@ function orders() {
     /** O02: past orders found to start a new one from (cached a moment; the search text is part of the key). */
     past: (text: string) => [...all, 'list', 'past', text.trim().toLowerCase()] as const,
     pastOne: (id: string) => [...all, 'list', 'past-one', id] as const,
+    /** The number beside Orders in the top bar: active orders (every staff role may count them). */
+    activeCount: () => [...all, 'list', 'active-count'] as const,
     /** O04: every order with its state dimensions, shaped by the caller's role (an engineer's has no money in it). */
     board: (role: string) => [...all, 'list', 'board', role] as const,
     /** The orders an RFQ produced (the RFQ page shows 'Open ORD-0039' once it is won). */
@@ -129,6 +131,10 @@ function orders() {
     captureSearch: (text: string, includePo: boolean) => [...all, 'list', 'capture-search', text.trim().toLowerCase(), includePo] as const,
     /** A8: the ranked quotes of an RFQ for the convert dialog and the Split line dialog (the role is in the key: an engineer's rows carry no selling price). */
     ranked: (rfqId: string, role: string) => [...all, 'list', 'ranked', rfqId, role] as const,
+    /** The number the next order will most likely take (shown in the convert dialog). */
+    nextNumber: () => [...all, 'list', 'next-number'] as const,
+    /** The supplier's median days from placed to delivered (the default expected date). */
+    supplierMedian: (supplierId: string) => [...all, 'list', 'supplier-median', supplierId] as const,
     /** Suppliers a leg can be added for. */
     supplierChoices: () => [...all, 'list', 'supplier-choices'] as const,
     jobTitle: (userId: string) => [...all, 'list', 'job-title', userId] as const,

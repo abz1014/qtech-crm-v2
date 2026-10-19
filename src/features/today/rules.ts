@@ -8,7 +8,7 @@
 // down). An item that has never been chased and is not due yet is not returned at all. Snoozes are subtracted after the
 // rules (applySnoozes), so a snoozed item is gone entirely: Waiting is the system's cooldown, a snooze is the person's choice.
 
-import { addBusinessDays, businessDaysBetween, daysBetween, longDay, parseDay } from '@/features/rfqs/lib/dateText'
+import { addBusinessDays, addDays, businessDaysBetween, daysBetween, longDay, parseDay } from '@/features/rfqs/lib/dateText'
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
 import { timeText } from '@/features/rfqs/lib/chaseCommon'
 import { supplierReplyBy } from '@/features/rfqs/lib/supplierChase'
@@ -63,6 +63,10 @@ export const THRESHOLDS = {
   /** The close-month item shows on these days of the month. */
   closeMonthFromDay: 1,
   closeMonthToDay: 10,
+  /** TCS not sent: an invoice with no courier date this many working days after its invoice date. */
+  tcsSendDays: 3,
+  /** TCS not sent only looks at invoices this recent (calendar days), so old register rows never raise it. */
+  tcsWindowDays: 60,
 } as const
 
 // ---------------------------------------------------------------- helpers
@@ -140,6 +144,10 @@ function tabFor(rule: RuleKey): TodayTab {
     case 'payment_overdue':
     case 'delivered_not_invoiced':
     case 'close_month':
+    case 'costs_incomplete':
+    case 'fbr_attention':
+    case 'tcs_not_sent':
+    case 'recurring_due':
       return 'money'
     default:
       return 'sourcing'
@@ -686,6 +694,160 @@ export function ruleCloseMonth(ctx: TodayInputs): Entry[] {
   ]
 }
 
+// ---------------------------------------------------------------- M08: the other money rules
+//
+// Each of these is ONE rolled-up item, never one per invoice or order: the work is a batch screen (the register, the
+// margins list, the expenses list), the item says how many and opens it, and a snooze hides the whole thing. That keeps a
+// cutover with a pile of old rows from filling the list (the old CRM was abandoned for nagging). Engineers never get any
+// of them: the money facts are not even requested for an engineer, and each rule also refuses the role itself.
+
+/** Stable uuids for the polymorphic snoozes.subject_id of a rolled-up rule (one subject per rule). */
+export const ROLLUP_SUBJECT: Record<'costs_incomplete' | 'fbr_attention' | 'tcs_not_sent', string> = {
+  costs_incomplete: '00000000-0000-4000-8000-00000000c057',
+  fbr_attention: '00000000-0000-4000-8000-00000000fb21',
+  tcs_not_sent: '00000000-0000-4000-8000-00000000ac50',
+}
+
+/** The recurring item is one per month, so a snooze or a change of month starts it afresh. */
+export function recurringSubjectId(today: string): string {
+  return `00000000-0000-4000-8000-${today.slice(0, 7).replace('-', '').padStart(12, 'e')}`
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+/**
+ * Costs incomplete (admin only): orders that are paid in full but whose costs are still provisional, so their margin is a
+ * guess. One item: "Costs not marked complete on n paid orders". Excluded: cancelled orders and orders whose basis is
+ * unknown (their margin is excluded anyway).
+ */
+export function ruleCostsIncomplete(ctx: TodayInputs): Entry[] {
+  if (ctx.user.role !== 'admin') return []
+  const rows = (ctx.costs ?? []).filter(c => c.paymentState === 'settled' && c.costsState === 'provisional' && !c.basisUnknown && !c.cancelled)
+  if (rows.length === 0) return []
+  const noExpected = rows.filter(c => c.expectedCost === null).length
+  const oldest = rows.reduce((a, b) => (a.orderNumber <= b.orderNumber ? a : b))
+  return [
+    build(
+      {
+        rule: 'costs_incomplete',
+        subjectId: ROLLUP_SUBJECT.costs_incomplete,
+        tab: tabFor('costs_incomplete'),
+        title: `Costs not marked complete on ${plural(rows.length, 'paid order', 'paid orders')}`,
+        ref: 'Margins',
+        party: noExpected > 0 ? `${noExpected} with no expected cost` : `Oldest ${orderRef(oldest.orderNumber)}`,
+        actionDueOn: null,
+        group: 'ready',
+        badge: { text: String(rows.length), tone: 'neutral' },
+        isPriority: false,
+        href: '/money/margins?filter=paid-provisional',
+        number: 0,
+      },
+      ctx.today,
+    ),
+  ]
+}
+
+/**
+ * FBR attention (admin and sales): invoices whose tax is not deposited and whose month is over, or where a later FBR step
+ * was recorded without the one before it (the register's "needs attention", ported from needsFbrAttention). One item.
+ */
+export function ruleFbrAttention(ctx: TodayInputs): Entry[] {
+  if (ctx.user.role === 'engineer') return []
+  const rows = (ctx.invoices ?? []).filter(i => i.needsFbrAttention || i.fbrException)
+  if (rows.length === 0) return []
+  const exceptions = rows.filter(i => i.fbrException).length
+  const dated = rows.map(i => i.invoiceDate).filter((d): d is string => Boolean(d)).sort()
+  const oldest = dated[0] ?? null
+  return [
+    build(
+      {
+        rule: 'fbr_attention',
+        subjectId: ROLLUP_SUBJECT.fbr_attention,
+        tab: tabFor('fbr_attention'),
+        title: `FBR: ${plural(rows.length, 'invoice needs', 'invoices need')} attention`,
+        ref: 'GST register',
+        party: exceptions > 0 ? `${plural(exceptions, 'step', 'steps')} recorded out of order` : oldest ? `Oldest ${MONTH_NAMES[Number(oldest.slice(5, 7)) - 1]} ${oldest.slice(0, 4)}` : 'Tax not deposited',
+        actionDueOn: null,
+        group: 'ready',
+        badge: { text: String(rows.length), tone: 'warning' },
+        isPriority: false,
+        href: '/money/gst-register?attention=1',
+        number: 0,
+      },
+      ctx.today,
+    ),
+  ]
+}
+
+/**
+ * TCS not sent (admin and sales): invoices from the last 60 days with no courier date, three working days after the
+ * invoice date. The courier steps "copy received" and "delivered" are optional (A3), so only "sent" is read. One item.
+ */
+export function ruleTcsNotSent(ctx: TodayInputs): Entry[] {
+  if (ctx.user.role === 'engineer') return []
+  const earliest = addDays(ctx.today, -THRESHOLDS.tcsWindowDays) ?? ctx.today
+  const rows = (ctx.invoices ?? []).filter(i => {
+    if (!i.invoiceDate || (i.courierState !== 'not_started' && i.courierState !== 'copy_received')) return false
+    return i.invoiceDate >= earliest && ctx.today >= addBusinessDays(i.invoiceDate, THRESHOLDS.tcsSendDays)
+  })
+  if (rows.length === 0) return []
+  const oldest = rows.map(i => i.invoiceDate as string).sort()[0]
+  const late = Math.max(0, daysBetween(oldest, ctx.today))
+  return [
+    build(
+      {
+        rule: 'tcs_not_sent',
+        subjectId: ROLLUP_SUBJECT.tcs_not_sent,
+        tab: tabFor('tcs_not_sent'),
+        title: `${plural(rows.length, 'invoice', 'invoices')} not sent by TCS`,
+        ref: 'GST register',
+        party: `Oldest invoice ${late} ${late === 1 ? 'day' : 'days'} ago`,
+        actionDueOn: null,
+        group: 'ready',
+        badge: { text: String(rows.length), tone: 'neutral' },
+        isPriority: false,
+        href: '/money/gst-register?tcs=1',
+        number: 0,
+      },
+      ctx.today,
+    ),
+  ]
+}
+
+/**
+ * Recurring due (admin only): active templates, started, with no expense yet for this month, whose day of the month has
+ * come (a template with no day is due from the 1st). One item per month; it is dated the earliest of those days, so it
+ * turns "overdue or due today" once a day has passed. Recording them is one tap each on the Expenses screen.
+ */
+export function ruleRecurringDue(ctx: TodayInputs): Entry[] {
+  if (ctx.user.role !== 'admin') return []
+  const period = ctx.today.slice(0, 7)
+  const day = parseDay(ctx.today)?.d ?? 0
+  const due = (ctx.recurring ?? []).filter(t => t.active && !t.recorded && (!t.startMonth || t.startMonth <= period) && (t.dayOfMonth ?? 1) <= day)
+  if (due.length === 0) return []
+  const firstDay = Math.min(...due.map(t => t.dayOfMonth ?? 1))
+  const actionOn = `${period}-${String(firstDay).padStart(2, '0')}`
+  const labels = due.map(t => t.label).sort()
+  return [
+    build(
+      {
+        rule: 'recurring_due',
+        subjectId: recurringSubjectId(ctx.today),
+        tab: tabFor('recurring_due'),
+        title: `${plural(due.length, 'recurring expense', 'recurring expenses')} to record`,
+        ref: 'Expenses',
+        party: labels.length > 3 ? `${labels.slice(0, 3).join(', ')} and ${labels.length - 3} more` : labels.join(', '),
+        actionDueOn: actionOn,
+        badge: dueBadge(actionOn, ctx.today),
+        isPriority: false,
+        href: '/money/expenses',
+        number: 0,
+      },
+      ctx.today,
+    ),
+  ]
+}
+
 // ---------------------------------------------------------------- snoozes, grouping, the whole list
 
 /** Remove every item the person snoozed until a date that has not arrived. On the date itself the item is back. */
@@ -735,6 +897,10 @@ export const RULES: Record<RuleKey, (ctx: TodayInputs) => Entry[]> = {
   to_source: ruleToSource,
   delivered_not_invoiced: ruleDeliveredNotInvoiced,
   close_month: ruleCloseMonth,
+  costs_incomplete: ruleCostsIncomplete,
+  fbr_attention: ruleFbrAttention,
+  tcs_not_sent: ruleTcsNotSent,
+  recurring_due: ruleRecurringDue,
 }
 
 /** The whole Today list for one person on one day: every rule, snoozes subtracted, grouped. Engineers never get a money rule. */

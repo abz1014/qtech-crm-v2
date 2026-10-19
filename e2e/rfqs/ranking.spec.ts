@@ -277,8 +277,9 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     const art = page.getByRole('article', { name: 'Item 1' })
     await expect(art.locator('li[data-ranked]')).toHaveCount(4)
     await expect(art.locator('li[data-ranked]').first()).toContainText(s.bravo.name)
-    // Echo quotes far below everyone (its currency is pre-filled, not typed): it becomes rank 1 without a reload.
+    // Echo quotes far below everyone (its currency is picked with one chip tap, never typed): it becomes rank 1 without a reload.
     const region = page.getByRole('region', { name: echo.name })
+    await region.getByRole('group', { name: `Currency for ${echo.name}` }).getByRole('button', { name: 'PKR' }).click()
     await region.getByLabel(`Price for item 1 from ${echo.name}`).fill('90')
     await region.getByRole('button', { name: 'Save reply' }).click()
     await expect(art.locator('li[data-ranked]')).toHaveCount(5)

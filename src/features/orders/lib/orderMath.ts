@@ -1,6 +1,8 @@
 // Order item arithmetic for display (O03). The database view v_order_items_total is the authority; these mirror its rounding
 // (line net = qty x unit price to 2 decimals, line GST rounded to whole rupees per line) so the table adds up the same way.
-// Money is held in paisa as plain integers: order lines are far inside the safe-integer range.
+// Money is held in paisa as plain integers: order lines are far inside the safe-integer range. The products are exact decimals
+// (lib/money), never floats: 0.1 x 0.35 is 0.035 and rounds to 0.04 in the database, while a float product gives 0.03.
+import { gstWholeRupeesPaisa, productPaisa } from '@/lib/money'
 
 export interface PricedLine {
   qty: number
@@ -9,13 +11,12 @@ export interface PricedLine {
 }
 
 export function lineNetPaisa(l: Pick<PricedLine, 'qty' | 'unitPriceNet'>): number {
-  return Math.round(l.qty * l.unitPriceNet * 100)
+  return Number(productPaisa(l.qty, l.unitPriceNet))
 }
 
 /** GST on one line, to whole rupees (DATA_MODEL 2.13), in paisa. */
 export function lineGstPaisa(l: PricedLine): number {
-  const netRupees = lineNetPaisa(l) / 100
-  return Math.round((netRupees * l.gstRate) / 100) * 100
+  return Number(gstWholeRupeesPaisa(BigInt(lineNetPaisa(l)), l.gstRate))
 }
 
 export function orderTotals(lines: readonly PricedLine[]): { net: number; gst: number; gross: number } {

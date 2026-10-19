@@ -21,7 +21,7 @@ import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 import type { NextNumber, OrderForInvoice } from '@/features/money/invoices/api'
 import { useCreateInvoice, useInvoiceableOrders, useNextInvoiceNumber, useOrderForInvoice } from '@/features/money/invoices/hooks'
-import { GST_OPTION_LABEL, dueOn, gstOn, gstRowLabel, invoiceStart, round2, type GstOption } from '@/features/money/invoices/model'
+import { GST_OPTION_LABEL, dueOn, gstForNet, gstOn, gstRowLabel, invoiceStart, round2, type GstOption } from '@/features/money/invoices/model'
 
 /*
  * Create invoice (M01; g2-money "create invoice dialog"). Opened from an order (the order page, or a link) or from the register's
@@ -157,7 +157,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
 
   const setNet = (v: number | null) => {
     form.setValue('net', v as number, { shouldDirty: true })
-    if (option !== 'mixed') form.setValue('gst', gstOn(v ?? 0, option), { shouldDirty: true })
+    form.setValue('gst', gstForNet(v ?? 0, option, start), { shouldDirty: true })
   }
   const setOption = (o: GstOption) => {
     form.setValue('option', o, { shouldDirty: true })
