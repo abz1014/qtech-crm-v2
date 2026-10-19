@@ -53,19 +53,18 @@ const ROW = `grid gap-x-4 gap-y-2 border-t px-5 py-3 ${COLS}`
 /** A8 (R25): with the ranking there is a column for the rank before the supplier, and one more tap target (the reasons) in the last. */
 const RCOLS = 'md:grid-cols-[30px_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,0.9fr)_104px_72px]'
 const RHEAD = `hidden px-5 py-2 text-xs text-fg-muted md:grid md:gap-4 ${RCOLS}`
-const RROW = `relative grid gap-x-3 gap-y-1 border-t px-5 py-3 max-md:grid-cols-[26px_minmax(0,1fr)_auto_auto] max-md:[&_.row-label]:sr-only md:gap-x-4 md:gap-y-2 ${RCOLS}`
+const RROW = `relative grid gap-x-3 gap-y-1 border-t px-5 py-3 max-md:grid-cols-[26px_minmax(0,1fr)_auto] max-md:[&_.row-label]:sr-only md:gap-x-4 md:gap-y-2 ${RCOLS}`
 /**
  * The phone's ranked row is the mockup's compact block (g2-ranking-split, phone 375): rank, then the supplier on the left and the price on the
- * right (the PKR figure and the rate under it), lead time on the left and stock on the right of the last line, the row's buttons in the last
- * column. The reasons and the last-price chip run under the whole row.
+ * right (the PKR figure and the rate under it), lead time on the left and stock on the right of the last line, the row's buttons right-aligned on a line of their own. The reasons and the last-price chip run under the whole row.
  */
 const PH = {
   supplier: 'max-md:col-start-2 max-md:row-start-1 max-md:row-span-2',
-  price: 'max-md:col-start-3 max-md:row-start-1 max-md:justify-items-end max-md:text-right',
-  pkr: 'max-md:col-start-3 max-md:row-start-2 max-md:justify-items-end max-md:text-right',
+  price: 'max-md:col-start-3 max-md:row-start-1 max-md:max-w-[160px] max-md:justify-items-end max-md:text-right',
+  pkr: 'max-md:col-start-3 max-md:row-start-2 max-md:max-w-[160px] max-md:justify-items-end max-md:text-right',
   lead: 'max-md:col-start-2 max-md:row-start-3',
   stock: 'max-md:col-start-3 max-md:row-start-3 max-md:justify-self-end',
-  actions: 'max-md:col-start-4 max-md:row-start-1 max-md:row-span-3',
+  actions: 'max-md:col-start-3 max-md:row-start-4 max-md:justify-self-end',
 } as const
 
 function Label({ children }: { children: string }) {

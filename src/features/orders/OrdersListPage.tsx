@@ -146,7 +146,7 @@ export default function OrdersListPage() {
   const today = businessToday()
   const columns = useMemo<Column<OrderListRow>[]>(
     () => [
-      { id: 'order', header: 'Order', value: r => r.number, kind: 'num', align: 'left', sortable: true, width: 120, cell: r => <OrderCell row={r} /> },
+      { id: 'order', header: 'Order', value: r => r.number, kind: 'num', align: 'left', sortable: true, width: 140, cell: r => <OrderCell row={r} /> },
       { id: 'customer', header: 'Customer', value: r => r.companyName, sortable: true, cell: r => <CustomerCell row={r} /> },
       { id: 'goods', header: 'Goods', value: r => r.goods, width: 130, cell: r => <Chip dim="goods" value={r.goods} /> },
       { id: 'commissioning', header: 'Commissioning', value: r => r.commissioning, width: 140, hideBelowMd: true, cell: r => <Chip dim="commissioning" value={r.commissioning} /> },

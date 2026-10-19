@@ -122,8 +122,8 @@ export function BoardPage() {
       { id: 'company', header: 'Company', value: r => r.companyName, sortable: true, cell: r => <CompanyCell row={r} compact={compact} /> },
       { id: 'due', header: 'Due', kind: 'date', value: r => r.dueOn, sortable: true, width: compact ? 210 : 130, cell: r => <DueCell row={r} compact={compact} /> },
       { id: 'items', header: 'Items', kind: 'num', value: r => r.itemsTotal, width: 64, hideBelowMd: true, cell: r => <span className="num">{r.itemsTotal}</span> },
-      { id: 'sourcing', header: 'Sourcing', value: r => r.sourcingState, width: compact ? 240 : 175, cell: r => <SourcingCell row={r} compact={compact} /> },
-      { id: 'clarification', header: 'Questions', value: r => r.clarificationState, width: 210, hideBelowMd: true, cell: r => <ClarificationCell row={r} /> },
+      { id: 'sourcing', header: 'Sourcing', value: r => r.sourcingState, width: compact ? 250 : 205, cell: r => <SourcingCell row={r} compact={compact} /> },
+      { id: 'clarification', header: 'Questions', value: r => r.clarificationState, width: 240, hideBelowMd: true, cell: r => <ClarificationCell row={r} /> },
       { id: 'bid', header: 'Bid', value: r => r.bidState, width: 120, hideBelowMd: true, cell: r => <BidCell row={r} /> },
       ...(canSeeMoney
         ? [{ id: 'value', header: 'Value (PKR net)', kind: 'money' as const, value: (r: BoardRow) => values.data?.[r.rfqId] ?? null, width: 120, hideBelowMd: true, sortable: true }]
@@ -284,7 +284,7 @@ export function BoardPage() {
             error={open.isError ? errorProps(open) : null}
             summary={open.isSuccess ? `Showing ${shown.length} of ${total} open RFQs` : undefined}
             toolbar={
-              <div className="grid w-full gap-3">
+              <div className="grid w-full grid-cols-[minmax(0,1fr)] gap-3">
                 <div className="flex flex-wrap items-center gap-3">
                   {listBar}
                   {densityBar}
