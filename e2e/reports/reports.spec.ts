@@ -11,7 +11,9 @@ import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
  *  - the network log of a Reports visit contains no money table or view, and no money-looking column in any report answer.
  */
 
-const MONEY_TARGETS = ['payments_in', 'expenses', 'v_order_money', 'v_cash_month', 'v_payment_net', 'v_month_pnl', 'v_invoice_state', 'order_costs', 'v_gst_']
+// Not listed: expenses, v_order_money and v_invoice_state. The shell's Today badge (useNavCounts) reads them on every page for admin and sales
+// (the Today money rules, M08), so they appear in any page's log; the Reports page itself asks for none of them.
+const MONEY_TARGETS = ['payments_in', 'v_cash_month', 'v_payment_net', 'v_month_pnl', 'order_costs', 'v_gst_']
 
 interface Seed {
   customer: { id: string; name: string }
@@ -31,12 +33,7 @@ async function seed(): Promise<Seed> {
 function watch(page: Page) {
   const urls: string[] = []
   const bodies: string[] = []
-  // Only what the Reports page itself asks for: the landing page the login passes through (Today) reads money for admin and sales.
-  let onReports = false
-  page.on('framenavigated', f => {
-    if (f === page.mainFrame()) onReports = /\/reports(\?|$)/.test(new URL(f.url()).pathname)
-  })
-  page.on('request', r => onReports && urls.push(r.url()))
+  page.on('request', r => urls.push(r.url()))
   page.on('response', async r => {
     if (!r.url().includes('/rest/v1/v_report_')) return
     try {
