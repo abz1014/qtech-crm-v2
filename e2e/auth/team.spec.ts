@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test'
+import { readClipboardWhen } from '../support/clipboard'
 
 /*
  * A04 Team and A06 Company profile against the CI stack: real sign-in, the real admin-users Edge
@@ -79,7 +80,7 @@ test.describe('Team (A04)', () => {
 
     await secret.getByRole('button', { name: 'Copy', exact: true }).click()
     actions++
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(password) // raw, no separators
+    expect(await readClipboardWhen(page, t => t === password)).toBe(password) // raw, no separators
     await expect(secret.getByRole('button', { name: 'Copied' })).toBeVisible()
     await secret.getByRole('button', { name: 'Done' }).click()
     actions++
@@ -130,7 +131,7 @@ test.describe('Team (A04)', () => {
     expect(newPassword).not.toBe(password)
     await expect(reset.getByRole('button', { name: 'Done' })).toBeDisabled()
     await reset.getByRole('button', { name: 'Copy sign-in message' }).click() // WhatsApp text also unlocks Done
-    const message = await page.evaluate(() => navigator.clipboard.readText())
+    const message = await readClipboardWhen(page, `Password: ${newPassword}`)
     expect(message).toContain(`Email: ${email}`)
     expect(message).toContain(`Password: ${newPassword}`)
     await reset.getByRole('button', { name: 'Done' }).click()

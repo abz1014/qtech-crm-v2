@@ -125,7 +125,6 @@ export async function pastePage(page: Page, payload: { text?: string; file?: { n
   }, payload)
 }
 
-export const clipboardText = (page: Page): Promise<string> => page.evaluate(() => navigator.clipboard.readText())
 
 /** Force the file-download fallback of Share (a desktop Chromium has no share sheet that takes files). */
 export async function noShareApi(context: BrowserContext): Promise<void> {

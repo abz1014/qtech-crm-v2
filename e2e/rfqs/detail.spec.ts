@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
+import { readClipboardWhen } from '../support/clipboard'
 
 /*
  * R07 end to end, against the local CI stack: the RFQ detail page, as the fixture users through the real login form.
@@ -308,7 +309,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     const card = page.locator(`[data-chase-card="${s.china.id}"]`) // the supplier shown in the Suppliers asked card
     await card.getByRole('button', { name: 'Copy and mark chased' }).click() // the one tap
     await expect(page.getByRole('status').filter({ hasText: 'Chase text copied' })).toBeVisible()
-    const text = await page.evaluate(() => navigator.clipboard.readText())
+    const text = await readClipboardWhen(page, `ref *RFQ-${String(s.rfq.number).padStart(4, '0')}*`)
     expect(text).toContain(`ref *RFQ-${String(s.rfq.number).padStart(4, '0')}*`)
     expect(text).toContain('Following up on our enquiry')
     expect(text).toContain(s.items[0].description)
@@ -321,7 +322,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
 
     // The second chase uses the second-reminder wording.
     await card.getByRole('button', { name: 'Copy and mark chased' }).click()
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('A second reminder')
+    await readClipboardWhen(page, 'A second reminder')
     expect((await inquiryOf(s.china.inquiryId)).chase_count).toBe(2)
   })
 
@@ -355,7 +356,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     taps++
     expect(taps).toBe(1)
     await expect(page.getByRole('status').filter({ hasText: 'Chase text copied' })).toBeVisible()
-    const text = await page.evaluate(() => navigator.clipboard.readText())
+    const text = await readClipboardWhen(page, 'Following up on our enquiry')
     expect(text).toContain('Following up on our enquiry')
     expect(text).toContain(s.items[0].description)
     expect(text).not.toContain(s.customer)
@@ -498,7 +499,7 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     const menu = () => page.getByRole('button', { name: `More for ${s.usd.name}` }).click()
     await menu()
     await page.getByRole('menuitem', { name: 'Copy price' }).click()
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('USD 100.00')
+    await readClipboardWhen(page, t => t === 'USD 100.00')
 
     await menu()
     await page.getByRole('menuitem', { name: 'Edit reply' }).click()
@@ -602,7 +603,7 @@ test.describe('Suppliers asked, Float to another supplier, and the empty state (
     await dialog.locator('label', { hasText: s.carrier!.name }).click()
     await dialog.getByRole('button', { name: 'Copy enquiry for 1 supplier' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Enquiry text copied' })).toBeVisible()
-    const text = await page.evaluate(() => navigator.clipboard.readText())
+    const text = await readClipboardWhen(page, s.items[0].description)
     expect(text).toContain(s.items[0].description)
     expect(text).toContain(`RFQ-${String(s.rfq.number).padStart(4, '0')}`)
     expect(text).not.toContain(s.customer)
@@ -629,7 +630,7 @@ test.describe('Suppliers asked, Float to another supplier, and the empty state (
     await card.locator('label', { hasText: s.carrier!.name }).click()
     await card.getByRole('button', { name: 'Copy enquiry for 1 supplier' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Enquiry text copied' })).toBeVisible()
-    const text = await page.evaluate(() => navigator.clipboard.readText())
+    const text = await readClipboardWhen(page, s.items[0].description)
     expect(text).toContain(s.items[0].description)
     expect(text).toContain(s.items[1].description) // every item
     await expect(page.locator('[data-slot="suppliers-asked"]')).toContainText(s.carrier!.name)
@@ -646,7 +647,7 @@ test.describe('Suppliers asked, Float to another supplier, and the empty state (
     await expect(one.getByText("Float it to someone else before the customer's bid is due.")).toBeVisible()
     await one.getByRole('button', { name: `Copy enquiry text for ${s.carrier!.name}` }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Enquiry text copied' })).toBeVisible()
-    const text = await page.evaluate(() => navigator.clipboard.readText())
+    const text = await readClipboardWhen(page, s.items[0].description)
     expect(text).toContain(s.items[0].description)
     expect(text).not.toContain(s.items[1].description) // this item only
     const made = await must(rest<{ id: string }[]>('admin', `supplier_inquiries?rfq_id=eq.${s.rfq.id}&supplier_id=eq.${s.carrier!.id}&select=id`))

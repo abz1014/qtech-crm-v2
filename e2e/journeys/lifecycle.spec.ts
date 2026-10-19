@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import { createCompany, karachiDay, must, rest, uniqueName } from '../support/stack'
 import { legLoc, seedPo } from '../orders/fixtures'
 import { fe2, monthBefore, openPage, ordRef, readCount, resetCount, roleContext, todayHas } from './support'
+import { readClipboardWhen } from '../support/clipboard'
 
 /*
  * P03, the critical paths the order-lifecycle audit (docs/AUDIT_ORDER_LIFECYCLE.md) found untested. Each is a short journey of its own:
@@ -116,10 +117,7 @@ test.describe('cancelling an order after its PO was issued', () => {
     await resetCount(page)
     await d.getByRole('button', { name: 'Copy cancellation message' }).click()
     fe2('Copy the cancellation message', (await readCount(page)).mouse, 1)
-    // The copy is asynchronous (the handler awaits the clipboard, then toasts), so a read straight after the click can see the old, empty
-    // clipboard (run 39228025992 read ""). Wait for the message to be there; the product handler is correct, the test raced it.
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText()), { message: 'the cancellation message reaches the clipboard' }).toContain(`*${ref}*`)
-    const text = await page.evaluate(() => navigator.clipboard.readText())
+    const text = await readClipboardWhen(page, `*${ref}*`)
     expect(text).toContain('Endress+Hauser Cerabar PMC51 pressure transmitter')
     expect(text).toMatch(/ask you to cancel/)
     expect(text).not.toMatch(/PKR|USD|\d+\.\d\d/) // no price

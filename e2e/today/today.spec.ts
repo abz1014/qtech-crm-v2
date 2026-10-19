@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName, type Role } from '../support/stack'
 import { axeViolations } from '../support/axe'
+import { readClipboardWhen } from '../support/clipboard'
 
 /*
  * R11 and R16 end to end, against the local CI stack: Today for the three fixture roles, through the real login form.
@@ -105,7 +106,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     const toast = page.getByRole('status').filter({ hasText: `Copied. ${s.ref} marked chased.` })
     await expect(toast).toBeVisible()
     expect(taps).toBe(1)
-    const clip = await page.evaluate(() => navigator.clipboard.readText())
+    const clip = await readClipboardWhen(page, 'A gentle reminder about your RFQ')
     expect(clip).toContain('A gentle reminder about your RFQ')
     expect(clip).toContain('1. Line size and flange rating on the process line')
     expect(clip).toContain('2. Fluid temperature range')
@@ -207,7 +208,7 @@ test.describe('Today: role-aware', () => {
     await expect(page.getByRole('status').filter({ hasText: 'marked chased' })).toBeVisible()
     const leg = (await must(rest<{ chase_count: number }[]>('admin', `supplier_orders?id=eq.${g.leg.id}&select=chase_count`)))[0]
     expect(leg.chase_count).toBe(1)
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(g.reference)
+    await readClipboardWhen(page, g.reference)
     await review(page, 'today-05-engineer-goods-1440')
   })
 

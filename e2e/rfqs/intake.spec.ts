@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
+import { readClipboardWhen } from '../support/clipboard'
 
 /*
  * R05 end to end, against the local CI stack: the intake = float screen, as the fixture users, through the real
@@ -24,7 +25,6 @@ async function paste(page: Page, text: string): Promise<void> {
   }, text)
 }
 
-const clipboard = (page: Page) => page.evaluate(() => navigator.clipboard.readText())
 
 const violations = (page: Page): Promise<string[]> => axeViolations(page)
 
@@ -164,7 +164,7 @@ test.describe('canonical scenario (FE-2 counts)', () => {
 
     const [rfq] = await rfqsOf(s.customer.id)
     expect(rfq).toBeTruthy()
-    const text = await clipboard(page)
+    const text = await readClipboardWhen(page, `our ref *${rfqRef(rfq.number)}*`)
     expect(text).toContain(`our ref *${rfqRef(rfq.number)}*`) // the number the database gave it, not the placeholder
     expect(text).not.toContain('####')
     expect(text).toMatch(/Spec: left blank/)
@@ -422,7 +422,7 @@ test.describe('float one item to the supplier who is not ticked', () => {
     const inquiries = await inquiriesOf(rfq.id)
     expect(inquiries.map(i => i.supplier_id).sort()).toEqual([s.supplied.id, s.other.id].sort())
     expect(inquiries.every(i => i.sent_on === karachiDay())).toBe(true)
-    const text = await clipboard(page)
+    const text = await readClipboardWhen(page, s.brand2)
     expect(text).toContain(s.brand2)
     expect(text).not.toContain(s.model)
   })

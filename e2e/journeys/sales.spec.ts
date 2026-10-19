@@ -2,7 +2,8 @@ import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, rest, rfqRef, uniqueName } from '../support/stack'
 import { fetchStoredPdf, pdfIsValid, pdfText } from '../support/pdf'
 import { legLoc, setProfile } from '../orders/fixtures'
-import { clipboardText, fe2, todayHas, monthOf, noShareApi, openPage, ordRef, pastePage, readCount, resetCount, roleContext } from './support'
+import { fe2, todayHas, monthOf, noShareApi, openPage, ordRef, pastePage, readCount, resetCount, roleContext } from './support'
+import { readClipboardWhen } from '../support/clipboard'
 
 /*
  * P03, the sales journey: one working day from a WhatsApp enquiry to a payment on the books, through the real screens, on the CI stack.
@@ -158,8 +159,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     expect(rows).toHaveLength(1)
     rfq = rows[0]
     expect(rows[0].owner_id).toBe('a0000000-0000-4000-8000-000000000002') // the salesperson, with nothing typed
-    const text = await clipboardText(page)
-    expect(text).toContain(`our ref *${rfqRef(rfq.number)}*`)
+    const text = await readClipboardWhen(page, `our ref *${rfqRef(rfq.number)}*`)
     expect(text).not.toContain('####')
     expect(text).toContain(`${s.brand1} ${s.model1} electromagnetic flow meter DN50, 4 nos`)
     expect(text).toContain(`${s.brand2} ${s.model2} pressure transmitter 0-10 bar, 2 nos`)
@@ -190,7 +190,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await panel.getByRole('button', { name: 'Copy questions for customer' }).click()
     await expect(toast(page, 'Questions copied')).toBeVisible()
     fe2('Copy the question for the customer', (await readCount(page)).mouse, 1)
-    expect(await clipboardText(page)).toContain('Flange rating and line size on the process line')
+    await readClipboardWhen(page, 'Flange rating and line size on the process line')
     const [q] = await must(rest<{ ask_count: number }[]>('admin', `clarifications?rfq_id=eq.${rfq.id}&select=ask_count`))
     expect(q.ask_count).toBe(1)
     // Hand-off: asked eight days ago (moved back), so the customer is due a chase.
@@ -255,7 +255,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await pane.getByRole('button', { name: 'Copy message and mark chased' }).click()
     await expect(t.getByRole('status').filter({ hasText: `Copied. ${rfqRef(rfq.number)} marked chased.` })).toBeVisible()
     fe2('Chase the customer from Today', (await readCount(t)).mouse, 1)
-    expect(await clipboardText(t)).toContain('Flange rating and line size')
+    await readClipboardWhen(t, 'Flange rating and line size')
     await t.close()
   })
 
@@ -369,7 +369,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await panel.getByRole('button', { name: 'Copy chase text' }).click()
     await expect(toast(page, 'Chase text copied')).toBeVisible()
     fe2('Chase the customer', (await readCount(page)).mouse, 1)
-    expect(await clipboardText(page)).toContain(`our ref *${rfqRef(rfq.number)}*`)
+    await readClipboardWhen(page, `our ref *${rfqRef(rfq.number)}*`)
     await expect.poll(async () => (await must(rest<{ ask_count: number }[]>('admin', `clarifications?rfq_id=eq.${rfq.id}&select=ask_count`)))[0].ask_count).toBe(3)
   })
 
