@@ -332,6 +332,8 @@ test.describe('O03: legs, one next-step stamp each', () => {
     await page.getByRole('textbox', { name: 'Delivered date, leg B' }).fill(slashDate(karachiDay(0)))
     await page.getByRole('textbox', { name: 'Delivered date, leg B' }).press('Enter')
     await page.getByRole('button', { name: 'Save' }).click()
+    // the editor closes only after the save and refetch finish; clicking its trigger sooner would toggle it shut
+    await expect(page.getByRole('textbox', { name: 'Delivered date, leg B' })).toHaveCount(0)
     await expect.poll(async () => (await legRow(s.legB)).delivered_on).toBe(karachiDay(0))
     expect((await legRow(s.legB)).received_on).toBe(karachiDay(0))
     // editing delivered moves received too
@@ -339,6 +341,8 @@ test.describe('O03: legs, one next-step stamp each', () => {
     await page.getByRole('textbox', { name: 'Delivered date, leg B' }).fill(slashDate(karachiDay(-1)))
     await page.getByRole('textbox', { name: 'Delivered date, leg B' }).press('Enter')
     await page.getByRole('button', { name: 'Save' }).click()
+    // the editor closes only after the save and refetch finish; clicking its trigger sooner would toggle it shut
+    await expect(page.getByRole('textbox', { name: 'Delivered date, leg B' })).toHaveCount(0)
     await expect.poll(async () => (await legRow(s.legB)).delivered_on).toBe(karachiDay(-1))
     expect((await legRow(s.legB)).received_on).toBe(karachiDay(-1))
     // and a date can be fixed
@@ -346,6 +350,8 @@ test.describe('O03: legs, one next-step stamp each', () => {
     await page.getByRole('textbox', { name: 'Placed date, leg B' }).fill(slashDate(karachiDay(-9)))
     await page.getByRole('textbox', { name: 'Placed date, leg B' }).press('Enter')
     await page.getByRole('button', { name: 'Save' }).click()
+    // the editor closes only after the save and refetch finish; clicking its trigger sooner would toggle it shut
+    await expect(page.getByRole('textbox', { name: 'Placed date, leg B' })).toHaveCount(0)
     await expect.poll(async () => (await legRow(s.legB)).placed_on).toBe(karachiDay(-9))
   })
 
