@@ -239,6 +239,24 @@ test.describe('Today: role-aware', () => {
     await expect(rowOf(page, part.customer).getByText('Partly invoiced: PKR 59,000 still to invoice')).toBeVisible()
   })
 
+  test('sales: a won order with goods that have no supplier shows how many items still need one', async ({ page }) => {
+    const customer = uniqueName('To Source')
+    const co = await createCompany(customer)
+    const order = (await must(rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: co.id, owner_id: SALES, ordered_on: iso(-3) } })))[0]
+    await must(
+      rest('admin', 'order_items', {
+        method: 'POST',
+        body: [
+          { order_id: order.id, description: 'Pressure transmitter', qty: 1, unit_price_net: 1000 },
+          { order_id: order.id, description: 'Flow meter', qty: 1, unit_price_net: 2000 },
+        ],
+        prefer: 'return=minimal',
+      }),
+    )
+    await openAs(page, 'sales', '/today')
+    await expect(rowOf(page, customer).getByText('2 items still need a supplier')).toBeVisible()
+  })
+
   test('admin: sees money items for orders that are not sales-owned, plus everything of their own', async ({ page }) => {
     const p = await seedOverdueOrder(ADMIN)
     const mine = await seedCustomerChase(ADMIN)
