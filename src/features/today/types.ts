@@ -15,6 +15,7 @@ export type RuleKey =
   | 'goods_late'
   | 'place_po'
   | 'plan_commissioning'
+  | 'to_source'
   | 'delivered_not_invoiced'
   | 'close_month'
 
@@ -30,6 +31,7 @@ export const SNOOZE_RULE: Record<RuleKey, string> = {
   goods_late: 'goods_late',
   place_po: 'place_po',
   plan_commissioning: 'plan_commissioning',
+  to_source: 'to_source',
   delivered_not_invoiced: 'delivered_not_invoiced',
   close_month: 'close_month',
 }
@@ -129,6 +131,8 @@ export interface OrderFact {
   commissioningState: string
   /** v_order_state.invoicing_state: not_invoiced / part / fully_invoiced; null when the caller is an engineer. */
   invoicingState: string | null
+  /** Goods lines of the order that have no supplier leg yet (only counted when goodsState is to_source). */
+  unsourced: number
   /** Gross still to invoice (order gross less invoiced gross) when the order is part-invoiced; otherwise null. Admin and sales only. */
   toInvoice: number | null
   /** The date of the latest invoice on a part-invoiced order, or null. */
