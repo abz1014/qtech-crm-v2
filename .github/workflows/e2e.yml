@@ -50,6 +50,7 @@ jobs:
       orders: ${{ steps.final.outputs.orders }}
       settings_admin: ${{ steps.final.outputs.settings_admin }}
       pwa: ${{ steps.final.outputs.pwa }}
+      perf: ${{ steps.final.outputs.perf }}
       money_books: ${{ steps.final.outputs.money_books }}
       expenses: ${{ steps.final.outputs.expenses }}
       reports: ${{ steps.final.outputs.reports }}
@@ -71,6 +72,8 @@ jobs:
               - 'supabase/config.toml'
               - 'playwright.config.ts'
               - 'package*.json'
+              - 'vercel.json'
+              - 'vite.config.ts'
               - '.github/workflows/e2e.yml'
             auth:
               - 'e2e/auth/**'
@@ -109,6 +112,8 @@ jobs:
               - 'e2e/settings/**'
             money_books:
               - 'e2e/money-books/**'
+            perf:
+              - 'e2e/perf/**'
             pwa:
               - 'e2e/pwa/**'
               - 'public/manifest.webmanifest'
@@ -132,6 +137,7 @@ jobs:
           S_ORDERS: ${{ steps.filter.outputs.orders }}
           S_SETTINGS_ADMIN: ${{ steps.filter.outputs.settings_admin }}
           S_PWA: ${{ steps.filter.outputs.pwa }}
+          S_PERF: ${{ steps.filter.outputs.perf }}
           S_MONEY_BOOKS: ${{ steps.filter.outputs.money_books }}
           S_EXPENSES: ${{ steps.filter.outputs.expenses }}
           S_REPORTS: ${{ steps.filter.outputs.reports }}
@@ -169,6 +175,8 @@ jobs:
           echo "settings_admin=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_PWA; if [ "$all" = "true" ]; then v=true; fi
           echo "pwa=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          v=$S_PERF; if [ "$all" = "true" ]; then v=true; fi
+          echo "perf=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_EXPENSES; if [ "$all" = "true" ]; then v=true; fi
           echo "expenses=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_REPORTS; if [ "$all" = "true" ]; then v=true; fi
@@ -186,6 +194,10 @@ jobs:
     if: ${{ needs.changes.outputs.any == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # P04: the preview server sends vercel.json's real Content-Security-Policy to every suite (see vite.config.ts), so a policy that
+      # breaks a screen, a PDF, the service worker, the share target or a storage image fails the suite that exercises it.
+      E2E_CSP: '1'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -417,6 +429,18 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=money-books REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/money-books npx playwright test --project=money-books --output=test-results/money-books
+
+      - name: Reset database (perf)
+        if: ${{ !cancelled() && needs.changes.outputs.perf == 'true' }}
+        run: npx supabase db reset --local
+
+      # Lighthouse is installed here, pinned, and not added to package.json: only this step needs it.
+      - name: Playwright (perf project: Lighthouse accessibility, CSP violations, request shape)
+        if: ${{ !cancelled() && needs.changes.outputs.perf == 'true' }}
+        run: |
+          npm i --no-save --no-audit --no-fund lighthouse@12.8.2
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=perf PLAYWRIGHT_HTML_REPORT=playwright-report/perf npx playwright test --project=perf --output=test-results/perf
 
       - name: Playwright (pwa project, no database reset needed)
         if: ${{ !cancelled() && needs.changes.outputs.pwa == 'true' }}

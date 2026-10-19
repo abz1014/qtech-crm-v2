@@ -10,6 +10,8 @@ so runs stay fast and quick to read: a docs-only push runs nothing.
 | `db.yml` | every push, only if `supabase/**`, `src/types/database.ts`, `import/**`, `package*.json` or the workflow changed (its last step is the import load test, I01) | about 6 min |
 | `functions.yml` | every push; paths `supabase/functions/**`, `supabase/migrations/**` | about 6 min |
 | `e2e.yml` (all DB suites, incl. `search`, plus `pwa`) | every push, path-gated; one stack boot, only suites whose paths changed | about 8 to 14 min |
+| `ci.yml` build job, bundle budget step (P04) | every push except docs-only | seconds; fails if the initial JS is over 300 KB gzip, and prints the PDF chunk and service-worker precache sizes in the run summary |
+| `e2e.yml` suite `perf` (P04) | with the other suites, when `e2e/perf/**` or a shared path changes | about 5 min (Lighthouse, 7 screens, desktop and phone) |
 | `remote.yml`, `deploy-functions.yml` | manual only, owner approval | not part of the budget |
 | `backup.yml` (R13) | nightly 20:30 UTC, drill weekly, manual; `backup` environment, main only | about 3 min nightly, 15 min drill |
 | `backup-checks.yml` | push touching `scripts/backup/**` or the backup workflows | about 8 min |
@@ -32,6 +34,13 @@ The `capture` suite (R22, `e2e/capture/`) is a database suite like the others (r
 
 Add a suite: a project in `playwright.config.ts`, a filter and an output in `e2e.yml`, a step.
 Locally, several at once: `E2E_SUITE=db npx playwright test --project=auth --project=companies`.
+
+## Performance and accessibility (P04)
+
+- **Bundle budget:** `scripts/bundle-budget.mjs` (run in the `ci.yml` build job after `npm run build`) walks `dist/index.html` and its static imports, gzips them and fails above 300 KB. It also reports the lazy PDF chunk (not on first load, not precached) and the service worker precache, and fails if the PDF chunk ever enters the precache.
+- **Accessibility:** the `perf` suite runs the real Lighthouse accessibility category (lighthouse 12.8.2, installed with `npm i --no-save` in that step so it is not a project dependency) on Today, RFQ board, RFQ detail, order detail, Money GST register, Month-end and Settings, desktop and phone, and fails below 95. Lighthouse cannot sign in, so Playwright signs in inside a persistent Chromium profile with the debugging port open and Lighthouse attaches to it with storage kept. The axe checks (WCAG 2.2 AA plus best practice) in every other suite stay as they were.
+- **CSP:** the whole e2e job runs with `E2E_CSP=1`, so every suite runs under the production Content-Security-Policy (see docs/HOSTING.md).
+- Locally: `npm i --no-save lighthouse@12.8.2`, then `E2E_CSP=1 E2E_SUITE=perf npx playwright test --project=perf` against a stack-backed build.
 
 ## Forcing a full run
 

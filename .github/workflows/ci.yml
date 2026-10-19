@@ -78,6 +78,8 @@ jobs:
         run: npm run test:import
       - name: Build
         run: npm run build
+      - name: Bundle budget (initial JS <= 300 KB gzip; reports the PDF chunk and the service-worker precache)
+        run: node scripts/bundle-budget.mjs
 
   # U09: visual regression and axe over /dev/gallery, in real Chromium on Ubuntu.
   # Baselines are Linux-only and live in e2e/__screenshots__.
