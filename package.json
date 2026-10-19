@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:import": "vitest run --config import/vitest.config.ts",
     "import:report": "tsx import/src/cli.ts report",
+    "import:i06": "tsx import/src/cli.ts i06",
     "import:load": "tsx import/src/cli.ts load",
     "import:fixtures": "node import/fixtures/build-legacy-dump.mjs",
     "check:tokens": "node scripts/check-token-parity.mjs",

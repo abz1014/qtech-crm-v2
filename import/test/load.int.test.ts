@@ -3,13 +3,15 @@
 // It talks only to API_URL, which must be a local stack (the same guard the CLI uses checks that), and signs in only as the
 // fixture users of supabase/seed.sql. Nothing here can reach a remote project.
 import { execFileSync, spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import '../src/lib/ws-shim'
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { isLegacyId } from '../src/lib/ids'
+import { parseDump } from '../src/extract/dump'
 import { assertTargetAllowed } from '../src/load/guard'
 import { loadLegacy } from '../src/load/loader'
 import { IMPORT_TABLES } from '../src/types'
@@ -313,6 +315,43 @@ describe.skipIf(!ENABLED)('the import against the local stack', () => {
       encoding: 'utf8',
     })
     expect(out).toContain('Reconciles: **yes**')
+  })
+
+  it('dump.sql, run read-only against a stand-in for the old database, gives JSON that reads back to the same import', () => {
+    const dbUrl = process.env['DB_URL'] ?? ''
+    expect(dbUrl).toMatch(/@(127\.0\.0\.1|localhost):/) // local stack only
+    const dir = mkdtempSync(join(tmpdir(), 'dumpsql-'))
+    try {
+      // 1. a stand-in "old" schema built from the fixture (a table the fixture lacks stays missing: that path is tested too)
+      const ddl = execFileSync(process.execPath, ['import/dump/make-old-schema.mjs', join(FIXTURE_DUMP, 'dump.json'), 'old_fixture'], { encoding: 'utf8' })
+      writeFileSync(join(dir, 'schema.sql'), ddl)
+      execFileSync('psql', [dbUrl, '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-f', join(dir, 'schema.sql')], { stdio: 'pipe' })
+      // 2. the script, pointed at that schema, inside a read-only transaction
+      const script = readFileSync('import/dump/dump.sql', 'utf8')
+      expect(script).toContain("'public'::text as sch")
+      writeFileSync(join(dir, 'dump.sql'), script.replace("'public'::text as sch", "'old_fixture'::text as sch"))
+      const raw = execFileSync('psql', [dbUrl, '-X', '-q', '-A', '-t', '-v', 'ON_ERROR_STOP=1', '-c', 'begin read only', '-f', join(dir, 'dump.sql'), '-c', 'rollback'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+      // 3. read it with the real reader and compare the transform of both
+      const parsed = parseDump(raw.trim())
+      const meta = parsed.dump.meta as { tables_missing: string[]; postgres: string }
+      expect(meta.postgres).toMatch(/PostgreSQL/)
+      expect(meta.tables_missing).toEqual(expect.arrayContaining(['employees']))
+      const users = (parsed.dump.tables['users'] ?? []).map(u => Object.keys(u))
+      expect(users.every(k => !k.includes('password'))).toBe(true)
+      expect(Object.keys(parsed.dump.catalog?.details ?? {})).toEqual(expect.arrayContaining(['columns', 'checks', 'functions']))
+      const canon = (v: unknown): unknown =>
+        Array.isArray(v) ? v.map(canon) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([, x]) => x !== null).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, x]) => [k, canon(x)])) : v
+      const fromDb = run({ ...parsed.dump, storage: fixtureDump().storage })
+      expect(JSON.stringify(canon(fromDb.tables))).toBe(JSON.stringify(canon(run().tables)))
+      expect(JSON.stringify(canon(fromDb.recon))).toBe(JSON.stringify(canon(run().recon)))
+    } finally {
+      try {
+        execFileSync('psql', [dbUrl, '-X', '-q', '-c', 'drop schema if exists old_fixture cascade'], { stdio: 'pipe' })
+      } catch {
+        /* the stack is thrown away after the job */
+      }
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   it('the fixture dump is unchanged by all of this', () => {

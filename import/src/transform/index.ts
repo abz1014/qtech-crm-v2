@@ -125,6 +125,6 @@ export function transformAll(dump: LegacyDump, maps: Mappings, opts: TransformOp
     recon,
     sourceCounts: sourceNames.map(table => ({ table, rows: (dump.tables[table] ?? []).length, dropped: ctx.droppedCount.get(table) ?? 0 })),
     importedCounts: IMPORT_TABLES.map(table => ({ table, rows: tables[table].length })),
-    droppedByDesign: DROPPED_BY_DESIGN.map(d => ({ ...d, rows: (dump.tables[d.table] ?? []).length })),
+    droppedByDesign: DROPPED_BY_DESIGN.map(d => ({ ...d, rows: Math.max((dump.tables[d.table] ?? []).length, dump.catalog?.counts?.[d.table] ?? 0) })),
   }
 }
