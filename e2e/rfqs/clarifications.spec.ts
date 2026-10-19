@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { axeViolations } from '../support/axe'
 import { API_URL, ANON_KEY, createCompany, createRfq, karachiDay, login, must, openAs, review, rest, uniqueName } from '../support/stack'
-import { readClipboardWhen } from '../support/clipboard'
+import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
 /*
  * R09 (clarifications) and R10 (attachments) end to end, against the local CI stack: the RFQ detail page as the fixture users,
@@ -132,6 +132,7 @@ test.describe('copy for the customer (FE-2: 1 tap)', () => {
     const b = await addClar(s.rfq.id, 'Fluid temperature range')
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
 
+    await resetClipboard(page)
     await panel(page).getByRole('button', { name: 'Copy questions for customer' }).click()
     await expect(toast(page, 'Questions copied')).toBeVisible()
     const text = await readClipboardWhen(page, 'To complete our quotation for your RFQ *#')
@@ -148,6 +149,7 @@ test.describe('copy for the customer (FE-2: 1 tap)', () => {
     await panel(page).getByRole('radio', { name: 'Email' }).click()
     await expect(panel(page).getByRole('button', { name: 'Copy subject' })).toBeVisible()
     await expect(panel(page).getByText(/^RFQ #.*your confirmation needed by/)).toBeVisible()
+    await resetClipboard(page)
     await panel(page).getByRole('button', { name: 'Copy chase text' }).click()
     await expect(toast(page, 'Chase text copied')).toBeVisible()
     await readClipboardWhen(page, 'Thank you for your RFQ #')
@@ -213,6 +215,7 @@ test.describe('answers', () => {
     // The supplier banner: Lahore Process Controls is waiting for 2 answers; ABC Traders has none yet.
     await expect(panel(page).getByText(`${s.lpc.name} is waiting for 2 answers.`)).toBeVisible()
     await expect(panel(page).getByRole('button', { name: `Copy answers for supplier ${s.abc.name}` })).toHaveCount(0)
+    await resetClipboard(page)
     await panel(page).getByRole('button', { name: `Copy answers for supplier ${s.lpc.name}` }).click()
     await expect(toast(page, 'Answers copied')).toBeVisible()
     const text = await readClipboardWhen(page, 'Which probe kit comes with the HQ1110?')

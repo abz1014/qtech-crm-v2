@@ -3,7 +3,7 @@ import { createCompany, createRfq, karachiDay, must, rest, rfqRef, uniqueName } 
 import { fetchStoredPdf, pdfIsValid, pdfText } from '../support/pdf'
 import { legLoc, setProfile } from '../orders/fixtures'
 import { fe2, todayHas, monthOf, noShareApi, openPage, ordRef, pastePage, readCount, resetCount, roleContext } from './support'
-import { readClipboardWhen } from '../support/clipboard'
+import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
 /*
  * P03, the sales journey: one working day from a WhatsApp enquiry to a payment on the books, through the real screens, on the CI stack.
@@ -151,6 +151,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await resetCount(page)
     await page.getByRole('button', { name: 'Write the enquiry' }).click()
     await expect(page.getByRole('heading', { name: /Enquiry to 2 suppliers/ })).toBeVisible()
+    await resetClipboard(page)
     await page.getByRole('button', { name: 'Copy & mark floated to 2' }).click()
     await expect(page.getByText(/is out for prices/)).toBeVisible()
     fe2('Float to 2 suppliers: Write the enquiry, Copy and mark floated', (await readCount(page)).mouse, 2)
@@ -187,6 +188,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(page.getByRole('status').filter({ hasText: /questions? added/i }).first()).toBeVisible()
     fe2('Add a question: 1 paste + 1 tap', (await readCount(page)).mouse, 1)
     await resetCount(page)
+    await resetClipboard(page)
     await panel.getByRole('button', { name: 'Copy questions for customer' }).click()
     await expect(toast(page, 'Questions copied')).toBeVisible()
     fe2('Copy the question for the customer', (await readCount(page)).mouse, 1)
@@ -252,6 +254,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const pane = t.getByRole('region', { name: new RegExp(rfqRef(rfq.number)) })
     await expect(pane.getByTestId('draft-text')).toContainText('Flange rating and line size')
     await resetCount(t)
+    await resetClipboard(t)
     await pane.getByRole('button', { name: 'Copy message and mark chased' }).click()
     await expect(t.getByRole('status').filter({ hasText: `Copied. ${rfqRef(rfq.number)} marked chased.` })).toBeVisible()
     fe2('Chase the customer from Today', (await readCount(t)).mouse, 1)
@@ -366,6 +369,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const panel = page.locator('[data-slot="clarifications"]')
     await expect(panel.getByText('Asked ×2')).toBeVisible() // the Today chase was the second ask
     await resetCount(page)
+    await resetClipboard(page)
     await panel.getByRole('button', { name: 'Copy chase text' }).click()
     await expect(toast(page, 'Chase text copied')).toBeVisible()
     fe2('Chase the customer', (await readCount(page)).mouse, 1)

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { createCompany, karachiDay, must, rest, uniqueName } from '../support/stack'
 import { legLoc, seedPo } from '../orders/fixtures'
 import { fe2, monthBefore, openPage, ordRef, readCount, resetCount, roleContext, todayHas } from './support'
-import { readClipboardWhen } from '../support/clipboard'
+import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
 /*
  * P03, the critical paths the order-lifecycle audit (docs/AUDIT_ORDER_LIFECYCLE.md) found untested. Each is a short journey of its own:
@@ -115,6 +115,7 @@ test.describe('cancelling an order after its PO was issued', () => {
     const d = page.getByRole('dialog')
     await expect(d.getByTestId('cancel-sent-pos')).toContainText(`${ref} was sent to ${s.supplier.name}. Tell them it's cancelled.`)
     await resetCount(page)
+    await resetClipboard(page)
     await d.getByRole('button', { name: 'Copy cancellation message' }).click()
     fe2('Copy the cancellation message', (await readCount(page)).mouse, 1)
     const text = await readClipboardWhen(page, `*${ref}*`)
