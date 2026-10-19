@@ -83,7 +83,7 @@ export function TeamPage() {
       header: 'Name',
       sortable: true,
       value: m => m.name,
-      width: '34%',
+      width: 360,
       cell: m => (
         <span className={cn('flex min-w-0 items-center gap-3', dim(m))}>
           <Avatar name={m.name} className={avatarTone(m)} />
