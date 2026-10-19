@@ -53,12 +53,23 @@ const ROW = `grid gap-x-4 gap-y-2 border-t px-5 py-3 ${COLS}`
 /** A8 (R25): with the ranking there is a column for the rank before the supplier, and one more tap target (the reasons) in the last. */
 const RCOLS = 'md:grid-cols-[30px_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,0.9fr)_104px_72px]'
 const RHEAD = `hidden px-5 py-2 text-xs text-fg-muted md:grid md:gap-4 ${RCOLS}`
-const RROW = `relative grid gap-x-4 gap-y-2 border-t px-5 py-3 max-md:grid-cols-[26px_minmax(0,1fr)] ${RCOLS}`
-/** On the phone every cell but the rank sits in the second column; the reasons and the last-price chip run under the whole row. */
-const IN2 = 'max-md:col-start-2'
+const RROW = `relative grid gap-x-3 gap-y-1 border-t px-5 py-3 max-md:grid-cols-[26px_minmax(0,1fr)_auto_auto] max-md:[&_.row-label]:sr-only md:gap-x-4 md:gap-y-2 ${RCOLS}`
+/**
+ * The phone's ranked row is the mockup's compact block (g2-ranking-split, phone 375): rank, then the supplier on the left and the price on the
+ * right (the PKR figure and the rate under it), lead time on the left and stock on the right of the last line, the row's buttons in the last
+ * column. The reasons and the last-price chip run under the whole row.
+ */
+const PH = {
+  supplier: 'max-md:col-start-2 max-md:row-start-1 max-md:row-span-2',
+  price: 'max-md:col-start-3 max-md:row-start-1 max-md:justify-items-end max-md:text-right',
+  pkr: 'max-md:col-start-3 max-md:row-start-2 max-md:justify-items-end max-md:text-right',
+  lead: 'max-md:col-start-2 max-md:row-start-3',
+  stock: 'max-md:col-start-3 max-md:row-start-3 max-md:justify-self-end',
+  actions: 'max-md:col-start-4 max-md:row-start-1 max-md:row-span-3',
+} as const
 
 function Label({ children }: { children: string }) {
-  return <span className="text-xs text-fg-muted md:sr-only">{children}</span>
+  return <span className="row-label text-xs text-fg-muted md:sr-only">{children}</span>
 }
 
 function PkrCell({ line, c, rates }: { line: QuoteLineRow; c: ComparedLine; rates: RateTable }) {
@@ -427,7 +438,6 @@ export function ItemsPanel({
                         const rk = ranked ? (rankOf(line) as RankRow) : null
                         const reasons = rk ? reasonsFor(rk, { showSell, bandSize, evidence: evidenceOf(memRow), names: { brand: item.brandName, family: item.familyName } }) : null
                         const open = rk ? (opened[line.id] ?? (bandSize >= 2 && rk.within_band === true)) : false
-                        const cell = rk ? IN2 : ''
                         return (
                           <li
                             key={line.id}
@@ -437,30 +447,30 @@ export function ItemsPanel({
                             data-ranked={rk ? (rk.rank ?? 'none') : undefined}
                           >
                             {rk ? <RankBadge row={rk} className="mt-[2px] max-md:row-start-1" /> : null}
-                            <div className={cn('grid gap-[2px]', cell)}>
+                            <div className={cn('grid content-start gap-[2px]', rk && PH.supplier)}>
                               <Label>Supplier</Label>
                               <span className="min-w-0 break-words text-sm font-medium">{inquiry.supplierName}</span>
                               {inquiry.supplierCity || inquiry.supplierCountry ? <span className="text-xs text-fg-muted">{[inquiry.supplierCity, inquiry.supplierCountry].filter(Boolean).join(', ')}</span> : null}
                             </div>
-                            <div className={cn('grid gap-1 md:justify-items-end', cell)}>
+                            <div className={cn('grid gap-1 md:justify-items-end', rk && PH.price)}>
                               <Label>Price</Label>
                               <span className="num whitespace-nowrap text-sm font-medium">
                                 <span className="mr-1 font-sans text-xs font-regular text-fg-muted">{line.currency}</span>
                                 {formatAmount(line.unitPrice, 'always')}
                               </span>
                             </div>
-                            <div className={cn('grid content-start gap-1', cell)}>
+                            <div className={cn('grid content-start gap-1', rk && PH.pkr)}>
                               <Label>In PKR at today&apos;s rate</Label>
-                              <span className="flex flex-wrap items-start gap-2">
+                              <span className={cn('flex flex-wrap items-start gap-2', rk && 'max-md:justify-end')}>
                                 {c.lowest ? <StatusBadge dimension="sourcing" value="covered" label="Lowest" /> : null}
                                 <PkrCell line={line} c={c} rates={rates} />
                               </span>
                             </div>
-                            <div className={cn('grid content-start gap-1', cell)}>
+                            <div className={cn('grid content-start gap-1', rk && PH.lead)}>
                               <Label>Lead time</Label>
                               <span className="text-sm">{line.leadTime ?? <span className="text-fg-muted">—</span>}</span>
                             </div>
-                            <div className={cn('grid content-start gap-1', cell)}>
+                            <div className={cn('grid content-start gap-1', rk && PH.stock)}>
                               <Label>Stock</Label>
                               <span className="flex items-center gap-2 text-sm">
                                 {line.inStock === null ? (
@@ -473,7 +483,7 @@ export function ItemsPanel({
                                 )}
                               </span>
                             </div>
-                            <div className={cn('flex justify-end', rk ? 'max-md:absolute max-md:right-3 max-md:top-2' : 'max-md:order-first')}>
+                            <div className={cn('flex justify-end', rk ? PH.actions : 'max-md:order-first')}>
                               {rk ? (
                                 <Button
                                   variant="quiet"
