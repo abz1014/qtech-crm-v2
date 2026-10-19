@@ -343,7 +343,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(page.getByRole('button', { name: 'Mark bid sent' })).toHaveCount(0)
 
     // The sales person also quotes by phone: that bid has no PDF, and "Mark bid sent" is the one tap.
-    const verbal = await createRfq(s.customer.id, { due_on: karachiDay(5) })
+    const verbal = await createRfq(s.customer.id, { due_on: karachiDay(5), owner_id: 'a0000000-0000-4000-8000-000000000002' })
     await post('rfq_items', { rfq_id: verbal.id, position: 0, description: `Spare gasket set ${letters()}`, qty: 1 })
     // Hand-off: it has not been floated and its bid is due in five days: both reminders are listed until the bid is sent.
     await todayHas(salesCtx, 'not_floated', [rfqRef(verbal.number)], true)
