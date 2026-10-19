@@ -6,7 +6,7 @@ import { openGallery, SCENES } from './support'
  * the primitive that changed) and one per overlay scene, at 1440 and at 375 (the two projects).
  * A deliberate change to a primitive updates these baselines in the same PR: docs/design/VISUAL_TESTS.md.
  */
-const SECTIONS = ['foundations', 'textsize', 'forms', 'navigation', 'feedback', 'status', 'money', 'sumbar', 'rfq', 'cards', 'register', 'cash', 'margins', 'rail', 'more', 'tooltip', 'overlays']
+const SECTIONS = ['foundations', 'textsize', 'forms', 'navigation', 'feedback', 'status', 'money', 'sumbar', 'rfq', 'cards', 'register', 'cash', 'margins', 'rail', 'more', 'tooltip', 'infotip', 'overlays']
 
 test.describe('gallery sections', () => {
   for (const id of SECTIONS) {

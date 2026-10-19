@@ -33,6 +33,7 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Tab, TabList, TabPanel, Tabs } from '@/ui/Tabs'
 import { Tooltip } from '@/ui/Tooltip'
 import { TooltipVariants } from '@/dev/gallery/primitives'
+import { InfoTipExamples } from '@/dev/gallery/uxPrimitives'
 import { ShellScene } from '@/dev/gallery/shell'
 
 /*
@@ -579,6 +580,11 @@ const NODES: Record<SceneName, () => ReactNode> = {
   'tooltips': () => (
     <div className="w-[760px] max-w-full rounded border bg-surface p-6 pb-[140px]">
       <TooltipVariants />
+    </div>
+  ),
+  'infotip-open': () => (
+    <div className="w-[760px] max-w-full rounded border bg-surface p-6 pb-[160px]">
+      <InfoTipExamples />
     </div>
   ),
   'shell': () => <ShellScene />,
