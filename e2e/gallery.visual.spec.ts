@@ -56,6 +56,7 @@ test.describe('shell widths', () => {
     test(`the top bar fits from 768 to 1920 with ${tabs} destinations, labels in words from 1024`, async ({ page }, info) => {
       test.skip(info.project.name !== 'w1440', 'the test sets its own widths')
       await openGallery(page, `?scene=shell&tabs=${tabs}`)
+      await page.locator('[data-shell-scene] > nav').waitFor({ state: 'attached' })
       for (const width of [768, 1024, 1093, 1280, 1366, 1440, 1536, 1920]) {
         await page.setViewportSize({ width, height: 800 })
         const m = await page.evaluate(() => {
@@ -83,6 +84,7 @@ test.describe('shell widths', () => {
     test(`the phone tabs fit at 320 and 375 with ${tabs} destinations`, async ({ page }, info) => {
       test.skip(info.project.name !== 'w1440', 'the test sets its own widths')
       await openGallery(page, `?scene=shell&tabs=${tabs}`)
+      await page.locator('[data-shell-scene] > nav').waitFor({ state: 'attached' })
       for (const width of [320, 360, 375]) {
         await page.setViewportSize({ width, height: 700 })
         const m = await page.evaluate(() => {
