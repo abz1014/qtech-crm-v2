@@ -435,7 +435,7 @@ jobs:
         run: npx supabase db reset --local
 
       # Lighthouse is installed here, pinned, and not added to package.json: only this step needs it.
-      - name: Playwright (perf project: Lighthouse accessibility, CSP violations, request shape)
+      - name: Playwright (perf project, Lighthouse accessibility, CSP violations, request shape)
         if: ${{ !cancelled() && needs.changes.outputs.perf == 'true' }}
         run: |
           npm i --no-save --no-audit --no-fund lighthouse@12.8.2
