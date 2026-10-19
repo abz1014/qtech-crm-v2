@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { FileText, MessageSquareWarning, Plus, Receipt, Split, TriangleAlert } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
@@ -166,7 +166,6 @@ function Leg({
   const medianDays = median.data ?? null
   /** The default expected date for this leg (lead time, else this supplier's usual days, else 30). Dated from today until the leg is placed. */
   const suggestion = defaultExpected(leg.placedOn ?? today, leg.leadTimes, medianDays)
-  const filled = useRef(false)
   const leadHint = leg.leadTimes.length > 0 ? [...leg.leadTimes].sort((a, b) => b.length - a.length)[0] : null
   const total = legSupplierTotal(items.map(it => ({ qty: it.qty, supplierUnitPrice: it.supplierUnitPrice, isService: it.isService })))
   const ccy = leg.currency
@@ -233,13 +232,7 @@ function Leg({
           : `${suggestion.days} days after it is placed (${suggestion.label})`
       : undefined
 
-  // A leg placed by any route (a PO issued, a date typed, an import-free manual leg) with no expected date gets the default once, so goods late can fire.
-  // It is written as an ordinary edit: the date reads as text and changes on tap, and an Undo is not needed because nothing was replaced.
-  useEffect(() => {
-    if (filled.current || !canEdit || order.imported || !leg.placedOn || leg.expectedOn || leg.deliveredOn || !suggestion || median.isPending) return
-    filled.current = true
-    update.mutate({ id: leg.id, patch: { expected_on: suggestion.on } })
-  }, [canEdit, order.imported, leg.placedOn, leg.expectedOn, leg.deliveredOn, leg.id, suggestion, median.isPending, update])
+  // The default expected date of a leg placed by any route (a PO issued, a typed date) is written by the database (0067); the stamp below sends the same date at once.
 
   return (
     <li aria-label={`Leg ${letter}, ${leg.supplierName}`} data-testid={`leg-${letter}`} className="grid gap-4 px-5 py-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.5fr)_minmax(0,0.9fr)]">

@@ -97,18 +97,26 @@ export interface QuoteItem {
   quotedUnitPriceNet: number | null
   gstRate: number
   quotedLeadTime: string | null
+  brandName: string | null
+  familyName: string | null
 }
 
 export async function listQuoteItems(rfqId: string): Promise<QuoteItem[]> {
+  const db = requireSupabase()
   const rows = unwrap(
-    await requireSupabase()
+    await db
       .from('rfq_items')
-      .select('id, position, description, qty, unit, quoted_unit_price_net, gst_rate, quoted_lead_time, created_at')
+      .select('id, position, description, brand_id, family_id, qty, unit, quoted_unit_price_net, gst_rate, quoted_lead_time, created_at')
       .eq('rfq_id', rfqId)
       .order('position')
       .order('created_at'),
   )
+  // brands and families are both rows of `brands`
+  const nameIds = [...new Set(rows.flatMap(r => [r.brand_id, r.family_id]).filter((b): b is string => Boolean(b)))]
+  const names = new Map((nameIds.length ? unwrap(await db.from('brands').select('id, name').in('id', nameIds)) : []).map(b => [b.id, b.name]))
   return rows.map(r => ({
+    brandName: r.brand_id ? (names.get(r.brand_id) ?? null) : null,
+    familyName: r.family_id ? (names.get(r.family_id) ?? null) : null,
     id: r.id,
     position: r.position,
     description: r.description,

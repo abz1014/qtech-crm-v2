@@ -2064,6 +2064,9 @@ isOneToOne: false
 "item_text_norm":
 { Args: { "t": string }; Returns: string
                            },
+"lead_time_upper_days":
+{ Args: { "p_text": string }; Returns: number
+                           },
 "merge_brands":
 { Args: { "p_drop": string,"p_keep": string }; Returns: undefined
                            },
@@ -2182,6 +2185,9 @@ isOneToOne: false
 { Args: { "p_brand_id": string,"p_description": string,"p_exclude_rfq_id"?: string,"p_family_id": string,"p_supplier_ids": (string)[] }; Returns: {
               "best_tier": number,"best_tier_label": string,"evidence_count_at_tier": number,"evidence_delivered_after_days": number,"evidence_delivered_on": string,"evidence_expected_on": string,"evidence_item_desc": string,"evidence_order_id": string,"evidence_order_number": number,"evidence_placed_on": string,"evidence_qty": number,"evidence_tier": number,"last_ordered_currency": string,"last_ordered_fx_rate_on": string,"last_ordered_fx_rate_pkr": number,"last_ordered_on": string,"last_ordered_price": number,"last_ordered_price_pkr": number,"last_ordered_qty": number,"last_ordered_source": string,"last_ordered_tier": number,"last_ordered_unit": string,"last_po_currency": string,"last_po_fx_rate_on": string,"last_po_fx_rate_pkr": number,"last_po_on": string,"last_po_price": number,"last_po_price_pkr": number,"last_po_qty": number,"last_po_tier": number,"last_po_unit": string,"last_quote_currency": string,"last_quote_fx_rate_on": string,"last_quote_fx_rate_pkr": number,"last_quote_is_legacy": boolean,"last_quote_lead_time": string,"last_quote_on": string,"last_quote_price": number,"last_quote_price_hidden": boolean,"last_quote_price_pkr": number,"last_quote_qty": number,"last_quote_tier": number,"last_quote_unit": string,"recent_lead_times": (string)[],"supplied_before": boolean,"supplier_id": string
             }[]
+                           },
+"supplier_median_delivery_days":
+{ Args: { "p_supplier_id": string }; Returns: number
                            },
 "today_pkt":
 { Args: { "ts"?: string }; Returns: string
