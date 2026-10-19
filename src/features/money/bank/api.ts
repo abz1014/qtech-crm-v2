@@ -129,7 +129,7 @@ async function categoriesById(ids: string[]): Promise<Record<string, { name: str
 }
 
 /** "leg A", "leg B": the leg's place among its order's legs, as the Add expense dialog names them. */
-async function legLabels(legIds: string[]): Promise<Record<string, string>> {
+export async function legLabels(legIds: string[]): Promise<Record<string, string>> {
   if (legIds.length === 0) return {}
   const db = requireSupabase()
   const mine = unwrap(await db.from('supplier_orders').select('id, order_id').in('id', legIds)) ?? []
