@@ -240,6 +240,22 @@ test.describe('Today: role-aware', () => {
     await expect(page.getByTestId('order-terms')).toHaveText('Terms 30 days from invoice (default terms)')
   })
 
+  test('sales: a delivered order with no invoice, and a part-invoiced one, come back as reminders', async ({ page }) => {
+    const seed = async (invoiced: boolean) => {
+      const customer = uniqueName(invoiced ? 'Part Invoiced' : 'Uninvoiced')
+      const co = await createCompany(customer)
+      const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: co.id, owner_id: SALES, ordered_on: iso(-30), needs_commissioning: true, commissioning_planned_on: iso(-12), commissioning_done_on: iso(-10) } })))[0]
+      await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, description: 'Commissioning visit', qty: 1, unit_price_net: 100000, is_service: true }, prefer: 'return=minimal' }))
+      if (invoiced) await must(rest('admin', 'invoices', { method: 'POST', body: { order_id: order.id, number: `INV-${Date.now().toString(36)}`, invoice_date: iso(-8), net_amount: 50000, gst_amount: 9000 }, prefer: 'return=minimal' }))
+      return { customer }
+    }
+    const plain = await seed(false)
+    const part = await seed(true)
+    await openAs(page, 'sales', '/today')
+    await expect(rowOf(page, plain.customer).getByText('Delivered, not invoiced')).toBeVisible()
+    await expect(rowOf(page, part.customer).getByText('Partly invoiced: PKR 59,000 still to invoice')).toBeVisible()
+  })
+
   test('admin: sees money items for orders that are not sales-owned, plus everything of their own', async ({ page }) => {
     const p = await seedOverdueOrder(ADMIN)
     const mine = await seedCustomerChase(ADMIN)

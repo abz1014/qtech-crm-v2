@@ -886,3 +886,121 @@ logged KEPT for FE-2:
 
 Also: the "No current X rate" preview line keeps its icon inline with its text in the narrow reply box, and the phone "..." menus start with
 **Mark won**, as in the mockup.
+
+
+# Part E: final re-audit (2026-10-19)
+
+Main at `778084b` (Merge p8/import-rules). Read-only; no product code changed. Owner rule: "make sure that the ui is ditto same as the mockup. dont miss out on anything."
+
+## Method and limits
+
+- Built evidence: the 243 `review-shots` PNGs of E2E run 39207818397 (push to main at 778084b, all suites, success), at 1440 and 375. The Settings suite writes no shots into that artifact, so Team and Company profile come from the committed `docs/design/review/a04-a06` (their source is unchanged since). Shots are viewport-high (900 px), so the lower part of long pages was judged from other shots of the same screen and from source.
+- Reference: `docs/design/screens/*.png` (rendered from the g2 mockups) and the mockup HTML text, checked with a text-diff of every mockup string against `src/`.
+- Compared screen by screen: shell, Today, intake, RFQ detail, quotation PDF, convert dialog, company supplier, order detail, Money (GST register, Receivables, Expenses burst sheet, Margins, Bank tick), Exchange rates, Team, PO PDF. Capture, Today and the PDFs were checked frame by frame and are close to ditto.
+- The review data is thin seed data, so differences that only come from empty history (supplier memory lines, "Chased x1" chips, brand lists, delivery squares) are not listed as defects.
+- Not re-listed: anything Parts A to D already mark FIXED, KEPT or APPROVED, and the deviations in `docs/DECISIONS.md` (per-supplier reply boxes, partial quotations, 18 % / Exempt only, Files panel, Change password, Capture top-bar button (R22), no "Received" step on a leg (2026-10-15 O03), ranking-aware intake lede (A8)).
+- Not built, so not comparable: the Month-end checklist and the six reports (see E-MN-01, E-MN-02). The Reports screen (P01) and Settings Targets and Expense categories have no mockup (KEPT extras).
+
+## Counts of NEW items
+
+| Screen | high | medium | low |
+|---|---|---|---|
+| Shell / nav / palette | 0 | 1 | 0 |
+| Today | 0 | 0 | 0 |
+| RFQ board | 0 | 0 | 0 |
+| RFQ intake | 0 | 0 | 2 |
+| RFQ detail | 0 | 0 | 1 |
+| Quotation dialog + PDF | 0 | 0 | 1 |
+| Convert dialog (Mark won) | 0 | 0 | 3 |
+| Company pages | 0 | 0 | 0 |
+| Capture | 0 | 0 | 0 |
+| Orders list | 0 | 0 | 0 |
+| Order detail (incl. margin panel, Files, PO) | 0 | 3 | 3 |
+| Money: GST register, Receivables, Expenses, Margins, Exceptions, Bank tick | 0 | 1 | 5 |
+| Money: Month-end checklist and six reports (not built) | 2 | 0 | 0 |
+| Reports | 0 | 0 | 0 |
+| Settings: Exchange rates | 0 | 1 | 2 |
+| Settings: Team, Company profile, Categories, Your details | 0 | 0 | 1 |
+| Total | 2 | 6 | 18 |
+
+## NEW items, grouped by screen
+
+### Shell
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-SH-01 | Top bar counts on all four: "Today 9, RFQs 14, Orders 7, Money 3" | `useNavCounts` sets only Today and RFQs; its comment says Orders and Money "are not built yet", but both are now. Orders and Money show no number | medium | NEW (continues B-11 / D-10) |
+
+### RFQ intake
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-IN-01 | Step 2 "Items" header right side: "4 items · bid due Thu 3 Dec" | "2 items" only | low | NEW |
+| E-IN-02 | Item chips start with a small numbered circle | Plain number, no circle | low | NEW |
+
+### RFQ detail
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-RD-01 | Header has two buttons: Issue quotation and Bid and close; Mark won lives in the menus | Header also carries a direct "Mark won" button beside "Mark bid sent" (only Mark bid sent was KEPT for FE-2, C-07) | low | NEW (owner to confirm; same one-tap argument as Mark bid sent) |
+
+### Quotation dialog and PDF
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-QT-01 | "Prepared by Ayesha Rana" (name only) | "Prepared by Test Sales, +92 300 1234567" (phone added; the signature block already carries it) | low | NEW |
+
+### Convert dialog (Mark won)
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-CV-01 | Title "Mark won QT-26-0058 R1" with the quotation number in mono; sub-line "Customer · 3 quoted lines · gross PKR" | Title "Mark won"; sub-line names the RFQ customer, not the quotation | low | NEW |
+| E-CV-02 | Neutral grey one-line note "Creates order ORD-0043. Each item is assigned to the best-ranked quote; ..." | Blue info callout with a bold heading and a different sentence; the order number is not announced | low | NEW |
+| E-CV-03 | Label "Customer PO number" with a helper line above the input ("optional, add it from the order later"); brand and family sub-line under each item | "Optional" tag beside the label and the helper below; no brand sub-line | low | NEW |
+
+### Order detail
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-OD-01 | Item rows carry a sub-line "Brand · model" (for example "Belimo · NM24A-SR") | Description only | medium | NEW |
+| E-OD-02 | "Unit net" shows the unit price on every line | Unit net column is blank on plain lines in the admin shots (o03-admin, o03-legs-stamped, m04 margin panel) while line net is filled. Only head rows draw a value (`OrderItemsPanel.tsx`, the `unit` column cell returns nothing for other kinds). Verify with real data | medium | NEW |
+| E-OD-03 | Phone: dimension strip wraps to two rows ("Same content, one column. Dimension strip wraps to two rows") | Five dimension cards stack in one column, so the first screen is all status text | medium | NEW |
+| E-OD-04 | Each dimension label has an icon (package, wrench, file-text, banknote, clipboard-check) | Labels have no icons | low | NEW |
+| E-OD-05 | Items table has a group header band: "Sale to customer, PKR" over the sale columns and "Supplier, in the leg currency" over the supplier columns | One header row, no band | low | NEW |
+| E-OD-06 | GST column is plain text "18%" | An editable select on every line; plus a "Service" tick column, "Split line", "Exempt the whole order from GST", density toggle and move hints | low | KEPT extra (A8 split and O03 line editing are in DECISIONS; the always-open GST select is new, owner to confirm) |
+
+### Money: GST register, Receivables, Expenses, Margins, Exceptions, Bank tick
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-MN-03 | Receivables opens with the most overdue row selected and the Payment reminder panel beside the table | No row selected on open, so the panel (the main thing on this screen) is not seen; table is full width | medium | NEW |
+| E-MN-04 | "Overdue" figure in red | Same colour as the other figures | low | NEW |
+| E-MN-05 | Footnote: "...Copying the text records the reminder and moves the item to Waiting on Today." | First sentence only | low | NEW |
+| E-MN-06 | Money content spans the full page (40 px gutters at 1440; 1328 px of content) | All Money views sit in a centred column of about 1216 px with 112 px side margins; Orders, RFQs and Settings are wider | low | NEW |
+| E-MN-07 | "By invoice date" is a shaded chip with a calendar icon | Plain text with an icon, no chip background | low | NEW |
+| E-MN-08 | GST register footnote: "...see Cash month." | "...see Receivables." (the Cash month tab does not exist yet; follows E-MN-01) | low | NEW (resolves with M10) |
+
+### Money: Month-end (not built)
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-MN-01 | Month-end opens on the Checklist (seven checks, jump links, Close October with warning counts, Reopen, closed state with lock) plus the Today "Close October" row | Month-end opens straight on Bank tick; no checklist, no close or reopen, no Today row. The sub-strip shows only "Bank tick" | high | NEW (BUILD_PLAN M10, not built) |
+| E-MN-02 | Six reports under Month-end, each with CSV: P&L (with Cash month), Expenses by category, Aging, We owe, GST/FBR, Team | None built; the sub-strip has no report tabs | high | NEW (M10) |
+
+### Settings: Exchange rates (`/settings/exchange-rates`)
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-XR-01 | Rate table fits its card; Band chip fully shown | At 1440 the table is clipped at the card edge: "Stale, 1" is cut off, Fresh touches the border; the card is narrower than the page | medium | NEW |
+| E-XR-02 | Right of the table header: "Automatic update ran Fri 27 Nov, 02:10"; per-row "Add rate" on stale and unusable rows; yellow banner "GBP has not been updated for 54 days..."; "Last automatic: 372.40 on 4 Oct" under the currency field | None of the four | low | NEW |
+| E-XR-03 | "Recent USD rates" list on a full-width card | Same list, narrower card, currency select in the header | low | NEW (cosmetic) |
+
+### Settings: Team
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-ST-01 | Deactivated row: "Reactivate" button sits inside the Actions column | The button is cut off at the right edge of the card at 1440 (the shot shows "Reactivate" clipped with a stray underscore) | low | NEW |
+
+## Already approved or KEPT, seen again and not counted
+
+Capture button in the top bar and the "This is a supplier's reply" and "Attach to an order" links (DECISIONS R22); per-supplier reply boxes, partial quotations, 18 % and Exempt, Files panel (DECISIONS 2026-10-15 owner, parity audit); "Mark bid sent" and per-supplier "Chase" buttons (C-07, C-46 KEPT for FE-2); "Asked so far x1" (O-4); full names in salutations (O-5); no "Received" step on legs (DECISIONS O03); comfortable and compact density toggle on every table (DataTable primitive); Exceptions tab, Reports screen, Targets and Expense categories pages, Orders list (no mockup).
+
+## Checked and matching (no row)
+
+Today draft, copied and just-chased frames; target tile; Waiting group; intake step 4; supplier company page structure; Money Margins; Expenses burst sheet (to the keystroke hints and dashed defaults); Bank tick body; Issue PO dialog and PO PDF; quotation PDF; Team list.
+
+## Fix pickup order
+
+1. E-MN-01, E-MN-02 (M10, a task of its own).
+2. E-OD-02, E-OD-01, E-OD-03, E-SH-01, E-MN-03, E-XR-01.
+3. Everything low, grouped by screen above.
