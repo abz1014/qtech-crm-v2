@@ -180,6 +180,10 @@ describe('commissioning guess for the convert toggle', () => {
     expect(guessCommissioning([{ number: 1, description: 'Flow meter' }, { number: 2, description: 'Loop check' }], { a: 'q1', b: 'service' }, ids)).toEqual({ needs: true, reason: 'line 2 is a service' })
     expect(guessCommissioning([{ number: 1, description: 'Flow meter' }, { number: 2, description: 'Installation and commissioning' }], { a: 'q1', b: 'q2' }, ids)).toEqual({ needs: true, reason: 'line 2 mentions commissioning or installation' })
   })
+  it('is on for an item in an analyser or control-system family, and says which', () => {
+    expect(guessCommissioning([{ number: 1, description: 'Hach HQ1110 meter', familyName: 'Process analysers' }], { a: 'q1' }, ids)).toEqual({ needs: true, reason: 'line 1 is in the Process analysers family' })
+    expect(guessCommissioning([{ number: 1, description: 'Pressure transmitter', familyName: 'Pressure transmitters' }], { a: 'q1' }, ids)).toEqual({ needs: false, reason: null })
+  })
   it('is off for plain goods', () => {
     expect(guessCommissioning([{ number: 1, description: 'Pressure transmitter 0 to 10 bar' }], { a: 'q1' }, ids)).toEqual({ needs: false, reason: null })
   })

@@ -217,7 +217,11 @@ test('goods late on a repeat order: late goods are raised even though no quote e
   await legLoc(page, 'A').getByRole('button', { name: 'Mark placed, leg A' }).click()
   const legs = await must(rest<{ id: string }[]>('admin', `supplier_orders?order_id=eq.${id}&select=id`))
   await expect.poll(async () => (await must(rest<{ placed_on: string | null }[]>('admin', `supplier_orders?id=eq.${legs[0].id}&select=placed_on`)))[0].placed_on).toBe(today)
-  await must(rest('admin', `supplier_orders?id=eq.${legs[0].id}`, { method: 'PATCH', body: { placed_on: karachiDay(-20) }, prefer: 'return=minimal' }))
-  await knownGap('Audit G1: create_repeat_order copies no expected date and nothing defaults one, so goods late is silent for repeat orders', () => todayHas(ctx, 'goods_late', [supplier.name], true))
+  // The leg got its expected date when it was placed (0067: no lead time on a repeat leg, so the supplier's record or 30 days), not by a person.
+  const placed = (await must(rest<{ expected_on: string | null }[]>('admin', `supplier_orders?id=eq.${legs[0].id}&select=expected_on`)))[0]
+  expect(placed.expected_on).not.toBeNull()
+  // Forty-five days pass (the dates move back together): the default has run out and goods late is raised.
+  await must(rest('admin', `supplier_orders?id=eq.${legs[0].id}`, { method: 'PATCH', body: { placed_on: karachiDay(-45), expected_on: karachiDay(-45 + Math.round((Date.parse(placed.expected_on as string) - Date.parse(today)) / 86_400_000)) }, prefer: 'return=minimal' }))
+  await todayHas(ctx, 'goods_late', [supplier.name], true)
   await ctx.close()
 })
