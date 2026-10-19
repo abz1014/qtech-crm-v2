@@ -417,6 +417,7 @@ Line net, line GST and line gross are derived. Rounding: GST is rounded to whole
 | last_reminded_on | date | yes | — | S | Stamped when someone copies a payment reminder. The Today item then drops away for 7 days. Only admin and sales can see it (engineers have no access to `invoices`). |
 | reminder_count | smallint | no | 0 | S |  |
 | tax_bank_month | date | yes | — | S | *(Amendment A6, A6.1)* The bank tick for the FBR deposit: the first day of the statement month. CHECK first day of a month. The UI ticks a whole PSID group at once. Stays editable after the month closes. |
+| settled_before_cutover | boolean | no | false | S | *(Migration 0068, owner decision 2026-10-19)* An imported invoice with no order, paid before the new system: fully received (open 0, not overdue, not remindable; `aging_as_of()` leaves it out, `stamp_payment_reminder()` skips it). Still a sale and output GST. CHECK true only with `legacy_source` set and `order_id` NULL. Set by the import (service role) only: a trigger refuses any insert or change of it by a signed-in user. |
 | gross, courier_state, fbr_state | — | — | — | **D** | `v_invoice_state`. |
 
 > Every invoice goes to FBR; there is one GST register and no provincial (SRB/PRA) tax. `order_items.gst_rate` stays at 18 by default, 0 for exempt items. Only admin and sales can see invoices; engineers have no access (§10).

@@ -22,6 +22,8 @@ export interface MoneyOutput {
   invoiceNetByOrder: Map<string, number>
   /** How many payments_in rows were derived from the old paid status or the owner's list (not from payment rows). */
   paymentsFromStatusCount: number
+  /** Paid invoices with no order, marked settled_before_cutover (owner decision 2026-10-19): how many, and their gross. */
+  settledBeforeCutover: { count: number; gross: number }
 }
 
 /** One imported invoice, as the payment and still-owed steps need it. */
@@ -118,6 +120,7 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
     storageCopies: [],
     invoiceNetByOrder: new Map(),
     paymentsFromStatusCount: 0,
+    settledBeforeCutover: { count: 0, gross: 0 },
   }
   const orderRowById = new Map(ctx.rows('orders').map(r => [String(r['id']), r]))
   const storage = new Map(ctx.dump.storage.map(o => [`${o.bucket}/${o.path}`, o]))
@@ -168,6 +171,7 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
   ): void => {
     row['order_id'] = group?.newId ?? null
     row['company_id'] = group ? null : companyId
+    row['settled_before_cutover'] = false
     out.invoices.push(row)
     infos.push({
       id: String(row['id']),
@@ -609,21 +613,16 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
     return capAsOf(due ?? orderDue ?? plusTerms(invoiceDate, g) ?? invoiceDate ?? ctx.opts.asOf)
   }
 
+  // Paid on an invoice with no order: a payment needs an order, so nothing is recorded yet. Once every step has run, an
+  // invoice paid in full this way is settled before cutover; anything less is listed in payments_not_placed.
+  const unplaced = new Map<InvoiceInfo, { amount: number; basis: string; ownerList: boolean }[]>()
   const derive = (p: { invoice: InvoiceInfo; group: OrderGroup | null; amount: number; receivedOn: string; flags: string[]; basis: string; key: string; source: Record<string, unknown> }): void => {
     const amount = money(p.amount)
     if (amount <= 0) return
     p.invoice.paid = money(p.invoice.paid + amount)
     ledger.add('paymentsFromStatus', 'old', amount)
-    const label = p.invoice.number ?? p.invoice.oldId
     if (!p.group) {
-      ledger.add('paymentsFromStatus', 'excluded', amount)
-      ctx.addReview(
-        'payments_not_placed',
-        p.invoice.table,
-        p.invoice.oldId,
-        label,
-        `${amount} paid per ${p.basis}, but the invoice is not linked to an order and a payment needs one: no payment recorded`,
-      )
+      unplaced.set(p.invoice, [...(unplaced.get(p.invoice) ?? []), { amount, basis: p.basis, ownerList: p.flags.includes('paid_per_owner_list') }])
       return
     }
     ledger.add('paymentsFromStatus', 'neu', amount)
@@ -738,6 +737,42 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
       key: `owner-list:${i.key}`,
       source: { table: 'legacy_invoice_status', invoice_number: i.number },
     })
+  }
+
+  // Owner decision 2026-10-19: an invoice with no order that is paid in full (old status, or paid in the owner's list) is
+  // settled before cutover: no fake order, no fake bank payment. The invoice carries settled_before_cutover = true, and the
+  // database treats it as fully received (open 0, not overdue, not remindable); it stays a sale and output GST.
+  // Paid in part only: no payment can be placed, listed in payments_not_placed (the rest is in still_owed).
+  for (const i of infos) {
+    const parts = unplaced.get(i)
+    if (!parts) continue
+    const label = i.number ?? i.oldId
+    if (i.group === null && money(i.gross - i.paid) <= 1) {
+      const row = out.invoices.find(r => r['id'] === i.id)!
+      row['settled_before_cutover'] = true
+      for (const x of parts) ledger.add('paymentsFromStatus', 'settled', x.amount)
+      out.settledBeforeCutover.count++
+      out.settledBeforeCutover.gross = money(out.settledBeforeCutover.gross + i.gross)
+      const reason = parts.some(x => x.ownerList) ? 'owner_list' : 'status'
+      ctx.addReview('settled_before_cutover', i.table, i.oldId, label, `paid per ${[...new Set(parts.map(x => x.basis))].join('; ')}, no order: settled before the new system, no payment recorded`, {
+        invoice_number: i.number,
+        customer: book.companyName(i.companyId),
+        invoice_date: i.invoiceDate,
+        gross: i.gross,
+        reason,
+      })
+      continue
+    }
+    for (const x of parts) {
+      ledger.add('paymentsFromStatus', 'excluded', x.amount)
+      ctx.addReview(
+        'payments_not_placed',
+        i.table,
+        i.oldId,
+        label,
+        `${x.amount} paid per ${x.basis}, but the invoice is not linked to an order and is not paid in full: no payment recorded`,
+      )
+    }
   }
 
   // (d) everything else old and unpaid is listed, not assumed

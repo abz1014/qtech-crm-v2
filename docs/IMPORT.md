@@ -240,7 +240,8 @@ phone numbers, e-mail addresses or amounts), which are then committed; the sign-
 | `storage_missing` | Receipt files not in the dump, or over 5 MB | Fetch them | the dump folder |
 | `invoice_duplicates` | Bookkeeping invoices matched to a GST invoice (not imported), and same-PO rows of another customer (not matched), with both amounts and their ratio | Is it the same sale? | `company_merge.csv` when a customer name is missing |
 | `still_owed` | Every imported old invoice with an open balance | Paid or still owed | `legacy_invoice_status.csv` (`invoice_number,status`) |
-| `payments_not_placed` | An invoice the old status says is paid but that has no order (a payment needs one) | Nothing, or link it in the app | |
+| `settled_before_cutover` | An invoice with no order that is paid in full (old status, or `paid` in `legacy_invoice_status.csv`): imported with `settled_before_cutover` = true, no payment (columns: invoice number, customer, date, gross, reason `status` or `owner_list`) | Nothing: it counts as received before the new system | |
+| `payments_not_placed` | An invoice with no order that the old status says is paid only in part (a payment needs an order; the rest is in `still_owed`) | Nothing, or settle it in `legacy_invoice_status.csv` | |
 | `dropped_rows` | Every row that could not be imported, with the reason | Nothing, unless it matters | |
 | `warnings` | For example a non-empty `documents` table | Look | |
 
@@ -306,9 +307,14 @@ Each is one small rule in `import/src/transform/`, covered by a test.
    `payment_received`: every invoice of it with no payment yet is paid in full (`paid_per_order_status`). Never where payment rows
    exist for that invoice or order (no double count). Date: the old invoice due date, else the order's `payment_due_date`, else
    invoice date + payment terms, else invoice date, never after the run date; every such payment is flagged
-   `payment_date_estimated`. Bank, not ticked, credited to nobody (rule 5). A payment needs an order: a paid invoice with no order
-   is listed in `payments_not_placed.csv` and counted as left out. These payments have their own reconciliation line ("Payments
-   in, from paid status") and a note in `report.md`.
+   `payment_date_estimated`. Bank, not ticked, credited to nobody (rule 5). A payment needs an order. **An invoice with no order
+   that is paid in full (owner, 2026-10-19) is settled before cutover:** no fake order and no fake bank payment; the invoice is
+   imported with `settled_before_cutover` = true (migration 0068), listed in `settled_before_cutover.csv` (reason `status` or
+   `owner_list`), and the database treats it as fully received: not in "who owes us" (`aging_as_of`), never overdue, never
+   reminded. It is still a sale and output GST (GST register, `v_gst_month`). One paid only in part is listed in
+   `payments_not_placed.csv` and counted as left out (its rest is in `still_owed.csv`). These payments have their own
+   reconciliation line ("Payments in, from paid status": old = new + left out + settled before cutover) and notes in `report.md`;
+   the loader's read-back also checks that exactly the transform's invoices carry the mark.
    **Everything else old and unpaid is listed, not assumed:** `still_owed.csv` has every imported invoice left with an open
    balance (number, customer, date, gross, open, PO, linked to an order or not). Answer it in the optional
    `import/.data/mappings/legacy_invoice_status.csv` (template `import/mappings/legacy_invoice_status.template.csv`,

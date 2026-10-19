@@ -197,12 +197,58 @@ describe('the old paid status becomes a payment received', () => {
     }
   })
 
-  it('lists a paid invoice with no order (a payment needs one) and keeps it out of the money', () => {
-    expect(review(result, 'payments_not_placed').map(i => i.label)).toEqual(['INV-B-31'])
-    expect(result.recon.paymentsFromStatus).toEqual({ key: 'paymentsFromStatus', old: 267000, neu: 260000, excluded: 7000, diff: 0 })
+  it('settles a paid invoice with no order before cutover: no payment, no fake order, listed, and the money reconciles', () => {
+    // INV-B-31: Paid 7000 of 7000, linked to a client only (a payment needs an order)
+    const inv = invoiceOf(result, 'INV-B-31')!
+    expect(inv['order_id']).toBeNull()
+    expect(inv['settled_before_cutover']).toBe(true)
+    expect(t.invoices.filter(i => i['settled_before_cutover'] === true).map(i => i['number'])).toEqual(['INV-B-31'])
+    expect(t.invoices.every(i => typeof i['settled_before_cutover'] === 'boolean')).toBe(true)
+    expect(review(result, 'payments_not_placed')).toEqual([])
+    expect(review(result, 'settled_before_cutover').map(i => [i.label, i.fields])).toEqual([
+      ['INV-B-31', { invoice_number: 'INV-B-31', customer: 'Alpha Textile Mills', invoice_date: '2025-01-15', gross: 7000, reason: 'status' }],
+    ])
+    expect(result.recon.paymentsFromStatus).toEqual({ key: 'paymentsFromStatus', old: 267000, neu: 260000, excluded: 0, settled: 7000, diff: 0 })
+    expect(result.recon.settledBeforeCutover).toEqual({ count: 1, gross: 7000 })
     expect(result.recon.paymentsFromStatusCount).toBe(4)
     expect(derived(result)).toHaveLength(4)
+    expect(t.payments_in.some(p => p['reference'] === 'INV-B-31')).toBe(false)
     expect(owed(result, 'INV-B-31')).toBeUndefined()
+    expect(reconciles(result.recon)).toBe(true)
+    // only an imported row with no order may carry it (the database CHECK)
+    expect(t.invoices.filter(i => i['settled_before_cutover'] === true).every(i => i['order_id'] === null && i['legacy_source'])).toBe(true)
+  })
+
+  it('settles an invoice with no order that the owner marks paid (reason owner_list)', () => {
+    // INV-B-77: 5000, no order, no old status: open until the owner's list says paid
+    const r = withStatusList('invoice_number,status\nINV-B-77,paid\n')
+    expect(invoiceOf(r, 'INV-B-77')!['settled_before_cutover']).toBe(true)
+    expect(review(r, 'settled_before_cutover').find(i => i.label === 'INV-B-77')!.fields).toMatchObject({ gross: 5000, reason: 'owner_list' })
+    expect(owed(r, 'INV-B-77')).toBeUndefined()
+    expect(r.recon.paymentsFromStatus).toMatchObject({ settled: 12000, excluded: 0, diff: 0 })
+    expect(r.recon.settledBeforeCutover).toEqual({ count: 2, gross: 12000 })
+    expect(reconciles(r.recon)).toBe(true)
+  })
+
+  it('keeps an invoice with no order that is paid only in part open: listed in payments_not_placed, the rest still owed', () => {
+    const r = run(edit(d => Object.assign(oldInvoice(d, 'INV-B-31'), { payment_status: 'Partial', amount_paid: 3000 })))
+    expect(invoiceOf(r, 'INV-B-31')!['settled_before_cutover']).toBe(false)
+    expect(review(r, 'settled_before_cutover')).toEqual([])
+    expect(review(r, 'payments_not_placed').map(i => i.label)).toEqual(['INV-B-31'])
+    expect(owed(r, 'INV-B-31')!.fields).toMatchObject({ gross: 7000, open: 4000, linked_to_order: 'no' })
+    expect(r.recon.paymentsFromStatus).toEqual({ key: 'paymentsFromStatus', old: 263000, neu: 260000, excluded: 3000, diff: 0 })
+    expect(reconciles(r.recon)).toBe(true)
+    // the owner's list then settles it: the part (status) and the rest (list) together
+    const both = withStatusList('invoice_number,status\nINV-B-31,paid\n', edit(d => Object.assign(oldInvoice(d, 'INV-B-31'), { payment_status: 'Partial', amount_paid: 3000 })))
+    expect(invoiceOf(both, 'INV-B-31')!['settled_before_cutover']).toBe(true)
+    expect(review(both, 'payments_not_placed')).toEqual([])
+    expect(review(both, 'settled_before_cutover')[0]!.fields).toMatchObject({ reason: 'owner_list' })
+    expect(both.recon.paymentsFromStatus).toMatchObject({ old: 267000, neu: 260000, excluded: 0, settled: 7000, diff: 0 })
+  })
+
+  it('still pays an invoice that has an order (settled before cutover is for invoices with no order only)', () => {
+    expect(t.invoices.filter(i => i['order_id'] !== null).every(i => i['settled_before_cutover'] === false)).toBe(true)
+    expect(paymentsOn(result, 'EW-9')).toHaveLength(1)
   })
 
   it('gives the same ids on every run and breaks no database rule', () => {
@@ -256,7 +302,9 @@ describe('what is still owed is listed, not assumed', () => {
       expect(head('invoice_duplicates.csv')).toBe('table,old_id,label,detail,bookkeeping_invoice,po,amount,gst_invoice,gst_gross,ratio,match')
       expect(head('still_owed.csv')).toBe('table,old_id,label,detail,invoice_number,customer,invoice_date,gross,open,po,linked_to_order')
       expect(head('dropped_rows.csv')).toBe('table,old_id,label,detail')
+      expect(head('settled_before_cutover.csv')).toBe('table,old_id,label,detail,invoice_number,customer,invoice_date,gross,reason')
       expect(readFileSync(join(dir, 'report.md'), 'utf8')).toContain('Payments in, from paid status')
+      expect(readFileSync(join(dir, 'report.md'), 'utf8')).toContain('Settled before cutover: 1 invoices (gross 7,000.00)')
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

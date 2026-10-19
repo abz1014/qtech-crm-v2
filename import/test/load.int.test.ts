@@ -256,6 +256,27 @@ describe.skipIf(!ENABLED)('the import against the local stack', () => {
     expect(unknown.every(m => m['margin'] === null)).toBe(true)
   })
 
+  it('a paid invoice with no order is settled before cutover: not owed, no payment, still in the GST register', async () => {
+    const admin = await signedIn('admin@test.invalid')
+    const sales = await signedIn('sales@test.invalid')
+    const want = result.tables.invoices.filter(i => i['settled_before_cutover'] === true).map(i => String(i['id'])).sort()
+    expect(want.length).toBe(result.recon.settledBeforeCutover.count)
+    expect(want.length).toBeGreaterThan(0)
+    const got = (await rows(admin, 'invoices', 'id,order_id,settled_before_cutover'))
+      .filter(i => isLegacyId(String(i['id'])) && i['settled_before_cutover'] === true)
+    expect(got.map(i => String(i['id'])).sort()).toEqual(want)
+    expect(got.every(i => i['order_id'] === null)).toBe(true)
+    // not owed: no aging row ("who owes us") for any of them
+    const aging = ok(await admin.rpc('aging_as_of', { p_date: AS_OF }), 'aging_as_of') as { invoice_id: string | null }[]
+    expect(aging.some(a => a.invoice_id !== null && want.includes(a.invoice_id))).toBe(false)
+    // still a sale: the GST register lists every one
+    const reg = (await rows(sales, 'v_gst_register', 'invoice_id')).map(r => String(r['invoice_id']))
+    expect(want.every(id => reg.includes(id))).toBe(true)
+    // nobody in the app can clear it
+    const cleared = await admin.from('invoices').update({ settled_before_cutover: false }).eq('id', want[0]!)
+    expect(cleared.error).not.toBeNull()
+  })
+
   it('row security still holds with the data in: engineers and sales see no money, anonymous sees nothing', async () => {
     const engineer = await signedIn('engineer@test.invalid')
     const sales = await signedIn('sales@test.invalid')
