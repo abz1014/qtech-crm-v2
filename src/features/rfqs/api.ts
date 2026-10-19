@@ -294,7 +294,7 @@ export interface InquiryRow {
   contactPhone: string | null
   contactEmail?: string | null
   contactTitle?: string | null
-  /** The currency of this supplier's most recent quote line on any RFQ, or null. */
+  /** The currency of this supplier's most recent quote line on any RFQ, else of its latest procurement leg, or null. */
   lastCurrency: string | null
   /** v_inquiry_state values. */
   responseState: string | null
@@ -318,7 +318,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
   if (inq.length === 0) return []
   const supplierIds = [...new Set(inq.map(i => i.supplier_id))]
   const inquiryIds = inq.map(i => i.id)
-  const [companies, states, contacts, lines, recent, declines] = await Promise.all([
+  const [companies, states, contacts, lines, recent, declines, legs] = await Promise.all([
     db.from('companies').select('id, name, country, city').in('id', supplierIds),
     db.from('v_inquiry_state').select('inquiry_id, response_state, contact_state, items_quoted, quote_received_on').eq('rfq_id', rfqId),
     db.from('contacts').select('company_id, name, phone, email, job_title, created_at').in('company_id', supplierIds).order('created_at'),
@@ -333,6 +333,14 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
       .order('created_at', { ascending: false })
       .limit(500),
     db.from('inquiry_item_declines').select('inquiry_id, rfq_item_id, reason').in('inquiry_id', inquiryIds),
+    // A supplier with no earlier reply but a procurement leg (A2b) is pre-filled with the leg's currency, not PKR.
+    db
+      .from('supplier_orders')
+      .select('supplier_id, currency')
+      .in('supplier_id', supplierIds)
+      .not('currency', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(200),
   ])
   const declinesBy = new Map<string, Record<string, string>>()
   for (const d of unwrap(declines)) declinesBy.set(d.inquiry_id, { ...(declinesBy.get(d.inquiry_id) ?? {}), [d.rfq_item_id]: d.reason })
@@ -346,6 +354,7 @@ export async function listInquiries(rfqId: string): Promise<InquiryRow[]> {
     const si = Array.isArray(r.supplier_inquiries) ? r.supplier_inquiries[0] : r.supplier_inquiries
     if (si && !lastCurrency.has(si.supplier_id)) lastCurrency.set(si.supplier_id, r.currency.trim())
   }
+  for (const l of unwrap(legs)) if (l.currency && !lastCurrency.has(l.supplier_id)) lastCurrency.set(l.supplier_id, l.currency.trim())
   const linesBy = new Map<string, QuoteLineRow[]>()
   for (const l of unwrap(lines)) {
     const row: QuoteLineRow = {
