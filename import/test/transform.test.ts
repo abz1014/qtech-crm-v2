@@ -281,9 +281,9 @@ describe('Q-Tech own numbers', () => {
 })
 
 describe('I04 orders', () => {
-  it('turns 17 seed orders into 16', () => {
-    expect(fixtureDump().tables['orders']).toHaveLength(17)
-    expect(t.orders).toHaveLength(16)
+  it('turns 22 seed orders into 21', () => {
+    expect(fixtureDump().tables['orders']).toHaveLength(22)
+    expect(t.orders).toHaveLength(21)
   })
 
   it('merges PO 000001 Unit A and Unit B into one order with 2 items, one leg and both invoices', () => {
@@ -337,7 +337,7 @@ describe('I04 orders', () => {
 
   it('merges 000001 even with no mapping file at all (the decision is built in)', () => {
     const r = transformAll(fixtureDump(), parseMappings({}), { asOf: AS_OF, v2Users: null })
-    expect(r.tables.orders).toHaveLength(16)
+    expect(r.tables.orders).toHaveLength(21)
   })
 
   it('makes order_value one item: qty 1, price net, 18% GST', () => {
@@ -350,14 +350,14 @@ describe('I04 orders', () => {
 
   it('writes cost_value to order_costs.expected_cost_pkr, one row per order with a cost', () => {
     expect(t.order_costs.find(c => c['order_id'] === orderOf('251809')['id'])!['expected_cost_pkr']).toBe(87150)
-    expect(t.order_costs).toHaveLength(16)
+    expect(t.order_costs).toHaveLength(21)
     expect(t.order_costs.every(c => c['costs_complete_at'] === undefined)).toBe(true)
   })
 
   it('resolves the basis against the GST register: net proven = no flag, everything else value_basis_unknown', () => {
     const proven = ['251809', '252446', '225', '000001', 'AT-501'].map(orderOf)
     for (const o of proven) expect(flagsOf(o)).not.toContain('value_basis_unknown')
-    expect(t.orders.filter(o => flagsOf(o).includes('value_basis_unknown'))).toHaveLength(11)
+    expect(t.orders.filter(o => flagsOf(o).includes('value_basis_unknown'))).toHaveLength(16)
     // never converted silently: the item price is the old order value
     expect(t.order_items.find(i => i['order_id'] === orderOf('TF-7788')['id'])!['unit_price_net']).toBe(177000)
   })
@@ -455,7 +455,7 @@ describe('I05 invoices', () => {
   const inv = (n: string) => t.invoices.find(i => i['number'] === n)!
 
   it('takes invoices from three sources: GST register, bookkeeping invoices, orders.invoice_number', () => {
-    expect(t.invoices).toHaveLength(13)
+    expect(t.invoices).toHaveLength(18)
     expect(inv('INV-2024-0101')).toMatchObject({ net_amount: 370000, gst_amount: 66600, order_id: orderOf('251809')['id'] })
     // orders.invoice_number, where there is no GST row
     expect(inv('INV-0004')).toMatchObject({ net_amount: 650163, gst_amount: 0, invoice_date: '2024-08-20', order_id: orderOf('248504')['id'] })
@@ -481,7 +481,7 @@ describe('I05 invoices', () => {
     expect(t.invoices.some(i => i['number'] === 'INV-B-05')).toBe(false)
   })
 
-  it('never turns amount_paid into payments; flags paid_per_old_invoice when payment rows disagree', () => {
+  it('keeps payment rows over amount_paid; flags paid_per_old_invoice when the rows disagree', () => {
     expect(flagsOf(inv('INV-B-15'))).toContain('paid_per_old_invoice')
     expect(flagsOf(inv('INV-B-11'))).not.toContain('paid_per_old_invoice')
   })
@@ -582,7 +582,9 @@ describe('I05 payments', () => {
     const old = [...raw['order_payments']!, ...raw['payment_records']!].reduce((s, p) => s + Number(p['amount']), 0)
     expect(result.recon.payments.old).toBe(Math.round(old * 100) / 100)
     expect(result.recon.payments.diff).toBe(0)
-    expect(sum(t.payments_in, 'amount')).toBe(result.recon.payments.neu)
+    const fromRows = t.payments_in.filter(p => !(p['legacy_source'] as Record<string, unknown>)['derived_from'])
+    expect(sum(fromRows, 'amount')).toBe(result.recon.payments.neu)
+    expect(sum(t.payments_in, 'amount')).toBe(Math.round((result.recon.payments.neu + result.recon.paymentsFromStatus.neu) * 100) / 100)
   })
 })
 

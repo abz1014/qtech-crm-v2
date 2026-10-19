@@ -1,0 +1,4 @@
+# legacy_invoice_status.csv (optional): your word on old invoices the import found still open (see still_owed.csv).
+# invoice_number = the number as still_owed.csv shows it.  status = paid (a full payment is recorded, date estimated) or owed (it stays open).
+# An invoice with no line stays open and stays on still_owed.csv. No file at all is fine.
+invoice_number,status

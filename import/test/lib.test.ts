@@ -1,9 +1,13 @@
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { parseCsv, toCsv } from '../src/lib/csv'
 import { dueTextFromNotes, parseLegacyDate } from '../src/lib/dates'
 import { isLegacyId, legacyId, uuidv5 } from '../src/lib/ids'
 import { normName, num } from '../src/lib/text'
-import { parseMappings } from '../src/mappings'
+import { loadMappings, normInvoiceNumber, parseMappings } from '../src/mappings'
 
 describe('ids', () => {
   it('is RFC 4122 version 5 (known test vector)', () => {
@@ -112,5 +116,33 @@ describe('mappings', () => {
 
   it('has PO 000001 merged before anyone writes a line', () => {
     expect(parseMappings({}).poDecisions.get('000001')).toBe('merge')
+  })
+
+  it('reads legacy_invoice_status.csv: paid or owed, matched on the number without case or spaces; anything else ignored', () => {
+    const m = parseMappings({
+      legacyInvoiceStatus: '# answers\ninvoice_number,status\n inv-b-703 ,PAID\nINV 2025 0105,owed\nINV-X,maybe\n,paid\n',
+    })
+    expect([...m.legacyInvoiceStatus]).toEqual([
+      ['INV-B-703', 'paid'],
+      ['INV20250105', 'owed'],
+    ])
+    expect(normInvoiceNumber(' Inv-B 703 ')).toBe('INV-B703')
+  })
+
+  it('treats a missing legacy_invoice_status.csv as no lines, not an error', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'maps-'))
+    try {
+      expect(loadMappings(dir).legacyInvoiceStatus.size).toBe(0)
+      writeFileSync(join(dir, 'legacy_invoice_status.csv'), 'invoice_number,status\nINV-1,paid\n')
+      expect(loadMappings(dir).legacyInvoiceStatus.get('INV-1')).toBe('paid')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('ships a template for legacy_invoice_status.csv with the header the reader expects', () => {
+    const text = readFileSync(fileURLToPath(new URL('../mappings/legacy_invoice_status.template.csv', import.meta.url)), 'utf8')
+    expect(text.split('\n').find(l => !l.startsWith('#'))).toBe('invoice_number,status')
+    expect(parseMappings({ legacyInvoiceStatus: text }).legacyInvoiceStatus.size).toBe(0)
   })
 })

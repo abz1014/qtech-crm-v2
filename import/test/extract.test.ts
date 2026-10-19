@@ -11,7 +11,7 @@ describe('the dump reader', () => {
   it('reads the fixture folder: tables, storage listing and the folder of files', () => {
     const d = readDump(FIXTURE_DUMP)
     expect(Object.keys(d.dump.tables)).toContain('orders')
-    expect(d.dump.tables['orders']).toHaveLength(17)
+    expect(d.dump.tables['orders']).toHaveLength(22)
     expect(d.dump.storage).toHaveLength(1)
     expect(d.storageDir).toMatch(/storage$/)
     expect(d.warnings).toEqual([])
@@ -61,7 +61,7 @@ describe('the report', () => {
     const md = renderReport(result)
     expect(md).toContain('## Money: old against new')
     expect(md).toContain('Reconciles: **yes**')
-    expect(md).toContain('| orders | 17 | 0 |')
+    expect(md).toContain('| orders | 22 | 0 |')
     expect(md).toContain('| 000001 | 147,972.00 | 147,972.00 | 0.00 | proven net |')
     expect(md).toContain('basis_unknown.csv')
   })

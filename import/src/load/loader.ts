@@ -396,7 +396,7 @@ export async function verify(db: Db, tables: Record<ImportTable, NewRow[]>, resu
   const sum = async (table: string, col: string) =>
     money((await fetchAll(db, table, `id,${col}`)).filter(r => isLegacyId(String(r['id']))).reduce((s, r) => s + Number(r[col]), 0))
   const checks: [string, number, number][] = [
-    ['payments_in.amount', await sum('payments_in', 'amount'), result.recon.payments.neu],
+    ['payments_in.amount', await sum('payments_in', 'amount'), Math.round((result.recon.payments.neu + result.recon.paymentsFromStatus.neu) * 100) / 100],
     ['expenses.amount_pkr', await sum('expenses', 'amount_pkr'), result.recon.expensesTotal.neu],
     ['invoices.net_amount', await sum('invoices', 'net_amount'), result.recon.invoiceNet.neu],
     ['invoices.gst_amount', await sum('invoices', 'gst_amount'), result.recon.invoiceGst.neu],

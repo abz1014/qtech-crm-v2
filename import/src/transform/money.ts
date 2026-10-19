@@ -1,7 +1,8 @@
-import { parseLegacyDate } from '../lib/dates'
+import { addDays, parseLegacyDate } from '../lib/dates'
 import { legacyId, uuidv5 } from '../lib/ids'
 import { clean, money, normName, num, str } from '../lib/text'
 import type { Row } from '../lib/text'
+import { normInvoiceNumber } from '../mappings'
 import type { NewRow, StorageCopy } from '../types'
 import type { CompanyBook } from './companies'
 import type { Ctx } from './context'
@@ -19,6 +20,49 @@ export interface MoneyOutput {
   storageCopies: StorageCopy[]
   /** new order id -> Σ invoice net, for the order/invoice reconciliation */
   invoiceNetByOrder: Map<string, number>
+  /** How many payments_in rows were derived from the old paid status or the owner's list (not from payment rows). */
+  paymentsFromStatusCount: number
+}
+
+/** One imported invoice, as the payment and still-owed steps need it. */
+interface InvoiceInfo {
+  id: string
+  /** the legacyId key of the invoice ('gst:<old id>', 'inv:<old id>', 'order:<old id>') */
+  key: string
+  number: string | null
+  table: 'gst_invoices' | 'invoices' | 'orders'
+  oldId: string
+  group: OrderGroup | null
+  companyId: string | null
+  invoiceDate: string | null
+  gross: number
+  po: string | null
+  /** due dates of the old bookkeeping invoice(s) behind it (itself, or its twins) */
+  oldDue: string[]
+  /** paid so far: allocated payment rows, payments derived from status, or status-paid amounts that could not be placed */
+  paid: number
+}
+
+/** A PO number as the matcher compares it: no "PO" prefix, no "#", no spaces, upper case, no trailing punctuation. */
+export function normPoToken(v: string): string {
+  return v
+    .toUpperCase()
+    .replace(/[\s#]/g, '')
+    .replace(/^P\.?O\.?(?:NO\.?|NUMBER)?:?/, '')
+    .replace(/^[:.-]+|[.,;:]+$/g, '')
+}
+
+/** The PO numbers in a register cell or an order's PO field: "253074 & 252993 & 254040" gives three. */
+export function poTokens(v: string | null): string[] {
+  if (v === null) return []
+  return [...new Set(v.split(/\s*(?:&|,|;|\+|\/|\band\b)\s*/i).map(normPoToken).filter(Boolean))]
+}
+
+/** The PO written in free text: "PO 251809.", "PO# 251809 (Unit A)", "PO# 1 & 2". Not "Position". */
+export function poFromNotes(notes: string | null): string | null {
+  if (notes === null) return null
+  const m = /\bP\.?O(?![a-z])\.?\s*(?:#|no\.?|number)?\s*[:.]?\s*([a-z0-9][a-z0-9\-/]*(?:\s*(?:&|,|\band\b)\s*\d[a-z0-9\-/]*)*)/i.exec(notes)
+  return m ? m[1]!.trim() : null
 }
 
 /** The categories migration 0025 seeds. A legacy category with exactly one of these names needs no mapping row. */
@@ -73,6 +117,7 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
     recurring_expenses: [],
     storageCopies: [],
     invoiceNetByOrder: new Map(),
+    paymentsFromStatusCount: 0,
   }
   const orderRowById = new Map(ctx.rows('orders').map(r => [String(r['id']), r]))
   const storage = new Map(ctx.dump.storage.map(o => [`${o.bucket}/${o.path}`, o]))
@@ -113,27 +158,136 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
     return p.date
   }
 
-  const pushInvoice = (group: OrderGroup | null, companyId: string | null, row: NewRow): void => {
+  const orderCompany = new Map(orders.orders.map(o => [String(o['id']), String(o['company_id'])]))
+  const infos: InvoiceInfo[] = []
+  const pushInvoice = (
+    group: OrderGroup | null,
+    companyId: string | null,
+    row: NewRow,
+    meta: { key: string; table: InvoiceInfo['table']; oldId: string; po: string | null; oldDue: string[] },
+  ): void => {
     row['order_id'] = group?.newId ?? null
     row['company_id'] = group ? null : companyId
     out.invoices.push(row)
+    infos.push({
+      id: String(row['id']),
+      ...meta,
+      number: (row['number'] as string | null) ?? null,
+      group,
+      companyId: group ? (orderCompany.get(group.newId) ?? null) : companyId,
+      invoiceDate: (row['invoice_date'] as string | null) ?? null,
+      gross: money(Number(row['net_amount']) + Number(row['gst_amount'])),
+      paid: 0,
+    })
     ledger.add('invoiceNet', 'neu', Number(row['net_amount']))
     ledger.add('invoiceGst', 'neu', Number(row['gst_amount']))
     if (group) out.invoiceNetByOrder.set(group.newId, money((out.invoiceNetByOrder.get(group.newId) ?? 0) + Number(row['net_amount'])))
   }
 
-  // 1. gst_invoices -> invoices (+ receipt attachments)
-  for (const g of ctx.rows('gst_invoices')) {
-    const oldId = String(g['id'])
+  // ---------------------------------------------------------------- the GST register wins (owner decision 2026-10-19)
+  // A bookkeeping invoice (old `invoices`) is the same sale as a GST register row when, for the same customer (through the
+  // company merge), its PO equals one of the register row's PO numbers. The register row is imported; the bookkeeping
+  // invoice is not (dropped_rows + invoice_duplicates.csv, so the owner can check every match).
+  interface GstPre {
+    row: Row
+    oldId: string
+    number: string | null
+    gross: number
+    net: number
+    tax: number
+    group: OrderGroup | null
+    companies: Set<string>
+    tokens: Set<string>
+    importable: boolean
+  }
+  const gstPre: GstPre[] = ctx.rows('gst_invoices').map(g => {
     // The old register shows `amount` as "Amount (incl GST)" and the net as amount - gst_amount (GstRegisterPage.tsx).
     const tax = num(g['gst_amount']) ?? 0
-    const net = money((num(g['amount']) ?? 0) - tax)
+    const gross = num(g['amount']) ?? 0
+    const net = money(gross - tax)
+    const group = str(g, 'order_id') !== null ? (orders.byOldId.get(str(g, 'order_id')!) ?? null) : null
+    const client = str(g, 'client_name')
+    const companies = new Set<string>()
+    if (group) companies.add(orderCompany.get(group.newId)!)
+    if (client !== null) companies.add(book.customerCompanyId(client))
+    return {
+      row: g,
+      oldId: String(g['id']),
+      number: str(g, 'gst_invoice_number'),
+      gross: money(gross),
+      net,
+      tax,
+      group,
+      companies,
+      tokens: new Set([...poTokens(str(g, 'customer_po_number')), ...poTokens(group?.poNumber ?? null)]),
+      importable: (group !== null || client !== null) && !(net < 0 || tax < 0 || tax > net),
+    }
+  })
+
+  interface BookPre {
+    row: Row
+    oldId: string
+    amount: number
+    group: OrderGroup | null
+    po: string | null
+    status: string
+    amountPaid: number
+    due: string | null
+    twin: GstPre | null
+    /** the same PO on a register row of another customer: listed for the owner, not matched */
+    nearMiss: GstPre | null
+  }
+  const bookPre: BookPre[] = ctx.rows('invoices').map(inv => {
+    const oldOrder = str(inv, 'order_id')
+    const orderRow = oldOrder !== null ? orderRowById.get(oldOrder) : undefined
+    const group = oldOrder !== null ? (orders.byOldId.get(oldOrder) ?? null) : null
+    const companies = new Set<string>()
+    if (group) companies.add(orderCompany.get(group.newId)!)
+    const clientId = str(inv, 'client_id')
+    const clientCompany = clientId !== null ? book.clients.get(clientId)?.companyId : undefined
+    if (clientCompany) companies.add(clientCompany)
+    const po = poFromNotes(str(inv, 'notes')) ?? (orderRow ? (str(orderRow, 'customer_po_number') ?? poFromNotes(str(orderRow, 'notes'))) : null)
+    const tokens = poTokens(po)
+    const candidates = tokens.length ? gstPre.filter(g => g.importable && tokens.some(t => g.tokens.has(t))) : []
+    const twin = candidates.find(g => [...g.companies].some(c => companies.has(c))) ?? null
+    return {
+      row: inv,
+      oldId: String(inv['invoice_id'] ?? inv['id']),
+      amount: num(inv['invoice_amount']) ?? 0,
+      group,
+      po,
+      status: (str(inv, 'payment_status') ?? '').toLowerCase(),
+      amountPaid: num(inv['amount_paid']) ?? 0,
+      due: parseLegacyDate(inv['due_date']).date,
+      twin,
+      nearMiss: twin ? null : (candidates[0] ?? null),
+    }
+  })
+  const twinsOf = new Map<GstPre, BookPre[]>()
+  for (const b of bookPre) if (b.twin) twinsOf.set(b.twin, [...(twinsOf.get(b.twin) ?? []), b])
+  const gstPreOf = new Map<InvoiceInfo, GstPre>()
+  const bookPreById = new Map(bookPre.map(b => [b.oldId, b]))
+
+  // 1. gst_invoices -> invoices (+ receipt attachments)
+  for (const pre of gstPre) {
+    const g = pre.row
+    const oldId = pre.oldId
+    const { tax, net } = pre
     ledger.add('invoiceNet', 'old', net)
     ledger.add('invoiceGst', 'old', tax)
     const flags: string[] = []
     const label = str(g, 'gst_invoice_number') ?? oldId
 
-    const group = str(g, 'order_id') !== null ? (orders.byOldId.get(str(g, 'order_id')!) ?? null) : null
+    let group = pre.group
+    const twins = twinsOf.get(pre) ?? []
+    if (!group && twins.length) {
+      // A register row with no order link takes the order of its bookkeeping twin(s), when they all point to one order.
+      const twinGroups = [...new Set(twins.map(b => b.group))]
+      if (twinGroups.length === 1 && twinGroups[0] !== null) {
+        group = twinGroups[0]!
+        flags.push('order_from_bookkeeping_twin')
+      }
+    }
     let companyId: string | null = null
     if (!group && str(g, 'client_name') !== null) {
       companyId = book.byCustomerName(str(g, 'client_name')!).companyId
@@ -202,7 +356,14 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
       legacy_flags: [...new Set(flags)].sort(),
       legacy_source: { table: 'gst_invoices', row: g },
     }
-    pushInvoice(group, companyId, row)
+    pushInvoice(group, companyId, row, {
+      key: `gst:${oldId}`,
+      table: 'gst_invoices',
+      oldId,
+      po: str(g, 'customer_po_number') ?? group?.poNumber ?? null,
+      oldDue: twins.map(b => b.due).filter((x): x is string => x !== null),
+    })
+    gstPreOf.set(infos.at(-1)!, pre)
 
     // wasif_receipt_file_path -> attachment (+ the file to copy)
     const path = str(g, 'wasif_receipt_file_path')
@@ -238,14 +399,51 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
     if (k !== null) paymentsByOldOrder.set(k, money((paymentsByOldOrder.get(k) ?? 0) + (num(p['amount']) ?? 0)))
   }
 
-  // 2. bookkeeping invoices, only where the order has no GST row and no orders.invoice_number
-  for (const inv of ctx.rows('invoices')) {
-    const oldId = String(inv['invoice_id'] ?? inv['id'])
-    const amount = num(inv['invoice_amount']) ?? 0
+  const recordInvoices = new Set(ctx.rows('payment_records').map(p => str(p, 'invoice_id')).filter((x): x is string => x !== null))
+
+  // 2. bookkeeping invoices: not where the GST register has the same sale, the order has a GST row, or orders.invoice_number
+  for (const pre of bookPre) {
+    const inv = pre.row
+    const oldId = pre.oldId
+    const amount = pre.amount
     ledger.add('invoiceNet', 'old', amount)
     const oldOrder = str(inv, 'order_id')
     const label = str(inv, 'invoice_number') ?? oldId
     const orderRow = oldOrder !== null ? orderRowById.get(oldOrder) : undefined
+    const dupFields = (g: GstPre, match: string) => ({
+      bookkeeping_invoice: label,
+      po: pre.po,
+      amount,
+      gst_invoice: g.number ?? g.oldId,
+      gst_gross: g.gross,
+      ratio: g.gross ? Math.round((amount / g.gross) * 10000) / 10000 : null,
+      match,
+    })
+    if (pre.twin) {
+      const g = pre.twin
+      ctx.drop('invoices', oldId, label, `duplicate of GST invoice ${g.number ?? g.oldId}`)
+      ctx.addReview(
+        'invoice_duplicates',
+        'invoices',
+        oldId,
+        label,
+        `same customer and PO as GST invoice ${g.number ?? g.oldId}: the register row is imported, this one is not`,
+        dupFields(g, 'duplicate'),
+      )
+      ledger.add('invoiceNet', 'excluded', amount)
+      continue
+    }
+    if (pre.nearMiss) {
+      const g = pre.nearMiss
+      ctx.addReview(
+        'invoice_duplicates',
+        'invoices',
+        oldId,
+        label,
+        `GST invoice ${g.number ?? g.oldId} has the same PO but another customer: NOT treated as a duplicate (both imported). If it is the same customer, add the name to company_merge.csv.`,
+        dupFields(g, 'not matched: customer differs'),
+      )
+    }
     if (oldOrder !== null && (gstOldOrders.has(oldOrder) || (orderRow && str(orderRow, 'invoice_number') !== null))) {
       ctx.addReview('dropped_rows', 'invoices', oldId, label, 'the order already has a GST register row or an invoice number on the order: not imported twice')
       ledger.add('invoiceNet', 'excluded', amount)
@@ -264,12 +462,19 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
     const flags = group ? ['invoice_basis_unknown'] : []
     const invoiceDate = dateOrFlag(inv, 'issued_date', 'invoices', label, flags)
     if (invoiceDate === null) flags.push('invoice_date_missing')
-    // amount_paid is NOT turned into payments; it is flagged when the payments we do have disagree.
-    const paidOld = num(inv['amount_paid']) ?? 0
+    // Where the old database holds payment rows for this invoice (or its order), the rows are the payments and amount_paid
+    // only flags a disagreement. Without rows, the paid status becomes a payment (below, owner decision 2026-10-19).
+    const paidOld = pre.amountPaid
     const paidRows = oldOrder !== null ? (paymentsByOldOrder.get(oldOrder) ?? 0) : 0
-    if (Math.abs(paidOld - paidRows) > 1) {
+    if ((paidRows > 0 || recordInvoices.has(oldId)) && Math.abs(paidOld - paidRows) > 1) {
       flags.push('paid_per_old_invoice')
-      ctx.addReview('dropped_rows', 'invoices', oldId, label, `old invoice says ${paidOld} paid, payment rows total ${paidRows}: no payment invented`)
+      ctx.addReview(
+        'dropped_rows',
+        'invoices',
+        oldId,
+        label,
+        `old invoice says ${paidOld} paid, payment rows total ${paidRows}: the rows are imported, nothing is derived from the status`,
+      )
     }
     const id = legacyId('invoice', `inv:${oldId}`)
     pushInvoice(group, companyId, {
@@ -281,7 +486,7 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
       notes: str(inv, 'notes'),
       legacy_flags: [...new Set(flags)].sort(),
       legacy_source: { table: 'invoices', row: inv },
-    })
+    }, { key: `inv:${oldId}`, table: 'invoices', oldId, po: pre.po, oldDue: pre.due !== null ? [pre.due] : [] })
   }
 
   // 3. orders.invoice_number / invoice_date, where there is no GST row for that old order
@@ -306,7 +511,7 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
       gst_amount: 0,
       legacy_flags: [...new Set(flags)].sort(),
       legacy_source: { table: 'orders', row: r },
-    })
+    }, { key: `order:${oldId}`, table: 'orders', oldId, po: str(r, 'customer_po_number'), oldDue: [] })
   }
 
   // ---------------------------------------------------------------- payments_in
@@ -368,6 +573,186 @@ export function transformMoney(ctx: Ctx, book: CompanyBook, orders: OrderOutput,
   for (const p of ctx.rows('payment_records')) {
     const oldOrder = invoiceOrder.get(String(p['invoice_id'])) ?? null
     addPayment('payment_records', p, String(p['payment_id'] ?? p['id']), oldOrder !== null ? (orders.byOldId.get(oldOrder) ?? null) : null, 'from_payment_records')
+  }
+
+  // ---------------------------------------------------------------- payments derived from the old paid status
+  // Owner decision 2026-10-19: the old database has no payment rows for most sales; "paid" lives in invoices.payment_status
+  // (Paid / Partial with amount_paid) and orders.status = payment_received. That status becomes a payment received
+  // (bank, not ticked, credited to nobody, date estimated). Never where payment rows already exist (no double count).
+  const rowPaidByGroup = new Map<string, number>()
+  for (const p of out.payments_in) rowPaidByGroup.set(String(p['order_id']), money((rowPaidByGroup.get(String(p['order_id'])) ?? 0) + Number(p['amount'])))
+  const invoicesByGroup = new Map<string, InvoiceInfo[]>()
+  for (const i of infos) if (i.group) invoicesByGroup.set(i.group.newId, [...(invoicesByGroup.get(i.group.newId) ?? []), i])
+  const byDate = (a: InvoiceInfo, b: InvoiceInfo) => (a.invoiceDate ?? '9999').localeCompare(b.invoiceDate ?? '9999') || a.id.localeCompare(b.id)
+  // Payment rows are per order: they settle the order's invoices oldest first (for the still-owed list only).
+  for (const [gid, list] of invoicesByGroup) {
+    let left = rowPaidByGroup.get(gid) ?? 0
+    for (const i of [...list].sort(byDate)) {
+      const take = Math.min(left, Math.max(i.gross - i.paid, 0))
+      i.paid = money(i.paid + take)
+      left = money(left - take)
+    }
+  }
+  const hasRows = (g: OrderGroup | null) => g !== null && rowPaidByGroup.has(g.newId)
+
+  const orderRowsOf = (g: OrderGroup | null): Row[] => (g ? g.oldIds.map(k => orderRowById.get(k)).filter((r): r is Row => r !== undefined) : [])
+  const termsOf = (g: OrderGroup | null): number | null => orderRowsOf(g).map(r => num(r['payment_terms_days'])).find((x): x is number => x !== null && x >= 0) ?? null
+  const capAsOf = (d: string): string => (d > ctx.opts.asOf ? ctx.opts.asOf : d)
+  const plusTerms = (invoiceDate: string | null, g: OrderGroup | null): string | null => {
+    const terms = termsOf(g)
+    return invoiceDate !== null && terms !== null ? addDays(invoiceDate, Math.round(terms)) : null
+  }
+  /** The old invoice due date, else the order's payment_due_date, else invoice date + terms, else invoice date; never after asOf. */
+  const statusDate = (oldDue: string[], g: OrderGroup | null, invoiceDate: string | null): string => {
+    const due = [...oldDue].sort().at(-1) ?? null
+    const orderDue = orderRowsOf(g).map(r => parseLegacyDate(r['payment_due_date']).date).filter((x): x is string => x !== null).sort()[0] ?? null
+    return capAsOf(due ?? orderDue ?? plusTerms(invoiceDate, g) ?? invoiceDate ?? ctx.opts.asOf)
+  }
+
+  const derive = (p: { invoice: InvoiceInfo; group: OrderGroup | null; amount: number; receivedOn: string; flags: string[]; basis: string; key: string; source: Record<string, unknown> }): void => {
+    const amount = money(p.amount)
+    if (amount <= 0) return
+    p.invoice.paid = money(p.invoice.paid + amount)
+    ledger.add('paymentsFromStatus', 'old', amount)
+    const label = p.invoice.number ?? p.invoice.oldId
+    if (!p.group) {
+      ledger.add('paymentsFromStatus', 'excluded', amount)
+      ctx.addReview(
+        'payments_not_placed',
+        p.invoice.table,
+        p.invoice.oldId,
+        label,
+        `${amount} paid per ${p.basis}, but the invoice is not linked to an order and a payment needs one: no payment recorded`,
+      )
+      return
+    }
+    ledger.add('paymentsFromStatus', 'neu', amount)
+    out.paymentsFromStatusCount++
+    out.payments_in.push({
+      id: legacyId('payment', p.key),
+      order_id: p.group.newId,
+      received_on: p.receivedOn,
+      amount,
+      credited_user_id: null,
+      reference: p.invoice.number,
+      paid_via: 'bank',
+      bank_month: null,
+      legacy_flags: [...new Set([...p.flags, 'payment_date_estimated'])].sort(),
+      legacy_source: { derived_from: p.basis, invoice: { table: p.invoice.table, old_id: p.invoice.oldId, number: p.invoice.number }, ...p.source },
+    })
+  }
+  const paidAmount = (b: BookPre): number => (b.status === 'paid' && b.amountPaid <= 0 ? b.amount : b.amountPaid)
+
+  // (a) bookkeeping invoices marked Paid / Partial: on the invoice they end up as (themselves, or their GST twin)
+  for (const i of infos) {
+    if (i.table === 'invoices') {
+      const b = bookPreById.get(i.oldId)!
+      if ((b.status !== 'paid' && b.status !== 'partial') || hasRows(i.group) || recordInvoices.has(b.oldId)) continue
+      const partial = b.status === 'partial'
+      derive({
+        invoice: i,
+        group: i.group,
+        amount: partial ? Math.min(b.amountPaid, i.gross) : paidAmount(b),
+        receivedOn: statusDate(i.oldDue, i.group, i.invoiceDate),
+        flags: ['paid_per_old_invoice_status', ...(partial ? ['payment_partial_legacy'] : [])],
+        basis: `old invoice status ${b.status}`,
+        key: `status:${i.key}`,
+        source: { table: 'invoices', row: b.row },
+      })
+    } else if (i.table === 'gst_invoices') {
+      const pre = gstPreOf.get(i)!
+      const twins = twinsOf.get(pre) ?? []
+      const paidTwins = twins.filter(b => b.status === 'paid' || b.status === 'partial')
+      if (!paidTwins.length || twins.some(b => recordInvoices.has(b.oldId))) continue
+      if (i.group) {
+        if (hasRows(i.group)) continue
+        // All twins Paid: the GST invoice is paid in full (its gross). Otherwise what was recorded, capped at the gross.
+        const all = twins.every(b => b.status === 'paid')
+        derive({
+          invoice: i,
+          group: i.group,
+          amount: all ? i.gross : Math.min(paidTwins.reduce((s, b) => s + paidAmount(b), 0), i.gross),
+          receivedOn: statusDate(i.oldDue, i.group, i.invoiceDate),
+          flags: ['paid_per_old_invoice_status', ...(all ? [] : ['payment_partial_legacy'])],
+          basis: `old invoice status of ${twins.map(b => str(b.row, 'invoice_number') ?? b.oldId).join(', ')}`,
+          key: `status:${i.key}`,
+          source: { table: 'invoices', rows: twins.map(b => b.row) },
+        })
+      } else {
+        // The register row covers several orders (one per PO): each twin's payment goes on the twin's own order.
+        let room = i.gross
+        for (const b of paidTwins) {
+          if (hasRows(b.group)) continue
+          const amount = Math.min(b.status === 'partial' ? Math.min(b.amountPaid, b.amount) : paidAmount(b), room)
+          room = money(room - Math.max(amount, 0))
+          derive({
+            invoice: i,
+            group: b.group,
+            amount,
+            receivedOn: statusDate(b.due !== null ? [b.due] : [], b.group, parseLegacyDate(b.row['issued_date']).date ?? i.invoiceDate),
+            flags: ['paid_per_old_invoice_status', 'payment_on_twin_order', ...(b.status === 'partial' ? ['payment_partial_legacy'] : [])],
+            basis: `old invoice status of ${str(b.row, 'invoice_number') ?? b.oldId}`,
+            key: `status:${i.key}:${b.oldId}`,
+            source: { table: 'invoices', row: b.row },
+          })
+        }
+      }
+    }
+  }
+
+  // (b) orders marked payment_received: every invoice of the order with no payment yet is paid in full
+  for (const g of orders.groups) {
+    const rows = orderRowsOf(g)
+    if (!rows.length || !rows.every(r => (str(r, 'status') ?? '').toLowerCase() === 'payment_received') || hasRows(g)) continue
+    for (const i of [...(invoicesByGroup.get(g.newId) ?? [])].sort(byDate)) {
+      if (i.paid > 0) continue
+      derive({
+        invoice: i,
+        group: g,
+        amount: i.gross,
+        receivedOn: statusDate(i.oldDue, g, i.invoiceDate),
+        flags: ['paid_per_order_status'],
+        basis: 'old order status payment_received',
+        key: `order-status:${i.key}`,
+        source: { table: 'orders', rows },
+      })
+    }
+  }
+
+  // (c) the owner's list (legacy_invoice_status.csv): paid = a full payment of what is open; owed = stays open, unlisted
+  const statusFor = (i: InvoiceInfo) => (i.number !== null ? ctx.maps.legacyInvoiceStatus.get(normInvoiceNumber(i.number)) : undefined)
+  const known = new Set(infos.filter(i => i.number !== null).map(i => normInvoiceNumber(i.number)))
+  for (const no of ctx.maps.legacyInvoiceStatus.keys()) {
+    if (!known.has(no)) ctx.addReview('warnings', 'legacy_invoice_status', no, no, 'legacy_invoice_status.csv names an invoice number the import does not have: line ignored')
+  }
+  for (const i of infos) {
+    const open = money(i.gross - i.paid)
+    if (statusFor(i) !== 'paid' || open <= 1) continue
+    derive({
+      invoice: i,
+      group: i.group,
+      amount: open,
+      receivedOn: capAsOf(plusTerms(i.invoiceDate, i.group) ?? i.invoiceDate ?? ctx.opts.asOf),
+      flags: ['paid_per_owner_list'],
+      basis: 'the owner list legacy_invoice_status.csv',
+      key: `owner-list:${i.key}`,
+      source: { table: 'legacy_invoice_status', invoice_number: i.number },
+    })
+  }
+
+  // (d) everything else old and unpaid is listed, not assumed
+  for (const i of infos) {
+    const open = money(i.gross - i.paid)
+    if (open <= 1 || statusFor(i) === 'owed') continue
+    ctx.addReview('still_owed', i.table, i.oldId, i.number ?? '(no number)', `${open} of ${i.gross} open: paid, or still owed? Answer in legacy_invoice_status.csv`, {
+      invoice_number: i.number,
+      customer: book.companyName(i.companyId),
+      invoice_date: i.invoiceDate,
+      gross: i.gross,
+      open,
+      po: i.po,
+      linked_to_order: i.group ? 'yes' : 'no',
+    })
   }
 
   // ---------------------------------------------------------------- recurring_expenses

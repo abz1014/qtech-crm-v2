@@ -18,9 +18,9 @@ describe('the I06 checklist', () => {
   it('reads the fixture the way the data is built', () => {
     expect(item(2).verdict).toBe('adjusted') // garbage dates and a day-first one
     expect(item(2).evidence).toMatch(/unparseable/)
-    expect(item(6).evidence).toMatch(/payment_received 3/)
+    expect(item(6).evidence).toMatch(/payment_received 6/)
     expect(item(7).verdict).toBe('adjusted') // supplier payments + Inventory/Procurement
-    expect(item(9).evidence).toMatch(/9 rows, 7 linked/)
+    expect(item(9).evidence).toMatch(/11 rows, 7 linked/)
     expect(item(11).verdict).toBe('adjusted') // one receipt path is not in the listing
     expect(item(15).verdict).toBe('confirmed') // GST = round(amount x 18/118)
     expect(item(16).verdict).toBe('confirmed')
