@@ -12,6 +12,8 @@ import { Skeleton } from '@/ui/Skeleton'
 import { SumBar } from '@/ui/SumBar'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { MonthEndNav } from '@/features/money/monthEnd/MonthEndNav'
+import { useMonthEndStatus } from '@/features/money/monthEnd/hooks'
+import { buildChecklist, checksWithItems } from '@/features/money/monthEnd/model'
 import { monthKeyLabel, monthKeyShort, shiftMonth } from '@/features/money/expenses/model'
 import { useBankMonth, useTickLine } from '@/features/money/bank/hooks'
 import { bankTotals, buildBankView, defaultStatementMonth, isMonthKey, type BankLine } from '@/features/money/bank/model'
@@ -35,6 +37,7 @@ export function BankTickPage() {
 
   const data = useBankMonth(month)
   const tick = useTickLine(month)
+  const status = useMonthEndStatus(month)
   const view = useMemo(() => (data.data ? buildBankView(data.data, month) : null), [data.data, month])
   const totals = useMemo(() => (view ? bankTotals(view) : null), [view])
 
@@ -77,7 +80,11 @@ export function BankTickPage() {
 
   return (
     <MoneyFrame active="month-end">
-      <MonthEndNav active="bank" counts={openCount ? { bank: openCount } : undefined} search={`?month=${month}`} />
+      <MonthEndNav
+        active="bank"
+        counts={{ bank: openCount || undefined, checklist: status.data ? checksWithItems(buildChecklist(status.data, month)) : undefined }}
+        search={`?month=${month}`}
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-xs font-medium text-fg-2">Statement month</span>

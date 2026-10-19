@@ -886,3 +886,236 @@ logged KEPT for FE-2:
 
 Also: the "No current X rate" preview line keeps its icon inline with its text in the narrow reply box, and the phone "..." menus start with
 **Mark won**, as in the mockup.
+
+
+# Part E: final re-audit (2026-10-19)
+
+Main at `778084b` (Merge p8/import-rules). Read-only; no product code changed. Owner rule: "make sure that the ui is ditto same as the mockup. dont miss out on anything."
+
+## Method and limits
+
+- Built evidence: the 243 `review-shots` PNGs of E2E run 39207818397 (push to main at 778084b, all suites, success), at 1440 and 375. The Settings suite writes no shots into that artifact, so Team and Company profile come from the committed `docs/design/review/a04-a06` (their source is unchanged since). Shots are viewport-high (900 px), so the lower part of long pages was judged from other shots of the same screen and from source.
+- Reference: `docs/design/screens/*.png` (rendered from the g2 mockups) and the mockup HTML text, checked with a text-diff of every mockup string against `src/`.
+- Compared screen by screen: shell, Today, intake, RFQ detail, quotation PDF, convert dialog, company supplier, order detail, Money (GST register, Receivables, Expenses burst sheet, Margins, Bank tick), Exchange rates, Team, PO PDF. Capture, Today and the PDFs were checked frame by frame and are close to ditto.
+- The review data is thin seed data, so differences that only come from empty history (supplier memory lines, "Chased x1" chips, brand lists, delivery squares) are not listed as defects.
+- Not re-listed: anything Parts A to D already mark FIXED, KEPT or APPROVED, and the deviations in `docs/DECISIONS.md` (per-supplier reply boxes, partial quotations, 18 % / Exempt only, Files panel, Change password, Capture top-bar button (R22), no "Received" step on a leg (2026-10-15 O03), ranking-aware intake lede (A8)).
+- Not built, so not comparable: the Month-end checklist and the six reports (see E-MN-01, E-MN-02). The Reports screen (P01) and Settings Targets and Expense categories have no mockup (KEPT extras).
+
+## Counts of NEW items
+
+| Screen | high | medium | low |
+|---|---|---|---|
+| Shell / nav / palette | 0 | 1 | 0 |
+| Today | 0 | 0 | 0 |
+| RFQ board | 0 | 0 | 0 |
+| RFQ intake | 0 | 0 | 2 |
+| RFQ detail | 0 | 0 | 1 |
+| Quotation dialog + PDF | 0 | 0 | 1 |
+| Convert dialog (Mark won) | 0 | 0 | 3 |
+| Company pages | 0 | 0 | 0 |
+| Capture | 0 | 0 | 0 |
+| Orders list | 0 | 0 | 0 |
+| Order detail (incl. margin panel, Files, PO) | 0 | 3 | 3 |
+| Money: GST register, Receivables, Expenses, Margins, Exceptions, Bank tick | 0 | 1 | 5 |
+| Money: Month-end checklist and six reports (not built) | 2 | 0 | 0 |
+| Reports | 0 | 0 | 0 |
+| Settings: Exchange rates | 0 | 1 | 2 |
+| Settings: Team, Company profile, Categories, Your details | 0 | 0 | 1 |
+| Total | 2 | 6 | 18 |
+
+## NEW items, grouped by screen
+
+### Shell
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-SH-01 | Top bar counts on all four: "Today 9, RFQs 14, Orders 7, Money 3" | `useNavCounts` sets only Today and RFQs; its comment says Orders and Money "are not built yet", but both are now. Orders and Money show no number | medium | NEW (continues B-11 / D-10) |
+
+### RFQ intake
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-IN-01 | Step 2 "Items" header right side: "4 items · bid due Thu 3 Dec" | "2 items" only | low | FIXED 4a02499 (the line was already drawn whenever a bid due date is entered; the audit shot had none) |
+| E-IN-02 | Item chips start with a small numbered circle | Plain number, no circle | low | FIXED 4a02499 |
+
+### RFQ detail
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-RD-01 | Header has two buttons: Issue quotation and Bid and close; Mark won lives in the menus | Header also carries a direct "Mark won" button beside "Mark bid sent" (only Mark bid sent was KEPT for FE-2, C-07) | low | KEPT (owner: the direct Mark won button stays) |
+
+### Quotation dialog and PDF
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-QT-01 | "Prepared by Ayesha Rana" (name only) | "Prepared by Test Sales, +92 300 1234567" (phone added; the signature block already carries it) | low | FIXED 4a02499 |
+
+### Convert dialog (Mark won)
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-CV-01 | Title "Mark won QT-26-0058 R1" with the quotation number in mono; sub-line "Customer · 3 quoted lines · gross PKR" | Title "Mark won"; sub-line names the RFQ customer, not the quotation | low | NEW |
+| E-CV-02 | Neutral grey one-line note "Creates order ORD-0043. Each item is assigned to the best-ranked quote; ..." | Blue info callout with a bold heading and a different sentence; the order number is not announced | low | NEW |
+| E-CV-03 | Label "Customer PO number" with a helper line above the input ("optional, add it from the order later"); brand and family sub-line under each item | "Optional" tag beside the label and the helper below; no brand sub-line | low | NEW |
+
+### Order detail
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-OD-01 | Item rows carry a sub-line "Brand · model" (for example "Belimo · NM24A-SR") | Description only | medium | NEW |
+| E-OD-02 | "Unit net" shows the unit price on every line | Unit net column is blank on plain lines in the admin shots (o03-admin, o03-legs-stamped, m04 margin panel) while line net is filled. Only head rows draw a value (`OrderItemsPanel.tsx`, the `unit` column cell returns nothing for other kinds). Verify with real data | medium | NEW |
+| E-OD-03 | Phone: dimension strip wraps to two rows ("Same content, one column. Dimension strip wraps to two rows") | Five dimension cards stack in one column, so the first screen is all status text | medium | NEW |
+| E-OD-04 | Each dimension label has an icon (package, wrench, file-text, banknote, clipboard-check) | Labels have no icons | low | NEW |
+| E-OD-05 | Items table has a group header band: "Sale to customer, PKR" over the sale columns and "Supplier, in the leg currency" over the supplier columns | One header row, no band | low | NEW |
+| E-OD-06 | GST column is plain text "18%" | An editable select on every line; plus a "Service" tick column, "Split line", "Exempt the whole order from GST", density toggle and move hints | low | KEPT extra (A8 split and O03 line editing are in DECISIONS; the always-open GST select is new, owner to confirm) |
+
+### Money: GST register, Receivables, Expenses, Margins, Exceptions, Bank tick
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-MN-03 | Receivables opens with the most overdue row selected and the Payment reminder panel beside the table | No row selected on open, so the panel (the main thing on this screen) is not seen; table is full width | medium | NEW |
+| E-MN-04 | "Overdue" figure in red | Same colour as the other figures | low | NEW |
+| E-MN-05 | Footnote: "...Copying the text records the reminder and moves the item to Waiting on Today." | First sentence only | low | NEW |
+| E-MN-06 | Money content spans the full page (40 px gutters at 1440; 1328 px of content) | All Money views sit in a centred column of about 1216 px with 112 px side margins; Orders, RFQs and Settings are wider | low | NEW |
+| E-MN-07 | "By invoice date" is a shaded chip with a calendar icon | Plain text with an icon, no chip background | low | NEW |
+| E-MN-08 | GST register footnote: "...see Cash month." | "...see Receivables." (the Cash month tab does not exist yet; follows E-MN-01) | low | NEW (resolves with M10) |
+
+### Money: Month-end (not built)
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-MN-01 | Month-end opens on the Checklist (seven checks, jump links, Close October with warning counts, Reopen, closed state with lock) plus the Today "Close October" row | Month-end opens straight on Bank tick; no checklist, no close or reopen, no Today row. The sub-strip shows only "Bank tick" | high | NEW (BUILD_PLAN M10, not built) |
+| E-MN-02 | Six reports under Month-end, each with CSV: P&L (with Cash month), Expenses by category, Aging, We owe, GST/FBR, Team | None built; the sub-strip has no report tabs | high | NEW (M10) |
+
+### Settings: Exchange rates (`/settings/exchange-rates`)
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-XR-01 | Rate table fits its card; Band chip fully shown | At 1440 the table is clipped at the card edge: "Stale, 1" is cut off, Fresh touches the border; the card is narrower than the page | medium | NEW |
+| E-XR-02 | Right of the table header: "Automatic update ran Fri 27 Nov, 02:10"; per-row "Add rate" on stale and unusable rows; yellow banner "GBP has not been updated for 54 days..."; "Last automatic: 372.40 on 4 Oct" under the currency field | None of the four | low | NEW |
+| E-XR-03 | "Recent USD rates" list on a full-width card | Same list, narrower card, currency select in the header | low | NEW (cosmetic) |
+
+### Settings: Team
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E-ST-01 | Deactivated row: "Reactivate" button sits inside the Actions column | The button is cut off at the right edge of the card at 1440 (the shot shows "Reactivate" clipped with a stray underscore) | low | NEW |
+
+## Already approved or KEPT, seen again and not counted
+
+Capture button in the top bar and the "This is a supplier's reply" and "Attach to an order" links (DECISIONS R22); per-supplier reply boxes, partial quotations, 18 % and Exempt, Files panel (DECISIONS 2026-10-15 owner, parity audit); "Mark bid sent" and per-supplier "Chase" buttons (C-07, C-46 KEPT for FE-2); "Asked so far x1" (O-4); full names in salutations (O-5); no "Received" step on legs (DECISIONS O03); comfortable and compact density toggle on every table (DataTable primitive); Exceptions tab, Reports screen, Targets and Expense categories pages, Orders list (no mockup).
+
+## Checked and matching (no row)
+
+Today draft, copied and just-chased frames; target tile; Waiting group; intake step 4; supplier company page structure; Money Margins; Expenses burst sheet (to the keystroke hints and dashed defaults); Bank tick body; Issue PO dialog and PO PDF; quotation PDF; Team list.
+
+## Fix pickup order
+
+1. E-MN-01, E-MN-02 (M10, a task of its own).
+2. E-OD-02, E-OD-01, E-OD-03, E-SH-01, E-MN-03, E-XR-01.
+3. Everything low, grouped by screen above.
+
+
+# Part E2: coverage-gap audit (2026-10-19)
+
+Main at `8ac8983` plus Part E (`6a9fbde`). Read-only; no product code changed. This part closes the gaps Part E listed: Month-end, Settings Company profile / Categories / Your details, every Capture frame, RFQ board, Reports, Orders list and the company views, the phone comparisons, and full-page photographs.
+
+## Method and limits
+
+- Phone mockups: every `data-w <= 430` board of every `g2-*.html` was re-rendered with Playwright (Chromium) at its native width. Only five mockups draw phone boards: g2-capture (17 frames), g2-login-team-settings (6), g2-month-end (2), g2-ranking-split (2), g2-today-b2 (3); g2-rfq-detail has a section frame (`rfq-detail-08-mobile-375`). g2-money, g2-company, g2-order-detail and g2-intake-float draw no phone board (they carry a prose note and, for Money and Order detail, a 768 tablet board), so their phone checks are against that note and the design system, not a drawing.
+- Built evidence: E2E run 39207818397 (243 shots, 1440 and 375); the committed `docs/design/review/m05-m10` shots for Month-end (the E2E run for 8ac8983 was cancelled by a later push, so it has no Month-end shots); and a new spec `e2e/settings/parity-e2.spec.ts` (this branch) that photographs 11 Settings pages at 1440 and 375 with the window made as tall as the content (run 39212771836, success). The new spec only writes PNGs when `REVIEW_DIR` is set.
+- There is no local Supabase here, so the app could not be run locally; CI is the only source of shots. The 375 shots of other screens in run 39207818397 are full-page where the page scrolls with the document, viewport-high where the shell scrolls (several are 812 px high).
+- Not re-listed: anything Parts A to E already mark FIXED, KEPT, APPROVED or NEW.
+
+## Part E items re-checked
+
+| id | now | note |
+|---|---|---|
+| E-MN-01 | RESOLVED | The checklist, Close and Reopen, the closed-months list and the "What closing does" card are built and match the frame closely. What still differs is in E2-ME-01..03 |
+| E-MN-02 | RESOLVED | All six reports are built with Export CSV. What still differs is in E2-RP-01..05 |
+| E-SH-01 | STILL OPEN | Orders and Money still show no count (`useNavCounts.ts`) |
+| E-MN-06 | STILL OPEN | Money and the Month-end pages still sit in the centred 1216 px column; the Month-end frames span the page |
+| E-MN-08 | STILL OPEN | `GstRegisterPage.tsx:315` still says "see Receivables" ("Cash month" in the mockup, now P&L) |
+| E-ST-01 | WIDENED | See E2-ST-01 |
+
+## Counts of NEW items (Part E2)
+
+| Screen | high | medium | low |
+|---|---|---|---|
+| Shell, shared phone patterns | 0 | 1 | 1 |
+| Today (phone) | 0 | 1 | 0 |
+| RFQ board | 0 | 1 | 1 |
+| RFQ detail (phone) | 0 | 1 | 0 |
+| Orders list | 0 | 0 | 1 |
+| Capture | 0 | 0 | 2 |
+| Month-end checklist | 0 | 1 | 2 |
+| Month-end reports | 0 | 0 | 5 |
+| Settings: Team | 0 | 1 | 0 |
+| Settings: Company profile, Categories, Your details, Targets, Change password | 0 | 0 | 0 |
+| Company pages, Reports (P01) | 0 | 0 | 0 |
+| Total | 0 | 6 | 12 |
+
+## NEW items, grouped by screen
+
+### Shell and shared phone patterns
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E2-SH-01 | Phone tab strips show the active tab | The active tab is not scrolled into view. On the Money strip, Margins and Exceptions (m04, m07 at 375) and Month-end sit off the right edge ("Ma..."); on the Settings strip, Company profile, Your details, Exchange rates and Change password are hidden behind "Team, Targets, Expense categories". The person lands on a page whose own tab is not visible | medium | NEW |
+| E2-SH-02 | Settings phone: page sits directly under the tab strip | A blank band of about 120 to 170 px between the tab strip and the page heading on Team, Change password, Your details and Settings home | low | NEW |
+
+### Today (phone, g2-today-b2 frames 4 to 6)
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E2-TD-01 | Date rail under the key figures: labels do not collide | In "just chased", with "Today · Mon 19 Oct" and "Next nudge · Thu 22 Oct" three days apart, the two labels print on top of each other at 375 | medium | NEW |
+
+Frames 4 to 6 otherwise match (target tile first, group headers, 2 by 2 key figures, accordion, toast with Undo, Waiting collapsed).
+
+### RFQ board (no mockup; compared with the DataTable board in g2-components)
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E2-LS-01 | Customer cell is readable | At 1440 the Company column is about 100 px wide while the table has room to spare: "Board pri...", "Board plain ...", and the Owner cell "Test" is cut. Real names will be unreadable | medium | NEW (same cause on the Orders list, E2-LS-03) |
+| E2-LS-02 | Toolbar wraps cleanly | At 375 the filter box, Open / Closed switch, Mine / All switch and the state segments wrap in three rows and the right-hand segments ("Open 7 \| C...") are clipped | low | NEW |
+
+### Orders list (no mockup)
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E2-LS-03 | Customer cell is readable | Customer cut to about 10 characters ("Listcoeiwjg ...") with free width on the right; the filter strip wraps its search box onto a second row at 1440 | low | NEW |
+
+### RFQ detail (phone ranked comparison, `ranking-split-02/03`)
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E2-RD-01 | Each ranked supplier is a compact block: name and price on one line, the PKR figure beside it, lead time and stock together, then the reason line | Each block stacks Supplier, Price, In PKR, Lead time and Stock as separate labelled lines plus the "At entry ... Fresh 0 d" row, about twice the height; a four-supplier item takes about two screens | medium | NEW |
+
+### Capture (all 21 frames compared: 17 phone, 4 desktop)
+Frames 1 to 17 (share sheet, empty state, answer, supplier questions, notes, new RFQ, photo, saved, limits, offline, resizing, save failed, expired, signed-out) match the mockup in structure, copy and states; the "This is a supplier's reply" and "Attach to an order" links are the R22 decision.
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E2-CP-01 | Desktop sheet: the header band and the empty destinations pane are tinted cream; footer hint reads "enter, command, V saves" | Header band and empty pane are white; the hint reads "command, enter saves" | low | NEW |
+| E2-CP-02 | A photo alone shows only the file row (frame e, "Answer with photo") | An empty text box is shown above the file row | low | NEW |
+
+### Month-end checklist (g2-month-end frames 2 to 5, phone 15)
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E2-ME-01 | Every check card carries a data line: "2 money in (PKR 820,000), 5 money out (PKR 526,100), 1 of them from September", "PKR 463,500 in 1 PSID group", "ORD-0034, ORD-0029, ORD-0026", "PKR 481,410 GST not deposited: INV-2291 (Oct), INV-2256 (Sep)"; the last card says "Open ORD-0012" | Cards show the fixed definition ("Bank payments and expenses dated up to month end with no statement month...") and the generic link ("Open receivables"); the phone rows say "Open bank tick" instead of "2 in, 5 out, 1 from Sep". The figures that make the card useful are missing | medium | NEW |
+| E2-ME-02 | No month stepper on the checklist (the month is in the card title and the Closed months list) | A "< Oct 2026 >" stepper sits above the October card | low | NEW |
+| E2-ME-03 | "Reopen" is a plain text link in Closed months | Outlined buttons | low | NEW |
+
+### Month-end reports (g2-month-end frames 6 to 11)
+All six reports match in header, key-figure row, Export CSV and the footnote copy. Differences:
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E2-RP-01 | P&L amounts at two decimals in black ("4,223,300.00", "-736,750.00") | Whole rupees, negatives in red | low | NEW |
+| E2-RP-02 | Expenses by category: second line under each category ("Including owner salary", "Tea, water, biscuits, stationery"); Bank and Cash chips with icons; group rows (Overheads, Order costs, Not in P&L) on a grey band | No second line; plain outline chips; group rows only slightly heavier | low | NEW |
+| E2-RP-03 | We owe: State chips coloured (Owed blue, Settled teal, Paid over amber) with the icons | Plain grey outline chips | low | NEW |
+| E2-RP-04 | Aging: "As of 31 Oct 2026" button | A date field that cuts its text ("Sat 31 Oct 20:") | low | NEW |
+| E2-RP-05 | Team: "Against the Q4 target" has a progress bar under each figure | Figure text only | low | NEW |
+
+### Settings: Team
+| id | mockup | built | sev | status |
+|---|---|---|---|---|
+| E2-ST-01 | Name and email fully shown; "Reactivate" inside the Actions cell; table fills the card | In the current shot the Name column is about 60 px wide: "Test Adm", "admin@te:"; Reactivate is cut at the right edge; the table stops before the card edge; the density toggle sits in the toolbar over the filter note. Phone: the back bar, rows, chip and bottom sheet now match (A-34 to A-36 hold) | medium | NEW (replaces E-ST-01) |
+
+### Settings: Company profile (admin incomplete, filled, sales read-only; 1440 and 375)
+Matches the mockup frame by frame: banner with Add them, red invalid fields with the two inline messages, "Needed for PDFs" notes, Business details, Tax, Bank, Quotations and purchase orders cards, the sales read-only list with "Not set" flags, the "Only an admin can edit" tag, the "View only" tag in the nav, and the save bar. No NEW item.
+
+### Settings: pages with no mockup (KEPT extras, not counted)
+Expense categories, Targets, Your details, Change password, Settings home for sales and engineers, and Exchange rates (placement KEPT in Part C). They follow the Company profile card language; one cosmetic point on Exchange rates is E-XR-01 and E-XR-02.
+
+### Companies list, supplier and customer pages, Reports (P01)
+The Companies list, the supplier "What we know" page and the Reports screen were re-checked at 1440 against the drawn boards where there are any (company boards 1 to 4) and the DataTable pattern where there are none. No NEW item. The 375 shots of the company pages and of Reports were not opened in this pass (the company mockup draws no phone board and Reports has no mockup), so phone parity of those three is still unchecked.
+
+## Fix pickup order
+
+1. E2-SH-01 (tab strips), E2-ST-01 (Team table), E2-LS-01 (list columns), E2-ME-01 (check data lines), E2-RD-01 (phone comparison), E2-TD-01 (date rail).
+2. The Part E list (E-OD-01..03, E-SH-01, E-MN-03, E-XR-01).
+3. Everything low, by screen.
