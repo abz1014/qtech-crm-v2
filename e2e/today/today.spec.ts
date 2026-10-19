@@ -236,7 +236,7 @@ test.describe('Today: role-aware', () => {
     const [r] = await must(rest<{ is_overdue: boolean; payment_state: string }[]>('admin', 'rpc/order_receivables', { method: 'POST', body: { p_order_id: p.order.id } }))
     expect(r).toMatchObject({ is_overdue: true, payment_state: 'overdue' })
     // and the order page says which terms apply
-    await openAs(page, 'admin', `/orders/${p.order.id}`)
+    await page.goto(`/orders/${p.order.id}`)
     await expect(page.getByTestId('order-terms')).toHaveText('Terms 30 days from invoice (default terms)')
   })
 
