@@ -59,7 +59,7 @@ function NextStepText({ step }: { step: NextStep }) {
     <span
       data-tone={step.tone}
       className={cn(
-        'inline-flex items-start gap-1.5 whitespace-normal',
+        'inline-flex items-start gap-[6px] whitespace-normal',
         step.tone === 'late' && 'font-medium text-tone-danger-fg',
         step.tone === 'now' && 'font-medium text-fg',
         (step.tone === 'waiting' || step.tone === 'done') && 'text-fg-muted',
@@ -165,8 +165,9 @@ export default function OrdersListPage() {
   const stepOf = (r: OrderListRow) => steps.get(r.id) ?? listNextStep(r, role, today)
   const columns: Column<OrderListRow>[] = [
     { id: 'customer', header: 'Customer and items', value: r => r.companyName, sortable: true, cell: r => <CustomerCell row={r} /> },
-    { id: 'next', header: 'Next step', value: r => stepOf(r).rank, kind: 'num', align: 'left', sortable: true, cell: r => <NextStepText step={stepOf(r)} /> },
-    { id: 'order', header: 'Order', value: r => r.number, kind: 'num', align: 'left', sortable: true, cell: r => <OrderCell row={r} /> },
+    // text columns sorted by a number (the urgency rank, the order number): compareCells compares text numerically
+    { id: 'next', header: 'Next step', value: r => stepOf(r).rank, sortable: true, cell: r => <NextStepText step={stepOf(r)} /> },
+    { id: 'order', header: 'Order', value: r => r.number, sortable: true, cell: r => <OrderCell row={r} /> },
     ...(money ? ([{ id: 'gross', header: 'Value (PKR)', kind: 'money', value: (r: OrderListRow) => r.gross, sortable: true, hideBelowLg: true }] satisfies Column<OrderListRow>[]) : []),
     {
       id: 'ordered',

@@ -298,7 +298,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                         <span className="num pt-px">{n}</span>
                         <b className="font-medium">{it.description}</b>
                         <span className="num lg:pt-1.5 lg:text-right">{it.qty}</span>
-                        <span className="flex items-center gap-1.5 text-xs lg:pt-1" data-testid={`convert-item-${n}-left-out`}>
+                        <span className="flex items-center gap-[6px] text-xs lg:pt-1" data-testid={`convert-item-${n}-left-out`}>
                           <Icon icon={EyeOff} size="sm" />
                           Not in the quotation. Left out of the order.
                         </span>
@@ -467,7 +467,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
             onCheckedChange={v => setNeedsTouched(v === true)}
           />
 
-          <div className="grid max-w-[360px] gap-1.5">
+          <div className="grid max-w-[360px] gap-[6px]">
             <label htmlFor="convert-po" className="text-sm font-medium">
               Customer PO number <span className="font-regular text-xs text-fg-muted">optional, add it from the order later</span>
             </label>

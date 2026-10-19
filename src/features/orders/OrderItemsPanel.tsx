@@ -153,16 +153,21 @@ export function OrderItemsPanel({
     if (!leg) return <span className="text-fg-muted">No supplier yet</span>
     const st = legState({ placedOn: leg.placedOn, expectedOn: leg.expectedOn, receivedOn: leg.receivedOn, deliveredOn: leg.deliveredOn }, today)
     return (
-      <span className="grid min-w-[140px] max-w-[240px] gap-px whitespace-normal">
-        <span className="break-words">
-          {leg.supplierName}
-          <span className={cn('text-fg-muted', st === 'late' && 'font-medium text-tone-danger-fg')}>{` · ${STATE_WORDS[st]}`}</span>
+      <span className="grid min-w-[140px] max-w-[260px] gap-px whitespace-normal">
+        <span className="break-words">{leg.supplierName}</span>
+        <span className="text-xs text-fg-muted">
+          <span className={cn(st === 'late' && 'font-medium text-tone-danger-fg')}>{STATE_WORDS[st]}</span>
+          {money ? (
+            r.supplierUnitPrice === null ? (
+              ` · ${basisUnknown ? 'price not recorded' : 'price not set'}`
+            ) : (
+              <>
+                {' · '}
+                <span className="num">{`${leg.currency ?? ''} ${formatAmount(r.supplierUnitPrice)}`}</span> each
+              </>
+            )
+          ) : null}
         </span>
-        {money ? (
-          <span className="num text-xs text-fg-muted">
-            {r.supplierUnitPrice === null ? (basisUnknown ? 'price not recorded' : 'price not set') : `${leg.currency ?? ''} ${formatAmount(r.supplierUnitPrice)} each`}
-          </span>
-        ) : null}
       </span>
     )
   }

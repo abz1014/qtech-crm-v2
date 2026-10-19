@@ -40,7 +40,7 @@ import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
 
 /** `sticky`: the phone shows the next step in a bar fixed to the bottom, so the page leaves room for it. */
 function Shell({ children, sticky = false }: { children: ReactNode; sticky?: boolean }) {
-  return <div className={cn('mx-auto w-full max-w-[1440px] px-4 pb-16 pt-4 md:px-8 md:pt-6', sticky && 'max-md:pb-32')}>{children}</div>
+  return <div className={cn('mx-auto w-full max-w-[1440px] px-4 pb-16 pt-4 md:px-8 md:pt-6', sticky && 'max-md:pb-[128px]')}>{children}</div>
 }
 
 /** The loading state in the final layout, so nothing jumps when the data arrives. */

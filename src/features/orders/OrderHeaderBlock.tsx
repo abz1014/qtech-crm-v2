@@ -52,7 +52,7 @@ import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features
 function Cell({ title, icon, children, action }: { title: string; icon: LucideIcon; children: ReactNode; action?: ReactNode }) {
   return (
     <div className="grid min-w-0 content-start justify-items-start gap-2 px-4 py-3 md:px-5 md:py-4">
-      <h2 className="flex items-center gap-1.5 text-sm text-fg-muted">
+      <h2 className="flex items-center gap-[6px] text-sm text-fg-muted">
         <Icon icon={icon} size="sm" />
         {title}
       </h2>
@@ -125,7 +125,7 @@ export function OrderHeaderBlock({
           ? `Planned ${formatShortDate(order.plannedOn, today)}${engineers.length ? ` · ${engineers.map(e => e.name).join(', ')}` : ''}`
           : 'Needs a date'
 
-  const cols = isAdmin ? 'lg:grid-cols-5' : money ? 'lg:grid-cols-4' : 'lg:grid-cols-2'
+  const cols = isAdmin ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
 
   return (
     // data-slot="order-actions": every order-level action (the next step, Create invoice, Record payment) is inside the header, once.
@@ -190,13 +190,15 @@ export function OrderHeaderBlock({
         <NextStep order={order} primary={primary} legs={legs} onResolve={() => setResolving(true)} waiting={waitingText({ legs, needsCommissioning: order.needsCommissioning, plannedOn: order.plannedOn, doneOn: order.doneOn, invoicing: s?.invoicing ?? null, balance: m?.balance ?? null, role })} />
       ) : null}
 
+      {isEngineer ? null : (
       <div className={`mt-4 grid grid-cols-2 rounded border bg-surface lg:divide-x ${cols} [&>*]:border-b [&>*]:border-line lg:[&>*]:border-b-0 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1`} aria-label="State of this order">
         <Cell title="Goods" icon={Package}>
-          {s?.goods ? <StatusBadge dimension="goods" value={s.goods} /> : null}
+          {s?.goods && s.goods !== 'n_a' ? <StatusBadge dimension="goods" value={s.goods} /> : null}
           <p className="text-sm text-fg-2">{goodsLine(legs, today)}</p>
         </Cell>
         <Cell title="Commissioning" icon={Wrench}>
-          {s?.commissioning ? <StatusBadge dimension="commissioning" value={s.commissioning} /> : null}
+          {/* no 'n/a' chip: the line says there is none */}
+          {s?.commissioning && s.commissioning !== 'n_a' ? <StatusBadge dimension="commissioning" value={s.commissioning} /> : null}
           <p className="text-sm text-fg-2">{commissioningLine}</p>
         </Cell>
         {money ? (
@@ -206,14 +208,20 @@ export function OrderHeaderBlock({
             action={!cancelled && primary?.kind !== 'create-invoice' && s?.invoicing !== 'fully_invoiced' ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
           >
             {s?.invoicing ? <StatusBadge dimension="invoicing" value={s.invoicing} /> : null}
-            <p className="num text-sm text-fg-2" data-testid="order-invoiced">
-              {gross === null
-                ? ''
-                : (invoiced ?? 0) <= 0
-                  ? `PKR ${formatAmount(gross)} to invoice`
-                  : (invoiced ?? 0) >= gross
-                    ? `Invoiced ${formatAmount(invoiced ?? 0)}`
-                    : `Invoiced ${formatAmount(invoiced ?? 0)} of ${formatAmount(gross)}`}
+            <p className="text-sm text-fg-2" data-testid="order-invoiced">
+              {gross === null ? null : (invoiced ?? 0) <= 0 ? (
+                <>
+                  PKR <span className="num">{formatAmount(gross)}</span> to invoice
+                </>
+              ) : (invoiced ?? 0) >= gross ? (
+                <>
+                  Invoiced <span className="num">{formatAmount(invoiced ?? 0)}</span>
+                </>
+              ) : (
+                <>
+                  Invoiced <span className="num">{formatAmount(invoiced ?? 0)}</span> of <span className="num">{formatAmount(gross)}</span>
+                </>
+              )}
             </p>
           </Cell>
         ) : null}
@@ -225,16 +233,16 @@ export function OrderHeaderBlock({
             ) : !m ? (
               <p className="text-sm text-fg-muted">The balance did not load. Reload to try again.</p>
             ) : (
-              <p className="num grid gap-px text-sm text-fg-2">
+              <p className="grid gap-px text-sm text-fg-2">
                 {m.settled > 0 ? (
-                  <span>Received {formatAmount(m.settled)}</span>
-                ) : (
-                  <span data-testid="payments-empty" className="font-sans">
-                    Nothing received yet
+                  <span>
+                    Received <span className="num">{formatAmount(m.settled)}</span>
                   </span>
+                ) : (
+                  <span data-testid="payments-empty">Nothing received yet</span>
                 )}
                 <span>
-                  Balance <b className="font-medium text-fg" data-testid="order-balance">{formatAmount(m.balance)}</b>
+                  Balance <b className="num font-medium text-fg" data-testid="order-balance">{formatAmount(m.balance)}</b>
                   {m.dueOn && m.balance > 0 ? <span className={cn(m.paymentState === 'overdue' && 'text-tone-danger-fg')}> · due {formatShortDate(m.dueOn, today)}</span> : null}
                 </span>
               </p>
@@ -244,12 +252,21 @@ export function OrderHeaderBlock({
         {isAdmin ? (
           <Cell title="Costs" icon={ClipboardCheck}>
             {m?.costsState ? <StatusBadge dimension="costs" value={m.costsState} /> : null}
-            <p className="num text-sm text-fg-2">
-              {m ? `Paid out ${formatAmount(m.actualCost ?? 0)}${m.expectedCost !== null ? ` of ${formatAmount(m.expectedCost)}` : ''}` : ''}
-            </p>
+            {m ? (
+              <p className="text-sm text-fg-2">
+                Paid out <span className="num">{formatAmount(m.actualCost ?? 0)}</span>
+                {m.expectedCost !== null ? (
+                  <>
+                    {' of '}
+                    <span className="num">{formatAmount(m.expectedCost)}</span>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
           </Cell>
         ) : null}
       </div>
+      )}
 
       {resolving ? <ResolveBasisDialog order={order} items={items} money={orderMoney} onClose={() => setResolving(false)} /> : null}
     </header>
@@ -423,9 +440,9 @@ function EngineerJob({ order, engineers, primary, legs, today }: { order: OrderH
   const phone = order.contact?.phone ?? null
   return (
     <section aria-label="Your job" className="mt-4 grid gap-3 rounded border border-line-strong bg-surface px-4 py-4 md:px-5">
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:gap-6">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] md:gap-6">
         <div className="grid min-w-0 content-start gap-1">
-          <span className="flex items-center gap-1.5 text-sm text-fg-muted">
+          <span className="flex items-center gap-[6px] text-sm text-fg-muted">
             <Icon icon={MapPin} size="sm" /> Site
           </span>
           <span className="font-medium">{order.site?.name ?? <span className="font-regular text-fg-muted">Not set</span>}</span>
@@ -443,7 +460,7 @@ function EngineerJob({ order, engineers, primary, legs, today }: { order: OrderH
           ) : null}
         </div>
         <div className="grid min-w-0 content-start gap-1">
-          <span className="flex items-center gap-1.5 text-sm text-fg-muted">
+          <span className="flex items-center gap-[6px] text-sm text-fg-muted">
             <Icon icon={Wrench} size="sm" /> Commissioning
           </span>
           {order.needsCommissioning ? (
@@ -454,6 +471,13 @@ function EngineerJob({ order, engineers, primary, legs, today }: { order: OrderH
           ) : (
             <span className="text-fg-2">None on this order. Supply only.</span>
           )}
+        </div>
+        <div className="grid min-w-0 content-start justify-items-start gap-1">
+          <span className="flex items-center gap-[6px] text-sm text-fg-muted">
+            <Icon icon={Package} size="sm" /> Goods
+          </span>
+          {order.state?.goods ? <StatusBadge dimension="goods" value={order.state.goods} /> : null}
+          <span className="text-sm text-fg-2">{goodsLine(legs, today)}</span>
         </div>
       </div>
       {primary || showDate ? (
