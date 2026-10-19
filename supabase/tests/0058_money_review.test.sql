@@ -126,6 +126,7 @@ set local role authenticated;
 select is((select net_in from public.v_month_pnl where month = '2026-01-01'), 1000.00::numeric, 'D-MR2: January before the close: net in 1,000');
 reset role;
 create temp table jan_status_before as select check_key, n from public.month_end_status('2026-01-01');
+grant select on jan_status_before to authenticated;
 set local role authenticated;
 select lives_ok($$select public.close_month('2026-01-01')$$, 'D-MR2: January closes');
 select ok((select frozen and frozen_at is not null and net_in = 1000.00 and overheads = 100.00 and result = 900.00
