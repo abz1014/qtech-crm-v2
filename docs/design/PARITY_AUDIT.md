@@ -933,18 +933,18 @@ Main at `778084b` (Merge p8/import-rules). Read-only; no product code changed. O
 ### RFQ intake
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-IN-01 | Step 2 "Items" header right side: "4 items · bid due Thu 3 Dec" | "2 items" only | low | NEW |
-| E-IN-02 | Item chips start with a small numbered circle | Plain number, no circle | low | NEW |
+| E-IN-01 | Step 2 "Items" header right side: "4 items · bid due Thu 3 Dec" | "2 items" only | low | FIXED 4a02499 (the line was already drawn whenever a bid due date is entered; the audit shot had none) |
+| E-IN-02 | Item chips start with a small numbered circle | Plain number, no circle | low | FIXED 4a02499 |
 
 ### RFQ detail
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-RD-01 | Header has two buttons: Issue quotation and Bid and close; Mark won lives in the menus | Header also carries a direct "Mark won" button beside "Mark bid sent" (only Mark bid sent was KEPT for FE-2, C-07) | low | NEW (owner to confirm; same one-tap argument as Mark bid sent) |
+| E-RD-01 | Header has two buttons: Issue quotation and Bid and close; Mark won lives in the menus | Header also carries a direct "Mark won" button beside "Mark bid sent" (only Mark bid sent was KEPT for FE-2, C-07) | low | KEPT (owner: the direct Mark won button stays) |
 
 ### Quotation dialog and PDF
 | id | mockup | built | sev | status |
 |---|---|---|---|---|
-| E-QT-01 | "Prepared by Ayesha Rana" (name only) | "Prepared by Test Sales, +92 300 1234567" (phone added; the signature block already carries it) | low | NEW |
+| E-QT-01 | "Prepared by Ayesha Rana" (name only) | "Prepared by Test Sales, +92 300 1234567" (phone added; the signature block already carries it) | low | FIXED 4a02499 |
 
 ### Convert dialog (Mark won)
 | id | mockup | built | sev | status |
