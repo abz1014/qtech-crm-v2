@@ -49,6 +49,8 @@ describe('invalidation map (R01)', () => {
     'target.save': {},
     'category.save': {},
     'bank.tick': {},
+    'month.close': { month: '2026-10' },
+    'month.reopen': { month: '2026-10' },
     'site.update': { companyId: 'c1' },
     'site.remove': { companyId: 'c1' },
     'contact.update': { companyId: 'c1' },
@@ -122,7 +124,7 @@ describe('invalidation map (R01)', () => {
   it('a target write refreshes the admin grid and the signed-in person\'s own Today tile; a category write refreshes the category list', () => {
     expect(keysFor('target.save', {})).toEqual([qk.settings.targets(), qk.today.target()])
     expect(keysFor('category.save', {})).toEqual([qk.settings.categories(), qk.money.categories()])
-    expect(keysFor('bank.tick', {})).toEqual([qk.money.bank.all])
+    expect(keysFor('bank.tick', {})).toEqual([qk.money.bank.all, qk.money.monthEnd.all])
     // the grid's two reads sit under the one prefix that is invalidated
     expect(qk.settings.targetRows(2026).slice(0, 2)).toEqual(qk.settings.targets())
     expect(qk.settings.targetProgress(2026).slice(0, 2)).toEqual(qk.settings.targets())

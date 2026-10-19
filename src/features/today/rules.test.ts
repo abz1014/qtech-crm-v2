@@ -100,6 +100,8 @@ const ord = (o: Partial<OrderFact> = {}): OrderFact => ({
   goodsState: 'delivered',
   commissioningState: 'n_a',
   invoicingState: 'not_invoiced',
+  toInvoice: null,
+  lastInvoicedOn: null,
   deliveredOn: '2026-11-20',
   ...o,
 })
@@ -658,16 +660,82 @@ describe('rule: order rules (O05)', () => {
     const [e] = ruleDeliveredNotInvoiced(ctx({ orders: [ord()] }))
     expect(e).toMatchObject({ rule: 'delivered_not_invoiced', tab: 'money', ref: 'ORD-0038', actionDueOn: '2026-11-23' })
   })
-  it('delivered, not invoiced waits for commissioning, skips part and fully invoiced, and orders with nothing to deliver', () => {
-    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ commissioningState: 'to_plan' })] }))).toEqual([])
-    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ commissioningState: 'planned' })] }))).toEqual([])
+  it('delivered, not invoiced waits for the goods, skips fully invoiced, and orders with nothing to deliver', () => {
     expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ commissioningState: 'done' })] }))).toHaveLength(1)
     expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ goodsState: 'on_order' })] }))).toEqual([])
     expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ goodsState: 'partly_delivered' })] }))).toEqual([])
-    expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ invoicingState: 'part' })] }))).toEqual([])
     expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ invoicingState: 'fully_invoiced' })] }))).toEqual([])
     expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ goodsState: 'n_a', commissioningState: 'n_a' })] }))).toEqual([])
   })
+  describe('commissioning not marked done (a missing Mark done must not hide the invoice)', () => {
+    const noMark = (o: Partial<OrderFact> = {}) => ord({ commissioningState: 'planned', deliveredOn: '2026-11-25', ...o })
+    it('does not fire before the wait, and fires on the fifth working day after the delivery with a title that says so', () => {
+      expect(THRESHOLDS.invoiceDespiteCommissioningDays).toBe(5)
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [noMark()] }))).toEqual([]) // delivered Wed 25: due Wed 2 Dec; Fri 27 is early
+      const [e] = ruleDeliveredNotInvoiced(ctx({ orders: [noMark()], today: '2026-12-02' }))
+      expect(e).toMatchObject({ rule: 'delivered_not_invoiced', title: 'Delivered, not invoiced (commissioning not marked done)', actionDueOn: '2026-12-02', group: 'now' })
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [noMark({ commissioningState: 'to_plan' })], today: '2026-12-03' }))).toHaveLength(1)
+    })
+    it('marking commissioning done brings back the one-day wait and the plain title', () => {
+      const [e] = ruleDeliveredNotInvoiced(ctx({ orders: [noMark({ commissioningState: 'done' })] }))
+      expect(e.title).toBe('Delivered, not invoiced')
+    })
+    it('a service-only order with commissioning not done has no delivery to count from and is not raised', () => {
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [noMark({ goodsState: 'n_a', commissioningState: 'planned', deliveredOn: null })], today: '2026-12-20' }))).toEqual([])
+    })
+    it('routes as before: the sales owner, else admin, never an engineer', () => {
+      const o = noMark()
+      const today = '2026-12-03'
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [o], today }, 'sales'))).toHaveLength(1)
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [{ ...o, ownerId: OTHER }], today }, 'sales'))).toEqual([])
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [{ ...o, ownerId: 'u-eng' }], today }, 'admin'))).toHaveLength(1)
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [{ ...o, ownerId: OTHER }], today }, 'admin'))).toEqual([])
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [o], today }, 'engineer'))).toEqual([])
+    })
+    it('can be snoozed', () => {
+      const v = buildToday(ctx({ orders: [noMark()], today: '2026-12-03', snoozes: [{ rule: 'delivered_not_invoiced', subjectId: 'ord1', untilOn: '2026-12-08' }] }))
+      expect(v.active).toEqual([])
+    })
+  })
+
+  describe('part-invoiced orders (the rest is not forgotten)', () => {
+    const part = (o: Partial<OrderFact> = {}) => ord({ invoicingState: 'part', toInvoice: 120_500, lastInvoicedOn: '2026-11-20', ...o })
+    it('is raised three working days after the last invoice, with the amount still to invoice', () => {
+      expect(THRESHOLDS.invoicePartDays).toBe(3)
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [part({ lastInvoicedOn: '2026-11-26' })] }))).toEqual([]) // Thu 26 + 3 = Tue 1 Dec
+      const [e] = ruleDeliveredNotInvoiced(ctx({ orders: [part()] }))
+      expect(e).toMatchObject({ rule: 'delivered_not_invoiced', title: 'Partly invoiced: PKR 120,500 still to invoice', actionDueOn: '2026-11-25', tab: 'money' })
+    })
+    it('waits for the goods; a fully invoiced order is never raised', () => {
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [part({ goodsState: 'on_order' })] }))).toEqual([])
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [part({ invoicingState: 'fully_invoiced', toInvoice: null })] }))).toEqual([])
+    })
+    it('falls back to the delivery date when the last invoice date is unknown, and to a plain line without an amount', () => {
+      const [e] = ruleDeliveredNotInvoiced(ctx({ orders: [part({ lastInvoicedOn: null, toInvoice: null })] }))
+      expect(e.title).toBe('Partly invoiced: the rest is still to invoice')
+      expect(e.actionDueOn).toBe('2026-11-25') // delivered 20 Nov + 3 working days
+    })
+    it('goes to the sales owner, else admin, never an engineer, and can be snoozed', () => {
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [part()] }, 'sales'))).toHaveLength(1)
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [part({ ownerId: OTHER })] }, 'sales'))).toEqual([])
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [part({ ownerId: 'u-eng' })] }, 'admin'))).toHaveLength(1)
+      expect(ruleDeliveredNotInvoiced(ctx({ orders: [part()] }, 'engineer'))).toEqual([])
+      expect(buildToday(ctx({ orders: [part()], snoozes: [{ rule: 'delivered_not_invoiced', subjectId: 'ord1', untilOn: '2026-12-01' }] })).active).toEqual([])
+    })
+  })
+
+  describe('stale legs and orders with no PO', () => {
+    it('goods late fires for a leg whose expected date is months past and is not delivered', () => {
+      const [e] = ruleGoodsLate(ctx({ legs: [leg({ expectedOn: '2026-08-27' })] }))
+      expect(e).toMatchObject({ rule: 'goods_late', title: 'Goods 92 days late from supplier', group: 'now' })
+      expect(e.badge.tone).toBe('danger')
+    })
+    it('place PO fires for a won order whose leg has no PO, however old, and not once the PO is placed', () => {
+      expect(rulePlacePo(ctx({ legs: [leg({ placedOn: null, orderedOn: '2026-08-01' })] }))[0]).toMatchObject({ rule: 'place_po', group: 'ready' })
+      expect(rulePlacePo(ctx({ legs: [leg({ placedOn: '2026-08-02' })] }))).toEqual([])
+    })
+  })
+
   it('delivered, not invoiced is never given to an engineer, whoever owns the order or whatever the state says', () => {
     expect(ruleDeliveredNotInvoiced(ctx({ orders: [ord({ ownerId: ME })] }, 'engineer'))).toEqual([])
     const v = buildToday(ctx({ orders: [ord({ ownerId: ME })] }, 'engineer'))
