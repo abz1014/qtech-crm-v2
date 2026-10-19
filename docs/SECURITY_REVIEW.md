@@ -61,8 +61,8 @@ shares it sends the altered file. The database row stays "issued and frozen", so
 3. `lock_issued_document()`: staff can attach the first PDF (NULL to a path) or write the same path again; changing or
    clearing an attached path is admin only (errcode 42501). Writes with no signed-in user are not limited.
 
-**Proof.** pgTAP `0057_security_hardening.test.sql` part 1 (engineer and sales refused on overwrite, move, upsert,
-re-point and clear; first attach and unreferenced objects still work; deactivated writes nothing; admin can still do
+**Proof.** pgTAP `0057_security_hardening.test.sql` part 1 (engineer and sales refused on overwrite, move,
+re-point and clear (an upload with upsert onto an existing object is checked by the same UPDATE policy); first attach and unreferenced objects still work; deactivated writes nothing; admin can still do
 all of it) and S14 rows `generated-docs [issued]` (admin SU, sales S, engineer S), `quotations [pdf_attached]` and
 `purchase_orders [pdf_attached]` (U admin only).
 
