@@ -278,6 +278,23 @@ test.describe('what is required and what is pre-filled (FE-2)', () => {
   })
 })
 
+test.describe('a polite WhatsApp paste is not lost (audit E1)', () => {
+  test('"Please quote 2 nos ..." gives an item; the courtesy line under it is skipped', async ({ page }) => {
+    const customer = await createCompany(uniqueName('Polite Paste'))
+    await openAs(page, 'sales', '/rfqs/new')
+    await pickCompany(page, customer.name)
+    await paste(page, 'Sir please quote 2 nos pressure transmitter 0-10 bar\nKindly share best price')
+    await expect(page.getByText('1 item found in 2 lines').first()).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue('pressure transmitter 0-10 bar')
+    await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue('2 nos')
+    await page.getByRole('button', { name: 'Save without floating' }).click()
+    await expect(page.getByText(/is saved/)).toBeVisible()
+    const [rfq] = await rfqsOf(customer.id)
+    const items = await itemsOf(rfq.id)
+    expect(items.map(i => [i.description, i.qty, i.unit])).toEqual([['pressure transmitter 0-10 bar', 2, 'nos']])
+  })
+})
+
 test.describe('save only, and no supplier ticked', () => {
   test('a company with no suppliers on file saves without floating: no inquiry, nothing sent', async ({ page }) => {
     const customer = await createCompany(uniqueName('Nobody Knows'))
