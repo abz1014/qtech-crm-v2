@@ -269,7 +269,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       {justChased && item.waiting ? (
         <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded border border-tone-success-fg/25 bg-tone-success-bg px-4 py-3 text-sm text-tone-success-fg">
           <Icon icon={Hourglass} />
-          <span className="min-w-0 flex-1 basis-60">
+          <span className="min-w-0 flex-1 basis-[15rem]">
             <b className="font-semibold">Moved to Waiting.</b> It comes back to your list on {formatDay(item.waiting.nextNudgeOn)}, or sooner if {replyWho(item)}.
           </span>
           {nextItem && onSelect ? (
