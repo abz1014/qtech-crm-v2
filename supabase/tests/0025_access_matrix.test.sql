@@ -239,7 +239,10 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('bucket', 'rfq-files',        '',  'SIUD', 'SIUD', 'SIUD'),           -- s10 "attachments (RFQ/clarification)": bucket rfq-files, same rules
   ('bucket', 'gst-receipts',     '',  'SIUD', 'SIUD', ''),               -- s10 "attachments (invoice)": bucket gst-receipts, admin and sales
   ('bucket', 'generated-docs',   '',  'SIUD', 'SIU',  'SIU'),            -- s10 "bucket generated-docs" (D admin only, A5)
-  ('bucket', 'expense-receipts', '',  'SIUD', '',     '');               -- A6 s10 "attachments (parent is an expense)": bucket expense-receipts, admin only
+  ('bucket', 'expense-receipts', '',  'SIUD', '',     ''),               -- A6 s10 "attachments (parent is an expense)": bucket expense-receipts, admin only
+  ('bucket', 'generated-docs',   'issued',  'SU', 'S',  'S'),            -- 0057 (H-1): a PDF an issued quotation or PO points at is overwritten by an admin only
+  ('table', 'quotations',        'pdf_attached', 'U', '', ''),           -- 0057 (H-1): once a PDF is attached, only an admin re-points or clears pdf_path
+  ('table', 'purchase_orders',   'pdf_attached', 'U', '', '');           -- 0057 (H-1): same for a supplier PO
 
 -- ------------------------------------------------------------------ fixtures (as the table owner, admin claims)
 -- Row ids are written in hex and appear in the probes as @NN (same two hex digits).
@@ -318,6 +321,10 @@ update public.orders set legacy_flags = '{value_basis_unknown}' where id = pg_te
 insert into storage.objects (bucket_id, name) values
   ('rfq-files', 'fixture.txt'), ('gst-receipts', 'fixture.txt'), ('generated-docs', 'fixture.txt'),
   ('expense-receipts', 'fixture.txt');
+-- 0057 (H-1): quotation @3a and PO @3b are issued with their PDF attached.
+insert into storage.objects (bucket_id, name) values ('generated-docs', 'm/q.pdf'), ('generated-docs', 'm/p.pdf');
+update public.quotations set pdf_path = 'm/q.pdf' where id = pg_temp.f('3a');
+update public.purchase_orders set pdf_path = 'm/p.pdf' where id = pg_temp.f('3b');
 
 -- ------------------------------------------------------------------ probes: tables
 -- Generated probes for the simple cases: S (select), U (touch one column to its own value), D (delete the leaf row).
@@ -479,6 +486,13 @@ select b, '', 'D', format($q$select 1 from storage.objects where bucket_id = '%s
   (select string_agg('(' || coalesce(pl.qual, 'false') || ')', ' or ') from pg_policies pl
    where pl.schemaname = 'storage' and pl.tablename = 'objects' and pl.cmd = 'DELETE'))
 from unnest(array['rfq-files','gst-receipts','generated-docs','expense-receipts']) b;
+
+-- 0057 (H-1): issued PDFs and attached pdf_path values.
+insert into probes values
+  ('generated-docs', 'issued', 'S', $q$select 1 from storage.objects where bucket_id = 'generated-docs' and name = 'm/q.pdf'$q$),
+  ('generated-docs', 'issued', 'U', $q$update storage.objects set name = name where bucket_id = 'generated-docs' and name = 'm/q.pdf'$q$),
+  ('quotations', 'pdf_attached', 'U', $q$update public.quotations set pdf_path = 'm/other.pdf' where id = @3a$q$),
+  ('purchase_orders', 'pdf_attached', 'U', $q$update public.purchase_orders set pdf_path = 'm/other.pdf' where id = @3b$q$);
 
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
