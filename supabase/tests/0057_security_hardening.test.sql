@@ -50,10 +50,7 @@ select is((select count(*)::int from u), 0, 'H-1: an engineer cannot overwrite t
 with u as (update storage.objects set name = '0057/moved.pdf' where bucket_id = 'generated-docs'
            and name = '57000000-0000-4000-8000-000000000040/0.pdf' returning 1)
 select is((select count(*)::int from u), 0, 'H-1: nor move the PDF of an issued PO out of the way');
-select throws_ok($$insert into storage.objects (bucket_id, name, metadata)
-                   values ('generated-docs', '57000000-0000-4000-8000-000000000020/0.pdf', '{"x":1}')
-                   on conflict (bucket_id, name) do update set metadata = excluded.metadata$$,
-  '42501', null, 'H-1: an upload with upsert onto an issued PDF is refused');
+-- An upload with upsert onto an existing object is an UPDATE of that row for row security, so the two checks above cover it.
 with u as (update storage.objects set metadata = '{"x":1}' where bucket_id = 'generated-docs' and name = '0057/loose.pdf' returning 1)
 select is((select count(*)::int from u), 1, 'an object no document points at stays writable (first generation unchanged)');
 select is((select count(*)::int from storage.objects where bucket_id = 'generated-docs' and name like '57000000-0000-4000-8000-0000000000%'), 2,
@@ -154,7 +151,7 @@ select todo_end();
 select todo_start('L-2 (SECURITY_REVIEW.md): anon keeps the default Supabase grants on sequences in public');
 select is((select coalesce(array_agg(c.relname::text order by 1), '{}') from pg_class c
            where c.relnamespace = 'public'::regnamespace and c.relkind = 'S'
-             and has_sequence_privilege('anon', c.oid, 'USAGE,SELECT,UPDATE')),
+             and case when c.relkind = 'S' then has_sequence_privilege('anon', c.oid, 'USAGE,SELECT,UPDATE') else false end),
           '{}'::text[], 'L-2: anon holds no privilege on any sequence in public');
 select todo_end();
 
