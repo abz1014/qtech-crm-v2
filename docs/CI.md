@@ -30,6 +30,8 @@ one after another, resetting the database between them.
 
 The `capture` suite (R22, `e2e/capture/`) is a database suite like the others (reset, then the same build) but runs with service workers allowed, because the Android share target is a POST the worker answers. The `pwa` suite (R21, `e2e/pwa/`) needs no database and no reset: it reuses the same production build to check the manifest, the service worker, its shell-only precache, offline open and Chrome's installability. It is the only project with service workers allowed. Lighthouse is not run (version 12 dropped the PWA audit); Chrome's own installability check replaces it.
 
+The `journeys` suite (P03, `e2e/journeys/`) is the regression net: three whole working days, one spec per role (sales: a pasted enquiry to a payment on the books; engineer: Today to delivered, with a network-log check that no money is ever requested or returned; admin: burst expenses, bank tick, margins, close and reopen a month), each holding every step to its FE-2 interaction count. It runs whenever `src/**` or any other shared path changes (the `all` rule above), or when `e2e/journeys/**` changes, after its own database reset, and installs poppler to read the stored PDFs. Each role signs in once and the saved session is reused (`e2e/journeys/support.ts`). A count over its target is reported as a soft failure naming the step, the count and the target.
+
 Add a suite: a project in `playwright.config.ts`, a filter and an output in `e2e.yml`, a step.
 Locally, several at once: `E2E_SUITE=db npx playwright test --project=auth --project=companies`.
 

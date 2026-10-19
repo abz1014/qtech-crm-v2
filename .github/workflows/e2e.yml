@@ -1,7 +1,7 @@
 name: E2E
 
 # ONE Supabase stack boot and ONE build for every database-backed suite (auth, companies, rfq-board,
-# rfq-intake, rfq-detail, rfq-quotation, today, search, rfq-memory, rfq-ranking, settings-admin, orders, capture, pwa). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
+# rfq-intake, rfq-detail, rfq-quotation, today, search, rfq-memory, rfq-ranking, settings-admin, orders, capture, journeys, pwa). A small `changes` job picks the suites whose paths changed; the `e2e` job boots
 # once and runs only those, one after another, with a database reset between them.
 # Pushes to main and manual runs (Actions, E2E, Run workflow) run every suite. See docs/CI.md.
 # No pull_request trigger: a push to a PR branch already runs this, and a second run doubled the minutes.
@@ -55,6 +55,7 @@ jobs:
       reports: ${{ steps.final.outputs.reports }}
       bank: ${{ steps.final.outputs.bank }}
       money_costs: ${{ steps.final.outputs.money_costs }}
+      journeys: ${{ steps.final.outputs.journeys }}
       any: ${{ steps.final.outputs.any }}
     steps:
       - uses: actions/checkout@v7
@@ -109,6 +110,8 @@ jobs:
               - 'e2e/settings/**'
             money_books:
               - 'e2e/money-books/**'
+            journeys:
+              - 'e2e/journeys/**'
             pwa:
               - 'e2e/pwa/**'
               - 'public/manifest.webmanifest'
@@ -137,6 +140,7 @@ jobs:
           S_REPORTS: ${{ steps.filter.outputs.reports }}
           S_BANK: ${{ steps.filter.outputs.bank }}
           S_MONEY_COSTS: ${{ steps.filter.outputs.money_costs }}
+          S_JOURNEYS: ${{ steps.filter.outputs.journeys }}
         run: |
           all=false
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$GITHUB_REF" = "refs/heads/main" ] || [ "$SHARED" = "true" ]; then all=true; fi
@@ -179,6 +183,9 @@ jobs:
           echo "money_costs=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           v=$S_MONEY_BOOKS; if [ "$all" = "true" ]; then v=true; fi
           echo "money_books=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
+          # The journeys are the regression net: `all` is true whenever src/** (or any shared path) changed, so they run on every such push.
+          v=$S_JOURNEYS; if [ "$all" = "true" ]; then v=true; fi
+          echo "journeys=$v" >> "$GITHUB_OUTPUT"; [ "$v" = "true" ] && any=true
           echo "any=$any" >> "$GITHUB_OUTPUT"
 
   e2e:
@@ -417,6 +424,20 @@ jobs:
         run: |
           eval "$(npx supabase status -o env | sed 's/^/export /')"
           E2E_SUITE=money-books REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/money-books npx playwright test --project=money-books --output=test-results/money-books
+
+      - name: PDF tools for the journeys suite (poppler, to read the stored quotation and PO PDFs)
+        if: ${{ !cancelled() && needs.changes.outputs.journeys == 'true' }}
+        run: command -v pdftoppm && command -v pdftotext || (sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils)
+
+      - name: Reset database (journeys)
+        if: ${{ !cancelled() && needs.changes.outputs.journeys == 'true' }}
+        run: npx supabase db reset --local
+
+      - name: Playwright (journeys project)
+        if: ${{ !cancelled() && needs.changes.outputs.journeys == 'true' }}
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          E2E_SUITE=journeys REVIEW_DIR=review-shots PLAYWRIGHT_HTML_REPORT=playwright-report/journeys npx playwright test --project=journeys --output=test-results/journeys
 
       - name: Playwright (pwa project, no database reset needed)
         if: ${{ !cancelled() && needs.changes.outputs.pwa == 'true' }}
