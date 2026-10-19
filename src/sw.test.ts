@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * call, or any other origin, and the worker must not add a fetch listener of its own.
  */
 const SUPABASE = 'https://yafbphagorydbitfgfmg.supabase.co'
-const ORIGIN = 'https://qtechcrm.vercel.app'
+const ORIGIN = 'https://qtech-crm-v2.vercel.app'
 
 type Matcher = (ctx: { request: { mode: string; url: string; method?: string }; url: URL }) => boolean
 const registerRoute = vi.fn<(m: Matcher, h: unknown, method?: string) => void>()

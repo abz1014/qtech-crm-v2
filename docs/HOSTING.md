@@ -17,6 +17,8 @@ The app is a static Vite build. It is hosted on Vercel (Hobby plan). The owner a
 4. Deploy.
 5. Paste the `https://<name>.vercel.app` address (or the custom domain) to the team; it is the production URL used below.
 
+**Production (since 2026-10-19):** `https://qtech-crm-v2.vercel.app`, Vercel Hobby account `abz1014sajid-7491s-projects`, project `qtech-crm-v2`, deploying `main` only. The earlier `qtechcrm.vercel.app` (old Vercel account) is retired and is not an allowed origin.
+
 ### Headers and routing (`vercel.json`)
 
 - `vercel.json` holds the security headers (HSTS, CSP, Permissions-Policy, nosniff, X-Frame-Options, Referrer-Policy), long immutable caching for `/assets/*`, and an SPA rewrite that serves `/index.html` for every path that is not a file.

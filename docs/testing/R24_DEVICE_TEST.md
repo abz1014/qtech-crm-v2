@@ -10,7 +10,7 @@ Count your taps in Part A step A8 and Part B step B6 (a tap is one touch of the 
 
 ## Part A: Android phone, Chrome (about 8 minutes)
 
-**A1. Open the app.** Open Chrome. Type `qtechcrm.vercel.app` and go. Sign in with your Q-Tech login.
+**A1. Open the app.** Open Chrome. Type `qtech-crm-v2.vercel.app` and go. Sign in with your Q-Tech login.
 - You should see the Q-Tech CRM home screen with a green **Capture** button at the top. [ ]
 - If it doesn't work, screenshot and send.
 
@@ -51,7 +51,7 @@ Count your taps in Part A step A8 and Part B step B6 (a tap is one touch of the 
 
 iPhone cannot share into Q-Tech from other apps, so you copy in the other app and paste into Capture. This is expected.
 
-**B1. Open the app.** Open **Safari** (not Chrome). Go to `qtechcrm.vercel.app` and sign in.
+**B1. Open the app.** Open **Safari** (not Chrome). Go to `qtech-crm-v2.vercel.app` and sign in.
 - You should see the home screen with the green **Capture** button. [ ]
 - If it doesn't work, screenshot and send.
 
