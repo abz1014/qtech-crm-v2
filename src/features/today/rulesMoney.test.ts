@@ -93,7 +93,7 @@ describe('M08 costs incomplete (admin only)', () => {
   it('is one item for paid orders whose costs are provisional', () => {
     const e = ruleCostsIncomplete(ctx({ costs: [cost(), cost({ orderId: 'o2', orderNumber: 30 })] }))
     expect(e).toHaveLength(1)
-    expect(e[0]).toMatchObject({ rule: 'costs_incomplete', tab: 'money', title: 'Costs not marked complete on 2 paid orders', group: 'ready', href: '/money/margins' })
+    expect(e[0]).toMatchObject({ rule: 'costs_incomplete', tab: 'money', title: 'Costs not marked complete on 2 paid orders', group: 'ready', href: '/money/margins?filter=paid-provisional' })
     expect(e[0].subjectId).toBe(ROLLUP_SUBJECT.costs_incomplete)
   })
   it('says how many have no expected cost', () => {

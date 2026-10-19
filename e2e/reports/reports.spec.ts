@@ -31,7 +31,12 @@ async function seed(): Promise<Seed> {
 function watch(page: Page) {
   const urls: string[] = []
   const bodies: string[] = []
-  page.on('request', r => urls.push(r.url()))
+  // Only what the Reports page itself asks for: the landing page the login passes through (Today) reads money for admin and sales.
+  let onReports = false
+  page.on('framenavigated', f => {
+    if (f === page.mainFrame()) onReports = /\/reports(\?|$)/.test(new URL(f.url()).pathname)
+  })
+  page.on('request', r => onReports && urls.push(r.url()))
   page.on('response', async r => {
     if (!r.url().includes('/rest/v1/v_report_')) return
     try {

@@ -20,7 +20,12 @@ export interface MarginRow {
   actualCost: number
   margin: number | null
   state: MarginState
+  /** v_order_money.payment_state (unpaid, part, settled, overdue); lets the list show "paid, costs provisional". */
+  paymentState?: string
 }
+
+/** An order paid in full whose costs are still provisional (the Today item "Costs not marked complete" lists these). */
+export const isPaidProvisional = (r: Pick<MarginRow, 'state' | 'paymentState'>): boolean => r.state === 'provisional' && r.paymentState === 'settled'
 
 export interface MarginTotals {
   /** Orders with costs marked complete: the only ones added up. */

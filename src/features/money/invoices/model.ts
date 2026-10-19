@@ -118,6 +118,9 @@ export function attentionReason(r: Pick<GstRow, 'fbrException' | 'needsAttention
 
 export const needsAttention = (r: GstRow): boolean => attentionReason(r) !== null
 
+/** No courier date yet (not started, or only the optional "copy received"): the register's "Not sent by TCS" filter. */
+export const tcsNotSent = (r: Pick<GstRow, 'courierState'>): boolean => r.courierState === 'not_started' || r.courierState === 'copy_received'
+
 /** Search the register by invoice number, customer or order number. */
 export function matchesSearch(r: GstRow, text: string): boolean {
   const words = text.toLowerCase().split(/\s+/).filter(Boolean)
