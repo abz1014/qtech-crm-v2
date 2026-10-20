@@ -1,11 +1,12 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Banknote } from 'lucide-react'
+import { Banknote, ExternalLink } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
 import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
+import { Icon } from '@/ui/Icon'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Money } from '@/ui/Money'
@@ -13,6 +14,7 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { SumBar } from '@/ui/SumBar'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
+import { InfoTip } from '@/ui/InfoTip'
 import { useReceivables } from '@/features/money/payments/hooks'
 import { RecordPaymentDialog } from '@/features/money/payments/RecordPaymentDialog'
 import { ReminderPanel } from '@/features/money/payments/ReminderPanel'
@@ -28,9 +30,10 @@ import {
 } from '@/features/money/payments/model'
 
 /*
- * Money > Receivables (M02; g2-money "receivables", and for sales "order balances"). What each order still owes, gross, GST
- * included, through order_receivables(): admin and sales see balances; only admin sees payment rows (there are none on this
- * screen) and only admin can record a payment. Open, Overdue and Settled filter the list; the four figures on top split the
+ * Money > Who owes us (M02; g2-money "receivables"; one name for admin and sales since the owner decision of 2026-10-19, and
+ * where Money opens). What each order still owes, gross, GST included, through order_receivables(): admin and sales see
+ * balances; only admin sees payment rows (there are none on this screen) and only admin can record a payment. On a phone each
+ * card carries "Record payment" (admin) and "Open order", so the most frequent admin job needs no detour through the order. Open, Overdue and Settled filter the list; the four figures on top split the
  * outstanding balance by status. The payment-reminder panel beside the table is M09 (ReminderPanel): picking a row
  * selects it (the 3 px green edge) and shows its reminder; the order opens from the order number. Beside the table from
  * 1360 px, under it below that.
@@ -136,7 +139,7 @@ export function ReceivablesPage() {
           r.state === 'overdue' && r.dueOn ? (
             <StatusBadge dimension="payment" value="overdue" label={`${DUE_WORD(Math.max(daysBetween(r.dueOn, today), 1))} overdue`} />
           ) : (
-            <StatusBadge dimension="payment" value={r.state} />
+            <StatusBadge dimension="payment" value={r.state} label={r.state === 'settled' ? 'Paid' : undefined} />
           ),
       },
       {
@@ -171,7 +174,7 @@ export function ReceivablesPage() {
     return cols
   }, [isAdmin, today])
 
-  const tabLabel = isAdmin ? 'Receivables' : 'Order balances'
+  const tabLabel = 'Who owes us'
 
   return (
     <MoneyFrame active="receivables">
@@ -194,22 +197,27 @@ export function ReceivablesPage() {
             twoLine
             onRowOpen={pick}
             activeRowId={selected?.orderId ?? null}
-            footerLabel={`${shown.length} ${filter === 'settled' ? 'settled' : filter === 'overdue' ? 'overdue' : 'open'} ${shown.length === 1 ? 'order' : 'orders'}`}
+            footerLabel={`${shown.length} ${filter === 'settled' ? 'paid' : filter === 'overdue' ? 'overdue' : 'open'} ${shown.length === 1 ? 'order' : 'orders'}`}
             loading={q.isPending}
             error={q.isError ? { title: 'The balances did not load', message: 'Your invoices and payments are safe. Try again, and if it keeps failing, tell the admin.', onRetry: () => void q.refetch() } : null}
             toolbar={
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-base font-semibold">{tabLabel}</h2>
                 <span className="text-sm text-fg-muted">Balance is gross, GST included</span>
+                <InfoTip label="About reminders">
+                  A reminder is due when an order is overdue and has not been reminded in the last 7 days. Copying the reminder records it,
+                  and the order moves to Waiting on Today. {isAdmin ? 'Record a payment with the button on its row.' : 'Payments are recorded by an admin.'}
+                </InfoTip>
                 <span className="flex-1" />
                 <SegmentedControl
                   aria-label="Filter"
                   value={filter}
                   onValueChange={v => setFilter(v as ReceivableFilter)}
                   options={[
-                    { value: 'open', label: 'Open', count: counts.open },
+                    // a count means "needs you": only Overdue carries one
+                    { value: 'open', label: 'Open' },
                     { value: 'overdue', label: 'Overdue', count: counts.overdue },
-                    { value: 'settled', label: 'Settled', count: counts.settled },
+                    { value: 'settled', label: 'Paid' },
                   ]}
                 />
               </div>
@@ -220,8 +228,8 @@ export function ReceivablesPage() {
                   Every order is paid in full. New balances appear here when an order is won.
                 </EmptyState>
               ) : (
-                <EmptyState title={filter === 'overdue' ? 'Nothing is overdue' : 'No settled orders yet'}>
-                  {filter === 'overdue' ? 'Orders appear here once their due date has passed without full payment.' : 'An order is settled when its payments reach the gross amount.'}
+                <EmptyState title={filter === 'overdue' ? 'Nothing is overdue' : 'No order is paid in full yet'}>
+                  {filter === 'overdue' ? 'Orders appear here once their due date has passed without full payment.' : 'An order is paid in full when its payments reach the gross amount.'}
                 </EmptyState>
               )
             }
@@ -236,8 +244,22 @@ export function ReceivablesPage() {
                   {isInvoiced(r) ? ` · ${r.invoiceNumbers.join(', ')}` : ' · not invoiced yet'}
                 </span>
                 <div className="flex flex-wrap items-center gap-2">
-                  {r.state === 'overdue' && r.dueOn ? <StatusBadge dimension="payment" value="overdue" label={`${DUE_WORD(Math.max(daysBetween(r.dueOn, today), 1))} overdue`} /> : <StatusBadge dimension="payment" value={r.state} />}
-                  {r.dueOn ? <span className="num text-xs text-fg-muted">Due {formatDay(r.dueOn).replace(/^\w+ /, '').replace(/ \d{4}$/, '')}</span> : null}
+                  {r.state === 'overdue' && r.dueOn ? <StatusBadge dimension="payment" value="overdue" label={`${DUE_WORD(Math.max(daysBetween(r.dueOn, today), 1))} overdue`} /> : <StatusBadge dimension="payment" value={r.state} label={r.state === 'settled' ? 'Paid' : undefined} />}
+                  {r.dueOn ? <span className="num text-sm text-fg-muted">Due {formatDay(r.dueOn).replace(/^\w+ /, '').replace(/ \d{4}$/, '')}</span> : null}
+                </div>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {isAdmin && r.state !== 'settled' ? (
+                    <Button icon={Banknote} size="touch" onClick={() => setPaying(r.orderId)} aria-label={`Record payment for ${orderRef(r.orderNumber)}`}>
+                      Record payment
+                    </Button>
+                  ) : null}
+                  <Link
+                    to={`/orders/${r.orderId}`}
+                    className="inline-flex min-h-touch items-center gap-2 rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken"
+                  >
+                    <Icon icon={ExternalLink} size="sm" className="text-fg-muted" />
+                    Open order
+                  </Link>
                 </div>
               </div>
             )}
@@ -247,9 +269,6 @@ export function ReceivablesPage() {
           <ReminderPanel row={selected} today={today} />
         </div>
       </div>
-      <p className="max-w-[90ch] text-xs text-fg-muted">
-        A reminder becomes due when an order is overdue and has not been reminded in the last 7 days. Copying the text records the reminder and moves the item to Waiting on Today.
-      </p>
       <RecordPaymentDialog open={paying !== null || linkedPay !== null} orderId={paying ?? linkedPay} onOpenChange={o => { if (!o) { setPaying(null); if (linkedPay) closeLinked() } }} />
     </MoneyFrame>
   )

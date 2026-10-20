@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, CalendarCheck, ChartColumn, Import, Plus, Settings } from 'lucide-react'
+import { Building2, CalendarCheck, ChartColumn, CircleAlert, HandCoins, Import, Landmark, Percent, Plus, Receipt, Settings, Wallet, type LucideIcon } from 'lucide-react'
 import { navItemsForRole } from '@/app/navConfig'
 import { settingsLinksFor } from '@/features/settings/settingsLinks'
 import { CaptureContext } from '@/app/capture/useCapture'
@@ -15,19 +15,32 @@ const INTAKE_ROUTE = '/rfqs/new'
 const TODAY_ROUTE = '/today'
 
 /**
+ * Money pages Jump to finds by name (the Money tabs since ux/money-today). Admin and sales see Who owes us, Invoices & GST and
+ * Reports; the rest is admin only, as the Money tabs are. "Add expenses" opens the burst sheet straight away.
+ */
+const MONEY_PLACES: ReadonlyArray<{ id: string; label: string; href: string; icon: LucideIcon; roles: readonly string[]; meta?: string; keywords?: string[] }> = [
+  { id: 'money:receivables', label: 'Who owes us', href: '/money/receivables', icon: HandCoins, roles: ['admin', 'sales'], keywords: ['receivables', 'balances'] },
+  { id: 'money:gst', label: 'Invoices & GST', href: '/money/gst-register', icon: Receipt, roles: ['admin', 'sales'], keywords: ['gst register', 'invoices'] },
+  { id: 'money:reports', label: 'Reports', href: '/money/reports', icon: ChartColumn, roles: ['admin', 'sales'] },
+  { id: 'money:expenses', label: 'Expenses', href: '/money/expenses', icon: Wallet, roles: ['admin'] },
+  { id: 'money:burst', label: 'Add expenses', href: '/money/expenses?burst=1', icon: Plus, roles: ['admin'], meta: 'Action', keywords: ['money', 'burst'] },
+  { id: 'money:month-end', label: 'Month end', href: '/money/month-end', icon: CalendarCheck, roles: ['admin'] },
+  { id: 'money:bank', label: 'Match bank statement', href: '/money/month-end/bank', icon: Landmark, roles: ['admin'], keywords: ['bank tick'] },
+  { id: 'money:margins', label: 'Order margins', href: '/money/margins', icon: Percent, roles: ['admin'] },
+  { id: 'money:exceptions', label: 'Things to check', href: '/money/exceptions', icon: CircleAlert, roles: ['admin'], keywords: ['exceptions'] },
+]
+
+/**
  * The places Jump to finds by name, besides the main destinations (audit: they were only in the avatar menu). Searched,
  * not shown idle. The Settings pages come from the same list as the Settings menu (settingsLinks.ts), so a role is offered
- * exactly what that menu offers. Reports is listed for admin and sales even when it is no longer a main destination:
- * /reports opens it, or redirects to where it lives now.
+ * exactly what that menu offers; the Money pages follow the Money tabs' roles.
  */
 function placesFor(role: string): PaletteItem[] {
-  const places: PaletteItem[] = [
+  return [
     { id: 'settings', label: 'Settings', icon: Settings, meta: 'Go to', href: '/settings' },
     ...settingsLinksFor(role).map(l => ({ id: `settings:${l.to}`, label: l.label, icon: l.icon, meta: 'Settings', href: l.to })),
+    ...MONEY_PLACES.filter(p => p.roles.includes(role)).map(p => ({ id: p.id, label: p.label, icon: p.icon, meta: p.meta ?? 'Money', keywords: p.keywords, href: p.href })),
   ]
-  const navHasReports = navItemsForRole(role).some(n => n.path === '/reports')
-  if (!navHasReports && (role === 'admin' || role === 'sales')) places.push({ id: 'reports', label: 'Reports', icon: ChartColumn, meta: 'Money', href: '/reports' })
-  return places
 }
 
 /** True when a key press belongs to something the person is typing into or a dialog they are in. */

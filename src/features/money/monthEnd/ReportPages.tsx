@@ -1,6 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { Info, Lock, Wallet } from 'lucide-react'
+import { Lock, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
@@ -11,10 +10,13 @@ import { SumBar } from '@/ui/SumBar'
 import { Tag } from '@/ui/Tag'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Avatar } from '@/ui/Avatar'
-import { formatPaisa, toPaisa, type Amount } from '@/lib/money'
+import { InfoTip } from '@/ui/InfoTip'
+import { formatPaisa, paisaToFixed, sumPaisa, toPaisa, type Amount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
 import { monthKeyLabel } from '@/features/money/expenses/model'
-import { MonthBar, MonthEndFrame } from '@/features/money/monthEnd/MonthEndFrame'
+import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
+import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
+import { MONTH_REPORT_TITLE, type MonthReportKey } from '@/features/money/monthEnd/reportList'
 import { useMonthEnd, type MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
 import {
   AsOfField,
@@ -58,35 +60,44 @@ import {
 } from '@/features/money/monthEnd/model'
 
 /*
- * The six Month-end reports (M10; M05 amended: the cash month is the P&L here). Each is one tap on its tab and one tap on Export
- * CSV, which writes the figures on the page. Layout: g2-month-end "Report: profit and loss", "expenses by category", "aging",
- * "what we owe", "GST and FBR month" and "team". Every figure comes from the database views of migration 0028; nothing is
- * recomputed here beyond adding what is drawn.
+ * The six money reports for a month (M10; M05 amended: the cash month is the P&L here), opened from Money > Reports
+ * (/money/reports/<key>?month=2026-09). Each page has a back link to Reports, the month pager and one tap on Export CSV, which
+ * writes the exact figures (with paisa). On screen every amount is in whole rupees (owner decision 2026-10-19). Layout:
+ * g2-month-end "Report: profit and loss", "expenses by category", "aging", "what we owe", "GST and FBR month" and "team",
+ * without the old strip of report tabs. Every figure comes from the database views of migration 0028; nothing is recomputed
+ * here beyond adding what is drawn.
  */
-function ReportPage({
-  active,
-  title,
-  children,
-  hideBar,
-}: {
-  active: string
-  title: string
-  children: (ctx: MonthEndCtx) => ReactNode
-  hideBar?: boolean
-}) {
+function ReportPage({ report, children }: { report: MonthReportKey; children: (ctx: MonthEndCtx) => ReactNode }) {
   const ctx = useMonthEnd()
   return (
-    <MonthEndFrame active={active} ctx={ctx}>
-      <h2 className="sr-only">{title}</h2>
-      {hideBar ? null : <MonthBar ctx={ctx} />}
+    <MoneyFrame active="reports">
+      <MoneySubHeader
+        back={{ to: `/money/reports${ctx.search}`, label: 'Reports' }}
+        title={MONTH_REPORT_TITLE[report]}
+        meta={
+          <span className="flex flex-wrap items-center gap-3">
+            <MonthPager month={ctx.month} thisMonth={ctx.thisMonth} go={ctx.go} />
+            {ctx.state ? <MonthStateChip closed={ctx.state.kind === 'closed'} /> : null}
+          </span>
+        }
+      />
       {children(ctx)}
-    </MonthEndFrame>
+    </MoneyFrame>
   )
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 const Num = ({ children }: { children: ReactNode }) => <span className="num">{children}</span>
-const pkr = (v: Amount) => `PKR ${formatPaisa(toPaisa(v))}`
+/** Whole rupees on screen; the CSV keeps the paisa. */
+const rupees = (v: Amount | bigint) => formatPaisa(typeof v === 'bigint' ? v : toPaisa(v), 'never')
+const pkr = (v: Amount) => `PKR ${rupees(v)}`
+/** A money column in whole rupees, with its total (and group subtotals) summed in paisa and rounded once. */
+function whole<T>(get: (r: T) => Amount | null | undefined) {
+  return {
+    paisa: 'never' as const,
+    total: (rows: T[]) => <Money value={paisaToFixed(sumPaisa(rows.map(r => get(r) ?? 0)))} prefix={false} paisa="never" strong />,
+  }
+}
 
 function Empty({ ctx, what }: { ctx: MonthEndCtx; what: string }) {
   return (
@@ -134,7 +145,7 @@ function Line({
         {basis}
       </span>
       <span role="cell" className="num text-right">
-        {amount !== undefined ? <Money value={amount} prefix={false} paisa="always" plainNegative strong={tone === 'total' || tone === 'result'} /> : null}
+        {amount !== undefined ? <Money value={amount} prefix={false} paisa="never" plainNegative strong={tone === 'total' || tone === 'result'} /> : null}
       </span>
       {basis ? (
         <span role="presentation" className="col-span-2 -mt-1 pb-2 text-xs text-fg-muted md:hidden">
@@ -147,7 +158,7 @@ function Line({
 
 export function PnlPage() {
   return (
-    <ReportPage active="pnl" title="Profit and loss">
+    <ReportPage report="pnl">
       {ctx => <PnlBody ctx={ctx} />}
     </ReportPage>
   )
@@ -173,21 +184,21 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
           {
             label: 'Net in',
             amount: v.netIn,
-            paisa: 'auto',
+            
             sub: (
               <>
                 <Num>{split}</Num> {split === 1 ? 'payment' : 'payments'}
-                {v.payments.unresolved.length ? <>, excludes {formatPaisa(toPaisa(v.unresolvedGross))} unresolved</> : null}
+                {v.payments.unresolved.length ? <>, leaves out {rupees(v.unresolvedGross)} not split yet</> : null}
               </>
             ),
           },
-          { label: 'GST in the payments', amount: v.gstIn, paisa: 'auto', sub: 'Shown here, never counted as revenue' },
-          { label: 'Result', amount: v.result, paisa: 'auto', sub: 'Net in less order costs and overheads' },
+          { label: 'GST in the payments', amount: v.gstIn,  sub: 'Shown here, never counted as revenue' },
+          { label: 'Result', amount: v.result,  sub: 'Net in less order costs and overheads' },
           {
             label: 'After drawings',
             amount: v.afterDrawings,
-            paisa: 'auto',
-            sub: <>Result less {formatPaisa(toPaisa(v.notInPnl.total.net))} not in the P&amp;L</>,
+            
+            sub: <>Result less {rupees(v.notInPnl.total.net)} not in the P&amp;L</>,
           },
         ]}
       />
@@ -198,6 +209,9 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
             meta={
               <>
                 <ClockTag>By payment date</ClockTag>
+                <InfoTip label="About the payment date">
+                  This counts money on the day it moved. It will not match Invoices &amp; GST, which counts invoices on their date.
+                </InfoTip>
                 {v.frozenAt ? <span className="text-xs text-fg-muted" data-testid="pnl-frozen">Frozen when the month was closed</span> : null}
               </>
             }
@@ -235,7 +249,7 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
                 basis={
                   <>
                     <Num>{v.orderCosts.count}</Num> {v.orderCosts.count === 1 ? 'expense' : 'expenses'}
-                    {toPaisa(v.orderCosts.inputTax) > 0n ? <>, net of <Num>{formatPaisa(toPaisa(v.orderCosts.inputTax))}</Num> input tax</> : null}
+                    {toPaisa(v.orderCosts.inputTax) > 0n ? <>, net of <Num>{rupees(v.orderCosts.inputTax)}</Num> input tax</> : null}
                   </>
                 }
                 amount={negate(v.orderCosts.net)}
@@ -250,7 +264,7 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
 
           <section aria-label="Not in P&L" className="overflow-hidden rounded border border-dashed border-line-input bg-canvas">
             <header className="flex flex-wrap items-center gap-3 border-b border-dashed border-line-input px-5 py-3">
-              <h3 className="text-sm font-semibold">Not in P&amp;L</h3>
+              <h4 className="text-sm font-semibold">Not in P&amp;L</h4>
               <span className="text-xs text-fg-muted">Owner drawings and loan repayment are money out, but not a cost of doing business</span>
             </header>
             {v.notInPnl.lines.length === 0 ? (
@@ -270,16 +284,16 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
               <div className="grid">
                 <span className="text-base font-semibold">After drawings</span>
                 <span className="text-xs text-fg-muted">
-                  Result <Num>{formatPaisa(toPaisa(v.result))}</Num> less <Num>{formatPaisa(toPaisa(v.notInPnl.total.net))}</Num>
+                  Result <Num>{rupees(v.result)}</Num> less <Num>{rupees(v.notInPnl.total.net)}</Num>
                 </span>
               </div>
-              <Money value={v.afterDrawings} size="xl" strong data-testid="after-drawings" />
+              <Money value={v.afterDrawings} size="xl" paisa="never" strong data-testid="after-drawings" />
             </div>
           </section>
         </div>
 
         <div className="grid gap-6">
-          <Panel title="Where the net in went" meta={<span className="num text-xs text-fg-muted">PKR {formatPaisa(toPaisa(v.netIn))}</span>}>
+          <Panel title="Where the net in went" meta={<span className="num text-xs text-fg-muted">PKR {rupees(v.netIn)}</span>}>
             <div className="grid gap-3 px-5 py-4">
               <div role="img" aria-label="Order costs, overheads and result against net in" className="flex h-4 overflow-hidden rounded border bg-surface">
                 <i className="block bg-fg" style={{ width: w(toPaisa(v.orderCosts.net)) }} />
@@ -291,19 +305,19 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
                   <i className="size-[10px] rounded-[2px] bg-fg" />
                   Order costs <span className="text-xs text-fg-muted"><Num>{v.orderCosts.count}</Num> expenses</span>
                   <span className="flex-1" />
-                  <Money value={v.orderCosts.net} prefix={false} paisa="always" plainNegative />
+                  <Money value={v.orderCosts.net} prefix={false} paisa="never" plainNegative />
                 </li>
                 <li className="flex items-center gap-2">
                   <i className="size-[10px] rounded-[2px] bg-fg-muted" />
                   Overheads <span className="text-xs text-fg-muted"><Num>{v.overheads.count}</Num> expenses</span>
                   <span className="flex-1" />
-                  <Money value={v.overheads.net} prefix={false} paisa="always" plainNegative />
+                  <Money value={v.overheads.net} prefix={false} paisa="never" plainNegative />
                 </li>
                 <li className="flex items-center gap-2">
                   <i className="size-[10px] rounded-[2px] border border-line-strong bg-surface" />
                   Result
                   <span className="flex-1" />
-                  <Money value={v.result} prefix={false} paisa="always" plainNegative />
+                  <Money value={v.result} prefix={false} paisa="never" plainNegative />
                 </li>
               </ul>
             </div>
@@ -320,17 +334,12 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
                 <div key={k} className="flex min-h-[40px] items-center justify-between gap-4 border-t px-5 first:border-t-0">
                   <dt className="text-fg-2">{k}</dt>
                   <dd>
-                    <Money value={amt} prefix={false} paisa="always" />
+                    <Money value={amt} prefix={false} paisa="never" />
                   </dd>
                 </div>
               ))}
             </dl>
           </Panel>
-
-          <aside className="flex items-start gap-3 rounded bg-sunken px-4 py-3 text-xs text-fg-muted">
-            <Icon icon={Info} size="md" className="mt-px" />
-            <p>This counts money on the day it moved. It will not match the GST register, which counts invoices on their date.</p>
-          </aside>
         </div>
       </div>
     </>
@@ -343,7 +352,7 @@ const VIA_LABEL: Record<ViaFilter, string> = { all: 'All paid via', bank: 'Bank'
 
 export function CategoriesPage() {
   return (
-    <ReportPage active="categories" title="Expenses by category">
+    <ReportPage report="categories">
       {ctx => <CategoriesBody ctx={ctx} />}
     </ReportPage>
   )
@@ -375,14 +384,14 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
         value: l => l.paidVia,
         cell: l => <StatusBadge dimension="paid-via" value={l.paidVia} />,
       },
-      { id: 'gross', header: 'Gross paid', kind: 'money', value: l => l.gross, total: true },
-      { id: 'tax', header: 'Input tax', kind: 'money', value: l => l.inputTax, total: true, cell: l => (toPaisa(l.inputTax) > 0n ? <Money value={l.inputTax} prefix={false} /> : <span className="text-fg-muted">{'—'}</span>) },
+      { id: 'gross', header: 'Gross paid', kind: 'money', value: l => l.gross, ...whole<CategoryLine>(l => l.gross) },
+      { id: 'tax', header: 'Input tax', kind: 'money', value: l => l.inputTax, ...whole<CategoryLine>(l => l.inputTax), cell: l => (toPaisa(l.inputTax) > 0n ? <Money value={l.inputTax} prefix={false} paisa="never" /> : <span className="text-fg-muted">{'—'}</span>) },
       {
         id: 'net',
         header: 'Net cost',
         kind: 'money',
         value: l => l.net,
-        total: true,
+        ...whole<CategoryLine>(l => l.net),
         cell: l => {
           const grp = v?.groups.find(g => g.grp === l.grp)?.lines ?? []
           return (
@@ -390,7 +399,7 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
               <span aria-hidden="true" className="hidden h-1 w-[72px] overflow-hidden rounded-round bg-selected md:block">
                 <i className="block h-full rounded-round bg-fg-2" style={{ width: `${barShare(l.net, grp) * 100}%` }} />
               </span>
-              <Money value={l.net} prefix={false} />
+              <Money value={l.net} prefix={false} paisa="never" />
             </span>
           )
         },
@@ -416,7 +425,7 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
             sub: (
               <>
                 <Num>{ord.count}</Num> {ord.count === 1 ? 'expense' : 'expenses'}
-                {toPaisa(ord.inputTax) > 0n ? <>, net of <Num>{formatPaisa(toPaisa(ord.inputTax))}</Num> input tax</> : null}
+                {toPaisa(ord.inputTax) > 0n ? <>, net of <Num>{rupees(ord.inputTax)}</Num> input tax</> : null}
               </>
             ),
           },
@@ -453,7 +462,7 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
         twoLine
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-base font-semibold">Expenses by category</h2>
+            <h3 className="text-base font-semibold">Expenses by category</h3>
             <ClockTag>By payment date</ClockTag>
             <span className="flex-1" />
             <SegmentedControl
@@ -475,7 +484,7 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
 
 export function AgingPage() {
   return (
-    <ReportPage active="aging" title="Aging">
+    <ReportPage report="aging">
       {ctx => <AgingBody ctx={ctx} />}
     </ReportPage>
   )
@@ -503,19 +512,19 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
       },
       { id: 'date', header: 'Invoice date', kind: 'date', value: r => r.invoiceDate, cell: r => <span className="num">{formatShortDate(r.invoiceDate, asOf)}</span> },
       { id: 'days', header: 'Days', kind: 'num', value: r => r.ageDays },
-      { id: 'gross', header: 'Invoice gross', kind: 'money', value: r => r.gross, total: true, hideBelowMd: true },
-      { id: 'applied', header: 'Paid by then', kind: 'money', value: r => (toPaisa(r.applied) > 0n ? r.applied : null), total: true, hideBelowMd: true },
+      { id: 'gross', header: 'Invoice gross', kind: 'money', value: r => r.gross, ...whole<AgingRow>(r => r.gross), hideBelowMd: true },
+      { id: 'applied', header: 'Paid by then', kind: 'money', value: r => (toPaisa(r.applied) > 0n ? r.applied : null), ...whole<AgingRow>(r => r.applied), hideBelowMd: true },
       ...AGING_BUCKETS.map(
         (b): Column<AgingRow> => ({
           id: `b${b}`,
           header: BUCKET_LABEL[b],
           kind: 'money',
           value: r => (r.bucket === b ? r.remaining : null),
-          total: true,
+          ...whole<AgingRow>(r => (r.bucket === b ? r.remaining : null)),
           cell: r =>
             r.bucket === b ? (
               <span className={cn('-mx-2 inline-block rounded px-2 py-[2px]', b === '61-90' && 'bg-tone-warning-bg', b === '90+' && 'bg-tone-danger-bg')}>
-                <Money value={r.remaining} prefix={false} />
+                <Money value={r.remaining} prefix={false} paisa="never" />
               </span>
             ) : (
               <span className="text-fg-muted">{'—'}</span>
@@ -525,17 +534,17 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
     ],
     [asOf],
   )
-  if (q.isError) return <ReportError title="The aging did not load" onRetry={q.refetch} />
-  if (q.isPending || !v) return <ReportLoading label="Loading the aging" />
+  if (q.isError) return <ReportError title="Overdue by age did not load" onRetry={q.refetch} />
+  if (q.isPending || !v) return <ReportLoading label="Loading overdue by age" />
   const asOfLabel = `${Number(asOf.slice(8))} ${monthName(asOf.slice(0, 7))} ${asOf.slice(0, 4)}`
   return (
     <>
       <SumBar
-        label="Aging buckets"
+        label="Overdue by age"
         items={AGING_BUCKETS.map(b => ({
           label: BUCKET_TITLE[b],
           amount: v.totals[b].amount,
-          paisa: 'auto' as const,
+          
           sub: <>
             <Num>{v.totals[b].count}</Num> {v.totals[b].count === 1 ? 'invoice' : 'invoices'}
           </>,
@@ -543,7 +552,7 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
       />
       <div className="grid">
         <DataTable
-          label="Aging of what customers owe"
+          label="What customers owe, by how late"
           columns={columns}
           rows={v.rows}
           getRowId={r => r.invoiceId}
@@ -552,8 +561,11 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
           className={v.advances.length ? 'rounded-b-none' : undefined}
           toolbar={
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="text-base font-semibold">Aging of what customers owe</h2>
+              <h3 className="text-base font-semibold">What customers owe, by how late</h3>
               <ClockTag>As of {asOfLabel}</ClockTag>
+              <InfoTip label="About overdue by age">
+                Payments are applied first in, first out to the oldest invoice of each order. Invoices dated after {asOfLabel} are left out.
+              </InfoTip>
               <span className="flex-1" />
               <AsOfField value={asOf} onChange={d => setAsOf(d)} />
               {chosen ? (
@@ -561,7 +573,7 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
                   Back to month end
                 </button>
               ) : null}
-              <ExportCsvButton onClick={() => downloadReport(agingCsv(v), csvFile('aging', ctx.month))} />
+              <ExportCsvButton onClick={() => downloadReport(agingCsv(v), csvFile('overdue-by-age', ctx.month))} />
             </div>
           }
           empty={<EmptyState mood="goal" title="Nobody owes an invoice">Every invoice dated up to {asOfLabel} is paid.</EmptyState>}
@@ -577,14 +589,13 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
                     {a.orderRef ? <Num>{a.orderRef}</Num> : null} · {a.customer}. Held apart, never shown as negative aging.
                   </span>
                 </span>
-                <Money value={a.held} />
+                <Money value={a.held} paisa="never" />
               </li>
             ))}
           </ul>
         ) : null}
-        <p className="mt-2 text-xs text-fg-muted">
-          Payments are applied first in, first out to the oldest invoice of each order. Invoices dated after {asOfLabel} are left out. Total outstanding{' '}
-          <Num>{formatPaisa(toPaisa(v.outstanding))}</Num>.
+        <p className="mt-2 text-sm text-fg-2">
+          Total outstanding <Num>PKR {rupees(v.outstanding)}</Num>
         </p>
       </div>
     </>
@@ -595,7 +606,7 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
 
 export function OwePage() {
   return (
-    <ReportPage active="owe" title="What we owe">
+    <ReportPage report="owe">
       {ctx => <OweBody ctx={ctx} />}
     </ReportPage>
   )
@@ -609,7 +620,7 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
     () => [
       {
         id: 'supplier',
-        header: 'Supplier and leg',
+        header: 'Supplier and order',
         value: r => r.supplier,
         cell: r => (
           <span className="grid gap-px">
@@ -624,18 +635,22 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
       { id: 'currency', header: 'Currency', value: r => r.currency, cell: r => <Tag>{r.currency}</Tag> },
       { id: 'committed', header: 'Committed', kind: 'money', value: r => r.committed, paisa: 'always', cell: r => (r.committed === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.committed} prefix={false} paisa="always" />) },
       { id: 'rate', header: 'Rate', kind: 'num', value: r => (r.rate === null ? null : Number(r.rate)), cell: r => (r.rate === null ? <span className="text-fg-muted">no rate</span> : <span className={cn('num', r.currency === 'PKR' && 'text-fg-muted')}>{Number(r.rate).toFixed(2)}</span>) },
-      { id: 'committedPkr', header: 'Committed, PKR', kind: 'money', value: r => r.committedPkr, total: true, cell: r => (r.committedPkr === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.committedPkr} prefix={false} />) },
-      { id: 'paid', header: 'Paid, PKR', kind: 'money', value: r => r.paidPkr, total: true, cell: r => (toPaisa(r.paidPkr) === 0n ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.paidPkr} prefix={false} />) },
-      { id: 'owed', header: 'Owed, PKR (≈)', kind: 'money', value: r => r.owedPkr, total: true, cell: r => (r.owedPkr === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.owedPkr} prefix={false} strong />) },
+      { id: 'committedPkr', header: 'Committed, PKR', kind: 'money', value: r => r.committedPkr, ...whole<PayableRow>(r => r.committedPkr), cell: r => (r.committedPkr === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.committedPkr} prefix={false} paisa="never" />) },
+      { id: 'paid', header: 'Paid, PKR', kind: 'money', value: r => r.paidPkr, ...whole<PayableRow>(r => r.paidPkr), cell: r => (toPaisa(r.paidPkr) === 0n ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.paidPkr} prefix={false} paisa="never" />) },
+      { id: 'owed', header: 'Owed, PKR (≈)', kind: 'money', value: r => r.owedPkr, ...whole<PayableRow>(r => r.owedPkr), cell: r => (r.owedPkr === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.owedPkr} prefix={false} paisa="never" strong />) },
       {
         id: 'state',
         header: 'State',
         sortable: false,
         cell: r => (
           <span className="grid justify-items-start gap-px">
-            <StatusBadge dimension="payable" value={r.flag === 'overpaid' && r.state === 'settled' ? 'paid-over' : r.state === 'no_rate' ? 'no-rate' : r.state} />
+            <StatusBadge
+              dimension="payable"
+              value={r.flag === 'overpaid' && r.state === 'settled' ? 'paid-over' : r.state === 'no_rate' ? 'no-rate' : r.state}
+              label={r.state === 'unpriced' ? 'Supplier price missing' : undefined}
+            />
             <span className="text-xs text-fg-muted">
-              {r.state === 'owing' ? (toPaisa(r.paidPkr) === 0n ? 'No payment yet' : 'Part paid') : r.state === 'settled' ? (r.flag === 'overpaid' ? 'Owed shown as 0' : 'Within 3% of paid, or paid') : r.state === 'unpriced' ? 'No price on the items yet' : 'No rate in the 30 days before; add one on Exchange rates'}
+              {r.state === 'owing' ? (toPaisa(r.paidPkr) === 0n ? 'No payment yet' : 'Part paid') : r.state === 'settled' ? (r.flag === 'overpaid' ? 'Owed shown as 0' : 'Within 3% of paid, or paid') : r.state === 'unpriced' ? "The supplier's price is not on the items yet" : 'No rate in the 30 days before; add one on Exchange rates'}
             </span>
           </span>
         ),
@@ -651,9 +666,9 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
       <SumBar
         label="What we owe"
         items={[
-          { label: 'Owed, open legs', amount: v.owed, sub: <><Num>{v.owedCount}</Num> {v.owedCount === 1 ? 'leg' : 'legs'}, about, at the rate on {Number(asOf.slice(8))} {monthName(asOf.slice(0, 7)).slice(0, 3)}</> },
-          { label: 'Committed, all legs', amount: v.committed, sub: <><Num>{v.committedLegs}</Num> placed {v.committedLegs === 1 ? 'leg' : 'legs'} on live orders</> },
-          { label: 'Paid so far', amount: v.paid, sub: <><Num>{v.paidLegs}</Num> {v.paidLegs === 1 ? 'leg' : 'legs'} with a payment</> },
+          { label: 'Owed, open supplier orders', amount: v.owed, sub: <><Num>{v.owedCount}</Num> supplier {v.owedCount === 1 ? 'order' : 'orders'}, about, at the rate on {Number(asOf.slice(8))} {monthName(asOf.slice(0, 7)).slice(0, 3)}</> },
+          { label: 'Committed, all supplier orders', amount: v.committed, sub: <><Num>{v.committedLegs}</Num> placed supplier {v.committedLegs === 1 ? 'order' : 'orders'} on live orders</> },
+          { label: 'Paid so far', amount: v.paid, sub: <><Num>{v.paidLegs}</Num> supplier {v.paidLegs === 1 ? 'order' : 'orders'} with a payment</> },
           { label: 'Settled (≈)', count: v.settledCount, sub: 'Within 3% of paid, or paid over' },
         ]}
       />
@@ -663,11 +678,16 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
         rows={v.rows}
         getRowId={r => r.legId}
         twoLine
-        footerLabel={plural(v.rows.length, 'leg')}
+        footerLabel={plural(v.rows.length, 'supplier order')}
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-base font-semibold">What we owe suppliers</h2>
+            <h3 className="text-base font-semibold">What we owe suppliers</h3>
             <ClockTag>As of {asOfLabel}</ClockTag>
+            <InfoTip label="About what we owe">
+              Owed is approximate: the committed amount at the rate on or before {asOfLabel}, less what was paid. Open supplier orders{' '}
+              <Num>{rupees(v.owed)}</Num> + settled (≈) <Num>{rupees(v.settledLeft)}</Num> − paid over <Num>{rupees(v.paidOver)}</Num> ={' '}
+              <Num>{rupees(toPaisa(v.committed) - toPaisa(v.paid))}</Num> committed less paid.
+            </InfoTip>
             <span className="flex-1" />
             <AsOfField value={asOf} onChange={d => setAsOf(d)} />
             {chosen ? (
@@ -675,16 +695,11 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
                 Back to month end
               </button>
             ) : null}
-            <ExportCsvButton onClick={() => downloadReport(payablesCsv(v), csvFile('we-owe', ctx.month))} />
+            <ExportCsvButton onClick={() => downloadReport(payablesCsv(v), csvFile('we-owe-suppliers', ctx.month))} />
           </div>
         }
-        empty={<EmptyState mood="goal" title="Nothing is owed to suppliers">No placed leg has a price to pay on {asOfLabel}.</EmptyState>}
+        empty={<EmptyState mood="goal" title="Nothing is owed to suppliers">No placed supplier order has a price to pay on {asOfLabel}.</EmptyState>}
       />
-      <p className="text-xs text-fg-muted">
-        Owed is approximate: the committed amount at the rate on or before {asOfLabel}, less what was paid. Open legs{' '}
-        <Num>{formatPaisa(toPaisa(v.owed))}</Num> + settled (≈) <Num>{formatPaisa(toPaisa(v.settledLeft))}</Num> − paid over <Num>{formatPaisa(toPaisa(v.paidOver))}</Num> ={' '}
-        <Num>{formatPaisa(toPaisa(v.committed) - toPaisa(v.paid))}</Num> committed less paid.
-      </p>
     </>
   )
 }
@@ -693,7 +708,7 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
 
 export function GstFbrPage() {
   return (
-    <ReportPage active="gst" title="GST and FBR month">
+    <ReportPage report="gst">
       {ctx => <GstBody ctx={ctx} />}
     </ReportPage>
   )
@@ -716,8 +731,8 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
         ),
       },
       { id: 'count', header: 'Invoices', kind: 'num', value: r => r.invoiceCount, total: true },
-      { id: 'net', header: 'Net', kind: 'money', value: r => r.net, total: true },
-      { id: 'gst', header: 'GST', kind: 'money', value: r => r.gst, total: true },
+      { id: 'net', header: 'Net', kind: 'money', value: r => r.net, ...whole<GstMonthRow>(r => r.net) },
+      { id: 'gst', header: 'GST', kind: 'money', value: r => r.gst, ...whole<GstMonthRow>(r => r.gst) },
       { id: 'psid', header: 'PSID sets', kind: 'num', value: r => r.psidSets, total: true },
       {
         id: 'deposited',
@@ -731,9 +746,9 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
           </span>
         ),
       },
-      { id: 'depositedAmount', header: 'Deposited, PKR', kind: 'money', value: r => r.depositedAmount, total: true },
-      { id: 'todeposit', header: 'To deposit, PKR', kind: 'money', value: r => r.toDeposit, total: true },
-      { id: 'tax', header: 'Input tax paid', kind: 'money', value: r => r.inputTax, total: true },
+      { id: 'depositedAmount', header: 'Deposited, PKR', kind: 'money', value: r => r.depositedAmount, ...whole<GstMonthRow>(r => r.depositedAmount) },
+      { id: 'todeposit', header: 'To deposit, PKR', kind: 'money', value: r => r.toDeposit, ...whole<GstMonthRow>(r => r.toDeposit) },
+      { id: 'tax', header: 'Input tax paid', kind: 'money', value: r => r.inputTax, ...whole<GstMonthRow>(r => r.inputTax) },
     ],
     [ctx.month],
   )
@@ -747,10 +762,10 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
       <SumBar
         label="GST and FBR"
         items={[
-          { label: `${name} invoices`, count: sel?.invoiceCount ?? 0, sub: <>Net PKR <Num>{formatPaisa(toPaisa(sel?.net ?? 0))}</Num></> },
-          { label: 'Output GST', amount: sel?.gst ?? '0', paisa: 'auto', sub: <>On the <Num>{sel?.invoiceCount ?? 0}</Num> {name} invoices</> },
-          { label: 'Deposited', amount: sel?.depositedAmount ?? '0', paisa: 'auto', sub: <><Num>{sel?.depositedCount ?? 0}</Num> of <Num>{sel?.invoiceCount ?? 0}</Num> invoices, in <Num>{sel?.psidSets ?? 0}</Num> PSID {sel?.psidSets === 1 ? 'set' : 'sets'}</> },
-          { label: 'Still to deposit', amount: sel?.toDeposit ?? '0', paisa: 'auto', sub: <><Num>{(sel?.invoiceCount ?? 0) - (sel?.depositedCount ?? 0)}</Num> {(sel?.invoiceCount ?? 0) - (sel?.depositedCount ?? 0) === 1 ? 'invoice' : 'invoices'}</> },
+          { label: `${name} invoices`, count: sel?.invoiceCount ?? 0, sub: <>Net PKR <Num>{rupees(sel?.net ?? 0)}</Num></> },
+          { label: 'Output GST', amount: sel?.gst ?? '0',  sub: <>On the <Num>{sel?.invoiceCount ?? 0}</Num> {name} invoices</> },
+          { label: 'Deposited', amount: sel?.depositedAmount ?? '0',  sub: <><Num>{sel?.depositedCount ?? 0}</Num> of <Num>{sel?.invoiceCount ?? 0}</Num> invoices, in <Num>{sel?.psidSets ?? 0}</Num> PSID {sel?.psidSets === 1 ? 'set' : 'sets'}</> },
+          { label: 'Still to deposit', amount: sel?.toDeposit ?? '0',  sub: <><Num>{(sel?.invoiceCount ?? 0) - (sel?.depositedCount ?? 0)}</Num> {(sel?.invoiceCount ?? 0) - (sel?.depositedCount ?? 0) === 1 ? 'invoice' : 'invoices'}</> },
         ]}
       />
       <DataTable
@@ -762,8 +777,12 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
         footerLabel={`${plural(note, 'month')}`}
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-base font-semibold">GST and FBR, by invoice month</h2>
+            <h3 className="text-base font-semibold">GST and FBR, by invoice month</h3>
             <ClockTag>By invoice date</ClockTag>
+            <InfoTip label="About GST and FBR">
+              FBR is the tax office: the GST on every invoice is deposited with it, and a PSID is the payment slip number of one deposit.
+              Sales see Invoices &amp; GST only, never input tax or this report.
+            </InfoTip>
             <span className="flex-1" />
             {v.showInputTax ? (
               <span className="inline-flex h-6 items-center gap-[6px] rounded bg-tone-ink-bg px-2 text-xs font-medium text-tone-ink-fg">
@@ -777,7 +796,18 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
         empty={<EmptyState title="No invoices yet">Invoices appear here by their date, with their PSID sets and deposits.</EmptyState>}
       />
       {v.showInputTax ? (
-        <Panel title="Output GST and input tax, side by side" meta={<span className="text-xs text-fg-muted">Never netted on this page</span>}>
+        <Panel
+          title="Output GST and input tax, side by side"
+          meta={
+            <>
+              <span className="text-sm text-fg-muted">Never netted on this page</span>
+              <InfoTip label="About input tax">
+                Filing stays with the tax agent. Input tax is the part of a Supplier payment, Clearing or Freight amount that Q-Tech can claim; the
+                profit and loss and the margins use the amount without it.
+              </InfoTip>
+            </>
+          }
+        >
           <div className="grid gap-4 px-5 py-4">
             <div className="grid divide-y rounded border md:grid-cols-2 md:divide-x md:divide-y-0">
               <div className="grid gap-1 px-4 py-3">
@@ -797,21 +827,9 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
                 <span className="num text-base">{pkr(sel?.inputTax ?? 0)}</span>
               </div>
             </div>
-            <p className="text-xs text-fg-muted">
-              Filing stays with the tax agent. Input tax is the part of a Supplier payment, Clearing or Freight amount that Q-Tech can claim; the P&amp;L and margins use the amount without it.
-            </p>
           </div>
         </Panel>
       ) : null}
-      <aside className="flex items-start gap-3 rounded bg-sunken px-4 py-3 text-xs text-fg-muted">
-        <Icon icon={Lock} size="md" className="mt-px" />
-        <p>
-          Sales see the GST register only, never input tax or this report. Output GST and input tax are shown here side by side and never netted.{' '}
-          <Link to="/money/gst-register" className="font-medium text-primary hover:underline">
-            Open the GST register
-          </Link>
-        </p>
-      </aside>
     </>
   )
 }
@@ -820,7 +838,7 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
 
 export function TeamPage() {
   return (
-    <ReportPage active="team" title="Team">
+    <ReportPage report="team">
       {ctx => <TeamBody ctx={ctx} />}
     </ReportPage>
   )
@@ -846,8 +864,8 @@ function TeamBody({ ctx }: { ctx: MonthEndCtx }) {
         ),
       },
       { id: 'payments', header: 'Payments', kind: 'num', value: r => r.payments, total: true },
-      { id: 'net', header: `Net credited, ${monthName(ctx.month)}`, kind: 'money', value: r => r.net, total: true, cell: r => (r.net === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.net} prefix={false} />) },
-      { id: 'qtd', header: 'Quarter to date', kind: 'money', value: r => r.quarterNet, total: true, cell: r => (r.quarterNet === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.quarterNet} prefix={false} />) },
+      { id: 'net', header: `Net credited, ${monthName(ctx.month)}`, kind: 'money', value: r => r.net, ...whole<TeamRow>(r => r.net), cell: r => (r.net === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.net} prefix={false} paisa="never" />) },
+      { id: 'qtd', header: 'Quarter to date', kind: 'money', value: r => r.quarterNet, ...whole<TeamRow>(r => r.quarterNet), cell: r => (r.quarterNet === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.quarterNet} prefix={false} paisa="never" />) },
       {
         id: 'target',
         header: v ? `Against the Q${v.quarter} target` : 'Against the target',
@@ -859,13 +877,13 @@ function TeamBody({ ctx }: { ctx: MonthEndCtx }) {
             <span className="grid gap-1">
               <span
                 role="img"
-                aria-label={`${formatPaisa(toPaisa(r.quarterNet ?? 0))} of ${formatPaisa(toPaisa(r.quarterTarget))}`}
+                aria-label={`${rupees(r.quarterNet ?? 0)} of ${rupees(r.quarterTarget)}`}
                 className="relative block h-[6px] w-full min-w-[96px] max-w-[220px] overflow-hidden rounded-round bg-selected"
               >
                 <i className="absolute inset-y-0 left-0 block rounded-round bg-fg-muted" style={{ width: `${Math.min(100, Math.max(0, (Number(r.quarterNet ?? 0) / Math.max(1, Number(r.quarterTarget))) * 100))}%` }} />
               </span>
               <span className="num text-xs text-fg-2">
-                {formatPaisa(toPaisa(r.quarterNet ?? 0))} of {formatPaisa(toPaisa(r.quarterTarget))}
+                {rupees(r.quarterNet ?? 0)} of {rupees(r.quarterTarget)}
               </span>
             </span>
           ),
@@ -873,21 +891,21 @@ function TeamBody({ ctx }: { ctx: MonthEndCtx }) {
     ],
     [ctx.month, v],
   )
-  if (q.isError) return <ReportError title="The team report did not load" onRetry={q.refetch} />
-  if (q.isPending || !v) return <ReportLoading label="Loading the team report" />
+  if (q.isError) return <ReportError title="Sales by person did not load" onRetry={q.refetch} />
+  if (q.isPending || !v) return <ReportLoading label="Loading sales by person" />
   return (
     <>
       <SumBar
-        label="Team"
+        label="Sales by person"
         items={[
-          { label: 'Net cash credited', amount: v.credited, paisa: 'auto', sub: <><Num>{v.creditedPayments}</Num> {v.creditedPayments === 1 ? 'payment' : 'payments'} credited to <Num>{v.creditedPeople}</Num> {v.creditedPeople === 1 ? 'person' : 'people'}</> },
-          { label: 'Not credited', amount: v.unresolved, paisa: 'auto', sub: <><Num>{v.unresolvedCount}</Num> unresolved {v.unresolvedCount === 1 ? 'payment' : 'payments'}</> },
-          { label: 'Quarter to date', amount: v.quarterToDate, paisa: 'auto', sub: `Q${v.quarter} to date, from the payments counted for targets` },
+          { label: 'Net cash credited', amount: v.credited,  sub: <><Num>{v.creditedPayments}</Num> {v.creditedPayments === 1 ? 'payment' : 'payments'} credited to <Num>{v.creditedPeople}</Num> {v.creditedPeople === 1 ? 'person' : 'people'}</> },
+          { label: 'Not credited', amount: v.unresolved,  sub: <><Num>{v.unresolvedCount}</Num> {v.unresolvedCount === 1 ? 'payment' : 'payments'} not split into net and GST</> },
+          { label: 'Quarter to date', amount: v.quarterToDate,  sub: `Q${v.quarter} to date, from the payments counted for targets` },
           { label: `Days left in Q${v.quarter}`, count: v.daysLeft, sub: <>Until {formatShortDate(v.quarterEnd, ctx.today, true)}</> },
         ]}
       />
       <DataTable
-        label="Team: net cash credited"
+        label="Net cash credited to each person"
         columns={columns}
         rows={v.rows}
         getRowId={r => r.userId}
@@ -895,17 +913,18 @@ function TeamBody({ ctx }: { ctx: MonthEndCtx }) {
         footerLabel="Credited to people"
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-base font-semibold">Team: net cash credited</h2>
+            <h3 className="text-base font-semibold">Net cash credited to each person</h3>
             <ClockTag>By payment date</ClockTag>
+            <InfoTip label="About sales by person">
+              The total matches Net in on the Profit and loss report. The <Num>{rupees(v.unresolved)}</Num> not yet split into net and GST has no net,
+              so nobody is credited for it.
+            </InfoTip>
             <span className="flex-1" />
-            <ExportCsvButton onClick={() => downloadReport(teamCsv(v, ctx.month), csvFile('team', ctx.month))} />
+            <ExportCsvButton onClick={() => downloadReport(teamCsv(v, ctx.month), csvFile('sales-by-person', ctx.month))} />
           </div>
         }
         empty={<EmptyState title="Nobody is credited">No payment counted towards a person in {monthName(ctx.month)}.</EmptyState>}
       />
-      <p className="text-xs text-fg-muted">
-        The total matches Net in on the P&amp;L tab. The unresolved <Num>{formatPaisa(toPaisa(v.unresolved))}</Num> has no net yet, so nobody is credited for it.
-      </p>
     </>
   )
 }

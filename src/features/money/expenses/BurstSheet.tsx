@@ -319,7 +319,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                   <Button variant="quiet" size="sm" icon={X} aria-label="Close" disabled={pending} className="-mr-2 text-fg-muted" />
                 </RadixDialog.Close>
               </header>
-              <div className="flex items-center gap-5 border-b bg-sunken px-6 py-2 text-xs leading-4 text-fg-2">
+              <div className="flex items-center gap-5 border-b bg-sunken px-6 py-2 text-xs text-fg-2">
                 <span className="inline-flex items-center gap-[6px]">
                   <i aria-hidden="true" className="inline-block h-[14px] w-[28px] rounded-[3px] border border-dashed border-line-input bg-surface" />
                   Filled in for you. Type over it to change it.
@@ -600,8 +600,8 @@ function ClosedError({ message, others }: { message: string; others: number }) {
     >
       <Icon icon={CircleAlert} className="mt-[2px] text-tone-danger-fg" />
       <div className="grid gap-0">
-        <b className="text-sm font-medium leading-5 text-tone-danger-fg">{message}</b>
-        <span className="text-xs leading-4 text-fg-2">
+        <b className="text-sm font-medium text-tone-danger-fg">{message}</b>
+        <span className="text-xs text-fg-2">
           Nothing was saved. This row keeps what you typed; change the date or reopen {message.split(' ')[0]} in Month-end, then save again. {others === 1 ? 'The other row is still here.' : others > 1 ? `The other ${others} rows are still here.` : ''}
         </span>
       </div>
@@ -846,7 +846,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
       />
       {showsInputTax(row.categoryId) ? <InputTax amount={row.amount} value={row.inputTax} onChange={v => onPatch({ inputTax: v })} /> : null}
       {err ? (
-        <div role="alert" className="flex gap-2 rounded bg-tone-danger-bg px-3 py-2 text-xs leading-4 text-fg-2">
+        <div role="alert" className="flex gap-2 rounded bg-tone-danger-bg px-3 py-2 text-xs text-fg-2">
           <Icon icon={CircleAlert} size="sm" className="mt-[1px] text-tone-danger-fg" />
           <span>
             <b className="font-medium text-tone-danger-fg">{err}</b> This row keeps what you typed.

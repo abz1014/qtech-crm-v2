@@ -142,6 +142,20 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
     }
   })
 
+  it('the Money pages follow the Money tabs: sales find Who owes us and Invoices & GST, only admins the rest', async () => {
+    const admin = ['Who owes us', 'Invoices & GST', 'Reports', 'Expenses', 'Add expenses', 'Month end', 'Match bank statement', 'Order margins', 'Things to check']
+    for (const [role, want] of [['admin', admin], ['sales', ['Who owes us', 'Invoices & GST', 'Reports']], ['engineer', []]] as const) {
+      const u = userEvent.setup()
+      shell(role)
+      const dlg = await search(u, 'money')
+      for (const label of admin) {
+        const found = within(dlg).queryAllByRole('option').some(o => o.textContent?.startsWith(label))
+        expect(found, `${role}: ${label}`).toBe((want as readonly string[]).includes(label))
+      }
+      cleanup()
+    }
+  })
+
   it('"reports" finds Reports for admin and sales, never for an engineer', async () => {
     for (const [role, found] of [['admin', true], ['sales', true], ['engineer', false]] as const) {
       const u = userEvent.setup()

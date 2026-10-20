@@ -5,7 +5,7 @@ import { fe2, monthBefore, openPage, ordRef, readCount, resetCount, roleContext 
 /*
  * P03, the admin journey: the books for a month, from the daily scraps to the close.
  *
- *   burst-enter five expenses with the keyboard only -> tick the bank statement -> review the margins and the exceptions ->
+ *   burst-enter five expenses with the keyboard only -> match the bank statement -> review the margins and the things to check ->
  *   close the month -> the closed-month sentence refuses an edit (a new expense, a delete) -> reopen the month.
  *
  * FE-2 targets (BUILD_PLAN FE-2 and A6.5), each read from the browser's own mouse and key events:
@@ -160,17 +160,20 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     const d = rowOf(m.done)
     await expect(d).toContainText(ordRef(m.done.order.number))
     await expect(d).toContainText('300,000') // 1,000,000 net less 700,000 paid out
-    await expect(d).toContainText('Complete')
+    await expect(d).toContainText('Costs complete')
     const p = rowOf(m.prov)
     await expect(p).toContainText(ordRef(m.prov.order.number))
-    await expect(p).toContainText('Not final')
+    await expect(p).toContainText('Margin not final')
     await expect(p.locator('[data-provisional]')).toHaveCount(1)
-    // Margins and exceptions are each one tap from the other Money tabs.
+    // Things to check (the old Exceptions tab) is one row of the Month end checklist: one tap from there.
+    await page.goto(`/money/month-end?month=${STMT.key}`)
+    const row = page.getByTestId('check-things_to_check')
+    await expect(row).toBeVisible()
     await resetCount(page)
-    await page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /Exceptions/ }).click()
-    await expect(page.getByRole('heading', { name: 'Exceptions' })).toBeVisible()
-    fe2('Money tab to Exceptions', (await readCount(page)).mouse, 1)
-    const over = page.getByRole('list', { name: 'Exceptions' }).getByRole('listitem').filter({ hasText: ordRef(m.over.order.number) }).filter({ hasText: 'Payments exceed total' })
+    await row.getByRole('link').click()
+    await expect(page.getByRole('heading', { name: 'Things to check', level: 2 })).toBeVisible()
+    fe2('Month end to Things to check', (await readCount(page)).mouse, 1)
+    const over = page.getByRole('list', { name: 'Things to check' }).getByRole('listitem').filter({ hasText: ordRef(m.over.order.number) }).filter({ hasText: 'Payments exceed total' })
     await expect(over).toContainText('Customer payments (15,000) exceed the order')
     await expect(over.getByRole('link', { name: 'View order' })).toHaveAttribute('href', `/orders/${m.over.order.id}`)
     await page.close()
@@ -180,8 +183,10 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
   const page = await openPage(ctx, `/money/month-end?month=${STMT.key}`)
 
   await test.step('the checklist knows the bank is ticked; closing the month is 2 taps', async () => {
-    await expect(page.getByRole('navigation', { name: 'Month-end views' }).getByRole('link', { name: /^Checklist/ })).toHaveAttribute('aria-current', 'page')
-    await expect(page.getByTestId('check-bank_unticked')).toHaveAttribute('data-clear', /.*/) // nothing left to tick
+    await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /^Month end/ })).toHaveAttribute('aria-current', 'page')
+    // nothing left to tick: a clear check is not listed, it is named on the "clear" line
+    await expect(page.getByTestId('check-bank_unticked')).toHaveCount(0)
+    await expect(page.getByTestId('checks-clear')).toContainText('Not matched to the bank statement')
     const closeBtn = page.getByRole('button', { name: closeName })
     await expect(closeBtn).toBeEnabled()
     await resetCount(page)
@@ -198,8 +203,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
   await test.step('the closed-month sentence refuses an edit, word for word', async () => {
     // A new expense dated in the closed month: the sentence sits under the date and the entry is kept.
     const amount = 70000 + Math.floor(Math.random() * 9000)
-    await page.goto('/money/expenses')
-    await page.getByRole('button', { name: 'Add expense', exact: true }).click()
+    await page.goto('/money/expenses?add=1') // the one-expense dialog (the screen's own button opens the burst sheet)
     await page.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(amount))
     await page.getByRole('textbox', { name: 'Date paid' }).fill(`05/${STMT.key.slice(5)}/${STMT.key.slice(0, 4)}`)
     await page.getByRole('button', { name: 'Save expense' }).click()

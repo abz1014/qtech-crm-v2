@@ -165,7 +165,7 @@ test.describe('invoices and the GST register (M01)', () => {
     await review(page, 'm01-month-stamping-1440')
     await bar.getByRole('button', { name: 'Sent by TCS today' }).click() // tap 2
     await expect(page.getByText(/sent by TCS today/).first()).toBeVisible()
-    await page.getByLabel('PSID').focus()
+    await page.getByRole('textbox', { name: 'PSID', exact: true }).focus()
     await page.keyboard.press('Control+V') // the one paste
     await page.keyboard.press('Enter')
     await expect(page.getByText(new RegExp(`given PSID PSID${tag}`)).first()).toBeVisible()
@@ -274,7 +274,7 @@ test.describe('payments in and receivables (M02)', () => {
     expect(await receivable(order.id)).toMatchObject({ balance: 0, payment_state: 'settled' })
   })
 
-  test('a smaller amount is a part payment, from Receivables, and says what stays due', async ({ page }) => {
+  test('a smaller amount is a part payment, from Who owes us, and says what stays due', async ({ page }) => {
     const order = await seedOrder(200000)
     await seedInvoice(order, { net_amount: 200000, gst_amount: 36000 })
     await openAs(page, 'admin', '/money/receivables')
@@ -289,7 +289,7 @@ test.describe('payments in and receivables (M02)', () => {
     expect(await receivable(order.id)).toMatchObject({ balance: 136000, settled: 100000, payment_state: 'part' })
   })
 
-  test('Receivables shows balances by status with the figures on top, and a deep link opens Record payment', async ({ page }) => {
+  test('Who owes us shows balances by status with the figures on top, and a deep link opens Record payment', async ({ page }) => {
     const order = await seedOrder(100000)
     await seedInvoice(order, { net_amount: 100000, gst_amount: 18000, invoice_date: karachiDay(-60) })
     await openAs(page, 'admin', '/money/receivables')
@@ -303,6 +303,27 @@ test.describe('payments in and receivables (M02)', () => {
     await expect(row).toBeVisible()
     await page.goto(`/money/receivables?pay=1&order=${order.id}`)
     await expect(page.getByRole('dialog', { name: 'Record payment' })).toBeVisible()
+  })
+
+  test('Money opens on Who owes us; on a phone each card records a payment and opens its order (no detour)', async ({ page }) => {
+    const order = await seedOrder(100000)
+    await seedInvoice(order, { net_amount: 100000, gst_amount: 18000, invoice_date: karachiDay(-60) })
+    await openAs(page, 'admin', '/money')
+    await expect(page).toHaveURL(/\/money\/receivables$/)
+    await expect(page.getByRole('heading', { name: 'Who owes us', level: 2 })).toBeVisible()
+    await page.setViewportSize({ width: 375, height: 812 })
+    const ref = `ORD-${String(order.number).padStart(4, '0')}`
+    const card = page.locator('tr[data-card]').filter({ hasText: order.company.name })
+    await expect(card).toBeVisible()
+    await expect(card.getByRole('link', { name: 'Open order' })).toHaveAttribute('href', `/orders/${order.id}`)
+    await startCounting(page)
+    await card.getByRole('button', { name: `Record payment for ${ref}` }).click() // tap 1
+    const dialog = page.getByRole('dialog', { name: 'Record payment' })
+    await expect(dialog.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue('118,000')
+    await dialog.getByRole('button', { name: 'Save payment' }).click() // tap 2
+    await expect(page.getByRole('dialog')).toBeHidden()
+    expect((await counted(page)).mouse).toBe(2)
+    expect(await receivable(order.id)).toMatchObject({ balance: 0, payment_state: 'settled' })
   })
 
   test('sales see the register and the order balances, not payment rows, and cannot record a payment', async ({ page }) => {
@@ -319,7 +340,15 @@ test.describe('payments in and receivables (M02)', () => {
     await expect(page.getByRole('button', { name: 'New invoice' })).toBeVisible()
     await expect(page.getByRole('link', { name: /Expenses/ })).toHaveCount(0)
     await review(page, 'm01-gst-register-sales-1440')
-    await page.getByRole('link', { name: /Order balances/ }).click()
+    // sales stamp too (Today sends them the TCS and FBR items): the ticks, the toggles and the FBR column stay; Net and GST go
+    await expect(page.getByRole('checkbox', { name: `Select ${inv.number}` })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Not sent by TCS/ })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: /FBR/ })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Net', exact: true })).toHaveCount(0)
+    await page.getByRole('checkbox', { name: `Select ${inv.number}` }).click()
+    await page.getByTestId('batch-bar').getByRole('button', { name: 'Sent by TCS today' }).click()
+    await expect.poll(async () => (await must(rest<InvoiceRow[]>('admin', `invoices?id=eq.${inv.id}&select=tcs_sent_on`)))[0].tcs_sent_on).toBe(today())
+    await page.getByRole('link', { name: /^Who owes us/ }).click()
     const row = page.getByRole('row', { name: new RegExp(order.company.name) })
     await expect(row).toContainText('88,000') // the balance: 118,000 less 30,000
     await expect(page.getByRole('button', { name: /Record payment/ })).toHaveCount(0)
@@ -377,7 +406,10 @@ test.describe('payments in and receivables (M02)', () => {
     expect(await axeViolations(page)).toEqual([])
     await page.goto('/money/receivables')
     await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('heading', { name: 'Receivables', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Who owes us', level: 2 })).toBeVisible()
+    // the four Money tabs wrap: none is off-screen, and nothing scrolls sideways
+    for (const t of await page.getByRole('navigation', { name: 'Money views' }).getByRole('link').all()) await expect(t).toBeInViewport()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
     await review(page, 'm02-receivables-375')
     expect(await axeViolations(page)).toEqual([])
     await page.goto(`/money/gst-register?new=1&order=${order.id}`)

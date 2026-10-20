@@ -186,14 +186,17 @@ test.describe('toolbar: filter box, Open and Closed switch, density, nav counts'
       await review(page, `board-toolbar-${w}`)
 
       if (w >= 1280) {
-        // B-11 / B-164: the top bar reads "RFQs <open count>", and Money stays bare.
+        // The top bar reads "RFQs <n>": since the owner decision of 2026-10-19 a count means "needs you", so n is the RFQ items
+        // on the admin's own Today, never more than the open RFQs the board lists.
         const link = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs\s*\d+$/ })
         await expect(link).toBeVisible()
-        const open = Number(/(\d+)$/.exec((await link.innerText()).trim())?.[1])
-        expect(open).toBeGreaterThanOrEqual(6)
+        const needs = Number(/(\d+)$/.exec((await link.innerText()).trim())?.[1])
         const seg = page.getByRole('radio', { name: /^Open\s*\d+$/ })
         await expect(seg).toBeChecked()
-        expect(Number(/(\d+)$/.exec((await seg.innerText()).trim())?.[1])).toBe(open)
+        const open = Number(/(\d+)$/.exec((await seg.innerText()).trim())?.[1])
+        expect(open).toBeGreaterThanOrEqual(6)
+        expect(needs).toBeGreaterThan(0)
+        expect(needs).toBeLessThanOrEqual(open)
         await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Today\s*\d+$/ })).toBeVisible()
       }
 

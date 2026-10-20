@@ -17,7 +17,7 @@ const FIVE: NavItem[] = [
   { key: 'companies', label: 'Companies', path: '/companies', icon: Building2, roles: ALL },
   { key: 'money', label: 'Money', path: '/money', icon: Wallet, roles: ['admin', 'sales'] },
 ]
-const SIX: NavItem[] = [...FIVE, { key: 'reports', label: 'Reports', path: '/reports', icon: ChartColumn, roles: ['admin', 'sales'] }]
+const SIX: NavItem[] = [...FIVE, { key: 'reports' as NavKey, label: 'Reports', path: '/reports', icon: ChartColumn, roles: ['admin', 'sales'] }]
 
 // The widest realistic bar: an admin, every count, three-digit RFQs.
 const USER: SessionUser = { id: 'gallery-admin', name: 'Farhan Mirza', role: 'admin' }
