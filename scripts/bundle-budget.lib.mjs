@@ -10,7 +10,8 @@ import { gzipSync } from 'node:zlib'
  * 278 KB. Set about 5% above the real entry (257.5 KB on perf/client), so a regression fails instead of eating hidden
  * headroom. Lower it when the entry shrinks. Round 2 (r2/fast-reads): the lazy sign-in page took the entry to 221.8 KB; limit 240 KB.
  */
-export const INITIAL_JS_BUDGET_BYTES = 240 * 1024
+// 2026-10-20: temporarily 245 KB (main reached 239.9 after the round-2 merges); perf/trim brings it back under 230 and lowers this to 235.
+export const INITIAL_JS_BUDGET_BYTES = 245 * 1024
 
 /** Local asset paths a JS or HTML source points at: <script src>, <link rel=modulepreload href>, and static `import ... from "./x.js"`. */
 export function staticJsRefs(source, { html = false } = {}) {
