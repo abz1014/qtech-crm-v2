@@ -3,7 +3,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff, KeyRound, Smartphone, UserX } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { OfflineSignInPage } from '@/app/pages/OfflinePage'
 import { useSession, useSignInNotice } from '@/app/session'
+import { useOnline } from '@/lib/connection'
 import { getSupabase } from '@/lib/supabase'
 import { shortDay } from '@/features/capture/model'
 import { listCaptures, markCaptureBeforeSignIn, safely } from '@/lib/capture/store'
@@ -29,6 +31,7 @@ type Failure = 'invalid' | 'deactivated' | 'unreachable' | null
 export function SignInPage() {
   const session = useSession()
   const notice = useSignInNotice()
+  const online = useOnline()
   const [failure, setFailure] = useState<Failure>(null)
   const [submitting, setSubmitting] = useState(false)
   const [attempted, setAttempted] = useState(false)
@@ -70,6 +73,19 @@ export function SignInPage() {
 
   // A notice from the session (signed out because deactivated) shows when this form has nothing to say itself.
   const shown: Failure = failure ?? (notice === 'deactivated' ? 'deactivated' : notice === 'unreachable' ? 'unreachable' : null)
+
+  // Signing in needs signal: offline, say so instead of offering a form that cannot work (phone audit 2c).
+  if (!online && !busy) {
+    return (
+      <OfflineSignInPage>
+        {kept ? (
+          <Banner tone="success" title="Your shared item is safe">
+            {`${kept.what}, kept on this phone until ${kept.until}. Sign in when you have signal and the Capture sheet opens with it.`}
+          </Banner>
+        ) : null}
+      </OfflineSignInPage>
+    )
+  }
 
   return (
     <main className="grid min-h-dvh place-items-center bg-canvas px-4 py-8 max-sm:items-start max-sm:bg-surface max-sm:px-0 max-sm:py-6">

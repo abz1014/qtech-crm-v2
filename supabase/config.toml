@@ -178,7 +178,12 @@ jwt_expiry = 3600
 enable_refresh_token_rotation = true
 # Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
 # Requires enable_refresh_token_rotation = true.
-refresh_token_reuse_interval = 10
+# 120, not the default 10 (phone audit section 4): on patchy mobile data a refresh can reach the server and its reply be
+# lost; the phone then retries with the same (now used) token later (supabase-js waits out a 60 s cooldown after a failed
+# refresh, then tries on its 30 s auto-refresh tick), and past this window Auth treats that as token reuse and revokes the
+# session, which signs the person out. 120 s covers the first retries after the cooldown. Mirror it in the hosted project
+# (docs/SUPABASE.md, "Auth session settings").
+refresh_token_reuse_interval = 120
 # Allow/disallow new user signups to your project.
 enable_signup = false
 # Allow/disallow anonymous sign-ins to your project.
