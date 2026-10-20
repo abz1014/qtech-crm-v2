@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeftRight, Building2, CalendarCheck, ChartColumn, CircleAlert, HandCoins, Import, Landmark, Percent, Plus, Receipt, Settings, Wallet, type LucideIcon } from 'lucide-react'
+import { Building2, CalendarCheck, ChartColumn, CircleAlert, HandCoins, Import, Landmark, Percent, Plus, Receipt, Settings, Wallet, type LucideIcon } from 'lucide-react'
 import { navItemsForRole } from '@/app/navConfig'
 import { settingsLinksFor } from '@/features/settings/settingsLinks'
 import { CaptureContext } from '@/app/capture/useCapture'
@@ -24,7 +24,7 @@ const MONEY_PLACES: ReadonlyArray<{ id: string; label: string; href: string; ico
   { id: 'money:reports', label: 'Reports', href: '/money/reports', icon: ChartColumn, roles: ['admin', 'sales'] },
   { id: 'money:expenses', label: 'Expenses', href: '/money/expenses', icon: Wallet, roles: ['admin'] },
   { id: 'money:burst', label: 'Add expenses', href: '/money/expenses?burst=1', icon: Plus, roles: ['admin'], meta: 'Action', keywords: ['money', 'burst', 'add expense', 'spend', 'fuel', 'water', 'petrol'] },
-  { id: 'money:in-out', label: 'In vs out', href: '/money/reports/in-out', icon: ArrowLeftRight, roles: ['admin'], keywords: ['cash flow', 'money in', 'money out', 'quarter', 'profit'] },
+  { id: 'money:in-out', label: 'In vs out', href: '/money/reports/in-out', icon: ChartColumn, roles: ['admin'], keywords: ['cash flow', 'money in', 'money out', 'quarter', 'profit'] },
   { id: 'money:month-end', label: 'Month end', href: '/money/month-end', icon: CalendarCheck, roles: ['admin'] },
   { id: 'money:bank', label: 'Match bank statement', href: '/money/month-end/bank', icon: Landmark, roles: ['admin'], keywords: ['bank tick'] },
   { id: 'money:margins', label: 'Order margins', href: '/money/margins', icon: Percent, roles: ['admin'] },
