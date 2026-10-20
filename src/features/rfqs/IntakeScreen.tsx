@@ -36,7 +36,7 @@ import { asParseResult, parseEnquiry } from '@/lib/docread/enquiryParse'
 import type { SenderHint } from '@/features/companies/api'
 import { PdfPickButton, SenderSuggestion } from '@/features/rfqs/PdfIntake'
 import { isReadableFile, pastedPictures, readDocument } from '@/features/rfqs/lib/readPdf'
-import { DraftOffer, EnquiryCard, FloatedPanel, Hint, SidePanels, StepLine, type Step } from '@/features/rfqs/IntakeParts'
+import { DraftOffer, EnquiryCard, FloatedPanel, Hint, StepLine, type Step } from '@/features/rfqs/IntakeParts'
 import { clearIntakeDraft, draftHasContent, draftSummary, loadIntakeDraft, saveIntakeDraft, type IntakeDraft } from '@/features/rfqs/lib/intakeDraftStore'
 import { useLeaveGuard } from '@/features/rfqs/useLeaveGuard'
 import { repeatedNote, skipRepeats } from '@/features/rfqs/lib/skipRepeats'
@@ -54,7 +54,8 @@ import { Field } from '@/ui/form/Field'
 import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { Icon } from '@/ui/Icon'
-import { StatusBadge } from '@/ui/StatusBadge'
+import { STATUS } from '@/lib/status'
+import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
 
 /*
@@ -119,12 +120,13 @@ export default function IntakeScreen() {
   // first: Continue your draft, or Start new with what just arrived.
   const captureId = (location.state as { capture?: { id: string } } | null)?.capture?.id ?? ''
   const companyParam = params.get('company') ?? ''
+  const supplierParam = params.get('supplier') ?? ''
   return (
     <IntakeForm
-      key={`${round}|${captureId}|${companyParam}`}
+      key={`${round}|${captureId}|${companyParam}|${supplierParam}`}
       onAnother={() => {
-        // A fresh form does not take again what the last one arrived with (a company, a captured message).
-        if (captureId || companyParam) navigate('/rfqs/new', { replace: true })
+        // A fresh form does not take again what the last one arrived with (a company, a supplier, a captured message).
+        if (captureId || companyParam || supplierParam) navigate('/rfqs/new', { replace: true })
         setRound(r => r + 1)
       }}
     />
@@ -214,6 +216,19 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     tookCompany.current = true
     setCompany({ id: wanted.data.id, name: wanted.data.name, country: wanted.data.country, city: wanted.data.city ?? null, role: wanted.data.role })
   }, [arrival, wanted.data])
+
+  // A supplier's company page arrives with ?supplier=<id>: that supplier is already on the list of suppliers to ask (ticked, under
+  // "Added by you", or ticked in its reason group when it is suggested anyway), with no extra step. Taken once, like the company.
+  const presetId = params.get('supplier')
+  const preset = useCompany(presetId ?? undefined)
+  const tookSupplier = useRef(false)
+  useEffect(() => {
+    if (arrival !== 'take' || tookSupplier.current || !preset.data) return
+    tookSupplier.current = true
+    const s = { id: preset.data.id, name: preset.data.name }
+    setManual(m => (m.some(x => x.id === s.id) ? m : [...m, s]))
+    setOverrides(o => ({ ...o, [s.id]: true }))
+  }, [arrival, preset.data])
 
   // ---- items
   const itemsRef = useRef(items)
@@ -480,7 +495,10 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   const suppliersLoading = wantSuppliers && (candidates.isPending || (candidates.isSuccess && memory.isPending && suggestionItems.length > 0 && candidateList.length > 0))
   const suppliersError = candidates.isError || memory.isError
 
-  const manualIds = manual.map(m => m.id)
+  // Never ask the customer itself (a supplier page's company can also be the customer chosen here).
+  const manualList = manual.filter(m => m.id !== company?.id)
+  const manualIds = manualList.map(m => m.id)
+  const presetSupplier = presetId ? manualList.find(m => m.id === presetId) : undefined
   const ticked = tickedIds(suggestions.suppliers, overrides, manualIds)
   const tickedSet = useMemo(() => new Set(ticked), [ticked])
   const flaggedKeys = itemsWithoutSupplier(
@@ -489,7 +507,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     ticked,
     manualIds,
   )
-  const nameOf = (id: string) => suggestions.suppliers.find(s => s.supplierId === id)?.name ?? manual.find(m => m.id === id)?.name ?? 'Supplier'
+  const nameOf = (id: string) => suggestions.suppliers.find(s => s.supplierId === id)?.name ?? manualList.find(m => m.id === id)?.name ?? 'Supplier'
   const recipients = ticked.map(id => ({ id, name: nameOf(id) }))
   const itemNumber = (key: string) => suggestionItems.findIndex(i => i.id === key) + 1
   const shortItem = (key: string) => {
@@ -754,7 +772,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   return (
     <div className="mx-auto w-full max-w-[1100px] px-4 pb-12 pt-6 md:px-8">
       {/* minmax(0,1fr) tracks: a long item name or supplier never widens the page past a phone screen (it truncates or wraps). */}
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_288px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8">
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
           <header className="grid gap-1">
             <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-fg-muted">
@@ -764,6 +782,11 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
             </nav>
             <h1 className="text-2xl font-semibold tracking-tight">New RFQ</h1>
             <p className="max-w-prose text-sm text-fg-muted">{lede}</p>
+            {step === 'build' && !offer && presetSupplier ? (
+              <p className="max-w-prose text-sm text-fg-2" data-preset-supplier>
+                <strong className="font-medium text-fg">{presetSupplier.name}</strong> is ticked as a supplier to ask.
+              </p>
+            ) : null}
           </header>
           <StepLine step={step} />
 
@@ -948,7 +971,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                   groups={suggestions.groups}
                   ticked={tickedSet}
                   onToggle={toggleSupplier}
-                  manual={manual}
+                  manual={manualList}
                   onAddManual={addManual}
                   memory={memoryContext}
                   excludeIds={new Set([...(company ? [company.id] : []), ...suggestions.suppliers.map(s => s.supplierId)])}
@@ -1100,16 +1123,6 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
           ) : null}
         </div>
 
-        <SidePanels
-          step={step}
-          number={saved?.number ?? null}
-          customer={company?.name ?? null}
-          itemCount={real.length}
-          dueOn={dueOn || null}
-          tickedCount={ticked.length}
-          floated={step === 'floated'}
-          floatedOn={floatedOn}
-        />
       </div>
 
       {leaving ? (
@@ -1154,11 +1167,12 @@ function CustomerChip({ company, contacts, onChange }: { company: Company; conta
     <div className="flex min-h-12 flex-wrap items-center gap-3 rounded border bg-surface px-3 py-2">
       <Avatar name={company.name} className="!bg-selected !text-fg-2" />
       <div className="min-w-0">
-        <p className="m-0 truncate text-sm font-medium">{company.name}</p>
+        <p className="m-0 line-clamp-2 break-words text-sm font-medium">{company.name}</p>
         <p className="m-0 text-xs text-fg-muted">{[company.city ?? company.country, contactNote].filter(Boolean).join(' · ')}</p>
       </div>
       <span className="ml-auto" />
-      {company.role ? <StatusBadge dimension="company-role" value={company.role} label={company.role === 'prospect' ? 'New prospect' : undefined} /> : null}
+      {/* Identity, not state: a Tag, as on the company page (the company-role chip is hidden in the registry). */}
+      {company.role ? <Tag dashed={company.role === 'prospect'}>{company.role === 'prospect' ? 'New prospect' : STATUS['company-role'][company.role].label}</Tag> : null}
       <Button variant="quiet" size="sm" onClick={onChange} aria-label={`Change company, now ${company.name}`}>
         Change
       </Button>

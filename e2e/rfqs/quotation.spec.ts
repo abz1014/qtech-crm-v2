@@ -214,7 +214,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     const row = page.getByTestId('quotation-0')
     await expect(row).toContainText(refOf(q)) // on screen the number, no "R0" (the PDF and its file name keep it)
     await expect(row).not.toContainText(`${refOf(q)} R0`)
-    await expect(row).toContainText('Current')
+    await expect(row.locator('[data-status]')).toHaveCount(0) // the current version carries no mark (the normal state)
     await expect(row).toContainText('PKR 2,891.50')
     await shot(page, 'rfq-quotation-03-list-1440')
   })
@@ -305,9 +305,9 @@ test.describe('re-issue', () => {
     }
     if (pdf1 && process.env.REVIEW_DIR) renderPdfPng(pdf1, process.env.REVIEW_DIR, 'rfq-quotation-pdf-r1-revised-page1')
 
-    // The list: both revisions, the latest current, the earlier superseded.
-    await expect(page.getByTestId('quotation-1')).toContainText('Current')
-    await expect(page.getByTestId('quotation-0')).toContainText('Replaced')
+    // The list: both revisions, the latest with no mark, the earlier one replaced.
+    await expect(page.getByTestId('quotation-1')).not.toContainText('Replaced')
+    await expect(page.getByTestId('quotation-0')).toContainText('Replaced by revision 1')
     await expect(page.getByTestId('quotation-1')).toContainText('Revision 1')
     await shot(page, 'rfq-quotation-05-list-two-revisions-1440')
   })
@@ -320,8 +320,8 @@ test.describe('expired state', () => {
     await issueViaRpc(s.rfq.id, { p_valid_until: karachiDay(-2) })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const row = page.getByTestId('quotation-0')
-    await expect(row).toContainText('Expired')
-    await expect(row).toContainText(/Expired/)
+    await expect(row).toContainText('Quotation expired')
+    await expect(row.locator('[data-status="bid:expired"]')).toBeVisible()
     await shot(page, 'rfq-quotation-06-expired-1440')
   })
 })

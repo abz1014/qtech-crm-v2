@@ -10,12 +10,12 @@ import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
 import { Skeleton } from '@/ui/Skeleton'
-import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import { Panel } from '@/features/companies/CompanyParts'
 import type { ClarificationRow, InquiryRow, RfqHeader } from '@/features/rfqs/api'
 import { AddQuestions, QuestionRow, WithdrawnRow } from '@/features/rfqs/ClarificationParts'
-import { ChannelLink, ChasedByNote, ChaseNote, FormattedMessage, MoreToggle, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
+import { ChannelLink } from '@/ui/ChannelLink'
+import { ChasedByNote, ChaseNote, FormattedMessage, MoreToggle, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
 import { useClarifications, useFileUrls, useRestoreClarificationAsk, useRfqAttachments, useRfqItems, useSetInquiryRelayed, useStampClarificationAsk } from '@/features/rfqs/hooks'
 import { useSignature } from '@/features/rfqs/useSignature'
 import { useChannelPreference } from '@/lib/useChannelPreference'
@@ -218,8 +218,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                 signature={signature}
                 items={rfqItems.data}
                 today={today}
-                header={<StatusBadge dimension="clarification" value="to-ask" />}
-                hint={`${groups.toAsk.length} ${groups.toAsk.length === 1 ? 'question' : 'questions'}`}
+                header={`To ask the customer · ${groups.toAsk.length}`}
                 copyLabel="Copy questions for customer"
                 stamping={copying || stamp.isPending}
                 onCopy={(selected, text) => void once(() => copyAsk(selected, false, text))}
@@ -241,7 +240,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                 signature={signature}
                 items={rfqItems.data}
                 today={today}
-                header={<StatusBadge dimension="clarification" value="waiting-customer" label={`Asked ×${Math.max(...groups.asked.map(c => c.askCount))}`} />}
+                header={`Waiting on the customer · ${groups.asked.length}`}
                 hint={askedHint(groups.asked, today)}
                 copyLabel="Copy chase text"
                 stamping={copying || stamp.isPending}
@@ -258,8 +257,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
             {groups.answered.length > 0 ? (
               <Group
                 key="answered"
-                header={<StatusBadge dimension="clarification" value="answered" />}
-                hint={`${groups.answered.length} ${groups.answered.length === 1 ? 'question' : 'questions'}`}
+                header={`Answered · ${groups.answered.length}`}
               >
                 {groups.answered.map(c => (
                   <QuestionRow key={c.id} rfqId={rfq.id} c={c} raisedBy={c.raisedByInquiryId ? (nameOf.get(c.raisedByInquiryId) ?? 'a supplier') : null} files={filesFor(c.id)} urls={urls.data} />
@@ -290,7 +288,8 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
 function askedHint(rows: ClarificationRow[], today: string): string {
   const last = rows.map(c => c.lastAskedAt).filter((x): x is string => Boolean(x)).sort().at(-1)
   const days = last ? daysBetween(toBusinessDate(new Date(last)), today) : 0
-  return `${rows.length} ${rows.length === 1 ? 'question' : 'questions'} · last asked ${agoText(days)}`
+  const times = Math.max(...rows.map(c => c.askCount))
+  return `Asked ×${times} · last asked ${agoText(days)}`
 }
 
 function chaseDueNote(rows: ClarificationRow[], dueOn: string | null, today: string): string | null {
@@ -302,7 +301,7 @@ function chaseDueNote(rows: ClarificationRow[], dueOn: string | null, today: str
 }
 
 /**
- * One group of questions with the same state: a header with its chip, the questions, and for the ones still to ask or
+ * One group of questions with the same state: a plain heading with its count, the questions, and for the ones still to ask or
  * waiting, the message (g2-chase-texts "Customer clarification chase"): a short preview of the text, the recipient, and one tap to
  * copy and mark it; under "Show the whole message", every open question ticked, "Kindly confirm by" a date the person can change,
  * the subject for an email and the full text. The channel is the person's remembered one, with the other as a link.
@@ -333,8 +332,9 @@ function ChaseGroup({
   signature: { name: string; company: string; jobTitle?: string | null; phone?: string | null }
   items?: ReadonlyArray<{ id: string; number: number; description: string; brandName: string | null }>
   today: string
-  header: React.ReactNode
-  hint: string
+  /** The group's plain heading with its count ("To ask the customer · 2"): words, not a chip (consistency spec 1.5). */
+  header: string
+  hint?: string
   copyLabel: string
   stamping: boolean
   onCopy: (selected: ClarificationRow[], text: string) => void
@@ -391,10 +391,7 @@ function ChaseGroup({
   const text = shown ? shown.body : ''
   return (
     <div className="border-t first:border-t-0">
-      <header className="flex items-center justify-between gap-2 px-4 pb-1 pt-3">
-        {header}
-        <span className="text-right text-xs text-fg-muted">{hint}</span>
-      </header>
+      <GroupHeading heading={header} hint={hint} />
       <div className="divide-y divide-dashed">{children}</div>
       {repeat ? <ChasedByNote byId={lastBy?.by} at={lastBy?.at} className="px-4 pt-2" /> : null}
       <div className="mx-4 mb-3 mt-2 grid overflow-hidden rounded border bg-surface">
@@ -481,13 +478,21 @@ function ChaseGroup({
 }
 
 /** A plain group of questions (answered). */
-function Group({ header, hint, children }: { header: React.ReactNode; hint: string; children: React.ReactNode }) {
+/** A group's heading: a plain h3 with its count, and an optional muted note on the right. */
+function GroupHeading({ heading, hint }: { heading: string; hint?: string }) {
+  return (
+    <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-4 pb-1 pt-3">
+      <h3 className="text-sm font-semibold text-fg">{heading}</h3>
+      {hint ? <span className="text-right text-sm text-fg-muted">{hint}</span> : null}
+    </header>
+  )
+}
+
+/** A plain group of questions (answered). */
+function Group({ header, hint, children }: { header: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="border-t first:border-t-0">
-      <header className="flex items-center justify-between gap-2 px-4 pb-1 pt-3">
-        {header}
-        <span className="text-right text-xs text-fg-muted">{hint}</span>
-      </header>
+      <GroupHeading heading={header} hint={hint} />
       <div className="divide-y divide-dashed">{children}</div>
     </div>
   )

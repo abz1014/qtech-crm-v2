@@ -1,14 +1,14 @@
 import { useState } from 'react'
-import { Circle, CircleCheck, Clock, ExternalLink, FilePlus2, Share2 } from 'lucide-react'
+import { ExternalLink, FilePlus2, Share2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { formatPaisa, toPaisa } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
-import { Icon } from '@/ui/Icon'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { Skeleton } from '@/ui/Skeleton'
+import { StatusBadge } from '@/ui/StatusBadge'
 import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
 import type { InquiryRow, RfqHeader } from '@/features/rfqs/api'
@@ -30,25 +30,11 @@ import { sharePdf, downloadBlob } from '@/features/quotations/lib/sharePdf'
  * header's Issue quotation (another component) and this block's own button open the same dialog without sharing state.
  * On screen a version is the number and "Revision 2" (plain words, 2026-10-19); the PDF and its file name keep "QT-26-0042 R2".
  * Mark won is not repeated here: it is the page's one green button once a quotation is out.
+ * State per version (consistency spec 1.5): the current one has no mark (the normal state); an older one says "Replaced by
+ * revision N" in plain words; an expired current one shows the registry's `bid:expired` chip.
  */
 
 const gross = (q: QuotationRow) => toPaisa(q.netTotal) + toPaisa(q.gstTotal)
-
-function StateChip({ kind }: { kind: 'current' | 'superseded' | 'expired' }) {
-  const look = {
-    current: 'border-tone-success-fg/25 bg-tone-success-bg text-tone-success-fg',
-    superseded: 'border-line-strong bg-surface text-fg-muted',
-    expired: 'border-tone-warning-fg/25 bg-tone-warning-bg text-tone-warning-fg',
-  }[kind]
-  const text = { current: 'Current', superseded: 'Replaced', expired: 'Expired' }[kind]
-  const glyph = { current: CircleCheck, superseded: Circle, expired: Clock }[kind]
-  return (
-    <span className={`inline-flex h-6 items-center gap-[5px] rounded border pl-[6px] pr-2 text-sm font-medium ${look}`}>
-      <Icon icon={glyph} size="chip" />
-      {text}
-    </span>
-  )
-}
 
 export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader; inquiries: InquiryRow[]; itemCount: number }) {
   const { toast } = useToast()
@@ -139,7 +125,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
             </div>
           ) : null}
           <div role="table" aria-label="Issued quotations" className="text-sm">
-            <div role="row" className={`hidden gap-4 px-5 py-2 text-xs text-fg-muted sm:grid ${GRID}`}>
+            <div role="row" className={`hidden gap-4 px-5 py-2 text-sm text-fg-muted sm:grid ${GRID}`}>
               <span role="columnheader">Quotation</span>
               <span role="columnheader">Issued</span>
               <span role="columnheader">Valid until</span>
@@ -168,26 +154,30 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
                     <span role="cell" className="flex flex-wrap items-center gap-2">
                       <Tag>{base}</Tag>
                       {q.revision > 0 ? <span className="text-sm text-fg-2">Revision {q.revision}</span> : null}
-                      <StateChip kind={expired ? 'expired' : latest ? 'current' : 'superseded'} />
+                      {expired ? (
+                        <StatusBadge dimension="bid" value="expired" />
+                      ) : latest ? null : (
+                        <span className="text-sm text-fg-muted" data-replaced>{`Replaced by revision ${rows[i - 1].revision}`}</span>
+                      )}
                     </span>
                     <span role="cell" className="num text-sm">
-                      <span className="text-xs text-fg-muted sm:sr-only">Issued </span>
+                      <span className="text-sm text-fg-muted sm:sr-only">Issued </span>
                       {formatDay(q.issuedOn)}
                     </span>
                     <span role="cell" className={`num text-sm ${expired ? 'font-medium text-tone-warning-fg' : ''}`}>
-                      <span className="text-xs font-regular text-fg-muted sm:sr-only">{expired ? 'Expired ' : 'Valid until '}</span>
+                      <span className="text-sm font-regular text-fg-muted sm:sr-only">{expired ? 'Expired ' : 'Valid until '}</span>
                       {formatDay(q.validUntil)}
                     </span>
                     <span role="cell" className="num text-sm">
                       {q.lines.length} of {itemCount}
-                      <span className="text-xs text-fg-muted sm:sr-only">{q.lines.length === 1 ? ' item' : ' items'}</span>
+                      <span className="text-sm text-fg-muted sm:sr-only">{q.lines.length === 1 ? ' item' : ' items'}</span>
                     </span>
                     <span role="cell" className="grid sm:justify-items-end sm:text-right">
                       <span className="num text-sm font-medium">
-                        <span className="mr-1 font-sans text-xs font-regular text-fg-muted sm:sr-only">PKR{' '}</span>
+                        <span className="mr-1 font-sans text-sm font-regular text-fg-muted sm:sr-only">PKR{' '}</span>
                         {formatPaisa(gp, 'auto')}
                       </span>
-                      <span className="num text-xs text-fg-muted">net {formatPaisa(toPaisa(q.netTotal), 'auto')}</span>
+                      <span className="num text-sm text-fg-muted">net {formatPaisa(toPaisa(q.netTotal), 'auto')}</span>
                     </span>
                     <span role="cell" className="flex flex-wrap items-center gap-2 sm:justify-end">
                       <Button

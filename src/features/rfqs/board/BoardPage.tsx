@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, CircleCheck, Plus, Search, Users, X } from 'lucide-react'
-import { useClosedCount, useClosedRfqs, useOpenRfqs, useRfqValues } from '@/features/rfqs/board/hooks'
+import { ChevronLeft, ChevronRight, CircleCheck, Plus, Users, X } from 'lucide-react'
+import { useClosedRfqs, useOpenRfqs, useRfqValues } from '@/features/rfqs/board/hooks'
 import {
   applyOwner,
   applyQuery,
@@ -24,12 +24,17 @@ import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
-import { FirstUseState, NothingYetState } from '@/features/help/FirstUseState'
+import { FilterSheet } from '@/ui/FilterSheet'
+import { FirstUseState } from '@/features/help/FirstUseState'
 import { useFirstUse } from '@/features/help/useFirstUse'
+import { NoResults } from '@/ui/NoResults'
+import { PageHeader } from '@/ui/PageHeader'
 import { SegmentedControl } from '@/ui/SegmentedControl'
-import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
-import { TextField } from '@/ui/form/TextField'
+import { TableFilter } from '@/ui/TableFilter'
+import { Tooltip } from '@/ui/Tooltip'
+import { useMediaQuery } from '@/lib/useMediaQuery'
+import { useQueryParamText } from '@/lib/useQueryParamText'
 
 /*
  * RFQ board (R06; UX audit 2026-10-19). Open RFQs in the order the work is due: due date first, then priority. One filter worded
@@ -37,8 +42,10 @@ import { TextField } from '@/ui/form/TextField'
  * the owner switch (Mine or All; Mine is the default for sales). Each row leads with the company and what was asked, then the
  * code, and one "Next step" column says where it stands. Where you are (what is shown, owner, page) lives in the address, so a
  * reload or a shared link lands on the same view. An empty open list is the goal state.
- * The filter box (`/` focuses it, Esc clears) narrows the open list on this device; on Closed it searches the server, over every
- * closed RFQ (number, customer reference, company and item text), not only the page on screen.
+ * The search (TableFilter "Search RFQs", consistency spec 3.1: DataTable's `/` focuses it, Esc clears, the text lives in `?q=`)
+ * narrows the open list on this device; on Closed it searches the server, over every closed RFQ (number, customer reference,
+ * company and item text), not only the page on screen. On a phone, Mine or All moves into the Filters sheet (spec 3.2), so the
+ * phone toolbar is the search and the step select.
  */
 const errorProps = (q: { refetch: () => unknown; error: Error | null; errorUpdatedAt: number }) => ({
   title: 'Couldn’t load RFQs',
@@ -68,23 +75,12 @@ export function BoardPage() {
   const closedTab = show === 'closed'
   const owner: OwnerFilter = params.get('owner') === 'all' ? 'all' : params.get('owner') === 'mine' ? 'mine' : defaultOwner(user?.role ?? '')
   const page = Math.max(0, (Number(params.get('page')) || 1) - 1)
-  const [query, setQuery] = useState('')
-  const filterRef = useRef<HTMLInputElement>(null)
+  // The search lives in ?q= (a reload or a shared link keeps it); a new search starts the closed list on its first page.
+  const [query, setQueryParam] = useQueryParamText()
+  const setQuery = (v: string) => setQueryParam(v, { page: null })
   const q = query.trim()
   const searched = useSettled(closedTab ? q : '')
-
-  // "/" jumps to the filter box, unless the person is already typing somewhere.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return
-      const t = e.target as HTMLElement | null
-      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.closest('[role="dialog"]'))) return
-      e.preventDefault()
-      filterRef.current?.focus()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  const phone = useMediaQuery('(max-width: 639px)')
 
   const change = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params)
@@ -99,22 +95,12 @@ export function BoardPage() {
     setParams(next, { replace: true })
   }
 
-  // A new closed search starts on its first page.
-  const lastSearch = useRef(searched)
-  useEffect(() => {
-    if (lastSearch.current === searched) return
-    lastSearch.current = searched
-    if (page > 0) change({ page: null })
-    // change reads the current params; only a new search should reset the page
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searched])
 
   const open = useOpenRfqs()
   // Value is money: engineers never see it, and for them the request is never made.
   const canSeeMoney = user?.role === 'admin' || user?.role === 'sales'
   const values = useRfqValues(canSeeMoney)
   const closed = useClosedRfqs(page, searched, closedTab)
-  const closedCount = useClosedCount()
 
   // Owner narrows first, so the step counts always add up to what the owner switch shows.
   const byOwner = useMemo(() => applyOwner(open.data ?? [], owner, user?.id ?? null), [open.data, owner, user?.id])
@@ -159,27 +145,23 @@ export function BoardPage() {
   const filtered = owner === 'mine' || step !== 'all'
   const reset = () => change({ owner: 'all', show: null })
 
-  const clearQuery = () => {
-    setQuery('')
-    filterRef.current?.focus()
-  }
+  // Nothing matches the search (consistency spec 3.3). On the open list the step and owner filters are named, and Clear clears them too.
+  const filtersOn = closedTab ? [] : [...(owner === 'mine' ? ['Mine'] : []), ...(step !== 'all' ? [NEXT_STEP_LABEL[step]] : [])]
   const noMatch = (
-    <EmptyState title={`No RFQs match “${q}”`} actions={<Button onClick={clearQuery}>Clear filter</Button>}>
-      {closedTab
-        ? 'Searched every closed and won RFQ by number, customer, their reference and item. Try fewer words or clear the filter.'
-        : 'The filter covers the RFQ number, the customer, their reference and the first item. Try fewer words or clear the filter.'}
-    </EmptyState>
+    <NoResults
+      query={q}
+      scope={closedTab ? 'every closed RFQ' : 'open RFQs'}
+      fields="number, customer, their reference and item"
+      filtersOn={filtersOn}
+      onClear={() => (filtersOn.length ? change({ owner: 'all', show: null, page: null, q: null }) : setQuery(''))}
+    />
   )
 
   const firstUse = useFirstUse('rfqs', user?.id ?? '', user?.role ?? '', open.isSuccess && owner === 'mine' && mineCount === 0 && step === 'all' && !q)
-  // "Every quotation is out or closed" is only true once there has been an RFQ: with none open and none closed or won (a new
-  // CRM), the board says what will appear here instead. Until the closed count answers, the neutral line shows (never a false "done").
-  const neverAny = total === 0 && !(closedCount.isSuccess && closedCount.data > 0)
-  const emptyOpen = q && total > 0 ? noMatch : !filtered && neverAny ? (
-    <NothingYetState screen="rfqs" />
-  ) : !filtered && total === 0 ? (
+  // No open RFQ at all: one honest line for a new CRM and for a floor where everything is out or closed alike (it claims neither),
+  // so the board needs no extra count of the closed RFQs to choose between them.
+  const emptyOpen = q && total > 0 ? noMatch : !filtered && total === 0 ? (
     <EmptyState
-      mood="goal"
       title="No open RFQs"
       actions={
         <Button variant="primary" icon={Plus} onClick={newRfq}>
@@ -187,7 +169,7 @@ export function BoardPage() {
         </Button>
       }
     >
-      Every quotation is out or closed. New RFQs appear here as soon as you start one.
+      New RFQs appear here as soon as you start one. Won and closed RFQs are under Closed.
     </EmptyState>
   ) : owner === 'mine' && mineCount === 0 && step === 'all' && firstUse.isNew ? (
     <FirstUseState screen="rfqs" role={user?.role ?? ''} className="mx-5 my-4" />
@@ -216,53 +198,49 @@ export function BoardPage() {
     </EmptyState>
   )
 
-  const filterBox = (
-    <div className="relative w-[260px] max-w-full max-sm:w-full">
-      <span className="pointer-events-none absolute inset-y-0 left-[10px] grid place-items-center text-fg-muted">
-        <Icon icon={Search} />
-      </span>
-      <TextField
-        ref={filterRef}
-        className="pl-8"
-        placeholder={closedTab ? 'Search closed RFQs' : 'Filter RFQs'}
-        aria-label="Filter RFQs"
-        aria-keyshortcuts="/"
-        autoComplete="off"
-        value={query}
-        onChange={e => setQuery(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === 'Escape' && query) {
-            e.preventDefault()
-            setQuery('')
-          }
-        }}
-      />
-    </div>
+  // Mine or All narrows the open RFQs; the Closed list is everyone's (as before), so the switch is not drawn there.
+  const ownerSwitch = closedTab ? null : (
+    <SegmentedControl
+      aria-label="Whose RFQs"
+      large
+      value={owner}
+      onValueChange={v => change({ owner: v, page: null })}
+      options={[
+        { value: 'mine', label: 'Mine' },
+        { value: 'all', label: 'All' },
+      ]}
+    />
   )
+  const ownerOff = owner !== defaultOwner(user?.role ?? '')
 
   const toolbar = (
     <div className="flex w-full flex-wrap items-center gap-3">
-      {/* Mine or All narrows the open RFQs; the Closed list is everyone's (as before), so the switch is not drawn there. */}
-      {closedTab ? null : (
-        <SegmentedControl
-          aria-label="Whose RFQs"
-          large
-          value={owner}
-          onValueChange={v => change({ owner: v, page: null })}
-          options={[
-            { value: 'mine', label: 'Mine' },
-            { value: 'all', label: 'All' },
-          ]}
-        />
+      <TableFilter
+        label="Search RFQs"
+        hint={closedTab ? 'Finds a closed or won RFQ by number, customer, their reference or item.' : 'Finds an open RFQ by number, customer, their reference or item.'}
+        value={query}
+        onChange={setQuery}
+        className="min-w-0 max-sm:flex-1"
+      />
+      {phone ? (
+        ownerSwitch ? (
+          <FilterSheet title="Filter RFQs" on={ownerOff ? 1 : 0} shown={shown.length} noun={['RFQ', 'RFQs']} onClear={() => change({ owner: null, page: null })}>
+            {ownerSwitch}
+          </FilterSheet>
+        ) : null
+      ) : (
+        ownerSwitch
       )}
-      <div className="min-w-0 flex-1">
-        <StepFilter
-          value={show}
-          onChange={v => change({ show: v === 'all' ? null : v, page: null })}
-          needs={open.isSuccess ? { suppliers: counts.suppliers, ready: counts.ready } : {}}
-        />
+      <div className="flex min-w-0 basis-full items-center gap-3 lg:flex-1 lg:basis-auto">
+        <div className="min-w-0 flex-1">
+          <StepFilter
+            value={show}
+            onChange={v => change({ show: v === 'all' ? null : v, page: null })}
+            needs={open.isSuccess ? { suppliers: counts.suppliers, ready: counts.ready } : {}}
+          />
+        </div>
+        <InfoTip label="About next steps">Needs suppliers → Waiting for prices → Ready to quote → Quotation sent → Won or closed.</InfoTip>
       </div>
-      <InfoTip label="About next steps">Needs suppliers → Waiting for prices → Ready to quote → Quotation sent → Won or closed.</InfoTip>
     </div>
   )
 
@@ -276,19 +254,17 @@ export function BoardPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-6 md:px-8">
-      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">RFQs</h1>
-          <p className="text-sm text-fg-muted">{lede}</p>
-        </div>
-        {/* Phone: New RFQ beside the title, the filter box on its own line under them. */}
-        <div className="flex items-center gap-3 max-sm:contents">
-          <div className="max-sm:order-last max-sm:w-full">{filterBox}</div>
-          <Button variant="primary" icon={Plus} onClick={newRfq}>
-            New RFQ
-          </Button>
-        </div>
-      </header>
+      <PageHeader
+        title="RFQs"
+        lede={lede}
+        primary={
+          <Tooltip content="New RFQ" shortcut="N">
+            <Button variant="primary" icon={Plus} onClick={newRfq} aria-keyshortcuts="N">
+              New RFQ
+            </Button>
+          </Tooltip>
+        }
+      />
 
       <div className="min-w-0">
         {!closedTab ? (
@@ -298,7 +274,6 @@ export function BoardPage() {
             rows={shown}
             getRowId={r => r.rfqId}
             twoLine
-            densitySwitch={false}
             mobileRow={r => <OpenCard row={r} />}
             onRowOpen={openRow}
             loading={open.isPending}
@@ -315,7 +290,6 @@ export function BoardPage() {
               rows={closed.data?.rows ?? []}
               getRowId={r => r.rfqId}
               twoLine
-              densitySwitch={false}
               mobileRow={r => <ClosedCard row={r} />}
               onRowOpen={openRow}
               loading={closed.isPending}

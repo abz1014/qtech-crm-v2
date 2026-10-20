@@ -10,7 +10,8 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
-import { ChannelLink, ChasedByNote, ChaseNote, FormattedMessage, MoreToggle, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
+import { ChannelLink } from '@/ui/ChannelLink'
+import { ChasedByNote, ChaseNote, FormattedMessage, MoreToggle, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
 import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
 import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
 import { useRestoreSupplierChase, useStampSupplierChase } from '@/features/rfqs/hooks'
@@ -22,7 +23,7 @@ import { formatDay } from '@/lib/formatDay'
 
 /*
  * "Suppliers asked" (g2-rfq-detail rail; UX audit 2026-10-19): who was asked and where each one stands, as a list, with the chase.
- * Under each name: one chip (Quoted 2 of 4, Chased x1, ...), a memory line from v_supplier_stats ("Replied 5 of 7, usually ~2 days,
+ * Under each name: one chip (Priced 2 of 4, Waiting for prices chased ×1, Can't quote, Not asked yet), a memory line from v_supplier_stats ("Replied 5 of 7, usually ~2 days,
  * now 5 days"; amber when the wait is longer than usual) and when it was sent. The supplier to chase shows a short preview of the
  * message and "Copy and mark chased", which copies the text and stamps the chase together (stamp_supplier_chase, 1 tap); the whole
  * message (the items it asks for, the reply-by date, the recipient, an email's subject) opens under "Show the whole message", so the
@@ -64,11 +65,11 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, chaseIsMain = fal
                 {i.lines.length > 0 ? (
                   <StatusBadge dimension="inquiry" value="quoted" detail={`${i.lines.length} of ${items.length}`} />
                 ) : i.noOfferOn ? (
-                  <StatusBadge dimension="inquiry" value="no-offer" label="Can't quote" />
+                  <StatusBadge dimension="inquiry" value="no-offer" />
                 ) : !i.sentOn ? (
-                  <StatusBadge dimension="inquiry" value="shortlisted" label="Not asked yet" />
+                  <StatusBadge dimension="inquiry" value="shortlisted" />
                 ) : i.chaseCount > 0 ? (
-                  <StatusBadge dimension="inquiry" value="chased" detail={`×${i.chaseCount}`} />
+                  <StatusBadge dimension="inquiry" value="chased" detail={`chased ×${i.chaseCount}`} />
                 ) : (
                   <StatusBadge dimension="inquiry" value="awaiting" />
                 )}

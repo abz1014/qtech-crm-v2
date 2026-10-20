@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
 import { Flag } from 'lucide-react'
-import { askedText, CLOSE_REASON, dueText, nextStepText, type BoardRow, type NextStepText } from '@/features/rfqs/board/model'
+import { askedText, CLOSE_REASON, dueText, nextStepText, type BoardRow } from '@/features/rfqs/board/model'
 import { formatDay } from '@/lib/formatDay'
 import { rfqRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/ui/Avatar'
 import { Icon } from '@/ui/Icon'
 import { StatusBadge } from '@/ui/StatusBadge'
+import { StatusText } from '@/ui/StatusText'
 
 /*
  * Cells of the RFQ board (R06, UX audit 2026-10-19). Each is a pure rendering of one BoardRow. A row leads with who and what
@@ -15,13 +16,6 @@ import { StatusBadge } from '@/ui/StatusBadge'
 
 /** The row link's name: the company, the code and what was asked, so two RFQs of one customer never read alike (WCAG 2.4.4). */
 const linkName = (row: BoardRow) => `${row.companyName}, ${rfqRef(row.number)}, ${askedText(row)}`
-
-const TONE: Record<NextStepText['tone'], string> = {
-  warning: 'text-tone-warning-fg',
-  info: 'text-tone-info-fg',
-  success: 'text-tone-success-fg',
-  neutral: 'text-fg-2',
-}
 
 function Priority() {
   return (
@@ -53,16 +47,17 @@ export function RfqCell({ row }: { row: BoardRow }) {
   )
 }
 
-/** The one state on the row: what happens next, with one short line behind it. */
+/**
+ * The one state on the row (StatusText, consistency spec 1.2): what happens next, with one short line behind it. The table row is a
+ * fixed two-line height, so the detail stays on one line here, with the whole of it in the title; the phone card wraps it.
+ */
 export function NextStepCell({ row }: { row: BoardRow }) {
   const s = nextStepText(row)
   return (
-    <div className="grid min-w-0 gap-px" data-next-step={s.step}>
-      <span className={cn('flex items-center gap-2 font-medium', TONE[s.tone])}>
-        <i aria-hidden="true" className="size-2 shrink-0 rounded-round bg-current" />
+    <div className="min-w-0" data-next-step={s.step} title={s.detail}>
+      <StatusText tone={s.tone} detail={<span className="block truncate">{s.detail}</span>} className="max-w-full [&>span]:min-w-0">
         {s.label}
-      </span>
-      <span className="truncate text-sm text-fg-muted" title={s.detail}>{s.detail}</span>
+      </StatusText>
     </div>
   )
 }
@@ -113,16 +108,15 @@ export function OpenCard({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-0 gap-1">
       <span className="flex min-w-0 items-center gap-1.5">
-        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="truncate font-medium text-fg hover:underline">
+        <Link to={`/rfqs/${row.rfqId}`} aria-label={linkName(row)} className="line-clamp-2 break-words font-medium text-fg hover:underline">
           {row.companyName}
         </Link>
         {row.isPriority ? <Priority /> : null}
       </span>
       <span className="line-clamp-2 break-words text-sm text-fg-2">{askedText(row)}</span>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className={cn('flex items-center gap-2 text-sm font-medium', TONE[s.tone])} data-next-step={s.step}>
-          <i aria-hidden="true" className="size-2 shrink-0 rounded-round bg-current" />
-          {s.label}
+        <span data-next-step={s.step}>
+          <StatusText tone={s.tone}>{s.label}</StatusText>
         </span>
         <span className={cn('text-sm', danger ? 'font-medium text-tone-danger-fg' : due.tone === 'warning' ? 'text-tone-warning-fg' : 'text-fg-muted')}>
           {due.date ? (
@@ -136,7 +130,7 @@ export function OpenCard({ row }: { row: BoardRow }) {
         </span>
       </div>
       <div className="flex min-w-0 items-center justify-between gap-3 text-sm text-fg-muted">
-        <span className="min-w-0 truncate">
+        <span className="min-w-0 break-words">
           <span className="num">{rfqRef(row.number)}</span>
           {row.customerRef ? ` · their ref ${row.customerRef}` : null}
         </span>
@@ -149,13 +143,13 @@ export function OpenCard({ row }: { row: BoardRow }) {
 export function ClosedCard({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-0 gap-1">
-      <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="truncate font-medium text-fg hover:underline">
+      <Link to={`/rfqs/${row.rfqId}`} aria-label={linkName(row)} className="line-clamp-2 break-words font-medium text-fg hover:underline">
         {row.companyName}
       </Link>
       <span className="line-clamp-2 break-words text-sm text-fg-2">{askedText(row)}</span>
       <OutcomeCell row={row} />
       <div className="flex min-w-0 items-center justify-between gap-3 text-sm text-fg-muted">
-        <span className="min-w-0 truncate">
+        <span className="min-w-0 break-words">
           <span className="num">{rfqRef(row.number)}</span> · received <span className="num">{formatDay(row.receivedOn)}</span>
         </span>
         <OwnerCell row={row} />

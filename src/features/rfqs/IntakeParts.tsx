@@ -13,12 +13,11 @@ import type { ContactChannel } from '@/lib/useChannelPreference'
 import { useRfqInquiries } from '@/features/rfqs/hooks'
 import { Button } from '@/ui/Button'
 import { ChannelLink } from '@/features/rfqs/ChaseParts'
-import { StatusBadge } from '@/ui/StatusBadge'
 import { Icon } from '@/ui/Icon'
 
 /*
- * The right-hand column, the enquiry card and the "floated" panel of the intake screen
- * (g2-intake-float frames 5 and 6).
+ * The step line, the enquiry card and the "floated" panel of the intake screen (g2-intake-float frames 5 and 6). The
+ * "This RFQ" and "Progress" side boxes are gone (round 2, R2-09): they repeated the page, and the step line says where you are.
  */
 
 export type Step = 'build' | 'suppliers' | 'enquiry' | 'floated' | 'saved'
@@ -91,18 +90,17 @@ export function DraftOffer({
 
 const STEP_INDEX: Record<Step, number> = { build: 1, suppliers: 2, enquiry: 3, floated: 4, saved: 4 }
 
-/** The four steps in the words of the phone line (the desktop Progress box uses the same order). */
+/** The four steps, in order. */
 const STEP_LINE = ['Items', 'Suppliers', 'Message', 'Done'] as const
 
 /**
- * Phones and tablets (below 1024, where the Progress box is not drawn): one compact line with the four steps and the current one
- * in bold, so the person always knows which of the four they are on (UX audit S1 and recommendation 16). It wraps rather than
- * scrolling sideways at 320.
+ * One compact line with the four steps and the current one in bold, at every width, so the person always knows which of the four
+ * they are on (UX audit S1 and recommendation 16; R2-09). It wraps rather than scrolling sideways at 320.
  */
 export function StepLine({ step }: { step: Step }) {
   const at = STEP_INDEX[step]
   return (
-    <ol aria-label={`Step ${at} of 4`} className="m-0 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0 text-sm lg:hidden" data-step-line>
+    <ol aria-label={`Step ${at} of 4`} className="m-0 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0 text-sm" data-step-line>
       {STEP_LINE.map((label, i) => {
         const n = i + 1
         const state = n < at || (step !== 'build' && step !== 'suppliers' && step !== 'enquiry' && n === 4) ? 'done' : n === at ? 'now' : 'todo'
@@ -118,83 +116,6 @@ export function StepLine({ step }: { step: Step }) {
         )
       })}
     </ol>
-  )
-}
-
-export function SidePanels({
-  step,
-  number,
-  customer,
-  itemCount,
-  dueOn,
-  tickedCount,
-  floated,
-  floatedOn,
-}: {
-  step: Step
-  number: number | null
-  customer: string | null
-  itemCount: number
-  dueOn: string | null
-  tickedCount: number
-  floated: boolean
-  floatedOn: string | null
-}) {
-  const at = STEP_INDEX[step]
-  const done = (i: number) => i < at || (step === 'floated' && i === 3)
-  const steps: { label: string; state: 'done' | 'now' | 'todo'; note?: string }[] = [
-    { label: 'Customer', state: customer ? 'done' : at === 1 ? 'now' : 'todo' },
-    { label: 'Items', state: itemCount > 0 && at > 1 ? 'done' : at === 1 && customer ? 'now' : 'todo' },
-    { label: 'Suppliers', state: done(2) ? 'done' : at === 2 ? 'now' : 'todo', note: at >= 2 && tickedCount > 0 ? String(tickedCount) : undefined },
-    { label: 'Message', state: floated ? 'done' : at === 3 ? 'now' : 'todo', note: floated && floatedOn ? formatDay(floatedOn).slice(4) : undefined },
-  ]
-  return (
-    <aside aria-label="This RFQ" className="hidden content-start gap-4 lg:grid">
-      <section className="rounded border bg-surface px-4 py-4">
-        <h2 className="mb-2 text-base font-semibold">This RFQ</h2>
-        <dl className="grid">
-          <Row k="Number">{number != null ? <span className="num">{rfqRef(number)}</span> : <span className="text-fg-muted">Given when saved</span>}</Row>
-          <Row k="Customer">{customer ?? <span className="text-fg-muted">Not yet</span>}</Row>
-          <Row k="Items">{itemCount > 0 ? <><span className="num">{itemCount}</span> {itemCount === 1 ? 'item' : 'items'}</> : <span className="text-fg-muted">Not yet</span>}</Row>
-          <Row k="Due">{dueOn ? <span className="num">{formatDay(dueOn)}</span> : <span className="text-fg-muted">Optional</span>}</Row>
-          <Row k="Suppliers">
-            {floated ? (
-              <StatusBadge dimension="sourcing" value="awaiting" label={`Asked ${tickedCount} ${tickedCount === 1 ? 'supplier' : 'suppliers'}`} />
-            ) : (
-              <StatusBadge dimension="sourcing" value="not-floated" label="Not sent to suppliers" />
-            )}
-          </Row>
-        </dl>
-      </section>
-      <section className="rounded border bg-surface px-4 py-4">
-        <h2 className="mb-2 text-base font-semibold">Progress</h2>
-        <ol className="m-0 grid list-none gap-2 p-0">
-          {steps.map(s => (
-            <li key={s.label} className={cn('flex items-center gap-3 text-sm', s.state === 'todo' ? 'text-fg-2' : 'text-fg')} aria-current={s.state === 'now' ? 'step' : undefined}>
-              <Icon
-                icon={s.state === 'done' ? CircleCheck : s.state === 'now' ? CircleDot : Circle}
-                size="lg"
-                className={s.state === 'todo' ? 'text-fg-muted' : 'text-brand-green'}
-              />
-              <span className={cn(s.state === 'now' && 'font-medium')}>
-                {s.label}
-                <span className="sr-only">{s.state === 'done' ? ', done' : s.state === 'now' ? ', in progress' : ', not started'}</span>
-              </span>
-              {s.note ? <span className="num ml-auto text-xs text-fg-muted">{s.note}</span> : null}
-            </li>
-          ))}
-        </ol>
-      </section>
-    </aside>
-  )
-}
-
-function Row({ k, children }: { k: string; children: ReactNode }) {
-  return (
-    <div className="grid grid-cols-[98px_minmax(0,1fr)] items-center py-[6px] text-sm">
-      <dt className="text-fg-muted">{k}</dt>
-      <dd className="m-0 min-w-0">{children}</dd>
-    </div>
   )
 }
 

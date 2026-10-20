@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import CaptureSheet from '@/features/capture/CaptureSheet'
+import { SavedPanel } from '@/features/capture/CaptureParts'
 import { CaptureContext, type CaptureApi, type Draft } from '@/app/capture/useCapture'
 import { SessionContext } from '@/app/session'
 import { ToastContext } from '@/ui/useToast'
@@ -102,6 +103,8 @@ describe('Capture sheet: a button that cannot go yet says why (owner test 2026-1
   it('Continue to New RFQ needs no company: a PDF on its own goes straight on', async () => {
     const pdf = { id: 'f2', file: new File(['%PDF-1.4'], 'enquiry.pdf', { type: 'application/pdf' }), originalSize: 8 }
     const { cap } = show({ id: 'd1', source: 'drop', text: '', files: [pdf] })
+    // Only the chosen option shows; Something else opens the rest (R2-11).
+    fireEvent.click(await screen.findByRole('button', { name: 'Something else' }))
     fireEvent.click(await screen.findByRole('radio', { name: /Start a new RFQ/ }))
     const go = screen.getByRole('button', { name: 'Continue to New RFQ' })
     expect(go).toBeEnabled()
@@ -130,5 +133,30 @@ describe('Capture sheet: after a save the RFQs on offer are read again', () => {
     fireEvent.click(save)
     await waitFor(() => expect(capApi.setRfqNotes).toHaveBeenCalled())
     await waitFor(() => expect(capApi.listCandidates).toHaveBeenCalledTimes(2))
+  })
+})
+
+describe('Capture sheet: only the chosen option shows (R2-11)', () => {
+  it('draws the chosen tile alone; Something else opens the other three and the reply and order choices', async () => {
+    show({ id: 'd1', source: 'paste', text: 'Fluid is hot water', files: [] })
+    const group = await screen.findByRole('radiogroup', { name: 'What should we do with it' })
+    await waitFor(() => expect(within(group).getAllByRole('radio')).toHaveLength(1))
+    expect(within(group).getByRole('radio')).toBeChecked()
+    expect(screen.queryByRole('button', { name: 'Attach to an order' })).toBeNull()
+    const more = screen.getByRole('button', { name: 'Something else' })
+    expect(more).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(more)
+    expect(more).toHaveAttribute('aria-expanded', 'true')
+    expect(within(screen.getByRole('radiogroup', { name: 'What should we do with it' })).getAllByRole('radio')).toHaveLength(4)
+    expect(screen.getByRole('button', { name: 'Attach to an order' })).toBeInTheDocument()
+  })
+
+  it('the saved answer says what happens next in one sentence, not two chips', () => {
+    render(
+      <SavedPanel title="Saved to RFQ-0177" summary="2 questions answered." rfq="RFQ-0177 · Acme" answered={2}>
+        <button type="button">Done</button>
+      </SavedPanel>,
+    )
+    expect(screen.getByText(/Marks/)).toHaveTextContent('Marks 2 questions answered. Next: send the answers to the suppliers.')
   })
 })

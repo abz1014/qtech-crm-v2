@@ -24,6 +24,8 @@ export interface PastedBlock {
 
 // g2-a.css .sp-r: # 28, Qty 76, Description 1fr, Brand 148, Family 120; the remove control gets its own narrow column.
 const GRID = 'md:grid md:grid-cols-[28px_76px_minmax(0,1fr)_148px_120px_28px] md:items-center md:gap-3'
+// Without the Family column (R2-10): the family sits after the brand chip, in one wider cell.
+const GRID_NO_FAMILY = 'md:grid md:grid-cols-[28px_76px_minmax(0,1fr)_220px_28px] md:items-center md:gap-3'
 
 const cell =
   'h-control -mx-2 w-[calc(100%+1rem)] max-w-none min-w-0 rounded border border-line-input bg-surface px-2 text-sm text-fg max-md:text-base md:border-transparent md:bg-transparent ' +
@@ -267,6 +269,13 @@ export function ItemRows({
 }) {
   const brandOptions = brands.filter(b => b.kind === 'brand').map(b => ({ value: b.id, label: b.name }))
   const familyOptions = brands.filter(b => b.kind === 'family').map(b => ({ value: b.id, label: b.name }))
+  // The Family column only when a guess is unsure (R2-10): a row whose description named neither a brand nor a family, so the family
+  // is the one way left to match suppliers to it. Once the person picks a family in the column it stays, so it does not vanish under
+  // their hand. Without the column every row still sets its family, after the brand chip.
+  const unsure = familyOptions.length > 0 && items.some(i => i.description.trim() && !i.brandId && !i.familyId)
+  const [keepFamily, setKeepFamily] = useState(false)
+  const familyColumn = unsure || keepFamily
+  const grid = familyColumn ? GRID : GRID_NO_FAMILY
   useEffect(() => {
     if (focusKey) document.getElementById(`item-desc-${focusKey}`)?.focus()
   }, [focusKey])
@@ -275,12 +284,12 @@ export function ItemRows({
     <div className="overflow-hidden rounded border bg-surface">
       {items.length > 0 ? (
         <>
-          <div className={cn('hidden min-h-8 border-b bg-sunken px-4 text-xs font-medium text-fg-muted', GRID)} aria-hidden="true">
+          <div className={cn('hidden min-h-8 border-b bg-sunken px-4 text-xs font-medium text-fg-muted', grid)} aria-hidden="true">
             <span>#</span>
             <span>Qty</span>
             <span>Description</span>
-            <span>Brand</span>
-            <span>Family</span>
+            <span>{familyColumn ? 'Brand' : 'Brand and family'}</span>
+            {familyColumn ? <span>Family</span> : null}
             <span />
           </div>
           <ol className="m-0 grid list-none p-0">
@@ -291,7 +300,7 @@ export function ItemRows({
                   key={it.key}
                   className={cn(
                     'group grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b px-4 py-3 last:border-b-0 md:min-h-12 md:py-0',
-                    GRID,
+                    grid,
                     flagged.includes(it.key) && 'bg-tone-warning-bg',
                   )}
                 >
@@ -309,7 +318,7 @@ export function ItemRows({
                     title={it.description}
                     className={cn(cell, 'order-2 col-span-3 truncate md:order-none md:col-span-1')}
                   />
-                  <div className="order-3 col-span-3 flex flex-wrap items-center gap-3 md:order-none md:contents">
+                  <div className={cn('order-3 col-span-3 flex flex-wrap items-center gap-3 md:order-none', familyColumn ? 'md:contents' : 'md:col-span-1 md:min-w-0 md:gap-2')}>
                     <PickCell
                       chip
                       label={`Brand of item ${n}`}
@@ -318,13 +327,18 @@ export function ItemRows({
                       options={brandOptions}
                       empty="no brand"
                     />
-                    <PickCell
-                      label={`Family of item ${n}`}
-                      value={it.familyId}
-                      onChange={v => onChange(it.key, { familyId: v })}
-                      options={familyOptions}
-                      empty="no family"
-                    />
+                    {familyColumn || familyOptions.length > 0 ? (
+                      <PickCell
+                        label={`Family of item ${n}`}
+                        value={it.familyId}
+                        onChange={v => {
+                          if (familyColumn) setKeepFamily(true)
+                          onChange(it.key, { familyId: v })
+                        }}
+                        options={familyOptions}
+                        empty={familyColumn ? 'no family' : '+ family'}
+                      />
+                    ) : null}
                   </div>
                   <Button
                     variant="quiet"

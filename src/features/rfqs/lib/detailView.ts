@@ -1,6 +1,7 @@
 // Pure rules behind the RFQ page as drawn in g2-rfq-detail (parity audit Part C). Framework-free, so they are tested without a screen.
 
 import { formatDay } from '@/lib/formatDay'
+import { daysOverdue, dueWord, inDays } from '@/lib/timeWords'
 
 // ------------------------------------------------------------------------------------------------ coverage of one item
 
@@ -8,29 +9,34 @@ export type CoverageKind = 'covered' | 'partly' | 'uncovered' | 'none' | 'unaske
 
 export interface Coverage {
   kind: CoverageKind
-  /** The chip's words (plain-words glossary, 2026-10-19): "3 prices", "1 price so far", "No price yet", "Waiting for prices", "Needs suppliers". */
-  label: string
+  /**
+   * The item's one chip, an `item-price` registry value (consistency spec 1.5): Priced, Waiting for prices or No price yet. Null
+   * while nobody has been asked: the item then says so in a sentence, and the header's stage chip already reads "Needs suppliers".
+   */
+  value: 'priced' | 'waiting' | 'none' | null
+  /** The chip's mono detail: "3 prices", "1 price so far". */
+  detail?: string
 }
 
 /**
- * The chip on an item (C-23), in the same words as the header's stage chip and the board's Next step (review of ux/rfqs, item 10):
- *  - a price and nobody still to answer  -> n prices
- *  - a price and somebody still waiting  -> n price(s) so far     (the owner's partial-quote rule: it can still improve)
- *  - nobody asked yet                    -> Needs suppliers      (a supplier only on the shortlist is not asked)
+ * The chip on an item (C-23), in the registry's `item-price` words, so it agrees with the header's stage chip and the board:
+ *  - a price and nobody still to answer  -> Priced · n prices
+ *  - a price and somebody still waiting  -> Priced · n price(s) so far     (the owner's partial-quote rule: it can still improve)
+ *  - nobody asked yet                    -> no chip                        (a supplier only on the shortlist is not asked)
  *  - no price, but others replied        -> No price yet
  *  - no price, somebody still to answer  -> Waiting for prices
- *  - no price and nobody left to answer  -> No price yet         (everyone asked said they cannot quote it)
+ *  - no price and nobody left to answer  -> No price yet                   (everyone asked said they cannot quote it)
  * `waiting` is the number of suppliers asked about this item who have not answered it; `responders` the suppliers who quoted any
  * item; `asked` the suppliers asked at all (sent, or answered "cannot quote").
  */
 export function itemCoverage(prices: number, waiting: number, responders: number, asked: number): Coverage {
   if (prices > 0) {
     const n = `${prices} ${prices === 1 ? 'price' : 'prices'}`
-    return waiting > 0 ? { kind: 'partly', label: `${n} so far` } : { kind: 'covered', label: n }
+    return waiting > 0 ? { kind: 'partly', value: 'priced', detail: `${n} so far` } : { kind: 'covered', value: 'priced', detail: n }
   }
-  if (asked === 0) return { kind: 'unasked', label: 'Needs suppliers' }
-  if (responders > 0 || waiting === 0) return { kind: 'uncovered', label: 'No price yet' }
-  return { kind: 'none', label: 'Waiting for prices' }
+  if (asked === 0) return { kind: 'unasked', value: null }
+  if (responders > 0 || waiting === 0) return { kind: 'uncovered', value: 'none' }
+  return { kind: 'none', value: 'waiting' }
 }
 
 // ------------------------------------------------------------------------------------------------ suppliers asked
@@ -98,18 +104,18 @@ export function daysSince(from: string, to: string): number {
 
 // ------------------------------------------------------------------------------------------------ the deadline chip
 
-/** "Due in 4 days", "Due tomorrow"... as one chip (C-05). Null when there is nothing to say (no date, or more than a week away). */
+/**
+ * "Due in 4 days", "Due tomorrow", "3 days overdue" as one chip (C-05), in the shared time words (src/lib/timeWords.ts). Null when
+ * there is nothing to say (no date, or more than a week away).
+ */
 export function dueChipLabel(daysToDue: number | null | undefined, isOverdue: boolean): string | null {
-  if (isOverdue && daysToDue !== null && daysToDue !== undefined && daysToDue < 0) return daysToDue === -1 ? 'Overdue by 1 day' : `Overdue by ${-daysToDue} days`
+  if (isOverdue && daysToDue !== null && daysToDue !== undefined && daysToDue < 0) return daysOverdue(-daysToDue)
   if (daysToDue === null || daysToDue === undefined || daysToDue > 7) return null
-  if (daysToDue <= 0) return 'Due today'
-  return daysToDue === 1 ? 'Due in 1 day' : `Due in ${daysToDue} days`
+  return dueWord(Math.max(0, daysToDue))
 }
 
-/** The label for a bid-due sub-line: "In 4 days", "Today", "3 days ago". */
+/** The label for a bid-due sub-line: "In 4 days", "Tomorrow", "Today", "3 days ago". */
 export function dueSubLabel(daysToDue: number | null | undefined): string | null {
   if (daysToDue === null || daysToDue === undefined) return null
-  if (daysToDue < 0) return `${-daysToDue} ${daysToDue === -1 ? 'day' : 'days'} ago`
-  if (daysToDue === 0) return 'Today'
-  return `In ${daysToDue} ${daysToDue === 1 ? 'day' : 'days'}`
+  return inDays(daysToDue)
 }

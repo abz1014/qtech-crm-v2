@@ -11,7 +11,7 @@ import { Tag } from '@/ui/Tag'
  */
 export function LastPriceChipView({ chip }: { chip: LastPriceChip }) {
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-muted md:col-span-full" data-last-price>
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-muted md:col-span-full" data-last-price>
       <Icon icon={History} size="sm" />
       <span>
         Last price for this item:{' '}

@@ -128,14 +128,6 @@ export async function listClosedRfqs(page: number, size: number, text = ''): Pro
   return { rows: rows.map(r => toRow(r, refBy.get(r.rfq_id as string))), total: res.count ?? rows.length }
 }
 
-/** How many RFQs are won or closed, for the tab label. A count only: no rows travel. */
-export async function countClosedRfqs(): Promise<number> {
-  const db = requireSupabase()
-  const res = await db.from('v_rfq_state').select('rfq_id', { count: 'exact', head: true }).in('outcome', ['won', 'closed'])
-  if (res.error) throw res.error
-  return res.count ?? 0
-}
-
 export interface RfqHit {
   id: string
   number: number

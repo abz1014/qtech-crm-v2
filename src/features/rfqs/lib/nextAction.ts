@@ -1,5 +1,6 @@
 // The one main action on the RFQ page (owner decision 2026-10-19, step 2: one green button per screen, chosen by state), and the
-// one "stage" chip that says where the RFQ stands. Pure, so the rules are tested without a screen.
+// one "stage" chip that says where the RFQ stands (a registry key: the words and tone come from src/lib/status.ts). Pure, so the
+// rules are tested without a screen.
 
 export type RfqPrimary = 'ask' | 'issue' | 'won' | 'chase' | 'none'
 
@@ -75,24 +76,29 @@ export function nextStepSentence(i: NextStepInput): string {
   }
 }
 
-export interface StageChip {
-  label: string
-  tone: 'warning' | 'info' | 'success' | 'neutral'
-}
+/** The registry key of the header's stage chip: an `rfq-stage` while open, else the outcome. Words and tones live in src/lib/status.ts. */
+export type StageKey =
+  | 'rfq-stage:suppliers'
+  | 'rfq-stage:prices'
+  | 'rfq-stage:ready'
+  | 'rfq-stage:sent'
+  | 'rfq-stage:expired'
+  | 'rfq-outcome:won'
+  | 'rfq-outcome:closed'
 
-/** The stage chip in the header, in the same words as the board's Next step. */
-export function stageChip(i: Pick<PrimaryInput, 'outcome' | 'hasOrder' | 'sourcingState' | 'bidState' | 'quotationCount'>): StageChip {
-  if (i.outcome === 'won' || i.hasOrder) return { label: 'Won', tone: 'success' }
-  if (i.outcome === 'closed') return { label: 'Closed', tone: 'neutral' }
-  if (i.bidState === 'quotation_expired') return { label: 'Quotation expired', tone: 'warning' }
-  if (quotationSent(i)) return { label: 'Quotation sent', tone: 'neutral' }
+/** The stage chip in the header, as a registry key, so it reads in the same words and tone as the board's Next step. */
+export function stageKey(i: Pick<PrimaryInput, 'outcome' | 'hasOrder' | 'sourcingState' | 'bidState' | 'quotationCount'>): StageKey {
+  if (i.outcome === 'won' || i.hasOrder) return 'rfq-outcome:won'
+  if (i.outcome === 'closed') return 'rfq-outcome:closed'
+  if (i.bidState === 'quotation_expired') return 'rfq-stage:expired'
+  if (quotationSent(i)) return 'rfq-stage:sent'
   switch (i.sourcingState) {
     case 'covered':
-      return { label: 'Ready to quote', tone: 'success' }
+      return 'rfq-stage:ready'
     case 'floated_awaiting':
     case 'partly_covered':
-      return { label: 'Waiting for prices', tone: 'info' }
+      return 'rfq-stage:prices'
     default:
-      return { label: 'Needs suppliers', tone: 'warning' }
+      return 'rfq-stage:suppliers'
   }
 }

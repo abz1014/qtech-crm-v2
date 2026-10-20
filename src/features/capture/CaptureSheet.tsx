@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type Keyboa
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import * as RadixDialog from '@radix-ui/react-dialog'
-import { ArrowRight, Check, ClipboardPaste, Clock, FileWarning, Share2, WifiOff, X } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, ClipboardPaste, Clock, FileWarning, MessageSquareReply, Package, Share2, WifiOff, X } from 'lucide-react'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { deleteCapture, safely } from '@/lib/capture/store'
 import { readRecentOrders, readRecents } from '@/lib/capture/recents'
@@ -26,7 +26,7 @@ import {
   type Dest,
   type OrderCandidate,
 } from '@/features/capture/model'
-import { CapNote, CaptureArea, OrderPicker, QuestionPick, RfqPicker, SavedPanel, Section, SplitRows, Tiles } from '@/features/capture/CaptureParts'
+import { CapNote, CaptureArea, ChosenCard, OrderPicker, QuestionPick, RfqPicker, SavedPanel, Section, SplitRows, Tiles } from '@/features/capture/CaptureParts'
 import { useCapture } from '@/app/capture/useCapture'
 import { useBackToClose } from '@/lib/useBackToClose'
 import { useCompanyMatches, useRfqInquiries } from '@/features/rfqs/hooks'
@@ -136,6 +136,8 @@ export default function CaptureSheet() {
   const [company, setCompany] = useState<{ id: string; name: string } | null>(null)
   const [companyText, setCompanyText] = useState('')
   const [inquiryPick, setInquiryPick] = useState<string | null>(null)
+  // R2-11: only the chosen option is shown; "Something else" opens the other three tiles and the reply and order choices.
+  const [more, setMore] = useState(false)
 
   const dest: Dest = orderMode ? 'order' : (userDest ?? guessDestination(kind, draft.text, ordered))
   const rfq = dest === 'order' ? null : (ordered.find(c => c.id === userRfqId) ?? defaultRfq(dest, ordered))
@@ -389,9 +391,11 @@ export default function CaptureSheet() {
       setUserDest(null)
       setUserRfqId(null)
       setTickState(null)
+      setMore(false)
     }
   }, [empty])
   const ref = rfq ? rfqRef(rfq.number) : ''
+  const isTile = dest !== 'reply' && dest !== 'order'
   const shorts = tickedList.map(q => shortQuestion(q.question)).join(', ')
 
   const body = (
@@ -451,18 +455,27 @@ export default function CaptureSheet() {
     <div ref={rightRef} className="grid min-w-0 content-start gap-4">
       <div className="grid gap-2">
         <Section title="What should we do with it?" aside={<InfoTip label="About Paste or photo" align="end">Saves a photo, PDF or message to an RFQ or order. Nothing else to fill in.</InfoTip>}>
-          <Tiles
-            chosen={dest}
-            kind={kind}
-            off={empty}
-            onChoose={d => {
-              setOrderMode(false)
-              choose(d)
-            }}
-          />
+          {empty || more || isTile ? (
+            <Tiles
+              chosen={dest}
+              kind={kind}
+              off={empty}
+              only={!empty && !more}
+              onChoose={d => {
+                setOrderMode(false)
+                choose(d)
+              }}
+            />
+          ) : (
+            <ChosenCard
+              icon={dest === 'order' ? Package : MessageSquareReply}
+              title={dest === 'order' ? 'Attach to an order' : 'A supplier’s reply'}
+              help={dest === 'order' ? 'Kept with the order’s files and notes' : 'The RFQ opens with the prices read out'}
+            />
+          )}
         </Section>
         {empty ? <span className="text-xs text-fg-muted">You choose after you add something.</span> : null}
-        {!empty ? (
+        {!empty && more ? (
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             <button
               type="button"
@@ -471,7 +484,7 @@ export default function CaptureSheet() {
                 choose('reply')
               }}
               aria-pressed={dest === 'reply'}
-              className={cn('w-fit rounded text-xs text-fg-muted underline decoration-1 underline-offset-2 hover:text-fg', dest === 'reply' && 'font-medium text-fg no-underline')}
+              className={cn('w-fit rounded text-sm text-fg-muted underline decoration-1 underline-offset-2 hover:text-fg', dest === 'reply' && 'font-medium text-fg no-underline')}
             >
               {dest === 'reply' ? 'Reading it as a supplier’s reply' : 'This is a supplier’s reply'}
             </button>
@@ -479,27 +492,28 @@ export default function CaptureSheet() {
               type="button"
               onClick={() => setOrderMode(m => !m)}
               aria-pressed={dest === 'order'}
-              className={cn('w-fit rounded text-xs text-fg-muted underline decoration-1 underline-offset-2 hover:text-fg', dest === 'order' && 'font-medium text-fg no-underline')}
+              className={cn('w-fit rounded text-sm text-fg-muted underline decoration-1 underline-offset-2 hover:text-fg', dest === 'order' && 'font-medium text-fg no-underline')}
             >
               {dest === 'order' ? 'Attaching to an order' : 'Attach to an order'}
             </button>
           </div>
         ) : null}
+        {!empty ? (
+          <button
+            type="button"
+            aria-expanded={more}
+            onClick={() => setMore(m => !m)}
+            className="inline-flex w-fit items-center gap-1 rounded text-sm font-medium text-fg-2 hover:text-fg"
+          >
+            Something else
+            <Icon icon={ChevronDown} size="sm" className={cn('transition-transform', more && 'rotate-180')} />
+          </button>
+        ) : null}
       </div>
 
       {!empty && dest === 'order' ? (
         <>
-          <OrderPicker
-            list={orders}
-            chosenId={order?.id ?? null}
-            now={now}
-            includePo={user?.role !== 'engineer'}
-            onPick={o => {
-              setUserOrderId(o.id)
-              if (!orders.some(x => x.id === o.id)) setExtraOrder(o)
-            }}
-          />
-          {orders.length === 0 && !ordersQuery.isPending ? <p className="text-sm text-fg-muted">No order opened lately. Search all orders to choose one.</p> : null}
+          {/* The confirmation sits above the list, where the sticky Save cannot cover it (R2-11). */}
           <CapNote>
             {draft.text.trim() ? (
               <>
@@ -511,42 +525,40 @@ export default function CaptureSheet() {
               </>
             )}
           </CapNote>
+          <OrderPicker
+            list={orders}
+            chosenId={order?.id ?? null}
+            now={now}
+            includePo={user?.role !== 'engineer'}
+            onPick={o => {
+              setUserOrderId(o.id)
+              if (!orders.some(x => x.id === o.id)) setExtraOrder(o)
+            }}
+          />
+          {orders.length === 0 && !ordersQuery.isPending ? <p className="text-sm text-fg-muted">No order opened lately. Search all orders to choose one.</p> : null}
         </>
       ) : null}
 
       {!empty && dest !== 'new-rfq' && dest !== 'order' ? (
         <>
-          {ordered.length === 0 && !candidatesQuery.isPending ? <p className="text-sm text-fg-muted">No RFQ opened lately and none of yours has a question waiting. Search all RFQs to choose one.</p> : null}
-          <RfqPicker list={ordered} chosenId={rfq?.id ?? null} now={now} onPick={pickRfq} />
-
+          {/* The confirmation sits above the RFQ list, where the sticky Save cannot cover it (R2-11). */}
           {rfq && dest === 'answer' ? (
-            <>
-              <CapNote>
-                {open.length === 0 ? (
-                  <>
-                    <b>{ref}</b> has no open questions. Choose another RFQ, or add this to its notes.
-                  </>
-                ) : kind === 'files' ? (
-                  <>
-                    Answers {tickedList.length === 1 ? '1 open question' : `${tickedList.length} open questions`} on <b>{ref}</b>: {shorts}. The photo is attached as the reply. Tick another to answer it too.
-                  </>
-                ) : (
-                  <>
-                    Answers {tickedList.length === 1 ? '1 open question' : `${tickedList.length} open questions`} on <b>{ref}</b>: {shorts}. Untick any that this does not answer.
-                  </>
-                )}
-              </CapNote>
-              {open.length ? <QuestionPick open={open} ticked={ticked} onToggle={toggleTick} /> : null}
-            </>
+            <CapNote>
+              {open.length === 0 ? (
+                <>
+                  <b>{ref}</b> has no open questions. Choose another RFQ, or add this to its notes.
+                </>
+              ) : kind === 'files' ? (
+                <>
+                  Answers {tickedList.length === 1 ? '1 open question' : `${tickedList.length} open questions`} on <b>{ref}</b>: {shorts}. The photo is attached as the reply. Tick another to answer it too.
+                </>
+              ) : (
+                <>
+                  Answers {tickedList.length === 1 ? '1 open question' : `${tickedList.length} open questions`} on <b>{ref}</b>: {shorts}. Untick any that this does not answer.
+                </>
+              )}
+            </CapNote>
           ) : null}
-
-          {rfq && dest === 'questions' ? (
-            <Section title={`Split into ${lines.length} ${lines.length === 1 ? 'question' : 'questions'}`} aside="Tick the ones to keep">
-              <SplitRows lines={lines} off={lineOff} onToggle={(l, on) => setLineOff(prev => { const next = new Set(prev); if (on) next.delete(l); else next.add(l); return next })} />
-              <CapNote>Each line becomes one question on the RFQ, ready to put to the customer.</CapNote>
-            </Section>
-          ) : null}
-
           {rfq && dest === 'notes' ? (
             <CapNote>
               {draft.text.trim() ? (
@@ -557,6 +569,17 @@ export default function CaptureSheet() {
                 <>The files are kept with {ref}.</>
               )}
             </CapNote>
+          ) : null}
+          {ordered.length === 0 && !candidatesQuery.isPending ? <p className="text-sm text-fg-muted">No RFQ opened lately and none of yours has a question waiting. Search all RFQs to choose one.</p> : null}
+          <RfqPicker list={ordered} chosenId={rfq?.id ?? null} now={now} onPick={pickRfq} />
+
+          {rfq && dest === 'answer' && open.length ? <QuestionPick open={open} ticked={ticked} onToggle={toggleTick} /> : null}
+
+          {rfq && dest === 'questions' ? (
+            <Section title={`Split into ${lines.length} ${lines.length === 1 ? 'question' : 'questions'}`} aside="Tick the ones to keep">
+              <SplitRows lines={lines} off={lineOff} onToggle={(l, on) => setLineOff(prev => { const next = new Set(prev); if (on) next.delete(l); else next.add(l); return next })} />
+              <CapNote>Each line becomes one question on the RFQ, ready to put to the customer.</CapNote>
+            </Section>
           ) : null}
 
           {rfq && dest === 'reply' ? (
@@ -652,7 +675,7 @@ export default function CaptureSheet() {
               ) : result ? (
                 <SavedPanel
                   title={`Saved to ${result.ref}`}
-                  summary={result.answered ? `${result.summary} They now wait on Today to be passed on to the suppliers.` : result.summary}
+                  summary={result.summary}
                   rfq={`${result.ref} · ${result.companyName}`}
                   rfqLabel={result.kind === 'order' ? 'Order' : 'RFQ'}
                   answered={result.answered}

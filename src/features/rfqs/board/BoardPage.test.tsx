@@ -117,9 +117,11 @@ describe('RFQ board', () => {
     expect(rows).toHaveLength(3)
     expect(rows[0]).toHaveTextContent('Punjab Cement')
     expect(within(rows[0]).getByText('3 days overdue')).toHaveClass('text-tone-danger-fg')
-    // one plain next step per row, not three chips
-    expect(within(rows[0]).getByText('Quotation sent')).toBeInTheDocument()
-    expect(within(rows[0]).getByText('The quotation has expired')).toBeInTheDocument()
+    // one plain next step per row (StatusText, no chip), in the registry's rfq-stage words
+    expect(within(rows[0]).getByText('Quotation expired')).toBeInTheDocument()
+    expect(within(rows[0]).getByText('Revise it or mark it won')).toBeInTheDocument()
+    expect(within(rows[0]).getByText('Quotation expired').closest('[data-tone]')).toHaveAttribute('data-tone', 'now')
+    expect(within(rows[0]).queryByText((_, el) => el?.hasAttribute('data-status') ?? false)).toBeNull()
     expect(within(rows[1]).getByText('Needs suppliers')).toBeInTheDocument()
     expect(within(rows[2]).getByText('Waiting for prices')).toBeInTheDocument()
     expect(within(rows[2]).getByText('2 of 5 items priced · waiting on the customer for 2 answers')).toBeInTheDocument()
@@ -153,21 +155,23 @@ describe('RFQ board', () => {
     expect(await screen.findByTestId('where')).toHaveTextContent('/rfqs/b')
   })
 
-  it('says "No open RFQs" when everything is done, with New RFQ in the empty view too', async () => {
-    db([], [state({ rfq_id: 'z', outcome: 'won' })])
+  it('with nothing open says "No open RFQs" in words true for a new CRM too, with New RFQ, and asks for no closed count', async () => {
+    const d = db([], [])
     renderBoard('admin')
     expect(await screen.findByText('No open RFQs')).toBeInTheDocument()
-    expect(screen.getByText(/Every quotation is out or closed/)).toBeInTheDocument()
+    expect(screen.getByText(/New RFQs appear here as soon as you start one/)).toBeInTheDocument()
+    expect(screen.queryByText(/Every quotation is out or closed/)).toBeNull()
     expect(screen.getAllByRole('button', { name: 'New RFQ' })).toHaveLength(2)
+    // no head request for the closed count (consistency spec 2.2 #10)
+    expect(d.calls.filter(c => c.target === 'v_rfq_state' && opArgs(c, 'in'))).toHaveLength(0)
   })
 
-  it('a CRM with no RFQ ever (none open, none closed) gets a neutral first-use line, never "every quotation is out"', async () => {
-    db([], [])
-    renderBoard('admin')
-    expect(await screen.findByText('No RFQs yet')).toBeInTheDocument()
-    expect(screen.queryByText(/Every quotation is out or closed/)).toBeNull()
-    expect(screen.queryByText('No open RFQs')).toBeNull()
-    expect(screen.getAllByRole('button', { name: 'New RFQ' })).toHaveLength(2)
+  it('New RFQ is the page header primary, with its N key', async () => {
+    db()
+    renderBoard('sales')
+    await screen.findByText('Indus Textile Mills')
+    expect(screen.getByRole('heading', { level: 1, name: 'RFQs' })).toHaveClass('max-md:sr-only')
+    expect(screen.getByRole('button', { name: 'New RFQ' })).toHaveAttribute('aria-keyshortcuts', 'N')
   })
 
   it('New RFQ in the header opens the intake screen', async () => {
@@ -195,32 +199,44 @@ describe('RFQ board', () => {
 })
 
 describe('RFQ board toolbar', () => {
-  it('filters by company, number or customer ref; Esc clears; a miss names the filter and offers Clear filter', async () => {
+  it('searches by company, number or customer ref, kept in ?q=; Esc clears; a miss says what was searched and offers Clear search', async () => {
     db()
     const user = userEvent.setup()
     renderBoard('admin')
     await screen.findByText('Indus Textile Mills')
-    const box = screen.getByRole('textbox', { name: 'Filter RFQs' })
+    const box = screen.getByRole('textbox', { name: 'Search RFQs' })
+    expect(box).toHaveAttribute('placeholder', 'Search RFQs')
     await user.type(box, 'rfq-0178')
     expect(bodyRows()).toHaveLength(1)
     expect(bodyRows()[0]).toHaveTextContent('Punjab Cement')
+    expect(screen.getByTestId('where-board')).toHaveTextContent('q=rfq-0178')
     await user.clear(box)
     await user.type(box, 'Belimo')
-    expect(await screen.findByText('No RFQs match “Belimo”')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Clear filter' }))
+    expect(await screen.findByText('Nothing matches "Belimo"')).toBeInTheDocument()
+    expect(screen.getByText('Searched open RFQs by number, customer, their reference and item.')).toBeInTheDocument()
+    // the field's own clear (x) and the no-results action share the name; use the one in the empty state
+    await user.click(within(screen.getByRole('table', { name: 'Open RFQs' })).getByRole('button', { name: 'Clear search' }))
     expect(box).toHaveValue('')
     expect(bodyRows()).toHaveLength(3)
     await user.type(box, 'dairy{Escape}')
     expect(box).toHaveValue('')
   })
 
-  it('/ focuses the filter box', async () => {
+  it('a search in the address is applied on load', async () => {
+    db()
+    renderBoard('admin', '/rfqs?q=punjab')
+    await screen.findByText('Punjab Cement')
+    expect(screen.getByRole('textbox', { name: 'Search RFQs' })).toHaveValue('punjab')
+    expect(bodyRows()).toHaveLength(1)
+  })
+
+  it('/ focuses the search', async () => {
     db()
     const user = userEvent.setup()
     renderBoard('admin')
     await screen.findByText('Indus Textile Mills')
     await user.keyboard('/')
-    expect(screen.getByRole('textbox', { name: 'Filter RFQs' })).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Search RFQs' })).toHaveFocus()
   })
 
   it('Closed is one more choice of the same filter', async () => {
@@ -254,7 +270,7 @@ describe('RFQ board toolbar', () => {
     const user = userEvent.setup()
     renderBoard('admin', '/rfqs?show=closed')
     await screen.findByRole('table', { name: 'Closed and won RFQs' })
-    await user.type(screen.getByRole('textbox', { name: 'Filter RFQs' }), 'belimo  gauge')
+    await user.type(screen.getByRole('textbox', { name: 'Search RFQs' }), 'belimo  gauge')
     await waitFor(() => expect(d.calls.some(c => c.target === 'rpc:search_closed_rfqs')).toBe(true))
     const search = d.calls.find(c => c.target === 'rpc:search_closed_rfqs')!
     expect(opArgs(search, 'args')?.[0]).toEqual({ p_text: 'belimo  gauge', p_limit: 25, p_offset: 0 })
