@@ -905,6 +905,7 @@ export function asParseResult(r: EnquiryParse): ParseResult {
   return {
     items: r.items,
     lines: r.lines.map(l => ({ text: l.text, kind: l.kind === 'skipped' ? 'skipped' : 'item', marker: l.marker })),
-    lineCount: r.lineCount,
+    // A table's header row is not a line of the enquiry ("2 items found in 2 lines" for a header and two rows), as parsePaste counts.
+    lineCount: r.lineCount - r.lines.filter(l => l.reason === 'table' && splitCells(l.text) !== null && tableHeader(splitCells(l.text) as string[]) !== null).length,
   }
 }

@@ -242,6 +242,11 @@ describe('parseEnquiry: the shapes the sales verification found (BUG-SALES-1, BU
     ])
   })
 
+  it('a spreadsheet block with a header row counts its rows only: "2 items found in 2 lines"', () => {
+    const r = asParseResult(parse(['S.No\tDescription\tQty\tUnit', '1\tBall valve 1 inch SS316\t6\tnos', '2\tSignal cable 4 core\t150\tm'].join('\n')))
+    expect([r.items.length, r.lineCount]).toEqual([2, 2])
+  })
+
   it('an unmarked email: nothing after "Regards," is an item (name, job title, phone)', () => {
     const text = ['Dear Sir,', 'Please quote the following:', 'Turbine flow meter DN80 - 2 nos', 'Float level switch 1000 mm - 1 no', 'Best regards,', 'Usman Tariq', 'Senior Purchase Officer', '0321-7654321'].join('\n')
     expect(rows(text)).toEqual([
