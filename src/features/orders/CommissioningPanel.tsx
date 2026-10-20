@@ -86,7 +86,7 @@ export function CommissioningPanel({
             </div>
           </div>
         ) : (
-          <p className="text-sm text-fg-muted">This order has no commissioning. Supply only.</p>
+          <p className="text-sm text-fg-muted">Supply only, no commissioning.</p>
         )}
 
         <div className="grid gap-5 border-t pt-4 md:grid-cols-2">
@@ -104,15 +104,12 @@ export function CommissioningPanel({
               ) : null}
             </span>
             <p className="whitespace-pre-wrap text-sm" data-testid="order-notes">
-              {order.notes ? order.notes : <span className="text-fg-muted">No notes.</span>}
+              {order.notes ? order.notes : <span className="text-fg-muted">None</span>}
             </p>
           </div>
           <div className="grid content-start gap-1">
             <span className="flex items-center gap-2 text-xs text-fg-muted">
               Site contact
-              <span className="inline-flex items-center gap-1">
-                <Icon icon={Lock} size="chip" /> Read only
-              </span>
             </span>
             {order.contact ? (
               <p className="text-sm">
@@ -120,7 +117,7 @@ export function CommissioningPanel({
                 {order.contact.phone ? <span className="num block text-primary">{order.contact.phone}</span> : null}
               </p>
             ) : (
-              <p className="text-sm text-fg-muted">No contact on record.</p>
+              <p className="text-sm text-fg-muted">None</p>
             )}
           </div>
         </div>
@@ -157,7 +154,7 @@ export function CommissioningEditDialog({ order, engineers, onClose }: { order: 
     <Dialog open busy={update.isPending} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
         title="Commissioning"
-        context="Needs it, who is on it, and the planned date. Marking it done is one tap on the page."
+        context="Mark it done with one tap on the page."
         footer={
           <>
             <Button data-cancel onClick={onClose} disabled={update.isPending}>

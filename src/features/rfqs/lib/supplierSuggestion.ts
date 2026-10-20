@@ -78,7 +78,7 @@ export const GROUP_ORDER: readonly SuggestionGroup[] = ['supplied_before', 'carr
 export const GROUP_LABEL: Record<SuggestionGroup, string> = {
   supplied_before: 'Supplied this item before',
   carries_brand: 'Carries a brand in this RFQ',
-  family_shortlist: 'Shortlisted for the family',
+  family_shortlist: 'Picked for this type of item',
 }
 
 export type TierLabel = 'same model' | 'same item' | 'same brand' | 'same family'

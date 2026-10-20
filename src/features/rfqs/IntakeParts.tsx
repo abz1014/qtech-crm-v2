@@ -156,7 +156,7 @@ export function SidePanels({
           <Row k="Due">{dueOn ? <span className="num">{formatDay(dueOn)}</span> : <span className="text-fg-muted">Optional</span>}</Row>
           <Row k="Suppliers">
             {floated ? (
-              <StatusBadge dimension="sourcing" value="awaiting" label={`Sent to ${tickedCount} ${tickedCount === 1 ? 'supplier' : 'suppliers'}, waiting for prices`} />
+              <StatusBadge dimension="sourcing" value="awaiting" label={`Asked ${tickedCount} ${tickedCount === 1 ? 'supplier' : 'suppliers'}`} />
             ) : (
               <StatusBadge dimension="sourcing" value="not-floated" label="Not sent to suppliers" />
             )}

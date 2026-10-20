@@ -8,7 +8,7 @@ A number beside a tab means "this many need you". The (i) next to a word explain
  - Row: Amount, PKR. Category (type 2 or 3 letters). Date (today). Paid via (Bank or Cash). Note. Receipt photo.
  - Enter adds a row. Tab moves along. Ctrl+Enter saves all.
  - Phone: tap the Receipt photo button to open the camera.
- - From an order: "Add expense" on the order page.
+ - From an order: open the supplier's menu under Supplier orders and tap "Pay <supplier>". It starts at what is still owed.
 
 2. PAYMENTS RECEIVED
  - Money opens on "Who owes us" (the same page and name for sales). Find the order.

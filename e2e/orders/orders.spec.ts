@@ -596,7 +596,7 @@ test.describe('O03: role views', () => {
     await expect(page.getByRole('button', { name: `Issue PO, ${s.supplierA.name}` })).toBeEnabled()
     await expect(page.getByRole('region', { name: 'Margin' }).getByRole('button', { name: 'Add expense' })).toBeEnabled()
     await leg(page, 'A').getByRole('button', { name: `More for ${s.supplierA.name}` }).click()
-    await expect(page.getByRole('menuitem', { name: 'Add expense' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: `Pay ${s.supplierA.name}` })).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(page.getByRole('button', { name: 'Add line' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Add supplier' })).toBeVisible()

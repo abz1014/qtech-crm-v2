@@ -19,6 +19,8 @@ import { useLegActions } from '@/features/orders/useLegActions'
 import { AddLegDialog } from '@/features/orders/AddDialogs'
 import { IssuePoDialog } from '@/features/purchaseOrders/IssuePoDialog'
 import { AddExpenseDialog } from '@/features/money/expenses/ExpenseDialog'
+import { useOrderCosts } from '@/features/money/costs/hooks'
+import { estimateExpectedCost, stillOwedOnLeg } from '@/features/money/lib/costEstimate'
 import { useOpenPoPdf } from '@/features/purchaseOrders/useOpenPoPdf'
 import { GoodsChaseDialog } from '@/features/orders/GoodsChaseDialog'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
@@ -33,7 +35,7 @@ import { TapDate, TapText } from '@/features/orders/TapEdit'
  *
  * The page has one green button (the order header's next step, lib/primaryAction.ts); here every button is secondary. Visible on the row:
  * the stamp, "Issue PO" while there is no PO (admin and sales: a PO carries prices; "Mark placed, no PO" is then in the menu) and "Chase
- * goods" once the goods are late. The rest is in the row's menu: View PO, Revise PO, Chase goods (before they are late) and Add expense (admin; the M03 dialog with this supplier as
+ * goods" once the goods are late. The rest is in the row's menu: View PO, Revise PO, Chase goods (before they are late) and Pay <supplier> (admin; the M03 dialog with this supplier as
  * the payee and Supplier payment as the category: the one Add expense per supplier order).
  */
 const STATE_DIM: Record<string, string> = { 'to-place': 'to-place', 'on-order': 'on-order', late: 'late', received: 'received', delivered: 'delivered' }
@@ -57,6 +59,21 @@ export function LegsPanel({
 }) {
   const fx = useFxLatest()
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
+  // Admin only (the Margin panel reads the same query, so this is no extra request): what is still owed on each supplier order, the
+  // amount Pay supplier starts at (entry-burden J14).
+  const costs = useOrderCosts(order.id, isAdmin)
+  const owedByLeg = useMemo(() => {
+    const out = new Map<string, { amount: number; note: string }>()
+    if (!costs.data) return out
+    const estRates = Object.fromEntries((fx.data ?? []).map(r => [r.currency, { rate: r.ratePkr, ageDays: r.ageDays }]))
+    const est = estimateExpectedCost({ items: costs.data.items, legs: costs.data.legs, pos: costs.data.pos, rates: estRates })
+    for (const l of legs) {
+      const paid = costs.data.expenses.filter(e => e.legId === l.id).reduce((n, e) => n + e.amount, 0)
+      const owed = stillOwedOnLeg(est, l.id, paid)
+      if (owed) out.set(l.id, owed)
+    }
+    return out
+  }, [costs.data, fx.data, legs])
   const [chasing, setChasing] = useState<OrderLegRow | null>(null)
   const [adding, setAdding] = useState(false)
   const [issuing, setIssuing] = useState<OrderLegRow | null>(null)
@@ -97,6 +114,7 @@ export function LegsPanel({
               isAdmin={isAdmin}
               canEdit={canEdit}
               rates={rates}
+              owed={owedByLeg.get(leg.id)}
               today={today}
               onChase={() => setChasing(leg)}
               onIssue={() => setIssuing(leg)}
@@ -124,6 +142,7 @@ function Leg({
   isAdmin,
   canEdit,
   rates,
+  owed,
   today,
   onChase,
   onIssue,
@@ -142,6 +161,8 @@ function Leg({
   isAdmin: boolean
   canEdit: boolean
   rates: ReturnType<typeof toRateTable>
+  /** Admin: what is still owed to this supplier, Pay supplier's starting amount. */
+  owed?: { amount: number; note: string }
   today: string
   onChase: () => void
   onIssue: () => void
@@ -239,8 +260,8 @@ function Leg({
               <span className="text-fg-2">{changed.notes.join('. ')}. The PO still lists the earlier lines.</span>
             </span>
             {canEdit ? (
-              <Button size="sm" icon={FileText} onClick={onIssue} aria-label={`Re-issue PO, ${name}`}>
-                Re-issue PO
+              <Button size="sm" icon={FileText} onClick={onIssue} aria-label={`Revise PO, ${name}`}>
+                Revise PO
               </Button>
             ) : null}
           </div>
@@ -306,7 +327,7 @@ function Leg({
                   ) : null}
                   {isAdmin ? (
                     <MenuItem icon={Receipt} onClick={() => setAddingExpense(true)}>
-                      Add expense
+                      {`Pay ${name}`}
                     </MenuItem>
                   ) : null}
                 </PopoverContent>
@@ -323,7 +344,7 @@ function Leg({
         <AddExpenseDialog
           open
           onOpenChange={o => !o && setAddingExpense(false)}
-          context={{ orderId: order.id, orderLabel: orderRef(order.number), legId: leg.id, payeeId: leg.supplierId, payeeName: leg.supplierName }}
+          context={{ orderId: order.id, orderLabel: orderRef(order.number), legId: leg.id, payeeId: leg.supplierId, payeeName: leg.supplierName, amount: owed?.amount, amountNote: owed?.note }}
         />
       ) : null}
     </li>

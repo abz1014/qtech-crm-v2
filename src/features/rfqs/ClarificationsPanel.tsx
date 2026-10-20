@@ -237,7 +237,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
             {groups.withdrawn.length > 0 ? (
               <details className="border-t px-0 py-1 text-sm">
                 <summary className="cursor-pointer px-4 py-2 text-fg-muted hover:text-fg">
-                  Withdrawn (<span className="num">{groups.withdrawn.length}</span>)
+                  Not needed (<span className="num">{groups.withdrawn.length}</span>)
                 </summary>
                 <ul className="divide-y">
                   {groups.withdrawn.map(c => (

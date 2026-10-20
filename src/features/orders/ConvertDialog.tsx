@@ -19,6 +19,7 @@ import type { RfqHeader } from '@/features/rfqs/api'
 import { useQuoteItems } from '@/features/quotations/hooks'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { FALLBACK_PAYMENT_TERMS_DAYS } from '@/features/settings/companyProfile'
+import { daysFromTermsText } from '@/features/orders/lib/termsDays'
 import { useConvertRfq, useLastTerms, useNextOrderNumber, useRankedQuotes } from '@/features/orders/hooks'
 import { useQuotations } from '@/features/quotations/hooks'
 import { quotationRef } from '@/features/quotations/lib/refs'
@@ -95,9 +96,13 @@ export function ConvertDialog({ rfq, onClose }: Props) {
   const [needsTouched, setNeedsTouched] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  /** Payment terms typed once: the days written on the latest quotation win over the last order's (entry-burden J5/J7). */
+  const quotedDays = daysFromTermsText(quotesQ.data?.[0]?.paymentTerms)
   useEffect(() => {
-    if (!termsTouched && termsQ.data) setTerms(termsQ.data.days)
-  }, [termsQ.data, termsTouched])
+    if (termsTouched) return
+    if (quotedDays !== null) setTerms(quotedDays)
+    else if (termsQ.data) setTerms(termsQ.data.days)
+  }, [termsQ.data, termsTouched, quotedDays])
 
   /** What an item is assigned to when nobody chooses: its rank-1 quote; a lone quote that cannot be ranked; otherwise nothing yet. */
   const defaultOf = (id: string): SupplierChoice => {
@@ -479,11 +484,13 @@ export function ConvertDialog({ rfq, onClose }: Props) {
             label="Payment terms"
             requirement="optional"
             source={
-              termsQ.data && !termsTouched
-                ? `from the last order, ${orderRef(termsQ.data.orderNumber)}`
-                : !termsTouched && terms === null && termsQ.isSuccess
-                  ? `default terms, ${defaultTerms} days`
-                  : undefined
+              quotedDays !== null && !termsTouched
+                ? 'from the quotation'
+                : termsQ.data && !termsTouched
+                  ? `from the last order, ${orderRef(termsQ.data.orderNumber)}`
+                  : !termsTouched && terms === null && termsQ.isSuccess
+                    ? `default terms, ${defaultTerms} days`
+                    : undefined
             }
             edited={termsTouched}
           >

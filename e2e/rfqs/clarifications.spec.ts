@@ -104,7 +104,7 @@ test.describe('adding questions (FE-2: 1 paste + 1 tap)', () => {
     pastes++
     const list = panel(page).getByRole('list', { name: 'Questions to add' })
     await expect(list.getByRole('listitem')).toHaveCount(3)
-    await list.getByLabel('Who asked: Should the Cerabar output be HART or plain 4 to 20 mA?').selectOption({ label: `Raised by ${s.lpc.name}` })
+    await list.getByLabel('Who asked: Should the Cerabar output be HART or plain 4 to 20 mA?').selectOption({ label: `Asked by ${s.lpc.name}` })
     await panel(page).getByRole('button', { name: 'Add 3 questions' }).click()
     taps++
     expect(pastes).toBe(1)
@@ -120,7 +120,7 @@ test.describe('adding questions (FE-2: 1 paste + 1 tap)', () => {
     expect(rows.map(r => r.raised_by_inquiry_id)).toEqual([null, null, s.lpc.inquiryId])
     expect(rows.every(r => r.ask_count === 0 && r.first_asked_at === null)).toBe(true)
     await expect(panel(page).getByText('To ask', { exact: true })).toBeVisible()
-    await expect(panel(page).getByText(`Raised by ${s.lpc.name}`)).toBeVisible()
+    await expect(panel(page).getByText(`Asked by ${s.lpc.name}`)).toBeVisible()
     await expect(panel(page).getByText('Our question').first()).toBeVisible()
   })
 })
@@ -258,7 +258,7 @@ test.describe('answers', () => {
     await panel(page).getByRole('button', { name: `Withdraw: ${q.question}` }).click()
     await expect(toast(page, 'Question withdrawn')).toBeVisible()
     await expect.poll(async () => (await clarsOf(s.rfq.id)).find(r => r.id === q.id)?.withdrawn_at ?? null).not.toBeNull()
-    await panel(page).getByText(/^Withdrawn/).click()
+    await panel(page).getByText(/^Not needed/).click()
     await panel(page).getByRole('button', { name: `Put back: ${q.question}` }).click()
     await expect.poll(async () => (await clarsOf(s.rfq.id)).find(r => r.id === q.id)?.withdrawn_at ?? null).toBeNull()
     await expect(panel(page).getByRole('button', { name: `Withdraw: ${q.question}` })).toBeVisible()

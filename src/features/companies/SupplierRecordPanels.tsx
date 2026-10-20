@@ -30,7 +30,7 @@ const OUTCOME: Record<QuoteOutcome, { label: string; icon: LucideIcon; cls: stri
   'quoted-open': { label: 'Quoted, RFQ open', icon: CircleDot, cls: 'bg-tone-info-bg text-tone-info-fg' },
   waiting: { label: 'Waiting for a reply', icon: CircleDot, cls: 'bg-tone-info-bg text-tone-info-fg' },
   'no-reply': { label: 'No reply', icon: CircleDashed, cls: 'border border-dashed border-line-strong text-fg-muted' },
-  declined: { label: "Couldn't offer", icon: Circle, cls: 'border border-line-strong text-fg-2' },
+  declined: { label: "Can't quote", icon: Circle, cls: 'border border-line-strong text-fg-2' },
 }
 
 /** One outcome chip with its icon, as drawn in the company mockup. Used by the quotes and the enquiries lists. */

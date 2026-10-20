@@ -239,7 +239,7 @@ export function computeReconciliationExceptions(input: ReconciliationInput): Rec
         key: `leg-overpaid-out-${po.legId}`,
         severity: 'critical',
         category: 'Payments exceed total',
-        message: `Supplier payments (${money(paid)}) exceed the PO total (${money(po.total)}) on ${leg ? `${label(leg.orderId)} ${leg.label}` : 'a leg'}`,
+        message: `Supplier payments (${money(paid)}) are more than the PO total (${money(po.total)}) on ${leg ? `${label(leg.orderId)} ${leg.label}` : 'a supplier order'}`,
         orderId: leg?.orderId,
       })
     }
