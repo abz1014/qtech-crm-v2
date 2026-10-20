@@ -50,8 +50,8 @@ export function TargetTile({ today, className }: { today: string; className?: st
     )
   }
   return (
-    <section aria-label={`Your ${w.label} target`} className={cn('grid gap-2 p-4', className)}>
-      <div className="flex items-baseline justify-between gap-3">
+    <section aria-label={`Your ${w.label} target`} className={cn('grid grid-cols-[minmax(0,1fr)] gap-2 p-4', className)}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <p className="whitespace-nowrap text-sm text-fg-muted">Your {w.label} target <InfoTip label="About your target">Money received this quarter on your orders, without GST. Set by the admin.</InfoTip></p>
         <Status w={w} />
       </div>

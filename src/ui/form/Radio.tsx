@@ -35,11 +35,11 @@ export const Radio = forwardRef<ElementRef<typeof RadixRadio.Item>, RadioProps>(
   const id = idProp ?? auto
   return (
     <div className="flex items-start gap-3 text-sm">
-      <RadixRadio.Item ref={ref} id={id} aria-describedby={help ? `${id}-help` : undefined} className={cn(circle, 'mt-[calc((var(--lh-sm)-18px)/2)]', className)} {...rest}>
+      <RadixRadio.Item ref={ref} id={id} aria-describedby={help ? `${id}-help` : undefined} className={cn(circle, 'mt-[calc((var(--lh-sm)-18px)/2)] [@media(pointer:coarse)]:mt-[calc((var(--hit-touch)-18px)/2)]', className)} {...rest}>
         {dot}
       </RadixRadio.Item>
       <div className="grid">
-        <label htmlFor={id} className={cn('cursor-pointer', rest.disabled && 'cursor-not-allowed text-fg-muted')}>
+        <label htmlFor={id} className={cn('cursor-pointer [@media(pointer:coarse)]:py-[calc((var(--hit-touch)-var(--lh-sm))/2)]', rest.disabled && 'cursor-not-allowed text-fg-muted')}>
           {label}
         </label>
         {help ? (

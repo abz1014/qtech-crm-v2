@@ -37,17 +37,17 @@ export function RfqCell({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-0 gap-px">
       <span className="flex min-w-0 items-center gap-1.5">
-        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="truncate font-medium text-fg hover:underline">
+        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="min-w-0 font-medium text-fg hover:underline [overflow-wrap:anywhere]">
           {row.companyName}
         </Link>
         {row.isPriority ? <Priority /> : null}
       </span>
       <span className="flex min-w-0 items-baseline gap-1 text-sm text-fg-muted">
-        <span className="min-w-0 truncate text-fg-2" data-asked title={askedText(row, 500)}>
+        <span className="min-w-0 text-fg-2 [overflow-wrap:anywhere]" data-asked title={askedText(row, 500)}>
           {askedText(row)}
         </span>
         <span className="num shrink-0">· {rfqRef(row.number)}</span>
-        {row.customerRef ? <span className="min-w-0 truncate" title={`Their ref ${row.customerRef}`}>· their ref {row.customerRef}</span> : null}
+        {row.customerRef ? <span className="min-w-0 [overflow-wrap:anywhere]" title={`Their ref ${row.customerRef}`}>· their ref {row.customerRef}</span> : null}
       </span>
     </div>
   )
@@ -62,7 +62,7 @@ export function NextStepCell({ row }: { row: BoardRow }) {
         <i aria-hidden="true" className="size-2 shrink-0 rounded-round bg-current" />
         {s.label}
       </span>
-      <span className="truncate text-sm text-fg-muted" title={s.detail}>{s.detail}</span>
+      <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]" title={s.detail}>{s.detail}</span>
     </div>
   )
 }
@@ -84,7 +84,7 @@ export function OwnerCell({ row }: { row: BoardRow }) {
   return (
     <span className="inline-flex min-w-0 items-center gap-2">
       <Avatar name={row.ownerName} size="sm" />
-      <span className="truncate" title={row.ownerName}>{row.ownerName.split(' ')[0]}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere]" title={row.ownerName}>{row.ownerName.split(' ')[0]}</span>
     </span>
   )
 }
@@ -113,12 +113,12 @@ export function OpenCard({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-0 gap-1">
       <span className="flex min-w-0 items-center gap-1.5">
-        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="truncate font-medium text-fg hover:underline">
+        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="min-w-0 font-medium text-fg hover:underline [overflow-wrap:anywhere]">
           {row.companyName}
         </Link>
         {row.isPriority ? <Priority /> : null}
       </span>
-      <span className="line-clamp-2 break-words text-sm text-fg-2">{askedText(row)}</span>
+      <span className="min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]">{askedText(row)}</span>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className={cn('flex items-center gap-2 text-sm font-medium', TONE[s.tone])} data-next-step={s.step}>
           <i aria-hidden="true" className="size-2 shrink-0 rounded-round bg-current" />
@@ -136,7 +136,7 @@ export function OpenCard({ row }: { row: BoardRow }) {
         </span>
       </div>
       <div className="flex min-w-0 items-center justify-between gap-3 text-sm text-fg-muted">
-        <span className="min-w-0 truncate">
+        <span className="min-w-0 [overflow-wrap:anywhere]">
           <span className="num">{rfqRef(row.number)}</span>
           {row.customerRef ? ` · their ref ${row.customerRef}` : null}
         </span>
@@ -149,13 +149,13 @@ export function OpenCard({ row }: { row: BoardRow }) {
 export function ClosedCard({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-0 gap-1">
-      <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="truncate font-medium text-fg hover:underline">
+      <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="min-w-0 font-medium text-fg hover:underline [overflow-wrap:anywhere]">
         {row.companyName}
       </Link>
-      <span className="line-clamp-2 break-words text-sm text-fg-2">{askedText(row)}</span>
+      <span className="min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]">{askedText(row)}</span>
       <OutcomeCell row={row} />
       <div className="flex min-w-0 items-center justify-between gap-3 text-sm text-fg-muted">
-        <span className="min-w-0 truncate">
+        <span className="min-w-0 [overflow-wrap:anywhere]">
           <span className="num">{rfqRef(row.number)}</span> · received <span className="num">{formatDay(row.receivedOn)}</span>
         </span>
         <OwnerCell row={row} />

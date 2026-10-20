@@ -214,10 +214,10 @@
   --row-h: 32px;
 }
 
-/* Phones and tablets, at EITHER text size: 44px controls and large buttons, 40px small buttons and segments, 48px rows.
+/* Phones and tablets, at EITHER text size: every control, small button and segment 44px (--hit-touch, WCAG 2.5.5), 48px rows.
    Smaller text never shrinks a tap target (this block comes after [data-text="small"] and wins at equal specificity). */
 @media (pointer: coarse) {
-  :root { --control-h: 44px; --control-lg-h: 44px; --control-sm-h: 40px; --segment-h: 40px; --row-h: 48px; }
+  :root { --control-h: 44px; --control-lg-h: 44px; --control-sm-h: 44px; --segment-h: 44px; --row-h: 48px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -478,4 +478,20 @@
 .row-settle { animation: row-settle var(--dur-slow) var(--ease-out) both; }
 @media (prefers-reduced-motion: reduce) {
   .row-settle { animation: none; }
+}
+
+/* Touch screens (pointer: coarse): no tap target under --hit-touch (DESIGN_SYSTEM 11, WCAG 2.5.5; screen audit "phone tap
+   targets"). A floor, not a size: buttons, tabs, options, inputs, and every link drawn as a box (a flex or grid child, or a
+   link with its own display), however small a component draws them with a mouse. The specificity is deliberately high so a
+   component's own h-6 or min-h-[28px] cannot undercut it. Left out: links inside a sentence (WCAG 2.5.8 exception), the 18px
+   Checkbox and Radio boxes (their label is the target, see Checkbox.tsx) and screen-reader-only text. */
+@media (pointer: coarse) {
+  :is(button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [role="switch"], [role="combobox"], summary, select, textarea, input:not([type="hidden"], [type="checkbox"], [type="radio"]), :is(.flex, .inline-flex, .grid, .inline-grid) > a[href], a[href]:is(.flex, .inline-flex, .block, .inline-block, .grid, .inline-grid)):not(.sr-only, [role="checkbox"], [role="radio"]) {
+    min-height: var(--hit-touch);
+    min-width: var(--hit-touch);
+  }
+  /* A block link or summary grown to 44 keeps its line in the middle of the target. */
+  :is(:is(.flex, .inline-flex, .grid, .inline-grid) > a[href], a[href]:is(.block, .inline-block), summary):not(.sr-only) {
+    align-content: center;
+  }
 }

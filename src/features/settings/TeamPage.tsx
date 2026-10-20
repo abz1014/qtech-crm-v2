@@ -70,7 +70,7 @@ export function TeamPage() {
     title: 'Team',
     back: '/settings',
     actions: (
-      <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading} className="h-9">
+      <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading || team.isError} className="h-9">
         Add
       </Button>
     ),
@@ -93,10 +93,10 @@ export function TeamPage() {
           <Avatar name={m.name} className={avatarTone(m)} />
           <span className="grid min-w-0">
             <span className="flex items-center gap-1">
-              <span className="truncate font-medium">{m.name}</span>
+              <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{m.name}</span>
               {m.id === me ? <Tag className="ml-1">You</Tag> : null}
             </span>
-            <span className="num truncate text-xs text-fg-muted">{m.email ?? 'No email on record'}</span>
+            <span className="num min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">{m.email ?? 'No email on record'}</span>
           </span>
         </span>
       ),
@@ -159,7 +159,7 @@ export function TeamPage() {
             Everyone who can sign in to Q-Tech CRM. Passwords are created and reset here, and shown once.
           </p>
         </div>
-        <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading}>
+        <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading || team.isError}>
           Add person
         </Button>
       </header>
@@ -207,8 +207,8 @@ export function TeamPage() {
           <span className={cn('flex items-center gap-3', dim(m))}>
             <Avatar name={m.name} size="xl" className={avatarTone(m)} />
             <span className="grid min-w-0 flex-1">
-              <span className="truncate text-sm font-medium">{m.name}</span>
-              <span className="truncate text-xs text-fg-muted">
+              <span className="min-w-0 text-sm font-medium [overflow-wrap:anywhere]">{m.name}</span>
+              <span className="min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">
                 {roleLabel(m.role)}
                 {m.job_title ? ` · ${m.job_title}` : ''}
               </span>

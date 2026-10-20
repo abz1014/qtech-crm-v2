@@ -484,7 +484,7 @@ function ReplyRow({
                     <span className="flex min-w-0 items-start gap-2" aria-hidden="true">
                       <span className="num mt-[2px] text-sm text-fg-muted">{it.number}</span>
                       <span className="min-w-0">
-                        <span className="line-clamp-2 break-words" title={it.description}>
+                        <span className="min-w-0 [overflow-wrap:anywhere]" title={it.description}>
                           {it.description}
                         </span>
                         {q ? <span className="num text-sm text-fg-muted">{q}</span> : null}
@@ -587,7 +587,7 @@ function ReplyRow({
             <ul className="mt-2 grid gap-2 md:grid-cols-2">
               {items.map(it => (
                 <li key={it.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3">
-                  <span className="min-w-0 truncate" title={it.description}>
+                  <span className="min-w-0 [overflow-wrap:anywhere]" title={it.description}>
                     <span className="num mr-2 text-fg-muted">{it.number}</span>
                     {it.description}
                   </span>
