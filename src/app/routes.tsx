@@ -5,10 +5,12 @@ import { navItems, type NavKey } from '@/app/navConfig'
 import { DestinationPage } from '@/app/pages/DestinationPage'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
-import { SignInPage } from '@/app/pages/SignInPage'
 import { useSession } from '@/app/session'
 import { AdminOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
 import { AppShell } from '@/app/shell/AppShell'
+
+// Lazy: the sign-in form brings zod, react-hook-form and its resolvers, which nothing else on first paint needs (perf/client).
+const SignInPage = lazy(() => import('@/app/pages/SignInPage').then(m => ({ default: m.SignInPage })))
 
 /**
  * Screens plug in here, one per destination. A feature task replaces its entry
@@ -53,7 +55,11 @@ const Gallery = import.meta.env.DEV ? lazy(() => import('@/dev/gallery/Gallery')
 function SignInRoute() {
   const session = useSession()
   const from = (useLocation().state as { from?: string } | null)?.from
-  return session.status === 'signed-in' ? <Navigate to={from && from !== '/login' ? from : '/'} replace /> : <SignInPage />
+  return session.status === 'signed-in' ? <Navigate to={from && from !== '/login' ? from : '/'} replace /> : (
+    <Suspense fallback={null}>
+      <SignInPage />
+    </Suspense>
+  )
 }
 
 export function AppRoutes() {

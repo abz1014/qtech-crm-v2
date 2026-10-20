@@ -22,8 +22,9 @@ afterEach(() => {
 /** Serve order_receivables rows (D-MR3: a cancelled, never-invoiced order is not listed) for the company, as the function does. */
 function serveOrderMoney(books: Books, today: string) {
   fake = installFakeDb(call => {
-    if (call.target !== 'rpc:order_receivables') return { data: [] }
-    const company = opArgs(call, 'eq')?.[1]
+    // receivables_list(p_company_id) since round 2 (it filters order_receivables() on the server; same rows, same figures)
+    if (call.target !== 'rpc:receivables_list') return { data: [] }
+    const company = (opArgs(call, 'args')?.[0] as { p_company_id?: string } | undefined)?.p_company_id
     const rows = books.orders
       .filter((o: Order) => o.companyId === company)
       .map(o => orderMoneyOf(o, books, today))

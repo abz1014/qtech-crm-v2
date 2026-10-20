@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import MoneyScreen from '@/features/money/MoneyScreen'
 import { installFakeDb, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
+import { receivablesListResult } from '@/test/receivablesFake'
 import { ToastProvider } from '@/ui/Toast'
 
 /*
@@ -120,6 +121,8 @@ describe('tab counts mean "needs you", and agree with the pages', () => {
       last_reminded_on: remindedDaysAgo === null ? null : new Date(Date.now() - remindedDaysAgo * 86_400_000).toISOString().slice(0, 10),
     })
     at('/money/receivables', 'admin', c => {
+      if (c.target === 'rpc:receivables_list')
+        return receivablesListResult(c, [overdue('o1', 'u', null), overdue('o2', 'u', 1), overdue('o3', 's', null)])
       if (c.target === 'rpc:order_receivables')
         return { data: [overdue('o1', 'u', null), overdue('o2', 'u', 1), overdue('o3', 's', null)] } // mine, mine but just reminded, a sales person's
       if (c.target === 'users') return { data: [{ id: 'u', role: 'admin', name: 'A' }, { id: 's', role: 'sales', name: 'S' }] }

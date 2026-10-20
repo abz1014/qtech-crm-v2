@@ -9,6 +9,7 @@ import { ReceivablesPage } from '@/features/money/payments/ReceivablesPage'
 import { ReminderPanel } from '@/features/money/payments/ReminderPanel'
 import type { ReceivableRow } from '@/features/money/payments/model'
 import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
+import { receivablesListResult } from '@/test/receivablesFake'
 import { ToastProvider } from '@/ui/Toast'
 import { businessToday } from '@/lib/dates'
 
@@ -172,6 +173,8 @@ describe('the panel beside Receivables (M09)', () => {
   ]
   const feed = (c: FakeCall): FakeResult | undefined => {
     if (c.target === 'rpc:order_receivables') return { data: receivables }
+    if (c.target === 'rpc:receivables_list')
+      return receivablesListResult(c, receivables, { companyName: id => (id === 'c1' ? 'Indus Textile Mills' : 'Lahore Beverage Co.'), invoiceNumbers: id => (id === 'o27' ? ['INV-2256'] : ['INV-2299']) })
     if (c.target === 'companies') return { data: [{ id: 'c1', name: 'Indus Textile Mills' }, { id: 'c2', name: 'Lahore Beverage Co.' }] }
     if (c.target === 'invoices' && c.ops.some(([k, a]) => k === 'select' && String(a[0]).includes('invoice_date') && !String(a[0]).includes('reminded'))) {
       return { data: [{ order_id: 'o27', number: 'INV-2256', invoice_date: '2026-09-20' }, { order_id: 'o35', number: 'INV-2299', invoice_date: '2026-10-30' }] }

@@ -8,9 +8,9 @@ import { gzipSync } from 'node:zlib'
  * VITE_SUPABASE_* so the Supabase client is bundled as in production; `hasSupabaseClient` refuses a build without it).
  * Audit 2 (performance §1.6): the old 300 KB gate measured a build without the client (about 220 KB) while production was
  * 278 KB. Set about 5% above the real entry (257.5 KB on perf/client), so a regression fails instead of eating hidden
- * headroom. Lower it when the entry shrinks (a lazy sign-in page takes it to about 228 KB).
+ * headroom. Lower it when the entry shrinks. Round 2 (r2/fast-reads): the lazy sign-in page took the entry to 221.8 KB; limit 240 KB.
  */
-export const INITIAL_JS_BUDGET_BYTES = 270 * 1024
+export const INITIAL_JS_BUDGET_BYTES = 240 * 1024
 
 /** Local asset paths a JS or HTML source points at: <script src>, <link rel=modulepreload href>, and static `import ... from "./x.js"`. */
 export function staticJsRefs(source, { html = false } = {}) {

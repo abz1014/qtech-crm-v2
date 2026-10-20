@@ -84,6 +84,8 @@ Brand green fails AA for text in both directions (3.78:1). So:
 &
 | `public/icon-maskable-512.png` | Maskable manifest icon, made from the mark by `scripts/make-pwa-icons.py` (the white disc fits the 80% safe zone). |
 
+In the app, show a logo through `<BrandImage name="logo-mark" | "logo-wordmark">` (`src/ui/BrandImage.tsx`), never a bare `<img>`: it serves the `.avif`, then the `.webp`, then the `.png` of the same name in a `<picture>` (the PNG is the fallback and the only format the PDFs use). All three are made by `scripts/make-brand-images.py` and precached (`brand/*.{png,webp,avif}` in `vite.config.ts`); a new brand image needs all three.
+
 Do not recolour, stretch, outline or place the wordmark on a coloured or photographic background. The wordmark's tagline is too small to read below 24px height; use the mark instead.
 
 ## 7. Never

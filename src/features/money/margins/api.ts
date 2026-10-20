@@ -1,4 +1,5 @@
-import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import { fetchAll, requireSupabase } from '@/lib/supabase'
+import { lookupLabels } from '@/features/money/lookupLabels'
 import type { MarginRow, MarginState } from '@/features/money/margins/model'
 
 /*
@@ -13,10 +14,8 @@ export async function listOrderMargins(): Promise<MarginRow[]> {
   ])
   const live = new Map(orders.filter(o => !o.cancelled_on).map(o => [o.id, o.ordered_on]))
   const companyIds = [...new Set(money.map(m => m.company_id).filter((x): x is string => !!x))]
-  const names = new Map<string, string>()
-  for (let i = 0; i < companyIds.length; i += 80) {
-    for (const c of unwrap(await db.from('companies').select('id, name').in('id', companyIds.slice(i, i + 80)))) names.set(c.id, c.name)
-  }
+  // one lookup_labels call (ids in the body) instead of a read per 80 companies, one after another
+  const names = new Map(Object.entries((await lookupLabels({ companies: companyIds })).companies))
   return money
     .filter(m => m.order_id && live.has(m.order_id))
     .map(m => {
