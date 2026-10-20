@@ -312,7 +312,7 @@ export default function OrdersListPage() {
               value={split}
               onValueChange={v => change({ show: v === 'all' ? null : v })}
               options={[
-                { value: 'all', label: 'All', count: orders.isSuccess ? shown.length : undefined },
+                { value: 'all', label: 'Any', count: orders.isSuccess ? shown.length : undefined },
                 { value: 'need', label: 'Needs action', count: orders.isSuccess ? needCount : undefined },
                 { value: 'waiting', label: 'Waiting', count: orders.isSuccess ? shown.length - needCount : undefined },
               ]}

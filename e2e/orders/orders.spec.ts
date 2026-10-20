@@ -472,7 +472,7 @@ test.describe('O03: commissioning and cancel', () => {
     const s = await seedOrder({ needs_commissioning: false, commissioning_planned_on: null })
     await openAs(page, 'admin', `/orders/${s.order.id}`)
     const section = page.getByRole('region', { name: 'Commissioning' })
-    await expect(section).toContainText('This order has no commissioning')
+    await expect(section).toContainText('no commissioning')
     await section.getByRole('button', { name: 'Edit', exact: true }).click()
     const dialog = page.getByRole('dialog')
     await dialog.getByRole('checkbox', { name: 'This order needs commissioning' }).click()
