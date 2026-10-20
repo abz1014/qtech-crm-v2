@@ -12,7 +12,7 @@ import { BUGS, SCREENS, UI, asRole, knownBug, expect, focusProblems, focusSweep,
 /** Known failures per viewport and screen. */
 const SWEEP_BUGS: Record<string, Record<string, keyof typeof BUGS>> = {
   'at 1440x900': { 'New RFQ': 'invisibleFocus' },
-  'at 200% zoom (683x330)': { 'New RFQ': 'invisibleFocus', 'RFQ detail': 'obscured', Orders: 'obscured' },
+  'at 200% zoom (683x330)': { 'New RFQ': 'invisibleFocus', 'RFQ detail': 'obscured' },
 }
 
 const SWEEP_VIEWPORTS = [
@@ -140,7 +140,7 @@ test.describe('a new page starts at the top (2.4.3)', () => {
     await open(page, `/rfqs/${world.rfq.id}`)
     await page.locator('#main').evaluate(m => (m.scrollTop = m.scrollHeight))
     expect(await page.locator('#main').evaluate(m => m.scrollTop), 'the RFQ page must be tall enough to scroll at 330px').toBeGreaterThan(0)
-    await page.getByRole('navigation', { name: 'Main' }).filter({ visible: true }).getByRole('link', { name: /^Companies/ }).click()
+    await page.getByRole('navigation', { name: 'Main' }).filter({ visible: true }).locator('a[href="/companies"]').click()
     await page.waitForURL(/\/companies$/)
     await page.waitForLoadState('networkidle')
     expect(await page.locator('#main').evaluate(m => m.scrollHeight - m.clientHeight), 'Companies must be tall enough to scroll at 330px').toBeGreaterThan(0)

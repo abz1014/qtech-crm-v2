@@ -69,10 +69,10 @@ const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (pa
     },
   },
   {
-    name: 'Add expense dialog',
+    name: 'Add expenses sheet',
     open: async page => {
       await open(page, '/money/expenses')
-      await page.getByRole('button', { name: UI.addExpense }).click()
+      await page.getByRole('button', { name: UI.addExpenses }).click()
       await expect(page.getByRole('dialog')).toBeVisible()
     },
   },

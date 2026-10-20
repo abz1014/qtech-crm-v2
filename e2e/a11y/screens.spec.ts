@@ -25,7 +25,7 @@ for (const viewport of [
     for (const [name, path] of SETTINGS) {
       test(`${name}`, async ({ page }) => {
         if (name === 'Exchange rates' && viewport.width === 1440) knownBug(BUGS.labelInName)
-        if ((name === 'Settings home' || name === 'Team') && viewport.width === 375) knownBug(BUGS.phoneH1)
+        if (name === 'Team' && viewport.width === 375) knownBug(BUGS.phoneH1)
         await open(page, path)
         expect(await axe(page)).toEqual([])
       })

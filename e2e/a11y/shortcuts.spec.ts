@@ -21,7 +21,8 @@ test('documents today\'s single-key shortcuts: N, C, G then T, and /, outside te
   await expect(page).toHaveURL(/\/rfqs\/new$/)
 
   await open(page, '/today')
-  await pressOnNavLink(page, 'c')
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+  await page.keyboard.press('c')
   await expect(page.getByRole('dialog', { name: UI.capture })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog', { name: UI.capture })).toBeHidden()

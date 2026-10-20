@@ -66,12 +66,12 @@ export const BUGS = {
   undoKeys: { id: 'A11Y-09', sc: '2.2.1', what: 'the Undo toast never tells a screen-reader user that Ctrl+Z undoes', where: 'src/ui/Toast.tsx:199-221' },
   filterCount: { id: 'A11Y-10', sc: '4.1.3', what: '"Showing n of m" changes silently when a filter is typed', where: 'src/ui/DataTable.tsx:773-775, src/features/rfqs/board/BoardPage.tsx:285' },
   invisibleFocus: { id: 'A11Y-11', sc: '2.4.7', what: 'native controls laid over chips with opacity-0 show no focus ring', where: 'src/features/money/expenses/BurstSheet.tsx:795-821, src/features/rfqs/ItemsEditor.tsx:83-87' },
-  obscured: { id: 'A11Y-12', sc: '2.4.11', what: 'sticky and fixed bars cover the focused control', where: 'src/features/rfqs/RfqHeaderBlock.tsx:352 (phone "RFQ actions" bar), src/app/shell/MobileChrome.tsx:78 (tab bar over the Orders tab panel), src/features/rfqs/IntakeScreen.tsx:738 (Next step bar)' },
+  obscured: { id: 'A11Y-12', sc: '2.4.11', what: 'sticky and fixed bars cover the focused control', where: 'src/features/rfqs/RfqHeaderBlock.tsx (phone "RFQ actions" sticky bar),src/features/rfqs/IntakeScreen.tsx:738 (Next step bar)' },
   filterEsc: { id: 'A11Y-14', sc: '2.4.3', what: 'a second Esc in a table filter blurs it, dropping focus to <body>', where: 'src/ui/TableFilter.tsx:29-32' },
   prohibitedLabel: { id: 'A11Y-15', sc: '1.3.1 / 4.1.2', what: 'aria-label on role-less div/span/p is ignored by screen readers', where: 'src/features/orders/OrderItemsPanel.tsx:173 ("Leg A"), src/features/rfqs/RfqHeaderBlock.tsx:219, src/features/orders/ConvertDialog.tsx:434, src/features/quotations/IssueQuotationDialog.tsx:561, src/features/rfqs/ItemsEditor.tsx:170 (pre), src/features/orders/TapEdit.tsx:62,120' },
   menuDialogFocus: { id: 'A11Y-19', sc: '2.4.3', what: 'a dialog opened from a menu item returns focus to that (gone) item, so focus falls to <body>', where: 'src/ui/Dialog.tsx:111,123, src/features/settings/TeamPage.tsx:280' },
   labelInName: { id: 'A11Y-20', sc: '2.5.3', what: '"Add a rate for X" buttons have an aria-label that does not contain their visible text', where: 'src/features/fx/ExchangeRatesPage.tsx:143' },
-  phoneH1: { id: 'A11Y-21', sc: '1.3.1 / 2.4.6', what: 'no h1 on a phone on Settings home and Team', where: 'src/features/settings/TeamPage.tsx:145 (header max-md:hidden), src/features/settings/SettingsLayout.tsx:45-60' },
+  phoneH1: { id: 'A11Y-21', sc: '1.3.1 / 2.4.6', what: 'no h1 on a phone on Team', where: 'src/features/settings/TeamPage.tsx:145 (header max-md:hidden)' },
   phoneTitle: { id: 'A11Y-22', sc: '1.4.10', what: 'the phone bar title is truncated at 320 px ("Companies")', where: 'src/app/shell/MobileChrome.tsx:55 (truncate)' },
 } satisfies Record<string, Bug>
 
