@@ -26,7 +26,8 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 | `NeedsCount` (was CountPill) | The "needs you" number beside a nav item, tab or switch; other counts are words | 13 | U05 (built) |
 | `StatusBadge` | Chip for any status value; shape, colour and label together; tones from `tokens.css` | 02 | U05 (built; registry in `src/lib/status.ts`) |
 | `Money` | Net / GST / gross, PKR grouping, foreign variant, estimate, stale-rate and basis-unknown marks, tabular mono | 03 | U06 (built: `Money`, `Margin`, `MoneyFx`, `NetGstGross`) |
-| `StatusTrack` | Three-step track beside a chip for the invoice courier (TCS) and FBR dimensions | money-01, 02 | U05 (built) |
+| `StatusText` | A state as icon and word with no box (Next step columns, status strips, history rows); tone = who acts next. `StatusTrack` was removed in round 2 (R2-21): the GST register shows the chip only | round 2 | Built (`src/ui/StatusText.tsx`) |
+| `FilterSheet`, `NoResults` | Extra list filters in one popover (sheet on a phone) with "Filters · n on"; the shared no-results state with Clear and "Search everywhere" | round 2 | Built (`src/ui/FilterSheet.tsx`, `src/ui/NoResults.tsx`) |
 | `SumBar`, `AfterDrawings` | The Money summary strip (label, figure, one line of context) and the Amendment A6 "Not in P&L" and "After drawings" lines set apart below a month result | money-07, 10 | U06 (built) |
 | `Form`, `Field` | RHF + Zod form, label, help, error line, submitting and unique-violation states | 04 | U07 (built: `Form`, `FormField`, `Field`, `useSubmitForm`, `DateInput`, source note) |
 | `Dialog` | Modal (Radix), header, body, footer, destructive confirm variant, focus return | 05 | U03 (built) |
@@ -35,7 +36,7 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 | `Toast` | With Undo (10 s), plain, error | 08 | U03 (built: `ToastProvider`, `useToast`) |
 | `EmptyState` | Heading, what happens next, optional action; role-limited variant | 09 | U04 (built; goal, neutral and error moods; the role-limited wording is a screen concern) |
 | `Tooltip` | Short hover and focus hint; also carries exact values behind rounded figures | 10 | U03 (built) |
-| `SegmentedControl` | 2 to 5 options, counts, large size; tablist or radiogroup semantics | 11 | U03 (built) |
+| `SegmentedControl` | 2 to 5 options, a `needs` count (NeedsCount) only for things that need someone on our side, large size; tablist or radiogroup semantics | 11 | U03 (built) |
 | `DateRail` | Start-to-due rail with today marker; tones on track, due soon, due today, overdue, done, no date | 12 | Built (`src/ui/DateRail.tsx`, parity pass); Today's context pane uses it |
 | `Popover` | `Menu` variant (actions, 32 px items) and information variant | 13 | U03 (built) |
 | `InlineConfirm` | In-place "Copied. Marked as chased today. Undo" line | 13 | U03 (built) |

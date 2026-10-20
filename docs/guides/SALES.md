@@ -53,7 +53,7 @@ Press ? on a computer to see the keyboard shortcuts.
  - Tap "Create order". The order opens.
 
 8. INVOICE
- - Open the order. In Invoicing tap "Create invoice" (or Money, "Invoices & GST", "New invoice").
+ - Open the order. In Invoicing tap "Create invoice" (or Money, "Invoices & GST", "Create invoice").
  - Check Invoice number (it continues the series), Invoice date, Net amount, GST.
  - Save. Then send the invoice to the customer.
  - Courier sent? In "Invoices & GST" tick the invoices, then "Sent by TCS today". The (i) explains TCS, FBR and PSID.

@@ -34,7 +34,7 @@ test('documents today\'s single-key shortcuts: N, C, G then T, and /, outside te
 
   await open(page, '/rfqs')
   await pressOnNavLink(page, '/')
-  expect(await focusedThing(page)).toMatch(/Filter RFQs/)
+  expect(await focusedThing(page)).toMatch(/Search RFQs/)
 
   // Inside a text field the keys are only text.
   await open(page, '/companies')
@@ -54,4 +54,19 @@ test('a single printable key never acts unless the person can turn it off (WCAG 
   await pressOnNavLink(page, 'n')
   await page.waitForTimeout(500)
   expect(new URL(page.url()).pathname, 'N moved the page with no way to turn it off').not.toBe('/rfqs/new')
+})
+
+test('? opens the keyboard shortcuts sheet on a computer; a phone shows no key hints (consistency spec 4.4)', async ({ page }) => {
+  await open(page, '/rfqs')
+  const width = page.viewportSize()?.width ?? 1440
+  if (width < 768) {
+    // No keyboard on a phone: no key cap may be visible on a list page.
+    await expect(page.locator('kbd').filter({ visible: true })).toHaveCount(0)
+    return
+  }
+  await pressOnNavLink(page, '?')
+  const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
+  await expect(sheet).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(sheet).toBeHidden()
 })

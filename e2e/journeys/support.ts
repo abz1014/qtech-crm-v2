@@ -161,6 +161,9 @@ export async function todayHas(context: BrowserContext, rule: Rule, text: string
   const page = await openPage(context, '/today')
   await expect(page.getByRole('heading', { level: 1, name: 'Today' })).toBeVisible()
   await expect(page.getByText(/\d+ due now/)).toBeVisible() // the list has loaded
+  // Waiting starts collapsed (R2-08): open it, so a waiting row counts as listed as it did before
+  const waiting = page.getByRole('region', { name: 'Waiting' }).getByRole('button', { name: /^Waiting · \d+/ })
+  if ((await waiting.count()) > 0 && (await waiting.getAttribute('aria-expanded')) === 'false') await waiting.click()
   let row = page.locator(`li[data-rule="${rule}"]`)
   for (const t of text) row = row.filter({ hasText: t })
   if (listed) await expect(row.first(), `Today should list ${rule} for ${text.join(' ')}`).toBeVisible()

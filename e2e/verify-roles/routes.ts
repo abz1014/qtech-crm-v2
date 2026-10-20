@@ -98,7 +98,7 @@ export const ROUTES: readonly RouteSpec[] = [
       { name: /^(Add leg|Add supplier)$/, roles: AS },
       { name: /^Edit notes$/, roles: AS },
       { name: /^Issue PO/, roles: AS },
-      { name: /^More actions$/, roles: AS, open: false },
+      { name: /^More( actions)?$/, roles: AS, open: false },
     ],
     engineerAbsent: [
       /^Add expense/, /^Split line/, /^Edit price/, /^Resolve price basis$/, /^Is GST included/, /^View PO/, /^Re-issue PO/,
@@ -122,7 +122,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/companies/{supplier}', admin: 'ok', sales: 'ok', engineer: 'ok', prices: ['supplier', 'fx'] },
   // ------------------------------------------------------------------ Money (two levels after the restructure)
   { path: '/money', admin: 'ok', sales: 'ok', engineer: 'no', landsOn: /\/money\/(gst-register|receivables)$/, note: 'main opens GST register, post opens Who owes us' },
-  { path: '/money/gst-register', admin: 'ok', sales: 'ok', engineer: 'no', openers: [{ name: /^New invoice$/, roles: AS }, { name: /^Export$/, roles: A, open: false, optional: true }] },
+  { path: '/money/gst-register', admin: 'ok', sales: 'ok', engineer: 'no', openers: [{ name: /^Create invoice$/, roles: AS }, { name: /^More$/, roles: A, open: false, optional: true }] },
   { path: '/money/gst-register?invoice={invoice}', admin: 'ok', sales: 'ok', engineer: 'no', note: 'deep link: invoice detail dialog' },
   { path: '/money/gst-register?new=1&order={order}', admin: 'ok', sales: 'ok', engineer: 'no', note: 'deep link: Create invoice dialog' },
   { path: '/money/gst-register?attention=1', admin: 'ok', sales: 'ok', engineer: 'no' },

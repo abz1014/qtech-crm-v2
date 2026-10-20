@@ -10,4 +10,4 @@ screens: /orders, /money/expenses
 3. Check the amount and [Paid via].
 4. Tap [Save expense].
 
-Tip: What is still owed to suppliers is in [We owe suppliers] under Reports.
+Tip: What is still owed to suppliers is in [We owe suppliers] under Reports. Tap [Pay] on a row to open the same form, filled in.
