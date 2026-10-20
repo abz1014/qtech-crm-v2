@@ -249,6 +249,7 @@ function money() {
     receivables: {
       all: [...all, 'receivables'] as const,
       list: () => [...all, 'receivables', 'list'] as const,
+      summary: (today: string) => [...all, 'receivables', 'summary', today] as const,
       order: (orderId: string) => [...all, 'receivables', 'order', orderId] as const,
       payments: (orderId: string) => [...all, 'receivables', 'payments', orderId] as const,
     },

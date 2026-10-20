@@ -1,5 +1,6 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { orderRef } from '@/lib/refs'
+import { lookupLabels } from '@/features/money/lookupLabels'
 import type { TableRow, ViewRow } from '@/features/dbTypes'
 import type { GstRow, OrderAmounts } from '@/features/money/invoices/model'
 
@@ -154,19 +155,24 @@ export interface InvoiceableOrder {
 /** Orders a new invoice can go on: not cancelled and not fully invoiced yet (v_order_state, so an engineer-proof derived value). */
 export async function listInvoiceableOrders(): Promise<InvoiceableOrder[]> {
   const db = requireSupabase()
-  const orders = unwrap(
-    await db.from('orders').select('id, number, company_id').is('cancelled_on', null).order('number', { ascending: false }).limit(300),
-  ) ?? []
+  // Filtered on the server (lifecycle 'cancelled' is exactly cancelled_on set; an invoicing state that is null is kept, as before)
+  // and paged, newest first: no 300-order cap and no long `in.(...)` list in the URL.
+  const orders = await fetchAll((from, to) =>
+    db
+      .from('v_order_state')
+      .select('order_id, number, company_id')
+      .neq('lifecycle', 'cancelled')
+      .or(INVOICEABLE_FILTER)
+      .order('number', { ascending: false })
+      .range(from, to),
+  )
   if (orders.length === 0) return []
-  const ids = orders.map(o => o.id)
-  const [states, companies] = await Promise.all([
-    db.from('v_order_state').select('order_id, invoicing_state').in('order_id', ids),
-    db.from('companies').select('id, name').in('id', [...new Set(orders.map(o => o.company_id))]),
-  ])
-  const full = new Set((unwrap(states) ?? []).filter(s => s.invoicing_state === 'fully_invoiced').map(s => s.order_id))
-  const names = new Map((unwrap(companies) ?? []).map(c => [c.id, c.name]))
-  return orders.filter(o => !full.has(o.id)).map(o => ({ id: o.id, ref: orderRef(Number(o.number)), company: names.get(o.company_id) ?? '' }))
+  const { companies } = await lookupLabels({ companies: orders.map(o => o.company_id).filter((x): x is string => !!x) })
+  return orders.filter(o => o.order_id).map(o => ({ id: o.order_id as string, ref: orderRef(Number(o.number)), company: (o.company_id && companies[o.company_id]) || '' }))
 }
+
+/** v_order_state rows a new invoice can go on: not fully invoiced (PostgREST `or`; `neq` alone would drop a null state). */
+export const INVOICEABLE_FILTER = 'invoicing_state.is.null,invoicing_state.neq.fully_invoiced'
 
 // ------------------------------------------------------------------ stamps (a month at a time)
 

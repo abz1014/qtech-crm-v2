@@ -13,6 +13,7 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Field } from '@/ui/form/Field'
 import { TextField } from '@/ui/form/TextField'
+import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
 
 /*
@@ -90,7 +91,7 @@ export function SignInPage() {
   return (
     <main className="grid min-h-dvh place-items-center bg-canvas px-4 py-8 max-sm:items-start max-sm:bg-surface max-sm:px-0 max-sm:py-6">
       <div className="grid w-full max-w-[360px] gap-5 rounded border border-line bg-surface px-8 pb-6 pt-8 max-sm:max-w-none max-sm:border-0 max-sm:px-4">
-        <img src="/brand/logo-wordmark.png" alt="Q Tech Solutions" width={181} height={44} className="h-[44px] w-auto justify-self-start" />
+        <BrandImage name="logo-wordmark" alt="Q Tech Solutions" width={181} height={44} className="h-[44px] w-auto justify-self-start" />
         <div className="grid gap-[2px]">
           <h1 className="text-xl font-semibold tracking-snug">{kept ? 'Sign in to continue' : 'Sign in'}</h1>
           <p className="text-sm text-fg-muted">{kept ? 'You were signed out.' : 'Use the email and password your admin gave you.'}</p>
