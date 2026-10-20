@@ -1,12 +1,13 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Link } from 'react-router-dom'
-import { ClipboardPaste, Pencil, Plus, Undo2, X } from 'lucide-react'
+import { ClipboardPaste, Pencil, Plus, TriangleAlert, Undo2, X } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { formatPaisa } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
+import { Dialog, DialogContent } from '@/ui/Dialog'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
@@ -241,6 +242,9 @@ function ReplyRow({
   const declinedAll = Boolean(inquiry.noOfferOn) && !hasLines
   const dirty = isReplyDirty(existing, draft)
   const typed = Object.values(draft.prices).filter(p => typeof p === 'number' && p > 0).length
+  // Closing with prices typed and not saved asks first (review of ux/rfqs, item 9): one tap on X must not throw them away.
+  const [askClose, setAskClose] = useState(false)
+  const requestClose = () => (dirty ? setAskClose(true) : onClose())
   const others = inquiries.filter(i => i.id !== inquiry.id)
 
   const currencyNote = hasLines && existing[0].currency === draft.currency ? `${draft.currency}, as saved` : draft.currency === prefill.currency ? currencySourceNote(prefill, inquiry.supplierCountry) : prefill.source === 'none' ? `${draft.currency}, picked by you` : `${draft.currency}, changed by you`
@@ -379,8 +383,35 @@ function ReplyRow({
             Paste reply
           </Button>
         ) : null}
-        <Button size="sm" variant="quiet" icon={X} aria-label={`Close the reply, ${inquiry.supplierName}`} onClick={onClose} />
+        <Button size="sm" variant="quiet" icon={X} aria-label={`Close the reply, ${inquiry.supplierName}`} onClick={requestClose} />
       </header>
+      {askClose ? (
+        <Dialog open onOpenChange={o => (o ? null : setAskClose(false))}>
+          <DialogContent
+            title="Close without saving the prices?"
+            context={inquiry.supplierName}
+            icon={TriangleAlert}
+            footer={
+              <>
+                <Button data-cancel onClick={() => setAskClose(false)}>
+                  Keep editing
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    setAskClose(false)
+                    onClose()
+                  }}
+                >
+                  Close without saving
+                </Button>
+              </>
+            }
+          >
+            <p>The prices you typed for {inquiry.supplierName} are not saved yet. Closing throws them away.</p>
+          </DialogContent>
+        </Dialog>
+      ) : null}
 
       {declinedAll ? (
         <div className="flex flex-wrap items-center gap-3 rounded border border-line bg-sunken px-3 py-2">
