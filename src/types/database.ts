@@ -1742,6 +1742,14 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"v_month_profit": {
+                  Row: {
+                    "input_tax_paid": number | null,"invoice_count": number | null,"month": string | null,"non_pnl_paid": number | null,"order_costs_matched": number | null,"order_costs_paid": number | null,"overheads": number | null,"profit": number | null,"sales_gst": number | null,"sales_net": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+
+                  ]
                 },"v_month_team": {
                   Row: {
                     "month": string | null,"net_credited": number | null,"payment_count": number | null,"quarter_achieved_net": number | null,"quarter_gap": number | null,"quarter_target_net": number | null,"user_id": string | null,"user_name": string | null

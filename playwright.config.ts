@@ -128,7 +128,7 @@ const VERIFY_DIRS: Record<string, string> = {
   'verify-money': 'money-flow',
   'verify-books': 'books',
   'verify-admin': 'admin',
-  'verify-roles': 'roles',
+  'verify-role-flows': 'roles',
   'verify-resilience': 'resilience',
 }
 const VERIFY_SUITES = Object.keys(VERIFY_DIRS)

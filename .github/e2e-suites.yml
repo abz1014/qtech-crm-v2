@@ -87,7 +87,7 @@ verify-books: # weight=150 (workflow verification)
 verify-admin: # weight=90 (workflow verification; installs poppler)
   - 'e2e/verify/admin/**'
   - 'e2e/verify/support/**'
-verify-roles: # weight=120 (workflow verification)
+verify-role-flows: # weight=120 (workflow verification; was also named verify-roles, which clashed with the suite below)
   - 'e2e/verify/roles/**'
   - 'e2e/verify/support/**'
 verify-resilience: # weight=120 (workflow verification)
