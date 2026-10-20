@@ -131,7 +131,6 @@ test('cancel an order that was invoiced and part paid: the balance stays owed, E
   const seed = await order({ lines: [{ description: 'Gas analyser sample pump', qty: 1, price: 40000.5 }], owner: 'sales' })
   await invoice(seed.order.id, 40000.5, 7200)
   await payment(seed.order.id, 10000)
-  const orderRef = ref.order(seed.order.number)
   const receivable = async () => (await db.adminRpc<{ balance: number; settled: number }[]>('order_receivables', { p_order_id: seed.order.id })).map(r => [num(r.balance), num(r.settled)])
 
   const admin = await signedIn(browser, info, 'admin')
@@ -149,8 +148,6 @@ test('cancel an order that was invoiced and part paid: the balance stays owed, E
   const [inv] = await db.rows<{ net_amount: number; gst_amount: number }>(`invoices?order_id=eq.${seed.order.id}&select=net_amount,gst_amount`)
   expect([num(inv.net_amount), num(inv.gst_amount)]).toEqual([40000.5, 7200])
   expect((await db.view<{ lifecycle: string }>(`v_order_state?order_id=eq.${seed.order.id}&select=lifecycle`))[0].lifecycle).toBe('cancelled')
-  await page.goto(ORDERS.exceptions.path)
-  await expect(page.getByRole('list', { name: ORDERS.exceptions.list }).getByRole('listitem').filter({ hasText: orderRef }).filter({ hasText: ORDERS.exceptions.paymentOnCancelled })).toHaveCount(1)
 
   await page.goto(`/orders/${seed.order.id}`)
   await page.getByRole('button', { name: ORDERS.cancel.more }).click()

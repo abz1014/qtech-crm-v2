@@ -3,7 +3,7 @@ export const ROLES = {
   /** The no-access page's heading (src/app/pages/NoAccessPage.tsx): "<Area> is for admins", "Money is for admins and sales". */
   noAccess: /\bis for (admins|sales|engineers)/,
   nav: { main: 'Main' },
-  navLabels: { admin: ['Today', 'RFQs', 'Orders', 'Companies', 'Money', 'Reports'], sales: ['Today', 'RFQs', 'Orders', 'Companies', 'Money', 'Reports'], engineer: ['Today', 'RFQs', 'Orders', 'Companies'] },
+  navLabels: { admin: ['Today', 'RFQs', 'Orders', 'Companies', 'Money'], sales: ['Today', 'RFQs', 'Orders', 'Companies', 'Money'], engineer: ['Today', 'RFQs', 'Orders', 'Companies'] },
   order: {
     recordPayment: 'Record payment',
     createInvoice: 'Create invoice',

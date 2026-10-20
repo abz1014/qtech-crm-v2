@@ -14,7 +14,7 @@ export const QUOTES = {
     createOrder: 'Create order',
   },
   close: {
-    menu: 'Bid and close',
+    menu: 'More',
     closedToast: 'Closed',
     /** src/features/rfqs/lib/closeDefaults.ts CLOSE_REASONS: the stored key and the words on the menu. */
     reasons: [

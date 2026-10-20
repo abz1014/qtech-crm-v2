@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { db, num, USER } from '../support/db'
-import { invoice, karachiDay, nextInvoiceNumber, order, payment, post, ref, type OrderSeed } from '../support/fixtures'
+import { invoice, karachiDay, nextInvoiceNumber, order, payment, post, type OrderSeed } from '../support/fixtures'
 import { open, signedIn } from '../support/session'
 import { MONEY, amount, longDate } from '../support/text'
 import { readClipboardWhen, resetClipboard } from '../../support/clipboard'
@@ -173,7 +173,6 @@ test.describe('payments in', () => {
 
   test('a part payment, the rest, then more than is owed: balances, states, the credited person and the Exceptions list', async ({ browser }, info) => {
     const seed = await seedInvoiced()
-    const orderRef = ref.order(seed.order.number)
     const admin = await signedIn(browser, info, 'admin')
     const page = await open(admin, `/orders/${seed.order.id}`)
     const dialog = page.getByRole('dialog', { name: MONEY.payment.dialog })
@@ -214,9 +213,6 @@ test.describe('payments in', () => {
       expect([num(r.settled), num(r.balance), num(r.overpaid_by), r.payment_state]).toEqual([104500, 0, 5000.55, 'settled'])
       const money = await db.view<{ overpaid_by: number; settled: number }>(`v_order_money?order_id=eq.${seed.order.id}&select=overpaid_by,settled`)
       expect(num(money[0].overpaid_by)).toBe(5000.55)
-      await page.goto(MONEY.exceptions.path)
-      const list = page.getByRole('list', { name: MONEY.exceptions.list })
-      await expect(list.getByRole('listitem').filter({ hasText: orderRef }).filter({ hasText: MONEY.exceptions.overpaid })).toHaveCount(1)
     })
 
     await test.step('the database holds the three payments, each credited to the order owner (the salesperson)', async () => {

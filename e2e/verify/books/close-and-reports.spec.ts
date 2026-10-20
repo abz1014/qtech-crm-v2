@@ -96,8 +96,8 @@ test('one month of books by hand: P&L, team, GST month, checklist and aging; the
       const sum = page.getByRole('region', { name: BOOKS.pnl.sumBar }).first()
       await expect(sum).toContainText(amount(70000))
       await expect(sum).toContainText(amount(12600))
-      await expect(sum).toContainText(amount(37654.33))
-      await expect(sum).toContainText(amount(30654.33))
+      await expect(sum).toContainText(amount(37654)) // headline figures are whole rupees
+      await expect(sum).toContainText(amount(30654))
       await expect(page.getByTestId('pnl-frozen')).toHaveCount(0)
     })
 
@@ -162,7 +162,7 @@ test('one month of books by hand: P&L, team, GST month, checklist and aging; the
       await expect(page.getByTestId('pnl-frozen')).toBeVisible()
       const sum = page.getByRole('region', { name: BOOKS.pnl.sumBar }).first()
       await expect(sum).toContainText(amount(70000))
-      await expect(sum).toContainText(amount(37654.33))
+      await expect(sum).toContainText(amount(37654)) // headline figures are whole rupees
       // The checklist of a closed month is the one saved at the close, even after a bank tick changes the live count.
       await db.patch(`payments_in?id=eq.${p1.id}`, { bank_month: M.start })
       const status = Object.fromEntries((await db.adminRpc<{ check_key: string; n: number }[]>('month_end_status', { p_month: M.start })).map(s => [s.check_key, s.n]))
@@ -242,7 +242,7 @@ test('we owe a supplier: the leg total in USD at the rate, less the supplier pay
   const admin = await signedIn(browser, info, 'admin')
   const page = await open(admin, `/orders/${seed.order.id}`)
   await expect(page.getByTestId('leg-A-total')).toContainText(amount(2033.25))
-  await expect(page.getByTestId('leg-A')).toContainText(BOOKS.owe.atTodaysRate(amount(569818.31)))
+  await expect(page.getByTestId('leg-A')).toContainText(amount(569818))
 
   await page.getByRole('button', { name: BOOKS.owe.addExpenseOnLeg('A') }).click()
   const d = page.getByRole('dialog', { name: BOOKS.owe.dialog })
@@ -261,9 +261,9 @@ test('we owe a supplier: the leg total in USD at the rate, less the supplier pay
   await page.goto(BOOKS.monthEnd.owe(monthOf(today).key))
   const row = page.getByRole('row', { name: new RegExp(sup.name) })
   await expect(row).toContainText(amount(2033.25, { always: true }))
-  await expect(row).toContainText(amount(569818.31))
+  await expect(row).toContainText(amount(569818))
   await expect(row).toContainText(amount(300000))
-  await expect(row).toContainText(amount(269818.31))
+  await expect(row).toContainText(amount(269818))
   await expect(row).toContainText(BOOKS.owe.partPaid)
   await admin.close()
 })

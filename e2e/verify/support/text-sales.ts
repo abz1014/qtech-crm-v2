@@ -8,12 +8,12 @@ export const SALES = {
     quantity: (n: number) => `Quantity of item ${n}`,
     anyDescription: /^Description of item \d+$/,
     found: (items: number, lines: number) => `${items} ${items === 1 ? 'item' : 'items'} found in ${lines} ${lines === 1 ? 'line' : 'lines'}`,
-    saveOnly: 'Save without floating',
+    saveOnly: 'Save without asking',
     saved: /is saved/,
   },
   ask: {
     toAskSlot: 'suppliers-to-ask',
-    copyFor: (n: number) => `Copy enquiry for ${n} supplier${n === 1 ? '' : 's'}`,
+    copyFor: (n: number) => `Copy message for ${n} ${n === 1 ? 'supplier' : 'suppliers'}`,
     copied: 'Enquiry text copied',
     /** The enquiry's reply line (src/features/rfqs/lib/enquiryDraft.ts); WhatsApp puts the date in *bold*. */
     replyBy: (day: string) => new RegExp(`Kindly reply by \\*?${day}\\*?\\.`),
