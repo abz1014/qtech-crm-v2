@@ -3,6 +3,9 @@ import {
   CloseLedger,
   agingAsOf,
   basisOf,
+  cashMonth,
+  profitMonth,
+  quarterMonths,
   dec,
   itemsTotal,
   livePnlFields,
@@ -221,5 +224,71 @@ describe('0904 money month', () => {
     ledger.close('2025-01')
     ledger.close('2025-02')
     expect([ledger.shown('2025-01').result, ledger.shown('2025-02').result, ledger.shown('2025-02').adjust.netIn].map(rs)).toEqual(['-15288.09', '211.91', '0.00'])
+  })
+})
+
+describe('0079 in vs out', () => {
+  const o1 = order('o1', { lines: [{ qty: '1.000', price: '10000.00', rate: '18' }], ownerId: 'sales' })
+  const o2 = order('o2', { lines: [{ qty: '1.000', price: '1000.00', rate: '18' }], ownerId: 'sales' })
+  const books: Books = {
+    orders: [o1, o2],
+    invoices: [inv('ivo', 'o1', '2020-01-10', '10000.00', '1800.00')],
+    payments: [
+      pay('p1', 'o1', '2019-12-31', '5900.00'),
+      pay('p2', 'o1', '2020-01-01', '3000.50'),
+      pay('p3', 'o1', '2020-03-31', '1000.00'),
+      pay('p4', 'o1', '2020-04-01', '700.00'),
+      { ...pay('pv', 'o1', '2020-02-10', '2000.00'), voided: true },
+    ],
+    expenses: [
+      exp('e1', '2019-12-15', '4000.00', '600.00', 'order_cost', { orderId: 'o1', supplierPayment: true }),
+      exp('e2', '2020-01-05', '1500.00', '0', 'overhead'),
+      exp('e3', '2020-01-25', '2500.00', '0', 'overhead'),
+      exp('e4', '2020-03-31', '500.00', '0', 'overhead'),
+      exp('e5', '2020-03-10', '10000.00', '0', 'non_pnl'),
+      exp('e6', '2020-04-01', '800.00', '0', 'overhead'),
+      exp('e7', '2020-04-20', '300.00', '0', 'order_cost', { orderId: 'o2' }),
+    ],
+    defaultTerms: 30,
+  }
+  const cash = (m: string) => cashMonth(m, books)
+  const sumQ = (key: string, f: (m: string) => bigint) => quarterMonths(key).reduce((s, m) => s + f(m), 0n)
+
+  it('cash by month, gross, the voided payment left out', () => {
+    expect(['2019-12', '2020-01', '2020-02', '2020-03', '2020-04'].map(m => [rs(cash(m).in), cash(m).payments, rs(cash(m).out), cash(m).expenses])).toEqual([
+      ['5900.00', 1, '4000.00', 1],
+      ['3000.50', 1, '4000.00', 2],
+      ['0.00', 0, '0.00', 0],
+      ['1000.00', 1, '10500.00', 2],
+      ['700.00', 1, '1100.00', 2],
+    ])
+  })
+
+  it('quarters: Q4 2019 net 1,900.00; Q1 2020 in 4,000.50, out 14,500.00, net -10,499.50', () => {
+    expect(rs(sumQ('2019-Q4', m => cash(m).in - cash(m).out))).toBe('1900.00')
+    expect([sumQ('2020-Q1', m => cash(m).in), sumQ('2020-Q1', m => cash(m).out), sumQ('2020-Q1', m => cash(m).in - cash(m).out)].map(rs)).toEqual(['4000.50', '14500.00', '-10499.50'])
+    expect([sumQ('2020-Q2', m => cash(m).in), sumQ('2020-Q2', m => cash(m).out)].map(rs)).toEqual(['700.00', '1100.00'])
+  })
+
+  it('GST: the cash P&L takes 900.00 out of December; cash in keeps it', () => {
+    const p = monthPnlLive('2019-12', books)
+    expect([rs(p.netIn), rs(p.gstIn), rs(p.orderCosts)]).toEqual(['5000.00', '900.00', '3400.00'])
+  })
+
+  it('profit, invoiced basis, month by month and the Q1 2020 total', () => {
+    const row = (m: string) => {
+      const p = profitMonth(m, books)
+      return [p.sales, p.salesGst, p.orderCosts, p.overheads, p.profit, p.orderCostsPaid, p.nonPnlPaid, p.inputTaxPaid].map(rs)
+    }
+    expect(row('2019-12')).toEqual(['0.00', '0.00', '0.00', '0.00', '0.00', '3400.00', '0.00', '600.00'])
+    expect(row('2020-01')).toEqual(['10000.00', '1800.00', '3400.00', '4000.00', '2600.00', '0.00', '0.00', '0.00'])
+    expect(row('2020-03')).toEqual(['0.00', '0.00', '0.00', '500.00', '-500.00', '0.00', '10000.00', '0.00'])
+    expect(row('2020-04')).toEqual(['0.00', '0.00', '0.00', '800.00', '-800.00', '300.00', '0.00', '0.00'])
+    expect(rs(sumQ('2020-Q1', m => profitMonth(m, books).profit))).toBe('2100.00')
+  })
+
+  it('cancelling the never-invoiced order lets its held cost count in the cancel month', () => {
+    const cancelled = { ...books, orders: [o1, { ...o2, cancelledOn: '2020-05-15' }] }
+    expect([profitMonth('2020-05', cancelled).orderCosts, profitMonth('2020-05', cancelled).profit].map(rs)).toEqual(['300.00', '-300.00'])
   })
 })

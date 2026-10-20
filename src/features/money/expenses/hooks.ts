@@ -1,9 +1,43 @@
+import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { businessToday } from '@/lib/dates'
+import { mapPgError } from '@/lib/pgErrors'
 import { invalidateAfter } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
+import { checkCategoryName, nextSort } from '@/features/settings/categoriesModel'
+import { useCreateCategory } from '@/features/settings/hooks'
 import * as api from '@/features/money/expenses/api'
-import { SUPPLIER_PAYMENT_ID, mostUsedCategory, type RecurringTemplate } from '@/features/money/expenses/model'
+import type { CreateCategoryResult } from '@/features/money/expenses/CategoryPicker'
+import { SUPPLIER_PAYMENT_ID, monthKey, mostUsedCategory, shiftMonth, type Category, type PaidVia, type RecurringTemplate } from '@/features/money/expenses/model'
+
+/** The details typed in the last twelve months, for the Detail field's suggestions (detailSuggestions orders them per row). */
+export function useRecentDetails(enabled = true) {
+  const since = `${shiftMonth(monthKey(businessToday()), -11)}-01`
+  return useQuery({ queryKey: qk.money.expenses.details(since), queryFn: () => api.listRecentDetails(since), enabled, staleTime: 60_000 })
+}
+
+/**
+ * "Create" in the category picker (owner request 2026-10-20): the same name rule and the same request as Settings > Expense
+ * categories (useCreateCategory, so the same lists refresh), filed under Overheads, placed last, paid via as tapped. Resolves
+ * once the category lists hold the new one, so the picker shows it straight away.
+ */
+export function useInlineCategoryCreate(categories: readonly Category[] | undefined): (name: string, paidVia: PaidVia) => Promise<CreateCategoryResult> {
+  const { mutateAsync } = useCreateCategory()
+  return useCallback(
+    async (raw: string, paidVia: PaidVia) => {
+      const all = categories ?? []
+      const check = checkCategoryName(raw, all)
+      if (!check.ok) return { error: check.message }
+      try {
+        const id = await mutateAsync({ name: check.name, grp: 'overhead', default_paid_via: paidVia, sort: nextSort(all) })
+        return { id }
+      } catch (err) {
+        return { error: mapPgError(err, { entity: 'category' }).message }
+      }
+    },
+    [categories, mutateAsync],
+  )
+}
 
 /*
  * Expense hooks (R01 pattern). Every read takes `enabled`: Money's expense data is admin only, so for anyone else the

@@ -1,6 +1,9 @@
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ChartColumn, ChevronRight, Clock, FileText, Percent, Scale, Truck, Users, type LucideIcon } from 'lucide-react'
+import { useInOutReport } from '@/features/money/inOut/hooks'
+
+import { IN_OUT_TITLE, inOutCsv, periodOf } from '@/features/money/inOut/model'
+import { ArrowLeftRight, ChartColumn,ChevronRight, Clock, FileText, Percent, Scale, Truck, Users, type LucideIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { formatPaisa, toPaisa, type Amount } from '@/lib/money'
@@ -71,7 +74,7 @@ function useReportMonth() {
 const Pkr = ({ v }: { v: Amount }) => <span className="num">PKR {formatPaisa(toPaisa(v), 'never')}</span>
 
 interface Line {
-  key: MonthReportKey | 'margins'
+  key: MonthReportKey | 'margins' | 'in-out'
   icon: LucideIcon
   title: string
   to: string
@@ -93,8 +96,22 @@ function MoneyReports() {
   const asOfWords = `${Number(asOf.slice(8))} ${monthName(asOf.slice(0, 7))}`
   const mt = margins.data ? marginTotals(margins.data) : null
   const to = (k: MonthReportKey) => `/money/reports/${k}${m.search}`
+  const inOutPeriod = useMemo(() => periodOf('month', m.month), [m.month])
+  const inOut = useInOutReport(inOutPeriod)
 
   const lines: Line[] = [
+    {
+      key: 'in-out',
+      icon: ArrowLeftRight,
+      title: IN_OUT_TITLE,
+      to: `/money/reports/in-out?by=month&period=${m.month}`,
+      summary: inOut.view ? (
+        <>
+          In <Pkr v={inOut.view.cash.in} />, out <Pkr v={inOut.view.cash.out} />; profit (invoiced) <Pkr v={inOut.view.profit.profit} />. Also by quarter
+        </>
+      ) : null,
+      csv: inOut.view ? () => downloadReport(inOutCsv(inOut.view!), `in-vs-out-${m.month}.csv`) : null,
+    },
     {
       key: 'pnl',
       icon: ChartColumn,
