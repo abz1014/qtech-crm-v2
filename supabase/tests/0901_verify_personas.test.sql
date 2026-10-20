@@ -423,11 +423,11 @@ create temp table sweep_obj as
 
 -- The column each UPDATE probe touches (set to itself): the first one `authenticated` may update, if any.
 create temp table sweep_touch as
-  select s.obj, (select c.column_name::text from information_schema.columns c
-                 where c.table_schema = 'public' and c.table_name = s.obj and c.is_generated = 'NEVER'
-                   and c.identity_generation is null
-                   and has_column_privilege('authenticated', format('public.%I', s.obj), c.column_name, 'UPDATE')
-                 order by c.ordinal_position limit 1) as col
+  select s.obj, (select a.attname::text from pg_attribute a
+                 where a.attrelid = format('public.%I', s.obj)::regclass and a.attnum > 0 and not a.attisdropped
+                   and a.attgenerated = '' and a.attidentity = ''
+                   and has_column_privilege('authenticated', a.attrelid, a.attnum, 'UPDATE')
+                 order by a.attnum limit 1) as col
   from sweep_obj s where s.kind = 'table';
 
 select is((select coalesce(array_agg(s.obj order by s.obj), '{}') from sweep_obj s

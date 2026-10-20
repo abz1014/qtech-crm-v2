@@ -169,7 +169,7 @@ returns void language sql as $$
      format($c$select exists (select 1 from public.%I where %s and 'forged' = any (legacy_flags))$c$, o, new_id), writers),
     (o, 'legacy_flags', 'U',
      format('update public.%I set legacy_flags = %L::text[] where %s', o, '{forged}', old_where),
-     format($c$select 'forged' = any ((select legacy_flags from public.%I where %s))$c$, o, old_where), coalesce(upd_writers, writers))
+     format($c$select coalesce((select 'forged' = any (t.legacy_flags) from public.%I t where %s), false)$c$, o, old_where), coalesce(upd_writers, writers))
 $$;
 
 select pg_temp.add_legacy('companies', 'id, name', $v$@a1, 'probe co'$v$, 'id = @a1', 'id = @02', '{admin,sales,engineer}');

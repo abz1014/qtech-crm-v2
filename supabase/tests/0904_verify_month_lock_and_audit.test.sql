@@ -110,7 +110,7 @@ insert into lock_case values
   ('invoice order', $q$update public.invoices set order_id = null, company_id = '99040000-0000-4000-8000-000000000001' where id = '99040000-0000-4000-8000-000000000020'$q$, 'sales', 'E:P0001'),
   ('invoice company', $q$update public.invoices set company_id = '99040000-0000-4000-8000-000000000001' where id = '99040000-0000-4000-8000-000000000021'$q$, 'admin', 'E:P0001'),
   ('invoice deleted', $q$delete from public.invoices where id = '99040000-0000-4000-8000-000000000020'$q$, 'admin', 'E:P0001'),
-  ('invoice deleted', $q$delete from public.invoices where id = '99040000-0000-4000-8000-000000000020'$q$, 'sales', 'E:P0001'),
+  ('invoice deleted (sales may not delete at all, s10)', $q$delete from public.invoices where id = '99040000-0000-4000-8000-000000000020'$q$, 'sales', 'ok:0'),
   ('invoice added to March', $q$insert into public.invoices (order_id, number, invoice_date, net_amount, gst_amount) values ('99040000-0000-4000-8000-000000000010', 'INV-0904-9', '2020-03-20', 1, 0)$q$, 'sales', 'E:P0001'),
   ('invoice notes (allowed)', $q$update public.invoices set notes = 'filed late' where id = '99040000-0000-4000-8000-000000000020'$q$, 'sales', 'ok:1'),
   ('invoice FBR bank tick (allowed)', $q$update public.invoices set tax_bank_month = '2020-04-01' where id = '99040000-0000-4000-8000-000000000020'$q$, 'admin', 'ok:1'),

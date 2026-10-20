@@ -67,3 +67,6 @@ perf: # weight=260 (Lighthouse, 7 screens x 2; installs lighthouse@12.8.2)
   - 'e2e/perf/**'
 journeys: # weight=120 (installs poppler; also runs on every change under src/** through `shared`)
   - 'e2e/journeys/**'
+verify-roles: # weight=240 (every route as every role, the data API per persona, admin-users, data safety)
+  - 'e2e/verify-roles/**'
+  - 'supabase/functions/admin-users/**'
