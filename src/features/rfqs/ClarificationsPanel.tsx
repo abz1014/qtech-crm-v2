@@ -175,7 +175,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
         ) : clars.isError ? (
           <div className="px-5 py-4 text-sm text-fg-muted">
             <p>Could not load the questions. Nothing was changed.</p>
-            <Button className="mt-2" variant="primary" size="sm" onClick={() => void clars.refetch()}>
+            <Button className="mt-2" size="sm" onClick={() => void clars.refetch()}>
               Try again
             </Button>
           </div>
@@ -200,7 +200,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                   onChannelChange={setVariant}
                 />
                 {relayOpened.includes(inq.id) ? (
-                  <Button size="sm" variant="primary" icon={Check} busy={copying || relayStamp.isPending} onClick={() => void once(() => markRelay(inq, false))} aria-label={`Mark ${inq.supplierName} as told`}>
+                  <Button size="sm" icon={Check} busy={copying || relayStamp.isPending} onClick={() => void once(() => markRelay(inq, false))} aria-label={`Mark ${inq.supplierName} as told`}>
                     Mark as told
                   </Button>
                 ) : null}
@@ -442,7 +442,7 @@ function ChaseGroup({
                 to={rfq.contact}
                 text={draft.whatsapp.body}
                 email={{ subject: draft.email.subject, body: draft.email.body }}
-                variant={opened ? 'secondary' : 'primary'}
+                variant="secondary"
                 copy={{ label: copyLabel, onCopy: () => onCopy(selected, text), busy: stamping, busyLabel: 'Marking asked' }}
                 onOpen={() => setOpened(true)}
                 channel={variant}
@@ -451,7 +451,6 @@ function ChaseGroup({
               {opened ? (
                 <Button
                   size="sm"
-                  variant="primary"
                   icon={Check}
                   busy={stamping}
                   busyLabel="Marking asked"

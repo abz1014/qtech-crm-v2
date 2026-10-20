@@ -33,8 +33,8 @@ describe('touch targets do not depend on the text size (DESIGN_SYSTEM 11)', () =
     expect(coarse).not.toContain('data-text')
     expect(px(coarse, '--control-h')).toBeGreaterThanOrEqual(44)
     expect(px(coarse, '--control-lg-h')).toBeGreaterThanOrEqual(44)
-    expect(px(coarse, '--control-sm-h')).toBeGreaterThanOrEqual(40)
-    expect(px(coarse, '--segment-h')).toBeGreaterThanOrEqual(40)
+    expect(px(coarse, '--control-sm-h')).toBeGreaterThanOrEqual(44)
+    expect(px(coarse, '--segment-h')).toBeGreaterThanOrEqual(44)
     expect(px(coarse, '--row-h')).toBeGreaterThanOrEqual(48)
   })
 

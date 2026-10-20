@@ -297,7 +297,10 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
   )
 }
 
-function Row({ label, value, mono }: { label: string; value: string | number | null; mono?: boolean }) {
+/** A phone number, address or site in the read-only profile is a link (call, write, open), so a phone can act on it in one tap. */
+const LINK = 'rounded text-fg underline decoration-line-strong underline-offset-2 hover:decoration-fg max-md:inline-flex max-md:min-h-touch max-md:items-center'
+
+function Row({ label, value, mono, href }: { label: string; value: string | number | null; mono?: boolean; href?: (v: string) => string }) {
   const empty = value === null || value === ''
   return (
     <>
@@ -308,7 +311,15 @@ function Row({ label, value, mono }: { label: string; value: string | number | n
           Not set
         </dd>
       ) : (
-        <dd className={cn('min-w-0 whitespace-pre-line [overflow-wrap:anywhere]', mono && 'num')}>{value}</dd>
+        <dd className={cn('min-w-0 whitespace-pre-line [overflow-wrap:anywhere]', mono && 'num')}>
+          {href ? (
+            <a href={href(String(value))} className={LINK} {...(/^https?:/.test(href(String(value))) ? { target: '_blank', rel: 'noreferrer' } : {})}>
+              {value}
+            </a>
+          ) : (
+            value
+          )}
+        </dd>
       )}
     </>
   )
@@ -324,9 +335,9 @@ function ProfileReadOnly({ profile: p }: { profile: CompanyProfile }) {
         <dl className={KV}>
           <Row label="Legal name" value={p.legal_name} />
           <Row label="Address" value={p.address} />
-          <Row label="Phone" value={p.phone} mono />
-          <Row label="Email" value={p.email} />
-          <Row label="Website" value={p.website} />
+          <Row label="Phone" value={p.phone} mono href={v => `tel:${v.split(/[,;/]/)[0].replace(/[^\d+]/g, '')}`} />
+          <Row label="Email" value={p.email} href={v => `mailto:${v.trim()}`} />
+          <Row label="Website" value={p.website} href={v => (/^https?:\/\//i.test(v.trim()) ? v.trim() : `https://${v.trim()}`)} />
         </dl>
       </Section>
       <Section title="Tax registration">

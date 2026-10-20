@@ -149,49 +149,53 @@ export function OrderHeaderBlock({
   const cols = isAdmin ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
 
   return (
-    // data-slot="order-actions": every order-level action (the next step, Create invoice, Record payment) is inside the header, once.
-    <header data-slot="order-actions">
-      <Breadcrumb className="max-md:hidden" items={[{ label: 'Orders', to: '/orders' }, { label: ref, mono: true }]} />
-      <div className="mt-2 flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
-        <div className="min-w-0">
-          <h1 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-2xl font-semibold tracking-snug">
-            <Link to={`/companies/${order.companyId}`} className="min-w-0 break-words hover:underline">
-              {order.companyName}
-            </Link>
-            <span className="num text-lg font-regular text-fg-2">{ref}</span>
-            {/* an active order needs no chip: only Done or Cancelled is news */}
-            {s?.lifecycle && s.lifecycle !== 'active' ? <StatusBadge dimension="order" value={s.lifecycle} /> : null}
-            {/* an unknown price basis is asked in words below ("Is GST included?"); other trust marks keep their chip */}
-            {s && s.dataTrust && s.dataTrust !== 'ok' && !basisUnknown ? <StatusBadge dimension="trust" value={s.dataTrust} /> : null}
-          </h1>
-          <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg-2">
-            {order.site && !isEngineer ? <span>{order.site.name}</span> : null}
-            <span>
-              Customer PO{' '}
-              <TapText
-                value={order.customerPo}
-                label="Customer PO number"
-                empty="add"
-                placeholder="Not yet received"
-                disabled={isEngineer || cancelled}
-                render={v => <span className="num">{v}</span>}
-                onSave={async v => {
-                  try {
-                    await update.mutateAsync({ customer_po_number: v })
-                  } catch (err) {
-                    toast({ title: 'Could not save the PO number', body: mapPgError(err, { entity: 'PO number' }).message, tone: 'danger' })
-                  }
-                }}
-              />
-            </span>
-            {order.orderedOn ? <span>Ordered {formatShortDate(order.orderedOn, today)}</span> : null}
-            {order.owner ? <span>Owner {order.owner.name}</span> : null}
-            {money ? <span data-testid="order-terms">{termsText}</span> : null}
-            {order.imported ? <span className="text-fg-muted">Imported from the old CRM</span> : null}
-          </p>
+    // data-slot="order-actions": every order-level action (the next step, Create invoice, Record payment) is inside this block, once.
+    // The <header> is the title block only (who, the code, at most the Done/Cancelled and trust chips); the next step and the state
+    // strip, one chip per dimension, are the page's first content under it (screen audit: at most 2 chips in a page header).
+    <div data-slot="order-actions">
+      <header>
+        <Breadcrumb className="max-md:hidden" items={[{ label: 'Orders', to: '/orders' }, { label: ref, mono: true }]} />
+        <div className="mt-2 flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
+          <div className="min-w-0">
+            <h1 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-2xl font-semibold tracking-snug">
+              <Link to={`/companies/${order.companyId}`} className="min-w-0 break-words hover:underline">
+                {order.companyName}
+              </Link>
+              <span className="num text-lg font-regular text-fg-2">{ref}</span>
+              {/* an active order needs no chip: only Done or Cancelled is news */}
+              {s?.lifecycle && s.lifecycle !== 'active' ? <StatusBadge dimension="order" value={s.lifecycle} /> : null}
+              {/* an unknown price basis is asked in words below ("Is GST included?"); other trust marks keep their chip */}
+              {s && s.dataTrust && s.dataTrust !== 'ok' && !basisUnknown ? <StatusBadge dimension="trust" value={s.dataTrust} /> : null}
+            </h1>
+            <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg-2">
+              {order.site && !isEngineer ? <span>{order.site.name}</span> : null}
+              <span>
+                Customer PO{' '}
+                <TapText
+                  value={order.customerPo}
+                  label="Customer PO number"
+                  empty="add"
+                  placeholder="Not yet received"
+                  disabled={isEngineer || cancelled}
+                  render={v => <span className="num">{v}</span>}
+                  onSave={async v => {
+                    try {
+                      await update.mutateAsync({ customer_po_number: v })
+                    } catch (err) {
+                      toast({ title: 'Could not save the PO number', body: mapPgError(err, { entity: 'PO number' }).message, tone: 'danger' })
+                    }
+                  }}
+                />
+              </span>
+              {order.orderedOn ? <span>Ordered {formatShortDate(order.orderedOn, today)}</span> : null}
+              {order.owner ? <span>Owner {order.owner.name}</span> : null}
+              {money ? <span data-testid="order-terms">{termsText}</span> : null}
+              {order.imported ? <span className="text-fg-muted">Imported from the old CRM</span> : null}
+            </p>
+          </div>
+          {!isEngineer ? <OrderMoreMenu order={order} className="max-md:hidden" /> : null}
         </div>
-        {!isEngineer ? <OrderMoreMenu order={order} className="max-md:hidden" /> : null}
-      </div>
+      </header>
 
       {cancelled ? (
         <Banner tone="warning" title={`Cancelled ${order.cancelledOn ? formatDay(order.cancelledOn) : ''}`} className="mt-4">
@@ -312,7 +316,7 @@ export function OrderHeaderBlock({
       )}
 
       {resolving ? <ResolveBasisDialog order={order} items={items} money={orderMoney} onClose={() => setResolving(false)} /> : null}
-    </header>
+    </div>
   )
 }
 

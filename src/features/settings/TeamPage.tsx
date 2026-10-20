@@ -70,7 +70,7 @@ export function TeamPage() {
     title: 'Team',
     back: '/settings',
     actions: (
-      <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading} className="h-9">
+      <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading || team.isError} className="h-9">
         Add
       </Button>
     ),
@@ -159,7 +159,7 @@ export function TeamPage() {
             Everyone who can sign in to Q-Tech CRM. Passwords are created and reset here, and shown once.
           </p>
         </div>
-        <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading}>
+        <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading || team.isError}>
           Add person
         </Button>
       </header>

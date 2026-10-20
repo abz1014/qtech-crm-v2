@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 function Card({ id, title, text, to, cta, children }: { id: string; title: string; text: string; to: string; cta: string; children?: ReactNode }) {
   return (
     <section aria-labelledby={id} className="grid gap-4 rounded border bg-surface p-5">
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid gap-[2px]">
           <h2 id={id} className="text-base font-semibold">{title}</h2>
           <p className="max-w-[62ch] text-sm text-fg-muted text-pretty">{text}</p>

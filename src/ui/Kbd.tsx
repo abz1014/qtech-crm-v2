@@ -6,9 +6,21 @@ import { cn } from '@/lib/utils'
  * `size="inline"` is one text line tall, for a key inside a tooltip or a sentence; the default is a chip.
  * Both heights come from tokens, so the key grows with the text size instead of clipping it.
  */
-export function Kbd({ children, size = 'chip', className }: { children: ReactNode; size?: 'chip' | 'inline'; className?: string }) {
+export function Kbd({
+  children,
+  size = 'chip',
+  className,
+  'aria-hidden': ariaHidden,
+}: {
+  children: ReactNode
+  size?: 'chip' | 'inline'
+  className?: string
+  /** Hide the hint from the accessible name of the control it sits in (axe label-content-name-mismatch): pair it with aria-keyshortcuts there. */
+  'aria-hidden'?: boolean
+}) {
   return (
     <kbd
+      aria-hidden={ariaHidden || undefined}
       className={cn(
         'inline-flex items-center justify-center rounded border border-b-2 border-line-strong bg-surface',
         size === 'chip' ? 'h-chip min-w-chip px-[6px]' : 'h-[var(--lh-xs)] min-w-[var(--lh-xs)] px-1',

@@ -77,6 +77,7 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
         type="button"
         onClick={onSearch}
         aria-label="Search or jump to"
+        aria-keyshortcuts={hint === '⌘K' ? 'Meta+K' : 'Control+K'}
         className={cn(
           'ml-auto flex h-control shrink-0 items-center gap-2 rounded border border-line-strong bg-sunken text-left text-sm text-fg-muted',
           'transition-colors duration-fast ease-out hover:border-line-input',
@@ -90,7 +91,7 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
         <span aria-hidden="true" className="flex-1 truncate max-xl:hidden">
           Search or jump to
         </span>
-        <Kbd className="max-2xl:hidden">{hint}</Kbd>
+        <Kbd aria-hidden className="max-2xl:hidden">{hint}</Kbd>
       </button>
 
       {onCapture ? (
@@ -98,6 +99,7 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
           type="button"
           onClick={onCapture}
           aria-label={CAPTURE_LABEL}
+          aria-keyshortcuts="C"
           className={cn(
             'flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground',
             'transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover active:bg-primary-active',
@@ -108,7 +110,7 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
           <span aria-hidden="true" className="max-lg:hidden">
             {CAPTURE_LABEL}
           </span>
-          <Kbd className="border-primary-foreground/40 bg-transparent text-primary-foreground max-2xl:hidden">C</Kbd>
+          <Kbd aria-hidden className="border-primary-foreground/40 bg-transparent text-primary-foreground max-2xl:hidden">C</Kbd>
         </button>
       ) : null}
 
