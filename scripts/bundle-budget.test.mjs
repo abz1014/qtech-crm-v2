@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { initialJs, staticJsRefs } from './bundle-budget.lib.mjs'
+import { initialJs, pdfjsInInitial, pdfReaderFiles, PDFJS_SIGNATURE, staticJsRefs } from './bundle-budget.lib.mjs'
 
 describe('bundle budget helpers', () => {
   it('reads script and modulepreload refs from the html', () => {
@@ -24,5 +24,19 @@ describe('bundle budget helpers', () => {
     writeFileSync(join(dist, 'assets', 'lazy-D.js'), 'z'.repeat(5000))
     const r = initialJs(dist)
     expect([...r.files.keys()].sort()).toEqual(['assets/index-A.js', 'assets/vendor-B.js'])
+  })
+
+  it('finds the PDF reader files and tells when pdf.js is in the first load', () => {
+    const dist = mkdtempSync(join(tmpdir(), 'budget-'))
+    mkdirSync(join(dist, 'assets'))
+    writeFileSync(join(dist, 'index.html'), '<script type="module" src="/assets/index-A.js"></script>')
+    writeFileSync(join(dist, 'assets', 'index-A.js'), 'import("./pdfjsRuntime-x1Y2.js");')
+    writeFileSync(join(dist, 'assets', 'pdfjsRuntime-x1Y2.js'), `throw new Error('No "${PDFJS_SIGNATURE}" specified.')`)
+    writeFileSync(join(dist, 'assets', 'pdf.worker.min-Ab_9.mjs'), 'w'.repeat(100))
+    const listing = ['assets/index-A.js', 'assets/pdfjsRuntime-x1Y2.js', 'assets/pdf.worker.min-Ab_9.mjs']
+    expect(pdfReaderFiles(dist, listing).map(f => f.file)).toEqual(['assets/pdfjsRuntime-x1Y2.js', 'assets/pdf.worker.min-Ab_9.mjs'])
+    expect(pdfjsInInitial(dist, initialJs(dist))).toEqual([])
+    writeFileSync(join(dist, 'assets', 'index-A.js'), 'import"./pdfjsRuntime-x1Y2.js";')
+    expect(pdfjsInInitial(dist, initialJs(dist))).toEqual(['assets/pdfjsRuntime-x1Y2.js'])
   })
 })

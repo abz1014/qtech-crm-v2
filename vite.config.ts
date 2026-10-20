@@ -39,7 +39,9 @@ export default defineConfig(({ command }) => ({
               // The PDF renderer (react-pdf, 1.5 MB: the quotation and the supplier PO share it) is a lazy chunk used by few screens; it is
               // fetched on demand, not precached. Its file name follows whichever module the bundler picks to name the shared chunk, so it is
               // recognised by size, not by name: anything over 1 MB is left out of the precache list (the largest shell chunk is about half of that; the renderer is 1.5 MB or more).
-              globIgnores: ['**/assets/render-*'],
+              // The PDF reader (pdf.js, src/lib/docread/pdfjsRuntime.ts: its lazy chunk and its worker) is fetched the first time a
+              // PDF is read, not stored on every phone either.
+              globIgnores: ['**/assets/render-*', '**/assets/pdfjsRuntime-*', '**/assets/pdf.worker*'],
               maximumFileSizeToCacheInBytes: 5_000_000,
               manifestTransforms: [
                 async entries => ({
