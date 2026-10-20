@@ -42,7 +42,7 @@ export function Field({ label, requirement, help, error, source, edited = false,
   const srcId = source ? `${id}-src` : undefined
   const describedBy = [errId, srcId, helpId].filter(Boolean).join(' ') || undefined
   return (
-    <FieldContext.Provider value={{ id, invalid: Boolean(error), describedBy }}>
+    <FieldContext.Provider value={{ id, invalid: Boolean(error), describedBy, required: requirement === 'required' }}>
       <div className={cn('grid min-w-0 content-start gap-[6px]', className)}>
         <div className="flex items-baseline gap-2">
           <label htmlFor={id} className="text-sm font-medium text-fg">

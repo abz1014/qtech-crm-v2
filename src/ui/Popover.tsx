@@ -3,6 +3,7 @@ import * as RadixPopover from '@radix-ui/react-popover'
 import { Check, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
+import { rememberMenuTrigger } from '@/ui/menuTrigger'
 
 /*
  * Popover (INVENTORY: U03; D08 section 13). Two variants on one Radix primitive:
@@ -55,7 +56,10 @@ export const PopoverContent = forwardRef<ElementRef<typeof RadixPopover.Content>
           if (typeof ref === 'function') ref(node)
           else if (ref) ref.current = node
         }}
-        role={isMenu ? 'menu' : role}
+        // A labelled information popover is a dialog (an aria-label on a role-less div is ignored, WCAG 4.1.2).
+        role={isMenu ? 'menu' : (role ?? (rest['aria-label'] || rest['aria-labelledby'] ? 'dialog' : undefined))}
+        onClickCapture={isMenu ? () => rememberMenuTrigger(inner.current) : undefined}
+        onKeyDownCapture={isMenu ? e => (e.key === 'Enter' || e.key === ' ') && rememberMenuTrigger(inner.current) : undefined}
         sideOffset={sideOffset}
         align={align}
         collisionPadding={8}
@@ -68,7 +72,7 @@ export const PopoverContent = forwardRef<ElementRef<typeof RadixPopover.Content>
         }}
         className={cn(
           'z-50 animate-rise-4 rounded bg-surface shadow-pop focus:outline-none',
-          isMenu ? 'min-w-[200px] p-1' : 'max-w-[320px] p-4 text-sm',
+          isMenu ? 'max-h-[var(--radix-popover-content-available-height)] min-w-[200px] overflow-y-auto p-1' : 'max-w-[320px] p-4 text-sm',
           className,
         )}
         {...rest}

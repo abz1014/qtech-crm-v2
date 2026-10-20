@@ -171,7 +171,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
               The message asks about the expected date, so set one on the supplier order first.
             </Banner>
           ) : draftData.isPending ? (
-            <div className="grid gap-2" aria-busy="true" aria-label="Preparing the message">
+            <div role="status" className="grid gap-2" aria-busy="true" aria-label="Preparing the message">
               <Skeleton className="h-4 w-1/3" />
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-5/6" />

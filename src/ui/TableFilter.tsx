@@ -29,7 +29,11 @@ export function TableFilter({
     if (value !== '') {
       e.preventDefault()
       onChange('')
-    } else e.currentTarget.blur()
+    } else {
+      // Second Esc leaves the field for the table's current row (WCAG 2.4.3), never for <body>. No table: focus stays here.
+      const row = e.currentTarget.closest('[data-table-root]')?.querySelector<HTMLElement>('[data-di][tabindex="0"]')
+      row?.focus()
+    }
   }
   return (
     <div className={cn('relative w-[260px] max-sm:w-full', className)}>

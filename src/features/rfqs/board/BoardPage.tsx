@@ -130,7 +130,7 @@ export function BoardPage() {
       { id: 'next', header: 'Next step', value: r => r.sourcingState, width: 250, cell: r => <NextStepCell row={r} /> },
       { id: 'due', header: 'Due', kind: 'date', value: r => r.dueOn, sortable: true, width: 140, cell: r => <DueCell row={r} /> },
       ...(canSeeMoney
-        ? [{ id: 'value', header: 'Value (PKR net)', kind: 'money' as const, value: (r: BoardRow) => values.data?.[r.rfqId] ?? null, width: 130, hideBelowMd: true, sortable: true }]
+        ? [{ id: 'value', header: 'Value (PKR net)', kind: 'money' as const, value: (r: BoardRow) => values.data?.[r.rfqId] ?? null, width: 130, sortable: true }]
         : []),
       { id: 'owner', header: 'Owner', value: r => r.ownerName, sortable: true, width: 120, hideBelowMd: true, cell: r => <OwnerCell row={r} /> },
     ],

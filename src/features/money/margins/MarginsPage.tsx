@@ -130,7 +130,7 @@ export function MarginsPage() {
           ) : null}
         </header>
         {q.isPending ? (
-          <div className="grid gap-3 p-5" aria-busy="true" aria-label="Loading order margins">
+          <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label="Loading order margins">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />

@@ -4,6 +4,9 @@ import { X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { useBackToClose } from '@/lib/useBackToClose'
+import { recentMenuTrigger } from '@/ui/menuTrigger'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 
 /*
  * Dialog (INVENTORY: U03; D08 section 05). The one modal wrapper, on Radix:
@@ -92,6 +95,15 @@ export function Dialog({ busy = false, dirty = false, open, defaultOpen, onOpenC
     }),
     [busy, guarded, asking, change, report],
   )
+  // Android Back (and the browser's) closes the open dialog instead of leaving the page: the same path as Esc (asks first
+  // when something was typed), and ignored while a save is in flight.
+  // Phones and touch screens only: that is where a system Back button closes a sheet (desktop Back keeps its meaning).
+  const touch = useMediaQuery('(max-width: 767px), (pointer: coarse)')
+  useBackToClose(isOpen, () => {
+    if (busy) return
+    if (guarded) setAsking(true)
+    else change(false)
+  }, { enabled: touch })
 
   return (
     <GuardContext.Provider value={guard}>
@@ -178,6 +190,23 @@ interface DialogContentProps {
   className?: string
 }
 
+/**
+ * Where focus goes back to when the dialog closes. Opened from a menu item, the item is gone by then (the menu closed), so
+ * focus would fall to <body> (WCAG 2.4.3): return to the button that opened the menu (the one whose aria-controls names it).
+ */
+function returnTarget(active: Element | null): HTMLElement | null {
+  const fromMenu = recentMenuTrigger()
+  if (!(active instanceof HTMLElement) || active === document.body) return fromMenu
+  if (!active.closest('[role="menu"]')) return active
+  if (fromMenu) return fromMenu
+  for (let x: HTMLElement | null = active; x; x = x.parentElement) {
+    if (!x.id) continue
+    const trigger = document.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(x.id)}"]`)
+    if (trigger) return trigger
+  }
+  return document.querySelector<HTMLElement>('[aria-expanded="true"][aria-haspopup]') ?? active
+}
+
 export function DialogContent({
   title,
   titleChip,
@@ -217,7 +246,7 @@ export function DialogContent({
           onInteractOutside={hold}
           onOpenAutoFocus={e => {
             e.preventDefault()
-            openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+            openerRef.current = returnTarget(document.activeElement)
             const root = contentRef.current
             if (!root) return
             const target =
@@ -229,9 +258,15 @@ export function DialogContent({
           }}
           // Radix only restores focus to a <DialogTrigger>. A dialog opened from code has none, so
           // return to whatever had focus when it opened.
-          onCloseAutoFocus={() => openerRef.current?.isConnected && openerRef.current.focus()}
+          onCloseAutoFocus={e => {
+            if (!openerRef.current?.isConnected) return
+            e.preventDefault()
+            openerRef.current.focus()
+          }}
           className={cn(
-            'relative grid max-h-[calc(100dvh-64px)] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal',
+            'relative grid max-h-[calc(100dvh-64px)] w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal',
+            // A short window (a laptop at 400% zoom): the whole sheet scrolls, so the title and Close are never pushed off the top.
+            '[@media(max-height:480px)]:grid-rows-[auto_auto_auto] [@media(max-height:480px)]:overflow-y-auto',
             'animate-rise-6 focus:outline-none max-md:max-h-[calc(100dvh-16px)] max-md:animate-sheet-in max-md:rounded-b-none',
             WIDTH[size],
             className,
@@ -239,7 +274,7 @@ export function DialogContent({
         >
           {/* Bottom sheet below 768: the 36 by 4 grab handle (g2-components "Bottom sheet on a phone"). */}
           <span aria-hidden="true" data-grab className="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-round bg-line-strong md:hidden" />
-          <header className="flex items-start gap-3 px-5 pt-5 max-md:pt-6">
+          <header className="flex items-start gap-3 px-5 pt-5 max-md:pt-6 [@media(max-height:480px)]:sticky [@media(max-height:480px)]:top-0 [@media(max-height:480px)]:z-10 [@media(max-height:480px)]:bg-surface [@media(max-height:480px)]:pb-2">
             {icon ? (
               <span aria-hidden="true" className={cn('grid size-[36px] shrink-0 place-items-center rounded', TILE[tone])}>
                 <Icon icon={icon} size="lg" />

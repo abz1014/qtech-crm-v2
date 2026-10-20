@@ -31,7 +31,7 @@ const C = {
 }
 
 const s = StyleSheet.create({
-  page: { fontFamily: 'Geist', fontSize: 9, color: C.ink, paddingTop: 36, paddingBottom: 44, paddingHorizontal: 36 },
+  page: { fontFamily: 'Geist', fontSize: 10, color: C.ink, paddingTop: 36, paddingBottom: 44, paddingHorizontal: 36 },
   mono: { fontFamily: 'Geist Mono' },
   muted: { color: C.muted },
   strongText: { fontWeight: 600 },
@@ -42,7 +42,7 @@ const s = StyleSheet.create({
   companyName: { fontSize: 10.5, fontWeight: 600 },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
   h1: { fontSize: 22, fontWeight: 600, letterSpacing: -0.4, lineHeight: 1.1, marginBottom: 6 },
-  copyTag: { alignSelf: 'flex-start', borderWidth: 1, borderColor: C.ink, paddingVertical: 2.5, paddingHorizontal: 6, fontSize: 8.5, fontWeight: 600 },
+  copyTag: { alignSelf: 'flex-start', borderWidth: 1, borderColor: C.ink, paddingVertical: 2.5, paddingHorizontal: 6, fontSize: 9.5, fontWeight: 600 },
   meta: { width: 210 },
   metaRow: { flexDirection: 'row', marginBottom: 3 },
   metaLabel: { width: 82, textAlign: 'right', color: C.muted, paddingRight: 10 },
@@ -51,11 +51,11 @@ const s = StyleSheet.create({
   box: { flex: 1, paddingVertical: 8 },
   boxL: { paddingRight: 14, borderRightWidth: 0.75, borderRightColor: C.strong },
   boxR: { paddingLeft: 14 },
-  boxLabel: { fontSize: 8.5, fontWeight: 500, color: C.muted, marginBottom: 4 },
+  boxLabel: { fontSize: 9.5, fontWeight: 500, color: C.muted, marginBottom: 4 },
   refRow: { flexDirection: 'row', marginBottom: 2.5 },
   refLabel: { width: 78, color: C.muted },
-  th: { flexDirection: 'row', backgroundColor: C.sunken, borderTopWidth: 0.75, borderBottomWidth: 0.75, borderColor: C.strong, marginTop: 12, paddingVertical: 5, fontWeight: 600, fontSize: 8 },
-  tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: C.strong, paddingVertical: 6, fontSize: 8.5 },
+  th: { flexDirection: 'row', backgroundColor: C.sunken, borderTopWidth: 0.75, borderBottomWidth: 0.75, borderColor: C.strong, marginTop: 12, paddingVertical: 5, fontWeight: 600, fontSize: 9.5 },
+  tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: C.strong, paddingVertical: 6, fontSize: 9.5 },
   cNo: { width: 18, paddingLeft: 3 },
   cDesc: { flex: 1, paddingRight: 6 },
   // numeric columns fit 10,000,000.00 in mono 8.5 with a 4pt gap, so two amounts never run together (checked in a browser render)
@@ -70,12 +70,12 @@ const s = StyleSheet.create({
   gross: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, paddingVertical: 6, borderTopWidth: 1.5, borderBottomWidth: 0.75, borderTopColor: C.ink, borderBottomColor: C.ink },
   secTitle: { fontWeight: 600, paddingBottom: 3, marginBottom: 5, borderBottomWidth: 0.75, borderBottomColor: C.strong },
   sign: { marginTop: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  note: { width: 250, color: C.muted, fontSize: 8 },
+  note: { width: 250, color: C.muted, fontSize: 9.5 },
   signBox: { width: 230, borderTopWidth: 0.75, borderTopColor: C.ink, paddingTop: 4, marginTop: 40 },
   run: { position: 'absolute', top: 14, left: 36, right: 36 },
   runInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   runLogo: { width: 60, height: 14.6, objectFit: 'contain' },
-  foot: { position: 'absolute', left: 36, right: 36, bottom: 20, width: 523, flexDirection: 'row', borderTopWidth: 0.5, borderTopColor: C.strong, paddingTop: 5, fontSize: 7.5, color: C.muted },
+  foot: { position: 'absolute', left: 36, right: 36, bottom: 20, width: 523, flexDirection: 'row', borderTopWidth: 0.5, borderTopColor: C.strong, paddingTop: 5, fontSize: 9.5, color: C.muted },
 })
 
 const money = (paisa: bigint) => formatPaisa(paisa, 'always')
@@ -102,7 +102,7 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
   const exempt = f.byRate.find(r => r.ratePercent === 0)
 
   return (
-    <Document title={`Sales tax invoice ${doc.number}`} author={companyName} subject={`Sales tax invoice ${doc.number} for ${doc.buyer.name}`}>
+    <Document language="en-GB" title={`Sales tax invoice ${doc.number}`} author={companyName} subject={`Sales tax invoice ${doc.number} for ${doc.buyer.name}`}>
       <Page size="A4" style={s.page}>
         {/* From page 2 on: a slim running header (small wordmark; document, buyer, date). */}
         <View
@@ -112,7 +112,7 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
             pageNumber > 1 ? (
               <View style={s.runInner}>
                 <Image src={logoSrc} style={s.runLogo} />
-                <Text style={[s.muted, { fontSize: 7.5, textAlign: 'right' }]}>
+                <Text style={[s.muted, { fontSize: 9.5, textAlign: 'right' }]}>
                   Sales tax invoice {doc.number}  {doc.buyer.name}  {longDay(doc.invoiceDate)}
                 </Text>
               </View>
@@ -216,7 +216,7 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
               <Text style={[s.cNo, s.muted]}>{l.no}</Text>
               <View style={s.cDesc}>
                 <Text style={s.strongText}>{d.title}</Text>
-                {d.detail ? <Text style={[s.muted, { fontSize: 8 }]}>{d.detail}</Text> : null}
+                {d.detail ? <Text style={[s.muted, { fontSize: 9.5 }]}>{d.detail}</Text> : null}
               </View>
               <Text style={[s.cQty, s.mono]}>{l.unit ? `${qtyText(l.qty)} ${l.unit}` : qtyText(l.qty)}</Text>
               <Text style={[s.cPrice, s.mono]}>{money(l.unitPrice)}</Text>
@@ -253,7 +253,7 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
               <Text style={s.strongText}>Value including sales tax</Text>
               <Text style={[s.mono, { fontWeight: 500, fontSize: 11 }]}>PKR {money(f.gross)}</Text>
             </View>
-            <Text style={[s.right, s.muted, { fontSize: 8, marginTop: 5 }]}>{doc.words}</Text>
+            <Text style={[s.right, s.muted, { fontSize: 9.5, marginTop: 5 }]}>{doc.words}</Text>
           </View>
 
           {bank.length > 0 ? (

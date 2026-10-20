@@ -165,7 +165,7 @@ export function SitesPanel({
       }
     >
       {loading ? (
-        <div className="grid gap-3 p-5" aria-busy="true" aria-label="Loading sites">
+        <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label="Loading sites">
           <Skeleton className="h-4 w-1/4" />
           <Skeleton className="h-8 w-full" />
         </div>

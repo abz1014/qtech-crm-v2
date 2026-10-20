@@ -1,4 +1,4 @@
-import { BUGS, UI, asRole, axe, knownBug, expect, open, openChase, seedChase, test } from './support'
+import { UI, asRole, axe, expect, open, openChase, seedChase, test } from './support'
 
 /*
  * (a) axe, strict, on the screens and states that no feature suite runs it on: Settings home, Team, My details, Company profile,
@@ -24,8 +24,6 @@ for (const viewport of [
 
     for (const [name, path] of SETTINGS) {
       test(`${name}`, async ({ page }) => {
-        if (name === 'Exchange rates' && viewport.width === 1440) knownBug(BUGS.labelInName)
-        if (name === 'Team' && viewport.width === 375) knownBug(BUGS.phoneH1)
         await open(page, path)
         expect(await axe(page)).toEqual([])
       })
@@ -101,7 +99,6 @@ test.describe('axe on open overlays at 1440', () => {
   })
 
   test('the More actions menu on a company and on an order', async ({ page, world }) => {
-    knownBug(BUGS.prohibitedLabel)
     await open(page, `/companies/${world.customer.id}`)
     await page.getByRole('button', { name: UI.moreActions }).first().click()
     await expect(page.getByRole('menu')).toBeVisible()

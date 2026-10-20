@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { longReason, priceTexts, shortReason, type RankedQuote } from '@/features/orders/lib/ranking'
+import { rovingKeyDown, rovingTabIndex } from '@/ui/roving'
 
 /*
  * The ranked supplier picker (A8; g2-ranking-split.html ".spl-sel" and ".spl-pop"). One button shows the chosen supplier with its rank and
@@ -76,6 +77,7 @@ export function RankedPicker({
   const [open, setOpen] = useState(false)
   const chosen = quotes.find(q => q.lineId === value)
   const extra = extras.find(e => e.value === value)
+  const sel = [...quotes.map(q => q.lineId), ...extras.map(e => e.value)].indexOf(value ?? '')
   const pick = (v: string) => {
     onChange(v)
     setOpen(false)
@@ -99,8 +101,9 @@ export function RankedPicker({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[min(520px,calc(100vw-32px))] max-w-none p-1">
         <p className="px-2 pb-1 pt-2 text-xs font-medium leading-snug text-fg-muted">{header}</p>
-        <div role="listbox" aria-label={header}>
-          {quotes.map(q => {
+        {/* One Tab stop; arrows, Home and End move; Enter or Space picks. */}
+        <div role="listbox" aria-label={header} onKeyDown={e => rovingKeyDown(e, { item: '[role=option]' })}>
+          {quotes.map((q, qi) => {
             const used = usedLineIds?.has(q.lineId) && q.lineId !== value
             return (
               <button
@@ -108,6 +111,7 @@ export function RankedPicker({
                 type="button"
                 role="option"
                 aria-selected={q.lineId === value}
+                tabIndex={rovingTabIndex(qi, sel)}
                 disabled={used}
                 onClick={() => pick(q.lineId)}
                 className={cn('block w-full rounded p-2 text-left hover:bg-sunken disabled:opacity-55 disabled:hover:bg-transparent', q.lineId === value && 'bg-selected')}
@@ -122,6 +126,7 @@ export function RankedPicker({
               type="button"
               role="option"
               aria-selected={e.value === value}
+              tabIndex={rovingTabIndex(quotes.length + i, sel)}
               onClick={() => pick(e.value)}
               className={cn(
                 'grid w-full grid-cols-[24px_minmax(0,1fr)] items-center gap-2 rounded p-2 text-left text-sm hover:bg-sunken',

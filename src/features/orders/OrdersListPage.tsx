@@ -187,7 +187,7 @@ export default function OrdersListPage() {
     // text columns sorted by a number (the urgency rank, the order number): compareCells compares text numerically
     { id: 'next', header: 'Next step', value: r => stepOf(r).rank, sortable: true, cell: r => <NextStepText step={stepOf(r)} /> },
     { id: 'order', header: 'Order', value: r => r.number, sortable: true, cell: r => <OrderCell row={r} /> },
-    ...(money ? ([{ id: 'gross', header: 'Value (PKR)', kind: 'money', value: (r: OrderListRow) => r.gross, sortable: true, hideBelowLg: true }] satisfies Column<OrderListRow>[]) : []),
+    ...(money ? ([{ id: 'gross', header: 'Value (PKR)', kind: 'money', value: (r: OrderListRow) => r.gross, sortable: true }] satisfies Column<OrderListRow>[]) : []),
     {
       id: 'ordered',
       header: 'Ordered',

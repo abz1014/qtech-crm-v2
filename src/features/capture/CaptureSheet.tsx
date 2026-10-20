@@ -610,7 +610,7 @@ export default function CaptureSheet() {
               const root = e.currentTarget as HTMLElement
               ;(root.querySelector<HTMLElement>('textarea[placeholder]') ?? root).focus()
             }}
-            className="grid max-h-[calc(100dvh-64px)] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal focus:outline-none md:w-[960px] max-md:h-dvh max-md:max-h-none max-md:animate-sheet-in max-md:rounded-none md:animate-rise-6"
+            className="grid max-h-[calc(100dvh-64px)] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal focus:outline-none md:w-[min(960px,calc(100vw-2rem))] max-md:h-dvh max-md:max-h-none max-md:animate-sheet-in max-md:rounded-none md:animate-rise-6"
           >
             {/* Desktop header: tile, title, one sentence. */}
             <header className="flex items-start gap-3 px-5 pt-5 max-md:hidden">

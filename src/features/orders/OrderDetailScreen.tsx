@@ -47,7 +47,7 @@ function Shell({ children, sticky = false }: { children: ReactNode; sticky?: boo
 function PageSkeleton() {
   return (
     <Shell>
-      <div className="grid gap-4" aria-busy="true" aria-label="Loading order">
+      <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading order">
         <Skeleton className="h-4 w-40" />
         <Skeleton className="h-9 w-96 max-w-full" />
         <Skeleton className="h-5 w-72 max-w-full" />
@@ -186,7 +186,7 @@ export default function OrderDetailScreen() {
             Nothing was changed. Check your connection and try again.
           </EmptyState>
         ) : !lists ? (
-          <div className="grid gap-4" aria-busy="true" aria-label="Loading items and supplier orders">
+          <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading items and supplier orders">
             <Skeleton className="h-56 w-full" />
             <Skeleton className="h-56 w-full" />
           </div>

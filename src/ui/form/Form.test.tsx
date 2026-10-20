@@ -68,17 +68,22 @@ describe('Form (U07): submit guard', () => {
     expect(save).toHaveBeenCalledTimes(1)
   })
 
-  it('is disabled and busy while pending, and every control is locked', async () => {
+  it('is aria-disabled and busy while pending, keeps focus, and every control is locked', async () => {
     const user = userEvent.setup()
     let resolve!: () => void
     render(<Harness save={() => new Promise<void>(r => (resolve = r))} defaults={{ name: 'Mehran Paper Board' }} />)
     await user.click(screen.getByRole('button', { name: 'Add company' }))
     const busy = await screen.findByRole('button', { name: 'Saving' })
-    expect(busy).toBeDisabled()
+    // WCAG 2.4.3: not `disabled`, so focus is not dropped to <body>.
+    expect(busy).not.toBeDisabled()
+    expect(busy).toHaveAttribute('aria-disabled', 'true')
     expect(busy).toHaveAttribute('aria-busy', 'true')
-    expect(screen.getByLabelText(/Company name/)).toBeDisabled()
+    expect(busy).toHaveFocus()
+    const field = screen.getByLabelText(/Company name/)
+    await user.type(field, 'XYZ')
+    expect(field).toHaveValue('Mehran Paper Board')
     resolve()
-    await waitFor(() => expect(screen.getByLabelText(/Company name/)).toBeEnabled())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Add company' })).not.toHaveAttribute('aria-disabled'))
   })
 
   it('passes a client-generated request id; a retry with the same entries reuses it, changed entries get a new one', async () => {

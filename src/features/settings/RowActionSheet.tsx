@@ -1,4 +1,5 @@
 import * as RadixDialog from '@radix-ui/react-dialog'
+import { useBackToClose } from '@/lib/useBackToClose'
 import { KeyRound, Pencil, Phone, Shield, UserCheck, UserX, type LucideIcon } from 'lucide-react'
 import type { TeamMember } from '@/features/settings/api'
 import { isActive, roleLabel } from '@/features/settings/teamModel'
@@ -32,6 +33,7 @@ export function RowActionSheet({
   onClose: () => void
 }) {
   const items: readonly { kind: RowAction; label: string; icon: LucideIcon; danger?: boolean }[] = isActive(member) ? ACTIVE : INACTIVE
+  useBackToClose(true, onClose)
   const sub = `${roleLabel(member.role)}${member.job_title ? ` · ${member.job_title}` : ''}`
   return (
     <RadixDialog.Root open onOpenChange={open => !open && onClose()}>

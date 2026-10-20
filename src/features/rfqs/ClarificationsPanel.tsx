@@ -168,7 +168,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
         meta={clars.isSuccess && count > 0 ? <span className="num">{count} {count === 1 ? 'question' : 'questions'}</span> : undefined}
       >
         {clars.isPending ? (
-          <div className="grid gap-2 p-4" aria-busy="true" aria-label="Loading questions">
+          <div role="status" className="grid gap-2 p-4" aria-busy="true" aria-label="Loading questions">
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-4 w-1/2" />
           </div>

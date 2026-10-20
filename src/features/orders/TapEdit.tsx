@@ -59,7 +59,7 @@ export function TapDate({ value, label, today, onSave, disabled, button, empty =
           </button>
         )}
       </PopoverTrigger>
-      <PopoverContent className="w-[280px]" aria-label={label}>
+      <PopoverContent role="dialog" className="w-[280px]" aria-label={label}>
         <div className="grid gap-3">
           <p className="text-sm font-medium">{label}</p>
           <DateInput value={draft} onChange={setDraft} defaultToday={false} aria-label={label} />
@@ -117,7 +117,7 @@ export function TapText({ value, label, empty, render, onSave, disabled, placeho
           {value ? (render ? render(value) : value) : empty}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[280px]" aria-label={label}>
+      <PopoverContent role="dialog" className="w-[280px]" aria-label={label}>
         <form
           className="grid gap-3"
           onSubmit={e => {

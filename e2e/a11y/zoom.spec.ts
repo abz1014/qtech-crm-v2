@@ -24,7 +24,6 @@ async function atEveryBand(page: Page, check: () => Promise<string[]>): Promise<
 
 for (const s of SCREENS) {
   test(`${s.name}: no sideways scroll and no title cut off at any zoom band`, async ({ page, world }) => {
-    if (s.name === 'Companies' || s.name === 'Company detail') knownBug(BUGS.phoneTitle)
     await page.setViewportSize({ width: ZOOM_BANDS[0].width, height: ZOOM_BANDS[0].height })
     await open(page, s.path(world))
     expect(await atEveryBand(page, () => layoutProblems(page))).toEqual([])
@@ -35,7 +34,6 @@ for (const s of SCREENS) {
 const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (page: Page, w: World) => Promise<void> }> = [
   {
     name: 'Capture sheet',
-    bug: 'wideDialogs',
     open: async page => {
       await open(page, '/today')
       await page.getByRole('button', { name: UI.capture }).filter({ visible: true }).first().click()
@@ -44,7 +42,6 @@ const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (pa
   },
   {
     name: 'Issue quotation dialog',
-    bug: 'wideDialogs',
     open: async (page, w) => {
       await open(page, `/rfqs/${w.rfq.id}`)
       // The header button from 768 up; below it the same action is in the sticky bar at the foot.
@@ -54,10 +51,9 @@ const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (pa
   },
   {
     name: 'Issue PO dialog',
-    bug: 'wideDialogs',
     open: async (page, w) => {
       await open(page, `/orders/${w.order.id}`)
-      await page.getByRole('button', { name: UI.issuePoLegA }).click()
+      await page.getByRole('button', { name: UI.issuePoLegA }).filter({ visible: true }).first().click()
       await expect(page.getByRole('dialog')).toBeVisible()
     },
   },
@@ -78,7 +74,6 @@ const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (pa
   },
   {
     name: 'Command palette',
-    bug: 'shortSheets',
     open: async page => {
       await open(page, '/today')
       await page.keyboard.press('Control+k')

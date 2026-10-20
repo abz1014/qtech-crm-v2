@@ -19,7 +19,7 @@ export function FirstWeekBadge({ member, facts }: { member: FirstWeekMember; fac
         <button
           type="button"
           className="num rounded-sm bg-selected px-2 py-[2px] text-xs font-medium text-fg-2 hover:bg-hover"
-          aria-label={`First week: ${done} of ${rows.length} done. Show the list`}
+          aria-label={`First week ${done}/${rows.length}: ${done} of ${rows.length} done. Show the list`}
         >
           First week {done}/{rows.length}
         </button>

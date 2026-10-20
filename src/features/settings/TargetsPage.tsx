@@ -158,7 +158,7 @@ export function TargetsPage() {
           {(targets.error ?? team.error) instanceof Error ? ((targets.error ?? team.error) as Error).message : 'Check your connection, then try again.'}
         </Banner>
       ) : loading ? (
-        <div className="grid gap-px overflow-hidden rounded border bg-line" aria-busy="true" aria-label="Loading targets">
+        <div role="status" className="grid gap-px overflow-hidden rounded border bg-line" aria-busy="true" aria-label="Loading targets">
           {[0, 1, 2].map(i => (
             <div key={i} className="bg-surface p-4">
               <Skeleton className="h-10 w-full" />

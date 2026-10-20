@@ -184,7 +184,7 @@ describe('MessageActions (owner decision 2026-10-20)', () => {
         </ToastProvider>
       </SessionProvider>,
     )
-    expect(screen.getByRole('button', { name: 'Marking' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Marking' })).toHaveAttribute('aria-disabled', 'true') // busy keeps focus (WCAG 2.4.3)
   })
 
   it('Copy can carry a fuller name, so a list of them keeps its old selectors', () => {
