@@ -1,7 +1,7 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import { toPaisa } from '@/lib/money'
-import { dueOn, gstForNet, gstOn, invoiceStart, registerTotals, type GstRow } from '@/features/money/invoices/model'
+import { dueOn, gstForNet, gstOn, invoiceStart, orderDueOn, registerTotals, type GstRow } from '@/features/money/invoices/model'
 import { defaultPaymentAmount, filterReceivables, paymentNote, receivableTotals, reminderDue, type ReceivableRow } from '@/features/money/payments/model'
 import { marginTotals, type MarginRow } from '@/features/money/margins/model'
 import { estimateExpectedCost, type EstItem } from '@/features/money/lib/costEstimate'
@@ -85,7 +85,7 @@ describe('Create invoice (money/invoices/model) against the oracle', () => {
 
   // BUG-M8: the mixed-rate share is rounded with Math.round on a floating-point quotient. At an exact half rupee the float lands
   // just below .5 and the GST is rounded DOWN where every other GST in the books rounds half away from zero (Rs 1 per invoice).
-  it.fails('BUG-M8: at an exact half rupee the mixed-rate share rounds away from zero', () => {
+  it('BUG-M8: at an exact half rupee the mixed-rate share rounds away from zero', () => {
     const ties: Array<[bigint, bigint, bigint]> = [
       [3060n, 500n, 918n], // left 30.60 net / 5 GST, typed 9.18: 5 x 9.18 / 30.60 = 1.50 -> 2
       [3060n, 500n, 2754n], // typed 27.54: 4.50 -> 5
@@ -97,8 +97,8 @@ describe('Create invoice (money/invoices/model) against the oracle', () => {
     }
   })
 
-  it('BUG-M8 minimal repro (documents the wrong value): 5 x 9.18 / 30.60 = 1.50 gives GST 1, not 2', () => {
-    expect(gstForNet(9.18, 'mixed', { net: 30.6, gst: 5 })).toBe(1)
+  it('BUG-M8 regression: 5 x 9.18 / 30.60 = 1.50 gives GST 2 (was 1)', () => {
+    expect(gstForNet(9.18, 'mixed', { net: 30.6, gst: 5 })).toBe(2)
     expect(roundDiv(500n * 918n, 3060n * 100n)).toBe(2n)
   })
 
@@ -106,7 +106,7 @@ describe('Create invoice (money/invoices/model) against the oracle', () => {
   // order, the quotation and the customer's PO carry GST rounded per line (DATA_MODEL 2.13). Re-typing the full net of a many-line
   // order changes the GST (by up to Rs 0.50 a line); the invoice then no longer matches the PO, and when the gap passes Rs 1 the
   // order never reads "fully invoiced" (v_order_state), so Today and Create invoice keep offering the last rupees.
-  it.fails('BUG-M10: the full net of an 18% order, typed back in, keeps the GST of the order lines', () => {
+  it('BUG-M10: the full net of an 18% order, typed back in, keeps the GST of the order lines', () => {
     fc.assert(
       fc.property(linesArb(20).map(ls => ls.map(l => ({ ...l, rate: '18' }))), lines => {
         const t = itemsTotal(lines)
@@ -117,13 +117,14 @@ describe('Create invoice (money/invoices/model) against the oracle', () => {
     )
   })
 
-  it('BUG-M10 minimal repro: 20 lines of 10.50 at 18% carry GST 40 (2 a line); typed back in, the invoice carries 38', () => {
+  it('BUG-M10 regression: 20 lines of 10.50 at 18% carry GST 40 (2 a line); typed back in, the invoice keeps 40 (was 38)', () => {
     const lines = Array.from({ length: 20 }, () => ({ qty: '1.000', price: '10.50', rate: '18' }))
     const t = itemsTotal(lines)
     expect(rs(t.gst)).toBe('40.00')
     const start = invoiceStart({ itemsNet: n(t.net), itemsGst: n(t.gst), lineCount: 20, exemptLineCount: 0, invoicedNet: 0, invoicedGst: 0, paymentTermsDays: 30 })
     expect(start.gst).toBe(40)
-    expect(gstForNet(start.net, start.option, start)).toBe(38)
+    expect(gstForNet(start.net, start.option, start)).toBe(40)
+    expect(gstForNet(start.net / 2, start.option, start)).toBe(20)
   })
 
   it('the dialog opens with what is left: line totals less earlier invoices, never below zero', () => {
@@ -176,7 +177,7 @@ describe('Create invoice (money/invoices/model) against the oracle', () => {
   // v_order_money, Today's "payment overdue", the receivables page) dates the whole order from its EARLIEST invoice
   // (DATA_MODEL section 5: "the earliest invoice date plus payment_terms_days"). On a second or part invoice the dialog promises a
   // later date than the one the books use, and the order can already be overdue when the new invoice is saved.
-  it.fails('BUG-M6: the due date the dialog shows for a later invoice is the order due date the books use', () => {
+  it('BUG-M6: the due date the dialog shows for a later invoice is the order due date the books use', () => {
     fc.assert(
       fc.property(dateArb, fc.integer({ min: 1, max: 200 }), fc.constantFrom(0, 15, 30, 60), (first, gap, terms) => {
         const order: Order = { id: 'o', number: 1, companyId: 'c', ownerId: null, lines: [{ qty: '1.000', price: '100.00', rate: '18' }], terms, cancelledOn: null, basisUnknown: false, costsComplete: false, expectedCost: null }
@@ -186,13 +187,13 @@ describe('Create invoice (money/invoices/model) against the oracle', () => {
           { id: 'b', orderId: 'o', number: 'INV-2', date: second, net: 5000n, gst: 900n },
         ]
         const books: Books = { orders: [order], invoices, payments: [], expenses: [], defaultTerms: 30 }
-        expect(dueOn(second, terms)).toBe(receivableOf(order, books, second).dueOn)
+        expect(orderDueOn(second, first, terms)).toBe(receivableOf(order, books, second).dueOn)
       }),
       { numRuns: 200, seed: 20261020 },
     )
   })
 
-  it('BUG-M6 minimal repro (documents the wrong value)', () => {
+  it('BUG-M6 regression: a second invoice shows the order due date', () => {
     // first invoice 1 Aug 2026, 30 days: the order is due 31 Aug. A second invoice on 20 Oct shows "Due 19 Nov 2026"
     const order: Order = { id: 'o', number: 1, companyId: 'c', ownerId: null, lines: [{ qty: '2.000', price: '500.00', rate: '18' }], terms: 30, cancelledOn: null, basisUnknown: false, costsComplete: false, expectedCost: null }
     const invoices: Invoice[] = [
@@ -200,7 +201,7 @@ describe('Create invoice (money/invoices/model) against the oracle', () => {
       { id: 'b', orderId: 'o', number: 'INV-2', date: '2026-10-20', net: 50000n, gst: 9000n },
     ]
     const r = receivableOf(order, { invoices, payments: [], defaultTerms: 30 }, '2026-10-20')
-    expect(dueOn('2026-10-20', 30)).toBe('2026-11-19') // what the dialog prints
+    expect(orderDueOn('2026-10-20', '2026-08-01', 30)).toBe('2026-08-31') // what the dialog prints (was 19 Nov 2026)
     expect(r.dueOn).toBe('2026-08-31') // what order_receivables / Today use: already overdue on the day it is invoiced
     expect(r.overdue).toBe(true)
   })
@@ -316,7 +317,7 @@ describe('record payment and receivables (money/payments/model) against the orac
   // BUG-M5: Receivables counts an order as "due a reminder" 7 CALENDAR days after the last reminder; Today's payment-overdue item
   // comes back only 7 WORKING days after it (rules.ts chaseState / addBusinessDays). The two screens disagree for 2 to 4 days after
   // every reminder: the Receivables header says "1 due a reminder" while Today shows the order as waiting.
-  it.fails('BUG-M5: Receivables "due a reminder" and Today\'s payment-overdue item agree on the same day', () => {
+  it('BUG-M5: Receivables "due a reminder" and Today\'s payment-overdue item agree on the same day', () => {
     fc.assert(
       fc.property(dateArb, fc.integer({ min: 0, max: 20 }), (reminded, after) => {
         const today = addDays(reminded, after)
@@ -351,9 +352,10 @@ describe('record payment and receivables (money/payments/model) against the orac
     )
   })
 
-  it('BUG-M5 minimal repro: reminded Mon 5 Oct 2026; on Mon 12 Oct Receivables says "due a reminder", Today says waiting until Wed 14 Oct', () => {
+  it('BUG-M5 regression: reminded Mon 5 Oct 2026; on Mon 12 Oct both screens wait until Wed 14 Oct', () => {
     const row = { state: 'overdue', lastRemindedOn: '2026-10-05' } as ReceivableRow
-    expect(reminderDue(row, '2026-10-12')).toBe(true)
+    expect(reminderDue(row, '2026-10-12')).toBe(false)
+    expect(reminderDue(row, '2026-10-14')).toBe(true)
     const ctx = {
       today: '2026-10-12',
       user: { id: 'admin', role: 'admin' },
@@ -481,7 +483,7 @@ describe('expected-cost suggestion (money/lib/costEstimate) against the oracle',
   // BUG-M7: the expected-cost suggestion multiplies and rounds in floating point (Math.round(n * 100) / 100), the error MR-1 removed
   // everywhere else: 1 x 1.005 suggests 1.00 where the exact rule round(round(qty x price, 2) x rate, 2) gives 1.01, and the
   // error is then multiplied by the exchange rate on a foreign leg.
-  it.fails('BUG-M7: any supplier price with paisa/cents: the suggestion equals the exact rule', () => {
+  it('BUG-M7: any supplier price with paisa/cents: the suggestion equals the exact rule', () => {
     fc.assert(
       fc.property(cases, c => {
         const { est, a, b } = run(c)
@@ -492,10 +494,10 @@ describe('expected-cost suggestion (money/lib/costEstimate) against the oracle',
     )
   })
 
-  it('BUG-M7 minimal repro (documents the wrong value)', () => {
+  it('BUG-M7 regression: 1 x 1.005 suggests 1.01 (was 1.00)', () => {
     const est = estimateExpectedCost({ items: [{ id: 'a', qty: 1, supplierUnitPrice: 1.005, legId: 'L1', isService: false }], legs: [{ id: 'L1', currency: 'PKR' }], pos: [], rates: {} })
     expect(oracleLeg([['1.000', '1.0050']], null).pkr).toBe(101n) // the exact rule: 1.01
-    expect(est.pkr).toBe(1) // the app suggests 1.00
+    expect(est.pkr).toBe(1.01)
   })
 })
 

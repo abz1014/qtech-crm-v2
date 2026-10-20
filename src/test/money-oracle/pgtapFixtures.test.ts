@@ -133,8 +133,8 @@ describe('0902 money aging', () => {
     expect(a.advances).toEqual([{ orderId: 'A3', held: 500000n }])
     expect(a.invoices.find(i => i.invoiceId === 'old-paid')).toBeUndefined()
     expect(a.invoices.find(i => i.invoiceId === 'old-open')).toMatchObject({ remaining: 59000n, applied: 0n, bucket: '90+' })
-    // the oracle (like aging_as_of today) keeps the 0.50: BUG-M3 is that receivables call this order settled
-    expect(a.invoices.find(i => i.orderId === 'A4')?.remaining).toBe(50n)
+    // BUG-M3 (fixed): the order receivables call settled (paid to within Rs 1) has no aging row, here or in aging_as_of
+    expect(a.invoices.find(i => i.orderId === 'A4')).toBeUndefined()
     expect(receivableOf(order('A4'), { invoices, payments, defaultTerms: 30 }, '2025-06-30').state).toBe('settled')
   })
 })

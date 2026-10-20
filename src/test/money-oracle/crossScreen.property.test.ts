@@ -19,27 +19,25 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-/** Serve v_order_money rows (receivable = max(G - paid, 0), settled = paid) for every order of the company, as the view does. */
+/** Serve order_receivables rows (D-MR3: a cancelled, never-invoiced order is not listed) for the company, as the function does. */
 function serveOrderMoney(books: Books, today: string) {
   fake = installFakeDb(call => {
-    if (call.target !== 'v_order_money') return { data: [] }
+    if (call.target !== 'rpc:order_receivables') return { data: [] }
     const company = opArgs(call, 'eq')?.[1]
     const rows = books.orders
       .filter((o: Order) => o.companyId === company)
-      .map(o => {
-        const m = orderMoneyOf(o, books, today)
-        return { receivable: Number(rs(m.balance)), settled: Number(rs(m.settled)) }
-      })
+      .map(o => orderMoneyOf(o, books, today))
+      .filter(m => m.listed)
+      .map(m => ({ gross_target: rs(m.gross), settled: rs(m.settled), balance: rs(m.balance), overpaid_by: rs(m.overpaid) }))
     return { data: rows }
   })
 }
 
 describe('Company page "Money with them" (companies/api getCompanyMoney) against the receivables', () => {
-  // BUG-M1: getCompanyMoney adds up v_order_money.receivable (already the OUTSTANDING balance, max(G - paid, 0)) and labels it
-  // "Receivable (gross)", then shows Balance = receivable - received, so every payment is subtracted twice. A customer who paid
-  // half shows a balance of zero; a customer who paid everything shows a NEGATIVE balance equal to all they ever paid.
-  // It also reads v_order_money, which keeps cancelled orders that were never invoiced (D-MR3 leaves them out of receivables).
-  it.fails('BUG-M1: Receivable (gross), Received and Balance equal the sums over the customer\'s orders', async () => {
+  // BUG-M1 (fixed): getCompanyMoney used to add up v_order_money.receivable (already the OUTSTANDING balance) as "Receivable
+  // (gross)" and show Balance = receivable - received, subtracting every payment twice, and it counted cancelled orders that were
+  // never invoiced (D-MR3). It now sums order_receivables: gross, received and balance per order, in exact paisa.
+  it('BUG-M1: Receivable (gross), Received and Balance equal the sums over the customer\'s orders', async () => {
     await fc.assert(
       fc.asyncProperty(booksArb, dateArb, async (books, today) => {
         serveOrderMoney(books, today)
@@ -54,28 +52,24 @@ describe('Company page "Money with them" (companies/api getCompanyMoney) against
     )
   })
 
-  it('BUG-M1 minimal repro (documents the wrong values)', async () => {
+  it('BUG-M1 regression: part paid, fully paid, cancelled never invoiced', async () => {
     // One order, one 18% line of 1,000: gross 1,180. Paid 500, then paid in full.
     const order: Order = { id: 'o1', number: 1, companyId: 'c1', ownerId: null, lines: [{ qty: '1.000', price: '1000.00', rate: '18' }], terms: 30, cancelledOn: null, basisUnknown: false, costsComplete: false, expectedCost: null }
     const part: Books = { orders: [order], invoices: [], payments: [{ id: 'p1', orderId: 'o1', date: '2026-01-10', amount: 50000n, credited: null }], expenses: [], defaultTerms: 30 }
     serveOrderMoney(part, '2026-10-20')
     const a = await getCompanyMoney('c1')
-    expect([a.receivable, a.settled, a.balance]).toEqual([680, 500, 180]) // the screen: 680 / 500 / 180
-    expect(companyMoney('c1', part, '2026-10-20')).toEqual({ gross: 118000n, received: 50000n, balance: 68000n, overpaid: 0n }) // right: 1,180 / 500 / 680
+    expect([a.receivable, a.settled, a.balance]).toEqual([1180, 500, 680]) // was 680 / 500 / 180
     fake?.uninstall()
 
     const full: Books = { ...part, payments: [{ id: 'p1', orderId: 'o1', date: '2026-01-10', amount: 118000n, credited: null }] }
     serveOrderMoney(full, '2026-10-20')
-    const b = await getCompanyMoney('c1')
-    expect(b.balance).toBe(-1180) // a fully paid customer shows a negative balance of everything they paid
+    expect((await getCompanyMoney('c1')).balance).toBe(0) // was -1,180
     fake?.uninstall()
 
-    // a cancelled order that was never invoiced still counts (v_order_money has no D-MR3 filter)
     const cancelled: Books = { ...part, orders: [{ ...order, cancelledOn: '2026-02-01' }], payments: [] }
     serveOrderMoney(cancelled, '2026-10-20')
     const c = await getCompanyMoney('c1')
-    expect(c.receivable).toBe(1180)
-    expect(companyMoney('c1', cancelled, '2026-10-20').balance).toBe(0n)
+    expect([c.receivable, c.balance, c.orders]).toEqual([0, 0, 0]) // was a receivable of 1,180
   })
 
   it('what each order owes, summed over a customer, is what the receivables list shows for that customer', () => {
