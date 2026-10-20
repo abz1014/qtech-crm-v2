@@ -852,11 +852,21 @@ test.describe('the side column at 1366 (UX audit: never longer than the page bes
     await expect(page.locator(`[data-chase-card="${s.china.id}"]`)).toBeVisible()
     await expect(page.locator('[data-slot="clarifications"]')).toContainText('Is the line size DN50 or DN80?')
     const h = await page.evaluate(() => {
-      const aside = document.querySelector('aside[aria-label="Suppliers, questions and files"]')
+      const aside = document.querySelector('aside[aria-label="Suppliers, questions and files"]') as HTMLElement | null
       const mainCol = aside?.previousElementSibling
-      return { rail: aside?.getBoundingClientRect().height ?? 0, main: mainCol?.getBoundingClientRect().height ?? 0 }
+      return {
+        rail: aside?.getBoundingClientRect().height ?? 0,
+        main: mainCol?.getBoundingClientRect().height ?? 0,
+        sticky: aside ? getComputedStyle(aside).position : '',
+        content: aside?.scrollHeight ?? 0,
+      }
     })
-    expect(h.rail, `rail ${h.rail}px against main ${h.main}px`).toBeLessThanOrEqual(h.main)
+    // The rail stays beside the page and scrolls on its own: it never runs on below the main column, whatever it holds.
+    expect(h.sticky).toBe('sticky')
+    expect(h.rail, `rail ${h.rail}px (content ${h.content}px) against main ${h.main}px`).toBeLessThanOrEqual(h.main)
+    // Everything in it is still reachable: the last panel scrolls into view inside the rail.
+    await page.locator('aside').getByRole('heading', { name: 'Files', level: 2 }).scrollIntoViewIfNeeded()
+    await expect(page.getByRole('heading', { name: 'Files', level: 2 })).toBeInViewport()
     await noSidewaysScroll(page)
     await review(page, 'rfq-detail-rail-1366')
   })

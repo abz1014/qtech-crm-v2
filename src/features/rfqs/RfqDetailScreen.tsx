@@ -325,7 +325,12 @@ function Loaded({
           )}
           <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />
         </div>
-        <aside className="grid min-w-0 gap-6" aria-label="Suppliers, questions and files">
+        {/* From 1024 up the side column stays beside what is being read and scrolls on its own, so a busy RFQ (a chase message,
+            questions, files) never runs on below the main column (UX audit screens.md 3: "ends up longer than the main column"). */}
+        <aside
+          className="grid min-w-0 content-start gap-6 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:pb-1"
+          aria-label="Suppliers, questions and files"
+        >
           {loadError ? (
             <DetailPanel title="Suppliers asked">
               <p className="px-5 py-4 text-sm text-fg-muted">Not loaded. Try again to see who has replied.</p>
