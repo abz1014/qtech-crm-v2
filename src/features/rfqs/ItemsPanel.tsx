@@ -373,7 +373,7 @@ export function ItemsPanel({
                             sell.text
                           ) : (
                             <span>
-                              We sell at <span className="num font-medium text-fg-2">{sell.amount}</span> {sell.text}
+                              Our price <span className="num font-medium text-fg-2">{sell.amount}</span> {sell.text}
                             </span>
                           )}
                         </span>

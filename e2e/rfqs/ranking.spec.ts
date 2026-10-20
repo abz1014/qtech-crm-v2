@@ -10,7 +10,7 @@ import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } 
  * price and no spread, and no extra money request is made).
  *
  * Interaction counts asserted (BUILD_PLAN A8, R25): seeing the ranking is 0 taps (it is there when the page opens); opening the
- * reasons of one supplier is 1 optional tap. The float list needs no extra tap for the new order or the evidence lines.
+ * reasons of one supplier is 1 optional tap (rows start closed; the one Recommended mark and the Cheapest line need none). The float list needs no extra tap for the new order or the evidence lines.
  */
 
 const violations = (page: Page): Promise<string[]> => axeViolations(page)
@@ -163,13 +163,21 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     expect(names[1]).toContain(s.apex.name)
     expect(names[2]).toContain(s.charlie.name)
     expect(names[3]).toContain(s.delta.name)
-    await expect(art.getByText('Ranked 3 of 4')).toBeVisible()
-    await expect(art.locator('[data-rank-note="ranked"]')).toContainText("Ranked by price in PKR at today's rate.")
-    await expect(art.locator('[data-sell-note="quoted"]')).toContainText('Selling price PKR 40,000 each, quoted')
+    // ONE mark per item: Recommended on rank 1; the cheapest is someone else, so a plain line names it (UX audit 2026-10-19).
+    await expect(art.getByText('Recommended', { exact: true })).toHaveCount(1)
+    await expect(rowOf(page, 'Item 1', s.bravo.name)).toContainText('Recommended')
+    await expect(art.locator('[data-cheapest]')).toHaveText(`Cheapest: ${s.apex.name}. ${s.bravo.name} is only 1.0% dearer and has the better delivery record.`)
+    await expect(art.getByText('Lowest', { exact: true })).toHaveCount(0)
+    // The rule is one tip in the panel header, not a note above every item.
+    await expect(page.getByRole('button', { name: 'How are prices compared?' })).toHaveCount(1)
+    await expect(art.locator('[data-sell-note="quoted"]')).toContainText('Our price PKR 40,000 each, quoted')
 
-    // Rank 1 (inside the band, proven): open by default, every key printed as a count, the evidence cites the order.
+    // Rows start closed: one line each. Rank 1 opens in 1 tap: every key printed as a count, the evidence cites the order.
     const bravo = rowOf(page, 'Item 1', s.bravo.name)
     const last = s.bravoOrders[2]
+    await expect(bravo.locator('[data-reasons="full"]')).toHaveCount(0)
+    await bravo.getByRole('button', { name: `Show details for ${s.bravo.name}` }).click()
+    taps++
     await expect(bravo.locator('[data-reasons="full"]')).toBeVisible()
     await expect(bravo).toContainText('≈ PKR 280 each above the best (1.0%)')
     await expect(bravo).toContainText('Within 2% of the best price: ordered by delivery record')
@@ -183,30 +191,34 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     // Rank 2 is the lowest price, with no record yet.
     const apex = rowOf(page, 'Item 1', s.apex.name)
     await expect(apex).toHaveAttribute('data-lowest', '')
-    await expect(apex).toContainText('Lowest')
+    await apex.getByRole('button', { name: `Show details for ${s.apex.name}` }).click()
     await expect(apex).toContainText('Best price: ≈ PKR 28,000 each (USD 100 at 280.00, today)')
     await expect(apex).toContainText('No deliveries yet')
 
     // Rank 3 is above the band: one line, closed; 1 tap opens it.
     const charlie = rowOf(page, 'Item 1', s.charlie.name)
-    await expect(charlie.locator('[data-reasons="short"]')).toContainText('≈ PKR 5,600 each above the best (20.0%)')
-    await expect(charlie.locator('[data-reasons="short"]')).not.toContainText('Within 2%')
-    const toggle = charlie.getByRole('button', { name: `Show reasons for ${s.charlie.name}` })
+    await expect(charlie).toContainText('≈ PKR33,600') // 120 USD at 280: the figure people compare, on the line
+    const toggle = charlie.getByRole('button', { name: `Show details for ${s.charlie.name}` })
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
     await toggle.click()
-    taps++
-    await expect(charlie.getByRole('button', { name: `Hide reasons for ${s.charlie.name}` })).toHaveAttribute('aria-expanded', 'true')
+    await expect(charlie.getByRole('button', { name: `Hide details for ${s.charlie.name}` })).toHaveAttribute('aria-expanded', 'true')
+    await expect(charlie.locator('[data-reasons="full"]')).toContainText('≈ PKR 5,600 each above the best (20.0%)')
+    await expect(charlie.locator('[data-reasons="full"]')).not.toContainText('Within 2%')
     await expect(charlie.locator('[data-reasons="full"]')).toContainText('Spread ≈ PKR 6,400 each')
-    expect(taps).toBe(1)
+    expect(taps).toBe(1) // seeing the order and the one mark: 0 taps; the reasons of one supplier: 1 optional tap
 
-    // No rate: listed after the ranked lines, with the reason and the one button.
+    // No rate: listed after the ranked lines, its own figure marked not compared; the reason and the one button inside.
     const delta = rowOf(page, 'Item 1', s.delta.name)
+    await expect(delta).toContainText('not compared, no rate')
+    await delta.getByRole('button', { name: `Show details for ${s.delta.name}` }).click()
     await expect(delta).toContainText('Not ranked: no current CNY rate. Add one.')
     await expect(delta.getByRole('link', { name: 'Add CNY rate' })).toHaveAttribute('href', '/settings/exchange-rates')
 
     // Item 2 has no selling price: the note says so, and no spread is invented.
     const item2 = page.getByRole('article', { name: 'Item 2' })
     await expect(item2.locator('[data-sell-note="none"]')).toContainText('No selling price yet')
+    await rowOf(page, 'Item 2', s.bravo.name).getByRole('button', { name: `Show details for ${s.bravo.name}` }).click()
+    await expect(item2.locator('[data-reasons]').first()).toBeVisible()
     await expect(item2.locator('[data-reasons]').first()).not.toContainText('Spread')
 
     // There is no "Received" step anywhere in the reasons: legs are placed, then delivered.
@@ -231,6 +243,8 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     await expect(art.locator('li[data-ranked]')).toHaveCount(4)
     const names = await art.locator('li[data-ranked]').allInnerTexts()
     expect(names[0]).toContain(s.bravo.name)
+    await expect(rowOf(page, 'Item 1', s.bravo.name)).toContainText('Recommended')
+    await rowOf(page, 'Item 1', s.bravo.name).getByRole('button', { name: `Show details for ${s.bravo.name}` }).click()
     await expect(rowOf(page, 'Item 1', s.bravo.name)).toContainText('On time 3 of 3 deliveries')
     await expect(rowOf(page, 'Item 1', s.bravo.name)).toContainText('Within 2% of the best price: ordered by delivery record')
     await expect(rowOf(page, 'Item 1', s.bravo.name).locator('[data-reason="evidence"]')).toContainText('delivered after')
@@ -254,14 +268,16 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     expect(await violations(page)).toEqual([])
   })
 
-  test('phone 375: the rank sits in its own column and the reasons wrap under the supplier', async ({ page }) => {
+  test('phone 375: Recommended above the supplier, the price on the same line, and the reasons wrap under it when opened', async ({ page }) => {
     const s = await seed()
     await page.setViewportSize({ width: 375, height: 900 })
     await openAs(page, 'sales', `/rfqs/${s.rfqId}`)
     const art = page.getByRole('article', { name: 'Item 1' })
     await expect(art.locator('li[data-ranked]')).toHaveCount(4)
     const first = rowOf(page, 'Item 1', s.bravo.name)
-    await expect(first.locator('[data-rank="1"]')).toBeVisible()
+    await expect(first).toHaveAttribute('data-recommended', '')
+    await expect(first).toContainText('Recommended')
+    await first.getByRole('button', { name: `Show details for ${s.bravo.name}` }).click()
     await expect(first).toContainText('On time 3 of 3 deliveries')
     // The page does not scroll sideways.
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
@@ -431,11 +447,13 @@ test.describe('R25 stale and missing exchange rates (audit K1)', () => {
     // EUR 96 at 300 = PKR 28,800 (2.9% above, outside the 2% band) against USD 100 at 280 = PKR 28,000: both rank; the EUR row says its rate is 12 days old.
     await expect(rowOf(page, 'Item 1', fresh.name)).toHaveAttribute('data-ranked', '1')
     await expect(rowOf(page, 'Item 1', stale.name)).toHaveAttribute('data-ranked', '2')
-    await rowOf(page, 'Item 1', stale.name).getByRole('button', { name: `Show reasons for ${stale.name}` }).click()
+    await rowOf(page, 'Item 1', stale.name).getByRole('button', { name: `Show details for ${stale.name}` }).click()
     await expect(rowOf(page, 'Item 1', stale.name)).toContainText('Rate 12 days old')
     // SAR: the only rate is 45 days old, so it is not used. Unranked, with the reason and the one link.
     const oldRow = rowOf(page, 'Item 1', old.name)
     await expect(oldRow).toHaveAttribute('data-ranked', 'none')
+    await expect(oldRow).toContainText('not compared, rate too old')
+    await oldRow.getByRole('button', { name: `Show details for ${old.name}` }).click()
     await expect(oldRow).toContainText(/Not ranked: the SAR rate is 45 days old\. Add a current one\./)
     await expect(oldRow.getByRole('link', { name: 'Add SAR rate' })).toHaveAttribute('href', '/settings/exchange-rates')
   })

@@ -326,6 +326,10 @@ test.describe('R17 last price chip on RFQ reply rows', () => {
       await post('supplier_quote_lines', { inquiry_id: inq.id, rfq_item_id: item.id, unit_price: 438, currency: 'USD', lead_time: '2 weeks' })
     }
     await openAs(page, 'sales', `/rfqs/${rfq.id}`)
+    // Each price is one line; the last price for the item opens with the row's details (UX audit 2026-10-19).
+    const item1 = page.getByRole('article', { name: 'Item 1' })
+    await expect(item1.locator('[data-last-price]')).toHaveCount(0)
+    for (const name of [s.s1.name, s.s3.name, s7.name]) await item1.getByRole('button', { name: `Show details for ${name}` }).click()
     const rows = page.locator('li', { has: page.locator('[data-last-price]') })
     const chip1 = page.locator('li', { hasText: s.s1.name }).locator('[data-last-price]')
     await expect(chip1).toContainText('Last price for this item:')

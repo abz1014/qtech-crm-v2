@@ -213,19 +213,16 @@ function MoreMenu({ rfq, facts, actions, trigger, label, side }: { rfq: RfqHeade
 }
 
 /**
- * The green button for the state. `size` is md in the header and touch in the phone bar. Only the header's carries the data-slot
- * (issue-quotation R19, mark-won O01, ask-suppliers), so a slot always names one button.
+ * The green button for the state. `size` is md in the header and touch in the phone bar. Both carry the data-slot (issue-quotation
+ * R19, mark-won O01, ask-suppliers): only one of the two is ever displayed (md:hidden / max-md:hidden), so a slot names one visible button.
  */
-function PrimaryButton({ rfq, facts, size = 'md', className, slot = true }: { rfq: RfqHeader; facts: HeaderFacts; size?: 'md' | 'touch'; className?: string; slot?: boolean }) {
+function PrimaryButton({ rfq, facts, size = 'md', className }: { rfq: RfqHeader; facts: HeaderFacts; size?: 'md' | 'touch'; className?: string }) {
   const main = useMainActions(rfq, facts)
-  const wrap = (name: string, button: React.ReactNode) =>
-    slot ? (
-      <span data-slot={name} className="contents">
-        {button}
-      </span>
-    ) : (
-      button
-    )
+  const wrap = (name: string, button: React.ReactNode) => (
+    <span data-slot={name} className="contents">
+      {button}
+    </span>
+  )
   switch (facts.primary) {
     case 'ask':
       return wrap(
@@ -452,7 +449,7 @@ export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rf
       ) : facts.primary === 'none' ? (
         <span className="flex-1" />
       ) : (
-        <PrimaryButton rfq={rfq} facts={facts} size="touch" className="flex-1" slot={false} />
+        <PrimaryButton rfq={rfq} facts={facts} size="touch" className="flex-1" />
       )}
       <Popover>
         <PopoverTrigger asChild>
