@@ -160,6 +160,23 @@ export async function quote(rfqId: string, sup: Co, prices: { itemId: string; pr
   return inq
 }
 
+/**
+ * An RFQ ready to win: items with a quoted selling price (as the Issue quotation dialog writes them) and one supplier (PKR) who
+ * priced every item, so Mark won can make an order with nothing typed.
+ */
+export async function quotedRfq(opts: { items: { description: string; qty: number; price: number; supplierPrice: number; gst?: number }[]; owner?: keyof typeof USER }) {
+  const customer = await company('Verify Won Customer', { city: 'Faisalabad' })
+  const r = await post<{ id: string; number: number }>('rfqs', { company_id: customer.id, owner_id: USER[opts.owner ?? 'sales'], due_on: karachiDay(5) })
+  const items = await postMany<{ id: string; position: number; description: string }>(
+    'rfq_items',
+    opts.items.map((it, i) => ({ rfq_id: r.id, position: i, description: it.description, qty: it.qty, unit: 'nos', gst_rate: it.gst ?? 18, quoted_unit_price_net: it.price })),
+  )
+  items.sort((a, b) => a.position - b.position)
+  const sup = await supplier('Verify Lahore Stockist', 'Pakistan')
+  await quote(r.id, sup, items.map((it, i) => ({ itemId: it.id, price: opts.items[i].supplierPrice })), 'PKR')
+  return { rfq: r, customer, items, supplier: sup }
+}
+
 /** Calendar helpers in the business time zone (Asia/Karachi). */
 export function monthOf(iso: string) {
   const key = iso.slice(0, 7)
