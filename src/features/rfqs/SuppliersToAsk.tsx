@@ -7,7 +7,7 @@ import { Checkbox } from '@/ui/form/Checkbox'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { ReasonParts } from '@/features/rfqs/ranking/RankParts'
-import type { RfqItemRow } from '@/features/rfqs/api'
+import type { InquiryRow, RfqItemRow } from '@/features/rfqs/api'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import type { SupplierSuggestion } from '@/features/rfqs/lib'
 
@@ -20,6 +20,38 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib'
  * The card's button is not green: the page has one green button, and while nobody is asked it is the header's Ask suppliers.
  */
 const copyLabel = (n: number) => `Copy message for ${n} ${n === 1 ? 'supplier' : 'suppliers'}`
+
+/**
+ * The Ask list (review of ux/rfqs, item 3): the suppliers on the shortlist (New RFQ's "Save without asking": an inquiry with no
+ * sent date) come first, already ticked, then the suggestions. Asking them stamps their inquiry sent (useAskSuppliers). Undefined
+ * while the suggestions load.
+ */
+export function withShortlist(
+  inquiries: readonly InquiryRow[],
+  items: readonly RfqItemRow[],
+  suggestions: readonly SupplierSuggestion[] | undefined,
+): SupplierSuggestion[] | undefined {
+  if (suggestions === undefined) return undefined
+  const short = inquiries
+    .filter(i => !i.sentOn && !i.noOfferOn)
+    .map<SupplierSuggestion>(i => ({
+      supplierId: i.supplierId,
+      name: i.supplierName,
+      city: i.supplierCity ?? null,
+      group: 'supplied_before',
+      groupLabel: 'Shortlist',
+      preTicked: true,
+      tierLabel: 'same item',
+      reason: 'On the shortlist from New RFQ. Not asked yet.',
+      memoryLine: '',
+      coversItemIds: items.map(it => it.id),
+      lastContact: null,
+      record: null,
+      evidence: null,
+      stats: null,
+    }))
+  return [...short, ...suggestions.filter(s => !short.some(x => x.supplierId === s.supplierId))]
+}
 
 /** The ticked suppliers, starting with the pre-ticked ones; a tick or untick by hand is kept. */
 function useTicks(suggestions: readonly SupplierSuggestion[] | undefined) {

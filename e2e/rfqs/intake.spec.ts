@@ -436,6 +436,32 @@ test.describe('save only, and no supplier ticked', () => {
     expect(await rfqsOf(s.customer.id)).toHaveLength(1)
   })
 
+  test('saved without asking, then Ask suppliers on the RFQ page: the shortlist comes first and ticked, and asking stamps it sent', async ({ page }) => {
+    const s = await seed()
+    await openAs(page, 'sales', '/rfqs/new')
+    await pickCompany(page, s.customer.name)
+    await paste(page, s.email)
+    await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
+    await expect(page.getByRole('checkbox', { name: s.supplied.name })).toBeChecked()
+    await page.getByRole('button', { name: 'Save without asking' }).click()
+    await expect(page.getByText(/is saved/)).toBeVisible()
+    const [rfq] = await rfqsOf(s.customer.id)
+    expect((await inquiriesOf(rfq.id)).map(i => i.sent_on)).toEqual([null])
+
+    await page.getByRole('link', { name: `Open ${rfqRef(rfq.number)}` }).click()
+    await page.locator('[data-slot="ask-suppliers"]:visible').click()
+    const dialog = page.getByRole('dialog', { name: 'Ask suppliers' })
+    const first = dialog.getByRole('checkbox').first()
+    await expect(first).toHaveAccessibleName(s.supplied.name)
+    await expect(first).toBeChecked()
+    await expect(dialog.getByText('On the shortlist from New RFQ. Not asked yet.')).toBeVisible()
+    await dialog.getByRole('button', { name: /^Copy message for \d+ suppliers?$/ }).click()
+    await expect(dialog).toBeHidden()
+    await expect
+      .poll(async () => (await inquiriesOf(rfq.id)).filter(i => i.supplier_id === s.supplied.id).map(i => i.sent_on))
+      .toEqual([karachiDay()])
+  })
+
   test('a customer reference the customer already has is refused in plain words and nothing is created', async ({ page }) => {
     const s = await seed()
     const ref = `SAME-${Date.now().toString(36)}`

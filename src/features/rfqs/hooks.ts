@@ -305,6 +305,15 @@ export function useAddInquiries(rfqId: string) {
   })
 }
 
+/** Ask the shortlisted suppliers (saved without asking): their inquiries are stamped sent; `undo` takes the stamp back. */
+export function useMarkInquiriesSent(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { ids: readonly string[]; on: string; undo?: boolean }) => (v.undo ? api.unmarkInquiriesSent(v.ids, v.on).then(() => [...v.ids]) : api.markInquiriesSent(v.ids, v.on)),
+    onSuccess: () => invalidateAfter(client, 'rfq.setFloated', { rfqId }),
+  })
+}
+
 export function useRemoveInquiries(rfqId: string) {
   const client = useQueryClient()
   return useMutation({

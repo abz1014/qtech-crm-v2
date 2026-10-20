@@ -22,7 +22,7 @@ import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { AddItemDialog } from '@/features/rfqs/AddItemDialog'
 import { SuppliersAsked } from '@/features/rfqs/SuppliersAsked'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
-import { FloatDialog, SuppliersToAskCard } from '@/features/rfqs/SuppliersToAsk'
+import { FloatDialog, SuppliersToAskCard, withShortlist } from '@/features/rfqs/SuppliersToAsk'
 import { useAskSuppliers } from '@/features/rfqs/useAskSuppliers'
 import { QuotationsPanel } from '@/features/quotations/QuotationsPanel'
 import { ClarificationsPanel } from '@/features/rfqs/ClarificationsPanel'
@@ -216,7 +216,11 @@ function Loaded({
   const chaseCustomer = rfq.state?.waiting ?? 0
   const loadError = items.isError || inquiries.isError
   const loading = items.isPending || inquiries.isPending
-  const nobodyAsked = !loading && !loadError && inquiryList.length === 0
+  // Asked: sent, or answered "cannot quote". A supplier only on the shortlist (saved without asking) is not asked yet: it comes first
+  // in the Ask list, already ticked, and asking it stamps its inquiry sent (review item 3).
+  const askedCount = inquiryList.filter(i => i.sentOn || i.noOfferOn).length
+  const nobodyAsked = !loading && !loadError && askedCount === 0
+  const askList = useMemo(() => withShortlist(inquiryList, itemList, suggestions), [inquiryList, itemList, suggestions])
 
   // The one green button (owner decision 2026-10-19): chosen by state. Until the items and replies are in, there is none.
   const quotations = useQuotations(rfq.id)
@@ -328,7 +332,7 @@ function Loaded({
             <Skeleton className="h-40 w-full" />
           ) : nobodyAsked ? (
             <SuppliersToAskCard
-              suggestions={suggestions}
+              suggestions={askList}
               items={itemList}
               busy={asking}
               onAsk={ticked => void askFrom(ticked, itemList)}
@@ -344,8 +348,8 @@ function Loaded({
       {adding ? <AddItemDialog rfq={rfq} onClose={() => setAdding(false)} /> : null}
       {floating ? (
         <FloatDialog
-          title={inquiryList.length > 0 ? 'Ask more suppliers' : 'Ask suppliers'}
-          suggestions={suggestions}
+          title={askedCount > 0 ? 'Ask more suppliers' : 'Ask suppliers'}
+          suggestions={askList}
           itemCount={(itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id))).length || itemList.length) as number}
           busy={asking}
           onClose={() => setFloating(false)}

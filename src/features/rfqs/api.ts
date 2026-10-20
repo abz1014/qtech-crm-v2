@@ -847,6 +847,24 @@ export async function addInquiries(input: { rfqId: string; supplierIds: readonly
   return rows.map(r => r.id)
 }
 
+/**
+ * Stamp shortlisted inquiries (New RFQ's "Save without asking") sent on `on`: only rows not yet sent change. Returns the ids that
+ * changed, for the Undo.
+ */
+export async function markInquiriesSent(ids: readonly string[], on: string): Promise<string[]> {
+  if (ids.length === 0) return []
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('supplier_inquiries').update({ sent_on: on }).in('id', [...ids]).is('sent_on', null).select('id'))
+  return rows.map(r => r.id)
+}
+
+/** The Undo of markInquiriesSent: back to shortlisted, only while still stamped that day and not chased since. */
+export async function unmarkInquiriesSent(ids: readonly string[], stampedOn: string): Promise<void> {
+  if (ids.length === 0) return
+  const db = requireSupabase()
+  unwrap(await db.from('supplier_inquiries').update({ sent_on: null }).in('id', [...ids]).eq('sent_on', stampedOn).is('last_chased_on', null).select('id'))
+}
+
 /** Take back inquiries just added: they go back to shortlisted (sent_on empty), which is the only state staff may delete. */
 export async function removeInquiries(ids: readonly string[]): Promise<void> {
   const db = requireSupabase()
