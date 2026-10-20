@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
@@ -6,10 +6,13 @@ import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { InstallBanner } from '@/features/settings/InstallBanner'
 import { SETTINGS_GROUPS } from '@/features/settings/settingsLinks'
-import { SettingsHomePage } from '@/features/settings/SettingsHomePage'
 import { Icon } from '@/ui/Icon'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { lazyWithReload } from '@/lib/importWithReload'
+
+// The Settings home (its rates table, DataTable and the RFQ rate queries) is a lazy chunk: none of it is on the first screen (perf/trim).
+const SettingsHomePage = lazyWithReload(() => import('@/features/settings/SettingsHomePage').then(m => ({ default: m.SettingsHomePage })))
 
 /*
  * Settings (A04, A06). Reached from the account menu, not the five main destinations (the search box's "Jump to" entries for
@@ -104,7 +107,11 @@ export function SettingsHome() {
   const phone = usePhone()
   // the list is the page on a phone: it still needs the page's one level-one heading
   if (isAdmin) return phone ? <h1 className="sr-only">Settings</h1> : <Navigate to="/settings/team" replace />
-  return <SettingsHomePage />
+  return (
+    <Suspense fallback={null}>
+      <SettingsHomePage />
+    </Suspense>
+  )
 }
 
 /** The Team screen is admin only. Anyone else sees the no-access page inside the shell, never the data (the function refuses them too). */

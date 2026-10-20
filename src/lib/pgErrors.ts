@@ -14,6 +14,7 @@
  *
  * Works on a PostgrestError ({ code, message, details }) or anything shaped like one.
  */
+import { PlainError } from '@/lib/errors/plainError'
 import { rpcMessage, type RpcAction } from '@/lib/errors/rpcMessages'
 
 export interface PgLikeError {
@@ -53,18 +54,8 @@ export interface MapOptions {
   entity?: string
 }
 
-/**
- * An error whose message is already a plain sentence written for people (the admin-users function
- * answers in them). mapPgError passes it through unchanged instead of the generic fallback.
- */
-export class PlainError extends Error {
-  code?: string
-  constructor(message: string, code?: string) {
-    super(message)
-    this.name = 'PlainError'
-    this.code = code
-  }
-}
+// PlainError lives in its own module so the first load can use it without this file and its message table (perf/trim).
+export { PlainError }
 
 const CLOSED_MONTH = /\bis closed\.\s*An admin can reopen it\.?$/i
 /** postgrest-js turns a rejected fetch into { code: '', message: `${err.name}: ${err.message}` }. */

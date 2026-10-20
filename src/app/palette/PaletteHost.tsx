@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Building2, CalendarCheck, ChartColumn, CircleAlert, HandCoins, Import, Landmark, Percent, Plus, Receipt, Settings, Wallet, type LucideIcon } from 'lucide-react'
 import { navItemsForRole } from '@/app/navConfig'
@@ -6,9 +6,15 @@ import { settingsLinksFor } from '@/features/settings/settingsLinks'
 import { CaptureContext } from '@/app/capture/useCapture'
 import { PaletteContext, type PaletteApi } from '@/app/palette/usePalette'
 import { CAPTURE_LABEL } from '@/app/shell/TopBar'
-import { CommandPalette } from '@/ui/CommandPalette'
+import { lazyWithReload } from '@/lib/importWithReload'
 import { Kbd } from '@/ui/Kbd'
 import { filterItems, type PaletteItem, type PaletteSource } from '@/ui/paletteSources'
+
+/*
+ * The palette itself (cmdk and its dialog) is a lazy chunk (perf/trim): it is not part of the first load, and it starts
+ * loading as soon as the shell mounts (it is always rendered, closed), so it is there long before anyone opens it.
+ */
+const CommandPalette = lazyWithReload(() => import('@/ui/CommandPalette').then(m => ({ default: m.CommandPalette })))
 
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
 const INTAKE_ROUTE = '/rfqs/new'
@@ -133,13 +139,15 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
   return (
     <PaletteContext.Provider value={api}>
       {children}
-      <CommandPalette
-        open={open}
-        onOpenChange={setOpen}
-        sources={sources}
-        onNavigate={(href, { newTab }) => (newTab ? window.open(href, '_blank', 'noopener') : navigate(href))}
-        emptyHint={<>Search covers RFQs, orders, companies and items. Try one word, or press <Kbd>N</Kbd> to start an RFQ.</>}
-      />
+      <Suspense fallback={null}>
+        <CommandPalette
+          open={open}
+          onOpenChange={setOpen}
+          sources={sources}
+          onNavigate={(href, { newTab }) => (newTab ? window.open(href, '_blank', 'noopener') : navigate(href))}
+          emptyHint={<>Search covers RFQs, orders, companies and items. Try one word, or press <Kbd>N</Kbd> to start an RFQ.</>}
+        />
+      </Suspense>
     </PaletteContext.Provider>
   )
 }

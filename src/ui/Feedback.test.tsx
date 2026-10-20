@@ -206,4 +206,13 @@ describe('Toast Undo that fails (code review p9)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/Could not undo/)
     expect(screen.queryByText('Undone.')).toBeNull()
   })
+
+  it('maps the very first undo failure through the lazily loaded error table (perf/trim)', async () => {
+    const user = userEvent.setup()
+    const onUndo = vi.fn(() => Promise.reject({ code: 'P0001', message: 'March 2026 is still open. Close earlier months first.' }))
+    setup({ title: 'Closed RFQ-0101', undo: { onUndo } })
+    await user.click(screen.getByRole('button', { name: 'Fire' }))
+    await user.click(await screen.findByRole('button', { name: /Undo/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Close March 2026 first. Months close in order.')
+  })
 })

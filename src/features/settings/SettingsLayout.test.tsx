@@ -72,9 +72,10 @@ describe('settings access (A04, A06)', () => {
   })
 
   for (const role of ['sales', 'engineer']) {
-    it(`${role}: Team is not offered and a typed /settings/team address shows the no-access page`, () => {
+    it(`${role}: Team is not offered and a typed /settings/team address shows the no-access page`, async () => {
       const first = at('/settings', role)
-      expect(screen.getByText('Settings home')).toBeInTheDocument()
+      // the Settings home is a lazy chunk (perf/trim)
+      expect(await screen.findByText('Settings home')).toBeInTheDocument()
       expect(screen.queryByRole('link', { name: 'Team' })).toBeNull()
       expect(screen.getByRole('link', { name: /Company profile/ })).toHaveTextContent('View only')
       expect(screen.getByRole('link', { name: 'Exchange rates' })).toBeInTheDocument()

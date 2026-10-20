@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CircleAlert, CircleCheck, Undo2, X } from 'lucide-react'
-import { mapPgError } from '@/lib/pgErrors'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import { ToastContext, type ToastApi, type ToastInput } from '@/ui/useToast'
@@ -54,7 +53,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       await item.input.undo.onUndo()
     } catch (err) {
       // The undo write failed: the toast must not keep saying "Undone.". It turns into an error that stays until dismissed.
-      const input: ToastInput = { title: 'Could not undo', body: mapPgError(err).message, tone: 'danger' }
+      // The error sentences (pgErrors and its message table) are a lazy chunk, awaited here: not part of the first load (perf/trim).
+      const body = await import('@/lib/pgErrors').then(
+        m => m.mapPgError(err).message,
+        () => 'Something went wrong. Nothing was saved. Try again.', // the chunk itself could not load: mapPgError's own fallback
+      )
+      const input: ToastInput = { title: 'Could not undo', body, tone: 'danger' }
       setItems(list => list.map(i => (i.id === id ? { ...i, input, phase: 'running' } : i)))
     }
   }, [])

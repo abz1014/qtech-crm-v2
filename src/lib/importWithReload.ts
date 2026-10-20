@@ -1,5 +1,5 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
-import { PlainError } from '@/lib/pgErrors'
+import { PlainError } from '@/lib/errors/plainError'
 import { hasDirtyForms } from '@/lib/pwa/dirtyForms'
 import { applyUpdate } from '@/lib/pwa/updates'
 
