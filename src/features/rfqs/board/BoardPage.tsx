@@ -20,7 +20,6 @@ import {
 } from '@/features/rfqs/board/model'
 import { ClosedCard, DueCell, NextStepCell, OpenCard, OutcomeCell, OwnerCell, ReceivedCell, RfqCell } from '@/features/rfqs/board/BoardParts'
 import { StepFilter } from '@/features/rfqs/board/StepFilter'
-import { SEARCH_CAP } from '@/features/rfqs/board/api'
 import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
@@ -227,16 +226,19 @@ export function BoardPage() {
 
   const toolbar = (
     <div className="flex w-full flex-wrap items-center gap-3">
-      <SegmentedControl
-        aria-label="Whose RFQs"
-        large
-        value={owner}
-        onValueChange={v => change({ owner: v, page: null })}
-        options={[
-          { value: 'mine', label: 'Mine', count: open.isSuccess ? mineCount : undefined },
-          { value: 'all', label: 'All', count: open.isSuccess ? total : undefined },
-        ]}
-      />
+      {/* Mine or All narrows the open RFQs; the Closed list is everyone's (as before), so the switch is not drawn there. */}
+      {closedTab ? null : (
+        <SegmentedControl
+          aria-label="Whose RFQs"
+          large
+          value={owner}
+          onValueChange={v => change({ owner: v, page: null })}
+          options={[
+            { value: 'mine', label: 'Mine', count: open.isSuccess ? mineCount : undefined },
+            { value: 'all', label: 'All', count: open.isSuccess ? total : undefined },
+          ]}
+        />
+      )}
       <div className="min-w-0 flex-1">
         <StepFilter
           value={show}
@@ -256,9 +258,7 @@ export function BoardPage() {
       : `${total} open${overdue ? `, ${overdue} overdue` : ''}. Earliest due date first.`
     : 'Open RFQs, earliest due date first.'
 
-  const closedSummary = closed.isSuccess
-    ? `${pageSummary(page, PAGE_SIZE, closed.data.total)}${closed.data.capped ? `. Only the newest ${SEARCH_CAP} matches were searched: add a word to narrow it.` : ''}`
-    : undefined
+  const closedSummary = closed.isSuccess ? pageSummary(page, PAGE_SIZE, closed.data.total) : undefined
 
   return (
     <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-6 md:px-8">

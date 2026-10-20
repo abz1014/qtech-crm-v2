@@ -149,7 +149,7 @@ describe('RFQ board', () => {
     const user = userEvent.setup()
     renderBoard('engineer')
     await screen.findByText('Punjab Cement')
-    await user.click(screen.getByRole('link', { name: 'Punjab Cement' }))
+    await user.click(screen.getByRole('link', { name: /^Punjab Cement, RFQ-0178, / }))
     expect(await screen.findByTestId('where')).toHaveTextContent('/rfqs/b')
   })
 
@@ -223,43 +223,35 @@ describe('RFQ board toolbar', () => {
     expect(screen.getByTestId('where-board')).toHaveTextContent('show=closed')
   })
 
-  it('the old ?tab=closed address still lands on Closed, and stays there when the owner switch changes', async () => {
+  it('the old ?tab=closed address still lands on Closed; the owner switch is not drawn there (the Closed list is everyone\'s)', async () => {
     db()
-    const user = userEvent.setup()
-    renderBoard('admin', '/rfqs?tab=closed')
+    renderBoard('sales', '/rfqs?tab=closed')
     expect(await screen.findByRole('table', { name: 'Closed and won RFQs' })).toBeInTheDocument()
-    await user.click(screen.getByRole('radio', { name: /^Mine/ }))
-    expect(screen.getByRole('table', { name: 'Closed and won RFQs' })).toBeInTheDocument()
-    expect(screen.getByTestId('where-board')).toHaveTextContent('show=closed')
-    expect(screen.getByTestId('where-board')).not.toHaveTextContent('tab=')
+    expect(screen.queryByRole('radiogroup', { name: 'Whose RFQs' })).toBeNull()
+    expect(screen.getByRole('radio', { name: /^Closed/ })).toBeChecked()
   })
 
-  it('on Closed the filter box searches the server: number, reference, company and item text, over every closed RFQ', async () => {
-    const closedRow = state({ rfq_id: 'z', number: 12, outcome: 'closed', close_reason: 'price', companies: { name: 'Old Mill' } })
+  it('on Closed the filter box searches the server over every won and closed RFQ, one page at a time, in the order it gives', async () => {
+    const z = state({ rfq_id: 'z', number: 12, outcome: 'closed', close_reason: 'price', companies: { name: 'Old Mill' } })
+    const y = state({ rfq_id: 'y', number: 11, outcome: 'won', companies: { name: 'Older Mill' } })
     const d = installFakeDb((c: FakeCall): FakeResult => {
-      if (c.target === 'companies') return { data: [{ id: 'c9' }] }
-      if (c.target === 'rfqs' && opArgs(c, 'or')) return { data: [{ id: 'z', number: 12 }] }
-      if (c.target === 'rfqs' && opArgs(c, 'ilike')) return { data: [{ id: 'y', number: 11 }] }
+      if (c.target === 'rpc:search_closed_rfqs') return { data: [{ rfq_id: 'z', total: 40 }, { rfq_id: 'y', total: 40 }] }
       if (c.target === 'rfqs') return { data: [{ id: 'z', customer_ref: 'OLD-1', rfq_items: [{ description: 'Belimo actuator', position: 0 }] }] }
-      if (c.target === 'v_rfq_state') return opArgs(c, 'in') ? { data: [closedRow], count: 1 } : { data: OPEN }
+      // the state rows come back in another order: the page keeps the search's order
+      if (c.target === 'v_rfq_state') return opArgs(c, 'in') ? { data: [y, z], count: 2 } : { data: OPEN }
       return { data: [] }
     })
     const user = userEvent.setup()
     renderBoard('admin', '/rfqs?show=closed')
     await screen.findByRole('table', { name: 'Closed and won RFQs' })
-    await user.type(screen.getByRole('textbox', { name: 'Filter RFQs' }), 'belimo')
-    await waitFor(() => expect(d.calls.some(c => c.target === 'rfqs' && opArgs(c, 'ilike')?.[0] === 'rfq_items.description')).toBe(true))
-    const byItem = d.calls.find(c => c.target === 'rfqs' && opArgs(c, 'ilike'))!
-    expect(opArgs(byItem, 'ilike')).toEqual(['rfq_items.description', '%belimo%'])
-    expect(opArgs(byItem, 'select')?.[0]).toContain('rfq_items!inner')
-    const own = d.calls.find(c => c.target === 'rfqs' && opArgs(c, 'or'))!
-    expect(opArgs(own, 'or')?.[0]).toBe('customer_ref.ilike.%belimo%,company_id.in.(c9)')
-    // the closed page is read for exactly the matching RFQs, newest first
-    await waitFor(() => {
-      const page = d.calls.filter(c => c.target === 'v_rfq_state' && c.ops.filter(([n]) => n === 'in').length === 2).at(-1)
-      expect(page?.ops.filter(([n]) => n === 'in')[1][1]).toEqual(['rfq_id', ['z', 'y']])
-    })
+    await user.type(screen.getByRole('textbox', { name: 'Filter RFQs' }), 'belimo  gauge')
+    await waitFor(() => expect(d.calls.some(c => c.target === 'rpc:search_closed_rfqs')).toBe(true))
+    const search = d.calls.find(c => c.target === 'rpc:search_closed_rfqs')!
+    expect(opArgs(search, 'args')?.[0]).toEqual({ p_text: 'belimo  gauge', p_limit: 25, p_offset: 0 })
     expect(await screen.findByText('Belimo actuator + 3 more')).toBeInTheDocument()
+    const names = within(screen.getByRole('table', { name: 'Closed and won RFQs' })).getAllByRole('link').map(a => a.textContent)
+    expect(names).toEqual(['Old Mill', 'Older Mill'])
+    expect(screen.getByText('Showing 1 to 25 of 40')).toBeInTheDocument()
   })
 })
 

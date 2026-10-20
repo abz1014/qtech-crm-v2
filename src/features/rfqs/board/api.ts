@@ -66,7 +66,9 @@ export async function listOpenRfqs(): Promise<BoardRow[]> {
           .from('rfqs')
           .select(REF_SELECT)
           .is('closed_on', null)
+          // The first item as the RFQ page orders them: by position, then when it was added (legacy rows share position 0).
           .order('position', { referencedTable: 'rfq_items' })
+          .order('created_at', { referencedTable: 'rfq_items' })
           .limit(1, { referencedTable: 'rfq_items' })
           .order('number')
           .range(from, to) as unknown as Page<RefRow>,
@@ -79,67 +81,51 @@ export async function listOpenRfqs(): Promise<BoardRow[]> {
 export interface ClosedPage {
   rows: BoardRow[]
   total: number
-  /** A search matched more RFQs than one read takes: only the newest matches are searched. */
-  capped?: boolean
 }
 
-/** How many matching RFQs one search reads by each route (reference or company, item text). Ids travel in the address. */
-export const SEARCH_CAP = 120
-
-/**
- * The RFQs whose number, customer reference, company name or item text matches `text`, newest first, at most SEARCH_CAP.
- * Two reads in parallel: the RFQ's own fields (with the matching company ids), and the items (an inner join on rfq_items).
- */
-async function matchingRfqIds(text: string): Promise<{ ids: string[]; capped: boolean }> {
-  const q = likeText(text)
-  if (!q) return { ids: [], capped: false }
+/** The first item and the customer's reference of these RFQs (at most a page of them). */
+async function refsFor(ids: readonly string[]): Promise<Map<string, RefInfo>> {
+  if (ids.length === 0) return new Map()
   const db = requireSupabase()
-  const companyIds = unwrap(await db.from('companies').select('id').ilike('name', `%${q}%`).limit(25)).map(c => c.id)
-  const clauses = [`customer_ref.ilike.%${q}%`]
-  const num = parseRfqNumber(text)
-  if (num !== null) clauses.push(`number.eq.${num}`)
-  if (companyIds.length) clauses.push(`company_id.in.(${companyIds.join(',')})`)
-  type Hit = { id: string; number: number }
-  const [own, byItem] = await Promise.all([
-    db.from('rfqs').select('id, number').or(clauses.join(',')).order('number', { ascending: false }).limit(SEARCH_CAP),
-    db.from('rfqs').select('id, number, rfq_items!inner(id)').ilike('rfq_items.description', `%${q}%`).order('number', { ascending: false }).limit(SEARCH_CAP),
-  ])
-  const a = unwrap(own as unknown as { data: Hit[] | null; error: PgError | null }) ?? []
-  const b = unwrap(byItem as unknown as { data: Hit[] | null; error: PgError | null }) ?? []
-  const byId = new Map([...a, ...b].map(h => [h.id, Number(h.number)]))
-  const ids = [...byId.entries()].sort((x, y) => y[1] - x[1]).map(([id]) => id)
-  return { ids: ids.slice(0, SEARCH_CAP), capped: ids.length > SEARCH_CAP || a.length >= SEARCH_CAP || b.length >= SEARCH_CAP }
+  const res = await db
+    .from('rfqs')
+    .select(REF_SELECT)
+    .in('id', [...ids])
+    .order('position', { referencedTable: 'rfq_items' })
+    .order('created_at', { referencedTable: 'rfq_items' })
+    .limit(1, { referencedTable: 'rfq_items' })
+  return refInfo((unwrap(res as unknown as { data: RefRow[] | null; error: PgError | null }) ?? []) as RefRow[])
 }
 
 /**
- * One page of won and closed RFQs, newest first, with the total for the pager. With `text`, only the RFQs whose number, customer
- * reference, company or item text match: the search runs on the server, over every closed RFQ, not over the page on screen.
+ * One page of won and closed RFQs, newest first, with the total for the pager. With `text`, the search runs on the server over
+ * EVERY won and closed RFQ (search_closed_rfqs, 0070): each word must appear in the company name, their reference, the number or an
+ * item; closed and won are picked before the page is cut, and the text is a bound parameter. Then the page's rows are read from
+ * v_rfq_state, in the order the search gave.
  */
 export async function listClosedRfqs(page: number, size: number, text = ''): Promise<ClosedPage> {
   const db = requireSupabase()
   const from = page * size
-  const search = text.trim() ? await matchingRfqIds(text) : null
-  if (search && search.ids.length === 0) return { rows: [], total: 0 }
-  let query = db.from('v_rfq_state').select(STATE_SELECT, { count: 'exact' }).in('outcome', ['won', 'closed'])
-  if (search) query = query.in('rfq_id', search.ids)
-  const res = await query
+  const q = text.trim()
+  if (q) {
+    const hits = (unwrap(await db.rpc('search_closed_rfqs', { p_text: q, p_limit: size, p_offset: from })) ?? []) as { rfq_id: string; total: number }[]
+    if (hits.length === 0) return { rows: [], total: 0 }
+    const ids = hits.map(h => h.rfq_id)
+    const [states, refBy] = await Promise.all([db.from('v_rfq_state').select(STATE_SELECT).in('rfq_id', ids), refsFor(ids)])
+    const byId = new Map(((unwrap(states as unknown as { data: StateRow[] | null; error: PgError | null }) ?? []) as StateRow[]).map(s => [s.rfq_id as string, s]))
+    const rows = ids.map(id => byId.get(id)).filter((s): s is StateRow => Boolean(s))
+    return { rows: rows.map(r => toRow(r, refBy.get(r.rfq_id as string))), total: Number(hits[0].total) }
+  }
+  const res = await db
+    .from('v_rfq_state')
+    .select(STATE_SELECT, { count: 'exact' })
+    .in('outcome', ['won', 'closed'])
     .order('received_on', { ascending: false })
     .order('number', { ascending: false })
     .range(from, from + size - 1)
   const rows = unwrap(res as unknown as { data: StateRow[] | null; error: PgError | null }) ?? []
-  const ids = rows.map(r => r.rfq_id as string)
-  const refs = ids.length
-    ? (unwrap(
-        (await db
-          .from('rfqs')
-          .select(REF_SELECT)
-          .in('id', ids)
-          .order('position', { referencedTable: 'rfq_items' })
-          .limit(1, { referencedTable: 'rfq_items' })) as unknown as { data: RefRow[] | null; error: PgError | null },
-      ) ?? [])
-    : []
-  const refBy = refInfo(refs)
-  return { rows: rows.map(r => toRow(r, refBy.get(r.rfq_id as string))), total: res.count ?? rows.length, capped: search?.capped }
+  const refBy = await refsFor(rows.map(r => r.rfq_id as string))
+  return { rows: rows.map(r => toRow(r, refBy.get(r.rfq_id as string))), total: res.count ?? rows.length }
 }
 
 /** How many RFQs are won or closed, for the tab label. A count only: no rows travel. */

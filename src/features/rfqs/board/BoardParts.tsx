@@ -13,6 +13,9 @@ import { StatusBadge } from '@/ui/StatusBadge'
  * (the company, then what they asked for), and only then the code; the state is one plain "Next step", not three chips.
  */
 
+/** The row link's name: the company, the code and what was asked, so two RFQs of one customer never read alike (WCAG 2.4.4). */
+const linkName = (row: BoardRow) => `${row.companyName}, ${rfqRef(row.number)}, ${askedText(row)}`
+
 const TONE: Record<NextStepText['tone'], string> = {
   warning: 'text-tone-warning-fg',
   info: 'text-tone-info-fg',
@@ -34,7 +37,7 @@ export function RfqCell({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-0 gap-px">
       <span className="flex min-w-0 items-center gap-1.5">
-        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} className="truncate font-medium text-fg hover:underline">
+        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="truncate font-medium text-fg hover:underline">
           {row.companyName}
         </Link>
         {row.isPriority ? <Priority /> : null}
@@ -110,7 +113,7 @@ export function OpenCard({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-0 gap-1">
       <span className="flex min-w-0 items-center gap-1.5">
-        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} className="truncate font-medium text-fg hover:underline">
+        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="truncate font-medium text-fg hover:underline">
           {row.companyName}
         </Link>
         {row.isPriority ? <Priority /> : null}
@@ -146,7 +149,7 @@ export function OpenCard({ row }: { row: BoardRow }) {
 export function ClosedCard({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-0 gap-1">
-      <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} className="truncate font-medium text-fg hover:underline">
+      <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} aria-label={linkName(row)} className="truncate font-medium text-fg hover:underline">
         {row.companyName}
       </Link>
       <span className="line-clamp-2 break-words text-sm text-fg-2">{askedText(row)}</span>
