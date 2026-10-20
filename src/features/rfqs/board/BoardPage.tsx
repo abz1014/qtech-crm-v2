@@ -86,12 +86,14 @@ export function BoardPage() {
 
   const change = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params)
+    // The old address (?tab=closed, ?state=...) becomes the new one before the change is applied, so Closed stays Closed.
+    if (next.get('tab') === 'closed' && !next.has('show')) next.set('show', 'closed')
+    next.delete('tab')
+    next.delete('state')
     for (const [k, v] of Object.entries(patch)) {
       if (v === null) next.delete(k)
       else next.set(k, v)
     }
-    next.delete('tab')
-    next.delete('state')
     setParams(next, { replace: true })
   }
 

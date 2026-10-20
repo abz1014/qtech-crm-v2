@@ -223,6 +223,17 @@ describe('RFQ board toolbar', () => {
     expect(screen.getByTestId('where-board')).toHaveTextContent('show=closed')
   })
 
+  it('the old ?tab=closed address still lands on Closed, and stays there when the owner switch changes', async () => {
+    db()
+    const user = userEvent.setup()
+    renderBoard('admin', '/rfqs?tab=closed')
+    expect(await screen.findByRole('table', { name: 'Closed and won RFQs' })).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: /^Mine/ }))
+    expect(screen.getByRole('table', { name: 'Closed and won RFQs' })).toBeInTheDocument()
+    expect(screen.getByTestId('where-board')).toHaveTextContent('show=closed')
+    expect(screen.getByTestId('where-board')).not.toHaveTextContent('tab=')
+  })
+
   it('on Closed the filter box searches the server: number, reference, company and item text, over every closed RFQ', async () => {
     const closedRow = state({ rfq_id: 'z', number: 12, outcome: 'closed', close_reason: 'price', companies: { name: 'Old Mill' } })
     const d = installFakeDb((c: FakeCall): FakeResult => {
