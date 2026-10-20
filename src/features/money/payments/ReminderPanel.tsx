@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { CircleCheck, Copy, ExternalLink, History, Mail, MessageCircle } from 'lucide-react'
+import { Check, CircleCheck, ExternalLink, History, Mail, MessageCircle } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { copyToClipboard } from '@/lib/clipboard'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { MessageActions } from '@/ui/MessageActions'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
@@ -113,7 +114,9 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
   const [channel, setChannel] = useChannelPreference()
   const [busy, setBusy] = useState(false)
   // After the tap: what the strip and footer say until the undo window closes and the screen re-reads.
-  const [done, setDone] = useState<{ count: number; undo: () => Promise<void>; open: boolean } | null>(null)
+  const [done, setDone] = useState<{ count: number; undo: () => Promise<void>; open: boolean; copied: boolean } | null>(null)
+  // A WhatsApp / email link was opened: offer "Mark reminded" (opening never marks).
+  const [opened, setOpened] = useState(false)
   const timer = useRef<number | null>(null)
   useEffect(() => () => { if (timer.current !== null) window.clearTimeout(timer.current) }, [])
 
@@ -214,6 +217,25 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
 
   const refresh = () => invalidateAfter(client, 'payment.remind', {})
 
+  /** Stamps every invoice of the order, with Undo. `copied`: the copy button did it, else a link was opened. */
+  const mark = async (copied: boolean) => {
+    if (stamps.length === 0) {
+      toast({ title: copied ? 'Copied' : 'Nothing to mark', body: 'This order has no invoice to mark as reminded yet.', tone: 'neutral' })
+      return
+    }
+    try {
+      const r = await performChase({ kind: 'payment', invoiceIds: stamps.map(i => i.id), before: stamps })
+      setOpened(false)
+      setDone({ count: r.count, undo: r.undo, open: true, copied })
+      timer.current = window.setTimeout(() => {
+        setDone(d => (d ? { ...d, open: false } : d))
+        void refresh()
+      }, UNDO_SECONDS * 1000)
+    } catch (err) {
+      toast({ title: copied ? 'Copied, but it was not marked' : 'It was not marked', body: mapPgError(err).message, tone: 'danger' })
+    }
+  }
+
   const copyAndMark = async () => {
     if (busy || done) return
     setBusy(true)
@@ -224,20 +246,17 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
         toast({ title: 'Could not copy the message', body: 'Select the text and copy it by hand. Nothing was marked.', tone: 'danger' })
         return
       }
-      if (stamps.length === 0) {
-        toast({ title: 'Copied', body: 'This order has no invoice to mark as reminded yet.', tone: 'neutral' })
-        return
-      }
-      try {
-        const r = await performChase({ kind: 'payment', invoiceIds: stamps.map(i => i.id), before: stamps })
-        setDone({ count: r.count, undo: r.undo, open: true })
-        timer.current = window.setTimeout(() => {
-          setDone(d => (d ? { ...d, open: false } : d))
-          void refresh()
-        }, UNDO_SECONDS * 1000)
-      } catch (err) {
-        toast({ title: 'Copied, but it was not marked', body: mapPgError(err).message, tone: 'danger' })
-      }
+      await mark(true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const markOnly = async () => {
+    if (busy || done) return
+    setBusy(true)
+    try {
+      await mark(false)
     } finally {
       setBusy(false)
     }
@@ -295,7 +314,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
         {done ? (
           <>
             <span role="status" className="inline-flex items-center gap-1.5 text-sm font-medium text-tone-success-fg">
-              <Icon icon={CircleCheck} size="sm" /> Copied. Reminder <span className="num">{done.count}</span> recorded today.
+              <Icon icon={CircleCheck} size="sm" /> {done.copied ? 'Copied. ' : ''}Reminder <span className="num">{done.count}</span> recorded today.
             </span>
             <span className="flex-1" />
             {done.open ? (
@@ -306,9 +325,21 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
           </>
         ) : (
           <>
-            <Button variant="primary" icon={Copy} busy={busy} busyLabel="Marking" onClick={() => void copyAndMark()} className="min-h-touch md:min-h-0">
-              Copy and mark reminded
-            </Button>
+            <MessageActions
+              to={draftQ.data.contact ?? draft.contact}
+              text={draft.whatsapp.body}
+              email={{ subject: draft.email.subject, body: draft.email.body }}
+              variant={opened ? 'secondary' : 'primary'}
+              copy={{ label: 'Copy and mark reminded', onCopy: copyAndMark, busy, busyLabel: 'Marking' }}
+              onOpen={() => setOpened(true)}
+              channel={channel}
+              onChannelChange={setChannel}
+            />
+            {opened ? (
+              <Button variant="primary" icon={Check} busy={busy} busyLabel="Marking" onClick={() => void markOnly()} className="min-h-touch md:min-h-0">
+                Mark reminded
+              </Button>
+            ) : null}
             {user?.role === 'admin' ? <RecordPaymentButton orderId={row.orderId} className="min-h-touch md:min-h-0" /> : null}
             <span className="min-w-[10rem] flex-1 text-right text-sm text-fg-muted">{toneText}</span>
           </>

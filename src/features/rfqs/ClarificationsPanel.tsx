@@ -1,7 +1,8 @@
 import { useId, useMemo, useRef, useState } from 'react'
-import { Copy, Send } from 'lucide-react'
+import { Check, Send } from 'lucide-react'
 import { businessToday, toBusinessDate } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
+import { MessageActions } from '@/ui/MessageActions'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
@@ -69,6 +70,8 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
   // The copy runs before the stamp, so no mutation is pending yet while it does: a double tap must not stamp twice.
   const inFlight = useRef(false)
   const [copying, setCopying] = useState(false)
+  // Suppliers whose answers were opened in WhatsApp / email: their banner offers "Mark as told" (opening never marks).
+  const [relayOpened, setRelayOpened] = useState<string[]>([])
   const once = async (run: () => Promise<void>) => {
     if (inFlight.current) return
     inFlight.current = true
@@ -87,56 +90,70 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
       toast({ title: 'Could not copy the text', body: 'Select the text in the message and copy it by hand. The questions were not marked as asked.', tone: 'danger' })
       return
     }
+    await markAsk(group, repeat, true)
+  }
+
+  /** Stamps the questions as asked, with Undo. `copied`: the copy button did it, else a WhatsApp / email link was opened. */
+  const markAsk = async (group: ClarificationRow[], repeat: boolean, copied: boolean) => {
+    const done = copied ? (repeat ? 'Chase text copied' : 'Questions copied') : 'Marked as asked'
     const before = group.map(c => ({ id: c.id, firstAskedAt: c.firstAskedAt, lastAskedAt: c.lastAskedAt, lastAskedBy: c.lastAskedBy ?? null, askCount: c.askCount }))
     try {
       await stamp.mutateAsync(group.map(c => c.id))
       toast({
-        title: repeat ? 'Chase text copied' : 'Questions copied',
+        title: done,
         body: `${group.length} ${group.length === 1 ? 'question' : 'questions'} · marked as asked today`,
         tone: 'success',
         undo: {
           onUndo: async () => {
             await restore.mutateAsync(before)
           },
-          settledTitle: repeat ? 'Chase text copied' : 'Questions copied',
+          settledTitle: done,
           settledBody: `${rfqRef(rfq.number)} marked chased`,
           undoneTitle: 'Undone.',
           undoneBody: 'The questions are not marked as asked.',
         },
       })
     } catch (err) {
-      toast({ title: 'Copied, but not marked as asked', body: mapPgError(err).message, tone: 'danger' })
+      toast({ title: copied ? 'Copied, but not marked as asked' : 'Not marked as asked', body: mapPgError(err).message, tone: 'danger' })
     }
   }
 
-  const copyRelay = async (inq: InquiryRow, answered: ClarificationRow[]) => {
-    const text = relayText({
+  const relayFor = (inq: InquiryRow, answered: ClarificationRow[]) =>
+    relayText({
       rfqRef: rfqRef(rfq.number),
       contactName: inq.contactName,
       lines: answered.map(c => ({ question: c.question, answer: c.answer, hasPhoto: filesFor(c.id).length > 0 })),
       signature,
     })
+
+  const copyRelay = async (inq: InquiryRow, text: string) => {
     if (!(await copyToClipboard(text))) {
       toast({ title: 'Could not copy the text', body: 'Nothing was marked as told.', tone: 'danger' })
       return
     }
+    await markRelay(inq, true)
+  }
+
+  /** Stamps last_relayed_at, with Undo. `copied`: the copy button did it, else a WhatsApp / email link was opened. */
+  const markRelay = async (inq: InquiryRow, copied: boolean) => {
+    setRelayOpened(o => o.filter(id => id !== inq.id))
     const before = inq.lastRelayedAt
     try {
       await relayStamp.mutateAsync({ inquiryId: inq.id, at: new Date().toISOString() })
       toast({
-        title: 'Answers copied',
+        title: copied ? 'Answers copied' : 'Marked as told',
         body: `${inq.supplierName} · marked as told`,
         tone: 'success',
         undo: {
           onUndo: async () => {
             await relayStamp.mutateAsync({ inquiryId: inq.id, at: before })
           },
-          settledTitle: 'Answers copied',
+          settledTitle: copied ? 'Answers copied' : 'Marked as told',
           undoneTitle: 'Marked as not told',
         },
       })
     } catch (err) {
-      toast({ title: 'Copied, but not marked as told', body: mapPgError(err).message, tone: 'danger' })
+      toast({ title: copied ? 'Copied, but not marked as told' : 'Not marked as told', body: mapPgError(err).message, tone: 'danger' })
     }
   }
 
@@ -172,9 +189,21 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                 <span className="min-w-0 flex-1 basis-[10rem]">
                   <b className="font-medium">{inq.supplierName}</b> is waiting for <span className="num">{answered.length}</span> {answered.length === 1 ? 'answer' : 'answers'}.
                 </span>
-                <Button size="sm" icon={Copy} onClick={() => void once(() => copyRelay(inq, answered))} busy={copying || relayStamp.isPending} aria-label={`Copy answers for supplier ${inq.supplierName}`}>
-                  Copy answers
-                </Button>
+                <MessageActions
+                  size="sm"
+                  to={{ name: inq.contactName ?? inq.supplierName, phone: inq.contactPhone, email: inq.contactEmail }}
+                  text={relayFor(inq, answered)}
+                  email={{ subject: `${rfqRef(rfq.number)}: answers to your questions` }}
+                  copy={{ label: 'Copy answers', onCopy: () => once(() => copyRelay(inq, relayFor(inq, answered))), busy: copying || relayStamp.isPending, 'aria-label': `Copy answers for supplier ${inq.supplierName}` }}
+                  onOpen={() => setRelayOpened(o => (o.includes(inq.id) ? o : [...o, inq.id]))}
+                  channel={variant}
+                  onChannelChange={setVariant}
+                />
+                {relayOpened.includes(inq.id) ? (
+                  <Button size="sm" variant="primary" icon={Check} busy={copying || relayStamp.isPending} onClick={() => void once(() => markRelay(inq, false))} aria-label={`Mark ${inq.supplierName} as told`}>
+                    Mark as told
+                  </Button>
+                ) : null}
               </div>
             ))}
 
@@ -194,6 +223,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                 copyLabel="Copy questions for customer"
                 stamping={copying || stamp.isPending}
                 onCopy={(selected, text) => void once(() => copyAsk(selected, false, text))}
+                onMark={selected => void once(() => markAsk(selected, false, false))}
               >
                 {groups.toAsk.map(c => (
                   <QuestionRow key={c.id} rfqId={rfq.id} c={c} raisedBy={c.raisedByInquiryId ? (nameOf.get(c.raisedByInquiryId) ?? 'a supplier') : null} files={filesFor(c.id)} urls={urls.data} />
@@ -216,6 +246,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
                 copyLabel="Copy chase text"
                 stamping={copying || stamp.isPending}
                 onCopy={(selected, text) => void once(() => copyAsk(selected, true, text))}
+                onMark={selected => void once(() => markAsk(selected, true, false))}
                 dueNote={chaseDueNote(groups.asked, rfq.dueOn, today)}
               >
                 {groups.asked.map(c => (
@@ -290,6 +321,7 @@ function ChaseGroup({
   copyLabel,
   stamping,
   onCopy,
+  onMark,
   dueNote,
   children,
 }: {
@@ -306,12 +338,15 @@ function ChaseGroup({
   copyLabel: string
   stamping: boolean
   onCopy: (selected: ClarificationRow[], text: string) => void
+  /** After a WhatsApp / email link was opened: stamp the questions as asked (the separate "Mark asked" tap). */
+  onMark: (selected: ClarificationRow[]) => void
   dueNote?: string | null
   children: React.ReactNode
 }) {
   const [off, setOff] = useState<ReadonlySet<string>>(new Set())
   const [chosen, setChosen] = useState<string | null>(null)
   const [whole, setWhole] = useState(false)
+  const [opened, setOpened] = useState(false)
   const wholeId = useId()
   const selected = rows.filter(c => !off.has(c.id))
   const lastBy = rows
@@ -400,9 +435,40 @@ function ChaseGroup({
           </ChaseNote>
         ) : null}
         <div className={`grid gap-2 bg-sunken px-4 py-3 ${whole ? 'border-t' : ''}`}>
-          <Button size="sm" icon={Copy} disabled={!shown} busy={stamping} busyLabel="Marking asked" onClick={() => onCopy(selected, text)} className="w-fit">
-            {copyLabel}
-          </Button>
+          {draft ? (
+            <div className="flex flex-wrap items-start gap-2">
+              <MessageActions
+                size="sm"
+                to={rfq.contact}
+                text={draft.whatsapp.body}
+                email={{ subject: draft.email.subject, body: draft.email.body }}
+                variant={opened ? 'secondary' : 'primary'}
+                copy={{ label: copyLabel, onCopy: () => onCopy(selected, text), busy: stamping, busyLabel: 'Marking asked' }}
+                onOpen={() => setOpened(true)}
+                channel={variant}
+                onChannelChange={onVariant}
+              />
+              {opened ? (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  icon={Check}
+                  busy={stamping}
+                  busyLabel="Marking asked"
+                  onClick={() => {
+                    setOpened(false)
+                    onMark(selected)
+                  }}
+                >
+                  Mark asked
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <Button size="sm" disabled className="w-fit">
+              {copyLabel}
+            </Button>
+          )}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <MoreToggle open={whole} onToggle={() => setWhole(w => !w)} controls={wholeId} />
             <ChannelLink value={variant} onChange={onVariant} />

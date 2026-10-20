@@ -8,7 +8,6 @@ import {
   ChevronRight,
   CircleCheck,
   Clock,
-  Copy,
   ExternalLink,
   Hourglass,
   MessageCircleQuestion,
@@ -26,6 +25,7 @@ import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPrefe
 import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
+import { MessageActions } from '@/ui/MessageActions'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { DateInput } from '@/ui/form/DateInput'
 import { Icon } from '@/ui/Icon'
@@ -102,6 +102,10 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   // the person's last WhatsApp / Email choice, remembered on this device
   const [channel, setChannel] = useChannelPreference()
   const [busy, setBusy] = useState(false)
+  // A WhatsApp / email link was opened for this item: offer the separate "Mark chased" tap (opening never marks).
+  const [openedKey, setOpenedKey] = useState<string | null>(null)
+  const opened = openedKey === item.key
+  const [sentKey, setSentKey] = useState<string | null>(null)
   const [full, setFull] = useState(false)
   const [again, setAgain] = useState(false)
   const isRfq = Boolean(item.rfqId)
@@ -164,6 +168,50 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
     return null
   }
 
+  /** Stamps the chase with Undo. `copied`: the message was just copied (the copy button), else a link was opened. */
+  const mark = async (copied: boolean) => {
+    const lead = copied ? 'Copied. ' : ''
+    const s = spec()
+    if (!s) {
+      toast({ title: copied ? 'Copied' : 'Nothing to mark', body: item.rule === 'payment_overdue' ? 'This order has no invoice to mark as reminded yet.' : copied ? 'Nothing to mark.' : 'There is nothing on this item to mark.', tone: 'neutral' })
+      return
+    }
+    try {
+      const r = await performChase(s)
+      rememberChase(item.key, { channel, at: Date.now(), text })
+      setAgain(false)
+      setOpenedKey(null)
+      setSentKey(copied ? null : item.key)
+      onCopied(item.key)
+      toast({
+        title: `${lead}${item.ref} marked ${verb}.`,
+        body: item.party,
+        tone: 'success',
+        undo: {
+          seconds: 10,
+          onUndo: async () => {
+            try {
+              await r.undo()
+            } finally {
+              forgetChase(item.key)
+              onReleased(item.key)
+              void refresh()
+            }
+          },
+          onSettle: () => {
+            void refresh().finally(() => onReleased(item.key))
+          },
+          settledTitle: `${item.ref} marked ${verb}`,
+          settledBody: 'It moves to Waiting and comes back on its date.',
+          undoneTitle: 'Undone.',
+          undoneBody: `${item.ref} is not marked ${verb}.`,
+        },
+      })
+    } catch (err) {
+      toast({ title: copied ? 'Copied, but it was not marked' : 'It was not marked', body: mapPgError(err).message, tone: 'danger' })
+    }
+  }
+
   const copyAndMark = async () => {
     if (!draft || busy) return
     setBusy(true)
@@ -174,43 +222,17 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
         toast({ title: 'Could not copy the message', body: 'Select the text in the draft and copy it by hand. Nothing was marked.', tone: 'danger' })
         return
       }
-      const s = spec()
-      if (!s) {
-        toast({ title: 'Copied', body: item.rule === 'payment_overdue' ? 'This order has no invoice to mark as reminded yet.' : 'Nothing to mark.', tone: 'neutral' })
-        return
-      }
-      try {
-        const r = await performChase(s)
-        rememberChase(item.key, { channel, at: Date.now(), text })
-        setAgain(false)
-        onCopied(item.key)
-        toast({
-          title: `Copied. ${item.ref} marked ${verb}.`,
-          body: item.party,
-          tone: 'success',
-          undo: {
-            seconds: 10,
-            onUndo: async () => {
-              try {
-                await r.undo()
-              } finally {
-                forgetChase(item.key)
-                onReleased(item.key)
-                void refresh()
-              }
-            },
-            onSettle: () => {
-              void refresh().finally(() => onReleased(item.key))
-            },
-            settledTitle: `${item.ref} marked ${verb}`,
-            settledBody: 'It moves to Waiting and comes back on its date.',
-            undoneTitle: 'Undone.',
-            undoneBody: `${item.ref} is not marked ${verb}.`,
-          },
-        })
-      } catch (err) {
-        toast({ title: 'Copied, but it was not marked', body: mapPgError(err).message, tone: 'danger' })
-      }
+      await mark(true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const markOnly = async () => {
+    if (!draft || busy) return
+    setBusy(true)
+    try {
+      await mark(false)
     } finally {
       setBusy(false)
     }
@@ -324,7 +346,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
         <div className="grid overflow-hidden rounded border bg-surface">
           {wasCopied ? (
             <p role="status" className="flex items-center gap-2 bg-tone-success-bg px-4 py-3 text-sm text-tone-success-fg">
-              <Icon icon={CircleCheck} size="sm" /> Copied. Paste it into {channel === 'email' ? 'your email' : 'WhatsApp'}.
+              <Icon icon={CircleCheck} size="sm" /> {sentKey === item.key ? `Marked ${verb}.` : `Copied. Paste it into ${channel === 'email' ? 'your email' : 'WhatsApp'}.`}
             </p>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
@@ -345,9 +367,21 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           )}
           {!compact && !wasCopied ? (
             <div className="flex flex-wrap items-center gap-2 border-b bg-sunken px-4 py-3" data-testid="pane-actions">
-              <Button variant="primary" icon={Copy} busy={busy} busyLabel="Marking" onClick={() => void copyAndMark()}>
-                {copyLabel}
-              </Button>
+              <MessageActions
+                to={draft.contact}
+                text={draft.whatsapp.body}
+                email={{ subject: draft.email.subject, body: draft.email.body }}
+                variant={opened ? 'secondary' : 'primary'}
+                copy={{ label: copyLabel, onCopy: copyAndMark, busy, busyLabel: 'Marking' }}
+                onOpen={() => setOpenedKey(item.key)}
+                channel={channel}
+                onChannelChange={setChannel}
+              />
+              {opened ? (
+                <Button variant="primary" icon={Check} busy={busy} busyLabel="Marking" onClick={() => void markOnly()}>
+                  Mark {verb}
+                </Button>
+              ) : null}
               <Button icon={ExternalLink} onClick={() => navigate(item.href)}>
                 Open {item.ref}
               </Button>
@@ -386,11 +420,27 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               </div>
             )
           ) : compact ? (
-            <div className="flex items-center gap-2 border-t bg-sunken px-4 py-3">
-              <Button variant="primary" icon={Copy} busy={busy} busyLabel="Marking" onClick={() => void copyAndMark()} className={cn('flex-1', touch)}>
-                {copyLabel}
-              </Button>
-              <SnoozeMenu item={item} today={today} iconOnly />
+            <div className="grid gap-2 border-t bg-sunken px-4 py-3">
+              <MessageActions
+                to={draft.contact}
+                text={draft.whatsapp.body}
+                email={{ subject: draft.email.subject, body: draft.email.body }}
+                variant={opened ? 'secondary' : 'primary'}
+                size="touch"
+                fill
+                copy={{ label: copyLabel, onCopy: copyAndMark, busy, busyLabel: 'Marking' }}
+                onOpen={() => setOpenedKey(item.key)}
+                channel={channel}
+                onChannelChange={setChannel}
+              />
+              <div className="flex items-center gap-2">
+                {opened ? (
+                  <Button variant="primary" icon={Check} busy={busy} busyLabel="Marking" onClick={() => void markOnly()} className={cn('flex-1', touch)}>
+                    Mark {verb}
+                  </Button>
+                ) : null}
+                <SnoozeMenu item={item} today={today} iconOnly />
+              </div>
             </div>
           ) : null}
         </div>

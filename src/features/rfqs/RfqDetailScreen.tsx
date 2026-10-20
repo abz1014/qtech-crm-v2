@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { CloudOff, FileQuestion, RefreshCw } from 'lucide-react'
+import { CloudOff, FileQuestion, RefreshCw, X } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { recordRfqVisit } from '@/lib/capture/recents'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
+import { MessageActions } from '@/ui/MessageActions'
+import { useChannelPreference } from '@/lib/useChannelPreference'
+import { rfqRef } from '@/lib/refs'
 import { Skeleton } from '@/ui/Skeleton'
 import { useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
@@ -24,7 +27,7 @@ import { SuppliersAsked } from '@/features/rfqs/SuppliersAsked'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
 import { FloatDialog, SuppliersToAskCard } from '@/features/rfqs/SuppliersToAsk'
 import { withShortlist } from '@/features/rfqs/askList'
-import { useAskSuppliers } from '@/features/rfqs/useAskSuppliers'
+import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/useAskSuppliers'
 import { QuotationsPanel } from '@/features/quotations/QuotationsPanel'
 import { ClarificationsPanel } from '@/features/rfqs/ClarificationsPanel'
 import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
@@ -186,6 +189,7 @@ function Loaded({
   const [floating, setFloating] = useState(false)
   const today = businessToday()
   const { ask, busy: asking } = useAskSuppliers(rfq, inquiryList)
+  const [lastAsk, clearLastAsk] = useLastAsk(rfq.id)
 
   // Who could be asked: every supplier on file except the customer and those already asked, with the reason for each (R03).
   const candidates = useSupplierCandidates(true)
@@ -337,7 +341,9 @@ function Loaded({
             </DetailPanel>
           ) : loading ? (
             <Skeleton className="h-40 w-full" />
-          ) : nobodyAsked ? (
+          ) : null}
+          {lastAsk && !loadError && !loading ? <SendToEachCard rfq={rfq} ask={lastAsk} inquiries={inquiryList} onClose={clearLastAsk} /> : null}
+          {loadError || loading ? null : nobodyAsked ? (
             <SuppliersToAskCard
               suggestions={askList}
               items={itemList}
@@ -362,10 +368,48 @@ function Loaded({
           onClose={() => setFloating(false)}
           onAsk={ticked => {
             const needing = itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id)))
-            void askFrom(ticked, needing.length > 0 ? needing : itemList).then(ok => ok && setFloating(false))
+            void askFrom(ticked, needing.length > 0 ? needing : itemList).then(r => r.ok && setFloating(false))
           }}
         />
       ) : null}
     </Shell>
+  )
+}
+
+/**
+ * After an ask: the one enquiry (copied already, the same for every supplier) with Open in WhatsApp / Open in email for
+ * each supplier asked, so nobody pastes it N times by hand. Nothing to mark: the ask was recorded when it was copied.
+ */
+function SendToEachCard({ rfq, ask, inquiries, onClose }: { rfq: RfqHeader; ask: AskResult; inquiries: readonly InquiryRow[]; onClose: () => void }) {
+  const [channel, setChannel] = useChannelPreference()
+  const asked = ask.supplierIds.map(id => inquiries.find(i => i.supplierId === id)).filter((i): i is InquiryRow => Boolean(i))
+  if (asked.length === 0) return null
+  return (
+    <DetailPanel
+      title="Send it to each supplier"
+      meta={<span className="text-sm text-fg-muted">Copied already. Open each chat, or paste it.</span>}
+      actions={
+        <Button size="sm" variant="quiet" icon={X} onClick={onClose} aria-label="Close send to each supplier">
+          Done
+        </Button>
+      }
+    >
+      <ul className="grid divide-y" data-slot="send-to-each">
+        {asked.map(i => (
+          <li key={i.id} className="grid gap-2 px-5 py-3">
+            <b className="text-sm font-medium">{i.supplierName}</b>
+            <MessageActions
+              size="sm"
+              to={{ name: i.contactName ?? i.supplierName, phone: i.contactPhone, email: i.contactEmail }}
+              text={ask.text}
+              email={{ subject: `Enquiry ${rfqRef(rfq.number)}` }}
+              copy={false}
+              channel={channel}
+              onChannelChange={setChannel}
+            />
+          </li>
+        ))}
+      </ul>
+    </DetailPanel>
   )
 }

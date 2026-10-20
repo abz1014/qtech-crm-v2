@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from '@/ui/Icon'
-import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, Copy, Ellipsis, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, RotateCcw, Scale, Truck, Wrench, type LucideIcon } from 'lucide-react'
+import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, Ellipsis, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, RotateCcw, Scale, Truck, Wrench, type LucideIcon } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay, formatShortDate } from '@/lib/formatDay'
@@ -12,6 +12,7 @@ import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
+import { MessageActions } from '@/ui/MessageActions'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Radio, RadioGroup } from '@/ui/form/Radio'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
@@ -638,16 +639,19 @@ function CancelDialog({
               {sent.map(po => (
                 <li key={po.ref} className="flex flex-wrap items-center justify-between gap-2">
                   <span>{sentPoSentence(po)}</span>
-                  <Button
+                  <MessageActions
                     size="sm"
-                    icon={Copy}
-                    onClick={async () => {
-                      const ok = await copyToClipboard(cancellationMessage(po, COMPANY_NAME))
-                      toast(ok ? { title: 'Cancellation message copied', body: `For ${po.supplierName}, ${po.ref}.` } : { title: 'Could not copy the message', body: 'Nothing was changed.', tone: 'danger' })
+                    to={po.contact ?? { name: po.supplierName }}
+                    text={cancellationMessage(po, COMPANY_NAME)}
+                    email={{ subject: `${po.ref} cancelled` }}
+                    copy={{
+                      label: 'Copy cancellation message',
+                      onCopy: async () => {
+                        const ok = await copyToClipboard(cancellationMessage(po, COMPANY_NAME))
+                        toast(ok ? { title: 'Cancellation message copied', body: `For ${po.supplierName}, ${po.ref}.` } : { title: 'Could not copy the message', body: 'Nothing was changed.', tone: 'danger' })
+                      },
                     }}
-                  >
-                    Copy cancellation message
-                  </Button>
+                  />
                 </li>
               ))}
             </ul>
