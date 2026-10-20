@@ -67,3 +67,5 @@ perf: # weight=260 (Lighthouse, 7 screens x 2; installs lighthouse@12.8.2)
   - 'e2e/perf/**'
 journeys: # weight=120 (installs poppler; also runs on every change under src/** through `shared`)
   - 'e2e/journeys/**'
+a11y: # weight=300 (axe strict, zoom bands, Tab sweeps, live regions, shortcuts; also runs on every change under src/** through `shared`)
+  - 'e2e/a11y/**'

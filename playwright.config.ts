@@ -105,10 +105,16 @@ import { defineConfig, devices } from '@playwright/test'
  *    each asserting the FE-2 interaction counts at every step. Each role signs in once and the saved session is reused. Run on every push that
  *    touches src/** (the regression net), or when e2e/journeys/** changes:
  *      E2E_SUITE=journeys REVIEW_DIR=review-shots npx playwright test --project=journeys
+ *
+ *  - a11y: the cross-cutting accessibility suite (e2e/a11y): strict axe on the screens and overlays no feature suite covers, the
+ *    owner's zoom bands (683x330, 780x600, 1093x560, 320x256), a Tab sweep on every main screen, focus after actions, live regions
+ *    and single-key shortcuts. Signed in once as the admin. Its axe runs strict (A11Y_STRICT=1, set by the suite itself), which also
+ *    fails on the reliably-real "needs review" results (e2e/support/axe.ts). Known failures are test.fail() with a BUG id:
+ *      E2E_SUITE=a11y npx playwright test --project=a11y
  */
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -348,6 +354,23 @@ export default defineConfig({
         baseURL: `http://127.0.0.1:${AUTH_PORT}`,
         viewport: { width: 1440, height: 900 },
         // Enquiry, chase and reply texts are copied to the clipboard and read back, and a reply is pasted from it, as a person would.
+        permissions: ['clipboard-read', 'clipboard-write'],
+        screenshot: 'only-on-failure',
+      },
+    },
+    {
+      name: 'a11y',
+      testMatch: /a11y\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      timeout: 90_000,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://127.0.0.1:${AUTH_PORT}`,
+        viewport: { width: 1440, height: 900 },
+        // Animations off, as axe and the focus checks need settled styles (the design system honours it).
+        reducedMotion: 'reduce',
+        // The 1-tap chase copies its message to the clipboard.
         permissions: ['clipboard-read', 'clipboard-write'],
         screenshot: 'only-on-failure',
       },
