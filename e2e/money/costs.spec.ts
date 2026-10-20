@@ -219,7 +219,7 @@ test.describe('who sees money', () => {
         if (MONEY.test(r.url())) seen.push(`${r.method()} ${r.url()}`)
       })
       await openAs(page, role, `/orders/${o.id}`)
-      await expect(page.getByText(ordRef(o.number)).first()).toBeVisible()
+      await expect(page.locator('#main').getByText(ordRef(o.number)).first()).toBeVisible()
       await page.waitForLoadState('networkidle')
       await expect(page.getByRole('region', { name: 'Margin' })).toHaveCount(0)
       for (const path of ['/money/margins', '/money/exceptions']) {

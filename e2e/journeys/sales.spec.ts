@@ -514,7 +514,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   // ---- 12. Admin records the payment ---------------------------------------------------------------------------------------------------------
   await test.step('(admin) record the payment in full: 2 taps, the amount is the balance due', async () => {
     const admin = await openPage(adminCtx, `/orders/${order.id}`)
-    await expect(admin.getByText(ordRef(order.number)).first()).toBeVisible()
+    await expect(admin.locator('#main').getByText(ordRef(order.number)).first()).toBeVisible()
     await resetCount(admin)
     await admin.getByRole('button', { name: 'Record payment' }).click()
     const d = admin.getByRole('dialog', { name: 'Record payment' })

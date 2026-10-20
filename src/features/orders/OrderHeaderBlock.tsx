@@ -476,7 +476,7 @@ function EngineerJob({ order, engineers, primary, legs, today }: { order: OrderH
           <span className="flex items-center gap-[6px] text-sm text-fg-muted">
             <Icon icon={Package} size="sm" /> Goods
           </span>
-          {order.state?.goods ? <StatusBadge dimension="goods" value={order.state.goods} /> : null}
+          {order.state?.goods && order.state.goods !== 'n_a' ? <StatusBadge dimension="goods" value={order.state.goods} /> : null}
           <span className="text-sm text-fg-2">{goodsLine(legs, today)}</span>
         </div>
       </div>
