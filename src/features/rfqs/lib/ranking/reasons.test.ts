@@ -13,6 +13,7 @@ import {
   reliabilityBand,
   sellNote,
   unrankedReason,
+  whyNotCheapest,
   type Evidence,
   type RankRow,
 } from './reasons'
@@ -258,5 +259,24 @@ describe('the item header', () => {
     expect(sellNote([row()], true)).toEqual({ kind: 'quoted', amount: 'PKR 612,000', text: 'each, quoted' })
     expect(sellNote([row({ sell_source: 'last_sold', sell_order_number: 27 })], true)?.text).toBe('each, last sold on ORD-0027')
     expect(sellNote([row({ sell_unit_net: null, sell_source: 'none' })], true)?.kind).toBe('none')
+  })
+})
+
+describe('why the recommended supplier is not the cheapest (the tie-breaker rank_item_quotes used, 0049)', () => {
+  const rec = (o: Partial<RankRow> = {}) => row({ pct_above_best: 1.04, reliability_band: 1, orders_count: 2, last_order_on: '2026-09-01', ...o })
+  const low = (o: Partial<RankRow> = {}) => row({ pct_above_best: 0, reliability_band: 1, orders_count: 2, last_order_on: '2026-09-01', ...o })
+  it('the better delivery record first', () => {
+    expect(whyNotCheapest(rec(), low({ reliability_band: 2 }))).toBe('is only 1.0% dearer and has the better delivery record')
+  })
+  it('equal records: more orders with us', () => {
+    expect(whyNotCheapest(rec({ orders_count: 6 }), low({ orders_count: 1 }))).toBe('is only 1.0% dearer and has the same delivery record and more orders with us (6 to 1)')
+  })
+  it('equal records and orders: the more recent order', () => {
+    expect(whyNotCheapest(rec({ last_order_on: '2026-10-02' }), low({ last_order_on: null }))).toBe(
+      'is only 1.0% dearer and has the same delivery record and order count, and we ordered from them more recently (2 Oct 2026)',
+    )
+  })
+  it('a gap that rounds to 0.0% reads "costs about the same"; nothing to tell them apart reads "within 2%"', () => {
+    expect(whyNotCheapest(rec({ pct_above_best: 0.03 }), low())).toBe('costs about the same and is within 2% of it')
   })
 })

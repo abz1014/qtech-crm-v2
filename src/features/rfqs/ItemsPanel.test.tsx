@@ -133,7 +133,7 @@ describe('the supplier comparison', () => {
       [a, b],
       new Map([
         ['lb', rank({ quote_line_id: 'lb', rank: 1, pct_above_best: 1.28 })],
-        ['la', rank({ quote_line_id: 'la', rank: 2, pct_above_best: 0, deliveries: 1, on_time: 0, late: 1 })],
+        ['la', rank({ quote_line_id: 'la', rank: 2, pct_above_best: 0, deliveries: 1, on_time: 0, late: 1, reliability_band: 3 })],
       ]),
     )
     const [first, second] = rows()
@@ -144,6 +144,21 @@ describe('the supplier comparison', () => {
     expect(screen.queryByText('Lowest price')).toBeNull()
     const cheapest = screen.getByText(/^Cheapest:/).closest('[data-cheapest]') as HTMLElement
     expect(cheapest).toHaveTextContent('Cheapest: Lahore Flow Systems. ABC Traders is only 1.3% dearer and has the better delivery record.')
+  })
+
+  it('with the same delivery record, the Cheapest line gives the reason the database used: more orders with us', () => {
+    const a = inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)])
+    const b = inquiry('b', 'ABC Traders', [line('lb', 'b', 101)])
+    renderPanel(
+      [a, b],
+      new Map([
+        ['lb', rank({ quote_line_id: 'lb', rank: 1, pct_above_best: 1.0, reliability_band: 2, orders_count: 5 })],
+        ['la', rank({ quote_line_id: 'la', rank: 2, pct_above_best: 0, reliability_band: 2, orders_count: 1 })],
+      ]),
+    )
+    const cheapest = screen.getByText(/^Cheapest:/).closest('[data-cheapest]') as HTMLElement
+    expect(cheapest).toHaveTextContent('Cheapest: Lahore Flow Systems. ABC Traders is only 1.0% dearer and has the same delivery record and more orders with us (5 to 1).')
+    expect(cheapest).not.toHaveTextContent('better delivery record')
   })
 
   it('shows no Cheapest line when the recommended supplier is the cheapest', () => {
@@ -203,6 +218,6 @@ describe('the supplier comparison', () => {
     const user = userEvent.setup()
     renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)])])
     await user.click(screen.getByRole('button', { name: 'How are prices compared?' }))
-    expect(await screen.findByText(/within 2% of it and has the better delivery record/)).toBeInTheDocument()
+    expect(await screen.findByText(/unless other suppliers are within 2% of it\. Among those, the better delivery record wins; if the records are the same, the supplier we have ordered from more often/)).toBeInTheDocument()
   })
 })

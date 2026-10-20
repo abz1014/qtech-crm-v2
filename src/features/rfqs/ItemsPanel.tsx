@@ -19,7 +19,7 @@ import { InfoTip } from '@/ui/InfoTip'
 import { focusReplyInput } from '@/features/rfqs/replyFocus'
 import { buildRateBar } from '@/features/fx/ratesModel'
 import { ReasonBlock } from '@/features/rfqs/ranking/RankParts'
-import { bandSizeOf, evidenceOf, pctText, reasonsFor, sellNote, type RankRow } from '@/features/rfqs/lib/ranking/reasons'
+import { bandSizeOf, evidenceOf, reasonsFor, sellNote, whyNotCheapest, type RankRow } from '@/features/rfqs/lib/ranking/reasons'
 import { lastPriceChip, type MemoryRow } from '@/lib/memory'
 import type { FxLatestRow, InquiryRow, QuoteLineRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useRemoveQuoteLine, useRestoreQuoteLine, useSetItemDecline } from '@/features/rfqs/hooks'
@@ -232,7 +232,8 @@ function HowCompared() {
     <InfoTip label="How are prices compared?">
       <p>Every price is turned into PKR at today&apos;s rate, and the list for each item starts with the best.</p>
       <p className="mt-2">
-        The cheapest is recommended, unless another supplier is within 2% of it and has the better delivery record (then the order history decides).
+        The cheapest is recommended, unless other suppliers are within 2% of it. Among those, the better delivery record wins; if the records
+        are the same, the supplier we have ordered from more often; then the one we ordered from most recently; then the lower price.
       </p>
       <p className="mt-2">A price with no current rate is shown but not compared. Add the rate in Exchange rates and the list sorts itself.</p>
     </InfoTip>
@@ -505,8 +506,9 @@ export function ItemsPanel({
                           <span>
                             Cheapest: <b className="font-semibold text-fg">{cheaperElsewhere.inquiry.supplierName}</b>
                             {(() => {
-                              const pct = rankOf(recommended.line)?.pct_above_best
-                              return pct !== null && pct !== undefined && pct > 0 ? `. ${recommended.inquiry.supplierName} is only ${pctText(pct)} dearer and has the better delivery record.` : '.'
+                              const rec = rankOf(recommended.line)
+                              const low = rankOf(cheaperElsewhere.line)
+                              return rec && low ? `. ${recommended.inquiry.supplierName} ${whyNotCheapest(rec, low)}.` : '.'
                             })()}
                           </span>
                         </li>

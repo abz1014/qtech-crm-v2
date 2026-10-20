@@ -408,6 +408,30 @@ export function reasonsFor(row: RankRow, ctx: ReasonContext): ReasonSet {
   return { short, full }
 }
 
+/**
+ * The "Cheapest: X. Y is only 1.2% dearer and ..." line, in the words of the tie-breaker rank_item_quotes really used (0049): inside
+ * the 2% band the better delivery record (reliability_band, lower is better) wins, then more orders with us, then the more recent
+ * order, then the price. `recommended` is rank 1; `cheapest` is the lowest PKR price of the item.
+ */
+export function whyNotCheapest(
+  recommended: Pick<RankRow, 'pct_above_best' | 'reliability_band' | 'orders_count' | 'last_order_on'>,
+  cheapest: Pick<RankRow, 'reliability_band' | 'orders_count' | 'last_order_on'>,
+): string {
+  const pct = recommended.pct_above_best ?? 0
+  const gap = Math.round(pct * 10) / 10 > 0 ? `is only ${pctText(pct)} dearer` : 'costs about the same'
+  const band = (r: Pick<RankRow, 'reliability_band'>) => r.reliability_band ?? 2
+  const orders = (r: Pick<RankRow, 'orders_count'>) => r.orders_count ?? 0
+  let why: string
+  if (band(recommended) < band(cheapest)) why = 'has the better delivery record'
+  else if (band(recommended) === band(cheapest) && orders(recommended) > orders(cheapest)) {
+    const n = orders(recommended)
+    why = `has the same delivery record and more orders with us (${n} to ${orders(cheapest)})`
+  } else if (band(recommended) === band(cheapest) && orders(recommended) === orders(cheapest) && (recommended.last_order_on ?? '') > (cheapest.last_order_on ?? '')) {
+    why = `has the same delivery record and order count, and we ordered from them more recently (${dmy(recommended.last_order_on)})`
+  } else why = 'is within 2% of it'
+  return `${gap} and ${why}`
+}
+
 /** How many comparable lines of one item sit inside the 2% band (the band line is only worth printing from 2). */
 export function bandSizeOf(rows: readonly Pick<RankRow, 'comparable' | 'within_band'>[]): number {
   return rows.filter(r => r.comparable && r.within_band === true).length
