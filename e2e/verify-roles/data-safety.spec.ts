@@ -37,7 +37,17 @@ async function openCapture(page: Page): Promise<void> {
   await expect(captureSheet(page)).toBeVisible({ timeout: 10_000 })
   const n = await captureBox(page).count()
   if (n === 0) test.info().annotations.push({ type: 'Capture sheet without a text box', description: (await captureSheet(page).innerText()).slice(0, 600) })
-  await expect(captureBox(page), 'the Capture sheet has its text box').toBeVisible({ timeout: 10_000 })
+}
+
+/** A paste outside any text field: CaptureProvider opens the sheet with that text (src/app/capture/CaptureProvider.tsx). */
+async function pasteIntoCapture(page: Page, text: string): Promise<void> {
+  await page.evaluate(t => {
+    const dt = new DataTransfer()
+    dt.setData('text/plain', t)
+    document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+  }, text)
+  await expect(captureSheet(page)).toBeVisible({ timeout: 10_000 })
+  await expect.poll(() => captureBox(page).inputValue()).toContain(text.slice(0, 20))
 }
 
 const rows = async <T>(path: string): Promise<T[]> => {
@@ -249,8 +259,7 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
   await page.goto('/money/gst-register')
   await page.locator('#main').waitFor()
   // A Capture draft (kept in IndexedDB while signed in).
-  await openCapture(page)
-  await captureBox(page).fill(secret)
+  await pasteIntoCapture(page, secret)
   await page.waitForTimeout(800)
   expect((await storageState(page)).captures, 'the draft is kept on the device while signed in').toBeGreaterThan(0)
   await page.keyboard.press('Escape')
@@ -284,8 +293,7 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
 test('a session that ends without Sign out (expired or revoked token) does not hand the Capture draft to the next person', async ({ page }) => {
   const secret = `${world.tag} expired-session capture note`
   await openAs(page, 'admin', '/today')
-  await openCapture(page)
-  await captureBox(page).fill(secret)
+  await pasteIntoCapture(page, secret)
   await page.waitForTimeout(800)
   await page.keyboard.press('Escape')
   expect((await storageState(page)).captures, 'precondition: the draft is kept on the device').toBeGreaterThan(0)
