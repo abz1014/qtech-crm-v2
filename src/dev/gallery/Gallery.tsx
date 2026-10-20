@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Bell, Download, Plus, Search, Trash2 } from 'lucide-react'
 import { Panel, Row, Section } from '@/dev/gallery/layout'
 import { ComboScene, CompanyForm, Controls, Feedback, Files, Misc, Overlays, SCENES, SceneView } from '@/dev/gallery/scenes'
-import { DateRailSection, EmptyCards, MorePrimitivesSection, TooltipSection } from '@/dev/gallery/primitives'
+import { DateRailSection, EmptyCards, MorePrimitivesSection, TextSizeSection, TooltipSection } from '@/dev/gallery/primitives'
 import { StatusMoneyTableSections } from '@/dev/gallery/tables'
 import { InfoTipSection, PhoneBarSection } from '@/dev/gallery/uxPrimitives'
 import { Avatar } from '@/ui/Avatar'
@@ -25,6 +25,7 @@ const ICON_SIZES: IconSize[] = ['chip', 'sm', 'md', 'lg', 'xl']
 
 const NAV = [
   ['foundations', 'Foundations'],
+  ['textsize', 'Text size'],
   ['forms', 'Forms'],
   ['navigation', 'Navigation'],
   ['feedback', 'Feedback'],
@@ -45,7 +46,7 @@ function Foundations() {
   return (
     <Section id="foundations" title="Foundations" note="Icon, Button, Kbd, Avatar, Tag, CountPill, ProgressSegments, Skeleton.">
       <div className="rounded border bg-surface px-5">
-        <Row title="Icon" note="Sizes 12, 14, 16, 20, 24. Decorative by default.">
+        <Row title="Icon" note="Sizes 12, 14, 16, 20, 24. Inside a status chip the glyph is 16 (12 with smaller text). Decorative by default.">
           {ICON_SIZES.map(s => (
             <Icon key={s} icon={Bell} size={s} />
           ))}
@@ -65,7 +66,7 @@ function Foundations() {
             Save
           </Button>
         </Row>
-        <Row title="Button, sizes" note="40, 32, 28 and the 44 touch size. Icon-only needs an aria-label.">
+        <Row title="Button, sizes" note="44, 40, 36 and the 44 touch size (40, 32, 28 with smaller text). Icon-only needs an aria-label.">
           <Button size="lg" icon={Plus}>
             New RFQ
           </Button>
@@ -84,7 +85,7 @@ function Foundations() {
           <Kbd>Esc</Kbd>
           <Kbd>Enter</Kbd>
         </Row>
-        <Row title="Avatar" note="28 in lists and the top bar, 22 inside key figures.">
+        <Row title="Avatar" note="28 in lists and the top bar, 24 inside key figures.">
           <Avatar name="Asad Saleem" />
           <Avatar name="Waqar Anwar" size="sm" />
         </Row>
@@ -171,7 +172,7 @@ function FeedbackSection() {
         <Banner tone="danger" title="Couldn’t save the answer">
           Nothing was changed. Check your connection and try again.
         </Banner>
-        <Banner tone="success" title="All 4 suppliers marked as floated">
+        <Banner tone="success" title="Sent to 4 suppliers">
           Sent today. You can undo for 10 seconds.
         </Banner>
       </div>
@@ -179,7 +180,7 @@ function FeedbackSection() {
       <EmptyCards />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Panel title="EmptyState: goal (in a container)">
-          <EmptyState mood="goal" title="Every bid is in" actions={<Button variant="primary">New RFQ</Button>}>
+          <EmptyState mood="goal" title="Every quotation is sent" actions={<Button variant="primary">New RFQ</Button>}>
             Nothing is open and nothing is due in the next 5 days.
           </EmptyState>
         </Panel>
@@ -262,6 +263,7 @@ export default function Gallery() {
         </nav>
       </header>
       <Foundations />
+      <TextSizeSection />
       <Forms />
       <Section id="navigation" title="Navigation" note="SegmentedControl, Tabs, Breadcrumb.">
         <Misc />

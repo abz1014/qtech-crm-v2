@@ -32,7 +32,7 @@ export function TableFilter({
     } else e.currentTarget.blur()
   }
   return (
-    <div className={cn('relative w-[220px] max-sm:w-full', className)}>
+    <div className={cn('relative w-[260px] max-sm:w-full', className)}>
       <Icon icon={Search} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
       <TextField
         data-table-filter=""

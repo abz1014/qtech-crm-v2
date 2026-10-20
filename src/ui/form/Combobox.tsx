@@ -196,7 +196,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
           role="listbox"
           aria-label="Matches"
           onMouseDown={e => e.preventDefault()}
-          className="max-h-[280px] animate-rise-4 overflow-y-auto rounded bg-surface p-1 shadow-pop"
+          className="max-h-[320px] animate-rise-4 overflow-y-auto rounded bg-surface p-1 shadow-pop"
         >
           {matches.map((o, i) => (
             <li

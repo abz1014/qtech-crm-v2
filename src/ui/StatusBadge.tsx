@@ -7,6 +7,9 @@ import type { StatusDimension } from '@/lib/status'
  * StatusBadge (D08 section 02): shape + colour + label, never colour alone. The
  * glyph and label come from the registry (src/lib/status.ts); the colours come
  * from the data-status map in tokens.css through --status-fg / --status-bg.
+ * The glyph is 16px (12 with smaller text) and the label medium weight, so neutral,
+ * info and success chips differ by shape and word, not by colour alone. Height is
+ * --chip-h (24, or 20) and grows with the text rather than clipping it.
  */
 interface StatusBadgeProps {
   dimension: StatusDimension
@@ -29,12 +32,12 @@ export function StatusBadge({ dimension, value, label, detail, className }: Stat
         borderColor: 'color-mix(in srgb, var(--status-fg, var(--tone-neutral-fg)) 24%, transparent)',
       }}
       className={cn(
-        'inline-flex h-5 items-center gap-[5px] whitespace-nowrap rounded border bg-status-bg pl-[6px] pr-2 text-xs font-medium leading-none text-status-fg',
+        'inline-flex min-h-chip items-center gap-[6px] whitespace-nowrap rounded border bg-status-bg py-px pl-[6px] pr-2 text-xs font-medium leading-none text-status-fg',
         !s && 'bg-tone-neutral-bg text-tone-neutral-fg',
         className,
       )}
     >
-      {s ? <Icon icon={s.icon} size="chip" /> : null}
+      {s ? <Icon icon={s.icon} size="chip" className="size-icon-chip" /> : null}
       {label ?? s?.label ?? 'Unknown'}
       {detail ? <span className="num font-regular">{detail}</span> : null}
     </span>

@@ -10,9 +10,12 @@ export interface FieldContextValue {
 export const FieldContext = createContext<FieldContextValue | null>(null)
 export const useFieldContext = () => useContext(FieldContext)
 
-/** Shared control chrome: 32 tall (40 on touch), hairline input edge, focus ring from the global rule. */
+/**
+ * Shared control chrome: --control-h tall (40, 32 with smaller text, 44 on touch), hairline input edge, focus ring
+ * from the global rule. On a phone the value is 16px whatever the text size, so iOS Safari never zooms the page.
+ */
 export const controlClass = cn(
-  'h-control w-full min-w-0 rounded border border-line-input bg-surface px-3 text-sm text-fg',
+  'h-control w-full min-w-0 rounded border border-line-input bg-surface px-3 text-sm text-fg max-md:text-[16px]',
   'transition-colors duration-fast ease-out placeholder:text-fg-muted hover:border-fg-muted',
   'focus-visible:border-fg focus-visible:outline-offset-1',
   'aria-[invalid=true]:border-tone-danger-fg',

@@ -72,7 +72,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
           <Outlet />
         </ErrorBoundary>
       </main>
-      <BottomTabs role={user.role} />
+      <BottomTabs role={user.role} counts={counts} />
     </div>
   )
 }

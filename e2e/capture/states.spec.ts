@@ -112,7 +112,7 @@ for (const [name, size] of [
       await dlg.getByRole('button', { name: 'Save answer to 2 questions' }).click()
       await expect(dlg.getByRole('heading', { name: `Saved to ${rfqRef(s.rfq.number)}` })).toBeVisible()
       await expect(dlg.getByText(/2 questions answered and 1 photo attached\. They now wait on Today to be passed on to the suppliers./)).toBeVisible()
-      await expect(dlg.getByText('Answers to relay')).toBeVisible()
+      await expect(dlg.getByText('Answers to send')).toBeVisible()
       for (const b of ['Open ' + rfqRef(s.rfq.number), 'Add another', 'Done']) await expect(dlg.getByRole('button', { name: b })).toBeVisible()
       await expect(page.getByRole('status').filter({ hasText: '2 questions answered' }).getByRole('button', { name: /Undo/ })).toBeVisible()
       await settle(page)

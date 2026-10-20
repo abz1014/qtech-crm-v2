@@ -6,7 +6,8 @@ import { Icon } from '@/ui/Icon'
 
 /*
  * Button (docs/design/INVENTORY.md; D08 section 01). Variants primary,
- * secondary, quiet, danger. Sizes: lg 40, md 32 (40 on touch), sm 28, touch 44 (phone chrome).
+ * secondary, quiet, danger. Sizes read the density tokens, so they follow the text size:
+ * lg 44 (40 with smaller text), md 40 (32; 44 on touch), sm 36 (28; 40 on touch), touch 44 (phone chrome).
  * States: default, hover, pressed, focus (global ring), disabled, busy.
  */
 const button = cva(
@@ -40,18 +41,18 @@ const button = cva(
         ],
       },
       size: {
-        lg: 'h-10 px-4 text-base',
+        lg: 'h-control-lg px-4 text-base',
         md: 'h-control px-3 text-sm',
-        sm: 'h-[28px] px-2 text-xs',
+        sm: 'h-control-sm px-[10px] text-xs',
         /** Phone chrome: the 44px minimum tap target (--hit-touch). */
         touch: 'h-touch px-3 text-sm',
       },
       iconOnly: { true: 'px-0', false: '' },
     },
     compoundVariants: [
-      { size: 'lg', iconOnly: true, className: 'w-10' },
+      { size: 'lg', iconOnly: true, className: 'w-control-lg' },
       { size: 'md', iconOnly: true, className: 'w-control' },
-      { size: 'sm', iconOnly: true, className: 'w-[28px]' },
+      { size: 'sm', iconOnly: true, className: 'w-control-sm' },
       { size: 'touch', iconOnly: true, className: 'w-touch' },
     ],
     defaultVariants: { variant: 'secondary', size: 'md', iconOnly: false },

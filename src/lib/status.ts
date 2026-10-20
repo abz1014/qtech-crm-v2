@@ -22,6 +22,9 @@ import {
  * unit test (status.test.ts) fails if it disagrees with tokens.css, if a token
  * has no entry here, or if an entry has no token.
  *
+ * Labels follow the plain-words glossary (DECISIONS 2026-10-19): "Not sent to suppliers", not "Not floated";
+ * "Quotation sent", not "Bid sent". Only the words change; the keys and the view values never do.
+ *
  * Dimension and value keys are the data-status slugs (kebab-case). Views emit
  * snake_case ("floated_awaiting"); resolveStatus() normalises and applies the
  * aliases below, and THROWS on anything unknown, so a new view value cannot
@@ -45,24 +48,24 @@ const def = (label: string, tone: Tone, extra: Partial<StatusDef> = {}): StatusD
 export const STATUS = {
   'rfq-outcome': { open: def('Open', 'info'), won: def('Won', 'success'), closed: def('Closed', 'neutral') },
   sourcing: {
-    'not-floated': def('Not floated', 'warning'),
-    awaiting: def('Awaiting offers', 'info'),
-    'partly-covered': def('Partly covered', 'info'),
-    covered: def('Covered', 'success'),
-    'no-offer': def('No offer anywhere', 'danger'),
+    'not-floated': def('Not sent to suppliers', 'warning'),
+    awaiting: def('Waiting for prices', 'info'),
+    'partly-covered': def('Partly priced', 'info'),
+    covered: def('All priced', 'success'),
+    'no-offer': def('No price yet', 'danger'),
   },
   clarification: {
     none: def('No questions', 'neutral'),
     'to-ask': def('To ask', 'warning'),
     asked: def('Asked', 'info'),
     'waiting-customer': def('Waiting on customer', 'info'),
-    'answers-to-relay': def('Answers to relay', 'warning'),
+    'answers-to-relay': def('Answers to send', 'warning'),
     answered: def('Answered', 'success'),
     withdrawn: def('Withdrawn', 'neutral'),
   },
   bid: {
-    'to-bid': def('To bid', 'warning'),
-    'bid-sent': def('Bid sent', 'success'),
+    'to-bid': def('To quote', 'warning'),
+    'bid-sent': def('Quotation sent', 'success'),
     expired: def('Quotation expired', 'warning'),
   },
   deadline: { 'due-soon': def('Due soon', 'warning'), overdue: def('Overdue', 'danger') },
@@ -72,7 +75,7 @@ export const STATUS = {
     chased: def('Chased', 'warning'),
     awaiting: def('Awaiting reply', 'info'),
     quoted: def('Quoted', 'success'),
-    'no-offer': def('No offer', 'danger'),
+    'no-offer': def("Can't quote", 'danger'),
   },
   'inquiry-blocked': {
     none: def('Not blocked', 'neutral'),
@@ -81,7 +84,7 @@ export const STATUS = {
   },
   order: { active: def('Active', 'info'), cancelled: def('Cancelled', 'neutral'), done: def('Done', 'success') },
   goods: {
-    na: def('n/a', 'neutral'),
+    na: def('Not needed', 'neutral'),
     'to-source': def('To source', 'warning'),
     'to-place': def('To place', 'warning'),
     'on-order': def('On order', 'info'),
@@ -91,7 +94,7 @@ export const STATUS = {
     delivered: def('Delivered', 'success'),
   },
   commissioning: {
-    na: def('n/a', 'neutral'),
+    na: def('Not needed', 'neutral'),
     'to-plan': def('To plan', 'warning'),
     planned: def('Planned', 'info'),
     done: def('Done', 'success'),
@@ -107,10 +110,10 @@ export const STATUS = {
     settled: def('Settled', 'success'),
     overdue: def('Overdue', 'danger'),
   },
-  costs: { provisional: def('Provisional', 'warning'), complete: def('Complete', 'success') },
+  costs: { provisional: def('Not final', 'warning'), complete: def('Complete', 'success') },
   trust: {
     ok: def('Firm', 'neutral'),
-    'basis-unknown': def('Basis unknown', 'warning', { dashed: true, icon: CircleDashed }),
+    'basis-unknown': def('Is GST included?', 'warning', { dashed: true, icon: CircleDashed }),
     estimated: def('Estimated dates', 'neutral', { dashed: true, icon: CircleDashed }),
   },
   tcs: {
@@ -160,7 +163,7 @@ export const STATUS = {
     'not-in-pnl': def('Not in P&L', 'neutral'),
   },
   excluded: {
-    'basis-unknown': def('Basis unknown', 'warning', { dashed: true, icon: CircleDashed }),
+    'basis-unknown': def('Is GST included?', 'warning', { dashed: true, icon: CircleDashed }),
     'zero-value': def('Zero value', 'neutral'),
     unattributed: def('Unattributed', 'neutral'),
   },

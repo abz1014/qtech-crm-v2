@@ -4,15 +4,19 @@ import { ROLE_LABEL, session, type SessionUser } from '@/app/session'
 import { cn } from '@/lib/utils'
 import { promptInstall, useInstall } from '@/lib/pwa/install'
 import { Avatar } from '@/ui/Avatar'
-import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
+import { MenuGroup, MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
+import { useTextSize } from '@/ui/useTextSize'
 
 /**
  * Account menu: the top-bar avatar opens a Popover (menu variant) with the
- * person's name and role and "Sign out". Esc closes it and returns focus to the avatar.
+ * person's name and role, Settings, the Text size choice (Normal or Smaller,
+ * applied at once and kept on this device) and "Sign out". Esc closes it and
+ * returns focus to the avatar.
  */
 export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?: boolean }) {
   const navigate = useNavigate()
   const { canPrompt } = useInstall()
+  const [textSize, setTextSize] = useTextSize()
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -44,6 +48,14 @@ export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?
         <MenuItem icon={KeyRound} onClick={() => navigate('/settings/password')}>
           Change password
         </MenuItem>
+        <MenuGroup label="Text size">
+          <MenuItem keepOpen checked={textSize === 'normal'} onClick={() => setTextSize('normal')}>
+            Normal
+          </MenuItem>
+          <MenuItem keepOpen checked={textSize === 'small'} onClick={() => setTextSize('small')}>
+            Smaller
+          </MenuItem>
+        </MenuGroup>
         {canPrompt ? (
           <MenuItem icon={Download} onClick={() => void promptInstall()}>
             Install app

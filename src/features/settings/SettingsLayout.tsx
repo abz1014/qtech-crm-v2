@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Building2, ChevronRight, KeyRound, Receipt, RefreshCw, Target, User, Users, type LucideIcon } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { InstallBanner } from '@/features/settings/InstallBanner'
+import { SETTINGS_GROUPS } from '@/features/settings/settingsLinks'
 import { SettingsHomePage } from '@/features/settings/SettingsHomePage'
 import { Icon } from '@/ui/Icon'
 import { cn } from '@/lib/utils'
@@ -18,33 +19,7 @@ import { useMediaQuery } from '@/lib/useMediaQuery'
  * (Team sets its own bar, with its Add button). Team, Targets and Expense categories are shown to admins only; the company
  * profile is shown to everyone (read-only unless admin).
  */
-interface SettingsLink {
-  to: string
-  label: string
-  icon: LucideIcon
-  adminOnly?: boolean
-  /** Shown at the right for everyone who is not an admin ("View only"). */
-  tagForOthers?: string
-}
-const GROUPS: readonly { title: string; links: readonly SettingsLink[] }[] = [
-  {
-    title: 'Company',
-    links: [
-      { to: '/settings/team', label: 'Team', icon: Users, adminOnly: true },
-      { to: '/settings/company', label: 'Company profile', icon: Building2, tagForOthers: 'View only' },
-      { to: '/settings/targets', label: 'Targets', icon: Target, adminOnly: true },
-      { to: '/settings/categories', label: 'Expense categories', icon: Receipt, adminOnly: true },
-      { to: '/settings/exchange-rates', label: 'Exchange rates', icon: RefreshCw },
-    ],
-  },
-  {
-    title: 'You',
-    links: [
-      { to: '/settings/details', label: 'Your details', icon: User },
-      { to: '/settings/password', label: 'Change password', icon: KeyRound },
-    ],
-  },
-]
+// The pages and their two groups live in settingsLinks.ts, shared with the command palette's Jump to.
 
 const useIsAdmin = () => {
   const s = useSession()
@@ -57,7 +32,7 @@ export function SettingsLayout() {
   const isAdmin = useIsAdmin()
   const { pathname } = useLocation()
   const atHome = pathname.replace(/\/+$/, '') === '/settings'
-  const groups = GROUPS.map(g => ({ ...g, links: g.links.filter(l => isAdmin || !l.adminOnly) }))
+  const groups = SETTINGS_GROUPS.map(g => ({ ...g, links: g.links.filter(l => isAdmin || !l.adminOnly) }))
   const current = groups.flatMap(g => g.links).find(l => pathname.startsWith(l.to))
   return (
     <div className="grid min-h-full grid-cols-[minmax(0,1fr)] max-md:grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)]">

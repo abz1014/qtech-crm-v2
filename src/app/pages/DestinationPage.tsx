@@ -4,8 +4,8 @@ import { Icon } from '@/ui/Icon'
 
 /** What each destination will hold. One line, in the person's words. */
 const LEDE: Record<NavKey, string> = {
-  today: 'What needs you today: bids, chases, goods and payments.',
-  rfqs: 'Enquiries from first contact to bid, win or close.',
+  today: 'What needs you today: quotations, chases, goods and payments.',
+  rfqs: 'Enquiries from first contact to quotation, win or close.',
   orders: 'Orders from purchase order to delivery and invoice.',
   companies: 'Customers and suppliers, with their history.',
   money: 'Who owes us, invoices and GST, expenses, month end and reports.',

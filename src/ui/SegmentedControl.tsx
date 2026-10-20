@@ -14,7 +14,8 @@ import { Icon } from '@/ui/Icon'
  *   mode="tabs"             role=tablist: switches a panel (render <TabPanel> children);
  *                           arrows move focus, Space or Enter selects.
  * Track bg-selected, selected segment is a surface with a border-strong edge.
- * 26px tall, 32 when `large`. A phone scrolls it inside its own container.
+ * Each segment is --segment-h tall (36, 26 with smaller text, 40 on touch), --control-h when `large`.
+ * A phone scrolls it inside its own container.
  */
 export interface SegmentOption {
   value: string
@@ -65,14 +66,15 @@ export function SegmentedControl({
     </>
   )
   const segClass = cn(
-    'group inline-flex shrink-0 items-center justify-center gap-[6px] whitespace-nowrap rounded border border-transparent px-3 text-xs font-medium text-fg-muted',
+    'group inline-flex shrink-0 items-center justify-center gap-[6px] whitespace-nowrap rounded border border-transparent px-3 text-xs font-medium text-fg-2',
     'transition-colors duration-fast ease-out hover:text-fg disabled:text-fg-disabled disabled:hover:text-fg-disabled',
     'data-[state=checked]:border-line-strong data-[state=checked]:bg-surface data-[state=checked]:text-fg',
     'data-[state=active]:border-line-strong data-[state=active]:bg-surface data-[state=active]:text-fg',
     // locked (a submitting form disables its fieldset): the selected segment keeps its surface but greys out
     'disabled:data-[state=checked]:text-fg-disabled disabled:data-[state=active]:text-fg-disabled',
-    large ? 'h-8' : 'h-[26px]',
-    fill && 'min-w-0 flex-1 px-2',
+    large ? 'h-control' : 'h-segment',
+    // Shares the width but never shrinks below its words: a track too narrow scrolls instead of overlapping labels.
+    fill && 'flex-1 px-2',
   )
 
   if (mode === 'tabs') {

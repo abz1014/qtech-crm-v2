@@ -28,8 +28,8 @@ import { formatDay } from '@/lib/formatDay'
  *  - A missing value is an em dash in muted text, never 0.
  *  - Negative values use a true minus and danger colour; the word ("below cost")
  *    is added by <Margin>, so colour is never the only signal.
- *  - Provisional: dashed underline plus the warning chip. Basis unknown: shown as
- *    typed, with the dashed warning chip. Nothing here converts or hides either.
+ *  - Provisional: dashed underline plus the warning chip ("Not final"). Basis unknown: shown as
+ *    typed, with the dashed warning chip ("Is GST included?"). Nothing here converts or hides either.
  */
 type Size = 'sm' | 'base' | 'lg' | 'xl' | 'display'
 const SIZE: Record<Size, string> = {
@@ -113,7 +113,7 @@ export function Money({
             <StatusBadge dimension="costs" value="provisional" />
           </Tooltip>
         ) : (
-          <span className="sr-only">Provisional</span>
+          <span className="sr-only">Not final</span>
         )
       ) : null}
       {basisUnknown ? (
@@ -122,7 +122,7 @@ export function Money({
             <StatusBadge dimension="trust" value="basis-unknown" />
           </Tooltip>
         ) : (
-          <span className="sr-only">Basis unknown</span>
+          <span className="sr-only">Is GST included?</span>
         )
       ) : null}
     </span>
@@ -219,7 +219,7 @@ export function MoneyFx({ amount, currency, rate, rateOn, ageDays, staleness, ca
         </span>
         <span
           data-quiet-chip=""
-          className="inline-flex items-center gap-1 justify-self-start rounded-round bg-selected px-2 py-px text-xs leading-[18px] text-fg-muted"
+          className="inline-flex items-center gap-1 justify-self-start rounded-round bg-selected px-2 py-px text-xs text-fg-muted"
         >
           <Icon icon={Info} size="chip" />
           not compared, no rate
@@ -279,7 +279,7 @@ export function NetGstGross({ net, gst, gross, gstRate, size = 'lg', className }
   const mismatch = gross !== null && gross !== undefined && toPaisa(gross) !== sum
   const shown = mismatch ? toPaisa(gross) : sum
   const cell = 'grid min-w-0 gap-[2px] px-4 py-3'
-  const label = 'text-xs font-medium text-fg-muted'
+  const label = 'text-xs font-medium text-fg-2'
   return (
     <div
       role="group"
