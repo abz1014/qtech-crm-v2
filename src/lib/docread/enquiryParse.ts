@@ -399,6 +399,38 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
   }
 }
 
+/** A unit on its own in a table cell ("EA", "NO", "Nos", "Mtr"). */
+const UNIT_CELL = new RegExp(String.raw`^(?:${UNIT_SRC})$`, 'i')
+const NUM_CELL = /^\d[\d,]*(?:\.\d+)?$/
+
+/**
+ * A printed RFQ form's item row (an ERP printout: SAP, Oracle): a quantity cell next to a unit cell. Returns the item, with the
+ * description from the text cells before the unit (a leading serial or requisition number is dropped). Null for any other row.
+ */
+function formRow(cells: string[]): ReadItem | null {
+  if (cells.filter(Boolean).length < 3) return null
+  for (let i = cells.length - 1; i > 0; i--) {
+    const c = cells[i] as string
+    if (!NUM_CELL.test(c)) continue
+    const unitAt = UNIT_CELL.test(cells[i - 1] ?? '') ? i - 1 : UNIT_CELL.test(cells[i + 1] ?? '') ? i + 1 : -1
+    if (unitAt < 0) continue
+    const text = cells
+      .slice(0, Math.min(i, unitAt))
+      .filter(Boolean)
+      .filter((x, k) => !(k === 0 && /^(?:\d+\s*\.?|\d{4,})$/.test(x)))
+    const description = tidy(text.join(' '))
+    if (!description || !/[A-Za-z]{2}/.test(description)) return null
+    return { description, qty: toQty(c), unit: unitOf(cells[unitAt]) }
+  }
+  return null
+}
+
+/** A heading that starts the terms printed under the items ("Terms and Conditions", "Special Instructions :"). */
+const TERMS_HEAD = /^(?:special\s+instructions|(?:general\s+)?terms\s*(?:and|&)\s*conditions|general\s+terms|terms)\s*:?$/i
+/** Continuation text stops at the form's totals. */
+const TOTALS = /\b(?:sub\s*-?\s*total|grand\s+total|total\s+amount|total)\b.*$/i
+const MAX_DESCRIPTION = 400
+
 const isContact = (t: string): boolean => {
   if (PHONE_LABEL.test(t) && (PHONE.test(t) || /@|www\.|https?:/i.test(t) || /^(?:address|e-?mail|email|web|website)\b/i.test(t))) return true
   const bare = t.replace(EMAIL, ' ').replace(URL, ' ').replace(PHONE, ' ').replace(/[|,;:/()+\-–\s]+/g, ' ').trim()
@@ -498,6 +530,14 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     return body === '' || (!isCourtesy(body) && !isContact(body))
   })
 
+  // Form mode: a printed RFQ form (an ERP printout read from a PDF) has its items as table rows with a quantity next to a unit.
+  // Then a line outside those rows is never an item of its own: it is the description wrapping onto the next line (joined to
+  // the row above) or the form around the table (header boxes, comments, terms).
+  const formMode = src.some(s => {
+    const c = splitCells(s.t)
+    return c !== null && formRow(c) !== null
+  })
+
   const lines: EnquiryLine[] = []
   const drafts: Draft[] = []
   const refs: Array<RefHit & { line: string }> = []
@@ -505,10 +545,18 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   const emails: Array<{ e: string; rank: number }> = []
   const phones: string[] = []
   const names: Array<{ n: string; rank: number }> = []
-  let zone: 'content' | 'signature' | 'quoted' | 'disclaimer' = 'content'
+  let zone: 'content' | 'signature' | 'quoted' | 'disclaimer' | 'terms' = 'content'
   let cur: Draft | null = null
   let table: TableCols | null = null
   let contentLines = 0
+  /** Form mode: the item row a wrapped line belongs to, until a blank line. */
+  let row: Draft | null = null
+  const extend = (d: Draft, t: string) => {
+    const it = d.fromTable as ReadItem
+    const more = tidy(t.replace(TOTALS, ''))
+    if (more && it.description.length < MAX_DESCRIPTION) it.description = tidy(`${it.description} ${more}`).slice(0, MAX_DESCRIPTION)
+    lines.push({ text: t, kind: 'joined', reason: null, marker: null })
+  }
 
   const skip = (t: string, reason: SkipReason) => lines.push({ text: t, kind: 'skipped', reason, marker: null })
   const close = () => {
@@ -535,7 +583,22 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   for (let k = 0; k < src.length; k++) {
     const s = src[k] as Src
     const t = s.t
-    if (s.blankBefore) table = null
+    if (s.blankBefore) {
+      table = null
+      row = null
+    }
+    if (zone === 'terms') {
+      if (!due) due = findDue(t, today) ?? findDue(`${t} ${src[k + 1]?.t ?? ''}`, today)
+      noteContacts(t, 1)
+      skip(t, 'instruction')
+      continue
+    }
+    if (TERMS_HEAD.test(t) && drafts.length > 0) {
+      zone = 'terms'
+      close()
+      skip(t, 'instruction')
+      continue
+    }
 
     if (FORWARD_SEP.test(t)) {
       zone = 'content'
@@ -610,13 +673,46 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       }
       if (table) {
         const it = tableItem(cells, table)
+        // A form's row with no quantity is the row above wrapping onto the next line.
+        if (formMode && row && (table.qty < 0 || !NUM_CELL.test(cells[table.qty] ?? ''))) {
+          extend(row, cells.filter(Boolean).join(' '))
+          continue
+        }
         if (it) {
-          drafts.push({ first: lines.length, marker: null, indent: 0, texts: [], attrs: [], qty: null, fromTable: it })
+          const d: Draft = { first: lines.length, marker: null, indent: 0, texts: [], attrs: [], qty: null, fromTable: it }
+          drafts.push(d)
+          row = formMode ? d : null
           lines.push({ text: t, kind: 'item', reason: null, marker: null })
-        } else skip(t, 'table')
+          close()
+          continue
+        }
+        skip(t, 'table')
         close()
         continue
       }
+    }
+
+    if (formMode) {
+      const it = cells ? formRow(cells) : null
+      if (it) {
+        close()
+        row = { first: lines.length, marker: null, indent: 0, texts: [], attrs: [], qty: null, fromTable: it }
+        drafts.push(row)
+        lines.push({ text: t, kind: 'item', reason: null, marker: null })
+        continue
+      }
+      if (row && !/^(?:comments?|remarks?|note)\s*:/i.test(t)) {
+        extend(row, cells ? cells.filter(Boolean).join(' ') : t)
+        continue
+      }
+      row = null
+      // Facts still come from the form around the table; nothing else there is an item.
+      for (const r of findRefs(t)) refs.push({ ...r, line: t })
+      if (!due) due = findDue(t, today) ?? (DUE_STRONG.test(t) && !findDate(t, today) ? findDue(`${t} ${src[k + 1]?.t ?? ''}`, today) : null)
+      noteContacts(t, 2)
+      if (isCompanyLine(t) && !own.test(t)) names.push({ n: t, rank: contentLines <= 4 ? 2 : 1 })
+      skip(t, isContact(t) ? 'contact' : 'header')
+      continue
     }
 
     // A header word on its own line (a table pasted one cell per line).
