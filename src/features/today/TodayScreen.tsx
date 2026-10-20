@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Banknote, CalendarCheck, Calculator, ChevronDown, ChevronRight, FileCheck, Hourglass, Landmark, MessageCircleQuestion, Package, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
+import { Banknote, CalendarCheck, Calculator, ChevronDown, ChevronRight, FileCheck, HardHat, Hourglass, Landmark, MessageCircleQuestion, Package, PackageCheck, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -20,7 +20,11 @@ import type { Role, RuleKey, TodayItem, TodayTab } from '@/features/today/types'
 /*
  * Today (R11, direction B): a 420px list and a context pane. Groups: overdue or due today, the next 5 days, ready to
  * move, then Waiting (the system's cooldown, dimmed, never in the count of things that need you; collapsed when it holds
- * more than 5). On a phone the pane folds into an accordion under the row. The empty state is the goal state.
+ * more than 5). On a phone the pane folds into an accordion under the row, and the list comes first: the target tile sits
+ * under it. The empty state is the goal state.
+ *
+ * Tabs (owner glossary 2026-10-19, short forms): All, Quotes, Suppliers, Money; every count is "needs you". Engineers get no
+ * tabs at all: their list is short (their jobs, their goods, the RFQs they own) and one list is easier.
  */
 const ICON: Record<RuleKey, LucideIcon> = {
   chase_customer: MessageCircleQuestion,
@@ -40,9 +44,13 @@ const ICON: Record<RuleKey, LucideIcon> = {
   fbr_attention: Landmark,
   tcs_not_sent: Package,
   recurring_due: Repeat,
+  job_commissioning: HardHat,
+  job_on_site: PackageCheck,
 }
 
-const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Bids', sourcing: 'Sourcing', money: 'Money' }
+// The short forms of the glossary's "Quotations" and "Suppliers & delivery", so the four tabs fit the list column in one row on a
+// laptop; below that they wrap (never a sideways scroll).
+const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Quotes', sourcing: 'Suppliers', money: 'Money' }
 const WAITING_OPEN_MAX = 5
 
 /** Whether the person opened or closed the Waiting group, kept for this browser session only (null: not touched, the size decides). */
@@ -101,7 +109,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
     return { all: a.length, bids: a.filter(i => i.tab === 'bids').length, sourcing: a.filter(i => i.tab === 'sourcing').length, money: a.filter(i => i.tab === 'money').length }
   }, [view])
   const dueNow = view?.now.length ?? 0
-  const tabs: Array<'all' | TodayTab> = user.role === 'engineer' ? ['all', 'bids', 'sourcing'] : ['all', 'bids', 'sourcing', 'money']
+  const tabs: Array<'all' | TodayTab> = user.role === 'engineer' ? [] : ['all', 'bids', 'sourcing', 'money']
 
   // Five or fewer: open. More than five: collapsed, and opening it is the person's choice (remembered for the session).
   const waitingOpen = waitingToggled ?? waiting.length <= WAITING_OPEN_MAX
@@ -126,14 +134,15 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
             </>
           ) : null}
         </p>
-        {wide ? null : <TargetTile today={today} className="mt-2 rounded border bg-surface" />}
-        <SegmentedControl
-          aria-label="Show"
-          className="mt-2 justify-self-start"
-          value={tab}
-          onValueChange={v => setTab(v as 'all' | TodayTab)}
-          options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], count: counts[t] }))}
-        />
+        {tabs.length > 0 ? (
+          <SegmentedControl
+            aria-label="Show"
+            className="mt-2 flex-wrap justify-self-start"
+            value={tab}
+            onValueChange={v => setTab(v as 'all' | TodayTab)}
+            options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], count: counts[t] }))}
+          />
+        ) : null}
       </header>
 
       {query.isPending ? (
@@ -152,7 +161,9 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
             <EmptyState mood="goal" title={tab === 'all' ? 'Nothing needs you today' : 'Nothing here needs you today'}>
               {waiting.length > 0
                 ? 'Everything you chased is waiting for its date. It comes back here when it is time to nudge.'
-                : 'Chases, bids and goods that need you will appear here.'}
+                : user.role === 'engineer'
+                  ? 'Commissioning jobs you are assigned to, and the goods on your orders, appear here.'
+                  : 'Chases, quotations, goods and payments that need you will appear here.'}
             </EmptyState>
           ) : null}
           {groups.map(g =>
@@ -215,14 +226,17 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   )
 
   return (
-    <div className="grid min-h-full md:h-full md:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
+    // 768 to 1023 px (a tablet, a narrow window): the list takes two fifths so the pane keeps room; 420 px from 1024.
+    <div className="grid min-h-full md:h-full md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
       <div className="flex min-h-0 flex-col border-r bg-surface">
-        {/* On a phone the target tile sits above the list; on desktop it is the foot of the list column. */}
+        {/* The target tile is the foot of the list column: under the list on a phone, pinned at the bottom on desktop. */}
         <div className="min-h-0 flex-1 md:overflow-y-auto">{list}</div>
-        {wide ? <div className="border-t bg-surface"><TargetTile today={today} /></div> : null}
+        <div className={wide ? 'border-t bg-surface' : 'border-t bg-surface px-4 py-4'}>
+          <TargetTile today={today} className={wide ? undefined : 'rounded border bg-surface'} />
+        </div>
       </div>
       {wide ? (
-        <div className="min-h-0 overflow-y-auto px-8 py-6">
+        <div className="min-h-0 overflow-y-auto px-5 py-6 lg:px-8">
           {current && data ? (
             <div className="mx-auto max-w-[860px]">
               <ContextPane key={current.key} item={current} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} nextItem={nextOf(current.key)} onSelect={setSelected} />
@@ -237,7 +251,8 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
 }
 
 function Row({ item, today, names, waiting = false, open, copied, wide, onPick, children }: { item: TodayItem; today: string; names?: Record<string, string>; waiting?: boolean; open: boolean; copied: boolean; wide: boolean; onPick: () => void; children?: React.ReactNode }) {
-  const tone = item.badge.tone === 'danger' ? 'text-tone-danger-fg' : item.badge.tone === 'warning' ? 'text-tone-warning-fg' : 'text-fg-muted'
+  // On the selected row's background the amber is below 4.5:1, so a warning badge reads in the body colour there (as on the GST register).
+  const tone = item.badge.tone === 'danger' ? 'text-tone-danger-fg' : item.badge.tone === 'warning' ? (open ? 'text-fg-2' : 'text-tone-warning-fg') : 'text-fg-muted'
   return (
     <li data-rule={item.rule} data-waiting={waiting || undefined} className="border-b last:border-b-0">
       <button

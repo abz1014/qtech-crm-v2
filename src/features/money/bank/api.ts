@@ -15,7 +15,7 @@ const fixed = (n: number | string): string => paisaToFixed(toPaisa(n))
 
 /**
  * Everything that can appear on the statement of one month ("2026-10"): bank rows ticked against it, and bank rows not
- * ticked yet and dated up to its end (older ones included). Cash rows are never read.
+ * ticked yet and dated up to its end (older ones included). Cash rows and voided payments are never read.
  */
 export async function loadBank(month: string): Promise<RawBank> {
   const db = requireSupabase()
@@ -28,6 +28,7 @@ export async function loadBank(month: string): Promise<RawBank> {
         .from('payments_in')
         .select('*')
         .eq('paid_via', 'bank')
+        .is('voided_at', null) // 0073: a voided payment is history, never on a statement
         .or(`bank_month.eq.${start},and(bank_month.is.null,received_on.lte.${end})`)
         .order('received_on', { ascending: false })
         .range(from, to),
@@ -128,7 +129,7 @@ async function categoriesById(ids: string[]): Promise<Record<string, { name: str
   return Object.fromEntries(rows.map(r => [r.id, { name: r.name, grp: r.grp as CategoryGroup }]))
 }
 
-/** "leg A", "leg B": the leg's place among its order's legs, as the Add expense dialog names them. */
+/** "supplier order A", "supplier order B": the leg's place among its order's legs, as the Add expense dialog names them. */
 export async function legLabels(legIds: string[]): Promise<Record<string, string>> {
   if (legIds.length === 0) return {}
   const db = requireSupabase()
@@ -140,7 +141,7 @@ export async function legLabels(legIds: string[]): Promise<Record<string, string
   for (const l of all) {
     const i = seen.get(l.order_id) ?? 0
     seen.set(l.order_id, i + 1)
-    out[l.id] = `leg ${String.fromCharCode(65 + i)}`
+    out[l.id] = `supplier order ${String.fromCharCode(65 + i)}`
   }
   return out
 }

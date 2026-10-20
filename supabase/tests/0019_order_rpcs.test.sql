@@ -79,8 +79,8 @@ select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-0000000
 select is(public.float_rfq('d0000000-0000-4000-8000-000000000011', 'c0000000-0000-4000-8000-000000000001',
             '[{"description":"Pump A","qty":2,"unit":"pcs"},{"description":"Valve B"},{"description":"Service C","gst_rate":0}]'::jsonb,
             array['c0000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000003']::uuid[],
-            'c1000000-0000-4000-8000-000000000001', 'c2000000-0000-4000-8000-000000000001', 'CR-1', date '2030-01-01'),
-  'd0000000-0000-4000-8000-000000000011'::uuid, 'float_rfq returns the RFQ id');
+            'c1000000-0000-4000-8000-000000000001', 'c2000000-0000-4000-8000-000000000001', 'CR-1', date '2030-01-01') ->> 'id',
+  'd0000000-0000-4000-8000-000000000011', 'float_rfq returns the RFQ id (0070: as {"id", "created"})');
 select ok((select owner_id = 'a0000000-0000-4000-8000-000000000002' and received_on = public.today_pkt()
                   and customer_ref = 'CR-1' and due_on = date '2030-01-01'
                   and site_id = 'c1000000-0000-4000-8000-000000000001'
@@ -97,8 +97,8 @@ select is((select count(*)::int from public.supplier_inquiries
            where rfq_id = 'd0000000-0000-4000-8000-000000000011' and sent_on = public.today_pkt()), 2,
   'one inquiry per chosen supplier, stamped sent today');
 select is(public.float_rfq('d0000000-0000-4000-8000-000000000011', 'c0000000-0000-4000-8000-000000000001',
-            '[{"description":"Something else"}]'::jsonb, array['c0000000-0000-4000-8000-000000000002']::uuid[]),
-  'd0000000-0000-4000-8000-000000000011'::uuid, 'a second call with the same id returns the same RFQ');
+            '[{"description":"Something else"}]'::jsonb, array['c0000000-0000-4000-8000-000000000002']::uuid[]) ->> 'id',
+  'd0000000-0000-4000-8000-000000000011', 'a second call with the same id returns the same RFQ');
 select ok((select (select count(*) from public.rfq_items where rfq_id = 'd0000000-0000-4000-8000-000000000011') = 3
                   and (select count(*) from public.supplier_inquiries where rfq_id = 'd0000000-0000-4000-8000-000000000011') = 2
                   and (select count(*) from public.rfqs where id = 'd0000000-0000-4000-8000-000000000011') = 1),

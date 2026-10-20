@@ -4,10 +4,10 @@ You do not see prices, payments or costs. That is normal.
 Sign in from the home-screen icon. Bottom bar: Today, RFQs, Orders, Companies.
 
 1. START WITH TODAY
- - Tap Today.
- - Tabs: All, Bids, Sourcing.
- - "Overdue or due today" is what needs you now.
- - Tap a row to see the details.
+ - Tap Today. It lists your jobs: the orders you are an engineer on, and the goods on your own orders. One list, no tabs.
+ - "Commissioning on <day>" (or "today", "tomorrow"): a site visit in the next 5 working days.
+ - "Goods delivered to site: set the commissioning date": the goods are there, pick the day.
+ - "Overdue or due today" is what needs you now. Tap a row, then "Open ORD-..." to see the order.
 
 2. CAPTURE A PHOTO OR A MESSAGE (30 seconds)
  - Tap Capture (the + button), or share a photo or WhatsApp text to the CRM from your phone.

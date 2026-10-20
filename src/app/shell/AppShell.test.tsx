@@ -50,7 +50,7 @@ function navs() {
 }
 
 describe('page shell navigation, per role', () => {
-  it('admin: all six, in order, on both bars', () => {
+  it('admin: all five, in order, on both bars', () => {
     render(signedIn('admin'), '/today')
     expect(navs()[0]).toMatchInlineSnapshot(`
       [
@@ -59,13 +59,12 @@ describe('page shell navigation, per role', () => {
         "Orders -> /orders",
         "Companies -> /companies",
         "Money -> /money",
-        "Reports -> /reports",
       ]
     `)
     expect(navs()[1]).toEqual(navs()[0])
   })
 
-  it('sales: all six, in order, on both bars', () => {
+  it('sales: all five, in order, on both bars', () => {
     render(signedIn('sales'), '/today')
     expect(navs()[0]).toMatchInlineSnapshot(`
       [
@@ -74,7 +73,6 @@ describe('page shell navigation, per role', () => {
         "Orders -> /orders",
         "Companies -> /companies",
         "Money -> /money",
-        "Reports -> /reports",
       ]
     `)
     expect(navs()[1]).toEqual(navs()[0])

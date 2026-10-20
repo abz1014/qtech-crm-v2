@@ -106,11 +106,20 @@ export interface WriteVars {
   'payment.record': { orderId: string }
   /** M09: a payment reminder stamped on the invoices of an order (or taken back): Receivables' "Last reminder" and Today's payment item. */
   'payment.remind': Record<string, never>
+  /** 0073: a payment voided, corrected (void plus a new row) or restored (Undo of either). */
+  'payment.void': { orderId: string }
+  'payment.correct': { orderId: string }
+  'payment.restore': { orderId: string }
 }
 
 export type WriteName = keyof WriteVars
 
 type Keys = readonly QueryKey[]
+
+// 0073: a void, a correction or its Undo moves every figure built on payments: balances and "who owes us", the bank tick,
+// month-end, margins and exceptions (all under money), the order page and board, Today (overdue items and the target tile), the
+// targets grid in Settings, and a customer's money on the company page.
+const paymentChange = (): Keys => [qk.money.all, qk.orders.all, qk.today.all, qk.settings.targets(), qk.companies.all]
 
 export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // A new company appears in every list and search. Its own page does not exist in the cache yet.
@@ -219,6 +228,9 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // A payment moves balances (receivables, the order page's panel, its payment chip) and Today's overdue items.
   'payment.record': v => [qk.money.receivables.all, qk.money.bank.all, qk.money.receivables.payments(v.orderId), qk.orders.all, qk.today.all],
   'payment.remind': () => [qk.money.receivables.all, qk.money.invoices.all, qk.today.all],
+  'payment.void': paymentChange,
+  'payment.correct': paymentChange,
+  'payment.restore': paymentChange,
 }
 
 /** The keys a write makes stale. Pure, so it can be tested without a QueryClient. */

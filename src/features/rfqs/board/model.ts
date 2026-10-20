@@ -2,10 +2,9 @@ import { formatDay } from '@/lib/formatDay'
 import { rfqRef } from '@/lib/refs'
 
 /*
- * The RFQ board's pure rules (R06): what is sorted first, what the filters keep, how a due date reads.
- * Everything here works on BoardRow, a plain view-model built from v_rfq_state in api.ts, so it is
- * testable without a database or a DOM. Status values are never decided here: the row carries the
- * view's own words and StatusBadge resolves them through the U05 registry.
+ * The RFQ board's pure rules (R06, then the UX audit of 2026-10-19): what is sorted first, what the one filter keeps, how a due
+ * date and the next step read. Everything here works on BoardRow, a plain view-model built from v_rfq_state in api.ts, so it is
+ * testable without a database or a DOM.
  */
 export type SourcingState = 'not_floated' | 'floated_awaiting' | 'partly_covered' | 'covered' | 'no_offer_anywhere'
 export type ClarificationState = 'none' | 'to_ask' | 'waiting_on_customer' | 'answers_to_relay'
@@ -18,6 +17,8 @@ export interface BoardRow {
   companyId: string
   companyName: string
   customerRef: string | null
+  /** The first item's description: what the customer asked for. Null while unknown or with no items. */
+  firstItem: string | null
   ownerId: string | null
   ownerName: string | null
   receivedOn: string
@@ -38,33 +39,114 @@ export interface BoardRow {
   waitingDays: number | null
   toRelay: number
   bidState: BidState
+  /** When the quotation was sent (rfqs.quoted_on), for "Sent Thu 26 Nov". */
+  quotedOn: string | null
 }
 
-/** The state filter: five choices, because a segmented control holds at most five. */
-export type StateFilter = 'all' | 'not-floated' | 'out' | 'covered' | 'no-offer'
+/*
+ * The next step (owner decision 2026-10-19, step 2): one plain phrase for where an open RFQ stands, worked out from the view's
+ * sourcing and quotation dimensions. It drives the board's one filter and its "Next step" column; the detailed state stays on the
+ * RFQ page. Every open RFQ lands in exactly one step, so the counts add up.
+ *   suppliers  nobody asked yet, or every supplier asked said they cannot offer
+ *   prices     asked, and not every item has a price yet
+ *   ready      every item has at least one price: the quotation can go
+ *   sent       the quotation is sent (also when it has expired)
+ */
+export type NextStep = 'suppliers' | 'prices' | 'ready' | 'sent'
+/** The board's one filter: all open RFQs, one next step, or the won and closed ones. */
+export type BoardShow = 'all' | NextStep | 'closed'
 export type OwnerFilter = 'mine' | 'all'
 
-export const STATE_FILTERS: ReadonlyArray<{ value: StateFilter; label: string }> = [
+export const NEXT_STEP_LABEL: Record<NextStep, string> = {
+  suppliers: 'Needs suppliers',
+  prices: 'Waiting for prices',
+  ready: 'Ready to quote',
+  sent: 'Quotation sent',
+}
+
+export const SHOW_OPTIONS: ReadonlyArray<{ value: BoardShow; label: string }> = [
   { value: 'all', label: 'All open' },
-  { value: 'not-floated', label: 'Not floated' },
-  { value: 'out', label: 'Out for offers' },
-  { value: 'covered', label: 'Covered' },
-  { value: 'no-offer', label: 'No offer' },
+  { value: 'suppliers', label: NEXT_STEP_LABEL.suppliers },
+  { value: 'prices', label: NEXT_STEP_LABEL.prices },
+  { value: 'ready', label: NEXT_STEP_LABEL.ready },
+  { value: 'sent', label: NEXT_STEP_LABEL.sent },
+  { value: 'closed', label: 'Closed' },
 ]
 
-/** Which filter segment a sourcing state belongs to. "Out for offers" is floated and not yet fully covered. */
-export function filterOf(state: SourcingState): Exclude<StateFilter, 'all'> {
-  switch (state) {
+export function isBoardShow(v: string | null): v is BoardShow {
+  return SHOW_OPTIONS.some(o => o.value === v)
+}
+
+export function nextStepOf(r: Pick<BoardRow, 'sourcingState' | 'bidState'>): NextStep {
+  if (r.bidState !== 'to_bid') return 'sent'
+  switch (r.sourcingState) {
     case 'not_floated':
-      return 'not-floated'
+    case 'no_offer_anywhere':
+      return 'suppliers'
+    case 'covered':
+      return 'ready'
     case 'floated_awaiting':
     case 'partly_covered':
-      return 'out'
-    case 'covered':
-      return 'covered'
-    case 'no_offer_anywhere':
-      return 'no-offer'
+      return 'prices'
   }
+}
+
+export interface NextStepText {
+  step: NextStep
+  label: string
+  /** One short line under the label: what is behind it, in plain words. */
+  detail: string
+  tone: 'warning' | 'info' | 'success' | 'neutral'
+}
+
+const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+/** What the customer still owes us, or we owe them, when anything: added to the detail line. */
+function questionsNote(r: Pick<BoardRow, 'clarificationState' | 'toAsk' | 'waiting' | 'toRelay'>): string | null {
+  switch (r.clarificationState) {
+    case 'to_ask':
+      return `${count(r.toAsk, 'question', 'questions')} to ask the customer`
+    case 'waiting_on_customer':
+      return `waiting on the customer for ${count(r.waiting, 'answer', 'answers')}`
+    case 'answers_to_relay':
+      return `${count(r.toRelay, 'answer', 'answers')} to pass on to suppliers`
+    default:
+      return null
+  }
+}
+
+type StepInput = Pick<BoardRow, 'sourcingState' | 'bidState' | 'itemsTotal' | 'itemsQuoted' | 'floated' | 'clarificationState' | 'toAsk' | 'waiting' | 'toRelay' | 'quotedOn'>
+
+export function nextStepText(r: StepInput): NextStepText {
+  const step = nextStepOf(r)
+  const label = NEXT_STEP_LABEL[step]
+  const q = questionsNote(r)
+  const withQ = (base: string) => (q ? `${base} · ${q}` : base)
+  switch (step) {
+    case 'sent':
+      return r.bidState === 'quotation_expired'
+        ? { step, label, detail: 'The quotation has expired', tone: 'warning' }
+        : { step, label, detail: r.quotedOn ? `Sent ${formatDay(r.quotedOn)}` : 'Waiting for the customer', tone: 'neutral' }
+    case 'suppliers':
+      return { step, label, detail: withQ(r.sourcingState === 'no_offer_anywhere' ? 'Every supplier asked said no' : 'Not sent to suppliers yet'), tone: 'warning' }
+    case 'ready':
+      return { step, label, detail: withQ(r.itemsTotal === 1 ? 'The item has a price' : `All ${r.itemsTotal} items have a price`), tone: 'success' }
+    case 'prices':
+      return {
+        step,
+        label,
+        detail: withQ(r.itemsQuoted > 0 ? `${r.itemsQuoted} of ${r.itemsTotal} items priced` : `Asked ${count(r.floated, 'supplier', 'suppliers')}`),
+        tone: 'info',
+      }
+  }
+}
+
+/** "Cerabar PMC71 pressure transmitter + 3 more": what the customer asked for, short enough for one line. */
+export function askedText(r: Pick<BoardRow, 'firstItem' | 'itemsTotal'>, max = 70): string {
+  const first = (r.firstItem ?? '').replace(/\s+/g, ' ').trim()
+  if (!first) return r.itemsTotal > 0 ? count(r.itemsTotal, 'item', 'items') : 'No items yet'
+  const short = first.length > max ? `${first.slice(0, max - 1).trimEnd()}…` : first
+  return r.itemsTotal > 1 ? `${short} + ${r.itemsTotal - 1} more` : short
 }
 
 /** Due date first (earliest on top, no date last), then priority RFQs, then the older RFQ number. */
@@ -86,23 +168,24 @@ export function applyOwner(rows: readonly BoardRow[], owner: OwnerFilter, userId
   return owner === 'mine' ? rows.filter(r => r.ownerId !== null && r.ownerId === userId) : [...rows]
 }
 
-export function applyState(rows: readonly BoardRow[], state: StateFilter): BoardRow[] {
-  return state === 'all' ? [...rows] : rows.filter(r => filterOf(r.sourcingState) === state)
+/** Keep the open RFQs at one next step ('all' keeps every one). */
+export function applyStep(rows: readonly BoardRow[], step: 'all' | NextStep): BoardRow[] {
+  return step === 'all' ? [...rows] : rows.filter(r => nextStepOf(r) === step)
 }
 
-/** The filter box: every word must appear in the RFQ number ("RFQ-0177" or "177"), the customer or their reference. */
+/** The filter box: every word must appear in the RFQ number ("RFQ-0177" or "177"), the customer, their reference or what was asked. */
 export function applyQuery(rows: readonly BoardRow[], query: string): BoardRow[] {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   if (words.length === 0) return [...rows]
   return rows.filter(r => {
-    const hay = `${rfqRef(r.number)} ${r.number} ${r.companyName} ${r.customerRef ?? ''}`.toLowerCase()
+    const hay = `${rfqRef(r.number)} ${r.number} ${r.companyName} ${r.customerRef ?? ''} ${r.firstItem ?? ''}`.toLowerCase()
     return words.every(w => hay.includes(w))
   })
 }
 
-export function stateCounts(rows: readonly BoardRow[]): Record<StateFilter, number> {
-  const out: Record<StateFilter, number> = { all: rows.length, 'not-floated': 0, out: 0, covered: 0, 'no-offer': 0 }
-  for (const r of rows) out[filterOf(r.sourcingState)]++
+export function stepCounts(rows: readonly BoardRow[]): Record<'all' | NextStep, number> {
+  const out: Record<'all' | NextStep, number> = { all: rows.length, suppliers: 0, prices: 0, ready: 0, sent: 0 }
+  for (const r of rows) out[nextStepOf(r)]++
   return out
 }
 
@@ -132,26 +215,6 @@ export function dueText(r: Pick<BoardRow, 'dueOn' | 'daysToDue' | 'isOverdue'>):
   return { date, hint: `in ${days(n)}`, tone: 'normal' }
 }
 
-/** The mono suffix on the sourcing chip: how many items have a price. Nothing before anything is floated. */
-export function sourcingDetail(r: Pick<BoardRow, 'sourcingState' | 'itemsQuoted' | 'itemsTotal' | 'itemsUncovered'>): string | undefined {
-  if (r.sourcingState === 'not_floated' || r.sourcingState === 'no_offer_anywhere' || r.itemsTotal === 0) return undefined
-  return `${r.itemsQuoted} of ${r.itemsTotal}`
-}
-
-/** The mono suffix on the clarification chip: how many questions, and for how long the customer has had them. */
-export function clarificationDetail(r: Pick<BoardRow, 'clarificationState' | 'toAsk' | 'waiting' | 'waitingDays' | 'toRelay'>): string | undefined {
-  switch (r.clarificationState) {
-    case 'to_ask':
-      return String(r.toAsk)
-    case 'waiting_on_customer':
-      return r.waitingDays !== null && r.waitingDays > 0 ? `${r.waiting} · ${r.waitingDays}d` : String(r.waiting)
-    case 'answers_to_relay':
-      return String(r.toRelay)
-    default:
-      return undefined
-  }
-}
-
 export const CLOSE_REASON: Record<string, string> = {
   competitor: 'Lost to a competitor',
   price: 'Price',
@@ -177,7 +240,6 @@ export function pageSummary(page: number, size: number, total: number): string {
  * The reference is six hex digits derived from the time and the error text, so the same failure reads
  * the same on screen and in a screenshot someone sends to support.
  */
-/** The six hex digits of a failure's reference: derived from the time and the error text. */
 export function failureReference(at: number, message: string): string {
   let h = 2166136261
   for (const c of `${at}|${message}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619)

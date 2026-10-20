@@ -117,7 +117,15 @@ beforeEach(() => {
   })
 })
 
-describe('Bank tick (M12)', () => {
+describe('Match bank statement (M12, the old Bank tick)', () => {
+  it('is reached from Month end with a back link, never a third strip of tabs', async () => {
+    mount()
+    await screen.findByTestId('bank-out')
+    expect(screen.getByRole('heading', { name: 'Match bank statement', level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to Month end' })).toHaveAttribute('href', '/money/month-end?month=2026-10')
+    expect(screen.queryByRole('navigation', { name: 'Month-end views' })).toBeNull()
+  })
+
   it('shows the two lists, the four totals and the not-ticked chip', async () => {
     mount()
     const out = await screen.findByTestId('bank-out')
@@ -189,7 +197,7 @@ describe('Bank tick (M12)', () => {
     h.load.mockRejectedValueOnce(new Error('boom'))
     const user = userEvent.setup()
     mount()
-    expect(await screen.findByText('The bank tick did not load')).toBeInTheDocument()
+    expect(await screen.findByText('The bank statement lines did not load')).toBeInTheDocument()
     h.load.mockResolvedValue(structuredClone(DATA))
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     await screen.findByTestId('bank-in')

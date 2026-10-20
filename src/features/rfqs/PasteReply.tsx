@@ -144,7 +144,7 @@ export function PasteReplyPanel({
             disabled={count === 0 && !declinedOnly}
             onClick={() => onAccept(selected)}
           >
-            {declinedOnly ? "Record can't quote" : `Accept ${count} ${count === 1 ? 'offer' : 'offers'}`}
+            {declinedOnly ? "Record can't quote" : `Accept ${count} ${count === 1 ? 'price' : 'prices'}`}
           </Button>
         ) : null}
       </div>

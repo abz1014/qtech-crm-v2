@@ -13,11 +13,13 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib'
 
 /*
  * "Suppliers to ask" (g2-rfq-detail, empty state): the suggested suppliers with the reason for each, the ones who supplied the
- * item before already ticked, and one button that copies an enquiry listing every item and records the asking. The same list
- * is what "Float to another supplier" opens in a dialog once suppliers have been asked. Suggestions come from R03 (the reasons)
- * and R17 (the memory); nothing is scored. Inside a reason the supplier with the better record comes first (A8), and the order
- * behind it is cited (number, the date we placed it, days to delivery).
+ * item before already ticked, and one button that copies a message listing every item and records the asking. The same list
+ * is what "Ask suppliers" (the page's green button while nobody is asked) and "Ask more suppliers" open in a dialog. Suggestions
+ * come from R03 (the reasons) and R17 (the memory); nothing is scored. Inside a reason the supplier with the better record comes
+ * first (A8), and the order behind it is cited (number, the date we placed it, days to delivery).
+ * The card's button is not green: the page has one green button, and while nobody is asked it is the header's Ask suppliers.
  */
+const copyLabel = (n: number) => `Copy message for ${n} ${n === 1 ? 'supplier' : 'suppliers'}`
 
 /** The ticked suppliers, starting with the pre-ticked ones; a tick or untick by hand is kept. */
 function useTicks(suggestions: readonly SupplierSuggestion[] | undefined) {
@@ -108,15 +110,8 @@ export function SuppliersToAskCard({
         <>
           <PickList suggestions={suggestions} isTicked={t.isTicked} onTick={t.set} />
           <div className="border-t px-5 py-3">
-            <Button
-              variant="primary"
-              icon={Copy}
-              busy={busy}
-              busyLabel="Copying"
-              disabled={t.ticked.length === 0 || items.length === 0}
-              onClick={() => onAsk(t.ticked)}
-            >
-              {t.ticked.length === 0 ? 'Tick a supplier to ask' : `Copy enquiry for ${t.ticked.length} ${t.ticked.length === 1 ? 'supplier' : 'suppliers'}`}
+            <Button icon={Copy} busy={busy} busyLabel="Copying" disabled={t.ticked.length === 0 || items.length === 0} onClick={() => onAsk(t.ticked)}>
+              {t.ticked.length === 0 ? 'Tick a supplier to ask' : copyLabel(t.ticked.length)}
             </Button>
           </div>
         </>
@@ -125,14 +120,16 @@ export function SuppliersToAskCard({
   )
 }
 
-/** "Float to another supplier": the same list in a dialog, for the items that still need a price (all of them when none does). */
+/** "Ask suppliers" / "Ask more suppliers": the same list in a dialog, for the items that still need a price (all of them when none does). */
 export function FloatDialog({
+  title = 'Ask more suppliers',
   suggestions,
   itemCount,
   busy,
   onAsk,
   onClose,
 }: {
+  title?: string
   suggestions: readonly SupplierSuggestion[] | undefined
   itemCount: number
   busy: boolean
@@ -143,8 +140,8 @@ export function FloatDialog({
   return (
     <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
-        title="Float to another supplier"
-        context={`${itemCount} ${itemCount === 1 ? 'item' : 'items'} in the enquiry`}
+        title={title}
+        context={`${itemCount} ${itemCount === 1 ? 'item' : 'items'} in the message`}
         icon={Copy}
         footer={
           <>
@@ -152,7 +149,7 @@ export function FloatDialog({
               Cancel
             </Button>
             <Button variant="primary" icon={Copy} busy={busy} busyLabel="Copying" disabled={t.ticked.length === 0} onClick={() => onAsk(t.ticked)}>
-              {t.ticked.length === 0 ? 'Tick a supplier' : `Copy enquiry for ${t.ticked.length} ${t.ticked.length === 1 ? 'supplier' : 'suppliers'}`}
+              {t.ticked.length === 0 ? 'Tick a supplier' : copyLabel(t.ticked.length)}
             </Button>
           </>
         }

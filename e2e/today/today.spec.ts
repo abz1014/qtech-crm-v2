@@ -76,6 +76,32 @@ async function seedOverdueOrder(ownerId: string, terms: number | null = 30) {
   return { customer, order }
 }
 
+/**
+ * An order owned by SALES that the engineer is ASSIGNED to (order_engineers), not owner of. `planned`: commissioning planned for
+ * tomorrow. `onSite`: the goods are delivered to the site and commissioning has no date yet.
+ */
+async function seedAssignedJob(kind: 'planned' | 'onSite') {
+  const customer = uniqueName(kind === 'planned' ? 'Job Planned' : 'Job On Site')
+  const co = await createCompany(customer)
+  const order = (
+    await must(
+      rest<{ id: string; number: number }[]>('admin', 'orders', {
+        method: 'POST',
+        body: { company_id: co.id, owner_id: SALES, ordered_on: iso(-20), needs_commissioning: true, ...(kind === 'planned' ? { commissioning_planned_on: iso(1) } : {}) },
+      }),
+    )
+  )[0]
+  if (kind === 'onSite') {
+    const sup = await createCompany(uniqueName('Job Supplier'))
+    const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: sup.id, placed_on: iso(-15), expected_on: iso(-5), delivered_on: iso(-2) } })))[0]
+    await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, description: 'Control valve', qty: 1, unit_price_net: 1000, supplier_order_id: leg.id }, prefer: 'return=minimal' }))
+  } else {
+    await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: order.id, description: 'Commissioning visit', qty: 1, unit_price_net: 1000, is_service: true }, prefer: 'return=minimal' }))
+  }
+  await must(rest('admin', 'order_engineers', { method: 'POST', body: { order_id: order.id, user_id: ENGINEER }, prefer: 'return=minimal' }))
+  return { customer, order, ref: `ORD-${String(order.number).padStart(4, '0')}` }
+}
+
 const rowOf = (page: Page, text: string | RegExp) => page.locator('li[data-rule]').filter({ hasText: text })
 const paneFor = (page: Page, ref: string) => page.getByRole('region', { name: new RegExp(ref) })
 
@@ -170,6 +196,21 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' })).toBeVisible()
   })
 
+  test('at 1366 x 768 the one job, "Copy message and mark chased", is on the first screen without scrolling', async ({ page }) => {
+    const s = await seedCustomerChase(SALES)
+    await page.setViewportSize({ width: 1366, height: 768 })
+    await openAs(page, 'sales', '/today')
+    await rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' }).getByRole('button').first().click()
+    const pane = paneFor(page, s.ref)
+    const copy = pane.getByRole('button', { name: 'Copy message and mark chased' })
+    await expect(copy).toBeVisible()
+    const box = await copy.boundingBox()
+    expect((box?.y ?? 9999) + (box?.height ?? 0), 'the button bottom is inside the 768 px window').toBeLessThanOrEqual(768)
+    // each fact is said once: the status chips and the date rail that repeated the cells are gone
+    await expect(pane.locator('[data-status]')).toHaveCount(0)
+    await review(page, 'today-12-above-the-fold-1366')
+  })
+
   test('the target tile shows only the signed-in person\'s own number, with its working', async ({ page }) => {
     // A target for sales this quarter; the admin gets a different one that must never appear on sales' screen.
     const d = new Date(`${iso(0)}T00:00:00Z`)
@@ -188,6 +229,22 @@ test.describe('Today: the 1-tap chase (sales)', () => {
 })
 
 test.describe('Today: role-aware', () => {
+  test('engineer: the jobs they are ASSIGNED to are on Today (commissioning soon, goods on site), with no tabs to choose from', async ({ page }) => {
+    const planned = await seedAssignedJob('planned')
+    const onSite = await seedAssignedJob('onSite')
+    await openAs(page, 'engineer', '/today')
+    const job = page.locator('li[data-rule="job_commissioning"]').filter({ hasText: planned.ref })
+    await expect(job).toContainText('Commissioning tomorrow')
+    await expect(job).toContainText(planned.customer)
+    await expect(page.locator('li[data-rule="job_on_site"]').filter({ hasText: onSite.ref })).toContainText('Goods delivered to site: set the commissioning date')
+    // one list for an engineer: no Quotes / Suppliers / Money tabs
+    await expect(page.getByRole('radiogroup', { name: 'Show' })).toHaveCount(0)
+    await job.getByRole('button').first().click()
+    await paneFor(page, planned.ref).getByRole('button', { name: `Open ${planned.ref}` }).click()
+    await expect(page).toHaveURL(new RegExp(`/orders/${planned.order.id}`))
+    await review(page, 'today-13-engineer-jobs-1440')
+  })
+
   test('engineer: goods and chases for their own records, never a money item or tab, and no receivables request', async ({ page }) => {
     const g = await seedLateGoods(ENGINEER)
     await seedOverdueOrder(ENGINEER)
@@ -286,8 +343,27 @@ test.describe('Today: role-aware', () => {
     await expect(rowOf(page, mine.ref).first()).toBeVisible()
     await expect(rowOf(page, theirs.ref)).toHaveCount(0)
     await expect(page.getByRole('radio', { name: /^Money/ })).toBeVisible()
+    // the tabs in plain words (owner glossary 2026-10-19)
+    await expect(page.getByRole('radio', { name: /^Quotes/ })).toBeVisible()
+    await expect(page.getByRole('radio', { name: /^Suppliers/ })).toBeVisible()
+    await expect(page.getByRole('radio', { name: /^(Bids|Sourcing)/ })).toHaveCount(0)
     await review(page, 'today-07-admin-1440')
   })
+})
+
+test.describe('Today: the tab strip fits', () => {
+  for (const [width, height] of [[1366, 768], [1024, 768], [800, 1024], [375, 812]] as const) {
+    test(`at ${width} px every tab is on screen and nothing scrolls sideways`, async ({ page }) => {
+      await seedOverdueOrder(ADMIN)
+      await page.setViewportSize({ width, height })
+      await openAs(page, 'admin', '/today')
+      const strip = page.getByRole('radiogroup', { name: 'Show' })
+      await expect(strip.getByRole('radio', { name: /^Money/ })).toBeVisible()
+      for (const tab of await strip.getByRole('radio').all()) await expect(tab).toBeInViewport({ ratio: 1 })
+      expect(await strip.evaluate(el => el.scrollWidth <= el.clientWidth + 1), 'the strip scrolls sideways').toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    })
+  }
 })
 
 test.describe('Today: accessibility and mobile', () => {
@@ -305,6 +381,10 @@ test.describe('Today: accessibility and mobile', () => {
     await page.locator('#main').waitFor()
     const row = rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' })
     await expect(row).toBeVisible()
+    // on a phone the list comes first: the target tile sits under it
+    const firstRow = await page.locator('li[data-rule]').first().boundingBox()
+    const tile = await page.getByRole('region', { name: /target/ }).boundingBox()
+    expect(firstRow?.y ?? 9999).toBeLessThan(tile?.y ?? 0)
     await row.getByRole('button').first().click() // the accordion opens under the row
     await expect(row.getByText('Prepared for you')).toBeVisible()
     await review(page, 'today-08-mobile-accordion-375')

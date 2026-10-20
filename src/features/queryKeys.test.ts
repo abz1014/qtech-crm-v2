@@ -96,6 +96,9 @@ describe('invalidation map (R01)', () => {
     'invoice.receipt': { invoiceId: 'i1' },
     'payment.record': { orderId: 'o1' },
     'payment.remind': {},
+    'payment.void': { orderId: 'o1' },
+    'payment.correct': { orderId: 'o1' },
+    'payment.restore': { orderId: 'o1' },
   }
 
   it('names at least one key for every write', () => {
@@ -215,6 +218,28 @@ describe('invalidation map: stale screens found in review', () => {
   it('a chase from Today refreshes the supplier record and the invoice reminders Money shows', async () => {
     expect(await staleAfter('today.chase', {}, qk.companies.part('s1', 'supplier-activity'))).toBe(true)
     expect(await staleAfter('today.chase', {}, qk.money.invoices.register())).toBe(true)
+  })
+
+  it('a payment void, correction or Undo (0073) refreshes every figure built on payments', async () => {
+    const keys = [
+      qk.money.receivables.list(),
+      qk.money.receivables.order('o1'),
+      qk.money.receivables.payments('o1'),
+      qk.money.bank.month('2026-10'),
+      qk.money.monthEnd.status('2026-10'),
+      qk.money.monthEnd.aging('2026-10-31'),
+      qk.money.margins(),
+      qk.money.exceptions(),
+      qk.orders.part('o1', 'money'),
+      qk.orders.board('admin'),
+      qk.today.board(),
+      qk.today.target(),
+      qk.settings.targetProgress(2026),
+      qk.companies.part('c1', 'money'),
+    ]
+    for (const w of ['payment.void', 'payment.correct', 'payment.restore'] as const) {
+      for (const key of keys) expect(await staleAfter(w, { orderId: 'o1' }, key), `${w} ${JSON.stringify(key)}`).toBe(true)
+    }
   })
 
   it('issuing a PO refreshes the supplier record (it shows the leg PO and placed date)', async () => {
