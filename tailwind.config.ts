@@ -134,7 +134,8 @@ export default {
       },
       size: { 'icon-chip': v('icon-chip'), 'control-sm': v('control-sm-h'), touch: v('hit-touch') },
       // Page caps from DESIGN_SYSTEM 12: work lists 860, tables 1280 (content width).
-      maxWidth: { list: '860px', table: '1280px', prose: '66ch' },
+      // detail: RFQ, Order and Company pages (round-2 spec 5.1); lists use table.
+      maxWidth: { list: '860px', table: '1280px', detail: '1440px', prose: '66ch' },
     },
   },
   plugins: [animate],

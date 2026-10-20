@@ -63,10 +63,6 @@ export function ReceivablesPage() {
   const summary = useReceivablesSummary(today)
   const local = useMemo(() => receivableTotals(rows, today), [rows, today])
   const totals = summary.data ?? local
-  const counts = useMemo(
-    () => ({ open: filterReceivables(rows, 'open').length, overdue: filterReceivables(rows, 'overdue').length, settled: filterReceivables(rows, 'settled').length }),
-    [rows],
-  )
   const shown = useMemo(() => sortReceivables(filterReceivables(rows, filter)), [rows, filter])
   // The panel follows the picked row; before a pick (or when it leaves the list) it follows the most overdue row (E-MN-03), else the first.
   const mostOverdue = shown.find(r => r.state === 'overdue') ?? shown[0] ?? null
@@ -222,7 +218,7 @@ export function ReceivablesPage() {
                   options={[
                     // a count means "needs you": only Overdue carries one
                     { value: 'open', label: 'Open' },
-                    { value: 'overdue', label: 'Overdue', count: counts.overdue },
+                    { value: 'overdue', label: 'Overdue' },
                     { value: 'settled', label: 'Paid' },
                   ]}
                 />

@@ -6,12 +6,14 @@ import { AccountMenu } from '@/app/shell/AccountMenu'
 import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
+import { NeedsCount } from '@/ui/Tag'
+import { Tooltip } from '@/ui/Tooltip'
 import { cn } from '@/lib/utils'
 import { searchKeyHint } from '@/ui/paletteSources'
 
 interface TopBarProps {
   user: SessionUser
-  /** Optional counts beside a destination ("RFQs 14"). Supplied by the data layer; nothing is shown when absent. */
+  /** "Needs you" counts beside a destination (NeedsCount: "RFQs 4", named "RFQs, 4 need you"). Nothing is shown for 0 or absent. */
   counts?: Partial<Record<NavKey, number>>
   onSearch?: () => void
   onCapture?: () => void
@@ -49,6 +51,8 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
             key={item.key}
             to={item.path}
             title={item.label}
+            // Spelled out so the name is exactly "RFQs, 4 need you" whatever the layout hides.
+            aria-label={counts?.[item.key] ? `${item.label}, ${counts[item.key]} need you` : undefined}
             className={({ isActive }) =>
               cn(
                 'relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded px-2 text-sm font-medium transition-colors duration-fast ease-out xl:px-3',
@@ -63,9 +67,7 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
                 <span data-nav-label="" className={cn(!isActive && 'max-lg:sr-only')}>
                   {item.label}
                 </span>
-                {counts?.[item.key] != null ? (
-                  <span className="num text-xs text-fg-muted max-lg:hidden">{counts[item.key]}</span>
-                ) : null}
+                <NeedsCount n={counts?.[item.key]} className="max-lg:hidden" />
                 {isActive ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-2 -bottom-px h-indicator bg-brand-green xl:inset-x-3" /> : null}
               </>
             )}
@@ -73,43 +75,50 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
         ))}
       </nav>
 
-      <button
-        type="button"
-        onClick={onSearch}
-        aria-label="Search or jump to"
-        className={cn(
-          'ml-auto flex h-control shrink-0 items-center gap-2 rounded border border-line-strong bg-sunken text-left text-sm text-fg-muted',
-          'transition-colors duration-fast ease-out hover:border-line-input',
-          'w-control justify-center lg:w-[150px] lg:justify-start lg:pl-3 lg:pr-2 xl:w-[220px] 2xl:w-[280px]',
-        )}
-      >
-        <Icon icon={Search} />
-        <span aria-hidden="true" className="flex-1 truncate max-lg:hidden xl:hidden">
-          Search
-        </span>
-        <span aria-hidden="true" className="flex-1 truncate max-xl:hidden">
-          Search or jump to
-        </span>
-        <Kbd className="max-2xl:hidden">{hint}</Kbd>
-      </button>
-
-      {onCapture ? (
+      {/* The key hints hide below 2xl, so the tooltip carries the key (consistency spec 4.3). */}
+      <Tooltip content="Search or jump to" shortcut={hint}>
         <button
           type="button"
-          onClick={onCapture}
-          aria-label={CAPTURE_LABEL}
+          onClick={onSearch}
+          aria-label="Search or jump to"
+          aria-keyshortcuts="Control+K Meta+K"
           className={cn(
-            'flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground',
-            'transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover active:bg-primary-active',
-            'max-lg:w-control max-lg:justify-center max-lg:px-0',
+            'ml-auto flex h-control shrink-0 items-center gap-2 rounded border border-line-strong bg-sunken text-left text-sm text-fg-muted',
+            'transition-colors duration-fast ease-out hover:border-line-input',
+            'w-control justify-center lg:w-[150px] lg:justify-start lg:pl-3 lg:pr-2 xl:w-[220px] 2xl:w-[280px]',
           )}
         >
-          <Icon icon={Import} />
-          <span aria-hidden="true" className="max-lg:hidden">
-            {CAPTURE_LABEL}
+          <Icon icon={Search} />
+          <span aria-hidden="true" className="flex-1 truncate max-lg:hidden xl:hidden">
+            Search
           </span>
-          <Kbd className="border-primary-foreground/40 bg-transparent text-primary-foreground max-2xl:hidden">C</Kbd>
+          <span aria-hidden="true" className="flex-1 truncate max-xl:hidden">
+            Search or jump to
+          </span>
+          <Kbd className="max-2xl:hidden">{hint}</Kbd>
         </button>
+      </Tooltip>
+
+      {onCapture ? (
+        <Tooltip content={CAPTURE_LABEL} shortcut="C">
+          <button
+            type="button"
+            onClick={onCapture}
+            aria-label={CAPTURE_LABEL}
+            aria-keyshortcuts="C"
+            className={cn(
+              'flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground',
+              'transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover active:bg-primary-active',
+              'max-lg:w-control max-lg:justify-center max-lg:px-0',
+            )}
+          >
+            <Icon icon={Import} />
+            <span aria-hidden="true" className="max-lg:hidden">
+              {CAPTURE_LABEL}
+            </span>
+            <Kbd className="border-primary-foreground/40 bg-transparent text-primary-foreground max-2xl:hidden">C</Kbd>
+          </button>
+        </Tooltip>
       ) : null}
 
       <div className="flex shrink-0 items-center gap-3">

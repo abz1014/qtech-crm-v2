@@ -144,16 +144,16 @@ export function CompaniesPage() {
         toolbar={
           // min-w-0: on a phone the filter scrolls inside its own track instead of pushing the search field past the edge.
           <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
-            <TableFilter label="Search companies" placeholder="Name, contact, phone or city" value={text} onChange={setText} className="sm:w-[320px]" />
+            <TableFilter label="Search companies" hint="Finds a company by name, contact, phone or city." value={text} onChange={setText} className="sm:w-[320px]" />
             <SegmentedControl
               aria-label="Show"
               value={filter}
               onValueChange={v => setFilter(v as Filter)}
               options={[
-                { value: 'all', label: 'All', count: counts.all },
-                { value: 'customers', label: 'Customers', count: counts.customers },
-                { value: 'suppliers', label: 'Suppliers', count: counts.suppliers },
-                { value: 'prospects', label: 'Prospects', count: counts.prospects },
+                { value: 'all', label: 'All' },
+                { value: 'customers', label: 'Customers' },
+                { value: 'suppliers', label: 'Suppliers' },
+                { value: 'prospects', label: 'Prospects' },
               ]}
             />
           </div>

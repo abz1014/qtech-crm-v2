@@ -187,4 +187,26 @@ describe('account menu: Text size (DECISIONS 2026-10-19)', () => {
     // The last item is Sign out; above it (no Install app in jsdom) Smaller, then Normal.
     expect(screen.getByRole('menuitemradio', { name: 'Normal' })).toHaveFocus()
   })
+
+  it('Keyboard shortcuts (with its ? key) shows only with a fine pointer from md up, and opens the sheet', async () => {
+    const user = userEvent.setup()
+    const mq = (matches: boolean) =>
+      vi.spyOn(window, 'matchMedia').mockImplementation(
+        query => ({ matches, media: query, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false }) as unknown as MediaQueryList,
+      )
+    mq(false)
+    const { unmount } = shell()
+    await user.click(screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0])
+    await screen.findByRole('menu', { name: 'Account' })
+    expect(screen.queryByRole('menuitem', { name: /Keyboard shortcuts/ })).toBeNull()
+    unmount()
+    vi.restoreAllMocks()
+    mq(true)
+    shell()
+    await user.click(screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0])
+    const item = await screen.findByRole('menuitem', { name: /Keyboard shortcuts/ })
+    expect(item.querySelector('kbd')?.textContent).toBe('?')
+    await user.click(item)
+    expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument()
+  })
 })

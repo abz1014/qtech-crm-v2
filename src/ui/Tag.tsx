@@ -16,33 +16,55 @@ export function Tag({ children, dashed, className }: { children: ReactNode; dash
   )
 }
 
-/** CountPill: a count beside a tab or group name. */
-export function CountPill({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <span className={cn('num inline-grid h-[var(--lh-xs)] min-w-[var(--lh-xs)] place-items-center rounded-round bg-selected px-[6px] text-xs leading-none text-fg', className)}>
-      {children}
-    </span>
-  )
-}
-
-/**
- * CountBadge: a count pinned to the top-right of an icon (the phone tabs show the top bar's counts this way).
- * Two px under the xs size so it stays small beside a 20px glyph, never under 11px (Smaller text); over 99 reads "99+". Decorative: the
- * control it sits in says the count in words for screen readers.
+/*
+ * NeedsCount (consistency spec 2.1): the ONLY number drawn beside a nav item, tab, segmented option or toggle, and it always
+ * means "items that need someone on our side to act". Any other count is written in words (a lede, a footer, "Waiting · 5").
+ *   <NeedsCount n={4} />                    warning tint, mono; screen readers hear ", 4 need you"
+ *   <NeedsCount n={2} variant="danger" />   critical items (Things to check)
+ *   <NeedsCount n={4} badge />              solid warning dot pinned to the top-right of an icon (phone tabs); needs a
+ *                                           `relative` parent. Over 99 reads "99+".
+ * Renders nothing for 0 (or a missing count): a pill is never shown for zero. `sr` replaces the spoken words when
+ * ", N need you" does not fit ("2 critical"); pass it without the leading comma.
  */
-export function CountBadge({ count, className }: { count: number; className?: string }) {
+export function NeedsCount({
+  n,
+  variant = 'warning',
+  badge = false,
+  sr,
+  className,
+}: {
+  n: number | null | undefined
+  variant?: 'warning' | 'danger'
+  badge?: boolean
+  sr?: string
+  className?: string
+}) {
+  if (!n || n <= 0) return null
+  const shown = badge && n > 99 ? '99+' : String(n)
   return (
-    <span
-      aria-hidden="true"
-      data-count=""
-      className={cn(
-        'num absolute -top-[6px] left-[calc(100%-7px)] inline-grid h-[max(16px,calc(var(--lh-xs)-2px))] min-w-[max(16px,calc(var(--lh-xs)-2px))] place-items-center',
-        'rounded-round bg-primary px-[5px] text-[length:max(11px,calc(var(--text-xs)-2px))] font-medium leading-none text-primary-foreground ring-2 ring-surface',
-        className,
-      )}
-    >
-      {count > 99 ? '99+' : count}
-    </span>
+    <>
+      <span
+        aria-hidden="true"
+        data-needs-count={variant}
+        className={cn(
+          'num inline-grid place-items-center rounded-round leading-none',
+          badge
+            ? cn(
+                'absolute -top-[6px] left-[calc(100%-7px)] h-[max(16px,calc(var(--lh-xs)-2px))] min-w-[max(16px,calc(var(--lh-xs)-2px))] px-[5px]',
+                'text-[length:max(11px,calc(var(--text-xs)-2px))] font-medium text-surface ring-2 ring-surface',
+                variant === 'danger' ? 'bg-tone-danger-fg' : 'bg-tone-warning-fg',
+              )
+            : cn(
+                'h-[var(--lh-xs)] min-w-[var(--lh-xs)] px-[6px] text-xs font-medium',
+                variant === 'danger' ? 'bg-tone-danger-bg text-tone-danger-fg' : 'bg-tone-warning-bg text-tone-warning-fg',
+              ),
+          className,
+        )}
+      >
+        {shown}
+      </span>
+      <span className="sr-only">{`, ${sr ?? `${n} need you`}`}</span>
+    </>
   )
 }
 

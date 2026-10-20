@@ -97,7 +97,7 @@ afterEach(() => installFakeDb(() => ({})).uninstall())
 const bodyRows = () => within(screen.getByRole('table', { name: 'Open RFQs' })).getAllByRole('row').slice(1)
 
 describe('RFQ board', () => {
-  it('shows a sales person their own RFQs first, in due-date order, with counts', async () => {
+  it('shows a sales person their own RFQs first, in due-date order; the owner switch carries no totals', async () => {
     db()
     renderBoard('sales')
     await screen.findByText('Indus Textile Mills')
@@ -105,8 +105,8 @@ describe('RFQ board', () => {
     expect(rows).toHaveLength(2)
     expect(rows[0]).toHaveTextContent('Sargodha Dairy')
     expect(rows[1]).toHaveTextContent('Indus Textile Mills')
-    expect(screen.getByRole('radio', { name: /Mine\s*2/ })).toBeChecked()
-    expect(screen.getByRole('radio', { name: /All\s*3/ })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Mine' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'All' })).toBeInTheDocument()
   })
 
   it('opens on All for an engineer, overdue first, with the due date in the danger tone', async () => {
@@ -135,11 +135,11 @@ describe('RFQ board', () => {
     const user = userEvent.setup()
     renderBoard('engineer')
     await screen.findByText('Punjab Cement')
-    expect(screen.getByRole('radio', { name: /^All open\s*3$/ })).toBeChecked()
-    await user.click(screen.getByRole('radio', { name: /^Quotation sent\s*1/ }))
+    expect(screen.getByRole('radio', { name: 'All open' })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: 'Quotation sent' }))
     await waitFor(() => expect(bodyRows()).toHaveLength(1))
     expect(bodyRows()[0]).toHaveTextContent('Punjab Cement')
-    await user.click(screen.getByRole('radio', { name: /^Needs suppliers\s*1/ }))
+    await user.click(screen.getByRole('radio', { name: /^Needs suppliers\s*, 1 need you$/ }))
     await waitFor(() => expect(bodyRows()[0]).toHaveTextContent('Sargodha Dairy'))
     expect(screen.queryByRole('radio', { name: 'Compact' })).toBeNull() // no density switch any more
   })

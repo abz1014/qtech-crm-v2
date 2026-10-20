@@ -59,10 +59,12 @@ export type { Column, Density, SortState } from '@/ui/dataTableModel'
  * `/` focuses the filter (the field marked data-table-filter: see TableFilter, which also clears on Esc), and the row
  * you opened is focused again when you come back from its detail view (kept in sessionStorage per table label).
  *
- * Density: a table with a toolbar draws the Comfortable / Compact switch at its right edge, remembered per person
- * and per table (useTableDensity). `density` is the starting value; `densitySwitch={false}` leaves it out.
+ * Density: "Smaller text" in the account menu is the one density control (consistency spec 3.2), so the Comfortable / Compact
+ * switch is off unless a table asks for it with `densitySwitch` (remembered per person and per table, useTableDensity).
+ * `density` is the starting value.
  * Truncation: a column with `width` cuts long text with an ellipsis and shows the whole text in a tooltip.
- * Footer: "Showing 7 of 7 RFQs" (give `noun`, or your own `summary`) and the key legend, whenever rows can be focused.
+ * Footer: "Showing 7 of 7 RFQs" (give `noun`, or your own `summary`) and the key legend, whenever rows can be focused; the
+ * legend adds "/ search" when the toolbar holds a TableFilter.
  */
 const OVERSCAN = 8
 const PAGE = 10
@@ -79,7 +81,7 @@ export interface DataTableProps<T> {
   label: string
   /** Starting density; the switch (and the person's saved choice) takes over. Default comfortable. */
   density?: 'comfortable' | 'compact'
-  /** Draw the Comfortable / Compact switch. Default: yes when the table has a toolbar or an export button. */
+  /** Draw the Comfortable / Compact switch. Default: no (the account menu's Smaller text is the density control). */
   densitySwitch?: boolean
   /** Controlled sort. Omit to let the table hold it (starting from `defaultSort`). */
   sort?: SortState | null
@@ -156,8 +158,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const cards = !!mobileRow && phone
   const rootRef = useRef<HTMLDivElement>(null)
   const [savedDensity, setDensity] = useTableDensity(label, props.density ?? 'comfortable')
-  const toolbarGiven = !!props.toolbar || !!exportCsv
-  const densityOn = (props.densitySwitch ?? toolbarGiven) && !cards
+  const densityOn = (props.densitySwitch ?? false) && !cards
   const density = densityOn ? savedDensity : (props.density ?? 'comfortable')
   const hasError = !!error
   const errorAt = useMemo(() => (hasError ? new Date() : null), [hasError])
@@ -283,6 +284,11 @@ export function DataTable<T>(props: DataTableProps<T>) {
   }
 
   // ---- "/" focuses the filter; the opened row is focused again on the way back ----------------------
+  // Whether the toolbar holds a filter field, for the "/ search" key hint. Read whenever the toolbar changes: it is any node.
+  const [hasFilter, setHasFilter] = useState(false)
+  useEffect(() => {
+    setHasFilter(!!rootRef.current?.querySelector('[data-table-filter]'))
+  }, [props.toolbar])
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
       if (e.key !== '/' || e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented || !shortcutsEnabled()) return
@@ -802,6 +808,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
               <span className="inline-flex items-center gap-[6px]"><Kbd>{'↑'}</Kbd><Kbd>{'↓'}</Kbd> move</span>
               {onRowOpen ? <span className="inline-flex items-center gap-[6px]"><Kbd>{'↵'}</Kbd> open</span> : null}
               {selection ? <span className="inline-flex items-center gap-[6px]"><Kbd>Space</Kbd> select</span> : null}
+              {hasFilter ? <span className="inline-flex items-center gap-[6px]"><Kbd>/</Kbd> search</span> : null}
             </span>
           ) : null}
         </div>

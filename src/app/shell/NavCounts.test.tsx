@@ -34,27 +34,33 @@ function mount(role: 'admin' | 'engineer', rfqs = [open(1)]) {
 }
 
 describe('top-bar counts mean "needs you"', () => {
+  it('makes no head request for active orders: every number comes from the Today list', async () => {
+    const { fake, bar } = mount('admin')
+    await within(bar).findByRole('link', { name: 'Orders, 1 need you' })
+    expect(fake.calls.some(c => c.target === 'v_order_state' && /head|count/.test(JSON.stringify(c)))).toBe(false)
+  })
+
   it('RFQs counts the RFQ items on Today (three not sent to suppliers), not every open RFQ', async () => {
     const { bar } = mount('admin', [open(1), open(2), open(3)])
-    expect(await within(bar).findByRole('link', { name: /^RFQs\s*3$/ })).toBeInTheDocument()
-    expect(within(bar).getByRole('link', { name: /^Today\s*\d+$/ })).toBeInTheDocument()
+    expect(await within(bar).findByRole('link', { name: 'RFQs, 3 need you' })).toBeInTheDocument()
+    expect(within(bar).getByRole('link', { name: /^Today, \d+ need you$/ })).toBeInTheDocument()
   })
 
   it('an open RFQ that needs nothing today gets no number', async () => {
     const { bar } = mount('admin', [{ ...open(1), sourcing_state: 'floated_awaiting', owner_id: 'someone-else' }])
-    expect(await within(bar).findByRole('link', { name: /^Orders\s*1$/ })).toBeInTheDocument()
-    expect(within(bar).getByRole('link', { name: /^RFQs$/ })).toBeInTheDocument()
+    expect(await within(bar).findByRole('link', { name: 'Orders, 1 need you' })).toBeInTheDocument()
+    expect(within(bar).getByRole('link', { name: 'RFQs' })).toBeInTheDocument()
   })
 
   it('admin: Orders from the order items on Today (plan commissioning), Money from the money items', async () => {
     const { bar } = mount('admin')
-    expect(await within(bar).findByRole('link', { name: /^Orders\s*1$/ })).toBeInTheDocument()
-    expect(await within(bar).findByRole('link', { name: /^Money\s*1$/ })).toBeInTheDocument() // the one FBR item
+    expect(await within(bar).findByRole('link', { name: 'Orders, 1 need you' })).toBeInTheDocument()
+    expect(await within(bar).findByRole('link', { name: 'Money, 1 need you' })).toBeInTheDocument() // the one FBR item
   })
 
   it('an engineer gets an Orders count, no Money entry, and makes no money request', async () => {
     const { fake, bar } = mount('engineer')
-    expect(await within(bar).findByRole('link', { name: /^Orders\s*1$/ })).toBeInTheDocument()
+    expect(await within(bar).findByRole('link', { name: 'Orders, 1 need you' })).toBeInTheDocument()
     expect(within(bar).queryByRole('link', { name: /Money/ })).not.toBeInTheDocument()
     const money = /^(v_invoice_state|v_order_money|payments_in|invoices|expenses|recurring_expenses|rpc:order_receivables|rpc:month_end_status)$/
     expect(fake.calls.filter(c => money.test(c.target))).toEqual([])

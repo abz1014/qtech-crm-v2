@@ -234,9 +234,9 @@ export function TeamPage() {
               value={filter}
               onValueChange={v => setFilter(v as TeamFilter)}
               options={[
-                { value: 'all', label: 'All', count: counts.all },
-                { value: 'active', label: 'Active', count: counts.active },
-                { value: 'deactivated', label: 'Deactivated', count: counts.deactivated },
+                { value: 'all', label: 'All' },
+                { value: 'active', label: 'Active' },
+                { value: 'deactivated', label: 'Deactivated' },
               ]}
             />
             <span className="ml-auto text-xs text-fg-muted max-sm:hidden">At least one active admin is always required.</span>

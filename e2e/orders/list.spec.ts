@@ -53,14 +53,15 @@ const closeFilters = async (page: Page) => {
 const open = (page: Page, role: 'admin' | 'sales' | 'engineer', s: ListSeed, extra = '') => openAs(page, role, `/orders?owner=all&q=${encodeURIComponent(s.tag)}${extra}`)
 
 test.describe('O04: the orders list', () => {
-  test('tabs are the lifecycle, with counts; every order says its next step in words, after the customer and what was ordered', async ({ page }) => {
+  test('tabs are the lifecycle (no totals: a number beside a tab means needs you); every order says its next step in words, after the customer and what was ordered', async ({ page }) => {
     const s = await seedList()
     await open(page, 'admin', s)
     await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible()
-    // A, B and C are active (C is delivered, but not invoiced, paid and costed, so it is not done); D is cancelled
-    await expect(page.getByRole('tab', { name: /^Active/ })).toContainText('3')
-    await expect(page.getByRole('tab', { name: /^Done/ })).toContainText('0')
-    await expect(page.getByRole('tab', { name: /^Cancelled/ })).toContainText('1')
+    // the tabs carry no totals (consistency spec 2.2); the lede says the active split in words
+    await expect(page.getByRole('tab', { name: 'Active' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Done' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Cancelled' })).toBeVisible()
+    await expect(page.getByText(/^\d+ need you · \d+ waiting$/)).toBeVisible()
     // one plain next step per row instead of four chips
     // the supplier is named, and late goods say by how many days (b was expected 2 days ago)
     await expect(row(page, s.orders.a)).toContainText(`Place the order with ${s.supplierName}`)
@@ -72,7 +73,7 @@ test.describe('O04: the orders list', () => {
     await expect(page.getByRole('columnheader', { name: 'Next step' })).toBeVisible()
     await shot(page, 'o04-orders-list-1440')
     await page.getByRole('tab', { name: /^Done/ }).click()
-    await expect(page.getByText('No orders match')).toBeVisible()
+    await expect(page.getByText(/^Nothing matches/)).toBeVisible()
     await expect(row(page, s.orders.a)).toHaveCount(0)
     await page.getByRole('tab', { name: /^Cancelled/ }).click()
     await expect(row(page, s.orders.d)).toBeVisible()
@@ -94,10 +95,10 @@ test.describe('O04: the orders list', () => {
 
     // combined with commissioning: an order that is late AND planned does not exist
     await page.getByLabel('Commissioning state').selectOption({ label: 'Planned (0)' })
-    await expect(page.getByText('No orders match')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Filters (2)' })).toBeVisible()
+    await expect(page.getByText(/^Nothing matches/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Filters · 2 on' })).toBeVisible()
     await closeFilters(page)
-    await page.getByRole('button', { name: 'Clear the filters' }).click()
+    await page.getByRole('button', { name: 'Clear search and filters' }).click()
     // clearing also clears the search, so the list is every order: scope it to this test's customer again
     await page.getByLabel('Search orders').fill(s.tag)
     await expect(row(page, s.orders.a)).toBeVisible()
@@ -138,7 +139,7 @@ test.describe('O04: the orders list', () => {
     await openAs(page, 'sales', `/orders?q=${encodeURIComponent(s.tag)}`)
     // none of these orders belong to the fixture salesperson, so Mine is empty until All is chosen
     await expect(page.getByRole('radio', { name: /^Mine/ })).toBeChecked()
-    await expect(page.getByText('No orders match')).toBeVisible()
+    await expect(page.getByText(/^Nothing matches/)).toBeVisible()
     await page.getByRole('radio', { name: /^All/ }).click()
     await expect(row(page, s.orders.a)).toBeVisible()
     await expect(page.getByRole('radio', { name: /^All/ })).toBeChecked()
@@ -178,7 +179,7 @@ test.describe('O04: the orders list', () => {
 
   test('loading, an empty list and an error say what is true', async ({ page }) => {
     await openAs(page, 'admin', `/orders?owner=all&q=${encodeURIComponent('zzzz-nothing-matches')}`)
-    await expect(page.getByText('No orders match')).toBeVisible()
+    await expect(page.getByText(/^Nothing matches/)).toBeVisible()
     await page.route(/\/rest\/v1\/v_order_state/, route => route.abort())
     await page.reload()
     // the query retries before it gives up

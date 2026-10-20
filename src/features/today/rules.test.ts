@@ -9,6 +9,8 @@ import {
   dueBadge,
   groupFor,
   groupItems,
+  NAV_SECTION,
+  navSectionOf,
   previousMonthStart,
   ruleBidDue,
   ruleChaseCustomer,
@@ -23,6 +25,7 @@ import {
   rulePlacePo,
   ruleRelayAnswers,
   ruleToSource,
+  RULES,
   THRESHOLDS,
 } from './rules'
 import type { ClarificationFact, InquiryFact, LegFact, OrderFact, ReceivableFact, RfqFact, Role, TodayInputs } from './types'
@@ -538,6 +541,34 @@ describe('the whole list', () => {
     expect(v.waiting).toEqual([])
     const a = buildToday(ctx({ receivables: [rec({ ownerId: 'u-eng' })], monthEnd: { month: '2026-10-01', checks: 3, closed: false }, today: '2026-11-03' }, 'admin'))
     expect(a.active.map(i => i.rule).sort()).toEqual(['close_month', 'payment_overdue'])
+  })
+})
+
+describe('nav partition (consistency spec 2.3)', () => {
+  it('every rule maps to exactly one section, and money is the money tab', () => {
+    const keys = Object.keys(RULES) as (keyof typeof RULES)[]
+    expect(Object.keys(NAV_SECTION).sort()).toEqual([...keys].sort())
+    for (const k of keys) expect(['rfqs', 'orders', 'money']).toContain(NAV_SECTION[k])
+  })
+  it('the section counts add up to the whole active list', () => {
+    const v = buildToday(
+      ctx(
+        {
+          rfqs: [rfq({ id: 'a', number: 1, dueOn: '2026-11-26' }), rfq({ id: 'c', number: 3, dueOn: '2026-12-20', sourcingState: 'not_floated' })],
+          legs: [leg({ placedOn: null })],
+          receivables: [rec()],
+          monthEnd: { month: '2026-10-01', checks: 3, closed: false },
+          today: '2026-11-03',
+        },
+        'admin',
+      ),
+    )
+    const by = (s: string) => v.active.filter(i => navSectionOf(i) === s).length
+    expect(by('rfqs')).toBeGreaterThan(0)
+    expect(by('orders')).toBeGreaterThan(0)
+    expect(by('money')).toBeGreaterThan(0)
+    expect(by('rfqs') + by('orders') + by('money')).toBe(v.active.length)
+    for (const i of v.active) expect(navSectionOf(i) === 'money').toBe(i.tab === 'money')
   })
 })
 

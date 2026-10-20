@@ -123,6 +123,11 @@ export function BoardPage() {
   const shown = useMemo(() => applyQuery(applyStep(byOwner, step), q), [byOwner, step, q])
   const mineCount = useMemo(() => applyOwner(open.data ?? [], 'mine', user?.id ?? null).length, [open.data, user?.id])
   const overdue = useMemo(() => (open.data ?? []).filter(r => r.isOverdue).length, [open.data])
+  // "Need you": the two steps that wait on our side (ask suppliers, send the quotation); the others wait on someone else.
+  const needYou = useMemo(() => {
+    const c = stepCounts(open.data ?? [])
+    return c.suppliers + c.ready
+  }, [open.data])
 
   const openColumns = useMemo<Column<BoardRow>[]>(
     () => [
@@ -245,8 +250,8 @@ export function BoardPage() {
           value={owner}
           onValueChange={v => change({ owner: v, page: null })}
           options={[
-            { value: 'mine', label: 'Mine', count: open.isSuccess ? mineCount : undefined },
-            { value: 'all', label: 'All', count: open.isSuccess ? total : undefined },
+            { value: 'mine', label: 'Mine' },
+            { value: 'all', label: 'All' },
           ]}
         />
       )}
@@ -254,10 +259,7 @@ export function BoardPage() {
         <StepFilter
           value={show}
           onChange={v => change({ show: v === 'all' ? null : v, page: null })}
-          counts={{
-            ...(open.isSuccess ? counts : {}),
-            ...(closedCount.isSuccess ? { closed: closedCount.data } : {}),
-          }}
+          needs={open.isSuccess ? { suppliers: counts.suppliers, ready: counts.ready } : {}}
         />
       </div>
       <InfoTip label="About next steps">Needs suppliers → Waiting for prices → Ready to quote → Quotation sent → Won or closed.</InfoTip>
@@ -267,7 +269,7 @@ export function BoardPage() {
   const lede = open.isSuccess
     ? total === 0
       ? 'Nothing is waiting on you.'
-      : `${total} open${overdue ? `, ${overdue} overdue` : ''}. Earliest due date first.`
+      : [`${total} open`, needYou ? `${needYou} need you` : null, overdue ? `${overdue} overdue` : null].filter(Boolean).join(' · ')
     : 'Open RFQs, earliest due date first.'
 
   const closedSummary = closed.isSuccess ? pageSummary(page, PAGE_SIZE, closed.data.total) : undefined

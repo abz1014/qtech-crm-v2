@@ -15,6 +15,7 @@ import { useClosedMonths, useMonthEndStatus } from '@/features/money/monthEnd/ho
 import { buildChecklist, checksWithItems, defaultMonthEndMonth, isMonthKey } from '@/features/money/monthEnd/model'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import type { Role } from '@/features/today/types'
+import { NeedsCount } from '@/ui/Tag'
 
 /*
  * The frame every Money view sits in: the title, the date and currency line, the page actions, the Reports link and the
@@ -97,13 +98,7 @@ export function MoneyFrame({ active, actions, children }: { active: string | nul
                 aria-current={on ? 'page' : undefined}
               >
                 {t.label}
-                {n ? (
-                  <span className="num inline-flex h-5 min-w-[20px] items-center justify-center rounded-round bg-tone-warning-bg px-[6px] text-xs font-medium text-tone-warning-fg">
-                    <span className="sr-only">, </span>
-                    {n}
-                    <span className="sr-only"> need you</span>
-                  </span>
-                ) : null}
+                <NeedsCount n={n} />
               </Link>
             )
           })}

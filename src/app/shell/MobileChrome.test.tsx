@@ -21,10 +21,10 @@ describe('phone tabs: the top bar counts as badges', () => {
       </MemoryRouter>,
     )
     const nav = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(nav).getByRole('link', { name: /^Today\s*9$/ })).toBeInTheDocument()
-    expect(within(nav).getByRole('link', { name: /^RFQs\s*140$/ })).toHaveTextContent('99+')
-    expect(within(nav).getByRole('link', { name: 'Orders' }).querySelector('[data-count]')).toBeNull()
-    expect(within(nav).getByRole('link', { name: 'Companies' }).querySelector('[data-count]')).toBeNull()
+    expect(within(nav).getByRole('link', { name: 'Today, 9 need you' })).toBeInTheDocument()
+    expect(within(nav).getByRole('link', { name: 'RFQs, 140 need you' })).toHaveTextContent('99+')
+    expect(within(nav).getByRole('link', { name: 'Orders' }).querySelector('[data-needs-count]')).toBeNull()
+    expect(within(nav).getByRole('link', { name: 'Companies' }).querySelector('[data-needs-count]')).toBeNull()
   })
 
   it('every column is at least as wide as its label, so a long label never clips', () => {

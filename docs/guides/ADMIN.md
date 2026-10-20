@@ -2,6 +2,7 @@ Q-TECH CRM: ADMIN (one page)
 
 Money has four tabs: Who owes us, Invoices & GST, Expenses, Month end. "Reports" is at the top right of Money.
 A number beside a tab means "this many need you". The (i) next to a word explains it in one line.
+Press ? on a computer to see the keyboard shortcuts.
 
 1. EXPENSES, QUICK ENTRY
  - Money, Expenses, "Add expenses" (one row or many).

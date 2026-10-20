@@ -145,7 +145,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
             className="mt-2 flex-wrap justify-self-start"
             value={tab}
             onValueChange={v => setTab(v as 'all' | TodayTab)}
-            options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], count: counts[t] }))}
+            options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], needs: counts[t] }))}
           />
         ) : null}
         <HowItWorksCard userId={user.id} role={user.role} className="mt-2" />

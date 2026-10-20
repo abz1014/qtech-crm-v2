@@ -270,30 +270,32 @@ describe('DataTable: density, filter keys, focus memory, footer (A-108 to A-113)
   const density = () => el.querySelector('[data-density]')?.getAttribute('data-density')
   const radio = (name: string) => [...el.querySelectorAll<HTMLButtonElement>('[role="radio"]')].find(b => b.textContent === name)!
 
-  it('a table with a toolbar offers Comfortable / Compact and remembers the choice per table', () => {
+  it('a table that asks for it offers Comfortable / Compact and remembers the choice per table', () => {
     window.localStorage.clear()
-    mount(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} />)
+    mount(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} densitySwitch />)
     expect(density()).toBeUndefined()
     act(() => radio('Compact').click())
     expect(density()).toBe('compact')
     expect(window.localStorage.getItem('qtech.density.anon.Invoices')).toBe('compact')
     act(() => root!.unmount())
     el.remove()
-    mount(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} />)
+    mount(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} densitySwitch />)
     expect(density()).toBe('compact')
     expect(radio('Compact').getAttribute('aria-checked')).toBe('true')
     window.localStorage.clear()
   })
 
-  it('still works when storage throws, and has no switch without a toolbar or with densitySwitch off', () => {
+  it('still works when storage throws, and has no switch by default (Smaller text is the density control) or with densitySwitch off', () => {
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('blocked')
     })
-    mount(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} />)
+    mount(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} densitySwitch />)
     act(() => radio('Compact').click())
     expect(density()).toBe('compact')
     spy.mockRestore()
     act(() => root!.render(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} />))
+    expect(el.querySelector('[role="radiogroup"]')).toBeNull()
+    act(() => root!.render(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} />))
     expect(el.querySelector('[role="radiogroup"]')).toBeNull()
     act(() => root!.render(<DataTable label="Invoices" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} densitySwitch={false} />))
     expect(el.querySelector('[role="radiogroup"]')).toBeNull()
@@ -315,6 +317,13 @@ describe('DataTable: density, filter keys, focus memory, footer (A-108 to A-113)
     const ev = new KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true })
     act(() => void field.dispatchEvent(ev))
     expect(ev.defaultPrevented).toBe(false)
+  })
+
+  it('the key legend says "/ search" only when the toolbar holds a filter', () => {
+    mount(<DataTable label="x" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={toolbar} />)
+    expect(el.textContent).toContain('/ search')
+    act(() => root!.render(<DataTable label="x" columns={columns} rows={INVOICES} getRowId={r => r.id} toolbar={<span>no filter</span>} />))
+    expect(el.textContent).not.toContain('/ search')
   })
 
   it('the row you opened is focused again when the table comes back', () => {

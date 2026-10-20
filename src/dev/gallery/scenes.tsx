@@ -379,10 +379,10 @@ export function Misc() {
               value={filter}
               onValueChange={setFilter}
               options={[
-                { value: 'all', label: 'All', count: 9 },
-                { value: 'bids', label: 'Quotations', count: 3 },
-                { value: 'chases', label: 'Chases', count: 4 },
-                { value: 'orders', label: 'Orders', count: 2 },
+                { value: 'all', label: 'All', needs: 9 },
+                { value: 'bids', label: 'Quotations', needs: 3 },
+                { value: 'chases', label: 'Chases', needs: 4 },
+                { value: 'orders', label: 'Orders', needs: 2 },
               ]}
             />
             <SegmentedControl large fill aria-label="Role" value={role} onValueChange={setRole} options={[{ value: 'customer', label: 'Customer' }, { value: 'supplier', label: 'Supplier' }, { value: 'both', label: 'Both' }]} />
@@ -397,7 +397,7 @@ export function Misc() {
             <Tab value="suppliers" data-preview-tab>
               Suppliers
             </Tab>
-            <Tab value="questions" count={2}>
+            <Tab value="questions" needs={2}>
               Questions
             </Tab>
             <Tab value="history">History</Tab>

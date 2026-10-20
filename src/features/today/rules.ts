@@ -1009,6 +1009,39 @@ export function buildToday(ctx: TodayInputs): TodayView {
   return groupItems(applySnoozes(all, ctx.snoozes, ctx.today))
 }
 
+/** Which top-bar destination counts an item: every Today item belongs to exactly one, so the nav numbers add up to Today's. */
+export type NavSection = 'rfqs' | 'orders' | 'money'
+
+/**
+ * The nav partition (consistency spec 2.3), by rule so it never depends on which ids an item happens to carry:
+ *   money   the money tab (payment overdue, delivered not invoiced, close month, costs, FBR, TCS, recurring);
+ *   orders  the order rules (goods late, place PO, plan commissioning, to source, the engineer's job rules);
+ *   rfqs    the rest (chase customer, relay answers, not floated, chase supplier, quotation due, decision overdue).
+ */
+export const NAV_SECTION: Record<RuleKey, NavSection> = {
+  chase_customer: 'rfqs',
+  relay_answers: 'rfqs',
+  not_floated: 'rfqs',
+  chase_supplier: 'rfqs',
+  bid_due: 'rfqs',
+  decision_overdue: 'rfqs',
+  payment_overdue: 'money',
+  goods_late: 'orders',
+  place_po: 'orders',
+  plan_commissioning: 'orders',
+  to_source: 'orders',
+  delivered_not_invoiced: 'money',
+  close_month: 'money',
+  costs_incomplete: 'money',
+  fbr_attention: 'money',
+  tcs_not_sent: 'money',
+  recurring_due: 'money',
+  job_commissioning: 'orders',
+  job_on_site: 'orders',
+}
+
+export const navSectionOf = (item: Pick<TodayItem, 'rule'>): NavSection => NAV_SECTION[item.rule]
+
 /** The nudge date of a Waiting row, or null. */
 export const returnsOn = (i: Entry): string | null => i.waiting?.nextNudgeOn ?? null
 

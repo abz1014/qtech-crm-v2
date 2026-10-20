@@ -53,8 +53,7 @@ const s = StyleSheet.create({
   tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: C.strong, paddingVertical: 6 },
   cNo: { width: 22, paddingLeft: 4 },
   cDesc: { flex: 1, paddingRight: 8 },
-  cQty: { width: 30, textAlign: 'right' },
-  cUnit: { width: 32, paddingLeft: 6 },
+  cQty: { width: 62, textAlign: 'right' },
   cPrice: { width: 66, textAlign: 'right' },
   cGst: { width: 44, textAlign: 'right' },
   cNet: { width: 84, textAlign: 'right' },
@@ -88,6 +87,14 @@ const longDay = (iso: string): string => {
 }
 const plainDay = (iso: string): string => longDay(iso).replace(/^\w{3} /, '')
 const qtyText = (n: number) => (Number.isInteger(n) ? String(n) : String(parseFloat(n.toFixed(3))))
+/** "2 pcs": the quantity and the customer's unit in one cell (screens audit 15), the unit left out when there is none. */
+const qtyWithUnit = (n: number, unit: string | null | undefined) => (unit?.trim() ? `${qtyText(n)} ${unit.trim()}` : qtyText(n))
+/** 1 -> "1st", 2 -> "2nd", 11 -> "11th": the revision in words, not the R2 code (screens audit 15). */
+const ordinal = (n: number): string => {
+  const t = n % 100
+  const suffix = t >= 11 && t <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th')
+  return `${n}${suffix}`
+}
 
 /** The first line of a description is the item, any further lines are its detail (as in the approved PDF). */
 function splitDescription(text: string): { title: string; detail: string | null } {
@@ -146,7 +153,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
             {!data.previous && !data.preview ? <Text style={[s.muted, { marginTop: 3 }]}>First issue</Text> : null}
             {data.previous ? (
               <Text style={[s.muted, { marginTop: 3 }]}>
-                Supersedes <Text style={s.mono}>{refOf(data.previous.revision)}</Text> of {plainDay(data.previous.issuedOn)}
+                Revised quotation ({ordinal(q.revision)} revision), replaces the one of {plainDay(data.previous.issuedOn)}
               </Text>
             ) : null}
           </View>
@@ -155,10 +162,12 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
               <Text style={s.metaLabel}>Quotation no.</Text>
               <Text style={[s.metaValue, s.mono]}>{ref}</Text>
             </View>
-            <View style={s.metaRow}>
-              <Text style={s.metaLabel}>Revision</Text>
-              <Text style={[s.metaValue, s.mono]}>R{q.revision}</Text>
-            </View>
+            {q.revision > 0 ? (
+              <View style={s.metaRow}>
+                <Text style={s.metaLabel}>Revision</Text>
+                <Text style={s.metaValue}>{ordinal(q.revision)}</Text>
+              </View>
+            ) : null}
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Date</Text>
               <Text style={s.metaValue}>{longDay(q.issuedOn)}</Text>
@@ -207,7 +216,6 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
           <Text style={s.cNo}>#</Text>
           <Text style={s.cDesc}>Description</Text>
           <Text style={s.cQty}>Qty</Text>
-          <Text style={s.cUnit}>Unit</Text>
           <View style={s.cPrice}>
             <Text style={s.right}>Unit price</Text>
             <Text style={[s.right, s.muted, { fontWeight: 400 }]}>PKR, net</Text>
@@ -229,8 +237,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
                 <Text style={s.strongText}>{d.title}</Text>
                 {d.detail ? <Text style={[s.muted, { fontSize: 9.5 }]}>{d.detail}</Text> : null}
               </View>
-              <Text style={[s.cQty, s.mono]}>{qtyText(l.qty)}</Text>
-              <Text style={s.cUnit}>{l.unit ?? ''}</Text>
+              <Text style={s.cQty}>{qtyWithUnit(l.qty, l.unit)}</Text>
               <Text style={[s.cPrice, s.mono]}>{money(toPaisa(l.unit_price_net))}</Text>
               <Text style={[s.cGst, s.mono]}>{Number(l.gst_rate) === 0 ? 'Exempt' : `${qtyText(Number(l.gst_rate))}%`}</Text>
               <Text style={[s.cNet, s.mono]}>{money(a.net)}</Text>

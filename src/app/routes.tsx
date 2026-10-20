@@ -3,7 +3,6 @@ import { lazyWithReload as lazy } from '@/lib/importWithReload'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { RequireRole, RequireSession, RoleLanding } from '@/app/guards'
 import { navItems, type NavKey } from '@/app/navConfig'
-import { DestinationPage } from '@/app/pages/DestinationPage'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
@@ -14,11 +13,10 @@ import { AppShell } from '@/app/shell/AppShell'
 const SignInPage = lazy(() => import('@/app/pages/SignInPage').then(m => ({ default: m.SignInPage })))
 
 /**
- * Screens plug in here, one per destination. A feature task replaces its entry
- * (a lazy-loaded page component); until then the destination shows the stand-in.
+ * One lazy-loaded screen per destination (a total map: a new nav key does not compile without its screen).
  * Sub-routes such as /rfqs/:id are declared by the feature under the same key.
  */
-const screens: Partial<Record<NavKey, ComponentType>> = {
+const screens: Record<NavKey, ComponentType> = {
   today: lazy(() => import('@/features/today/TodayScreen')),
   companies: lazy(() => import('@/features/companies/CompaniesScreen')),
   rfqs: lazy(() => import('@/features/rfqs/board/RfqsScreen')),
@@ -197,13 +195,9 @@ export function AppRoutes() {
                 path={`${item.path.slice(1)}/*`}
                 element={
                   <RequireRole item={item}>
-                    {Screen ? (
-                      <Suspense fallback={null}>
-                        <Screen />
-                      </Suspense>
-                    ) : (
-                      <DestinationPage navKey={item.key} />
-                    )}
+                    <Suspense fallback={null}>
+                      <Screen />
+                    </Suspense>
                   </RequireRole>
                 }
               />

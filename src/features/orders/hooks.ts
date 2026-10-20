@@ -164,11 +164,6 @@ export function useSupplierChoices(enabled: boolean) {
   return useQuery({ queryKey: qk.orders.supplierChoices(), queryFn: api.listSupplierChoices, enabled, staleTime: 60_000 })
 }
 
-/** The top-bar Orders count. */
-export function useActiveOrderCount() {
-  return useQuery({ queryKey: qk.orders.activeCount(), queryFn: api.countActiveOrders, staleTime: 60_000 })
-}
-
 /** O04: the orders list. `role` is in the key because the request itself differs by role. */
 export function useOrdersList(role: 'admin' | 'sales' | 'engineer' | null) {
   return useQuery({ queryKey: qk.orders.board(role ?? ''), queryFn: () => api.listOrders(role as 'admin' | 'sales' | 'engineer'), enabled: role !== null })

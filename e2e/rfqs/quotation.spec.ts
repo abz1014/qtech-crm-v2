@@ -300,10 +300,10 @@ test.describe('re-issue', () => {
     const text = pdf1 ? pdfText(pdf1) : null
     if (text) {
       expect(text).toContain(`${refOf(b, a)}`)
-      expect(text).toContain('R1')
-      expect(text).toContain(`Supersedes ${refOf(a)}`)
+      expect(text).toContain('Revised quotation (1st revision), replaces the one of') // words, not the R1 / Supersedes codes (R2-18)
+      expect(text).not.toContain('Supersedes')
     }
-    if (pdf1 && process.env.REVIEW_DIR) renderPdfPng(pdf1, process.env.REVIEW_DIR, 'rfq-quotation-pdf-r1-supersedes-page1')
+    if (pdf1 && process.env.REVIEW_DIR) renderPdfPng(pdf1, process.env.REVIEW_DIR, 'rfq-quotation-pdf-r1-revised-page1')
 
     // The list: both revisions, the latest current, the earlier superseded.
     await expect(page.getByTestId('quotation-1')).toContainText('Current')

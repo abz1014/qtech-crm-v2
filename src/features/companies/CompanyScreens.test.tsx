@@ -249,7 +249,8 @@ describe('companies list', () => {
     const glass = (await screen.findByRole('link', { name: 'Karachi Glassworks' })).closest('tr') as HTMLElement
     expect(glass).toHaveTextContent('Karachi')
     expect(glass).not.toHaveTextContent('Pakistan')
-    expect(within(glass).getByText('Customer & supplier').closest('[data-status]')).toHaveAttribute('data-status', 'company-role:customer')
+    // The role is identity, not state: a neutral Tag with no status tone (DESIGN_SYSTEM section 6).
+    expect(within(glass).getByText('Customer & supplier').closest('[data-status]')).toBeNull()
     expect((screen.getByRole('link', { name: 'Alpenmark Controls' }).closest('tr') as HTMLElement)).toHaveTextContent('Linz, Austria')
     expect((screen.getByRole('link', { name: 'Lahore Mills' }).closest('tr') as HTMLElement)).toHaveTextContent('Pakistan')
     expect(await axeViolations(document.body)).toEqual([])
@@ -261,7 +262,7 @@ describe('companies list', () => {
     mount('/companies', <CompaniesPage />)
     await screen.findByRole('link', { name: 'Karachi Glassworks' })
     const search = screen.getByRole('textbox', { name: 'Search companies' })
-    expect(search).toHaveAttribute('placeholder', 'Name, contact, phone or city')
+    expect(search).toHaveAttribute('placeholder', 'Search companies')
 
     await user.type(search, 'naveed')
     expect(screen.getByRole('link', { name: 'Karachi Glassworks' }).closest('tr')).toHaveTextContent('Contact: Naveed Akhtar')

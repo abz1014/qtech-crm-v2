@@ -1,171 +1,206 @@
 import {
   Ban,
+  CalendarClock,
   Circle,
   CircleAlert,
+  CircleArrowRight,
   CircleCheck,
   CircleDashed,
-  CircleDot,
   Clock,
   Hourglass,
   Landmark,
-  Layers,
+  Lock,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
 
 /*
- * The status registry (U05): the ONE place where a dimension and a value from a
- * database view become a label, a tone and a glyph (DATA_MODEL section 5, plus
- * Amendment A6 and the fx / user additions). Colour is never decided here: the
- * chip reads --status-fg / --status-bg from the [data-status="dimension:value"]
- * map in docs/design/tokens.css. `tone` is only used to pick the glyph, and a
- * unit test (status.test.ts) fails if it disagrees with tokens.css, if a token
- * has no entry here, or if an entry has no token.
+ * The status registry (U05, round 2 R2-01): the ONE place where a dimension and a value from a
+ * database view become a label, a tone and a glyph (DATA_MODEL section 5, plus Amendment A6 and
+ * the fx / user additions). Colour is never decided here: the chip reads --status-fg / --status-bg
+ * from the [data-status="dimension:value"] map in docs/design/tokens.css. `tone` picks the glyph and
+ * the StatusText colours, and a unit test (status.test.ts) fails if it disagrees with tokens.css, if a
+ * token has no entry here, or if an entry has no token.
  *
- * Labels follow the plain-words glossary (DECISIONS 2026-10-19): "Not sent to suppliers", not "Not floated";
- * "Quotation sent", not "Bid sent". Only the words change; the keys and the view values never do.
+ * Vocabulary (DESIGN_SYSTEM section 6): 34 visible labels; one label means one thing and has one tone
+ * everywhere. The tone says who acts next: warning = we act (now), info = someone else acts (waiting),
+ * success = finished (done), danger = past its date and still open (late), neutral = closed, not asked,
+ * not needed (inert). The normal state never draws a chip: those keys carry `hidden: true`, StatusBadge
+ * renders nothing for them, and their label is only used as text (StatusText, headings, filters).
  *
- * Dimension and value keys are the data-status slugs (kebab-case). Views emit
- * snake_case ("floated_awaiting"); resolveStatus() normalises and applies the
- * aliases below, and THROWS on anything unknown, so a new view value cannot
- * silently render as an unstyled chip.
+ * Dimension and value keys are the data-status slugs (kebab-case). Views emit snake_case
+ * ("floated_awaiting"); resolveStatus() normalises and applies the aliases below, and THROWS on
+ * anything unknown, so a new view value cannot silently render as an unstyled chip. The keys and the
+ * view values never change; only the words and tones do.
  */
-export type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'ink'
+export type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
+
+/** Who acts next, in words: the shared tone of every Next step (lists, board, Today). */
+export type StepTone = 'late' | 'now' | 'waiting' | 'done' | 'inert'
+
+export const TONE_OF_STEP = {
+  late: 'danger',
+  now: 'warning',
+  waiting: 'info',
+  done: 'success',
+  inert: 'neutral',
+} as const satisfies Record<StepTone, Tone>
 
 export interface StatusDef {
   label: string
   tone: Tone
   /** Dashed edge: the data is not firm (data trust, prospect). Must match --status-border-style in tokens.css. */
   dashed?: boolean
-  /** Position on a three-step track (TCS and FBR): 0 to 3 steps filled. */
-  step?: 0 | 1 | 2 | 3
-  /** Overrides the glyph chosen from the tone. */
+  /** Overrides the glyph chosen from the tone (only CircleDashed, Ban, Lock and CalendarClock are allowed). */
   icon?: LucideIcon
+  /** The normal state: never drawn as a chip (StatusBadge returns null); the label is text only. */
+  hidden?: true
 }
 
 const def = (label: string, tone: Tone, extra: Partial<StatusDef> = {}): StatusDef => ({ label, tone, ...extra })
+/** A normal-state key: no chip, the label is used only as text. */
+const hid = (label: string, tone: Tone, extra: Partial<StatusDef> = {}): StatusDef => ({ label, tone, ...extra, hidden: true })
 
 export const STATUS = {
-  'rfq-outcome': { open: def('Open', 'info'), won: def('Won', 'success'), closed: def('Closed', 'neutral') },
-  sourcing: {
-    'not-floated': def('Not sent to suppliers', 'warning'),
-    awaiting: def('Waiting for prices', 'info'),
-    'partly-covered': def('Partly priced', 'info'),
-    covered: def('All priced', 'success'),
-    'no-offer': def('No price yet', 'danger'),
-  },
-  clarification: {
-    none: def('No questions', 'neutral'),
-    'to-ask': def('To ask', 'warning'),
-    asked: def('Asked', 'info'),
-    'waiting-customer': def('Waiting on customer', 'info'),
-    'answers-to-relay': def('Answers to send', 'warning'),
-    answered: def('Answered', 'success'),
-    withdrawn: def('Not needed', 'neutral'),
-  },
-  bid: {
-    'to-bid': def('To quote', 'warning'),
-    'bid-sent': def('Quotation sent', 'success'),
+  'rfq-outcome': { open: hid('Open', 'info'), won: def('Won', 'success'), closed: def('Closed', 'neutral') },
+  // UI-only: the one stage of an RFQ (header chip, board and list Next step). Not a database value.
+  'rfq-stage': {
+    suppliers: def('Needs suppliers', 'warning'),
+    prices: def('Waiting for prices', 'info'),
+    ready: def('Ready to quote', 'warning'),
+    sent: def('Quotation sent', 'info'),
     expired: def('Quotation expired', 'warning'),
   },
-  deadline: { 'due-soon': def('Due soon', 'warning'), overdue: def('Overdue', 'danger') },
+  sourcing: {
+    'not-floated': def('Needs suppliers', 'warning'),
+    awaiting: def('Waiting for prices', 'info'),
+    'partly-covered': def('Waiting for prices', 'info'),
+    covered: def('Ready to quote', 'warning'),
+    'no-offer': def('Needs suppliers', 'warning'),
+  },
+  // Headings in the questions panel, never chips.
+  clarification: {
+    none: hid('No questions', 'neutral'),
+    'to-ask': hid('To ask', 'warning'),
+    asked: hid('Waiting on the customer', 'info'),
+    'waiting-customer': hid('Waiting on the customer', 'info'),
+    'answers-to-relay': hid('Answers to send', 'warning'),
+    answered: hid('Answered', 'success'),
+    withdrawn: hid('Withdrawn', 'neutral'),
+  },
+  bid: {
+    'to-bid': hid('Ready to quote', 'warning'),
+    'bid-sent': def('Quotation sent', 'info'),
+    expired: def('Quotation expired', 'warning'),
+  },
+  // Due soon is always drawn with a time phrase from timeWords ("Due today", "Due in 2 days").
+  deadline: { 'due-soon': def('Due soon', 'warning', { icon: CalendarClock }), overdue: def('Overdue', 'danger') },
   inquiry: {
     shortlisted: def('Not asked yet', 'neutral'),
-    sent: def('Sent', 'info'),
-    chased: def('Chased', 'warning'),
-    awaiting: def('Awaiting reply', 'info'),
-    quoted: def('Quoted', 'success'),
-    'no-offer': def("Can't quote", 'danger'),
+    sent: def('Waiting for prices', 'info'),
+    chased: def('Waiting for prices', 'info'),
+    awaiting: def('Waiting for prices', 'info'),
+    quoted: def('Priced', 'success'),
+    'no-offer': def("Can't quote", 'neutral', { icon: Ban }),
+  },
+  // UI-only: an item's price state on the RFQ items panel. Not a database value.
+  'item-price': {
+    waiting: def('Waiting for prices', 'info'),
+    priced: def('Priced', 'success'),
+    none: def('No price yet', 'warning'),
   },
   'inquiry-blocked': {
-    none: def('Not blocked', 'neutral'),
-    'open-questions': def('Open questions', 'warning'),
-    'answers-waiting': def('Answers waiting', 'warning'),
+    none: hid('Not blocked', 'neutral'),
+    'open-questions': hid('Open questions', 'warning'),
+    'answers-waiting': hid('Answers waiting', 'warning'),
   },
-  order: { active: def('Active', 'info'), cancelled: def('Cancelled', 'neutral'), done: def('Done', 'success') },
+  order: { active: hid('Active', 'info'), cancelled: def('Cancelled', 'neutral', { icon: Ban }), done: def('Done', 'success') },
   goods: {
-    na: def('Not needed', 'neutral'),
-    'to-source': def('To source', 'warning'),
-    'to-place': def('To place', 'warning'),
+    na: hid('Not needed', 'neutral'),
+    'to-source': def('To order', 'warning'),
+    'to-place': def('To order', 'warning'),
     'on-order': def('On order', 'info'),
-    late: def('Late', 'danger'),
-    received: def('Received', 'info'),
-    'partly-delivered': def('Partly delivered', 'info'),
+    late: def('Overdue', 'danger'),
+    received: def('To deliver', 'warning'),
+    'partly-delivered': def('To deliver', 'warning'),
     delivered: def('Delivered', 'success'),
   },
   commissioning: {
-    na: def('Not needed', 'neutral'),
+    na: hid('Not needed', 'neutral'),
     'to-plan': def('To plan', 'warning'),
     planned: def('Planned', 'info'),
     done: def('Done', 'success'),
   },
   invoicing: {
-    'not-invoiced': def('Not invoiced', 'warning'),
-    part: def('Part invoiced', 'info'),
-    full: def('Fully invoiced', 'success'),
+    'not-invoiced': def('To invoice', 'warning'),
+    part: def('To invoice', 'warning'),
+    full: def('Invoiced', 'success'),
   },
   payment: {
-    unpaid: def('Unpaid', 'neutral'),
-    part: def('Part paid', 'info'),
-    settled: def('Settled', 'success'),
+    unpaid: def('Awaiting payment', 'info'),
+    part: def('Awaiting payment', 'info'),
+    settled: def('Paid', 'success'),
     overdue: def('Overdue', 'danger'),
   },
-  costs: { provisional: def('Not final', 'warning'), complete: def('Complete', 'success') },
+  costs: { provisional: def('Not final', 'warning'), complete: hid('Complete', 'success') },
   trust: {
-    ok: def('Firm', 'neutral'),
+    ok: hid('Firm', 'neutral'),
     'basis-unknown': def('Is GST included?', 'warning', { dashed: true, icon: CircleDashed }),
-    estimated: def('Estimated dates', 'neutral', { dashed: true, icon: CircleDashed }),
+    // Estimated dates are a dashed underline with an InfoTip in the order meta line, not a chip.
+    estimated: hid('Estimated dates', 'neutral', { dashed: true, icon: CircleDashed }),
   },
   tcs: {
-    'not-started': def('Not started', 'neutral', { step: 0 }),
-    'copy-received': def('Copy received', 'info', { step: 1 }),
-    sent: def('Sent', 'info', { step: 2 }),
-    delivered: def('Delivered', 'success', { step: 3 }),
+    'not-started': def('Not sent', 'warning'),
+    'copy-received': def('Not sent', 'warning'),
+    sent: def('Sent', 'info'),
+    delivered: def('Delivered', 'success'),
   },
   fbr: {
-    pending: def('Pending', 'warning', { step: 0 }),
-    generated: def('Generated', 'info', { step: 1 }),
-    receipt: def('Receipt received', 'info', { step: 2 }),
-    deposited: def('Deposited', 'success', { step: 3 }),
+    pending: def('To deposit', 'warning'),
+    generated: def('To deposit', 'warning'),
+    receipt: def('To deposit', 'warning'),
+    deposited: def('Deposited', 'success'),
   },
-  reminder: { none: def('Not reminded', 'neutral'), reminded: def('Reminded', 'info') },
+  reminder: { none: hid('Not reminded', 'neutral'), reminded: hid('Reminded', 'info') },
+  // Identity, not state: drawn as a Tag by RoleChip. The labels are the Tag words.
   'company-role': {
-    customer: def('Customer', 'info'),
-    supplier: def('Supplier', 'neutral'),
-    both: def('Both', 'ink', { icon: Layers }),
-    prospect: def('Prospect', 'neutral', { dashed: true, icon: CircleDashed }),
+    customer: hid('Customer', 'info'),
+    supplier: hid('Supplier', 'neutral'),
+    both: hid('Customer & supplier', 'neutral'),
+    prospect: hid('Prospect', 'neutral', { dashed: true, icon: CircleDashed }),
   },
-  fx: { fresh: def('Fresh', 'success'), stale: def('Stale', 'warning'), unusable: def('Unusable', 'danger') },
-  'fx-capture': { captured: def('Rate at the time', 'neutral'), none: def('No rate captured', 'neutral') },
-  user: { active: def('Active', 'success'), deactivated: def('Deactivated', 'neutral', { icon: Ban }) },
-  // Amendment A6: monthly bookkeeping.
-  month: { open: def('Open', 'info'), closed: def('Closed', 'success') },
+  fx: { fresh: hid('Fresh', 'success'), stale: def('Old rate', 'warning'), unusable: def('No rate', 'warning') },
+  'fx-capture': { captured: hid('Rate at the time', 'neutral'), none: def('No rate', 'warning') },
+  user: { active: hid('Active', 'success'), deactivated: def('Deactivated', 'neutral', { icon: Ban }) },
+  // Amendment A6: monthly bookkeeping. Only a closed month shows a chip.
+  month: { open: hid('Open', 'info'), closed: def('Closed', 'neutral', { icon: Lock }) },
+  // Report text from here down: no chips.
   aging: {
-    '0-30': def('0 to 30 days', 'neutral'),
-    '31-60': def('31 to 60 days', 'warning'),
-    '61-90': def('61 to 90 days', 'warning'),
-    '90-plus': def('Over 90 days', 'danger'),
-    'advance-held': def('Advance held', 'info'),
+    '0-30': hid('0 to 30 days', 'neutral'),
+    '31-60': hid('31 to 60 days', 'warning'),
+    '61-90': hid('61 to 90 days', 'warning'),
+    '90-plus': hid('Over 90 days', 'danger'),
+    'advance-held': hid('Advance held', 'info'),
   },
-  bank: { unticked: def('Not on statement', 'warning'), ticked: def('On statement', 'success') },
-  'paid-via': { bank: def('Bank', 'info', { icon: Landmark }), cash: def('Cash', 'neutral', { icon: Wallet }) },
-  // What we owe (Month-end): the state of a supplier leg against what was paid (g2-month-end "leg:owed", "leg:settled", "leg:flag").
+  bank: { unticked: hid('Not on statement', 'warning'), ticked: hid('On statement', 'success') },
+  'paid-via': { bank: hid('Bank', 'info', { icon: Landmark }), cash: hid('Cash', 'neutral', { icon: Wallet }) },
+  // What we owe (Month-end): the state of a supplier leg against what was paid.
   payable: {
-    owing: def('Owed', 'info', { icon: Hourglass }),
-    settled: def('Settled (≈)', 'success', { icon: CircleCheck }),
-    'paid-over': def('Paid over', 'warning', { icon: CircleAlert }),
-    unpriced: def('No price yet', 'neutral'),
-    'no-rate': def('No rate', 'neutral'),
+    owing: hid('Owed', 'info', { icon: Hourglass }),
+    settled: hid('Settled (≈)', 'success'),
+    'paid-over': hid('Paid over', 'warning'),
+    unpriced: hid('No price yet', 'neutral'),
+    'no-rate': hid('No rate', 'neutral'),
   },
   'expense-group': {
-    overhead: def('Overhead', 'neutral'),
-    'order-cost': def('Order cost', 'neutral'),
-    'not-in-pnl': def('Not in P&L', 'neutral'),
+    overhead: hid('Overhead', 'neutral'),
+    'order-cost': hid('Order cost', 'neutral'),
+    'not-in-pnl': hid('Not in P&L', 'neutral'),
   },
   excluded: {
     'basis-unknown': def('Is GST included?', 'warning', { dashed: true, icon: CircleDashed }),
-    'zero-value': def('Zero value', 'neutral'),
-    unattributed: def('Unattributed', 'neutral'),
+    'zero-value': hid('Zero value', 'neutral'),
+    unattributed: hid('Unattributed', 'neutral'),
   },
 } as const satisfies Record<string, Record<string, StatusDef>>
 
@@ -211,13 +246,13 @@ export interface ResolvedStatus extends StatusDef {
   icon: LucideIcon
 }
 
-const TONE_ICON: Record<Tone, LucideIcon> = {
+/** The glyph of each tone (DESIGN_SYSTEM section 6): warning says "you act", info says "waiting on someone". */
+export const TONE_ICON: Record<Tone, LucideIcon> = {
   neutral: Circle,
-  info: CircleDot,
+  info: Clock,
   success: CircleCheck,
-  warning: Clock,
+  warning: CircleArrowRight,
   danger: CircleAlert,
-  ink: Layers,
 }
 
 const normalise = (raw: string) => raw.trim().toLowerCase().replace(/[\s_]+/g, '-')

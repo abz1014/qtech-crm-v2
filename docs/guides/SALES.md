@@ -2,6 +2,7 @@ Q-TECH CRM: SALES, DAILY (one page)
 
 Sign in on your phone from the home-screen icon. Bottom bar: Today, RFQs, Orders, Companies, Money.
 A number beside a tab means "this many need you".
+Press ? on a computer to see the keyboard shortcuts.
 
 1. START WITH TODAY
  - Tap Today. Read "Overdue or due today" first, then "Ready to move".

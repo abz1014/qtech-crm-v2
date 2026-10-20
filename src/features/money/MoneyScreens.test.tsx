@@ -206,7 +206,7 @@ describe('GST register (M01)', () => {
     db()
     const { container } = mount(<GstRegisterPage />)
     await screen.findByText('INV-2299')
-    expect(container.querySelectorAll('[data-on]')).toHaveLength(0) // the StatusTrack bar segments
+    expect(container.querySelectorAll('[data-on]')).toHaveLength(0) // no step-track bar segments (the old StatusTrack is gone)
   })
 
   it('Needs attention filters the list and the totals recompute', async () => {
@@ -264,12 +264,12 @@ describe('Who owes us (M02)', () => {
     expect(screen.getByText(/Every order is paid in full/)).toBeInTheDocument()
   })
 
-  it('only the Overdue filter carries a count (a count means "needs you")', async () => {
+  it('the filter carries no counts: Overdue is not a needs-you count (the Who owes us tab carries the to-remind one)', async () => {
     db()
     mount(<ReceivablesPage />)
     await screen.findAllByText('Punjab Cement Ltd')
     const filter = screen.getByRole('radiogroup', { name: 'Filter' })
-    expect(within(filter).getByRole('radio', { name: /Overdue/ })).toHaveTextContent(/Overdue\s*1/)
+    expect(within(filter).getByRole('radio', { name: /Overdue/ })).toHaveTextContent(/^Overdue$/)
     expect(within(filter).getByRole('radio', { name: /Open/ })).toHaveTextContent(/^Open$/)
   })
 })
