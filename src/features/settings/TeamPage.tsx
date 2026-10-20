@@ -62,11 +62,11 @@ export function TeamPage() {
     setFilter('all')
   }
 
-  // Phone: the shared bar becomes the back bar of the mockup (chevron, "Team", a primary Add).
+  // Phone: the shared bar becomes the back bar of the mockup (chevron back to the Settings list, "Team", a primary Add).
   useMobileBar({
     title: 'Team',
-    back: { to: '/' },
-    action: (
+    back: '/settings',
+    actions: (
       <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading} className="h-9">
         Add
       </Button>
@@ -93,7 +93,7 @@ export function TeamPage() {
               <span className="truncate font-medium">{m.name}</span>
               {m.id === me ? <Tag className="ml-1">You</Tag> : null}
             </span>
-            <span className="num truncate text-xs leading-4 text-fg-muted">{m.email ?? 'No email on record'}</span>
+            <span className="num truncate text-xs text-fg-muted">{m.email ?? 'No email on record'}</span>
           </span>
         </span>
       ),

@@ -1,0 +1,227 @@
+import { describe, expect, it } from 'vitest'
+import { ENQUIRY_CORPUS } from '@/features/rfqs/lib/__fixtures__/enquiryCorpus'
+import { parsePaste } from '@/features/rfqs/lib/parseItems'
+import { ENQUIRY_HOLDOUT } from './__fixtures__/enquiryHoldout'
+import { CORPUS_TODAY, ENQUIRY_EMAILS, type EnquiryCase } from './__fixtures__/enquiryEmails'
+import { norm, pct, scoreFact, scoreItems, type FactScore } from './__fixtures__/score'
+import { asParseResult, findDate, parseEnquiry, unitOf } from './enquiryParse'
+
+const parse = (text: string) => parseEnquiry(text, { today: CORPUS_TODAY })
+
+describe('parseEnquiry: what is not an item', () => {
+  it('drops the signature, phone, email and address lines, and the disclaimer', () => {
+    const r = parse(`Please quote 2 nos gate valve 4 inch class 150
+
+Regards,
+Bilal Khan
+Purchase Officer
+Tel: 042-35761234
+bilal@northerncement.com.pk
+DISCLAIMER: This e-mail is confidential.`)
+    expect(r.items).toEqual([{ description: 'gate valve 4 inch class 150', qty: 2, unit: 'nos' }])
+    expect(r.lines.filter(l => l.kind === 'skipped').map(l => l.reason)).toEqual(['signature', 'signature', 'signature', 'signature', 'signature', 'disclaimer'])
+  })
+
+  it('keeps only the new message of a reply, but a forward is read below its separator', () => {
+    const reply = parse('1) Cable gland M20 - 20 Nos\nRegards\n-----Original Message-----\nFrom: x@qtech.example\n1) MCB 16A - 10 Nos')
+    expect(reply.items.map(i => i.description)).toEqual(['Cable gland M20'])
+    const fwd = parse('FYI\n---------- Forwarded message ---------\nFrom: a@b.com\nPlease quote 3 nos proximity sensor M18')
+    expect(fwd.items).toEqual([{ description: 'proximity sensor M18', qty: 3, unit: 'nos' }])
+  })
+
+  it('strips WhatsApp export prefixes', () => {
+    const r = parse('[20/10/2026, 10:13:02 AM] Bilal: Please quote 2 nos limit switch D4N\n20/10/26, 11:05 am - Kashif: Fluke 87V x2')
+    expect(r.items).toEqual([
+      { description: 'limit switch D4N', qty: 2, unit: 'nos' },
+      { description: 'Fluke 87V', qty: 2, unit: null },
+    ])
+  })
+
+  it('does not turn an "Our Ref" line, a date line or a note into an item', () => {
+    const r = parse('Our Ref: NCL/PUR/0418\nRFQ Date: 14.10.2026\nNote: please mention origin\nBearing 6205 - 4 Nos')
+    expect(r.items).toEqual([{ description: 'Bearing 6205', qty: 4, unit: 'nos' }])
+    expect(r.lines.map(l => l.reason)).toEqual(['reference', 'date', 'instruction', null])
+  })
+})
+
+describe('parseEnquiry: items over several lines and quantity shapes', () => {
+  it('folds Make, Size and Qty lines into the item above', () => {
+    const r = parse('1. Flow meter\n   Size: DN80\n   Make: Krohne\n   Qty: 2 Nos\n2. Level transmitter\n   Qty: 1 No')
+    expect(r.items).toEqual([
+      { description: 'Flow meter, Size: DN80, Make: Krohne', qty: 2, unit: 'nos' },
+      { description: 'Level transmitter', qty: 1, unit: 'nos' },
+    ])
+    expect(r.lines.map(l => l.kind)).toEqual(['item', 'joined', 'joined', 'joined', 'item', 'joined'])
+  })
+
+  it('joins a wrapped line so its quantity is kept', () => {
+    const r = parse('1. Pressure transmitter, 0-40 bar,\n   1/2" NPT - 3 Nos')
+    expect(r.items).toEqual([{ description: 'Pressure transmitter, 0-40 bar, 1/2" NPT', qty: 3, unit: 'nos' }])
+  })
+
+  it.each([
+    ['Cable tray 300mm, Qty : 03 NOS', 'Cable tray 300mm', 3, 'nos'],
+    ['Solenoid valve 24VDC QTY REQUIRED: 01', 'Solenoid valve 24VDC', 1, null],
+    ['Safety relay REQ QTY 5', 'Safety relay', 5, null],
+    ['Encoder 1024 PPR Qty-2', 'Encoder 1024 PPR', 2, null],
+    ['Bearing 6205 2.000 EA', 'Bearing 6205', 2, 'nos'],
+    ['Proximity sensor M30 x2', 'Proximity sensor M30', 2, null],
+    ['Flame scanner (2 Nos)', 'Flame scanner', 2, 'nos'],
+    ['Hydraulic oil ISO VG 68 - 4 Drums', 'Hydraulic oil ISO VG 68', 4, 'drums'],
+    ['Gear motor 1.5kW, Qty: 2 Nos, Make: SEW', 'Gear motor 1.5kW, Make: SEW', 2, 'nos'],
+    ['Siemens 6ES7 231-4HD32-0XB0 – 2', 'Siemens 6ES7 231-4HD32-0XB0', 2, null],
+    ['Ultrasonic level transmitter 0-10m qty 3', 'Ultrasonic level transmitter 0-10m', 3, null],
+  ])('%s', (line, description, qty, unit) => {
+    expect(parse(line).items).toEqual([{ description, qty, unit }])
+  })
+
+  it('reads a table by its header, adds the part number and leaves out an internal material code', () => {
+    const r = parse('Item\tMaterial\tDescription\tPart No\tQty\tUOM\n00010\t1000012345\tSafety relay 24VDC\tG9SA-301\t2.000\tEA')
+    expect(r.items).toEqual([{ description: 'Safety relay 24VDC, Part No: G9SA-301', qty: 2, unit: 'nos' }])
+  })
+
+  it('normalises units as the intake does', () => {
+    expect([unitOf('EA'), unitOf("No's"), unitOf('Mtr'), unitOf('No.'), unitOf('Kgs'), unitOf(null)]).toEqual(['nos', 'nos', 'm', 'nos', 'kg', null])
+  })
+})
+
+describe('parseEnquiry: header facts', () => {
+  it('prefers the RFQ number over a collective number, and keeps a reference written as one word', () => {
+    expect(parse('Collective No.: 6000004512\nRFQ No.: 4500012345').facts.customerRef).toMatchObject({ value: '4500012345', label: 'RFQ' })
+    expect(parse('Subject: RFQ-ST-2026-118 Pressure gauges').facts.customerRef?.value).toBe('RFQ-ST-2026-118')
+    expect(parse('Your Ref: QT-RFQ-0118\nPlease quote 2 nos valve').facts.customerRef).toBeNull()
+  })
+
+  it('reads the quotation due date and never a delivery date', () => {
+    expect(parse('Material required at site by 30/11/2026.\nPlease send quotation by 27-10-2026.').facts.dueDate?.iso).toBe('2026-10-27')
+    expect(parse('Quotations must reach us before 11-NOV-26').facts.dueDate?.iso).toBe('2026-11-11')
+    expect(parse('Due 22/10').facts.dueDate?.iso).toBe('2026-10-22')
+    expect(parse('Due 05/01').facts.dueDate?.iso).toBe('2027-01-05') // no year and already past: next January
+    expect(parse('Required delivery date: 30/11/2026').facts.dueDate).toBeNull()
+  })
+
+  it('never reads a size or a fraction as a date', () => {
+    expect(findDate('Ball valve 1/2" and gauge 2.5 inch', CORPUS_TODAY)).toBeNull()
+    expect(findDate('23rd October 2026', CORPUS_TODAY)?.iso).toBe('2026-10-23')
+    expect(findDate('11-JUL-26', CORPUS_TODAY)?.iso).toBe('2026-07-11')
+  })
+
+  it('offers the signature company and the sender domain, never our own or a free mail domain', () => {
+    const r = parse('Please quote 1 no PLC\nRegards\nAsad\nIndus Fibres Ltd.\nasad@gmail.com\nFrom: sales@qtech.example')
+    expect(r.facts.company).toMatchObject({ name: 'Indus Fibres Ltd.', domain: null })
+    const d = parse('From: Waqas <waqas@sialkottanneries.com>\nPlease quote 2 nos gauge')
+    expect(d.facts.company).toMatchObject({ name: null, domain: 'sialkottanneries.com', emails: ['waqas@sialkottanneries.com'] })
+  })
+
+  it('gives the intake its own ParseResult shape for the paste panel', () => {
+    const r = asParseResult(parse('Hi\n1. Flow meter\n   Qty: 2 Nos'))
+    expect(r).toEqual({
+      items: [{ description: 'Flow meter', qty: 2, unit: 'nos' }],
+      lines: [
+        { text: 'Hi', kind: 'skipped', marker: null },
+        { text: '1. Flow meter', kind: 'item', marker: '1.' },
+        { text: 'Qty: 2 Nos', kind: 'item', marker: null },
+      ],
+      lineCount: 3,
+    })
+  })
+
+  it('keeps the text as given, for the RFQ notes', () => {
+    const text = 'Dear Sir,\r\nPlease quote 2 nos valve'
+    expect(parse(text).raw).toBe(text)
+  })
+})
+
+describe('the enquiry corpus (realistic emails, WhatsApp exports, PDF text)', () => {
+  it('has at least 25 cases', () => {
+    expect(ENQUIRY_EMAILS.length).toBeGreaterThanOrEqual(25)
+  })
+
+  it.each(ENQUIRY_EMAILS.map(c => [c.name, c] as const))('%s', (_n, c) => {
+    const r = parse(c.text)
+    expect(r.items).toEqual(c.items)
+    expect(r.facts.customerRef?.value ?? undefined).toBe(c.ref)
+    expect(r.facts.dueDate?.iso ?? undefined).toBe(c.due)
+    if (c.company?.name) expect(norm(r.facts.company?.name)).toBe(norm(c.company.name))
+    if (c.company?.domain) expect(r.facts.company?.domain).toBe(c.company.domain)
+  })
+
+  it('still reads every case of the intake corpus exactly as the old parser does', () => {
+    for (const c of ENQUIRY_CORPUS) expect(parse(c.text).items, c.name).toEqual(c.items)
+  })
+})
+
+describe('old parser (parsePaste) against the new one', () => {
+  interface Row {
+    corpus: string
+    parser: string
+    precision: string
+    recall: string
+    ref: string
+    due: string
+    company: string
+    p: number
+    r: number
+  }
+
+  function measure(corpus: string, cases: EnquiryCase[]): Row[] {
+    return (['old', 'new'] as const).map(parser => {
+      let expected = 0
+      let predicted = 0
+      let correct = 0
+      const ref: FactScore = { expected: 0, predicted: 0, correct: 0 }
+      const due: FactScore = { expected: 0, predicted: 0, correct: 0 }
+      const company: FactScore = { expected: 0, predicted: 0, correct: 0 }
+      for (const c of cases) {
+        const r = parser === 'old' ? { items: parsePaste(c.text).items, facts: null } : parse(c.text)
+        const s = scoreItems(c.items, r.items)
+        expected += s.expected
+        predicted += s.predicted
+        correct += s.correct
+        scoreFact(c.ref, r.facts?.customerRef?.value, ref)
+        scoreFact(c.due, r.facts?.dueDate?.iso, due)
+        const want = c.company?.name ?? c.company?.domain
+        const got = c.company?.name ? r.facts?.company?.name : r.facts?.company?.domain
+        scoreFact(want, got, company)
+      }
+      const f = (x: FactScore) => `${x.correct}/${x.expected}`
+      return {
+        corpus,
+        parser,
+        precision: `${pct(correct, predicted)} (${correct}/${predicted})`,
+        recall: `${pct(correct, expected)} (${correct}/${expected})`,
+        ref: f(ref),
+        due: f(due),
+        company: f(company),
+        p: predicted ? correct / predicted : 1,
+        r: expected ? correct / expected : 1,
+      }
+    })
+  }
+
+  const rows = [
+    ...measure(`emails (${ENQUIRY_EMAILS.length})`, ENQUIRY_EMAILS),
+    ...measure(`held-out (${ENQUIRY_HOLDOUT.length})`, ENQUIRY_HOLDOUT),
+    ...measure(
+      `intake corpus (${ENQUIRY_CORPUS.length})`,
+      ENQUIRY_CORPUS.map(c => ({ ...c })),
+    ),
+  ]
+
+  it('reports item precision and recall, and the facts read', () => {
+    // A row is right when its description is the expected item's (word overlap of 0.7 or more) and its quantity is equal.
+    console.log(
+      ['ENQUIRY_PARSER_ACCURACY', 'corpus | parser | item precision | item recall | ref | due date | company']
+        .concat(rows.map(x => `${x.corpus} | ${x.parser} | ${x.precision} | ${x.recall} | ${x.ref} | ${x.due} | ${x.company}`))
+        .join('\n'),
+    )
+    for (let k = 0; k < rows.length; k += 2) {
+      const [old, neu] = [rows[k] as Row, rows[k + 1] as Row]
+      expect(neu.p, `${neu.corpus} precision`).toBeGreaterThanOrEqual(old.p)
+      expect(neu.r, `${neu.corpus} recall`).toBeGreaterThanOrEqual(old.r)
+    }
+    expect(rows[1]?.r).toBe(1)
+    expect(rows[1]?.p).toBe(1)
+    expect(rows[3]?.r).toBeGreaterThanOrEqual(0.9)
+  })
+})

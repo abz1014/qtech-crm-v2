@@ -19,7 +19,7 @@ import { attachmentPath, RFQ_FILE_ACCEPT } from '@/features/rfqs/lib'
  *   FE-2  add a file   drop, paste or 1 tap on Choose files. 0 typed. Required: the file. Nothing else.
  */
 
-export function AttachmentsPanel({ rfqId, orderId }: { rfqId?: string; orderId?: string }) {
+export function AttachmentsPanel({ rfqId, orderId, compact = false }: { rfqId?: string; orderId?: string; /** A shorter drop zone and one-line empty text (the RFQ page side column). */ compact?: boolean }) {
   // One panel for an RFQ's files and an order's files (R22): give it the RFQ, or the order.
   const parentId = (orderId ?? rfqId) as string
   const rfqAtts = useRfqAttachments(orderId ? undefined : rfqId)
@@ -64,7 +64,7 @@ export function AttachmentsPanel({ rfqId, orderId }: { rfqId?: string; orderId?:
   return (
     <Panel title="Files" meta={atts.isSuccess ? (list.length === 0 ? 'None yet' : `${list.length} ${list.length === 1 ? 'file' : 'files'}`) : undefined}>
       <div className="grid gap-3 p-4">
-        <FileDrop onAdd={files => void onAdd(files)} accept={RFQ_FILE_ACCEPT} className="min-h-[132px] py-5" />
+        <FileDrop onAdd={files => void onAdd(files)} accept={RFQ_FILE_ACCEPT} className={compact ? 'min-h-[72px] py-3' : 'min-h-[132px] py-5'} />
         <p role="status" aria-live="polite" className="text-xs text-fg-muted empty:hidden">
           {sending > 0 ? `Adding ${sending} ${sending === 1 ? 'file' : 'files'}` : ''}
         </p>
@@ -87,7 +87,7 @@ export function AttachmentsPanel({ rfqId, orderId }: { rfqId?: string; orderId?:
             </button>
           </p>
         ) : list.length === 0 ? (
-          <p className="text-sm text-fg-muted">{orderId ? 'No files yet. The customer’s PO or a photo from site goes here.' : 'No files yet. A nameplate photo or the customer’s enquiry PDF goes here, next to the questions.'}</p>
+          <p className="text-sm text-fg-muted">{orderId ? 'No files yet. The customer’s PO or a photo from site goes here.' : compact ? 'No files yet.' : 'No files yet. A nameplate photo or the customer’s enquiry PDF goes here, next to the questions.'}</p>
         ) : (
           <ul className="grid gap-2" aria-label={orderId ? 'Files on this order' : 'Files on this RFQ'}>
             {list.map(a => (

@@ -4,7 +4,7 @@ import { axeViolations } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 
 /*
- * M09 (payment-reminder panel beside Receivables) and M08 (Today v3 money rules), end to end on the local CI stack.
+ * M09 (payment-reminder panel beside Who owes us, the old Receivables) and M08 (Today v3 money rules), end to end on the local CI stack.
  *
  * FE-2 target asserted here: "Copy and mark reminded" is ONE tap (one mouse press, no key) and stamps every invoice of the
  * order; Undo inside 10 seconds puts the old values back; the order then moves to Waiting on Today; an engineer can neither
@@ -157,7 +157,7 @@ test.describe('payment-reminder panel (M09)', () => {
     await expect(panel.getByTestId('reminder-text')).toHaveCount(0)
   })
 
-  test('sales get the panel on Order balances', async ({ page }) => {
+  test('sales get the panel on Who owes us (one name for both roles)', async ({ page }) => {
     const s = await seedOverdue()
     await openAs(page, 'sales', '/money/receivables')
     await pick(page, s)
@@ -212,7 +212,7 @@ test.describe('Today v3 money rules (M08)', () => {
     await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Money\s*\d+$/ })).toBeVisible() // E-SH-01
     await review(page, 'm08-today-money-1440')
     await page.locator(`${tcs} button`).click()
-    await expect(page.getByRole('button', { name: /Open GST register/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Open Invoices & GST/ })).toBeVisible()
     await review(page, 'm08-today-money-pane-1440')
   })
 

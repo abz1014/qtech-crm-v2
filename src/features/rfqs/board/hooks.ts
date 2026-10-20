@@ -10,10 +10,12 @@ export function useOpenRfqs() {
   return useQuery({ queryKey: qk.rfqs.board(), queryFn: async () => sortBoard(await api.listOpenRfqs()) })
 }
 
-export function useClosedRfqs(page: number, enabled = true) {
+/** One page of won and closed RFQs; with `text`, searched on the server over every closed RFQ (the key keeps the closed prefix, so invalidation reaches it). */
+export function useClosedRfqs(page: number, text: string, enabled = true) {
+  const q = text.trim().toLowerCase()
   return useQuery({
-    queryKey: qk.rfqs.closed(page),
-    queryFn: () => api.listClosedRfqs(page, PAGE_SIZE),
+    queryKey: [...qk.rfqs.closed(page), q] as const,
+    queryFn: () => api.listClosedRfqs(page, PAGE_SIZE, q),
     placeholderData: keepPreviousData,
     enabled,
   })

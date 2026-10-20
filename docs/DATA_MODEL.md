@@ -446,6 +446,8 @@ created_at, created_by, legacy flags and legacy source as before.
 | reference | text | yes | — | Cheque or bank-transfer reference. |
 | paid_via | text | no | `'bank'` | *(Amendment A6, A6.1)* CHECK in ('bank', 'cash'). Only bank items are ticked. |
 | bank_month | date | yes | — | *(Amendment A6, A6.1)* The statement month this payment was ticked against; NULL = not ticked. CHECK first day of a month, and CHECK `bank_month IS NULL OR paid_via = 'bank'`. Stays editable after the month closes. |
+| voided_at, voided_by, void_reason | timestamptz, uuid FK users, text | yes | — | *(0073)* Soft void: the row stays as history and is left out of every money figure. Written only by `void_payment` / `correct_payment` (reason required) and cleared only by `restore_payment` (Undo: the same admin, within 10 minutes). A voided row cannot be changed, ticked or deleted. |
+| corrects_payment_id | uuid FK payments_in RESTRICT | yes | — | *(0073)* Set on the new row `correct_payment` makes: the voided payment it replaces. The correction keeps that payment's credited person (NULL stays NULL). |
 
 **Removed:** `tax_withheld` (the owner confirms no withholding happens) and `payment_method`.
 
@@ -1447,6 +1449,7 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | `customer_price_memory(rfq_id)` (R19, migration 0037) | X | X | X | Security invoker. The issue-quotation price chips: last sold to this customer and last quoted, same model or same item. Reads orders, order items, quotations and RFQ items, all readable by all staff. |
 | RPCs `issue_quotation`, `issue_purchase_order`, `stamp_clarification_ask`, `stamp_supplier_chase` | ✓ | ✓ | ✓ | |
 | RPC `stamp_payment_reminder` | ✓ | ✓ | — | |
+| RPCs `void_payment`, `correct_payment`, `restore_payment` *(0073)* | ✓ | — | — | Run as the caller; admin check inside; refused in a closed month and on a bank-ticked payment; audited. |
 | users.job_title | via `admin-users` | — | — | |
 
 S14 (the access-matrix test) and S16 (the remote anonymous-denial smoke test) now cover **28 tables** *(superseded by A6: 30 tables; each A6 task adds its own rows to the S14 matrix data)*.

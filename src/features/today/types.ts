@@ -22,6 +22,8 @@ export type RuleKey =
   | 'fbr_attention'
   | 'tcs_not_sent'
   | 'recurring_due'
+  | 'job_commissioning'
+  | 'job_on_site'
 
 /** The rule key written to snoozes.rule (DATA_MODEL 2.21 gives `chase_customer_clarification` as the example). */
 export const SNOOZE_RULE: Record<RuleKey, string> = {
@@ -42,6 +44,8 @@ export const SNOOZE_RULE: Record<RuleKey, string> = {
   fbr_attention: 'fbr_attention',
   tcs_not_sent: 'tcs_not_sent',
   recurring_due: 'recurring_due',
+  job_commissioning: 'job_commissioning',
+  job_on_site: 'job_on_site',
 }
 
 export type TodayTab = 'bids' | 'sourcing' | 'money'
@@ -203,6 +207,28 @@ export interface InvoiceFact {
   needsFbrAttention: boolean
 }
 
+/**
+ * One live order the engineer is assigned to (order_engineers), for their own jobs on Today (owner decision 2026-10-19: an
+ * engineer's Today shows the jobs assigned to them, not only the orders they own). Engineers only; never a money column.
+ */
+export interface JobFact {
+  orderId: string
+  orderNumber: number
+  ownerId: string | null
+  customerName: string
+  siteName: string | null
+  /** v_order_state.goods_state */
+  goodsState: string
+  /** v_order_state.commissioning_state: n_a / to_plan / planned / done */
+  commissioningState: string
+  /** orders.commissioning_planned_on */
+  plannedOn: string | null
+  /** The latest supplier delivery to site (supplier_orders.delivered_on), or null. */
+  deliveredOn: string | null
+  /** Imported from the old CRM (orders.legacy_source) or with estimated dates (v_order_state.data_trust): never an engineer's job item. */
+  legacy?: boolean
+}
+
 /** M08: one recurring expense template and whether this month's expense exists. Admin only. */
 export interface RecurringFact {
   id: string
@@ -243,6 +269,8 @@ export interface TodayInputs {
   invoices?: readonly InvoiceFact[]
   /** M08. Admin only: recurring templates. Absent or empty for everyone else. */
   recurring?: readonly RecurringFact[]
+  /** Engineers only: the live orders they are assigned to. Absent or empty for everyone else (never requested). */
+  jobs?: readonly JobFact[]
   snoozes: readonly SnoozeFact[]
 }
 

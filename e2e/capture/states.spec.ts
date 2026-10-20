@@ -36,7 +36,7 @@ async function ready(page: Page, rfqId: string) {
   await page.locator('#main').waitFor()
 }
 
-const sheet = (page: Page) => page.getByRole('dialog', { name: 'Capture' })
+const sheet = (page: Page) => page.getByRole('dialog', { name: 'Paste or photo' })
 const settle = (page: Page) => page.waitForTimeout(450)
 
 async function paste(page: Page, text: string, files: { name: string; type: string }[] = []) {
@@ -111,9 +111,9 @@ for (const [name, size] of [
       await review(page, `capture-frame-android-check-${name}`)
       await dlg.getByRole('button', { name: 'Save answer to 2 questions' }).click()
       await expect(dlg.getByRole('heading', { name: `Saved to ${rfqRef(s.rfq.number)}` })).toBeVisible()
-      await expect(dlg.getByText(/2 questions answered and 1 photo attached\. They now wait on Today to be relayed\./)).toBeVisible()
+      await expect(dlg.getByText(/2 questions answered and 1 photo attached\. They now wait on Today to be passed on to the suppliers./)).toBeVisible()
       await expect(dlg.getByText('Answers to relay')).toBeVisible()
-      for (const b of ['Open ' + rfqRef(s.rfq.number), 'Capture another', 'Done']) await expect(dlg.getByRole('button', { name: b })).toBeVisible()
+      for (const b of ['Open ' + rfqRef(s.rfq.number), 'Add another', 'Done']) await expect(dlg.getByRole('button', { name: b })).toBeVisible()
       await expect(page.getByRole('status').filter({ hasText: '2 questions answered' }).getByRole('button', { name: /Undo/ })).toBeVisible()
       await settle(page)
       await review(page, `capture-frame-saved-${name}`)
@@ -132,12 +132,12 @@ for (const [name, size] of [
       await page.getByRole('button', { name: 'Remove nameplate-photo.png' }).click()
       // b: several questions
       await paste(page, 'Dear Sir, for the Belimo quote please confirm:\n1. Valve size and Kvs\n2. Actuator torque and supply voltage\n3. Fail-safe position on power loss\n4. Medium and maximum temperature')
-      await page.getByRole('radio', { name: /New supplier questions/ }).click()
+      await page.getByRole('radio', { name: /Questions from a supplier/ }).click()
       await expect(sheet(page).getByText('Tick the ones to keep')).toBeVisible()
       await expect(sheet(page).getByText('Each line becomes one question on the RFQ, ready to put to the customer.')).toBeVisible()
       await settle(page)
       await review(page, `capture-frame-destination-questions-${name}`)
-      await sheet(page).getByRole('textbox', { name: 'Captured text' }).fill('')
+      await sheet(page).getByRole('textbox', { name: 'Pasted text' }).fill('')
       // c: notes
       await paste(page, 'Customer will send the P&ID on Monday. Plant shutdown is 12 to 14 Dec, so delivery must be before 10 Dec.')
       await page.getByRole('radio', { name: /Add to RFQ notes/ }).click()
@@ -152,8 +152,8 @@ for (const [name, size] of [
       await settle(page)
       await review(page, `capture-frame-destination-new-rfq-${name}`)
       await page.getByRole('option', { name: new RegExp(s.customer) }).click()
-      await expect(sheet(page).getByText('Intake opens with this text and the company already filled in. Nothing is saved until you create the RFQ.')).toBeVisible()
-      await expect(sheet(page).getByRole('button', { name: 'Continue to intake' })).toBeEnabled()
+      await expect(sheet(page).getByText('The new RFQ opens with this text and the company already filled in. Nothing is saved until you create the RFQ.')).toBeVisible()
+      await expect(sheet(page).getByRole('button', { name: 'Continue to New RFQ' })).toBeEnabled()
       await expect(sheet(page).getByText('Search all RFQs')).toHaveCount(0)
     })
 
@@ -209,7 +209,7 @@ for (const [name, size] of [
       await expect(dlg.getByText('Nothing was changed and your capture is still here.')).toBeVisible()
       await expect(dlg.getByRole('button', { name: 'Try again' })).toBeVisible()
       await review(page, `capture-frame-save-failed-${name}`)
-      await expect(dlg.getByRole('textbox', { name: 'Captured text' })).toHaveValue(/Line size is 4 inch/)
+      await expect(dlg.getByRole('textbox', { name: 'Pasted text' })).toHaveValue(/Line size is 4 inch/)
     })
   })
 }
@@ -220,7 +220,7 @@ test.describe('desktop frames at 1440', () => {
   test('nothing added, a file over the window, added and ready', async ({ page }) => {
     const s = await seed()
     await ready(page, s.rfq.id)
-    await page.getByRole('button', { name: 'Capture' }).first().click()
+    await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
     const dlg = sheet(page)
     await expect(dlg.getByText('Text, photos and files from WhatsApp or anywhere else. Choose where they go.')).toBeVisible()
     await expect(dlg.getByText('Drop text, photos or files here')).toBeVisible()
@@ -282,7 +282,7 @@ test.describe('signed out in the middle', () => {
 test.describe('after 7 days', () => {
   test.use({ viewport: { width: 375, height: 812 } })
 
-  test('the screen says the item is gone and offers Open Capture', async ({ page }) => {
+  test('the screen says the item is gone and offers Paste or add a photo', async ({ page }) => {
     const s = await seed()
     await ready(page, s.rfq.id)
     const id = await page.evaluate(
@@ -305,7 +305,7 @@ test.describe('after 7 days', () => {
     await expect(sheet(page).getByText('Shared items are kept for 7 days. Share it again from WhatsApp, or paste it.')).toBeVisible()
     await settle(page)
     await review(page, 'capture-frame-expired-375')
-    await sheet(page).getByRole('button', { name: 'Open Capture' }).click()
+    await sheet(page).getByRole('button', { name: 'Paste or add a photo' }).click()
     await expect(sheet(page).getByText('Tap and hold here, then tap Paste')).toBeVisible()
   })
 })

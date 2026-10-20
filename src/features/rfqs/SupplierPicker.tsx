@@ -30,7 +30,7 @@ export function ItemChips({ items }: { items: readonly DraftItem[] }) {
   return (
     <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
       {items.map((it, i) => (
-        <li key={it.key} title={it.description} className="inline-flex h-[22px] max-w-full items-center gap-[6px] rounded border border-line-strong bg-surface pl-[6px] pr-2 text-xs text-fg-2">
+        <li key={it.key} title={it.description} className="inline-grid min-h-[22px] max-w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[6px] rounded border border-line-strong bg-surface pl-[6px] pr-2 text-xs text-fg-2">
           <span className="num grid size-4 shrink-0 place-items-center rounded-full bg-selected text-xs leading-none text-fg">{i + 1}</span>
           <span className="truncate">{it.description}</span>
           <span className="num shrink-0 text-fg-muted">× {effectiveQty(it)}</span>
@@ -133,7 +133,7 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
           <button
             type="button"
             aria-expanded={open}
-            aria-controls={panelId}
+            aria-controls={open ? panelId : undefined}
             aria-label={`Memory, ${s.name}`}
             onClick={() => setOpen(o => !o)}
             className="relative z-10 inline-flex h-6 shrink-0 items-center gap-1 rounded px-2 text-xs font-medium text-fg-2 hover:bg-selected"

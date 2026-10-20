@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -73,5 +73,51 @@ describe('SupplierReplies', () => {
     release()
     await waitFor(() => expect(screen.getAllByText('Reply saved').length).toBeGreaterThan(0))
     expect(writes).toHaveLength(1)
+  })
+
+  it('closing a reply with prices typed and not saved asks first; Keep editing keeps them, Close without saving closes', async () => {
+    installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
+          <MemoryRouter>
+            <ToastProvider>
+              <SupplierReplies rfq={rfq} items={items} inquiries={[inquiry]} rates={{}} />
+            </ToastProvider>
+          </MemoryRouter>
+        </SessionContext.Provider>
+      </QueryClientProvider>,
+    )
+    const close = screen.getByRole('button', { name: 'Close the reply, Orient Analytical' })
+    await user.type(screen.getByRole('textbox', { name: 'Price for item 1 from Orient Analytical' }), '1500')
+    await user.click(close)
+    const ask = await screen.findByRole('dialog', { name: 'Close without saving the prices?' })
+    await user.click(within(ask).getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByRole('textbox', { name: 'Price for item 1 from Orient Analytical' })).toHaveValue('1,500')
+    await user.click(close)
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Close without saving' }))
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Price for item 1 from Orient Analytical' })).toBeNull())
+  })
+
+  it('closing a reply with nothing typed closes at once', async () => {
+    installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
+          <MemoryRouter>
+            <ToastProvider>
+              <SupplierReplies rfq={rfq} items={items} inquiries={[inquiry]} rates={{}} />
+            </ToastProvider>
+          </MemoryRouter>
+        </SessionContext.Provider>
+      </QueryClientProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'Close the reply, Orient Analytical' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('textbox', { name: 'Price for item 1 from Orient Analytical' })).toBeNull()
   })
 })

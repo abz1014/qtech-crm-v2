@@ -58,31 +58,35 @@ interface CheckDef {
   glyph: 'landmark' | 'receipt' | 'list-filter' | 'history' | 'hourglass' | 'file-check' | 'circle-dashed'
 }
 
-/** The seven checks, in the order of the approved mockup (g2-month-end "Checklist"). */
+/**
+ * The seven checks, in the order of the approved mockup (g2-month-end "Checklist"), named in plain words (owner glossary
+ * 2026-10-19: Bank tick is "Match bank statement", Provisional margin is "Margin not final", Unresolved payments are
+ * "Payments not split"). Each links to the screen where it is fixed.
+ */
 export const CHECKS: readonly CheckDef[] = [
   {
     key: 'bank_unticked',
-    label: 'Bank items not ticked',
+    label: 'Not matched to the bank statement',
     unit: ['item', 'items'],
     has: () => 'Bank payments and expenses dated up to month end with no statement month. Items still in transit are expected.',
-    none: () => 'Every bank item is ticked against a statement.',
-    linkLabel: 'Open bank tick',
+    none: () => 'Every bank item is matched to a statement.',
+    linkLabel: 'Match bank statement',
     to: m => `/money/month-end/bank?month=${m}`,
     glyph: 'landmark',
   },
   {
     key: 'fbr_deposits_unticked',
-    label: 'FBR deposits not ticked',
+    label: 'FBR deposits not matched',
     unit: ['invoice', 'invoices'],
     has: () => 'Deposits to FBR with no statement month. One tick covers a whole PSID group.',
-    none: () => 'Every FBR deposit is ticked against a statement.',
-    linkLabel: 'Tick the PSID group',
+    none: () => 'Every FBR deposit is matched to a statement.',
+    linkLabel: 'Match the PSID group',
     to: m => `/money/month-end/bank?month=${m}`,
     glyph: 'receipt',
   },
   {
     key: 'uncategorised',
-    label: 'Uncategorised',
+    label: 'Expenses without a category',
     unit: ['to do', 'to do'],
     has: m => `${monthName(m)} expenses with no clear category, or an order cost with no order.`,
     none: () => 'Every expense has a category, and an order where it needs one.',
@@ -92,41 +96,41 @@ export const CHECKS: readonly CheckDef[] = [
   },
   {
     key: 'recurring_not_recorded',
-    label: 'Recurring not recorded',
+    label: 'Recurring expenses not recorded',
     unit: ['to do', 'to do'],
     has: m => `Recurring templates with no ${monthName(m)} expense yet.`,
     none: m => `Every recurring template has a ${monthName(m)} expense.`,
-    linkLabel: 'Open recurring',
+    linkLabel: 'Record them in Expenses',
     to: () => '/money/expenses',
     glyph: 'history',
   },
   {
     key: 'provisional_margins',
-    label: 'Provisional margins',
+    label: 'Margin not final',
     unit: ['order', 'orders'],
     has: m => `Settled by the end of ${monthName(m)}, costs not marked complete.`,
     none: () => 'Every settled order has its costs marked complete.',
-    linkLabel: 'Review margins',
-    to: () => '/money/margins',
+    linkLabel: 'Check the margins',
+    to: () => '/money/margins?filter=paid-provisional',
     glyph: 'hourglass',
   },
   {
     key: 'fbr_pending',
-    label: 'FBR pending',
+    label: 'GST not deposited with FBR',
     unit: ['invoice', 'invoices'],
     has: m => `Invoices dated up to the end of ${monthName(m)} with no FBR deposit date.`,
     none: () => 'Every invoice has its FBR deposit.',
-    linkLabel: 'Open GST register',
+    linkLabel: 'Open Invoices & GST',
     to: () => '/money/gst-register',
     glyph: 'file-check',
   },
   {
     key: 'unresolved_payments',
-    label: 'Unresolved payments',
+    label: 'Payments not split',
     unit: ['payment', 'payments'],
-    has: () => 'Counted in gross but not yet split into net, because the order has no value basis.',
+    has: () => 'Counted in gross but not yet split into net and GST, because nobody has said whether GST is included in the order price.',
     none: () => 'Every payment is split into net and GST.',
-    linkLabel: 'Open receivables',
+    linkLabel: 'Open Who owes us',
     to: () => '/money/receivables',
     glyph: 'circle-dashed',
   },
@@ -194,7 +198,7 @@ function describe(c: CheckDef, month: string, n: number, d: Record<string, unkno
       if (n === 0) return fallback
       const groups = num(d.groups)
       return {
-        linkLabel: plural(groups, 'Tick the PSID group', 'Tick the PSID groups'),
+        linkLabel: plural(groups, 'Match the PSID group', 'Match the PSID groups'),
         to: base.to,
         parts: [pkr(d.amount), ' in ', { mono: String(groups) }, plural(groups, ' PSID group', ' PSID groups'), `. One tick covers ${plural(groups, 'the whole group', 'a whole group')}.`],
       }

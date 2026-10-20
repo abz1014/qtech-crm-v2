@@ -84,7 +84,7 @@ describe('what can be chosen, and what the buttons say', () => {
     expect(saveLabel({ dest: 'answer', kind: 'text', ticked: 2, questionLines: 0 })).toBe('Save answer to 2 questions')
     expect(saveLabel({ dest: 'answer', kind: 'files', ticked: 1, questionLines: 0 })).toBe('Save photo as the answer')
     expect(saveLabel({ dest: 'questions', kind: 'text', ticked: 0, questionLines: 4 })).toBe('Add 4 questions')
-    expect(saveLabel({ dest: 'new-rfq', kind: 'text', ticked: 0, questionLines: 0 })).toBe('Continue to intake')
+    expect(saveLabel({ dest: 'new-rfq', kind: 'text', ticked: 0, questionLines: 0 })).toBe('Continue to New RFQ')
     expect(saveLabel({ dest: 'order', kind: 'files', ticked: 0, questionLines: 0 })).toBe('Attach to order')
     expect(saveLabel({ dest: 'order', kind: 'text', ticked: 0, questionLines: 0 })).toBe('Add to order notes')
     expect(savedSummary('answer', { questions: 2, photos: 1 })).toBe('2 questions answered and 1 photo attached.')

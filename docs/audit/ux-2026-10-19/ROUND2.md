@@ -60,3 +60,31 @@ Round 2 starts after these round-1 branches merge: ux/foundation, ux/rfqs, ux/or
 - [ ] performance.md, copy.md, round2-spec.md (statuses ≤35, counts, search, shortcuts sheet, page template).
 - [ ] The screen-audit rig baseline (test/screen-audit), then re-measure after round 1.
 - [ ] Verification findings: test/money-verify, test/workflow-verify, test/roles-verify. Bugs here are fixed BEFORE any new UX work.
+
+## Wording (round2/copy.md): main 4.5/10, about 6.5 after the round-1 branches
+- [ ] Apply the "Words we use" table (about 120 terms) app-wide, plus the guides and the in-app help. Coordinator decisions under the owner's plain-words mandate: net / gross / settled become "before GST" / "with GST" / "paid in full"; supplier side uses "price" (not "quote") and "Can't quote" everywhere; one name for the customer reference ("Customer ref").
+- [ ] One list of RFQ close reasons (rfqs/lib/closeDefaults.ts is the source; board model and SitesPanel read it).
+- [ ] Error messages: one "Couldn't load …" pattern with the fix, no "Something went wrong", no technical text (OrderDetailScreen "Request GET …", clipboard, "read back", "Supabase address"). Use the server-error table from the learnability spec.
+- [ ] No symbols for words (×, ≈, ~, ÷, ≠, 3d, 1.2M); one money format (PKR 45,000.50 everywhere, toasts included); dates formatted, never ISO; no "Use the form 2026-11".
+- [ ] Sentences on screen ≤ 20 words (ExceptionsPage.tsx:60, IntakeScreen.tsx:715 and 8 more).
+- [ ] Message templates: one greeting spelling, "Dear Sir or Madam", "(our ref X)".
+- [ ] Merge note: take ux/money-today's SALES.md; ADMIN/ENGINEER guides are refreshed in the final docs pass.
+
+## Speed (round2/performance.md): 4/10 on a mid-range Android over 4G
+In progress: perf/db (RLS policy wrap, >1,000-row correctness, matching prefilter, audit growth, month-end exempt bug), perf/client (non-blocking saves, bundle, logos, honest CI budget), ux/phone-platform (persisted cache, offline, preconnect, loading screen).
+Round 2 after the merges:
+- [ ] Take the Today load out of the shell. Nav counts get a light count RPC, not about 25 requests on every screen (useNavCounts).
+- [ ] Flatten the order page's waterfall (legs don't wait for items); month end fetches its snapshot once (not 6 times); the RFQ page batches supplier-memory RPCs per item.
+- [ ] Issue quotation/PO in the background (PDF render off the critical path).
+- [ ] Switch client .in() id lists to the server-side RPCs from perf/db (call sites listed in its report).
+- [ ] Cap the history-growing reads (Today, RFQ value column, company counts, Orders list) with server-side limits and ordering.
+- [ ] order.update must refresh the Margin panel (invalidation map).
+- [ ] Target: Lighthouse mobile ≥95 on /login and on the main screens; under 1 second to a usable screen on repeat opens.
+
+## Consistency (round2/consistency-spec.md): tasks R2-01 to R2-22, order of work in its §6.1
+- Coordinator decision on §5.3: every detail page (RFQ, Order, and later Company where it has an action) shows its single green action in a labelled **"Next step" box directly under the title** (the pattern ux/orders built). The header keeps the name, code, at most 2 status words and a "More" menu, with no primary button. Phones put the same action in the bottom bar.
+- [ ] Status vocabulary: 89 labels down to 34 (tone = who acts next), shared status-text component, time-words helper.
+- [ ] Counts: 24 counts reworked; `count` renamed to `needs`; nav badges = a split of Today.
+- [ ] Search: "Search {noun}", `/` everywhere, ?q=, a shared no-results state with "Search everywhere", filters in one sheet, density switch off.
+- [ ] "?" shortcuts sheet from one registry; remove the dead duplicate C handler.
+- [ ] Page templates: list, detail and phone; one sticky-bar implementation.

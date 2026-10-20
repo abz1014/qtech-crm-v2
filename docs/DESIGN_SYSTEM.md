@@ -250,7 +250,9 @@ Compact is a per-table toggle remembered per user; it never applies to forms or 
 
 ## 12. Layout
 
-Desktop navigation is either a 224px left rail (`--nav-w`) or a 52px top bar (`--topbar-h`); the Today directions explore both. Exactly six destinations in this order: Today, RFQs, Orders, Companies, Money, Reports. A `⌘K` search field sits with the navigation. Phones use a bottom tab bar with the same six. Page content is capped at 860px for single-column work lists and 1280px for tables. The active destination is marked by a 2 to 3px brand-green indicator plus `--bg-selected` or an underline, never a green fill.
+Desktop navigation is either a 224px left rail (`--nav-w`) or a 52px top bar (`--topbar-h`); the Today directions explore both. Exactly five destinations in this order: Today, RFQs, Orders, Companies, Money (owner decision 2026-10-19; engineers get the first four). Reports lives inside Money (`/reports` redirects there). A `⌘K` search field sits with the navigation. Phones use a bottom tab bar with the same five.
+
+Navigation is at most two levels: the main destinations, then one strip of tabs inside a destination (Money: Who owes us, Invoices & GST, Expenses, Month end). Never a third strip: a page reached from inside a tab (Match bank statement, Margins, Things to check, a report) has a back link (on a phone, the phone bar's back arrow) and a title instead. On a phone no tab strip scrolls sideways: it wraps into a grid, or the list itself is the page (Settings). A count beside a destination or a tab means "needs you" (to do) and nothing else, and agrees with the person's Today list; a tab with nothing to do shows no number. Page content is capped at 860px for single-column work lists and 1280px for tables. The active destination is marked by a 2 to 3px brand-green indicator plus `--bg-selected` or an underline, never a green fill.
 
 ## 13. Writing in the interface
 
