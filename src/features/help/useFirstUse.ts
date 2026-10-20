@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
+import { firstUseCopy } from '@/features/help/firstUseCopy'
 import { fetchFirstUse, isNewOn, type FirstUseScreenName } from '@/features/help/firstUseApi'
 
 const TEN_MINUTES = 10 * 60_000
@@ -16,5 +17,8 @@ export function useFirstUse(screen: FirstUseScreenName, userId: string, role: st
     staleTime: TEN_MINUTES,
   })
   const facts = q.data
-  return { isNew: enabled && !!facts && isNewOn(screen, role, facts), alone: !!facts?.ownerAlone }
+  const alone = !!facts?.ownerAlone
+  // A role with no first-use words for this screen (an engineer on the RFQ board) keeps the screen's own empty state.
+  const isNew = enabled && !!facts && isNewOn(screen, role, facts) && firstUseCopy(screen, role, { alone }) !== null
+  return { isNew, alone }
 }

@@ -283,7 +283,7 @@ test.describe('closed and won', () => {
 
     const total = Number(/of (\d+)$/.exec((await page.getByText(/^Showing 1 to 25 of \d+$/).innerText()).trim())?.[1])
     expect(total).toBeGreaterThanOrEqual(closedTotalAtLeast)
-    await page.getByRole('button', { name: 'Next' }).click()
+    await page.getByRole('button', { name: 'Next', exact: true }).click()
     await expect(page).toHaveURL(/page=2/)
     await expect(page.getByText(new RegExp(`^Showing 26 to ${Math.min(50, total)} of ${total}$`))).toBeVisible()
     await page.getByRole('button', { name: 'Previous' }).click()
