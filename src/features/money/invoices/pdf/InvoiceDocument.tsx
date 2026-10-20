@@ -58,12 +58,13 @@ const s = StyleSheet.create({
   tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: C.strong, paddingVertical: 6, fontSize: 8.5 },
   cNo: { width: 18, paddingLeft: 3 },
   cDesc: { flex: 1, paddingRight: 6 },
-  cQty: { width: 44, textAlign: 'right' },
-  cPrice: { width: 64, textAlign: 'right' },
-  cNet: { width: 72, textAlign: 'right' },
-  cRate: { width: 38, textAlign: 'right' },
-  cTax: { width: 62, textAlign: 'right' },
-  cGross: { width: 74, textAlign: 'right', paddingRight: 3 },
+  // numeric columns fit 10,000,000.00 in mono 8.5 with a 4pt gap, so two amounts never run together (checked in a browser render)
+  cQty: { width: 46, textAlign: 'right', paddingLeft: 4 },
+  cPrice: { width: 68, textAlign: 'right', paddingLeft: 4 },
+  cNet: { width: 78, textAlign: 'right', paddingLeft: 4 },
+  cRate: { width: 32, textAlign: 'right', paddingLeft: 4 },
+  cTax: { width: 70, textAlign: 'right', paddingLeft: 4 },
+  cGross: { width: 80, textAlign: 'right', paddingLeft: 4, paddingRight: 3 },
   totals: { alignSelf: 'flex-end', width: 320, marginTop: 12 },
   totRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   gross: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, paddingVertical: 6, borderTopWidth: 1.5, borderBottomWidth: 0.75, borderTopColor: C.ink, borderBottomColor: C.ink },
@@ -199,7 +200,10 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
           <Text style={s.cNo}>#</Text>
           <Text style={s.cDesc}>Description</Text>
           <Text style={s.cQty}>Qty</Text>
-          <Text style={s.cPrice}>Unit price excl. tax</Text>
+          <View style={s.cPrice}>
+            <Text>Unit price</Text>
+            <Text>excl. tax</Text>
+          </View>
           <Text style={s.cNet}>Value excl. tax</Text>
           <Text style={s.cRate}>Rate</Text>
           <Text style={s.cTax}>Sales tax</Text>

@@ -21,6 +21,7 @@ import { NextStepBox } from '@/ui/NextStepBox'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
+import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
 import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
 import { useCompanyProfile } from '@/features/settings/hooks'
@@ -241,7 +242,12 @@ export function OrderHeaderBlock({
             <Cell
               title="Invoicing"
               icon={FileText}
-              action={!cancelled && primary?.kind !== 'create-invoice' && s?.invoicing !== 'fully_invoiced' ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
+              action={
+                <div className="flex flex-wrap gap-2">
+                  {(invoiced ?? 0) > 0 ? <InvoicePdfButton orderId={order.id} size="sm" /> : null}
+                  {!cancelled && primary?.kind !== 'create-invoice' && s?.invoicing !== 'fully_invoiced' ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
+                </div>
+              }
             >
               {s?.invoicing ? <StatusBadge dimension="invoicing" value={s.invoicing} /> : null}
               <p className="text-sm text-fg-2" data-testid="order-invoiced">
