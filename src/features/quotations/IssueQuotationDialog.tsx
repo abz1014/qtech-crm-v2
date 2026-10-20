@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Download, Eye, FileCheck, FileText, Info, RotateCcw, Share2, TriangleAlert } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
-import { formatShortDate } from '@/lib/formatDay'
+import { formatDay, formatShortDate } from '@/lib/formatDay'
 import { formatPaisa } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, rfqRef } from '@/lib/refs'
@@ -93,7 +93,8 @@ function Chip({ label, value, selected, onPick, testId, disabled }: { label: str
   )
 }
 
-const GRID = 'md:grid-cols-[28px_minmax(0,1.7fr)_44px_120px_88px_minmax(0,1.3fr)_112px]'
+// Each line is its own grid, so the tracks are fixed to line up; sized for 16px text (a 7-figure price, "Exempt", a 4-digit qty).
+const GRID = 'md:grid-cols-[28px_minmax(0,1.6fr)_56px_140px_108px_minmax(0,1.2fr)_128px]'
 
 export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHeader; inquiries: InquiryRow[]; onClose: () => void }) {
   const { toast } = useToast()
@@ -317,17 +318,17 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
     }
   }
 
-  // The new revision is what the title names: "Issue quotation QT-26-0042 R2".
-  const title = previous ? `Issue quotation ${quotationRef(previous.number, firstYear, nextRevision)}` : 'Issue quotation'
+  // On screen a re-issue is "Revise quotation QT-26-0042" (plain words, 2026-10-19); the PDF and its file name keep the R number.
+  const title = previous ? `Revise quotation ${quotationRef(previous.number, firstYear)}` : 'Issue quotation'
 
   if (stage.kind === 'done') {
     const { quotation: q, pdf, pdfError } = stage
-    const ref = quotationRef(q.number, firstYear, q.revision)
+    const base = quotationRef(q.number, firstYear)
     return (
       <Dialog open onOpenChange={o => (o ? null : onClose())} busy={storePdf.isPending}>
         <DialogContent
-          title={`${ref} issued`}
-          context={`${rfqRef(rfq.number)} · ${rfq.company.name}. The bid is marked sent today.`}
+          title={q.revision > 0 ? `Revised quotation ${base} issued` : `Quotation ${base} issued`}
+          context={`${rfqRef(rfq.number)} · ${rfq.company.name}. It is marked sent today.`}
           icon={FileText}
           tone="success"
           size="md"
@@ -381,21 +382,21 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         title={title}
         titleChip={
           previous ? (
-            <span className="inline-flex h-5 items-center gap-1 rounded border border-line-strong bg-surface px-[6px] text-xs font-medium text-fg-2">
+            <span className="inline-flex h-6 items-center gap-1 rounded border border-line-strong bg-surface px-[6px] text-sm font-medium text-fg-2">
               <Icon icon={RotateCcw} size="chip" />
-              Re-issue
+              Revision {nextRevision}
             </span>
           ) : null
         }
         context={
           previous
-            ? `R${previous.revision} stays exactly as it was sent. This creates R${nextRevision} under the same number.${rfq.customerRef ? ` Customer ref ${rfq.customerRef}.` : ''}`
+            ? `The quotation sent ${formatDay(previous.issuedOn)} stays exactly as it was. This makes a revised one under the same number.${rfq.customerRef ? ` Customer ref ${rfq.customerRef}.` : ''}`
             : `${rfqRef(rfq.number)} · ${rfq.company.name}${rfq.customerRef ? ` · customer ref ${rfq.customerRef}` : ''}`
         }
         icon={FileText}
         size="lg"
         className="md:w-[900px]"
-        lead="Issuing sets the bid as sent today."
+        lead="Issuing marks the quotation sent today."
         footer={
           <>
             <Button data-cancel onClick={onClose} disabled={busy}>
@@ -405,7 +406,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
               Preview PDF
             </Button>
             <Button variant="primary" icon={FileCheck} disabled={!ready} busy={busy} busyLabel={storePdf.isPending ? 'Making the PDF' : 'Issuing'} onClick={() => void submit()}>
-              {previous ? `Issue quotation R${nextRevision}` : 'Issue quotation'}
+              {previous ? 'Issue revised quotation' : 'Issue quotation'}
             </Button>
           </>
         }
@@ -433,7 +434,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
             ) : null}
 
             <div className="grid gap-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
-              <Field label="Addressed to" requirement="optional" source={previous?.contactId === contactId && contactId ? `from ${quotationRef(previous.number, firstYear, previous.revision)}` : undefined}>
+              <Field label="Addressed to" requirement="optional" source={previous?.contactId === contactId && contactId ? 'from the last quotation' : undefined}>
                 <Select value={contactId} onChange={e => setContactId(e.target.value)} placeholder="No contact" options={addressedOptions} />
               </Field>
               <Field label="Valid until" requirement="optional" edited={validEdited}>
@@ -609,10 +610,10 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
             ) : null}
 
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Delivery" requirement="optional" source={previous?.deliveryText && delivery === previous.deliveryText ? `from ${quotationRef(previous.number, firstYear, previous.revision)}` : undefined}>
+              <Field label="Delivery" requirement="optional" source={previous?.deliveryText && delivery === previous.deliveryText ? 'from the last quotation' : undefined}>
                 <TextField value={delivery} onChange={e => setDelivery(e.target.value)} placeholder="e.g. To your site, within the lead time on each line" />
               </Field>
-              <Field label="Payment terms" requirement="optional" source={previous?.paymentTerms && payment === previous.paymentTerms ? `from ${quotationRef(previous.number, firstYear, previous.revision)}` : undefined}>
+              <Field label="Payment terms" requirement="optional" source={previous?.paymentTerms && payment === previous.paymentTerms ? 'from the last quotation' : undefined}>
                 <TextField value={payment} onChange={e => setPayment(e.target.value)} placeholder="e.g. 50% advance, balance against delivery" />
               </Field>
             </div>
@@ -621,7 +622,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
             </Field>
             <p className="flex items-center gap-2 text-xs text-fg-muted">
               <TriangleAlert className="size-3" aria-hidden="true" />
-              An issued quotation cannot be edited. To change it, issue a new revision.
+              An issued quotation cannot be edited. To change it, revise it: the new one keeps the same number.
             </p>
           </>
         )}

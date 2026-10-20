@@ -122,10 +122,30 @@ describe('SuppliersAsked chase', () => {
         if (call.target === 'rpc:stamp_supplier_chase') stamps.push(call)
       },
     )
-    const chase = screen.getByRole('button', { name: 'Chase Silent Traders' })
+    // The supplier to chase shows the preview and one "Copy and mark chased" (no second Chase button beside it).
+    expect(screen.queryByRole('button', { name: 'Chase Silent Traders' })).toBeNull()
+    const chase = screen.getByRole('button', { name: 'Copy and mark chased' })
     await user.dblClick(chase)
     release()
     await waitFor(() => expect(screen.getAllByText('Chase text copied').length).toBeGreaterThan(0))
     expect(stamps).toHaveLength(1)
+  })
+
+  it('shows a short preview; the whole message, with its items and reply-by date, opens on request; Email is one link away', async () => {
+    const user = userEvent.setup()
+    localStorage.removeItem('qtech.channel.u1')
+    renderWith([{ id: 'it-1', number: 1, description: 'Hach HQ1110 meter', brandId: 'b-hach', brandName: 'Hach', familyId: null, qty: 1, unit: 'pcs' }], { ...inquiry, chaseCount: 0, lastChasedOn: null })
+    const card = screen.getByRole('group', { name: 'Chase Silent Traders' })
+    expect(within(card).getByTestId('chase-text')).toHaveClass('line-clamp-3')
+    expect(within(card).queryByRole('group', { name: 'Items still without a price from this supplier' })).toBeNull()
+    await user.click(within(card).getByRole('button', { name: 'Show the whole message' }))
+    expect(within(card).getByRole('group', { name: 'Items still without a price from this supplier' })).toBeInTheDocument()
+    expect(within(card).getByTestId('chase-text')).not.toHaveClass('line-clamp-3')
+    expect(within(card).getByTestId('chase-text')).not.toHaveTextContent('Subject')
+    await user.click(within(card).getByRole('button', { name: 'Email instead' }))
+    expect(within(card).getByRole('button', { name: 'WhatsApp instead' })).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Copy subject' })).toBeInTheDocument() // an email has its subject row
+    expect(localStorage.getItem('qtech.channel.u1')).toBe('email') // remembered for the next message
+    localStorage.removeItem('qtech.channel.u1')
   })
 })

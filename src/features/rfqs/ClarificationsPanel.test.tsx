@@ -74,6 +74,9 @@ describe('ClarificationsPanel chase text', () => {
         </SessionContext.Provider>
       </QueryClientProvider>,
     )
+    // The message waits under "Show the whole message": the questions are listed right above it.
+    expect(screen.queryByTestId('chase-text')).toBeNull()
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Show the whole message' }))
     const text = await screen.findByTestId('chase-text')
     expect(text.textContent).toMatch(/gentle reminder/)
 

@@ -93,6 +93,8 @@ function intake() {
     memory: (signature: string) => [...all, 'memory', signature] as const,
     /** The up to three evidence orders of one supplier for one item (the memory card). */
     evidence: (signature: string) => [...all, 'evidence', signature] as const,
+    /** A kept New RFQ draft, checked before it is offered: is its RFQ already saved; are its company, site and contact on file. */
+    draft: (signature: string) => [...all, 'draft', signature] as const,
   }
 }
 /**

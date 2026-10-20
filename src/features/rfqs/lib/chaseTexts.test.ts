@@ -76,7 +76,7 @@ describe('customer clarification chase', () => {
         '1. Line size and flange rating on the process line (item 2)',
         '2. Fluid temperature range, and whether the meter sees CIP cleaning (items 2 and 3)',
         '',
-        'Kindly confirm by *Thursday 10 December*; our bid is due on Friday 11 December.',
+        'Kindly confirm by *Thursday 10 December*; our quotation is due on Friday 11 December.',
         '',
         'Thank you for your support.',
         'Regards,',
@@ -89,7 +89,7 @@ describe('customer clarification chase', () => {
   it('names the bid date when the bid is close', () => {
     const t = generateCustomerChase({ ...base, dueOn: '2026-11-30' })
     expect(t.kind).toBe('bid_close')
-    expect(t.body).toContain('Our bid for your RFQ *#74037* is due *Monday 30 November*.')
+    expect(t.body).toContain('Our quotation for your RFQ *#74037* is due *Monday 30 November*.')
     expect(t.body).toContain('Kindly confirm by *5:00 pm today*.')
     const tomorrow = generateCustomerChase({ ...base, dueOn: '2026-11-28', today: '2026-11-27' })
     expect(tomorrow.body).toContain('is due *tomorrow, Saturday 28 November*')
