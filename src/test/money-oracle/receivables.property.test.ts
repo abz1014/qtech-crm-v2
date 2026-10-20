@@ -102,6 +102,30 @@ describe('Create invoice (money/invoices/model) against the oracle', () => {
     expect(roundDiv(500n * 918n, 3060n * 100n)).toBe(2n)
   })
 
+  // BUG-M10: typing the net in Create invoice (or picking 18%) recomputes GST as round(net x 18%) on the WHOLE invoice, while the
+  // order, the quotation and the customer's PO carry GST rounded per line (DATA_MODEL 2.13). Re-typing the full net of a many-line
+  // order changes the GST (by up to Rs 0.50 a line); the invoice then no longer matches the PO, and when the gap passes Rs 1 the
+  // order never reads "fully invoiced" (v_order_state), so Today and Create invoice keep offering the last rupees.
+  it.fails('BUG-M10: the full net of an 18% order, typed back in, keeps the GST of the order lines', () => {
+    fc.assert(
+      fc.property(linesArb(20).map(ls => ls.map(l => ({ ...l, rate: '18' }))), lines => {
+        const t = itemsTotal(lines)
+        const start = invoiceStart({ itemsNet: n(t.net), itemsGst: n(t.gst), lineCount: lines.length, exemptLineCount: 0, invoicedNet: 0, invoicedGst: 0, paymentTermsDays: 30 })
+        expect(toPaisa(gstForNet(start.net, start.option, start))).toBe(t.gst)
+      }),
+      { ...RUNS, seed: 20261020 },
+    )
+  })
+
+  it('BUG-M10 minimal repro: 20 lines of 10.50 at 18% carry GST 40 (2 a line); typed back in, the invoice carries 38', () => {
+    const lines = Array.from({ length: 20 }, () => ({ qty: '1.000', price: '10.50', rate: '18' }))
+    const t = itemsTotal(lines)
+    expect(rs(t.gst)).toBe('40.00')
+    const start = invoiceStart({ itemsNet: n(t.net), itemsGst: n(t.gst), lineCount: 20, exemptLineCount: 0, invoicedNet: 0, invoicedGst: 0, paymentTermsDays: 30 })
+    expect(start.gst).toBe(40)
+    expect(gstForNet(start.net, start.option, start)).toBe(38)
+  })
+
   it('the dialog opens with what is left: line totals less earlier invoices, never below zero', () => {
     fc.assert(
       fc.property(linesArb(), fc.array(fc.tuple(paisaArb(), paisaArb(2_000_000n)), { maxLength: 3 }), (lines, earlier) => {

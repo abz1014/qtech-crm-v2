@@ -129,6 +129,15 @@ insert into public.invoices (order_id, number, invoice_date, net_amount, gst_amo
 set local role authenticated;
 select ok((select frozen and net_in = 700 and gst_in = 90 and result = -15300 from public.v_month_pnl where month = '2025-01-01'),
   'January stays frozen at its closed figures');
+-- BUG-M11: a closed month's checklist count is frozen (D-MR2) but month_end_check_details (0064) is always live. After one bank
+-- item is ticked, closed January's card reads "8 items" over "3 money in, 4 money out" (7): the two contradict on every closed month.
+select is((select n from public.month_end_status('2025-01-01') where check_key = 'bank_unticked'), 8,
+  'closed January: the bank-unticked count stays frozen at 8');
+select is((select (detail ->> 'in_n')::int + (detail ->> 'out_n')::int from public.month_end_check_details('2025-01-01') where check_key = 'bank_unticked'), 7,
+  'BUG-M11 (current, wrong): the details under it are live (7)');
+select todo('BUG-M11: the details of a closed month must be the frozen ones (the same as its count)', 1);
+select is((select (detail ->> 'in_n')::int + (detail ->> 'out_n')::int from public.month_end_check_details('2025-01-01') where check_key = 'bank_unticked'), 8,
+  'BUG-M11: a closed month''s details match its frozen count');
 select ok((select net_in = 711.91 and gst_in = 78.09 from public.v_month_pnl_live where month = '2025-01-01'),
   'the live January has moved: net in 711.91, GST 78.09');
 select ok((select net_in = 511.91 and gst_in = 78.09 and adj_net_in = 11.91 and adj_gst_in = -11.91 and adjust_result = 11.91
