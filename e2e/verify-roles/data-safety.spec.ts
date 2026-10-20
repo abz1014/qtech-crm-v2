@@ -290,7 +290,8 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
   for (const n of [world.amounts.invoiceNet, world.amounts.payment, world.amounts.sell]) expect(text, 'no figure from the admin session').not.toContain(n.toLocaleString('en-US'))
 })
 
-test('a session that ends without Sign out (expired or revoked token) does not hand the Capture draft to the next person', async ({ page }) => {
+test('BUG-RV-06: a session that ends without Sign out (expired or revoked token) does not hand the Capture draft to the next person', async ({ page }) => {
+  test.fail(true, 'BUG-RV-06: forgetDeviceCaptures() runs only on the Sign out button and on deactivation; a session that ends otherwise leaves the Capture draft (IndexedDB) and recents, and the next person gets the draft')
   const secret = `${world.tag} expired-session capture note`
   await openAs(page, 'admin', '/today')
   await pasteIntoCapture(page, secret)
