@@ -13,6 +13,11 @@ import type { ImportTable, NewRow, ReviewItem, TransformResult } from '../types'
 // set), in reverse foreign-key order, then inserts the transform output. Companies, brands and sites that v2 already
 // holds under the same normalised name are reused, not duplicated and not deleted.
 //
+// legacy_source (0078, BUG-RV-01): the transform still hands the old CRM row(s) to the database as legacy_source, but the
+// database never stores them there. A trigger on each table moves the raw jsonb to legacy_archive.legacy_rows (owner only,
+// not exposed by the API) and leaves the money-free marker {"imported": true, "table": "<old table>"} in the column, which
+// every role may read. The read-back (verify) fails the run if any imported row still carries more than that marker.
+//
 // PostgREST has no multi-statement transaction, so a run is not atomic. It is safe to re-run: every run starts by
 // removing what the previous run left, and a run that stops half way leaves only legacy rows behind.
 
@@ -157,6 +162,13 @@ export interface LoadSummary {
   review: ReviewItem[]
   /** Disagreements found by the read-back check. Empty = the database holds exactly what the transform produced. */
   mismatches: string[]
+}
+
+/** The money-free marker the database keeps in legacy_source (0078): {"imported": true} plus, optionally, a text "table". */
+export function isLegacyMarker(v: unknown): boolean {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return false
+  const o = v as Record<string, unknown>
+  return o['imported'] === true && Object.keys(o).every(k => k === 'imported' || (k === 'table' && typeof o[k] === 'string'))
 }
 
 const strip = (row: NewRow): NewRow => Object.fromEntries(Object.entries(row).filter(([k]) => !k.startsWith('_')))
@@ -412,6 +424,11 @@ export async function verify(db: Db, tables: Record<ImportTable, NewRow[]>, resu
     (await fetchAll(db, 'invoices', 'id,settled_before_cutover')).filter(r => isLegacyId(String(r['id'])) && r['settled_before_cutover'] === true).map(r => String(r['id'])),
   )
   const settledOff = [...settledWant].filter(id => !settledGot.has(id)).length + [...settledGot].filter(id => !settledWant.has(id)).length
+  // 0078: no imported row may carry the old raw row (old prices, costs, GST) in a column staff can read
+  for (const t of DELETE_ORDER.filter(d => d.legacySource)) {
+    const raw = (await fetchAll(db, t.table, 'id,legacy_source', [{ kind: 'notNull', col: 'legacy_source' }])).filter(r => !isLegacyMarker(r['legacy_source'])).length
+    if (raw) bad.push(`${t.table}.legacy_source: ${raw} row(s) hold more than the import marker (migration 0078 missing?)`)
+  }
   if (settledOff) bad.push(`invoices.settled_before_cutover: database ${settledGot.size} marked, transform ${settledWant.size}, ${settledOff} differ`)
   return bad
 }

@@ -163,7 +163,7 @@ returns void language sql as $$
      format($c$select exists (select 1 from public.%I where %s and legacy_source is not null)$c$, o, new_id), writers),
     (o, 'legacy_source', 'U',
      format('update public.%I set legacy_source = %L::jsonb where %s', o, '{"forged":true}', old_where),
-     format($c$select (select legacy_source from public.%I where %s) = '{"forged":true}'::jsonb$c$, o, old_where), coalesce(upd_writers, writers)),
+     format($c$select (select legacy_source from public.%I where %s) is not null$c$, o, old_where), coalesce(upd_writers, writers)),
     (o, 'legacy_flags', 'I',
      format('insert into public.%I (%s, legacy_flags) values (%s, %L::text[])', o, ins_cols, ins_vals, '{forged}'),
      format($c$select exists (select 1 from public.%I where %s and 'forged' = any (legacy_flags))$c$, o, new_id), writers),
@@ -206,6 +206,12 @@ select is((select coalesce(array_agg(x order by x), '{}') from (
 select is(pg_temp.sets(p.stmt, p.chk, 'service'), 'set', format('valid probe: the import sets %s.%s on %s', p.obj, p.col, p.op))
 from legacy_probe p order by p.obj, p.col, p.op;
 
+-- 0078 (BUG-RV-01): what the import sends as legacy_source is kept in legacy_archive.legacy_rows; the column keeps a marker.
+select is((select legacy_source from public.invoices where id = pg_temp.f('e1')), '{"imported": true, "table": "gst_invoices"}'::jsonb,
+  'legacy_source keeps only the marker of an imported row');
+select is((select data from legacy_archive.legacy_rows where table_name = 'invoices' and row_id = pg_temp.f('e1')),
+  '{"table":"gst_invoices","row":{"id":"old-1"}}'::jsonb, 'the raw old row is in legacy_archive.legacy_rows');
+
 -- ------------------------------------------------------------------ settled_before_cutover: no app user (real assertions, 0068)
 select ok(pg_temp.sets(p.stmt, p.chk, w) <> 'set',
   format('%s cannot set invoices.settled_before_cutover on %s (got %s)', w, p.op, pg_temp.sets(p.stmt, p.chk, w)))
@@ -223,36 +229,30 @@ where p.obj = 'orders' and p.col = 'legacy_flags' and w <> 'admin' order by p.op
 -- turns off the payment's target credit (set_payment_credited_user skips rows with legacy_source), skips the FX capture
 -- of a supplier quote line (capture_quote_line_fx), shows the row as "legacy" in supplier memory, and is the
 -- precondition of settled_before_cutover. It can also overwrite or erase the import's audit trail of a row.
-select todo_start('BUG-RV-02: legacy_source can be set by app users (no guard)');
 select ok(pg_temp.sets(p.stmt, p.chk, w) <> 'set',
   format('BUG-RV-02 %s cannot set %s.legacy_source on %s (got %s)', w, p.obj, p.op, pg_temp.sets(p.stmt, p.chk, w)))
 from legacy_probe p cross join unnest(p.writers) w
 where p.col = 'legacy_source' order by p.obj, p.op, w;
-select todo_end();
 
 -- ------------------------------------------------------------------ BUG-RV-03: legacy_flags writable by non-admins outside orders
 -- 0065 made orders.legacy_flags admin only because flags change what the database requires and computes. The other
 -- tables were left open: e.g. any flag on an invoice lifts the NOT NULL rules on its number and date
 -- (invoices_number_present, invoices_date_present), so sales can create an undated invoice that no month (and so no
 -- month lock or GST month) ever contains; 'owner_unknown' lifts the owner rule on an RFQ.
-select todo_start('BUG-RV-03: legacy_flags can be set by sales and engineers on tables other than orders');
 select ok(pg_temp.sets(p.stmt, p.chk, w) <> 'set',
   format('BUG-RV-03 %s cannot set %s.legacy_flags on %s (got %s)', w, p.obj, p.op, pg_temp.sets(p.stmt, p.chk, w)))
 from legacy_probe p cross join unnest(p.writers) w
 where p.col = 'legacy_flags' and p.obj <> 'orders' and w <> 'admin' order by p.obj, p.op, w;
-select todo_end();
 
 -- The concrete effect of BUG-RV-03 on invoices: sales create an invoice with neither a number nor a date.
 select is(pg_temp.sets(
   $q$insert into public.invoices (id, order_id, number, invoice_date, net_amount, gst_amount, legacy_flags) values (@e3, @21, null, null, 100, 18, '{forged}')$q$,
   $q$select exists (select 1 from public.invoices where id = @e3 and invoice_date is null)$q$, 'service'), 'set',
   'valid probe: an undated, unnumbered invoice needs a legacy flag (the import may)');
-select todo_start('BUG-RV-03: sales can create an undated invoice outside every month');
 select isnt(pg_temp.sets(
   $q$insert into public.invoices (id, order_id, number, invoice_date, net_amount, gst_amount, legacy_flags) values (@e3, @21, null, null, 100, 18, '{forged}')$q$,
   $q$select exists (select 1 from public.invoices where id = @e3 and invoice_date is null)$q$, 'sales'), 'set',
   'BUG-RV-03 sales cannot create an invoice with no number and no date');
-select todo_end();
 
 select * from finish();
 rollback;

@@ -370,7 +370,8 @@ select ok((select net_in = 1500 from public.v_month_pnl where month = '2025-01-0
   'January P&L: only the corrected 1,500 counts (1,000 voided, 2,000 replaced)');
 reset role;
 select ok((select voided_at is not null and void_reason = 'Duplicate of an import row'
-                  and legacy_source ->> 'id' = '7' and credited_user_id is null
+                  and legacy_source is not null and credited_user_id is null
+                  and (select data ->> 'id' from legacy_archive.legacy_rows where table_name = 'payments_in' and row_id = 'a4000000-0000-4000-8000-000000000733') = '7'
            from public.payments_in where id = 'a4000000-0000-4000-8000-000000000733'),
   'the voided imported payment keeps its legacy source and stays credited to nobody');
 select ok((select credited_user_id is null and legacy_source is null and corrects_payment_id = 'a4000000-0000-4000-8000-000000000734'

@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { isLegacyId } from '../src/lib/ids'
 import { parseDump } from '../src/extract/dump'
 import { assertTargetAllowed } from '../src/load/guard'
-import { loadLegacy } from '../src/load/loader'
+import { isLegacyMarker, loadLegacy } from '../src/load/loader'
 import { IMPORT_TABLES } from '../src/types'
 import type { TransformResult } from '../src/types'
 import { AS_OF, FIXTURE_DUMP, FIXTURE_MAPPINGS, fixtureDump, run, V2_USERS } from './support'
@@ -301,6 +301,14 @@ describe.skipIf(!ENABLED)('the import against the local stack', () => {
       expect(await rows(c, 'v_order_money', '*')).toHaveLength(0)
       expect(await rows(c, 'v_payment_net', '*')).toHaveLength(0)
     }
+    // 0078 (BUG-RV-01): imported rows carry only the money-free marker in legacy_source; the old rows are not readable
+    for (const t of ['orders', 'order_items', 'supplier_orders', 'rfqs', 'rfq_items', 'supplier_quote_lines', 'supplier_inquiries', 'companies']) {
+      const got = (await rows(engineer, t, 'id,legacy_source')).filter(r => isLegacyId(String(r['id'])) && r['legacy_source'] !== null)
+      if (t === 'orders' || t === 'rfqs') expect(got.length, `${t}: imported rows the engineer reads`).toBeGreaterThan(0)
+      expect(got.filter(r => !isLegacyMarker(r['legacy_source'])), `${t}: legacy_source holds only the marker`).toEqual([])
+    }
+    expect(JSON.stringify(await rows(engineer, 'orders', 'legacy_source'))).not.toMatch(/value|cost|gst|price|amount/i)
+
     // invoices and the GST register: sales yes, engineers no
     expect((await rows(sales, 'invoices', 'id')).length).toBeGreaterThan(5)
     expect((await rows(sales, 'v_gst_register', 'invoice_id')).length).toBeGreaterThan(5)

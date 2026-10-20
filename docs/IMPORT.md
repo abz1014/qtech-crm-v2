@@ -332,3 +332,11 @@ Each is one small rule in `import/src/transform/`, covered by a test.
 8. **Mixed-status merged orders** (PO 000001): the merged leg counts as delivered only when every member order was; its date is the latest.
 9. **Received.** There is no Received step (owner, 2026-10-15): the leg's `received_on` is its `delivered_on`.
 10. **Family tags** are created for every product type in the old data, including those only on rows that could not be imported.
+
+## Where the old rows land (migration 0078, BUG-RV-01)
+
+The transform still sends each old CRM row as `legacy_source`. The database never keeps it there: a trigger on every table
+with the column stores the raw jsonb in `legacy_archive.legacy_rows (table_name, row_id, data)` (owner only, not exposed by
+the API) and writes `{"imported": true, "table": "<old table>"}` into `legacy_source`. Every role can read that marker; it has
+no money. Deleting an imported row deletes its archived row. The load's read-back fails if any imported row still holds more
+than the marker. Read an old row with SQL as the owner: `select data from legacy_archive.legacy_rows where table_name = 'orders' and row_id = '...'`.
