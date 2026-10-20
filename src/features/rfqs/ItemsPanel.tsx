@@ -41,7 +41,8 @@ import { CANT_QUOTE_REASONS, comparePrices, itemCoverage, qtyText, reasonForItem
 
 const daysBetween = (from: string, to: string) => Math.round((Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10)) - Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10))) / 86_400_000)
 
-const COLS = 'md:grid-cols-[112px_minmax(0,1fr)_minmax(150px,auto)_minmax(0,140px)_116px_72px]'
+// Every row is its own grid, so the tracks are fixed to line up; sized for 16px text ("≈ PKR 1,234,567", "Not in stock").
+const COLS = 'md:grid-cols-[minmax(0,1fr)_176px_minmax(0,136px)_128px_72px]'
 const HEAD = `hidden gap-x-4 px-5 py-2 text-sm text-fg-muted md:grid ${COLS}`
 /** Phone: the supplier and the price on one line, lead time, stock and the two buttons on the next (the mark, when there is one, above). */
 const ROW = `relative grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 border-t px-5 py-3 md:gap-x-4 ${COLS}`
@@ -421,7 +422,6 @@ export function ItemsPanel({
                   <div className="mt-3">
                     {entries.length > 0 ? (
                       <div className={HEAD} aria-hidden="true">
-                        <span />
                         <span>Supplier</span>
                         <span className="text-right">Price, PKR today</span>
                         <span>Lead time</span>
@@ -448,15 +448,16 @@ export function ItemsPanel({
                             data-compared={c.compared && c.pkrPaisa !== null ? '' : undefined}
                             data-ranked={rk ? (rk.rank ?? 'none') : undefined}
                           >
-                            <span className="max-md:col-span-3 max-md:empty:hidden">
+                            {/* The mark sits with the name (no column of its own), so the name keeps its width at 16px text. */}
+                            <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                              <span className="min-w-0 break-words font-medium">{inquiry.supplierName}</span>
                               {mark ? (
-                                <span className="inline-flex h-6 items-center gap-1 rounded border border-tone-success-fg/25 bg-tone-success-bg px-2 text-sm font-medium text-tone-success-fg">
+                                <span className="inline-flex min-h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded border border-tone-success-fg/25 bg-tone-success-bg px-2 text-sm font-medium text-tone-success-fg">
                                   <Icon icon={ThumbsUp} size="chip" />
                                   {mark === 'recommended' ? 'Recommended' : 'Lowest price'}
                                 </span>
                               ) : null}
                             </span>
-                            <span className="min-w-0 break-words font-medium">{inquiry.supplierName}</span>
                             <span className="text-right max-md:col-span-2">
                               <PriceCell line={line} c={c} />
                             </span>

@@ -34,17 +34,17 @@ export function RfqCell({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-0 gap-px">
       <span className="flex min-w-0 items-center gap-1.5">
-        <Link to={`/rfqs/${row.rfqId}`} className="truncate font-medium text-fg hover:underline">
+        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} className="truncate font-medium text-fg hover:underline">
           {row.companyName}
         </Link>
         {row.isPriority ? <Priority /> : null}
       </span>
       <span className="flex min-w-0 items-baseline gap-1 text-sm text-fg-muted">
-        <span className="min-w-0 truncate text-fg-2" data-asked>
+        <span className="min-w-0 truncate text-fg-2" data-asked title={askedText(row, 500)}>
           {askedText(row)}
         </span>
         <span className="num shrink-0">· {rfqRef(row.number)}</span>
-        {row.customerRef ? <span className="min-w-0 truncate">· their ref {row.customerRef}</span> : null}
+        {row.customerRef ? <span className="min-w-0 truncate" title={`Their ref ${row.customerRef}`}>· their ref {row.customerRef}</span> : null}
       </span>
     </div>
   )
@@ -59,7 +59,7 @@ export function NextStepCell({ row }: { row: BoardRow }) {
         <i aria-hidden="true" className="size-2 shrink-0 rounded-round bg-current" />
         {s.label}
       </span>
-      <span className="truncate text-sm text-fg-muted">{s.detail}</span>
+      <span className="truncate text-sm text-fg-muted" title={s.detail}>{s.detail}</span>
     </div>
   )
 }
@@ -81,7 +81,7 @@ export function OwnerCell({ row }: { row: BoardRow }) {
   return (
     <span className="inline-flex min-w-0 items-center gap-2">
       <Avatar name={row.ownerName} size="sm" />
-      <span className="truncate">{row.ownerName.split(' ')[0]}</span>
+      <span className="truncate" title={row.ownerName}>{row.ownerName.split(' ')[0]}</span>
     </span>
   )
 }
@@ -110,7 +110,7 @@ export function OpenCard({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-0 gap-1">
       <span className="flex min-w-0 items-center gap-1.5">
-        <Link to={`/rfqs/${row.rfqId}`} className="truncate font-medium text-fg hover:underline">
+        <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} className="truncate font-medium text-fg hover:underline">
           {row.companyName}
         </Link>
         {row.isPriority ? <Priority /> : null}
@@ -146,7 +146,7 @@ export function OpenCard({ row }: { row: BoardRow }) {
 export function ClosedCard({ row }: { row: BoardRow }) {
   return (
     <div className="grid min-w-0 gap-1">
-      <Link to={`/rfqs/${row.rfqId}`} className="truncate font-medium text-fg hover:underline">
+      <Link to={`/rfqs/${row.rfqId}`} title={row.companyName} className="truncate font-medium text-fg hover:underline">
         {row.companyName}
       </Link>
       <span className="line-clamp-2 break-words text-sm text-fg-2">{askedText(row)}</span>
