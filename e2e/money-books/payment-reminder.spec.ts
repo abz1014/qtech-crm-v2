@@ -102,6 +102,33 @@ test.describe('payment-reminder panel (M09)', () => {
     expect(await invoiceRow(s.invoiceId)).toEqual({ last_reminded_on: null, reminder_count: 0 })
   })
 
+  test('Open in WhatsApp is a wa.me link with the text filled in and marks nothing; Mark reminded stamps, Undo takes it back', async ({ page }) => {
+    const s = await seedOverdue()
+    await openAs(page, 'admin', '/money/receivables')
+    await pick(page, s)
+    const panel = page.getByTestId('reminder-panel')
+    // Record the link instead of leaving the app for wa.me.
+    await page.evaluate(() => {
+      const w = window as unknown as { opened: string[] }
+      w.opened = []
+      HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+        w.opened.push(this.href)
+      }
+    })
+    await panel.getByRole('button', { name: 'Open in WhatsApp' }).click()
+    const opened = await page.evaluate(() => (window as unknown as { opened: string[] }).opened)
+    expect(opened).toHaveLength(1)
+    expect(opened[0]).toMatch(/^https:\/\/wa\.me\/923005550118\?text=[^&]+$/)
+    expect(decodeURIComponent(opened[0].split('?text=')[1])).toContain('Mr. Faisal Qureshi')
+    expect(await invoiceRow(s.invoiceId)).toEqual({ last_reminded_on: null, reminder_count: 0 }) // opening never marks
+    await panel.getByRole('button', { name: 'Mark reminded' }).click()
+    await expect(panel.getByText(/Reminder 1 recorded today/)).toBeVisible()
+    await expect.poll(() => invoiceRow(s.invoiceId)).toEqual({ last_reminded_on: today(), reminder_count: 1 })
+    await panel.getByRole('button', { name: 'Undo' }).click()
+    await expect(panel.getByRole('button', { name: 'Copy and mark reminded' })).toBeVisible()
+    await expect.poll(() => invoiceRow(s.invoiceId)).toEqual({ last_reminded_on: null, reminder_count: 0 })
+  })
+
   test('a reminded order leaves Today for Waiting, and the Receivables row says when it was reminded', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     const s = await seedOverdue()

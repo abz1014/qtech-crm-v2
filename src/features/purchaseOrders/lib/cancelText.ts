@@ -7,6 +7,8 @@ export interface SentPo {
   ref: string
   supplierName: string
   items: Array<{ description: string; qty: number; unit: string | null }>
+  /** The supplier's first contact, for Open in WhatsApp / Open in email. */
+  contact?: { name: string; phone: string | null; email: string | null } | null
 }
 
 /** "PO-26-0017 was sent to Alpenmark. Tell them it's cancelled." One sentence per PO. */

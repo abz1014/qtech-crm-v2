@@ -543,7 +543,7 @@ export async function getMyTarget(): Promise<TargetProgress | null> {
 // ================================================================ drafts: what the generators need beyond the Today facts
 
 export interface LegDraftData {
-  contact: { name: string; phone: string | null } | null
+  contact: { name: string; phone: string | null; email?: string | null } | null
   items: Array<{ description: string; brandName: string | null; qty: number; unit: string | null }>
 }
 
@@ -559,12 +559,12 @@ export async function getLegDraft(legId: string): Promise<LegDraftData> {
   const brandIds = [...new Set(rows.map(r => r.brand_id).filter((b): b is string => Boolean(b)))]
   const [brands, contacts] = await Promise.all([
     brandIds.length ? db.from('brands').select('id, name').in('id', brandIds) : Promise.resolve({ data: [], error: null }),
-    supplierId ? db.from('contacts').select('name, phone').eq('company_id', supplierId).order('created_at').limit(1) : Promise.resolve({ data: [], error: null }),
+    supplierId ? db.from('contacts').select('name, phone, email').eq('company_id', supplierId).order('created_at').limit(1) : Promise.resolve({ data: [], error: null }),
   ])
   const brandBy = new Map((unwrap(brands) ?? []).map(b => [b.id, b.name]))
   const contact = (unwrap(contacts) ?? [])[0] ?? null
   return {
-    contact: contact ? { name: contact.name, phone: contact.phone } : null,
+    contact: contact ? { name: contact.name, phone: contact.phone, email: contact.email } : null,
     items: rows.map(r => ({ description: r.description, brandName: r.brand_id ? (brandBy.get(r.brand_id) ?? null) : null, qty: num(r.qty), unit: r.unit })),
   }
 }

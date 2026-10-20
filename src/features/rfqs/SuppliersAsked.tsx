@@ -1,10 +1,11 @@
-import { useId, useRef, useState } from 'react'
-import { Copy, Plus } from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { Check, Copy, Plus } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
 import { mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
 import { Button } from '@/ui/Button'
+import { MessageActions } from '@/ui/MessageActions'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
@@ -110,7 +111,7 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
   const today = businessToday()
   const outstanding = outstandingItems(inquiry, items).filter(it => !opts.off?.has(it.id))
   const pricedNumbers = items.filter(it => inquiry.lines.some(l => l.itemId === it.id)).map(it => it.number)
-  const chase =
+  const make = (v: EnquiryVariant) =>
     outstanding.length === 0
       ? null
       : generateSupplierChase({
@@ -123,10 +124,13 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
           pricedNumbers,
           items: outstanding.map(it => ({ number: it.number, description: it.description, brandName: it.brandName, qty: it.qty, unit: it.unit })),
           signature,
-          variant,
+          variant: v,
           ageDays: inquiry.sentOn ? daysSince(inquiry.sentOn, today) : null,
           replyByOverride: opts.replyBy ?? null,
         })
+  // Both channels: Open in WhatsApp sends the WhatsApp text and Open in email the email one, whichever is shown.
+  const both = { whatsapp: make('whatsapp'), email: make('email') }
+  const chase = both[variant]
   // The clipboard gets the body: an email's subject has its own row and its own copy button.
   const text = chase ? chase.body : ''
 
@@ -144,6 +148,18 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
       setCopying(false)
     }
   }
+  /** After a WhatsApp / email link was opened: the separate "Mark chased" tap (opening never marks). */
+  const markOnly = async () => {
+    if (!chase || inFlight.current) return
+    inFlight.current = true
+    setCopying(true)
+    try {
+      await stampChase(false)
+    } finally {
+      inFlight.current = false
+      setCopying(false)
+    }
+  }
   const copyAndStamp = async () => {
     if (!chase) return
     const ok = await copyToClipboard(text)
@@ -151,29 +167,33 @@ function useSupplierChase(rfq: RfqHeader, items: RfqItemRow[], inquiry: InquiryR
       toast({ title: 'Could not copy the text', body: 'Show the whole message and copy it by hand. The chase was not recorded.', tone: 'danger' })
       return
     }
+    await stampChase(true)
+  }
+  const stampChase = async (copied: boolean) => {
+    const done = copied ? 'Chase text copied' : 'Marked chased'
     const before = { lastChasedOn: inquiry.lastChasedOn, lastChasedBy: inquiry.lastChasedBy ?? null, chaseCount: inquiry.chaseCount }
     try {
       const n = await stamp.mutateAsync(inquiry.id)
       toast({
-        title: 'Chase text copied',
+        title: done,
         body: `${inquiry.supplierName} · chased ${n} ${n === 1 ? 'time' : 'times'}`,
         tone: 'success',
         undo: {
           onUndo: async () => {
             await restore.mutateAsync({ inquiryId: inquiry.id, before })
           },
-          settledTitle: 'Chase text copied',
+          settledTitle: done,
           settledBody: `${rfqRef(rfq.number)} marked chased`,
           undoneTitle: 'Undone.',
           undoneBody: `${inquiry.supplierName} is not marked chased.`,
         },
       })
     } catch (err) {
-      toast({ title: 'Copied, but the chase was not recorded', body: mapPgError(err).message, tone: 'danger' })
+      toast({ title: copied ? 'Copied, but the chase was not recorded' : 'The chase was not recorded', body: mapPgError(err).message, tone: 'danger' })
     }
   }
 
-  return { chase, text, doChase, busy: copying || stamp.isPending }
+  return { chase, both, text, doChase, markOnly, busy: copying || stamp.isPending }
 }
 
 /** "Chase": 1 tap on any other supplier asked. Copies the text in the person's channel and marks the chase. */
@@ -208,9 +228,18 @@ function ChaseCard({
   const [chosen, setChosen] = useState<string | null>(null)
   const [dismissed, setDismissed] = useState(false)
   const [whole, setWhole] = useState(false)
+  const [opened, setOpened] = useState(false)
   const wholeId = useId()
   const today = businessToday()
-  const { chase, doChase, busy, text } = useSupplierChase(rfq, items, inquiry, channel, { off, replyBy: chosen })
+  // The header's "Chase" jump focuses [data-chase-copy]: that stays on the card's first action (the remembered channel's Open, or Copy).
+  const actionsRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = actionsRef.current
+    if (!el) return
+    el.querySelectorAll('[data-chase-copy]').forEach(b => b.removeAttribute('data-chase-copy'))
+    el.querySelector('button:not([disabled])')?.setAttribute('data-chase-copy', '')
+  })
+  const { chase, both, doChase, markOnly, busy, text } = useSupplierChase(rfq, items, inquiry, channel, { off, replyBy: chosen })
   const outstandingAll = outstandingItems(inquiry, items)
   const defaultBy = supplierReplyBy(rfq.dueOn, today) ?? today
   const returnsOn = supplierReturnsOn(today, rfq.dueOn)
@@ -283,9 +312,38 @@ function ChaseCard({
           </ChaseNote>
         ) : null}
         <div className="grid gap-2 border-t bg-sunken px-4 py-3">
-          <Button data-chase-copy variant={main ? 'primary' : 'secondary'} icon={Copy} disabled={!chase} onClick={() => void doChase()} busy={busy} busyLabel="Marking chased" className="w-fit">
-            Copy and mark chased
-          </Button>
+          <div ref={actionsRef} className="flex flex-wrap items-start gap-2">
+            {both.whatsapp && both.email ? (
+              <MessageActions
+                to={recipient ?? { name: inquiry.supplierName }}
+                text={both.whatsapp.body}
+                email={{ subject: both.email.subject, body: both.email.body }}
+                variant={main && !opened ? 'primary' : 'secondary'}
+                copy={{ label: 'Copy and mark chased', onCopy: doChase, busy, busyLabel: 'Marking chased' }}
+                onOpen={() => setOpened(true)}
+                channel={channel}
+                onChannelChange={onChannel}
+              />
+            ) : (
+              <Button variant={main ? 'primary' : 'secondary'} icon={Copy} disabled className="w-fit">
+                Copy and mark chased
+              </Button>
+            )}
+            {opened && chase ? (
+              <Button
+                variant="primary"
+                icon={Check}
+                busy={busy}
+                busyLabel="Marking chased"
+                onClick={() => {
+                  setOpened(false)
+                  void markOnly()
+                }}
+              >
+                Mark chased
+              </Button>
+            ) : null}
+          </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <MoreToggle open={whole} onToggle={() => setWhole(w => !w)} controls={wholeId} />
             <ChannelLink value={channel} onChange={onChannel} />
