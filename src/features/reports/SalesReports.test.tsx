@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
-import ReportsScreen from '@/features/reports/ReportsScreen'
+import { SalesReports } from '@/features/reports/SalesReports'
 import { installFakeDb, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 
 /* The same hand-computed fixture as the pgTAP test, as the views would return it. */
@@ -38,24 +39,40 @@ function show(respond: (c: FakeCall) => FakeResult = c => ({ data: VIEWS[c.targe
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <ReportsScreen />
+        <SalesReports />
       </MemoryRouter>
     </QueryClientProvider>,
   )
   return db
 }
 
-describe('Reports screen', () => {
-  it('shows the four reports with the hand-counted figures', async () => {
+describe('Enquiry and customer reports (inside Money > Reports)', () => {
+  it('leads with three numbers, each report is one line with its headline, and opens to the hand-counted figures', async () => {
+    const user = userEvent.setup()
     const db = show()
+    const glance = await screen.findByRole('region', { name: 'At a glance' })
+    expect(within(glance).getByText('25%')).toBeInTheDocument() // 1 won of 4 decided
+    expect(within(glance).getByText('Of the 4 RFQs decided')).toBeInTheDocument()
+    expect(within(glance).getByText('Customers who came back')).toBeInTheDocument()
+    // every report is a closed line with its headline; nothing to read until it is opened
+    expect(screen.getByText('1 won, 3 lost, 3 open')).toBeInTheDocument()
+    expect(screen.getByText('1 of 2 came back')).toBeInTheDocument()
+    for (const q of [
+      'How many RFQs did we win, and why did we lose the others?',
+      'Does asking suppliers for prices help us win?',
+      'How fast do customers answer our questions?',
+      'Which customers come back?',
+    ])
+      await user.click(screen.getByText(q))
     expect(await screen.findByText('Price too high')).toBeInTheDocument()
     const outcomes = screen.getByRole('region', { name: 'RFQ outcome totals' })
     expect(within(outcomes).getByText("7")).toBeInTheDocument()
-    expect(within(outcomes).getByText('25% of those answered')).toBeInTheDocument()
-    const float = await screen.findByRole('region', { name: 'Float totals' })
+    expect(within(outcomes).getByText('25% of those decided')).toBeInTheDocument()
+    const float = await screen.findByRole('region', { name: 'Asking suppliers totals' })
     expect(within(float).getByText('57%')).toBeInTheDocument()
-    expect(within(float).getByText('4 of 7 items on floated RFQs')).toBeInTheDocument()
-    const turn = await screen.findByRole('region', { name: 'Clarification totals' })
+    expect(within(float).getByText('4 of 7 items on RFQs sent to suppliers')).toBeInTheDocument()
+    expect(screen.getByText('Not sent to suppliers')).toBeInTheDocument()
+    const turn = await screen.findByRole('region', { name: 'Customer answer totals' })
     expect(within(turn).getByText('2.7 days')).toBeInTheDocument()
     expect(await screen.findByText('Mar 2026')).toBeInTheDocument()
     const repeat = await screen.findByRole('region', { name: 'Repeat customer totals' })
@@ -66,16 +83,35 @@ describe('Reports screen', () => {
     expect(db.calls.every(c => c.verb === 'select')).toBe(true)
   })
 
-  it('says what is true when nothing exists yet', async () => {
+  it('says what is true when nothing exists yet, without empty tiles', async () => {
+    const user = userEvent.setup()
     show(() => ({ data: [] }))
+    expect(await screen.findByText(/Not enough data yet\. These fill in/)).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'At a glance' })).toBeNull()
+    for (const q of ['How many RFQs did we win, and why did we lose the others?', 'How fast do customers answer our questions?', 'Which customers come back?']) await user.click(screen.getByText(q))
     expect(await screen.findByText(/No RFQ has been closed yet/)).toBeInTheDocument()
     expect(await screen.findByText(/No customer has an order yet/)).toBeInTheDocument()
     expect(await screen.findByText(/No question has been asked of a customer yet/)).toBeInTheDocument()
   })
 
+  it('builds the asking-suppliers headline per side, so a side with nothing decided never reads "Won not enough data"', async () => {
+    show(c =>
+      c.target === 'v_report_float'
+        ? { data: [{ sourcing_state: 'covered', rfqs: 2, items_total: 3, items_quoted: 3, won: 1, closed: 1, still_open: 0 }, { sourcing_state: 'not_floated', rfqs: 1, items_total: 1, items_quoted: 0, won: 0, closed: 0, still_open: 1 }] }
+        : { data: VIEWS[c.target] ?? [] },
+    )
+    expect(await screen.findByText('Won 50% when asked, nothing decided when not')).toBeInTheDocument()
+    expect(screen.queryByText(/not enough data when/)).toBeNull()
+  })
+
   it('reports a failed read in plain words and keeps the other reports', async () => {
+    const user = userEvent.setup()
     show(c => (c.target === 'v_report_float' ? { error: { message: 'boom' } } : { data: VIEWS[c.target] ?? [] }))
-    expect(await screen.findByText(/The float report could not be read/)).toBeInTheDocument()
+    // the closed line already says so; nobody has to open it to find out
+    expect(await screen.findByText('Could not load')).toBeInTheDocument()
+    await user.click(await screen.findByText('Does asking suppliers for prices help us win?'))
+    await user.click(screen.getByText('How many RFQs did we win, and why did we lose the others?'))
+    expect(await screen.findByText(/This report could not be read/)).toBeInTheDocument()
     expect(await screen.findByText('Price too high')).toBeInTheDocument()
   })
 })

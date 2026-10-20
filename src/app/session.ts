@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 import { clearDevRole } from '@/app/devSession'
-import { forgetDeviceCaptures } from '@/lib/capture/forget'
+import { forgetDeviceCaptures, forgetIntakeDrafts } from '@/lib/capture/forget'
 import { getSupabase } from '@/lib/supabase'
 
 /**
@@ -46,6 +46,8 @@ export const session = {
     await forgetDeviceCaptures()
     const supabase = getSupabase()
     if (supabase) await supabase.auth.signOut()
+    // Again once the session has ended: a New RFQ draft kept while the sign-out was on its way does not stay behind.
+    forgetIntakeDrafts()
     if (dev) window.location.assign('/login')
   },
 }

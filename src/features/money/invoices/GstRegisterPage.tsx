@@ -12,12 +12,13 @@ import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
-import { StatusTrack } from '@/ui/StatusTrack'
+import { StatusBadge } from '@/ui/StatusBadge'
 import { SumBar } from '@/ui/SumBar'
 import { ToggleButton } from '@/ui/ToggleButton'
 import { useToast } from '@/ui/useToast'
 import { TextField } from '@/ui/form/TextField'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
+import { InfoTip } from '@/ui/InfoTip'
 import { CreateInvoiceDialog } from '@/features/money/invoices/CreateInvoiceDialog'
 import { useGstRegister, useStamps } from '@/features/money/invoices/hooks'
 import { InvoiceDetailDialog } from '@/features/money/invoices/InvoiceDetailDialog'
@@ -36,9 +37,11 @@ import {
 } from '@/features/money/invoices/model'
 
 /*
- * Money > GST register (M01; g2-money "GST register, by invoice date" and "month stamping"). Admin and sales: the one register,
- * every invoice goes to FBR. Grouped by invoice month with month subtotals, TCS and FBR as three-step tracks, "Needs attention"
- * for tax not deposited in an earlier month and for a step recorded without the one before it.
+ * Money > Invoices & GST (M01; g2-money "GST register, by invoice date" and "month stamping"). Admin and sales: the one register,
+ * every invoice goes to FBR. Grouped by invoice month with month subtotals; the courier (TCS) and FBR states are one chip each
+ * (owner decision 2026-10-19: the chip or the bar, not both), "Needs attention" for tax not deposited in an earlier month and for a
+ * step recorded without the one before it. Sales tick and stamp like the admin (Today sends them the TCS and FBR items, and the
+ * stamp functions of 0020 accept them); their register leaves out the Net and GST columns, and Export stays the admin's.
  *
  * Month stamping: tick a month (1), then "Sent by TCS today" (2), paste the PSID once and press Enter or "Add PSID", then
  * "Deposited today" (3): at most 3 taps and 1 paste. Each stamp writes today's date to the ticked invoices, and Undo stays on the
@@ -92,8 +95,8 @@ export function GstRegisterPage() {
     setParams(next, { replace: true })
   }
 
-  const columns = useMemo<Column<GstRow>[]>(
-    () => [
+  const columns = useMemo<Column<GstRow>[]>(() => {
+    const cols: Column<GstRow>[] = [
       {
         id: 'number',
         header: 'Invoice',
@@ -134,12 +137,14 @@ export function GstRegisterPage() {
       { id: 'net', header: 'Net', kind: 'money', sortable: true, value: r => String(r.net), total: true },
       { id: 'gst', header: 'GST', kind: 'money', sortable: true, value: r => String(r.gst), total: true },
       { id: 'gross', header: 'Gross', kind: 'money', sortable: true, value: r => String(r.gross), total: true },
-      { id: 'tcs', header: 'Courier (TCS)', sortable: false, cell: r => <StatusTrack dimension="tcs" value={r.courierState} /> },
-      { id: 'fbr', header: 'FBR', sortable: false, cell: r => <StatusTrack dimension="fbr" value={r.fbrState} /> },
-    ],
+      { id: 'tcs', header: 'Sent to customer (TCS)', sortable: false, cell: r => <StatusBadge dimension="tcs" value={r.courierState} /> },
+      { id: 'fbr', header: 'Tax deposited (FBR)', sortable: false, cell: r => <StatusBadge dimension="fbr" value={r.fbrState} /> },
+    ]
+    // Sales stamp too (M08 sends them the TCS and FBR items; the 0020 RPCs allow it): they keep the ticks, the toggles and the
+    // stamps, and only lose the Net and GST columns, which are the admin's filing figures.
+    return isAdmin ? cols : cols.filter(c => c.id !== 'net' && c.id !== 'gst')
     // a ticked row has the selected background, where the amber text is below 4.5:1, so it reads in the body colour there
-    [ticked],
-  )
+  }, [ticked, isAdmin])
 
   const stamp = async (kind: StampKind) => {
     if (busy || tickedRows.length === 0) return
@@ -190,11 +195,16 @@ export function GstRegisterPage() {
   const header = (
     <div className="flex flex-wrap items-center gap-3">
       <h2 className="text-base font-semibold">GST register</h2>
-      <span className="inline-flex h-6 items-center gap-[6px] rounded border border-line-strong bg-selected px-2 text-xs text-fg-2">
+      <span className="inline-flex h-6 items-center gap-[6px] rounded border border-line-strong bg-selected px-2 text-sm text-fg-2">
         <Icon icon={CalendarDays} size="chip" />
         By invoice date
       </span>
       {all.length > 0 ? <span className="text-sm text-fg-muted">{rangeLabel(all)}</span> : null}
+      <InfoTip label="About TCS, FBR and PSID">
+        <b className="font-medium text-fg">TCS</b> is the courier that takes the invoice to the customer. <b className="font-medium text-fg">FBR</b> is the
+        tax office: the GST on every invoice is deposited with FBR. <b className="font-medium text-fg">PSID</b> is the payment slip number FBR gives a deposit;
+        one PSID can cover several invoices. Dates here are invoice dates; money actually received is under Who owes us.
+      </InfoTip>
       <span className="flex-1" />
       <ToggleButton pressed={attention} onPressedChange={setAttention} icon={TriangleAlert}>
         Needs attention <span className="num">{attentionCount}</span>
@@ -202,10 +212,10 @@ export function GstRegisterPage() {
       <ToggleButton pressed={tcs} onPressedChange={setTcs} icon={Truck}>
         Not sent by TCS <span className="num">{tcsCount}</span>
       </ToggleButton>
-      <label className="relative block w-[200px]">
+      <label className="relative block w-[220px] max-md:w-full">
         <span className="sr-only">Search invoices</span>
         <Icon icon={Search} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
-        <TextField type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Invoice or customer" autoComplete="off" className="h-[28px] pl-8 text-xs" />
+        <TextField type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Invoice or customer" autoComplete="off" className="pl-8" />
       </label>
       {isAdmin ? (
         <Button size="sm" icon={Download} onClick={exportCsv} disabled={shown.length === 0}>
@@ -222,12 +232,19 @@ export function GstRegisterPage() {
     <MoneyFrame active="gst-register">
       <SumBar
         label="Totals for the invoices shown"
-        items={[
-          { label: 'Invoices', count: totals.count, sub: all.length ? `${rangeLabel(shown.length ? shown : all).replace(' to ', ' to ')}, by invoice date` : 'By invoice date' },
-          { label: 'Net', amount: totals.net, sub: 'Before GST' },
-          { label: 'GST', amount: totals.gst, sub: 'Output tax on the invoices' },
-          { label: 'Gross', amount: totals.gross, sub: 'Net + GST' },
-        ]}
+        items={
+          isAdmin
+            ? [
+                { label: 'Invoices', count: totals.count, sub: all.length ? `${rangeLabel(shown.length ? shown : all)}, by invoice date` : 'By invoice date' },
+                { label: 'Net', amount: totals.net, sub: 'Before GST' },
+                { label: 'GST', amount: totals.gst, sub: 'Output tax on the invoices' },
+                { label: 'Gross', amount: totals.gross, sub: 'Net + GST' },
+              ]
+            : [
+                { label: 'Invoices', count: totals.count, sub: all.length ? `${rangeLabel(shown.length ? shown : all)}, by invoice date` : 'By invoice date' },
+                { label: 'Gross', amount: totals.gross, sub: 'GST included' },
+              ]
+        }
       />
 
       <DataTable
@@ -243,7 +260,7 @@ export function GstRegisterPage() {
         loading={register.isPending}
         error={
           register.isError
-            ? { title: 'The GST register did not load', message: 'Your invoices are safe. The server did not answer in time. Try again, and if it keeps failing, tell the admin.', onRetry: () => void register.refetch() }
+            ? { title: 'The invoices did not load', message: 'Your invoices are safe. The server did not answer in time. Try again, and if it keeps failing, tell the admin.', onRetry: () => void register.refetch() }
             : null
         }
         toolbar={({ selectedCount }) => (
@@ -259,6 +276,7 @@ export function GstRegisterPage() {
                   Sent by TCS today
                 </Button>
                 <span className="inline-flex items-center gap-2">
+                  <InfoTip label="About PSID">PSID is the payment slip number FBR gives a tax deposit. Paste it once: it is written to every ticked invoice.</InfoTip>
                   <TextField
                     aria-label="PSID"
                     value={psid}
@@ -272,7 +290,7 @@ export function GstRegisterPage() {
                     placeholder="Paste PSID once"
                     autoComplete="off"
                     spellCheck={false}
-                    className="num h-[28px] w-[160px] text-xs"
+                    className="num w-[180px]"
                   />
                   <Button size="sm" icon={Plus} onClick={() => void stamp('psid')} disabled={busy}>
                     Add PSID
@@ -305,22 +323,14 @@ export function GstRegisterPage() {
               <Money value={r.gross} prefix={false} />
             </div>
             <span className="truncate text-sm">{r.companyName}</span>
-            {attentionReason(r) ? <span className="text-xs text-tone-warning-fg">{attentionReason(r)}</span> : null}
+            {attentionReason(r) ? <span className="text-sm text-tone-warning-fg">{attentionReason(r)}</span> : null}
             <div className="flex flex-wrap gap-2">
-              <StatusTrack dimension="tcs" value={r.courierState} />
-              <StatusTrack dimension="fbr" value={r.fbrState} />
+              <StatusBadge dimension="tcs" value={r.courierState} />
+              <StatusBadge dimension="fbr" value={r.fbrState} />
             </div>
           </div>
         )}
       />
-      <p className="max-w-[90ch] text-xs text-fg-muted">
-        Every invoice goes to FBR, so this is the one register. Dates here are invoice dates. For money actually received, see {isAdmin ? 'Receivables' : 'Order balances'}.
-      </p>
-      {tickedRows.length > 0 ? (
-        <p className="max-w-[90ch] text-xs text-fg-muted">
-          Each stamp applies to the ticked invoices and writes today&rsquo;s date. No bank is asked for: the PSID is the deposit reference. Undo stays on the toast for 10 seconds.
-        </p>
-      ) : null}
 
       <CreateInvoiceDialog open={creating || linkedNew} onOpenChange={o => { if (!o) { setCreating(false); if (linkedNew) closeLinked() } }} orderId={creating ? undefined : linkedOrder} />
       {opening ?? linkedInvoice ? <InvoiceDetailDialog invoiceId={(opening ?? linkedInvoice) as string} onClose={closeInvoice} /> : null}

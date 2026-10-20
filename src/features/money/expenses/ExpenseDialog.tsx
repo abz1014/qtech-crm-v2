@@ -173,7 +173,7 @@ function ExpenseFormReady({
   const pre = (() => {
     if (expense) return { categoryId: expense.categoryId, note: undefined as string | undefined }
     if (context?.categoryId) return { categoryId: context.categoryId, note: 'Chosen for you' }
-    if (fromLeg) return { categoryId: SUPPLIER_PAYMENT_ID, note: 'Opened from a leg' }
+    if (fromLeg) return { categoryId: SUPPLIER_PAYMENT_ID, note: 'Opened from a supplier order' }
     if (lastForOrder && context?.orderId)
       return { categoryId: lastForOrder, note: `Last used on ${context.orderLabel ?? 'this order'}` }
     if (mostUsed) return { categoryId: mostUsed.id, note: 'Most used in the last 30 days' }
@@ -308,15 +308,15 @@ function ExpenseFormReady({
           </FormField>
           {lockedPayee ? (
             <div className="grid min-w-0 content-start gap-[6px]">
-              <span className="text-sm font-medium leading-5 text-fg">Payee</span>
-              <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded border border-line-strong bg-sunken px-3 text-sm text-fg-2" aria-label="Payee, from the leg">
+              <span className="text-sm font-medium text-fg">Payee</span>
+              <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded border border-line-strong bg-sunken px-3 text-sm text-fg-2" aria-label="Payee, from the supplier order">
                 <span className="truncate">
                   {context?.payeeName}
                   {context?.legLabel ? ` · ${context.legLabel}` : ''}
                 </span>
                 <Icon icon={Lock} className="text-fg-muted" />
               </div>
-              <span className="text-xs leading-4 text-fg-2">From the leg</span>
+              <span className="text-sm text-fg-2">From the supplier order</span>
             </div>
           ) : null}
           {amountField}
@@ -347,10 +347,10 @@ function ExpenseFormReady({
               )}
             </FormField>
             {orderId && (legs.data?.length ?? 0) > 0 ? (
-              <FormField<Values, 'legId'> name="legId" label="Leg" requirement="optional">
+              <FormField<Values, 'legId'> name="legId" label="Supplier order" requirement="optional">
                 {f => (
                   <Select
-                    placeholder="No leg"
+                    placeholder="No supplier order"
                     value={f.value ?? ''}
                     options={(legs.data ?? []).map(l => ({ value: l.id, label: `${l.label} · ${l.supplierName}` }))}
                     onChange={e => {

@@ -1,20 +1,22 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Link } from 'react-router-dom'
-import { ClipboardPaste, Info, Undo2 } from 'lucide-react'
+import { ClipboardPaste, Pencil, Plus, TriangleAlert, Undo2, X } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { formatPaisa } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
-import { Icon } from '@/ui/Icon'
+import { Dialog, DialogContent } from '@/ui/Dialog'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
+import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { PasteBox, PasteReplyPanel } from '@/features/rfqs/PasteReply'
-import { replyInputId } from '@/features/rfqs/replyFocus'
+import { InfoTip } from '@/ui/InfoTip'
+import { awaitingReply, focusReplyInput, OPEN_REPLY_EVENT, replyInputId, type OpenReplyDetail } from '@/features/rfqs/replyFocus'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useSaveReply, useSetInquiryNoOffer, useSetItemDecline } from '@/features/rfqs/hooks'
 import {
@@ -37,10 +39,12 @@ import {
 } from '@/features/rfqs/lib'
 
 /*
- * One inline reply row per supplier asked (R07; the owner kept reply entry per supplier). No modal. A price per item, the
- * currency already filled in (the supplier's last currency, else the country map: "there is nothing to pick"), lead time and
- * stock once for the whole reply. While a price is typed the row says what it reads as in PKR at today's rate, and whether it
- * would be the lowest; with no rate it says the reply can be saved and the rate added afterwards (g2-rfq-detail "Add reply").
+ * "Replies from suppliers" (R07; reworked by the UX audit of 2026-10-19): one row per supplier asked, with ONE way in on that row.
+ * A supplier we are still waiting on has its reply open, ready to type into (no tap first, FE-2). A supplier who has replied shows
+ * one line ("Quoted 2 of 4", Edit reply); one who cannot quote shows the reason and Take back. Opening a row shows the inline reply,
+ * no modal: a price per item, the currency already filled in (the supplier's last currency, else the country map: "there is nothing
+ * to pick"), lead time and stock once for the whole reply. While a price is typed the row says what it reads as in PKR at today's
+ * rate, and whether it would be the lowest; with no rate it says the reply can be saved and the rate added afterwards.
  *
  *   FE-2  supplier reply   one typed price per item, currency never typed, then Save reply
  *         can't quote      1 tap: the reason buttons are in the row
@@ -51,21 +55,122 @@ import {
  */
 
 export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHeader; items: RfqItemRow[]; inquiries: InquiryRow[]; rates: RateTable }) {
+  // Open by default while a reply is expected; a person's own open or close wins until the reply is saved.
+  const [toggled, setToggled] = useState<Readonly<Record<string, boolean>>>({})
+  const [focus, setFocus] = useState<OpenReplyDetail | null>(null)
+  const isOpen = (i: InquiryRow) => toggled[i.id] ?? awaitingReply(i)
+  /** `undefined` forgets the person's choice: the row goes back to its default (open only while a reply is expected). */
+  const setOpen = (id: string, open: boolean | undefined) =>
+    setToggled(t => {
+      const next = { ...t }
+      if (open === undefined) delete next[id]
+      else next[id] = open
+      return next
+    })
+
+  // "Edit reply" in a price row's menu: open the supplier's row, then put the cursor in the price box once it is drawn.
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<OpenReplyDetail>).detail
+      setToggled(t => ({ ...t, [d.inquiryId]: true }))
+      setFocus(d)
+    }
+    window.addEventListener(OPEN_REPLY_EVENT, on)
+    return () => window.removeEventListener(OPEN_REPLY_EVENT, on)
+  }, [])
+  useEffect(() => {
+    if (focus && document.getElementById(replyInputId(focus.inquiryId, focus.itemId))) {
+      focusReplyInput(focus.inquiryId, focus.itemId)
+      setFocus(null)
+    }
+  }, [focus, toggled])
+
+  // Capture's "This is a supplier's reply" arrives with the supplier chosen: open that row so it can read the text.
+  const location = useLocation()
+  const handed = (location.state as { reply?: { inquiryId: string } } | null)?.reply?.inquiryId
+  useEffect(() => {
+    if (handed) setToggled(t => (t[handed] ? t : { ...t, [handed]: true }))
+  }, [handed])
+
   if (inquiries.length === 0 || items.length === 0) return null
+  const replied = inquiries.filter(i => i.lines.length > 0).length
   return (
-    <section aria-label="Replies by supplier" className="border-b">
-      <div className="px-5 pt-4">
-        <h3 className="text-sm font-semibold">Enter a reply</h3>
-        <p className="text-sm text-fg-muted">One box per supplier. Type the price for each item they quoted. The currency follows the supplier, so there is nothing to pick.</p>
-      </div>
-      <ul className="grid gap-3 p-5">
-        {inquiries.map(i => (
-          <li key={`${i.id}:${i.lines.map(l => `${l.itemId}=${l.unitPrice}${l.currency}${l.leadTime}${l.inStock}`).join('|')}`}>
-            <ReplyRow rfq={rfq} items={items} inquiry={i} inquiries={inquiries} rates={rates} />
-          </li>
-        ))}
+    <DetailPanel
+      title="Replies from suppliers"
+      tip={
+        <InfoTip label="How to enter a reply">
+          Type the price for each item the supplier quoted, or tap Paste reply to read the message they sent. The currency follows the supplier, so there is nothing to pick. Nothing is
+          compared until it is saved.
+        </InfoTip>
+      }
+      meta={`${replied} of ${inquiries.length} replied`}
+      dataSlot="replies"
+    >
+      <ul className="divide-y">
+        {inquiries.map(i =>
+          isOpen(i) ? (
+            <li key={`${i.id}:${i.lines.map(l => `${l.itemId}=${l.unitPrice}${l.currency}${l.leadTime}${l.inStock}`).join('|')}`} className="p-4">
+              <ReplyRow
+                rfq={rfq}
+                items={items}
+                inquiry={i}
+                inquiries={inquiries}
+                rates={rates}
+                onClose={() => setOpen(i.id, false)}
+                onSaved={() => setOpen(i.id, undefined)}
+              />
+            </li>
+          ) : (
+            <ClosedRow key={i.id} rfq={rfq} inquiry={i} items={items} onOpen={() => setOpen(i.id, true)} />
+          ),
+        )}
       </ul>
-    </section>
+    </DetailPanel>
+  )
+}
+
+/** The status of a supplier's reply, as one chip. */
+function ReplyChip({ inquiry, itemCount }: { inquiry: InquiryRow; itemCount: number }) {
+  if (!inquiry.sentOn && !inquiry.noOfferOn && inquiry.lines.length === 0) return <StatusBadge dimension="inquiry" value="shortlisted" label="Not asked yet" />
+  if (inquiry.responseState === 'quoted' || inquiry.lines.length > 0) return <StatusBadge dimension="inquiry" value="quoted" detail={`${inquiry.itemsQuoted} of ${itemCount}`} />
+  if (inquiry.responseState === 'no_offer' || inquiry.noOfferOn) return <StatusBadge dimension="inquiry" value="no-offer" label="Can't quote" />
+  return <StatusBadge dimension="inquiry" value="awaiting" />
+}
+
+/** One line for a supplier whose reply is not open: who, where it stands, and the one way in. */
+function ClosedRow({ rfq, inquiry, items, onOpen }: { rfq: RfqHeader; inquiry: InquiryRow; items: RfqItemRow[]; onOpen: () => void }) {
+  const { toast } = useToast()
+  const noOffer = useSetInquiryNoOffer(rfq.id)
+  const declinedAll = Boolean(inquiry.noOfferOn) && inquiry.lines.length === 0
+  const takeBack = async () => {
+    try {
+      await noOffer.mutateAsync({ inquiryId: inquiry.id, noOfferOn: null, reason: null })
+    } catch (err) {
+      toast({ title: "Could not take back can't quote", body: mapPgError(err).message, tone: 'danger' })
+    }
+  }
+  return (
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3" data-reply-row={inquiry.supplierId}>
+      <span className="min-w-0 flex-1 basis-[12rem] break-words font-medium">{inquiry.supplierName}</span>
+      {declinedAll ? (
+        <span className="text-sm text-fg-2">
+          {"Can't quote"}
+          {inquiry.noOfferReason ? `: ${reasonLabel(inquiry.noOfferReason)}` : ''}
+          <span className="text-fg-muted">{` · ${formatDay(inquiry.noOfferOn as string)}`}</span>
+        </span>
+      ) : (
+        <ReplyChip inquiry={inquiry} itemCount={items.length} />
+      )}
+      {declinedAll ? (
+        <Button size="sm" icon={Undo2} onClick={() => void takeBack()} busy={noOffer.isPending}>
+          Take back
+        </Button>
+      ) : (
+        <Button size="sm" icon={inquiry.lines.length > 0 ? Pencil : Plus} onClick={onOpen} aria-label={`${inquiry.lines.length > 0 ? 'Edit reply' : 'Add reply'}, ${inquiry.supplierName}`}>
+          {inquiry.lines.length > 0 ? 'Edit reply' : 'Add reply'}
+        </Button>
+      )}
+    </li>
   )
 }
 
@@ -76,8 +181,7 @@ function PricePreview({ itemId, amount, currency, others, rates }: { itemId: str
   const usable = rate && rate.staleness !== 'unusable' && rate.ageDays <= 30
   if (!usable) {
     return (
-      <p className="text-xs text-fg-muted" data-preview="no-rate">
-        <Icon icon={Info} size="chip" className="mr-1 inline-block align-[-2px]" />
+      <p className="text-sm text-fg-muted" data-preview="no-rate">
         {`No current ${currency} rate. You can save the reply and add the rate afterwards.`}{' '}
         <Link to="/settings/exchange-rates" className="underline underline-offset-2">
           Exchange rates
@@ -91,7 +195,7 @@ function PricePreview({ itemId, amount, currency, others, rates }: { itemId: str
   if (!mine || mine.pkrPaisa === null) return null
   const lowest = mine.lowest
   return (
-    <p className="text-xs text-fg-muted" data-preview="rate">
+    <p className="text-sm text-fg-muted" data-preview="rate">
       {`Reads as ≈ PKR ${formatPaisa(mine.pkrPaisa)} at today's ${currency} rate.`}
       {lowest ? ` It would be the lowest of ${cmp.comparableCount} comparable prices.` : ''}
     </p>
@@ -101,7 +205,24 @@ function PricePreview({ itemId, amount, currency, others, rates }: { itemId: str
 /** The one-tap chips for a supplier with no currency on file: the usual four first, then the rest. */
 const CURRENCY_CHIPS = ['USD', 'EUR', 'CNY', 'PKR', ...REPLY_CURRENCIES.filter(c => !['USD', 'EUR', 'CNY', 'PKR'].includes(c))]
 
-function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; items: RfqItemRow[]; inquiry: InquiryRow; inquiries: InquiryRow[]; rates: RateTable }) {
+function ReplyRow({
+  rfq,
+  items,
+  inquiry,
+  inquiries,
+  rates,
+  onClose,
+  onSaved,
+}: {
+  rfq: RfqHeader
+  items: RfqItemRow[]
+  inquiry: InquiryRow
+  inquiries: InquiryRow[]
+  rates: RateTable
+  /** Close the row again. */
+  onClose: () => void
+  onSaved: () => void
+}) {
   const { toast } = useToast()
   const headingId = useId()
   const save = useSaveReply(rfq.id)
@@ -119,6 +240,9 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
   const declinedAll = Boolean(inquiry.noOfferOn) && !hasLines
   const dirty = isReplyDirty(existing, draft)
   const typed = Object.values(draft.prices).filter(p => typeof p === 'number' && p > 0).length
+  // Closing with prices typed and not saved asks first (review of ux/rfqs, item 9): one tap on X must not throw them away.
+  const [askClose, setAskClose] = useState(false)
+  const requestClose = () => (dirty ? setAskClose(true) : onClose())
   const others = inquiries.filter(i => i.id !== inquiry.id)
 
   const currencyNote = hasLines && existing[0].currency === draft.currency ? `${draft.currency}, as saved` : draft.currency === prefill.currency ? currencySourceNote(prefill, inquiry.supplierCountry) : prefill.source === 'none' ? `${draft.currency}, picked by you` : `${draft.currency}, changed by you`
@@ -148,6 +272,7 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
         body: `${inquiry.supplierName} · ${n} ${n === 1 ? 'price' : 'prices'}${noRate ? ' · not compared, no rate' : ''}`,
         tone: 'success',
       })
+      onSaved()
     } catch (err) {
       toast({ title: 'Could not save the reply', body: mapPgError(err, { entity: 'reply' }).message, tone: 'danger' })
     } finally {
@@ -241,31 +366,53 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
 
   return (
     <section aria-labelledby={headingId} className="grid gap-3 rounded border border-line-strong bg-surface p-4">
-      <header className="flex flex-wrap items-start gap-x-3 gap-y-2">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <div className="min-w-0 flex-1 basis-[14rem]">
-          <h4 id={headingId} className="break-words text-sm font-semibold">
+          <h3 id={headingId} className="break-words font-semibold">
             {inquiry.supplierName}
-          </h4>
+          </h3>
           <p className="text-sm text-fg-muted">
             {[[inquiry.supplierCity, inquiry.supplierCountry].filter(Boolean).join(', '), inquiry.contactTitle ? `${inquiry.contactName}, ${inquiry.contactTitle}` : inquiry.contactName].filter(Boolean).join(' · ') || 'No country or contact on file'}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {!inquiry.sentOn && !inquiry.noOfferOn && !hasLines ? (
-            <StatusBadge dimension="inquiry" value="shortlisted" />
-          ) : inquiry.responseState === 'quoted' ? (
-            <StatusBadge dimension="inquiry" value="quoted" detail={`${inquiry.itemsQuoted} of ${items.length}`} />
-          ) : inquiry.responseState === 'no_offer' ? (
-            <StatusBadge dimension="inquiry" value="no-offer" />
-          ) : (
-            <StatusBadge dimension="inquiry" value="awaiting" />
-          )}
-          {inquiry.chaseCount > 0 ? <StatusBadge dimension="inquiry" value="chased" detail={`×${inquiry.chaseCount}`} /> : null}
-        </div>
+        <ReplyChip inquiry={inquiry} itemCount={items.length} />
+        {!declinedAll ? (
+          <Button size="sm" icon={ClipboardPaste} onClick={() => void startPaste()} disabled={pasteMode !== null}>
+            Paste reply
+          </Button>
+        ) : null}
+        <Button size="sm" variant="quiet" icon={X} aria-label={`Close the reply, ${inquiry.supplierName}`} onClick={requestClose} />
       </header>
+      {askClose ? (
+        <Dialog open onOpenChange={o => (o ? null : setAskClose(false))}>
+          <DialogContent
+            title="Close without saving the prices?"
+            context={inquiry.supplierName}
+            icon={TriangleAlert}
+            footer={
+              <>
+                <Button data-cancel onClick={() => setAskClose(false)}>
+                  Keep editing
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    setAskClose(false)
+                    onClose()
+                  }}
+                >
+                  Close without saving
+                </Button>
+              </>
+            }
+          >
+            <p>The prices you typed for {inquiry.supplierName} are not saved yet. Closing throws them away.</p>
+          </DialogContent>
+        </Dialog>
+      ) : null}
 
       {declinedAll ? (
-        <div className="flex flex-wrap items-center gap-3 rounded border border-line bg-sunken px-3 py-2 text-sm">
+        <div className="flex flex-wrap items-center gap-3 rounded border border-line bg-sunken px-3 py-2">
           <span>
             <span className="font-medium">{"Can't quote"}</span>
             {inquiry.noOfferReason ? `: ${reasonLabel(inquiry.noOfferReason)}` : ''}
@@ -277,8 +424,27 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
         </div>
       ) : (
         <>
+          {pasteMode === 'box' ? <PasteBox onRead={readText} onCancel={() => setPasteMode(null)} /> : null}
+          {pasteMode === 'suggest' && suggestions ? (
+            <PasteReplyPanel
+              set={suggestions}
+              items={items}
+              supplierName={inquiry.supplierName}
+              busy={save.isPending || itemReason.isPending || noOffer.isPending}
+              onAccept={sel => void acceptSuggestions(sel)}
+              onCantQuote={reason => {
+                setPasteMode(null)
+                setSuggestions(null)
+                void cantQuote(reason)
+              }}
+              onCancel={() => {
+                setPasteMode(null)
+                setSuggestions(null)
+              }}
+            />
+          ) : null}
           {!draft.currency ? (
-            <div role="group" aria-label={`Currency for ${inquiry.supplierName}`} className="flex flex-wrap items-center gap-2 rounded border border-line bg-sunken px-3 py-2 text-sm">
+            <div role="group" aria-label={`Currency for ${inquiry.supplierName}`} className="flex flex-wrap items-center gap-2 rounded border border-line bg-sunken px-3 py-2">
               <span className="text-fg-2">Which currency are they quoting in? Asked once, then remembered.</span>
               {CURRENCY_CHIPS.map(c => (
                 <button
@@ -300,18 +466,18 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
               const price = draft.prices[it.id]
               return (
                 <li key={it.id} className="grid content-start gap-1">
-                  <div className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_132px]">
-                    <span className="flex min-w-0 items-start gap-2 text-sm" aria-hidden="true">
-                      <span className="num mt-[2px] text-xs text-fg-muted">{it.number}</span>
+                  <div className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_140px]">
+                    <span className="flex min-w-0 items-start gap-2" aria-hidden="true">
+                      <span className="num mt-[2px] text-sm text-fg-muted">{it.number}</span>
                       <span className="min-w-0">
                         <span className="line-clamp-2 break-words" title={it.description}>
                           {it.description}
                         </span>
-                        {q ? <span className="num text-xs text-fg-muted">{q}</span> : null}
+                        {q ? <span className="num text-sm text-fg-muted">{q}</span> : null}
                       </span>
                     </span>
                     {reason ? (
-                      <span className="text-xs text-fg-muted">{`Can't quote: ${reasonLabel(reason)}`}</span>
+                      <span className="text-sm text-fg-muted">{`Can't quote: ${reasonLabel(reason)}`}</span>
                     ) : (
                       <NumberInput
                         id={replyInputId(inquiry.id, it.id)}
@@ -331,7 +497,7 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
                     )}
                   </div>
                   {!reason && typeof price === 'number' && price > 0 ? (
-                    <div className="sm:pr-[144px]">
+                    <div className="sm:pr-[152px]">
                       <PricePreview itemId={it.id} amount={price} currency={draft.currency} others={others} rates={rates} />
                     </div>
                   ) : null}
@@ -340,8 +506,8 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
             })}
           </ul>
 
-          <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_160px_auto]">
-            <label className="grid gap-1 text-xs text-fg-muted">
+          <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_170px_auto]">
+            <label className="grid gap-1 text-sm text-fg-muted">
               Lead time
               <TextField
                 aria-label={`Lead time from ${inquiry.supplierName}`}
@@ -350,7 +516,7 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
                 placeholder="2 weeks, ex-stock"
               />
             </label>
-            <label className="grid gap-1 text-xs text-fg-muted">
+            <label className="grid gap-1 text-sm text-fg-muted">
               Stock
               <Select
                 aria-label={`Stock at ${inquiry.supplierName}`}
@@ -363,60 +529,32 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
                 onChange={e => setDraft(d => ({ ...d, inStock: e.target.value === '' ? null : e.target.value === 'yes' }))}
               />
             </label>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="primary"
-                onClick={() => void doSave()}
-                disabled={!draft.currency || !dirty || (typed === 0 && planReplySave(existing, draft).removeItemIds.length === 0)}
-                busy={save.isPending}
-                busyLabel="Saving"
-              >
-                Save reply
-              </Button>
-            </div>
+            <Button
+              variant="primary"
+              onClick={() => void doSave()}
+              disabled={!draft.currency || !dirty || (typed === 0 && planReplySave(existing, draft).removeItemIds.length === 0)}
+              busy={save.isPending}
+              busyLabel="Saving"
+            >
+              Save reply
+            </Button>
           </div>
           {draft.currency ? (
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-muted">
-            <span>{prefill.source === 'none' && !hasLines ? `Currency: ${currencyNote}. It is remembered for this supplier once the reply is saved.` : `The currency follows the supplier: ${currencyNote}. There is nothing to pick.`}</span>
-            <button type="button" onClick={() => setChangeCurrency(c => !c)} aria-expanded={changeCurrency} className="rounded font-medium underline underline-offset-2 hover:text-fg">
-              {changeCurrency ? 'Keep it' : 'Change currency'}
-            </button>
-            {changeCurrency ? (
-              <Select
-                aria-label={`Currency for ${inquiry.supplierName}`}
-                className="w-[96px]"
-                options={currencyOptions}
-                value={draft.currency}
-                onChange={e => setDraft(d => ({ ...d, currency: e.target.value }))}
-              />
-            ) : null}
-          </p>
-          ) : null}
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" icon={ClipboardPaste} onClick={() => void startPaste()} disabled={pasteMode !== null}>
-              Paste reply
-            </Button>
-            <span className="text-xs text-fg-muted">Reads the email or message you copied. Nothing is saved until you accept.</span>
-          </div>
-          {pasteMode === 'box' ? <PasteBox onRead={readText} onCancel={() => setPasteMode(null)} /> : null}
-          {pasteMode === 'suggest' && suggestions ? (
-            <PasteReplyPanel
-              set={suggestions}
-              items={items}
-              supplierName={inquiry.supplierName}
-              busy={save.isPending || itemReason.isPending || noOffer.isPending}
-              onAccept={sel => void acceptSuggestions(sel)}
-              onCantQuote={reason => {
-                setPasteMode(null)
-                setSuggestions(null)
-                void cantQuote(reason)
-              }}
-              onCancel={() => {
-                setPasteMode(null)
-                setSuggestions(null)
-              }}
-            />
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-muted">
+              <span>{`Prices in ${currencyNote}.`}</span>
+              <button type="button" onClick={() => setChangeCurrency(c => !c)} aria-expanded={changeCurrency} className="rounded font-medium underline underline-offset-2 hover:text-fg">
+                {changeCurrency ? 'Keep it' : 'Change currency'}
+              </button>
+              {changeCurrency ? (
+                <Select
+                  aria-label={`Currency for ${inquiry.supplierName}`}
+                  className="w-[96px]"
+                  options={currencyOptions}
+                  value={draft.currency}
+                  onChange={e => setDraft(d => ({ ...d, currency: e.target.value }))}
+                />
+              ) : null}
+            </p>
           ) : null}
 
           {!hasLines ? (
@@ -435,8 +573,8 @@ function ReplyRow({ rfq, items, inquiry, inquiries, rates }: { rfq: RfqHeader; i
             <ul className="mt-2 grid gap-2 md:grid-cols-2">
               {items.map(it => (
                 <li key={it.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3">
-                  <span className="min-w-0 truncate text-sm" title={it.description}>
-                    <span className="num mr-2 text-xs text-fg-muted">{it.number}</span>
+                  <span className="min-w-0 truncate" title={it.description}>
+                    <span className="num mr-2 text-fg-muted">{it.number}</span>
                     {it.description}
                   </span>
                   <Select

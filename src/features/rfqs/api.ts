@@ -116,12 +116,17 @@ export interface FloatInput {
 export interface SavedRfq {
   id: string
   number: number
+  /**
+   * false when an RFQ with this id already existed (0070): a New RFQ draft that was already saved (another tab, an earlier save whose
+   * reply was lost). Nothing was written; the screen says "Already saved as RFQ-…". Absent on reads that are not a save.
+   */
+  created?: boolean
 }
 
-/** float_rfq (atomic: RFQ, items, inquiries, stamp), then the number the database gave it. */
+/** float_rfq (atomic: RFQ, items, inquiries, stamp), then the number the database gave it, and whether this call created it. */
 export async function floatRfq(input: FloatInput): Promise<SavedRfq> {
   const db = requireSupabase()
-  const { error } = await db.rpc('float_rfq', {
+  const { data, error } = await db.rpc('float_rfq', {
     p_rfq_id: input.id,
     p_company_id: input.companyId,
     p_items: input.items as never,
@@ -134,9 +139,29 @@ export async function floatRfq(input: FloatInput): Promise<SavedRfq> {
     p_is_priority: input.isPriority,
   })
   if (error) throw error
+  const created = (data as { created?: boolean } | null)?.created !== false
   const row = unwrap(await db.from('rfqs').select('id, number').eq('id', input.id).single()) as { id: string; number: number } | null
   if (!row) throw new Error('The RFQ was saved but could not be read back.')
-  return { id: row.id, number: row.number }
+  return { id: row.id, number: row.number, created }
+}
+
+/** The RFQ saved under this id, when there is one: a New RFQ draft whose RFQ was already saved is offered "Open it" instead. */
+export async function findRfqById(id: string): Promise<SavedRfq | null> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('rfqs').select('id, number').eq('id', id).limit(1))
+  return rows[0] ? { id: rows[0].id, number: rows[0].number } : null
+}
+
+/** Which of these companies, sites and contacts are still on file (a restored draft may name one that was merged or removed). */
+export async function stillOnFile(input: { companyId: string | null; siteId: string | null; contactId: string | null }): Promise<{ company: boolean; site: boolean; contact: boolean }> {
+  const db = requireSupabase()
+  const [c, s, k] = await Promise.all([
+    input.companyId ? db.from('companies').select('id').eq('id', input.companyId).limit(1) : Promise.resolve({ data: [], error: null }),
+    input.siteId ? db.from('company_sites').select('id').eq('id', input.siteId).limit(1) : Promise.resolve({ data: [], error: null }),
+    input.contactId ? db.from('contacts').select('id').eq('id', input.contactId).limit(1) : Promise.resolve({ data: [], error: null }),
+  ])
+  const has = (r: { data: unknown[] | null; error: unknown }) => (unwrap(r as never) as unknown[] | null)?.length === 1
+  return { company: !input.companyId || has(c), site: !input.siteId || has(s), contact: !input.contactId || has(k) }
 }
 
 /** Undo (false) or float a saved RFQ now (true). Returns how many inquiries changed. */
@@ -820,6 +845,24 @@ export async function addInquiries(input: { rfqId: string; supplierIds: readonly
       .select('id'),
   )
   return rows.map(r => r.id)
+}
+
+/**
+ * Stamp shortlisted inquiries (New RFQ's "Save without asking") sent on `on`: only rows not yet sent change. Returns the ids that
+ * changed, for the Undo.
+ */
+export async function markInquiriesSent(ids: readonly string[], on: string): Promise<string[]> {
+  if (ids.length === 0) return []
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('supplier_inquiries').update({ sent_on: on }).in('id', [...ids]).is('sent_on', null).select('id'))
+  return rows.map(r => r.id)
+}
+
+/** The Undo of markInquiriesSent: back to shortlisted, only while still stamped that day and not chased since. */
+export async function unmarkInquiriesSent(ids: readonly string[], stampedOn: string): Promise<void> {
+  if (ids.length === 0) return
+  const db = requireSupabase()
+  unwrap(await db.from('supplier_inquiries').update({ sent_on: null }).in('id', [...ids]).eq('sent_on', stampedOn).is('last_chased_on', null).select('id'))
 }
 
 /** Take back inquiries just added: they go back to shortlisted (sent_on empty), which is the only state staff may delete. */

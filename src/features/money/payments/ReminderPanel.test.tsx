@@ -196,6 +196,24 @@ describe('the panel beside Receivables (M09)', () => {
   })
 })
 
+describe('Record payment beside the reminder (UX audit rec 4)', () => {
+  it('the admin records a payment from the panel, for an overdue and for a not-yet-due order; sales never see the button', async () => {
+    db()
+    const a = mount(<ReminderPanel row={row()} today={TODAY} />)
+    await screen.findByTestId('reminder-text')
+    expect(screen.getByRole('button', { name: 'Record payment' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open order' })).toHaveAttribute('href', '/orders/o27')
+    a.unmount()
+    const b = mount(<ReminderPanel row={row({ state: 'part', isOverdue: false, dueOn: TODAY })} today={TODAY} />)
+    expect(await screen.findByText('Not overdue yet.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Record payment' })).toBeInTheDocument()
+    b.unmount()
+    mount(<ReminderPanel row={row()} today={TODAY} />, 'sales')
+    await screen.findByTestId('reminder-text')
+    expect(screen.queryByRole('button', { name: 'Record payment' })).toBeNull()
+  })
+})
+
 describe('engineers cannot reach the reminder (M09)', () => {
   it('Money is not in an engineer\'s navigation, and the stamp RPC is only ever called from the panel', () => {
     expect(navItemsForRole('engineer').map(i => i.path)).not.toContain('/money')

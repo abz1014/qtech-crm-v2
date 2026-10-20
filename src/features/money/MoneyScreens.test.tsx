@@ -176,16 +176,34 @@ describe('GST register (M01)', () => {
     await waitFor(() => expect(d.calls.some(c => c.target === 'rpc:stamp_tax_deposited')).toBe(true))
   })
 
-  it('admin can export; sales see the same register without Export', async () => {
+  it('admin can export; sales tick and stamp the same register (Today sends them the TCS and FBR items), without Export, Net or GST', async () => {
+    const user = userEvent.setup()
     db()
     const a = mount(<GstRegisterPage />)
     await screen.findByText('INV-2299')
     expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /Tax deposited \(FBR\)/ })).toBeInTheDocument()
     a.unmount()
+    const d = db()
     mount(<GstRegisterPage />, 'sales')
     await screen.findByText('INV-2299')
     expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'New invoice' })).toBeInTheDocument()
+    const table = screen.getByRole('table', { name: 'GST register' })
+    for (const h of ['Net', 'GST']) expect(within(table).queryByRole('columnheader', { name: h })).toBeNull()
+    expect(within(table).getByRole('columnheader', { name: /Tax deposited \(FBR\)/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Needs attention/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Not sent by TCS/ })).toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: /Select all in October 2026/ }))
+    await user.click(screen.getByRole('button', { name: 'Sent by TCS today' }))
+    await waitFor(() => expect(d.calls.some(c => c.target === 'rpc:stamp_tcs_sent')).toBe(true))
+  })
+
+  it('shows each courier and FBR state once, as a chip, never a chip beside a progress bar', async () => {
+    db()
+    const { container } = mount(<GstRegisterPage />)
+    await screen.findByText('INV-2299')
+    expect(container.querySelectorAll('[data-on]')).toHaveLength(0) // the StatusTrack bar segments
   })
 
   it('Needs attention filters the list and the totals recompute', async () => {
@@ -200,22 +218,31 @@ describe('GST register (M01)', () => {
   })
 })
 
-describe('Receivables (M02)', () => {
+describe('Who owes us (M02)', () => {
   it('admin sees balances and a Record payment action per open order', async () => {
     db()
     mount(<ReceivablesPage />)
     expect(await screen.findByText('Indus Textile Mills').catch(() => screen.findAllByText('Punjab Cement Ltd'))).toBeTruthy()
     expect(screen.getAllByRole('button', { name: /^Record payment for ORD-/ }).length).toBeGreaterThan(0)
-    expect(screen.getByText('Receivables', { selector: 'h2' })).toBeInTheDocument()
+    expect(screen.getByText('Who owes us', { selector: 'h2' })).toBeInTheDocument()
   })
 
-  it('sales see "Order balances" with the same balances, no Record payment, and never ask for a payment row', async () => {
+  it('sales see the same page under the same name, with no Record payment, and never ask for a payment row', async () => {
     const d = db()
     mount(<ReceivablesPage />, 'sales')
     await screen.findAllByText('Punjab Cement Ltd')
-    expect(screen.getByText('Order balances', { selector: 'h2' })).toBeInTheDocument()
+    expect(screen.getByText('Who owes us', { selector: 'h2' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Record payment/ })).not.toBeInTheDocument()
     expect(d.calls.filter(c => c.target === 'payments_in')).toHaveLength(0)
-    expect(within(screen.getByRole('table', { name: 'Order balances' })).getAllByRole('row').length).toBeGreaterThan(1)
+    expect(within(screen.getByRole('table', { name: 'Who owes us' })).getAllByRole('row').length).toBeGreaterThan(1)
+  })
+
+  it('only the Overdue filter carries a count (a count means "needs you")', async () => {
+    db()
+    mount(<ReceivablesPage />)
+    await screen.findAllByText('Punjab Cement Ltd')
+    const filter = screen.getByRole('radiogroup', { name: 'Filter' })
+    expect(within(filter).getByRole('radio', { name: /Overdue/ })).toHaveTextContent(/Overdue\s*1/)
+    expect(within(filter).getByRole('radio', { name: /Open/ })).toHaveTextContent(/^Open$/)
   })
 })

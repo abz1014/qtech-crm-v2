@@ -77,6 +77,29 @@ export function useFloatToSupplier() {
 
 export { findRfqByCustomerRef } from '@/features/rfqs/api'
 
+export interface DraftCheck {
+  /** The RFQ this draft was already saved as (another tab, or a save whose reply was lost), or null. */
+  existing: api.SavedRfq | null
+  company: boolean
+  site: boolean
+  contact: boolean
+}
+
+/** Before a kept New RFQ draft is offered back: is it already saved, and are its company, site and contact still on file. */
+export function useDraftCheck(draft: { rfqId: string; companyId: string | null; siteId: string | null; contactId: string | null } | null) {
+  return useQuery({
+    queryKey: qk.intake.draft(JSON.stringify(draft)),
+    queryFn: async (): Promise<DraftCheck> => {
+      const d = draft as NonNullable<typeof draft>
+      const [existing, onFile] = await Promise.all([api.findRfqById(d.rfqId), api.stillOnFile(d)])
+      return { existing, ...onFile }
+    },
+    enabled: draft !== null,
+    staleTime: 0,
+    gcTime: 0,
+  })
+}
+
 // ================================================================ RFQ detail (R07)
 
 export function useRfqHeader(id: string | undefined) {
@@ -279,6 +302,15 @@ export function useAddInquiries(rfqId: string) {
   return useMutation({
     mutationFn: (input: { supplierIds: readonly string[]; sentOn: string }) => api.addInquiries({ rfqId, ...input }),
     onSuccess: () => invalidateAfter(client, 'inquiry.add', { rfqId }),
+  })
+}
+
+/** Ask the shortlisted suppliers (saved without asking): their inquiries are stamped sent; `undo` takes the stamp back. */
+export function useMarkInquiriesSent(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { ids: readonly string[]; on: string; undo?: boolean }) => (v.undo ? api.unmarkInquiriesSent(v.ids, v.on).then(() => [...v.ids]) : api.markInquiriesSent(v.ids, v.on)),
+    onSuccess: () => invalidateAfter(client, 'rfq.setFloated', { rfqId }),
   })
 }
 

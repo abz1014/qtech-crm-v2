@@ -1,9 +1,10 @@
-// Ported from src/lib/navConfig.ts @ 7a29f3a (Q-Tech CRM v1). Rewritten for the v2 navigation (direction B, 6 items, 3 roles) with Lucide icons per DESIGN_SYSTEM section 10.
-import { Building2, CalendarCheck, ChartColumn, FileText, Package, Wallet, type LucideIcon } from 'lucide-react'
+// Ported from src/lib/navConfig.ts @ 7a29f3a (Q-Tech CRM v1). Rewritten for the v2 navigation (direction B, 5 items since the
+// 2026-10-19 owner decision, 3 roles) with Lucide icons per DESIGN_SYSTEM section 10.
+import { Building2, CalendarCheck, FileText, Package, Wallet, type LucideIcon } from 'lucide-react'
 
 export type Role = 'admin' | 'sales' | 'engineer'
 
-export type NavKey = 'today' | 'rfqs' | 'orders' | 'companies' | 'money' | 'reports'
+export type NavKey = 'today' | 'rfqs' | 'orders' | 'companies' | 'money'
 
 export interface NavItem {
   key: NavKey
@@ -14,13 +15,15 @@ export interface NavItem {
 }
 
 /**
- * Single source of truth for what each role can reach. Exactly six destinations,
- * in this order (DESIGN_SYSTEM section 12). The top bar, the mobile tab bar, the
- * route guards and the role landing all read this list.
+ * Single source of truth for what each role can reach. Exactly five destinations,
+ * in this order (DESIGN_SYSTEM section 12, owner decision 2026-10-19). The top bar,
+ * the mobile tab bar, the command palette's "Jump to", the route guards and the
+ * role landing all read this list.
  *
  * Money is admin and sales: engineers never see payments, expenses, costs or
- * margin (DECISIONS 2026-10-13). Sales see invoices, the GST register and each
- * order's balance inside Money; admin-only panels are filtered inside the screen.
+ * margin (DECISIONS 2026-10-13). Sales see "Who owes us", invoices and Reports
+ * inside Money; admin-only views are filtered inside the screen. Reports is no
+ * longer a destination of its own: `/reports` opens Money's Reports view.
  */
 export const navItems: readonly NavItem[] = [
   { key: 'today', label: 'Today', path: '/today', icon: CalendarCheck, roles: ['admin', 'sales', 'engineer'] },
@@ -28,7 +31,6 @@ export const navItems: readonly NavItem[] = [
   { key: 'orders', label: 'Orders', path: '/orders', icon: Package, roles: ['admin', 'sales', 'engineer'] },
   { key: 'companies', label: 'Companies', path: '/companies', icon: Building2, roles: ['admin', 'sales', 'engineer'] },
   { key: 'money', label: 'Money', path: '/money', icon: Wallet, roles: ['admin', 'sales'] },
-  { key: 'reports', label: 'Reports', path: '/reports', icon: ChartColumn, roles: ['admin', 'sales'] },
 ]
 
 export function navItemsForRole(role: string): NavItem[] {
