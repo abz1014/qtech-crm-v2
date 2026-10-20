@@ -273,6 +273,18 @@ function reports() {
   }
 }
 
+/** Learnability (spec 1.1, 5.1): "has this person started yet" and the first-week checklist, all derived from existing rows. */
+function onboarding() {
+  const all = root('onboarding')
+  return {
+    all,
+    /** The head-counts behind the first-use states, for one person. */
+    firstUse: (userId: string) => [...all, 'first-use', userId] as const,
+    /** The first-week checklist of the people on the Team page (admin view). */
+    firstWeek: (people = '') => [...all, 'first-week', people] as const,
+  }
+}
+
 export const qk = {
   today: today(),
   settings: settings(),
@@ -286,6 +298,7 @@ export const qk = {
   fx: fx(),
   money: money(),
   reports: reports(),
+  onboarding: onboarding(),
 }
 
 export type QueryKeyRoot = keyof typeof qk

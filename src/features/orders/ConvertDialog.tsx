@@ -478,6 +478,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
           <Field
             label="Payment terms"
             requirement="optional"
+            help="Days the customer has to pay after the invoice. Who owes us marks it late after that."
             source={
               termsQ.data && !termsTouched
                 ? `from the last order, ${orderRef(termsQ.data.orderNumber)}`

@@ -7,6 +7,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { Skeleton } from '@/ui/Skeleton'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
@@ -146,6 +147,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
     <div data-slot="clarifications">
       <Panel
         title="Questions for the customer"
+        info={<InfoTip label="About questions">A supplier asked something the customer must answer. Copy the questions, then send each supplier the answers.</InfoTip>}
         meta={clars.isSuccess && count > 0 ? <span className="num">{count} {count === 1 ? 'question' : 'questions'}</span> : undefined}
       >
         {clars.isPending ? (
