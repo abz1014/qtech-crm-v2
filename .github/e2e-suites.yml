@@ -87,12 +87,12 @@ verify-books: # weight=150 (workflow verification)
 verify-admin: # weight=90 (workflow verification; installs poppler)
   - 'e2e/verify/admin/**'
   - 'e2e/verify/support/**'
-verify-roles: # weight=120 (workflow verification)
+verify-access: # weight=120 (workflow verification: role journeys)
   - 'e2e/verify/roles/**'
   - 'e2e/verify/support/**'
 verify-resilience: # weight=120 (workflow verification)
   - 'e2e/verify/resilience/**'
   - 'e2e/verify/support/**'
-roles-matrix: # weight=240 (folder e2e/verify-roles; every route as every role, the data API per persona, admin-users, data safety)
+verify-roles: # weight=240 (every route as every role, the data API per persona, admin-users, data safety)
   - 'e2e/verify-roles/**'
   - 'supabase/functions/admin-users/**'

@@ -16,6 +16,10 @@ import { useToast } from '@/ui/useToast'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { PasteBox, PasteReplyPanel } from '@/features/rfqs/PasteReply'
 import { InfoTip } from '@/ui/InfoTip'
+import { Banner } from '@/ui/Banner'
+import { parseSupplierQuote } from '@/lib/docread/supplierQuoteParse'
+import { PdfPickButton } from '@/features/rfqs/PdfIntake'
+import { readPdf } from '@/features/rfqs/lib/readPdf'
 import { awaitingReply, focusReplyInput, OPEN_REPLY_EVENT, replyInputId, type OpenReplyDetail } from '@/features/rfqs/replyFocus'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useSaveReply, useSetInquiryNoOffer, useSetItemDecline } from '@/features/rfqs/hooks'
@@ -27,7 +31,6 @@ import {
   draftFromLines,
   draftFromSuggestions,
   isReplyDirty,
-  parseSupplierReply,
   planReplySave,
   qtyText,
   REPLY_CURRENCIES,
@@ -318,19 +321,25 @@ function ReplyRow({
 
   // ---- paste reply (R08): read the clipboard, offer what was found, save nothing until Accept
   const suggestItems = items.map(it => ({ id: it.id, number: it.number, description: it.description, qty: it.qty, unit: it.unit }))
+  // A whole quotation (an email, or the text of a PDF) is read with its totals, bank and header lines left out (docread).
   const readText = (text: string) => {
-    setSuggestions(suggestFromReply(parseSupplierReply(text, suggestItems, { today: businessToday() }), suggestItems, draft.currency))
+    setPdfNote(null)
+    setSuggestions(suggestFromReply(parseSupplierQuote(text, suggestItems, { today: businessToday() }), suggestItems, draft.currency))
     setPasteMode('suggest')
   }
+  const [pdfNote, setPdfNote] = useState<string | null>(null)
   // Capture's "This is a supplier's reply" opens this RFQ with the text and the supplier chosen: read it out as if it had been pasted here.
   const location = useLocation()
   const navigate = useNavigate()
   const handedOver = useRef(false)
   useEffect(() => {
-    const reply = (location.state as { reply?: { inquiryId: string; text: string } } | null)?.reply
+    const reply = (location.state as { reply?: { inquiryId: string; text: string; pdf?: File } } | null)?.reply
     if (!reply || reply.inquiryId !== inquiry.id || handedOver.current) return
     handedOver.current = true
-    readText(reply.text)
+    if (!reply.text.trim() && reply.pdf) {
+      // A PDF quote handed over with no text: its prices are read here.
+      void readPdf(reply.pdf, 'prices').then(r => ('text' in r ? readText(r.text) : setPdfNote(r.message)))
+    } else readText(reply.text)
     navigate(location.pathname, { replace: true, state: null })
     // readText only reads props and state set above
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -381,6 +390,7 @@ function ReplyRow({
             Paste reply
           </Button>
         ) : null}
+        {!declinedAll && pasteMode === null ? <PdfPickButton size="sm" label="Read a PDF" subject="prices" onText={readText} onMessage={setPdfNote} /> : null}
         <Button size="sm" variant="quiet" icon={X} aria-label={`Close the reply, ${inquiry.supplierName}`} onClick={requestClose} />
       </header>
       {askClose ? (
@@ -424,6 +434,7 @@ function ReplyRow({
         </div>
       ) : (
         <>
+          {pdfNote ? <Banner tone="warning" title={pdfNote} /> : null}
           {pasteMode === 'box' ? <PasteBox onRead={readText} onCancel={() => setPasteMode(null)} /> : null}
           {pasteMode === 'suggest' && suggestions ? (
             <PasteReplyPanel

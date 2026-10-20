@@ -240,6 +240,8 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     // The first reply's toast can still be showing now that a save returns when the server confirms (no wait for refetches).
     await expect(toast(page, 'Reply saved').last()).toBeVisible()
     fe2('Supplier reply, pasted: Paste reply + Accept', (await readCount(page)).mouse, 2)
+    // The first reply's "Reply saved" toast can satisfy the wait above before this save lands: wait for the rows themselves.
+    await expect.poll(async () => (await linesOf(s.lahore.id)).length).toBe(2)
     const bLines = await linesOf(s.lahore.id)
     expect(bLines.map(l => [Number(l.unit_price), l.currency, Number(l.fx_rate_pkr)])).toEqual([
       [100, 'USD', 280],
