@@ -50,8 +50,8 @@ describe('the saved query cache (performance audit 3)', () => {
 
     const next = await reopen('u1')
     expect(next.getQueryData(qk.rfqs.board())).toEqual([{ id: 'r1', number: 'RFQ-0001' }])
-    // Restored data is old: it is shown at once and refetched when a screen mounts it.
-    expect(next.getQueryState(qk.rfqs.board())?.dataUpdatedAt).toBeLessThanOrEqual(Date.now())
+    // Restored data is shown at once but always stale (even under a 5-minute staleTime): a screen that mounts it reads it again.
+    expect(next.getQueryState(qk.rfqs.board())?.isInvalidated).toBe(true)
   })
 
   it('is never shown to someone else, and is deleted then', async () => {

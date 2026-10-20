@@ -158,7 +158,19 @@ export async function startQueryPersistence(qc: QueryClient, userId: string | nu
       saved.userId === userId &&
       Date.now() - saved.savedAt < PERSIST_MAX_AGE_MS &&
       (owner === null || owner === saved.userId)
-    if (usable) hydrate(qc, saved.state)
+    // Restored data is shown at once but always counts as stale, whatever a read's staleTime: the first screen that
+    // mounts it reads it again (an edit made on another device or by a colleague must not wait out a 5-minute staleTime).
+    // Marked invalidated: the next mount refetches it, and a screen already showing it refetches now.
+    if (usable) {
+      hydrate(qc, saved.state)
+      for (const q of saved.state.queries) {
+        const query = qc.getQueryCache().find({ queryKey: q.queryKey, exact: true })
+        if (query && query.state.dataUpdatedAt <= q.state.dataUpdatedAt) {
+          query.invalidate()
+          if (query.getObserversCount() > 0 && query.state.fetchStatus === 'idle') void query.fetch().catch(() => {})
+        }
+      }
+    }
     else await deleteSaved()
   } catch {
     /* IndexedDB unavailable (private mode, blocked): start empty */
