@@ -15,7 +15,7 @@ const fixed = (n: number | string): string => paisaToFixed(toPaisa(n))
 
 /**
  * Everything that can appear on the statement of one month ("2026-10"): bank rows ticked against it, and bank rows not
- * ticked yet and dated up to its end (older ones included). Cash rows are never read.
+ * ticked yet and dated up to its end (older ones included). Cash rows and voided payments are never read.
  */
 export async function loadBank(month: string): Promise<RawBank> {
   const db = requireSupabase()
@@ -28,6 +28,7 @@ export async function loadBank(month: string): Promise<RawBank> {
         .from('payments_in')
         .select('*')
         .eq('paid_via', 'bank')
+        .is('voided_at', null) // 0073: a voided payment is history, never on a statement
         .or(`bank_month.eq.${start},and(bank_month.is.null,received_on.lte.${end})`)
         .order('received_on', { ascending: false })
         .range(from, to),
