@@ -24,9 +24,9 @@ import { VISITS, type CaptureOptions, type Visit } from './screens'
  * is being audited, written into the results).
  */
 
-const OUT = resolve(process.env.AUDIT_DIR ?? 'test-results/screen-audit')
-const ROLES = (process.env.AUDIT_ROLES ?? 'admin sales engineer').split(/[\s,]+/).filter(Boolean) as Role[]
-const VIEWPORTS = (process.env.AUDIT_VIEWPORTS ?? '1366x768 1920x1080 375x812 320x640')
+const OUT = resolve(process.env.AUDIT_DIR || 'test-results/screen-audit')
+const ROLES = (process.env.AUDIT_ROLES || 'admin sales engineer').split(/[\s,]+/).filter(Boolean) as Role[]
+const VIEWPORTS = (process.env.AUDIT_VIEWPORTS || '1366x768 1920x1080 375x812 320x640')
   .split(/[\s,]+/)
   .filter(Boolean)
   .map(name => {

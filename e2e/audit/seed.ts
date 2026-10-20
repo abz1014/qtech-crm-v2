@@ -870,13 +870,16 @@ async function seedAll(): Promise<Fixture> {
 
   // Expenses over this month and the last: overheads, cash spends and order costs.
   const CAT = (n: number) => `ca7e0000-0000-4000-8000-${String(n).padStart(12, '0')}`
-  const ex = (days: number, cat: number, amount: number, description: string, via: 'bank' | 'cash', extra: Record<string, unknown> = {}) => ({
+  // PostgREST takes a bulk insert only when every row has the same keys: the optional links are always present.
+  const ex = (days: number, cat: number, amount: number, description: string, via: 'bank' | 'cash', links: { order_id?: string; supplier_order_id?: string; payee_id?: string } = {}) => ({
     paid_on: D(days),
     category_id: CAT(cat),
     amount_pkr: amount,
     description,
     paid_via: via,
-    ...extra,
+    order_id: links.order_id ?? null,
+    supplier_order_id: links.supplier_order_id ?? null,
+    payee_id: links.payee_id ?? null,
   })
   await postMany('expenses', [
     ex(-1, 5, 4350, 'Tea, milk and biscuits', 'cash'),

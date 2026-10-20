@@ -18,7 +18,9 @@ gh run download <run id> -n screen-audit -D <somewhere outside the repo>
 ```
 
 `--ref` is the branch whose workflow file and audit code run (`test/screen-audit` until it is merged, then `main`); `-f ref=` is the
-app being audited. The audit code (`e2e/audit/`, `scripts/audit/`) is copied onto the audited checkout, so a ref made before the audit
+app being audited. GitHub only dispatches a workflow whose file is also on the default branch (`main`): until
+`.github/workflows/screen-audit.yml` is on `main`, `gh workflow run` answers "workflow screen-audit.yml not found on the default
+branch". The audit code (`e2e/audit/`, `scripts/audit/`) is copied onto the audited checkout, so a ref made before the audit
 existed can be audited too. Optional inputs: `roles` (default `admin sales engineer`), `viewports` (default
 `1366x768 1920x1080 375x812 320x640`) and `screens` (a regular expression over visit or screen ids, for a quick partial run, e.g.
 `-f screens='^(today|rfq-quoted)$'`).
