@@ -58,7 +58,9 @@ function argsFor(fn: string, names: string[]): Record<string, unknown> {
 
 function empty(body: unknown): boolean {
   if (body === null || body === false || body === 0 || body === '') return true
-  if (Array.isArray(body)) return body.length === 0 || body.every(r => r === null || (typeof r === 'object' && Object.values(r as object).every(v => v === null)))
+  // A row that only echoes the ids it was asked about (supplier_item_memory answers one row per supplier id, all else empty).
+  if (Array.isArray(body))
+    return body.length === 0 || body.every(r => r === null || (typeof r === 'object' && Object.entries(r as object).every(([k, v]) => k.endsWith('_id') || v === null || v === false || v === 0)))
   return false
 }
 

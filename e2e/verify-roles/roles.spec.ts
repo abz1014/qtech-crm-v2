@@ -207,7 +207,7 @@ async function crawl(page: Page, role: Staff, info: TestInfo): Promise<Watch> {
     await closeDialogs(page)
 
     if (v.state !== 'page') {
-      if (role === 'engineer') expect.soft(engineerTextLeaks(await visibleText(page), [], world), `engineer ${r.path}: refused page shows money`).toEqual([])
+      if (role === 'engineer') expect.soft(engineerTextLeaks(await visibleText(page), [], world).filter(x => !x.startsWith('money word')), `engineer ${r.path}: refused page shows money (its title names the area, e.g. "Expense categories is for admins")`).toEqual([])
       continue
     }
 

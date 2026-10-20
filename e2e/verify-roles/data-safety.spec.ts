@@ -20,6 +20,9 @@ test.beforeAll(async () => {
   world = await seedWorld('VD')
 })
 
+const captureSheet = (page: Page) => page.getByRole('dialog', { name: /^(Capture|Paste or photo)$/ })
+const captureBox = (page: Page) => captureSheet(page).getByRole('textbox', { name: 'Pasted text' })
+
 const rows = async <T>(path: string): Promise<T[]> => {
   const r = await api('admin', `/rest/v1/${path}`)
   if (r.status !== 200) throw new Error(`GET ${path}: ${r.status} ${r.text}`)
@@ -125,7 +128,8 @@ test.describe('a double tap makes one record', () => {
     expect((await rows(`invoices?order_id=eq.${order}&select=id`)).length).toBe(before + 1)
   })
 
-  test('Add line on an order (sales): one line', async ({ page }) => {
+  test('BUG-RV-07: Add line on an order (sales): a double tap makes one line', async ({ page }) => {
+    test.fail(true, 'BUG-RV-07: AddLineDialog (src/features/orders/AddDialogs.tsx) has no ref lock and no stable id; a double tap inserts the line twice')
     const description = `${world.tag} double tap line`
     await openAs(page, 'sales', `/orders/${world.order.id}`)
     const toggle = page.getByRole('button', { name: 'Edit GST and lines' })
@@ -229,8 +233,7 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
   await page.locator('#main').waitFor()
   // A Capture draft (kept in IndexedDB while signed in).
   await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
-  const sheet = page.getByRole('dialog').last()
-  await sheet.getByRole('textbox').first().fill(secret)
+  await captureBox(page).fill(secret)
   await page.waitForTimeout(800)
   expect((await storageState(page)).captures, 'the draft is kept on the device while signed in').toBeGreaterThan(0)
   await page.keyboard.press('Escape')
@@ -251,8 +254,8 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
   // The next person on the same tab.
   await signIn(page, STAFF_EMAIL.engineer)
   await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
-  const next = page.getByRole('dialog').last()
-  expect(await next.getByRole('textbox').first().inputValue(), 'the next person\'s Capture sheet').not.toContain('secret capture note')
+  const next = captureSheet(page)
+  expect(await captureBox(page).inputValue(), 'the next person\'s Capture sheet').not.toContain('secret capture note')
   await expect(next).not.toContainText('secret capture note')
   await page.keyboard.press('Escape')
   await page.goto(`/orders/${world.order.id}`)
@@ -265,7 +268,7 @@ test('a session that ends without Sign out (expired or revoked token) does not h
   const secret = `${world.tag} expired-session capture note`
   await openAs(page, 'admin', '/today')
   await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
-  await page.getByRole('dialog').last().getByRole('textbox').first().fill(secret)
+  await captureBox(page).fill(secret)
   await page.waitForTimeout(800)
   await page.keyboard.press('Escape')
   expect((await storageState(page)).captures, 'precondition: the draft is kept on the device').toBeGreaterThan(0)
@@ -279,9 +282,8 @@ test('a session that ends without Sign out (expired or revoked token) does not h
   test.info().annotations.push({ type: 'device state after the session ended', description: `captures ${left.captures}; localStorage ${left.local.join(', ')}` })
   await signIn(page, STAFF_EMAIL.engineer)
   await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
-  const sheet = page.getByRole('dialog').last()
   await page.waitForTimeout(1000)
-  expect(await sheet.getByRole('textbox').first().inputValue(), 'the next person sees the previous person\'s Capture draft').not.toContain('expired-session capture note')
+  expect(await captureBox(page).inputValue(), 'the next person sees the previous person\'s Capture draft').not.toContain('expired-session capture note')
 })
 
 test('BUG-RV-04: the command palette\'s recent items are cleared on sign-out and are per person', async ({ page }) => {

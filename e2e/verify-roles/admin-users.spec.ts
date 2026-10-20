@@ -90,23 +90,25 @@ test('only an active admin: every other persona and every bad token is refused o
   expect(users.find(u => u.email === 'mallory-verify@test.invalid')).toBeUndefined()
 })
 
-test('CORS: another origin is refused outright, with no allow-origin header, no wildcard and no credentials', async () => {
+// On the LOCAL stack the API gateway (Kong) answers every preflight itself and adds "Access-Control-Allow-Origin: *" to
+// every function response, so headers here say nothing about production; the function's own decision is its status and
+// body. The gateway headers are recorded as an annotation.
+test('CORS: a browser on another origin is refused by the function itself, even with an admin token', async () => {
   const adminToken = await token('admin')
+  const seen: string[] = []
   for (const origin of ['https://evil.example', 'null', 'http://127.0.0.1:4174', `${APP_ORIGIN}.evil.example`, 'https://qtech-crm.vercel.app.evil.example']) {
-    const pre = await fetch(FN, { method: 'OPTIONS', headers: { Origin: origin, 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'authorization, content-type' } })
-    expect.soft(pre.status, `preflight from ${origin}`).toBe(403)
-    expect.soft(pre.headers.get('access-control-allow-origin'), `preflight from ${origin}: allow-origin`).toBeNull()
     const post = await call(adminToken, { action: 'list' }, { Origin: origin })
     expect.soft(post.status, `POST from ${origin} with an admin token`).toBe(403)
-    expect.soft(post.headers.get('access-control-allow-origin'), `POST from ${origin}: allow-origin`).toBeNull()
     expect.soft(post.text, `POST from ${origin}: no data`).not.toContain('"users"')
+    const reset = await call(adminToken, { action: 'reset_password', user_id: 'a0000000-0000-4000-8000-000000000002' }, { Origin: origin })
+    expect.soft(reset.status, `reset_password from ${origin}`).toBe(403)
+    expect.soft(reset.text, `reset_password from ${origin}: no password`).not.toMatch(/"password"/)
+    seen.push(`${origin}: allow-origin ${post.headers.get('access-control-allow-origin')}`)
   }
-  // The app's own origin works, and never with a wildcard or credentials.
+  test.info().annotations.push({ type: 'local gateway CORS headers (not production)', description: seen.join(' ; ') })
   const ok = await call(adminToken, { action: 'list' }, { Origin: APP_ORIGIN })
-  expect(ok.status).toBe(200)
-  expect(ok.headers.get('access-control-allow-origin')).toBe(APP_ORIGIN)
+  expect(ok.status, 'the app origin works').toBe(200)
   expect(ok.headers.get('access-control-allow-credentials')).toBeNull()
-  expect(ok.headers.get('vary') ?? '').toMatch(/Origin/)
 })
 
 test('BUG-RV-05: in production only the production origin is allowed (localhost dev origins are always added)', async () => {

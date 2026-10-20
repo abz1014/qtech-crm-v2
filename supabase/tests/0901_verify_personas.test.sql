@@ -377,7 +377,18 @@ insert into probes values
   ('void_payment', '', 'X', $q$select public.void_payment(@28, 'probe')$q$),
   ('correct_payment', '', 'X', $q$select public.correct_payment(@28, 1, current_date, 'bank', 'r', 'probe')$q$),
   ('restore_payment', '', 'X', $q$select public.restore_payment(@28)$q$),
-  ('search_closed_rfqs', '', 'X', $q$select * from public.search_closed_rfqs('M', 5, 0)$q$);
+  ('search_closed_rfqs', '', 'X', $q$select * from public.search_closed_rfqs('M', 5, 0)$q$),
+  -- 0074 (perf/db)
+  ('receivables_list', '', 'X', $q$select * from public.receivables_list(null, null, null, true)$q$),
+  ('receivables_summary', '', 'X', $q$select * from public.receivables_summary() where gross > 0$q$),
+  ('today_inquiry_facts', '', 'X', $q$select * from public.today_inquiry_facts()$q$),
+  ('lookup_labels', '', 'X', $q$select 1 from (select public.lookup_labels(array[@01], array[@23], array[@20]) j) x where j::text ~ 'M Main|ORD-'$q$);
+
+-- 0074 receivables: money, so an engineer is refused too (they run order_receivables()).
+select is(pg_temp.actual(f, '', 'engineer'), '', format('engineer gets nothing from %s', f))
+from unnest(array['receivables_list', 'receivables_summary']) f;
+select is(pg_temp.actual(f, '', 'sales'), 'X', format('precondition: sales get %s', f))
+from unnest(array['receivables_list', 'receivables_summary']) f;
 
 -- ------------------------------------------------------------------ coverage: every object has probes
 select is((select coalesce(array_agg(t.tablename::text order by t.tablename), '{}') from pg_tables t

@@ -221,6 +221,8 @@ export const MONEY: Record<string, Record<string, Rule>> = {
   aging_as_of: { gross: H, applied: H, remaining: H, advance_held: H },
   payables_as_of: { committed: H, committed_pkr: H, fx_rate: H, paid_pkr: H, owed_pkr: H },
   order_receivables: { gross_target: H, settled: H, balance: H, overpaid_by: H },
+  receivables_list: { gross_target: H, settled: H, balance: H, overpaid_by: H },
+  receivables_summary: { gross: H, settled: H, outstanding: H, overdue: H, not_yet_due: H, not_invoiced: H },
   month_end_check_details: { detail: H },
   my_target_progress: { target_net: 'own', achieved_net: 'own', on_pace_net: 'own' },
   rank_item_quotes: {
@@ -272,7 +274,7 @@ export function moneyIn(object: string, body: unknown, where = object): Leak[] {
     if (!row || typeof row !== 'object') continue
     for (const [k, v] of Object.entries(row as Record<string, unknown>)) {
       if (v === null || v === undefined || v === 0 || v === '0' || v === '') continue
-      if (Array.isArray(v) || (typeof v === 'object' && !(k in (MONEY[object] ?? {})) && k !== 'legacy_source' && k !== 'lines' && k !== 'detail')) {
+      if ((Array.isArray(v) || typeof v === 'object') && !(k in (MONEY[object] ?? {})) && k !== 'legacy_source' && k !== 'detail') {
         out.push(...moneyIn(k, v, `${where}.${k}`))
         continue
       }
