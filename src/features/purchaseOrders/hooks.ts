@@ -62,6 +62,6 @@ export function useSetLegCurrency(orderId: string) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (v: { legId: string; currency: string }) => api.setLegCurrency(v.legId, v.currency),
-    onSuccess: () => invalidateAfter(client, 'order.update', { orderId }),
+    onSuccess: () => invalidateAfter(client, 'order.update', { orderId }, { wait: 'all' }),
   })
 }

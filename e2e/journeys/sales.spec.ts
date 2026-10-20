@@ -237,7 +237,8 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(b.getByText('Read from their reply')).toBeVisible()
     expect(await linesOf(s.lahore.id)).toHaveLength(0)
     await b.getByRole('button', { name: 'Accept 2 prices' }).click()
-    await expect(toast(page, 'Reply saved')).toBeVisible()
+    // The first reply's toast can still be showing now that a save returns when the server confirms (no wait for refetches).
+    await expect(toast(page, 'Reply saved').last()).toBeVisible()
     fe2('Supplier reply, pasted: Paste reply + Accept', (await readCount(page)).mouse, 2)
     const bLines = await linesOf(s.lahore.id)
     expect(bLines.map(l => [Number(l.unit_price), l.currency, Number(l.fx_rate_pkr)])).toEqual([

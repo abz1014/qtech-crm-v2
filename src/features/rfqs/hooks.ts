@@ -147,7 +147,7 @@ export function useStampSupplierChase(rfqId: string) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (inquiryId: string) => api.stampSupplierChase(inquiryId),
-    onSuccess: () => invalidateAfter(client, 'inquiry.chase', { rfqId }),
+    onSuccess: () => invalidateAfter(client, 'inquiry.chase', { rfqId }, { wait: 'all' }),
   })
 }
 
@@ -204,7 +204,7 @@ export function useStampClarificationAsk(rfqId: string) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (ids: readonly string[]) => api.stampClarificationAsk(ids),
-    onSuccess: () => invalidateAfter(client, 'clarification.ask', { rfqId }),
+    onSuccess: () => invalidateAfter(client, 'clarification.ask', { rfqId }, { wait: 'all' }),
   })
 }
 
@@ -212,7 +212,7 @@ export function useRestoreClarificationAsk(rfqId: string) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (before: readonly api.ClarificationAskBefore[]) => api.restoreClarificationAsk(before),
-    onSuccess: () => invalidateAfter(client, 'clarification.ask', { rfqId }),
+    onSuccess: () => invalidateAfter(client, 'clarification.ask', { rfqId }, { wait: 'all' }),
   })
 }
 
@@ -220,7 +220,7 @@ export function useRestoreSupplierChase(rfqId: string) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (v: { inquiryId: string; before: { lastChasedOn: string | null; lastChasedBy?: string | null; chaseCount: number } }) => api.restoreSupplierChase(v.inquiryId, v.before),
-    onSuccess: () => invalidateAfter(client, 'inquiry.chase', { rfqId }),
+    onSuccess: () => invalidateAfter(client, 'inquiry.chase', { rfqId }, { wait: 'all' }),
   })
 }
 
