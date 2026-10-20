@@ -1,6 +1,8 @@
 import { useEffect, useState, type RefObject } from 'react'
 import { ClipboardPaste, Plus, Scissors, X, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useMediaQuery } from '@/lib/useMediaQuery'
+import { pastedPictures } from '@/features/rfqs/lib/readPdf'
 import type { BrandRef, ParseResult } from '@/features/rfqs/lib/parseItems'
 import { parseQtyCell, type DraftItem } from '@/features/rfqs/lib/intakeModel'
 import { qtyText } from '@/features/rfqs/lib/enquiryDraft'
@@ -10,8 +12,11 @@ import { Icon } from '@/ui/Icon'
 /*
  * Items (g2-intake-float frames 1 and 3): one paste becomes rows. The paste zone is a real text area (so a phone can
  * paste into it) and the whole page listens for a paste, so on a desktop the person presses Ctrl+V with nothing
- * focused. Each row is editable; quantity starts at 1 when the paste gave none.
+ * focused. A phone has no Ctrl+V: it gets a Paste button instead (the clipboard read where the browser allows it, else
+ * "tap and hold in the box, then Paste"). A pasted screenshot is read like a chosen one. Each row is editable; quantity
+ * starts at 1 when the paste gave none.
  */
+
 
 export interface PastedBlock {
   result: ParseResult
@@ -100,13 +105,52 @@ function PickCell({
 export function PasteZone({
   zoneRef,
   onText,
+  onPicture,
   filled,
 }: {
   zoneRef: RefObject<HTMLTextAreaElement>
   onText: (text: string) => void
+  /** A screenshot pasted instead of text: read like a chosen picture. */
+  onPicture?: (file: File) => void
   filled: boolean
 }) {
   const [draft, setDraft] = useState('')
+  // A touch screen (a phone, a tablet) has no Ctrl V to press.
+  const touch = useMediaQuery('(pointer: coarse)')
+  const [hint, setHint] = useState<string | null>(null)
+  const pasteFromClipboard = async () => {
+    setHint(null)
+    try {
+      const clip = navigator.clipboard
+      if (clip?.read) {
+        for (const item of await clip.read()) {
+          const picture = item.types.find(t => t.startsWith('image/'))
+          if (picture && onPicture) {
+            const blob = await item.getType(picture)
+            onPicture(new File([blob], `pasted.${picture.split('/')[1] ?? 'png'}`, { type: picture }))
+            return
+          }
+          if (item.types.includes('text/plain')) {
+            const text = await (await item.getType('text/plain')).text()
+            if (text.trim()) {
+              onText(text)
+              return
+            }
+          }
+        }
+      }
+      const text = clip?.readText ? await clip.readText() : ''
+      if (text.trim()) {
+        onText(text)
+        return
+      }
+      setHint('Nothing to paste: copy the email or the list first.')
+    } catch {
+      // The browser would not let the page read the clipboard: the box takes a paste the usual way.
+      zoneRef.current?.focus()
+      setHint('Tap and hold in the box, then Paste.')
+    }
+  }
   return (
     <div
       className={cn(
@@ -129,6 +173,12 @@ export function PasteZone({
           // Parsed straight from the clipboard, so one paste is one action. The page-level listener does the same
           // for a paste made with nothing focused.
           const text = e.clipboardData.getData('text/plain')
+          const pictures = pastedPictures(e.clipboardData)
+          if (!text.trim() && pictures.length && onPicture) {
+            e.preventDefault()
+            for (const p of pictures) onPicture(p)
+            return
+          }
           if (!text.trim()) return
           e.preventDefault()
           setDraft('')
@@ -140,13 +190,27 @@ export function PasteZone({
             setDraft('')
           }
         }}
-        placeholder="Click here and paste, or type one item per line"
+        placeholder={touch ? 'Tap here to paste, or type one item per line' : 'Click here and paste, or type one item per line'}
         className="w-full resize-y rounded border border-line-input bg-surface px-3 py-2 font-mono text-sm leading-5 text-fg placeholder:text-fg-muted hover:border-fg-muted focus-visible:border-fg max-md:text-base max-md:leading-6"
       />
+      {touch ? (
+        <Button size="sm" icon={ClipboardPaste} onClick={() => void pasteFromClipboard()}>
+          Paste
+        </Button>
+      ) : null}
+      {hint ? (
+        <p role="status" className="text-sm text-fg-2">
+          {hint}
+        </p>
+      ) : null}
       <p className="text-xs text-fg-muted">
-        Press <kbd className="num rounded border border-line-strong bg-sunken px-1">Ctrl</kbd>{' '}
-        <kbd className="num rounded border border-line-strong bg-sunken px-1">V</kbd> anywhere on this page. Each line
-        becomes an item, with quantity and brand picked out.
+        {touch ? null : (
+          <>
+            Press <kbd className="num rounded border border-line-strong bg-sunken px-1">Ctrl</kbd>{' '}
+            <kbd className="num rounded border border-line-strong bg-sunken px-1">V</kbd> anywhere on this page.{' '}
+          </>
+        )}
+        Paste the whole email, a PDF or a screenshot — we pick out the items; you check them before saving.
       </p>
     </div>
   )

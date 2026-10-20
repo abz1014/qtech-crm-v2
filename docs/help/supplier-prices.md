@@ -7,7 +7,7 @@ screens: /rfqs
 related: issue-quotation
 ---
 1. Open the RFQ. Find [Replies from suppliers].
-2. Tap [Paste reply], paste what the supplier sent, then tap [Read it]. A PDF quote? Tap [Read a PDF].
+2. Tap [Paste reply], paste what the supplier sent, then tap [Read it]. A PDF quote, or a screenshot of one? Tap [Read a PDF or photo].
 3. Check the price, currency and lead time it read.
 4. Tap [Accept N prices].
 5. Or type each price in its box and tap [Save reply].

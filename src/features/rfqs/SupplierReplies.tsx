@@ -19,7 +19,7 @@ import { InfoTip } from '@/ui/InfoTip'
 import { Banner } from '@/ui/Banner'
 import { parseSupplierQuote } from '@/lib/docread/supplierQuoteParse'
 import { PdfPickButton } from '@/features/rfqs/PdfIntake'
-import { readPdf } from '@/features/rfqs/lib/readPdf'
+import { readDocument } from '@/features/rfqs/lib/readPdf'
 import { awaitingReply, focusReplyInput, OPEN_REPLY_EVENT, replyInputId, type OpenReplyDetail } from '@/features/rfqs/replyFocus'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useSaveReply, useSetInquiryNoOffer, useSetItemDecline } from '@/features/rfqs/hooks'
@@ -337,8 +337,11 @@ function ReplyRow({
     if (!reply || reply.inquiryId !== inquiry.id || handedOver.current) return
     handedOver.current = true
     if (!reply.text.trim() && reply.pdf) {
-      // A PDF quote handed over with no text: its prices are read here.
-      void readPdf(reply.pdf, 'prices').then(r => ('text' in r ? readText(r.text) : setPdfNote(r.message)))
+      // A PDF quote, or a screenshot or photo of one, handed over with no text: its prices are read here.
+      setPdfNote('Reading the file…')
+      void readDocument(reply.pdf, 'prices', { onProgress: p => setPdfNote(p.message) }).then(r =>
+        'text' in r ? readText(r.text) : setPdfNote('message' in r ? r.message : null),
+      )
     } else readText(reply.text)
     navigate(location.pathname, { replace: true, state: null })
     // readText only reads props and state set above
@@ -390,7 +393,7 @@ function ReplyRow({
             Paste reply
           </Button>
         ) : null}
-        {!declinedAll && pasteMode === null ? <PdfPickButton size="sm" label="Read a PDF" subject="prices" onText={readText} onMessage={setPdfNote} /> : null}
+        {!declinedAll && pasteMode === null ? <PdfPickButton size="sm" label="Read a PDF or photo" subject="prices" onText={t => readText(t)} onMessage={setPdfNote} /> : null}
         <Button size="sm" variant="quiet" icon={X} aria-label={`Close the reply, ${inquiry.supplierName}`} onClick={requestClose} />
       </header>
       {askClose ? (

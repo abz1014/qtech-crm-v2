@@ -4,8 +4,8 @@
 //
 // What comes back is either the text (lines in reading order, table rows with their cells joined by a tab, pdfLayout.ts) or
 // a plain reason it could not be read, worded for the screen:
-//  - a scan (pages with no text layer, a photo saved as a PDF): "This PDF is a scan; type or paste the items." Photo OCR
-//    comes later, after PDFs work well;
+//  - a scan (pages with no text layer, a photo saved as a PDF): the person is pointed to a screenshot or photo of it, which
+//    the picture reader (imageText.ts) reads;
 //  - a password-protected PDF, a file that is not a PDF, a file over the size limit, a damaged file.
 // Long files are read up to a page limit; `truncated` says so. Nothing here throws for a bad file.
 
@@ -63,15 +63,16 @@ export function pdfFailureMessage(reason: PdfReadFailure, subject: PdfSubject = 
   const what = `type or paste the ${subject}`
   switch (reason) {
     case 'scan':
-      return `This PDF is a scan; ${what}.`
+      // A scan is a picture: the picture reader can read a screenshot or a photo of it (imageText.ts).
+      return `This PDF is a scan. Take a screenshot or photo of it and choose that instead, or ${what}.`
     case 'password':
       return `This PDF is locked with a password. Open it, copy the text and paste it here, or ${what}.`
     case 'too_big':
       return `This PDF is ${size !== undefined ? mb(size) : 'too big'}; the limit is ${mb(maxBytes)}. Copy the text from it and paste it here, or ${what}.`
     case 'not_pdf':
-      return `This file is not a PDF. Paste the text, or ${what}.`
+      return `This file is not a PDF. Choose a PDF, a screenshot or a photo, or ${what}.`
     case 'unreadable':
-      return `This PDF could not be read. Paste the text, or ${what}.`
+      return `This PDF could not be read. Take a screenshot of it and choose that instead, or ${what}.`
     case 'aborted':
       return ''
   }

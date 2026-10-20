@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import react from '@vitejs/plugin-react-swc'
 import { loadEnv, type Plugin } from 'vite'
@@ -46,6 +47,50 @@ function supabasePreconnect(url: string | undefined): Plugin {
 }
 
 /*
+ * The picture reader (src/lib/docread/imageText.ts, owner priority 2026-10-20): tesseract.js runs on the device, so its worker,
+ * its WebAssembly engine and the English language data must be served by this site (the CSP allows `worker-src 'self'`,
+ * `connect-src 'self'` and `'wasm-unsafe-eval'`, no CDN). tesseract.js finds them by fixed file name next to each other, so they
+ * are not hashed: they go under one directory named after the package versions (assets/ocr/<versions>/), which keeps the
+ * `immutable` cache header on /assets/ safe. They are written only when a build contains the reader (src/lib/docread/ocrRuntime.ts),
+ * are never precached (globIgnores below), and the dev server serves them straight from node_modules.
+ */
+const requireFromHere = createRequire(import.meta.url)
+const pkgDir = (name: string) => path.dirname(requireFromHere.resolve(`${name}/package.json`))
+const pkgVersion = (name: string) => (JSON.parse(readFileSync(path.join(pkgDir(name), 'package.json'), 'utf8')) as { version: string }).version
+const OCR_DIR = `assets/ocr/t${pkgVersion('tesseract.js')}-c${pkgVersion('tesseract.js-core')}-e${pkgVersion('@tesseract.js-data/eng')}/`
+/** Published name -> source file. The LSTM-only engine in two builds: with WebAssembly SIMD (most devices) and without. */
+const OCR_FILES: Record<string, () => string> = {
+  'worker.min.js': () => path.join(pkgDir('tesseract.js'), 'dist', 'worker.min.js'),
+  'tesseract-core-simd-lstm.js': () => path.join(pkgDir('tesseract.js-core'), 'tesseract-core-simd-lstm.js'),
+  'tesseract-core-simd-lstm.wasm': () => path.join(pkgDir('tesseract.js-core'), 'tesseract-core-simd-lstm.wasm'),
+  'tesseract-core-lstm.js': () => path.join(pkgDir('tesseract.js-core'), 'tesseract-core-lstm.js'),
+  'tesseract-core-lstm.wasm': () => path.join(pkgDir('tesseract.js-core'), 'tesseract-core-lstm.wasm'),
+  // The integer "best" English model, LSTM only: about 3 MB gzipped.
+  'eng.traineddata.gz': () => path.join(pkgDir('@tesseract.js-data/eng'), '4.0.0_best_int', 'eng.traineddata.gz'),
+}
+
+function ocrAssets(): Plugin {
+  const mime: Record<string, string> = { '.js': 'text/javascript', '.wasm': 'application/wasm', '.gz': 'application/gzip' }
+  return {
+    name: 'qtech-ocr-assets',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = (req.url ?? '').split('?')[0] ?? ''
+        const prefix = `${server.config.base}${OCR_DIR}`
+        const source = url.startsWith(prefix) ? OCR_FILES[url.slice(prefix.length)] : undefined
+        if (!source) return next()
+        res.setHeader('Content-Type', mime[path.extname(url)] ?? 'application/octet-stream')
+        res.end(readFileSync(source()))
+      })
+    },
+    generateBundle() {
+      if (![...this.getModuleIds()].some(id => id.replaceAll('\\', '/').endsWith('/src/lib/docread/ocrRuntime.ts'))) return
+      for (const [name, source] of Object.entries(OCR_FILES)) this.emitFile({ type: 'asset', fileName: `${OCR_DIR}${name}`, source: readFileSync(source()) })
+    },
+  }
+}
+
+/*
  * Which build wrote the saved query cache (src/lib/queryPersist.ts): a cache from another build is dropped, because a
  * deploy may change what a query returns. The commit when the host provides one (so a rebuild of the same commit keeps
  * the cache and the entry chunk's hash), else the build time.
@@ -53,9 +98,10 @@ function supabasePreconnect(url: string | undefined): Plugin {
 const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA || process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || Date.now().toString(36)
 
 export default defineConfig(({ command, mode }) => ({
-  define: { __APP_BUILD__: JSON.stringify(BUILD_ID) },
+  define: { __APP_BUILD__: JSON.stringify(BUILD_ID), __OCR_DIR__: JSON.stringify(OCR_DIR) },
   plugins: [
     react(),
+    ocrAssets(),
     supabasePreconnect(loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL),
     // Builds src/sw.ts into dist/sw.js and injects the precache list (R21). Build only: the dev server and Vitest
     // run without a worker. The manifest is the hand-written public/manifest.webmanifest.
@@ -82,7 +128,9 @@ export default defineConfig(({ command, mode }) => ({
               // that then misses the renderer after a deploy is moved onto the new build by src/lib/importWithReload.ts.
               // The PDF reader (pdf.js, src/lib/docread/pdfjsRuntime.ts: its lazy chunk and its worker) is fetched the first time a
               // PDF is read, not stored on every phone either.
-              globIgnores: ['**/assets/pdfjsRuntime-*', '**/assets/pdf.worker*'],
+              // The picture reader (tesseract.js, src/lib/docread/ocrRuntime.ts: its lazy chunk, and its worker, engine and language
+              // data under assets/ocr/) is the same: about 6 MB, fetched the first time a picture is read.
+              globIgnores: ['**/assets/pdfjsRuntime-*', '**/assets/pdf.worker*', '**/assets/ocrRuntime-*', '**/assets/ocr/**'],
               maximumFileSizeToCacheInBytes: 5_000_000,
               manifestTransforms: [
                 async entries => ({

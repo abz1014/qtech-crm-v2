@@ -52,6 +52,8 @@ function ReportsRedirect() {
 
 /** Dev builds only: the component gallery (U09). Dead code in production. */
 const Gallery = import.meta.env.DEV ? lazy(() => import('@/dev/gallery/Gallery')) : null
+/** Dev builds only: reads a picture with the on-device OCR (e2e/docread). Dead code in production. */
+const DocreadLab = import.meta.env.DEV ? lazy(() => import('@/dev/docread/DocreadLab')) : null
 
 function SignInRoute() {
   const session = useSession()
@@ -73,6 +75,16 @@ export function AppRoutes() {
           element={
             <Suspense fallback={null}>
               <Gallery />
+            </Suspense>
+          }
+        />
+      ) : null}
+      {DocreadLab ? (
+        <Route
+          path="/dev/docread"
+          element={
+            <Suspense fallback={null}>
+              <DocreadLab />
             </Suspense>
           }
         />
