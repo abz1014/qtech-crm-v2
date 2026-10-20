@@ -39,7 +39,7 @@ const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (pa
     open: async page => {
       await open(page, '/today')
       await page.getByRole('button', { name: UI.capture }).filter({ visible: true }).first().click()
-      await expect(page.getByRole('dialog', { name: UI.capture })).toBeVisible()
+      await expect(page.getByRole('dialog', { name: UI.captureSheet })).toBeVisible()
     },
   },
   {

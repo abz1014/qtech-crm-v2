@@ -23,9 +23,9 @@ test('documents today\'s single-key shortcuts: N, C, G then T, and /, outside te
   await open(page, '/today')
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await page.keyboard.press('c')
-  await expect(page.getByRole('dialog', { name: UI.capture })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: UI.captureSheet })).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog', { name: UI.capture })).toBeHidden()
+  await expect(page.getByRole('dialog', { name: UI.captureSheet })).toBeHidden()
 
   await open(page, '/rfqs')
   await pressOnNavLink(page, 'g')

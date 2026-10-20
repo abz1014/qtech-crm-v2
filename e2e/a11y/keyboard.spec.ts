@@ -135,11 +135,12 @@ test.describe('focus after an action (2.4.3)', () => {
 })
 
 test.describe('a new page starts at the top (2.4.3)', () => {
-  test('moving to another screen from the tab bar resets the scroll of #main', async ({ page, world }) => {
+  test('moving to another screen from the tab bar resets the scroll of #main', async ({ page }) => {
     await page.setViewportSize({ width: 683, height: 330 })
-    await open(page, `/rfqs/${world.rfq.id}`)
+    // A list page: detail pages hide the tab bar on a phone while their own action bar shows.
+    await open(page, '/money/gst-register')
     await page.locator('#main').evaluate(m => (m.scrollTop = m.scrollHeight))
-    expect(await page.locator('#main').evaluate(m => m.scrollTop), 'the RFQ page must be tall enough to scroll at 330px').toBeGreaterThan(0)
+    expect(await page.locator('#main').evaluate(m => m.scrollTop), 'the page must be tall enough to scroll at 330px').toBeGreaterThan(0)
     await page.getByRole('navigation', { name: 'Main' }).filter({ visible: true }).locator('a[href="/companies"]').click()
     await page.waitForURL(/\/companies$/)
     await page.waitForLoadState('networkidle')

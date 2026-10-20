@@ -19,6 +19,7 @@ export const UI = {
   signIn: { email: /^Email/, password: /^Password$/, submit: /^Sign in$/, wrong: /password is incorrect/i, deactivated: /deactivated/i },
   accountMenu: /^Account menu/,
   capture: /^Capture$/,
+  captureSheet: /^(Capture|Paste or photo)$/,
   palette: /^Search or jump to$/,
   close: /^Close$/,
   rowActions: /^Actions for /,
