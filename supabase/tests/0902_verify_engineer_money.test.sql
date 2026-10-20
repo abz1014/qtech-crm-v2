@@ -240,6 +240,8 @@ insert into money_cols (obj, col, rule, bug) values
   ('v_month_pnl_live', 'net_in', 'hidden', null), ('v_month_pnl_live', 'gst_in', 'hidden', null), ('v_month_pnl_live', 'unresolved_gross', 'hidden', null),
   ('v_month_pnl_live', 'order_costs', 'hidden', null), ('v_month_pnl_live', 'overheads', 'hidden', null), ('v_month_pnl_live', 'non_pnl_out', 'hidden', null),
   ('v_month_pnl_live', 'cash_out_total', 'hidden', null), ('v_month_pnl_live', 'input_tax', 'hidden', null),
+  ('v_month_cash_flow', 'money_in', 'hidden', null), ('v_month_cash_flow', 'money_out', 'hidden', null),   -- 0079
+  ('v_month_cash_out_detail', 'gross_paid', 'hidden', null),   -- 0079
   ('v_month_team', 'net_credited', 'hidden', null), ('v_month_team', 'quarter_achieved_net', 'hidden', null),
   ('v_month_team', 'quarter_target_net', 'hidden', null),
   ('v_order_basis', 'items_net', 'hidden', null), ('v_order_basis', 'items_gross', 'hidden', null), ('v_order_basis', 'invoice_net', 'hidden', null),

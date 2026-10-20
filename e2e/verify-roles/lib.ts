@@ -204,6 +204,8 @@ export const MONEY: Record<string, Record<string, Rule>> = {
   v_order_items_total: { net: 'm3', gst: 'm3', gross: 'm3' },
   v_order_state: { net: 'm3', gst: 'm3', gross: 'm3' },
   v_cash_month: { gross_received: H, gst_received: H, money_out: H, net_received: H, unresolved_gross: H },
+  v_month_cash_flow: { money_in: H, money_out: H },
+  v_month_cash_out_detail: { gross_paid: H },
   v_gst_month: { net: H, gst: H, deposited_amount: H, gst_to_deposit: H, input_tax: H },
   v_gst_register: { net_amount: H, gst_amount: H, gross_amount: H, tax_deposit_amount: H },
   v_invoice_state: { net_amount: H, gst_amount: H, gross_amount: H },

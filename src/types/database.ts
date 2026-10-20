@@ -1690,6 +1690,34 @@ isOneToOne: false
       referencedColumns: ["order_id"]
     }
                   ]
+                },"v_month_cash_flow": {
+                  Row: {
+                    "expenses_count": number | null,"frozen": boolean | null,"money_in": number | null,"money_out": number | null,"month": string | null,"payments_count": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    
+                  ]
+                },"v_month_cash_out_detail": {
+                  Row: {
+                    "category_id": string | null,"detail": string | null,"expense_count": number | null,"gross_paid": number | null,"last_paid_on": string | null,"month": string | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "expenses_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "expense_categories"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "expenses_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "v_month_expense_category"
+      referencedColumns: ["category_id"]
+    }
+                  ]
                 },"v_month_expense_category": {
                   Row: {
                     "category": string | null,"category_id": string | null,"category_sort": number | null,"expense_count": number | null,"gross_paid": number | null,"grp": string | null,"month": string | null,"net_cost": number | null

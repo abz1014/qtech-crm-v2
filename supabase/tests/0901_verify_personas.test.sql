@@ -261,6 +261,7 @@ from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_sta
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
+                  'v_month_cash_flow','v_month_cash_out_detail',
                   'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)
