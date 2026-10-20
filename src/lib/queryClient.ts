@@ -1,4 +1,4 @@
-import { onlineManager, QueryClient, type Query } from '@tanstack/react-query'
+import { MutationCache, onlineManager, QueryClient, type Query } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
 import { wireOnlineManager } from '@/lib/connection'
 
@@ -16,6 +16,18 @@ export function refetchOnReturn(query: Query): boolean {
 }
 
 /**
+ * Saves never wait silently for the network (BUG-RES-1, U07). TanStack's default networkMode 'online' pauses a mutation while
+ * the onlineManager says offline: the dialog sat on "Saving" with nothing to say. Instead a save fails fast when there is
+ * no connection (or no live session, see holdNetwork in connection.ts) and the form shows the plain sentence and Try
+ * again; networkMode 'always' also stops a save that loses signal mid-flight from pausing instead of failing. The refusal is a
+ * TypeError, like a failed fetch, so mapPgError gives the U07 sentence "Check your connection and try again. Trying again will
+ * not create a duplicate." and Try again reuses the same client request id.
+ */
+export function refuseOfflineSave(): void {
+  if (!onlineManager.isOnline()) throw new TypeError('offline')
+}
+
+/**
  * The app's one query client. A module singleton (not React context) so non-React code, such as a
  * command-palette source, can use the same cache as the screens.
  *
@@ -23,7 +35,9 @@ export function refetchOnReturn(query: Query): boolean {
  * how fresh a read must be when a screen mounts, the app comes back to the front, or the network returns.
  */
 export const queryClient = new QueryClient({
+  mutationCache: new MutationCache({ onMutate: refuseOfflineSave }),
   defaultOptions: {
+    mutations: { networkMode: 'always' },
     queries: {
       staleTime: 30_000,
       retry: 1,

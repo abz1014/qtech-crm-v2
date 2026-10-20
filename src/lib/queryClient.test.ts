@@ -1,7 +1,8 @@
-import { onlineManager, type Query } from '@tanstack/react-query'
+import { MutationObserver, onlineManager, type Query } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { qk } from '@/features/queryKeys'
 import { holdNetwork } from '@/lib/connection'
+import { mapPgError } from '@/lib/pgErrors'
 import { FOCUS_REFETCH_MIN_AGE_MS, queryClient, REFERENCE_STALE_MS, refetchOnReturn } from '@/lib/queryClient'
 
 const aged = (ms: number) => ({ state: { dataUpdatedAt: Date.now() - ms } }) as unknown as Query
@@ -44,5 +45,33 @@ describe('TanStack online state (connection.ts)', () => {
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
     window.dispatchEvent(new Event('online'))
     expect(onlineManager.isOnline()).toBe(true)
+  })
+})
+
+describe('a save never pauses silently offline (BUG-RES-1, U07)', () => {
+  const save = (fn: () => Promise<unknown>) => new MutationObserver(queryClient, { mutationFn: fn }).mutate()
+
+  it('offline: fails at once with the plain sentence, and the request is never sent', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    window.dispatchEvent(new Event('offline'))
+    const sent = vi.fn(async () => 'saved')
+    const err = await save(sent).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(TypeError)
+    expect(sent).not.toHaveBeenCalled()
+    expect(mapPgError(err).message).toBe('Check your connection and try again. Trying again will not create a duplicate.')
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
+    window.dispatchEvent(new Event('online'))
+  })
+
+  it('no live session yet (network held): fails the same way instead of waiting', async () => {
+    holdNetwork(true)
+    const sent = vi.fn(async () => 'saved')
+    await expect(save(sent)).rejects.toBeInstanceOf(TypeError)
+    expect(sent).not.toHaveBeenCalled()
+  })
+
+  it('online: the save runs, and never pauses (networkMode always)', async () => {
+    expect(queryClient.getDefaultOptions().mutations?.networkMode).toBe('always')
+    await expect(save(async () => 'saved')).resolves.toBe('saved')
   })
 })

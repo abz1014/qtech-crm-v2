@@ -122,25 +122,26 @@ export function VoidPaymentDialog({ open, onOpenChange, line, orderNumber }: { o
   const submit = () => {
     setTried(true)
     if (!reason.trim()) return
-    voidIt.mutate(
-      { paymentId: line.id, reason: reason.trim() },
-      {
-        onSuccess: () => {
-          const t = voidToastText(line, orderNumber, today)
-          toast({
-            title: t.title,
-            body: t.body,
-            tone: 'success',
-            undo: {
-              onUndo: async () => {
-                await restore.mutateAsync(line.id)
-              },
-              undoneBody: t.undoneBody,
+    // mutateAsync, not mutate's onSuccess: the save re-reads the payments before it returns, the voided line moves under "Voided" and
+    // this dialog's row unmounts, and a per-call onSuccess is dropped once its component is gone (the Undo toast never showed).
+    // A failure stays on voidIt.error for the dialog to show.
+    voidIt.mutateAsync({ paymentId: line.id, reason: reason.trim() }).then(
+      () => {
+        const t = voidToastText(line, orderNumber, today)
+        toast({
+          title: t.title,
+          body: t.body,
+          tone: 'success',
+          undo: {
+            onUndo: async () => {
+              await restore.mutateAsync(line.id)
             },
-          })
-          close(false)
-        },
+            undoneBody: t.undoneBody,
+          },
+        })
+        close(false)
       },
+      () => undefined,
     )
   }
   return (
@@ -208,25 +209,24 @@ function CorrectForm({ line, orderNumber, onClose }: { line: PaymentLine; orderN
   const submit = () => {
     setTried(true)
     if (!reason.trim() || changes.length === 0) return
-    correct.mutate(
-      { paymentId: line.id, newId, reason: reason.trim(), ...after },
-      {
-        onSuccess: () => {
-          const t = correctionToastText(before, after, orderNumber, today)
-          toast({
-            title: t.title,
-            body: t.body,
-            tone: 'success',
-            undo: {
-              onUndo: async () => {
-                await restore.mutateAsync(line.id)
-              },
-              undoneBody: t.undoneBody,
+    // mutateAsync for the same reason as Void: the corrected line moves and this dialog's row can unmount before the save returns.
+    correct.mutateAsync({ paymentId: line.id, newId, reason: reason.trim(), ...after }).then(
+      () => {
+        const t = correctionToastText(before, after, orderNumber, today)
+        toast({
+          title: t.title,
+          body: t.body,
+          tone: 'success',
+          undo: {
+            onUndo: async () => {
+              await restore.mutateAsync(line.id)
             },
-          })
-          onClose()
-        },
+            undoneBody: t.undoneBody,
+          },
+        })
+        onClose()
       },
+      () => undefined,
     )
   }
   return (
