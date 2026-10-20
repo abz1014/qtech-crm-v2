@@ -71,7 +71,7 @@ export const SALES = {
   ask: {
     toAskSlot: 'suppliers-to-ask',
     copyFor: (n: number) => `Copy message for ${n} ${n === 1 ? 'supplier' : 'suppliers'}`,
-    copied: 'Enquiry text copied',
+    copied: 'Message copied',
     /** The enquiry's reply line (src/features/rfqs/lib/enquiryDraft.ts); WhatsApp puts the date in *bold*. */
     replyBy: (day: string) => new RegExp(`Kindly reply by \\*?${day}\\*?\\.`),
     itemLine: (description: string, qty: string) => `${description}, ${qty}`,
@@ -120,8 +120,9 @@ export const QUOTES = {
   },
   repeat: {
     ordersPath: '/orders?owner=all',
-    newOrder: 'New order',
-    heading: 'New order',
+    /** Was "New order" until the plain-words decision of 2026-10-19 (src/features/orders/NewOrderDialog.tsx). */
+    newOrder: 'Repeat a past order',
+    heading: 'Repeat a past order',
     find: 'Find a past order',
     customerPo: 'Customer PO number',
     create: 'Create order',
@@ -192,6 +193,8 @@ export const MONEY = {
     defaultTerms: '(default terms)',
     whatIsLeft: 'what is left to invoice',
     fullyInvoiced: 'Every line of this order is already invoiced',
+    /** The Invoicing cell (src/features/orders/OrderHeaderBlock.tsx) once the order is fully invoiced: Create invoice is gone. */
+    invoicedTestId: 'order-invoiced',
   },
   payment: {
     dialog: 'Record payment',
@@ -258,7 +261,7 @@ export const BOOKS = {
   },
   margin: {
     panel: 'Margin',
-    provisionalNoExpected: 'Provisional. No expected cost is set, so only costs paid so far are counted. It becomes final when you mark costs complete.',
+    provisionalNoExpected: 'Not final: no expected cost is set, so only what is paid so far counts.',
     final: 'Final. Costs are marked complete.',
     markComplete: 'Mark costs complete',
     reopenCosts: 'Reopen costs',
@@ -268,7 +271,8 @@ export const BOOKS = {
     openOrder: (ref: string) => `Open ${ref}`,
   },
   owe: {
-    addExpenseOnLeg: (letter: string) => `Add expense, leg ${letter}`,
+    moreFor: (supplier: string) => `More for ${supplier}`,
+    addExpense: 'Add expense',
     dialog: 'Add expense',
     amount: 'Amount, PKR',
     category: 'Category',
@@ -312,7 +316,8 @@ export const ROLES = {
     recordPayment: 'Record payment',
     createInvoice: 'Create invoice',
     marginPanel: 'Margin',
-    invoicesPanel: 'Invoices and payments',
+    /** The Invoicing cell's figure in the header's status strip (the old "Invoices and payments" panel was folded into it). */
+    invoicedTestId: 'order-invoiced',
     issuePo: /^Issue PO/,
     items: 'Items',
   },
@@ -336,9 +341,12 @@ export const RESILIENCE = {
     paymentDialog: 'Record payment',
     amount: 'Amount received, PKR',
     savePayment: 'Save payment',
-    markPlaced: (letter: string) => `Mark placed, leg ${letter}`,
-    deliveredToday: (letter: string) => `Delivered today, leg ${letter}`,
-    issuePoOnLeg: (letter: string) => `Issue PO, leg ${letter}`,
+    /** Supplier orders are named by the supplier on screen (no leg letters since the UX merges). */
+    moreFor: (supplier: string) => `More for ${supplier}`,
+    /** Admin and sales with no PO yet: Issue PO is the button, and placing without a PO is in the menu. */
+    markPlacedNoPo: 'Mark placed, no PO',
+    deliveredToday: (supplier: string) => `Delivered today, ${supplier}`,
+    issuePoFor: (supplier: string) => `Issue PO, ${supplier}`,
     issuePoDialog: 'Issue purchase order',
     issuePo: 'Issue PO',
   },
@@ -347,7 +355,9 @@ export const RESILIENCE = {
     wonDialog: 'Mark won',
     createOrder: 'Create order',
     openOrder: /Open ORD-\d{4}/,
-    chase: (supplier: string) => `Chase ${supplier}`,
+    /** With one supplier to chase, the Suppliers asked card offers the chase text and this button (src/features/rfqs/SuppliersAsked.tsx). */
+    chaseSlot: 'suppliers-asked',
+    chaseCopy: 'Copy and mark chased',
     chaseCopied: 'Chase text copied',
   },
   company: {

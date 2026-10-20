@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { db, num, USER } from '../support/db'
 import { company, karachiDay, letters, post, quote, rfq, setRates, supplier } from '../support/fixtures'
-import { open, signedIn } from '../support/session'
+import { open, openMarkWon, signedIn } from '../support/session'
 import { SALES } from '../support/text'
 import { readClipboardWhen, resetClipboard } from '../../support/clipboard'
 
@@ -222,13 +222,13 @@ test('prices in three currencies are stored with the rate of the day and ranked 
   expect(ranked[0]).toContain(germany.name)
   expect(ranked[1]).toContain(lahore.name)
   expect(ranked[2]).toContain(houston.name)
-  const rank = await db.adminRpc<{ supplier_id: string; rank: number; price_pkr: number }[]>('rank_item_quotes', { p_rfq_id: r.rfq.id })
-  const byId = Object.fromEntries(rank.map(x => [x.supplier_id, [Number(x.rank), num(x.price_pkr)]]))
+  const rank = await db.adminRpc<{ supplier_id: string; rank: number; pkr_unit_price: number }[]>('rank_item_quotes', { p_rfq_id: r.rfq.id })
+  const byId = Object.fromEntries(rank.map(x => [x.supplier_id, [Number(x.rank), num(x.pkr_unit_price)]]))
   expect(byId[germany.id]).toEqual([1, 25572.55])
   expect(byId[lahore.id]).toEqual([2, 27450])
   expect(byId[houston.id]).toEqual([3, 28361.3])
 
-  await page.locator('[data-slot="mark-won"]').getByRole('button', { name: SALES.won.markWon }).click()
+  await openMarkWon(page)
   const d = page.getByRole('dialog')
   await expect(d.getByRole('heading', { name: SALES.won.heading })).toBeVisible()
   await expect(d.getByRole('button', { name: SALES.won.supplierFor(1) })).toContainText(germany.name)

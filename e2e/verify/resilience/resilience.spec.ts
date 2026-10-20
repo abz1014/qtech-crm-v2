@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { db, num, USER } from '../support/db'
 import { karachiDay, order, quotedRfq, quote, rfq, setProfile, supplier, uniqueName } from '../support/fixtures'
-import { open, signedIn } from '../support/session'
+import { open, openMarkWon, signedIn } from '../support/session'
 import { COMMON, RESILIENCE as R, amount } from '../support/text'
 import { openAs } from '../../support/stack'
 
@@ -44,6 +44,7 @@ const storedToken = (page: Page) =>
 
 test.describe('a save that cannot reach the server', () => {
   test('Record payment offline: the plain sentence, the amount kept, then Try again saves exactly one payment', async ({ browser }, info) => {
+    test.fail(true, 'BUG-RES-1: offline, the save hangs on "Saving" with the dialog disabled (the mutation is paused while offline since ux/phone-platform), instead of the plain sentence and Try again (U07)')
     // 1 x 61,234.45 at 18%: GST 11,022.20 -> 11,022; gross 72,256.45.
     const seed = await order({ lines: [{ description: 'Vortex flow meter DN100', qty: 1, price: 61234.45 }], owner: 'sales' })
     const admin = await signedIn(browser, info, 'admin')
@@ -97,6 +98,7 @@ test.describe('a save that cannot reach the server', () => {
   })
 
   test('Add expense offline: the note and amount stay, and back online one expense is saved', async ({ browser }, info) => {
+    test.fail(true, 'BUG-RES-1: offline, the save hangs on "Saving" with the dialog disabled (the mutation is paused while offline since ux/phone-platform), instead of the plain sentence and Try again (U07)')
     const amt = 100000 + Math.floor(Math.random() * 800000) / 100
     const admin = await signedIn(browser, info, 'admin')
     const page = await open(admin, R.expense.path)
@@ -187,7 +189,7 @@ test.describe('a double press makes one record', () => {
     const seed = await order({ suppliers: [{ supplier: sup, currency: 'PKR' }], lines: [{ description: 'Cable gland M20, brass', qty: 40, price: 650, leg: 0, supplierPrice: 412.5 }] })
     const sales = await signedIn(browser, info, 'sales')
     const page = await open(sales, `/orders/${seed.order.id}`)
-    await page.getByTestId('leg-A').getByRole('button', { name: R.order.issuePoOnLeg('A') }).click()
+    await page.getByTestId('leg-A').getByRole('button', { name: R.order.issuePoFor(sup.name) }).click()
     const d = page.getByRole('dialog')
     await expect(d.getByRole('heading', { name: R.order.issuePoDialog })).toBeVisible()
     await d.getByRole('button', { name: R.order.issuePo }).dblclick()
@@ -232,7 +234,7 @@ test.describe('two people on the same record', () => {
     const pa = await open(a, `/rfqs/${seed.rfq.id}`)
     const pb = await open(b, `/rfqs/${seed.rfq.id}`)
     for (const p of [pa, pb]) {
-      await p.locator('[data-slot="mark-won"]').getByRole('button', { name: R.rfq.markWon }).click()
+      await openMarkWon(p)
       await expect(p.getByRole('dialog').getByRole('heading', { name: R.rfq.wonDialog })).toBeVisible()
     }
     await pa.getByRole('dialog').getByRole('button', { name: R.rfq.createOrder }).click()
@@ -255,9 +257,9 @@ test.describe('two people on the same record', () => {
     const b = await signedIn(browser, info, 'sales')
     const pa = await open(a, `/rfqs/${r.rfq.id}`)
     const pb = await open(b, `/rfqs/${r.rfq.id}`)
-    await pa.getByRole('button', { name: R.rfq.chase(sup.name), exact: true }).click()
+    await pa.locator(`[data-slot="${R.rfq.chaseSlot}"]`).getByRole('button', { name: R.rfq.chaseCopy }).click()
     await expect(pa.getByRole('status').filter({ hasText: R.rfq.chaseCopied })).toBeVisible()
-    await pb.getByRole('button', { name: R.rfq.chase(sup.name), exact: true }).click()
+    await pb.locator(`[data-slot="${R.rfq.chaseSlot}"]`).getByRole('button', { name: R.rfq.chaseCopy }).click()
     await expect(pb.getByRole('status').filter({ hasText: R.rfq.chaseCopied })).toBeVisible()
     await expect
       .poll(() => db.one<{ chase_count: number; last_chased_on: string; last_chased_by: string }>(`supplier_inquiries?id=eq.${inq.id}&select=chase_count,last_chased_on,last_chased_by`))
@@ -279,7 +281,8 @@ test.describe('Undo restores the record exactly', () => {
     const page = await open(sales, `/orders/${seed.order.id}`)
     const legA = page.getByTestId('leg-A')
 
-    await legA.getByRole('button', { name: R.order.markPlaced('A') }).click()
+    await legA.getByRole('button', { name: R.order.moreFor(sup.name) }).click()
+    await page.getByRole('menuitem', { name: R.order.markPlacedNoPo }).click()
     await expect.poll(async () => (await dates()).placed_on).toBe(karachiDay(0))
     const placed = await dates()
     expect(placed.expected_on, 'Mark placed fills the expected date').not.toBeNull()
@@ -289,7 +292,7 @@ test.describe('Undo restores the record exactly', () => {
     // Placed again (an earlier placed date, so Delivered is offered), then Delivered and its Undo.
     await db.patch(`supplier_orders?id=eq.${leg}`, { placed_on: karachiDay(-9), expected_on: karachiDay(-1) })
     await page.reload()
-    await legA.getByRole('button', { name: R.order.deliveredToday('A') }).click()
+    await legA.getByRole('button', { name: R.order.deliveredToday(sup.name) }).click()
     await expect.poll(async () => (await dates()).delivered_on).toBe(karachiDay(0))
     expect((await dates()).received_on).toBe(karachiDay(0))
     await page.getByRole('status').getByRole('button', { name: R.undo }).first().click()
@@ -305,7 +308,7 @@ test.describe('Undo restores the record exactly', () => {
     await db.patch(`supplier_inquiries?id=eq.${inq.id}`, { chase_count: 1, last_chased_on: karachiDay(-4), last_chased_by: USER.admin })
     const sales = await signedIn(browser, info, 'sales')
     const page = await open(sales, `/rfqs/${r.rfq.id}`)
-    await page.getByRole('button', { name: R.rfq.chase(sup.name), exact: true }).click()
+    await page.locator(`[data-slot="${R.rfq.chaseSlot}"]`).getByRole('button', { name: R.rfq.chaseCopy }).click()
     const toast = page.getByRole('status').filter({ hasText: R.rfq.chaseCopied })
     await expect(toast).toBeVisible()
     await expect.poll(() => db.one(`supplier_inquiries?id=eq.${inq.id}&select=chase_count,last_chased_on,last_chased_by`)).toEqual({

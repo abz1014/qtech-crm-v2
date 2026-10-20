@@ -246,7 +246,9 @@ test('we owe a supplier: the leg total in USD at the rate, less the supplier pay
   await expect(page.getByTestId('leg-A-total')).toContainText(amount(2033.25))
   await expect(page.getByTestId('leg-A')).toContainText(amount(569818))
 
-  await page.getByRole('button', { name: BOOKS.owe.addExpenseOnLeg('A') }).click()
+  // Add expense is in the supplier order's menu, named by the supplier (no leg letters on screen since the UX merges).
+  await page.getByTestId('leg-A').getByRole('button', { name: BOOKS.owe.moreFor(sup.name) }).click()
+  await page.getByRole('menuitem', { name: BOOKS.owe.addExpense }).click()
   const d = page.getByRole('dialog', { name: BOOKS.owe.dialog })
   await expect(d.getByRole('combobox', { name: BOOKS.owe.category })).toHaveValue(BOOKS.owe.supplierPayment)
   await d.getByRole('textbox', { name: BOOKS.owe.amount }).fill('300000')
