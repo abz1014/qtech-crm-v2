@@ -324,8 +324,19 @@ export async function convertRfqToOrder(input: ConvertInput): Promise<string> {
     ...(input.paymentTermsDays !== null ? { p_payment_terms_days: input.paymentTermsDays } : {}),
     ...(input.needsCommissioning !== undefined ? { p_needs_commissioning: input.needsCommissioning } : {}),
   })
-  if (error) throw error
+  if (error) {
+    // 0077 (BUG-CONC-1): someone else already won this RFQ. Their order is the answer, so it is returned instead of an error.
+    const existing = existingOrderOf(error)
+    if (existing) return existing
+    throw error
+  }
   return (data as string | null) ?? input.orderId
+}
+
+/** The order id in convert_rfq_to_order's "This RFQ is already order ORD-…" refusal (hint "rfq_has_order:<uuid>"), else null. */
+export function existingOrderOf(err: { hint?: string | null } | null | undefined): string | null {
+  const m = /^rfq_has_order:([0-9a-f-]{36})$/i.exec(err?.hint ?? '')
+  return m ? m[1] : null
 }
 
 export async function updateOrder(id: string, patch: TableUpdate<'orders'>): Promise<void> {

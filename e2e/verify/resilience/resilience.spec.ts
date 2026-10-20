@@ -44,7 +44,6 @@ const storedToken = (page: Page) =>
 
 test.describe('a save that cannot reach the server', () => {
   test('Record payment offline: the plain sentence, the amount kept, then Try again saves exactly one payment', async ({ browser }, info) => {
-    test.fixme(true, 'selectors outdated by the ux/* merge (69f40fa): update RESILIENCE words in support/text-resilience.ts')
     // 1 x 61,234.45 at 18%: GST 11,022.20 -> 11,022; gross 72,256.45.
     const seed = await order({ lines: [{ description: 'Vortex flow meter DN100', qty: 1, price: 61234.45 }], owner: 'sales' })
     const admin = await signedIn(browser, info, 'admin')
@@ -98,11 +97,9 @@ test.describe('a save that cannot reach the server', () => {
   })
 
   test('Add expense offline: the note and amount stay, and back online one expense is saved', async ({ browser }, info) => {
-    test.fixme(true, 'selectors outdated by the ux/* merge (69f40fa): update RESILIENCE words in support/text-resilience.ts')
     const amt = 100000 + Math.floor(Math.random() * 800000) / 100
     const admin = await signedIn(browser, info, 'admin')
     const page = await open(admin, R.expense.path)
-    await page.getByRole('button', { name: R.expense.add, exact: true }).click()
     const d = page.getByRole('dialog', { name: R.expense.dialog })
     await d.getByRole('textbox', { name: R.expense.amount }).fill(String(amt))
     await admin.setOffline(true)
@@ -172,11 +169,9 @@ test.describe('a double press makes one record', () => {
   })
 
   test('Add expense: a double click on Save expense saves one expense', async ({ browser }, info) => {
-    test.fixme(true, 'selectors outdated by the ux/* merge (69f40fa): update RESILIENCE words in support/text-resilience.ts')
     const amt = 900000 + Math.floor(Math.random() * 800000) / 100
     const admin = await signedIn(browser, info, 'admin')
     const page = await open(admin, R.expense.path)
-    await page.getByRole('button', { name: R.expense.add, exact: true }).click()
     const d = page.getByRole('dialog', { name: R.expense.dialog })
     await d.getByRole('textbox', { name: R.expense.amount }).fill(String(amt))
     await d.getByRole('button', { name: R.expense.save }).dblclick()
@@ -231,7 +226,6 @@ test.describe('two people on the same record', () => {
   })
 
   test('both press Mark won on the same RFQ from pages opened at the same time: one order, not two', async ({ browser }, info) => {
-    test.fixme(true, 'BUG-CONC-1 (confirmed in CI run 39384071413; selectors outdated by the ux/* merge): convert_rfq_to_order is idempotent per dialog id only; two dialogs make two orders for one RFQ (supabase/migrations/0050_split_order_item.sql:44-56)')
     const seed = await quotedRfq({ items: [{ description: 'Ultrasonic level transmitter 10 m', qty: 2, price: 48500, supplierPrice: 39000 }] })
     const a = await signedIn(browser, info, 'sales')
     const b = await signedIn(browser, info, 'admin')
@@ -243,17 +237,17 @@ test.describe('two people on the same record', () => {
     }
     await pa.getByRole('dialog').getByRole('button', { name: R.rfq.createOrder }).click()
     await expect(pa).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
+    const first = pa.url().split('/orders/')[1]
     await pb.getByRole('dialog').getByRole('button', { name: R.rfq.createOrder }).click()
-    await pb.waitForTimeout(2500)
+    // BUG-CONC-1 (fixed in 0077): the second person is taken to the order the first one made, not shown an error.
+    await expect(pb).toHaveURL(new RegExp(`/orders/${first}$`))
     const orders = await db.rows<{ id: string }>(`orders?rfq_id=eq.${seed.rfq.id}&select=id`)
-    // SUSPECTED BUG: convert_rfq_to_order is idempotent per dialog (its order id), not per RFQ, so a second dialog makes a second order.
-    expect(orders, 'one RFQ is won once').toHaveLength(1)
+    expect(orders.map(o => o.id), 'one RFQ is won once').toEqual([first])
     await a.close()
     await b.close()
   })
 
   test('two people chase the same supplier from stale pages: both chases count and the last one names its sender', async ({ browser }, info) => {
-    test.fixme(true, 'selectors outdated by the ux/* merge (69f40fa): update RESILIENCE words in support/text-resilience.ts')
     const r = await rfq({ items: [{ description: 'Coriolis meter DN25', qty: 1 }] })
     const sup = await supplier('Verify Chase Supplier', 'China')
     const inq = await quote(r.rfq.id, sup, [], 'CNY', 6)
@@ -304,7 +298,6 @@ test.describe('Undo restores the record exactly', () => {
   })
 
   test('a supplier chase: Undo puts the count and the date back; the chaser becomes unknown, as documented', async ({ browser }, info) => {
-  test.fixme(true, 'selectors outdated by the ux/* merge (69f40fa); passed or confirmed before it: update the words in support/text-*.ts')
     const r = await rfq({ items: [{ description: 'Magnetic level gauge 1.2 m', qty: 2 }] })
     const sup = await supplier('Verify Undo Chase Supplier', 'Pakistan')
     const inq = await quote(r.rfq.id, sup, [], 'PKR', 8)

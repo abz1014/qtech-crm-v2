@@ -63,7 +63,6 @@ async function reopenIfClosed(month: string): Promise<void> {
 }
 
 test('one month of books by hand: P&L, team, GST month, checklist and aging; then closed (frozen) and reopened (live)', async ({ browser }, info) => {
-  test.fixme(true, 'selectors outdated by the ux/* merge (69f40fa); passed or confirmed before it: update the words in support/text-*.ts')
   // Nothing else may sit before this month, or "close through" would close more than it.
   const earlier = await db.rows(`payments_in?received_on=lt.${M.start}&select=id`)
   expect(earlier, 'no payment is dated before the isolated month').toHaveLength(0)

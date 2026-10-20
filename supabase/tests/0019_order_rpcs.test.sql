@@ -213,9 +213,16 @@ select is((select count(*)::int from public.orders where id = 'a1000000-0000-400
   'refused conversions leave no order');
 
 -- One RFQ may produce several orders: a subset, with its own terms, PO number and date.
+-- 0077: one RFQ is won once. To test a further conversion of the same RFQ, its live orders are parked (detached) and put back.
+reset role;
+update public.orders set rfq_id = null, notes = 'parked-0077' where rfq_id = 'd0000000-0000-4000-8000-000000000001';
+set local role authenticated;
 select lives_ok($$select public.convert_rfq_to_order('a1000000-0000-4000-8000-000000000003', 'd0000000-0000-4000-8000-000000000001',
                     '[{"rfq_item_id":"d1000000-0000-4000-8000-000000000003","qty":4}]'::jsonb, ' PO-77 ', date '2027-01-05', 10, true)$$,
   'a second order from the same RFQ, for a subset of its items');
+reset role;
+update public.orders set rfq_id = 'd0000000-0000-4000-8000-000000000001', notes = null where notes = 'parked-0077';
+set local role authenticated;
 select ok((select customer_po_number = 'PO-77' and ordered_on = date '2027-01-05' and payment_terms_days = 10
                   and needs_commissioning
            from public.orders where id = 'a1000000-0000-4000-8000-000000000003'),

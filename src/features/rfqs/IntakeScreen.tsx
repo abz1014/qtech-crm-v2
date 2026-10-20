@@ -35,6 +35,7 @@ import { ItemRows, PastedPanel, PasteZone, type PastedBlock } from '@/features/r
 import { DraftOffer, EnquiryCard, FloatedPanel, Hint, SidePanels, StepLine, type Step } from '@/features/rfqs/IntakeParts'
 import { clearIntakeDraft, draftHasContent, draftSummary, loadIntakeDraft, saveIntakeDraft, type IntakeDraft } from '@/features/rfqs/lib/intakeDraftStore'
 import { useLeaveGuard } from '@/features/rfqs/useLeaveGuard'
+import { repeatedNote, skipRepeats } from '@/features/rfqs/lib/skipRepeats'
 import { useChannelPreference } from '@/lib/useChannelPreference'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { InfoTip } from '@/ui/InfoTip'
@@ -204,8 +205,12 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   }, [arrival, wanted.data])
 
   // ---- items
+  const itemsRef = useRef(items)
+  itemsRef.current = items
   const addItems = useCallback(
-    (parsed: { description: string; qty: number; unit: string | null }[], list: BrandRef[]) => {
+    (all: { description: string; qty: number; unit: string | null }[], list: BrandRef[]) => {
+      const { fresh: parsed, repeated } = skipRepeats(itemsRef.current, all)
+      if (repeated > 0) toast({ title: repeatedNote(repeated) })
       const rows = parsed.map<DraftItem>(p => ({
         key: newKey(),
         description: p.description,
@@ -215,7 +220,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
       }))
       setItems(prev => [...prev, ...rows])
     },
-    [],
+    [toast],
   )
   const brandsRef = useRef(brands)
   brandsRef.current = brands
