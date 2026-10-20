@@ -15,7 +15,8 @@ import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
 
 // Not listed: expenses, v_order_money and v_invoice_state. The shell's Today badge (useNavCounts) reads them on every page for admin and sales
 // (the Today money rules, M08), so they appear in any page's log; the Reports page itself asks for none of them.
-const MONEY_TARGETS = ['payments_in', 'v_cash_month', 'v_payment_net', 'v_month_pnl', 'order_costs', 'v_gst_']
+// v_gst_register is not listed either: the Money frame reads it for the "Invoices & GST" tab count, a register sales already use.
+const MONEY_TARGETS = ['payments_in', 'v_cash_month', 'v_payment_net', 'v_month_pnl', 'order_costs', 'v_gst_month']
 
 interface Seed {
   customer: { id: string; name: string }
