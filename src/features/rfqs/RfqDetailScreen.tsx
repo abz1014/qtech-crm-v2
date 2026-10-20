@@ -250,7 +250,7 @@ function Loaded({
           {`Showing the details saved on this device at ${timeOf(headerAt)}. Replies and questions did not load.`}
         </p>
       ) : null}
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="grid min-w-0 gap-6">
           {loadError ? (
             <DetailPanel title="Items and supplier replies">

@@ -220,7 +220,7 @@ test.describe('desktop frames at 1440', () => {
   test('nothing added, a file over the window, added and ready', async ({ page }) => {
     const s = await seed()
     await ready(page, s.rfq.id)
-    await page.getByRole('button', { name: /^(Capture|Paste or photo)$/ }).first().click()
+    await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
     const dlg = sheet(page)
     await expect(dlg.getByText('Text, photos and files from WhatsApp or anywhere else. Choose where they go.')).toBeVisible()
     await expect(dlg.getByText('Drop text, photos or files here')).toBeVisible()

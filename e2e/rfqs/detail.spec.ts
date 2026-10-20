@@ -738,10 +738,16 @@ test.describe('optional fields (migration 0039): bid time, company city, contact
 /** The page's own content never scrolls sideways. */
 async function noSidewaysScroll(page: Page) {
   const m = await page.evaluate(() => {
-    const main = document.querySelector('#main')
-    return { scroll: main?.scrollWidth ?? 0, client: main?.clientWidth ?? 0, right: main?.getBoundingClientRect().right ?? 0, view: window.innerWidth }
+    const main = document.querySelector('#main') as HTMLElement | null
+    const edge = main?.getBoundingClientRect().right ?? window.innerWidth
+    // The widest offenders, named in a miss, so the fix is one look away.
+    const wide = Array.from(main?.querySelectorAll<HTMLElement>('*') ?? [])
+      .filter(e => e.getBoundingClientRect().right > edge + 1 && e.getClientRects().length > 0)
+      .map(e => `${e.tagName.toLowerCase()}.${String(e.className).slice(0, 90)} [${Math.round(e.getBoundingClientRect().width)}px]`)
+      .slice(0, 6)
+    return { scroll: main?.scrollWidth ?? 0, client: main?.clientWidth ?? 0, right: main?.getBoundingClientRect().right ?? 0, view: window.innerWidth, wide }
   })
-  expect(m.scroll, 'the content scrolls sideways').toBeLessThanOrEqual(m.client + 1)
+  expect(m.scroll, `the content scrolls sideways: ${m.wide.join(' | ')}`).toBeLessThanOrEqual(m.client + 1)
   expect(m.right, 'the content is wider than the window').toBeLessThanOrEqual(m.view + 1)
 }
 
@@ -749,9 +755,11 @@ test.describe('the phone layout (C-100 to C-105; UX audit: one bar)', () => {
   test('ONE bar with back and the number, no bottom tabs, and a sticky action bar with the green action, Chase and More', async ({ page }) => {
     const s = await seed()
     await page.setViewportSize({ width: 375, height: 812 })
-    // Opened from the board: back returns there (history), not to a fixed place.
+    // Opened from the board, inside the app: back returns there (history), not to a fixed place.
     await openAs(page, 'sales', '/rfqs?owner=all')
-    await page.goto(`/rfqs/${s.rfq.id}`)
+    await page.getByRole('textbox', { name: 'Filter RFQs' }).fill(s.customer)
+    await page.getByRole('link', { name: s.customer }).first().click()
+    await expect(page).toHaveURL(new RegExp(`/rfqs/${s.rfq.id}$`))
     const bar = page.locator('header[data-mobile-bar="detail"]')
     await expect(bar).toBeVisible()
     await expect(bar).toContainText(`RFQ-${String(s.rfq.number).padStart(4, '0')}`)
@@ -802,9 +810,13 @@ test.describe('the phone layout (C-100 to C-105; UX audit: one bar)', () => {
       { inquiry_id: s.usd.inquiryId, rfq_item_id: s.items[0].id, unit_price: 100, currency: 'USD', lead_time: '8 to 10 weeks from PO', in_stock: true },
       { inquiry_id: s.germany.inquiryId, rfq_item_id: s.items[0].id, unit_price: 90, currency: 'EUR', lead_time: null, in_stock: false },
     ] }))
+    await page.setViewportSize({ width: 320, height: 740 })
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     for (const width of [320, 375]) {
-      await page.setViewportSize({ width, height: 740 })
-      await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+      if (width !== 320) {
+        await page.setViewportSize({ width, height: 740 })
+        await page.reload()
+      }
       await expect(page.getByRole('article', { name: 'Item 1' })).toBeVisible()
       await expect(page.locator('[data-action-bar]').getByRole('button', { name: 'Issue quotation', exact: true })).toHaveClass(/bg-primary/)
       await noSidewaysScroll(page)
@@ -825,8 +837,9 @@ test.describe('the side column at 1366 (UX audit: never longer than the page bes
     ] }))
     const ago = new Date(Date.now() - 4 * 86_400_000).toISOString()
     await must(rest('admin', 'clarifications', { method: 'POST', body: [
+      // A bulk insert needs the same keys on every row.
       { rfq_id: s.rfq.id, question: 'Is the line size DN50 or DN80?', first_asked_at: ago, last_asked_at: ago, ask_count: 1 },
-      { rfq_id: s.rfq.id, question: 'Which output, HART or 4 to 20 mA?' },
+      { rfq_id: s.rfq.id, question: 'Which output, HART or 4 to 20 mA?', first_asked_at: null, last_asked_at: null, ask_count: 0 },
     ], prefer: 'return=minimal' }))
     await page.setViewportSize({ width: 1366, height: 768 })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)

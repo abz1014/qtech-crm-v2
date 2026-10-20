@@ -239,7 +239,7 @@ test.describe('desktop: paste and drop anywhere', () => {
   test('a file over 5 MB is named and refused, and the rest can still be saved', async ({ page }) => {
     const s = await seed()
     await ready(page, s.rfq.id)
-    await page.getByRole('button', { name: /^(Capture|Paste or photo)$/ }).first().click()
+    await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
     await sheet(page).locator('input[aria-label="Choose files"]:visible').setInputFiles([
       { name: 'datasheet-scan.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(5 * 1024 * 1024 + 2048) },
       { name: 'nameplate.png', mimeType: 'image/png', buffer: PNG },
@@ -260,7 +260,7 @@ test.describe('iPhone: Capture button, paste, photo pick', () => {
     const s = await seed()
     await ready(page, s.rfq.id)
     let taps = 0
-    await page.getByRole('button', { name: /^(Capture|Paste or photo)$/ }).first().click()
+    await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
     taps++
     await expect(sheet(page)).toBeVisible()
     await expect(sheet(page).getByRole('button', { name: 'Add something first' })).toBeDisabled()
@@ -281,7 +281,7 @@ test.describe('iPhone: Capture button, paste, photo pick', () => {
     const s = await seed()
     await ready(page, s.rfq.id)
     let taps = 2 // Copy in WhatsApp (press and hold, then Copy), open Q-Tech CRM from the home screen
-    await page.getByRole('button', { name: /^(Capture|Paste or photo)$/ }).first().click()
+    await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
     taps++
     await expect(sheet(page)).toBeVisible()
     await page.waitForTimeout(450)
@@ -381,7 +381,7 @@ for (const [name, size] of [
       const s = await seed()
       await ready(page, s.rfq.id)
       expect(await axeViolations(page)).toEqual([])
-      await page.getByRole('button', { name: /^(Capture|Paste or photo)$/ }).first().click()
+      await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
       await expect(sheet(page)).toBeVisible()
       await page.waitForTimeout(400)
       expect(await axeViolations(page)).toEqual([])

@@ -571,8 +571,9 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-4 pb-12 pt-6 md:px-8">
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_288px]">
-        <div className="grid min-w-0 content-start gap-6">
+      {/* minmax(0,1fr) tracks: a long item name or supplier never widens the page past a phone screen (it truncates or wraps). */}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_288px]">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
           <header className="grid gap-1">
             <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-fg-muted">
               <Link to="/rfqs" className="hover:text-fg">RFQs</Link>

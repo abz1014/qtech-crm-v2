@@ -284,9 +284,17 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     await expect(page.getByText('2 items found').first()).toBeVisible()
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     await expect(page.getByRole('list', { name: 'Step 2 of 4' })).toBeVisible()
-    const m = await page.evaluate(() => ({ scroll: document.querySelector('#main')?.scrollWidth ?? 0, client: document.querySelector('#main')?.clientWidth ?? 0 }))
-    expect(m.scroll).toBeLessThanOrEqual(m.client + 1)
     await review(page, 'intake-steps-320')
+    // Nothing reaches past the right edge; a miss names the widest offenders, so the fix is one look away.
+    const m = await page.evaluate(() => {
+      const main = document.querySelector('#main') as HTMLElement
+      const edge = main.getBoundingClientRect().right
+      const wide = Array.from(main.querySelectorAll<HTMLElement>('*'))
+        .filter(e => e.getBoundingClientRect().right > edge + 1 && e.getClientRects().length > 0)
+        .map(e => `${e.tagName.toLowerCase()}.${String(e.className).slice(0, 90)} [${Math.round(e.getBoundingClientRect().width)}px] "${(e.textContent ?? '').trim().slice(0, 40)}"`)
+      return { scroll: main.scrollWidth, client: main.clientWidth, wide: wide.slice(0, 6) }
+    })
+    expect(m.scroll, `too wide at 320: ${m.wide.join(' | ')}`).toBeLessThanOrEqual(m.client + 1)
   })
 })
 
