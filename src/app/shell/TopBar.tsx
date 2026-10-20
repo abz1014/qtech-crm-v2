@@ -73,45 +73,55 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
         ))}
       </nav>
 
-      <button
-        type="button"
-        onClick={onSearch}
-        aria-label="Search or jump to"
-        aria-keyshortcuts={hint === '⌘K' ? 'Meta+K' : 'Control+K'}
-        className={cn(
-          'ml-auto flex h-control shrink-0 items-center gap-2 rounded border border-line-strong bg-sunken text-left text-sm text-fg-muted',
-          'transition-colors duration-fast ease-out hover:border-line-input',
-          'w-control justify-center lg:w-[150px] lg:justify-start lg:pl-3 lg:pr-2 xl:w-[220px] 2xl:w-[280px]',
-        )}
-      >
-        <Icon icon={Search} />
-        <span aria-hidden="true" className="flex-1 truncate max-lg:hidden xl:hidden">
-          Search
-        </span>
-        <span aria-hidden="true" className="flex-1 truncate max-xl:hidden">
-          Search or jump to
-        </span>
-        <Kbd aria-hidden className="max-2xl:hidden">{hint}</Kbd>
-      </button>
-
-      {onCapture ? (
+      {/* The key hints sit beside the buttons, drawn over their right end, not inside them: text inside a button must be part of its
+          name (axe label-content-name-mismatch at 2xl, where the hints show); the name stays the action, the key is aria-keyshortcuts. */}
+      <div className="relative ml-auto shrink-0">
         <button
           type="button"
-          onClick={onCapture}
-          aria-label={CAPTURE_LABEL}
-          aria-keyshortcuts="C"
+          onClick={onSearch}
+          aria-label="Search or jump to"
+          aria-keyshortcuts={hint === '⌘K' ? 'Meta+K' : 'Control+K'}
           className={cn(
-            'flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground',
-            'transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover active:bg-primary-active',
-            'max-lg:w-control max-lg:justify-center max-lg:px-0',
+            'flex h-control items-center gap-2 rounded border border-line-strong bg-sunken text-left text-sm text-fg-muted',
+            'transition-colors duration-fast ease-out hover:border-line-input',
+            'w-control justify-center lg:w-[150px] lg:justify-start lg:pl-3 lg:pr-2 xl:w-[220px] 2xl:w-[280px] 2xl:pr-16',
           )}
         >
-          <Icon icon={Import} />
-          <span aria-hidden="true" className="max-lg:hidden">
-            {CAPTURE_LABEL}
+          <Icon icon={Search} />
+          <span aria-hidden="true" className="flex-1 truncate max-lg:hidden xl:hidden">
+            Search
           </span>
-          <Kbd aria-hidden className="border-primary-foreground/40 bg-transparent text-primary-foreground max-2xl:hidden">C</Kbd>
+          <span aria-hidden="true" className="flex-1 truncate max-xl:hidden">
+            Search or jump to
+          </span>
         </button>
+        <Kbd aria-hidden className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 max-2xl:hidden">
+          {hint}
+        </Kbd>
+      </div>
+
+      {onCapture ? (
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={onCapture}
+            aria-label={CAPTURE_LABEL}
+            aria-keyshortcuts="C"
+            className={cn(
+              'flex h-control items-center gap-2 whitespace-nowrap rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground 2xl:pr-11',
+              'transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover active:bg-primary-active',
+              'max-lg:w-control max-lg:justify-center max-lg:px-0',
+            )}
+          >
+            <Icon icon={Import} />
+            <span aria-hidden="true" className="max-lg:hidden">
+              {CAPTURE_LABEL}
+            </span>
+          </button>
+          <Kbd aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 border-primary-foreground/40 bg-transparent text-primary-foreground max-2xl:hidden">
+            C
+          </Kbd>
+        </div>
       ) : null}
 
       <div className="flex shrink-0 items-center gap-3">
