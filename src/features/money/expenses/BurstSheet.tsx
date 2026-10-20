@@ -17,8 +17,16 @@ import { useToast } from '@/ui/useToast'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
-import { CategoryPicker } from '@/features/money/expenses/CategoryPicker'
-import { useCategories, useInsertExpenses, useMostUsedCategory, useOrderOptions, useUploadReceipt } from '@/features/money/expenses/hooks'
+import { CategoryPicker, type CreateCategoryResult } from '@/features/money/expenses/CategoryPicker'
+import {
+  useCategories,
+  useInlineCategoryCreate,
+  useInsertExpenses,
+  useMostUsedCategory,
+  useOrderOptions,
+  useRecentDetails,
+  useUploadReceipt,
+} from '@/features/money/expenses/hooks'
 import { InputTax } from '@/features/money/expenses/InputTax'
 import { OrderTagPicker } from '@/features/money/expenses/OrderTagPicker'
 import {
@@ -26,6 +34,7 @@ import {
   burstInserts,
   burstTotals,
   clearRowErrors,
+  detailSuggestions,
   effectivePaidVia,
   invalidRows,
   isFilled,
@@ -34,6 +43,7 @@ import {
   showsInputTax,
   type BurstRow,
   type Category,
+  type DetailUse,
   type OrderTagOption,
   type PaidVia,
 } from '@/features/money/expenses/model'
@@ -50,7 +60,13 @@ import {
  * The Order cell (audit X1) is optional: a supplier payment typed here with no order is never counted against that order's margin,
  * so it is one Tab away after the note. Empty is fine; a number or a customer name narrows the list and Tab takes the first match.
  * Below 1024 px the grid becomes a list of cards with a 44 px camera button (the photo is compressed before upload).
+ *
+ * Owner request 2026-10-20 (every little expense, fast): a category that does not exist yet is created from the category box
+ * ("Create "Office water"", cash or bank); the Detail cell (was Note) suggests what was typed before ("LEA-1234"); on a phone
+ * Enter in the amount goes to the category and the paid-via chip flips Cash and Bank in one tap. "Office water, Rs 500, cash"
+ * with a new category: Add expenses, type 500, Enter, type the name, tap Create, tap Save: three taps.
  */
+const NO_DETAILS: readonly DetailUse[] = []
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif']
 const GRID = 'grid grid-cols-[28px_128px_minmax(0,1.25fr)_148px_164px_minmax(0,1.4fr)_132px_112px_32px] items-start gap-2 px-6'
 
@@ -82,6 +98,9 @@ function BurstContent({ onClose }: { onClose: () => void }) {
   const orderQ = useOrderOptions(true)
   const orders: readonly OrderTagOption[] = orderQ.data ?? NO_ORDERS
   const uploadReceipt = useUploadReceipt()
+  const createCategory = useInlineCategoryCreate(categories)
+  const detailQ = useRecentDetails(true)
+  const details = detailQ.data ?? NO_DETAILS
 
   const defaults = useMemo(() => {
     const first = categories?.filter(c => c.active).sort((a, b) => a.sort - b.sort)[0]
@@ -358,6 +377,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                     onKey={e => rowKey(e, r)}
                     onRemove={rows.length > 1 ? () => removeRow(r.id) : undefined}
                     count={rows.length}
+                    onCreate={createCategory}
+                    details={details}
                   />
                 ))}
                 <button
@@ -377,7 +398,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                   <span>Category</span>
                   <span>Date</span>
                   <span>Paid via</span>
-                  <span>Note</span>
+                  <span>Detail</span>
                   <span>Order</span>
                   <span>Receipt photo</span>
                   <span />
@@ -394,6 +415,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                     onKey={e => rowKey(e, r)}
                     onRemove={rows.length > 1 ? () => removeRow(r.id) : undefined}
                     count={rows.length}
+                    onCreate={createCategory}
+                    details={details}
                     dateFlushers={dateFlushers}
                   />
                 ))}
@@ -471,11 +494,27 @@ interface RowProps {
   count: number
   /** Desktop only: where the row's date cell registers what it holds before the rows do. */
   dateFlushers?: React.MutableRefObject<Map<string, () => string | null>>
+  /** Creates a category typed into the category box. */
+  onCreate: (name: string, paidVia: PaidVia) => Promise<CreateCategoryResult>
+  /** Details typed before, for the Detail field's suggestions. */
+  details: readonly DetailUse[]
+}
+
+/** The suggestions under a Detail field: a native list, so it works the same with a keyboard and on a phone. */
+function DetailOptions({ id, details, categoryId }: { id: string; details: readonly DetailUse[]; categoryId: string }) {
+  const options = useMemo(() => detailSuggestions(details, categoryId), [details, categoryId])
+  return (
+    <datalist id={id}>
+      {options.map(d => (
+        <option key={d} value={d} />
+      ))}
+    </datalist>
+  )
 }
 
 const defaultEdge = 'border-dashed bg-surface text-fg-2'
 
-function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRemove, count, dateFlushers }: RowProps) {
+function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRemove, count, dateFlushers, onCreate, details }: RowProps) {
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const err = row.error
@@ -500,6 +539,7 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
         tag={row.categorySource === 'typed' ? undefined : row.categorySource === 'most-used' ? 'most used' : 'carried'}
         onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
         onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
+        onCreate={onCreate}
       />
       <CellDate
         index={index}
@@ -523,7 +563,18 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
           <span className="pointer-events-none absolute right-[28px] top-1/2 -translate-y-1/2 whitespace-nowrap text-xs leading-none text-fg-muted">from category</span>
         ) : null}
       </div>
-      <TextField aria-label={`Note, row ${index}`} value={row.note} onChange={e => onPatch({ note: e.target.value })} className="h-[36px]" />
+      <div className="min-w-0">
+        <TextField
+          aria-label={`Detail, row ${index}`}
+          placeholder="e.g. LEA-1234"
+          list={`detail-${row.id}`}
+          autoComplete="off"
+          value={row.note}
+          onChange={e => onPatch({ note: e.target.value })}
+          className="h-[36px]"
+        />
+        <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
+      </div>
       <OrderTagPicker
         orders={orders}
         value={row.orderId}
@@ -723,9 +774,10 @@ function PhotoThumb({ file, className }: { file: File; className?: string }) {
 
 // ====================================================================== phone card
 
-function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRemove }: RowProps) {
+function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRemove, onCreate, details }: RowProps) {
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
+  const categoryRef = useRef<HTMLInputElement | null>(null)
   const hasPhoto = !!row.photo && !row.photo.error
   const dateText = row.date === today ? `Today, ${formatDay(row.date)}` : row.date ? formatShortDate(row.date, today) : 'Choose a date'
   const err = row.error
@@ -745,6 +797,14 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
             aria-label={`Amount, expense ${index}`}
             value={row.amount}
             min={0.01}
+            enterKeyHint="next"
+            onKeyDown={e => {
+              // the keyboard's Next goes to the category (a phone adds a row with the button under the cards)
+              if (e.key !== 'Enter') return
+              e.preventDefault()
+              e.stopPropagation()
+              categoryRef.current?.focus()
+            }}
             onChange={v => onPatch({ amount: v })}
             className="num h-full flex-1 border-0 bg-transparent p-0 text-xl font-medium outline-none hover:border-0 focus-visible:border-0 focus-visible:outline-none"
           />
@@ -784,12 +844,15 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
         />
       </div>
       <CategoryPicker
+        ref={categoryRef}
         categories={categories}
         value={row.categoryId}
         aria-label={`Category, expense ${index}`}
         size="phone"
         tag={row.categorySource === 'typed' ? undefined : row.categorySource === 'most-used' ? 'most used' : 'carried'}
-        onChange={id => onPatch({ categoryId: id, categorySource: 'typed' })}
+        onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
+        onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
+        onCreate={onCreate}
       />
       <div className="flex flex-wrap gap-2">
         <label
@@ -809,19 +872,19 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
             className="absolute inset-0 size-full cursor-pointer opacity-0"
           />
         </label>
-        <label className={cn('relative inline-flex h-8 items-center gap-[6px] rounded-round border px-3 text-xs text-fg-2', row.paidVia === null ? 'border-dashed border-line-input' : 'border-line-input')}>
+        {/* two values only: one tap flips Cash and Bank (was a menu: two taps) */}
+        <button
+          type="button"
+          aria-label={`Paid via, expense ${index}: ${PAID_VIA_LABEL[paid]}. Tap for ${PAID_VIA_LABEL[paid === 'cash' ? 'bank' : 'cash']}`}
+          onClick={() => onPatch({ paidVia: (paid === 'cash' ? 'bank' : 'cash') as PaidVia })}
+          className={cn(
+            'inline-flex h-8 items-center gap-[6px] rounded-round border px-3 text-xs text-fg-2',
+            row.paidVia === null ? 'border-dashed border-line-input' : 'border-line-input',
+          )}
+        >
           <Icon icon={paid === 'cash' ? Wallet : Landmark} size="chip" className="text-fg-muted" />
           {PAID_VIA_LABEL[paid]}
-          <select
-            aria-label={`Paid via, expense ${index}`}
-            value={paid}
-            onChange={e => onPatch({ paidVia: e.target.value as PaidVia })}
-            className="absolute inset-0 size-full cursor-pointer opacity-0"
-          >
-            <option value="bank">Bank</option>
-            <option value="cash">Cash</option>
-          </select>
-        </label>
+        </button>
         {onRemove ? (
           <button type="button" aria-label={`Remove expense ${index}`} onClick={onRemove} className="ml-auto grid size-8 place-items-center rounded text-fg-muted">
             <Icon icon={Trash2} />
@@ -829,12 +892,15 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
         ) : null}
       </div>
       <input
-        aria-label={`Note, expense ${index}`}
-        placeholder="Add a note, optional"
+        aria-label={`Detail, expense ${index}`}
+        placeholder="Detail, optional: LEA-1234, office water"
+        list={`detail-${row.id}`}
+        autoComplete="off"
         value={row.note}
         onChange={e => onPatch({ note: e.target.value })}
         className="w-full rounded border-0 bg-transparent p-0 text-sm text-fg-2 placeholder:text-fg-muted focus-visible:outline-offset-4"
       />
+      <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
       <OrderTagPicker
         orders={orders}
         value={row.orderId}

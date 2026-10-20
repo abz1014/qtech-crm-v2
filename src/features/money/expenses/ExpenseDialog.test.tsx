@@ -113,7 +113,7 @@ describe('Add expense dialog (M03)', () => {
     const amount = await screen.findByRole('textbox', { name: 'Amount, PKR' })
     expect(amount).toHaveValue('1,111')
     expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('Rent')
-    expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('Office, November')
+    expect(screen.getByRole('combobox', { name: 'Detail' })).toHaveValue('Office, November')
     await user.clear(amount)
     await user.type(amount, '1500')
     await user.click(screen.getByRole('button', { name: 'Save expense' }))

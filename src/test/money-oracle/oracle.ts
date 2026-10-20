@@ -24,6 +24,12 @@
  *                   days before the date, manual first on a day) less paid (supplier payments' net cost); settled within 3%
  *   month close     a closed month's P&L is frozen at close; a later change to it is shown in the first open month after the
  *                   last closed one; over all months the results still add up to the live books
+ *   cash in vs out  (owner decision 2026-10-20) by Karachi month: in = every payment received, gross, voided ones left out;
+ *                   out = every expense paid, gross (input tax in), every category. A quarter is a calendar quarter.
+ *   profit invoiced (owner decision 2026-10-20) sales = invoice net by invoice date; an order's order-cost expenses count in the
+ *                   later of their paid month and the order's first invoice month, are held while it has none, and go in the
+ *                   later of paid and cancel month once a never-invoiced order is cancelled; untagged order costs and
+ *                   overheads count when paid (net of input tax); drawings and loan repayments are not costs
  */
 
 export type Paisa = bigint
@@ -205,6 +211,8 @@ export interface Payment {
   amount: Paisa
   /** Whose target it counts towards; null = unattributed (still company cash). */
   credited: string | null
+  /** Voided (0073): kept as history, left out of every figure. */
+  voided?: boolean
 }
 
 export type Group = 'overhead' | 'order_cost' | 'non_pnl'
@@ -408,7 +416,7 @@ export function monthPnlLive(month: string, books: Books): MonthPnl {
   let gstIn = 0n
   let unresolved = 0n
   for (const p of books.payments) {
-    if (monthOf(p.date) !== month) continue
+    if (monthOf(p.date) !== month || p.voided) continue
     const order = books.orders.find(o => o.id === p.orderId) as Order
     const s = splitPayment(p, order, basisOf(order, books.invoices))
     if (s.countsInCash) {
@@ -604,3 +612,70 @@ export class CloseLedger {
 }
 
 export const livePnlFields = (books: Books) => (month: string): PnlFields => pick(monthPnlLive(month, books))
+
+// ------------------------------------------------------------------------------------------------ cash in vs out, profit invoiced
+
+export interface CashMonth {
+  in: Paisa
+  payments: number
+  out: Paisa
+  expenses: number
+}
+
+/** The money trail of a month: gross, voided payments out, every expense category in. */
+export function cashMonth(month: string, books: Pick<Books, 'payments' | 'expenses'>): CashMonth {
+  const pays = books.payments.filter(p => !p.voided && monthOf(p.date) === month)
+  const ex = books.expenses.filter(e => monthOf(e.date) === month)
+  return { in: sumP(pays.map(p => p.amount)), payments: pays.length, out: sumP(ex.map(e => e.amount)), expenses: ex.length }
+}
+
+/** The month an expense counts in on the invoiced basis, or null (not a cost, or held for an order not yet invoiced). */
+export function costMonth(e: Expense, books: Pick<Books, 'orders' | 'invoices'>): string | null {
+  const paid = monthOf(e.date)
+  if (e.grp === 'non_pnl') return null
+  if (e.grp === 'overhead' || e.orderId === null) return paid
+  const dates = books.invoices.filter(i => i.orderId === e.orderId && i.date !== null).map(i => i.date as string).sort()
+  const later = (a: string, b: string) => (a > b ? a : b)
+  if (dates.length) return later(monthOf(dates[0]), paid)
+  const cancelled = books.orders.find(o => o.id === e.orderId)?.cancelledOn ?? null
+  return cancelled ? later(monthOf(cancelled), paid) : null
+}
+
+export interface ProfitMonth {
+  sales: Paisa
+  salesGst: Paisa
+  invoices: number
+  orderCosts: Paisa
+  overheads: Paisa
+  profit: Paisa
+  orderCostsPaid: Paisa
+  nonPnlPaid: Paisa
+  inputTaxPaid: Paisa
+}
+
+export function profitMonth(month: string, books: Books): ProfitMonth {
+  const inv = books.invoices.filter(i => i.date !== null && monthOf(i.date) === month)
+  const net = (e: Expense) => e.amount - e.inputTax
+  const counted = books.expenses.filter(e => costMonth(e, books) === month)
+  const paid = books.expenses.filter(e => monthOf(e.date) === month)
+  const sales = sumP(inv.map(i => i.net))
+  const orderCosts = sumP(counted.filter(e => e.grp === 'order_cost').map(net))
+  const overheads = sumP(counted.filter(e => e.grp === 'overhead').map(net))
+  return {
+    sales,
+    salesGst: sumP(inv.map(i => i.gst)),
+    invoices: inv.length,
+    orderCosts,
+    overheads,
+    profit: sales - orderCosts - overheads,
+    orderCostsPaid: sumP(paid.filter(e => e.grp === 'order_cost').map(net)),
+    nonPnlPaid: sumP(paid.filter(e => e.grp === 'non_pnl').map(net)),
+    inputTaxPaid: sumP(paid.map(e => e.inputTax)),
+  }
+}
+
+/** The calendar quarter's months: "2026-Q4" -> 2026-10, 2026-11, 2026-12. */
+export const quarterMonths = (key: string): string[] => {
+  const first = (Number(key.slice(6)) - 1) * 3 + 1
+  return [0, 1, 2].map(i => `${key.slice(0, 4)}-${String(first + i).padStart(2, '0')}`)
+}

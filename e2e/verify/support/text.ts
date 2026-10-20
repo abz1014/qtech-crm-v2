@@ -373,7 +373,7 @@ export const RESILIENCE = {
     add: 'Add expense',
     dialog: 'Add expense',
     amount: 'Amount, PKR',
-    note: 'Note',
+    note: 'Detail',
     save: 'Save expense',
   },
   signIn: {
