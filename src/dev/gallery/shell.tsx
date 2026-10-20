@@ -29,7 +29,7 @@ export function ShellScene() {
   const [params] = useSearchParams()
   const items = params.get('tabs') === '6' ? SIX : FIVE
   return (
-    <div data-shell-scene="" className="-m-6 grid min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas">
+    <div data-shell-scene="" className="-m-6 grid min-h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas">
       <TopBar user={USER} counts={COUNTS} items={items} onSearch={noop} onCapture={noop} />
       <MobileBar user={USER} title="Companies" onSearch={noop} onCapture={noop} />
       <div className="grid content-start gap-2 p-6">
