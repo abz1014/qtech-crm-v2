@@ -1,6 +1,19 @@
 import { clearCaptures, safely } from './store'
 import { clearRecents } from './recents'
 
+/** The key prefix of the command palette's recent items, one key per person (PALETTE_RECENT_PREFIX in CommandPalette.tsx). */
+export const PALETTE_RECENT_KEYS = 'qtech.palette.recent'
+
+/** Every person's palette recents on this device, and the old shared key (BUG-RV-04). */
+export function forgetPaletteRecents(): void {
+  try {
+    const keys = Object.keys(window.localStorage).filter(k => k === PALETTE_RECENT_KEYS || k.startsWith(`${PALETTE_RECENT_KEYS}.`))
+    for (const k of keys) window.localStorage.removeItem(k)
+  } catch {
+    /* storage blocked: nothing was kept */
+  }
+}
+
 /*
  * Security review L-5: on sign-out, this device forgets what the person captured (drafts in IndexedDB), which RFQs and
  * orders they opened (localStorage) and any half-typed New RFQ (localStorage, src/features/rfqs/lib/intakeDraftStore.ts), so
@@ -23,8 +36,22 @@ export function forgetIntakeDrafts(): void {
   }
 }
 
-export async function forgetDeviceCaptures(): Promise<void> {
+let wiping: Promise<void> | null = null
+
+/**
+ * Wipes what this device kept for the person. Sign-out paths overlap (the button, then Auth's SIGNED_OUT), so calls made
+ * while a wipe is running share it instead of starting another.
+ */
+export function forgetDeviceCaptures(opts: { keepShares?: boolean } = {}): Promise<void> {
+  if (wiping) return wiping
   clearRecents()
   forgetIntakeDrafts()
-  await safely(() => clearCaptures(), undefined)
+  forgetPaletteRecents()
+  // keepShares: the session ended without Sign out (BUG-RV-06). An item the phone's share sheet handed over is kept for
+  // whoever signs in next (the "Your shared item is safe" promise); typed or pasted drafts of the last person are not.
+  const keep = opts.keepShares ? (i: { source: string }) => i.source === 'share' : undefined
+  wiping = safely(() => clearCaptures(undefined, keep), undefined).finally(() => {
+    wiping = null
+  })
+  return wiping
 }

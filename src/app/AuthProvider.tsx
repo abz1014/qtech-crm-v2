@@ -94,12 +94,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = supabase.auth.onAuthStateChange((event, next) => {
       // Only set state here: calling Supabase from inside this callback can deadlock.
       setAuthSession(next)
-      if (event === 'SIGNED_OUT') {
+      // A session that ended without Sign out (refresh token expired or revoked, the stored token gone): Auth opens with
+      // no session and nothing kept, but the device still remembers the last person (BUG-RV-06). A refresh that failed for
+      // lack of signal keeps the stored session, so it is not counted here.
+      const endedUnseen = event === 'INITIAL_SESSION' && !next && !storedSessionUserId() && rememberedUserRaw() !== null
+      if (event === 'SIGNED_OUT' || endedUnseen) {
         // Sign-out, a refused refresh token or a deactivation: this device keeps nothing of theirs (owner rule).
         queryClient.clear()
         forgetRememberedUser()
         void forgetSavedQueries()
-        void forgetDeviceCaptures()
+        void forgetDeviceCaptures({ keepShares: endedUnseen })
       }
       if (event === 'SIGNED_IN') setDeactivated(false)
     })

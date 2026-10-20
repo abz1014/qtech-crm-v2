@@ -212,16 +212,16 @@ insert into money_cols (obj, col, rule, bug) values
   ('v_month_profit', 'non_pnl_paid', 'hidden', null), ('v_month_profit', 'input_tax_paid', 'hidden', null),
   ('order_costs', 'expected_cost_pkr', 'hidden', null),
   ('order_items', 'unit_price_net', 'm3', null), ('order_items', 'supplier_unit_price', 'supplier', null), ('order_items', 'gst_rate', 'info', null),
-  ('order_items', 'legacy_source', 'hidden', 'BUG-RV-01'),
-  ('orders', 'legacy_source', 'hidden', 'BUG-RV-01'),
+  ('order_items', 'legacy_source', 'hidden', null),
+  ('orders', 'legacy_source', 'hidden', null),
   ('payments_in', 'amount', 'hidden', null), ('payments_in', 'legacy_source', 'hidden', null),
   ('purchase_orders', 'total', 'supplier', null), ('purchase_orders', 'lines', 'supplier', null),
   ('quotations', 'net_total', 'm3', null), ('quotations', 'gst_total', 'm3', null), ('quotations', 'lines', 'm3', null),
   ('recurring_expenses', 'amount', 'hidden', null),
-  ('rfq_items', 'quoted_unit_price_net', 'm3', null), ('rfq_items', 'gst_rate', 'info', null), ('rfq_items', 'legacy_source', 'hidden', 'BUG-RV-01'),
-  ('rfqs', 'legacy_source', 'hidden', 'BUG-RV-01'),
+  ('rfq_items', 'quoted_unit_price_net', 'm3', null), ('rfq_items', 'gst_rate', 'info', null), ('rfq_items', 'legacy_source', 'hidden', null),
+  ('rfqs', 'legacy_source', 'hidden', null),
   ('supplier_inquiries', 'legacy_source', 'hidden', null),
-  ('supplier_orders', 'legacy_source', 'hidden', 'BUG-RV-01'),
+  ('supplier_orders', 'legacy_source', 'hidden', null),
   ('supplier_quote_lines', 'unit_price', 'supplier', null), ('supplier_quote_lines', 'fx_rate_pkr', 'info', null),
   ('supplier_quote_lines', 'legacy_source', 'supplier', null),
   ('targets', 'target_net_pkr', 'own', null),
@@ -338,11 +338,21 @@ select is((select coalesce(array_agg(x order by x), '{}') from (
 select is((select coalesce(array_agg(distinct m.obj order by m.obj), '{}') from money_cols m
            where m.rule <> 'info' and pg_temp.scalar_as(format('select count(*) from public.%I', m.obj), 'admin') in ('0', '<none>')),
           '{}'::text[], 'precondition: the admin sees rows in every table and view that holds money');
+-- 0078 (BUG-RV-01): the raw rows the fixtures wrote into legacy_source were moved to legacy_archive.legacy_rows by the
+-- database; the column keeps a marker. The money is still there (as the owner reads it), just not in a readable column.
 select is((select coalesce(array_agg(m.obj || '.' || m.col order by m.obj, m.col), '{}') from money_cols m
            where m.col = 'legacy_source' and m.obj not in ('companies', 'supplier_inquiries')
-             and pg_temp.scalar_as(format('select count(*) from public.%I t where exists (select 1 from pg_temp.money_keys(t.%I::jsonb))', m.obj, m.col), 'admin')
-                 in ('0', '<none>')),
-          '{}'::text[], 'precondition: the imported rows carry money in legacy_source (as the import writes them)');
+             and not exists (select 1 from legacy_archive.legacy_rows r
+                             where r.table_name = m.obj and exists (select 1 from pg_temp.money_keys(r.data)))),
+          '{}'::text[], 'precondition: the imported raw rows carry money (in legacy_archive.legacy_rows, 0078)');
+select is((select count(*)::int from public.orders where legacy_source is not null and not legacy_archive.is_marker(legacy_source))
+          + (select count(*)::int from public.order_items where legacy_source is not null and not legacy_archive.is_marker(legacy_source))
+          + (select count(*)::int from public.supplier_orders where legacy_source is not null and not legacy_archive.is_marker(legacy_source))
+          + (select count(*)::int from public.rfqs where legacy_source is not null and not legacy_archive.is_marker(legacy_source))
+          + (select count(*)::int from public.rfq_items where legacy_source is not null and not legacy_archive.is_marker(legacy_source)),
+          0, 'every legacy_source left in public is the money-free marker (0078)');
+select is(pg_temp.scalar_as('select count(*) from legacy_archive.legacy_rows', p), 'E:42501', format('%s cannot read legacy_archive.legacy_rows', p))
+from unnest(array['admin', 'sales', 'engineer', 'deactivated']) p;
 
 -- ------------------------------------------------------------------ hidden: the engineer gets nothing (real assertions)
 -- A numeric column: no row with a value. A JSON column: no row with a money-named key that has a value.
@@ -364,10 +374,9 @@ from money_cols m where m.rule = 'hidden' and m.bug is null order by m.obj, m.co
 -- role (s10), so an engineer reads costs and margins (order_value - cost_value) of all imported history. The company
 -- (supplier) page even downloads supplier_orders.legacy_source into every role's browser
 -- (src/features/companies/api.ts: supplier_orders select ... legacy_source).
-select todo_start('BUG-RV-01: legacy_source exposes legacy order value, cost and GST to engineers');
+-- BUG-RV-01 (fixed in 0078): the raw rows are in legacy_archive; legacy_source keeps a marker with no money.
 select is(pg_temp.engineer_sees(m.obj, m.col), '0', format('BUG-RV-01 engineer reads no money in %s.%s', m.obj, m.col))
-from money_cols m where m.rule = 'hidden' and m.bug = 'BUG-RV-01' order by m.obj, m.col;
-select todo_end();
+from money_cols m where m.col = 'legacy_source' order by m.obj, m.col;
 
 -- Accepted by the owner (not new bugs): the strict rule of the brief, run as todo so each run lists the exposure.
 select todo_start('M-3 (owner decision 2026-10-19): engineers may see selling prices; strict brief rule not applied');

@@ -38,9 +38,10 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
       startMonth: template?.startMonth ?? '',
       active: template?.active ?? true,
     } satisfies Partial<Values>,
-    onSubmit: v =>
+    onSubmit: (v, { requestId }) =>
       save.mutateAsync({
         id: template?.id,
+        newId: template ? undefined : requestId,
         label: v.label,
         categoryId: v.categoryId,
         amount: v.amount,

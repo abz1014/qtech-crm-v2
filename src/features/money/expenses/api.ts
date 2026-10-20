@@ -302,7 +302,10 @@ export async function recordedRecurring(period: string): Promise<string[]> {
 }
 
 export interface RecurringInput {
+  /** The template being edited. */
   id?: string
+  /** A new template: the client id it is inserted under, so a retry adds it once (BUG-RV-07 pattern). */
+  newId?: string
   label: string
   categoryId: string
   amount: number
@@ -323,8 +326,10 @@ export async function saveRecurring(input: RecurringInput): Promise<void> {
     start_month: input.startMonth,
     notes: input.notes,
   }
-  const res = input.id ? await db.from('recurring_expenses').update(row).eq('id', input.id) : await db.from('recurring_expenses').insert(row)
-  if (res.error) throw res.error
+  const res = input.id
+    ? await db.from('recurring_expenses').update(row).eq('id', input.id)
+    : await db.from('recurring_expenses').insert({ ...row, id: input.newId })
+  if (res.error && !(res.error.code === '23505' && !input.id && input.newId)) throw res.error
 }
 
 /**

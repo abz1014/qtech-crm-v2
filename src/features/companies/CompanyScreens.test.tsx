@@ -50,7 +50,7 @@ const sel = (c: FakeCall) => String(opArgs(c, 'select')?.[0] ?? '')
 function supplierDb(c: FakeCall): FakeResult {
   switch (c.target) {
     case 'companies':
-      return { data: { id: 's1', name: 'Alpenmark Controls', country: 'Austria', city: 'Linz', notes: null, created_at: '2024-02-01T00:00:00Z', legacy_flags: [], legacy_source: null } }
+      return { data: { id: 's1', name: 'Alpenmark Controls', country: 'Austria', city: 'Linz', notes: null, created_at: '2024-02-01T00:00:00Z', legacy_flags: [], imported: null } }
     case 'v_company_roles':
       return { data: { role: 'supplier', is_customer: false, is_supplier: true } }
     case 'v_supplier_stats':
@@ -67,13 +67,13 @@ function supplierDb(c: FakeCall): FakeResult {
         ? { data: [1, 2, 3].map(() => ({ legacy_flags: [], rfq_items: { brand_id: 'b1', family_id: null } })) }
         : {
             data: [
-              { id: 'x1', inquiry_id: 'q1', rfq_item_id: 't1', unit_price: 214, currency: 'EUR', lead_time: '2 to 3 weeks ex stock', fx_rate_pkr: 326.8, fx_rate_on: day(-29), created_at: `${day(-29)}T10:00:00Z`, legacy_flags: [], legacy_source: null },
+              { id: 'x1', inquiry_id: 'q1', rfq_item_id: 't1', unit_price: 214, currency: 'EUR', lead_time: '2 to 3 weeks ex stock', fx_rate_pkr: 326.8, fx_rate_on: day(-29), created_at: `${day(-29)}T10:00:00Z`, legacy_flags: [], imported: null },
             ],
           }
     case 'supplier_inquiries':
-      return { data: [{ id: 'q1', rfq_id: 'r1', sent_on: day(-30), last_chased_on: null, chase_count: 0, no_offer_on: null, no_offer_reason: null, legacy_source: null }] }
+      return { data: [{ id: 'q1', rfq_id: 'r1', sent_on: day(-30), last_chased_on: null, chase_count: 0, no_offer_on: null, no_offer_reason: null, imported: null }] }
     case 'supplier_orders':
-      return { data: [{ id: 'l1', placed_on: day(-25), expected_on: day(-15), received_on: day(-9), currency: 'EUR', legacy_source: null, orders: { number: 38, cancelled_on: null } }] }
+      return { data: [{ id: 'l1', placed_on: day(-25), expected_on: day(-15), received_on: day(-9), currency: 'EUR', imported: null, orders: { number: 38, cancelled_on: null } }] }
     case 'rfq_items':
       return { data: [{ id: 't1', rfq_id: 'r1', position: 1, description: 'Belimo NM24A-SR damper actuator', qty: 2, unit: 'pcs', brand_id: 'b1' }] }
     case 'rfqs':
@@ -96,7 +96,7 @@ function supplierDb(c: FakeCall): FakeResult {
 function customerDb(c: FakeCall): FakeResult {
   switch (c.target) {
     case 'companies':
-      return { data: { id: 'c1', name: 'Karachi Glassworks', country: 'Pakistan', city: 'Karachi', notes: null, created_at: '2023-05-01T00:00:00Z', legacy_flags: [], legacy_source: null } }
+      return { data: { id: 'c1', name: 'Karachi Glassworks', country: 'Pakistan', city: 'Karachi', notes: null, created_at: '2023-05-01T00:00:00Z', legacy_flags: [], imported: null } }
     case 'v_company_roles':
       return { data: { role: 'prospect', is_customer: true, is_supplier: false } }
     case 'company_sites':

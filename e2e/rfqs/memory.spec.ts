@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { axeViolations } from '../support/axe'
 import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { servicePost } from '../verify-roles/lib'
 
 /*
  * R17 and R18 end to end, against the local CI stack: supplier memory in intake (one-liner, Memory card), the "last price
@@ -60,7 +61,8 @@ async function pastRfq(supplierId: string, o: { description: string; brandId: st
   const customer = await createCompany(uniqueName('Earlier Customer'))
   const rfq = await createRfq(customer.id, { received_on: karachiDay(-o.sentAgo) })
   const item = await post('rfq_items', { rfq_id: rfq.id, description: o.description, brand_id: o.brandId })
-  const inq = await post('supplier_inquiries', {
+  // legacy_source is written by the import (service role) only (0078); an imported row is made the same way here.
+  const inq = await (o.legacy ? servicePost : post)('supplier_inquiries', {
     rfq_id: rfq.id,
     supplier_id: supplierId,
     sent_on: karachiDay(-o.sentAgo),
@@ -70,7 +72,7 @@ async function pastRfq(supplierId: string, o: { description: string; brandId: st
 }
 
 async function quote(h: History, o: { price: number; currency: string; lead?: string; ago: number; rate?: number | null; legacy?: boolean; flags?: string[] }): Promise<void> {
-  await post('supplier_quote_lines', {
+  await (o.legacy ? servicePost : post)('supplier_quote_lines', {
     inquiry_id: h.inquiryId,
     rfq_item_id: h.itemId,
     unit_price: o.price,

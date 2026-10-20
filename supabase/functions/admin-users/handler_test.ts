@@ -1,6 +1,6 @@
 import { assert, assertEquals, assertMatch, assertNotEquals } from '@std/assert'
 import { createHandler } from './handler.ts'
-import { bearerToken, generatePassword, parseOrigins, validEmail } from './lib.ts'
+import { bearerToken, devOriginsAllowed, generatePassword, parseOrigins, validEmail } from './lib.ts'
 import type { AuditRow, Profile, Role, Store } from './types.ts'
 
 const ADMIN = '00000000-0000-4000-8000-000000000001'
@@ -73,7 +73,7 @@ function fakeStore(profiles: Profile[]) {
 
 function setup(extra: Profile[] = []) {
   const f = fakeStore([profile(ADMIN, 'admin'), profile(SALES, 'sales'), profile(GONE, 'sales', true), ...extra])
-  const handler = createHandler({ store: f.store, allowedOrigins: parseOrigins(''), generatePassword: () => 'Generated-Pass-1234' })
+  const handler = createHandler({ store: f.store, allowedOrigins: parseOrigins('', true), generatePassword: () => 'Generated-Pass-1234' })
   return { ...f, handler }
 }
 
@@ -297,7 +297,12 @@ Deno.test('lib: password generator, origins, bearer, email', () => {
   assertMatch(a, /^[A-HJ-NP-Za-km-z2-9]+$/)
   assertNotEquals(a, generatePassword())
   assert(parseOrigins('https://crm.example, https://b.example').has('https://b.example'))
-  assert(parseOrigins(undefined).has('http://localhost:5173'))
+  assert(parseOrigins(undefined, true).has('http://localhost:5173'))
+  // BUG-RV-05: without the dev flag only the configured origins are allowed.
+  assertEquals([...parseOrigins('https://crm.example')], ['https://crm.example'])
+  assertEquals([...parseOrigins(undefined)], [])
+  assert(devOriginsAllowed('1') && devOriginsAllowed('true'))
+  assert(!devOriginsAllowed(undefined) && !devOriginsAllowed('') && !devOriginsAllowed('0'))
   assertEquals(bearerToken('Bearer abc'), 'abc')
   assertEquals(bearerToken('Basic abc'), null)
   assertEquals(bearerToken(null), null)
