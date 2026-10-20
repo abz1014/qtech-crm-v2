@@ -11,7 +11,7 @@ export function pct(part: number, whole: number): number | null {
   return whole > 0 ? Math.round((part / whole) * 100) : null
 }
 
-export const showPct = (v: number | null): string => (v === null ? 'n/a' : `${v}%`)
+export const showPct = (v: number | null): string => (v === null ? 'not enough data' : `${v}%`)
 
 // ------------------------------------------------------------------ RFQ outcomes
 export interface OutcomeRow {
@@ -68,13 +68,13 @@ export interface FloatRow {
   open: number
 }
 
-/** In the order the work flows. */
+/** In the order the work flows, in the owner's plain words (glossary 2026-10-19). */
 export const FLOAT_STATES = [
-  { key: 'not_floated', label: 'Not floated' },
-  { key: 'floated_awaiting', label: 'Floated, waiting for prices' },
+  { key: 'not_floated', label: 'Not sent to suppliers' },
+  { key: 'floated_awaiting', label: 'Waiting for prices' },
   { key: 'partly_covered', label: 'Some items priced' },
-  { key: 'covered', label: 'Every item priced' },
-  { key: 'no_offer_anywhere', label: 'No offer anywhere' },
+  { key: 'covered', label: 'All priced' },
+  { key: 'no_offer_anywhere', label: 'No price yet' },
 ] as const
 
 export interface FloatLine extends FloatRow {
@@ -167,7 +167,7 @@ export function monthLabel(iso: string): string {
 
 /** 1 day, 3.5 days, 0 days. */
 export function daysText(d: number | null): string {
-  if (d === null) return 'n/a'
+  if (d === null) return 'not enough data'
   return `${d} ${d === 1 ? 'day' : 'days'}`
 }
 

@@ -59,7 +59,7 @@ describe('Add expense dialog (M03)', () => {
     })
     await screen.findByRole('textbox', { name: 'Amount, PKR' })
     expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('Supplier payment')
-    expect(screen.getByText('Opened from a leg')).toBeInTheDocument()
+    expect(screen.getByText('Opened from a supplier order')).toBeInTheDocument()
     expect(screen.getByText(/Alpenmark Controls GmbH · leg A/)).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('384,497')
     expect(screen.getByText(/Still owed on leg A/)).toBeInTheDocument()

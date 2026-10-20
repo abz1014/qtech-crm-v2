@@ -129,7 +129,7 @@ async function categoriesById(ids: string[]): Promise<Record<string, { name: str
   return Object.fromEntries(rows.map(r => [r.id, { name: r.name, grp: r.grp as CategoryGroup }]))
 }
 
-/** "leg A", "leg B": the leg's place among its order's legs, as the Add expense dialog names them. */
+/** "supplier order A", "supplier order B": the leg's place among its order's legs, as the Add expense dialog names them. */
 export async function legLabels(legIds: string[]): Promise<Record<string, string>> {
   if (legIds.length === 0) return {}
   const db = requireSupabase()
@@ -141,7 +141,7 @@ export async function legLabels(legIds: string[]): Promise<Record<string, string
   for (const l of all) {
     const i = seen.get(l.order_id) ?? 0
     seen.set(l.order_id, i + 1)
-    out[l.id] = `leg ${String.fromCharCode(65 + i)}`
+    out[l.id] = `supplier order ${String.fromCharCode(65 + i)}`
   }
   return out
 }

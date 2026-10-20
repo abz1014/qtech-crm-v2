@@ -46,7 +46,7 @@ describe('Today screen', () => {
   it('lists an item with its title and reference', async () => {
     fake = install()
     renderAs('sales')
-    expect(await screen.findByText('Not floated to suppliers yet')).toBeInTheDocument()
+    expect(await screen.findByText('Not sent to suppliers yet')).toBeInTheDocument()
     expect(screen.getAllByText('RFQ-0184').length).toBeGreaterThan(0)
     expect(screen.getByRole('radio', { name: /Money/ })).toBeInTheDocument()
   })
@@ -67,7 +67,7 @@ describe('Today screen', () => {
   it('an engineer has no Money tab and never requests receivables, invoices or the month-end checks', async () => {
     fake = install()
     renderAs('engineer')
-    await screen.findByText('Not floated to suppliers yet')
+    await screen.findByText('Not sent to suppliers yet')
     expect(screen.queryByRole('radio', { name: /Money/ })).toBeNull()
     await waitFor(() => expect(fake?.calls.length).toBeGreaterThan(0))
     const targets = fake?.calls.map(c => c.target) ?? []
@@ -79,7 +79,7 @@ describe('Today screen', () => {
   it('admin and sales do request the receivables', async () => {
     fake = install()
     renderAs('admin')
-    await screen.findByText('Not floated to suppliers yet')
+    await screen.findByText('Not sent to suppliers yet')
     expect(fake?.calls.map(c => c.target)).toContain('rpc:order_receivables')
   })
 })

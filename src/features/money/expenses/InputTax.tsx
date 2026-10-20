@@ -45,7 +45,7 @@ export function InputTax({ amount, value, onChange, defaultOpen = false, label =
         </label>
         <NumberInput id={id} aria-label={`${label}, PKR`} value={value} onChange={onChange} min={0} aria-invalid={tooHigh || undefined} />
       </div>
-      <div className="grid gap-[2px] text-xs leading-4 text-fg-2">
+      <div className="grid gap-[2px] text-xs text-fg-2">
         <span>
           Paid, the bank debit <Money value={paid} prefix={false} className="text-fg" />
         </span>
