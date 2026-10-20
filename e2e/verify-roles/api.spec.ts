@@ -209,7 +209,6 @@ test('engineer: no GST receipt or expense receipt can be listed or downloaded', 
 })
 
 test('BUG-RV-01: the engineer reads no legacy order value or cost through the API', async () => {
-  test.fail(true, 'BUG-RV-01: orders/order_items/supplier_orders.legacy_source carry the old order_value and cost_value to engineers')
   const got: string[] = []
   for (const [t, filter] of [['orders', `id=eq.${world.legacyOrder.id}`], ['order_items', `order_id=eq.${world.legacyOrder.id}`], ['supplier_orders', `order_id=eq.${world.legacyOrder.id}`]] as const) {
     const r = await api('engineer', `/rest/v1/${t}?${filter}&select=id,legacy_source`)
@@ -227,14 +226,12 @@ test('legacy-only columns through the API: settled_before_cutover is refused', a
 })
 
 test('BUG-RV-02: app users cannot set legacy_source through the API', async () => {
-  test.fail(true, 'BUG-RV-02: legacy_source has no guard; any role that can write a row can set it')
   const r = await api('engineer', `/rest/v1/orders?id=eq.${world.order.id}`, { method: 'PATCH', body: { legacy_source: { forged: true } }, prefer: 'return=representation' })
   const landed = r.status < 300 && Array.isArray(r.body) && (r.body as { legacy_source: unknown }[])[0]?.legacy_source !== null
   expect(landed, `engineer PATCH orders.legacy_source: ${r.status}`).toBe(false)
 })
 
 test('BUG-RV-03: sales cannot create an invoice with no number and no date by adding a legacy flag', async () => {
-  test.fail(true, 'BUG-RV-03: legacy_flags on invoices is writable by sales and lifts the number and date rules')
   const r = await api('sales', '/rest/v1/invoices', {
     method: 'POST',
     body: { order_id: world.order.id, number: null, invoice_date: null, net_amount: 5, gst_amount: 0, legacy_flags: ['forged'] },

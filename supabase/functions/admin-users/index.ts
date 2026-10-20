@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { createHandler } from './handler.ts'
-import { parseOrigins } from './lib.ts'
+import { devOriginsAllowed, parseOrigins } from './lib.ts'
 import type { AuditRow, Profile, Store } from './types.ts'
 
 // Service-role client: server-side only. SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected by the platform.
@@ -81,4 +81,4 @@ const store: Store = {
   },
 }
 
-Deno.serve(createHandler({ store, allowedOrigins: parseOrigins(Deno.env.get('ALLOWED_ORIGINS')) }))
+Deno.serve(createHandler({ store, allowedOrigins: parseOrigins(Deno.env.get('ALLOWED_ORIGINS'), devOriginsAllowed(Deno.env.get('ALLOW_DEV_ORIGINS'))) }))

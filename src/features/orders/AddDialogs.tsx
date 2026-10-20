@@ -38,14 +38,19 @@ export function AddLineDialog({ order, items, legs, onClose }: { order: OrderHea
   const [legId, setLegId] = useState('')
   const [supplierPrice, setSupplierPrice] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // BUG-RV-07: one id per opening of the dialog (it mounts on open), and a lock so a double tap sends one request.
+  const id = useRef(crypto.randomUUID())
+  const sending = useRef(false)
   const ccy = legs.find(l => l.id === legId)?.currency ?? ''
   const ready = description.trim() !== '' && qty !== null && qty > 0 && price !== null && price >= 0 && gst !== null && gst >= 0 && gst <= 100
 
   const save = async () => {
-    if (!ready) return
+    if (!ready || sending.current) return
+    sending.current = true
     setError(null)
     try {
       await add.mutateAsync({
+        id: id.current,
         orderId: order.id,
         position: items.length,
         description: description.trim(),
@@ -61,6 +66,8 @@ export function AddLineDialog({ order, items, legs, onClose }: { order: OrderHea
       onClose()
     } catch (err) {
       setError(mapPgError(err, { entity: 'line' }).message)
+    } finally {
+      sending.current = false
     }
   }
 
@@ -135,6 +142,7 @@ export function AddLegDialog({ order, legs, onClose }: { order: OrderHeader; leg
   const add = useAddLeg(order.id)
   const choices = useSupplierChoices(true)
   const id = useRef(crypto.randomUUID())
+  const sending = useRef(false)
   const [supplierId, setSupplierId] = useState('')
   const [currency, setCurrency] = useState('PKR')
   const [touched, setTouched] = useState(false)
@@ -148,7 +156,8 @@ export function AddLegDialog({ order, legs, onClose }: { order: OrderHeader; leg
 
   const duplicate = used.has(`${supplierId}:${currency}`)
   const save = async () => {
-    if (!supplierId || duplicate) return
+    if (!supplierId || duplicate || sending.current) return
+    sending.current = true
     setError(null)
     try {
       await add.mutateAsync({ id: id.current, supplierId, currency })
@@ -156,6 +165,8 @@ export function AddLegDialog({ order, legs, onClose }: { order: OrderHeader; leg
       onClose()
     } catch (err) {
       setError(mapPgError(err, { entity: 'supplier order' }).message)
+    } finally {
+      sending.current = false
     }
   }
 

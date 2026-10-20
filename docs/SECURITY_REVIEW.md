@@ -271,6 +271,23 @@ The values are what this project needs; change any setting that differs.
       localhost).
 - [ ] **Rate Limits:** keep the defaults for sign-in and token refresh (the app sends no email).
 
+## Round 3: roles verification fixes (fix/security-roles, migration 0078, 2026-10-20)
+
+- **BUG-RV-01 (High).** `legacy_source` carried the old CRM row (order value, cost, GST, quoted price) on tables engineers
+  read. 0078 moves the raw row to `legacy_archive.legacy_rows` (not exposed by the API, no client role, owner only) by a
+  trigger on all 11 tables; the column keeps `{"imported": true, "table": ...}`. The company page reads only
+  `imported:legacy_source->imported`. Proof: pgTAP 0902 (engineer reads no money in any `legacy_source`; no role reads the
+  archive), 0903, import load test I01, e2e verify-roles (api + browser).
+- **BUG-RV-02.** `legacy_source`: insert or change by a signed-in person is refused (`guard_legacy_columns`, 0068 pattern).
+- **BUG-RV-03.** `legacy_flags`: insert with flags or change is admin only on all 11 tables (orders keeps 0065).
+- **BUG-RV-04.** Palette recents are stored per person (`qtech.palette.recent.<user id>`) and wiped on sign-out.
+- **BUG-RV-05.** admin-users allows localhost origins only with `ALLOW_DEV_ORIGINS=1` (set by
+  `supabase/functions/local.env` for local serve and CI only; never in production).
+- **BUG-RV-06.** A session that ends without Sign out (expired or revoked token) wipes the device data like Sign out
+  (capture and intake drafts, recents, persisted query cache); the wipe runs once.
+- **BUG-RV-07.** Add line (and the other Add dialogs) lock while sending and send a client id per opening; a retry is
+  idempotent.
+
 ## Reviewed and clean
 
 - 0038 FX job: all five functions are SECURITY DEFINER with an empty search_path and no client execute (S14);

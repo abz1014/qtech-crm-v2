@@ -156,7 +156,6 @@ test.describe('a double tap makes one record', () => {
   })
 
   test('BUG-RV-07: Add line on an order (sales): a double tap makes one line', async ({ page }) => {
-    test.fail(true, 'BUG-RV-07: AddLineDialog (src/features/orders/AddDialogs.tsx) has no ref lock and no stable id; a double tap inserts the line twice')
     const description = `${world.tag} double tap line`
     await openAs(page, 'sales', `/orders/${world.order.id}`)
     const toggle = page.getByRole('button', { name: 'Edit GST and lines' })
@@ -291,7 +290,6 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
 })
 
 test('BUG-RV-06: a session that ends without Sign out (expired or revoked token) does not hand the Capture draft to the next person', async ({ page }) => {
-  test.fail(true, 'BUG-RV-06: forgetDeviceCaptures() runs only on the Sign out button and on deactivation; a session that ends otherwise leaves the Capture draft (IndexedDB) and recents, and the next person gets the draft')
   const secret = `${world.tag} expired-session capture note`
   await openAs(page, 'admin', '/today')
   await pasteIntoCapture(page, secret)
@@ -313,7 +311,6 @@ test('BUG-RV-06: a session that ends without Sign out (expired or revoked token)
 })
 
 test('BUG-RV-04: the command palette\'s recent items are cleared on sign-out and are per person', async ({ page }) => {
-  test.fail(true, 'BUG-RV-04: qtech.palette.recent (labels and meta of opened items, e.g. an invoice number) survives sign-out and is shown to the next person')
   await openAs(page, 'admin', '/today')
   await page.keyboard.press('Control+k')
   const palette = page.getByRole('dialog', { name: 'Search or jump to' })
@@ -322,7 +319,8 @@ test('BUG-RV-04: the command palette\'s recent items are cleared on sign-out and
   await expect(page).toHaveURL(/\/money\/gst-register\?invoice=/)
   await page.keyboard.press('Escape')
   await signOut(page)
-  const after = await page.evaluate(() => localStorage.getItem('qtech.palette.recent'))
+  // Recents are kept per person (qtech.palette.recent.<user id>); sign-out removes every one, and the old shared key.
+  const after = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.palette.recent')).join(',') || null)
   test.info().annotations.push({ type: 'qtech.palette.recent after sign-out', description: String(after) })
   await signIn(page, STAFF_EMAIL.engineer)
   await page.keyboard.press('Control+k')
@@ -342,7 +340,6 @@ test('New RFQ drafts (post-merge) are kept per person and cleared on sign-out', 
   }, `${world.tag} enquiry\n2 x Rosemount 3051 pressure transmitter\n1 x Yokogawa EJA110E`)
   await page.waitForTimeout(1500)
   const keys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.rfqs.intakeDraft.')))
-  test.skip(keys.length === 0, 'the New RFQ draft (ux/rfqs) is not merged in this build')
   expect(keys, 'one draft, keyed by the person').toEqual([`qtech.rfqs.intakeDraft.${IDS.sales}`])
   await page.goto('/today')
   await signOut(page)

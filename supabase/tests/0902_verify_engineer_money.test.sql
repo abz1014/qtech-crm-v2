@@ -204,7 +204,7 @@ insert into money_cols (obj, col, rule, bug) values
   ('month_snapshots', 'pnl', 'hidden', null), ('month_snapshots', 'adjust', 'hidden', null), ('month_snapshots', 'status', 'hidden', null),
   ('month_snapshots', 'categories', 'hidden', null), ('month_snapshots', 'team', 'hidden', null), ('month_snapshots', 'payments', 'hidden', null),
   ('month_snapshots', 'via', 'hidden', null), ('month_snapshots', 'aging', 'hidden', null), ('month_snapshots', 'payables', 'hidden', null),
-  ('month_snapshots', 'gst', 'hidden', null),
+  ('month_snapshots', 'gst', 'hidden', null), ('month_snapshots', 'details', 'hidden', null),
   ('order_costs', 'expected_cost_pkr', 'hidden', null),
   ('order_items', 'unit_price_net', 'm3', null), ('order_items', 'supplier_unit_price', 'supplier', null), ('order_items', 'gst_rate', 'info', null),
   ('order_items', 'legacy_source', 'hidden', null),

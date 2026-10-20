@@ -60,7 +60,7 @@ function isTypingContext(e: KeyboardEvent): boolean {
  * own sources with usePaletteSource(): R12 registers search (companies, contacts,
  * RFQ numbers), screens register their actions ("New RFQ") while they are mounted.
  */
-export function PaletteHost({ role, children }: { role: string; children: ReactNode }) {
+export function PaletteHost({ role, personId, children }: { role: string; personId?: string; children: ReactNode }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [extra, setExtra] = useState<PaletteSource[]>([])
@@ -136,6 +136,7 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
         open={open}
         onOpenChange={setOpen}
         sources={sources}
+        personId={personId}
         onNavigate={(href, { newTab }) => (newTab ? window.open(href, '_blank', 'noopener') : navigate(href))}
         emptyHint={<>Search covers RFQs, orders, companies and items. Try one word, or press <Kbd>N</Kbd> to start an RFQ.</>}
       />

@@ -35,24 +35,29 @@ interface Recent {
   at: number
 }
 
-const RECENT_KEY = 'qtech.palette.recent'
+/**
+ * Recents are kept per person (BUG-RV-04): `qtech.palette.recent.<user id>`. The old shared key is never read, and sign-out
+ * removes every one (forgetPaletteRecents in src/lib/capture/forget.ts). With no person, nothing is remembered.
+ */
+const RECENT_PREFIX = 'qtech.palette.recent.'
 const RECENT_MAX = 5
 
-function loadRecents(): Recent[] {
+function loadRecents(personId: string | undefined): Recent[] {
+  if (!personId) return []
   try {
-    const raw = window.localStorage.getItem(RECENT_KEY)
+    const raw = window.localStorage.getItem(RECENT_PREFIX + personId)
     const list = raw ? (JSON.parse(raw) as Recent[]) : []
     return Array.isArray(list) ? list.filter(r => r && typeof r.href === 'string').slice(0, RECENT_MAX) : []
   } catch {
     return []
   }
 }
-function saveRecent(item: PaletteItem) {
-  if (!item.href) return
+function saveRecent(personId: string | undefined, item: PaletteItem) {
+  if (!item.href || !personId) return
   try {
     const next: Recent = { id: item.id, label: item.label, meta: item.meta, href: item.href, at: Date.now() }
-    const list = [next, ...loadRecents().filter(r => r.href !== item.href)].slice(0, RECENT_MAX)
-    window.localStorage.setItem(RECENT_KEY, JSON.stringify(list))
+    const list = [next, ...loadRecents(personId).filter(r => r.href !== item.href)].slice(0, RECENT_MAX)
+    window.localStorage.setItem(RECENT_PREFIX + personId, JSON.stringify(list))
   } catch {
     // storage blocked: recents are a convenience only
   }
@@ -89,9 +94,11 @@ interface CommandPaletteProps {
   onNavigate: (href: string, opts: { newTab: boolean }) => void
   /** What the search covers, shown when nothing matched. */
   emptyHint?: ReactNode
+  /** The signed-in person: Recent is kept for them alone. Without one, nothing is remembered. */
+  personId?: string
 }
 
-export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyHint }: CommandPaletteProps) {
+export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyHint, personId }: CommandPaletteProps) {
   const [query, setQuery] = useState('')
   const [groups, setGroups] = useState<Group[]>([])
   const [searching, setSearching] = useState(false)
@@ -136,7 +143,7 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
       setGroups([...(q ? [] : recentGroup()), ...merged])
     }
     const recentGroup = (): Group[] => {
-      const r = loadRecents()
+      const r = loadRecents(personId)
       return r.length
         ? [{ key: 'recent', heading: 'Recent', items: r.map(x => ({ id: x.id, label: x.label, meta: ago(x.at), href: x.href, icon: recentIcon(x.href) })) }]
         : []
@@ -182,14 +189,14 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
       ctl.abort()
       window.clearTimeout(timer)
     }
-  }, [open, query, ordered])
+  }, [open, query, ordered, personId])
 
   const close = useCallback(() => {
     onOpenChange(false)
   }, [onOpenChange])
 
   const run = (item: PaletteItem, newTab: boolean) => {
-    saveRecent(item)
+    saveRecent(personId, item)
     close()
     if (item.onSelect) item.onSelect({ newTab })
     else if (item.href) onNavigate(item.href, { newTab })
