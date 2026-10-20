@@ -69,3 +69,14 @@ Round 2 starts after these round-1 branches merge: ux/foundation, ux/rfqs, ux/or
 - [ ] Sentences on screen ≤ 20 words (ExceptionsPage.tsx:60, IntakeScreen.tsx:715 and 8 more).
 - [ ] Message templates: one greeting spelling, "Dear Sir or Madam", "(our ref X)".
 - [ ] Merge note: take ux/money-today's SALES.md; ADMIN/ENGINEER guides are refreshed in the final docs pass.
+
+## Speed (round2/performance.md): 4/10 on a mid-range Android over 4G
+In progress: perf/db (RLS policy wrap, >1,000-row correctness, matching prefilter, audit growth, month-end exempt bug), perf/client (non-blocking saves, bundle, logos, honest CI budget), ux/phone-platform (persisted cache, offline, preconnect, loading screen).
+Round 2 after the merges:
+- [ ] Take the Today load out of the shell. Nav counts get a light count RPC, not about 25 requests on every screen (useNavCounts).
+- [ ] Flatten the order page's waterfall (legs don't wait for items); month end fetches its snapshot once (not 6 times); the RFQ page batches supplier-memory RPCs per item.
+- [ ] Issue quotation/PO in the background (PDF render off the critical path).
+- [ ] Switch client .in() id lists to the server-side RPCs from perf/db (call sites listed in its report).
+- [ ] Cap the history-growing reads (Today, RFQ value column, company counts, Orders list) with server-side limits and ordering.
+- [ ] order.update must refresh the Margin panel (invalidation map).
+- [ ] Target: Lighthouse mobile ≥95 on /login and on the main screens; under 1 second to a usable screen on repeat opens.
