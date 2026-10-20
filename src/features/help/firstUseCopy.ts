@@ -23,7 +23,8 @@ export interface FirstUseCopy {
   title: string
   /** At most two short lines. */
   body: string
-  action: FirstUseAction
+  /** The one button. A list with nothing to point at yet (Who owes us on a new CRM) has none; "Show me how" still shows. */
+  action?: FirstUseAction
   /** A second, quiet button opening this Help recipe. */
   recipe?: string
 }
@@ -90,4 +91,32 @@ export const ADMIN_ALONE: FirstUseCopy = {
 export function firstUseCopy(screen: FirstUseScreen, role: string, opts: { alone?: boolean } = {}): FirstUseCopy | null {
   if (screen === 'today' && role === 'admin' && opts.alone) return ADMIN_ALONE
   return (FIRST_USE_COPY[screen] as Record<string, FirstUseCopy | undefined>)[role] ?? null
+}
+
+/*
+ * A list that has NEVER had a record (a brand-new CRM, or the company has not used this part yet). Its usual empty state praises
+ * finished work ("Every order is paid in full", "Every quotation is out or closed"), which is untrue when nothing has ever been
+ * entered. The screen shows this neutral line instead and keeps its own words for when records exist. Company-wide, not per
+ * person: who owns what is the first-use state above.
+ */
+export type NothingYetScreen = 'rfqs' | 'orders' | 'receivables'
+
+export const NOTHING_YET: Record<NothingYetScreen, FirstUseCopy> = {
+  rfqs: {
+    title: 'No RFQs yet',
+    body: 'An RFQ is a customer asking for a price. Start one and it stays here until it is quoted, won or closed.',
+    action: { kind: 'link', label: 'New RFQ', to: '/rfqs/new' },
+    recipe: 'new-rfq',
+  },
+  orders: {
+    title: 'No orders yet',
+    body: 'An order starts when you mark an RFQ won, and stays here until it is delivered and paid.',
+    action: { kind: 'link', label: 'Open RFQs', to: '/rfqs' },
+    recipe: 'mark-won',
+  },
+  receivables: {
+    title: 'No balances yet',
+    body: 'Once an order is won, what the customer owes shows here until it is paid.',
+    recipe: 'record-payment',
+  },
 }

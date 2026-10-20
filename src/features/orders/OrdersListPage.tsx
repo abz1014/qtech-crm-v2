@@ -12,7 +12,7 @@ import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { EmptyState } from '@/ui/EmptyState'
-import { FirstUseState } from '@/features/help/FirstUseState'
+import { FirstUseState, NothingYetState } from '@/features/help/FirstUseState'
 import { useFirstUse } from '@/features/help/useFirstUse'
 import { Select } from '@/ui/form/Select'
 import { Icon } from '@/ui/Icon'
@@ -246,6 +246,9 @@ export default function OrdersListPage() {
 
   const empty = firstUse.isNew ? (
       <FirstUseState screen="orders" role={role} onEveryone={() => change({ owner: 'all' })} everyoneCount={allCount} className="mx-5 my-4" />
+    ) : !filtered && all.length === 0 && filters.tab === 'active' ? (
+      // No order has ever been made (a new CRM): "Every order is done or cancelled" would be untrue.
+      <NothingYetState screen="orders" />
     ) : !filtered && total === 0 ? (
       filters.tab === 'active' ? (
         <EmptyState

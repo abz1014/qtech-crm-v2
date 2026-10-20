@@ -15,6 +15,7 @@ import { StatusBadge } from '@/ui/StatusBadge'
 import { SumBar } from '@/ui/SumBar'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
+import { NothingYetState } from '@/features/help/FirstUseState'
 import { useReceivables, useReceivablesSummary } from '@/features/money/payments/hooks'
 import { RecordPaymentDialog } from '@/features/money/payments/RecordPaymentDialog'
 import { ReminderPanel } from '@/features/money/payments/ReminderPanel'
@@ -207,10 +208,11 @@ export function ReceivablesPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-base font-semibold">{tabLabel}</h2>
                 <span className="text-sm text-fg-muted">Balance is gross, GST included</span>
-                <InfoTip label="About the balance">What the customer still owes, GST included, after payments recorded.</InfoTip>
-                <InfoTip label="About reminders">
-                  A reminder is due when an order is overdue and has not been reminded in the last 7 days. Copying the reminder records it,
-                  and the order moves to Waiting on Today. {isAdmin ? 'Record a payment with the button on its row.' : 'Payments are recorded by an admin.'}
+                {/* ONE tip beside the header (two merges once left a second one beside it): the balance, then reminders. */}
+                <InfoTip label="About the balance and reminders">
+                  What the customer still owes, GST included, after payments recorded. A reminder is due when an order is overdue and has
+                  not been reminded in the last 7 days; copying the reminder records it, and the order moves to Waiting on Today.{' '}
+                  {isAdmin ? 'Record a payment with the button on its row.' : 'Payments are recorded by an admin.'}
                 </InfoTip>
                 <span className="flex-1" />
                 <SegmentedControl
@@ -227,7 +229,10 @@ export function ReceivablesPage() {
               </div>
             }
             empty={
-              filter === 'open' ? (
+              filter === 'open' && rows.length === 0 ? (
+                // No balance has ever been recorded (a new CRM): "Every order is paid in full" would be untrue.
+                <NothingYetState screen="receivables" />
+              ) : filter === 'open' ? (
                 <EmptyState mood="goal" title="Nothing is owed">
                   Every order is paid in full. New balances appear here when an order is won.
                 </EmptyState>
