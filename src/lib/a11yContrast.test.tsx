@@ -210,8 +210,8 @@ describe('a selected table row (DataTable) and the text that sits on it', () => 
     })
   }
 
-  // BUG A11Y-17: amber tone text (due soon, needs attention) on bg-selected is 4.34:1.
-  it.fails('A11Y-17: tone-warning-fg text stays at 4.5:1 on a selected row (WCAG 1.4.3)', () => {
+  // A11Y-17 (was 4.34:1) is fixed on main by the ux/foundation token changes; this now guards it.
+  it('A11Y-17 fixed: tone-warning-fg text stays at 4.5:1 on a selected row (WCAG 1.4.3)', () => {
     expect(contrast('tone-warning-fg', selectedRow)).toBeGreaterThanOrEqual(4.5)
   })
 
