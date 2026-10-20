@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPreference'
 import { Check, Copy, MessageSquareWarning, Phone } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { copyToClipboard } from '@/lib/clipboard'
@@ -30,7 +31,8 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
   const refresh = useRefreshAfterChase()
   const draftData = useLegDraft(leg.id)
   const jobTitle = useMyJobTitle(user?.id)
-  const [channel, setChannel] = useState<'whatsapp' | 'email'>('whatsapp')
+  // the person's last WhatsApp / Email choice, remembered on this device (useChannelPreference)
+  const [channel, setChannel] = useChannelPreference()
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
   const today = businessToday()
@@ -129,8 +131,8 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
       >
         <div className="grid gap-3">
           {!leg.expectedOn ? (
-            <Banner tone="warning" title="No expected date on this leg">
-              The message asks about the expected date, so set one on the leg first.
+            <Banner tone="warning" title="No expected date for these goods">
+              The message asks about the expected date, so set one on the supplier order first.
             </Banner>
           ) : draftData.isPending ? (
             <div className="grid gap-2" aria-busy="true" aria-label="Preparing the message">
@@ -152,7 +154,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
                 <SegmentedControl
                   aria-label="Message channel"
                   value={channel}
-                  onValueChange={v => setChannel(v as 'whatsapp' | 'email')}
+                  onValueChange={v => setChannel(v as ContactChannel)}
                   options={[
                     { value: 'whatsapp', label: 'WhatsApp' },
                     { value: 'email', label: 'Email' },

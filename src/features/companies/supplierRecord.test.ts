@@ -201,7 +201,7 @@ describe('open with them', () => {
     )
     expect(chased.lastContact).toEqual(['Enquiry sent for ', { rfqId: 'r1', ref: 'RFQ-0165' }, '. Chased once on 19 Nov.'])
     const imported = buildSupplierRecord(raw({ legs: [leg('g', 20, { placedOn: '2026-09-07', legacy: true })] }), TODAY)
-    expect(imported.lastContact).toEqual(['Order leg for ORD-0020. Imported.'])
+    expect(imported.lastContact).toEqual(['Supplier order for ORD-0020. Imported.'])
   })
 
   it('names how long it went unanswered, with the chases', () => {

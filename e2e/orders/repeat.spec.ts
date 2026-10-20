@@ -55,14 +55,14 @@ const ordersOf = (companyId: string) => get<{ id: string; number: number; rfq_id
   `orders?company_id=eq.${companyId}&select=id,number,rfq_id,site_id,contact_id,customer_po_number,ordered_on,payment_terms_days,needs_commissioning,owner_id,created_at&order=number`,
 )
 
-test.describe('O02: a new order from a past order', () => {
+test.describe('O02: repeat a past order', () => {
   test('find it by company, then 1 tap to copy it; typing the PO is the only other interaction; a double submit makes one order', async ({ page }) => {
     const s = await seedSource()
     await openAs(page, 'sales', '/orders?owner=all')
-    await page.getByRole('button', { name: 'New order' }).first().click()
+    await page.getByRole('button', { name: 'Repeat a past order' }).first().click()
     const d = dialog(page)
-    await expect(d.getByRole('heading', { name: 'New order' })).toBeVisible()
-    await expect(d).toContainText('A customer ordered again, or ordered without an RFQ')
+    await expect(d.getByRole('heading', { name: 'Repeat a past order' })).toBeVisible()
+    await expect(d).toContainText('The customer ordered again, or ordered without an RFQ')
     // the most recent orders are offered before anything is typed; typing narrows them
     await expect(d.getByRole('list', { name: 'Most recent orders' })).toBeVisible()
     await d.getByLabel('Find a past order').fill(s.company.name)
@@ -113,7 +113,7 @@ test.describe('O02: a new order from a past order', () => {
   test('found by site, by item text, by order number and by customer PO', async ({ page }) => {
     const s = await seedSource()
     await openAs(page, 'admin', '/orders?owner=all')
-    await page.getByRole('button', { name: 'New order' }).first().click()
+    await page.getByRole('button', { name: 'Repeat a past order' }).first().click()
     const d = dialog(page)
     const input = d.getByLabel('Find a past order')
     const hit = d.getByRole('button', { name: new RegExp(`${s.company.name}.*ORD-${String(s.order.number).padStart(4, '0')}`) })
@@ -143,7 +143,7 @@ test.describe('O02: a new order from a past order', () => {
     expect(await ordersOf(s.company.id)).toHaveLength(2)
   })
 
-  test('an engineer is not offered New order or Repeat order', async ({ page }) => {
+  test('an engineer is not offered Repeat a past order or Repeat order', async ({ page }) => {
     const s = await seedSource()
     await openAs(page, 'engineer', `/companies/${s.company.id}`)
     await expect(page.getByRole('heading', { name: s.company.name }).first()).toBeVisible()
@@ -151,11 +151,11 @@ test.describe('O02: a new order from a past order', () => {
   })
 
   for (const width of [1440, 375]) {
-    test(`axe (WCAG 2.2 AA) and review screenshots at ${width}: the New order dialog`, async ({ page }) => {
+    test(`axe (WCAG 2.2 AA) and review screenshots at ${width}: the Repeat a past order dialog`, async ({ page }) => {
       const s = await seedSource()
       await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
       await openAs(page, 'sales', '/orders?owner=all')
-      await page.getByRole('button', { name: 'New order' }).first().click()
+      await page.getByRole('button', { name: 'Repeat a past order' }).first().click()
       await dialog(page).getByLabel('Find a past order').fill(s.company.name)
       await expect(dialog(page).getByRole('button', { name: new RegExp(s.company.name) })).toBeVisible()
       expect(await dialogViolations(page)).toEqual([])

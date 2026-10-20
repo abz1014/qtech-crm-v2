@@ -21,6 +21,13 @@ const row = (over: Partial<OrderListRow>): OrderListRow => ({
   payment: 'unpaid',
   balance: 1000,
   engineerIds: [],
+  plannedOn: null,
+  dueOn: null,
+  costsState: null,
+  what: 'Belimo actuator ×6',
+  moreLines: false,
+  itemsText: 'belimo actuator · memosens ph sensor · cable gland kit',
+  legs: [],
   ...over,
 })
 
@@ -59,7 +66,7 @@ describe('orders list filters (O04)', () => {
     expect(ids(filterRows(rows, f({ invoicing: 'part', goods: ALL }), sales))).toEqual(['b'])
   })
 
-  it('finds an order by number in any spelling, by customer PO, customer or site', () => {
+  it('finds an order by number in any spelling, by customer PO, customer, site or item', () => {
     expect(matchesText(rows[0], '38')).toBe(true)
     expect(matchesText(rows[0], 'ORD-0038')).toBe(true)
     expect(matchesText(rows[0], 'ord 38')).toBe(true)
@@ -68,6 +75,11 @@ describe('orders list filters (O04)', () => {
     expect(matchesText(rows[0], 'cement')).toBe(true)
     expect(matchesText(rows[0], 'hub')).toBe(true)
     expect(matchesText(rows[1], 'hub')).toBe(false)
+    // and by what was ordered
+    expect(matchesText(rows[0], 'belimo')).toBe(true)
+    // every line is searched, not only the two the row shows (review 2026-10-20)
+    expect(rows[0].what).not.toMatch(/cable/i)
+    expect(matchesText(rows[0], 'cable gland')).toBe(true)
     expect(ids(filterRows(rows, f({ text: 'faisalabad' }), sales))).toEqual(['b'])
   })
 

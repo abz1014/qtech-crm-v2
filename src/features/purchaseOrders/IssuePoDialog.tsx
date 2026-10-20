@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { FileCheck2, FileText, Info, Lock, TriangleAlert } from 'lucide-react'
+import { FileCheck2, FileText, Lock, TriangleAlert } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { convertToPaisa, formatAmount, formatPaisa, formatRate } from '@/lib/money'
@@ -8,6 +8,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, poRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
+import { InfoTip } from '@/ui/InfoTip'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Dialog, DialogContent } from '@/ui/Dialog'
@@ -24,7 +25,7 @@ import { profileGaps } from '@/features/quotations/lib/profileGaps'
 import { SettingsLink } from '@/features/quotations/SettingsLink'
 import type { OrderHeader, OrderLegRow } from '@/features/orders/api'
 import { useUpdateLeg } from '@/features/orders/hooks'
-import { expectedAfterIssue, legLetter } from '@/features/orders/lib/legModel'
+import { expectedAfterIssue } from '@/features/orders/lib/legModel'
 import { loadPoPdfData, loadPoPreviewData } from '@/features/purchaseOrders/api'
 import { useIssuePo, useLastPoToSupplier, useLegPo, useNextPoNumber, usePoPrefill, useSetLegCurrency, useStorePoPdf } from '@/features/purchaseOrders/hooks'
 import { generatePurchaseOrderPdf } from '@/features/purchaseOrders/pdf/generate'
@@ -71,7 +72,7 @@ function SourceChip({ source, children }: { source: PriceSource; children: strin
   return <span className={cn('inline-flex h-5 items-center rounded border px-2 text-xs font-medium', look[source])}>{children}</span>
 }
 
-export function IssuePoDialog({ order, leg, legIndex, onClose }: { order: OrderHeader; leg: OrderLegRow; legIndex: number; onClose: () => void }) {
+export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg: OrderLegRow; onClose: () => void }) {
   const { toast } = useToast()
   const session = useSession()
   const user = session.status === 'signed-in' ? session.user : null
@@ -179,7 +180,7 @@ export function IssuePoDialog({ order, leg, legIndex, onClose }: { order: OrderH
       onClose()
       toast({
         title: `Issued ${ref}`,
-        body: `Leg ${legLetter(legIndex)} is placed.${pdfNote ? ` ${pdfNote}` : ''}`,
+        body: `The order with ${leg.supplierName} is marked placed.${pdfNote ? ` ${pdfNote}` : ''}`,
         tone: 'success',
         action: pdf
           ? {
@@ -311,7 +312,7 @@ export function IssuePoDialog({ order, leg, legIndex, onClose }: { order: OrderH
     <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
         title="Issue purchase order"
-        context={`Leg ${legLetter(legIndex)} · ${leg.supplierName} · for ${orderRef(order.number)}`}
+        context={`${leg.supplierName} · for ${orderRef(order.number)}`}
         icon={FileCheck2}
         size="lg"
         className="md:w-[820px]"
@@ -344,7 +345,7 @@ export function IssuePoDialog({ order, leg, legIndex, onClose }: { order: OrderH
         ) : (
           <div className="grid gap-5">
             <div className="grid gap-4 md:grid-cols-3">
-              <Field label="Currency" help={ccy ? 'Set on this leg. Change it on the leg, not here.' : 'This leg has no currency yet. Choose one to price the PO.'}>
+              <Field label="Currency" help={ccy ? 'Set on this supplier order, not here.' : 'This supplier order has no currency yet. Choose one to price the PO.'}>
                 {ccy ? (
                   <TextField value={ccy} readOnly suffix={<Icon icon={Lock} />} aria-label="Currency" />
                 ) : (
@@ -401,8 +402,8 @@ export function IssuePoDialog({ order, leg, legIndex, onClose }: { order: OrderH
             </div>
 
             {rows.length === 0 ? (
-              <Banner tone="warning" title="This leg has no goods lines">
-                Put a goods line on the leg before issuing a purchase order.
+              <Banner tone="warning" title="Nothing to order from this supplier">
+                Put a goods line on this supplier order before issuing a purchase order.
               </Banner>
             ) : (
               <>
@@ -422,13 +423,13 @@ export function IssuePoDialog({ order, leg, legIndex, onClose }: { order: OrderH
               </>
             )}
 
-            <div className="flex items-start gap-3 rounded bg-sunken px-4 py-3 text-sm text-fg-2">
-              <Icon icon={Info} className="mt-[2px] text-fg-muted" />
-              <p>
-                Incoterm and terms are copied from this supplier&rsquo;s last PO; change them only if this order differs. Issuing saves these prices back to the order items, so the order keeps one
-                working price, and stamps leg {legLetter(legIndex)} as placed today. The PO is a snapshot; later edits to the order do not change it.
-              </p>
-            </div>
+            <p className="flex items-center gap-1 text-sm text-fg-2">
+              Issuing marks the order with {leg.supplierName} as placed today.
+              <InfoTip label="What issuing does" side="top">
+                Incoterm and terms are copied from this supplier&rsquo;s last PO: change them only if this order differs. Issuing saves these prices back to the order items, so the order keeps one working
+                price. The PO is a snapshot: later edits to the order do not change it.
+              </InfoTip>
+            </p>
 
             {missing.length > 0 ? (
               <p className="flex items-center gap-2 text-sm text-tone-warning-fg" data-testid="po-missing">

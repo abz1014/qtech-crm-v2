@@ -83,7 +83,8 @@ export function AddExpenseDialog({ open, onOpenChange, context, expense, onSaved
   const [busy, setBusy] = useState(false)
   const fromLeg = !!context?.legId
   const orderLabel = context?.orderLabel
-  const sub = expense ? 'Edit expense' : [orderLabel, context?.legLabel].filter(Boolean).join(' · ') || 'Money › Expenses'
+  // the supplier names the supplier order ("ORD-0038 · Alpenmark Controls"); the old "leg A" label is not shown (plain words, 2026-10-19)
+  const sub = expense ? 'Edit expense' : [orderLabel, context?.legId ? context?.payeeName : null].filter(Boolean).join(' · ') || 'Money › Expenses'
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={busy}>
       <DialogContent title={expense ? 'Edit expense' : 'Add expense'} context={expense ? undefined : sub} size="md" className="md:w-[520px]">
@@ -312,7 +313,6 @@ function ExpenseFormReady({
               <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded border border-line-strong bg-sunken px-3 text-sm text-fg-2" aria-label="Payee, from the supplier order">
                 <span className="truncate">
                   {context?.payeeName}
-                  {context?.legLabel ? ` · ${context.legLabel}` : ''}
                 </span>
                 <Icon icon={Lock} className="text-fg-muted" />
               </div>
@@ -352,7 +352,7 @@ function ExpenseFormReady({
                   <Select
                     placeholder="No supplier order"
                     value={f.value ?? ''}
-                    options={(legs.data ?? []).map(l => ({ value: l.id, label: `${l.label} · ${l.supplierName}` }))}
+                    options={(legs.data ?? []).map(l => ({ value: l.id, label: l.supplierName || l.label }))}
                     onChange={e => {
                       const leg = legs.data?.find(l => l.id === e.target.value)
                       f.onChange(leg?.id ?? null)

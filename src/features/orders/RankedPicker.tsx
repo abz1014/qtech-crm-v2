@@ -43,9 +43,9 @@ export function RankedOptionRow({ q, among, className }: { q: RankedQuote; among
       <RankBadge rank={q.rank} />
       <span className="grid min-w-0">
         <b className="text-sm font-medium leading-[18px]">{q.supplierName}</b>
-        <span className="text-xs leading-4 text-fg-muted">{longReason(q, among)}</span>
+        <span className="text-xs text-fg-muted">{longReason(q, among)}</span>
       </span>
-      <span className="num text-right text-xs leading-4">
+      <span className="num text-right text-xs">
         {p.price}
         <em className="block font-sans not-italic text-fg-muted">{p.pkr}</em>
       </span>

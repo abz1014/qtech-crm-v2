@@ -119,13 +119,14 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'company.update': v => [qk.companies.lists(), qk.companies.detail(v.id)],
   // The dropped company is gone; everything that pointed at it now points at the kept one.
   'company.merge': v => [qk.companies.all, qk.rfqs.all, qk.orders.all, qk.companies.detail(v.keepId), qk.today.all, qk.intake.all, qk.memory.all, qk.purchaseOrders.all, qk.money.all],
-  // Adding a site or contact changes the page, and the roster does not show them, so only the detail.
+  // Adding a site changes the page only (the roster does not show sites). A contact changes the page AND the roster: the Companies
+  // search matches contact names and phone numbers (2026-10-20), so a contact just saved must be findable at once.
   'site.add': v => [qk.companies.detail(v.companyId)],
-  'contact.add': v => [qk.companies.detail(v.companyId)],
+  'contact.add': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   'site.update': v => [qk.companies.detail(v.companyId)],
   'site.remove': v => [qk.companies.detail(v.companyId)],
-  'contact.update': v => [qk.companies.detail(v.companyId)],
-  'contact.remove': v => [qk.companies.detail(v.companyId)],
+  'contact.update': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
+  'contact.remove': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   // Dropping the last brand can end a supplier's role, so the roster refreshes too.
   'brand.unlink': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   // Carrying a brand makes the company a supplier, so the roster's role column can change too.

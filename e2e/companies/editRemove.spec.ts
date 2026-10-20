@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { createCompany, createRfq, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 
 /*
- * Edit and remove for sites, contacts and brands carried (R02 follow-up), against the local CI stack.
+ * Edit and remove for sites, contacts and brands carried (R02 follow-up; brands now sit in the Details panel), against the local CI stack.
  * Anything that an RFQ, order or quotation points at is never deleted: the database would only unfile it
  * (ON DELETE SET NULL), so the screen counts first and refuses in plain words.
  */
@@ -127,7 +127,7 @@ test.describe('remove', () => {
     const brand = (await must(rest<{ id: string }[]>('admin', 'brands', { method: 'POST', body: { name: brandName } })))[0]
     await must(rest('admin', 'company_brands', { method: 'POST', body: { company_id: supplier.id, brand_id: brand.id } }))
     await openAs(page, 'engineer', `/companies/${supplier.id}`)
-    const panel = page.getByRole('region', { name: 'Brands carried' })
+    const panel = page.getByRole('region', { name: 'Details', exact: true }).getByRole('region', { name: 'Brands carried' })
     await panel.getByRole('button', { name: `Remove ${brandName}` }).click()
     await panel.getByRole('group', { name: `Remove ${brandName}?` }).getByRole('button', { name: 'Remove', exact: true }).click()
     await expect(panel.getByText(brandName)).toHaveCount(0)

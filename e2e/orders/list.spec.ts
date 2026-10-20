@@ -4,7 +4,7 @@ import { axeViolations } from '../support/axe'
 import { expect, get, shot } from './fixtures'
 
 /*
- * O04 end to end: the orders list with a filter for each state dimension. Each test makes its own customer with a unique name and
+ * O04 end to end: the orders list, with one plain "Next step" per row (UX audit 2026-10-19) and the state filters behind one Filters button. Each test makes its own customer with a unique name and
  * scopes the list to it with the search box (the address carries q=), because other suites' orders are in the same database.
  */
 
@@ -16,6 +16,7 @@ interface ListSeed {
   /** a: goods to place, commissioning planned, assigned to the fixture engineer. b: goods late. c: delivered. d: cancelled. */
   orders: Record<'a' | 'b' | 'c' | 'd', { id: string; number: number; po: string }>
   engineerName: string
+  supplierName: string
 }
 
 async function seedList(): Promise<ListSeed> {
@@ -36,14 +37,23 @@ async function seedList(): Promise<ListSeed> {
   const b = await make('B', {}, { placed_on: karachiDay(-10), expected_on: karachiDay(-2) })
   const c = await make('C', {}, { placed_on: karachiDay(-10), expected_on: karachiDay(-4), received_on: karachiDay(-3), delivered_on: karachiDay(-3) })
   const d = await make('D', { cancelled_on: karachiDay(-1), cancel_reason: 'customer_cancelled' }, {})
-  return { tag, company, orders: { a, b, c, d }, engineerName: engineer.name }
+  return { tag, company, orders: { a, b, c, d }, engineerName: engineer.name, supplierName: supplier.name }
 }
 
 const row = (page: Page, o: { number: number }) => page.getByRole('row', { name: new RegExp(`ORD-${String(o.number).padStart(4, '0')}`) })
+/** The state filters sit behind one button: open it before choosing one (a small panel on a laptop). */
+const openFilters = async (page: Page) => {
+  if (!(await page.getByLabel('Goods state').isVisible())) await page.getByRole('button', { name: /^Filters/ }).click()
+  await expect(page.getByLabel('Goods state')).toBeVisible()
+}
+const closeFilters = async (page: Page) => {
+  await page.keyboard.press('Escape')
+  await expect(page.getByLabel('Goods state')).toHaveCount(0)
+}
 const open = (page: Page, role: 'admin' | 'sales' | 'engineer', s: ListSeed, extra = '') => openAs(page, role, `/orders?owner=all&q=${encodeURIComponent(s.tag)}${extra}`)
 
 test.describe('O04: the orders list', () => {
-  test('tabs are the lifecycle, with counts; every order shows its state chips', async ({ page }) => {
+  test('tabs are the lifecycle, with counts; every order says its next step in words, after the customer and what was ordered', async ({ page }) => {
     const s = await seedList()
     await open(page, 'admin', s)
     await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible()
@@ -51,13 +61,15 @@ test.describe('O04: the orders list', () => {
     await expect(page.getByRole('tab', { name: /^Active/ })).toContainText('3')
     await expect(page.getByRole('tab', { name: /^Done/ })).toContainText('0')
     await expect(page.getByRole('tab', { name: /^Cancelled/ })).toContainText('1')
-    await expect(row(page, s.orders.a)).toContainText('To place')
-    await expect(row(page, s.orders.a)).toContainText('Planned')
-    await expect(row(page, s.orders.a)).toContainText('Not invoiced')
-    await expect(row(page, s.orders.a)).toContainText('Unpaid')
+    // one plain next step per row instead of four chips
+    // the supplier is named, and late goods say by how many days (b was expected 2 days ago)
+    await expect(row(page, s.orders.a)).toContainText(`Place the order with ${s.supplierName}`)
+    await expect(row(page, s.orders.a)).toContainText(`Line A ${s.tag} ×1`)
     await expect(row(page, s.orders.a)).toContainText(s.orders.a.po)
-    await expect(row(page, s.orders.b)).toContainText('Late')
-    await expect(row(page, s.orders.c)).toContainText('Delivered')
+    await expect(row(page, s.orders.b)).toContainText(`Chase ${s.supplierName}: goods 2 days late`)
+    await expect(row(page, s.orders.c)).toContainText('Create the invoice')
+    await expect(row(page, s.orders.a).locator('[data-status]')).toHaveCount(0)
+    await expect(page.getByRole('columnheader', { name: 'Next step' })).toBeVisible()
     await shot(page, 'o04-orders-list-1440')
     await page.getByRole('tab', { name: /^Done/ }).click()
     await expect(page.getByText('No orders match')).toBeVisible()
@@ -66,12 +78,15 @@ test.describe('O04: the orders list', () => {
     await expect(row(page, s.orders.d)).toBeVisible()
   })
 
-  test('a filter for each dimension, combined: goods, commissioning, invoicing and payment', async ({ page }) => {
+  test('a filter for each dimension behind one Filters button, combined: goods, commissioning, invoicing and payment', async ({ page }) => {
     const s = await seedList()
     await open(page, 'admin', s)
     await expect(row(page, s.orders.a)).toBeVisible()
     await expect(row(page, s.orders.b)).toBeVisible()
+    // the four state filters are not on the toolbar until asked for
+    await expect(page.getByLabel('Goods state')).toHaveCount(0)
 
+    await openFilters(page)
     await page.getByLabel('Goods state').selectOption({ label: 'Late (1)' })
     await expect(row(page, s.orders.b)).toBeVisible()
     await expect(row(page, s.orders.a)).toHaveCount(0)
@@ -80,12 +95,15 @@ test.describe('O04: the orders list', () => {
     // combined with commissioning: an order that is late AND planned does not exist
     await page.getByLabel('Commissioning state').selectOption({ label: 'Planned (0)' })
     await expect(page.getByText('No orders match')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Filters (2)' })).toBeVisible()
+    await closeFilters(page)
     await page.getByRole('button', { name: 'Clear the filters' }).click()
     // clearing also clears the search, so the list is every order: scope it to this test's customer again
     await page.getByLabel('Search orders').fill(s.tag)
     await expect(row(page, s.orders.a)).toBeVisible()
     await expect(row(page, s.orders.b)).toBeVisible()
 
+    await openFilters(page)
     await page.getByLabel('Commissioning state').selectOption({ label: 'Planned (1)' })
     await expect(row(page, s.orders.a)).toBeVisible()
     await expect(row(page, s.orders.b)).toHaveCount(0)
@@ -97,6 +115,7 @@ test.describe('O04: the orders list', () => {
     await expect(page).toHaveURL(/payment=unpaid/)
     // the address carries the filters: a reload lands on the same view
     await page.reload()
+    await openFilters(page)
     await expect(page.getByLabel('Commissioning state')).toHaveValue('planned')
     await expect(row(page, s.orders.a)).toBeVisible()
   })
@@ -123,7 +142,8 @@ test.describe('O04: the orders list', () => {
     await page.getByRole('radio', { name: /^All/ }).click()
     await expect(row(page, s.orders.a)).toBeVisible()
     await expect(page.getByRole('radio', { name: /^All/ })).toBeChecked()
-    await expect(page.getByRole('button', { name: 'New order' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Repeat a past order' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'New order' })).toHaveCount(0)
   })
 
   test('an engineer starts on My jobs, sees no money column and makes no money request', async ({ page }) => {
@@ -141,11 +161,16 @@ test.describe('O04: the orders list', () => {
     await expect(row(page, s.orders.b)).toBeVisible()
     await page.waitForLoadState('networkidle')
     const text = await page.locator('#main').innerText()
-    expect(text).not.toMatch(/Invoicing|Payment|Gross|PKR|Unpaid|Not invoiced|New order/)
-    for (const h of ['Invoicing', 'Payment', 'Gross']) await expect(page.getByRole('columnheader', { name: new RegExp(h) })).toHaveCount(0)
+    expect(text).not.toMatch(/Invoic|Payment|Gross|Value|PKR|Unpaid|Not invoiced|Repeat a past order|New order/)
+    // the engineer's next steps are about goods and commissioning only
+    await expect(row(page, s.orders.b)).toContainText(`Chase ${s.supplierName}: goods 2 days late`)
+    for (const h of ['Invoicing', 'Payment', 'Gross', 'Value']) await expect(page.getByRole('columnheader', { name: new RegExp(h) })).toHaveCount(0)
+    await openFilters(page)
+    await expect(page.getByLabel('Commissioning state')).toBeVisible()
     await expect(page.getByLabel('Invoicing state')).toHaveCount(0)
     await expect(page.getByLabel('Payment state')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'New order' })).toHaveCount(0)
+    await closeFilters(page)
+    await expect(page.getByRole('button', { name: 'Repeat a past order' })).toHaveCount(0)
     expect(urls.filter(u => /order_receivables|v_order_money|invoicing_state|[,=(]gross|payments_in|invoices|expenses/.test(u.replace(/^https?:\/\/[^/]+/, '')))).toEqual([])
     expect(urls.some(u => u.includes('v_order_state'))).toBe(true)
     await shot(page, 'o04-orders-list-engineer-1440')
@@ -168,7 +193,21 @@ test.describe('O04: the orders list', () => {
       await open(page, 'admin', s)
       await expect(row(page, s.orders.a)).toBeVisible()
       expect(await violations(page)).toEqual([])
+      // nothing scrolls sideways at this width
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
       await shot(page, `o04-orders-list-axe-${width}`)
+      if (width < 640) {
+        // a phone gets one Filter button instead of six controls; the owner switch and the four filters are in its sheet
+        await expect(page.getByRole('radio', { name: /^All/ })).toHaveCount(0)
+        await page.getByRole('button', { name: /^Filter/ }).click()
+        const sheet = page.getByRole('dialog', { name: 'Filter orders' })
+        await expect(sheet.getByRole('radio', { name: /^All/ })).toBeVisible()
+        await expect(sheet.getByLabel('Goods state')).toBeVisible()
+        expect(await axeViolations(page, { landmarks: false })).toEqual([])
+        await shot(page, 'o04-orders-list-filter-sheet-375')
+        await sheet.getByRole('button', { name: /^Show \d+ orders?$/ }).click()
+        await expect(sheet).toHaveCount(0)
+      }
     })
   }
 })

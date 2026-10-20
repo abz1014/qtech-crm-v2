@@ -16,7 +16,7 @@ const trigger =
 
 interface TapDateProps {
   value: string | null
-  /** Names the date for assistive tech and the editor ("Placed date, leg A"). */
+  /** Names the date for assistive tech and the editor ("Placed date, Alpenmark Controls"). */
   label: string
   today: string
   onSave: (value: string | null) => void | Promise<void>

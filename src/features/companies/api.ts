@@ -2,6 +2,7 @@ import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { TableRow, ViewRow } from '@/features/dbTypes'
 import { toBusinessDate } from '@/lib/dates'
 import type { RawInquiry, RawItem, RawLeg, RawLine, RawOrderItem, RawRfq, SupplierRecordRaw } from '@/features/companies/supplierRecord'
+import { phoneKey, type SearchContact } from '@/features/companies/companySearch'
 
 /*
  * Companies: every database call for this area (R01 reference implementation). This is the only
@@ -17,10 +18,13 @@ export interface CompanyListRow {
   id: string
   name: string
   country: string | null
+  city: string | null
   role: CompanyRole | null
   rfqCount: number
   orderCount: number
   updatedAt: string
+  /** Its contacts' names and phone digits (phoneKey), so the list search finds a company by a person or a number. */
+  contacts: SearchContact[]
 }
 
 export interface CompanyDetail {
@@ -40,18 +44,22 @@ function asRole(r: string | null | undefined): CompanyRole | null {
   return r === 'customer' || r === 'supplier' || r === 'both' || r === 'prospect' ? r : null
 }
 
-/** Every company with its derived role and how many RFQs and orders it has. Four light reads, joined here. */
+/** Every company with its derived role, how many RFQs and orders it has, and its contacts for the search. Five light reads, joined here. */
 export async function listCompanies(): Promise<CompanyListRow[]> {
   const db = requireSupabase()
-  const [companies, roles, rfqs, orders] = await Promise.all([
-    fetchAll<Pick<TableRow<'companies'>, 'id' | 'name' | 'country' | 'updated_at'>>((from, to) =>
-      db.from('companies').select('id, name, country, updated_at').order('name').range(from, to),
+  const [companies, roles, rfqs, orders, contacts] = await Promise.all([
+    fetchAll<Pick<TableRow<'companies'>, 'id' | 'name' | 'country' | 'city' | 'updated_at'>>((from, to) =>
+      db.from('companies').select('id, name, country, city, updated_at').order('name').range(from, to),
     ),
     fetchAll<Pick<ViewRow<'v_company_roles'>, 'company_id' | 'role'>>((from, to) =>
       db.from('v_company_roles').select('company_id, role').range(from, to),
     ),
     fetchAll<{ company_id: string }>((from, to) => db.from('rfqs').select('company_id').range(from, to)),
     fetchAll<{ company_id: string }>((from, to) => db.from('orders').select('company_id').range(from, to)),
+    fetchAll<Pick<TableRow<'contacts'>, 'company_id' | 'name' | 'phone'>>((from, to) =>
+      // ordered by id: names repeat ("Accounts"), and only a unique order pages stably across 1000-row pages
+      db.from('contacts').select('company_id, name, phone').order('id').range(from, to),
+    ),
   ])
   const roleBy = new Map(roles.map(r => [r.company_id, asRole(r.role)]))
   const count = (rows: { company_id: string }[]) => {
@@ -61,14 +69,22 @@ export async function listCompanies(): Promise<CompanyListRow[]> {
   }
   const rfqBy = count(rfqs)
   const orderBy = count(orders)
+  const contactsBy = new Map<string, SearchContact[]>()
+  for (const p of contacts) {
+    const list = contactsBy.get(p.company_id) ?? []
+    list.push({ name: p.name, phoneKey: phoneKey(p.phone) })
+    contactsBy.set(p.company_id, list)
+  }
   return companies.map(c => ({
     id: c.id,
     name: c.name,
     country: c.country,
+    city: c.city,
     role: roleBy.get(c.id) ?? null,
     rfqCount: rfqBy.get(c.id) ?? 0,
     orderCount: orderBy.get(c.id) ?? 0,
     updatedAt: c.updated_at,
+    contacts: contactsBy.get(c.id) ?? [],
   }))
 }
 

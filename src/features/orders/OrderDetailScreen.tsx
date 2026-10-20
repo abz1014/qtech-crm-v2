@@ -6,11 +6,16 @@ import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Skeleton } from '@/ui/Skeleton'
 import { useLegPos, useOrderEngineers, useOrderHeader, useOrderItems, useOrderLegs, useOrderMoney } from '@/features/orders/hooks'
-import { OrderHeaderBlock } from '@/features/orders/OrderHeaderBlock'
+import { OrderHeaderBlock, OrderMoreMenu } from '@/features/orders/OrderHeaderBlock'
+import { useMobileBar } from '@/app/shell/MobileBarContext'
+import { orderRef } from '@/lib/refs'
+import { cn } from '@/lib/utils'
+import { orderFacts, pageStep } from '@/features/orders/lib/primaryAction'
+import { businessToday } from '@/lib/dates'
 import { OrderItemsPanel } from '@/features/orders/OrderItemsPanel'
 import { LegsPanel } from '@/features/orders/LegsPanel'
 import { CommissioningPanel } from '@/features/orders/CommissioningPanel'
-import { InvoicesPanel, MarginPanel } from '@/features/orders/MoneyPanels'
+import { MarginPanel } from '@/features/orders/MoneyPanels'
 import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
 
 /*
@@ -33,8 +38,9 @@ import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
  * invoices-payments (M01, M02), issue-po on each leg (O07).
  */
 
-function Shell({ children }: { children: ReactNode }) {
-  return <div className="mx-auto w-full max-w-[1440px] px-4 pb-16 pt-6 md:px-8">{children}</div>
+/** `sticky`: the phone shows the next step in a bar fixed to the bottom, so the page leaves room for it. */
+function Shell({ children, sticky = false }: { children: ReactNode; sticky?: boolean }) {
+  return <div className={cn('mx-auto w-full max-w-[1440px] px-4 pb-16 pt-4 md:px-8 md:pt-6', sticky && 'max-md:pb-[128px]')}>{children}</div>
 }
 
 /** The loading state in the final layout, so nothing jumps when the data arrives. */
@@ -79,6 +85,21 @@ export default function OrderDetailScreen() {
   const engineers = useOrderEngineers(id)
   const orderMoney = useOrderMoney(id, role === 'admin' ? 'admin' : role === 'sales' ? 'sales' : null)
   const pos = useLegPos(id, (legs.data ?? []).map(l => l.id), money)
+  // The page's ONE primary (green) button and its sentence (lib/orderSteps.ts, the same ordering as the orders list). Worked out once, here,
+  // so the header draws it, the panels below know not to repeat it, and the phone knows to show it in a bar at the bottom instead of the
+  // tabs. Only once the supplier orders (and for admin and sales their POs and the balance) have loaded: a guess from half the facts
+  // would show the wrong green button for a moment, or for good when a read fails (then there is no step at all).
+  const ready = Boolean(header.data && items.data && legs.data && (!money || (pos.isSuccess && orderMoney.isSuccess)))
+  const next = ready && header.data ? pageStep(orderFacts(header.data, legs.data ?? [], items.data ?? [], pos.data ?? [], role, orderMoney.data, businessToday())) : null
+  const primary = next?.primary ?? null
+  // Phones get one bar: back (to where the person came from, else the orders list), the order number, and the order's menu.
+  useMobileBar({
+    title: header.data ? orderRef(header.data.number) : 'Order',
+    back: 'history',
+    fallback: '/orders',
+    actions: header.data && !isEngineer ? <OrderMoreMenu order={header.data} touch /> : undefined,
+    hideTabs: primary !== null,
+  })
 
   if (header.isPending) return <PageSkeleton />
   if (header.isError) {
@@ -132,14 +153,24 @@ export default function OrderDetailScreen() {
   const lists = items.data && legs.data
   const basisUnknown = order.state?.dataTrust === 'basis_unknown'
   return (
-    <Shell>
-      <OrderHeaderBlock order={order} legs={legs.data ?? []} items={items.data ?? []} engineers={engineers.data ?? []} role={role} orderMoney={orderMoney.data} />
+    <Shell sticky={primary !== null}>
+      <OrderHeaderBlock
+        order={order}
+        legs={legs.data ?? []}
+        items={items.data ?? []}
+        engineers={engineers.data ?? []}
+        role={role}
+        orderMoney={orderMoney.data}
+        moneyLoading={money && orderMoney.isPending}
+        pos={pos.data ?? []}
+        next={next}
+      />
 
       <div className="mt-6 grid gap-6">
         {loadError ? (
           <EmptyState
             mood="error"
-            title="Couldn't load the items and legs"
+            title="Couldn't load the items and supplier orders"
             actions={
               <Button
                 variant="primary"
@@ -155,38 +186,26 @@ export default function OrderDetailScreen() {
             Nothing was changed. Check your connection and try again.
           </EmptyState>
         ) : !lists ? (
-          <div className="grid gap-4" aria-busy="true" aria-label="Loading items and legs">
+          <div className="grid gap-4" aria-busy="true" aria-label="Loading items and supplier orders">
             <Skeleton className="h-56 w-full" />
             <Skeleton className="h-56 w-full" />
           </div>
         ) : (
           <>
             <OrderItemsPanel order={order} items={items.data} legs={legs.data} money={money} canEdit={canEdit && money} basisUnknown={basisUnknown} pos={pos.data ?? []} />
-            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className={isAdmin ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]' : 'grid gap-6'}>
               <div className="grid min-w-0 gap-6">
                 <LegsPanel order={order} legs={legs.data} items={items.data} pos={pos.data ?? []} money={money} isAdmin={isAdmin} canEdit={canEdit} />
-                <CommissioningPanel order={order} engineers={engineers.data ?? []} isEngineer={isEngineer} canEdit={canEdit} />
+                <CommissioningPanel order={order} engineers={engineers.data ?? []} isEngineer={isEngineer} canEdit={canEdit} markDoneAbove={primary?.kind === 'mark-done'} />
                 <AttachmentsPanel orderId={order.id} />
               </div>
-              <aside className="grid min-w-0 gap-6 lg:row-start-1 lg:col-start-2" aria-label="Site and money">
-                {isEngineer ? (
-                  <section aria-label="Site" className="rounded border bg-surface">
-                    <h2 className="border-b px-5 py-4 text-base font-semibold">Site</h2>
-                    <dl className="grid gap-3 px-5 py-4 text-sm">
-                      <div className="flex justify-between gap-4 border-b pb-3">
-                        <dt className="text-fg-muted">Delivery site</dt>
-                        <dd className="min-w-0 text-right">{order.site?.name ?? <span className="text-fg-muted">Not set</span>}</dd>
-                      </div>
-                      <div className="flex justify-between gap-4">
-                        <dt className="text-fg-muted">Address</dt>
-                        <dd className="min-w-0 text-right">{order.site?.address ?? <span className="text-fg-muted">Not set</span>}</dd>
-                      </div>
-                    </dl>
-                  </section>
-                ) : null}
-                {isAdmin ? <MarginPanel order={order} money={orderMoney.data} loading={orderMoney.isPending} error={orderMoney.isError} /> : null}
-                {money ? <InvoicesPanel order={order} money={orderMoney.data} loading={orderMoney.isPending} error={orderMoney.isError} isAdmin={isAdmin} /> : null}
-              </aside>
+              {/* The side column is admin's Margin (with the one order-level Add expense). Invoices and payments are in the header's status
+                  strip, and the engineer's site is in the header's "Your job". */}
+              {isAdmin ? (
+                <aside className="grid min-w-0 gap-6 lg:col-start-2 lg:row-start-1" aria-label="Margin and costs">
+                  <MarginPanel order={order} money={orderMoney.data} loading={orderMoney.isPending} error={orderMoney.isError} />
+                </aside>
+              ) : null}
             </div>
           </>
         )}

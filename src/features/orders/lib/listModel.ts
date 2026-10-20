@@ -2,7 +2,7 @@
 //
 // Filters are one per state dimension (goods, commissioning, invoicing, payment) plus the lifecycle tab (active, done, cancelled), whose
 // order is mine or all (for an engineer, "mine" is the jobs they are assigned to), and a search over the order number, customer PO,
-// customer and site. They combine with AND. Every count is taken with all the OTHER filters applied, so the numbers on the tabs and on
+// customer, site and the first lines of what was ordered. They combine with AND. Every count is taken with all the OTHER filters applied, so the numbers on the tabs and on
 // the dimension options always add up to what the rest of the page shows.
 
 import type { OrderListRow } from '@/features/orders/api'
@@ -46,7 +46,7 @@ export function matchesText(row: OrderListRow, text: string): boolean {
   if (num && row.number === Number(num[2])) return true
   // a bare number is the order number (above), never a fragment of the padded ref
   const ref = `ord-${String(row.number).padStart(4, '0')}`
-  return [row.customerPo, row.companyName, row.siteName, q.startsWith('ord') ? ref : null].some(v => (v ?? '').toLowerCase().includes(q))
+  return [row.customerPo, row.companyName, row.siteName, row.itemsText, q.startsWith('ord') ? ref : null].some(v => (v ?? '').toLowerCase().includes(q))
 }
 
 export function ownedBy(row: OrderListRow, userId: string | null, role: string): boolean {
