@@ -225,3 +225,28 @@ describe('old parser (parsePaste) against the new one', () => {
     expect(rows[3]?.r).toBeGreaterThanOrEqual(0.9)
   })
 })
+
+describe('parseEnquiry: the shapes the sales verification found (BUG-SALES-1, BUG-SALES-2; fictional)', () => {
+  const rows = (text: string) => parse(text).items.map(i => [i.description, i.qty, i.unit])
+
+  it('a WhatsApp Web copy of several messages: prefixes, the greeting and the sign-off go, a range stays in the description', () => {
+    const text = [
+      '[10:41, 19/10/2026] Bilal Ahmed: Assalam o Alaikum',
+      '[10:42, 19/10/2026] Bilal Ahmed: Please quote 2 nos radar level transmitter 0-10 m',
+      '[10:42, 19/10/2026] Bilal Ahmed: 4 pcs pressure gauge 0-16 bar',
+      '[10:43, 19/10/2026] Bilal Ahmed: Regards',
+    ].join('\n')
+    expect(rows(text)).toEqual([
+      ['radar level transmitter 0-10 m', 2, 'nos'],
+      ['pressure gauge 0-16 bar', 4, 'nos'],
+    ])
+  })
+
+  it('an unmarked email: nothing after "Regards," is an item (name, job title, phone)', () => {
+    const text = ['Dear Sir,', 'Please quote the following:', 'Turbine flow meter DN80 - 2 nos', 'Float level switch 1000 mm - 1 no', 'Best regards,', 'Usman Tariq', 'Senior Purchase Officer', '0321-7654321'].join('\n')
+    expect(rows(text)).toEqual([
+      ['Turbine flow meter DN80', 2, 'nos'],
+      ['Float level switch 1000 mm', 1, 'nos'],
+    ])
+  })
+})
