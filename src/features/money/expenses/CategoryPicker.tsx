@@ -11,8 +11,8 @@ import { GROUP_LABEL, categoryMeta, type Category, type PaidVia } from '@/featur
  * CategoryPicker (M03, M11; g2-month-end "Category type-ahead"). Two or three letters narrow the 17 categories; the first
  * match is already highlighted, Enter or Tab accepts it (Tab then carries on to the next cell), Up and Down choose, Esc
  * closes the list and only the list. Each row says the group and the category's own paid-via ("Overhead · cash"); the
- * footer lists the keys; the field shows "2 of 17" while typing. A dashed edge and a small tag ("most used", "carried")
- * say the value was filled in for you.
+ * footer lists the keys; the field shows "2 of 17" while typing. A dashed edge says the value was filled in for you (what
+ * the dashed edge means is in the keyboard shortcuts sheet, not in a tag on every cell: round 2, R2-12).
  *
  * With `onCreate` (owner request 2026-10-20), a name that is not a category yet is offered as a new one at the foot of the
  * list: 'Create "Office water"', paid in cash or by bank (one tap each, cash first: the small spends). It is filed under
@@ -25,8 +25,8 @@ interface CategoryPickerProps {
   categories: readonly Category[]
   value: string | null | undefined
   onChange: (categoryId: string) => void
-  /** Filled in for you: dashed edge and the tag at the right ("most used", "carried"). */
-  tag?: string
+  /** Filled in for you: a dashed edge (no words on the cell). */
+  prefilled?: boolean
   /** 36 px in the sheet's cells; the form's 32 px control by default. */
   size?: 'cell' | 'field' | 'phone'
   'aria-label'?: string
@@ -74,7 +74,7 @@ function Highlight({ label, q }: { label: string; q: string }) {
 }
 
 export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(function CategoryPicker(
-  { categories, value, onChange, tag, size = 'field', id: idProp, disabled, className, chevron, onUnmatched, onCreate, ...rest },
+  { categories, value, onChange, prefilled, size = 'field', id: idProp, disabled, className, chevron, onUnmatched, onCreate, ...rest },
   ref,
 ) {
   const a11y = useControlProps({ id: idProp })
@@ -219,9 +219,9 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
               controlClass,
               size === 'cell' && 'h-[36px]',
               size === 'phone' && 'h-[44px] text-base',
-              tag && !typing && 'border-dashed text-fg-2',
-              (tag || chevron) && 'pr-24',
-              chevron && !tag && 'pr-8',
+              prefilled && !typing && 'border-dashed text-fg-2',
+              typing && 'pr-24',
+              chevron && !typing && 'pr-8',
               className,
             )}
           />
@@ -229,8 +229,6 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
             <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs leading-none text-fg-muted">
               {matches.length} of {options.length}
             </span>
-          ) : tag ? (
-            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 whitespace-nowrap text-xs leading-none text-fg-muted">{tag}</span>
           ) : chevron ? (
             <Icon icon={ChevronDown} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-fg-muted" />
           ) : null}

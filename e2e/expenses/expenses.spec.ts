@@ -132,7 +132,8 @@ test.describe('expenses (M03, M11)', () => {
     const first = page.getByRole('textbox', { name: 'Amount, row 1' })
     await expect(first).toBeFocused()
     await expect(page.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Office supplies & snacks')
-    await expect(page.getByText('most used')).toBeVisible()
+    // filled in for you: a dashed edge, no "most used" tag on the cell (R2-12)
+    await expect(page.getByRole('combobox', { name: 'Category, row 1' })).toHaveClass(/border-dashed/)
     await startCounting(page)
     const b = base()
     const amounts = [b + 1, b + 2, b + 3, b + 4, b + 5]
@@ -141,7 +142,7 @@ test.describe('expenses (M03, M11)', () => {
       if (i < amounts.length - 1) await page.keyboard.press('Enter')
     }
     await expect(page.getByRole('textbox', { name: /^Amount, row/ })).toHaveCount(5)
-    await expect(page.getByText('carried')).toHaveCount(4)
+    await expect(page.getByRole('combobox', { name: 'Category, row 5' })).toHaveClass(/border-dashed/) // carried down, no tag
     await review(page, 'm11-burst-sheet-1440')
     await page.keyboard.press('Control+Enter')
     await expect(page.getByRole('dialog')).toBeHidden()
@@ -351,7 +352,7 @@ test.describe('expenses (M03, M11)', () => {
     await expect(page.getByText(/Last used on ORD-/)).toBeVisible()
   })
 
-  test('the list: by month with totals, filters by group, category and paid via, edit and delete', async ({ page }) => {
+  test('the list: by month with totals, search, filters by group, category and paid via, edit and delete', async ({ page }) => {
     const tag = `list-${unique()}`
     const [x1, x2, x3] = [base() + 11, base() + 12, base() + 13]
     await addExpense({ amount_pkr: x1, category_id: RENT, paid_via: 'bank', description: `${tag} a` })
@@ -361,19 +362,29 @@ test.describe('expenses (M03, M11)', () => {
     await expect(page.getByText(`${tag} a`)).toBeVisible()
     await expect(page.getByText(`${tag} c`)).toBeVisible()
     await review(page, 'm03-expenses-list-1440')
-    // filter: group, then category, then paid via
-    await page.getByRole('combobox', { name: 'Group' }).selectOption('order_cost')
-    await expect(page.getByText(`${tag} c`)).toBeVisible()
-    await expect(page.getByText(`${tag} a`)).toHaveCount(0)
-    await page.getByRole('button', { name: 'Clear filters' }).click()
-    await page.getByRole('combobox', { name: 'Category' }).selectOption({ label: 'Office supplies & snacks' })
+    // search: the detail, kept in ?q=
+    const search = page.getByRole('textbox', { name: 'Search expenses' })
+    await search.fill(`${tag} b`)
+    await expect(page).toHaveURL(/[?&]q=/)
     await expect(page.getByText(`${tag} b`)).toBeVisible()
     await expect(page.getByText(`${tag} a`)).toHaveCount(0)
-    await page.getByRole('button', { name: 'Clear filters' }).click()
-    await page.getByRole('combobox', { name: 'Paid via' }).selectOption('bank')
+    await page.getByRole('button', { name: 'Clear search' }).click()
+    // filter (the Filters sheet): group, then category, then paid via
+    await page.getByRole('button', { name: 'Filters', exact: true }).click()
+    const sheet = page.getByRole('dialog', { name: 'Filter expenses' })
+    await sheet.getByRole('combobox', { name: 'Group' }).selectOption('order_cost')
+    await expect(page.getByText(`${tag} c`)).toBeVisible()
+    await expect(page.getByText(`${tag} a`)).toHaveCount(0)
+    await sheet.getByRole('button', { name: 'Clear' }).click()
+    await sheet.getByRole('combobox', { name: 'Category' }).selectOption({ label: 'Office supplies & snacks' })
+    await expect(page.getByText(`${tag} b`)).toBeVisible()
+    await expect(page.getByText(`${tag} a`)).toHaveCount(0)
+    await sheet.getByRole('button', { name: 'Clear' }).click()
+    await sheet.getByRole('combobox', { name: 'Paid via' }).selectOption('bank')
     await expect(page.getByText(`${tag} a`)).toBeVisible()
     await expect(page.getByText(`${tag} b`)).toHaveCount(0)
-    await page.getByRole('button', { name: 'Clear filters' }).click()
+    await sheet.getByRole('button', { name: 'Clear' }).click()
+    await page.keyboard.press('Escape')
     // totals under the list: paid, input tax and cost
     await expect(page.getByText(/All \d+ expenses shown/)).toBeVisible()
     // edit

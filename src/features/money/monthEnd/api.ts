@@ -267,6 +267,7 @@ export async function loadPayables(asOf: string): Promise<PayableRow[]> {
   return data.map(r => ({
     legId: r.supplier_order_id,
     supplier: r.supplier_name ?? 'Supplier',
+    orderId: r.order_id ?? null,
     orderRef: r.order_number ? orderRef(r.order_number) : null,
     leg: legs[r.supplier_order_id] ?? null,
     currency: r.currency ?? 'PKR',

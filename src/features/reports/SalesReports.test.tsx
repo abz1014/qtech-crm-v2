@@ -71,7 +71,7 @@ describe('Enquiry and customer reports (inside Money > Reports)', () => {
     const float = await screen.findByRole('region', { name: 'Asking suppliers totals' })
     expect(within(float).getByText('57%')).toBeInTheDocument()
     expect(within(float).getByText('4 of 7 items on RFQs sent to suppliers')).toBeInTheDocument()
-    expect(screen.getByText('Not sent to suppliers')).toBeInTheDocument()
+    expect(screen.getByText('Needs suppliers')).toBeInTheDocument() // the RFQ step's word, not the old "Not sent to suppliers"
     const turn = await screen.findByRole('region', { name: 'Customer answer totals' })
     expect(within(turn).getByText('2.7 days')).toBeInTheDocument()
     expect(await screen.findByText('Mar 2026')).toBeInTheDocument()

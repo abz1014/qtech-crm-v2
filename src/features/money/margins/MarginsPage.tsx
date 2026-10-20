@@ -10,7 +10,7 @@ import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
 import { StatusBadge } from '@/ui/StatusBadge'
-import { Tag } from '@/ui/Tag'
+import { NeedsCount, Tag } from '@/ui/Tag'
 import { ToggleButton } from '@/ui/ToggleButton'
 import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
@@ -27,19 +27,24 @@ import { isPaidProvisional, marginTotals, sortMargins, type MarginRow } from '@/
  * only. Reached from the Month end checklist ("Margin not final") and from Reports (?from=reports), with a back link to either.
  * Only orders with costs marked complete are totalled. A provisional margin is shown with the dashed mark and not added up;
  * an order with an unknown price basis has no margin, is labelled, and is left out of every total.
+ * Round 2 (R2-13): the margin sits beside the customer, bigger; the cost is ONE line (what the margin uses: the actual cost,
+ * with the dashed not-final mark while costs may still come in, and the expected cost under it); "Costs complete" is not
+ * shown (rule 2: a done state needs no chip), only "Margin not final" and "Is GST included?".
  */
-const COLS = 'md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_128px]'
+const COLS = 'md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_152px]'
 const ROW = `grid grid-cols-2 gap-x-4 gap-y-2 border-t px-5 py-3 first:border-t-0 md:gap-4 ${COLS}`
 
 function Label({ children, phone = true }: { children: string; phone?: boolean }) {
   return <span className={cn('text-sm text-fg-muted md:sr-only', !phone && 'sr-only')}>{children}</span>
 }
 
+/** Only the states that ask for something: "Costs complete" is not shown. */
 function CostsChip({ state }: { state: MarginRow['state'] }) {
+  if (state === 'final') return null
   return state === 'basis_unknown' ? (
     <StatusBadge dimension="trust" value="basis-unknown" label="Is GST included?" />
   ) : (
-    <StatusBadge dimension="costs" value={state === 'final' ? 'complete' : 'provisional'} label={state === 'final' ? 'Costs complete' : 'Margin not final'} />
+    <StatusBadge dimension="costs" value="provisional" label="Margin not final" />
   )
 }
 
@@ -47,12 +52,20 @@ function MarginRowView({ r }: { r: MarginRow }) {
   const unknown = r.state === 'basis_unknown'
   return (
     <li className={ROW} data-margin-state={r.state}>
-      <div className="col-span-2 grid content-start gap-[2px] md:col-span-1">
+      <div className="grid content-start gap-[2px]">
         <Label phone={false}>Customer and order</Label>
         <span className="min-w-0 break-words text-sm font-medium">{r.companyName}</span>
         <Link to={`/orders/${r.orderId}`} className="w-fit rounded hover:underline" aria-label={`Open ${orderRef(r.orderNumber)}`}>
           <Tag className="border-0 bg-transparent px-0">{orderRef(r.orderNumber)}</Tag>
         </Link>
+      </div>
+      <div className="grid content-start justify-items-end gap-1" data-testid="margin-value">
+        <Label>Margin</Label>
+        {unknown ? (
+          <Money value={null} prefix={false} size="lg" />
+        ) : (
+          <Money value={r.margin} prefix={false} size="lg" provisional={r.state === 'provisional'} mark="underline" strong />
+        )}
       </div>
       <div className="grid content-start gap-1 md:justify-items-end">
         <Label>Net sale</Label>
@@ -66,20 +79,22 @@ function MarginRowView({ r }: { r: MarginRow }) {
         )}
       </div>
       <div className="grid content-start gap-1 md:justify-items-end">
-        <Label>Expected cost</Label>
-        <Money value={r.expectedCost} prefix={false} />
+        <Label>Cost</Label>
+        <Money value={r.actualCost} prefix={false} provisional={r.state === 'provisional'} mark="underline" />
+        {r.state !== 'final' ? (
+          <span className="text-xs text-fg-muted">
+            {r.expectedCost !== null ? (
+              <>
+                so far, <Money value={r.expectedCost} prefix={false} /> expected
+              </>
+            ) : (
+              'so far'
+            )}
+          </span>
+        ) : null}
       </div>
-      <div className="grid content-start gap-1 md:justify-items-end">
-        <Label>Actual cost so far</Label>
-        <Money value={r.actualCost} prefix={false} />
-      </div>
-      <div className="grid content-start gap-1 md:justify-items-end">
-        <Label>Margin</Label>
-        {unknown ? <Money value={null} prefix={false} /> : <Money value={r.margin} prefix={false} provisional={r.state === 'provisional'} mark="underline" strong={r.state === 'final'} />}
-      </div>
-      <div className="grid content-start gap-1">
-        <Label>Costs</Label>
-        <span>
+      <div className="col-span-2 grid content-start gap-1 md:col-span-1">
+        <span className="empty:hidden">
           <CostsChip state={r.state} />
         </span>
       </div>
@@ -121,7 +136,7 @@ export function MarginsPage() {
           </span>
           <span className="flex-1" />
           <ToggleButton pressed={onlyPaid} onPressedChange={setOnlyPaid} icon={ListFilter}>
-            Paid, margin not final <span className="num">{paidCount}</span>
+            Paid, margin not final <NeedsCount n={paidCount} />
           </ToggleButton>
           {onlyPaid && rows.length > 1 ? (
             <Button size="sm" icon={ClipboardCheck} onClick={() => setConfirming(true)}>
@@ -155,11 +170,10 @@ export function MarginsPage() {
           <div>
             <div className={`hidden border-b bg-sunken px-5 py-2 text-xs text-fg-muted md:grid md:gap-4 ${COLS}`} aria-hidden="true">
               <span>Customer and order</span>
-              <span className="text-right">Net sale</span>
-              <span className="text-right">Expected cost</span>
-              <span className="text-right">Actual cost so far</span>
               <span className="text-right">Margin</span>
-              <span>Costs</span>
+              <span className="text-right">Net sale</span>
+              <span className="text-right">Cost</span>
+              <span />
             </div>
             <ul>
               {rows.map(r => (
@@ -169,21 +183,21 @@ export function MarginsPage() {
             {onlyPaid && rows.length === 0 ? <p className="px-5 py-6 text-sm text-fg-muted">Every paid order has its costs marked complete.</p> : null}
             <div className={`grid grid-cols-2 gap-x-4 gap-y-1 border-t bg-sunken px-5 py-3 text-sm font-medium md:gap-4 ${COLS}`} data-testid="margin-totals">
               <span className="col-span-2 md:col-span-1">
-                Total of <span className="num">{totals.orders}</span> {totals.orders === 1 ? 'order' : 'orders'} with costs complete
+                Added up: <span className="num">{totals.orders}</span> {totals.orders === 1 ? 'order' : 'orders'} with costs complete
+              </span>
+              <span className="num text-right">
+                <span className="text-fg-muted md:sr-only">Margin </span>
+                <Money value={totals.orders > 0 ? totals.margin : null} prefix={false} size="lg" />
               </span>
               <span className="num md:text-right">
+                <span className="font-regular text-fg-muted md:sr-only">Net sale </span>
                 <Money value={totals.orders > 0 ? totals.netSale : null} prefix={false} />
               </span>
               <span className="num md:text-right">
-                <Money value={totals.orders > 0 ? totals.expectedCost : null} prefix={false} />
-              </span>
-              <span className="num md:text-right">
+                <span className="font-regular text-fg-muted md:sr-only">Cost </span>
                 <Money value={totals.orders > 0 ? totals.actualCost : null} prefix={false} />
               </span>
-              <span className="num md:text-right">
-                <Money value={totals.orders > 0 ? totals.margin : null} prefix={false} />
-              </span>
-              <span />
+              <span className="max-md:hidden" />
             </div>
             {totals.provisional + totals.basisUnknown > 0 ? (
               <p className="border-t px-5 py-3 text-sm text-fg-2" data-testid="margin-left-out">

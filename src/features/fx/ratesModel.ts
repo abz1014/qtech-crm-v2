@@ -51,16 +51,22 @@ export function ageText(days: number): string {
   return days <= 0 ? 'today' : days === 1 ? '1 day' : `${days} days`
 }
 
-/** The band chip's words: "Fresh", "Stale, 8 days", "Unusable, 54 days". */
+/**
+ * The Age cell's words (round 2, spec 1.5): a fresh rate is just its age ("today", "3 days"); an old one is the chip "Old rate"
+ * and an unusable one "No rate", each with "8 days old" as the chip's detail. Returns what is read, chip label first.
+ */
 export function bandLabel(staleness: 'fresh' | 'stale' | 'unusable', ageDays: number): string {
-  if (staleness === 'fresh') return 'Fresh'
-  return `${staleness === 'stale' ? 'Stale' : 'Unusable'}, ${ageDays} days`
+  if (staleness === 'fresh') return ageText(ageDays)
+  return `${staleness === 'stale' ? 'Old rate' : 'No rate'}, ${bandDetail(ageDays)}`
 }
+
+/** The chip's detail: "8 days old". */
+export const bandDetail = (ageDays: number): string => `${ageText(ageDays)} old`
 
 /** The sentence under the table for a rate that can no longer be used; null for any other band. */
 export function unusableWarning(r: RateRow): string | null {
   if (r.staleness !== 'unusable' || r.ageDays === null) return null
-  return `${r.currency} has not been updated for ${r.ageDays} days. A rate older than 30 days is unusable, so ${r.currency} quotes show in ${r.currency} only and are left out of price comparisons until someone adds a current rate. Fresh is up to 7 days, stale is 8 to 30.`
+  return `${r.currency} has not been updated for ${r.ageDays} days. A rate older than 30 days is not used, so ${r.currency} quotes show in ${r.currency} only and are left out of price comparisons until someone adds a current rate.`
 }
 
 const runDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Karachi', weekday: 'short', day: 'numeric', month: 'short' })

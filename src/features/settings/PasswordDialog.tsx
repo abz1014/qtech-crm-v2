@@ -80,7 +80,7 @@ export function PasswordDialog({ kind, person, password, onClose }: SecretDialog
         <div className="flex items-center gap-3 border-b pb-4">
           <Avatar name={person.name} size="lg" />
           <div className="grid min-w-0">
-            <span className="truncate font-medium text-fg">{person.name}</span>
+            <span className="line-clamp-2 break-words font-medium text-fg">{person.name}</span>
             <span className="flex min-w-0 gap-2 text-xs text-fg-muted">
               <span className="num truncate">{person.email}</span>
               <span>{roleLabel(person.role)}</span>

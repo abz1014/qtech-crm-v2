@@ -1,6 +1,7 @@
 import { passwordSchema, type PasswordValues } from '@/features/settings/passwordModel'
 import { useChangePassword } from '@/features/settings/hooks'
 import { Button } from '@/ui/Button'
+import { PageHeader } from '@/ui/PageHeader'
 import { useToast } from '@/ui/useToast'
 import { Form, FormField } from '@/ui/form/Form'
 import { TextField } from '@/ui/form/TextField'
@@ -34,10 +35,7 @@ export function ChangePasswordPage() {
 
   return (
     <div className="grid content-start gap-4">
-      <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Change password</h1>
-        <p className="max-w-[62ch] text-sm text-fg-muted">Change the password for your own sign-in. You stay signed in on this device.</p>
-      </header>
+      <PageHeader title="Change password" lede="Change the password for your own sign-in. You stay signed in on this device." />
       <Form sf={sf} labels={LABELS} className="grid gap-4">
         <section className="grid gap-4 rounded border bg-surface p-5">
           <div className="grid gap-4 sm:max-w-[480px]">

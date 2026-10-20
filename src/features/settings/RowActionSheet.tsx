@@ -47,8 +47,8 @@ export function RowActionSheet({
           <div className="flex items-center gap-3 border-b px-4 pb-3 pt-2">
             <Avatar name={member.name} size="lg" />
             <div className="grid min-w-0">
-              <RadixDialog.Title className="truncate text-sm font-medium text-fg">{member.name}</RadixDialog.Title>
-              <span className="truncate text-xs text-fg-muted">{sub}</span>
+              <RadixDialog.Title className="line-clamp-2 text-sm font-medium text-fg">{member.name}</RadixDialog.Title>
+              <span className="line-clamp-2 text-xs text-fg-muted">{sub}</span>
             </div>
           </div>
           <ul>

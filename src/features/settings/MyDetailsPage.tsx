@@ -6,6 +6,7 @@ import { useMyDetails, useSetPhone } from '@/features/settings/hooks'
 import type { MyDetails } from '@/features/settings/api'
 import { PHONE_MAX } from '@/features/settings/teamModel'
 import { Button } from '@/ui/Button'
+import { PageHeader } from '@/ui/PageHeader'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
@@ -30,12 +31,10 @@ export function MyDetailsPage() {
 
   return (
     <div className="grid content-start gap-4">
-      <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Your details</h1>
-        <p className="max-w-prose text-sm text-fg-muted">
-          How you appear to customers. Your phone number is printed under your signature on chase texts and quotations.
-        </p>
-      </header>
+      <PageHeader
+        title="Your details"
+        lede="How you appear to customers. Your phone number is printed under your signature on chase texts and quotations."
+      />
       {q.isLoading ? (
         <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading your details">
           <Skeleton className="h-[260px]" />

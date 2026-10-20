@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { RatesTable } from '@/features/settings/RatesTable'
 import { Icon } from '@/ui/Icon'
+import { PageHeader } from '@/ui/PageHeader'
 import { cn } from '@/lib/utils'
 
 /*
@@ -35,12 +36,7 @@ function Card({ id, title, text, to, cta, children }: { id: string; title: strin
 export function SettingsHomePage() {
   return (
     <div className="grid content-start gap-6">
-      <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="max-w-[62ch] text-sm text-fg-muted">
-          Company details for documents, and the rates used to compare prices in other currencies.
-        </p>
-      </header>
+      <PageHeader title="Settings" lede="Company details for documents, and the rates used to compare prices in other currencies." />
       <Card
         id="fxh"
         title="Exchange rates"

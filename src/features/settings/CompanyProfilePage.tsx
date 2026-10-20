@@ -11,6 +11,7 @@ import {
 } from '@/features/settings/companyProfile'
 import { useCompanyProfile, useSaveCompanyProfile } from '@/features/settings/hooks'
 import { Banner } from '@/ui/Banner'
+import { PageHeader } from '@/ui/PageHeader'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
@@ -52,22 +53,22 @@ export function CompanyProfilePage() {
 
   return (
     <div className="grid content-start gap-4">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Company profile</h1>
-          <p className="max-w-prose text-sm text-fg-muted">
-            {isAdmin
-              ? 'Your registered details and standard wording. Only admins can change them.'
-              : 'Your registered details and standard wording, as printed on quotations and purchase orders.'}
-          </p>
-        </div>
-        {!isAdmin ? (
-          <span className="inline-flex h-6 items-center gap-[6px] rounded bg-selected px-[6px] text-xs font-medium text-fg-2">
-            <Icon icon={Lock} size="sm" />
-            Only an admin can edit
-          </span>
-        ) : null}
-      </header>
+      <PageHeader
+        title="Company profile"
+        lede={
+          isAdmin
+            ? 'Your registered details and standard wording. Only admins can change them.'
+            : 'Your registered details and standard wording, as printed on quotations and purchase orders.'
+        }
+        secondary={
+          !isAdmin ? (
+            <span className="inline-flex h-6 items-center gap-[6px] rounded bg-selected px-[6px] text-sm font-medium text-fg-2">
+              <Icon icon={Lock} size="sm" />
+              Only an admin can edit
+            </span>
+          ) : undefined
+        }
+      />
 
       {q.isLoading ? (
         <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading the company profile">

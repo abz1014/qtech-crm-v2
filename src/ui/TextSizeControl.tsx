@@ -41,7 +41,7 @@ export function TextSizePanel({ className }: { className?: string }) {
   )
 }
 
-/** "Keyboard shortcuts" for Settings > Your details (WCAG SC 2.1.4): N, C, G then T and "/" can be turned off. */
+/** "Keyboard shortcuts" for Settings > Your details (WCAG SC 2.1.4): N, C, G then T, "/" and "?" can be turned off. */
 export function ShortcutsPanel({ className }: { className?: string }) {
   const [on, setOn] = useSingleKeyShortcuts()
   return (
@@ -51,8 +51,8 @@ export function ShortcutsPanel({ className }: { className?: string }) {
           Keyboard shortcuts
         </h2>
         <p className="max-w-[62ch] text-sm text-fg-2 text-pretty">
-          N starts an RFQ, C opens Capture, G then T goes to Today and / jumps to a table filter. Turn these off if you use
-          voice control or press keys by accident. Ctrl+K and Ctrl+Z always work. This device only.
+          N starts an RFQ, C opens Paste or photo, G then T goes to Today, / jumps to a list&apos;s search and ? opens the keyboard
+          shortcuts. Turn these off if you use voice control or press keys by accident. Ctrl+K and Ctrl+Z always work. This device only.
         </p>
       </div>
       <Checkbox label="Single-key shortcuts on" checked={on} onCheckedChange={v => setOn(v === true)} />

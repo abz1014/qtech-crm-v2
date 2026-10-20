@@ -1,11 +1,12 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Lock, Wallet } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Lock, Receipt, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
 import { SegmentedControl } from '@/ui/SegmentedControl'
-import { StatusBadge } from '@/ui/StatusBadge'
+import { StatusText } from '@/ui/StatusText'
 import { SumBar } from '@/ui/SumBar'
 import { Tag } from '@/ui/Tag'
 import { DataTable, type Column } from '@/ui/DataTable'
@@ -26,7 +27,7 @@ import {
   ReportError,
   ReportLoading,
 } from '@/features/money/monthEnd/ReportParts'
-import { csvFile, downloadReport } from '@/features/money/monthEnd/reportFiles'
+import { csvFile, downloadReport, payHref } from '@/features/money/monthEnd/reportFiles'
 import {
   useAgingReport,
   useAsOf,
@@ -373,7 +374,7 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
         cell: l => (
           <span className="grid gap-px">
             <span className="font-medium">{l.category}</span>
-            {notes.data?.[l.categoryId] ? <span className="truncate text-xs font-regular text-fg-muted">{notes.data[l.categoryId]}</span> : null}
+            {notes.data?.[l.categoryId] ? <span className="line-clamp-2 text-xs font-regular text-fg-muted">{notes.data[l.categoryId]}</span> : null}
           </span>
         ),
       },
@@ -382,7 +383,7 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
         id: 'via',
         header: 'Paid via',
         value: l => l.paidVia,
-        cell: l => <StatusBadge dimension="paid-via" value={l.paidVia} />,
+        cell: l => <Tag>{VIA_LABEL[l.paidVia]}</Tag>,
       },
       { id: 'gross', header: 'Gross paid', kind: 'money', value: l => l.gross, ...whole<CategoryLine>(l => l.gross) },
       { id: 'tax', header: 'Input tax', kind: 'money', value: l => l.inputTax, ...whole<CategoryLine>(l => l.inputTax), cell: l => (toPaisa(l.inputTax) > 0n ? <Money value={l.inputTax} prefix={false} paisa="never" /> : <span className="text-fg-muted">{'—'}</span>) },
@@ -502,8 +503,8 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
         value: r => r.customer,
         cell: r => (
           <span className="grid gap-px">
-            <span className="truncate font-medium">{r.customer}</span>
-            <span className="num truncate text-xs text-fg-muted">
+            <span className="line-clamp-2 font-medium">{r.customer}</span>
+            <span className="num line-clamp-2 text-xs text-fg-muted">
               {r.invoiceNumber}
               {r.orderRef ? ` · ${r.orderRef}` : ''}
             </span>
@@ -624,9 +625,15 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
         value: r => r.supplier,
         cell: r => (
           <span className="grid gap-px">
-            <span className="truncate font-medium">{r.supplier}</span>
-            <span className="num truncate text-xs text-fg-muted">
-              {r.orderRef ?? ''}
+            <span className="line-clamp-2 font-medium">{r.supplier}</span>
+            <span className="num line-clamp-2 text-xs text-fg-muted">
+              {r.orderId && r.orderRef ? (
+                <Link to={`/orders/${r.orderId}`} className="rounded hover:underline">
+                  {r.orderRef}
+                </Link>
+              ) : (
+                (r.orderRef ?? '')
+              )}
               {r.leg ? ` · ${r.leg}` : ''}
             </span>
           </span>
@@ -642,21 +649,36 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
         id: 'state',
         header: 'State',
         sortable: false,
+        // Report text, not a chip (round 2, spec 1.5): the state word and its reason under it.
         cell: r => (
-          <span className="grid justify-items-start gap-px">
-            <StatusBadge
-              dimension="payable"
-              value={r.flag === 'overpaid' && r.state === 'settled' ? 'paid-over' : r.state === 'no_rate' ? 'no-rate' : r.state}
-              label={r.state === 'unpriced' ? 'Supplier price missing' : undefined}
-            />
-            <span className="text-xs text-fg-muted">
-              {r.state === 'owing' ? (toPaisa(r.paidPkr) === 0n ? 'No payment yet' : 'Part paid') : r.state === 'settled' ? (r.flag === 'overpaid' ? 'Owed shown as 0' : 'Within 3% of paid, or paid') : r.state === 'unpriced' ? "The supplier's price is not on the items yet" : 'No rate in the 30 days before; add one on Exchange rates'}
-            </span>
-          </span>
+          <StatusText
+            dimension="payable"
+            value={r.flag === 'overpaid' && r.state === 'settled' ? 'paid-over' : r.state === 'no_rate' ? 'no-rate' : r.state}
+            label={r.state === 'unpriced' ? 'Supplier price missing' : undefined}
+            detail={
+              r.state === 'owing' ? (toPaisa(r.paidPkr) === 0n ? 'No payment yet' : 'Part paid') : r.state === 'settled' ? (r.flag === 'overpaid' ? 'Owed shown as 0' : 'Within 3% of paid, or paid') : r.state === 'unpriced' ? "The supplier's price is not on the items yet" : 'No rate in the 30 days before; add one on Exchange rates'
+            }
+          />
         ),
       },
+      {
+        id: 'pay',
+        header: 'Pay',
+        sortable: false,
+        // The same Pay {supplier} dialog as the order's supplier order menu: the order, the supplier order, the supplier and the
+        // amount owed are filled in (ExpensesPage reads ?add=1&order&leg&amount&note).
+        cell: r => {
+          const href = payHref(r, asOf)
+          return href ? (
+            <Link to={href} className="inline-flex items-center gap-1 rounded text-sm font-medium text-primary hover:underline" aria-label={`Pay ${r.supplier}${r.orderRef ? `, ${r.orderRef}` : ''}`}>
+              <Icon icon={Receipt} size="sm" />
+              Pay
+            </Link>
+          ) : null
+        },
+      },
     ],
-    [],
+    [asOf],
   )
   if (q.isError) return <ReportError title="What we owe did not load" onRetry={q.refetch} />
   if (q.isPending || !v) return <ReportLoading label="Loading what we owe" />

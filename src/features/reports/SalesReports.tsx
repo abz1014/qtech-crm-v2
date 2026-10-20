@@ -138,7 +138,6 @@ function OutcomesReport() {
         error={q.isError ? { message: 'The outcomes could not be read. Nothing was changed.', onRetry: () => void q.refetch() } : null}
         empty={<span>No RFQ has been closed yet. Closed RFQs appear here with the reason you chose.</span>}
         defaultSort={{ id: 'count', dir: 'desc' }}
-        densitySwitch={false}
       />
     </Section>
   )
@@ -193,7 +192,6 @@ function FloatReport() {
         loading={q.isLoading}
         error={q.isError ? { message: 'This report could not be read. Nothing was changed.', onRetry: () => void q.refetch() } : null}
         empty={<span>No RFQ yet. Once RFQs exist they are grouped here by how far asking suppliers has got.</span>}
-        densitySwitch={false}
       />
     </Section>
   )
@@ -241,7 +239,6 @@ function TurnaroundReport() {
         loading={q.isLoading}
         error={q.isError ? { message: 'This report could not be read. Nothing was changed.', onRetry: () => void q.refetch() } : null}
         empty={<span>No question has been asked of a customer yet. Months appear here once one is.</span>}
-        densitySwitch={false}
       />
     </Section>
   )
@@ -313,7 +310,6 @@ function RepeatReport() {
         empty={<span>No customer has an order yet. They appear here as soon as one is placed.</span>}
         exportCsv={{ filename: 'repeat-customers' }}
         defaultSort={{ id: 'orders', dir: 'desc' }}
-        densitySwitch={false}
       />
     </Section>
   )

@@ -32,6 +32,7 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
+import { PageHeader } from '@/ui/PageHeader'
 import { Money } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
 import { Tag } from '@/ui/Tag'
@@ -115,12 +116,18 @@ export function TargetsPage() {
 
   return (
     <div className="grid content-start gap-4">
-      <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Targets <InfoTip label="About targets">Per person, per quarter, in net cash received (GST excluded).</InfoTip></h1>
-        <p className="max-w-prose text-sm text-fg-muted">
-          Net cash received per person for each quarter, GST left out. Each person sees only their own target, on Today.
-        </p>
-      </header>
+      <PageHeader
+        title="Targets"
+        lede={
+          <>
+            Each person sees only their own target, on Today.{' '}
+            <InfoTip label="About targets">
+              Per person, per quarter, in net cash received (GST left out). Achieved is net cash received and credited to the person in
+              that quarter. On pace is the target spread evenly over the days of the quarter, counting today.
+            </InfoTip>
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
         <div className="flex items-center gap-1" role="group" aria-label="Year">
@@ -187,8 +194,8 @@ export function TargetsPage() {
               <div role="rowheader" className="flex min-w-0 items-center gap-3 md:px-4 md:py-3">
                 <Avatar name={m.name} />
                 <span className="grid min-w-0">
-                  <span className="truncate text-sm font-medium">{m.name}</span>
-                  <span className="truncate text-xs text-fg-muted">{roleLabel(m.role)}</span>
+                  <span className="line-clamp-2 break-words text-sm font-medium">{m.name}</span>
+                  <span className="text-xs text-fg-muted">{roleLabel(m.role)}</span>
                 </span>
               </div>
               {QUARTERS.map(q => (
@@ -214,9 +221,6 @@ export function TargetsPage() {
           {targetsFooter(people.map(p => p.id), targets.data ?? [], year, year === now.year ? now.quarter : null)}
         </p>
       ) : null}
-      <p className="max-w-prose text-xs text-fg-muted">
-        Achieved is net cash received and credited to the person in that quarter. On pace is the target spread evenly over the days of the quarter, counting today.
-      </p>
     </div>
   )
 }
