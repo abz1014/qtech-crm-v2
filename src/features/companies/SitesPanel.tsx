@@ -74,7 +74,7 @@ function itemsFor(history: CompanyHistory, siteId: string | null): Item[] {
           : r.outcome === 'closed'
             ? (CLOSED_WHY[r.closeReason ?? ''] ?? null)
             : r.dueOn
-              ? `bid due ${formatDay(r.dueOn)}`
+              ? `quotation due ${formatDay(r.dueOn)}`
               : null,
     }))
   const orders: Item[] = history.orders
@@ -137,60 +137,16 @@ export function SitesPanel({
   }
   const columns = useMemo<Column<Item>[]>(
     () => [
-      {
-        id: 'ref',
-        header: 'Reference',
-        value: r => r.number,
-        cell: r => (
-          <Link to={r.href} className="rounded hover:underline">
-            <Tag>{r.kind === 'rfq' ? rfqRef(r.number) : orderRef(r.number)}</Tag>
-          </Link>
-        ),
-        width: 132,
-      },
-      {
-        id: 'what',
-        header: 'What',
-        value: r => r.what,
-        cell: r =>
-          r.what ? (
-            <span title={r.what}>
-              {r.what}
-              {r.moreItems > 0 ? <span className="ml-1 text-fg-muted">{`+ ${r.moreItems} more`}</span> : null}
-            </span>
-          ) : (
-            <span className="text-fg-muted">No items yet</span>
-          ),
-      },
+      { id: 'ref', header: 'Reference', value: r => r.number, cell: r => <RefTag item={r} />, width: 132 },
+      { id: 'what', header: 'What', value: r => r.what, cell: r => <WhatText item={r} /> },
       { id: 'date', header: 'Date', kind: 'date', value: r => r.date, cell: r => <span className="num">{r.date ? formatShortDate(r.date, today) : 'No date'}</span>, width: 104 },
-      {
-        id: 'state',
-        header: 'State',
-        width: 330,
-        cell: r =>
-          r.kind === 'order' ? (
-            <span className="inline-flex flex-wrap items-center gap-[6px]">
-              {r.state === 'cancelled' ? <StatusBadge dimension="order" value="cancelled" /> : r.goods ? <StatusBadge dimension="goods" value={r.goods} /> : null}
-              {r.paymentOverdue ? (
-                <StatusBadge dimension="payment" value="overdue" label="Payment overdue" />
-              ) : r.invoicing ? (
-                <StatusBadge dimension="invoicing" value={r.invoicing} />
-              ) : null}
-            </span>
-          ) : r.state ? (
-            <span className="inline-flex flex-wrap items-center gap-2">
-              <StatusBadge dimension="rfq-outcome" value={r.state} />
-              {r.extra ? <span className="text-xs text-fg-muted">{r.extra}</span> : null}
-            </span>
-          ) : null,
-      },
+      { id: 'state', header: 'State', width: 330, cell: r => <StateChips item={r} /> },
       {
         id: 'repeat',
         header: 'Row actions',
         hiddenHeader: true,
-        width: 150,
-        cell: r =>
-          r.kind === 'order' && r.orderId ? <RepeatOrderSlot orderId={r.orderId} orderNumber={r.number} /> : null,
+        width: 164,
+        cell: r => (r.kind === 'order' && r.orderId ? <RepeatOrderSlot orderId={r.orderId} orderNumber={r.number} /> : null),
       },
     ],
     [today],
@@ -201,7 +157,6 @@ export function SitesPanel({
   return (
     <Panel
       title="Sites"
-      meta="RFQs and orders are filed under the site they are for"
       actions={
         <Button variant="quiet" size="sm" icon={Plus} onClick={onAddSite}>
           Add site
@@ -222,7 +177,7 @@ export function SitesPanel({
       ) : !sites || (sites.length === 0 && unfiled.length === 0) ? (
         <div className="grid gap-1 px-5 py-6 text-sm">
           <p className="font-medium text-fg">No sites or RFQs yet.</p>
-          <Fine>Add a site here, or type its name when you log the first RFQ and it is added for you.</Fine>
+          <Fine>Add a site here, or type one when you log an RFQ.</Fine>
         </div>
       ) : (
         <div>
@@ -234,6 +189,7 @@ export function SitesPanel({
               address={s.address}
               items={history ? itemsFor(history, s.id) : []}
               columns={columns}
+              today={today}
               onEdit={() => onEditSite(s)}
               onRemove={() => {
                 setRemoveError(null)
@@ -254,18 +210,13 @@ export function SitesPanel({
               }
             />
           ))}
-          {unfiled.length > 0 ? <SiteBlock name="Not filed under a site" items={unfiled} columns={columns} muted /> : null}
+          {unfiled.length > 0 ? <SiteBlock name="Not filed under a site" items={unfiled} columns={columns} today={today} muted /> : null}
         </div>
       )}
     </Panel>
   )
 }
 
-/**
- * "Repeat order" (g2-company board 4): starts a new order from this one, filed under the same site. The action itself is O02
- * (create_repeat_order, built by another worker): until it lands the slot is drawn as the design has it, but disabled and
- * labelled. Replace the disabled button with the real action when O02 merges. Tracked in docs/design/PARITY_AUDIT.md (D-83).
- */
 /**
  * "Repeat order" on an order row (O02; D-83): opens the New order dialog with this order already chosen, so a repeat is Create order and
  * nothing else. Engineers are not offered it: a repeat copies prices.
@@ -290,6 +241,7 @@ function SiteBlock({
   address,
   items,
   columns,
+  today,
   muted,
   onEdit,
   onRemove,
@@ -300,6 +252,7 @@ function SiteBlock({
   address?: string | null
   items: Item[]
   columns: Column<Item>[]
+  today: string
   muted?: boolean
   onEdit?: () => void
   onRemove?: () => void
@@ -307,17 +260,17 @@ function SiteBlock({
 }) {
   const rfqs = items.filter(i => i.kind === 'rfq').length
   const orders = items.length - rfqs
+  const counts = `${rfqs} ${rfqs === 1 ? 'RFQ' : 'RFQs'} · ${orders} ${orders === 1 ? 'order' : 'orders'}`
   return (
     <section className="border-t first:border-t-0" aria-label={name}>
       <header className="flex items-start gap-3 px-5 py-3">
-        <Icon icon={MapPin} className="mt-[2px] text-fg-muted" />
+        <Icon icon={MapPin} className="mt-[3px] text-fg-muted" />
         <div className="min-w-0 flex-1">
           <h3 className={muted ? 'text-sm font-medium text-fg-muted' : 'text-sm font-semibold'}>{name}</h3>
-          {address ? <p className="truncate text-xs text-fg-muted">{address}</p> : null}
+          {address ? <p className="truncate text-sm text-fg-muted">{address}</p> : null}
+          <p className="num text-sm text-fg-muted sm:hidden">{counts}</p>
         </div>
-        <span className="num shrink-0 text-xs text-fg-muted">
-          {rfqs} {rfqs === 1 ? 'RFQ' : 'RFQs'} · {orders} {orders === 1 ? 'order' : 'orders'}
-        </span>
+        <span className="num hidden shrink-0 pt-[2px] text-sm text-fg-muted sm:inline">{counts}</span>
         {onEdit && onRemove ? (
           <div className="-my-1 flex shrink-0 items-center">
             <Button variant="quiet" size="sm" icon={Pencil} aria-label={`Edit ${name}`} onClick={onEdit} />
@@ -327,13 +280,68 @@ function SiteBlock({
       </header>
       {confirm}
       {items.length > 0 ? (
-        <DataTable label={`RFQs and orders at ${name}`} columns={columns} rows={items} getRowId={r => r.key} density="compact" />
+        <DataTable label={`RFQs and orders at ${name}`} columns={columns} rows={items} getRowId={r => r.key} mobileRow={r => <ItemCard item={r} today={today} />} />
       ) : (
-        <div className="grid gap-1 px-5 pb-5 pt-4 text-sm">
-          <p className="font-medium text-fg">No RFQs or orders for this site yet.</p>
-          <p className="text-fg-2">Start one from the button above and it will be filed under this site.</p>
-        </div>
+        <p className="px-5 pb-4 text-sm text-fg-muted">No RFQs or orders here yet.</p>
       )}
     </section>
+  )
+}
+
+function RefTag({ item }: { item: Item }) {
+  return (
+    <Link to={item.href} className="rounded hover:underline">
+      <Tag>{item.kind === 'rfq' ? rfqRef(item.number) : orderRef(item.number)}</Tag>
+    </Link>
+  )
+}
+
+function WhatText({ item }: { item: Item }) {
+  if (!item.what) return <span className="text-fg-muted">No items yet</span>
+  return (
+    <span title={item.what}>
+      {item.what}
+      {item.moreItems > 0 ? <span className="ml-1 text-fg-muted">{`+ ${item.moreItems} more`}</span> : null}
+    </span>
+  )
+}
+
+/** An order: its goods chip and its invoicing chip ("Payment overdue" takes the invoicing chip's place). An RFQ: its outcome and why. */
+function StateChips({ item }: { item: Item }) {
+  if (item.kind === 'order') {
+    return (
+      <span className="inline-flex flex-wrap items-center gap-[6px]">
+        {item.state === 'cancelled' ? <StatusBadge dimension="order" value="cancelled" /> : item.goods ? <StatusBadge dimension="goods" value={item.goods} /> : null}
+        {item.paymentOverdue ? (
+          <StatusBadge dimension="payment" value="overdue" label="Payment overdue" />
+        ) : item.invoicing ? (
+          <StatusBadge dimension="invoicing" value={item.invoicing} />
+        ) : null}
+      </span>
+    )
+  }
+  if (!item.state) return null
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+      <StatusBadge dimension="rfq-outcome" value={item.state} />
+      {item.extra ? <span className="text-sm text-fg-muted">{item.extra}</span> : null}
+    </span>
+  )
+}
+
+/** A phone row (below 640px): the reference and date, what it was, then its state and Repeat order. */
+function ItemCard({ item, today }: { item: Item; today: string }) {
+  return (
+    <div className="grid gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <RefTag item={item} />
+        <span className="num text-sm text-fg-muted">{item.date ? formatShortDate(item.date, today) : 'No date'}</span>
+      </div>
+      <WhatText item={item} />
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <StateChips item={item} />
+        {item.kind === 'order' && item.orderId ? <RepeatOrderSlot orderId={item.orderId} orderNumber={item.number} /> : null}
+      </div>
+    </div>
   )
 }

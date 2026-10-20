@@ -1,6 +1,6 @@
 import { Fragment, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Building2, ChevronLeft, Ellipsis, FilePlus2, GitMerge, Link2, Pencil, Plus, Send, Trash2 } from 'lucide-react'
+import { Building2, ChevronLeft, Ellipsis, FilePlus2, GitMerge, Link2, Pencil, Plus, Trash2 } from 'lucide-react'
 import {
   useCompany,
   useCompanyContacts,
@@ -9,20 +9,23 @@ import {
   useCompanySites,
   useRemoveContact,
   useSupplierRecordView,
+  useSupplierStats,
 } from '@/features/companies/hooks'
 import type { CompanyDetail, ContactRow, SiteRow } from '@/features/companies/api'
 import { ContactDialog, EditCompanyDialog, SiteDialog } from '@/features/companies/CompanyDialogs'
-import { ConfirmRemove, Fine, KeyValue, Panel } from '@/features/companies/CompanyParts'
+import { ConfirmRemove, CountText, Fine, KeyValue, Panel, RoleChip } from '@/features/companies/CompanyParts'
 import { removeErrorMessage } from '@/features/companies/removeError'
-import { BrandsPanel } from '@/features/companies/BrandsPanel'
+import { BrandsCarried } from '@/features/companies/BrandsPanel'
 import { MergeCompanyDialog } from '@/features/companies/MergeCompanyDialog'
 import { SitesPanel } from '@/features/companies/SitesPanel'
 import { SupplierPanel } from '@/features/companies/SupplierPanel'
-import { companyMeta } from '@/features/companies/companyMeta'
+import { companyMeta, monthYearOf } from '@/features/companies/companyMeta'
+import { recordLine, supplierFacts } from '@/features/companies/supplierFacts'
 import { earliestYear } from '@/features/companies/supplierRecord'
 import { copyToClipboard } from '@/lib/clipboard'
 import { OpenWithThem } from '@/features/companies/SupplierRecordPanels'
 import { useSession } from '@/app/session'
+import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
@@ -30,13 +33,16 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Money } from '@/ui/Money'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { Skeleton } from '@/ui/Skeleton'
-import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 
 /*
  * Company page (R02; g2-company.html). Customer and supplier are one record: the role is derived from
- * what we have done with the company, so the same page grows a supplier panel the first time an enquiry
- * is sent, and sites with their RFQs and orders the first time a bid arrives.
+ * what we have done with the company, so the same page grows the supplier's history the first time an enquiry
+ * is sent, and sites with their RFQs and orders the first time an RFQ arrives.
+ *
+ * Layout (UX audit 2026-10-19, 9b): the main column is the useful history (a supplier's recent quotes and
+ * deliveries first; a customer's sites), the side column is Contacts, "Open with them", "Money with them"
+ * (admin) and one compact Details panel (customer since, brands carried); the role is said once, in the header.
  *
  * Access (DATA_MODEL section 10): everyone signed in reads and edits the company, its sites, contacts and
  * brands. The money panel and the merge action are admin only; they are not rendered for anyone else, and
@@ -122,6 +128,10 @@ function Loaded({ company }: { company: CompanyDetail }) {
   const history = useCompanyHistory(company.id, session.status === 'signed-in' && session.user.role !== 'engineer')
   const money = useCompanyMoney(company.id, isAdmin)
   const record = useSupplierRecordView(company.id, company.isSupplier)
+  // The same read as "What we know" (one cache entry): its counts in one line under the name.
+  const stats = useSupplierStats(company.id, company.isSupplier)
+  const facts = supplierFacts(stats.data ?? null)
+  const supplierRecordLine = company.isSupplier && facts ? recordLine(facts) : null
 
   // 'site' and 'contact' are the add dialogs; editSite and editContact open the same dialogs filled in.
   const [dialog, setDialog] = useState<null | 'edit' | 'site' | 'contact' | 'merge'>(null)
@@ -167,18 +177,47 @@ function Loaded({ company }: { company: CompanyDetail }) {
 
   // A supplier-only company has no plants to list until one is added; a customer always shows its sites.
   const showSites = company.isCustomer || !company.isSupplier || (sites.data?.length ?? 0) > 0 || sites.isPending
-  const newRfq = () => navigate(`/rfqs/new?company=${company.id}`)
+  const supplierOnly = supplierSide && !company.isCustomer
+  // A customer's New RFQ opens intake with them as the customer. Intake has no way yet to start from a supplier, so a supplier-only
+  // page's New RFQ opens a blank intake (it used to put the supplier in as the customer) and is not the page's main action.
+  const newRfq = () => navigate(supplierOnly ? '/rfqs/new' : `/rfqs/new?company=${company.id}`)
+
+  // The "more" menu: Edit, Copy link, Merge (admin). On a phone it is the one bar's right slot; from tablet up Edit is a button.
+  const moreMenu = (touch: boolean) => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="quiet" size={touch ? 'touch' : undefined} icon={Ellipsis} aria-label="More actions" className={touch ? undefined : 'max-md:hidden'} />
+      </PopoverTrigger>
+      <PopoverContent variant="menu" align="end" aria-label="More actions">
+        {touch ? (
+          <MenuItem icon={Pencil} onClick={() => setDialog('edit')}>
+            Edit company
+          </MenuItem>
+        ) : null}
+        <MenuItem icon={Link2} onClick={() => void copyLink()}>
+          Copy link to this company
+        </MenuItem>
+        {isAdmin ? (
+          <MenuItem icon={GitMerge} onClick={() => setDialog('merge')}>
+            Merge into another company
+          </MenuItem>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  )
+  // Phones get one bar: back (to where the person came from, else the companies list), the name, and the menu.
+  useMobileBar({ title: company.name, back: 'history', fallback: '/companies', actions: moreMenu(true) })
 
   return (
     <Shell>
       <div className="grid gap-6">
         <header className="grid gap-2">
-          <Breadcrumb links="primary" items={[{ label: 'Companies', to: '/companies' }, { label: company.name }]} />
+          <Breadcrumb className="max-md:hidden" links="primary" items={[{ label: 'Companies', to: '/companies' }, { label: company.name }]} />
           <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
             <div className="grid min-w-0 gap-2">
               <h1 className="flex flex-wrap items-baseline gap-3 text-2xl font-semibold tracking-tight text-balance">
                 <span className="min-w-0 break-words">{company.name}</span>
-                {company.role ? <StatusBadge dimension="company-role" value={company.role} className="translate-y-[-2px]" /> : null}
+                {company.role ? <RoleChip role={company.role} className="translate-y-[-2px]" /> : null}
               </h1>
               <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-2">
                 {meta.map((m, i) => (
@@ -192,29 +231,20 @@ function Loaded({ company }: { company: CompanyDetail }) {
                   </Fragment>
                 ))}
               </p>
+              {supplierRecordLine ? (
+                <p className="text-sm text-fg-2" data-testid="supplier-record-line">
+                  <CountText text={supplierRecordLine} />
+                </p>
+              ) : null}
             </div>
-            <div className="flex flex-none items-center gap-2">
-              <Button variant="primary" icon={supplierSide && !company.isCustomer ? Send : FilePlus2} onClick={newRfq}>
-                {supplierSide && !company.isCustomer ? 'Float an RFQ here' : 'New RFQ'}
+            <div className="flex max-w-full flex-wrap items-center gap-2">
+              <Button variant={supplierOnly ? 'secondary' : 'primary'} icon={FilePlus2} onClick={newRfq}>
+                New RFQ
               </Button>
-              <Button icon={Pencil} onClick={() => setDialog('edit')}>
+              <Button icon={Pencil} onClick={() => setDialog('edit')} className="max-md:hidden">
                 Edit
               </Button>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="quiet" icon={Ellipsis} aria-label="More actions" />
-                </PopoverTrigger>
-                <PopoverContent variant="menu" align="end">
-                  <MenuItem icon={Link2} onClick={() => void copyLink()}>
-                    Copy link to this company
-                  </MenuItem>
-                  {isAdmin ? (
-                    <MenuItem icon={GitMerge} onClick={() => setDialog('merge')}>
-                      Merge into another company
-                    </MenuItem>
-                  ) : null}
-                </PopoverContent>
-              </Popover>
+              {moreMenu(false)}
             </div>
           </div>
         </header>
@@ -252,14 +282,12 @@ function Loaded({ company }: { company: CompanyDetail }) {
               }}
             />
             {supplierSide ? <OpenWithThem view={record.view} loading={record.query.isPending} error={record.query.isError} onRetry={() => void record.query.refetch()} /> : null}
-            {supplierSide || !company.isCustomer ? <BrandsPanel companyId={company.id} /> : null}
-            {customerSide && !(supplierSide && !company.isCustomer) ? <RolesPanel company={company} since={customerSince} /> : null}
             {isAdmin && money.data && money.data.orders > 0 ? (
               <Panel title="Money with them" meta="Admin only">
                 <div className="px-5 py-3">
                   <KeyValue
                     rows={[
-                      { key: 'Receivable (gross)', value: <Money value={money.data.receivable} /> },
+                      { key: 'Total (with GST)', value: <Money value={money.data.receivable} /> },
                       { key: 'Received', value: <Money value={money.data.settled} /> },
                       { key: 'Balance', value: <Money value={money.data.balance} strong /> },
                     ]}
@@ -268,6 +296,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
               </Panel>
             ) : null}
             {isAdmin && money.isError ? <Banner tone="warning" title="Couldn't load the money figures">Reload the page to try again.</Banner> : null}
+            <DetailsPanel company={company} customerSince={customerSide && !supplierOnly ? customerSince : null} brands={supplierSide || !company.isCustomer} />
             {company.notes ? (
               <Panel title="Notes">
                 <p className="whitespace-pre-line px-5 py-4 text-sm text-fg-2">{company.notes}</p>
@@ -353,7 +382,7 @@ function ContactsPanel({
             Reload the page to try again.
           </Banner>
         ) : !contacts || contacts.length === 0 ? (
-          <Fine>No contacts yet. Every field is optional, so a name alone is enough.</Fine>
+          <Fine>No contacts yet. A name is enough to add one.</Fine>
         ) : (
           <ul className="grid">
             {contacts.map(c => (
@@ -407,21 +436,32 @@ function ContactsPanel({
   )
 }
 
-/** Roles (g2-company board 4): only drawn for a customer. "Customer since" is the year of the first RFQ or order. */
-function RolesPanel({ company, since }: { company: CompanyDetail; since: number }) {
+/**
+ * Details: what used to be the Roles and Brands carried panels, in one compact panel (UX audit 9b). The role chip is in the
+ * header, so it is not repeated here. On the customer side: since when (the year of the first RFQ or order; "Added" for a
+ * company with neither yet) and whether they also supply us (left out for "both": the header chip already says so). On the
+ * supplier side, and for a company with no role yet: the brands they carry, with Add and remove.
+ */
+function DetailsPanel({ company, customerSince, brands }: { company: CompanyDetail; customerSince: number | null; brands: boolean }) {
+  const rows: { key: string; value: ReactNode }[] = []
+  if (customerSince !== null) {
+    rows.push(
+      company.isCustomer
+        ? { key: 'Customer since', value: <span className="num">{customerSince}</span> }
+        : { key: 'Added', value: <span className="num">{monthYearOf(company.createdAt)}</span> },
+    )
+    if (company.role !== 'both') rows.push({ key: 'Also a supplier', value: company.isSupplier ? 'Yes' : 'No' })
+  }
+  if (rows.length === 0 && !brands) return null
   return (
-    <Panel title="Roles">
-      <div className="px-5 py-3">
-        <KeyValue
-          rows={[
-            {
-              key: 'Customer',
-              value: <StatusBadge dimension="company-role" value={company.role === 'prospect' ? 'prospect' : 'customer'} />,
-            },
-            { key: 'Also a supplier?', value: company.isSupplier ? <span>Yes</span> : <span>No</span> },
-            { key: 'Customer since', value: <span className="num">{since}</span> },
-          ]}
-        />
+    <Panel title="Details">
+      <div className="grid gap-3 px-5 py-3">
+        {rows.length > 0 ? <KeyValue rows={rows} /> : null}
+        {brands ? (
+          <div className={rows.length > 0 ? 'border-t pt-2' : undefined}>
+            <BrandsCarried companyId={company.id} withQuoteCounts={company.isSupplier} />
+          </div>
+        ) : null}
       </div>
     </Panel>
   )

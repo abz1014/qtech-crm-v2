@@ -37,6 +37,17 @@ export function monthYearOf(iso: string): string {
   return `${MONTHS[m - 1]} ${y}`
 }
 
+/**
+ * The place under a name in the Companies list (audit 9a: the city, not "Pakistan" on every row). The city alone when the
+ * company is in the country most of the list shares, "City, Country" when it is abroad, the country when no city is known.
+ */
+export function listPlace(city: string | null | undefined, country: string | null | undefined, common: string | null): string | null {
+  const c = city?.trim()
+  const k = country?.trim()
+  if (c) return k && k !== common ? `${c}, ${k}` : c
+  return k || null
+}
+
 export function companyMeta(i: MetaInput): string[] {
   const out: string[] = []
   const place = [i.city?.trim(), i.country?.trim()].filter(Boolean).join(', ')

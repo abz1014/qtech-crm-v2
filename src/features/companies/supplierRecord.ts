@@ -249,7 +249,7 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
         outcome === 'declined'
           ? inq.noOfferReason
             ? reasonLabel(inq.noOfferReason)
-            : 'No offer'
+            : 'No reason given'
           : outcome === 'no-reply'
             ? `Sent ${formatShortDate(inq.sentOn, today)}, ${inq.chaseCount > 0 ? `chased ${inq.chaseCount === 1 ? 'once' : `${inq.chaseCount} times`}, ` : ''}never answered`
             : 'Awaiting a quote',
@@ -329,7 +329,7 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
   }
   for (const l of raw.legs) {
     if (l.po) events.push({ on: l.po.issuedOn, parts: [`${poRef(l.po.number, l.po.issuedOn)} issued for ${orderRef(l.orderNumber)}.`] })
-    else if (l.placedOn ?? l.expectedOn) events.push({ on: (l.placedOn ?? l.expectedOn) as string, parts: [`Order leg for ${orderRef(l.orderNumber)}.${l.legacy ? ' Imported.' : ''}`] })
+    else if (l.placedOn ?? l.expectedOn) events.push({ on: (l.placedOn ?? l.expectedOn) as string, parts: [`Supplier order for ${orderRef(l.orderNumber)}.${l.legacy ? ' Imported.' : ''}`] })
   }
   events.sort((a, b) => (a.on < b.on ? 1 : a.on > b.on ? -1 : 0))
 

@@ -25,12 +25,14 @@ for (const { label, width, height } of WIDTHS) {
     test.use({ viewport: { width, height } })
 
     test('company list', async ({ page }) => {
-      await createCompany(uniqueName('Axe Listed'), { country: 'Pakistan' })
+      await createCompany(uniqueName('Axe Listed'), { country: 'Pakistan', city: 'Multan' })
       await openAs(page, 'sales', '/companies')
       await expect(page.getByRole('heading', { name: 'Companies', level: 1 })).toBeVisible()
       await expect(page.getByRole('row').nth(1)).toBeVisible()
       await settle(page)
       expect(await violations(page, true)).toEqual([])
+      // No sideways scroll on a phone: below 640 px each company is one card (name, place, role).
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0)
     })
 
     test('customer detail, with a site, a contact and an RFQ', async ({ page }) => {
@@ -69,8 +71,13 @@ for (const { label, width, height } of WIDTHS) {
       await openAs(page, 'engineer', `/companies/${supplier.id}`)
       await expect(page.getByRole('heading', { name: 'What we know' })).toBeVisible()
       await expect(page.getByRole('row', { name: /RFQ-/ })).toBeVisible()
+      await expect(page.getByRole('region', { name: 'Details', exact: true })).toBeVisible()
       await settle(page)
       expect(await violations(page, true)).toEqual([])
+      // The rules behind the numbers open from the (i) beside "What we know" (a popover, portalled outside <main>).
+      await page.getByRole('region', { name: 'What we know' }).getByRole('button', { name: 'About these numbers' }).click()
+      await expect(page.getByRole('dialog', { name: 'About these numbers' })).toBeVisible()
+      expect(await violations(page, false)).toEqual([])
     })
 
     test('create dialog', async ({ page }) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { companyMeta, type MetaInput } from '@/features/companies/companyMeta'
+import { companyMeta, listPlace, type MetaInput } from '@/features/companies/companyMeta'
 
 const base: MetaInput = {
   country: 'Austria',
@@ -37,5 +37,21 @@ describe('companyMeta (g2-company: the line under the name)', () => {
   })
   it('a company that is both shows the supplier line and the customer counts', () => {
     expect(companyMeta({ ...base, isCustomer: true, counts: { sites: 1, rfqs: 2, orders: 0 } }).slice(-1)).toEqual(['1 site · 2 RFQs · 0 orders'])
+  })
+})
+
+describe('listPlace (the Companies list: the city, not the country on every row)', () => {
+  it('shows the city alone at home, "City, Country" abroad', () => {
+    expect(listPlace('Karachi', 'Pakistan', 'Pakistan')).toBe('Karachi')
+    expect(listPlace('Linz', 'Austria', 'Pakistan')).toBe('Linz, Austria')
+    expect(listPlace('Lahore', null, 'Pakistan')).toBe('Lahore')
+  })
+  it('falls back to the country, then to nothing', () => {
+    expect(listPlace(null, 'Pakistan', 'Pakistan')).toBe('Pakistan')
+    expect(listPlace('  ', ' China ', null)).toBe('China')
+    expect(listPlace(null, null, null)).toBeNull()
+  })
+  it('with no common country, a city keeps its country', () => {
+    expect(listPlace('Karachi', 'Pakistan', null)).toBe('Karachi, Pakistan')
   })
 })
