@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ENQUIRY_CORPUS } from '@/features/rfqs/lib/__fixtures__/enquiryCorpus'
 import { parsePaste } from '@/features/rfqs/lib/parseItems'
 import { ENQUIRY_HOLDOUT } from './__fixtures__/enquiryHoldout'
+import { ENQUIRY_FULL_EMAILS } from './__fixtures__/enquiryFullEmails'
 import { CORPUS_TODAY, ENQUIRY_EMAILS, type EnquiryCase } from './__fixtures__/enquiryEmails'
 import { norm, pct, scoreFact, scoreItems, type FactScore } from './__fixtures__/score'
 import { asParseResult, findDate, parseEnquiry, unitOf } from './enquiryParse'
@@ -223,5 +224,56 @@ describe('old parser (parsePaste) against the new one', () => {
     expect(rows[1]?.r).toBe(1)
     expect(rows[1]?.p).toBe(1)
     expect(rows[3]?.r).toBeGreaterThanOrEqual(0.9)
+  })
+})
+
+describe('parseEnquiry: whole emails as the owner pastes them (held-out set, owner test 2026-10-20)', () => {
+  it('only the real items come out: item precision 95% or more, every case listed when it is not', () => {
+    let expected = 0
+    let predicted = 0
+    let correct = 0
+    const misses: string[] = []
+    for (const c of ENQUIRY_FULL_EMAILS) {
+      const r = parse(c.text)
+      const s = scoreItems(c.items, r.items)
+      expected += s.expected
+      predicted += s.predicted
+      correct += s.correct
+      if (s.correct !== s.expected || s.predicted !== s.expected) misses.push(`${c.name}: ${JSON.stringify(r.items.map(x => [x.description, x.qty]))}`)
+    }
+    console.log(`FULL_EMAILS precision ${pct(correct, predicted)} (${correct}/${predicted}) recall ${pct(correct, expected)} (${correct}/${expected})\n${misses.join('\n')}`)
+    expect(ENQUIRY_FULL_EMAILS.length).toBeGreaterThanOrEqual(15)
+    expect(correct / predicted).toBeGreaterThanOrEqual(0.95)
+    expect(correct / expected).toBeGreaterThanOrEqual(0.9)
+  })
+})
+
+describe('parseEnquiry: the shapes the sales verification found (BUG-SALES-1, BUG-SALES-2; fictional)', () => {
+  const rows = (text: string) => parse(text).items.map(i => [i.description, i.qty, i.unit])
+
+  it('a WhatsApp Web copy of several messages: prefixes, the greeting and the sign-off go, a range stays in the description', () => {
+    const text = [
+      '[10:41, 19/10/2026] Bilal Ahmed: Assalam o Alaikum',
+      '[10:42, 19/10/2026] Bilal Ahmed: Please quote 2 nos radar level transmitter 0-10 m',
+      '[10:42, 19/10/2026] Bilal Ahmed: 4 pcs pressure gauge 0-16 bar',
+      '[10:43, 19/10/2026] Bilal Ahmed: Regards',
+    ].join('\n')
+    expect(rows(text)).toEqual([
+      ['radar level transmitter 0-10 m', 2, 'nos'],
+      ['pressure gauge 0-16 bar', 4, 'nos'],
+    ])
+  })
+
+  it('a spreadsheet block with a header row counts its rows only: "2 items found in 2 lines"', () => {
+    const r = asParseResult(parse(['S.No\tDescription\tQty\tUnit', '1\tBall valve 1 inch SS316\t6\tnos', '2\tSignal cable 4 core\t150\tm'].join('\n')))
+    expect([r.items.length, r.lineCount]).toEqual([2, 2])
+  })
+
+  it('an unmarked email: nothing after "Regards," is an item (name, job title, phone)', () => {
+    const text = ['Dear Sir,', 'Please quote the following:', 'Turbine flow meter DN80 - 2 nos', 'Float level switch 1000 mm - 1 no', 'Best regards,', 'Usman Tariq', 'Senior Purchase Officer', '0321-7654321'].join('\n')
+    expect(rows(text)).toEqual([
+      ['Turbine flow meter DN80', 2, 'nos'],
+      ['Float level switch 1000 mm', 1, 'nos'],
+    ])
   })
 })

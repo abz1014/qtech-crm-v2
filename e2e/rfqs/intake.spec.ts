@@ -329,8 +329,10 @@ test.describe('what is required and what is pre-filled (FE-2)', () => {
   test('a company and one typed item are enough; qty is 1, GST 18, today and the owner fill themselves', async ({ page }) => {
     const customer = await createCompany(uniqueName('Bare Minimum'))
     await openAs(page, 'engineer', '/rfqs/new')
-    await expect(page.getByRole('button', { name: 'Looks right: find suppliers' })).toBeDisabled()
-    await expect(page.getByText('Choose the company and paste or add at least one item.')).toBeVisible()
+    // Not ready: the reason is beside the button, and a press puts the focus on what is missing (owner test 2026-10-20).
+    await expect(page.getByText('Choose the company first, then paste or add an item.')).toBeVisible()
+    await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
+    await expect(page.locator('#intake-company')).toBeFocused()
     await pickCompany(page, customer.name)
     await page.getByRole('button', { name: 'Add an item by hand' }).click()
     await page.getByRole('textbox', { name: 'Description of item 1' }).fill('Spare gasket set')
@@ -521,11 +523,12 @@ test.describe('company picker', () => {
     await expect(page.getByRole('option', { name: new RegExp(`Add “${typed}” as a new company`) })).toBeVisible()
   })
 
-  test('the items zone is faded until a company is chosen', async ({ page }) => {
+  test('the items zone is open before a company is chosen (the paste or PDF often names the company)', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', '/rfqs/new')
     const zone = page.locator('section[aria-labelledby="h-items"]')
-    await expect(zone).toHaveCSS('opacity', '0.5')
+    await expect(zone).toHaveCSS('opacity', '1')
+    await expect(zone.getByRole('button', { name: 'Choose PDF' })).toBeEnabled()
     await pickCompany(page, s.customer.name)
     await expect(zone).toHaveCSS('opacity', '1')
   })

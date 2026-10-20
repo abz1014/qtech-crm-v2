@@ -31,6 +31,19 @@ export function orderTotals(lines: readonly PricedLine[]): { net: number; gst: n
 
 export const STANDARD_GST = 18
 
+/**
+ * The GST choices a line offers (DECISIONS 2026-10-15: 18% or exempt, nothing else). A legacy line already at another rate keeps it
+ * on show as "<n>% (old rate)", so the select does not silently change it; picking a choice moves it to 18% or exempt.
+ */
+export function gstOptions(current?: number | null): { value: string; label: string }[] {
+  const opts = [
+    { value: String(STANDARD_GST), label: `${STANDARD_GST}%` },
+    { value: '0', label: 'Exempt' },
+  ]
+  if (current != null && current !== STANDARD_GST && current !== 0) opts.push({ value: String(current), label: `${current}% (old rate)` })
+  return opts
+}
+
 /** True when every line is at 0 %: the "exempt all" toggle shows on. An order with no lines is not exempt. */
 export function isExemptAll(lines: ReadonlyArray<{ gstRate: number }>): boolean {
   return lines.length > 0 && lines.every(l => l.gstRate === 0)

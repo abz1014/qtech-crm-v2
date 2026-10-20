@@ -83,15 +83,29 @@ select throws_ok($$select public.convert_rfq_to_order('f1000000-0000-4000-8000-0
   '22023', null, '(b) and so are two parts that would both infer the same quote line');
 select is((select count(*)::int from public.orders where id = 'f1000000-0000-4000-8000-000000000002'), 0,
   '(b) a refused conversion leaves no order');
+-- 0077: one RFQ is won once. To test a further conversion of the same RFQ, its live orders are parked (detached) and put back.
+reset role;
+update public.orders set rfq_id = null, notes = 'parked-0077' where rfq_id = 'd9000000-0000-4000-8000-000000000001';
+set local role authenticated;
 select lives_ok($$select public.convert_rfq_to_order('f1000000-0000-4000-8000-000000000008', 'd9000000-0000-4000-8000-000000000001',
                     '[{"rfq_item_id":"da000000-0000-4000-8000-000000000003","qty":1,"is_service":true},
                       {"rfq_item_id":"da000000-0000-4000-8000-000000000003","qty":1,"is_service":true}]'::jsonb)$$,
   '(b) two service entries are not a split and are not refused');
+reset role;
+update public.orders set rfq_id = 'd9000000-0000-4000-8000-000000000001', notes = null where notes = 'parked-0077';
+set local role authenticated;
 
 -- ------------------------------------------------------------------ (c) inference of the rank-1 quote line
+-- 0077: one RFQ is won once. To test a further conversion of the same RFQ, its live orders are parked (detached) and put back.
+reset role;
+update public.orders set rfq_id = null, notes = 'parked-0077' where rfq_id = 'd9000000-0000-4000-8000-000000000001';
+set local role authenticated;
 select lives_ok($$select public.convert_rfq_to_order('f1000000-0000-4000-8000-000000000003', 'd9000000-0000-4000-8000-000000000001',
                     '[{"rfq_item_id":"da000000-0000-4000-8000-000000000001"},{"rfq_item_id":"da000000-0000-4000-8000-000000000002"}]'::jsonb)$$,
   '(c) converting without naming quote lines');
+reset role;
+update public.orders set rfq_id = 'd9000000-0000-4000-8000-000000000001', notes = null where notes = 'parked-0077';
+set local role authenticated;
 select is((select so.supplier_id from public.order_items i join public.supplier_orders so on so.id = i.supplier_order_id
            where i.order_id = 'f1000000-0000-4000-8000-000000000003' and i.description = 'Pump X'),
   'c8000000-0000-4000-8000-000000000002'::uuid, '(c) Pump X, which has two quotes, goes to the rank-1 supplier (A, the cheaper)');
@@ -142,9 +156,16 @@ select lives_ok($$select public.split_order_item(
 select is((select count(*)::int from public.supplier_orders where order_id = 'f1000000-0000-4000-8000-000000000003'), 3,
   '(d) reuses that leg instead of adding another');
 -- a new leg for a supplier that was asked on the RFQ is linked to its inquiry
+-- 0077: one RFQ is won once. To test a further conversion of the same RFQ, its live orders are parked (detached) and put back.
+reset role;
+update public.orders set rfq_id = null, notes = 'parked-0077' where rfq_id = 'd9000000-0000-4000-8000-000000000001';
+set local role authenticated;
 select lives_ok($$select public.convert_rfq_to_order('f1000000-0000-4000-8000-00000000000a', 'd9000000-0000-4000-8000-000000000001',
                     '[{"rfq_item_id":"da000000-0000-4000-8000-000000000002"}]'::jsonb)$$,
   '(d) an order with Valve Y only, on leg B');
+reset role;
+update public.orders set rfq_id = 'd9000000-0000-4000-8000-000000000001', notes = null where notes = 'parked-0077';
+set local role authenticated;
 select lives_ok($$select public.split_order_item(
     (select id from public.order_items where order_id = 'f1000000-0000-4000-8000-00000000000a'),
     2, null, 'c8000000-0000-4000-8000-000000000002', 'USD')$$,
