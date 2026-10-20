@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
+import { useBackToClose } from '@/lib/useBackToClose'
 import { Command } from 'cmdk'
 import { ArrowDown, ArrowUp, Building2, CornerDownLeft, FileText, Package, Search, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -93,6 +94,7 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyHint }: CommandPaletteProps) {
   const [query, setQuery] = useState('')
+  useBackToClose(open, () => onOpenChange(false))
   const [groups, setGroups] = useState<Group[]>([])
   const [searching, setSearching] = useState(false)
   const [slow, setSlow] = useState(false)
@@ -230,11 +232,11 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
             e.preventDefault()
             if (openerRef.current?.isConnected) openerRef.current.focus()
           }}
-          className="fixed left-1/2 top-[96px] z-50 w-[640px] max-w-[calc(100vw-32px)] -translate-x-1/2 overflow-hidden rounded bg-surface shadow-modal focus:outline-none max-md:top-4"
+          className="fixed left-1/2 top-[96px] z-50 flex max-h-[calc(100dvh-112px)] w-[640px] flex-col max-md:max-h-[calc(100dvh-32px)] max-w-[calc(100vw-32px)] -translate-x-1/2 overflow-hidden rounded bg-surface shadow-modal focus:outline-none max-md:top-4"
         >
           <RadixDialog.Title className="sr-only">Search or jump to</RadixDialog.Title>
-          <Command shouldFilter={false} loop label="Search or jump to" onKeyDownCapture={onKeyDownCapture} className="grid grid-cols-[minmax(0,1fr)]">
-            <div className="flex min-h-[calc(var(--control-h)+16px)] items-center gap-3 border-b px-4">
+          <Command shouldFilter={false} loop label="Search or jump to" onKeyDownCapture={onKeyDownCapture} className="flex min-h-0 flex-col">
+            <div className="flex min-h-[calc(var(--control-h)+16px)] shrink-0 items-center gap-3 border-b px-4">
               <Icon icon={Search} size="lg" className="text-fg-muted" />
               <Command.Input
                 value={query}
@@ -245,7 +247,7 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
               <Kbd className="text-xs">Esc</Kbd>
             </div>
 
-            <Command.List className="max-h-[min(480px,60dvh)] overflow-y-auto pb-2 pt-1">
+            <Command.List className="max-h-[min(480px,60dvh)] min-h-0 overflow-y-auto pb-2 pt-1">
               {groups.map(g => (
                 <Command.Group
                   key={g.key}

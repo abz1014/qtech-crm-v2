@@ -4,6 +4,7 @@ import { X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { useBackToClose } from '@/lib/useBackToClose'
 
 /*
  * Dialog (INVENTORY: U03; D08 section 05). The one modal wrapper, on Radix:
@@ -36,6 +37,10 @@ interface DialogProps {
 }
 
 export function Dialog({ busy = false, children, ...rest }: DialogProps) {
+  // Android Back (and the browser's) closes the open dialog instead of leaving the page; ignored while a save is in flight.
+  useBackToClose(Boolean(rest.open), () => {
+    if (!busy) rest.onOpenChange?.(false)
+  })
   return (
     <BusyContext.Provider value={busy}>
       <RadixDialog.Root {...rest}>{children}</RadixDialog.Root>
@@ -79,6 +84,21 @@ interface DialogContentProps {
   className?: string
 }
 
+/**
+ * Where focus goes back to when the dialog closes. Opened from a menu item, the item is gone by then (the menu closed), so
+ * focus would fall to <body> (WCAG 2.4.3): return to the button that opened the menu (the one whose aria-controls names it).
+ */
+function returnTarget(active: Element | null): HTMLElement | null {
+  if (!(active instanceof HTMLElement)) return null
+  if (!active.closest('[role="menu"]')) return active
+  for (let x: HTMLElement | null = active; x; x = x.parentElement) {
+    if (!x.id) continue
+    const trigger = document.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(x.id)}"]`)
+    if (trigger) return trigger
+  }
+  return document.querySelector<HTMLElement>('[aria-expanded="true"][aria-haspopup]') ?? active
+}
+
 export function DialogContent({
   title,
   titleChip,
@@ -109,7 +129,7 @@ export function DialogContent({
           onInteractOutside={hold}
           onOpenAutoFocus={e => {
             e.preventDefault()
-            openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+            openerRef.current = returnTarget(document.activeElement)
             const root = contentRef.current
             if (!root) return
             const target =

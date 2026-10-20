@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
+import { useBackToClose } from '@/lib/useBackToClose'
 import { Camera, Check, CircleAlert, Keyboard, Landmark, Plus, Trash2, TriangleAlert, Wallet, X, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
@@ -63,6 +64,7 @@ interface BurstSheetProps {
 }
 
 export function BurstSheet({ open, onOpenChange }: BurstSheetProps) {
+  useBackToClose(open, () => onOpenChange(false))
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       {open ? <BurstContent onClose={() => onOpenChange(false)} /> : null}

@@ -140,7 +140,7 @@ function RatesTable({ rows, onPick }: { rows: RateRow[]; onPick: (c: string) => 
       align: 'right',
       cell: r =>
         r.staleness !== 'fresh' ? (
-          <Button size="sm" variant="quiet" onClick={() => onPick(r.currency)} aria-label={`Add a rate for ${r.currency}`}>
+          <Button size="sm" variant="quiet" onClick={() => onPick(r.currency)} aria-label={`Add rate for ${r.currency}`}>
             Add rate
           </Button>
         ) : null,

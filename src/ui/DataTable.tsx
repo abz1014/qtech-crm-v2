@@ -659,22 +659,19 @@ export function DataTable<T>(props: DataTableProps<T>) {
       Showing <span className="num">{dataRows.length}</span> of <span className="num">{total ?? dataRows.length}</span> {noun}
     </>
   ) : undefined)
-  // WCAG 4.1.3: a filter changes the count silently. One polite, persistent status node says it, 500 ms after typing stops.
+  // WCAG 4.1.3: a filter changes the count silently. One polite node, on the page from the start, says each new count
+  // (not the first one: the page itself is being read then). Polite announcements of quick typing coalesce in screen readers.
   const countText = loading || error ? '' : `Showing ${dataRows.length} of ${total ?? dataRows.length} ${noun ?? 'rows'}`
-  const [announced, setAnnounced] = useState('')
-  const firstCount = useRef(true)
+  const [firstCount, setFirstCount] = useState<string | null>(null)
   useEffect(() => {
-    if (firstCount.current) {
-      if (countText) firstCount.current = false
-      return
-    }
-    const t = window.setTimeout(() => setAnnounced(countText), 500)
-    return () => window.clearTimeout(t)
-  }, [countText])
+    if (firstCount === null && countText) setFirstCount(countText)
+  }, [countText, firstCount])
+  const announced = firstCount !== null && countText !== firstCount ? countText : ''
 
   return (
     <div
       ref={rootRef}
+      data-table-root
       data-density={density === 'compact' ? 'compact' : undefined}
       className={cn('overflow-hidden rounded border bg-surface', className)}
     >

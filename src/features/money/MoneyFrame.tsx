@@ -70,7 +70,7 @@ export function MoneyFrame({ active, actions, children }: { active: string | nul
               aria-current={active === 'reports' ? 'page' : undefined}
               className={cn(
                 'inline-flex h-control items-center gap-2 rounded border px-3 text-sm font-medium transition-colors duration-fast hover:bg-sunken',
-                active === 'reports' ? 'border-line-strong bg-selected text-fg' : 'border-line-strong bg-surface text-fg',
+                active === 'reports' ? 'border-fg bg-selected text-fg' : 'border-line-strong bg-surface text-fg',
               )}
             >
               <Icon icon={ChartColumn} className="text-fg-muted" />
@@ -92,7 +92,7 @@ export function MoneyFrame({ active, actions, children }: { active: string | nul
                 to={t.to}
                 className={cn(
                   'inline-flex min-h-control items-center justify-center gap-2 rounded border px-4 text-sm font-medium transition-colors duration-fast ease-out md:justify-start',
-                  on ? 'border-line-strong bg-surface text-fg' : 'border-transparent text-fg-2 hover:text-fg',
+                  on ? 'border-fg bg-surface text-fg' : 'border-transparent text-fg-muted hover:text-fg',
                 )}
                 aria-current={on ? 'page' : undefined}
               >
