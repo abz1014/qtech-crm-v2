@@ -10,7 +10,11 @@ import { clearRecents } from './recents'
 /** The key prefix of the New RFQ drafts (INTAKE_DRAFT_PREFIX in intakeDraftStore.ts; a test there holds the two together). */
 export const INTAKE_DRAFT_KEYS = 'qtech.rfqs.intakeDraft.'
 
-function clearIntakeDrafts(): void {
+/**
+ * Every New RFQ draft on this device. Sign-out calls it twice: first with the rest, then again once the session has ended, so a
+ * draft the open New RFQ screen kept while the sign-out was on its way is not left behind (review of ux/rfqs, item 14).
+ */
+export function forgetIntakeDrafts(): void {
   try {
     const keys = Object.keys(window.localStorage).filter(k => k.startsWith(INTAKE_DRAFT_KEYS))
     for (const k of keys) window.localStorage.removeItem(k)
@@ -21,6 +25,6 @@ function clearIntakeDrafts(): void {
 
 export async function forgetDeviceCaptures(): Promise<void> {
   clearRecents()
-  clearIntakeDrafts()
+  forgetIntakeDrafts()
   await safely(() => clearCaptures(), undefined)
 }

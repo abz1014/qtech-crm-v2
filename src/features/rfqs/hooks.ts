@@ -77,6 +77,29 @@ export function useFloatToSupplier() {
 
 export { findRfqByCustomerRef } from '@/features/rfqs/api'
 
+export interface DraftCheck {
+  /** The RFQ this draft was already saved as (another tab, or a save whose reply was lost), or null. */
+  existing: api.SavedRfq | null
+  company: boolean
+  site: boolean
+  contact: boolean
+}
+
+/** Before a kept New RFQ draft is offered back: is it already saved, and are its company, site and contact still on file. */
+export function useDraftCheck(draft: { rfqId: string; companyId: string | null; siteId: string | null; contactId: string | null } | null) {
+  return useQuery({
+    queryKey: qk.intake.draft(JSON.stringify(draft)),
+    queryFn: async (): Promise<DraftCheck> => {
+      const d = draft as NonNullable<typeof draft>
+      const [existing, onFile] = await Promise.all([api.findRfqById(d.rfqId), api.stillOnFile(d)])
+      return { existing, ...onFile }
+    },
+    enabled: draft !== null,
+    staleTime: 0,
+    gcTime: 0,
+  })
+}
+
 // ================================================================ RFQ detail (R07)
 
 export function useRfqHeader(id: string | undefined) {

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { session } from '@/app/session'
 import { forgetDeviceCaptures, INTAKE_DRAFT_KEYS } from '@/lib/capture/forget'
+import { setSupabaseForTests, type Db } from '@/lib/supabase'
 import {
   clearIntakeDraft,
   draftAge,
@@ -82,5 +84,45 @@ describe('the New RFQ draft store', () => {
     await forgetDeviceCaptures()
     expect(localStorage.getItem(intakeDraftKey('u1'))).toBeNull()
     expect(localStorage.getItem('qtech.channel.u1')).toBe('email') // only the drafts go
+  })
+
+  it('never writes over or removes another RFQ\'s draft; keeps nothing with nobody signed in', () => {
+    const now = Date.UTC(2026, 10, 27, 6, 0)
+    expect(saveIntakeDraft('u1', draft({ rfqId: 'r-1' }), undefined, now)).toBe('kept')
+    expect(saveIntakeDraft('u1', draft({ rfqId: 'r-2', customerRef: 'NEW' }), undefined, now)).toBe('other')
+    expect(saveIntakeDraft('u1', draft({ rfqId: 'r-2', company: null, items: [] }), undefined, now)).toBe('other')
+    expect(loadIntakeDraft('u1', now)?.rfqId).toBe('r-1')
+    // Its own draft: written over, and removed when the form is emptied.
+    expect(saveIntakeDraft('u1', draft({ rfqId: 'r-1', customerRef: 'X' }), undefined, now)).toBe('kept')
+    expect(saveIntakeDraft('u1', draft({ rfqId: 'r-1', company: null, items: [] }), undefined, now)).toBe('removed')
+    // Nobody signed in (signing out): nothing is written, not even under a shared key.
+    expect(saveIntakeDraft(null, draft(), undefined, now)).toBe('none')
+    expect(Object.keys(localStorage)).toEqual([])
+  })
+
+  it('a save clears only its own RFQ\'s draft', () => {
+    saveIntakeDraft('u1', draft({ rfqId: 'r-1' }))
+    clearIntakeDraft('u1', 'r-2')
+    expect(localStorage.getItem(intakeDraftKey('u1'))).not.toBeNull()
+    clearIntakeDraft('u1', 'r-1')
+    expect(localStorage.getItem(intakeDraftKey('u1'))).toBeNull()
+  })
+
+  it('sign-out clears the drafts again once the session has ended (a draft kept while signing out does not stay)', async () => {
+    setSupabaseForTests({
+      auth: {
+        signOut: async () => {
+          // The open New RFQ screen keeps its draft while the sign-out is on its way.
+          saveIntakeDraft('u1', draft())
+          return { error: null }
+        },
+      },
+    } as unknown as Db)
+    try {
+      await session.signOut()
+      expect(localStorage.getItem(intakeDraftKey('u1'))).toBeNull()
+    } finally {
+      setSupabaseForTests(null)
+    }
   })
 })

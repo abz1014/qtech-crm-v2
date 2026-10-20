@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { formatDay } from '@/lib/formatDay'
 import { rfqRef } from '@/lib/refs'
 import { joinNames } from '@/features/rfqs/lib/intakeModel'
+import { draftAge, draftSummary, type IntakeDraft } from '@/features/rfqs/lib/intakeDraftStore'
 import type { EnquiryVariant, ReplyBy } from '@/features/rfqs/lib/enquiryDraft'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
@@ -18,6 +19,72 @@ import { Icon } from '@/ui/Icon'
  */
 
 export type Step = 'build' | 'suppliers' | 'enquiry' | 'floated' | 'saved'
+
+const PRIMARY_LINK =
+  'inline-flex h-control items-center justify-center rounded border border-primary bg-primary px-3 text-sm font-medium leading-none text-primary-foreground transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover'
+
+/**
+ * The kept New RFQ draft, offered before anything else on every way in (review of ux/rfqs, item 1): Continue your draft, or Start
+ * new (which forgets it). Nothing is kept over it until the person answers. A draft whose RFQ turns out to be saved already
+ * (another tab, or a save whose answer was lost) offers "Open RFQ-…" instead of Continue (item 2).
+ */
+export function DraftOffer({
+  draft,
+  existing,
+  checking,
+  startLabel,
+  keepsCapture,
+  onContinue,
+  onStartNew,
+}: {
+  draft: IntakeDraft
+  existing: { id: string; number: number } | null
+  /** The draft is being checked (already saved? company still on file?): Continue waits for it. */
+  checking: boolean
+  /** "Start new", "Start new for Punjab Cement", "Start new with the pasted message". */
+  startLabel: string
+  /** The visit came from Paste or photo: continuing leaves that message where it is. */
+  keepsCapture: boolean
+  onContinue: () => void
+  onStartNew: () => void
+}) {
+  const box = 'grid gap-3 rounded border border-tone-info-fg/25 bg-tone-info-bg px-4 py-3'
+  if (existing) {
+    return (
+      <section aria-label="Your draft" className={box}>
+        <div className="grid gap-[2px]">
+          <h2 className="font-semibold">
+            Your draft is already saved as <span className="num">{rfqRef(existing.number)}</span>
+          </h2>
+          <p className="text-fg-2">{draftSummary(draft)}. It was saved before (in another tab, or by a save whose answer did not arrive), so saving it again would not make a new RFQ.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link to={`/rfqs/${existing.id}`} className={PRIMARY_LINK}>
+            Open {rfqRef(existing.number)}
+          </Link>
+          <Button onClick={onStartNew}>{startLabel}</Button>
+        </div>
+      </section>
+    )
+  }
+  return (
+    <section aria-label="Your draft" className={box}>
+      <div className="grid gap-[2px]">
+        <h2 className="font-semibold">You have a draft from {draftAge(draft.savedAt)}</h2>
+        <p className="text-fg-2">
+          {draftSummary(draft)}. It is kept on this device until you save it or start new; Start new forgets it.
+          {keepsCapture ? ' If you continue it, the pasted message stays in Paste or photo.' : ''}
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="primary" onClick={onContinue} busy={checking} busyLabel="Checking the draft">
+          Continue your draft
+        </Button>
+        <Button onClick={onStartNew}>{startLabel}</Button>
+      </div>
+    </section>
+  )
+}
 
 const STEP_INDEX: Record<Step, number> = { build: 1, suppliers: 2, enquiry: 3, floated: 4, saved: 4 }
 
@@ -209,7 +276,7 @@ export function EnquiryCard({
   // The text is shown as drawn (blank specs highlighted); "Edit the text" swaps it for a text area.
   const [editing, setEditing] = useState(false)
   return (
-    <section aria-label="The enquiry" className="overflow-hidden rounded border bg-surface">
+    <section aria-label="The message" className="overflow-hidden rounded border bg-surface">
       <header className="flex flex-wrap items-start gap-3 border-b px-5 py-4">
         <div className="min-w-0 flex-1">
           <h2 className="m-0 text-base font-semibold">

@@ -1,8 +1,11 @@
 // The new-RFQ draft (UX audit 2026-10-19, S1 and recommendation 16): what the person has typed or pasted on New RFQ, kept on THIS
 // device as they go, so a tap on a tab, a reload or a closed tab does not throw the pasted items away. One draft per person
 // (`qtech.rfqs.intakeDraft.<person id>`) in localStorage, like the Capture store's other device-only data; kept for 7 days, like a
-// captured item; removed once the RFQ is saved, when the person discards it, and on sign-out (src/lib/capture/forget.ts, security
-// review L-5). Nothing here is sent anywhere. Pure functions over a Storage, so it is tested without a browser.
+// captured item; removed once its RFQ is saved, when the person chooses Start new, and on sign-out (src/lib/capture/forget.ts,
+// security review L-5). Nothing here is sent anywhere. Pure functions over a Storage, so it is tested without a browser.
+//
+// A draft belongs to one RFQ id (the id the RFQ will be saved under). A form never writes over, or removes, a draft for another id
+// (review of ux/rfqs, item 1): that is only done by the person's own choice (Start new). With nobody signed in nothing is kept.
 
 import type { DraftItem } from './intakeModel'
 
@@ -68,20 +71,50 @@ export function loadIntakeDraft(userId: string | null, now = Date.now(), store: 
   }
 }
 
-/** Keep the draft. An empty form removes it instead, so an abandoned blank screen never offers a draft. */
-export function saveIntakeDraft(userId: string | null, d: IntakeDraft, store: Store | null = storage()): void {
-  if (!store) return
+/** What saveIntakeDraft did: kept it, removed this form's own draft (the form is empty), or left another RFQ's draft alone. */
+export type DraftWrite = 'kept' | 'removed' | 'other' | 'none'
+
+/**
+ * Keep this form's draft. An empty form removes its own draft, so an abandoned blank screen never offers one. A draft for another
+ * RFQ (started in another tab, or not yet answered with Continue or Start new) is never overwritten or removed: returns 'other'.
+ * With nobody signed in (userId null, e.g. while signing out) nothing is written: 'none'.
+ */
+export function saveIntakeDraft(userId: string | null, d: IntakeDraft, store: Store | null = storage(), now = Date.now()): DraftWrite {
+  if (!store || !userId) return 'none'
   try {
-    if (draftHasContent(d)) store.setItem(intakeDraftKey(userId), JSON.stringify(d))
-    else store.removeItem(intakeDraftKey(userId))
+    const kept = loadIntakeDraft(userId, now, store)
+    if (kept && kept.rfqId !== d.rfqId) return 'other'
+    if (draftHasContent(d)) {
+      store.setItem(intakeDraftKey(userId), JSON.stringify(d))
+      return 'kept'
+    }
+    store.removeItem(intakeDraftKey(userId))
+    return 'removed'
   } catch {
     /* storage full or blocked: the form still works, it is just not kept */
+    return 'none'
   }
 }
 
-export function clearIntakeDraft(userId: string | null, store: Store | null = storage()): void {
+/**
+ * Forget the draft. With `rfqId`, only when the kept draft is that RFQ's (a save clears its own draft, never one started since in
+ * another tab); without it, whatever is kept (the person chose Start new on the draft they were shown).
+ */
+export function clearIntakeDraft(userId: string | null, rfqId?: string, store: Store | null = storage()): void {
   try {
-    store?.removeItem(intakeDraftKey(userId))
+    if (!store) return
+    if (rfqId !== undefined) {
+      const raw = store.getItem(intakeDraftKey(userId))
+      if (!raw) return
+      let kept: { rfqId?: unknown } | null = null
+      try {
+        kept = JSON.parse(raw) as { rfqId?: unknown }
+      } catch {
+        kept = null
+      }
+      if (kept?.rfqId !== rfqId) return
+    }
+    store.removeItem(intakeDraftKey(userId))
   } catch {
     /* nothing to clear */
   }

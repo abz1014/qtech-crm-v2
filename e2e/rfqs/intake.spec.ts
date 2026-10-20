@@ -254,7 +254,7 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     // Back on New RFQ: the draft is offered, and Continue brings it all back.
     await page.getByRole('button', { name: 'New RFQ' }).click()
     await expect(page.getByText(/You have a draft from .* today/)).toBeVisible()
-    await expect(page.getByText(`${s.customer.name}, 2 items. It is kept on this device until you save it or discard it.`)).toBeVisible()
+    await expect(page.getByText(`${s.customer.name}, 2 items. It is kept on this device until you save it or start new; Start new forgets it.`)).toBeVisible()
     await review(page, 'intake-draft-offer-1440')
     await page.getByRole('button', { name: 'Continue your draft' }).click()
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue(`${s.brand1} ${s.model} electromagnetic flow meter DN50`)
@@ -269,6 +269,33 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
     await page.getByRole('button', { name: 'New RFQ' }).click()
     await expect(page.getByRole('heading', { name: 'New RFQ', level: 1 })).toBeVisible()
     await expect(page.getByText(/You have a draft/)).toHaveCount(0)
+  })
+
+  test('a company page\'s New RFQ offers the kept draft first: nothing is written over it, and Start new takes that company', async ({ page }) => {
+    const s = await seed()
+    const other = await createCompany(uniqueName('Second Mill Test'))
+    await openAs(page, 'sales', '/rfqs/new')
+    await pickCompany(page, s.customer.name)
+    await paste(page, s.email)
+    await expect(page.getByText('2 items found').first()).toBeVisible()
+    await page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs/ }).click()
+    await page.getByRole('dialog', { name: 'Leave this new RFQ?' }).getByRole('button', { name: 'Leave, keep the draft' }).click()
+    await expect(page).toHaveURL(/\/rfqs$/)
+
+    await page.goto(`/companies/${other.id}`)
+    await page.locator('#main').getByRole('button', { name: 'New RFQ', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`/rfqs/new\\?company=${other.id}`))
+    // The draft comes first, and the other company waits for the answer.
+    await expect(page.getByText(`${s.customer.name}, 2 items. It is kept on this device`, { exact: false })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Customer' })).toHaveCount(0)
+    const kept = await page.evaluate(() => Object.entries(localStorage).find(([k]) => k.startsWith('qtech.rfqs.intakeDraft.'))?.[1] ?? '')
+    expect(kept).toContain(s.customer.name)
+
+    await page.getByRole('button', { name: `Start new for ${other.name}` }).click()
+    await expect(page.getByRole('button', { name: `Change company, now ${other.name}` })).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveCount(0)
+    const after = await page.evaluate(() => Object.entries(localStorage).find(([k]) => k.startsWith('qtech.rfqs.intakeDraft.'))?.[1] ?? '')
+    expect(after).not.toContain(s.customer.name)
   })
 
   test('on a phone the steps show as one line, and nothing scrolls sideways at 320', async ({ page }) => {
