@@ -64,7 +64,7 @@ interface BurstSheetProps {
 }
 
 export function BurstSheet({ open, onOpenChange }: BurstSheetProps) {
-  useBackToClose(open, () => onOpenChange(false))
+  useBackToClose(open, () => onOpenChange(false), { enabled: useMediaQuery('(max-width: 767px), (pointer: coarse)') })
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       {open ? <BurstContent onClose={() => onOpenChange(false)} /> : null}

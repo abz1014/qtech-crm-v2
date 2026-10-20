@@ -226,7 +226,7 @@ export function OrderHeaderBlock({
 
       {isEngineer ? null : (
         <div
-          className={`mt-4 grid grid-cols-2 rounded border bg-surface lg:divide-x ${cols} [&>*]:border-b [&>*]:border-line lg:[&>*]:border-b-0 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1`}
+          className={`mt-4 grid grid-cols-2 max-[399px]:grid-cols-1 max-[399px]:[&>*:last-child:nth-child(odd)]:col-span-1 rounded border bg-surface lg:divide-x ${cols} [&>*]:border-b [&>*]:border-line lg:[&>*]:border-b-0 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1`}
           role="group"
           aria-label="State of this order"
         >

@@ -6,6 +6,7 @@ import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { useBackToClose } from '@/lib/useBackToClose'
 import { recentMenuTrigger } from '@/ui/menuTrigger'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 
 /*
  * Dialog (INVENTORY: U03; D08 section 05). The one modal wrapper, on Radix:
@@ -96,11 +97,13 @@ export function Dialog({ busy = false, dirty = false, open, defaultOpen, onOpenC
   )
   // Android Back (and the browser's) closes the open dialog instead of leaving the page: the same path as Esc (asks first
   // when something was typed), and ignored while a save is in flight.
+  // Phones and touch screens only: that is where a system Back button closes a sheet (desktop Back keeps its meaning).
+  const touch = useMediaQuery('(max-width: 767px), (pointer: coarse)')
   useBackToClose(isOpen, () => {
     if (busy) return
     if (guarded) setAsking(true)
     else change(false)
-  })
+  }, { enabled: touch })
 
   return (
     <GuardContext.Provider value={guard}>

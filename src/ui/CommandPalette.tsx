@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
 import { modKeyLabel, type PaletteItem, type PaletteSource } from '@/ui/paletteSources'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 
 /*
  * CommandPalette (INVENTORY: U08; D08 section 07). Cmd+K or Ctrl+K from anywhere,
@@ -94,7 +95,7 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyHint }: CommandPaletteProps) {
   const [query, setQuery] = useState('')
-  useBackToClose(open, () => onOpenChange(false))
+  useBackToClose(open, () => onOpenChange(false), { enabled: useMediaQuery('(max-width: 767px), (pointer: coarse)') })
   const [groups, setGroups] = useState<Group[]>([])
   const [searching, setSearching] = useState(false)
   const [slow, setSlow] = useState(false)
