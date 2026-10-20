@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Link, MemoryRouter, Route, Routes, useNavigate, type InitialEntry } from 'react-router-dom'
+import { Link, MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SessionContext, type SessionState } from '@/app/session'
 import IntakeScreen from '@/features/rfqs/IntakeScreen'
@@ -99,6 +99,8 @@ function SendCapture() {
     </button>
   )
 }
+
+type InitialEntry = string | { pathname: string; search?: string; state?: unknown }
 
 function renderScreen(entry: InitialEntry = '/rfqs/new', session: SessionState = SIGNED_IN) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
