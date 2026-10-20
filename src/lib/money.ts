@@ -108,6 +108,16 @@ export function productPaisa(qty: Amount, price: Amount): bigint {
   return divRound(scaledAmount(qty, 3) * scaledAmount(price, 6), 10_000_000n)
 }
 
+/** round(Σ qty x price, 2) in paisa: the products are summed exactly and rounded once (half away from zero). */
+export function sumProductsPaisa(pairs: Iterable<readonly [Amount, Amount]>): bigint {
+  let s = 0n
+  for (const [q, p] of pairs) s += scaledAmount(q, 3) * scaledAmount(p, 6)
+  return divRound(s, 10_000_000n)
+}
+
+/** n / d rounded half away from zero, exact integers (d > 0). For shares such as the GST of part of an invoice. */
+export const divRoundHalfUp = (n: bigint, d: bigint): bigint => divRound(n, d)
+
 /** GST on a line net, rounded to whole rupees (DATA_MODEL 2.13), in paisa: round(net x rate / 100, 0) x 100. */
 export function gstWholeRupeesPaisa(netPaisa: bigint, ratePercent: Amount): bigint {
   return divRound(netPaisa * scaledAmount(ratePercent, 2), 1_000_000n) * 100n

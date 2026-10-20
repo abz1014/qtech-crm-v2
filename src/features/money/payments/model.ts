@@ -2,6 +2,8 @@
  * Payments in and receivables (M02): the pure rules. Balance is gross, GST included (DATA_MODEL 2.17): customers pay the full
  * invoice amount and deduct nothing. "Settled" is computed against gross by order_receivables(), with a Rs 1 allowance.
  */
+import { addBusinessDays } from '@/features/rfqs/lib/dateText'
+
 export type PaymentState = 'unpaid' | 'part' | 'settled' | 'overdue'
 
 export interface ReceivableRow {
@@ -68,9 +70,12 @@ export interface ReceivableTotals {
   settled: number
 }
 
-/** A reminder is due when the order is overdue and has not been reminded in the last 7 days (M09; Today shows the same rule). */
+/** Working days after a reminder before the next one is due: the same wait as Today's payment-overdue item (rules.ts). */
+export const REMINDER_WAIT_WORKING_DAYS = 7
+
+/** A reminder is due when the order is overdue and was not reminded within the last 7 WORKING days (M09; Today uses the same rule). */
 export function reminderDue(r: ReceivableRow, today: string): boolean {
-  return r.state === 'overdue' && (r.lastRemindedOn === null || daysBetween(r.lastRemindedOn, today) >= 7)
+  return r.state === 'overdue' && (r.lastRemindedOn === null || today >= addBusinessDays(r.lastRemindedOn, REMINDER_WAIT_WORKING_DAYS))
 }
 
 export function receivableTotals(rows: readonly ReceivableRow[], today: string): ReceivableTotals {

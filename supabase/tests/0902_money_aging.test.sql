@@ -114,22 +114,31 @@ select is((select public.stamp_payment_reminder(array['e1000000-0000-4000-8000-0
 -- frozen snapshot) as an unpaid invoice that only grows older (90+). Every order settled within the allowance does this.
 select ok((select payment_state = 'settled' and balance = 0.50 from public.order_receivables('a1000000-0000-4000-8000-000000000914')),
   'A4: receivables say settled (within Rs 1)');
-select is((select remaining from public.aging_as_of('2025-06-30') where order_id = 'a1000000-0000-4000-8000-000000000914'), 0.50::numeric,
-  'BUG-M3 (current, wrong): the aging lists the 0.50 of a settled order as unpaid, 90+ days');
-select todo('BUG-M3: aging_as_of should apply the same Rs 1 allowance as order_receivables (a settled order is not aged)', 1);
+-- (fixed in 0076: aging_as_of applies the same allowance)
 select is((select count(*)::int from public.aging_as_of('2025-06-30') where order_id = 'a1000000-0000-4000-8000-000000000914'), 0,
   'BUG-M3: an order receivables call settled has no aging row');
 
 -- BUG-M9: an imported invoice with no date counts in order_receivables (balance 1,180, but never a due date, so never overdue
 -- and never on Today) and is left out of the aging entirely (invoice_date <= p_date is not true for NULL).
-select ok((select balance = 1180 and due_on is null and not is_overdue and payment_state = 'unpaid'
-           from public.order_receivables('a1000000-0000-4000-8000-000000000915')),
-  'A5: the undated legacy invoice is owed in receivables, with no due date (never overdue)');
-select is((select count(*)::int from public.aging_as_of(public.today_pkt()) where order_id = 'a1000000-0000-4000-8000-000000000915'), 0,
-  'BUG-M9 (current, wrong): the same 1,180 is missing from the aging');
-select todo('BUG-M9: money owed on an undated legacy invoice must appear in the aging (oldest bucket) as it does in receivables', 1);
+-- (fixed in 0076: the due basis of an undated invoice is the order date, else the import date)
+select ok((select balance = 1180 and due_on = o.ordered_on + 30 and not is_overdue and payment_state = 'unpaid'
+           from public.order_receivables('a1000000-0000-4000-8000-000000000915')
+           cross join (select ordered_on from public.orders where id = 'a1000000-0000-4000-8000-000000000915') o),
+  'A5: the undated legacy invoice is owed in receivables, due order date + 30 days');
+select is((select due_on from public.v_order_money where order_id = 'a1000000-0000-4000-8000-000000000915'),
+  (select due_on from public.order_receivables('a1000000-0000-4000-8000-000000000915')),
+  'A5: v_order_money has the same due date');
 select is((select coalesce(sum(remaining), 0) from public.aging_as_of(public.today_pkt()) where order_id = 'a1000000-0000-4000-8000-000000000915'),
   1180.00::numeric, 'BUG-M9: the undated invoice is aged');
+reset role;
+update public.orders set ordered_on = '2025-01-01' where id = 'a1000000-0000-4000-8000-000000000915';
+set local role authenticated;
+select ok((select is_overdue and payment_state = 'overdue' and due_on = '2025-01-31'
+           from public.order_receivables('a1000000-0000-4000-8000-000000000915')),
+  'BUG-M9: an undated invoice on an order of 1 Jan 2025 falls due 31 Jan 2025 and is overdue');
+select ok((select bucket = '90+' and invoice_date = '2025-01-01' from public.aging_as_of(public.today_pkt())
+           where order_id = 'a1000000-0000-4000-8000-000000000915'),
+  'BUG-M9: and ages from the order date (90+)');
 
 select * from finish();
 rollback;

@@ -115,11 +115,8 @@ select is((select count(*)::int
                  is distinct from (m.gross_target, m.settled, m.receivable, m.overpaid_by, m.due_on, m.payment_state)), 0,
   'cross-check: order_receivables and v_order_money agree on gross, paid, balance, overpaid, due date and state for every listed order');
 
--- BUG-M2: v_order_money has no D-MR3 filter, so the admin's order page, the admin's Orders list "balance" column and the
--- company page still show the full item gross of a cancelled, never-invoiced order as owed (sales see nothing for it).
-select is((select receivable from public.v_order_money where order_id = 'a1000000-0000-4000-8000-000000000905'), 1180.00::numeric,
-  'BUG-M2 (current, wrong): v_order_money shows a receivable of 1,180 on a cancelled order that was never invoiced');
-select todo('BUG-M2: a cancelled order with no invoice owes nothing (D-MR3); v_order_money should agree with order_receivables', 1);
+-- BUG-M2 (fixed in 0076): v_order_money had no D-MR3 filter, so the admin's order page, the admin's Orders list "balance" column
+-- and the company page showed the full item gross of a cancelled, never-invoiced order as owed.
 select is((select receivable from public.v_order_money where order_id = 'a1000000-0000-4000-8000-000000000905'), 0.00::numeric,
   'BUG-M2: v_order_money.receivable of a cancelled, never-invoiced order is 0');
 

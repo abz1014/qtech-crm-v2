@@ -84,14 +84,21 @@ describe('companies reads', () => {
     const { wrapper, db } = setup(() => ({ data: [] }))
     const { result } = renderHook(() => useCompanyMoney('c1', false), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
-    expect(db.calls.filter(c => c.target === 'v_order_money')).toHaveLength(0)
+    expect(db.calls.filter(c => c.target === 'rpc:order_receivables')).toHaveLength(0)
   })
 
-  it('useCompanyMoney totals the receivable and what was settled for an admin', async () => {
-    const { wrapper } = setup(() => ({ data: [{ receivable: 1000, settled: 400 }, { receivable: '500.50', settled: 0 }] }))
+  it('useCompanyMoney totals gross, received and balance over the company receivables for an admin', async () => {
+    const { wrapper, db } = setup(() => ({
+      data: [
+        { gross_target: 1000, settled: 400, balance: 600, overpaid_by: 0 },
+        { gross_target: '500.50', settled: '600.00', balance: 0, overpaid_by: '99.50' },
+      ],
+    }))
     const { result } = renderHook(() => useCompanyMoney('c1', true), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data).toEqual({ receivable: 1500.5, settled: 400, balance: 1100.5, orders: 2 })
+    expect(result.current.data).toEqual({ receivable: 1500.5, settled: 1000, balance: 600, overpaid: 99.5, orders: 2 })
+    expect(db.calls[0].target).toBe('rpc:order_receivables')
+    expect(opArgs(db.calls[0], 'eq')).toEqual(['company_id', 'c1'])
   })
 
   it('useSupplierStats reads the one row from v_supplier_stats', async () => {

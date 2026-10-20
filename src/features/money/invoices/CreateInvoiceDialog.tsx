@@ -23,7 +23,7 @@ import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 import type { NextNumber, OrderForInvoice } from '@/features/money/invoices/api'
 import { useCreateInvoice, useInvoiceableOrders, useNextInvoiceNumber, useOrderForInvoice } from '@/features/money/invoices/hooks'
-import { GST_OPTION_LABEL, dueOn, gstForNet, gstOn, gstRowLabel, invoiceStart, round2, type GstOption } from '@/features/money/invoices/model'
+import { GST_OPTION_LABEL, gstForNet, gstRowLabel, invoiceStart, orderDueOn, round2, type GstOption } from '@/features/money/invoices/model'
 
 /*
  * Create invoice (M01; g2-money "create invoice dialog"). Opened from an order (the order page, or a link) or from the register's
@@ -157,7 +157,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
   const gross = round2((typeof net === 'number' ? net : 0) + (gst ?? 0))
   const profileQ = useCompanyProfile()
   const terms = effectiveTerms(order.amounts.paymentTermsDays, profileQ.data?.default_payment_terms_days)
-  const due = dueOn(date, terms.days)
+  const due = orderDueOn(date, order.amounts.earliestInvoiceDate, terms.days)
 
   const setNet = (v: number | null) => {
     form.setValue('net', v as number, { shouldDirty: true })
@@ -165,7 +165,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
   }
   const setOption = (o: GstOption) => {
     form.setValue('option', o, { shouldDirty: true })
-    form.setValue('gst', gstOn(typeof net === 'number' ? net : 0, o), { shouldDirty: true })
+    form.setValue('gst', gstForNet(typeof net === 'number' ? net : 0, o, start), { shouldDirty: true })
   }
 
   const lines = order.amounts.lineCount
@@ -218,7 +218,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
           <Line label="Due" last>
             {due ? (
               <span className="num text-xs text-fg-2">
-                {formatDateText(due)} <span className="text-fg-muted">· {terms.days} days from invoice{terms.isDefault ? ' (default terms)' : ''}</span>
+                {formatDateText(due)} <span className="text-fg-muted">· {terms.days} days from {order.amounts.earliestInvoiceDate && order.amounts.earliestInvoiceDate < date ? 'the first invoice' : 'invoice'}{terms.isDefault ? ' (default terms)' : ''}</span>
               </span>
             ) : (
               <span className="text-xs text-fg-muted">No payment terms on the order</span>

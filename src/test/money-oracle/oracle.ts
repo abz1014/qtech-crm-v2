@@ -366,6 +366,9 @@ export function agingAsOf(asOf: string, books: Pick<Books, 'invoices' | 'payment
     if (gross - applied > 0n) out.push({ invoiceId: i.id, orderId: i.orderId, gross, applied, remaining: gross - applied, age, bucket: bucketOf(age) })
   }
   for (const [orderId, list] of byOrder) {
+    // the Rs 1 allowance of order_receivables (BUG-M3): an order paid to within Rs 1 of what it is invoiced is settled, not aged
+    const invoiced = sumP(list.map(i => i.net + i.gst))
+    if (invoiced > 0n && (paidBy.get(orderId) ?? 0n) >= invoiced - 100n) continue
     // oldest first: date, then number, then id (byte order, as Postgres "C"-like comparison of these ASCII strings)
     const sorted = [...list].sort((a, b) => cmp(a.date as string, b.date as string) || cmp(a.number, b.number) || cmp(a.id, b.id))
     let left = paidBy.get(orderId) ?? 0n

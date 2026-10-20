@@ -58,9 +58,10 @@ describe('receivables, the mockup figures', () => {
     })
   })
 
-  it('a reminder is due when overdue and not reminded in the last 7 days', () => {
+  it('a reminder is due when overdue and not reminded in the last 7 working days (as Today)', () => {
     expect(reminderDue(MOCKUP[0], TODAY)).toBe(true) // reminded 13 days ago
-    expect(reminderDue(MOCKUP[1], TODAY)).toBe(true) // 8 days ago
+    expect(reminderDue(MOCKUP[1], TODAY)).toBe(false) // 8 calendar days but 6 working days ago: due Mon 30 Nov
+    expect(reminderDue(MOCKUP[1], '2026-11-30')).toBe(true)
     expect(reminderDue(row({ state: 'overdue', lastRemindedOn: '2026-11-21' }), TODAY)).toBe(false) // 6 days ago
     expect(reminderDue(row({ state: 'part' }), TODAY)).toBe(false)
     expect(reminderPhrase(2, 2)).toBe('both due a reminder')

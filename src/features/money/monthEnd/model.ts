@@ -251,7 +251,10 @@ export function buildChecklist(rows: readonly StatusRow[], month: string, detail
   const by = new Map(rows.map(r => [r.check_key, Number(r.n) || 0]))
   return CHECKS.map(c => {
     const n = by.get(c.key) ?? 0
-    const line = describe(c, month, n, details?.[c.key])
+    const detail = details?.[c.key]
+    const described = describe(c, month, n, detail)
+    // A month closed before migration 0076 has no frozen details: its count is frozen but the figures under it are today's.
+    const line = detail?.live === true && n > 0 ? { ...described, parts: [...described.parts, ' (live figures, not frozen at close)'] } : described
     return {
       key: c.key,
       label: c.label,

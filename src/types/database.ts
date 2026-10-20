@@ -687,14 +687,14 @@ isOneToOne: false
                   ]
                 },"month_snapshots": {
                   Row: {
-                    "adjust": NonNullable<Json>,"aging": NonNullable<Json>,"categories": NonNullable<Json>,"gst": Json | null,"month": string,"payables": NonNullable<Json>,"payments": NonNullable<Json>,"pnl": NonNullable<Json>,"status": NonNullable<Json>,"taken_at": string,"team": NonNullable<Json>,"via": NonNullable<Json>
+                    "adjust": NonNullable<Json>,"aging": NonNullable<Json>,"categories": NonNullable<Json>,"details": Json | null,"gst": Json | null,"month": string,"payables": NonNullable<Json>,"payments": NonNullable<Json>,"pnl": NonNullable<Json>,"status": NonNullable<Json>,"taken_at": string,"team": NonNullable<Json>,"via": NonNullable<Json>
                   }
                   ComputedFields: never
                   Insert: {
-                    "adjust": NonNullable<Json>,"aging": NonNullable<Json>,"categories": NonNullable<Json>,"gst"?: Json | null,"month": string,"payables": NonNullable<Json>,"payments": NonNullable<Json>,"pnl": NonNullable<Json>,"status": NonNullable<Json>,"taken_at"?: string,"team": NonNullable<Json>,"via": NonNullable<Json>
+                    "adjust": NonNullable<Json>,"aging": NonNullable<Json>,"categories": NonNullable<Json>,"details"?: Json | null,"gst"?: Json | null,"month": string,"payables": NonNullable<Json>,"payments": NonNullable<Json>,"pnl": NonNullable<Json>,"status": NonNullable<Json>,"taken_at"?: string,"team": NonNullable<Json>,"via": NonNullable<Json>
                   }
                   Update: {
-                    "adjust"?: NonNullable<Json>,"aging"?: NonNullable<Json>,"categories"?: NonNullable<Json>,"gst"?: Json | null,"month"?: string,"payables"?: NonNullable<Json>,"payments"?: NonNullable<Json>,"pnl"?: NonNullable<Json>,"status"?: NonNullable<Json>,"taken_at"?: string,"team"?: NonNullable<Json>,"via"?: NonNullable<Json>
+                    "adjust"?: NonNullable<Json>,"aging"?: NonNullable<Json>,"categories"?: NonNullable<Json>,"details"?: Json | null,"gst"?: Json | null,"month"?: string,"payables"?: NonNullable<Json>,"payments"?: NonNullable<Json>,"pnl"?: NonNullable<Json>,"status"?: NonNullable<Json>,"taken_at"?: string,"team"?: NonNullable<Json>,"via"?: NonNullable<Json>
                   }
                   Relationships: [
                     {

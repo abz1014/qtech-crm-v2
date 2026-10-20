@@ -1,4 +1,5 @@
 import { monthLabel } from '@/features/money/expenses/model'
+import { divRoundHalfUp, paisaToFixed, toPaisa } from '@/lib/money'
 
 /*
  * Invoices and the GST register (M01): the pure rules. No React and no database in here, so each rule can be unit-tested.
@@ -35,6 +36,8 @@ export interface OrderAmounts {
   invoicedNet: number
   invoicedGst: number
   paymentTermsDays: number | null
+  /** The date of the order's earliest dated invoice, if any: the whole order falls due from it (DATA_MODEL section 5). */
+  earliestInvoiceDate?: string | null
 }
 
 export interface InvoiceStart {
@@ -67,14 +70,22 @@ export function invoiceStart(a: OrderAmounts): InvoiceStart {
 }
 
 /**
- * The GST row when the net amount is typed. 18% or exempt: from the net. An order that mixes 18% and exempt lines has no single
- * rate, so the GST left to invoice is shared out in proportion to the net typed (whole rupees): invoicing half of what is left
- * carries half of its GST, never all of it.
+ * The GST row when the net amount is typed. The order's GST is rounded per LINE (DATA_MODEL 2.13), so a GST worked out again on
+ * the invoice total (round(net x 18%)) can differ from the lines by up to Rs 0.50 a line and the order would never read "fully
+ * invoiced". So whenever there is GST left on the lines and the rate typed is the order's own (18% on an all-18% order, or an
+ * order that mixes 18% and exempt), the GST left is shared out in proportion to the net typed: the full net left carries exactly
+ * the GST of the lines, half of it carries half (whole rupees, half away from zero, in exact integer arithmetic). Otherwise
+ * (exempt, or 18% picked on an order with nothing left) the GST comes from the net.
  */
-export function gstForNet(net: number, option: GstOption | 'mixed', start: Pick<InvoiceStart, 'net' | 'gst'>): number {
-  if (option !== 'mixed') return gstOn(net, option)
+export function gstForNet(net: number, option: GstOption | 'mixed', start: Pick<InvoiceStart, 'net' | 'gst'> & { option?: InvoiceStart['option'] }): number {
+  const share = option === 'mixed' || (option === '18' && (start.option ?? '18') === '18' && start.net > 0)
+  if (!share) return gstOn(net, option as GstOption)
   if (!(net > 0) || !(start.net > 0)) return 0
-  return Math.round((start.gst * net) / start.net)
+  const n = toPaisa(net)
+  const left = toPaisa(start.net)
+  if (n === left) return start.gst
+  const rupees = divRoundHalfUp(toPaisa(start.gst) * n, left * 100n)
+  return Number(paisaToFixed(rupees * 100n))
 }
 
 /** Due date: the invoice date plus the order's payment terms. Null without terms. */
@@ -83,6 +94,15 @@ export function dueOn(invoiceDate: string, terms: number | null): string | null 
   const [y, m, d] = invoiceDate.split('-').map(Number)
   const t = new Date(Date.UTC(y, m - 1, d + terms))
   return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`
+}
+
+/**
+ * The order's due date once this invoice exists: the EARLIEST invoice date plus the terms, the date order_receivables, Today and
+ * the Receivables page use (DATA_MODEL section 5). A second or part invoice does not move it later.
+ */
+export function orderDueOn(invoiceDate: string, earliestInvoiceDate: string | null | undefined, terms: number | null): string | null {
+  const first = earliestInvoiceDate && earliestInvoiceDate < invoiceDate ? earliestInvoiceDate : invoiceDate
+  return dueOn(first, terms)
 }
 
 // ------------------------------------------------------------------ the register
