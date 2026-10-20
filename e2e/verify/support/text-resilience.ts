@@ -1,0 +1,46 @@
+/* Words the verify-resilience suite looks for. Merged into text.ts at the end; import them from ./text. */
+export const RESILIENCE = {
+  tryAgain: 'Try again',
+  undo: /^Undo/,
+  order: {
+    actions: { createInvoice: 'Create invoice', recordPayment: 'Record payment' },
+    invoiceDialog: 'Create invoice',
+    createInvoice: 'Create invoice',
+    paymentDialog: 'Record payment',
+    amount: 'Amount received, PKR',
+    savePayment: 'Save payment',
+    markPlaced: (letter: string) => `Mark placed, leg ${letter}`,
+    deliveredToday: (letter: string) => `Delivered today, leg ${letter}`,
+    issuePoOnLeg: (letter: string) => `Issue PO, leg ${letter}`,
+    issuePoDialog: 'Issue purchase order',
+    issuePo: 'Issue PO',
+  },
+  rfq: {
+    markWon: 'Mark won',
+    wonDialog: 'Mark won',
+    createOrder: 'Create order',
+    openOrder: /Open ORD-\d{4}/,
+    chase: (supplier: string) => `Chase ${supplier}`,
+    chaseCopied: 'Chase text copied',
+  },
+  company: {
+    path: '/companies',
+    newCompany: 'New company',
+    dialog: 'New company',
+    name: /Company name/,
+    add: 'Add company',
+  },
+  expense: {
+    path: '/money/expenses',
+    add: 'Add expense',
+    dialog: 'Add expense',
+    amount: 'Amount, PKR',
+    note: 'Note',
+    save: 'Save expense',
+  },
+  signIn: {
+    email: 'Email',
+    password: 'Password',
+    button: 'Sign in',
+  },
+} as const
