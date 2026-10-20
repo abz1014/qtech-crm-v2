@@ -135,6 +135,62 @@ export async function searchCompanies(text: string, limit = 8): Promise<CompanyH
   return all.map(r => ({ id: r.id, name: r.name, country: r.country, city: r.city, role: roleBy.get(r.id) ?? null, rfqCount: rfqCount.get(r.id) ?? 0, similar: r.similar }))
 }
 
+/** Who sent an enquiry, as the PDF or paste reader found it (docread parseEnquiry facts.company). */
+export interface SenderHint {
+  name: string | null
+  domain: string | null
+  emails: string[]
+  phones: string[]
+}
+
+/** "Fauji Cement Company Limited" and "Fauji Cement Co. Ltd" read the same: legal words, dots and case do not count. */
+export function companyNameKey(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\(.*?\)/g, ' ')
+    .replace(/\b(?:limited|ltd|pvt|private|company|co|inc|llc|corporation|corp|the)\b\.?/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+/**
+ * The company on file that sent this enquiry, or null: a contact with one of its email addresses first, then a contact at its
+ * email domain, then a contact with one of its phone numbers, then a company of the same name (legal words aside). `why` says
+ * which, for the screen ("Their email is on file").
+ */
+export async function findCompanyForSender(h: SenderHint): Promise<(CompanyHit & { why: 'email' | 'domain' | 'phone' | 'name' }) | null> {
+  const db = requireSupabase()
+  const byContact = async (filter: string): Promise<string | null> => {
+    const rows = unwrap(await db.from('contacts').select('company_id').or(filter).limit(5))
+    return rows[0]?.company_id ?? null
+  }
+  let id: string | null = null
+  let why: 'email' | 'domain' | 'phone' | 'name' = 'email'
+  const emails = h.emails.slice(0, 3).map(e => e.replace(/[,()"]/g, ''))
+  if (emails.length) id = await byContact(emails.map(e => `email.ilike.${likeEscape(e)}`).join(','))
+  if (!id && h.domain && /^[a-z0-9.-]+$/i.test(h.domain)) {
+    why = 'domain'
+    id = await byContact(`email.ilike.*@${h.domain}`)
+  }
+  if (!id && h.phones.length) {
+    why = 'phone'
+    // Stored numbers are written many ways ("0300-1234567", "+92 300 1234567"): match the last 7 digits in order.
+    const keys = h.phones.slice(0, 3).map(p => p.replace(/\D/g, '').slice(-7)).filter(k => k.length === 7)
+    if (keys.length) id = await byContact(keys.map(k => `phone.ilike.*${k.split('').join('*')}*`).join(','))
+  }
+  if (id) {
+    const row = unwrap(await db.from('companies').select('id, name, country, city').eq('id', id).maybeSingle()) as { id: string; name: string; country: string | null; city: string | null } | null
+    if (row) return { ...row, role: null, why }
+  }
+  const key = h.name ? companyNameKey(h.name) : ''
+  if (key.length >= 3) {
+    const hits = await searchCompanies(key.split(' ').slice(0, 2).join(' '), 8)
+    const same = hits.find(c => companyNameKey(c.name) === key)
+    if (same) return { ...same, why: 'name' }
+  }
+  return null
+}
+
 /** The company whose name equals `name` ignoring case and surrounding spaces, as the unique index sees it. */
 export async function findCompanyByName(name: string): Promise<CompanyHit | null> {
   const db = requireSupabase()

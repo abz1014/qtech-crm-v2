@@ -22,6 +22,8 @@ function companies() {
     list: () => [...all, 'list', 'roster'] as const,
     search: (text: string) => [...all, 'list', 'search', text.trim().toLowerCase()] as const,
     byName: (name: string) => [...all, 'list', 'by-name', name.trim().toLowerCase()] as const,
+    /** The company that sent an enquiry (a PDF or a paste), by what the text says about the sender. */
+    sender: (signature: string) => [...all, 'list', 'sender', signature] as const,
     detail,
     /** R22: the RFQs Capture offers (recents and your own with open questions), with their open questions. */
     capture: (signature = '') => [...all, 'capture', signature] as const,
