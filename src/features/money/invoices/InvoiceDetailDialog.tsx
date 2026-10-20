@@ -1,4 +1,7 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useSession } from '@/app/session'
+import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
 import { Camera, Check, ExternalLink } from 'lucide-react'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
@@ -67,6 +70,8 @@ const val = (s: string): string | null => (s.trim() === '' ? null : s)
 
 function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy: (b: boolean) => void; onClose: () => void }) {
   const toast = useToast()
+  const session = useSession()
+  const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
   const update = useUpdateInvoice(invoice.id)
   const receipts = useInvoiceReceipts(invoice.id, invoice.psid)
   const upload = useUploadInvoiceReceipt(invoice.id, invoice.psid)
@@ -220,6 +225,12 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
       </section>
 
       <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
+        {isAdmin && invoice.order_id ? (
+          <Link to={`/orders/${invoice.order_id}#payments`} onClick={onClose} className="mr-auto text-sm font-medium text-primary underline-offset-2 hover:underline">
+            Payments on the order
+          </Link>
+        ) : null}
+        <InvoicePdfButton invoiceId={invoice.id} variant="secondary" />
         <Button variant="quiet" onClick={onClose} data-cancel>
           Close
         </Button>

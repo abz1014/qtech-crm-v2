@@ -1,9 +1,25 @@
+import { OrderPaymentLines } from '@/features/money/payments/PaymentCorrections'
+
 /*
- * The money panel of the order page (g2-order-detail.html): "Margin" (admin only, M04). It lives with the other money code because it
- * reads order_costs, expenses and v_order_money.
+ * The money panels of the order page (g2-order-detail.html): "Margin" (admin only, M04), and under it "Invoices and payments" (admin
+ * only): the order's payments, each with ⋯ Correct… / Void… (0073), the voided ones folded with Undo. They live with the other money
+ * code because they read order_costs, expenses, payments_in and v_order_money.
  *
- * The "Invoices and payments" panel that used to sit under it was folded into the header's status strip by the UX audit of 2026-10-19
- * (screens.md 8, "one place for each action"): the Invoicing cell says what is invoiced and has "Create invoice", the Payment cell says
- * what was received, the balance and its due date and has "Record payment" (admin), unless either is the page's one primary step.
+ * The figures (invoiced, received, balance, due date) and Print invoice stay in the header's status strip (UX audit 2026-10-19,
+ * screens.md 8): this panel is where a recorded payment is put right.
  */
 export { MarginPanel } from '@/features/money/costs/MarginPanel'
+
+export function InvoicesPanel({ orderId, orderNumber }: { orderId: string; orderNumber: number }) {
+  return (
+    <section id="payments" aria-label="Invoices and payments" data-slot="invoices-payments" className="rounded border bg-surface">
+      <div className="flex items-center gap-2 border-b px-4 py-3 md:px-5">
+        <h2 className="text-base font-semibold">Invoices and payments</h2>
+        <span className="ml-auto text-xs text-fg-muted">Payments received</span>
+      </div>
+      <div className="grid gap-2 px-4 py-3 md:px-5">
+        <OrderPaymentLines orderId={orderId} orderNumber={orderNumber} />
+      </div>
+    </section>
+  )
+}
