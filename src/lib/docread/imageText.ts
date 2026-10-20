@@ -16,7 +16,17 @@
 // up to that size and read once more.
 
 import { linesToText, type LaidLine } from './pdfLayout'
-import { layoutOcr, MIN_PAGE_CONFIDENCE, MIN_PAGE_LETTERS, pageConfidence, typicalRowHeight, type OcrBox, type OcrLine } from './ocrLayout'
+import {
+  layoutOcr,
+  MIN_PAGE_CONFIDENCE,
+  MIN_PAGE_LETTERS,
+  pageConfidence,
+  skewAngle,
+  typicalRowHeight,
+  type OcrBox,
+  type OcrLine,
+  type TableRules,
+} from './ocrLayout'
 import { findMissedBoxes, mergeRecovered, padBox } from './ocrRecover'
 import type { PdfSubject } from './pdfText'
 
@@ -35,8 +45,11 @@ export const MAX_EDGE = 4800
 const CROP_MARGIN = 16
 /** The row height, in px, a piece read again on its own is enlarged to. */
 const CROP_ROW_HEIGHT = 48
-/** A word read again counts only when read at least this sure (a smudge read alone can come out as anything). */
-const RECOVERED_CONFIDENCE = 80
+/**
+ * A word read again counts only when read at least this sure: in a cell nothing was read from (a lone "25"), or over a word
+ * the page reading was unsure of, which it replaces (a smudge read alone can come out as anything, so the bar is higher).
+ */
+const RECOVERED_CONFIDENCE = { empty: 60, replacing: 80 }
 
 export type ImageReadFailure = 'not_image' | 'too_big' | 'unsupported' | 'unclear' | 'unreadable' | 'aborted'
 
@@ -74,8 +87,12 @@ export interface PreparedImage {
   height: number
   /** The factor the original was scaled by. */
   scale: number
+  /** The angle (radians) the original was turned by, to level a slanted photo. */
+  angle?: number
   /** The cleaned pixels (RGBA, grey), for the second look at skipped ink (ocrRecover.ts). */
   pixels?: Uint8ClampedArray
+  /** The table rules wiped off the picture, in its pixels. */
+  rules?: Rules
   /** A piece of the cleaned picture, enlarged `scale` times. */
   crop?: (box: OcrBox, scale: number) => HTMLCanvasElement | Blob
 }
@@ -97,7 +114,9 @@ export interface ReadImageOptions {
   onProgress?: (p: ImageProgress) => void
   maxBytes?: number
   /** Scales and cleans the picture. Default: a canvas in this page. Tests pass their own. */
-  prepare?: (file: Blob, scale?: number) => Promise<PreparedImage | null>
+  prepare?: (file: Blob, scale?: number, angle?: number) => Promise<PreparedImage | null>
+  /** The words as the engine read them and the picture they were read from, before layout (the dev page shows them). */
+  onWords?: (words: OcrLine[], image: PreparedImage) => void
   /** The OCR engine. Default: tesseract.js in a worker (ocrRuntime.ts). Tests pass their own. */
   engine?: OcrEngine
 }
@@ -195,12 +214,37 @@ const RULE_INK = 200
 /** A table rule is at most this thick, in px. Thicker dark areas (a filled header, a logo) are left alone. */
 const RULE_THICKNESS = 8
 
+/** Pieces of one rule found pixel row by pixel row (or column by column), joined into one box. */
+function joinSegments(segs: OcrBox[], across: 'x' | 'y'): OcrBox[] {
+  const out: OcrBox[] = []
+  const sorted = [...segs].sort((a, b) => (across === 'y' ? a.y0 - b.y0 || a.x0 - b.x0 : a.x0 - b.x0 || a.y0 - b.y0))
+  for (const s of sorted) {
+    const hit = out.find(o =>
+      across === 'y'
+        ? s.y0 - o.y1 <= 1 && Math.min(o.x1, s.x1) - Math.max(o.x0, s.x0) > 0.5 * Math.min(o.x1 - o.x0, s.x1 - s.x0)
+        : s.x0 - o.x1 <= 1 && Math.min(o.y1, s.y1) - Math.max(o.y0, s.y0) > 0.5 * Math.min(o.y1 - o.y0, s.y1 - s.y0),
+    )
+    if (hit) {
+      hit.x0 = Math.min(hit.x0, s.x0)
+      hit.x1 = Math.max(hit.x1, s.x1)
+      hit.y0 = Math.min(hit.y0, s.y0)
+      hit.y1 = Math.max(hit.y1, s.y1)
+    } else out.push({ ...s })
+  }
+  return out
+}
+
+/** The rules a picture had: they mark a table's cells, so the layout uses them after they are wiped (ocrLayout.ts). */
+export type Rules = TableRules
+
 /**
  * Wipes the rules of a table (cell borders, underlines) off a cleaned grey picture, in place: a straight dark run longer than
  * any letter stroke and at most a few pixels thick. Left in, they make the engine take a bordered cell for a picture and drop
- * the number in it (the quantity column of an Outlook table).
+ * the number in it (the quantity column of an Outlook table). Returns where they were.
  */
-export function removeRules(px: Uint8ClampedArray, width: number, height: number): void {
+export function removeRules(px: Uint8ClampedArray, width: number, height: number): Rules {
+  const hSegs: OcrBox[] = []
+  const vSegs: OcrBox[] = []
   const min = Math.max(70, Math.round(0.035 * Math.max(width, height)))
   const dark = (x: number, y: number) => (px[4 * (y * width + x)] as number) < RULE_INK
   const white = (x: number, y: number) => {
@@ -228,6 +272,7 @@ export function removeRules(px: Uint8ClampedArray, width: number, height: number
         while (down <= RULE_THICKNESS && y + down + 1 < height && dark(xi, y + down + 1)) down++
         if (up + down + 1 <= RULE_THICKNESS) wipe.push(xi, y)
       }
+      hSegs.push({ x0: start, x1: x, y0: y, y1: y + 1 })
     }
   }
   for (let x = 0; x < width; x++) {
@@ -247,9 +292,18 @@ export function removeRules(px: Uint8ClampedArray, width: number, height: number
         while (right <= RULE_THICKNESS && x + right + 1 < width && dark(x + right + 1, yi)) right++
         if (left + right + 1 <= RULE_THICKNESS) wipe.push(x, yi)
       }
+      vSegs.push({ x0: x, x1: x + 1, y0: start, y1: y })
     }
   }
   for (let i = 0; i < wipe.length; i += 2) white(wipe[i] as number, wipe[i + 1] as number)
+  // A thick dark area (a logo, a filled header) gives many long runs too: only thin ones are rules.
+  const thin = (b: OcrBox) => Math.min(b.x1 - b.x0, b.y1 - b.y0) <= RULE_THICKNESS
+  const rules = { horizontal: joinSegments(hSegs, 'y').filter(thin), vertical: joinSegments(vSegs, 'x').filter(thin) }
+  // Then each rule whole, a pixel wider on each side: its grey edges and the dots where two rules cross go too.
+  for (const b of [...rules.horizontal, ...rules.vertical]) {
+    for (let y = Math.max(0, b.y0 - 1); y < Math.min(height, b.y1 + 1); y++) for (let x = Math.max(0, b.x0 - 1); x < Math.min(width, b.x1 + 1); x++) white(x, y)
+  }
+  return rules
 }
 
 /** The scale factor for a picture whose long edge is `edge` px. */
@@ -260,7 +314,7 @@ export function scaleFor(edge: number): number {
 }
 
 /** Decodes, scales and cleans the picture on a canvas. Null when this browser cannot open the format. */
-export async function prepareImage(blob: Blob, scaleOverride?: number): Promise<PreparedImage | null> {
+export async function prepareImage(blob: Blob, scaleOverride?: number, angle = 0): Promise<PreparedImage | null> {
   let src: Awaited<ReturnType<typeof decode>>
   try {
     src = await decode(blob)
@@ -281,10 +335,16 @@ export async function prepareImage(blob: Blob, scaleOverride?: number): Promise<
     ctx.imageSmoothingQuality = 'high'
     ctx.fillStyle = '#fff'
     ctx.fillRect(0, 0, width, height)
-    ctx.drawImage(src, 0, 0, width, height)
+    if (angle) {
+      // Turned about the centre, the opposite way to the slant; the corners that leave the canvas hold no text in practice.
+      ctx.translate(width / 2, height / 2)
+      ctx.rotate(-angle)
+      ctx.drawImage(src, -width / 2, -height / 2, width, height)
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+    } else ctx.drawImage(src, 0, 0, width, height)
     const data = ctx.getImageData(0, 0, width, height)
     cleanPixels(data.data)
-    removeRules(data.data, width, height)
+    const rules = removeRules(data.data, width, height)
     ctx.putImageData(data, 0, 0)
     const crop = (box: OcrBox, by: number) => {
       const c = document.createElement('canvas')
@@ -304,7 +364,7 @@ export async function prepareImage(blob: Blob, scaleOverride?: number): Promise<
       }
       return c
     }
-    return { image: canvas, width, height, scale, pixels: data.data, crop }
+    return { image: canvas, width, height, scale, angle, pixels: data.data, crop, rules }
   } finally {
     src.close?.()
   }
@@ -442,8 +502,10 @@ async function recoverSkipped(
     const box = padBox(b, Math.round(0.4 * rh), image.width, image.height)
     const cropped = image.crop(box, by)
     const got = await engine.read(cropped, { signal, mode: 'line', onProgress: () => onProgress(i / boxes.length) })
+    const replacing = words.some(l => l.words.some(w => w.bbox.x1 > b.x0 && w.bbox.x0 < b.x1 && w.bbox.y1 > b.y0 && w.bbox.y0 < b.y1))
+    const bar = replacing ? RECOVERED_CONFIDENCE.replacing : RECOVERED_CONFIDENCE.empty
     for (const l of got) {
-      const sure = l.words.filter(w => w.confidence >= RECOVERED_CONFIDENCE && /[\p{L}\p{N}]/u.test(w.text))
+      const sure = l.words.filter(w => w.confidence >= bar && /[\p{L}\p{N}]/u.test(w.text))
       if (sure.length) recovered.push(placeLine({ ...l, words: sure }, box, by))
     }
   }
@@ -485,14 +547,17 @@ export async function readImageText(file: Blob, opts: ReadImageOptions = {}): Pr
   let words: OcrLine[]
   let used = prepared
   try {
-    // The first reading is most of the bar; a second one, when the letters were small, is the rest.
+    // The first reading is most of the bar; a second one (letters small, or a slanted photo) is the rest.
     words = await engine.read(prepared.image, { signal: opts.signal, onProgress: f => progress(0.02 + 0.78 * f) })
     if (opts.signal?.aborted) return fail('aborted')
     const rh = typicalRowHeight(words)
     const longEdge = Math.max(prepared.width, prepared.height)
     const factor = rh && rh < MIN_ROW_HEIGHT ? Math.min(TARGET_ROW_HEIGHT / rh, MAX_EDGE / longEdge) : 1
-    if (factor > 1.2) {
-      const larger = await prepare(file, prepared.scale * factor).catch(() => null)
+    // A photo of a screen or of paper is seldom level: turned level, its table rules are straight again (and wiped) and its
+    // rows line up across the columns.
+    const angle = skewAngle(words, rh)
+    if (factor > 1.2 || angle !== 0) {
+      const larger = await prepare(file, prepared.scale * Math.max(1, factor), angle).catch(() => null)
       if (opts.signal?.aborted) return fail('aborted')
       if (larger) {
         const again = await engine.read(larger.image, { signal: opts.signal, onProgress: f => progress(0.8 + 0.2 * f) })
@@ -512,7 +577,8 @@ export async function readImageText(file: Blob, opts: ReadImageOptions = {}): Pr
 
   const { confidence, letters } = pageConfidence(words)
   if (letters < MIN_PAGE_LETTERS || confidence < MIN_PAGE_CONFIDENCE) return fail('unclear')
-  const lines = layoutOcr(words)
+  opts.onWords?.(words, used)
+  const lines = layoutOcr(words, used.rules)
   if (lines.length === 0) return fail('unclear')
   progress(1)
   return {

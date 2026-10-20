@@ -31,7 +31,18 @@ export default function DocreadLab() {
     ctrl.current = c
     setResult(null)
     const t0 = performance.now()
-    const r = await readImageText(file, { signal: c.signal, onProgress: p => setProgress(p.message) })
+    const r = await readImageText(file, {
+      signal: c.signal,
+      onProgress: p => setProgress(p.message),
+      // The raw words and the cleaned picture, for looking into a bad reading from the browser console.
+      onWords: (words, image) => {
+        ;(window as unknown as { __docreadWords?: unknown }).__docreadWords = {
+          words,
+          rules: image.rules,
+          picture: image.image instanceof HTMLCanvasElement ? image.image.toDataURL() : null,
+        }
+      },
+    })
     if (ctrl.current === c) setResult({ ...r, ms: Math.round(performance.now() - t0) })
   }
 

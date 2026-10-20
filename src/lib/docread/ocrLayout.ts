@@ -36,6 +36,12 @@ export interface OcrLine {
   rowHeight?: number | null
 }
 
+/** The rules of a table, wiped off the picture before reading (imageText.ts removeRules): its cell borders. */
+export interface TableRules {
+  horizontal: OcrBox[]
+  vertical: OcrBox[]
+}
+
 /** A word read with less confidence than this is noise (a rule, an icon, a speck). */
 export const MIN_WORD_CONFIDENCE = 30
 /** Below this mean confidence (weighted by letters) the reading is not trusted: the person is asked to type the items. */
@@ -60,12 +66,14 @@ export function cleanWord(w: OcrWord): string | null {
 }
 
 /** Where the baseline is under x (the line may be slightly tilted). Falls back to the word's own bottom. */
-function baselineAt(line: OcrLine, x: number, fallback: number): number {
+function baselineAt(line: OcrLine, x: number, fallback: number, size: number): number {
   const b = line.baseline
   if (!b || (b.x0 === 0 && b.x1 === 0 && b.y0 === 0 && b.y1 === 0)) return fallback
   // A "line" running down the page (a column of single digits read as one line) has no usable baseline.
   if (b.x1 === b.x0 || Math.abs(b.y1 - b.y0) > 0.2 * Math.abs(b.x1 - b.x0)) return fallback
-  return b.y0 + ((b.y1 - b.y0) * (x - b.x0)) / (b.x1 - b.x0)
+  const y = b.y0 + ((b.y1 - b.y0) * (x - b.x0)) / (b.x1 - b.x0)
+  // A lone digit read on its own can come with a baseline at its top: the word's own bottom is the better guess then.
+  return Math.abs(y - fallback) > 0.5 * size ? fallback : y
 }
 
 function median(xs: number[]): number | null {
@@ -120,7 +128,8 @@ const kept = (l: OcrLine) => lineWords(l).map(k => k.word)
  * A photo of a screen or of paper is seldom level. The page's slant, from the baselines of its longer lines, is turned back
  * (every box moved by the opposite rotation), so a table row lines up again across its columns. Under 0.3 degrees: unchanged.
  */
-export function deskew(lines: readonly OcrLine[], typical: number | null = typicalRowHeight(lines)): OcrLine[] {
+/** The page's slant in radians, from the baselines of its longer lines; 0 when it is level (under 0.3 degrees). */
+export function skewAngle(lines: readonly OcrLine[], typical: number | null = typicalRowHeight(lines)): number {
   const minLength = 6 * (typical ?? 20)
   const angles = lines
     .map(l => l.baseline)
@@ -128,7 +137,12 @@ export function deskew(lines: readonly OcrLine[], typical: number | null = typic
     .map(b => Math.atan2(b.y1 - b.y0, b.x1 - b.x0))
     .filter(a => Math.abs(a) < 0.15)
   const angle = median(angles)
-  if (angle === null || Math.abs(angle) < (0.3 * Math.PI) / 180) return [...lines]
+  return angle === null || Math.abs(angle) < (0.3 * Math.PI) / 180 ? 0 : angle
+}
+
+export function deskew(lines: readonly OcrLine[], typical: number | null = typicalRowHeight(lines)): OcrLine[] {
+  const angle = skewAngle(lines, typical)
+  if (angle === 0) return [...lines]
   const cos = Math.cos(angle)
   const sin = Math.sin(angle)
   const turn = (x: number, y: number) => ({ x: x * cos + y * sin, y: -x * sin + y * cos })
@@ -192,9 +206,10 @@ export function unwrapLines(lines: readonly OcrLine[], typical: number | null = 
 
 /**
  * The words of the page as positioned text runs (pdfLayout.ts TextRun), `size` being the line's font size in pixels. A rule
- * read as "|" between two words is a cell border: the word before it is shortened so the gap reads as a new cell.
+ * read as "|" between two words, or a wiped table rule (`rules`), is a cell border: the word before it is shortened so the gap
+ * reads as a new cell. Words between the same two horizontal rules are one table row: they get one baseline.
  */
-export function wordsToRuns(lines: readonly OcrLine[], typical: number | null = typicalRowHeight(lines)): TextRun[] {
+export function wordsToRuns(lines: readonly OcrLine[], typical: number | null = typicalRowHeight(lines), rules?: TableRules): TextRun[] {
   const runs: TextRun[] = []
   for (const line of lines) {
     const size = lineSize(line, typical)
@@ -207,11 +222,39 @@ export function wordsToRuns(lines: readonly OcrLine[], typical: number | null = 
         continue
       }
       const cx = (w.bbox.x0 + w.bbox.x1) / 2
-      last = { str: text, x: w.bbox.x0, y: baselineAt(line, cx, w.bbox.y1), w: Math.max(1, w.bbox.x1 - w.bbox.x0), size }
+      last = { str: text, x: w.bbox.x0, y: baselineAt(line, cx, w.bbox.y1, size), w: Math.max(1, w.bbox.x1 - w.bbox.x0), size }
       runs.push(last)
     }
   }
+  if (rules) applyRules(runs, rules)
   return runs
+}
+
+const overlap = (a0: number, a1: number, b0: number, b1: number) => Math.min(a1, b1) - Math.max(a0, b0)
+
+/** Cell borders and row bands from the wiped rules of a table (see wordsToRuns). In place. */
+function applyRules(runs: TextRun[], rules: TableRules): void {
+  for (const r of runs) {
+    const end = r.x + r.w
+    const border = rules.vertical.find(
+      v => v.x0 >= end - 0.3 * r.size && v.x0 <= end + 2.5 * r.size && overlap(v.y0, v.y1, r.y - 0.8 * r.size, r.y) >= 0.5 * r.size,
+    )
+    if (border) r.w = Math.max(1, Math.min(r.w, border.x0 - r.x - 1.1 * r.size))
+  }
+  const bands = new Map<string, TextRun[]>()
+  for (const r of runs) {
+    const cx = r.x + r.w / 2
+    const across = rules.horizontal.filter(h => h.x0 <= cx && h.x1 >= cx)
+    const above = Math.max(...across.filter(h => h.y1 <= r.y - 0.5 * r.size).map(h => h.y1))
+    const below = Math.min(...across.filter(h => h.y0 >= r.y - 0.2 * r.size).map(h => h.y0))
+    if (!Number.isFinite(above) || !Number.isFinite(below) || below - above > 3 * r.size) continue
+    const key = `${above}:${below}`
+    bands.set(key, [...(bands.get(key) ?? []), r])
+  }
+  for (const band of bands.values()) {
+    const y = median(band.map(r => r.y)) as number
+    for (const r of band) r.y = y
+  }
 }
 
 /** Mean confidence of the kept words, weighted by their letters; and how many letters there are. */
@@ -251,9 +294,11 @@ export function isChromeLine(text: string): boolean {
  * Lays out the words of one picture: reading-order lines, table rows with cells joined by a tab, wrapped lines joined, phone
  * chrome removed.
  */
-export function layoutOcr(lines: readonly OcrLine[]): LaidLine[] {
+export function layoutOcr(lines: readonly OcrLine[], rules?: TableRules): LaidLine[] {
   const typical = typicalRowHeight(lines)
-  const laid = layoutPages([wordsToRuns(unwrapLines(deskew(lines, typical), typical), typical)])
+  // The rules were found on the picture as it was: they only line up with the words when the page needed no turning.
+  const level = skewAngle(lines, typical) === 0
+  const laid = layoutPages([wordsToRuns(unwrapLines(deskew(lines, typical), typical), typical, level ? rules : undefined)])
   const kept: LaidLine[] = []
   for (const l of laid) {
     if (l.kind === 'text' && PRESENCE.test(l.text.trim())) {
