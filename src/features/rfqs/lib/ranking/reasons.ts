@@ -408,30 +408,37 @@ export function reasonsFor(row: RankRow, ctx: ReasonContext): ReasonSet {
   return { short, full }
 }
 
+/**
+ * The "Cheapest: X. Y is only 1.2% dearer and ..." line, in the words of the tie-breaker rank_item_quotes really used (0049): inside
+ * the 2% band the better delivery record (reliability_band, lower is better) wins, then more orders with us, then the more recent
+ * order, then the price. `recommended` is rank 1; `cheapest` is the lowest PKR price of the item.
+ */
+export function whyNotCheapest(
+  recommended: Pick<RankRow, 'pct_above_best' | 'reliability_band' | 'orders_count' | 'last_order_on'>,
+  cheapest: Pick<RankRow, 'reliability_band' | 'orders_count' | 'last_order_on'>,
+): string {
+  const pct = recommended.pct_above_best ?? 0
+  const gap = Math.round(pct * 10) / 10 > 0 ? `is only ${pctText(pct)} dearer` : 'costs about the same'
+  const band = (r: Pick<RankRow, 'reliability_band'>) => r.reliability_band ?? 2
+  const orders = (r: Pick<RankRow, 'orders_count'>) => r.orders_count ?? 0
+  let why: string
+  if (band(recommended) < band(cheapest)) why = 'has the better delivery record'
+  else if (band(recommended) === band(cheapest) && orders(recommended) > orders(cheapest)) {
+    const n = orders(recommended)
+    why = `has the same delivery record and more orders with us (${n} to ${orders(cheapest)})`
+  } else if (band(recommended) === band(cheapest) && orders(recommended) === orders(cheapest) && (recommended.last_order_on ?? '') > (cheapest.last_order_on ?? '')) {
+    why = `has the same delivery record and order count, and we ordered from them more recently (${dmy(recommended.last_order_on)})`
+  } else why = 'is within 2% of it'
+  return `${gap} and ${why}`
+}
+
 /** How many comparable lines of one item sit inside the 2% band (the band line is only worth printing from 2). */
 export function bandSizeOf(rows: readonly Pick<RankRow, 'comparable' | 'within_band'>[]): number {
   return rows.filter(r => r.comparable && r.within_band === true).length
 }
 
-/** The sentence above an item's rows: how it was ranked, and what the selling price is (admin and sales only). */
-export function rankNote(rows: readonly RankRow[]): { title: string; body: string; kind: 'ranked' | 'none' | 'few' } {
-  const ranked = rows.filter(r => r.rank !== null).length
-  if (ranked === 0) return { title: 'Nothing can be ranked yet.', body: 'Add the missing rate and the list sorts itself.', kind: 'none' }
-  if (ranked === 1) return { title: 'One ranked quote.', body: 'Nothing to compare it with yet.', kind: 'few' }
-  const unproven = rows.filter(r => r.rank !== null).every(r => (r.deliveries ?? 0) === 0)
-  if (unproven) return { title: 'No supplier has a record yet.', body: 'Nobody is called proven; the ranking is price only.', kind: 'few' }
-  return { title: "Ranked by price in PKR at today's rate.", body: 'Lines within 2% of the best are ordered by delivery record, then by order history.', kind: 'ranked' }
-}
-
-/** "Ranked, 3 prices" / "Ranked 2 of 3": the chip on an item. Null below two ranked lines (a single price is not a ranking; the coverage chip stays). */
-export function rankChip(rows: readonly Pick<RankRow, 'rank'>[]): string | null {
-  const ranked = rows.filter(r => r.rank !== null).length
-  if (ranked < 2) return null
-  return ranked === rows.length ? `Ranked, ${plural(ranked, 'price', 'prices')}` : `Ranked ${ranked} of ${rows.length}`
-}
-
 /**
- * What we would sell the item for, for the right of the note (admin and sales only). Null for an engineer, whatever the rows hold.
+ * What we would sell the item for, on the item's line (admin and sales only). Null for an engineer, whatever the rows hold.
  * "Selling price PKR 612,000 each, quoted", "..., last sold on ORD-0027", or "No selling price yet".
  */
 export function sellNote(rows: readonly RankRow[], showSell: boolean): { kind: 'quoted' | 'last_sold' | 'none'; text: string; amount: string | null } | null {

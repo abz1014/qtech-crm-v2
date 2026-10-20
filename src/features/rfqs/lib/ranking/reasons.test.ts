@@ -7,14 +7,13 @@ import {
   evidenceOf,
   evidenceReason,
   pkrTotal,
-  rankChip,
-  rankNote,
   reasonsFor,
   recordFromStats,
   recordReason,
   reliabilityBand,
   sellNote,
   unrankedReason,
+  whyNotCheapest,
   type Evidence,
   type RankRow,
 } from './reasons'
@@ -253,22 +252,31 @@ describe('lines that cannot be ranked', () => {
 
 describe('the item header', () => {
   const rows = [row(), row({ quote_line_id: 'q2', rank: 2 }), row({ quote_line_id: 'q3', rank: null, comparable: false })]
-  it('counts the band and the chip', () => {
+  it('counts the band', () => {
     expect(bandSizeOf(rows)).toBe(3 - 1)
-    expect(rankChip(rows)).toBe('Ranked 2 of 3')
-    expect(rankChip(rows.slice(0, 2))).toBe('Ranked, 2 prices')
-    expect(rankChip([{ rank: null }])).toBeNull()
-    expect(rankChip([{ rank: 1 }])).toBeNull()
-    expect(rankChip([{ rank: 1 }, { rank: null }])).toBeNull()
-  })
-  it('the note says how it was ranked, or that nobody has a record, or that nothing can be ranked', () => {
-    expect(rankNote(rows.slice(0, 2)).title).toBe("Ranked by price in PKR at today's rate.")
-    expect(rankNote(rows.slice(0, 2).map(r => ({ ...r, deliveries: 0 }))).title).toBe('No supplier has a record yet.')
-    expect(rankNote([rows[2]]).kind).toBe('none')
   })
   it('the selling price note: quoted, last sold or none', () => {
     expect(sellNote([row()], true)).toEqual({ kind: 'quoted', amount: 'PKR 612,000', text: 'each, quoted' })
     expect(sellNote([row({ sell_source: 'last_sold', sell_order_number: 27 })], true)?.text).toBe('each, last sold on ORD-0027')
     expect(sellNote([row({ sell_unit_net: null, sell_source: 'none' })], true)?.kind).toBe('none')
+  })
+})
+
+describe('why the recommended supplier is not the cheapest (the tie-breaker rank_item_quotes used, 0049)', () => {
+  const rec = (o: Partial<RankRow> = {}) => row({ pct_above_best: 1.04, reliability_band: 1, orders_count: 2, last_order_on: '2026-09-01', ...o })
+  const low = (o: Partial<RankRow> = {}) => row({ pct_above_best: 0, reliability_band: 1, orders_count: 2, last_order_on: '2026-09-01', ...o })
+  it('the better delivery record first', () => {
+    expect(whyNotCheapest(rec(), low({ reliability_band: 2 }))).toBe('is only 1.0% dearer and has the better delivery record')
+  })
+  it('equal records: more orders with us', () => {
+    expect(whyNotCheapest(rec({ orders_count: 6 }), low({ orders_count: 1 }))).toBe('is only 1.0% dearer and has the same delivery record and more orders with us (6 to 1)')
+  })
+  it('equal records and orders: the more recent order', () => {
+    expect(whyNotCheapest(rec({ last_order_on: '2026-10-02' }), low({ last_order_on: null }))).toBe(
+      'is only 1.0% dearer and has the same delivery record and order count, and we ordered from them more recently (2 Oct 2026)',
+    )
+  })
+  it('a gap that rounds to 0.0% reads "costs about the same"; nothing to tell them apart reads "within 2%"', () => {
+    expect(whyNotCheapest(rec({ pct_above_best: 0.03 }), low())).toBe('costs about the same and is within 2% of it')
   })
 })

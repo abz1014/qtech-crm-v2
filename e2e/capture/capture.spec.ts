@@ -89,7 +89,7 @@ async function share(page: Page, payload: Shared) {
   )
 }
 
-const sheet = (page: Page) => page.getByRole('dialog', { name: 'Capture' })
+const sheet = (page: Page) => page.getByRole('dialog', { name: 'Paste or photo' })
 // The Undo toast (the saved panel is a status too, so the toast is the one with an Undo button).
 const toast = (page: Page, text: string) => page.getByRole('status').filter({ hasText: text }).filter({ has: page.getByRole('button', { name: /Undo/ }) })
 
@@ -141,7 +141,7 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await share(page, { text: 'Line size is 4 inch, flange PN16.\nFluid is hot water, 5 to 85 C.' })
 
     await expect(sheet(page)).toBeVisible()
-    await expect(sheet(page).getByRole('textbox', { name: 'Captured text' })).toHaveValue(/Line size is 4 inch/)
+    await expect(sheet(page).getByRole('textbox', { name: 'Pasted text' })).toHaveValue(/Line size is 4 inch/)
     await expect(page.getByRole('radio', { name: /Answer a question/ })).toBeChecked()
     await sheet(page).getByRole('button', { name: 'Save answer to 2 questions' }).click()
     await expect(toast(page, `Saved to ${rfqRef(s.rfq.number)}`)).toBeVisible()
@@ -153,7 +153,7 @@ test.describe('Android share target: the service worker takes the POST', () => {
     rows = await clarsOf(s.rfq.id)
     expect(rows).toHaveLength(2)
     // the capture is back in the sheet
-    await expect(sheet(page).getByRole('textbox', { name: 'Captured text' })).toHaveValue(/Line size is 4 inch/)
+    await expect(sheet(page).getByRole('textbox', { name: 'Pasted text' })).toHaveValue(/Line size is 4 inch/)
   })
 
   test('the shared item survives a sign-in redirect and opens the sheet afterwards', async ({ page }) => {
@@ -168,7 +168,7 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await page.getByLabel('Password', { exact: true }).fill('fixture-only-password')
     await page.getByRole('button', { name: 'Sign in' }).click()
     await expect(sheet(page)).toBeVisible()
-    await expect(sheet(page).getByRole('textbox', { name: 'Captured text' })).toHaveValue('Reply: line size is 4 inch.')
+    await expect(sheet(page).getByRole('textbox', { name: 'Pasted text' })).toHaveValue('Reply: line size is 4 inch.')
     await expect(page.getByText('Your shared item is back')).toBeVisible()
   })
 
@@ -193,7 +193,7 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await page.goto(`/capture?share=${id}`)
     await expect(sheet(page).getByText('The shared item is no longer on this phone')).toBeVisible()
     await review(page, 'capture-expired-1440')
-    await sheet(page).getByRole('button', { name: 'Open Capture' }).click()
+    await sheet(page).getByRole('button', { name: 'Paste or add a photo' }).click()
     await expect(sheet(page).getByText('Drop text, photos or files here')).toBeVisible()
   })
 })
@@ -204,7 +204,7 @@ test.describe('desktop: paste and drop anywhere', () => {
     await ready(page, s.rfq.id)
     await paste(page, { text: 'Customer will send the P&ID on Monday.' })
     await expect(sheet(page)).toBeVisible()
-    await expect(sheet(page).getByRole('textbox', { name: 'Captured text' })).toHaveValue('Customer will send the P&ID on Monday.')
+    await expect(sheet(page).getByRole('textbox', { name: 'Pasted text' })).toHaveValue('Customer will send the P&ID on Monday.')
     await page.getByRole('radio', { name: /Add to RFQ notes/ }).click()
     await sheet(page).getByRole('button', { name: 'Add to notes' }).click()
     await expect(toast(page, `Saved to ${rfqRef(s.rfq.number)}`)).toBeVisible()
@@ -239,7 +239,7 @@ test.describe('desktop: paste and drop anywhere', () => {
   test('a file over 5 MB is named and refused, and the rest can still be saved', async ({ page }) => {
     const s = await seed()
     await ready(page, s.rfq.id)
-    await page.getByRole('button', { name: 'Capture' }).first().click()
+    await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
     await sheet(page).locator('input[aria-label="Choose files"]:visible').setInputFiles([
       { name: 'datasheet-scan.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(5 * 1024 * 1024 + 2048) },
       { name: 'nameplate.png', mimeType: 'image/png', buffer: PNG },
@@ -260,7 +260,7 @@ test.describe('iPhone: Capture button, paste, photo pick', () => {
     const s = await seed()
     await ready(page, s.rfq.id)
     let taps = 0
-    await page.getByRole('button', { name: 'Capture' }).first().click()
+    await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
     taps++
     await expect(sheet(page)).toBeVisible()
     await expect(sheet(page).getByRole('button', { name: 'Add something first' })).toBeDisabled()
@@ -281,12 +281,12 @@ test.describe('iPhone: Capture button, paste, photo pick', () => {
     const s = await seed()
     await ready(page, s.rfq.id)
     let taps = 2 // Copy in WhatsApp (press and hold, then Copy), open Q-Tech CRM from the home screen
-    await page.getByRole('button', { name: 'Capture' }).first().click()
+    await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
     taps++
     await expect(sheet(page)).toBeVisible()
     await page.waitForTimeout(450)
     await review(page, 'capture-iphone-empty')
-    await sheet(page).getByRole('textbox', { name: 'Captured text' }).fill('1. Line size is 4 inch, flange PN16.' + String.fromCharCode(10) + '2. Fluid is hot water, 5 to 85 C.') // press and hold, then Paste
+    await sheet(page).getByRole('textbox', { name: 'Pasted text' }).fill('1. Line size is 4 inch, flange PN16.' + String.fromCharCode(10) + '2. Fluid is hot water, 5 to 85 C.') // press and hold, then Paste
     taps++
     await expect(page.getByRole('radio', { name: /Answer a question/ })).toBeChecked()
     await page.waitForTimeout(450)
@@ -317,7 +317,7 @@ test.describe('the other destinations', () => {
     const s = await seed()
     await ready(page, s.rfq.id)
     await paste(page, { text: '1. Valve size and Kvs?\n2. Actuator torque and supply voltage?\n3. Fail-safe position on power loss?' })
-    await page.getByRole('radio', { name: /New supplier questions/ }).click()
+    await page.getByRole('radio', { name: /Questions from a supplier/ }).click()
     await sheet(page).getByRole('checkbox', { name: /Actuator torque/ }).click()
     await sheet(page).getByRole('button', { name: 'Add 2 questions' }).click()
     await expect(toast(page, `Saved to ${rfqRef(s.rfq.number)}`)).toBeVisible()
@@ -344,14 +344,14 @@ test.describe('the other destinations', () => {
     await page.getByRole('radio', { name: /Start a new RFQ/ }).click()
     await sheet(page).getByLabel('Which company?').fill(s.customer)
     await page.getByRole('option', { name: new RegExp(s.customer) }).click()
-    await sheet(page).getByRole('button', { name: 'Continue to intake' }).click()
+    await sheet(page).getByRole('button', { name: 'Continue to New RFQ' }).click()
     await expect(page).toHaveURL(/\/rfqs\/new\?company=/)
     await expect(page.getByText(/ultrasonic level transmitter/).first()).toBeVisible()
     // A polite line is now read (audit E1): the item and its quantity are already there. Tidy the description by hand.
     await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue('2 nos')
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue(/^ultrasonic level transmitter/)
     await page.getByRole('textbox', { name: 'Description of item 1' }).fill('Ultrasonic level transmitter 0 to 8 m')
-    await page.getByRole('button', { name: 'Save without floating' }).click()
+    await page.getByRole('button', { name: 'Save without asking' }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
     await expect.poll(async () => (await must(rest<{ id: string }[]>('admin', `rfqs?company_id=eq.${s.co.id}&select=id&order=number`))).length).toBe(2)
     const created = (await must(rest<{ id: string }[]>('admin', `rfqs?company_id=eq.${s.co.id}&select=id&order=number.desc&limit=1`)))[0]
@@ -381,7 +381,7 @@ for (const [name, size] of [
       const s = await seed()
       await ready(page, s.rfq.id)
       expect(await axeViolations(page)).toEqual([])
-      await page.getByRole('button', { name: 'Capture' }).first().click()
+      await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
       await expect(sheet(page)).toBeVisible()
       await page.waitForTimeout(400)
       expect(await axeViolations(page)).toEqual([])

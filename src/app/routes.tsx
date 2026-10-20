@@ -22,7 +22,6 @@ const screens: Partial<Record<NavKey, ComponentType>> = {
   rfqs: lazy(() => import('@/features/rfqs/board/RfqsScreen')),
   money: lazy(() => import('@/features/money/MoneyScreen')),
   orders: lazy(() => import('@/features/orders/OrdersScreen')),
-  reports: lazy(() => import('@/features/reports/ReportsScreen')),
 }
 
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
@@ -37,6 +36,17 @@ const IntakeScreen = lazy(() => import('@/features/rfqs/IntakeScreen'))
 /** The Android share target and sign-in return point (R22): opens the Capture sheet. */
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
 const rfqsItem = navItems.find(i => i.key === 'rfqs')
+const moneyItem = navItems.find(i => i.key === 'money')
+
+/**
+ * `/reports` was a destination of its own until the 2026-10-19 owner decision (five tabs). Reports now live inside Money,
+ * so an old link, a bookmark or the palette lands on Money's Reports view with its query string kept. Engineers get the
+ * no-access page, as before.
+ */
+function ReportsRedirect() {
+  const { search } = useLocation()
+  return <Navigate to={{ pathname: '/money/reports', search }} replace />
+}
 
 /** Dev builds only: the component gallery (U09). Dead code in production. */
 const Gallery = import.meta.env.DEV ? lazy(() => import('@/dev/gallery/Gallery')) : null
@@ -147,6 +157,16 @@ export function AppRoutes() {
                   <Suspense fallback={null}>
                     <IntakeScreen />
                   </Suspense>
+                </RequireRole>
+              }
+            />
+          ) : null}
+          {moneyItem ? (
+            <Route
+              path="reports/*"
+              element={
+                <RequireRole item={moneyItem}>
+                  <ReportsRedirect />
                 </RequireRole>
               }
             />

@@ -11,15 +11,19 @@ import { useFxLatest, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCan
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import * as rfqApi from '@/features/rfqs/api'
 import { qk } from '@/features/queryKeys'
-import { suggestSuppliers, toRateTable, type SuggestionItem } from '@/features/rfqs/lib'
-import { RfqActionBar, RfqHeaderBlock } from '@/features/rfqs/RfqHeaderBlock'
+import { primaryAction, suggestSuppliers, toRateTable, type RfqPrimary, type SuggestionItem } from '@/features/rfqs/lib'
+import { RfqActionBar, RfqHeaderBlock, type HeaderFacts } from '@/features/rfqs/RfqHeaderBlock'
+import { useQuotations } from '@/features/quotations/hooks'
+import { useOrdersForRfq } from '@/features/orders/hooks'
 import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
+import { SupplierReplies } from '@/features/rfqs/SupplierReplies'
 import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { AddItemDialog } from '@/features/rfqs/AddItemDialog'
 import { SuppliersAsked } from '@/features/rfqs/SuppliersAsked'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
 import { FloatDialog, SuppliersToAskCard } from '@/features/rfqs/SuppliersToAsk'
+import { withShortlist } from '@/features/rfqs/askList'
 import { useAskSuppliers } from '@/features/rfqs/useAskSuppliers'
 import { QuotationsPanel } from '@/features/quotations/QuotationsPanel'
 import { ClarificationsPanel } from '@/features/rfqs/ClarificationsPanel'
@@ -28,10 +32,13 @@ import { ConvertDialog } from '@/features/orders/ConvertDialog'
 import { useWonDialog } from '@/features/orders/useWonDialog'
 
 /*
- * RFQ detail (R07; g2-rfq-detail.html; the parity audit's Part C). Left column: "Items and supplier replies" (with Add item,
- * the rate bar, one reply box per supplier, then each item with every supplier's price and the lowest marked) and the
- * Quotations table. Right rail: "Suppliers asked" (memory lines, the chase, Float to another supplier) or, while nobody has been
- * asked, "Suppliers to ask"; then the questions for the customer (R09) and the files (R10).
+ * RFQ detail (R07; g2-rfq-detail.html; the parity audit's Part C; the UX audit of 2026-10-19). The header has the company, at most
+ * two chips and ONE green button chosen by state (lib/nextAction.ts: Ask suppliers, Issue quotation, Mark won; the supplier chase
+ * while waiting for prices), with everything else in More. Left column: "Items and supplier prices" (Add item, the rate bar,
+ * then each item with one line per price, best first, one Recommended mark), "Replies from suppliers" (one row per supplier, open
+ * while a reply is expected) and the Quotations table. Right rail: "Suppliers asked" (memory lines, the chase as a short preview,
+ * Ask more suppliers) or, while nobody has been asked, "Suppliers to ask"; then the questions for the customer (R09) and the files
+ * (R10). Phone: one bar (back, the number) and a sticky action bar with the same green action, Chase and More.
  *
  * FE-2 entry burden, listed for the commit:
  *   required     a price (greater than zero) for each item the supplier quoted. Nothing else is required.
@@ -39,9 +46,9 @@ import { useWonDialog } from '@/features/orders/useWonDialog'
  *   pre-filled   currency (supplier's last currency, else the country map, else PKR), the supplier's lead time and stock
  *                when they were saved before, quantity 1 for a new item, the date (today).
  *   optional     lead time, stock, a per-item "can't quote" reason.
- *   interactions supplier reply: one typed price per item, then "Save reply" (currency never typed).
- *                can't quote: 1 tap. chase: 1 tap for the supplier shown (Copy and mark chased), one more to pick another.
- *                mark bid sent: 2 taps (open Bid and close, choose). close or lose: 2 taps (open, choose the reason).
+ *   interactions supplier reply: one typed price per item, then "Save reply" (currency never typed; the reply is open while expected).
+ *                can't quote: 1 tap. chase: 1 tap for the supplier shown (Copy and mark chased), 1 tap Chase on any other.
+ *                mark quotation sent (no PDF): 2 taps (More, choose). close or lose: 2 taps (More, choose the reason).
  *
  * A missing exchange rate never blocks anything (BUILD_PLAN A3/A4): the line shows "not compared, no rate".
  */
@@ -210,14 +217,38 @@ function Loaded({
   const chaseCustomer = rfq.state?.waiting ?? 0
   const loadError = items.isError || inquiries.isError
   const loading = items.isPending || inquiries.isPending
-  const nobodyAsked = !loading && !loadError && inquiryList.length === 0
+  // Asked: sent, or answered "cannot quote". A supplier only on the shortlist (saved without asking) is not asked yet: it comes first
+  // in the Ask list, already ticked, and asking it stamps its inquiry sent (review item 3).
+  const askedCount = inquiryList.filter(i => i.sentOn || i.noOfferOn).length
+  const nobodyAsked = !loading && !loadError && askedCount === 0
+  const askList = useMemo(() => withShortlist(inquiryList, itemList, suggestions), [inquiryList, itemList, suggestions])
+
+  // The one green button (owner decision 2026-10-19): chosen by state. Until the items and replies are in, there is none.
+  const quotations = useQuotations(rfq.id)
+  const orders = useOrdersForRfq(rfq.id)
+  const quotationCount = quotations.data?.length ?? 0
+  const primary: RfqPrimary =
+    loading || loadError
+      ? 'none'
+      : primaryAction({
+          outcome: rfq.state?.outcome ?? 'open',
+          hasOrder: (orders.data ?? []).some(o => !o.cancelledOn),
+          sourcingState: rfq.state?.sourcing_state,
+          bidState: rfq.state?.bid_state,
+          hasPrices,
+          quotationCount,
+          itemCount: itemList.length,
+          chaseable: chaseSuppliers,
+        })
+  const awaiting = inquiryList.filter(i => i.sentOn && !i.noOfferOn && i.lines.length === 0).length
+  const facts: HeaderFacts = { primary, itemCount: itemList.length, quotationCount, onAsk: () => setFloating(true), awaiting }
 
   const askFrom = async (ticked: readonly { supplierId: string; name: string }[], list: RfqItemRow[]) =>
     ask({ supplierIds: ticked.map(t => t.supplierId), names: ticked.map(t => t.name), items: list })
 
   return (
     <Shell>
-      <RfqHeaderBlock rfq={rfq} hasPrices={hasPrices} />
+      <RfqHeaderBlock rfq={rfq} facts={facts} />
       {/* data-slot="convert-dialog" (O01): the Create order dialog, open while the address carries ?won=1. */}
       {wonOpen && inquiries.data ? <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} /> : null}
       {loadError ? (
@@ -225,7 +256,7 @@ function Loaded({
           {`Showing the details saved on this device at ${timeOf(headerAt)}. Replies and questions did not load.`}
         </p>
       ) : null}
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="grid min-w-0 gap-6">
           {loadError ? (
             <DetailPanel title="Items and supplier replies">
@@ -276,22 +307,30 @@ function Loaded({
               <Skeleton className="h-56 w-full" />
             </div>
           ) : (
-            <ItemsPanel
-              rfq={rfq}
-              items={itemList}
-              inquiries={inquiryList}
-              rates={rates}
-              fxRows={fx.data ?? []}
-              memory={memory.data}
-              suggestions={suggestions}
-              ranking={ranking.byLine}
-              onAddItem={() => setAdding(true)}
-              onCopyEnquiry={(s, item) => void askFrom([s], [item])}
-            />
+            <>
+              <ItemsPanel
+                rfq={rfq}
+                items={itemList}
+                inquiries={inquiryList}
+                rates={rates}
+                fxRows={fx.data ?? []}
+                memory={memory.data}
+                suggestions={suggestions}
+                ranking={ranking.byLine}
+                onAddItem={() => setAdding(true)}
+                onCopyEnquiry={(s, item) => void askFrom([s], [item])}
+              />
+              <SupplierReplies rfq={rfq} items={itemList} inquiries={inquiryList} rates={rates} />
+            </>
           )}
           <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />
         </div>
-        <aside className="grid min-w-0 gap-6" aria-label="Suppliers, questions and files">
+        {/* From 1024 up the side column stays beside what is being read and scrolls on its own, so a busy RFQ (a chase message,
+            questions, files) never runs on below the main column (UX audit screens.md 3: "ends up longer than the main column"). */}
+        <aside
+          className="grid min-w-0 content-start gap-6 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:overscroll-contain lg:pb-1"
+          aria-label="Suppliers, questions and files"
+        >
           {loadError ? (
             <DetailPanel title="Suppliers asked">
               <p className="px-5 py-4 text-sm text-fg-muted">Not loaded. Try again to see who has replied.</p>
@@ -300,7 +339,7 @@ function Loaded({
             <Skeleton className="h-40 w-full" />
           ) : nobodyAsked ? (
             <SuppliersToAskCard
-              suggestions={suggestions}
+              suggestions={askList}
               items={itemList}
               busy={asking}
               onAsk={ticked => void askFrom(ticked, itemList)}
@@ -309,14 +348,15 @@ function Loaded({
             <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} onFloat={() => setFloating(true)} />
           )}
           <ClarificationsPanel rfq={rfq} inquiries={inquiryList} />
-          <AttachmentsPanel rfqId={rfq.id} />
+          <AttachmentsPanel rfqId={rfq.id} compact />
         </aside>
       </div>
-      <RfqActionBar rfq={rfq} hasPrices={hasPrices} chaseSuppliers={chaseSuppliers} chaseCustomer={chaseCustomer} />
+      <RfqActionBar rfq={rfq} facts={facts} chaseSuppliers={chaseSuppliers} chaseCustomer={chaseCustomer} />
       {adding ? <AddItemDialog rfq={rfq} onClose={() => setAdding(false)} /> : null}
       {floating ? (
         <FloatDialog
-          suggestions={suggestions}
+          title={askedCount > 0 ? 'Ask more suppliers' : 'Ask suppliers'}
+          suggestions={askList}
           itemCount={(itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id))).length || itemList.length) as number}
           busy={asking}
           onClose={() => setFloating(false)}

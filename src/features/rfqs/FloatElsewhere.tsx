@@ -63,7 +63,7 @@ export function FloatElsewhere({
         </div>
       }
     >
-      <span className="block">Float {all} to someone else? Next in line, by reason:</span>
+      <span className="block">Ask another supplier for {all}? Next in line, by reason:</span>
       {candidates.isPending || (items.length > 0 && memory.isPending && candidates.isSuccess && list.length > 0) ? (
         <span className="mt-1 block text-fg-muted">Looking at who else carries them…</span>
       ) : next.length === 0 ? (

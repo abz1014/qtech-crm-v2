@@ -80,6 +80,9 @@ export default defineConfig(({ command, mode }) => ({
               // precache list (the largest shell chunk is about half of that). The two small pdf/render chunks (about 10 KB each) ARE
               // precached now (the old `render-*` glob ignore was written for the renderer and had gone stale). A window left on an old build
               // that then misses the renderer after a deploy is moved onto the new build by src/lib/importWithReload.ts.
+              // The PDF reader (pdf.js, src/lib/docread/pdfjsRuntime.ts: its lazy chunk and its worker) is fetched the first time a
+              // PDF is read, not stored on every phone either.
+              globIgnores: ['**/assets/pdfjsRuntime-*', '**/assets/pdf.worker*'],
               maximumFileSizeToCacheInBytes: 5_000_000,
               manifestTransforms: [
                 async entries => ({

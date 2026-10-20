@@ -71,6 +71,7 @@ const FK_EDGES: { child: string; col: string; parent: string }[] = [
   { child: 'invoices', col: 'order_id', parent: 'orders' },
   { child: 'invoices', col: 'company_id', parent: 'companies' },
   { child: 'payments_in', col: 'order_id', parent: 'orders' },
+  { child: 'payments_in', col: 'corrects_payment_id', parent: 'payments_in' },
   { child: 'expenses', col: 'order_id', parent: 'orders' },
   { child: 'expenses', col: 'supplier_order_id', parent: 'supplier_orders' },
   { child: 'expenses', col: 'payee_id', parent: 'companies' },
@@ -196,6 +197,9 @@ export async function loadLegacy(opts: LoadOptions): Promise<LoadSummary> {
   const costRows = await fetchAll(db, 'order_costs', 'order_id,created_by', [{ kind: 'notNull', col: 'created_by' }])
   const v2Costs = costRows.filter(r => isLegacyId(String(r['order_id']))).length
   if (v2Costs > 0) conflicts.push(`${v2Costs} order cost(s) entered in v2 sit on imported orders`)
+  // 0073: a run deletes and re-inserts every imported payment, so one voided in v2 would come back counted again.
+  const voided = (await fetchAll(db, 'payments_in', 'id', [{ kind: 'notNull', col: 'voided_at' }])).filter(r => isLegacyId(String(r['id']))).length
+  if (voided > 0) conflicts.push(`${voided} imported payment(s) were voided or corrected in v2 (a re-import would count them again)`)
   if (conflicts.length) {
     throw new LoadError(
       `REFUSED, nothing was deleted: rows made in v2 depend on imported rows.\n  - ${conflicts.join('\n  - ')}\nA re-import would change or delete them. Resolve those first.`,

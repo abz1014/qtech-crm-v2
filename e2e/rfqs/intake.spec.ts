@@ -10,7 +10,7 @@ import { readClipboardWhen, resetClipboard } from '../support/clipboard'
  *
  * FE-2 targets asserted here (BUILD_PLAN FE-2):
  *   New RFQ, desktop   at most 3 actions + 1 paste   (pick the company = 2: type, choose; then "Looks right")
- *   Float              at most 2 taps                (Write the enquiry, Copy & mark floated)
+ *   Ask suppliers      at most 2 taps                (Write the message, Copy message for N suppliers)
  *   R05 canonical      at most 15 interactions in all, Undo included
  */
 
@@ -108,7 +108,7 @@ async function pickCompany(page: Page, name: string): Promise<void> {
 }
 
 test.describe('canonical scenario (FE-2 counts)', () => {
-  test('company, paste, suppliers, enquiry, copy and float, then Undo', async ({ page }) => {
+  test('company, paste, suppliers, message, copy and ask, then Undo', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', '/rfqs/new')
     await expect(page.getByRole('heading', { name: 'New RFQ', level: 1 })).toBeVisible()
@@ -148,19 +148,19 @@ test.describe('canonical scenario (FE-2 counts)', () => {
 
     // Float: Write the enquiry, Copy & mark floated.
     let floatTaps = 0
-    await page.getByRole('button', { name: 'Write the enquiry' }).click()
+    await page.getByRole('button', { name: 'Write the message' }).click()
     floatTaps++ // 1
     actions++
-    await expect(page.getByRole('heading', { name: /Enquiry to 1 supplier/ })).toBeVisible()
-    await expect(page.getByLabel('Enquiry text')).toContainText(/Spec:\s+left blank/)
+    await expect(page.getByRole('heading', { name: /WhatsApp message to 1 supplier/ })).toBeVisible()
+    await expect(page.getByLabel('Message text')).toContainText(/Spec:\s+left blank/)
     // A blank Spec is drawn as a highlighted blank, not as plain text.
     await expect(page.locator('[data-spec-blank]')).toHaveCount(2)
     await review(page, 'intake-float-05-enquiry-1440')
     await resetClipboard(page)
-    await page.getByRole('button', { name: 'Copy & mark floated to 1' }).click()
+    await page.getByRole('button', { name: 'Copy message for 1 supplier' }).click()
     floatTaps++ // 2
     actions++
-    await expect(page.getByText(/is out for prices/)).toBeVisible()
+    await expect(page.getByText(/is waiting for prices/)).toBeVisible()
     expect(floatTaps).toBeLessThanOrEqual(2)
 
     const [rfq] = await rfqsOf(s.customer.id)
@@ -188,14 +188,14 @@ test.describe('canonical scenario (FE-2 counts)', () => {
 
     // Item 2 has no supplier ticked, and a shortlisted supplier carries it: the panel offers to float it to them.
     await expect(page.getByText('Item 2 has no supplier yet.')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Float item 2 to them' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Ask them for item 2' })).toBeVisible()
 
     // Undo within the toast: the RFQ stays, the inquiry goes back to shortlisted.
-    await expect(page.getByRole('status').filter({ hasText: 'Floated to 1' })).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: 'Asked 1 supplier' })).toBeVisible()
     await review(page, 'intake-float-06-floated-with-undo-1440')
     await page.getByRole('button', { name: /Undo/ }).click()
     actions++
-    await expect(page.getByText('Float undone').first()).toBeVisible()
+    await expect(page.getByText('Undone', { exact: true }).first()).toBeVisible()
     inquiries = await inquiriesOf(rfq.id)
     expect(inquiries).toEqual([{ supplier_id: s.supplied.id, sent_on: null }])
     expect(await rfqsOf(s.customer.id)).toHaveLength(1)
@@ -203,14 +203,14 @@ test.describe('canonical scenario (FE-2 counts)', () => {
     expect(actions + pastes).toBeLessThanOrEqual(15)
 
     // Copying again floats the saved RFQ (no second RFQ).
-    await page.getByRole('button', { name: 'Copy & mark floated to 1' }).click()
-    await expect(page.getByText(/is out for prices/)).toBeVisible()
+    await page.getByRole('button', { name: 'Copy message for 1 supplier' }).click()
+    await expect(page.getByText(/is waiting for prices/)).toBeVisible()
     inquiries = await inquiriesOf(rfq.id)
     expect(inquiries[0].sent_on).toBe(karachiDay())
     expect(await rfqsOf(s.customer.id)).toHaveLength(1)
   })
 
-  test('a double tap on Copy & mark floated makes one RFQ', async ({ page }) => {
+  test('a double tap on Copy message makes one RFQ', async ({ page }) => {
     const s = await seed()
     const ref = `DT-${Date.now().toString(36)}`
     await openAs(page, 'sales', '/rfqs/new')
@@ -218,12 +218,110 @@ test.describe('canonical scenario (FE-2 counts)', () => {
     await paste(page, s.email)
     await page.getByRole('textbox', { name: 'Customer reference' }).fill(ref)
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
-    await page.getByRole('button', { name: 'Write the enquiry' }).click()
-    await page.getByRole('button', { name: 'Copy & mark floated to 1' }).dblclick()
-    await expect(page.getByText(/is out for prices/)).toBeVisible()
+    await page.getByRole('button', { name: 'Write the message' }).click()
+    await page.getByRole('button', { name: 'Copy message for 1 supplier' }).dblclick()
+    await expect(page.getByText(/is waiting for prices/)).toBeVisible()
     const rows = await must(rest<{ id: string }[]>('admin', `rfqs?company_id=eq.${s.customer.id}&customer_ref=eq.${ref}&select=id`))
     expect(rows).toHaveLength(1)
     expect(await inquiriesOf(rows[0].id)).toHaveLength(1)
+  })
+})
+
+test.describe('the draft on this device (UX audit S1: one tap on a tab must not throw the paste away)', () => {
+  test('leaving with items asks first; the draft comes back with Continue your draft, and saving it clears it', async ({ page }) => {
+    const s = await seed()
+    const ref = `DR-${Date.now().toString(36)}`
+    await openAs(page, 'sales', '/rfqs/new')
+    await pickCompany(page, s.customer.name)
+    // The customer's reference sits with the company: it is how the RFQ is found later.
+    await page.getByRole('region', { name: 'Customer' }).getByRole('textbox', { name: 'Customer reference' }).fill(ref)
+    await paste(page, s.email)
+    await expect(page.getByText('2 items found').first()).toBeVisible()
+
+    // A tab in the top bar: the screen asks first, and Stay keeps everything.
+    const rfqsTab = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs/ })
+    await rfqsTab.click()
+    const ask = page.getByRole('dialog', { name: 'Leave this new RFQ?' })
+    await expect(ask).toContainText(`${s.customer.name}, 2 items`)
+    await review(page, 'intake-leave-warning-1440')
+    await ask.getByRole('button', { name: 'Stay here' }).click()
+    await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toBeVisible()
+    await rfqsTab.click()
+    await page.getByRole('dialog', { name: 'Leave this new RFQ?' }).getByRole('button', { name: 'Leave, keep the draft' }).click()
+    await expect(page).toHaveURL(/\/rfqs$/)
+    expect(await rfqsOf(s.customer.id)).toHaveLength(0) // nothing was saved to the database
+
+    // Back on New RFQ: the draft is offered, and Continue brings it all back.
+    await page.getByRole('button', { name: 'New RFQ' }).click()
+    await expect(page.getByText(/You have a draft from .* today/)).toBeVisible()
+    await expect(page.getByText(`${s.customer.name}, 2 items. It is kept on this device until you save it or start new; Start new forgets it.`)).toBeVisible()
+    await review(page, 'intake-draft-offer-1440')
+    await page.getByRole('button', { name: 'Continue your draft' }).click()
+    await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue(`${s.brand1} ${s.model} electromagnetic flow meter DN50`)
+    await expect(page.getByRole('textbox', { name: 'Customer reference' })).toHaveValue(ref)
+
+    // Saving it clears the draft: the next New RFQ starts blank, and leaving no longer asks.
+    await page.getByRole('button', { name: 'Save without asking' }).click()
+    await expect(page.getByText(/is saved/)).toBeVisible()
+    expect(await rfqsOf(s.customer.id)).toHaveLength(1)
+    await rfqsTab.click()
+    await expect(page).toHaveURL(/\/rfqs$/)
+    await page.getByRole('button', { name: 'New RFQ' }).click()
+    await expect(page.getByRole('heading', { name: 'New RFQ', level: 1 })).toBeVisible()
+    await expect(page.getByText(/You have a draft/)).toHaveCount(0)
+  })
+
+  test('a company page\'s New RFQ offers the kept draft first: nothing is written over it, and Start new takes that company', async ({ page }) => {
+    const s = await seed()
+    const other = await createCompany(uniqueName('Second Mill Test'))
+    await openAs(page, 'sales', '/rfqs/new')
+    await pickCompany(page, s.customer.name)
+    await paste(page, s.email)
+    await expect(page.getByText('2 items found').first()).toBeVisible()
+    await page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs/ }).click()
+    await page.getByRole('dialog', { name: 'Leave this new RFQ?' }).getByRole('button', { name: 'Leave, keep the draft' }).click()
+    await expect(page).toHaveURL(/\/rfqs$/)
+
+    await page.goto(`/companies/${other.id}`)
+    await page.locator('#main').getByRole('button', { name: 'New RFQ', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`/rfqs/new\\?company=${other.id}`))
+    // The draft comes first, and the other company waits for the answer.
+    await expect(page.getByText(`${s.customer.name}, 2 items. It is kept on this device`, { exact: false })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Customer' })).toHaveCount(0)
+    const kept = await page.evaluate(() => Object.entries(localStorage).find(([k]) => k.startsWith('qtech.rfqs.intakeDraft.'))?.[1] ?? '')
+    expect(kept).toContain(s.customer.name)
+
+    await page.getByRole('button', { name: `Start new for ${other.name}` }).click()
+    await expect(page.getByRole('button', { name: `Change company, now ${other.name}` })).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveCount(0)
+    const after = await page.evaluate(() => Object.entries(localStorage).find(([k]) => k.startsWith('qtech.rfqs.intakeDraft.'))?.[1] ?? '')
+    expect(after).not.toContain(s.customer.name)
+  })
+
+  test('on a phone the steps show as one line, and nothing scrolls sideways at 320', async ({ page }) => {
+    const s = await seed()
+    await page.setViewportSize({ width: 320, height: 640 })
+    await openAs(page, 'sales', '/rfqs/new')
+    const steps = page.getByRole('list', { name: 'Step 1 of 4' })
+    await expect(steps).toBeVisible()
+    await expect(steps).toContainText('Items')
+    await expect(steps).toContainText('Done')
+    await pickCompany(page, s.customer.name)
+    await paste(page, s.email)
+    await expect(page.getByText('2 items found').first()).toBeVisible()
+    await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
+    await expect(page.getByRole('list', { name: 'Step 2 of 4' })).toBeVisible()
+    await review(page, 'intake-steps-320')
+    // Nothing reaches past the right edge; a miss names the widest offenders, so the fix is one look away.
+    const m = await page.evaluate(() => {
+      const main = document.querySelector('#main') as HTMLElement
+      const edge = main.getBoundingClientRect().right
+      const wide = Array.from(main.querySelectorAll<HTMLElement>('*'))
+        .filter(e => e.getBoundingClientRect().right > edge + 1 && e.getClientRects().length > 0)
+        .map(e => `${e.tagName.toLowerCase()}.${String(e.className).slice(0, 90)} [${Math.round(e.getBoundingClientRect().width)}px] "${(e.textContent ?? '').trim().slice(0, 40)}"`)
+      return { scroll: main.scrollWidth, client: main.clientWidth, wide: wide.slice(0, 6) }
+    })
+    expect(m.scroll, `too wide at 320: ${m.wide.join(' | ')}`).toBeLessThanOrEqual(m.client + 1)
   })
 })
 
@@ -236,7 +334,7 @@ test.describe('what is required and what is pre-filled (FE-2)', () => {
     await pickCompany(page, customer.name)
     await page.getByRole('button', { name: 'Add an item by hand' }).click()
     await page.getByRole('textbox', { name: 'Description of item 1' }).fill('Spare gasket set')
-    await page.getByRole('button', { name: 'Save without floating' }).click()
+    await page.getByRole('button', { name: 'Save without asking' }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
 
     const [rfq] = await rfqsOf(customer.id)
@@ -256,23 +354,23 @@ test.describe('what is required and what is pre-filled (FE-2)', () => {
     await expect(page.getByText('Only site on file')).toBeVisible()
     await expect(page.getByText('Only contact on file')).toBeVisible()
     await paste(page, s.email)
-    await page.getByRole('button', { name: 'Save without floating' }).click()
+    await page.getByRole('button', { name: 'Save without asking' }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
     const [rfq] = await rfqsOf(s.customer.id)
     expect(rfq.site_id).not.toBeNull()
     expect(rfq.contact_id).not.toBeNull()
   })
 
-  test('customer reference, bid due date and top priority are optional extras and are saved when given', async ({ page }) => {
+  test('customer reference, quotation due date and top priority are optional extras and are saved when given', async ({ page }) => {
     const s = await seed()
     const ref = `ENQ-${Date.now().toString(36)}`
     await openAs(page, 'sales', '/rfqs/new')
     await pickCompany(page, s.customer.name)
     await paste(page, s.email)
     await page.getByRole('textbox', { name: 'Customer reference' }).fill(ref)
-    await page.getByRole('textbox', { name: /Bid due/ }).fill('3 dec 2030')
+    await page.getByRole('textbox', { name: /Quotation due/ }).fill('3 dec 2030')
     await page.getByRole('checkbox', { name: /Top priority/ }).check()
-    await page.getByRole('button', { name: 'Save without floating' }).click()
+    await page.getByRole('button', { name: 'Save without asking' }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
     const [rfq] = await rfqsOf(s.customer.id)
     expect(rfq).toMatchObject({ customer_ref: ref, due_on: '2030-12-03', is_priority: true })
@@ -288,7 +386,7 @@ test.describe('a polite WhatsApp paste is not lost (audit E1)', () => {
     await expect(page.getByText('1 item found in 2 lines').first()).toBeVisible()
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue('pressure transmitter 0-10 bar')
     await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue('2 nos')
-    await page.getByRole('button', { name: 'Save without floating' }).click()
+    await page.getByRole('button', { name: 'Save without asking' }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
     const [rfq] = await rfqsOf(customer.id)
     const items = await itemsOf(rfq.id)
@@ -297,15 +395,15 @@ test.describe('a polite WhatsApp paste is not lost (audit E1)', () => {
 })
 
 test.describe('save only, and no supplier ticked', () => {
-  test('a company with no suppliers on file saves without floating: no inquiry, nothing sent', async ({ page }) => {
+  test('a company with no suppliers on file saves without asking: no inquiry, nothing sent', async ({ page }) => {
     const customer = await createCompany(uniqueName('Nobody Knows'))
     await openAs(page, 'sales', '/rfqs/new')
     await pickCompany(page, customer.name)
     await paste(page, '1. Hand-made one-off bracket - 3 nos')
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     await expect(page.getByText('0 suppliers ticked')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Write the enquiry' })).toHaveCount(0)
-    await page.getByRole('button', { name: 'Save without floating' }).click()
+    await expect(page.getByRole('button', { name: 'Write the message' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Save without asking' }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
     expect(await violations(page)).toEqual([])
     const [rfq] = await rfqsOf(customer.id)
@@ -313,7 +411,7 @@ test.describe('save only, and no supplier ticked', () => {
     await expect(page.getByRole('link', { name: `Open ${rfqRef(rfq.number)}` })).toBeVisible()
   })
 
-  test('saved without floating keeps the ticked supplier shortlisted, then floats from the saved RFQ', async ({ page }) => {
+  test('saved without asking keeps the ticked supplier shortlisted, then floats from the saved RFQ', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', '/rfqs/new')
     await pickCompany(page, s.customer.name)
@@ -322,20 +420,46 @@ test.describe('save only, and no supplier ticked', () => {
     await expect(page.getByRole('checkbox', { name: s.supplied.name })).toBeChecked()
     await tick(page, s.carries.name)
     await expect(page.getByRole('checkbox', { name: s.carries.name })).toBeChecked()
-    await page.getByRole('button', { name: 'Save without floating' }).click()
+    await page.getByRole('button', { name: 'Save without asking' }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
     const [rfq] = await rfqsOf(s.customer.id)
     const shortlisted = await inquiriesOf(rfq.id)
     expect(shortlisted.map(i => i.sent_on)).toEqual([null, null])
     expect(shortlisted.map(i => i.supplier_id).sort()).toEqual([s.supplied.id, s.carries.id].sort())
 
-    await page.getByRole('button', { name: 'Write the enquiry' }).click()
-    await expect(page.getByLabel('Enquiry text')).toContainText(rfqRef(rfq.number))
-    await page.getByRole('button', { name: 'Copy & mark floated to 2' }).click()
-    await expect(page.getByText(/is out for prices/)).toBeVisible()
+    await page.getByRole('button', { name: 'Write the message' }).click()
+    await expect(page.getByLabel('Message text')).toContainText(rfqRef(rfq.number))
+    await page.getByRole('button', { name: 'Copy message for 2 suppliers' }).click()
+    await expect(page.getByText(/is waiting for prices/)).toBeVisible()
     const floated = await inquiriesOf(rfq.id)
     expect(floated.map(i => i.sent_on)).toEqual([karachiDay(), karachiDay()])
     expect(await rfqsOf(s.customer.id)).toHaveLength(1)
+  })
+
+  test('saved without asking, then Ask suppliers on the RFQ page: the shortlist comes first and ticked, and asking stamps it sent', async ({ page }) => {
+    const s = await seed()
+    await openAs(page, 'sales', '/rfqs/new')
+    await pickCompany(page, s.customer.name)
+    await paste(page, s.email)
+    await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
+    await expect(page.getByRole('checkbox', { name: s.supplied.name })).toBeChecked()
+    await page.getByRole('button', { name: 'Save without asking' }).click()
+    await expect(page.getByText(/is saved/)).toBeVisible()
+    const [rfq] = await rfqsOf(s.customer.id)
+    expect((await inquiriesOf(rfq.id)).map(i => i.sent_on)).toEqual([null])
+
+    await page.getByRole('link', { name: `Open ${rfqRef(rfq.number)}` }).click()
+    await page.locator('[data-slot="ask-suppliers"]:visible').click()
+    const dialog = page.getByRole('dialog', { name: 'Ask suppliers' })
+    const first = dialog.getByRole('checkbox').first()
+    await expect(first).toHaveAccessibleName(s.supplied.name)
+    await expect(first).toBeChecked()
+    await expect(dialog.getByText('On the shortlist from New RFQ. Not asked yet.')).toBeVisible()
+    await dialog.getByRole('button', { name: /^Copy message for \d+ suppliers?$/ }).click()
+    await expect(dialog).toBeHidden()
+    await expect
+      .poll(async () => (await inquiriesOf(rfq.id)).filter(i => i.supplier_id === s.supplied.id).map(i => i.sent_on))
+      .toEqual([karachiDay()])
   })
 
   test('a customer reference the customer already has is refused in plain words and nothing is created', async ({ page }) => {
@@ -346,7 +470,7 @@ test.describe('save only, and no supplier ticked', () => {
     await pickCompany(page, s.customer.name)
     await paste(page, s.email)
     await page.getByRole('textbox', { name: 'Customer reference' }).fill(ref)
-    await page.getByRole('button', { name: 'Save without floating' }).click()
+    await page.getByRole('button', { name: 'Save without asking' }).click()
     await expect(page.getByText('This customer already has an RFQ with that reference.')).toBeVisible()
     await expect(page.getByRole('link', { name: `Open ${rfqRef(existing.number)}` })).toBeVisible()
     expect(await rfqsOf(s.customer.id)).toHaveLength(1)
@@ -408,18 +532,18 @@ test.describe('company picker', () => {
 })
 
 test.describe('float one item to the supplier who is not ticked', () => {
-  test('"Float item 2 to them" asks that supplier, marks it sent and copies a text for that item only', async ({ page }) => {
+  test('"Ask them for item 2" asks that supplier, marks it sent and copies a text for that item only', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', '/rfqs/new')
     await pickCompany(page, s.customer.name)
     await paste(page, s.email)
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
-    await page.getByRole('button', { name: 'Write the enquiry' }).click()
+    await page.getByRole('button', { name: 'Write the message' }).click()
     await resetClipboard(page)
-    await page.getByRole('button', { name: 'Copy & mark floated to 1' }).click()
-    await expect(page.getByText(/is out for prices/)).toBeVisible()
-    await page.getByRole('button', { name: 'Float item 2 to them' }).click()
-    await expect(page.getByText(/Item 2 floated to /).first()).toBeVisible()
+    await page.getByRole('button', { name: 'Copy message for 1 supplier' }).click()
+    await expect(page.getByText(/is waiting for prices/)).toBeVisible()
+    await page.getByRole('button', { name: 'Ask them for item 2' }).click()
+    await expect(page.getByText(/Item 2: asked /).first()).toBeVisible()
     const [rfq] = await rfqsOf(s.customer.id)
     const inquiries = await inquiriesOf(rfq.id)
     expect(inquiries.map(i => i.supplier_id).sort()).toEqual([s.supplied.id, s.other.id].sort())
@@ -461,14 +585,14 @@ for (const width of [1440, 375]) {
     expect(await violations(page)).toEqual([])
     await review(page, `intake-float-04-suppliers-${width}`)
 
-    await page.getByRole('button', { name: 'Write the enquiry' }).click()
-    await expect(page.getByRole('heading', { name: /Enquiry to 1 supplier/ })).toBeVisible()
+    await page.getByRole('button', { name: 'Write the message' }).click()
+    await expect(page.getByRole('heading', { name: /WhatsApp message to 1 supplier/ })).toBeVisible()
     expect(await violations(page)).toEqual([])
     await review(page, `intake-float-05-enquiry-${width}`)
 
-    await page.getByRole('button', { name: 'Copy & mark floated to 1' }).click()
-    await expect(page.getByText(/is out for prices/)).toBeVisible()
-    await expect(page.getByRole('status').filter({ hasText: 'Floated to 1' })).toBeVisible()
+    await page.getByRole('button', { name: 'Copy message for 1 supplier' }).click()
+    await expect(page.getByText(/is waiting for prices/)).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: 'Asked 1 supplier' })).toBeVisible()
     expect(await violations(page)).toEqual([])
     await review(page, `intake-float-06-floated-with-undo-${width}`)
   })
