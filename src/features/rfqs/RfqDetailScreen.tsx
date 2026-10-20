@@ -337,7 +337,7 @@ function Loaded({
             <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} chaseIsMain={primary === 'chase'} onFloat={() => setFloating(true)} />
           )}
           <ClarificationsPanel rfq={rfq} inquiries={inquiryList} />
-          <AttachmentsPanel rfqId={rfq.id} />
+          <AttachmentsPanel rfqId={rfq.id} compact />
         </aside>
       </div>
       <RfqActionBar rfq={rfq} facts={facts} chaseSuppliers={chaseSuppliers} chaseCustomer={chaseCustomer} />

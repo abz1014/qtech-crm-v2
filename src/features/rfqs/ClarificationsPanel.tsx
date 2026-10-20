@@ -361,9 +361,10 @@ function ChaseGroup({
       <div className="divide-y divide-dashed">{children}</div>
       {repeat ? <ChasedByNote byId={lastBy?.by} at={lastBy?.at} className="px-4 pt-2" /> : null}
       <div className="mx-4 mb-3 mt-2 grid overflow-hidden rounded border bg-surface">
-        <RecipientRow channel={variant} lead={variant === 'email' ? 'Email to' : 'WhatsApp to'} contact={rfq.contact} />
+        {/* The questions are listed just above, so the message itself waits under "Show the whole message" (the rail stays short). */}
         {whole ? (
           <div id={wholeId} className="grid">
+            <RecipientRow channel={variant} lead={variant === 'email' ? 'Email to' : 'WhatsApp to'} contact={rfq.contact} />
             <TickList
               title="Questions in this message"
               rows={rows.map(c => ({ id: c.id, label: c.question, checked: !off.has(c.id) }))}
@@ -385,20 +386,18 @@ function ChaseGroup({
             {variant === 'email' && shown?.subject ? <SubjectRow subject={shown.subject} /> : null}
           </div>
         ) : null}
-        <div className="px-4 py-3">
-          {shown ? (
-            <FormattedMessage text={text} testId="chase-text" className={whole ? undefined : 'line-clamp-4'} />
-          ) : (
-            <p className="text-sm text-fg-muted">Tick at least one question to write the message.</p>
-          )}
-        </div>
+        {whole ? (
+          <div className="px-4 py-3">
+            {shown ? <FormattedMessage text={text} testId="chase-text" /> : <p className="text-sm text-fg-muted">Tick at least one question to write the message.</p>}
+          </div>
+        ) : null}
         {whole ? (
           <ChaseNote className="border-t">
             Copying records {repeat ? 'a chase today' : 'the ask today'} (asked ×{count}). {rfqRef(rfq.number)} moves to Waiting and returns on {formatDay(returnsOn)}.
             {dueNote ? ` ${dueNote}` : ''}
           </ChaseNote>
         ) : null}
-        <div className="grid gap-2 border-t bg-sunken px-4 py-3">
+        <div className={`grid gap-2 bg-sunken px-4 py-3 ${whole ? 'border-t' : ''}`}>
           <Button size="sm" icon={Copy} disabled={!shown} busy={stamping} busyLabel="Marking asked" onClick={() => onCopy(selected, text)} className="w-fit">
             {copyLabel}
           </Button>

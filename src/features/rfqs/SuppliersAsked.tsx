@@ -271,7 +271,7 @@ function ChaseCard({
         ) : null}
         <div className="px-4 py-3">
           {chase ? (
-            <FormattedMessage text={text} testId="chase-text" chaseText className={whole ? undefined : 'line-clamp-4'} />
+            <FormattedMessage text={text} testId="chase-text" chaseText className={whole ? undefined : 'line-clamp-3'} />
           ) : (
             <p className="text-sm text-fg-muted">Tick at least one item to write the message.</p>
           )}

@@ -101,7 +101,7 @@ export function AddQuestions({ rfqId, inquiries }: { rfqId: string; inquiries: r
         <Button variant="primary" icon={MessageSquareText} disabled={lines.length === 0} busy={add.isPending} busyLabel="Adding" onClick={() => void submit()}>
           {lines.length > 1 ? `Add ${lines.length} questions` : 'Add question'}
         </Button>
-        <span className="text-xs text-fg-muted">{inquiries.length > 0 ? 'Say which supplier asked, or leave it as our own question.' : 'Questions raised by a supplier can be tagged once they are asked.'}</span>
+        {lines.length > 0 && inquiries.length > 0 ? <span className="text-sm text-fg-muted">Say which supplier asked, or leave it as our own question.</span> : null}
       </div>
     </div>
   )
