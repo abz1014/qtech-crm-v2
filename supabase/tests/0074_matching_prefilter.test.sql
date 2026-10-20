@@ -678,12 +678,13 @@ from generate_series(1, 60) g cross join generate_series(0, 2) p
 join public.rfq_items ri on ri.id = pg_temp.u('d1000000', g * 4 + p);
 
 -- POs on the first supplier order of two orders in three (a second revision on every sixth), with a snapshot of the lines
-insert into public.purchase_orders (id, supplier_order_id, number, revision, issued_on, currency, total, lines)
+insert into public.purchase_orders (id, supplier_order_id, number, revision, issued_on, currency, total, lines, created_at)
 select pg_temp.u('a5000000', g * 2 + r), so.id, 30000 + g, r, public.today_pkt() - g + 1 + r, so.currency, 0,
        (select jsonb_agg(jsonb_build_object('order_item_id', oi.id, 'description', oi.description, 'qty', oi.qty, 'unit', 'pcs',
-                                            'unit_price', coalesce(oi.supplier_unit_price, 9) + r, 'price_source', 'order')
+                                            'unit_price', 50 + g + r, 'price_source', 'order')
                          order by oi.position)
-        from public.order_items oi where oi.supplier_order_id = so.id and not oi.is_service)
+        from public.order_items oi where oi.supplier_order_id = so.id and not oi.is_service),
+       now() - make_interval(days => g, secs => r)
 from generate_series(1, 60) g cross join generate_series(0, 1) r
 join public.supplier_orders so on so.id = pg_temp.u('a3000000', g * 2)
 where g % 3 <> 0 and (r = 0 or g % 6 = 1)
