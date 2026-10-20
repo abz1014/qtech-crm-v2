@@ -10,7 +10,7 @@
 --   aging_as_of              and becomes overdue like any other. A dated invoice is unchanged.
 --   aging_as_of              M3: the Rs 1 allowance of order_receivables. An order paid to within Rs 1 of what it is invoiced
 --                            (as of the date) is settled and has no aging row. Frozen month snapshots are corrected below.
---   month_end_check_details  M11: a closed month returns the details frozen at close (month_snapshots.details, new); a month
+--   month_end_check_details  (from 0074, with its gst_amount > 0 fix for M4) M11: a closed month returns the details frozen at close (month_snapshots.details, new); a month
 --                            closed before this migration returns the live details marked "live": true.
 
 -- ================================================================ order_receivables (M9)
@@ -37,7 +37,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_role text := public.current_user_role();
+  v_role text := (select public.current_user_role());
 begin
   if v_role is null then
     return;
@@ -159,7 +159,7 @@ cross join lateral (
   where v.order_id = o.id
 
 ) d
-where public.current_user_role() = 'admin';
+where (select public.current_user_role()) = 'admin';
 
 -- ================================================================ aging_as_of (M3, M9)
 create or replace function public.aging_as_of(p_date date)
@@ -191,14 +191,14 @@ as $$
     left join public.orders o on o.id = v.order_id
     where coalesce(v.invoice_date, o.ordered_on, (v.created_at at time zone 'Asia/Karachi')::date) <= p_date
       and not v.settled_before_cutover
-      and public.current_user_role() = 'admin'
+      and (select public.current_user_role()) = 'admin'
   ),
   paid as (
     select p.order_id as ordid, sum(p.amount) as paid
     from public.payments_in p
     where p.received_on <= p_date
       and p.voided_at is null
-      and public.current_user_role() = 'admin'
+      and (select public.current_user_role()) = 'admin'
     group by p.order_id
   ),
   fifo as (
@@ -328,7 +328,7 @@ as $$
   pending as (
     select r.number, r.invoice_date, r.gst_amount
     from public.v_gst_register r, b
-    where r.invoice_date <= b.m_end and r.tax_deposited_on is null
+    where r.invoice_date <= b.m_end and r.tax_deposited_on is null and r.gst_amount > 0   -- 0074: the same predicate as month_end_status
   ),
   unres as (
     select p.payment_id, p.order_id, o.number as order_number, p.amount, pi.reference
@@ -392,11 +392,11 @@ as $$
     select exists (select 1 from public.closed_months c, b where c.month = b.m_start) as is_closed
   )
   select f.check_key, f.detail from frozen f
-  where public.current_user_role() = 'admin'
+  where (select public.current_user_role()) = 'admin'
   union all
   select d.check_key, case when (select is_closed from closed) then d.detail || '{"live": true}'::jsonb else d.detail end
   from details d
-  where public.current_user_role() = 'admin'
+  where (select public.current_user_role()) = 'admin'
     and not exists (select 1 from frozen)
 $$;
 
@@ -424,3 +424,54 @@ set aging = coalesce((
               and p.voided_at is null) pi
       where gi.g > 0 and pi.paid >= gi.g - 1)
   )), '[]'::jsonb);
+
+-- ================================================================ receivables_summary (M5)
+-- 0074 with one change: a reminder is due 7 WORKING days (Mon-Fri) after the last one, as Today and the client's reminderDue.
+create or replace function public.receivables_summary(p_today date default null)
+returns table (
+  open_count          integer,
+  outstanding         numeric,
+  overdue_count       integer,
+  overdue             numeric,
+  reminder_due_count  integer,
+  not_yet_due_count   integer,
+  not_yet_due         numeric,
+  not_invoiced_count  integer,
+  not_invoiced        numeric,
+  gross               numeric,
+  settled             numeric,
+  settled_count       integer
+)
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  with
+  r as (
+    select l.*, cardinality(l.invoice_numbers) > 0 as invoiced
+    from public.receivables_list(null, null, null, true) l
+  ),
+  o as (
+    select * from r where r.payment_state <> 'settled'
+  )
+  select
+    (select count(*) from o)::int,
+    (select coalesce(sum(o.balance), 0) from o),
+    (select count(*) from o where o.payment_state = 'overdue')::int,
+    (select coalesce(sum(o.balance), 0) from o where o.payment_state = 'overdue'),
+    (select count(*) from o
+     where o.payment_state = 'overdue'
+       and (o.last_reminded_on is null
+            or (select count(*) from generate_series(o.last_reminded_on + 1, coalesce(p_today, public.today_pkt()), interval '1 day') g(d)
+                where extract(isodow from g.d) < 6) >= 7))::int,
+    (select count(*) from o where o.invoiced and o.payment_state <> 'overdue')::int,
+    (select coalesce(sum(o.balance), 0) from o where o.invoiced and o.payment_state <> 'overdue'),
+    (select count(*) from o where not o.invoiced)::int,
+    (select coalesce(sum(o.balance), 0) from o where not o.invoiced),
+    (select coalesce(sum(o.gross_target), 0) from o),
+    (select coalesce(sum(o.settled), 0) from o),
+    (select count(*) from r where r.payment_state = 'settled')::int
+  where (select public.current_user_role()) is not null
+$$;
+

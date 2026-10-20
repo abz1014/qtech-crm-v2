@@ -93,9 +93,8 @@ select is((select n from public.month_end_status('2025-02-01') where check_key =
   'checklist February: FBR pending counts only invoices with GST to deposit (MR-7): MON-0001, not the exempt MON-0002');
 select is((select (detail ->> 'amount')::numeric from public.month_end_check_details('2025-02-01') where check_key = 'fbr_pending'), 180.00::numeric,
   'details February: GST not deposited 180');
--- BUG-M4: month_end_check_details (0064) was written after MR-7 but its "pending" list has no gst_amount > 0 filter, so the card
--- reads "PKR 180 GST not deposited: MON-0002 (Feb), MON-0001 (Jan)" under a count of 1: the exempt invoice is named as unpaid tax.
-select todo('BUG-M4: fixed by perf/db (0074/0075), which redefines month_end_check_details with gst_amount > 0', 1);
+-- BUG-M4 (fixed in 0074): month_end_check_details' "pending" list had no gst_amount > 0 filter, so the card named the exempt
+-- invoice as unpaid tax under a count of 1. It now uses the same predicate as the count.
 select is((select jsonb_array_length(detail -> 'invoices') from public.month_end_check_details('2025-02-01') where check_key = 'fbr_pending'), 1,
   'BUG-M4: the details list exactly the invoices the count counts');
 

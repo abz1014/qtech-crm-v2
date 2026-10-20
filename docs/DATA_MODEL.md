@@ -541,6 +541,8 @@ Unchanged shape:
 
 Append-only, no client grants, trigger on every business table. It replaces all `updated_by` columns and quote-revision history.
 
+*(0075)* What a row holds: an insert stores the full new row and a delete the full old row; an update stores only the columns that changed (their old values in `old_value`, their new values in `new_value`; `updated_at` and the generated `model_tokens` are left out), and an update that changes nothing writes no row. Every version of a record is the insert image with each update's `new_value` applied in order. Rows older than 24 months of the work-flow tables listed by `audit_archive.archivable_tables()` (snoozes, enquiries, questions, RFQs, companies, sites, contacts, brands and their links, engineer assignments) are moved each month by `audit_archive.compact()` into `audit_archive.audit_log_months` (one compressed jsonb array per table and month, every column kept); `audit_archive.audit_log_all` shows live and archived rows together. Money tables never leave `audit_log`. See "Amendment P-DB" at the end.
+
 ### 2.23 `targets` (new) — [std]: created_at, created_by, updated_at
 
 | Field | Type | Null | Default | Purpose |
@@ -1435,6 +1437,8 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | RPCs `close_month`, `close_months_through`, `reopen_month` *(A6)* | ✓ | — | — | Run as the caller; admin check inside; audited. |
 | v_order_money, v_cash_month, v_payment_net, v_target_progress | S | — | — | Explicit admin check inside each view. |
 | `order_receivables()` (definer) | ✓ | ✓ | — | Returns gross due, settled, balance, due date and overdue. No cost or margin. |
+| `receivables_list()`, `receivables_summary()` *(0074)* | ✓ | ✓ | — | Invoker wrappers of `order_receivables()` (same access): the list with company name and invoice numbers, filtered on the server; the Who-owes-us figures in one row. |
+| `today_inquiry_facts()`, `lookup_labels()` *(0074)* | ✓ | ✓ | ✓ | Invoker, read only tables every staff role reads; row security applies. |
 | `my_target_progress()` (definer) | ✓ (own) | ✓ (own) | ✓ (own) | No parameters; always the caller and the current quarter. |
 | RPCs `convert_rfq_to_order`, `create_repeat_order` | ✓ | ✓ | ✓ | Run with the caller's permissions; never write to `order_costs`. |
 | RPCs `merge_companies`, `merge_brands`, `resolve_value_basis` | ✓ | — | — | |
