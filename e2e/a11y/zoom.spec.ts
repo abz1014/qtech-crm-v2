@@ -53,7 +53,7 @@ const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (pa
     name: 'Issue PO dialog',
     open: async (page, w) => {
       await open(page, `/orders/${w.order.id}`)
-      await page.getByRole('button', { name: UI.issuePoLegA }).click()
+      await page.getByRole('button', { name: UI.issuePoLegA }).filter({ visible: true }).first().click()
       await expect(page.getByRole('dialog')).toBeVisible()
     },
   },

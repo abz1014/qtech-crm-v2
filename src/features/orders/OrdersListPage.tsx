@@ -122,7 +122,7 @@ export default function OrdersListPage() {
   const money = role === 'admin' || role === 'sales'
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
-  const phone = useMediaQuery('(max-width: 767px)')
+  const phone = useMediaQuery('(max-width: 639px)')
   const [creating, setCreating] = useState(false)
   const [sheet, setSheet] = useState(false)
 
@@ -176,7 +176,7 @@ export default function OrdersListPage() {
     // text columns sorted by a number (the urgency rank, the order number): compareCells compares text numerically
     { id: 'next', header: 'Next step', value: r => stepOf(r).rank, sortable: true, cell: r => <NextStepText step={stepOf(r)} /> },
     { id: 'order', header: 'Order', value: r => r.number, sortable: true, cell: r => <OrderCell row={r} /> },
-    ...(money ? ([{ id: 'gross', header: 'Value (PKR)', kind: 'money', value: (r: OrderListRow) => r.gross, sortable: true, hideBelowMd: true }] satisfies Column<OrderListRow>[]) : []),
+    ...(money ? ([{ id: 'gross', header: 'Value (PKR)', kind: 'money', value: (r: OrderListRow) => r.gross, sortable: true }] satisfies Column<OrderListRow>[]) : []),
     {
       id: 'ordered',
       header: 'Ordered',

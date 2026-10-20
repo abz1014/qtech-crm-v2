@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { useBackToClose } from '@/lib/useBackToClose'
+import { recentMenuTrigger } from '@/ui/menuTrigger'
 
 /*
  * Dialog (INVENTORY: U03; D08 section 05). The one modal wrapper, on Radix:
@@ -89,8 +90,10 @@ interface DialogContentProps {
  * focus would fall to <body> (WCAG 2.4.3): return to the button that opened the menu (the one whose aria-controls names it).
  */
 function returnTarget(active: Element | null): HTMLElement | null {
-  if (!(active instanceof HTMLElement)) return null
+  const fromMenu = recentMenuTrigger()
+  if (!(active instanceof HTMLElement) || active === document.body) return fromMenu
   if (!active.closest('[role="menu"]')) return active
+  if (fromMenu) return fromMenu
   for (let x: HTMLElement | null = active; x; x = x.parentElement) {
     if (!x.id) continue
     const trigger = document.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(x.id)}"]`)
@@ -141,9 +144,15 @@ export function DialogContent({
           }}
           // Radix only restores focus to a <DialogTrigger>. A dialog opened from code has none, so
           // return to whatever had focus when it opened.
-          onCloseAutoFocus={() => openerRef.current?.isConnected && openerRef.current.focus()}
+          onCloseAutoFocus={e => {
+            if (!openerRef.current?.isConnected) return
+            e.preventDefault()
+            openerRef.current.focus()
+          }}
           className={cn(
             'relative grid max-h-[calc(100dvh-64px)] w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal',
+            // A short window (a laptop at 400% zoom): the whole sheet scrolls, so the title and Close are never pushed off the top.
+            '[@media(max-height:480px)]:grid-rows-[auto_auto_auto] [@media(max-height:480px)]:overflow-y-auto',
             'animate-rise-6 focus:outline-none max-md:max-h-[calc(100dvh-16px)] max-md:animate-sheet-in max-md:rounded-b-none',
             WIDTH[size],
             className,

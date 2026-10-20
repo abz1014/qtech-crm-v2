@@ -1,22 +1,28 @@
 import { useEffect, useRef } from 'react'
+import { useNavigationType } from 'react-router-dom'
 
 /*
  * Route change (WCAG 2.4.3, 2.4.2, 4.1.3): when the path changes, reset the #main scroll, move focus to the page h1
  * (or #main while it loads) so screen readers hear the new page, and title the tab after the h1:
  * "RFQ-0177 · RFQs · Q-Tech CRM". Search-parameter changes (filters, tabs) keep focus and scroll where they are.
- * The first render does not move focus: the browser's own load already starts at the top.
+ * The first render does not move focus: the browser's own load already starts at the top. A redirect (REPLACE) does not
+ * move focus either, and Back or Forward (POP) keeps the scroll the phone platform restores.
  */
 const APP = 'Q-Tech CRM'
 
 export function useRouteFocus(pathname: string, section: string | null) {
   const first = useRef(true)
+  const nav = useNavigationType()
+  const navRef = useRef(nav)
+  navRef.current = nav
   useEffect(() => {
     const main = document.getElementById('main')
     const base = section ? `${section} · ${APP}` : APP
     document.title = base
-    const moveFocus = !first.current
+    const kind = navRef.current
+    const moveFocus = !first.current && kind !== 'REPLACE'
     first.current = false
-    if (moveFocus && main) main.scrollTop = 0
+    if (moveFocus && kind === 'PUSH' && main) main.scrollTop = 0
 
     let done = false
     const settle = () => {

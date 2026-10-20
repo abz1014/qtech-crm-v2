@@ -31,6 +31,23 @@ interface Item {
   phase: Phase
 }
 
+/**
+ * A toast usually follows an action whose control then goes away (a chased item leaves the list). If focus falls to
+ * <body> in the next moments, put it on the page content (#main) so the keyboard user keeps their place (WCAG 2.4.3).
+ */
+function rescueFocus() {
+  if (typeof window === 'undefined') return
+  let n = 0
+  const id = window.setInterval(() => {
+    if (++n > 15) window.clearInterval(id)
+    const lost = !document.activeElement || document.activeElement === document.body
+    if (lost && !document.querySelector('[role="dialog"],[role="alertdialog"]')) {
+      document.getElementById('main')?.focus({ preventScroll: true })
+      window.clearInterval(id)
+    }
+  }, 100)
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([])
   const seq = useRef(0)
@@ -70,6 +87,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const toast = useCallback(
     (input: ToastInput) => {
       const id = `t${++seq.current}`
+      rescueFocus()
       setItems(list => {
         const next = [...list, { id, input, phase: 'running' as Phase }]
         const overflow = next.length - MAX_SHOWN

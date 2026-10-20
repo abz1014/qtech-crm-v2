@@ -48,7 +48,7 @@ export type { Column, Density, SortState } from '@/ui/dataTableModel'
  * raised to the tallest row in view (a row with a small button is 49), and read again when the text size, the
  * pointer type or the window of rows changes (readRowMetrics in dataTableModel.ts).
  *
- * Phone cards: give `mobileRow` and, below 768px (a phone, or a laptop at 200% zoom), each row is drawn as one stacked, tappable card
+ * Phone cards: give `mobileRow` and, below 640px, each row is drawn as one stacked, tappable card
  * (whatever `mobileRow` returns) instead of table cells. The rows keep their keyboard focus, Enter to
  * open, Space and the checkbox for selection, and a 44px minimum height. The column header row is kept
  * for screen readers only, so sorting is a desktop control; group subtotals and the totals footer are
@@ -121,7 +121,7 @@ export interface DataTableProps<T> {
   columnBands?: ReadonlyArray<{ label: ReactNode; from: string; to: string }>
   /** Rows hold two-line cells (name over reference): 48 px as in the mockups. Required for virtualised tables with two-line cells. */
   twoLine?: boolean
-  /** Below 768px, draw each row as a stacked card with this content instead of columns. */
+  /** Below 640px, draw each row as a stacked card with this content instead of columns. */
   mobileRow?: (row: T) => ReactNode
   className?: string
 }
@@ -152,7 +152,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     mobileRow,
     className,
   } = props
-  const phone = useMediaQuery('(max-width: 767px)')
+  const phone = useMediaQuery('(max-width: 639px)')
   const cards = !!mobileRow && phone
   const rootRef = useRef<HTMLDivElement>(null)
   const [savedDensity, setDensity] = useTableDensity(label, props.density ?? 'comfortable')

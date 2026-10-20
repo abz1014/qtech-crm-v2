@@ -18,7 +18,7 @@ import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName, t
 export const UI = {
   signIn: { email: /^Email/, password: /^Password$/, submit: /^Sign in$/, wrong: /password is incorrect/i, deactivated: /deactivated/i },
   accountMenu: /^Account menu/,
-  capture: /^Capture$/,
+  capture: /^(Capture|Paste or photo)$/,
   captureSheet: /^(Capture|Paste or photo)$/,
   palette: /^Search or jump to$/,
   close: /^Close$/,
@@ -35,7 +35,7 @@ export const UI = {
   addRow: /^Add a row$/,
   addItemByHand: /^Add an item by hand$/,
   issue: /Issue/,
-  issuePoLegA: /^Issue PO, leg A$/,
+  issuePoLegA: /^Issue PO, /,
   chase: /mark chased/i,
   undo: /Undo/,
   filterRfqs: /^Filter RFQs$/,
