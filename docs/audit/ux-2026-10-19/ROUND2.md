@@ -80,3 +80,11 @@ Round 2 after the merges:
 - [ ] Cap the history-growing reads (Today, RFQ value column, company counts, Orders list) with server-side limits and ordering.
 - [ ] order.update must refresh the Margin panel (invalidation map).
 - [ ] Target: Lighthouse mobile ≥95 on /login and on the main screens; under 1 second to a usable screen on repeat opens.
+
+## Consistency (round2/consistency-spec.md): tasks R2-01 to R2-22, order of work in its §6.1
+- Coordinator decision on §5.3: every detail page (RFQ, Order, and later Company where it has an action) shows its single green action in a labelled **"Next step" box directly under the title** (the pattern ux/orders built). The header keeps the name, code, at most 2 status words and a "More" menu, with no primary button. Phones put the same action in the bottom bar.
+- [ ] Status vocabulary: 89 labels down to 34 (tone = who acts next), shared status-text component, time-words helper.
+- [ ] Counts: 24 counts reworked; `count` renamed to `needs`; nav badges = a split of Today.
+- [ ] Search: "Search {noun}", `/` everywhere, ?q=, a shared no-results state with "Search everywhere", filters in one sheet, density switch off.
+- [ ] "?" shortcuts sheet from one registry; remove the dead duplicate C handler.
+- [ ] Page templates: list, detail and phone; one sticky-bar implementation.
