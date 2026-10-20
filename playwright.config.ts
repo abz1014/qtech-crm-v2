@@ -136,7 +136,8 @@ const VERIFY_SUITES = Object.keys(VERIFY_DIRS)
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
 const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
-const GALLERY_PORT = 5199
+// GALLERY_PORT overrides it when another checkout already serves 5199 on the same machine.
+const GALLERY_PORT = Number(process.env.GALLERY_PORT ?? 5199)
 const AUTH_PORT = 4173
 
 const galleryUse = {
@@ -426,6 +427,15 @@ export default defineConfig({
         permissions: ['clipboard-read', 'clipboard-write'],
         screenshot: 'only-on-failure',
       },
+    },
+    // The picture reader (src/lib/docread/imageText.ts) on /dev/docread, on the gallery's dev build and server. Under the production
+    // Content-Security-Policy with E2E_CSP=1 (ci.yml): E2E_CSP=1 npx playwright test --project=docread
+    {
+      name: 'docread',
+      testMatch: /docread\/.*\.spec\.ts/,
+      fullyParallel: false,
+      timeout: 600_000,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${GALLERY_PORT}`, screenshot: 'only-on-failure' },
     },
     { name: 'w1440', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 1440, height: 900 } } },
     { name: 'w375', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 375, height: 812 } } },

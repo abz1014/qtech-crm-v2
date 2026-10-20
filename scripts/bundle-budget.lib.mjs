@@ -1,5 +1,5 @@
 // Bundle budget (P04). Pure helpers: given the files of a built dist/, work out what a first visit downloads.
-import { readFileSync, statSync } from 'node:fs'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, posix } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
@@ -104,6 +104,36 @@ export function pdfReaderFiles(distDir, listing) {
 /** Initial files that carry pdf.js. */
 export function pdfjsInInitial(distDir, initial) {
   return [...initial.files.keys()].filter(f => readFileSync(join(distDir, f), 'utf8').includes(PDFJS_SIGNATURE))
+}
+
+/** A string only the picture reader's chunk carries (the directory of its worker, engine and language data). */
+export const OCR_SIGNATURE = 'assets/ocr/t'
+
+/**
+ * The picture reader (tesseract.js, src/lib/docread/imageText.ts): its lazy chunk (named after ocrRuntime.ts), and its worker,
+ * engine and English language data under assets/ocr/<versions>/ (vite.config.ts writes them only into a build that has the
+ * reader). Empty until a screen (or, in a dev build, /dev/docread) imports src/lib/docread/imageText.ts.
+ */
+export function ocrReaderFiles(distDir, listing) {
+  const chunk = listing.filter(f => /^assets\/ocrRuntime-[\w-]+\.js$/.test(f))
+  let assets = []
+  try {
+    assets = readdirSync(join(distDir, 'assets', 'ocr'), { recursive: true })
+      .map(f => `assets/ocr/${String(f).replaceAll('\\', '/')}`)
+      .filter(f => statSync(join(distDir, f)).isFile())
+      .sort()
+  } catch {
+    assets = []
+  }
+  return [...chunk, ...assets].map(f => {
+    const buf = readFileSync(join(distDir, f))
+    return { file: f, raw: buf.length, gzip: gz(buf) }
+  })
+}
+
+/** Initial files that carry the picture reader. */
+export function ocrInInitial(distDir, initial) {
+  return [...initial.files.keys()].filter(f => readFileSync(join(distDir, f), 'utf8').includes(OCR_SIGNATURE))
 }
 
 export const kb = n => `${(n / 1024).toFixed(1)} KB`

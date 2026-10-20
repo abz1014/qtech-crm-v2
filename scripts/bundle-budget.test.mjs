@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { hasSupabaseClient, initialJs, pdfjsInInitial, pdfReaderFiles, PDFJS_SIGNATURE, staticJsRefs } from './bundle-budget.lib.mjs'
+import { hasSupabaseClient, initialJs, OCR_SIGNATURE, ocrInInitial, ocrReaderFiles, pdfjsInInitial, pdfReaderFiles, PDFJS_SIGNATURE, staticJsRefs } from './bundle-budget.lib.mjs'
 
 describe('bundle budget helpers', () => {
   it('reads script and modulepreload refs from the html', () => {
@@ -53,5 +53,25 @@ describe('bundle budget helpers', () => {
     expect(pdfjsInInitial(dist, initialJs(dist))).toEqual([])
     writeFileSync(join(dist, 'assets', 'index-A.js'), 'import"./pdfjsRuntime-x1Y2.js";')
     expect(pdfjsInInitial(dist, initialJs(dist))).toEqual(['assets/pdfjsRuntime-x1Y2.js'])
+  })
+
+  it('finds the picture reader files (chunk, worker, engine, language data) and tells when it is in the first load', () => {
+    const dist = mkdtempSync(join(tmpdir(), 'budget-'))
+    const dir = join(dist, 'assets', 'ocr', 't7.0.0-c7.0.0-e1.0.0')
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(join(dist, 'index.html'), '<script type="module" src="/assets/index-A.js"></script>')
+    writeFileSync(join(dist, 'assets', 'index-A.js'), 'import("./ocrRuntime-Q1.js");')
+    writeFileSync(join(dist, 'assets', 'ocrRuntime-Q1.js'), `const d="${OCR_SIGNATURE}7.0.0-c7.0.0-e1.0.0/";`)
+    for (const f of ['worker.min.js', 'tesseract-core-simd-lstm.wasm', 'eng.traineddata.gz']) writeFileSync(join(dir, f), 'o'.repeat(50))
+    const listing = ['assets/index-A.js', 'assets/ocrRuntime-Q1.js', 'assets/ocr']
+    expect(ocrReaderFiles(dist, listing).map(f => f.file)).toEqual([
+      'assets/ocrRuntime-Q1.js',
+      'assets/ocr/t7.0.0-c7.0.0-e1.0.0/eng.traineddata.gz',
+      'assets/ocr/t7.0.0-c7.0.0-e1.0.0/tesseract-core-simd-lstm.wasm',
+      'assets/ocr/t7.0.0-c7.0.0-e1.0.0/worker.min.js',
+    ])
+    expect(ocrInInitial(dist, initialJs(dist))).toEqual([])
+    writeFileSync(join(dist, 'assets', 'index-A.js'), 'import"./ocrRuntime-Q1.js";')
+    expect(ocrInInitial(dist, initialJs(dist))).toEqual(['assets/ocrRuntime-Q1.js'])
   })
 })

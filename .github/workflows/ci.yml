@@ -38,6 +38,10 @@ jobs:
             gallery:
               - 'src/ui/**'
               - 'src/dev/**'
+              - 'src/lib/docread/**'
+              - 'e2e/docread/**'
+              - 'vite.config.ts'
+              - 'vercel.json'
               - 'src/index.css'
               - 'tailwind.config.ts'
               - 'e2e/gallery.*.spec.ts'
@@ -132,6 +136,13 @@ jobs:
             exit 1
           fi
           npx playwright test e2e/gallery.visual.spec.ts --project=w1440 --project=w375
+      # The picture reader (src/lib/docread/imageText.ts) on /dev/docread under the production Content-Security-Policy: fictional
+      # screenshots are read on the device and scored (>= 90% item recall and precision); the accuracy table goes to the summary.
+      - name: Picture reader (OCR) under the production CSP
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.update_baselines) }}
+        env:
+          E2E_CSP: "1"
+        run: npx playwright test --project=docread
       - name: Upload generated baselines
         if: ${{ always() && (steps.visual.outputs.generated == 'true' || (github.event_name == 'workflow_dispatch' && inputs.update_baselines)) }}
         uses: actions/upload-artifact@v7
