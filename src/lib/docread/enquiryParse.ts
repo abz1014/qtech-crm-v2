@@ -79,7 +79,7 @@ const PRODUCT =
   /\b(?:valves?|gauges?|transmitters?|sensors?|switch(?:es)?|meters?|pumps?|motors?|cables?|relays?|contactors?|breakers?|mcbs?|mccbs?|plcs?|hmis?|vfds?|drives?|inverters?|encoders?|actuators?|positioners?|controllers?|indicators?|thermocouples?|rtds?|pt100|bearings?|seals?|gaskets?|hoses?|fittings?|glands?|lugs?|trays?|panels?|transformers?|detectors?|analy[sz]ers?|recorders?|timers?|counters?|modules?|cpus?|ups|batter(?:y|ies)|lamps?|fans?|filters?|regulators?|cylinders?|solenoids?|manifolds?|thermowells?|probes?|electrodes?|scanners?|hooters?|sirens?|annunciators?|enclosures?|terminals?|connectors?|couplings?|belts?|chains?|gears?|gearbox(?:es)?|fuses?|isolators?|starters?|capacitors?|calibrators?|multimeters?|testers?|thermostats?|thermometers?|spares?)\b/i
 
 const COURTESY =
-  /\b(?:enquiry|inquiry|quotations?|quote|quoting|offers?|rfq|tender|attached|attachment|below|above|following|requirements?|arrange|reply|revert|respond|soonest|earliest|asap|needful|urgent(?:ly)?|thanks|thank|regards|kindly|please|plz|pls|best\s+price|lowest|rates?|prices?|hai|hain|bata|batao|bhejo|bhej|dein|jaldi|zaroor|chahiye|letterhead|invited|fyi|f\.y\.i|for\s+your\s+(?:information|reference|action)|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|need\s+(?:it|them)|hope\s+you)\b/i
+  /\b(?:enquiry|inquiry|quotations?|quote|quoting|offers?|rfq|tender|attached|attachment|below|above|following|requirements?|arrange|reply|revert|respond|soonest|earliest|asap|needful|urgent(?:ly)?|thanks|thank|regards|kindly|please|plz|pls|best\s+price|lowest|rates?|prices?|hai|hain|bata|batao|bhejo|bhej|dein|jaldi|zaroor|chahiye|letterhead|invited|fyi|f\.y\.i|for\s+your\s+(?:information|reference|action)|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|need\s+(?:it|them)|hope\s+you|finds?\s+you\s+well|trust\s+(?:this|you))\b/i
 /** A sentence that only greets ("Hi Ali, hope you are well."). */
 const GREETING_SENTENCE = /^(?:hi|hello|hey|dear|salam|assalam\w*|aoa|good\s+(?:morning|afternoon|evening))\b[^.!?]*[.!?]?$|\bhope\s+(?:you|this|all)\b/i
 
@@ -296,6 +296,22 @@ function cleanRef(v: string): string | null {
   return s
 }
 
+/**
+ * A subject line that names an enquiry but carries its number without a label: "RFQ FOR THE ELECTRONICS ITEMS REQUIRED 131026",
+ * "RFQ PLC SPARES EML-RFQ-2210", "Enquiry 2210-B for PLC spares". The code right after the word, else the last code on the line.
+ */
+function subjectRef(line: string): RefHit | null {
+  const body = line.replace(/^subject\s*:\s*/i, '').replace(/^(?:(?:re|fw|fwd)\s*:\s*)+/i, '')
+  const kw = /\b(?:rfq|enquiry|inquiry|quotation|tender)\b/i.exec(body)
+  if (!kw) return null
+  const tokens = body.split(/[\s,;:()]+/).filter(Boolean)
+  const isCode = (w: string) => /\d/.test(w) && w.length >= 4 && cleanRef(w) !== null && !/^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$/.test(w)
+  const after = body.slice(kw.index + kw[0].length).trim().split(/[\s,;:()]+/)[0] ?? ''
+  const pick = isCode(after) ? after : [...tokens].reverse().find(isCode)
+  const value = pick ? cleanRef(pick) : null
+  return value ? { value, label: 'Subject', rank: 4 } : null
+}
+
 function findRefs(text: string): RefHit[] {
   // "Your Ref: QT-RFQ-0118" is our own number quoted back: nothing from there on is the customer's.
   const yours = /\byour\s+ref/i.exec(text)
@@ -400,6 +416,9 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
     unit: unitOf(cell(cols.unit) || qm?.[2] || null),
   }
 }
+
+/** Units an ERP or a purchase clerk writes in capitals; kept as the customer wrote them. */
+const CAPS_UNIT = /^(?:EA|EACH|NOS?|PCS?|SETS?|MTRS?|M|KGS?|LOTS?|ROLLS?|BOX(?:ES)?|PAIRS?|PRS?|LTRS?|FT|PKTS?|DRUMS?|COILS?|UNITS?|LENGTHS?)$/
 
 /** A unit on its own in a table cell ("EA", "NO", "Nos", "Mtr"). */
 const UNIT_CELL = new RegExp(String.raw`^(?:${UNIT_SRC})$`, 'i')
@@ -571,9 +590,14 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   const extend = (d: Draft, t: string) => {
     const it = d.fromTable as ReadItem
     const more = tidy(t.replace(TOTALS, ''))
-    if (more && it.description.length < MAX_DESCRIPTION) it.description = tidy(`${it.description} ${more}`).slice(0, MAX_DESCRIPTION)
+    // A part number broken at its dash ("6ES7647-8BB61-" / "7CS1") is joined back without a space.
+    const glue = hyphenated.has(d) ? '-' : ' '
+    hyphenated.delete(d)
+    if (/[A-Za-z0-9]-\s*$/.test(t)) hyphenated.add(d)
+    if (more && it.description.length < MAX_DESCRIPTION) it.description = tidy(`${it.description}${glue}${more}`).slice(0, MAX_DESCRIPTION)
     lines.push({ text: t, kind: 'joined', reason: null, marker: null })
   }
+  const hyphenated = new Set<Draft>()
 
   const skip = (t: string, reason: SkipReason) => lines.push({ text: t, kind: 'skipped', reason, marker: null })
   const close = () => {
@@ -587,7 +611,8 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     if (p && phones.length < 3) phones.push(p[0].trim())
   }
   const noteCompany = (t: string, rank: number) => {
-    for (const part of t.split(/\s*\|\s*/)) {
+    // "Example Mills Limited, Some Centre, 2nd Floor,": the company is one part of an address line.
+    for (const part of t.split(/\s*[|,]\s*/)) {
       const p = part.replace(EMAIL, '').trim()
       if (p && isCompanyLine(p) && !own.test(p)) names.push({ n: p, rank })
     }
@@ -655,7 +680,11 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       close()
       if (/^(?:from|reply-to)\s*:/i.test(t)) noteContacts(t, 3)
       else if (/^(?:to|cc)\s*:/i.test(t)) noteContacts(t, 0)
-      if (/^subject\s*:/i.test(t)) noteFacts(t)
+      if (/^subject\s*:/i.test(t)) {
+        noteFacts(t)
+        const sr = findRefs(t).length ? null : subjectRef(t)
+        if (sr) refs.push({ ...sr, line: t })
+      }
       skip(t, 'header')
       continue
     }
@@ -875,17 +904,25 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   }
 
   // ---- items
+  // The customer's own unit, when the row ends with it in capitals ("12\tEA", "100   MTR", "3 SET"): kept as written.
+  const writtenUnit = (d: Draft): string | null => {
+    const line = lines[d.first]?.text ?? ''
+    const m = /\d[\d,]*(?:\.\d+)?[\s\t]+([A-Z]{1,5}S?)\.?[\s\t]*$/.exec(line.replace(/[\u00a0]/g, ' '))
+    const w = m?.[1]
+    // "NOS" and "SET" are our own units in capitals: stored as ours. "EA" or "MTR" would be renamed by the intake: kept as written.
+    return w && CAPS_UNIT.test(w) && unitOf(w) !== w.toLowerCase() ? w : null
+  }
   const items: ParsedItem[] = []
   for (const d of drafts) {
     if (d.fromTable) {
-      items.push({ description: d.fromTable.description, qty: d.fromTable.qty ?? 1, unit: d.fromTable.unit })
+      items.push({ description: d.fromTable.description, qty: d.fromTable.qty ?? 1, unit: writtenUnit(d) ?? d.fromTable.unit })
       continue
     }
     const r = d.texts.length ? readItem(d.texts.join(' ')) : null
     const description = tidy([r?.description ?? '', ...d.attrs].filter(Boolean).join(', '))
     if (!description) continue
     const qty = r && r.qty !== null ? { qty: r.qty, unit: r.unit } : d.qty
-    items.push({ description, qty: qty?.qty ?? 1, unit: qty?.unit ?? null })
+    items.push({ description, qty: qty?.qty ?? 1, unit: (qty ? writtenUnit(d) : null) ?? qty?.unit ?? null })
   }
 
   // ---- facts

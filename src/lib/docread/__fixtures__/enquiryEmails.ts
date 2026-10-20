@@ -339,7 +339,7 @@ Need quotation for following:
 Cable tray 300mm perforated GI, Qty : 03 NOS
 Proximity sensor M30 x2
 Push button green 22mm, QTY: 10 EA`,
-    items: [i('Cable tray 300mm perforated GI', 3, 'nos'), i('Proximity sensor M30', 2), i('Push button green 22mm', 10, 'nos')],
+    items: [i('Cable tray 300mm perforated GI', 3, 'nos'), i('Proximity sensor M30', 2), i('Push button green 22mm', 10, 'EA')],
   },
   {
     name: 'pasted with the email headers: ref in the subject, deadline in the body, sender domain',
