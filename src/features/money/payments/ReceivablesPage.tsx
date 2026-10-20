@@ -138,7 +138,7 @@ export function ReceivablesPage() {
           r.state === 'overdue' && r.dueOn ? (
             <StatusBadge dimension="payment" value="overdue" label={`${DUE_WORD(Math.max(daysBetween(r.dueOn, today), 1))} overdue`} />
           ) : (
-            <StatusBadge dimension="payment" value={r.state} />
+            <StatusBadge dimension="payment" value={r.state} label={r.state === 'settled' ? 'Paid' : undefined} />
           ),
       },
       {
@@ -243,7 +243,7 @@ export function ReceivablesPage() {
                   {isInvoiced(r) ? ` · ${r.invoiceNumbers.join(', ')}` : ' · not invoiced yet'}
                 </span>
                 <div className="flex flex-wrap items-center gap-2">
-                  {r.state === 'overdue' && r.dueOn ? <StatusBadge dimension="payment" value="overdue" label={`${DUE_WORD(Math.max(daysBetween(r.dueOn, today), 1))} overdue`} /> : <StatusBadge dimension="payment" value={r.state} />}
+                  {r.state === 'overdue' && r.dueOn ? <StatusBadge dimension="payment" value="overdue" label={`${DUE_WORD(Math.max(daysBetween(r.dueOn, today), 1))} overdue`} /> : <StatusBadge dimension="payment" value={r.state} label={r.state === 'settled' ? 'Paid' : undefined} />}
                   {r.dueOn ? <span className="num text-sm text-fg-muted">Due {formatDay(r.dueOn).replace(/^\w+ /, '').replace(/ \d{4}$/, '')}</span> : null}
                 </div>
                 <div className="mt-1 flex flex-wrap gap-2">

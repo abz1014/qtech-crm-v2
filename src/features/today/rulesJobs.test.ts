@@ -85,6 +85,22 @@ describe('rule: goods delivered to site on an assigned order (engineers)', () =>
   })
 })
 
+describe('imported and stale jobs never flood an engineer\'s Today (cutover)', () => {
+  it('leaves out an order from the old CRM or with estimated dates', () => {
+    expect(ruleJobCommissioning(ctx([job({ legacy: true, plannedOn: '2026-11-25' })]))).toEqual([])
+    expect(ruleJobOnSite(ctx([job({ legacy: true, commissioningState: 'to_plan', plannedOn: null })]))).toEqual([])
+  })
+  it('leaves out a planned day or a delivery more than 30 days ago, and keeps one 30 days old', () => {
+    expect(ruleJobCommissioning(ctx([job({ plannedOn: '2026-10-27' })]))).toEqual([]) // 31 days before 27 Nov
+    expect(ruleJobCommissioning(ctx([job({ plannedOn: '2026-10-28' })]))).toHaveLength(1) // 30 days: still shown, red
+    expect(ruleJobOnSite(ctx([job({ commissioningState: 'to_plan', plannedOn: null, deliveredOn: '2026-10-01' })]))).toEqual([])
+  })
+  it('a cutover with forty imported jobs adds nothing to the list', () => {
+    const imported = Array.from({ length: 40 }, (_, i) => job({ orderId: `l${i}`, orderNumber: 1000 + i, plannedOn: '2024-03-01', legacy: true }))
+    expect(buildToday(ctx(imported)).active).toEqual([])
+  })
+})
+
 describe("an engineer's Today with assigned jobs", () => {
   it('is no longer empty for jobs the engineer does not own, and a snooze hides one', () => {
     const jobs = [job(), job({ orderId: 'o2', orderNumber: 42, commissioningState: 'to_plan', plannedOn: null })]

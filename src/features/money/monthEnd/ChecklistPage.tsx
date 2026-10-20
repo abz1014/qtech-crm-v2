@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChartColumn, ChevronRight, CircleCheck, Lock, LockOpen } from 'lucide-react'
+import { ChartColumn, ChevronRight, CircleCheck, Landmark, Lock, LockOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { computeReconciliationExceptions } from '@/lib/reconciliation'
 import { Button } from '@/ui/Button'
@@ -51,6 +51,16 @@ export function ChecklistPage() {
         <MonthPager month={ctx.month} thisMonth={ctx.thisMonth} go={ctx.go} />
         {ctx.state ? <MonthStateChip closed={isClosed} /> : null}
         <span className="flex-1" />
+        {/* Always here, not only while a bank check has items: comparing totals, unticking a mistake and matching a closed month. */}
+        <Link
+          to={`/money/month-end/bank${ctx.search}`}
+          className="inline-flex min-h-touch items-center gap-2 text-sm font-medium text-primary hover:underline md:min-h-0"
+          data-testid="month-bank-link"
+        >
+          <Icon icon={Landmark} size="sm" />
+          Match bank statement
+          <Icon icon={ChevronRight} size="sm" />
+        </Link>
         <Link
           to={`/money/reports${ctx.search}`}
           className="inline-flex min-h-touch items-center gap-2 text-sm font-medium text-primary hover:underline md:min-h-0"

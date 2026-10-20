@@ -40,8 +40,8 @@ import {
  * Money > Invoices & GST (M01; g2-money "GST register, by invoice date" and "month stamping"). Admin and sales: the one register,
  * every invoice goes to FBR. Grouped by invoice month with month subtotals; the courier (TCS) and FBR states are one chip each
  * (owner decision 2026-10-19: the chip or the bar, not both), "Needs attention" for tax not deposited in an earlier month and for a
- * step recorded without the one before it. Sales do not stamp, so they get the simpler list: invoice, date, customer, gross and
- * whether it reached the customer, with no ticks and no tax columns.
+ * step recorded without the one before it. Sales tick and stamp like the admin (Today sends them the TCS and FBR items, and the
+ * stamp functions of 0020 accept them); their register leaves out the Net and GST columns, and Export stays the admin's.
  *
  * Month stamping: tick a month (1), then "Sent by TCS today" (2), paste the PSID once and press Enter or "Add PSID", then
  * "Deposited today" (3): at most 3 taps and 1 paste. Each stamp writes today's date to the ticked invoices, and Undo stays on the
@@ -95,8 +95,8 @@ export function GstRegisterPage() {
     setParams(next, { replace: true })
   }
 
-  const columns = useMemo<Column<GstRow>[]>(
-    () => (isAdmin ? [
+  const columns = useMemo<Column<GstRow>[]>(() => {
+    const cols: Column<GstRow>[] = [
       {
         id: 'number',
         header: 'Invoice',
@@ -139,27 +139,12 @@ export function GstRegisterPage() {
       { id: 'gross', header: 'Gross', kind: 'money', sortable: true, value: r => String(r.gross), total: true },
       { id: 'tcs', header: 'Sent to customer (TCS)', sortable: false, cell: r => <StatusBadge dimension="tcs" value={r.courierState} /> },
       { id: 'fbr', header: 'Tax deposited (FBR)', sortable: false, cell: r => <StatusBadge dimension="fbr" value={r.fbrState} /> },
-    ] : [
-      { id: 'number', header: 'Invoice', kind: 'date', sortable: true, value: r => r.number, cell: r => r.number ?? <span className="text-fg-muted">No number</span> },
-      { id: 'date', header: 'Date', kind: 'date', sortable: true, value: r => r.invoiceDate, cell: r => (r.invoiceDate ? formatDay(r.invoiceDate).replace(/^\w+ /, '') : '—') },
-      {
-        id: 'customer',
-        header: 'Customer',
-        sortable: true,
-        value: r => r.companyName,
-        cell: r => (
-          <span className="grid gap-px">
-            <span className="truncate font-medium">{r.companyName ?? 'No customer'}</span>
-            {r.orderNumber !== null ? <span className="num text-sm text-fg-muted">{orderRef(r.orderNumber)}</span> : null}
-          </span>
-        ),
-      },
-      { id: 'gross', header: 'Gross', kind: 'money', sortable: true, value: r => String(r.gross), total: true },
-      { id: 'tcs', header: 'Sent to customer', sortable: false, cell: r => <StatusBadge dimension="tcs" value={r.courierState} /> },
-    ]),
+    ]
+    // Sales stamp too (M08 sends them the TCS and FBR items; the 0020 RPCs allow it): they keep the ticks, the toggles and the
+    // stamps, and only lose the Net and GST columns, which are the admin's filing figures.
+    return isAdmin ? cols : cols.filter(c => c.id !== 'net' && c.id !== 'gst')
     // a ticked row has the selected background, where the amber text is below 4.5:1, so it reads in the body colour there
-    [ticked, isAdmin],
-  )
+  }, [ticked, isAdmin])
 
   const stamp = async (kind: StampKind) => {
     if (busy || tickedRows.length === 0) return
@@ -209,7 +194,7 @@ export function GstRegisterPage() {
 
   const header = (
     <div className="flex flex-wrap items-center gap-3">
-      <h2 className="text-base font-semibold">{isAdmin ? 'GST register' : 'Invoices'}</h2>
+      <h2 className="text-base font-semibold">GST register</h2>
       <span className="inline-flex h-6 items-center gap-[6px] rounded border border-line-strong bg-selected px-2 text-sm text-fg-2">
         <Icon icon={CalendarDays} size="chip" />
         By invoice date
@@ -221,16 +206,12 @@ export function GstRegisterPage() {
         one PSID can cover several invoices. Dates here are invoice dates; money actually received is under Who owes us.
       </InfoTip>
       <span className="flex-1" />
-      {isAdmin ? (
-        <>
-          <ToggleButton pressed={attention} onPressedChange={setAttention} icon={TriangleAlert}>
-            Needs attention <span className="num">{attentionCount}</span>
-          </ToggleButton>
-          <ToggleButton pressed={tcs} onPressedChange={setTcs} icon={Truck}>
-            Not sent by TCS <span className="num">{tcsCount}</span>
-          </ToggleButton>
-        </>
-      ) : null}
+      <ToggleButton pressed={attention} onPressedChange={setAttention} icon={TriangleAlert}>
+        Needs attention <span className="num">{attentionCount}</span>
+      </ToggleButton>
+      <ToggleButton pressed={tcs} onPressedChange={setTcs} icon={Truck}>
+        Not sent by TCS <span className="num">{tcsCount}</span>
+      </ToggleButton>
       <label className="relative block w-[220px] max-md:w-full">
         <span className="sr-only">Search invoices</span>
         <Icon icon={Search} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
@@ -267,13 +248,13 @@ export function GstRegisterPage() {
       />
 
       <DataTable
-        label={isAdmin ? 'GST register' : 'Invoices'}
+        label="GST register"
         columns={columns}
         rows={shown}
         getRowId={r => r.invoiceId}
         twoLine
         group={r => ({ key: rowMonth(r), label: `${rowMonth(r)} · ${monthCounts.get(rowMonth(r)) ?? 0} ${(monthCounts.get(rowMonth(r)) ?? 0) === 1 ? 'invoice' : 'invoices'}` })}
-        selection={isAdmin ? { selected: ticked, onChange: s => setTicked(s), rowLabel: r => r.number ?? 'invoice' } : undefined}
+        selection={{ selected: ticked, onChange: s => setTicked(s), rowLabel: r => r.number ?? 'invoice' }}
         onRowOpen={r => setOpening(r.invoiceId)}
         footerLabel={`All ${totals.count} ${totals.count === 1 ? 'invoice' : 'invoices'} shown`}
         loading={register.isPending}
@@ -342,10 +323,10 @@ export function GstRegisterPage() {
               <Money value={r.gross} prefix={false} />
             </div>
             <span className="truncate text-sm">{r.companyName}</span>
-            {isAdmin && attentionReason(r) ? <span className="text-sm text-tone-warning-fg">{attentionReason(r)}</span> : null}
+            {attentionReason(r) ? <span className="text-sm text-tone-warning-fg">{attentionReason(r)}</span> : null}
             <div className="flex flex-wrap gap-2">
               <StatusBadge dimension="tcs" value={r.courierState} />
-              {isAdmin ? <StatusBadge dimension="fbr" value={r.fbrState} /> : null}
+              <StatusBadge dimension="fbr" value={r.fbrState} />
             </div>
           </div>
         )}

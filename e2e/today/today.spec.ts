@@ -237,7 +237,7 @@ test.describe('Today: role-aware', () => {
     await expect(job).toContainText('Commissioning tomorrow')
     await expect(job).toContainText(planned.customer)
     await expect(page.locator('li[data-rule="job_on_site"]').filter({ hasText: onSite.ref })).toContainText('Goods delivered to site: set the commissioning date')
-    // one list for an engineer: no Quotations / Suppliers & delivery / Money tabs
+    // one list for an engineer: no Quotes / Suppliers / Money tabs
     await expect(page.getByRole('radiogroup', { name: 'Show' })).toHaveCount(0)
     await job.getByRole('button').first().click()
     await paneFor(page, planned.ref).getByRole('button', { name: `Open ${planned.ref}` }).click()
@@ -344,11 +344,26 @@ test.describe('Today: role-aware', () => {
     await expect(rowOf(page, theirs.ref)).toHaveCount(0)
     await expect(page.getByRole('radio', { name: /^Money/ })).toBeVisible()
     // the tabs in plain words (owner glossary 2026-10-19)
-    await expect(page.getByRole('radio', { name: /^Quotations/ })).toBeVisible()
-    await expect(page.getByRole('radio', { name: /^Suppliers & delivery/ })).toBeVisible()
+    await expect(page.getByRole('radio', { name: /^Quotes/ })).toBeVisible()
+    await expect(page.getByRole('radio', { name: /^Suppliers/ })).toBeVisible()
     await expect(page.getByRole('radio', { name: /^(Bids|Sourcing)/ })).toHaveCount(0)
     await review(page, 'today-07-admin-1440')
   })
+})
+
+test.describe('Today: the tab strip fits', () => {
+  for (const [width, height] of [[1366, 768], [1024, 768], [800, 1024], [375, 812]] as const) {
+    test(`at ${width} px every tab is on screen and nothing scrolls sideways`, async ({ page }) => {
+      await seedOverdueOrder(ADMIN)
+      await page.setViewportSize({ width, height })
+      await openAs(page, 'admin', '/today')
+      const strip = page.getByRole('radiogroup', { name: 'Show' })
+      await expect(strip.getByRole('radio', { name: /^Money/ })).toBeVisible()
+      for (const tab of await strip.getByRole('radio').all()) await expect(tab).toBeInViewport({ ratio: 1 })
+      expect(await strip.evaluate(el => el.scrollWidth <= el.clientWidth + 1), 'the strip scrolls sideways').toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    })
+  }
 })
 
 test.describe('Today: accessibility and mobile', () => {

@@ -69,6 +69,8 @@ export const THRESHOLDS = {
   tcsWindowDays: 60,
   /** An engineer's planned commissioning shows from this many working days before the date (the "next 5 days" group). */
   jobAheadDays: 5,
+  /** An engineer's job older than this many calendar days (planned, or delivered to site) is stale, not today's work: it is left out. */
+  jobStaleDays: 30,
 } as const
 
 // ---------------------------------------------------------------- helpers
@@ -865,12 +867,16 @@ export function ruleRecurringDue(ctx: TodayInputs): Entry[] {
  * Commissioning soon (engineers): an order the engineer is ASSIGNED to (order_engineers, not ownership) has commissioning planned
  * within the next 5 working days, today, or on a day that has passed without "Mark done". One item per order, dated on the planned
  * day, so it turns red on the day and stays red until it is marked done or moved.
+ * Not raised for an order imported from the old CRM or with estimated dates, nor for a planned day more than 30 days ago: the import
+ * carries old start dates with no "done", and a cutover must not fill an engineer's list with years-old red items (as M08 avoids).
  */
+const stale = (on: string | null, today: string): boolean => !!on && daysBetween(on, today) > THRESHOLDS.jobStaleDays
+
 export function ruleJobCommissioning(ctx: TodayInputs): Entry[] {
   if (ctx.user.role !== 'engineer') return []
   const out: Entry[] = []
   for (const j of ctx.jobs ?? []) {
-    if (j.commissioningState !== 'planned' || !j.plannedOn) continue
+    if (j.legacy || j.commissioningState !== 'planned' || !j.plannedOn || stale(j.plannedOn, ctx.today)) continue
     if (j.plannedOn > ctx.today && businessDaysBetween(ctx.today, j.plannedOn) > THRESHOLDS.jobAheadDays) continue
     const d = daysBetween(ctx.today, j.plannedOn)
     const title =
@@ -907,13 +913,13 @@ export function ruleJobCommissioning(ctx: TodayInputs): Entry[] {
 /**
  * Goods on site (engineers): on an order the engineer is assigned to, the goods have reached the customer's site (all, or some)
  * and commissioning has no date yet. Always "ready to move", aged from the delivery. An order the engineer also owns already
- * shows "Plan commissioning", so it is not said twice.
+ * shows "Plan commissioning", so it is not said twice. Imported orders and deliveries more than 30 days old are left out.
  */
 export function ruleJobOnSite(ctx: TodayInputs): Entry[] {
   if (ctx.user.role !== 'engineer') return []
   const out: Entry[] = []
   for (const j of ctx.jobs ?? []) {
-    if (j.commissioningState !== 'to_plan') continue
+    if (j.legacy || j.commissioningState !== 'to_plan' || stale(j.deliveredOn, ctx.today)) continue
     if (j.goodsState !== 'delivered' && j.goodsState !== 'partly_delivered') continue
     if (j.ownerId === ctx.user.id) continue
     out.push(

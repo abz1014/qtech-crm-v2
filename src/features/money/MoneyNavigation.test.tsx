@@ -112,7 +112,49 @@ describe('old addresses keep working', () => {
   })
 })
 
+describe('tab counts mean "needs you", and agree with the pages', () => {
+  it('Who owes us counts exactly Today\'s payment items for this person: routed by owner, the reminded one waiting', async () => {
+    const overdue = (id: string, owner: string, remindedDaysAgo: number | null) => ({
+      order_id: id, order_number: Number(id.slice(1)), company_id: 'c', owner_id: owner, gross_target: 118000, settled: 0, balance: 118000, overpaid_by: 0,
+      due_on: '2025-01-01', is_overdue: true, payment_state: 'overdue', reminder_count: remindedDaysAgo === null ? 0 : 1, data_trust: 'ok',
+      last_reminded_on: remindedDaysAgo === null ? null : new Date(Date.now() - remindedDaysAgo * 86_400_000).toISOString().slice(0, 10),
+    })
+    at('/money/receivables', 'admin', c => {
+      if (c.target === 'rpc:order_receivables')
+        return { data: [overdue('o1', 'u', null), overdue('o2', 'u', 1), overdue('o3', 's', null)] } // mine, mine but just reminded, a sales person's
+      if (c.target === 'users') return { data: [{ id: 'u', role: 'admin', name: 'A' }, { id: 's', role: 'sales', name: 'S' }] }
+      return respond(c)
+    })
+    const tab = await screen.findByRole('link', { name: /^Who owes us/ })
+    await waitFor(() => expect(tab).toHaveTextContent('Who owes us, 1 need you'))
+  })
+
+  it('Month end counts the checks with items plus Things to check, the same number the checklist says', async () => {
+    at(`/money/month-end?month=${MONTH}`, 'admin', c =>
+      c.target === 'rpc:money_exceptions_input'
+        ? { data: { orders: [{ id: 'o1', number: 7, orderedOn: null, cancelled: false, basisUnknown: true }], money: [], payments: [], expenses: [], invoices: [], legs: [], pos: [], legPaid: [] } }
+        : respond(c),
+    )
+    const tab = await screen.findByRole('link', { name: /^Month end/ })
+    await waitFor(() => expect(tab).toHaveTextContent('Month end, 3 need you'))
+    expect(await screen.findByTestId('checks-summary')).toHaveTextContent('3 checks have something to look at')
+  })
+})
+
 describe('Month end checklist', () => {
+  it('always offers Match bank statement, for the month, even when the bank checks are clear', async () => {
+    at(`/money/month-end?month=${MONTH}`, 'admin', c => (c.target === 'rpc:month_end_status' ? { data: [] } : respond(c)))
+    await screen.findByTestId('checks-summary')
+    expect(screen.queryByTestId('check-bank_unticked')).toBeNull()
+    expect(screen.getByTestId('month-bank-link')).toHaveAttribute('href', `/money/month-end/bank?month=${MONTH}`)
+  })
+
+  it('the Reports link in the Money header keeps the month', async () => {
+    at(`/money/month-end?month=${MONTH}`)
+    await screen.findByTestId('checks-summary')
+    expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', `/money/reports?month=${MONTH}`)
+  })
+
   it('lists only the checks that have items, each linking to its fix, and the clear ones on one line', async () => {
     at(`/money/month-end?month=${MONTH}`)
     const bank = await screen.findByTestId('check-bank_unticked')

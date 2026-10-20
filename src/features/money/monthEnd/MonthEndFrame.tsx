@@ -17,11 +17,11 @@ export function MonthPager({ month, thisMonth, go, label = 'Month' }: { month: s
         type="button"
         aria-label="Previous month"
         onClick={() => go(-1)}
-        className="inline-flex h-9 min-w-9 items-center justify-center rounded px-2 text-fg-2 transition-colors duration-fast hover:text-fg"
+        className="inline-flex h-control w-control items-center justify-center rounded px-2 text-fg-2 transition-colors duration-fast hover:text-fg"
       >
         <Icon icon={ChevronLeft} size="sm" />
       </button>
-      <span aria-live="polite" title={monthKeyLabel(month)} className="num inline-flex h-9 items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium">
+      <span aria-live="polite" title={monthKeyLabel(month)} className="num inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium">
         {monthKeyShort(month)}
       </span>
       <button
@@ -29,7 +29,7 @@ export function MonthPager({ month, thisMonth, go, label = 'Month' }: { month: s
         aria-label="Next month"
         disabled={month >= thisMonth}
         onClick={() => go(1)}
-        className="inline-flex h-9 min-w-9 items-center justify-center rounded px-2 text-fg-2 transition-colors duration-fast hover:text-fg disabled:text-fg-disabled disabled:hover:text-fg-disabled"
+        className="inline-flex h-control w-control items-center justify-center rounded px-2 text-fg-2 transition-colors duration-fast hover:text-fg disabled:text-fg-disabled disabled:hover:text-fg-disabled"
       >
         <Icon icon={ChevronRight} size="sm" />
       </button>

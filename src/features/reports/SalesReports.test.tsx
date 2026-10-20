@@ -94,9 +94,21 @@ describe('Enquiry and customer reports (inside Money > Reports)', () => {
     expect(await screen.findByText(/No question has been asked of a customer yet/)).toBeInTheDocument()
   })
 
+  it('builds the asking-suppliers headline per side, so a side with nothing decided never reads "Won not enough data"', async () => {
+    show(c =>
+      c.target === 'v_report_float'
+        ? { data: [{ sourcing_state: 'covered', rfqs: 2, items_total: 3, items_quoted: 3, won: 1, closed: 1, still_open: 0 }, { sourcing_state: 'not_floated', rfqs: 1, items_total: 1, items_quoted: 0, won: 0, closed: 0, still_open: 1 }] }
+        : { data: VIEWS[c.target] ?? [] },
+    )
+    expect(await screen.findByText('Won 50% when asked, nothing decided when not')).toBeInTheDocument()
+    expect(screen.queryByText(/not enough data when/)).toBeNull()
+  })
+
   it('reports a failed read in plain words and keeps the other reports', async () => {
     const user = userEvent.setup()
     show(c => (c.target === 'v_report_float' ? { error: { message: 'boom' } } : { data: VIEWS[c.target] ?? [] }))
+    // the closed line already says so; nobody has to open it to find out
+    expect(await screen.findByText('Could not load')).toBeInTheDocument()
     await user.click(await screen.findByText('Does asking suppliers for prices help us win?'))
     await user.click(screen.getByText('How many RFQs did we win, and why did we lose the others?'))
     expect(await screen.findByText(/This report could not be read/)).toBeInTheDocument()

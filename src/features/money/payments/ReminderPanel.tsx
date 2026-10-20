@@ -17,6 +17,7 @@ import { daysBetween as daysBetweenText } from '@/features/rfqs/lib/dateText'
 import { usePaymentDraft, performChase } from '@/features/today/hooks'
 import { buildPaymentDraft } from '@/features/today/chaseDraft'
 import { useMyJobTitle } from '@/features/orders/hooks'
+import { RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
 import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPreference'
 import type { ReceivableRow } from '@/features/money/payments/model'
 
@@ -59,10 +60,22 @@ export function ReminderPanel({ row, today }: { row: ReceivableRow | null; today
           title={row.state === 'settled' ? 'Nothing is owed.' : 'Not overdue yet.'}
           body={row.state === 'settled' ? 'This order is paid in full.' : `Due on ${formatDay(row.dueOn)}, in ${d} ${d === 1 ? 'day' : 'days'}. A reminder becomes available once the invoice is overdue.`}
         />
+        {row.state !== 'settled' ? <PayFooter orderId={row.orderId} /> : null}
       </PanelShell>
     )
   }
   return <ReminderBody key={row.orderId} row={row} today={today} />
+}
+
+/** Admin only: the payment came in, so record it from here (the order page and the row have the same button). */
+function PayFooter({ orderId }: { orderId: string }) {
+  const session = useSession()
+  if (session.status !== 'signed-in' || session.user.role !== 'admin') return null
+  return (
+    <footer className="flex border-t bg-sunken px-5 py-3">
+      <RecordPaymentButton orderId={orderId} className="min-h-touch md:min-h-0" />
+    </footer>
+  )
 }
 
 function PanelShell({ title, meta, aside, children }: { title: string; meta?: React.ReactNode; aside?: React.ReactNode; children: React.ReactNode }) {
@@ -296,6 +309,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
             <Button variant="primary" icon={Copy} busy={busy} busyLabel="Marking" onClick={() => void copyAndMark()} className="min-h-touch md:min-h-0">
               Copy and mark reminded
             </Button>
+            {user?.role === 'admin' ? <RecordPaymentButton orderId={row.orderId} className="min-h-touch md:min-h-0" /> : null}
             <span className="min-w-[10rem] flex-1 text-right text-sm text-fg-muted">{toneText}</span>
           </>
         )}

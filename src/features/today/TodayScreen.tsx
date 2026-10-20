@@ -23,7 +23,7 @@ import type { Role, RuleKey, TodayItem, TodayTab } from '@/features/today/types'
  * more than 5). On a phone the pane folds into an accordion under the row, and the list comes first: the target tile sits
  * under it. The empty state is the goal state.
  *
- * Tabs (owner glossary 2026-10-19): All, Quotations, Suppliers & delivery, Money; every count is "needs you". Engineers get no
+ * Tabs (owner glossary 2026-10-19, short forms): All, Quotes, Suppliers, Money; every count is "needs you". Engineers get no
  * tabs at all: their list is short (their jobs, their goods, the RFQs they own) and one list is easier.
  */
 const ICON: Record<RuleKey, LucideIcon> = {
@@ -48,7 +48,9 @@ const ICON: Record<RuleKey, LucideIcon> = {
   job_on_site: PackageCheck,
 }
 
-const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Quotations', sourcing: 'Suppliers & delivery', money: 'Money' }
+// The short forms of the glossary's "Quotations" and "Suppliers & delivery", so the four tabs fit the list column in one row on a
+// laptop; below that they wrap (never a sideways scroll).
+const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Quotes', sourcing: 'Suppliers', money: 'Money' }
 const WAITING_OPEN_MAX = 5
 
 /** Whether the person opened or closed the Waiting group, kept for this browser session only (null: not touched, the size decides). */
@@ -135,7 +137,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
         {tabs.length > 0 ? (
           <SegmentedControl
             aria-label="Show"
-            className="mt-2 justify-self-start"
+            className="mt-2 flex-wrap justify-self-start"
             value={tab}
             onValueChange={v => setTab(v as 'all' | TodayTab)}
             options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], count: counts[t] }))}
@@ -224,7 +226,8 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   )
 
   return (
-    <div className="grid min-h-full md:h-full md:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
+    // 768 to 1023 px (a tablet, a narrow window): the list takes two fifths so the pane keeps room; 420 px from 1024.
+    <div className="grid min-h-full md:h-full md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
       <div className="flex min-h-0 flex-col border-r bg-surface">
         {/* The target tile is the foot of the list column: under the list on a phone, pinned at the bottom on desktop. */}
         <div className="min-h-0 flex-1 md:overflow-y-auto">{list}</div>
@@ -233,7 +236,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
         </div>
       </div>
       {wide ? (
-        <div className="min-h-0 overflow-y-auto px-8 py-6">
+        <div className="min-h-0 overflow-y-auto px-5 py-6 lg:px-8">
           {current && data ? (
             <div className="mx-auto max-w-[860px]">
               <ContextPane key={current.key} item={current} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} nextItem={nextOf(current.key)} onSelect={setSelected} />

@@ -84,6 +84,21 @@ function Section({ id, title, headline, children }: { id: string; title: string;
 
 const Loading = ({ label }: { label: string }) => <Skeleton className="h-[72px] w-full" aria-label={label} />
 
+/** A closed line's headline: the figure, "Not enough data yet", "Could not load" after a failed read, or "…" while it loads. */
+function headlineOf<T>(q: { isError: boolean }, s: T | null, ready: (s: T) => boolean, say: (s: T) => string): string {
+  if (q.isError) return 'Could not load'
+  if (!s) return '…'
+  return ready(s) ? say(s) : 'Not enough data yet'
+}
+
+/** "Won 50% when asked, 0% when not"; a side with nothing decided yet says so on its own. */
+function askingHeadline(asked: number | null, notAsked: number | null): string {
+  if (asked === null && notAsked === null) return 'Nothing decided yet'
+  const part = (v: number | null, when: string) => (v === null ? `nothing decided ${when}` : `won ${v}% ${when}`)
+  const text = `${part(asked, 'when asked')}, ${part(notAsked, 'when not')}`
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
 // ------------------------------------------------------------------ 1. Won and lost
 const reasonColumns: Column<ReasonLine>[] = [
   { id: 'reason', header: 'Why we lost it', value: r => r.label },
@@ -98,7 +113,7 @@ function OutcomesReport() {
     <Section
       id="rep-outcomes"
       title="How many RFQs did we win, and why did we lose the others?"
-      headline={s ? (s.total ? `${s.won} won, ${s.closed} lost, ${s.open} open` : 'Not enough data yet') : '…'}
+      headline={headlineOf(q, s, x => x.total > 0, x => `${x.won} won, ${x.closed} lost, ${x.open} open`)}
     >
       {s && s.total > 0 ? (
         <SumBar
@@ -154,7 +169,7 @@ function FloatReport() {
     <Section
       id="rep-float"
       title="Does asking suppliers for prices help us win?"
-      headline={s ? (s.floatedRfqs || s.lines.length ? `Won ${showPct(s.floatedWinRate)} when asked, ${showPct(s.notFloatedWinRate)} when not` : 'Not enough data yet') : '…'}
+      headline={headlineOf(q, s, x => x.lines.length > 0, x => askingHeadline(x.floatedWinRate, x.notFloatedWinRate))}
     >
       {s && s.lines.length > 0 ? (
         <SumBar
@@ -202,7 +217,7 @@ function TurnaroundReport() {
     <Section
       id="rep-turnaround"
       title="How fast do customers answer our questions?"
-      headline={s ? (s.asked ? `${daysText(s.avgDays)} on average` : 'Not enough data yet') : '…'}
+      headline={headlineOf(q, s, x => x.asked > 0, x => (x.avgDays === null ? `${x.asked} asked, none answered yet` : `${daysText(x.avgDays)} on average`))}
     >
       {s && s.asked > 0 ? (
         <SumBar
@@ -272,7 +287,7 @@ function RepeatReport() {
     <Section
       id="rep-repeat"
       title="Which customers come back?"
-      headline={s ? (s.customers ? `${s.repeat} of ${s.customers} came back` : 'Not enough data yet') : '…'}
+      headline={headlineOf(q, s, x => x.customers > 0, x => `${x.repeat} of ${x.customers} came back`)}
     >
       {s && s.customers > 0 ? (
         <SumBar

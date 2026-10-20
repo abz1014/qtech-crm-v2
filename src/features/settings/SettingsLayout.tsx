@@ -11,7 +11,8 @@ import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 
 /*
- * Settings (A04, A06). Reached from the account menu and from the search box ("Jump to"), not the five main destinations.
+ * Settings (A04, A06). Reached from the account menu, not the five main destinations (the search box's "Jump to" entries for
+ * Settings are the shell's to add).
  * Two short groups (UX audit 2026-10-19): the company's settings, then yours. A left list on tablet and desktop. On a phone
  * /settings IS the list (no sideways-scrolling strip), and every page under it has the phone bar's back arrow to /settings
  * (Team sets its own bar, with its Add button). Team, Targets and Expense categories are shown to admins only; the company

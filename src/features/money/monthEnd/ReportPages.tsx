@@ -188,7 +188,7 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
             sub: (
               <>
                 <Num>{split}</Num> {split === 1 ? 'payment' : 'payments'}
-                {v.payments.unresolved.length ? <>, excludes {rupees(v.unresolvedGross)} unresolved</> : null}
+                {v.payments.unresolved.length ? <>, leaves out {rupees(v.unresolvedGross)} not split yet</> : null}
               </>
             ),
           },
@@ -644,9 +644,13 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
         sortable: false,
         cell: r => (
           <span className="grid justify-items-start gap-px">
-            <StatusBadge dimension="payable" value={r.flag === 'overpaid' && r.state === 'settled' ? 'paid-over' : r.state === 'no_rate' ? 'no-rate' : r.state} />
+            <StatusBadge
+              dimension="payable"
+              value={r.flag === 'overpaid' && r.state === 'settled' ? 'paid-over' : r.state === 'no_rate' ? 'no-rate' : r.state}
+              label={r.state === 'unpriced' ? 'Supplier price missing' : undefined}
+            />
             <span className="text-xs text-fg-muted">
-              {r.state === 'owing' ? (toPaisa(r.paidPkr) === 0n ? 'No payment yet' : 'Part paid') : r.state === 'settled' ? (r.flag === 'overpaid' ? 'Owed shown as 0' : 'Within 3% of paid, or paid') : r.state === 'unpriced' ? 'No price on the items yet' : 'No rate in the 30 days before; add one on Exchange rates'}
+              {r.state === 'owing' ? (toPaisa(r.paidPkr) === 0n ? 'No payment yet' : 'Part paid') : r.state === 'settled' ? (r.flag === 'overpaid' ? 'Owed shown as 0' : 'Within 3% of paid, or paid') : r.state === 'unpriced' ? "The supplier's price is not on the items yet" : 'No rate in the 30 days before; add one on Exchange rates'}
             </span>
           </span>
         ),
@@ -895,7 +899,7 @@ function TeamBody({ ctx }: { ctx: MonthEndCtx }) {
         label="Sales by person"
         items={[
           { label: 'Net cash credited', amount: v.credited,  sub: <><Num>{v.creditedPayments}</Num> {v.creditedPayments === 1 ? 'payment' : 'payments'} credited to <Num>{v.creditedPeople}</Num> {v.creditedPeople === 1 ? 'person' : 'people'}</> },
-          { label: 'Not credited', amount: v.unresolved,  sub: <><Num>{v.unresolvedCount}</Num> unresolved {v.unresolvedCount === 1 ? 'payment' : 'payments'}</> },
+          { label: 'Not credited', amount: v.unresolved,  sub: <><Num>{v.unresolvedCount}</Num> {v.unresolvedCount === 1 ? 'payment' : 'payments'} not split into net and GST</> },
           { label: 'Quarter to date', amount: v.quarterToDate,  sub: `Q${v.quarter} to date, from the payments counted for targets` },
           { label: `Days left in Q${v.quarter}`, count: v.daysLeft, sub: <>Until {formatShortDate(v.quarterEnd, ctx.today, true)}</> },
         ]}

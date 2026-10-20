@@ -225,6 +225,8 @@ export interface JobFact {
   plannedOn: string | null
   /** The latest supplier delivery to site (supplier_orders.delivered_on), or null. */
   deliveredOn: string | null
+  /** Imported from the old CRM (orders.legacy_source) or with estimated dates (v_order_state.data_trust): never an engineer's job item. */
+  legacy?: boolean
 }
 
 /** M08: one recurring expense template and whether this month's expense exists. Admin only. */

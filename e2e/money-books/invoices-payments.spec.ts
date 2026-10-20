@@ -340,9 +340,14 @@ test.describe('payments in and receivables (M02)', () => {
     await expect(page.getByRole('button', { name: 'New invoice' })).toBeVisible()
     await expect(page.getByRole('link', { name: /Expenses/ })).toHaveCount(0)
     await review(page, 'm01-gst-register-sales-1440')
-    // sales get the simpler invoice list: no ticks, no tax columns
-    await expect(page.getByRole('table', { name: 'Invoices' }).getByRole('checkbox')).toHaveCount(0)
-    await expect(page.getByRole('columnheader', { name: /FBR/ })).toHaveCount(0)
+    // sales stamp too (Today sends them the TCS and FBR items): the ticks, the toggles and the FBR column stay; Net and GST go
+    await expect(page.getByRole('checkbox', { name: `Select ${inv.number}` })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Not sent by TCS/ })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: /FBR/ })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Net', exact: true })).toHaveCount(0)
+    await page.getByRole('checkbox', { name: `Select ${inv.number}` }).click()
+    await page.getByTestId('batch-bar').getByRole('button', { name: 'Sent by TCS today' }).click()
+    await expect.poll(async () => (await must(rest<InvoiceRow[]>('admin', `invoices?id=eq.${inv.id}&select=tcs_sent_on`)))[0].tcs_sent_on).toBe(today())
     await page.getByRole('link', { name: /^Who owes us/ }).click()
     const row = page.getByRole('row', { name: new RegExp(order.company.name) })
     await expect(row).toContainText('88,000') // the balance: 118,000 less 30,000

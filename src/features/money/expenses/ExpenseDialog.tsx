@@ -308,7 +308,7 @@ function ExpenseFormReady({
           </FormField>
           {lockedPayee ? (
             <div className="grid min-w-0 content-start gap-[6px]">
-              <span className="text-sm font-medium leading-5 text-fg">Payee</span>
+              <span className="text-sm font-medium text-fg">Payee</span>
               <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded border border-line-strong bg-sunken px-3 text-sm text-fg-2" aria-label="Payee, from the supplier order">
                 <span className="truncate">
                   {context?.payeeName}
@@ -316,7 +316,7 @@ function ExpenseFormReady({
                 </span>
                 <Icon icon={Lock} className="text-fg-muted" />
               </div>
-              <span className="text-sm leading-5 text-fg-2">From the supplier order</span>
+              <span className="text-sm text-fg-2">From the supplier order</span>
             </div>
           ) : null}
           {amountField}

@@ -309,11 +309,14 @@ async function loadJobs(userId: string, names: Map<string, string>): Promise<Job
   const jobs: JobFact[] = []
   for (let i = 0; i < ids.length; i += 100) {
     const chunk = ids.slice(i, i + 100)
-    const [states, orders, legs] = await Promise.all([
-      db.from('v_order_state').select('order_id, lifecycle, goods_state, commissioning_state').in('order_id', chunk).eq('lifecycle', 'active'),
+    const [states, orders, legs, imported] = await Promise.all([
+      db.from('v_order_state').select('order_id, lifecycle, goods_state, commissioning_state, data_trust').in('order_id', chunk).eq('lifecycle', 'active'),
       db.from('orders').select('id, number, owner_id, company_id, commissioning_planned_on, company_sites(name)').in('id', chunk) as unknown as PromiseLike<{ data: JobOrderRow[] | null; error: PgError | null }>,
       db.from('supplier_orders').select('order_id, delivered_on').in('order_id', chunk).not('delivered_on', 'is', null),
+      // which of them came from the old CRM: the ids only (legacy_source itself may hold old prices, so it is never read here)
+      db.from('orders').select('id').in('id', chunk).not('legacy_source', 'is', null),
     ])
+    const legacy = new Set((unwrap(imported) ?? []).map(o => o.id))
     const orderBy = new Map((unwrap(orders) ?? []).map(o => [o.id, o]))
     const delivered = new Map<string, string>()
     for (const l of unwrap(legs) ?? []) {
@@ -333,6 +336,7 @@ async function loadJobs(userId: string, names: Map<string, string>): Promise<Job
         commissioningState: s.commissioning_state ?? 'n_a',
         plannedOn: o.commissioning_planned_on,
         deliveredOn: delivered.get(o.id) ?? null,
+        legacy: legacy.has(o.id) || s.data_trust === 'estimated_dates',
       })
     }
   }

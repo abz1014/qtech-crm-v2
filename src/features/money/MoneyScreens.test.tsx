@@ -176,22 +176,27 @@ describe('GST register (M01)', () => {
     await waitFor(() => expect(d.calls.some(c => c.target === 'rpc:stamp_tax_deposited')).toBe(true))
   })
 
-  it('admin can export; sales get the simpler invoice list: no Export, no ticks, no tax columns, New invoice kept', async () => {
+  it('admin can export; sales tick and stamp the same register (Today sends them the TCS and FBR items), without Export, Net or GST', async () => {
+    const user = userEvent.setup()
     db()
     const a = mount(<GstRegisterPage />)
     await screen.findByText('INV-2299')
     expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: /Tax deposited \(FBR\)/ })).toBeInTheDocument()
     a.unmount()
+    const d = db()
     mount(<GstRegisterPage />, 'sales')
     await screen.findByText('INV-2299')
     expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'New invoice' })).toBeInTheDocument()
-    const table = screen.getByRole('table', { name: 'Invoices' })
-    expect(within(table).queryByRole('checkbox')).toBeNull()
-    for (const h of ['Net', 'GST', 'Tax deposited (FBR)']) expect(within(table).queryByRole('columnheader', { name: h })).toBeNull()
-    expect(within(table).getByRole('columnheader', { name: /Sent to customer/ })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Needs attention/ })).toBeNull()
+    const table = screen.getByRole('table', { name: 'GST register' })
+    for (const h of ['Net', 'GST']) expect(within(table).queryByRole('columnheader', { name: h })).toBeNull()
+    expect(within(table).getByRole('columnheader', { name: /Tax deposited \(FBR\)/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Needs attention/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Not sent by TCS/ })).toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: /Select all in October 2026/ }))
+    await user.click(screen.getByRole('button', { name: 'Sent by TCS today' }))
+    await waitFor(() => expect(d.calls.some(c => c.target === 'rpc:stamp_tcs_sent')).toBe(true))
   })
 
   it('shows each courier and FBR state once, as a chip, never a chip beside a progress bar', async () => {

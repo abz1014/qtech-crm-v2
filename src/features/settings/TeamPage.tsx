@@ -93,7 +93,7 @@ export function TeamPage() {
               <span className="truncate font-medium">{m.name}</span>
               {m.id === me ? <Tag className="ml-1">You</Tag> : null}
             </span>
-            <span className="num truncate text-xs leading-4 text-fg-muted">{m.email ?? 'No email on record'}</span>
+            <span className="num truncate text-xs text-fg-muted">{m.email ?? 'No email on record'}</span>
           </span>
         </span>
       ),

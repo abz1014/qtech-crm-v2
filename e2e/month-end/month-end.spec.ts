@@ -95,6 +95,16 @@ test.describe('month-end (M10)', () => {
     expect(await mouse(page)).toBe(1)
   })
 
+  test('Match bank statement is always one tap from Month end, for the month, even when its checks are clear', async ({ page }) => {
+    await openAs(page, 'admin', `/money/month-end?month=${OLDER.key}`)
+    await expect(page.getByTestId('checks-summary')).toBeVisible()
+    await startCounting(page)
+    await page.getByTestId('month-bank-link').click()
+    await expect(page).toHaveURL(new RegExp(`/money/month-end/bank\\?month=${OLDER.key}`))
+    await expect(page.getByRole('heading', { name: 'Match bank statement', level: 2 })).toBeVisible()
+    expect(await mouse(page)).toBe(1)
+  })
+
   test('a clear check is one line, not a card; the reports for the month are one tap away', async ({ page }) => {
     await openAs(page, 'admin', `/money/month-end?month=${STMT.key}`)
     await expect(page.getByTestId('checks-summary')).toBeVisible()
