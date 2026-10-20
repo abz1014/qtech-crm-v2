@@ -92,7 +92,7 @@ export async function getPaymentOrder(orderId: string): Promise<PaymentOrder | n
   const [names, invoices, payments] = await Promise.all([
     companyNames([raw.company_id]),
     invoiceNumbersByOrder([orderId]),
-    db.from('payments_in').select('received_on, amount').eq('order_id', orderId).order('received_on'),
+    db.from('payments_in').select('received_on, amount').eq('order_id', orderId).is('voided_at', null).order('received_on'),
   ])
   return {
     row: toRow(raw, names, invoices),

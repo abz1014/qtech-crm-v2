@@ -243,7 +243,7 @@ function money() {
       forOrder: (orderId: string) => [...all, 'invoices', 'for-order', orderId] as const,
       invoiceable: () => [...all, 'invoices', 'invoiceable-orders'] as const,
     },
-    /** M02: order balances through order_receivables() (admin and sales) and one order's payments (admin). */
+    /** M02: order balances through order_receivables() (admin and sales) and one order's payments (admin; 0073: voided ones included). */
     receivables: {
       all: [...all, 'receivables'] as const,
       list: () => [...all, 'receivables', 'list'] as const,
