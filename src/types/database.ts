@@ -961,17 +961,29 @@ isOneToOne: false
                   ]
                 },"payments_in": {
                   Row: {
-                    "amount": number,"bank_month": string | null,"created_at": string,"created_by": string | null,"credited_user_id": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"paid_via": string,"received_on": string,"reference": string | null
+                    "amount": number,"bank_month": string | null,"corrects_payment_id": string | null,"created_at": string,"created_by": string | null,"credited_user_id": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"paid_via": string,"received_on": string,"reference": string | null,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount": number,"bank_month"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null
+                    "amount": number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null
                   }
                   Update: {
-                    "amount"?: number,"bank_month"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null
+                    "amount"?: number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null
                   }
                   Relationships: [
                     {
+      foreignKeyName: "payments_in_corrects_payment_id_fkey"
+      columns: ["corrects_payment_id"]
+isOneToOne: false
+      referencedRelation: "payments_in"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_in_corrects_payment_id_fkey"
+      columns: ["corrects_payment_id"]
+isOneToOne: false
+      referencedRelation: "v_payment_net"
+      referencedColumns: ["payment_id"]
+    },{
       foreignKeyName: "payments_in_created_by_fkey"
       columns: ["created_by"]
 isOneToOne: false
@@ -1013,6 +1025,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_voided_by_fkey"
+      columns: ["voided_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
     }
                   ]
                 },"purchase_orders": {
@@ -2023,6 +2041,9 @@ isOneToOne: false
 "convert_rfq_to_order":
 { Args: { "p_customer_po_number"?: string,"p_items"?: Json,"p_needs_commissioning"?: boolean,"p_order_id": string,"p_ordered_on"?: string,"p_payment_terms_days"?: number,"p_rfq_id": string }; Returns: string
                            },
+"correct_payment":
+{ Args: { "p_amount": number,"p_new_id"?: string,"p_paid_via": string,"p_payment_id": string,"p_reason": string,"p_received_on": string,"p_reference": string }; Returns: string
+                           },
 "create_repeat_order":
 { Args: { "p_customer_po_number"?: string,"p_from_order_id": string,"p_order_id": string,"p_ordered_on"?: string }; Returns: string
                            },
@@ -2038,7 +2059,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: string
                            },
 "float_rfq":
-{ Args: { "p_company_id": string,"p_contact_id"?: string,"p_customer_ref"?: string,"p_due_on"?: string,"p_is_priority"?: boolean,"p_items": Json,"p_mark_sent"?: boolean,"p_rfq_id": string,"p_site_id"?: string,"p_supplier_ids"?: (string)[] }; Returns: string
+{ Args: { "p_company_id": string,"p_contact_id"?: string,"p_customer_ref"?: string,"p_due_on"?: string,"p_is_priority"?: boolean,"p_items": Json,"p_mark_sent"?: boolean,"p_rfq_id": string,"p_site_id"?: string,"p_supplier_ids"?: (string)[] }; Returns: Json
                            },
 "fx_wanted_currencies":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
@@ -2066,6 +2087,9 @@ isOneToOne: false
                            },
 "lead_time_upper_days":
 { Args: { "p_text": string }; Returns: number
+                           },
+"lookup_labels":
+{ Args: { "p_company_ids"?: (string)[],"p_leg_ids"?: (string)[],"p_order_ids"?: (string)[] }; Returns: Json
                            },
 "merge_brands":
 { Args: { "p_drop": string,"p_keep": string }; Returns: undefined
@@ -2136,11 +2160,24 @@ isOneToOne: false
 "receipt_locked":
 { Args: { "p_bucket": string,"p_name": string }; Returns: boolean
                            },
+"receivables_list":
+{ Args: { "p_company_id"?: string,"p_order_id"?: string,"p_state"?: string,"p_with_value"?: boolean }; Returns: {
+              "balance": number,"company_id": string,"company_name": string,"data_trust": string,"due_on": string,"gross_target": number,"invoice_numbers": (string)[],"is_overdue": boolean,"last_reminded_on": string,"order_id": string,"order_number": number,"overpaid_by": number,"owner_id": string,"payment_state": string,"reminder_count": number,"settled": number
+            }[]
+                           },
+"receivables_summary":
+{ Args: { "p_today"?: string }; Returns: {
+              "gross": number,"not_invoiced": number,"not_invoiced_count": number,"not_yet_due": number,"not_yet_due_count": number,"open_count": number,"outstanding": number,"overdue": number,"overdue_count": number,"reminder_due_count": number,"settled": number,"settled_count": number
+            }[]
+                           },
 "reopen_month":
 { Args: { "p_month": string,"p_note"?: string }; Returns: undefined
                            },
 "resolve_value_basis":
 { Args: { "p_basis": string,"p_order_id": string }; Returns: undefined
+                           },
+"restore_payment":
+{ Args: { "p_payment_id": string }; Returns: undefined
                            },
 "revoke_user_sessions":
 { Args: { "p_user_id": string }; Returns: undefined
@@ -2151,6 +2188,11 @@ isOneToOne: false
 "search_all":
 { Args: { "lim"?: number,"q": string }; Returns: {
               "company_id": string,"id": string,"kind": string,"label": string,"meta": string,"order_id": string,"role": string,"score": number
+            }[]
+                           },
+"search_closed_rfqs":
+{ Args: { "p_limit"?: number,"p_offset"?: number,"p_text": string }; Returns: {
+              "rfq_id": string,"total": number
             }[]
                            },
 "set_fx_rate":
@@ -2202,11 +2244,19 @@ isOneToOne: false
 "supplier_median_delivery_days":
 { Args: { "p_supplier_id": string }; Returns: number
                            },
+"today_inquiry_facts":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "answered_on": string,"answers_to_relay": number,"chase_count": number,"inquiry_id": string,"last_chased_by": string,"last_chased_on": string,"median_reply_days": number,"replied": number,"response_state": string,"rfq_id": string,"sent_on": string,"supplier_id": string,"supplier_name": string
+            }[]
+                           },
 "today_pkt":
 { Args: { "ts"?: string }; Returns: string
                            },
 "tokens_without":
 { Args: { "p_drop": (string)[],"p_tokens": (string)[] }; Returns: (string)[]
+                           },
+"void_payment":
+{ Args: { "p_payment_id": string,"p_reason": string }; Returns: undefined
                            }
           }
           Enums: {

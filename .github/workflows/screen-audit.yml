@@ -1,0 +1,205 @@
+name: Screen audit
+
+# Manual only: Actions > Screen audit > Run workflow, or `gh workflow run screen-audit.yml -f ref=<branch, tag or SHA>`.
+# Measures the real built app at `ref` on the local CI stack with seeded data: every main screen and key state, per role, at each
+# viewport; above-the-fold and full-page screenshots, DOM metrics and axe. One job per role (each with its own stack), then one
+# job merges the parts into audit-results.json and audit-report.md, uploaded as the `screen-audit` artifact.
+# The audit code (e2e/audit, scripts/audit) always comes from the commit this workflow runs from, so any ref can be audited,
+# including one made before the audit existed. Never on push or pull request. See docs/audit/SCREEN_AUDIT.md.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or SHA of the app to audit
+        required: true
+        default: main
+      roles:
+        description: Roles (space separated, from admin sales engineer)
+        required: false
+        default: admin sales engineer
+      viewports:
+        description: Viewports as WIDTHxHEIGHT (space separated)
+        required: false
+        default: 1366x768 1920x1080 375x812 320x640
+      screens:
+        description: Only visits or screens whose id matches this regular expression (empty for all)
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: screen-audit-${{ github.ref }}-${{ inputs.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      roles: ${{ steps.roles.outputs.json }}
+    steps:
+      - id: roles
+        env:
+          ROLES: ${{ inputs.roles }}
+        run: |
+          json=$(python3 -c 'import json, os; r = [x for x in os.environ["ROLES"].split() if x in ("admin", "sales", "engineer")]; print(json.dumps(r or ["admin", "sales", "engineer"]))')
+          echo "roles: $json"
+          echo "json=$json" >> "$GITHUB_OUTPUT"
+
+  audit:
+    name: Audit (${{ matrix.role }})
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        role: ${{ fromJSON(needs.plan.outputs.roles) }}
+    steps:
+      - name: Check out the app to audit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Check out the audit code (this workflow's commit)
+        uses: actions/checkout@v7
+        with:
+          path: .audit-tools
+          sparse-checkout: |
+            e2e/audit
+            scripts/audit
+
+      - name: Use this commit's audit code on the app
+        run: |
+          echo "AUDIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          rm -rf e2e/audit scripts/audit
+          mkdir -p e2e scripts
+          cp -r .audit-tools/e2e/audit e2e/audit
+          cp -r .audit-tools/scripts/audit scripts/audit
+          rm -rf .audit-tools
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pwcache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
+
+      - name: Install Chromium with system dependencies
+        if: steps.pwcache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install system dependencies only (browser restored from cache)
+        if: steps.pwcache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Start local Supabase (db, auth, rest, storage); a fresh start applies migrations and seed
+        run: npx supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime
+
+      - name: Start the admin-users function (the Team screen calls it)
+        run: nohup npx supabase functions serve admin-users --no-verify-jwt > "$RUNNER_TEMP/functions-serve.log" 2>&1 &
+
+      - name: Build the app against the local stack
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY" npm run build
+
+      - name: Wait for the admin-users function
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H 'Origin: http://127.0.0.1:4173' "$API_URL/functions/v1/admin-users" || true)
+            if [ "$code" = "204" ]; then echo "function ready after $i tries"; exit 0; fi
+            sleep 2
+          done
+          echo "::warning::admin-users did not become ready; the Team screen will show its error state"
+          cat "$RUNNER_TEMP/functions-serve.log" || true
+
+      - name: Screen audit (${{ matrix.role }})
+        env:
+          AUDIT_ROLES: ${{ matrix.role }}
+          AUDIT_VIEWPORTS: ${{ inputs.viewports }}
+          AUDIT_SCREENS: ${{ inputs.screens }}
+          AUDIT_REF: ${{ inputs.ref }}
+          AUDIT_DIR: audit-out
+          # The preview server sends the production Content-Security-Policy, as in the E2E suites.
+          E2E_CSP: "1"
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          npx playwright test -c e2e/audit/playwright.audit.config.ts
+
+      - name: Upload this role's part
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: screen-audit-part-${{ matrix.role }}
+          path: audit-out
+          retention-days: 3
+          if-no-files-found: ignore
+
+      - name: Upload the Playwright report (for debugging the audit itself)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: screen-audit-playwright-${{ matrix.role }}
+          path: |
+            playwright-report/audit
+            test-results/audit
+          retention-days: 3
+          if-no-files-found: ignore
+
+      - name: Function log
+        if: always()
+        run: cat "$RUNNER_TEMP/functions-serve.log" || true
+
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop --no-backup
+
+  report:
+    name: Report
+    needs: audit
+    if: ${{ always() && needs.audit.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/audit
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      - name: Download the parts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: screen-audit-part-*
+          merge-multiple: true
+          path: audit-out
+
+      - name: Build the report
+        env:
+          REF: ${{ inputs.ref }}
+        run: |
+          node scripts/audit/report.mjs audit-out --ref "$REF"
+          cat audit-out/audit-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the audit
+        uses: actions/upload-artifact@v7
+        with:
+          name: screen-audit
+          path: audit-out
+          retention-days: 30

@@ -6,7 +6,7 @@ import { openAs } from '../support/stack'
  * Capture and the account) was 7 px too wide, and because the shell is one grid, the top bar and main area took the whole page with them.
  * Checked at 1280, 1366 and 1440 on the main screens, as admin (the widest bar: five destinations and every count).
  */
-const SCREENS = ['/today', '/rfqs', '/orders', '/companies', '/money/receivables', '/money/gst-register', '/reports']
+const SCREENS = ['/today', '/rfqs', '/orders', '/companies', '/money/receivables', '/money/gst-register', '/money/month-end', '/money/reports']
 
 test.describe('shell width', () => {
   test('no page scrolls sideways at 1280, 1366 or 1440, and the top bar stays inside the window', async ({ page }) => {

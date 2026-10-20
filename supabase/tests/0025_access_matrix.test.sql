@@ -165,6 +165,10 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('view',  'v_supplier_activity', '',           'S',    'S',    'S'),    -- s10 (same row)
   ('view',  'v_supplier_stats',    '',           'S',    'S',    'S'),    -- s10 (same row)
   ('function', 'order_receivables',       '',    'X',    'X',    ''),     -- s10 "order_receivables() (definer)"
+  ('function', 'receivables_list',        '',    'X',    'X',    ''),     -- 0074: order_receivables() rows with names, filtered on the server; its access
+  ('function', 'receivables_summary',     '',    'X',    'X',    ''),     -- 0074: the Who-owes-us figures in one row; order_receivables() access
+  ('function', 'today_inquiry_facts',     '',    'X',    'X',    'X'),    -- 0074: Today's enquiry facts in one call, SECURITY INVOKER, all staff
+  ('function', 'lookup_labels',           '',    'X',    'X',    'X'),    -- 0074: names for id lists sent in the body, SECURITY INVOKER, all staff (row security applies)
   ('function', 'my_target_progress',      '',    'X',    'X',    'X'),    -- s10 "my_target_progress() (definer)"
   ('function', 'my_target_progress_at',   '',    '',     '',     ''),     -- A4: test seam granted to nobody
   ('function', 'convert_rfq_to_order',    '',    'X',    'X',    'X'),    -- s10 "RPCs convert_rfq_to_order, create_repeat_order"
@@ -188,6 +192,9 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'supplier_item_memory',    '',    'X',    'X',    'X'),    -- s10 "supplier_item_memory()"
   ('function', 'supplier_item_evidence',  '',    'X',    'X',    'X'),    -- P9 (0066): up to three recent orders at the best tier for the memory card; no price, all staff (SECURITY INVOKER)
   ('function', 'money_exceptions_input',  '',    'X',    '',     ''),     -- P9 (0066): Money > Exceptions input, admin only (NULL for everyone else; SECURITY INVOKER with a role check inside)
+  ('function', 'void_payment',            '',    'X',    '',     ''),     -- 0073: void a payment (soft void, reason required), admin only (SECURITY INVOKER with a role check inside)
+  ('function', 'correct_payment',         '',    'X',    '',     ''),     -- 0073: void plus a corrected new row, admin only
+  ('function', 'restore_payment',         '',    'X',    '',     ''),     -- 0073: Undo of a void, by the admin who voided, within 10 minutes
   ('function', 'customer_price_memory',  '',    'X',    'X',    'X'),    -- R19 (0037): the two price chips of the issue-quotation dialog, all staff
   ('function', 'rank_item_quotes',       '',    'X',    'X',    'X'),    -- A8 (0049): supplier quote ranking, all staff; the selling price and spread inside it are NULL for engineers (own pgTAP test)
   ('function', 'issue_quotation',         '',    'X',    'X',    'X'),    -- s10 "RPCs issue_quotation, issue_purchase_order, stamp_clarification_ask, stamp_supplier_chase"
@@ -197,6 +204,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'stamp_supplier_chase',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_goods_chase',      '',    'X',    'X',    'X'),    -- R16 (0033): goods-chase stamp on a supplier leg, all staff
   ('function', 'search_all',            '',    'X',    'X',    'X'),    -- R12 (0034): palette search, SECURITY INVOKER, all staff; deactivated gets zero rows
+  ('function', 'search_closed_rfqs',    '',    'X',    'X',    'X'),    -- 0070: the RFQ list's Closed search, SECURITY INVOKER, all staff; deactivated gets zero rows
   ('function', 'search_all',            'invoice',     'X', 'X', ''),   -- P02 (0054): an invoice number is found by admin and sales, never by an engineer
   ('function', 'search_all',            'customer_po', 'X', 'X', ''),   -- P02 (0054): the customer PO text is searched and shown to admin and sales only
   ('function', 'search_all',            'order_item',  'X', 'X', 'X'),  -- P02 (0054): order lines, no price
@@ -296,6 +304,8 @@ insert into public.order_engineers (order_id, user_id) values (pg_temp.f('20'), 
 insert into public.invoices (id, order_id, number, net_amount, gst_amount) values
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
+insert into public.payments_in (id, order_id, amount, voided_at, voided_by, void_reason) values   -- 0073: voided just now by the admin
+  (pg_temp.f('c0'), pg_temp.f('20'), 50, now(), 'a0000000-0000-4000-8000-000000000001', 'fixture');
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000010');
 insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values
@@ -419,6 +429,10 @@ from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_sta
 -- positive count); the id arguments are fixtures, so a caller who cannot see them gets P0002 or a zero count.
 insert into probes values
   ('order_receivables', '', 'X', 'select * from public.order_receivables()'),
+  ('receivables_list', '', 'X', 'select * from public.receivables_list()'),   -- 0074
+  ('receivables_summary', '', 'X', 'select * from public.receivables_summary()'),   -- 0074: one row for admin and sales, none for a deactivated user
+  ('today_inquiry_facts', '', 'X', 'select * from public.today_inquiry_facts()'),   -- 0074: @1a is sent and awaiting on the open RFQ @15
+  ('lookup_labels', '', 'X', $q$select 1 where public.lookup_labels(array[@01]) -> 'companies' ? @01::text$q$),   -- 0074: row security hides the name from a deactivated user
   ('my_target_progress', '', 'X', 'select * from public.my_target_progress()'),
   ('my_target_progress_at', '', 'X', 'select * from public.my_target_progress_at(now())'),
   ('float_rfq', '', 'X', $q$select public.float_rfq(@c0, @01, '[{"description":"x"}]'::jsonb)$q$),
@@ -451,6 +465,7 @@ insert into probes values
   ('stamp_supplier_chase', '', 'X', 'select public.stamp_supplier_chase(@19)'),
   ('stamp_goods_chase', '', 'X', 'select public.stamp_goods_chase(@23)'),
   ('search_all', '', 'X', $q$select * from public.search_all('Contact', 5)$q$),
+  ('search_closed_rfqs', '', 'X', $q$select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.search_closed_rfqs('x', 5, 0)) >= 0$q$),   -- 0070: same shape as rank_item_quotes
   ('search_all', 'invoice', 'X', $q$select 1 from public.search_all('INV-M1', 5) where kind = 'invoice'$q$),
   ('search_all', 'customer_po', 'X', $q$select 1 from public.search_all('PO-M1', 5) where kind = 'order' and meta = 'Customer PO PO-M1'$q$),
   ('search_all', 'order_item', 'X', $q$select 1 from public.search_all('Fixture order item', 5) where kind = 'item'$q$),
@@ -481,7 +496,10 @@ insert into probes values
   ('month_end_check_details', '', 'X', 'select 1 from public.month_end_check_details(public.today_pkt()) limit 1'),   -- 0064
   ('month_pnl_drift', '', 'X', 'select 1 where public.month_pnl_drift() is not null'),         -- 0058 (D-MR2)
   ('month_pnl_adjusted', '', 'X', 'select 1 where public.month_pnl_adjusted() is not null'),   -- 0058 (D-MR2)
-  ('revoke_user_sessions', '', 'X', $q$select public.revoke_user_sessions(gen_random_uuid())$q$);   -- A01
+  ('revoke_user_sessions', '', 'X', $q$select public.revoke_user_sessions(gen_random_uuid())$q$),   -- A01
+  ('void_payment', '', 'X', $q$select public.void_payment(@28, 'probe')$q$),   -- 0073
+  ('correct_payment', '', 'X', $q$select public.correct_payment(@28, 100, public.today_pkt(), 'bank', null, 'probe')$q$),   -- 0073
+  ('restore_payment', '', 'X', $q$select public.restore_payment(@c0)$q$);   -- 0073: @c0 was voided by the admin in this transaction
 
 -- ------------------------------------------------------------------ probes: storage buckets
 -- Storage refuses a direct SQL DELETE on storage.objects for every role (its protect_delete guard fires before row

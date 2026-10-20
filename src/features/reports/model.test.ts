@@ -20,7 +20,7 @@ describe('pct', () => {
     expect(pct(2, 3)).toBe(67)
     expect(pct(0, 5)).toBe(0)
     expect(pct(1, 0)).toBeNull()
-    expect(showPct(null)).toBe('n/a')
+    expect(showPct(null)).toBe('not enough data')
     expect(showPct(57)).toBe('57%')
   })
 })
@@ -102,7 +102,7 @@ describe('clarification turnaround', () => {
     expect(daysText(1)).toBe('1 day')
     expect(daysText(3.5)).toBe('3.5 days')
     expect(daysText(0)).toBe('0 days')
-    expect(daysText(null)).toBe('n/a')
+    expect(daysText(null)).toBe('not enough data')
   })
 })
 

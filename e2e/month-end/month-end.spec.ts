@@ -4,11 +4,13 @@ import { createCompany, karachiDay, must, openAs, review, rest, uniqueName } fro
 import { axeViolations } from '../support/axe'
 
 /*
- * M10 (and M05, amended) end to end, against the local CI stack: Money > Month-end for the admin, through the real login form.
+ * M10 (and M05, amended) end to end, against the local CI stack: Money > Month end for the admin, through the real login form.
+ * Since the owner decision of 2026-10-19 Money is two levels deep: the checklist lists only the checks that have items, each
+ * row is the link to its fix, and the six month reports live in Money > Reports (/money/reports/<report>), with no strip of tabs.
  *
  * FE-2 targets asserted here (BUILD_PLAN A6.5):
  *   Jump from a check to the fix        1 tap
- *   Monthly report viewed               1 tap (the tab)
+ *   Monthly report viewed               1 tap (its line in Reports; Reports is 1 tap from the checklist)
  *   CSV export                          1 tap, one file named for the report and month
  *   Close a month (checklist reviewed)  2 taps, nothing typed
  *   Reopen                              2 taps (a reason is optional)
@@ -80,47 +82,92 @@ test.describe('month-end (M10)', () => {
     await addExpense()
     await openAs(page, 'admin', `/money/month-end?month=${STMT.key}`)
     const card = page.getByTestId('check-bank_unticked')
-    await expect(card).toContainText('Bank items not ticked')
+    await expect(card).toContainText('Not matched to the bank statement')
+    await expect(card).toContainText('Match bank statement')
     await expect(card.locator('span.num').first()).not.toHaveText('0')
-    await expect(page.getByRole('navigation', { name: 'Month-end views' }).getByRole('link', { name: /^Checklist/ })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /^Month end/ })).toHaveAttribute('aria-current', 'page')
+    // two levels only: the Money tabs, then the page; no strip of month-end views
+    await expect(page.getByRole('navigation', { name: 'Month-end views' })).toHaveCount(0)
     await startCounting(page)
-    await card.getByRole('link', { name: 'Open bank tick' }).click()
+    await card.getByRole('link').click()
     await expect(page).toHaveURL(new RegExp(`/money/month-end/bank\\?month=${STMT.key}`))
+    await expect(page.getByRole('heading', { name: 'Match bank statement', level: 2 })).toBeVisible()
     expect(await mouse(page)).toBe(1)
   })
 
-  test('every report is one tap on its tab and one tap on Export CSV', async ({ page }) => {
+  test('Match bank statement is always one tap from Month end, for the month, even when its checks are clear', async ({ page }) => {
+    await openAs(page, 'admin', `/money/month-end?month=${OLDER.key}`)
+    await expect(page.getByTestId('checks-summary')).toBeVisible()
+    await startCounting(page)
+    await page.getByTestId('month-bank-link').click()
+    await expect(page).toHaveURL(new RegExp(`/money/month-end/bank\\?month=${OLDER.key}`))
+    await expect(page.getByRole('heading', { name: 'Match bank statement', level: 2 })).toBeVisible()
+    expect(await mouse(page)).toBe(1)
+  })
+
+  test('a clear check is one line, not a card; the reports for the month are one tap away', async ({ page }) => {
+    await openAs(page, 'admin', `/money/month-end?month=${STMT.key}`)
+    await expect(page.getByTestId('checks-summary')).toBeVisible()
+    const clear = page.getByTestId('checks-clear')
+    await expect(clear).toContainText(/checks? (is|are) clear/)
+    await expect(page.getByText('What closing does')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'About closing a month' })).toBeVisible()
+    await startCounting(page)
+    await page.getByTestId('month-reports-link').click()
+    await expect(page).toHaveURL(new RegExp(`/money/reports\\?month=${STMT.key}`))
+    await expect(page.getByRole('list', { name: 'Money reports' })).toBeVisible()
+    expect(await mouse(page)).toBe(1)
+  })
+
+  test('every report is one tap from Reports and one tap on Export CSV', async ({ page }) => {
+    test.setTimeout(120_000) // six reports, each opened, read and exported
     const { order } = await newOrder('Report Payer')
     await addPayment(order.id)
     await addExpense({ description: 'office rent' })
     await addExpense({ category_id: SUPPLIER, amount_pkr: 11800, input_tax_pkr: 1800 })
     await addInvoice(order.id)
-    await openAs(page, 'admin', `/money/month-end?month=${STMT.key}`)
-    const nav = page.getByRole('navigation', { name: 'Month-end views' })
-    const reports: { tab: string; file: string; header: string; shows: RegExp }[] = [
-      { tab: 'P&L', file: `profit-and-loss-${STMT.key}.csv`, header: 'Section', shows: new RegExp(`Result for ${STMT.name}`) },
-      { tab: 'Expenses by category', file: `expenses-by-category-${STMT.key}.csv`, header: 'Month', shows: /Overheads/ },
-      { tab: 'Aging', file: `aging-${STMT.key}.csv`, header: 'As of', shows: /Aging of what customers owe/ },
-      { tab: 'We owe', file: `we-owe-${STMT.key}.csv`, header: 'As of', shows: /What we owe suppliers/ },
-      { tab: 'GST/FBR', file: `gst-and-fbr-${STMT.key}.csv`, header: 'Invoice month', shows: /GST and FBR, by invoice month/ },
-      { tab: 'Team', file: `team-${STMT.key}.csv`, header: 'Month', shows: /Team: net cash credited/ },
+    const reports: { title: string; key: string; file: string; header: string; shows: RegExp }[] = [
+      { title: 'Profit and loss', key: 'pnl', file: `profit-and-loss-${STMT.key}.csv`, header: 'Section', shows: new RegExp(`Result for ${STMT.name}`) },
+      { title: 'Expenses by category', key: 'categories', file: `expenses-by-category-${STMT.key}.csv`, header: 'Month', shows: /Overheads/ },
+      { title: 'Overdue by age', key: 'aging', file: `overdue-by-age-${STMT.key}.csv`, header: 'As of', shows: /What customers owe, by how late/ },
+      { title: 'We owe suppliers', key: 'owe', file: `we-owe-suppliers-${STMT.key}.csv`, header: 'As of', shows: /What we owe suppliers/ },
+      { title: 'GST and FBR', key: 'gst', file: `gst-and-fbr-${STMT.key}.csv`, header: 'Invoice month', shows: /GST and FBR, by invoice month/ },
+      { title: 'Sales by person', key: 'team', file: `sales-by-person-${STMT.key}.csv`, header: 'Month', shows: /Net cash credited to each person/ },
     ]
+    await openAs(page, 'admin', `/money/reports?month=${STMT.key}`) // one sign-in; then each report from the Reports list
     for (const r of reports) {
+      await page.goto(`/money/reports?month=${STMT.key}`)
+      const line = page.getByTestId(`report-${r.key}`)
+      await expect(line.getByRole('button', { name: 'Export CSV' })).toBeEnabled()
       await startCounting(page)
-      await nav.getByRole('link', { name: new RegExp(`^${r.tab.replace('/', '\\/')}`) }).click()
+      await line.getByRole('link', { name: r.title, exact: true }).click()
       await expect(page.getByText(r.shows).first()).toBeVisible()
-      expect(await mouse(page), `${r.tab}: tab is one tap`).toBe(1)
-      await expect(page).toHaveURL(new RegExp(`month=${STMT.key}`))
+      await expect(page.getByRole('heading', { name: r.title, level: 2 })).toBeVisible()
+      expect(await mouse(page), `${r.title}: one tap from Reports`).toBe(1)
+      await expect(page).toHaveURL(new RegExp(`/money/reports/${r.key}\\?month=${STMT.key}`))
       await page.waitForLoadState('networkidle')
       const csv = await exportCsv(page)
-      expect(await mouse(page), `${r.tab}: tab and CSV are two taps in all`).toBe(2)
+      expect(await mouse(page), `${r.title}: the report and its CSV are two taps in all`).toBe(2)
       expect(csv.name).toBe(r.file)
       expect(csv.text.split('\n')[0]).toContain(`"${r.header}"`)
     }
+    // and straight from the Reports list: one tap, the same file
+    await page.goto(`/money/reports?month=${STMT.key}`)
+    await page.waitForLoadState('networkidle')
+    await startCounting(page)
+    const csv = await exportCsv(page, page.getByTestId('report-pnl'))
+    expect(await mouse(page)).toBe(1)
+    expect(csv.name).toBe(`profit-and-loss-${STMT.key}.csv`)
+  })
+
+  test('the old month-end report addresses open the same report under Reports, month kept', async ({ page }) => {
+    await openAs(page, 'admin', `/money/month-end/aging?month=${STMT.key}`)
+    await expect(page).toHaveURL(new RegExp(`/money/reports/aging\\?month=${STMT.key}`))
+    await expect(page.getByRole('heading', { name: 'Overdue by age', level: 2 })).toBeVisible()
   })
 
   test('the P&L shows the payment with no net split apart, and its CSV carries Gross, GST and Net columns', async ({ page }) => {
-    await openAs(page, 'admin', `/money/month-end/pnl?month=${STMT.key}`)
+    await openAs(page, 'admin', `/money/reports/pnl?month=${STMT.key}`)
     await expect(page.getByText('less payments not yet split')).toBeVisible()
     await expect(page.getByText('not revenue')).toBeVisible()
     await expect(page.getByRole('region', { name: 'Not in P&L' })).toBeVisible()
@@ -135,7 +182,7 @@ test.describe('month-end (M10)', () => {
     const { order } = await newOrder('Gst Payer')
     await addInvoice(order.id)
     await addExpense({ category_id: SUPPLIER, amount_pkr: 11800, input_tax_pkr: 1800 })
-    await openAs(page, 'admin', `/money/month-end/gst?month=${STMT.key}`)
+    await openAs(page, 'admin', `/money/reports/gst?month=${STMT.key}`)
     await expect(page.getByText('Output GST and input tax, side by side')).toBeVisible()
     const csv = await exportCsv(page)
     expect(csv.text.split('\n')[0]).toContain('"Input tax paid"')
@@ -143,21 +190,21 @@ test.describe('month-end (M10)', () => {
   })
 
   for (const role of ['sales', 'engineer'] as const) {
-    test(`${role}: no Month-end page, no month-end request, no rows from the database${role === 'sales' ? '; the GST register is still readable' : ''}`, async ({ browser }) => {
+    test(`${role}: no Month end page, no month-end request, no rows from the database${role === 'sales' ? '; Invoices & GST is still readable' : ''}`, async ({ browser }) => {
       const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
       const seen: string[] = []
       page.on('request', r => {
         if (/\/rest\/v1\/(closed_months|v_month_pnl|v_month_expense_category|v_month_team|payments_in|expenses)|\/rpc\/(month_end_status|aging_as_of|payables_as_of|close_month|close_months_through|reopen_month)/.test(r.url())) seen.push(r.url())
       })
-      // one sign-in, then one visit to a Month-end address (every Month-end route is behind the same admin check)
-      await openAs(page, role, `/money/month-end/pnl?month=${STMT.key}`)
+      // one sign-in, then one visit to a month report (every month-end view and money report is behind the same admin check)
+      await openAs(page, role, `/money/reports/pnl?month=${STMT.key}`)
       await expect(page.getByRole('heading', { name: /is for admins|not available to your role/ })).toBeVisible()
       expect(seen, `${role} must not fetch month-end data`).toEqual([])
       if (role === 'sales') {
         // already signed in: just navigate
         await page.goto('/money/gst-register')
         await expect(page.getByRole('navigation', { name: 'Money views' })).toBeVisible()
-        await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /Month-end/ })).toHaveCount(0)
+        await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /Month end/ })).toHaveCount(0)
         await expect(page.getByRole('button', { name: 'Export CSV' })).toHaveCount(0)
       }
       await page.close()
@@ -179,24 +226,36 @@ test.describe('month-end (M10)', () => {
     await page.waitForLoadState('networkidle')
     await review(page, 'm10-checklist-1440')
     expect(await axeViolations(page)).toEqual([])
+    await page.goto(`/money/reports?month=${STMT.key}`)
+    await page.waitForLoadState('networkidle')
+    await review(page, 'm10-reports-1440')
+    expect(await axeViolations(page), 'reports').toEqual([])
     for (const path of ['pnl', 'categories', 'aging', 'owe', 'gst', 'team']) {
-      await page.goto(`/money/month-end/${path}?month=${STMT.key}`)
+      await page.goto(`/money/reports/${path}?month=${STMT.key}`)
       await page.waitForLoadState('networkidle')
       await review(page, `m10-report-${path}-1440`)
       expect(await axeViolations(page), path).toEqual([])
     }
     await page.setViewportSize({ width: 375, height: 812 })
     await page.goto(`/money/month-end?month=${STMT.key}`)
-    await expect(page.getByRole('navigation', { name: 'Checklist' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Checklist' })).toBeVisible()
     await page.waitForLoadState('networkidle')
     await review(page, 'm10-checklist-375')
     expect(await axeViolations(page)).toEqual([])
-    await page.goto(`/money/month-end/pnl?month=${STMT.key}`)
+    // the four Money tabs wrap on a phone: nothing scrolls sideways and every tab is on screen
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
+    for (const t of await page.getByRole('navigation', { name: 'Money views' }).getByRole('link').all()) await expect(t).toBeInViewport()
+    await page.goto(`/money/reports?month=${STMT.key}`)
+    await page.waitForLoadState('networkidle')
+    await review(page, 'm10-reports-375')
+    expect(await axeViolations(page), 'reports at 375').toEqual([])
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
+    await page.goto(`/money/reports/pnl?month=${STMT.key}`)
     await page.waitForLoadState('networkidle')
     await review(page, 'm10-pnl-375')
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
     for (const path of ['categories', 'aging', 'owe', 'gst', 'team']) {
-      await page.goto(`/money/month-end/${path}?month=${STMT.key}`)
+      await page.goto(`/money/reports/${path}?month=${STMT.key}`)
       await page.waitForLoadState('networkidle')
       await review(page, `m10-report-${path}-375`)
     }

@@ -146,7 +146,9 @@ test.describe('copy for the customer (FE-2: 1 tap)', () => {
     // Asked: the chip shows how many times, the days since the last ask, and the group offers the chase text.
     await expect(panel(page).getByText('Asked ×1')).toBeVisible()
     await expect(panel(page).getByText(/last asked today/)).toBeVisible()
-    await panel(page).getByRole('radio', { name: 'Email' }).click()
+    // The message itself waits under "Show the whole message"; Email is a link, and the choice is remembered.
+    await panel(page).getByRole('button', { name: 'Show the whole message' }).click()
+    await panel(page).getByRole('button', { name: 'Email instead' }).click()
     await expect(panel(page).getByRole('button', { name: 'Copy subject' })).toBeVisible()
     await expect(panel(page).getByText(/^RFQ #.*your confirmation needed by/)).toBeVisible()
     await resetClipboard(page)

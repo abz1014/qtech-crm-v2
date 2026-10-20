@@ -233,7 +233,7 @@ describe('collision line (O-3)', () => {
 describe('rule: relay answers', () => {
   it('names the count and the supplier', () => {
     const [e] = ruleRelayAnswers(ctx({ rfqs: [rfq()], inquiries: [inq({ answersToRelay: 3, supplierName: 'Beli Valves' })] }))
-    expect(e).toMatchObject({ rule: 'relay_answers', title: 'Answer received on 3 questions: relay to Beli Valves', subjectId: 'i1', inquiryId: 'i1' })
+    expect(e).toMatchObject({ rule: 'relay_answers', title: 'Answer received on 3 questions: send it to Beli Valves', subjectId: 'i1', inquiryId: 'i1' })
     expect(ruleRelayAnswers(ctx({ rfqs: [rfq()], inquiries: [inq({ answersToRelay: 1 })] }))[0].title).toContain('1 question:')
   })
   it('is not raised with nothing to relay or for another owner', () => {
@@ -245,7 +245,7 @@ describe('rule: relay answers', () => {
 describe('rule: not floated', () => {
   it('is raised for an open RFQ nobody has been asked about', () => {
     const [e] = ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'not_floated' })] }))
-    expect(e).toMatchObject({ rule: 'not_floated', title: 'Not floated to suppliers yet', ref: 'RFQ-0177' })
+    expect(e).toMatchObject({ rule: 'not_floated', title: 'Not sent to suppliers yet', ref: 'RFQ-0177' })
   })
   it('is not raised once floated, or once the bid is out', () => {
     expect(ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'floated_awaiting' })] }))).toEqual([])
@@ -317,16 +317,16 @@ describe('rule: bid due', () => {
       ctx({ rfqs: [rfq({ id: 'a', number: 1, dueOn: '2026-11-27' }), rfq({ id: 'b', number: 2, dueOn: '2026-11-25' }), rfq({ id: 'c', number: 3, dueOn: '2026-12-02' }), rfq({ id: 'd', number: 4, dueOn: '2026-12-03' })] }),
     )
     expect(rows.map(r => r.subjectId)).toEqual(['a', 'b', 'c'])
-    expect(rows.map(r => r.title)).toEqual(['Bid due today', 'Bid 2 days overdue', 'Bid due Wednesday 2 December'])
+    expect(rows.map(r => r.title)).toEqual(['Quotation due today', 'Quotation 2 days overdue', 'Quotation due Wednesday 2 December'])
     expect(rows[0].badge).toEqual({ text: 'today', tone: 'danger' })
   })
   it('names the bid time when the RFQ has one (rfqs.due_time)', () => {
-    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: TODAY, dueTime: '17:00:00' })] }))[0].title).toBe('Bid due today, 17:00')
-    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-11-28', dueTime: '12:00:00' })] }))[0].title).toBe('Bid due tomorrow, 12:00')
-    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-12-02', dueTime: '09:30:00' })] }))[0].title).toBe('Bid due Wednesday 2 December, 09:30')
+    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: TODAY, dueTime: '17:00:00' })] }))[0].title).toBe('Quotation due today, 17:00')
+    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-11-28', dueTime: '12:00:00' })] }))[0].title).toBe('Quotation due tomorrow, 12:00')
+    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-12-02', dueTime: '09:30:00' })] }))[0].title).toBe('Quotation due Wednesday 2 December, 09:30')
   })
   it('words tomorrow, and skips RFQs already bid, without a date or owned by someone else', () => {
-    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-11-28' })] }))[0].title).toBe('Bid due tomorrow')
+    expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-11-28' })] }))[0].title).toBe('Quotation due tomorrow')
     expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-11-28', bidState: 'bid_sent' })] }))).toEqual([])
     expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: null })] }))).toEqual([])
     expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-11-28', ownerId: OTHER })] }))).toEqual([])
@@ -337,12 +337,12 @@ describe('rule: decision overdue', () => {
   it('is raised 10 working days after the bid went out', () => {
     // Fri 13 Nov + 10 working days = Fri 27 Nov
     const [e] = ruleDecisionOverdue(ctx({ rfqs: [rfq({ bidState: 'bid_sent', quotedOn: '2026-11-13' })] }))
-    expect(e).toMatchObject({ rule: 'decision_overdue', title: 'No decision yet: bid sent 14 days ago', group: 'now' })
+    expect(e).toMatchObject({ rule: 'decision_overdue', title: 'No decision yet: quotation sent 14 days ago', group: 'now' })
     expect(ruleDecisionOverdue(ctx({ rfqs: [rfq({ bidState: 'bid_sent', quotedOn: '2026-11-16' })] }))).toEqual([])
   })
   it('is raised when the quotation expired', () => {
     const [e] = ruleDecisionOverdue(ctx({ rfqs: [rfq({ bidState: 'quotation_expired', quotedOn: '2026-10-01', quotationValidUntil: '2026-11-20' })] }))
-    expect(e.title).toBe('Quotation expired: re-confirm prices before re-issuing')
+    expect(e.title).toBe('Quotation expired: check prices before you revise it')
     expect(e.badge.text).toBe('7d late')
   })
   it('is not raised for a bid still to send', () => {
@@ -470,6 +470,9 @@ describe('rule: close month (admin only, 1st to 10th)', () => {
   })
   it('is for the previous month only', () => {
     expect(ruleCloseMonth(ctx({ today: '2026-11-05', monthEnd: { ...me, month: '2026-09-01' } }, 'admin'))).toEqual([])
+  })
+  it('opens the month-end checklist for that month, not the Money landing (audit A5)', () => {
+    expect(ruleCloseMonth(ctx({ today: '2026-11-05', monthEnd: me }, 'admin'))[0].href).toBe('/money/month-end?month=2026-10')
   })
 })
 

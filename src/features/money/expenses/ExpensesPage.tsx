@@ -9,16 +9,17 @@ import { ExpensesTab } from '@/features/money/expenses/ExpensesTab'
 import { useLegOptions, useOrderOptions } from '@/features/money/expenses/hooks'
 
 /**
- * Money › Expenses: the frame, the two ways to add, and the list.
+ * Money › Expenses: the frame, ONE way to add ("Add expenses": the burst sheet, which is just as quick for a single row; owner
+ * decision 2026-10-19), and the list.
  *
  * `/money/expenses?add=1[&order=<id>[&leg=<id>]][&amount=384497][&note=Still owed on leg A]` opens the one Add expense
  * dialog with the context pre-filled (A3), so an order or a leg can offer "Add expense" as a plain link, and the screen
  * behind it is the Expenses list.
  */
 export function ExpensesPage() {
-  const [burst, setBurst] = useState(false)
-  const [single, setSingle] = useState(false)
   const [params, setParams] = useSearchParams()
+  // /money/expenses?burst=1 opens the sheet straight away (the Month end empty state links here).
+  const [burst, setBurst] = useState(() => params.get('burst') !== null)
   const linked = params.get('add') !== null
   const orderId = params.get('order')
   const legId = params.get('leg')
@@ -52,19 +53,23 @@ export function ExpensesPage() {
     <MoneyFrame
       active="expenses"
       actions={
-        <>
-          <Button size="sm" icon={Plus} onClick={() => setSingle(true)}>
-            Add expense
-          </Button>
-          <Button variant="primary" size="sm" icon={Plus} onClick={() => setBurst(true)}>
-            Add expenses
-          </Button>
-        </>
+        <Button variant="primary" icon={Plus} onClick={() => setBurst(true)}>
+          Add expenses
+        </Button>
       }
     >
       <ExpensesTab />
-      <BurstSheet open={burst} onOpenChange={setBurst} />
-      <AddExpenseDialog open={single} onOpenChange={setSingle} />
+      <BurstSheet
+        open={burst}
+        onOpenChange={o => {
+          setBurst(o)
+          if (!o && params.get('burst') !== null) {
+            const next = new URLSearchParams(params)
+            next.delete('burst')
+            setParams(next, { replace: true })
+          }
+        }}
+      />
       {linkReady ? <AddExpenseDialog open context={context} onOpenChange={o => !o && closeLinked()} /> : null}
     </MoneyFrame>
   )

@@ -82,7 +82,7 @@ export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompa
             type="text"
             role="combobox"
             aria-expanded={showList}
-            aria-controls={listId}
+            aria-controls={showList ? listId : undefined}
             aria-autocomplete="list"
             aria-activedescendant={showList && rows > 0 ? optionId(activeIndex) : undefined}
             autoComplete="off"

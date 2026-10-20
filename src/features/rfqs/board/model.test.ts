@@ -2,17 +2,19 @@ import { describe, expect, it } from 'vitest'
 import {
   applyOwner,
   applyQuery,
+  applyStep,
+  askedText,
   failureLine,
-  applyState,
-  clarificationDetail,
   compareBoard,
   defaultOwner,
   dueText,
-  filterOf,
+  isBoardShow,
+  nextStepOf,
+  nextStepText,
   pageSummary,
   sortBoard,
-  sourcingDetail,
-  stateCounts,
+  stepCounts,
+  type BidState,
   type BoardRow,
   type SourcingState,
 } from '@/features/rfqs/board/model'
@@ -25,6 +27,8 @@ function row(over: Partial<BoardRow> = {}): BoardRow {
     companyId: 'c',
     companyName: 'Acme',
     customerRef: null,
+    firstItem: null,
+    quotedOn: null,
     ownerId: 'u1',
     ownerName: 'Ayesha Rana',
     receivedOn: '2026-11-01',
@@ -88,18 +92,30 @@ describe('filters', () => {
     expect(applyOwner(rows, 'all', 'me')).toHaveLength(5)
   })
 
-  it('groups awaiting and partly covered as "out for offers"', () => {
-    expect(applyState(rows, 'out').map(r => r.rfqId)).toEqual(['2', '3'])
-    expect(applyState(rows, 'no-offer').map(r => r.rfqId)).toEqual(['5'])
-    expect(applyState(rows, 'all')).toHaveLength(5)
+  it('groups by the next step: awaiting and partly priced wait for prices, nobody asked or nobody able needs suppliers', () => {
+    expect(applyStep(rows, 'prices').map(r => r.rfqId)).toEqual(['2', '3'])
+    expect(applyStep(rows, 'suppliers').map(r => r.rfqId)).toEqual(['1', '5'])
+    expect(applyStep(rows, 'ready').map(r => r.rfqId)).toEqual(['4'])
+    expect(applyStep(rows, 'all')).toHaveLength(5)
   })
 
-  it('every sourcing state lands in exactly one filter, so the counts add up', () => {
+  it('a sent quotation is "Quotation sent" whatever the sourcing, an expired one too', () => {
+    expect(nextStepOf(row({ sourcingState: 'partly_covered', bidState: 'bid_sent' }))).toBe('sent')
+    expect(nextStepOf(row({ sourcingState: 'not_floated', bidState: 'quotation_expired' }))).toBe('sent')
+  })
+
+  it('every open RFQ lands in exactly one next step, so the counts add up', () => {
     const states: SourcingState[] = ['not_floated', 'floated_awaiting', 'partly_covered', 'covered', 'no_offer_anywhere']
-    for (const s of states) expect(filterOf(s)).toBeTruthy()
-    const c = stateCounts(rows)
-    expect(c).toEqual({ all: 5, 'not-floated': 1, out: 2, covered: 1, 'no-offer': 1 })
-    expect(c['not-floated'] + c.out + c.covered + c['no-offer']).toBe(c.all)
+    const bids: BidState[] = ['to_bid', 'bid_sent', 'quotation_expired']
+    for (const s of states) for (const b of bids) expect(['suppliers', 'prices', 'ready', 'sent']).toContain(nextStepOf({ sourcingState: s, bidState: b }))
+    const c = stepCounts([...rows, row({ rfqId: '6', bidState: 'bid_sent' })])
+    expect(c).toEqual({ all: 6, suppliers: 2, prices: 2, ready: 1, sent: 1 })
+    expect(c.suppliers + c.prices + c.ready + c.sent).toBe(c.all)
+  })
+
+  it('reads the address: the old ?state values are not a filter any more', () => {
+    for (const v of ['all', 'suppliers', 'prices', 'ready', 'sent', 'closed']) expect(isBoardShow(v)).toBe(true)
+    for (const v of ['not-floated', 'out', 'covered', null]) expect(isBoardShow(v)).toBe(false)
   })
 
   it('Mine is the default for sales only', () => {
@@ -124,25 +140,35 @@ describe('due text', () => {
   })
 })
 
-describe('chip details', () => {
-  it('shows how many items have a price once something is floated', () => {
-    expect(sourcingDetail(row({ sourcingState: 'partly_covered', itemsQuoted: 2, itemsTotal: 5 }))).toBe('2 of 5')
-    expect(sourcingDetail(row({ sourcingState: 'not_floated' }))).toBeUndefined()
-    expect(sourcingDetail(row({ sourcingState: 'no_offer_anywhere' }))).toBeUndefined()
+describe('next step words', () => {
+  it('says what is behind the step in plain words', () => {
+    expect(nextStepText(row({ sourcingState: 'not_floated' }))).toEqual({ step: 'suppliers', label: 'Needs suppliers', detail: 'Not sent to suppliers yet', tone: 'warning' })
+    expect(nextStepText(row({ sourcingState: 'no_offer_anywhere' })).detail).toBe('Every supplier asked said no')
+    expect(nextStepText(row({ sourcingState: 'floated_awaiting', floated: 3 })).detail).toBe('Asked 3 suppliers')
+    expect(nextStepText(row({ sourcingState: 'partly_covered', itemsQuoted: 2, itemsTotal: 5 })).detail).toBe('2 of 5 items priced')
+    expect(nextStepText(row({ sourcingState: 'covered', itemsTotal: 4 }))).toMatchObject({ label: 'Ready to quote', detail: 'All 4 items have a price', tone: 'success' })
+    expect(nextStepText(row({ sourcingState: 'covered', itemsTotal: 1 })).detail).toBe('The item has a price')
+    expect(nextStepText(row({ bidState: 'bid_sent', quotedOn: '2026-11-26' }))).toMatchObject({ label: 'Quotation sent', detail: 'Sent Thu 26 Nov' })
+    expect(nextStepText(row({ bidState: 'quotation_expired' }))).toMatchObject({ detail: 'The quotation has expired', tone: 'warning' })
   })
-  it('counts questions, with days for the ones the customer has had', () => {
-    expect(clarificationDetail(row({ clarificationState: 'to_ask', toAsk: 2 }))).toBe('2')
-    expect(clarificationDetail(row({ clarificationState: 'waiting_on_customer', waiting: 2, waitingDays: 6 }))).toBe('2 · 6d')
-    expect(clarificationDetail(row({ clarificationState: 'answers_to_relay', toRelay: 1 }))).toBe('1')
-    expect(clarificationDetail(row())).toBeUndefined()
+  it('adds the customer questions to the line when there are any', () => {
+    expect(nextStepText(row({ sourcingState: 'partly_covered', itemsQuoted: 1, itemsTotal: 2, clarificationState: 'waiting_on_customer', waiting: 2 })).detail).toBe(
+      '1 of 2 items priced · waiting on the customer for 2 answers',
+    )
+    expect(nextStepText(row({ clarificationState: 'to_ask', toAsk: 1 })).detail).toBe('Not sent to suppliers yet · 1 question to ask the customer')
+    expect(nextStepText(row({ sourcingState: 'covered', clarificationState: 'answers_to_relay', toRelay: 1 })).detail).toBe('All 4 items have a price · 1 answer to pass on to suppliers')
+  })
+  it('names what was asked for, shortened, with how many more', () => {
+    expect(askedText(row({ firstItem: 'Cerabar PMC71 pressure transmitter', itemsTotal: 4 }))).toBe('Cerabar PMC71 pressure transmitter + 3 more')
+    expect(askedText(row({ firstItem: 'Gauge', itemsTotal: 1 }))).toBe('Gauge')
+    expect(askedText(row({ firstItem: `A ${'very long words '.repeat(10)}`, itemsTotal: 1 }), 20)).toBe('A very long words v…')
+    expect(askedText(row({ firstItem: null, itemsTotal: 3 }))).toBe('3 items')
+    expect(askedText(row({ firstItem: null, itemsTotal: 0 }))).toBe('No items yet')
   })
 })
 
 describe('status words come from the U05 registry', () => {
-  it('every value the board can show resolves, so none renders as an unstyled chip', () => {
-    for (const v of ['not_floated', 'floated_awaiting', 'partly_covered', 'covered', 'no_offer_anywhere']) expect(() => resolveStatus('sourcing', v)).not.toThrow()
-    for (const v of ['to_ask', 'waiting_on_customer', 'answers_to_relay']) expect(() => resolveStatus('clarification', v)).not.toThrow()
-    for (const v of ['to_bid', 'bid_sent', 'quotation_expired']) expect(() => resolveStatus('bid', v)).not.toThrow()
+  it('the closed list still shows the outcome chip', () => {
     for (const v of ['open', 'won', 'closed']) expect(() => resolveStatus('rfq-outcome', v)).not.toThrow()
   })
 })
@@ -156,12 +182,13 @@ describe('pager text', () => {
 })
 
 describe('filter box and failure line', () => {
-  const rows = [row({ number: 177, companyName: 'Indus Textile Mills', customerRef: 'ENQ-2211' }), row({ number: 178, companyName: 'Punjab Cement' })]
-  it('needs every word, matching number, customer or customer ref', () => {
+  const rows = [row({ number: 177, companyName: 'Indus Textile Mills', customerRef: 'ENQ-2211', firstItem: 'Belimo damper actuator' }), row({ number: 178, companyName: 'Punjab Cement' })]
+  it('needs every word, matching number, customer, customer ref or what was asked', () => {
     expect(applyQuery(rows, '').length).toBe(2)
     expect(applyQuery(rows, 'rfq-0177')).toHaveLength(1)
     expect(applyQuery(rows, '178')).toHaveLength(1)
     expect(applyQuery(rows, 'indus enq')).toHaveLength(1)
+    expect(applyQuery(rows, 'belimo')).toHaveLength(1)
     expect(applyQuery(rows, 'indus cement')).toHaveLength(0)
   })
   it('reads like the drawing, with a stable six-digit reference', () => {

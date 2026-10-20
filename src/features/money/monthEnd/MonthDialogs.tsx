@@ -103,7 +103,7 @@ export function CloseMonthDialog({ open, onOpenChange, ctx }: { open: boolean; o
         <div className="flex items-start gap-3 rounded bg-sunken px-4 py-3 text-sm">
           <Icon icon={Info} className="mt-[2px] text-fg-muted" />
           <p>
-            <span className="font-medium text-fg">These are warnings, not blockers.</span> Closing freezes payments, expenses and invoices dated in {name}. Bank ticks and the TCS and FBR stamps stay
+            <span className="font-medium text-fg">These are warnings, not blockers.</span> Closing freezes payments, expenses and invoices dated in {name}. Bank matching and the TCS and FBR stamps stay
             editable. An admin can reopen {name} from the closed-months list.
           </p>
         </div>
