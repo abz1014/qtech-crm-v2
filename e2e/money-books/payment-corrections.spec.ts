@@ -42,7 +42,7 @@ test.describe('payment corrections (0073)', () => {
     await expect(page.getByTestId('order-balance')).toHaveText('118,000')
     await expect.poll(() => balance(order.id)).toBe(118000)
     await expect(panel.getByRole('button', { name: 'Voided (1)' })).toBeVisible()
-    await page.getByRole('button', { name: 'Undo' }).first().click()
+    await page.getByRole('status').filter({ hasText: 'Voided payment' }).getByRole('button', { name: /Undo/ }).click()
     await expect.poll(() => balance(order.id)).toBe(68000)
     await expect(page.getByTestId('order-balance')).toHaveText('68,000')
   })

@@ -1,4 +1,5 @@
 import { OrderPaymentLines } from '@/features/money/payments/PaymentCorrections'
+import { useOrderPayments } from '@/features/money/payments/correctionHooks'
 
 /*
  * The money panels of the order page (g2-order-detail.html): "Margin" (admin only, M04), and under it "Invoices and payments" (admin
@@ -11,6 +12,9 @@ import { OrderPaymentLines } from '@/features/money/payments/PaymentCorrections'
 export { MarginPanel } from '@/features/money/costs/MarginPanel'
 
 export function InvoicesPanel({ orderId, orderNumber }: { orderId: string; orderNumber: number }) {
+  // Only once a payment is recorded: before that there is nothing to put right, and the strip already says "Nothing received yet".
+  const q = useOrderPayments(orderId)
+  if (!q.data?.length) return null
   return (
     <section id="payments" aria-label="Invoices and payments" data-slot="invoices-payments" className="rounded border bg-surface">
       <div className="flex items-center gap-2 border-b px-4 py-3 md:px-5">
