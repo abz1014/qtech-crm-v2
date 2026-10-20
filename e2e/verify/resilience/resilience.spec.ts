@@ -44,7 +44,6 @@ const storedToken = (page: Page) =>
 
 test.describe('a save that cannot reach the server', () => {
   test('Record payment offline: the plain sentence, the amount kept, then Try again saves exactly one payment', async ({ browser }, info) => {
-    test.fail(true, 'BUG-RES-1: offline, the save hangs on "Saving" with the dialog disabled (the mutation is paused while offline since ux/phone-platform), instead of the plain sentence and Try again (U07)')
     // 1 x 61,234.45 at 18%: GST 11,022.20 -> 11,022; gross 72,256.45.
     const seed = await order({ lines: [{ description: 'Vortex flow meter DN100', qty: 1, price: 61234.45 }], owner: 'sales' })
     const admin = await signedIn(browser, info, 'admin')
@@ -98,7 +97,6 @@ test.describe('a save that cannot reach the server', () => {
   })
 
   test('Add expense offline: the note and amount stay, and back online one expense is saved', async ({ browser }, info) => {
-    test.fail(true, 'BUG-RES-1: offline, the save hangs on "Saving" with the dialog disabled (the mutation is paused while offline since ux/phone-platform), instead of the plain sentence and Try again (U07)')
     const amt = 100000 + Math.floor(Math.random() * 800000) / 100
     const admin = await signedIn(browser, info, 'admin')
     const page = await open(admin, R.expense.path)
