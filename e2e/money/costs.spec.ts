@@ -4,7 +4,8 @@ import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../su
 import { axeViolations } from '../support/axe'
 
 /*
- * M04 and M07 end to end, against the local CI stack: the Margin panel on the order page, Money > Margins and Money > Exceptions,
+ * M04 and M07 end to end, against the local CI stack: the Margin panel on the order page, Money > Month end > Margins and Things to
+ * check (the old Exceptions; both are reached from the Month end checklist since the owner decision of 2026-10-19),
  * as the fixture users through the real login form, with data set up through the REST API as the admin.
  *
  * Asserted: the supplier-price estimate (supplier price x today's rate) and that it never overwrites an expected cost that is
@@ -156,12 +157,12 @@ test.describe('Money > Margins (admin)', () => {
     await expect(d).toContainText('1,000,000')
     await expect(d).toContainText('650,000')
     await expect(d).toContainText('300,000') // margin 1,000,000 - 700,000
-    await expect(d).toContainText('Complete')
+    await expect(d).toContainText('Costs complete')
     const p = rowOf(prov)
-    await expect(p).toContainText('Provisional')
+    await expect(p).toContainText('Margin not final')
     await expect(p.locator('[data-provisional]')).toHaveCount(1) // the dashed underline on the margin
     const u = rowOf(unknown)
-    await expect(u).toContainText('Basis unknown')
+    await expect(u).toContainText('Is GST included?')
     await expect(u).not.toContainText('150,000') // no margin is calculated
 
     // The footer adds up exactly the complete orders (read from the views, so other orders in the database count too).
@@ -171,22 +172,24 @@ test.describe('Money > Margins (admin)', () => {
     const totals = page.getByTestId('margin-totals')
     await expect(totals).toContainText(`${live.length} ${live.length === 1 ? 'order' : 'orders'}`)
     expect(digits((await totals.innerText()).split('\n').find(l => /^\s*[\d,]+\s*$/.test(l)) ?? '0')).toBe(live.reduce((a, m) => a + Number(m.net_sale), 0))
-    await expect(page.getByText(/provisional margins? (is|are) shown so you can see the trend/)).toBeVisible()
-    await expect(page.getByText(/unknown price basis (is|are) left out until someone resolves/)).toBeVisible()
+    await expect(page.getByTestId('margin-left-out')).toContainText(/\d+ with margin not final/)
+    await expect(page.getByTestId('margin-left-out')).toContainText(/\d+ where nobody has said whether GST is included/)
+    // the rule behind the totals is one (i), not a paragraph under the table
+    await expect(page.getByRole('button', { name: 'About margins' })).toBeVisible()
     expect(await page.locator('main').innerText()).not.toMatch(/%|score|rating/i)
     await shot(page, 'm04-money-margins-1440')
   })
 })
 
-test.describe('Money > Exceptions (admin)', () => {
+test.describe('Money > Month end > Things to check (admin)', () => {
   test('lists what the reconciliation finds, links the order, and exports CSV', async ({ page }) => {
     const o = await seedOrder({ lines: [{ qty: 1, net: 10000, supplierPrice: null }] }) // gross 11,800
     await post('payments_in', { order_id: o.id, amount: 15000, received_on: today() })
     const unknown = await seedOrder({ flags: ['value_basis_unknown'], lines: [{ qty: 1, net: 1000, supplierPrice: null }] })
 
     await openAs(page, 'admin', '/money/exceptions')
-    await expect(page.getByRole('heading', { name: 'Exceptions' })).toBeVisible()
-    const list = page.getByRole('list', { name: 'Exceptions' })
+    await expect(page.getByRole('heading', { name: 'Things to check', level: 2 })).toBeVisible()
+    const list = page.getByRole('list', { name: 'Things to check' })
     const over = list.getByRole('listitem').filter({ hasText: ordRef(o.number) }).filter({ hasText: 'Payments exceed total' })
     await expect(over).toContainText('Customer payments (15,000) exceed the order')
     await expect(over).toContainText('Critical.')
@@ -248,7 +251,7 @@ test.describe('who sees money', () => {
 
 for (const width of [1440, 375]) {
   test.describe(`axe at ${width}`, () => {
-    test('the Margin panel, Money > Margins and Money > Exceptions have no violations', async ({ page }) => {
+    test('the Margin panel, Margins and Things to check have no violations', async ({ page }) => {
       await setEurRate()
       const o = await seedOrder()
       await expense(o.id, 4000)
@@ -264,8 +267,8 @@ for (const width of [1440, 375]) {
       expect(await axeViolations(page), 'margins').toEqual([])
       await shot(page, `m04-money-margins-${width}`)
       await page.goto('/money/exceptions')
-      await expect(page.getByRole('heading', { name: 'Exceptions' })).toBeVisible()
-      await expect(page.getByRole('list', { name: 'Exceptions' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Things to check', level: 2 })).toBeVisible()
+      await expect(page.getByRole('list', { name: 'Things to check' })).toBeVisible()
       expect(await axeViolations(page), 'exceptions').toEqual([])
       await shot(page, `m07-money-exceptions-${width}`)
     })
