@@ -28,6 +28,7 @@ import {
 } from '@/features/capture/model'
 import { CapNote, CaptureArea, OrderPicker, QuestionPick, RfqPicker, SavedPanel, Section, SplitRows, Tiles } from '@/features/capture/CaptureParts'
 import { useCapture } from '@/app/capture/useCapture'
+import { useBackToClose } from '@/lib/useBackToClose'
 import { useCompanyMatches, useRfqInquiries } from '@/features/rfqs/hooks'
 import {
   addClarifications,
@@ -150,6 +151,9 @@ export default function CaptureSheet() {
 
   // ---- saving
   const [busy, setBusy] = useState(false)
+  useBackToClose(true, () => {
+    if (!busy) cap.close()
+  })
   const [error, setError] = useState(false)
   const [result, setResult] = useState<Result | null>(null)
   const inFlight = useRef(false)

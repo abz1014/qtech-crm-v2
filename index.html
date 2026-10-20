@@ -2,7 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      viewport-fit=cover: the page may draw under the iPhone home bar and notch, so env(safe-area-inset-*) report real
+      values and the bottom tab bar, sheet footers and the burst sheet pad themselves (without it the insets are 0).
+      interactive-widget=resizes-content: on Android Chrome the on-screen keyboard shrinks the layout viewport (and
+      100dvh), so a sheet's Save bar moves above the keyboard instead of under it. iOS ignores it.
+      No maximum-scale: pinch zoom stays.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>Q-Tech CRM</title>
     <meta name="theme-color" content="#1a7b46" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -13,9 +20,23 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Q-Tech" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!--
+      First paint before the script runs (performance audit 3): the loading screen inside #root is plain HTML and CSS
+      (the Content-Security-Policy allows inline styles, not inline scripts). React replaces it on its first render.
+      Its colours are the --bg-canvas and --fg-muted tokens. The side padding keeps landscape content clear of the notch,
+      which viewport-fit=cover would otherwise let it slide under (0 everywhere else).
+    -->
+    <style>
+      body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+      .boot { box-sizing: border-box; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; background: #fafafb; color: #5a5a63; font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+      .boot-row { display: flex; align-items: center; gap: 8px; }
+      .boot-spin { width: 14px; height: 14px; box-sizing: border-box; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: boot-spin 0.8s linear infinite; }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .boot-spin { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot" aria-busy="true"><div class="boot-row" role="status"><span class="boot-spin" aria-hidden="true"></span><span>Loading Q-Tech</span></div></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

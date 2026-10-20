@@ -1,4 +1,5 @@
-import { lazy, Suspense, type ComponentType } from 'react'
+import { Suspense, type ComponentType } from 'react'
+import { lazyWithReload as lazy } from '@/lib/importWithReload'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { RequireRole, RequireSession, RoleLanding } from '@/app/guards'
 import { navItems, type NavKey } from '@/app/navConfig'
