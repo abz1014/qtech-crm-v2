@@ -60,6 +60,7 @@ test('line totals with GST per line, and a line made exempt: the page and the da
 })
 
 test('a line offers only the GST rates the owner allows: 18% or exempt', async ({ browser }, info) => {
+  test.fail(true, 'BUG-ORD-1: order lines offer 0/5/10/17/18% (src/features/orders/OrderItemsPanel.tsx:31 RATES), against the owner rule 18% or exempt')
   const seed = await order({ lines: [{ description: 'Ball valve 2 inch', qty: 1, price: 15000 }], owner: 'sales' })
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, `/orders/${seed.order.id}`)

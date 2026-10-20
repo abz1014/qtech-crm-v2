@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { db, num } from '../support/db'
-import { company, karachiDay, letters, order, ref, rfq, setProfile } from '../support/fixtures'
+import { company, karachiDay, letters, order, quote, ref, rfq, setProfile, supplier } from '../support/fixtures'
 import { open, signedIn } from '../support/session'
 import { QUOTES, pkr } from '../support/text'
 import { fetchStoredPdf, pdfIsValid, pdfText } from '../../support/pdf'
@@ -27,6 +27,8 @@ test('issue a quotation with an exempt line and a decimal quantity, then Mark wo
       { description: `Junction box, IP66 ${letters()}`, qty: 3, unit: 'nos' },
     ],
   })
+  const sup = await supplier('Verify Quote Supplier', 'Pakistan')
+  await quote(r.rfq.id, sup, r.items.map((it, i) => ({ itemId: it.id, price: [9000, 5000, 700][i] })), 'PKR')
   const sales = await signedIn(browser, info, 'sales')
   await sales.addInitScript(() => Object.defineProperty(Navigator.prototype, 'share', { value: undefined, configurable: true }))
   const page = await open(sales, `/rfqs/${r.rfq.id}`)

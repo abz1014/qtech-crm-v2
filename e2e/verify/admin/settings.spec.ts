@@ -71,8 +71,8 @@ test('a rate entered by hand is stored as today’s manual rate and re-ranks the
 
   const admin = await signedIn(browser, info, 'admin')
   const page = await open(admin, ADMIN.rates.path)
-  await page.getByLabel(ADMIN.rates.currency).selectOption('USD')
-  await page.getByLabel(ADMIN.rates.rate).fill('290')
+  await page.locator('form').getByLabel(ADMIN.rates.currency).selectOption('USD')
+  await page.locator('form').getByLabel(ADMIN.rates.rate).fill('290')
   await page.getByRole('button', { name: ADMIN.rates.save }).click()
   await expect.poll(async () => num((await db.one<{ rate_pkr: number }>(`fx_rates?currency=eq.USD&as_of=eq.${karachiDay(0)}&source=eq.manual&select=rate_pkr`)).rate_pkr)).toBe(290)
   expect(await first()).toBe(pkr.id)

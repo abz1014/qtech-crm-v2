@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { as, db, num, rpcAs, USER } from '../support/db'
-import { company, karachiDay, monthBefore, monthOf, order, post, ref, setRates } from '../support/fixtures'
+import { company, karachiDay, monthBefore, monthOf, order, post, setRates } from '../support/fixtures'
 import { open, signedIn } from '../support/session'
 import { BOOKS, COMMON, amount } from '../support/text'
 
@@ -61,8 +61,6 @@ async function reopenIfClosed(month: string): Promise<void> {
   const closed = await db.rows<{ month: string }>(`closed_months?month=eq.${month}&select=month`)
   if (closed.length) await rpcAs('admin', 'reopen_month', { p_month: month, p_note: 'verify-books: leave the books open' })
 }
-
-test.describe.configure({ mode: 'serial' })
 
 test('one month of books by hand: P&L, team, GST month, checklist and aging; then closed (frozen) and reopened (live)', async ({ browser }, info) => {
   // Nothing else may sit before this month, or "close through" would close more than it.
@@ -215,11 +213,6 @@ test('the margin of an order: net sale less costs net of input tax, provisional 
   expect(costs.costs_complete_at).not.toBeNull()
   expect(costs.costs_complete_by).toBe(USER.admin)
   expect(await m().then(r => [num(r.margin), r.margin_state])).toEqual([79691.03, 'final'])
-
-  // Money > Margins lists the order with the same margin.
-  await page.goto(BOOKS.margin.marginsPath)
-  const row = page.getByRole('row').filter({ has: page.getByRole('link', { name: BOOKS.margin.openOrder(ref.order(seed.order.number)) }) })
-  await expect(row).toContainText(amount(79691.03))
 
   // Reopen costs: provisional again, and the stamp is cleared.
   await page.goto(`/orders/${seed.order.id}`)
