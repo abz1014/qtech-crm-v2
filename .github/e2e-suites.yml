@@ -93,6 +93,6 @@ verify-access: # weight=120 (workflow verification: role journeys)
 verify-resilience: # weight=120 (workflow verification)
   - 'e2e/verify/resilience/**'
   - 'e2e/verify/support/**'
-roles-api: # weight=240 (was a second "verify-roles" key: a duplicate YAML key broke the suite picker) (every route as every role, the data API per persona, admin-users, data safety)
+verify-roles: # weight=240 (every route as every role, the data API per persona, admin-users, data safety)
   - 'e2e/verify-roles/**'
   - 'supabase/functions/admin-users/**'
