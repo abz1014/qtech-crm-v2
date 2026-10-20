@@ -5,9 +5,12 @@
 
 import { formatAmount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
+import type { StepTone } from '@/lib/status'
+import { daysLate, daysOverdue } from '@/lib/timeWords'
 import type { OrderListRow } from '@/features/orders/api'
-import { nextOrderStep, type OrderFacts, type OrderStep, type StepKind, type StepTone } from '@/features/orders/lib/orderSteps'
+import { nextOrderStep, type OrderFacts, type OrderStep, type StepKind } from '@/features/orders/lib/orderSteps'
 
+/** The shared tone (late, now, waiting, done, inert: a cancelled order). */
 export type NextStepTone = StepTone
 
 export interface NextStep {
@@ -17,8 +20,6 @@ export interface NextStep {
   /** Sorts the column: lower is more urgent. */
   rank: number
 }
-
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
 /** The facts a list row carries, in the shared shape. */
 export function rowFacts(row: OrderListRow, role: string, today: string): OrderFacts {
@@ -50,11 +51,11 @@ export function listText(step: OrderStep, f: OrderFacts): string {
     case 'resolve-basis':
       return 'Is GST included? Answer it'
     case 'chase-payment': {
-      const late = step.lateDays && step.lateDays > 0 ? `${plural(step.lateDays, 'day', 'days')} overdue` : 'overdue'
+      const late = step.lateDays && step.lateDays > 0 ? daysOverdue(step.lateDays) : 'overdue'
       return `Chase payment: ${late}${pkr(f.balance) ? ` · ${pkr(f.balance)}` : ''}`
     }
     case 'goods-late': {
-      const late = step.lateDays && step.lateDays > 0 ? `goods ${plural(step.lateDays, 'day', 'days')} late` : 'goods late'
+      const late = step.lateDays && step.lateDays > 0 ? `goods ${daysLate(step.lateDays)}` : 'goods late'
       return supplier ? `Chase ${supplier}: ${late}` : `Chase the supplier: ${late}`
     }
     case 'add-supplier':

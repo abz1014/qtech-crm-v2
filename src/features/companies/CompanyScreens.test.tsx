@@ -130,12 +130,18 @@ describe('supplier page', () => {
     expect(await axeViolations(document.body)).toEqual([])
   })
 
-  it('says the record once in the header, in counts; New RFQ is not the main action on a supplier-only page', async () => {
+  it('says the record once in the header, in counts; the role is a Tag in the meta line; New RFQ asks this supplier', async () => {
     installFakeDb(supplierDb)
     mount('/companies/s1', <CompanyPage />)
     await waitFor(() => expect(screen.getByTestId('supplier-record-line')).toHaveTextContent('Replied 5 of 6 · quoted 4 · late 1 of 4'))
-    // intake cannot start from a supplier, so New RFQ here is a plain, secondary button (the supplier's history is the page's point)
-    expect(screen.getByRole('button', { name: 'New RFQ' })).not.toHaveClass('bg-primary')
+    const h1 = screen.getByRole('heading', { level: 1 })
+    expect(h1).toHaveTextContent(/^Alpenmark Controls$/)
+    expect(h1.querySelector('[data-status]')).toBeNull()
+    expect(screen.getByText('Supplier', { selector: 'header p *' })).toBeInTheDocument()
+    // the one green action, in the Next step box: New RFQ with this supplier already chosen (IntakeScreen reads ?supplier=)
+    const next = screen.getByRole('region', { name: 'Next step' })
+    expect(within(next).getByRole('button', { name: 'New RFQ' })).toHaveClass('bg-primary')
+    expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument()
     expect(screen.queryByText(/Float/)).not.toBeInTheDocument()
   })
 
@@ -175,7 +181,7 @@ describe('supplier page', () => {
     expect(li).toHaveTextContent('Ordered here')
     expect(within(quotes).getByRole('link', { name: 'All enquiries' })).toBeInTheDocument()
     const deliveries = screen.getByRole('region', { name: 'Deliveries' })
-    expect(deliveries).toHaveTextContent('Late 6 days')
+    expect(deliveries).toHaveTextContent('Delivered 6 days late')
     expect(deliveries).toHaveTextContent(/PO-\d\d-\d{4}/)
     expect(screen.getByRole('region', { name: 'Open with them' })).toHaveTextContent('Supplier orders')
   })
@@ -275,7 +281,7 @@ describe('companies list', () => {
 
     await user.clear(search)
     await user.type(search, '0399 1234567')
-    expect(await screen.findByText('No company matches')).toBeInTheDocument()
+    expect(await screen.findByText('Nothing matches "0399 1234567"')).toBeInTheDocument()
     // A number is not offered as a new company's name.
     expect(screen.queryByRole('button', { name: /Add “0399/ })).not.toBeInTheDocument()
   })
@@ -286,7 +292,23 @@ describe('companies list', () => {
     mount('/companies', <CompaniesPage />)
     await screen.findByRole('link', { name: 'Karachi Glassworks' })
     await user.type(screen.getByRole('textbox', { name: 'Search companies' }), 'کراچی سیمنٹ')
-    expect(await screen.findByText('No company matches')).toBeInTheDocument()
+    expect(await screen.findByText('Nothing matches "کراچی سیمنٹ"')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Add “کراچی سیمنٹ”' })).toBeInTheDocument()
+  })
+
+  it('keeps the search in ?q= and shows each company’s last activity: the later of its last RFQ and its last order (R2-19)', async () => {
+    installFakeDb(c =>
+      c.target === 'rfqs'
+        ? { data: [{ company_id: 'b', received_on: '2026-03-02' }, { company_id: 'e', received_on: '2026-05-01' }] }
+        : c.target === 'orders'
+          ? { data: [{ company_id: 'b', ordered_on: '2026-04-10' }] }
+          : listDb(c),
+    )
+    mount('/companies?q=karachi', <CompaniesPage />)
+    expect(await screen.findByRole('textbox', { name: 'Search companies' })).toHaveValue('karachi')
+    const glass = (await screen.findByRole('link', { name: 'Karachi Glassworks' })).closest('tr') as HTMLElement
+    expect(screen.queryByRole('link', { name: 'Alpenmark Controls' })).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /Last activity/ })).toBeInTheDocument()
+    expect(glass).toHaveTextContent(/10 Apr/)
   })
 })

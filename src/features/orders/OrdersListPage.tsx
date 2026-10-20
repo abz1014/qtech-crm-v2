@@ -1,22 +1,22 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CircleAlert, CircleCheck, CopyPlus, Users } from 'lucide-react'
+import { CircleCheck, CopyPlus, Users } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
 import { businessToday } from '@/lib/dates'
 import { resolveStatus, type StatusDimension } from '@/lib/status'
 import { useMediaQuery } from '@/lib/useMediaQuery'
-import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { FilterSheet } from '@/ui/FilterSheet'
 import { NoResults } from '@/ui/NoResults'
+import { PageHeader } from '@/ui/PageHeader'
+import { StatusText } from '@/ui/StatusText'
 import { FirstUseState, NothingYetState } from '@/features/help/FirstUseState'
 import { useFirstUse } from '@/features/help/useFirstUse'
 import { Select } from '@/ui/form/Select'
-import { Icon } from '@/ui/Icon'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { TableFilter } from '@/ui/TableFilter'
 import { Tab, TabList, TabPanel, Tabs } from '@/ui/Tabs'
@@ -53,7 +53,22 @@ import {
 const LABEL: Record<Dimension, string> = { goods: 'Goods', commissioning: 'Commissioning', invoicing: 'Invoicing', payment: 'Payment' }
 const STATUS_DIM: Record<Dimension, StatusDimension> = { goods: 'goods', commissioning: 'commissioning', invoicing: 'invoicing', payment: 'payment' }
 
-const valueLabel = (dim: Dimension, value: string) => resolveStatus(STATUS_DIM[dim], value).label
+/** Where two view values share one status word, the filter option adds a detail so the choices stay distinct (spec 1.2 rule 4). */
+const FILTER_DETAIL: Partial<Record<string, string>> = {
+  'goods:to_source': 'no supplier yet',
+  'goods:to_place': 'not placed',
+  'goods:received': 'with us',
+  'goods:partly_delivered': 'partly delivered',
+  'invoicing:not_invoiced': 'nothing invoiced',
+  'invoicing:part': 'part invoiced',
+  'payment:unpaid': 'nothing paid',
+  'payment:part': 'part paid',
+}
+const valueLabel = (dim: Dimension, value: string) => {
+  const detail = FILTER_DETAIL[`${dim}:${value}`]
+  const word = resolveStatus(STATUS_DIM[dim], value).label
+  return detail ? `${word} · ${detail}` : word
+}
 
 /** What "done" means differs by role (v_order_state.is_done): sales are done once it is invoiced; their Next step still says if it is unpaid. */
 const doneMeaning = (role: string) =>
@@ -63,20 +78,12 @@ const doneMeaning = (role: string) =>
       ? 'An order is done for you when the goods are delivered and commissioning is done.'
       : 'An order is done when the goods are delivered, commissioning is done, it is paid and its costs are complete.'
 
+/** The row's one Next step as status text (icon and words, no box; spec 1.2 rule 3). */
 function NextStepText({ step }: { step: NextStep }) {
   return (
-    <span
-      data-tone={step.tone}
-      className={cn(
-        'inline-flex items-start gap-[6px] whitespace-normal',
-        step.tone === 'late' && 'font-medium text-tone-danger-fg',
-        step.tone === 'now' && 'font-medium text-fg',
-        (step.tone === 'waiting' || step.tone === 'done') && 'text-fg-muted',
-      )}
-    >
-      {step.tone === 'late' ? <Icon icon={CircleAlert} size="sm" className="mt-[3px] shrink-0" /> : step.tone === 'done' ? <Icon icon={CircleCheck} size="sm" className="mt-[3px] shrink-0" /> : null}
+    <StatusText tone={step.tone} className="whitespace-normal">
       {step.text}
-    </span>
+    </StatusText>
   )
 }
 
@@ -96,7 +103,7 @@ function OrderCell({ row }: { row: OrderListRow }) {
   return (
     <span className="grid min-w-0 gap-px">
       <span className="num">{orderRef(row.number)}</span>
-      <span className="truncate text-xs text-fg-muted">{[row.customerPo ? `PO ${row.customerPo}` : null, row.ownerName].filter(Boolean).join(' · ') || ' '}</span>
+      <span className="line-clamp-2 text-sm text-fg-muted">{[row.customerPo ? `PO ${row.customerPo}` : null, row.ownerName].filter(Boolean).join(' · ') || ' '}</span>
     </span>
   )
 }
@@ -109,9 +116,7 @@ function OrderCard({ row, step }: { row: OrderListRow; step: NextStep }) {
         <span className="num shrink-0 text-sm text-fg-muted">{orderRef(row.number)}</span>
       </span>
       {row.what ? <span className="line-clamp-2 text-sm text-fg-2">{`${row.what}${row.moreLines ? ' + more' : ''}`}</span> : null}
-      <span className="text-sm">
-        <NextStepText step={step} />
-      </span>
+      <NextStepText step={step} />
     </span>
   )
 }
@@ -312,7 +317,8 @@ export default function OrdersListPage() {
       rows={rows}
       getRowId={r => r.id}
       twoLine
-      defaultSort={{ id: 'order', dir: 'desc' }}
+      // R2-05: the active list starts with the most urgent step first (late, then now, then waiting); done and cancelled newest first
+      defaultSort={filters.tab === 'active' ? { id: 'next', dir: 'asc' } : { id: 'order', dir: 'desc' }}
       mobileRow={r => <OrderCard row={r} step={stepOf(r)} />}
       onRowOpen={r => navigate(`/orders/${r.id}`)}
       loading={orders.isPending}
@@ -345,17 +351,17 @@ export default function OrdersListPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-6 md:px-8">
-      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
-          <p className="text-sm text-fg-muted">{lede}</p>
-        </div>
-        {money ? (
-          <Button icon={CopyPlus} onClick={() => setCreating(true)}>
-            Repeat a past order
-          </Button>
-        ) : null}
-      </header>
+      <PageHeader
+        title="Orders"
+        lede={lede}
+        secondary={
+          money ? (
+            <Button icon={CopyPlus} onClick={() => setCreating(true)}>
+              Repeat a past order
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Tabs className="min-w-0" value={filters.tab} onValueChange={v => change({ tab: v === 'active' ? null : v })}>
         <TabList aria-label="Order lists">

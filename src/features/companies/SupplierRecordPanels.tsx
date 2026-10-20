@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Circle, CircleAlert, CircleCheck, CircleDashed, CircleDot, Lock, type LucideIcon } from 'lucide-react'
+import { Ban, CircleDashed, Lock, type LucideIcon } from 'lucide-react'
 import { useFxLatest } from '@/features/rfqs/hooks'
 import { formatRate } from '@/lib/money'
 import type { DeliveryRow, QuoteOutcome, QuoteRow, SupplierRecord } from '@/features/companies/supplierRecord'
@@ -12,7 +12,9 @@ import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
 import { Skeleton } from '@/ui/Skeleton'
+import { StatusText } from '@/ui/StatusText'
 import { Tag } from '@/ui/Tag'
+import type { StepTone } from '@/lib/status'
 
 /*
  * The supplier's record (R18; g2-company.html): recent quotes with the PKR value at the time, deliveries from purchase
@@ -21,26 +23,29 @@ import { Tag } from '@/ui/Tag'
  * explained the columns are in an (i) tip on each panel (UX audit 2026-10-19).
  */
 
-const CHIP = 'inline-flex h-5 w-fit items-center gap-[6px] whitespace-nowrap rounded-round px-2 text-xs'
-const OUTCOME: Record<QuoteOutcome, { label: string; icon: LucideIcon; cls: string }> = {
-  quoted: { label: 'Quoted', icon: CircleCheck, cls: 'bg-tone-success-bg text-tone-success-fg' },
-  'ordered-here': { label: 'Ordered here', icon: CircleCheck, cls: 'bg-tone-success-bg text-tone-success-fg' },
-  'ordered-elsewhere': { label: 'Ordered elsewhere', icon: Circle, cls: 'border border-line-strong text-fg-2' },
-  'not-ordered': { label: 'Not ordered', icon: Circle, cls: 'border border-line-strong text-fg-2' },
-  'quoted-open': { label: 'Quoted, RFQ open', icon: CircleDot, cls: 'bg-tone-info-bg text-tone-info-fg' },
-  waiting: { label: 'Waiting for a reply', icon: CircleDot, cls: 'bg-tone-info-bg text-tone-info-fg' },
-  'no-reply': { label: 'No reply', icon: CircleDashed, cls: 'border border-dashed border-line-strong text-fg-muted' },
-  declined: { label: "Can't quote", icon: Circle, cls: 'border border-line-strong text-fg-2' },
+/*
+ * Outcomes are history facts, so they are status text (icon and words, no box; consistency spec 1.5), toned by who acts next:
+ * done when it was priced or ordered here, waiting while the supplier still has to answer, inert for the rest. Only the
+ * registry's icon overrides are used (Ban for "Can't quote", CircleDashed for no reply: not firm).
+ */
+const OUTCOME: Record<QuoteOutcome, { label: string; tone: StepTone; icon?: LucideIcon }> = {
+  quoted: { label: 'Quoted', tone: 'done' },
+  'ordered-here': { label: 'Ordered here', tone: 'done' },
+  'ordered-elsewhere': { label: 'Ordered elsewhere', tone: 'inert' },
+  'not-ordered': { label: 'Not ordered', tone: 'inert' },
+  'quoted-open': { label: 'Quoted, RFQ open', tone: 'waiting' },
+  waiting: { label: 'Waiting for a reply', tone: 'waiting' },
+  'no-reply': { label: 'No reply', tone: 'inert', icon: CircleDashed },
+  declined: { label: "Can't quote", tone: 'inert', icon: Ban },
 }
 
-/** One outcome chip with its icon, as drawn in the company mockup. Used by the quotes and the enquiries lists. */
-export function OutcomeChip({ outcome, label }: { outcome: QuoteOutcome; label?: string }) {
+/** One outcome as status text. Used by the quotes and the enquiries lists. */
+export function OutcomeText({ outcome, label }: { outcome: QuoteOutcome; label?: string }) {
   const o = OUTCOME[outcome]
   return (
-    <span className={cn(CHIP, o.cls)}>
-      <Icon icon={o.icon} size="chip" />
+    <StatusText tone={o.tone} icon={o.icon}>
       {label ?? o.label}
-    </span>
+    </StatusText>
   )
 }
 
@@ -152,7 +157,7 @@ function ItemCell({ r }: { r: QuoteRow }) {
 function OutcomeCell({ r }: { r: QuoteRow }) {
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <OutcomeChip outcome={r.outcome} />
+      <OutcomeText outcome={r.outcome} />
       {r.orderRef ? <Tag>{r.orderRef}</Tag> : null}
     </span>
   )
@@ -231,18 +236,15 @@ const DGRID = 'md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(
 const DHEAD = cn('hidden border-b bg-sunken px-5 py-2 text-sm text-fg-muted md:grid', DGRID)
 const DROW = cn('grid grid-cols-2 gap-x-4 gap-y-3 border-t px-5 py-3 first:border-t-0', DGRID)
 
+/** A delivery's result as status text: a history fact ("Delivered 6 days late"), late in red only while it is still not delivered. */
 function ResultCell({ r }: { r: DeliveryRow }) {
   const x = r.result
-  const cls = x.kind === 'late' || x.kind === 'overdue' ? 'bg-tone-danger-bg text-tone-danger-fg' : x.kind === 'ontime' ? 'bg-tone-success-bg text-tone-success-fg' : 'border border-line-strong text-fg-2'
-  const aside = x.kind === 'ontime' && x.days > 0 ? `${x.days} ${x.days === 1 ? 'day' : 'days'} early` : null
+  const tone: StepTone = x.kind === 'overdue' ? 'late' : x.kind === 'ontime' || x.kind === 'late' ? 'done' : x.kind === 'expected' ? 'waiting' : 'inert'
+  const aside = x.kind === 'ontime' && x.days > 0 ? `${x.days} ${x.days === 1 ? 'day' : 'days'} early` : undefined
   return (
-    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <span className={cn(CHIP, cls)}>
-        <Icon icon={x.kind === 'late' || x.kind === 'overdue' ? CircleAlert : x.kind === 'ontime' ? CircleCheck : Circle} size="chip" />
-        {x.text}
-      </span>
-      {aside ? <span className="text-sm text-fg-muted">{aside}</span> : null}
-    </span>
+    <StatusText tone={tone} detail={aside}>
+      {x.text}
+    </StatusText>
   )
 }
 

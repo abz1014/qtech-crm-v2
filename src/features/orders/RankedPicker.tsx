@@ -93,7 +93,7 @@ export function RankedPicker({
           <RankBadge rank={chosen?.rank ?? null} />
           <span className="grid min-w-0 leading-[17px]">
             <span className="sr-only">{label}: </span>
-            <b className="truncate text-sm font-medium">{chosen ? chosen.supplierName : (extra?.label ?? 'Choose a supplier')}</b>
+            <b className="line-clamp-2 text-sm font-medium">{chosen ? chosen.supplierName : (extra?.label ?? 'Choose a supplier')}</b>
             {chosen ? <span className="text-pretty text-xs text-fg-muted">{shortReason(chosen, quotes)}</span> : null}
           </span>
           <Icon icon={ChevronDown} size="sm" className="text-fg-muted" />

@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useSupplierActivity, useSupplierRecordView, useSupplierStats } from '@/features/companies/hooks'
-import { Deliveries, OutcomeChip, RecentQuotes } from '@/features/companies/SupplierRecordPanels'
+import { Deliveries, OutcomeText, RecentQuotes } from '@/features/companies/SupplierRecordPanels'
 import { deliveryLine, factNotes, supplierFacts, type SupplierFacts } from '@/features/companies/supplierFacts'
 import type { SupplierEnquiry } from '@/features/companies/api'
 import { CountText, Fine, Panel } from '@/features/companies/CompanyParts'
@@ -238,7 +238,7 @@ function OutcomeCell({ r, today }: { r: SupplierEnquiry; today: string }) {
   const o = outcome(r, today)
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
-      <OutcomeChip outcome={o.value} label={o.label} />
+      <OutcomeText outcome={o.value} label={o.label} />
       {r.isLegacy ? <Tag dashed>Imported</Tag> : null}
     </span>
   )

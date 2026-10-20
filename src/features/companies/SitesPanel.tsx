@@ -15,7 +15,7 @@ import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
-import { StatusBadge } from '@/ui/StatusBadge'
+import { StatusText } from '@/ui/StatusText'
 import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
 
@@ -33,9 +33,8 @@ interface Item {
   what: string | null
   moreItems: number
   state: string | null
-  /** Order only: the goods state (Delivered...), the invoicing chip, and "Payment overdue" (which takes the invoicing chip's place). */
+  /** Order only: the goods state (Delivered...) and "Payment overdue" (which takes the goods word's place). */
   goods: string | null
-  invoicing: string | null
   paymentOverdue: boolean
   /** Orders only: the order's id, for "Repeat order" (O02). */
   orderId?: string
@@ -66,7 +65,6 @@ function itemsFor(history: CompanyHistory, siteId: string | null): Item[] {
       moreItems: r.moreItems,
       state: r.outcome,
       goods: null,
-      invoicing: null,
       paymentOverdue: false,
       extra:
         r.outcome === 'won' && r.orderNumber
@@ -89,7 +87,6 @@ function itemsFor(history: CompanyHistory, siteId: string | null): Item[] {
       moreItems: o.moreItems,
       state: o.lifecycle,
       goods: o.goods,
-      invoicing: o.invoicing,
       paymentOverdue: o.paymentOverdue === true,
       orderId: o.id,
       extra: null,
@@ -140,8 +137,8 @@ export function SitesPanel({
       { id: 'ref', header: 'Reference', value: r => r.number, cell: r => <RefTag item={r} />, width: 132 },
       { id: 'what', header: 'What', value: r => r.what, cell: r => <WhatText item={r} /> },
       { id: 'date', header: 'Date', kind: 'date', value: r => r.date, cell: r => <span className="num">{r.date ? formatShortDate(r.date, today) : 'No date'}</span>, width: 104 },
-      // no fixed width: a fixed width truncates, and two chips ("Partly delivered", "Payment overdue") must wrap, never clip
-      { id: 'state', header: 'State', cell: r => <StateChips item={r} /> },
+      // no fixed width: a fixed width truncates; the state and its reason must wrap, never clip
+      { id: 'state', header: 'State', cell: r => <StateText item={r} /> },
       {
         id: 'repeat',
         header: 'Row actions',
@@ -268,7 +265,7 @@ function SiteBlock({
         <Icon icon={MapPin} className="mt-[3px] text-fg-muted" />
         <div className="min-w-0 flex-1">
           <h3 className={muted ? 'text-sm font-medium text-fg-muted' : 'text-sm font-semibold'}>{name}</h3>
-          {address ? <p className="truncate text-sm text-fg-muted">{address}</p> : null}
+          {address ? <p className="line-clamp-2 text-sm text-fg-muted">{address}</p> : null}
           <p className="num text-sm text-fg-muted sm:hidden">{counts}</p>
         </div>
         <span className="num hidden shrink-0 pt-[2px] text-sm text-fg-muted sm:inline">{counts}</span>
@@ -307,27 +304,21 @@ function WhatText({ item }: { item: Item }) {
   )
 }
 
-/** An order: its goods chip and its invoicing chip ("Payment overdue" takes the invoicing chip's place). An RFQ: its outcome and why. */
-function StateChips({ item }: { item: Item }) {
+/**
+ * One state per row, as status text (consistency spec 1.5, rule 3: history rows show no chips). An order: Cancelled, else
+ * "Payment overdue", else its goods word (Delivered, On order...); an order with no goods says Done once it is done, else "—".
+ * An RFQ: Won or Closed with why; an open RFQ has no state word, only its quotation due date.
+ */
+function StateText({ item }: { item: Item }) {
   if (item.kind === 'order') {
-    return (
-      <span className="inline-flex flex-wrap items-center gap-[6px]">
-        {item.state === 'cancelled' ? <StatusBadge dimension="order" value="cancelled" /> : item.goods ? <StatusBadge dimension="goods" value={item.goods} /> : null}
-        {item.paymentOverdue ? (
-          <StatusBadge dimension="payment" value="overdue" label="Payment overdue" />
-        ) : item.invoicing ? (
-          <StatusBadge dimension="invoicing" value={item.invoicing} />
-        ) : null}
-      </span>
-    )
+    if (item.state === 'cancelled') return <StatusText dimension="order" value="cancelled" />
+    if (item.paymentOverdue) return <StatusText dimension="payment" value="overdue" label="Payment overdue" />
+    if (item.goods && item.goods !== 'n_a') return <StatusText dimension="goods" value={item.goods} />
+    if (item.state === 'done') return <StatusText dimension="order" value="done" />
+    return <span className="text-fg-muted">—</span>
   }
-  if (!item.state) return null
-  return (
-    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-      <StatusBadge dimension="rfq-outcome" value={item.state} />
-      {item.extra ? <span className="text-sm text-fg-muted">{item.extra}</span> : null}
-    </span>
-  )
+  if (item.state === 'won' || item.state === 'closed') return <StatusText dimension="rfq-outcome" value={item.state} detail={item.extra} />
+  return item.extra ? <span className="text-sm text-fg-muted">{item.extra}</span> : null
 }
 
 /** A phone row (below 640px): the reference and date, what it was, then its state and Repeat order. */
@@ -340,7 +331,7 @@ function ItemCard({ item, today }: { item: Item; today: string }) {
       </div>
       <WhatText item={item} />
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <StateChips item={item} />
+        <StateText item={item} />
         {item.kind === 'order' && item.orderId ? <RepeatOrderSlot orderId={item.orderId} orderNumber={item.number} /> : null}
       </div>
     </div>

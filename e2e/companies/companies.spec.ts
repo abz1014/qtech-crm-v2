@@ -121,7 +121,7 @@ test.describe('companies list search (audit F1)', () => {
     await review(page, 'companies-search-phone-1440')
 
     await search.fill(`0399 ${local}`)
-    await expect(page.getByText('No company matches')).toBeVisible()
+    await expect(page.getByText(`Nothing matches "0399 ${local}"`)).toBeVisible()
     await expect(page.getByRole('button', { name: /Add “0399/ })).toHaveCount(0) // a number is not offered as a company name
   })
 })
@@ -135,8 +135,9 @@ test.describe('company page', () => {
 
     await openAs(page, 'sales', `/companies/${company.id}`)
     await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
-    // An RFQ and no order yet: the derived role, said once, in the header chip.
-    await expect(page.getByRole('heading', { name: company.name, level: 1 })).toContainText('Prospect')
+    // An RFQ and no order yet: the derived role, said once, as a Tag in the meta line under the name (never inside the h1).
+    await expect(page.getByRole('heading', { name: company.name, level: 1 })).not.toContainText('Prospect')
+    await expect(page.locator('header p').getByText('Prospect', { exact: true })).toBeVisible()
     await expect(page.getByRole('region', { name: 'Main plant' }).getByText(rfqRef(rfq.number))).toBeVisible()
     await expect(page.getByText('Karachi, Pakistan')).toBeVisible() // the place under the name: city, country
     await expect(page.getByText('Naveed Akhtar')).toBeVisible()
@@ -152,7 +153,7 @@ test.describe('company page', () => {
     await review(page, 'company-customer-1440')
   })
 
-  test('site history reads What, the order chips (Delivered, invoicing, Payment overdue), the RFQ state words and the Repeat order slot', async ({ page }) => {
+  test('site history reads What, one state word per order (Cancelled, Payment overdue, else the goods word), the RFQ state words and the Repeat order slot', async ({ page }) => {
     const company = await createCompany(uniqueName('History Customer'), { country: 'Pakistan' })
     const site = (await must(rest<{ id: string }[]>('admin', 'company_sites', { method: 'POST', body: { company_id: company.id, name: 'Main plant', address: 'Plot 14, Landhi' } })))[0]
     const supplier = await createCompany(uniqueName('History Supplier'))
@@ -175,7 +176,8 @@ test.describe('company page', () => {
     await expect(siteRegion.getByText('no reply from customer')).toBeVisible()
     const orderRow = siteRegion.getByRole('row', { name: /Annealing lehr instrumentation/ })
     await expect(orderRow.getByText('Delivered')).toBeVisible()
-    await expect(orderRow.getByText('Not invoiced')).toBeVisible()
+    // one state per row: the goods word; invoicing is on the order page, not repeated here
+    await expect(orderRow.getByText('To invoice')).toHaveCount(0)
     // Repeat order is live (O02): it opens the New order dialog with this order already chosen (its journey is in e2e/orders/repeat.spec.ts).
     await expect(orderRow.getByRole('button', { name: /Repeat order/ })).toBeEnabled()
     await expect(siteRegion.getByRole('columnheader', { name: 'Their reference' })).toHaveCount(0)
@@ -237,11 +239,10 @@ test.describe('company page', () => {
     await review(page, 'company-supplier-1440')
     await page.keyboard.press('Escape')
 
-    // A supplier-only page's New RFQ (was "Float an RFQ here") opens a blank intake: it no longer puts the supplier in as the customer,
-    // and it is not the page's green button (the supplier's history is what this page is for).
-    await expect(page.getByRole('button', { name: 'New RFQ' })).not.toHaveClass(/bg-primary/)
-    await page.getByRole('button', { name: 'New RFQ' }).click()
-    await expect(page).toHaveURL(/\/rfqs\/new$/)
+    // A supplier-only page's New RFQ (was "Float an RFQ here") is its next step: it opens intake with this supplier already
+    // chosen to ask for prices (?supplier=), never with the supplier as the customer.
+    await page.getByRole('region', { name: 'Next step' }).getByRole('button', { name: 'New RFQ' }).click()
+    await expect(page).toHaveURL(url => url.pathname === '/rfqs/new' && url.searchParams.get('supplier') === supplier.id)
   })
 
   test('brands are carried by picking one or typing a new one', async ({ page }) => {
@@ -285,7 +286,7 @@ test.describe('admin merge', () => {
 
     await openAs(page, 'admin', `/companies/${drop.id}`)
     await expect(page.getByRole('heading', { name: drop.name, level: 1 })).toBeVisible()
-    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
     await page.getByRole('menuitem', { name: 'Merge into another company' }).click()
     const dialog = page.getByRole('dialog', { name: 'Merge duplicate company' })
     await dialog.getByRole('combobox', { name: 'Merge into' }).fill(keep.name)
@@ -319,7 +320,7 @@ test.describe('admin merge', () => {
     const dropRfq = await createRfq(drop.id, { customer_ref: 'SAME-REF' })
 
     await openAs(page, 'admin', `/companies/${drop.id}`)
-    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
     await page.getByRole('menuitem', { name: 'Merge into another company' }).click()
     const dialog = page.getByRole('dialog', { name: 'Merge duplicate company' })
     await dialog.getByRole('combobox', { name: 'Merge into' }).fill(keep.name)
@@ -348,7 +349,7 @@ test.describe('access by role (DATA_MODEL section 10)', () => {
       await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
       await page.waitForLoadState('networkidle')
       // Everyone has the "..." menu the design draws; only an admin finds Merge in it.
-      await page.getByRole('button', { name: 'More actions' }).click()
+      await page.getByRole('button', { name: /^More( actions)?$/ }).click()
       await expect(page.getByRole('menuitem', { name: 'Copy link to this company' })).toBeVisible()
       expect(await page.getByRole('menuitem', { name: 'Merge into another company' }).count(), `${role} merge menu`).toBe(role === 'admin' ? 1 : 0)
       money[role] = seen

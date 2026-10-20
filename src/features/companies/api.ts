@@ -24,6 +24,8 @@ export interface CompanyListRow {
   role: CompanyRole | null
   rfqCount: number
   orderCount: number
+  /** R2-19: the later of its last RFQ received and its last order date (YYYY-MM-DD); null with neither. Read-only, worked out here. */
+  lastActivity: string | null
   updatedAt: string
   /** Its contacts' names and phone digits (phoneKey), so the list search finds a company by a person or a number. */
   contacts: SearchContact[]
@@ -56,8 +58,8 @@ export async function listCompanies(): Promise<CompanyListRow[]> {
     fetchAll<Pick<ViewRow<'v_company_roles'>, 'company_id' | 'role'>>((from, to) =>
       db.from('v_company_roles').select('company_id, role').range(from, to),
     ),
-    fetchAll<{ company_id: string }>((from, to) => db.from('rfqs').select('company_id').range(from, to)),
-    fetchAll<{ company_id: string }>((from, to) => db.from('orders').select('company_id').range(from, to)),
+    fetchAll<{ company_id: string; received_on: string | null }>((from, to) => db.from('rfqs').select('company_id, received_on').range(from, to)),
+    fetchAll<{ company_id: string; ordered_on: string | null }>((from, to) => db.from('orders').select('company_id, ordered_on').range(from, to)),
     fetchAll<Pick<TableRow<'contacts'>, 'company_id' | 'name' | 'phone'>>((from, to) =>
       // ordered by id: names repeat ("Accounts"), and only a unique order pages stably across 1000-row pages
       db.from('contacts').select('company_id, name, phone').order('id').range(from, to),
@@ -71,6 +73,14 @@ export async function listCompanies(): Promise<CompanyListRow[]> {
   }
   const rfqBy = count(rfqs)
   const orderBy = count(orders)
+  // The same rows the counts come from: no extra request (R2-19). ISO dates compare as text.
+  const lastBy = new Map<string, string>()
+  const later = (id: string, day: string | null) => {
+    const d = day?.slice(0, 10)
+    if (d && d > (lastBy.get(id) ?? '')) lastBy.set(id, d)
+  }
+  for (const r of rfqs) later(r.company_id, r.received_on)
+  for (const o of orders) later(o.company_id, o.ordered_on)
   const contactsBy = new Map<string, SearchContact[]>()
   for (const p of contacts) {
     const list = contactsBy.get(p.company_id) ?? []
@@ -85,6 +95,7 @@ export async function listCompanies(): Promise<CompanyListRow[]> {
     role: roleBy.get(c.id) ?? null,
     rfqCount: rfqBy.get(c.id) ?? 0,
     orderCount: orderBy.get(c.id) ?? 0,
+    lastActivity: lastBy.get(c.id) ?? null,
     updatedAt: c.updated_at,
     contacts: contactsBy.get(c.id) ?? [],
   }))

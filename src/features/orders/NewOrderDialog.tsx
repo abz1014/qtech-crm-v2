@@ -178,7 +178,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
                         {o.orderedOn ? `ordered ${formatShortDate(o.orderedOn, today)}` : 'no date'}
                         {o.customerPo ? ` · PO ${o.customerPo}` : ''}
                       </span>
-                      {o.summary ? <span className="truncate text-sm text-fg-muted">{o.summary}</span> : null}
+                      {o.summary ? <span className="line-clamp-2 text-sm text-fg-muted">{o.summary}</span> : null}
                     </button>
                   </li>
                 ))}
