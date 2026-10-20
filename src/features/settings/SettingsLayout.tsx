@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 import { Navigate, NavLink, Outlet } from 'react-router-dom'
-import { Building2, KeyRound, Receipt, RefreshCw, Target, User, Users, type LucideIcon } from 'lucide-react'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { useSession } from '@/app/session'
 import { InstallBanner } from '@/features/settings/InstallBanner'
+import { settingsLinksFor } from '@/features/settings/settingsLinks'
 import { SettingsHomePage } from '@/features/settings/SettingsHomePage'
 import { Icon } from '@/ui/Icon'
 import { cn } from '@/lib/utils'
@@ -14,23 +14,7 @@ import { useScrollActiveIntoView } from '@/lib/useScrollActiveIntoView'
  * tablet and desktop, a row of links above the page on a phone. Team, Targets and Expense categories are shown to admins only; the
  * company profile is shown to everyone (read-only unless admin).
  */
-interface SettingsLink {
-  to: string
-  label: string
-  icon: LucideIcon
-  adminOnly?: boolean
-  /** Shown at the right for everyone who is not an admin ("View only"). */
-  tagForOthers?: string
-}
-const SETTINGS_LINKS: readonly SettingsLink[] = [
-  { to: '/settings/team', label: 'Team', icon: Users, adminOnly: true },
-  { to: '/settings/targets', label: 'Targets', icon: Target, adminOnly: true },
-  { to: '/settings/categories', label: 'Expense categories', icon: Receipt, adminOnly: true },
-  { to: '/settings/company', label: 'Company profile', icon: Building2, tagForOthers: 'View only' },
-  { to: '/settings/details', label: 'Your details', icon: User },
-  { to: '/settings/exchange-rates', label: 'Exchange rates', icon: RefreshCw },
-  { to: '/settings/password', label: 'Change password', icon: KeyRound },
-]
+// The list of pages lives in settingsLinks.ts, shared with the command palette's Jump to.
 
 const useIsAdmin = () => {
   const s = useSession()
@@ -39,7 +23,7 @@ const useIsAdmin = () => {
 
 export function SettingsLayout() {
   const isAdmin = useIsAdmin()
-  const links = SETTINGS_LINKS.filter(l => isAdmin || !l.adminOnly)
+  const links = settingsLinksFor(isAdmin ? 'admin' : null)
   const strip = useScrollActiveIntoView<HTMLUListElement>()
   return (
     <div className="grid min-h-full grid-cols-[minmax(0,1fr)] max-md:grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)]">

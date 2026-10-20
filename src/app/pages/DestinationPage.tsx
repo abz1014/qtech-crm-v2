@@ -4,11 +4,11 @@ import { Icon } from '@/ui/Icon'
 
 /** What each destination will hold. One line, in the person's words. */
 const LEDE: Record<NavKey, string> = {
-  today: 'What needs you today: bids, chases, goods and payments.',
-  rfqs: 'Enquiries from first contact to bid, win or close.',
+  today: 'What needs you today: quotations, chases, goods and payments.',
+  rfqs: 'Enquiries from first contact to quotation, win or close.',
   orders: 'Orders from purchase order to delivery and invoice.',
   companies: 'Customers and suppliers, with their history.',
-  money: 'Invoices, the GST register, receivables and cash.',
+  money: 'Invoices, the GST register, who owes us and cash.',
   reports: 'How enquiries turn into orders.',
 }
 

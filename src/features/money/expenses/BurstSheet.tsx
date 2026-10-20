@@ -444,8 +444,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
               <Button variant="primary" icon={Check} busy={pending} busyLabel="Saving" onClick={() => void save()}>
                 {label}
                 <span className="inline-flex items-center gap-[2px]" aria-hidden="true">
-                  <Kbd className="h-[18px] min-w-[18px] border-primary-foreground/40 bg-primary-foreground/15 text-primary-foreground">Ctrl</Kbd>
-                  <Kbd className="h-[18px] min-w-[18px] border-primary-foreground/40 bg-primary-foreground/15 text-primary-foreground">↵</Kbd>
+                  <Kbd size="inline" className="border-primary-foreground/40 bg-primary-foreground/15 text-primary-foreground">Ctrl</Kbd>
+                  <Kbd size="inline" className="border-primary-foreground/40 bg-primary-foreground/15 text-primary-foreground">↵</Kbd>
                 </span>
               </Button>
             </footer>

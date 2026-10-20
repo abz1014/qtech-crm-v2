@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
@@ -8,6 +8,7 @@ import type { SessionState } from '@/app/session'
 import { AppShell } from '@/app/shell/AppShell'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
 import { TopBar } from '@/app/shell/TopBar'
+import { SETTINGS_LINKS, settingsLinksFor } from '@/features/settings/settingsLinks'
 import { installFakeDb } from '@/test/fakeSupabase'
 
 const user = { id: 'u1', name: 'Farhan Mirza', role: 'admin' }
@@ -81,16 +82,32 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
     return dlg
   }
 
-  it('an admin finds Exchange rates, Targets, Team and Expense categories by name', async () => {
-    const u = userEvent.setup()
-    shell('admin')
-    const dlg = await search(u, 'rates')
-    expect(await within(dlg).findByRole('option', { name: /Exchange rates/ })).toBeInTheDocument()
-    await u.keyboard('{Enter}')
-    expect(await screen.findByText('Rates page')).toBeInTheDocument()
+  it('every role finds Exchange rates, as the Settings menu offers it to everyone, and Enter opens it', async () => {
+    for (const role of ['admin', 'sales', 'engineer']) {
+      const u = userEvent.setup()
+      shell(role)
+      const dlg = await search(u, 'rates')
+      expect(await within(dlg).findByRole('option', { name: /Exchange rates/ })).toBeInTheDocument()
+      await u.keyboard('{Enter}')
+      expect(await screen.findByText('Rates page')).toBeInTheDocument()
+      cleanup()
+    }
   })
 
-  for (const [q, label] of [['targets', 'Targets'], ['team', 'Team'], ['categories', 'Expense categories']] as const) {
+  it('Jump to offers exactly the Settings pages the Settings menu lists for the role (one list, settingsLinks.ts)', async () => {
+    for (const role of ['admin', 'sales'] as const) {
+      const u = userEvent.setup()
+      shell(role)
+      const dlg = await search(u, 'settings')
+      const want = settingsLinksFor(role).map(l => l.label)
+      for (const label of want) expect(await within(dlg).findByRole('option', { name: new RegExp(`^${label}`) })).toBeInTheDocument()
+      for (const l of SETTINGS_LINKS.filter(x => !want.includes(x.label)))
+        expect(within(dlg).queryByRole('option', { name: new RegExp(`^${l.label}`) })).toBeNull()
+      cleanup()
+    }
+  })
+
+  for (const [q, label] of [['targets', 'Targets'], ['team', 'Team'], ['categories', 'Expense categories'], ['company', 'Company profile'], ['password', 'Change password']] as const) {
     it(`admin: "${q}" finds ${label}`, async () => {
       const u = userEvent.setup()
       shell('admin')
@@ -99,14 +116,40 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
     })
   }
 
-  it('a sales person finds Settings and Your details, but no admin page', async () => {
+  it('a sales person finds Your details, Company profile and Change password, but no admin page', async () => {
     const u = userEvent.setup()
     shell('sales')
     let dlg = await search(u, 'your details')
     expect(await within(dlg).findByRole('option', { name: /Your details/ })).toBeInTheDocument()
     await u.keyboard('{Enter}')
     expect(await screen.findByText('Details page')).toBeInTheDocument()
-    dlg = await search(u, 'exchange')
-    expect(within(dlg).queryByRole('option', { name: /Exchange rates/ })).toBeNull()
+    for (const [q, label] of [['company', 'Company profile'], ['password', 'Change password']]) {
+      dlg = await search(u, q)
+      expect(await within(dlg).findByRole('option', { name: new RegExp(label) })).toBeInTheDocument()
+      await u.keyboard('{Escape}')
+    }
+    dlg = await search(u, 'targets')
+    expect(within(dlg).queryByRole('option', { name: /Targets/ })).toBeNull()
+  })
+
+  it('"capture" and "paste" still find Paste or photo', async () => {
+    for (const q of ['capture', 'paste']) {
+      const u = userEvent.setup()
+      shell('sales')
+      const dlg = await search(u, q)
+      expect(await within(dlg).findByRole('option', { name: /Paste or photo/ })).toBeInTheDocument()
+      cleanup()
+    }
+  })
+
+  it('"reports" finds Reports for admin and sales, never for an engineer', async () => {
+    for (const [role, found] of [['admin', true], ['sales', true], ['engineer', false]] as const) {
+      const u = userEvent.setup()
+      shell(role)
+      const dlg = await search(u, 'reports')
+      if (found) expect(await within(dlg).findByRole('option', { name: /^Reports/ })).toBeInTheDocument()
+      else expect(within(dlg).queryByRole('option', { name: /^Reports/ })).toBeNull()
+      cleanup()
+    }
   })
 })

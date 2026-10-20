@@ -67,8 +67,8 @@
   --neutral-50: #f4f4f6;
   --neutral-100: #eeeef1;
   --neutral-150: #e3e3e7;
-  --neutral-175: #c8c8cf;   /* readable hairline, 1.66:1 on white (2026-10-19) */
   --neutral-200: #d2d2d8;
+  --neutral-250: #c8c8cf;   /* readable hairline (2026-10-19): 1.66 on white, 1.60 canvas, 1.52 sunken, 1.44 selected */
   --neutral-300: #b3b3bb;
   --neutral-400: #8a8a93;
   --neutral-500: #6e6e77;
@@ -99,7 +99,7 @@
   --fg-disabled: var(--neutral-300);    /* disabled controls only (WCAG-exempt) */
 
   /* ---- 2d. Lines & focus ------------------------------------------------- */
-  --border: var(--neutral-175);         /* hairline: panels, rows, dividers (1.66:1 on white) */
+  --border: var(--neutral-250);         /* hairline: panels, rows, dividers (1.66:1 on white, 1.44 on selected) */
   --border-strong: var(--neutral-300);  /* hover/active hairline, popover edge, secondary button (2.08:1) */
   --border-input: var(--neutral-400);   /* form control edge (3.42:1 on white, WCAG 1.4.11) */
   --hairline: 1px;
@@ -214,10 +214,10 @@
   --row-h: 32px;
 }
 
-/* Phones and tablets: 44px controls, 40px small buttons and segments; small text keeps its old 40 / 48. */
+/* Phones and tablets, at EITHER text size: 44px controls and large buttons, 40px small buttons and segments, 48px rows.
+   Smaller text never shrinks a tap target (this block comes after [data-text="small"] and wins at equal specificity). */
 @media (pointer: coarse) {
-  :root { --control-h: 44px; --control-sm-h: 40px; --segment-h: 40px; --row-h: 48px; }
-  [data-text="small"] { --control-h: 40px; --control-sm-h: 28px; --segment-h: 26px; --row-h: 48px; }
+  :root { --control-h: 44px; --control-lg-h: 44px; --control-sm-h: 40px; --segment-h: 40px; --row-h: 48px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

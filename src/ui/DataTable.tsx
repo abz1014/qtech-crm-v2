@@ -21,8 +21,11 @@ import {
   formatStamp,
   sortRows,
   tableCsvRows,
+  DEFAULT_ROW_METRICS,
+  readRowMetrics,
   type Column,
   type Density,
+  type RowMetrics,
   type SortState,
 } from '@/ui/dataTableModel'
 
@@ -40,8 +43,9 @@ export type { Column, Density, SortState } from '@/ui/dataTableModel'
  * Performance: past `virtualAfter` rows (default 80) only the rows in view plus
  * an overscan are rendered, with spacer rows keeping the scroll height. Row
  * heights come from the density tokens (--row-h, --row-h-tall, --head-h: 48 / 56 / 40 at normal text,
- * 40 / 48 / 36 with smaller text, --row-h 40 or 32 when compact), read once from the table's own computed
- * style and again when the person changes the text size, so rows are never measured one by one.
+ * 40 / 48 / 36 with smaller text, --row-h 40 or 32 when compact) read from the table's own computed style,
+ * raised to the tallest row in view (a row with a small button is 49), and read again when the text size, the
+ * pointer type or the window of rows changes (readRowMetrics in dataTableModel.ts).
  *
  * Phone cards: give `mobileRow` and, below 640px, each row is drawn as one stacked, tappable card
  * (whatever `mobileRow` returns) instead of table cells. The rows keep their keyboard focus, Enter to
@@ -59,10 +63,6 @@ export type { Column, Density, SortState } from '@/ui/dataTableModel'
  * Truncation: a column with `width` cuts long text with an ellipsis and shows the whole text in a tooltip.
  * Footer: "Showing 7 of 7 RFQs" (give `noun`, or your own `summary`) and the key legend, whenever rows can be focused.
  */
-/** Fallbacks for an environment without computed custom properties (jsdom): the normal-text tokens. */
-const ROW_H = { comfortable: 48, compact: 40 } as const
-const TALL_H = 56
-const HEAD_H = 40
 const OVERSCAN = 8
 const PAGE = 10
 
@@ -204,7 +204,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const showPaisa = useMemo(() => new Map(columns.map(c => [c.id, columnShowsPaisa(c, rows)])), [columns, rows])
 
   // ---- windowing ----------------------------------------------------------
-  const metrics = useRowMetrics(rootRef, density)
+  const [metrics, remeasure] = useRowMetrics(rootRef, density)
   const rowH = twoLine ? Math.max(metrics.tall, metrics.row) : metrics.row
   const groupH = Math.max(36, metrics.row - 4)
   const headH = metrics.head
@@ -245,6 +245,10 @@ export function DataTable<T>(props: DataTableProps<T>) {
     const y0 = Math.max(0, scrollTop - headH)
     return [Math.max(0, find(y0) - OVERSCAN), Math.min(items.length, find(y0 + viewH) + 1 + OVERSCAN)]
   }, [virtual, items.length, offsets, scrollTop, viewH, headH])
+  // A new window of rows (scrolled, filtered, sorted) may hold a taller row: measure the rows now drawn.
+  useLayoutEffect(() => {
+    if (virtual) remeasure()
+  }, [virtual, first, items.length, remeasure])
 
   // ---- keyboard focus -----------------------------------------------------
   const [focusDi, setFocusDi] = useState(0)
@@ -794,29 +798,29 @@ export function DataTable<T>(props: DataTableProps<T>) {
 }
 
 /**
- * The row, two-line row and header heights the CSS draws (density tokens), read from the table's computed style so the
- * windowing maths always matches the rows on screen: normal or smaller text, comfortable or compact, touch or mouse.
- * Read again when the density changes and when <html data-text> changes (the text-size setting).
+ * The row, two-line row and header heights the table draws (readRowMetrics: the density tokens, raised to the tallest row
+ * in view), so the windowing maths matches the rows on screen. Read again when the density changes, when <html data-text>
+ * changes (the text-size setting), when the pointer turns coarse or fine (a 2-in-1 folded into a tablet), and on request
+ * (a new window of rows). Returns the metrics and that request.
  */
-function useRowMetrics(rootRef: RefObject<HTMLDivElement>, density: Density) {
-  const [m, setM] = useState<{ row: number; tall: number; head: number }>(() => ({ row: ROW_H[density], tall: TALL_H, head: HEAD_H }))
-  useLayoutEffect(() => {
+function useRowMetrics(rootRef: RefObject<HTMLDivElement>, density: Density): [RowMetrics, () => void] {
+  const [m, setM] = useState<RowMetrics>(() => DEFAULT_ROW_METRICS[density])
+  const read = useCallback(() => {
     const el = rootRef.current
-    if (!el || typeof window.getComputedStyle !== 'function') return
-    const read = () => {
-      const cs = window.getComputedStyle(el)
-      const px = (name: string, fallback: number) => {
-        const v = Number.parseFloat(cs.getPropertyValue(name))
-        return Number.isFinite(v) && v > 0 ? v : fallback
-      }
-      const next = { row: px('--row-h', ROW_H[density]), tall: px('--row-h-tall', TALL_H), head: px('--head-h', HEAD_H) }
-      setM(prev => (prev.row === next.row && prev.tall === next.tall && prev.head === next.head ? prev : next))
-    }
-    read()
-    if (typeof MutationObserver === 'undefined') return
-    const mo = new MutationObserver(read)
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-text'] })
-    return () => mo.disconnect()
+    if (!el) return
+    const next = readRowMetrics(el, density)
+    setM(prev => (prev.row === next.row && prev.tall === next.tall && prev.head === next.head ? prev : next))
   }, [rootRef, density])
-  return m
+  useLayoutEffect(() => {
+    read()
+    const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(read)
+    mo?.observe(document.documentElement, { attributes: true, attributeFilter: ['data-text'] })
+    const pointer = typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)') : null
+    pointer?.addEventListener?.('change', read)
+    return () => {
+      mo?.disconnect()
+      pointer?.removeEventListener?.('change', read)
+    }
+  }, [read])
+  return [m, read]
 }

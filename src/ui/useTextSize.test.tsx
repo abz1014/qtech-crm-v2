@@ -61,6 +61,29 @@ describe('text size store', () => {
     expect(html().dataset.text).toBe('small')
     expect(screen.getByRole('radio', { name: 'Smaller' })).toBeChecked()
   })
+
+  it('ignores a storage event for another key (the table density, a draft)', () => {
+    setTextSize('small')
+    render(<TextSizeControl />)
+    // Another tab cleared the size in storage but only told us about some other key: nothing changes here.
+    window.localStorage.removeItem(TEXT_SIZE_KEY)
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'qtech.density.u1.RFQs', newValue: 'compact' }))
+    })
+    expect(html().dataset.text).toBe('small')
+    expect(screen.getByRole('radio', { name: 'Smaller' })).toBeChecked()
+  })
+
+  it('a cleared storage in another tab (key null) goes back to Normal', () => {
+    setTextSize('small')
+    render(<TextSizeControl />)
+    window.localStorage.clear()
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: null }))
+    })
+    expect(html().hasAttribute('data-text')).toBe(false)
+    expect(screen.getByRole('radio', { name: 'Normal' })).toBeChecked()
+  })
 })
 
 describe('TextSizeControl and the Your details panel', () => {

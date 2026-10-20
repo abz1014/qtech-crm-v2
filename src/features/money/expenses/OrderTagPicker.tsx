@@ -175,10 +175,10 @@ export const OrderTagPicker = forwardRef<HTMLInputElement, OrderTagPickerProps>(
             </ul>
             <footer className="mt-[2px] flex items-center gap-4 border-t px-2 pb-[2px] pt-[6px] text-xs text-fg-muted">
               <span className="inline-flex items-center gap-1">
-                <Kbd className="h-4 min-w-4 text-xs">Tab</Kbd>accept
+                <Kbd size="inline">Tab</Kbd>accept
               </span>
               <span className="inline-flex items-center gap-1">
-                <Kbd className="h-4 min-w-4 text-xs">Esc</Kbd>cancel
+                <Kbd size="inline">Esc</Kbd>cancel
               </span>
             </footer>
           </div>

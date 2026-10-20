@@ -73,7 +73,7 @@ export function InlineEditRow({ columns, label, cells, editCells, mode, error, o
         className={cn(
           'relative grid min-h-row items-center gap-2 px-3 text-sm',
           editing
-            ? 'bg-sunken py-2 before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green [&_input]:h-control-sm [&_input]:px-2 [&_input]:text-sm [&_select]:h-control-sm [&_select]:text-sm'
+            ? 'bg-sunken py-2 before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green [&_input]:h-control-sm [&_input]:px-2 [&_input]:text-sm [&_select]:h-control-sm [&_select]:text-sm max-md:[&_input]:text-[16px] max-md:[&_select]:text-[16px]'
             : 'cursor-pointer bg-surface hover:bg-sunken',
         )}
       >

@@ -145,6 +145,14 @@ describe('InlineEditRow (components-13)', () => {
     await user.click(screen.getByRole('button', { name: 'Edit Karachi Valve House' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Price must be a number')
   })
+
+  it('while editing on a phone the fields are 16 px, so iOS does not zoom (the 15 px desktop size loses below md)', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    await user.click(screen.getByRole('button', { name: 'Edit Karachi Valve House' }))
+    const cls = screen.getByRole('group', { name: 'Karachi Valve House' }).className.split(' ')
+    expect(cls).toEqual(expect.arrayContaining(['[&_input]:text-sm', 'max-md:[&_input]:text-[16px]', 'max-md:[&_select]:text-[16px]']))
+  })
 })
 
 describe('EmptyState (components-09)', () => {

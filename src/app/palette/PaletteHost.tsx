@@ -1,7 +1,8 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, CalendarCheck, Import, Plus, Receipt, RefreshCw, Settings, Target, User, Users, type LucideIcon } from 'lucide-react'
+import { Building2, CalendarCheck, ChartColumn, Import, Plus, Settings } from 'lucide-react'
 import { navItemsForRole } from '@/app/navConfig'
+import { settingsLinksFor } from '@/features/settings/settingsLinks'
 import { CaptureContext } from '@/app/capture/useCapture'
 import { PaletteContext, type PaletteApi } from '@/app/palette/usePalette'
 import { CAPTURE_LABEL } from '@/app/shell/TopBar'
@@ -14,17 +15,20 @@ const INTAKE_ROUTE = '/rfqs/new'
 const TODAY_ROUTE = '/today'
 
 /**
- * Settings pages people look for by name (audit: they were only in the avatar menu). Searched, not shown idle.
- * Admin-only pages are left out for other roles, as the Settings menu does.
+ * The places Jump to finds by name, besides the main destinations (audit: they were only in the avatar menu). Searched,
+ * not shown idle. The Settings pages come from the same list as the Settings menu (settingsLinks.ts), so a role is offered
+ * exactly what that menu offers. Reports is listed for admin and sales even when it is no longer a main destination:
+ * /reports opens it, or redirects to where it lives now.
  */
-const SETTINGS_PLACES: ReadonlyArray<{ id: string; label: string; href: string; icon: LucideIcon; adminOnly?: boolean }> = [
-  { id: 'settings', label: 'Settings', href: '/settings', icon: Settings },
-  { id: 'settings-details', label: 'Your details', href: '/settings/details', icon: User },
-  { id: 'settings-team', label: 'Team', href: '/settings/team', icon: Users, adminOnly: true },
-  { id: 'settings-rates', label: 'Exchange rates', href: '/settings/exchange-rates', icon: RefreshCw, adminOnly: true },
-  { id: 'settings-targets', label: 'Targets', href: '/settings/targets', icon: Target, adminOnly: true },
-  { id: 'settings-categories', label: 'Expense categories', href: '/settings/categories', icon: Receipt, adminOnly: true },
-]
+function placesFor(role: string): PaletteItem[] {
+  const places: PaletteItem[] = [
+    { id: 'settings', label: 'Settings', icon: Settings, meta: 'Go to', href: '/settings' },
+    ...settingsLinksFor(role).map(l => ({ id: `settings:${l.to}`, label: l.label, icon: l.icon, meta: 'Settings', href: l.to })),
+  ]
+  const navHasReports = navItemsForRole(role).some(n => n.path === '/reports')
+  if (!navHasReports && (role === 'admin' || role === 'sales')) places.push({ id: 'reports', label: 'Reports', icon: ChartColumn, meta: 'Money', href: '/reports' })
+  return places
+}
 
 /** True when a key press belongs to something the person is typing into or a dialog they are in. */
 function isTypingContext(e: KeyboardEvent): boolean {
@@ -59,13 +63,7 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
   const goTo = useMemo<PaletteSource>(() => {
     const items: PaletteItem[] = [
       ...navItemsForRole(role).map(n => ({ id: n.key, label: n.label, icon: n.icon, meta: 'Go to', href: n.path })),
-      ...SETTINGS_PLACES.filter(p => !p.adminOnly || role === 'admin').map(p => ({
-        id: p.id,
-        label: p.label,
-        icon: p.icon,
-        meta: p.id === 'settings' ? 'Go to' : 'Settings',
-        href: p.href,
-      })),
+      ...placesFor(role),
     ]
     return {
       id: 'go-to',
@@ -77,14 +75,15 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
 
   // Actions (A-89): idle rows in the palette, and the same keys work anywhere outside a text field: N, C, G then T.
   const actions = useMemo<PaletteSource>(() => {
-    const captureItem: PaletteItem = { id: 'capture', label: CAPTURE_LABEL, meta: 'Action', icon: Import, shortcut: ['C'], onSelect: () => openCapture?.() }
+    // "capture" and "paste" still find it: the old name, and the word people reach for.
+    const captureItem: PaletteItem = { id: 'capture', label: CAPTURE_LABEL, meta: 'Action', keywords: ['capture', 'paste'], icon: Import, shortcut: ['C'], onSelect: () => openCapture?.() }
     const items: PaletteItem[] = [
       { id: 'new-rfq', label: 'New RFQ', meta: 'Go to intake', icon: Plus, shortcut: ['N'], href: INTAKE_ROUTE },
       captureItem,
       { id: 'go-today', label: 'Go to Today', icon: CalendarCheck, shortcut: ['G T'], href: TODAY_ROUTE },
       { id: 'new-company', label: 'New company', icon: Building2, href: '/companies?new=1' },
     ]
-    // Typing "paste" or "photo" finds the paste-or-photo action; the other actions are idle-only (destinations answer typed text).
+    // Typing "paste", "photo" or "capture" finds the paste-or-photo action; the other actions are idle-only (destinations answer typed text).
     return { id: 'actions', group: 'Actions', order: 90, idle: () => items, search: q => filterItems([captureItem], q) }
   }, [openCapture])
 

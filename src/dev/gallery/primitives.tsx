@@ -202,7 +202,7 @@ export function EmptyCards() {
         Belimo is a brand, not a company. Brands are on the company page of the agent who supplies them.
       </EmptyState>
       <EmptyState bordered mood="warning" title="Money is for admins and sales">
-        Your role is Engineer. Ask an admin if you need to see invoices or receivables.
+        Your role is Engineer. Ask an admin if you need to see invoices or who owes us.
       </EmptyState>
     </div>
   )

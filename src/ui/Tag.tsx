@@ -27,7 +27,7 @@ export function CountPill({ children, className }: { children: ReactNode; classN
 
 /**
  * CountBadge: a count pinned to the top-right of an icon (the phone tabs show the top bar's counts this way).
- * Two px under the xs size so it stays small beside a 20px glyph; over 99 reads "99+". Decorative: the
+ * Two px under the xs size so it stays small beside a 20px glyph, never under 11px (Smaller text); over 99 reads "99+". Decorative: the
  * control it sits in says the count in words for screen readers.
  */
 export function CountBadge({ count, className }: { count: number; className?: string }) {
@@ -36,8 +36,8 @@ export function CountBadge({ count, className }: { count: number; className?: st
       aria-hidden="true"
       data-count=""
       className={cn(
-        'num absolute -top-[6px] left-[calc(100%-7px)] inline-grid h-[calc(var(--lh-xs)-2px)] min-w-[calc(var(--lh-xs)-2px)] place-items-center',
-        'rounded-round bg-primary px-[5px] text-[length:calc(var(--text-xs)-2px)] font-medium leading-none text-primary-foreground ring-2 ring-surface',
+        'num absolute -top-[6px] left-[calc(100%-7px)] inline-grid h-[max(16px,calc(var(--lh-xs)-2px))] min-w-[max(16px,calc(var(--lh-xs)-2px))] place-items-center',
+        'rounded-round bg-primary px-[5px] text-[length:max(11px,calc(var(--text-xs)-2px))] font-medium leading-none text-primary-foreground ring-2 ring-surface',
         className,
       )}
     >

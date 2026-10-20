@@ -36,7 +36,7 @@ Rules:
 - Sentence case everywhere. No all-caps labels, no letter-spaced eyebrows.
 - Line length for running text: 66 characters maximum (`max-width: 66ch`). Tables and lists are exempt.
 - Titles use `text-wrap: balance`, paragraphs `text-wrap: pretty`.
-- Muted text is `--fg-muted` (7.2:1 or better on every surface, 8.4:1 on white), never a lighter grey, and only for captions, hints and placeholders. Body copy and data in primitives use `--fg` or `--fg-2`.
+- Muted text is `--fg-muted` (8.37:1 on white, 7.62 on sunken, 7.23 on selected, and 7.13 on the lightest chip tint, the danger tint: 7.1:1 or better wherever it can sit), never a lighter grey, and only for captions, hints and placeholders. Body copy and data in primitives use `--fg` or `--fg-2`.
 
 ### Mono and tabular figures
 
@@ -82,8 +82,8 @@ Cool grey, hue about 240 degrees, chroma under 3 percent. Components never refer
 | `--neutral-50` | `#f4f4f6` |
 | `--neutral-100` | `#eeeef1` |
 | `--neutral-150` | `#e3e3e7` |
-| `--neutral-175` | `#c8c8cf` (added 2026-10-19: the readable hairline) |
 | `--neutral-200` | `#d2d2d8` |
+| `--neutral-250` | `#c8c8cf` (added 2026-10-19: the readable hairline) |
 | `--neutral-300` | `#b3b3bb` |
 | `--neutral-400` | `#8a8a93` |
 | `--neutral-500` | `#6e6e77` |
@@ -104,7 +104,7 @@ Cool grey, hue about 240 degrees, chroma under 3 percent. Components never refer
 | Modal scrim | `--bg-scrim` | 42% black |
 | Text | `--fg` / `--fg-2` / `--fg-muted` | neutral-900 / 700 / 650 |
 | Disabled | `--fg-disabled` | neutral-300 (WCAG-exempt) |
-| Hairline | `--border` | neutral-175 (1.66:1 on white, so dividers are visible) |
+| Hairline | `--border` | neutral-250 (1.66:1 on white, 1.60 on canvas, 1.52 on sunken, 1.44 on selected; up from 1.28 on white) |
 | Hover or popover edge, secondary button | `--border-strong` | neutral-300 (2.08:1) |
 | Form control edge | `--border-input` | neutral-400 (3.42:1) |
 | Primary action, links, green text | `--primary` `#1a7b46` | hover `#166a3b`, active `#115a31` |
@@ -220,7 +220,7 @@ Computed from the token values by the build script; every pair below passes. Tex
 | brand-green (focus ring, indicator, progress) on selected | `#429446` | `#eeeef1` | 3.26:1 | 3:1 | pass |
 | border-input on surface | `#8a8a93` | `#ffffff` | 3.42:1 | 3:1 | pass |
 | border-input on sunken | `#8a8a93` | `#f4f4f6` | 3.11:1 | 3:1 | pass |
-| border (hairline, divider) on surface | `#c8c8cf` | `#ffffff` | 1.66:1 | none (decorative), 1.6 house floor | pass |
+| border (hairline, divider) on surface / canvas / sunken / selected | `#c8c8cf` | `#ffffff` … `#eeeef1` | 1.66 / 1.60 / 1.52 / 1.44 | none (decorative) | pass |
 | border-strong on surface | `#b3b3bb` | `#ffffff` | 2.08:1 | none (decorative) | pass |
 | tone-warning-fg dot on surface | `#92400e` | `#ffffff` | 7.09:1 | 3:1 | pass |
 
@@ -256,19 +256,19 @@ One default, one alternative, at either text size. Compact is never a default.
 
 | Token | Normal text | Smaller text | Coarse pointer (phones, tablets) |
 |---|---|---|---|
-| `--control-h` (inputs, buttons, menu rows) | 40 | 32 | 44 (40 with Smaller) |
-| `--control-sm-h` (small buttons, row actions) | 36 | 28 | 40 (28 with Smaller) |
-| `--control-lg-h` (large buttons) | 44 | 40 | |
-| `--segment-h` (one SegmentedControl segment, filter chips) | 36 | 26 | 40 (26 with Smaller) |
+| `--control-h` (inputs, buttons, menu rows) | 40 | 32 | 44 at either text size |
+| `--control-sm-h` (small buttons, row actions) | 36 | 28 | 40 at either text size |
+| `--control-lg-h` (large buttons) | 44 | 40 | 44 at either text size |
+| `--segment-h` (one SegmentedControl segment, filter chips) | 36 | 26 | 40 at either text size |
 | `--chip-h` (status chip, tag, key; a minimum) | 24 | 20 | |
-| `--row-h` (table and list rows) | 48 | 40 | 48 |
+| `--row-h` (table and list rows) | 48 | 40 | 48 at either text size |
 | `--row-h-tall` (two-line rows) | 56 | 48 | |
 | `--head-h` (table header; column bands are 8 less) | 40 | 36 | |
 | `--topbar-h` | 56 | 52 | |
 | Table text | 15 / 22 | 13 / 20 | |
 | Compact table (`data-density="compact"`) | rows 40, text 14 / 20, cells 8 | rows 32, text 12 / 16 | |
 
-Compact is a per-table toggle remembered per user; it never applies to forms or the Today list. DataTable reads `--row-h`, `--row-h-tall` and `--head-h` from its own computed style for windowing, so virtual rows always match the CSS. Tap targets on phones are at least 44 (`--hit-touch`).
+Compact is a per-table toggle remembered per user; it never applies to forms or the Today list. DataTable reads `--row-h`, `--row-h-tall` and `--head-h` from its own computed style for windowing and raises them to what the rows in view need (a row with a 36 px small button needs 49), so virtual rows always match what is drawn. Tap targets on phones are at least 44 (`--hit-touch`), and Smaller text never shrinks a tap target: the coarse-pointer heights are the same at both sizes (`src/lib/tokens.test.ts`).
 
 ## 12. Layout
 
