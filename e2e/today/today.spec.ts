@@ -161,7 +161,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(pane.getByRole('heading', { level: 2, name: 'Chase customer for clarifications' })).toBeVisible()
     await expect(pane.getByText('Moved to Waiting.')).toBeVisible()
     await expect(pane.getByText('Chased customer', { exact: true })).toBeVisible()
-    await expect(pane.getByText('Next nudge', { exact: true })).toBeVisible()
+    await expect(pane.getByText('Chase again on', { exact: true })).toBeVisible()
     await expect(pane.getByRole('region', { name: 'Chased today' })).toBeVisible()
     await expect(pane.getByRole('button', { name: 'Copy message and mark chased' })).toHaveCount(0)
     await review(page, 'today-03-waiting-1440')
@@ -188,7 +188,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await openAs(page, 'sales', '/today')
     const row = rowOf(page, s.ref).filter({ hasText: 'Chase customer for clarifications' })
     await row.getByRole('button').first().click()
-    await paneFor(page, s.ref).getByRole('button', { name: 'Snooze' }).click() // tap 1: open
+    await paneFor(page, s.ref).getByRole('button', { name: 'Snooze', exact: true }).click() // tap 1: open
     await page.getByRole('menuitem', { name: /^Tomorrow/ }).click() // tap 2: choose
     await expect(page.getByRole('status').filter({ hasText: 'Snoozed until' })).toBeVisible()
     await expect(row).toHaveCount(0)

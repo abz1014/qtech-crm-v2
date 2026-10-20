@@ -14,6 +14,7 @@ import {
 } from 'react-hook-form'
 import type { MappedError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
+import { useReportDialogDirty } from '@/ui/Dialog'
 import { Field, type FieldSource } from '@/ui/form/Field'
 import type { SubmitForm } from '@/ui/form/useSubmitForm'
 
@@ -27,6 +28,8 @@ interface FormProps<TIn extends FieldValues, TOut> {
 
 export function Form<TIn extends FieldValues, TOut>({ sf, labels = {}, children, className }: FormProps<TIn, TOut>) {
   const { form } = sf
+  // Inside a Dialog, changes here make closing ask "Discard what you typed?" (learnability spec 3.3). Elsewhere a no-op.
+  useReportDialogDirty(form.formState.isDirty && !sf.pending)
   return (
     <FormProvider {...(form as unknown as UseFormReturn<TIn>)}>
       <form id={sf.formId} noValidate onSubmit={sf.submit} className={className} aria-busy={sf.pending || undefined}>

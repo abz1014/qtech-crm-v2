@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPreference'
-import { Check, Copy, MessageSquareWarning, Phone } from 'lucide-react'
+import { Check, MessageSquareWarning, Phone } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { copyToClipboard } from '@/lib/clipboard'
 import { businessToday } from '@/lib/dates'
@@ -10,6 +10,7 @@ import { orderRef } from '@/lib/refs'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
+import { MessageActions } from '@/ui/MessageActions'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
@@ -35,6 +36,8 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
   const [channel, setChannel] = useChannelPreference()
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
+  // A WhatsApp / email link was opened: the dialog stays open and offers "Mark chased" (opening never marks).
+  const [opened, setOpened] = useState(false)
   const today = businessToday()
 
   const draft = useMemo(() => {
@@ -64,6 +67,37 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
 
   const text = draft ? chaseClipboardText(channel === 'email' ? draft.email : draft.whatsapp) : ''
 
+  /** Stamps the chase with Undo and closes the dialog. `copied`: the copy button did it, else a link was opened. */
+  const mark = async (copied: boolean) => {
+    try {
+      const r = await performChase({ kind: 'goods', legId: leg.id, before: { lastChasedOn: leg.lastChasedOn, chaseCount: leg.chaseCount } })
+      setCopied(true)
+      toast({
+        title: `${copied ? 'Copied. ' : ''}${leg.supplierName} marked chased.`,
+        body: orderRef(order.number),
+        tone: 'success',
+        undo: {
+          seconds: 10,
+          onUndo: async () => {
+            try {
+              await r.undo()
+              setCopied(false)
+            } finally {
+              void refresh()
+            }
+          },
+          onSettle: () => void refresh(),
+          settledTitle: `${leg.supplierName} marked chased`,
+          undoneTitle: 'Undone.',
+          undoneBody: `${leg.supplierName} is not marked chased.`,
+        },
+      })
+      onClose()
+    } catch (err) {
+      toast({ title: copied ? 'Copied, but it was not marked' : 'It was not marked', body: mapPgError(err).message, tone: 'danger' })
+    }
+  }
+
   const copyAndMark = async () => {
     if (!draft || busy) return
     setBusy(true)
@@ -73,33 +107,17 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
         toast({ title: 'Could not copy the message', body: 'Select the text and copy it by hand. Nothing was marked.', tone: 'danger' })
         return
       }
-      try {
-        const r = await performChase({ kind: 'goods', legId: leg.id, before: { lastChasedOn: leg.lastChasedOn, chaseCount: leg.chaseCount } })
-        setCopied(true)
-        toast({
-          title: `Copied. ${leg.supplierName} marked chased.`,
-          body: orderRef(order.number),
-          tone: 'success',
-          undo: {
-            seconds: 10,
-            onUndo: async () => {
-              try {
-                await r.undo()
-                setCopied(false)
-              } finally {
-                void refresh()
-              }
-            },
-            onSettle: () => void refresh(),
-            settledTitle: `${leg.supplierName} marked chased`,
-            undoneTitle: 'Undone.',
-            undoneBody: `${leg.supplierName} is not marked chased.`,
-          },
-        })
-        onClose()
-      } catch (err) {
-        toast({ title: 'Copied, but it was not marked', body: mapPgError(err).message, tone: 'danger' })
-      }
+      await mark(true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const markOnly = async () => {
+    if (!draft || busy) return
+    setBusy(true)
+    try {
+      await mark(false)
     } finally {
       setBusy(false)
     }
@@ -121,8 +139,26 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
               <Button icon={Check} disabled>
                 Marked chased today
               </Button>
+            ) : draft ? (
+              <>
+                <MessageActions
+                  to={draft.contact}
+                  text={draft.whatsapp.body}
+                  email={{ subject: draft.email.subject, body: draft.email.body }}
+                  variant={opened ? 'secondary' : 'primary'}
+                  copy={{ label: 'Copy message and mark chased', onCopy: copyAndMark, busy, busyLabel: 'Marking' }}
+                  onOpen={() => setOpened(true)}
+                  channel={channel}
+                  onChannelChange={setChannel}
+                />
+                {opened ? (
+                  <Button variant="primary" icon={Check} busy={busy} busyLabel="Marking" onClick={() => void markOnly()}>
+                    Mark chased
+                  </Button>
+                ) : null}
+              </>
             ) : (
-              <Button variant="primary" icon={Copy} busy={busy} busyLabel="Marking" disabled={!draft} onClick={() => void copyAndMark()}>
+              <Button variant="primary" disabled>
                 Copy message and mark chased
               </Button>
             )}

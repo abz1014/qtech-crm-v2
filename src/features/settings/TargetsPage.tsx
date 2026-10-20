@@ -31,6 +31,7 @@ import { Avatar } from '@/ui/Avatar'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { Money } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
 import { Tag } from '@/ui/Tag'
@@ -115,7 +116,7 @@ export function TargetsPage() {
   return (
     <div className="grid content-start gap-4">
       <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Targets</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Targets <InfoTip label="About targets">Per person, per quarter, in net cash received (GST excluded).</InfoTip></h1>
         <p className="max-w-prose text-sm text-fg-muted">
           Net cash received per person for each quarter, GST left out. Each person sees only their own target, on Today.
         </p>

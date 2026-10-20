@@ -10,7 +10,7 @@
  * supplier price, currency and PO line: nothing assumes one supplier per RFQ item.
  */
 
-import { convertToPaisa, paisaToFixed, sumProductsPaisa } from '@/lib/money'
+import { convertToPaisa, formatAmount, paisaToFixed, sumProductsPaisa } from '@/lib/money'
 
 export interface EstItem {
   id: string
@@ -118,4 +118,19 @@ export function estimateExpectedCost(input: { items: readonly EstItem[]; legs: r
   }
   legs.sort((a, b) => a.legId.localeCompare(b.legId))
   return { pkr: any ? rupees(total) : null, legs, linesWithoutPrice: withoutPrice, unconverted: [...unconverted].sort() }
+}
+
+/**
+ * The "still owed on this supplier order" pre-fill for Pay supplier (entry-burden J14): the supplier order's estimate (its PO, else its
+ * supplier prices) in PKR, less the supplier payments already tagged to it. Exact for PKR; a labelled estimate at today's rate for a
+ * foreign currency. Null when nothing is owed or it cannot be converted: the amount is then typed, as before.
+ */
+export function stillOwedOnLeg(est: CostEstimate, legId: string, paidPkr: number): { amount: number; note: string } | null {
+  const leg = est.legs.find(l => l.legId === legId)
+  if (!leg || leg.pkr === null) return null
+  const owed = Math.round((leg.pkr - paidPkr) * 100) / 100
+  if (owed <= 0) return null
+  const basis = leg.source === 'prices' ? 'Supplier prices' : 'PO total'
+  const what = leg.currency === 'PKR' ? `${basis} PKR ${formatAmount(leg.amount)}` : `${basis} ${leg.currency} ${formatAmount(leg.amount)}, about PKR ${formatAmount(leg.pkr)} today`
+  return { amount: owed, note: paidPkr > 0 ? `Still owed: ${what}, less PKR ${formatAmount(paidPkr)} paid` : `Still owed: ${what}` }
 }

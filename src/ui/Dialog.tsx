@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
 import { X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -26,7 +26,22 @@ import { recentMenuTrigger } from '@/ui/menuTrigger'
  *   </Dialog>
  */
 
-const BusyContext = createContext(false)
+/*
+ * Discard guard (learnability spec 3.3): once something was typed, a stray tap must not throw it away. While the dialog is
+ * `dirty` (the prop, or any <Form> inside it with changes, reported through useReportDialogDirty) the scrim does nothing,
+ * and Esc, the close button and a [data-cancel] button show an inline bar, "Discard what you typed?", with focus on
+ * Keep editing. A dialog that closes itself after a save (its own setOpen(false)) is not asked.
+ */
+interface Guard {
+  busy: boolean
+  dirty: boolean
+  asking: boolean
+  ask: () => void
+  keep: () => void
+  discard: () => void
+  report: (id: string, dirty: boolean) => void
+}
+const GuardContext = createContext<Guard | null>(null)
 
 interface DialogProps {
   open?: boolean
@@ -34,18 +49,105 @@ interface DialogProps {
   onOpenChange?: (open: boolean) => void
   /** A request is in flight: Esc, scrim and close are ignored, the body is dimmed. */
   busy?: boolean
+  /** Something was typed: closing asks "Discard what you typed?" first. A <Form> inside reports this on its own. */
+  dirty?: boolean
   children: ReactNode
 }
 
-export function Dialog({ busy = false, children, ...rest }: DialogProps) {
-  // Android Back (and the browser's) closes the open dialog instead of leaving the page; ignored while a save is in flight.
-  useBackToClose(Boolean(rest.open), () => {
-    if (!busy) rest.onOpenChange?.(false)
+export function Dialog({ busy = false, dirty = false, open, defaultOpen, onOpenChange, children }: DialogProps) {
+  const [inner, setInner] = useState(defaultOpen ?? false)
+  const isOpen = open ?? inner
+  const [forms, setForms] = useState<ReadonlySet<string>>(new Set())
+  const [asking, setAsking] = useState(false)
+  const guarded = dirty || forms.size > 0
+  useEffect(() => {
+    if (!isOpen) setAsking(false)
+  }, [isOpen])
+
+  const change = useCallback(
+    (next: boolean) => {
+      if (!next) setAsking(false)
+      if (open === undefined) setInner(next)
+      onOpenChange?.(next)
+    },
+    [open, onOpenChange],
+  )
+  const report = useCallback((id: string, d: boolean) => {
+    setForms(s => {
+      if (s.has(id) === d) return s
+      const n = new Set(s)
+      if (d) n.add(id)
+      else n.delete(id)
+      return n
+    })
+  }, [])
+
+  const guard = useMemo<Guard>(
+    () => ({
+      busy,
+      dirty: guarded,
+      asking: asking && guarded,
+      ask: () => setAsking(true),
+      keep: () => setAsking(false),
+      discard: () => change(false),
+      report,
+    }),
+    [busy, guarded, asking, change, report],
+  )
+  // Android Back (and the browser's) closes the open dialog instead of leaving the page: the same path as Esc (asks first
+  // when something was typed), and ignored while a save is in flight.
+  useBackToClose(isOpen, () => {
+    if (busy) return
+    if (guarded) setAsking(true)
+    else change(false)
   })
+
   return (
-    <BusyContext.Provider value={busy}>
-      <RadixDialog.Root {...rest}>{children}</RadixDialog.Root>
-    </BusyContext.Provider>
+    <GuardContext.Provider value={guard}>
+      <RadixDialog.Root
+        open={isOpen}
+        onOpenChange={next => {
+          if (!next && guarded) setAsking(true)
+          else change(next)
+        }}
+      >
+        {children}
+      </RadixDialog.Root>
+    </GuardContext.Provider>
+  )
+}
+
+/** A form inside a dialog says whether it holds changes (Form calls this; a hand-rolled form can too). */
+// eslint-disable-next-line react-refresh/only-export-components -- the hook belongs with the guard it reports to
+export function useReportDialogDirty(dirty: boolean) {
+  const guard = useContext(GuardContext)
+  const report = guard?.report
+  const id = useId()
+  useEffect(() => {
+    if (!report) return
+    report(id, dirty)
+    return () => report(id, false)
+  }, [report, id, dirty])
+}
+
+function DiscardBar({ onKeep, onDiscard }: { onKeep: () => void; onDiscard: () => void }) {
+  const keepRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => keepRef.current?.focus(), [])
+  return (
+    <div
+      role="group"
+      aria-label="Discard what you typed?"
+      data-discard-bar
+      className="flex flex-wrap items-center justify-end gap-2 border-t bg-tone-warning-bg px-5 py-3 text-sm text-tone-warning-fg max-md:[&>button]:h-touch"
+    >
+      <span className="mr-auto font-medium">Discard what you typed?</span>
+      <Button ref={keepRef} onClick={onKeep}>
+        Keep editing
+      </Button>
+      <Button variant="danger" onClick={onDiscard}>
+        Discard
+      </Button>
+    </div>
   )
 }
 
@@ -115,11 +217,20 @@ export function DialogContent({
   children,
   className,
 }: DialogContentProps) {
-  const busy = useContext(BusyContext)
+  const guard = useContext(GuardContext)
+  const busy = guard?.busy ?? false
+  const dirty = guard?.dirty ?? false
   const contentRef = useRef<HTMLDivElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
   const hold = (e: Event) => {
+    if (busy || dirty) e.preventDefault()
+  }
+  const holdEscape = (e: KeyboardEvent) => {
     if (busy) e.preventDefault()
+    else if (dirty) {
+      e.preventDefault()
+      guard?.ask()
+    }
   }
   return (
     <RadixDialog.Portal>
@@ -127,7 +238,7 @@ export function DialogContent({
         <RadixDialog.Content
           ref={contentRef}
           {...(context ? {} : { 'aria-describedby': undefined })}
-          onEscapeKeyDown={hold}
+          onEscapeKeyDown={holdEscape}
           onPointerDownOutside={hold}
           onInteractOutside={hold}
           onOpenAutoFocus={e => {
@@ -189,8 +300,17 @@ export function DialogContent({
           >
             {children}
           </div>
-          {footer ? (
+          {guard?.asking ? (
+            <DiscardBar onKeep={guard.keep} onDiscard={guard.discard} />
+          ) : footer ? (
             <footer
+              onClickCapture={e => {
+                // A Cancel button (data-cancel) closes through the caller's own state, so it is caught here.
+                if (!dirty || busy || !(e.target instanceof Element) || !e.target.closest('[data-cancel]')) return
+                e.preventDefault()
+                e.stopPropagation()
+                guard?.ask()
+              }}
               className={cn(
                 'flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 pb-[max(var(--sp-3),env(safe-area-inset-bottom,0px))]',
                 'max-md:flex-col-reverse max-md:items-stretch max-md:[&>button]:h-touch',

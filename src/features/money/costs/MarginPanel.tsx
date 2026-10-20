@@ -168,7 +168,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
           <div className="grid gap-1 rounded border border-dashed border-line-strong p-4">
             <div className="flex items-baseline justify-between gap-3 text-sm text-fg-2">
               <span>{unknown ? 'Margin' : 'Margin so far'}</span>
-              <span className="text-xs text-fg-muted">{unknown ? 'Not calculated' : 'Net sale less costs paid'}</span>
+              <span className="text-xs text-fg-muted">{unknown ? 'Not calculated' : 'Sale less costs paid'}</span>
             </div>
             <div className="text-xl">
               <Margin value={m.margin} state={m.marginState as 'provisional' | 'final' | 'basis_unknown' | null} size="xl" />
@@ -177,10 +177,10 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
               {unknown
                 ? `Not worked out until someone answers "Is GST included?" at the top of the page.${actual > 0 ? ` Imported costs of PKR ${formatAmount(actual)} are on file.` : ''}`
                 : complete
-                  ? 'Final. Costs are marked complete.'
+                  ? 'Final: costs complete.'
                   : expected !== null
-                    ? `Not final: ${formatAmount(actual)} of an expected ${formatAmount(expected)} paid out so far.`
-                    : 'Not final: no expected cost is set, so only what is paid so far counts.'}
+                    ? `Not final: ${formatAmount(actual)} of ${formatAmount(expected)} paid.`
+                    : 'Not final: counts only what is paid so far.'}
             </p>
           </div>
 
@@ -189,8 +189,8 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
               <Bar net={net} paid={actual} stillToPay={stillToPay ?? 0} />
               <div className="grid gap-1">
                 <Legend swatch="paid" label="Paid out" value={formatAmount(actual)} />
-                <Legend swatch="still" label="Still to pay, from expected cost" value={stillToPay !== null ? formatAmount(stillToPay) : '—'} />
-                <Legend swatch="margin" label="Margin if costs land as expected" value={ifExpected !== null ? formatAmount(ifExpected) : '—'} />
+                <Legend swatch="still" label="Still to pay" value={stillToPay !== null ? formatAmount(stillToPay) : '—'} />
+                <Legend swatch="margin" label="Margin if as expected" value={ifExpected !== null ? formatAmount(ifExpected) : '—'} />
               </div>
             </>
           ) : null}

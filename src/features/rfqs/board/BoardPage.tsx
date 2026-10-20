@@ -24,8 +24,11 @@ import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
+import { FirstUseState } from '@/features/help/FirstUseState'
+import { useFirstUse } from '@/features/help/useFirstUse'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { TextField } from '@/ui/form/TextField'
 
 /*
@@ -163,6 +166,7 @@ export function BoardPage() {
     </EmptyState>
   )
 
+  const firstUse = useFirstUse('rfqs', user?.id ?? '', user?.role ?? '', open.isSuccess && owner === 'mine' && mineCount === 0 && step === 'all' && !q)
   const emptyOpen = q && total > 0 ? noMatch : !filtered && total === 0 ? (
     <EmptyState
       mood="goal"
@@ -175,6 +179,8 @@ export function BoardPage() {
     >
       Every quotation is out or closed. New RFQs appear here as soon as you start one.
     </EmptyState>
+  ) : owner === 'mine' && mineCount === 0 && step === 'all' && firstUse.isNew ? (
+    <FirstUseState screen="rfqs" role={user?.role ?? ''} className="mx-5 my-4" />
   ) : owner === 'mine' && mineCount === 0 && step === 'all' ? (
     <EmptyState
       mood="goal"
@@ -249,6 +255,7 @@ export function BoardPage() {
           }}
         />
       </div>
+      <InfoTip label="About next steps">Needs suppliers → Waiting for prices → Ready to quote → Quotation sent → Won or closed.</InfoTip>
     </div>
   )
 

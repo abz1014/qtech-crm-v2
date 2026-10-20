@@ -58,7 +58,7 @@ describe('the orders list "Next step" column', () => {
     expect(step({ ...eng, goods: 'delivered' }, 'engineer').text).toBe('Nothing left for you')
     expect(step({ ...eng, goods: 'delivered', commissioning: 'planned', plannedOn: '2026-11-25' }, 'engineer').text).toBe('Commissioning 25 Nov')
     expect(step({ ...eng, goods: 'to_source' }, 'engineer')).toMatchObject({ text: 'Waiting for a supplier to be chosen', tone: 'waiting' })
-    expect(step({ ...eng, goods: 'to_place', legs: [leg({})] }, 'engineer')).toMatchObject({ text: 'Waiting for the order with Alpenmark Controls to be placed', tone: 'waiting' })
+    expect(step({ ...eng, goods: 'to_place', legs: [leg({})] }, 'engineer')).toMatchObject({ text: 'Waiting for the PO to Alpenmark Controls', tone: 'waiting' })
     expect(step({ ...eng, goods: 'delivered', commissioning: 'to_plan' }, 'engineer')).toMatchObject({ text: 'Waiting for a commissioning date', tone: 'waiting' })
     for (const g of ['to_place', 'late', 'on_order', 'delivered']) expect(step({ ...eng, goods: g, payment: 'overdue' }, 'engineer').text).not.toMatch(/PKR|payment|invoice/i)
   })

@@ -61,7 +61,7 @@ export const STATUS = {
     'waiting-customer': def('Waiting on customer', 'info'),
     'answers-to-relay': def('Answers to send', 'warning'),
     answered: def('Answered', 'success'),
-    withdrawn: def('Withdrawn', 'neutral'),
+    withdrawn: def('Not needed', 'neutral'),
   },
   bid: {
     'to-bid': def('To quote', 'warning'),
@@ -70,7 +70,7 @@ export const STATUS = {
   },
   deadline: { 'due-soon': def('Due soon', 'warning'), overdue: def('Overdue', 'danger') },
   inquiry: {
-    shortlisted: def('Shortlisted', 'neutral'),
+    shortlisted: def('Not asked yet', 'neutral'),
     sent: def('Sent', 'info'),
     chased: def('Chased', 'warning'),
     awaiting: def('Awaiting reply', 'info'),

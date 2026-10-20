@@ -16,6 +16,8 @@ import {
 } from '@/features/settings/TeamDialogs'
 import { filterTeam, isActive, roleLabel, teamCounts, type TeamFilter } from '@/features/settings/teamModel'
 import { useTeam } from '@/features/settings/hooks'
+import { FirstWeekBadge } from '@/features/help/FirstWeekBadge'
+import { useFirstWeek } from '@/features/help/useFirstWeek'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/ui/Avatar'
@@ -53,6 +55,7 @@ export function TeamPage() {
 
   const members = useMemo(() => team.data ?? [], [team.data])
   const counts = teamCounts(members)
+  const firstWeek = useFirstWeek(members, isAdmin)
   const rows = useMemo(() => filterTeam(members, filter, query), [members, filter, query])
   const close = () => setDialog(null)
   const open = (kind: RowAction, member: TeamMember) => setDialog({ kind, member })
@@ -103,7 +106,12 @@ export function TeamPage() {
       header: 'Role',
       sortable: false,
       value: m => roleLabel(m.role),
-      cell: m => <span className={dim(m)}>{roleLabel(m.role)}</span>,
+      cell: m => (
+        <span className={cn('flex flex-wrap items-center gap-2', dim(m))}>
+          {roleLabel(m.role)}
+          <FirstWeekBadge member={m} facts={firstWeek.data} />
+        </span>
+      ),
       hideBelowMd: true,
     },
     {

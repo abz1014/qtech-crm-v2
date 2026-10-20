@@ -10,6 +10,7 @@ import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { DateInput } from '@/ui/form/DateInput'
 import { Field } from '@/ui/form/Field'
 import { Select } from '@/ui/form/Select'
@@ -43,7 +44,7 @@ export function ExchangeRatesPage() {
   return (
     <div className="grid min-w-0 content-start gap-4">
       <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Exchange rates</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Exchange rates <InfoTip label="About rates">Updated every night. Used only to compare supplier prices in PKR, never for invoices.</InfoTip></h1>
         <p className="max-w-prose text-sm text-fg-muted">
           Updated every night. Anyone on the team can enter today&apos;s rate by hand, for example the bank&apos;s rate. The rates are used to compare prices in other currencies.
         </p>

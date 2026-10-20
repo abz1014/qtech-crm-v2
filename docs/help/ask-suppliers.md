@@ -9,7 +9,7 @@ related: supplier-prices
 1. After [Looks right: find suppliers], the usual suppliers are already ticked. Tick or untick any.
 2. Tap [Write the message] and check it.
 3. Tap [Copy message for N suppliers].
-4. Paste it into each supplier's chat and send.
+4. Under [Send it to each supplier], tap [Open in WhatsApp] for each one and press Send there.
 5. Later, to ask more: open the RFQ and tap [Ask more suppliers].
 
 Tip: On an RFQ nobody has been asked about yet, the green button is [Ask suppliers].

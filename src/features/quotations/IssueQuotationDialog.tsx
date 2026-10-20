@@ -10,6 +10,7 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { Skeleton } from '@/ui/Skeleton'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { DateInput } from '@/ui/form/DateInput'
@@ -405,6 +406,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
             <Button icon={Eye} onClick={() => void preview()} busy={previewing} busyLabel="Making the preview" disabled={busy || gaps.length > 0 || chosen.length === 0 || missing.length > 0}>
               Preview PDF
             </Button>
+            <InfoTip label="What issuing does" side="top" align="end">It gets a number and a PDF and cannot be edited. You can always Revise it; the first one stays on record.</InfoTip>
             <Button variant="primary" icon={FileCheck} disabled={!ready} busy={busy} busyLabel={storePdf.isPending ? 'Making the PDF' : 'Issuing'} onClick={() => void submit()}>
               {previous ? 'Issue revised quotation' : 'Issue quotation'}
             </Button>

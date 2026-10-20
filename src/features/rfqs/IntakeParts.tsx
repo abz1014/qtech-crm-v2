@@ -8,6 +8,9 @@ import { joinNames } from '@/features/rfqs/lib/intakeModel'
 import { draftAge, draftSummary, type IntakeDraft } from '@/features/rfqs/lib/intakeDraftStore'
 import type { EnquiryVariant, ReplyBy } from '@/features/rfqs/lib/enquiryDraft'
 import { Banner } from '@/ui/Banner'
+import { MessageActions } from '@/ui/MessageActions'
+import type { ContactChannel } from '@/lib/useChannelPreference'
+import { useRfqInquiries } from '@/features/rfqs/hooks'
 import { Button } from '@/ui/Button'
 import { ChannelLink } from '@/features/rfqs/ChaseParts'
 import { StatusBadge } from '@/ui/StatusBadge'
@@ -156,7 +159,7 @@ export function SidePanels({
           <Row k="Due">{dueOn ? <span className="num">{formatDay(dueOn)}</span> : <span className="text-fg-muted">Optional</span>}</Row>
           <Row k="Suppliers">
             {floated ? (
-              <StatusBadge dimension="sourcing" value="awaiting" label={`Sent to ${tickedCount} ${tickedCount === 1 ? 'supplier' : 'suppliers'}, waiting for prices`} />
+              <StatusBadge dimension="sourcing" value="awaiting" label={`Asked ${tickedCount} ${tickedCount === 1 ? 'supplier' : 'suppliers'}`} />
             ) : (
               <StatusBadge dimension="sourcing" value="not-floated" label="Not sent to suppliers" />
             )}
@@ -356,6 +359,10 @@ export function FloatedPanel({
   onCopyAgain,
   unfloated,
   onAnother,
+  rfqId,
+  messages,
+  channel,
+  onChannelChange,
 }: {
   refText: string
   openTo: string
@@ -369,8 +376,15 @@ export function FloatedPanel({
   /** Items with no supplier ticked, as short sentences ("Item 4 has no supplier yet. ..."), with the link that floats the item. */
   unfloated: { key: string; text: ReactNode; action?: { label: string; onClick: () => void; busy: boolean } }[]
   onAnother: () => void
+  /** The saved RFQ: its suppliers asked, each with Open in WhatsApp / Open in email. */
+  rfqId?: string
+  /** The enquiry in both channels, with the RFQ number filled in. */
+  messages?: { whatsapp: string; email: { subject: string | null; body: string } }
+  channel?: ContactChannel
+  onChannelChange?: (c: ContactChannel) => void
 }) {
   const n = names.length
+  const asked = useRfqInquiries(rfqId).data?.filter(i => i.sentOn) ?? []
   return (
     <section aria-label="Sent to suppliers" className="grid gap-4 rounded border bg-surface p-6">
       <p className="m-0 flex items-center gap-2 text-sm text-tone-success-fg">
@@ -401,6 +415,24 @@ export function FloatedPanel({
           </div>
         </div>
       )}
+      {messages && asked.length > 0 ? (
+        <ul aria-label="Send it to each supplier" className="m-0 grid list-none gap-3 p-0" data-slot="send-to-each">
+          {asked.map(i => (
+            <li key={i.id} className="grid gap-2">
+              <b className="text-sm font-medium">{i.supplierName}</b>
+              <MessageActions
+                size="sm"
+                to={{ name: i.contactName ?? i.supplierName, phone: i.contactPhone, email: i.contactEmail }}
+                text={messages.whatsapp}
+                email={messages.email}
+                copy={false}
+                channel={channel}
+                onChannelChange={onChannelChange}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {replyBy.date || dueOn ? (
         <dl className="m-0 grid gap-2 text-sm">
           {replyBy.date ? (

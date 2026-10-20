@@ -383,7 +383,7 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
 
     // 1 tap on the indicator opens the Issue dialog on that leg; issuing R1 clears it
     const t = tapper()
-    await t.tap(changed.getByRole('button', { name: `Re-issue PO, ${s.s1.name}` }))
+    await t.tap(changed.getByRole('button', { name: `Revise PO, ${s.s1.name}` }))
     await expect(dialog(page).getByRole('heading', { name: /Issue|Re-issue/ })).toBeVisible()
     await t.tap(dialog(page).getByRole('button', { name: /^Issue (PO|R1)/ }).last())
     await expect(page.getByTestId('leg-A-changed')).toHaveCount(0)
@@ -407,7 +407,7 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     await openAs(page, 'engineer', `/orders/${s.order.id}`)
     const items = page.getByRole('region', { name: 'Items' })
     await expect(items.getByText('split across 2 suppliers')).toBeVisible()
-    await expect(page.getByRole('button', { name: /Split line|Edit price|Re-issue PO/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /Split line|Edit price|Revise PO/ })).toHaveCount(0)
     await expect(items.getByText(/Unit price|Unit net/)).toHaveCount(0)
     await expect(items.getByText(/Supplier unit price/)).toHaveCount(0)
     const bad = urls.filter(u => /unit_price_net|supplier_unit_price|rank_item_quotes|sell_unit|spread|purchase_orders\?.*lines|split_order_item/.test(u))

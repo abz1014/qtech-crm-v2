@@ -14,6 +14,7 @@ import { useCapture } from '@/app/capture/useCapture'
 import { TopBar } from '@/app/shell/TopBar'
 import { useNavCounts } from '@/app/shell/useNavCounts'
 import { useRouteFocus } from '@/app/shell/useRouteFocus'
+import { HelpHost } from '@/features/help/HelpHost'
 
 interface AppShellProps {
   /** Counts beside the destinations. Today and RFQs are read from the shared cache; a value passed here wins. */
@@ -71,6 +72,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
         </ErrorBoundary>
       </main>
       <BottomTabs role={user.role} counts={counts} />
+      <HelpHost />
     </div>
   )
 }

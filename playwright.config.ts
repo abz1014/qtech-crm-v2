@@ -134,7 +134,7 @@ const VERIFY_DIRS: Record<string, string> = {
 const VERIFY_SUITES = Object.keys(VERIFY_DIRS)
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES]
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles']
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -411,6 +411,22 @@ export default defineConfig({
         screenshot: 'only-on-failure' as const,
       },
     })),
+    {
+      // verify-roles (branch test/roles-verify): every route and dialog as every role, the data API as every persona, the
+      // admin-users function, and data safety (double submit, Undo, rollback, sign-out, service worker). See e2e/verify-roles/.
+      name: 'verify-roles',
+      testMatch: /verify-roles\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      timeout: 300_000,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://127.0.0.1:${AUTH_PORT}`,
+        viewport: { width: 1440, height: 900 },
+        permissions: ['clipboard-read', 'clipboard-write'],
+        screenshot: 'only-on-failure',
+      },
+    },
     { name: 'w1440', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 1440, height: 900 } } },
     { name: 'w375', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 375, height: 812 } } },
   ],

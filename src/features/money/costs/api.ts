@@ -18,6 +18,8 @@ export interface OrderExpenseRow {
   note: string | null
   payeeName: string | null
   legLabel: string | null
+  /** The supplier order it is tagged to (for "still owed" on Pay supplier). */
+  legId: string | null
 }
 
 export interface OrderCostsData {
@@ -57,7 +59,7 @@ export async function getOrderCosts(orderId: string): Promise<OrderCostsData> {
     payeeIds.length ? db.from('companies').select('id, name').in('id', payeeIds) : Promise.resolve({ data: [], error: null }),
   ])
   const payeeName = new Map(unwrap(payees).map(p => [p.id, p.name]))
-  const letter = new Map(legRows.map((l, i) => [l.id, `leg ${String.fromCharCode(65 + i)}`]))
+  const letter = new Map(legRows.map((l, i) => [l.id, `supplier order ${String.fromCharCode(65 + i)}`]))
 
   // The latest revision of each leg's PO, as (order item, qty, unit price) lines.
   const latest = new Map<string, EstPo>()
@@ -85,6 +87,7 @@ export async function getOrderCosts(orderId: string): Promise<OrderCostsData> {
       note: e.description,
       payeeName: e.payee_id ? (payeeName.get(e.payee_id) ?? null) : null,
       legLabel: e.supplier_order_id ? (letter.get(e.supplier_order_id) ?? null) : null,
+      legId: e.supplier_order_id ?? null,
     })),
     items: unwrap(items).map(i => ({ id: i.id, qty: Number(i.qty), supplierUnitPrice: i.supplier_unit_price == null ? null : Number(i.supplier_unit_price), legId: i.supplier_order_id, isService: i.is_service })),
     legs: legRows.map(l => ({ id: l.id, currency: l.currency?.trim() ?? null })),

@@ -207,6 +207,7 @@ export function ReceivablesPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-base font-semibold">{tabLabel}</h2>
                 <span className="text-sm text-fg-muted">Balance is gross, GST included</span>
+                <InfoTip label="About the balance">What the customer still owes, GST included, after payments recorded.</InfoTip>
                 <InfoTip label="About reminders">
                   A reminder is due when an order is overdue and has not been reminded in the last 7 days. Copying the reminder records it,
                   and the order moves to Waiting on Today. {isAdmin ? 'Record a payment with the button on its row.' : 'Payments are recorded by an admin.'}
