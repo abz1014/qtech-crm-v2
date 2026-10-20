@@ -16,6 +16,7 @@ import { buildChecklist, checksWithItems, defaultMonthEndMonth, isMonthKey } fro
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import type { Role } from '@/features/today/types'
 import { NeedsCount } from '@/ui/Tag'
+import { PageHeader } from '@/ui/PageHeader'
 
 /*
  * The frame every Money view sits in: the title, the date and currency line, the page actions, the Reports link and the
@@ -53,19 +54,20 @@ export function MoneyFrame({ active, actions, children }: { active: string | nul
     'month-end': checks.data && monthOpen ? checksWithItems(buildChecklist(checks.data, monthEnd)) + (things > 0 ? 1 : 0) : undefined,
   }
   return (
-    <div className="grid w-full min-w-0 content-start gap-4 px-4 pb-12 pt-6 md:px-10">
-      <header className="grid gap-4">
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-          <div className="grid gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">Money</h1>
-            <p className="flex flex-wrap items-center gap-2 text-sm text-fg-muted">
+    <div className="grid w-full min-w-0 content-start gap-4 px-4 pb-12 pt-6 md:px-8">
+      <div className="grid gap-4">
+        {/* The list-page head (spec 5.2): the page's one green action (`actions`) and Reports as the secondary. */}
+        <PageHeader
+          title="Money"
+          lede={
+            <span className="inline-flex flex-wrap items-center gap-2">
               <span>{longDay.format(new Date(`${today}T12:00:00+05:00`))}</span>
               <i aria-hidden="true" className="size-[3px] rounded-round bg-fg-muted" />
               <span>All amounts in PKR</span>
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {actions}
+            </span>
+          }
+          primary={actions}
+          secondary={
             <Link
               to={{ pathname: '/money/reports', search: month ? `?month=${month}` : '' }}
               aria-current={active === 'reports' ? 'page' : undefined}
@@ -77,8 +79,8 @@ export function MoneyFrame({ active, actions, children }: { active: string | nul
               <Icon icon={ChartColumn} className="text-fg-muted" />
               Reports
             </Link>
-          </div>
-        </div>
+          }
+        />
         <nav
           aria-label="Money views"
           className="grid grid-cols-2 gap-[2px] rounded bg-selected p-[2px] md:inline-flex md:max-w-full md:justify-self-start"
@@ -103,7 +105,7 @@ export function MoneyFrame({ active, actions, children }: { active: string | nul
             )
           })}
         </nav>
-      </header>
+      </div>
       {children}
     </div>
   )

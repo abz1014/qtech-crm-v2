@@ -58,7 +58,7 @@ describe('rule: commissioning on an assigned order (engineers)', () => {
     expect(ruleJobCommissioning(ctx([job({ plannedOn: '2026-11-28' })]))[0].title).toBe('Commissioning tomorrow')
     const late = ruleJobCommissioning(ctx([job({ plannedOn: '2026-11-25' })]))[0]
     expect(late).toMatchObject({ title: 'Commissioning was planned for Wednesday 25 November: mark it done or move it', group: 'now' })
-    expect(late.badge).toEqual({ text: '2d late', tone: 'danger' })
+    expect(late.badge).toEqual({ text: '2 days overdue', tone: 'danger' })
   })
   it('stays quiet for a date further out, a done or unplanned job, and no date', () => {
     expect(ruleJobCommissioning(ctx([job({ plannedOn: '2026-12-11' })]))).toEqual([])
@@ -75,7 +75,7 @@ describe('rule: commissioning on an assigned order (engineers)', () => {
 describe('rule: goods delivered to site on an assigned order (engineers)', () => {
   it('asks for the commissioning date once the goods are on site, aged from the delivery', () => {
     const [e] = ruleJobOnSite(ctx([job({ commissioningState: 'to_plan', plannedOn: null })]))
-    expect(e).toMatchObject({ rule: 'job_on_site', title: 'Goods delivered to site: set the commissioning date', group: 'ready', badge: { text: '3d old', tone: 'neutral' } })
+    expect(e).toMatchObject({ rule: 'job_on_site', title: 'Goods delivered to site: set the commissioning date', group: 'ready', badge: { text: '3 days old', tone: 'neutral' } })
     expect(ruleJobOnSite(ctx([job({ commissioningState: 'to_plan', goodsState: 'partly_delivered' })]))[0].title).toBe('Some goods delivered to site: set the commissioning date')
   })
   it('stays quiet before delivery, once a date is set, and on an order the engineer owns (Plan commissioning says it)', () => {

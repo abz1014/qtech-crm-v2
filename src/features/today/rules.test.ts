@@ -142,10 +142,10 @@ const ctx = (o: Partial<TodayInputs> = {}, role: Role = 'sales'): TodayInputs =>
 
 describe('helpers', () => {
   it('dueBadge words the distance', () => {
-    expect(dueBadge('2026-11-15', TODAY)).toEqual({ text: '12d late', tone: 'danger' })
-    expect(dueBadge(TODAY, TODAY)).toEqual({ text: 'today', tone: 'danger' })
-    expect(dueBadge('2026-11-28', TODAY)).toEqual({ text: 'in 1d', tone: 'warning' })
-    expect(dueBadge('2026-12-01', TODAY)).toEqual({ text: 'in 4d', tone: 'neutral' })
+    expect(dueBadge('2026-11-15', TODAY)).toEqual({ text: '12 days overdue', tone: 'danger' })
+    expect(dueBadge(TODAY, TODAY)).toEqual({ text: 'Due today', tone: 'danger' })
+    expect(dueBadge('2026-11-28', TODAY)).toEqual({ text: 'Due tomorrow', tone: 'warning' })
+    expect(dueBadge('2026-12-01', TODAY)).toEqual({ text: 'Due in 4 days', tone: 'neutral' })
   })
   it('groups by the date', () => {
     expect(groupFor('2026-11-26', TODAY)).toBe('now')
@@ -248,7 +248,7 @@ describe('rule: relay answers', () => {
 describe('rule: not floated', () => {
   it('is raised for an open RFQ nobody has been asked about', () => {
     const [e] = ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'not_floated' })] }))
-    expect(e).toMatchObject({ rule: 'not_floated', title: 'Not sent to suppliers yet', ref: 'RFQ-0177' })
+    expect(e).toMatchObject({ rule: 'not_floated', title: 'Needs suppliers', ref: 'RFQ-0177' })
   })
   it('is not raised once floated, or once the bid is out', () => {
     expect(ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'floated_awaiting' })] }))).toEqual([])
@@ -257,7 +257,7 @@ describe('rule: not floated', () => {
   it('without a bid date shows its age instead', () => {
     const [e] = ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'not_floated', dueOn: null })] }))
     expect(e.actionDueOn).toBe('2026-11-17') // due the day it arrived
-    expect(e.badge).toEqual({ text: '10d late', tone: 'danger' })
+    expect(e.badge).toEqual({ text: '10 days overdue', tone: 'danger' })
     expect(e.group).toBe('now')
   })
 })
@@ -321,7 +321,7 @@ describe('rule: bid due', () => {
     )
     expect(rows.map(r => r.subjectId)).toEqual(['a', 'b', 'c'])
     expect(rows.map(r => r.title)).toEqual(['Quotation due today', 'Quotation 2 days overdue', 'Quotation due Wednesday 2 December'])
-    expect(rows[0].badge).toEqual({ text: 'today', tone: 'danger' })
+    expect(rows[0].badge).toEqual({ text: 'Due today', tone: 'danger' })
   })
   it('names the bid time when the RFQ has one (rfqs.due_time)', () => {
     expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: TODAY, dueTime: '17:00:00' })] }))[0].title).toBe('Quotation due today, 17:00')
@@ -346,7 +346,7 @@ describe('rule: decision overdue', () => {
   it('is raised when the quotation expired', () => {
     const [e] = ruleDecisionOverdue(ctx({ rfqs: [rfq({ bidState: 'quotation_expired', quotedOn: '2026-10-01', quotationValidUntil: '2026-11-20' })] }))
     expect(e.title).toBe('Quotation expired: check prices before you revise it')
-    expect(e.badge.text).toBe('7d late')
+    expect(e.badge.text).toBe('7 days overdue')
   })
   it('is not raised for a bid still to send', () => {
     expect(ruleDecisionOverdue(ctx({ rfqs: [rfq()] }))).toEqual([])
@@ -357,7 +357,7 @@ describe('rule: payment overdue (admin and sales only)', () => {
   it('is raised for an overdue order that was never reminded, with the days late', () => {
     const [e] = rulePaymentOverdue(ctx({ receivables: [rec()] }))
     expect(e).toMatchObject({ rule: 'payment_overdue', title: 'Payment 12 days overdue', ref: 'ORD-0031', party: 'Karachi Glassworks', orderId: 'o1', group: 'now' })
-    expect(e.badge).toEqual({ text: '12d late', tone: 'danger' })
+    expect(e.badge).toEqual({ text: '12 days overdue', tone: 'danger' })
   })
   it('is never produced for an engineer', () => {
     expect(rulePaymentOverdue(ctx({ receivables: [rec()] }, 'engineer'))).toEqual([])
@@ -410,7 +410,7 @@ describe('rule: place PO', () => {
   it('is raised for a leg with no placed date, as ready to move, with its age', () => {
     const [e] = rulePlacePo(ctx({ legs: [leg({ placedOn: null, expectedOn: null })] }))
     expect(e).toMatchObject({ rule: 'place_po', title: 'Place PO with Hengxin', ref: 'ORD-0038', group: 'ready' })
-    expect(e.badge.text).toBe('17d old')
+    expect(e.badge.text).toBe('17 days old')
   })
   it('is not raised once placed or for another owner; engineers do see it', () => {
     expect(rulePlacePo(ctx({ legs: [leg()] }))).toEqual([])
@@ -424,7 +424,7 @@ describe('rule: to source (a won order with items that have no supplier)', () =>
   it('says how many items still need a supplier, as ready to move with the order age', () => {
     const [e] = ruleToSource(ctx({ orders: [toSource()] }))
     expect(e).toMatchObject({ rule: 'to_source', title: '3 items still need a supplier', ref: 'ORD-0038', party: 'Karachi Glassworks', group: 'ready', tab: 'sourcing', orderId: 'ord1', href: '/orders/ord1' })
-    expect(e.badge.text).toBe('17d old')
+    expect(e.badge.text).toBe('17 days old')
     expect(ruleToSource(ctx({ orders: [toSource({ unsourced: 1 })] }))[0].title).toBe('1 item still needs a supplier')
   })
   it('is not raised once every item has a leg, for services-only orders, or when the count is zero', () => {
@@ -661,7 +661,7 @@ describe('actionDueOn per rule', () => {
     const [e] = ruleChaseCustomer(ctx({ rfqs: [rfq({ dueOn: '2026-12-11' })], clarifications: [clar({ lastAskedOn: '2026-11-18' })] }))
     expect(e.actionDueOn).toBe('2026-11-23') // Wed 18 + 3 working days = Mon 23
     expect(e.group).toBe('now')
-    expect(e.badge).toEqual({ text: '4d late', tone: 'danger' })
+    expect(e.badge).toEqual({ text: '4 days overdue', tone: 'danger' })
     // with the bid close the wait is 1 working day
     expect(ruleChaseCustomer(ctx({ rfqs: [rfq({ dueOn: '2026-12-01' })], clarifications: [clar({ lastAskedOn: '2026-11-25' })] }))[0].actionDueOn).toBe('2026-11-26')
   })
@@ -672,16 +672,16 @@ describe('actionDueOn per rule', () => {
   it('relay answers: the day the customer answered', () => {
     const [e] = ruleRelayAnswers(ctx({ rfqs: [rfq()], inquiries: [inq({ answersToRelay: 2, answeredOn: '2026-11-25' })] }))
     expect(e.actionDueOn).toBe('2026-11-25')
-    expect(e.badge).toEqual({ text: '2d late', tone: 'danger' })
+    expect(e.badge).toEqual({ text: '2 days overdue', tone: 'danger' })
   })
   it('not floated: the day the RFQ was received', () => {
-    expect(ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'not_floated', receivedOn: '2026-11-27' })] }))[0]).toMatchObject({ actionDueOn: '2026-11-27', group: 'now', badge: { text: 'today' } })
+    expect(ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'not_floated', receivedOn: '2026-11-27' })] }))[0]).toMatchObject({ actionDueOn: '2026-11-27', group: 'now', badge: { text: 'Due today' } })
   })
   it('bid due: the bid date, in the next 5 working days when ahead', () => {
     const [e] = ruleBidDue(ctx({ rfqs: [rfq({ dueOn: '2026-12-02' })] }))
     expect(e.actionDueOn).toBe('2026-12-02')
     expect(e.group).toBe('soon')
-    expect(e.badge.text).toBe('in 5d')
+    expect(e.badge.text).toBe('Due in 5 days')
   })
   it('decision overdue: ten working days after the bid; for an expired quotation, the valid-until date', () => {
     expect(ruleDecisionOverdue(ctx({ rfqs: [rfq({ bidState: 'bid_sent', quotedOn: '2026-11-13' })] }))[0].actionDueOn).toBe('2026-11-27')
@@ -692,7 +692,7 @@ describe('actionDueOn per rule', () => {
     expect(rulePaymentOverdue(ctx({ receivables: [rec({ lastRemindedOn: '2026-11-10', reminderCount: 1 })] }))[0].actionDueOn).toBe('2026-11-19') // Tue 10 + 7 working days
   })
   it('goods late: the expected date for the first chase, the last chase plus the cooldown after that', () => {
-    expect(ruleGoodsLate(ctx({ legs: [leg()] }))[0]).toMatchObject({ actionDueOn: '2026-11-22', badge: { text: '5d late' } })
+    expect(ruleGoodsLate(ctx({ legs: [leg()] }))[0]).toMatchObject({ actionDueOn: '2026-11-22', badge: { text: '5 days overdue' } })
     expect(ruleGoodsLate(ctx({ legs: [leg({ lastChasedOn: '2026-11-20', chaseCount: 1 })] }))[0].actionDueOn).toBe('2026-11-25')
   })
   it('place PO: the day the order was confirmed, and always ready to move', () => {

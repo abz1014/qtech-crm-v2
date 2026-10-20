@@ -14,6 +14,7 @@ import { timeText } from '@/features/rfqs/lib/chaseCommon'
 import { supplierReplyBy } from '@/features/rfqs/lib/supplierChase'
 import { formatAmount } from '@/lib/money'
 import { orderRef, rfqRef } from '@/lib/refs'
+import { ageWords, dueWord } from '@/lib/timeWords'
 import {
   SNOOZE_RULE,
   type ClarificationFact,
@@ -84,17 +85,18 @@ export function routesToUser(ownerId: string | null, ctx: TodayInputs): boolean 
   return ownerId === ctx.user.id
 }
 
-/** "12d late", "today", "3d". Danger when late or today, warning within three days, neutral beyond. */
+/**
+ * Time words from src/lib/timeWords (R2-08): "12 days overdue", "Due today", "Due tomorrow", "Due in 4 days". Danger when late or
+ * today, warning within three days, neutral beyond.
+ */
 export function dueBadge(dueOn: string, today: string): { text: string; tone: Tone } {
   const d = daysBetween(today, dueOn)
-  if (d < 0) return { text: `${-d}d late`, tone: 'danger' }
-  if (d === 0) return { text: 'today', tone: 'danger' }
-  return { text: `in ${d}d`, tone: d <= 3 ? 'warning' : 'neutral' }
+  return { text: dueWord(d), tone: d <= 0 ? 'danger' : d <= 3 ? 'warning' : 'neutral' }
 }
 
+/** "5 days old", "New" (ageWords). */
 function ageBadge(since: string | null, today: string): { text: string; tone: Tone } {
-  const d = since ? Math.max(0, daysBetween(since, today)) : 0
-  return { text: since ? `${d}d old` : 'new', tone: 'neutral' }
+  return { text: ageWords(since ? Math.max(0, daysBetween(since, today)) : 0), tone: 'neutral' }
 }
 
 /** The collision line (O-3): somebody else made the last chase. Nothing when it was you or nobody is on record. */
@@ -244,7 +246,7 @@ export function ruleNotFloated(ctx: TodayInputs): Entry[] {
           rule: 'not_floated',
           subjectId: r.id,
           tab: tabFor('not_floated'),
-          title: 'Not sent to suppliers yet',
+          title: 'Needs suppliers',
           ref: rfqRef(r.number),
           party: r.companyName,
           actionDueOn: r.receivedOn, // due the day it arrived (+0): floating is the first thing to do

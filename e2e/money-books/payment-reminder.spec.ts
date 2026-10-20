@@ -139,8 +139,10 @@ test.describe('payment-reminder panel (M09)', () => {
     await page.getByTestId('reminder-panel').getByRole('button', { name: 'Copy and mark reminded' }).click()
     await expect(page.getByText(/Reminder 1 recorded today/)).toBeVisible()
     await page.waitForTimeout(10_500) // the undo window closes and the screen re-reads
-    await expect(page.getByRole('row', { name: new RegExp(s.company.name) })).toContainText('Reminded 1×')
+    await expect(page.getByRole('row', { name: new RegExp(s.company.name) })).toContainText('Reminded today')
     await page.goto('/today')
+    // Waiting starts collapsed (R2-08): open it to see the reminded order
+    await page.getByRole('region', { name: 'Waiting' }).getByRole('button', { name: /^Waiting · \d+/ }).click()
     await expect(page.locator('li[data-rule="payment_overdue"][data-waiting]').filter({ hasText: s.company.name })).toHaveCount(1)
     await expect(page.locator('li[data-rule="payment_overdue"]:not([data-waiting])').filter({ hasText: s.company.name })).toHaveCount(0)
   })

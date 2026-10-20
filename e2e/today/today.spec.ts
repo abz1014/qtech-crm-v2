@@ -116,7 +116,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     // Asked 9 days ago, bid in 14 days: the chase has been due for days, so it is in "Overdue or due today" and the chip says how late.
     const overdue = page.getByRole('region', { name: 'Overdue or due today' })
     await expect(overdue.locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })).toBeVisible()
-    await expect(row.getByText(/^\d+d late$/)).toBeVisible()
+    await expect(row.getByText(/^\d+ days? overdue$/)).toBeVisible()
     await expect(page.getByRole('region', { name: 'Ready to move' }).filter({ hasText: s.ref })).toHaveCount(0)
     await expect(page.getByText(/\d+ due now/)).not.toContainText('0 due now')
     await row.getByRole('button').first().click() // selecting a row is not a chase
@@ -175,6 +175,8 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await must(rest('admin', 'rpc/stamp_clarification_ask', { method: 'POST', body: { p_clarification_ids: [s.clarificationId] }, prefer: 'return=minimal' }))
     await openAs(page, 'sales', '/today')
     const waiting = page.getByRole('region', { name: 'Waiting' })
+    // Waiting starts collapsed (R2-08): "Waiting · N · next nudge …"
+    await waiting.getByRole('button', { name: /^Waiting · \d+/ }).click()
     const row = waiting.locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })
     await expect(row).toBeVisible()
     await expect(row.locator('[data-collision]')).toContainText(/Test chased this (just now|\d+ min ago|\d+h ago|today)/)

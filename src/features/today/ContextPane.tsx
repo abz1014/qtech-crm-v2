@@ -21,7 +21,7 @@ import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay } from '@/lib/formatDay'
 import { cn } from '@/lib/utils'
-import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPreference'
+import { useChannelPreference } from '@/lib/useChannelPreference'
 import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
@@ -30,7 +30,7 @@ import { Dialog, DialogContent } from '@/ui/Dialog'
 import { DateInput } from '@/ui/form/DateInput'
 import { Icon } from '@/ui/Icon'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
-import { SegmentedControl } from '@/ui/SegmentedControl'
+import { ChannelLink } from '@/ui/ChannelLink'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
 import { InfoTip } from '@/ui/InfoTip'
@@ -356,15 +356,8 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
                 <h3 className="text-base font-semibold">Prepared for you</h3>
                 {compact ? null : <p className="text-sm text-fg-muted">{preparedFrom(item, questions.length)} Edit anything before you send.</p>}
               </div>
-              <SegmentedControl
-                aria-label="Message channel"
-                value={channel}
-                onValueChange={v => setChannel(v as ContactChannel)}
-                options={[
-                  { value: 'whatsapp', label: 'WhatsApp' },
-                  { value: 'email', label: 'Email' },
-                ]}
-              />
+              {/* The remembered channel as a link (R2-07); Open in WhatsApp / Open in email is MessageActions, in the row below. */}
+              <ChannelLink value={channel} onChange={setChannel} />
             </div>
           )}
           {!compact && !wasCopied ? (

@@ -8,7 +8,8 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
-import { Tag } from '@/ui/Tag'
+import { NeedsCount, Tag } from '@/ui/Tag'
+import { StatusText } from '@/ui/StatusText'
 import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
 import { useReconciliationInput } from '@/features/money/hooks'
@@ -73,18 +74,21 @@ export function ExceptionsPage() {
           <h3 id="exceptions-h" className="text-base font-semibold">
             What does not add up
           </h3>
-          <div className="ml-auto flex flex-wrap items-center gap-2 text-sm" aria-live="polite">
+          {/* The needs-you counts as NeedsCount pills (spec 2.2 #22: danger for critical), the word beside each; "All clear" as text. */}
+          <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" aria-live="polite">
             {counts.critical > 0 ? (
-              <span className="inline-flex h-6 items-center rounded-round bg-tone-danger-bg px-2 font-medium text-tone-danger-fg">
-                <span className="num mr-1">{counts.critical}</span> critical
+              <span className="inline-flex items-center gap-2 text-fg-2" data-count="critical">
+                <NeedsCount n={counts.critical} variant="danger" sr={`${counts.critical} critical`} />
+                <span aria-hidden="true">critical</span>
               </span>
             ) : null}
             {counts.warning > 0 ? (
-              <span className="inline-flex h-6 items-center rounded-round bg-tone-warning-bg px-2 font-medium text-tone-warning-fg">
-                <span className="num mr-1">{counts.warning}</span> {counts.warning === 1 ? 'warning' : 'warnings'}
+              <span className="inline-flex items-center gap-2 text-fg-2" data-count="warning">
+                <NeedsCount n={counts.warning} sr={`${counts.warning} ${counts.warning === 1 ? 'warning' : 'warnings'}`} />
+                <span aria-hidden="true">{counts.warning === 1 ? 'warning' : 'warnings'}</span>
               </span>
             ) : null}
-            {q.data && list.length === 0 ? <span className="inline-flex h-6 items-center rounded-round bg-tone-success-bg px-2 font-medium text-tone-success-fg">All clear</span> : null}
+            {q.data && list.length === 0 ? <StatusText tone="done">All clear</StatusText> : null}
           </div>
         </header>
         {q.isPending ? (

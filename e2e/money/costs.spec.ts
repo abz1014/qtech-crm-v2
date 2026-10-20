@@ -113,7 +113,7 @@ test.describe('Margin panel on the order page (admin)', () => {
 
     await panel.getByRole('button', { name: 'Mark costs complete' }).click()
     await expect(panel.locator('[data-margin-state="final"]')).toBeVisible()
-    await expect(panel.getByText('Complete', { exact: true }).first()).toBeVisible()
+    await expect(panel.locator('[data-status="costs:complete"]')).toHaveCount(0) // the normal state draws no chip (R2-01 rule 2)
     await expect(panel.getByRole('button', { name: 'Reopen costs' })).toBeVisible()
     const done = await must(rest<{ costs_complete_at: string | null; costs_complete_by: string | null }[]>('admin', `order_costs?order_id=eq.${o.id}&select=costs_complete_at,costs_complete_by`))
     expect(done[0].costs_complete_at).not.toBeNull()
@@ -155,12 +155,13 @@ test.describe('Money > Margins (admin)', () => {
     const d = rowOf(done)
     await expect(d).toContainText(ordRef(done.number))
     await expect(d).toContainText('1,000,000')
-    await expect(d).toContainText('650,000')
-    await expect(d).toContainText('300,000') // margin 1,000,000 - 700,000
-    await expect(d).toContainText('Costs complete')
+    await expect(d).toContainText('700,000') // one Cost line: the actual cost (R2-13)
+    await expect(d.getByTestId('margin-value')).toContainText('300,000') // margin 1,000,000 - 700,000, beside the customer
+    await expect(d).not.toContainText('Costs complete') // a done state shows no chip
     const p = rowOf(prov)
     await expect(p).toContainText('Margin not final')
-    await expect(p.locator('[data-provisional]')).toHaveCount(1) // the dashed underline on the margin
+    await expect(p).toContainText('300,000 expected')
+    await expect(p.locator('[data-provisional]')).toHaveCount(2) // the dashed mark on the cost and on the margin
     const u = rowOf(unknown)
     await expect(u).toContainText('Is GST included?')
     await expect(u).not.toContainText('150,000') // no margin is calculated
@@ -171,7 +172,8 @@ test.describe('Money > Margins (admin)', () => {
     const live = money.filter(m => !cancelled.some(c => c.id === m.order_id))
     const totals = page.getByTestId('margin-totals')
     await expect(totals).toContainText(`${live.length} ${live.length === 1 ? 'order' : 'orders'}`)
-    expect(digits((await totals.innerText()).split('\n').find(l => /^\s*[\d,]+\s*$/.test(l)) ?? '0')).toBe(live.reduce((a, m) => a + Number(m.net_sale), 0))
+    await expect(totals).toContainText('Added up:')
+    expect(digits((await totals.innerText()).split('\n').find(l => /^\s*[\d,]+\s*$/.test(l)) ?? '0')).toBe(live.reduce((a, m) => a + Number(m.margin ?? 0), 0)) // the margin comes first
     await expect(page.getByTestId('margin-left-out')).toContainText(/\d+ with margin not final/)
     await expect(page.getByTestId('margin-left-out')).toContainText(/\d+ where nobody has said whether GST is included/)
     // the rule behind the totals is one (i), not a paragraph under the table

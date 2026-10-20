@@ -9,17 +9,18 @@ import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { MessageActions } from '@/ui/MessageActions'
-import { SegmentedControl } from '@/ui/SegmentedControl'
+import { ChannelLink } from '@/ui/ChannelLink'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
 import { invalidateAfter } from '@/features/invalidation'
 import { chaseClipboardText, COMPANY_NAME } from '@/features/rfqs/lib'
 import { daysBetween as daysBetweenText } from '@/features/rfqs/lib/dateText'
+import { agoDays } from '@/lib/timeWords'
 import { usePaymentDraft, performChase } from '@/features/today/hooks'
 import { buildPaymentDraft } from '@/features/today/chaseDraft'
 import { useMyJobTitle } from '@/features/orders/hooks'
 import { RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
-import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPreference'
+import { useChannelPreference } from '@/lib/useChannelPreference'
 import type { ReceivableRow } from '@/features/money/payments/model'
 
 /*
@@ -85,7 +86,7 @@ function PanelShell({ title, meta, aside, children }: { title: string; meta?: Re
       <header className="flex flex-wrap items-start justify-between gap-3 border-b px-5 py-4">
         <div className="min-w-[9rem] flex-1">
           <h2 className="text-base font-semibold">{title}</h2>
-          {meta ? <span className="block truncate text-sm text-fg-muted">{meta}</span> : null}
+          {meta ? <span className="line-clamp-2 text-sm text-fg-muted">{meta}</span> : null}
         </div>
         {aside}
       </header>
@@ -154,17 +155,9 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
       {row.companyName} · <span className="num">{row.invoiceNumbers.length > 1 ? `${lead} +${row.invoiceNumbers.length - 1}` : lead}</span>
     </>
   )
-  const channelControl = (
-    <SegmentedControl
-      aria-label="Channel"
-      value={channel}
-      onValueChange={v => setChannel(v as ContactChannel)}
-      options={[
-        { value: 'whatsapp', label: 'WhatsApp' },
-        { value: 'email', label: 'Email' },
-      ]}
-    />
-  )
+  // The remembered channel as a link (R2-07): "Email instead" / "WhatsApp instead"; Open in WhatsApp / Open in email is
+  // MessageActions, in the panel's action row.
+  const channelControl = <ChannelLink value={channel} onChange={setChannel} />
 
   if (draftQ.isError) {
     return (
@@ -198,7 +191,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
     count > 0 && last ? (
       <>
         Reminded <span className="num">{count}×</span> · last <span className="num">{formatDay(last).replace(/^\w+ /, '').replace(/ \d{4}$/, '')}</span> ·{' '}
-        {daysBetweenText(last, today) === 0 ? 'today' : `${daysBetweenText(last, today)} days ago`}
+        {agoDays(daysBetweenText(last, today)).toLowerCase()}
       </>
     ) : (
       'Not reminded yet'

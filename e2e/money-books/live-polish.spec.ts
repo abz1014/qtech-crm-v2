@@ -90,10 +90,10 @@ test.describe('a brand-new CRM, as the admin', () => {
     await review(page, 'live-polish-orders-1366')
   })
 
-  test('RFQs: with none ever, a first-use line, not "every quotation is out or closed"', async ({ page }) => {
+  test('RFQs: with none open, one line true for a new CRM too, never "every quotation is out or closed"', async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 })
     await open(page, '/rfqs')
-    await expect(page.getByText('No RFQs yet')).toBeVisible()
+    await expect(page.getByText('No open RFQs')).toBeVisible()
     await expect(page.getByText(/Every quotation is out or closed/)).toHaveCount(0)
   })
 

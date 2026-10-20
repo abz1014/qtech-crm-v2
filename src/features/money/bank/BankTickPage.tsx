@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CheckCheck, TriangleAlert } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { mapPgError, type MappedError } from '@/lib/pgErrors'
-import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
-import { Icon } from '@/ui/Icon'
+import { StatusText } from '@/ui/StatusText'
 import { Skeleton } from '@/ui/Skeleton'
 import { SumBar } from '@/ui/SumBar'
 import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
@@ -177,26 +175,11 @@ export function BankTickPage() {
   )
 }
 
+/** The page's state as text, no chip (spec 1.5): "7 to match" (we act) or "Everything matched" (done). */
 function StateChip({ open }: { open: number }) {
-  const clear = open === 0
   return (
-    <span
-      data-testid="bank-state"
-      className={cn(
-        'inline-flex h-5 items-center gap-[5px] whitespace-nowrap rounded border pl-[6px] pr-2 text-xs font-medium leading-none',
-        clear
-          ? 'border-tone-success-fg/25 bg-tone-success-bg text-tone-success-fg'
-          : 'border-tone-warning-fg/25 bg-tone-warning-bg text-tone-warning-fg',
-      )}
-    >
-      <Icon icon={clear ? CheckCheck : TriangleAlert} size="chip" />
-      {clear ? (
-        'Everything ticked'
-      ) : (
-        <>
-          <span className="num">{open}</span> not ticked
-        </>
-      )}
+    <span data-testid="bank-state">
+      {open === 0 ? <StatusText tone="done">Everything matched</StatusText> : <StatusText tone="now">{`${open} to match`}</StatusText>}
     </span>
   )
 }
