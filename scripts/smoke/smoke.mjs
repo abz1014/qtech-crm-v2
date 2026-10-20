@@ -92,10 +92,23 @@ async function resolveAnonKey() {
     for (const a of assets) {
       const js = await http(app + a)
       for (const m of js.text.matchAll(/eyJ[\w-]+\.[\w-]+\.[\w-]+/g)) candidates.push(m[0])
+      if (/sb_secret_[\w-]+/.test(js.text)) {
+        die('SECRET KEY EXPOSED', 'An sb_secret_ key was found in the public app bundle. Rotate it NOW (Dashboard, Project Settings, API Keys).')
+      }
+      for (const m of js.text.matchAll(/sb_publishable_[\w-]+/g)) candidates.push(m[0])
     }
   }
   let anon = null
   for (const t of candidates) {
+    if (t.startsWith('sb_secret_')) {
+      die('SECRET KEY GIVEN', 'SMOKE_SUPABASE_ANON_KEY holds a secret key. Use the public publishable or anon key.')
+    }
+    // A new-style public key (sb_publishable_...) is not a JWT: prove it belongs to this project by asking it.
+    if (t.startsWith('sb_publishable_')) {
+      const s = await http(`${baseUrl}/auth/v1/settings`, { headers: { apikey: t } })
+      if (s.status === 200) anon = t
+      continue
+    }
     const p = jwtPayload(t)
     if (!p) continue
     if (p.role === 'service_role') {
@@ -103,12 +116,17 @@ async function resolveAnonKey() {
     }
     if (p.role === 'anon' && p.ref === NEW_REF) anon = t
   }
-  if (!anon) die('anon key unavailable', `No anon key for ${NEW_REF} found. Set the repository variable SMOKE_SUPABASE_ANON_KEY (the public anon key).`)
+  if (!anon) die('anon key unavailable', `No anon key for ${NEW_REF} found. Set the repository variable SMOKE_SUPABASE_ANON_KEY (the public publishable or anon key).`)
   return anon
 }
 
 const anonKey = await resolveAnonKey()
-const H = (token) => ({ apikey: anonKey, Authorization: `Bearer ${token || anonKey}`, 'Content-Type': 'application/json' })
+// A publishable key is not a JWT: send it only as apikey, and send Authorization only for a real user token.
+const H = (token) => ({
+  apikey: anonKey,
+  ...(token || !anonKey.startsWith('sb_') ? { Authorization: `Bearer ${token || anonKey}` } : {}),
+  'Content-Type': 'application/json',
+})
 const objs = listPublicObjects(path.resolve(here, '../../src/types/database.ts'))
 log(`objects from types: ${objs.tables.length} tables, ${objs.views.length} views, ${objs.functions.length} RPCs`)
 
