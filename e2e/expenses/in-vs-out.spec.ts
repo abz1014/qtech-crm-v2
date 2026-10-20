@@ -76,7 +76,7 @@ test.describe('in vs out (owner request 2026-10-20)', () => {
     await openAs(page, 'admin', '/money/reports')
     // Reports opens on the month that just ended; its In vs out line links there. This month is one tap on the arrow.
     await page.getByRole('link', { name: 'In vs out' }).first().click()
-    await expect(page.getByRole('heading', { name: 'In vs out' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'In vs out', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Next month' }).click()
     await expect(page).toHaveURL(new RegExp(`period=${month}`))
     await expect(page.getByTestId('in-out-explainer')).toContainText('Profit (invoiced basis)')
