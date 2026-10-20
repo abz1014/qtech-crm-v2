@@ -33,6 +33,7 @@ import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
+import { InfoTip } from '@/ui/InfoTip'
 import { ChaseNote, FormattedMessage, RecipientRow, SubjectRow } from '@/features/rfqs/ChaseParts'
 import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
 import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
@@ -881,6 +882,7 @@ export function SnoozeMenu({ item, today, iconOnly = false }: { item: TodayItem;
           </MenuItem>
         </PopoverContent>
       </Popover>
+      {iconOnly ? null : <InfoTip label="About snooze">Hides this item until the day you pick. Only for you.</InfoTip>}
       <Dialog open={picking} onOpenChange={setPicking}>
         <DialogContent
           title="Snooze until"

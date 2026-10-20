@@ -2,6 +2,7 @@ import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { businessDaysFromNow } from '@/lib/dates'
 import { orderRef } from '@/lib/refs'
 import type { TableRow } from '@/features/dbTypes'
+import { lookupLabels, type Labels } from '@/features/money/lookupLabels'
 import {
   monthEnd,
   monthStart,
@@ -72,22 +73,24 @@ export async function listExpenses(month: string): Promise<ExpenseListing> {
   const rows = raw.map(toListed)
   const payeeIds = [...new Set(rows.map(r => r.payeeId).filter((x): x is string => !!x))]
   const orderIds = [...new Set(rows.map(r => r.orderId).filter((x): x is string => !!x))]
-  const [payees, orders] = await Promise.all([companyNames(payeeIds), orderRefs(orderIds)])
-  return { rows, payees, orders }
+  // payee names and order numbers in one lookup_labels call (ids in the body: no URL-length limit)
+  const labels = await lookupLabels({ companies: payeeIds, orders: orderIds })
+  return { rows, payees: { ...labels.companies }, orders: orderRefsOf(labels) }
 }
 
+const orderRefsOf = (labels: Labels): Record<string, string> =>
+  Object.fromEntries(Object.entries(labels.orders).map(([id, o]) => [id, orderRef(Number(o.number))]))
+
+/** Company names by id (lookup_labels). */
 export async function companyNames(ids: string[]): Promise<Record<string, string>> {
   if (ids.length === 0) return {}
-  const db = requireSupabase()
-  const rows = unwrap(await db.from('companies').select('id, name').in('id', ids)) ?? []
-  return Object.fromEntries(rows.map(r => [r.id, r.name]))
+  return { ...(await lookupLabels({ companies: ids })).companies }
 }
 
+/** "ORD-0038" by order id (lookup_labels). */
 export async function orderRefs(ids: string[]): Promise<Record<string, string>> {
   if (ids.length === 0) return {}
-  const db = requireSupabase()
-  const rows = unwrap(await db.from('orders').select('id, number').in('id', ids)) ?? []
-  return Object.fromEntries(rows.map(r => [r.id, orderRef(r.number)]))
+  return orderRefsOf(await lookupLabels({ orders: ids }))
 }
 
 /** The category tally of the last 30 days, for the first row's default (A6.5). */

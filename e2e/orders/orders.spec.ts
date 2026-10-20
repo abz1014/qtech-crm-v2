@@ -411,8 +411,9 @@ test.describe('O03: items', () => {
     // the per-line controls are behind one toggle: the table shows five columns until then
     await expect(page.getByLabel('GST rate, line 1')).toHaveCount(0)
     await page.getByRole('button', { name: 'Edit GST and lines' }).click()
-    await page.getByLabel('GST rate, line 1').selectOption('5')
-    await expect.poll(async () => Number((await itemRows(s.order.id))[0].gst_rate)).toBe(5)
+    // 18% or exempt only (DECISIONS 2026-10-15, BUG-ORD-1)
+    await page.getByLabel('GST rate, line 1').selectOption('0')
+    await expect.poll(async () => Number((await itemRows(s.order.id))[0].gst_rate)).toBe(0)
     expect(Number((await itemRows(s.order.id))[1].gst_rate)).toBe(18)
 
     const exempt = page.getByRole('checkbox', { name: 'Exempt the whole order from GST' })
@@ -421,7 +422,7 @@ test.describe('O03: items', () => {
     await expect(exempt).toBeChecked()
     // off again: every line returns to where it was
     await exempt.click()
-    await expect.poll(async () => (await itemRows(s.order.id)).map(r => Number(r.gst_rate))).toEqual([5, 18, 18])
+    await expect.poll(async () => (await itemRows(s.order.id)).map(r => Number(r.gst_rate))).toEqual([0, 18, 18])
 
     // service: the line has no goods leg
     await page.getByRole('checkbox', { name: 'Service, line 2' }).click()

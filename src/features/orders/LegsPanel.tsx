@@ -6,6 +6,7 @@ import { orderRef, poRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { EmptyState } from '@/ui/EmptyState'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { StatusBadge } from '@/ui/StatusBadge'
@@ -68,6 +69,7 @@ export function LegsPanel({
     <section aria-label="Supplier orders" className="min-w-0 rounded border bg-surface">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3 md:px-5">
         <h2 className="text-base font-semibold">Supplier orders</h2>
+        <InfoTip label="About supplier orders">One supplier's part of this order: their PO, when it was placed, received and delivered.</InfoTip>
         <span className="text-sm text-fg-muted">{legs.length === 0 ? (imported ? 'None recorded for imported orders' : 'None yet') : legs.length === 1 ? '1 supplier' : `${legs.length} suppliers`}</span>
         {/* data-slot="add-leg": adds a supplier by hand. */}
         <span data-slot="add-leg" className="ml-auto contents">

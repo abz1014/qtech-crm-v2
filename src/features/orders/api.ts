@@ -6,6 +6,7 @@ import { mapRankRows, type RankedQuote } from '@/features/orders/lib/ranking'
 import type { RankRow } from '@/features/rfqs/lib/ranking/reasons'
 import type { LegPatch } from '@/features/orders/lib/legModel'
 import type { StepLeg } from '@/features/orders/lib/orderSteps'
+import { fetchReceivablesList } from '@/features/money/payments/api'
 
 /*
  * Orders (O01, O03): every database call for converting an RFQ and for the order page. This is the only file that names an
@@ -703,6 +704,10 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
           .select(
             'id, number, customer_po_number, ordered_on, owner_id, company_id, commissioning_planned_on, companies(name), company_sites(name), order_items(description, qty, position, supplier_order_id, is_service), supplier_orders(id, placed_on, expected_on, delivered_on, companies(name))',
           )
+          // Only the supplier orders a Next step can name: not yet delivered, or never marked placed. One that is placed and
+          // delivered never changes the step (orderSteps reads open = placed and not delivered, and to-place = not placed), so it
+          // is left on the server; that is every finished supplier order in history.
+          .or(LIST_LEG_FILTER, { referencedTable: 'supplier_orders' })
           .order('number', { ascending: false })
           .range(from, to) as unknown as PromiseLike<{ data: OrdersJoin[] | null; error: { code?: string; message: string } | null }>,
     ),
@@ -721,10 +726,8 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
             db.from('v_order_money').select('order_id, payment_state, receivable, due_on, costs_state').range(from, to) as unknown as PromiseLike<{ data: Array<Record<string, unknown>> | null; error: { code?: string; message: string } | null }>,
         )
       : role === 'sales'
-        ? db.rpc('order_receivables').then(r => {
-            if (r.error) throw r.error
-            return (r.data ?? []) as Array<Record<string, unknown>>
-          })
+        ? // paged: the unpaged RPC was cut at 1,000 rows
+          (fetchReceivablesList() as unknown as Promise<Array<Record<string, unknown>>>)
         : Promise.resolve([] as Array<Record<string, unknown>>),
   ])
   const names = new Map(unwrap(users).map(u => [u.id, u.name]))
@@ -770,6 +773,12 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
     }
   })
 }
+
+/** The orders list's server-side filter on the embedded supplier orders (PostgREST `or`): the ones a Next step can still name. */
+export const LIST_LEG_FILTER = 'delivered_on.is.null,placed_on.is.null'
+
+/** The orders list's leg filter, in JS: what LIST_LEG_FILTER keeps. */
+export const listLegKept = (l: { placed_on: string | null; delivered_on: string | null }): boolean => l.delivered_on === null || l.placed_on === null
 
 /** The supplier orders that supply at least one goods line, as v_order_state counts them (an empty one is not a step). */
 function goodsLegs<L extends { id: string }>(legs: readonly L[], lines: ReadonlyArray<{ supplier_order_id?: string | null; is_service?: boolean | null }>): L[] {

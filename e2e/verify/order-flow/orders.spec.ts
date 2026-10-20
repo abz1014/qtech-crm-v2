@@ -39,21 +39,24 @@ test('line totals with GST per line, and a line made exempt: the page and the da
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, `/orders/${seed.order.id}`)
   const table = page.getByRole('table', { name: ORDERS.items.table })
+  // Since the UX audit the table shows each line's total before GST; the bar under it gives GST and the total with GST.
   const footer = table.getByRole('row').filter({ hasText: ORDERS.items.footer(3) })
-  for (const f of [25746.89, 2835, 28581.89]) await expect(footer).toContainText(amount(f))
-  for (const [desc, line] of [
-    ['Cerabar PMC51', [3703.65, 667, 4370.65]],
-    ['Promag 10W', [12043.25, 2168, 14211.25]],
-    ['Calibration certificate', [9999.99, 0, 9999.99]],
+  const gstBar = page.getByTestId(ORDERS.items.gstSummary)
+  await expect(footer).toContainText(amount(25746.89))
+  for (const f of [2835, 28581.89]) await expect(gstBar).toContainText(amount(f))
+  for (const [desc, net] of [
+    ['Cerabar PMC51', 3703.65],
+    ['Promag 10W', 12043.25],
+    ['Calibration certificate', 9999.99],
   ] as const) {
-    const row = table.getByRole('row').filter({ hasText: desc })
-    for (const f of line) await expect(row).toContainText(amount(f))
+    await expect(table.getByRole('row').filter({ hasText: desc })).toContainText(amount(net))
   }
 
   // Line 2 exempt: GST 667 + 0 + 0 = 667; gross 25,746.89 + 667 = 26,413.89.
+  await page.getByRole('button', { name: ORDERS.items.edit }).click()
   await page.getByLabel(ORDERS.items.gstRate(2)).selectOption('0')
   await expect.poll(totals).toEqual([25746.89, 667, 26413.89])
-  await expect(footer).toContainText(amount(26413.89))
+  await expect(gstBar).toContainText(amount(26413.89))
   const rates = await db.rows<{ gst_rate: number }>(`order_items?order_id=eq.${seed.order.id}&select=gst_rate&order=position`)
   expect(rates.map(r => num(r.gst_rate))).toEqual([18, 0, 0])
   await sales.close()
@@ -63,6 +66,7 @@ test('a line offers only the GST rates the owner allows: 18% or exempt', async (
   const seed = await order({ lines: [{ description: 'Ball valve 2 inch', qty: 1, price: 15000 }], owner: 'sales' })
   const sales = await signedIn(browser, info, 'sales')
   const page = await open(sales, `/orders/${seed.order.id}`)
+  await page.getByRole('button', { name: ORDERS.items.edit }).click()
   const select = page.getByLabel(ORDERS.items.gstRate(1))
   await expect(select).toBeVisible()
   const offered = await select.locator('option').allInnerTexts()

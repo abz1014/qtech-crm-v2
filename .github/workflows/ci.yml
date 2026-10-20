@@ -83,7 +83,7 @@ jobs:
           VITE_SUPABASE_URL: https://ci-budget-dummy.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-budget-dummy-anon-key
         run: npm run build
-      - name: Bundle budget (initial JS <= 270 KB gzip, Supabase client included; reports the PDF chunk and the service-worker precache)
+      - name: Bundle budget (initial JS <= 240 KB gzip, Supabase client included; reports the PDF chunk and the service-worker precache)
         run: node scripts/bundle-budget.mjs
 
   # U09: visual regression and axe over /dev/gallery, in real Chromium on Ubuntu.

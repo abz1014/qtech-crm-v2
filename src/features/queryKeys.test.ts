@@ -119,8 +119,12 @@ describe('invalidation map (R01)', () => {
   })
 
   it('every change to a person re-reads the team list, and a profile save re-reads the profile', () => {
-    for (const n of ['team.create', 'team.reset-password', 'team.set-role', 'team.set-job-title', 'team.deactivate', 'team.reactivate'] as const) {
+    for (const n of ['team.reset-password', 'team.set-role', 'team.set-job-title'] as const) {
       expect(keysFor(n, {})).toEqual([qk.settings.team()])
+    }
+    // Adding, deactivating or reactivating someone changes "is the owner alone" and the first-week list (learnability 1.1, 5.1).
+    for (const n of ['team.create', 'team.deactivate', 'team.reactivate'] as const) {
+      expect(keysFor(n, {})).toEqual([qk.settings.team(), qk.onboarding.all])
     }
     expect(keysFor('company-profile.update', {})).toEqual([qk.settings.profile(), qk.money.receivables.all, qk.today.all])
   })

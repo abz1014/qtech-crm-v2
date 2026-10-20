@@ -132,7 +132,11 @@ export const QUOTES = {
 export const ORDERS = {
   items: {
     table: 'Order items',
-    footer: (lines: number) => `Order total, ${lines} ${lines === 1 ? 'line' : 'lines'}`,
+    footer: (lines: number) => `Total before GST, ${lines} ${lines === 1 ? 'line' : 'lines'}`,
+    /** The bar under the table: "GST … · Total with GST …". */
+    gstSummary: 'items-gst-summary',
+    /** The per-line controls (GST select, Service, Split) are behind this toggle. */
+    edit: 'Edit GST and lines',
     gstRate: (line: number) => `GST rate, line ${line}`,
     /** The owner rule (DECISIONS 2026-10-15): GST is 18% or exempt, nothing else. */
     allowedRates: ['18%', 'Exempt'],

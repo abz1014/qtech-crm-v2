@@ -6,6 +6,7 @@ import { orderRef } from '@/lib/refs'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
+import { InfoTip } from '@/ui/InfoTip'
 import { Radio, RadioGroup } from '@/ui/form/Radio'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader, OrderItemRow, OrderMoney } from '@/features/orders/api'
@@ -77,6 +78,7 @@ export function ResolveBasisDialog({ order, items, money, onClose }: { order: Or
         <div className="grid gap-4">
           <p className="text-sm text-fg-2">
             The old CRM did not say. Choose one: each choice shows what the order would come to. Nothing changes until you press Save answer.
+            <InfoTip label="About this question" className="ml-1">Old orders did not say whether prices included GST. Your answer fixes the totals; it is asked once.</InfoTip>
           </p>
           <RadioGroup aria-label="Is GST included?" value={basis ?? ''} onValueChange={v => setBasis(v as 'net' | 'gross')} className="gap-3">
             {option('gross', 'The prices include GST')}

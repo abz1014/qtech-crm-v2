@@ -12,6 +12,8 @@ import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { EmptyState } from '@/ui/EmptyState'
+import { FirstUseState } from '@/features/help/FirstUseState'
+import { useFirstUse } from '@/features/help/useFirstUse'
 import { Select } from '@/ui/form/Select'
 import { Icon } from '@/ui/Icon'
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
@@ -192,6 +194,7 @@ export default function OrdersListPage() {
   const dimsOn = (['goods', 'commissioning', 'invoicing', 'payment'] as const).filter(d => filters[d] !== ALL).length
   const reset = () => change({ owner: defaultOwner(role) === 'mine' ? 'all' : null, goods: null, commissioning: null, invoicing: null, payment: null, q: null })
   const total = all.filter(r => r.lifecycle === filters.tab).length
+  const firstUse = useFirstUse('orders', user?.id ?? '', role, orders.isSuccess && filters.tab === 'active' && filters.owner === 'mine' && mineCount === 0 && !filters.text && dimsOn === 0)
   const ownerLabel = role === 'engineer' ? 'My jobs' : 'Mine'
 
   const dimSelect = (dim: Dimension) => {
@@ -232,8 +235,9 @@ export default function OrdersListPage() {
   )
   const filterLabel = dimsOn > 0 ? `Filters (${dimsOn})` : 'Filters'
 
-  const empty =
-    !filtered && total === 0 ? (
+  const empty = firstUse.isNew ? (
+      <FirstUseState screen="orders" role={role} onEveryone={() => change({ owner: 'all' })} everyoneCount={allCount} className="mx-5 my-4" />
+    ) : !filtered && total === 0 ? (
       filters.tab === 'active' ? (
         <EmptyState
           mood="goal"
