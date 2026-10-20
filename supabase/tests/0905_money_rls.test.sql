@@ -43,6 +43,7 @@ insert into money_relations values
   ('public.v_order_basis'), ('public.v_payment_net'), ('public.v_order_money'), ('public.v_cash_month'), ('public.v_target_progress'),
   ('public.v_month_pnl'), ('public.v_month_pnl_live'), ('public.v_month_expense_category'), ('public.v_month_team'),
   ('public.v_gst_month'), ('public.v_invoice_state'), ('public.v_gst_register'),
+  ('public.v_month_cash_flow'), ('public.v_month_cash_out_detail'), ('public.v_month_profit'),   -- 0079
   ('public.aging_as_of(''2025-06-30'')'), ('public.payables_as_of(''2025-01-31'')'),
   ('public.month_end_status(''2025-02-01'')'), ('public.month_end_check_details(''2025-02-01'')');
 

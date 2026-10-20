@@ -11,6 +11,7 @@ import { AgingPage, CategoriesPage, GstFbrPage, OwePage, PnlPage, TeamPage } fro
 import { MONTH_REPORT_KEYS } from '@/features/money/monthEnd/reportList'
 import { ExceptionsPage } from '@/features/money/exceptions/ExceptionsPage'
 import { MarginsPage } from '@/features/money/margins/MarginsPage'
+import { InOutPage } from '@/features/money/inOut/InOutPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 
 /**
@@ -67,6 +68,8 @@ function ReportRoute({ isAdmin }: { isAdmin: boolean }) {
       return <OwePage />
     case 'gst':
       return <GstFbrPage />
+    case 'in-out':
+      return <InOutPage />
     case 'team':
       return <TeamPage />
     default:

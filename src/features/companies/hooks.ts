@@ -131,6 +131,17 @@ export class DuplicateCompanyError extends Error {
   }
 }
 
+/** The company on file that sent an enquiry (findCompanyForSender), read once per sender. */
+export function useCompanyForSender(hint: api.SenderHint | null) {
+  const sig = hint ? JSON.stringify([hint.name, hint.domain, hint.emails, hint.phones]) : ''
+  return useQuery({
+    queryKey: qk.companies.sender(sig),
+    queryFn: () => api.findCompanyForSender(hint as api.SenderHint),
+    enabled: hint !== null,
+    staleTime: 60_000,
+  })
+}
+
 /** `contactName` (optional) adds a first contact in the same gesture, as the inline create in intake draws it. */
 export function useCreateCompany() {
   const client = useQueryClient()

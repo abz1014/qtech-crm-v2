@@ -28,6 +28,7 @@ import {
 } from '@/features/capture/model'
 import { CapNote, CaptureArea, OrderPicker, QuestionPick, RfqPicker, SavedPanel, Section, SplitRows, Tiles } from '@/features/capture/CaptureParts'
 import { useCapture } from '@/app/capture/useCapture'
+import { useBackToClose } from '@/lib/useBackToClose'
 import { useCompanyMatches, useRfqInquiries } from '@/features/rfqs/hooks'
 import {
   addClarifications,
@@ -40,6 +41,7 @@ import {
 } from '@/features/rfqs/api'
 import { attachmentPath, clarState, splitQuestions } from '@/features/rfqs/lib/clarifications'
 import { formatBytes } from '@/lib/fileIntake'
+import { isPdfFile } from '@/lib/docread/pdfText'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
@@ -150,18 +152,43 @@ export default function CaptureSheet() {
 
   // ---- saving
   const [busy, setBusy] = useState(false)
+  useBackToClose(true, () => {
+    if (!busy) cap.close()
+  })
   const [error, setError] = useState(false)
   const [result, setResult] = useState<Result | null>(null)
   const inFlight = useRef(false)
   const uploaded = useRef(new Map<string, AttachmentRow>())
 
-  const ready =
-    kind !== 'empty' &&
-    online &&
-    (dest === 'new-rfq' ? Boolean(company) : dest === 'order' ? Boolean(order) : Boolean(rfq)) &&
-    (dest === 'answer' ? tickedList.length > 0 : true) &&
-    (dest === 'questions' ? keptLines.length > 0 : true) &&
-    (dest === 'reply' ? Boolean(inquiryId) : true)
+  // Why it cannot be saved yet, in plain words beside the button (owner test 2026-10-20). Offline and nothing added keep the button
+  // disabled; anything left to choose keeps it enabled, and a press puts the focus on that choice. New RFQ needs no company here:
+  // it can be chosen (or is suggested from the text) on the New RFQ screen.
+  const why =
+    kind === 'empty'
+      ? null
+      : !online
+        ? 'You’re offline'
+        : dest === 'order'
+          ? order ? null : 'Choose the order first'
+          : dest === 'new-rfq'
+            ? null
+            : !rfq
+              ? 'Choose the RFQ first'
+              : dest === 'answer' && tickedList.length === 0
+                ? open.length ? 'Tick the question it answers' : 'This RFQ has no open questions'
+                : dest === 'questions' && keptLines.length === 0
+                  ? 'Tick at least one question to add'
+                  : dest === 'reply' && !inquiryId
+                    ? inquiryList.length ? 'Choose the supplier who replied' : 'No supplier has been asked on this RFQ yet'
+                    : null
+  const ready = kind !== 'empty' && online && why === null
+  const [whyShown, setWhyShown] = useState(false)
+  const rightRef = useRef<HTMLDivElement>(null)
+  const press = () => {
+    if (ready) return void save()
+    setWhyShown(true)
+    rightRef.current?.querySelector<HTMLElement>('input:not([disabled]), [role="radio"]:not([disabled]), [role="checkbox"]:not([disabled]), button:not([disabled])')?.focus()
+  }
   const label = saveLabel({ dest, kind, ticked: tickedList.length, questionLines: keptLines.length })
   const emptyAnswerOpen = (defaultRfq('answer', ordered) ?? ordered[0])?.open.length ?? 0
   const emptyLabel = emptyAnswerOpen ? `Save answer to ${emptyAnswerOpen} ${emptyAnswerOpen === 1 ? 'question' : 'questions'}` : 'Save'
@@ -198,9 +225,9 @@ export default function CaptureSheet() {
     // Put the capture back after an Undo, so nothing the person gave us is lost by a tap.
     const restore = () => cap.add({ text: keep.text, files: keep.files }, keep.source)
     try {
-      if (dest === 'new-rfq' && company) {
+      if (dest === 'new-rfq') {
         cap.close()
-        navigate(`/rfqs/new?company=${company.id}`, { state: { capture: { id: draft.id, text: draft.text, files: keep.files } } })
+        navigate(company ? `/rfqs/new?company=${company.id}` : '/rfqs/new', { state: { capture: { id: draft.id, text: draft.text, files: keep.files } } })
         return
       }
       if (dest === 'order' && order) {
@@ -249,7 +276,9 @@ export default function CaptureSheet() {
         await refresh(rfqId, goodFiles.length ? ['attachment.add'] : [])
         cap.close()
         cap.discard()
-        navigate(`/rfqs/${rfqId}`, { state: { reply: { inquiryId, text: draft.text } } })
+        // A PDF quote with no text is read on the RFQ (its prices), as a pasted reply would be.
+        const pdf = text ? undefined : goodFiles.map(f => f.file).find(f => isPdfFile(f))
+        navigate(`/rfqs/${rfqId}`, { state: { reply: { inquiryId, text: draft.text, pdf } } })
         return
       }
 
@@ -323,7 +352,7 @@ export default function CaptureSheet() {
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
-      void save()
+      if (kind !== 'empty' && online) press()
     }
   }
 
@@ -419,7 +448,7 @@ export default function CaptureSheet() {
   )
 
   const right = (
-    <div className="grid min-w-0 content-start gap-4">
+    <div ref={rightRef} className="grid min-w-0 content-start gap-4">
       <div className="grid gap-2">
         <Section title="What should we do with it?" aside={<InfoTip label="About Paste or photo" align="end">Saves a photo, PDF or message to an RFQ or order. Nothing else to fill in.</InfoTip>}>
           <Tiles
@@ -560,7 +589,7 @@ export default function CaptureSheet() {
               placeholder="Start typing the company"
             />
           </div>
-          <CapNote>The new RFQ opens with this text and the company already filled in. Nothing is saved until you create the RFQ.</CapNote>
+          <CapNote>Optional: you can choose the company on the next screen, where it is suggested from the text or PDF. The new RFQ opens with the items read out. Nothing is saved until you create the RFQ.</CapNote>
         </Section>
       ) : null}
     </div>
@@ -656,8 +685,17 @@ export default function CaptureSheet() {
             </div>
 
             {cap.notice === 'expired' || result ? null : (
-              <footer className="flex items-center gap-2 border-t bg-surface px-4 py-3 md:rounded-b md:bg-sunken md:px-5">
-                <span className="mr-auto hidden items-center gap-[6px] text-xs text-fg-muted md:inline-flex">
+              <footer className="flex flex-wrap items-center gap-2 border-t bg-surface px-4 py-3 md:rounded-b md:bg-sunken md:px-5">
+                {why ? (
+                  <span
+                    role={whyShown ? 'alert' : undefined}
+                    data-testid="capture-why"
+                    className={cn('mr-auto text-sm max-md:basis-full', whyShown ? 'font-medium text-tone-warning-fg' : 'text-fg-muted')}
+                  >
+                    {why}
+                  </span>
+                ) : null}
+                <span className={cn('mr-auto hidden items-center gap-[6px] text-xs text-fg-muted md:inline-flex', why && 'md:hidden')}>
                   {empty ? (
                     'Nothing to save yet'
                   ) : (
@@ -672,8 +710,8 @@ export default function CaptureSheet() {
                 </Button>
                 <Button
                   variant="primary"
-                  onClick={() => void save()}
-                  disabled={!ready}
+                  onClick={press}
+                  disabled={kind === 'empty' || !online}
                   busy={busy}
                   busyLabel="Saving"
                   icon={empty ? Check : dest === 'new-rfq' ? ArrowRight : dest === 'reply' ? undefined : Check}

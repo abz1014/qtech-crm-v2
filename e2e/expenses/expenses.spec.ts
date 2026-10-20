@@ -174,7 +174,7 @@ test.describe('expenses (M03, M11)', () => {
     await page.keyboard.type('supplier')
     await page.keyboard.press('Tab') // date (the highlighted category is taken)
     await page.keyboard.press('Tab') // paid via
-    await page.keyboard.press('Tab') // note
+    await page.keyboard.press('Tab') // detail
     await page.keyboard.press('Tab') // order
     await expect(page.getByRole('combobox', { name: 'Order, row 1' })).toBeFocused()
     await page.keyboard.type(String(order.number))
@@ -539,7 +539,7 @@ test.describe('expenses (M03, M11)', () => {
       // The cell reads the typed date one tick after it loses focus and then shows it in words ("Sat 5 Sep", in the closed month's own name). Saving before
       // that tick saves the old date, so wait for the words: input events are served before timers on a busy runner.
       await expect(page.getByRole('textbox', { name: 'Date, row 3' })).toHaveValue(new RegExp(`\\b5 ${prev.label.slice(0, 3)}`))
-      await page.keyboard.press('Tab') // note
+      await page.keyboard.press('Tab') // detail
       await page.keyboard.type(tag)
       await page.keyboard.press('Control+Enter')
       const alert = page.getByRole('alert').filter({ hasText: sentence })
@@ -551,14 +551,14 @@ test.describe('expenses (M03, M11)', () => {
       await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toHaveValue(c1.toLocaleString('en-US'))
       await expect(page.getByRole('textbox', { name: 'Amount, row 2' })).toHaveValue(c2.toLocaleString('en-US'))
       await expect(page.getByRole('textbox', { name: 'Amount, row 3' })).toHaveValue(c3.toLocaleString('en-US'))
-      await expect(page.getByRole('textbox', { name: 'Note, row 3' })).toHaveValue(tag)
+      await expect(page.getByRole('combobox', { name: 'Detail, row 3' })).toHaveValue(tag)
       await review(page, 'm11-burst-closed-month-1440')
       // the whole save was refused
       expect((await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=in.(${c1},${c2})&select=id`))).length).toBe(0)
       expect(await byNote(tag)).toHaveLength(0)
       // fixing the date (today) lets the same sheet save all three
       await page.getByRole('textbox', { name: 'Date, row 3' }).fill('today')
-      await page.getByRole('textbox', { name: 'Note, row 3' }).focus()
+      await page.getByRole('combobox', { name: 'Detail, row 3' }).focus()
       await expect(alert).toBeHidden() // the date was read on leaving it, which clears the row's error
       await page.keyboard.press('Control+Enter')
       await expect(page.getByRole('dialog')).toBeHidden()
@@ -570,12 +570,12 @@ test.describe('expenses (M03, M11)', () => {
       await openAs(page, 'admin', '/money/expenses?add=1')
       await page.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(z))
       await page.getByRole('textbox', { name: 'Date paid' }).fill(prev.typed)
-      await page.getByRole('button', { name: 'Add a note' }).click()
-      await page.getByRole('textbox', { name: 'Note' }).fill('kept in the form')
+      await page.getByRole('button', { name: 'Add a detail' }).click()
+      await page.getByRole('combobox', { name: 'Detail' }).fill('kept in the form')
       await page.getByRole('button', { name: 'Save expense' }).click()
       await expect(page.getByText(sentence)).toBeVisible()
       await expect(page.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue(z.toLocaleString('en-US'))
-      await expect(page.getByRole('textbox', { name: 'Note' })).toHaveValue('kept in the form')
+      await expect(page.getByRole('combobox', { name: 'Detail' })).toHaveValue('kept in the form')
       await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
       await review(page, 'm03-closed-month-dialog-1440')
       expect((await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${z}&select=id`))).length).toBe(0)

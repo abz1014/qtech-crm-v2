@@ -233,6 +233,9 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('view',  'v_month_pnl_live',         '',      'S',    '',     ''),     -- 0058 (D-MR2): the live P&L a snapshot is compared with, admin only
   ('view',  'v_month_expense_category', '',      'S',    '',     ''),     -- A6 A6.3: admin only
   ('view',  'v_month_team',             '',      'S',    '',     ''),     -- A6 A6.3: admin only
+  ('view',  'v_month_cash_flow',        '',      'S',    '',     ''),     -- 0079: cash in vs out per month, admin only
+  ('view',  'v_month_cash_out_detail',  '',      'S',    '',     ''),     -- 0079: money out by category and detail, admin only
+  ('view',  'v_month_profit',           '',      'S',    '',     ''),     -- 0079: profit on the invoiced basis, admin only
   ('view',  'v_gst_month',              '',      'S',    'S',    ''),     -- A6 A6.3: admin and sales (input tax is NULL for sales)
   ('view',  'v_report_rfq_outcomes', '', 'S', 'S', ''),     -- P01 (0053): reports, admin and sales; engineers get zero rows, no money column
   ('view',  'v_report_float', '', 'S', 'S', ''),     -- P01 (0053): reports, admin and sales; engineers get zero rows, no money column
@@ -422,6 +425,7 @@ from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_sta
                   'v_order_money','v_cash_month','v_payment_net','v_target_progress','v_order_basis',
                   'v_order_items_total','v_fx_latest','v_supplier_activity','v_supplier_stats',
                   'v_month_pnl','v_month_pnl_live','v_month_expense_category','v_month_team','v_gst_month',
+                  'v_month_cash_flow','v_month_cash_out_detail','v_month_profit',
                   'v_report_rfq_outcomes','v_report_float','v_report_clarification_turnaround','v_report_repeat_customers']) v;   -- A6, P01
 
 -- ------------------------------------------------------------------ probes: functions (X)

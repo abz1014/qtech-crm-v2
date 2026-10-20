@@ -13,7 +13,7 @@ import { TextField } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { useAddItem, useAddLeg, useSupplierChoices } from '@/features/orders/hooks'
-import { STANDARD_GST } from '@/features/orders/lib/orderMath'
+import { gstOptions, STANDARD_GST } from '@/features/orders/lib/orderMath'
 
 /*
  * "Add line" and "Add leg" on the order page (g2-order-detail.html: the buttons in the Items and Procurement legs headers).
@@ -105,7 +105,7 @@ export function AddLineDialog({ order, items, legs, onClose }: { order: OrderHea
               <NumberInput value={price} onChange={setPrice} prefix="PKR" />
             </Field>
             <Field label="GST rate" source={exempt ? 'the order is exempt' : undefined}>
-              <NumberInput value={gst} onChange={setGst} suffix="%" />
+              <Select value={String(gst ?? STANDARD_GST)} onChange={e => setGst(Number(e.target.value))} options={gstOptions()} />
             </Field>
           </div>
           <Checkbox label="A service (commissioning or a service charge): no supplier" checked={service} onCheckedChange={v => setService(v === true)} />

@@ -310,9 +310,11 @@ function RfqNextStep({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFac
           Reopen
         </Button>
         {main.canWin ? (
-          <Button icon={FileCheck2} onClick={main.won}>
-            Mark won
-          </Button>
+          <span data-slot="mark-won" className="contents">
+            <Button icon={FileCheck2} onClick={main.won}>
+              Mark won
+            </Button>
+          </span>
         ) : null}
       </div>
     )

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { db, num, USER } from '../support/db'
 import { company, karachiDay, letters, post, quote, rfq, setRates, supplier } from '../support/fixtures'
-import { open, signedIn } from '../support/session'
+import { open, openMarkWon, signedIn } from '../support/session'
 import { SALES } from '../support/text'
 import { readClipboardWhen, resetClipboard } from '../../support/clipboard'
 
@@ -70,7 +70,6 @@ test.describe('the enquiry as it arrives', () => {
   })
 
   test('a WhatsApp chat copied with its "[time, date] Name:" prefixes gives the two items, without the prefixes or the greetings', async ({ browser }, info) => {
-    test.fail(true, 'BUG-SALES-1: chat prefixes are kept in the description, every message becomes an item, "0-10 m" is read as qty 10 m (src/features/rfqs/lib/parseItems.ts parsePaste)')
     const customer = await company('Verify WhatsApp Customer')
     const sales = await signedIn(browser, info, 'sales')
     const page = await open(sales, '/today')
@@ -86,7 +85,7 @@ test.describe('the enquiry as it arrives', () => {
       ].join('\n'),
     )
     await expect(page.getByRole('textbox', { name: SALES.intake.description(1) })).toBeVisible()
-    // SUSPECTED BUG: parsePaste has no rule for chat prefixes, so each message becomes an item with its timestamp and qty 1.
+    // Fixed (BUG-SALES-1): New RFQ reads pastes with parseEnquiry, which takes off WhatsApp Web's "[time, date] Name:" prefixes.
     expect(await rowsOnScreen(page)).toEqual([
       ['ultrasonic level transmitter 0-10 m', '2 nos'],
       ['pressure gauge 0-16 bar', '4 nos'],
@@ -95,7 +94,6 @@ test.describe('the enquiry as it arrives', () => {
   })
 
   test('an unmarked email with a signature block gives only the items, not the name, the job title or the phone number', async ({ browser }, info) => {
-    test.fail(true, 'BUG-SALES-2: signature lines (name, title, phone) become items (parseItems.ts, unmarked paste; audit E2)')
     const customer = await company('Verify Signature Customer')
     const sales = await signedIn(browser, info, 'sales')
     const page = await open(sales, '/today')
@@ -105,7 +103,7 @@ test.describe('the enquiry as it arrives', () => {
       ['Dear Sir,', 'Please quote the following:', 'Vortex flow meter DN100 - 2 nos', 'Magnetic level gauge 1500 mm - 1 no', 'Regards,', 'Muhammad Asif', 'Senior Procurement Engineer', '0300-1234567'].join('\n'),
     )
     await expect(page.getByRole('textbox', { name: SALES.intake.description(1) })).toBeVisible()
-    // SUSPECTED BUG (audit E2, still open): every unmarked line after the sign-off becomes an item.
+    // Fixed (BUG-SALES-2): nothing after the sign-off is an item (parseEnquiry).
     expect(await rowsOnScreen(page)).toEqual([
       ['Vortex flow meter DN100', '2 nos'],
       ['Magnetic level gauge 1500 mm', '1 no'],
@@ -114,7 +112,6 @@ test.describe('the enquiry as it arrives', () => {
   })
 
   test('the same message pasted twice does not double the items', async ({ browser }, info) => {
-    test.fail(true, 'BUG-SALES-3: a second paste of the same text appends duplicate rows (IntakeScreen.tsx:148-167 addItems)')
     const customer = await company('Verify Twice Customer')
     const sales = await signedIn(browser, info, 'sales')
     const page = await open(sales, '/today')
@@ -123,8 +120,8 @@ test.describe('the enquiry as it arrives', () => {
     await paste(page, msg)
     await expect(page.getByRole('textbox', { name: SALES.intake.description(2) })).toBeVisible()
     await paste(page, msg) // the same Ctrl+V again, as happens when the first one seemed not to land
-    await page.waitForTimeout(500)
-    // SUSPECTED BUG: takePaste appends every paste (IntakeScreen.tsx addItems), so the same message gives four rows.
+    await expect(page.getByRole('status').filter({ hasText: SALES.intake.alreadyThere(2) }).first()).toBeVisible()
+    // BUG-SALES-3 (fixed): repeated lines are skipped (src/features/rfqs/lib/skipRepeats.ts).
     expect(await rowsOnScreen(page)).toEqual([
       ['Temperature transmitter PT100 head mount', '3 nos'],
       ['Thermowell SS316 250 mm', '3 nos'],
@@ -147,7 +144,6 @@ function replyByOf(due: string): string {
 }
 
 test('asking a supplier: the copied enquiry names the RFQ, every item with its quantity and the reply-by date; the asking is recorded and Undo takes it back', async ({ browser }, info) => {
-  test.fixme(true, 'selectors outdated by the ux/* merge (69f40fa); passed or confirmed before it: update the words in support/text-*.ts')
   const tag = letters()
   const brand = await post<{ id: string; name: string }>('brands', { name: `Verifyflow${tag}`, kind: 'brand' })
   const due = karachiDay(10)
@@ -183,7 +179,6 @@ test('asking a supplier: the copied enquiry names the RFQ, every item with its q
 })
 
 test('prices in three currencies are stored with the rate of the day and ranked by their PKR value; Mark won pre-picks the cheapest', async ({ browser }, info) => {
-  test.fixme(true, 'selectors outdated by the ux/* merge (69f40fa); passed or confirmed before it: update the words in support/text-*.ts')
   // Today: EUR 300.50, USD 280.25.
   //   Germany  EUR 85.10  x 300.50 = 25,572.55 PKR each  -> rank 1
   //   Lahore   PKR 27,450.00                              -> rank 2 (7.3% dearer: outside the 2% band)
@@ -225,13 +220,13 @@ test('prices in three currencies are stored with the rate of the day and ranked 
   expect(ranked[0]).toContain(germany.name)
   expect(ranked[1]).toContain(lahore.name)
   expect(ranked[2]).toContain(houston.name)
-  const rank = await db.adminRpc<{ supplier_id: string; rank: number; price_pkr: number }[]>('rank_item_quotes', { p_rfq_id: r.rfq.id })
-  const byId = Object.fromEntries(rank.map(x => [x.supplier_id, [Number(x.rank), num(x.price_pkr)]]))
+  const rank = await db.adminRpc<{ supplier_id: string; rank: number; pkr_unit_price: number }[]>('rank_item_quotes', { p_rfq_id: r.rfq.id })
+  const byId = Object.fromEntries(rank.map(x => [x.supplier_id, [Number(x.rank), num(x.pkr_unit_price)]]))
   expect(byId[germany.id]).toEqual([1, 25572.55])
   expect(byId[lahore.id]).toEqual([2, 27450])
   expect(byId[houston.id]).toEqual([3, 28361.3])
 
-  await page.locator('[data-slot="mark-won"]').getByRole('button', { name: SALES.won.markWon }).click()
+  await openMarkWon(page)
   const d = page.getByRole('dialog')
   await expect(d.getByRole('heading', { name: SALES.won.heading })).toBeVisible()
   await expect(d.getByRole('button', { name: SALES.won.supplierFor(1) })).toContainText(germany.name)

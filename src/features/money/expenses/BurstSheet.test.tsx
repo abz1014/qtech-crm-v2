@@ -244,4 +244,68 @@ describe('burst entry sheet (M11)', () => {
       expect('order_id' in savedRows(db)[0]).toBe(false)
     })
   })
+
+  describe('a new category from the category box (owner request 2026-10-20)', () => {
+    function setupCreate() {
+      const cats = [...CATEGORIES]
+      const db = installFakeDb((c: FakeCall) => {
+        if (c.target === 'expense_categories' && c.verb === 'insert') {
+          const row = opArgs(c, 'insert')?.[0] as Record<string, unknown>
+          cats.push({ id: 'c-water', name: String(row.name), grp: String(row.grp), default_paid_via: String(row.default_paid_via), sort: Number(row.sort), active: true })
+          return { data: [{ id: 'c-water' }] }
+        }
+        if (c.target === 'expense_categories') return { data: [...cats] }
+        if (c.target === 'expenses' && c.verb === 'select') return { data: [{ category_id: 'c-snacks', paid_on: '2026-11-01' }] }
+        if (c.target === 'v_month_cash_out_detail') return { data: [{ category_id: 'c-fuel', detail: 'LEA-1234', expense_count: 3, last_paid_on: '2026-11-02' }] }
+        return { data: [] }
+      })
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+      render(
+        <QueryClientProvider client={client}>
+          <ToastProvider>
+            <BurstSheet open onOpenChange={() => {}} />
+          </ToastProvider>
+        </QueryClientProvider>,
+      )
+      return db
+    }
+
+    it('typing a name that is no category offers Create, paid in cash first; Enter creates it under Overheads and selects it', async () => {
+      const user = userEvent.setup()
+      const db = setupCreate()
+      const amount = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(amount).toHaveFocus())
+      await user.keyboard('500{Tab}Office water')
+      const list = await screen.findByRole('listbox', { name: 'Categories' })
+      const options = within(list).getAllByRole('option')
+      expect(options.map(o => o.textContent)).toEqual(['Create “Office water”Overhead · paid in cash', 'Create “Office water”Overhead · paid by bank'])
+      await user.keyboard('{Enter}')
+      await waitFor(() => expect(screen.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Office water'))
+      const insert = db.calls.find(c => c.target === 'expense_categories' && c.verb === 'insert')!
+      expect(opArgs(insert, 'insert')?.[0]).toEqual({ name: 'Office water', grp: 'overhead', default_paid_via: 'cash', sort: 60 })
+      // the row follows the new category's paid via
+      expect(screen.getByRole('combobox', { name: 'Paid via, row 1' })).toHaveValue('cash')
+      await user.keyboard('{Control>}{Enter}{/Control}')
+      await waitFor(() => expect(saves(db)).toHaveLength(1))
+      expect((opArgs(saves(db)[0], 'upsert')?.[0] as Record<string, unknown>[])[0]).toMatchObject({ amount_pkr: 500, category_id: 'c-water', paid_via: 'cash' })
+    })
+
+    it('a name that only differs in case is the existing category, not a new one', async () => {
+      const user = userEvent.setup()
+      setupCreate()
+      const amount = await screen.findByRole('textbox', { name: 'Amount, row 1' })
+      await waitFor(() => expect(amount).toHaveFocus())
+      await user.keyboard('{Tab}fuel & TRAVEL')
+      const list = await screen.findByRole('listbox', { name: 'Categories' })
+      expect(within(list).queryByText(/Create/)).toBeNull()
+    })
+
+    it('the Detail cell suggests what was typed before', async () => {
+      setupCreate()
+      const detail = await screen.findByRole('combobox', { name: 'Detail, row 1' })
+      const list = document.getElementById(detail.getAttribute('list') ?? '')
+      await waitFor(() => expect(list?.querySelectorAll('option')).toHaveLength(1))
+      expect(list?.querySelector('option')?.getAttribute('value')).toBe('LEA-1234')
+    })
+  })
 })

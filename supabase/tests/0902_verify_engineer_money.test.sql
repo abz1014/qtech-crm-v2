@@ -205,6 +205,11 @@ insert into money_cols (obj, col, rule, bug) values
   ('month_snapshots', 'categories', 'hidden', null), ('month_snapshots', 'team', 'hidden', null), ('month_snapshots', 'payments', 'hidden', null),
   ('month_snapshots', 'via', 'hidden', null), ('month_snapshots', 'aging', 'hidden', null), ('month_snapshots', 'payables', 'hidden', null),
   ('month_snapshots', 'gst', 'hidden', null), ('month_snapshots', 'details', 'hidden', null),
+  ('v_month_cash_flow', 'money_in', 'hidden', null), ('v_month_cash_flow', 'money_out', 'hidden', null),   -- 0079
+  ('v_month_cash_out_detail', 'gross_paid', 'hidden', null),   -- 0079
+  ('v_month_profit', 'sales_net', 'hidden', null), ('v_month_profit', 'sales_gst', 'hidden', null), ('v_month_profit', 'order_costs_matched', 'hidden', null),   -- 0079
+  ('v_month_profit', 'overheads', 'hidden', null), ('v_month_profit', 'profit', 'hidden', null), ('v_month_profit', 'order_costs_paid', 'hidden', null),
+  ('v_month_profit', 'non_pnl_paid', 'hidden', null), ('v_month_profit', 'input_tax_paid', 'hidden', null),
   ('order_costs', 'expected_cost_pkr', 'hidden', null),
   ('order_items', 'unit_price_net', 'm3', null), ('order_items', 'supplier_unit_price', 'supplier', null), ('order_items', 'gst_rate', 'info', null),
   ('order_items', 'legacy_source', 'hidden', null),

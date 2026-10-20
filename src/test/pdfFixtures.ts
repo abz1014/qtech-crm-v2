@@ -144,6 +144,83 @@ export async function sapEnquiryPdf(): Promise<Uint8Array> {
   return placedPdf([[...head, ...table.items, ...tail]])
 }
 
+/**
+ * An ERP "Request for Quotation" form (made-up company and items): a header row, item rows whose description wraps onto
+ * further rows (text in the serial and description columns, no quantity), the totals line, then printed terms.
+ */
+export async function erpFormPdf(): Promise<Uint8Array> {
+  const cols = [40, 70, 270, 330, 380, 420, 470, 520]
+  const row = (y: number, cells: string[]): Placed[] =>
+    cells.flatMap((text, i) => (text ? [{ text, x: cols[i] as number, y, size: 8 }] : []))
+  const items: Placed[] = [
+    { text: 'KOHSAR CEMENT COMPANY LIMITED', x: 40, y: 40, size: 12, bold: true },
+    { text: 'Kohsar House, 12 Mall Road, Abbottabad', x: 40, y: 56 },
+    { text: 'Ph No : 0992-555120', x: 40, y: 69 },
+    { text: 'REQUEST FOR QUOTATION', x: 220, y: 90, bold: true },
+    { text: 'RFQ # : 7700012001', x: 360, y: 108 },
+    { text: 'REPLY DUE DATE: 04.11.2026', x: 360, y: 121 },
+    ...row(150, ['S.No.', 'Material Description', 'Pur. Req.', 'Plant', 'UOM', 'Quantity', 'Rate/Unit', 'Amount']).map(p => ({ ...p, bold: true })),
+    ...row(166, ['1 .', 'LEVEL SWITCH LSX-200-24V', '5500000123', 'KCCL', 'EA', '2.00']),
+    ...row(178, ['ACME', 'Level Switch']),
+    ...row(190, ['Model:', 'LSX-200-24V Make: Acme Controls']),
+    ...row(202, ['Installed', 'qty: 04 nos']),
+    ...row(218, ['2 .', 'DOSING PUMP DP-90 230V', '5500000123', 'KCCL', 'EA', '1.00']),
+    ...row(230, ['Make:', 'Fictive Pumps Application: lime dosing']),
+    ...row(246, ['3 .', 'SOLENOID VALVE SV-25 1 INCH', '5500000123', 'KCCL', 'EA', '3.00']),
+    ...row(258, ['Installed', 'qty: 06 nos', 'TOTAL AMOUNT:', '', '', '', 'GST:']),
+    { text: 'Special Instructions :', x: 40, y: 300 },
+    { text: 'Terms and Conditions', x: 40, y: 313 },
+    { text: '1. Please reply within due date, otherwise the quotation will not be considered.', x: 40, y: 326 },
+    { text: '2. Only prime quality material shall be accepted.', x: 40, y: 339 },
+    { text: '3. Literature / sample where necessary should be enclosed.', x: 40, y: 352 },
+    { text: '4. Sales Tax to be shown separately (if applicable).', x: 40, y: 365 },
+    { text: 'Thanks & Regards,', x: 40, y: 395 },
+    { text: 'KCCL Procurement Department', x: 40, y: 408 },
+  ]
+  return placedPdf([items])
+}
+
+/**
+ * A second ERP form (made-up company and item): the column headings stacked one per line, one item row ending with the unit and
+ * the quantity, its description wrapping under the description column, comments, and the due date on the line after its words.
+ */
+export async function stackedFormPdf(): Promise<Uint8Array> {
+  const items: Placed[] = [
+    { text: 'CHENAB TEXTILE MILLS LIMITED', x: 40, y: 40, size: 12, bold: true },
+    { text: '7 - CANAL ROAD, FAISALABAD', x: 40, y: 56 },
+    { text: 'TEL : 041-5550100', x: 40, y: 69 },
+    { text: 'Request For Quotation', x: 220, y: 90, bold: true },
+    { text: 'Document No', x: 40, y: 108 },
+    { text: 'Inquiry Ref', x: 360, y: 108 },
+    { text: '41207', x: 460, y: 108 },
+    { text: 'Head Office', x: 40, y: 121 },
+    { text: 'Dear Sir,', x: 40, y: 150 },
+    { text: 'We shall feel obliged if you will please quote your lowest price for the items detailed below.', x: 40, y: 163 },
+    { text: 'PR.#', x: 40, y: 190, bold: true },
+    { text: 'Item Description', x: 100, y: 203, bold: true },
+    { text: 'UOM', x: 470, y: 216, bold: true },
+    { text: 'Quantity', x: 510, y: 229, bold: true },
+    { text: '700123', x: 40, y: 250 },
+    { text: '2XY FLOW METER TYPE FM-40', x: 100, y: 250 },
+    { text: 'FLOW METER, TYPE: FM-40,', x: 280, y: 250 },
+    { text: 'NO', x: 470, y: 250 },
+    { text: '4', x: 520, y: 250 },
+    { text: 'DN40, FLANGED, 4-20MA OUTPUT,', x: 280, y: 262 },
+    { text: 'MAKE: EXAMPLE INSTRUMENTS.', x: 280, y: 274 },
+    { text: 'Comments: FLOW METER', x: 40, y: 305 },
+    { text: 'FOR', x: 40, y: 317 },
+    { text: 'BOILER', x: 40, y: 329 },
+    { text: '1.', x: 40, y: 350 },
+    { text: 'Quotations must reach us before', x: 60, y: 350 },
+    { text: '09-NOV-26', x: 60, y: 362 },
+    { text: '2.', x: 40, y: 375 },
+    { text: 'Samples may be sent along with the quotations.', x: 60, y: 375 },
+    { text: 'Your Faithfully', x: 40, y: 405 },
+    { text: 'For Chenab Textile Mills Limited', x: 40, y: 418 },
+  ]
+  return placedPdf([items])
+}
+
 // A 1x1 grey PNG, stretched over the page: what a phone "scan to PDF" looks like to a text reader.
 const PIXEL_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
 

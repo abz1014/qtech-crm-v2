@@ -129,12 +129,10 @@ test.describe('invoices from an order', () => {
       expect((await stateOf(seed.order.id)).invoicing_state).toBe('fully_invoiced')
     })
 
-    await test.step('a third Create invoice says every line is already invoiced and pre-fills nothing', async () => {
+    await test.step('once fully invoiced, the order offers no third Create invoice', async () => {
       await page.reload()
-      await orderPage(page).getByRole('button', { name: MONEY.order.createInvoice }).click()
-      const d = page.getByRole('dialog', { name: MONEY.invoice.dialog })
-      await expect(d.getByText(MONEY.invoice.fullyInvoiced)).toBeVisible()
-      await page.keyboard.press('Escape')
+      await expect(page.getByTestId(MONEY.invoice.invoicedTestId)).toContainText(amount(GROSS))
+      await expect(orderPage(page).getByRole('button', { name: MONEY.order.createInvoice })).toHaveCount(0)
       expect(await invoicesOf(seed.order.id)).toHaveLength(2)
     })
     await sales.close()

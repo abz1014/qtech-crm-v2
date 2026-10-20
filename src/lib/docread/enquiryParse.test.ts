@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { ENQUIRY_CORPUS } from '@/features/rfqs/lib/__fixtures__/enquiryCorpus'
 import { parsePaste } from '@/features/rfqs/lib/parseItems'
 import { ENQUIRY_HOLDOUT } from './__fixtures__/enquiryHoldout'
+import { ENQUIRY_FULL_EMAILS } from './__fixtures__/enquiryFullEmails'
+import { ENQUIRY_EMAIL_TABLES } from './__fixtures__/enquiryEmailTables'
 import { CORPUS_TODAY, ENQUIRY_EMAILS, type EnquiryCase } from './__fixtures__/enquiryEmails'
 import { norm, pct, scoreFact, scoreItems, type FactScore } from './__fixtures__/score'
 import { asParseResult, findDate, parseEnquiry, unitOf } from './enquiryParse'
@@ -64,7 +66,7 @@ describe('parseEnquiry: items over several lines and quantity shapes', () => {
     ['Solenoid valve 24VDC QTY REQUIRED: 01', 'Solenoid valve 24VDC', 1, null],
     ['Safety relay REQ QTY 5', 'Safety relay', 5, null],
     ['Encoder 1024 PPR Qty-2', 'Encoder 1024 PPR', 2, null],
-    ['Bearing 6205 2.000 EA', 'Bearing 6205', 2, 'nos'],
+    ['Bearing 6205 2.000 EA', 'Bearing 6205', 2, 'EA'],
     ['Proximity sensor M30 x2', 'Proximity sensor M30', 2, null],
     ['Flame scanner (2 Nos)', 'Flame scanner', 2, 'nos'],
     ['Hydraulic oil ISO VG 68 - 4 Drums', 'Hydraulic oil ISO VG 68', 4, 'drums'],
@@ -77,7 +79,7 @@ describe('parseEnquiry: items over several lines and quantity shapes', () => {
 
   it('reads a table by its header, adds the part number and leaves out an internal material code', () => {
     const r = parse('Item\tMaterial\tDescription\tPart No\tQty\tUOM\n00010\t1000012345\tSafety relay 24VDC\tG9SA-301\t2.000\tEA')
-    expect(r.items).toEqual([{ description: 'Safety relay 24VDC, Part No: G9SA-301', qty: 2, unit: 'nos' }])
+    expect(r.items).toEqual([{ description: 'Safety relay 24VDC, Part No: G9SA-301', qty: 2, unit: 'EA' }])
   })
 
   it('normalises units as the intake does', () => {
@@ -223,5 +225,77 @@ describe('old parser (parsePaste) against the new one', () => {
     expect(rows[1]?.r).toBe(1)
     expect(rows[1]?.p).toBe(1)
     expect(rows[3]?.r).toBeGreaterThanOrEqual(0.9)
+  })
+})
+
+describe('parseEnquiry: whole emails as the owner pastes them (held-out set, owner test 2026-10-20)', () => {
+  it('only the real items come out: item precision 95% or more, every case listed when it is not', () => {
+    let expected = 0
+    let predicted = 0
+    let correct = 0
+    const misses: string[] = []
+    for (const c of ENQUIRY_FULL_EMAILS) {
+      const r = parse(c.text)
+      const s = scoreItems(c.items, r.items)
+      expected += s.expected
+      predicted += s.predicted
+      correct += s.correct
+      if (s.correct !== s.expected || s.predicted !== s.expected) misses.push(`${c.name}: ${JSON.stringify(r.items.map(x => [x.description, x.qty]))}`)
+    }
+    console.log(`FULL_EMAILS precision ${pct(correct, predicted)} (${correct}/${predicted}) recall ${pct(correct, expected)} (${correct}/${expected})\n${misses.join('\n')}`)
+    expect(ENQUIRY_FULL_EMAILS.length).toBeGreaterThanOrEqual(15)
+    expect(correct / predicted).toBeGreaterThanOrEqual(0.95)
+    expect(correct / expected).toBeGreaterThanOrEqual(0.9)
+  })
+})
+
+describe('parseEnquiry: the shapes the sales verification found (BUG-SALES-1, BUG-SALES-2; fictional)', () => {
+  const rows = (text: string) => parse(text).items.map(i => [i.description, i.qty, i.unit])
+
+  it('a WhatsApp Web copy of several messages: prefixes, the greeting and the sign-off go, a range stays in the description', () => {
+    const text = [
+      '[10:41, 19/10/2026] Bilal Ahmed: Assalam o Alaikum',
+      '[10:42, 19/10/2026] Bilal Ahmed: Please quote 2 nos radar level transmitter 0-10 m',
+      '[10:42, 19/10/2026] Bilal Ahmed: 4 pcs pressure gauge 0-16 bar',
+      '[10:43, 19/10/2026] Bilal Ahmed: Regards',
+    ].join('\n')
+    expect(rows(text)).toEqual([
+      ['radar level transmitter 0-10 m', 2, 'nos'],
+      ['pressure gauge 0-16 bar', 4, 'nos'],
+    ])
+  })
+
+  it('a spreadsheet block with a header row counts its rows only: "2 items found in 2 lines"', () => {
+    const r = asParseResult(parse(['S.No\tDescription\tQty\tUnit', '1\tBall valve 1 inch SS316\t6\tnos', '2\tSignal cable 4 core\t150\tm'].join('\n')))
+    expect([r.items.length, r.lineCount]).toEqual([2, 2])
+  })
+
+  it('an unmarked email: nothing after "Regards," is an item (name, job title, phone)', () => {
+    const text = ['Dear Sir,', 'Please quote the following:', 'Turbine flow meter DN80 - 2 nos', 'Float level switch 1000 mm - 1 no', 'Best regards,', 'Usman Tariq', 'Senior Purchase Officer', '0321-7654321'].join('\n')
+    expect(rows(text)).toEqual([
+      ['Turbine flow meter DN80', 2, 'nos'],
+      ['Float level switch 1000 mm', 1, 'nos'],
+    ])
+  })
+})
+
+describe('parseEnquiry: an Outlook table with no header row (held-out set, owner case 2026-10-20)', () => {
+  for (const c of ENQUIRY_EMAIL_TABLES) {
+    it(c.name, () => {
+      const r = parse(c.text)
+      // Every row: the description as written (a "-01" suffix and dashed part numbers kept), the quantity and the customer's unit.
+      expect(r.items.map(x => [x.description, x.qty, x.unit])).toEqual(c.items.map(x => [x.description, x.qty, x.unit]))
+      expect(r.facts.customerRef?.value ?? null).toBe(c.ref ?? null)
+      expect(r.facts.company?.name ?? null).toBe(c.company?.name ?? null)
+    })
+  }
+})
+
+describe('parseEnquiry: a printed form whose part number breaks at a dash (fictional)', () => {
+  it('joins "6ES7000-1AA00-" and "0AB0" back into one part number', () => {
+    const r = parse(['PR.#', 'Item Description', 'UOM', 'Quantity', '700991\t2XY OPERATOR PANEL\tOPERATOR PANEL ,MAKE\tNO\t2', 'EXAMPLE,TYPE KP700 6ES7000-1AA00-', '0AB0'].join('\n'))
+    expect(r.items).toHaveLength(1)
+    expect(r.items[0]?.description).toContain('6ES7000-1AA00-0AB0')
+    expect(r.items[0]?.qty).toBe(2)
   })
 })

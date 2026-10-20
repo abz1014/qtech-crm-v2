@@ -7,11 +7,26 @@ import {
   monthEnd,
   monthStart,
   type Category,
+  type DetailUse,
   type ExpenseInsert,
   type ListedExpense,
   type PaidVia,
   type RecurringTemplate,
 } from '@/features/money/expenses/model'
+
+/** The details typed since a month's first day ("2025-11-01"), per month and category (v_month_cash_out_detail, 0079). */
+export async function listRecentDetails(since: string): Promise<DetailUse[]> {
+  const db = requireSupabase()
+  const rows = await fetchAll<{ category_id: string | null; detail: string | null; expense_count: number | null; last_paid_on: string | null }>((from, to) =>
+    db
+      .from('v_month_cash_out_detail')
+      .select('category_id, detail, expense_count, last_paid_on')
+      .gte('month', since)
+      .not('detail', 'is', null)
+      .range(from, to),
+  )
+  return rows.flatMap(r => (r.detail && r.category_id ? [{ detail: r.detail, categoryId: r.category_id, count: r.expense_count ?? 0, last: r.last_paid_on ?? '' }] : []))
+}
 
 /*
  * Expenses (M03, M11): every database call for this area. Admin only, enforced by Row Level Security; the screens also

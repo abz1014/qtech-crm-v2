@@ -105,6 +105,7 @@ export interface BurstRow {
   dateTyped: boolean
   /** null: follows the category's own default. */
   paidVia: PaidVia | null
+  /** The Detail field ("LEA-1234", "Office water"), saved as the expense's description. */
   note: string
   photo: AddedFile | null
   inputTax: number | null
@@ -171,7 +172,7 @@ export function burstInserts(rows: readonly BurstRow[], categories: readonly Cat
     category_id: r.categoryId,
     paid_on: r.date,
     paid_via: effectivePaidVia(r, categories),
-    description: r.note.trim() || null,
+    description: cleanDetail(r.note),
     input_tax_pkr: showsInputTax(r.categoryId) ? (r.inputTax ?? 0) : 0,
     ...(r.orderId ? { order_id: r.orderId } : {}),
   }))
@@ -283,4 +284,51 @@ export function listTotals(rows: readonly ListedExpense[]): { count: number; tot
   // Sums are rounded to paisa so float dust never shows.
   const r2 = (n: number) => Math.round(n * 100) / 100
   return { count: rows.length, total: r2(total), inputTax: r2(inputTax), cost: r2(total - inputTax) }
+}
+
+// ------------------------------------------------------------------ the Detail field (owner request 2026-10-20)
+
+/*
+ * One optional word or two per expense, kept in expenses.description: the car ("LEA-1234"), the bill ("Office water"). Fuel
+ * per car shows in the In vs out report without one category per car. The field suggests what was typed before.
+ */
+
+/** How the database matches details (0079): outer spaces gone, inner runs of spaces one, case ignored. */
+export const detailKey = (s: string): string => s.trim().replace(/\s+/g, ' ').toLowerCase()
+/** The detail as it is saved: trimmed, inner spaces squeezed; empty is null. */
+export const cleanDetail = (s: string | null | undefined): string | null => (s ?? '').trim().replace(/\s+/g, ' ') || null
+
+/** One row of v_month_cash_out_detail as the suggestions read it. */
+export interface DetailUse {
+  detail: string
+  categoryId: string
+  count: number
+  /** The latest date it was used ("2026-10-14"). */
+  last: string
+}
+
+/**
+ * The Detail field's suggestions: one per detail (case and spaces ignored, shown as last typed), the ones used with this
+ * category first, then the most used, then the most recent.
+ */
+export function detailSuggestions(rows: readonly DetailUse[], categoryId: string | null | undefined, limit = 30): string[] {
+  const by = new Map<string, { shown: string; shownAt: string; total: number; inCategory: number; last: string }>()
+  for (const r of rows) {
+    const shown = cleanDetail(r.detail)
+    if (!shown) continue
+    const k = detailKey(shown)
+    const t = by.get(k) ?? { shown, shownAt: '', total: 0, inCategory: 0, last: '' }
+    t.total += r.count
+    if (categoryId && r.categoryId === categoryId) t.inCategory += r.count
+    if (r.last > t.last) t.last = r.last
+    if (r.last >= t.shownAt) {
+      t.shown = shown
+      t.shownAt = r.last
+    }
+    by.set(k, t)
+  }
+  return [...by.values()]
+    .sort((a, b) => b.inCategory - a.inCategory || b.total - a.total || (a.last < b.last ? 1 : a.last > b.last ? -1 : 0) || a.shown.localeCompare(b.shown))
+    .slice(0, limit)
+    .map(t => t.shown)
 }
