@@ -239,7 +239,7 @@ test.describe('Today v3 money rules (M08)', () => {
     await page.getByRole('radio', { name: /^Money/ }).click()
     await expect(page.locator(tcs)).toHaveCount(1)
     await expect(page.locator(tcs)).toContainText(/\d+ invoices? not sent by TCS/)
-    await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Money\s*\d+$/ })).toBeVisible() // E-SH-01
+    await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Money\s?, \d+ need you$/ })).toBeVisible() // E-SH-01
     await review(page, 'm08-today-money-1440')
     await page.locator(`${tcs} button`).click()
     await expect(page.getByRole('button', { name: /Open Invoices & GST/ })).toBeVisible()
