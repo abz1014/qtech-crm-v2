@@ -2059,7 +2059,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: string
                            },
 "float_rfq":
-{ Args: { "p_company_id": string,"p_contact_id"?: string,"p_customer_ref"?: string,"p_due_on"?: string,"p_is_priority"?: boolean,"p_items": Json,"p_mark_sent"?: boolean,"p_rfq_id": string,"p_site_id"?: string,"p_supplier_ids"?: (string)[] }; Returns: string
+{ Args: { "p_company_id": string,"p_contact_id"?: string,"p_customer_ref"?: string,"p_due_on"?: string,"p_is_priority"?: boolean,"p_items": Json,"p_mark_sent"?: boolean,"p_rfq_id": string,"p_site_id"?: string,"p_supplier_ids"?: (string)[] }; Returns: Json
                            },
 "fx_wanted_currencies":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
@@ -2175,6 +2175,11 @@ isOneToOne: false
 "search_all":
 { Args: { "lim"?: number,"q": string }; Returns: {
               "company_id": string,"id": string,"kind": string,"label": string,"meta": string,"order_id": string,"role": string,"score": number
+            }[]
+                           },
+"search_closed_rfqs":
+{ Args: { "p_limit"?: number,"p_offset"?: number,"p_text": string }; Returns: {
+              "rfq_id": string,"total": number
             }[]
                            },
 "set_fx_rate":

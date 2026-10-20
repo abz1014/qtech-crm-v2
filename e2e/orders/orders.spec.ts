@@ -62,7 +62,8 @@ async function seedRfq(): Promise<RfqSeed> {
   const tag = Math.random().toString(36).slice(2, 6)
   const customer = await createCompany(uniqueName('Convert Customer'))
   await must(rest('admin', 'orders', { method: 'POST', body: { company_id: customer.id, ordered_on: karachiDay(-30), payment_terms_days: 45 } }))
-  const rfq = await createRfq(customer.id, { due_on: karachiDay(6), customer_ref: `RFQ-${tag}` })
+  // quoted_on: the quotation is out (marked sent by phone), so Mark won is the RFQ page's one green button (UX audit 2026-10-19).
+  const rfq = await createRfq(customer.id, { due_on: karachiDay(6), customer_ref: `RFQ-${tag}`, quoted_on: karachiDay(-1) })
   const items = await must(
     rest<{ id: string; description: string; position: number }[]>('admin', 'rfq_items', {
       method: 'POST',
@@ -269,12 +270,14 @@ test.describe('O01: Mark won creates the order', () => {
     await expect(page.getByText(`CPO-${s.tag}`).first()).toBeVisible()
   })
 
-  test('Mark won on the issued quotation: 2 taps', async ({ page }) => {
+  test('Mark won once the quotation is issued: 2 taps', async ({ page }) => {
     const s = await seedRfq()
     await must(rest('admin', 'rpc/issue_quotation', { method: 'POST', body: { p_quotation_id: crypto.randomUUID(), p_rfq_id: s.rfq.id } }))
     const t = tapper()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await t.tap(page.getByTestId('quotation-0').getByRole('button', { name: 'Mark won' }))
+    // Mark won is not repeated on the quotation row: it is the page's one green button once a quotation is out.
+    await expect(page.getByTestId('quotation-0').getByRole('button', { name: 'Mark won' })).toHaveCount(0)
+    await t.tap(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' }))
     await t.tap(page.getByRole('dialog').getByRole('button', { name: 'Create order' }))
     await expect(page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/)
     expect(t.count).toBe(2)

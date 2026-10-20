@@ -98,7 +98,7 @@ export function RankedPicker({
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[min(520px,calc(100vw-32px))] max-w-none p-1">
-        <p className="px-2 pb-1 pt-2 text-xs font-medium text-fg-muted">{header}</p>
+        <p className="px-2 pb-1 pt-2 text-xs font-medium leading-snug text-fg-muted">{header}</p>
         <div role="listbox" aria-label={header}>
           {quotes.map(q => {
             const used = usedLineIds?.has(q.lineId) && q.lineId !== value

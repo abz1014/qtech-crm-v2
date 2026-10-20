@@ -37,7 +37,8 @@ interface Seed {
 async function seed(): Promise<Seed> {
   const tag = Math.random().toString(36).slice(2, 6)
   const customer = await createCompany(uniqueName('Split Customer'))
-  const rfq = await createRfq(customer.id, { due_on: karachiDay(6), customer_ref: `RFQ-${tag}` })
+  // quoted_on: the quotation is out (marked sent by phone), so Mark won is the RFQ page's one green button (UX audit 2026-10-19).
+  const rfq = await createRfq(customer.id, { due_on: karachiDay(6), customer_ref: `RFQ-${tag}`, quoted_on: karachiDay(-1) })
   const items = await must(
     rest<{ id: string; description: string; position: number }[]>('admin', 'rfq_items', {
       method: 'POST',

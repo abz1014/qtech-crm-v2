@@ -56,7 +56,8 @@ type Props = {
   onClose: () => void
 }
 
-const GRID = 'lg:grid lg:grid-cols-[26px_minmax(0,1.25fr)_64px_minmax(0,1.65fr)_124px_104px] lg:items-start lg:gap-x-3'
+// Sized for 16px text: the quantity, a supplier price with its currency, and our net price fit their tracks (UX foundation review).
+const GRID = 'lg:grid lg:grid-cols-[26px_minmax(0,1.25fr)_72px_minmax(0,1.55fr)_148px_128px] lg:items-start lg:gap-x-3'
 const EXTRAS = [
   { value: 'none', label: 'Not sourced yet' },
   { value: 'service', label: 'Service, no supplier' },
@@ -281,7 +282,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
             </Banner>
           ) : (
             <div className="overflow-hidden rounded border" role="group" aria-label="Suppliers by line">
-              <div className={cn('hidden border-b bg-sunken px-4 py-2 text-xs font-medium text-fg-muted', GRID)}>
+              <div className={cn('hidden border-b bg-sunken px-4 py-2 text-xs font-medium leading-snug text-fg-muted', GRID)}>
                 <span />
                 <span>Item</span>
                 <span className="text-right">Qty</span>
@@ -378,7 +379,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                                   aria-label={`Quantity, part ${i + 1}, line ${n}`}
                                   className={cn('w-16', auto && 'border-dashed bg-sunken')}
                                 />
-                                <span className="text-xs text-fg-muted">{auto ? 'remainder, auto' : p.qty === undefined ? 'type it' : 'typed'}</span>
+                                <span className="text-xs leading-snug text-fg-muted">{auto ? 'remainder, auto' : p.qty === undefined ? 'type it' : 'typed'}</span>
                               </div>
                               <RankedPicker
                                 label={`Supplier for part ${i + 1}, line ${n}`}
