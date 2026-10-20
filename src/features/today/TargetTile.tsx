@@ -1,7 +1,9 @@
 import { useId, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ChevronDown, CircleCheck, Clock } from 'lucide-react'
 import { formatAmount } from '@/lib/money'
 import { cn } from '@/lib/utils'
+import { useSession } from '@/app/session'
 import { Icon } from '@/ui/Icon'
 import { InfoTip } from '@/ui/InfoTip'
 import { Skeleton } from '@/ui/Skeleton'
@@ -17,6 +19,8 @@ const pkr = (n: number) => `PKR ${formatAmount(n)}`
 
 export function TargetTile({ today, className }: { today: string; className?: string }) {
   const q = useMyTarget()
+  const session = useSession()
+  const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
   const [open, setOpen] = useState(false)
   const panel = useId()
 
@@ -31,11 +35,17 @@ export function TargetTile({ today, className }: { today: string; className?: st
   const w = q.data ? targetWorking(q.data, today) : null
   if (!w) {
     const quarter = q.data?.quarter ?? Math.floor((Number(today.slice(5, 7)) - 1) / 3) + 1
+    // One small line, not a block: with no target there is nothing to show, and the list above needs the room.
     return (
-      <section aria-label={`Your Q${quarter} target`} className={cn('grid gap-1 p-4', className)}>
-        <p className="text-sm text-fg-muted">Your Q{quarter} target</p>
-        <p className="text-base font-semibold">No target set for Q{quarter}</p>
-        <p className="text-sm text-fg-muted">Ask an admin to set one in Settings, under Targets. Nothing else on Today depends on it.</p>
+      <section aria-label={`Your Q${quarter} target`} data-target-empty className={cn('px-4 py-2 text-sm text-fg-muted', className)}>
+        No Q{quarter} target set.{' '}
+        {isAdmin ? (
+          <Link to="/settings/targets" className="font-medium text-primary underline underline-offset-2">
+            Set targets
+          </Link>
+        ) : (
+          'The admin sets it.'
+        )}
       </section>
     )
   }

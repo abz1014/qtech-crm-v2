@@ -4,8 +4,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { CaptureContext, type CaptureApi } from '@/app/capture/useCapture'
-import { FIRST_USE_COPY } from '@/features/help/firstUseCopy'
-import { FirstUseState } from '@/features/help/FirstUseState'
+import { FIRST_USE_COPY, NOTHING_YET } from '@/features/help/firstUseCopy'
+import { FirstUseState, NothingYetState } from '@/features/help/FirstUseState'
 import { axeViolations } from '@/test/axe'
 
 function Where() {
@@ -78,5 +78,29 @@ describe('first-use empty states', () => {
   it('renders nothing where it has no words (the screen keeps its own empty state)', () => {
     const { container } = mount(<FirstUseState screen="rfqs" role="engineer" />)
     expect(container.querySelector('[data-mood]')).toBeNull()
+  })
+
+  it('nothing-yet lines (a list that never had a record) are neutral and never claim the work is done', () => {
+    for (const copy of Object.values(NOTHING_YET)) {
+      expect(copy.title.length).toBeLessThanOrEqual(40)
+      expect(copy.body.split(/\s+/).length).toBeLessThanOrEqual(40)
+      expect(`${copy.title} ${copy.body}`).not.toMatch(/\bevery\b|\bnice\b|paid in full|done or cancelled|out or closed/i)
+    }
+  })
+
+  it('NothingYetState: neutral mood, its words, and the one button where there is one; axe-clean', async () => {
+    const user = userEvent.setup()
+    const { container } = mount(<NothingYetState screen="orders" />)
+    expect(container.querySelector('[data-mood="neutral"]')).not.toBeNull()
+    expect(screen.getByText('No orders yet')).toBeInTheDocument()
+    expect(await axeViolations(container)).toEqual([])
+    await user.click(screen.getByRole('button', { name: 'Open RFQs' }))
+    expect(screen.getByTestId('at')).toHaveTextContent('/rfqs')
+  })
+
+  it('NothingYetState for Who owes us has no primary button, only "Show me how"', () => {
+    mount(<NothingYetState screen="receivables" />)
+    expect(screen.getByText('No balances yet')).toBeInTheDocument()
+    expect(screen.getAllByRole('button').map(b => b.textContent)).toEqual(['Show me how'])
   })
 })

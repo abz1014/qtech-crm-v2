@@ -24,7 +24,7 @@ import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
-import { FirstUseState } from '@/features/help/FirstUseState'
+import { FirstUseState, NothingYetState } from '@/features/help/FirstUseState'
 import { useFirstUse } from '@/features/help/useFirstUse'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Icon } from '@/ui/Icon'
@@ -167,7 +167,12 @@ export function BoardPage() {
   )
 
   const firstUse = useFirstUse('rfqs', user?.id ?? '', user?.role ?? '', open.isSuccess && owner === 'mine' && mineCount === 0 && step === 'all' && !q)
-  const emptyOpen = q && total > 0 ? noMatch : !filtered && total === 0 ? (
+  // "Every quotation is out or closed" is only true once there has been an RFQ: with none open and none closed or won (a new
+  // CRM), the board says what will appear here instead. Until the closed count answers, the neutral line shows (never a false "done").
+  const neverAny = total === 0 && !(closedCount.isSuccess && closedCount.data > 0)
+  const emptyOpen = q && total > 0 ? noMatch : !filtered && neverAny ? (
+    <NothingYetState screen="rfqs" />
+  ) : !filtered && total === 0 ? (
     <EmptyState
       mood="goal"
       title="No open RFQs"

@@ -125,7 +125,8 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   }
 
   const list = (
-    <div className="grid content-start">
+    // One column that may shrink to the pane: no card or row can make the list wider than its pane (no sideways scroll).
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start">
       <header className="grid gap-1 px-5 pb-3 pt-5">
         <h1 className={wide ? 'text-2xl font-semibold tracking-tight' : 'sr-only'}>Today</h1>
         <p className="text-sm text-fg-muted">
@@ -237,7 +238,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
     <div className="grid min-h-full md:h-full md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
       <div className="flex min-h-0 flex-col border-r bg-surface">
         {/* The target tile is the foot of the list column: under the list on a phone, pinned at the bottom on desktop. */}
-        <div className="min-h-0 flex-1 md:overflow-y-auto">{list}</div>
+        <div data-today-list className="min-h-0 min-w-0 flex-1 overflow-x-clip md:overflow-y-auto">{list}</div>
         <div className={wide ? 'border-t bg-surface' : 'border-t bg-surface px-4 py-4'}>
           <TargetTile today={today} className={wide ? undefined : 'rounded border bg-surface'} />
         </div>

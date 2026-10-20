@@ -80,7 +80,9 @@ export function HowItWorksCard({ userId, role, since, now, className }: HowItWor
       )}
       {open ? (
         <div id={listId} className="grid gap-3 px-4 pb-3 pt-2">
-          <ol className="grid gap-x-6 gap-y-1 md:grid-cols-2">
+          {/* Two columns only when the CARD has room for two (about 2 x 16rem), not when the window does: in Today's 420 px
+              list a viewport breakpoint squeezed each step to a word per line and pushed "Show me" past the card's edge. */}
+          <ol className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-x-6 gap-y-1">
             {steps.map((s, i) => (
               <li key={s.recipe} className="flex items-start gap-2 text-sm text-fg-2">
                 <span aria-hidden="true" className="mt-[2px] grid size-5 shrink-0 place-items-center rounded-round bg-selected text-xs font-semibold text-fg">

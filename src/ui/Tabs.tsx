@@ -15,7 +15,16 @@ export const Tabs = RadixTabs.Root
 
 export const TabList = forwardRef<ElementRef<typeof RadixTabs.List>, ComponentPropsWithoutRef<typeof RadixTabs.List>>(
   function TabList({ className, ...rest }, ref) {
-    return <RadixTabs.List ref={ref} className={cn('flex gap-1 overflow-x-auto border-b', className)} {...rest} />
+    // Scrolls sideways only when the tabs really are wider than the row. The hairline under the tabs is drawn inside the box (an
+    // inset shadow over a 1 px bottom padding) rather than as a border, so the active tab's indicator, which sits on that line,
+    // stays inside the scroll box: as a border it hung 1 px below it, and Chrome drew a stray up/down scroller at the row's end.
+    return (
+      <RadixTabs.List
+        ref={ref}
+        className={cn('hairline-under flex gap-1 overflow-x-auto overflow-y-hidden pb-px', className)}
+        {...rest}
+      />
+    )
   },
 )
 
