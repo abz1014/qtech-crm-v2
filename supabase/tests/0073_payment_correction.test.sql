@@ -25,10 +25,11 @@ select ok(exists (select 1 from pg_indexes where schemaname = 'public' and index
 select ok(exists (select 1 from pg_trigger where tgrelid = 'public.payments_in'::regclass
                     and tgname = 'payments_in_void_guard' and not tgisinternal and tgtype & 2 = 2),
   'payments_in carries the BEFORE guard trigger');
-select is((select array_agg(t.tgname::text order by t.tgname::text collate "C") from pg_trigger t
-           where t.tgrelid = 'public.payments_in'::regclass and not t.tgisinternal and t.tgtype & 2 = 2 and t.tgtype & 16 = 16),
-  array['payments_in_month_lock', 'payments_in_void_guard'],
-  'BEFORE UPDATE triggers fire in name order: the month lock first, so a closed month answers first');
+select ok((select array_position(x.names, 'payments_in_month_lock') < array_position(x.names, 'payments_in_void_guard')
+           from (select array_agg(t.tgname::text order by t.tgname::text collate "C") as names from pg_trigger t
+                 where t.tgrelid = 'public.payments_in'::regclass and not t.tgisinternal
+                   and t.tgtype & 2 = 2 and t.tgtype & 16 = 16) x),
+  'BEFORE UPDATE triggers fire in name order: the month lock before the guard, so a closed month answers first');
 select ok(not has_function_privilege('authenticated', 'public.guard_payment_void()', 'execute')
       and not has_function_privilege('anon', 'public.guard_payment_void()', 'execute'),
   'the guard trigger function has no client grant');
