@@ -372,7 +372,12 @@ insert into probes values
   ('users', 'own_role', 'U', $q$update public.users set role = 'admin' where id = '{uid}'$q$),
   ('users', 'other_role', 'U', $q$update public.users set role = 'engineer' where id = '{other}'$q$),
   ('users', 'reactivate', 'U', $q$update public.users set deactivated_at = null where id = 'a0000000-0000-4000-8000-000000000004'$q$),
-  ('users', 'deactivate_other', 'U', $q$update public.users set deactivated_at = now() where id = '{other}'$q$);
+  ('users', 'deactivate_other', 'U', $q$update public.users set deactivated_at = now() where id = '{other}'$q$),
+  -- RPCs added on main after S14's last update (0070, 0073): must refuse everyone without a role
+  ('void_payment', '', 'X', $q$select public.void_payment(@28, 'probe')$q$),
+  ('correct_payment', '', 'X', $q$select public.correct_payment(@28, 1, current_date, 'bank', 'r', 'probe')$q$),
+  ('restore_payment', '', 'X', $q$select public.restore_payment(@28)$q$),
+  ('search_closed_rfqs', '', 'X', $q$select * from public.search_closed_rfqs('M', 5, 0)$q$);
 
 -- ------------------------------------------------------------------ coverage: every object has probes
 select is((select coalesce(array_agg(t.tablename::text order by t.tablename), '{}') from pg_tables t

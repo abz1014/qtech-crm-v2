@@ -278,6 +278,7 @@ insert into money_fns values
   ('customer_price_memory', 'quoted_number', 'info'), ('customer_price_memory', 'quoted_revision', 'info'), ('customer_price_memory', 'quoted_tier', 'info'),
   ('customer_price_memory', 'sold_order_number', 'info'), ('customer_price_memory', 'sold_tier', 'info'),
   ('po_line_prefill', 'unit_price', 'supplier'),
+  ('search_closed_rfqs', 'total', 'info'),
   ('supplier_item_memory', 'last_quote_price', 'supplier'), ('supplier_item_memory', 'last_quote_price_pkr', 'supplier'),
   ('supplier_item_memory', 'last_quote_fx_rate_pkr', 'supplier'), ('supplier_item_memory', 'last_po_price', 'supplier'),
   ('supplier_item_memory', 'last_po_price_pkr', 'supplier'), ('supplier_item_memory', 'last_po_fx_rate_pkr', 'supplier'),

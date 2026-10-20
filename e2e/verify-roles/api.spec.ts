@@ -29,7 +29,7 @@ const WRITES = new Set(['apply_fx_payload', 'close_month', 'close_months_through
   'float_rfq', 'import_purge_audit', 'import_reset_numbers', 'ingest_fx_response', 'issue_purchase_order', 'issue_quotation', 'merge_brands',
   'merge_companies', 'reopen_month', 'resolve_value_basis', 'revoke_user_sessions', 'schedule_fx_cron', 'set_fx_rate', 'set_rfq_floated',
   'split_order_item', 'stamp_clarification_ask', 'stamp_fbr_psid', 'stamp_goods_chase', 'stamp_payment_reminder', 'stamp_supplier_chase',
-  'stamp_tax_deposited', 'stamp_tcs_sent'])
+  'stamp_tax_deposited', 'stamp_tcs_sent', 'void_payment', 'correct_payment', 'restore_payment'])
 
 /** Arguments for any function, from the argument names (fixture ids where the name says which record). */
 function argsFor(fn: string, names: string[]): Record<string, unknown> {
