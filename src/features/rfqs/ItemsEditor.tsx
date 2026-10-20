@@ -21,7 +21,7 @@ export interface PastedBlock {
 const GRID = 'md:grid md:grid-cols-[28px_76px_minmax(0,1fr)_148px_120px_28px] md:items-center md:gap-3'
 
 const cell =
-  'h-8 -mx-2 w-[calc(100%+1rem)] max-w-none min-w-0 rounded border border-line-input bg-surface px-2 text-sm text-fg md:border-transparent md:bg-transparent ' +
+  'h-control -mx-2 w-[calc(100%+1rem)] max-w-none min-w-0 rounded border border-line-input bg-surface px-2 text-sm text-fg max-md:text-base md:border-transparent md:bg-transparent ' +
   'placeholder:text-fg-muted hover:border-line-input focus-visible:border-fg focus-visible:bg-surface'
 
 function QtyCell({ item, n, onChange }: { item: DraftItem; n: number; onChange: (patch: Partial<DraftItem>) => void }) {
@@ -141,7 +141,7 @@ export function PasteZone({
           }
         }}
         placeholder="Click here and paste, or type one item per line"
-        className="w-full resize-y rounded border border-line-input bg-surface px-3 py-2 font-mono text-sm leading-5 text-fg placeholder:text-fg-muted hover:border-fg-muted focus-visible:border-fg"
+        className="w-full resize-y rounded border border-line-input bg-surface px-3 py-2 font-mono text-sm leading-5 text-fg placeholder:text-fg-muted hover:border-fg-muted focus-visible:border-fg max-md:text-base max-md:leading-6"
       />
       <p className="text-xs text-fg-muted">
         Press <kbd className="num rounded border border-line-strong bg-sunken px-1">Ctrl</kbd>{' '}

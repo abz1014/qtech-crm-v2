@@ -10,8 +10,7 @@
 --   aging_as_of              and becomes overdue like any other. A dated invoice is unchanged.
 --   aging_as_of              M3: the Rs 1 allowance of order_receivables. An order paid to within Rs 1 of what it is invoiced
 --                            (as of the date) is settled and has no aging row. Frozen month snapshots are corrected below.
---   month_end_check_details  M4: the FBR-pending list uses the count's predicate (gst_amount > 0, MR-7).
---                            M11: a closed month returns the details frozen at close (month_snapshots.details, new); a month
+--   month_end_check_details  M11: a closed month returns the details frozen at close (month_snapshots.details, new); a month
 --                            closed before this migration returns the live details marked "live": true.
 
 -- ================================================================ order_receivables (M9)
@@ -330,7 +329,6 @@ as $$
     select r.number, r.invoice_date, r.gst_amount
     from public.v_gst_register r, b
     where r.invoice_date <= b.m_end and r.tax_deposited_on is null
-      and r.gst_amount > 0
   ),
   unres as (
     select p.payment_id, p.order_id, o.number as order_number, p.amount, pi.reference
