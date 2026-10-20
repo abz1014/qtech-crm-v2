@@ -283,6 +283,7 @@ insert into money_fns values
   ('receivables_list', 'overpaid_by', 'hidden'),
   ('receivables_summary', 'gross', 'hidden'), ('receivables_summary', 'settled', 'hidden'), ('receivables_summary', 'outstanding', 'hidden'),
   ('receivables_summary', 'overdue', 'hidden'), ('receivables_summary', 'not_yet_due', 'hidden'), ('receivables_summary', 'not_invoiced', 'hidden'),
+  ('receivables_summary', 'settled_count', 'info'),
   ('lookup_labels', '<return>', 'info'),
   ('float_rfq', '<return>', 'info'),   -- 0070: returns the floated RFQ as JSON (ids and numbers, no price)
   ('supplier_item_memory', 'last_quote_price', 'supplier'), ('supplier_item_memory', 'last_quote_price_pkr', 'supplier'),
