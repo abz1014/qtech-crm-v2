@@ -76,9 +76,14 @@ jobs:
         run: npm test
       - name: Import transforms and safety guard (fixtures only; the load test runs in db.yml)
         run: npm run test:import
+      # Production-equivalent: without VITE_SUPABASE_* the Supabase client is tree-shaken away and the budget under-measures
+      # by about 40 KB gzip (audit 2, performance §1.6). Dummy public values: this build is measured, never deployed.
       - name: Build
+        env:
+          VITE_SUPABASE_URL: https://ci-budget-dummy.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-budget-dummy-anon-key
         run: npm run build
-      - name: Bundle budget (initial JS <= 300 KB gzip; reports the PDF chunk and the service-worker precache)
+      - name: Bundle budget (initial JS <= 270 KB gzip, Supabase client included; reports the PDF chunk and the service-worker precache)
         run: node scripts/bundle-budget.mjs
 
   # U09: visual regression and axe over /dev/gallery, in real Chromium on Ubuntu.

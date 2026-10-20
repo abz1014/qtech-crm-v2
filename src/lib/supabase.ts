@@ -1,5 +1,5 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
+import { createLeanClient, type LeanSupabaseClient } from '@/lib/supabaseClient'
 
 /*
  * The one browser Supabase client. It carries the anon key only (public by design; Row Level
@@ -8,7 +8,8 @@ import type { Database } from '@/types/database'
  * `getSupabase()` returns null when the URL or key is missing (a dev checkout without .env.local,
  * unit tests), so the app can still render the sign-in screen with a clear message.
  */
-export type AppSupabase = SupabaseClient<Database>
+/** supabase-js's client type, narrowed to the parts the app uses (no Realtime: supabaseClient.ts). */
+export type AppSupabase = LeanSupabaseClient<Database>
 
 let client: AppSupabase | null | undefined
 
@@ -36,7 +37,7 @@ export function getSupabase(): AppSupabase | null {
   if (client !== undefined) return client
   const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
-  client = url && key ? createClient<Database>(url, key, { global: { fetch: activityFetch } }) : null
+  client = url && key ? createLeanClient<Database>(url, key, { fetch: activityFetch }) : null
   return client
 }
 

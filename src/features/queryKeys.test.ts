@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
-import { invalidateAfter, invalidates, keysFor, type WriteName } from '@/features/invalidation'
+import { invalidateAfter, invalidates, isMoneyKey, keysFor, type WriteName } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
 
 const isPrefix = (prefix: readonly unknown[], key: readonly unknown[]) => prefix.every((p, i) => JSON.stringify(p) === JSON.stringify(key[i]))
@@ -165,7 +165,9 @@ describe('invalidation map: stale screens found in review', () => {
     const client = new QueryClient()
     client.setQueryData(key, [])
     await invalidateAfter(client, name, vars)
-    return client.getQueryState(key)?.isInvalidated
+    // Money that no screen watches is dropped rather than marked (invalidation.ts): stronger than stale, the old figure is gone.
+    const state = client.getQueryState(key)
+    return state === undefined ? isMoneyKey(key) : state.isInvalidated
   }
 
   it('closing an RFQ from Today ("Close as no reply") takes it off the Today list', async () => {

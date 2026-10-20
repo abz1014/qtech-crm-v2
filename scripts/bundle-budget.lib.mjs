@@ -3,7 +3,14 @@ import { readFileSync, statSync } from 'node:fs'
 import { join, posix } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
-export const INITIAL_JS_BUDGET_BYTES = 300 * 1024
+/*
+ * The limit on what a first visit downloads and runs, gzipped. Measured on a production-equivalent build (ci.yml sets dummy
+ * VITE_SUPABASE_* so the Supabase client is bundled as in production; `hasSupabaseClient` refuses a build without it).
+ * Audit 2 (performance §1.6): the old 300 KB gate measured a build without the client (about 220 KB) while production was
+ * 278 KB. Set about 5% above the real entry (257.5 KB on perf/client), so a regression fails instead of eating hidden
+ * headroom. Lower it when the entry shrinks (a lazy sign-in page takes it to about 228 KB).
+ */
+export const INITIAL_JS_BUDGET_BYTES = 270 * 1024
 
 /** Local asset paths a JS or HTML source points at: <script src>, <link rel=modulepreload href>, and static `import ... from "./x.js"`. */
 export function staticJsRefs(source, { html = false } = {}) {
@@ -41,6 +48,16 @@ export function initialJs(distDir) {
     total.gzip += f.gzip
   }
   return { files, total }
+}
+
+/**
+ * True when the initial JS contains the Supabase client (its `auth/v1` endpoint literal). Without VITE_SUPABASE_URL and
+ * VITE_SUPABASE_ANON_KEY at build time `getSupabase()` folds to null and the client is tree-shaken away, so the entry
+ * measures about 40 KB gzip lighter than production.
+ */
+export function hasSupabaseClient(distDir, initial) {
+  for (const rel of initial.files.keys()) if (/["'`]auth\/v1["'`]/.test(readFileSync(join(distDir, rel), 'utf8'))) return true
+  return false
 }
 
 /** The largest JS chunk that is not part of the initial load: in this app, the lazy PDF renderer (react-pdf). */
