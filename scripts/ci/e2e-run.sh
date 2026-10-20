@@ -10,8 +10,6 @@ case " $* " in *" rfq-quotation "*|*" orders "*|*" journeys "*)
 esac
 # P04: every suite runs under the production Content-Security-Policy (the preview server reads vercel.json, see vite.config.ts).
 export E2E_CSP=1
-# PROBE (temporary, test/a11y-suite): every suite logs its strict-only axe findings as A11Y-STRICT lines without failing.
-export A11Y_STRICT="${A11Y_STRICT:-report}"
 # The perf suite drives the real Lighthouse; it is pinned here and is not a project dependency.
 case " $* " in *" perf "*) npm i --no-save --no-audit --no-fund lighthouse@12.8.2 ;; esac
 for s in "$@"; do

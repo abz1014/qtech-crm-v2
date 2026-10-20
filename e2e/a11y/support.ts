@@ -123,8 +123,8 @@ async function makeWorld(): Promise<World> {
     rest('admin', 'order_items', {
       method: 'POST',
       body: [
-        { order_id: order.id, position: 0, description: 'Pressure transmitter 0-10 bar, 4-20 mA HART', qty: 3, unit: 'ea', unit_price_net: 100000, gst_rate: 18, supplier_order_id: leg.id, supplier_unit_price: 612 },
-        { order_id: order.id, position: 1, description: 'Commissioning and loop check', qty: 1, unit: 'job', unit_price_net: 135000, gst_rate: 18, is_service: true },
+        { order_id: order.id, position: 0, description: 'Pressure transmitter 0-10 bar, 4-20 mA HART', qty: 3, unit: 'ea', unit_price_net: 100000, gst_rate: 18, supplier_order_id: leg.id, supplier_unit_price: 612, is_service: false },
+        { order_id: order.id, position: 1, description: 'Commissioning and loop check', qty: 1, unit: 'job', unit_price_net: 135000, gst_rate: 18, supplier_order_id: null, supplier_unit_price: null, is_service: true },
       ],
       prefer: 'return=minimal',
     }),
