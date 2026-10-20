@@ -417,6 +417,14 @@
   }
   :focus:not(:focus-visible) { outline: none; }
 
+  /* WCAG 2.4.11: sticky and fixed action bars (intake Next step, RFQ/order header bars, month-end close) sit over
+     the bottom of #main. Tabbing scrolls the focused control clear of them instead of underneath. */
+  #main { scroll-padding-top: 8px; scroll-padding-bottom: 16px; }
+  #main:has([data-action-bar]) { scroll-padding-bottom: 96px; }
+  #main:has([data-sticky-bar]) { scroll-padding-bottom: 136px; }
+  /* The h1 takes focus on a route change (useRouteFocus); the page has just opened, no ring needed. */
+  #main h1[tabindex="-1"]:focus { outline: none; }
+
   ::selection { background: var(--bg-selected); }
 
   /* Section 9: under reduced motion every duration token is already 0.01ms;
@@ -430,14 +438,21 @@
 }
 
 @layer utilities {
-  /* Mono + tabular figures: PKR amounts, reference numbers, dates in tables (section 2). */
+  /* Tabular figures: PKR amounts, reference numbers, dates in tables (section 2). Set in the sans, not Geist Mono: the mono's
+     only zero is slashed ("0" read as a struck-out digit on the live app, owner 2026-10-20) and the sans has a plain tabular
+     zero (tnum), so columns still line up. Never add slashed-zero here. */
   .num {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-variant-numeric: tabular-nums;
   }
   /* Sans with tabular figures: a plain count beside other sans text. */
   .tab {
     font-variant-numeric: tabular-nums;
+  }
+  /* A hairline along the bottom edge drawn INSIDE the box (pair it with pb-px), for a scroll row whose children sit on the line:
+     a border would put the line outside the scroll box and the child's 1 px overhang would make the row scroll (TabList). */
+  .hairline-under {
+    box-shadow: inset 0 calc(-1 * var(--hairline)) 0 var(--border);
   }
   /* Geist has no rupee glyph (U+20A8): render it through the fallback stack. */
   .cur {

@@ -6,6 +6,8 @@ export interface FieldContextValue {
   id: string
   invalid: boolean
   describedBy: string | undefined
+  /** The Field says "Required": the control gets aria-required so screen readers say it too (WCAG 1.3.1, 3.3.2). */
+  required?: boolean
 }
 export const FieldContext = createContext<FieldContextValue | null>(null)
 export const useFieldContext = () => useContext(FieldContext)
@@ -24,11 +26,12 @@ export const controlClass = cn(
 )
 
 /** Props every control takes from the surrounding Field unless it was given its own. */
-export function useControlProps(own: Pick<AriaAttributes, 'aria-describedby' | 'aria-invalid'> & { id?: string }) {
+export function useControlProps(own: Pick<AriaAttributes, 'aria-describedby' | 'aria-invalid' | 'aria-required'> & { id?: string }) {
   const f = useFieldContext()
   return {
     id: own.id ?? f?.id,
     'aria-invalid': own['aria-invalid'] ?? (f?.invalid ? true : undefined),
     'aria-describedby': own['aria-describedby'] ?? f?.describedBy,
+    'aria-required': own['aria-required'] ?? (f?.required ? true : undefined),
   } as const
 }

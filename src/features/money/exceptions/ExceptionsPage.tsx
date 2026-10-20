@@ -88,7 +88,7 @@ export function ExceptionsPage() {
           </div>
         </header>
         {q.isPending ? (
-          <div className="grid gap-3 p-5" aria-busy="true" aria-label="Checking the money records">
+          <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label="Checking the money records">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>

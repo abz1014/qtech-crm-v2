@@ -1,5 +1,5 @@
 import { rfqRef } from '../support/stack'
-import { BUGS, UI, announcedBy, knownBug, expect, liveText, markLiveRegions, open, openChase, seedChase, test } from './support'
+import { UI, announcedBy, expect, liveText, markLiveRegions, open, openChase, seedChase, test } from './support'
 
 /*
  * (d) Status messages (WCAG 4.1.3) and the Undo window (2.2.1). Screen readers announce a change inside a live region that was
@@ -11,7 +11,6 @@ import { BUGS, UI, announcedBy, knownBug, expect, liveText, markLiveRegions, ope
 
 test.describe('toasts', () => {
   test('a saved toast is spoken from a live region that was already on the page', async ({ page }) => {
-    knownBug(BUGS.toastLive)
     await open(page, '/settings/exchange-rates')
     await markLiveRegions(page)
     await page.getByLabel(UI.rate).fill('281.5')
@@ -21,7 +20,6 @@ test.describe('toasts', () => {
   })
 
   test('the Undo toast is not re-read every second while its countdown runs', async ({ page }) => {
-    knownBug(BUGS.undoCountdown)
     const s = await seedChase()
     await open(page, '/today')
     await (await openChase(page, s.ref)).button.click()
@@ -35,7 +33,6 @@ test.describe('toasts', () => {
   })
 
   test('the Undo toast tells a screen reader how to undo from the keyboard (Ctrl+Z)', async ({ page }) => {
-    knownBug(BUGS.undoKeys)
     const s = await seedChase()
     await open(page, '/today')
     await (await openChase(page, s.ref)).button.click()
@@ -48,7 +45,6 @@ test.describe('toasts', () => {
 
 test.describe('filter result counts', () => {
   test('RFQ board: typing in the filter announces "Showing n of m"', async ({ page, world }) => {
-    knownBug(BUGS.filterCount)
     await open(page, '/rfqs')
     await expect(page.getByText(UI.showing).first()).toBeVisible()
     await markLiveRegions(page)
@@ -58,7 +54,6 @@ test.describe('filter result counts', () => {
   })
 
   test('Companies: typing in the search announces "Showing n of m"', async ({ page, world }) => {
-    knownBug(BUGS.filterCount)
     await open(page, '/companies')
     await expect(page.getByText(UI.showing).first()).toBeVisible()
     await markLiveRegions(page)

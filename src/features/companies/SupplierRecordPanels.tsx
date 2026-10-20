@@ -69,7 +69,7 @@ function LoadError({ title, onRetry }: { title: string; onRetry: () => void }) {
 
 function ListSkeleton({ label }: { label: string }) {
   return (
-    <div className="grid gap-3 p-5" aria-busy="true" aria-label={label}>
+    <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label={label}>
       <Skeleton className="h-5 w-2/3" />
       <Skeleton className="h-5 w-1/2" />
       <Skeleton className="h-5 w-3/4" />
@@ -318,7 +318,7 @@ export function OpenWithThem({ view, loading, error, onRetry }: { view: Supplier
     <Panel title="Open with them">
       <div className="px-5 py-3">
         {loading ? (
-          <div className="grid gap-2" aria-busy="true" aria-label="Loading what is open with them">
+          <div role="status" className="grid gap-2" aria-busy="true" aria-label="Loading what is open with them">
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-4 w-1/2" />
           </div>

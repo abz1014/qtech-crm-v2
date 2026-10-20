@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { Workbox } from 'workbox-window'
+import type { Workbox } from 'workbox-window'
 import { hasDirtyForms } from '@/lib/pwa/dirtyForms'
 
 /*
@@ -38,8 +38,11 @@ export function applyUpdate(): ApplyResult {
 
 const CHECK_EVERY_MS = 60 * 60 * 1000
 
-export function registerServiceWorker(): void {
+export async function registerServiceWorker(): Promise<void> {
   if (!import.meta.env.PROD || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+  if (wb) return
+  // Loaded on demand, not in the first-load JS (bundle budget, P04): registration waits for nothing on screen.
+  const { Workbox } = await import('workbox-window')
   if (wb) return
   const instance = new Workbox('/sw.js', { scope: '/' })
   wb = instance

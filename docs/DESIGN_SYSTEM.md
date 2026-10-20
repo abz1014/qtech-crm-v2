@@ -40,7 +40,7 @@ Rules:
 
 ### Mono and tabular figures
 
-Set in `--font-mono` with `font-variant-numeric: tabular-nums` (class `.num`):
+Set with `font-variant-numeric: tabular-nums` (class `.num`), in the sans (`--font-sans`) since 2026-10-20: Geist Mono's only zero is slashed and the owner read it as a struck-out digit; Geist's tabular figures have a plain zero and still line up in columns. Never turn on `slashed-zero` or the `zero` feature. `--font-mono` stays for pasted raw text only:
 
 - PKR amounts, quantities, percentages, margins.
 - RFQ, PO, invoice, challan, quotation numbers and customer refs (`RFQ-0177`, `PO 000001`, `RFQ #74037`).
@@ -48,7 +48,7 @@ Set in `--font-mono` with `font-variant-numeric: tabular-nums` (class `.num`):
 - Dates and times in tables, lists and rails (`Tue 1 Dec`, `17:00`).
 - Phone numbers, NTN, STRN.
 
-Right-align numeric columns. Amounts carry thousands separators. A number inside a sentence is set mono at the sentence's size and weight 500 (`<b class="num">4</b> days`). Plain counts in sans UI (a nav badge) use `.tab` (sans with tabular-nums) or mono, whichever sits next to other mono data.
+Right-align numeric columns. Amounts carry thousands separators. A number inside a sentence is set `.num` at the sentence's size and weight 500 (`<b class="num">4</b> days`). Plain counts in sans UI (a nav badge) use `.tab` (sans with tabular-nums) or mono, whichever sits next to other mono data.
 
 ## 3. Spacing
 

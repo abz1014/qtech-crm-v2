@@ -260,7 +260,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
           </p>
 
           {itemsQ.isPending || rankQ.isPending ? (
-            <div className="grid gap-2" aria-busy="true" aria-label="Loading the lines">
+            <div role="status" className="grid gap-2" aria-busy="true" aria-label="Loading the lines">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
@@ -440,7 +440,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                   </div>
                 )
               })}
-              <div className="grid justify-end gap-1 border-t bg-sunken px-4 py-3 text-sm" aria-label="Order totals">
+              <div className="grid justify-end gap-1 border-t bg-sunken px-4 py-3 text-sm" role="group" aria-label="Order totals">
                 <div className="flex justify-between gap-8">
                   <span className="text-fg-muted">Net</span>
                   <span className="num">{formatAmount(totals.net)}</span>
@@ -483,7 +483,8 @@ export function ConvertDialog({ rfq, onClose }: Props) {
           <Field
             label="Payment terms"
             requirement="optional"
-            help="Days the customer has to pay after the invoice. Who owes us marks it late after that."
+            // Who owes us is a money page the engineer never sees (DECISIONS 2026-10-13), so it is not named to them.
+            help={`Days the customer has to pay after the invoice.${role === 'engineer' ? '' : ' Who owes us marks it late after that.'}`}
             source={
               quotedDays !== null && !termsTouched
                 ? 'from the quotation'

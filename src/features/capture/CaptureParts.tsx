@@ -17,6 +17,7 @@ import { Kbd } from '@/ui/Kbd'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { FileRow } from '@/ui/form/FileRow'
 import { TextField } from '@/ui/form/TextField'
+import { rovingKeyDown, rovingTabIndex } from '@/ui/roving'
 
 /*
  * The pieces of the Capture sheet, drawn as in docs/design/mockups/g2-capture.html (class names there in brackets):
@@ -242,12 +243,13 @@ export function CaptureArea({
   )
 }
 
-function Row({ c, on, onPick, hint }: { c: Candidate; on: boolean; onPick: () => void; hint: string }) {
+function Row({ c, on, onPick, hint, tabIndex }: { c: Candidate; on: boolean; onPick: () => void; hint: string; tabIndex: 0 | -1 }) {
   return (
     <button
       type="button"
       role="radio"
       aria-checked={on}
+      tabIndex={tabIndex}
       onClick={onPick}
       className={cn('relative flex min-h-[52px] w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-fast ease-out hover:bg-sunken', on && 'bg-selected')}
     >
@@ -293,9 +295,9 @@ export function RfqPicker({ list, chosenId, now, onPick }: { list: readonly Cand
             {list.length} {list.length === 1 ? 'RFQ' : 'RFQs'}
           </span>
         </h4>
-        <div role="radiogroup" aria-label="RFQ" className="divide-y">
-          {list.map(c => (
-            <Row key={c.id} c={c} on={c.id === chosenId} onPick={() => void onPick(c)} hint={hint(c)} />
+        <div role="radiogroup" aria-label="RFQ" className="divide-y" onKeyDown={e => rovingKeyDown(e, { item: '[role=radio]', select: true })}>
+          {list.map((c, i) => (
+            <Row key={c.id} c={c} on={c.id === chosenId} tabIndex={rovingTabIndex(i, list.findIndex(x => x.id === chosenId))} onPick={() => void onPick(c)} hint={hint(c)} />
           ))}
         </div>
         {searching ? (
@@ -346,13 +348,14 @@ export function OrderPicker({ list, chosenId, now, includePo, onPick }: { list: 
             {list.length} {list.length === 1 ? 'order' : 'orders'}
           </span>
         </h4>
-        <div role="radiogroup" aria-label="Order" className="divide-y">
-          {list.map(c => (
+        <div role="radiogroup" aria-label="Order" className="divide-y" onKeyDown={e => rovingKeyDown(e, { item: '[role=radio]', select: true })}>
+          {list.map((c, i) => (
             <button
               key={c.id}
               type="button"
               role="radio"
               aria-checked={c.id === chosenId}
+              tabIndex={rovingTabIndex(i, list.findIndex(x => x.id === chosenId))}
               onClick={() => onPick(c)}
               className={cn('relative flex min-h-[52px] w-full items-center gap-3 px-3 py-2 text-left hover:bg-sunken', c.id === chosenId && 'bg-selected')}
             >

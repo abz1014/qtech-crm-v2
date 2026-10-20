@@ -1,10 +1,10 @@
 import { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarCheck, CircleHelp, FileText, Package, type LucideIcon } from 'lucide-react'
+import { Banknote, CalendarCheck, CircleHelp, FileText, Package, type LucideIcon } from 'lucide-react'
 import { CaptureContext } from '@/app/capture/useCapture'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
-import { firstUseCopy, type FirstUseScreen } from '@/features/help/firstUseCopy'
+import { firstUseCopy, NOTHING_YET, type FirstUseCopy, type FirstUseScreen, type NothingYetScreen } from '@/features/help/firstUseCopy'
 import { useHelp } from '@/features/help/useHelp'
 
 /*
@@ -27,18 +27,44 @@ export interface FirstUseStateProps {
   className?: string
 }
 
-const ICON: Record<FirstUseScreen, LucideIcon> = { today: CalendarCheck, rfqs: FileText, orders: Package }
+const ICON: Record<FirstUseScreen | NothingYetScreen, LucideIcon> = { today: CalendarCheck, rfqs: FileText, orders: Package, receivables: Banknote }
 
 export function FirstUseState({ screen, role, alone, onEveryone, everyoneCount, className }: FirstUseStateProps) {
+  const copy = firstUseCopy(screen, role, { alone })
+  if (!copy) return null
+  return <FirstUseCard copy={copy} icon={ICON[screen]} onEveryone={onEveryone} everyoneCount={everyoneCount} className={className} />
+}
+
+/**
+ * A list that has never had a record, company-wide (NOTHING_YET in firstUseCopy.ts): a neutral line about what will appear here,
+ * instead of the goal state ("Every order is paid in full") that is only true once records exist. Unbordered by default, because
+ * it sits inside a table body that already has its edge.
+ */
+export function NothingYetState({ screen, bordered = false, className }: { screen: NothingYetScreen; bordered?: boolean; className?: string }) {
+  return <FirstUseCard copy={NOTHING_YET[screen]} icon={ICON[screen]} bordered={bordered} className={className} />
+}
+
+function FirstUseCard({
+  copy,
+  icon,
+  onEveryone,
+  everyoneCount,
+  bordered = true,
+  className,
+}: {
+  copy: FirstUseCopy
+  icon: LucideIcon
+  onEveryone?: () => void
+  everyoneCount?: number
+  bordered?: boolean
+  className?: string
+}) {
   const navigate = useNavigate()
   const openCapture = useContext(CaptureContext)?.openCapture
   const { openHelp } = useHelp()
-  const copy = firstUseCopy(screen, role, { alone })
-  if (!copy) return null
 
   const a = copy.action
-  const primary =
-    a.kind === 'link' ? (
+  const primary = !a ? null : a.kind === 'link' ? (
       <Button variant="primary" onClick={() => navigate(a.to)}>
         {a.label}
       </Button>
@@ -56,8 +82,8 @@ export function FirstUseState({ screen, role, alone, onEveryone, everyoneCount, 
   return (
     <EmptyState
       mood="neutral"
-      icon={ICON[screen]}
-      bordered
+      icon={icon}
+      bordered={bordered}
       title={copy.title}
       className={className}
       actions={

@@ -1047,6 +1047,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
               <div
                 role="region"
                 aria-label="Next step"
+                data-sticky-bar
                 className="sticky bottom-3 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 rounded border bg-surface px-4 py-3 shadow-pop"
               >
                 <p className="m-0 min-w-0 text-sm text-fg-2">

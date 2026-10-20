@@ -226,7 +226,8 @@ export function OrderHeaderBlock({
 
       {isEngineer ? null : (
         <div
-          className={`mt-4 grid grid-cols-2 rounded border bg-surface lg:divide-x ${cols} [&>*]:border-b [&>*]:border-line lg:[&>*]:border-b-0 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1`}
+          className={`mt-4 grid grid-cols-2 max-[399px]:grid-cols-1 max-[399px]:[&>*:last-child:nth-child(odd)]:col-span-1 rounded border bg-surface lg:divide-x ${cols} [&>*]:border-b [&>*]:border-line lg:[&>*]:border-b-0 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1`}
+          role="group"
           aria-label="State of this order"
         >
           <Cell title="Goods" icon={Package}>
@@ -405,7 +406,7 @@ function PhoneSticky({ children }: { children: ReactNode }) {
   const phone = useMediaQuery('(max-width: 767px)')
   if (!phone) return <>{children}</>
   return (
-    <div data-testid="order-sticky-action" className="fixed inset-x-0 bottom-0 z-20 flex border-t bg-surface px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 shadow-pop [&>*]:flex-1">
+    <div data-testid="order-sticky-action" data-action-bar className="fixed inset-x-0 bottom-0 z-20 flex border-t bg-surface px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 shadow-pop [&>*]:flex-1">
       {children}
     </div>
   )

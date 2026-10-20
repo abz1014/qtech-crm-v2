@@ -136,7 +136,7 @@ describe('SegmentedControl: the selected segment', () => {
   }
 
   // BUG A11Y-16: white fill on bg-selected is 1.16:1 and the border-strong edge 1.30:1; the text colour is the only cue.
-  it.fails('A11Y-16: is told apart by a 3:1 fill or edge (WCAG 1.4.11)', () => {
+  it('A11Y-16 fixed: is told apart by a 3:1 fill or edge (WCAG 1.4.11)', () => {
     const v = view()
     const [cue, ratio] = selectedCue(v.selected, v.track, v.unselected)
     expect(ratio, `best cue: ${cue}`).toBeGreaterThanOrEqual(3)
@@ -162,7 +162,7 @@ describe('ToggleButton: pressed against not pressed', () => {
   }
 
   // BUG A11Y-16 (same cue): pressed is bg-selected on a white page (1.16:1) and a border-input edge where it was border-strong (2.27:1).
-  it.fails('A11Y-16: pressed is told apart by a 3:1 fill or edge (WCAG 1.4.11)', () => {
+  it('A11Y-16 fixed: pressed is told apart by a 3:1 fill or edge (WCAG 1.4.11)', () => {
     const on = classes(true)
     const off = classes(false)
     const page = 'bg-surface'
@@ -183,7 +183,7 @@ describe('Money views: the current view in the strip', () => {
   })
 
   // BUG A11Y-16 (same cue): the active view is the same white-on-bg-selected segment.
-  it.fails('A11Y-16: the current view is told apart by a 3:1 fill or edge (WCAG 1.4.11)', () => {
+  it('A11Y-16 fixed: the current view is told apart by a 3:1 fill or edge (WCAG 1.4.11)', () => {
     const track = paint(strip?.[1] ?? '', 'bg') ?? 'bg-surface'
     const on = { bg: paint(pick?.[1] ?? '', 'bg'), border: paint(pick?.[1] ?? '', 'border') }
     const off = { bg: paint(pick?.[2] ?? '', 'bg'), border: paint(pick?.[2] ?? '', 'border') }
@@ -232,11 +232,14 @@ describe('the focus ring (brand-green) on every surface it can sit on (WCAG 1.4.
     })
   }
 
-  // BUG A11Y-18: the danger toast is filled with tone-danger-fg (ui/Toast.tsx:191); the green ring on it is 1.49:1.
-  it.fails('A11Y-18: 3:1 on the danger toast (tone-danger-fg fill)', () => {
+  // A11Y-18 (fixed): the danger toast is filled with tone-danger-fg, where the green ring was 1.49:1. Controls inside a toast
+  // now draw their ring in the toast's own ink (focus-visible:outline-<token>); that ring must be 3:1 on the danger fill.
+  it('A11Y-18 fixed: 3:1 on the danger toast (tone-danger-fg fill)', () => {
     const toast = read('src/ui/Toast.tsx')
     const fill = toast.match(/tone === 'danger' \? '(bg-[\w-]+)/)?.[1]
     expect(fill, 'Toast.tsx changed shape: update this guard').toBeTruthy()
-    expect(contrast('brand-green', tokenOfClass(fill!.slice(3)) ?? 'tone-danger-fg')).toBeGreaterThanOrEqual(3)
+    const rings = [...toast.matchAll(/focus-visible:outline-([\w-]+)/g)].map(m => m[1])
+    expect(rings.length, 'every control in a toast sets its own ring colour').toBeGreaterThanOrEqual(3)
+    for (const r of rings) expect(contrast(tokenOfClass(r) ?? r, tokenOfClass(fill!.slice(3)) ?? 'tone-danger-fg'), r).toBeGreaterThanOrEqual(3)
   })
 })

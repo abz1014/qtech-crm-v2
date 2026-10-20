@@ -396,7 +396,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         }
         icon={FileText}
         size="lg"
-        className="md:w-[900px]"
+        className="md:w-[min(900px,calc(100vw-2rem))]"
         lead="Issuing marks the quotation sent today."
         footer={
           <>
@@ -414,7 +414,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         }
       >
         {loading ? (
-          <div className="grid gap-3" aria-busy="true" aria-label="Loading the quotation">
+          <div role="status" className="grid gap-3" aria-busy="true" aria-label="Loading the quotation">
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-24 w-full" />
           </div>
@@ -561,7 +561,8 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                         </div>
                         <LeadHint item={it} inquiries={inquiries} />
                       </div>
-                      <p className="num text-right text-sm font-medium text-fg md:pt-2" aria-label={`Line net, item ${n}`}>
+                      <p className="num text-right text-sm font-medium text-fg md:pt-2">
+                        <span className="sr-only">{`Line net, item ${n}: `}</span>
                         {on && a.priced ? `PKR ${formatPaisa(a.net, 'auto')}` : on ? 'No price yet' : 'Not included'}
                       </p>
                     </li>

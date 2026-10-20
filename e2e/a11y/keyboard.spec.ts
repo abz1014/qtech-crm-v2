@@ -11,8 +11,7 @@ import { BUGS, SCREENS, UI, asRole, knownBug, expect, focusProblems, focusSweep,
 
 /** Known failures per viewport and screen. */
 const SWEEP_BUGS: Record<string, Record<string, keyof typeof BUGS>> = {
-  'at 1440x900': { 'New RFQ': 'invisibleFocus' },
-  'at 200% zoom (683x330)': { 'New RFQ': 'invisibleFocus', 'RFQ detail': 'obscured' },
+  // A11Y-11 (invisible focus on New RFQ) and A11Y-12 (RFQ detail obscured at 200%) are fixed.
 }
 
 const SWEEP_VIEWPORTS = [
@@ -47,7 +46,6 @@ for (const vp of SWEEP_VIEWPORTS) {
 
 test.describe('Tab sweep inside overlays', () => {
   test('the burst sheet (Add expenses) at 200% zoom, where it shows cards', async ({ page }) => {
-    knownBug(BUGS.invisibleFocus)
     await page.setViewportSize({ width: 683, height: 330 })
     await open(page, '/money/expenses')
     await page.getByRole('button', { name: UI.addExpenses }).click()
@@ -58,7 +56,6 @@ test.describe('Tab sweep inside overlays', () => {
 
 test.describe('focus after an action (2.4.3)', () => {
   test('signing in with a wrong password from the Sign in button keeps focus off <body>', async ({ browser }, info) => {
-    knownBug(BUGS.busyFocus)
     await asRole(browser, info, null, '/login', async page => {
       await page.getByRole('textbox', { name: UI.signIn.email }).fill('sales@test.invalid')
       await page.getByLabel(UI.signIn.password).fill('not-the-password')
@@ -70,7 +67,6 @@ test.describe('focus after an action (2.4.3)', () => {
   })
 
   test('the 1-tap chase on Today (a busy button) keeps focus off <body>', async ({ page }) => {
-    knownBug(BUGS.busyFocus)
     const s = await seedChase()
     await open(page, '/today')
     const { button } = await openChase(page, s.ref)
@@ -82,7 +78,6 @@ test.describe('focus after an action (2.4.3)', () => {
   })
 
   test('opening an RFQ from the board with Enter puts focus on the new page, not <body>', async ({ page, world }) => {
-    knownBug(BUGS.routeFocus)
     await open(page, '/rfqs')
     await page.getByRole('row').filter({ hasText: rfqRef(world.rfq.number) }).focus()
     await page.keyboard.press('Enter')
@@ -93,7 +88,6 @@ test.describe('focus after an action (2.4.3)', () => {
   })
 
   test('a dialog opened from a row menu gives focus back when it closes', async ({ page }) => {
-    knownBug(BUGS.menuDialogFocus)
     await open(page, '/settings/team')
     const trigger = page.getByRole('button', { name: UI.rowActions }).first()
     await trigger.focus()
@@ -108,7 +102,6 @@ test.describe('focus after an action (2.4.3)', () => {
   })
 
   test('Esc twice in a table filter (clear, then leave) keeps focus off <body>', async ({ page }) => {
-    knownBug(BUGS.filterEsc)
     await open(page, '/companies')
     const filter = page.getByRole('textbox', { name: UI.searchCompanies })
     await filter.focus()

@@ -61,7 +61,7 @@ export interface AxeOptions {
    */
   landmarks?: boolean
   /**
-   * Also fail on the STRICT_INCOMPLETE "needs review" results. Default: on when A11Y_STRICT=1. The a11y suite (e2e/a11y) always
+   * Also fail on the STRICT_INCOMPLETE "needs review" results. Default: on for every suite (A11Y_STRICT=0 turns it off locally). The a11y suite (e2e/a11y) always
    * runs strict. A11Y_STRICT=report keeps the other suites passing and prints each strict-only finding as an `A11Y-STRICT` line
    * (how the findings on the older suites are collected until they are fixed and strict can be on for everyone).
    */
@@ -93,7 +93,7 @@ const line = (r: AxeResult, n: AxeNode, prefix = '') =>
 /** Runs axe (WCAG 2.2 AA plus best practice, colour contrast included) and returns one readable line per failing node. */
 export async function axeViolations(page: Page, opts: AxeOptions = {}): Promise<string[]> {
   const mode = process.env.A11Y_STRICT
-  const strict = opts.strict ?? mode === '1'
+  const strict = opts.strict ?? (mode !== '0' && mode !== 'report')
   const report = !strict && mode === 'report'
   await reduceMotion(page)
   await waitForAnimationsToFinish(page)

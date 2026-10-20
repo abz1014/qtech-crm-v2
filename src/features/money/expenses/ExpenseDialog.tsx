@@ -318,7 +318,7 @@ function ExpenseFormReady({
           {lockedPayee ? (
             <div className="grid min-w-0 content-start gap-[6px]">
               <span className="text-sm font-medium text-fg">Payee</span>
-              <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded border border-line-strong bg-sunken px-3 text-sm text-fg-2" aria-label="Payee, from the supplier order">
+              <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded border border-line-strong bg-sunken px-3 text-sm text-fg-2" role="group" aria-label="Payee, from the supplier order">
                 <span className="truncate">
                   {context?.payeeName}
                 </span>

@@ -5,6 +5,7 @@ import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
+import { shortcutsEnabled } from '@/ui/useShortcutsSetting'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { Money } from '@/ui/Money'
 import { SegmentedControl } from '@/ui/SegmentedControl'
@@ -284,7 +285,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   // ---- "/" focuses the filter; the opened row is focused again on the way back ----------------------
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== '/' || e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented) return
+      if (e.key !== '/' || e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented || !shortcutsEnabled()) return
       const t = e.target as HTMLElement | null
       if (t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName))) return
       if (document.querySelector('[role="dialog"],[role="alertdialog"]')) return
@@ -658,13 +659,25 @@ export function DataTable<T>(props: DataTableProps<T>) {
       Showing <span className="num">{dataRows.length}</span> of <span className="num">{total ?? dataRows.length}</span> {noun}
     </>
   ) : undefined)
+  // WCAG 4.1.3: a filter changes the count silently. One polite node, on the page from the start, says each new count
+  // (not the first one: the page itself is being read then). Polite announcements of quick typing coalesce in screen readers.
+  const countText = loading || error ? '' : `Showing ${dataRows.length} of ${total ?? dataRows.length} ${noun ?? 'rows'}`
+  const [firstCount, setFirstCount] = useState<string | null>(null)
+  useEffect(() => {
+    if (firstCount === null && countText) setFirstCount(countText)
+  }, [countText, firstCount])
+  const announced = firstCount !== null && countText !== firstCount ? countText : ''
 
   return (
     <div
       ref={rootRef}
+      data-table-root
       data-density={density === 'compact' ? 'compact' : undefined}
       className={cn('overflow-hidden rounded border bg-surface', className)}
     >
+      <p aria-live="polite" aria-atomic="true" className="sr-only" data-table-count>
+        {announced}
+      </p>
       {toolbarNode || exportCsv ? (
         <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{toolbarNode}</div>

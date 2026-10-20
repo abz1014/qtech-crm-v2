@@ -240,6 +240,30 @@ describe('Who owes us (M02)', () => {
     expect(within(screen.getByRole('table', { name: 'Who owes us' })).getAllByRole('row').length).toBeGreaterThan(1)
   })
 
+  it('has ONE info tip beside "Balance is gross, GST included", covering the balance and reminders', async () => {
+    db()
+    mount(<ReceivablesPage />)
+    await screen.findAllByText('Punjab Cement Ltd')
+    const toolbar = screen.getByText('Balance is gross, GST included').parentElement as HTMLElement
+    expect(toolbar.querySelectorAll('[data-infotip]')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'About the balance and reminders' })).toBeInTheDocument()
+  })
+
+  it('an empty list says "Nothing is owed" only when orders exist; with none ever, a neutral first-use line', async () => {
+    const empty = db(c => (c.target === 'rpc:receivables_list' ? receivablesListResult(c, [], {}) : undefined))
+    const first = mount(<ReceivablesPage />)
+    expect(await screen.findByText('No balances yet')).toBeInTheDocument()
+    expect(screen.queryByText(/Every order is paid in full/)).toBeNull()
+    first.unmount()
+    empty.uninstall()
+
+    const settled = receivables.map(r => ({ ...r, balance: 0, settled: r.gross_target, is_overdue: false, payment_state: 'settled' }))
+    db(c => (c.target === 'rpc:receivables_list' ? receivablesListResult(c, settled, { companyName: () => 'Punjab Cement Ltd' }) : undefined))
+    mount(<ReceivablesPage />)
+    expect(await screen.findByText('Nothing is owed')).toBeInTheDocument()
+    expect(screen.getByText(/Every order is paid in full/)).toBeInTheDocument()
+  })
+
   it('only the Overdue filter carries a count (a count means "needs you")', async () => {
     db()
     mount(<ReceivablesPage />)
