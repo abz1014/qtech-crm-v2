@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { Link, MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { SessionContext } from '@/app/session'
+import { SessionContext, type SessionState } from '@/app/session'
 import IntakeScreen from '@/features/rfqs/IntakeScreen'
-import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
+import { saveIntakeDraft, type IntakeDraft } from '@/features/rfqs/lib/intakeDraftStore'
+import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
 /*
@@ -17,19 +18,29 @@ const EMAIL = ['Dear Sir, please quote:', '1) Hach HQ1110 portable meter - 1 no'
 
 let copied: string[] = []
 
-function respond(call: FakeCall) {
+/** Companies, sites and contacts on file (a restored draft is checked against them). */
+const ON_FILE = new Set(['c-acme', 's-orient', 'c-old'])
+/** RFQs already saved, by id (a kept draft whose RFQ is one of these offers "Open" instead of Continue). */
+let savedRfqs: Record<string, number> = {}
+
+function respond(call: FakeCall): FakeResult {
   const ilike = call.ops.some(([n]) => n === 'ilike')
+  const has = (op: string) => call.ops.some(([n]) => n === op)
+  const eqId = opArgs(call, 'eq')?.[1] as string | undefined
   switch (call.target) {
     case 'brands':
       return { data: [{ id: 'b-hach', name: 'Hach', kind: 'brand' }] }
     case 'companies':
+      if (has('maybeSingle')) return { data: eqId === 'c-acme' ? { id: 'c-acme', name: 'Acme Plastics', country: 'Pakistan', city: 'Lahore' } : null }
+      if (has('limit') && eqId !== undefined) return { data: ON_FILE.has(eqId) ? [{ id: eqId }] : [] }
       return ilike
         ? { data: [{ id: 'c-acme', name: 'Acme Plastics', country: 'Pakistan' }] }
         : { data: [{ id: 'c-acme', name: 'Acme Plastics', country: 'Pakistan' }, { id: 's-orient', name: 'Orient Analytical', country: 'Pakistan' }] }
     case 'v_company_roles':
+      return { data: has('maybeSingle') ? null : [] }
     case 'company_sites':
     case 'contacts':
-      return { data: [] }
+      return { data: has('limit') && eqId !== undefined ? (ON_FILE.has(eqId) ? [{ id: eqId }] : []) : [] }
     case 'v_supplier_stats':
       return {
         data: [
@@ -65,7 +76,10 @@ function respond(call: FakeCall) {
     case 'rpc:float_rfq':
       return { data: 'rfq-id' }
     case 'rfqs':
-      return call.ops.some(([n]) => n === 'in') ? { data: [] } : { data: { id: 'rfq-id', number: 185 } }
+      if (has('in')) return { data: [] }
+      // findRfqById (the kept draft's check): a list of at most one.
+      if (has('limit')) return { data: eqId !== undefined && savedRfqs[eqId] ? [{ id: eqId, number: savedRfqs[eqId] }] : [] }
+      return { data: { id: 'rfq-id', number: 185 } }
     case 'rpc:set_rfq_floated':
       return { data: 1 }
     default:
@@ -73,14 +87,35 @@ function respond(call: FakeCall) {
   }
 }
 
-function renderScreen() {
+const SIGNED_IN: SessionState = { status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }
+const CAPTURED = 'Pls quote\n1) Rosemount 3051 transmitter - 1 no'
+
+/** Paste or photo's "Start a new RFQ", sent while New RFQ is open: the same address, with the captured message. */
+function SendCapture() {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => navigate('/rfqs/new?company=c-acme', { state: { capture: { id: 'cap-1', text: CAPTURED, files: [] } } })}>
+      Send from Paste or photo
+    </button>
+  )
+}
+
+type InitialEntry = string | { pathname: string; search?: string; state?: unknown }
+
+function renderScreen(entry: InitialEntry = '/rfqs/new', session: SessionState = SIGNED_IN) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
-      <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
-        <MemoryRouter initialEntries={['/rfqs/new']}>
+      <SessionContext.Provider value={session}>
+        <MemoryRouter initialEntries={[entry]}>
           <ToastProvider>
-            <IntakeScreen />
+            {/* A tab of the shell, to leave the screen by. */}
+            <Link to="/today">Today</Link>
+            <SendCapture />
+            <Routes>
+              <Route path="/rfqs/new" element={<IntakeScreen />} />
+              <Route path="/today" element={<h1>Today page</h1>} />
+            </Routes>
           </ToastProvider>
         </MemoryRouter>
       </SessionContext.Provider>
@@ -94,6 +129,8 @@ class FakeClipboardItem {
 
 beforeEach(() => {
   copied = []
+  savedRfqs = {}
+  localStorage.clear() // the New RFQ draft and the channel choice are kept on the device: each test starts with none
   vi.stubGlobal('ClipboardItem', FakeClipboardItem)
 })
 
@@ -127,7 +164,7 @@ async function reachEnquiry(user: ReturnType<typeof setup>) {
   await user.click(screen.getByRole('button', { name: 'Looks right: find suppliers' }))
   const orient = await screen.findByRole('checkbox', { name: 'Orient Analytical' })
   await waitFor(() => expect(orient).toBeChecked()) // supplied this item before: ticked
-  await user.click(screen.getByRole('button', { name: 'Write the enquiry' }))
+  await user.click(screen.getByRole('button', { name: 'Write the message' }))
 }
 
 describe('intake screen', () => {
@@ -185,16 +222,16 @@ describe('intake screen', () => {
     expect(screen.queryByLabelText('What we know about Orient Analytical')).not.toBeInTheDocument()
   })
 
-  it('Copy & mark floated copies the text with the real RFQ number and floats once, even on a double tap', async () => {
+  it('Copy message copies the text with the real RFQ number and marks it sent once, even on a double tap', async () => {
     const db = installFakeDb(respond)
     const user = setup()
     renderScreen()
     await reachEnquiry(user)
 
-    const button = await screen.findByRole('button', { name: 'Copy & mark floated to 1' })
+    const button = await screen.findByRole('button', { name: 'Copy message for 1 supplier' })
     await user.dblClick(button)
 
-    expect(await screen.findByText(/is out for prices/)).toBeInTheDocument()
+    expect(await screen.findByText(/is waiting for prices/)).toBeInTheDocument()
     const floats = db.calls.filter(c => c.target === 'rpc:float_rfq')
     expect(floats).toHaveLength(1)
     const args = opArgs(floats[0], 'args')?.[0] as Record<string, unknown>
@@ -214,22 +251,22 @@ describe('intake screen', () => {
     const user = setup()
     renderScreen()
     await reachEnquiry(user)
-    await user.click(await screen.findByRole('button', { name: 'Copy & mark floated to 1' }))
-    await screen.findByText(/is out for prices/)
+    await user.click(await screen.findByRole('button', { name: 'Copy message for 1 supplier' }))
+    await screen.findByText(/is waiting for prices/)
 
     await user.click(await screen.findByRole('button', { name: /Undo/ }))
     await waitFor(() => expect(db.calls.some(c => c.target === 'rpc:set_rfq_floated')).toBe(true))
     const undo = db.calls.find(c => c.target === 'rpc:set_rfq_floated') as FakeCall
     expect(opArgs(undo, 'args')?.[0]).toEqual({ p_rfq_id: 'rfq-id', p_floated: false })
-    expect((await screen.findAllByText('Float undone')).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText('Undone')).length).toBeGreaterThan(0)
     // Back on the enquiry, ready to copy again: that floats the saved RFQ, it does not create a second one.
-    await user.click(screen.getByRole('button', { name: 'Copy & mark floated to 1' }))
-    await screen.findByText(/is out for prices/)
+    await user.click(screen.getByRole('button', { name: 'Copy message for 1 supplier' }))
+    await screen.findByText(/is waiting for prices/)
     expect(db.calls.filter(c => c.target === 'rpc:float_rfq')).toHaveLength(1)
     expect(db.calls.filter(c => c.target === 'rpc:set_rfq_floated').map(c => (opArgs(c, 'args')?.[0] as { p_floated: boolean }).p_floated)).toEqual([false, true])
   })
 
-  it('Save without floating keeps the supplier shortlisted (p_mark_sent false)', async () => {
+  it('Save without asking keeps the supplier shortlisted (p_mark_sent false)', async () => {
     const db = installFakeDb(respond)
     const user = setup()
     renderScreen()
@@ -239,7 +276,7 @@ describe('intake screen', () => {
     await screen.findByText('2 items found')
     await user.click(screen.getByRole('button', { name: 'Looks right: find suppliers' }))
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Orient Analytical' })).toBeChecked())
-    await user.click(screen.getByRole('button', { name: 'Save without floating' }))
+    await user.click(screen.getByRole('button', { name: 'Save without asking' }))
     expect(await screen.findByText(/is saved/)).toBeInTheDocument()
     const args = opArgs(db.calls.find(c => c.target === 'rpc:float_rfq') as FakeCall, 'args')?.[0] as Record<string, unknown>
     expect(args.p_mark_sent).toBe(false)
@@ -252,8 +289,222 @@ describe('intake screen', () => {
     const user = setup()
     renderScreen()
     await reachEnquiry(user)
-    await user.click(await screen.findByRole('button', { name: 'Copy & mark floated to 1' }))
+    await user.click(await screen.findByRole('button', { name: 'Copy message for 1 supplier' }))
     expect(await screen.findByRole('alert')).toBeInTheDocument()
-    expect(screen.queryByText(/is out for prices/)).toBeNull()
+    expect(screen.queryByText(/is waiting for prices/)).toBeNull()
+  })
+})
+
+describe('the New RFQ draft (kept on this device)', () => {
+  const keptDraft = (over: Partial<IntakeDraft> = {}): IntakeDraft => ({
+    v: 1,
+    savedAt: Date.now() - 60_000,
+    rfqId: 'r-kept',
+    company: { id: 'c-old', name: 'Old Mill', country: 'Pakistan', city: 'Multan', role: 'customer' },
+    siteId: null,
+    contactId: 'k-gone',
+    dueOn: '',
+    customerRef: '',
+    isPriority: false,
+    items: [{ key: 'k1', description: 'Belimo LF24 actuator', qty: 1, unit: 'pcs', brandId: null, familyId: null }],
+    overrides: {},
+    manual: [],
+    ...over,
+  })
+
+  async function startDraft(user: ReturnType<typeof setup>) {
+    await user.type(screen.getByRole('combobox', { name: 'Company' }), 'Acme')
+    await user.click(await screen.findByRole('option', { name: /Acme Plastics/ }))
+    await user.type(screen.getByRole('textbox', { name: 'Customer reference' }), 'ENQ-2211')
+    fireEvent.paste(document.body, { clipboardData: { getData: () => EMAIL } })
+    expect(await screen.findByText('2 items found')).toBeInTheDocument()
+  }
+
+  it('keeps what was typed and offers it on return: Continue your draft brings the company, the reference and the items back', async () => {
+    installFakeDb(respond)
+    const user = setup()
+    const first = renderScreen()
+    await startDraft(user)
+    first.unmount()
+
+    renderScreen()
+    expect(await screen.findByText(/You have a draft from .* today/)).toBeInTheDocument()
+    expect(screen.getByText(/Acme Plastics, 2 items\. It is kept on this device/)).toBeInTheDocument()
+    // The form waits for the answer: nothing to type into, so nothing can be kept over the draft.
+    expect(screen.queryByRole('region', { name: 'Customer' })).toBeNull()
+    await user.click(await screen.findByRole('button', { name: 'Continue your draft' }))
+    expect(screen.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Hach HQ1110 portable meter')
+    expect(screen.getByRole('textbox', { name: 'Customer reference' })).toHaveValue('ENQ-2211')
+    expect(screen.getByRole('button', { name: 'Change company, now Acme Plastics' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Continue your draft' })).toBeNull()
+  })
+
+  it('Start new forgets it', async () => {
+    installFakeDb(respond)
+    const user = setup()
+    const first = renderScreen()
+    await startDraft(user)
+    first.unmount()
+    const second = renderScreen()
+    await user.click(await screen.findByRole('button', { name: 'Start new' }))
+    expect(screen.queryByText(/You have a draft/)).toBeNull()
+    expect(screen.getByRole('combobox', { name: 'Company' })).toBeInTheDocument()
+    second.unmount()
+    renderScreen()
+    expect(screen.queryByText(/You have a draft/)).toBeNull()
+  })
+
+  it('is offered on every way in: from a company page the draft comes first, it is not written over, and the company waits for Start new', async () => {
+    installFakeDb(respond)
+    const user = setup()
+    saveIntakeDraft('u1', keptDraft())
+    const before = localStorage.getItem('qtech.rfqs.intakeDraft.u1')
+    renderScreen('/rfqs/new?company=c-acme')
+    expect(await screen.findByText(/You have a draft from/)).toBeInTheDocument()
+    expect(screen.getByText(/Old Mill, 1 item\./)).toBeInTheDocument()
+    await screen.findByRole('button', { name: 'Continue your draft' })
+    expect(screen.queryByRole('button', { name: /Change company/ })).toBeNull()
+    expect(localStorage.getItem('qtech.rfqs.intakeDraft.u1')).toBe(before)
+
+    await user.click(await screen.findByRole('button', { name: 'Start new for Acme Plastics' }))
+    expect(await screen.findByRole('button', { name: 'Change company, now Acme Plastics' })).toBeInTheDocument()
+    expect(localStorage.getItem('qtech.rfqs.intakeDraft.u1')).not.toContain('Old Mill')
+  })
+
+  it('from a company page, Continue your draft keeps the draft\'s company, not the page\'s', async () => {
+    installFakeDb(respond)
+    const user = setup()
+    saveIntakeDraft('u1', keptDraft())
+    renderScreen('/rfqs/new?company=c-acme')
+    await user.click(await screen.findByRole('button', { name: 'Continue your draft' }))
+    expect(await screen.findByRole('button', { name: 'Change company, now Old Mill' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Belimo LF24 actuator')
+    // The contact it named is no longer on file: dropped, and said once.
+    expect(screen.getByText('The contact in your draft is no longer on file. Pick again if you need one.')).toBeInTheDocument()
+    await new Promise(r => setTimeout(r, 30))
+    expect(screen.getByRole('button', { name: 'Change company, now Old Mill' })).toBeInTheDocument()
+  })
+
+  it('a message from Paste or photo while New RFQ is open starts a new form: it is not merged in, and the open one is offered back', async () => {
+    installFakeDb(respond)
+    const user = setup()
+    renderScreen()
+    await startDraft(user)
+    await user.click(screen.getByRole('button', { name: 'Send from Paste or photo' }))
+    // A new form: the two pasted items are not on it, and the one that was open is the draft on offer.
+    expect(await screen.findByText(/Acme Plastics, 2 items\. It is kept on this device/)).toBeInTheDocument()
+    expect(screen.getByText(/the pasted message stays in Paste or photo/)).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Description of item 1' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Start new with the pasted message' }))
+    expect(await screen.findByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Rosemount 3051 transmitter')
+    expect(screen.queryByRole('textbox', { name: 'Description of item 2' })).toBeNull()
+    expect(screen.getByRole('textbox', { name: 'Customer reference' })).toHaveValue('')
+  })
+
+  it('a draft whose RFQ is already saved offers Open RFQ-0177 instead of Continue', async () => {
+    installFakeDb(respond)
+    setup()
+    savedRfqs = { 'r-kept': 177 }
+    saveIntakeDraft('u1', keptDraft())
+    renderScreen()
+    expect(await screen.findByRole('heading', { name: 'Your draft is already saved as RFQ-0177' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open RFQ-0177' })).toHaveAttribute('href', '/rfqs/r-kept')
+    expect(screen.queryByRole('button', { name: /Continue your draft/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Start new' })).toBeInTheDocument()
+  })
+
+  it('Continue checks the draft: a company no longer on file is asked for again', async () => {
+    installFakeDb(respond)
+    const user = setup()
+    saveIntakeDraft('u1', keptDraft({ company: { id: 'c-gone', name: 'Gone Ltd', country: 'Pakistan', city: null, role: 'customer' } }))
+    renderScreen()
+    await user.click(await screen.findByRole('button', { name: 'Continue your draft' }))
+    expect(await screen.findByText(/Gone Ltd in your draft is no longer on file/)).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Company' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Belimo LF24 actuator')
+  })
+
+  it('never writes over another RFQ\'s draft (another tab): it says this form is not kept', async () => {
+    installFakeDb(respond)
+    const user = setup()
+    renderScreen()
+    await user.type(screen.getByRole('textbox', { name: 'Customer reference' }), 'ENQ-1')
+    // Another tab keeps its own draft meanwhile.
+    localStorage.setItem('qtech.rfqs.intakeDraft.u1', JSON.stringify(keptDraft({ rfqId: 'r-other', savedAt: Date.now() })))
+    await user.type(screen.getByRole('textbox', { name: 'Customer reference' }), '2')
+    expect(await screen.findByText('This form is not kept on this device')).toBeInTheDocument()
+    expect(localStorage.getItem('qtech.rfqs.intakeDraft.u1')).toContain('r-other')
+  })
+
+  it('the save clears its draft even when the screen has already gone', async () => {
+    let finish: (r: FakeResult) => void = () => {}
+    installFakeDb(call => (call.target === 'rpc:float_rfq' ? new Promise<FakeResult>(res => (finish = res)) : respond(call)))
+    const user = setup()
+    const view = renderScreen()
+    await reachEnquiry(user)
+    expect(localStorage.getItem('qtech.rfqs.intakeDraft.u1')).not.toBeNull()
+    await user.click(await screen.findByRole('button', { name: 'Copy message for 1 supplier' }))
+    view.unmount()
+    finish({ data: { id: 'rfq-id', created: true } })
+    await waitFor(() => expect(localStorage.getItem('qtech.rfqs.intakeDraft.u1')).toBeNull())
+  })
+
+  it('a save that finds the RFQ already saved says so: Open it, nothing claimed as sent', async () => {
+    installFakeDb(call => (call.target === 'rpc:float_rfq' ? { data: { id: 'rfq-id', created: false } } : respond(call)))
+    const user = setup()
+    renderScreen()
+    await reachEnquiry(user)
+    await user.click(await screen.findByRole('button', { name: 'Copy message for 1 supplier' }))
+    expect(await screen.findByText('Already saved as RFQ-0185')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open RFQ-0185' })).toHaveAttribute('href', '/rfqs/rfq-id')
+    expect(screen.queryByText(/is waiting for prices/)).toBeNull()
+    expect(localStorage.getItem('qtech.rfqs.intakeDraft.u1')).toBeNull()
+  })
+
+  it('keeps nothing on the device with nobody signed in (signing out)', async () => {
+    installFakeDb(respond)
+    const user = setup()
+    renderScreen('/rfqs/new', { status: 'signed-out' })
+    await user.type(screen.getByRole('textbox', { name: 'Customer reference' }), 'ENQ-9')
+    expect(Object.keys(localStorage).filter(k => k.startsWith('qtech.rfqs.intakeDraft.'))).toEqual([])
+  })
+
+  it('asks before leaving with items on the form: Stay here keeps the screen, Leave goes on and keeps the draft', async () => {
+    installFakeDb(respond)
+    const user = setup()
+    renderScreen()
+    await startDraft(user)
+    await user.click(screen.getByRole('link', { name: 'Today' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Leave this new RFQ?' })
+    expect(dialog).toHaveTextContent('Acme Plastics, 2 items')
+    await user.click(within(dialog).getByRole('button', { name: 'Stay here' }))
+    expect(screen.getByRole('heading', { name: 'New RFQ', level: 1 })).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: 'Today' }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Leave, keep the draft' }))
+    expect(await screen.findByRole('heading', { name: 'Today page' })).toBeInTheDocument()
+    expect(localStorage.getItem('qtech.rfqs.intakeDraft.u1')).toContain('Hach HQ1110 portable meter')
+  })
+
+  it('a saved RFQ leaves no draft behind, and the screen no longer asks before leaving', async () => {
+    installFakeDb(respond)
+    const user = setup()
+    renderScreen()
+    await reachEnquiry(user)
+    expect(localStorage.getItem('qtech.rfqs.intakeDraft.u1')).not.toBeNull()
+    await user.click(await screen.findByRole('button', { name: 'Copy message for 1 supplier' }))
+    await screen.findByText(/is waiting for prices/)
+    await waitFor(() => expect(localStorage.getItem('qtech.rfqs.intakeDraft.u1')).toBeNull())
+    await user.click(screen.getByRole('link', { name: 'Today' }))
+    expect(await screen.findByRole('heading', { name: 'Today page' })).toBeInTheDocument()
+  })
+
+  it('shows the step it is on as one line (for phones), and the customer reference sits with the company', async () => {
+    installFakeDb(respond)
+    setup()
+    renderScreen()
+    const line = screen.getByRole('list', { name: 'Step 1 of 4' })
+    expect(within(line).getAllByRole('listitem').map(li => li.textContent?.replace(/,.*$/, ''))).toEqual(['Items', 'Suppliers', 'Message', 'Done'])
+    const customer = screen.getByRole('region', { name: 'Customer' })
+    expect(within(customer).getByRole('textbox', { name: 'Customer reference' })).toBeInTheDocument()
   })
 })

@@ -14,10 +14,10 @@ import { readClipboardWhen, resetClipboard } from '../support/clipboard'
  *   issue the supplier PO -> create the invoice -> (admin) record the payment -> the month-end checklist shows it.
  *
  * Every step reads its interaction count from the browser (mouse presses and named keys, see support.ts) and holds it to the FE-2 target:
- *   New RFQ              at most 3 actions + 1 paste        Float                 at most 2 taps
+ *   New RFQ              at most 3 actions + 1 paste        Ask suppliers         at most 2 taps
  *   Supplier reply       at most 1 typed price per item, then 1 tap; or paste + accept, at most 2
  *   Ranked comparison    0 taps                             Issue quotation       at most 1 price per item + 2 taps (Issue, Share)
- *   Mark bid sent        1 tap                              Chase                 1 tap
+ *   Mark quotation sent  2 taps (More, then the item)       Chase                 1 tap
  *   Win (no changes)     2 taps; with one split: + 1 tap + 1 quantity typed
  *   Issue PO (priced)    2 taps                             Invoice               2 taps, nothing typed
  *   Full payment         2 taps, nothing typed
@@ -143,18 +143,18 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     fe2('New RFQ: mouse presses', (await readCount(page)).mouse, 3)
   })
 
-  // ---- 2. Float to the suppliers: the enquiry text is copied --------------------------------------------------------------------
-  await test.step('float to both suppliers: Write the enquiry, Copy and mark floated', async () => {
+  // ---- 2. Ask the suppliers: the message is copied ---------------------------------------------------------------------------------
+  await test.step('ask both suppliers: Write the message, Copy message for 2 suppliers', async () => {
     // Both suppliers supplied both items before, so both are ticked with nothing tapped.
     await expect(page.getByRole('checkbox', { name: s.alpen.name })).toBeChecked()
     await expect(page.getByRole('checkbox', { name: s.lahore.name })).toBeChecked()
     await resetCount(page)
-    await page.getByRole('button', { name: 'Write the enquiry' }).click()
-    await expect(page.getByRole('heading', { name: /Enquiry to 2 suppliers/ })).toBeVisible()
+    await page.getByRole('button', { name: 'Write the message' }).click()
+    await expect(page.getByRole('heading', { name: /message to 2 suppliers/ })).toBeVisible()
     await resetClipboard(page)
-    await page.getByRole('button', { name: 'Copy & mark floated to 2' }).click()
-    await expect(page.getByText(/is out for prices/)).toBeVisible()
-    fe2('Float to 2 suppliers: Write the enquiry, Copy and mark floated', (await readCount(page)).mouse, 2)
+    await page.getByRole('button', { name: 'Copy message for 2 suppliers' }).click()
+    await expect(page.getByText(/is waiting for prices/)).toBeVisible()
+    fe2('Ask 2 suppliers: Write the message, Copy message for 2 suppliers', (await readCount(page)).mouse, 2)
 
     const rows = await must(rest<{ id: string; number: number; owner_id: string }[]>('admin', `rfqs?company_id=eq.${s.customer.id}&select=id,number,owner_id`))
     expect(rows).toHaveLength(1)
@@ -235,7 +235,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await b.getByRole('button', { name: 'Paste reply' }).click()
     await expect(b.getByText('Read from their reply')).toBeVisible()
     expect(await linesOf(s.lahore.id)).toHaveLength(0)
-    await b.getByRole('button', { name: 'Accept 2 offers' }).click()
+    await b.getByRole('button', { name: 'Accept 2 prices' }).click()
     await expect(toast(page, 'Reply saved')).toBeVisible()
     fe2('Supplier reply, pasted: Paste reply + Accept', (await readCount(page)).mouse, 2)
     const bLines = await linesOf(s.lahore.id)
@@ -279,7 +279,8 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     expect(one.order).toEqual(['1', '2'])
     expect(one.names[0]).toContain(s.alpen.name)
     expect(one.names[1]).toContain(s.lahore.name)
-    await expect(one.art.locator('[data-rank-note]')).toBeVisible()
+    await expect(one.art.locator('li[data-ranked]').first()).toContainText('Recommended') // one mark, no rank squares
+    await expect(page.getByRole('button', { name: 'How are prices compared?' })).toHaveCount(1)
     await expect(one.art.locator('[data-sell-note]')).toContainText('No selling price yet') // nothing is quoted yet, so no spread is invented
     const two = await rank('Item 2')
     expect(two.order).toEqual(['1', '2'])
@@ -317,7 +318,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
 
     // With a selling price in, the salesperson's comparison shows the spread (an engineer's never does). Opening the reasons is optional.
     const first = page.getByRole('article', { name: 'Item 1' }).locator('li[data-ranked="1"]')
-    const reasons = first.getByRole('button', { name: `Show reasons for ${s.alpen.name}` })
+    const reasons = first.getByRole('button', { name: `Show details for ${s.alpen.name}` })
     if (await reasons.count()) await reasons.click()
     await expect(first).toContainText('Spread ≈ PKR 7,000 each, PKR 28,000 for 4, against our quoted PKR 34,000')
 
@@ -339,23 +340,26 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   })
 
   // ---- 7. The bid is sent -------------------------------------------------------------------------------------------------------------
-  await test.step('mark bid sent: issuing the PDF already marked it, a verbal bid is one tap', async () => {
+  await test.step('quotation sent: issuing the PDF already marked it; a verbal quotation is More, Mark quotation sent', async () => {
     for (const rule of ['not_floated', 'chase_supplier', 'bid_due', 'chase_customer'] as const) await todayHas(salesCtx, rule, [rfqRef(rfq.number)], false)
     const quoted = await must(rest<{ quoted_on: string | null }[]>('admin', `rfqs?id=eq.${rfq.id}&select=quoted_on`))
-    expect(quoted[0].quoted_on).toBe(today) // issuing the quotation sent the bid: no further tap is needed
-    await expect(page.getByRole('button', { name: 'Mark bid sent' })).toHaveCount(0)
+    expect(quoted[0].quoted_on).toBe(today) // issuing the quotation marked it sent: no further tap is needed
+    // The quotation is out: the page's one green button is now Mark won.
+    await expect(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })).toBeVisible()
 
-    // The sales person also quotes by phone: that bid has no PDF, and "Mark bid sent" is the one tap.
+    // The sales person also quotes by phone: that quotation has no PDF. It is a rare case, so it lives in More (2 taps): the
+    // owner's decision of 2026-10-19 keeps one green button per screen and puts the rest in one menu.
     const verbal = await createRfq(s.customer.id, { due_on: karachiDay(5), owner_id: 'a0000000-0000-4000-8000-000000000002' })
     await post('rfq_items', { rfq_id: verbal.id, position: 0, description: `Spare gasket set ${letters()}`, qty: 1 })
-    // Hand-off: it has not been floated and its bid is due in five days: both reminders are listed until the bid is sent.
+    // Hand-off: nobody has been asked and its quotation is due in five days: both reminders are listed until it is sent.
     await todayHas(salesCtx, 'not_floated', [rfqRef(verbal.number)], true)
     await todayHas(salesCtx, 'bid_due', [rfqRef(verbal.number)], true)
     const side = await openPage(salesCtx, `/rfqs/${verbal.id}`)
     await resetCount(side)
-    await side.getByRole('button', { name: 'Mark bid sent' }).click()
-    await expect(toast(side, 'Marked bid sent')).toBeVisible()
-    fe2('Mark bid sent (a verbal bid)', (await readCount(side)).mouse, 1)
+    await side.getByRole('button', { name: 'More', exact: true }).click()
+    await side.getByRole('menuitem', { name: /Mark quotation sent/ }).click()
+    await expect(toast(side, 'Marked quotation sent')).toBeVisible()
+    fe2('Mark quotation sent (a verbal quotation): More, then the item', (await readCount(side)).mouse, 2)
     const after = await must(rest<{ quoted_on: string | null }[]>('admin', `rfqs?id=eq.${verbal.id}&select=quoted_on`))
     expect(after[0].quoted_on).toBe(today)
     await side.close()

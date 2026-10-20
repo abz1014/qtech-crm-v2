@@ -204,6 +204,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'stamp_supplier_chase',    '',    'X',    'X',    'X'),    -- s10 (same row)
   ('function', 'stamp_goods_chase',      '',    'X',    'X',    'X'),    -- R16 (0033): goods-chase stamp on a supplier leg, all staff
   ('function', 'search_all',            '',    'X',    'X',    'X'),    -- R12 (0034): palette search, SECURITY INVOKER, all staff; deactivated gets zero rows
+  ('function', 'search_closed_rfqs',    '',    'X',    'X',    'X'),    -- 0070: the RFQ list's Closed search, SECURITY INVOKER, all staff; deactivated gets zero rows
   ('function', 'search_all',            'invoice',     'X', 'X', ''),   -- P02 (0054): an invoice number is found by admin and sales, never by an engineer
   ('function', 'search_all',            'customer_po', 'X', 'X', ''),   -- P02 (0054): the customer PO text is searched and shown to admin and sales only
   ('function', 'search_all',            'order_item',  'X', 'X', 'X'),  -- P02 (0054): order lines, no price
@@ -464,6 +465,7 @@ insert into probes values
   ('stamp_supplier_chase', '', 'X', 'select public.stamp_supplier_chase(@19)'),
   ('stamp_goods_chase', '', 'X', 'select public.stamp_goods_chase(@23)'),
   ('search_all', '', 'X', $q$select * from public.search_all('Contact', 5)$q$),
+  ('search_closed_rfqs', '', 'X', $q$select 1 where exists (select 1 from public.rfqs where id = @15) and (select count(*) from public.search_closed_rfqs('x', 5, 0)) >= 0$q$),   -- 0070: same shape as rank_item_quotes
   ('search_all', 'invoice', 'X', $q$select 1 from public.search_all('INV-M1', 5) where kind = 'invoice'$q$),
   ('search_all', 'customer_po', 'X', $q$select 1 from public.search_all('PO-M1', 5) where kind = 'order' and meta = 'Customer PO PO-M1'$q$),
   ('search_all', 'order_item', 'X', $q$select 1 from public.search_all('Fixture order item', 5) where kind = 'item'$q$),

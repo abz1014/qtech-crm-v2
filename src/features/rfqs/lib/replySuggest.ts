@@ -106,7 +106,7 @@ export function suggestFromReply(parsed: ParsedReply, items: readonly SuggestIte
     else if (o.unitPrice === null) blocked = 'No price found on this line'
     else if (!o.currency && !currency) blocked = 'No currency stated: pick the supplier’s currency above first'
     else if (o.currency && currency && o.currency !== currency) blocked = `${o.currency} price: this row is in ${currency}, enter it separately`
-    else if (taken.has(o.rfqItemId)) blocked = 'Another offer above already covers this item'
+    else if (taken.has(o.rfqItemId)) blocked = 'Another price above already covers this item'
     if (!blocked && o.rfqItemId) taken.add(o.rfqItemId)
     return {
       key: `${i}:${o.rfqItemId ?? 'none'}`,
