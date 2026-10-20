@@ -36,6 +36,13 @@ async function resolveUser(userId: string): Promise<Resolved> {
   return { user: { id: row.data.id, name: row.data.name, role: role.data } }
 }
 
+/** PostgREST's answers to a token it will not accept, or a role check refused: the session is not valid. */
+function isAuthRefusal(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  const code = (err as { code?: unknown }).code
+  return code === 'PGRST301' || code === 'PGRST302' || code === 'PGRST303' || code === '42501'
+}
+
 /** True once `running` has stayed true for `ms`. */
 function useElapsed(running: boolean, ms: number): boolean {
   const [elapsed, setElapsed] = useState(false)
@@ -81,10 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authSession, setAuthSession] = useState<Session | null | undefined>(supabase ? undefined : null)
   const [signedOutForDeactivation, setDeactivated] = useState(false)
 
-  useEffect(() => {
-    if (!supabase) return
-    void startQueryPersistence(queryClient, storedSessionUserId())
-  }, [supabase, queryClient])
 
   useEffect(() => {
     if (!supabase) return
@@ -92,9 +95,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Only set state here: calling Supabase from inside this callback can deadlock.
       setAuthSession(next)
       if (event === 'SIGNED_OUT') {
+        // Sign-out, a refused refresh token or a deactivation: this device keeps nothing of theirs (owner rule).
         queryClient.clear()
         forgetRememberedUser()
         void forgetSavedQueries()
+        void forgetDeviceCaptures()
       }
       if (event === 'SIGNED_IN') setDeactivated(false)
     })
@@ -115,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryFn: () => resolveUser(userId as string),
     enabled: Boolean(userId),
     staleTime: 0,
-    retry: LOOKUP_RETRIES,
+    retry: (count, err) => count < LOOKUP_RETRIES && !isAuthRefusal(err),
     refetchInterval: POLL_MS,
     refetchOnWindowFocus: 'always',
   })
@@ -142,6 +147,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (live) rememberUser(live)
   }, [live])
+
+  // The saved query cache is restored only once the server has confirmed the session (owner rule: a deactivated
+  // person's phone shows nothing). Offline, the shell opens from the remembered person with no saved data.
+  const liveId = live?.id ?? null
+  useEffect(() => {
+    if (liveId) void startQueryPersistence(queryClient, liveId)
+  }, [liveId, queryClient])
+
+  // The server refusing the token itself (JWT invalid or expired past refresh, permission refused) ends the session
+  // and wipes the device like a deactivation. A network failure does not.
+  const refused = isAuthRefusal(query.error)
+  useEffect(() => {
+    if (!refused || !supabase) return
+    void forgetDeviceCaptures().finally(() => void supabase.auth.signOut())
+  }, [refused, supabase])
 
   const deactivated = Boolean(userId) && query.data?.user === null
   useEffect(() => {
@@ -176,9 +196,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     if (query.data?.user) return { state: { status: 'signed-in', user: query.data.user }, notice: null, connection: online ? 'online' : 'offline', fromMemory: false }
     if (query.data && query.data.user === null) return signedOut('deactivated')
+    if (query.isError && isAuthRefusal(query.error)) return signedOut(null)
     if (query.isError || !online || slow) return fromMemory()
     return LOADING
-  }, [supabase, authSession, query.data, query.isError, signedOutForDeactivation, online, slow, stored, kept, userId])
+  }, [supabase, authSession, query.data, query.isError, query.error, signedOutForDeactivation, online, slow, stored, kept, userId])
 
   // No live token: hold every query (they would go out anonymous) until Auth confirms the session.
   const hold = decision.state.status === 'signed-in' && decision.fromMemory && !authSession

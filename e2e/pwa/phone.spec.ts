@@ -145,3 +145,51 @@ test.describe('phone platform', () => {
     await expect.poll(() => main.evaluate(el => el.scrollTop)).toBe(600)
   })
 })
+
+const API_URL = process.env.API_URL ?? 'http://127.0.0.1:54321'
+const SERVICE_KEY = process.env.SERVICE_ROLE_KEY ?? ''
+const service = (path: string, init: RequestInit = {}) =>
+  fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}`, 'content-type': 'application/json', ...(init.headers ?? {}) },
+  })
+
+const savedCache = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise<boolean>(resolve => {
+        const open = indexedDB.open('qtech-cache', 1)
+        open.onupgradeneeded = () => open.result.createObjectStore('kv')
+        open.onerror = () => resolve(false)
+        open.onsuccess = () => {
+          const get = open.result.transaction('kv').objectStore('kv').get('queries')
+          get.onsuccess = () => resolve(Boolean(get.result))
+          get.onerror = () => resolve(false)
+        }
+      }),
+  )
+
+test('an engineer deactivated while the app is open loses everything on this phone at the next request', async ({ page }) => {
+  test.skip(!SERVICE_KEY, 'needs SERVICE_ROLE_KEY from the local stack')
+  const email = `phone-deact-${Date.now()}@test.invalid`
+  const created = await service('/auth/v1/admin/users', { method: 'POST', body: JSON.stringify({ email, password: PASSWORD, email_confirm: true }) })
+  expect(created.status).toBe(200)
+  const { id } = (await created.json()) as { id: string }
+  expect((await service('/rest/v1/users', { method: 'POST', body: JSON.stringify({ id, name: 'Phone Engineer', role: 'engineer' }) })).status).toBe(201)
+
+  await page.goto('/login')
+  await workerInControl(page)
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page).toHaveURL(/\/today$/)
+  await expect.poll(() => savedCache(page), { timeout: 15_000 }).toBe(true)
+
+  // An admin deactivates them (the users row current_user_role() reads, as the admin-users function writes it).
+  expect((await service(`/rest/v1/users?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ deactivated_at: new Date().toISOString() }) })).status).toBe(204)
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(page).toHaveURL(/\/login$/)
+  await expect.poll(() => savedCache(page)).toBe(false)
+  const kept = await page.evaluate(() => Object.keys(window.localStorage).filter(k => k.startsWith('qtech.session') || /^sb-.*-auth-token$/.test(k)))
+  expect(kept).toEqual([])
+})

@@ -16,12 +16,18 @@ const h = vi.hoisted(() => ({
   initial: 'user' as 'user' | 'null' | 'never',
   /** The users row and current_user_role() fail as a dropped connection does. */
   failLookup: false,
+  /** The lookup is refused as an invalid token (PostgREST PGRST301). */
+  refuse: false,
+  start: vi.fn(),
+  forgetSaved: vi.fn(),
+  forgetCaptures: vi.fn(),
   /** The user id of the Supabase session kept in localStorage. */
   stored: 'u1' as string | null,
 }))
 
 vi.mock('@/lib/supabase', () => {
   const failed = { data: null, error: { message: 'TypeError: Failed to fetch', details: '', hint: '', code: '' } }
+  const refused = { data: null, error: { message: 'JWT expired', details: '', hint: '', code: 'PGRST301' } }
   const client = {
     auth: {
       onAuthStateChange: (cb: AuthCb) => {
@@ -40,11 +46,11 @@ vi.mock('@/lib/supabase', () => {
     from: () => ({
       select: () => ({
         eq: () => ({
-          maybeSingle: () => Promise.resolve(h.failLookup ? failed : { data: h.name ? { id: 'u1', name: h.name } : null, error: null }),
+          maybeSingle: () => Promise.resolve(h.refuse ? refused : h.failLookup ? failed : { data: h.name ? { id: 'u1', name: h.name } : null, error: null }),
         }),
       }),
     }),
-    rpc: () => Promise.resolve(h.failLookup ? failed : { data: h.role, error: null }),
+    rpc: () => Promise.resolve(h.refuse ? refused : h.failLookup ? failed : { data: h.role, error: null }),
   }
   return { onApiActivity: () => () => {}, getSupabase: () => client }
 })
@@ -55,9 +61,22 @@ vi.mock('@/lib/storedSession', async importOriginal => ({
 }))
 
 vi.mock('@/lib/queryPersist', () => ({
-  startQueryPersistence: () => Promise.resolve(),
+  startQueryPersistence: (...a: unknown[]) => {
+    h.start(...a)
+    return Promise.resolve()
+  },
   setCacheOwner: () => {},
-  forgetSavedQueries: () => Promise.resolve(),
+  forgetSavedQueries: () => {
+    h.forgetSaved()
+    return Promise.resolve()
+  },
+}))
+
+vi.mock('@/lib/capture/forget', () => ({
+  forgetDeviceCaptures: () => {
+    h.forgetCaptures()
+    return Promise.resolve()
+  },
 }))
 
 function Probe() {
@@ -95,7 +114,11 @@ beforeEach(() => {
   h.name = 'Ayesha'
   h.initial = 'user'
   h.failLookup = false
+  h.refuse = false
   h.stored = 'u1'
+  h.start.mockClear()
+  h.forgetSaved.mockClear()
+  h.forgetCaptures.mockClear()
   h.signOut.mockClear()
   window.localStorage.clear()
   vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
@@ -205,5 +228,45 @@ describe('no signal is not a sign-out (phone audit 2c)', () => {
     setOnline(false)
     mount()
     expect(await screen.findByText('signed-out::none')).toBeInTheDocument()
+  })
+})
+
+describe('nothing is kept for a person the server no longer accepts (owner security rule)', () => {
+  it('the saved cache is restored only after the server confirmed the session, never from memory alone', async () => {
+    rememberUser({ id: 'u1', name: 'Ayesha', role: 'sales' })
+    h.initial = 'never'
+    setOnline(false)
+    mount()
+    await screen.findByText('signed-in:sales:none')
+    expect(h.start).not.toHaveBeenCalled()
+  })
+
+  it('restores it once the lookup confirms', async () => {
+    mount()
+    await screen.findByText('signed-in:sales:none')
+    await waitFor(() => expect(h.start).toHaveBeenCalledWith(expect.anything(), 'u1'))
+  })
+
+  it('deactivated: signed out, and captures, drafts, the saved cache and the remembered person are wiped', async () => {
+    rememberUser({ id: 'u1', name: 'Ayesha', role: 'sales' })
+    h.role = null
+    h.name = null
+    mount()
+    expect(await screen.findByText('signed-out::deactivated')).toBeInTheDocument()
+    await waitFor(() => expect(h.signOut).toHaveBeenCalled())
+    expect(h.forgetCaptures).toHaveBeenCalled()
+    expect(h.forgetSaved).toHaveBeenCalled()
+    expect(readRememberedUser()).toBeNull()
+    expect(h.start).not.toHaveBeenCalled()
+  })
+
+  it('a token the server refuses (PGRST301): signed out and wiped at once, not shown from memory', async () => {
+    rememberUser({ id: 'u1', name: 'Ayesha', role: 'sales' })
+    h.refuse = true
+    mount()
+    expect(await screen.findByText(/^signed-out:/)).toBeInTheDocument()
+    await waitFor(() => expect(h.signOut).toHaveBeenCalled())
+    expect(h.forgetCaptures).toHaveBeenCalled()
+    expect(h.forgetSaved).toHaveBeenCalled()
   })
 })
