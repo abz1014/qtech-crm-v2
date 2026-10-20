@@ -197,7 +197,7 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
 
     // Rank 3 is above the band: one line, closed; 1 tap opens it.
     const charlie = rowOf(page, 'Item 1', s.charlie.name)
-    await expect(charlie).toContainText('≈ PKR33,600') // 120 USD at 280: the figure people compare, on the line
+    await expect(charlie).toContainText('≈ PKR 33,600') // 120 USD at 280: the figure people compare, on the line
     const toggle = charlie.getByRole('button', { name: `Show details for ${s.charlie.name}` })
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
     await toggle.click()

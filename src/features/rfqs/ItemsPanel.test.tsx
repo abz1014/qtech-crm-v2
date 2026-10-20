@@ -191,7 +191,7 @@ describe('the supplier comparison', () => {
       ]),
     )
     const first = rows()[0]
-    expect(first).toHaveTextContent('≈ PKR28,000')
+    expect(first).toHaveTextContent('≈ PKR 28,000')
     expect(first).toHaveTextContent('3 weeks')
     expect(first).toHaveTextContent('In stock')
     // closed by default: no own-currency figure, no reasons
@@ -217,6 +217,8 @@ describe('the supplier comparison', () => {
   it('explains the order once, in a tip in the panel header', async () => {
     const user = userEvent.setup()
     renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)])])
+    // The tip sits beside the heading, not in it: the heading's name is the title alone.
+    expect(screen.getByRole('heading', { level: 2, name: 'Items and supplier prices' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'How are prices compared?' }))
     expect(await screen.findByText(/unless other suppliers are within 2% of it\. Among those, the better delivery record wins; if the records are the same, the supplier we have ordered from more often/)).toBeInTheDocument()
   })

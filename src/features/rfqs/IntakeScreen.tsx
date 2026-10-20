@@ -808,13 +808,15 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
               </section>
               <section aria-labelledby="h-sup" className="grid gap-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <h2 id="h-sup" className="inline-flex items-center gap-1 text-lg font-semibold tracking-snug">
-                    Suppliers
+                  <span className="inline-flex items-center gap-1">
+                    <h2 id="h-sup" className="text-lg font-semibold tracking-snug">
+                      Suppliers
+                    </h2>
                     <InfoTip label="How is this list ordered?">
                       By the reason first (same model, same item, same brand), then the track record: on time or not, how often we have ordered, how often they reply, then
                       the most recent contact. A supplier marked late is still listed. Only suppliers who supplied the item before are ticked.
                     </InfoTip>
-                  </h2>
+                  </span>
                   <p className="text-sm text-fg-muted">Ticked: supplied this item before. The rest is your call.</p>
                 </div>
                 <SupplierPicker

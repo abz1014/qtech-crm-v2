@@ -58,7 +58,8 @@ function PriceCell({ line, c }: { line: QuoteLineRow; c: ComparedLine }) {
   if (line.currency === 'PKR' || c.pkrPaisa !== null) {
     return (
       <span className="num whitespace-nowrap text-base font-medium">
-        <span className="mr-1 font-sans text-sm font-regular text-fg-muted">{line.currency === 'PKR' ? 'PKR' : '≈ PKR'}</span>
+        {/* A real space, not a margin: a screen reader reads "≈ PKR 33,600", not "PKR33,600". */}
+        <span className="font-sans text-sm font-regular text-fg-muted">{line.currency === 'PKR' ? 'PKR' : '≈ PKR'}</span>{' '}
         {line.currency === 'PKR' ? formatAmount(line.unitPrice, 'auto') : formatPaisa(c.pkrPaisa as bigint, 'auto')}
       </span>
     )
@@ -66,7 +67,7 @@ function PriceCell({ line, c }: { line: QuoteLineRow; c: ComparedLine }) {
   return (
     <span className="grid justify-items-end">
       <span className="num whitespace-nowrap text-base font-medium">
-        <span className="mr-1 font-sans text-sm font-regular text-fg-muted">{line.currency}</span>
+        <span className="font-sans text-sm font-regular text-fg-muted">{line.currency}</span>{' '}
         {formatAmount(line.unitPrice, 'always')}
       </span>
       <span className="text-sm text-fg-muted">{c.notCompared === 'unusable' ? 'not compared, rate too old' : 'not compared, no rate'}</span>
@@ -282,12 +283,8 @@ export function ItemsPanel({
   const nobodyAsked = inquiries.length === 0
   return (
     <DetailPanel
-      title={
-        <span className="inline-flex items-center gap-1">
-          Items and supplier prices
-          {!nobodyAsked ? <HowCompared /> : null}
-        </span>
-      }
+      title="Items and supplier prices"
+      tip={!nobodyAsked ? <HowCompared /> : null}
       dataSlot="items"
       meta={
         <>

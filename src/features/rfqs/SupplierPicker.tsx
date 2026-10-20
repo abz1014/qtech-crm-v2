@@ -133,7 +133,7 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
           <button
             type="button"
             aria-expanded={open}
-            aria-controls={panelId}
+            aria-controls={open ? panelId : undefined}
             aria-label={`Memory, ${s.name}`}
             onClick={() => setOpen(o => !o)}
             className="relative z-10 inline-flex h-6 shrink-0 items-center gap-1 rounded px-2 text-xs font-medium text-fg-2 hover:bg-selected"

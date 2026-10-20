@@ -96,14 +96,12 @@ export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHead
   const replied = inquiries.filter(i => i.lines.length > 0).length
   return (
     <DetailPanel
-      title={
-        <span className="inline-flex items-center gap-1">
-          Replies from suppliers
-          <InfoTip label="How to enter a reply">
-            Type the price for each item the supplier quoted, or tap Paste reply to read the message they sent. The currency follows the supplier, so there is nothing to pick. Nothing is
-            compared until it is saved.
-          </InfoTip>
-        </span>
+      title="Replies from suppliers"
+      tip={
+        <InfoTip label="How to enter a reply">
+          Type the price for each item the supplier quoted, or tap Paste reply to read the message they sent. The currency follows the supplier, so there is nothing to pick. Nothing is
+          compared until it is saved.
+        </InfoTip>
       }
       meta={`${replied} of ${inquiries.length} replied`}
       dataSlot="replies"

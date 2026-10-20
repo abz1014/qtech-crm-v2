@@ -106,14 +106,8 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
   const GRID = 'sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_72px_minmax(0,1.1fr)_minmax(0,1.4fr)]'
   return (
     <DetailPanel
-      title={
-        <span className="inline-flex items-center gap-1">
-          Quotations
-          {rows.length > 0 ? (
-            <InfoTip label="What revising does">Revising makes a new version under the same number. Earlier versions and their PDFs never change.</InfoTip>
-          ) : null}
-        </span>
-      }
+      title="Quotations"
+      tip={rows.length > 0 ? <InfoTip label="What revising does">Revising makes a new version under the same number. Earlier versions and their PDFs never change.</InfoTip> : null}
       dataSlot="quotations"
       actions={
         isOpen && rows.length > 0 ? (
