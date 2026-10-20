@@ -16,6 +16,7 @@ import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Radio, RadioGroup } from '@/ui/form/Radio'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { Skeleton } from '@/ui/Skeleton'
+import { NextStepBox } from '@/ui/NextStepBox'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
@@ -409,26 +410,20 @@ function PhoneSticky({ children }: { children: ReactNode }) {
  * supplier order's own row as a secondary button. With no button for this person, the sentence says what the order is waiting for.
  */
 function NextStep({ order, next, legs, engineers, onResolve }: { order: OrderHeader; next: NextForPage | null; legs: readonly OrderLegRow[]; engineers: readonly PersonRow[]; onResolve: () => void }) {
-  if (!next) {
-    return (
-      <section aria-label="Next step" aria-busy="true" className="mt-4 rounded border bg-sunken px-4 py-3 md:px-5">
-        <Skeleton className="h-5 w-72 max-w-full" />
-      </section>
-    )
-  }
+  if (!next) return <NextStepBox loading />
   const { primary, step, text } = next
   return (
-    <section aria-label="Next step" className={cn('mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded border px-4 py-3 md:px-5', primary ? 'border-line-strong bg-surface' : 'bg-sunken')}>
-      <p className="min-w-0 text-base">
-        <span className="mr-2 text-sm text-fg-muted">Next step</span>
-        <span className={cn('font-medium', step.tone === 'late' && 'text-tone-danger-fg', !primary && step.tone !== 'late' && 'font-regular text-fg-2')}>{text}</span>
-      </p>
-      {primary ? (
-        <PhoneSticky>
-          <PrimaryButton order={order} action={primary} legs={legs} engineers={engineers} onResolve={onResolve} />
-        </PhoneSticky>
-      ) : null}
-    </section>
+    <NextStepBox
+      text={text}
+      tone={step.tone === 'late' ? 'late' : primary ? 'action' : 'quiet'}
+      action={
+        primary ? (
+          <PhoneSticky>
+            <PrimaryButton order={order} action={primary} legs={legs} engineers={engineers} onResolve={onResolve} />
+          </PhoneSticky>
+        ) : null
+      }
+    />
   )
 }
 
