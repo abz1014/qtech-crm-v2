@@ -777,7 +777,7 @@ $$;
 -- ================================================================ D. month_end_check_details (0064): list and count agree
 -- month_end_status() counts fbr_pending as invoices with GST to deposit (gst_amount > 0, 0058); the detail also listed
 -- GST-exempt invoices, so a month could read "1 pending" over a list naming two invoices. The detail now uses the same
--- predicate. The amount is unchanged (an exempt invoice adds 0 GST). Everything else is as in 0064.
+-- predicate. The amount is unchanged (an exempt invoice adds 0 GST). Everything else is as in 0073 (voided payments left out).
 create or replace function public.month_end_check_details(p_month date)
 returns table (check_key text, detail jsonb)
 language sql
@@ -793,6 +793,7 @@ as $$
   bank_in as (
     select p.amount, p.received_on from public.payments_in p, b
     where p.paid_via = 'bank' and p.bank_month is null and p.received_on <= b.m_end
+      and p.voided_at is null
   ),
   bank_out as (
     select e.amount_pkr as amount, e.paid_on from public.expenses e, b
@@ -835,7 +836,7 @@ as $$
       and oc.costs_complete_at is null
       and ob.g > 0
       and (select coalesce(sum(p.amount), 0) from public.payments_in p
-           where p.order_id = o.id and p.received_on <= b.m_end) >= ob.g - 1
+           where p.order_id = o.id and p.received_on <= b.m_end and p.voided_at is null) >= ob.g - 1
   ),
   pending as (
     select r.number, r.invoice_date, r.gst_amount
