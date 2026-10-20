@@ -6,6 +6,7 @@ import { useMobileBarConfig, type MobileBarConfig } from '@/app/shell/MobileBarC
 import { AccountMenu } from '@/app/shell/AccountMenu'
 import { CAPTURE_LABEL } from '@/app/shell/TopBar'
 import { Button } from '@/ui/Button'
+import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
 import { CountBadge } from '@/ui/Tag'
 import { cn } from '@/lib/utils'
@@ -53,7 +54,7 @@ export function MobileBar({ user, title, onSearch, onCapture }: { user: SessionU
   return (
     <header data-mobile-bar="default" className="flex h-topbar items-center gap-1 border-b bg-surface pl-4 pr-2 md:hidden max-[399px]:pl-3">
       <NavLink to="/" aria-label="Q-Tech, home" className="mr-2 shrink-0 rounded max-[399px]:hidden">
-        <img src="/brand/logo-mark.png" alt="" width={28} height={28} className="block size-[28px]" />
+        <BrandImage name="logo-mark" alt="" width={28} height={28} className="block size-[28px]" />
       </NavLink>
       {/* Not a heading: every screen draws its own h1, and two h1s on a phone is wrong. */}
       <p className="line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-tight tracking-snug max-[399px]:text-sm">{config?.title ?? title}</p>

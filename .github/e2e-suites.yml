@@ -69,3 +69,27 @@ journeys: # weight=120 (installs poppler; also runs on every change under src/**
   - 'e2e/journeys/**'
 a11y: # weight=300 (axe strict, zoom bands, Tab sweeps, live regions, shortcuts; also runs on every change under src/** through `shared`)
   - 'e2e/a11y/**'
+verify-sales: # weight=150 (workflow verification; installs poppler)
+  - 'e2e/verify/sales/**'
+  - 'e2e/verify/support/**'
+verify-quotes: # weight=120 (workflow verification; installs poppler)
+  - 'e2e/verify/quotes/**'
+  - 'e2e/verify/support/**'
+verify-orders: # weight=130 (workflow verification; installs poppler)
+  - 'e2e/verify/order-flow/**'
+  - 'e2e/verify/support/**'
+verify-money: # weight=120 (workflow verification)
+  - 'e2e/verify/money-flow/**'
+  - 'e2e/verify/support/**'
+verify-books: # weight=150 (workflow verification)
+  - 'e2e/verify/books/**'
+  - 'e2e/verify/support/**'
+verify-admin: # weight=90 (workflow verification; installs poppler)
+  - 'e2e/verify/admin/**'
+  - 'e2e/verify/support/**'
+verify-roles: # weight=120 (workflow verification)
+  - 'e2e/verify/roles/**'
+  - 'e2e/verify/support/**'
+verify-resilience: # weight=120 (workflow verification)
+  - 'e2e/verify/resilience/**'
+  - 'e2e/verify/support/**'

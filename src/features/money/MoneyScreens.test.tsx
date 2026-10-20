@@ -9,6 +9,7 @@ import { GstRegisterPage } from '@/features/money/invoices/GstRegisterPage'
 import { RecordPaymentDialog } from '@/features/money/payments/RecordPaymentDialog'
 import { ReceivablesPage } from '@/features/money/payments/ReceivablesPage'
 import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
+import { receivablesListResult } from '@/test/receivablesFake'
 import { ToastProvider } from '@/ui/Toast'
 import { businessToday } from '@/lib/dates'
 
@@ -35,6 +36,8 @@ function db(extra: (c: FakeCall) => FakeResult | undefined = () => undefined) {
         const id = (c.ops[0]?.[1][0] as { p_order_id?: string } | undefined)?.p_order_id
         return { data: id ? receivables.filter(r => r.order_id === id) : receivables }
       }
+      case 'rpc:receivables_list':
+        return receivablesListResult(c, receivables, { companyName: () => 'Punjab Cement Ltd', invoiceNumbers: id => (id === 'o27' ? ['INV-2256'] : []) })
       case 'rpc:next_invoice_number':
         return { data: [{ next_number: 'INV-2312', last_number: 'INV-2311', last_date: '2026-11-25' }] }
       case 'rpc:stamp_tcs_sent':

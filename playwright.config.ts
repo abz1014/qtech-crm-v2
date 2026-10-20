@@ -111,10 +111,30 @@ import { defineConfig, devices } from '@playwright/test'
  *    and single-key shortcuts. Signed in once as the admin. Its axe runs strict (A11Y_STRICT=1, set by the suite itself), which also
  *    fails on the reliably-real "needs review" results (e2e/support/axe.ts). Known failures are test.fail() with a BUG id:
  *      E2E_SUITE=a11y npx playwright test --project=a11y
+ *  - verify-* (workflow verification, e2e/verify/): one suite per area (sales, quotes, orders, money, books, admin, roles, resilience). Each test
+ *    drives a whole workflow on screen and asserts the outcome twice: what the page shows (hand-computed figures) and what the database
+ *    holds (read with the local stack's service role, see e2e/verify/support/db.ts). Every visible word they look for is in ONE file,
+ *    e2e/verify/support/text.ts. A test that exposes a product bug is marked test.fail() with its BUG id and a one-line reason:
+ *      E2E_SUITE=db npx playwright test --project=verify-sales
  */
+/**
+ * The workflow-verification suites: project -> folder under e2e/verify/. A folder must not end in the name of an older suite's folder
+ * ('verify/orders/' would also match the 'orders' project's testMatch), hence 'order-flow' and 'money-flow'.
+ */
+const VERIFY_DIRS: Record<string, string> = {
+  'verify-sales': 'sales',
+  'verify-quotes': 'quotes',
+  'verify-orders': 'order-flow',
+  'verify-money': 'money-flow',
+  'verify-books': 'books',
+  'verify-admin': 'admin',
+  'verify-roles': 'roles',
+  'verify-resilience': 'resilience',
+}
+const VERIFY_SUITES = Object.keys(VERIFY_DIRS)
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES]
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 const GALLERY_PORT = 5199
 const AUTH_PORT = 4173
@@ -375,6 +395,22 @@ export default defineConfig({
         screenshot: 'only-on-failure',
       },
     },
+    // Workflow verification (e2e/verify/): whole workflows, asserted on screen and in the database. Long flows, so a longer timeout.
+    ...VERIFY_SUITES.map(name => ({
+      name,
+      testMatch: new RegExp(`verify/${VERIFY_DIRS[name]}/[^/]+\\.spec\\.ts$`),
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      timeout: 180_000,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://127.0.0.1:${AUTH_PORT}`,
+        viewport: { width: 1440, height: 900 },
+        // Messages are copied to the clipboard and read back, and replies are pasted from it, as a person would.
+        permissions: ['clipboard-read', 'clipboard-write'],
+        screenshot: 'only-on-failure' as const,
+      },
+    })),
     { name: 'w1440', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 1440, height: 900 } } },
     { name: 'w375', testMatch: /gallery\..*\.spec\.ts/, fullyParallel: true, use: { ...galleryUse, viewport: { width: 375, height: 812 } } },
   ],

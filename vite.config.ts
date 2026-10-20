@@ -72,7 +72,7 @@ export default defineConfig(({ command, mode }) => ({
               // App shell only: built JS, CSS, HTML, fonts, the favicons, the manifest and the two brand images the shell shows.
               // The install icons (192, 512, maskable 512, apple-touch-icon) are left out: the browser fetches them, online,
               // only when the app is installed, and they were a large share of the precache (performance audit 3.1).
-              globPatterns: ['index.html', 'assets/**/*.{js,css,woff2}', 'favicon.ico', 'favicon-32.png', 'manifest.webmanifest', 'brand/*.png'],
+              globPatterns: ['index.html', 'assets/**/*.{js,css,woff2}', 'favicon.ico', 'favicon-32.png', 'manifest.webmanifest', 'brand/*.{png,webp,avif}'],
               // The PDF renderer (react-pdf, about 1.5 MB raw / 500 KB brotli: the quotation and the supplier PO share it) is a lazy chunk
               // used by few screens and few people; it is fetched on demand, not precached, so every install and every deploy that changes it
               // does not cost each phone half a megabyte. Its file name follows whichever module the bundler picks to name the shared chunk
