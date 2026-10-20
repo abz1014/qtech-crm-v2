@@ -21,8 +21,8 @@ describe('phone tabs: the top bar counts as badges', () => {
       </MemoryRouter>,
     )
     const nav = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(nav).getByRole('link', { name: 'Today, 9 need you' })).toBeInTheDocument()
-    expect(within(nav).getByRole('link', { name: 'RFQs, 140 need you' })).toHaveTextContent('99+')
+    expect(within(nav).getByRole('link', { name: /^Today\s?, 9 need you$/ })).toBeInTheDocument()
+    expect(within(nav).getByRole('link', { name: /^RFQs\s?, 140 need you$/ })).toHaveTextContent('99+')
     expect(within(nav).getByRole('link', { name: 'Orders' }).querySelector('[data-needs-count]')).toBeNull()
     expect(within(nav).getByRole('link', { name: 'Companies' }).querySelector('[data-needs-count]')).toBeNull()
   })

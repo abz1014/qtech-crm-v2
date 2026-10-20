@@ -228,7 +228,7 @@ test.describe('toolbar: filter box, the one filter, nav counts', () => {
       if (w >= 1280) {
         // The top bar reads "RFQs <n>", named "RFQs, n need you": a count means "needs you", so n is the RFQ items on the
         // admin's own Today, never more than the open RFQs the board lists (its lede: "12 open · 4 need you · 3 overdue").
-        const link = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs, \d+ need you$/ })
+        const link = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs\s?, \d+ need you$/ })
         await expect(link).toBeVisible()
         const needs = Number(/^RFQs, (\d+)/.exec((await link.getAttribute('aria-label')) ?? '')?.[1])
         await expect(page.getByRole('radio', { name: 'All open' })).toBeChecked()
@@ -238,7 +238,7 @@ test.describe('toolbar: filter box, the one filter, nav counts', () => {
         expect(open).toBeGreaterThanOrEqual(6)
         expect(needs).toBeGreaterThan(0)
         expect(needs).toBeLessThanOrEqual(open)
-        await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Today, \d+ need you$/ })).toBeVisible()
+        await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Today\s?, \d+ need you$/ })).toBeVisible()
       } else {
         // A phone gets the same one filter as a select, not a strip that scrolls sideways; Mine or All is in the Filters sheet.
         await expect(page.getByRole('combobox', { name: 'Show RFQs' })).toBeVisible()

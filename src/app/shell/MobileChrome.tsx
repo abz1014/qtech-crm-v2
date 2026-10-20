@@ -103,7 +103,6 @@ export function BottomTabs({
           <NavLink
             key={item.key}
             to={item.path}
-            aria-label={count ? `${item.label}, ${count} need you` : undefined}
             className={({ isActive }) =>
               cn(
                 'relative grid min-h-touch min-w-0 justify-items-center content-center gap-[2px] py-2 text-xs font-medium',
@@ -117,9 +116,12 @@ export function BottomTabs({
                 <span className="relative">
                   <Icon icon={item.icon} size="lg" />
                   {/* Solid warning badge on the icon. Nothing for 0. The link's name says it in words ("RFQs, 4 need you"). */}
-                  <NeedsCount n={count} badge />
+                  <NeedsCount n={count} badge silent />
                 </span>
-                <span className="whitespace-nowrap">{item.label}</span>
+                <span className="whitespace-nowrap">
+                  {item.label}
+                  {count ? <span className="sr-only">{`, ${count} need you`}</span> : null}
+                </span>
               </>
             )}
           </NavLink>

@@ -31,12 +31,15 @@ export function NeedsCount({
   variant = 'warning',
   badge = false,
   sr,
+  silent = false,
   className,
 }: {
   n: number | null | undefined
   variant?: 'warning' | 'danger'
   badge?: boolean
   sr?: string
+  /** No screen-reader words here: the caller says them elsewhere (the phone tab puts them after its label). */
+  silent?: boolean
   className?: string
 }) {
   if (!n || n <= 0) return null
@@ -63,7 +66,7 @@ export function NeedsCount({
       >
         {shown}
       </span>
-      <span className="sr-only">{`, ${sr ?? `${n} need you`}`}</span>
+      {silent ? null : <span className="sr-only">{`, ${sr ?? `${n} need you`}`}</span>}
     </>
   )
 }

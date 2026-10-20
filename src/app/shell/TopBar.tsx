@@ -51,8 +51,8 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
             key={item.key}
             to={item.path}
             title={item.label}
-            // Spelled out so the name is exactly "RFQs, 4 need you" whatever the layout hides.
-            aria-label={counts?.[item.key] ? `${item.label}, ${counts[item.key]} need you` : undefined}
+            // No aria-label: the name is the label (sr-only when squeezed) then NeedsCount's words, "RFQs, 4 need you", so the
+            // visible text is always part of the name (axe label-content-name-mismatch).
             className={({ isActive }) =>
               cn(
                 'relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded px-2 text-sm font-medium transition-colors duration-fast ease-out xl:px-3',
