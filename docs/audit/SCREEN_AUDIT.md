@@ -70,13 +70,14 @@ all three users so every Today has items. Dates are relative to the day of the r
 
 ## How each number is taken
 
-All counts are of **visible** elements: a box larger than 1 px (so screen-reader-only text is out) that `checkVisibility()` passes.
+All counts are of **visible** elements: a box larger than 1 px that `checkVisibility()` passes and that no screen-reader-only clip
+(`sr-only`, as on "Skip to content") hides.
 "Fold" means some part is on screen without scrolling (inside the viewport and every scrolling ancestor). Text size is the default (no
 "Smaller text" preference).
 
 | Metric | Definition | Target |
 |---|---|---|
-| Primary buttons | Buttons and links in `<main>` drawn as the primary variant: class `bg-primary` (`src/ui/Button.tsx`), `data-variant="primary"`, or the primary background colour. The top bar's Capture button is counted apart ("in chrome") | at most 1 (plan step 2) |
+| Primary buttons | Buttons and links in `<main>` drawn as the primary variant: class `bg-primary` (`src/ui/Button.tsx`), `data-variant="primary"`, or the primary background colour; enabled ones only (a disabled primary is drawn grey and is listed apart, marked "disabled"). The top bar's Capture button is counted apart ("in chrome") | at most 1 (plan step 2) |
 | Header chips | Status chips inside the page header: the `<header>` that holds the page's `<h1>`, else a band from the `<h1>` to 96 px under it. A chip is a `StatusBadge` (`[data-status]`) or any small inline bordered rounded label (14 to 32 px tall, 1 to 48 characters, not a control, not `<kbd>`); nested chips count once | at most 2 (plan step 2) |
 | Characters at 14 px or more | Share of the visible characters whose computed font size is 14 px or larger (under 14, 14 to 15.9 and 16 and over are all recorded, with a per-size histogram) | at least 90% |
 | Sideways scroll | The document or `<main>` is wider than the viewport; the widest elements not inside their own scroller are listed | none |

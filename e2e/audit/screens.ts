@@ -75,6 +75,27 @@ async function press(page: Page, names: RegExp[], what: string): Promise<void> {
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+/**
+ * Types the company and chooses it. The list is searched as you type, so a click can land on a result that is about to be replaced
+ * (full run 39381813101: the click was lost and the list stayed open); the choice counts once the list has closed, else it is retried.
+ */
+async function pickCompany(page: Page, name: string): Promise<void> {
+  const combo = page.getByRole('combobox', { name: /company/i }).first()
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await combo.fill(name)
+    await settle(page)
+    await page.getByRole('option', { name: new RegExp(escape(name)) }).first().click()
+    const closed = await page
+      .getByRole('listbox')
+      .first()
+      .waitFor({ state: 'hidden', timeout: 4_000 })
+      .then(() => true)
+      .catch(() => false)
+    if (closed) return
+  }
+  throw new Error(`could not choose the company "${name}"`)
+}
+
 /** New RFQ, steps 1 to 4: items read from a pasted enquiry, suppliers, the message, sent. Wording covers the old and the plain-words names. */
 const newRfq: Visit = {
   id: 'rfq-new',
@@ -88,8 +109,7 @@ const newRfq: Visit = {
       for (const k of Object.keys(localStorage)) if (!k.startsWith('sb-')) localStorage.removeItem(k)
     })
     await open(page, '/rfqs/new')
-    await page.getByRole('combobox', { name: /company/i }).first().fill(fx.intake.customerName)
-    await page.getByRole('option', { name: new RegExp(escape(fx.intake.customerName)) }).first().click()
+    await pickCompany(page, fx.intake.customerName)
     // The screen listens for a paste anywhere; this is what Ctrl+V with nothing focused delivers.
     await page.evaluate(t => {
       const dt = new DataTransfer()

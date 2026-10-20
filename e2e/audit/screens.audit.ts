@@ -175,12 +175,13 @@ async function captureOne(page: Page, role: Role, visit: Visit, screen: string, 
   try {
     await waitForAnimationsToFinish(page)
     await page.evaluate(sel => {
-      document.querySelector<HTMLElement>('#main')?.scrollTo(0, 0)
+      const main = document.querySelector<HTMLElement>('#main')
+      main?.scrollTo(0, 0)
       window.scrollTo(0, 0)
-      if (sel) {
-        const el = document.querySelector(sel)
-        ;(el?.closest('section, article, [role="region"]') ?? el)?.scrollIntoView({ block: 'start' })
-      }
+      const el = sel ? document.querySelector(sel) : null
+      const target = el?.closest('section, article, [role="region"]') ?? el
+      // Scroll <main> only: scrollIntoView would also move the document and push the top bar off the screen.
+      if (main && target) main.scrollTop = target.getBoundingClientRect().top - main.getBoundingClientRect().top - 8
     }, opts.scrollTo ?? null)
     const metrics = await page.evaluate(collect, { phone: vp.width < 768 })
     const fold = join(dir, `${vp.name}-fold.png`)

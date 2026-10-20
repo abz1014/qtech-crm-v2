@@ -18,7 +18,10 @@ export interface Metrics {
   contentHeight: number
   /** Visible elements with role button or link. */
   actions: { total: number; aboveFold: number; buttons: number; links: number }
-  /** Primary-variant buttons and links (class bg-primary, data-variant="primary" or the primary background colour). */
+  /**
+   * Primary-variant buttons and links (class bg-primary, data-variant="primary" or the primary background colour). inMain counts the
+   * enabled ones in <main>; disabled ones (drawn grey) are counted in disabledInMain; the top bar's are inChrome.
+   */
   primary: { inMain: number; inMainAboveFold: number; disabledInMain: number; inChrome: number; labels: string[] }
   /** Status chips and tags: StatusBadge ([data-status]) and any small bordered inline label. Header = the page title's block. */
   chips: { total: number; aboveFold: number; header: number; headerMethod: string; headerLabels: string[] }
@@ -74,13 +77,31 @@ export function collect(opts: { phone: boolean }): Metrics {
     }
     return r
   }
+  // Screen-reader-only content (Tailwind sr-only: clip rect(0 0 0 0), or clip-path inset(50%)) on the element or an ancestor. Its box
+  // is not always 1 px: padding classes on the same element (the "Skip to content" link) make it bigger, but nothing is painted.
+  const srOnly = new Map<Element, boolean>()
+  const clippedAway = (el: Element | null): boolean => {
+    if (!el || el === document.body || el === document.documentElement) return false
+    let v = srOnly.get(el)
+    if (v === undefined) {
+      const s = style(el)
+      const zeroClip = s.position !== 'static' && /^rect\(\s*0(px)?[\s,]+0(px)?[\s,]+0(px)?[\s,]+0(px)?\s*\)$/.test(s.clip)
+      v = zeroClip || s.clipPath === 'inset(50%)' || clippedAway(el.parentElement)
+      srOnly.set(el, v)
+    }
+    return v
+  }
   const vis = new Map<Element, boolean>()
   const visible = (el: Element): boolean => {
     let v = vis.get(el)
     if (v === undefined) {
       const r = rect(el)
       const check = (el as HTMLElement & { checkVisibility?: (o: object) => boolean }).checkVisibility
-      v = r.width > 1 && r.height > 1 && (check ? check.call(el, { opacityProperty: true, visibilityProperty: true, checkOpacity: true, checkVisibilityCSS: true }) : true)
+      v =
+        r.width > 1 &&
+        r.height > 1 &&
+        (check ? check.call(el, { opacityProperty: true, visibilityProperty: true, checkOpacity: true, checkVisibilityCSS: true }) : true) &&
+        !clippedAway(el)
       vis.set(el, v)
     }
     return v
@@ -195,9 +216,14 @@ export function collect(opts: { phone: boolean }): Metrics {
       primary.inChrome++
       continue
     }
+    // A disabled primary is drawn grey (Button.tsx), so it is no competing green: counted apart, not in inMain.
+    if ((el as HTMLButtonElement).disabled || el.getAttribute('aria-disabled') === 'true') {
+      primary.disabledInMain++
+      primary.labels.push(`${label(el)} (disabled)`)
+      continue
+    }
     primary.inMain++
     if (fold) primary.inMainAboveFold++
-    if ((el as HTMLButtonElement).disabled || el.getAttribute('aria-disabled') === 'true') primary.disabledInMain++
     primary.labels.push(label(el))
   }
 
