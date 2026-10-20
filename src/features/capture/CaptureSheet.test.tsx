@@ -98,6 +98,26 @@ describe('Capture sheet: a retry after a half-done save does not write twice', (
   })
 })
 
+describe('Capture sheet: a button that cannot go yet says why (owner test 2026-10-20)', () => {
+  it('Continue to New RFQ needs no company: a PDF on its own goes straight on', async () => {
+    const pdf = { id: 'f2', file: new File(['%PDF-1.4'], 'enquiry.pdf', { type: 'application/pdf' }), originalSize: 8 }
+    const { cap } = show({ id: 'd1', source: 'drop', text: '', files: [pdf] })
+    fireEvent.click(await screen.findByRole('radio', { name: /Start a new RFQ/ }))
+    const go = screen.getByRole('button', { name: 'Continue to New RFQ' })
+    expect(go).toBeEnabled()
+    expect(screen.queryByTestId('capture-why')).toBeNull()
+    fireEvent.click(go)
+    await waitFor(() => expect(cap.close).toHaveBeenCalled())
+  })
+
+  it('offline: the button is disabled and the reason is beside it', async () => {
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    show({ id: 'd1', source: 'paste', text: 'Fluid is hot water', files: [] })
+    expect(await screen.findByTestId('capture-why')).toHaveTextContent('You’re offline')
+    online.mockRestore()
+  })
+})
+
 describe('Capture sheet: after a save the RFQs on offer are read again', () => {
   it('refetches the candidate list (answered questions must not be offered again)', async () => {
     rfqApi.uploadAttachment.mockReset().mockResolvedValue({ id: 'att-1', path: 'rfq-1/x.jpg' })

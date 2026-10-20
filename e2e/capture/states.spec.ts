@@ -152,7 +152,7 @@ for (const [name, size] of [
       await settle(page)
       await review(page, `capture-frame-destination-new-rfq-${name}`)
       await page.getByRole('option', { name: new RegExp(s.customer) }).click()
-      await expect(sheet(page).getByText('The new RFQ opens with this text and the company already filled in. Nothing is saved until you create the RFQ.')).toBeVisible()
+      await expect(sheet(page).getByText(/^Optional: you can choose the company on the next screen/)).toBeVisible()
       await expect(sheet(page).getByRole('button', { name: 'Continue to New RFQ' })).toBeEnabled()
       await expect(sheet(page).getByText('Search all RFQs')).toHaveCount(0)
     })

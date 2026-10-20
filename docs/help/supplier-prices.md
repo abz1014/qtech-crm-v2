@@ -2,12 +2,12 @@
 id: supplier-prices
 title: Enter a supplier's prices
 roles: sales, admin
-keywords: reply, offer, price, supplier, paste, lead time, currency, compare, no price
+keywords: reply, offer, price, supplier, paste, pdf, quotation, lead time, currency, compare, no price
 screens: /rfqs
 related: issue-quotation
 ---
 1. Open the RFQ. Find [Replies from suppliers].
-2. Tap [Paste reply], paste what the supplier sent, then tap [Read it].
+2. Tap [Paste reply], paste what the supplier sent, then tap [Read it]. A PDF quote? Tap [Read a PDF].
 3. Check the price, currency and lead time it read.
 4. Tap [Accept N prices].
 5. Or type each price in its box and tap [Save reply].

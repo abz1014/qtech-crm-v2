@@ -9,7 +9,8 @@ screens: /today, /rfqs, /orders
 2. Tap [Choose photos], or [Tap and hold here, then tap Paste] for copied text.
 3. Pick where it goes: [On which RFQ] or [On which order]. Search by customer if it is not listed.
 4. Tap [Save]. There are no other fields.
+5. A customer's PDF enquiry? Pick [Start a new RFQ], then [Continue to New RFQ]. The items are read from the PDF.
 
-Tip: No signal? It is kept on this phone. Save it when you are back online.
+Tip: The button grey? The reason is written beside it. No signal? It is kept on this phone.
 
 Safe to try: saved in the wrong place? Tap [Undo] on the message at the bottom.

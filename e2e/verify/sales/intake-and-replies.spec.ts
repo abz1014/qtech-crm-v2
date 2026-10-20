@@ -70,7 +70,6 @@ test.describe('the enquiry as it arrives', () => {
   })
 
   test('a WhatsApp chat copied with its "[time, date] Name:" prefixes gives the two items, without the prefixes or the greetings', async ({ browser }, info) => {
-    test.fail(true, 'BUG-SALES-1: chat prefixes are kept in the description, every message becomes an item, "0-10 m" is read as qty 10 m (src/features/rfqs/lib/parseItems.ts parsePaste)')
     const customer = await company('Verify WhatsApp Customer')
     const sales = await signedIn(browser, info, 'sales')
     const page = await open(sales, '/today')
@@ -86,7 +85,7 @@ test.describe('the enquiry as it arrives', () => {
       ].join('\n'),
     )
     await expect(page.getByRole('textbox', { name: SALES.intake.description(1) })).toBeVisible()
-    // SUSPECTED BUG: parsePaste has no rule for chat prefixes, so each message becomes an item with its timestamp and qty 1.
+    // Fixed (BUG-SALES-1): New RFQ reads pastes with parseEnquiry, which takes off WhatsApp Web's "[time, date] Name:" prefixes.
     expect(await rowsOnScreen(page)).toEqual([
       ['ultrasonic level transmitter 0-10 m', '2 nos'],
       ['pressure gauge 0-16 bar', '4 nos'],
@@ -95,7 +94,6 @@ test.describe('the enquiry as it arrives', () => {
   })
 
   test('an unmarked email with a signature block gives only the items, not the name, the job title or the phone number', async ({ browser }, info) => {
-    test.fail(true, 'BUG-SALES-2: signature lines (name, title, phone) become items (parseItems.ts, unmarked paste; audit E2)')
     const customer = await company('Verify Signature Customer')
     const sales = await signedIn(browser, info, 'sales')
     const page = await open(sales, '/today')
@@ -105,7 +103,7 @@ test.describe('the enquiry as it arrives', () => {
       ['Dear Sir,', 'Please quote the following:', 'Vortex flow meter DN100 - 2 nos', 'Magnetic level gauge 1500 mm - 1 no', 'Regards,', 'Muhammad Asif', 'Senior Procurement Engineer', '0300-1234567'].join('\n'),
     )
     await expect(page.getByRole('textbox', { name: SALES.intake.description(1) })).toBeVisible()
-    // SUSPECTED BUG (audit E2, still open): every unmarked line after the sign-off becomes an item.
+    // Fixed (BUG-SALES-2): nothing after the sign-off is an item (parseEnquiry).
     expect(await rowsOnScreen(page)).toEqual([
       ['Vortex flow meter DN100', '2 nos'],
       ['Magnetic level gauge 1500 mm', '1 no'],
