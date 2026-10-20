@@ -88,7 +88,7 @@ test.describe('phone platform', () => {
     await noSidewaysScroll(page)
 
     // Capture stays reachable from the shell (it keeps what is pasted on this phone).
-    await expect(page.getByRole('button', { name: 'Capture' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Paste or photo' })).toBeEnabled()
 
     // Signal returns: the banner goes without a reload or a sign-in.
     await context.setOffline(false)
