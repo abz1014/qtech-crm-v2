@@ -233,14 +233,14 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "city": string | null,"country": string | null,"created_at": string,"created_by": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"name": string,"notes": string | null,"updated_at": string
+                    "city": string | null,"country": string | null,"created_at": string,"created_by": string | null,"id": string,"invoice_address": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"name": string,"notes": string | null,"ntn": string | null,"sales_tax_registered": boolean | null,"strn": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name": string,"notes"?: string | null,"updated_at"?: string
+                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"invoice_address"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name": string,"notes"?: string | null,"ntn"?: string | null,"sales_tax_registered"?: boolean | null,"strn"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name"?: string,"notes"?: string | null,"updated_at"?: string
+                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"invoice_address"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name"?: string,"notes"?: string | null,"ntn"?: string | null,"sales_tax_registered"?: boolean | null,"strn"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {

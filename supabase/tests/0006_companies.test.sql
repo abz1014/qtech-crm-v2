@@ -6,8 +6,9 @@ select plan(74);
 
 -- ------------------------------------------------------------------ structure
 select columns_are('public', 'companies',
-  array['id', 'created_at', 'created_by', 'updated_at', 'name', 'country', 'notes', 'legacy_flags', 'legacy_source', 'city'],
-  'companies has the section 2.2 columns (city from A7, 0039)');
+  array['id', 'created_at', 'created_by', 'updated_at', 'name', 'country', 'notes', 'legacy_flags', 'legacy_source', 'city',
+        'ntn', 'strn', 'sales_tax_registered', 'invoice_address'],
+  'companies has the section 2.2 columns (city from A7, 0039; buyer tax details, 0072)');
 select columns_are('public', 'company_sites',
   array['id', 'created_at', 'created_by', 'company_id', 'name', 'address'],
   'company_sites has the section 2.3 columns');
