@@ -16,25 +16,15 @@ export function refetchOnReturn(query: Query): boolean {
 }
 
 /**
- * A save started with no connection (BUG-RES-1). A TypeError, like a failed fetch, so mapPgError gives the U07 sentence
- * "Check your connection and try again. Trying again will not create a duplicate." and the form offers Try again with the
- * same client request id.
- */
-export class OfflineSaveError extends TypeError {
-  constructor() {
-    super('Failed to fetch: offline, the save was not sent')
-    this.name = 'OfflineSaveError'
-  }
-}
-
-/**
  * Saves never wait silently for the network (BUG-RES-1, U07). TanStack's default networkMode 'online' pauses a mutation while
  * the onlineManager says offline: the dialog sat on "Saving" with nothing to say. Instead a save fails fast when there is
  * no connection (or no live session, see holdNetwork in connection.ts) and the form shows the plain sentence and Try
- * again; networkMode 'always' also stops a save that loses signal mid-flight from pausing instead of failing.
+ * again; networkMode 'always' also stops a save that loses signal mid-flight from pausing instead of failing. The refusal is a
+ * TypeError, like a failed fetch, so mapPgError gives the U07 sentence "Check your connection and try again. Trying again will
+ * not create a duplicate." and Try again reuses the same client request id. (Kept tiny: the initial-JS budget is tight.)
  */
 export function refuseOfflineSave(): void {
-  if (!onlineManager.isOnline()) throw new OfflineSaveError()
+  if (!onlineManager.isOnline()) throw new TypeError('offline')
 }
 
 /**

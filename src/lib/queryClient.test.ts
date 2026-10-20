@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { qk } from '@/features/queryKeys'
 import { holdNetwork } from '@/lib/connection'
 import { mapPgError } from '@/lib/pgErrors'
-import { FOCUS_REFETCH_MIN_AGE_MS, OfflineSaveError, queryClient, REFERENCE_STALE_MS, refetchOnReturn } from '@/lib/queryClient'
+import { FOCUS_REFETCH_MIN_AGE_MS, queryClient, REFERENCE_STALE_MS, refetchOnReturn } from '@/lib/queryClient'
 
 const aged = (ms: number) => ({ state: { dataUpdatedAt: Date.now() - ms } }) as unknown as Query
 
@@ -56,7 +56,7 @@ describe('a save never pauses silently offline (BUG-RES-1, U07)', () => {
     window.dispatchEvent(new Event('offline'))
     const sent = vi.fn(async () => 'saved')
     const err = await save(sent).catch((e: unknown) => e)
-    expect(err).toBeInstanceOf(OfflineSaveError)
+    expect(err).toBeInstanceOf(TypeError)
     expect(sent).not.toHaveBeenCalled()
     expect(mapPgError(err).message).toBe('Check your connection and try again. Trying again will not create a duplicate.')
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
@@ -66,7 +66,7 @@ describe('a save never pauses silently offline (BUG-RES-1, U07)', () => {
   it('no live session yet (network held): fails the same way instead of waiting', async () => {
     holdNetwork(true)
     const sent = vi.fn(async () => 'saved')
-    await expect(save(sent)).rejects.toBeInstanceOf(OfflineSaveError)
+    await expect(save(sent)).rejects.toBeInstanceOf(TypeError)
     expect(sent).not.toHaveBeenCalled()
   })
 
