@@ -5,8 +5,11 @@ export function commonCountry(rows: readonly Pick<CompanyListRow, 'country'>[] |
   if (!rows || rows.length < 5) return null
   const count = new Map<string, number>()
   for (const r of rows) {
+    // free text: count "Pakistan" and "pakistan" as one country (the first spelling seen is the one shown)
     const c = r.country?.trim()
-    if (c) count.set(c, (count.get(c) ?? 0) + 1)
+    if (!c) continue
+    const key = [...count.keys()].find(k => k.toLowerCase() === c.toLowerCase()) ?? c
+    count.set(key, (count.get(key) ?? 0) + 1)
   }
   const top = [...count.entries()].sort((a, b) => b[1] - a[1])[0]
   return top && top[1] / rows.length >= 0.5 ? top[0] : null

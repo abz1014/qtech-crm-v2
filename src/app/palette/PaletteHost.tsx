@@ -1,9 +1,11 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, CalendarCheck, Import, Plus } from 'lucide-react'
+import { Building2, CalendarCheck, ChartColumn, CircleAlert, HandCoins, Import, Landmark, Percent, Plus, Receipt, Settings, Wallet, type LucideIcon } from 'lucide-react'
 import { navItemsForRole } from '@/app/navConfig'
+import { settingsLinksFor } from '@/features/settings/settingsLinks'
 import { CaptureContext } from '@/app/capture/useCapture'
 import { PaletteContext, type PaletteApi } from '@/app/palette/usePalette'
+import { CAPTURE_LABEL } from '@/app/shell/TopBar'
 import { CommandPalette } from '@/ui/CommandPalette'
 import { Kbd } from '@/ui/Kbd'
 import { filterItems, type PaletteItem, type PaletteSource } from '@/ui/paletteSources'
@@ -11,6 +13,35 @@ import { filterItems, type PaletteItem, type PaletteSource } from '@/ui/paletteS
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
 const INTAKE_ROUTE = '/rfqs/new'
 const TODAY_ROUTE = '/today'
+
+/**
+ * Money pages Jump to finds by name (the Money tabs since ux/money-today). Admin and sales see Who owes us, Invoices & GST and
+ * Reports; the rest is admin only, as the Money tabs are. "Add expenses" opens the burst sheet straight away.
+ */
+const MONEY_PLACES: ReadonlyArray<{ id: string; label: string; href: string; icon: LucideIcon; roles: readonly string[]; meta?: string; keywords?: string[] }> = [
+  { id: 'money:receivables', label: 'Who owes us', href: '/money/receivables', icon: HandCoins, roles: ['admin', 'sales'], keywords: ['receivables', 'balances'] },
+  { id: 'money:gst', label: 'Invoices & GST', href: '/money/gst-register', icon: Receipt, roles: ['admin', 'sales'], keywords: ['gst register', 'invoices'] },
+  { id: 'money:reports', label: 'Reports', href: '/money/reports', icon: ChartColumn, roles: ['admin', 'sales'] },
+  { id: 'money:expenses', label: 'Expenses', href: '/money/expenses', icon: Wallet, roles: ['admin'] },
+  { id: 'money:burst', label: 'Add expenses', href: '/money/expenses?burst=1', icon: Plus, roles: ['admin'], meta: 'Action', keywords: ['money', 'burst'] },
+  { id: 'money:month-end', label: 'Month end', href: '/money/month-end', icon: CalendarCheck, roles: ['admin'] },
+  { id: 'money:bank', label: 'Match bank statement', href: '/money/month-end/bank', icon: Landmark, roles: ['admin'], keywords: ['bank tick'] },
+  { id: 'money:margins', label: 'Order margins', href: '/money/margins', icon: Percent, roles: ['admin'] },
+  { id: 'money:exceptions', label: 'Things to check', href: '/money/exceptions', icon: CircleAlert, roles: ['admin'], keywords: ['exceptions'] },
+]
+
+/**
+ * The places Jump to finds by name, besides the main destinations (audit: they were only in the avatar menu). Searched,
+ * not shown idle. The Settings pages come from the same list as the Settings menu (settingsLinks.ts), so a role is offered
+ * exactly what that menu offers; the Money pages follow the Money tabs' roles.
+ */
+function placesFor(role: string): PaletteItem[] {
+  return [
+    { id: 'settings', label: 'Settings', icon: Settings, meta: 'Go to', href: '/settings' },
+    ...settingsLinksFor(role).map(l => ({ id: `settings:${l.to}`, label: l.label, icon: l.icon, meta: 'Settings', href: l.to })),
+    ...MONEY_PLACES.filter(p => p.roles.includes(role)).map(p => ({ id: p.id, label: p.label, icon: p.icon, meta: p.meta ?? 'Money', keywords: p.keywords, href: p.href })),
+  ]
+}
 
 /** True when a key press belongs to something the person is typing into or a dialog they are in. */
 function isTypingContext(e: KeyboardEvent): boolean {
@@ -43,13 +74,10 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
   }, [])
 
   const goTo = useMemo<PaletteSource>(() => {
-    const items: PaletteItem[] = navItemsForRole(role).map(n => ({
-      id: n.key,
-      label: n.label,
-      icon: n.icon,
-      meta: 'Go to',
-      href: n.path,
-    }))
+    const items: PaletteItem[] = [
+      ...navItemsForRole(role).map(n => ({ id: n.key, label: n.label, icon: n.icon, meta: 'Go to', href: n.path })),
+      ...placesFor(role),
+    ]
     return {
       id: 'go-to',
       group: 'Jump to',
@@ -60,14 +88,15 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
 
   // Actions (A-89): idle rows in the palette, and the same keys work anywhere outside a text field: N, C, G then T.
   const actions = useMemo<PaletteSource>(() => {
-    const captureItem: PaletteItem = { id: 'capture', label: 'Capture', meta: 'Action', icon: Import, shortcut: ['C'], onSelect: () => openCapture?.() }
+    // "capture" and "paste" still find it: the old name, and the word people reach for.
+    const captureItem: PaletteItem = { id: 'capture', label: CAPTURE_LABEL, meta: 'Action', keywords: ['capture', 'paste'], icon: Import, shortcut: ['C'], onSelect: () => openCapture?.() }
     const items: PaletteItem[] = [
       { id: 'new-rfq', label: 'New RFQ', meta: 'Go to intake', icon: Plus, shortcut: ['N'], href: INTAKE_ROUTE },
       captureItem,
       { id: 'go-today', label: 'Go to Today', icon: CalendarCheck, shortcut: ['G T'], href: TODAY_ROUTE },
       { id: 'new-company', label: 'New company', icon: Building2, href: '/companies?new=1' },
     ]
-    // Typing "capture" still finds the Capture action; the other actions are idle-only (destinations answer typed text).
+    // Typing "paste", "photo" or "capture" finds the paste-or-photo action; the other actions are idle-only (destinations answer typed text).
     return { id: 'actions', group: 'Actions', order: 90, idle: () => items, search: q => filterItems([captureItem], q) }
   }, [openCapture])
 

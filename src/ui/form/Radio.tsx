@@ -34,8 +34,8 @@ export const Radio = forwardRef<ElementRef<typeof RadixRadio.Item>, RadioProps>(
   const auto = useId()
   const id = idProp ?? auto
   return (
-    <div className="flex items-start gap-3 text-sm leading-5">
-      <RadixRadio.Item ref={ref} id={id} aria-describedby={help ? `${id}-help` : undefined} className={cn(circle, 'mt-[1px]', className)} {...rest}>
+    <div className="flex items-start gap-3 text-sm">
+      <RadixRadio.Item ref={ref} id={id} aria-describedby={help ? `${id}-help` : undefined} className={cn(circle, 'mt-[calc((var(--lh-sm)-18px)/2)]', className)} {...rest}>
         {dot}
       </RadixRadio.Item>
       <div className="grid">
@@ -74,7 +74,7 @@ export const RadioCard = forwardRef<ElementRef<typeof RadixRadio.Item>, RadioPro
         id={id}
         disabled={disabled}
         aria-describedby={help ? `${id}-help` : undefined}
-        className={cn(circle, 'mt-[1px] focus-visible:outline-none')}
+        className={cn(circle, 'mt-[calc((var(--lh-sm)-18px)/2)] focus-visible:outline-none')}
         {...rest}
       >
         {dot}

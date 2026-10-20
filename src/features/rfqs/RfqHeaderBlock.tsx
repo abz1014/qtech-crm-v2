@@ -22,6 +22,7 @@ import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
+import { NextStepBox } from '@/ui/NextStepBox'
 import { ROLE_LABEL } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Avatar } from '@/ui/Avatar'
@@ -280,7 +281,7 @@ function PrimaryButton({ rfq, facts, size = 'md', className }: { rfq: RfqHeader;
  * button is in the sticky bar at the foot instead, so the box keeps the sentence. Closed: when and why, with Reopen and Mark won
  * (neither green). Won: the way to the order.
  */
-function NextStepBox({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions }) {
+function RfqNextStep({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions }) {
   const main = useMainActions(rfq, facts)
   const s = rfq.state
   const outcome = s?.outcome ?? 'open'
@@ -323,15 +324,7 @@ function NextStepBox({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFac
     text = nextStepSentence({ primary: facts.primary, sourcingState: s?.sourcing_state, bidState: s?.bid_state, itemCount: facts.itemCount, awaiting: facts.awaiting ?? 0 })
     action = quiet ? null : <PrimaryButton rfq={rfq} facts={facts} className="max-md:hidden" />
   }
-  return (
-    <section aria-label="Next step" className={cn('mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded border px-4 py-3 md:px-5', quiet ? 'bg-sunken' : 'border-line-strong bg-surface')}>
-      <p className="min-w-0 text-base">
-        <span className="mr-2 text-sm text-fg-muted">Next step</span>
-        <span className={cn('font-medium', quiet && 'font-regular text-fg-2')}>{text}</span>
-      </p>
-      {action}
-    </section>
-  )
+  return <NextStepBox text={text} tone={quiet ? 'quiet' : 'action'} action={action} />
 }
 
 // ------------------------------------------------------------------------------------------------ the meta strip
@@ -433,7 +426,7 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
         ) : null}
       </div>
 
-      <NextStepBox rfq={rfq} facts={facts} actions={actions} />
+      <RfqNextStep rfq={rfq} facts={facts} actions={actions} />
 
       <dl className="mt-4 grid grid-cols-2 divide-x divide-y rounded border bg-surface md:grid-cols-3 xl:grid-cols-6 [&>*]:border-line">
         <Meta icon={FileText} label="Customer ref" phone sub={`Received ${formatDay(rfq.receivedOn)}`}>

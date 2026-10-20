@@ -47,11 +47,11 @@ function shell(entries: string[], routes: ReactNode) {
 const where = () => screen.getByTestId('where').textContent
 
 describe('phone bar: the one-bar form', () => {
-  it('default: logo, title, search, Capture, avatar, and the tab bar', () => {
+  it('default: logo, title, search, Paste or photo, avatar, and the tab bar', () => {
     shell(['/rfqs'], null)
     expect(screen.getByRole('link', { name: 'Q-Tech, home' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Capture' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paste or photo' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Account menu/ })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument()
   })
@@ -63,7 +63,7 @@ describe('phone bar: the one-bar form', () => {
     expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Q-Tech, home' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Search' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Capture' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Paste or photo' })).toBeNull()
     expect(screen.queryByRole('button', { name: /Account menu/ })).toBeNull()
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull()
   })

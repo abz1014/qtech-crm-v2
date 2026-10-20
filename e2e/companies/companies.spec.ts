@@ -92,8 +92,42 @@ test.describe('inline create (FE-2: name only, three actions)', () => {
   })
 })
 
+test.describe('companies list search (audit F1)', () => {
+  test('finds a company by a contact name, or by a phone number written with 0 or with +92', async ({ page }) => {
+    const company = await createCompany(uniqueName('Search Contact Co'), { country: 'Pakistan', city: 'Hyderabad' })
+    const tag = Date.now().toString(36)
+    const contact = `Rukhsana${tag} Iqbal`
+    let local = ''
+    do local = String(1_000_000 + Math.floor(Math.random() * 8_999_999))
+    while (`333${local}`.includes('399')) // the saved key is "333" + local: "0399 <local>" below must match nothing of ours
+    await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: company.id, name: contact, phone: `+92 333 ${local}` } }))
+
+    await openAs(page, 'sales', '/companies')
+    await expect(page.getByRole('heading', { name: 'Companies', level: 1 })).toBeVisible()
+    const search = page.getByRole('textbox', { name: 'Search companies' })
+    await expect(search).toHaveAttribute('placeholder', 'Name, contact, phone or city')
+
+    await search.fill(`rukhsana${tag}`)
+    const row = page.getByRole('row', { name: new RegExp(company.name) })
+    await expect(row).toBeVisible()
+    await expect(row).toContainText(`Contact: ${contact}`)
+    await expect(row).toContainText('Hyderabad') // the city, not the country on every row
+    const companyRows = page.getByRole('row').filter({ has: page.getByRole('link') })
+    await expect(companyRows).toHaveCount(1)
+
+    await search.fill(`0333 ${local}`) // saved as +92 333 ..., typed the local way
+    await expect(page.getByRole('row', { name: new RegExp(company.name) })).toBeVisible()
+    await expect(companyRows).toHaveCount(1)
+    await review(page, 'companies-search-phone-1440')
+
+    await search.fill(`0399 ${local}`)
+    await expect(page.getByText('No company matches')).toBeVisible()
+    await expect(page.getByRole('button', { name: /Add “0399/ })).toHaveCount(0) // a number is not offered as a company name
+  })
+})
+
 test.describe('company page', () => {
-  test('a customer shows its sites with their RFQs, contacts and roles', async ({ page }) => {
+  test('a customer shows its sites with their RFQs, contacts and details', async ({ page }) => {
     const company = await createCompany(uniqueName('Page Customer'), { country: 'Pakistan', city: 'Karachi' })
     const site = (await must(rest<{ id: string }[]>('admin', 'company_sites', { method: 'POST', body: { company_id: company.id, name: 'Main plant', address: 'Plot 14, Landhi' } })))[0]
     await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: company.id, site_id: site.id, name: 'Naveed Akhtar', job_title: 'Finance' } }))
@@ -101,12 +135,18 @@ test.describe('company page', () => {
 
     await openAs(page, 'sales', `/companies/${company.id}`)
     await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
-    await expect(page.getByText('Customer', { exact: true }).first()).toBeVisible()
+    // An RFQ and no order yet: the derived role, said once, in the header chip.
+    await expect(page.getByRole('heading', { name: company.name, level: 1 })).toContainText('Prospect')
     await expect(page.getByRole('region', { name: 'Main plant' }).getByText(rfqRef(rfq.number))).toBeVisible()
     await expect(page.getByText('Karachi, Pakistan')).toBeVisible() // the place under the name: city, country
     await expect(page.getByText('Naveed Akhtar')).toBeVisible()
     await expect(page.getByRole('region', { name: 'Contacts' }).getByText('Finance')).toBeVisible() // the job title under the name
-    await expect(page.getByRole('region', { name: 'Roles' }).getByText('Customer since')).toBeVisible()
+    // Roles and Brands carried are one Details panel now (UX audit 9b); the role chip is said once, in the header.
+    const details = page.getByRole('region', { name: 'Details', exact: true })
+    await expect(details.getByText('Customer since')).toBeVisible()
+    await expect(details.getByText('Also a supplier')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Roles' })).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'Brands carried' })).toHaveCount(0) // a customer carries no brands
     await expect(page.getByRole('heading', { name: 'History' })).toHaveCount(0) // no placeholder panel: the mockup has none
     await expect(page.getByRole('heading', { name: 'Money with them' })).toHaveCount(0)
     await review(page, 'company-customer-1440')
@@ -116,7 +156,7 @@ test.describe('company page', () => {
     const company = await createCompany(uniqueName('History Customer'), { country: 'Pakistan' })
     const site = (await must(rest<{ id: string }[]>('admin', 'company_sites', { method: 'POST', body: { company_id: company.id, name: 'Main plant', address: 'Plot 14, Landhi' } })))[0]
     const supplier = await createCompany(uniqueName('History Supplier'))
-    // An open RFQ with a bid date, a closed one with a reason, and a delivered order.
+    // An open RFQ with a quotation due date, a closed one with a reason, and a delivered order.
     const open = await createRfq(company.id, { site_id: site.id, due_on: karachiDay(9) })
     await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: open.id, description: 'Furnace zone thermocouples and transmitters' } }))
     const closed = await createRfq(company.id, { site_id: site.id, closed_on: karachiDay(-1), close_reason: 'no_reply_to_clarification' })
@@ -129,7 +169,7 @@ test.describe('company page', () => {
     const siteRegion = page.getByRole('region', { name: 'Main plant' })
     await expect(siteRegion.getByRole('columnheader', { name: 'What' })).toBeVisible()
     await expect(siteRegion.getByText('Furnace zone thermocouples and transmitters')).toBeVisible()
-    await expect(siteRegion.getByText(/bid due \w{3} \d/)).toBeVisible() // weekday and day, as drawn
+    await expect(siteRegion.getByText(/quotation due \w{3} \d/)).toBeVisible() // weekday and day, as drawn
     await expect(siteRegion.getByText('Compressed air flow meters')).toBeVisible()
     await expect(siteRegion.getByText('+ 1 more')).toBeVisible()
     await expect(siteRegion.getByText('no reply from customer')).toBeVisible()
@@ -177,20 +217,39 @@ test.describe('company page', () => {
 
     await openAs(page, 'engineer', `/companies/${supplier.id}`)
     await expect(page.getByRole('heading', { name: supplier.name, level: 1 })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'What we know' })).toBeVisible()
-    await expect(page.getByText('Asked once · no replies')).toBeVisible()
-    await expect(page.getByText('Low data')).toBeVisible()
-    await expect(page.getByText('With so few enquiries the page shows facts only')).toBeVisible()
+    const what = page.getByRole('region', { name: 'What we know' })
+    await expect(what.getByText('Asked once · no replies')).toBeVisible()
+    await expect(page.getByTestId('supplier-record-line')).toHaveText('Asked once · no replies') // the same counts, once, under the name
     await expect(page.getByRole('row', { name: new RegExp(rfqRef(rfq.number)) })).toContainText('No reply')
-    expect(await page.getByRole('region', { name: 'What we know' }).innerText()).not.toMatch(/score|rating|rank|%/i)
+    expect(await what.innerText()).not.toMatch(/score|rating|rank|%/i)
+
+    // The useful history comes first: Recent quotes and Deliveries, then the counts, then every enquiry.
+    const top = async (name: string) => (await page.getByRole('heading', { name, level: 2, exact: true }).boundingBox())?.y ?? -1
+    const order = [await top('Recent quotes'), await top('Deliveries'), await top('What we know'), await top('Recent enquiries')]
+    expect(order.every(y => y >= 0)).toBe(true)
+    expect([...order].sort((a, b) => a - b)).toEqual(order)
+
+    // The rules behind the numbers are behind the (i), not printed on the page.
+    await expect(page.getByText('With so few enquiries')).toHaveCount(0)
+    await expect(page.getByText(/Where this comes from/)).toHaveCount(0)
+    await what.getByRole('button', { name: 'About these numbers' }).click()
+    await expect(page.getByRole('dialog', { name: 'About these numbers' })).toContainText('With so few enquiries these are facts, not a pattern.')
     await review(page, 'company-supplier-1440')
+    await page.keyboard.press('Escape')
+
+    // A supplier-only page's New RFQ (was "Float an RFQ here") opens a blank intake: it no longer puts the supplier in as the customer,
+    // and it is not the page's green button (the supplier's history is what this page is for).
+    await expect(page.getByRole('button', { name: 'New RFQ' })).not.toHaveClass(/bg-primary/)
+    await page.getByRole('button', { name: 'New RFQ' }).click()
+    await expect(page).toHaveURL(/\/rfqs\/new$/)
   })
 
   test('brands are carried by picking one or typing a new one', async ({ page }) => {
     const supplier = await createCompany(uniqueName('Brand Carrier'))
     const brand = uniqueName('Belimo')
     await openAs(page, 'sales', `/companies/${supplier.id}`)
-    const panel = page.getByRole('region', { name: 'Brands carried' })
+    // Brands carried lives inside the one Details panel of the side column (it was its own panel).
+    const panel = page.getByRole('region', { name: 'Details', exact: true }).getByRole('region', { name: 'Brands carried' })
     await panel.getByRole('button', { name: 'Add' }).click()
     await panel.getByRole('combobox', { name: 'Brand or product family' }).fill(brand)
     await page.getByRole('option', { name: new RegExp(`Add “${brand}” as a new brand`) }).click()

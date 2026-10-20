@@ -40,9 +40,10 @@ import {
  *
  *   /money/receivables?pay=1&order=<id>   opens Record payment for that order (admin)
  */
-// Gross and Settled fold away on a phone, and again between 1360 and 1439 px, where the reminder panel sits beside the table and the
-// Balance column carries the figure that matters; the table then fits without a sideways scroll. They show everywhere else.
-const GROSS_SETTLED = 'hidden md:table-cell min-[1360px]:hidden min-[1440px]:table-cell'
+// Gross and Settled fold away on a phone, and again between 1360 and 1535 px (1439 before the bigger text, DECISIONS 2026-10-19), where
+// the reminder panel sits beside the table and the Balance column carries the figure that matters; the table then fits without a
+// sideways scroll. They show everywhere else.
+const GROSS_SETTLED = 'hidden md:table-cell min-[1360px]:hidden min-[1536px]:table-cell'
 const DUE_WORD = (d: number) => `${d} ${d === 1 ? 'day' : 'days'}`
 
 export function ReceivablesPage() {
@@ -186,7 +187,7 @@ export function ReceivablesPage() {
           { label: 'Not invoiced yet', amount: totals.notInvoiced, sub: `${totals.notInvoicedCount} ${totals.notInvoicedCount === 1 ? 'order' : 'orders'}, balance from items` },
         ]}
       />
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 min-[1360px]:grid-cols-[minmax(0,1fr)_392px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 min-[1360px]:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0">
           <DataTable
             label={tabLabel}

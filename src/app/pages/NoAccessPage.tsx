@@ -9,7 +9,7 @@ import { EmptyState } from '@/ui/EmptyState'
 const WHO: Record<string, string> = { admin: 'admins', sales: 'sales', engineer: 'engineers' }
 
 /** What a person asks an admin for, per area. Anything not listed falls back to "access to <area>". */
-const NEED: Record<string, string> = { Money: 'to see invoices or receivables', Reports: 'to see reports' }
+const NEED: Record<string, string> = { Money: 'to see invoices or who owes us', Reports: 'to see reports' }
 
 function joinWords(words: string[]): string {
   return words.length < 2 ? (words[0] ?? '') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`

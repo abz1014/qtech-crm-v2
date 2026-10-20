@@ -135,3 +135,68 @@ export function formatStamp(at: Date): string {
 
 /** The default sentence under a table that failed to load, with the stamp and the request reference. */
 export const ERROR_MESSAGE = 'Your changes are safe. Check your connection and try again.'
+
+/** Row, two-line row and header heights in px, as DataTable's windowing uses them. */
+export interface RowMetrics {
+  row: number
+  tall: number
+  head: number
+}
+
+/** The normal-text density tokens: the fallback where computed custom properties are not available (jsdom). */
+export const DEFAULT_ROW_METRICS: Record<Density, RowMetrics> = {
+  comfortable: { row: 48, tall: 56, head: 40 },
+  compact: { row: 40, tall: 56, head: 40 },
+}
+
+/** Body rows checked for their drawn height: the window in view is enough, and it keeps the read cheap. */
+const SAMPLE_ROWS = 24
+
+/**
+ * The heights a table really draws, for windowing: the density tokens from the table's own computed style (--row-h,
+ * --row-h-tall, --head-h, so normal or smaller text, comfortable or compact, touch or mouse), raised to what the rows in
+ * view need. A row holding a small button needs more than the token: 36 px button + 12 px padding + 1 px hairline = 49
+ * (53 with a 40 px touch button). The need is measured from the cells' contents plus the cell padding and hairline, never
+ * from the row box itself: a windowed row is pinned to the previous reading, so its box would never let the height shrink
+ * when the text gets smaller. Phone cards ([data-card]) are not windowed and are left out. Anything unreadable falls back
+ * to DEFAULT_ROW_METRICS.
+ */
+export function readRowMetrics(
+  root: Element,
+  density: Density,
+  view: Pick<Window, 'getComputedStyle'> = window,
+  { rows: measureRows = true }: { rows?: boolean } = {},
+): RowMetrics {
+  const fallback = DEFAULT_ROW_METRICS[density]
+  const style = (el: Element) => (typeof view.getComputedStyle === 'function' ? view.getComputedStyle(el) : null)
+  const cs = style(root)
+  const token = (name: string, dflt: number) => {
+    const v = Number.parseFloat(cs?.getPropertyValue(name) ?? '')
+    return Number.isFinite(v) && v > 0 ? v : dflt
+  }
+  const num = (v: string | undefined) => {
+    const n = Number.parseFloat(v ?? '')
+    return Number.isFinite(n) ? n : 0
+  }
+  const rows = measureRows ? root.querySelectorAll('tbody > tr[data-di]:not([data-card])') : []
+  const firstCell = rows[0]?.querySelector('td')
+  const cellStyle = firstCell ? style(firstCell) : null
+  const around = num(cellStyle?.paddingTop) + num(cellStyle?.paddingBottom) + num(cellStyle?.borderBottomWidth)
+  let content = 0
+  for (let i = 0; i < rows.length && i < SAMPLE_ROWS; i++) {
+    for (const child of Array.from(rows[i].querySelectorAll(':scope > td > *'))) {
+      const h = child.getBoundingClientRect().height
+      if (h <= 0) continue // not laid out (or no layout engine): nothing to read, and no style lookup to pay for
+      // Margins count: the selection checkbox sits in a -12 px margin, 12 px padding box (a 44 px touch target) that adds no height.
+      const m = style(child)
+      content = Math.max(content, h + num(m?.marginTop) + num(m?.marginBottom))
+    }
+  }
+  const need = content > 0 ? Math.ceil(content + around - 0.01) : 0
+  const head = root.querySelector('thead > tr:last-child')?.getBoundingClientRect().height ?? 0
+  return {
+    row: Math.max(token('--row-h', fallback.row), need),
+    tall: Math.max(token('--row-h-tall', fallback.tall), need),
+    head: Math.max(token('--head-h', fallback.head), Math.ceil(head - 0.01)),
+  }
+}

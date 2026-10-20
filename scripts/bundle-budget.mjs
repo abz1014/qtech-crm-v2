@@ -1,9 +1,10 @@
-// Bundle budget gate (P04): fails if the initial JS of dist/ exceeds 300 KB gzipped, and reports the lazy PDF chunk and
-// the service-worker precache so a regression in either is visible in the CI summary. It also fails if the PDF reader
-// (pdf.js, src/lib/docread) lands in the first load or in the precache. Usage: node scripts/bundle-budget.mjs [distDir]
+// Bundle budget gate (P04): fails if the initial JS of dist/ exceeds the budget (bundle-budget.lib.mjs) gzipped, or if dist/ was built
+// without the Supabase client (an under-measuring build), and reports the lazy PDF chunk and the service-worker precache so a
+// regression in either is visible in the CI summary. It also fails if the PDF reader (pdf.js, src/lib/docread) lands in the
+// first load or in the precache. Usage: node scripts/bundle-budget.mjs [distDir]
 import { appendFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { INITIAL_JS_BUDGET_BYTES, initialJs, kb, largestLazyChunk, pdfjsInInitial, pdfReaderFiles, precacheSize } from './bundle-budget.lib.mjs'
+import { INITIAL_JS_BUDGET_BYTES, hasSupabaseClient, initialJs, kb, largestLazyChunk, pdfjsInInitial, pdfReaderFiles, precacheSize } from './bundle-budget.lib.mjs'
 
 const dist = resolve(process.argv[2] ?? 'dist')
 const listing = readdirSync(join(dist, 'assets')).map(f => `assets/${f}`)
@@ -30,6 +31,11 @@ const lines = [
 console.log(lines.join('\n'))
 if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`)
 
+if (!hasSupabaseClient(dist, initial)) {
+  console.error('\nFAIL: the initial JS has no Supabase client, so this build under-measures production by about 40 KB gzip.')
+  console.error('Build with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY set (dummy values are fine), as the CI build step does.')
+  process.exit(1)
+}
 if (initial.total.gzip > INITIAL_JS_BUDGET_BYTES) {
   console.error(`\nFAIL: initial JS is ${kb(initial.total.gzip)} gzipped, over the ${kb(INITIAL_JS_BUDGET_BYTES)} budget.`)
   process.exit(1)

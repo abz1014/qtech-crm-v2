@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 import { ArrowDown, ArrowUp, ChevronsUpDown, Download, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
@@ -21,7 +21,11 @@ import {
   formatStamp,
   sortRows,
   tableCsvRows,
+  DEFAULT_ROW_METRICS,
+  readRowMetrics,
   type Column,
+  type Density,
+  type RowMetrics,
   type SortState,
 } from '@/ui/dataTableModel'
 
@@ -38,7 +42,10 @@ export type { Column, Density, SortState } from '@/ui/dataTableModel'
  *
  * Performance: past `virtualAfter` rows (default 80) only the rows in view plus
  * an overscan are rendered, with spacer rows keeping the scroll height. Row
- * heights are fixed (40 / 32 / 48 and 36 for group rows) so no measuring is needed.
+ * heights come from the density tokens (--row-h, --row-h-tall, --head-h: 48 / 56 / 40 at normal text,
+ * 40 / 48 / 36 with smaller text, --row-h 40 or 32 when compact) read from the table's own computed style,
+ * raised to the tallest row in view (a row with a small button is 49), and read again when the text size, the
+ * pointer type or the window of rows changes (readRowMetrics in dataTableModel.ts).
  *
  * Phone cards: give `mobileRow` and, below 640px, each row is drawn as one stacked, tappable card
  * (whatever `mobileRow` returns) instead of table cells. The rows keep their keyboard focus, Enter to
@@ -56,8 +63,6 @@ export type { Column, Density, SortState } from '@/ui/dataTableModel'
  * Truncation: a column with `width` cuts long text with an ellipsis and shows the whole text in a tooltip.
  * Footer: "Showing 7 of 7 RFQs" (give `noun`, or your own `summary`) and the key legend, whenever rows can be focused.
  */
-const GROUP_H = 36
-const HEAD_H = 36
 const OVERSCAN = 8
 const PAGE = 10
 
@@ -106,7 +111,7 @@ export interface DataTableProps<T> {
   loading?: boolean
   /** title, message and the stamp have defaults ("Couldn’t load RFQs", "Your changes are safe...", the time the error first showed). */
   error?: { title?: string; message?: ReactNode; onRetry?: () => void; reference?: string; at?: Date } | null
-  /** The empty-state slot. Say what is true and what happens next ("Every bid is in"). */
+  /** The empty-state slot. Say what is true and what happens next ("Every quotation is sent"). */
   empty?: ReactNode
   /** Scroll height once virtualised. Default 70vh. */
   maxHeight?: string
@@ -199,15 +204,17 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const showPaisa = useMemo(() => new Map(columns.map(c => [c.id, columnShowsPaisa(c, rows)])), [columns, rows])
 
   // ---- windowing ----------------------------------------------------------
-  const coarse = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
-  const rowH = coarse || twoLine ? 48 : density === 'compact' ? 32 : 40
   const virtual = !cards && items.length > virtualAfter
+  const [metrics, remeasure] = useRowMetrics(rootRef, density, virtual)
+  const rowH = twoLine ? Math.max(metrics.tall, metrics.row) : metrics.row
+  const groupH = Math.max(36, metrics.row - 4)
+  const headH = metrics.head
   const offsets = useMemo(() => {
     const o = new Array<number>(items.length + 1)
     o[0] = 0
-    for (let i = 0; i < items.length; i++) o[i + 1] = o[i] + (items[i].t === 'group' ? GROUP_H : rowH)
+    for (let i = 0; i < items.length; i++) o[i + 1] = o[i] + (items[i].t === 'group' ? groupH : rowH)
     return o
-  }, [items, rowH])
+  }, [items, rowH, groupH])
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
@@ -235,9 +242,13 @@ export function DataTable<T>(props: DataTableProps<T>) {
       }
       return lo
     }
-    const y0 = Math.max(0, scrollTop - HEAD_H)
+    const y0 = Math.max(0, scrollTop - headH)
     return [Math.max(0, find(y0) - OVERSCAN), Math.min(items.length, find(y0 + viewH) + 1 + OVERSCAN)]
-  }, [virtual, items.length, offsets, scrollTop, viewH])
+  }, [virtual, items.length, offsets, scrollTop, viewH, headH])
+  // A new window of rows (scrolled, filtered, sorted) may hold a taller row: measure the rows now drawn.
+  useLayoutEffect(() => {
+    if (virtual) remeasure()
+  }, [virtual, first, items.length, remeasure])
 
   // ---- keyboard focus -----------------------------------------------------
   const [focusDi, setFocusDi] = useState(0)
@@ -258,10 +269,10 @@ export function DataTable<T>(props: DataTableProps<T>) {
     const el = scrollRef.current
     if (virtual && el) {
       const flat = dataFlat[next]
-      const top = HEAD_H + offsets[flat]
-      const bottom = HEAD_H + offsets[flat + 1]
+      const top = headH + offsets[flat]
+      const bottom = headH + offsets[flat + 1]
       let target = el.scrollTop
-      if (top < target + HEAD_H) target = top - HEAD_H
+      if (top < target + headH) target = top - headH
       else if (bottom > target + viewH) target = bottom - viewH
       if (target !== el.scrollTop) {
         el.scrollTop = target
@@ -447,7 +458,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     <tr
       key={key}
       data-row-kind={kind}
-      style={kind === 'group' && virtual ? { height: GROUP_H } : undefined}
+      style={kind === 'group' && virtual ? { height: groupH } : undefined}
       className={cn(
         kind === 'group'
           ? groupStyle === 'big'
@@ -694,7 +705,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
           <thead role={cards ? 'rowgroup' : undefined} className={cn(cards && 'sr-only')}>
             {columnBands && !cards ? (
               <tr className="hidden lg:table-row" data-testid="column-bands">
-                {selection ? <th aria-hidden="true" className="h-[28px] border-b border-line bg-sunken" /> : null}
+                {selection ? <th aria-hidden="true" className="h-[calc(var(--head-h)-8px)] border-b border-line bg-sunken" /> : null}
                 {(() => {
                   const out: ReactNode[] = []
                   let i = 0
@@ -704,13 +715,13 @@ export function DataTable<T>(props: DataTableProps<T>) {
                       const end = columns.findIndex(c => c.id === band.to)
                       const span = Math.max(1, (end < 0 ? i : end) - i + 1)
                       out.push(
-                        <th key={`band-${band.from}`} colSpan={span} scope="colgroup" className="h-[28px] whitespace-nowrap border-b border-l border-line bg-sunken px-[var(--cell-px)] text-left text-xs font-medium text-fg-muted">
+                        <th key={`band-${band.from}`} colSpan={span} scope="colgroup" className="h-[calc(var(--head-h)-8px)] whitespace-nowrap border-b border-l border-line bg-sunken px-[var(--cell-px)] text-left text-xs font-medium text-fg-2">
                           {band.label}
                         </th>,
                       )
                       i += span
                     } else {
-                      out.push(<td key={`gap-${columns[i].id}`} className="h-[28px] border-b border-line bg-sunken" />)
+                      out.push(<td key={`gap-${columns[i].id}`} className="h-[calc(var(--head-h)-8px)] border-b border-line bg-sunken" />)
                       i += 1
                     }
                   }
@@ -720,7 +731,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
             ) : null}
             <tr aria-rowindex={virtual ? 1 : undefined}>
               {selection ? (
-                <th className="sticky top-0 z-[1] h-[36px] w-10 border-b border-line bg-sunken px-[var(--cell-px)] first:pl-5 last:pr-5">
+                <th className="sticky top-0 z-[1] h-head w-10 border-b border-line bg-sunken px-[var(--cell-px)] first:pl-5 last:pr-5">
                   {checkbox(headState, () => setMany(ids, !allOn), 'Select all rows')}
                 </th>
               ) : null}
@@ -734,9 +745,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
                     aria-sort={dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : sortable ? 'none' : undefined}
                     style={c.width !== undefined ? { width: c.width } : undefined}
                     className={cn(
-                      'group sticky top-0 z-[1] h-[36px] whitespace-nowrap border-b border-line bg-sunken px-[var(--cell-px)] text-xs font-medium first:pl-5 last:pr-5',
+                      'group sticky top-0 z-[1] h-head whitespace-nowrap border-b border-line bg-sunken px-[var(--cell-px)] text-xs font-medium first:pl-5 last:pr-5',
                       alignRight(c) ? 'text-right' : 'text-left',
-                      dir ? 'text-fg' : 'text-fg-muted',
+                      dir ? 'text-fg' : 'text-fg-2',
                       hide(c),
                     )}
                   >
@@ -784,4 +795,33 @@ export function DataTable<T>(props: DataTableProps<T>) {
       ) : null}
     </div>
   )
+}
+
+/**
+ * The row, two-line row and header heights the table draws (readRowMetrics: the density tokens, raised to the tallest row
+ * in view), so the windowing maths matches the rows on screen. Read again when the density changes, when <html data-text>
+ * changes (the text-size setting), when the pointer turns coarse or fine (a 2-in-1 folded into a tablet), and on request
+ * (a new window of rows). Returns the metrics and that request.
+ */
+function useRowMetrics(rootRef: RefObject<HTMLDivElement>, density: Density, virtual: boolean): [RowMetrics, () => void] {
+  const [m, setM] = useState<RowMetrics>(() => DEFAULT_ROW_METRICS[density])
+  const read = useCallback(() => {
+    const el = rootRef.current
+    if (!el) return
+    // Only a windowed table needs the drawn rows; any other table just reads the tokens.
+    const next = readRowMetrics(el, density, window, { rows: virtual })
+    setM(prev => (prev.row === next.row && prev.tall === next.tall && prev.head === next.head ? prev : next))
+  }, [rootRef, density, virtual])
+  useLayoutEffect(() => {
+    read()
+    const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(read)
+    mo?.observe(document.documentElement, { attributes: true, attributeFilter: ['data-text'] })
+    const pointer = typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)') : null
+    pointer?.addEventListener?.('change', read)
+    return () => {
+      mo?.disconnect()
+      pointer?.removeEventListener?.('change', read)
+    }
+  }, [read])
+  return [m, read]
 }

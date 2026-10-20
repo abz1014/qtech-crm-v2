@@ -142,5 +142,5 @@ export async function performChase(spec: ChaseSpec): Promise<ChaseResult> {
 
 export function useRefreshAfterChase() {
   const client = useQueryClient()
-  return () => invalidateAfter(client, 'today.chase', {})
+  return () => invalidateAfter(client, 'today.chase', {}, { wait: 'all' })
 }

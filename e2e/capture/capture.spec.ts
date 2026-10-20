@@ -253,7 +253,7 @@ test.describe('desktop: paste and drop anywhere', () => {
   })
 })
 
-test.describe('iPhone: Capture button, paste, photo pick', () => {
+test.describe('iPhone: Paste or photo button, paste, photo pick', () => {
   test.use({ viewport: { width: 375, height: 812 } })
 
   test('Capture, Choose photos, Save: a photo answer with nothing typed', async ({ page }) => {
@@ -306,8 +306,8 @@ test.describe('iPhone: Capture button, paste, photo pick', () => {
     await page.keyboard.press('Escape')
     await expect(sheet(page)).toHaveCount(0)
     await page.keyboard.press('Control+k')
-    await page.getByRole('combobox').fill('captu')
-    await page.getByRole('option', { name: /Capture/ }).first().click()
+    await page.getByRole('combobox').fill('photo')
+    await page.getByRole('option', { name: /Paste or photo/ }).first().click()
     await expect(sheet(page)).toBeVisible()
   })
 })
@@ -377,7 +377,7 @@ for (const [name, size] of [
       await review(page, `capture-sheet-${name}`)
     })
 
-    test(`the empty sheet and the shell with the Capture button pass axe`, async ({ page }) => {
+    test(`the empty sheet and the shell with the Paste or photo button pass axe`, async ({ page }) => {
       const s = await seed()
       await ready(page, s.rfq.id)
       expect(await axeViolations(page)).toEqual([])

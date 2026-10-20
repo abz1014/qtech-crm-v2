@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
-import { invalidateAfter, invalidates, keysFor, type WriteName } from '@/features/invalidation'
+import { invalidateAfter, invalidates, isMoneyKey, keysFor, type WriteName } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
 
 const isPrefix = (prefix: readonly unknown[], key: readonly unknown[]) => prefix.every((p, i) => JSON.stringify(p) === JSON.stringify(key[i]))
@@ -138,16 +138,20 @@ describe('invalidation map (R01)', () => {
     expect(qk.settings.targetProgress(2026).slice(0, 2)).toEqual(qk.settings.targets())
   })
 
-  it('editing or removing a site or contact refreshes that company only; unlinking a brand also refreshes the roster', () => {
-    for (const w of ['site.update', 'site.remove', 'contact.update', 'contact.remove'] as const) {
+  it('editing or removing a site refreshes that company only; a contact or an unlinked brand also refreshes the roster (its search)', () => {
+    for (const w of ['site.update', 'site.remove'] as const) {
       expect(keysFor(w, { companyId: 'c1' })).toEqual([qk.companies.detail('c1')])
+    }
+    // the Companies search matches contact names and phones, so a saved contact is found at once
+    for (const w of ['contact.update', 'contact.remove'] as const) {
+      expect(keysFor(w, { companyId: 'c1' })).toEqual([qk.companies.detail('c1'), qk.companies.lists()])
     }
     expect(keysFor('brand.unlink', { companyId: 'c1' })).toEqual([qk.companies.detail('c1'), qk.companies.lists()])
   })
 
-  it('adding a site or contact refreshes that company only', () => {
+  it('adding a site refreshes that company only; adding a contact also refreshes the roster', () => {
     expect(keysFor('site.add', { companyId: 'c1' })).toEqual([qk.companies.detail('c1')])
-    expect(keysFor('contact.add', { companyId: 'c1' })).toEqual([qk.companies.detail('c1')])
+    expect(keysFor('contact.add', { companyId: 'c1' })).toEqual([qk.companies.detail('c1'), qk.companies.lists()])
   })
 
   it('invalidateAfter marks exactly those keys stale', async () => {
@@ -168,7 +172,9 @@ describe('invalidation map: stale screens found in review', () => {
     const client = new QueryClient()
     client.setQueryData(key, [])
     await invalidateAfter(client, name, vars)
-    return client.getQueryState(key)?.isInvalidated
+    // Money that no screen watches is dropped rather than marked (invalidation.ts): stronger than stale, the old figure is gone.
+    const state = client.getQueryState(key)
+    return state === undefined ? isMoneyKey(key) : state.isInvalidated
   }
 
   it('closing an RFQ from Today ("Close as no reply") takes it off the Today list', async () => {

@@ -3,22 +3,29 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Building2, Plus, X } from 'lucide-react'
 import { useCompanyList } from '@/features/companies/hooks'
 import type { CompanyListRow } from '@/features/companies/api'
+import { RoleChip } from '@/features/companies/CompanyParts'
+import { commonCountry } from '@/features/companies/commonCountry'
+import { listPlace } from '@/features/companies/companyMeta'
+import { matchCompany } from '@/features/companies/companySearch'
 import { CreateCompanyDialog } from '@/features/companies/CreateCompanyDialog'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
+import { InfoTip } from '@/ui/InfoTip'
 import { SegmentedControl } from '@/ui/SegmentedControl'
-import { StatusBadge } from '@/ui/StatusBadge'
 import { TableFilter } from '@/ui/TableFilter'
 import { useToast } from '@/ui/useToast'
 
 /*
  * Companies list (R02). One table of every company, customer or supplier, with the role derived from
- * what has happened (never typed). Search matches the name and country; the filter narrows by role.
- * "New company" opens the one-dialog inline create, and /companies?new=1 (the command palette's
- * "New company") opens it too.
+ * what has happened (never typed). Search matches the name, the city or country, a contact's name or a
+ * contact's phone number (companySearch.ts); the filter narrows by role. A row found through a contact
+ * says which one. "New company" opens the one-dialog inline create, and /companies?new=1 (the command
+ * palette's "New company") opens it too.
  */
 type Filter = 'all' | 'customers' | 'suppliers' | 'prospects'
+
+type Shown = CompanyListRow & { place: string | null; via: string | null }
 
 const matches: Record<Filter, (r: CompanyListRow) => boolean> = {
   all: () => true,
@@ -58,12 +65,18 @@ export function CompaniesPage() {
     }),
     [rows],
   )
-  const shown = useMemo(() => {
-    const words = text.toLowerCase().split(/\s+/).filter(Boolean)
-    return (rows ?? []).filter(r => matches[filter](r) && words.every(w => `${r.name} ${r.country ?? ''}`.toLowerCase().includes(w)))
+  const shown = useMemo<Shown[]>(() => {
+    const common = commonCountry(rows)
+    const out: Shown[] = []
+    for (const r of rows ?? []) {
+      if (!matches[filter](r)) continue
+      const hit = matchCompany(r, text)
+      if (hit) out.push({ ...r, place: listPlace(r.city, r.country, common), via: hit.contact })
+    }
+    return out
   }, [rows, filter, text])
 
-  const columns = useMemo<Column<CompanyListRow>[]>(
+  const columns = useMemo<Column<Shown>[]>(
     () => [
       {
         id: 'name',
@@ -72,21 +85,12 @@ export function CompaniesPage() {
         sortable: true,
         cell: r => (
           <div className="grid min-w-0 gap-px">
-            <Link to={`/companies/${r.id}`} className="truncate font-medium text-fg hover:underline">
-              {r.name}
-            </Link>
-            {r.country ? <span className="truncate text-xs text-fg-muted">{r.country}</span> : null}
+            <NameLink row={r} />
+            <PlaceLine row={r} />
           </div>
         ),
       },
-      {
-        id: 'role',
-        header: 'Role',
-        value: r => r.role,
-        sortable: true,
-        width: 160,
-        cell: r => (r.role ? <StatusBadge dimension="company-role" value={r.role} /> : <span className="text-xs text-fg-muted">No activity yet</span>),
-      },
+      { id: 'role', header: 'Role', value: r => r.role, sortable: true, width: 216, cell: r => <Role row={r} /> },
       { id: 'rfqs', header: 'RFQs', kind: 'num', value: r => r.rfqCount, sortable: true, width: 96, hideBelowMd: true },
       { id: 'orders', header: 'Orders', kind: 'num', value: r => r.orderCount, sortable: true, width: 96, hideBelowMd: true },
     ],
@@ -94,21 +98,18 @@ export function CompaniesPage() {
   )
 
   const clearSearch = text.trim() !== '' || filter !== 'all'
+  // A typed phone number is not a company name: offer "New company" then, not "Add “0301 5550142”".
+  // any script's letters make it a name (an Urdu name gets "Add …" too); a number alone is not offered as a company name
+  const typedName = /\p{L}/u.test(text) ? text.trim() : ''
 
   return (
     <div className="mx-auto grid w-full max-w-table content-start gap-4 px-4 pb-12 pt-6 md:px-8">
-      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="grid gap-1">
+      <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <div className="flex items-center gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Companies</h1>
-          <p className="text-sm text-fg-muted">
-            {list.isSuccess ? (
-              <>
-                <span className="num">{counts.all}</span> {counts.all === 1 ? 'company' : 'companies'}. Whether one is a customer or a supplier follows from what you do with it.
-              </>
-            ) : (
-              'Customers and suppliers in one list.'
-            )}
-          </p>
+          <InfoTip label="About roles">
+            Nobody sets a role by hand. An RFQ or an order makes a company a customer (a prospect until it orders); asking it for prices, ordering from it or listing a brand makes it a supplier.
+          </InfoTip>
         </div>
         <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
           New company
@@ -122,6 +123,16 @@ export function CompaniesPage() {
         columns={columns}
         rows={shown}
         getRowId={r => r.id}
+        twoLine
+        mobileRow={r => (
+          <div className="grid min-w-0 gap-1">
+            <NameLink row={r} />
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <PlaceLine row={r} />
+              <Role row={r} />
+            </div>
+          </div>
+        )}
         defaultSort={{ id: 'name', dir: 'asc' }}
         onRowOpen={r => navigate(`/companies/${r.id}`)}
         loading={list.isPending}
@@ -131,8 +142,9 @@ export function CompaniesPage() {
             : null
         }
         toolbar={
-          <div className="flex flex-wrap items-center gap-3">
-            <TableFilter label="Search companies" placeholder="Search by name or country" value={text} onChange={setText} className="sm:w-[320px]" />
+          // min-w-0: on a phone the filter scrolls inside its own track instead of pushing the search field past the edge.
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
+            <TableFilter label="Search companies" placeholder="Name, contact, phone or city" value={text} onChange={setText} className="sm:w-[320px]" />
             <SegmentedControl
               aria-label="Show"
               value={filter}
@@ -162,12 +174,12 @@ export function CompaniesPage() {
                     Clear search
                   </Button>
                   <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
-                    {text.trim() ? `Add “${text.trim()}”` : 'New company'}
+                    {typedName ? `Add “${typedName}”` : 'New company'}
                   </Button>
                 </>
               }
             >
-              Check the spelling, or add it as a new company. It takes one field.
+              No name, city, contact or phone number matches. Check the spelling, or add it as a new company.
             </EmptyState>
           ) : (
             <EmptyState
@@ -191,7 +203,7 @@ export function CompaniesPage() {
           setCreating(o)
           if (!o) setNewName('')
         }}
-        initialName={newName || text.trim()}
+        initialName={newName || typedName}
         onCreated={c => {
           toast({ title: `Added ${c.name}`, body: 'Open it to add sites, contacts and brands when you have them.', tone: 'success' })
           navigate(`/companies/${c.id}`)
@@ -199,4 +211,22 @@ export function CompaniesPage() {
       />
     </div>
   )
+}
+
+function NameLink({ row }: { row: Shown }) {
+  return (
+    <Link to={`/companies/${row.id}`} className="truncate font-medium text-fg hover:underline">
+      {row.name}
+    </Link>
+  )
+}
+
+/** The city (or "City, Country" abroad), and the contact a search found it through. */
+function PlaceLine({ row }: { row: Shown }) {
+  if (!row.place && !row.via) return null
+  return <span className="min-w-0 truncate text-sm text-fg-muted">{[row.place, row.via ? `Contact: ${row.via}` : null].filter(Boolean).join(' · ')}</span>
+}
+
+function Role({ row }: { row: Shown }) {
+  return row.role ? <RoleChip role={row.role} /> : <span className="text-sm text-fg-muted">No activity yet</span>
 }

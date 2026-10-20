@@ -1,37 +1,58 @@
 import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Info } from 'lucide-react'
-import { useCompanyBrands, useSupplierActivity, useSupplierBrandQuotes, useSupplierRecordView, useSupplierStats } from '@/features/companies/hooks'
-import { Deliveries, RecentQuotes } from '@/features/companies/SupplierRecordPanels'
-import { supplierFacts, type SupplierFacts } from '@/features/companies/supplierFacts'
+import { useSupplierActivity, useSupplierRecordView, useSupplierStats } from '@/features/companies/hooks'
+import { Deliveries, OutcomeChip, RecentQuotes } from '@/features/companies/SupplierRecordPanels'
+import { deliveryLine, factNotes, supplierFacts, type SupplierFacts } from '@/features/companies/supplierFacts'
 import type { SupplierEnquiry } from '@/features/companies/api'
-import { Fine, Panel, UnitChart, type Unit } from '@/features/companies/CompanyParts'
-import { OutcomeChip } from '@/features/companies/SupplierRecordPanels'
+import { CountText, Fine, Panel } from '@/features/companies/CompanyParts'
 import type { LastContactPart, SupplierRecord } from '@/features/companies/supplierRecord'
 import { businessToday } from '@/lib/dates'
-import { formatDay, formatShortDate } from '@/lib/formatDay'
+import { formatShortDate } from '@/lib/formatDay'
 import { rfqRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
-import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { Skeleton } from '@/ui/Skeleton'
 import { Tag } from '@/ui/Tag'
 
 /*
- * "What we know" (supplier side; g2-company.html boards 1 to 3). Facts derived from our own
- * enquiries, quotes and deliveries (v_supplier_stats, v_supplier_activity). Each rate carries its
- * counts, a measure appears only when there is enough behind it, imported history is marked wherever
- * it feeds a number, and nothing is scored or ranked (DATA_MODEL section 5c).
+ * The supplier's history, most useful first (UX audit 2026-10-19, 9b): what they quoted, how their deliveries went, then
+ * "What we know" as a few plain counts, then every enquiry. Facts come from our own enquiries, quotes and deliveries
+ * (v_supplier_stats, v_supplier_activity); each rate carries its counts, imported rows stay marked, nothing is scored or
+ * ranked (DATA_MODEL section 5c). The rules behind the numbers sit behind one (i) tip instead of on the page.
  */
 export function SupplierPanel({ companyId }: { companyId: string }) {
-  const stats = useSupplierStats(companyId)
-  const activity = useSupplierActivity(companyId)
-  const facts = useMemo(() => supplierFacts(stats.data ?? null), [stats.data])
   const record = useSupplierRecordView(companyId)
+  const activity = useSupplierActivity(companyId)
+  const retryRecord = () => void record.query.refetch()
 
-  if (stats.isPending) return <PanelSkeleton />
+  return (
+    <>
+      <RecentQuotes view={record.view} loading={record.query.isPending} error={record.query.isError} onRetry={retryRecord} enquiriesAnchor="enquiries" />
+      <Deliveries view={record.view} loading={record.query.isPending} error={record.query.isError} onRetry={retryRecord} today={record.today} />
+      <WhatWeKnow companyId={companyId} view={record.view} today={record.today} />
+      <EnquiryList rows={activity.data} loading={activity.isPending} error={activity.isError} onRetry={() => void activity.refetch()} />
+    </>
+  )
+}
+
+/** "What we know": the counts, one short row each. The squares and the rule-explaining sub-lines are gone; the tip holds the rules. */
+function WhatWeKnow({ companyId, view, today }: { companyId: string; view: SupplierRecord | null; today: string }) {
+  const stats = useSupplierStats(companyId)
+  const facts = useMemo(() => supplierFacts(stats.data ?? null), [stats.data])
+
+  if (stats.isPending) {
+    return (
+      <Panel title="What we know">
+        <div className="grid gap-3 p-5" aria-busy="true" aria-label="Loading what we know">
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      </Panel>
+    )
+  }
   if (stats.isError) {
     return (
       <Banner
@@ -49,163 +70,61 @@ export function SupplierPanel({ companyId }: { companyId: string }) {
   }
   if (!facts) return null
 
-  const tag = facts.provenance.importedOnly ? 'Imported history only' : facts.lowData ? 'Low data' : facts.provenance.hasImported ? 'Includes imported history' : null
-
   return (
-    <>
-      <Panel
-        title="What we know"
-        meta={facts.provenance.importedOnly ? 'From enquiries, quotes and deliveries, last 24 months' : facts.lowData ? 'From our own enquiries, quotes and deliveries' : 'From our own enquiries, quotes and deliveries, last 24 months'}
-        actions={tag ? <Tag dashed>{tag}</Tag> : null}
-        footer={<Provenance facts={facts} span={record.view?.span ?? null} />}
-      >
-        {facts.empty ? (
-          <div className="grid gap-1 px-5 py-6 text-sm">
-            <p className="font-medium text-fg">No enquiries yet.</p>
-            <Fine>Float an RFQ to this supplier and the facts appear here as the answers come in. Nothing needs typing.</Fine>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2">
-            <Section title="Brands" sub="Evidence we hold, not what the supplier claims." className="md:border-r">
-              <BrandFacts companyId={companyId} />
-            </Section>
-            <Section title="Enquiries" sub={<BoldCounts text={facts.enquirySummary} />} className="border-t md:border-t-0">
-              <EnquiryUnits facts={facts} />
-              <FactRows
-                rows={[
-                  { key: 'Usual reply time', value: <ReplyTime facts={facts} /> },
-                  { key: 'Chosen', value: <Chosen facts={facts} /> },
-                ]}
-              />
-            </Section>
-            <Section title="Deliveries" sub={deliverySub(facts)} className="border-t md:border-r">
-              <DeliveryUnits facts={facts} units={record.view?.deliveryUnits ?? null} />
-            </Section>
-            <Section title="Last contacted" className="border-t">
-              <FactRows rows={[{ key: facts.lastContact ? formatDay(facts.lastContact) : 'No contact', value: <LastContact facts={facts} what={record.view?.lastContact ?? null} importedOnly={facts.provenance.importedOnly} /> }]} />
-            </Section>
-          </div>
-        )}
-      </Panel>
-      <RecentQuotes
-        view={record.view}
-        loading={record.query.isPending}
-        error={record.query.isError}
-        onRetry={() => void record.query.refetch()}
-        enquiriesAnchor="enquiries"
-        meta={facts.provenance.importedOnly ? 'Imported rows are marked' : facts.lowData ? 'Everything we have from them' : 'Original currency first. "At the time" uses the rate captured when the quote was logged.'}
-      />
-      <Deliveries view={record.view} loading={record.query.isPending} error={record.query.isError} onRetry={() => void record.query.refetch()} today={record.today} />
-      <EnquiryList rows={activity.data} loading={activity.isPending} error={activity.isError} onRetry={() => void activity.refetch()} />
-    </>
-  )
-}
-
-function PanelSkeleton() {
-  return (
-    <Panel title="What we know">
-      <div className="grid gap-3 p-5" aria-busy="true" aria-label="Loading what we know">
-        <Skeleton className="h-4 w-1/3" />
-        <Skeleton className="h-6 w-1/2" />
-        <Skeleton className="h-4 w-2/3" />
-      </div>
+    <Panel
+      title="What we know"
+      info={
+        <InfoTip label="About these numbers">
+          <span className="grid gap-2">
+            {factNotes(facts, view?.span ?? null).map(n => (
+              <span key={n}>{n}</span>
+            ))}
+          </span>
+        </InfoTip>
+      }
+      meta={facts.lowData ? undefined : 'Last 24 months'}
+      actions={facts.provenance.importedOnly ? <Tag dashed>Imported only</Tag> : null}
+    >
+      {facts.empty ? (
+        <div className="grid gap-1 px-5 py-5 text-sm">
+          <p className="font-medium text-fg">No enquiries yet.</p>
+          <Fine>The counts start with the first RFQ they are asked about.</Fine>
+        </div>
+      ) : (
+        <dl className="grid sm:grid-cols-2">
+          <Fact label="Enquiries">
+            <CountText text={facts.enquirySummary} />
+          </Fact>
+          <Fact label="Deliveries">
+            <CountText text={deliveryLine(facts)} />
+          </Fact>
+          <Fact label="Usual reply time">
+            <ReplyTime facts={facts} />
+          </Fact>
+          <Fact label="Chosen">
+            {facts.chosen.kind === 'known' ? (
+              <>
+                <span className="num font-medium">{facts.chosen.chosen}</span> of <span className="num font-medium">{facts.chosen.of}</span> times
+              </>
+            ) : (
+              <span className="text-fg-muted">Nothing ordered yet</span>
+            )}
+          </Fact>
+          <Fact label="Last contacted" wide>
+            <LastContact facts={facts} what={view?.lastContact ?? null} today={today} />
+          </Fact>
+        </dl>
+      )}
     </Panel>
   )
 }
 
-function Section({ title, sub, children, className }: { title: string; sub?: ReactNode; children: ReactNode; className?: string }) {
+/** One fact: the label over the value. Two to a row from the small breakpoint; `wide` takes the whole row. */
+function Fact({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
   return (
-    <section className={cn('grid min-w-0 content-start gap-3 px-5 pb-5 pt-4', className)}>
-      <div className="grid gap-[2px]">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        {sub ? <p className="text-xs text-fg-muted">{sub}</p> : null}
-      </div>
-      {children}
-    </section>
-  )
-}
-
-function FactRows({ rows }: { rows: { key: string; value: ReactNode }[] }) {
-  return (
-    <div className="grid">
-      {rows.map(r => (
-        <div key={r.key} className="grid gap-x-3 border-t py-[9px] text-sm first:border-t-0 sm:grid-cols-[148px_minmax(0,1fr)]">
-          <span className="text-fg-muted">{r.key}</span>
-          <span className="min-w-0 text-pretty">{r.value}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function EnquiryUnits({ facts }: { facts: SupplierFacts }) {
-  if (facts.asked === 0) return <Fine>No enquiry is old enough to judge yet.</Fine>
-  const units: Unit[] = [
-    ...Array<Unit>(facts.quoted).fill('quoted'),
-    ...Array<Unit>(facts.declined).fill('declined'),
-    ...Array<Unit>(facts.waiting).fill('waiting'),
-  ]
-  return (
-    <UnitChart
-      units={units}
-      label={`${facts.asked} enquiries: ${facts.quoted} quoted, ${facts.declined} could not offer, ${facts.waiting} no reply`}
-      legend={[
-        { unit: 'quoted', text: 'quoted', count: facts.quoted },
-        { unit: 'declined', text: "couldn't offer", count: facts.declined },
-        { unit: 'waiting', text: 'no reply', count: facts.waiting },
-      ]}
-    />
-  )
-}
-
-function deliverySub(f: SupplierFacts) {
-  if (f.deliveries.kind !== 'known') return undefined
-  return `Late ${f.deliveries.late} of ${f.deliveries.total}${f.provenance.importedOnly ? ', dates estimated' : ''}`
-}
-
-/** "Asked 6 · replied 5 of 6": the counts are set in bold, as drawn. */
-function BoldCounts({ text }: { text: string }) {
-  return (
-    <>
-      {text.split(/(\d+)/).map((part, i) =>
-        /^\d+$/.test(part) ? (
-          <b key={i} className="num font-semibold text-fg-2">
-            {part}
-          </b>
-        ) : (
-          part
-        ),
-      )}
-    </>
-  )
-}
-
-function DeliveryUnits({ facts, units }: { facts: SupplierFacts; units: SupplierRecord['deliveryUnits'] | null }) {
-  const d = facts.deliveries
-  if (d.kind === 'none') {
-    return (
-      <Fine>
-        <span className="font-medium text-fg">No deliveries recorded yet.</span> The first PO to this supplier starts the count.
-      </Fine>
-    )
-  }
-  // One square per delivery. The squares come from the legs themselves when they add up to the stats row, so an imported
-  // on-time delivery can be drawn dashed ("on time, dates estimated"); otherwise from the stats' counts alone.
-  const fromLegs = units && units.ontime + units.late + units.estimatedOntime === d.total && units.late === d.late ? units : null
-  const onTime = fromLegs ? fromLegs.ontime : d.total - d.late
-  const estimated = fromLegs ? fromLegs.estimatedOntime : 0
-  return (
-    <div className="grid gap-2">
-      <UnitChart
-        units={[...Array<Unit>(onTime).fill('ontime'), ...Array<Unit>(estimated).fill('estimated'), ...Array<Unit>(d.late).fill('late')]}
-        label={`${d.total} deliveries: ${onTime + estimated} on time, ${d.late} late`}
-        legend={[
-          { unit: 'ontime', text: 'on time', count: onTime },
-          { unit: 'late', text: 'late', count: d.late },
-          { unit: 'estimated', text: 'on time, dates estimated', count: estimated },
-        ]}
-      />
-      {d.medianDaysLate !== null ? <Fine>Late ones usually ran about {Math.round(d.medianDaysLate)} days over.</Fine> : null}
+    <div className={cn('grid content-start gap-1 border-t px-5 py-3 first:border-t-0', wide ? 'sm:col-span-2' : 'sm:odd:border-r sm:[&:nth-child(2)]:border-t-0')}>
+      <dt className="text-sm text-fg-muted">{label}</dt>
+      <dd className="m-0 min-w-0 text-base text-pretty">{children}</dd>
     </div>
   )
 }
@@ -216,141 +135,33 @@ function ReplyTime({ facts }: { facts: SupplierFacts }) {
     return (
       <>
         About <span className="num font-medium">{r.days}</span> {r.days === 1 ? 'day' : 'days'}
-        <Fine>
-          Middle value of the <span className="num">{r.logged}</span> replies logged in this CRM.
-          {r.importedLeftOut > 0 ? (
-            <>
-              {' '}
-              <span className="num">{r.importedLeftOut}</span> imported {r.importedLeftOut === 1 ? 'reply has' : 'replies have'} no real date and {r.importedLeftOut === 1 ? 'is' : 'are'} left out.
-            </>
-          ) : null}
-        </Fine>
       </>
     )
   }
-  return (
-    <>
-      <span className="text-fg-muted">{r.importedOnly ? 'Not shown.' : 'Not enough replies yet.'}</span>
-      <Fine>
-        {r.importedOnly
-          ? 'Imported replies carry the import date, not the day the supplier answered. A real figure starts once 3 replies are logged here.'
-          : `Needs 3 logged replies. There ${r.logged === 1 ? 'is' : 'are'} ${r.logged}.`}
-      </Fine>
-    </>
-  )
+  return <span className="text-fg-muted">{r.importedOnly ? 'Not shown for imported replies' : 'Not enough replies yet'}</span>
 }
 
-function Chosen({ facts }: { facts: SupplierFacts }) {
-  const c = facts.chosen
-  if (c.kind === 'none') {
-    return (
-      <>
-        <span className="text-fg-muted">Nothing ordered yet.</span>
-        <Fine>No quoted item has gone to an order.</Fine>
-      </>
-    )
-  }
-  return (
-    <>
-      <span className="num font-medium">{c.chosen}</span> of <span className="num font-medium">{c.of}</span> times
-      <Fine>A quoted item was later ordered, and the order went on a leg with them.</Fine>
-    </>
-  )
-}
-
-/** "Enquiry sent for RFQ-0171. No reply yet." with the RFQ as a link; "Imported." marks an imported leg. */
-function LastContact({ facts, what, importedOnly }: { facts: SupplierFacts; what: LastContactPart[] | null; importedOnly: boolean }) {
-  if (!facts.lastContact) return <span className="text-fg-muted">Nothing recorded yet.</span>
-  if (!what) return <span>{importedOnly ? 'Imported.' : 'Contact on record.'}</span>
+/** "24 Oct · Enquiry sent for RFQ-0171. No reply yet." with the RFQ as a link. */
+function LastContact({ facts, what, today }: { facts: SupplierFacts; what: LastContactPart[] | null; today: string }) {
+  if (!facts.lastContact) return <span className="text-fg-muted">Nothing recorded yet</span>
   return (
     <span>
-      {what.map((p, i) =>
-        typeof p === 'string' ? (
-          <span key={i}>{p}</span>
-        ) : (
-          <Link key={i} to={`/rfqs/${p.rfqId}`} className="num rounded text-primary hover:underline" aria-label={`Open ${p.ref}`}>
-            {p.ref}
-          </Link>
-        ),
+      <span className="num">{formatShortDate(facts.lastContact, today)}</span>
+      {' · '}
+      {what ? (
+        what.map((p, i) =>
+          typeof p === 'string' ? (
+            <span key={i}>{p}</span>
+          ) : (
+            <Link key={i} to={`/rfqs/${p.rfqId}`} className="num rounded text-primary hover:underline" aria-label={`Open ${p.ref}`}>
+              {p.ref}
+            </Link>
+          ),
+        )
+      ) : (
+        <span>{facts.provenance.importedOnly ? 'Imported.' : 'Contact on record.'}</span>
       )}
     </span>
-  )
-}
-
-/** The brands and families they carry, each with how many times they quoted one of its items. A count, never a rating. */
-function BrandFacts({ companyId }: { companyId: string }) {
-  const carried = useCompanyBrands(companyId)
-  const counts = useSupplierBrandQuotes(companyId)
-  if (carried.isPending) return <Skeleton className="h-5 w-2/3" />
-  if (carried.isError) return <Fine>The brands did not load. Reload the page to try again.</Fine>
-  if (carried.data.length === 0) return <Fine>No brand listed yet. One is added by itself when they quote an item of it.</Fine>
-  return (
-    <ul className="grid">
-      {carried.data.map(b => {
-        const n = counts.data?.[b.brandId] ?? 0
-        return (
-          <li key={b.brandId} className="flex items-baseline justify-between gap-3 border-t py-[9px] text-sm first:border-t-0">
-            <span className="min-w-0 break-words font-medium">
-              {b.name}
-              {b.kind === 'family' ? <span className="sr-only"> (product family)</span> : null}
-            </span>
-            <span className="shrink-0 text-fg-muted">
-              {counts.isPending ? '' : n > 0 ? (
-                <>
-                  quoted <span className="num text-fg-2">{n}</span>×
-                </>
-              ) : (
-                'listed, no quote yet'
-              )}
-            </span>
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
-
-function monthYear(iso: string): string {
-  const M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${M[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`
-}
-
-/** Where the numbers come from: three variants (populated, low data, imported only), worded as in g2-company.html. */
-function Provenance({ facts, span }: { facts: SupplierFacts; span: { from: string; to: string } | null }) {
-  const p = facts.provenance
-  const hidden = p.pricesHidden > 0 ? (
-    <>
-      <span className="num">{p.pricesHidden}</span> {p.pricesHidden === 1 ? 'price is' : 'prices are'} hidden because {p.pricesHidden === 1 ? 'its' : 'their'} currency was never verified.{' '}
-    </>
-  ) : null
-  return (
-    <div className="flex items-start gap-3">
-      <Icon icon={Info} size="sm" className="mt-[1px]" />
-      {p.importedOnly ? (
-        <p className="text-pretty">
-          <b className="font-medium text-fg-2">All of this was imported from the old CRM{span ? `, ${monthYear(span.from)} to ${monthYear(span.to)}` : ''}.</b> {hidden}
-          Imported delivery dates are estimates, so lateness is indicative. Nothing has been logged here since the move.
-        </p>
-      ) : p.hasImported ? (
-        <p className="text-pretty">
-          <b className="font-medium text-fg-2">Where this comes from.</b> Counts are derived from enquiries, quote lines, purchase orders and delivery dates. Nothing here is typed in.{' '}
-          <b className="font-medium text-fg-2">Includes imported history:</b> <span className="num">{p.legacyAsked}</span> of <span className="num">{facts.asked}</span> enquiries came from the old CRM
-          {p.pricesHidden > 0 ? (
-            <>
-              , <span className="num">{p.pricesHidden}</span> {p.pricesHidden === 1 ? 'price is' : 'prices are'} hidden because the currency was never verified
-            </>
-          ) : null}
-          , and imported replies are left out of reply times.
-        </p>
-      ) : (
-        <p className="text-pretty">
-          <b className="font-medium text-fg-2">Where this comes from.</b>{' '}
-          {facts.lowData
-            ? 'Everything here was logged in this CRM. There is no imported history. With so few enquiries the page shows facts only, and no pattern is implied.'
-            : 'Counts are derived from enquiries, quote lines, purchase orders and delivery dates. Nothing here is typed in. Everything here was logged in this CRM.'}
-        </p>
-      )}
-    </div>
   )
 }
 
@@ -363,33 +174,21 @@ function EnquiryList({ rows, loading, error, onRetry }: { rows: SupplierEnquiry[
         id: 'rfq',
         header: 'RFQ',
         value: r => r.rfqNumber,
-        cell: r => (
-          <Link to={`/rfqs/${r.rfqId}`} className="rounded hover:underline">
-            <Tag>{r.rfqNumber ? rfqRef(r.rfqNumber) : 'RFQ'}</Tag>
-          </Link>
-        ),
+        cell: r => <RfqLink r={r} />,
         width: 130,
       },
       {
         id: 'outcome',
         header: 'Outcome',
         value: r => outcome(r, today).value,
-        cell: r => {
-          const o = outcome(r, today)
-          return (
-            <span className="inline-flex items-center gap-2">
-              <OutcomeChip outcome={o.value} label={o.label} />
-              {r.isLegacy ? <Tag dashed>Imported</Tag> : null}
-            </span>
-          )
-        },
+        cell: r => <OutcomeCell r={r} today={today} />,
       },
       {
         id: 'reply',
         header: 'Reply time',
         kind: 'num',
         value: r => (r.isLegacy ? null : r.replyDays),
-        cell: r => (r.isLegacy ? <span className="text-fg-muted">Not shown</span> : r.replyDays === null ? <span className="text-fg-muted">None yet</span> : <span className="num">{r.replyDays === 1 ? '1 day' : `${r.replyDays} days`}</span>),
+        cell: r => <ReplyDays r={r} />,
         hideBelowMd: true,
         width: 130,
       },
@@ -398,20 +197,57 @@ function EnquiryList({ rows, loading, error, onRetry }: { rows: SupplierEnquiry[
   )
   return (
     <div id="enquiries" className="scroll-mt-20">
-    <Panel title="Recent enquiries" meta="Every enquiry sent to them in the last 24 months">
-      <DataTable
-        label="Recent enquiries"
-        columns={columns}
-        rows={rows ?? []}
-        getRowId={r => r.inquiryId}
-        loading={loading}
-        error={error ? { title: "Couldn't load the enquiries", message: 'Nothing was changed.', onRetry } : null}
-        empty={<p className="px-5 py-6 text-sm text-fg-muted">No enquiry has been sent to this supplier yet.</p>}
-        density="compact"
-      />
-    </Panel>
+      <Panel title="Recent enquiries" meta="Last 24 months">
+        <DataTable
+          label="Recent enquiries"
+          columns={columns}
+          rows={rows ?? []}
+          getRowId={r => r.inquiryId}
+          loading={loading}
+          error={error ? { title: "Couldn't load the enquiries", message: 'Nothing was changed.', onRetry } : null}
+          empty={<p className="px-5 py-6 text-sm text-fg-muted">No enquiry sent to them yet.</p>}
+          mobileRow={r => (
+            <div className="grid gap-2">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <RfqLink r={r} />
+                <span className="num text-sm text-fg-muted">{formatShortDate(r.sentOn, today)}</span>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <OutcomeCell r={r} today={today} />
+                <span className="text-sm">
+                  <ReplyDays r={r} />
+                </span>
+              </div>
+            </div>
+          )}
+        />
+      </Panel>
     </div>
   )
+}
+
+function RfqLink({ r }: { r: SupplierEnquiry }) {
+  return (
+    <Link to={`/rfqs/${r.rfqId}`} className="rounded hover:underline">
+      <Tag>{r.rfqNumber ? rfqRef(r.rfqNumber) : 'RFQ'}</Tag>
+    </Link>
+  )
+}
+
+function OutcomeCell({ r, today }: { r: SupplierEnquiry; today: string }) {
+  const o = outcome(r, today)
+  return (
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <OutcomeChip outcome={o.value} label={o.label} />
+      {r.isLegacy ? <Tag dashed>Imported</Tag> : null}
+    </span>
+  )
+}
+
+function ReplyDays({ r }: { r: SupplierEnquiry }) {
+  if (r.isLegacy) return <span className="text-fg-muted">Not shown</span>
+  if (r.replyDays === null) return <span className="text-fg-muted">No reply yet</span>
+  return <span className="num">{r.replyDays === 1 ? '1 day' : `${r.replyDays} days`}</span>
 }
 
 function daysBetween(a: string, b: string) {

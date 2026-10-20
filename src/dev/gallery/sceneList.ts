@@ -24,6 +24,7 @@ export const SCENE_LIST = [
   { scene: 'overlays', group: 'Tooltip and Popover', label: 'Tooltip, menu and information popover' },
   { scene: 'tooltips', group: 'Tooltip and Popover', label: 'Tooltip variants: disabled why, long label, status, two lines' },
   { scene: 'infotip-open', group: 'Tooltip and Popover', label: 'InfoTip, open' },
+  { scene: 'shell', group: 'Shell', label: 'Top bar, phone bar and phone tabs (5 tabs, with counts)' },
 ] as const
 
 export type SceneName = (typeof SCENE_LIST)[number]['scene']

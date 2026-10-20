@@ -89,7 +89,7 @@ describe('every section 5 value has an entry', () => {
 
   it('maps the view outputs to the slugs the design uses', () => {
     expect(resolveStatus('sourcing', 'floated_awaiting').key).toBe('sourcing:awaiting')
-    expect(resolveStatus('sourcing', 'no_offer_anywhere').label).toBe('No offer anywhere')
+    expect(resolveStatus('sourcing', 'no_offer_anywhere').label).toBe('No price yet')
     expect(resolveStatus('tcs', 'delivered_to_client').key).toBe('tcs:delivered')
     expect(resolveStatus('fbr', 'receipt_received').key).toBe('fbr:receipt')
     expect(resolveStatus('invoicing', 'fully_invoiced').key).toBe('invoicing:full')
@@ -112,6 +112,23 @@ describe('every section 5 value has an entry', () => {
     expect([0, 30, 31, 60, 61, 90, 91].map(agingBucket)).toEqual([
       'aging:0-30', 'aging:0-30', 'aging:31-60', 'aging:31-60', 'aging:61-90', 'aging:61-90', 'aging:90-plus',
     ])
+  })
+})
+
+describe('labels use the plain-words glossary (DECISIONS 2026-10-19)', () => {
+  it('no chip says floated, bid, relay, covered, n/a, provisional or basis unknown', () => {
+    const jargon = /floated|\bbid\b|relay|covered|^n\/a$|provisional|basis unknown/i
+    expect(STATUS_ENTRIES.filter(([, , s]) => jargon.test(s.label)).map(([d, v, s]) => `${d}:${v} "${s.label}"`)).toEqual([])
+  })
+
+  it('reads the glossary words', () => {
+    expect(resolveStatus('sourcing', 'not_floated').label).toBe('Not sent to suppliers')
+    expect(resolveStatus('sourcing', 'floated_awaiting').label).toBe('Waiting for prices')
+    expect(resolveStatus('sourcing', 'covered').label).toBe('All priced')
+    expect(resolveStatus('bid', 'to_bid').label).toBe('To quote')
+    expect(resolveStatus('bid', 'bid_sent').label).toBe('Quotation sent')
+    expect(resolveStatus('trust', 'value_basis_unknown').label).toBe('Is GST included?')
+    expect(resolveStatus('costs', 'provisional').label).toBe('Not final')
   })
 })
 

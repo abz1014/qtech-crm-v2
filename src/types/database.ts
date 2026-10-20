@@ -233,14 +233,14 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "city": string | null,"country": string | null,"created_at": string,"created_by": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"name": string,"notes": string | null,"updated_at": string
+                    "city": string | null,"country": string | null,"created_at": string,"created_by": string | null,"id": string,"invoice_address": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"name": string,"notes": string | null,"ntn": string | null,"sales_tax_registered": boolean | null,"strn": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name": string,"notes"?: string | null,"updated_at"?: string
+                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"invoice_address"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name": string,"notes"?: string | null,"ntn"?: string | null,"sales_tax_registered"?: boolean | null,"strn"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name"?: string,"notes"?: string | null,"updated_at"?: string
+                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"invoice_address"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name"?: string,"notes"?: string | null,"ntn"?: string | null,"sales_tax_registered"?: boolean | null,"strn"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -687,14 +687,14 @@ isOneToOne: false
                   ]
                 },"month_snapshots": {
                   Row: {
-                    "adjust": NonNullable<Json>,"aging": NonNullable<Json>,"categories": NonNullable<Json>,"gst": Json | null,"month": string,"payables": NonNullable<Json>,"payments": NonNullable<Json>,"pnl": NonNullable<Json>,"status": NonNullable<Json>,"taken_at": string,"team": NonNullable<Json>,"via": NonNullable<Json>
+                    "adjust": NonNullable<Json>,"aging": NonNullable<Json>,"categories": NonNullable<Json>,"details": Json | null,"gst": Json | null,"month": string,"payables": NonNullable<Json>,"payments": NonNullable<Json>,"pnl": NonNullable<Json>,"status": NonNullable<Json>,"taken_at": string,"team": NonNullable<Json>,"via": NonNullable<Json>
                   }
                   ComputedFields: never
                   Insert: {
-                    "adjust": NonNullable<Json>,"aging": NonNullable<Json>,"categories": NonNullable<Json>,"gst"?: Json | null,"month": string,"payables": NonNullable<Json>,"payments": NonNullable<Json>,"pnl": NonNullable<Json>,"status": NonNullable<Json>,"taken_at"?: string,"team": NonNullable<Json>,"via": NonNullable<Json>
+                    "adjust": NonNullable<Json>,"aging": NonNullable<Json>,"categories": NonNullable<Json>,"details"?: Json | null,"gst"?: Json | null,"month": string,"payables": NonNullable<Json>,"payments": NonNullable<Json>,"pnl": NonNullable<Json>,"status": NonNullable<Json>,"taken_at"?: string,"team": NonNullable<Json>,"via": NonNullable<Json>
                   }
                   Update: {
-                    "adjust"?: NonNullable<Json>,"aging"?: NonNullable<Json>,"categories"?: NonNullable<Json>,"gst"?: Json | null,"month"?: string,"payables"?: NonNullable<Json>,"payments"?: NonNullable<Json>,"pnl"?: NonNullable<Json>,"status"?: NonNullable<Json>,"taken_at"?: string,"team"?: NonNullable<Json>,"via"?: NonNullable<Json>
+                    "adjust"?: NonNullable<Json>,"aging"?: NonNullable<Json>,"categories"?: NonNullable<Json>,"details"?: Json | null,"gst"?: Json | null,"month"?: string,"payables"?: NonNullable<Json>,"payments"?: NonNullable<Json>,"pnl"?: NonNullable<Json>,"status"?: NonNullable<Json>,"taken_at"?: string,"team"?: NonNullable<Json>,"via"?: NonNullable<Json>
                   }
                   Relationships: [
                     {
@@ -2088,6 +2088,9 @@ isOneToOne: false
 "lead_time_upper_days":
 { Args: { "p_text": string }; Returns: number
                            },
+"lookup_labels":
+{ Args: { "p_company_ids"?: (string)[],"p_leg_ids"?: (string)[],"p_order_ids"?: (string)[] }; Returns: Json
+                           },
 "merge_brands":
 { Args: { "p_drop": string,"p_keep": string }; Returns: undefined
                            },
@@ -2156,6 +2159,16 @@ isOneToOne: false
                            },
 "receipt_locked":
 { Args: { "p_bucket": string,"p_name": string }; Returns: boolean
+                           },
+"receivables_list":
+{ Args: { "p_company_id"?: string,"p_order_id"?: string,"p_state"?: string,"p_with_value"?: boolean }; Returns: {
+              "balance": number,"company_id": string,"company_name": string,"data_trust": string,"due_on": string,"gross_target": number,"invoice_numbers": (string)[],"is_overdue": boolean,"last_reminded_on": string,"order_id": string,"order_number": number,"overpaid_by": number,"owner_id": string,"payment_state": string,"reminder_count": number,"settled": number
+            }[]
+                           },
+"receivables_summary":
+{ Args: { "p_today"?: string }; Returns: {
+              "gross": number,"not_invoiced": number,"not_invoiced_count": number,"not_yet_due": number,"not_yet_due_count": number,"open_count": number,"outstanding": number,"overdue": number,"overdue_count": number,"reminder_due_count": number,"settled": number,"settled_count": number
+            }[]
                            },
 "reopen_month":
 { Args: { "p_month": string,"p_note"?: string }; Returns: undefined
@@ -2230,6 +2243,11 @@ isOneToOne: false
                            },
 "supplier_median_delivery_days":
 { Args: { "p_supplier_id": string }; Returns: number
+                           },
+"today_inquiry_facts":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "answered_on": string,"answers_to_relay": number,"chase_count": number,"inquiry_id": string,"last_chased_by": string,"last_chased_on": string,"median_reply_days": number,"replied": number,"response_state": string,"rfq_id": string,"sent_on": string,"supplier_id": string,"supplier_name": string
+            }[]
                            },
 "today_pkt":
 { Args: { "ts"?: string }; Returns: string

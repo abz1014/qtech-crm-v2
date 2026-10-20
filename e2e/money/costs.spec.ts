@@ -80,7 +80,7 @@ test.describe('Margin panel on the order page (admin)', () => {
     const o = await seedOrder()
     await openAs(page, 'admin', `/orders/${o.id}`)
     const panel = page.getByRole('region', { name: 'Margin' })
-    await expect(panel.getByText('Provisional', { exact: true }).first()).toBeVisible()
+    await expect(panel.getByText('Not final', { exact: true }).first()).toBeVisible()
 
     // Supplier price x today's rate: 2 x EUR 100 x 300 = PKR 60,000; the line with no supplier price is counted, not guessed.
     const estimate = panel.getByTestId('cost-estimate')
@@ -222,7 +222,7 @@ test.describe('who sees money', () => {
         if (MONEY.test(r.url())) seen.push(`${r.method()} ${r.url()}`)
       })
       await openAs(page, role, `/orders/${o.id}`)
-      await expect(page.getByText(ordRef(o.number)).first()).toBeVisible()
+      await expect(page.locator('#main').getByText(ordRef(o.number)).first()).toBeVisible()
       await page.waitForLoadState('networkidle')
       await expect(page.getByRole('region', { name: 'Margin' })).toHaveCount(0)
       for (const path of ['/money/margins', '/money/exceptions']) {

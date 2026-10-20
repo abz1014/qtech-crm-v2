@@ -125,7 +125,9 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
     await expect(legLoc(page, 'A')).toBeVisible()
     await expect(page.getByRole('region', { name: 'Commissioning' })).toBeVisible()
     await expect(page.getByTestId('order-notes')).toContainText('Gate pass needed 2 days ahead.')
-    for (const header of ['Unit net', 'Line gross', 'Supplier unit price']) await expect(page.getByRole('columnheader', { name: new RegExp(header) })).toHaveCount(0)
+    for (const header of ['Unit price', 'Total']) await expect(page.getByRole('columnheader', { name: new RegExp(header) })).toHaveCount(0)
+    // the page leads with the engineer's job: the site and the one green button
+    await expect(page.getByRole('region', { name: 'Your job' })).toBeVisible()
     await expect(page.getByRole('button', { name: /Issue PO|Record payment|Create invoice|Add expense/ })).toHaveCount(0)
     await noMoneyOnScreen(page, 'the order page')
   })
@@ -168,7 +170,7 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
 
   await test.step('goods delivered: 1 tap', async () => {
     await resetCount(page)
-    await legLoc(page, 'A').getByRole('button', { name: 'Delivered today, leg A' }).click()
+    await legLoc(page, 'A').getByRole('button', { name: `Delivered today, ${s.supplier.name}` }).click()
     await expect.poll(async () => (await must(rest<{ delivered_on: string | null }[]>('admin', `supplier_orders?id=eq.${s.leg}&select=delivered_on`)))[0].delivered_on).toBe(karachiDay(0))
     fe2('Mark the goods delivered', (await readCount(page)).mouse, 1)
     await expect(page.getByRole('button', { name: /Received today/ })).toHaveCount(0) // there is no Received step

@@ -144,27 +144,27 @@ export function useUpdateCategory() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (v: { id: string; patch: api.CategoryPatch }) => api.updateCategory(v.id, v.patch),
-    onSuccess: () => invalidateAfter(client, 'category.save', {}),
+    onSuccess: () => invalidateAfter(client, 'category.save', {}, { wait: 'all' }),
   })
 }
 export function useCreateCategory() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (v: { name: string; grp: CategoryGroup; default_paid_via: PaidVia; sort: number }) => api.createCategory(v),
-    onSuccess: () => invalidateAfter(client, 'category.save', {}),
+    onSuccess: () => invalidateAfter(client, 'category.save', {}, { wait: 'all' }),
   })
 }
 export function useReorderCategories() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (changes: readonly { id: string; sort: number }[]) => api.reorderCategories(changes),
-    onSuccess: () => invalidateAfter(client, 'category.save', {}),
+    onSuccess: () => invalidateAfter(client, 'category.save', {}, { wait: 'all' }),
   })
 }
 export function useDeleteCategory() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api.deleteCategory(id),
-    onSuccess: () => invalidateAfter(client, 'category.save', {}),
+    onSuccess: () => invalidateAfter(client, 'category.save', {}, { wait: 'all' }),
   })
 }

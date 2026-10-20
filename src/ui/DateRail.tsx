@@ -12,7 +12,7 @@ export type { DateRailState } from '@/ui/dateRailModel'
  *   due-soon   warning (the Today pane)
  *   due-today  danger; the label flips to the left of the marker near the end
  *   overdue    the track turns red and the label says how late
- *   done       success; names the day it was done ("Bid sent Wed 25 Nov")
+ *   done       success; names the day it was done ("Quotation sent Wed 25 Nov")
  *   no-date    a dashed line and an honest label, no invented date
  * Dates are always real days ("Tue 1 Dec"), never "in a few days". The fill draws once from the left
  * (reduced motion: no draw-in, through the duration token). Pass `state` to force one, for example the Today
@@ -20,12 +20,12 @@ export type { DateRailState } from '@/ui/dateRailModel'
  * the due day, due-today on it, due-soon within 4 days, on-track before that.
  */
 const TONE: Record<DateRailState, { fg: string; dot: string }> = {
-  'on-track': { fg: 'text-fg-muted', dot: 'bg-fg-muted' },
+  'on-track': { fg: 'text-fg-2', dot: 'bg-fg-muted' },
   'due-soon': { fg: 'text-tone-warning-fg', dot: 'bg-tone-warning-fg' },
   'due-today': { fg: 'text-tone-danger-fg', dot: 'bg-tone-danger-fg' },
   overdue: { fg: 'text-tone-danger-fg', dot: 'bg-tone-danger-fg' },
   done: { fg: 'text-tone-success-fg', dot: 'bg-tone-success-fg' },
-  'no-date': { fg: 'text-fg-muted', dot: 'bg-fg-muted' },
+  'no-date': { fg: 'text-fg-2', dot: 'bg-fg-muted' },
 }
 
 export interface DateRailProps {
@@ -41,13 +41,13 @@ export interface DateRailProps {
   state?: DateRailState
   /** The word before the start date. Default "Asked". */
   startLabel?: string
-  /** The word before the due date. Default "Bid due". */
+  /** The word before the due date. Default "Quotation due". */
   dueLabel?: string
-  /** The word before the done date. Default "Bid sent". */
+  /** The word before the done date. Default "Quotation sent". */
   doneLabel?: string
   /** Replaces the marker label ("Today · 17:00"). */
   todayLabel?: string
-  /** The marker label with no date. Default "No bid date on this RFQ". */
+  /** The marker label with no date. Default "No quotation date on this RFQ". */
   noDateLabel?: string
   /** The rail repeats what the page already says in words: hide it from assistive tech. */
   decorative?: boolean
@@ -61,10 +61,10 @@ export function DateRail({
   doneOn,
   state,
   startLabel = 'Asked',
-  dueLabel = 'Bid due',
-  doneLabel = 'Bid sent',
+  dueLabel = 'Quotation due',
+  doneLabel = 'Quotation sent',
   todayLabel,
-  noDateLabel = 'No bid date on this RFQ',
+  noDateLabel = 'No quotation date on this RFQ',
   decorative,
   className,
 }: DateRailProps) {
@@ -92,11 +92,11 @@ export function DateRail({
       data-rail-state={st}
       aria-hidden={decorative ? 'true' : undefined}
       style={{ '--p': `${pos}%` } as CSSProperties}
-      className={cn('relative min-w-0 pt-[18px]', className)}
+      className={cn('relative min-w-0 pt-[calc(var(--lh-xs)+2px)]', className)}
     >
       <span
         className={cn(
-          'num absolute left-[var(--p)] top-0 whitespace-nowrap text-xs font-medium leading-[14px]',
+          'num absolute left-[var(--p)] top-0 whitespace-nowrap text-xs font-medium leading-[var(--lh-xs)]',
           tone.fg,
           side === 'centre' && '-translate-x-1/2',
           side === 'right' && '-translate-x-full',
@@ -124,7 +124,7 @@ export function DateRail({
           </>
         )}
       </div>
-      <div className="num mt-[6px] flex justify-between gap-3 text-xs text-fg-muted">
+      <div className="num mt-[6px] flex justify-between gap-3 text-xs text-fg-2">
         <span>{`${startLabel} ${formatDay(start)}`}</span>
         <span>{due ? `${dueLabel} ${formatDay(due)}` : 'No due date'}</span>
       </div>

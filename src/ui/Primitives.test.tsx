@@ -29,7 +29,7 @@ describe('DateRail (components-12)', () => {
     expect(rail.style.getPropertyValue('--p')).toBe('25%')
     expect(rail).toHaveTextContent('Today · Fri 27 Nov')
     expect(rail).toHaveTextContent('Asked Wed 25 Nov')
-    expect(rail).toHaveTextContent('Bid due Thu 3 Dec')
+    expect(rail).toHaveTextContent('Quotation due Thu 3 Dec')
   })
 
   it('flips the label to the left of the marker near the end, and says how late when overdue', () => {
@@ -54,8 +54,8 @@ describe('DateRail (components-12)', () => {
       </>,
     )
     const [done, none] = [...container.querySelectorAll<HTMLElement>('[data-rail-state]')]
-    expect(done).toHaveTextContent('Bid sent Wed 25 Nov')
-    expect(none).toHaveTextContent('No bid date on this RFQ')
+    expect(done).toHaveTextContent('Quotation sent Wed 25 Nov')
+    expect(none).toHaveTextContent('No quotation date on this RFQ')
     expect(none).toHaveTextContent('No due date')
     expect(none.querySelector('i')).toBeNull()
   })
@@ -144,6 +144,14 @@ describe('InlineEditRow (components-13)', () => {
     expect(screen.queryByRole('alert')).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Edit Karachi Valve House' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Price must be a number')
+  })
+
+  it('while editing on a phone the fields are 16 px, so iOS does not zoom (the 15 px desktop size loses below md)', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    await user.click(screen.getByRole('button', { name: 'Edit Karachi Valve House' }))
+    const cls = screen.getByRole('group', { name: 'Karachi Valve House' }).className.split(' ')
+    expect(cls).toEqual(expect.arrayContaining(['[&_input]:text-sm', 'max-md:[&_input]:text-[16px]', 'max-md:[&_select]:text-[16px]']))
   })
 })
 

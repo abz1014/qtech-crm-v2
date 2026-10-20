@@ -906,7 +906,7 @@ No combined score is computed or shown; the rank is a sort order and every key i
 | **R25** | Ranked comparison on RFQ detail plus `lib/ranking/reasons.ts` (the one module that composes the reason strings). Selling price and spread shown to admin and sales only. | S24, D16 | 0 extra taps to see the ranking. |
 | **R26** | Float suggestion re-order plus evidence lines in intake and the memory card (extends R17). | S24, D16 | Pre-ticks unchanged. |
 | **O08** | Convert dialog: split editor and rank-1 pre-assignment (O01 amended). | S25, D16, O01 merged | Split is 3 taps or fewer plus 1 quantity typed; convert with no changes is still 2 taps. |
-| **O09** | Order detail: split grouping ("split across N suppliers"), a "Split line" action running `split_order_item`, selling price edited once for the group, the "changed since PO" indicator (shared with O07). Legs show Placed and Delivered only. | S25, D16, O03 merged | Split line is 3 taps or fewer plus 1 quantity typed. |
+| **O09** | Order detail: split grouping ("split across N suppliers"), a "Split line" action running `split_order_item`, selling price edited once for the group, the "changed since PO" indicator (shared with O07). Legs show Placed and Delivered only. | S25, D16, O03 merged | Split line is 4 taps or fewer plus 1 quantity typed (was 3: since the UX overhaul of 2026-10-20 the row actions sit behind "Edit GST and lines", which is the first tap; see DECISIONS). |
 | **P03 (amended)** | Adds interaction-count assertions for the split and the convert. | O08 | Green in `db.yml`. |
 
 ### S24 acceptance (named fixtures)

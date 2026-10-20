@@ -13,7 +13,6 @@ import { TextField } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { useAddItem, useAddLeg, useSupplierChoices } from '@/features/orders/hooks'
-import { legLetter } from '@/features/orders/lib/legModel'
 import { STANDARD_GST } from '@/features/orders/lib/orderMath'
 
 /*
@@ -102,7 +101,7 @@ export function AddLineDialog({ order, items, legs, onClose }: { order: OrderHea
               <NumberInput value={gst} onChange={setGst} suffix="%" />
             </Field>
           </div>
-          <Checkbox label="A service (commissioning or a service charge): no supplier leg" checked={service} onCheckedChange={v => setService(v === true)} />
+          <Checkbox label="A service (commissioning or a service charge): no supplier" checked={service} onCheckedChange={v => setService(v === true)} />
           {!service && legs.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
               <Field label="Supplied by" requirement="optional">
@@ -110,7 +109,7 @@ export function AddLineDialog({ order, items, legs, onClose }: { order: OrderHea
                   value={legId}
                   onChange={e => setLegId(e.target.value)}
                   placeholder="Not sourced yet"
-                  options={legs.map((l, i) => ({ value: l.id, label: `Leg ${legLetter(i)}, ${l.supplierName}` }))}
+                  options={legs.map(l => ({ value: l.id, label: l.currency ? `${l.supplierName} (${l.currency})` : l.supplierName }))}
                 />
               </Field>
               {legId ? (
@@ -153,17 +152,17 @@ export function AddLegDialog({ order, legs, onClose }: { order: OrderHeader; leg
     setError(null)
     try {
       await add.mutateAsync({ id: id.current, supplierId, currency })
-      toast({ title: 'Leg added', body: `${orderRef(order.number)} · ${chosen?.name ?? ''}` })
+      toast({ title: 'Supplier added', body: `${orderRef(order.number)} · ${chosen?.name ?? ''}` })
       onClose()
     } catch (err) {
-      setError(mapPgError(err, { entity: 'leg' }).message)
+      setError(mapPgError(err, { entity: 'supplier order' }).message)
     }
   }
 
   return (
     <Dialog open busy={add.isPending} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
-        title="Add leg"
+        title="Add supplier"
         context={`${orderRef(order.number)} · one supplier in one currency`}
         icon={Truck}
         footer={
@@ -172,7 +171,7 @@ export function AddLegDialog({ order, legs, onClose }: { order: OrderHeader; leg
               Cancel
             </Button>
             <Button variant="primary" busy={add.isPending} busyLabel="Adding" disabled={!supplierId || duplicate} onClick={() => void save()}>
-              Add leg
+              Add supplier
             </Button>
           </>
         }
@@ -190,7 +189,7 @@ export function AddLegDialog({ order, legs, onClose }: { order: OrderHeader; leg
             label="Currency"
             source={chosen && !touched ? (chosen.lastCurrency ? `${chosen.name} last used ${chosen.lastCurrency}` : 'PKR unless you change it') : undefined}
             edited={touched}
-            error={duplicate ? 'This order already has a leg for that supplier in this currency.' : undefined}
+            error={duplicate ? 'This order already has this supplier in this currency.' : undefined}
           >
             <Select
               value={currency}
@@ -202,7 +201,7 @@ export function AddLegDialog({ order, legs, onClose }: { order: OrderHeader; leg
             />
           </Field>
           {error ? (
-            <Banner tone="danger" title="Couldn't add the leg">
+            <Banner tone="danger" title="Couldn't add the supplier">
               {error}
             </Banner>
           ) : null}

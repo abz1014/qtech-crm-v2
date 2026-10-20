@@ -1,7 +1,9 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { TableRow, ViewRow } from '@/features/dbTypes'
 import { toBusinessDate } from '@/lib/dates'
+import { paisaToFixed, sumPaisa } from '@/lib/money'
 import type { RawInquiry, RawItem, RawLeg, RawLine, RawOrderItem, RawRfq, SupplierRecordRaw } from '@/features/companies/supplierRecord'
+import { phoneKey, type SearchContact } from '@/features/companies/companySearch'
 
 /*
  * Companies: every database call for this area (R01 reference implementation). This is the only
@@ -17,10 +19,13 @@ export interface CompanyListRow {
   id: string
   name: string
   country: string | null
+  city: string | null
   role: CompanyRole | null
   rfqCount: number
   orderCount: number
   updatedAt: string
+  /** Its contacts' names and phone digits (phoneKey), so the list search finds a company by a person or a number. */
+  contacts: SearchContact[]
 }
 
 export interface CompanyDetail {
@@ -40,18 +45,22 @@ function asRole(r: string | null | undefined): CompanyRole | null {
   return r === 'customer' || r === 'supplier' || r === 'both' || r === 'prospect' ? r : null
 }
 
-/** Every company with its derived role and how many RFQs and orders it has. Four light reads, joined here. */
+/** Every company with its derived role, how many RFQs and orders it has, and its contacts for the search. Five light reads, joined here. */
 export async function listCompanies(): Promise<CompanyListRow[]> {
   const db = requireSupabase()
-  const [companies, roles, rfqs, orders] = await Promise.all([
-    fetchAll<Pick<TableRow<'companies'>, 'id' | 'name' | 'country' | 'updated_at'>>((from, to) =>
-      db.from('companies').select('id, name, country, updated_at').order('name').range(from, to),
+  const [companies, roles, rfqs, orders, contacts] = await Promise.all([
+    fetchAll<Pick<TableRow<'companies'>, 'id' | 'name' | 'country' | 'city' | 'updated_at'>>((from, to) =>
+      db.from('companies').select('id, name, country, city, updated_at').order('name').range(from, to),
     ),
     fetchAll<Pick<ViewRow<'v_company_roles'>, 'company_id' | 'role'>>((from, to) =>
       db.from('v_company_roles').select('company_id, role').range(from, to),
     ),
     fetchAll<{ company_id: string }>((from, to) => db.from('rfqs').select('company_id').range(from, to)),
     fetchAll<{ company_id: string }>((from, to) => db.from('orders').select('company_id').range(from, to)),
+    fetchAll<Pick<TableRow<'contacts'>, 'company_id' | 'name' | 'phone'>>((from, to) =>
+      // ordered by id: names repeat ("Accounts"), and only a unique order pages stably across 1000-row pages
+      db.from('contacts').select('company_id, name, phone').order('id').range(from, to),
+    ),
   ])
   const roleBy = new Map(roles.map(r => [r.company_id, asRole(r.role)]))
   const count = (rows: { company_id: string }[]) => {
@@ -61,14 +70,22 @@ export async function listCompanies(): Promise<CompanyListRow[]> {
   }
   const rfqBy = count(rfqs)
   const orderBy = count(orders)
+  const contactsBy = new Map<string, SearchContact[]>()
+  for (const p of contacts) {
+    const list = contactsBy.get(p.company_id) ?? []
+    list.push({ name: p.name, phoneKey: phoneKey(p.phone) })
+    contactsBy.set(p.company_id, list)
+  }
   return companies.map(c => ({
     id: c.id,
     name: c.name,
     country: c.country,
+    city: c.city,
     role: roleBy.get(c.id) ?? null,
     rfqCount: rfqBy.get(c.id) ?? 0,
     orderCount: orderBy.get(c.id) ?? 0,
     updatedAt: c.updated_at,
+    contacts: contactsBy.get(c.id) ?? [],
   }))
 }
 
@@ -533,23 +550,26 @@ export async function getCompanyHistory(companyId: string, withPayment = false):
 }
 
 export interface CompanyMoney {
+  /** Gross invoiced (or the order lines' gross before an invoice), GST included: what they owe in all. */
   receivable: number
+  /** Received from them. */
   settled: number
+  /** Still owed: the sum of each order's balance (an overpaid order counts 0 here, its excess is `overpaid`). */
   balance: number
+  /** Paid above an order's gross, kept apart, never netted into the balance. */
+  overpaid: number
   orders: number
 }
 
-/** ADMIN ONLY (v_order_money refuses anyone else; the screen also hides the panel). Totals over the company's orders. */
+/**
+ * ADMIN ONLY (the screen hides the panel). Totals over the company's orders exactly as the Receivables page lists them
+ * (order_receivables: D-MR3 leaves out a cancelled order that was never invoiced), summed in exact paisa.
+ */
 export async function getCompanyMoney(companyId: string): Promise<CompanyMoney> {
   const db = requireSupabase()
-  const rows = unwrap(await db.from('v_order_money').select('receivable, settled').eq('company_id', companyId))
-  let receivable = 0
-  let settled = 0
-  for (const r of rows) {
-    receivable += Number(r.receivable ?? 0)
-    settled += Number(r.settled ?? 0)
-  }
-  return { receivable, settled, balance: receivable - settled, orders: rows.length }
+  const rows = unwrap(await db.rpc('order_receivables', {}).select('gross_target, settled, balance, overpaid_by').eq('company_id', companyId)) ?? []
+  const total = (k: 'gross_target' | 'settled' | 'balance' | 'overpaid_by') => Number(paisaToFixed(sumPaisa(rows.map(r => r[k] ?? 0))))
+  return { receivable: total('gross_target'), settled: total('settled'), balance: total('balance'), overpaid: total('overpaid_by'), orders: rows.length }
 }
 
 // ---------------------------------------------------------------- writes

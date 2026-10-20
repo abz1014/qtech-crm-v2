@@ -12,7 +12,7 @@ export interface SupplierFacts {
   quoted: number
   declined: number
   waiting: number
-  /** "Asked 6 · replied 5 of 6" once there are 3 or more enquiries; "Asked twice, 1 reply" below that. */
+  /** "Replied 5 of 6 · quoted 4" once there are 3 or more enquiries; "Asked twice · 1 reply" below that. */
   enquirySummary: string
   replyTime: { kind: 'known'; days: number; logged: number; importedLeftOut: number } | { kind: 'withheld'; logged: number; importedOnly: boolean }
   chosen: { kind: 'known'; chosen: number; of: number } | { kind: 'none' }
@@ -41,8 +41,10 @@ export function supplierFacts(s: SupplierStats | null): SupplierFacts | null {
 
   const enquirySummary =
     asked >= 3
-      ? `Asked ${asked} · replied ${replied} of ${asked}${declined >= 1 ? ` · couldn't offer ${declined} of ${asked}` : ''}`
-      : `Asked ${times(asked)}${asked ? ` · ${replies(replied)}` : ''}`
+      ? `Replied ${replied} of ${asked} · quoted ${quoted}${declined >= 1 ? ` · couldn't offer ${declined}` : ''}`
+      : asked === 0
+        ? 'No enquiries yet'
+        : `Asked ${times(asked)} · ${replies(replied)}`
 
   return {
     asked,
@@ -68,4 +70,55 @@ export function supplierFacts(s: SupplierStats | null): SupplierFacts | null {
     lowData: asked < 3,
     empty: asked === 0 && deliveries === 0 && s.last_contact === null,
   }
+}
+
+/** The supplier's record in one line, for the page header: "Replied 5 of 6 · quoted 4 · late 1 of 4". Null with nothing to say. */
+export function recordLine(f: SupplierFacts): string | null {
+  const parts: string[] = []
+  if (f.asked >= 3) parts.push(`Replied ${f.replied} of ${f.asked}`, `quoted ${f.quoted}`)
+  else if (f.asked > 0) parts.push(f.enquirySummary)
+  if (f.deliveries.kind === 'known') parts.push(`${parts.length > 0 ? 'late' : 'Late'} ${f.deliveries.late} of ${f.deliveries.total}`)
+  return parts.length > 0 ? parts.join(' · ') : null
+}
+
+/** Deliveries in a few words: "Late 1 of 4 · about 6 days over", "Late 0 of 3 · dates estimated", "None recorded yet". */
+export function deliveryLine(f: SupplierFacts): string {
+  const d = f.deliveries
+  if (d.kind === 'none') return 'None recorded yet'
+  const over = d.late > 0 && d.medianDaysLate !== null ? ` · about ${Math.round(d.medianDaysLate)} ${Math.round(d.medianDaysLate) === 1 ? 'day' : 'days'} over` : ''
+  return `Late ${d.late} of ${d.total}${over}${f.provenance.importedOnly ? ' · dates estimated' : ''}`
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const monthYear = (iso: string) => `${MONTHS[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`
+const isAre = (n: number, one: string, many: string) => (n === 1 ? one : many)
+
+/**
+ * What the (i) beside "What we know" says: where the numbers come from and the rules behind them, one sentence each. These
+ * were footnotes and sub-lines on the page; the page now shows the counts, and the reasons wait behind the tip.
+ */
+export function factNotes(f: SupplierFacts, span: { from: string; to: string } | null): string[] {
+  const p = f.provenance
+  const out: string[] = []
+  if (p.importedOnly) {
+    out.push(`All imported from the old CRM${span ? `, ${monthYear(span.from)} to ${monthYear(span.to)}` : ''}. Nothing logged here since.`)
+  } else {
+    out.push('Counted from enquiries, quotes, POs and delivery dates. Nothing is typed in.')
+    if (p.hasImported) out.push(`Includes imported history: ${p.legacyAsked} of ${f.asked} enquiries came from the old CRM.`)
+  }
+  if (p.pricesHidden > 0) out.push(`${p.pricesHidden} ${isAre(p.pricesHidden, 'price is', 'prices are')} hidden: the currency was never checked.`)
+  const r = f.replyTime
+  if (r.kind === 'known') {
+    out.push(
+      `Reply time is the middle of the ${r.logged} replies logged here.${r.importedLeftOut > 0 ? ` ${r.importedLeftOut} imported ${isAre(r.importedLeftOut, 'reply is', 'replies are')} left out (no real date).` : ''}`,
+    )
+  } else if (r.importedOnly) {
+    out.push('No reply time: imported replies carry the import date, not the day they answered.')
+  } else if (f.asked > 0) {
+    out.push(`Reply time shows once 3 replies are logged here (${r.logged} so far).`)
+  }
+  if (f.chosen.kind === 'known') out.push('Chosen: quoted items later ordered from them.')
+  // Imported delivery dates being estimates is said by the Deliveries tip and the "est." beside each such date.
+  if (f.lowData && !p.importedOnly) out.push('With so few enquiries these are facts, not a pattern.')
+  return out
 }

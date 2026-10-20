@@ -96,7 +96,7 @@ describe('search button and Cmd/Ctrl+K open the palette (U08)', () => {
     const rows = await within(dlg).findAllByRole('option')
     // Idle: the Actions of the mockup (A-89); the destinations answer when typed.
     expect(rows.map(r => r.textContent)).toEqual(
-      expect.arrayContaining([expect.stringContaining('New RFQ'), expect.stringContaining('Capture'), expect.stringContaining('Go to Today')]),
+      expect.arrayContaining([expect.stringContaining('New RFQ'), expect.stringContaining('Paste or photo'), expect.stringContaining('Go to Today')]),
     )
     await user.keyboard('rfq{Enter}')
     expect(await screen.findByText('RFQs page')).toBeInTheDocument()
@@ -151,4 +151,40 @@ describe('account menu: Settings and Team (A04)', () => {
       expect(await screen.findByText('Settings page')).toBeInTheDocument()
     })
   }
+})
+
+describe('account menu: Text size (DECISIONS 2026-10-19)', () => {
+  afterEach(() => {
+    delete document.documentElement.dataset.text
+  })
+
+  it('Normal and Smaller are menu radios; Smaller applies at once and the menu stays open to show it', async () => {
+    const user = userEvent.setup()
+    shell()
+    await user.click(screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0])
+    const menu = await screen.findByRole('menu', { name: 'Account' })
+    const group = within(menu).getByRole('group', { name: 'Text size' })
+    const normal = within(group).getByRole('menuitemradio', { name: 'Normal' })
+    const smaller = within(group).getByRole('menuitemradio', { name: 'Smaller' })
+    expect(normal).toHaveAttribute('aria-checked', 'true')
+    expect(smaller).toHaveAttribute('aria-checked', 'false')
+    await user.click(smaller)
+    expect(document.documentElement.dataset.text).toBe('small')
+    expect(window.localStorage.getItem('qtech.text-size')).toBe('small')
+    expect(screen.getByRole('menu', { name: 'Account' })).toBeInTheDocument()
+    expect(smaller).toHaveAttribute('aria-checked', 'true')
+    expect(await axeViolations(menu)).toEqual([])
+    await user.click(normal)
+    expect(document.documentElement.hasAttribute('data-text')).toBe(false)
+  })
+
+  it('the arrow keys reach the text size choices like any other item', async () => {
+    const user = userEvent.setup()
+    shell()
+    await user.click(screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0])
+    await screen.findByRole('menu', { name: 'Account' })
+    await user.keyboard('{End}{ArrowUp}{ArrowUp}')
+    // The last item is Sign out; above it (no Install app in jsdom) Smaller, then Normal.
+    expect(screen.getByRole('menuitemradio', { name: 'Normal' })).toHaveFocus()
+  })
 })

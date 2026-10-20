@@ -5,7 +5,7 @@ import { fetchStoredPdf, pdfIsValid, pdfText, renderPdfPng } from '../support/pd
 import { expect, get, legLoc, seedPo, setProfile, shot, tapper } from './fixtures'
 
 /*
- * O07 end to end, against the local CI stack: "Issue PO" on a leg, the dialog with each line's price and where it came from, the PO
+ * O07 end to end, against the local CI stack: "Issue PO" on a supplier order, the dialog with each line's price and where it came from, the PO
  * stored with its PDF, the PO chip and View PO on the leg, and a re-issue as the next revision. As the fixture users through the real
  * login form; every test seeds its own customer, supplier and orders.
  *
@@ -36,7 +36,7 @@ test.describe('O07: Issue PO', () => {
     const s = await seedPo()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText('No PO yet')
-    await legLoc(page, 'A').getByRole('button', { name: 'Issue PO, leg A' }).click()
+    await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
 
     const d = dialog(page)
     await expect(d.getByRole('heading', { name: 'Issue purchase order' })).toBeVisible()
@@ -44,7 +44,7 @@ test.describe('O07: Issue PO', () => {
     // the currency is the leg's and cannot be changed here
     await expect(d.getByLabel('Currency')).toHaveValue('USD')
     await expect(d.getByLabel('Currency')).toHaveJSProperty('readOnly', true)
-    await expect(d).toContainText('Set on this leg. Change it on the leg, not here.')
+    await expect(d).toContainText('Set on this supplier order, not here.')
     // incoterm and terms from the supplier's last PO, each with where it came from; ship-to from the profile
     await expect(d.getByLabel('Incoterm')).toHaveValue('DAP')
     await expect(d.getByLabel('Delivery terms')).toHaveValue('Air freight, 3 weeks')
@@ -117,9 +117,12 @@ test.describe('O07: Issue PO', () => {
     }
     if (stored && process.env.REVIEW_DIR) renderPdfPng(stored, process.env.REVIEW_DIR, 'o07-po-pdf-r0-page1')
 
-    // the leg shows the PO chip, View PO and the next revision
+    // the supplier order shows the PO chip; View PO and the next revision are in its menu
     await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/^PO-\d\d-\d{4} · R0$/)
-    await expect(legLoc(page, 'A').getByRole('button', { name: 'View PO, leg A' })).toBeVisible()
+    await legLoc(page, 'A').getByRole('button', { name: `More for ${s.supplier.name}` }).click()
+    await expect(page.getByRole('menuitem', { name: 'View PO' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Revise PO (R1)' })).toBeVisible()
+    await page.keyboard.press('Escape')
     await expect(legLoc(page, 'A').getByTestId('leg-A-state')).toContainText('On order')
     await shot(page, 'o07-leg-with-po-1440')
   })
@@ -128,7 +131,7 @@ test.describe('O07: Issue PO', () => {
     const s = await seedPo({ allPriced: true })
     const t = tapper()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
-    await t.tap(legLoc(page, 'A').getByRole('button', { name: 'Issue PO, leg A' }))
+    await t.tap(legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }))
     await expect(dialog(page).getByTestId('po-source-1')).toBeVisible()
     await expect(dialog(page).getByTestId('po-missing')).toHaveCount(0)
     await t.doubleTap(dialog(page).getByRole('button', { name: 'Issue PO' }))
@@ -141,10 +144,11 @@ test.describe('O07: Issue PO', () => {
   test('re-issue makes the next revision under the same number; the PDF of each revision is kept', async ({ page }) => {
     const s = await seedPo({ allPriced: true })
     await openAs(page, 'admin', `/orders/${s.order.id}`)
-    await legLoc(page, 'A').getByRole('button', { name: 'Issue PO, leg A' }).click()
+    await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
     await dialog(page).getByRole('button', { name: 'Issue PO' }).click()
     await expect(dialog(page)).toHaveCount(0, { timeout: 30_000 })
-    const button = legLoc(page, 'A').getByRole('button', { name: 'Issue R1, leg A' })
+    await legLoc(page, 'A').getByRole('button', { name: `More for ${s.supplier.name}` }).click()
+    const button = page.getByRole('menuitem', { name: 'Revise PO (R1)' })
     await expect(button).toBeVisible()
     await button.click()
     await expect(dialog(page).locator('.num').filter({ hasText: /^PO-\d\d-\d{4} · R1$/ })).toBeVisible()
@@ -168,7 +172,7 @@ test.describe('O07: Issue PO', () => {
     await must(rest('admin', `supplier_orders?id=eq.${s.leg}`, { method: 'PATCH', body: { currency: null }, prefer: 'return=minimal' }))
     await setProfile(false)
     await openAs(page, 'sales', `/orders/${s.order.id}`)
-    await legLoc(page, 'A').getByRole('button', { name: 'Issue PO, leg A' }).click()
+    await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
     const d = dialog(page)
     await expect(d.getByRole('button', { name: 'Issue PO' })).toBeDisabled()
     await d.getByLabel('Currency').selectOption('USD')
@@ -187,7 +191,7 @@ test.describe('O07: Issue PO', () => {
   test('Preview PDF opens a PDF without issuing anything', async ({ page, context }) => {
     const s = await seedPo({ allPriced: true })
     await openAs(page, 'sales', `/orders/${s.order.id}`)
-    await legLoc(page, 'A').getByRole('button', { name: 'Issue PO, leg A' }).click()
+    await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
     // headless Chromium has no PDF viewer: pointing the new tab at the PDF makes it a download, which is the proof that a PDF was made
     let downloaded = 0
     context.on('page', p => p.on('download', () => downloaded++))
@@ -196,14 +200,15 @@ test.describe('O07: Issue PO', () => {
     expect(await posOf(s.leg)).toHaveLength(0)
   })
 
-  test('Add expense on a leg opens the M03 dialog with this order and leg, the supplier as payee', async ({ page }) => {
+  test('Add expense on a supplier order opens the M03 dialog with this order and supplier order, the supplier as payee', async ({ page }) => {
     const s = await seedPo({ allPriced: true })
     await openAs(page, 'admin', `/orders/${s.order.id}`)
-    await legLoc(page, 'A').getByRole('button', { name: 'Add expense, leg A' }).click()
+    await legLoc(page, 'A').getByRole('button', { name: `More for ${s.supplier.name}` }).click()
+    await page.getByRole('menuitem', { name: 'Add expense' }).click()
     const d = dialog(page)
     await expect(d.getByRole('heading', { name: /expense/i })).toBeVisible()
     await expect(d).toContainText(s.supplier.name)
-    await expect(d).toContainText(/leg A/)
+    await expect(d.getByRole('combobox', { name: 'Category' })).toHaveValue('Supplier payment')
   })
 
   test('an engineer never sees Issue PO, View PO or a price, but does see the PO chip', async ({ page }) => {
@@ -211,7 +216,8 @@ test.describe('O07: Issue PO', () => {
     await must(rest('admin', 'rpc/issue_purchase_order', { method: 'POST', body: { p_po_id: crypto.randomUUID(), p_supplier_order_id: s.leg } }))
     await openAs(page, 'engineer', `/orders/${s.order.id}`)
     await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/^PO-\d\d-\d{4} · R0$/)
-    await expect(page.getByRole('button', { name: /Issue PO|View PO|Issue R1/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /Issue PO|View PO|Revise PO/ })).toHaveCount(0)
+    await expect(page.getByRole('menuitem', { name: /View PO|Revise PO/ })).toHaveCount(0)
   })
 
   for (const width of [1440, 375]) {
@@ -219,7 +225,7 @@ test.describe('O07: Issue PO', () => {
       const s = await seedPo()
       await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
       await openAs(page, 'sales', `/orders/${s.order.id}`)
-      await legLoc(page, 'A').getByRole('button', { name: 'Issue PO, leg A' }).click()
+      await legLoc(page, 'A').getByRole('button', { name: `Issue PO, ${s.supplier.name}` }).click()
       await expect(dialog(page).getByTestId('po-source-4')).toBeVisible()
       expect(await dialogViolations(page)).toEqual([])
       await shot(page, `o07-issue-po-dialog-axe-${width}`)

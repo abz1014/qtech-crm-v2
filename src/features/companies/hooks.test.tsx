@@ -19,17 +19,24 @@ afterEach(() => {
 })
 
 describe('companies reads', () => {
-  it('useCompanyList joins roles and counts onto each company', async () => {
-    const { wrapper } = setup(c => {
+  it('useCompanyList joins roles, counts and contacts (names and phone digits) onto each company', async () => {
+    const { wrapper, db } = setup(c => {
       switch (c.target) {
         case 'companies':
-          return { data: [{ id: 'a', name: 'Alpenmark', country: 'Austria', updated_at: 't' }, { id: 'b', name: 'Karachi Glassworks', country: null, updated_at: 't' }] }
+          return {
+            data: [
+              { id: 'a', name: 'Alpenmark', country: 'Austria', city: 'Linz', updated_at: 't' },
+              { id: 'b', name: 'Karachi Glassworks', country: null, city: null, updated_at: 't' },
+            ],
+          }
         case 'v_company_roles':
           return { data: [{ company_id: 'a', role: 'supplier' }, { company_id: 'b', role: 'customer' }] }
         case 'rfqs':
           return { data: [{ company_id: 'b' }, { company_id: 'b' }] }
         case 'orders':
           return { data: [{ company_id: 'b' }] }
+        case 'contacts':
+          return { data: [{ company_id: 'b', name: 'Naveed Akhtar', phone: '+92 301 555 0142' }, { company_id: 'b', name: 'Front desk', phone: null }] }
         default:
           return { data: [] }
       }
@@ -37,9 +44,26 @@ describe('companies reads', () => {
     const { result } = renderHook(() => useCompanyList(), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data).toEqual([
-      { id: 'a', name: 'Alpenmark', country: 'Austria', role: 'supplier', rfqCount: 0, orderCount: 0, updatedAt: 't' },
-      { id: 'b', name: 'Karachi Glassworks', country: null, role: 'customer', rfqCount: 2, orderCount: 1, updatedAt: 't' },
+      { id: 'a', name: 'Alpenmark', country: 'Austria', city: 'Linz', role: 'supplier', rfqCount: 0, orderCount: 0, updatedAt: 't', contacts: [] },
+      {
+        id: 'b',
+        name: 'Karachi Glassworks',
+        country: null,
+        city: null,
+        role: 'customer',
+        rfqCount: 2,
+        orderCount: 1,
+        updatedAt: 't',
+        contacts: [
+          { name: 'Naveed Akhtar', phoneKey: '3015550142' },
+          { name: 'Front desk', phoneKey: '' },
+        ],
+      },
     ])
+    // Contacts are read in pages like every other list (fetchAll), only the three columns the search needs.
+    const read = db.calls.find(c => c.target === 'contacts')
+    expect(read?.verb).toBe('select')
+    expect(opArgs(read!, 'select')).toEqual(['company_id, name, phone'])
   })
 
   it('useCompany returns null for a company that is gone, not an error', async () => {
@@ -60,14 +84,21 @@ describe('companies reads', () => {
     const { wrapper, db } = setup(() => ({ data: [] }))
     const { result } = renderHook(() => useCompanyMoney('c1', false), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
-    expect(db.calls.filter(c => c.target === 'v_order_money')).toHaveLength(0)
+    expect(db.calls.filter(c => c.target === 'rpc:order_receivables')).toHaveLength(0)
   })
 
-  it('useCompanyMoney totals the receivable and what was settled for an admin', async () => {
-    const { wrapper } = setup(() => ({ data: [{ receivable: 1000, settled: 400 }, { receivable: '500.50', settled: 0 }] }))
+  it('useCompanyMoney totals gross, received and balance over the company receivables for an admin', async () => {
+    const { wrapper, db } = setup(() => ({
+      data: [
+        { gross_target: 1000, settled: 400, balance: 600, overpaid_by: 0 },
+        { gross_target: '500.50', settled: '600.00', balance: 0, overpaid_by: '99.50' },
+      ],
+    }))
     const { result } = renderHook(() => useCompanyMoney('c1', true), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data).toEqual({ receivable: 1500.5, settled: 400, balance: 1100.5, orders: 2 })
+    expect(result.current.data).toEqual({ receivable: 1500.5, settled: 1000, balance: 600, overpaid: 99.5, orders: 2 })
+    expect(db.calls[0].target).toBe('rpc:order_receivables')
+    expect(opArgs(db.calls[0], 'eq')).toEqual(['company_id', 'c1'])
   })
 
   it('useSupplierStats reads the one row from v_supplier_stats', async () => {

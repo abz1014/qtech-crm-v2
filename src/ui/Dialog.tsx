@@ -54,7 +54,8 @@ const TILE: Record<Tone, string> = {
   warning: 'bg-tone-warning-bg text-tone-warning-fg',
   danger: 'bg-tone-danger-bg text-tone-danger-fg',
 }
-const WIDTH = { sm: 'md:w-[400px]', md: 'md:w-[480px]', lg: 'md:w-[640px]' } as const
+// Wider than the 400 / 480 / 640 of the mockups since the text grew (DECISIONS 2026-10-19), so lines keep their length.
+const WIDTH = { sm: 'md:w-[440px]', md: 'md:w-[520px]', lg: 'md:w-[720px]' } as const
 
 interface DialogContentProps {
   title: string
@@ -142,7 +143,7 @@ export function DialogContent({
                 {titleChip}
               </div>
               {context ? (
-                <RadixDialog.Description className="text-sm text-fg-muted">{context}</RadixDialog.Description>
+                <RadixDialog.Description className="text-sm text-fg-2">{context}</RadixDialog.Description>
               ) : null}
             </div>
             {meta ? <div className="mr-2 shrink-0 self-start">{meta}</div> : null}

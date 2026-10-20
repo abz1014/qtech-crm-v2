@@ -20,6 +20,7 @@ import { readClipboardWhen, resetClipboard } from '../support/clipboard'
  *   Mark quotation sent  2 taps (More, then the item)       Chase                 1 tap
  *   Win (no changes)     2 taps; with one split: + 1 tap + 1 quantity typed
  *   Issue PO (priced)    2 taps                             Invoice               2 taps, nothing typed
+ *   Mark placed, no PO   2 taps (the supplier order's menu; Issue PO is the 1-tap way)   Delivered today   1 tap
  *   Full payment         2 taps, nothing typed
  * Data that is not part of the day (the customer, the suppliers and what they supplied before, the exchange rates) is made through the
  * API as the admin; everything the salesperson does is done on screen.
@@ -236,7 +237,8 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(b.getByText('Read from their reply')).toBeVisible()
     expect(await linesOf(s.lahore.id)).toHaveLength(0)
     await b.getByRole('button', { name: 'Accept 2 prices' }).click()
-    await expect(toast(page, 'Reply saved')).toBeVisible()
+    // The first reply's toast can still be showing now that a save returns when the server confirms (no wait for refetches).
+    await expect(toast(page, 'Reply saved').last()).toBeVisible()
     fe2('Supplier reply, pasted: Paste reply + Accept', (await readCount(page)).mouse, 2)
     const bLines = await linesOf(s.lahore.id)
     expect(bLines.map(l => [Number(l.unit_price), l.currency, Number(l.fx_rate_pkr)])).toEqual([
@@ -431,7 +433,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const letter = (await legLoc(page, 'A').innerText()).includes(s.alpen.name) ? 'A' : 'B'
     expect((await legLoc(page, letter).innerText()).includes(s.alpen.name)).toBe(true)
     await resetCount(page)
-    await legLoc(page, letter).getByRole('button', { name: `Issue PO, leg ${letter}` }).click()
+    await legLoc(page, letter).getByRole('button', { name: `Issue PO, ${s.alpen.name}` }).click()
     const d = dialog(page)
     await expect(d.getByRole('heading', { name: 'Issue purchase order' })).toBeVisible()
     await expect(d.getByTestId('po-missing')).toHaveCount(0) // the supplier price came with the rank-1 quote
@@ -471,16 +473,18 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const lLetter = await letterOf(s.lahore.name)
     const aLetter = await letterOf(s.alpen.name)
     await resetCount(page)
-    await legLoc(page, lLetter).getByRole('button', { name: `Mark placed, leg ${lLetter}` }).click()
+    // ordered by phone, no PO: from the row's menu ("Mark placed, no PO"; Issue PO is the 1-tap way and it is on the row)
+    await legLoc(page, lLetter).getByRole('button', { name: `More for ${s.lahore.name}` }).click()
+    await page.getByRole('menuitem', { name: 'Mark placed, no PO' }).click()
     await expect.poll(async () => (await must(rest<{ placed_on: string | null }[]>('admin', `supplier_orders?id=eq.${lahoreLeg}&select=placed_on`)))[0].placed_on).toBe(today)
-    fe2('Mark placed', (await readCount(page)).mouse, 1)
+    fe2('Mark placed without a PO (row menu)', (await readCount(page)).mouse, 2)
     await todayHas(salesCtx, 'place_po', [ordRef(order.number), s.lahore.name], false)
     await must(rest('admin', `supplier_orders?id=eq.${lahoreLeg}`, { method: 'PATCH', body: { expected_on: karachiDay(-2) }, prefer: 'return=minimal' }))
     await todayHas(salesCtx, 'goods_late', [s.lahore.name], true)
     // Delivered: one tap each, and nothing is late any more.
-    for (const [letter, id] of [[aLetter, alpenLeg], [lLetter, lahoreLeg]] as const) {
+    for (const [letter, id, name] of [[aLetter, alpenLeg, s.alpen.name], [lLetter, lahoreLeg, s.lahore.name]] as const) {
       await resetCount(page)
-      await legLoc(page, letter).getByRole('button', { name: `Delivered today, leg ${letter}` }).click()
+      await legLoc(page, letter).getByRole('button', { name: `Delivered today, ${name}` }).click()
       await expect.poll(async () => (await must(rest<{ delivered_on: string | null }[]>('admin', `supplier_orders?id=eq.${id}&select=delivered_on`)))[0].delivered_on).toBe(today)
       fe2('Mark delivered', (await readCount(page)).mouse, 1)
     }
@@ -492,7 +496,9 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   // ---- 11. The invoice ----------------------------------------------------------------------------------------------------------------------
   await test.step('create the invoice: 2 taps, nothing typed', async () => {
     await resetCount(page)
-    await page.locator('[data-slot="order-actions"]').getByRole('button', { name: 'Create invoice' }).click()
+    // everything is delivered, so Create invoice is the page's one green button
+    await expect(page.locator('#main button.bg-primary:visible')).toHaveText(['Create invoice'])
+    await page.getByRole('button', { name: 'Create invoice' }).click()
     const d = page.getByRole('dialog', { name: 'Create invoice' })
     await expect(d.getByRole('textbox', { name: 'Invoice number' })).toHaveValue(/.+/)
     await expect(d.getByText('GST, 18%')).toBeVisible()
@@ -516,9 +522,9 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   // ---- 12. Admin records the payment ---------------------------------------------------------------------------------------------------------
   await test.step('(admin) record the payment in full: 2 taps, the amount is the balance due', async () => {
     const admin = await openPage(adminCtx, `/orders/${order.id}`)
-    await expect(admin.getByText(ordRef(order.number)).first()).toBeVisible()
+    await expect(admin.locator('#main').getByText(ordRef(order.number)).first()).toBeVisible()
     await resetCount(admin)
-    await admin.locator('[data-slot="order-actions"]').getByRole('button', { name: 'Record payment' }).click()
+    await admin.getByRole('button', { name: 'Record payment' }).click()
     const d = admin.getByRole('dialog', { name: 'Record payment' })
     await expect(d.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue('316,240')
     await d.getByRole('button', { name: 'Save payment' }).click()

@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 import { initials } from '@/lib/initials'
 
 const SIZE = {
-  sm: 'size-[22px] text-xs',
+  sm: 'size-[24px] text-xs',
   md: 'size-[28px] text-xs',
   lg: 'size-[32px] text-xs',
   xl: 'size-[36px] text-xs',
@@ -11,7 +11,7 @@ const SIZE = {
 
 interface AvatarProps {
   name: string
-  /** sm 22 (key-figures row), md 28 (top bar, lists), lg 32 (who-row), xl 36 (phone row), 2xl 40 (avatar-lg, text-sm). */
+  /** sm 24 (key-figures row), md 28 (top bar, lists), lg 32 (who-row), xl 36 (phone row), 2xl 40 (avatar-lg, text-sm). */
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   className?: string
 }

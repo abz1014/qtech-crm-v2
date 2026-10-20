@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { EyeOff, FileCheck2, Info, Split, TriangleAlert, Truck, X } from 'lucide-react'
+import { EyeOff, FileCheck2, Split, TriangleAlert, Truck, X } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { formatAmount } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
+import { InfoTip } from '@/ui/InfoTip'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Icon } from '@/ui/Icon'
@@ -244,11 +245,13 @@ export function ConvertDialog({ rfq, onClose }: Props) {
         }
       >
         <div className="grid gap-4">
-          <p className="flex items-start gap-2 rounded bg-sunken px-3 py-2 text-sm text-fg-2">
-            <Icon icon={Info} size="sm" className="mt-[3px] shrink-0 text-fg-muted" />
+          <p className="flex items-center gap-1 text-sm text-fg-2">
             <span>
-              Creates order {nextNo.data ? <b className="num font-medium">{orderRef(nextNo.data)}</b> : 'a new order'}. Each item is assigned to the best-ranked quote; change it from the list, or split an item between two suppliers. Prices and terms copy from the quotation.
+              Creates order {nextNo.data ? <b className="num font-medium">{orderRef(nextNo.data)}</b> : 'a new order'}, each item with its best-ranked supplier.
             </span>
+            <InfoTip label="How the order is made">
+              Each item is assigned to the best-ranked quote: change it from the list, or split an item between two suppliers. Prices and terms copy from the quotation.
+            </InfoTip>
           </p>
 
           {itemsQ.isPending || rankQ.isPending ? (
@@ -296,7 +299,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                         <span className="num pt-px">{n}</span>
                         <b className="font-medium">{it.description}</b>
                         <span className="num lg:pt-1.5 lg:text-right">{it.qty}</span>
-                        <span className="flex items-center gap-1.5 text-xs lg:pt-1" data-testid={`convert-item-${n}-left-out`}>
+                        <span className="flex items-center gap-[6px] text-xs lg:pt-1" data-testid={`convert-item-${n}-left-out`}>
                           <Icon icon={EyeOff} size="sm" />
                           Not in the quotation. Left out of the order.
                         </span>
@@ -396,7 +399,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                     {isSplitItem && chk ? (
                       <>
                         {chk.mismatch && !chk.incomplete ? (
-                          <div role="alert" className="mx-4 mb-3 flex items-start gap-3 rounded border border-tone-warning-fg/30 bg-tone-warning-bg px-3 py-2 text-xs leading-4">
+                          <div role="alert" className="mx-4 mb-3 flex items-start gap-3 rounded border border-tone-warning-fg/30 bg-tone-warning-bg px-3 py-2 text-xs">
                             <Icon icon={TriangleAlert} size="sm" className="mt-px text-tone-warning-fg" />
                             <span>
                               <b className="font-medium">
@@ -415,7 +418,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                             of <span className="num font-medium">{it.qty}</span>
                           </span>
                           <span className="text-xs text-fg-muted">
-                            {chk.incomplete ? 'Type a quantity for every part to create the order.' : "Each part becomes its own line on its supplier's leg, at the same selling price."}
+                            {chk.incomplete ? 'Type a quantity for every part to create the order.' : 'Each part becomes its own line with its supplier, at the same selling price.'}
                           </span>
                         </div>
                       </>
@@ -453,7 +456,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
             <p className="flex items-center gap-2 text-xs text-fg-muted">
               <Icon icon={Truck} size="sm" />
               <span>
-                {legs.length} {legs.length === 1 ? 'leg' : 'legs'}: {legs.join(', ')}.
+                {legs.length === 1 ? '1 supplier order' : `${legs.length} supplier orders`}: {legs.join(', ')}.
               </span>
             </p>
           ) : null}
@@ -465,7 +468,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
             onCheckedChange={v => setNeedsTouched(v === true)}
           />
 
-          <div className="grid max-w-[360px] gap-1.5">
+          <div className="grid max-w-[360px] gap-[6px]">
             <label htmlFor="convert-po" className="text-sm font-medium">
               Customer PO number <span className="font-regular text-xs text-fg-muted">optional, add it from the order later</span>
             </label>

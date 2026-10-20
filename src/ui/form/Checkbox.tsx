@@ -26,13 +26,13 @@ export const Checkbox = forwardRef<ElementRef<typeof RadixCheckbox.Root>, Checkb
     throw new Error('Checkbox needs a label, or an aria-label when it is drawn without one.')
   }
   return (
-    <div className="flex items-start gap-3 text-sm leading-5">
+    <div className="flex items-start gap-3 text-sm">
       <RadixCheckbox.Root
         ref={ref}
         id={id}
         aria-describedby={help ? `${id}-help` : undefined}
         className={cn(
-          'mt-[1px] grid size-[18px] shrink-0 place-items-center rounded border border-line-input bg-surface text-primary-foreground',
+          'mt-[calc((var(--lh-sm)-18px)/2)] grid size-[18px] shrink-0 place-items-center rounded border border-line-input bg-surface text-primary-foreground',
           'transition-colors duration-fast ease-out hover:border-fg-muted',
           'data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary',
           'disabled:cursor-not-allowed disabled:border-line disabled:bg-sunken',

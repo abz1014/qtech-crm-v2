@@ -10,6 +10,8 @@
  * supplier price, currency and PO line: nothing assumes one supplier per RFQ item.
  */
 
+import { convertToPaisa, paisaToFixed, sumProductsPaisa } from '@/lib/money'
+
 export interface EstItem {
   id: string
   qty: number
@@ -59,34 +61,35 @@ export interface CostEstimate {
 /** A rate older than this is not used for money (the same 30 days as every other conversion). */
 export const MAX_RATE_AGE_DAYS = 30
 
-const r2 = (n: number) => Math.round(n * 100) / 100
+// Exact decimals (MR-1): round(round(Σ qty x price, 2) x rate, 2) per leg, in integer paisa; never a float product.
+const rupees = (p: bigint): number => Number(paisaToFixed(p))
 
 export function estimateExpectedCost(input: { items: readonly EstItem[]; legs: readonly EstLeg[]; pos: readonly EstPo[]; rates: Readonly<Record<string, EstRate | undefined>> }): CostEstimate {
   const legById = new Map(input.legs.map(l => [l.id, l]))
   const poByLeg = new Map(input.pos.map(p => [p.legId, p]))
-  const perLeg = new Map<string, { amount: number; fromPo: boolean; fromPrices: boolean }>()
+  const perLeg = new Map<string, { pairs: Array<[number, number]>; fromPo: boolean; fromPrices: boolean }>()
   let withoutPrice = 0
 
   for (const it of input.items) {
     if (it.isService) continue
     const poLine = it.legId ? poByLeg.get(it.legId)?.lines.find(l => l.orderItemId === it.id) : undefined
-    let amount: number | null = null
+    let pair: [number, number] | null = null
     let fromPo = false
     if (poLine) {
       // The PO's price, for the quantity the line holds NOW: a split after the PO (A8) moves quantity to another leg, which counts it
       // there. Using the PO's own quantity would count the moved part twice.
-      amount = it.qty * poLine.unitPrice
+      pair = [it.qty, poLine.unitPrice]
       fromPo = true
     } else if (it.supplierUnitPrice !== null && it.legId) {
-      amount = it.qty * it.supplierUnitPrice
+      pair = [it.qty, it.supplierUnitPrice]
     }
-    if (amount === null) {
+    if (pair === null) {
       withoutPrice += 1
       continue
     }
     const key = it.legId as string
-    const cur = perLeg.get(key) ?? { amount: 0, fromPo: false, fromPrices: false }
-    cur.amount += amount
+    const cur = perLeg.get(key) ?? { pairs: [], fromPo: false, fromPrices: false }
+    cur.pairs.push(pair)
     if (fromPo) cur.fromPo = true
     else cur.fromPrices = true
     perLeg.set(key, cur)
@@ -94,24 +97,25 @@ export function estimateExpectedCost(input: { items: readonly EstItem[]; legs: r
 
   const legs: EstLegResult[] = []
   const unconverted = new Set<string>()
-  let total = 0
+  let total = 0n
   let any = false
   for (const [legId, v] of perLeg) {
     const currency = legById.get(legId)?.currency ?? null
-    const amount = r2(v.amount)
-    let pkr: number | null = null
-    if (currency === 'PKR') pkr = amount
+    const amountP = sumProductsPaisa(v.pairs)
+    let pkrP: bigint | null = null
+    if (currency === 'PKR') pkrP = amountP
     else if (currency) {
       const rate = input.rates[currency]
-      if (rate && rate.ageDays <= MAX_RATE_AGE_DAYS) pkr = r2(amount * rate.rate)
+      if (rate && rate.ageDays <= MAX_RATE_AGE_DAYS) pkrP = convertToPaisa(paisaToFixed(amountP), rate.rate.toFixed(6))
     }
-    if (pkr === null) unconverted.add(currency ?? 'no currency')
+    if (pkrP === null) unconverted.add(currency ?? 'no currency')
     else {
-      total += pkr
+      total += pkrP
       any = true
     }
-    legs.push({ legId, currency, amount, source: v.fromPo && v.fromPrices ? 'po and prices' : v.fromPo ? 'po' : 'prices', pkr })
+    const pkr = pkrP === null ? null : rupees(pkrP)
+    legs.push({ legId, currency, amount: rupees(amountP), source: v.fromPo && v.fromPrices ? 'po and prices' : v.fromPo ? 'po' : 'prices', pkr })
   }
   legs.sort((a, b) => a.legId.localeCompare(b.legId))
-  return { pkr: any ? r2(total) : null, legs, linesWithoutPrice: withoutPrice, unconverted: [...unconverted].sort() }
+  return { pkr: any ? rupees(total) : null, legs, linesWithoutPrice: withoutPrice, unconverted: [...unconverted].sort() }
 }

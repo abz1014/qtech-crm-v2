@@ -13,6 +13,7 @@ import { Margin } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
+import { InfoTip } from '@/ui/InfoTip'
 import { NumberInput } from '@/ui/form/NumberInput'
 import type { OrderHeader, OrderMoney } from '@/features/orders/api'
 import { useFxLatest } from '@/features/rfqs/hooks'
@@ -128,7 +129,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
       await setComplete.mutateAsync({ complete: next, userId })
       toast({
         title: next ? 'Costs marked complete' : 'Costs reopened',
-        body: next ? `${ref} · the margin is final` : `${ref} · the margin is provisional again`,
+        body: next ? `${ref} · the margin is final` : `${ref} · the margin is not final again`,
         tone: 'success',
         undo: {
           onUndo: async () => {
@@ -145,9 +146,12 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
 
   return (
     <section aria-label="Margin" data-slot="margin-costs" className="rounded border bg-surface">
-      <div className="flex items-center gap-3 border-b px-5 py-4">
+      <div className="flex items-center gap-2 border-b px-4 py-3 md:px-5">
         <h2 className="text-base font-semibold">Margin</h2>
-        {unknown ? <StatusBadge dimension="trust" value="basis-unknown" /> : m ? <StatusBadge dimension="costs" value={complete ? 'complete' : 'provisional'} /> : null}
+        <InfoTip label="About the margin">
+          Net sale less the costs paid so far. GST sits outside the margin on both sides, and expenses count at true cost, without recoverable input tax. It is final once costs are marked complete.
+        </InfoTip>
+        {unknown ? <StatusBadge dimension="trust" value="basis-unknown" label="Is GST included?" /> : m ? <StatusBadge dimension="costs" value={complete ? 'complete' : 'provisional'} /> : null}
         <span className="ml-auto inline-flex items-center gap-1 text-xs text-fg-muted">
           <Icon icon={Lock} size="chip" /> Admin only
         </span>
@@ -160,7 +164,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
       ) : error || !m ? (
         <p className="p-5 text-sm text-fg-muted">The margin could not be read. Reload the page to try again.</p>
       ) : (
-        <div className="grid gap-4 p-5">
+        <div className="grid gap-4 p-4 md:p-5">
           <div className="grid gap-1 rounded border border-dashed border-line-strong p-4">
             <div className="flex items-baseline justify-between gap-3 text-sm text-fg-2">
               <span>{unknown ? 'Margin' : 'Margin so far'}</span>
@@ -171,12 +175,12 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
             </div>
             <p className="text-sm text-fg-2">
               {unknown
-                ? `Net sale is unknown while the price basis is unknown.${actual > 0 ? ` Imported costs of PKR ${formatAmount(actual)} are on file.` : ''} Resolve it from the order header.`
+                ? `Not worked out until someone answers "Is GST included?" at the top of the page.${actual > 0 ? ` Imported costs of PKR ${formatAmount(actual)} are on file.` : ''}`
                 : complete
                   ? 'Final. Costs are marked complete.'
                   : expected !== null
-                    ? `Provisional. Only ${formatAmount(actual)} of an expected ${formatAmount(expected)} has been paid out. It becomes final when you mark costs complete.`
-                    : 'Provisional. No expected cost is set, so only costs paid so far are counted. It becomes final when you mark costs complete.'}
+                    ? `Not final: ${formatAmount(actual)} of an expected ${formatAmount(expected)} paid out so far.`
+                    : 'Not final: no expected cost is set, so only what is paid so far counts.'}
             </p>
           </div>
 
@@ -235,15 +239,15 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
               <p className="text-sm text-fg-muted">The expenses could not be read. Reload the page to try again.</p>
             ) : costs.data.expenses.length === 0 ? (
               <p className="text-sm text-fg-muted" data-testid="margin-expenses-empty">
-                No expense is tagged to this order yet. Expenses tagged to it, with their dates and payees, are listed here.
+                No expense on this order yet.
               </p>
             ) : (
               costs.data.expenses.map(e => (
                 <div key={e.id} className={ROW}>
                   <span className="flex min-w-0 items-baseline gap-3 text-fg-2">
                     <span className="num shrink-0 text-xs text-fg-muted">{formatShortDate(e.paidOn, today)}</span>
-                    <span className="min-w-0 truncate" title={[categoryName(e.categoryId), e.payeeName ?? e.note, e.legLabel].filter(Boolean).join(' · ')}>
-                      {[categoryName(e.categoryId), e.payeeName ?? e.note, e.legLabel].filter(Boolean).join(' · ')}
+                    <span className="min-w-0 truncate" title={[categoryName(e.categoryId), e.payeeName ?? e.note].filter(Boolean).join(' · ')}>
+                      {[categoryName(e.categoryId), e.payeeName ?? e.note].filter(Boolean).join(' · ')}
                     </span>
                   </span>
                   <span className="num shrink-0 text-right">
@@ -292,7 +296,6 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
               Add expense
             </Button>
           </div>
-          <p className="text-xs text-fg-muted">GST sits outside margin on both sides. Expenses are recorded at true cost, without recoverable input tax.</p>
         </div>
       )}
       <AddExpenseDialog open={adding} onOpenChange={setAdding} context={{ orderId: order.id, orderLabel: ref }} />

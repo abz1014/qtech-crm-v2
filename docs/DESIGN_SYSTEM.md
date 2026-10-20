@@ -8,21 +8,26 @@ Direction in one line: an instrument panel that has been tidied by someone who c
 
 **Geist** (sans) and **Geist Mono**, both SIL OFL, self-hosted through `@fontsource/geist-sans` and `@fontsource/geist-mono` (weights 400, 500, 600 and 400, 500; latin subset; woff2; about 60 KB total). `font-display: swap` with the system stack as fallback.
 
-Why: it is the one family that gives the sans and the monospace the same skeleton, so a PKR amount set in mono sits next to a label in sans without a visible seam. Its figures are tabular in the mono and its sans has a calm, slightly technical voice that suits instrumentation without looking like a default shadcn/Inter build. It is built for dense product UI at 12 to 14 px. BRAND.md said "no webfont"; this is the permitted refinement, and the fallback stack keeps the app usable if the font fails.
+Why: it is the one family that gives the sans and the monospace the same skeleton, so a PKR amount set in mono sits next to a label in sans without a visible seam. Its figures are tabular in the mono and its sans has a calm, slightly technical voice that suits instrumentation without looking like a default shadcn/Inter build. It is built for dense product UI; since 2026-10-19 the app sets it at 14 to 16 px by default (section 2). BRAND.md said "no webfont"; this is the permitted refinement, and the fallback stack keeps the app usable if the font fails.
 
 Gaps: Geist has no glyph for the rupee sign (U+20A8). Render the symbol through the fallback in a `<span class="cur">` at the same size, or use the text prefix `PKR` in dense tables. Latin only; Urdu text, if ever needed, needs a separate Nastaliq face (out of scope for v1).
 
 ## 2. Type scale
 
-| Token | Size / line | Use |
-|---|---|---|
-| `--text-xs` | 12 / 16 | Captions, chip labels, kbd, meta lines, compact tables |
-| `--text-sm` | 13 / 20 | **Default for dense UI**: tables, lists, buttons, secondary copy |
-| `--text-base` | 14 / 22 | Body copy, form values, row titles |
-| `--text-lg` | 16 / 24 | Panel and card titles |
-| `--text-xl` | 20 / 28 | Section headers, big inline figures |
-| `--text-2xl` | 28 / 34 | Page titles |
-| `--text-display` | 36 / 40 | One headline number per screen (target tile). Mono, weight 500 |
+Owner decision 2026-10-19 (DECISIONS.md): the text was "very small", so **Normal** is now the bigger scale below, for everyone. A person can pick **Smaller** (Settings > Your details, or the account menu); that puts `data-text="small"` on `<html>` and restores the frozen Gate 2 scale. The choice is kept per device (`localStorage`, `qtech.text-size`) and applied before the first paint (`src/ui/useTextSize.ts`). This is a deliberate, owner-requested deviation from the approved mockups: readability outranks pixel parity for size and density.
+
+| Token | Normal (default) | Smaller (`data-text="small"`) | Use |
+|---|---|---|---|
+| `--text-xs` | 14 / 20 | 12 / 16 | Captions, chip labels, kbd, meta lines, small buttons, compact tables |
+| `--text-sm` | 15 / 22 | 13 / 20 | **Default for UI**: tables, lists, buttons, labels, secondary copy |
+| `--text-base` | 16 / 24 | 14 / 22 | Body copy, row titles |
+| `--text-lg` | 18 / 26 | 16 / 24 | Panel and card titles |
+| `--text-xl` | 22 / 30 | 20 / 28 | Section headers, big inline figures |
+| `--text-2xl` | 30 / 36 | 28 / 34 | Page titles |
+| `--text-display` | 38 / 44 | 36 / 40 | One headline number per screen (target tile). Mono, weight 500 |
+| `--text-table` | 15 / 22 (= sm) | 13 / 20 | DataTable body; compact switches it to xs |
+
+On a phone every input is 16px whatever the scale, so iOS Safari never zooms the page (`controlClass` in `src/ui/form/fieldContext.ts`). Nothing around text has a fixed pixel height or line-height: chips, keys, segments, small buttons, table heads and rows read the tokens in section 11, so they grow with the text instead of clipping it.
 
 Weights: 400 body, 500 for emphasis, titles, buttons and nav, 600 for page and panel headings only. Never 700. Tracking: `-0.02em` at 28 px and up, `-0.01em` from 16 to 20 px, none below.
 
@@ -31,7 +36,7 @@ Rules:
 - Sentence case everywhere. No all-caps labels, no letter-spaced eyebrows.
 - Line length for running text: 66 characters maximum (`max-width: 66ch`). Tables and lists are exempt.
 - Titles use `text-wrap: balance`, paragraphs `text-wrap: pretty`.
-- Muted text is `--fg-muted` (5.7:1 or better on every surface), never a lighter grey.
+- Muted text is `--fg-muted` (8.37:1 on white, 7.62 on sunken, 7.23 on selected, and 7.13 on the lightest chip tint, the danger tint: 7.1:1 or better wherever it can sit), never a lighter grey, and only for captions, hints and placeholders. Body copy and data in primitives use `--fg` or `--fg-2`.
 
 ### Mono and tabular figures
 
@@ -78,10 +83,12 @@ Cool grey, hue about 240 degrees, chroma under 3 percent. Components never refer
 | `--neutral-100` | `#eeeef1` |
 | `--neutral-150` | `#e3e3e7` |
 | `--neutral-200` | `#d2d2d8` |
+| `--neutral-250` | `#c8c8cf` (added 2026-10-19: the readable hairline) |
 | `--neutral-300` | `#b3b3bb` |
 | `--neutral-400` | `#8a8a93` |
 | `--neutral-500` | `#6e6e77` |
 | `--neutral-600` | `#5a5a63` |
+| `--neutral-650` | `#4d4d55` (added 2026-10-19: secondary text) |
 | `--neutral-700` | `#3d3d44` |
 | `--neutral-800` | `#26262b` |
 | `--neutral-900` | `#111113` |
@@ -95,10 +102,10 @@ Cool grey, hue about 240 degrees, chroma under 3 percent. Components never refer
 | Table header, hover | `--bg-sunken` | neutral-50 |
 | Selected row, active nav, track | `--bg-selected` | neutral-100 |
 | Modal scrim | `--bg-scrim` | 42% black |
-| Text | `--fg` / `--fg-2` / `--fg-muted` | neutral-900 / 700 / 600 |
+| Text | `--fg` / `--fg-2` / `--fg-muted` | neutral-900 / 700 / 650 |
 | Disabled | `--fg-disabled` | neutral-300 (WCAG-exempt) |
-| Hairline | `--border` | neutral-150 |
-| Hover or popover edge | `--border-strong` | neutral-200 |
+| Hairline | `--border` | neutral-250 (1.66:1 on white, 1.60 on canvas, 1.52 on sunken, 1.44 on selected; up from 1.28 on white) |
+| Hover or popover edge, secondary button | `--border-strong` | neutral-300 (2.08:1) |
 | Form control edge | `--border-input` | neutral-400 (3.42:1) |
 | Primary action, links, green text | `--primary` `#1a7b46` | hover `#166a3b`, active `#115a31` |
 | Non-text green | `--brand-green` `#429446` | focus ring, active indicator, selected control fill, progress, logo |
@@ -112,10 +119,10 @@ Six tones. Every derived state in the app resolves to one of them through `data-
 | Tone | Text | Tint | Ratio | Meaning |
 |---|---|---|---|---|
 | `neutral` | `--tone-neutral-fg` `#3d3d44` | `--tone-neutral-bg` `#eeeef1` | 9.30:1 | Inert, informational or closed states |
-| `info` | `--tone-info-fg` `#1d6fb8` | `--tone-info-bg` `#e3f0fb` | 4.51:1 | In progress, waiting on someone else |
-| `success` | `--tone-success-fg` `#0f766e` | `--tone-success-bg` `#e0f2f1` | 4.73:1 | Done, covered, settled, delivered |
-| `warning` | `--tone-warning-fg` `#b45309` | `--tone-warning-bg` `#fef3c7` | 4.51:1 | Needs action soon, incomplete, uncertain |
-| `danger` | `--tone-danger-fg` `#c62828` | `--tone-danger-bg` `#fde8e8` | 4.79:1 | Overdue, late, failed, nowhere to buy |
+| `info` | `--tone-info-fg` `#185f9e` | `--tone-info-bg` `#e3f0fb` | 5.72:1 | In progress, waiting on someone else |
+| `success` | `--tone-success-fg` `#0b625b` | `--tone-success-bg` `#e0f2f1` | 6.23:1 | Done, all priced, settled, delivered |
+| `warning` | `--tone-warning-fg` `#92400e` | `--tone-warning-bg` `#fef3c7` | 6.37:1 | Needs action soon, incomplete, uncertain |
+| `danger` | `--tone-danger-fg` `#b21f1f` | `--tone-danger-bg` `#fde8e8` | 5.75:1 | Overdue, late, failed, nowhere to buy |
 | `ink` | `--tone-ink-fg` `#ffffff` | `--tone-ink-bg` `#26262b` | 15.06:1 | Emphasis without hue (company role: both) |
 
 Mapping rule: **warning** = someone here should act soon, or the data is incomplete; **info** = in progress or waiting on someone else; **success** = finished or fully covered; **danger** = late, overdue or nowhere to buy; **neutral** = inert or closed; **ink** is reserved for company role "both".
@@ -123,23 +130,25 @@ Mapping rule: **warning** = someone here should act soon, or the data is incompl
 | Status | Values (tone) |
 |---|---|
 | RFQ outcome | Open (info) · Won (success) · Closed (neutral) |
-| RFQ sourcing | Not floated (warning) · Awaiting offers (info) · Partly covered (info) · Covered (success) · No offer anywhere (danger) |
-| Clarification | To ask (warning) · Waiting on customer (info) · Answers to relay (warning) · Answered (success) · Withdrawn (neutral) |
-| Bid | To bid (warning) · Bid sent (success) |
+| RFQ sourcing | Not sent to suppliers (warning) · Waiting for prices (info) · Partly priced (info) · All priced (success) · No price yet (danger) |
+| Clarification | To ask (warning) · Waiting on customer (info) · Answers to send (warning) · Answered (success) · Withdrawn (neutral) |
+| Quotation (`bid`) | To quote (warning) · Quotation sent (success) · Quotation expired (warning) |
 | Deadline risk | Due soon (warning) · Overdue (danger) |
-| Supplier inquiry | Shortlisted (neutral) · Sent (info) · Chased (warning) · Quoted (success) · No offer (danger) |
+| Supplier inquiry | Shortlisted (neutral) · Sent (info) · Chased (warning) · Quoted (success) · Can't quote (danger) |
 | Order lifecycle | Active (info) · Cancelled (neutral) · Done (success) |
 | Goods | To source (warning) · To place (warning) · On order (info) · Late (danger) · Received (info) · Partly delivered (info) · Delivered (success) |
-| Commissioning | n/a (neutral) · To plan (warning) · Planned (info) · Done (success) |
+| Commissioning | Not needed (neutral) · To plan (warning) · Planned (info) · Done (success) |
 | Invoicing | Not invoiced (warning) · Part invoiced (info) · Fully invoiced (success) |
 | Payment | Unpaid (neutral) · Part paid (info) · Settled (success) · Overdue (danger) |
-| Costs | Provisional (warning) · Complete (success) |
-| Data trust | Basis unknown (warning, dashed) · Estimated dates (neutral, dashed) |
+| Costs | Not final (warning) · Complete (success) |
+| Data trust | Is GST included? (warning, dashed) · Estimated dates (neutral, dashed) |
 | Invoice courier (TCS) | Not started (neutral) · Copy received (info) · Sent (info) · Delivered (success) |
 | FBR | Pending (warning) · Generated (info) · Receipt received (info) · Deposited (success) |
 | Company role | Customer (info) · Supplier (neutral) · Both (ink) · Prospect (neutral, dashed) |
 
-Usage: `<span class="chip" data-status="goods:late">…</span>`. Chip height 20, padding 0 8 (6 on the glyph side), 12px weight-500 label, 12px glyph, 1px hairline tinted from the text colour. Do not invent per-screen colours for a status; add it to the map in `tokens.css`.
+Labels follow the plain-words glossary (DECISIONS 2026-10-19). Only the words changed; the `data-status` keys and the view values did not (`src/lib/status.ts`, guarded by `status.test.ts`).
+
+Usage: `<span class="chip" data-status="goods:late">…</span>`. Chip height `--chip-h` (24; 20 with Smaller text) as a minimum, so the label never clips; padding 0 8 (6 on the glyph side); `--text-xs` weight-500 label; the glyph is `--icon-chip` (16; 12 with Smaller text), big enough that neutral (hollow circle), info (dotted circle) and success (check) chips differ by shape without colour; 1px hairline tinted from the text colour. Do not invent per-screen colours for a status; add it to the map in `tokens.css`.
 
 ## 7. Contrast (WCAG 2.2 AA)
 
@@ -157,10 +166,10 @@ Computed from the token values by the build script; every pair below passes. Tex
 | fg-2 on canvas | `#3d3d44` | `#fafafb` | 10.33:1 | 4.5:1 | pass |
 | fg-2 on sunken / hover | `#3d3d44` | `#f4f4f6` | 9.81:1 | 4.5:1 | pass |
 | fg-2 on selected | `#3d3d44` | `#eeeef1` | 9.30:1 | 4.5:1 | pass |
-| fg-muted on surface | `#5a5a63` | `#ffffff` | 6.82:1 | 4.5:1 | pass |
-| fg-muted on canvas | `#5a5a63` | `#fafafb` | 6.54:1 | 4.5:1 | pass |
-| fg-muted on sunken / hover | `#5a5a63` | `#f4f4f6` | 6.21:1 | 4.5:1 | pass |
-| fg-muted on selected | `#5a5a63` | `#eeeef1` | 5.89:1 | 4.5:1 | pass |
+| fg-muted on surface | `#4d4d55` | `#ffffff` | 8.37:1 | 4.5:1 | pass |
+| fg-muted on canvas | `#4d4d55` | `#fafafb` | 8.03:1 | 4.5:1 | pass |
+| fg-muted on sunken / hover | `#4d4d55` | `#f4f4f6` | 7.62:1 | 4.5:1 | pass |
+| fg-muted on selected | `#4d4d55` | `#eeeef1` | 7.23:1 | 4.5:1 | pass |
 | primary on surface | `#1a7b46` | `#ffffff` | 5.30:1 | 4.5:1 | pass |
 | primary on canvas | `#1a7b46` | `#fafafb` | 5.08:1 | 4.5:1 | pass |
 | primary on sunken / hover | `#1a7b46` | `#f4f4f6` | 4.82:1 | 4.5:1 | pass |
@@ -178,24 +187,28 @@ Computed from the token values by the build script; every pair below passes. Tex
 | Pair | Foreground | Background | Ratio | Needs | Result |
 |---|---|---|---|---|---|
 | tone-neutral-fg on tone-neutral-bg | `#3d3d44` | `#eeeef1` | 9.30:1 | 4.5:1 | pass |
-| tone-info-fg on tone-info-bg | `#1d6fb8` | `#e3f0fb` | 4.51:1 | 4.5:1 | pass |
-| tone-success-fg on tone-success-bg | `#0f766e` | `#e0f2f1` | 4.73:1 | 4.5:1 | pass |
-| tone-warning-fg on tone-warning-bg | `#b45309` | `#fef3c7` | 4.51:1 | 4.5:1 | pass |
-| tone-danger-fg on tone-danger-bg | `#c62828` | `#fde8e8` | 4.79:1 | 4.5:1 | pass |
+| tone-info-fg on tone-info-bg | `#185f9e` | `#e3f0fb` | 5.72:1 | 4.5:1 | pass |
+| tone-success-fg on tone-success-bg | `#0b625b` | `#e0f2f1` | 6.23:1 | 4.5:1 | pass |
+| tone-warning-fg on tone-warning-bg | `#92400e` | `#fef3c7` | 6.37:1 | 4.5:1 | pass |
+| tone-danger-fg on tone-danger-bg | `#b21f1f` | `#fde8e8` | 5.75:1 | 4.5:1 | pass |
 | tone-ink-fg on tone-ink-bg | `#ffffff` | `#26262b` | 15.06:1 | 4.5:1 | pass |
 
 **Tone text on page surfaces (inline text, no chip)**
 
 | Pair | Foreground | Background | Ratio | Needs | Result |
 |---|---|---|---|---|---|
-| tone-info-fg on surface | `#1d6fb8` | `#ffffff` | 5.23:1 | 4.5:1 | pass |
-| tone-info-fg on canvas | `#1d6fb8` | `#fafafb` | 5.01:1 | 4.5:1 | pass |
-| tone-success-fg on surface | `#0f766e` | `#ffffff` | 5.47:1 | 4.5:1 | pass |
-| tone-success-fg on canvas | `#0f766e` | `#fafafb` | 5.25:1 | 4.5:1 | pass |
-| tone-warning-fg on surface | `#b45309` | `#ffffff` | 5.02:1 | 4.5:1 | pass |
-| tone-warning-fg on canvas | `#b45309` | `#fafafb` | 4.81:1 | 4.5:1 | pass |
-| tone-danger-fg on surface | `#c62828` | `#ffffff` | 5.62:1 | 4.5:1 | pass |
-| tone-danger-fg on canvas | `#c62828` | `#fafafb` | 5.39:1 | 4.5:1 | pass |
+| tone-info-fg on surface | `#185f9e` | `#ffffff` | 6.63:1 | 4.5:1 | pass |
+| tone-info-fg on canvas | `#185f9e` | `#fafafb` | 6.35:1 | 4.5:1 | pass |
+| tone-success-fg on surface | `#0b625b` | `#ffffff` | 7.21:1 | 4.5:1 | pass |
+| tone-success-fg on canvas | `#0b625b` | `#fafafb` | 6.91:1 | 4.5:1 | pass |
+| tone-warning-fg on surface | `#92400e` | `#ffffff` | 7.09:1 | 4.5:1 | pass |
+| tone-warning-fg on canvas | `#92400e` | `#fafafb` | 6.80:1 | 4.5:1 | pass |
+| tone-danger-fg on surface | `#b21f1f` | `#ffffff` | 6.76:1 | 4.5:1 | pass |
+| tone-danger-fg on canvas | `#b21f1f` | `#fafafb` | 6.48:1 | 4.5:1 | pass |
+| tone-info-fg on selected (a chip-coloured word in a selected row) | `#185f9e` | `#eeeef1` | 5.72:1 | 4.5:1 | pass |
+| tone-success-fg on selected | `#0b625b` | `#eeeef1` | 6.23:1 | 4.5:1 | pass |
+| tone-warning-fg on selected (failed at 4.34:1 before 2026-10-19) | `#92400e` | `#eeeef1` | 6.12:1 | 4.5:1 | pass |
+| tone-danger-fg on selected | `#b21f1f` | `#eeeef1` | 5.83:1 | 4.5:1 | pass |
 
 **Non-text (3:1)**
 
@@ -207,7 +220,9 @@ Computed from the token values by the build script; every pair below passes. Tex
 | brand-green (focus ring, indicator, progress) on selected | `#429446` | `#eeeef1` | 3.26:1 | 3:1 | pass |
 | border-input on surface | `#8a8a93` | `#ffffff` | 3.42:1 | 3:1 | pass |
 | border-input on sunken | `#8a8a93` | `#f4f4f6` | 3.11:1 | 3:1 | pass |
-| tone-warning-fg dot on surface | `#b45309` | `#ffffff` | 5.02:1 | 3:1 | pass |
+| border (hairline, divider) on surface / canvas / sunken / selected | `#c8c8cf` | `#ffffff` … `#eeeef1` | 1.66 / 1.60 / 1.52 / 1.44 | none (decorative) | pass |
+| border-strong on surface | `#b3b3bb` | `#ffffff` | 2.08:1 | none (decorative) | pass |
+| tone-warning-fg dot on surface | `#92400e` | `#ffffff` | 7.09:1 | 3:1 | pass |
 
 Notes: brand green fails 4.5:1 as text on white (3.78:1) and is therefore non-text only. Primary text on `--bg-selected` is 4.57:1, so a selected row may carry a green link, but prefer `--fg`. `--fg-disabled` is exempt under WCAG 1.4.3 (inactive components).
 
@@ -231,22 +246,29 @@ Patterns: menus fade and rise 4px; a selected detail pane fades in and rises 6px
 
 ## 10. Icons
 
-**Lucide** (`lucide-react`, ISC licence), one stroke width: **1.75**, round caps and joins, `currentColor`, no fills. Sizes: 12 inside chips (stroke 2 for legibility), 14 for inline facts, **16 default** (buttons, nav, inputs), 20 for list-row icons and the mobile tab bar, 24 for empty and error illustrations. Icons are muted (`--fg-muted`) until they carry an action or a tone. Never an icon-only control without an `aria-label`.
+**Lucide** (`lucide-react`, ISC licence), one stroke width: **1.75**, round caps and joins, `currentColor`, no fills. Sizes: 16 inside status chips (12 with Smaller text; stroke 2), 12 inside keys and compact marks, 14 for inline facts, **16 default** (buttons, nav, inputs), 20 for list-row icons and the mobile tab bar, 24 for empty and error illustrations. Icons are muted (`--fg-muted`) until they carry an action or a tone. Never an icon-only control without an `aria-label`.
 
 Set in use in the mockups: calendar-check, file-text, package, building-2, wallet (Money), chart-column, search, message-circle-question, send, reply, inbox, truck, alarm-clock-off, clock, circle-alert, triangle-alert, circle-check, check, x, chevron-right, chevron-down, chevron-left, refresh-cw, cloud-off and others (see the spec sheet).
 
 ## 11. Density
 
-One default, one alternative.
+One default, one alternative, at either text size. Compact is never a default.
 
-| | Default | Compact (DataTable only, `data-density="compact"`) |
-|---|---|---|
-| Row height | 40 (`--row-h`) | 32 |
-| Cell padding x | 12 | 8 |
-| Table text | 13 / 20 | 12 / 16 |
-| Control height | 32 (40 on coarse pointers) | 32 |
+| Token | Normal text | Smaller text | Coarse pointer (phones, tablets) |
+|---|---|---|---|
+| `--control-h` (inputs, buttons, menu rows) | 40 | 32 | 44 at either text size |
+| `--control-sm-h` (small buttons, row actions) | 36 | 28 | 40 at either text size |
+| `--control-lg-h` (large buttons) | 44 | 40 | 44 at either text size |
+| `--segment-h` (one SegmentedControl segment, filter chips) | 36 | 26 | 40 at either text size |
+| `--chip-h` (status chip, tag, key; a minimum) | 24 | 20 | |
+| `--row-h` (table and list rows) | 48 | 40 | 48 at either text size |
+| `--row-h-tall` (two-line rows) | 56 | 48 | |
+| `--head-h` (table header; column bands are 8 less) | 40 | 36 | |
+| `--topbar-h` | 56 | 52 | |
+| Table text | 15 / 22 | 13 / 20 | |
+| Compact table (`data-density="compact"`) | rows 40, text 14 / 20, cells 8 | rows 32, text 12 / 16 | |
 
-Compact is a per-table toggle remembered per user; it never applies to forms or the Today list. On touch devices rows are 48 and controls 40; tap targets on phones are at least 44 (`--hit-touch`).
+Compact is a per-table toggle remembered per user; it never applies to forms or the Today list. DataTable reads `--row-h`, `--row-h-tall` and `--head-h` from its own computed style for windowing and raises them to what the rows in view need (a row with a 36 px small button needs 49), so virtual rows always match what is drawn. Tap targets on phones are at least 44 (`--hit-touch`), and Smaller text never shrinks a tap target: the coarse-pointer heights are the same at both sizes (`src/lib/tokens.test.ts`).
 
 ## 12. Layout
 

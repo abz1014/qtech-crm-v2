@@ -42,7 +42,7 @@ export function Tooltip({ content, title, shortcut, children, forDisabled = fals
             side={side}
             sideOffset={6}
             collisionPadding={8}
-            className="z-50 max-w-[260px] animate-fade-in rounded bg-tone-ink-bg px-2 py-[6px] text-xs text-tone-ink-fg shadow-pop"
+            className="z-50 max-w-[300px] animate-fade-in rounded bg-tone-ink-bg px-[10px] py-[6px] text-xs text-tone-ink-fg shadow-pop"
           >
             {title ? (
               <div className="grid gap-[2px]">
@@ -67,7 +67,7 @@ function KeyRow({ keys }: { keys: string[] }) {
   return (
     <span className="inline-flex gap-1">
       {keys.map(k => (
-        <Kbd key={k} className="h-4 min-w-4 border-tone-ink-fg/30 bg-transparent text-xs text-tone-ink-fg">
+        <Kbd key={k} size="inline" className="border-tone-ink-fg/30 bg-transparent text-tone-ink-fg">
           {k}
         </Kbd>
       ))}
@@ -106,7 +106,7 @@ export function TruncateTip({ children, className, style }: { children: ReactNod
             side="bottom"
             sideOffset={6}
             collisionPadding={8}
-            className="z-50 max-w-[260px] animate-fade-in rounded bg-tone-ink-bg px-2 py-[6px] text-xs font-medium text-tone-ink-fg shadow-pop"
+            className="z-50 max-w-[300px] animate-fade-in rounded bg-tone-ink-bg px-[10px] py-[6px] text-xs font-medium text-tone-ink-fg shadow-pop"
           >
             {text}
           </RadixTooltip.Content>

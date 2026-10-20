@@ -19,7 +19,7 @@ import type { PastOrder } from '@/features/orders/api'
 import { useCreateRepeatOrder, usePastOrder, usePastOrders } from '@/features/orders/hooks'
 
 /*
- * New order from a past order (O02): "WhatsApp order (no RFQ) and repeat order". The customer ordered again, or ordered without an RFQ
+ * Repeat a past order (O02; the dialog was called "New order" until the plain-words decision of 2026-10-19): "WhatsApp order (no RFQ) and repeat order". The customer ordered again, or ordered without an RFQ
  * (a message, a call): start from the closest past order. It is found by company, site, item text, order number or customer PO, and
  * create_repeat_order copies the company, site, contact, payment terms, the lines with their last selling and purchase prices, and the
  * supplier legs that supplied them. The new order has today's date and no dates on its legs (nothing has been ordered yet).
@@ -78,8 +78,8 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
   return (
     <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
       <DialogContent
-        title="New order"
-        context={chosen ? `Repeat of ${orderRef(chosen.number)} · ${chosen.companyName}` : 'A customer ordered again, or ordered without an RFQ. Start from the closest past order.'}
+        title="Repeat a past order"
+        context={chosen ? `Copy of ${orderRef(chosen.number)} · ${chosen.companyName}` : 'The customer ordered again, or ordered without an RFQ: start from the closest past order.'}
         icon={CopyPlus}
         size="lg"
         footer={
@@ -113,7 +113,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
               {chosen.summary ? <span className="text-sm text-fg-muted">{chosen.summary}</span> : null}
             </div>
             <p className="text-sm text-fg-2">
-              The new order copies the customer, site, contact and payment terms, the lines with their last prices, and the supplier legs that supplied them. Nothing is ordered from the suppliers yet.
+              The new order copies the customer, site, contact and payment terms, the lines with their last prices, and the suppliers. Nothing is ordered from the suppliers yet.
             </p>
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Customer PO number" requirement="optional" help="Add it from the order later if it has not arrived.">
@@ -158,7 +158,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
               </Banner>
             ) : found.data.length === 0 ? (
               <p className="rounded border border-dashed p-4 text-sm text-fg-muted" data-testid="no-past-orders">
-                {debounced.trim() ? 'No past order matches that. Try a company name, a site or an item.' : 'There are no past orders to copy yet. Win an RFQ to start the first one.'}
+                {debounced.trim() ? 'No past order matches that. Try a company name, a site or an item.' : 'There are no past orders to copy yet. Mark an RFQ won to start the first one.'}
               </p>
             ) : (
               <ul className="grid gap-2" aria-label={debounced.trim() ? 'Past orders that match' : 'Most recent orders'}>

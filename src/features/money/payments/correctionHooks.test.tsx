@@ -29,7 +29,8 @@ describe('payment correction hooks (0073)', () => {
     const { db, client, wrapper } = setup(c => ({ data: c.target === 'rpc:correct_payment' ? 'n1' : null }))
     const watched = [qk.money.receivables.payments('o1'), qk.money.receivables.list(), qk.today.board(), qk.orders.part('o1', 'money')]
     const prime = () => watched.forEach(k => client.setQueryData(k, []))
-    const stale = () => watched.map(k => client.getQueryState(k)?.isInvalidated)
+    // Money no screen watches is dropped rather than marked (invalidation.ts): gone counts as stale.
+    const stale = () => watched.map(k => client.getQueryState(k)?.isInvalidated ?? (client.getQueryState(k) === undefined))
 
     const v = renderHook(() => useVoidPayment('o1'), { wrapper })
     prime()

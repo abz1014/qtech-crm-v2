@@ -1,4 +1,4 @@
-import type { QueryClient, QueryKey } from '@tanstack/react-query'
+import { notifyManager, partialMatchKey, type Query, type QueryClient, type QueryKey } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
 
 /*
@@ -12,6 +12,14 @@ import { qk } from '@/features/queryKeys'
  *    a stale screen is not.
  *  - A write that moves rows between areas (a merge moves RFQs and orders) lists every area it touches.
  *  - Realtime and cross-tab changes are out of scope; the map is for this tab's own writes.
+ *
+ * Timing (audit 2, performance #1): a save no longer waits for every screen to read itself again. `invalidateAfter` marks
+ * every key stale at once and refetches what is on screen in the background, so Save, Snooze or Issue returns when the
+ * server confirms. Two exceptions, both about money:
+ *  - A money figure on screen (`isMoneyKey`) is read again before the save returns, so a dialog never closes onto, and
+ *    never reopens with, the balance from before the payment.
+ *  - A money read no screen is watching is dropped, so the next screen that opens on it waits for the new figure.
+ * A caller that goes straight on to use fresh non-money data passes `{ wait: 'all' }` (the old behaviour).
  */
 export interface WriteVars {
   'company.create': { id: string }
@@ -119,13 +127,14 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'company.update': v => [qk.companies.lists(), qk.companies.detail(v.id)],
   // The dropped company is gone; everything that pointed at it now points at the kept one.
   'company.merge': v => [qk.companies.all, qk.rfqs.all, qk.orders.all, qk.companies.detail(v.keepId), qk.today.all, qk.intake.all, qk.memory.all, qk.purchaseOrders.all, qk.money.all],
-  // Adding a site or contact changes the page, and the roster does not show them, so only the detail.
+  // Adding a site changes the page only (the roster does not show sites). A contact changes the page AND the roster: the Companies
+  // search matches contact names and phone numbers (2026-10-20), so a contact just saved must be findable at once.
   'site.add': v => [qk.companies.detail(v.companyId)],
-  'contact.add': v => [qk.companies.detail(v.companyId)],
+  'contact.add': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   'site.update': v => [qk.companies.detail(v.companyId)],
   'site.remove': v => [qk.companies.detail(v.companyId)],
-  'contact.update': v => [qk.companies.detail(v.companyId)],
-  'contact.remove': v => [qk.companies.detail(v.companyId)],
+  'contact.update': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
+  'contact.remove': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   // Dropping the last brand can end a supplier's role, so the roster refreshes too.
   'brand.unlink': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   // Carrying a brand makes the company a supplier, so the roster's role column can change too.
@@ -190,10 +199,12 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'order.convert': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.all, qk.orders.all, qk.today.all, qk.companies.all],
   'order.repeat': v => [qk.orders.all, qk.today.all, qk.companies.all, qk.companies.detail(v.companyId)],
   // The customer's history shows each order's lifecycle and goods state, so it goes stale too.
-  'order.update': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.companies.all],
+  // An item or leg edit moves the supplier-price inputs of the Margin panel and the margins list (audit 2, performance §2.1).
+  'order.update': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.companies.all, qk.money.orderCosts(v.orderId), qk.money.margins()],
   'order.cancel': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.rfqs.all, qk.today.all, qk.companies.all],
   // An issued PO changes the order page (leg placed, prices written back), the order lists, Today and every PO read.
-  'po.issue': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.purchaseOrders.all, qk.companies.all],
+  // The prices written back are the Margin panel's supplier-price inputs.
+  'po.issue': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.purchaseOrders.all, qk.companies.all, qk.money.orderCosts(v.orderId), qk.money.margins()],
   'po.pdf': v => [qk.orders.part(v.orderId, 'pos'), qk.purchaseOrders.all],
   // A chase stamp changes the asked/chased fields the RFQ page, the board and the order screens read, and every Today read.
   // A supplier chase moves the supplier's activity counts; a payment reminder moves the invoice reminder fields Money shows.
@@ -228,7 +239,85 @@ export function keysFor<N extends WriteName>(name: N, vars: WriteVars[N]): Keys 
   return invalidates[name](vars)
 }
 
-/** Invalidate every key a write makes stale. Call from a mutation's onSuccess; returns when the refetches settle. */
-export function invalidateAfter<N extends WriteName>(client: QueryClient, name: N, vars: WriteVars[N]): Promise<unknown> {
-  return Promise.all(keysFor(name, vars).map(queryKey => client.invalidateQueries({ queryKey })))
+/**
+ * A read that shows money: everything under the money root, and the money slice of an order or a company page.
+ * After a write these are never shown from before it (see `invalidateAfter`).
+ */
+export function isMoneyKey(key: QueryKey): boolean {
+  const [root, kind, , part] = key
+  if (root === 'money') return true
+  return (root === 'orders' || root === 'companies') && kind === 'detail' && part === 'money'
+}
+
+export interface InvalidateOptions {
+  /**
+   * What the returned promise waits for.
+   *  - 'money' (the default): the money reads on screen. Everything else refreshes in the background.
+   *  - 'all': every read on screen (the old behaviour). For a caller that goes straight on to use fresh data, such as a
+   *    double-tap guard held until the list it reads has caught up.
+   */
+  wait?: 'money' | 'all'
+}
+
+/** The longest a save waits for its on-screen money reads. A read that is slower than this is left to finish in the background. */
+export const MONEY_WAIT_CEILING_MS = 10_000
+
+/** Drops a key that another key of the same write already covers (a prefix), so no query is refetched twice. */
+function withoutCovered(keys: Keys): Keys {
+  return keys.filter((key, i) => !keys.some((other, j) => j !== i && partialMatchKey(key, other) && (!partialMatchKey(other, key) || j < i)))
+}
+
+/**
+ * Resolves once none of `queries` is still fetching for a screen (or after the ceiling). Offline (paused) counts as done.
+ * Each check runs after the notification batch has flushed, not inside the cache event: a later save cancels this save's
+ * refetch and starts its own in one step, and the gap between the two must not count as done (the screen still shows the
+ * figure from before both saves).
+ */
+function settled(client: QueryClient, queries: Query[]): Promise<void> {
+  const cache = client.getQueryCache()
+  const busy = () => queries.some(q => cache.get(q.queryHash) === q && q.isActive() && q.state.fetchStatus === 'fetching')
+  if (!busy()) return Promise.resolve()
+  return new Promise(resolve => {
+    let finished = false
+    const done = () => {
+      if (finished) return
+      finished = true
+      unsubscribe()
+      clearTimeout(timer)
+      resolve()
+    }
+    const unsubscribe = cache.subscribe(() =>
+      notifyManager.schedule(() => {
+        if (!busy()) done()
+      }),
+    )
+    const timer = setTimeout(done, MONEY_WAIT_CEILING_MS)
+  })
+}
+
+/**
+ * Invalidate every key a write makes stale. Call from a mutation's onSuccess, after the server has confirmed the write.
+ *
+ *  1. A read already in flight may have left before the write committed. It is cancelled (its state put back), so its
+ *     rows can never land as current; the screens that need it fetch again below.
+ *  2. Money no screen is watching is dropped from the cache.
+ *  3. Every key is marked stale and every query on screen refetches, in the background.
+ *  4. The promise resolves once the on-screen money reads have their new figures (`wait: 'all'`: once every on-screen
+ *     read has). Usually there are none, and it resolves at once.
+ */
+export function invalidateAfter<N extends WriteName>(client: QueryClient, name: N, vars: WriteVars[N], options: InvalidateOptions = {}): Promise<void> {
+  const keys = withoutCovered(keysFor(name, vars))
+  const cache = client.getQueryCache()
+  const matched = new Set<Query>()
+  for (const queryKey of keys) for (const q of cache.findAll({ queryKey })) matched.add(q)
+  const money = [...matched].filter(q => isMoneyKey(q.queryKey))
+  const refetched = notifyManager.batch(() => {
+    for (const q of matched) if (q.state.fetchStatus === 'fetching') void q.cancel({ revert: true })
+    const unwatched = money.filter(q => q.getObserversCount() === 0)
+    if (unwatched.length > 0) client.removeQueries({ predicate: q => unwatched.includes(q) })
+    return Promise.all(keys.map(queryKey => client.invalidateQueries({ queryKey })))
+  })
+  // `settled` as well as the refetch promises: a later save that cancels one of these refetches resolves its promise early.
+  if (options.wait === 'all') return Promise.all([refetched, settled(client, [...matched].filter(q => q.isActive()))]).then(() => undefined)
+  return settled(client, money.filter(q => q.isActive()))
 }

@@ -73,7 +73,7 @@ export function InlineEditRow({ columns, label, cells, editCells, mode, error, o
         className={cn(
           'relative grid min-h-row items-center gap-2 px-3 text-sm',
           editing
-            ? 'bg-sunken py-2 before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green [&_input]:h-7 [&_input]:px-2 [&_input]:text-sm [&_select]:h-7 [&_select]:text-sm'
+            ? 'bg-sunken py-2 before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green [&_input]:h-control-sm [&_input]:px-2 [&_input]:text-sm [&_select]:h-control-sm [&_select]:text-sm max-md:[&_input]:text-[16px] max-md:[&_select]:text-[16px]'
             : 'cursor-pointer bg-surface hover:bg-sunken',
         )}
       >
@@ -96,7 +96,7 @@ export function InlineEditRow({ columns, label, cells, editCells, mode, error, o
       {error && editing ? (
         <div className="px-3 py-2">
           <p role="alert" className="flex items-start gap-[6px] text-xs font-medium text-tone-danger-fg">
-            <Icon icon={CircleAlert} size="sm" className="mt-px" />
+            <Icon icon={CircleAlert} size="sm" className="mt-[calc((var(--lh-xs)-14px)/2)]" />
             <span>{error}</span>
           </p>
         </div>
