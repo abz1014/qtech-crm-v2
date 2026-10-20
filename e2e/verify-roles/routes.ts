@@ -94,7 +94,7 @@ export const ROUTES: readonly RouteSpec[] = [
     openers: [
       { name: /^Record payment$/, roles: A },
       { name: /^Create invoice$/, roles: AS, optional: true },
-      { name: /^Add line$/, roles: AS },
+      { name: /^Add line$/, roles: AS, optional: true }, // post-merge: behind the "Edit GST and lines" toggle
       { name: /^(Add leg|Add supplier)$/, roles: AS },
       { name: /^Edit notes$/, roles: AS },
       { name: /^Issue PO/, roles: AS },
@@ -116,7 +116,7 @@ export const ROUTES: readonly RouteSpec[] = [
     admin: 'ok',
     sales: 'ok',
     engineer: 'ok',
-    openers: [{ name: /^Repeat order ORD-/, roles: AS }],
+    openers: [{ name: /^Repeat order ORD-/, roles: AS, optional: true }],
     engineerAbsent: [/^Money with them$/, /^Receivable/, /^Merge into another company$/],
   },
   { path: '/companies/{supplier}', admin: 'ok', sales: 'ok', engineer: 'ok', prices: ['supplier', 'fx'] },

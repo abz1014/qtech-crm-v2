@@ -111,14 +111,18 @@ test.describe('a double tap makes one record', () => {
   })
 
   test('Create invoice (sales): one invoice', async ({ page }) => {
-    const before = (await rows(`invoices?order_id=eq.${world.order.id}&select=id`)).length
-    await openAs(page, 'sales', `/money/gst-register?new=1&order=${world.order.id}`)
+    // The imported order has lines and no invoice yet, so the dialog pre-fills a full invoice.
+    const order = world.legacyOrder.id
+    const before = (await rows(`invoices?order_id=eq.${order}&select=id`)).length
+    await openAs(page, 'sales', `/money/gst-register?new=1&order=${order}`)
     const d = page.getByRole('dialog', { name: 'Create invoice' })
     await d.getByLabel('Invoice number').fill(`INV-${world.tag}-2`)
+    const net = d.getByLabel('Net amount, PKR')
+    if (await net.count()) await net.fill('1000')
     await d.getByRole('button', { name: 'Create invoice' }).dblclick()
     await expect(d).toHaveCount(0)
     await page.waitForTimeout(1500)
-    expect((await rows(`invoices?order_id=eq.${world.order.id}&select=id`)).length).toBe(before + 1)
+    expect((await rows(`invoices?order_id=eq.${order}&select=id`)).length).toBe(before + 1)
   })
 
   test('Add line on an order (sales): one line', async ({ page }) => {
@@ -142,7 +146,7 @@ test.describe('a double tap makes one record', () => {
     await page.getByRole('button', { name: 'Add item' }).first().click()
     const d = page.getByRole('dialog', { name: 'Add an item' })
     await d.getByLabel('Description').fill(description)
-    await d.getByRole('button', { name: 'Add item' }).dblclick()
+    await d.getByRole('button', { name: 'Add item' }).last().dblclick()
     await expect(d).toHaveCount(0)
     await page.waitForTimeout(1500)
     expect((await rows(`rfq_items?rfq_id=eq.${world.rfq.id}&description=eq.${encodeURIComponent(description)}&select=id`)).length).toBe(1)
@@ -247,7 +251,9 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
   // The next person on the same tab.
   await signIn(page, STAFF_EMAIL.engineer)
   await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
-  await expect(page.getByRole('dialog').last()).not.toContainText(world.tag)
+  const next = page.getByRole('dialog').last()
+  expect(await next.getByRole('textbox').first().inputValue(), 'the next person\'s Capture sheet').not.toContain('secret capture note')
+  await expect(next).not.toContainText('secret capture note')
   await page.keyboard.press('Escape')
   await page.goto(`/orders/${world.order.id}`)
   await page.waitForLoadState('networkidle')
@@ -277,9 +283,13 @@ test('BUG-RV-04: the command palette\'s recent items are cleared on sign-out and
 
 test('New RFQ drafts (post-merge) are kept per person and cleared on sign-out', async ({ page }) => {
   await openAs(page, 'sales', '/rfqs/new')
-  const box = page.getByRole('textbox').first()
-  await box.fill(`${world.tag} 2 x Rosemount 3051 transmitter`)
-  await page.waitForTimeout(1000)
+  // A pasted enquiry, as a person would (the intake listens for paste anywhere on the screen).
+  await page.evaluate(text => {
+    const dt = new DataTransfer()
+    dt.setData('text/plain', text)
+    document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+  }, `${world.tag} enquiry\n2 x Rosemount 3051 pressure transmitter\n1 x Yokogawa EJA110E`)
+  await page.waitForTimeout(1500)
   const keys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.rfqs.intakeDraft.')))
   test.skip(keys.length === 0, 'the New RFQ draft (ux/rfqs) is not merged in this build')
   expect(keys, 'one draft, keyed by the person').toEqual([`qtech.rfqs.intakeDraft.${IDS.sales}`])

@@ -215,7 +215,8 @@ async function crawl(page: Page, role: Staff, info: TestInfo): Promise<Watch> {
       expect.soft(engineerTextLeaks(await visibleText(page), watch.allow, world), `engineer ${r.path}: money on the screen`).toEqual([])
       for (const name of r.engineerAbsent ?? []) {
         const hits = (await page.getByRole('button', { name }).count()) + (await page.getByRole('columnheader', { name }).count()) +
-          (await page.getByRole('heading', { name }).count()) + (await page.getByRole('checkbox', { name }).count())
+          (await page.getByRole('heading', { name }).count()) + (await page.getByRole('checkbox', { name }).count()) +
+          (await page.getByRole('combobox', { name }).count()) + (await page.getByRole('menuitem', { name }).count())
         expect.soft(hits, `engineer ${r.path}: "${name.source}" must not be offered`).toBe(0)
       }
     }
