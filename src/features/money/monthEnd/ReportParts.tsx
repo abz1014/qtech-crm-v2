@@ -69,7 +69,7 @@ export function AsOfField({ value, onChange }: { value: string; onChange: (iso: 
 
 export function ReportLoading({ label }: { label: string }) {
   return (
-    <div aria-busy="true" aria-label={label} className="grid gap-4">
+    <div role="status" aria-busy="true" aria-label={label} className="grid gap-4">
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded border bg-line md:grid-cols-4">
         {[0, 1, 2, 3].map(i => (
           <div key={i} className="grid gap-2 bg-surface px-5 py-4">

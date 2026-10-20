@@ -64,7 +64,7 @@ function Shell({ children }: { children: ReactNode }) {
 function PageSkeleton() {
   return (
     <Shell>
-      <div className="grid gap-4" aria-busy="true" aria-label="Loading RFQ">
+      <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading RFQ">
         <Skeleton className="h-4 w-40" />
         <div className="flex flex-wrap items-start justify-between gap-4">
           <Skeleton className="h-9 w-96 max-w-full" />
@@ -306,7 +306,7 @@ function Loaded({
               </dl>
             </DetailPanel>
           ) : loading ? (
-            <div className="grid gap-4" aria-busy="true" aria-label="Loading items and replies">
+            <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading items and replies">
               <Skeleton className="h-56 w-full" />
               <Skeleton className="h-56 w-full" />
             </div>

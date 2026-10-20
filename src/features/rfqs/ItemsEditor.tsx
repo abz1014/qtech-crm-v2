@@ -66,7 +66,7 @@ function PickCell({
 }) {
   const chosen = options.find(o => o.value === value)
   return (
-    <span className="relative inline-flex min-w-0 max-w-full">
+    <span className="relative inline-flex min-w-0 max-w-full rounded has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green">
       <span
         className={cn(
           chip
@@ -167,7 +167,7 @@ export function PastedPanel({ block }: { block: PastedBlock }) {
           {found === 0 ? 'No items found' : `${found} ${found === 1 ? 'item' : 'items'} found`}
         </span>
       </div>
-      <pre tabIndex={0} aria-label="What was pasted" className="m-0 max-h-[168px] overflow-auto whitespace-pre-wrap break-words py-2 font-mono text-xs leading-5 text-fg-2">
+      <pre tabIndex={0} role="region" aria-label="What was pasted" className="m-0 max-h-[168px] overflow-auto whitespace-pre-wrap break-words py-2 font-mono text-xs leading-5 text-fg-2">
         {result.lines.map((l, i) => (
           <span key={i} className={cn('block px-4', l.kind === 'skipped' && 'bg-tone-warning-bg')}>
             {l.marker ? <mark className="rounded bg-selected px-[2px] text-fg">{l.marker}</mark> : null}

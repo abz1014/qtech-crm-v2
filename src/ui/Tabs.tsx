@@ -15,7 +15,16 @@ export const Tabs = RadixTabs.Root
 
 export const TabList = forwardRef<ElementRef<typeof RadixTabs.List>, ComponentPropsWithoutRef<typeof RadixTabs.List>>(
   function TabList({ className, ...rest }, ref) {
-    return <RadixTabs.List ref={ref} className={cn('flex gap-1 overflow-x-auto border-b', className)} {...rest} />
+    // Scrolls sideways only when the tabs really are wider than the row. The hairline under the tabs is drawn inside the box (an
+    // inset shadow over a 1 px bottom padding) rather than as a border, so the active tab's indicator, which sits on that line,
+    // stays inside the scroll box: as a border it hung 1 px below it, and Chrome drew a stray up/down scroller at the row's end.
+    return (
+      <RadixTabs.List
+        ref={ref}
+        className={cn('hairline-under flex gap-1 overflow-x-auto overflow-y-hidden pb-px', className)}
+        {...rest}
+      />
+    )
   },
 )
 
@@ -55,6 +64,7 @@ export const Tab = forwardRef<ElementRef<typeof RadixTabs.Trigger>, TabProps>(fu
 
 export const TabPanel = forwardRef<ElementRef<typeof RadixTabs.Content>, ComponentPropsWithoutRef<typeof RadixTabs.Content>>(
   function TabPanel({ className, ...rest }, ref) {
-    return <RadixTabs.Content ref={ref} className={cn('pt-4 focus-visible:outline-offset-4', className)} {...rest} />
+    // Not a Tab stop of its own: a panel that holds controls is reached through them (a whole-panel stop is mostly off screen at 200% zoom).
+    return <RadixTabs.Content ref={ref} tabIndex={-1} className={cn('pt-4 focus-visible:outline-offset-4', className)} {...rest} />
   },
 )

@@ -157,7 +157,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
         </span>
       </div>
       {loading ? (
-        <div className="grid gap-3 p-5" aria-busy="true" aria-label="Loading margin">
+        <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label="Loading margin">
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-4 w-2/3" />
         </div>

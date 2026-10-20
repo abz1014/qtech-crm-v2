@@ -97,7 +97,7 @@ export function CategoriesPage() {
           {q.error instanceof Error ? q.error.message : 'Check your connection, then try again.'}
         </Banner>
       ) : q.isPending ? (
-        <div className="grid gap-px overflow-hidden rounded border bg-line" aria-busy="true" aria-label="Loading categories">
+        <div role="status" className="grid gap-px overflow-hidden rounded border bg-line" aria-busy="true" aria-label="Loading categories">
           {[0, 1, 2, 3].map(i => (
             <div key={i} className="bg-surface p-4">
               <Skeleton className="h-8 w-full" />

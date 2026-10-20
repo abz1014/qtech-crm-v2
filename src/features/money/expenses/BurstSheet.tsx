@@ -9,6 +9,7 @@ import { formatDay, formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { useDirtyFlag } from '@/lib/pwa/dirtyForms'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { useBackToClose } from '@/lib/useBackToClose'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
@@ -79,6 +80,7 @@ interface BurstSheetProps {
 }
 
 export function BurstSheet({ open, onOpenChange }: BurstSheetProps) {
+  useBackToClose(open, () => onOpenChange(false), { enabled: useMediaQuery('(max-width: 767px), (pointer: coarse)') })
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       {open ? <BurstContent onClose={() => onOpenChange(false)} /> : null}
@@ -857,7 +859,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
       <div className="flex flex-wrap gap-2">
         <label
           className={cn(
-            'relative inline-flex h-8 items-center gap-[6px] rounded-round border px-3 text-xs text-fg-2',
+            'relative inline-flex h-8 items-center gap-[6px] rounded-round border px-3 text-xs text-fg-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
             !row.dateTyped && row.date === today ? 'border-dashed border-line-input' : 'border-line-input',
             err && 'border-tone-danger-fg',
           )}

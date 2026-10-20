@@ -315,7 +315,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
         context={`${leg.supplierName} · for ${orderRef(order.number)}`}
         icon={FileCheck2}
         size="lg"
-        className="md:w-[820px]"
+        className="md:w-[min(820px,calc(100vw-2rem))]"
         meta={<span className="num inline-flex h-6 items-center rounded border border-line-strong bg-surface px-2 text-xs text-fg-2">{tag}</span>}
         lead={
           <Button icon={FileText} onClick={() => void preview()} busy={previewing} busyLabel="Preparing" disabled={loading || ccy === null || rows.length === 0}>
@@ -334,7 +334,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
         }
       >
         {loading ? (
-          <div className="grid gap-3" aria-busy="true" aria-label="Loading the purchase order">
+          <div role="status" className="grid gap-3" aria-busy="true" aria-label="Loading the purchase order">
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-40 w-full" />
           </div>

@@ -10,9 +10,9 @@ import { gzipSync } from 'node:zlib'
  * 278 KB. Set about 5% above the real entry (257.5 KB on perf/client), so a regression fails instead of eating hidden
  * headroom. Lower it when the entry shrinks. Round 2 (r2/fast-reads): the lazy sign-in page took the entry to 221.8 KB; limit 240 KB.
  */
-// 2026-10-20: main reached 240.5 KB after the round-2 merges (limit raised to 245 for a day). perf/trim took it to 182.0 KB: the
-// Settings home (DataTable, RFQ and company queries), the command palette (cmdk), storage-js, the help palette code and the
-// error-message table now load lazily. Limit 235 KB.
+// 2026-10-20: main reached 240.5 KB after the round-2 merges (limit raised to 245 for a day). perf/trim (with r2/a11y-fixes' lazy
+// command palette) took it to 183.2 KB: the Settings home (DataTable, RFQ and company queries), the command palette (cmdk),
+// storage-js, the help palette code and the error-message table now load lazily. Limit 235 KB.
 export const INITIAL_JS_BUDGET_BYTES = 235 * 1024
 
 /** Local asset paths a JS or HTML source points at: <script src>, <link rel=modulepreload href>, and static `import ... from "./x.js"`. */

@@ -18,7 +18,7 @@ import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName, t
 export const UI = {
   signIn: { email: /^Email/, password: /^Password$/, submit: /^Sign in$/, wrong: /password is incorrect/i, deactivated: /deactivated/i },
   accountMenu: /^Account menu/,
-  capture: /^Capture$/,
+  capture: /^(Capture|Paste or photo)$/,
   captureSheet: /^(Capture|Paste or photo)$/,
   palette: /^Search or jump to$/,
   close: /^Close$/,
@@ -35,7 +35,7 @@ export const UI = {
   addRow: /^Add a row$/,
   addItemByHand: /^Add an item by hand$/,
   issue: /Issue/,
-  issuePoLegA: /^Issue PO, leg A$/,
+  issuePoLegA: /^Issue PO, /,
   chase: /mark chased/i,
   undo: /Undo/,
   filterRfqs: /^Filter RFQs$/,
@@ -505,7 +505,8 @@ export async function focusSweep(page: Page, max = 45): Promise<string[]> {
     }
     if (first === null) first = s.key
     else if (s.key === first) return out // round once: a <body> just before this was the wrap
-    if (body !== null) out.push(`Tab ${body}: focus is on <body>`)
+    // A sweep that starts mid-page (focus was on a control, then blurred) wraps through the browser UI to the skip link: that <body> is the wrap too.
+    if (body !== null && !/Skip to content/.test(s.who)) out.push(`Tab ${body}: focus is on <body>`)
     body = null
     for (const p of s.problems) out.push(`Tab ${i} ${s.who}: ${p}`)
   }

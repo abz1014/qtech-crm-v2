@@ -154,9 +154,19 @@ describe('RFQ board', () => {
   })
 
   it('says "No open RFQs" when everything is done, with New RFQ in the empty view too', async () => {
-    db([])
+    db([], [state({ rfq_id: 'z', outcome: 'won' })])
     renderBoard('admin')
     expect(await screen.findByText('No open RFQs')).toBeInTheDocument()
+    expect(screen.getByText(/Every quotation is out or closed/)).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'New RFQ' })).toHaveLength(2)
+  })
+
+  it('a CRM with no RFQ ever (none open, none closed) gets a neutral first-use line, never "every quotation is out"', async () => {
+    db([], [])
+    renderBoard('admin')
+    expect(await screen.findByText('No RFQs yet')).toBeInTheDocument()
+    expect(screen.queryByText(/Every quotation is out or closed/)).toBeNull()
+    expect(screen.queryByText('No open RFQs')).toBeNull()
     expect(screen.getAllByRole('button', { name: 'New RFQ' })).toHaveLength(2)
   })
 

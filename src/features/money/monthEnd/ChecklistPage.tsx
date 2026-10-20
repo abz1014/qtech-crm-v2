@@ -314,7 +314,7 @@ function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: ClosedM
 
 function ChecklistLoading() {
   return (
-    <div aria-busy="true" aria-label="Loading the month-end checklist" className="grid gap-4">
+    <div role="status" aria-busy="true" aria-label="Loading the month-end checklist" className="grid gap-4">
       <div className="grid gap-3 rounded border bg-surface px-6 py-5 md:grid-cols-[1fr_auto]">
         <Skeleton className="h-6 w-48" />
         <Skeleton className="h-10 w-40" />

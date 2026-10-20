@@ -130,7 +130,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
             ) : null}
           </div>
         ) : sourceId ? (
-          <div className="grid gap-2" aria-busy="true" aria-label="Loading the order">
+          <div role="status" className="grid gap-2" aria-busy="true" aria-label="Loading the order">
             <Skeleton className="h-16 w-full" />
           </div>
         ) : (
@@ -148,7 +148,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
               />
             </div>
             {found.isPending ? (
-              <div className="grid gap-2" aria-busy="true" aria-label="Searching">
+              <div role="status" className="grid gap-2" aria-busy="true" aria-label="Searching">
                 <Skeleton className="h-14 w-full" />
                 <Skeleton className="h-14 w-full" />
               </div>

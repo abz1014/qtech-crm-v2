@@ -29,7 +29,7 @@ const C = {
 }
 
 const s = StyleSheet.create({
-  page: { fontFamily: 'Geist', fontSize: 9, color: C.ink, paddingTop: 36, paddingBottom: 40, paddingHorizontal: 36 },
+  page: { fontFamily: 'Geist', fontSize: 10, color: C.ink, paddingTop: 36, paddingBottom: 40, paddingHorizontal: 36 },
   mono: { fontFamily: 'Geist Mono' },
   muted: { color: C.muted },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 14, borderBottomWidth: 1.5, borderBottomColor: C.ink },
@@ -47,9 +47,9 @@ const s = StyleSheet.create({
   box: { flex: 1, paddingVertical: 8 },
   boxL: { paddingRight: 14, borderRightWidth: 0.75, borderRightColor: C.strong },
   boxR: { paddingLeft: 14 },
-  boxLabel: { fontSize: 8.5, fontWeight: 500, color: C.muted, marginBottom: 4 },
+  boxLabel: { fontSize: 9.5, fontWeight: 500, color: C.muted, marginBottom: 4 },
   strongText: { fontWeight: 600 },
-  th: { flexDirection: 'row', backgroundColor: C.sunken, borderTopWidth: 0.75, borderBottomWidth: 0.75, borderColor: C.strong, marginTop: 12, paddingVertical: 5, fontWeight: 600, fontSize: 8.5 },
+  th: { flexDirection: 'row', backgroundColor: C.sunken, borderTopWidth: 0.75, borderBottomWidth: 0.75, borderColor: C.strong, marginTop: 12, paddingVertical: 5, fontWeight: 600, fontSize: 9.5 },
   tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: C.strong, paddingVertical: 6 },
   cNo: { width: 22, paddingLeft: 4 },
   cDesc: { flex: 1, paddingRight: 8 },
@@ -58,17 +58,17 @@ const s = StyleSheet.create({
   cPrice: { width: 84, textAlign: 'right' },
   cAmt: { width: 92, textAlign: 'right', paddingRight: 2 },
   total: { alignSelf: 'flex-end', width: 240, marginTop: 14, flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderTopWidth: 1.5, borderTopColor: C.ink, borderBottomWidth: 0.75, borderBottomColor: C.ink },
-  words: { alignSelf: 'flex-end', marginTop: 6, fontSize: 8, color: C.muted },
+  words: { alignSelf: 'flex-end', marginTop: 6, fontSize: 9.5, color: C.muted },
   two: { flexDirection: 'row', marginTop: 12 },
   twoCol: { flex: 1 },
   secTitle: { fontWeight: 600, paddingBottom: 3, marginBottom: 5, borderBottomWidth: 0.75, borderBottomColor: C.strong },
   terms: { marginTop: 10 },
-  termRow: { flexDirection: 'row', marginBottom: 2, fontSize: 8 },
+  termRow: { flexDirection: 'row', marginBottom: 2, fontSize: 9.5 },
   termNo: { width: 14, color: C.muted },
   sign: { marginTop: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  thanks: { width: 230, color: C.muted, fontSize: 8 },
+  thanks: { width: 230, color: C.muted, fontSize: 9.5 },
   signBox: { width: 230, borderTopWidth: 0.75, borderTopColor: C.ink, paddingTop: 4 },
-  foot: { position: 'absolute', left: 36, right: 36, bottom: 20, width: 523, flexDirection: 'row', borderTopWidth: 0.5, borderTopColor: C.strong, paddingTop: 5, fontSize: 7.5, color: C.muted },
+  foot: { position: 'absolute', left: 36, right: 36, bottom: 20, width: 523, flexDirection: 'row', borderTopWidth: 0.5, borderTopColor: C.strong, paddingTop: 5, fontSize: 9.5, color: C.muted },
 })
 
 const money = (n: number) => formatPaisa(toPaisa(n), 'always')
@@ -108,7 +108,7 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
   const contactFor = data.signatory ? [data.signatory.name, data.signatory.phone].filter(Boolean).join(', ') : null
 
   return (
-    <Document title={refRev} author={companyName} subject={`Purchase order ${refRev} to ${data.supplier.name}`}>
+    <Document language="en-GB" title={refRev} author={companyName} subject={`Purchase order ${refRev} to ${data.supplier.name}`}>
       <Page size="A4" style={s.page}>
         <View style={s.head}>
           <Image src={logoSrc} style={s.logo} />
@@ -195,7 +195,7 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
               <Text style={[s.cNo, s.muted]}>{i + 1}</Text>
               <View style={s.cDesc}>
                 <Text style={s.strongText}>{d.title}</Text>
-                {d.detail ? <Text style={[s.muted, { fontSize: 8 }]}>{d.detail}</Text> : null}
+                {d.detail ? <Text style={[s.muted, { fontSize: 9.5 }]}>{d.detail}</Text> : null}
               </View>
               <Text style={[s.cQty, s.mono]}>{qtyText(Number(l.qty))}</Text>
               <Text style={s.cUnit}>{l.unit ?? ''}</Text>

@@ -9,7 +9,7 @@ import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
-import { TextSizePanel } from '@/ui/TextSizeControl'
+import { ShortcutsPanel, TextSizePanel } from '@/ui/TextSizeControl'
 import { useToast } from '@/ui/useToast'
 import { Field } from '@/ui/form/Field'
 import { Form, FormField } from '@/ui/form/Form'
@@ -49,6 +49,7 @@ export function MyDetailsPage() {
         <DetailsForm details={q.data} />
       )}
       <TextSizePanel />
+      <ShortcutsPanel />
     </div>
   )
 }

@@ -46,7 +46,7 @@ function WhatWeKnow({ companyId, view, today }: { companyId: string; view: Suppl
   if (stats.isPending) {
     return (
       <Panel title="What we know">
-        <div className="grid gap-3 p-5" aria-busy="true" aria-label="Loading what we know">
+        <div role="status" className="grid gap-3 p-5" aria-busy="true" aria-label="Loading what we know">
           <Skeleton className="h-4 w-1/3" />
           <Skeleton className="h-4 w-1/2" />
         </div>

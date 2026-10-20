@@ -62,7 +62,7 @@ const button = cva(
 type Common = Omit<VariantProps<typeof button>, 'iconOnly'> & {
   /** Leading glyph. Muted on secondary and quiet; inherits the text colour on primary and danger. */
   icon?: LucideIcon
-  /** The action is in flight: disables the button and shows the spinner (and `busyLabel`, the verb in -ing form). */
+  /** The action is in flight: aria-disabled (focus stays), clicks ignored, and shows the spinner (and `busyLabel`, the verb in -ing form). */
   busy?: boolean
   busyLabel?: ReactNode
 }
@@ -75,19 +75,28 @@ export type ButtonProps = (Labelled | IconOnly) &
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'aria-label'>
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant, size, icon, busy = false, busyLabel, className, children, disabled, type = 'button', ...rest },
+  { variant, size, icon, busy = false, busyLabel, className, children, disabled, type = 'button', onClick, ...rest },
   ref,
 ) {
+  // Busy keeps focus (WCAG 2.4.3): aria-disabled instead of disabled, and clicks are ignored while in flight.
   const iconOnly = children === undefined || children === null
   const glyph = variant === 'primary' || variant === 'danger' ? '' : 'text-fg-muted group-disabled:text-fg-disabled'
   return (
     <button
       ref={ref}
       type={type}
-      disabled={disabled || busy}
+      disabled={disabled && !busy}
+      aria-disabled={busy || undefined}
       aria-busy={busy || undefined}
-      className={cn(button({ variant, size, iconOnly }), busy && 'disabled:cursor-progress', className)}
+      className={cn(button({ variant, size, iconOnly }), busy && 'cursor-progress active:translate-y-0', className)}
       {...rest}
+      onClick={e => {
+        if (busy) {
+          e.preventDefault()
+          return
+        }
+        onClick?.(e)
+      }}
     >
       {busy ? (
         <Icon icon={LoaderCircle} className="animate-spin motion-reduce:animate-none" />

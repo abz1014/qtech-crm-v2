@@ -150,6 +150,8 @@ export function TeamPage() {
 
   return (
     <div className="grid content-start gap-4">
+      {/* The phone hides the header (the bar says Team); the page still needs its h1 (WCAG 1.3.1, 2.4.6). */}
+      <h1 className="sr-only md:hidden">Team</h1>
       <header className="flex flex-wrap items-start justify-between gap-4 max-md:hidden">
         <div className="grid gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Team</h1>

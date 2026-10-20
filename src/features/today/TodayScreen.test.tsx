@@ -83,4 +83,20 @@ describe('Today screen', () => {
     await screen.findByText('Not sent to suppliers yet')
     expect(fake?.calls.map(c => c.target)).toContain('rpc:receivables_list')
   })
+
+  it('no target this quarter is ONE small line; the admin gets a link to Settings > Targets', async () => {
+    fake = install()
+    renderAs('admin')
+    const tile = await screen.findByRole('region', { name: /^Your Q\d target$/ })
+    expect(tile).toHaveTextContent(/^No Q\d target set\. Set targets$/)
+    expect(screen.getByRole('link', { name: 'Set targets' })).toHaveAttribute('href', '/settings/targets')
+  })
+
+  it('no target, sales: the same line, no link (only the admin sets targets)', async () => {
+    fake = install()
+    renderAs('sales')
+    const tile = await screen.findByRole('region', { name: /^Your Q\d target$/ })
+    expect(tile).toHaveTextContent(/^No Q\d target set\. The admin sets it\.$/)
+    expect(screen.queryByRole('link', { name: 'Set targets' })).toBeNull()
+  })
 })

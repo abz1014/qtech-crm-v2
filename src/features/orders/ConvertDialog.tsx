@@ -260,7 +260,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
           </p>
 
           {itemsQ.isPending || rankQ.isPending ? (
-            <div className="grid gap-2" aria-busy="true" aria-label="Loading the lines">
+            <div role="status" className="grid gap-2" aria-busy="true" aria-label="Loading the lines">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
@@ -440,7 +440,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                   </div>
                 )
               })}
-              <div className="grid justify-end gap-1 border-t bg-sunken px-4 py-3 text-sm" aria-label="Order totals">
+              <div className="grid justify-end gap-1 border-t bg-sunken px-4 py-3 text-sm" role="group" aria-label="Order totals">
                 <div className="flex justify-between gap-8">
                   <span className="text-fg-muted">Net</span>
                   <span className="num">{formatAmount(totals.net)}</span>
