@@ -39,7 +39,10 @@ function rescueFocus() {
   if (typeof window === 'undefined') return
   let n = 0
   const id = window.setInterval(() => {
-    if (++n > 15) window.clearInterval(id)
+    if (++n > 15 || typeof document === 'undefined') {
+      window.clearInterval(id)
+      return
+    }
     const lost = !document.activeElement || document.activeElement === document.body
     if (lost && !document.querySelector('[role="dialog"],[role="alertdialog"]')) {
       document.getElementById('main')?.focus({ preventScroll: true })
