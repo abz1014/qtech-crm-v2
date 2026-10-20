@@ -165,6 +165,10 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('view',  'v_supplier_activity', '',           'S',    'S',    'S'),    -- s10 (same row)
   ('view',  'v_supplier_stats',    '',           'S',    'S',    'S'),    -- s10 (same row)
   ('function', 'order_receivables',       '',    'X',    'X',    ''),     -- s10 "order_receivables() (definer)"
+  ('function', 'receivables_list',        '',    'X',    'X',    ''),     -- 0074: order_receivables() rows with names, filtered on the server; its access
+  ('function', 'receivables_summary',     '',    'X',    'X',    ''),     -- 0074: the Who-owes-us figures in one row; order_receivables() access
+  ('function', 'today_inquiry_facts',     '',    'X',    'X',    'X'),    -- 0074: Today's enquiry facts in one call, SECURITY INVOKER, all staff
+  ('function', 'lookup_labels',           '',    'X',    'X',    'X'),    -- 0074: names for id lists sent in the body, SECURITY INVOKER, all staff (row security applies)
   ('function', 'my_target_progress',      '',    'X',    'X',    'X'),    -- s10 "my_target_progress() (definer)"
   ('function', 'my_target_progress_at',   '',    '',     '',     ''),     -- A4: test seam granted to nobody
   ('function', 'convert_rfq_to_order',    '',    'X',    'X',    'X'),    -- s10 "RPCs convert_rfq_to_order, create_repeat_order"
@@ -419,6 +423,10 @@ from unnest(array['v_company_roles','v_rfq_state','v_inquiry_state','v_order_sta
 -- positive count); the id arguments are fixtures, so a caller who cannot see them gets P0002 or a zero count.
 insert into probes values
   ('order_receivables', '', 'X', 'select * from public.order_receivables()'),
+  ('receivables_list', '', 'X', 'select * from public.receivables_list()'),   -- 0074
+  ('receivables_summary', '', 'X', 'select * from public.receivables_summary()'),   -- 0074: one row for admin and sales, none for a deactivated user
+  ('today_inquiry_facts', '', 'X', 'select * from public.today_inquiry_facts()'),   -- 0074: @1a is sent and awaiting on the open RFQ @15
+  ('lookup_labels', '', 'X', $q$select 1 where public.lookup_labels(array[@01]) -> 'companies' ? @01::text$q$),   -- 0074: row security hides the name from a deactivated user
   ('my_target_progress', '', 'X', 'select * from public.my_target_progress()'),
   ('my_target_progress_at', '', 'X', 'select * from public.my_target_progress_at(now())'),
   ('float_rfq', '', 'X', $q$select public.float_rfq(@c0, @01, '[{"description":"x"}]'::jsonb)$q$),
