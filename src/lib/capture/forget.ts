@@ -42,12 +42,15 @@ let wiping: Promise<void> | null = null
  * Wipes what this device kept for the person. Sign-out paths overlap (the button, then Auth's SIGNED_OUT), so calls made
  * while a wipe is running share it instead of starting another.
  */
-export function forgetDeviceCaptures(): Promise<void> {
+export function forgetDeviceCaptures(opts: { keepShares?: boolean } = {}): Promise<void> {
   if (wiping) return wiping
   clearRecents()
   forgetIntakeDrafts()
   forgetPaletteRecents()
-  wiping = safely(() => clearCaptures(), undefined).finally(() => {
+  // keepShares: the session ended without Sign out (BUG-RV-06). An item the phone's share sheet handed over is kept for
+  // whoever signs in next (the "Your shared item is safe" promise); typed or pasted drafts of the last person are not.
+  const keep = opts.keepShares ? (i: { source: string }) => i.source === 'share' : undefined
+  wiping = safely(() => clearCaptures(undefined, keep), undefined).finally(() => {
     wiping = null
   })
   return wiping

@@ -483,7 +483,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
           <Field
             label="Payment terms"
             requirement="optional"
-            help="Days the customer has to pay after the invoice. Who owes us marks it late after that."
+            help="Days the customer has to pay after the invoice. After that the payment counts as late."
             source={
               quotedDays !== null && !termsTouched
                 ? 'from the quotation'

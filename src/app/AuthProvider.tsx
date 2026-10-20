@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         queryClient.clear()
         forgetRememberedUser()
         void forgetSavedQueries()
-        void forgetDeviceCaptures()
+        void forgetDeviceCaptures({ keepShares: endedUnseen })
       }
       if (event === 'SIGNED_IN') setDeactivated(false)
     })
