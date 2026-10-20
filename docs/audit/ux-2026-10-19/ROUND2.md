@@ -60,3 +60,12 @@ Round 2 starts after these round-1 branches merge: ux/foundation, ux/rfqs, ux/or
 - [ ] performance.md, copy.md, round2-spec.md (statuses ≤35, counts, search, shortcuts sheet, page template).
 - [ ] The screen-audit rig baseline (test/screen-audit), then re-measure after round 1.
 - [ ] Verification findings: test/money-verify, test/workflow-verify, test/roles-verify. Bugs here are fixed BEFORE any new UX work.
+
+## Wording (round2/copy.md): main 4.5/10, about 6.5 after the round-1 branches
+- [ ] Apply the "Words we use" table (about 120 terms) app-wide, plus the guides and the in-app help. Coordinator decisions under the owner's plain-words mandate: net / gross / settled become "before GST" / "with GST" / "paid in full"; supplier side uses "price" (not "quote") and "Can't quote" everywhere; one name for the customer reference ("Customer ref").
+- [ ] One list of RFQ close reasons (rfqs/lib/closeDefaults.ts is the source; board model and SitesPanel read it).
+- [ ] Error messages: one "Couldn't load …" pattern with the fix, no "Something went wrong", no technical text (OrderDetailScreen "Request GET …", clipboard, "read back", "Supabase address"). Use the server-error table from the learnability spec.
+- [ ] No symbols for words (×, ≈, ~, ÷, ≠, 3d, 1.2M); one money format (PKR 45,000.50 everywhere, toasts included); dates formatted, never ISO; no "Use the form 2026-11".
+- [ ] Sentences on screen ≤ 20 words (ExceptionsPage.tsx:60, IntakeScreen.tsx:715 and 8 more).
+- [ ] Message templates: one greeting spelling, "Dear Sir or Madam", "(our ref X)".
+- [ ] Merge note: take ux/money-today's SALES.md; ADMIN/ENGINEER guides are refreshed in the final docs pass.
