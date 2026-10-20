@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import { Download, KeyRound, LogOut, Settings, Users } from 'lucide-react'
+import { CircleHelp, Download, KeyRound, LogOut, Settings, Users } from 'lucide-react'
 import { ROLE_LABEL, session, type SessionUser } from '@/app/session'
+import { useHelp } from '@/features/help/useHelp'
 import { cn } from '@/lib/utils'
 import { promptInstall, useInstall } from '@/lib/pwa/install'
 import { Avatar } from '@/ui/Avatar'
@@ -15,6 +16,7 @@ import { useTextSize } from '@/ui/useTextSize'
  */
 export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?: boolean }) {
   const navigate = useNavigate()
+  const { openHelp } = useHelp()
   const { canPrompt } = useInstall()
   const [textSize, setTextSize] = useTextSize()
   return (
@@ -37,6 +39,9 @@ export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?
           <span className="text-xs text-fg-muted">{ROLE_LABEL[user.role] ?? user.role}</span>
         </div>
         <MenuSeparator />
+        <MenuItem icon={CircleHelp} onClick={() => openHelp()}>
+          Help
+        </MenuItem>
         <MenuItem icon={Settings} onClick={() => navigate('/settings')}>
           Settings
         </MenuItem>

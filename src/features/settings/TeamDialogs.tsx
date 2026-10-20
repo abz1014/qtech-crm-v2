@@ -114,7 +114,7 @@ export function AddPersonDialog({
             {f => <TextField {...f} type="email" autoComplete="off" inputMode="email" />}
           </FormField>
           <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
-            <FormField name="role" label="Role">
+            <FormField name="role" label="Role" help="Admin: everything. Sales: RFQs, orders, invoices, no costs. Engineer: RFQs and orders, no money.">
               {f => <Select {...f} options={ROLE_OPTIONS.map(r => ({ value: r.value, label: r.label }))} />}
             </FormField>
             <FormField name="job_title" label="Job title" requirement="optional">

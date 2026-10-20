@@ -781,7 +781,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
               </section>
 
               <section aria-label="Optional details" className="grid items-end gap-4 sm:grid-cols-2">
-                <Field label="Quotation due" requirement="optional">
+                <Field label="Quotation due" requirement="optional" help="The customer's deadline for our quotation. Today warns you two days before.">
                   <DateInput value={dueOn} onChange={setDueOn} defaultToday={false} placeholder="e.g. 3 dec" />
                 </Field>
                 <Checkbox

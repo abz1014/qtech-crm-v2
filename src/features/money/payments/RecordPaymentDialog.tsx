@@ -150,7 +150,7 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
           </FormField>
         ) : null}
         {showVia ? (
-          <FormField<Values, 'paidVia'> name="paidVia" label="Paid via">
+          <FormField<Values, 'paidVia'> name="paidVia" label="Paid via" help="Bank payments are matched to the bank statement at month end; cash is not.">
             {f => <Select {...f} options={(Object.keys(PAID_VIA_LABEL) as PaidVia[]).map(v => ({ value: v, label: PAID_VIA_LABEL[v] }))} />}
           </FormField>
         ) : null}

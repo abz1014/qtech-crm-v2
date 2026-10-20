@@ -14,6 +14,8 @@
  *
  * Works on a PostgrestError ({ code, message, details }) or anything shaped like one.
  */
+import { rpcMessage, type RpcAction } from '@/lib/errors/rpcMessages'
+
 export interface PgLikeError {
   code?: string
   message?: string
@@ -41,6 +43,9 @@ export interface MappedError {
   code?: string
   /** Constraint name when Postgres gave one, so a form can route the message to a field. */
   constraint?: string
+  /** Help recipe id and a screen to open, when the server rule has one (src/lib/errors/rpcMessages.ts). */
+  help?: string
+  action?: RpcAction
 }
 
 export interface MapOptions {
@@ -86,6 +91,11 @@ export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
   const text = typeof err.message === 'string' ? err.message : ''
   if (!err.code && FETCH_FAILED.test(text)) return { ...NETWORK }
   const constraint = constraintOf({ ...err, message: text })
+  const rpc = ['22023', '22004', 'P0001', 'P0002', '23514', '42501', '', undefined].includes(err.code) ? rpcMessage(text) : null
+  if (rpc && !(err.code === 'P0001' && CLOSED_MONTH.test(text.trim()))) {
+    const kind: PgErrorKind = err.code === '23514' ? 'check' : err.code === '42501' ? 'permission' : 'unknown'
+    return { kind, ...rpc, ...(constraint ? { constraint } : {}) }
+  }
   switch (err.code) {
     case '23505':
       if (constraint && /_pkey$/.test(constraint)) {
