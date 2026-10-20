@@ -28,19 +28,6 @@ import { MAX_STEPS, parseRecipe, type Recipe } from '@/features/help/recipes'
  * that branch is merged: the test says when, by failing with "is on main now".
  */
 const PENDING: Record<string, string> = {
-  'Paste or photo': 'ux/foundation',
-  'Accept N prices': 'ux/rfqs',
-  'Ask more suppliers': 'ux/rfqs',
-  'Ask suppliers': 'ux/rfqs',
-  'Close the RFQ because': 'ux/rfqs',
-  'Continue your draft': 'ux/rfqs',
-  'Copy message for N suppliers': 'ux/rfqs',
-  'Issue revised quotation': 'ux/rfqs',
-  'Mark quotation sent': 'ux/rfqs',
-  Recommended: 'ux/rfqs',
-  'Replies from suppliers': 'ux/rfqs',
-  'Revise quotation': 'ux/rfqs',
-  'Write the message': 'ux/rfqs',
   'Repeat a past order': 'ux/orders',
   'Supplier orders': 'ux/orders',
   'Suppliers & delivery': 'ux/money-today',
