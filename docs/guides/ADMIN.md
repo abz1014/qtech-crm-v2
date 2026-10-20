@@ -1,46 +1,44 @@
 Q-TECH CRM: ADMIN (one page)
 
-Money has tabs: GST register, Receivables, Expenses, Margins, Exceptions, Month-end.
+Money has four tabs: Who owes us, Invoices & GST, Expenses, Month end. "Reports" is at the top right of Money.
+A number on a tab means "this many need you". The (i) next to a word explains it in one line.
 
-1. EXPENSES, QUICK ENTRY
- - Money, Expenses, "Add expenses".
- - Row: Amount, PKR. Category (type 2 or 3 letters). Date (today). Paid via (Bank or Cash). Note. Receipt photo.
- - Enter adds a row. Tab moves along. Ctrl+Enter saves all.
- - Phone: tap the Receipt photo button to open the camera.
- - One expense: "Add expense". From an order: "Add expense" on the order page.
-
-2. PAYMENTS RECEIVED
- - Money, Receivables ("Order balances" for sales). Find the order.
- - Tap "Record payment".
- - Enter "Amount received, PKR", "Date received", "Paid via", optionally a Reference. Save.
+1. PAYMENTS RECEIVED
+ - Money opens on "Who owes us". Find the order, tap "Record payment" (on a phone: the button on its card).
+ - The amount is the balance due; change it for a part payment. Save.
  - The balance is gross, GST included.
 
-3. INVOICE, GST AND FBR STAMPS
- - Money, GST register. "New invoice" or "Create invoice" from an order.
- - Open an invoice to add the "Consignment number", "Receipt file" and Notes.
- - Parcel sent by TCS: tap "Sent by TCS today".
- - Tax deposited: paste the PSID ("Add PSID"), then "Deposited today". Add "Deposit amount, PKR".
- - FBR receipt: open the invoice, "Add receipt".
+2. EXPENSES
+ - Money, Expenses, "Add expenses" (one row or many).
+ - Amount, then the category (type 2 or 3 letters). Enter adds a row. Ctrl+Enter saves all.
+ - Paying a supplier: "Add expense" on that supplier order, on the order page.
 
-4. BANK TICK
- - Money, Month-end, Bank tick. Pick the Statement month with the arrows.
- - Tap each item that appears on your bank statement. FBR deposits sharing a PSID tick together in one tap.
- - Compare "Ticked, money in" and "Ticked, money out" with the statement totals.
- - Goal: "Everything ticked". Cash items are never ticked.
+3. INVOICES, TCS AND FBR
+ - "Create invoice" on the order, or Money, Invoices & GST, "New invoice".
+ - Tick the invoices, then "Sent by TCS today". Paste the PSID once, then "Deposited today".
+ - "Needs attention" shows what is late.
 
-5. MONTH-END CLOSE
- - Money, Month-end, Checklist. Read the warnings; tap one to fix it. None blocks.
- - Reports in the same strip: P&L, Expenses by category, Aging, We owe, GST/FBR, Team. Each has CSV export.
- - Tap "Close <month>" (for example "Close October"). Confirm. Done.
- - Closed by mistake: "Reopen" in "Closed months". It is logged.
- - Closed months freeze payments, expenses and invoices dated in them (bank ticks still work).
+4. MONTH END (first 10 days of the month; Today reminds you)
+ - Money, Month end. Only the checks with something to look at are listed. Tap one to fix it:
+   Match bank statement, Expenses without a category, Recurring expenses not recorded, Margin not final, GST not deposited with FBR, Payments not split, Things to check.
+ - None blocks. Tap "Close <month>", then confirm.
+ - Closed by mistake: "Reopen" under "Closed months". It is logged.
 
-6. TEAM AND SETTINGS
- - Settings, Team: "Add person" (Full name, Email, Role, Job title, Phone), then "Create account". The password shows once; give it in person.
- - Per person: Change role, Edit phone, Edit job title, Reset password, Deactivate (at least one admin always stays).
- - Settings also has: Company profile, Targets, Expense categories, Exchange rates, Change password.
+5. MATCH BANK STATEMENT
+ - From the Month end checklist. Tap each line that is on your statement; a whole PSID group is one tap.
+ - Compare "Ticked, money in" and "Ticked, money out" with the statement. Cash is never listed.
 
-7. BACKUPS (every night, automatic)
+6. REPORTS
+ - "Reports for <month>" on Month end, or Reports in Money. Arrows change the month.
+ - Profit and loss, Expenses by category, Overdue by age, We owe suppliers, GST and FBR, Sales by person, Order margins.
+ - Open shows it; Export CSV gives the exact figures (the screen shows whole rupees).
+
+7. TEAM AND SETTINGS
+ - Avatar menu, Settings (or type "Settings" in Search). Team: "Add person", then "Create account"; the password shows once.
+ - Settings: Company (Team, Company profile, Targets, Expense categories, Exchange rates) and You (Your details, Change password).
+ - On a phone, Settings is a list; the back arrow returns to it.
+
+8. BACKUPS (every night, automatic)
  - A backup is made every night at 01:30. You only check it.
  - Weekly: GitHub, Actions, Backup. The latest run must be green.
  - Once a month: download the newest "backup-<date>", decrypt it with your private key (kept in the password manager and on the USB stick), confirm it opens.
