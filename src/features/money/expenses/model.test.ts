@@ -6,7 +6,9 @@ import {
   burstInserts,
   burstTotals,
   categoryMeta,
+  cleanDetail,
   closedMonthOf,
+  detailSuggestions,
   dueThisMonth,
   effectivePaidVia,
   filterExpenses,
@@ -187,5 +189,26 @@ describe('order tag type-ahead (audit X1)', () => {
   })
   it('nothing typed lists nothing to reject, and no match is an empty list', () => {
     expect(matchOrders(ORDERS, 'zzz')).toEqual([])
+  })
+})
+
+describe('the Detail field (owner request 2026-10-20)', () => {
+  it('cleanDetail trims and squeezes spaces; empty is null', () => {
+    expect(cleanDetail('  LEA-1234  ')).toBe('LEA-1234')
+    expect(cleanDetail('Office   water')).toBe('Office water')
+    expect(cleanDetail('   ')).toBeNull()
+  })
+
+  it('suggestions: one per detail (case ignored, latest spelling), this category first, then most used, then most recent', () => {
+    const rows = [
+      { detail: 'Office water', categoryId: 'util', count: 2, last: '2026-09-30' },
+      { detail: 'office water', categoryId: 'util', count: 1, last: '2026-10-15' },
+      { detail: 'LEA-1234', categoryId: 'fuel', count: 5, last: '2026-10-01' },
+      { detail: 'LEB-777', categoryId: 'fuel', count: 1, last: '2026-10-18' },
+      { detail: 'Courier to Lahore', categoryId: 'post', count: 1, last: '2026-10-10' },
+    ]
+    expect(detailSuggestions(rows, 'util')).toEqual(['office water', 'LEA-1234', 'LEB-777', 'Courier to Lahore'])
+    expect(detailSuggestions(rows, 'fuel')).toEqual(['LEA-1234', 'LEB-777', 'office water', 'Courier to Lahore'])
+    expect(detailSuggestions(rows, null, 2)).toEqual(['LEA-1234', 'office water'])
   })
 })

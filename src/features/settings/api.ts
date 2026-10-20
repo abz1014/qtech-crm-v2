@@ -268,8 +268,11 @@ export async function updateCategory(id: string, patch: CategoryPatch): Promise<
   if (!rows || rows.length === 0) throw new PlainError('Only an admin can change categories.')
 }
 
-export async function createCategory(v: { name: string; grp: CategoryGroup; default_paid_via: PaidVia; sort: number }): Promise<void> {
-  unwrap(await requireSupabase().from('expense_categories').insert(v).select('id'))
+/** Adds a category and returns its id (an expense form that creates one inline selects it straight away). */
+export async function createCategory(v: { name: string; grp: CategoryGroup; default_paid_via: PaidVia; sort: number }): Promise<string> {
+  const rows = unwrap(await requireSupabase().from('expense_categories').insert(v).select('id'))
+  if (!rows?.[0]) throw new PlainError('Only an admin can add categories.')
+  return rows[0].id
 }
 
 /** Writes the new order: one statement per changed row, run together; each sets only `sort`. */

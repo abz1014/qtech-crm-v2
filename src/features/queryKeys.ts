@@ -209,6 +209,8 @@ function money() {
       recentUse: (day: string) => [...expenses, 'recent-use', day] as const,
       lastCategory: (orderId: string) => [...expenses, 'last-category', orderId] as const,
       receipts: (expenseId: string) => [...expenses, 'receipts', expenseId] as const,
+      /** The Detail field's suggestions: the details typed since `since` ("2025-11-01"). */
+      details: (since: string) => [...expenses, 'details', since] as const,
     },
     categories: () => [...all, 'expense-categories'] as const,
     /** M12: the bank tick for one statement month ("2026-10"). */
@@ -234,6 +236,9 @@ function money() {
       payables: (asOf: string) => [...all, 'month-end', 'payables', asOf] as const,
       gst: () => [...all, 'month-end', 'gst'] as const,
       team: (month: string) => [...all, 'month-end', 'team', month] as const,
+      /** In vs out (0079): every month's cash in and out, and the money out by category and detail from one month to another. */
+      cashFlow: () => [...all, 'month-end', 'cash-flow'] as const,
+      cashOutDetail: (from: string, to: string) => [...all, 'month-end', 'cash-out-detail', from, to] as const,
     },
     orderOptions: () => [...all, 'order-options'] as const,
     legOptions: (orderId: string) => [...all, 'leg-options', orderId] as const,

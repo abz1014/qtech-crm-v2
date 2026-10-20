@@ -9,7 +9,7 @@ import { NumberInput } from '@/ui/form/NumberInput'
 import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 import { CategoryPicker } from '@/features/money/expenses/CategoryPicker'
-import { useSaveRecurring } from '@/features/money/expenses/hooks'
+import { useInlineCategoryCreate, useSaveRecurring } from '@/features/money/expenses/hooks'
 import type { Category, RecurringTemplate } from '@/features/money/expenses/model'
 
 /** Add or edit a recurring template: what it is called, its category, the amount, and the day it usually falls on. */
@@ -25,6 +25,7 @@ type Values = z.input<typeof schema>
 
 export function RecurringDialog({ template, categories, onClose }: { template?: RecurringTemplate; categories: readonly Category[]; onClose: () => void }) {
   const save = useSaveRecurring()
+  const createCategory = useInlineCategoryCreate(categories)
   const toast = useToast()
   const sf = useSubmitForm({
     schema,
@@ -75,7 +76,7 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
           </FormField>
           <div className="grid gap-4 md:grid-cols-2">
             <FormField<Values, 'categoryId'> name="categoryId" label="Category">
-              {f => <CategoryPicker categories={categories} value={f.value} onChange={f.onChange} chevron />}
+              {f => <CategoryPicker categories={categories} value={f.value} onChange={f.onChange} onCreate={createCategory} chevron />}
             </FormField>
             <FormField<Values, 'amount'> name="amount" label="Amount, PKR">
               {f => <NumberInput {...f} />}

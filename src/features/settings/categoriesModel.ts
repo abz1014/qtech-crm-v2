@@ -50,11 +50,11 @@ export function moveCategory(rows: readonly Category[], id: string, dir: -1 | 1)
 }
 
 /** The sort value for a new category: after the last one. */
-export const nextSort = (rows: readonly Category[]): number => rows.reduce((m, c) => Math.max(m, c.sort), 0) + SORT_STEP
+export const nextSort = (rows: readonly Pick<Category, 'sort'>[]): number => rows.reduce((m, c) => Math.max(m, c.sort), 0) + SORT_STEP
 
 export type NameCheck = { ok: true; name: string } | { ok: false; message: string }
 /** The unique index ignores case and outer spaces, so the check does too. */
-export function checkCategoryName(raw: string, rows: readonly Category[], selfId?: string): NameCheck {
+export function checkCategoryName(raw: string, rows: readonly Pick<Category, 'id' | 'name'>[], selfId?: string): NameCheck {
   const name = raw.trim().replace(/\s+/g, ' ')
   if (!name) return { ok: false, message: 'Give the category a name.' }
   if (name.length > 60) return { ok: false, message: 'Keep the name to 60 characters or fewer.' }

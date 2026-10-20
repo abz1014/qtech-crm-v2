@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Camera, Check, Lock } from 'lucide-react'
 import { z } from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
@@ -22,12 +22,14 @@ import { CategoryPicker } from '@/features/money/expenses/CategoryPicker'
 import {
   useCategories,
   useDeleteReceipt,
+  useInlineCategoryCreate,
   useInsertExpenses,
   useLastCategoryForOrder,
   useLegOptions,
   useMostUsedCategory,
   useOrderOptions,
   useReceipts,
+  useRecentDetails,
   useUpdateExpense,
   useUploadReceipt,
 } from '@/features/money/expenses/hooks'
@@ -35,6 +37,8 @@ import { InputTax } from '@/features/money/expenses/InputTax'
 import {
   PAID_VIA_LABEL,
   SUPPLIER_PAYMENT_ID,
+  cleanDetail,
+  detailSuggestions,
   paidViaFor,
   showsInputTax,
   type Category,
@@ -203,7 +207,7 @@ function ExpenseFormReady({
         category_id: v.categoryId,
         paid_on: v.paidOn,
         paid_via: v.paidVia as PaidVia,
-        description: v.note.trim() || null,
+        description: cleanDetail(v.note),
         input_tax_pkr: showsInputTax(v.categoryId) ? (v.inputTax ?? 0) : 0,
         order_id: v.orderId,
         supplier_order_id: v.legId,
@@ -254,6 +258,9 @@ function ExpenseFormReady({
   const receipts = useReceipts(expense?.id)
   const deleteReceipt = useDeleteReceipt(expense?.id ?? '')
   const lockedPayee = !!context?.payeeId
+  const createCategory = useInlineCategoryCreate(categories)
+  const recentDetails = useRecentDetails(showNote)
+  const detailOptions = useMemo(() => detailSuggestions(recentDetails.data ?? [], categoryId), [recentDetails.data, categoryId])
 
   // Paid via follows the category until the person picks one.
   useEffect(() => {
@@ -303,6 +310,7 @@ function ExpenseFormReady({
                 categories={categories}
                 value={f.value}
                 onChange={f.onChange}
+                onCreate={createCategory}
                 chevron
               />
             )}
@@ -324,8 +332,17 @@ function ExpenseFormReady({
         </div>
 
         {showNote ? (
-          <FormField<Values, 'note'> name="note" label="Note" requirement="optional">
-            {f => <TextField {...f} placeholder="What it was for" />}
+          <FormField<Values, 'note'> name="note" label="Detail" requirement="optional">
+            {f => (
+              <>
+                <TextField {...f} placeholder="e.g. LEA-1234, office water" list="expense-detail-options" autoComplete="off" />
+                <datalist id="expense-detail-options">
+                  {detailOptions.map(d => (
+                    <option key={d} value={d} />
+                  ))}
+                </datalist>
+              </>
+            )}
           </FormField>
         ) : null}
 
@@ -399,7 +416,7 @@ function ExpenseFormReady({
         <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
           {!showNote ? (
             <span>
-              <LinkButton onClick={() => setShowNote(true)}>Add a note</LinkButton>, optional.
+              <LinkButton onClick={() => setShowNote(true)}>Add a detail</LinkButton> (car, bill), optional.
             </span>
           ) : null}
           {!photo ? (
