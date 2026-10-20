@@ -504,8 +504,8 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await page.keyboard.press('Escape')
     await expect(page.getByRole('button', { name: 'Bid and close' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Close or lose' })).toHaveCount(0)
-    // Owner role and customer since sit under their values.
-    await expect(page.locator('dl').first()).toContainText('Customer since')
+    // The owner's role sits under the name in the facts strip; "Customer since" moved to the meta line under the title (R2 DetailHeader).
+    await expect(page.getByText(/^(Customer since .+|New customer)$/).first()).toBeVisible()
     await expect(page.locator('dl').first()).toContainText('Admin')
   })
 
@@ -813,7 +813,7 @@ test.describe('the phone layout (C-100 to C-105; UX audit: one bar)', () => {
     await review(page, 'rfq-detail-mobile-bar-375')
     // Back goes to where the person came from.
     await bar.getByRole('button', { name: 'Back' }).click()
-    await expect(page).toHaveURL(/\/rfqs\?owner=all$/)
+    await expect(page).toHaveURL(/\/rfqs\?owner=all(&q=[^&]*)?$/)
   })
 
   test('with prices in, at 320 and 375: nothing scrolls sideways, and the green action is Issue quotation', async ({ page }) => {

@@ -42,7 +42,7 @@ test('documents today\'s single-key shortcuts: N, C, G then T, and /, outside te
   await search.focus()
   await page.keyboard.type('nc')
   await expect(search).toHaveValue('nc')
-  await expect(page).toHaveURL(/\/companies$/)
+  await expect(page).toHaveURL(/\/companies(\?q=nc)?$/) // the typed text is the search, kept in ?q=, not a shortcut
 })
 
 test('a single printable key never acts unless the person can turn it off (WCAG 2.1.4)', async ({ page }) => {

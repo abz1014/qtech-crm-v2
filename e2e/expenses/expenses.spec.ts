@@ -362,9 +362,9 @@ test.describe('expenses (M03, M11)', () => {
     await expect(page.getByText(`${tag} a`)).toBeVisible()
     await expect(page.getByText(`${tag} c`)).toBeVisible()
     await review(page, 'm03-expenses-list-1440')
-    // search: the detail, kept in ?q=
+    // search: every word must match (the detail and the category here), kept in ?q=. A single letter would also match "bank".
     const search = page.getByRole('textbox', { name: 'Search expenses' })
-    await search.fill(`${tag} b`)
+    await search.fill(`${tag} snacks`)
     await expect(page).toHaveURL(/[?&]q=/)
     await expect(page.getByText(`${tag} b`)).toBeVisible()
     await expect(page.getByText(`${tag} a`)).toHaveCount(0)

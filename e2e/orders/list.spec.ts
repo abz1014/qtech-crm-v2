@@ -88,7 +88,7 @@ test.describe('O04: the orders list', () => {
     await expect(page.getByLabel('Goods state')).toHaveCount(0)
 
     await openFilters(page)
-    await page.getByLabel('Goods state').selectOption({ label: 'Late (1)' })
+    await page.getByLabel('Goods state').selectOption({ label: 'Overdue (1)' })
     await expect(row(page, s.orders.b)).toBeVisible()
     await expect(row(page, s.orders.a)).toHaveCount(0)
     await expect(page).toHaveURL(/goods=late/)

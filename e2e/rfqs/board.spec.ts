@@ -150,7 +150,7 @@ test.describe('open RFQs', () => {
 
   test('All shows everyone, each with the next step and what is behind it', async ({ page }) => {
     await openAs(page, 'sales', '/rfqs')
-    await page.getByRole('radio', { name: 'All' }).click()
+    await page.getByRole('radio', { name: 'All', exact: true }).click()
     const partly = row(page, 'partly')
     await expect(partly.getByText('Waiting for prices', { exact: true })).toBeVisible()
     await expect(partly.getByText('1 of 2 items priced · waiting on the customer for 1 answer', { exact: true })).toBeVisible()
@@ -165,7 +165,7 @@ test.describe('open RFQs', () => {
 
   test('the one next-step filter narrows the rows, its needs-you counts follow the owner switch, and it lives in the address', async ({ page }) => {
     await openAs(page, 'admin', '/rfqs') // admin opens on All
-    await expect(page.getByRole('radio', { name: 'All' })).toBeChecked()
+    await expect(page.getByRole('radio', { name: 'All', exact: true })).toBeChecked()
     await expect(page.getByRole('radio', { name: 'All open' })).toBeChecked()
     await show(page, 'Quotation sent', 'sent')
     await expect(row(page, 'covered')).toBeVisible()
@@ -230,7 +230,7 @@ test.describe('toolbar: filter box, the one filter, nav counts', () => {
         // admin's own Today, never more than the open RFQs the board lists (its lede: "12 open · 4 need you · 3 overdue").
         const link = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs\s?, \d+ need you$/ })
         await expect(link).toBeVisible()
-        const needs = Number(/^RFQs, (\d+)/.exec((await link.getAttribute('aria-label')) ?? '')?.[1])
+        const needs = Number(/(\d+) need you/.exec((await link.textContent()) ?? '')?.[1])
         await expect(page.getByRole('radio', { name: 'All open' })).toBeChecked()
         const lede = page.getByText(/^\d+ open( · \d+ need you)?( · \d+ overdue)?$/)
         await expect(lede).toBeVisible()

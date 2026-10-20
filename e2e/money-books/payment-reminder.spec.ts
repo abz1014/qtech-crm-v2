@@ -157,7 +157,8 @@ test.describe('payment-reminder panel (M09)', () => {
         const w = t?.parentElement
         return { scroll: w?.scrollWidth ?? 0, client: w?.clientWidth ?? 0, columns: Array.from(document.querySelectorAll('table thead th')).filter(th => (th as HTMLElement).offsetParent !== null).length, page: document.documentElement.scrollWidth, view: window.innerWidth }
       })
-    for (const [width, columns] of [[1536, 8], [1440, 6], [1360, 6], [1280, 8]] as const) {
+    for (const [width, columns] of [[1536, 7], [1440, 5], [1360, 5], [1280, 7]] as const) {
+      // Payment + Last reminder are one Next step column (R2-06)
       await page.setViewportSize({ width, height: 900 })
       await page.waitForTimeout(300)
       const m = await measure()

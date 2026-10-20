@@ -107,7 +107,8 @@ test.describe('a brand-new CRM, as the admin', () => {
           return { family: s.fontFamily, numeric: s.fontVariantNumeric, features: s.fontFeatureSettings }
         }),
       )
-      expect(styles.length, `numbers on ${path}`).toBeGreaterThan(0)
+      // An empty Orders list draws no number at all since its tabs lost their totals (round-2 counts rule); the others still do.
+      if (path !== '/orders') expect(styles.length, `numbers on ${path}`).toBeGreaterThan(0)
       for (const s of styles) {
         expect(s.numeric, `font-variant-numeric on ${path}`).toContain('tabular-nums')
         expect(s.numeric, `font-variant-numeric on ${path}`).not.toContain('slashed-zero')

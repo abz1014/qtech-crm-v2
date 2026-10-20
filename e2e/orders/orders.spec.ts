@@ -384,7 +384,7 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
     const s = await seedOrder()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     const b = leg(page, 'B')
-    await expect(page.getByTestId('leg-B-state')).toContainText('Late')
+    await expect(page.getByTestId('leg-B-state')).toContainText('Overdue')
     await b.getByRole('button', { name: `Chase goods, ${s.supplierB.name}` }).click()
     const dialog = page.getByRole('dialog')
     // the same wording as Today: the leg's reference is in the text
