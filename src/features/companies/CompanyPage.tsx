@@ -24,6 +24,8 @@ import { recordLine, supplierFacts } from '@/features/companies/supplierFacts'
 import { earliestYear } from '@/features/companies/supplierRecord'
 import { copyToClipboard } from '@/lib/clipboard'
 import { OpenWithThem } from '@/features/companies/SupplierRecordPanels'
+import { BuyerTaxFields } from '@/features/money/invoices/pdf/BuyerTaxFields'
+import { cn } from '@/lib/utils'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Banner } from '@/ui/Banner'
@@ -436,6 +438,28 @@ function ContactsPanel({
   )
 }
 
+/** The buyer's tax details printed on its sales-tax invoices (0072): folded until asked for, then the self-contained form. */
+function TaxDetails({ companyId, divided }: { companyId: string; divided: boolean }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className={cn('grid gap-2', divided && 'border-t pt-2')}>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-medium text-fg">Tax details for invoices</h3>
+        {!open ? (
+          <Button size="sm" variant="quiet" onClick={() => setOpen(true)}>
+            Edit
+          </Button>
+        ) : null}
+      </div>
+      {open ? (
+        <BuyerTaxFields companyId={companyId} onSaved={() => setOpen(false)} onCancel={() => setOpen(false)} />
+      ) : (
+        <p className="text-xs text-fg-muted">NTN, STRN, registered status and invoice address.</p>
+      )}
+    </div>
+  )
+}
+
 /**
  * Details: what used to be the Roles and Brands carried panels, in one compact panel (UX audit 9b). The role chip is in the
  * header, so it is not repeated here. On the customer side: since when (the year of the first RFQ or order; "Added" for a
@@ -452,11 +476,13 @@ function DetailsPanel({ company, customerSince, brands }: { company: CompanyDeta
     )
     if (company.role !== 'both') rows.push({ key: 'Also a supplier', value: company.isSupplier ? 'Yes' : 'No' })
   }
-  if (rows.length === 0 && !brands) return null
+  const tax = company.isCustomer
+  if (rows.length === 0 && !brands && !tax) return null
   return (
     <Panel title="Details">
       <div className="grid gap-3 px-5 py-3">
         {rows.length > 0 ? <KeyValue rows={rows} /> : null}
+        {tax ? <TaxDetails companyId={company.id} divided={rows.length > 0} /> : null}
         {brands ? (
           <div className={rows.length > 0 ? 'border-t pt-2' : undefined}>
             <BrandsCarried companyId={company.id} withQuoteCounts={company.isSupplier} />

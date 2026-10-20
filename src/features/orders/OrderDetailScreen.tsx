@@ -15,7 +15,7 @@ import { businessToday } from '@/lib/dates'
 import { OrderItemsPanel } from '@/features/orders/OrderItemsPanel'
 import { LegsPanel } from '@/features/orders/LegsPanel'
 import { CommissioningPanel } from '@/features/orders/CommissioningPanel'
-import { MarginPanel } from '@/features/orders/MoneyPanels'
+import { InvoicesPanel, MarginPanel } from '@/features/orders/MoneyPanels'
 import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
 
 /*
@@ -199,11 +199,12 @@ export default function OrderDetailScreen() {
                 <CommissioningPanel order={order} engineers={engineers.data ?? []} isEngineer={isEngineer} canEdit={canEdit} markDoneAbove={primary?.kind === 'mark-done'} />
                 <AttachmentsPanel orderId={order.id} />
               </div>
-              {/* The side column is admin's Margin (with the one order-level Add expense). Invoices and payments are in the header's status
-                  strip, and the engineer's site is in the header's "Your job". */}
+              {/* The side column is admin's Margin (with the one order-level Add expense) and the payment rows (Correct / Void, 0073). The
+                  invoiced and received figures are in the header's status strip, and the engineer's site is in the header's "Your job". */}
               {isAdmin ? (
                 <aside className="grid min-w-0 gap-6 lg:col-start-2 lg:row-start-1" aria-label="Margin and costs">
                   <MarginPanel order={order} money={orderMoney.data} loading={orderMoney.isPending} error={orderMoney.isError} />
+                  <InvoicesPanel orderId={order.id} orderNumber={order.number} />
                 </aside>
               ) : null}
             </div>
