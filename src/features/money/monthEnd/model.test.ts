@@ -42,17 +42,18 @@ describe('the checklist', () => {
   it('lists the seven checks in the mockup order with their counts and links', () => {
     const cards = buildChecklist(STATUS, '2026-10')
     expect(cards.map(c => c.label)).toEqual([
-      'Bank items not ticked',
-      'FBR deposits not ticked',
-      'Uncategorised',
-      'Recurring not recorded',
-      'Provisional margins',
-      'FBR pending',
-      'Unresolved payments',
+      'Not matched to the bank statement',
+      'FBR deposits not matched',
+      'Expenses without a category',
+      'Recurring expenses not recorded',
+      'Margin not final',
+      'GST not deposited with FBR',
+      'Payments not split',
     ])
     expect(cards.map(c => c.n)).toEqual([7, 2, 0, 0, 3, 2, 1])
     expect(checksWithItems(cards)).toBe(5)
     expect(cards[0].to).toBe('/money/month-end/bank?month=2026-10')
+    expect(cards[4].to).toBe('/money/margins?filter=paid-provisional') // Margin not final opens the margins it counts
     expect(cards[1].unit).toBe('invoices')
     expect(cards[6].unit).toBe('payment')
     expect(cards[2].clear).toBe(true)
@@ -360,8 +361,8 @@ describe('the checklist data lines (migration 0064, g2-month-end "Checklist")', 
   it('opens the one order a single unresolved payment belongs to, and names the PSID groups', () => {
     expect(cards[6].linkLabel).toBe('Open ORD-0012')
     expect(cards[6].to).toBe('/orders/o-12')
-    expect(cards[1].linkLabel).toBe('Tick the PSID group')
-    expect(buildChecklist(STATUS, '2026-10', { ...DETAILS, fbr_deposits_unticked: { amount: 5, groups: 2 } })[1].linkLabel).toBe('Tick the PSID groups')
+    expect(cards[1].linkLabel).toBe('Match the PSID group')
+    expect(buildChecklist(STATUS, '2026-10', { ...DETAILS, fbr_deposits_unticked: { amount: 5, groups: 2 } })[1].linkLabel).toBe('Match the PSID groups')
   })
   it('lists the commonest few and says how many more', () => {
     const more = buildChecklist([{ check_key: 'provisional_margins', n: 5 }], '2026-10', { provisional_margins: { numbers: [9, 8, 7] } })
@@ -372,7 +373,7 @@ describe('the checklist data lines (migration 0064, g2-month-end "Checklist")', 
   it('falls back to the fixed wording when the figures did not load', () => {
     const plainCards = buildChecklist(STATUS, '2026-10')
     expect(plainCards[0].sub).toMatch(/^Bank payments and expenses dated up to month end/)
-    expect(plainCards[6].linkLabel).toBe('Open receivables')
+    expect(plainCards[6].linkLabel).toBe('Open Who owes us')
   })
 })
 

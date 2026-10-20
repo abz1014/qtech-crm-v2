@@ -193,6 +193,15 @@ describe.skipIf(!ENABLED)('the import against the local stack', () => {
     expect(net.every(p => p['counts_in_target'] === false)).toBe(true)
   })
 
+  it('refuses to run while an imported payment is voided in v2 (it would come back counted); Undo clears the void', async () => {
+    const admin = await signedIn('admin@test.invalid')
+    const pay = (await rows(admin, 'payments_in', 'id,bank_month')).find(p => isLegacyId(String(p['id'])) && p['bank_month'] === null)!
+    ok(await admin.rpc('void_payment', { p_payment_id: pay['id'], p_reason: 'load test' }), 'void an imported payment')
+    await expect(loadLegacy({ db, result, storageDir: null })).rejects.toThrow(/REFUSED, nothing was deleted[\s\S]*1 imported payment\(s\) were voided or corrected in v2/)
+    ok(await admin.rpc('restore_payment', { p_payment_id: pay['id'] }), 'undo the void')
+    expect(ok(await db.from('payments_in').select('voided_at').eq('id', pay['id']), 'read back')).toEqual([{ voided_at: null }])
+  })
+
   it('leaves no audit rows behind for the import, and keeps the audit rows of v2 records', async () => {
     const audit = await rows(db, 'audit_log', 'record_id,changed_by')
     expect(audit.filter(a => isLegacyId(String(a['record_id'])) && a['changed_by'] === null)).toHaveLength(0)

@@ -365,3 +365,26 @@ test.describe('Settings › Expense categories (M13)', () => {
     expect(up?.height ?? 0).toBeGreaterThanOrEqual(44)
   })
 })
+
+test.describe('Settings on a phone (UX audit 2026-10-19)', () => {
+  test('/settings is the list itself, in two groups; a page has one back arrow to it, and Team goes back there too', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await openAs(page, 'admin', '/settings')
+    const nav = page.getByRole('navigation', { name: 'Settings' })
+    await expect(nav).toBeVisible()
+    await expect(nav).toContainText('Company')
+    await expect(nav).toContainText('You')
+    // no sideways-scrolling strip: every link is on screen
+    for (const link of await nav.getByRole('link').all()) await expect(link).toBeInViewport({ ratio: 0.5 })
+    await nav.getByRole('link', { name: 'Team' }).click()
+    await expect(page).toHaveURL(/\/settings\/team$/)
+    await page.getByRole('button', { name: 'Back' }).click()
+    await expect(page).toHaveURL(/\/settings$/)
+    await page.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: 'Your details' }).click()
+    await expect(page.getByRole('navigation', { name: 'Settings' })).toBeHidden() // the page, not the list
+    await page.getByRole('button', { name: 'Back' }).click()
+    await expect(page).toHaveURL(/\/settings$/)
+    expect(await noHorizontalScroll(page)).toBe(true)
+    expect(await axeViolations(page), 'axe at 375, settings list').toEqual([])
+  })
+})

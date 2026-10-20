@@ -1,12 +1,14 @@
 Q-TECH CRM: SALES, DAILY (one page)
 
-Sign in on your phone from the home-screen icon. Bottom bar: Today, RFQs, Orders, Companies, Money, Reports.
+Sign in on your phone from the home-screen icon. Bottom bar: Today, RFQs, Orders, Companies, Money.
+A number beside a tab means "this many need you".
 
 1. START WITH TODAY
  - Tap Today. Read "Overdue or due today" first, then "Ready to move".
- - Tabs: All, Bids, Sourcing, Money.
- - Tap a row. The message is already written. Tap "Copy and mark chased" (or "Copy and mark reminded"), paste it into WhatsApp, send.
- - Not now? Tap the clock icon (Snooze), pick a date.
+ - Tabs: All, Quotes, Suppliers, Money.
+ - Tap a row. The message is already written. Tap "Copy message and mark chased" (or "... mark reminded"), paste it into WhatsApp, send.
+ - WhatsApp or Email: pick once, the app remembers.
+ - Not now? Tap Snooze, pick a date.
 
 2. NEW ENQUIRY: PASTE IT
  - Tap RFQs, then New RFQ.
@@ -39,8 +41,8 @@ Sign in on your phone from the home-screen icon. Bottom bar: Today, RFQs, Orders
  - Change it later: "Revise quotation". The first one stays as it was.
 
 6. CHASE
- - Customer quiet? Today shows it. Open it, tap "Copy and mark chased".
- - Or on the RFQ, under "Questions for the customer", tap "Copy chase text".
+ - Customer quiet? Today shows it. Open it, tap "Copy message and mark chased".
+ - Or on the RFQ, under "Questions for the customer", tap "Copy chase text". After 3 chases with no answer, the app asks if you want to close it.
  - Close an RFQ: More, then pick the reason under "Close the RFQ because".
 
 7. WON: CONVERT TO ORDER
@@ -50,12 +52,15 @@ Sign in on your phone from the home-screen icon. Bottom bar: Today, RFQs, Orders
  - Tap "Create order". The order opens.
 
 8. INVOICE
- - Open the order. In Invoicing tap "Create invoice" (or Money, GST register, "New invoice").
+ - Open the order. In Invoicing tap "Create invoice" (or Money, "Invoices & GST", "New invoice").
  - Check Invoice number (it continues the series), Invoice date, Net amount, GST.
  - Save. Then send the invoice to the customer.
- - Courier sent? In the GST register tap "Sent by TCS today".
+ - Courier sent? In "Invoices & GST" tick the invoices, then "Sent by TCS today". The (i) explains TCS, FBR and PSID.
 
-9. MONEY, ORDER BALANCES
- - Money, "Order balances": who owes what. Overdue ones show a "Payment reminder": tap "Copy and mark reminded".
+9. MONEY: WHO OWES US
+ - Money opens on "Who owes us": what each order still owes. Overdue is in red.
+ - Tap an overdue order: the "Payment reminder" is written. Tap "Copy and mark reminded".
+ - Payments are recorded by the admin.
+ - "Reports" (top right of Money): wins, asking suppliers, how fast customers answer, who comes back.
 
 Stuck? Search is at the top. Tell the owner what confused you; never log extra detail.

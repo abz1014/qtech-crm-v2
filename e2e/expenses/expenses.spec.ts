@@ -11,7 +11,8 @@ import { axeViolations } from '../support/axe'
  *   Recurring expense                  1 tap
  *   Supplier payment from a leg        2 taps
  * plus the closed-month refusal (month closed by the admin first), the engineer and sales having no access, and axe
- * (WCAG 2.2 AA) at 1440 and 375. Each test makes its own records with unique notes; the closed-month tests run last
+ * (WCAG 2.2 AA) at 1440 and 375. Since the owner decision of 2026-10-19 the screen has ONE add button, "Add expenses" (the burst
+ * sheet, as quick for one row); the one-expense dialog is what an order or a supplier order opens (/money/expenses?add=1...). Each test makes its own records with unique notes; the closed-month tests run last
  * because closing a month is permanent until it is reopened (and the suite reopens it).
  */
 const SNACKS = 'ca7e0000-0000-4000-8000-000000000005' // Office supplies & snacks (cash)
@@ -78,11 +79,31 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR
 test.describe.configure({ mode: 'serial' })
 
 test.describe('expenses (M03, M11)', () => {
-  test('one expense in the default category is one amount and Enter', async ({ page }) => {
+  test('the screen has one add button, and one expense through it is one amount and Ctrl+Enter', async ({ page }) => {
     await seedFavourite()
     await openAs(page, 'admin', '/money/expenses')
+    await expect(page.getByRole('button', { name: /^Add expense/ })).toHaveCount(1)
     const posts = expensesRequests(page)
-    await page.getByRole('button', { name: 'Add expense', exact: true }).click()
+    const amount = 30000 + base()
+    await page.getByRole('button', { name: 'Add expenses' }).click()
+    await expect(page.getByRole('textbox', { name: 'Amount, row 1' })).toBeFocused()
+    await expect(page.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Office supplies & snacks')
+    await startCounting(page)
+    await page.keyboard.type(String(amount))
+    await page.keyboard.press('Control+Enter')
+    await expect(page.getByRole('dialog')).toBeHidden()
+    const c = await counted(page)
+    expect(c.keys).toEqual(['Enter']) // 1 amount + Ctrl+Enter
+    expect(c.mouse).toBe(0)
+    expect(posts).toHaveLength(1)
+    const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amount}&select=*`))
+    expect(row).toMatchObject({ category_id: SNACKS, paid_via: 'cash', paid_on: today() })
+  })
+
+  test('one expense in the default category is one amount and Enter (the one-expense dialog)', async ({ page }) => {
+    await seedFavourite()
+    await openAs(page, 'admin', '/money/expenses?add=1')
+    const posts = expensesRequests(page)
     const amount = page.getByRole('textbox', { name: 'Amount, PKR' })
     await expect(amount).toBeFocused()
     // the pre-fills: most used category, today, paid via from the category
@@ -272,8 +293,7 @@ test.describe('expenses (M03, M11)', () => {
 
   test('input tax is collapsed, optional, and only on Supplier payment, Freight and Clearing', async ({ page }) => {
     const amt = 590000 + base() + 8
-    await openAs(page, 'admin', '/money/expenses')
-    await page.getByRole('button', { name: 'Add expense', exact: true }).click()
+    await openAs(page, 'admin', '/money/expenses?add=1')
     await expect(page.getByText('Input tax, optional')).toHaveCount(0)
     const category = page.getByRole('combobox', { name: 'Category' })
     await category.click()
@@ -290,7 +310,7 @@ test.describe('expenses (M03, M11)', () => {
     const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amt}&select=*`))
     expect(row).toMatchObject({ category_id: SUPPLIER_PAYMENT, input_tax_pkr: 90000, paid_via: 'bank' })
     // a category without input tax never offers it
-    await page.getByRole('button', { name: 'Add expense', exact: true }).click()
+    await page.goto('/money/expenses?add=1')
     await page.getByRole('combobox', { name: 'Category' }).click()
     await page.keyboard.type('rent')
     await page.keyboard.press('Tab')
@@ -308,8 +328,8 @@ test.describe('expenses (M03, M11)', () => {
     const dialog = page.getByRole('dialog', { name: 'Add expense' })
     await expect(dialog).toBeVisible()
     await expect(dialog.getByRole('combobox', { name: 'Category' })).toHaveValue('Supplier payment')
-    await expect(dialog.getByText('Opened from a leg')).toBeVisible()
-    await expect(dialog.getByText(new RegExp(`${supplier.name} · leg A`))).toBeVisible()
+    await expect(dialog.getByText('Opened from a supplier order')).toBeVisible()
+    await expect(dialog.getByText(new RegExp(`${supplier.name} · supplier order A`))).toBeVisible()
     await expect(dialog.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('384,497')
     await expect(dialog.getByText(note)).toBeVisible()
     await review(page, 'm03-add-expense-from-a-leg-1440')
@@ -426,10 +446,11 @@ test.describe('expenses (M03, M11)', () => {
     await expect(page.getByRole('button', { name: 'Add expenses' })).toBeVisible()
     await expect(page.getByText(/All \d+ expenses shown/)).toBeVisible()
     expect(await axeViolations(page)).toEqual([])
-    await page.getByRole('button', { name: 'Add expense', exact: true }).click()
+    await page.goto('/money/expenses?add=1')
     await expect(page.getByRole('textbox', { name: 'Amount, PKR' })).toBeFocused()
     expect(await axeViolations(page, { landmarks: false })).toEqual([])
     await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog')).toBeHidden()
     await page.getByRole('button', { name: 'Add expenses' }).click()
     await page.keyboard.type('450')
     await page.keyboard.press('Enter')
@@ -545,8 +566,7 @@ test.describe('expenses (M03, M11)', () => {
 
     test('the single dialog shows the plain sentence under the date and keeps every entry', async ({ page }) => {
       const z = base() + 31
-      await openAs(page, 'admin', '/money/expenses')
-      await page.getByRole('button', { name: 'Add expense', exact: true }).click()
+      await openAs(page, 'admin', '/money/expenses?add=1')
       await page.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(z))
       await page.getByRole('textbox', { name: 'Date paid' }).fill(prev.typed)
       await page.getByRole('button', { name: 'Add a note' }).click()

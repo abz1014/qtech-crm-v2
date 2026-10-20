@@ -95,7 +95,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
           <p className="mt-1 text-fg-muted">
             Net cash received by you since {w.startText}, GST left out. Shown to the nearest PKR 10,000: exact on pace {formatAmount(w.onPaceExact)}
             {w.status === 'ahead' ? `, ahead ${formatAmount(w.aheadExact)}` : `, behind ${formatAmount(w.behindExact)}`}.
-            {w.excludedCount > 0 ? ` ${w.excludedCount} ${w.excludedCount === 1 ? 'payment is' : 'payments are'} not counted yet (basis unknown).` : ''}
+            {w.excludedCount > 0 ? ` ${w.excludedCount} ${w.excludedCount === 1 ? 'payment is' : 'payments are'} not counted yet: nobody has said whether GST is included.` : ''}
           </p>
         </div>
       ) : null}

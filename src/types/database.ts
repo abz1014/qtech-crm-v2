@@ -961,17 +961,29 @@ isOneToOne: false
                   ]
                 },"payments_in": {
                   Row: {
-                    "amount": number,"bank_month": string | null,"created_at": string,"created_by": string | null,"credited_user_id": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"paid_via": string,"received_on": string,"reference": string | null
+                    "amount": number,"bank_month": string | null,"corrects_payment_id": string | null,"created_at": string,"created_by": string | null,"credited_user_id": string | null,"id": string,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"paid_via": string,"received_on": string,"reference": string | null,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount": number,"bank_month"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null
+                    "amount": number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null
                   }
                   Update: {
-                    "amount"?: number,"bank_month"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null
+                    "amount"?: number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null
                   }
                   Relationships: [
                     {
+      foreignKeyName: "payments_in_corrects_payment_id_fkey"
+      columns: ["corrects_payment_id"]
+isOneToOne: false
+      referencedRelation: "payments_in"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "payments_in_corrects_payment_id_fkey"
+      columns: ["corrects_payment_id"]
+isOneToOne: false
+      referencedRelation: "v_payment_net"
+      referencedColumns: ["payment_id"]
+    },{
       foreignKeyName: "payments_in_created_by_fkey"
       columns: ["created_by"]
 isOneToOne: false
@@ -1013,6 +1025,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "v_order_state"
       referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "payments_in_voided_by_fkey"
+      columns: ["voided_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
     }
                   ]
                 },"purchase_orders": {
@@ -2023,6 +2041,9 @@ isOneToOne: false
 "convert_rfq_to_order":
 { Args: { "p_customer_po_number"?: string,"p_items"?: Json,"p_needs_commissioning"?: boolean,"p_order_id": string,"p_ordered_on"?: string,"p_payment_terms_days"?: number,"p_rfq_id": string }; Returns: string
                            },
+"correct_payment":
+{ Args: { "p_amount": number,"p_new_id"?: string,"p_paid_via": string,"p_payment_id": string,"p_reason": string,"p_received_on": string,"p_reference": string }; Returns: string
+                           },
 "create_repeat_order":
 { Args: { "p_customer_po_number"?: string,"p_from_order_id": string,"p_order_id": string,"p_ordered_on"?: string }; Returns: string
                            },
@@ -2142,6 +2163,9 @@ isOneToOne: false
 "resolve_value_basis":
 { Args: { "p_basis": string,"p_order_id": string }; Returns: undefined
                            },
+"restore_payment":
+{ Args: { "p_payment_id": string }; Returns: undefined
+                           },
 "revoke_user_sessions":
 { Args: { "p_user_id": string }; Returns: undefined
                            },
@@ -2212,6 +2236,9 @@ isOneToOne: false
                            },
 "tokens_without":
 { Args: { "p_drop": (string)[],"p_tokens": (string)[] }; Returns: (string)[]
+                           },
+"void_payment":
+{ Args: { "p_payment_id": string,"p_reason": string }; Returns: undefined
                            }
           }
           Enums: {
