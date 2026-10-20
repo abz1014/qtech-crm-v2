@@ -12,6 +12,8 @@ import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { EmptyState } from '@/ui/EmptyState'
+import { FirstUseState } from '@/features/help/FirstUseState'
+import { useFirstUse } from '@/features/help/useFirstUse'
 import { Select } from '@/ui/form/Select'
 import { Icon } from '@/ui/Icon'
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
@@ -171,6 +173,15 @@ export default function OrdersListPage() {
   const today = businessToday()
   const steps = useMemo(() => new Map(all.map(r => [r.id, listNextStep(r, role, today)])), [all, role, today])
   const stepOf = (r: OrderListRow) => steps.get(r.id) ?? listNextStep(r, role, today)
+  // R2-05: Active orders split by who acts next. "Needs action" is a late or now step; everything else waits on someone else.
+  const needsAction = (r: OrderListRow) => {
+    const t = stepOf(r).tone
+    return t === 'late' || t === 'now'
+  }
+  const showParam = params.get('show')
+  const split = filters.tab === 'active' && (showParam === 'need' || showParam === 'waiting') ? showParam : 'all'
+  const needCount = shown.filter(needsAction).length
+  const rows = split === 'need' ? shown.filter(needsAction) : split === 'waiting' ? shown.filter(r => !needsAction(r)) : shown
   const columns: Column<OrderListRow>[] = [
     { id: 'customer', header: 'Customer and items', value: r => r.companyName, sortable: true, cell: r => <CustomerCell row={r} /> },
     // text columns sorted by a number (the urgency rank, the order number): compareCells compares text numerically
@@ -190,8 +201,9 @@ export default function OrdersListPage() {
 
   const filtered = hasFilters(filters, role)
   const dimsOn = (['goods', 'commissioning', 'invoicing', 'payment'] as const).filter(d => filters[d] !== ALL).length
-  const reset = () => change({ owner: defaultOwner(role) === 'mine' ? 'all' : null, goods: null, commissioning: null, invoicing: null, payment: null, q: null })
+  const reset = () => change({ owner: defaultOwner(role) === 'mine' ? 'all' : null, goods: null, commissioning: null, invoicing: null, payment: null, q: null, show: null })
   const total = all.filter(r => r.lifecycle === filters.tab).length
+  const firstUse = useFirstUse('orders', user?.id ?? '', role, orders.isSuccess && filters.tab === 'active' && filters.owner === 'mine' && mineCount === 0 && !filters.text && dimsOn === 0)
   const ownerLabel = role === 'engineer' ? 'My jobs' : 'Mine'
 
   const dimSelect = (dim: Dimension) => {
@@ -232,8 +244,9 @@ export default function OrdersListPage() {
   )
   const filterLabel = dimsOn > 0 ? `Filters (${dimsOn})` : 'Filters'
 
-  const empty =
-    !filtered && total === 0 ? (
+  const empty = firstUse.isNew ? (
+      <FirstUseState screen="orders" role={role} onEveryone={() => change({ owner: 'all' })} everyoneCount={allCount} className="mx-5 my-4" />
+    ) : !filtered && total === 0 ? (
       filters.tab === 'active' ? (
         <EmptyState
           mood="goal"
@@ -284,7 +297,7 @@ export default function OrdersListPage() {
     <DataTable
       label={label}
       columns={columns}
-      rows={shown}
+      rows={rows}
       getRowId={r => r.id}
       twoLine
       densitySwitch={false}
@@ -293,10 +306,22 @@ export default function OrdersListPage() {
       onRowOpen={r => navigate(`/orders/${r.id}`)}
       loading={orders.isPending}
       error={orders.isError ? { title: "Couldn't load the orders", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void orders.refetch() } : null}
-      summary={orders.isSuccess ? `Showing ${shown.length} of ${total} ${filters.tab} ${total === 1 ? 'order' : 'orders'}` : undefined}
+      summary={orders.isSuccess ? `Showing ${rows.length} of ${total} ${filters.tab} ${total === 1 ? 'order' : 'orders'}` : undefined}
       toolbar={
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
           {phone ? null : ownerSwitch}
+          {filters.tab === 'active' ? (
+            <SegmentedControl
+              aria-label="Who acts next"
+              value={split}
+              onValueChange={v => change({ show: v === 'all' ? null : v })}
+              options={[
+                { value: 'all', label: 'Any', count: orders.isSuccess ? shown.length : undefined },
+                { value: 'need', label: 'Needs action', count: orders.isSuccess ? needCount : undefined },
+                { value: 'waiting', label: 'Waiting', count: orders.isSuccess ? shown.length - needCount : undefined },
+              ]}
+            />
+          ) : null}
           <TableFilter label="Search orders" placeholder="Customer, item, order or PO" value={filters.text} onChange={v => change({ q: v })} className="min-w-0 flex-1 sm:max-w-[320px]" />
           {phone ? (
             <Button icon={ListFilter} onClick={() => setSheet(true)} aria-label={dimsOn > 0 || filters.owner !== defaultOwner(role) ? `Filter, ${dimsOn + (filters.owner !== defaultOwner(role) ? 1 : 0)} on` : 'Filter'}>

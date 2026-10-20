@@ -9,6 +9,9 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
+import { FirstUseState } from '@/features/help/FirstUseState'
+import { HowItWorksCard } from '@/features/help/HowItWorksCard'
+import { useFirstUse } from '@/features/help/useFirstUse'
 import { ContextPane } from '@/features/today/ContextPane'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import { TargetTile } from '@/features/today/TargetTile'
@@ -109,6 +112,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
     return { all: a.length, bids: a.filter(i => i.tab === 'bids').length, sourcing: a.filter(i => i.tab === 'sourcing').length, money: a.filter(i => i.tab === 'money').length }
   }, [view])
   const dueNow = view?.now.length ?? 0
+  const firstUse = useFirstUse('today', user.id, user.role, !!view && view.active.length === 0 && view.waiting.length === 0)
   const tabs: Array<'all' | TodayTab> = user.role === 'engineer' ? [] : ['all', 'bids', 'sourcing', 'money']
 
   // Five or fewer: open. More than five: collapsed, and opening it is the person's choice (remembered for the session).
@@ -143,6 +147,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
             options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], count: counts[t] }))}
           />
         ) : null}
+        <HowItWorksCard userId={user.id} role={user.role} className="mt-2" />
       </header>
 
       {query.isPending ? (
@@ -157,7 +162,9 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
         </EmptyState>
       ) : (
         <>
-          {active.length === 0 ? (
+          {firstUse.isNew ? (
+            <FirstUseState screen="today" role={user.role} alone={firstUse.alone} className="mx-5 my-4" />
+          ) : active.length === 0 ? (
             <EmptyState mood="goal" title={tab === 'all' ? 'Nothing needs you today' : 'Nothing here needs you today'}>
               {waiting.length > 0
                 ? 'Everything you chased is waiting for its date. It comes back here when it is time to nudge.'

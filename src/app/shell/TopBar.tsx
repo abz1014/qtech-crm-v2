@@ -3,6 +3,7 @@ import { Import, Search } from 'lucide-react'
 import { navItemsForRole, type NavItem, type NavKey } from '@/app/navConfig'
 import { ROLE_LABEL, type SessionUser } from '@/app/session'
 import { AccountMenu } from '@/app/shell/AccountMenu'
+import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
 import { cn } from '@/lib/utils'
@@ -38,8 +39,8 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
   return (
     <header className="hidden h-topbar min-w-0 items-center gap-4 border-b bg-surface px-4 md:flex xl:gap-5 2xl:gap-6 2xl:px-5">
       <NavLink to="/" className="shrink-0 rounded" aria-label="Q-Tech Solutions, home">
-        <img src="/brand/logo-wordmark.png" alt="" width={124} height={30} className="block h-[30px] w-auto max-xl:hidden" />
-        <img src="/brand/logo-mark.png" alt="" width={28} height={28} className="block size-[28px] xl:hidden" />
+        <BrandImage name="logo-wordmark" alt="" width={124} height={30} className="block h-[30px] w-auto max-xl:hidden" />
+        <BrandImage name="logo-mark" alt="" width={28} height={28} className="block size-[28px] xl:hidden" />
       </NavLink>
 
       <nav aria-label="Main" className="flex min-w-0 gap-1 self-stretch 2xl:ml-2">

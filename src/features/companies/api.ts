@@ -2,6 +2,7 @@ import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { TableRow, ViewRow } from '@/features/dbTypes'
 import { toBusinessDate } from '@/lib/dates'
 import { paisaToFixed, sumPaisa } from '@/lib/money'
+import { fetchReceivablesList } from '@/features/money/payments/api'
 import type { RawInquiry, RawItem, RawLeg, RawLine, RawOrderItem, RawRfq, SupplierRecordRaw } from '@/features/companies/supplierRecord'
 import { phoneKey, type SearchContact } from '@/features/companies/companySearch'
 
@@ -556,7 +557,13 @@ export async function getCompanyHistory(companyId: string, withPayment = false):
       orderRows.map(o => o.id),
       b => db.from('order_items').select('order_id, description, position, is_service').in('order_id', b),
     ),
-    withPayment && orderRows.length > 0 ? db.rpc('order_receivables', {}) : Promise.resolve(null),
+    // this company's overdue orders only, filtered on the server (it used to read order_receivables() for every order in the database)
+    withPayment && orderRows.length > 0
+      ? fetchReceivablesList({ p_company_id: companyId, p_state: 'overdue' }).then(
+          data => ({ data, error: null }),
+          (error: unknown) => ({ data: null, error }),
+        )
+      : Promise.resolve(null),
   ])
   const firstOf = <T extends { description: string; position: number }>(rows: T[], key: (r: T) => string) => {
     const by = new Map<string, T[]>()
@@ -619,11 +626,11 @@ export interface CompanyMoney {
 
 /**
  * ADMIN ONLY (the screen hides the panel). Totals over the company's orders exactly as the Receivables page lists them
- * (order_receivables: D-MR3 leaves out a cancelled order that was never invoiced), summed in exact paisa.
+ * (receivables_list for the company, over order_receivables: D-MR3 leaves out a cancelled order that was never invoiced), summed
+ * in exact paisa.
  */
 export async function getCompanyMoney(companyId: string): Promise<CompanyMoney> {
-  const db = requireSupabase()
-  const rows = unwrap(await db.rpc('order_receivables', {}).select('gross_target, settled, balance, overpaid_by').eq('company_id', companyId)) ?? []
+  const rows = await fetchReceivablesList({ p_company_id: companyId })
   const total = (k: 'gross_target' | 'settled' | 'balance' | 'overpaid_by') => Number(paisaToFixed(sumPaisa(rows.map(r => r[k] ?? 0))))
   return { receivable: total('gross_target'), settled: total('settled'), balance: total('balance'), overpaid: total('overpaid_by'), orders: rows.length }
 }

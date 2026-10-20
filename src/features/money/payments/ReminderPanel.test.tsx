@@ -9,6 +9,7 @@ import { ReceivablesPage } from '@/features/money/payments/ReceivablesPage'
 import { ReminderPanel } from '@/features/money/payments/ReminderPanel'
 import type { ReceivableRow } from '@/features/money/payments/model'
 import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
+import { receivablesListResult } from '@/test/receivablesFake'
 import { ToastProvider } from '@/ui/Toast'
 import { businessToday } from '@/lib/dates'
 
@@ -122,6 +123,30 @@ describe('Payment-reminder panel (M09)', () => {
     expect(screen.queryByRole('button', { name: 'Copy and mark reminded' })).not.toBeInTheDocument()
   })
 
+  it('Open in WhatsApp marks nothing; the separate "Mark reminded" stamps, and Undo takes it back', async () => {
+    const user = userEvent.setup()
+    const d = db()
+    const clicked: string[] = []
+    const spy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      clicked.push(this.href)
+    })
+    mount(<ReminderPanel row={row()} today={TODAY} />)
+    await screen.findByTestId('reminder-text')
+    expect(screen.queryByRole('button', { name: 'Mark reminded' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Open in WhatsApp' }))
+    expect(clicked[0]).toMatch(/^https:\/\/wa\.me\/923005550118\?text=.*INV-2256/)
+    expect(copyToClipboard).not.toHaveBeenCalled()
+    expect(d.calls.filter(c => c.target === 'rpc:stamp_payment_reminder')).toHaveLength(0)
+    await user.click(screen.getByRole('button', { name: 'Mark reminded' }))
+    expect(await screen.findByText(/recorded today/)).toBeInTheDocument()
+    expect(screen.queryByText(/Copied\./)).not.toBeInTheDocument()
+    expect(d.calls.filter(c => c.target === 'rpc:stamp_payment_reminder')).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Copy and mark reminded' })).toBeInTheDocument())
+    expect(d.calls.some(c => c.target === 'invoices' && c.verb === 'update')).toBe(true)
+    spy.mockRestore()
+  })
+
   it('Undo puts the previous reminder fields back', async () => {
     const user = userEvent.setup()
     const d = db()
@@ -172,6 +197,8 @@ describe('the panel beside Receivables (M09)', () => {
   ]
   const feed = (c: FakeCall): FakeResult | undefined => {
     if (c.target === 'rpc:order_receivables') return { data: receivables }
+    if (c.target === 'rpc:receivables_list')
+      return receivablesListResult(c, receivables, { companyName: id => (id === 'c1' ? 'Indus Textile Mills' : 'Lahore Beverage Co.'), invoiceNumbers: id => (id === 'o27' ? ['INV-2256'] : ['INV-2299']) })
     if (c.target === 'companies') return { data: [{ id: 'c1', name: 'Indus Textile Mills' }, { id: 'c2', name: 'Lahore Beverage Co.' }] }
     if (c.target === 'invoices' && c.ops.some(([k, a]) => k === 'select' && String(a[0]).includes('invoice_date') && !String(a[0]).includes('reminded'))) {
       return { data: [{ order_id: 'o27', number: 'INV-2256', invoice_date: '2026-09-20' }, { order_id: 'o35', number: 'INV-2299', invoice_date: '2026-10-30' }] }

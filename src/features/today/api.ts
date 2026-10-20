@@ -3,6 +3,7 @@ import { toBusinessDate } from '@/lib/dates'
 import type { ViewRow } from '@/features/dbTypes'
 import { previousMonthStart } from '@/features/today/rules'
 import { addDays } from '@/features/rfqs/lib/dateText'
+import { fetchReceivablesList, type ReceivablesListRow } from '@/features/money/payments/api'
 import type {
   ClarificationFact,
   CostFact,
@@ -114,61 +115,48 @@ async function loadClarifications(open: Set<string>): Promise<ClarificationFact[
     }))
 }
 
-async function loadInquiries(open: Set<string>, names: Map<string, string>): Promise<InquiryFact[]> {
+/**
+ * Supplier enquiries on open RFQs that await a reply or have answers to relay: one today_inquiry_facts() call (0074) with the
+ * chaser, the date the waiting answers came in (Karachi) and the supplier's reply stats. It replaces five reads, one of which
+ * (who chased) was cut at 1,000 rows. `open` still narrows to the RFQs Today lists.
+ */
+async function loadInquiries(open: Set<string>): Promise<InquiryFact[]> {
   const db = requireSupabase()
-  const [rows, stats] = await Promise.all([
-    fetchAll((from, to) =>
-      db
-        .from('v_inquiry_state')
-        .select('inquiry_id, rfq_id, supplier_id, sent_on, last_chased_on, chase_count, response_state, answers_to_relay')
-        .or('response_state.eq.awaiting,answers_to_relay.gt.0')
-        .range(from, to),
-    ),
-    fetchAll((from, to) => db.from('v_supplier_stats').select('supplier_id, replied, median_reply_days').range(from, to)),
-  ])
-  const statBy = new Map(stats.map(s => [s.supplier_id, s]))
-  // v_inquiry_state does not carry who chased; the table does (0048).
-  const actors = unwrap(await db.from('supplier_inquiries').select('id, last_chased_by').not('last_chased_by', 'is', null))
-  const actorBy = new Map(actors.map(a => [a.id, a.last_chased_by]))
-  // When did the answers that wait to be relayed come in? Answered after the inquiry's last relay.
-  const relayIds = rows.filter(r => num(r.answers_to_relay) > 0 && r.inquiry_id).map(r => r.inquiry_id as string)
-  const answeredOn = new Map<string, string>()
-  if (relayIds.length > 0) {
-    const [inqs, answered] = await Promise.all([
-      db.from('supplier_inquiries').select('id, last_relayed_at').in('id', relayIds),
-      db.from('clarifications').select('raised_by_inquiry_id, answered_at').in('raised_by_inquiry_id', relayIds).not('answered_at', 'is', null).is('withdrawn_at', null),
-    ])
-    const relayedAt = new Map(unwrap(inqs).map(i => [i.id, i.last_relayed_at]))
-    for (const a of unwrap(answered)) {
-      const id = a.raised_by_inquiry_id as string
-      const at = a.answered_at as string
-      const last = relayedAt.get(id)
-      if (last && at <= last) continue
-      const day = toBusinessDate(new Date(at))
-      if (!answeredOn.has(id) || day > (answeredOn.get(id) as string)) answeredOn.set(id, day)
-    }
-  }
-  return rows
-    .filter(r => r.rfq_id && open.has(r.rfq_id) && r.inquiry_id && r.supplier_id)
-    .map(r => {
-      const s = statBy.get(r.supplier_id)
-      return {
-        id: r.inquiry_id as string,
-        rfqId: r.rfq_id as string,
-        supplierId: r.supplier_id as string,
-        supplierName: names.get(r.supplier_id as string) ?? 'Unknown supplier',
-        sentOn: r.sent_on,
-        lastChasedOn: r.last_chased_on,
-        lastChasedBy: actorBy.get(r.inquiry_id as string) ?? null,
-        chaseCount: num(r.chase_count),
-        responseState: r.response_state ?? 'awaiting',
-        answersToRelay: num(r.answers_to_relay),
-        answeredOn: answeredOn.get(r.inquiry_id as string) ?? null,
-        replied: num(s?.replied),
-        medianReplyDays: s?.median_reply_days === null || s?.median_reply_days === undefined ? null : Number(s.median_reply_days),
-      }
-    })
+  const rows = await fetchAll((from, to) => db.rpc('today_inquiry_facts').range(from, to))
+  return rows.filter(r => r.rfq_id && open.has(r.rfq_id) && r.inquiry_id && r.supplier_id).map(toInquiryFact)
 }
+
+type InquiryFactRow = {
+  inquiry_id: string
+  rfq_id: string
+  supplier_id: string
+  supplier_name: string | null
+  sent_on: string | null
+  last_chased_on: string | null
+  last_chased_by: string | null
+  chase_count: number | null
+  response_state: string | null
+  answers_to_relay: number | null
+  answered_on: string | null
+  replied: number | null
+  median_reply_days: number | string | null
+}
+
+export const toInquiryFact = (r: InquiryFactRow): InquiryFact => ({
+  id: r.inquiry_id,
+  rfqId: r.rfq_id,
+  supplierId: r.supplier_id,
+  supplierName: r.supplier_name ?? 'Unknown supplier',
+  sentOn: r.sent_on,
+  lastChasedOn: r.last_chased_on,
+  lastChasedBy: r.last_chased_by ?? null,
+  chaseCount: num(r.chase_count),
+  responseState: r.response_state ?? 'awaiting',
+  answersToRelay: num(r.answers_to_relay),
+  answeredOn: r.answered_on ?? null,
+  replied: num(r.replied),
+  medianReplyDays: r.median_reply_days === null || r.median_reply_days === undefined ? null : Number(r.median_reply_days),
+})
 
 type LegRow = {
   id: string
@@ -343,24 +331,24 @@ async function loadJobs(userId: string, names: Map<string, string>): Promise<Job
   return jobs.sort((a, b) => a.orderNumber - b.orderNumber)
 }
 
+/** Overdue orders only, filtered on the server (receivables_list 'overdue' = is_overdue) and paged, so none is lost past 1,000 rows. */
 async function loadReceivables(names: Map<string, string>): Promise<ReceivableFact[]> {
-  const db = requireSupabase()
-  const rows = unwrap(await db.rpc('order_receivables')) ?? []
-  return rows
-    .filter(r => r.is_overdue)
-    .map(r => ({
-      orderId: r.order_id,
-      orderNumber: num(r.order_number),
-      ownerId: r.owner_id ?? null,
-      customerName: names.get(r.company_id) ?? 'Unknown company',
-      balance: num(r.balance),
-      settled: num(r.settled),
-      dueOn: r.due_on ?? null,
-      isOverdue: Boolean(r.is_overdue),
-      lastRemindedOn: r.last_reminded_on ?? null,
-      reminderCount: num(r.reminder_count),
-    }))
+  const rows = await fetchReceivablesList({ p_state: 'overdue' })
+  return rows.map(r => toReceivableFact(r, names))
 }
+
+export const toReceivableFact = (r: Omit<ReceivablesListRow, 'company_name' | 'invoice_numbers'>, names: Map<string, string>): ReceivableFact => ({
+  orderId: r.order_id,
+  orderNumber: num(r.order_number),
+  ownerId: r.owner_id ?? null,
+  customerName: names.get(r.company_id) ?? 'Unknown company',
+  balance: num(r.balance),
+  settled: num(r.settled),
+  dueOn: r.due_on ?? null,
+  isOverdue: Boolean(r.is_overdue),
+  lastRemindedOn: r.last_reminded_on ?? null,
+  reminderCount: num(r.reminder_count),
+})
 
 /** The close-month item reads only on the 1st to the 10th: one RPC and one tiny read, admin only. */
 async function loadMonthEnd(today: string): Promise<MonthEndFact | null> {
@@ -477,7 +465,7 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
   const money = role === 'admin' || role === 'sales'
   const [clarifications, inquiries, legs, orders, receivables, monthEnd, costs, invoices, recurring, jobs] = await Promise.all([
     loadClarifications(open),
-    loadInquiries(open, names),
+    loadInquiries(open),
     loadLegs(names, labels),
     loadOrders(role, names),
     money ? loadReceivables(labels) : Promise.resolve<ReceivableFact[]>([]),
@@ -543,7 +531,7 @@ export async function getMyTarget(): Promise<TargetProgress | null> {
 // ================================================================ drafts: what the generators need beyond the Today facts
 
 export interface LegDraftData {
-  contact: { name: string; phone: string | null } | null
+  contact: { name: string; phone: string | null; email?: string | null } | null
   items: Array<{ description: string; brandName: string | null; qty: number; unit: string | null }>
 }
 
@@ -559,12 +547,12 @@ export async function getLegDraft(legId: string): Promise<LegDraftData> {
   const brandIds = [...new Set(rows.map(r => r.brand_id).filter((b): b is string => Boolean(b)))]
   const [brands, contacts] = await Promise.all([
     brandIds.length ? db.from('brands').select('id, name').in('id', brandIds) : Promise.resolve({ data: [], error: null }),
-    supplierId ? db.from('contacts').select('name, phone').eq('company_id', supplierId).order('created_at').limit(1) : Promise.resolve({ data: [], error: null }),
+    supplierId ? db.from('contacts').select('name, phone, email').eq('company_id', supplierId).order('created_at').limit(1) : Promise.resolve({ data: [], error: null }),
   ])
   const brandBy = new Map((unwrap(brands) ?? []).map(b => [b.id, b.name]))
   const contact = (unwrap(contacts) ?? [])[0] ?? null
   return {
-    contact: contact ? { name: contact.name, phone: contact.phone } : null,
+    contact: contact ? { name: contact.name, phone: contact.phone, email: contact.email } : null,
     items: rows.map(r => ({ description: r.description, brandName: r.brand_id ? (brandBy.get(r.brand_id) ?? null) : null, qty: num(r.qty), unit: r.unit })),
   }
 }

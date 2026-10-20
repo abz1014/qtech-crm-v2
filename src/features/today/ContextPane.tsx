@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlarmClock,
@@ -8,7 +8,6 @@ import {
   ChevronRight,
   CircleCheck,
   Clock,
-  Copy,
   ExternalLink,
   Hourglass,
   MessageCircleQuestion,
@@ -26,6 +25,7 @@ import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPrefe
 import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
+import { MessageActions } from '@/ui/MessageActions'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { DateInput } from '@/ui/form/DateInput'
 import { Icon } from '@/ui/Icon'
@@ -33,6 +33,7 @@ import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
+import { InfoTip } from '@/ui/InfoTip'
 import { ChaseNote, FormattedMessage, RecipientRow, SubjectRow } from '@/features/rfqs/ChaseParts'
 import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
 import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
@@ -42,6 +43,7 @@ import { SUPPLIER_WAIT_DAYS } from '@/features/rfqs/lib/chaseWait'
 import { supplierChaseBaseDays } from '@/features/today/rules'
 import { addBusinessDays, addDays, nextMonday } from '@/features/rfqs/lib/dateText'
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
+import { closeReasonLabel, type CloseReason } from '@/features/rfqs/lib/closeDefaults'
 import { chasedByText } from '@/features/rfqs/lib/collision'
 import type { TodayData } from '@/features/today/api'
 import { buildCustomerDraft, buildGoodsDraft, buildPaymentDraft, buildSupplierDraft, type Draft } from '@/features/today/chaseDraft'
@@ -101,6 +103,10 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   // the person's last WhatsApp / Email choice, remembered on this device
   const [channel, setChannel] = useChannelPreference()
   const [busy, setBusy] = useState(false)
+  // A WhatsApp / email link was opened for this item: offer the separate "Mark chased" tap (opening never marks).
+  const [openedKey, setOpenedKey] = useState<string | null>(null)
+  const opened = openedKey === item.key
+  const [sentKey, setSentKey] = useState<string | null>(null)
   const [full, setFull] = useState(false)
   const [again, setAgain] = useState(false)
   const isRfq = Boolean(item.rfqId)
@@ -163,6 +169,50 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
     return null
   }
 
+  /** Stamps the chase with Undo. `copied`: the message was just copied (the copy button), else a link was opened. */
+  const mark = async (copied: boolean) => {
+    const lead = copied ? 'Copied. ' : ''
+    const s = spec()
+    if (!s) {
+      toast({ title: copied ? 'Copied' : 'Nothing to mark', body: item.rule === 'payment_overdue' ? 'This order has no invoice to mark as reminded yet.' : copied ? 'Nothing to mark.' : 'There is nothing on this item to mark.', tone: 'neutral' })
+      return
+    }
+    try {
+      const r = await performChase(s)
+      rememberChase(item.key, { channel, at: Date.now(), text })
+      setAgain(false)
+      setOpenedKey(null)
+      setSentKey(copied ? null : item.key)
+      onCopied(item.key)
+      toast({
+        title: `${lead}${item.ref} marked ${verb}.`,
+        body: item.party,
+        tone: 'success',
+        undo: {
+          seconds: 10,
+          onUndo: async () => {
+            try {
+              await r.undo()
+            } finally {
+              forgetChase(item.key)
+              onReleased(item.key)
+              void refresh()
+            }
+          },
+          onSettle: () => {
+            void refresh().finally(() => onReleased(item.key))
+          },
+          settledTitle: `${item.ref} marked ${verb}`,
+          settledBody: 'It moves to Waiting and comes back on its date.',
+          undoneTitle: 'Undone.',
+          undoneBody: `${item.ref} is not marked ${verb}.`,
+        },
+      })
+    } catch (err) {
+      toast({ title: copied ? 'Copied, but it was not marked' : 'It was not marked', body: mapPgError(err).message, tone: 'danger' })
+    }
+  }
+
   const copyAndMark = async () => {
     if (!draft || busy) return
     setBusy(true)
@@ -173,43 +223,17 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
         toast({ title: 'Could not copy the message', body: 'Select the text in the draft and copy it by hand. Nothing was marked.', tone: 'danger' })
         return
       }
-      const s = spec()
-      if (!s) {
-        toast({ title: 'Copied', body: item.rule === 'payment_overdue' ? 'This order has no invoice to mark as reminded yet.' : 'Nothing to mark.', tone: 'neutral' })
-        return
-      }
-      try {
-        const r = await performChase(s)
-        rememberChase(item.key, { channel, at: Date.now(), text })
-        setAgain(false)
-        onCopied(item.key)
-        toast({
-          title: `Copied. ${item.ref} marked ${verb}.`,
-          body: item.party,
-          tone: 'success',
-          undo: {
-            seconds: 10,
-            onUndo: async () => {
-              try {
-                await r.undo()
-              } finally {
-                forgetChase(item.key)
-                onReleased(item.key)
-                void refresh()
-              }
-            },
-            onSettle: () => {
-              void refresh().finally(() => onReleased(item.key))
-            },
-            settledTitle: `${item.ref} marked ${verb}`,
-            settledBody: 'It moves to Waiting and comes back on its date.',
-            undoneTitle: 'Undone.',
-            undoneBody: `${item.ref} is not marked ${verb}.`,
-          },
-        })
-      } catch (err) {
-        toast({ title: 'Copied, but it was not marked', body: mapPgError(err).message, tone: 'danger' })
-      }
+      await mark(true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const markOnly = async () => {
+    if (!draft || busy) return
+    setBusy(true)
+    try {
+      await mark(false)
     } finally {
       setBusy(false)
     }
@@ -295,6 +319,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       ) : null}
 
       {item.escalation === 'close_no_reply' && !justChased ? <CloseNoReply item={item} today={today} /> : null}
+      {item.rule === 'decision_overdue' && item.escalation !== 'close_no_reply' && !justChased ? <CloseLost item={item} today={today} /> : null}
       {item.escalation === 'float_elsewhere' && !justChased && supplierRule && items.data && inquiries.data ? (
         <FloatElsewhere
           supplierName={item.party}
@@ -323,7 +348,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
         <div className="grid overflow-hidden rounded border bg-surface">
           {wasCopied ? (
             <p role="status" className="flex items-center gap-2 bg-tone-success-bg px-4 py-3 text-sm text-tone-success-fg">
-              <Icon icon={CircleCheck} size="sm" /> Copied. Paste it into {channel === 'email' ? 'your email' : 'WhatsApp'}.
+              <Icon icon={CircleCheck} size="sm" /> {sentKey === item.key ? `Marked ${verb}.` : `Copied. Paste it into ${channel === 'email' ? 'your email' : 'WhatsApp'}.`}
             </p>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
@@ -344,9 +369,21 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           )}
           {!compact && !wasCopied ? (
             <div className="flex flex-wrap items-center gap-2 border-b bg-sunken px-4 py-3" data-testid="pane-actions">
-              <Button variant="primary" icon={Copy} busy={busy} busyLabel="Marking" onClick={() => void copyAndMark()}>
-                {copyLabel}
-              </Button>
+              <MessageActions
+                to={draft.contact}
+                text={draft.whatsapp.body}
+                email={{ subject: draft.email.subject, body: draft.email.body }}
+                variant={opened ? 'secondary' : 'primary'}
+                copy={{ label: copyLabel, onCopy: copyAndMark, busy, busyLabel: 'Marking' }}
+                onOpen={() => setOpenedKey(item.key)}
+                channel={channel}
+                onChannelChange={setChannel}
+              />
+              {opened ? (
+                <Button variant="primary" icon={Check} busy={busy} busyLabel="Marking" onClick={() => void markOnly()}>
+                  Mark {verb}
+                </Button>
+              ) : null}
               <Button icon={ExternalLink} onClick={() => navigate(item.href)}>
                 Open {item.ref}
               </Button>
@@ -385,11 +422,27 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               </div>
             )
           ) : compact ? (
-            <div className="flex items-center gap-2 border-t bg-sunken px-4 py-3">
-              <Button variant="primary" icon={Copy} busy={busy} busyLabel="Marking" onClick={() => void copyAndMark()} className={cn('flex-1', touch)}>
-                {copyLabel}
-              </Button>
-              <SnoozeMenu item={item} today={today} iconOnly />
+            <div className="grid gap-2 border-t bg-sunken px-4 py-3">
+              <MessageActions
+                to={draft.contact}
+                text={draft.whatsapp.body}
+                email={{ subject: draft.email.subject, body: draft.email.body }}
+                variant={opened ? 'secondary' : 'primary'}
+                size="touch"
+                fill
+                copy={{ label: copyLabel, onCopy: copyAndMark, busy, busyLabel: 'Marking' }}
+                onOpen={() => setOpenedKey(item.key)}
+                channel={channel}
+                onChannelChange={setChannel}
+              />
+              <div className="flex items-center gap-2">
+                {opened ? (
+                  <Button variant="primary" icon={Check} busy={busy} busyLabel="Marking" onClick={() => void markOnly()} className={cn('flex-1', touch)}>
+                    Mark {verb}
+                  </Button>
+                ) : null}
+                <SnoozeMenu item={item} today={today} iconOnly />
+              </div>
             </div>
           ) : null}
         </div>
@@ -451,7 +504,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               {item.waiting ? (
                 <>
                   <Event on={item.waiting.chasedOn} text={`Chased customer, asked ×${askedTimes}`} warn />
-                  <Event on={item.waiting.nextNudgeOn} text="Next nudge if no reply" />
+                  <Event on={item.waiting.nextNudgeOn} text="Chase again if no reply" />
                 </>
               ) : (
                 <Event on={today} text="Not chased yet" warn />
@@ -544,7 +597,7 @@ export function nudgeInfo(item: TodayItem, dueOn: string | null, today: string, 
 }
 
 function noDraftText(item: TodayItem): string {
-  if (item.rule === 'chase_supplier') return 'Every item has a price or a "cannot offer" from this supplier, so there is nothing to ask. Open the RFQ to update it.'
+  if (item.rule === 'chase_supplier') return 'Every item has a price or a "Can’t quote" from this supplier. Nothing to ask.'
   if (item.rule === 'goods_late') return 'There is no expected date on this order, so there is nothing to chase. Open the order.'
   return 'There is nothing to write for this item yet. Open the record.'
 }
@@ -558,9 +611,9 @@ function howTo(item: TodayItem): string {
     case 'bid_due':
       return 'The quotation is still to send. Open the RFQ to issue it.'
     case 'decision_overdue':
-      return 'No decision since the quotation went out. Open the RFQ to chase the customer, or close it with a reason.'
+      return 'No decision since the quotation went out. Chase the customer, or close it here if they said no.'
     case 'place_po':
-      return 'This order has a supplier order with no purchase order yet. Open the order to place it.'
+      return 'A supplier on this order has no PO yet. Open the order and send the PO.'
     case 'to_source':
       return 'Some goods on this won order have no supplier yet. Open the order and give each line a supplier, or mark it a service.'
     case 'plan_commissioning':
@@ -627,7 +680,7 @@ function factsFor(
     value: on === today ? 'Today' : agoText(on, today).replace(/^\w/, ch => ch.toUpperCase()),
     sub: `${formatDay(on)} · ${count > 0 ? `${who === 'customer' ? 'asked' : 'chase'} ×${count}` : 'once'}`,
   })
-  const nextNudge = (on: string): Fact => ({ label: 'Next nudge', short: 'Next nudge', icon: Hourglass, value: formatDay(on), sub: c.nudge.why })
+  const nextNudge = (on: string): Fact => ({ label: 'Chase again on', short: 'Chase again', icon: Hourglass, value: formatDay(on), sub: c.nudge.why })
   const out: Array<Fact | null> = []
   switch (item.rule) {
     case 'chase_customer': {
@@ -786,7 +839,37 @@ function ChasedCard({
 
 /** Escalation for a customer: a suggestion, never automatic. */
 function CloseNoReply({ item, today }: { item: TodayItem; today: string }) {
+  return (
+    <CloseRfqBanner item={item} today={today} title="3 chases, no answer" reasons={['no_reply_to_clarification']} buttonLabel={() => 'Close as no reply'}>
+      This is a suggestion. Nothing is closed for you. Closing records the reason “No reply to our questions”.
+    </CloseRfqBanner>
+  )
+}
 
+/** "Decision overdue": lose it here, without opening the RFQ (entry-burden J6). Secondary buttons; Undo in the toast. */
+function CloseLost({ item, today }: { item: TodayItem; today: string }) {
+  return (
+    <CloseRfqBanner item={item} today={today} title="No decision yet" reasons={['price', 'competitor']} buttonLabel={r => (r === 'price' ? 'Lost on price' : 'Lost to a competitor')}>
+      If the customer has said no, close it here. Nothing is closed for you.
+    </CloseRfqBanner>
+  )
+}
+
+function CloseRfqBanner({
+  item,
+  today,
+  title,
+  reasons,
+  buttonLabel,
+  children,
+}: {
+  item: TodayItem
+  today: string
+  title: string
+  reasons: CloseReason[]
+  buttonLabel: (r: CloseReason) => string
+  children: ReactNode
+}) {
   const { toast } = useToast()
   const close = useSetRfqClosed(item.rfqId ?? '')
   const [dismissed, setDismissed] = useState(false)
@@ -794,38 +877,42 @@ function CloseNoReply({ item, today }: { item: TodayItem; today: string }) {
   return (
     <Banner
       tone="warning"
-      title="3 chases, no answer"
+      title={title}
       action={
         <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            busy={close.isPending}
-            busyLabel="Closing"
-            onClick={() =>
-              close.mutate(
-                { closedOn: today, reason: 'no_reply_to_clarification', note: null },
-                {
-                  onSuccess: () =>
-                    toast({
-                      title: `Closed ${item.ref}`,
-                      body: 'No reply from customer',
-                      tone: 'success',
-                      undo: { onUndo: () => close.mutateAsync({ closedOn: null, reason: null, note: null }).then(() => undefined) },
-                    }),
-                  onError: err => toast({ title: 'Could not close it', body: mapPgError(err).message, tone: 'danger' }),
-                },
-              )
-            }
-          >
-            Close as no reply
-          </Button>
+          {reasons.map(reason => (
+            <Button
+              key={reason}
+              size="sm"
+              busy={close.isPending && close.variables?.reason === reason}
+              busyLabel="Closing"
+              disabled={close.isPending}
+              onClick={() =>
+                close.mutate(
+                  { closedOn: today, reason, note: null },
+                  {
+                    onSuccess: () =>
+                      toast({
+                        title: `Closed ${item.ref}`,
+                        body: closeReasonLabel(reason),
+                        tone: 'success',
+                        undo: { onUndo: () => close.mutateAsync({ closedOn: null, reason: null, note: null }).then(() => undefined) },
+                      }),
+                    onError: err => toast({ title: 'Could not close it', body: mapPgError(err).message, tone: 'danger' }),
+                  },
+                )
+              }
+            >
+              {buttonLabel(reason)}
+            </Button>
+          ))}
           <Button size="sm" onClick={() => setDismissed(true)}>
             Keep waiting
           </Button>
         </div>
       }
     >
-      This is a suggestion. Nothing is closed for you. Closing records the reason “No reply to our questions”.
+      {children}
     </Banner>
   )
 }
@@ -881,6 +968,7 @@ export function SnoozeMenu({ item, today, iconOnly = false }: { item: TodayItem;
           </MenuItem>
         </PopoverContent>
       </Popover>
+      {iconOnly ? null : <InfoTip label="About snooze">Hides this item until the day you pick. Only for you.</InfoTip>}
       <Dialog open={picking} onOpenChange={setPicking}>
         <DialogContent
           title="Snooze until"

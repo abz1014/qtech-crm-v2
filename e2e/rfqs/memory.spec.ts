@@ -408,7 +408,7 @@ test.describe('R18 company page: What we know', () => {
     const rowC = quotes.locator('li', { hasText: 'CQ24A-SR' })
     await expect(rowC).toContainText('Price on file, currency unverified')
     await expect(rowC).toContainText('Imported')
-    await expect(quotes.locator('li', { hasText: 'QAA2030' })).toContainText("Couldn't offer")
+    await expect(quotes.locator('li', { hasText: 'QAA2030' })).toContainText("Can't quote")
     await expect(quotes.locator('li', { hasText: 'AME435' })).toContainText('No reply')
     await expect(quotes.locator('li', { hasText: 'LR24A-SR' })).toContainText('Waiting for a reply')
     await expect(quotes.getByRole('link', { name: 'All enquiries' })).toBeVisible()

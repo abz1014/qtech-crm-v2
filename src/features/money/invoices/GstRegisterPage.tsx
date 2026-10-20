@@ -22,6 +22,7 @@ import { InfoTip } from '@/ui/InfoTip'
 import { CreateInvoiceDialog } from '@/features/money/invoices/CreateInvoiceDialog'
 import { useGstRegister, useStamps } from '@/features/money/invoices/hooks'
 import { InvoiceDetailDialog } from '@/features/money/invoices/InvoiceDetailDialog'
+import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
 import {
   attentionReason,
   cleanPsid,
@@ -139,6 +140,17 @@ export function GstRegisterPage() {
       { id: 'gross', header: 'Gross', kind: 'money', sortable: true, value: r => String(r.gross), total: true },
       { id: 'tcs', header: 'Sent to customer (TCS)', sortable: false, cell: r => <StatusBadge dimension="tcs" value={r.courierState} /> },
       { id: 'fbr', header: 'Tax deposited (FBR)', sortable: false, cell: r => <StatusBadge dimension="fbr" value={r.fbrState} /> },
+      {
+        id: 'pdf',
+        header: 'PDF',
+        sortable: false,
+        // stop the row's own click (it opens the invoice) for the button and for its dialog, whose events bubble through the portal
+        cell: r => (
+          <span onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+            <InvoicePdfButton invoiceId={r.invoiceId} iconOnly size="sm" label={`Print invoice ${r.number ?? ''}`.trim()} />
+          </span>
+        ),
+      },
     ]
     // Sales stamp too (M08 sends them the TCS and FBR items; the 0020 RPCs allow it): they keep the ticks, the toggles and the
     // stamps, and only lose the Net and GST columns, which are the admin's filing figures.

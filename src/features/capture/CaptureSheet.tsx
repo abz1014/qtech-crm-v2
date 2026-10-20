@@ -46,6 +46,7 @@ import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { Kbd } from '@/ui/Kbd'
 import { Combobox } from '@/ui/form/Combobox'
 import { Radio, RadioGroup } from '@/ui/form/Radio'
@@ -449,7 +450,7 @@ export default function CaptureSheet() {
   const right = (
     <div ref={rightRef} className="grid min-w-0 content-start gap-4">
       <div className="grid gap-2">
-        <Section title="What should we do with it?">
+        <Section title="What should we do with it?" aside={<InfoTip label="About Paste or photo" align="end">Saves a photo, PDF or message to an RFQ or order. Nothing else to fill in.</InfoTip>}>
           <Tiles
             chosen={dest}
             kind={kind}

@@ -49,6 +49,10 @@ describe('drafts', () => {
     expect(d?.whatsapp.body).not.toContain('1. Flow meter')
     expect(d?.countAfter).toBe(1)
   })
+  it('supplier: the contact carries the email, so Open in email has an address', () => {
+    const d = buildSupplierDraft({ rfq, inquiry: inquiry({ contactEmail: 'imran@metro.example' }), items, today: TODAY, signature: sig })
+    expect(d?.contact).toEqual({ name: 'Mr. Imran', phone: '0321', email: 'imran@metro.example' })
+  })
   it('supplier: nothing to ask when everything is priced or declined, or the supplier said no', () => {
     expect(buildSupplierDraft({ rfq, inquiry: inquiry({ itemDeclines: { i1: 'x', i2: 'x' } }), items, today: TODAY, signature: sig })).toBeNull()
     expect(buildSupplierDraft({ rfq, inquiry: inquiry({ noOfferOn: '2026-11-25' }), items, today: TODAY, signature: sig })).toBeNull()

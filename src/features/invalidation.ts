@@ -141,14 +141,14 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'brand.link': v => [qk.companies.detail(v.companyId), qk.companies.lists()],
   'brand.create': () => [qk.brands.all],
   // Every change to a person is read back from the admin-users function, the source of truth for the list.
-  'team.create': () => [qk.settings.team()],
+  'team.create': () => [qk.settings.team(), qk.onboarding.all],
   // A new password changes nothing the list shows; refreshing it anyway is cheap and keeps the rule simple.
   'team.reset-password': () => [qk.settings.team()],
   'team.set-role': () => [qk.settings.team()],
   'team.set-job-title': () => [qk.settings.team()],
-  'team.set-phone': () => [qk.settings.team(), qk.settings.myDetails()],
-  'team.deactivate': () => [qk.settings.team()],
-  'team.reactivate': () => [qk.settings.team()],
+  'team.set-phone': () => [qk.settings.team(), qk.settings.myDetails(), qk.onboarding.all],
+  'team.deactivate': () => [qk.settings.team(), qk.onboarding.all],
+  'team.reactivate': () => [qk.settings.team(), qk.onboarding.all],
   // The default payment terms move every due date for orders with no terms of their own.
   'company-profile.update': () => [qk.settings.profile(), qk.money.receivables.all, qk.today.all],
   'target.save': () => [qk.settings.targets(), qk.today.target()],
@@ -160,7 +160,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'month.close': () => [qk.money.monthEnd.all, qk.money.bank.all, qk.money.expenses.all, qk.today.all],
   'month.reopen': () => [qk.money.monthEnd.all, qk.money.bank.all, qk.money.expenses.all, qk.today.all],
   // Floating creates an RFQ (and inquiries): the RFQ lists, the customer's history and every supplier's activity change.
-  'rfq.float': () => [qk.rfqs.all, qk.intake.all, qk.companies.all],
+  'rfq.float': () => [qk.rfqs.all, qk.intake.all, qk.companies.all, qk.onboarding.all],
   // Floating or un-floating moves inquiries between shortlisted and sent: the RFQ and the suppliers' counts.
   'rfq.setFloated': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.companies.all],
   // A rate entered by hand changes every comparison (today's rate), so the RFQ pages refresh with the rate lists.
@@ -196,11 +196,11 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'quotation.issue': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.today.all, qk.companies.all, qk.orders.rankedFor(v.rfqId)],
   'quotation.pdf': v => [qk.rfqs.part(v.rfqId, 'quotations')],
   // A new order changes the RFQ (won), every list that shows orders or states, Today (place PO, goods late) and the customer's history.
-  'order.convert': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.all, qk.orders.all, qk.today.all, qk.companies.all],
-  'order.repeat': v => [qk.orders.all, qk.today.all, qk.companies.all, qk.companies.detail(v.companyId)],
+  'order.convert': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.all, qk.orders.all, qk.today.all, qk.companies.all, qk.onboarding.all],
+  'order.repeat': v => [qk.orders.all, qk.today.all, qk.companies.all, qk.companies.detail(v.companyId), qk.onboarding.all],
   // The customer's history shows each order's lifecycle and goods state, so it goes stale too.
   // An item or leg edit moves the supplier-price inputs of the Margin panel and the margins list (audit 2, performance §2.1).
-  'order.update': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.companies.all, qk.money.orderCosts(v.orderId), qk.money.margins()],
+  'order.update': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.today.all, qk.companies.all, qk.money.orderCosts(v.orderId), qk.money.margins(), qk.onboarding.all],
   'order.cancel': v => [qk.orders.detail(v.orderId), qk.orders.lists(), qk.rfqs.all, qk.today.all, qk.companies.all],
   // An issued PO changes the order page (leg placed, prices written back), the order lists, Today and every PO read.
   // The prices written back are the Margin panel's supplier-price inputs.
@@ -220,7 +220,7 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   // Recording makes an expense (and a recurring item leaves Today).
   'recurring.record': () => [qk.money.expenses.all, qk.money.bank.all, qk.money.recurring.all, qk.today.all],
   // A new invoice moves the register, the order's invoicing state and balance, receivables and Today (a payment reminder can become due).
-  'invoice.create': () => [qk.money.invoices.all, qk.money.bank.all, qk.money.receivables.all, qk.orders.all, qk.today.all],
+  'invoice.create': () => [qk.money.invoices.all, qk.money.bank.all, qk.money.receivables.all, qk.orders.all, qk.today.all, qk.onboarding.all],
   'invoice.update': v => [qk.money.invoices.register(), qk.money.bank.all, qk.money.invoices.detail(v.invoiceId), qk.money.receivables.all, qk.orders.all, qk.today.all],
   // Stamps move the register's tracks and the FBR / TCS items on Today.
   'invoice.stamp': () => [qk.money.invoices.all, qk.money.bank.all, qk.today.all],

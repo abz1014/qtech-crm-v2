@@ -30,6 +30,7 @@ import {
   type DraftItem,
   type EnquiryVariant,
 } from '@/features/rfqs/lib'
+import { fillRfqRef } from '@/features/rfqs/lib/intakeModel'
 import { ItemRows, PastedPanel, PasteZone, type PastedBlock } from '@/features/rfqs/ItemsEditor'
 import { asParseResult, parseEnquiry } from '@/lib/docread/enquiryParse'
 import { isPdfFile } from '@/lib/docread/pdfText'
@@ -669,6 +670,15 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   ) : null
 
   const floatedNames = recipients.map(r => r.name)
+  /** The enquiry as sent, both channels, for Open in WhatsApp / Open in email per supplier on the floated step. */
+  const floatMessages = (number: number) => {
+    if (suggestionItems.length === 0) return undefined
+    const one = (v: Variant) => {
+      const d = generateEnquiryDraft({ rfqRef: rfqRef(number), items: toEnquiryItems(items, brands), dueOn: dueOn || null, today, signature: { name: user?.name ?? 'Q-Tech', company: TEAM_COMPANY }, variant: v })
+      return { subject: d.subject, body: fillRfqRef((edit.sig === sig ? edit.text[v] : undefined) ?? d.body, rfqRef(number)) }
+    }
+    return { whatsapp: one('whatsapp').body, email: one('email') }
+  }
   const replyBy = computeReplyBy(dueOn || null, today)
   async function floatItem(key: string, supplierId: string, supplierName: string) {
     const item = items.find(i => i.key === key)
@@ -856,7 +866,12 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
               </section>
 
               <section aria-label="Optional details" className="grid items-end gap-4 sm:grid-cols-2">
-                <Field label="Quotation due" requirement="optional" source={dueSource ?? undefined}>
+                <Field
+                  label="Quotation due"
+                  requirement="optional"
+                  help="The customer's deadline for our quotation. Today warns you two days before."
+                  source={dueSource ?? undefined}
+                >
                   <DateInput
                     value={dueOn}
                     onChange={v => {
@@ -866,6 +881,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                     defaultToday={false}
                     placeholder="e.g. 3 dec"
                   />
+
                 </Field>
                 <Checkbox
                   checked={isPriority}
@@ -971,6 +987,10 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
               onCopyAgain={copyAgain}
               unfloated={unfloated}
               onAnother={onAnother}
+              rfqId={saved.id}
+              messages={floatMessages(saved.number)}
+              channel={variant}
+              onChannelChange={setVariant}
             />
           ) : null}
 

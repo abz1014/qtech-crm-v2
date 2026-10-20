@@ -17,6 +17,7 @@ import { useSubmitForm } from '@/ui/form/useSubmitForm'
 import { PAID_VIA_LABEL, type PaidVia } from '@/features/money/expenses/model'
 import type { PaymentOrder } from '@/features/money/payments/api'
 import { usePaymentOrder, useRecordPayment } from '@/features/money/payments/hooks'
+import { OrderPaymentLines } from '@/features/money/payments/PaymentCorrections'
 import { defaultPaymentAmount, paymentNote } from '@/features/money/payments/model'
 
 /*
@@ -150,7 +151,7 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
           </FormField>
         ) : null}
         {showVia ? (
-          <FormField<Values, 'paidVia'> name="paidVia" label="Paid via">
+          <FormField<Values, 'paidVia'> name="paidVia" label="Paid via" help="Bank payments are matched to the bank statement at month end; cash is not.">
             {f => <Select {...f} options={(Object.keys(PAID_VIA_LABEL) as PaidVia[]).map(v => ({ value: v, label: PAID_VIA_LABEL[v] }))} />}
           </FormField>
         ) : null}
@@ -167,6 +168,12 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
           ) : null}
         </p>
       </Form>
+      {data.prior.length > 0 ? (
+        <div className="grid gap-1 border-t pt-3" data-testid="already-recorded">
+          <h3 className="text-xs font-medium text-fg-muted">Already recorded</h3>
+          <OrderPaymentLines orderId={row.orderId} orderNumber={row.orderNumber} compact />
+        </div>
+      ) : null}
       <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
         <Button variant="quiet" onClick={onCancel} data-cancel>
           Cancel

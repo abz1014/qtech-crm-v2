@@ -3,6 +3,7 @@ import { orderRef } from '@/lib/refs'
 import { paisaToFixed, toPaisa } from '@/lib/money'
 import type { TableRow } from '@/features/dbTypes'
 import { companyNames } from '@/features/money/expenses/api'
+import { legLabelOf, lookupLabels } from '@/features/money/lookupLabels'
 import { monthEnd, monthStart, type CategoryGroup } from '@/features/money/expenses/model'
 import type { RawBank, RawDeposit, RawExpense, RawPayment } from '@/features/money/bank/model'
 
@@ -117,9 +118,8 @@ export async function loadBank(month: string): Promise<RawBank> {
 
 async function ordersById(ids: string[]): Promise<Record<string, { ref: string; companyId: string }>> {
   if (ids.length === 0) return {}
-  const db = requireSupabase()
-  const rows = unwrap(await db.from('orders').select('id, number, company_id').in('id', ids)) ?? []
-  return Object.fromEntries(rows.map(r => [r.id, { ref: orderRef(r.number), companyId: r.company_id }]))
+  const { orders } = await lookupLabels({ orders: ids })
+  return Object.fromEntries(Object.entries(orders).map(([id, o]) => [id, { ref: orderRef(Number(o.number)), companyId: o.company_id }]))
 }
 
 async function categoriesById(ids: string[]): Promise<Record<string, { name: string; grp: CategoryGroup }>> {
@@ -129,21 +129,14 @@ async function categoriesById(ids: string[]): Promise<Record<string, { name: str
   return Object.fromEntries(rows.map(r => [r.id, { name: r.name, grp: r.grp as CategoryGroup }]))
 }
 
-/** "supplier order A", "supplier order B": the leg's place among its order's legs, as the Add expense dialog names them. */
+/**
+ * "supplier order A", "supplier order B": the leg's place among its order's legs (by created_at, then id), as the Add expense
+ * dialog names them. One lookup_labels call; it used to be two reads with `in.(...)` lists.
+ */
 export async function legLabels(legIds: string[]): Promise<Record<string, string>> {
   if (legIds.length === 0) return {}
-  const db = requireSupabase()
-  const mine = unwrap(await db.from('supplier_orders').select('id, order_id').in('id', legIds)) ?? []
-  const orderIds = [...new Set(mine.map(l => l.order_id))]
-  const all = unwrap(await db.from('supplier_orders').select('id, order_id, created_at').in('order_id', orderIds).order('created_at')) ?? []
-  const seen = new Map<string, number>()
-  const out: Record<string, string> = {}
-  for (const l of all) {
-    const i = seen.get(l.order_id) ?? 0
-    seen.set(l.order_id, i + 1)
-    out[l.id] = `supplier order ${String.fromCharCode(65 + i)}`
-  }
-  return out
+  const { legs } = await lookupLabels({ legs: legIds })
+  return Object.fromEntries(Object.entries(legs).map(([id, l]) => [id, legLabelOf(Number(l.position))]))
 }
 
 export type TickKind = 'payment' | 'expense' | 'fbr'

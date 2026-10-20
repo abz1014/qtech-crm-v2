@@ -80,7 +80,7 @@ describe('account menu (U03, on Popover)', () => {
     const trigger = screen.getAllByRole('button', { name: 'Account menu, Ayesha Rana' })[0]
     trigger.focus()
     await user.keyboard('{Enter}')
-    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Settings' })).toHaveFocus())
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Help' })).toHaveFocus())
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
     expect(trigger).toHaveFocus()

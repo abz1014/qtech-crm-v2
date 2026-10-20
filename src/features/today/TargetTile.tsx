@@ -3,6 +3,7 @@ import { ChevronDown, CircleCheck, Clock } from 'lucide-react'
 import { formatAmount } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { Skeleton } from '@/ui/Skeleton'
 import { useMyTarget } from '@/features/today/hooks'
 import { millions, targetWorking, type TargetWorking } from '@/features/today/targetModel'
@@ -41,7 +42,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
   return (
     <section aria-label={`Your ${w.label} target`} className={cn('grid gap-2 p-4', className)}>
       <div className="flex items-baseline justify-between gap-3">
-        <p className="whitespace-nowrap text-sm text-fg-muted">Your {w.label} target</p>
+        <p className="whitespace-nowrap text-sm text-fg-muted">Your {w.label} target <InfoTip label="About your target">Money received this quarter on your orders, without GST. Set by the admin.</InfoTip></p>
         <Status w={w} />
       </div>
       <p className="text-lg">

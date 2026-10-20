@@ -72,6 +72,7 @@ describe('Today screen', () => {
     await waitFor(() => expect(fake?.calls.length).toBeGreaterThan(0))
     const targets = fake?.calls.map(c => c.target) ?? []
     expect(targets).not.toContain('rpc:order_receivables')
+    expect(targets).not.toContain('rpc:receivables_list')
     expect(targets).not.toContain('rpc:month_end_status')
     expect(targets).not.toContain('invoices')
   })
@@ -80,6 +81,6 @@ describe('Today screen', () => {
     fake = install()
     renderAs('admin')
     await screen.findByText('Not sent to suppliers yet')
-    expect(fake?.calls.map(c => c.target)).toContain('rpc:order_receivables')
+    expect(fake?.calls.map(c => c.target)).toContain('rpc:receivables_list')
   })
 })

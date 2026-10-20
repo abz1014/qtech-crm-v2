@@ -287,6 +287,12 @@ export async function listSentPos(orderId: string): Promise<import('@/features/p
     db.from('order_items').select('id, description, unit').eq('order_id', orderId),
     db.from('companies').select('id, name').in('id', [...new Set(legs.map(l => l.supplier_id))]),
   ])
+  // The first contact of each supplier (the same one the goods chase uses), for Open in WhatsApp / Open in email.
+  const contactRows = unwrap(
+    await db.from('contacts').select('company_id, name, phone, email').in('company_id', [...new Set(legs.map(l => l.supplier_id))]).order('created_at'),
+  )
+  const firstContact = new Map<string, { name: string; phone: string | null; email: string | null }>()
+  for (const c of contactRows) if (!firstContact.has(c.company_id)) firstContact.set(c.company_id, { name: c.name, phone: c.phone, email: c.email })
   const byItem = new Map(unwrap(items).map(i => [i.id, i]))
   const names = new Map(unwrap(companies).map(c => [c.id, c.name]))
   const seen = new Set<string>()
@@ -300,6 +306,7 @@ export async function listSentPos(orderId: string): Promise<import('@/features/p
       ref: `PO-${p.issued_on.slice(2, 4)}-${String(p.number).padStart(4, '0')}`,
       supplierName: names.get(leg?.supplier_id ?? '') ?? 'the supplier',
       items: lines.map(l => ({ description: byItem.get(l.order_item_id)?.description ?? 'Item', qty: Number(l.qty), unit: byItem.get(l.order_item_id)?.unit ?? null })),
+      contact: firstContact.get(leg?.supplier_id ?? '') ?? null,
     })
   }
   return out

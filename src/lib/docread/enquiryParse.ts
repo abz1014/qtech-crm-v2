@@ -84,7 +84,7 @@ const COURTESY =
 const GREETING_SENTENCE = /^(?:hi|hello|hey|dear|salam|assalam\w*|aoa|good\s+(?:morning|afternoon|evening))\b[^.!?]*[.!?]?$|\bhope\s+(?:you|this|all)\b/i
 
 const SIGN_OFF =
-  /^(?:(?:best|kind|warm|warmest|with)\s+regards?|regards?|thanks?(?:\s*(?:&|and)\s*(?:best\s+|kind\s+)?regards?)?|thank\s+you(?:\s+(?:and|&)\s+regards)?|thankyou|many\s+thanks|sincerely|yours\s+(?:sincerely|faithfully|truly)|br|cheers|allah\s+hafiz|jazak\s*allah(?:\s+khair)?)[\s,.!]*$/i
+  /^(?:(?:best|kind|warm|warmest|with)\s+regards?|regards?|thanks?(?:\s*(?:&|and)\s*(?:best\s+|kind\s+)?regards?)?|thank\s+you(?:\s+(?:and|&)\s+regards)?|thankyou|many\s+thanks|sincerely|yours\s+(?:sincerely|faithfully|truly)|br|cheers|allah\s+hafiz|jazak\s*allah(?:\s+khair)?|shukriya|shukria|thnx|thx|tks)[\s,.!]*$/i
 const SENT_FROM = /^sent\s+from\s+my\b/i
 const DISCLAIMER =
   /^(?:\**\s*disclaimer|confidentiality\s+notice|this\s+(?:e-?mail|message)\s+(?:and\s+any|is\s+(?:confidential|intended)|may\s+contain|contains)|the\s+information\s+(?:contained|in\s+this)|if\s+you\s+(?:are\s+not|have\s+received)|please\s+consider\s+the\s+environment|caution\s*:|this\s+email\s+has\s+been\s+scanned)/i
@@ -524,9 +524,23 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     }
   }
 
+  // A reply on top of an older thread: once the new message above the separator ("____", "-----Original Message-----",
+  // "On ... wrote:", or an Outlook "From:" with "Sent:" or "Date:" under it) has anything item-like, everything below it is the
+  // old thread, even when nothing above has been read as an item yet. It never counts for list mode either.
+  const itemish = (t: string) => LABELLED_QTY.test(t) || PRODUCT.test(t) || hasCode(t) || /\d\s*(?:nos?|pcs?|sets?|units?)\b/i.test(t)
+  let quotedFrom = src.length
+  for (let k = 1; k < src.length; k++) {
+    const t = (src[k] as Src).t
+    const outlook = /^from\s*:/i.test(t) && src.slice(k + 1, k + 4).some(x => /^(?:sent|date)\s*:/i.test(x.t))
+    if ((REPLY_SEP.test(t) || outlook) && !FORWARD_SEP.test(t) && src.slice(0, k).some(x => itemish(x.t))) {
+      quotedFrom = k
+      break
+    }
+  }
+
   // List mode: when the items carry markers ("1.", "-", "a)"), an unmarked line is not an item of its own.
   const markerMode = src.some((s, k) => {
-    if (sigLines.has(k)) return false
+    if (sigLines.has(k) || k >= quotedFrom) return false
     const m = MARKER.exec(s.t)
     if (!m) return false
     const body = s.t.slice(m[0].length)
@@ -609,10 +623,14 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       skip(t, 'header')
       continue
     }
+    if (k === quotedFrom) {
+      close()
+      zone = 'quoted'
+    }
     if (REPLY_SEP.test(t)) {
       close()
       // Items above: the rest is the older thread. None yet: what follows is the enquiry (a forward pasted whole).
-      zone = drafts.length > 0 ? 'quoted' : 'content'
+      zone = drafts.length > 0 || k >= quotedFrom ? 'quoted' : 'content'
       skip(t, 'quoted')
       continue
     }
@@ -842,6 +860,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       continue
     }
     let parts = work.split(/\s+(?:and|&|aur|plus)\s+(?=\d[\d,.]*\s*(?:nos?|pcs?|pieces?|sets?|x)\b)/i)
+    if (parts.length === 1) parts = work.split(/(?<=\d\s*(?:nos?|pcs?|pieces?|sets?|units?)\.?)\s+(?:and|&|aur|plus)\s+/i)
     if (parts.length > 1 && !parts.every(p => readItem(p)?.qty != null)) parts = [work]
     if (!parts.every(p => readItem(p) !== null)) {
       skip(t, 'greeting')

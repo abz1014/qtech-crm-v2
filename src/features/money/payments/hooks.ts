@@ -8,6 +8,11 @@ export function useReceivables(enabled = true) {
   return useQuery({ queryKey: qk.money.receivables.list(), queryFn: api.listReceivables, enabled })
 }
 
+/** Who owes us totals, counted on the server (receivables_summary). */
+export function useReceivablesSummary(today: string, enabled = true) {
+  return useQuery({ queryKey: qk.money.receivables.summary(today), queryFn: () => api.getReceivablesSummary(today), enabled })
+}
+
 export function usePaymentOrder(orderId: string | null | undefined) {
   return useQuery({
     queryKey: qk.money.receivables.order(orderId ?? ''),

@@ -257,6 +257,6 @@ function daysBetween(a: string, b: string) {
 
 function outcome(r: SupplierEnquiry, today: string): { value: 'quoted' | 'declined' | 'waiting' | 'no-reply'; label: string } {
   if (r.quoted) return { value: 'quoted', label: 'Quoted' }
-  if (r.noOffer) return { value: 'declined', label: "Couldn't offer" }
+  if (r.noOffer) return { value: 'declined', label: "Can't quote" }
   return r.sentOn && daysBetween(r.sentOn, today) >= 7 ? { value: 'no-reply', label: 'No reply' } : { value: 'waiting', label: 'Waiting for a reply' }
 }

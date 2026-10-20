@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { SessionContext } from '@/app/session'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
-import { useAskSuppliers } from '@/features/rfqs/useAskSuppliers'
+import { useAskSuppliers, type AskResult } from '@/features/rfqs/useAskSuppliers'
 import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
@@ -40,8 +40,8 @@ describe('useAskSuppliers', () => {
     )
     const { result } = renderHook(() => useAskSuppliers(rfq, []), { wrapper })
     const input = { supplierIds: ['s-1'], names: ['Orient'], items }
-    let a!: Promise<boolean>
-    let b!: Promise<boolean>
+    let a!: Promise<AskResult>
+    let b!: Promise<AskResult>
     act(() => {
       a = result.current.ask(input)
       b = result.current.ask(input)
@@ -73,7 +73,7 @@ describe('useAskSuppliers', () => {
     const shortlisted = { id: 'inq-short', supplierId: 's-short', supplierName: 'Orient', sentOn: null, noOfferOn: null, lines: [] } as unknown as InquiryRow
     const { result } = renderHook(() => useAskSuppliers(rfq, [shortlisted]), { wrapper })
     await act(async () => {
-      expect(await result.current.ask({ supplierIds: ['s-short', 's-new'], names: ['Orient', 'Gateway'], items })).toBe(true)
+      expect(await result.current.ask({ supplierIds: ['s-short', 's-new'], names: ['Orient', 'Gateway'], items })).toMatchObject({ ok: true, supplierIds: ['s-short', 's-new'], text: expect.stringContaining('RFQ-') })
     })
     const update = calls.find(c => c.target === 'supplier_inquiries' && c.verb === 'update') as FakeCall
     expect(opArgs(update, 'update')?.[0]).toEqual({ sent_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) })

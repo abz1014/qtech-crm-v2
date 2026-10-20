@@ -1,0 +1,143 @@
+/*
+ * The server's own rule messages (raise exception in supabase/migrations) to plain sentences that say the fix
+ * (learnability spec 3.4). mapPgError consults rpcMessage before its generic fallback.
+ *
+ * Every raise exception literal in the migrations must match an entry here: rpcMessages.test.ts scans them, so a new
+ * unmapped RAISE fails CI. An entry is either a plain message (what happened, then the fix; no apology) or
+ * `internal: true` for programmer, import and migration-only errors that no person can fix from a screen.
+ * An entry with neither keeps the server's text, which is already written for people.
+ */
+export interface RpcAction {
+  label: string
+  href: string
+}
+
+export interface RpcEntry {
+  match: RegExp
+  message?: (m: RegExpMatchArray) => string
+  internal?: true
+  /** Help recipe id (docs/help/<id>.md). */
+  help?: string
+  action?: RpcAction
+}
+
+export interface RpcMessage {
+  message: string
+  help?: string
+  action?: RpcAction
+}
+
+const MONTH_END: RpcAction = { label: 'Open Month end', href: '/money/month-end' }
+const BANK: RpcAction = { label: 'Open Match bank statement', href: '/money/month-end/bank' }
+const CATEGORIES: RpcAction = { label: 'Open categories', href: '/settings/categories' }
+const TEAM: RpcAction = { label: 'Open Team', href: '/settings/team' }
+
+const ADMIN_ONLY = 'Only an admin can do this. Nothing was saved. Ask an admin if it needs doing.'
+const ADMIN_SALES = 'Only admin and sales can do this. Nothing was saved. Ask one of them if it needs doing.'
+const RELOAD = 'Something this needs is no longer there. Reload the page, then try again.'
+
+export const RPC_MESSAGES: readonly RpcEntry[] = [
+  // Months
+  { match: /^(.+?) cannot be closed yet: it is the current month or later\.?$/, message: m => `${m[1]} can be closed from the 1st of next month.`, help: 'month-end-close' },
+  { match: /^(.+?) is closed\. An admin can reopen it\.?$/, action: MONTH_END },
+  { match: /^(.+?) is closed\. Reopen it first \(Money, Month-end\), then change this payment\.?$/, action: MONTH_END },
+  { match: /^(.+?) is still open\. Close earlier months first/, message: m => `Close ${m[1]} first. Months close in order.`, help: 'month-end-close', action: MONTH_END },
+  { match: /^The new date is in (.+?), which is closed\./, action: MONTH_END },
+  { match: /^a month is required$/, message: () => 'Choose a month first.' },
+  { match: /^only an admin can (close|reopen) a month$/, message: m => `Only an admin can ${m[1]} a month. Ask an admin if it needs doing.` },
+
+  // Payments: these are already written for people
+  { match: /^Give a reason for voiding this payment/ },
+  { match: /^Nothing to correct: / },
+  { match: /^Only the person who voided this payment can undo it\./ },
+  { match: /^Paid via must be bank or cash\.$/ },
+  { match: /^The amount must be above zero\.$/ },
+  { match: /^The correction of this payment has been changed since\./ },
+  { match: /^The date received is required\.$/ },
+  { match: /^This payment is already voided\./ },
+  { match: /^This payment is no longer there\./ },
+  { match: /^This payment is not voided\./ },
+  { match: /^This payment is ticked against the (.+?) bank statement\./, action: BANK },
+  { match: /^This payment is voided and kept as history\./ },
+  { match: /^Undo works for 10 minutes after a void\./ },
+  { match: /^only an admin can undo a void$/, message: () => 'Only an admin can undo a void. Ask an admin, or record the payment again.' },
+  { match: /^only an admin can void or correct a payment$/, message: () => 'Only an admin can void or correct a payment. Ask an admin if it needs doing.' },
+  { match: /^a correction is recorded only through correct_payment$/, internal: true },
+  { match: /^a payment is voided (or restored )?only through /, internal: true },
+  { match: /^which payment a correction replaces cannot be changed$/, internal: true },
+  { match: /^settled before cutover is set by the legacy import only$/, internal: true },
+  { match: /^payment reminders are for admin and sales only$/, message: () => ADMIN_SALES },
+
+  // Quotations and POs
+  { match: /^a quoted price is needed for: (.+)$/, message: m => `Add a price for "${m[1]}", then issue the quotation again.`, help: 'issue-quotation' },
+  { match: /^a selling price is needed for: (.+)$/, message: m => `Add a selling price for "${m[1]}", then try again.` },
+  { match: /^a price is needed for: (.+)$/, message: m => `Add the supplier price for "${m[1]}", then issue the PO again.`, help: 'issue-po' },
+  { match: /^set the currency of this supplier order before issuing a PO$/, message: () => "Pick the supplier's currency on this supplier order, then issue the PO.", help: 'issue-po' },
+  { match: /^an issued (.+?) cannot be changed; issue a new revision$/, message: () => "An issued quotation or PO can't be edited. Use Revise.", help: 'revise-quotation' },
+  { match: /^the PDF of this issued (.+?) is already attached; only an admin can replace it$/, message: m => `This ${m[1]} already has its PDF. Only an admin can replace it.` },
+  { match: /^the RFQ has no items to (quote|convert)$/, message: () => 'Add at least one item first.' },
+  { match: /^the supplier order has no goods lines to issue$/, message: () => 'Add at least one goods line to this supplier order, then issue the PO.' },
+  { match: /^the chosen quote line is not a quote for the item: (.+)$/, message: m => `The chosen supplier quote does not belong to "${m[1]}". Choose the quote again.` },
+  { match: /^an item (to quote )?does not belong to this RFQ$/, message: () => RELOAD },
+  { match: /^every item needs a description$/, message: () => 'Every item needs a description. Fill in the empty ones, then save.' },
+  { match: /^invoice numbers are for admin and sales only$/, message: () => ADMIN_SALES },
+  { match: /^(FBR|TCS) stamping is for admin and sales only$/, message: () => ADMIN_SALES },
+  { match: /^prices, quantities and GST on an order are changed by admin and sales only$/, message: () => ADMIN_SALES },
+
+  // Supplier orders and splits
+  { match: /^a line does not belong to this supplier order$/, message: () => RELOAD },
+  { match: /^a service line cannot be split$/, message: () => 'A service line cannot be split. Split only goods lines.' },
+  { match: /^choose a different supplier order from the one the line is on$/, message: () => 'Choose a different supplier order from the one the line is on.' },
+  { match: /^name either an existing supplier order or a supplier to move the quantity to$/, message: () => 'Choose a supplier order or a supplier to move the quantity to.' },
+  { match: /^split parts of an item must use different suppliers: (.+)$/, message: m => `Each part of "${m[1]}" needs a different supplier.` },
+  { match: /^the quantity to move must be more than 0 and less than the line quantity \((.+?)\)$/, message: m => `Move more than 0 and less than ${m[1]}.` },
+  { match: /^the supplier order is not a leg of this order$/, message: () => RELOAD },
+
+  // Merges, roles, ownership
+  { match: /^merge conflict: both companies have an RFQ with the same customer reference$/, message: () => 'Both companies have an RFQ with the same customer reference. Change one reference, then merge.' },
+  { match: /^merge conflict: both companies have an order with the same customer PO number$/, message: () => 'Both companies have an order with the same customer PO number. Change one, then merge.' },
+  { match: /^merge conflict: both companies were sent the same RFQ as supplier$/, message: () => 'Both companies were sent the same RFQ as supplier. Remove one of them from that RFQ, then merge.' },
+  { match: /^merge needs two different (brands|companies)$/, message: m => `Choose two different ${m[1]} to merge.` },
+  { match: /^a brand and a family cannot be merged$/, message: () => 'A brand and a family cannot be merged. Choose two brands or two families.' },
+  { match: /^only an admin can (merge brands|merge companies|change who owns an RFQ|change who owns an order|resolve a value basis|change the legacy flags of an order|set legacy flags on an order)$/, message: () => ADMIN_ONLY },
+  { match: /^the system must keep at least one active admin$/, message: () => 'Make someone else an admin first. The app always keeps one.', action: TEAM },
+  { match: /^category "(.+?)" is inactive; pick an active category$/, message: m => `"${m[1]}" is switched off. Pick another category, or switch it on in Settings, Expense categories.`, action: CATEGORIES },
+  { match: /^the order has no unresolved value basis$/, message: () => 'This order has no value basis left to resolve. Reload the page.' },
+  { match: /^basis must be net or gross$/, message: () => 'Choose net or gross.' },
+  { match: /^a PSID is required$/, message: () => 'Enter the PSID, then save.' },
+
+  // Not found
+  { match: /^(RFQ|inquiry|order|order line|supplier order) (.+?) not found$/, message: () => RELOAD },
+  { match: /^(brand|company) not found$/, message: () => RELOAD },
+
+  // Programmer, import and migration-only
+  { match: /^(convert_rfq_to_order|create_repeat_order|float_rfq|issue_purchase_order|issue_quotation|set_rfq_floated|split_order_item) needs /, internal: true },
+  { match: /^0074: /, internal: true },
+  { match: /^import_purge_audit: /, internal: true },
+  { match: /^audit_archive\./, internal: true },
+  { match: /^order_receivables is not available to the /, internal: true },
+  { match: /^receivables_list: unknown state /, internal: true },
+  { match: /^the value basis of an order is changed only by resolve_value_basis$/, internal: true },
+]
+
+/** The table entry for a server text, internal ones included (the test uses this). */
+export function rpcEntry(text: string): { entry: RpcEntry; m: RegExpMatchArray } | null {
+  const t = text.trim()
+  for (const entry of RPC_MESSAGES) {
+    const m = t.match(entry.match)
+    if (m) return { entry, m }
+  }
+  return null
+}
+
+/** A plain message for a server rule text, or null when none is mapped or the entry is internal. */
+export function rpcMessage(text: string): RpcMessage | null {
+  const hit = rpcEntry(text)
+  if (!hit || hit.entry.internal) return null
+  const { entry, m } = hit
+  return {
+    message: entry.message ? entry.message(m) : text.trim(),
+    ...(entry.help ? { help: entry.help } : {}),
+    ...(entry.action ? { action: entry.action } : {}),
+  }
+}

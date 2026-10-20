@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ENQUIRY_CORPUS } from '@/features/rfqs/lib/__fixtures__/enquiryCorpus'
 import { parsePaste } from '@/features/rfqs/lib/parseItems'
 import { ENQUIRY_HOLDOUT } from './__fixtures__/enquiryHoldout'
+import { ENQUIRY_FULL_EMAILS } from './__fixtures__/enquiryFullEmails'
 import { CORPUS_TODAY, ENQUIRY_EMAILS, type EnquiryCase } from './__fixtures__/enquiryEmails'
 import { norm, pct, scoreFact, scoreItems, type FactScore } from './__fixtures__/score'
 import { asParseResult, findDate, parseEnquiry, unitOf } from './enquiryParse'
@@ -223,6 +224,27 @@ describe('old parser (parsePaste) against the new one', () => {
     expect(rows[1]?.r).toBe(1)
     expect(rows[1]?.p).toBe(1)
     expect(rows[3]?.r).toBeGreaterThanOrEqual(0.9)
+  })
+})
+
+describe('parseEnquiry: whole emails as the owner pastes them (held-out set, owner test 2026-10-20)', () => {
+  it('only the real items come out: item precision 95% or more, every case listed when it is not', () => {
+    let expected = 0
+    let predicted = 0
+    let correct = 0
+    const misses: string[] = []
+    for (const c of ENQUIRY_FULL_EMAILS) {
+      const r = parse(c.text)
+      const s = scoreItems(c.items, r.items)
+      expected += s.expected
+      predicted += s.predicted
+      correct += s.correct
+      if (s.correct !== s.expected || s.predicted !== s.expected) misses.push(`${c.name}: ${JSON.stringify(r.items.map(x => [x.description, x.qty]))}`)
+    }
+    console.log(`FULL_EMAILS precision ${pct(correct, predicted)} (${correct}/${predicted}) recall ${pct(correct, expected)} (${correct}/${expected})\n${misses.join('\n')}`)
+    expect(ENQUIRY_FULL_EMAILS.length).toBeGreaterThanOrEqual(15)
+    expect(correct / predicted).toBeGreaterThanOrEqual(0.95)
+    expect(correct / expected).toBeGreaterThanOrEqual(0.9)
   })
 })
 

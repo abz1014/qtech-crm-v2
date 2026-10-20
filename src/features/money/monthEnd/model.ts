@@ -623,7 +623,7 @@ export interface PayableRow {
   legId: string
   supplier: string
   orderRef: string | null
-  /** "leg A" */
+  /** "supplier order A" */
   leg: string | null
   currency: string
   committed: string | null
@@ -682,7 +682,7 @@ export const PAYABLE_STATE_LABEL: Record<PayableRow['state'], string> = {
 
 export function payablesCsv(v: PayablesView): { headers: string[]; rows: unknown[][] } {
   return {
-    headers: ['As of', 'Supplier', 'Order', 'Leg', 'Currency', 'Committed', 'Rate', 'Committed, PKR', 'Paid, PKR', 'Owed, PKR (approx.)', 'State'],
+    headers: ['As of', 'Supplier', 'Order', 'Supplier order', 'Currency', 'Committed', 'Rate', 'Committed, PKR', 'Paid, PKR', 'Owed, PKR (approx.)', 'State'],
     rows: v.rows.map(r => [
       v.asOf,
       r.supplier,

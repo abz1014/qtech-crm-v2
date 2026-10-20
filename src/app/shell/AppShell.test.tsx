@@ -1,7 +1,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AppRoutes } from '@/app/routes'
 import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
@@ -122,9 +122,10 @@ describe('routing and role landing', () => {
     expect(el.querySelector('main h1')?.textContent).toBe('This account has no access yet')
   })
 
-  it('signed out goes to sign-in and shows no navigation', () => {
+  it('signed out goes to sign-in and shows no navigation', async () => {
     render({ status: 'signed-out' }, '/rfqs')
-    expect(el.querySelector('h1')?.textContent).toBe('Sign in')
+    // the sign-in page is a lazy chunk (round 2): wait for it
+    await vi.waitFor(() => expect(el.querySelector('h1')?.textContent).toBe('Sign in'), { timeout: 5000 })
     expect(el.querySelector('nav')).toBeNull()
   })
 

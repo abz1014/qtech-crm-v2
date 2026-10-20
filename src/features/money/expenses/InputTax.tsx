@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { Money } from '@/ui/Money'
 import { NumberInput } from '@/ui/form/NumberInput'
 
@@ -51,6 +52,7 @@ export function InputTax({ amount, value, onChange, defaultOpen = false, label =
         </span>
         <span>
           Input tax <Money value={tax} prefix={false} className="text-fg" />
+          <InfoTip label="About input tax">GST on a bill that we can claim back. Leave 0 if unsure.</InfoTip>
         </span>
         <span>
           <b className="font-medium">Cost in margin and P&amp;L</b> <Money value={Math.max(paid - tax, 0)} prefix={false} className="text-fg" />

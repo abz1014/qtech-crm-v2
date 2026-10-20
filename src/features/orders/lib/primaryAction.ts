@@ -122,7 +122,7 @@ export function pageText(step: OrderStep, f: OrderFacts & { unsourced?: number }
     case 'place':
       return `Order the goods from ${supplier}`
     case 'wait-placing':
-      return `Waiting for the order with ${supplier} to be placed`
+      return `Waiting for the PO to ${supplier}`
     case 'plan-commissioning':
       return 'Commissioning needs a date'
     case 'wait-plan':
