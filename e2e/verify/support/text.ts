@@ -240,6 +240,8 @@ export const BOOKS = {
     reopenButton: (label: string) => `Reopen ${label}`,
     reopenDialog: (label: string) => `Reopen ${label}?`,
     reopenConfirm: (monthName: string) => `Reopen ${monthName}`,
+    /** src/features/money/monthEnd/model.ts, the uncategorised check's label. */
+    uncategorisedLabel: 'Expenses without a category',
   },
   pnl: {
     sumBar: 'Profit and loss',

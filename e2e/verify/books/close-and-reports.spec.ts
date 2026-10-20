@@ -127,7 +127,9 @@ test('one month of books by hand: P&L, team, GST month, checklist and aging; the
       await page.goto(BOOKS.monthEnd.checklist(M.key))
       await expect(page.getByTestId('check-bank_unticked').getByText('4', { exact: true }).first()).toBeVisible()
       await expect(page.getByTestId('check-fbr_pending').getByText('2', { exact: true }).first()).toBeVisible()
-      await expect(page.getByTestId('check-uncategorised')).toHaveAttribute('data-clear', '')
+      // A clear check has no row of its own; it is named on the one "checks are clear" line.
+      await expect(page.getByTestId('check-uncategorised')).toHaveCount(0)
+      await expect(page.getByTestId('checks-clear')).toContainText(BOOKS.monthEnd.uncategorisedLabel)
     })
 
     await test.step('close the month: a snapshot is taken and the lock refuses an edit dated in it', async () => {
