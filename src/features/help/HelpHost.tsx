@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { usePaletteSource } from '@/app/palette/usePalette'
 import { useSession } from '@/app/session'
 import { useMediaQuery } from '@/lib/useMediaQuery'
-import { helpPaletteSource } from '@/features/help/helpPalette'
+import type { helpPaletteSource } from '@/features/help/helpPalette'
 import { howItWorksFor, howItWorksKey } from '@/features/help/howItWorks'
 import type { Recipe } from '@/features/help/recipes'
 import { useDismissed } from '@/features/help/useDismissed'
@@ -36,11 +36,15 @@ export function HelpHost() {
   const navigationType = useNavigationType()
   const wide = useMediaQuery('(min-width: 1024px)')
   const [recipes, setRecipes] = useState<Recipe[] | null>(null)
+  // The palette group's code comes with the recipes (it searches them), so neither is in the first load (perf/trim).
+  const [toSource, setToSource] = useState<{ make: typeof helpPaletteSource } | null>(null)
 
   useEffect(() => {
     let live = true
-    void import('@/features/help/recipes').then(m => {
-      if (live) setRecipes(m.allRecipes())
+    void Promise.all([import('@/features/help/recipes'), import('@/features/help/helpPalette')]).then(([m, p]) => {
+      if (!live) return
+      setRecipes(m.allRecipes())
+      setToSource({ make: p.helpPaletteSource })
     })
     return () => {
       live = false
@@ -63,7 +67,10 @@ export function HelpHost() {
   }, [location, navigationType, navigate])
 
   const role = user?.role ?? ''
-  const source = useMemo(() => (recipes && role ? helpPaletteSource(recipes, role, location.pathname, openHelp) : null), [recipes, role, location.pathname, openHelp])
+  const source = useMemo(
+    () => (recipes && toSource && role ? toSource.make(recipes, role, location.pathname, openHelp) : null),
+    [recipes, toSource, role, location.pathname, openHelp],
+  )
   usePaletteSource(source)
 
   const [dismissed, setDismissed] = useDismissed(user ? howItWorksKey(user.id) : null)

@@ -1,7 +1,7 @@
 import { AuthClient } from '@supabase/auth-js'
 import { FunctionsClient } from '@supabase/functions-js'
 import { PostgrestClient } from '@supabase/postgrest-js'
-import { StorageClient } from '@supabase/storage-js'
+import type { StorageClient } from '@supabase/storage-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 /*
@@ -26,6 +26,30 @@ function baseUrl(url: string): URL {
   const trimmed = url.trim()
   if (!/^https?:\/\//i.test(trimmed)) throw new Error('Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL.')
   return new URL(trimmed.endsWith('/') ? trimmed : `${trimmed}/`)
+}
+
+/*
+ * Storage (uploads, downloads, signed links) is loaded on first use, not with the app: storage-js and its iceberg-js
+ * dependency were about 7 KB gzip of the first load and only file screens use them (perf/trim). Every call the app makes
+ * is `storage.from(bucket).<method>(...)` and every such method already returns a promise, so each one waits for the
+ * module and then runs the real call: same requests, same results.
+ */
+function lazyStorage(url: string, headers: Record<string, string>, fetch: typeof globalThis.fetch): StorageClient {
+  let real: Promise<StorageClient> | null = null
+  const load = () => (real ??= import('@supabase/storage-js').then(m => new m.StorageClient(url, headers, fetch)))
+  const bucket = (id: string) =>
+    new Proxy({} as ReturnType<StorageClient['from']>, {
+      // not a thenable: `await storage.from(x)` must not try to call a lazy `then`
+      get: (_t, method) =>
+        method === 'then'
+          ? undefined
+          : (...args: unknown[]) =>
+              load().then(s => {
+                const api = s.from(id) as unknown as Record<PropertyKey, (...a: unknown[]) => unknown>
+                return api[method](...args)
+              }),
+    })
+  return { from: bucket } as unknown as StorageClient
 }
 
 export function createLeanClient<Database>(url: string, key: string, options: { fetch?: typeof fetch } = {}): LeanSupabaseClient<Database> {
@@ -74,7 +98,7 @@ export function createLeanClient<Database>(url: string, key: string, options: { 
   const dataFetch = withAuth(false)
   const functionsFetch = withAuth(true)
   const rest = new PostgrestClient(new URL('rest/v1', base).href, { headers, schema: 'public', fetch: dataFetch })
-  const storage = new StorageClient(new URL('storage/v1', base).href, headers, dataFetch)
+  const storage = lazyStorage(new URL('storage/v1', base).href, headers, dataFetch)
   const functionsUrl = new URL('functions/v1', base).href
 
   const client = {
