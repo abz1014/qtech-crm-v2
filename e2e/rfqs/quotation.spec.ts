@@ -212,7 +212,8 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
 
     await dialog(page).getByRole('button', { name: 'Done' }).click()
     const row = page.getByTestId('quotation-0')
-    await expect(row).toContainText(`${refOf(q)} R0`)
+    await expect(row).toContainText(refOf(q)) // on screen the number, no "R0" (the PDF and its file name keep it)
+    await expect(row).not.toContainText(`${refOf(q)} R0`)
     await expect(row).toContainText('Current')
     await expect(row).toContainText('PKR 2,891.50')
     await shot(page, 'rfq-quotation-03-list-1440')
@@ -264,11 +265,12 @@ test.describe('re-issue', () => {
     const pdf0 = await fetchStoredPdf('sales', 'generated-docs', r0.pdf_path as string)
     expect(pdfIsValid(pdf0)).toBe(true)
 
-    // The button now offers the next revision.
-    await page.locator('[data-slot="issue-quotation"]').getByRole('button', { name: 'Issue quotation' }).click()
-    await expect(dialog(page).getByRole('heading', { name: `Issue quotation ${refOf(r0)} R1` })).toBeVisible()
-    await expect(dialog(page).getByText('Re-issue', { exact: true })).toBeVisible()
-    await expect(dialog(page).getByText('R0 stays exactly as it was sent. This creates R1 under the same number.')).toBeVisible()
+    // A quotation is out: Mark won is the green button, and the Quotations panel offers Revise quotation.
+    await expect(page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })).toBeVisible()
+    await page.locator('[data-slot="quotations"]').getByRole('button', { name: 'Revise quotation' }).click()
+    await expect(dialog(page).getByRole('heading', { name: `Revise quotation ${refOf(r0)}` })).toBeVisible()
+    await expect(dialog(page).getByText('Revision 1', { exact: true })).toBeVisible()
+    await expect(dialog(page).getByText(/^The quotation sent .* stays exactly as it was. This makes a revised one under the same number./)).toBeVisible()
     // Everything from R0 is carried over, so a re-issue with one changed price is one typed number and two taps.
     await expect(price(page, 1)).toHaveValue('1,200.00')
     await expect(price(page, 2)).toHaveValue('700.00')
@@ -277,7 +279,7 @@ test.describe('re-issue', () => {
     await expect(dialog(page).getByLabel('Lead time we quote, item 1')).toHaveValue('2 weeks from PO')
     await shot(page, 'rfq-quotation-04-reissue-dialog-1440')
     await price(page, 2).fill('650')
-    await dialog(page).getByRole('button', { name: `Issue quotation R1` }).click()
+    await dialog(page).getByRole('button', { name: 'Issue revised quotation' }).click()
     await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 30_000 })
     await dialog(page).getByRole('button', { name: 'Done' }).click()
 
@@ -305,7 +307,8 @@ test.describe('re-issue', () => {
 
     // The list: both revisions, the latest current, the earlier superseded.
     await expect(page.getByTestId('quotation-1')).toContainText('Current')
-    await expect(page.getByTestId('quotation-0')).toContainText('Superseded')
+    await expect(page.getByTestId('quotation-0')).toContainText('Replaced')
+    await expect(page.getByTestId('quotation-1')).toContainText('Revision 1')
     await shot(page, 'rfq-quotation-05-list-two-revisions-1440')
   })
 })

@@ -26,8 +26,8 @@ select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-0000000
 select is(public.float_rfq('d0000000-0000-4000-8000-0000000000a1', 'c0000000-0000-4000-8000-0000000000a1',
             '[{"description":"Pump A"}]'::jsonb,
             array['c0000000-0000-4000-8000-0000000000a2', 'c0000000-0000-4000-8000-0000000000a3']::uuid[],
-            null, null, null, null, true, true),
-  'd0000000-0000-4000-8000-0000000000a1'::uuid, 'float_rfq accepts p_is_priority');
+            null, null, null, null, true, true) ->> 'id',
+  'd0000000-0000-4000-8000-0000000000a1', 'float_rfq accepts p_is_priority (0070: returns {"id", "created"})');
 select is((select is_priority from public.rfqs where id = 'd0000000-0000-4000-8000-0000000000a1'), true,
   'and the RFQ is top priority');
 

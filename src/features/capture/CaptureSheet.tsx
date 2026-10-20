@@ -559,7 +559,7 @@ export default function CaptureSheet() {
               placeholder="Start typing the company"
             />
           </div>
-          <CapNote>Intake opens with this text and the company already filled in. Nothing is saved until you create the RFQ.</CapNote>
+          <CapNote>The new RFQ opens with this text and the company already filled in. Nothing is saved until you create the RFQ.</CapNote>
         </Section>
       ) : null}
     </div>
@@ -588,7 +588,7 @@ export default function CaptureSheet() {
                 <Icon icon={ClipboardPaste} size="lg" />
               </span>
               <div className="grid min-w-0 flex-1 gap-[2px]">
-                <RadixDialog.Title className="text-lg font-semibold tracking-snug">Capture</RadixDialog.Title>
+                <RadixDialog.Title className="text-lg font-semibold tracking-snug">Paste or photo</RadixDialog.Title>
                 <p className="text-sm text-fg-muted">Text, photos and files from WhatsApp or anywhere else. Choose where they go.</p>
               </div>
               <RadixDialog.Close asChild>
@@ -600,7 +600,7 @@ export default function CaptureSheet() {
               <RadixDialog.Close asChild>
                 <Button variant="quiet" size="touch" icon={X} aria-label="Close" disabled={busy} className="-ml-2 text-fg-muted" />
               </RadixDialog.Close>
-              <h2 className="flex-1 text-lg font-semibold tracking-snug">Capture</h2>
+              <h2 className="flex-1 text-lg font-semibold tracking-snug">Paste or photo</h2>
               {via ? (
                 <span className="inline-flex items-center gap-[6px] text-xs text-fg-muted">
                   <Icon icon={via.icon} size="sm" />
@@ -616,13 +616,13 @@ export default function CaptureSheet() {
                     Shared items are kept for 7 days. Share it again from WhatsApp, or paste it.
                   </Banner>
                   <Button variant="primary" icon={ClipboardPaste} onClick={cap.openCapture} className="h-touch w-full">
-                    Open Capture
+                    Paste or add a photo
                   </Button>
                 </div>
               ) : result ? (
                 <SavedPanel
                   title={`Saved to ${result.ref}`}
-                  summary={result.answered ? `${result.summary} They now wait on Today to be relayed.` : result.summary}
+                  summary={result.answered ? `${result.summary} They now wait on Today to be passed on to the suppliers.` : result.summary}
                   rfq={`${result.ref} · ${result.companyName}`}
                   rfqLabel={result.kind === 'order' ? 'Order' : 'RFQ'}
                   answered={result.answered}
@@ -637,7 +637,7 @@ export default function CaptureSheet() {
                     {`Open ${result.ref}`}
                   </Button>
                   <Button icon={ClipboardPaste} onClick={() => setResult(null)}>
-                    Capture another
+                    Add another
                   </Button>
                   <Button variant="quiet" onClick={cap.close}>
                     Done
