@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
-import { convertRfqToOrder, getOrderHeader, listLegPos, listOrderItems, searchOrders } from '@/features/orders/api'
+import { convertRfqToOrder, existingOrderOf, getOrderHeader, listLegPos, listOrderItems, searchOrders } from '@/features/orders/api'
 
 let uninstall: (() => void) | undefined
 afterEach(() => uninstall?.())
@@ -43,6 +43,14 @@ describe('orders api: convert and search', () => {
     await convertRfqToOrder({ orderId: 'order-2', rfqId: 'r1', items: [], customerPo: 'PO-9', paymentTermsDays: 45 })
     const second = db.calls.filter(c => c.target === 'rpc:convert_rfq_to_order')[1]
     expect(opArgs(second, 'args')?.[0]).toMatchObject({ p_customer_po_number: 'PO-9', p_payment_terms_days: 45 })
+  })
+
+  it('returns the existing order when the RFQ was already won by someone else (0077)', async () => {
+    const other = '0b6c1f2e-1111-4222-8333-444455556666'
+    const db = installFakeDb(() => ({ data: null, error: { code: 'P0001', message: 'This RFQ is already order ORD-0038.', hint: `rfq_has_order:${other}` } }))
+    uninstall = db.uninstall
+    expect(await convertRfqToOrder({ orderId: 'order-3', rfqId: 'r1', items: [], customerPo: null, paymentTermsDays: null })).toBe(other)
+    expect(existingOrderOf({ hint: 'something else' })).toBeNull()
   })
 
   it('finds an order by number and by customer PO, with the typed text escaped', async () => {

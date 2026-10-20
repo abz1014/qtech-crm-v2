@@ -1,0 +1,115 @@
+import { useRef, useState } from 'react'
+import { Building2, FileText, Plus } from 'lucide-react'
+import type { PdfSubject } from '@/lib/docread/pdfText'
+import { readPdf } from '@/features/rfqs/lib/readPdf'
+import type { SenderHint } from '@/features/companies/api'
+import { useCompanyForSender } from '@/features/companies/hooks'
+import { CreateCompanyInline } from '@/features/companies/CreateCompanyInline'
+import type { IntakeCompany } from '@/features/rfqs/CompanyPicker'
+import { Button } from '@/ui/Button'
+import { Icon } from '@/ui/Icon'
+
+/*
+ * PDFs and the sender, for New RFQ and a supplier's reply (owner decision 2026-10-20, item 3). A PDF is read on this device
+ * (src/lib/docread, nothing is uploaded to read it) and its text goes where a paste goes. A scan, a locked or a damaged file
+ * gets the reader's own plain sentence. The file itself is kept and attached as before.
+ */
+
+/** "Choose PDF" (New RFQ) or "Read a PDF" (a supplier's reply): a button over a hidden file input. */
+export function PdfPickButton({
+  label,
+  subject,
+  onText,
+  onFile,
+  onMessage,
+  size,
+}: {
+  label: string
+  subject: PdfSubject
+  onText: (text: string) => void
+  onFile?: (file: File) => void
+  onMessage: (message: string | null) => void
+  size?: 'sm'
+}) {
+  const input = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  return (
+    <>
+      <input
+        ref={input}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        data-testid={`pdf-input-${subject}`}
+        onChange={async e => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (!file) return
+          setBusy(true)
+          onMessage(null)
+          try {
+            onFile?.(file)
+            const r = await readPdf(file, subject)
+            if ('text' in r) onText(r.text)
+            else onMessage(r.message)
+          } finally {
+            setBusy(false)
+          }
+        }}
+      />
+      <Button size={size} icon={FileText} busy={busy} busyLabel="Reading the PDF" onClick={() => input.current?.click()}>
+        {label}
+      </Button>
+    </>
+  )
+}
+
+const WHY = { email: 'Their email is on file', domain: 'Their email domain is on file', phone: 'Their phone number is on file', name: 'Same name on file' } as const
+
+/**
+ * The company the enquiry came from, offered as one tap: "Use <Company>". When nothing on file matches and the text names the
+ * company, it can be added right here (the same inline create as the company picker; sales and admin only).
+ */
+export function SenderSuggestion({ hint, canCreate, onUse }: { hint: SenderHint; canCreate: boolean; onUse: (c: IntakeCompany) => void }) {
+  const found = useCompanyForSender(hint)
+  const [creating, setCreating] = useState(false)
+  if (found.isPending || found.isError) return null
+  const hit = found.data
+  if (hit) {
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border bg-sunken px-3 py-2 text-sm">
+        <Icon icon={Building2} className="text-fg-muted" />
+        <span className="min-w-0 flex-1">
+          <span className="text-fg-2">From the text: </span>
+          <strong className="font-medium">{hit.name}</strong>
+          <span className="block text-xs text-fg-muted">{WHY[hit.why]}</span>
+        </span>
+        <Button size="sm" variant="primary" onClick={() => onUse({ id: hit.id, name: hit.name, country: hit.country, city: hit.city ?? null, role: hit.role })}>
+          Use {hit.name}
+        </Button>
+      </div>
+    )
+  }
+  if (!hint.name || !canCreate) return null
+  return creating ? (
+    <CreateCompanyInline
+      initialName={hint.name}
+      onCancel={() => setCreating(false)}
+      onCreated={c => onUse({ id: c.id, name: c.name, country: null, city: c.city ?? null, role: 'prospect' })}
+    />
+  ) : (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border bg-sunken px-3 py-2 text-sm">
+      <Icon icon={Building2} className="text-fg-muted" />
+      <span className="min-w-0 flex-1">
+        <span className="text-fg-2">From the text: </span>
+        <strong className="font-medium">{hint.name}</strong>
+        <span className="block text-xs text-fg-muted">Not on file yet</span>
+      </span>
+      <Button size="sm" icon={Plus} onClick={() => setCreating(true)}>
+        Add {hint.name} as a new company
+      </Button>
+    </div>
+  )
+}

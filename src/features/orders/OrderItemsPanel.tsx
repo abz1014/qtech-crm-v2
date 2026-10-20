@@ -16,7 +16,7 @@ import { SplitLineDialog } from '@/features/orders/SplitLineDialog'
 import { groupItems } from '@/features/orders/lib/splitGroups'
 import { AddLineDialog } from '@/features/orders/AddDialogs'
 import { legState, type LegState } from '@/features/orders/lib/legModel'
-import { isExemptAll, lineGstPaisa, lineNetPaisa, STANDARD_GST } from '@/features/orders/lib/orderMath'
+import { gstOptions, isExemptAll, lineGstPaisa, lineNetPaisa, STANDARD_GST } from '@/features/orders/lib/orderMath'
 import { formatAmount, formatPaisa } from '@/lib/money'
 
 /*
@@ -33,7 +33,6 @@ import { formatAmount, formatPaisa } from '@/lib/money'
  * A legacy order whose price basis is unknown shows the prices "as typed" (the mockup's "basis unknown" frame). Below 1024 the unit price
  * folds into the item line.
  */
-const RATES = [0, 5, 10, 17, 18]
 
 interface Row extends OrderItemRow {
   /** A8: 'head' is the heading row of a split item (several order lines for one RFQ item), 'part' one of its lines. */
@@ -284,8 +283,8 @@ export function OrderItemsPanel({
           aria-label={`GST rate, line ${r.number}`}
           value={String(rate(r))}
           onChange={e => updateItem.mutate({ id: r.id, patch: { gst_rate: Number(e.target.value) } }, { onError: fail('Could not change the GST') })}
-          options={[...new Set([...RATES, rate(r)])].sort((a, b) => a - b).map(v => ({ value: String(v), label: `${v}%` }))}
-          className="w-[88px]"
+          options={gstOptions(rate(r))}
+          className="w-[120px]"
         />
       ),
   }

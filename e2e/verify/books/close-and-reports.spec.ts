@@ -63,7 +63,6 @@ async function reopenIfClosed(month: string): Promise<void> {
 }
 
 test('one month of books by hand: P&L, team, GST month, checklist and aging; then closed (frozen) and reopened (live)', async ({ browser }, info) => {
-  test.fixme(true, 'selectors outdated by the ux/* merge (69f40fa); passed or confirmed before it: update the words in support/text-*.ts')
   // Nothing else may sit before this month, or "close through" would close more than it.
   const earlier = await db.rows(`payments_in?received_on=lt.${M.start}&select=id`)
   expect(earlier, 'no payment is dated before the isolated month').toHaveLength(0)
@@ -128,7 +127,9 @@ test('one month of books by hand: P&L, team, GST month, checklist and aging; the
       await page.goto(BOOKS.monthEnd.checklist(M.key))
       await expect(page.getByTestId('check-bank_unticked').getByText('4', { exact: true }).first()).toBeVisible()
       await expect(page.getByTestId('check-fbr_pending').getByText('2', { exact: true }).first()).toBeVisible()
-      await expect(page.getByTestId('check-uncategorised')).toHaveAttribute('data-clear', '')
+      // A clear check has no row of its own; it is named on the one "checks are clear" line.
+      await expect(page.getByTestId('check-uncategorised')).toHaveCount(0)
+      await expect(page.getByTestId('checks-clear')).toContainText(BOOKS.monthEnd.uncategorisedLabel)
     })
 
     await test.step('close the month: a snapshot is taken and the lock refuses an edit dated in it', async () => {
@@ -245,7 +246,9 @@ test('we owe a supplier: the leg total in USD at the rate, less the supplier pay
   await expect(page.getByTestId('leg-A-total')).toContainText(amount(2033.25))
   await expect(page.getByTestId('leg-A')).toContainText(amount(569818))
 
-  await page.getByRole('button', { name: BOOKS.owe.addExpenseOnLeg('A') }).click()
+  // Add expense is in the supplier order's menu, named by the supplier (no leg letters on screen since the UX merges).
+  await page.getByTestId('leg-A').getByRole('button', { name: BOOKS.owe.moreFor(sup.name) }).click()
+  await page.getByRole('menuitem', { name: BOOKS.owe.addExpense }).click()
   const d = page.getByRole('dialog', { name: BOOKS.owe.dialog })
   await expect(d.getByRole('combobox', { name: BOOKS.owe.category })).toHaveValue(BOOKS.owe.supplierPayment)
   await d.getByRole('textbox', { name: BOOKS.owe.amount }).fill('300000')

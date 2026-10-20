@@ -76,6 +76,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^an issued (.+?) cannot be changed; issue a new revision$/, message: () => "An issued quotation or PO can't be edited. Use Revise.", help: 'revise-quotation' },
   { match: /^the PDF of this issued (.+?) is already attached; only an admin can replace it$/, message: m => `This ${m[1]} already has its PDF. Only an admin can replace it.` },
   { match: /^the RFQ has no items to (quote|convert)$/, message: () => 'Add at least one item first.' },
+  // 0077: already plain; Create order opens that order instead (existingOrderOf in src/features/orders/api.ts).
+  { match: /^This RFQ is already order ORD-.+\.$/ },
   { match: /^the supplier order has no goods lines to issue$/, message: () => 'Add at least one goods line to this supplier order, then issue the PO.' },
   { match: /^the chosen quote line is not a quote for the item: (.+)$/, message: m => `The chosen supplier quote does not belong to "${m[1]}". Choose the quote again.` },
   { match: /^an item (to quote )?does not belong to this RFQ$/, message: () => RELOAD },

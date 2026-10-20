@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { quotationPdf, sapEnquiryPdf } from '@/test/pdfFixtures'
+import { erpFormPdf, quotationPdf, sapEnquiryPdf, stackedFormPdf } from '@/test/pdfFixtures'
 import { parseEnquiry } from './enquiryParse'
 import { readPdfText } from './pdfText'
 import { parseSupplierQuote } from './supplierQuoteParse'
@@ -22,6 +22,38 @@ describe('PDF to rows', () => {
     expect(r.facts.customerRef?.value).toBe('4500012345')
     expect(r.facts.dueDate?.iso).toBe('2026-11-11')
     expect(r.facts.company?.name).toBe('Margalla Sugar Mills Limited')
+  })
+
+  // The shapes of two real customer forms (fictional content): wrapped rows join their item, the terms are not items.
+  it('an ERP form with wrapped rows and printed terms gives one item per numbered row', async () => {
+    const pdf = await readPdfText(await erpFormPdf())
+    expect(pdf.ok).toBe(true)
+    if (!pdf.ok) return
+    const r = parseEnquiry(pdf.text, { today: '2026-10-20' })
+    expect(r.items.map(i => [i.description.split(' ').slice(0, 2).join(' '), i.qty, i.unit])).toEqual([
+      ['LEVEL SWITCH', 2, 'nos'],
+      ['DOSING PUMP', 1, 'nos'],
+      ['SOLENOID VALVE', 3, 'nos'],
+    ])
+    expect(r.items[0]?.description).toContain('Make: Acme Controls')
+    expect(r.items[2]?.description).not.toMatch(/TOTAL|GST/)
+    expect(r.facts.customerRef?.value).toBe('7700012001')
+    expect(r.facts.dueDate?.iso).toBe('2026-11-04')
+    expect(r.facts.company?.name).toBe('KOHSAR CEMENT COMPANY LIMITED')
+  })
+
+  it('a form with stacked headings: one item, its wrapped description, and a due date on the next line', async () => {
+    const pdf = await readPdfText(await stackedFormPdf())
+    expect(pdf.ok).toBe(true)
+    if (!pdf.ok) return
+    const r = parseEnquiry(pdf.text, { today: '2026-10-20' })
+    expect(r.items).toHaveLength(1)
+    expect(r.items[0]).toMatchObject({ qty: 4, unit: 'nos' })
+    expect(r.items[0]?.description).toContain('MAKE: EXAMPLE INSTRUMENTS')
+    expect(r.items[0]?.description).not.toMatch(/Comments|BOILER/)
+    expect(r.facts.customerRef?.value).toBe('41207')
+    expect(r.facts.dueDate?.iso).toBe('2026-11-09')
+    expect(r.facts.company?.name).toBe('CHENAB TEXTILE MILLS LIMITED')
   })
 
   it('a table quotation becomes one offer per RFQ item, matched by part number, with the terms', async () => {

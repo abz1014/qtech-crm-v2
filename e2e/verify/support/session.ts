@@ -56,6 +56,22 @@ export async function open(context: BrowserContext, path: string): Promise<Page>
   return page
 }
 
+/**
+ * Opens the Mark won dialog on an RFQ page. It is the green button (data-slot="mark-won") once a quotation is out or the RFQ is
+ * closed; before that it is an item in the header's More menu.
+ */
+export async function openMarkWon(page: Page): Promise<void> {
+  const more = page.getByRole('button', { name: 'More', exact: true }).first()
+  await more.waitFor()
+  const slot = page.locator('[data-slot="mark-won"]').getByRole('button', { name: 'Mark won' })
+  if ((await slot.count()) > 0 && (await slot.first().isVisible())) {
+    await slot.first().click()
+    return
+  }
+  await more.click()
+  await page.getByRole('menuitem', { name: /^Mark won/ }).click()
+}
+
 /** Every request a page sends to the database's REST API, for "no money is ever asked for" checks. */
 export function restLog(page: Page): { urls: string[]; requests: Request[] } {
   const log = { urls: [] as string[], requests: [] as Request[] }

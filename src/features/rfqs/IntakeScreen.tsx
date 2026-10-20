@@ -19,7 +19,6 @@ import {
   guessBrandFamily,
   itemsWithoutSupplier,
   joinNames,
-  parsePaste,
   realItems,
   RFQ_REF_PLACEHOLDER,
   suggestSuppliers,
@@ -33,9 +32,15 @@ import {
 } from '@/features/rfqs/lib'
 import { fillRfqRef } from '@/features/rfqs/lib/intakeModel'
 import { ItemRows, PastedPanel, PasteZone, type PastedBlock } from '@/features/rfqs/ItemsEditor'
+import { asParseResult, parseEnquiry } from '@/lib/docread/enquiryParse'
+import { isPdfFile } from '@/lib/docread/pdfText'
+import type { SenderHint } from '@/features/companies/api'
+import { PdfPickButton, SenderSuggestion } from '@/features/rfqs/PdfIntake'
+import { readPdf } from '@/features/rfqs/lib/readPdf'
 import { DraftOffer, EnquiryCard, FloatedPanel, Hint, SidePanels, StepLine, type Step } from '@/features/rfqs/IntakeParts'
 import { clearIntakeDraft, draftHasContent, draftSummary, loadIntakeDraft, saveIntakeDraft, type IntakeDraft } from '@/features/rfqs/lib/intakeDraftStore'
 import { useLeaveGuard } from '@/features/rfqs/useLeaveGuard'
+import { repeatedNote, skipRepeats } from '@/features/rfqs/lib/skipRepeats'
 import { useChannelPreference } from '@/lib/useChannelPreference'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { InfoTip } from '@/ui/InfoTip'
@@ -160,6 +165,13 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   const [pasted, setPasted] = useState<PastedBlock | null>(null)
   const [focusKey, setFocusKey] = useState<string | null>(null)
   const zoneRef = useRef<HTMLTextAreaElement>(null)
+  // What the PDF or the paste said, used only where the person has typed nothing: shown as "From the PDF" / "From the paste".
+  const [refSource, setRefSource] = useState<string | null>(null)
+  const [dueSource, setDueSource] = useState<string | null>(null)
+  const [sender, setSender] = useState<SenderHint | null>(null)
+  const [pdfNote, setPdfNote] = useState<string | null>(null)
+  // Why the next step cannot happen yet, said beside the button after a press (the button stays enabled).
+  const [blocked, setBlocked] = useState(false)
 
   // ---- the flow
   const [step, setStep] = useState<Step>('build')
@@ -205,8 +217,12 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   }, [arrival, wanted.data])
 
   // ---- items
+  const itemsRef = useRef(items)
+  itemsRef.current = items
   const addItems = useCallback(
-    (parsed: { description: string; qty: number; unit: string | null }[], list: BrandRef[]) => {
+    (all: { description: string; qty: number; unit: string | null }[], list: BrandRef[]) => {
+      const { fresh: parsed, repeated } = skipRepeats(itemsRef.current, all)
+      if (repeated > 0) toast({ title: repeatedNote(repeated) })
       const rows = parsed.map<DraftItem>(p => ({
         key: newKey(),
         description: p.description,
@@ -216,18 +232,34 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
       }))
       setItems(prev => [...prev, ...rows])
     },
-    [],
+    [toast],
   )
   const brandsRef = useRef(brands)
   brandsRef.current = brands
+  const filled = useRef({ customerRef, dueOn })
+  filled.current = { customerRef, dueOn }
   const takePaste = useCallback(
-    (text: string) => {
-      const result = parsePaste(text)
+    (text: string, from: 'pdf' | 'paste' = 'paste') => {
+      const read = parseEnquiry(text)
+      const result = asParseResult(read)
       setPasted({ result })
       if (result.items.length > 0) addItems(result.items, brandsRef.current)
+      const label = from === 'pdf' ? 'From the PDF' : 'From the paste'
+      const { customerRef: refNow, dueOn: dueNow } = filled.current
+      if (!refNow.trim() && read.facts.customerRef) {
+        setCustomerRef(read.facts.customerRef.value)
+        setRefSource(label)
+      }
+      if (!dueNow && read.facts.dueDate) {
+        setDueOn(read.facts.dueDate.iso)
+        setDueSource(label)
+      }
+      if (read.facts.company) setSender(read.facts.company)
     },
     [addItems],
   )
+  // PDFs chosen on this screen: attached to the RFQ once it is saved, as Paste or photo's files are.
+  const pickedFiles = useRef<File[]>([])
   // Capture's "Start a new RFQ" (R22) arrives with the text and the files. The text is read as if it had been pasted here;
   // the files are attached once the RFQ exists (it has no id on the server before that).
   const capturedFiles = useRef<File[]>(captured?.files ?? [])
@@ -235,7 +267,20 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   useEffect(() => {
     if (arrival !== 'take' || !captured || takenCapture.current) return
     takenCapture.current = true
-    if (captured.text.trim()) takePaste(captured.text)
+    if (captured.text.trim()) {
+      takePaste(captured.text)
+      return
+    }
+    // A PDF with no text (dropped or shared on its own): read it as if its text had been pasted.
+    const pdfs = captured.files.filter(f => isPdfFile(f))
+    if (pdfs.length === 0) return
+    void (async () => {
+      for (const f of pdfs) {
+        const r = await readPdf(f, 'items')
+        if ('text' in r) takePaste(r.text, 'pdf')
+        else setPdfNote(r.message)
+      }
+    })()
   }, [arrival, captured, takePaste])
 
   // A paste made with nothing focused (Ctrl+V anywhere on the page) is handled here; the paste zone handles its own.
@@ -282,18 +327,20 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     setFocusKey(key)
   }
 
-  // Once saved: attach the captured files to the new RFQ and forget the captured item (only when this form took it).
+  // Once saved: attach the captured files (and PDFs chosen here) to the new RFQ and forget the captured item (only when this form took it).
   useEffect(() => {
-    if (!saved || !captured || !takenCapture.current) return
-    const files = capturedFiles.current
+    const fromCapture = Boolean(captured) && takenCapture.current
+    if (!saved || (!fromCapture && pickedFiles.current.length === 0)) return
+    const files = [...(fromCapture ? capturedFiles.current : []), ...pickedFiles.current]
     capturedFiles.current = []
+    pickedFiles.current = []
     void (async () => {
       try {
         for (const file of files) {
           const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin'
           await uploadAttachment({ rfqId: saved.id, clarificationId: null, file, path: `${saved.id}/${crypto.randomUUID()}.${(ext ?? 'bin').toLowerCase()}` })
         }
-        await safely(() => deleteCapture(captured.id), undefined)
+        if (fromCapture && captured) await safely(() => deleteCapture(captured.id), undefined)
         if (files.length) toast({ title: `${files.length} ${files.length === 1 ? 'file' : 'files'} attached`, body: rfqRef(saved.number), tone: 'success' })
       } catch {
         toast({ title: 'Could not attach the files', body: 'The RFQ is saved. Add them from its Files panel.', tone: 'danger' })
@@ -303,6 +350,19 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
 
   const real = realItems(items)
   const ready = Boolean(company) && real.length > 0
+  const why = !company ? (real.length ? 'Choose the company first.' : 'Choose the company first, then paste or add an item.') : real.length ? null : 'Paste or add at least one item first.'
+  const canCreateCompany = user?.role === 'sales' || user?.role === 'admin'
+  /** The next step, or (not ready) why not, with the missing field focused. */
+  const whenReady = (go: () => void) => () => {
+    if (ready) {
+      setBlocked(false)
+      go()
+      return
+    }
+    setBlocked(true)
+    if (!company) document.getElementById('intake-company')?.focus()
+    else zoneRef.current?.focus()
+  }
 
   // ---- site and contact: pre-filled when the company has exactly one
   const siteList = sites.data ?? []
@@ -709,6 +769,16 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
               <section aria-labelledby="h-customer" className="grid gap-3">
                 <h2 id="h-customer" className="text-lg font-semibold tracking-snug">Customer</h2>
                 {restoreNote ? <Banner tone="warning" title={restoreNote} /> : null}
+                {!company && sender ? (
+                  <SenderSuggestion
+                    hint={sender}
+                    canCreate={canCreateCompany}
+                    onUse={c => {
+                      setCompany(c)
+                      setRestoreNote(null)
+                    }}
+                  />
+                ) : null}
                 {company ? (
                   <CustomerChip company={company} contacts={contactList.map(c => c.name)} onChange={() => setCompany(null)} />
                 ) : (
@@ -722,8 +792,16 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                 )}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {/* Their own number for the request: it is how the RFQ is found again later, so it sits with the company. */}
-                  <Field label="Customer reference" requirement="optional" help="Their RFQ or enquiry number. Search finds the RFQ by it.">
-                    <TextField value={customerRef} onChange={e => setCustomerRef(e.target.value)} placeholder="e.g. ENQ-2211" autoComplete="off" />
+                  <Field label="Customer reference" requirement="optional" help="Their RFQ or enquiry number. Search finds the RFQ by it." source={refSource ?? undefined}>
+                    <TextField
+                      value={customerRef}
+                      onChange={e => {
+                        setCustomerRef(e.target.value)
+                        setRefSource(null)
+                      }}
+                      placeholder="e.g. ENQ-2211"
+                      autoComplete="off"
+                    />
                   </Field>
                   {company && siteList.length > 0 ? (
                     <Field
@@ -758,14 +836,8 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                 </div>
               </section>
 
-              <section
-                aria-labelledby="h-items"
-                // Faded and out of reach until a company is chosen (the mockup's "waits"); a paste anywhere on the page still works.
-                ref={el => {
-                  if (el) el.inert = !company
-                }}
-                className={`grid gap-3 ${company ? '' : 'opacity-50'}`}
-              >
+              {/* Open before the company is chosen (owner test 2026-10-20): the PDF or paste is often what tells us the company. */}
+              <section aria-labelledby="h-items" className="grid gap-3">
                 <div className="flex items-baseline justify-between gap-4">
                   <h2 id="h-items" className="text-lg font-semibold tracking-snug">Items</h2>
                   <p className="text-sm text-fg-muted">{pasted ? 'Split from the pasted text' : 'Paste once. We split it.'}</p>
@@ -783,16 +855,38 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                   />
                 ) : null}
                 <PasteZone zoneRef={zoneRef} onText={takePaste} filled={items.length > 0} />
-                {items.length === 0 ? (
-                  <div>
+                {pdfNote ? <Banner tone="warning" title={pdfNote} /> : null}
+                <div className="flex flex-wrap items-center gap-2">
+                  <PdfPickButton
+                    label="Choose PDF"
+                    subject="items"
+                    onFile={f => pickedFiles.current.push(f)}
+                    onText={t => takePaste(t, 'pdf')}
+                    onMessage={setPdfNote}
+                  />
+                  {items.length === 0 ? (
                     <Button variant="quiet" onClick={addBlank}>Add an item by hand</Button>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </section>
 
               <section aria-label="Optional details" className="grid items-end gap-4 sm:grid-cols-2">
-                <Field label="Quotation due" requirement="optional" help="The customer's deadline for our quotation. Today warns you two days before.">
-                  <DateInput value={dueOn} onChange={setDueOn} defaultToday={false} placeholder="e.g. 3 dec" />
+                <Field
+                  label="Quotation due"
+                  requirement="optional"
+                  help="The customer's deadline for our quotation. Today warns you two days before."
+                  source={dueSource ?? undefined}
+                >
+                  <DateInput
+                    value={dueOn}
+                    onChange={v => {
+                      setDueOn(v)
+                      setDueSource(null)
+                    }}
+                    defaultToday={false}
+                    placeholder="e.g. 3 dec"
+                  />
+
                 </Field>
                 <Checkbox
                   checked={isPriority}
@@ -940,7 +1034,9 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                     ready ? (
                       <>Creates a new RFQ for <strong className="font-medium text-fg">{company?.name}</strong> with <strong className="num font-medium text-fg">{real.length}</strong> {real.length === 1 ? 'item' : 'items'}.</>
                     ) : (
-                      'Choose the company and paste or add at least one item.'
+                      <span role={blocked ? 'alert' : undefined} className={blocked ? 'font-medium text-tone-warning-fg' : undefined}>
+                        {why}
+                      </span>
                     )
                   ) : (
                     <>
@@ -960,15 +1056,14 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                   <Button
                     variant={step === 'suppliers' && ticked.length === 0 ? 'primary' : 'quiet'}
                     icon={Save}
-                    onClick={saveOnly}
-                    disabled={!ready}
+                    onClick={whenReady(() => void saveOnly())}
                     busy={busy === 'save'}
                     busyLabel="Saving"
                   >
                     Save without asking
                   </Button>
                   {step === 'build' ? (
-                    <Button variant="primary" disabled={!ready} onClick={() => setStep('suppliers')}>
+                    <Button variant="primary" onClick={whenReady(() => setStep('suppliers'))}>
                       Looks right: find suppliers
                       <Icon icon={ChevronRight} />
                     </Button>

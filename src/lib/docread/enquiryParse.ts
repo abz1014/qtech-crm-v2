@@ -84,7 +84,7 @@ const COURTESY =
 const GREETING_SENTENCE = /^(?:hi|hello|hey|dear|salam|assalam\w*|aoa|good\s+(?:morning|afternoon|evening))\b[^.!?]*[.!?]?$|\bhope\s+(?:you|this|all)\b/i
 
 const SIGN_OFF =
-  /^(?:(?:best|kind|warm|warmest|with)\s+regards?|regards?|thanks?(?:\s*(?:&|and)\s*(?:best\s+|kind\s+)?regards?)?|thank\s+you(?:\s+(?:and|&)\s+regards)?|thankyou|many\s+thanks|sincerely|yours\s+(?:sincerely|faithfully|truly)|br|cheers|allah\s+hafiz|jazak\s*allah(?:\s+khair)?)[\s,.!]*$/i
+  /^(?:(?:best|kind|warm|warmest|with)\s+regards?|regards?|thanks?(?:\s*(?:&|and)\s*(?:best\s+|kind\s+)?regards?)?|thank\s+you(?:\s+(?:and|&)\s+regards)?|thankyou|many\s+thanks|sincerely|yours\s+(?:sincerely|faithfully|truly)|br|cheers|allah\s+hafiz|jazak\s*allah(?:\s+khair)?|shukriya|shukria|thnx|thx|tks)[\s,.!]*$/i
 const SENT_FROM = /^sent\s+from\s+my\b/i
 const DISCLAIMER =
   /^(?:\**\s*disclaimer|confidentiality\s+notice|this\s+(?:e-?mail|message)\s+(?:and\s+any|is\s+(?:confidential|intended)|may\s+contain|contains)|the\s+information\s+(?:contained|in\s+this)|if\s+you\s+(?:are\s+not|have\s+received)|please\s+consider\s+the\s+environment|caution\s*:|this\s+email\s+has\s+been\s+scanned)/i
@@ -92,6 +92,8 @@ const REPLY_SEP = /^(?:-{2,}\s*original\s+message\s*-{2,}|_{5,}|-{5,})$|^on\s.{4
 const FORWARD_SEP = /^(?:-{2,}\s*forwarded\s+message\s*-{2,}|begin\s+forwarded\s+message:?)$/i
 const HEADER_LINE = /^(?:from|to|cc|bcc|sent|date|subject|reply-to|attachments?)\s*:/i
 const WA_PREFIX = /^\s*\[?\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:[ap]\.?\s?m\.?)?\]?\s*(?:-\s*)?(?:[^:\d][^:]{0,40}:\s)?/i
+/** WhatsApp Web's copy of several messages puts the time first: "[10:42, 19/10/2026] Name: ". */
+const WA_WEB_PREFIX = /^\s*\[\d{1,2}:\d{2}(?::\d{2})?\s*(?:[ap]\.?\s?m\.?)?,\s*\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\]\s*(?:[^:\d][^:]{0,40}:\s)?/i
 const INSTRUCTION =
   /^(?:note|notes|n\.?\s?b|remarks?|terms|conditions|payment|delivery|required\s+delivery|delivery\s+(?:period|time|terms)|validity|offer\s+validity|warranty|origin|incoterms?|price\s+basis|please\s+(?:mention|confirm|include|specify|indicate|note|quote\s+(?:with|on|your\s+(?:validity|delivery)))|kindly\s+(?:mention|confirm|include|specify|indicate|note)|partial\s+(?:quotations?|offers?)|quotations?\s+(?:should|must)\s+(?:be|include|mention)|offer\s+(?:should|must)\s+(?:be|include|mention))\b[\s.:-]*/i
 
@@ -399,6 +401,38 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
   }
 }
 
+/** A unit on its own in a table cell ("EA", "NO", "Nos", "Mtr"). */
+const UNIT_CELL = new RegExp(String.raw`^(?:${UNIT_SRC})$`, 'i')
+const NUM_CELL = /^\d[\d,]*(?:\.\d+)?$/
+
+/**
+ * A printed RFQ form's item row (an ERP printout: SAP, Oracle): a quantity cell next to a unit cell. Returns the item, with the
+ * description from the text cells before the unit (a leading serial or requisition number is dropped). Null for any other row.
+ */
+function formRow(cells: string[]): ReadItem | null {
+  if (cells.filter(Boolean).length < 3) return null
+  for (let i = cells.length - 1; i > 0; i--) {
+    const c = cells[i] as string
+    if (!NUM_CELL.test(c)) continue
+    const unitAt = UNIT_CELL.test(cells[i - 1] ?? '') ? i - 1 : UNIT_CELL.test(cells[i + 1] ?? '') ? i + 1 : -1
+    if (unitAt < 0) continue
+    const text = cells
+      .slice(0, Math.min(i, unitAt))
+      .filter(Boolean)
+      .filter((x, k) => !(k === 0 && /^(?:\d+\s*\.?|\d{4,})$/.test(x)))
+    const description = tidy(text.join(' '))
+    if (!description || !/[A-Za-z]{2}/.test(description)) return null
+    return { description, qty: toQty(c), unit: unitOf(cells[unitAt]) }
+  }
+  return null
+}
+
+/** A heading that starts the terms printed under the items ("Terms and Conditions", "Special Instructions :"). */
+const TERMS_HEAD = /^(?:special\s+instructions|(?:general\s+)?terms\s*(?:and|&)\s*conditions|general\s+terms|terms)\s*:?$/i
+/** Continuation text stops at the form's totals. */
+const TOTALS = /\b(?:sub\s*-?\s*total|grand\s+total|total\s+amount|total)\b.*$/i
+const MAX_DESCRIPTION = 400
+
 const isContact = (t: string): boolean => {
   if (PHONE_LABEL.test(t) && (PHONE.test(t) || /@|www\.|https?:/i.test(t) || /^(?:address|e-?mail|email|web|website)\b/i.test(t))) return true
   const bare = t.replace(EMAIL, ' ').replace(URL, ' ').replace(PHONE, ' ').replace(/[|,;:/()+\-–\s]+/g, ' ').trim()
@@ -461,8 +495,9 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   const src: Src[] = []
   let blank = false
   for (const line of text.split('\n')) {
-    const wa = WA_PREFIX.test(line) && /^\s*\[?\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4},?\s+\d{1,2}:\d{2}/.test(line)
-    const body = wa ? line.replace(WA_PREFIX, '') : line
+    const web = WA_WEB_PREFIX.test(line)
+    const wa = web || (WA_PREFIX.test(line) && /^\s*\[?\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4},?\s+\d{1,2}:\d{2}/.test(line))
+    const body = web ? line.replace(WA_WEB_PREFIX, '') : wa ? line.replace(WA_PREFIX, '') : line
     if (!body.trim()) {
       blank = true
       continue
@@ -489,13 +524,35 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     }
   }
 
+  // A reply on top of an older thread: once the new message above the separator ("____", "-----Original Message-----",
+  // "On ... wrote:", or an Outlook "From:" with "Sent:" or "Date:" under it) has anything item-like, everything below it is the
+  // old thread, even when nothing above has been read as an item yet. It never counts for list mode either.
+  const itemish = (t: string) => LABELLED_QTY.test(t) || PRODUCT.test(t) || hasCode(t) || /\d\s*(?:nos?|pcs?|sets?|units?)\b/i.test(t)
+  let quotedFrom = src.length
+  for (let k = 1; k < src.length; k++) {
+    const t = (src[k] as Src).t
+    const outlook = /^from\s*:/i.test(t) && src.slice(k + 1, k + 4).some(x => /^(?:sent|date)\s*:/i.test(x.t))
+    if ((REPLY_SEP.test(t) || outlook) && !FORWARD_SEP.test(t) && src.slice(0, k).some(x => itemish(x.t))) {
+      quotedFrom = k
+      break
+    }
+  }
+
   // List mode: when the items carry markers ("1.", "-", "a)"), an unmarked line is not an item of its own.
   const markerMode = src.some((s, k) => {
-    if (sigLines.has(k)) return false
+    if (sigLines.has(k) || k >= quotedFrom) return false
     const m = MARKER.exec(s.t)
     if (!m) return false
     const body = s.t.slice(m[0].length)
     return body === '' || (!isCourtesy(body) && !isContact(body))
+  })
+
+  // Form mode: a printed RFQ form (an ERP printout read from a PDF) has its items as table rows with a quantity next to a unit.
+  // Then a line outside those rows is never an item of its own: it is the description wrapping onto the next line (joined to
+  // the row above) or the form around the table (header boxes, comments, terms).
+  const formMode = src.some(s => {
+    const c = splitCells(s.t)
+    return c !== null && formRow(c) !== null
   })
 
   const lines: EnquiryLine[] = []
@@ -505,10 +562,18 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   const emails: Array<{ e: string; rank: number }> = []
   const phones: string[] = []
   const names: Array<{ n: string; rank: number }> = []
-  let zone: 'content' | 'signature' | 'quoted' | 'disclaimer' = 'content'
+  let zone: 'content' | 'signature' | 'quoted' | 'disclaimer' | 'terms' = 'content'
   let cur: Draft | null = null
   let table: TableCols | null = null
   let contentLines = 0
+  /** Form mode: the item row a wrapped line belongs to, until a blank line. */
+  let row: Draft | null = null
+  const extend = (d: Draft, t: string) => {
+    const it = d.fromTable as ReadItem
+    const more = tidy(t.replace(TOTALS, ''))
+    if (more && it.description.length < MAX_DESCRIPTION) it.description = tidy(`${it.description} ${more}`).slice(0, MAX_DESCRIPTION)
+    lines.push({ text: t, kind: 'joined', reason: null, marker: null })
+  }
 
   const skip = (t: string, reason: SkipReason) => lines.push({ text: t, kind: 'skipped', reason, marker: null })
   const close = () => {
@@ -535,7 +600,22 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   for (let k = 0; k < src.length; k++) {
     const s = src[k] as Src
     const t = s.t
-    if (s.blankBefore) table = null
+    if (s.blankBefore) {
+      table = null
+      row = null
+    }
+    if (zone === 'terms') {
+      if (!due) due = findDue(t, today) ?? findDue(`${t} ${src[k + 1]?.t ?? ''}`, today)
+      noteContacts(t, 1)
+      skip(t, 'instruction')
+      continue
+    }
+    if (TERMS_HEAD.test(t) && drafts.length > 0) {
+      zone = 'terms'
+      close()
+      skip(t, 'instruction')
+      continue
+    }
 
     if (FORWARD_SEP.test(t)) {
       zone = 'content'
@@ -543,10 +623,14 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       skip(t, 'header')
       continue
     }
+    if (k === quotedFrom) {
+      close()
+      zone = 'quoted'
+    }
     if (REPLY_SEP.test(t)) {
       close()
       // Items above: the rest is the older thread. None yet: what follows is the enquiry (a forward pasted whole).
-      zone = drafts.length > 0 ? 'quoted' : 'content'
+      zone = drafts.length > 0 || k >= quotedFrom ? 'quoted' : 'content'
       skip(t, 'quoted')
       continue
     }
@@ -610,13 +694,46 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       }
       if (table) {
         const it = tableItem(cells, table)
+        // A form's row with no quantity is the row above wrapping onto the next line.
+        if (formMode && row && (table.qty < 0 || !NUM_CELL.test(cells[table.qty] ?? ''))) {
+          extend(row, cells.filter(Boolean).join(' '))
+          continue
+        }
         if (it) {
-          drafts.push({ first: lines.length, marker: null, indent: 0, texts: [], attrs: [], qty: null, fromTable: it })
+          const d: Draft = { first: lines.length, marker: null, indent: 0, texts: [], attrs: [], qty: null, fromTable: it }
+          drafts.push(d)
+          row = formMode ? d : null
           lines.push({ text: t, kind: 'item', reason: null, marker: null })
-        } else skip(t, 'table')
+          close()
+          continue
+        }
+        skip(t, 'table')
         close()
         continue
       }
+    }
+
+    if (formMode) {
+      const it = cells ? formRow(cells) : null
+      if (it) {
+        close()
+        row = { first: lines.length, marker: null, indent: 0, texts: [], attrs: [], qty: null, fromTable: it }
+        drafts.push(row)
+        lines.push({ text: t, kind: 'item', reason: null, marker: null })
+        continue
+      }
+      if (row && !/^(?:comments?|remarks?|note)\s*:/i.test(t)) {
+        extend(row, cells ? cells.filter(Boolean).join(' ') : t)
+        continue
+      }
+      row = null
+      // Facts still come from the form around the table; nothing else there is an item.
+      for (const r of findRefs(t)) refs.push({ ...r, line: t })
+      if (!due) due = findDue(t, today) ?? (DUE_STRONG.test(t) && !findDate(t, today) ? findDue(`${t} ${src[k + 1]?.t ?? ''}`, today) : null)
+      noteContacts(t, 2)
+      if (isCompanyLine(t) && !own.test(t)) names.push({ n: t, rank: contentLines <= 4 ? 2 : 1 })
+      skip(t, isContact(t) ? 'contact' : 'header')
+      continue
     }
 
     // A header word on its own line (a table pasted one cell per line).
@@ -743,6 +860,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       continue
     }
     let parts = work.split(/\s+(?:and|&|aur|plus)\s+(?=\d[\d,.]*\s*(?:nos?|pcs?|pieces?|sets?|x)\b)/i)
+    if (parts.length === 1) parts = work.split(/(?<=\d\s*(?:nos?|pcs?|pieces?|sets?|units?)\.?)\s+(?:and|&|aur|plus)\s+/i)
     if (parts.length > 1 && !parts.every(p => readItem(p)?.qty != null)) parts = [work]
     if (!parts.every(p => readItem(p) !== null)) {
       skip(t, 'greeting')
@@ -806,6 +924,7 @@ export function asParseResult(r: EnquiryParse): ParseResult {
   return {
     items: r.items,
     lines: r.lines.map(l => ({ text: l.text, kind: l.kind === 'skipped' ? 'skipped' : 'item', marker: l.marker })),
-    lineCount: r.lineCount,
+    // A table's header row is not a line of the enquiry ("2 items found in 2 lines" for a header and two rows), as parsePaste counts.
+    lineCount: r.lineCount - r.lines.filter(l => l.reason === 'table' && splitCells(l.text) !== null && tableHeader(splitCells(l.text) as string[]) !== null).length,
   }
 }
