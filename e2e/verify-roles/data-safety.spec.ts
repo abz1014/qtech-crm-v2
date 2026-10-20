@@ -261,6 +261,29 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
   for (const n of [world.amounts.invoiceNet, world.amounts.payment, world.amounts.sell]) expect(text, 'no figure from the admin session').not.toContain(n.toLocaleString('en-US'))
 })
 
+test('a session that ends without Sign out (expired or revoked token) does not hand the Capture draft to the next person', async ({ page }) => {
+  const secret = `${world.tag} expired-session capture note`
+  await openAs(page, 'admin', '/today')
+  await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
+  await page.getByRole('dialog').last().getByRole('textbox').first().fill(secret)
+  await page.waitForTimeout(800)
+  await page.keyboard.press('Escape')
+  expect((await storageState(page)).captures, 'precondition: the draft is kept on the device').toBeGreaterThan(0)
+  // The session ends without the Sign out button: the stored token is gone (refresh token expired or revoked elsewhere).
+  await page.evaluate(() => {
+    for (const k of Object.keys(localStorage)) if (/^sb-.*-auth-token/.test(k)) localStorage.removeItem(k)
+  })
+  await page.reload()
+  await expect(page).toHaveURL(/\/login$/)
+  const left = await storageState(page)
+  test.info().annotations.push({ type: 'device state after the session ended', description: `captures ${left.captures}; localStorage ${left.local.join(', ')}` })
+  await signIn(page, STAFF_EMAIL.engineer)
+  await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
+  const sheet = page.getByRole('dialog').last()
+  await page.waitForTimeout(1000)
+  expect(await sheet.getByRole('textbox').first().inputValue(), 'the next person sees the previous person\'s Capture draft').not.toContain('expired-session capture note')
+})
+
 test('BUG-RV-04: the command palette\'s recent items are cleared on sign-out and are per person', async ({ page }) => {
   test.fail(true, 'BUG-RV-04: qtech.palette.recent (labels and meta of opened items, e.g. an invoice number) survives sign-out and is shown to the next person')
   await openAs(page, 'admin', '/today')
