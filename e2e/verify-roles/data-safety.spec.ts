@@ -23,6 +23,20 @@ test.beforeAll(async () => {
 const captureSheet = (page: Page) => page.getByRole('dialog', { name: /^(Capture|Paste or photo)$/ })
 const captureBox = (page: Page) => captureSheet(page).getByRole('textbox', { name: 'Pasted text' })
 
+/** Opens the Capture sheet: the top-bar button, then the C key as a fallback (as e2e/capture does). */
+async function openCapture(page: Page): Promise<void> {
+  await page.locator('#main').waitFor()
+  await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
+  if (!(await captureSheet(page).isVisible().catch(() => false))) {
+    await page.waitForTimeout(1000)
+    if (!(await captureSheet(page).isVisible().catch(() => false))) {
+      await page.locator('#main').click({ position: { x: 5, y: 5 } })
+      await page.keyboard.press('c')
+    }
+  }
+  await expect(captureSheet(page)).toBeVisible({ timeout: 10_000 })
+}
+
 const rows = async <T>(path: string): Promise<T[]> => {
   const r = await api('admin', `/rest/v1/${path}`)
   if (r.status !== 200) throw new Error(`GET ${path}: ${r.status} ${r.text}`)
@@ -232,7 +246,7 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
   await page.goto('/money/gst-register')
   await page.locator('#main').waitFor()
   // A Capture draft (kept in IndexedDB while signed in).
-  await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
+  await openCapture(page)
   await captureBox(page).fill(secret)
   await page.waitForTimeout(800)
   expect((await storageState(page)).captures, 'the draft is kept on the device while signed in').toBeGreaterThan(0)
@@ -253,7 +267,7 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
 
   // The next person on the same tab.
   await signIn(page, STAFF_EMAIL.engineer)
-  await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
+  await openCapture(page)
   const next = captureSheet(page)
   expect(await captureBox(page).inputValue(), 'the next person\'s Capture sheet').not.toContain('secret capture note')
   await expect(next).not.toContainText('secret capture note')
@@ -267,7 +281,7 @@ test('sign-out clears the query cache, the Capture drafts and the recents; the n
 test('a session that ends without Sign out (expired or revoked token) does not hand the Capture draft to the next person', async ({ page }) => {
   const secret = `${world.tag} expired-session capture note`
   await openAs(page, 'admin', '/today')
-  await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
+  await openCapture(page)
   await captureBox(page).fill(secret)
   await page.waitForTimeout(800)
   await page.keyboard.press('Escape')
@@ -281,7 +295,7 @@ test('a session that ends without Sign out (expired or revoked token) does not h
   const left = await storageState(page)
   test.info().annotations.push({ type: 'device state after the session ended', description: `captures ${left.captures}; localStorage ${left.local.join(', ')}` })
   await signIn(page, STAFF_EMAIL.engineer)
-  await page.getByRole('button', { name: /^(Capture|Paste or photo)/ }).first().click()
+  await openCapture(page)
   await page.waitForTimeout(1000)
   expect(await captureBox(page).inputValue(), 'the next person sees the previous person\'s Capture draft').not.toContain('expired-session capture note')
 })
