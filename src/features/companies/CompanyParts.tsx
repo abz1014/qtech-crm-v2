@@ -39,10 +39,10 @@ export function Panel({
     <section aria-labelledby={headingId} className={cn('min-w-0 rounded border bg-surface', className)}>
       <header className="flex min-h-[52px] flex-wrap items-center gap-x-3 gap-y-1 border-b py-2 pl-5 pr-4">
         {info ? (
-          <span className="-my-1 flex items-center gap-1">
+          <div className="-my-1 flex items-center gap-1">
             {heading}
             {info}
-          </span>
+          </div>
         ) : (
           heading
         )}

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from '@/ui/Icon'
-import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, Copy, Ellipsis, FileText, MapPin, Package, Phone, RotateCcw, Scale, Wrench, type LucideIcon } from 'lucide-react'
+import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, Copy, Ellipsis, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, RotateCcw, Scale, Truck, Wrench, type LucideIcon } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay, formatShortDate } from '@/lib/formatDay'
@@ -25,9 +25,13 @@ import { useCompanyProfile } from '@/features/settings/hooks'
 import { termsLabel } from '@/features/settings/companyProfile'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
 import { useMarkDone, useSetPlanned } from '@/features/orders/commissioningActions'
+import { CommissioningEditDialog } from '@/features/orders/CommissioningPanel'
+import { AddLegDialog } from '@/features/orders/AddDialogs'
+import { GoodsChaseDialog } from '@/features/orders/GoodsChaseDialog'
 import { ResolveBasisDialog } from '@/features/orders/ResolveBasisDialog'
 import { legState } from '@/features/orders/lib/legModel'
-import { orderPrimary, waitingText, type PrimaryAction } from '@/features/orders/lib/primaryAction'
+import { orderFacts, pageStep, type PrimaryAction } from '@/features/orders/lib/primaryAction'
+import type { OrderStep } from '@/features/orders/lib/orderSteps'
 import { useLegActions } from '@/features/orders/useLegActions'
 import { IssuePoDialog } from '@/features/purchaseOrders/IssuePoDialog'
 import { useSentPos } from '@/features/purchaseOrders/hooks'
@@ -38,16 +42,27 @@ import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features
 
 /*
  * The top of the order page (O03; g2-order-detail.html), reworked by the UX audit of 2026-10-19 (screens.md 8): who it is for, then ONE
- * next step with the page's only primary (green) button, chosen by the order's state (lib/primaryAction.ts), then a short status strip.
+ * next step with the page's only primary (green) button, then a short status strip. The step comes from lib/orderSteps.ts, the same
+ * ordering as the orders list's "Next step" column; lib/primaryAction.ts turns it into this page's button and sentence.
  *
  * The strip has one cell per dimension (Goods, Commissioning; for admin and sales Invoicing and Payment; for admin Costs), each a chip
  * and one short line. What the "Invoices and payments" panel used to say (invoiced, received, balance, due date) now lives in the
  * Invoicing and Payment cells, with "Create invoice" (admin and sales) and "Record payment" (admin) beside the figure they change.
  * When either is the next step it is the green button above instead, never both. The ... menu holds Cancel order / Reopen order.
  *
- * An engineer's page leads with their job: the site, its contact, the planned date ("Change planned date") and "Mark done today" (1 tap,
- * nothing typed). No price, invoice, payment or cost is read or drawn for them.
+ * The step is only shown once the supplier orders (and for admin and sales their POs and the balance) have loaded, so the green button
+ * never jumps from a wrong guess to the right one; the page passes `next: null` until then (a quiet placeholder), and when they fail.
+ *
+ * An engineer's page leads with their job: the site, its contact, the planned date ("Change planned date"), the goods, the step's button
+ * (Delivered today; Mark done today once the planned date has come) and "Mark done today" as a secondary button before that.
+ * No price, invoice, payment or cost is read or drawn for them.
  */
+
+export interface NextForPage {
+  step: OrderStep
+  primary: PrimaryAction | null
+  text: string
+}
 
 function Cell({ title, icon, children, action }: { title: string; icon: LucideIcon; children: ReactNode; action?: ReactNode }) {
   return (
@@ -62,7 +77,7 @@ function Cell({ title, icon, children, action }: { title: string; icon: LucideIc
   )
 }
 
-/** "1 of 2 not placed · 1 late": the supplier orders in a few words. */
+/** "1 of 2 not placed · 1 late": the supplier orders that supply goods, in a few words. */
 function goodsLine(legs: readonly OrderLegRow[], today: string): string {
   if (legs.length === 0) return 'No supplier orders'
   const states = legs.map(l => legState({ placedOn: l.placedOn, expectedOn: l.expectedOn, receivedOn: l.receivedOn, deliveredOn: l.deliveredOn }, today))
@@ -84,7 +99,7 @@ export function OrderHeaderBlock({
   orderMoney,
   moneyLoading = false,
   pos = [],
-  primary: primaryProp,
+  next: nextProp,
 }: {
   order: OrderHeader
   legs: readonly OrderLegRow[]
@@ -94,8 +109,8 @@ export function OrderHeaderBlock({
   orderMoney: OrderMoney | null | undefined
   moneyLoading?: boolean
   pos?: readonly LegPo[]
-  /** The page's one primary step, when the page worked it out already (orderPrimary). */
-  primary?: PrimaryAction | null
+  /** The page's next step, worked out by the page once everything it needs has loaded; null until then (or when it failed to load). */
+  next?: NextForPage | null
 }) {
   const { toast } = useToast()
   const today = businessToday()
@@ -113,8 +128,11 @@ export function OrderHeaderBlock({
   const m = orderMoney
   const gross = s?.gross ?? null
   const invoiced = s?.invoiced ?? null
+  // Only supplier orders that supply a goods line count, as v_order_state counts them.
+  const goodsLegs = legs.filter(l => items.some(i => i.legId === l.id && !i.isService))
 
-  const primary = primaryProp === undefined ? orderPrimary(order, legs, pos, role, orderMoney, today) : primaryProp
+  const next = nextProp === undefined ? pageStep(orderFacts(order, legs, items, pos, role, orderMoney, today)) : nextProp
+  const primary = next?.primary ?? null
 
   const commissioningLine =
     s?.commissioning === 'n_a' || !order.needsCommissioning
@@ -178,94 +196,110 @@ export function OrderHeaderBlock({
         </Banner>
       ) : null}
 
-      {basisUnknown && !cancelled ? (
-        <Banner tone="warning" title="Is GST included in these prices?" className="mt-4">
+      {/* An unknown price basis is asked even on a cancelled order (its invoices and payments still need the net split): the admin's
+          button is the green next step on a live order, and a plain button here on a cancelled one. */}
+      {basisUnknown && !isEngineer ? (
+        <Banner
+          tone="warning"
+          title="Is GST included in these prices?"
+          className="mt-4"
+          action={
+            isAdmin && cancelled ? (
+              <Button icon={Scale} onClick={() => setResolving(true)}>
+                Is GST included?
+              </Button>
+            ) : undefined
+          }
+        >
           The old CRM did not say. Until someone answers, this order is left out of margin, GST totals and the net cash that counts towards targets. Its payments still count in gross cash.
         </Banner>
       ) : null}
 
       {isEngineer ? (
-        <EngineerJob order={order} engineers={engineers} primary={primary} legs={legs} today={today} />
+        <EngineerJob order={order} engineers={engineers} next={next} legs={legs} goodsLegs={goodsLegs} today={today} />
       ) : !cancelled ? (
-        <NextStep order={order} primary={primary} legs={legs} onResolve={() => setResolving(true)} waiting={waitingText({ legs, needsCommissioning: order.needsCommissioning, plannedOn: order.plannedOn, doneOn: order.doneOn, invoicing: s?.invoicing ?? null, balance: m?.balance ?? null, role })} />
+        <NextStep order={order} next={next} legs={legs} engineers={engineers} onResolve={() => setResolving(true)} />
       ) : null}
 
       {isEngineer ? null : (
-      <div className={`mt-4 grid grid-cols-2 rounded border bg-surface lg:divide-x ${cols} [&>*]:border-b [&>*]:border-line lg:[&>*]:border-b-0 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1`} aria-label="State of this order">
-        <Cell title="Goods" icon={Package}>
-          {s?.goods && s.goods !== 'n_a' ? <StatusBadge dimension="goods" value={s.goods} /> : null}
-          <p className="text-sm text-fg-2">{goodsLine(legs, today)}</p>
-        </Cell>
-        <Cell title="Commissioning" icon={Wrench}>
-          {/* no 'n/a' chip: the line says there is none */}
-          {s?.commissioning && s.commissioning !== 'n_a' ? <StatusBadge dimension="commissioning" value={s.commissioning} /> : null}
-          <p className="text-sm text-fg-2">{commissioningLine}</p>
-        </Cell>
-        {money ? (
-          <Cell
-            title="Invoicing"
-            icon={FileText}
-            action={!cancelled && primary?.kind !== 'create-invoice' && s?.invoicing !== 'fully_invoiced' ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
-          >
-            {s?.invoicing ? <StatusBadge dimension="invoicing" value={s.invoicing} /> : null}
-            <p className="text-sm text-fg-2" data-testid="order-invoiced">
-              {gross === null ? null : (invoiced ?? 0) <= 0 ? (
-                <>
-                  PKR <span className="num">{formatAmount(gross)}</span> to invoice
-                </>
-              ) : (invoiced ?? 0) >= gross ? (
-                <>
-                  Invoiced <span className="num">{formatAmount(invoiced ?? 0)}</span>
-                </>
-              ) : (
-                <>
-                  Invoiced <span className="num">{formatAmount(invoiced ?? 0)}</span> of <span className="num">{formatAmount(gross)}</span>
-                </>
-              )}
-            </p>
+        <div
+          className={`mt-4 grid grid-cols-2 rounded border bg-surface lg:divide-x ${cols} [&>*]:border-b [&>*]:border-line lg:[&>*]:border-b-0 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1`}
+          aria-label="State of this order"
+        >
+          <Cell title="Goods" icon={Package}>
+            {s?.goods && s.goods !== 'n_a' ? <StatusBadge dimension="goods" value={s.goods} /> : null}
+            <p className="text-sm text-fg-2">{goodsLine(goodsLegs, today)}</p>
           </Cell>
-        ) : null}
-        {money ? (
-          <Cell title="Payment" icon={Banknote} action={isAdmin && !cancelled && primary?.kind !== 'record-payment' ? <RecordPaymentButton orderId={order.id} size="sm" /> : null}>
-            {m ? <StatusBadge dimension="payment" value={m.paymentState} /> : null}
-            {moneyLoading ? (
-              <Skeleton className="h-4 w-32" />
-            ) : !m ? (
-              <p className="text-sm text-fg-muted">The balance did not load. Reload to try again.</p>
-            ) : (
-              <p className="grid gap-px text-sm text-fg-2">
-                {m.settled > 0 ? (
-                  <span>
-                    Received <span className="num">{formatAmount(m.settled)}</span>
-                  </span>
-                ) : (
-                  <span data-testid="payments-empty">Nothing received yet</span>
-                )}
-                <span>
-                  Balance <b className="num font-medium text-fg" data-testid="order-balance">{formatAmount(m.balance)}</b>
-                  {m.dueOn && m.balance > 0 ? <span className={cn(m.paymentState === 'overdue' && 'text-tone-danger-fg')}> · due {formatShortDate(m.dueOn, today)}</span> : null}
-                </span>
-              </p>
-            )}
+          <Cell title="Commissioning" icon={Wrench}>
+            {/* no 'n/a' chip: the line says there is none */}
+            {s?.commissioning && s.commissioning !== 'n_a' ? <StatusBadge dimension="commissioning" value={s.commissioning} /> : null}
+            <p className="text-sm text-fg-2">{commissioningLine}</p>
           </Cell>
-        ) : null}
-        {isAdmin ? (
-          <Cell title="Costs" icon={ClipboardCheck}>
-            {m?.costsState ? <StatusBadge dimension="costs" value={m.costsState} /> : null}
-            {m ? (
-              <p className="text-sm text-fg-2">
-                Paid out <span className="num">{formatAmount(m.actualCost ?? 0)}</span>
-                {m.expectedCost !== null ? (
+          {money ? (
+            <Cell
+              title="Invoicing"
+              icon={FileText}
+              action={!cancelled && primary?.kind !== 'create-invoice' && s?.invoicing !== 'fully_invoiced' ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
+            >
+              {s?.invoicing ? <StatusBadge dimension="invoicing" value={s.invoicing} /> : null}
+              <p className="text-sm text-fg-2" data-testid="order-invoiced">
+                {gross === null ? null : (invoiced ?? 0) <= 0 ? (
                   <>
-                    {' of '}
-                    <span className="num">{formatAmount(m.expectedCost)}</span>
+                    PKR <span className="num">{formatAmount(gross)}</span> to invoice
                   </>
-                ) : null}
+                ) : (invoiced ?? 0) >= gross ? (
+                  <>
+                    Invoiced <span className="num">{formatAmount(invoiced ?? 0)}</span>
+                  </>
+                ) : (
+                  <>
+                    Invoiced <span className="num">{formatAmount(invoiced ?? 0)}</span> of <span className="num">{formatAmount(gross)}</span>
+                  </>
+                )}
               </p>
-            ) : null}
-          </Cell>
-        ) : null}
-      </div>
+            </Cell>
+          ) : null}
+          {money ? (
+            <Cell title="Payment" icon={Banknote} action={isAdmin && !cancelled && primary?.kind !== 'record-payment' ? <RecordPaymentButton orderId={order.id} size="sm" /> : null}>
+              {m ? <StatusBadge dimension="payment" value={m.paymentState} /> : null}
+              {moneyLoading ? (
+                <Skeleton className="h-4 w-32" />
+              ) : !m ? (
+                <p className="text-sm text-fg-muted">The balance did not load. Reload to try again.</p>
+              ) : (
+                <p className="grid gap-px text-sm text-fg-2">
+                  {m.settled > 0 ? (
+                    <span>
+                      Received <span className="num">{formatAmount(m.settled)}</span>
+                    </span>
+                  ) : (
+                    <span data-testid="payments-empty">Nothing received yet</span>
+                  )}
+                  <span>
+                    Balance <b className="num font-medium text-fg" data-testid="order-balance">{formatAmount(m.balance)}</b>
+                    {m.dueOn && m.balance > 0 ? <span className={cn(m.paymentState === 'overdue' && 'text-tone-danger-fg')}> · due {formatShortDate(m.dueOn, today)}</span> : null}
+                  </span>
+                </p>
+              )}
+            </Cell>
+          ) : null}
+          {isAdmin ? (
+            <Cell title="Costs" icon={ClipboardCheck}>
+              {m?.costsState ? <StatusBadge dimension="costs" value={m.costsState} /> : null}
+              {m ? (
+                <p className="text-sm text-fg-2">
+                  Paid out <span className="num">{formatAmount(m.actualCost ?? 0)}</span>
+                  {m.expectedCost !== null ? (
+                    <>
+                      {' of '}
+                      <span className="num">{formatAmount(m.expectedCost)}</span>
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+            </Cell>
+          ) : null}
+        </div>
       )}
 
       {resolving ? <ResolveBasisDialog order={order} items={items} money={orderMoney} onClose={() => setResolving(false)} /> : null}
@@ -371,31 +405,53 @@ function PhoneSticky({ children }: { children: ReactNode }) {
 
 /**
  * The next step and the page's one primary button (admin and sales). The supplier-order steps act on that supplier order directly
- * (Issue PO opens its dialog; Mark placed and Delivered today stamp it, with Undo); the same step stays on the supplier order's own row as
- * a secondary button. With nothing to do, one quiet sentence says what the order is waiting for.
+ * (Issue PO opens its dialog; Chase goods its message; Mark placed and Delivered today stamp it, with Undo); the same step stays on the
+ * supplier order's own row as a secondary button. With no button for this person, the sentence says what the order is waiting for.
  */
-function NextStep({ order, primary, legs, onResolve, waiting }: { order: OrderHeader; primary: PrimaryAction | null; legs: readonly OrderLegRow[]; onResolve: () => void; waiting: string }) {
+function NextStep({ order, next, legs, engineers, onResolve }: { order: OrderHeader; next: NextForPage | null; legs: readonly OrderLegRow[]; engineers: readonly PersonRow[]; onResolve: () => void }) {
+  if (!next) {
+    return (
+      <section aria-label="Next step" aria-busy="true" className="mt-4 rounded border bg-sunken px-4 py-3 md:px-5">
+        <Skeleton className="h-5 w-72 max-w-full" />
+      </section>
+    )
+  }
+  const { primary, step, text } = next
   return (
     <section aria-label="Next step" className={cn('mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded border px-4 py-3 md:px-5', primary ? 'border-line-strong bg-surface' : 'bg-sunken')}>
       <p className="min-w-0 text-base">
         <span className="mr-2 text-sm text-fg-muted">Next step</span>
-        <span className={cn('font-medium', primary?.late && 'text-tone-danger-fg', !primary && 'font-regular text-fg-2')}>{primary ? primary.why : waiting}</span>
+        <span className={cn('font-medium', step.tone === 'late' && 'text-tone-danger-fg', !primary && step.tone !== 'late' && 'font-regular text-fg-2')}>{text}</span>
       </p>
       {primary ? (
         <PhoneSticky>
-          <PrimaryButton order={order} action={primary} legs={legs} onResolve={onResolve} />
+          <PrimaryButton order={order} action={primary} legs={legs} engineers={engineers} onResolve={onResolve} />
         </PhoneSticky>
       ) : null}
     </section>
   )
 }
 
-function PrimaryButton({ order, action, legs, onResolve }: { order: OrderHeader; action: PrimaryAction; legs: readonly OrderLegRow[]; onResolve?: () => void }) {
+function PrimaryButton({
+  order,
+  action,
+  legs,
+  engineers,
+  onResolve,
+}: {
+  order: OrderHeader
+  action: PrimaryAction
+  legs: readonly OrderLegRow[]
+  engineers?: readonly PersonRow[]
+  onResolve?: () => void
+}) {
   const leg = action.legId ? legs.find(l => l.id === action.legId) : undefined
   const legActions = useLegActions(order, leg)
   const markDone = useMarkDone(order)
-  const [issuing, setIssuing] = useState(false)
+  const [open, setOpen] = useState(false)
   const cls = 'max-sm:w-full'
+  // a supplier-order step names its supplier for assistive tech, as the same button on the supplier order's row does
+  const aria = action.supplierName ? `${action.label}, ${action.supplierName}` : undefined
   switch (action.kind) {
     case 'resolve-basis':
       return (
@@ -413,30 +469,76 @@ function PrimaryButton({ order, action, legs, onResolve }: { order: OrderHeader;
           {action.label}
         </Button>
       )
+    case 'add-supplier':
+      return (
+        <>
+          <Button variant="primary" icon={Plus} className={cls} onClick={() => setOpen(true)}>
+            {action.label}
+          </Button>
+          {open ? <AddLegDialog order={order} legs={legs} onClose={() => setOpen(false)} /> : null}
+        </>
+      )
+    case 'plan-commissioning':
+      return (
+        <>
+          <Button variant="primary" icon={CalendarDays} className={cls} onClick={() => setOpen(true)}>
+            {action.label}
+          </Button>
+          {open ? <CommissioningEditDialog order={order} engineers={engineers ?? []} onClose={() => setOpen(false)} /> : null}
+        </>
+      )
     case 'issue-po':
       return leg ? (
         <>
-          <Button variant="primary" icon={FileText} className={cls} onClick={() => setIssuing(true)}>
+          <Button variant="primary" icon={FileText} className={cls} onClick={() => setOpen(true)} aria-label={aria}>
             {action.label}
           </Button>
-          {issuing ? <IssuePoDialog order={order} leg={leg} onClose={() => setIssuing(false)} /> : null}
+          {open ? <IssuePoDialog order={order} leg={leg} onClose={() => setOpen(false)} /> : null}
+        </>
+      ) : null
+    case 'chase-goods':
+      return leg ? (
+        <>
+          <Button variant="primary" icon={MessageSquareWarning} className={cls} onClick={() => setOpen(true)} aria-label={aria}>
+            {action.label}
+          </Button>
+          {open ? <GoodsChaseDialog order={order} leg={leg} onClose={() => setOpen(false)} /> : null}
         </>
       ) : null
     case 'mark-placed':
     case 'deliver':
       return leg && legActions.stamp ? (
-        <Button variant="primary" className={cls} onClick={legActions.doStamp} busy={legActions.pending} busyLabel="Saving">
+        <Button variant="primary" icon={Truck} className={cls} onClick={legActions.doStamp} busy={legActions.pending} busyLabel="Saving" aria-label={`${legActions.stamp.label}, ${leg.supplierName}`}>
           {legActions.stamp.label}
         </Button>
       ) : null
   }
 }
 
-/** The engineer's page leads with their job: where, who to call, when, and the one tap that closes it. */
-function EngineerJob({ order, engineers, primary, legs, today }: { order: OrderHeader; engineers: readonly PersonRow[]; primary: PrimaryAction | null; legs: readonly OrderLegRow[]; today: string }) {
+/**
+ * The engineer's page leads with their job: where, who to call, when, the goods, and the one green button of the step (Delivered today;
+ * Mark done today once the planned date has come). Before that date "Mark done today" is still one tap, as a secondary button.
+ */
+function EngineerJob({
+  order,
+  engineers,
+  next,
+  legs,
+  goodsLegs,
+  today,
+}: {
+  order: OrderHeader
+  engineers: readonly PersonRow[]
+  next: NextForPage | null
+  legs: readonly OrderLegRow[]
+  goodsLegs: readonly OrderLegRow[]
+  today: string
+}) {
   const setPlanned = useSetPlanned(order)
+  const markDone = useMarkDone(order)
   const cancelled = order.cancelledOn !== null
-  const showDate = order.needsCommissioning && !order.doneOn && !cancelled
+  const open = order.needsCommissioning && !order.doneOn && !cancelled
+  const primary = next?.primary ?? null
   const phone = order.contact?.phone ?? null
   return (
     <section aria-label="Your job" className="mt-4 grid gap-3 rounded border border-line-strong bg-surface px-4 py-4 md:px-5">
@@ -477,20 +579,24 @@ function EngineerJob({ order, engineers, primary, legs, today }: { order: OrderH
             <Icon icon={Package} size="sm" /> Goods
           </span>
           {order.state?.goods && order.state.goods !== 'n_a' ? <StatusBadge dimension="goods" value={order.state.goods} /> : null}
-          <span className="text-sm text-fg-2">{goodsLine(legs, today)}</span>
+          <span className="text-sm text-fg-2">{goodsLine(goodsLegs, today)}</span>
         </div>
       </div>
-      {primary || showDate ? (
+      {next && !cancelled ? (
         <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+          <span className={cn('mr-2 text-sm', next.step.tone === 'late' ? 'font-medium text-tone-danger-fg' : 'text-fg-2')}>{next.text}</span>
           {primary ? (
-            <>
-              {primary.kind === 'deliver' ? <span className={cn('mr-2 text-sm', primary.late ? 'font-medium text-tone-danger-fg' : 'text-fg-2')}>{primary.why}</span> : null}
-              <PhoneSticky>
-                <PrimaryButton order={order} action={primary} legs={legs} />
-              </PhoneSticky>
-            </>
+            <PhoneSticky>
+              <PrimaryButton order={order} action={primary} legs={legs} />
+            </PhoneSticky>
           ) : null}
-          {showDate ? <TapDate value={order.plannedOn} label="Planned date" today={today} onSave={setPlanned} button={{ text: 'Change planned date', icon: CalendarDays }} /> : null}
+          {/* before the planned date "Mark done today" is still one tap, just not the page's green button */}
+          {open && primary?.kind !== 'mark-done' ? (
+            <Button icon={CircleCheck} onClick={() => void markDone.run()} busy={markDone.pending} busyLabel="Saving">
+              Mark done today
+            </Button>
+          ) : null}
+          {open ? <TapDate value={order.plannedOn} label="Planned date" today={today} onSave={setPlanned} button={{ text: 'Change planned date', icon: CalendarDays }} /> : null}
         </div>
       ) : null}
     </section>

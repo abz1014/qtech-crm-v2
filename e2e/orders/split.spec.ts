@@ -270,7 +270,9 @@ test.describe('lifecycle audit fixes: commissioning toggle and default expected 
     const legs = await get<{ id: string }>(`supplier_orders?order_id=eq.${s.order.id}&select=id&order=created_at`)
     const letter = String.fromCharCode(65 + legs.findIndex(l => l.id === leg.id))
     const card = legLoc(page, letter)
-    await card.getByRole('button', { name: `Mark placed, ${s.s3.name}` }).click()
+    // not placed and no PO: "Mark placed, no PO" is in the row's menu, Issue PO on the row
+    await card.getByRole('button', { name: `More for ${s.s3.name}` }).click()
+    await page.getByRole('menuitem', { name: 'Mark placed, no PO' }).click()
     await expect(card).toContainText('30 days assumed')
     await expect.poll(async () => (await get<{ expected_on: string | null }>(`supplier_orders?id=eq.${leg.id}&select=expected_on`))[0].expected_on).toBe(karachiDay(30))
     // an editable date, like any other
@@ -391,7 +393,10 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     const s = await seedSplitOrder()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     await expect(page.getByRole('button', { name: /Received/ })).toHaveCount(0)
-    await expect(legLoc(page, 'A').getByRole('button', { name: /Mark placed/ })).toBeVisible()
+    await expect(legLoc(page, 'A').getByRole('button', { name: /^Issue PO/ })).toBeVisible()
+    await legLoc(page, 'A').getByRole('button', { name: /^More for/ }).click()
+    await expect(page.getByRole('menuitem', { name: 'Mark placed, no PO' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: /Received/ })).toHaveCount(0)
   })
 
   test('an engineer sees the split item and legs but no selling price, supplier price, spread, ranking, Split line or Edit price, and no request carries them', async ({ page }) => {

@@ -143,7 +143,8 @@ function ItemCell({ r }: { r: QuoteRow }) {
       </span>
       {r.leadTime ? <span className="text-sm text-fg-2 text-pretty">Lead time: {r.leadTime}</span> : null}
       {r.itemNote ? <span className="text-sm text-fg-muted">{r.itemNote}</span> : null}
-      {r.ago ? <span className="text-sm text-tone-warning-fg">{`${r.dateText}, ${r.ago}`}</span> : null}
+      {/* the date is on the line above; this line only says how old it is */}
+      {r.ago ? <span className="text-sm text-tone-warning-fg">{r.ago}</span> : null}
     </span>
   )
 }

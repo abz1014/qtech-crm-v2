@@ -20,6 +20,7 @@ import { readClipboardWhen, resetClipboard } from '../support/clipboard'
  *   Mark bid sent        1 tap                              Chase                 1 tap
  *   Win (no changes)     2 taps; with one split: + 1 tap + 1 quantity typed
  *   Issue PO (priced)    2 taps                             Invoice               2 taps, nothing typed
+ *   Mark placed, no PO   2 taps (the supplier order's menu; Issue PO is the 1-tap way)   Delivered today   1 tap
  *   Full payment         2 taps, nothing typed
  * Data that is not part of the day (the customer, the suppliers and what they supplied before, the exchange rates) is made through the
  * API as the admin; everything the salesperson does is done on screen.
@@ -467,9 +468,11 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     const lLetter = await letterOf(s.lahore.name)
     const aLetter = await letterOf(s.alpen.name)
     await resetCount(page)
-    await legLoc(page, lLetter).getByRole('button', { name: `Mark placed, ${s.lahore.name}` }).click()
+    // ordered by phone, no PO: from the row's menu ("Mark placed, no PO"; Issue PO is the 1-tap way and it is on the row)
+    await legLoc(page, lLetter).getByRole('button', { name: `More for ${s.lahore.name}` }).click()
+    await page.getByRole('menuitem', { name: 'Mark placed, no PO' }).click()
     await expect.poll(async () => (await must(rest<{ placed_on: string | null }[]>('admin', `supplier_orders?id=eq.${lahoreLeg}&select=placed_on`)))[0].placed_on).toBe(today)
-    fe2('Mark placed', (await readCount(page)).mouse, 1)
+    fe2('Mark placed without a PO (row menu)', (await readCount(page)).mouse, 2)
     await todayHas(salesCtx, 'place_po', [ordRef(order.number), s.lahore.name], false)
     await must(rest('admin', `supplier_orders?id=eq.${lahoreLeg}`, { method: 'PATCH', body: { expected_on: karachiDay(-2) }, prefer: 'return=minimal' }))
     await todayHas(salesCtx, 'goods_late', [s.lahore.name], true)

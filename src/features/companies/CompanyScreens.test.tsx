@@ -278,4 +278,14 @@ describe('companies list', () => {
     // A number is not offered as a new company's name.
     expect(screen.queryByRole('button', { name: /Add “0399/ })).not.toBeInTheDocument()
   })
+
+  it('an Urdu-script name that matches nothing is offered as a new company (review 2026-10-20)', async () => {
+    installFakeDb(listDb)
+    const user = userEvent.setup()
+    mount('/companies', <CompaniesPage />)
+    await screen.findByRole('link', { name: 'Karachi Glassworks' })
+    await user.type(screen.getByRole('textbox', { name: 'Search companies' }), 'کراچی سیمنٹ')
+    expect(await screen.findByText('No company matches')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add “کراچی سیمنٹ”' })).toBeInTheDocument()
+  })
 })

@@ -62,6 +62,21 @@ describe('matchCompany (the Companies list search)', () => {
     expect(matchCompany(glass, '+92 300 123 4567')).toEqual({ contact: 'Salman Khan' })
   })
 
+  it('a mistyped prefix does not match piece by piece: 7 digits or more is one number (review 2026-10-20, finding 14)', () => {
+    // "0399 5550142" would match "+92 301 555 0142" word by word ("399" is not in it, but "5550142" is); as one number it does not
+    const naveed = glass.contacts.find(c => c.name === 'Naveed Akhtar')!
+    expect(naveed.phoneKey).toContain('5550142')
+    expect(matchCompany(glass, '0399 5550142')).toBeNull()
+    expect(matchCompany(glass, '0301 5550142')).toEqual({ contact: 'Naveed Akhtar' })
+    // a short run still falls back word by word
+    expect(matchCompany(glass, '555 0142')).toEqual({ contact: 'Naveed Akhtar' })
+  })
+
+  it('reads Urdu and Arabic digits as 0-9 (finding 15)', () => {
+    expect(matchCompany(glass, '۰۳۰۱ ۵۵۵۰۱۴۲')).toEqual({ contact: 'Naveed Akhtar' })
+    expect(matchCompany(glass, '٠٣٠١٥٥٥٠١٤٢')).toEqual({ contact: 'Naveed Akhtar' })
+  })
+
   it('needs 4 digits before a number is read as a phone', () => {
     expect(matchCompany(glass, '301')).toBeNull()
     expect(matchCompany(glass, '0142')).toEqual({ contact: 'Naveed Akhtar' })

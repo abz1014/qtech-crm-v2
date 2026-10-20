@@ -83,7 +83,8 @@ export function AddExpenseDialog({ open, onOpenChange, context, expense, onSaved
   const [busy, setBusy] = useState(false)
   const fromLeg = !!context?.legId
   const orderLabel = context?.orderLabel
-  const sub = expense ? 'Edit expense' : [orderLabel, context?.legLabel].filter(Boolean).join(' · ') || 'Money › Expenses'
+  // the supplier names the supplier order ("ORD-0038 · Alpenmark Controls"); the old "leg A" label is not shown (plain words, 2026-10-19)
+  const sub = expense ? 'Edit expense' : [orderLabel, context?.legId ? context?.payeeName : null].filter(Boolean).join(' · ') || 'Money › Expenses'
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={busy}>
       <DialogContent title={expense ? 'Edit expense' : 'Add expense'} context={expense ? undefined : sub} size="md" className="md:w-[520px]">
@@ -173,7 +174,7 @@ function ExpenseFormReady({
   const pre = (() => {
     if (expense) return { categoryId: expense.categoryId, note: undefined as string | undefined }
     if (context?.categoryId) return { categoryId: context.categoryId, note: 'Chosen for you' }
-    if (fromLeg) return { categoryId: SUPPLIER_PAYMENT_ID, note: 'Opened from a leg' }
+    if (fromLeg) return { categoryId: SUPPLIER_PAYMENT_ID, note: 'Opened from a supplier order' }
     if (lastForOrder && context?.orderId)
       return { categoryId: lastForOrder, note: `Last used on ${context.orderLabel ?? 'this order'}` }
     if (mostUsed) return { categoryId: mostUsed.id, note: 'Most used in the last 30 days' }
@@ -309,14 +310,13 @@ function ExpenseFormReady({
           {lockedPayee ? (
             <div className="grid min-w-0 content-start gap-[6px]">
               <span className="text-sm font-medium leading-5 text-fg">Payee</span>
-              <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded border border-line-strong bg-sunken px-3 text-sm text-fg-2" aria-label="Payee, from the leg">
+              <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded border border-line-strong bg-sunken px-3 text-sm text-fg-2" aria-label="Payee, from the supplier order">
                 <span className="truncate">
                   {context?.payeeName}
-                  {context?.legLabel ? ` · ${context.legLabel}` : ''}
                 </span>
                 <Icon icon={Lock} className="text-fg-muted" />
               </div>
-              <span className="text-xs leading-4 text-fg-2">From the leg</span>
+              <span className="text-xs text-fg-2">From the supplier order</span>
             </div>
           ) : null}
           {amountField}
@@ -347,12 +347,12 @@ function ExpenseFormReady({
               )}
             </FormField>
             {orderId && (legs.data?.length ?? 0) > 0 ? (
-              <FormField<Values, 'legId'> name="legId" label="Leg" requirement="optional">
+              <FormField<Values, 'legId'> name="legId" label="Supplier order" requirement="optional">
                 {f => (
                   <Select
-                    placeholder="No leg"
+                    placeholder="None"
                     value={f.value ?? ''}
-                    options={(legs.data ?? []).map(l => ({ value: l.id, label: `${l.label} · ${l.supplierName}` }))}
+                    options={(legs.data ?? []).map(l => ({ value: l.id, label: l.supplierName || l.label }))}
                     onChange={e => {
                       const leg = legs.data?.find(l => l.id === e.target.value)
                       f.onChange(leg?.id ?? null)

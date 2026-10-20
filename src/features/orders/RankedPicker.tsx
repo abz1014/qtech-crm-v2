@@ -43,9 +43,9 @@ export function RankedOptionRow({ q, among, className }: { q: RankedQuote; among
       <RankBadge rank={q.rank} />
       <span className="grid min-w-0">
         <b className="text-sm font-medium leading-[18px]">{q.supplierName}</b>
-        <span className="text-xs leading-4 text-fg-muted">{longReason(q, among)}</span>
+        <span className="text-xs text-fg-muted">{longReason(q, among)}</span>
       </span>
-      <span className="num text-right text-xs leading-4">
+      <span className="num text-right text-xs">
         {p.price}
         <em className="block font-sans not-italic text-fg-muted">{p.pkr}</em>
       </span>
@@ -98,7 +98,7 @@ export function RankedPicker({
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[min(520px,calc(100vw-32px))] max-w-none p-1">
-        <p className="px-2 pb-1 pt-2 text-xs font-medium leading-[14px] text-fg-muted">{header}</p>
+        <p className="px-2 pb-1 pt-2 text-xs font-medium text-fg-muted">{header}</p>
         <div role="listbox" aria-label={header}>
           {quotes.map(q => {
             const used = usedLineIds?.has(q.lineId) && q.lineId !== value

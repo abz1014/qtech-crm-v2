@@ -140,7 +140,8 @@ export function SitesPanel({
       { id: 'ref', header: 'Reference', value: r => r.number, cell: r => <RefTag item={r} />, width: 132 },
       { id: 'what', header: 'What', value: r => r.what, cell: r => <WhatText item={r} /> },
       { id: 'date', header: 'Date', kind: 'date', value: r => r.date, cell: r => <span className="num">{r.date ? formatShortDate(r.date, today) : 'No date'}</span>, width: 104 },
-      { id: 'state', header: 'State', width: 330, cell: r => <StateChips item={r} /> },
+      // no fixed width: a fixed width truncates, and two chips ("Partly delivered", "Payment overdue") must wrap, never clip
+      { id: 'state', header: 'State', cell: r => <StateChips item={r} /> },
       {
         id: 'repeat',
         header: 'Row actions',

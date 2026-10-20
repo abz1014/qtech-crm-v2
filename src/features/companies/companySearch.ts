@@ -23,20 +23,28 @@ export interface CompanyMatch {
   contact: string | null
 }
 
+/** Urdu (Extended Arabic-Indic, U+06F0-06F9) and Arabic-Indic (U+0660-0669) digits as 0-9, so "۰۳۰۱" is typed as "0301". */
+export function westernDigits(text: string): string {
+  return text.replace(/[٠-٩۰-۹]/g, c => String((c.charCodeAt(0) & 0xf) % 10))
+}
+
 /** A phone number as digits only, without "+" or "00", Pakistan's 92 or the trunk 0: "+92 301 555 0142" -> "3015550142". */
 export function phoneKey(raw: string | null | undefined): string {
   if (!raw) return ''
-  const international = /^\s*(\+|00)/.test(raw)
-  let d = raw.replace(/\D/g, '')
+  const western = westernDigits(raw)
+  const international = /^\s*(\+|00)/.test(western)
+  let d = western.replace(/\D/g, '')
   if (d.startsWith('00')) d = d.slice(2)
   if (d.startsWith('92') && (international || d.length >= 11)) return d.slice(2)
   if (d.startsWith('0')) return d.slice(1)
   return d
 }
 
-const digitCount = (s: string) => s.replace(/\D/g, '').length
+const digitCount = (s: string) => westernDigits(s).replace(/\D/g, '').length
+/** A run of number words with this many digits or more is one phone number: it matches as a whole or not at all. */
+const WHOLE_NUMBER_DIGITS = 7
 /** A word made only of digits and the marks people put in phone numbers. */
-const PHONEISH = /^[+(]?[\d()\-./]*\d[\d()\-./]*$/
+const PHONEISH = /^[+(]?[\d٠-٩۰-۹()\-./]*[\d٠-٩۰-۹][\d٠-٩۰-۹()\-./]*$/
 
 function phoneHit(contacts: readonly SearchContact[], typed: string): SearchContact | undefined {
   if (digitCount(typed) < 4) return undefined
@@ -47,7 +55,8 @@ function phoneHit(contacts: readonly SearchContact[], typed: string): SearchCont
 
 /**
  * Does the company match what was typed? Null when it does not. Consecutive number words are tried together first, so a
- * number typed with spaces ("0301 555 0142") is one phone number; failing that, each word is tried on its own.
+ * number typed with spaces ("0301 555 0142") is one phone number; a run of 7 digits or more matches only as that whole number,
+ * and a shorter run ("0142", "555 0142") falls back to each word on its own. Urdu and Arabic digits count as 0-9.
  */
 export function matchCompany(row: SearchableCompany, query: string): CompanyMatch | null {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
@@ -82,6 +91,8 @@ export function matchCompany(row: SearchableCompany, query: string): CompanyMatc
     const run = words.slice(i, end)
     const whole = run.length > 1 ? phoneHit(row.contacts, run.join(' ')) : undefined
     if (whole) via ??= whole.name
+    // 7 digits or more is one phone number: "0399 9912345" must not match "+92 333 9912345" piece by piece
+    else if (run.length > 1 && digitCount(run.join('')) >= WHOLE_NUMBER_DIGITS) return null
     else if (!run.every(wordMatches)) return null
     i = end
   }

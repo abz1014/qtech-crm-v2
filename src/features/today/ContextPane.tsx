@@ -575,7 +575,7 @@ function howTo(item: TodayItem): string {
     case 'decision_overdue':
       return 'No decision since the bid went out. Open the RFQ to chase the customer, or close it with a reason.'
     case 'place_po':
-      return 'This order has a supplier leg with no purchase order yet. Open the order to place it.'
+      return 'This order has a supplier order with no purchase order yet. Open the order to place it.'
     case 'to_source':
       return 'Some goods on this won order have no supplier yet. Open the order and give each line a supplier, or mark it a service.'
     case 'plan_commissioning':

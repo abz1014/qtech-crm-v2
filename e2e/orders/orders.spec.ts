@@ -284,17 +284,23 @@ test.describe('O01: Mark won creates the order', () => {
 // ------------------------------------------------------------------------------------------------ O03 legs
 
 test.describe('O03: supplier orders, one next-step stamp each', () => {
-  test('Mark placed, Delivered today: 1 tap each, no receiving step, expected date suggested from the lead time, every stamp has an Undo', async ({ page }) => {
+  test('Mark placed (no PO: from the row menu, 2 taps), Delivered today (1 tap), no receiving step, expected date suggested from the lead time, every stamp has an Undo', async ({ page }) => {
     const s = await seedOrder()
     const t = tapper()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     const a = leg(page, 'A')
     await expect(a).toContainText(s.supplierA.name)
-    await expect(a.getByRole('button', { name: /Mark placed/ })).toBeVisible()
+    // not placed and no PO: Issue PO is on the row, "Mark placed, no PO" is in its menu (never both side by side)
+    await expect(a.getByRole('button', { name: `Issue PO, ${s.supplierA.name}` })).toBeVisible()
+    await expect(a.getByRole('button', { name: /Mark placed/ })).toHaveCount(0)
     await expect(a).toContainText('suggested from lead time 2 wks')
     await expect(page.getByTestId('leg-A-state')).toContainText('To place')
+    const placeFromMenu = async () => {
+      await t.tap(a.getByRole('button', { name: `More for ${s.supplierA.name}` }))
+      await t.tap(page.getByRole('menuitem', { name: 'Mark placed, no PO' }))
+    }
 
-    await t.tap(a.getByRole('button', { name: `Mark placed, ${s.supplierA.name}` }))
+    await placeFromMenu()
     await expect(page.getByTestId('leg-A-state')).toContainText('On order')
     const row = await legRow(s.legA)
     expect(row.placed_on).toBe(karachiDay(0))
@@ -305,7 +311,7 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
     await page.getByRole('status').filter({ hasText: 'Marked placed' }).getByRole('button', { name: /Undo/ }).click()
     await expect.poll(async () => (await legRow(s.legA)).placed_on).toBeNull()
     expect((await legRow(s.legA)).expected_on).toBeNull()
-    await t.tap(a.getByRole('button', { name: `Mark placed, ${s.supplierA.name}` }))
+    await placeFromMenu()
     await expect(a.getByRole('button', { name: `Delivered today, ${s.supplierA.name}` })).toBeVisible()
     // there is no receiving step or date anywhere on the leg
     await expect(page.getByRole('button', { name: /Received today/ })).toHaveCount(0)
@@ -316,8 +322,8 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
     // received_on is set by the app to the delivered date
     expect((await legRow(s.legA)).received_on).toBe(karachiDay(0))
     await expect(a.getByRole('button', { name: new RegExp(`(Delivered today|Mark placed), ${s.supplierA.name}`) })).toHaveCount(0)
-    // 3 taps in all: placed (undone), placed again, delivered. Each stamp is exactly 1.
-    expect(t.count).toBe(3)
+    // 5 taps in all: placed without a PO twice (menu + item, the first undone), delivered (1). Issue PO is the 1-tap way to place.
+    expect(t.count).toBe(5)
     // the toast is added after the save returns, which can be a beat after the leg already reads Delivered: click this stamp's own Undo
     await page.getByRole('status').filter({ hasText: 'Marked delivered' }).getByRole('button', { name: /Undo/ }).click()
     await expect.poll(async () => (await legRow(s.legA)).delivered_on).toBeNull()
@@ -536,11 +542,13 @@ test.describe('O03: role views', () => {
     // no money column in the lines table, and no money dimension
     for (const header of ['Unit price', 'Total']) await expect(page.getByRole('columnheader', { name: new RegExp(header) })).toHaveCount(0)
     await expect(page.getByRole('region', { name: 'Items' })).toBeVisible()
-    // the page leads with the engineer's job, and its one green button is Mark done today
+    // the page leads with the engineer's job; supplier B's goods are late, so its one green button is Delivered today, and Mark done today
+    // (planned in 10 days) is still one tap, as a secondary button
     const job = page.getByRole('region', { name: 'Your job' })
     await expect(job).toContainText('Hub plant, kiln line 2')
     await expect(job).toContainText('Mr. Tariq Hussain')
-    await expect(page.locator('#main button.bg-primary:visible')).toHaveText(['Mark done today'])
+    await expect(page.locator('#main button.bg-primary:visible')).toHaveText(['Delivered today'])
+    await expect(job.getByRole('button', { name: 'Mark done today' })).toBeVisible()
 
     const forbidden = /unit_price_net|supplier_unit_price|gst_rate|order_receivables|\/invoices|payments_in|expenses|order_costs|v_order_money|v_order_items_total|invoicing_state|[,=(]gross|[,=(]net\b|invoiced/
     const leaks = urls.filter(u => forbidden.test(u.replace(/^https?:\/\/[^/]+/, '')))
@@ -576,9 +584,10 @@ test.describe('O03: role views', () => {
     await expect(page.getByTestId('order-invoiced')).toContainText('730,420 to invoice')
     await expect(page.getByTestId('order-balance')).toHaveText('730,420')
     await expect(page.getByTestId('payments-empty')).toBeVisible()
-    // ONE green button for the page, chosen by state: supplier A is not ordered from yet, so it is Issue PO
-    await expect(page.getByRole('region', { name: 'Next step' })).toContainText(s.supplierA.name)
-    await expect(page.locator('#main button.bg-primary:visible')).toHaveText(['Issue PO'])
+    // ONE green button for the page, chosen by state (the same order as the list): supplier B's goods are late, which comes first
+    await expect(page.getByRole('region', { name: 'Next step' })).toContainText(`Goods from ${s.supplierB.name} are 3 days late`)
+    await expect(page.locator('#main button.bg-primary:visible')).toHaveText(['Chase goods'])
+    await expect(page.locator('#main button.bg-primary:visible')).toHaveAccessibleName(`Chase goods, ${s.supplierB.name}`)
     // every other action once: Record payment and Create invoice in the strip, Add expense on each supplier order and in Margin
     for (const name of ['Record payment', 'Create invoice']) await expect(page.getByRole('button', { name, exact: true })).toHaveCount(1)
     await expect(page.getByRole('button', { name: `Issue PO, ${s.supplierA.name}` })).toBeEnabled()
@@ -738,7 +747,7 @@ for (const width of [1440, 375]) {
     if (width < 768) {
       // one bar with back and the order number; the next step sits in a bar at the bottom instead of the tabs
       await expect(page.getByRole('button', { name: 'Back' })).toBeVisible()
-      await expect(page.getByTestId('order-sticky-action').getByRole('button', { name: 'Issue PO' })).toBeVisible()
+      await expect(page.getByTestId('order-sticky-action').getByRole('button', { name: /^Chase goods/ })).toBeVisible()
       await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0)
     }
     await review(page, `o03-order-admin-${width}`)

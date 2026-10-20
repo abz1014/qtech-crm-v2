@@ -5,6 +5,7 @@ import { medianDeliveryDays } from '@/features/orders/lib/leadTime'
 import { mapRankRows, type RankedQuote } from '@/features/orders/lib/ranking'
 import type { RankRow } from '@/features/rfqs/lib/ranking/reasons'
 import type { LegPatch } from '@/features/orders/lib/legModel'
+import type { StepLeg } from '@/features/orders/lib/orderSteps'
 
 /*
  * Orders (O01, O03): every database call for converting an RFQ and for the order page. This is the only file that names an
@@ -668,6 +669,10 @@ export interface OrderListRow {
   /** What was ordered, no prices: "Belimo actuator ×6, Memosens pH sensor ×2" and whether there are more lines. */
   what: string
   moreLines: boolean
+  /** Every line's description, lower case, for the search ("an item on line 5" is found too). No price. */
+  itemsText: string
+  /** The supplier orders that supply a goods line (as v_order_state counts them): who to order from or chase, no price. */
+  legs: StepLeg[]
 }
 
 /**
@@ -683,11 +688,11 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
       (from, to) =>
         db
           .from('orders')
-          // the first three lines of each order (description and quantity, never a price) say what was ordered
-          .select('id, number, customer_po_number, ordered_on, owner_id, company_id, commissioning_planned_on, companies(name), company_sites(name), order_items(description, qty, position)')
+          // every line (description, quantity, its supplier order; never a price) and the supplier orders with their dates and supplier
+          .select(
+            'id, number, customer_po_number, ordered_on, owner_id, company_id, commissioning_planned_on, companies(name), company_sites(name), order_items(description, qty, position, supplier_order_id, is_service), supplier_orders(id, placed_on, expected_on, delivered_on, companies(name))',
+          )
           .order('number', { ascending: false })
-          .order('position', { referencedTable: 'order_items' })
-          .limit(LIST_LINES + 1, { referencedTable: 'order_items' })
           .range(from, to) as unknown as PromiseLike<{ data: OrdersJoin[] | null; error: { code?: string; message: string } | null }>,
     ),
     fetchAll(
@@ -743,8 +748,22 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
       dueOn: money && p ? ((p.due_on as string | null | undefined) ?? null) : null,
       costsState: role === 'admin' && p ? ((p.costs_state as string | null | undefined) ?? null) : null,
       ...listWhat(o.order_items ?? []),
+      itemsText: (o.order_items ?? []).map(l => l.description.toLowerCase()).join(' \n '),
+      legs: goodsLegs(o.supplier_orders ?? [], o.order_items ?? []).map(l => ({
+        id: l.id,
+        supplierName: one(l.companies)?.name ?? 'Unknown supplier',
+        placedOn: l.placed_on,
+        expectedOn: l.expected_on,
+        deliveredOn: l.delivered_on,
+      })),
     }
   })
+}
+
+/** The supplier orders that supply at least one goods line, as v_order_state counts them (an empty one is not a step). */
+function goodsLegs<L extends { id: string }>(legs: readonly L[], lines: ReadonlyArray<{ supplier_order_id?: string | null; is_service?: boolean | null }>): L[] {
+  const used = new Set(lines.filter(l => !l.is_service && l.supplier_order_id).map(l => l.supplier_order_id as string))
+  return legs.filter(l => used.has(l.id))
 }
 
 /** How many lines the orders list names per order; one more is read to know whether there are others. */
@@ -773,7 +792,8 @@ type OrdersJoin = {
   commissioning_planned_on?: string | null
   companies: { name: string } | { name: string }[] | null
   company_sites: { name: string } | { name: string }[] | null
-  order_items?: Array<{ description: string; qty: number | string; position: number | null }> | null
+  order_items?: Array<{ description: string; qty: number | string; position: number | null; supplier_order_id?: string | null; is_service?: boolean | null }> | null
+  supplier_orders?: Array<{ id: string; placed_on: string | null; expected_on: string | null; delivered_on: string | null; companies: { name: string } | { name: string }[] | null }> | null
 }
 
 // ---------------------------------------------------------------- a repeat order, or an order that came in without an RFQ (O02)

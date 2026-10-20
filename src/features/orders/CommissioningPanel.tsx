@@ -125,14 +125,14 @@ export function CommissioningPanel({
           </div>
         </div>
       </div>
-      {editing ? <EditDialog order={order} engineers={engineers} onClose={() => setEditing(false)} /> : null}
+      {editing ? <CommissioningEditDialog order={order} engineers={engineers} onClose={() => setEditing(false)} /> : null}
       {editingNotes ? <NotesDialog order={order} onClose={() => setEditingNotes(false)} /> : null}
     </section>
   )
 }
 
 /** Needs it, the planned date and the engineers. Engineers are added and removed at once; the rest saves with the button. */
-function EditDialog({ order, engineers, onClose }: { order: OrderHeader; engineers: readonly PersonRow[]; onClose: () => void }) {
+export function CommissioningEditDialog({ order, engineers, onClose }: { order: OrderHeader; engineers: readonly PersonRow[]; onClose: () => void }) {
   const { toast } = useToast()
   const update = useUpdateOrder(order.id)
   const add = useAddEngineer(order.id)

@@ -52,15 +52,17 @@ describe('Add expense dialog (M03)', () => {
     expect(row).toMatchObject({ amount_pkr: 450, category_id: 'c-snacks', paid_via: 'cash' })
   })
 
-  it('from a leg: Supplier payment, payee and leg filled, the amount starts at the balance, two taps to save', async () => {
+  it('from a supplier order: Supplier payment, payee and supplier order filled, the amount starts at the balance, two taps to save', async () => {
     const user = userEvent.setup()
     const db = setup({
       context: { orderId: 'o1', orderLabel: 'ORD-0038', legId: 'leg1', legLabel: 'leg A', payeeId: 'p1', payeeName: 'Alpenmark Controls GmbH', amount: 384497, amountNote: 'Still owed on leg A: EUR 2,430.00 less the 412,300 advance' },
     })
     await screen.findByRole('textbox', { name: 'Amount, PKR' })
     expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('Supplier payment')
-    expect(screen.getByText('Opened from a leg')).toBeInTheDocument()
-    expect(screen.getByText(/Alpenmark Controls GmbH · leg A/)).toBeInTheDocument()
+    expect(screen.getByText('Opened from a supplier order')).toBeInTheDocument()
+    // the supplier names the supplier order: no "leg A" (plain words, 2026-10-19)
+    expect(screen.getByLabelText('Payee, from the supplier order')).toHaveTextContent('Alpenmark Controls GmbH')
+    expect(screen.getByLabelText('Payee, from the supplier order')).not.toHaveTextContent(/leg/i)
     expect(screen.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('384,497')
     expect(screen.getByText(/Still owed on leg A/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save expense' }))

@@ -43,6 +43,7 @@ describe('companyMeta (g2-company: the line under the name)', () => {
 describe('listPlace (the Companies list: the city, not the country on every row)', () => {
   it('shows the city alone at home, "City, Country" abroad', () => {
     expect(listPlace('Karachi', 'Pakistan', 'Pakistan')).toBe('Karachi')
+    expect(listPlace('Karachi', 'pakistan', 'Pakistan')).toBe('Karachi')
     expect(listPlace('Linz', 'Austria', 'Pakistan')).toBe('Linz, Austria')
     expect(listPlace('Lahore', null, 'Pakistan')).toBe('Lahore')
   })

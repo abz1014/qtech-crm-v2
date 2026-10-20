@@ -88,7 +88,7 @@ function WhatWeKnow({ companyId, view, today }: { companyId: string; view: Suppl
       {facts.empty ? (
         <div className="grid gap-1 px-5 py-5 text-sm">
           <p className="font-medium text-fg">No enquiries yet.</p>
-          <Fine>Ask them for prices on an RFQ and the counts start here.</Fine>
+          <Fine>The counts start with the first RFQ they are asked about.</Fine>
         </div>
       ) : (
         <dl className="grid sm:grid-cols-2">

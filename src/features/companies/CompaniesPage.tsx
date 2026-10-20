@@ -99,7 +99,8 @@ export function CompaniesPage() {
 
   const clearSearch = text.trim() !== '' || filter !== 'all'
   // A typed phone number is not a company name: offer "New company" then, not "Add “0301 5550142”".
-  const typedName = /[a-z]/i.test(text) ? text.trim() : ''
+  // any script's letters make it a name (an Urdu name gets "Add …" too); a number alone is not offered as a company name
+  const typedName = /\p{L}/u.test(text) ? text.trim() : ''
 
   return (
     <div className="mx-auto grid w-full max-w-table content-start gap-4 px-4 pb-12 pt-6 md:px-8">

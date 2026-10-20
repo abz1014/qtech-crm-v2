@@ -16,6 +16,7 @@ interface ListSeed {
   /** a: goods to place, commissioning planned, assigned to the fixture engineer. b: goods late. c: delivered. d: cancelled. */
   orders: Record<'a' | 'b' | 'c' | 'd', { id: string; number: number; po: string }>
   engineerName: string
+  supplierName: string
 }
 
 async function seedList(): Promise<ListSeed> {
@@ -36,7 +37,7 @@ async function seedList(): Promise<ListSeed> {
   const b = await make('B', {}, { placed_on: karachiDay(-10), expected_on: karachiDay(-2) })
   const c = await make('C', {}, { placed_on: karachiDay(-10), expected_on: karachiDay(-4), received_on: karachiDay(-3), delivered_on: karachiDay(-3) })
   const d = await make('D', { cancelled_on: karachiDay(-1), cancel_reason: 'customer_cancelled' }, {})
-  return { tag, company, orders: { a, b, c, d }, engineerName: engineer.name }
+  return { tag, company, orders: { a, b, c, d }, engineerName: engineer.name, supplierName: supplier.name }
 }
 
 const row = (page: Page, o: { number: number }) => page.getByRole('row', { name: new RegExp(`ORD-${String(o.number).padStart(4, '0')}`) })
@@ -61,10 +62,11 @@ test.describe('O04: the orders list', () => {
     await expect(page.getByRole('tab', { name: /^Done/ })).toContainText('0')
     await expect(page.getByRole('tab', { name: /^Cancelled/ })).toContainText('1')
     // one plain next step per row instead of four chips
-    await expect(row(page, s.orders.a)).toContainText('Place the supplier order')
+    // the supplier is named, and late goods say by how many days (b was expected 2 days ago)
+    await expect(row(page, s.orders.a)).toContainText(`Place the order with ${s.supplierName}`)
     await expect(row(page, s.orders.a)).toContainText(`Line A ${s.tag} ×1`)
     await expect(row(page, s.orders.a)).toContainText(s.orders.a.po)
-    await expect(row(page, s.orders.b)).toContainText('Chase the supplier: goods late')
+    await expect(row(page, s.orders.b)).toContainText(`Chase ${s.supplierName}: goods 2 days late`)
     await expect(row(page, s.orders.c)).toContainText('Create the invoice')
     await expect(row(page, s.orders.a).locator('[data-status]')).toHaveCount(0)
     await expect(page.getByRole('columnheader', { name: 'Next step' })).toBeVisible()
@@ -161,7 +163,7 @@ test.describe('O04: the orders list', () => {
     const text = await page.locator('#main').innerText()
     expect(text).not.toMatch(/Invoic|Payment|Gross|Value|PKR|Unpaid|Not invoiced|Repeat a past order|New order/)
     // the engineer's next steps are about goods and commissioning only
-    await expect(row(page, s.orders.b)).toContainText('Chase the supplier: goods late')
+    await expect(row(page, s.orders.b)).toContainText(`Chase ${s.supplierName}: goods 2 days late`)
     for (const h of ['Invoicing', 'Payment', 'Gross', 'Value']) await expect(page.getByRole('columnheader', { name: new RegExp(h) })).toHaveCount(0)
     await openFilters(page)
     await expect(page.getByLabel('Commissioning state')).toBeVisible()

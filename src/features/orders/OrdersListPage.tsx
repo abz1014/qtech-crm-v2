@@ -54,6 +54,14 @@ const STATUS_DIM: Record<Dimension, StatusDimension> = { goods: 'goods', commiss
 
 const valueLabel = (dim: Dimension, value: string) => resolveStatus(STATUS_DIM[dim], value).label
 
+/** What "done" means differs by role (v_order_state.is_done): sales are done once it is invoiced; their Next step still says if it is unpaid. */
+const doneMeaning = (role: string) =>
+  role === 'sales'
+    ? 'An order is done for you when the goods are delivered, commissioning is done and it is fully invoiced. If the customer has not paid, its Next step still says so.'
+    : role === 'engineer'
+      ? 'An order is done for you when the goods are delivered and commissioning is done.'
+      : 'An order is done when the goods are delivered, commissioning is done, it is paid and its costs are complete.'
+
 function NextStepText({ step }: { step: NextStep }) {
   return (
     <span
@@ -242,7 +250,7 @@ export default function OrdersListPage() {
         </EmptyState>
       ) : (
         <EmptyState icon={CircleCheck} title={filters.tab === 'done' ? 'Nothing is done yet' : 'Nothing has been cancelled'}>
-          {filters.tab === 'done' ? 'An order is done when the goods are delivered, commissioning is done and it is paid.' : 'Cancelled orders stay on record here, with their reason.'}
+          {filters.tab === 'done' ? doneMeaning(role) : 'Cancelled orders stay on record here, with their reason.'}
         </EmptyState>
       )
     ) : filters.owner === 'mine' && mineCount === 0 && allCount > 0 && !filters.text && dimsOn === 0 ? (

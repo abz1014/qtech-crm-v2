@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Ellipsis, FileText, MessageSquareWarning, Plus, Receipt, RefreshCw, Split, TriangleAlert } from 'lucide-react'
+import { Ellipsis, FileText, MessageSquareWarning, Plus, Receipt, RefreshCw, Split, TriangleAlert, Truck } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { convertToPaisa, formatAmount, formatPaisa } from '@/lib/money'
 import { orderRef, poRef } from '@/lib/refs'
@@ -32,8 +32,8 @@ import { TapDate, TapText } from '@/features/orders/TapEdit'
  * text that edits on tap (optional). When placed, the expected date is suggested from the placed date plus the supplier's lead time.
  *
  * The page has one green button (the order header's next step, lib/primaryAction.ts); here every button is secondary. Visible on the row:
- * the stamp, "Issue PO" while there is no PO (admin and sales: a PO carries prices) and "Chase goods" once the goods are late. The rest is
- * in the row's menu: View PO, Revise PO, Chase goods (before they are late) and Add expense (admin; the M03 dialog with this supplier as
+ * the stamp, "Issue PO" while there is no PO (admin and sales: a PO carries prices; "Mark placed, no PO" is then in the menu) and "Chase
+ * goods" once the goods are late. The rest is in the row's menu: View PO, Revise PO, Chase goods (before they are late) and Add expense (admin; the M03 dialog with this supplier as
  * the payee and Supplier payment as the category: the one Add expense per supplier order).
  */
 const STATE_DIM: Record<string, string> = { 'to-place': 'to-place', 'on-order': 'on-order', late: 'late', received: 'received', delivered: 'delivered' }
@@ -186,7 +186,10 @@ function Leg({
       : undefined
 
   // The default expected date of an order placed by any route (a PO issued, a typed date) is written by the database (0067); the stamp sends the same date at once.
-  const menu = Boolean(money && po) || (canChase && !late) || isAdmin
+  // Not placed and no PO yet (admin and sales): Issue PO is the way to place it, so "Mark placed" (an order placed by phone or WhatsApp,
+  // no PO) goes into the menu: never two buttons for one step side by side. An engineer, who cannot issue a PO, keeps Mark placed.
+  const placeInMenu = Boolean(money && !po && stamp?.step === 'place')
+  const menu = Boolean(money && po) || (canChase && !late) || isAdmin || placeInMenu
 
   return (
     <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className="grid gap-3 px-4 py-4 md:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-6">
@@ -257,7 +260,7 @@ function Leg({
         ) : null}
         {canEdit ? (
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            {stamp ? (
+            {stamp && !placeInMenu ? (
               <Button size="sm" onClick={actions.doStamp} busy={actions.pending} busyLabel="Saving" aria-label={`${stamp.label}, ${name}`}>
                 {stamp.label}
               </Button>
@@ -289,6 +292,11 @@ function Leg({
                   {money && po ? (
                     <MenuItem icon={RefreshCw} onClick={onIssue}>
                       {`Revise PO (R${po.revision + 1})`}
+                    </MenuItem>
+                  ) : null}
+                  {placeInMenu ? (
+                    <MenuItem icon={Truck} onClick={actions.doStamp} disabled={actions.pending}>
+                      Mark placed, no PO
                     </MenuItem>
                   ) : null}
                   {canChase && !late ? (

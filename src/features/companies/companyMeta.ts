@@ -44,7 +44,8 @@ export function monthYearOf(iso: string): string {
 export function listPlace(city: string | null | undefined, country: string | null | undefined, common: string | null): string | null {
   const c = city?.trim()
   const k = country?.trim()
-  if (c) return k && k !== common ? `${c}, ${k}` : c
+  // country is free text: "Pakistan" and "pakistan" are the same country
+  if (c) return k && k.toLowerCase() !== common?.toLowerCase() ? `${c}, ${k}` : c
   return k || null
 }
 

@@ -46,7 +46,7 @@ export function matchesText(row: OrderListRow, text: string): boolean {
   if (num && row.number === Number(num[2])) return true
   // a bare number is the order number (above), never a fragment of the padded ref
   const ref = `ord-${String(row.number).padStart(4, '0')}`
-  return [row.customerPo, row.companyName, row.siteName, row.what, q.startsWith('ord') ? ref : null].some(v => (v ?? '').toLowerCase().includes(q))
+  return [row.customerPo, row.companyName, row.siteName, row.itemsText, q.startsWith('ord') ? ref : null].some(v => (v ?? '').toLowerCase().includes(q))
 }
 
 export function ownedBy(row: OrderListRow, userId: string | null, role: string): boolean {

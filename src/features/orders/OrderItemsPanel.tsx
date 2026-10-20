@@ -172,6 +172,37 @@ export function OrderItemsPanel({
     )
   }
 
+  /**
+   * A split item's one selling price (A8), edited in the item cell so it works at every width (the Unit price column is hidden below
+   * 1024): the amount, Save and Cancel. Enter saves, Escape cancels.
+   */
+  const groupEditor = (r: Row) => (
+    <span className="flex flex-wrap items-center gap-2" role="group" aria-label={`Selling price, ${r.description}`}>
+      <NumberInput
+        value={groupDraft}
+        onChange={setGroupDraft}
+        aria-label={`Selling price before GST, PKR, ${r.description}`}
+        data-autofocus
+        autoFocus
+        className="w-[160px]"
+        onKeyDown={e => {
+          if (e.key === 'Enter') void saveGroup(r)
+          if (e.key === 'Escape') {
+            e.stopPropagation()
+            setEditingGroup(null)
+          }
+        }}
+      />
+      <Button size="sm" variant="primary" onClick={() => void saveGroup(r)} busy={setGroupPrice.isPending} busyLabel="Saving" aria-label={`Save price, ${r.description}`}>
+        Save
+      </Button>
+      <Button size="sm" variant="quiet" onClick={() => setEditingGroup(null)} aria-label="Cancel price edit">
+        Cancel
+      </Button>
+    </span>
+  )
+  const groupPriceText = (r: Row) =>
+    r.groupPrice === 'mixed' ? <span className="text-fg-muted">Mixed</span> : r.unitPriceNet === null ? <span className="text-fg-muted">Not set</span> : <span className="num">{formatAmount(r.unitPriceNet)}</span>
   const itemCell = (r: Row) => (
     <span className="grid min-w-[200px] grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-2 whitespace-normal">
       <span className="num text-xs text-fg-muted">{r.no}</span>
@@ -182,6 +213,15 @@ export function OrderItemsPanel({
             <Split size={12} aria-hidden="true" />
             split across {r.members?.length ?? 0} suppliers
           </span>
+          {editingGroup === r.id ? (
+            groupEditor(r)
+          ) : money ? (
+            // below 1024 the Unit price column is hidden: the one selling price, and its edit, sit here
+            <span className="inline-flex items-center gap-1 text-sm lg:hidden">
+              {groupPriceText(r)} <span className="text-fg-muted">each</span>
+              {editable && !showEdit ? <Button size="sm" variant="quiet" icon={Pencil} aria-label={`Edit price, ${r.description}`} onClick={() => startGroupEdit(r)} /> : null}
+            </span>
+          ) : null}
         </span>
       ) : r.kind === 'part' ? (
         <span className="grid min-w-0 gap-px">
@@ -223,26 +263,11 @@ export function OrderItemsPanel({
     cell: r =>
       r.kind !== 'head' ? (
         <Money value={r.unitPriceNet} prefix={false} />
-      ) : editingGroup === r.id ? (
-        <NumberInput
-          value={groupDraft}
-          onChange={setGroupDraft}
-          aria-label={`Selling price before GST, PKR, ${r.description}`}
-          data-autofocus
-          autoFocus
-          onKeyDown={e => {
-            if (e.key === 'Enter') void saveGroup(r)
-            if (e.key === 'Escape') {
-              e.stopPropagation()
-              setEditingGroup(null)
-            }
-          }}
-        />
       ) : (
         <span className="inline-flex items-center justify-end gap-1">
-          {r.groupPrice === 'mixed' ? <span className="text-fg-muted">Mixed</span> : r.unitPriceNet === null ? <span className="text-fg-muted">Not set</span> : <span className="num">{formatAmount(r.unitPriceNet)}</span>}
-          {/* a split item's one selling price stays one tap away (A8); in edit mode the row's own Edit price does it */}
-          {editable && !showEdit ? <Button size="sm" variant="quiet" icon={Pencil} aria-label={`Edit price, ${r.description}`} onClick={() => startGroupEdit(r)} /> : null}
+          {groupPriceText(r)}
+          {/* a split item's one selling price stays one tap away (A8); the editor opens in the item cell; in edit mode the row's own Edit price does it */}
+          {editable && !showEdit && editingGroup !== r.id ? <Button size="sm" variant="quiet" icon={Pencil} aria-label={`Edit price, ${r.description}`} onClick={() => startGroupEdit(r)} /> : null}
         </span>
       ),
     hideBelowLg: true,
@@ -283,16 +308,7 @@ export function OrderItemsPanel({
     hiddenHeader: true,
     cell: r =>
       r.kind === 'head' ? (
-        editingGroup === r.id ? (
-          <span className="flex gap-1">
-            <Button size="sm" variant="primary" onClick={() => void saveGroup(r)} busy={setGroupPrice.isPending} busyLabel="Saving" aria-label={`Save price, ${r.description}`}>
-              Save
-            </Button>
-            <Button size="sm" variant="quiet" onClick={() => setEditingGroup(null)} aria-label="Cancel price edit">
-              Cancel
-            </Button>
-          </span>
-        ) : (
+        editingGroup === r.id ? null : (
           <Button size="sm" variant="quiet" icon={Pencil} aria-label={`Edit price, ${r.description}`} onClick={() => startGroupEdit(r)}>
             Edit price
           </Button>
@@ -369,12 +385,7 @@ export function OrderItemsPanel({
               </span>
               {editable ? (
                 editingGroup === r.id ? (
-                  <span className="flex items-center gap-2">
-                    <NumberInput value={groupDraft} onChange={setGroupDraft} aria-label={`Selling price before GST, PKR, ${r.description}`} onKeyDown={e => e.key === 'Enter' && void saveGroup(r)} />
-                    <Button size="sm" variant="primary" onClick={() => void saveGroup(r)} busy={setGroupPrice.isPending} busyLabel="Saving" aria-label={`Save price, ${r.description}`}>
-                      Save
-                    </Button>
-                  </span>
+                  groupEditor(r)
                 ) : (
                   <Button size="sm" variant="quiet" icon={Pencil} className="justify-self-start" aria-label={`Edit price, ${r.description}`} onClick={() => startGroupEdit(r)}>
                     Edit price

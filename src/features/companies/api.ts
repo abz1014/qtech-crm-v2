@@ -57,7 +57,8 @@ export async function listCompanies(): Promise<CompanyListRow[]> {
     fetchAll<{ company_id: string }>((from, to) => db.from('rfqs').select('company_id').range(from, to)),
     fetchAll<{ company_id: string }>((from, to) => db.from('orders').select('company_id').range(from, to)),
     fetchAll<Pick<TableRow<'contacts'>, 'company_id' | 'name' | 'phone'>>((from, to) =>
-      db.from('contacts').select('company_id, name, phone').order('name').range(from, to),
+      // ordered by id: names repeat ("Accounts"), and only a unique order pages stably across 1000-row pages
+      db.from('contacts').select('company_id, name, phone').order('id').range(from, to),
     ),
   ])
   const roleBy = new Map(roles.map(r => [r.company_id, asRole(r.role)]))

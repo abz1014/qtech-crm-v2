@@ -201,7 +201,9 @@ test('goods late on a repeat order: late goods are raised even though no quote e
   const id = page.url().split('/').pop() as string
 
   // The supplier is ordered from with one tap; the goods have not come twenty days later (the date is moved back).
-  await legLoc(page, 'A').getByRole('button', { name: `Mark placed, ${supplier.name}` }).click()
+  // ordered by phone, no PO: "Mark placed, no PO" from the row's menu
+  await legLoc(page, 'A').getByRole('button', { name: `More for ${supplier.name}` }).click()
+  await page.getByRole('menuitem', { name: 'Mark placed, no PO' }).click()
   const legs = await must(rest<{ id: string }[]>('admin', `supplier_orders?order_id=eq.${id}&select=id`))
   await expect.poll(async () => (await must(rest<{ placed_on: string | null }[]>('admin', `supplier_orders?id=eq.${legs[0].id}&select=placed_on`)))[0].placed_on).toBe(today)
   // The leg got its expected date when it was placed (0067: no lead time on a repeat leg, so the supplier's record or 30 days), not by a person.

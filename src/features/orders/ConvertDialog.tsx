@@ -281,7 +281,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
             </Banner>
           ) : (
             <div className="overflow-hidden rounded border" role="group" aria-label="Suppliers by line">
-              <div className={cn('hidden border-b bg-sunken px-4 py-2 text-xs font-medium leading-4 text-fg-muted', GRID)}>
+              <div className={cn('hidden border-b bg-sunken px-4 py-2 text-xs font-medium text-fg-muted', GRID)}>
                 <span />
                 <span>Item</span>
                 <span className="text-right">Qty</span>
@@ -378,7 +378,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                                   aria-label={`Quantity, part ${i + 1}, line ${n}`}
                                   className={cn('w-16', auto && 'border-dashed bg-sunken')}
                                 />
-                                <span className="text-xs leading-[14px] text-fg-muted">{auto ? 'remainder, auto' : p.qty === undefined ? 'type it' : 'typed'}</span>
+                                <span className="text-xs text-fg-muted">{auto ? 'remainder, auto' : p.qty === undefined ? 'type it' : 'typed'}</span>
                               </div>
                               <RankedPicker
                                 label={`Supplier for part ${i + 1}, line ${n}`}
@@ -398,7 +398,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                     {isSplitItem && chk ? (
                       <>
                         {chk.mismatch && !chk.incomplete ? (
-                          <div role="alert" className="mx-4 mb-3 flex items-start gap-3 rounded border border-tone-warning-fg/30 bg-tone-warning-bg px-3 py-2 text-xs leading-4">
+                          <div role="alert" className="mx-4 mb-3 flex items-start gap-3 rounded border border-tone-warning-fg/30 bg-tone-warning-bg px-3 py-2 text-xs">
                             <Icon icon={TriangleAlert} size="sm" className="mt-px text-tone-warning-fg" />
                             <span>
                               <b className="font-medium">

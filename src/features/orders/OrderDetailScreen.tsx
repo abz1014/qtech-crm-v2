@@ -10,7 +10,7 @@ import { OrderHeaderBlock, OrderMoreMenu } from '@/features/orders/OrderHeaderBl
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { orderRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
-import { orderPrimary } from '@/features/orders/lib/primaryAction'
+import { orderFacts, pageStep } from '@/features/orders/lib/primaryAction'
 import { businessToday } from '@/lib/dates'
 import { OrderItemsPanel } from '@/features/orders/OrderItemsPanel'
 import { LegsPanel } from '@/features/orders/LegsPanel'
@@ -85,9 +85,13 @@ export default function OrderDetailScreen() {
   const engineers = useOrderEngineers(id)
   const orderMoney = useOrderMoney(id, role === 'admin' ? 'admin' : role === 'sales' ? 'sales' : null)
   const pos = useLegPos(id, (legs.data ?? []).map(l => l.id), money)
-  // The page's ONE primary (green) button, chosen by the order's state (lib/primaryAction.ts). Worked out once, here, so the header draws it,
-  // the panels below know not to repeat it, and the phone knows to show it in a bar at the bottom instead of the tabs.
-  const primary = header.data ? orderPrimary(header.data, legs.data ?? [], pos.data ?? [], role, orderMoney.data, businessToday()) : null
+  // The page's ONE primary (green) button and its sentence (lib/orderSteps.ts, the same ordering as the orders list). Worked out once, here,
+  // so the header draws it, the panels below know not to repeat it, and the phone knows to show it in a bar at the bottom instead of the
+  // tabs. Only once the supplier orders (and for admin and sales their POs and the balance) have loaded: a guess from half the facts
+  // would show the wrong green button for a moment, or for good when a read fails (then there is no step at all).
+  const ready = Boolean(header.data && items.data && legs.data && (!money || (pos.isSuccess && orderMoney.isSuccess)))
+  const next = ready && header.data ? pageStep(orderFacts(header.data, legs.data ?? [], items.data ?? [], pos.data ?? [], role, orderMoney.data, businessToday())) : null
+  const primary = next?.primary ?? null
   // Phones get one bar: back (to where the person came from, else the orders list), the order number, and the order's menu.
   useMobileBar({
     title: header.data ? orderRef(header.data.number) : 'Order',
@@ -159,7 +163,7 @@ export default function OrderDetailScreen() {
         orderMoney={orderMoney.data}
         moneyLoading={money && orderMoney.isPending}
         pos={pos.data ?? []}
-        primary={primary}
+        next={next}
       />
 
       <div className="mt-6 grid gap-6">

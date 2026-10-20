@@ -12,7 +12,6 @@ import { OrderHeaderBlock } from '@/features/orders/OrderHeaderBlock'
 import { OrderItemsPanel } from '@/features/orders/OrderItemsPanel'
 import { LegsPanel } from '@/features/orders/LegsPanel'
 import OrdersListPage from '@/features/orders/OrdersListPage'
-import { orderPrimary } from '@/features/orders/lib/primaryAction'
 
 /*
  * The order page and the orders list after the UX audit of 2026-10-19: one primary (green) button for the whole page, chosen by state;
@@ -77,12 +76,11 @@ afterEach(() => installFakeDb(() => ({})).uninstall())
 const greens = (root: HTMLElement) => [...root.querySelectorAll('button.bg-primary')] as HTMLButtonElement[]
 
 function page(role: 'admin' | 'sales' | 'engineer', o: OrderHeader = order, ls: OrderLegRow[] = legs, m: OrderMoney | null = money) {
-  const primary = orderPrimary(o, ls, [], role, role === 'engineer' ? null : m, TODAY)
   const isMoney = role !== 'engineer'
   const its = isMoney ? items : items.map(i => ({ ...i, unitPriceNet: null, gstRate: null, supplierUnitPrice: null }))
   return mount(
     <div id="main">
-      <OrderHeaderBlock order={o} legs={ls} items={its} engineers={[{ id: 'e', name: 'Bilal' }]} role={role} orderMoney={isMoney ? m : null} pos={[]} primary={primary} />
+      <OrderHeaderBlock order={o} legs={ls} items={its} engineers={[{ id: 'e', name: 'Bilal' }]} role={role} orderMoney={isMoney ? m : null} pos={[]} />
       <OrderItemsPanel order={o} items={its} legs={ls} money={isMoney} canEdit={isMoney} basisUnknown={false} />
       <LegsPanel order={o} legs={ls} items={its} pos={[]} money={isMoney} isAdmin={role === 'admin'} canEdit />
     </div>,
@@ -91,13 +89,13 @@ function page(role: 'admin' | 'sales' | 'engineer', o: OrderHeader = order, ls: 
 }
 
 describe('the order page: one primary button, chosen by state', () => {
-  it('admin: the next step is Issue PO to the supplier not ordered from yet, and it is the only green button', () => {
+  it('admin: late goods come first (Chase goods), and it is the only green button; its name says which supplier', () => {
     installFakeDb(() => ({ data: [] }))
     const { container } = page('admin')
     const next = screen.getByRole('region', { name: 'Next step' })
-    expect(next).toHaveTextContent('Order the goods from Alpenmark Controls')
+    expect(next).toHaveTextContent('Goods from Dubai Instrumentation are 3 days late')
     expect(greens(container)).toHaveLength(1)
-    expect(greens(container)[0]).toHaveTextContent('Issue PO')
+    expect(greens(container)[0]).toHaveAccessibleName('Chase goods, Dubai Instrumentation')
     // Record payment appears once (the Payment cell), never in the header as well; Add expense is not in the header
     expect(screen.getAllByRole('button', { name: 'Record payment' })).toHaveLength(1)
     expect(within(screen.getByLabelText('State of this order')).getByRole('button', { name: 'Record payment' })).toBeInTheDocument()
@@ -108,6 +106,45 @@ describe('the order page: one primary button, chosen by state', () => {
     expect(screen.queryByRole('region', { name: 'Invoices and payments' })).toBeNull()
   })
 
+  it('with nothing late, the next step is Issue PO to the supplier not ordered from yet, named for assistive tech', () => {
+    installFakeDb(() => ({ data: [] }))
+    const onTime = legs.map(l => (l.id === 'lb' ? { ...l, expectedOn: day(5) } : l))
+    const { container } = page('admin', order, onTime)
+    expect(screen.getByRole('region', { name: 'Next step' })).toHaveTextContent('Order the goods from Alpenmark Controls')
+    expect(greens(container)).toHaveLength(1)
+    expect(greens(container)[0]).toHaveAccessibleName('Issue PO, Alpenmark Controls')
+    // not placed and no PO yet: Issue PO on the row, Mark placed in the row's menu, never both side by side
+    const row = within(screen.getByRole('region', { name: 'Supplier orders' })).getByRole('listitem', { name: 'Supplier order, Alpenmark Controls' })
+    expect(within(row).getByRole('button', { name: 'Issue PO, Alpenmark Controls' })).toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: /Mark placed/ })).toBeNull()
+  })
+
+  it('a supplier added with no goods lines is never the next step', () => {
+    installFakeDb(() => ({ data: [] }))
+    const delivered = legs.map(l => ({ ...l, placedOn: day(-10), deliveredOn: day(-1), receivedOn: day(-1) }))
+    const empty = { ...legs[0], id: 'le', supplierName: 'Empty Co', placedOn: null, deliveredOn: null }
+    const { container } = page('admin', { ...order, needsCommissioning: false, state: { ...order.state!, goods: 'delivered', commissioning: 'n_a' } }, [...delivered, empty])
+    expect(greens(container).map(b => b.textContent)).toEqual(['Create invoice'])
+    expect(screen.getByRole('region', { name: 'Next step' })).not.toHaveTextContent('Empty Co')
+  })
+
+  it('shows no next step and no green button until the supplier orders have loaded (review finding 7)', () => {
+    installFakeDb(() => ({ data: [] }))
+    const { container } = mount(<OrderHeaderBlock order={order} legs={[]} items={[]} engineers={[]} role="admin" orderMoney={money} next={null} />)
+    expect(screen.getByRole('region', { name: 'Next step' })).toHaveAttribute('aria-busy', 'true')
+    expect(greens(container)).toHaveLength(0)
+    expect(container.textContent).not.toMatch(/Everything is delivered|Create invoice ·/)
+  })
+
+  it('a cancelled order with an unknown price basis can still be answered by admin (review finding 6)', () => {
+    installFakeDb(() => ({ data: [] }))
+    const cancelled = { ...order, cancelledOn: day(-1), cancelReason: 'customer_cancelled', state: { ...order.state!, lifecycle: 'cancelled', dataTrust: 'basis_unknown' } }
+    mount(<OrderHeaderBlock order={cancelled} legs={legs} items={items} engineers={[]} role="admin" orderMoney={money} />)
+    expect(screen.getByText('Is GST included in these prices?')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Is GST included?' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Next step' })).toBeNull()
+  })
+
   it('when every supplier order is delivered, Create invoice becomes the green button and is not repeated in the strip', () => {
     installFakeDb(() => ({ data: [] }))
     const delivered = legs.map(l => ({ ...l, placedOn: day(-10), deliveredOn: day(-1), receivedOn: day(-1) }))
@@ -116,14 +153,16 @@ describe('the order page: one primary button, chosen by state', () => {
     expect(screen.getAllByRole('button', { name: 'Create invoice' })).toHaveLength(1)
   })
 
-  it('the engineer leads with their job: site, contact, planned date and Mark done today; no money anywhere', () => {
+  it('the engineer leads with their job: site, contact, planned date; Delivered today is green and Mark done today waits for its date', () => {
     installFakeDb(() => ({ data: [] }))
     const { container } = page('engineer')
     const job = screen.getByRole('region', { name: 'Your job' })
     expect(job).toHaveTextContent('Hub plant, kiln line 2')
     expect(job).toHaveTextContent('Hub Chowki Road, Lasbela')
     expect(within(job).getByRole('link', { name: /0301 555 0142/ })).toHaveAttribute('href', 'tel:03015550142')
-    expect(greens(container).map(b => b.textContent)).toEqual(['Mark done today'])
+    // commissioning is planned in 10 days: not the green button yet, still one tap
+    expect(greens(container).map(b => b.getAttribute('aria-label'))).toEqual(['Delivered today, Dubai Instrumentation'])
+    expect(within(job).getByRole('button', { name: 'Mark done today' })).not.toHaveClass('bg-primary')
     expect(within(job).getByRole('button', { name: 'Change planned date' })).toBeInTheDocument()
     expect(container.textContent).not.toMatch(/PKR|48,500|GST|Invoic|Payment|Record payment|Issue PO|Add expense/)
   })
@@ -152,6 +191,24 @@ describe('the items table: five columns, the rest behind "Edit GST and lines"', 
     expect(screen.getByRole('button', { name: 'Split line 1' })).toBeInTheDocument()
   })
 
+  it("a split item's one selling price edits in place with Save and Cancel, without turning on Edit GST and lines (review finding 8)", async () => {
+    const db = installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    const split = [
+      item({ id: 'p1', number: 1, description: 'Pressure transmitter', qty: 3, unitPriceNet: 134000, legId: 'la', rfqItemId: 'r1' }),
+      item({ id: 'p2', number: 2, description: 'Pressure transmitter', qty: 1, unitPriceNet: 134000, legId: 'lb', rfqItemId: 'r1' }),
+    ]
+    mount(<OrderItemsPanel order={order} items={split} legs={legs} money canEdit basisUnknown={false} />)
+    // the pencil is one tap away in the default five-column table (two copies exist for the two widths; only one is ever shown)
+    await user.click(screen.getAllByRole('button', { name: 'Edit price, Pressure transmitter' })[0])
+    const editor = screen.getByRole('group', { name: 'Selling price, Pressure transmitter' })
+    expect(within(editor).getByRole('button', { name: 'Cancel price edit' })).toBeInTheDocument()
+    await user.clear(within(editor).getByRole('textbox', { name: /Selling price before GST, PKR/ }))
+    await user.type(within(editor).getByRole('textbox', { name: /Selling price before GST, PKR/ }), '140000')
+    await user.click(within(editor).getByRole('button', { name: 'Save price, Pressure transmitter' }))
+    await waitFor(() => expect(db.calls.some(c => c.target === 'order_items' && c.verb === 'update')).toBe(true))
+  })
+
   it('an engineer gets Item, Qty and Supplier only', () => {
     installFakeDb(() => ({ data: [] }))
     page('engineer')
@@ -178,7 +235,7 @@ describe('supplier orders, in plain words', () => {
 
 describe('the orders list: one Next step column', () => {
   const listRows = [
-    { id: 'a', number: 38, customer_po_number: '253074', ordered_on: day(-5), owner_id: 'u', company_id: 'c', commissioning_planned_on: null, companies: { name: 'Punjab Cement Ltd' }, company_sites: { name: 'Hub plant' }, order_items: [{ description: 'Belimo actuator', qty: 6, position: 0 }, { description: 'pH sensor', qty: 2, position: 1 }, { description: 'Cable', qty: 1, position: 2 }] },
+    { id: 'a', number: 38, customer_po_number: '253074', ordered_on: day(-5), owner_id: 'u', company_id: 'c', commissioning_planned_on: null, companies: { name: 'Punjab Cement Ltd' }, company_sites: { name: 'Hub plant' }, order_items: [{ description: 'Belimo actuator', qty: 6, position: 0, supplier_order_id: 'la', is_service: false }, { description: 'pH sensor', qty: 2, position: 1 }, { description: 'Cable', qty: 1, position: 2 }], supplier_orders: [{ id: 'la', placed_on: null, expected_on: null, delivered_on: null, companies: { name: 'Alpenmark Controls' } }, { id: 'empty', placed_on: null, expected_on: null, delivered_on: null, companies: { name: 'Empty Co' } }] },
     { id: 'b', number: 39, customer_po_number: null, ordered_on: day(-9), owner_id: 'u', company_id: 'c2', commissioning_planned_on: null, companies: { name: 'Faisalabad Textile Mills' }, company_sites: null, order_items: [] },
   ]
   const states = [
@@ -199,7 +256,8 @@ describe('the orders list: one Next step column', () => {
     await waitFor(() => expect(screen.getAllByRole('row', { name: /ORD-0038/ }).length).toBeGreaterThan(0))
     const a = screen.getAllByRole('row', { name: /ORD-0038/ })[0]
     expect(a).toHaveTextContent('Belimo actuator ×6, pH sensor ×2 + more')
-    expect(a).toHaveTextContent('Place the supplier order')
+    // the supplier is named; a supplier order with no goods line is not counted
+    expect(a).toHaveTextContent('Place the order with Alpenmark Controls')
     expect(screen.getAllByRole('row', { name: /ORD-0039/ })[0]).toHaveTextContent('Chase the supplier: goods late')
     expect(container.querySelectorAll('tbody [data-status]')).toHaveLength(0)
     const headers = screen

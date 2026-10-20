@@ -99,7 +99,7 @@ test.describe('companies list search (audit F1)', () => {
     const contact = `Rukhsana${tag} Iqbal`
     let local = ''
     do local = String(1_000_000 + Math.floor(Math.random() * 8_999_999))
-    while (local.includes('399')) // so "0399 <local>" below can match nothing of ours
+    while (`333${local}`.includes('399')) // the saved key is "333" + local: "0399 <local>" below must match nothing of ours
     await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: company.id, name: contact, phone: `+92 333 ${local}` } }))
 
     await openAs(page, 'sales', '/companies')
