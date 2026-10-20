@@ -90,6 +90,26 @@ real output of run 38708549583 (`scripts/fixtures/drift-rls-auto-enable.sql`).
 S15 acceptance: migration list matches; schema drift = none; remote types
 artifact for reference.
 
+## Auth session settings (owner, dashboard)
+
+`supabase/config.toml` configures only the local and CI stack: `supabase db push` does not carry Auth settings to the
+hosted project. Set these once in the dashboard of project `yafbphagorydbitfgfmg` so it matches the repo:
+
+| Where | Setting | Value |
+| ----- | ------- | ----- |
+| Authentication > Configuration > **Sessions** (older dashboards: Authentication > Settings > User Sessions) | **Refresh token reuse interval** | **120** seconds (the default is 10) |
+| same page | Detect and revoke potentially compromised refresh tokens (refresh token rotation) | On (the default; keep it) |
+| same page, if shown | Time-box user sessions, Inactivity timeout | Off / 0 (people stay signed in until they sign out; the phone app relies on it) |
+
+The Management API names, for checking or setting it without the dashboard (`GET`/`PATCH /v1/projects/yafbphagorydbitfgfmg/config/auth`):
+`security_refresh_token_reuse_interval: 120` and `refresh_token_rotation_enabled: true`.
+
+Why 120: on patchy mobile data a token refresh can reach Auth and its reply be lost. The phone keeps the old refresh
+token and tries again later (supabase-js waits out a 60 s cooldown after a failed refresh, then retries on its 30 s
+tick). Past the reuse interval Auth treats that retry as a stolen token being replayed and revokes the whole session,
+so the person is signed out for no reason. 120 s covers those retries. The cost is small: an already-used refresh token
+stays usable for 2 minutes after its first use, and access tokens still expire after 1 hour (`jwt_expiry = 3600`).
+
 ## First admin (A02)
 
 The Team screen needs an admin to sign in, and only an admin can create people, so the very first

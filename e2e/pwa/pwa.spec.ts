@@ -97,9 +97,11 @@ test.describe('service worker', () => {
     }
     const paths = cached.map(c => new URL(c.url).pathname)
     expect(paths).toContain('/index.html')
-    expect(paths).toContain('/icon-192.png')
+    expect(paths).toContain('/favicon.ico')
     expect(paths).toContain('/brand/logo-mark.png')
     expect(paths.some(p => p.startsWith('/assets/') && p.endsWith('.js'))).toBe(true)
+    // The install icons are fetched by the browser, online, when the app is installed: not part of the shell (performance audit 3.1).
+    for (const icon of ['/icon-192.png', '/icon-512.png', '/icon-maskable-512.png', '/apple-touch-icon.png']) expect(paths).not.toContain(icon)
   })
 
   test('a Supabase request bypasses the worker cache entirely', async ({ page }) => {
