@@ -29,7 +29,6 @@ import { MAX_STEPS, parseRecipe, type Recipe } from '@/features/help/recipes'
  */
 const PENDING: Record<string, string> = {
   'Paste or photo': 'ux/foundation',
-  'Is GST included?': 'ux/foundation, ux/orders',
   'Accept N prices': 'ux/rfqs',
   'Ask more suppliers': 'ux/rfqs',
   'Ask suppliers': 'ux/rfqs',
@@ -44,12 +43,7 @@ const PENDING: Record<string, string> = {
   'Write the message': 'ux/rfqs',
   'Repeat a past order': 'ux/orders',
   'Supplier orders': 'ux/orders',
-  'Invoices & GST': 'ux/money-today',
-  'Match bank statement': 'ux/money-today',
-  'Overdue by age': 'ux/money-today',
   'Suppliers & delivery': 'ux/money-today',
-  'We owe suppliers': 'ux/money-today',
-  'Who owes us': 'ux/money-today',
 }
 
 const here = __dirname
