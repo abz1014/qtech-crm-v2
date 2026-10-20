@@ -121,7 +121,7 @@ test.describe('payment-reminder panel (M09)', () => {
     expect(opened[0]).toMatch(/^https:\/\/wa\.me\/923005550118\?text=[^&]+$/)
     expect(decodeURIComponent(opened[0].split('?text=')[1])).toContain('Mr. Faisal Qureshi')
     expect(await invoiceRow(s.invoiceId)).toEqual({ last_reminded_on: null, reminder_count: 0 }) // opening never marks
-    await panel.getByRole('button', { name: 'Mark reminded' }).click()
+    await panel.getByRole('button', { name: 'Mark reminded', exact: true }).click()
     await expect(panel.getByText(/Reminder 1 recorded today/)).toBeVisible()
     await expect.poll(() => invoiceRow(s.invoiceId)).toEqual({ last_reminded_on: today(), reminder_count: 1 })
     await panel.getByRole('button', { name: 'Undo' }).click()

@@ -363,7 +363,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await expect(card.locator('pre')).not.toContainText(s.items[0].description)
     await card.getByRole('button', { name: 'Email instead' }).click()
     await expect(card.getByText('Email to Mr. Li Wei')).toBeVisible()
-    await expect(card.getByText('li@hengxin.example')).toBeVisible()
+    await expect(card.getByText('li@hengxin.example', { exact: true })).toBeVisible()
     await expect(card.getByRole('button', { name: 'Copy subject' })).toBeVisible()
     await expect(card.getByText(/^RFQ-\d+: price needed/)).toBeVisible()
     await expect(card.getByRole('button', { name: 'WhatsApp instead' })).toBeVisible()
