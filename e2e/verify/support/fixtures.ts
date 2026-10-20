@@ -126,7 +126,8 @@ export async function order(opts: {
 
 /** The next number in the invoice series, as the Create invoice dialog would pre-fill it (so fixtures never bend the series). */
 export async function nextInvoiceNumber(): Promise<string> {
-  return must(rest<string>('admin', 'rpc/next_invoice_number', { method: 'POST', body: {} }))
+  const rows = await must(rest<{ next_number: string }[]>('admin', 'rpc/next_invoice_number', { method: 'POST', body: {} }))
+  return rows[0].next_number
 }
 
 /** An invoice on an order, numbered from the series. */

@@ -45,6 +45,14 @@ export const pkr = (n: number, opts: { always?: boolean } = {}): string => `PKR 
 /** A regex that finds the figure anywhere in a text, whatever sits before or after it ("PKR 1,234", "Rs 1,234", "1,234 due"). */
 export const figure = (n: number): RegExp => new RegExp(`(^|[^\\d,.])${amount(n).replace(/[.,]/g, m => `\\${m}`)}(?![\\d,]|\\.\\d)`)
 
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+/** "2026-10-05" -> "5 October 2026" (the chase and reminder texts). */
+export const longDate = (iso: string): string => `${Number(iso.slice(8, 10))} ${MONTH_NAMES[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`
+
+/** "2026-10-05" -> "5 Oct" (short day labels). */
+export const shortDay = (iso: string): string => `${Number(iso.slice(8, 10))} ${MONTH_NAMES[Number(iso.slice(5, 7)) - 1].slice(0, 3)}`
+
 export * from './text-sales'
 export * from './text-quotes'
 export * from './text-orders'

@@ -9,7 +9,7 @@ import { open, signedIn } from './session'
  */
 export function infraTest(role: Role): void {
   test(`support: the service-role reader and a signed-in ${role} context work on this stack`, async ({ browser }, info) => {
-    if (!SERVICE_KEY) info.annotations.push({ type: 'note', description: 'SERVICE_ROLE_KEY is not set: database reads fall back to the admin fixture user' })
+    console.log(SERVICE_KEY ? 'verify: database reads use the service role' : 'verify: SERVICE_ROLE_KEY is not set, database reads fall back to the admin fixture user')
     const me = await db.one<{ id: string; role: string }>(`users?id=eq.${USER[role]}&select=id,role`)
     expect(me.role).toBe(role)
     const ctx = await signedIn(browser, info, role)

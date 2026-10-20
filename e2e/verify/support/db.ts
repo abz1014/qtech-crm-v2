@@ -66,6 +66,14 @@ export const db = {
   },
   /** An RPC as the service role. Note: functions that check current_user_role() refuse the service role; call those with as(role). */
   rpc: <T = unknown>(fn: string, args: Record<string, unknown> = {}) => must(service<T>(`rpc/${fn}`, { method: 'POST', body: args })),
+  /**
+   * Rows of a VIEW (v_order_state, v_order_money, v_month_pnl, ...) or a role-checking function, read as the admin fixture user. The
+   * views are security_invoker and filter on current_user_role(), which is null for the service role (and not granted to it), so
+   * they must be read as a signed-in person. Admin sees every row.
+   */
+  view: <T = Record<string, unknown>>(path: string) => must(rest<T[]>('admin', path)),
+  /** A role-checking RPC as the admin (order_receivables, month_end_status, aging_as_of, rank_item_quotes, ...). */
+  adminRpc: <T = unknown>(fn: string, args: Record<string, unknown> = {}) => must(rest<T>('admin', `rpc/${fn}`, { method: 'POST', body: args })),
 }
 
 /** A PostgREST call as a fixture user; Row Level Security and the functions' own role checks answer. Never throws. */
