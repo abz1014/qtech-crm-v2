@@ -168,8 +168,11 @@ export const ROUTES: readonly RouteSpec[] = [
 
 /** Engineer: words a screen uses for money of the business. Allowed nowhere for an engineer (journeys P03 list, extended). */
 export const ENGINEER_MONEY_WORDS = /\b(Invoic\w*|Margins?|Receivables?|Spread|Selling price|Who owes us|Balance|Profit|Payments? (in|received)|Record payment|Expenses?)\b/
-/** Engineer: an amount of money in text (Money renders "PKR1,234" with no space; plain strings use "PKR 1,234", "≈ PKR", "Rs"). */
-export const CURRENCY_AMOUNT = /(PKR|Rs\.?)\s*[−-]?\d|\b(USD|EUR|GBP|AED|CNY|CHF|JPY|SGD)\s*[−-]?\d/
+/**
+ * Engineer: an amount of money in text (Money renders "PKR1,234" with no space; plain strings use "PKR 1,234", "≈ PKR", "Rs"). "Rs" must
+ * start a word: a fixture's random name suffix ("VRs37s5xf0") is not rupees.
+ */
+export const CURRENCY_AMOUNT = /(PKR|(?<![A-Za-z0-9])Rs\.?)\s*[−-]?\d|\b(USD|EUR|GBP|AED|CNY|CHF|JPY|SGD)\s*[−-]?\d/
 /** Engineer: a GST amount (a rate such as "GST 18%" is not an amount). */
 export const GST_AMOUNT = /GST\s*(?!\d+(\.\d+)?\s*%)[^%\n]{0,12}\d{1,3}(,\d{3})+/
 
