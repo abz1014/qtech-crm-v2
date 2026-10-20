@@ -597,7 +597,7 @@ select pg_temp.u('a0000000', 1 + (g * 3) % 2000), public.today_pkt() - ((g * 7) 
 from generate_series(1, 5000) g;
 
 insert into public.recurring_expenses (id, label, category_id, amount, active)
-select pg_temp.u('f0000000', g), 'Perf recurring ' || g, 'ca7e0000-0000-4000-8000-00000000000' || (1 + g % 3), 10000 * g, true
+select pg_temp.u('f0000000', g), 'Perf recurring ' || g, ('ca7e0000-0000-4000-8000-00000000000' || (1 + g % 3))::uuid, 10000 * g, true
 from generate_series(1, 9) g;
 
 -- 20,000 expenses over three years: overheads, supplier payments and freight on orders and legs, drawings
