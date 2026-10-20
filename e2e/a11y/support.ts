@@ -55,7 +55,25 @@ export interface Bug {
 }
 
 /** Known failures on main. Each is a test.fail() somewhere in e2e/a11y; the list is the report. */
-export const BUGS = {} satisfies Record<string, Bug>
+export const BUGS = {
+  shortcuts: { id: 'A11Y-01', sc: '2.1.4', what: 'single-key shortcuts N, C, G T and / act anywhere outside a text field and cannot be turned off', where: 'src/app/palette/PaletteHost.tsx:74-98, src/ui/DataTable.tsx:274-288, src/features/rfqs/board/BoardPage.tsx:87' },
+  busyFocus: { id: 'A11Y-02', sc: '2.4.3', what: 'a busy button is disabled while it has focus, so focus falls to <body>', where: 'src/ui/Button.tsx:86 (disabled={disabled || busy}), src/ui/form/Form.tsx:33' },
+  routeFocus: { id: 'A11Y-03', sc: '2.4.3', what: 'opening a row unmounts it and nothing takes focus on the new page', where: 'src/app/shell/AppShell.tsx:56-70 (no focus move on route change)' },
+  wideDialogs: { id: 'A11Y-05', sc: '1.4.10', what: 'fixed-width dialogs are wider than the window between 768 and ~1000 px (1366 at 175%), the Close button and footer are clipped; at 320x256 the sheet title starts above the window', where: 'src/features/capture/CaptureSheet.tsx:583 (md:w-[960px]), src/features/quotations/IssueQuotationDialog.tsx:397 (md:w-[900px]), src/features/purchaseOrders/IssuePoDialog.tsx:317 (md:w-[820px]), src/ui/Dialog.tsx:102,126' },
+  shortSheets: { id: 'A11Y-06', sc: '1.4.10', what: 'at 256 px tall the command palette is taller than the window', where: 'src/ui/CommandPalette.tsx:233,248' },
+  toastLive: { id: 'A11Y-07', sc: '4.1.3', what: 'each toast mounts with its own role=status, so its words are not in a live region that was waiting', where: 'src/ui/Toast.tsx:109-117,183-184' },
+  undoCountdown: { id: 'A11Y-08', sc: '4.1.3', what: 'the Undo countdown changes every second inside the atomic status, so it is re-read', where: 'src/ui/Toast.tsx:220' },
+  undoKeys: { id: 'A11Y-09', sc: '2.2.1', what: 'the Undo toast never tells a screen-reader user that Ctrl+Z undoes', where: 'src/ui/Toast.tsx:199-221' },
+  filterCount: { id: 'A11Y-10', sc: '4.1.3', what: '"Showing n of m" changes silently when a filter is typed', where: 'src/ui/DataTable.tsx:773-775, src/features/rfqs/board/BoardPage.tsx:285' },
+  invisibleFocus: { id: 'A11Y-11', sc: '2.4.7', what: 'native controls laid over chips with opacity-0 show no focus ring', where: 'src/features/money/expenses/BurstSheet.tsx:795-821, src/features/rfqs/ItemsEditor.tsx:83-87' },
+  obscured: { id: 'A11Y-12', sc: '2.4.11', what: 'sticky and fixed bars cover the focused control', where: 'src/features/rfqs/RfqHeaderBlock.tsx:352 (phone "RFQ actions" bar), src/app/shell/MobileChrome.tsx:78 (tab bar over the Orders tab panel), src/features/rfqs/IntakeScreen.tsx:738 (Next step bar)' },
+  filterEsc: { id: 'A11Y-14', sc: '2.4.3', what: 'a second Esc in a table filter blurs it, dropping focus to <body>', where: 'src/ui/TableFilter.tsx:29-32' },
+  prohibitedLabel: { id: 'A11Y-15', sc: '1.3.1 / 4.1.2', what: 'aria-label on role-less div/span/p is ignored by screen readers', where: 'src/features/orders/OrderItemsPanel.tsx:173 ("Leg A"), src/features/rfqs/RfqHeaderBlock.tsx:219, src/features/orders/ConvertDialog.tsx:434, src/features/quotations/IssueQuotationDialog.tsx:561, src/features/rfqs/ItemsEditor.tsx:170 (pre), src/features/orders/TapEdit.tsx:62,120' },
+  menuDialogFocus: { id: 'A11Y-19', sc: '2.4.3', what: 'a dialog opened from a menu item returns focus to that (gone) item, so focus falls to <body>', where: 'src/ui/Dialog.tsx:111,123, src/features/settings/TeamPage.tsx:280' },
+  labelInName: { id: 'A11Y-20', sc: '2.5.3', what: '"Add a rate for X" buttons have an aria-label that does not contain their visible text', where: 'src/features/fx/ExchangeRatesPage.tsx:143' },
+  phoneH1: { id: 'A11Y-21', sc: '1.3.1 / 2.4.6', what: 'no h1 on a phone on Settings home and Team', where: 'src/features/settings/TeamPage.tsx:145 (header max-md:hidden), src/features/settings/SettingsLayout.tsx:45-60' },
+  phoneTitle: { id: 'A11Y-22', sc: '1.4.10', what: 'the phone bar title is truncated at 320 px ("Companies")', where: 'src/app/shell/MobileChrome.tsx:55 (truncate)' },
+} satisfies Record<string, Bug>
 
 /** Marks the running test as a known failure: it must fail until BUG `bug.id` is fixed (then delete the call). */
 export function knownBug(bug: Bug): void {

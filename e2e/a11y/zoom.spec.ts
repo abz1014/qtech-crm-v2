@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { waitForAnimationsToFinish } from '../support/axe'
-import { SCREENS, UI, ZOOM_BANDS, expect, layoutProblems, open, overlayProblems, test, type World } from './support'
+import { BUGS, SCREENS, UI, ZOOM_BANDS, knownBug, expect, layoutProblems, open, overlayProblems, test, type World } from './support'
 
 /*
  * (b) The owner's zoom bands (WCAG 1.4.10 reflow, 1.4.4 resize text): 1366 at 200%, 175% and 125%, and the 320x256 reflow box.
@@ -24,6 +24,7 @@ async function atEveryBand(page: Page, check: () => Promise<string[]>): Promise<
 
 for (const s of SCREENS) {
   test(`${s.name}: no sideways scroll and no title cut off at any zoom band`, async ({ page, world }) => {
+    if (s.name === 'Companies' || s.name === 'Company detail') knownBug(BUGS.phoneTitle)
     await page.setViewportSize({ width: ZOOM_BANDS[0].width, height: ZOOM_BANDS[0].height })
     await open(page, s.path(world))
     expect(await atEveryBand(page, () => layoutProblems(page))).toEqual([])
@@ -31,9 +32,10 @@ for (const s of SCREENS) {
 }
 
 /** Overlays that open on a screen, each with the way to open it at any width. */
-const OVERLAYS: ReadonlyArray<{ name: string; open: (page: Page, w: World) => Promise<void> }> = [
+const OVERLAYS: ReadonlyArray<{ name: string; bug?: keyof typeof BUGS; open: (page: Page, w: World) => Promise<void> }> = [
   {
     name: 'Capture sheet',
+    bug: 'wideDialogs',
     open: async page => {
       await open(page, '/today')
       await page.getByRole('button', { name: UI.capture }).filter({ visible: true }).first().click()
@@ -42,6 +44,7 @@ const OVERLAYS: ReadonlyArray<{ name: string; open: (page: Page, w: World) => Pr
   },
   {
     name: 'Issue quotation dialog',
+    bug: 'wideDialogs',
     open: async (page, w) => {
       await open(page, `/rfqs/${w.rfq.id}`)
       // The header button from 768 up; below it the same action is in the sticky bar at the foot.
@@ -51,6 +54,7 @@ const OVERLAYS: ReadonlyArray<{ name: string; open: (page: Page, w: World) => Pr
   },
   {
     name: 'Issue PO dialog',
+    bug: 'wideDialogs',
     open: async (page, w) => {
       await open(page, `/orders/${w.order.id}`)
       await page.getByRole('button', { name: UI.issuePoLegA }).click()
@@ -74,6 +78,7 @@ const OVERLAYS: ReadonlyArray<{ name: string; open: (page: Page, w: World) => Pr
   },
   {
     name: 'Command palette',
+    bug: 'shortSheets',
     open: async page => {
       await open(page, '/today')
       await page.keyboard.press('Control+k')
@@ -92,6 +97,7 @@ const OVERLAYS: ReadonlyArray<{ name: string; open: (page: Page, w: World) => Pr
 
 for (const o of OVERLAYS) {
   test(`${o.name}: inside the window at every zoom band`, async ({ page, world }) => {
+    if (o.bug) knownBug(BUGS[o.bug])
     const out: string[] = []
     // Opened afresh at each band: a menu does not follow a resize (it closes), and a phone opens a sheet, not a dialog.
     for (const band of ZOOM_BANDS) {

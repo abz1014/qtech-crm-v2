@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { rfqRef } from '../support/stack'
-import { SCREENS, UI, asRole, expect, focusProblems, focusSweep, focusedThing, open, openChase, seedChase, test } from './support'
+import { BUGS, SCREENS, UI, asRole, knownBug, expect, focusProblems, focusSweep, focusedThing, open, openChase, seedChase, test } from './support'
 
 /*
  * (c) Keyboard. A Tab sweep on every main screen, at the design width and at the owner's 200% zoom: each stop is visible, shows a
@@ -8,6 +8,12 @@ import { SCREENS, UI, asRole, expect, focusProblems, focusSweep, focusedThing, o
  * that are known to drop focus (2.4.3): a busy button, a row that opens a page, a dialog opened from a menu, Esc in a filter, and
  * removing a burst-sheet row; and the scroll position a new page starts at.
  */
+
+/** Known failures per viewport and screen. */
+const SWEEP_BUGS: Record<string, Record<string, keyof typeof BUGS>> = {
+  'at 1440x900': { 'New RFQ': 'invisibleFocus' },
+  'at 200% zoom (683x330)': { 'New RFQ': 'invisibleFocus', 'RFQ detail': 'obscured', Orders: 'obscured' },
+}
 
 const SWEEP_VIEWPORTS = [
   { name: 'at 1440x900', width: 1440, height: 900 },
@@ -17,7 +23,9 @@ const SWEEP_VIEWPORTS = [
 /** Puts a screen in the state worth sweeping: New RFQ with an item row, so its brand and family picks are on the page. */
 async function prepare(page: Page, screen: string): Promise<void> {
   if (screen === 'New RFQ') {
-    await page.getByRole('button', { name: UI.addItemByHand }).click()
+    // From the keyboard: the sticky Next step bar covers the button for a pointer (BUG A11Y-12).
+    await page.getByRole('button', { name: UI.addItemByHand }).focus()
+    await page.keyboard.press('Enter')
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   }
 }
@@ -27,6 +35,8 @@ for (const vp of SWEEP_VIEWPORTS) {
     test.use({ viewport: { width: vp.width, height: vp.height } })
     for (const s of SCREENS) {
       test(`${s.name}: every stop is visible, ringed and uncovered`, async ({ page, world }) => {
+        const bug = SWEEP_BUGS[vp.name]?.[s.name]
+        if (bug) knownBug(BUGS[bug])
         await open(page, s.path(world))
         await prepare(page, s.name)
         expect(await focusSweep(page)).toEqual([])
@@ -37,6 +47,7 @@ for (const vp of SWEEP_VIEWPORTS) {
 
 test.describe('Tab sweep inside overlays', () => {
   test('the burst sheet (Add expenses) at 200% zoom, where it shows cards', async ({ page }) => {
+    knownBug(BUGS.invisibleFocus)
     await page.setViewportSize({ width: 683, height: 330 })
     await open(page, '/money/expenses')
     await page.getByRole('button', { name: UI.addExpenses }).click()
@@ -47,6 +58,7 @@ test.describe('Tab sweep inside overlays', () => {
 
 test.describe('focus after an action (2.4.3)', () => {
   test('signing in with a wrong password from the Sign in button keeps focus off <body>', async ({ browser }, info) => {
+    knownBug(BUGS.busyFocus)
     await asRole(browser, info, null, '/login', async page => {
       await page.getByRole('textbox', { name: UI.signIn.email }).fill('sales@test.invalid')
       await page.getByLabel(UI.signIn.password).fill('not-the-password')
@@ -58,6 +70,7 @@ test.describe('focus after an action (2.4.3)', () => {
   })
 
   test('the 1-tap chase on Today (a busy button) keeps focus off <body>', async ({ page }) => {
+    knownBug(BUGS.busyFocus)
     const s = await seedChase()
     await open(page, '/today')
     const { button } = await openChase(page, s.ref)
@@ -69,6 +82,7 @@ test.describe('focus after an action (2.4.3)', () => {
   })
 
   test('opening an RFQ from the board with Enter puts focus on the new page, not <body>', async ({ page, world }) => {
+    knownBug(BUGS.routeFocus)
     await open(page, '/rfqs')
     await page.getByRole('row').filter({ hasText: rfqRef(world.rfq.number) }).focus()
     await page.keyboard.press('Enter')
@@ -79,6 +93,7 @@ test.describe('focus after an action (2.4.3)', () => {
   })
 
   test('a dialog opened from a row menu gives focus back when it closes', async ({ page }) => {
+    knownBug(BUGS.menuDialogFocus)
     await open(page, '/settings/team')
     const trigger = page.getByRole('button', { name: UI.rowActions }).first()
     await trigger.focus()
@@ -93,6 +108,7 @@ test.describe('focus after an action (2.4.3)', () => {
   })
 
   test('Esc twice in a table filter (clear, then leave) keeps focus off <body>', async ({ page }) => {
+    knownBug(BUGS.filterEsc)
     await open(page, '/companies')
     const filter = page.getByRole('textbox', { name: UI.searchCompanies })
     await filter.focus()

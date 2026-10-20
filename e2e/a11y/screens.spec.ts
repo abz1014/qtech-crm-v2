@@ -1,4 +1,4 @@
-import { UI, asRole, axe, expect, open, openChase, seedChase, test } from './support'
+import { BUGS, UI, asRole, axe, knownBug, expect, open, openChase, seedChase, test } from './support'
 
 /*
  * (a) axe, strict, on the screens and states that no feature suite runs it on: Settings home, Team, My details, Company profile,
@@ -24,6 +24,8 @@ for (const viewport of [
 
     for (const [name, path] of SETTINGS) {
       test(`${name}`, async ({ page }) => {
+        if (name === 'Exchange rates' && viewport.width === 1440) knownBug(BUGS.labelInName)
+        if ((name === 'Settings home' || name === 'Team') && viewport.width === 375) knownBug(BUGS.phoneH1)
         await open(page, path)
         expect(await axe(page)).toEqual([])
       })
@@ -44,7 +46,8 @@ for (const viewport of [
       expect(await axe(page, { landmarks: false })).toEqual([])
     })
 
-    test('Team: a row menu open (a sheet on a phone)', async ({ page }) => {
+    test('Team: a row menu open', async ({ page }) => {
+      test.skip(viewport.width < 768, 'a phone has no row menu button on Team (its actions live in the row sheet)')
       await open(page, '/settings/team')
       await page.getByRole('button', { name: UI.rowActions }).first().click()
       await expect(page.getByRole('menu').or(page.getByRole('dialog')).first()).toBeVisible()
@@ -52,6 +55,7 @@ for (const viewport of [
     })
 
     test('Team: the Add person dialog', async ({ page }) => {
+      test.skip(viewport.width < 768, 'a phone has no Add person button on Team')
       await open(page, '/settings/team')
       await page.getByRole('button', { name: UI.addPerson }).click()
       await expect(page.getByRole('dialog')).toBeVisible()
@@ -97,6 +101,7 @@ test.describe('axe on open overlays at 1440', () => {
   })
 
   test('the More actions menu on a company and on an order', async ({ page, world }) => {
+    knownBug(BUGS.prohibitedLabel)
     await open(page, `/companies/${world.customer.id}`)
     await page.getByRole('button', { name: UI.moreActions }).first().click()
     await expect(page.getByRole('menu')).toBeVisible()

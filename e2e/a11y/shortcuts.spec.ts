@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { UI, expect, focusedThing, open, test } from './support'
+import { BUGS, UI, expect, focusedThing, knownBug, open, test } from './support'
 
 /*
  * (e) Single-key shortcuts (WCAG 2.1.4, level A). The first test documents what the app does today, so a change to it is noticed:
@@ -45,6 +45,7 @@ test('documents today\'s single-key shortcuts: N, C, G then T, and /, outside te
 })
 
 test('a single printable key never acts unless the person can turn it off (WCAG 2.1.4)', async ({ page }) => {
+  knownBug(BUGS.shortcuts)
   // Either a setting turns single-key shortcuts off (then N must do nothing), or N needs a modifier or its own control's focus.
   await open(page, '/settings/details')
   const setting = page.getByRole('checkbox', { name: UI.shortcutsSetting }).or(page.getByRole('switch', { name: UI.shortcutsSetting }))
