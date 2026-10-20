@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Layers, ListFilter } from 'lucide-react'
+import { ClipboardCheck, Layers, ListFilter } from 'lucide-react'
 import { orderRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
@@ -14,6 +14,11 @@ import { Tag } from '@/ui/Tag'
 import { ToggleButton } from '@/ui/ToggleButton'
 import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
+import { Dialog, DialogContent } from '@/ui/Dialog'
+import { useToast } from '@/ui/useToast'
+import { useSession } from '@/app/session'
+import { mapPgError } from '@/lib/pgErrors'
+import { useSetCostsCompleteMany } from '@/features/money/costs/hooks'
 import { useOrderMargins } from '@/features/money/hooks'
 import { isPaidProvisional, marginTotals, sortMargins, type MarginRow } from '@/features/money/margins/model'
 
@@ -92,6 +97,7 @@ export function MarginsPage() {
   const totals = useMemo(() => marginTotals(all), [all])
   const paidCount = useMemo(() => all.filter(isPaidProvisional).length, [all])
   const rows = useMemo(() => (onlyPaid ? all.filter(isPaidProvisional) : all), [all, onlyPaid])
+  const [confirming, setConfirming] = useState(false)
   return (
     <MoneyFrame active={fromReports ? 'reports' : 'month-end'}>
       <MoneySubHeader
@@ -117,6 +123,11 @@ export function MarginsPage() {
           <ToggleButton pressed={onlyPaid} onPressedChange={setOnlyPaid} icon={ListFilter}>
             Paid, margin not final <span className="num">{paidCount}</span>
           </ToggleButton>
+          {onlyPaid && rows.length > 1 ? (
+            <Button size="sm" icon={ClipboardCheck} onClick={() => setConfirming(true)}>
+              {`Mark costs complete for ${rows.length}`}
+            </Button>
+          ) : null}
         </header>
         {q.isPending ? (
           <div className="grid gap-3 p-5" aria-busy="true" aria-label="Loading order margins">
@@ -189,6 +200,62 @@ export function MarginsPage() {
           </div>
         )}
       </section>
+      {confirming ? <CompleteManyDialog rows={rows} onClose={() => setConfirming(false)} /> : null}
     </MoneyFrame>
+  )
+}
+
+/** Batch "Mark costs complete" (entry-burden J16). Costs complete is a judgement, so the orders and their figures are listed first. */
+function CompleteManyDialog({ rows, onClose }: { rows: readonly MarginRow[]; onClose: () => void }) {
+  const session = useSession()
+  const userId = session.status === 'signed-in' ? session.user.id : null
+  const many = useSetCostsCompleteMany()
+  const { toast } = useToast()
+  const confirm = () => {
+    if (!userId) return
+    many.mutate(
+      { orderIds: rows.map(r => r.orderId), complete: true, userId },
+      {
+        onSuccess: () => {
+          toast({ title: `Costs marked complete on ${rows.length} orders`, tone: 'success' })
+          onClose()
+        },
+        onError: err => toast({ title: 'Could not mark every order', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' }),
+      },
+    )
+  }
+  return (
+    <Dialog open busy={many.isPending} onOpenChange={o => (o ? null : onClose())}>
+      <DialogContent
+        title={`Mark costs complete for ${rows.length} orders?`}
+        context="Their margins become final. You can reopen one on its order page."
+        footer={
+          <>
+            <Button data-cancel onClick={onClose} disabled={many.isPending}>
+              Cancel
+            </Button>
+            <Button variant="primary" busy={many.isPending} busyLabel="Marking" onClick={confirm}>
+              Mark costs complete
+            </Button>
+          </>
+        }
+      >
+        <ul className="grid gap-2 text-sm">
+          {rows.map(r => (
+            <li key={r.orderId} className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0">
+                {r.companyName} <span className="num text-fg-muted">{orderRef(r.orderNumber)}</span>
+              </span>
+              <span className="text-right">
+                <span className="text-xs text-fg-muted">Cost </span>
+                <Money value={r.actualCost} prefix={false} />
+                <span className="text-xs text-fg-muted"> · Margin </span>
+                <Money value={r.margin} prefix={false} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      </DialogContent>
+    </Dialog>
   )
 }

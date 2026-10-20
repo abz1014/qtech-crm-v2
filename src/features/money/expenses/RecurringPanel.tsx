@@ -54,6 +54,27 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
     )
   }
 
+  /** Batch (entry-burden J14): every due template in one tap, one toast. One another tab already recorded is skipped. */
+  const [recordingAll, setRecordingAll] = useState(false)
+  const recordAll = async () => {
+    setRecordingAll(true)
+    let done = 0
+    let total = 0
+    const failed: string[] = []
+    for (const t of due) {
+      try {
+        await record.mutateAsync({ template: t, id: crypto.randomUUID(), period, paidOn: recurringPaidOn(t, today), paidVia: paidViaFor(t.categoryId, categories) })
+        done += 1
+        total += t.amount
+      } catch (e) {
+        if (mapPgError(e, { entity: 'expense' }).kind !== 'unique') failed.push(t.label)
+      }
+    }
+    setRecordingAll(false)
+    if (done > 0) toast.toast({ title: `Recorded ${done} recurring ${done === 1 ? 'expense' : 'expenses'}`, body: `PKR ${total.toLocaleString('en-US')} · ${monthKeyLabel(period)}`, tone: 'success' })
+    if (failed.length > 0) toast.toast({ title: `Couldn't record ${failed.join(', ')}`, body: 'Nothing else was changed. Try again.', tone: 'danger' })
+  }
+
   const loading = templates.isPending || recorded.isPending
   return (
     <section aria-labelledby="recurring-h" className="rounded border bg-surface">
@@ -65,6 +86,11 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
           {loading ? 'Loading' : due.length > 0 ? `${due.length} due for ${monthKeyLabel(period)}` : `Nothing due for ${monthKeyLabel(period)}`}
         </span>
         <span className="flex-1" />
+        {due.length > 1 ? (
+          <Button size="sm" icon={Check} busy={recordingAll} busyLabel="Recording" disabled={recording !== null} onClick={() => void recordAll()}>
+            {`Record all ${due.length}`}
+          </Button>
+        ) : null}
         <Button size="sm" icon={Plus} onClick={() => setEditing('new')}>
           Add recurring
         </Button>

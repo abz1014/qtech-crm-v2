@@ -123,6 +123,30 @@ describe('Payment-reminder panel (M09)', () => {
     expect(screen.queryByRole('button', { name: 'Copy and mark reminded' })).not.toBeInTheDocument()
   })
 
+  it('Open in WhatsApp marks nothing; the separate "Mark reminded" stamps, and Undo takes it back', async () => {
+    const user = userEvent.setup()
+    const d = db()
+    const clicked: string[] = []
+    const spy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      clicked.push(this.href)
+    })
+    mount(<ReminderPanel row={row()} today={TODAY} />)
+    await screen.findByTestId('reminder-text')
+    expect(screen.queryByRole('button', { name: 'Mark reminded' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Open in WhatsApp' }))
+    expect(clicked[0]).toMatch(/^https:\/\/wa\.me\/923005550118\?text=.*INV-2256/)
+    expect(copyToClipboard).not.toHaveBeenCalled()
+    expect(d.calls.filter(c => c.target === 'rpc:stamp_payment_reminder')).toHaveLength(0)
+    await user.click(screen.getByRole('button', { name: 'Mark reminded' }))
+    expect(await screen.findByText(/recorded today/)).toBeInTheDocument()
+    expect(screen.queryByText(/Copied\./)).not.toBeInTheDocument()
+    expect(d.calls.filter(c => c.target === 'rpc:stamp_payment_reminder')).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Copy and mark reminded' })).toBeInTheDocument())
+    expect(d.calls.some(c => c.target === 'invoices' && c.verb === 'update')).toBe(true)
+    spy.mockRestore()
+  })
+
   it('Undo puts the previous reminder fields back', async () => {
     const user = userEvent.setup()
     const d = db()

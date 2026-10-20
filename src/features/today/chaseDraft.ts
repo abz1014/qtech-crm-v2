@@ -14,13 +14,14 @@ import {
   type PaymentReminder,
   type SupplierChase,
 } from '@/features/rfqs/lib'
+import type { Recipient } from '@/features/rfqs/ChaseParts'
 import type { InquiryRow, RfqItemRow } from '@/features/rfqs/api'
 import type { LegDraftData, PaymentDraftData } from '@/features/today/api'
 import type { ClarificationFact, LegFact, ReceivableFact, RfqFact } from '@/features/today/types'
 
 export interface Draft {
   kind: 'customer' | 'supplier' | 'goods' | 'payment'
-  contact: { name: string; phone: string | null } | null
+  contact: Recipient | null
   whatsapp: ChaseText
   email: ChaseText
   /** What the stamp will change: used to word the footer ("asked ×2", "chase 1 for this supplier"). */
@@ -35,8 +36,8 @@ const both = <T extends ChaseText>(make: (variant: 'whatsapp' | 'email') => T): 
 
 export function buildCustomerDraft(input: {
   rfq: RfqFact
-  /** The RFQ's contact (name and phone), when one is set. */
-  contact: { name: string; phone: string | null } | null
+  /** The RFQ's contact (name, phone, email), when one is set. */
+  contact: Recipient | null
   questions: readonly ClarificationFact[]
   /** The RFQ's items, to tag each question with its item ("(item 2)"). */
   items?: ReadonlyArray<{ id: string; number: number; description: string; brandName: string | null }>
@@ -99,7 +100,7 @@ export function buildSupplierDraft(input: {
   )
   return {
     kind: 'supplier',
-    contact: inquiry.contactName ? { name: inquiry.contactName, phone: inquiry.contactPhone } : null,
+    contact: inquiry.contactName ? { name: inquiry.contactName, phone: inquiry.contactPhone, email: inquiry.contactEmail ?? null } : null,
     ...t,
     countAfter: inquiry.chaseCount + 1,
     answerBy: t.whatsapp.replyBy,

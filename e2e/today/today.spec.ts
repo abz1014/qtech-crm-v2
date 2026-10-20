@@ -161,7 +161,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(pane.getByRole('heading', { level: 2, name: 'Chase customer for clarifications' })).toBeVisible()
     await expect(pane.getByText('Moved to Waiting.')).toBeVisible()
     await expect(pane.getByText('Chased customer', { exact: true })).toBeVisible()
-    await expect(pane.getByText('Next nudge', { exact: true })).toBeVisible()
+    await expect(pane.getByText('Chase again on', { exact: true })).toBeVisible()
     await expect(pane.getByRole('region', { name: 'Chased today' })).toBeVisible()
     await expect(pane.getByRole('button', { name: 'Copy message and mark chased' })).toHaveCount(0)
     await review(page, 'today-03-waiting-1440')

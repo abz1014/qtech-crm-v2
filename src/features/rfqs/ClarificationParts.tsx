@@ -88,7 +88,7 @@ export function AddQuestions({ rfqId, inquiries }: { rfqId: string; inquiries: r
                 <Select
                   aria-label={`Who asked: ${q}`}
                   placeholder="Our question"
-                  options={inquiries.map(o => ({ value: o.id, label: `Raised by ${o.name}` }))}
+                  options={inquiries.map(o => ({ value: o.id, label: `Asked by ${o.name}` }))}
                   value={tags[q] ?? ''}
                   onChange={e => setTags(t => ({ ...t, [q]: e.target.value }))}
                 />
@@ -136,7 +136,7 @@ export function QuestionRow({
     if (typing) answerBox.current?.focus()
   }, [typing])
   const open = !c.answeredAt && !c.withdrawnAt
-  const by = raisedBy ? `Raised by ${raisedBy}` : 'Our question'
+  const by = raisedBy ? `Asked by ${raisedBy}` : 'Our question'
 
   const saveText = async () => {
     const answer = draft.trim()
