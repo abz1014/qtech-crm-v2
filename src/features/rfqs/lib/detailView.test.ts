@@ -1,35 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { comparisonNote, daysSince, dueChipLabel, dueSubLabel, itemCoverage, sentLine, supplierMemoryLine } from './detailView'
+import { daysSince, dueChipLabel, dueSubLabel, itemCoverage, sentLine, supplierMemoryLine } from './detailView'
 
 describe('itemCoverage', () => {
-  it('covered when priced and nobody is still to answer; partly while somebody is', () => {
-    expect(itemCoverage(3, 0, 3)).toEqual({ kind: 'covered', label: 'Covered, 3 prices' })
-    expect(itemCoverage(1, 0, 2).label).toBe('Covered, 1 price')
-    expect(itemCoverage(1, 1, 2)).toEqual({ kind: 'partly', label: 'Partly covered, 1 price' })
-    expect(itemCoverage(2, 2, 2).label).toBe('Partly covered, 2 prices')
+  it('counts the prices when nobody is still to answer; "so far" while somebody is', () => {
+    expect(itemCoverage(3, 0, 3, 3)).toEqual({ kind: 'covered', label: '3 prices' })
+    expect(itemCoverage(1, 0, 2, 2).label).toBe('1 price')
+    expect(itemCoverage(1, 1, 2, 3)).toEqual({ kind: 'partly', label: '1 price so far' })
+    expect(itemCoverage(2, 2, 2, 4).label).toBe('2 prices so far')
   })
-  it('uncovered once others replied and nobody priced it; "No replies yet" before that', () => {
-    expect(itemCoverage(0, 1, 2)).toEqual({ kind: 'uncovered', label: 'Uncovered item' })
-    expect(itemCoverage(0, 0, 0)).toEqual({ kind: 'none', label: 'No replies yet' })
-    expect(itemCoverage(0, 2, 0).kind).toBe('none')
+  it('"No price yet" once others replied and nobody priced it; "Waiting for prices" while somebody asked has not answered', () => {
+    expect(itemCoverage(0, 1, 2, 3)).toEqual({ kind: 'uncovered', label: 'No price yet' })
+    expect(itemCoverage(0, 2, 0, 2)).toEqual({ kind: 'none', label: 'Waiting for prices' })
   })
-})
-
-describe('comparisonNote', () => {
-  const base = { comparable: 3, basis: 'pkr' as const, notCompared: [], staleRates: [], lines: 3 }
-  it('says what was compared', () => {
-    expect(comparisonNote(base)).toBe("Lowest of the 3 with a rate. Compared in PKR at today's rates.")
-    expect(comparisonNote({ ...base, comparable: 2, basis: 'native' })).toBe('Lowest of the 2 with a rate. Same currency, compared as quoted.')
-  })
-  it('names the lines left out and a stale rate, as in the mockup', () => {
-    expect(comparisonNote({ ...base, comparable: 2, notCompared: ['AED'], staleRates: [{ currency: 'EUR', days: 12 }] })).toBe(
-      "Lowest of the 2 with a rate. Compared in PKR at today's rates. The AED line is not compared. The EUR rate is 12 days old, so treat the gap as indicative.",
-    )
-    expect(comparisonNote({ ...base, notCompared: ['AED', 'GBP'] })).toContain('The AED and GBP lines are not compared.')
-  })
-  it('one price or none', () => {
-    expect(comparisonNote({ ...base, comparable: 1, lines: 2 })).toBe('One price so far. Nothing to compare yet.')
-    expect(comparisonNote({ ...base, comparable: 0, lines: 0 })).toBe('Nobody has priced this item.')
+  it('agrees with the header and the board: "Needs suppliers" when nobody is asked, "No price yet" when everyone asked said no', () => {
+    expect(itemCoverage(0, 0, 0, 0)).toEqual({ kind: 'unasked', label: 'Needs suppliers' })
+    expect(itemCoverage(0, 0, 0, 2)).toEqual({ kind: 'uncovered', label: 'No price yet' })
   })
 })
 

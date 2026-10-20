@@ -9,6 +9,7 @@ import type {
   InvoiceFact,
   RecurringFact,
   InquiryFact,
+  JobFact,
   LegFact,
   MonthEndFact,
   OrderFact,
@@ -43,6 +44,8 @@ export interface TodayData {
   invoices: InvoiceFact[]
   /** M08. Admin only; empty otherwise. */
   recurring: RecurringFact[]
+  /** Engineers only: the live orders they are assigned to (their jobs). Empty for everyone else (the read is never made). */
+  jobs: JobFact[]
   snoozes: SnoozeFact[]
   /** users.role by id (everyone is readable by every staff role). */
   roles: Record<string, Role>
@@ -283,6 +286,63 @@ async function loadOrders(role: Role, names: Map<string, string>): Promise<Order
   })
 }
 
+type JobOrderRow = {
+  id: string
+  number: number
+  owner_id: string | null
+  company_id: string
+  commissioning_planned_on: string | null
+  company_sites: { name: string } | { name: string }[] | null
+}
+
+/**
+ * An engineer's jobs: the live orders they are assigned to (order_engineers), with the goods and commissioning states, the
+ * planned date and the last delivery to site. Every read here is one the engineer already makes on the Orders list and the
+ * order page (RLS lets every staff role read orders, order_engineers, v_order_state without its money columns, and
+ * supplier_orders), so no new grant and no migration is needed. Three small reads, all filtered to the assigned orders.
+ */
+async function loadJobs(userId: string, names: Map<string, string>): Promise<JobFact[]> {
+  const db = requireSupabase()
+  const mine = unwrap(await db.from('order_engineers').select('order_id').eq('user_id', userId)) ?? []
+  const ids = [...new Set(mine.map(r => r.order_id))]
+  if (ids.length === 0) return []
+  const jobs: JobFact[] = []
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100)
+    const [states, orders, legs, imported] = await Promise.all([
+      db.from('v_order_state').select('order_id, lifecycle, goods_state, commissioning_state, data_trust').in('order_id', chunk).eq('lifecycle', 'active'),
+      db.from('orders').select('id, number, owner_id, company_id, commissioning_planned_on, company_sites(name)').in('id', chunk) as unknown as PromiseLike<{ data: JobOrderRow[] | null; error: PgError | null }>,
+      db.from('supplier_orders').select('order_id, delivered_on').in('order_id', chunk).not('delivered_on', 'is', null),
+      // which of them came from the old CRM: the ids only (legacy_source itself may hold old prices, so it is never read here)
+      db.from('orders').select('id').in('id', chunk).not('legacy_source', 'is', null),
+    ])
+    const legacy = new Set((unwrap(imported) ?? []).map(o => o.id))
+    const orderBy = new Map((unwrap(orders) ?? []).map(o => [o.id, o]))
+    const delivered = new Map<string, string>()
+    for (const l of unwrap(legs) ?? []) {
+      if (l.delivered_on && (!delivered.has(l.order_id) || l.delivered_on > (delivered.get(l.order_id) as string))) delivered.set(l.order_id, l.delivered_on)
+    }
+    for (const s of unwrap(states) ?? []) {
+      const o = orderBy.get(s.order_id as string)
+      if (!o) continue
+      const site = Array.isArray(o.company_sites) ? o.company_sites[0] : o.company_sites
+      jobs.push({
+        orderId: o.id,
+        orderNumber: num(o.number),
+        ownerId: o.owner_id,
+        customerName: names.get(o.company_id) ?? 'Unknown company',
+        siteName: site?.name ?? null,
+        goodsState: s.goods_state ?? 'n_a',
+        commissioningState: s.commissioning_state ?? 'n_a',
+        plannedOn: o.commissioning_planned_on,
+        deliveredOn: delivered.get(o.id) ?? null,
+        legacy: legacy.has(o.id) || s.data_trust === 'estimated_dates',
+      })
+    }
+  }
+  return jobs.sort((a, b) => a.orderNumber - b.orderNumber)
+}
+
 async function loadReceivables(names: Map<string, string>): Promise<ReceivableFact[]> {
   const db = requireSupabase()
   const rows = unwrap(await db.rpc('order_receivables')) ?? []
@@ -415,7 +475,7 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
   /** Customers read "Name — City"; suppliers stay plain. */
   const labels = new Map(companies.map(c => [c.id, withCity(c.name, c.city)]))
   const money = role === 'admin' || role === 'sales'
-  const [clarifications, inquiries, legs, orders, receivables, monthEnd, costs, invoices, recurring] = await Promise.all([
+  const [clarifications, inquiries, legs, orders, receivables, monthEnd, costs, invoices, recurring, jobs] = await Promise.all([
     loadClarifications(open),
     loadInquiries(open, names),
     loadLegs(names, labels),
@@ -425,6 +485,7 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
     role === 'admin' ? loadCosts() : Promise.resolve<CostFact[]>([]),
     money ? loadInvoiceFacts(today) : Promise.resolve<InvoiceFact[]>([]),
     role === 'admin' ? loadRecurringFacts(today) : Promise.resolve<RecurringFact[]>([]),
+    role === 'engineer' ? loadJobs(user.id, names) : Promise.resolve<JobFact[]>([]),
   ])
   const userRows = unwrap(users)
   return {
@@ -438,6 +499,7 @@ export async function loadTodayData(user: { id: string; role: Role }, today: str
     costs,
     invoices,
     recurring,
+    jobs,
     snoozes,
     roles: Object.fromEntries(userRows.map(u => [u.id, u.role as Role])),
     jobTitle: userRows.find(u => u.id === user.id)?.job_title ?? null,

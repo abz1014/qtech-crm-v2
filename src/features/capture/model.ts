@@ -131,7 +131,7 @@ export function saveLabel({ dest, kind, ticked, questionLines }: SaveLabelInput)
     case 'notes':
       return 'Add to notes'
     case 'new-rfq':
-      return 'Continue to intake'
+      return 'Continue to New RFQ'
     case 'reply':
       return 'Read the reply'
     case 'order':

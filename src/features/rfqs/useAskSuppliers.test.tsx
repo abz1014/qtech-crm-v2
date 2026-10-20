@@ -3,9 +3,9 @@ import { act, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { SessionContext } from '@/app/session'
-import type { RfqHeader, RfqItemRow } from '@/features/rfqs/api'
+import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useAskSuppliers } from '@/features/rfqs/useAskSuppliers'
-import { installFakeDb, type FakeCall } from '@/test/fakeSupabase'
+import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
 /* Asking suppliers from the RFQ page: a second tap while the first is still copying records nothing more. */
@@ -51,5 +51,35 @@ describe('useAskSuppliers', () => {
       await Promise.all([a, b])
     })
     expect(inserts).toHaveLength(1)
+  })
+
+  it('a supplier on the shortlist (saved without asking) has its inquiry stamped sent, not a second one added; Undo takes the stamp back', async () => {
+    const calls: FakeCall[] = []
+    installFakeDb(call => {
+      calls.push(call)
+      if (call.target === 'supplier_inquiries' && call.verb === 'update') return { data: [{ id: 'inq-short' }] }
+      if (call.target === 'supplier_inquiries' && call.verb === 'insert') return { data: [{ id: 'inq-new' }] }
+      return { data: [] }
+    })
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.resolve() } })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>
+        <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
+          <ToastProvider>{children}</ToastProvider>
+        </SessionContext.Provider>
+      </QueryClientProvider>
+    )
+    const shortlisted = { id: 'inq-short', supplierId: 's-short', supplierName: 'Orient', sentOn: null, noOfferOn: null, lines: [] } as unknown as InquiryRow
+    const { result } = renderHook(() => useAskSuppliers(rfq, [shortlisted]), { wrapper })
+    await act(async () => {
+      expect(await result.current.ask({ supplierIds: ['s-short', 's-new'], names: ['Orient', 'Gateway'], items })).toBe(true)
+    })
+    const update = calls.find(c => c.target === 'supplier_inquiries' && c.verb === 'update') as FakeCall
+    expect(opArgs(update, 'update')?.[0]).toEqual({ sent_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) })
+    expect(opArgs(update, 'in')).toEqual(['id', ['inq-short']])
+    expect(opArgs(update, 'is')).toEqual(['sent_on', null])
+    const insert = calls.find(c => c.target === 'supplier_inquiries' && c.verb === 'insert') as FakeCall
+    expect((opArgs(insert, 'insert')?.[0] as { supplier_id: string }[]).map(r => r.supplier_id)).toEqual(['s-new'])
   })
 })

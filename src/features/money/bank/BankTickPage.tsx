@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, CheckCheck, TriangleAlert } from 'lucide-react'
+import { CheckCheck, TriangleAlert } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { mapPgError, type MappedError } from '@/lib/pgErrors'
 import { cn } from '@/lib/utils'
@@ -10,17 +10,15 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { SumBar } from '@/ui/SumBar'
-import { MoneyFrame } from '@/features/money/MoneyFrame'
-import { MonthEndNav } from '@/features/money/monthEnd/MonthEndNav'
-import { useMonthEndStatus } from '@/features/money/monthEnd/hooks'
-import { buildChecklist, checksWithItems } from '@/features/money/monthEnd/model'
-import { monthKeyLabel, monthKeyShort, shiftMonth } from '@/features/money/expenses/model'
+import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
+import { MonthPager } from '@/features/money/monthEnd/MonthEndFrame'
+import { monthKeyLabel, shiftMonth } from '@/features/money/expenses/model'
 import { useBankMonth, useTickLine } from '@/features/money/bank/hooks'
 import { bankTotals, buildBankView, defaultStatementMonth, isMonthKey, type BankLine } from '@/features/money/bank/model'
 import { TickPanel } from '@/features/money/bank/TickPanel'
 
 /*
- * Money › Month-end › Bank tick (M12; admin only). Pick the statement month, tick each bank line against the statement:
+ * Money › Month end › Match bank statement (M12; admin only; the old "Bank tick", reached from the checklist). Pick the statement month, tick each bank line against the statement:
  * one tap a line, one tap a whole PSID group, the same tap again to undo. The four totals are for comparing with the
  * statement's total credits and debits. Nothing is typed and there is no import. Layout: g2-month-end "Bank tick".
  *
@@ -37,7 +35,6 @@ export function BankTickPage() {
 
   const data = useBankMonth(month)
   const tick = useTickLine(month)
-  const status = useMonthEndStatus(month)
   const view = useMemo(() => (data.data ? buildBankView(data.data, month) : null), [data.data, month])
   const totals = useMemo(() => (view ? bankTotals(view) : null), [view])
 
@@ -80,50 +77,23 @@ export function BankTickPage() {
 
   return (
     <MoneyFrame active="month-end">
-      <MonthEndNav
-        active="bank"
-        counts={{ bank: openCount || undefined, checklist: status.data ? checksWithItems(buildChecklist(status.data, month)) : undefined }}
-        search={`?month=${month}`}
+      <MoneySubHeader
+        back={{ to: `/money/month-end?month=${month}`, label: 'Month end' }}
+        title="Match bank statement"
+        meta={totals ? <StateChip open={openCount ?? 0} /> : null}
       />
 
       <div className="flex flex-wrap items-center gap-3">
-        <span className="text-xs font-medium text-fg-2">Statement month</span>
-        <div role="group" aria-label="Statement month" className="inline-flex gap-[2px] rounded bg-selected p-[2px]">
-          <button
-            type="button"
-            aria-label="Previous month"
-            onClick={() => go(-1)}
-            className="inline-flex h-[26px] items-center rounded px-2 text-fg-muted transition-colors duration-fast hover:text-fg"
-          >
-            <Icon icon={ChevronLeft} size="sm" />
-          </button>
-          <span
-            aria-live="polite"
-            title={monthKeyLabel(month)}
-            className="num inline-flex h-[26px] items-center rounded border border-line-strong bg-surface px-3 text-xs font-medium"
-          >
-            {monthKeyShort(month)}
-          </span>
-          <button
-            type="button"
-            aria-label="Next month"
-            disabled={month >= thisMonth}
-            onClick={() => go(1)}
-            className="inline-flex h-[26px] items-center rounded px-2 text-fg-muted transition-colors duration-fast hover:text-fg disabled:text-fg-disabled disabled:hover:text-fg-disabled"
-          >
-            <Icon icon={ChevronRight} size="sm" />
-          </button>
-        </div>
-        <span className="text-xs text-fg-muted">Tick each line against the bank statement. Cash items never appear here.</span>
-        <span className="flex-1" />
-        {totals ? <StateChip open={openCount ?? 0} /> : null}
+        <span className="text-sm font-medium text-fg-2">Statement month</span>
+        <MonthPager month={month} thisMonth={thisMonth} go={go} label="Statement month" />
+        <span className="text-sm text-fg-muted">Tick each line that is on the bank statement. Cash items never appear here.</span>
       </div>
 
       {data.isError ? (
         <div className="mx-auto mt-12 max-w-[520px] rounded border bg-surface p-6">
           <EmptyState
             mood="error"
-            title="The bank tick did not load"
+            title="The bank statement lines did not load"
             actions={
               <Button variant="primary" onClick={() => void data.refetch()}>
                 Try again
@@ -150,7 +120,7 @@ export function BankTickPage() {
               {
                 label: 'Ticked, money in',
                 amount: totals.tickedIn.amount,
-                paisa: 'auto',
+                paisa: 'auto', // matched against the statement to the paisa
                 sub: (
                   <>
                     <span className="num">{items(totals.tickedIn.count)}</span>. Compare with the statement&rsquo;s total credits.
@@ -160,7 +130,7 @@ export function BankTickPage() {
               {
                 label: 'Ticked, money out',
                 amount: totals.tickedOut.amount,
-                paisa: 'auto',
+                paisa: 'auto', // matched against the statement to the paisa
                 sub: (
                   <>
                     <span className="num">{items(totals.tickedOut.count)}</span>. Compare with the statement&rsquo;s total debits.
@@ -170,13 +140,13 @@ export function BankTickPage() {
               {
                 label: 'Not ticked, in',
                 amount: totals.openIn.amount,
-                paisa: 'auto',
+                paisa: 'auto', // matched against the statement to the paisa
                 sub: <span className="num">{items(totals.openIn.count)}</span>,
               },
               {
                 label: 'Not ticked, out',
                 amount: totals.openOut.amount,
-                paisa: 'auto',
+                paisa: 'auto', // matched against the statement to the paisa
                 sub: (
                   <>
                     <span className="num">{items(totals.openOut.count)}</span>, <span className="num">{totals.openOut.older}</span> older
@@ -197,7 +167,7 @@ export function BankTickPage() {
               <TickPanel dir="out" side={view.out} justTicked={just} onTick={onTick} />
             </div>
           )}
-          <p className="max-w-[100ch] text-xs text-fg-muted">
+          <p className="max-w-[100ch] text-sm text-fg-muted">
             Ticking records that the line appeared on the {monthKeyLabel(month).split(' ')[0]} statement. It changes nothing in the books
             and stays editable after the month closes. Money out lists bank expenses plus FBR deposits, one row per PSID group.
           </p>
@@ -233,7 +203,7 @@ function StateChip({ open }: { open: number }) {
 
 function Loading() {
   return (
-    <div aria-busy="true" aria-label="Loading the bank tick" className="grid gap-4">
+    <div aria-busy="true" aria-label="Loading the bank statement lines" className="grid gap-4">
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded border bg-line md:grid-cols-4">
         {[0, 1, 2, 3].map(i => (
           <div key={i} className="grid gap-2 bg-surface px-5 py-4">

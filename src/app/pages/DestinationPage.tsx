@@ -8,8 +8,7 @@ const LEDE: Record<NavKey, string> = {
   rfqs: 'Enquiries from first contact to bid, win or close.',
   orders: 'Orders from purchase order to delivery and invoice.',
   companies: 'Customers and suppliers, with their history.',
-  money: 'Invoices, the GST register, receivables and cash.',
-  reports: 'How enquiries turn into orders.',
+  money: 'Who owes us, invoices and GST, expenses, month end and reports.',
 }
 
 /**

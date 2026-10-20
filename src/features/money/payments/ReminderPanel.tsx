@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { CircleCheck, Copy, History, Mail, MessageCircle } from 'lucide-react'
+import { CircleCheck, Copy, ExternalLink, History, Mail, MessageCircle } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { copyToClipboard } from '@/lib/clipboard'
 import { formatDay } from '@/lib/formatDay'
@@ -16,6 +17,8 @@ import { daysBetween as daysBetweenText } from '@/features/rfqs/lib/dateText'
 import { usePaymentDraft, performChase } from '@/features/today/hooks'
 import { buildPaymentDraft } from '@/features/today/chaseDraft'
 import { useMyJobTitle } from '@/features/orders/hooks'
+import { RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
+import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPreference'
 import type { ReceivableRow } from '@/features/money/payments/model'
 
 /*
@@ -57,10 +60,22 @@ export function ReminderPanel({ row, today }: { row: ReceivableRow | null; today
           title={row.state === 'settled' ? 'Nothing is owed.' : 'Not overdue yet.'}
           body={row.state === 'settled' ? 'This order is paid in full.' : `Due on ${formatDay(row.dueOn)}, in ${d} ${d === 1 ? 'day' : 'days'}. A reminder becomes available once the invoice is overdue.`}
         />
+        {row.state !== 'settled' ? <PayFooter orderId={row.orderId} /> : null}
       </PanelShell>
     )
   }
   return <ReminderBody key={row.orderId} row={row} today={today} />
+}
+
+/** Admin only: the payment came in, so record it from here (the order page and the row have the same button). */
+function PayFooter({ orderId }: { orderId: string }) {
+  const session = useSession()
+  if (session.status !== 'signed-in' || session.user.role !== 'admin') return null
+  return (
+    <footer className="flex border-t bg-sunken px-5 py-3">
+      <RecordPaymentButton orderId={orderId} className="min-h-touch md:min-h-0" />
+    </footer>
+  )
 }
 
 function PanelShell({ title, meta, aside, children }: { title: string; meta?: React.ReactNode; aside?: React.ReactNode; children: React.ReactNode }) {
@@ -94,7 +109,8 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
   const client = useQueryClient()
   const jobTitle = useMyJobTitle(user?.id).data
   const draftQ = usePaymentDraft(row.orderId, true)
-  const [channel, setChannel] = useState<'whatsapp' | 'email'>('whatsapp')
+  // the person's last WhatsApp / Email choice, remembered on this device (the same one Today and the RFQ page use)
+  const [channel, setChannel] = useChannelPreference()
   const [busy, setBusy] = useState(false)
   // After the tap: what the strip and footer say until the undo window closes and the screen re-reads.
   const [done, setDone] = useState<{ count: number; undo: () => Promise<void>; open: boolean } | null>(null)
@@ -139,7 +155,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
     <SegmentedControl
       aria-label="Channel"
       value={channel}
-      onValueChange={v => setChannel(v as 'whatsapp' | 'email')}
+      onValueChange={v => setChannel(v as ContactChannel)}
       options={[
         { value: 'whatsapp', label: 'WhatsApp' },
         { value: 'email', label: 'Email' },
@@ -247,10 +263,16 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
 
   return (
     <PanelShell title="Payment reminder" meta={meta} aside={channelControl}>
-      <p className="flex flex-wrap items-center gap-2 border-b px-5 py-3 text-xs text-fg-2 [&_.num]:text-fg" data-testid="reminder-state">
-        <Icon icon={History} size="sm" className="text-fg-muted" />
-        <span>{stateText}</span>
-      </p>
+      <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3 text-sm">
+        <p className="flex flex-wrap items-center gap-2 text-fg-2 [&_.num]:text-fg" data-testid="reminder-state">
+          <Icon icon={History} size="sm" className="text-fg-muted" />
+          <span>{stateText}</span>
+        </p>
+        <Link to={`/orders/${row.orderId}`} className="ml-auto inline-flex min-h-touch items-center gap-1 font-medium text-primary hover:underline md:min-h-0">
+          <Icon icon={ExternalLink} size="sm" />
+          Open order
+        </Link>
+      </div>
       <div className="px-5 py-4">
         <div className="mb-3 flex items-center gap-2 border-b pb-3 text-sm text-fg-2">
           <Icon icon={channel === 'whatsapp' ? MessageCircle : Mail} size="sm" className="text-fg-muted" />
@@ -287,7 +309,8 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
             <Button variant="primary" icon={Copy} busy={busy} busyLabel="Marking" onClick={() => void copyAndMark()} className="min-h-touch md:min-h-0">
               Copy and mark reminded
             </Button>
-            <span className="min-w-[10rem] flex-1 text-right text-xs text-fg-muted">{toneText}</span>
+            {user?.role === 'admin' ? <RecordPaymentButton orderId={row.orderId} className="min-h-touch md:min-h-0" /> : null}
+            <span className="min-w-[10rem] flex-1 text-right text-sm text-fg-muted">{toneText}</span>
           </>
         )}
       </footer>

@@ -4,14 +4,25 @@ import { describe, expect, it, vi } from 'vitest'
 import { AppRoutes } from '@/app/routes'
 import { SessionProvider } from '@/app/SessionProvider'
 import { AdminOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
+import { useMobileBarConfig } from '@/app/shell/MobileBarContext'
+import { MobileBarProvider } from '@/app/shell/MobileBarProvider'
 
 vi.mock('@/features/settings/SettingsHomePage', () => ({ SettingsHomePage: () => <p>Settings home</p> }))
 
 const as = (role: string) => ({ status: 'signed-in' as const, user: { id: 'u', name: 'Someone', role } })
 
+/** What the phone bar would show: its title and where its back arrow goes. */
+function BarProbe() {
+  const c = useMobileBarConfig()
+  const back = typeof c?.back === 'string' ? c.back : c?.back?.to
+  return <output data-testid="bar">{c ? `${c.title ?? ''} <- ${back ?? ''}` : 'default'}</output>
+}
+
 function at(path: string, role: string) {
   return render(
     <SessionProvider value={as(role)}>
+      <MobileBarProvider>
+      <BarProbe />
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/settings" element={<SettingsLayout />}>
@@ -43,11 +54,13 @@ function at(path: string, role: string) {
             <Route path="company" element={<p>Company screen</p>} />
             <Route path="details" element={<p>Details screen</p>} />
             <Route path="rates" element={<p>Rates screen</p>} />
+            <Route path="exchange-rates" element={<p>Exchange rates screen</p>} />
             <Route path="password" element={<p>Password screen</p>} />
           </Route>
           <Route path="/no-access" element={null} />
         </Routes>
       </MemoryRouter>
+      </MobileBarProvider>
     </SessionProvider>,
   )
 }
@@ -124,6 +137,20 @@ describe('settings access (A04, A06)', () => {
     expect(screen.getByRole('link', { name: 'Team' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Company profile' })).toBeInTheDocument() // no View only tag for an admin
     expect(screen.getByRole('link', { name: 'Exchange rates' })).toBeInTheDocument()
+  })
+
+  it('groups the links: the company first, then you', () => {
+    at('/settings/company', 'admin')
+    const nav = screen.getByRole('navigation', { name: 'Settings' })
+    expect(nav).toHaveTextContent(/Company.*Team.*Company profile.*Targets.*Expense categories.*Exchange rates.*You.*Your details.*Change password/)
+  })
+
+  it('on a phone every page under Settings gets the back arrow to the Settings list (Team sets its own)', () => {
+    const r = at('/settings/details', 'sales')
+    expect(screen.getByTestId('bar')).toHaveTextContent('Your details <- /settings')
+    r.unmount()
+    at('/settings/exchange-rates', 'admin')
+    expect(screen.getByTestId('bar')).toHaveTextContent('Exchange rates <- /settings')
   })
 
   it('the real route table mounts Settings inside the shell guard', () => {

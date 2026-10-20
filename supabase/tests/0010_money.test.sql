@@ -24,8 +24,9 @@ select columns_are('public', 'invoices',
 select hasnt_column('public', 'invoices', 'tax_deposit_bank', 'invoices.tax_deposit_bank is dropped (A3-2)');
 select columns_are('public', 'payments_in',
   array['id', 'created_at', 'created_by', 'order_id', 'received_on', 'amount', 'credited_user_id', 'reference',
-        'legacy_flags', 'legacy_source', 'paid_via', 'bank_month'],
-  'payments_in has the section 2.17 columns and no tax_withheld');
+        'legacy_flags', 'legacy_source', 'paid_via', 'bank_month', 'voided_at', 'voided_by', 'void_reason',
+        'corrects_payment_id'],
+  'payments_in has the section 2.17 columns (0073: void and correction) and no tax_withheld');
 select columns_are('public', 'expenses',
   array['id', 'created_at', 'created_by', 'paid_on', 'amount_pkr', 'category_id', 'description', 'order_id',
         'supplier_order_id', 'payee_id', 'reference', 'recurring_id', 'period', 'legacy_flags', 'legacy_source',

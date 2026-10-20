@@ -68,4 +68,25 @@ export function precacheSize(distDir) {
   return { urls, entries: urls.length, raw, gzip, swRaw: statSync(join(distDir, 'sw.js')).size, swGzip: gz(readFileSync(join(distDir, 'sw.js'))) }
 }
 
+/** A string only pdf.js's main module carries: if it is in the first load, the PDF reader is no longer lazy. */
+export const PDFJS_SIGNATURE = 'GlobalWorkerOptions.workerSrc'
+
+/**
+ * The PDF reader (pdf.js, src/lib/docread): its lazy chunk (named after pdfjsRuntime.ts) and its worker (copied as
+ * assets/pdf.worker.min-<hash>.mjs). Empty until a screen imports src/lib/docread/pdfText.ts.
+ */
+export function pdfReaderFiles(distDir, listing) {
+  return listing
+    .filter(f => /^assets\/pdfjsRuntime-[\w-]+\.js$/.test(f) || /^assets\/pdf\.worker(?:\.min)?-[\w-]+\.m?js$/.test(f))
+    .map(f => {
+      const buf = readFileSync(join(distDir, f))
+      return { file: f, raw: buf.length, gzip: gz(buf) }
+    })
+}
+
+/** Initial files that carry pdf.js. */
+export function pdfjsInInitial(distDir, initial) {
+  return [...initial.files.keys()].filter(f => readFileSync(join(distDir, f), 'utf8').includes(PDFJS_SIGNATURE))
+}
+
 export const kb = n => `${(n / 1024).toFixed(1)} KB`

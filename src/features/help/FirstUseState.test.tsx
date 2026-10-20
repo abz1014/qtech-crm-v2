@@ -1,0 +1,82 @@
+import type { ReactNode } from 'react'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, useLocation } from 'react-router-dom'
+import { describe, expect, it, vi } from 'vitest'
+import { CaptureContext, type CaptureApi } from '@/app/capture/useCapture'
+import { FIRST_USE_COPY } from '@/features/help/firstUseCopy'
+import { FirstUseState } from '@/features/help/FirstUseState'
+import { axeViolations } from '@/test/axe'
+
+function Where() {
+  const loc = useLocation()
+  return <p data-testid="at">{`${loc.pathname}${loc.search}`}</p>
+}
+
+function mount(ui: ReactNode, capture?: Partial<CaptureApi>) {
+  return render(
+    <CaptureContext.Provider value={(capture ?? null) as CaptureApi | null}>
+      <MemoryRouter initialEntries={['/today']}>
+        {ui}
+        <Where />
+      </MemoryRouter>
+    </CaptureContext.Provider>,
+  )
+}
+
+describe('first-use empty states', () => {
+  it('every copy is short: a title, at most two lines, one action', () => {
+    for (const byRole of Object.values(FIRST_USE_COPY)) {
+      for (const copy of Object.values(byRole)) {
+        expect(copy?.title.length).toBeLessThanOrEqual(40)
+        expect(copy?.body.split(/\s+/).length).toBeLessThanOrEqual(40)
+      }
+    }
+  })
+
+  it('Today, sales: says what Today is for, and the one button starts an RFQ; axe-clean', async () => {
+    const user = userEvent.setup()
+    const { container } = mount(<FirstUseState screen="today" role="sales" />)
+    expect(screen.getByText('Your work shows up here')).toBeInTheDocument()
+    expect(screen.queryByText(/Nice|Nothing needs you/)).toBeNull()
+    expect(await axeViolations(container)).toEqual([])
+    await user.click(screen.getByRole('button', { name: 'New RFQ' }))
+    expect(screen.getByTestId('at')).toHaveTextContent('/rfqs/new')
+  })
+
+  it('"Show me how" opens the matching recipe in Help', async () => {
+    const user = userEvent.setup()
+    mount(<FirstUseState screen="orders" role="sales" />)
+    await user.click(screen.getByRole('button', { name: 'Show me how' }))
+    expect(screen.getByTestId('at')).toHaveTextContent('/today?help=mark-won')
+  })
+
+  it('Today, engineer: the one button opens Paste or photo', async () => {
+    const user = userEvent.setup()
+    const openCapture = vi.fn()
+    mount(<FirstUseState screen="today" role="engineer" />, { openCapture })
+    await user.click(screen.getByRole('button', { name: 'Paste or photo' }))
+    expect(openCapture).toHaveBeenCalledTimes(1)
+  })
+
+  it('Today, admin alone on the team: the one button adds people', async () => {
+    const user = userEvent.setup()
+    mount(<FirstUseState screen="today" role="admin" alone />)
+    expect(screen.getByText('Just you so far')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Add person' }))
+    expect(screen.getByTestId('at')).toHaveTextContent('/settings/team')
+  })
+
+  it('Orders, engineer: keeps the list\'s own "show everyone\'s" switch, with the count', async () => {
+    const user = userEvent.setup()
+    const onEveryone = vi.fn()
+    const { container } = mount(<FirstUseState screen="orders" role="engineer" onEveryone={onEveryone} everyoneCount={12} />)
+    await user.click(within(container).getByRole('button', { name: 'Show everyone’s (12)' }))
+    expect(onEveryone).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders nothing where it has no words (the screen keeps its own empty state)', () => {
+    const { container } = mount(<FirstUseState screen="rfqs" role="engineer" />)
+    expect(container.querySelector('[data-mood]')).toBeNull()
+  })
+})

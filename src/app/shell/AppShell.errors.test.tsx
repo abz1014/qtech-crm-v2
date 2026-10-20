@@ -40,7 +40,7 @@ describe('ErrorBoundary inside the shell', () => {
       ),
     )
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('Something went wrong')
-    expect(el.querySelectorAll('nav[aria-label="Main"] a').length).toBe(12)
+    expect(el.querySelectorAll('nav[aria-label="Main"] a').length).toBe(10) // five destinations, top bar and tab bar
     act(() => root.unmount())
   })
 })

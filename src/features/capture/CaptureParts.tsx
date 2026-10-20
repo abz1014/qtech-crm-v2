@@ -39,7 +39,7 @@ export function Section({ title, aside, children, className }: { title: ReactNod
 
 export function CapNote({ children }: { children: ReactNode }) {
   return (
-    <p className="flex items-start gap-2 text-xs leading-4 text-fg-muted [&_b]:font-medium [&_b]:text-fg">
+    <p className="flex items-start gap-2 text-xs leading-snug text-fg-muted [&_b]:font-medium [&_b]:text-fg">
       <Icon icon={Info} size="sm" className="mt-px" />
       <span>{children}</span>
     </p>
@@ -81,8 +81,8 @@ export function Tiles({ chosen, kind, off, onChoose }: { chosen: Dest; kind: Pay
             )}
           >
             <Icon icon={t.icon} size="lg" className={cn('mb-1', on ? 'text-fg' : 'text-fg-muted', off && 'text-fg-disabled')} />
-            <b className={cn('text-sm font-medium leading-[18px]', off && 'text-fg-disabled')}>{title}</b>
-            <span className="text-pretty text-xs leading-4 text-fg-muted">{help}</span>
+            <b className={cn('text-sm font-medium leading-snug', off && 'text-fg-disabled')}>{title}</b>
+            <span className="text-pretty text-xs leading-snug text-fg-muted">{help}</span>
             {on ? <span aria-hidden="true" className="absolute right-[10px] top-[10px] size-[8px] rounded-round bg-brand-green" /> : null}
           </button>
         )
@@ -158,14 +158,14 @@ export function CaptureArea({
   )
   const textArea = (cls: string, placeholder?: string, rows = 4) => (
     <textarea
-      aria-label="Captured text"
+      aria-label="Pasted text"
       value={text}
       rows={rows}
       placeholder={placeholder}
       autoFocus={autoFocus}
       onChange={e => onText(e.target.value)}
       onPaste={onPaste}
-      className={cn('block w-full resize-y whitespace-pre-wrap text-sm leading-5 text-fg placeholder:text-fg-muted', cls)}
+      className={cn('block w-full resize-y whitespace-pre-wrap text-sm leading-5 text-fg placeholder:text-fg-muted max-md:text-base max-md:leading-6', cls)}
     />
   )
 
@@ -208,7 +208,7 @@ export function CaptureArea({
   }
 
   return (
-    <Section title="What you captured" aside={count}>
+    <Section title="What you added" aside={count}>
       {showText ? textArea('rounded border border-line-input bg-surface p-3', undefined, 5) : null}
       <ul className="grid gap-2">
         {files.map(f => (
@@ -256,11 +256,11 @@ function Row({ c, on, onPick, hint }: { c: Candidate; on: boolean; onPick: () =>
         <Icon icon={FileText} />
       </span>
       <span className="grid min-w-0 flex-1">
-        <b className="truncate text-sm font-medium leading-[18px]">
+        <b className="truncate text-sm font-medium leading-snug">
           <span className="num">{rfqRef(c.number)}</span> · {c.companyName}
           {c.city ? ` — ${c.city}` : ''}
         </b>
-        <span className="truncate text-xs leading-4 text-fg-muted">{hint}</span>
+        <span className="truncate text-xs leading-snug text-fg-muted">{hint}</span>
       </span>
       <span aria-hidden="true" className={cn('grid size-[16px] shrink-0 place-items-center rounded-round border', on ? 'border-brand-green bg-brand-green' : 'border-line-input bg-surface')}>
         {on ? <span className="size-[6px] rounded-round bg-surface" /> : null}
@@ -361,10 +361,10 @@ export function OrderPicker({ list, chosenId, now, includePo, onPick }: { list: 
                 <Icon icon={FileText} />
               </span>
               <span className="grid min-w-0 flex-1">
-                <b className="truncate text-sm font-medium leading-[18px]">
+                <b className="truncate text-sm font-medium leading-snug">
                   <span className="num">{orderRef(c.number)}</span> · {c.companyName}
                 </b>
-                <span className="truncate text-xs leading-4 text-fg-muted">{c.openedAt ? `Opened ${openedAgo(c.openedAt, now)}` : 'Found by search'}</span>
+                <span className="truncate text-xs leading-snug text-fg-muted">{c.openedAt ? `Opened ${openedAgo(c.openedAt, now)}` : 'Found by search'}</span>
               </span>
               <span aria-hidden="true" className={cn('grid size-[16px] shrink-0 place-items-center rounded-round border', c.id === chosenId ? 'border-brand-green bg-brand-green' : 'border-line-input bg-surface')}>
                 {c.id === chosenId ? <span className="size-[6px] rounded-round bg-surface" /> : null}
@@ -411,7 +411,7 @@ export function QuestionPick({ open, ticked, onToggle }: { open: readonly OpenQu
             <input type="checkbox" checked={ticked.has(q.id)} onChange={e => onToggle(q.id, e.target.checked)} className="mt-[2px] size-[16px] accent-[var(--brand-green)]" />
             <span>
               {q.question}
-              <small className="block text-xs leading-4 text-fg-muted">{q.askedAt ? `Asked ${shortDay(q.askedAt)}` : 'Not asked yet'}</small>
+              <small className="block text-xs leading-snug text-fg-muted">{q.askedAt ? `Asked ${shortDay(q.askedAt)}` : 'Not asked yet'}</small>
             </span>
           </label>
         </li>
