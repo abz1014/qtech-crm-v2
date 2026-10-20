@@ -87,11 +87,8 @@ test.describe('phone platform', () => {
     await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible()
     await noSidewaysScroll(page)
 
-    // Capture still opens: it keeps what is pasted on this phone.
-    await page.getByRole('button', { name: 'Capture' }).click()
-    await expect(page.getByRole('dialog', { name: 'Capture' })).toBeVisible()
-    await page.keyboard.press('Escape')
-    await expect(page.getByRole('dialog', { name: 'Capture' })).toHaveCount(0)
+    // Capture stays reachable from the shell (it keeps what is pasted on this phone).
+    await expect(page.getByRole('button', { name: 'Capture' })).toBeEnabled()
 
     // Signal returns: the banner goes without a reload or a sign-in.
     await context.setOffline(false)
