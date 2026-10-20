@@ -204,11 +204,11 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const showPaisa = useMemo(() => new Map(columns.map(c => [c.id, columnShowsPaisa(c, rows)])), [columns, rows])
 
   // ---- windowing ----------------------------------------------------------
-  const [metrics, remeasure] = useRowMetrics(rootRef, density)
+  const virtual = !cards && items.length > virtualAfter
+  const [metrics, remeasure] = useRowMetrics(rootRef, density, virtual)
   const rowH = twoLine ? Math.max(metrics.tall, metrics.row) : metrics.row
   const groupH = Math.max(36, metrics.row - 4)
   const headH = metrics.head
-  const virtual = !cards && items.length > virtualAfter
   const offsets = useMemo(() => {
     const o = new Array<number>(items.length + 1)
     o[0] = 0
@@ -803,14 +803,15 @@ export function DataTable<T>(props: DataTableProps<T>) {
  * changes (the text-size setting), when the pointer turns coarse or fine (a 2-in-1 folded into a tablet), and on request
  * (a new window of rows). Returns the metrics and that request.
  */
-function useRowMetrics(rootRef: RefObject<HTMLDivElement>, density: Density): [RowMetrics, () => void] {
+function useRowMetrics(rootRef: RefObject<HTMLDivElement>, density: Density, virtual: boolean): [RowMetrics, () => void] {
   const [m, setM] = useState<RowMetrics>(() => DEFAULT_ROW_METRICS[density])
   const read = useCallback(() => {
     const el = rootRef.current
     if (!el) return
-    const next = readRowMetrics(el, density)
+    // Only a windowed table needs the drawn rows; any other table just reads the tokens.
+    const next = readRowMetrics(el, density, window, { rows: virtual })
     setM(prev => (prev.row === next.row && prev.tall === next.tall && prev.head === next.head ? prev : next))
-  }, [rootRef, density])
+  }, [rootRef, density, virtual])
   useLayoutEffect(() => {
     read()
     const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(read)

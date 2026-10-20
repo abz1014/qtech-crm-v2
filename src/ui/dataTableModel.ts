@@ -161,7 +161,12 @@ const SAMPLE_ROWS = 24
  * when the text gets smaller. Phone cards ([data-card]) are not windowed and are left out. Anything unreadable falls back
  * to DEFAULT_ROW_METRICS.
  */
-export function readRowMetrics(root: Element, density: Density, view: Pick<Window, 'getComputedStyle'> = window): RowMetrics {
+export function readRowMetrics(
+  root: Element,
+  density: Density,
+  view: Pick<Window, 'getComputedStyle'> = window,
+  { rows: measureRows = true }: { rows?: boolean } = {},
+): RowMetrics {
   const fallback = DEFAULT_ROW_METRICS[density]
   const style = (el: Element) => (typeof view.getComputedStyle === 'function' ? view.getComputedStyle(el) : null)
   const cs = style(root)
@@ -173,16 +178,18 @@ export function readRowMetrics(root: Element, density: Density, view: Pick<Windo
     const n = Number.parseFloat(v ?? '')
     return Number.isFinite(n) ? n : 0
   }
-  const rows = root.querySelectorAll('tbody > tr[data-di]:not([data-card])')
+  const rows = measureRows ? root.querySelectorAll('tbody > tr[data-di]:not([data-card])') : []
   const firstCell = rows[0]?.querySelector('td')
   const cellStyle = firstCell ? style(firstCell) : null
   const around = num(cellStyle?.paddingTop) + num(cellStyle?.paddingBottom) + num(cellStyle?.borderBottomWidth)
   let content = 0
   for (let i = 0; i < rows.length && i < SAMPLE_ROWS; i++) {
     for (const child of Array.from(rows[i].querySelectorAll(':scope > td > *'))) {
+      const h = child.getBoundingClientRect().height
+      if (h <= 0) continue // not laid out (or no layout engine): nothing to read, and no style lookup to pay for
       // Margins count: the selection checkbox sits in a -12 px margin, 12 px padding box (a 44 px touch target) that adds no height.
       const m = style(child)
-      content = Math.max(content, child.getBoundingClientRect().height + num(m?.marginTop) + num(m?.marginBottom))
+      content = Math.max(content, h + num(m?.marginTop) + num(m?.marginBottom))
     }
   }
   const need = content > 0 ? Math.ceil(content + around - 0.01) : 0
