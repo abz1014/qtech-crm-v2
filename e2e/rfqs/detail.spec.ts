@@ -666,14 +666,14 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     await expect.poll(async () => (await must(rest<unknown[]>('admin', `supplier_inquiries?rfq_id=eq.${s.rfq.id}&supplier_id=eq.${s.carrier!.id}&select=id`))).length).toBe(0)
   })
 
-  test('nobody asked yet: Ask suppliers is the green button, every item is waiting for prices, and Suppliers to ask copies one message for every item', async ({ page }) => {
+  test('nobody asked yet: Ask suppliers is the green button, every item needs suppliers, and Suppliers to ask copies one message for every item', async ({ page }) => {
     const s = await seed({ brand: true, asked: false })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const panel = page.locator('[data-slot="items"]')
     await expect(panel).toContainText('2 items · nobody asked yet')
     await expect(panel).toContainText('Ask suppliers for prices. One tap copies a message listing every item')
     await expect(page.getByText('No supplier has been asked about this item.')).toHaveCount(2)
-    await expect(page.getByRole('article', { name: 'Item 1' }).getByText('Waiting for prices', { exact: true })).toBeVisible()
+    await expect(page.getByRole('article', { name: 'Item 1' }).getByText('Needs suppliers', { exact: true })).toBeVisible() // the stage chip's words
     await expect(page.locator('[data-stage]')).toHaveText('Needs suppliers')
     await expect(page.locator('[data-slot="ask-suppliers"]').getByRole('button', { name: 'Ask suppliers' })).toHaveClass(/bg-primary/)
     await expect(page.locator('#main button.bg-primary:not([disabled]):visible')).toHaveCount(1)

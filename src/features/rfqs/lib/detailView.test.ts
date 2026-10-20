@@ -3,15 +3,18 @@ import { daysSince, dueChipLabel, dueSubLabel, itemCoverage, sentLine, supplierM
 
 describe('itemCoverage', () => {
   it('counts the prices when nobody is still to answer; "so far" while somebody is', () => {
-    expect(itemCoverage(3, 0, 3)).toEqual({ kind: 'covered', label: '3 prices' })
-    expect(itemCoverage(1, 0, 2).label).toBe('1 price')
-    expect(itemCoverage(1, 1, 2)).toEqual({ kind: 'partly', label: '1 price so far' })
-    expect(itemCoverage(2, 2, 2).label).toBe('2 prices so far')
+    expect(itemCoverage(3, 0, 3, 3)).toEqual({ kind: 'covered', label: '3 prices' })
+    expect(itemCoverage(1, 0, 2, 2).label).toBe('1 price')
+    expect(itemCoverage(1, 1, 2, 3)).toEqual({ kind: 'partly', label: '1 price so far' })
+    expect(itemCoverage(2, 2, 2, 4).label).toBe('2 prices so far')
   })
-  it('"No price yet" once others replied and nobody priced it; "Waiting for prices" before that', () => {
-    expect(itemCoverage(0, 1, 2)).toEqual({ kind: 'uncovered', label: 'No price yet' })
-    expect(itemCoverage(0, 0, 0)).toEqual({ kind: 'none', label: 'Waiting for prices' })
-    expect(itemCoverage(0, 2, 0).kind).toBe('none')
+  it('"No price yet" once others replied and nobody priced it; "Waiting for prices" while somebody asked has not answered', () => {
+    expect(itemCoverage(0, 1, 2, 3)).toEqual({ kind: 'uncovered', label: 'No price yet' })
+    expect(itemCoverage(0, 2, 0, 2)).toEqual({ kind: 'none', label: 'Waiting for prices' })
+  })
+  it('agrees with the header and the board: "Needs suppliers" when nobody is asked, "No price yet" when everyone asked said no', () => {
+    expect(itemCoverage(0, 0, 0, 0)).toEqual({ kind: 'unasked', label: 'Needs suppliers' })
+    expect(itemCoverage(0, 0, 0, 2)).toEqual({ kind: 'uncovered', label: 'No price yet' })
   })
 })
 

@@ -4,28 +4,32 @@ import { formatDay } from '@/lib/formatDay'
 
 // ------------------------------------------------------------------------------------------------ coverage of one item
 
-export type CoverageKind = 'covered' | 'partly' | 'uncovered' | 'none'
+export type CoverageKind = 'covered' | 'partly' | 'uncovered' | 'none' | 'unasked'
 
 export interface Coverage {
   kind: CoverageKind
-  /** The chip's words (plain-words glossary, 2026-10-19): "3 prices", "1 price so far", "No price yet", "Waiting for prices". */
+  /** The chip's words (plain-words glossary, 2026-10-19): "3 prices", "1 price so far", "No price yet", "Waiting for prices", "Needs suppliers". */
   label: string
 }
 
 /**
- * The chip on an item (C-23):
+ * The chip on an item (C-23), in the same words as the header's stage chip and the board's Next step (review of ux/rfqs, item 10):
  *  - a price and nobody still to answer  -> n prices
  *  - a price and somebody still waiting  -> n price(s) so far     (the owner's partial-quote rule: it can still improve)
+ *  - nobody asked yet                    -> Needs suppliers      (a supplier only on the shortlist is not asked)
  *  - no price, but others replied        -> No price yet
- *  - no price and no replies             -> Waiting for prices
- * `waiting` is the number of suppliers asked about this item who have not answered it; `responders` the suppliers who quoted any item.
+ *  - no price, somebody still to answer  -> Waiting for prices
+ *  - no price and nobody left to answer  -> No price yet         (everyone asked said they cannot quote it)
+ * `waiting` is the number of suppliers asked about this item who have not answered it; `responders` the suppliers who quoted any
+ * item; `asked` the suppliers asked at all (sent, or answered "cannot quote").
  */
-export function itemCoverage(prices: number, waiting: number, responders: number): Coverage {
+export function itemCoverage(prices: number, waiting: number, responders: number, asked: number): Coverage {
   if (prices > 0) {
     const n = `${prices} ${prices === 1 ? 'price' : 'prices'}`
     return waiting > 0 ? { kind: 'partly', label: `${n} so far` } : { kind: 'covered', label: n }
   }
-  if (responders > 0) return { kind: 'uncovered', label: 'No price yet' }
+  if (asked === 0) return { kind: 'unasked', label: 'Needs suppliers' }
+  if (responders > 0 || waiting === 0) return { kind: 'uncovered', label: 'No price yet' }
   return { kind: 'none', label: 'Waiting for prices' }
 }
 

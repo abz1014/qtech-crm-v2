@@ -272,6 +272,8 @@ export function ItemsPanel({
   const showSell = session.status === 'signed-in' && (session.user.role === 'admin' || session.user.role === 'sales')
   const [opened, setOpened] = useState<Readonly<Record<string, boolean>>>({})
   const responders = inquiries.filter(i => i.lines.length > 0)
+  // Asked at all: sent, or answered "cannot quote" (a supplier only on the shortlist is not asked yet).
+  const askedCount = inquiries.filter(i => i.sentOn || i.noOfferOn).length
   const pricedItems = items.filter(it => inquiries.some(i => i.lines.some(l => l.itemId === it.id))).length
   const rateBar = buildRateBar(
     fxRows,
@@ -354,7 +356,7 @@ export function ItemsPanel({
             // Still waiting: asked, nothing back from them at all, and not declined for this item. A supplier who answered other items
             // and left this one is not waiting on it (the chase card still asks for it).
             const waiting = inquiries.filter(i => i.sentOn && !i.noOfferOn && i.lines.length === 0 && !i.itemDeclines[item.id])
-            const cov = itemCoverage(lines.length, waiting.length, responders.length)
+            const cov = itemCoverage(lines.length, waiting.length, responders.length, askedCount)
             const q = qtyText(item.qty, item.unit)
             const forThis = (suggestions ?? []).filter(s => s.coversItemIds.includes(item.id)).slice(0, 3)
             return (
@@ -384,7 +386,7 @@ export function ItemsPanel({
                   </div>
                   <StatusBadge
                     dimension={cov.kind === 'none' ? 'inquiry' : 'sourcing'}
-                    value={cov.kind === 'covered' ? 'covered' : cov.kind === 'partly' ? 'partly-covered' : cov.kind === 'uncovered' ? 'no-offer' : 'awaiting'}
+                    value={cov.kind === 'covered' ? 'covered' : cov.kind === 'partly' ? 'partly-covered' : cov.kind === 'uncovered' ? 'no-offer' : cov.kind === 'unasked' ? 'not-floated' : 'awaiting'}
                     label={cov.label}
                   />
                 </header>
@@ -394,7 +396,11 @@ export function ItemsPanel({
                     <div role="status" className="flex items-start gap-3 rounded-t border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3">
                       <Icon icon={TriangleAlert} className="mt-[2px] text-tone-danger-fg" />
                       <p className="text-fg-2">
-                        <b className="font-semibold text-fg">{`None of the ${responders.length} ${responders.length === 1 ? 'supplier' : 'suppliers'} who replied quoted this item.`}</b>{' '}
+                        <b className="font-semibold text-fg">
+                          {responders.length > 0
+                            ? `None of the ${responders.length} ${responders.length === 1 ? 'supplier' : 'suppliers'} who replied quoted this item.`
+                            : 'Every supplier asked said they cannot quote it.'}
+                        </b>{' '}
                         {waiting.length > 0 ? `${waiting.map(w => w.supplierName).join(', ')} ${waiting.length === 1 ? 'has' : 'have'} not replied yet. ` : ''}
                         Ask someone else before the quotation is due.
                       </p>
