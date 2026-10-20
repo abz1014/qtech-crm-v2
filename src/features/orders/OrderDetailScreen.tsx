@@ -202,7 +202,7 @@ export default function OrderDetailScreen() {
               {/* The side column is admin's Margin (with the one order-level Add expense) and the payment rows (Correct / Void, 0073). The
                   invoiced and received figures are in the header's status strip, and the engineer's site is in the header's "Your job". */}
               {isAdmin ? (
-                <aside className="grid min-w-0 gap-6 lg:col-start-2 lg:row-start-1" aria-label="Margin and costs">
+                <aside className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:col-start-2 lg:row-start-1" aria-label="Margin and costs">
                   <MarginPanel order={order} money={orderMoney.data} loading={orderMoney.isPending} error={orderMoney.isError} />
                   <InvoicesPanel orderId={order.id} orderNumber={order.number} />
                 </aside>
