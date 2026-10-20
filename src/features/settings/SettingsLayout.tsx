@@ -126,7 +126,8 @@ function BackToSettings({ title }: { title: string }) {
 export function SettingsHome() {
   const isAdmin = useIsAdmin()
   const phone = usePhone()
-  if (isAdmin) return phone ? null : <Navigate to="/settings/team" replace />
+  // the list is the page on a phone: it still needs the page's one level-one heading
+  if (isAdmin) return phone ? <h1 className="sr-only">Settings</h1> : <Navigate to="/settings/team" replace />
   return <SettingsHomePage />
 }
 

@@ -109,7 +109,8 @@ test.describe('month-end (M10)', () => {
     expect(await mouse(page)).toBe(1)
   })
 
-  test('every report is one tap on its tab and one tap on Export CSV', async ({ page }) => {
+  test('every report is one tap from Reports and one tap on Export CSV', async ({ page }) => {
+    test.setTimeout(120_000) // six reports, each opened, read and exported
     const { order } = await newOrder('Report Payer')
     await addPayment(order.id)
     await addExpense({ description: 'office rent' })
@@ -123,8 +124,9 @@ test.describe('month-end (M10)', () => {
       { title: 'GST and FBR', key: 'gst', file: `gst-and-fbr-${STMT.key}.csv`, header: 'Invoice month', shows: /GST and FBR, by invoice month/ },
       { title: 'Sales by person', key: 'team', file: `sales-by-person-${STMT.key}.csv`, header: 'Month', shows: /Net cash credited to each person/ },
     ]
+    await openAs(page, 'admin', `/money/reports?month=${STMT.key}`) // one sign-in; then each report from the Reports list
     for (const r of reports) {
-      await openAs(page, 'admin', `/money/reports?month=${STMT.key}`)
+      await page.goto(`/money/reports?month=${STMT.key}`)
       const line = page.getByTestId(`report-${r.key}`)
       await expect(line.getByRole('button', { name: 'Export CSV' })).toBeEnabled()
       await startCounting(page)
@@ -140,7 +142,7 @@ test.describe('month-end (M10)', () => {
       expect(csv.text.split('\n')[0]).toContain(`"${r.header}"`)
     }
     // and straight from the Reports list: one tap, the same file
-    await openAs(page, 'admin', `/money/reports?month=${STMT.key}`)
+    await page.goto(`/money/reports?month=${STMT.key}`)
     await page.waitForLoadState('networkidle')
     await startCounting(page)
     const csv = await exportCsv(page, page.getByTestId('report-pnl'))

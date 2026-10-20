@@ -248,7 +248,8 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
 }
 
 function Row({ item, today, names, waiting = false, open, copied, wide, onPick, children }: { item: TodayItem; today: string; names?: Record<string, string>; waiting?: boolean; open: boolean; copied: boolean; wide: boolean; onPick: () => void; children?: React.ReactNode }) {
-  const tone = item.badge.tone === 'danger' ? 'text-tone-danger-fg' : item.badge.tone === 'warning' ? 'text-tone-warning-fg' : 'text-fg-muted'
+  // On the selected row's background the amber is below 4.5:1, so a warning badge reads in the body colour there (as on the GST register).
+  const tone = item.badge.tone === 'danger' ? 'text-tone-danger-fg' : item.badge.tone === 'warning' ? (open ? 'text-fg-2' : 'text-tone-warning-fg') : 'text-fg-muted'
   return (
     <li data-rule={item.rule} data-waiting={waiting || undefined} className="border-b last:border-b-0">
       <button
