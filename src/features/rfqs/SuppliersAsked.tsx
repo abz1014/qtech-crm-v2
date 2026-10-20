@@ -283,7 +283,7 @@ function ChaseCard({
           </ChaseNote>
         ) : null}
         <div className="grid gap-2 border-t bg-sunken px-4 py-3">
-          <Button variant={main ? 'primary' : 'secondary'} icon={Copy} disabled={!chase} onClick={() => void doChase()} busy={busy} busyLabel="Marking chased" className="w-fit">
+          <Button data-chase-copy variant={main ? 'primary' : 'secondary'} icon={Copy} disabled={!chase} onClick={() => void doChase()} busy={busy} busyLabel="Marking chased" className="w-fit">
             Copy and mark chased
           </Button>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">

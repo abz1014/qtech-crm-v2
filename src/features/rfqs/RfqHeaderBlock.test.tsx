@@ -137,10 +137,40 @@ describe('the RFQ header', () => {
     expect(issue).toHaveTextContent('add an item first')
   })
 
-  it('a closed RFQ shows Closed and Reopen, and no green button', () => {
+  it('a closed RFQ says when and why in the Next step box, with Reopen and Mark won beside it, and no green button', async () => {
+    const user = userEvent.setup()
     renderHeader('none', rfq({ state: state({ outcome: 'closed' }), closedOn: '2026-11-30', closeReason: 'price' }))
     expect(greens()).toHaveLength(0)
-    expect(screen.getByRole('button', { name: 'Reopen' })).toBeInTheDocument()
-    expect(screen.getByText(/Closed .*: Price too high\./)).toBeInTheDocument()
+    const box = screen.getByRole('region', { name: 'Next step' })
+    expect(box).toHaveTextContent(/Closed .*: Price too high\./)
+    expect(within(box).getByRole('button', { name: 'Reopen' })).toBeInTheDocument()
+    // A customer may order after it was closed: Mark won is right there (converting reopens it).
+    await user.click(within(box).getByRole('button', { name: 'Mark won' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('won=1')
+  })
+
+  it('the green button sits in the Next step box under the title, with the reason; the header itself has none', () => {
+    renderHeader('issue')
+    const box = screen.getByRole('region', { name: 'Next step' })
+    expect(box).toHaveTextContent('Next stepSupplier prices are in. Send the customer a quotation.')
+    expect(within(box).getByRole('button', { name: 'Issue quotation' })).toHaveClass('bg-primary')
+    expect(greens()).toHaveLength(1)
+    // The title comes first, then the box.
+    const h1 = screen.getByRole('heading', { level: 1 })
+    expect(h1.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('waiting for prices: the green button is Chase suppliers, and the sentence says how many owe a price', () => {
+    renderHeader('chase', rfq({ state: state({ sourcing_state: 'floated_awaiting' }) }), { awaiting: 2 })
+    const box = screen.getByRole('region', { name: 'Next step' })
+    expect(box).toHaveTextContent('Waiting for prices from 2 suppliers. Chase them.')
+    expect(greens().map(b => b.textContent)).toEqual(['Chase suppliers'])
+  })
+
+  it('nothing to do: the box is a quiet sentence with no button', () => {
+    renderHeader('none', rfq({ state: state({ sourcing_state: 'floated_awaiting' }) }), { awaiting: 1 })
+    const box = screen.getByRole('region', { name: 'Next step' })
+    expect(box).toHaveTextContent('Waiting for prices from 1 supplier. Chased recently: nothing to do until they reply.')
+    expect(within(box).queryByRole('button')).toBeNull()
   })
 })

@@ -485,7 +485,13 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await expect(page.getByLabel('Where this RFQ stands').locator('> *')).toHaveCount(2)
     await expect(page.locator('[data-stage]')).toHaveText('Waiting for prices')
     await expect(page.locator('#main button.bg-primary:not([disabled]):visible')).toHaveCount(1)
-    await expect(page.locator(`[data-chase-card="${s.china.id}"]`).getByRole('button', { name: 'Copy and mark chased' })).toHaveClass(/bg-primary/)
+    // The green one is in the Next step box under the title (coordinator decision 2026-10-20), and goes to the chase in the rail.
+    const next = page.getByRole('region', { name: 'Next step' })
+    await expect(next).toContainText('Waiting for prices from 3 suppliers. Chase them.')
+    await expect(next.getByRole('button', { name: 'Chase suppliers' })).toHaveClass(/bg-primary/)
+    await expect(page.locator(`[data-chase-card="${s.china.id}"]`).getByRole('button', { name: 'Copy and mark chased' })).not.toHaveClass(/bg-primary/)
+    await next.getByRole('button', { name: 'Chase suppliers' }).click()
+    await expect(page.locator(`[data-chase-card="${s.china.id}"]`).getByRole('button', { name: 'Copy and mark chased' })).toBeFocused()
     // Issue quotation is never silently disabled: it is in More and opens (prices can be typed in the dialog).
     await more(page).click()
     await expect(page.getByRole('menuitem', { name: /Issue quotation/ })).toBeEnabled()

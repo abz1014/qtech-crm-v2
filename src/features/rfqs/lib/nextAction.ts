@@ -40,6 +40,41 @@ export function primaryAction(i: PrimaryInput): RfqPrimary {
   return 'none'
 }
 
+export interface NextStepInput {
+  primary: RfqPrimary
+  sourcingState: string | null | undefined
+  bidState: string | null | undefined
+  itemCount: number
+  /** Suppliers asked who have not replied (no price, no "cannot quote"). */
+  awaiting: number
+}
+
+/**
+ * The sentence in the "Next step" box under the title (coordinator decision 2026-10-20, the pattern ux/orders built: every detail
+ * page shows its one green action in a labelled Next step box). What to do now, or what the RFQ is waiting for when there is
+ * nothing to do. A closed or won RFQ says so with its date, reason or order (RfqHeaderBlock).
+ */
+export function nextStepSentence(i: NextStepInput): string {
+  const n = i.awaiting
+  const who = `${n} ${n === 1 ? 'supplier' : 'suppliers'}`
+  switch (i.primary) {
+    case 'ask':
+      return i.sourcingState === 'no_offer_anywhere' ? 'No supplier asked could quote. Ask other suppliers.' : 'Nobody has been asked for prices yet.'
+    case 'issue':
+      return 'Supplier prices are in. Send the customer a quotation.'
+    case 'won':
+      return i.bidState === 'quotation_expired'
+        ? 'The quotation has expired. Mark it won if they ordered, or revise it from More.'
+        : 'Quotation sent. Mark it won when the customer orders.'
+    case 'chase':
+      return `Waiting for prices from ${who}. Chase them.`
+    default:
+      if (i.itemCount === 0) return 'No items yet. Add what the customer asked for under Items.'
+      if (n > 0) return `Waiting for prices from ${who}. Chased recently: nothing to do until they reply.`
+      return 'Nothing to do now.'
+  }
+}
+
 export interface StageChip {
   label: string
   tone: 'warning' | 'info' | 'success' | 'neutral'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { primaryAction, quotationSent, stageChip, type PrimaryInput } from './nextAction'
+import { nextStepSentence, primaryAction, quotationSent, stageChip, type PrimaryInput } from './nextAction'
 
 const base: PrimaryInput = {
   outcome: 'open',
@@ -53,5 +53,23 @@ describe('the stage chip', () => {
     expect(stageChip(at({ bidState: 'quotation_expired' })).label).toBe('Quotation expired')
     expect(stageChip(at({ outcome: 'won' })).label).toBe('Won')
     expect(stageChip(at({ outcome: 'closed' })).label).toBe('Closed')
+  })
+})
+
+describe('the Next step sentence (the box under the title)', () => {
+  const step = (over: Partial<Parameters<typeof nextStepSentence>[0]> = {}) =>
+    nextStepSentence({ primary: 'none', sourcingState: 'floated_awaiting', bidState: 'to_bid', itemCount: 2, awaiting: 0, ...over })
+  it('says what to do now, in the words of the green button', () => {
+    expect(step({ primary: 'ask', sourcingState: 'not_floated' })).toBe('Nobody has been asked for prices yet.')
+    expect(step({ primary: 'ask', sourcingState: 'no_offer_anywhere' })).toBe('No supplier asked could quote. Ask other suppliers.')
+    expect(step({ primary: 'issue' })).toBe('Supplier prices are in. Send the customer a quotation.')
+    expect(step({ primary: 'won', bidState: 'bid_sent' })).toBe('Quotation sent. Mark it won when the customer orders.')
+    expect(step({ primary: 'won', bidState: 'quotation_expired' })).toMatch(/^The quotation has expired\./)
+    expect(step({ primary: 'chase', awaiting: 1 })).toBe('Waiting for prices from 1 supplier. Chase them.')
+  })
+  it('with nothing to do, says what it is waiting for', () => {
+    expect(step({ itemCount: 0 })).toBe('No items yet. Add what the customer asked for under Items.')
+    expect(step({ awaiting: 3 })).toBe('Waiting for prices from 3 suppliers. Chased recently: nothing to do until they reply.')
+    expect(step()).toBe('Nothing to do now.')
   })
 })

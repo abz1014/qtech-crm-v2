@@ -239,7 +239,8 @@ function Loaded({
           itemCount: itemList.length,
           chaseable: chaseSuppliers,
         })
-  const facts: HeaderFacts = { primary, itemCount: itemList.length, quotationCount, onAsk: () => setFloating(true) }
+  const awaiting = inquiryList.filter(i => i.sentOn && !i.noOfferOn && i.lines.length === 0).length
+  const facts: HeaderFacts = { primary, itemCount: itemList.length, quotationCount, onAsk: () => setFloating(true), awaiting }
 
   const askFrom = async (ticked: readonly { supplierId: string; name: string }[], list: RfqItemRow[]) =>
     ask({ supplierIds: ticked.map(t => t.supplierId), names: ticked.map(t => t.name), items: list })
@@ -338,7 +339,7 @@ function Loaded({
               onAsk={ticked => void askFrom(ticked, itemList)}
             />
           ) : (
-            <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} chaseIsMain={primary === 'chase'} onFloat={() => setFloating(true)} />
+            <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} onFloat={() => setFloating(true)} />
           )}
           <ClarificationsPanel rfq={rfq} inquiries={inquiryList} />
           <AttachmentsPanel rfqId={rfq.id} compact />

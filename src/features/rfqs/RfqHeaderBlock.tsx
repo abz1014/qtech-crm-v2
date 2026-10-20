@@ -36,15 +36,20 @@ import { useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
 import { useOrdersForRfq } from '@/features/orders/hooks'
 import { useWonDialog } from '@/features/orders/useWonDialog'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
-import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, dueChipLabel, dueSubLabel, quotationSent, stageChip, type CloseReason, type RfqPrimary } from '@/features/rfqs/lib'
+import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, dueChipLabel, dueSubLabel, nextStepSentence, quotationSent, stageChip, type CloseReason, type RfqPrimary } from '@/features/rfqs/lib'
 
 /*
  * The top of the RFQ page (g2-rfq-detail header, the phone bar and the action bar), reworked by the UX audit of 2026-10-19:
  *   - who it is for first (the company), then the code;
  *   - at most two chips: the stage, in the board's next-step words, and the due date when it is close or past;
- *   - exactly one green button, chosen by state (lib/nextAction.ts): Ask suppliers, then Issue quotation, then Mark won. Everything
- *     else is in one "More" menu: the other two, Mark quotation sent (no PDF), Quotation sent again, and the reasons to close.
- *     Mark won is never the button before a quotation exists, but stays in More for the odd case (a win by phone).
+ *   - exactly one green button, chosen by state (lib/nextAction.ts): Ask suppliers, then Issue quotation, then Mark won (and while
+ *     waiting for prices, Chase suppliers, which goes to the chase in the side column). It sits in a labelled "Next step" box under
+ *     the title, with a sentence saying why (coordinator decision 2026-10-20: every detail page, the pattern ux/orders built; this
+ *     mirrors that branch's NextStep markup, which is not merged yet). The header itself has no primary button. Everything else is
+ *     in one "More" menu: the other two, Mark quotation sent (no PDF), Quotation sent again, and the reasons to close. Mark won is
+ *     never the button before a quotation exists, but stays in More for the odd case (a win by phone).
+ *   - closed: the box says when and why, with Reopen and Mark won (a customer may order after it was closed: converting reopens
+ *     it); won: the box links to the order.
  *   - Issue quotation is never silently disabled: it opens whenever the RFQ has an item (prices can be typed in the dialog); with no
  *     item the menu says why.
  * Mark quotation sent and closing both have an Undo.
@@ -60,9 +65,20 @@ export interface HeaderFacts {
   quotationCount: number
   /** Opens the "Ask suppliers" list. */
   onAsk: () => void
+  /** Suppliers asked who have not replied yet, for the Next step sentence. */
+  awaiting?: number
 }
 
 // ------------------------------------------------------------------------------------------------ the actions
+
+/** Go to the chase in the side column (Suppliers asked) and put the focus on its copy button. */
+function goToChase() {
+  window.setTimeout(() => {
+    const panel = document.querySelector('[data-slot="suppliers-asked"]')
+    panel?.scrollIntoView({ block: 'start' })
+    panel?.querySelector<HTMLElement>('[data-chase-copy]')?.focus({ preventScroll: true })
+  }, 60)
+}
 
 /** Mark quotation sent, Quotation sent again and Close because...: one set of actions, used by the header menu and both phone menus. */
 function useQuoteAndClose(rfq: RfqHeader) {
@@ -247,9 +263,75 @@ function PrimaryButton({ rfq, facts, size = 'md', className }: { rfq: RfqHeader;
             </Button>,
           )
         : null
+    case 'chase':
+      return wrap(
+        'chase-suppliers',
+        <Button variant="primary" size={size} icon={MessageCircle} className={className} onClick={goToChase}>
+          Chase suppliers
+        </Button>,
+      )
     default:
       return null
   }
+}
+
+/**
+ * The "Next step" box under the title: one sentence (what to do, or what the RFQ waits for) and the one green button. On a phone the
+ * button is in the sticky bar at the foot instead, so the box keeps the sentence. Closed: when and why, with Reopen and Mark won
+ * (neither green). Won: the way to the order.
+ */
+function NextStepBox({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions }) {
+  const main = useMainActions(rfq, facts)
+  const s = rfq.state
+  const outcome = s?.outcome ?? 'open'
+  let text: string
+  let action: React.ReactNode = null
+  let quiet = false
+  if (main.liveOrders.length > 0) {
+    text = main.liveOrders.length === 1 ? `Won. Order ${orderRef(main.liveOrders[0].number)} carries it from here.` : `Won. ${main.liveOrders.length} orders carry it from here.`
+    // data-slot="mark-won" (O01): once there is an order, the way to it.
+    action = (
+      <span data-slot="mark-won" className="flex flex-wrap gap-2">
+        {main.liveOrders.map(o => (
+          <Link key={o.id} to={`/orders/${o.id}`} className="inline-flex h-control items-center gap-2 rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
+            <Icon icon={Package} />
+            Open {orderRef(o.number)}
+          </Link>
+        ))}
+      </span>
+    )
+  } else if (outcome === 'closed') {
+    quiet = true
+    text = `Closed ${rfq.closedOn ? formatDay(rfq.closedOn) : ''}: ${closeReasonLabel(rfq.closeReason)}.${rfq.closeNote ? ` ${rfq.closeNote}` : ''}`
+    action = (
+      <div className="flex flex-wrap gap-2">
+        <Button icon={RotateCcw} onClick={() => void actions.reopen()} busy={actions.busy} busyLabel="Reopening">
+          Reopen
+        </Button>
+        {main.canWin ? (
+          <Button icon={FileCheck2} onClick={main.won}>
+            Mark won
+          </Button>
+        ) : null}
+      </div>
+    )
+  } else if (outcome !== 'open') {
+    quiet = true
+    text = 'Won.'
+  } else {
+    quiet = facts.primary === 'none'
+    text = nextStepSentence({ primary: facts.primary, sourcingState: s?.sourcing_state, bidState: s?.bid_state, itemCount: facts.itemCount, awaiting: facts.awaiting ?? 0 })
+    action = quiet ? null : <PrimaryButton rfq={rfq} facts={facts} className="max-md:hidden" />
+  }
+  return (
+    <section aria-label="Next step" className={cn('mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded border px-4 py-3 md:px-5', quiet ? 'bg-sunken' : 'border-line-strong bg-surface')}>
+      <p className="min-w-0 text-base">
+        <span className="mr-2 text-sm text-fg-muted">Next step</span>
+        <span className={cn('font-medium', quiet && 'font-regular text-fg-2')}>{text}</span>
+      </p>
+      {action}
+    </section>
+  )
 }
 
 // ------------------------------------------------------------------------------------------------ the meta strip
@@ -335,48 +417,23 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
             {due ? <StatusBadge dimension="deadline" value={s?.is_overdue ? 'overdue' : 'due-soon'} label={due} /> : null}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {open ? (
-            <>
-              <PrimaryButton rfq={rfq} facts={facts} className="max-md:hidden" />
-              <MoreMenu
-                rfq={rfq}
-                facts={facts}
-                actions={actions}
-                label="More"
-                trigger={
-                  <Button aria-haspopup="menu" className="max-md:hidden">
-                    More
-                    <Icon icon={ChevronDown} size="sm" />
-                  </Button>
-                }
-              />
-            </>
-          ) : null}
-          {/* data-slot="mark-won" (O01): once there is an order, the way to it. */}
-          {main.liveOrders.length > 0 ? (
-            <span data-slot="mark-won" className="contents">
-              {main.liveOrders.map(o => (
-                <Link key={o.id} to={`/orders/${o.id}`} className="inline-flex h-control items-center gap-2 rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary-hover">
-                  <Icon icon={Package} />
-                  Open {orderRef(o.number)}
-                </Link>
-              ))}
-            </span>
-          ) : null}
-          {s?.outcome === 'closed' ? (
-            <Button icon={RotateCcw} onClick={() => void actions.reopen()} busy={actions.busy} busyLabel="Reopening">
-              Reopen
-            </Button>
-          ) : null}
-        </div>
+        {open ? (
+          <MoreMenu
+            rfq={rfq}
+            facts={facts}
+            actions={actions}
+            label="More"
+            trigger={
+              <Button aria-haspopup="menu" className="max-md:hidden">
+                More
+                <Icon icon={ChevronDown} size="sm" />
+              </Button>
+            }
+          />
+        ) : null}
       </div>
 
-      {s?.outcome === 'closed' ? (
-        <p className="mt-3 text-fg-2">
-          Closed {rfq.closedOn ? formatDay(rfq.closedOn) : ''}: {closeReasonLabel(rfq.closeReason)}.{rfq.closeNote ? ` ${rfq.closeNote}` : ''}
-        </p>
-      ) : null}
+      <NextStepBox rfq={rfq} facts={facts} actions={actions} />
 
       <dl className="mt-4 grid grid-cols-2 divide-x divide-y rounded border bg-surface md:grid-cols-3 xl:grid-cols-6 [&>*]:border-line">
         <Meta icon={FileText} label="Customer ref" phone sub={`Received ${formatDay(rfq.receivedOn)}`}>
@@ -442,11 +499,7 @@ export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rf
       role="toolbar"
       aria-label="RFQ actions"
     >
-      {facts.primary === 'chase' ? (
-        <Button variant="primary" size="touch" icon={MessageCircle} className="flex-1" onClick={() => scrollTo('suppliers-asked')}>
-          Chase suppliers
-        </Button>
-      ) : facts.primary === 'none' ? (
+      {facts.primary === 'none' ? (
         <span className="flex-1" />
       ) : (
         <PrimaryButton rfq={rfq} facts={facts} size="touch" className="flex-1" />
