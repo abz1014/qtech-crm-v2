@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlarmClock,
@@ -22,18 +22,16 @@ import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay } from '@/lib/formatDay'
 import { cn } from '@/lib/utils'
-import { deadlineValue } from '@/lib/status'
+import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPreference'
 import { Banner } from '@/ui/Banner'
 import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
-import { DateRail } from '@/ui/DateRail'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { DateInput } from '@/ui/form/DateInput'
 import { Icon } from '@/ui/Icon'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
-import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import { ChaseNote, FormattedMessage, RecipientRow, SubjectRow } from '@/features/rfqs/ChaseParts'
 import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
@@ -54,8 +52,10 @@ import { agoText, distanceText } from '@/features/today/text'
 
 /*
  * The context pane (direction B, g2-today-b2). Selecting a row shows what explains it and, for a chase, the message
- * already written. States, as drawn:
- *   draft        facts, date rail, "Prepared for you" with WhatsApp or Email, one tap: "Copy message and mark chased"
+ * already written. Owner decision 2026-10-19: each fact is said once (the four cells; no chip row and no date rail repeating
+ * them), and the one job, "Copy message and mark chased", sits right under the card's header, above the message, so it is
+ * on the first screen of a 1366 x 768 laptop at the larger text size. States:
+ *   draft        facts, "Prepared for you" with WhatsApp or Email, one tap: "Copy message and mark chased"
  *   copied       the green "Copied. Paste it into WhatsApp." bar replaces the card header; the footer says
  *                "Chased today. Moves to Waiting when the undo closes." while the 10 s Undo is open (the toast)
  *   just chased  after the undo closes the row has joined Waiting: the title stays, a "Moved to Waiting" bar says when it
@@ -98,7 +98,8 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   const navigate = useNavigate()
   const { toast } = useToast()
   const refresh = useRefreshAfterChase()
-  const [channel, setChannel] = useState<'whatsapp' | 'email'>('whatsapp')
+  // the person's last WhatsApp / Email choice, remembered on this device
+  const [channel, setChannel] = useChannelPreference()
   const [busy, setBusy] = useState(false)
   const [full, setFull] = useState(false)
   const [again, setAgain] = useState(false)
@@ -216,8 +217,6 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
 
   const nudge = nudgeInfo(item, rfq?.dueOn ?? null, today, inquiryFact)
   const facts = factsFor(item, { rfq, questions, inquiryFact, legFact, receivable, today, pricedOf: priced(items.data, inquiries.data, item.inquiryId), justChased, nudge })
-  const hs = header.data?.state
-  const deadline = hs ? deadlineValue(hs.days_to_due, Boolean(hs.is_overdue), 5) : null
   const askedTimes = customerRule ? Math.max(0, ...questions.map(q => q.askCount)) : 0
   const floated = inquiries.data ? inquiries.data.filter(i => i.sentOn).length : 0
   const firstFloat = inquiries.data ? inquiries.data.map(i => i.sentOn).filter((d): d is string => Boolean(d)).sort()[0] : undefined
@@ -250,15 +249,6 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               </>
             )}
           </p>
-          {hs ? (
-            <div className="mt-1 flex flex-wrap gap-2">
-              {hs.clarification_state && hs.clarification_state !== 'none' ? (
-                <StatusBadge dimension="clarification" value={hs.clarification_state} detail={customerRule && askedTimes >= 2 ? `asked ×${askedTimes}` : undefined} />
-              ) : null}
-              {deadline ? <StatusBadge dimension="deadline" value={deadline} /> : null}
-              {hs.sourcing_state ? <StatusBadge dimension="sourcing" value={hs.sourcing_state} /> : null}
-            </div>
-          ) : null}
         </header>
       )}
 
@@ -304,12 +294,6 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
         </dl>
       ) : null}
 
-      {justChased ? (
-        <NudgeRail item={item} rfqDue={rfq?.dueOn ?? null} questions={questions} inquirySent={inquiryFact?.sentOn ?? null} today={today} nudgeOn={item.waiting?.nextNudgeOn ?? null} />
-      ) : (
-        <ChaseRail item={item} rfqDue={rfq?.dueOn ?? null} questions={questions} inquirySent={inquiryFact?.sentOn ?? null} today={today} />
-      )}
-
       {item.escalation === 'close_no_reply' && !justChased ? <CloseNoReply item={item} today={today} /> : null}
       {item.escalation === 'float_elsewhere' && !justChased && supplierRule && items.data && inquiries.data ? (
         <FloatElsewhere
@@ -350,7 +334,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               <SegmentedControl
                 aria-label="Message channel"
                 value={channel}
-                onValueChange={v => setChannel(v as 'whatsapp' | 'email')}
+                onValueChange={v => setChannel(v as ContactChannel)}
                 options={[
                   { value: 'whatsapp', label: 'WhatsApp' },
                   { value: 'email', label: 'Email' },
@@ -358,6 +342,19 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               />
             </div>
           )}
+          {!compact && !wasCopied ? (
+            <div className="flex flex-wrap items-center gap-2 border-b bg-sunken px-4 py-3" data-testid="pane-actions">
+              <Button variant="primary" icon={Copy} busy={busy} busyLabel="Marking" onClick={() => void copyAndMark()}>
+                {copyLabel}
+              </Button>
+              <Button icon={ExternalLink} onClick={() => navigate(item.href)}>
+                Open {item.ref}
+              </Button>
+              <div className="ml-auto">
+                <SnoozeMenu item={item} today={today} />
+              </div>
+            </div>
+          ) : null}
           {compact ? null : <RecipientRow channel={channel} contact={draft.contact} />}
           {channel === 'email' && draft.email.subject ? <SubjectRow subject={draft.email.subject} /> : null}
           <div className={cn('relative px-4 py-3', compact && !full && 'max-h-40 overflow-hidden')}>
@@ -394,19 +391,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               </Button>
               <SnoozeMenu item={item} today={today} iconOnly />
             </div>
-          ) : (
-            <div className="flex flex-wrap items-center gap-2 border-t bg-sunken px-4 py-3">
-              <Button variant="primary" icon={Copy} busy={busy} busyLabel="Marking" onClick={() => void copyAndMark()}>
-                {copyLabel}
-              </Button>
-              <Button icon={ExternalLink} onClick={() => navigate(item.href)}>
-                Open {item.ref}
-              </Button>
-              <div className="ml-auto">
-                <SnoozeMenu item={item} today={today} />
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
       ) : isChase(item) && (draftReady || !pending(header, items, inquiries, leg, payment)) ? (
         <div className="flex flex-wrap items-center gap-2 rounded border bg-surface p-4">
@@ -461,7 +446,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
             <h3 className="text-base font-semibold">What happened</h3>
             <ul className="grid gap-2 text-sm">
               {rfq ? <Event on={rfq.receivedOn} text="RFQ received from customer" /> : null}
-              {firstFloat ? <Event on={firstFloat} text={`Floated to ${floated} ${floated === 1 ? 'supplier' : 'suppliers'}`} /> : null}
+              {firstFloat ? <Event on={firstFloat} text={`Sent to ${floated} ${floated === 1 ? 'supplier' : 'suppliers'} for prices`} /> : null}
               <Event on={questions.map(q => q.firstAskedOn).sort()[0]} text={`${questions.length} ${questions.length === 1 ? 'question' : 'questions'} sent to customer`} />
               {item.waiting ? (
                 <>
@@ -545,11 +530,11 @@ export function nudgeInfo(item: TodayItem, dueOn: string | null, today: string, 
   const close = isBidClose(dueOn, today)
   switch (item.rule) {
     case 'chase_customer':
-      return { returnsOn: customerReturnsOn(today, dueOn), why: close ? 'short wait: bid is close' : '3 working days' }
+      return { returnsOn: customerReturnsOn(today, dueOn), why: close ? 'short wait: quotation due soon' : '3 working days' }
     case 'chase_supplier': {
       // The same wait the rule uses: a slow supplier's own median plus one, not always 2.
       const base = inquiry ? supplierChaseBaseDays(inquiry) : SUPPLIER_WAIT_DAYS
-      return { returnsOn: supplierReturnsOn(today, dueOn, base), why: close ? 'short wait: bid is close' : `${base} working days` }
+      return { returnsOn: supplierReturnsOn(today, dueOn, base), why: close ? 'short wait: quotation due soon' : `${base} working days` }
     }
     case 'goods_late':
       return { returnsOn: addBusinessDays(today, 3), why: '3 working days' }
@@ -567,13 +552,13 @@ function noDraftText(item: TodayItem): string {
 function howTo(item: TodayItem): string {
   switch (item.rule) {
     case 'relay_answers':
-      return 'The customer has answered what this supplier asked. Open the RFQ to copy the answers back to them.'
+      return 'The customer has answered what this supplier asked. Open the RFQ to send the answers back to them.'
     case 'not_floated':
       return 'Nobody has been asked for a price yet. Open the RFQ to pick suppliers and send the enquiry.'
     case 'bid_due':
-      return 'The bid is still to send. Open the RFQ to issue the quotation, or mark the bid sent.'
+      return 'The quotation is still to send. Open the RFQ to issue it.'
     case 'decision_overdue':
-      return 'No decision since the bid went out. Open the RFQ to chase the customer, or close it with a reason.'
+      return 'No decision since the quotation went out. Open the RFQ to chase the customer, or close it with a reason.'
     case 'place_po':
       return 'This order has a supplier order with no purchase order yet. Open the order to place it.'
     case 'to_source':
@@ -583,13 +568,17 @@ function howTo(item: TodayItem): string {
     case 'delivered_not_invoiced':
       return 'Everything on this order has been delivered and no invoice exists. Open the order to invoice it.'
     case 'close_month':
-      return 'Review the month-end checks and close the month. Nothing blocks closing; each check is a warning.'
+      return 'Open the month-end checklist, look at what it lists and close the month. Nothing blocks closing; each check is a warning.'
     case 'costs_incomplete':
-      return 'These orders are paid in full but their costs are not marked complete, so their margin is still provisional. Open Margins, check the costs and mark each order complete.'
+      return 'These orders are paid in full but their costs are not marked complete, so their margin is not final. Open Margins, check the costs and mark each order complete.'
     case 'fbr_attention':
-      return 'The tax on these invoices is not deposited and the month is over, or an FBR step was recorded out of order. Open the GST register, which is filtered to them.'
+      return 'The GST on these invoices is not deposited with FBR and the month is over, or an FBR step was recorded out of order. Open Invoices & GST, which is filtered to them.'
     case 'tcs_not_sent':
-      return 'These invoices have no courier date three working days after the invoice. Open the GST register, tick them and stamp "sent by TCS" in one go.'
+      return 'These invoices have no courier (TCS) date three working days after the invoice. Open Invoices & GST, tick them and press "Sent by TCS today" once.'
+    case 'job_commissioning':
+      return 'You are an engineer on this order. Open it to see the site contact and the notes, then "Mark done today" when the commissioning is finished, or change the planned date.'
+    case 'job_on_site':
+      return 'The goods have reached the site and the commissioning has no date yet. Open the order and set the planned date.'
     case 'recurring_due':
       return 'These recurring expenses have no entry for this month yet. Open Expenses and record each one; it is one tap.'
     default:
@@ -628,7 +617,7 @@ function factsFor(
   },
 ): Fact[] {
   const { rfq, today } = c
-  const bid: Fact | null = rfq?.dueOn ? { label: 'Bid due in', icon: CalendarDays, value: distanceText(rfq.dueOn, today), sub: formatDay(rfq.dueOn), tone: rfq.dueOn <= today ? 'danger' : undefined } : null
+  const bid: Fact | null = rfq?.dueOn ? { label: 'Quotation due in', short: 'Quotation due', icon: CalendarDays, value: distanceText(rfq.dueOn, today), sub: formatDay(rfq.dueOn), tone: rfq.dueOn <= today ? 'danger' : undefined } : null
   /** The two cells that change once it has been chased: "Chased ..." and "Next nudge". */
   const chased = (who: string, count: number, on: string): Fact => ({
     label: `Chased ${who}`,
@@ -701,106 +690,28 @@ function factsFor(
       break
     }
     case 'relay_answers':
-      out.push({ label: 'Supplier', value: item.title.split('relay to ')[1] ?? '' }, rfq ? { label: 'RFQ received', value: formatDay(rfq.receivedOn) } : null, bid)
+      out.push({ label: 'Supplier', value: item.title.split('send it to ')[1] ?? '' }, rfq ? { label: 'RFQ received', value: formatDay(rfq.receivedOn) } : null, bid)
       break
     case 'not_floated':
     case 'bid_due':
       out.push(rfq ? { label: 'RFQ received', value: formatDay(rfq.receivedOn), sub: agoText(rfq.receivedOn, today) } : null, bid)
       break
     case 'decision_overdue':
-      out.push(rfq?.quotedOn ? { label: 'Bid sent', value: formatDay(rfq.quotedOn), sub: agoText(rfq.quotedOn, today) } : null)
+      out.push(rfq?.quotedOn ? { label: 'Quotation sent', value: formatDay(rfq.quotedOn), sub: agoText(rfq.quotedOn, today) } : null)
       break
     case 'place_po': {
       const l = c.legFact
       out.push(l ? { label: 'Order', value: item.ref } : null, l?.orderedOn ? { label: 'Ordered', value: formatDay(l.orderedOn), sub: agoText(l.orderedOn, today) } : null)
       break
     }
+    case 'job_commissioning':
+    case 'job_on_site':
+      out.push({ label: 'Order', value: item.ref }, { label: 'Customer and site', value: item.party })
+      break
     default:
       break
   }
   return out.filter((f): f is Fact => f !== null)
-}
-
-/** The rail once chased: asked or sent, today, and the "Next nudge" ring, up to the bid date. */
-function NudgeRail({
-  item,
-  rfqDue,
-  questions,
-  inquirySent,
-  today,
-  nudgeOn,
-}: {
-  item: TodayItem
-  rfqDue: string | null
-  questions: TodayData['clarifications']
-  inquirySent: string | null
-  today: string
-  nudgeOn: string | null
-}) {
-  const start = item.rule === 'chase_customer' ? questions.map(q => q.firstAskedOn).sort()[0] : item.rule === 'chase_supplier' ? inquirySent : null
-  if (!start || !rfqDue || rfqDue <= start) return null
-  const total = Math.max(1, daysSpan(start, rfqDue))
-  const at = (d: string) => Math.min(100, Math.max(0, (daysSpan(start, d) / total) * 100))
-  const pos = at(today)
-  const nudgePos = nudgeOn ? at(nudgeOn) : null
-  return (
-    <div className="grid gap-1" aria-hidden="true">
-      <RailLabels pos={pos} today={today} nudgeOn={nudgePos !== null ? nudgeOn : null} />
-      <div className="relative h-1 rounded bg-selected">
-        <span className="absolute inset-y-0 left-0 rounded bg-fg-muted" style={{ width: `${pos}%` }} />
-        <span className="absolute -top-1 size-3 -translate-x-1/2 rounded-round bg-tone-warning-fg" style={{ left: `${pos}%` }} />
-        {nudgePos !== null ? <span className="absolute -top-1 size-3 -translate-x-1/2 rounded-round border-2 border-fg-muted bg-surface" style={{ left: `${nudgePos}%` }} /> : null}
-      </div>
-      <div className="num flex justify-between text-xs text-fg-muted">
-        <span>
-          {item.rule === 'chase_customer' ? 'Asked' : 'Sent'} {formatDay(start)}
-        </span>
-        <span>Bid due {formatDay(rfqDue)}</span>
-      </div>
-    </div>
-  )
-}
-
-/**
- * The two labels above the rail: "Today · day" at the marker and "Next nudge · day" at the right end. When the two would print on top of each
- * other (the nudge is a few days away on a narrow rail, a phone), the nudge label drops to a second line instead of overlapping.
- */
-function RailLabels({ pos, today, nudgeOn }: { pos: number; today: string; nudgeOn: string | null }) {
-  const wrap = useRef<HTMLDivElement>(null)
-  const a = useRef<HTMLSpanElement>(null)
-  const b = useRef<HTMLSpanElement>(null)
-  const [stacked, setStacked] = useState(false)
-  const [aw, setAw] = useState(0)
-  useLayoutEffect(() => {
-    const el = wrap.current
-    if (!el || !nudgeOn) return
-    const measure = () => {
-      const w = el.clientWidth
-      const wa = a.current?.offsetWidth ?? 0
-      const wb = b.current?.offsetWidth ?? 0
-      if (!w) return
-      const left = Math.min((pos / 100) * w, w - wa)
-      setAw(wa)
-      setStacked(left + wa + 12 > w - wb)
-    }
-    measure()
-    if (typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [pos, nudgeOn, today])
-  return (
-    <div ref={wrap} className={cn('relative', stacked ? 'h-[36px]' : 'h-4')}>
-      <span ref={a} className="num absolute top-0 whitespace-nowrap text-xs text-tone-warning-fg" style={{ left: `min(${pos}%, calc(100% - ${aw ? `${aw}px` : '7rem'}))` }}>
-        Today · {formatDay(today)}
-      </span>
-      {nudgeOn ? (
-        <span ref={b} className={cn('num absolute right-0 whitespace-nowrap text-xs text-fg-muted', stacked ? 'top-[18px]' : 'top-0')}>
-          Next nudge · {formatDay(nudgeOn)}
-        </span>
-      ) : null}
-    </div>
-  )
 }
 
 const daysSpan = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000)
@@ -841,7 +752,7 @@ function ChasedCard({
     item.rule === 'chase_customer' && askedNow === 2
       ? 'A third ask suggests closing as no reply.'
       : item.rule === 'chase_supplier'
-        ? 'Chased twice with no reply suggests floating to someone else.'
+        ? 'Chased twice with no reply: ask another supplier.'
         : null
   const excerpt = memo ? excerptOf(memo.text) : null
   return (
@@ -870,23 +781,6 @@ function ChasedCard({
         {next ? <span className="ml-auto text-xs text-fg-muted">{next}</span> : null}
       </div>
     </section>
-  )
-}
-
-/** The chase rail: asked (or sent) to bid due, on the shared DateRail. Always due-soon (warning), as on the approved Today B. */
-function ChaseRail({ item, rfqDue, questions, inquirySent, today }: { item: TodayItem; rfqDue: string | null; questions: TodayData['clarifications']; inquirySent: string | null; today: string }) {
-  const start = item.rule === 'chase_customer' ? questions.map(q => q.lastAskedOn).sort().at(-1) : item.rule === 'chase_supplier' ? inquirySent : null
-  if (!start || !rfqDue || rfqDue <= start) return null
-  return (
-    <DateRail
-      decorative
-      state="due-soon"
-      start={start}
-      due={rfqDue}
-      today={today}
-      startLabel={item.rule === 'chase_customer' ? 'Asked' : 'Sent'}
-      className="[&_em]:ring-canvas"
-    />
   )
 }
 

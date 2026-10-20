@@ -309,14 +309,14 @@ function ExpenseFormReady({
           </FormField>
           {lockedPayee ? (
             <div className="grid min-w-0 content-start gap-[6px]">
-              <span className="text-sm font-medium leading-5 text-fg">Payee</span>
+              <span className="text-sm font-medium text-fg">Payee</span>
               <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded border border-line-strong bg-sunken px-3 text-sm text-fg-2" aria-label="Payee, from the supplier order">
                 <span className="truncate">
                   {context?.payeeName}
                 </span>
                 <Icon icon={Lock} className="text-fg-muted" />
               </div>
-              <span className="text-xs text-fg-2">From the supplier order</span>
+              <span className="text-sm text-fg-2">From the supplier order</span>
             </div>
           ) : null}
           {amountField}
@@ -350,7 +350,7 @@ function ExpenseFormReady({
               <FormField<Values, 'legId'> name="legId" label="Supplier order" requirement="optional">
                 {f => (
                   <Select
-                    placeholder="None"
+                    placeholder="No supplier order"
                     value={f.value ?? ''}
                     options={(legs.data ?? []).map(l => ({ value: l.id, label: l.supplierName || l.label }))}
                     onChange={e => {

@@ -6,11 +6,11 @@ import { getHomeRoute } from '@/app/roleRoutes'
 const paths = (r: string) => navItemsForRole(r).map(i => i.path)
 
 describe('navItemsForRole', () => {
-  it('admin sees everything', () =>
-    expect(paths('admin')).toEqual(['/today', '/rfqs', '/orders', '/companies', '/money', '/reports']))
-  it('sales sees everything incl. Money and Reports', () =>
-    expect(paths('sales')).toEqual(['/today', '/rfqs', '/orders', '/companies', '/money', '/reports']))
-  it('engineer sees no Money or Reports', () =>
+  it('admin sees the five destinations', () =>
+    expect(paths('admin')).toEqual(['/today', '/rfqs', '/orders', '/companies', '/money']))
+  it('sales sees the five destinations incl. Money (Reports lives inside Money)', () =>
+    expect(paths('sales')).toEqual(['/today', '/rfqs', '/orders', '/companies', '/money']))
+  it('engineer sees no Money', () =>
     expect(paths('engineer')).toEqual(['/today', '/rfqs', '/orders', '/companies']))
   it('unknown role sees nothing', () => expect(paths('hacker')).toEqual([]))
 })

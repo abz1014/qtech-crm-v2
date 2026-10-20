@@ -164,7 +164,8 @@ function worstOf(captures, def, n) {
     if (!measured(c)) continue
     const v = def.value(c)
     if (v === null || v === undefined) continue
-    const key = `${c.role}|${c.screen}`
+    // one row per screen: the role and viewport where it is worst (the same screen for three roles would fill the list)
+    const key = c.screen
     const prev = best.get(key)
     const worse = !prev || (def.worse === 'lower' ? v < prev.value : v > prev.value)
     if (worse) best.set(key, { role: c.role, screen: c.screen, title: c.title, viewport: c.viewport, value: v })
@@ -269,7 +270,7 @@ export function renderMarkdown(results) {
   }
   out.push('')
 
-  out.push('## Worst 5 screens per metric', '', 'Each screen once, at its worst viewport.', '')
+  out.push('## Worst 5 screens per metric', '', 'Each screen once, at its worst role and viewport.', '')
   for (const d of [...TARGETS, ...INFO]) {
     const rows = summary.worst[d.key]
     if (!rows.length) continue
