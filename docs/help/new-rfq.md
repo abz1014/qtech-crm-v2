@@ -7,7 +7,7 @@ screens: /rfqs, /today
 related: ask-suppliers
 ---
 1. Tap [RFQs], then [New RFQ].
-2. Paste what the customer sent, or tap [Choose PDF] for their PDF. It splits into items.
+2. Paste what the customer sent, or tap [Choose PDF or photo] for their PDF, a screenshot or a photo. It splits into items.
 3. Under [Customer], tap [Use <Company>] if it is suggested, or pick the company.
 4. Check the items, then tap [Looks right: find suppliers].
 5. Next, ask suppliers for prices.

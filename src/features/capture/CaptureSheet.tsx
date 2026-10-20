@@ -41,7 +41,7 @@ import {
 } from '@/features/rfqs/api'
 import { attachmentPath, clarState, splitQuestions } from '@/features/rfqs/lib/clarifications'
 import { formatBytes } from '@/lib/fileIntake'
-import { isPdfFile } from '@/lib/docread/pdfText'
+import { isReadableFile } from '@/features/rfqs/lib/readPdf'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
@@ -276,8 +276,8 @@ export default function CaptureSheet() {
         await refresh(rfqId, goodFiles.length ? ['attachment.add'] : [])
         cap.close()
         cap.discard()
-        // A PDF quote with no text is read on the RFQ (its prices), as a pasted reply would be.
-        const pdf = text ? undefined : goodFiles.map(f => f.file).find(f => isPdfFile(f))
+        // A PDF quote, or a screenshot or photo of one, with no text is read on the RFQ (its prices), as a pasted reply would be.
+        const pdf = text ? undefined : goodFiles.map(f => f.file).find(f => isReadableFile(f))
         navigate(`/rfqs/${rfqId}`, { state: { reply: { inquiryId, text: draft.text, pdf } } })
         return
       }

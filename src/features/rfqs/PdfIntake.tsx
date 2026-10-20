@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Building2, FileText, Plus } from 'lucide-react'
 import type { PdfSubject } from '@/lib/docread/pdfText'
-import { readPdf } from '@/features/rfqs/lib/readPdf'
+import { readDocument } from '@/features/rfqs/lib/readPdf'
 import type { SenderHint } from '@/features/companies/api'
 import { useCompanyForSender } from '@/features/companies/hooks'
 import { CreateCompanyInline } from '@/features/companies/CreateCompanyInline'
@@ -10,12 +10,17 @@ import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 
 /*
- * PDFs and the sender, for New RFQ and a supplier's reply (owner decision 2026-10-20, item 3). A PDF is read on this device
- * (src/lib/docread, nothing is uploaded to read it) and its text goes where a paste goes. A scan, a locked or a damaged file
- * gets the reader's own plain sentence. The file itself is kept and attached as before.
+ * PDFs, pictures and the sender, for New RFQ and a supplier's reply (owner decision 2026-10-20, item 3; pictures: owner priority
+ * the same day). A PDF or a picture (a screenshot, a photo taken now with the phone's camera) is read on this device
+ * (src/lib/docread, nothing is uploaded to read it) and its text goes where a paste goes. A scan, a locked or a damaged file, a
+ * picture that could not be read clearly gets the reader's own plain sentence. The file itself is kept and attached as before.
  */
 
-/** "Choose PDF" (New RFQ) or "Read a PDF" (a supplier's reply): a button over a hidden file input. */
+/**
+ * "Choose PDF or photo" (New RFQ) or "Read a PDF or photo" (a supplier's reply): a button over a hidden file input. On a phone
+ * the picker offers the camera and the gallery. A picture shows its progress on the button ("Reading the image… 40%") and can
+ * be cancelled.
+ */
 export function PdfPickButton({
   label,
   subject,
@@ -26,19 +31,20 @@ export function PdfPickButton({
 }: {
   label: string
   subject: PdfSubject
-  onText: (text: string) => void
+  onText: (text: string, from: 'pdf' | 'photo') => void
   onFile?: (file: File) => void
   onMessage: (message: string | null) => void
   size?: 'sm'
 }) {
   const input = useRef<HTMLInputElement>(null)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState<string | null>(null)
+  const reading = useRef<AbortController | null>(null)
   return (
     <>
       <input
         ref={input}
         type="file"
-        accept="application/pdf,.pdf"
+        accept="application/pdf,.pdf,image/*"
         className="sr-only"
         tabIndex={-1}
         aria-hidden="true"
@@ -47,21 +53,29 @@ export function PdfPickButton({
           const file = e.target.files?.[0]
           e.target.value = ''
           if (!file) return
-          setBusy(true)
+          const ctrl = new AbortController()
+          reading.current = ctrl
+          setBusy(file.type === 'application/pdf' || /\.pdf$/i.test(file.name) ? 'Reading the PDF' : 'Reading the image…')
           onMessage(null)
           try {
             onFile?.(file)
-            const r = await readPdf(file, subject)
-            if ('text' in r) onText(r.text)
-            else onMessage(r.message)
+            const r = await readDocument(file, subject, { signal: ctrl.signal, onProgress: p => setBusy(p.message) })
+            if ('text' in r) onText(r.text, r.from)
+            else if ('message' in r) onMessage(r.message)
           } finally {
-            setBusy(false)
+            if (reading.current === ctrl) reading.current = null
+            setBusy(null)
           }
         }}
       />
-      <Button size={size} icon={FileText} busy={busy} busyLabel="Reading the PDF" onClick={() => input.current?.click()}>
+      <Button size={size} icon={FileText} busy={busy !== null} busyLabel={<span aria-live="polite">{busy}</span>} onClick={() => input.current?.click()}>
         {label}
       </Button>
+      {busy !== null && busy !== 'Reading the PDF' ? (
+        <Button size={size} variant="quiet" onClick={() => reading.current?.abort()}>
+          Cancel
+        </Button>
+      ) : null}
     </>
   )
 }

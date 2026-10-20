@@ -55,46 +55,26 @@ Nothing on the first load and nothing in the service-worker precache (the bundle
 About 4 MB over the wire the first time, then from the browser cache (`/assets/` is `immutable`; the directory is named after
 the package versions). The files are written only into a build that contains the reader (vite.config.ts, `ocrAssets`).
 
-## Adoption (not wired yet)
+## Where it is used
 
-The screens are being changed by another task, so nothing calls it yet. The one change that wires every place a PDF is read
-today: make the shared helper read pictures too, then let pictures through where PDFs are let through.
+Everything goes through `readDocument(file, subject, { onProgress, signal })` in `src/features/rfqs/lib/readPdf.ts`: a PDF
+goes to `readPdfText`, a picture to `readImageText`; both give text for the same parser a paste goes through.
 
-1. `src/features/rfqs/lib/readPdf.ts`: add, next to `readPdf`,
-
-   ```ts
-   import { isImageFile, readImageText, type ImageProgress } from '@/lib/docread/imageText'
-   import { isPdfFile } from '@/lib/docread/pdfText'
-
-   /** A PDF or a picture (screenshot, photo) of an enquiry or a quote, read on this device. */
-   export async function readDocument(file: File, subject: PdfSubject, onProgress?: (p: ImageProgress) => void, signal?: AbortSignal) {
-     if (!isPdfFile(file) && isImageFile(file)) {
-       const r = await readImageText(file, { subject, onProgress, signal })
-       return r.ok ? { text: r.text } : { message: r.message || "Couldn't read this clearly — type or paste the " + subject + '.' }
-     }
-     return readPdf(file, subject)
-   }
-   ```
-
-2. `src/features/rfqs/IntakeScreen.tsx` (captured files, about line 275): where a PDF with no text is read,
-   `captured.files.filter(f => isPdfFile(f))` becomes `captured.files.filter(f => isPdfFile(f) || isImageFile(f))`, and
-   `await readPdf(f, 'items')` becomes `await readDocument(f, 'items', p => setPdfNote(p.message))`. Only when the capture has
-   no text of its own (as today for PDFs).
-
-3. `src/features/rfqs/PdfIntake.tsx`, `PdfPickButton`: `accept="application/pdf,.pdf"` becomes
-   `accept="application/pdf,.pdf,image/*"`, and `await readPdf(file, subject)` becomes `await readDocument(file, subject, p => …)`
-   (show `p.message` as the busy label: "Reading the image… 40%"). A label like "Choose PDF or screenshot".
-
-4. `src/features/capture/CaptureSheet.tsx` (reply destination, about line 280): `find(f => isPdfFile(f))` becomes
-   `find(f => isPdfFile(f) || isImageFile(f))`, and `src/features/rfqs/SupplierReplies.tsx` (about line 341)
-   `readPdf(reply.pdf, 'prices')` becomes `readDocument(reply.pdf, 'prices')`. Do not read photos sent as a clarification
-   answer or as attachments: they are pictures of parts, not text.
-
-5. Keep a Cancel next to the progress (pass an `AbortController`'s signal); a second picture within a minute reuses the loaded
-   reader.
+- New RFQ: "Choose PDF or photo" (`PdfPickButton`, accepts `application/pdf` and `image/*`: on a phone the camera and the
+  gallery) shows "Reading the image… 40%" on the button, with a Cancel beside it. A screenshot pasted on the page (Win+Shift+S
+  then Ctrl V) or with the phone's Paste button is read the same way. Paste or photo's "Start a new RFQ" with a picture and no
+  text reads it too. Items fill the rows, the customer reference and due date fill when empty ("From the photo").
+- A supplier's reply: "Read a PDF or photo", and Paste or photo's "This is a supplier's reply" with a picture and no text: the
+  prices are read with `parseSupplierQuote`.
+- Photos sent as a clarification answer or as attachments are not read: they are pictures of parts, not text.
+- The paste zone on a touch screen shows a Paste button (the clipboard read where the browser allows it, else "Tap and hold in
+  the box, then Paste"), never "Press Ctrl V".
+- A scanned or unreadable PDF now points to the photo route ("Take a screenshot or photo of it and choose that instead").
 
 ## Tests
 
+- `e2e/rfqs/intake.spec.ts`, "a screenshot on a phone (375)": a fictional Outlook RFQ screenshot chosen on New RFQ at 375 px
+  with touch: 8 items, quantities, the customer reference; the Paste button and no Ctrl V.
 - `src/lib/docread/{imageText,ocrLayout,ocrRecover}.test.ts`: the pipeline with the engine replaced, layout from word boxes.
 - `e2e/docread/ocr.spec.ts` (CI job "e2e", step "Picture reader (OCR) under the production CSP"): the real reader on
   `/dev/docread` (dev builds only) under the production Content-Security-Policy. Fictional screenshots (`e2e/docread/scenes.ts`,

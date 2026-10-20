@@ -192,8 +192,9 @@ const RFQ_131026: OutlookRfq = {
   ],
 }
 
+// The unit is kept as the customer wrote it (EA). The trailing "-01" is the customer's line code: kept as text, never a quantity.
 const RFQ_EXPECTED = {
-  items: RFQ_131026.rows.map(([description, qty]) => ({ description, qty, unit: 'nos' })),
+  items: RFQ_131026.rows.map(([description, qty, unit]) => ({ description, qty, unit })),
   customerRef: '131026',
   domain: 'fictional-power.example',
 }

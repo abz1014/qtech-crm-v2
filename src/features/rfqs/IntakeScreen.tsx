@@ -33,10 +33,9 @@ import {
 import { fillRfqRef } from '@/features/rfqs/lib/intakeModel'
 import { ItemRows, PastedPanel, PasteZone, type PastedBlock } from '@/features/rfqs/ItemsEditor'
 import { asParseResult, parseEnquiry } from '@/lib/docread/enquiryParse'
-import { isPdfFile } from '@/lib/docread/pdfText'
 import type { SenderHint } from '@/features/companies/api'
 import { PdfPickButton, SenderSuggestion } from '@/features/rfqs/PdfIntake'
-import { readPdf } from '@/features/rfqs/lib/readPdf'
+import { isReadableFile, pastedPictures, readDocument } from '@/features/rfqs/lib/readPdf'
 import { DraftOffer, EnquiryCard, FloatedPanel, Hint, SidePanels, StepLine, type Step } from '@/features/rfqs/IntakeParts'
 import { clearIntakeDraft, draftHasContent, draftSummary, loadIntakeDraft, saveIntakeDraft, type IntakeDraft } from '@/features/rfqs/lib/intakeDraftStore'
 import { useLeaveGuard } from '@/features/rfqs/useLeaveGuard'
@@ -239,12 +238,12 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   const filled = useRef({ customerRef, dueOn })
   filled.current = { customerRef, dueOn }
   const takePaste = useCallback(
-    (text: string, from: 'pdf' | 'paste' = 'paste') => {
+    (text: string, from: 'pdf' | 'photo' | 'paste' = 'paste') => {
       const read = parseEnquiry(text)
       const result = asParseResult(read)
       setPasted({ result })
       if (result.items.length > 0) addItems(result.items, brandsRef.current)
-      const label = from === 'pdf' ? 'From the PDF' : 'From the paste'
+      const label = from === 'pdf' ? 'From the PDF' : from === 'photo' ? 'From the photo' : 'From the paste'
       const { customerRef: refNow, dueOn: dueNow } = filled.current
       if (!refNow.trim() && read.facts.customerRef) {
         setCustomerRef(read.facts.customerRef.value)
@@ -258,8 +257,22 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     },
     [addItems],
   )
-  // PDFs chosen on this screen: attached to the RFQ once it is saved, as Paste or photo's files are.
+  // PDFs and pictures chosen or pasted on this screen: attached to the RFQ once it is saved, as Paste or photo's files are.
   const pickedFiles = useRef<File[]>([])
+  // A screenshot pasted here (Win+Shift+S then Ctrl+V, or the phone's Paste button): read as if its text had been pasted.
+  const takePicture = useCallback(
+    (file: File) => {
+      pickedFiles.current.push(file)
+      setPdfNote('Reading the image… 0%')
+      void readDocument(file, 'items', { onProgress: p => setPdfNote(p.message) }).then(r => {
+        if ('text' in r) {
+          setPdfNote(null)
+          takePaste(r.text, r.from)
+        } else setPdfNote('message' in r ? r.message : null)
+      })
+    },
+    [takePaste],
+  )
   // Capture's "Start a new RFQ" (R22) arrives with the text and the files. The text is read as if it had been pasted here;
   // the files are attached once the RFQ exists (it has no id on the server before that).
   const capturedFiles = useRef<File[]>(captured?.files ?? [])
@@ -271,14 +284,16 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
       takePaste(captured.text)
       return
     }
-    // A PDF with no text (dropped or shared on its own): read it as if its text had been pasted.
-    const pdfs = captured.files.filter(f => isPdfFile(f))
-    if (pdfs.length === 0) return
+    // A PDF or a screenshot with no text (dropped, pasted or shared on its own): read it as if its text had been pasted.
+    const docs = captured.files.filter(f => isReadableFile(f))
+    if (docs.length === 0) return
     void (async () => {
-      for (const f of pdfs) {
-        const r = await readPdf(f, 'items')
-        if ('text' in r) takePaste(r.text, 'pdf')
-        else setPdfNote(r.message)
+      for (const f of docs) {
+        const r = await readDocument(f, 'items', { onProgress: p => setPdfNote(p.message) })
+        if ('text' in r) {
+          setPdfNote(null)
+          takePaste(r.text, r.from)
+        } else setPdfNote('message' in r ? r.message : null)
       }
     })()
   }, [arrival, captured, takePaste])
@@ -291,13 +306,19 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
       const editable = t?.closest?.('input, textarea, select, [contenteditable="true"]')
       if (editable && editable !== zoneRef.current) return
       const text = e.clipboardData?.getData('text/plain') ?? ''
-      if (!text.trim()) return
+      if (!text.trim()) {
+        const pictures = e.defaultPrevented ? [] : pastedPictures(e.clipboardData)
+        if (pictures.length === 0) return
+        e.preventDefault()
+        for (const p of pictures) takePicture(p)
+        return
+      }
       e.preventDefault()
       takePaste(text)
     }
     document.addEventListener('paste', onPaste)
     return () => document.removeEventListener('paste', onPaste)
-  }, [step, offer, takePaste])
+  }, [step, offer, takePaste, takePicture])
 
   // Rows whose brand or family the person has set themselves: a late-arriving brand list never overrides those.
   const touched = useRef(new Set<string>())
@@ -854,14 +875,14 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                     focusKey={focusKey}
                   />
                 ) : null}
-                <PasteZone zoneRef={zoneRef} onText={takePaste} filled={items.length > 0} />
+                <PasteZone zoneRef={zoneRef} onText={takePaste} onPicture={takePicture} filled={items.length > 0} />
                 {pdfNote ? <Banner tone="warning" title={pdfNote} /> : null}
                 <div className="flex flex-wrap items-center gap-2">
                   <PdfPickButton
-                    label="Choose PDF"
+                    label="Choose PDF or photo"
                     subject="items"
                     onFile={f => pickedFiles.current.push(f)}
-                    onText={t => takePaste(t, 'pdf')}
+                    onText={(t, from) => takePaste(t, from)}
                     onMessage={setPdfNote}
                   />
                   {items.length === 0 ? (

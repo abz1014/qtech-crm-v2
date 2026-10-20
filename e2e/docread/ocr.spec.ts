@@ -150,8 +150,8 @@ test('screenshots of enquiries come back as text, and as the same items a paste 
       const pasteScore = score(expected, pasted.items)
       facts = `ref ${parsed.customerRef ?? "none"} (paste ${pasted.customerRef ?? "none"}, wanted ${scene.expected.customerRef}), domain ${parsed.domain === scene.expected.domain ? "ok" : (parsed.domain ?? "none")}; paste gives ${pasteScore.matched}/${expected.length}`
       if (scene.clean) {
-        // The reference: what the parser finds in the pasted text must come out of the picture too (finding it at all is the parser's job).
-        expect.soft(parsed.customerRef, `${scene.name}: customer ref as the paste gives it`).toBe(pasted.customerRef)
+        // The subject's trailing number is the customer's reference.
+        expect.soft(parsed.customerRef, `${scene.name}: customer ref`).toBe(scene.expected.customerRef)
         expect.soft(parsed.domain, `${scene.name}: email domain`).toBe(scene.expected.domain)
       }
     }

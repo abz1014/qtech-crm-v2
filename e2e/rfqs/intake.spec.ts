@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
+import { SCENES } from '../docread/scenes'
 
 /*
  * R05 end to end, against the local CI stack: the intake = float screen, as the fixture users, through the real
@@ -528,7 +529,7 @@ test.describe('company picker', () => {
     await openAs(page, 'sales', '/rfqs/new')
     const zone = page.locator('section[aria-labelledby="h-items"]')
     await expect(zone).toHaveCSS('opacity', '1')
-    await expect(zone.getByRole('button', { name: 'Choose PDF' })).toBeEnabled()
+    await expect(zone.getByRole('button', { name: 'Choose PDF or photo' })).toBeEnabled()
     await pickCompany(page, s.customer.name)
     await expect(zone).toHaveCSS('opacity', '1')
   })
@@ -600,3 +601,35 @@ for (const width of [1440, 375]) {
     await review(page, `intake-float-06-floated-with-undo-${width}`)
   })
 }
+
+// Owner, 2026-10-20, on an Android phone: New RFQ must take a screenshot of the customer's email. The picture is read on the
+// phone (src/lib/docread/imageText.ts) and its items land in the rows, as a paste's would. The screenshot is a fictional
+// Outlook RFQ (e2e/docread/scenes.ts), rendered here.
+test.describe('a screenshot on a phone (375)', () => {
+  test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true })
+
+  test('Choose PDF or photo reads a screenshot into the items; the paste zone offers Paste, never Ctrl V', async ({ page, browser }) => {
+    test.setTimeout(180_000)
+    const scene = SCENES.find(s => s.name === 'outlook-rfq-shaded')!
+    const shot = await browser.newContext({ viewport: scene.viewport, deviceScaleFactor: scene.deviceScaleFactor })
+    const sp = await shot.newPage()
+    await sp.setContent(scene.html)
+    const buffer = await sp.screenshot({ fullPage: true })
+    await shot.close()
+
+    await openAs(page, 'sales', '/rfqs/new')
+    const zone = page.locator('section[aria-labelledby="h-items"]')
+    await expect(zone.getByRole('button', { name: 'Paste', exact: true })).toBeVisible()
+    await expect(zone).not.toContainText('Ctrl')
+    await expect(zone).toContainText('Paste the whole email, a PDF or a screenshot — we pick out the items; you check them before saving.')
+
+    await page.getByTestId('pdf-input-items').setInputFiles({ name: 'Screenshot_20261013.png', mimeType: 'image/png', buffer })
+    await expect(page.getByText('8 items found').first()).toBeVisible({ timeout: 120_000 })
+    await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue('CAPACITOR 100UF 450 V-01')
+    await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue(/^10\b/)
+    await expect(page.getByRole('textbox', { name: 'Description of item 8' })).toHaveValue('FUSE GLASS 5X20 2A-01')
+    await expect(page.getByRole('textbox', { name: 'Quantity of item 8' })).toHaveValue(/^200\b/)
+    await expect(page.getByRole('textbox', { name: 'Customer reference' })).toHaveValue('131026')
+    await review(page, 'intake-photo-375')
+  })
+})

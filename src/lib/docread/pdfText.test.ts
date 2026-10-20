@@ -91,9 +91,9 @@ describe('readPdfText', () => {
 
   it('says a scan is a scan', async () => {
     const r = await readPdfText(await scanPdf(2))
-    expect(r).toEqual({ ok: false, reason: 'scan', message: 'This PDF is a scan; type or paste the items.', pageCount: 2 })
+    expect(r).toEqual({ ok: false, reason: 'scan', message: 'This PDF is a scan. Take a screenshot or photo of it and choose that instead, or type or paste the items.', pageCount: 2 })
     const q = await readPdfText(await scanPdf(1, 'Scanned with CamScanner'), { subject: 'prices' })
-    expect(q).toMatchObject({ ok: false, reason: 'scan', message: 'This PDF is a scan; type or paste the prices.' })
+    expect(q).toMatchObject({ ok: false, reason: 'scan', message: 'This PDF is a scan. Take a screenshot or photo of it and choose that instead, or type or paste the prices.' })
   })
 
   it('lists scanned pages inside a PDF that has text elsewhere', async () => {
@@ -131,7 +131,7 @@ describe('readPdfText', () => {
         throw new Error('not reached')
       },
     })
-    expect(r).toMatchObject({ ok: false, reason: 'not_pdf', message: 'This file is not a PDF. Paste the text, or type or paste the items.' })
+    expect(r).toMatchObject({ ok: false, reason: 'not_pdf', message: 'This file is not a PDF. Choose a PDF, a screenshot or a photo, or type or paste the items.' })
     expect(loaded).toBe(false)
   })
 
