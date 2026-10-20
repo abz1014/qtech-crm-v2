@@ -53,6 +53,8 @@ export interface MessageCopy {
   onCopy?: () => void | Promise<void>
   busy?: boolean
   busyLabel?: string
+  /** A fuller name where several sit in one list ("Copy answers for supplier Alpenmark"); it must contain the label. */
+  'aria-label'?: string
 }
 
 export interface MessageActionsProps {
@@ -193,6 +195,7 @@ export function MessageActions({
             icon={Copy}
             busy={copy.busy ?? copying}
             busyLabel={copy.busyLabel}
+            aria-label={copy['aria-label']}
             onClick={() => void (copy.onCopy ? copy.onCopy() : plainCopy())}
             className={width}
           >

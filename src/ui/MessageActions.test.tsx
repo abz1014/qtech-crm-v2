@@ -187,6 +187,11 @@ describe('MessageActions (owner decision 2026-10-20)', () => {
     expect(screen.getByRole('button', { name: 'Marking' })).toBeDisabled()
   })
 
+  it('Copy can carry a fuller name, so a list of them keeps its old selectors', () => {
+    show({ copy: { label: 'Copy answers', 'aria-label': 'Copy answers for supplier Alpenmark' } })
+    expect(screen.getByRole('button', { name: 'Copy answers for supplier Alpenmark' })).toHaveTextContent('Copy answers')
+  })
+
   it('copy={false} leaves Copy to the screen', () => {
     show({ copy: false })
     expect(names()).toEqual(['Open in WhatsApp', 'Open in email'])
