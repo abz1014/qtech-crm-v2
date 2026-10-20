@@ -173,8 +173,9 @@ describe('ToggleButton: pressed against not pressed', () => {
 
 describe('Money views: the current view in the strip', () => {
   const src = read('src/features/money/MoneyFrame.tsx')
-  const pick = src.match(/=== active \? '([^']+)' : '([^']+)'/)
-  const strip = src.match(/aria-label="Money views" className="([^"]+)"/)
+  // The lit view's classes (`active ? 'on' : 'off'` or `on ? 'on' : 'off'`) and the strip's own classes, whatever the layout.
+  const pick = src.match(/(?:=== active|\bon) \? '([^']+)' : '([^']+)'/)
+  const strip = src.match(/aria-label="Money views"\s+className="([^"]+)"/)
 
   it('the guard can still find the strip and its active and inactive classes', () => {
     expect(pick, 'MoneyFrame.tsx changed shape: update this guard').not.toBeNull()
