@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlarmClock,
@@ -43,6 +43,7 @@ import { SUPPLIER_WAIT_DAYS } from '@/features/rfqs/lib/chaseWait'
 import { supplierChaseBaseDays } from '@/features/today/rules'
 import { addBusinessDays, addDays, nextMonday } from '@/features/rfqs/lib/dateText'
 import { isBidClose } from '@/features/rfqs/lib/customerChase'
+import { closeReasonLabel, type CloseReason } from '@/features/rfqs/lib/closeDefaults'
 import { chasedByText } from '@/features/rfqs/lib/collision'
 import type { TodayData } from '@/features/today/api'
 import { buildCustomerDraft, buildGoodsDraft, buildPaymentDraft, buildSupplierDraft, type Draft } from '@/features/today/chaseDraft'
@@ -318,6 +319,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       ) : null}
 
       {item.escalation === 'close_no_reply' && !justChased ? <CloseNoReply item={item} today={today} /> : null}
+      {item.rule === 'decision_overdue' && item.escalation !== 'close_no_reply' && !justChased ? <CloseLost item={item} today={today} /> : null}
       {item.escalation === 'float_elsewhere' && !justChased && supplierRule && items.data && inquiries.data ? (
         <FloatElsewhere
           supplierName={item.party}
@@ -502,7 +504,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               {item.waiting ? (
                 <>
                   <Event on={item.waiting.chasedOn} text={`Chased customer, asked ×${askedTimes}`} warn />
-                  <Event on={item.waiting.nextNudgeOn} text="Next nudge if no reply" />
+                  <Event on={item.waiting.nextNudgeOn} text="Chase again if no reply" />
                 </>
               ) : (
                 <Event on={today} text="Not chased yet" warn />
@@ -595,7 +597,7 @@ export function nudgeInfo(item: TodayItem, dueOn: string | null, today: string, 
 }
 
 function noDraftText(item: TodayItem): string {
-  if (item.rule === 'chase_supplier') return 'Every item has a price or a "cannot offer" from this supplier, so there is nothing to ask. Open the RFQ to update it.'
+  if (item.rule === 'chase_supplier') return 'Every item has a price or a "Can’t quote" from this supplier. Nothing to ask.'
   if (item.rule === 'goods_late') return 'There is no expected date on this order, so there is nothing to chase. Open the order.'
   return 'There is nothing to write for this item yet. Open the record.'
 }
@@ -609,9 +611,9 @@ function howTo(item: TodayItem): string {
     case 'bid_due':
       return 'The quotation is still to send. Open the RFQ to issue it.'
     case 'decision_overdue':
-      return 'No decision since the quotation went out. Open the RFQ to chase the customer, or close it with a reason.'
+      return 'No decision since the quotation went out. Chase the customer, or close it here if they said no.'
     case 'place_po':
-      return 'This order has a supplier order with no purchase order yet. Open the order to place it.'
+      return 'A supplier on this order has no PO yet. Open the order and send the PO.'
     case 'to_source':
       return 'Some goods on this won order have no supplier yet. Open the order and give each line a supplier, or mark it a service.'
     case 'plan_commissioning':
@@ -678,7 +680,7 @@ function factsFor(
     value: on === today ? 'Today' : agoText(on, today).replace(/^\w/, ch => ch.toUpperCase()),
     sub: `${formatDay(on)} · ${count > 0 ? `${who === 'customer' ? 'asked' : 'chase'} ×${count}` : 'once'}`,
   })
-  const nextNudge = (on: string): Fact => ({ label: 'Next nudge', short: 'Next nudge', icon: Hourglass, value: formatDay(on), sub: c.nudge.why })
+  const nextNudge = (on: string): Fact => ({ label: 'Chase again on', short: 'Chase again', icon: Hourglass, value: formatDay(on), sub: c.nudge.why })
   const out: Array<Fact | null> = []
   switch (item.rule) {
     case 'chase_customer': {
@@ -837,7 +839,37 @@ function ChasedCard({
 
 /** Escalation for a customer: a suggestion, never automatic. */
 function CloseNoReply({ item, today }: { item: TodayItem; today: string }) {
+  return (
+    <CloseRfqBanner item={item} today={today} title="3 chases, no answer" reasons={['no_reply_to_clarification']} buttonLabel={() => 'Close as no reply'}>
+      This is a suggestion. Nothing is closed for you. Closing records the reason “No reply to our questions”.
+    </CloseRfqBanner>
+  )
+}
 
+/** "Decision overdue": lose it here, without opening the RFQ (entry-burden J6). Secondary buttons; Undo in the toast. */
+function CloseLost({ item, today }: { item: TodayItem; today: string }) {
+  return (
+    <CloseRfqBanner item={item} today={today} title="No decision yet" reasons={['price', 'competitor']} buttonLabel={r => (r === 'price' ? 'Lost on price' : 'Lost to a competitor')}>
+      If the customer has said no, close it here. Nothing is closed for you.
+    </CloseRfqBanner>
+  )
+}
+
+function CloseRfqBanner({
+  item,
+  today,
+  title,
+  reasons,
+  buttonLabel,
+  children,
+}: {
+  item: TodayItem
+  today: string
+  title: string
+  reasons: CloseReason[]
+  buttonLabel: (r: CloseReason) => string
+  children: ReactNode
+}) {
   const { toast } = useToast()
   const close = useSetRfqClosed(item.rfqId ?? '')
   const [dismissed, setDismissed] = useState(false)
@@ -845,38 +877,42 @@ function CloseNoReply({ item, today }: { item: TodayItem; today: string }) {
   return (
     <Banner
       tone="warning"
-      title="3 chases, no answer"
+      title={title}
       action={
         <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            busy={close.isPending}
-            busyLabel="Closing"
-            onClick={() =>
-              close.mutate(
-                { closedOn: today, reason: 'no_reply_to_clarification', note: null },
-                {
-                  onSuccess: () =>
-                    toast({
-                      title: `Closed ${item.ref}`,
-                      body: 'No reply from customer',
-                      tone: 'success',
-                      undo: { onUndo: () => close.mutateAsync({ closedOn: null, reason: null, note: null }).then(() => undefined) },
-                    }),
-                  onError: err => toast({ title: 'Could not close it', body: mapPgError(err).message, tone: 'danger' }),
-                },
-              )
-            }
-          >
-            Close as no reply
-          </Button>
+          {reasons.map(reason => (
+            <Button
+              key={reason}
+              size="sm"
+              busy={close.isPending && close.variables?.reason === reason}
+              busyLabel="Closing"
+              disabled={close.isPending}
+              onClick={() =>
+                close.mutate(
+                  { closedOn: today, reason, note: null },
+                  {
+                    onSuccess: () =>
+                      toast({
+                        title: `Closed ${item.ref}`,
+                        body: closeReasonLabel(reason),
+                        tone: 'success',
+                        undo: { onUndo: () => close.mutateAsync({ closedOn: null, reason: null, note: null }).then(() => undefined) },
+                      }),
+                    onError: err => toast({ title: 'Could not close it', body: mapPgError(err).message, tone: 'danger' }),
+                  },
+                )
+              }
+            >
+              {buttonLabel(reason)}
+            </Button>
+          ))}
           <Button size="sm" onClick={() => setDismissed(true)}>
             Keep waiting
           </Button>
         </div>
       }
     >
-      This is a suggestion. Nothing is closed for you. Closing records the reason “No reply to our questions”.
+      {children}
     </Banner>
   )
 }

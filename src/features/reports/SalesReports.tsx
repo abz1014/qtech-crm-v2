@@ -204,7 +204,7 @@ const turnaroundColumns: Column<TurnaroundRow>[] = [
   { id: 'month', header: 'First asked in', kind: 'date', value: r => r.month, cell: r => monthLabel(r.month) },
   { id: 'asked', header: 'Asked', kind: 'num', value: r => r.asked },
   { id: 'answered', header: 'Answered', kind: 'num', value: r => r.answered },
-  { id: 'withdrawn', header: 'Withdrawn', kind: 'num', value: r => r.withdrawn, hideBelowMd: true },
+  { id: 'withdrawn', header: 'Not needed', kind: 'num', value: r => r.withdrawn, hideBelowMd: true },
   { id: 'open', header: 'Still open', kind: 'num', value: r => r.open },
   { id: 'avg', header: 'Average to answer', kind: 'num', value: r => r.avgDays, cell: r => daysText(r.avgDays) },
   { id: 'slow', header: 'Slowest', kind: 'num', value: r => r.slowestDays, cell: r => daysText(r.slowestDays), hideBelowMd: true },

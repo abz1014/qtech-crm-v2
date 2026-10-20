@@ -22,7 +22,7 @@ export function useOpenPoPdf(orderId: string) {
     const tab = window.open('', '_blank')
     try {
       const po = await getLegPo(legId)
-      if (!po) throw new Error('This supplier order has no purchase order yet.')
+      if (!po) throw new Error('This supplier order has no PO yet.')
       let blob: Blob
       if (po.pdfPath) {
         blob = await downloadStoredPoPdf(po.pdfPath)

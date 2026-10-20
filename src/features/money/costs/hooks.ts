@@ -34,3 +34,16 @@ export function useSetCostsComplete(orderId: string) {
     onSuccess: () => invalidateAfter(client, 'costs.save', { orderId }),
   })
 }
+
+/** Batch "Mark costs complete" (entry-burden J16): the Margins list's filtered orders, after a confirm that lists them. */
+export function useSetCostsCompleteMany() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: { orderIds: readonly string[]; complete: boolean; userId: string }) => {
+      for (const id of v.orderIds) await api.setCostsComplete(id, v.complete, v.userId)
+    },
+    onSettled: (_d, _e, v) => {
+      for (const orderId of v.orderIds) void invalidateAfter(client, 'costs.save', { orderId })
+    },
+  })
+}

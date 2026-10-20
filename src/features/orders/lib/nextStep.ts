@@ -48,7 +48,7 @@ export function listText(step: OrderStep, f: OrderFacts): string {
     case 'cancelled':
       return 'Cancelled'
     case 'resolve-basis':
-      return 'Is GST included? Answer it to finish the order'
+      return 'Is GST included? Answer it'
     case 'chase-payment': {
       const late = step.lateDays && step.lateDays > 0 ? `${plural(step.lateDays, 'day', 'days')} overdue` : 'overdue'
       return `Chase payment: ${late}${pkr(f.balance) ? ` · ${pkr(f.balance)}` : ''}`
@@ -64,7 +64,7 @@ export function listText(step: OrderStep, f: OrderFacts): string {
     case 'place':
       return supplier ? `Place the order with ${supplier}` : 'Place the supplier order'
     case 'wait-placing':
-      return supplier ? `Waiting for the order with ${supplier} to be placed` : 'Waiting for the supplier order to be placed'
+      return supplier ? `Waiting for the PO to ${supplier}` : 'Waiting for the PO to be sent'
     case 'plan-commissioning':
       return 'Plan commissioning'
     case 'wait-plan':

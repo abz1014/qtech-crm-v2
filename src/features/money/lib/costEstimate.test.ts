@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estimateExpectedCost, type EstItem, type EstLeg, type EstPo } from '@/features/money/lib/costEstimate'
+import { estimateExpectedCost, stillOwedOnLeg, type EstItem, type EstLeg, type EstPo } from '@/features/money/lib/costEstimate'
 
 const item = (id: string, over: Partial<EstItem> = {}): EstItem => ({ id, qty: 1, supplierUnitPrice: null, legId: null, isService: false, ...over })
 const legs: EstLeg[] = [
@@ -69,5 +69,20 @@ describe('estimateExpectedCost (supplier prices x today\'s rate)', () => {
     })
     expect(e.legs).toHaveLength(2)
     expect(e.pkr).toBe(300 * 320 + 180 * 280)
+  })
+})
+
+describe('stillOwedOnLeg (Pay supplier pre-fill)', () => {
+  const est = (pkr: number | null, currency = 'PKR') => ({ pkr, legs: [{ legId: 'L', currency, amount: 1000, source: 'po' as const, pkr }], linesWithoutPrice: 0, unconverted: [] })
+  it('is the PO total less what is paid', () => {
+    expect(stillOwedOnLeg(est(1000), 'L', 400)).toEqual({ amount: 600, note: 'Still owed: PO total PKR 1,000, less PKR 400 paid' })
+  })
+  it('labels a foreign currency as about, at today', () => {
+    expect(stillOwedOnLeg(est(280000, 'EUR'), 'L', 0)?.note).toBe('Still owed: PO total EUR 1,000, about PKR 280,000 today')
+  })
+  it('offers nothing when paid in full or not convertible', () => {
+    expect(stillOwedOnLeg(est(1000), 'L', 1000)).toBeNull()
+    expect(stillOwedOnLeg(est(null, 'EUR'), 'L', 0)).toBeNull()
+    expect(stillOwedOnLeg(est(1000), 'other', 0)).toBeNull()
   })
 })

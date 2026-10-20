@@ -200,11 +200,11 @@ test.describe('O07: Issue PO', () => {
     expect(await posOf(s.leg)).toHaveLength(0)
   })
 
-  test('Add expense on a supplier order opens the M03 dialog with this order and supplier order, the supplier as payee', async ({ page }) => {
+  test('Pay <supplier> on a supplier order opens the M03 dialog with this order and supplier order, the supplier as payee', async ({ page }) => {
     const s = await seedPo({ allPriced: true })
     await openAs(page, 'admin', `/orders/${s.order.id}`)
     await legLoc(page, 'A').getByRole('button', { name: `More for ${s.supplier.name}` }).click()
-    await page.getByRole('menuitem', { name: 'Add expense' }).click()
+    await page.getByRole('menuitem', { name: `Pay ${s.supplier.name}` }).click()
     const d = dialog(page)
     await expect(d.getByRole('heading', { name: /expense/i })).toBeVisible()
     await expect(d).toContainText(s.supplier.name)
