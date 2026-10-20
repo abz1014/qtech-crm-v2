@@ -14,13 +14,19 @@ export function generatePassword(length = 16): string {
   return out
 }
 
-/** Local dev origins are always allowed; production origins come from the ALLOWED_ORIGINS secret. */
+/** Local dev origins: allowed only when ALLOW_DEV_ORIGINS=1 (the local stack, supabase/functions/local.env), never in production (BUG-RV-05). */
 export const DEV_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173', 'http://127.0.0.1:4173']
 
-/** Origins from the ALLOWED_ORIGINS secret (comma separated), plus the dev origins. */
-export function parseOrigins(raw: string | undefined | null): Set<string> {
+/** True only for the explicit flag value "1" or "true". */
+export function devOriginsAllowed(flag: string | undefined | null): boolean {
+  const v = (flag ?? '').trim().toLowerCase()
+  return v === '1' || v === 'true'
+}
+
+/** Origins from the ALLOWED_ORIGINS secret (comma separated), plus the dev origins when `allowDev` is set. */
+export function parseOrigins(raw: string | undefined | null, allowDev = false): Set<string> {
   const configured = (raw ?? '').split(',').map((o) => o.trim()).filter(Boolean)
-  return new Set([...DEV_ORIGINS, ...configured])
+  return new Set([...(allowDev ? DEV_ORIGINS : []), ...configured])
 }
 
 export function bearerToken(header: string | null): string | null {

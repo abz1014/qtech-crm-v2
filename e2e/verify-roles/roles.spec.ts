@@ -135,7 +135,6 @@ function watchNetwork(page: Page, w: Watch): void {
     const found: Leak[] = moneyIn(object, body, `${w.current} -> /${path}`)
     for (const l of found) {
       const line = `${l.where}: ${l.field} [${l.rule}]`
-      if (l.rule === 'legacy') continue // BUG-RV-01 has its own expected-fail test below
       if ((l.rule === 'supplier' && w.allow.includes('supplier')) || (l.rule === 'm3' && w.allow.includes('m3')) || l.rule === 'own') {
         w.accepted.push(line)
         continue
@@ -346,7 +345,6 @@ for (const who of ['deactivated', 'norole'] as const) {
 // BUG-RV-01 in the browser: the supplier's company page downloads supplier_orders.legacy_source, which (for imported
 // orders) is the old order row with its value and COST, into any role's browser, the engineer's included.
 test('BUG-RV-01: the engineer\'s browser receives no legacy order value or cost', async ({ browser }, info) => {
-  test.fail(true, 'BUG-RV-01: legacy_source (old order_value, cost_value) reaches engineers; see pgTAP 0902')
   const context = await staffContext(browser, info)
   const page = await context.newPage()
   const legacy: string[] = []

@@ -49,7 +49,7 @@ jobs:
         run: |
           # --no-verify-jwt: the function authenticates the bearer token itself (auth.getUser) and
           # then requires an active admin, so the platform check adds nothing in CI.
-          nohup npx supabase functions serve admin-users --no-verify-jwt > "$RUNNER_TEMP/functions-serve.log" 2>&1 &
+          nohup npx supabase functions serve admin-users --no-verify-jwt --env-file supabase/functions/local.env > "$RUNNER_TEMP/functions-serve.log" 2>&1 &
           echo "started"
 
       - name: Integration test (non-admin 403, last admin guard, audit rows)

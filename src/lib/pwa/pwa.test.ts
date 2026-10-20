@@ -66,7 +66,7 @@ describe('update flow', () => {
     Object.defineProperty(navigator, 'serviceWorker', { value: {}, configurable: true })
     const updates = await import('@/lib/pwa/updates')
     const dirty = await import('@/lib/pwa/dirtyForms')
-    updates.registerServiceWorker()
+    await updates.registerServiceWorker()
     return { updates, dirty, handlers, messageSkipWaiting }
   }
 

@@ -111,8 +111,7 @@ test('CORS: a browser on another origin is refused by the function itself, even 
   expect(ok.headers.get('access-control-allow-credentials')).toBeNull()
 })
 
-test('BUG-RV-05: in production only the production origin is allowed (localhost dev origins are always added)', async () => {
-  test.fail(true, 'BUG-RV-05: parseOrigins() always adds http://localhost:5173, 127.0.0.1:5173, :4173 to ALLOWED_ORIGINS (lib.ts DEV_ORIGINS)')
+test('BUG-RV-05: in production only the production origin is allowed (localhost dev origins only with ALLOW_DEV_ORIGINS)', async () => {
   // What the deployed function would allow with the production secret (deploy-functions.yml sets ALLOWED_ORIGINS).
   expect([...parseOrigins(PROD_ORIGIN)]).toEqual([PROD_ORIGIN])
 })

@@ -21,6 +21,7 @@ export function AddItemDialog({ rfq, onClose }: { rfq: RfqHeader; onClose: () =>
   const { toast } = useToast()
   const add = useAddRfqItem(rfq.id)
   const id = useRef(crypto.randomUUID())
+  const sending = useRef(false)
   const [description, setDescription] = useState('')
   const [qty, setQty] = useState<number | null>(1)
   const [unit, setUnit] = useState('')
@@ -32,12 +33,16 @@ export function AddItemDialog({ rfq, onClose }: { rfq: RfqHeader; onClose: () =>
       setError('Describe the item, for example the brand, model and size.')
       return
     }
+    if (sending.current) return
+    sending.current = true
     try {
       await add.mutateAsync({ id: id.current, description, qty: qty && qty > 0 ? qty : 1, unit: unit || null })
       toast({ title: 'Item added', body: `${rfqRef(rfq.number)} · ${description.trim()}`, tone: 'success' })
       onClose()
     } catch (err) {
       setError(mapPgError(err, { entity: 'item' }).message)
+    } finally {
+      sending.current = false
     }
   }
 

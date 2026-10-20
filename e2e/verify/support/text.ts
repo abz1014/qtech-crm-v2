@@ -261,8 +261,8 @@ export const BOOKS = {
   },
   margin: {
     panel: 'Margin',
-    provisionalNoExpected: 'Not final: no expected cost is set, so only what is paid so far counts.',
-    final: 'Final. Costs are marked complete.',
+    provisionalNoExpected: 'Not final: counts only what is paid so far.',
+    final: 'Final: costs complete.',
     markComplete: 'Mark costs complete',
     reopenCosts: 'Reopen costs',
     markedToast: 'Costs marked complete',
@@ -272,7 +272,8 @@ export const BOOKS = {
   },
   owe: {
     moreFor: (supplier: string) => `More for ${supplier}`,
-    addExpense: 'Add expense',
+    /** The supplier order's menu item for its one Add expense (Supplier payment, the supplier as payee). */
+    payFor: (supplier: string) => `Pay ${supplier}`,
     dialog: 'Add expense',
     amount: 'Amount, PKR',
     category: 'Category',

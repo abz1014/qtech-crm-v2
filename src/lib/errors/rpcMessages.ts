@@ -66,6 +66,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^a payment is voided (or restored )?only through /, internal: true },
   { match: /^which payment a correction replaces cannot be changed$/, internal: true },
   { match: /^settled before cutover is set by the legacy import only$/, internal: true },
+  { match: /^legacy_source is set by the legacy import only$/, internal: true },
   { match: /^payment reminders are for admin and sales only$/, message: () => ADMIN_SALES },
 
   // Quotations and POs
@@ -101,7 +102,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^merge conflict: both companies were sent the same RFQ as supplier$/, message: () => 'Both companies were sent the same RFQ as supplier. Remove one of them from that RFQ, then merge.' },
   { match: /^merge needs two different (brands|companies)$/, message: m => `Choose two different ${m[1]} to merge.` },
   { match: /^a brand and a family cannot be merged$/, message: () => 'A brand and a family cannot be merged. Choose two brands or two families.' },
-  { match: /^only an admin can (merge brands|merge companies|change who owns an RFQ|change who owns an order|resolve a value basis|change the legacy flags of an order|set legacy flags on an order)$/, message: () => ADMIN_ONLY },
+  { match: /^only an admin can (merge brands|merge companies|change who owns an RFQ|change who owns an order|resolve a value basis|change the legacy flags of an order|set legacy flags on an order|set legacy flags|change legacy flags)$/, message: () => ADMIN_ONLY },
   { match: /^the system must keep at least one active admin$/, message: () => 'Make someone else an admin first. The app always keeps one.', action: TEAM },
   { match: /^category "(.+?)" is inactive; pick an active category$/, message: m => `"${m[1]}" is switched off. Pick another category, or switch it on in Settings, Expense categories.`, action: CATEGORIES },
   { match: /^the order has no unresolved value basis$/, message: () => 'This order has no value basis left to resolve. Reload the page.' },

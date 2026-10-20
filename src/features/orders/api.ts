@@ -561,6 +561,8 @@ export async function listLegPos(legIds: readonly string[], money = false): Prom
 // ---------------------------------------------------------------- add a line, add a leg, resolve a legacy price basis
 
 export interface NewLine {
+  /** Made by the dialog once per opening, so a retry or a second tap can only ever write the same line (BUG-RV-07). */
+  id: string
   orderId: string
   position: number
   description: string
@@ -577,6 +579,7 @@ export async function addOrderItem(l: NewLine): Promise<void> {
   const { error } = await requireSupabase()
     .from('order_items')
     .insert({
+      id: l.id,
       order_id: l.orderId,
       position: l.position,
       description: l.description,
@@ -588,7 +591,8 @@ export async function addOrderItem(l: NewLine): Promise<void> {
       supplier_order_id: l.isService ? null : l.legId,
       supplier_unit_price: l.isService ? null : l.supplierUnitPrice,
     })
-  if (error) throw error
+  // 23505 on the client id: the first try already wrote this line (its reply was lost). Same outcome, not an error.
+  if (error && error.code !== '23505') throw error
 }
 
 /** The number the next order will most likely take (the highest so far plus one), for the convert dialog's "Creates order ORD-0043". The issued number is the database's. */

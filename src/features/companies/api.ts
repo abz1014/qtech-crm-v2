@@ -205,7 +205,7 @@ export async function findCompanyByName(name: string): Promise<CompanyHit | null
 export async function getCompany(id: string): Promise<CompanyDetail | null> {
   const db = requireSupabase()
   const [company, role] = await Promise.all([
-    db.from('companies').select('id, name, country, city, notes, created_at, legacy_flags, legacy_source').eq('id', id).maybeSingle(),
+    db.from('companies').select('id, name, country, city, notes, created_at, legacy_flags, imported:legacy_source->imported').eq('id', id).maybeSingle(),
     db.from('v_company_roles').select('role, is_customer, is_supplier').eq('company_id', id).maybeSingle(),
   ])
   const c = unwrap(company)
@@ -221,7 +221,7 @@ export async function getCompany(id: string): Promise<CompanyDetail | null> {
     role: asRole(r?.role),
     isCustomer: r?.is_customer ?? false,
     isSupplier: r?.is_supplier ?? false,
-    legacyImported: c.legacy_source !== null || (c.legacy_flags?.length ?? 0) > 0,
+    legacyImported: c.imported != null || (c.legacy_flags?.length ?? 0) > 0,
   }
 }
 
@@ -374,14 +374,14 @@ export async function getSupplierRecord(companyId: string): Promise<SupplierReco
   const [inqRes, legRes] = await Promise.all([
     db
       .from('supplier_inquiries')
-      .select('id, rfq_id, sent_on, last_chased_on, chase_count, no_offer_on, no_offer_reason, legacy_source')
+      .select('id, rfq_id, sent_on, last_chased_on, chase_count, no_offer_on, no_offer_reason, imported:legacy_source->imported')
       .eq('supplier_id', companyId)
       .not('sent_on', 'is', null)
       .order('sent_on', { ascending: false })
       .limit(60),
     db
       .from('supplier_orders')
-      .select('id, placed_on, expected_on, received_on, currency, legacy_source, orders!inner(number, cancelled_on)')
+      .select('id, placed_on, expected_on, received_on, currency, imported:legacy_source->imported, orders!inner(number, cancelled_on)')
       .eq('supplier_id', companyId)
       .order('created_at', { ascending: false })
       .limit(60),
@@ -394,7 +394,7 @@ export async function getSupplierRecord(companyId: string): Promise<SupplierReco
     chaseCount: i.chase_count,
     noOfferOn: i.no_offer_on,
     noOfferReason: i.no_offer_reason,
-    legacy: i.legacy_source !== null,
+    legacy: i.imported != null,
   }))
   type OrdRef = { number: number; cancelled_on: string | null }
   type LegRow = {
@@ -403,7 +403,7 @@ export async function getSupplierRecord(companyId: string): Promise<SupplierReco
     expected_on: string | null
     received_on: string | null
     currency: string | null
-    legacy_source: unknown
+    imported: unknown
     orders: Rel<OrdRef>
   }
   const legRows = unwrap(legRes) as unknown as LegRow[]
@@ -415,7 +415,7 @@ export async function getSupplierRecord(companyId: string): Promise<SupplierReco
       b =>
         db
           .from('supplier_quote_lines')
-          .select('id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, fx_rate_pkr, fx_rate_on, created_at, legacy_flags, legacy_source')
+          .select('id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, fx_rate_pkr, fx_rate_on, created_at, legacy_flags, imported:legacy_source->imported')
           .in('inquiry_id', b),
     ),
     inBatches(rfqIds, b => db.from('rfq_items').select('id, rfq_id, position, description, qty, unit, brand_id').in('rfq_id', b)),
@@ -447,7 +447,7 @@ export async function getSupplierRecord(companyId: string): Promise<SupplierReco
     fxRateOn: l.fx_rate_on,
     enteredOn: toBusinessDate(new Date(l.created_at)),
     hidden: l.legacy_flags.includes('currency_unverified'),
-    legacy: l.legacy_source !== null,
+    legacy: l.imported != null,
   }))
   const items: RawItem[] = itemRows.map(i => ({
     id: i.id,
@@ -479,7 +479,7 @@ export async function getSupplierRecord(companyId: string): Promise<SupplierReco
       placedOn: l.placed_on,
       expectedOn: l.expected_on,
       receivedOn: l.received_on,
-      legacy: l.legacy_source !== null,
+      legacy: l.imported != null,
       currency: l.currency?.trim() ?? null,
       po: latestPo.get(l.id) ?? null,
     }

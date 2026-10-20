@@ -260,6 +260,25 @@ describe('nothing is kept for a person the server no longer accepts (owner secur
     expect(h.start).not.toHaveBeenCalled()
   })
 
+  it('a session that ended without Sign out (no stored token, Auth reports none, someone remembered): wiped once (BUG-RV-06)', async () => {
+    rememberUser({ id: 'u1', name: 'Ayesha', role: 'sales' })
+    h.stored = null
+    h.initial = 'null'
+    mount()
+    expect(await screen.findByText('signed-out::none')).toBeInTheDocument()
+    await waitFor(() => expect(h.forgetCaptures).toHaveBeenCalledTimes(1))
+    expect(h.forgetSaved).toHaveBeenCalled()
+    expect(readRememberedUser()).toBeNull()
+  })
+
+  it('nobody was signed in on this device: nothing is wiped (a share kept while signed out stays)', async () => {
+    h.stored = null
+    h.initial = 'null'
+    mount()
+    expect(await screen.findByText('signed-out::none')).toBeInTheDocument()
+    expect(h.forgetCaptures).not.toHaveBeenCalled()
+  })
+
   it('a token the server refuses (PGRST301): signed out and wiped at once, not shown from memory', async () => {
     rememberUser({ id: 'u1', name: 'Ayesha', role: 'sales' })
     h.refuse = true

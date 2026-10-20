@@ -199,9 +199,11 @@ const CommandPalette = lazy(() =>
 
 export function PaletteHost({
   role,
+  personId,
   children,
 }: {
   role: string;
+  personId?: string;
   children: ReactNode;
 }) {
   const navigate = useNavigate();
@@ -363,6 +365,7 @@ export function PaletteHost({
             open={open}
             onOpenChange={setOpen}
             sources={sources}
+            personId={personId}
             onNavigate={(href, { newTab }) =>
               newTab ? window.open(href, "_blank", "noopener") : navigate(href)
             }

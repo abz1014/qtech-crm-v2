@@ -112,8 +112,13 @@ export async function deleteCapture(id: string, factory: IDBFactory = defaultFac
 }
 
 /** Remove every item, expired or not (sign-out: the next person on this device must not see them). */
-export async function clearCaptures(factory: IDBFactory = defaultFactory()): Promise<void> {
-  await run('readwrite', s => s.clear(), factory)
+export async function clearCaptures(factory: IDBFactory = defaultFactory(), keep?: (item: CaptureItem) => boolean): Promise<void> {
+  if (!keep) {
+    await run('readwrite', s => s.clear(), factory)
+    return
+  }
+  const all = ((await run('readonly', s => s.getAll(), factory)) as CaptureItem[] | undefined) ?? []
+  for (const i of all.filter(x => !keep(x))) await run('readwrite', s => s.delete(i.id), factory)
 }
 
 /** Remove every expired item. Returns how many went. */

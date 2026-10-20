@@ -87,8 +87,8 @@ These are defined once here and marked in the tables below:
   - `created_by uuid NULL DEFAULT auth.uid()`, FK to `users`, ON DELETE RESTRICT. NULL only on imported rows.
 - **[upd]** — `updated_at timestamptz NOT NULL DEFAULT now()`, maintained by a trigger. It is only on roots where staleness does work (rfqs, orders, companies), e.g. "nothing touched in 40 days".
 - **[L]** — present only on imported tables:
-  - `legacy_flags text[] NOT NULL DEFAULT '{}'`
-  - `legacy_source jsonb NULL` (the untouched original row)
+  - `legacy_flags text[] NOT NULL DEFAULT '{}'`. *(0078)* A signed-in person may insert or change flags only as admin (all 11 tables; orders also keeps 0065's `value_basis_unknown` rule).
+  - `legacy_source jsonb NULL`: set on imported rows only. *(0078, BUG-RV-01)* It holds the money-free marker `{"imported": true, "table": "<old table>"}`; the untouched original row (old prices, costs, GST) is moved by a trigger to `legacy_archive.legacy_rows (table_name, row_id, data)`, a schema the API does not expose and no client role (anon, authenticated, service_role) can read. Readers ask only whether the column is set. Written by the import (service role) and postgres only; a signed-in person is refused (BUG-RV-02).
   - One mechanism handles every import caveat. New rows always have an empty flag array.
 - **Types**
   - Money in PKR is `numeric(14,2)`.

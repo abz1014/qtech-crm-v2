@@ -34,7 +34,7 @@ export function AppShell({ counts }: AppShellProps) {
     <ToastProvider>
       <PwaPrompts />
       <CaptureProvider>
-        <PaletteHost role={session.user.role}>
+        <PaletteHost role={session.user.role} personId={session.user.id}>
           <MobileBarProvider>
             <Frame user={session.user} counts={counts} />
           </MobileBarProvider>

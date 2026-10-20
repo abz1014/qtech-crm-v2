@@ -29,12 +29,12 @@ const actions = (onSelect = vi.fn()): PaletteSource => ({
   search: q => filterItems([{ id: 'new-rfq', label: 'New RFQ', onSelect }], q),
 })
 
-function Host({ sources, onNavigate }: { sources: PaletteSource[]; onNavigate?: (h: string, o: { newTab: boolean }) => void }) {
+function Host({ sources, onNavigate, personId = 'u1' }: { sources: PaletteSource[]; onNavigate?: (h: string, o: { newTab: boolean }) => void; personId?: string }) {
   const [open, setOpen] = useState(false)
   return (
     <>
       <button onClick={() => setOpen(true)}>Search or jump to</button>
-      <CommandPalette open={open} onOpenChange={setOpen} sources={sources} onNavigate={onNavigate ?? (() => {})} />
+      <CommandPalette open={open} onOpenChange={setOpen} sources={sources} personId={personId} onNavigate={onNavigate ?? (() => {})} />
     </>
   )
 }
@@ -165,6 +165,25 @@ describe('CommandPalette (U08)', () => {
     await user.click(screen.getByRole('button'))
     expect(await screen.findByText('Recent')).toBeInTheDocument()
     expect(screen.getByRole('option', { name: /Punjab Cement Ltd/ })).toBeInTheDocument()
+  })
+
+  it('keeps Recent per person and ignores the old shared key (BUG-RV-04)', async () => {
+    window.localStorage.setItem('qtech.palette.recent', JSON.stringify([{ id: 'x', label: 'Old shared invoice', href: '/x', at: Date.now() }]))
+    const user = userEvent.setup()
+    const { unmount } = render(<Host sources={[places()]} personId="admin-1" />)
+    await user.click(screen.getByRole('button'))
+    await screen.findByRole('dialog')
+    expect(screen.queryByText('Old shared invoice')).toBeNull()
+    await user.keyboard('punjab{Enter}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    unmount()
+    expect(window.localStorage.getItem('qtech.palette.recent.admin-1')).toContain('Punjab Cement Ltd')
+
+    render(<Host sources={[places()]} personId="engineer-1" />)
+    await user.click(screen.getByRole('button'))
+    await screen.findByRole('dialog')
+    expect(screen.queryByText('Recent')).toBeNull()
+    expect(screen.queryByRole('option', { name: /Punjab Cement Ltd/ })).toBeNull()
   })
 
   it('opens empty again after a row was opened or it was closed with Ctrl+K (no stale query)', async () => {
