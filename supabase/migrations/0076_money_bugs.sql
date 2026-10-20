@@ -1,5 +1,6 @@
 -- 0076_money_bugs (money verification: BUG-M2, M3, M4, M9, M11; docs/DECISIONS.md 2026-10-20 "money bugs"). Same columns and
--- signatures everywhere, so nothing that reads these changes shape.
+-- signatures everywhere, so nothing that reads these changes shape. Each object starts from its 0073 definition (payment
+-- correction) and keeps its `voided_at is null` filter.
 --
 --   v_order_money            M2: D-MR3, as order_receivables: a cancelled order that was never invoiced owes nothing (gross 0,
 --                            receivable 0; money paid on it shows as overpaid, a refund may be due). The admin order page,
@@ -85,7 +86,7 @@ begin
     select case when iv.invoice_count > 0 then iv.invoice_gross else t.gross end as g
   ) b
   cross join lateral (
-    select coalesce(sum(p.amount), 0) as settled from public.payments_in p where p.order_id = o.id
+    select coalesce(sum(p.amount), 0) as settled from public.payments_in p where p.order_id = o.id and p.voided_at is null
   ) s
   cross join lateral (
     select (b.g > 0 and s.settled >= b.g - 1) as settled_ok
@@ -145,7 +146,7 @@ cross join lateral (
 ) gm
 left join public.order_costs oc on oc.order_id = o.id
 cross join lateral (
-  select coalesce(sum(p.amount), 0) as settled from public.payments_in p where p.order_id = o.id
+  select coalesce(sum(p.amount), 0) as settled from public.payments_in p where p.order_id = o.id and p.voided_at is null
 ) s
 cross join lateral (
   select coalesce(sum(x.amount_pkr - x.input_tax_pkr), 0) as actual_cost from public.expenses x where x.order_id = o.id
@@ -197,6 +198,7 @@ as $$
     select p.order_id as ordid, sum(p.amount) as paid
     from public.payments_in p
     where p.received_on <= p_date
+      and p.voided_at is null
       and public.current_user_role() = 'admin'
     group by p.order_id
   ),
@@ -279,6 +281,7 @@ as $$
   bank_in as (
     select p.amount, p.received_on from public.payments_in p, b
     where p.paid_via = 'bank' and p.bank_month is null and p.received_on <= b.m_end
+      and p.voided_at is null
   ),
   bank_out as (
     select e.amount_pkr as amount, e.paid_on from public.expenses e, b
@@ -321,7 +324,7 @@ as $$
       and oc.costs_complete_at is null
       and ob.g > 0
       and (select coalesce(sum(p.amount), 0) from public.payments_in p
-           where p.order_id = o.id and p.received_on <= b.m_end) >= ob.g - 1
+           where p.order_id = o.id and p.received_on <= b.m_end and p.voided_at is null) >= ob.g - 1
   ),
   pending as (
     select r.number, r.invoice_date, r.gst_amount
@@ -399,7 +402,6 @@ as $$
     and not exists (select 1 from frozen)
 $$;
 
-
 -- ---------------------------------------------------------------- M3: correct the frozen aging of closed months
 -- Drop the invoice rows of orders settled within Rs 1 as of the month's last day (the rule above).
 update public.month_snapshots s
@@ -420,6 +422,7 @@ set aging = coalesce((
            (select coalesce(sum(p.amount), 0) as paid
             from public.payments_in p
             where p.order_id = (x.e ->> 'order_id')::uuid
-              and p.received_on <= (s.month + interval '1 month')::date - 1) pi
+              and p.received_on <= (s.month + interval '1 month')::date - 1
+              and p.voided_at is null) pi
       where gi.g > 0 and pi.paid >= gi.g - 1)
   )), '[]'::jsonb);
