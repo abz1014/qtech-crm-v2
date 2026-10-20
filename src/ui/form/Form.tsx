@@ -2,7 +2,7 @@
  * Form, FormField, FormSummary: the pieces that render a form built with useSubmitForm
  * (src/ui/form/useSubmitForm.ts holds the guard, the request id and the error mapping).
  */
-import type { ReactElement, ReactNode } from 'react'
+import type { KeyboardEvent, ReactElement, ReactNode, SyntheticEvent } from 'react'
 import {
   FormProvider,
   useController,
@@ -30,7 +30,14 @@ export function Form<TIn extends FieldValues, TOut>({ sf, labels = {}, children,
   return (
     <FormProvider {...(form as unknown as UseFormReturn<TIn>)}>
       <form id={sf.formId} noValidate onSubmit={sf.submit} className={className} aria-busy={sf.pending || undefined}>
-        <fieldset disabled={sf.pending} className="m-0 grid min-w-0 gap-4 border-0 p-0">
+        {/* While saving, controls are locked but keep focus (WCAG 2.4.3): a disabled fieldset drops focus to <body>. */}
+        <fieldset
+          aria-disabled={sf.pending || undefined}
+          onBeforeInputCapture={sf.pending ? lock : undefined}
+          onKeyDownCapture={sf.pending ? lockKeys : undefined}
+          onClickCapture={sf.pending ? lock : undefined}
+          className="m-0 grid min-w-0 gap-4 border-0 p-0"
+        >
           <FormSummary labels={labels} />
           {sf.formError ? <FormErrorBanner error={sf.formError} entity={sf.entity} /> : null}
           {children}
@@ -38,6 +45,12 @@ export function Form<TIn extends FieldValues, TOut>({ sf, labels = {}, children,
       </form>
     </FormProvider>
   )
+}
+
+const lock = (e: SyntheticEvent) => e.preventDefault()
+/** While pending only Tab, Shift+Tab and Escape do anything: focus can move, nothing can change. */
+const lockKeys = (e: KeyboardEvent) => {
+  if (e.key !== 'Tab' && e.key !== 'Escape' && e.key !== 'Shift') e.preventDefault()
 }
 
 /** "Fix 2 fields to continue", with each field a control that moves focus to it. Shown after a submit that failed validation. */

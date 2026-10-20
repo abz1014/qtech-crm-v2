@@ -102,6 +102,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [undo])
 
   const api = useMemo<ToastApi>(() => ({ toast, dismiss }), [toast, dismiss])
+  const card = (item: Item) => (
+    <ToastCard key={item.id} item={item} onUndo={() => void undo(item.id)} onSettle={() => settle(item.id)} onDismiss={() => dismiss(item.id)} onGone={() => remove(item.id)} />
+  )
 
   return (
     <ToastContext.Provider value={api}>
@@ -111,9 +114,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         aria-label="Notifications"
         className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[380px] max-w-full flex-col gap-2 max-md:inset-x-4 max-md:bottom-[76px] max-md:w-auto"
       >
-        {items.map(item => (
-          <ToastCard key={item.id} item={item} onUndo={() => void undo(item.id)} onSettle={() => settle(item.id)} onDismiss={() => dismiss(item.id)} onGone={() => remove(item.id)} />
-        ))}
+        {/* WCAG 4.1.3: errors speak for themselves as role="alert". Every other toast goes into one persistent polite
+            live region, so it is announced on arrival (a status inserted with its content is often missed) and again
+            when its sentence changes (settled, undone). The countdown digits are hidden from it. */}
+        {items.filter(i => i.input.tone === 'danger').map(card)}
+        <div aria-live="polite" aria-relevant="additions text" className="flex flex-col gap-2" data-toast-live>
+          {items.filter(i => i.input.tone !== 'danger').map(card)}
+        </div>
       </div>
     </ToastContext.Provider>
   )
@@ -182,6 +189,8 @@ function ToastCard({
   return (
     <div
       role={tone === 'danger' ? 'alert' : 'status'}
+      // Not its own live region: the provider's persistent polite region speaks it.
+      aria-live={tone === 'danger' ? undefined : 'off'}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -195,12 +204,13 @@ function ToastCard({
       <div className="grid min-w-0 flex-1 text-pretty">
         <span className="font-medium">{title}</span>
         {body ? <span className={cn('text-xs', tone === 'danger' ? 'opacity-90' : 'opacity-80')}>{body}</span> : null}
+        {undoable ? <span className="sr-only">{` Undo is available for ${u?.seconds ?? 10} seconds, or press Control+Z.`}</span> : null}
       </div>
       {undoable ? (
         <button
           type="button"
           onClick={onUndo}
-          className="inline-flex h-control-sm items-center gap-[6px] rounded border border-tone-ink-fg/30 pl-3 pr-2 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 max-md:h-touch"
+          className="inline-flex h-control-sm items-center gap-[6px] rounded border border-tone-ink-fg/30 pl-3 pr-2 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:h-touch"
         >
           <svg viewBox="0 0 18 18" aria-hidden="true" className="size-[18px] -rotate-90">
             <circle cx="9" cy="9" r="7" fill="none" strokeWidth="2" className="stroke-tone-ink-fg opacity-30" />
@@ -217,7 +227,7 @@ function ToastCard({
             />
           </svg>
           Undo
-          <span className="num min-w-[3ch] text-right opacity-80">{secs}s</span>
+          <span aria-hidden="true" className="num min-w-[3ch] text-right opacity-80">{secs}s</span>
         </button>
       ) : input.action && phase === 'running' ? (
         <button
@@ -226,7 +236,7 @@ function ToastCard({
             input.action?.onClick()
             onDismiss()
           }}
-          className="inline-flex h-control-sm items-center rounded border border-tone-ink-fg/30 px-3 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 max-md:h-touch"
+          className="inline-flex h-control-sm items-center rounded border border-tone-ink-fg/30 px-3 text-xs font-medium transition-colors duration-fast ease-out hover:bg-tone-ink-fg/10 focus-visible:outline-tone-ink-fg max-md:h-touch"
         >
           {input.action.label}
         </button>
@@ -235,7 +245,7 @@ function ToastCard({
         type="button"
         aria-label="Dismiss"
         onClick={onDismiss}
-        className="grid size-control-sm shrink-0 place-items-center rounded opacity-70 transition-opacity duration-fast ease-out hover:bg-tone-ink-fg/10 hover:opacity-100 max-md:size-touch"
+        className="grid size-control-sm shrink-0 place-items-center rounded opacity-70 transition-opacity duration-fast ease-out hover:bg-tone-ink-fg/10 hover:opacity-100 focus-visible:outline-tone-ink-fg max-md:size-touch"
       >
         <Icon icon={X} />
       </button>

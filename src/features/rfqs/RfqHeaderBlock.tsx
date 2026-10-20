@@ -399,7 +399,7 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
               </span>
             ) : null}
           </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2" aria-label="Where this RFQ stands">
+          <div className="mt-2 flex flex-wrap items-center gap-2" role="group" aria-label="Where this RFQ stands">
             {s?.outcome === 'open' || !s ? (
               <span data-stage className={cn('inline-flex h-6 items-center rounded border px-2 text-sm font-medium', CHIP_TONE[stage.tone])}>
                 {stage.label}

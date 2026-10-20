@@ -5,6 +5,7 @@ import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
+import { shortcutsEnabled } from '@/ui/useShortcutsSetting'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { Money } from '@/ui/Money'
 import { SegmentedControl } from '@/ui/SegmentedControl'
@@ -47,7 +48,7 @@ export type { Column, Density, SortState } from '@/ui/dataTableModel'
  * raised to the tallest row in view (a row with a small button is 49), and read again when the text size, the
  * pointer type or the window of rows changes (readRowMetrics in dataTableModel.ts).
  *
- * Phone cards: give `mobileRow` and, below 640px, each row is drawn as one stacked, tappable card
+ * Phone cards: give `mobileRow` and, below 768px (a phone, or a laptop at 200% zoom), each row is drawn as one stacked, tappable card
  * (whatever `mobileRow` returns) instead of table cells. The rows keep their keyboard focus, Enter to
  * open, Space and the checkbox for selection, and a 44px minimum height. The column header row is kept
  * for screen readers only, so sorting is a desktop control; group subtotals and the totals footer are
@@ -120,7 +121,7 @@ export interface DataTableProps<T> {
   columnBands?: ReadonlyArray<{ label: ReactNode; from: string; to: string }>
   /** Rows hold two-line cells (name over reference): 48 px as in the mockups. Required for virtualised tables with two-line cells. */
   twoLine?: boolean
-  /** Below 640px, draw each row as a stacked card with this content instead of columns. */
+  /** Below 768px, draw each row as a stacked card with this content instead of columns. */
   mobileRow?: (row: T) => ReactNode
   className?: string
 }
@@ -151,7 +152,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     mobileRow,
     className,
   } = props
-  const phone = useMediaQuery('(max-width: 639px)')
+  const phone = useMediaQuery('(max-width: 767px)')
   const cards = !!mobileRow && phone
   const rootRef = useRef<HTMLDivElement>(null)
   const [savedDensity, setDensity] = useTableDensity(label, props.density ?? 'comfortable')
@@ -284,7 +285,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   // ---- "/" focuses the filter; the opened row is focused again on the way back ----------------------
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== '/' || e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented) return
+      if (e.key !== '/' || e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented || !shortcutsEnabled()) return
       const t = e.target as HTMLElement | null
       if (t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName))) return
       if (document.querySelector('[role="dialog"],[role="alertdialog"]')) return
@@ -658,6 +659,18 @@ export function DataTable<T>(props: DataTableProps<T>) {
       Showing <span className="num">{dataRows.length}</span> of <span className="num">{total ?? dataRows.length}</span> {noun}
     </>
   ) : undefined)
+  // WCAG 4.1.3: a filter changes the count silently. One polite, persistent status node says it, 500 ms after typing stops.
+  const countText = loading || error ? '' : `Showing ${dataRows.length} of ${total ?? dataRows.length} ${noun ?? 'rows'}`
+  const [announced, setAnnounced] = useState('')
+  const firstCount = useRef(true)
+  useEffect(() => {
+    if (firstCount.current) {
+      if (countText) firstCount.current = false
+      return
+    }
+    const t = window.setTimeout(() => setAnnounced(countText), 500)
+    return () => window.clearTimeout(t)
+  }, [countText])
 
   return (
     <div
@@ -665,6 +678,9 @@ export function DataTable<T>(props: DataTableProps<T>) {
       data-density={density === 'compact' ? 'compact' : undefined}
       className={cn('overflow-hidden rounded border bg-surface', className)}
     >
+      <p aria-live="polite" aria-atomic="true" className="sr-only" data-table-count>
+        {announced}
+      </p>
       {toolbarNode || exportCsv ? (
         <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{toolbarNode}</div>

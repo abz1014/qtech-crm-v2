@@ -146,7 +146,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
       </header>
 
       {query.isPending ? (
-        <div className="grid gap-4 px-5 py-4" aria-busy="true" aria-label="Loading Today">
+        <div role="status" className="grid gap-4 px-5 py-4" aria-busy="true" aria-label="Loading Today">
           {[0, 1, 2, 3].map(i => (
             <div key={i} className="grid gap-2"><Skeleton className="h-4 w-2/3" /><Skeleton className="h-3 w-1/2" /></div>
           ))}

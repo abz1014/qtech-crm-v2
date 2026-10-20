@@ -66,7 +66,7 @@ function PickCell({
 }) {
   const chosen = options.find(o => o.value === value)
   return (
-    <span className="relative inline-flex min-w-0 max-w-full">
+    <span className="relative inline-flex min-w-0 max-w-full rounded has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green">
       <span
         className={cn(
           chip

@@ -123,7 +123,7 @@ export function DialogContent({
           // return to whatever had focus when it opened.
           onCloseAutoFocus={() => openerRef.current?.isConnected && openerRef.current.focus()}
           className={cn(
-            'relative grid max-h-[calc(100dvh-64px)] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal',
+            'relative grid max-h-[calc(100dvh-64px)] w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal',
             'animate-rise-6 focus:outline-none max-md:max-h-[calc(100dvh-16px)] max-md:animate-sheet-in max-md:rounded-b-none',
             WIDTH[size],
             className,

@@ -8,6 +8,7 @@ import { PaletteContext, type PaletteApi } from '@/app/palette/usePalette'
 import { CAPTURE_LABEL } from '@/app/shell/TopBar'
 import { CommandPalette } from '@/ui/CommandPalette'
 import { Kbd } from '@/ui/Kbd'
+import { shortcutsEnabled } from '@/ui/useShortcutsSetting'
 import { filterItems, type PaletteItem, type PaletteSource } from '@/ui/paletteSources'
 
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
@@ -103,7 +104,7 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
   useEffect(() => {
     let armedAt = 0
     const onKey = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.repeat || e.metaKey || e.ctrlKey || e.altKey || isTypingContext(e)) return
+      if (e.defaultPrevented || e.repeat || e.metaKey || e.ctrlKey || e.altKey || isTypingContext(e) || !shortcutsEnabled()) return
       const k = e.key.toLowerCase()
       if (k === 'g') {
         armedAt = Date.now()

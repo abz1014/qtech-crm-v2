@@ -11,7 +11,7 @@ const cols: Column<R>[] = [{ id: 'name', header: 'Name', value: r => r.name }]
 
 function phone(on: boolean) {
   window.matchMedia = ((q: string) => ({
-    matches: on && q.includes('max-width: 639px'),
+    matches: on && q.includes('max-width: 767px'),
     media: q,
     addEventListener() {},
     removeEventListener() {},

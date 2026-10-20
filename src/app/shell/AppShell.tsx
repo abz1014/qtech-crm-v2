@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { navItemForPath, type NavKey } from '@/app/navConfig'
@@ -14,6 +13,7 @@ import { CaptureProvider } from '@/app/capture/CaptureProvider'
 import { useCapture } from '@/app/capture/useCapture'
 import { TopBar } from '@/app/shell/TopBar'
 import { useNavCounts } from '@/app/shell/useNavCounts'
+import { useRouteFocus } from '@/app/shell/useRouteFocus'
 
 interface AppShellProps {
   /** Counts beside the destinations. Today and RFQs are read from the shared cache; a value passed here wins. */
@@ -53,9 +53,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
   const inSettings = pathname === '/settings' || pathname.startsWith('/settings/')
   const title = active?.label ?? (inSettings ? 'Settings' : 'Q-Tech CRM')
 
-  useEffect(() => {
-    document.title = active ? `${active.label} · Q-Tech CRM` : inSettings ? 'Settings · Q-Tech CRM' : 'Q-Tech CRM'
-  }, [active, inSettings])
+  useRouteFocus(pathname, active?.label ?? (inSettings ? 'Settings' : null))
 
   return (
     <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas">

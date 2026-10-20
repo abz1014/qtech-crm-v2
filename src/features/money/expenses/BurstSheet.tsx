@@ -794,7 +794,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
       <div className="flex flex-wrap gap-2">
         <label
           className={cn(
-            'relative inline-flex h-8 items-center gap-[6px] rounded-round border px-3 text-xs text-fg-2',
+            'relative inline-flex h-8 items-center gap-[6px] rounded-round border px-3 text-xs text-fg-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
             !row.dateTyped && row.date === today ? 'border-dashed border-line-input' : 'border-line-input',
             err && 'border-tone-danger-fg',
           )}
@@ -809,7 +809,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
             className="absolute inset-0 size-full cursor-pointer opacity-0"
           />
         </label>
-        <label className={cn('relative inline-flex h-8 items-center gap-[6px] rounded-round border px-3 text-xs text-fg-2', row.paidVia === null ? 'border-dashed border-line-input' : 'border-line-input')}>
+        <label className={cn('relative inline-flex h-8 items-center gap-[6px] rounded-round border px-3 text-xs text-fg-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green', row.paidVia === null ? 'border-dashed border-line-input' : 'border-line-input')}>
           <Icon icon={paid === 'cash' ? Wallet : Landmark} size="chip" className="text-fg-muted" />
           {PAID_VIA_LABEL[paid]}
           <select

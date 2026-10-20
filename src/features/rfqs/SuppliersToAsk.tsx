@@ -100,7 +100,7 @@ export function SuppliersToAskCard({
   return (
     <DetailPanel title="Suppliers to ask" pill="suggested" dataSlot="suppliers-to-ask">
       {suggestions === undefined ? (
-        <div className="grid gap-2 p-5" aria-busy="true" aria-label="Finding suppliers">
+        <div role="status" className="grid gap-2 p-5" aria-busy="true" aria-label="Finding suppliers">
           <Skeleton className="h-10" />
           <Skeleton className="h-10" />
         </div>
