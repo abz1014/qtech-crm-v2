@@ -12,9 +12,17 @@ import { filterItems, type PaletteItem, type PaletteSource } from '@/ui/paletteS
 
 /*
  * The palette itself (cmdk and its dialog) is a lazy chunk (perf/trim): it is not part of the first load, and it starts
- * loading as soon as the shell mounts (it is always rendered, closed), so it is there long before anyone opens it.
+ * loading as soon as the shell mounts (it is always rendered, closed), so it is there long before anyone opens it. Until it
+ * has mounted, the host answers Cmd+K / Ctrl+K itself (the palette's own listener takes over once it is there), so the
+ * shortcut never falls through to the browser.
  */
 const CommandPalette = lazyWithReload(() => import('@/ui/CommandPalette').then(m => ({ default: m.CommandPalette })))
+
+/** Rendered after the palette in the same Suspense boundary: its effect runs once the palette's own effects have. */
+function Mounted({ onMount }: { onMount: () => void }) {
+  useEffect(onMount, [onMount])
+  return null
+}
 
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
 const INTAKE_ROUTE = '/rfqs/new'
@@ -133,6 +141,20 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
     return () => window.removeEventListener('keydown', onKey)
   }, [navigate, openCapture])
 
+  const [paletteMounted, setPaletteMounted] = useState(false)
+  const markMounted = useCallback(() => setPaletteMounted(true), [])
+  useEffect(() => {
+    if (paletteMounted) return
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setOpen(o => !o)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [paletteMounted])
+
   const sources = useMemo(() => [...extra, actions, goTo], [extra, actions, goTo])
   const api = useMemo<PaletteApi>(() => ({ open: () => setOpen(true), register }), [register])
 
@@ -147,6 +169,7 @@ export function PaletteHost({ role, children }: { role: string; children: ReactN
           onNavigate={(href, { newTab }) => (newTab ? window.open(href, '_blank', 'noopener') : navigate(href))}
           emptyHint={<>Search covers RFQs, orders, companies and items. Try one word, or press <Kbd>N</Kbd> to start an RFQ.</>}
         />
+        <Mounted onMount={markMounted} />
       </Suspense>
     </PaletteContext.Provider>
   )
