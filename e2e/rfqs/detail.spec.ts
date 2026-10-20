@@ -757,7 +757,7 @@ test.describe('the phone layout (C-100 to C-105; UX audit: one bar)', () => {
     await expect(bar).toContainText(`RFQ-${String(s.rfq.number).padStart(4, '0')}`)
     await expect(page.locator('header[data-mobile-bar="default"]')).toHaveCount(0) // one bar, not two
     await expect(page.locator('[data-page-bar]')).toHaveCount(0)
-    await expect(page.getByRole('navigation', { name: 'Main' })).toBeHidden() // the tabs step aside for the action bar
+    await expect(page.locator('nav[aria-label="Main"]:visible')).toHaveCount(0) // the tabs step aside for the action bar
     // Four meta cells, no icons: customer ref, quotation due, contact, owner.
     await expect(page.locator('dl > div:visible')).toHaveCount(4)
     const actions = page.locator('[data-action-bar]')
