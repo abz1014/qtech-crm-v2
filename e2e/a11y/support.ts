@@ -505,7 +505,8 @@ export async function focusSweep(page: Page, max = 45): Promise<string[]> {
     }
     if (first === null) first = s.key
     else if (s.key === first) return out // round once: a <body> just before this was the wrap
-    if (body !== null) out.push(`Tab ${body}: focus is on <body>`)
+    // A sweep that starts mid-page (focus was on a control, then blurred) wraps through the browser UI to the skip link: that <body> is the wrap too.
+    if (body !== null && !/Skip to content/.test(s.who)) out.push(`Tab ${body}: focus is on <body>`)
     body = null
     for (const p of s.problems) out.push(`Tab ${i} ${s.who}: ${p}`)
   }

@@ -160,7 +160,7 @@ export function DialogContent({
         >
           {/* Bottom sheet below 768: the 36 by 4 grab handle (g2-components "Bottom sheet on a phone"). */}
           <span aria-hidden="true" data-grab className="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-round bg-line-strong md:hidden" />
-          <header className="flex items-start gap-3 px-5 pt-5 max-md:pt-6">
+          <header className="flex items-start gap-3 px-5 pt-5 max-md:pt-6 [@media(max-height:480px)]:sticky [@media(max-height:480px)]:top-0 [@media(max-height:480px)]:z-10 [@media(max-height:480px)]:bg-surface [@media(max-height:480px)]:pb-2">
             {icon ? (
               <span aria-hidden="true" className={cn('grid size-[36px] shrink-0 place-items-center rounded', TILE[tone])}>
                 <Icon icon={icon} size="lg" />

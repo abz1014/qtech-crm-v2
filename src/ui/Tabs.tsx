@@ -55,6 +55,7 @@ export const Tab = forwardRef<ElementRef<typeof RadixTabs.Trigger>, TabProps>(fu
 
 export const TabPanel = forwardRef<ElementRef<typeof RadixTabs.Content>, ComponentPropsWithoutRef<typeof RadixTabs.Content>>(
   function TabPanel({ className, ...rest }, ref) {
-    return <RadixTabs.Content ref={ref} className={cn('pt-4 focus-visible:outline-offset-4', className)} {...rest} />
+    // Not a Tab stop of its own: a panel that holds controls is reached through them (a whole-panel stop is mostly off screen at 200% zoom).
+    return <RadixTabs.Content ref={ref} tabIndex={-1} className={cn('pt-4 focus-visible:outline-offset-4', className)} {...rest} />
   },
 )

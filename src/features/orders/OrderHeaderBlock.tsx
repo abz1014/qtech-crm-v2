@@ -399,7 +399,7 @@ function PhoneSticky({ children }: { children: ReactNode }) {
   const phone = useMediaQuery('(max-width: 767px)')
   if (!phone) return <>{children}</>
   return (
-    <div data-testid="order-sticky-action" className="fixed inset-x-0 bottom-0 z-20 flex border-t bg-surface px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 shadow-pop [&>*]:flex-1">
+    <div data-testid="order-sticky-action" data-action-bar className="fixed inset-x-0 bottom-0 z-20 flex border-t bg-surface px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 shadow-pop [&>*]:flex-1">
       {children}
     </div>
   )

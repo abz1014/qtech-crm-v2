@@ -420,7 +420,7 @@
   /* WCAG 2.4.11: sticky and fixed action bars (intake Next step, RFQ/order header bars, month-end close) sit over
      the bottom of #main. Tabbing scrolls the focused control clear of them instead of underneath. */
   #main { scroll-padding-top: 8px; scroll-padding-bottom: 16px; }
-  #main:has([data-action-bar]) { scroll-padding-bottom: 80px; }
+  #main:has([data-action-bar]) { scroll-padding-bottom: 96px; }
   #main:has([data-sticky-bar]) { scroll-padding-bottom: 136px; }
   /* The h1 takes focus on a route change (useRouteFocus); the page has just opened, no ring needed. */
   #main h1[tabindex="-1"]:focus { outline: none; }

@@ -46,7 +46,7 @@ export function MobileBar({ user, title, onSearch, onCapture }: { user: SessionU
     return (
       <header data-mobile-bar="detail" className="flex h-topbar items-center gap-1 border-b bg-surface px-2 md:hidden">
         <Button variant="quiet" size="touch" icon={isBack ? ChevronLeft : X} aria-label={label} onClick={() => leave(config, navigate, location)} />
-        <p className="min-w-0 flex-1 truncate text-lg font-semibold tracking-snug">{config.title ?? title}</p>
+        <p className="min-w-0 flex-1 break-words text-lg font-semibold leading-tight tracking-snug max-[399px]:text-base">{config.title ?? title}</p>
         {actions ? <div className="flex shrink-0 items-center">{actions}</div> : null}
       </header>
     )
