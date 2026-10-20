@@ -21,7 +21,7 @@ test.beforeAll(async () => {
 })
 
 const captureSheet = (page: Page) => page.getByRole('dialog', { name: /^(Capture|Paste or photo)$/ })
-const captureBox = (page: Page) => captureSheet(page).getByRole('textbox', { name: 'Pasted text' })
+const captureBox = (page: Page) => captureSheet(page).locator('textarea').first()
 
 /** Opens the Capture sheet: the top-bar button, then the C key as a fallback (as e2e/capture does). */
 async function openCapture(page: Page): Promise<void> {
@@ -35,6 +35,9 @@ async function openCapture(page: Page): Promise<void> {
     }
   }
   await expect(captureSheet(page)).toBeVisible({ timeout: 10_000 })
+  const n = await captureBox(page).count()
+  if (n === 0) test.info().annotations.push({ type: 'Capture sheet without a text box', description: (await captureSheet(page).innerText()).slice(0, 600) })
+  await expect(captureBox(page), 'the Capture sheet has its text box').toBeVisible({ timeout: 10_000 })
 }
 
 const rows = async <T>(path: string): Promise<T[]> => {
