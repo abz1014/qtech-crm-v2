@@ -302,3 +302,28 @@ describe('parseEnquiry: a printed form whose part number breaks at a dash (ficti
     expect(r.items[0]?.qty).toBe(2)
   })
 })
+
+describe('parseEnquiry: edge cases from the bug hunt (2026-10-22)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('keeps a list pasted with leading spaces as one item per line, and still joins a wrapped line', () => {
+    expect(rows('Pressure gauge 0-10 bar - 2 Nos\n    Ball valve 1 inch - 4 Nos\n    Cable gland PG16 - 10 Nos')).toEqual([
+      ['Pressure gauge 0-10 bar', 2, 'nos'],
+      ['Ball valve 1 inch', 4, 'nos'],
+      ['Cable gland PG16', 10, 'nos'],
+    ])
+    expect(rows('Solenoid valve 1/2 inch 24VDC\n    brass body, NC - 2 Nos')).toEqual([['Solenoid valve 1/2 inch 24VDC brass body, NC', 2, 'nos']])
+  })
+
+  it('reads Urdu quantities and request words, and decimal quantities', () => {
+    expect(rows('1. Relay 24VDC - 4 عدد\n2. Thermocouple type K 300mm  ۲ عدد بھیج دیں')).toEqual([
+      ['Relay 24VDC', 4, 'nos'],
+      ['Thermocouple type K 300mm', 2, 'nos'],
+    ])
+    expect(rows('Silicone tube 8mm 0.5 m\nCable 4 core 2.5mm2 - 0.5 m\nTeflon tape 0.5 kg')).toEqual([
+      ['Silicone tube 8mm', 0.5, 'm'],
+      ['Cable 4 core 2.5mm2', 0.5, 'm'],
+      ['Teflon tape', 0.5, 'kg'],
+    ])
+  })
+})

@@ -68,7 +68,7 @@ export function cleanWord(w: OcrWord): string | null {
 /** A part or model number: letters and digits mixed, maybe with dashes or slashes ("6ES7717-3EX68-0LC0", "P098A8460"). */
 const CODE = /^(?=[A-Za-z0-9/.-]*\d[A-Za-z0-9/.-]*\d)(?=[A-Za-z0-9/.-]*[A-Za-z])[A-Za-z0-9][A-Za-z0-9/.-]{3,}$/
 /** Sizes and ratings that look like codes; their letters are never digits ("24VDC", "100MM", "PT100"). */
-const SPEC = /^(?:\d+(?:\.\d+)?(?:[xX]\d+)*(?:V|VDC|VAC|A|KA|KW|W|MM|M|BAR|MA|UF|HZ|RPM|PPR|DI|DO|CO|I\/O)?|PT\d+|DN\d+|PN\d+|M\d+|PG\d+(?:\.\d+)?|[0-9.-]+(?:BAR|MA|MM|C))$/i
+const SPEC = /^(?:\d+(?:\.\d+)?(?:[xX]\d+)*(?:V|VDC|VAC|A|KA|KW|W|MM|M|BAR|MA|UF|HZ|RPM|PPR|DI|DO|CO|I\/O)?|PT\d+|DN\d+|PN\d+|M\d+|PG\d+(?:\.\d+)?|IP\d+|IEC\d+|ISO\d+|[0-9.-]+(?:BAR|MA|MM|C))$/i
 
 /**
  * Letters and digits the engine takes for each other, put right where the domain says which it must be: inside a part number
@@ -82,7 +82,13 @@ export function fixOcrWord(text: string): string {
   // I/O count: "141/0" or "14 1/0" for 14I/O.
   t = t.replace(/(\d)1\/0(?![0-9])/g, '$1I/O').replace(/^1\/0$/, 'I/O')
   if (/^L[il1]d\.?$/.test(t)) t = t.replace(/^L[il1]d/, 'Ltd')
-  if (CODE.test(t) && !SPEC.test(t)) {
+  // Sizes and ratings: DN50, NH00, SS316, M12.
+  t = t.replace(/^(DN|PN|NH)([0-9OSs]{2,4})(?=$|[^A-Za-z0-9])/, (_, a: string, b: string) => a + b.replace(/[Oo]/g, '0').replace(/[Ss]/g, '5'))
+  t = t.replace(/^S5(3\d\d)/, 'SS$1').replace(/^5S(3\d\d)/, 'SS$1')
+  // A date with the month in letters ("19-OCT-26", "0CT" read for OCT): the month, not a code.
+  t = t.replace(/^(\d{1,2}[-./]?)0(CT)([-./]?\d{2,4}[.,]?)$/i, '$1O$2$3')
+  const date = /^\d{1,2}[-./]?(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*[-./]?\d{2,4}[.,]?$/i.test(t)
+  if (CODE.test(t) && !SPEC.test(t) && !date) {
     const chars = [...t]
     const isDigit = (c: string | undefined) => c !== undefined && /\d/.test(c)
     for (let i = 0; i < chars.length; i++) {
@@ -90,7 +96,12 @@ export function fixOcrWord(text: string): string {
       if (!/[OoIl]/.test(c)) continue
       // Next to a digit, or at the edge of a dash-separated part ("-OETO", "UMY4HO"): a digit.
       const edge = chars[i - 1] === '-' || chars[i + 1] === '-' || i === chars.length - 1
-      if (isDigit(chars[i - 1]) || isDigit(chars[i + 1]) || (edge && /[Oo]/.test(c) && (t.match(/\d/g) ?? []).length >= 3)) chars[i] = /[Oo]/.test(c) ? '0' : '1'
+      // A capital O or I inside a part number (not its first letter): catalogues leave them out for this very reason.
+      // (Only in a dash-separated part that has digits itself: "QUO-2026725" keeps its O.)
+      const segStart = Math.max(t.lastIndexOf('-', i), t.lastIndexOf('/', i)) + 1
+      const segEnd = [t.indexOf('-', i), t.indexOf('/', i)].filter(x => x >= 0).reduce((a, b) => Math.min(a, b), t.length)
+      const inside = i > 0 && /[OI]/.test(c) && (t.match(/\d/g) ?? []).length >= 3 && /\d/.test(t.slice(segStart, segEnd))
+      if (isDigit(chars[i - 1]) || isDigit(chars[i + 1]) || inside || (edge && (segStart > 0 || /\d/.test(t.slice(segStart, segEnd))) && /[Oo]/.test(c) && (t.match(/\d/g) ?? []).length >= 3)) chars[i] = /[Oo]/.test(c) ? '0' : '1'
     }
     t = chars.join('')
   }
@@ -340,7 +351,12 @@ export function layoutOcr(lines: readonly OcrLine[], rules?: TableRules): LaidLi
   const typical = typicalRowHeight(lines)
   // The rules were found on the picture as it was: they only line up with the words when the page needed no turning.
   const level = skewAngle(lines, typical) === 0
-  const laid = layoutPages([wordsToRuns(unwrapLines(deskew(lines, typical), typical), typical, level ? rules : undefined)])
+  // A part number broken over two lines of a cell is whole again only now ("PMC33-" / "UMY4HO"): its words are fixed again.
+  const fixCell = (c: string) => c.split(' ').map(fixOcrWord).join(' ')
+  const laid = layoutPages([wordsToRuns(unwrapLines(deskew(lines, typical), typical), typical, level ? rules : undefined)]).map(l => {
+    const cells = l.cells.map(fixCell)
+    return { ...l, cells, text: l.kind === 'text' && cells.length <= 1 ? fixCell(l.text) : cells.join('\t') }
+  })
   const kept: LaidLine[] = []
   for (const l of laid) {
     if (l.kind === 'text' && PRESENCE.test(l.text.trim())) {

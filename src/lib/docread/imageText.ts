@@ -249,6 +249,92 @@ export function flattenLight(grey: Uint8Array, width: number, height: number): v
 }
 
 /**
+ * The slant of the text in a cleaned picture (RGBA, grey), in radians, from the picture itself: the angle at which the dark
+ * pixels, counted row by row, stack into the sharpest lines (a projection profile). Used before the first reading, so a photo
+ * taken 8 degrees off is read level from the start; the engine reads a slanted page badly or not at all. 0 under 0.5 degrees.
+ */
+export function estimateSkew(px: Uint8ClampedArray, width: number, height: number): number {
+  // About 500 px across is plenty to see the lines.
+  const step = Math.max(1, Math.round(Math.max(width, height) / 500))
+  const pts: number[] = []
+  for (let y = 0; y < height; y += step) {
+    for (let x = 0; x < width; x += step) {
+      if ((px[4 * (y * width + x)] as number) < 128) pts.push(x / step, y / step)
+    }
+  }
+  if (pts.length < 200) return 0
+  const rows = Math.ceil(Math.hypot(width, height) / step) + 2
+  const hist = new Float64Array(2 * rows)
+  const score = (a: number) => {
+    hist.fill(0)
+    const s = Math.sin(a)
+    const c = Math.cos(a)
+    for (let i = 0; i < pts.length; i += 2) {
+      const r = Math.round((pts[i + 1] as number) * c - (pts[i] as number) * s) + rows
+      if (r >= 0 && r < hist.length) (hist[r] as number)++
+    }
+    let sum = 0
+    for (let i = 0; i < hist.length; i++) sum += (hist[i] as number) ** 2
+    return sum
+  }
+  const deg = Math.PI / 180
+  let best = 0
+  let bestScore = score(0)
+  for (let d = -12; d <= 12; d += 0.5) {
+    const sc = score(d * deg)
+    if (sc > bestScore * 1.0001) {
+      bestScore = sc
+      best = d
+    }
+  }
+  for (let d = best - 0.4; d <= best + 0.4; d += 0.1) {
+    const sc = score(d * deg)
+    if (sc > bestScore) {
+      bestScore = sc
+      best = d
+    }
+  }
+  return Math.abs(best) < 0.5 ? 0 : best * deg
+}
+
+/**
+ * Whitens the dark that reaches the picture's edge (the desk round a photographed page, a phone's black bars): it holds no
+ * text, and left in, a big dark wedge makes the engine take the page for a picture. Text never touches the edge. In place.
+ */
+export function clearBorderDark(grey: Uint8Array, width: number, height: number): void {
+  const DARK = 140
+  const seen = new Uint8Array(width * height)
+  const stack: number[] = []
+  const push = (i: number) => {
+    if (!seen[i] && (grey[i] as number) < DARK) {
+      seen[i] = 1
+      stack.push(i)
+    }
+  }
+  for (let x = 0; x < width; x++) {
+    push(x)
+    push((height - 1) * width + x)
+  }
+  for (let y = 0; y < height; y++) {
+    push(y * width)
+    push(y * width + width - 1)
+  }
+  const filled: number[] = []
+  while (stack.length) {
+    const i = stack.pop() as number
+    filled.push(i)
+    const x = i % width
+    if (x > 0) push(i - 1)
+    if (x < width - 1) push(i + 1)
+    if (i >= width) push(i - width)
+    if (i < (height - 1) * width) push(i + width)
+  }
+  // Only a dark area of some size: a table rule that runs to the edge of a tight screenshot stays.
+  if (filled.length < 0.01 * width * height) return
+  for (const i of filled) grey[i] = 255
+}
+
+/**
  * Grey, light background, contrast stretched between the 1st and the 99th percentile. In place. Given the picture's size, the
  * light is evened out first (flattenLight): photos with a shadow, a desk round the page or low contrast.
  */
@@ -277,6 +363,7 @@ export function cleanPixels(px: Uint8ClampedArray, width?: number, height?: numb
   if (width && height && width * height === n) {
     if (darkMode) for (let i = 0; i < n; i++) grey[i] = 255 - (grey[i] as number)
     flattenLight(grey, width, height)
+    clearBorderDark(grey, width, height)
     if (darkMode) for (let i = 0; i < n; i++) grey[i] = 255 - (grey[i] as number)
     hist = histOf()
   }
@@ -599,6 +686,49 @@ async function recoverSkipped(
   return mergeRecovered(words, recovered)
 }
 
+/** At most this many doubtful words are read again on their own (each takes a few tens of milliseconds). */
+const MAX_REREAD = 30
+/** A word read less sure than this is read again, enlarged, on its own. */
+const DOUBTFUL = 60
+
+/**
+ * Reads again, one by one and enlarged, the words the page reading was unsure of (a part number in a photo, a smudged
+ * quantity), and keeps the second reading when it is clearly surer and about as long. Per-cell re-reads: the page reading
+ * sees each word among its neighbours and table rules; on its own and larger it is often read right.
+ */
+async function rereadDoubtful(
+  words: OcrLine[],
+  image: PreparedImage,
+  engine: OcrEngine,
+  signal: AbortSignal | undefined,
+  onProgress: (fraction: number) => void,
+): Promise<OcrLine[]> {
+  if (!image.crop) return words
+  const rh = typicalRowHeight(words)
+  if (!rh) return words
+  const doubtful = words
+    .flatMap(l => l.words)
+    .filter(w => w.confidence < DOUBTFUL && /[\p{L}\p{N}]{2}/u.test(w.text) && w.bbox.x1 - w.bbox.x0 > 0.5 * rh)
+    .sort((a, b) => a.confidence - b.confidence)
+    .slice(0, MAX_REREAD)
+  if (!doubtful.length) return words
+  const by = Math.max(1, Math.min(4, CROP_ROW_HEIGHT / rh))
+  const better = new Map<OcrLine['words'][number], { text: string; confidence: number }>()
+  for (const [i, w] of doubtful.entries()) {
+    if (signal?.aborted) return words
+    const box = padBox(w.bbox, Math.round(0.3 * rh), image.width, image.height)
+    const got = await engine.read(image.crop(box, by), { signal, mode: 'line', onProgress: () => onProgress(i / doubtful.length) })
+    const read = got.flatMap(l => l.words).filter(x => /[\p{L}\p{N}]/u.test(x.text))
+    if (!read.length) continue
+    const text = read.map(x => x.text).join(' ')
+    const confidence = Math.min(...read.map(x => x.confidence))
+    // Surer by a margin, and about the same length (not a neighbour's letters taken in, not half the word).
+    if (confidence >= Math.max(w.confidence + 15, DOUBTFUL) && Math.abs(text.length - w.text.length) <= Math.max(2, 0.25 * w.text.length)) better.set(w, { text, confidence })
+  }
+  if (!better.size) return words
+  return words.map(l => ({ ...l, words: l.words.map(w => (better.has(w) ? { ...w, ...(better.get(w) as { text: string; confidence: number }) } : w)) }))
+}
+
 // ------------------------------------------------------------------------------------------------ reading
 
 export async function readImageText(file: Blob, opts: ReadImageOptions = {}): Promise<ImageTextResult> {
@@ -626,9 +756,16 @@ export async function readImageText(file: Blob, opts: ReadImageOptions = {}): Pr
 
   const prepare = opts.prepare ?? prepareImage
   const engine = opts.engine ?? tesseractEngine
-  const prepared = await prepare(file).catch(() => null)
+  let prepared = await prepare(file).catch(() => null)
   if (opts.signal?.aborted) return fail('aborted')
   if (!prepared) return fail('unsupported')
+  // A slanted photo is turned level before the first reading (the engine reads a page 5 or 8 degrees off badly or not at all).
+  const tilt = prepared.pixels ? estimateSkew(prepared.pixels, prepared.width, prepared.height) : 0
+  if (tilt !== 0) {
+    const level = await prepare(file, prepared.scale, tilt).catch(() => null)
+    if (opts.signal?.aborted) return fail('aborted')
+    if (level) prepared = level
+  }
   progress(0.02)
 
   let words: OcrLine[]
@@ -642,8 +779,9 @@ export async function readImageText(file: Blob, opts: ReadImageOptions = {}): Pr
     const factor = rh && rh < MIN_ROW_HEIGHT ? Math.min(TARGET_ROW_HEIGHT / rh, MAX_EDGE / longEdge) : 1
     // A photo of a screen or of paper is seldom level: turned level, its table rules are straight again (and wiped) and its
     // rows line up across the columns.
-    const angle = skewAngle(words, rh)
-    if (factor > 1.2 || angle !== 0) {
+    const residual = skewAngle(words, rh)
+    const angle = tilt + residual
+    if (factor > 1.2 || residual !== 0) {
       const larger = await prepare(file, prepared.scale * Math.max(1, factor), angle).catch(() => null)
       if (opts.signal?.aborted) return fail('aborted')
       if (larger) {
@@ -655,16 +793,18 @@ export async function readImageText(file: Blob, opts: ReadImageOptions = {}): Pr
       }
     }
     if (opts.signal?.aborted) return fail('aborted')
-    words = await recoverSkipped(words, used, engine, opts.signal, f => progress(0.9 + 0.1 * f))
+    words = await recoverSkipped(words, used, engine, opts.signal, f => progress(0.9 + 0.05 * f))
+    if (opts.signal?.aborted) return fail('aborted')
+    words = await rereadDoubtful(words, used, engine, opts.signal, f => progress(0.95 + 0.05 * f))
   } catch {
     if (opts.signal?.aborted) return fail('aborted')
     return fail('unreadable')
   }
   if (opts.signal?.aborted) return fail('aborted')
 
+  opts.onWords?.(words, used)
   const { confidence, letters } = pageConfidence(words)
   if (letters < MIN_PAGE_LETTERS || confidence < MIN_PAGE_CONFIDENCE) return fail('unclear')
-  opts.onWords?.(words, used)
   const lines = layoutOcr(words, used.rules)
   if (lines.length === 0) return fail('unclear')
   progress(1)

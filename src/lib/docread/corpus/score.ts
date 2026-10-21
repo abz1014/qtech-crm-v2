@@ -8,8 +8,12 @@ import { unitFamily } from './units'
 
 const LABEL_WORDS = new Set(['make', 'model', 'part', 'no', 'brand', 'size', 'qty', 'p', 'n', 'pn', 'code', 'material'])
 
+/**
+ * The words of a description, normalised: lower case, split at anything that is not a letter or a digit and where letters
+ * meet digits ("PLC,CPU;24VDC" and "PLC.CPU24VDC" are the same words: plc cpu 24 vdc), label words left out.
+ */
 export function tokens(s: string): string[] {
-  return (s.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(t => !LABEL_WORDS.has(t))
+  return (s.toLowerCase().match(/[a-z]+|[0-9]+/g) ?? []).filter(t => !LABEL_WORDS.has(t))
 }
 
 export function dice(a: string, b: string): number {

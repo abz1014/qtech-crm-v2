@@ -184,6 +184,8 @@ interface ReadItem {
   description: string
   qty: number | null
   unit: string | null
+  /** The quantity cell as written ("2.000"), for a table row. */
+  rawQty?: string
 }
 
 /** One item's text (its own line, plus any wrapped lines) into description, quantity (null when none) and unit. */
@@ -225,10 +227,16 @@ function readItem(text: string): ReadItem | null {
       // "Siemens 6ES7 231-4HD32-0XB0 – 2": a bare number after a spaced dash, when what is before it is not a number
       // (that would be a range, "0 - 10").
       const dash = /\s[–-]\s+(\d{1,4})$/.exec(description)
+      // "Silicone tube 8mm 0.5 m": a quantity with a decimal point and a length or weight unit at the end.
+      const dec = /\s(\d+\.\d+)\s*(m|mtrs?|meters?|metres?|kgs?|ltrs?|l)\.?$/i.exec(description)
       if (ex) {
         qty = toQty(ex[1] as string)
         unit = unitOf(ex[2])
         description = description.slice(0, ex.index)
+      } else if (dec) {
+        qty = toQty(dec[1] as string)
+        unit = unitOf(dec[2])
+        description = description.slice(0, dec.index)
       } else if (dash && !/(?:^|\s)\d+(?:\.\d+)?$/.test(description.slice(0, dash.index))) {
         qty = toQty(dash[1] as string)
         description = description.slice(0, dash.index)
@@ -437,6 +445,12 @@ function tableHeader(cells: string[]): TableCols | null {
   const idx = (re: RegExp) => cells.findIndex(c => re.test(c) || re.test(c.replace(/\s+/g, '')))
   let desc = cells.map((c, i) => (/desc|particular|specification|product|item\s*name|short\s*text|item\s*text|goods|special\s*instruction/i.test(c) ? i : -1)).filter(i => i >= 0)
   if (desc.length === 0) desc = cells.map((c, i) => (/^item$/i.test(c) ? i : -1)).filter(i => i >= 0)
+  // A heading the picture reader garbled ("C=" for "Description" in "Description of Goods") just before the description
+  // column: its column holds the first words of each description.
+  if (desc.length && desc[0]! > 0) {
+    const before = cells[desc[0]! - 1] ?? ''
+    if (before && !isHeaderCell(before) && !/[A-Za-z]{3}/.test(before)) desc = [desc[0]! - 1, ...desc]
+  }
   if (desc.length === 0) return null
   const extra = cells
     .map((c, i) => ({ i, label: c.replace(/[:.]+$/, ''), codes: /^(?:material|item\s*code|code|material\s*(?:no|code)\.?)$/i.test(c) }))
@@ -469,7 +483,9 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
   const q = cell(cols.qty)
   const qm = /^(\d[\d,]*(?:\.\d+)?)\s*([A-Za-z'.]+)?$/.exec(q)
   return {
-    description: tidy([main, ...extras].join(', ')),
+    // A serial number and a material code that ran into the description cell ("60 13404632 BREAKER,...").
+    description: tidy([main.replace(/^(?:\d{1,5}\s+)?\d{7,}\s+(?=[A-Za-z])/, ''), ...extras].join(', ')),
+    rawQty: q,
     qty: qm ? toQty(qm[1] as string) : unitQty(cell(cols.unit)),
     unit: unitOf(unitCell(cell(cols.unit)) || qm?.[2] || null),
   }
@@ -510,7 +526,7 @@ function formRow(cells: string[]): ReadItem | null {
       .filter((x, k) => !(k === 0 && /^(?:\d+\s*\.?|\d{4,})$/.test(x)))
     const description = tidy(text.join(' '))
     if (!description || !/[A-Za-z]{2}/.test(description)) return null
-    return { description, qty: toQty(c), unit: unitOf(cells[unitAt]) }
+    return { description, qty: toQty(c), unit: unitOf(cells[unitAt]), rawQty: c }
   }
   return null
 }
@@ -583,6 +599,11 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     .replace(/[\u200b-\u200d\ufeff]/g, '')
     .replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xfee0))
     .replace(/：/g, ':')
+    // Urdu and Arabic-Indic digits, the Urdu word for "number" (adad) and Urdu request tails ("bhej dein", "chahiye").
+    .replace(/[۰-۹]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x06f0 + 48))
+    .replace(/[٠-٩]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))
+    .replace(/\s*عدد/g, ' adad')
+    .replace(/\s*(?:بھیج\s*دیں|بھیجیں|بھیج\s*دو|چاہیے|چاہئے|چاہیئے|ضرور|جلدی|بھی)(?=\s|$|[.!؟?،])/g, '')
 
   interface Src {
     t: string
@@ -1020,10 +1041,13 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     // other lines have markers, unless it wraps from an item that has no quantity yet.
     const self = readItem(work)
     const ownQty = !m && self !== null && self.qty !== null && /[A-Za-z]{3}/.test(self.description)
+    const curHasQty0 = () => cur !== null && ((cur as Draft).qty !== null || ((cur as Draft).texts.length > 0 && readItem(joinWrapped((cur as Draft).texts))?.qty != null))
     if (cur && !m && !s.blankBefore) {
       const d = cur as Draft
       const prev = d.texts[d.texts.length - 1] ?? ''
-      const wraps = s.indent > d.indent || DANGLING.test(prev)
+      // An indented line under an item is its wrapped text, unless both have a quantity of their own (a list pasted with
+      // leading spaces: "Pressure gauge - 2 Nos" / "   Ball valve - 4 Nos").
+      const wraps = (s.indent > d.indent && !(ownQty && curHasQty0())) || DANGLING.test(prev)
       const curHasQty = d.qty !== null || (d.texts.length > 0 && readItem(joinWrapped(d.texts))?.qty != null)
       if (wraps || (markerMode && !isCourtesy(work) && !SIGN_OFF.test(work) && !(ownQty && curHasQty))) {
         d.texts.push(work)
@@ -1042,6 +1066,8 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       continue
     }
     // Two items in one line: "4 nos contactor ... and 4 nos overload relay ..."
+    // A list line the picture reader split at a wide gap ("1. Thermal paste silicone based    5 Kg"): one line again.
+    if (work.includes('\t') && (m || work.split('\t').filter(Boolean).length < 3)) work = work.replace(/\t+/g, ' ')
     if (work.includes('\t')) {
       // A spreadsheet-like row with no header above it: the intake's own reading (row number dropped, last cells qty and unit).
       const row0 = parsePaste(work).items[0]
@@ -1075,6 +1101,15 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     const w = m?.[1]
     // "NOS" and "SET" are our own units in capitals: stored as ours. "EA" or "MTR" would be renamed by the intake: kept as written.
     return w && CAPS_UNIT.test(w) && unitOf(w) !== w.toLowerCase() ? w : null
+  }
+  // An ERP form writes every quantity with three decimals ("2.000"): one read from a picture without its point ("2000",
+  // "12500") is the same form's 2.000 and 12.500.
+  const raws = drafts.map(d => d.fromTable?.rawQty ?? '').filter(Boolean)
+  if (raws.length >= 2 && raws.filter(r => /^\d[\d,]*\.\d{3}$/.test(r)).length >= 0.5 * raws.length) {
+    for (const d of drafts) {
+      const r = d.fromTable?.rawQty
+      if (d.fromTable && r && /^\d{4,}$/.test(r)) d.fromTable.qty = Number(r) / 1000
+    }
   }
   const items: ParsedItem[] = []
   for (const d of drafts) {
