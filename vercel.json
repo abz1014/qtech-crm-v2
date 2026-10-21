@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/rest/v1/:path*",
+      "destination": "https://yafbphagorydbitfgfmg.supabase.co/rest/v1/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

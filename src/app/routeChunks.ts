@@ -42,45 +42,53 @@ export const routeChunks = {
 
 type ChunkKey = keyof typeof routeChunks
 
-/** The downloads a first visit to `pathname` needs (before any redirect), outermost first. */
+/**
+ * The downloads a first visit to `pathname` needs, outermost first: exactly the pages routes.tsx and each screen's own routes
+ * draw for that address (an address no page owns gets only its screen, which draws Not found, and no data is read ahead).
+ */
 export function chunksForPath(pathname: string): ChunkKey[] {
   const parts = pathname.split('/').filter(Boolean)
   const [top, sub, third] = parts
+  const n = parts.length
   switch (top) {
     case 'login':
-      return ['signIn']
+      return n === 1 ? ['signIn'] : []
     case 'today':
       return ['today']
     case 'rfqs':
-      if (sub === 'new') return ['rfqNew']
-      return sub ? ['rfqs', 'rfq'] : ['rfqs', 'rfqsBoard']
+      if (n === 1) return ['rfqs', 'rfqsBoard']
+      if (n === 2) return sub === 'new' ? ['rfqNew'] : ['rfqs', 'rfq']
+      return ['rfqs']
     case 'orders':
-      return sub ? ['orders', 'order'] : ['orders', 'ordersList']
+      return n === 1 ? ['orders', 'ordersList'] : n === 2 ? ['orders', 'order'] : ['orders']
     case 'companies':
-      return sub ? ['companies', 'company'] : ['companies', 'companiesList']
+      return n === 1 ? ['companies', 'companiesList'] : n === 2 ? ['companies', 'company'] : ['companies']
     case 'money':
-      switch (sub) {
-        case undefined:
-        case 'receivables':
-          return ['money', 'moneyReceivables']
-        case 'gst-register':
-          return ['money', 'moneyGst']
-        case 'expenses':
-          return ['money', 'moneyExpenses']
-        case 'month-end':
-          return ['money', third === 'bank' ? 'moneyBank' : third ? 'moneyReportPages' : 'moneyChecklist']
-        case 'margins':
-          return ['money', 'moneyMargins']
-        case 'exceptions':
-          return ['money', 'moneyExceptions']
-        case 'reports':
-          return ['money', third === 'in-out' ? 'moneyInOut' : third ? 'moneyReportPages' : 'moneyReports']
-        default:
-          return ['money']
+      if (n === 1) return ['money', 'moneyReceivables'] // /money opens Who owes us
+      if (n === 2) {
+        const page: Partial<Record<string, ChunkKey>> = {
+          receivables: 'moneyReceivables',
+          'gst-register': 'moneyGst',
+          expenses: 'moneyExpenses',
+          'month-end': 'moneyChecklist',
+          margins: 'moneyMargins',
+          exceptions: 'moneyExceptions',
+          reports: 'moneyReports',
+        }
+        const key = sub ? page[sub] : undefined
+        return key ? ['money', key] : ['money']
       }
+      if (n === 3 && sub === 'month-end') return ['money', third === 'bank' ? 'moneyBank' : 'moneyReportPages']
+      if (n === 3 && sub === 'reports') return ['money', third === 'in-out' ? 'moneyInOut' : 'moneyReportPages']
+      return ['money']
     default:
       return []
   }
+}
+
+/** Start downloading the pages an in-app navigation to `pathname` needs, all at once instead of one after the other. */
+export function preloadRouteCode(pathname: string): void {
+  for (const key of chunksForPath(pathname)) void routeChunks[key]().catch(() => {})
 }
 
 /**

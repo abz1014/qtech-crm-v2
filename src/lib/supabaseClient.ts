@@ -58,7 +58,7 @@ function lazyStorage(url: string, headers: Record<string, string>, fetch: typeof
 export function createLeanClient<Database>(
   url: string,
   key: string,
-  options: { fetch?: typeof fetch; deferAuth?: (load: () => void) => void } = {},
+  options: { fetch?: typeof fetch; deferAuth?: (load: () => void) => void; restOrigin?: string } = {},
 ): LeanSupabaseClient<Database> {
   const base = baseUrl(url)
   if (!key) throw new Error('supabaseKey is required.')
@@ -107,7 +107,9 @@ export function createLeanClient<Database>(
   }
   const dataFetch = withAuth(false)
   const functionsFetch = withAuth(true)
-  const rest = new PostgrestClient(new URL('rest/v1', base).href, { headers, schema: 'public', fetch: dataFetch })
+  // The database part may be reached through the site's own origin (restOrigin: Vercel forwards /rest/v1/ to Supabase, see
+  // supabase.ts); the same requests, headers and answers either way.
+  const rest = new PostgrestClient(new URL('rest/v1', options.restOrigin ? `${options.restOrigin}/` : base).href, { headers, schema: 'public', fetch: dataFetch })
   const storage = lazyStorage(new URL('storage/v1', base).href, headers, dataFetch)
   const functionsUrl = new URL('functions/v1', base).href
 

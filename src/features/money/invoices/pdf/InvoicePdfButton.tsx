@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { Printer } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { Button, type ButtonProps } from '@/ui/Button'
-import { InvoicePdfDialog } from '@/features/money/invoices/pdf/InvoicePdfDialog'
+import { lazyDialog } from '@/lib/lazyDialog'
+
+// Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
+const InvoicePdfDialog = lazyDialog(() => import('@/features/money/invoices/pdf/InvoicePdfDialog').then(m => m.InvoicePdfDialog))
 
 /*
  * The one component a screen adopts to print a sales-tax invoice: a button with its own dialog (the OrderMoneyButtons pattern).

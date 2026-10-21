@@ -1,7 +1,7 @@
 import { Suspense, useRef, useState } from 'react'
 import { Building2, FileText, Plus } from 'lucide-react'
 import type { PdfSubject } from '@/lib/docread/pdfText'
-import { readDocument } from '@/features/rfqs/lib/readPdf'
+import type { readDocument as ReadDocument } from '@/features/rfqs/lib/readPdf'
 import type { SenderHint } from '@/features/companies/api'
 import { useCompanyForSender } from '@/features/companies/hooks'
 import { lazyWithReload } from '@/lib/importWithReload'
@@ -9,6 +9,9 @@ import type { IntakeCompany } from '@/features/rfqs/CompanyPicker'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 
+// The file and reply readers (src/lib/docread: PDF text, the on-device picture reader, the quote parser) are downloaded the first
+// time a file or a reply is read, not with the RFQ page (perf/lcp).
+const readDocument: typeof ReadDocument = (...args) => import('@/features/rfqs/lib/readPdf').then(m => m.readDocument(...args))
 // The new-company form (and its form library) is downloaded when it is opened (perf/lcp).
 const CreateCompanyInline = lazyWithReload(() => import('@/features/companies/CreateCompanyInline').then(m => ({ default: m.CreateCompanyInline })))
 

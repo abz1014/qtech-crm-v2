@@ -1,4 +1,4 @@
-import { Suspense, type ComponentType } from 'react'
+import { Suspense, useEffect, useRef, type ComponentType } from 'react'
 import { lazyWithReload as lazy } from '@/lib/importWithReload'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { RequireRole, RequireSession, RoleLanding } from '@/app/guards'
@@ -8,7 +8,7 @@ import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
 import { AdminOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
 import { AppShell } from '@/app/shell/AppShell'
-import { routeChunks } from '@/app/routeChunks'
+import { preloadRouteCode, routeChunks } from '@/app/routeChunks'
 
 // Lazy: the sign-in form brings zod, react-hook-form and its resolvers, which nothing else on first paint needs (perf/client).
 const SignInPage = lazy(() => routeChunks.signIn().then(m => ({ default: m.SignInPage })))
@@ -64,7 +64,33 @@ function SignInRoute() {
   )
 }
 
+/**
+ * An in-app navigation fetches the new page's code all at once (its screen and its page together) instead of the screen first
+ * and the page after it (perf/lcp). The first address is handled at start-up (main.tsx).
+ */
+function PreloadOnNavigate() {
+  const { pathname } = useLocation()
+  const first = useRef(true)
+  useEffect(() => {
+    if (first.current) {
+      first.current = false
+      return
+    }
+    preloadRouteCode(pathname)
+  }, [pathname])
+  return null
+}
+
 export function AppRoutes() {
+  return (
+    <>
+      <PreloadOnNavigate />
+      <AppRouteTable />
+    </>
+  )
+}
+
+function AppRouteTable() {
   return (
     <Routes>
       <Route path="/login" element={<SignInRoute />} />

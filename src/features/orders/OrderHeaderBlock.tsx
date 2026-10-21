@@ -32,19 +32,22 @@ import { termsLabel } from '@/features/settings/companyProfile'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
 import { useMarkDone, useSetPlanned } from '@/features/orders/commissioningActions'
 import { CommissioningEditDialog } from '@/features/orders/CommissioningPanel'
-import { AddLegDialog } from '@/features/orders/AddDialogs'
-import { GoodsChaseDialog } from '@/features/orders/GoodsChaseDialog'
 import { ResolveBasisDialog } from '@/features/orders/ResolveBasisDialog'
 import { legState } from '@/features/orders/lib/legModel'
 import { orderFacts, pageStep, type PrimaryAction } from '@/features/orders/lib/primaryAction'
 import type { OrderStep } from '@/features/orders/lib/orderSteps'
 import { useLegActions } from '@/features/orders/useLegActions'
-import { IssuePoDialog } from '@/features/purchaseOrders/IssuePoDialog'
 import { useSentPos } from '@/features/purchaseOrders/hooks'
 import { cancellationMessage, sentPoSentence } from '@/features/purchaseOrders/lib/cancelText'
 import { copyToClipboard } from '@/lib/clipboard'
 import { COMPANY_NAME } from '@/features/rfqs/lib'
 import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features/orders/lib/cancel'
+import { lazyShown } from '@/lib/lazyDialog'
+
+// Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
+const IssuePoDialog = lazyShown(() => import('@/features/purchaseOrders/IssuePoDialog').then(m => m.IssuePoDialog))
+const GoodsChaseDialog = lazyShown(() => import('@/features/orders/GoodsChaseDialog').then(m => m.GoodsChaseDialog))
+const AddLegDialog = lazyShown(() => import('@/features/orders/AddDialogs').then(m => m.AddLegDialog))
 
 /*
  * The top of the order page (O03; g2-order-detail.html), reworked by the UX audit of 2026-10-19 (screens.md 8): who it is for, then ONE

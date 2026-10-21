@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import http from 'node:http'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import react from '@vitejs/plugin-react-swc'
@@ -40,6 +41,43 @@ function vercelPathHeaders(): Plugin {
         const url = (req.url ?? '').split('?')[0] ?? ''
         for (const rule of rules) if (rule.test.test(url)) for (const h of rule.headers) res.setHeader(h.key, h.value)
         next()
+      })
+    },
+  }
+}
+
+/*
+ * perf/lcp: database requests go to the site's own /rest/v1/, which vercel.json rewrites to the Supabase project (src/lib/supabase.ts
+ * says why). Built that way on Vercel (VERCEL=1 during its builds) and for the perf suite (E2E_SAME_ORIGIN_REST=1); everywhere else
+ * (the other e2e suites, a local dev server, the Cloudflare fallback) the app talks to Supabase directly, as before.
+ */
+const REST_SAME_ORIGIN = process.env.VERCEL === '1' || process.env.E2E_SAME_ORIGIN_REST === '1'
+
+/*
+ * The preview server does what vercel.json's /rest/v1/ rewrite does, for the perf suite: it forwards those requests to the local stack
+ * (API_URL), so the suite measures the page the way production serves it. Nothing else is forwarded.
+ */
+function vercelRestRewrite(): Plugin {
+  return {
+    name: 'qtech-vercel-rest-rewrite',
+    configurePreviewServer(server) {
+      if (process.env.E2E_SAME_ORIGIN_REST !== '1' || !process.env.API_URL) return
+      const target = new URL(process.env.API_URL)
+      const hop = new Set(['connection', 'keep-alive', 'proxy-connection', 'transfer-encoding', 'upgrade', 'http2-settings', 'te', 'host'])
+      server.middlewares.use((req, res, next) => {
+        if (!(req.url ?? '').startsWith('/rest/v1/')) return next()
+        const headers: Record<string, string | string[]> = { host: target.host }
+        for (const [name, value] of Object.entries(req.headers)) if (value !== undefined && !name.startsWith(':') && !hop.has(name)) headers[name] = value
+        const out = http.request({ hostname: target.hostname, port: target.port, method: req.method, path: req.url, headers }, up => {
+          for (const [name, value] of Object.entries(up.headers)) if (value !== undefined && !hop.has(name)) res.setHeader(name, value)
+          res.statusCode = up.statusCode ?? 502
+          up.pipe(res)
+        })
+        out.on('error', () => {
+          res.statusCode = 502
+          res.end()
+        })
+        req.pipe(out)
       })
     },
   }
@@ -172,12 +210,13 @@ function ocrAssets(): Plugin {
 const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA || process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || Date.now().toString(36)
 
 export default defineConfig(({ command, mode }) => ({
-  define: { __APP_BUILD__: JSON.stringify(BUILD_ID), __OCR_DIR__: JSON.stringify(OCR_DIR) },
+  define: { __APP_BUILD__: JSON.stringify(BUILD_ID), __OCR_DIR__: JSON.stringify(OCR_DIR), __REST_SAME_ORIGIN__: JSON.stringify(REST_SAME_ORIGIN) },
   plugins: [
     react(),
     ocrAssets(),
     supabasePreconnect(loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL),
     vercelPathHeaders(),
+    vercelRestRewrite(),
     inlineStylesheet(),
     // Builds src/sw.ts into dist/sw.js and injects the precache list (R21). Build only: the dev server and Vitest
     // run without a worker. The manifest is the hand-written public/manifest.webmanifest.

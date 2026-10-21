@@ -1,5 +1,5 @@
 import { COLS, toRow, type CompanyProfile, type ProfileValues } from '@/features/settings/companyProfile'
-import { WEAK_NEW, WRONG_CURRENT } from '@/features/settings/passwordModel'
+import { WEAK_NEW, WRONG_CURRENT } from '@/features/settings/passwordText'
 import type { Category, CategoryGroup, PaidVia } from '@/features/settings/categoriesModel'
 import type { ProgressRow, TargetRow } from '@/features/settings/targetsModel'
 import { PlainError } from '@/lib/pgErrors'

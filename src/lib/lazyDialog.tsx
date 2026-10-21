@@ -21,3 +21,15 @@ export function lazyDialog<P extends { open: boolean }>(load: () => Promise<Comp
   }
   return LazyDialog
 }
+
+/**
+ * The same for a dialog its page draws only while it is open (`{adding ? <AddLineDialog … /> : null}`): its code is downloaded
+ * the first time it is drawn. Nothing shows until it arrives (on a phone that has the app, the service worker has it already).
+ */
+export function lazyShown<P extends object>(load: () => Promise<ComponentType<P>>): ComponentType<P> {
+  const Shown = lazyWithReload(() => load().then(component => ({ default: component }))) as unknown as ComponentType<P>
+  function LazyShown(props: P) {
+    return <Suspense fallback={null}>{createElement(Shown, props)}</Suspense>
+  }
+  return LazyShown
+}

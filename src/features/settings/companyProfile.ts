@@ -1,5 +1,9 @@
-import { z } from 'zod'
 import type { TablesUpdate } from '@/types/database'
+import type { ProfileValues } from '@/features/settings/companyProfileSchema'
+
+// The form's schema (zod) is its own module, so a page that only reads the profile (an order's terms, a PDF's letterhead)
+// does not download zod with it (perf/lcp).
+export type { ProfileValues } from '@/features/settings/companyProfileSchema'
 
 /*
  * company_profile (DATA_MODEL 2.27): the pure model. One row, id = 1, created by a migration. Every
@@ -42,33 +46,6 @@ export interface CompanyProfile {
 
 export const COLS = [...TEXT_FIELDS, 'quotation_validity_days', 'default_payment_terms_days', 'updated_at'].join(', ')
 
-const text = (max: number, what: string) => z.string().trim().max(max, `Keep ${what} under ${max} characters.`)
-
-export const profileSchema = z.object({
-  legal_name: text(200, 'the legal name'),
-  address: text(500, 'the address'),
-  phone: text(50, 'the phone number'),
-  email: z.union([z.literal(''), text(200, 'the email').email('Enter a valid email address, or leave it empty.')]),
-  website: text(200, 'the website'),
-  ntn: text(50, 'the NTN'),
-  strn: text(50, 'the STRN'),
-  bank_name: text(200, 'the bank name'),
-  bank_account_title: text(200, 'the account title'),
-  bank_iban: text(60, 'the IBAN'),
-  quotation_validity_days: z
-    .number({ invalid_type_error: 'Enter the number of days a quotation stays valid.' })
-    .int('Use whole days.')
-    .min(1, 'A quotation must be valid for at least 1 day.')
-    .max(365, 'Keep the validity to a year or less.'),
-  default_payment_terms_days: z
-    .number({ invalid_type_error: 'Enter the number of days customers have to pay.' })
-    .int('Use whole days.')
-    .min(0, 'Payment terms cannot be negative.')
-    .max(365, 'Keep the terms to a year or less.'),
-  quotation_terms: text(4000, 'the terms'),
-  po_terms: text(4000, 'the terms'),
-})
-export type ProfileValues = z.infer<typeof profileSchema>
 
 /** Form values from a row: empty text instead of null, so inputs stay controlled. */
 export function toFormValues(p: CompanyProfile): ProfileValues {

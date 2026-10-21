@@ -2,13 +2,8 @@ import { useRef, type ReactElement, type ReactNode } from 'react'
 import { CircleDot, Lock, TriangleAlert } from 'lucide-react'
 import { useController, useFormContext, type ControllerRenderProps } from 'react-hook-form'
 import { useSession } from '@/app/session'
-import {
-  missingForPdf,
-  profileSchema,
-  toFormValues,
-  type CompanyProfile,
-  type ProfileValues,
-} from '@/features/settings/companyProfile'
+import { missingForPdf, toFormValues, type CompanyProfile } from '@/features/settings/companyProfile'
+import { profileSchema, type ProfileValues } from '@/features/settings/companyProfileSchema'
 import { useCompanyProfile, useSaveCompanyProfile } from '@/features/settings/hooks'
 import { Banner } from '@/ui/Banner'
 import { PageHeader } from '@/ui/PageHeader'

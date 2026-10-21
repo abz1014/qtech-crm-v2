@@ -17,14 +17,16 @@ import { isFreshSplitLeg, splitRfqItemIds } from '@/features/orders/lib/splitGro
 import { poChange } from '@/features/orders/lib/poChange'
 import { defaultExpected, legLetter, legState, legSupplierTotal, type LegDates } from '@/features/orders/lib/legModel'
 import { useLegActions } from '@/features/orders/useLegActions'
-import { AddLegDialog } from '@/features/orders/AddDialogs'
-import { IssuePoDialog } from '@/features/purchaseOrders/IssuePoDialog'
-import { lazyDialog } from '@/lib/lazyDialog'
+import { lazyDialog, lazyShown } from '@/lib/lazyDialog'
 import { useOrderCosts } from '@/features/money/costs/hooks'
 import { estimateExpectedCost, stillOwedOnLeg } from '@/features/money/lib/costEstimate'
 import { useOpenPoPdf } from '@/features/purchaseOrders/useOpenPoPdf'
-import { GoodsChaseDialog } from '@/features/orders/GoodsChaseDialog'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
+
+// Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
+const IssuePoDialog = lazyShown(() => import('@/features/purchaseOrders/IssuePoDialog').then(m => m.IssuePoDialog))
+const GoodsChaseDialog = lazyShown(() => import('@/features/orders/GoodsChaseDialog').then(m => m.GoodsChaseDialog))
+const AddLegDialog = lazyShown(() => import('@/features/orders/AddDialogs').then(m => m.AddLegDialog))
 
 // Downloaded the first time it opens (perf/lcp, lazyDialog.tsx).
 const AddExpenseDialog = lazyDialog(() => import('@/features/money/expenses/ExpenseDialog').then(m => m.AddExpenseDialog))

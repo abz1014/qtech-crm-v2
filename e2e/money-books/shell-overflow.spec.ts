@@ -26,6 +26,9 @@ const measure = () => {
 
 test.describe('shell width', () => {
   test('no page scrolls sideways at 375, 1280, 1366 or 1440, and the top bar stays inside the window', async ({ page }) => {
+    // 32 cold page loads, each waited to network idle: since perf/lcp a page's extras (the top bar's counts, Help, the web fonts)
+    // load after its content, so each load takes a little longer to go quiet.
+    test.setTimeout(60_000)
     await openAs(page, 'admin', '/today')
     for (const width of [375, 1280, 1366, 1440]) {
       await page.setViewportSize({ width, height: 900 })

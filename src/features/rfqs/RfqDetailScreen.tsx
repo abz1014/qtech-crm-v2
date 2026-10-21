@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { CloudOff, FileQuestion, RefreshCw, X } from 'lucide-react'
@@ -21,7 +21,6 @@ import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
 import { SupplierReplies } from '@/features/rfqs/SupplierReplies'
 import { useRankedQuotes } from '@/features/rfqs/ranking/hooks'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
-import { AddItemDialog } from '@/features/rfqs/AddItemDialog'
 import { SuppliersAsked } from '@/features/rfqs/SuppliersAsked'
 import { canChaseInquiry } from '@/features/rfqs/replyFocus'
 import { FloatDialog, SuppliersToAskCard } from '@/features/rfqs/SuppliersToAsk'
@@ -30,8 +29,12 @@ import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/use
 import { QuotationsPanel } from '@/features/quotations/QuotationsPanel'
 import { ClarificationsPanel } from '@/features/rfqs/ClarificationsPanel'
 import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
-import { ConvertDialog } from '@/features/orders/ConvertDialog'
+import { lazyWithReload } from '@/lib/importWithReload'
 import { useWonDialog } from '@/features/orders/useWonDialog'
+
+// Downloaded when opened, not with the RFQ page (perf/lcp): Mark won's Create order dialog and Add item.
+const ConvertDialog = lazyWithReload(() => import('@/features/orders/ConvertDialog').then(m => ({ default: m.ConvertDialog })))
+const AddItemDialog = lazyWithReload(() => import('@/features/rfqs/AddItemDialog').then(m => ({ default: m.AddItemDialog })))
 
 /*
  * RFQ detail (R07; g2-rfq-detail.html; the parity audit's Part C; the UX audit of 2026-10-19; round-2 spec 5.3). The header
@@ -250,7 +253,11 @@ function Loaded({
     <Shell bar={(rfq.state?.outcome ?? 'open') === 'open'}>
       <RfqHeaderBlock rfq={rfq} facts={facts} />
       {/* data-slot="convert-dialog" (O01): the Create order dialog, open while the address carries ?won=1. */}
-      {wonOpen && inquiries.data ? <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} /> : null}
+      {wonOpen && inquiries.data ? (
+        <Suspense fallback={null}>
+          <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} />
+        </Suspense>
+      ) : null}
       {loadError ? (
         <p className="mt-3 text-sm text-fg-muted" role="status">
           {`Showing the details saved on this device at ${timeOf(headerAt)}. Replies and questions did not load.`}
@@ -354,7 +361,11 @@ function Loaded({
         </aside>
       </div>
       <RfqActionBar rfq={rfq} facts={facts} chaseSuppliers={chaseSuppliers} chaseCustomer={chaseCustomer} />
-      {adding ? <AddItemDialog rfq={rfq} onClose={() => setAdding(false)} /> : null}
+      {adding ? (
+        <Suspense fallback={null}>
+          <AddItemDialog rfq={rfq} onClose={() => setAdding(false)} />
+        </Suspense>
+      ) : null}
       {floating ? (
         <FloatDialog
           title={askedCount > 0 ? 'Ask more suppliers' : 'Ask suppliers'}
