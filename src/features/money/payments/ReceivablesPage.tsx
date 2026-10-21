@@ -21,6 +21,7 @@ import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
 import { NothingYetState } from '@/features/help/FirstUseState'
 import { useReceivables, useReceivablesSummary } from '@/features/money/payments/hooks'
+import { HeldAdvancesPanel } from '@/features/money/payments/HeldAdvancesPanel'
 import { RecordPaymentDialog } from '@/features/money/payments/RecordPaymentDialog'
 import { ReminderPanel } from '@/features/money/payments/ReminderPanel'
 import {
@@ -272,6 +273,7 @@ export function ReceivablesPage() {
               </div>
             )}
           />
+          <HeldAdvancesPanel isAdmin={isAdmin} />
         </div>
         <div ref={panelRef} className="scroll-mt-4">
           <ReminderPanel row={selected} today={today} />

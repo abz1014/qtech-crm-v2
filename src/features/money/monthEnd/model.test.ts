@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  advanceLabel,
   agingCsv,
   buildAging,
   buildChecklist,
@@ -225,6 +226,13 @@ describe('aging', () => {
     const adv = csv.rows.at(-1)!
     expect(adv[2]).toBe('Advance held, not invoiced yet')
     expect(adv.slice(-4)).toEqual(['', '', '', ''])
+  })
+  it('an advance on a cancelled order says refund or keep, never "not invoiced yet" (owner decision 2026-10-22)', () => {
+    const w = buildAging('2026-10-31', [], [{ orderId: 'x', orderRef: 'ORD-0099', customer: 'C', held: '5000.00', cancelled: true }])
+    expect(agingCsv(w).rows.at(-1)![2]).toBe('Advance held — refund or keep (order cancelled)')
+    expect(advanceLabel({ cancelled: false })).toBe('Advance held, not invoiced yet')
+    expect(advanceLabel({})).toBe('Advance held, not invoiced yet')
+    expect(w.outstanding).toBe('0.00')
   })
 })
 

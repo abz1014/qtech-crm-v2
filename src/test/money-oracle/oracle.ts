@@ -15,6 +15,8 @@
  *   due date        first invoice date + (order terms, else the company default)
  *   overdue         due date before today and not settled
  *   receivables     a cancelled order is listed only when it has an invoice (D-MR3)
+ *   held advance    (owner decision 2026-10-22) money paid (not voided) on a cancelled, never-invoiced order is never owed and never
+ *                   overdue: it is held, to refund or keep; the aging marks its advance row cancelled from the cancel date
  *   aging           payments up to the date applied oldest invoice first; remaining gross bucketed 0-30/31-60/61-90/90+;
  *                   an order paid with no invoice yet is an advance; settled-before-cutover invoices are fully received
  *   margin          net sale (invoice net if invoiced, else line net) less tagged expenses' net cost (amount - input tax)
@@ -357,7 +359,10 @@ export interface AgingInvoice {
   bucket: Bucket
 }
 
-export function agingAsOf(asOf: string, books: Pick<Books, 'invoices' | 'payments'>): { invoices: AgingInvoice[]; advances: { orderId: string; held: Paisa }[] } {
+export function agingAsOf(
+  asOf: string,
+  books: Pick<Books, 'invoices' | 'payments'> & { orders?: readonly Order[] },
+): { invoices: AgingInvoice[]; advances: { orderId: string; held: Paisa; cancelled: boolean }[] } {
   const inv = books.invoices.filter(i => i.date !== null && i.date <= asOf && !i.settledBeforeCutover)
   const paidBy = new Map<string, Paisa>()
   for (const p of books.payments) if (p.date <= asOf) paidBy.set(p.orderId, (paidBy.get(p.orderId) ?? 0n) + p.amount)
@@ -388,9 +393,27 @@ export function agingAsOf(asOf: string, books: Pick<Books, 'invoices' | 'payment
     }
   }
   for (const i of unlinked) push(i, 0n)
-  const advances: { orderId: string; held: Paisa }[] = []
-  for (const [orderId, held] of paidBy) if (held > 0n && !byOrder.has(orderId)) advances.push({ orderId, held })
+  const advances: { orderId: string; held: Paisa; cancelled: boolean }[] = []
+  for (const [orderId, held] of paidBy) {
+    if (held <= 0n || byOrder.has(orderId)) continue
+    const cancelledOn = books.orders?.find(o => o.id === orderId)?.cancelledOn ?? null
+    advances.push({ orderId, held, cancelled: cancelledOn !== null && cancelledOn <= asOf })
+  }
   return { invoices: out, advances }
+}
+
+/**
+ * "Advance held — refund or keep" (owner decision 2026-10-22): every cancelled order with no invoice that still holds money
+ * (payments not voided, above 0). Such an order is not listed by receivables (D-MR3), so it is never owed and never overdue.
+ */
+export function heldAdvances(books: Pick<Books, 'orders' | 'invoices' | 'payments'>): { orderId: string; held: Paisa }[] {
+  const out: { orderId: string; held: Paisa }[] = []
+  for (const o of books.orders) {
+    if (o.cancelledOn === null || books.invoices.some(i => i.orderId === o.id)) continue
+    const held = sumP(books.payments.filter(p => p.orderId === o.id && !p.voided).map(p => p.amount))
+    if (held > 0n) out.push({ orderId: o.id, held })
+  }
+  return out
 }
 
 const cmp = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)

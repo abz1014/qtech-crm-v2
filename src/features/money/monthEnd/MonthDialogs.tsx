@@ -137,7 +137,8 @@ export function ReopenMonthDialog({ entry, onClose }: { entry: ClosedMonth | nul
         },
         onError: e => {
           const m = mapPgError(e, { entity: 'month' })
-          setError(m.kind === 'network' ? m.message : 'Something went wrong. The month was not reopened. Try again.')
+          // A rule the server explains (0080: months reopen newest first) is said as written; anything else stays generic.
+          setError(m.kind === 'network' || m.help ? m.message : 'Something went wrong. The month was not reopened. Try again.')
         },
       },
     )
