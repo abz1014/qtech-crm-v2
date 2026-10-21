@@ -30,7 +30,7 @@
   --primary: #1a7b46;             /* primary action fills (5.30:1 white text on it) */
   --primary-hover: #166a3b;
   --primary-active: #115a31;
-  --primary-text: #166a3b;        /* ANY green text (text-primary, links): 6.65 on white, 5.74 on --bg-selected and on every tint (2026-10-22) */
+  --primary-text: #187242;        /* ANY green text (text-primary, links): 5.96 on white, 5.15 on --bg-selected, 5.07 on the lowest tint, 3.16 against --fg so an inline link stands out (axe link-in-text-block) (2026-10-22) */
   --on-primary: var(--neutral-0);
 
   /* ---- 2b. Surfaces ------------------------------------------------------ */

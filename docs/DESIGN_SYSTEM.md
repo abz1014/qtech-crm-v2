@@ -108,7 +108,7 @@ Cool grey, hue about 240 degrees, chroma under 3 percent. Components never refer
 | Hover or popover edge, secondary button | `--border-strong` | neutral-300 (2.08:1) |
 | Form control edge | `--border-input` | neutral-400 (3.42:1) |
 | Primary action fill | `--primary` `#1a7b46` | hover `#166a3b`, active `#115a31` |
-| Links, any green text (`text-primary`) | `--primary-text` `#166a3b` | 6.65:1 on white, 5.74:1 on selected and on every tint (2026-10-22) |
+| Links, any green text (`text-primary`) | `--primary-text` `#187242` | 5.96:1 on white, 5.15:1 on selected, 5.07:1 on the lowest tint, 3.16:1 against `--fg` (2026-10-22) |
 | Non-text green | `--brand-green` `#429446` | focus ring, active indicator, selected control fill, progress, logo |
 
 The green rule from BRAND.md stands: green means primary action, active or selected, or focus. Anything else that is green gets its green removed. Nothing in the UI uses brand green for text.
@@ -211,11 +211,12 @@ Computed from the token values by the build script; every pair below passes. Tex
 | fg-muted on canvas | `#4d4d55` | `#fafafb` | 8.03:1 | 4.5:1 | pass |
 | fg-muted on sunken / hover | `#4d4d55` | `#f4f4f6` | 7.62:1 | 4.5:1 | pass |
 | fg-muted on selected | `#4d4d55` | `#eeeef1` | 7.23:1 | 4.5:1 | pass |
-| primary-text (green text) on surface | `#166a3b` | `#ffffff` | 6.65:1 | 4.5:1 | pass |
-| primary-text on canvas | `#166a3b` | `#fafafb` | 6.37:1 | 4.5:1 | pass |
-| primary-text on sunken / hover | `#166a3b` | `#f4f4f6` | 6.05:1 | 4.5:1 | pass |
-| primary-text on selected | `#166a3b` | `#eeeef1` | 5.74:1 | 4.5:1 | pass |
-| primary-text on the lowest tint (danger) | `#166a3b` | `#fde8e8` | 5.66:1 | 4.5:1 | pass |
+| primary-text (green text) on surface | `#187242` | `#ffffff` | 5.96:1 | 4.5:1 | pass |
+| primary-text on canvas | `#187242` | `#fafafb` | 5.71:1 | 4.5:1 | pass |
+| primary-text on sunken / hover | `#187242` | `#f4f4f6` | 5.42:1 | 4.5:1 | pass |
+| primary-text on selected | `#187242` | `#eeeef1` | 5.15:1 | 4.5:1 | pass |
+| primary-text on the lowest tint (danger) | `#187242` | `#fde8e8` | 5.07:1 | 4.5:1 | pass |
+| primary-text against fg (an inline link in a sentence, axe link-in-text-block) | `#187242` | `#111113` | 3.16:1 | 3:1 | pass |
 | primary-hover on surface | `#166a3b` | `#ffffff` | 6.65:1 | 4.5:1 | pass |
 | primary-hover on canvas | `#166a3b` | `#fafafb` | 6.37:1 | 4.5:1 | pass |
 | primary-hover on sunken / hover | `#166a3b` | `#f4f4f6` | 6.05:1 | 4.5:1 | pass |
@@ -266,7 +267,7 @@ Computed from the token values by the build script; every pair below passes. Tex
 | border-strong on surface | `#b3b3bb` | `#ffffff` | 2.08:1 | none (decorative) | pass |
 | tone-warning-fg dot on surface | `#7a3408` | `#ffffff` | 9.04:1 | 3:1 | pass |
 
-Notes: brand green fails 4.5:1 as text on white (3.78:1) and is therefore non-text only. Green text reads `--primary-text` (`#166a3b`), 5.74:1 on `--bg-selected`, so a selected row may carry a green link; the button fill `--primary` carries white text only. Tone text is at least 7:1 on white, on the selected and hover rows and on every tint (2026-10-22), so a coloured second line passes the 7:1 secondary-text rule anywhere; `src/lib/a11yContrast.test.tsx` checks every pair. `--fg-disabled` is exempt under WCAG 1.4.3 (inactive components).
+Notes: brand green fails 4.5:1 as text on white (3.78:1) and is therefore non-text only. Green text reads `--primary-text` (`#187242`), 5.15:1 on `--bg-selected` and 3.16:1 against `--fg` (so a link inside a sentence is told apart without an underline), so a selected row may carry a green link; the button fill `--primary` carries white text only. Tone text is at least 7:1 on white, on the selected and hover rows and on every tint (2026-10-22), so a coloured second line passes the 7:1 secondary-text rule anywhere; `src/lib/a11yContrast.test.tsx` checks every pair. `--fg-disabled` is exempt under WCAG 1.4.3 (inactive components).
 
 ## 8. Focus
 

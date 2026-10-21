@@ -265,6 +265,9 @@ describe('tone text and green text on highlighted rows and tints', () => {
     const low = backgrounds.map(b => [b, contrast('primary-text', b)] as const).filter(([, r]) => r < 5)
     expect(low, low.map(([b, r]) => `primary-text on ${b}: ${r}:1`).join(', ')).toEqual([])
   })
+  it('a green link inside a sentence is told apart from the text around it: 3:1 against fg (axe link-in-text-block)', () => {
+    expect(contrast('primary-text', 'fg')).toBeGreaterThanOrEqual(3)
+  })
   it('white text stays at 4.5:1 on the green button and on every tone used as a fill', () => {
     for (const fill of ['primary', 'primary-hover', 'primary-active', 'tone-info-fg', 'tone-success-fg', 'tone-warning-fg', 'tone-danger-fg']) {
       expect(contrast('on-primary', fill), fill).toBeGreaterThanOrEqual(4.5)
