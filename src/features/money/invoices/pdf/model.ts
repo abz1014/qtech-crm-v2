@@ -364,6 +364,16 @@ export function gapSentence(gaps: readonly Gap[]): string {
 // ------------------------------------------------------------------ the copy marks
 
 /** Original goes to the buyer (only one tax invoice per supply, s.23(1)); the duplicate is the office copy. */
+/**
+ * The signature box (owner decision 2026-10-22): a ruled line to sign over, then "For <legal name>" and "Authorised signatory".
+ * Only two copies, Original and Duplicate. The FBR digital-invoice number and QR code are deferred (nothing printed for them),
+ * and the further tax on supplies to unregistered buyers is not modelled.
+ */
+export function signatureLines(legalName: string): [string, string] {
+  const name = legalName.trim()
+  return [name ? `For ${name}` : 'For the seller', 'Authorised signatory']
+}
+
 export type InvoiceCopy = 'original' | 'duplicate'
 
 export const COPY_LABEL: Record<InvoiceCopy, string> = {
