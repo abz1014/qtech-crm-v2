@@ -62,7 +62,9 @@ export function SegmentedControl({
   const trackRef = useScrollActiveIntoView<HTMLDivElement>()
   const track = cn(
     // Phones wrap (flex-wrap, no horizontal overflow); wider screens keep one row and scroll inside the track if they must.
-    'inline-flex max-w-full flex-wrap gap-[2px] rounded bg-selected p-[2px] sm:flex-nowrap sm:overflow-x-auto',
+    // A caller that passes `flex-wrap` (Today's tabs) wraps at every width and never scrolls.
+    'inline-flex max-w-full flex-wrap gap-[2px] rounded bg-selected p-[2px]',
+    !/(^|\s)flex-wrap(\s|$)/.test(className ?? '') && 'sm:flex-nowrap sm:overflow-x-auto',
     fill && 'flex w-full',
     className,
   )
