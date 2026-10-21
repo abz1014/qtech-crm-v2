@@ -1198,7 +1198,6 @@ test('HW-24: an unknown filter value in the address (/orders?goods=bogus) crashe
   await land(page, '/orders?owner=all')
   await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible()
   await land(page, '/orders?owner=all&goods=bogus')
-  test.fail(true, 'HW-24: NoResults names the filter with valueLabel -> resolveStatus, which throws UnknownStatusError for a value it does not know, so the page shows "Something went wrong" (src/features/orders/OrdersListPage.tsx filtersOn)')
   await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible({ timeout: 10_000 })
 })
 

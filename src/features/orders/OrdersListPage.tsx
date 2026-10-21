@@ -8,6 +8,7 @@ import { orderRef } from '@/lib/refs'
 import { businessToday } from '@/lib/dates'
 import { resolveStatus, type StatusDimension } from '@/lib/status'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { knownParam } from '@/lib/urlParams'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
@@ -143,10 +144,11 @@ export default function OrdersListPage() {
     return {
       tab: isTab(tabParam) ? tabParam : 'active',
       owner: (p.get('owner') === 'all' ? 'all' : p.get('owner') === 'mine' ? 'mine' : defaultOwner(role)) as OwnerFilter,
-      goods: p.get('goods') ?? ALL,
-      commissioning: p.get('commissioning') ?? ALL,
-      invoicing: money ? (p.get('invoicing') ?? ALL) : ALL,
-      payment: money ? (p.get('payment') ?? ALL) : ALL,
+      // HW-24 / HE-1: a value the list does not know (old bookmark, typo) is ignored, not shown as a crash
+      goods: knownParam(p.get('goods'), DIMENSION_VALUES.goods, ALL),
+      commissioning: knownParam(p.get('commissioning'), DIMENSION_VALUES.commissioning, ALL),
+      invoicing: money ? knownParam(p.get('invoicing'), DIMENSION_VALUES.invoicing, ALL) : ALL,
+      payment: money ? knownParam(p.get('payment'), DIMENSION_VALUES.payment, ALL) : ALL,
       text: p.get('q') ?? '',
     }
   }, [query, role, money])
