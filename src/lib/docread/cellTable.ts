@@ -21,7 +21,7 @@ function headerKind(label: string, hasDesc: boolean): Kind {
   if (/^(?:s\.?\s*no|sr|sl|#|no\.?$|pos|line|itm)/i.test(label) || (hasDesc && /^item(?:\s*no\.?)?$/i.test(label))) return 'number'
   if (/desc|particular|specification|product|item\s*name|short\s*text|goods|^item$/i.test(label)) return 'desc'
   if (/qty|quantity/i.test(label)) return 'qty'
-  if (/^(?:uom|units?|u\/m)\b/i.test(label) && !/price|rate/i.test(label)) return 'unit'
+  if (/^(?:uom|units?|u\/m|a\s*\/\s*u)\b/i.test(label) && !/price|rate/i.test(label)) return 'unit'
   if (/part|model|cat|code|material/i.test(label)) return 'code'
   if (/make|brand/i.test(label)) return 'make'
   if (/date/i.test(label)) return 'date'

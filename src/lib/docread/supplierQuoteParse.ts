@@ -57,6 +57,8 @@ export function plainQuoteText(raw: string): string {
     .replace(/）/g, ') ')
     .replace(/．/g, '.')
     .replace(/[～〜]/g, '-')
+    // A word the picture reader broke at its dash ("ex- stock").
+    .replace(/\bex-\s+stock\b/gi, 'ex-stock')
     .replace(/(\d)\s*个?工作日/g, '$1 working days')
     .replace(/(\d)\s*天/g, '$1 days')
     .replace(/(\d)\s*(?:个)?(?:星期|周)/g, '$1 weeks')

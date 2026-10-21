@@ -248,6 +248,11 @@ function findLeadTime(w: string, raw: string): (LeadTime & Span) | null {
     const cut = Math.max(before.lastIndexOf(','), before.lastIndexOf(';'), before.lastIndexOf('|'))
     const ctx = cut >= 0 ? before.slice(cut + 1) : before
     if (NOT_LEAD_BEFORE.test(ctx)) continue
+    // "$18.00 - 8 weeks": the first number is a price, not the start of a range.
+    if (/(?:[$€£¥￥₨]|\b(?:usd|eur|rmb|cny|aed|pkr|gbp|rs)\.?)\s*$/i.test(before)) {
+      re.lastIndex = m.index + (m[1] ?? '').length + 1
+      continue
+    }
     if (NOT_LEAD_AFTER.test(w.slice(m.index + m[0].length, m.index + m[0].length + 14))) continue
     const mult = unitDays(unit)
     const lo = Number(m[1])

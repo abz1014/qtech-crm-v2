@@ -217,6 +217,8 @@ const HEADER_TERM = new RegExp(
       String.raw`org\.?`,
       String.raw`special\s+instructions?`,
       String.raw`rate\s*\/\s*unit`,
+      String.raw`item\s*name(?:\s*\/\s*spec(?:ification)?s?)?`,
+      String.raw`a\s*\/\s*u`,
     ].join('|') +
     ')$',
   'i',
@@ -511,7 +513,9 @@ export function layoutPages(pages: ReadonlyArray<readonly TextRun[]>): LaidLine[
         const paragraph = single !== null && !isNumericCell(single.text) && regionOf(single.x0 + 0.5 * single.size, t.cols) === 0 && edgesCrossed >= 2
         // A line that starts with a closing word ("Bid due:", "Regards,", "Terms") and has no number in a cell of its own.
         const closing = END_OF_TABLE.test((l.cells[0] as Cell).text) && (single !== null || !l.cells.slice(1).some(c => isNumericCell(c.text)))
-        const ends = l.y - t.lastY > Math.max(3.2 * typical, 4 * l.size) || startsLeft || paragraph || closing
+        // A numbered sentence written from the table's left edge ("1. Bid security 2% of the quoted amount."): the terms under it.
+        const numberedNote = single !== null && /^\d{1,2}[.)]\s+[A-Za-z]+(?:\s+\S+){2,}/.test(single.text) && regionOf(single.x0 + 0.5 * single.size, t.cols) === 0
+        const ends = l.y - t.lastY > Math.max(3.2 * typical, 4 * l.size) || startsLeft || paragraph || closing || numberedNote
         if (!ends) {
           t.pitch.push(l.y - t.lastY)
           t.lastY = l.y

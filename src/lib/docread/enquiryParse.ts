@@ -103,7 +103,7 @@ const CHAT_MEDIA =
 /** A chat reply that only acknowledges ("Noted", "Ok sir, will share today", "Sure, checking"). */
 const ACK = /^(?:ok(?:ay)?|noted|sure|done|received|thanks?|thank\s+you|thx|jee|ji|g\b|acha|theek|right|alright|great|will\s+(?:do|share|send|check|revert|update))\b/i
 const INSTRUCTION =
-  /^(?:note|notes|n\.?\s?b|remarks?|terms|conditions|payment|delivery|required\s+delivery|delivery\s+(?:period|time|terms)|validity|offer\s+validity|warranty|origin|incoterms?|price\s+basis|please\s+(?:mention|confirm|include|specify|indicate|note|quote\s+(?:with|on|your\s+(?:validity|delivery)))|kindly\s+(?:mention|confirm|include|specify|indicate|note)|partial\s+(?:quotations?|offers?)|quotations?\s+(?:should|must)\s+(?:be|include|mention)|offer\s+(?:should|must)\s+(?:be|include|mention))\b[\s.:-]*/i
+  /^(?:note|notes|n\.?\s?b|remarks?|terms|conditions|payment|delivery|required\s+delivery|delivery\s+(?:period|time|terms)|validity|offer\s+validity|warranty|origin|incoterms?|price\s+basis|please\s+(?:mention|confirm|include|specify|indicate|note|quote\s+(?:with|on|your\s+(?:validity|delivery)))|kindly\s+(?:mention|confirm|include|specify|indicate|note)|partial\s+(?:quotations?|offers?)|bid\s+security|earnest\s+money|performance\s+(?:bond|guarantee|security)|tender\s+(?:fee|documents?)|sealed\s+bids?|quotations?\s+(?:should|must)\s+(?:be|include|mention)|offer\s+(?:should|must)\s+(?:be|include|mention))\b[\s.:-]*/i
 
 const COMPANY =
   /\b(?:ltd|limited|pvt|private|inc|llc|corp(?:oration)?|company|co\.|industries|mills|group|enterprises?|traders|associates|sons)\b/i
@@ -190,7 +190,8 @@ interface ReadItem {
 
 /** One item's text (its own line, plus any wrapped lines) into description, quantity (null when none) and unit. */
 function readItem(text: string): ReadItem | null {
-  let t = text.replace(TAIL, '').replace(OPENER, '')
+  // "Item: Push button red; Make: X; Qty: 20 Pcs": the label in front is not part of the description.
+  let t = text.replace(TAIL, '').replace(OPENER, '').replace(/^(?:item|description|product|material|particulars)\s*[:=-]\s*/i, '')
   let qty: number | null = null
   let unit: string | null = null
   const lab = LABELLED_QTY.exec(t)
@@ -416,6 +417,8 @@ interface Draft {
   attrs: string[]
   qty: { qty: number; unit: string | null } | null
   fromTable?: ReadItem
+  /** Its quantity came on a line of its own ("Qty:" / "1 Each"): the item is complete, the next line is not its tail. */
+  qtyLine?: boolean
 }
 
 interface TableCols {
@@ -459,7 +462,7 @@ function tableHeader(cells: string[]): TableCols | null {
     desc,
     extra,
     qty: idx(/qty|quantity/i),
-    unit: idx(/^(?:uom|units?|u\/m)\.?$/i),
+    unit: idx(/^(?:uom|units?|u\/m|a\s*\/\s*u)\.?$/i),
     n: cells.length,
   }
 }
@@ -720,8 +723,12 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   /** "Kindly send your offer by" / "02/11/2026": a due-date sentence whose date wrapped onto the next line. */
   const dueOnNext = (t: string, next: string | undefined) =>
     next && (DUE_STRONG.test(t) || (DUE_WEAK.test(t) && QUOTE_WORD.test(t))) && !findDate(t, today) ? findDue(`${t} ${next}`, today) : null
-  const continuesRow = (t: string): boolean =>
-    !(
+  const continuesRow = (t0: string): boolean => {
+    // A numbered line under the table ("1. Bid security 2% ...") is the form's own text; so are a title and a company.
+    if (/^\(?\d{1,2}[.)]\s/.test(t0)) return false
+    if ((DESIGNATION.test(t0) && t0.split(' ').length <= 4 && !/\d/.test(t0)) || (isCompanyLine(t0) && !own.test(t0))) return false
+    const t = t0
+    return !(
       findDue(t, today) ||
       (DUE_STRONG.test(t) && /\d/.test(t)) ||
       findRefs(t).length > 0 ||
@@ -732,6 +739,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       (NOT_DUE.test(t) && findDate(t, today) !== null) ||
       /^(?:please|kindly|we\s|our\s|prepared|approved|checked|requested|for\s+and\s+on|authori[sz]ed|signature)/i.test(t)
     )
+  }
   const skip = (t: string, reason: SkipReason) => lines.push({ text: t, kind: 'skipped', reason, marker: null })
   const close = () => {
     cur = null
@@ -840,6 +848,11 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     }
     contentLines++
 
+    // A line with no Latin letter or digit (a greeting typed in Urdu): never an item, as a part is named in English.
+    if (!/[A-Za-z0-9]/.test(t)) {
+      skip(t, 'greeting')
+      continue
+    }
     // A sentence that wrapped onto this line ("The quotation" / "should mention delivery period ..."): skipped as its first
     // line was. Our own name and address ("M/s Q-Tech Engineering, Lahore") and a broken-off email address are never items.
     const last = lines[lines.length - 1]
@@ -1034,6 +1047,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     }
     if (qOnly && cur && !(cur as Draft).qty && !m) {
       ;(cur as Draft).qty = { qty: toQty(qOnly[1] as string), unit: unitOf(qOnly[2]) }
+      ;(cur as Draft).qtyLine = true
       lines.push({ text: t, kind: 'joined', reason: null, marker: null })
       continue
     }
@@ -1047,16 +1061,20 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       const prev = d.texts[d.texts.length - 1] ?? ''
       // An indented line under an item is its wrapped text, unless both have a quantity of their own (a list pasted with
       // leading spaces: "Pressure gauge - 2 Nos" / "   Ball valve - 4 Nos").
-      const wraps = (s.indent > d.indent && !(ownQty && curHasQty0())) || DANGLING.test(prev)
+      const wraps = !d.qtyLine && ((s.indent > d.indent && !(ownQty && curHasQty0())) || DANGLING.test(prev))
       const curHasQty = d.qty !== null || (d.texts.length > 0 && readItem(joinWrapped(d.texts))?.qty != null)
-      if (wraps || (markerMode && !isCourtesy(work) && !SIGN_OFF.test(work) && !(ownQty && curHasQty))) {
+      // In a marked list, an unmarked line naming a product after an item that has its quantity starts a new item (its
+      // quantity can follow on the next line: "Insulation tape self amalgamating" / "25 rolls").
+      const newItem = markerMode && curHasQty && (PRODUCT.test(work) || hasCode(work)) && !DANGLING.test(prev)
+      if (wraps || (markerMode && !newItem && !isCourtesy(work) && !SIGN_OFF.test(work) && !(ownQty && curHasQty))) {
         d.texts.push(work)
         lines.push({ text: t, kind: 'joined', reason: null, marker: null })
         continue
       }
     }
     close()
-    if (markerMode && !m && !ownQty) {
+    const unmarkedItem = markerMode && !m && cur === null && lines[lines.length - 1]?.kind !== 'skipped' && (PRODUCT.test(work) || hasCode(work))
+    if (markerMode && !m && !ownQty && !unmarkedItem) {
       skip(t, 'greeting')
       continue
     }

@@ -109,7 +109,8 @@ export const BATCHES: BatchSpec[] = [
   { batch: 0, enquiries: 180, quotes: 72, gens: [0], gate: true },
   { batch: 10, enquiries: 120, quotes: 48, gens: [0], dev: true, gate: true },
   { batch: 11, enquiries: 120, quotes: 48, gens: [0], dev: true, gate: true },
-  { batch: 1, enquiries: 120, quotes: 48, gens: [0, 1] },
+  // Fresh batch 1, first try (text and PDF): enquiry items 97.6% / 96.5%, quotes 100% / 99.5%: below 98%, so it became dev data.
+  { batch: 1, enquiries: 120, quotes: 48, gens: [0, 1], dev: true, gate: true },
   { batch: 2, enquiries: 120, quotes: 48, gens: [0, 1, 2] },
   { batch: 3, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3] },
   { batch: 4, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4] },
