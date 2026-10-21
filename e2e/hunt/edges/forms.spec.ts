@@ -30,6 +30,9 @@ const OUTCOME = async (page: Page) => {
   return { dialogOpen, msgs: [...new Set(msgs)].join(' | '), toasts: [...new Set(toasts)].join(' | ') }
 }
 
+/** Slices by code point, so an emoji is never cut in half (a lone surrogate makes encodeURIComponent throw). */
+const cut = (s: string, a: number, b: number) => Array.from(s).slice(a, b).join('')
+
 async function dbRows(path: string): Promise<unknown> {
   const r = await service(`/rest/v1/${path}`)
   return r.json()
@@ -50,11 +53,11 @@ test('New company: names (long, Urdu, emoji, spaces, special, unbroken, duplicat
       await dialog.getByRole('textbox', { name: /Company name/ }).fill(name)
       await dialog.getByRole('button', { name: /Add company|Try again/ }).click()
       const o = await OUTCOME(page)
-      const stored = (await dbRows(`companies?select=id,name&name=ilike.${encodeURIComponent(`*${name.trim().slice(5, 25).replace(/[*,()]/g, '_')}*`)}`)) as { id: string; name: string }[]
+      const stored = (await dbRows(`companies?select=id,name&name=ilike.${encodeURIComponent(`*${cut(name.trim(), 5, 25).replace(/[*,()]/g, '_')}*`)}`)) as { id: string; name: string }[]
       note({ kind: 'form', role: 'sales', vp: vkey, path: `new company ${k}`, detail: `typed ${JSON.stringify(name).slice(0, 80)} -> ${JSON.stringify(o)} stored=${JSON.stringify(stored.map(s => s.name)).slice(0, 200)} url=${page.url()}` })
       await shot(page, `form_company_${vkey}_${k}`)
       if (stored[0]) {
-        for (const p of [`/companies/${stored[0].id}`, `/companies?q=${encodeURIComponent(name.trim().slice(0, 12))}`]) {
+        for (const p of [`/companies/${stored[0].id}`, `/companies?q=${encodeURIComponent(cut(name.trim(), 0, 12))}`]) {
           w.at(`${p.startsWith('/companies/') ? '/companies/{id}' : '/companies?q'} name=${k}`)
           await page.goto(p)
           await settle(page)
