@@ -8,7 +8,8 @@ export type MonthReportKey = (typeof MONTH_REPORT_KEYS)[number]
 
 export const MONTH_REPORT_TITLE: Record<MonthReportKey, string> = {
   pnl: 'Profit and loss',
-  categories: 'Expenses by category',
+  // replaced by the Expenses report (/money/reports/expenses, 2026-10-22); the old address redirects there
+  categories: 'Expenses',
   aging: 'Overdue by age',
   owe: 'We owe suppliers',
   gst: 'GST and FBR',

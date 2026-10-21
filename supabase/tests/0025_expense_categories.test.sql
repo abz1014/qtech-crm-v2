@@ -18,8 +18,8 @@ $f$;
 
 -- ------------------------------------------------------------------ structure
 select columns_are('public', 'expense_categories',
-  array['id', 'created_at', 'created_by', 'name', 'grp', 'default_paid_via', 'sort', 'active'],
-  'expense_categories has the A6.1 columns');
+  array['id', 'created_at', 'created_by', 'name', 'grp', 'default_paid_via', 'sort', 'active', 'group_id', 'monthly_budget_pkr'],
+  'expense_categories has the A6.1 columns (and 0082: group_id, monthly_budget_pkr)');
 select hasnt_column('public', 'expenses', 'category', 'expenses.category (text) is gone');
 select hasnt_column('public', 'recurring_expenses', 'category', 'recurring_expenses.category (text) is gone');
 select col_not_null('public', 'expenses', 'category_id', 'expenses.category_id is required');
@@ -57,21 +57,21 @@ select ok(not has_function_privilege('authenticated', 'public.expenses_prepare()
       and not has_function_privilege('anon', 'public.expenses_prepare()', 'execute'),
   'expenses_prepare is not callable by clients');
 
--- ------------------------------------------------------------------ the seed
-select is((select count(*)::int from public.expense_categories), 17, '17 categories are seeded');
-select is((select count(*)::int from public.expense_categories where grp = 'overhead'), 10, '10 overhead categories');
-select is((select count(*)::int from public.expense_categories where grp = 'order_cost'), 5, '5 order-cost categories');
-select is((select count(*)::int from public.expense_categories where grp = 'non_pnl'), 2, '2 not-in-P&L categories');
-select is((select array_agg(name order by sort) from public.expense_categories where grp = 'overhead'),
+-- ------------------------------------------------------------------ the seed (the 0025 rows; 0082 adds seven defaults after them)
+select is((select count(*)::int from public.expense_categories where id <= 'ca7e0000-0000-4000-8000-000000000017'), 17, '17 categories are seeded');
+select is((select count(*)::int from public.expense_categories where grp = 'overhead' and id <= 'ca7e0000-0000-4000-8000-000000000017'), 10, '10 overhead categories');
+select is((select count(*)::int from public.expense_categories where grp = 'order_cost' and id <= 'ca7e0000-0000-4000-8000-000000000017'), 5, '5 order-cost categories');
+select is((select count(*)::int from public.expense_categories where grp = 'non_pnl' and id <= 'ca7e0000-0000-4000-8000-000000000017'), 2, '2 not-in-P&L categories');
+select is((select array_agg(name order by sort) from public.expense_categories where grp = 'overhead' and id <= 'ca7e0000-0000-4000-8000-000000000017'),
   array['Salaries', 'Rent', 'Utilities', 'Fuel & travel', 'Office supplies & snacks', 'Courier & postage',
         'Repairs & maintenance', 'Bank charges', 'Taxes & fees', 'Other'],
   'the overhead categories, in order');
-select is((select array_agg(name order by sort) from public.expense_categories where grp = 'order_cost'),
+select is((select array_agg(name order by sort) from public.expense_categories where grp = 'order_cost' and id <= 'ca7e0000-0000-4000-8000-000000000017'),
   array['Supplier payment', 'Freight', 'Clearing', 'Commissioning', 'Subcontractor'],
   'the order-cost categories, in order');
-select is((select array_agg(name order by sort) from public.expense_categories where grp = 'non_pnl'),
+select is((select array_agg(name order by sort) from public.expense_categories where grp = 'non_pnl' and id <= 'ca7e0000-0000-4000-8000-000000000017'),
   array['Owner drawings', 'Loan repayment'], 'the not-in-P&L categories (Owner drawings, Loan repayment)');
-select is((select array_agg(name order by name) from public.expense_categories where default_paid_via = 'cash'),
+select is((select array_agg(name order by name) from public.expense_categories where default_paid_via = 'cash' and id <= 'ca7e0000-0000-4000-8000-000000000017'),
   array['Commissioning', 'Courier & postage', 'Fuel & travel', 'Office supplies & snacks', 'Repairs & maintenance'],
   'five categories default to cash; the other twelve to bank');
 select ok((select bool_and(active) from public.expense_categories), 'every seeded category is active');
@@ -88,7 +88,7 @@ select throws_ok($$insert into public.expense_categories (name, grp) values ('Ba
 select throws_ok($$insert into public.expense_categories (name, grp, default_paid_via) values ('Bad via', 'overhead', 'card')$$,
   '23514', null, 'default_paid_via must be bank or cash');
 select lives_ok($$insert into public.expense_categories (id, name, grp) values
-                  ('ca7e0000-0000-4000-8000-0000000000f1', 'Water', 'overhead')$$,
+                  ('ca7e0000-0000-4000-8000-0000000000f1', 'Office tea', 'overhead')$$,
   'an admin can add a category');
 select is((select default_paid_via || '/' || sort || '/' || active from public.expense_categories
            where id = 'ca7e0000-0000-4000-8000-0000000000f1'),
@@ -224,7 +224,7 @@ select throws_ok($$insert into public.expense_categories (name, grp) values ('De
 -- ------------------------------------------------------------------ admin through the API
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
-select is((select count(*)::int from public.expense_categories), 17, 'admin reads all 17 categories');
+select is((select count(*)::int from public.expense_categories), 24, 'admin reads all 24 categories (17 from 0025, 7 from 0082)');
 select lives_ok($$insert into public.expenses (id, amount_pkr, category_id)
                   values ('b4000000-0000-4000-8000-0000000000a1', 40, 'ca7e0000-0000-4000-8000-000000000004')$$,
   'admin inserts an expense through the API; the category default is read despite row security');

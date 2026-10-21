@@ -15,11 +15,10 @@ import { marginTotals } from '@/features/money/margins/model'
 import { MonthPager } from '@/features/money/monthEnd/MonthEndFrame'
 import { ExportCsvButton } from '@/features/money/monthEnd/ReportParts'
 import { csvFile, downloadReport } from '@/features/money/monthEnd/reportFiles'
-import { useAgingReport, useAsOf, useCategoryReport, useGstReport, useOweReport, usePnlReport, useTeamReport } from '@/features/money/monthEnd/reportHooks'
+import { useAgingReport, useAsOf, useGstReport, useOweReport, usePnlReport, useTeamReport } from '@/features/money/monthEnd/reportHooks'
 import { MONTH_REPORT_TITLE, type MonthReportKey } from '@/features/money/monthEnd/reportList'
 import {
   agingCsv,
-  categoriesCsv,
   defaultMonthEndMonth,
   gstCsv,
   isMonthKey,
@@ -31,6 +30,8 @@ import {
   teamCsv,
 } from '@/features/money/monthEnd/model'
 import { SalesReports } from '@/features/reports/SalesReports'
+import { useExpenseReport } from '@/features/money/expenseReport/hooks'
+import { EXPENSE_REPORT_TITLE, expenseReportCsv } from '@/features/money/expenseReport/model'
 
 /*
  * Money > Reports (owner decision 2026-10-19): the ONE place for reports. It replaces the old top-level Reports page, the six
@@ -74,7 +75,7 @@ function useReportMonth() {
 const Pkr = ({ v }: { v: Amount }) => <span className="num">PKR {formatPaisa(toPaisa(v), 'never')}</span>
 
 interface Line {
-  key: MonthReportKey | 'margins' | 'in-out'
+  key: MonthReportKey | 'margins' | 'in-out' | 'expenses'
   icon: LucideIcon
   title: string
   to: string
@@ -86,7 +87,6 @@ function MoneyReports() {
   const m = useReportMonth()
   const { asOf } = useAsOf(m.month, m.today)
   const pnl = usePnlReport(m.month)
-  const cat = useCategoryReport(m.month)
   const aging = useAgingReport(asOf)
   const owe = useOweReport(asOf)
   const gst = useGstReport(m.month)
@@ -98,6 +98,7 @@ function MoneyReports() {
   const to = (k: MonthReportKey) => `/money/reports/${k}${m.search}`
   const inOutPeriod = useMemo(() => periodOf('month', m.month), [m.month])
   const inOut = useInOutReport(inOutPeriod)
+  const exp = useExpenseReport(inOutPeriod)
 
   const lines: Line[] = [
     {
@@ -125,16 +126,26 @@ function MoneyReports() {
       csv: pnl.view ? () => downloadReport(pnlCsv(pnl.view!), csvFile('profit-and-loss', m.month)) : null,
     },
     {
-      key: 'categories',
+      key: 'expenses',
       icon: FileText,
-      title: MONTH_REPORT_TITLE.categories,
-      to: to('categories'),
-      summary: cat.view ? (
-        <>
-          <span className="num">{cat.view.all.count}</span> {cat.view.all.count === 1 ? 'expense' : 'expenses'}, <Pkr v={cat.view.all.gross} /> paid
-        </>
+      title: EXPENSE_REPORT_TITLE,
+      to: `/money/reports/expenses?by=month&period=${m.month}`,
+      summary: exp.view ? (
+        exp.view.total.count === 0 ? (
+          `No expenses in ${name}`
+        ) : (
+          <>
+            <Pkr v={exp.view.total.amount} /> spent on <span className="num">{exp.view.total.count}</span> {exp.view.total.count === 1 ? 'expense' : 'expenses'}
+            {exp.view.groups[0] ? (
+              <>
+                ; most on {exp.view.groups[0].name} (<span className="num">{exp.view.groups[0].share}%</span>)
+              </>
+            ) : null}
+            . Also by quarter
+          </>
+        )
       ) : null,
-      csv: cat.view ? () => downloadReport(categoriesCsv(cat.view!, m.month, 'all'), csvFile('expenses-by-category', m.month)) : null,
+      csv: exp.view ? () => downloadReport(expenseReportCsv(exp.view!), `expenses-${m.month}.csv`) : null,
     },
     {
       key: 'aging',

@@ -48,10 +48,10 @@ select results_eq(
   'the 0025 seed and the new defaults sit in the expected groups');
 select is((select count(*)::int from public.expense_categories where id between 'ca7e0000-0000-4000-8000-000000000018' and 'ca7e0000-0000-4000-8000-000000000024'), 7,
   'seven default categories are added (Water, Electricity, Internet and phone, Vehicle repairs, Token tax, Staff meals, Customs duty)');
-select ok((select prosecdef from pg_proc where oid = 'public.merge_expense_categories(uuid, uuid)'::regprocedure)
+select ok(not (select prosecdef from pg_proc where oid = 'public.merge_expense_categories(uuid, uuid)'::regprocedure)
       and has_function_privilege('authenticated', 'public.merge_expense_categories(uuid, uuid)', 'execute')
       and not has_function_privilege('anon', 'public.merge_expense_categories(uuid, uuid)', 'execute'),
-  'merge_expense_categories: SECURITY DEFINER, signed-in callers only (it checks the role itself)');
+  'merge_expense_categories: SECURITY INVOKER (row security applies), signed-in callers only, admin checked inside');
 select ok(not has_function_privilege('authenticated', 'public.expense_categories_group()', 'execute')
       and not has_function_privilege('authenticated', 'public.expense_groups_kind_lock()', 'execute'),
   'the trigger functions have no client grant');

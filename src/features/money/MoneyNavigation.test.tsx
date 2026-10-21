@@ -200,7 +200,7 @@ describe('Reports view', () => {
     expect(await screen.findByRole('heading', { name: 'Reports', level: 2 })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Money for June 2025' })).toBeInTheDocument()
     const list = screen.getByRole('list', { name: 'Money reports' })
-    for (const t of ['Profit and loss', 'Expenses by category', 'Overdue by age', 'We owe suppliers', 'GST and FBR', 'Sales by person', 'Order margins'])
+    for (const t of ['Profit and loss', 'Expenses', 'Overdue by age', 'We owe suppliers', 'GST and FBR', 'Sales by person', 'Order margins'])
       expect(within(list).getAllByText(t).length).toBeGreaterThan(0)
     expect(screen.getByRole('heading', { name: 'Enquiries and customers' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page')
@@ -211,7 +211,28 @@ describe('Reports view', () => {
     expect(await screen.findByRole('heading', { name: 'Enquiries and customers' })).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Money reports' })).toBeNull()
     const targets = db.calls.map(c => c.target)
-    for (const t of ['v_month_pnl', 'v_payment_net', 'v_month_expense_category', 'rpc:aging_as_of', 'rpc:payables_as_of', 'v_gst_month', 'v_month_team', 'v_order_money', 'rpc:month_end_status'])
+    for (const t of ['v_month_pnl', 'v_payment_net', 'v_month_expense_category', 'expenses', 'expense_groups', 'expense_categories', 'rpc:aging_as_of', 'rpc:payables_as_of', 'v_gst_month', 'v_month_team', 'v_order_money', 'rpc:month_end_status'])
       expect(targets, t).not.toContain(t)
+  })
+})
+
+describe('Expenses report (2026-10-22)', () => {
+  it('the old Expenses by category address opens the Expenses report for that month', async () => {
+    at(`/money/reports/categories?month=${MONTH}`)
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(`/money/reports/expenses?by=month&period=${MONTH}`))
+    expect(await screen.findByRole('heading', { name: 'Expenses', level: 2 })).toBeInTheDocument()
+  })
+
+  it('the hub links to it for the month shown', async () => {
+    at(`/money/reports?month=${MONTH}`)
+    const line = await screen.findByTestId('report-expenses')
+    expect(within(line).getByRole('link', { name: 'Expenses' })).toHaveAttribute('href', `/money/reports/expenses?by=month&period=${MONTH}`)
+  })
+
+  it('sales get the no-access page and make no expense request', async () => {
+    const db = at(`/money/reports/expenses?by=month&period=${MONTH}`, 'sales')
+    expect((await screen.findAllByText(/Money reports is for/)).length).toBeGreaterThan(0)
+    const targets = db.calls.map(c => c.target)
+    for (const t of ['expenses', 'expense_groups', 'expense_categories', 'v_month_cash_flow']) expect(targets, t).not.toContain(t)
   })
 })

@@ -47,7 +47,7 @@ test.describe('in vs out (owner request 2026-10-20)', () => {
     await page.keyboard.type(name)
     await page.getByRole('option', { name: new RegExp(`Create “${name}”.*paid in cash`) }).click() // tap 2
     await expect(page.getByRole('combobox', { name: 'Category, expense 1' })).toHaveValue(name)
-    await expect(page.getByRole('button', { name: /^Paid via, expense 1: Cash/ })).toBeVisible()
+    await expect(page.getByRole('radiogroup', { name: 'Paid via, expense 1' }).getByRole('radio', { name: 'Cash' })).toBeChecked()
     await page.getByRole('button', { name: /^Save 1 expense/ }).click() // tap 3
     await expect(page.getByRole('dialog')).toBeHidden()
 

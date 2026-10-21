@@ -8,5 +8,5 @@ related: in-vs-out
 ---
 1. Tap [Money], then [Reports] at the top right. Or tap [Reports for <month>] on Month end.
 2. Use the arrows to change the month.
-3. Open [In vs out], [Profit and loss], [Expenses by category], [Overdue by age] or another report.
+3. Open [In vs out], [Profit and loss], [Expenses], [Overdue by age] or another report.
 4. Tap [Export CSV] for the exact figures. The screen shows whole rupees.

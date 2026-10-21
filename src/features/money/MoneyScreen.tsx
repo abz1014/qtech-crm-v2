@@ -7,7 +7,9 @@ import { ExpensesPage } from '@/features/money/expenses/ExpensesPage'
 import { GstRegisterPage } from '@/features/money/invoices/GstRegisterPage'
 import { ReceivablesPage } from '@/features/money/payments/ReceivablesPage'
 import { ChecklistPage } from '@/features/money/monthEnd/ChecklistPage'
-import { AgingPage, CategoriesPage, GstFbrPage, OwePage, PnlPage, TeamPage } from '@/features/money/monthEnd/ReportPages'
+import { AgingPage, GstFbrPage, OwePage, PnlPage, TeamPage } from '@/features/money/monthEnd/ReportPages'
+import { defaultMonthEndMonth, isMonthKey } from '@/features/money/monthEnd/model'
+import { businessToday } from '@/lib/dates'
 import { MONTH_REPORT_KEYS } from '@/features/money/monthEnd/reportList'
 import { ExceptionsPage } from '@/features/money/exceptions/ExceptionsPage'
 import { MarginsPage } from '@/features/money/margins/MarginsPage'
@@ -55,6 +57,17 @@ function OldReportAddress({ report }: { report: string }) {
   return <Navigate to={{ pathname: `/money/reports/${report}`, search }} replace />
 }
 
+/**
+ * /money/reports/categories?month=2026-09 (the old "Expenses by category", replaced by the Expenses report on 2026-10-22) opens
+ * /money/reports/expenses?by=month&period=2026-09; with no month, the month Month end shows (the one that just ended).
+ */
+function OldCategoriesAddress() {
+  const { search } = useLocation()
+  const asked = new URLSearchParams(search).get('month')
+  const month = isMonthKey(asked) ? asked : defaultMonthEndMonth(businessToday())
+  return <Navigate to={{ pathname: '/money/reports/expenses', search: `?by=month&period=${month}` }} replace />
+}
+
 function ReportRoute({ isAdmin }: { isAdmin: boolean }) {
   const { report } = useParams()
   if (!isAdmin) return <NoAccessPage area="Money reports" />
@@ -62,7 +75,7 @@ function ReportRoute({ isAdmin }: { isAdmin: boolean }) {
     case 'pnl':
       return <PnlPage />
     case 'categories':
-      return <CategoriesPage />
+      return <OldCategoriesAddress />
     case 'aging':
       return <AgingPage />
     case 'owe':

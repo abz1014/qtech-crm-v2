@@ -1,6 +1,6 @@
 import { COLS, toRow, type CompanyProfile, type ProfileValues } from '@/features/settings/companyProfile'
 import { WEAK_NEW, WRONG_CURRENT } from '@/features/settings/passwordModel'
-import type { Category, CategoryGroup, PaidVia } from '@/features/settings/categoriesModel'
+import type { Category, CategoryGroup, ExpenseGroup, PaidVia } from '@/features/settings/categoriesModel'
 import type { ProgressRow, TargetRow } from '@/features/settings/targetsModel'
 import { PlainError } from '@/lib/pgErrors'
 import { requireSupabase, unwrap } from '@/lib/supabase'
@@ -313,6 +313,12 @@ export async function mergeCategories(from: string, into: string): Promise<numbe
 }
 
 // ---------------------------------------------------------------- expense groups (0082, admin only)
+
+/** The expense groups in their saved order (the same read as the expense screens, under the same query key). */
+export async function listGroups(): Promise<ExpenseGroup[]> {
+  const rows = unwrap(await requireSupabase().from('expense_groups').select('id, name, kind, sort').order('sort').order('name')) ?? []
+  return rows.map(r => ({ id: r.id, name: r.name, kind: r.kind as CategoryGroup, sort: r.sort }))
+}
 
 export async function createGroup(v: { name: string; kind: CategoryGroup; sort: number }): Promise<string> {
   const rows = unwrap(await requireSupabase().from('expense_groups').insert(v).select('id'))

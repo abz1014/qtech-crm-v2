@@ -126,9 +126,10 @@ test.describe('month-end (M10)', () => {
     await addExpense({ description: 'office rent' })
     await addExpense({ category_id: SUPPLIER, amount_pkr: 11800, input_tax_pkr: 1800 })
     await addInvoice(order.id)
-    const reports: { title: string; key: string; file: string; header: string; shows: RegExp }[] = [
+    const reports: { title: string; key: string; file: string; header: string; shows: RegExp; url?: string }[] = [
       { title: 'Profit and loss', key: 'pnl', file: `profit-and-loss-${STMT.key}.csv`, header: 'Section', shows: new RegExp(`Result for ${STMT.name}`) },
-      { title: 'Expenses by category', key: 'categories', file: `expenses-by-category-${STMT.key}.csv`, header: 'Month', shows: /Overheads/ },
+      // the Expenses report (2026-10-22) replaced "Expenses by category"; it opens on the month as a period
+      { title: 'Expenses', key: 'expenses', file: `expenses-${STMT.key}.csv`, header: 'Section', shows: /Where the money went/, url: `/money/reports/expenses\\?by=month&period=${STMT.key}` },
       { title: 'Overdue by age', key: 'aging', file: `overdue-by-age-${STMT.key}.csv`, header: 'As of', shows: /What customers owe, by how late/ },
       { title: 'We owe suppliers', key: 'owe', file: `we-owe-suppliers-${STMT.key}.csv`, header: 'As of', shows: /What we owe suppliers/ },
       { title: 'GST and FBR', key: 'gst', file: `gst-and-fbr-${STMT.key}.csv`, header: 'Invoice month', shows: /GST and FBR, by invoice month/ },
@@ -144,7 +145,7 @@ test.describe('month-end (M10)', () => {
       await expect(page.getByText(r.shows).first()).toBeVisible()
       await expect(page.getByRole('heading', { name: r.title, level: 2 })).toBeVisible()
       expect(await mouse(page), `${r.title}: one tap from Reports`).toBe(1)
-      await expect(page).toHaveURL(new RegExp(`/money/reports/${r.key}\\?month=${STMT.key}`))
+      await expect(page).toHaveURL(new RegExp(r.url ?? `/money/reports/${r.key}\\?month=${STMT.key}`))
       await page.waitForLoadState('networkidle')
       const csv = await exportCsv(page)
       expect(await mouse(page), `${r.title}: the report and its CSV are two taps in all`).toBe(2)

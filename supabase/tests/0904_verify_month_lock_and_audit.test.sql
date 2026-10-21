@@ -154,8 +154,10 @@ select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-0000000
 select lives_ok($q$update public.order_items set unit_price_net = 10 where id = '99040000-0000-4000-8000-000000000012'$q$,
   'sales may still change a selling price on an order paid in a closed month (0065)');
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
-select lives_ok($q$update public.expense_categories set grp = 'non_pnl' where id = 'ca7e0000-0000-4000-8000-000000000011'$q$,
-  'the admin may still regroup a category used in a closed month');
+select throws_ok($q$update public.expense_categories set grp = 'non_pnl' where id = 'ca7e0000-0000-4000-8000-000000000011'$q$,
+  '23514', null, '0082: a category used in a closed month cannot move to another P&L kind (its closed profit would change)');
+select lives_ok($q$update public.expense_categories set name = 'Supplier payments' where id = 'ca7e0000-0000-4000-8000-000000000011'$q$,
+  'the admin may still rename a category used in a closed month');
 reset role;
 select is((select to_jsonb(p) - 'frozen_at' from public.v_month_pnl p where p.month = '2020-03-01') - array['adj_net_in', 'adj_gst_in', 'adj_unresolved_gross', 'adj_order_costs', 'adj_overheads', 'adj_non_pnl_out', 'adjust_result'],
           (select pnl from frozen) - array['adj_net_in', 'adj_gst_in', 'adj_unresolved_gross', 'adj_order_costs', 'adj_overheads', 'adj_non_pnl_out', 'adjust_result'],

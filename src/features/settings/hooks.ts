@@ -136,6 +136,11 @@ export function useAddTargets() {
 
 // ---------------------------------------------------------------- expense categories (M13)
 
+/** The expense groups (0082). Same key as the expense screens' read, so one cache serves both. Admin only (`enabled`). */
+export function useExpenseGroups(enabled: boolean) {
+  return useQuery({ queryKey: qk.money.groups(), queryFn: () => api.listGroups(), enabled, staleTime: 5 * 60_000 })
+}
+
 export function useCategories(enabled: boolean) {
   return useQuery({ queryKey: qk.settings.categories(), queryFn: () => api.listCategories(), enabled })
 }

@@ -53,7 +53,7 @@ describe('mapPgError uses the table', () => {
   it('23514 inactive category no longer gives the wrong advice', () => {
     const m = mapPgError({ code: '23514', message: 'category "Fuel" is inactive; pick an active category' })
     expect(m.kind).toBe('check')
-    expect(m.message).toMatch(/^"Fuel" is switched off\./)
+    expect(m.message).toMatch(/^"Fuel" is archived\./)
   })
 
   it('22023 missing price', () => {

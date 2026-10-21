@@ -56,6 +56,9 @@ create policy expense_groups_delete_admin on public.expense_groups for delete to
   using ((select public.current_user_role()) = 'admin');
 
 -- ================================================================ B. categories: group and budget
+-- The backfill and the default categories are seed data, not a person's edit: the audit log stays empty (as in 0025).
+alter table public.expense_categories disable trigger expense_categories_audit;
+
 alter table public.expense_categories
   add column group_id uuid references public.expense_groups (id) on delete restrict,
   add column monthly_budget_pkr numeric(14,2) check (monthly_budget_pkr > 0);
@@ -161,6 +164,10 @@ revoke all on function public.expense_groups_kind_lock() from public, anon, auth
 create trigger expense_groups_kind_lock before update on public.expense_groups
   for each row execute function public.expense_groups_kind_lock();
 
+-- 0065 L-1: created_by is always the caller.
+create trigger expense_groups_force_created_by before insert or update on public.expense_groups
+  for each row execute function public.force_created_by();
+
 -- Attached after the seed, like expense_categories_audit (0025): the log stays empty until a person edits a group.
 create trigger expense_groups_audit after insert or update or delete on public.expense_groups
   for each row execute function public.audit_row_change();
@@ -179,6 +186,8 @@ from (values
 ) as v (id, name, group_id, via, sort)
 join public.expense_groups g on g.id = v.group_id
 where not exists (select 1 from public.expense_categories c where c.id = v.id or lower(btrim(c.name)) = lower(btrim(v.name)));
+
+alter table public.expense_categories enable trigger expense_categories_audit;
 
 -- ================================================================ D. recurring_expenses.paid_via
 alter table public.recurring_expenses
@@ -247,11 +256,11 @@ revoke all on function public.enforce_month_lock() from public, anon, authentica
 
 -- Moves every expense and recurring template of p_from into p_into, then deletes p_from. Returns how many expenses moved.
 -- Admin only (42501). Refused (23514) when the two are the same, when p_into is archived, and when their kinds differ while
--- p_from has an expense in a closed month. SECURITY DEFINER so the month-lock flag can be set; the caller's role is checked.
+-- p_from has an expense in a closed month. SECURITY INVOKER: the caller's own row security applies to every read and write.
 create function public.merge_expense_categories(p_from uuid, p_into uuid)
 returns integer
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 declare

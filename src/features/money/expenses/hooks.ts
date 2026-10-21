@@ -12,9 +12,10 @@ import {
   SUPPLIER_PAYMENT_ID,
   defaultGroupId,
   monthKey,
-  mostUsedCategory,
+  rankCategoryUse,
   shiftMonth,
   type Category,
+  type CategoryUse,
   type ExpenseGroup,
   type PaidVia,
   type RecurringTemplate,
@@ -76,14 +77,17 @@ export function useExpenseMonth(month: string, enabled = true) {
   return useQuery({ queryKey: qk.money.expenses.month(month), queryFn: () => api.listExpenses(month), enabled })
 }
 
+/** Categories by use in the last 30 days, most used first: one read for the default and the picker's Recent section. */
+const recentUseQuery = (day: string) => ({ queryKey: qk.money.expenses.recentUse(day), queryFn: async () => rankCategoryUse(await api.recentCategoryUse()) })
+
 /** The most-used category of the last 30 days, with its count (the burst sheet's first-row default). */
 export function useMostUsedCategory(enabled = true) {
-  const day = businessToday()
-  return useQuery({
-    queryKey: qk.money.expenses.recentUse(day),
-    queryFn: async () => mostUsedCategory(await api.recentCategoryUse()),
-    enabled,
-  })
+  return useQuery({ ...recentUseQuery(businessToday()), enabled, select: (use: CategoryUse[]) => (use[0] ? { id: use[0].id, count: use[0].count } : null) })
+}
+
+/** Categories by use in the last 30 days (the picker's Recent section). */
+export function useCategoryUse(enabled = true) {
+  return useQuery({ ...recentUseQuery(businessToday()), enabled })
 }
 
 export function useLastCategoryForOrder(orderId: string | null | undefined) {

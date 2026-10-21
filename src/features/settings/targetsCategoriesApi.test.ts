@@ -96,3 +96,46 @@ describe('categories api (M13)', () => {
     await expect(api.updateCategory('c1', { name: 'x' })).rejects.toBeInstanceOf(PlainError)
   })
 })
+
+describe('expense groups, budgets and merge (0082)', () => {
+  it('reads the group and the budget of each category', async () => {
+    fake(() => ({
+      data: [
+        { id: 'c1', name: 'Water', grp: 'overhead', group_id: 'g1', monthly_budget_pkr: '3000.00', default_paid_via: 'cash', sort: 20, active: true, expenses: [{ count: 3 }], recurring_expenses: [{ count: 0 }] },
+        { id: 'c2', name: 'Rent', grp: 'overhead', group_id: 'g1', monthly_budget_pkr: null, default_paid_via: 'bank', sort: 10, active: true, expenses: [], recurring_expenses: [] },
+      ],
+    }))
+    const rows = await api.listCategories()
+    expect(rows.map(r => [r.name, r.group_id, r.monthly_budget_pkr])).toEqual([
+      ['Water', 'g1', 3000],
+      ['Rent', 'g1', null],
+    ])
+  })
+
+  it('reads the groups in their saved order', async () => {
+    const f = fake(() => ({ data: [{ id: 'g1', name: 'Office running', kind: 'overhead', sort: 10 }] }))
+    expect(await api.listGroups()).toEqual([{ id: 'g1', name: 'Office running', kind: 'overhead', sort: 10 }])
+    expect(f.calls[0].target).toBe('expense_groups')
+    expect(f.calls[0].ops.filter(([n]) => n === 'order').map(([, a]) => a[0])).toEqual(['sort', 'name'])
+  })
+
+  it('adds up this month per category from the detail view', async () => {
+    const f = fake(() => ({ data: [{ category_id: 'w', gross_paid: '1150.10' }, { category_id: 'w', gross_paid: '0.20' }, { category_id: 'r', gross_paid: 85000 }] }))
+    expect(await api.categoryMonthTotals('2026-10')).toEqual({ w: 1150.3, r: 85000 })
+    expect(f.calls[0].target).toBe('v_month_cash_out_detail')
+    expect(opArgs(f.calls[0], 'eq')).toEqual(['month', '2026-10-01'])
+  })
+
+  it('merges through the one function and returns how many expenses moved', async () => {
+    const f = fake(() => ({ data: 13 }))
+    expect(await api.mergeCategories('from', 'into')).toBe(13)
+    expect(f.calls[0].target).toBe('rpc:merge_expense_categories')
+    expect(opArgs(f.calls[0], 'args')).toEqual([{ p_from: 'from', p_into: 'into' }])
+  })
+
+  it('a group write the database does not apply is an error', async () => {
+    fake(() => ({ data: [] }))
+    await expect(api.updateGroup('g1', { name: 'x' })).rejects.toBeInstanceOf(PlainError)
+    await expect(api.deleteGroup('g1')).rejects.toBeInstanceOf(PlainError)
+  })
+})

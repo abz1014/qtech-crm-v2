@@ -57,12 +57,13 @@ export function MoneyFrame({ active, actions, children }: { active: string | nul
     <div className="grid w-full min-w-0 content-start gap-4 px-4 pb-12 pt-6 md:px-8">
       <div className="grid gap-4">
         {/* The list-page head (spec 5.2): the page's one green action (`actions`) and Reports as the secondary. */}
+        {/* The h1 names the view (grader M1: "Money" on every screen said nothing); the date line is desktop only (M2). */}
         <PageHeader
-          title="Money"
+          title={tabs.find(t => t.key === active)?.label ?? (active === 'reports' ? 'Reports' : 'Money')}
           lede={
             <span className="inline-flex flex-wrap items-center gap-2">
-              <span>{longDay.format(new Date(`${today}T12:00:00+05:00`))}</span>
-              <i aria-hidden="true" className="size-[3px] rounded-round bg-fg-muted" />
+              <span className="hidden md:inline">{longDay.format(new Date(`${today}T12:00:00+05:00`))}</span>
+              <i aria-hidden="true" className="hidden size-[3px] rounded-round bg-fg-muted md:inline-block" />
               <span>All amounts in PKR</span>
             </span>
           }

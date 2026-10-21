@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
-import { Camera, Check, CircleAlert, Landmark, Plus, Trash2, TriangleAlert, Wallet, X, CalendarDays } from 'lucide-react'
+import { Camera, Check, CircleAlert, Landmark, Plus, Repeat, Trash2, TriangleAlert, Wallet, X, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { parseDateText } from '@/lib/dateInput'
@@ -13,20 +13,24 @@ import { useBackToClose } from '@/lib/useBackToClose'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
+import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
+import { Checkbox } from '@/ui/form/Checkbox'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { CategoryPicker, type CreateCategoryResult } from '@/features/money/expenses/CategoryPicker'
 import {
   useCategories,
+  useCategoryUse,
   useGroups,
   useInlineCategoryCreate,
   useInsertExpenses,
   useMostUsedCategory,
   useOrderOptions,
   useRecentDetails,
+  useSaveRecurring,
   useUploadReceipt,
 } from '@/features/money/expenses/hooks'
 import { InputTax } from '@/features/money/expenses/InputTax'
@@ -42,10 +46,13 @@ import {
   isFilled,
   markClosedRows,
   newBurstRow,
+  recentCategories,
+  repeatTemplates,
   showsInputTax,
   type BurstRow,
   type Category,
   type DetailUse,
+  type ExpenseGroup,
   type OrderTagOption,
   type PaidVia,
 } from '@/features/money/expenses/model'
@@ -67,12 +74,18 @@ import {
  * ("Create "Office water"", cash or bank); the Detail cell (was Note) suggests what was typed before ("LEA-1234"); on a phone
  * Enter in the amount goes to the category and the paid-via chip flips Cash and Bank in one tap. "Office water, Rs 500, cash"
  * with a new category: Add expenses, type 500, Enter, type the name, tap Create, tap Save: three taps.
+ *
+ * 0082 (owner: "expense keeping is utmost priority"): the category list is grouped (Recent, then Office running, Vehicles...) and a
+ * new category can be filed under any group; a row can be marked "Every month": Save then also adds a recurring template (named by
+ * the detail, else the category; due on the row's day, 1 to 28; paid as the row) and links this expense to it for its month, so
+ * it is not due again. Paid via on a phone is a visible Cash | Bank switch (44 px); the Save button carries the total.
  */
 const NO_DETAILS: readonly DetailUse[] = []
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif']
-const GRID = 'grid grid-cols-[28px_128px_minmax(0,1.25fr)_148px_164px_minmax(0,1.4fr)_132px_112px_32px] items-start gap-2 px-6'
+const GRID = 'grid grid-cols-[28px_112px_minmax(0,1.25fr)_152px_104px_minmax(0,1.3fr)_124px_104px_100px_36px] items-start gap-2 px-6'
 
 const NO_ORDERS: readonly OrderTagOption[] = []
+const NO_GROUPS: readonly ExpenseGroup[] = []
 const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 })
 
 interface BurstSheetProps {
@@ -102,7 +115,11 @@ function BurstContent({ onClose }: { onClose: () => void }) {
   const orders: readonly OrderTagOption[] = orderQ.data ?? NO_ORDERS
   const uploadReceipt = useUploadReceipt()
   const groupsQ = useGroups()
+  const groups = groupsQ.data ?? NO_GROUPS
   const createCategory = useInlineCategoryCreate(categories, groupsQ.data)
+  const useQ = useCategoryUse()
+  const recent = useMemo(() => recentCategories(useQ.data ?? [], categories ?? []), [useQ.data, categories])
+  const saveRecurring = useSaveRecurring()
   const detailQ = useRecentDetails(true)
   const details = detailQ.data ?? NO_DETAILS
 
@@ -216,15 +233,19 @@ function BurstContent({ onClose }: { onClose: () => void }) {
     setBanner(null)
     setRows(clearRowErrors)
     try {
+      // "Every month" rows: their templates go first (client ids: a retry adds each once), then the expenses that point at them.
+      for (const t of repeatTemplates(settled, categories))
+        await saveRecurring.mutateAsync({ newId: t.newId, label: t.label, categoryId: t.categoryId, amount: t.amount, dayOfMonth: t.dayOfMonth, active: true, startMonth: t.startMonth, notes: null, paidVia: t.paidVia })
       const inserts = burstInserts(settled, categories)
       await insert.mutateAsync(inserts)
       // Photos go after the rows are in. A photo that fails never undoes an expense.
       const withPhoto = settled.filter(r => r.photo && !r.photo.error && inserts.some(i => i.id === r.id))
       const failed = (await Promise.all(withPhoto.map(r => uploadReceipt.mutateAsync({ expenseId: r.id, file: (r.photo as { file: File }).file }).then(() => false, () => true)))).filter(Boolean).length
       const n = inserts.length
+      const monthly = inserts.filter(i => i.recurring_id).length
       toast.toast({
         title: n === 1 ? 'Added 1 expense' : `Added ${n} expenses`,
-        body: `PKR ${fmt(inserts.reduce((s, i) => s + i.amount_pkr, 0))}${failed ? ` · ${failed} receipt ${failed === 1 ? 'photo' : 'photos'} did not upload` : ''}`,
+        body: `PKR ${fmt(inserts.reduce((s, i) => s + i.amount_pkr, 0))}${monthly ? ` · ${monthly} repeat${monthly === 1 ? 's' : ''} every month` : ''}${failed ? ` · ${failed} receipt ${failed === 1 ? 'photo' : 'photos'} did not upload` : ''}`,
         tone: 'success',
       })
       onClose()
@@ -277,6 +298,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
   }
 
   const label = totals.count === 1 ? 'Save 1 expense' : `Save ${totals.count || ''} expenses`.replace('  ', ' ')
+  /** Phone: the total rides in the Save button ("Save 3 expenses · PKR 54,000"), not in a corner of the header. */
+  const phoneLabel = totals.count > 0 ? `${label} · PKR ${fmt(totals.total)}` : label
 
   return (
     <RadixDialog.Portal>
@@ -309,15 +332,14 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                 <Button variant="quiet" size="touch" icon={X} aria-label="Close" disabled={pending} className="text-fg" />
               </RadixDialog.Close>
               <RadixDialog.Title className="flex-1 text-base font-semibold">Add expenses</RadixDialog.Title>
-              <span id="burst-desc" className="sr-only">One card per expense. One save for all of them, or none.</span>
-              <span className="num text-xs text-fg-muted">PKR {fmt(totals.total)}</span>
+              <span id="burst-desc" className="sr-only">One card per expense. Save adds them all.</span>
             </header>
           ) : (
             <header className="flex items-start gap-4 border-b px-6 pb-4 pt-5">
               <div className="grid flex-1 gap-[2px]">
                 <RadixDialog.Title className="text-lg font-semibold tracking-snug">Add expenses</RadixDialog.Title>
                 <RadixDialog.Description id="burst-desc" className="text-sm text-fg-muted">
-                  Money › Expenses · one row per expense · one save for all of them, or none
+                  One row per expense. Save adds them all.
                 </RadixDialog.Description>
               </div>
               <RadixDialog.Close asChild>
@@ -350,6 +372,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                     count={rows.length}
                     onCreate={createCategory}
                     details={details}
+                    groups={groups}
+                    recent={recent}
                   />
                 ))}
                 <button
@@ -372,6 +396,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                   <span>Detail</span>
                   <span>Order</span>
                   <span>Receipt photo</span>
+                  <span>Repeats</span>
                   <span />
                 </div>
                 {rows.map((r, i) => (
@@ -389,6 +414,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                     onCreate={createCategory}
                     details={details}
                     dateFlushers={dateFlushers}
+                    groups={groups}
+                    recent={recent}
                   />
                 ))}
                 <button
@@ -413,9 +440,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
           {compact ? (
             <footer className="grid gap-2 border-t bg-surface px-4 pb-[max(var(--sp-4),env(safe-area-inset-bottom,0px))] pt-3">
               <Button variant="primary" size="touch" icon={Check} busy={pending} busyLabel="Saving" onClick={() => void save()} className="w-full text-base">
-                {label}
+                <span className="num">{phoneLabel}</span>
               </Button>
-              <p className="text-center text-xs text-fg-muted">One save for all rows. Photos are compressed before upload.</p>
             </footer>
           ) : (
             <footer className="flex flex-wrap items-center gap-4 rounded-b border-t bg-sunken px-6 py-3">
@@ -468,6 +494,9 @@ interface RowProps {
   onCreate: (name: string, paidVia: PaidVia) => Promise<CreateCategoryResult>
   /** Details typed before, for the Detail field's suggestions. */
   details: readonly DetailUse[]
+  /** The expense groups (0082) and the recent categories, for the grouped category list. */
+  groups: readonly ExpenseGroup[]
+  recent: readonly Category[]
 }
 
 /** The suggestions under a Detail field: a native list, so it works the same with a keyboard and on a phone. */
@@ -484,7 +513,7 @@ function DetailOptions({ id, details, categoryId }: { id: string; details: reado
 
 const defaultEdge = 'border-dashed bg-surface text-fg-2'
 
-function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRemove, count, dateFlushers, onCreate, details }: RowProps) {
+function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRemove, count, dateFlushers, onCreate, details, groups, recent }: RowProps) {
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const err = row.error
@@ -510,6 +539,8 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
         onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
         onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
         onCreate={onCreate}
+        groups={groups}
+        recent={recent}
       />
       <CellDate
         index={index}
@@ -533,7 +564,7 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
       <div className="min-w-0">
         <TextField
           aria-label={`Detail, row ${index}`}
-          placeholder="e.g. LEA-1234"
+          placeholder="e.g. LESCO bill, LEA-1234"
           list={`detail-${row.id}`}
           autoComplete="off"
           value={row.note}
@@ -588,12 +619,20 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
           }}
         />
       </div>
+      <div className="flex h-[36px] items-center">
+        <Checkbox
+          label="Monthly"
+          checked={!!row.repeat}
+          onCheckedChange={c => onPatch({ repeat: c === true })}
+          title={`Row ${index} repeats every month`}
+        />
+      </div>
       {onRemove ? (
         <button
           type="button"
           aria-label={`Remove row ${index}`}
           onClick={onRemove}
-          className="grid h-[36px] w-8 place-items-center rounded text-fg-muted hover:bg-sunken hover:text-fg"
+          className="grid size-[36px] place-items-center rounded text-fg-muted hover:bg-sunken hover:text-fg"
         >
           <Icon icon={Trash2} />
         </button>
@@ -601,7 +640,7 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
         <span />
       )}
       {showsInputTax(row.categoryId) ? (
-        <div className="col-start-3 col-end-9">
+        <div className="col-start-3 col-end-10">
           <InputTax amount={row.amount} value={row.inputTax} onChange={v => onPatch({ inputTax: v })} />
         </div>
       ) : null}
@@ -614,7 +653,7 @@ function ClosedError({ message, others }: { message: string; others: number }) {
   return (
     <div
       role="alert"
-      className="col-start-3 col-end-9 -mt-[2px] mb-2 flex items-start gap-3 rounded border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3"
+      className="col-start-3 col-end-10 -mt-[2px] mb-2 flex items-start gap-3 rounded border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3"
     >
       <Icon icon={CircleAlert} className="mt-[2px] text-tone-danger-fg" />
       <div className="grid gap-0">
@@ -741,12 +780,12 @@ function PhotoThumb({ file, className }: { file: File; className?: string }) {
 
 // ====================================================================== phone card
 
-function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRemove, onCreate, details }: RowProps) {
+function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRemove, onCreate, details, groups, recent }: RowProps) {
   const paid = effectivePaidVia(row, categories)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const categoryRef = useRef<HTMLInputElement | null>(null)
   const hasPhoto = !!row.photo && !row.photo.error
-  const dateText = row.date === today ? `Today, ${formatDay(row.date)}` : row.date ? formatShortDate(row.date, today) : 'Choose a date'
+  const dateText = row.date === today ? 'Today' : row.date ? formatShortDate(row.date, today) : 'Choose a date'
   const err = row.error
   return (
     <div
@@ -820,17 +859,19 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
         onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
         onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
         onCreate={onCreate}
+        groups={groups}
+        recent={recent}
       />
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <label
           className={cn(
-            'relative inline-flex h-8 items-center gap-[6px] rounded-round border px-3 text-xs text-fg-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
+            'relative inline-flex h-touch min-w-0 items-center gap-2 rounded border px-3 text-sm text-fg-2 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
             !row.dateTyped && row.date === today ? 'border-dashed border-line-input' : 'border-line-input',
             err && 'border-tone-danger-fg',
           )}
         >
-          <Icon icon={CalendarDays} size="chip" className="text-fg-muted" />
-          {dateText}
+          <Icon icon={CalendarDays} size="sm" className="text-fg-muted" />
+          <span className="num truncate">{dateText}</span>
           <input
             type="date"
             aria-label={`Date, expense ${index}`}
@@ -839,33 +880,25 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
             className="absolute inset-0 size-full cursor-pointer opacity-0"
           />
         </label>
-        {/* two values only: one tap flips Cash and Bank (was a menu: two taps) */}
-        <button
-          type="button"
-          aria-label={`Paid via, expense ${index}: ${PAID_VIA_LABEL[paid]}. Tap for ${PAID_VIA_LABEL[paid === 'cash' ? 'bank' : 'cash']}`}
-          onClick={() => onPatch({ paidVia: (paid === 'cash' ? 'bank' : 'cash') as PaidVia })}
-          className={cn(
-            'inline-flex h-8 items-center gap-[6px] rounded-round border px-3 text-xs text-fg-2',
-            row.paidVia === null ? 'border-dashed border-line-input' : 'border-line-input',
-          )}
-        >
-          <Icon icon={paid === 'cash' ? Wallet : Landmark} size="chip" className="text-fg-muted" />
-          {PAID_VIA_LABEL[paid]}
-        </button>
-        {onRemove ? (
-          <button type="button" aria-label={`Remove expense ${index}`} onClick={onRemove} className="ml-auto grid size-8 place-items-center rounded text-fg-muted">
-            <Icon icon={Trash2} />
-          </button>
-        ) : null}
+        {/* two values, both visible: one tap picks Cash or Bank (grader: the hidden tap-to-toggle chip is gone) */}
+        <SegmentedControl
+          aria-label={`Paid via, expense ${index}`}
+          value={paid}
+          onValueChange={v => onPatch({ paidVia: v as PaidVia })}
+          options={[
+            { value: 'cash', label: PAID_VIA_LABEL.cash, icon: Wallet },
+            { value: 'bank', label: PAID_VIA_LABEL.bank, icon: Landmark },
+          ]}
+        />
       </div>
       <input
         aria-label={`Detail, expense ${index}`}
-        placeholder="Detail, optional: LEA-1234, office water"
+        placeholder="Detail: LESCO bill, LEA-1234"
         list={`detail-${row.id}`}
         autoComplete="off"
         value={row.note}
         onChange={e => onPatch({ note: e.target.value })}
-        className="w-full rounded border-0 bg-transparent p-0 text-sm text-fg-2 placeholder:text-fg-muted focus-visible:outline-offset-4"
+        className="h-touch w-full rounded border border-line-input bg-surface px-3 text-base text-fg placeholder:text-fg-muted focus-visible:border-fg"
       />
       <DetailOptions id={`detail-${row.id}`} details={details} categoryId={row.categoryId} />
       <OrderTagPicker
@@ -878,6 +911,23 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
         onUnmatched={text => onPatch({ orderText: text ?? undefined })}
       />
       {showsInputTax(row.categoryId) ? <InputTax amount={row.amount} value={row.inputTax} onChange={v => onPatch({ inputTax: v })} /> : null}
+      <div className="flex items-center justify-between gap-2">
+        <Checkbox
+          label={
+            <span className="inline-flex items-center gap-2">
+              <Icon icon={Repeat} size="sm" className="text-fg-muted" />
+              Every month
+            </span>
+          }
+          checked={!!row.repeat}
+          onCheckedChange={c => onPatch({ repeat: c === true })}
+        />
+        {onRemove ? (
+          <button type="button" aria-label={`Remove expense ${index}`} onClick={onRemove} className="grid size-touch place-items-center rounded text-fg-muted hover:bg-sunken">
+            <Icon icon={Trash2} />
+          </button>
+        ) : null}
+      </div>
       {err ? (
         <div role="alert" className="flex gap-2 rounded bg-tone-danger-bg px-3 py-2 text-xs text-fg-2">
           <Icon icon={CircleAlert} size="sm" className="mt-[1px] text-tone-danger-fg" />

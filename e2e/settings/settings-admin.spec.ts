@@ -27,6 +27,8 @@ interface CategoryRow {
   id: string
   name: string
   grp: string
+  group_id: string
+  monthly_budget_pkr: number | null
   default_paid_via: string
   sort: number
   active: boolean
@@ -214,155 +216,217 @@ test.describe('Settings › Targets (M06)', () => {
   })
 })
 
-test.describe('Settings › Expense categories (M13)', () => {
+test.describe('Settings › Expense categories (M13, groups 0082)', () => {
+  const OFFICE = 'ca7e9000-0000-4000-8000-000000000001'
+  const VEHICLES = 'ca7e9000-0000-4000-8000-000000000002'
+  const OWNER = 'ca7e9000-0000-4000-8000-000000000006'
   const name = uniqueName('E2E Category')
   const renamed = `${name} renamed`
   const spare = uniqueName('E2E Spare')
+  const mergeFrom = uniqueName('E2E Tea')
+  const mergeInto = uniqueName('E2E Pantry')
 
-  test('lists the seeded categories in order, with usage counts', async ({ page }) => {
+  const rowOf = (page: Page, n: string) => page.locator(`[data-category="${n}"]`)
+  const menuOf = async (page: Page, n: string) => {
+    await page.getByRole('button', { name: `Actions for ${n}`, exact: true }).click()
+    return page.getByRole('menu', { name: `Actions for ${n}`, exact: true })
+  }
+  const addCategory = async (page: Page, n: string, opts: { group?: string; pay?: 'Cash' | 'Bank'; budget?: string } = {}) => {
+    await page.getByRole('button', { name: 'Add category' }).click()
+    const dlg = page.getByRole('dialog', { name: 'Add category' })
+    await dlg.getByLabel('Name', { exact: true }).fill(n)
+    if (opts.group) await dlg.getByLabel('Group', { exact: true }).selectOption({ label: opts.group })
+    if (opts.pay) await dlg.getByRole('radio', { name: opts.pay }).click()
+    if (opts.budget) await dlg.getByLabel('Monthly budget, PKR').fill(opts.budget)
+    await dlg.getByRole('button', { name: 'Add category' }).click()
+    return dlg
+  }
+
+  test('lists the seeded groups in order, each with its categories, usage and this month', async ({ page }) => {
     await openAs(page, 'admin', '/settings/categories')
     await expect(page.getByRole('heading', { level: 1, name: 'Expense categories' })).toBeVisible()
-    await expect(page.getByText('Categories in use cannot be deleted')).toBeVisible()
-    const list = page.getByRole('list', { name: 'Expense categories' })
-    await expect(list.getByRole('listitem')).toHaveCount((await allCategories()).length)
-    expect((await allCategories()).length).toBeGreaterThanOrEqual(17)
-    await expect(list.getByRole('listitem').first()).toHaveAttribute('data-category', 'Salaries')
-    await expect(list.locator('[data-category="Rent"]').getByTestId('usage')).toHaveText('Not used yet')
+    await expect(page.locator('[data-group]')).toHaveCount(6)
+    expect(await page.locator('[data-group]').evaluateAll(els => els.map(e => e.getAttribute('data-group')))).toEqual([
+      'Office running',
+      'Vehicles',
+      'Staff',
+      'Bank, taxes and other',
+      'Order costs',
+      'Owner and loans',
+    ])
+    const office = page.locator('[data-group="Office running"]')
+    await expect(office.locator('[data-category="Water"]')).toBeVisible()
+    await expect(office.locator('[data-category="Rent"]').getByTestId('usage')).toHaveText('Usually bank · Not used yet')
+    await expect(page.locator('[data-group="Vehicles"] [data-category="Token tax"]')).toBeVisible()
+    await expect(page.locator('[data-group="Order costs"] [data-category="Customs duty"]')).toBeVisible()
+    // every active seeded category is listed once
+    const active = (await allCategories()).filter(c => c.active)
+    await expect(page.locator('[data-group] [data-category]')).toHaveCount(active.length)
     await review(page, 'm13-01-list-1440')
   })
 
-  test('add, rename, change group and paid via, and reorder: each is saved', async ({ page }) => {
+  test('add into a group with a budget, rename, move to a group of another kind, and the usual payment: each is saved', async ({ page }) => {
     await openAs(page, 'admin', '/settings/categories')
-    await page.getByLabel('New category').fill(name)
-    await page.getByLabel('Group', { exact: true }).selectOption('order_cost')
-    await page.getByLabel('Paid via', { exact: true }).selectOption('cash')
-    await page.getByRole('button', { name: 'Add category' }).click()
+    await addCategory(page, name, { group: 'Vehicles', pay: 'Cash', budget: '5000' })
     await expect(page.getByRole('status').filter({ hasText: 'Category added' })).toBeVisible()
-    const row = page.locator(`[data-category="${name}"]`)
-    await expect(row).toBeVisible()
+    await expect(page.locator(`[data-group="Vehicles"] [data-category="${name}"]`)).toBeVisible()
     const added = await categoryByName(name)
-    expect(added).toMatchObject({ grp: 'order_cost', default_paid_via: 'cash', active: true })
-    // a new category goes last
-    const all = await allCategories()
-    expect(all[all.length - 1].id).toBe(added.id)
+    expect(added).toMatchObject({ group_id: VEHICLES, grp: 'overhead', default_paid_via: 'cash', active: true, monthly_budget_pkr: 5000 })
+    await expect(rowOf(page, name).getByTestId('budget')).toHaveText('5,000 left of 5,000')
 
-    // a duplicate name (ignoring case) is refused on the field
-    await page.getByLabel('New category').fill(name.toUpperCase())
-    await page.getByRole('button', { name: 'Add category' }).click()
-    await expect(page.getByText('A category with this name already exists.')).toBeVisible()
-    await page.getByLabel('New category').fill('')
+    // a duplicate name (ignoring case) is refused on the field, nothing saved
+    const dup = await addCategory(page, name.toUpperCase())
+    await expect(dup.getByText('A category with this name already exists.')).toBeVisible()
+    await dup.getByRole('button', { name: 'Cancel' }).click()
 
     // rename
-    const nameInput = page.getByLabel(`Name of ${name}`)
-    await nameInput.fill(renamed)
-    await nameInput.press('Enter')
+    await (await menuOf(page, name)).getByRole('menuitem', { name: 'Rename' }).click()
+    const ren = page.getByRole('dialog', { name: `Rename ${name}` })
+    await ren.getByLabel('Name', { exact: true }).fill(renamed)
+    await ren.getByRole('button', { name: 'Rename' }).click()
     await expect.poll(async () => (await categoryByName(renamed))?.id).toBe(added.id)
 
-    // group and paid via
-    await page.getByLabel(`Group of ${renamed}`).selectOption('non_pnl')
+    // move to Owner and loans: the dialog says Profit and loss changes; the kind follows the group
+    await (await menuOf(page, renamed)).getByRole('menuitem', { name: 'Move to group…' }).click()
+    const mv = page.getByRole('dialog', { name: `Move ${renamed}` })
+    await mv.getByLabel('Group', { exact: true }).selectOption(OWNER)
+    await expect(mv.getByText('This changes Profit and loss')).toBeVisible()
+    await review(page, 'm13-02-move-other-kind-1440')
+    await mv.getByRole('button', { name: 'Move', exact: true }).click()
     await expect.poll(async () => (await categoryByName(renamed)).grp).toBe('non_pnl')
-    await page.getByLabel(`Default paid via for ${renamed}`).selectOption('bank')
-    await expect.poll(async () => (await categoryByName(renamed)).default_paid_via).toBe('bank')
+    expect((await categoryByName(renamed)).group_id).toBe(OWNER)
+    await expect(page.locator(`[data-group="Owner and loans"] [data-category="${renamed}"]`)).toBeVisible()
 
-    // reorder: up moves it above the one before it, and the order is the saved order
-    const before = (await allCategories()).map(c => c.id)
-    await page.getByRole('button', { name: `Move ${renamed} up` }).click()
-    await expect
-      .poll(async () => (await allCategories()).map(c => c.id))
-      .toEqual([...before.slice(0, -2), before[before.length - 1], before[before.length - 2]])
-    const at = (await allCategories()).findIndex(c => c.id === added.id)
-    expect(at).toBe(before.length - 2)
-    await expect(page.getByRole('list', { name: 'Expense categories' }).getByRole('listitem').nth(at)).toHaveAttribute('data-category', renamed)
-    // and it survives a reload
-    await page.reload()
-    await expect(page.getByRole('list', { name: 'Expense categories' }).getByRole('listitem').nth(at)).toHaveAttribute('data-category', renamed)
-    await review(page, 'm13-02-after-edits-1440')
+    // usual payment: one choice
+    await (await menuOf(page, renamed)).getByRole('menuitemradio', { name: 'Usually paid by bank' }).click()
+    await expect.poll(async () => (await categoryByName(renamed)).default_paid_via).toBe('bank')
+    await review(page, 'm13-03-after-edits-1440')
   })
 
-  test('a category in use cannot be deleted: the page says so and offers Deactivate, which hides it from new expenses', async ({ page }) => {
+  test('a category in use is never deleted: Archive hides it from new expenses (Undo, Bring back), the old expense keeps it', async ({ page }) => {
     const cat = await categoryByName(renamed)
     const expense = await must(rest<{ id: string }[]>('admin', 'expenses', { method: 'POST', body: { amount_pkr: 1500, category_id: cat.id } }))
     expect(expense).toHaveLength(1)
 
     await openAs(page, 'admin', '/settings/categories')
-    const row = page.locator(`[data-category="${renamed}"]`)
-    await expect(row.getByTestId('usage')).toHaveText('1 use')
-    await row.getByRole('button', { name: `Delete ${renamed}` }).click()
-    const panel = row.getByRole('group', { name: `Delete ${renamed}` })
-    await expect(panel).toContainText('so it cannot be deleted')
-    await expect(panel).toContainText('Deactivate it instead')
-    await expect(panel.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0)
-    await review(page, 'm13-03-in-use-delete-advice-1440')
-
+    await expect(rowOf(page, renamed).getByTestId('usage')).toHaveText('Usually bank · 1 use')
+    const menu = await menuOf(page, renamed)
+    await expect(menu.getByRole('menuitem', { name: 'Delete' })).toHaveCount(0)
+    await expect(menu.getByRole('menuitem', { name: 'Archive' })).toBeVisible()
     // the database agrees: the foreign key refuses
     const del = await rest('admin', `expense_categories?id=eq.${cat.id}`, { method: 'DELETE' })
     expect(del.status).toBe(409)
 
-    // ---- Deactivate from the advice
-    await panel.getByRole('button', { name: 'Deactivate', exact: true }).click()
-    await expect(row.getByText(/hidden from new expenses/)).toBeVisible()
-    await expect(row.getByRole('checkbox', { name: `${renamed} is active` })).not.toBeChecked()
-    await review(page, 'm13-04-deactivated-1440')
-
-    // ---- through the data layer: what new expenses choose from (active = true) no longer includes it
-    const offered = await must(rest<CategoryRow[]>('admin', 'expense_categories?active=eq.true&select=id,name&order=sort.asc,name.asc'))
-    expect(offered.map(c => c.id)).not.toContain(cat.id)
-    expect(offered.length).toBe((await allCategories()).length - 1)
-    // ...and a new expense that names it is refused by the database, while the old expense keeps it
-    const refused = await rest<{ code?: string; message?: string }>('admin', 'expenses', { method: 'POST', body: { amount_pkr: 10, category_id: cat.id } })
+    await menu.getByRole('menuitem', { name: 'Archive' }).click()
+    await expect.poll(async () => (await categoryByName(renamed)).active).toBe(false)
+    await expect(page.getByText(/Archived \(\d+\)/)).toBeVisible()
+    // ...a new expense that names it is refused by the database, while the old expense keeps it
+    const refused = await rest<{ code?: string }>('admin', 'expenses', { method: 'POST', body: { amount_pkr: 10, category_id: cat.id } })
     expect(refused.status).toBe(400)
     expect(refused.body.code).toBe('23514')
     const kept = await must(rest<{ category_id: string }[]>('admin', `expenses?id=eq.${expense[0].id}&select=category_id`))
     expect(kept[0].category_id).toBe(cat.id)
-
-    // ---- activate again: offered again
-    await row.getByRole('checkbox', { name: `${renamed} is active` }).click()
+    // Undo brings it straight back
+    await page.getByRole('button', { name: /Undo/ }).click()
     await expect.poll(async () => (await categoryByName(renamed)).active).toBe(true)
+
+    // archive again, then Bring back from the archived list
+    await (await menuOf(page, renamed)).getByRole('menuitem', { name: 'Archive' }).click()
+    await expect.poll(async () => (await categoryByName(renamed)).active).toBe(false)
+    await page.reload()
+    await page.getByText(/Archived \(\d+\)/).click()
+    await review(page, 'm13-04-archived-1440')
+    await (await menuOf(page, renamed)).getByRole('menuitem', { name: 'Bring back' }).click()
+    await expect.poll(async () => (await categoryByName(renamed)).active).toBe(true)
+  })
+
+  test('merge moves every expense of one category into another and removes the first', async ({ page }) => {
+    await openAs(page, 'admin', '/settings/categories')
+    await addCategory(page, mergeFrom, { group: 'Office running', pay: 'Cash' })
+    await expect(rowOf(page, mergeFrom)).toBeVisible()
+    await addCategory(page, mergeInto, { group: 'Office running', pay: 'Cash' })
+    await expect(rowOf(page, mergeInto)).toBeVisible()
+    const from = await categoryByName(mergeFrom)
+    const into = await categoryByName(mergeInto)
+    expect(from.group_id).toBe(OFFICE)
+    const made = await must(
+      rest<{ id: string }[]>('admin', 'expenses', {
+        method: 'POST',
+        body: [
+          { amount_pkr: 250, category_id: from.id, paid_via: 'cash', description: 'Tea' },
+          { amount_pkr: 300, category_id: from.id, paid_via: 'cash', description: 'Milk' },
+        ],
+      }),
+    )
+    await page.reload()
+    await (await menuOf(page, mergeFrom)).getByRole('menuitem', { name: 'Merge into…' }).click()
+    const dlg = page.getByRole('dialog', { name: `Merge ${mergeFrom}` })
+    await dlg.getByLabel('Merge into').selectOption(into.id)
+    await expect(dlg.getByTestId('merge-summary')).toHaveText(`Moves 2 expenses and templates from "${mergeFrom}" into "${mergeInto}". "${mergeFrom}" is removed.`)
+    await review(page, 'm13-05-merge-1440')
+    await dlg.getByRole('button', { name: 'Merge', exact: true }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Categories merged' })).toBeVisible()
+    await expect(rowOf(page, mergeFrom)).toHaveCount(0)
+    expect(await categoryByName(mergeFrom)).toBeUndefined()
+    const moved = await must(rest<{ category_id: string }[]>('admin', `expenses?id=in.(${made.map(m => m.id).join(',')})&select=category_id`))
+    expect(moved.map(m => m.category_id)).toEqual([into.id, into.id])
+    await expect(rowOf(page, mergeInto).getByTestId('usage')).toHaveText('Usually cash · 2 uses')
   })
 
   test('a category nothing uses can be deleted after a question', async ({ page }) => {
     await openAs(page, 'admin', '/settings/categories')
-    await page.getByLabel('New category').fill(spare)
-    await page.getByRole('button', { name: 'Add category' }).click()
-    const row = page.locator(`[data-category="${spare}"]`)
-    await expect(row.getByTestId('usage')).toHaveText('Not used yet')
-    await row.getByRole('button', { name: `Delete ${spare}` }).click()
-    await expect(row.getByRole('group', { name: `Delete ${spare}` })).toContainText('Nothing uses it')
-    await row.getByRole('button', { name: 'Delete', exact: true }).last().click()
-    await expect(row).toHaveCount(0)
+    await addCategory(page, spare)
+    await expect(rowOf(page, spare).getByTestId('usage')).toContainText('Not used yet')
+    await (await menuOf(page, spare)).getByRole('menuitem', { name: 'Delete' }).click()
+    const dlg = page.getByRole('dialog', { name: `Delete ${spare}?` })
+    await expect(dlg).toContainText('Nothing uses it')
+    await dlg.getByRole('button', { name: 'Delete category' }).click()
+    await expect(rowOf(page, spare)).toHaveCount(0)
     expect(await categoryByName(spare)).toBeUndefined()
   })
 
-  test('sales and engineer cannot read or change categories', async ({ browser }) => {
+  test('sales and engineer cannot read or change categories or groups', async ({ browser }) => {
     for (const role of ['sales', 'engineer'] as const) {
       const page = await asRole(browser, role, '/settings/categories')
       await expect(page.getByRole('heading', { name: 'Expense categories is for admins' })).toBeVisible()
       await page.context().close()
       expect(await must(rest<unknown[]>(role, 'expense_categories?select=id'))).toEqual([])
+      expect(await must(rest<unknown[]>(role, 'expense_groups?select=id'))).toEqual([])
       const patch = await rest(role, 'expense_categories?name=eq.Rent', { method: 'PATCH', body: { active: false } })
       expect(patch.status === 200 ? patch.body : []).toEqual([])
       expect((await categoryByName('Rent')).active).toBe(true)
+      const merge = await rest(role, 'rpc/merge_expense_categories', { method: 'POST', body: { p_from: (await categoryByName('Water')).id, p_into: (await categoryByName('Rent')).id } })
+      expect(merge.status).toBeGreaterThanOrEqual(400)
+      expect(await categoryByName('Water')).toBeDefined()
     }
     await login('admin')
   })
 
-  test('axe is clean at 1440 and at 375, with no sideways scroll on a phone', async ({ page }) => {
+  test('axe is clean at 1440 and at 375 (menu, dialog, sheet), with 44 px row actions and no sideways scroll on a phone', async ({ page }) => {
     await openAs(page, 'admin', '/settings/categories')
-    await expect(page.getByRole('list', { name: 'Expense categories' })).toBeVisible()
-    await page.locator(`[data-category="${renamed}"]`).getByRole('button', { name: `Delete ${renamed}` }).click()
-    expect(await axeViolations(page), 'axe at 1440, delete advice open').toEqual([])
-    await page.getByRole('button', { name: 'Close', exact: true }).click()
+    await expect(page.locator('[data-group]').first()).toBeVisible()
     expect(await axeViolations(page), 'axe at 1440').toEqual([])
+    await menuOf(page, 'Water')
+    expect(await axeViolations(page), 'axe at 1440, row menu open').toEqual([])
+    await page.getByRole('menuitem', { name: 'Merge into…' }).click()
+    await expect(page.getByRole('dialog', { name: 'Merge Water' })).toBeVisible()
+    expect(await axeViolations(page), 'axe at 1440, merge dialog').toEqual([])
+    await page.getByRole('button', { name: 'Cancel' }).click()
 
     await page.setViewportSize({ width: 375, height: 812 })
     await page.goto('/settings/categories')
     await page.locator('#main').waitFor()
-    await expect(page.getByRole('list', { name: 'Expense categories' })).toBeVisible()
+    await expect(page.locator('[data-group]').first()).toBeVisible()
     expect(await noHorizontalScroll(page)).toBe(true)
-    await review(page, 'm13-05-list-375')
+    await review(page, 'm13-06-list-375')
     expect(await axeViolations(page), 'axe at 375').toEqual([])
-    const up = await page.getByRole('button', { name: `Move ${renamed} up` }).boundingBox()
-    expect(up?.height ?? 0).toBeGreaterThanOrEqual(44)
+    const more = page.getByRole('button', { name: 'Actions for Water', exact: true })
+    const box = await more.boundingBox()
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
+    await more.click()
+    await expect(page.getByRole('dialog', { name: 'Water' })).toBeVisible()
+    await review(page, 'm13-07-row-sheet-375')
+    expect(await axeViolations(page), 'axe at 375, row sheet').toEqual([])
   })
 })
 

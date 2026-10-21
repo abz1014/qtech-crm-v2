@@ -1,11 +1,10 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Lock, Receipt, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
-import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusText } from '@/ui/StatusText'
 import { SumBar } from '@/ui/SumBar'
 import { Tag } from '@/ui/Tag'
@@ -31,20 +30,16 @@ import { csvFile, downloadReport, payHref } from '@/features/money/monthEnd/repo
 import {
   useAgingReport,
   useAsOf,
-  useCategoryReport,
   useGstReport,
   useOweReport,
   usePnlReport,
   useTeamReport,
 } from '@/features/money/monthEnd/reportHooks'
-import { useCategoryNotes } from '@/features/money/monthEnd/hooks'
 import {
   AGING_BUCKETS,
   BUCKET_LABEL,
   BUCKET_TITLE,
   agingCsv,
-  barShare,
-  categoriesCsv,
   gstCsv,
   isEmptyMonth,
   monthName,
@@ -53,11 +48,9 @@ import {
   pnlCsv,
   teamCsv,
   type AgingRow,
-  type CategoryLine,
   type GstMonthRow,
   type PayableRow,
   type TeamRow,
-  type ViaFilter,
 } from '@/features/money/monthEnd/model'
 
 /*
@@ -343,140 +336,6 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
           </Panel>
         </div>
       </div>
-    </>
-  )
-}
-
-// ------------------------------------------------------------------------------------------------ expenses by category
-
-const VIA_LABEL: Record<ViaFilter, string> = { all: 'All paid via', bank: 'Bank', cash: 'Cash' }
-
-export function CategoriesPage() {
-  return (
-    <ReportPage report="categories">
-      {ctx => <CategoriesBody ctx={ctx} />}
-    </ReportPage>
-  )
-}
-
-function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
-  const q = useCategoryReport(ctx.month)
-  const notes = useCategoryNotes(ctx.month)
-  const [via, setVia] = useState<ViaFilter>('all')
-  const v = q.view
-  const lines = useMemo(() => (v ? v.groups.flatMap(g => g.lines).filter(l => via === 'all' || l.paidVia === via) : []), [v, via])
-  const columns = useMemo<Column<CategoryLine>[]>(
-    () => [
-      {
-        id: 'category',
-        header: 'Category',
-        value: l => l.category,
-        cell: l => (
-          <span className="grid gap-px">
-            <span className="font-medium">{l.category}</span>
-            {notes.data?.[l.categoryId] ? <span className="min-w-0 text-xs font-regular text-fg-muted [overflow-wrap:anywhere]">{notes.data[l.categoryId]}</span> : null}
-          </span>
-        ),
-      },
-      { id: 'count', header: 'Count', kind: 'num', value: l => l.count, total: true },
-      {
-        id: 'via',
-        header: 'Paid via',
-        value: l => l.paidVia,
-        cell: l => <Tag>{VIA_LABEL[l.paidVia]}</Tag>,
-      },
-      { id: 'gross', header: 'Gross paid', kind: 'money', value: l => l.gross, ...whole<CategoryLine>(l => l.gross) },
-      { id: 'tax', header: 'Input tax', kind: 'money', value: l => l.inputTax, ...whole<CategoryLine>(l => l.inputTax), cell: l => (toPaisa(l.inputTax) > 0n ? <Money value={l.inputTax} prefix={false} paisa="never" /> : <span className="text-fg-muted">{'—'}</span>) },
-      {
-        id: 'net',
-        header: 'Net cost',
-        kind: 'money',
-        value: l => l.net,
-        ...whole<CategoryLine>(l => l.net),
-        cell: l => {
-          const grp = v?.groups.find(g => g.grp === l.grp)?.lines ?? []
-          return (
-            <span className="inline-flex items-center justify-end gap-3">
-              <span aria-hidden="true" className="hidden h-1 w-[72px] overflow-hidden rounded-round bg-selected md:block">
-                <i className="block h-full rounded-round bg-fg-2" style={{ width: `${barShare(l.net, grp) * 100}%` }} />
-              </span>
-              <Money value={l.net} prefix={false} paisa="never" />
-            </span>
-          )
-        },
-      },
-    ],
-    [v, notes.data],
-  )
-  if (q.isError) return <ReportError title="The expenses by category did not load" onRetry={q.refetch} />
-  if (q.isPending || !v) return <ReportLoading label="Loading the expenses by category" />
-  const over = v.groups.find(g => g.grp === 'overhead')!.total
-  const ord = v.groups.find(g => g.grp === 'order_cost')!.total
-  const non = v.groups.find(g => g.grp === 'non_pnl')!
-  if (v.all.count === 0) return <Empty ctx={ctx} what="No expense was paid." />
-  return (
-    <>
-      <SumBar
-        label="Expenses by group"
-        items={[
-          { label: 'Overheads', amount: over.net, sub: <><Num>{over.count}</Num> {over.count === 1 ? 'expense' : 'expenses'}, in the P&amp;L</> },
-          {
-            label: 'Order costs',
-            amount: ord.net,
-            sub: (
-              <>
-                <Num>{ord.count}</Num> {ord.count === 1 ? 'expense' : 'expenses'}
-                {toPaisa(ord.inputTax) > 0n ? <>, net of <Num>{rupees(ord.inputTax)}</Num> input tax</> : null}
-              </>
-            ),
-          },
-          {
-            label: 'Not in P&L',
-            amount: non.total.net,
-            sub: (
-              <>
-                <Num>{non.total.count}</Num> {non.total.count === 1 ? 'expense' : 'expenses'}
-                {non.lines.length ? `: ${non.lines.map(l => l.category.toLowerCase().replace('owner ', '').replace(' repayment', '')).join(', ')}` : ''}
-              </>
-            ),
-          },
-          {
-            label: 'Paid out',
-            amount: v.all.gross,
-            sub: (
-              <>
-                <Num>{v.all.count}</Num> {v.all.count === 1 ? 'expense' : 'expenses'}, <Num>{v.via.cashCount}</Num> cash and <Num>{v.via.bankCount}</Num> bank
-              </>
-            ),
-          },
-        ]}
-      />
-      <DataTable
-        label="Expenses by category"
-        columns={columns}
-        rows={lines}
-        getRowId={l => l.categoryId}
-        group={l => ({ key: l.grp, label: v.groups.find(g => g.grp === l.grp)?.title ?? l.grp })}
-        groupStyle="big"
-        footerLabel="All expenses"
-        noun="categories"
-        twoLine
-        toolbar={
-          <div className="flex flex-wrap items-center gap-3">
-            <h3 className="text-base font-semibold">Expenses by category</h3>
-            <ClockTag>By payment date</ClockTag>
-            <span className="flex-1" />
-            <SegmentedControl
-              aria-label="Paid via"
-              value={via}
-              onValueChange={x => setVia(x as ViaFilter)}
-              options={(['all', 'bank', 'cash'] as const).map(k => ({ value: k, label: VIA_LABEL[k] }))}
-            />
-            <ExportCsvButton onClick={() => downloadReport(categoriesCsv(v, ctx.month, via), csvFile('expenses-by-category', ctx.month))} />
-          </div>
-        }
-        empty={<EmptyState title="No expenses paid this way">Choose another way of paying to see the rest.</EmptyState>}
-      />
     </>
   )
 }

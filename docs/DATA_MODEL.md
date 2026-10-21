@@ -21,7 +21,7 @@ Evidence I relied on beyond the brief:
 
 ---
 
-## 1. Entity list (30 tables: 24 after Revision 1, plus 4 added by Amendment A2, plus 2 added by Amendment A6)
+## 1. Entity list (30 tables: 24 after Revision 1, plus 4 added by Amendment A2, plus 2 added by Amendment A6; Amendment A9 adds `expense_groups`)
 
 > **Amendment A6 (monthly bookkeeping) supersedes this document wherever it conflicts, and adds `expense_categories` and `closed_months` (rows 29 and 30 below). Read "Amendment A6" at the end before building anything that touches money. Notes marked "superseded by A6" in the sections below point to it.**
 
@@ -1807,3 +1807,41 @@ Signature unchanged. New rules: when `quote_line_id` is left out the rank-1 line
 ### `split_order_item(p_item_id, p_qty, p_supplier_order_id default null, p_supplier_id default null, p_currency default null, p_supplier_unit_price default null) returns uuid` (0050)
 
 SECURITY INVOKER. Moves `p_qty` of an order line to an existing leg of the same order (`p_supplier_order_id`), or to the leg for `p_supplier_id` and `p_currency` (the order's existing leg for that supplier and currency if there is one, else a new leg linked to the supplier's inquiry on the order's RFQ when it has one). Exactly one of the two is given. Needs `0 < p_qty < qty`; a service line is refused; the new line copies description, brand, family, unit, selling price, GST rate and `rfq_item_id`, and takes `p_supplier_unit_price` (NULL when not given: the source line's price belongs to another supplier); the source line keeps the remainder. Returns the new order line's id. Allowed after a PO was issued for the source leg (O07 shows "lines changed since PO"). Section 10: X for all staff.
+
+## Amendment A9: the expense book (migration 0082, owner request 2026-10-22)
+
+The owner: "expense category, expense keeping and expense report are utmost priority". One new table (`expense_groups`), two new columns on `expense_categories`, one on `recurring_expenses`, one function. Nothing changes a figure: the P&L kind of every expense, its amount, date and payment method stay as they were.
+
+### `expense_groups` [std] (new)
+
+| Field | Type | Null | Default | Purpose |
+|---|---|---|---|---|
+| name | text | no | — | 1 to 60 characters; unique ignoring case and outer spaces. "Office running", "Vehicles". |
+| kind | text | no | — | CHECK in ('overhead', 'order_cost', 'non_pnl'): the P&L place of every category in the group. Cannot change while the group holds a category. |
+| sort | smallint | no | 0 | Display order. |
+
+Seeded with fixed ids `ca7e9000-0000-4000-8000-0000000000NN`: 01 Office running, 02 Vehicles, 03 Staff, 04 Bank, taxes and other (overheads), 05 Order costs (order cost), 06 Owner and loans (not in P&L). Admin only, all four operations (section 10). Audited; `created_by` forced (0065 L-1).
+
+### `expense_categories` (changed)
+
+- `group_id uuid NOT NULL` FK `expense_groups` RESTRICT. The 0025 seed is filed by id (Salaries under Staff, Fuel & travel under Vehicles, Bank charges, Taxes & fees and Other under Bank, taxes and other, the other overheads under Office running); any other category by its kind.
+- `monthly_budget_pkr numeric(14,2) NULL`, CHECK > 0. Optional; compared with what was paid (gross). This supersedes "budgets" in the 2026-10-13 cut list, for expense categories only.
+- `grp` stays and is kept equal to the group's kind by a BEFORE trigger (`expense_categories_group`): every view, report and snapshot that reads `grp` is unchanged. An insert that names only `grp` goes to the first group of that kind. A move to a group of another kind is refused (23514) while the category has an expense in a closed month, because `v_month_profit` reads `grp` live.
+- Seven defaults are added only where no category of that name exists: Water, Electricity, Internet and phone (Office running), Vehicle repairs, Token tax (Vehicles), Staff meals (Staff), Customs duty (Order costs); fixed ids ...0018 to ...0024. The backfill and these rows write no audit rows (seed data).
+- "Archive" in the app is `active = false` (hidden from pickers, history kept). A category in use is never deleted (FK RESTRICT); merge instead.
+
+### `recurring_expenses.paid_via` (new)
+
+text NULL, CHECK in ('bank', 'cash'). How the monthly expense is usually paid; NULL follows the category. "Record all" uses it.
+
+### `merge_expense_categories(p_from uuid, p_into uuid) returns integer`
+
+PL/pgSQL, SECURITY INVOKER, fixed `search_path`. Admin only (42501 otherwise). Moves every expense and recurring template of `p_from` into `p_into`, deletes `p_from`, returns the number of expenses moved. Refused (23514) for the same category, an archived target, or two kinds while `p_from` has an expense in a closed month. `enforce_month_lock` (re-created) lets a closed month's expense change its `category_id`, and nothing else, only while the transaction-local setting `qtech.category_merge` is on, which only this function sets (PostgREST runs no SET). Closed figures stay: amounts, dates and kinds do not move; the snapshot keeps the old category's name in its category rows. Section 10: X for admin only.
+
+### Reports
+
+No new view. The Expenses report (Money > Reports > Expenses; `/money/reports/categories` now opens it) reads the period's `expenses` rows and `v_month_cash_flow` (trend). Its total equals `v_month_cash_flow.money_out` and `v_month_pnl.cash_out_total`; its running costs, order costs and "not a cost" equal `v_month_pnl` overheads, order costs and non-P&L out (net of input tax), and with input tax add up to the total; cash plus bank equals the total (pgTAP 0082, money oracle `expenseReport.property.test.ts`).
+
+### Proposal, not built: cash in hand (petty cash)
+
+DATA_MODEL and DECISIONS do not cover petty cash: `paid_via = 'cash'` says how an expense left, not from which box. A minimal design for the owner to approve: one table `cash_topups` (date, amount, note: cash drawn from the bank into the office box) and an opening balance on `company_profile` (`cash_opening_pkr`, `cash_opening_on`). Per month: cash in hand = opening + top-ups to date - cash expenses to date, shown on the Expenses list beside the month total and in the Expenses report ("Cash in hand on 31 October: PKR 12,400"). A top-up is not an expense (money moves between our own boxes), so it stays out of every cost and of In vs out; it is ticked on the bank statement like a bank expense. Later, if wanted: a monthly counted figure and the difference. Not built until the owner says yes.

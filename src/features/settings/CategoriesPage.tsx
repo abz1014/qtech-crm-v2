@@ -1,101 +1,187 @@
-import { useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Archive, ArchiveRestore, ArrowDown, ArrowUp, FolderInput, FolderPlus, Merge, Pencil, Plus, Target, Trash2 } from 'lucide-react'
 import { useSession } from '@/app/session'
 import {
-  categoriesFooter,
-  checkCategoryName,
-  deleteAdvice,
-  GROUP_LABEL,
-  moveCategory,
-  nextSort,
+  KIND_WORDS,
+  kindNote,
   PAID_VIA_LABEL,
-  sortCategories,
+  amountText,
+  budgetState,
+  categoriesFooter,
+  categorySections,
+  moveCategory,
   usageText,
   type Category,
-  type CategoryGroup,
+  type CategorySection,
+  type ExpenseGroup,
   type PaidVia,
 } from '@/features/settings/categoriesModel'
-import { useCategories, useCreateCategory, useDeleteCategory, useReorderCategories, useUpdateCategory } from '@/features/settings/hooks'
+import {
+  AddCategoryDialog,
+  AddGroupDialog,
+  BudgetDialog,
+  DeleteCategoryDialog,
+  DeleteGroupDialog,
+  MergeDialog,
+  MoveDialog,
+  RenameCategoryDialog,
+  RenameGroupDialog,
+} from '@/features/settings/categories/CategoryDialogs'
+import { RowMenu, type RowMenuItem } from '@/features/settings/categories/RowMenu'
+import { useCategories, useCategoryMonthTotals, useExpenseGroups, useReorderCategories, useUpdateCategory } from '@/features/settings/hooks'
 import type { CategoryPatch } from '@/features/settings/api'
+import { businessToday } from '@/lib/dates'
 import { mapPgError } from '@/lib/pgErrors'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
-import { PageHeader } from '@/ui/PageHeader'
 import { Button } from '@/ui/Button'
+import { InfoTip } from '@/ui/InfoTip'
+import { PageHeader } from '@/ui/PageHeader'
 import { Skeleton } from '@/ui/Skeleton'
-import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
-import { Checkbox } from '@/ui/form/Checkbox'
-import { Field } from '@/ui/form/Field'
-import { Select } from '@/ui/form/Select'
-import { TextField } from '@/ui/form/TextField'
 
 /*
- * Settings › Expense categories (M13, admin only). Rename, reorder (up and down), activate or deactivate, change the
- * group and the default paid-via. Expenses point at a category with a RESTRICT foreign key, so a category that is in use
- * can never be deleted: the page says so in words and offers Deactivate, which hides it from new expenses and leaves the
- * old ones alone. The usage count is expenses plus recurring templates.
+ * Settings › Expense categories (M13; groups, budgets, merge and archive 0082; admin only). Two levels, read-only rows:
+ *   group header   name, where it shows in Profit and loss, what it had paid this month, ⋯ (Rename, Delete when empty)
+ *   category row   name, how it is usually paid and how often it is used; this month's spend and the budget left or over; ⋯
+ * Every change goes through the row's ⋯ (a bottom sheet on a phone): Rename, Move to group, Monthly budget, Usually paid
+ * (Cash / Bank), Move up or down, Merge into, Archive (Undo) or Bring back, Delete (only when nothing uses it). A category
+ * in use is never deleted: the foreign key is RESTRICT. Archived categories wait, collapsed, at the foot of the page.
+ * One green button: Add category. The explanations are behind the (i), not printed (grader M5).
  */
-const GROUPS: CategoryGroup[] = ['overhead', 'order_cost', 'non_pnl']
-const GROUP_OPTIONS = GROUPS.map(g => ({ value: g, label: GROUP_LABEL[g] }))
-const PAID_OPTIONS = (['bank', 'cash'] as PaidVia[]).map(p => ({ value: p, label: PAID_VIA_LABEL[p] }))
+type Open =
+  | { kind: 'add'; groupId?: string }
+  | { kind: 'add-group' }
+  | { kind: 'rename' | 'move' | 'budget' | 'merge' | 'delete'; c: Category }
+  | { kind: 'rename-group' | 'delete-group'; g: ExpenseGroup }
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 export function CategoriesPage() {
   const session = useSession()
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
+  const month = businessToday().slice(0, 7)
+  const monthName = MONTHS[Number(month.slice(5, 7)) - 1]
   const q = useCategories(isAdmin)
+  const groupsQ = useExpenseGroups(isAdmin)
+  const totalsQ = useCategoryMonthTotals(month, isAdmin)
   const update = useUpdateCategory()
   const reorder = useReorderCategories()
   const { toast } = useToast()
+  const phone = useMediaQuery('(max-width: 767px)')
+  const [open, setOpen] = useState<Open | null>(null)
   const [announce, setAnnounce] = useState('')
-  const [asking, setAsking] = useState<string | null>(null)
 
-  const rows = useMemo(() => sortCategories(q.data ?? []), [q.data])
-  const fail = (title: string, err: unknown) => toast({ title, body: mapPgError(err, { entity: 'category' }).message, tone: 'danger' })
+  const rows = useMemo(() => q.data ?? [], [q.data])
+  const groups = useMemo(() => groupsQ.data ?? [], [groupsQ.data])
+  const totals = useMemo(() => totalsQ.data ?? {}, [totalsQ.data])
+  const { sections, archived } = useMemo(() => categorySections(rows, groups, totals), [rows, groups, totals])
 
-  const patch = async (c: Category, p: CategoryPatch, done?: string) => {
+  const patch = async (c: Category, p: CategoryPatch, done: string, undo?: CategoryPatch) => {
     try {
       await update.mutateAsync({ id: c.id, patch: p })
-      if (done) toast({ title: done, body: c.name, tone: 'success' })
+      toast({
+        title: done,
+        body: c.name,
+        tone: 'success',
+        ...(undo ? { undo: { onUndo: () => update.mutateAsync({ id: c.id, patch: undo }).then(() => undefined) } } : {}),
+      })
     } catch (err) {
-      fail(`Couldn't change ${c.name}`, err)
+      toast({ title: `Couldn't change ${c.name}`, body: mapPgError(err, { entity: 'category' }).message, tone: 'danger' })
     }
   }
 
-  const move = async (c: Category, dir: -1 | 1) => {
-    const changes = moveCategory(rows, c.id, dir)
+  const move = async (section: CategorySection, c: Category, dir: -1 | 1) => {
+    const changes = moveCategory(section.rows, c.id, dir)
     if (changes.length === 0) return
     try {
       await reorder.mutateAsync(changes)
-      const pos = rows.findIndex(r => r.id === c.id) + dir + 1
-      setAnnounce(`${c.name} moved ${dir < 0 ? 'up' : 'down'} to position ${pos} of ${rows.length}.`)
+      const pos = section.rows.findIndex(r => r.id === c.id) + dir + 1
+      setAnnounce(`${c.name} moved ${dir < 0 ? 'up' : 'down'} to position ${pos} of ${section.rows.length} in ${section.group.name}.`)
     } catch (err) {
-      fail(`Couldn't move ${c.name}`, err)
+      toast({ title: `Couldn't move ${c.name}`, body: mapPgError(err, { entity: 'category' }).message, tone: 'danger' })
     }
   }
 
+  const categoryItems = (c: Category, section: CategorySection | null): RowMenuItem[] => {
+    if (!c.active) {
+      return [
+        { key: 'restore', label: 'Bring back', icon: ArchiveRestore, onSelect: () => void patch(c, { active: true }, 'Category brought back') },
+        { key: 'merge', label: 'Merge into…', icon: Merge, onSelect: () => setOpen({ kind: 'merge', c }) },
+        ...(c.used === 0 ? [{ key: 'delete', label: 'Delete', icon: Trash2, danger: true, separated: true, onSelect: () => setOpen({ kind: 'delete', c }) }] : []),
+      ]
+    }
+    const at = section ? section.rows.findIndex(r => r.id === c.id) : -1
+    const items: RowMenuItem[] = [
+      { key: 'rename', label: 'Rename', icon: Pencil, onSelect: () => setOpen({ kind: 'rename', c }) },
+      { key: 'move', label: 'Move to group…', icon: FolderInput, onSelect: () => setOpen({ kind: 'move', c }) },
+      { key: 'budget', label: c.monthly_budget_pkr ? 'Change monthly budget…' : 'Set monthly budget…', icon: Target, onSelect: () => setOpen({ kind: 'budget', c }) },
+      ...(['cash', 'bank'] as PaidVia[]).map((v, i) => ({
+        key: `pay-${v}`,
+        label: `Usually paid by ${v === 'cash' ? 'cash' : 'bank'}`,
+        checked: c.default_paid_via === v,
+        separated: i === 0,
+        onSelect: () => (c.default_paid_via === v ? undefined : void patch(c, { default_paid_via: v }, `Usually paid by ${v === 'cash' ? 'cash' : 'bank'} now`)),
+      })),
+      ...(section && at > 0 ? [{ key: 'up', label: 'Move up', icon: ArrowUp, separated: true, onSelect: () => void move(section, c, -1) }] : []),
+      ...(section && at >= 0 && at < section.rows.length - 1 ? [{ key: 'down', label: 'Move down', icon: ArrowDown, separated: at === 0, onSelect: () => void move(section, c, 1) }] : []),
+      { key: 'merge', label: 'Merge into…', icon: Merge, separated: true, onSelect: () => setOpen({ kind: 'merge', c }) },
+      { key: 'archive', label: 'Archive', icon: Archive, onSelect: () => void patch(c, { active: false }, 'Category archived', { active: true }) },
+    ]
+    if (c.used === 0) items.push({ key: 'delete', label: 'Delete', icon: Trash2, danger: true, separated: true, onSelect: () => setOpen({ kind: 'delete', c }) })
+    return items
+  }
+
+  const groupItems = (s: CategorySection): RowMenuItem[] => [
+    { key: 'add', label: 'Add a category here', icon: Plus, onSelect: () => setOpen({ kind: 'add', groupId: s.group.id }) },
+    { key: 'rename', label: 'Rename group', icon: Pencil, onSelect: () => setOpen({ kind: 'rename-group', g: s.group }) },
+    ...(s.held === 0 ? [{ key: 'delete', label: 'Delete group', icon: Trash2, danger: true, separated: true, onSelect: () => setOpen({ kind: 'delete-group', g: s.group }) }] : []),
+  ]
+
+  const loading = q.isPending || groupsQ.isPending
+  const failed = q.isError || groupsQ.isError
+
   return (
-    <div className="grid content-start gap-4">
+    <div className="grid content-start gap-6">
       <PageHeader
         title="Expense categories"
-        lede="What an expense can be filed under. The order here is the order expenses offer them in; the group decides where reports place them."
+        lede="Every expense goes under a category, and every category under a group."
+        secondary={
+          <Button icon={FolderPlus} onClick={() => setOpen({ kind: 'add-group' })} disabled={loading || failed}>
+            Add group
+          </Button>
+        }
+        primary={
+          <Button variant="primary" icon={Plus} onClick={() => setOpen({ kind: 'add' })} disabled={loading || failed}>
+            Add category
+          </Button>
+        }
       />
-
-      <Banner tone="info" title="Categories in use cannot be deleted">
-        Past expenses point to them. Deactivate a category instead: it stops showing up for new expenses and the old ones keep it.
-      </Banner>
-
-      <AddCategory rows={rows} />
 
       <p className="sr-only" role="status" aria-live="polite">
         {announce}
       </p>
 
-      {q.isError ? (
-        <Banner tone="danger" title="Could not load the categories" action={<Button size="sm" onClick={() => void q.refetch()}>Try again</Button>}>
-          {q.error instanceof Error ? q.error.message : 'Check your connection, then try again.'}
+      {failed ? (
+        <Banner
+          tone="danger"
+          title="Could not load the categories"
+          action={
+            <Button
+              size="sm"
+              onClick={() => {
+                void q.refetch()
+                void groupsQ.refetch()
+              }}
+            >
+              Try again
+            </Button>
+          }
+        >
+          Check your connection, then try again.
         </Banner>
-      ) : q.isPending ? (
+      ) : loading ? (
         <div role="status" className="grid gap-px overflow-hidden rounded border bg-line" aria-busy="true" aria-label="Loading categories">
           {[0, 1, 2, 3].map(i => (
             <div key={i} className="bg-surface p-4">
@@ -104,217 +190,142 @@ export function CategoriesPage() {
           ))}
         </div>
       ) : (
-        <ul aria-label="Expense categories" className="overflow-hidden rounded border bg-surface">
-          {rows.map((c, i) => (
-            <CategoryRow
-              key={c.id}
-              c={c}
-              all={rows}
-              first={i === 0}
-              last={i === rows.length - 1}
-              busy={reorder.isPending}
-              asking={asking === c.id}
-              onAsk={open => setAsking(open ? c.id : null)}
-              onMove={dir => void move(c, dir)}
-              onPatch={(p, done) => patch(c, p, done)}
-            />
+        <>
+          <div className="-mb-3 flex items-center gap-1 text-sm text-fg-muted">
+            <span>
+              Amounts are what was paid in {monthName}, cash and bank together.
+            </span>
+            <InfoTip label="About categories">
+              <p>A category in use is never deleted: past expenses keep it. Archive it to hide it from new expenses, or merge it into another category to move its expenses there.</p>
+              <p className="mt-2">The group decides where spending shows in Profit and loss: running costs, order costs, or not a cost (owner drawings and loan repayments).</p>
+              <p className="mt-2">A budget is a monthly limit for one category, compared with what was paid that month.</p>
+            </InfoTip>
+          </div>
+          {sections.map(s => (
+            <GroupSection key={s.group.id} s={s} phone={phone} totals={totals} groupItems={groupItems(s)} itemsFor={c => categoryItems(c, s)} onAdd={() => setOpen({ kind: 'add', groupId: s.group.id })} />
           ))}
-        </ul>
+          {archived.length > 0 ? (
+            <details className="group/arch rounded border bg-surface">
+              <summary className="flex min-h-touch cursor-pointer items-center gap-2 px-4 text-base font-medium text-fg-2 [&::-webkit-details-marker]:hidden">
+                <Icon16 />
+                Archived ({archived.length})
+                <span className="text-sm font-normal text-fg-muted">hidden from new expenses</span>
+              </summary>
+              <ul aria-label="Archived categories" className="border-t">
+                {archived.map(c => (
+                  <CategoryRow key={c.id} c={c} spent={totals[c.id] ?? 0} groupName={groups.find(g => g.id === c.group_id)?.name} phone={phone} items={categoryItems(c, null)} />
+                ))}
+              </ul>
+            </details>
+          ) : null}
+          <p className="text-sm text-fg-muted" data-testid="categories-footer">
+            {categoriesFooter(rows)} · {groups.length} {groups.length === 1 ? 'group' : 'groups'}
+          </p>
+        </>
       )}
-      {q.data ? (
-        <p className="text-xs text-fg-muted" data-testid="categories-footer">
-          {categoriesFooter(q.data)}
-        </p>
-      ) : null}
+
+      {open?.kind === 'add' ? <AddCategoryDialog rows={rows} groups={groups} initialGroupId={open.groupId} onClose={() => setOpen(null)} /> : null}
+      {open?.kind === 'add-group' ? <AddGroupDialog groups={groups} onClose={() => setOpen(null)} /> : null}
+      {open?.kind === 'rename' ? <RenameCategoryDialog c={open.c} rows={rows} onClose={() => setOpen(null)} /> : null}
+      {open?.kind === 'move' ? <MoveDialog c={open.c} rows={rows} groups={groups} onClose={() => setOpen(null)} /> : null}
+      {open?.kind === 'budget' ? <BudgetDialog c={open.c} spent={totals[open.c.id] ?? 0} onClose={() => setOpen(null)} /> : null}
+      {open?.kind === 'merge' ? <MergeDialog c={open.c} rows={rows} groups={groups} onClose={() => setOpen(null)} /> : null}
+      {open?.kind === 'delete' ? <DeleteCategoryDialog c={open.c} onClose={() => setOpen(null)} /> : null}
+      {open?.kind === 'rename-group' ? <RenameGroupDialog g={open.g} groups={groups} onClose={() => setOpen(null)} /> : null}
+      {open?.kind === 'delete-group' ? <DeleteGroupDialog g={open.g} onClose={() => setOpen(null)} /> : null}
     </div>
   )
 }
 
-function AddCategory({ rows }: { rows: readonly Category[] }) {
-  const create = useCreateCategory()
-  const { toast } = useToast()
-  const [name, setName] = useState('')
-  const [grp, setGrp] = useState<CategoryGroup>('overhead')
-  const [paid, setPaid] = useState<PaidVia>('bank')
-  const [error, setError] = useState<string | null>(null)
-  const nameRef = useRef<HTMLInputElement>(null)
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const check = checkCategoryName(name, rows)
-    if (!check.ok) return setError(check.message)
-    try {
-      await create.mutateAsync({ name: check.name, grp, default_paid_via: paid, sort: nextSort(rows) })
-      toast({ title: 'Category added', body: check.name, tone: 'success' })
-      setName('')
-      setError(null)
-      nameRef.current?.focus()
-    } catch (err) {
-      const m = mapPgError(err, { entity: 'category' })
-      setError(m.kind === 'unique' ? 'A category with this name already exists.' : m.message)
-    }
-  }
-
+/** The disclosure triangle of the archived list (turns when open). */
+function Icon16() {
   return (
-    <form onSubmit={e => void submit(e)} noValidate aria-label="Add a category" className="grid items-start gap-3 rounded border bg-sunken p-3 md:grid-cols-[minmax(0,1fr)_170px_130px_auto]">
-      <Field label="New category" error={error ?? undefined}>
-        <TextField
-          ref={nameRef}
-          value={name}
-          placeholder="Name"
-          maxLength={60}
-          onChange={e => {
-            setName(e.target.value)
-            setError(null)
-          }}
-        />
-      </Field>
-      <Field label="Group">
-        <Select value={grp} onChange={e => setGrp(e.target.value as CategoryGroup)} options={GROUP_OPTIONS} />
-      </Field>
-      <Field label="Paid via">
-        <Select value={paid} onChange={e => setPaid(e.target.value as PaidVia)} options={PAID_OPTIONS} />
-      </Field>
-      <div className="md:pt-[26px]">
-        <Button type="submit" variant="primary" icon={Plus} busy={create.isPending} busyLabel="Adding" className="max-md:w-full">
-          Add category
-        </Button>
-      </div>
-    </form>
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="size-4 shrink-0 text-fg-muted transition-transform duration-fast group-open/arch:rotate-90">
+      <path d="M6 4l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }
 
-interface RowProps {
-  c: Category
-  all: readonly Category[]
-  first: boolean
-  last: boolean
-  busy: boolean
-  asking: boolean
-  onAsk: (open: boolean) => void
-  onMove: (dir: -1 | 1) => void
-  onPatch: (p: CategoryPatch, done?: string) => Promise<void>
+function GroupSection({
+  s,
+  phone,
+  totals,
+  groupItems,
+  itemsFor,
+  onAdd,
+}: {
+  s: CategorySection
+  phone: boolean
+  totals: Readonly<Record<string, number>>
+  groupItems: RowMenuItem[]
+  itemsFor: (c: Category) => RowMenuItem[]
+  onAdd: () => void
+}) {
+  const headId = `grp-${s.group.id}`
+  return (
+    <section aria-labelledby={headId} data-group={s.group.name} className="overflow-hidden rounded border bg-surface">
+      <header className="flex items-center gap-3 border-b bg-sunken py-2 pl-4 pr-1">
+        <div className="grid min-w-0 flex-1">
+          <h2 id={headId} className="min-w-0 text-lg font-semibold tracking-snug [overflow-wrap:anywhere]">
+            {s.group.name}
+          </h2>
+          {kindNote(s.group) ? <span className="text-sm text-fg-muted">{kindNote(s.group)}</span> : null}
+        </div>
+        <div className="grid justify-items-end text-right">
+          <span className="num text-base font-medium" data-testid="group-total">
+            PKR {amountText(s.monthTotal)}
+          </span>
+          <span className="text-sm text-fg-muted">this month</span>
+        </div>
+        <RowMenu label={`Actions for the group ${s.group.name}`} title={s.group.name} subtitle={KIND_WORDS[s.group.kind]} items={groupItems} phone={phone} />
+      </header>
+      {s.rows.length === 0 ? (
+        <div className="flex min-h-touch items-center gap-3 px-4 py-2 text-base text-fg-muted">
+          <span className="flex-1">{s.held > 0 ? 'Every category here is archived.' : 'No categories yet.'}</span>
+          <Button variant="quiet" icon={Plus} onClick={onAdd}>
+            Add one
+          </Button>
+        </div>
+      ) : (
+        <ul aria-label={`${s.group.name} categories`}>
+          {s.rows.map(c => (
+            <CategoryRow key={c.id} c={c} spent={totals[c.id] ?? 0} phone={phone} items={itemsFor(c)} />
+          ))}
+        </ul>
+      )}
+    </section>
+  )
 }
 
-function CategoryRow({ c, all, first, last, busy, asking, onAsk, onMove, onPatch }: RowProps) {
-  const del = useDeleteCategory()
-  const { toast } = useToast()
-  const [name, setName] = useState(c.name)
-  const [nameError, setNameError] = useState<string | null>(null)
-  const advice = deleteAdvice(c)
-
-  // Follow the saved name when it changes elsewhere, but never while it is being typed.
-  const lastSaved = useRef(c.name)
-  if (lastSaved.current !== c.name) {
-    lastSaved.current = c.name
-    if (name !== c.name) setName(c.name)
-  }
-
-  const saveName = async () => {
-    if (name === c.name) return setNameError(null)
-    const check = checkCategoryName(name, all, c.id)
-    if (!check.ok) return setNameError(check.message)
-    setNameError(null)
-    await onPatch({ name: check.name }, 'Category renamed')
-  }
-
-  const remove = async () => {
-    try {
-      await del.mutateAsync(c.id)
-      onAsk(false)
-      toast({ title: 'Category deleted', body: c.name, tone: 'success' })
-    } catch (err) {
-      // Something started using it since the page loaded: the foreign key refused, so say what to do instead.
-      const m = mapPgError(err, { entity: 'category' })
-      toast({
-        title: `Couldn't delete ${c.name}`,
-        body: m.kind === 'reference-in-use' ? 'It is in use, so it cannot be deleted. Deactivate it instead.' : m.message,
-        tone: 'danger',
-      })
-    }
-  }
-
-  const idBase = `cat-${c.id}`
+function CategoryRow({ c, spent, phone, items, groupName }: { c: Category; spent: number; phone: boolean; items: RowMenuItem[]; groupName?: string }) {
+  const b = budgetState(spent, c.monthly_budget_pkr)
+  const meta = [groupName, `Usually ${PAID_VIA_LABEL[c.default_paid_via].toLowerCase()}`, usageText(c.used)].filter(Boolean).join(' · ')
   return (
-    <li data-category={c.name} className={cn('grid gap-3 border-b px-3 py-3 last:border-b-0', !c.active && 'bg-sunken')}>
-      <div className="grid items-start gap-3 md:grid-cols-[64px_minmax(0,1fr)_150px_110px_120px_auto]">
-        <div className="flex gap-1">
-          <Button icon={ArrowUp} variant="quiet" className="max-md:h-touch max-md:w-touch" aria-label={`Move ${c.name} up`} disabled={first || busy} onClick={() => onMove(-1)} />
-          <Button icon={ArrowDown} variant="quiet" className="max-md:h-touch max-md:w-touch" aria-label={`Move ${c.name} down`} disabled={last || busy} onClick={() => onMove(1)} />
-        </div>
-        <div className="grid min-w-0 gap-1">
-          <TextField
-            aria-label={`Name of ${c.name}`}
-            aria-invalid={nameError ? true : undefined}
-            aria-describedby={nameError ? `${idBase}-err` : undefined}
-            value={name}
-            maxLength={60}
-            onChange={e => {
-              setName(e.target.value)
-              setNameError(null)
-            }}
-            onBlur={() => void saveName()}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                void saveName()
-              } else if (e.key === 'Escape') {
-                setName(c.name)
-                setNameError(null)
-              }
-            }}
-          />
-          {nameError ? (
-            <p id={`${idBase}-err`} role="alert" className="text-xs text-tone-danger-fg">
-              {nameError}
-            </p>
-          ) : null}
-        </div>
-        <Select
-          aria-label={`Group of ${c.name}`}
-          value={c.grp}
-          options={GROUP_OPTIONS}
-          onChange={e => void onPatch({ grp: e.target.value as CategoryGroup }, 'Group changed')}
-        />
-        <Select
-          aria-label={`Default paid via for ${c.name}`}
-          value={c.default_paid_via}
-          options={PAID_OPTIONS}
-          onChange={e => void onPatch({ default_paid_via: e.target.value as PaidVia }, 'Paid via changed')}
-        />
-        <p className="num flex h-control items-center text-sm text-fg-muted" data-testid="usage">
-          {usageText(c.used)}
-        </p>
-        <div className="flex h-control items-center justify-between gap-3 max-md:min-h-touch md:justify-end">
-          <Checkbox
-            aria-label={`${c.name} is active`}
-            label="Active"
-            checked={c.active}
-            onCheckedChange={v => void onPatch({ active: v === true }, v === true ? 'Category activated' : 'Category deactivated')}
-          />
-          <Button icon={Trash2} variant="quiet" className="max-md:h-touch max-md:w-touch" aria-label={`Delete ${c.name}`} aria-expanded={asking} onClick={() => onAsk(!asking)} />
-        </div>
+    <li data-category={c.name} className={cn('grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 border-b py-2 pl-4 pr-1 last:border-b-0', !c.active && 'bg-canvas')}>
+      <div className="grid min-w-0">
+        <span className={cn('min-w-0 text-base font-medium [overflow-wrap:anywhere]', !c.active && 'text-fg-2')}>{c.name}</span>
+        <span className="min-w-0 text-sm text-fg-muted" data-testid="usage">
+          {groupName ? <span className="whitespace-nowrap">{groupName} · </span> : null}
+          <span className="whitespace-nowrap">{phone ? PAID_VIA_LABEL[c.default_paid_via] : `Usually ${PAID_VIA_LABEL[c.default_paid_via].toLowerCase()}`} · </span>
+          <span className="whitespace-nowrap">{usageText(c.used)}</span>
+        </span>
       </div>
-      {!c.active ? (
-        <p className="md:pl-[76px]">
-          <Tag dashed>Inactive: hidden from new expenses</Tag>
-        </p>
-      ) : null}
-      {asking ? (
-        <div role="group" aria-label={`Delete ${c.name}`} className="flex flex-wrap items-center gap-3 rounded border bg-surface px-3 py-2 text-sm md:ml-[76px]">
-          <p className="min-w-0 flex-1 text-pretty">{advice.message}</p>
-          {advice.canDelete ? (
-            <Button variant="danger" icon={Trash2} busy={del.isPending} busyLabel="Deleting" onClick={() => void remove()}>
-              Delete
-            </Button>
-          ) : c.active ? (
-            <Button variant="primary" onClick={() => void onPatch({ active: false }, 'Category deactivated').then(() => onAsk(false))}>
-              Deactivate
-            </Button>
-          ) : null}
-          <Button onClick={() => onAsk(false)}>{advice.canDelete ? 'Cancel' : 'Close'}</Button>
-        </div>
-      ) : null}
+      <div className="grid justify-items-end text-right">
+        <span className={cn('num text-base', spent > 0 ? 'text-fg' : 'text-fg-muted')} data-testid="spent">
+          {spent > 0 ? amountText(spent) : '—'}
+          <span className="sr-only">{spent > 0 ? ' PKR this month' : 'nothing paid this month'}</span>
+        </span>
+        {b.kind === 'over' ? (
+          <span className="num text-sm font-medium text-tone-warning-fg" data-testid="budget">
+            {amountText(b.over)} over budget
+          </span>
+        ) : b.kind === 'under' ? (
+          <span className="num text-sm text-fg-muted" data-testid="budget">
+            {amountText(b.left)} left of {amountText(b.budget)}
+          </span>
+        ) : null}
+      </div>
+      <RowMenu label={`Actions for ${c.name}`} title={c.name} subtitle={meta} items={items} phone={phone} />
     </li>
   )
 }

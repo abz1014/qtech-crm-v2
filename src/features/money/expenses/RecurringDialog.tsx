@@ -8,9 +8,10 @@ import { Form, FormField } from '@/ui/form/Form'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
+import { SegmentedControl } from '@/ui/SegmentedControl'
 import { CategoryPicker } from '@/features/money/expenses/CategoryPicker'
 import { useGroups, useInlineCategoryCreate, useSaveRecurring } from '@/features/money/expenses/hooks'
-import type { Category, RecurringTemplate } from '@/features/money/expenses/model'
+import { PAID_VIA_LABEL, paidViaFor, type Category, type PaidVia, type RecurringTemplate } from '@/features/money/expenses/model'
 
 /** Add or edit a recurring template: what it is called, its category, the amount, and the day it usually falls on. */
 const schema = z.object({
@@ -20,6 +21,7 @@ const schema = z.object({
   dayOfMonth: z.number().int().min(1, 'Use a day from 1 to 28').max(28, 'Use a day from 1 to 28').nullable(),
   startMonth: z.string().regex(/^(\d{4}-(0[1-9]|1[0-2]))?$/, 'Use the form 2026-11'),
   active: z.boolean(),
+  paidVia: z.enum(['bank', 'cash']),
 })
 type Values = z.input<typeof schema>
 
@@ -38,6 +40,7 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
       dayOfMonth: template?.dayOfMonth ?? null,
       startMonth: template?.startMonth ?? '',
       active: template?.active ?? true,
+      paidVia: template?.paidVia ?? (template ? paidViaFor(template.categoryId, categories) : 'bank'),
     } satisfies Partial<Values>,
     onSubmit: (v, { requestId }) =>
       save.mutateAsync({
@@ -50,6 +53,7 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
         startMonth: v.startMonth || null,
         active: v.active,
         notes: template?.notes ?? null,
+        paidVia: v.paidVia as PaidVia,
       }),
     onSuccess: v => {
       toast.toast({ title: template ? 'Saved recurring expense' : 'Added recurring expense', body: v.label, tone: 'success' })
@@ -78,10 +82,21 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
           </FormField>
           <div className="grid gap-4 md:grid-cols-2">
             <FormField<Values, 'categoryId'> name="categoryId" label="Category">
-              {f => <CategoryPicker categories={categories} value={f.value} onChange={f.onChange} onCreate={createCategory} chevron />}
+              {f => <CategoryPicker categories={categories} value={f.value} onChange={f.onChange} onCreate={createCategory} groups={groupsQ.data} chevron />}
             </FormField>
             <FormField<Values, 'amount'> name="amount" label="Amount, PKR">
               {f => <NumberInput {...f} />}
+            </FormField>
+            <FormField<Values, 'paidVia'> name="paidVia" label="Paid via">
+              {f => (
+                <SegmentedControl
+                  aria-label="Paid via"
+                  fill
+                  value={f.value}
+                  onValueChange={f.onChange}
+                  options={(['cash', 'bank'] as const).map(v => ({ value: v, label: PAID_VIA_LABEL[v] }))}
+                />
+              )}
             </FormField>
             <FormField<Values, 'dayOfMonth'> name="dayOfMonth" label="Day of the month" requirement="optional">
               {f => <NumberInput {...f} placeholder="1 to 28" />}
