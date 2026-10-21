@@ -133,9 +133,9 @@ Item\tMaterial\tDescription\tQuantity\tUnit\tDelivery Date
 
 Please quote on your letterhead with validity and delivery period.`,
     items: [
-      i('TRANSMITTER,PRESSURE;0-16BAR,4-20MA Make: Rosemount, Model: 3051TG', 2, 'nos'),
-      i('GAUGE,PRESSURE;0-10BAR,4" DIAL', 6, 'nos'),
-      i('VALVE,MANIFOLD;3 WAY,SS316', 2, 'nos'),
+      i('TRANSMITTER,PRESSURE;0-16BAR,4-20MA Make: Rosemount, Model: 3051TG', 2, 'EA'),
+      i('GAUGE,PRESSURE;0-10BAR,4" DIAL', 6, 'EA'),
+      i('VALVE,MANIFOLD;3 WAY,SS316', 2, 'EA'),
     ],
     ref: '4500012345',
     due: '2026-11-11',
@@ -401,7 +401,7 @@ Best Regards,
 M. Saleem
 Procurement Officer
 Potohar Refinery Limited`,
-    items: [i('Hydraulic hose 1/2" 2SN with fittings, 1.5 m length', 6, 'nos'), i('Hydraulic oil ISO VG 68', 4, 'drums')],
+    items: [i('Hydraulic hose 1/2" 2SN with fittings, 1.5 m length', 6, 'nos'), i('Hydraulic oil ISO VG 68', 4, 'Drums')],
     company: { name: 'Potohar Refinery Limited' },
   },
   {
@@ -491,7 +491,7 @@ Rotary encoder 1024 PPR 10-30VDC Qty-2
 Coupling for encoder 6mm/10mm x2
 Encoder cable 10m - 2 pcs
 Sent from my iPhone`,
-    items: [i('Rotary encoder 1024 PPR 10-30VDC', 2), i('Coupling for encoder 6mm/10mm', 2), i('Encoder cable 10m', 2, 'nos')],
+    items: [i('Rotary encoder 1024 PPR 10-30VDC', 2), i('Coupling for encoder 6mm/10mm', 2), i('Encoder cable 10m', 2, 'pcs')],
   },
   {
     name: 'an RFQ that is all in the attachment: no items, but the ref and the deadline are in the text',

@@ -21,6 +21,7 @@
 
 import { businessToday } from '@/lib/dates'
 import { normaliseUnit, parsePaste, type ParsedItem, type ParseResult } from '@/features/rfqs/lib/parseItems'
+import { alignSpacedRows, rebuildCellTables } from './cellTable'
 import { isHeaderCell } from './pdfLayout'
 
 export type EnquiryLineKind = 'item' | 'joined' | 'skipped'
@@ -81,7 +82,7 @@ const PRODUCT =
 const COURTESY =
   /\b(?:enquiry|inquiry|quotations?|quote|quoting|offers?|rfq|tender|attached|attachment|below|above|following|requirements?|arrange|reply|revert|respond|soonest|earliest|asap|needful|urgent(?:ly)?|thanks|thank|regards|kindly|please|plz|pls|best\s+price|lowest|rates?|prices?|hai|hain|bata|batao|bhejo|bhej|dein|jaldi|zaroor|chahiye|letterhead|invited|fyi|f\.y\.i|for\s+your\s+(?:information|reference|action)|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|need\s+(?:it|them)|hope\s+you|finds?\s+you\s+well|trust\s+(?:this|you))\b/i
 /** A sentence that only greets ("Hi Ali, hope you are well."). */
-const GREETING_SENTENCE = /^(?:hi|hello|hey|dear|salam|assalam\w*|aoa|good\s+(?:morning|afternoon|evening))\b[^.!?]*[.!?]?$|\bhope\s+(?:you|this|all)\b/i
+const GREETING_SENTENCE = /^(?:hi|hello|hey|dear|respected|asalam\w*|salam|assalam\w*|aoa|good\s+(?:morning|afternoon|evening))\b[^.!?]*[.!?]?$|\bhope\s+(?:you|this|all)\b/i
 
 const SIGN_OFF =
   /^(?:(?:best|kind|warm|warmest|with)\s+regards?|regards?|thanks?(?:\s*(?:&|and)\s*(?:best\s+|kind\s+)?regards?)?|thank\s+you(?:\s+(?:and|&)\s+regards)?|thankyou|many\s+thanks|sincerely|yours\s+(?:sincerely|faithfully|truly)|br|cheers|allah\s+hafiz|jazak\s*allah(?:\s+khair)?|shukriya|shukria|thnx|thx|tks)[\s,.!]*$/i
@@ -94,6 +95,13 @@ const HEADER_LINE = /^(?:from|to|cc|bcc|sent|date|subject|reply-to|attachments?)
 const WA_PREFIX = /^\s*\[?\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:[ap]\.?\s?m\.?)?\]?\s*(?:-\s*)?(?:[^:\d][^:]{0,40}:\s)?/i
 /** WhatsApp Web's copy of several messages puts the time first: "[10:42, 19/10/2026] Name: ". */
 const WA_WEB_PREFIX = /^\s*\[\d{1,2}:\d{2}(?::\d{2})?\s*(?:[ap]\.?\s?m\.?)?,\s*\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\]\s*(?:[^:\d][^:]{0,40}:\s)?/i
+/** Emoji and their joiners: never part of an item. */
+const EMOJI = /\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}]|\u{FE0F}|\u{200D}/gu
+/** What a chat export writes for a voice note, a photo, a file or a deleted message. */
+const CHAT_MEDIA =
+  /^‎?(?:<media omitted>|<attached:[^>]*>|(?:audio|image|video|sticker|gif|document|contact card)\s+omitted|this message was deleted|you deleted this message|null|\S+\.(?:opus|ogg|m4a|aac|mp3|jpe?g|png|webp|mp4|pdf|docx?|xlsx?)\s*\(file attached\)|missed (?:voice|video) call)\.?$/i
+/** A chat reply that only acknowledges ("Noted", "Ok sir, will share today", "Sure, checking"). */
+const ACK = /^(?:ok(?:ay)?|noted|sure|done|received|thanks?|thank\s+you|thx|jee|ji|g\b|acha|theek|right|alright|great|will\s+(?:do|share|send|check|revert|update))\b/i
 const INSTRUCTION =
   /^(?:note|notes|n\.?\s?b|remarks?|terms|conditions|payment|delivery|required\s+delivery|delivery\s+(?:period|time|terms)|validity|offer\s+validity|warranty|origin|incoterms?|price\s+basis|please\s+(?:mention|confirm|include|specify|indicate|note|quote\s+(?:with|on|your\s+(?:validity|delivery)))|kindly\s+(?:mention|confirm|include|specify|indicate|note)|partial\s+(?:quotations?|offers?)|quotations?\s+(?:should|must)\s+(?:be|include|mention)|offer\s+(?:should|must)\s+(?:be|include|mention))\b[\s.:-]*/i
 
@@ -111,13 +119,14 @@ const FREE_MAIL = /^(?:gmail|googlemail|yahoo|ymail|hotmail|outlook|live|msn|icl
 
 // ------------------------------------------------------------------------------------------------ quantities
 
-const UNIT_SRC = String.raw`nos?\.?|no's|numbers?|pcs?\.?|pieces?|ea|each|units?|sets?|lots?|pairs?|rolls?|mtrs?|meters?|metres?|m|ltrs?|litres?|liters?|l|kgs?|ft|lengths?|boxe?s?|pkts?|packets?|bags?|drums?|cans?|sheets?|coils?|cartons?`
+const UNIT_SRC = String.raw`nos?\.?|no's|numbers?|pcs?\.?|pieces?|ea|each|units?|sets?|lots?|pairs?|rolls?|mtrs?|meters?|metres?|m|ltrs?|litres?|liters?|l|kgs?|ft|feet|prs?|adad|rmt?|lengths?|boxe?s?|pkts?|packets?|bags?|drums?|cans?|sheets?|coils?|cartons?`
 const QTY_WORD = String.raw`(?:qty\.?\s*req(?:uired|d)?\.?|req(?:uired|\.)?\s*qty\.?|required\s+(?:qty\.?|quantity)|quantity\s+required|qty\.?|quantity|q'ty|qnty)`
 const LABELLED_QTY = new RegExp(
   String.raw`(^|[\s,;(|])${QTY_WORD}\s*[:=.\-–]?\s*(\d[\d,]*(?:\.\d+)?)(?:\s*(${UNIT_SRC}))?(?![A-Za-z0-9])`,
   'i',
 )
-const EXTRA_TRAIL = new RegExp(String.raw`(?:^|[\s,;(–-])\s*(\d[\d,]*(?:\.\d+)?)\s*(no's|numbers?|adad|drums?|bags?|boxe?s?|cans?|sheets?|coils?|cartons?|pkts?|packets?|lengths?|kgs)\s*\)?\.?$`, 'i')
+const EXTRA_TRAIL = new RegExp(String.raw`(?:^|[\s,;(–-])\s*(\d[\d,]*(?:\.\d+)?)\s*(nos?|no's|numbers?|adad|drums?|bags?|boxe?s?|cans?|sheets?|coils?|cartons?|pkts?|packets?|lengths?|kgs?|prs?|pairs?|rolls?|ea|each|pieces?|pcs?|sets?|lots?)\.?\s*\)?\.?$`, 'i')
+const LEAD_UNIT = new RegExp(String.raw`^(\d[\d,]*(?:\.\d+)?)\s*(${UNIT_SRC})\.?\s+(?:of\s+)?(?=[A-Za-z])`, 'i')
 const QTY_ONLY = new RegExp(String.raw`^(?:${QTY_WORD}\s*[:=.\-–]?\s*)?(\d[\d,]*(?:\.\d+)?)\s*(${UNIT_SRC})?\.?$`, 'i')
 
 function toQty(raw: string): number {
@@ -125,13 +134,36 @@ function toQty(raw: string): number {
   return Number.isFinite(n) && n > 0 ? n : 1
 }
 
-/** The unit as the intake stores it ("EA" and "No's" are nos, "Mtr" is m). Unknown words are kept, lower case. */
+/**
+ * Units the intake stores in its own words: "No.", "No's" and "NOS" are nos, "Mtr" and "meters" are m, "Kgs" is kg. Any other
+ * unit is the customer's own and is kept as written ("EA", "Pcs", "each", "BOX"): owner brief 2026-10-22, the customer's unit
+ * goes on the quotation unchanged.
+ */
+const OWN_UNITS: Record<string, string> = {
+  no: 'nos', nos: 'nos', "no's": 'nos', number: 'nos', numbers: 'nos', adad: 'nos',
+  set: 'set', sets: 'set', lot: 'lot', lots: 'lot', pair: 'pair', pairs: 'pair', pr: 'pair', prs: 'pair', roll: 'roll', rolls: 'roll',
+  m: 'm', mtr: 'm', mtrs: 'm', meter: 'm', meters: 'm', metre: 'm', metres: 'm', rm: 'm', rmt: 'm',
+  kg: 'kg', kgs: 'kg', l: 'l', ltr: 'l', ltrs: 'l', litre: 'l', litres: 'l', liter: 'l', liters: 'l', ft: 'ft', feet: 'ft',
+}
+
+/** The unit as the intake stores it: our own word for nos, set, m, kg ..., else the customer's word as written. */
 export function unitOf(raw: string | null | undefined): string | null {
   if (!raw) return null
-  let u = raw.trim().toLowerCase().replace(/\.$/, '')
-  if (u === "no's" || u === 'number' || u === 'numbers' || u === 'adad') u = 'nos'
-  if (u === 'kgs') u = 'kg'
-  return normaliseUnit(u)
+  const w = raw.trim().replace(/\.$/, '')
+  if (!w) return null
+  return OWN_UNITS[w.toLowerCase()] ?? (/^[a-z]+$/i.test(w) ? w : normaliseUnit(w))
+}
+
+/**
+ * The unit word written next to `qty` in `text` ("12 Pcs", "Qty: 4 EA"), as written; null when there is none. The intake's own
+ * reading (parsePaste) gives a stored unit only ("nos" for "Pcs"); this finds the customer's word again.
+ */
+function writtenUnitFor(text: string, qty: number): string | null {
+  const re = new RegExp(String.raw`(\d[\d,]*(?:\.\d+)?)\s*(${UNIT_SRC})(?![A-Za-z0-9])`, 'gi')
+  let m: RegExpExecArray | null
+  let found: string | null = null
+  while ((m = re.exec(text))) if (toQty(m[1] as string) === qty) found = m[2] as string
+  return found
 }
 
 const tidy = (s: string) =>
@@ -165,6 +197,14 @@ function readItem(text: string): ReadItem | null {
     unit = unitOf(lab[3])
     const start = lab.index + (lab[1] as string).length
     t = `${t.slice(0, start)} ${t.slice(lab.index + lab[0].length)}`
+  } else {
+    // "20 Kg lubricating grease", "5 kgs ...", "2 PR carbon brush": a quantity and unit in front.
+    const lead = LEAD_UNIT.exec(t)
+    if (lead) {
+      qty = toQty(lead[1] as string)
+      unit = unitOf(lead[2])
+      t = t.slice(lead[0].length)
+    }
   }
   t = tidy(t.replace(OPENER, ''))
   if (!t) return null
@@ -177,7 +217,7 @@ function readItem(text: string): ReadItem | null {
     const explicit = old.qty !== 1 || old.unit !== null || /(?:^|\s)(?:[x×]\s*0*1|0*1\s*[x×])(?:\s|$)/i.test(t)
     if (explicit) {
       qty = old.qty
-      unit = old.unit
+      unit = old.unit ? unitOf(writtenUnitFor(t, old.qty) ?? old.unit) : null
     } else {
       const ex = EXTRA_TRAIL.exec(description)
       // "Siemens 6ES7 231-4HD32-0XB0 – 2": a bare number after a spaced dash, when what is before it is not a number
@@ -385,7 +425,7 @@ function tableHeader(cells: string[]): TableCols | null {
   const hits = filled.filter(isHeaderCell).length
   if (hits < 2 || hits < Math.ceil(filled.length * 0.6)) return null
   const idx = (re: RegExp) => cells.findIndex(c => re.test(c))
-  let desc = cells.map((c, i) => (/desc|particular|specification|product|item\s*name/i.test(c) ? i : -1)).filter(i => i >= 0)
+  let desc = cells.map((c, i) => (/desc|particular|specification|product|item\s*name|short\s*text|item\s*text|goods/i.test(c) ? i : -1)).filter(i => i >= 0)
   if (desc.length === 0) desc = cells.map((c, i) => (/^item$/i.test(c) ? i : -1)).filter(i => i >= 0)
   if (desc.length === 0) return null
   const extra = cells
@@ -471,7 +511,9 @@ const hasCode = (t: string) => /(?<![\w@.])(?=[A-Za-z0-9-]*[A-Za-z])(?=[A-Za-z0-
 
 /** Lines with no digits that only ask, thank or point at an attachment (still so once a polite opener is taken off). */
 function isCourtesy(t: string): boolean {
-  if (/\d/.test(t) || !COURTESY.test(t) || PRODUCT.test(t) || hasCode(t)) return false
+  if (/\d/.test(t) || PRODUCT.test(t) || hasCode(t)) return false
+  if (ACK.test(t) && t.split(/\s+/).length <= 8) return true
+  if (!COURTESY.test(t)) return false
   const rest = parsePaste(t).items[0]?.description ?? ''
   return rest === '' || COURTESY.test(rest)
 }
@@ -513,10 +555,18 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   }
   const src: Src[] = []
   let blank = false
-  for (const line of text.split('\n')) {
+  /** Inside a chat message we sent ourselves (its sender is our own name): not the customer's words. */
+  let ownMessage = false
+  for (const line0 of alignSpacedRows(text.split('\n'))) {
+    const line = line0.replace(EMOJI, '').replace(/\s+$/, '')
     const web = WA_WEB_PREFIX.test(line)
     const wa = web || (WA_PREFIX.test(line) && /^\s*\[?\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4},?\s+\d{1,2}:\d{2}/.test(line))
     const body = web ? line.replace(WA_WEB_PREFIX, '') : wa ? line.replace(WA_PREFIX, '') : line
+    if (wa) {
+      const sender = /(?:\]|\s-)\s*([^:\]]{1,40}):\s*$/.exec(line.slice(0, line.length - body.length))?.[1] ?? ''
+      ownMessage = sender !== '' && own.test(sender)
+    }
+    if (ownMessage || CHAT_MEDIA.test(body.trim())) continue
     if (!body.trim()) {
       blank = true
       continue
@@ -526,6 +576,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     src.push({ t: spaced.replace(/[ ]+/g, ' ').trim(), indent: /^\s*/.exec(body)?.[0].replace(/\t/g, '    ').length ?? 0, blankBefore: blank, wa })
     blank = false
   }
+  rebuildCellTables(src, t => SIGN_OFF.test(t) || DISCLAIMER.test(t) || findDue(t, today) !== null)
 
   // A closing block of name, title, phone, address and email with no sign-off word is a signature too: a paragraph that has
   // a contact line, no quantity and no product words or model codes.
@@ -599,6 +650,25 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   }
   const hyphenated = new Set<Draft>()
 
+  /**
+   * A line under a form's item row that goes on with its description (wrapped text, "MAKE: X"), not the form's own text: a
+   * due date, a reference, a delivery date, an instruction, a sign-off, a contact line, courtesy.
+   */
+  /** "Kindly send your offer by" / "02/11/2026": a due-date sentence whose date wrapped onto the next line. */
+  const dueOnNext = (t: string, next: string | undefined) =>
+    next && (DUE_STRONG.test(t) || (DUE_WEAK.test(t) && QUOTE_WORD.test(t))) && !findDate(t, today) ? findDue(`${t} ${next}`, today) : null
+  const continuesRow = (t: string): boolean =>
+    !(
+      findDue(t, today) ||
+      (DUE_STRONG.test(t) && /\d/.test(t)) ||
+      findRefs(t).length > 0 ||
+      (INSTRUCTION.test(t) && !ATTR.test(t)) ||
+      SIGN_OFF.test(t) ||
+      isContact(t) ||
+      isCourtesy(t) ||
+      (NOT_DUE.test(t) && findDate(t, today) !== null) ||
+      /^(?:please|kindly|we\s|our\s|prepared|approved|checked|requested|for\s+and\s+on|authori[sz]ed|signature)/i.test(t)
+    )
   const skip = (t: string, reason: SkipReason) => lines.push({ text: t, kind: 'skipped', reason, marker: null })
   const close = () => {
     cur = null
@@ -724,7 +794,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       if (table) {
         const it = tableItem(cells, table)
         // A form's row with no quantity is the row above wrapping onto the next line.
-        if (formMode && row && (table.qty < 0 || !NUM_CELL.test(cells[table.qty] ?? ''))) {
+        if (formMode && row && (table.qty < 0 || !NUM_CELL.test(cells[table.qty] ?? '')) && continuesRow(cells.filter(Boolean).join(' '))) {
           extend(row, cells.filter(Boolean).join(' '))
           continue
         }
@@ -751,14 +821,14 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         lines.push({ text: t, kind: 'item', reason: null, marker: null })
         continue
       }
-      if (row && !/^(?:comments?|remarks?|note)\s*:/i.test(t)) {
+      if (row && !/^(?:comments?|remarks?|note)\s*:/i.test(t) && continuesRow(t)) {
         extend(row, cells ? cells.filter(Boolean).join(' ') : t)
         continue
       }
       row = null
       // Facts still come from the form around the table; nothing else there is an item.
       for (const r of findRefs(t)) refs.push({ ...r, line: t })
-      if (!due) due = findDue(t, today) ?? (DUE_STRONG.test(t) && !findDate(t, today) ? findDue(`${t} ${src[k + 1]?.t ?? ''}`, today) : null)
+      if (!due) due = findDue(t, today) ?? dueOnNext(t, src[k + 1]?.t)
       noteContacts(t, 2)
       if (isCompanyLine(t) && !own.test(t)) names.push({ n: t, rank: contentLines <= 4 ? 2 : 1 })
       skip(t, isContact(t) ? 'contact' : 'header')
@@ -774,7 +844,8 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
 
     // ---- facts: references and dates
     const lineRefs = findRefs(t)
-    const lineDue = findDue(t, today)
+    // "Quotation must reach us on or before" / "08/11/2026": the date can wrap onto the next line.
+    const lineDue = findDue(t, today) ?? dueOnNext(t, src[k + 1]?.t)
     for (const r of lineRefs) refs.push({ ...r, line: t })
     if (lineDue && !due) due = lineDue
     noteContacts(t, 2)
@@ -859,29 +930,36 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       lines.push({ text: t, kind: 'joined', reason: null, marker: null })
       continue
     }
+    // A line with a quantity and unit of its own ("Pneumatic cylinder bore 40mm - 2 Nos") is an item of its own in a list whose
+    // other lines have markers, unless it wraps from an item that has no quantity yet.
+    const self = readItem(work)
+    const ownQty = !m && self !== null && self.qty !== null && /[A-Za-z]{3}/.test(self.description)
     if (cur && !m && !s.blankBefore) {
       const d = cur as Draft
       const prev = d.texts[d.texts.length - 1] ?? ''
       const wraps = s.indent > d.indent || /(?:[,/&(-]|\b(?:with|and|for|of))$/i.test(prev)
-      if (wraps || (markerMode && !isCourtesy(work) && !SIGN_OFF.test(work))) {
+      const curHasQty = d.qty !== null || (d.texts.length > 0 && readItem(d.texts.join(' '))?.qty != null)
+      if (wraps || (markerMode && !isCourtesy(work) && !SIGN_OFF.test(work) && !(ownQty && curHasQty))) {
         d.texts.push(work)
         lines.push({ text: t, kind: 'joined', reason: null, marker: null })
         continue
       }
     }
     close()
-    if (markerMode && !m) {
+    if (markerMode && !m && !ownQty) {
       skip(t, 'greeting')
       continue
     }
-    if ((!m && isCourtesy(work)) || (!m && DESIGNATION.test(work) && work.split(' ').length <= 4 && !/\d/.test(work) && !PRODUCT.test(work))) {
+    const greetingOnly = GREETING_SENTENCE.test(work) && !/\d/.test(work) && !PRODUCT.test(work) && !hasCode(work) && work.split(' ').length <= 6
+    if ((!m && (isCourtesy(work) || greetingOnly)) || (!m && DESIGNATION.test(work) && work.split(' ').length <= 4 && !/\d/.test(work) && !PRODUCT.test(work))) {
       skip(t, 'greeting')
       continue
     }
     // Two items in one line: "4 nos contactor ... and 4 nos overload relay ..."
     if (work.includes('\t')) {
       // A spreadsheet-like row with no header above it: the intake's own reading (row number dropped, last cells qty and unit).
-      const row = parsePaste(work).items[0]
+      const row0 = parsePaste(work).items[0]
+      const row = row0 && row0.unit ? { ...row0, unit: unitOf(writtenUnitFor(work.replace(/\t/g, ' '), row0.qty) ?? row0.unit) } : row0
       if (row) {
         drafts.push({ first: lines.length, marker, indent: s.indent, texts: [], attrs: [], qty: null, fromTable: row })
         lines.push({ text: t, kind: 'item', reason: null, marker })
@@ -936,7 +1014,12 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   goodEmails.sort((a, b) => b.rank - a.rank)
   const domain = goodEmails[0] ? domainOf(goodEmails[0].e) : null
   names.sort((a, b) => b.rank - a.rank)
-  const name = names[0]?.n ?? null
+  // "For Example Mills Ltd" under a letter, "M/s Example Mills": the company is what follows.
+  const name =
+    names[0]?.n
+      .replace(/^(?:for\s+(?:and\s+on\s+behalf\s+of\s+)?|on\s+behalf\s+of\s+|m\/s\.?\s*|messrs\.?\s+)/i, '')
+      .replace(/[\s,:;]+$/, '')
+      .trim() ?? null
   const realEmails = [...new Set(goodEmails.map(x => x.e).filter(e => !e.startsWith('web@')))]
   const company = name || domain || realEmails.length || phones.length ? { name, domain, emails: realEmails, phones } : null
 

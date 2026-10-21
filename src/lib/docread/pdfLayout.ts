@@ -205,6 +205,13 @@ const HEADER_TERM = new RegExp(
       String.raw`net(?:\s*(?:price|amount))?`,
       String.raw`ext(?:ended)?\.?\s*price`,
       'availability',
+      String.raw`(?:short|long|item)\s*text`,
+      'plant',
+      String.raw`itm\.?`,
+      String.raw`(?:req(?:uired|\.)?|del(?:ivery|\.)?|need|due)\s*(?:date|by)`,
+      'code',
+      String.raw`description\s+of\s+goods`,
+      String.raw`tag\s*(?:no\.?)?`,
     ].join('|') +
     ')$',
   'i',
@@ -230,14 +237,14 @@ function isHeaderLine(cells: Cell[]): boolean {
 
 /** A cell that is a number, a quantity with its unit, an amount or a date: "2", "2.000 EA", "USD 1,250.00", "15.08.2026". */
 const NUMERIC_CELL =
-  /^\(?(?:(?:usd|eur|rmb|cny|pkr|aed|gbp|us\$|rs\.?)\s*|[$€¥￥£]\s*)?-?\d[\d.,'/ -]*(?:\s*(?:%|nos?|pcs?|ea|each|sets?|lots?|pairs?|rolls?|m|mtrs?|kgs?|ltrs?|l|ft|units?|days?|weeks?|wks?|months?|usd|eur|rmb|cny|pkr|aed|gbp|[$€¥￥£])\.?)?\)?$/i
+  /^\(?(?:(?:usd|eur|rmb|cny|pkr|aed|gbp|us\$|rs\.?)\s*|[$€¥￥£]\s*)?-?\d[\d.,'/ -]*(?:\s*(?:%|nos?|no's|numbers?|pcs?|pieces?|ea|each|sets?|lots?|pairs?|prs?|rolls?|m|mtrs?|meters?|kgs?|ltrs?|l|ft|units?|boxe?s?|drums?|days?|weeks?|wks?|months?|usd|eur|rmb|cny|pkr|aed|gbp|[$€¥￥£])\.?)?\)?$/i
 
 const isNumericCell = (t: string) => NUMERIC_CELL.test(t.trim())
 
 /** The left column for row numbers ("S.No", "#", "Item" holding 1, 2, 3). */
 const NUMBER_COLUMN = /^(?:s\.?\s*no|sr|sl|#|no\.?$|pos|line)/i
 const END_OF_TABLE =
-  /^(?:terms|conditions|notes?\s*:|remarks?\s*:|payment|validity|valid\s+(?:for|till|until)|delivery\s*(?:terms|time|period)?\s*:|lead\s*time\s*:|incoterms?|price\s+basis|bank|account|iban|thank|regards|we\s+hope|for\s+and\s+on\s+behalf|authori[sz]ed|signature|amount\s+in\s+words|in\s+words|rupees|say\s*:|please\s|kindly\s|we\s)/i
+  /^(?:(?:bid|quotation|quote|offer)?\s*(?:due|closing|last)\s*(?:date|by)?\s*[:.-]|deadline|closing\s+date|due\s+date|(?:best|kind|warm|warmest)?\s*regards|thanks?\b|sincerely|yours\b|prepared\s+by|approved\s+by|checked\s+by|requested\s+by|terms|conditions|notes?\s*:|remarks?\s*:|payment|validity|valid\s+(?:for|till|until)|delivery\s*(?:terms|time|period)?\s*:|lead\s*time\s*:|incoterms?|price\s+basis|bank|account|iban|thank|regards|we\s+hope|for\s+and\s+on\s+behalf|authori[sz]ed|signature|amount\s+in\s+words|in\s+words|rupees|say\s*:|please\s|kindly\s|we\s)/i
 
 interface Column {
   x0: number
@@ -256,7 +263,7 @@ function columnKind(label: string): ColumnKind {
   return 'text'
 }
 
-const UNIT_WORD = /^(?:nos?\.?|pcs?\.?|pieces?|ea|each|sets?|lots?|pairs?|rolls?|m|mtrs?|meters?|kg|kgs|ltrs?|l|ft|units?|no's|numbers?|bags?|boxes|box|cans?|drums?|sheets?|lengths?)$/i
+const UNIT_WORD = /^(?:nos?\.?|pcs?\.?|pieces?|ea|each|sets?|lots?|pairs?|prs?|rolls?|m|mtrs?|meters?|metres?|rmt?|kg|kgs|ltrs?|l|ft|units?|no's|numbers?|bags?|boxes|box|cans?|drums?|sheets?|coils?|pkts?|cartons?|lengths?|adad)\.?$/i
 
 /** A header cell that pdf.js merged ("Unit Price (USD) Amount (USD)"), split back into its terms; else the cell itself. */
 function segmentHeader(c: Cell): Cell[] {
@@ -355,7 +362,13 @@ const joinPart = (a: string, b: string) => (a === '' ? b : /[-/]$/.test(a) ? a +
 
 /** Lays the lines of one table on its columns. Returns the rows; continuation lines are folded into their row. */
 function buildRows(lines: RawLine[], cols: Column[]): string[][] {
-  const kinds = cols.map(c => columnKind(c.label))
+  // "Item" over 1, 2, 3 beside a Description column is the row-number column.
+  const hasDescription = cols.some(c => /desc|particular|specification|product|short\s*text|goods/i.test(c.label))
+  const kinds = cols.map(c => (hasDescription && /^(?:item|itm)\.?(?:\s*(?:no\.?|#))?$/i.test(c.label) ? 'number' : columnKind(c.label)))
+  // A number starts a row only in a column made for numbers (S.No, Qty, Price, Date); "186" under Part No is the end of a
+  // part number that wrapped ("SN-69M-" / "186").
+  const numberKinds = new Set<ColumnKind>(['number', 'qty', 'money', 'date'])
+  const anyNumberColumn = kinds.some(k => numberKinds.has(k))
   const rows: TableRow[] = lines.map(l => {
     const cells: string[][] = cols.map(() => [])
     let anchor = false
@@ -363,7 +376,7 @@ function buildRows(lines: RawLine[], cols: Column[]): string[][] {
     for (const c of splitToColumns(l.cells, cols)) {
       const i = columnOf(c, cols)
       ;(cells[i] as string[]).push(c.text)
-      if (isNumericCell(c.text) || kinds[i] === 'number') anchor = true
+      if ((isNumericCell(c.text) && (!anyNumberColumn || numberKinds.has(kinds[i] as ColumnKind))) || kinds[i] === 'number') anchor = true
       else if (kinds[i] === 'text') hasText = true
     }
     return { y: l.y + l.page * 100_000, page: l.page, cells, anchor, hasText }
@@ -490,7 +503,9 @@ export function layoutPages(pages: ReadonlyArray<readonly TextRun[]>): LaidLine[
         // A sentence written from the table's left edge across two or more columns is a paragraph under the table, not a cell.
         const edgesCrossed = single ? t.cols.slice(1).filter(c => c.x0 > single.x0 + single.size && c.x0 < single.x1).length : 0
         const paragraph = single !== null && !isNumericCell(single.text) && regionOf(single.x0 + 0.5 * single.size, t.cols) === 0 && edgesCrossed >= 2
-        const ends = l.y - t.lastY > Math.max(3.2 * typical, 4 * l.size) || startsLeft || paragraph || (single !== null && END_OF_TABLE.test(single.text))
+        // A line that starts with a closing word ("Bid due:", "Regards,", "Terms") and has no number in a cell of its own.
+        const closing = END_OF_TABLE.test((l.cells[0] as Cell).text) && (single !== null || !l.cells.slice(1).some(c => isNumericCell(c.text)))
+        const ends = l.y - t.lastY > Math.max(3.2 * typical, 4 * l.size) || startsLeft || paragraph || closing
         if (!ends) {
           t.pitch.push(l.y - t.lastY)
           t.lastY = l.y

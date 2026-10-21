@@ -6,6 +6,7 @@ import { ENQUIRY_FULL_EMAILS } from './__fixtures__/enquiryFullEmails'
 import { ENQUIRY_EMAIL_TABLES } from './__fixtures__/enquiryEmailTables'
 import { CORPUS_TODAY, ENQUIRY_EMAILS, type EnquiryCase } from './__fixtures__/enquiryEmails'
 import { norm, pct, scoreFact, scoreItems, type FactScore } from './__fixtures__/score'
+import { unitFamily } from './corpus/units'
 import { asParseResult, findDate, parseEnquiry, unitOf } from './enquiryParse'
 
 const parse = (text: string) => parseEnquiry(text, { today: CORPUS_TODAY })
@@ -69,7 +70,7 @@ describe('parseEnquiry: items over several lines and quantity shapes', () => {
     ['Bearing 6205 2.000 EA', 'Bearing 6205', 2, 'EA'],
     ['Proximity sensor M30 x2', 'Proximity sensor M30', 2, null],
     ['Flame scanner (2 Nos)', 'Flame scanner', 2, 'nos'],
-    ['Hydraulic oil ISO VG 68 - 4 Drums', 'Hydraulic oil ISO VG 68', 4, 'drums'],
+    ['Hydraulic oil ISO VG 68 - 4 Drums', 'Hydraulic oil ISO VG 68', 4, 'Drums'],
     ['Gear motor 1.5kW, Qty: 2 Nos, Make: SEW', 'Gear motor 1.5kW, Make: SEW', 2, 'nos'],
     ['Siemens 6ES7 231-4HD32-0XB0 – 2', 'Siemens 6ES7 231-4HD32-0XB0', 2, null],
     ['Ultrasonic level transmitter 0-10m qty 3', 'Ultrasonic level transmitter 0-10m', 3, null],
@@ -83,7 +84,7 @@ describe('parseEnquiry: items over several lines and quantity shapes', () => {
   })
 
   it('normalises units as the intake does', () => {
-    expect([unitOf('EA'), unitOf("No's"), unitOf('Mtr'), unitOf('No.'), unitOf('Kgs'), unitOf(null)]).toEqual(['nos', 'nos', 'm', 'nos', 'kg', null])
+    expect([unitOf('EA'), unitOf("No's"), unitOf('Mtr'), unitOf('No.'), unitOf('Kgs'), unitOf(null)]).toEqual(['EA', 'nos', 'm', 'nos', 'kg', null])
   })
 })
 
@@ -149,7 +150,9 @@ describe('the enquiry corpus (realistic emails, WhatsApp exports, PDF text)', ()
   })
 
   it('still reads every case of the intake corpus exactly as the old parser does', () => {
-    for (const c of ENQUIRY_CORPUS) expect(parse(c.text).items, c.name).toEqual(c.items)
+    // Same items; the unit is the customer's own now ("pcs" stays pcs), so it is compared by family (corpus/units.ts).
+    const fam = (xs: Array<{ description: string; qty: number; unit: string | null }>) => xs.map(x => ({ ...x, unit: unitFamily(x.unit) === 'pcs' || unitFamily(x.unit) === 'ea' ? 'nos' : unitFamily(x.unit) }))
+    for (const c of ENQUIRY_CORPUS) expect(fam(parse(c.text).items), c.name).toEqual(fam(c.items))
   })
 })
 
@@ -261,7 +264,7 @@ describe('parseEnquiry: the shapes the sales verification found (BUG-SALES-1, BU
     ].join('\n')
     expect(rows(text)).toEqual([
       ['radar level transmitter 0-10 m', 2, 'nos'],
-      ['pressure gauge 0-16 bar', 4, 'nos'],
+      ['pressure gauge 0-16 bar', 4, 'pcs'],
     ])
   })
 
