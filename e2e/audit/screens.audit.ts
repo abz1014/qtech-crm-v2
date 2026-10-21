@@ -5,7 +5,7 @@ import { openAs, type Role } from '../support/stack'
 import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
 import { collect, type Metrics } from './collect'
 import { seedAudit, type Fixture } from './seed'
-import { VISITS, type CaptureOptions, type Visit } from './screens'
+import { VISITS, bounded, type CaptureOptions, type Visit } from './screens'
 
 /*
  * The screen audit (docs/audit/SCREEN_AUDIT.md): every main screen and key state, for each role, at each viewport, measured in
@@ -38,6 +38,8 @@ const ONLY = process.env.AUDIT_SCREENS ? new RegExp(process.env.AUDIT_SCREENS) :
 const AXE = process.env.AUDIT_AXE !== '0'
 const FULL = process.env.AUDIT_FULL !== '0'
 const MAX_FULL_HEIGHT = 15_000
+/** How long one visit may take at one viewport, per screen it captures (axe and the full-page shot included). */
+const VISIT_BUDGET_PER_SCREEN = 100_000
 
 export interface AxeSummary {
   rules: number
@@ -133,6 +135,9 @@ async function pageFor(browser: Browser, info: TestInfo, role: Role, vp: Viewpor
   const page = await context.newPage()
   // Its own sign-in through the login form, so no two contexts share (and rotate) one refresh token.
   await openAs(page, role, '/today')
+  // No click, fill or wait may hang a visit: without this, an action on an element that never shows waits for the whole test timeout.
+  page.setDefaultTimeout(20_000)
+  page.setDefaultNavigationTimeout(30_000)
   pages.set(key, { context, page })
   return page
 }
@@ -234,9 +239,18 @@ for (const role of ROLES) {
           try {
             page = await pageFor(browser, info, role, vp)
             const current = page
-            await visit.run(current, fx, async (screen, opts) => {
-              done.add(screen)
-              records.push(await captureOne(current, role, visit, screen, vp, opts))
+            let late = false
+            // A backstop: a visit that is still going after its budget is recorded as an error and its page replaced (below).
+            await bounded(visit.screens.length * VISIT_BUDGET_PER_SCREEN, `${visit.id} at ${vp.name}`, () =>
+              visit.run(current, fx, async (screen, opts) => {
+                if (late) throw new Error('visit timed out')
+                done.add(screen)
+                const record = await captureOne(current, role, visit, screen, vp, opts)
+                if (!late) records.push(record)
+              }),
+            ).catch(e => {
+              late = true
+              throw e
             })
           } catch (e) {
             let shot: string | undefined

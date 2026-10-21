@@ -130,6 +130,8 @@ describe('due text', () => {
   it('reads overdue in the danger tone with the days late', () => {
     expect(dueText({ dueOn: '2026-11-24', daysToDue: -3, isOverdue: true })).toEqual({ date: 'Tue 24 Nov', hint: '3 days overdue', tone: 'danger' })
     expect(dueText({ dueOn: '2026-11-26', daysToDue: -1, isOverdue: true }).hint).toBe('1 day overdue')
+    // Once the quotation is sent the due date is met: no red "overdue" (R6).
+    expect(dueText({ dueOn: '2026-11-26', daysToDue: -1, isOverdue: true, quotedOn: '2026-11-25' })).toEqual({ date: 'Thu 26 Nov', hint: 'Quotation sent', tone: 'normal' })
   })
   it('warns on today and tomorrow, and stays calm beyond', () => {
     expect(dueText({ dueOn: '2026-11-27', daysToDue: 0, isOverdue: false })).toMatchObject({ hint: 'Due today', tone: 'warning' })

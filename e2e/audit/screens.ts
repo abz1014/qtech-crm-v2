@@ -166,35 +166,105 @@ const SUPPLIER_REPLY = [
   'Regards, Oliver Grant, Midlands Valves Ltd',
 ].join('\n')
 
-/** The Paste or photo sheet (the top-bar button, or the phone bar's): empty, then with a supplier's reply pasted in. */
+/** Fails with `what` if `step` has not finished within `ms`: a step can never hang a visit (the runner then records an error and moves on). */
+export async function bounded<T>(ms: number, what: string, step: () => Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${what}: not done within ${ms / 1000} s`)), ms)
+  })
+  try {
+    return await Promise.race([step(), late])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Closes whatever dialog is open (Escape, then its Close or Cancel button), and if one is still there, opens Today afresh: the next
+ * visit starts from a page with no dialog. Never throws.
+ */
+async function closeDialogs(page: Page): Promise<void> {
+  const dialog = page.locator(DIALOG).first()
+  const gone = (ms: number) =>
+    dialog.waitFor({ state: 'hidden', timeout: ms }).then(
+      () => true,
+      () => false,
+    )
+  if (!(await dialog.isVisible().catch(() => false))) return
+  await page.keyboard.press('Escape').catch(() => undefined)
+  if (await gone(3_000)) return
+  await page
+    .locator(DIALOG)
+    .getByRole('button', { name: /^(close|cancel)$/i })
+    .filter({ visible: true })
+    .first()
+    .click({ timeout: 3_000 })
+    .catch(() => undefined)
+  if (await gone(3_000)) return
+  await open(page, '/today').catch(() => undefined)
+}
+
+/**
+ * The Paste or photo sheet (the top-bar button, or the phone bar's): empty, then with a supplier's reply pasted in.
+ *
+ * Empty, the sheet shows its "Pasted text" box only on a phone; on a desktop it is a drop zone and the phone's box is in the page but
+ * hidden. Filling that hidden box waited for it to show for the whole test timeout (run 39676918821: 17 minutes per role, then the
+ * closed page failed every visit after it). So only a visible box is filled; on a desktop the text arrives as a paste, as Ctrl+V does.
+ */
 const pasteOrPhoto: Visit = {
   id: 'paste-or-photo',
   title: 'Paste or photo',
   roles: ALL,
   screens: ['paste-or-photo-empty', 'paste-or-photo-pasted'],
   run: async (page, _fx, capture) => {
-    await open(page, '/today')
-    await press(page, [/^paste or photo$/i, /paste or photo/i, /^capture$/i], 'open Paste or photo')
-    await page.locator(DIALOG).first().waitFor({ timeout: 10_000 })
-    const box = page.locator(DIALOG).getByRole('textbox', { name: /pasted text/i }).first()
-    // A draft kept on the device (IndexedDB) from an earlier, interrupted run is emptied first: the empty state is what is graded.
-    if ((await box.count()) && (await box.inputValue()) !== '') {
-      await box.fill('')
-      await page.waitForTimeout(800)
+    const dialog = page.locator(DIALOG).first()
+    const box = page.locator(DIALOG).getByRole('textbox', { name: /pasted text/i }).filter({ visible: true }).first()
+    /** Empties the draft kept on the device (IndexedDB): an emptied draft is deleted from it (debounced 300 ms). */
+    const empty = async () => {
+      if ((await box.count()) && (await box.inputValue({ timeout: 3_000 })) !== '') {
+        await box.fill('', { timeout: 5_000 })
+        await page.waitForTimeout(800)
+      }
     }
-    await settle(page)
-    await capture('paste-or-photo-empty', { root: DIALOG })
+    try {
+      await bounded(45_000, 'open Paste or photo', async () => {
+        await open(page, '/today')
+        await closeDialogs(page)
+        await press(page, [/^paste or photo$/i, /paste or photo/i, /^capture$/i], 'open Paste or photo')
+        await dialog.waitFor({ timeout: 10_000 })
+        // A draft from an earlier, interrupted run is emptied first: the empty state is what is graded.
+        await empty()
+        await settle(page)
+      })
+      await capture('paste-or-photo-empty', { root: DIALOG })
 
-    await box.fill(SUPPLIER_REPLY)
-    await page.waitForTimeout(500)
-    await settle(page)
-    await capture('paste-or-photo-pasted', { root: DIALOG })
-
-    // Leave nothing behind: an emptied draft is deleted from the device (debounced 300 ms), then the sheet is closed.
-    await box.fill('')
-    await page.waitForTimeout(800)
-    await page.keyboard.press('Escape')
-    await page.locator(DIALOG).first().waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => undefined)
+      await bounded(30_000, 'paste a supplier reply', async () => {
+        if (await box.count()) {
+          await box.fill(SUPPLIER_REPLY, { timeout: 5_000 })
+        } else {
+          // The sheet listens for a paste anywhere; this is what Ctrl+V with nothing focused delivers.
+          await page.evaluate(t => {
+            const dt = new DataTransfer()
+            dt.setData('text/plain', t)
+            document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
+          }, SUPPLIER_REPLY)
+        }
+        await page.waitForFunction(
+          () => Array.from(document.querySelectorAll<HTMLTextAreaElement>('[role="dialog"] textarea')).some(t => t.offsetParent !== null && t.value.trim() !== ''),
+          undefined,
+          { timeout: 5_000 },
+        )
+        await page.waitForTimeout(500)
+        await settle(page)
+      })
+      await capture('paste-or-photo-pasted', { root: DIALOG })
+    } finally {
+      // Leave nothing behind: the draft emptied (so it is gone from the device), the sheet closed.
+      await bounded(20_000, 'close Paste or photo', async () => {
+        await empty().catch(() => undefined)
+        await closeDialogs(page)
+      }).catch(() => undefined)
+    }
   },
 }
 
@@ -205,13 +275,28 @@ const issueQuotation: Visit = {
   roles: MONEY,
   screens: ['issue-quotation'],
   run: async (page, fx, capture) => {
-    await open(page, `/rfqs/${fx.rfq.pricesIn}`)
-    const pressed = await tryPress(page, [/^issue quotation$/i, /^(make|write|send) (a )?quotation$/i, /issue quotation/i], 'Issue quotation')
-    if (!pressed) await open(page, `/rfqs/${fx.rfq.pricesIn}?issue=1`)
-    await page.locator(DIALOG).first().waitFor({ timeout: 10_000 })
-    await settle(page)
-    await capture('issue-quotation', { root: DIALOG })
-    await page.keyboard.press('Escape')
+    const dialog = page.locator(DIALOG).first()
+    try {
+      await bounded(60_000, 'open Issue quotation', async () => {
+        await open(page, `/rfqs/${fx.rfq.pricesIn}`)
+        await closeDialogs(page)
+        const pressed = await tryPress(page, [/^issue quotation$/i, /^(make|write|send) (a )?quotation$/i, /issue quotation/i], 'Issue quotation')
+        const shown =
+          pressed &&
+          (await dialog.waitFor({ timeout: 10_000 }).then(
+            () => true,
+            () => false,
+          ))
+        if (!shown) {
+          await open(page, `/rfqs/${fx.rfq.pricesIn}?issue=1`)
+          await dialog.waitFor({ timeout: 10_000 })
+        }
+        await settle(page)
+      })
+      await capture('issue-quotation', { root: DIALOG })
+    } finally {
+      await bounded(20_000, 'close Issue quotation', () => closeDialogs(page)).catch(() => undefined)
+    }
   },
 }
 

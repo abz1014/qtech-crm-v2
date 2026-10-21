@@ -70,9 +70,10 @@ export function StepBar({ summary, warning, primary, more }: { summary?: ReactNo
               busy={primary.busy}
               busyLabel={primary.busyLabel}
               disabled={primary.disabled}
-              className="min-w-0 flex-1"
+              // A long label ("Looks right: find suppliers") wraps to two lines at 320 px instead of being cut off; the bar stays one slim row.
+              className="h-auto min-h-touch min-w-0 flex-1 whitespace-normal py-1"
             >
-              <span className="truncate">{primary.label}</span>
+              <span className="line-clamp-2 min-w-0 text-balance text-center leading-tight">{primary.label}</span>
               {primary.next ? <Icon icon={ChevronRight} /> : null}
             </Button>
           ) : null}

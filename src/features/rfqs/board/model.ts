@@ -210,10 +210,14 @@ export interface DueText {
   tone: 'danger' | 'warning' | 'normal'
 }
 
-export function dueText(r: Pick<BoardRow, 'dueOn' | 'daysToDue' | 'isOverdue'>): DueText {
+/** Overdue only while our quotation is still owed: once it is sent the due date is met (R6, UX audit 2026-10-22). */
+export const isLate = (r: Pick<BoardRow, 'isOverdue'> & Partial<Pick<BoardRow, 'quotedOn'>>) => r.isOverdue && !r.quotedOn
+
+export function dueText(r: Pick<BoardRow, 'dueOn' | 'daysToDue' | 'isOverdue'> & Partial<Pick<BoardRow, 'quotedOn'>>): DueText {
   if (!r.dueOn) return { date: null, hint: 'No due date', tone: 'normal' }
   const date = formatDay(r.dueOn)
   const n = r.daysToDue
+  if (r.quotedOn) return { date, hint: 'Quotation sent', tone: 'normal' }
   if (r.isOverdue) return { date, hint: daysOverdue(n ?? 0), tone: 'danger' }
   if (n === null) return { date, hint: '', tone: 'normal' }
   if (n <= 1) return { date, hint: dueWord(Math.max(0, n)), tone: 'warning' }

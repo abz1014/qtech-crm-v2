@@ -12,14 +12,16 @@
 //   mark-done           everyone: Mark done today (only once the planned date has come)
 //   create-invoice      admin and sales: Create invoice
 //   await-payment       admin: Record payment; sales: Copy reminder
-//   the waiting steps, costs, done: the sentence only (an engineer keeps "Mark done today" as a secondary button in "Your job")
+//   done                admin and sales: Repeat order (the Repeat a past order dialog with this order chosen; audit 39676918821: a done,
+//                       paid order had no green button); an engineer: the sentence only
+//   the waiting steps, costs: the sentence only (an engineer keeps "Mark done today" as a secondary button in "Your job")
 
 import { formatAmount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney } from '@/features/orders/api'
 import { nextOrderStep, type OrderFacts, type OrderStep, type StepLeg } from '@/features/orders/lib/orderSteps'
 
-export type PrimaryKind = 'resolve-basis' | 'record-payment' | 'chase-goods' | 'deliver' | 'add-supplier' | 'issue-po' | 'mark-placed' | 'plan-commissioning' | 'mark-done' | 'create-invoice' | 'copy-reminder'
+export type PrimaryKind = 'resolve-basis' | 'record-payment' | 'chase-goods' | 'deliver' | 'add-supplier' | 'issue-po' | 'mark-placed' | 'plan-commissioning' | 'mark-done' | 'create-invoice' | 'copy-reminder' | 'repeat-order'
 
 export interface PrimaryAction {
   kind: PrimaryKind
@@ -93,6 +95,8 @@ export function pagePrimary(step: OrderStep, f: OrderFacts): PrimaryAction | nul
       return { kind: 'mark-done', label: 'Mark done today' }
     case 'create-invoice':
       return money ? { kind: 'create-invoice', label: 'Create invoice' } : null
+    case 'done':
+      return money ? { kind: 'repeat-order', label: 'Repeat order' } : null
     default:
       return null
   }

@@ -108,6 +108,17 @@ describe('the order page: one primary button, chosen by the shared ordering', ()
     expect(recordPaymentPlace(header({ cancelledOn: '2026-11-19' }), money(), undefined, 'admin')).toBeNull()
   })
 
+  it('a done, paid order: admin and sales get Repeat order as the green button; an engineer gets none (audit 39676918821)', () => {
+    const done = header({}, { lifecycle: 'done', goods: 'delivered', invoicing: 'fully_invoiced', invoiced: 1180 })
+    const paid = money({ paymentState: 'settled', balance: 0, settled: 1180, costsState: 'complete' })
+    const admin = page(done, [], [], 'admin', paid)
+    expect(admin.step.kind).toBe('done')
+    expect(admin.primary).toEqual({ kind: 'repeat-order', label: 'Repeat order' })
+    expect(admin.text).toBe('Nothing left to do on this order')
+    expect(page(done, [], [], 'sales', paid).primary).toMatchObject({ kind: 'repeat-order' })
+    expect(page(done, [], [], 'engineer').primary).toBeNull()
+  })
+
   it('a cancelled order has no primary step', () => {
     expect(page(header({ cancelledOn: '2026-11-19' }), [legRow('a')], [item('1', 'a')]).primary).toBeNull()
   })

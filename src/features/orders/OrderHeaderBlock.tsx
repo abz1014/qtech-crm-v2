@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Icon } from '@/ui/Icon'
-import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, RotateCcw, Scale, Truck, Wrench, type LucideIcon } from 'lucide-react'
+import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, CopyPlus, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, RotateCcw, Scale, Truck, Wrench, type LucideIcon } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay, formatShortDate } from '@/lib/formatDay'
@@ -33,6 +33,7 @@ import { TapDate, TapText } from '@/features/orders/TapEdit'
 import { useMarkDone, useSetPlanned } from '@/features/orders/commissioningActions'
 import { CommissioningEditDialog } from '@/features/orders/CommissioningPanel'
 import { AddLegDialog } from '@/features/orders/AddDialogs'
+import { NewOrderDialog } from '@/features/orders/NewOrderDialog'
 import { GoodsChaseDialog } from '@/features/orders/GoodsChaseDialog'
 import { ResolveBasisDialog } from '@/features/orders/ResolveBasisDialog'
 import { CopyReminderButton } from '@/features/orders/CopyReminderButton'
@@ -582,6 +583,15 @@ function PrimaryButton({
           {open ? <GoodsChaseDialog order={order} leg={leg} onClose={() => setOpen(false)} /> : null}
         </>
       ) : null
+    case 'repeat-order':
+      return (
+        <>
+          <Button variant="primary" icon={CopyPlus} className={cls} onClick={() => setOpen(true)}>
+            {action.label}
+          </Button>
+          {open ? <NewOrderDialog sourceId={order.id} onClose={() => setOpen(false)} /> : null}
+        </>
+      )
     case 'mark-placed':
     case 'deliver':
       return leg && legActions.stamp ? (
