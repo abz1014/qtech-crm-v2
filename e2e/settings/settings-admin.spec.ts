@@ -216,7 +216,7 @@ test.describe('Settings › Targets (M06)', () => {
   })
 })
 
-test.describe('Settings › Expense categories (M13, groups 0082)', () => {
+test.describe('Settings › Expense categories (M13, groups 0083)', () => {
   const OFFICE = 'ca7e9000-0000-4000-8000-000000000001'
   const VEHICLES = 'ca7e9000-0000-4000-8000-000000000002'
   const OWNER = 'ca7e9000-0000-4000-8000-000000000006'

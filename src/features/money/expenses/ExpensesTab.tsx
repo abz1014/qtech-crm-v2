@@ -48,7 +48,7 @@ import {
 } from '@/features/money/expenses/model'
 
 /*
- * Money › Expenses (M03, M11; grouped 0082; admin only). One month at a time, by payment date. The month's ONE total sits in the
+ * Money › Expenses (M03, M11; grouped 0083; admin only). One month at a time, by payment date. The month's ONE total sits in the
  * toolbar beside the month ("PKR 2,330,850 · 48 expenses"), so it is read before any row. The rows are grouped by their
  * category's group (Office running, Vehicles, Staff, Order costs, Owner and loans) with a subtotal each, so supplier payments
  * never hide among the snacks. "Search expenses" (payee, detail, category, order number; `?q=`) and Filters (group, category,

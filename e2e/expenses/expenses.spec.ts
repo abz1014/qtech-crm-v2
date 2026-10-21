@@ -10,7 +10,7 @@ import { axeViolations } from '../support/axe'
  *   Five small spends in a burst       at most 5 amounts + 6 keys, 0 mouse
  *   Recurring expense                  1 tap
  *   Supplier payment from a leg        2 taps
- *   Phone, "Office tea Rs 500 cash" with a category that does not exist yet: 3 taps (Add expenses, Create, Save) (0082)
+ *   Phone, "Office tea Rs 500 cash" with a category that does not exist yet: 3 taps (Add expenses, Create, Save) (0083)
  * plus the closed-month refusal (month closed by the admin first), the engineer and sales having no access, and axe
  * (WCAG 2.2 AA) at 1440 and 375. Since the owner decision of 2026-10-19 the screen has ONE add button, "Add expenses" (the burst
  * sheet, as quick for one row); the one-expense dialog is what an order or a supplier order opens (/money/expenses?add=1...). Each test makes its own records with unique notes; the closed-month tests run last
@@ -263,7 +263,7 @@ test.describe('expenses (M03, M11)', () => {
     await page.keyboard.press('Tab')
     await page.keyboard.type('fu')
     await expect(page.getByRole('option', { name: /Fuel & travel/ })).toBeVisible()
-    await expect(page.getByText(/^1 of \d+$/)).toBeVisible() // 0082 seeds more categories
+    await expect(page.getByText(/^1 of \d+$/)).toBeVisible() // 0083 seeds more categories
     await review(page, 'm11-burst-typeahead-1440')
     await page.keyboard.press('Tab')
     await expect(page.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Fuel & travel')

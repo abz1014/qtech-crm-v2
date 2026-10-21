@@ -1808,7 +1808,7 @@ Signature unchanged. New rules: when `quote_line_id` is left out the rank-1 line
 
 SECURITY INVOKER. Moves `p_qty` of an order line to an existing leg of the same order (`p_supplier_order_id`), or to the leg for `p_supplier_id` and `p_currency` (the order's existing leg for that supplier and currency if there is one, else a new leg linked to the supplier's inquiry on the order's RFQ when it has one). Exactly one of the two is given. Needs `0 < p_qty < qty`; a service line is refused; the new line copies description, brand, family, unit, selling price, GST rate and `rfq_item_id`, and takes `p_supplier_unit_price` (NULL when not given: the source line's price belongs to another supplier); the source line keeps the remainder. Returns the new order line's id. Allowed after a PO was issued for the source leg (O07 shows "lines changed since PO"). Section 10: X for all staff.
 
-## Amendment A9: the expense book (migration 0082, owner request 2026-10-22)
+## Amendment A9: the expense book (migration 0083, owner request 2026-10-22)
 
 The owner: "expense category, expense keeping and expense report are utmost priority". One new table (`expense_groups`), two new columns on `expense_categories`, one on `recurring_expenses`, one function. Nothing changes a figure: the P&L kind of every expense, its amount, date and payment method stay as they were.
 
@@ -1840,7 +1840,7 @@ PL/pgSQL, SECURITY INVOKER, fixed `search_path`. Admin only (42501 otherwise). M
 
 ### Reports
 
-No new view. The Expenses report (Money > Reports > Expenses; `/money/reports/categories` now opens it) reads the period's `expenses` rows and `v_month_cash_flow` (trend). Its total equals `v_month_cash_flow.money_out` and `v_month_pnl.cash_out_total`; its running costs, order costs and "not a cost" equal `v_month_pnl` overheads, order costs and non-P&L out (net of input tax), and with input tax add up to the total; cash plus bank equals the total (pgTAP 0082, money oracle `expenseReport.property.test.ts`).
+No new view. The Expenses report (Money > Reports > Expenses; `/money/reports/categories` now opens it) reads the period's `expenses` rows and `v_month_cash_flow` (trend). Its total equals `v_month_cash_flow.money_out` and `v_month_pnl.cash_out_total`; its running costs, order costs and "not a cost" equal `v_month_pnl` overheads, order costs and non-P&L out (net of input tax), and with input tax add up to the total; cash plus bank equals the total (pgTAP 0083, money oracle `expenseReport.property.test.ts`).
 
 ### Proposal, not built: cash in hand (petty cash)
 

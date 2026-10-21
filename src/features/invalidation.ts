@@ -47,7 +47,7 @@ export interface WriteVars {
   'target.save': Record<string, never>
   /** M13: any change to a category (name, group, paid via, order, active, add, delete). */
   'category.save': Record<string, never>
-  /** 0082: two categories merged (every expense of one moved into the other). */
+  /** 0083: two categories merged (every expense of one moved into the other). */
   'category.merge': Record<string, never>
   /** M12: a bank tick (or untick) of a payment, an expense or an FBR deposit group. */
   'bank.tick': Record<string, never>

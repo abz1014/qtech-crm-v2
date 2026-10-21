@@ -1,6 +1,6 @@
--- 0082_expense_book (owner request 2026-10-22: "expense category, expense keeping and expense report are utmost priority").
+-- 0083_expense_book (owner request 2026-10-22: "expense category, expense keeping and expense report are utmost priority").
 -- Admin only, like every expense table (DECISIONS 2026-10-13). Nothing here changes a figure: totals by month, by P&L kind
--- (overhead / order cost / not in P&L) and by payment method stay exactly what they were; pgTAP 0082 proves it.
+-- (overhead / order cost / not in P&L) and by payment method stay exactly what they were; pgTAP 0083 proves it.
 --
 --   A. expense_groups: the first level of the two-level list (group -> category), e.g. "Office running" -> Water, Electricity.
 --      A group carries the P&L kind; every category in it takes that kind (expense_categories.grp is kept and synced, so every
@@ -28,7 +28,7 @@ create table public.expense_groups (
 );
 
 comment on table public.expense_groups is
-  '0082: the first level of the expense list (group -> category). The kind is the P&L place of every category in the group. Admin only.';
+  '0083: the first level of the expense list (group -> category). The kind is the P&L place of every category in the group. Admin only.';
 
 create unique index expense_groups_name_key on public.expense_groups (lower(btrim(name)));
 
@@ -93,8 +93,8 @@ where c.grp <> (select g.kind from public.expense_groups g where g.id = c.group_
 alter table public.expense_categories alter column group_id set not null;
 create index expense_categories_group_idx on public.expense_categories (group_id);
 
-comment on column public.expense_categories.group_id is '0082: the group the category is listed under; grp follows the group''s kind.';
-comment on column public.expense_categories.monthly_budget_pkr is '0082: optional monthly budget (gross paid), shown against what was spent. NULL = no budget.';
+comment on column public.expense_categories.group_id is '0083: the group the category is listed under; grp follows the group''s kind.';
+comment on column public.expense_categories.monthly_budget_pkr is '0083: optional monthly budget (gross paid), shown against what was spent. NULL = no budget.';
 
 -- grp follows the group. A category given no group (an older client sending only grp) goes to the first group of its kind; a
 -- grp changed without a group change moves it to the first group of the new kind.
@@ -192,7 +192,7 @@ alter table public.expense_categories enable trigger expense_categories_audit;
 -- ================================================================ D. recurring_expenses.paid_via
 alter table public.recurring_expenses
   add column paid_via text check (paid_via in ('bank', 'cash'));
-comment on column public.recurring_expenses.paid_via is '0082: how this monthly expense is usually paid; NULL = the category''s own default.';
+comment on column public.recurring_expenses.paid_via is '0083: how this monthly expense is usually paid; NULL = the category''s own default.';
 
 -- ================================================================ E. merge, and the month lock's one exception
 -- The month lock (0027) lets a closed month's expense change its category only inside merge_expense_categories, which sets
@@ -226,7 +226,7 @@ begin
       v_touched := (new.number, new.invoice_date, new.net_amount, new.gst_amount, new.order_id, new.company_id)
         is distinct from (old.number, old.invoice_date, old.net_amount, old.gst_amount, old.order_id, old.company_id);
     elsif tg_table_name = 'expenses' and coalesce(current_setting('qtech.category_merge', true), '') = 'on' then
-      -- 0082: inside merge_expense_categories only the category may change
+      -- 0083: inside merge_expense_categories only the category may change
       v_touched := (to_jsonb(new) - 'bank_month' - 'category_id') is distinct from (to_jsonb(old) - 'bank_month' - 'category_id');
     else
       v_touched := (to_jsonb(new) - 'bank_month') is distinct from (to_jsonb(old) - 'bank_month');
@@ -306,4 +306,4 @@ revoke all on function public.merge_expense_categories(uuid, uuid) from public, 
 grant execute on function public.merge_expense_categories(uuid, uuid) to authenticated;
 
 comment on function public.merge_expense_categories(uuid, uuid) is
-  '0082: moves every expense and recurring template of one category into another and removes the first. Admin only. Closed months keep every figure (only the category of their expenses changes, and only between categories of the same kind).';
+  '0083: moves every expense and recurring template of one category into another and removes the first. Admin only. Closed months keep every figure (only the category of their expenses changes, and only between categories of the same kind).';

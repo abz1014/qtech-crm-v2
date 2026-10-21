@@ -282,7 +282,7 @@ export async function updateCategory(id: string, patch: CategoryPatch): Promise<
 export async function createCategory(v: {
   name: string
   group_id: string
-  /** The group's kind; the database sets it from the group anyway (0082). */
+  /** The group's kind; the database sets it from the group anyway (0083). */
   grp: CategoryGroup
   default_paid_via: PaidVia
   sort: number
@@ -306,13 +306,13 @@ export async function deleteCategory(id: string): Promise<void> {
   if (!rows || rows.length === 0) throw new PlainError('Only an admin can delete categories.')
 }
 
-/** Moves every expense and recurring template of `from` into `into`, then removes `from` (0082). Returns how many expenses moved. */
+/** Moves every expense and recurring template of `from` into `into`, then removes `from` (0083). Returns how many expenses moved. */
 export async function mergeCategories(from: string, into: string): Promise<number> {
   const n = unwrap(await requireSupabase().rpc('merge_expense_categories', { p_from: from, p_into: into }))
   return Number(n ?? 0)
 }
 
-// ---------------------------------------------------------------- expense groups (0082, admin only)
+// ---------------------------------------------------------------- expense groups (0083, admin only)
 
 /** The expense groups in their saved order (the same read as the expense screens, under the same query key). */
 export async function listGroups(): Promise<ExpenseGroup[]> {

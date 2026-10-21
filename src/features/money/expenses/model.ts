@@ -11,19 +11,19 @@ export type CategoryGroup = 'overhead' | 'order_cost' | 'non_pnl'
 export interface Category {
   id: string
   name: string
-  /** The P&L kind; always the kind of the category's group (0082 keeps them in step). */
+  /** The P&L kind; always the kind of the category's group (0083 keeps them in step). */
   grp: CategoryGroup
-  /** The group it is listed under ("Office running"), 0082. */
+  /** The group it is listed under ("Office running"), 0083. */
   groupId: string
   defaultPaidVia: PaidVia
   sort: number
   /** false: archived (hidden from pickers, history kept). */
   active: boolean
-  /** Optional monthly budget in PKR (gross paid), 0082. */
+  /** Optional monthly budget in PKR (gross paid), 0083. */
   budget: number | null
 }
 
-/** The first level of the expense list (0082): "Office running", "Vehicles", "Order costs". Its kind is the P&L place of its categories. */
+/** The first level of the expense list (0083): "Office running", "Vehicles", "Order costs". Its kind is the P&L place of its categories. */
 export interface ExpenseGroup {
   id: string
   name: string
@@ -31,7 +31,7 @@ export interface ExpenseGroup {
   sort: number
 }
 
-/** The seeded groups (0082), by fixed id. */
+/** The seeded groups (0083), by fixed id. */
 export const GROUP_IDS = {
   office: 'ca7e9000-0000-4000-8000-000000000001',
   vehicles: 'ca7e9000-0000-4000-8000-000000000002',
@@ -358,7 +358,7 @@ export interface RecurringTemplate {
   active: boolean
   startMonth: string | null
   notes: string | null
-  /** How it is usually paid (0082); null follows the category's own default. */
+  /** How it is usually paid (0083); null follows the category's own default. */
   paidVia: PaidVia | null
 }
 
@@ -392,7 +392,7 @@ export interface ListedExpense {
 }
 
 export interface ExpenseFilters {
-  /** A group id (0082: the group the category is listed under), or 'all'. */
+  /** A group id (0083: the group the category is listed under), or 'all'. */
   group: string | 'all'
   categoryId: string | 'all'
   paidVia: PaidVia | 'all'
@@ -464,7 +464,7 @@ export function detailSuggestions(rows: readonly DetailUse[], categoryId: string
     .map(t => t.shown)
 }
 
-// ------------------------------------------------------------------ the list, by group (0082)
+// ------------------------------------------------------------------ the list, by group (0083)
 
 /** The section a listed expense sits in: its category's group ("Office running"), in the groups' saved order. */
 export interface ListSection {

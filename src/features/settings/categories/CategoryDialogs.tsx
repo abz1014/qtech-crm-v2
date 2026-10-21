@@ -39,7 +39,7 @@ import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 
 /*
- * The dialogs of Settings › Expense categories (0082). Each is one small form: one press is one request, the dialog stays
+ * The dialogs of Settings › Expense categories (0083). Each is one small form: one press is one request, the dialog stays
  * open with what was typed when the server refuses, and the refusal is shown in its own words (rpcMessages).
  */
 const NEW_GROUP = '__new__'

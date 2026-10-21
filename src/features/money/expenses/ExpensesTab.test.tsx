@@ -8,7 +8,7 @@ import { installFakeDb, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
 /*
- * Money › Expenses list (0082): grouped by the category's group with one total in the toolbar, delete with Undo (nothing is
+ * Money › Expenses list (0083): grouped by the category's group with one total in the toolbar, delete with Undo (nothing is
  * removed until the Undo window closes), and a closed month's rows locked.
  */
 const OFFICE = 'ca7e9000-0000-4000-8000-000000000001'
@@ -49,7 +49,7 @@ function setup(closed: string[] = []) {
 
 afterEach(() => installFakeDb(() => ({})).uninstall())
 
-describe('Expenses list (0082)', () => {
+describe('Expenses list (0083)', () => {
   it('groups rows under their group with one month total in the toolbar; no input-tax column in a month with none', async () => {
     setup()
     expect(await screen.findByTestId('expenses-month-total')).toHaveTextContent('PKR 381,650 · 3 expenses')

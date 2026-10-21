@@ -116,7 +116,7 @@ describe('deleteAdvice', () => {
 const g = (id: string, name: string, kind: ExpenseGroup['kind'], sort: number): ExpenseGroup => ({ id, name, kind, sort })
 const GROUPS = [g('cars', 'Vehicles', 'overhead', 20), g('office', 'Office running', 'overhead', 10), g('orders', 'Order costs', 'order_cost', 50), g('empty', 'Site visits', 'overhead', 70)]
 
-describe('categorySections (0082)', () => {
+describe('categorySections (0083)', () => {
   const list = [
     c('water', 'Water', 20, { group_id: 'office' }),
     c('rent', 'Rent', 10, { group_id: 'office' }),
