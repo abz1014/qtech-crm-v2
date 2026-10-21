@@ -2,7 +2,8 @@ import { useEffect, useId, useRef, type ReactNode } from 'react'
 import type { CompanyRole } from '@/features/companies/api'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
-import { StatusBadge } from '@/ui/StatusBadge'
+import { STATUS } from '@/lib/status'
+import { Tag } from '@/ui/Tag'
 
 /*
  * Small page parts the company screens share, built from tokens only (g2-company.html: .g-panel,
@@ -70,14 +71,14 @@ export function KeyValue({ rows }: { rows: { key: string; value: ReactNode }[] }
 }
 
 /**
- * The derived role as a chip. "Both" is drawn as a light customer chip that says what it means ("Customer & supplier")
- * instead of the dark ink chip, the heaviest mark on the list for the least useful fact (UX audit 9a).
+ * The derived role as a neutral Tag: identity, not state (DESIGN_SYSTEM section 6), so no tone. The words come from
+ * the registry ("Customer", "Supplier", "Customer & supplier", "Prospect"); a prospect is dashed (not firm).
  */
 export function RoleChip({ role, className }: { role: CompanyRole; className?: string }) {
-  return role === 'both' ? (
-    <StatusBadge dimension="company-role" value="customer" label="Customer & supplier" className={className} />
-  ) : (
-    <StatusBadge dimension="company-role" value={role} className={className} />
+  return (
+    <Tag dashed={role === 'prospect'} className={className}>
+      {STATUS['company-role'][role].label}
+    </Tag>
   )
 }
 

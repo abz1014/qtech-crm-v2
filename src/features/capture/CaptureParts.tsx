@@ -1,5 +1,5 @@
 import { useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
-import { ChevronRight, CircleCheck, FileText, ImageIcon, Info, Paperclip, Search, Upload } from 'lucide-react'
+import { ChevronRight, CircleCheck, FileText, ImageIcon, Info, Paperclip, Search, Upload, type LucideIcon } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { qk } from '@/features/queryKeys'
@@ -14,7 +14,6 @@ import { TILES } from '@/features/capture/tiles'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
-import { StatusBadge } from '@/ui/StatusBadge'
 import { FileRow } from '@/ui/form/FileRow'
 import { TextField } from '@/ui/form/TextField'
 import { rovingKeyDown, rovingTabIndex } from '@/ui/roving'
@@ -40,15 +39,20 @@ export function Section({ title, aside, children, className }: { title: ReactNod
 
 export function CapNote({ children }: { children: ReactNode }) {
   return (
-    <p className="flex items-start gap-2 text-xs leading-snug text-fg-muted [&_b]:font-medium [&_b]:text-fg">
+    <p className="flex items-start gap-2 text-sm leading-snug text-fg-muted [&_b]:font-medium [&_b]:text-fg">
       <Icon icon={Info} size="sm" className="mt-px" />
       <span>{children}</span>
     </p>
   )
 }
 
-export function Tiles({ chosen, kind, off, onChoose }: { chosen: Dest; kind: PayloadKind; off: boolean; onChoose: (d: Dest) => void }) {
+/**
+ * The four destinations as radio tiles. With `only` (R2-11) just the chosen one is drawn, wide, and "Something else" (in the sheet)
+ * opens the rest; the arrow keys still step through all four, on the same element, so the focus stays put.
+ */
+export function Tiles({ chosen, kind, off, onChoose, only = false }: { chosen: Dest; kind: PayloadKind; off: boolean; onChoose: (d: Dest) => void; only?: boolean }) {
   const order = Object.keys(TILES) as Exclude<Dest, 'reply' | 'order'>[]
+  const shown = only ? order.filter(d => d === chosen) : order
   const move = (e: KeyboardEvent, i: number) => {
     const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
     if (!step || off) return
@@ -58,15 +62,16 @@ export function Tiles({ chosen, kind, off, onChoose }: { chosen: Dest; kind: Pay
     ;(e.currentTarget.parentElement?.querySelector(`[data-dest="${next}"]`) as HTMLElement | null)?.focus()
   }
   return (
-    <div role="radiogroup" aria-label="What should we do with it" className="grid grid-cols-2 gap-2">
-      {order.map((d, i) => {
+    <div role="radiogroup" aria-label="What should we do with it" className={cn('grid gap-2', only ? 'grid-cols-1' : 'grid-cols-2')}>
+      {shown.map(d => {
+        const i = order.indexOf(d)
         const t = TILES[d]
         const on = !off && chosen === d
         const title = d === 'answer' && kind === 'files' ? 'Answer with photo' : t.title
         const help = d === 'answer' && kind === 'files' ? 'The photo is the reply, no text needed' : t.help
         return (
           <button
-            key={d}
+            key={only ? 'chosen' : d}
             type="button"
             role="radio"
             aria-checked={on}
@@ -76,18 +81,31 @@ export function Tiles({ chosen, kind, off, onChoose }: { chosen: Dest; kind: Pay
             onKeyDown={e => move(e, i)}
             onClick={() => onChoose(d)}
             className={cn(
-              'relative grid min-h-[76px] content-start gap-[2px] rounded border p-3 text-left transition-colors duration-fast ease-out',
+              'relative grid content-start gap-[2px] rounded border p-3 text-left transition-colors duration-fast ease-out',
+              only ? 'grid-cols-[auto_minmax(0,1fr)] gap-x-3 pr-8' : 'min-h-[76px]',
               on ? 'border-fg bg-sunken' : 'border-line-strong bg-surface hover:border-line-input hover:bg-sunken',
               off && 'cursor-not-allowed bg-sunken hover:border-line-strong',
             )}
           >
-            <Icon icon={t.icon} size="lg" className={cn('mb-1', on ? 'text-fg' : 'text-fg-muted', off && 'text-fg-disabled')} />
+            <Icon icon={t.icon} size="lg" className={cn(only ? 'row-span-2 self-center' : 'mb-1', on ? 'text-fg' : 'text-fg-muted', off && 'text-fg-disabled')} />
             <b className={cn('text-sm font-medium leading-snug', off && 'text-fg-disabled')}>{title}</b>
-            <span className="text-pretty text-xs leading-snug text-fg-muted">{help}</span>
+            <span className="text-pretty text-sm leading-snug text-fg-muted">{help}</span>
             {on ? <span aria-hidden="true" className="absolute right-[10px] top-[10px] size-[8px] rounded-round bg-brand-green" /> : null}
           </button>
         )
       })}
+    </div>
+  )
+}
+
+/** The chosen destination when it is not one of the four tiles (a supplier's reply, an order), drawn like the chosen tile. */
+export function ChosenCard({ icon, title, help }: { icon: LucideIcon; title: string; help: string }) {
+  return (
+    <div className="relative grid grid-cols-[auto_minmax(0,1fr)] content-start gap-x-3 gap-y-[2px] rounded border border-fg bg-sunken p-3 pr-8 text-left" data-chosen-dest>
+      <Icon icon={icon} size="lg" className="row-span-2 self-center text-fg" />
+      <b className="text-sm font-medium leading-snug">{title}</b>
+      <span className="text-pretty text-sm leading-snug text-fg-muted">{help}</span>
+      <span aria-hidden="true" className="absolute right-[10px] top-[10px] size-[8px] rounded-round bg-brand-green" />
     </div>
   )
 }
@@ -221,7 +239,7 @@ export function CaptureArea({
           <li key={r.id} className="flex items-center gap-3 rounded border border-line-strong bg-surface px-3 py-2 text-sm">
             <span aria-hidden="true" className="size-[40px] shrink-0 rounded border bg-selected" />
             <span className="grid min-w-0 flex-1">
-              <b className="truncate font-medium">{r.name}</b>
+              <b className="min-w-0 [overflow-wrap:anywhere] break-all font-medium">{r.name}</b>
               <span className="text-xs text-fg-muted">Resizing</span>
             </span>
             <span role="progressbar" aria-label={`Resizing ${r.name}`} className="h-[6px] w-[64px] overflow-hidden rounded-round bg-selected">
@@ -258,11 +276,11 @@ function Row({ c, on, onPick, hint, tabIndex }: { c: Candidate; on: boolean; onP
         <Icon icon={FileText} />
       </span>
       <span className="grid min-w-0 flex-1">
-        <b className="truncate text-sm font-medium leading-snug">
+        <b className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium leading-snug">
           <span className="num">{rfqRef(c.number)}</span> · {c.companyName}
           {c.city ? ` — ${c.city}` : ''}
         </b>
-        <span className="truncate text-xs leading-snug text-fg-muted">{hint}</span>
+        <span className="min-w-0 [overflow-wrap:anywhere] text-xs leading-snug text-fg-muted">{hint}</span>
       </span>
       <span aria-hidden="true" className={cn('grid size-[16px] shrink-0 place-items-center rounded-round border', on ? 'border-brand-green bg-brand-green' : 'border-line-input bg-surface')}>
         {on ? <span className="size-[6px] rounded-round bg-surface" /> : null}
@@ -308,7 +326,7 @@ export function RfqPicker({ list, chosenId, now, onPick }: { list: readonly Cand
                 <li key={h.id}>
                   <button type="button" onClick={() => pickHit(h)} className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm hover:bg-sunken">
                     <b className="num font-medium">{rfqRef(h.number)}</b>
-                    <span className="truncate text-fg-muted">{h.companyName}</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere] text-fg-muted">{h.companyName}</span>
                   </button>
                 </li>
               ))}
@@ -364,10 +382,10 @@ export function OrderPicker({ list, chosenId, now, includePo, onPick }: { list: 
                 <Icon icon={FileText} />
               </span>
               <span className="grid min-w-0 flex-1">
-                <b className="truncate text-sm font-medium leading-snug">
+                <b className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium leading-snug">
                   <span className="num">{orderRef(c.number)}</span> · {c.companyName}
                 </b>
-                <span className="truncate text-xs leading-snug text-fg-muted">{c.openedAt ? `Opened ${openedAgo(c.openedAt, now)}` : 'Found by search'}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere] text-xs leading-snug text-fg-muted">{c.openedAt ? `Opened ${openedAgo(c.openedAt, now)}` : 'Found by search'}</span>
               </span>
               <span aria-hidden="true" className={cn('grid size-[16px] shrink-0 place-items-center rounded-round border', c.id === chosenId ? 'border-brand-green bg-brand-green' : 'border-line-input bg-surface')}>
                 {c.id === chosenId ? <span className="size-[6px] rounded-round bg-surface" /> : null}
@@ -383,7 +401,7 @@ export function OrderPicker({ list, chosenId, now, includePo, onPick }: { list: 
                 <li key={h.id}>
                   <button type="button" onClick={() => pickHit(h)} className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm hover:bg-sunken">
                     <b className="num font-medium">{orderRef(h.number)}</b>
-                    <span className="truncate text-fg-muted">{h.companyName}</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere] text-fg-muted">{h.companyName}</span>
                   </button>
                 </li>
               ))}
@@ -470,24 +488,13 @@ export function SavedPanel({
           <dt className="text-fg-muted">{rfqLabel}</dt>
           <dd className="min-w-0 text-right">{rfq}</dd>
         </div>
-        {answered !== undefined ? (
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-fg-muted">Questions</dt>
-              <dd className="flex items-center gap-2">
-                <StatusBadge dimension="clarification" value="answered" />
-                <span className="num">{answered}</span>
-              </dd>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-fg-muted">Next</dt>
-              <dd>
-                <StatusBadge dimension="clarification" value="answers-to-relay" />
-              </dd>
-            </div>
-          </>
-        ) : null}
       </dl>
+      {answered !== undefined ? (
+        // One sentence instead of two status chips (round 2, 1.5 "Paste or photo summary").
+        <p className="w-full max-w-[420px] text-pretty text-left text-sm text-fg-2" data-answered-next>
+          Marks <span className="num">{answered}</span> {answered === 1 ? 'question' : 'questions'} answered. Next: send the {answered === 1 ? 'answer' : 'answers'} to the suppliers.
+        </p>
+      ) : null}
       <div className="grid w-full max-w-[420px] gap-2 [&>button]:h-touch">{children}</div>
     </div>
   )

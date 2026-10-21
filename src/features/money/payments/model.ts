@@ -3,6 +3,9 @@
  * invoice amount and deduct nothing. "Settled" is computed against gross by order_receivables(), with a Rs 1 allowance.
  */
 import { addBusinessDays } from '@/features/rfqs/lib/dateText'
+import { orderRef } from '@/lib/refs'
+import type { StepTone } from '@/lib/status'
+import { agoDays, daysOverdue, inDays } from '@/lib/timeWords'
 
 export type PaymentState = 'unpaid' | 'part' | 'settled' | 'overdue'
 
@@ -76,6 +79,36 @@ export const REMINDER_WAIT_WORKING_DAYS = 7
 /** A reminder is due when the order is overdue and was not reminded within the last 7 WORKING days (M09; Today uses the same rule). */
 export function reminderDue(r: ReceivableRow, today: string): boolean {
   return r.state === 'overdue' && (r.lastRemindedOn === null || today >= addBusinessDays(r.lastRemindedOn, REMINDER_WAIT_WORKING_DAYS))
+}
+
+export interface ReceivableNextStep {
+  tone: StepTone
+  label: string
+  detail?: string
+}
+
+/**
+ * The ONE Next step of a Who owes us row (round-2 R2-06), in place of the old Payment chip and Last reminder columns:
+ *   late     "Send a reminder" · "12 days overdue"     overdue and a reminder is due (the same rule as Today)
+ *   waiting  "Reminded 3 days ago" · "12 days overdue"  overdue, reminded within the wait
+ *   waiting  "Due 3 Nov" · "In 4 days"                  invoiced, not yet due
+ *   inert    "Not invoiced yet"                         no invoice, so no due date
+ *   done     "Paid"
+ */
+export function receivableNextStep(r: ReceivableRow, today: string): ReceivableNextStep {
+  if (r.state === 'settled') return { tone: 'done', label: 'Paid' }
+  if (r.state === 'overdue') {
+    const late = daysOverdue(r.dueOn ? daysBetween(r.dueOn, today) : 1)
+    if (reminderDue(r, today) || !r.lastRemindedOn) return { tone: 'late', label: 'Send a reminder', detail: late }
+    return { tone: 'waiting', label: `Reminded ${agoDays(daysBetween(r.lastRemindedOn, today)).toLowerCase()}`, detail: late }
+  }
+  if (!r.dueOn) return { tone: 'inert', label: 'Not invoiced yet' }
+  return { tone: 'waiting', label: `Due ${day(r.dueOn)}`, detail: inDays(daysBetween(today, r.dueOn)) }
+}
+
+/** The text Search balances matches (customer, order number, invoice numbers). */
+export function receivableSearchText(r: ReceivableRow): string {
+  return [r.companyName, orderRef(r.orderNumber), String(r.orderNumber), ...r.invoiceNumbers].join(' ')
 }
 
 export function receivableTotals(rows: readonly ReceivableRow[], today: string): ReceivableTotals {

@@ -17,6 +17,7 @@ import {
   CircleAlert,
   HandCoins,
   Import,
+  Keyboard,
   Landmark,
   Percent,
   Plus,
@@ -30,6 +31,7 @@ import { settingsLinksFor } from "@/features/settings/settingsLinks";
 import { CaptureContext } from "@/app/capture/useCapture";
 import { PaletteContext, type PaletteApi } from "@/app/palette/usePalette";
 import { CAPTURE_LABEL } from "@/app/shell/TopBar";
+import { KEYBOARD_MEDIA } from "@/app/shell/shortcuts";
 import { Kbd } from "@/ui/Kbd";
 import { shortcutsEnabled } from "@/ui/useShortcutsSetting";
 import {
@@ -196,6 +198,18 @@ const loadPalette = () => import("@/ui/CommandPalette");
 const CommandPalette = lazy(() =>
   loadPalette().then((m) => ({ default: m.CommandPalette })),
 );
+// The Keyboard shortcuts sheet loads only when someone asks for it (?, the account menu, the palette action).
+const ShortcutsSheet = lazy(() =>
+  import("@/app/shell/ShortcutsSheet").then((m) => ({
+    default: m.ShortcutsSheet,
+  })),
+);
+
+function hasKeyboard(): boolean {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function"
+    ? window.matchMedia(KEYBOARD_MEDIA).matches
+    : true;
+}
 
 export function PaletteHost({
   role,
@@ -208,6 +222,18 @@ export function PaletteHost({
 }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [initialQuery, setInitialQuery] = useState("");
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // Mounted from the first time it opens (not before), so it closes with its own animation and focus return.
+  const [shortcutsLoaded, setShortcutsLoaded] = useState(false);
+  const openShortcuts = useCallback(() => {
+    setShortcutsLoaded(true);
+    setShortcutsOpen(true);
+  }, []);
+  const onPaletteOpenChange = useCallback((next: boolean) => {
+    if (!next) setInitialQuery("");
+    setOpen(next);
+  }, []);
   const [extra, setExtra] = useState<PaletteSource[]>([]);
   const seq = useRef(0);
   const openCapture = useContext(CaptureContext)?.openCapture;
@@ -237,7 +263,7 @@ export function PaletteHost({
     };
   }, [role]);
 
-  // Actions (A-89): idle rows in the palette, and the same keys work anywhere outside a text field: N, C, G then T.
+  // Actions (A-89): idle rows in the palette, and the same keys work anywhere outside a text field: N, C, G then T, ?.
   const actions = useMemo<PaletteSource>(() => {
     // "capture" and "paste" still find it: the old name, and the word people reach for.
     const captureItem: PaletteItem = {
@@ -248,6 +274,16 @@ export function PaletteHost({
       icon: Import,
       shortcut: ["C"],
       onSelect: () => openCapture?.(),
+    };
+    // Desktop only (a keyboard is likely); found by "keys" or "shortcuts" too.
+    const shortcutsItem: PaletteItem = {
+      id: "shortcuts",
+      label: "Keyboard shortcuts",
+      meta: "Action",
+      keywords: ["keys", "shortcuts", "keyboard", "hotkeys"],
+      icon: Keyboard,
+      shortcut: ["?"],
+      onSelect: openShortcuts,
     };
     const items: PaletteItem[] = [
       {
@@ -273,15 +309,17 @@ export function PaletteHost({
         href: "/companies?new=1",
       },
     ];
-    // Typing "paste", "photo" or "capture" finds the paste-or-photo action; the other actions are idle-only (destinations answer typed text).
+    // Typing "paste", "photo" or "capture" finds the paste-or-photo action, "keys" or "shortcuts" the shortcuts sheet; the
+    // other actions are idle-only (destinations answer typed text).
     return {
       id: "actions",
       group: "Actions",
       order: 90,
-      idle: () => items,
-      search: (q) => filterItems([captureItem], q),
+      idle: () => (hasKeyboard() ? [...items, shortcutsItem] : items),
+      search: (q) =>
+        filterItems(hasKeyboard() ? [captureItem, shortcutsItem] : [captureItem], q),
     };
-  }, [openCapture]);
+  }, [openCapture, openShortcuts]);
 
   useEffect(() => {
     let armedAt = 0;
@@ -303,12 +341,13 @@ export function PaletteHost({
       }
       const armed = Date.now() - armedAt < 1000;
       armedAt = 0;
+      // C (Paste or photo) is CaptureProvider's: it handles the key first and prevents default, so it is not matched here.
       if (k === "n") {
         e.preventDefault();
         navigate(INTAKE_ROUTE);
-      } else if (k === "c" && openCapture) {
+      } else if (k === "?") {
         e.preventDefault();
-        openCapture();
+        openShortcuts();
       } else if (k === "t" && armed) {
         e.preventDefault();
         navigate(TODAY_ROUTE);
@@ -316,7 +355,7 @@ export function PaletteHost({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [navigate, openCapture]);
+  }, [navigate, openShortcuts]);
 
   // Until the palette has loaded, Ctrl+K here opens it (and loads it); after that the palette's own key handles it.
   const [loaded, setLoaded] = useState(false);
@@ -347,13 +386,16 @@ export function PaletteHost({
   );
   const api = useMemo<PaletteApi>(
     () => ({
-      open: () => {
+      open: (query?: string) => {
+        // Buttons pass `open` straight to onClick, so a click event can arrive here: only a string is a query.
+        setInitialQuery(typeof query === "string" ? query.trim() : "");
         setLoaded(true);
         setOpen(true);
       },
+      openShortcuts,
       register,
     }),
-    [register],
+    [register, openShortcuts],
   );
 
   return (
@@ -363,9 +405,11 @@ export function PaletteHost({
         <Suspense fallback={null}>
           <CommandPalette
             open={open}
-            onOpenChange={setOpen}
+            onOpenChange={onPaletteOpenChange}
             sources={sources}
             personId={personId}
+            initialQuery={initialQuery}
+            shortcutsHint
             onNavigate={(href, { newTab }) =>
               newTab ? window.open(href, "_blank", "noopener") : navigate(href)
             }
@@ -376,6 +420,11 @@ export function PaletteHost({
               </>
             }
           />
+        </Suspense>
+      ) : null}
+      {shortcutsLoaded ? (
+        <Suspense fallback={null}>
+          <ShortcutsSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
         </Suspense>
       ) : null}
     </PaletteContext.Provider>

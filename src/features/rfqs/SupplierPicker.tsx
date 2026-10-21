@@ -20,8 +20,8 @@ import { Icon } from '@/ui/Icon'
 /*
  * Suppliers (g2-intake-float frame 4): reasons first. Every suggestion says why in a sentence, with the counts from
  * its history beneath. Only "supplied this item before" is ticked when the step opens. Nothing is scored. Inside a reason
- * group the supplier with the better record comes first (A8), and the order behind it is cited: number, the date we placed it,
- * days to delivery. The whole row is the tap target.
+ * group the supplier with the better record comes first (A8). The order behind it (number, the date we placed it, days to
+ * delivery) is in the Memory card, so a row is the name, the reason and one record line. The whole row is the tap target.
  */
 
 const pill = 'inline-flex h-5 shrink-0 items-center gap-[6px] whitespace-nowrap rounded border border-line-strong bg-surface px-[6px] text-xs text-fg-2'
@@ -30,7 +30,7 @@ export function ItemChips({ items }: { items: readonly DraftItem[] }) {
   return (
     <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
       {items.map((it, i) => (
-        <li key={it.key} title={it.description} className="inline-grid min-h-[22px] max-w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[6px] rounded border border-line-strong bg-surface pl-[6px] pr-2 text-xs text-fg-2">
+        <li key={it.key} title={it.description} className="inline-grid min-h-[22px] max-w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[6px] rounded border border-line-strong bg-surface py-[2px] pl-[6px] pr-2 text-xs text-fg-2">
           <span className="num grid size-4 shrink-0 place-items-center rounded-full bg-selected text-xs leading-none text-fg">{i + 1}</span>
           <span className="min-w-0 [overflow-wrap:anywhere]">{it.description}</span>
           <span className="num shrink-0 text-fg-muted">× {effectiveQty(it)}</span>
@@ -103,13 +103,19 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
           <span className="min-w-0">{s.name}</span>
           {s.city ? <span className="text-xs font-regular text-fg-muted">{s.city}</span> : null}
         </label>
+        {/* "2 items · same model": how many of the items they are suggested for, and the reason (R2-10; a bare "2 same model" read as a count of models). */}
         <span className={cn(pill, 'ml-auto')}>
-          <span className="num">{n}</span>
-          {s.tierLabel}
+          <span>
+            <span className="num">{n}</span> {n === 1 ? 'item' : 'items'}
+          </span>
+          <span aria-hidden="true">·</span>
+          <span>{s.tierLabel}</span>
         </span>
       </div>
       <p className="m-0 pl-[30px] text-sm text-fg-2">{s.reason}</p>
-      {s.evidence ? (
+      {/* The order behind the reason lives in Memory (its evidence block), so each supplier takes one line less (R2-10). Without a
+          Memory card it stays on the row. */}
+      {s.evidence && !memory ? (
         <p className="m-0 flex items-start gap-[6px] pl-[30px] text-xs text-fg-2" data-evidence>
           <Icon icon={FileCheck} size="chip" className="mt-[2px] text-fg-muted" />
           <span className="text-pretty">
@@ -197,6 +203,8 @@ export function SupplierPicker({
   memory?: MemoryContext
 }) {
   const [text, setText] = useState('')
+  // Someone added by hand (or from a supplier's page) who is also suggested shows once, in the reason group, ticked there.
+  const shownManual = manual.filter(m => !groups.some(g => g.suppliers.some(s => s.supplierId === m.id)))
   const matches = useCompanyMatches(text)
   const options = (matches.data ?? []).filter(m => !excludeIds.has(m.id) && !manual.some(x => x.id === m.id)).map(m => ({
     value: m.id,
@@ -232,13 +240,13 @@ export function SupplierPicker({
         groups.map(g => <Group key={g.group} g={g} ticked={ticked} onToggle={onToggle} memory={memory} />)
       )}
 
-      {manual.length > 0 ? (
+      {shownManual.length > 0 ? (
         <section aria-label="Added by you" className="overflow-hidden rounded border bg-surface">
           <header className="flex items-baseline gap-3 border-b bg-sunken px-5 py-3">
             <h3 className="m-0 text-sm font-semibold">Added by you</h3>
           </header>
           <ul className="m-0 grid list-none p-0">
-            {manual.map(m => {
+            {shownManual.map(m => {
               const on = ticked.has(m.id)
               const id = `sup-${m.id}`
               return (

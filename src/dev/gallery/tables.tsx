@@ -3,14 +3,14 @@
 import { useState, type ReactNode } from 'react'
 import { ClipboardPaste, Plus, Truck } from 'lucide-react'
 import { Row, Section } from '@/dev/gallery/layout'
-import { STATUS, type StatusDimension } from '@/lib/status'
+import { STATUS_ENTRIES, TONE_OF_STEP, type StatusDimension, type StepTone, type Tone } from '@/lib/status'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Button } from '@/ui/Button'
 import { Margin, Money, MoneyFx, NetGstGross } from '@/ui/Money'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { TableFilter } from '@/ui/TableFilter'
-import { StatusTrack } from '@/ui/StatusTrack'
+import { StatusText } from '@/ui/StatusText'
 import { AfterDrawings, ExactEquation, SumBar } from '@/ui/SumBar'
 import { formatDay } from '@/lib/formatDay'
 
@@ -20,6 +20,24 @@ const Cell2 = ({ t, s }: { t: ReactNode; s?: ReactNode }) => (
     {s ? <span className="text-xs text-fg-muted">{s}</span> : null}
   </span>
 )
+
+// ---------------------------------------------------------------- status vocabulary (DESIGN_SYSTEM section 6)
+const STEPS: { step: StepTone; title: string }[] = [
+  { step: 'now', title: 'We act next (warning)' },
+  { step: 'waiting', title: 'Someone else acts next (info)' },
+  { step: 'late', title: 'Past its date (danger)' },
+  { step: 'done', title: 'Finished (success)' },
+  { step: 'inert', title: 'Closed, not asked, not needed (neutral)' },
+]
+/** One registry key per visible label, grouped by tone. */
+const VOCAB = STATUS_ENTRIES.filter(([, , s]) => !s.hidden).reduce(
+  (acc, [d, v, s]) => {
+    if (!acc[s.tone].some(([, , l]) => l === s.label)) acc[s.tone].push([d, v, s.label])
+    return acc
+  },
+  { warning: [], info: [], danger: [], success: [], neutral: [] } as Record<Tone, [StatusDimension, string, string][]>,
+)
+const HIDDEN = STATUS_ENTRIES.filter(([, , s]) => s.hidden)
 
 // ---------------------------------------------------------------- components-06
 interface Rfq { id: string; no: string; customer: string; items: number; due: string; sourcing: string; status: string; value: string | null }
@@ -48,7 +66,7 @@ const rfqCols: Column<Rfq>[] = [
       ) : r.status === 'closed' ? (
         <StatusBadge dimension="rfq-outcome" value="closed" />
       ) : r.status === 'to_bid' ? (
-        <StatusBadge dimension="bid" value="to_bid" />
+        <StatusBadge dimension="rfq-stage" value="ready" />
       ) : (
         <StatusBadge dimension="rfq-outcome" value="open" />
       ),
@@ -77,8 +95,8 @@ const invCols: Column<Inv>[] = [
   { id: 'net', header: 'Net', ...money('net') },
   { id: 'gst', header: 'GST', ...money('gst') },
   { id: 'gross', header: 'Gross', kind: 'money', value: r => (Number(r.net) + Number(r.gst)).toFixed(2), total: true },
-  { id: 'tcs', header: 'Courier (TCS)', sortable: false, cell: r => <StatusTrack dimension="tcs" value={r.tcs} /> },
-  { id: 'fbr', header: 'FBR', sortable: false, cell: r => <StatusTrack dimension="fbr" value={r.fbr} /> },
+  { id: 'tcs', header: 'Courier (TCS)', sortable: false, cell: r => <StatusBadge dimension="tcs" value={r.tcs} /> },
+  { id: 'fbr', header: 'FBR', sortable: false, cell: r => <StatusBadge dimension="fbr" value={r.fbr} /> },
 ]
 
 // ---------------------------------------------------------------- money-08
@@ -135,7 +153,7 @@ function RfqTable({ label, density, activeRowId, onOpen }: { label: string; dens
       defaultSort={{ id: 'due', dir: 'asc' }}
       onRowOpen={r => onOpen(r.id)}
       activeRowId={activeRowId}
-      toolbar={<TableFilter label="Filter RFQs" value={text} onChange={setText} />}
+      toolbar={<TableFilter label="Search RFQs" value={text} onChange={setText} />}
       empty={<EmptyState title={`No RFQs match “${text}”`} actions={<Button onClick={() => setText('')}>Clear filter</Button>}>Try fewer words or clear the filter.</EmptyState>}
     />
   )
@@ -146,16 +164,31 @@ export function StatusMoneyTableSections() {
   const [open, setOpen] = useState<string | null>('3')
   return (
     <>
-      <Section id="status" title="StatusBadge" note="Every value in the registry, grouped by dimension. Colours come from the data-status map in tokens.css.">
+      <Section
+        id="status"
+        title="Status vocabulary"
+        note="The 34 visible labels, grouped by who acts next: as a chip (StatusBadge) and as status text (StatusText). One label, one tone, everywhere. Colours come from the data-status map in tokens.css."
+      >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {(Object.keys(STATUS) as StatusDimension[]).map(dim => (
-            <div key={dim} className="grid content-start gap-3 rounded border bg-surface p-4">
-              <p className="flex justify-between text-sm font-medium"><span>{dim}</span><span className="num text-fg-muted">{Object.keys(STATUS[dim]).length}</span></p>
-              <div className="flex flex-wrap gap-2">
-                {Object.keys(STATUS[dim]).map(v => <StatusBadge key={v} dimension={dim} value={v} />)}
-              </div>
+          {STEPS.map(({ step, title }) => (
+            <div key={step} className="grid content-start gap-3 rounded border bg-surface p-4">
+              <p className="flex justify-between text-sm font-medium"><span>{title}</span><span className="num text-fg-muted">{VOCAB[TONE_OF_STEP[step]].length}</span></p>
+              <ul className="grid gap-2">
+                {VOCAB[TONE_OF_STEP[step]].map(([d, v, label]) => (
+                  <li key={label} className="flex flex-wrap items-center justify-between gap-3">
+                    <StatusBadge dimension={d} value={v} />
+                    <StatusText dimension={d} value={v} />
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
+        </div>
+        <div className="mt-4 grid content-start gap-3 rounded border bg-surface p-4">
+          <p className="text-sm font-medium">Text only: the normal state never draws a chip</p>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {HIDDEN.map(([d, v]) => <StatusText key={`${d}:${v}`} dimension={d} value={v} detail={`${d}:${v}`} />)}
+          </div>
         </div>
       </Section>
 
@@ -193,10 +226,10 @@ export function StatusMoneyTableSections() {
         <RfqTable label="RFQs" activeRowId={null} onOpen={setOpen} />
         <RfqTable label="RFQs, compact" density="compact" activeRowId={open} onOpen={setOpen} />
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <DataTable label="Loading" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} loading toolbar={<TableFilter label="Filter RFQs" value="" onChange={() => undefined} />} />
-          <DataTable label="Error" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Filter RFQs" value="" onChange={() => undefined} />} error={{ onRetry: () => undefined, reference: '4f1c9a', at: new Date('2026-11-27T09:41:00+05:00') }} />
-          <DataTable label="Goal state" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Filter RFQs" value="" onChange={() => undefined} />} empty={<EmptyState mood="goal" title="Every quotation is sent" actions={<><Button variant="primary" icon={Plus}>New RFQ</Button><Button icon={ClipboardPaste}>Paste or photo</Button></>}>Nothing is open and nothing is due in the next 5 days. New RFQs appear here as soon as you start one.</EmptyState>} />
-          <DataTable label="No match" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Filter RFQs" value="Belimo" onChange={() => undefined} />} empty={<EmptyState title={'No RFQs match “Belimo”'} actions={<Button>Clear filter</Button>}>Search covers RFQ number, customer, customer ref and item text. Try fewer words or clear the filter.</EmptyState>} />
+          <DataTable label="Loading" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} loading toolbar={<TableFilter label="Search RFQs" value="" onChange={() => undefined} />} />
+          <DataTable label="Error" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Search RFQs" value="" onChange={() => undefined} />} error={{ onRetry: () => undefined, reference: '4f1c9a', at: new Date('2026-11-27T09:41:00+05:00') }} />
+          <DataTable label="Goal state" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Search RFQs" value="" onChange={() => undefined} />} empty={<EmptyState mood="goal" title="Every quotation is sent" actions={<><Button variant="primary" icon={Plus}>New RFQ</Button><Button icon={ClipboardPaste}>Paste or photo</Button></>}>Nothing is open and nothing is due in the next 5 days. New RFQs appear here as soon as you start one.</EmptyState>} />
+          <DataTable label="No match" noun="RFQs" columns={rfqCols} rows={[]} getRowId={r => r.id} toolbar={<TableFilter label="Search RFQs" value="Belimo" onChange={() => undefined} />} empty={<EmptyState title={'No RFQs match “Belimo”'} actions={<Button>Clear filter</Button>}>Search covers RFQ number, customer, customer ref and item text. Try fewer words or clear the filter.</EmptyState>} />
         </div>
       </Section>
 
@@ -219,7 +252,7 @@ export function StatusMoneyTableSections() {
               <span className="num text-xs text-fg-muted">Due {formatDay(r.due)}</span>
               <div className="flex flex-wrap items-center gap-1.5">
                 <StatusBadge dimension="sourcing" value={r.sourcing} />
-                {r.status === 'to_bid' ? <StatusBadge dimension="bid" value="to_bid" /> : <StatusBadge dimension="rfq-outcome" value={r.status === 'closed' ? 'closed' : 'open'} />}
+                {r.status === 'to_bid' ? <StatusBadge dimension="rfq-stage" value="ready" /> : <StatusBadge dimension="rfq-outcome" value={r.status === 'closed' ? 'closed' : 'open'} />}
               </div>
             </div>
           )}

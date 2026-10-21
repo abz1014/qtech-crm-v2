@@ -90,6 +90,16 @@ async function share(page: Page, payload: Shared) {
 }
 
 const sheet = (page: Page) => page.getByRole('dialog', { name: 'Paste or photo' })
+
+/** R2-11: only the chosen option shows; "Something else" opens the other tiles and the reply and order choices (once per capture). */
+async function openMore(page: Page) {
+  const more = sheet(page).getByRole('button', { name: 'Something else' })
+  if ((await more.getAttribute('aria-expanded')) !== 'true') await more.click()
+}
+async function chooseDest(page: Page, name: RegExp) {
+  await openMore(page)
+  await sheet(page).getByRole('radio', { name }).click()
+}
 // The Undo toast (the saved panel is a status too, so the toast is the one with an Undo button).
 const toast = (page: Page, text: string) => page.getByRole('status').filter({ hasText: text }).filter({ has: page.getByRole('button', { name: /Undo/ }) })
 
@@ -205,7 +215,7 @@ test.describe('desktop: paste and drop anywhere', () => {
     await paste(page, { text: 'Customer will send the P&ID on Monday.' })
     await expect(sheet(page)).toBeVisible()
     await expect(sheet(page).getByRole('textbox', { name: 'Pasted text' })).toHaveValue('Customer will send the P&ID on Monday.')
-    await page.getByRole('radio', { name: /Add to RFQ notes/ }).click()
+    await chooseDest(page, /Add to RFQ notes/)
     await sheet(page).getByRole('button', { name: 'Add to notes' }).click()
     await expect(toast(page, `Saved to ${rfqRef(s.rfq.number)}`)).toBeVisible()
     expect(await notesOf(s.rfq.id)).toMatch(/Test Sales, \w{3} \d{1,2} \w{3}, \d\d:\d\d\nCustomer will send the P&ID on Monday\./)
@@ -228,7 +238,7 @@ test.describe('desktop: paste and drop anywhere', () => {
       for (const type of ['dragenter', 'dragover', 'drop']) document.body.dispatchEvent(new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true }))
     }, PNG_B64)
     await expect(sheet(page).getByText('site-photo.png')).toBeVisible()
-    await page.getByRole('radio', { name: /Add to RFQ notes/ }).click()
+    await chooseDest(page, /Add to RFQ notes/)
     await sheet(page).getByRole('button', { name: 'Add to notes' }).click()
     await expect(toast(page, `Saved to ${rfqRef(s.rfq.number)}`)).toBeVisible()
     const [att] = await attsOf(s.rfq.id)
@@ -317,7 +327,7 @@ test.describe('the other destinations', () => {
     const s = await seed()
     await ready(page, s.rfq.id)
     await paste(page, { text: '1. Valve size and Kvs?\n2. Actuator torque and supply voltage?\n3. Fail-safe position on power loss?' })
-    await page.getByRole('radio', { name: /Questions from a supplier/ }).click()
+    await chooseDest(page, /Questions from a supplier/)
     await sheet(page).getByRole('checkbox', { name: /Actuator torque/ }).click()
     await sheet(page).getByRole('button', { name: 'Add 2 questions' }).click()
     await expect(toast(page, `Saved to ${rfqRef(s.rfq.number)}`)).toBeVisible()
@@ -329,6 +339,7 @@ test.describe('the other destinations', () => {
     const s = await seed()
     await ready(page, s.rfq.id)
     await paste(page, { text: 'Dear Sir, price for item 1 is USD 1,200 each, delivery 3 weeks, ex stock.' })
+    await openMore(page)
     await page.getByRole('button', { name: 'This is a supplier’s reply' }).click()
     await expect(sheet(page).getByRole('radio', { name: s.supplier.name })).toBeChecked()
     await sheet(page).getByRole('button', { name: 'Read the reply' }).click()
@@ -341,7 +352,7 @@ test.describe('the other destinations', () => {
     await ready(page, s.rfq.id)
     await share(page, { text: 'Please quote 2 nos ultrasonic level transmitter, 0 to 8 m, 4-20 mA.', files: [{ name: 'tank.png', type: 'image/png' }] })
     await expect(sheet(page)).toBeVisible()
-    await page.getByRole('radio', { name: /Start a new RFQ/ }).click()
+    await chooseDest(page, /Start a new RFQ/)
     await sheet(page).getByLabel('Which company?').fill(s.customer)
     await page.getByRole('option', { name: new RegExp(s.customer) }).click()
     await sheet(page).getByRole('button', { name: 'Continue to New RFQ' }).click()
@@ -407,6 +418,7 @@ test.describe('attach to an order (migration 0042)', () => {
     await page.locator('#main').waitFor()
     await paste(page, { text: 'Customer PO attached, delivery to site gate 2.', files: [{ name: 'po-scan.png', type: 'image/png' }] })
     await expect(sheet(page)).toBeVisible()
+    await openMore(page)
     await sheet(page).getByRole('button', { name: 'Attach to an order' }).click()
     await expect(sheet(page).getByRole('radio', { name: new RegExp(`ORD-${String(s.order.number).padStart(4, '0')} · ${s.customer}`) })).toBeChecked()
     await page.waitForTimeout(450)

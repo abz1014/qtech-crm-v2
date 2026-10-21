@@ -5,6 +5,7 @@ import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useScrollActiveIntoView } from '@/lib/useScrollActiveIntoView'
 import { Icon } from '@/ui/Icon'
+import { NeedsCount } from '@/ui/Tag'
 
 /*
  * SegmentedControl (INVENTORY: U03; D08 section 11). 2 to 5 options that switch
@@ -21,8 +22,13 @@ export interface SegmentOption {
   value: string
   label: string
   icon?: LucideIcon
-  /** Mono count after the label ("All 9"). */
-  count?: number
+  /**
+   * How many items under this option need you (NeedsCount: warning pill, ", N need you" for screen readers, nothing for 0).
+   * Only a needs-you count: a total ("All 9") is never drawn here; write it in words (consistency spec 2.1).
+   */
+  needs?: number
+  /** 'danger' for critical items (Things to check). */
+  needsVariant?: 'warning' | 'danger'
   disabled?: boolean
 }
 
@@ -62,7 +68,7 @@ export function SegmentedControl({
     <>
       {o.icon ? <Icon icon={o.icon} className="text-fg-muted group-data-[state=checked]:text-fg-2 group-data-[state=active]:text-fg-2" /> : null}
       {o.label}
-      {o.count !== undefined ? <span className="num font-regular">{o.count}</span> : null}
+      <NeedsCount n={o.needs} variant={o.needsVariant} />
     </>
   )
   const segClass = cn(

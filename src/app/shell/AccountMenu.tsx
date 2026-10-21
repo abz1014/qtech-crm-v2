@@ -1,10 +1,15 @@
+import { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CircleHelp, Download, KeyRound, LogOut, Settings, Users } from 'lucide-react'
+import { CircleHelp, Download, Keyboard, KeyRound, LogOut, Settings, Users } from 'lucide-react'
+import { PaletteContext } from '@/app/palette/usePalette'
+import { KEYBOARD_MEDIA } from '@/app/shell/shortcuts'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { ROLE_LABEL, session, type SessionUser } from '@/app/session'
 import { useHelp } from '@/features/help/useHelp'
 import { cn } from '@/lib/utils'
 import { promptInstall, useInstall } from '@/lib/pwa/install'
 import { Avatar } from '@/ui/Avatar'
+import { Kbd } from '@/ui/Kbd'
 import { MenuGroup, MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { useTextSize } from '@/ui/useTextSize'
 
@@ -12,13 +17,16 @@ import { useTextSize } from '@/ui/useTextSize'
  * Account menu: the top-bar avatar opens a Popover (menu variant) with the
  * person's name and role, Settings, the Text size choice (Normal or Smaller,
  * applied at once and kept on this device) and "Sign out". Esc closes it and
- * returns focus to the avatar.
+ * returns focus to the avatar. "Keyboard shortcuts" (with its ? key) shows only where a keyboard is likely: a fine pointer
+ * from md up.
  */
 export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?: boolean }) {
   const navigate = useNavigate()
   const { openHelp } = useHelp()
   const { canPrompt } = useInstall()
   const [textSize, setTextSize] = useTextSize()
+  const openShortcuts = useContext(PaletteContext)?.openShortcuts
+  const keyboard = useMediaQuery(KEYBOARD_MEDIA)
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -42,6 +50,11 @@ export function AccountMenu({ user, touch = false }: { user: SessionUser; touch?
         <MenuItem icon={CircleHelp} onClick={() => openHelp()}>
           Help
         </MenuItem>
+        {keyboard && openShortcuts ? (
+          <MenuItem icon={Keyboard} hint={<Kbd>?</Kbd>} onClick={openShortcuts}>
+            Keyboard shortcuts
+          </MenuItem>
+        ) : null}
         <MenuItem icon={Settings} onClick={() => navigate('/settings')}>
           Settings
         </MenuItem>

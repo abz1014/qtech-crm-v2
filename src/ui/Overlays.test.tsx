@@ -107,14 +107,14 @@ describe('Tooltip (U03)', () => {
 })
 
 describe('Tabs and SegmentedControl (U03)', () => {
-  it('Tabs: tablist semantics, arrows move and select, count pill, panel follows', async () => {
+  it('Tabs: tablist semantics, arrows move and select, needs-you pill, panel follows', async () => {
     const user = userEvent.setup()
     const { container } = render(
       <Tabs defaultValue="items">
         <TabList aria-label="RFQ sections">
           <Tab value="items">Items</Tab>
           <Tab value="suppliers">Suppliers</Tab>
-          <Tab value="questions" count={2}>
+          <Tab value="questions" needs={2}>
             Questions
           </Tab>
         </TabList>
@@ -132,6 +132,7 @@ describe('Tabs and SegmentedControl (U03)', () => {
     await user.keyboard('{End}')
     expect(screen.getByRole('tab', { name: /Questions/ })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: /Questions/ })).toHaveTextContent('2')
+    expect(screen.getByRole('tab', { name: /^Questions\s*, 2 need you$/ })).toBeInTheDocument()
   })
 
   function Seg({ mode }: { mode: 'radio' | 'tabs' }) {

@@ -7,7 +7,9 @@ import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
-import { StatusBadge } from '@/ui/StatusBadge'
+import { StickyActionBar } from '@/ui/StickyActionBar'
+import { useMediaQuery } from '@/lib/useMediaQuery'
+import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { monthKeyLabel } from '@/features/money/expenses/model'
 import { useReconciliationInput } from '@/features/money/hooks'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
@@ -98,11 +100,12 @@ export function ChecklistPage() {
           </EmptyState>
         </section>
       ) : (
-        <>
+        // Room under the last row for the phone's sticky action bar.
+        <div className="grid gap-4 max-md:pb-[calc(var(--control-lg-h)+2rem)]">
           <Hero ctx={ctx} extra={things?.length ?? 0} />
           <CheckList ctx={ctx} things={things} />
           <ClosedList ctx={ctx} onReopen={setReopen} />
-        </>
+        </div>
       )}
       <ReopenMonthDialog entry={reopen} onClose={() => setReopen(null)} />
     </MoneyFrame>
@@ -123,7 +126,7 @@ function LockBar({ month }: { month: string }) {
   )
 }
 
-/** The month, how many checks have items, and the one green button. On a phone the button is sticky at the foot. */
+/** The month, how many checks have items, and the one green button. On a phone the button is in the StickyActionBar. */
 function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const [open, setOpen] = useState(false)
   const state = ctx.state
@@ -131,16 +134,34 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const withItems = ctx.withItems + (extra > 0 ? 1 : 0)
   const day = closeWindowDay(ctx.month, ctx.today)
   const name = monthName(ctx.month)
+  const phone = useMediaQuery('(max-width: 767px)')
+  // The sticky bar replaces the bottom tabs on a phone (StickyActionBar's contract); the bar's back arrow leads out.
+  useMobileBar({ title: 'Month end', back: 'history', fallback: '/money/receivables', hideTabs: true })
+  const button = (size: 'lg' | 'touch') =>
+    closed ? (
+      <Button size={size} icon={Lock} disabled>
+        Closed
+      </Button>
+    ) : (
+      <Button size={size} variant="primary" icon={Lock} disabled={state?.kind === 'not-ended'} onClick={() => setOpen(true)}>
+        {state ? closeButtonLabel(ctx.month, state) : `Close ${name}`}
+      </Button>
+    )
+  const tip = (
+    <InfoTip label="About closing a month">
+      {state?.kind === 'not-ended' ? <>{name} can be closed once it has ended. </> : null}
+      Closing freezes payments, expenses and invoices dated in {name}. Bank matching and the TCS and FBR stamps stay open. You can reopen
+      it any time; both are written to the audit log. An earlier open month with money in it is closed in the same step.
+    </InfoTip>
+  )
   return (
     <section
       aria-label={`${monthKeyLabel(ctx.month)} summary`}
       className="grid items-center gap-x-8 gap-y-4 rounded border bg-surface px-6 py-5 md:grid-cols-[minmax(0,1fr)_auto]"
     >
       <div className="grid gap-1">
-        <h2 className="flex flex-wrap items-center gap-3 text-xl font-semibold tracking-snug">
-          {monthKeyLabel(ctx.month)}
-          <StatusBadge dimension="month" value={closed ? 'closed' : 'open'} />
-        </h2>
+        {/* No chip in the heading (spec 1.2): the month's state is the Closed chip beside the pager and the lock bar. */}
+        <h2 className="text-xl font-semibold tracking-snug">{monthKeyLabel(ctx.month)}</h2>
         <p className="text-base" data-testid="checks-summary">
           {withItems === 0 ? (
             'Every check is clear.'
@@ -158,37 +179,16 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
               : longDay(ctx.today)}
         </span>
       </div>
-      <div className="flex items-center gap-2 max-md:sticky max-md:bottom-0 max-md:z-10 max-md:-mx-6 max-md:-mb-5 max-md:border-t max-md:bg-surface max-md:px-4 max-md:py-3">
-        {closed ? (
-          <>
-            <Button size="lg" icon={Lock} disabled className="max-md:flex-1">
-              Closed
-            </Button>
-            <span className="text-sm text-fg-muted">Reopen it from the list below.</span>
-          </>
-        ) : (
-          <>
-            <Button
-              size="lg"
-              variant="primary"
-              icon={Lock}
-              disabled={state?.kind === 'not-ended'}
-              onClick={() => setOpen(true)}
-              className="max-md:h-touch max-md:flex-1"
-            >
-              {state ? closeButtonLabel(ctx.month, state) : `Close ${name}`}
-            </Button>
-            <InfoTip label="About closing a month">
-              {state?.kind === 'not-ended' ? (
-                <>{name} can be closed once it has ended. </>
-              ) : null}
-              Closing freezes payments, expenses and invoices dated in {name}. Bank matching and the TCS and FBR stamps stay open. You can reopen
-              it any time; both are written to the audit log. An earlier open month with money in it is closed in the same step.
-            </InfoTip>
-            <CloseMonthDialog open={open} onOpenChange={setOpen} ctx={ctx} />
-          </>
-        )}
-      </div>
+      {phone ? (
+        // The phone's one action bar (spec 5.3), the same button as on desktop.
+        <StickyActionBar label="Month end actions" primary={button('touch')} secondary={closed ? undefined : tip} />
+      ) : (
+        <div className="flex items-center gap-2">
+          {button('lg')}
+          {closed ? <span className="text-sm text-fg-muted">Reopen it from the list below.</span> : tip}
+        </div>
+      )}
+      {closed ? null : <CloseMonthDialog open={open} onOpenChange={setOpen} ctx={ctx} />}
     </section>
   )
 }
@@ -266,13 +266,12 @@ function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: ClosedM
     <Panel title="Closed months" meta={through ? <span className="text-sm text-fg-muted">Closed through {through}</span> : null} className="max-w-[720px]">
       <ul aria-label="Closed months">
         {state?.kind === 'open' ? (
-          <li className="grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 bg-selected px-5 py-3 text-sm">
+          <li className="grid grid-cols-[20px_minmax(0,1fr)] items-center gap-3 bg-selected px-5 py-3 text-sm">
             <Icon icon={LockOpen} size="md" className="text-tone-info-fg" />
             <span className="grid">
               <span className="font-medium">{monthKeyLabel(ctx.month)}</span>
               <span className="text-sm text-fg-muted">Open</span>
             </span>
-            <StatusBadge dimension="month" value="open" />
           </li>
         ) : null}
         {shown.map(c => (

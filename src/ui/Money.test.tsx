@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { Margin, Money, MoneyFx, NetGstGross } from '@/ui/Money'
 import { AfterDrawings, ExactEquation, SumBar } from '@/ui/SumBar'
 import { StatusBadge } from '@/ui/StatusBadge'
-import { StatusTrack } from '@/ui/StatusTrack'
+import { StatusText } from '@/ui/StatusText'
 import type { MarginState } from '@/lib/money'
 
 const html = (node: React.ReactElement) => renderToStaticMarkup(node)
@@ -56,10 +56,10 @@ describe('Money snapshots (D08 section 03)', () => {
     expect(html(<AfterDrawings result="2280635.60" notInPnl="300000" />)).toMatchSnapshot()
   })
 
-  it('status chip and track', () => {
+  it('status chip and status text', () => {
     expect(html(<StatusBadge dimension="goods" value="late" />)).toMatchSnapshot()
     expect(html(<StatusBadge dimension="trust" value="basis_unknown" />)).toMatchSnapshot()
-    expect(html(<StatusTrack dimension="fbr" value="receipt_received" />)).toMatchSnapshot()
+    expect(html(<StatusText dimension="fbr" value="receipt_received" detail="receipt in" />)).toMatchSnapshot()
   })
 })
 

@@ -2,6 +2,7 @@ Q-TECH CRM: ADMIN (one page)
 
 Money has four tabs: Who owes us, Invoices & GST, Expenses, Month end. "Reports" is at the top right of Money.
 A number beside a tab means "this many need you". The (i) next to a word explains it in one line.
+Press ? on a computer to see the keyboard shortcuts.
 
 1. EXPENSES, QUICK ENTRY
  - Money, Expenses, "Add expenses" (one row or many).
@@ -17,7 +18,7 @@ A number beside a tab means "this many need you". The (i) next to a word explain
  - The balance is gross, GST included.
 
 3. INVOICE, GST AND FBR STAMPS
- - Money, "Invoices & GST". "New invoice" or "Create invoice" from an order.
+ - Money, "Invoices & GST". "Create invoice" there or on an order.
  - Open an invoice to add the "Consignment number", "Receipt file" and Notes.
  - Parcel sent by TCS: tick the invoices, tap "Sent by TCS today".
  - Tax deposited: paste the PSID ("Add PSID"), then "Deposited today". Add "Deposit amount, PKR".

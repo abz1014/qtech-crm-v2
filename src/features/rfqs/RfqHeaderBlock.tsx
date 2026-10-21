@@ -1,10 +1,7 @@
 import { Link } from 'react-router-dom'
 import {
   Calendar,
-  Building2,
-  ChevronDown,
   Copy,
-  Ellipsis,
   FileCheck2,
   FilePlus2,
   FileText,
@@ -21,23 +18,25 @@ import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, rfqRef } from '@/lib/refs'
-import { cn } from '@/lib/utils'
+import type { StatusDimension } from '@/lib/status'
 import { NextStepBox } from '@/ui/NextStepBox'
 import { ROLE_LABEL } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Avatar } from '@/ui/Avatar'
-import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
+import { DetailHeader } from '@/ui/DetailHeader'
 import { Icon } from '@/ui/Icon'
+import { MoreMenu } from '@/ui/MoreMenu'
 import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { StatusBadge } from '@/ui/StatusBadge'
+import { StickyActionBar } from '@/ui/StickyActionBar'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader } from '@/features/rfqs/api'
 import { useSetBidSent, useSetRfqClosed } from '@/features/rfqs/hooks'
 import { useOrdersForRfq } from '@/features/orders/hooks'
 import { useWonDialog } from '@/features/orders/useWonDialog'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
-import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, dueChipLabel, dueSubLabel, nextStepSentence, quotationSent, stageChip, type CloseReason, type RfqPrimary } from '@/features/rfqs/lib'
+import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, dueChipLabel, dueSubLabel, nextStepSentence, quotationSent, stageKey, type CloseReason, type RfqPrimary } from '@/features/rfqs/lib'
 
 /*
  * The top of the RFQ page (g2-rfq-detail header, the phone bar and the action bar), reworked by the UX audit of 2026-10-19:
@@ -55,8 +54,12 @@ import { CLOSE_REASONS, closeReasonLabel, defaultCloseReason, dueChipLabel, dueS
  *     item the menu says why.
  * Mark quotation sent and closing both have an Undo.
  *
- * Phone (375): a page bar with back, the number and More; the company on one line; four meta cells; and a sticky bar at the foot
- * with the same one green action, a Chase menu (suppliers, customer) and More.
+ * Phone (375): a page bar with back and the number; the company on one line; four meta cells; and the shared StickyActionBar at
+ * the foot with the same one green action, a Chase menu (suppliers, customer) and More.
+ *
+ * Round-2 spec 5.3 and 1.5: drawn with src/ui/DetailHeader. The h1 is the company name, a link to the company (so the facts strip has
+ * no "Company" cell), with the code beside it; the chip row holds the stage (StatusBadge, `rfq-stage` or the outcome, from
+ * lib/nextAction.ts stageKey) and the due date; the meta line holds Top priority and how long they have been a customer.
  */
 
 export interface HeaderFacts {
@@ -218,14 +221,12 @@ function MoreItems({ rfq, facts, actions }: { rfq: RfqHeader; facts: HeaderFacts
   )
 }
 
-function MoreMenu({ rfq, facts, actions, trigger, label, side }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; trigger: React.ReactNode; label: string; side?: 'top' | 'bottom' }) {
+/** The page's More menu (src/ui/MoreMenu): the "More" text button on desktop, the Ellipsis in the phone bar. */
+function RfqMoreMenu({ rfq, facts, actions, touch = false }: { rfq: RfqHeader; facts: HeaderFacts; actions: Actions; touch?: boolean }) {
   return (
-    <Popover>
-      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent variant="menu" align="end" side={side} className="min-w-[300px]" aria-label={label}>
-        <MoreItems rfq={rfq} facts={facts} actions={actions} />
-      </PopoverContent>
-    </Popover>
+    <MoreMenu touch={touch} side={touch ? 'top' : undefined} label={touch ? 'More actions' : 'More'} menuClassName="min-w-[300px]">
+      <MoreItems rfq={rfq} facts={facts} actions={actions} />
+    </MoreMenu>
   )
 }
 
@@ -361,13 +362,6 @@ function Meta({
   )
 }
 
-const CHIP_TONE = {
-  warning: 'border-tone-warning-fg/25 bg-tone-warning-bg text-tone-warning-fg',
-  info: 'border-tone-info-fg/25 bg-tone-info-bg text-tone-info-fg',
-  success: 'border-tone-success-fg/25 bg-tone-success-bg text-tone-success-fg',
-  neutral: 'border-line-strong bg-surface text-fg-2',
-} as const
-
 // ------------------------------------------------------------------------------------------------ the header
 
 export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFacts }) {
@@ -379,7 +373,14 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
   const dueIn = s?.days_to_due
   const due = open ? dueChipLabel(dueIn, Boolean(s?.is_overdue)) : null
   const since = rfq.company.createdAt ? rfq.company.createdAt.slice(0, 4) : null
-  const stage = stageChip({ outcome: s?.outcome ?? 'open', hasOrder: main.liveOrders.length > 0, sourcingState: s?.sourcing_state, bidState: s?.bid_state, quotationCount: facts.quotationCount })
+  // The stage chip is a registry key (rfq-stage while open, else the outcome): the same words and tone as the board's Next step.
+  const [stageDim, stageValue] = stageKey({
+    outcome: s?.outcome ?? 'open',
+    hasOrder: main.liveOrders.length > 0,
+    sourcingState: s?.sourcing_state,
+    bidState: s?.bid_state,
+    quotationCount: facts.quotationCount,
+  }).split(':') as [StatusDimension, string]
 
   // Phone: ONE bar (UX audit rec. 17): back to where the person came from (Today, an order, a company; the RFQ list when there is
   // no earlier screen) and the number. While the RFQ is open its sticky action bar at the foot carries the green action, Chase and
@@ -387,57 +388,35 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
   useMobileBar({ title: ref, back: 'history', fallback: '/rfqs', hideTabs: open })
 
   return (
-    <header>
-      <Breadcrumb className="max-md:hidden" items={[{ label: 'RFQs', to: '/rfqs' }, { label: ref, mono: true }]} />
-      <div className="mt-2 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <div className="min-w-0">
-          <h1 className="flex flex-wrap items-baseline gap-x-3 text-2xl font-semibold tracking-snug max-md:text-xl">
-            <span className="min-w-0 break-words">{rfq.company.name}</span>
-            <span className="num text-lg font-medium text-fg-muted max-md:hidden">{ref}</span>
-            {rfq.isPriority ? (
-              <span className="inline-flex items-center gap-1 self-center text-sm font-medium text-tone-warning-fg">
-                <Icon icon={Flag} size="sm" />
-                Top priority
-              </span>
-            ) : null}
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2" role="group" aria-label="Where this RFQ stands">
-            {s?.outcome === 'open' || !s ? (
-              <span data-stage className={cn('inline-flex h-6 items-center rounded border px-2 text-sm font-medium', CHIP_TONE[stage.tone])}>
-                {stage.label}
-              </span>
-            ) : (
-              <StatusBadge dimension="rfq-outcome" value={s.outcome as string} />
-            )}
-            {due ? <StatusBadge dimension="deadline" value={s?.is_overdue ? 'overdue' : 'due-soon'} label={due} /> : null}
-          </div>
-        </div>
-        {open ? (
-          <MoreMenu
-            rfq={rfq}
-            facts={facts}
-            actions={actions}
-            label="More"
-            trigger={
-              <Button aria-haspopup="menu" className="max-md:hidden">
-                More
-                <Icon icon={ChevronDown} size="sm" />
-              </Button>
-            }
-          />
-        ) : null}
-      </div>
-
+    <DetailHeader
+      name={rfq.company.name}
+      nameHref={`/companies/${rfq.company.id}`}
+      code={ref}
+      breadcrumb={[{ label: 'RFQs', to: '/rfqs' }, { label: ref, mono: true }]}
+      more={open ? <RfqMoreMenu rfq={rfq} facts={facts} actions={actions} /> : undefined}
+      chips={
+        <>
+          <span data-stage className="contents">
+            <StatusBadge dimension={stageDim} value={stageValue} />
+          </span>
+          {due ? <StatusBadge dimension="deadline" value={s?.is_overdue ? 'overdue' : 'due-soon'} label={due} /> : null}
+        </>
+      }
+      meta={[
+        rfq.isPriority ? (
+          <span className="inline-flex items-center gap-1 font-medium text-tone-warning-fg">
+            <Icon icon={Flag} size="sm" />
+            Top priority
+          </span>
+        ) : null,
+        since ? `Customer since ${since}` : 'New customer',
+      ]}
+    >
       <RfqNextStep rfq={rfq} facts={facts} actions={actions} />
 
-      <dl className="mt-4 grid grid-cols-2 divide-x divide-y rounded border bg-surface md:grid-cols-3 xl:grid-cols-6 [&>*]:border-line">
+      <dl className="mt-4 grid grid-cols-2 divide-x divide-y rounded border bg-surface md:grid-cols-3 xl:grid-cols-5 [&>*]:border-line">
         <Meta icon={FileText} label="Customer ref" phone sub={`Received ${formatDay(rfq.receivedOn)}`}>
           <span className="num">{rfq.customerRef ?? 'None given'}</span>
-        </Meta>
-        <Meta icon={Building2} label="Company" sub={since ? `Customer since ${since}` : 'New customer'}>
-          <Link to={`/companies/${rfq.company.id}`} className="underline underline-offset-2 hover:text-fg-2">
-            {rfq.company.name}
-          </Link>
         </Meta>
         <Meta icon={MapPin} label="Site" sub={rfq.company.city ?? rfq.site?.address ?? undefined}>
           {rfq.site?.name ?? 'Not set'}
@@ -471,7 +450,7 @@ export function RfqHeaderBlock({ rfq, facts }: { rfq: RfqHeader; facts: HeaderFa
           )}
         </Meta>
       </dl>
-    </header>
+    </DetailHeader>
   )
 }
 
@@ -481,38 +460,33 @@ function scrollTo(slot: string) {
 }
 
 /**
- * Phone: the sticky bar at the foot of the page. The same one green action as the header (while waiting for prices it is the supplier
- * chase), a Chase menu (suppliers, customer) and the same More menu.
+ * Phone: the sticky bar at the foot of the page (src/ui/StickyActionBar). The same one green action as the Next step box (while
+ * waiting for prices it is the supplier chase), a Chase menu (suppliers, customer) and the same More menu. Drawn while the RFQ is
+ * open; the page pads its foot for it (RfqDetailScreen).
  */
 export function RfqActionBar({ rfq, facts, chaseSuppliers, chaseCustomer }: { rfq: RfqHeader; facts: HeaderFacts; chaseSuppliers: number; chaseCustomer: number }) {
   const actions = useQuoteAndClose(rfq)
   if ((rfq.state?.outcome ?? 'open') !== 'open') return null
   return (
-    <div
-      data-action-bar
-      className="sticky bottom-0 z-20 -mx-4 mt-6 flex items-center gap-2 border-t bg-surface px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 md:hidden"
-      role="toolbar"
-      aria-label="RFQ actions"
-    >
-      {facts.primary === 'none' ? (
-        <span className="flex-1" />
-      ) : (
-        <PrimaryButton rfq={rfq} facts={facts} size="touch" className="flex-1" />
-      )}
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button size="touch" icon={MessageCircle} aria-label="Chase" />
-        </PopoverTrigger>
-        <PopoverContent variant="menu" align="end" side="top" className="min-w-[240px]" aria-label="Chase">
-          <MenuItem hint={String(chaseSuppliers)} disabled={chaseSuppliers === 0} onClick={() => scrollTo('suppliers-asked')}>
-            Chase suppliers
-          </MenuItem>
-          <MenuItem hint={String(chaseCustomer)} disabled={chaseCustomer === 0} onClick={() => scrollTo('clarifications')}>
-            Chase customer
-          </MenuItem>
-        </PopoverContent>
-      </Popover>
-      <MoreMenu rfq={rfq} facts={facts} actions={actions} label="More actions" side="top" trigger={<Button size="touch" icon={Ellipsis} aria-label="More actions" />} />
-    </div>
+    <StickyActionBar
+      label="RFQ actions"
+      primary={facts.primary === 'none' ? undefined : <PrimaryButton rfq={rfq} facts={facts} size="touch" className="flex-1" />}
+      secondary={
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="touch" icon={MessageCircle} aria-label="Chase" />
+          </PopoverTrigger>
+          <PopoverContent variant="menu" align="end" side="top" className="min-w-[240px]" aria-label="Chase">
+            <MenuItem hint={String(chaseSuppliers)} disabled={chaseSuppliers === 0} onClick={() => scrollTo('suppliers-asked')}>
+              Chase suppliers
+            </MenuItem>
+            <MenuItem hint={String(chaseCustomer)} disabled={chaseCustomer === 0} onClick={() => scrollTo('clarifications')}>
+              Chase customer
+            </MenuItem>
+          </PopoverContent>
+        </Popover>
+      }
+      more={<RfqMoreMenu rfq={rfq} facts={facts} actions={actions} touch />}
+    />
   )
 }

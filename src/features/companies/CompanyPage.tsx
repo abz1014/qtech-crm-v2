@@ -1,6 +1,6 @@
-import { Fragment, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Building2, ChevronLeft, Ellipsis, FilePlus2, GitMerge, Link2, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Building2, ChevronLeft, FilePlus2, GitMerge, Link2, Pencil, Plus, Trash2 } from 'lucide-react'
 import {
   useCompany,
   useCompanyContacts,
@@ -26,15 +26,19 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { OpenWithThem } from '@/features/companies/SupplierRecordPanels'
 import { BuyerTaxFields } from '@/features/money/invoices/pdf/BuyerTaxFields'
 import { cn } from '@/lib/utils'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Banner } from '@/ui/Banner'
-import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
+import { DetailHeader } from '@/ui/DetailHeader'
 import { EmptyState } from '@/ui/EmptyState'
 import { Money } from '@/ui/Money'
-import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
+import { MoreMenu } from '@/ui/MoreMenu'
+import { NextStepBox } from '@/ui/NextStepBox'
+import { MenuItem } from '@/ui/Popover'
 import { Skeleton } from '@/ui/Skeleton'
+import { StickyActionBar } from '@/ui/StickyActionBar'
 import { useToast } from '@/ui/useToast'
 
 /*
@@ -44,7 +48,13 @@ import { useToast } from '@/ui/useToast'
  *
  * Layout (UX audit 2026-10-19, 9b): the main column is the useful history (a supplier's recent quotes and
  * deliveries first; a customer's sites), the side column is Contacts, "Open with them", "Money with them"
- * (admin) and one compact Details panel (customer since, brands carried); the role is said once, in the header.
+ * (admin) and one compact Details panel (customer since, brands carried); the role is said once, as a Tag in the
+ * header's meta line (identity, not state: never a chip in the h1).
+ *
+ * Header (round-2 spec 5.3): the shared DetailHeader with the name, the meta line and the More menu (Edit, Copy link,
+ * New RFQ asking them for prices on a company that is also a customer, Merge for admin). The page's one green action
+ * is New RFQ, in the shared NextStepBox under the title (a bar at the bottom on a phone): with this company as the
+ * customer, or for a supplier-only company with it already chosen as a supplier to ask (/rfqs/new?supplier=).
  *
  * Access (DATA_MODEL section 10): everyone signed in reads and edits the company, its sites, contacts and
  * brands. The money panel and the merge action are admin only; they are not rendered for anyone else, and
@@ -99,8 +109,9 @@ function AllCompaniesButton() {
   )
 }
 
-function Shell({ children }: { children: ReactNode }) {
-  return <div className="mx-auto w-full max-w-[1440px] px-4 pb-12 pt-6 md:px-8">{children}</div>
+/** `sticky`: the phone shows New RFQ in the StickyActionBar fixed to the bottom, so the page leaves room for it. */
+function Shell({ children, sticky = false }: { children: ReactNode; sticky?: boolean }) {
+  return <div className={cn('mx-auto w-full max-w-detail px-4 pb-16 pt-6 md:px-8', sticky && 'max-md:pb-[calc(var(--control-lg-h)+2rem)]')}>{children}</div>
 }
 
 function PageSkeleton() {
@@ -180,76 +191,65 @@ function Loaded({ company }: { company: CompanyDetail }) {
   // A supplier-only company has no plants to list until one is added; a customer always shows its sites.
   const showSites = company.isCustomer || !company.isSupplier || (sites.data?.length ?? 0) > 0 || sites.isPending
   const supplierOnly = supplierSide && !company.isCustomer
-  // A customer's New RFQ opens intake with them as the customer. Intake has no way yet to start from a supplier, so a supplier-only
-  // page's New RFQ opens a blank intake (it used to put the supplier in as the customer) and is not the page's main action.
-  const newRfq = () => navigate(supplierOnly ? '/rfqs/new' : `/rfqs/new?company=${company.id}`)
-
-  // The "more" menu: Edit, Copy link, Merge (admin). On a phone it is the one bar's right slot; from tablet up Edit is a button.
-  const moreMenu = (touch: boolean) => (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="quiet" size={touch ? 'touch' : undefined} icon={Ellipsis} aria-label="More actions" className={touch ? undefined : 'max-md:hidden'} />
-      </PopoverTrigger>
-      <PopoverContent variant="menu" align="end" aria-label="More actions">
-        {touch ? (
-          <MenuItem icon={Pencil} onClick={() => setDialog('edit')}>
-            Edit company
-          </MenuItem>
-        ) : null}
-        <MenuItem icon={Link2} onClick={() => void copyLink()}>
-          Copy link to this company
-        </MenuItem>
-        {isAdmin ? (
-          <MenuItem icon={GitMerge} onClick={() => setDialog('merge')}>
-            Merge into another company
-          </MenuItem>
-        ) : null}
-      </PopoverContent>
-    </Popover>
+  // The page's one green action: New RFQ with this company as the customer; on a supplier-only page, New RFQ with this supplier
+  // already chosen to ask for prices (IntakeScreen reads ?supplier=). A company that is both keeps the second in the More menu.
+  const newRfq = () => navigate(supplierOnly ? `/rfqs/new?supplier=${company.id}` : `/rfqs/new?company=${company.id}`)
+  const askForPrices = () => navigate(`/rfqs/new?supplier=${company.id}`)
+  const phone = useMediaQuery('(max-width: 767px)')
+  const primary = (
+    <Button variant="primary" icon={FilePlus2} size={phone ? 'touch' : undefined} onClick={newRfq}>
+      New RFQ
+    </Button>
   )
-  // Phones get one bar: back (to where the person came from, else the companies list), the name, and the menu.
-  useMobileBar({ title: company.name, back: 'history', fallback: '/companies', actions: moreMenu(true) })
+
+  // The "More" menu: Edit, Copy link, New RFQ asking them (a customer that also supplies us), Merge (admin). On a phone it is the
+  // one bar's right slot; from tablet up the "More" text button beside the name.
+  const moreMenu = (touch: boolean) => (
+    <MoreMenu touch={touch} label="More actions" menuClassName="min-w-[280px]">
+      <MenuItem icon={Pencil} onClick={() => setDialog('edit')}>
+        Edit company
+      </MenuItem>
+      <MenuItem icon={Link2} onClick={() => void copyLink()}>
+        Copy link to this company
+      </MenuItem>
+      {supplierSide && !supplierOnly ? (
+        <MenuItem icon={FilePlus2} onClick={askForPrices}>
+          New RFQ asking them for prices
+        </MenuItem>
+      ) : null}
+      {isAdmin ? (
+        <MenuItem icon={GitMerge} onClick={() => setDialog('merge')}>
+          Merge into another company
+        </MenuItem>
+      ) : null}
+    </MoreMenu>
+  )
+  // Phones get one bar: back (to where the person came from, else the companies list), the name, and the menu; New RFQ sits in
+  // the bar at the bottom instead of the tabs.
+  useMobileBar({ title: company.name, back: 'history', fallback: '/companies', actions: moreMenu(true), hideTabs: true })
 
   return (
-    <Shell>
+    <Shell sticky>
       <div className="grid gap-6">
-        <header className="grid gap-2">
-          <Breadcrumb className="max-md:hidden" links="primary" items={[{ label: 'Companies', to: '/companies' }, { label: company.name }]} />
-          <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-            <div className="grid min-w-0 gap-2">
-              <h1 className="flex flex-wrap items-baseline gap-3 text-2xl font-semibold tracking-tight text-balance">
-                <span className="min-w-0 break-words">{company.name}</span>
-                {company.role ? <RoleChip role={company.role} className="translate-y-[-2px]" /> : null}
-              </h1>
-              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-2">
-                {meta.map((m, i) => (
-                  <Fragment key={m}>
-                    {i > 0 ? (
-                      <span aria-hidden="true" className="text-fg-muted">
-                        ·
-                      </span>
-                    ) : null}
-                    <span className={i === 0 ? undefined : 'text-fg-muted'}>{m}</span>
-                  </Fragment>
-                ))}
-              </p>
-              {supplierRecordLine ? (
-                <p className="text-sm text-fg-2" data-testid="supplier-record-line">
-                  <CountText text={supplierRecordLine} />
-                </p>
-              ) : null}
-            </div>
-            <div className="flex max-w-full flex-wrap items-center gap-2">
-              <Button variant={supplierOnly ? 'secondary' : 'primary'} icon={FilePlus2} onClick={newRfq}>
-                New RFQ
-              </Button>
-              <Button icon={Pencil} onClick={() => setDialog('edit')} className="max-md:hidden">
-                Edit
-              </Button>
-              {moreMenu(false)}
-            </div>
-          </div>
-        </header>
+        <DetailHeader
+          name={company.name}
+          breadcrumb={[{ label: 'Companies', to: '/companies' }, { label: company.name }]}
+          more={moreMenu(false)}
+          // the role is identity, not state: a Tag at the head of the meta line, never a chip in the h1
+          meta={[company.role ? <RoleChip key="role" role={company.role} /> : null, ...meta.map((m, i) => (i === 0 ? m : <span key={m} className="text-fg-muted">{m}</span>))]}
+        >
+          {supplierRecordLine ? (
+            <p className="mt-2 text-sm text-fg-2" data-testid="supplier-record-line">
+              <CountText text={supplierRecordLine} />
+            </p>
+          ) : null}
+          <NextStepBox
+            tone="quiet"
+            text={supplierOnly ? 'To ask them for prices, start an RFQ with them already chosen.' : 'When they send an enquiry, log it as a new RFQ.'}
+            action={phone ? undefined : primary}
+          />
+        </DetailHeader>
+        {phone ? <StickyActionBar label="Company actions" primary={primary} /> : null}
 
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="grid min-w-0 gap-6">

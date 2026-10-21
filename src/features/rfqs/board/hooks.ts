@@ -21,10 +21,6 @@ export function useClosedRfqs(page: number, text: string, enabled = true) {
   })
 }
 
-export function useClosedCount() {
-  return useQuery({ queryKey: qk.rfqs.closedCount(), queryFn: api.countClosedRfqs })
-}
-
 /** Quoted net per open RFQ, for the Value column. `enabled` is false for an engineer: the request is never made. */
 export function useRfqValues(enabled: boolean) {
   return useQuery({ queryKey: qk.rfqs.values(), queryFn: api.listRfqValues, enabled, staleTime: 60_000 })

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Ellipsis, KeyRound, Pencil, Phone, Search, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
+import { Ellipsis, KeyRound, Pencil, Phone, Shield, UserCheck, UserPlus, UserX } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import type { CreatedUser, Role, TeamMember } from '@/features/settings/api'
@@ -19,17 +19,20 @@ import { useTeam } from '@/features/settings/hooks'
 import { FirstWeekBadge } from '@/features/help/FirstWeekBadge'
 import { useFirstWeek } from '@/features/help/useFirstWeek'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { useQueryParamText } from '@/lib/useQueryParamText'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/ui/Avatar'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
+import { NoResults } from '@/ui/NoResults'
+import { PageHeader } from '@/ui/PageHeader'
 import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusBadge } from '@/ui/StatusBadge'
+import { TableFilter } from '@/ui/TableFilter'
 import { Tag } from '@/ui/Tag'
-import { TextField } from '@/ui/form/TextField'
 
 type Open =
   | null
@@ -42,6 +45,8 @@ type Open =
  * with role and status. Add, change role, reset password, edit job title, deactivate and reactivate
  * are each a dialog, and each one calls the admin-users function. On a phone the rows are 60px cards,
  * pressing one opens the actions as a bottom sheet, and the shared bar becomes the back bar with Add.
+ * Round 2 (R2-14): only a deactivated person has a status chip (an active one is the normal case), "Search people" is the
+ * shared TableFilter kept in `?q=`, and All / Active / Deactivated carry no counts (the footer says them in words).
  */
 export function TeamPage() {
   const session = useSession()
@@ -50,7 +55,7 @@ export function TeamPage() {
   const team = useTeam(isAdmin) // the list is read only for an admin: for anyone else the request is never made
   const [dialog, setDialog] = useState<Open>(null)
   const [filter, setFilter] = useState<TeamFilter>('all')
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useQueryParamText()
   const phone = useMediaQuery('(max-width: 639px)')
 
   const members = useMemo(() => team.data ?? [], [team.data])
@@ -125,7 +130,8 @@ export function TeamPage() {
       id: 'status',
       header: 'Status',
       value: m => (isActive(m) ? 'Active' : 'Deactivated'),
-      cell: m => <StatusBadge dimension="user" value={isActive(m) ? 'active' : 'deactivated'} />,
+      // Only the exception is drawn: an active person's cell is empty (rule 2, R2-14).
+      cell: m => (isActive(m) ? null : <StatusBadge dimension="user" value="deactivated" />),
       hideBelowMd: true,
     },
     {
@@ -146,23 +152,20 @@ export function TeamPage() {
 
   const errorCode =
     team.error && typeof team.error === 'object' && 'code' in team.error ? String((team.error as { code?: unknown }).code ?? '') : ''
-  const filtered = query !== '' || filter !== 'all'
+  const filtered = query.trim() !== '' || filter !== 'all'
 
   return (
     <div className="grid content-start gap-4">
-      {/* The phone hides the header (the bar says Team); the page still needs its h1 (WCAG 1.3.1, 2.4.6). */}
-      <h1 className="sr-only md:hidden">Team</h1>
-      <header className="flex flex-wrap items-start justify-between gap-4 max-md:hidden">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
-          <p className="max-w-[62ch] text-sm text-fg-muted">
-            Everyone who can sign in to Q-Tech CRM. Passwords are created and reset here, and shown once.
-          </p>
-        </div>
-        <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading || team.isError}>
-          Add person
-        </Button>
-      </header>
+      {/* On a phone the h1 is read but not drawn (PageHeader: max-md:sr-only; the bar says Team), and Add lives in the bar. */}
+      <PageHeader
+        title="Team"
+        lede={<span className="max-md:hidden">Everyone who can sign in to Q-Tech CRM. Passwords are created and reset here, and shown once.</span>}
+        primary={
+          <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading || team.isError} className="max-md:hidden">
+            Add person
+          </Button>
+        }
+      />
 
       <DataTable
         label="Team"
@@ -191,12 +194,17 @@ export function TeamPage() {
             : null
         }
         empty={
-          filtered ? (
-            <EmptyState
-              title={query ? `No one matches “${query}”` : 'No one is deactivated'}
-              actions={<Button onClick={clearFilter}>Clear filter</Button>}
-            >
-              {query ? 'Check the spelling, or search by email.' : 'Everyone on the team can sign in.'}
+          query.trim() ? (
+            <NoResults
+              query={query}
+              scope="the team"
+              fields="name and email"
+              filtersOn={filter === 'all' ? [] : [`Show: ${filter === 'active' ? 'Active' : 'Deactivated'}`]}
+              onClear={clearFilter}
+            />
+          ) : filtered ? (
+            <EmptyState title={filter === 'deactivated' ? 'No one is deactivated' : 'No one is active'} actions={<Button onClick={clearFilter}>Show everyone</Button>}>
+              {filter === 'deactivated' ? 'Everyone on the team can sign in.' : 'Reactivate someone to let them sign in again.'}
             </EmptyState>
           ) : (
             <EmptyState title="No people yet">Add the first person to give them a way to sign in.</EmptyState>
@@ -219,24 +227,15 @@ export function TeamPage() {
         )}
         toolbar={
           <div className="flex w-full flex-wrap items-center gap-3">
-            <div className="relative w-[260px] max-sm:hidden">
-              <Icon icon={Search} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
-              <TextField
-                aria-label="Search name or email"
-                placeholder="Search name or email"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                className="pl-8"
-              />
-            </div>
+            <TableFilter label="Search people" hint="Finds a person by name or email." value={query} onChange={setQuery} />
             <SegmentedControl
               aria-label="Show"
               value={filter}
               onValueChange={v => setFilter(v as TeamFilter)}
               options={[
-                { value: 'all', label: 'All', count: counts.all },
-                { value: 'active', label: 'Active', count: counts.active },
-                { value: 'deactivated', label: 'Deactivated', count: counts.deactivated },
+                { value: 'all', label: 'All' },
+                { value: 'active', label: 'Active' },
+                { value: 'deactivated', label: 'Deactivated' },
               ]}
             />
             <span className="ml-auto text-xs text-fg-muted max-sm:hidden">At least one active admin is always required.</span>

@@ -105,6 +105,9 @@ describe('Team screen', () => {
     expect(await screen.findByText('Ayesha Rana')).toBeInTheDocument()
     expect(screen.getByText('You')).toBeInTheDocument()
     expect(within(screen.getByRole('table')).getAllByText('Deactivated').length).toBeGreaterThan(0)
+    // only the exception has a chip: no "Active" on every row (R2-14), and the switch carries no counts
+    expect(within(screen.getByRole('table')).queryByText('Active')).toBeNull()
+    expect(screen.getByRole('radio', { name: 'Deactivated' })).toBeInTheDocument()
     expect(screen.getByText('4 people · 3 active, 1 deactivated')).toBeInTheDocument()
     expect(screen.getByText('Deactivated people keep their name on everything they created.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reactivate Saad Hussain' })).toBeInTheDocument()
@@ -121,13 +124,28 @@ describe('Team screen', () => {
     const user = setupUser()
     mount()
     await screen.findByText('Ayesha Rana')
-    await user.type(screen.getByLabelText('Search name or email'), 'usman@')
+    await user.type(screen.getByRole('textbox', { name: 'Search people' }), 'usman@')
     expect(screen.queryByText('Ayesha Rana')).toBeNull()
     expect(screen.getByText('Usman Tariq')).toBeInTheDocument()
-    await user.clear(screen.getByLabelText('Search name or email'))
+    await user.clear(screen.getByRole('textbox', { name: 'Search people' }))
+    await user.type(screen.getByRole('textbox', { name: 'Search people' }), 'nobody here')
+    expect(screen.getByText('Nothing matches "nobody here"')).toBeInTheDocument()
+    // the NoResults action (the field's own x has the same name)
+    await user.click(screen.getAllByRole('button', { name: 'Clear search' }).at(-1)!)
+    expect(screen.getByText('Ayesha Rana')).toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: /Deactivated/ }))
     expect(screen.queryByText('Ayesha Rana')).toBeNull()
     expect(screen.getByText('Saad Hussain')).toBeInTheDocument()
+  })
+
+  it('/ jumps to "Search people" from the list (spec 3.1)', async () => {
+    const user = setupUser()
+    mount()
+    await screen.findByText('Ayesha Rana')
+    const row = screen.getByText('Ayesha Rana').closest('tr') as HTMLElement
+    row.focus()
+    await user.keyboard('/')
+    expect(screen.getByRole('textbox', { name: 'Search people' })).toHaveFocus()
   })
 
   it('shows a plain error with a retry when the list cannot load', async () => {

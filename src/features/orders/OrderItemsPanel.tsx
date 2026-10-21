@@ -347,7 +347,6 @@ export function OrderItemsPanel({
         rows={rows}
         getRowId={r => r.id}
         twoLine
-        densitySwitch={false}
         footerLabel={basisUnknown ? 'Total as typed' : `Total before GST, ${items.length} ${items.length === 1 ? 'line' : 'lines'}`}
         summary={summary}
         toolbar={

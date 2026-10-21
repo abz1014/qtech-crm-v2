@@ -139,8 +139,10 @@ test.describe('payment-reminder panel (M09)', () => {
     await page.getByTestId('reminder-panel').getByRole('button', { name: 'Copy and mark reminded' }).click()
     await expect(page.getByText(/Reminder 1 recorded today/)).toBeVisible()
     await page.waitForTimeout(10_500) // the undo window closes and the screen re-reads
-    await expect(page.getByRole('row', { name: new RegExp(s.company.name) })).toContainText('Reminded 1×')
+    await expect(page.getByRole('row', { name: new RegExp(s.company.name) })).toContainText('Reminded today')
     await page.goto('/today')
+    // Waiting starts collapsed (R2-08): open it to see the reminded order
+    await page.getByRole('region', { name: 'Waiting' }).getByRole('button', { name: /^Waiting · \d+/ }).click()
     await expect(page.locator('li[data-rule="payment_overdue"][data-waiting]').filter({ hasText: s.company.name })).toHaveCount(1)
     await expect(page.locator('li[data-rule="payment_overdue"]:not([data-waiting])').filter({ hasText: s.company.name })).toHaveCount(0)
   })
@@ -155,7 +157,8 @@ test.describe('payment-reminder panel (M09)', () => {
         const w = t?.parentElement
         return { scroll: w?.scrollWidth ?? 0, client: w?.clientWidth ?? 0, columns: Array.from(document.querySelectorAll('table thead th')).filter(th => (th as HTMLElement).offsetParent !== null).length, page: document.documentElement.scrollWidth, view: window.innerWidth }
       })
-    for (const [width, columns] of [[1536, 8], [1440, 6], [1360, 6], [1280, 8]] as const) {
+    for (const [width, columns] of [[1536, 7], [1440, 5], [1360, 5], [1280, 7]] as const) {
+      // Payment + Last reminder are one Next step column (R2-06)
       await page.setViewportSize({ width, height: 900 })
       await page.waitForTimeout(300)
       const m = await measure()
@@ -236,7 +239,7 @@ test.describe('Today v3 money rules (M08)', () => {
     await page.getByRole('radio', { name: /^Money/ }).click()
     await expect(page.locator(tcs)).toHaveCount(1)
     await expect(page.locator(tcs)).toContainText(/\d+ invoices? not sent by TCS/)
-    await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Money\s*\d+$/ })).toBeVisible() // E-SH-01
+    await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Money\s?, \d+ need you$/ })).toBeVisible() // E-SH-01
     await review(page, 'm08-today-money-1440')
     await page.locator(`${tcs} button`).click()
     await expect(page.getByRole('button', { name: /Open Invoices & GST/ })).toBeVisible()

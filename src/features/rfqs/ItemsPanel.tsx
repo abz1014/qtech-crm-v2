@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Ban, ChevronDown, Clock, Copy, Ellipsis, Pencil, Plus, ThumbsUp, Trash2, TriangleAlert } from 'lucide-react'
+import { ChevronDown, Clock, Copy, Ellipsis, Pencil, Plus, ThumbsUp, Trash2, TriangleAlert } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
@@ -11,6 +11,8 @@ import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { StatusBadge } from '@/ui/StatusBadge'
+import { StatusText } from '@/ui/StatusText'
+import { agoDays, days } from '@/lib/timeWords'
 import { useToast } from '@/ui/useToast'
 import { LastPriceChipView } from '@/features/rfqs/LastPriceChip'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
@@ -99,10 +101,15 @@ function PriceDetail({ line, inquiry, c, rates }: { line: QuoteLineRow; inquiry:
         ) : (
           <span className="text-fg-muted">{c.notCompared === 'unusable' ? 'not compared — rate too old' : 'not compared — no rate'}</span>
         )}
+        {/* The rate captured at entry: a chip only when it is a problem (Old rate, No rate); a fresh one is its age in words. */}
         {line.currency === 'PKR' ? null : line.fxRatePkr !== null && line.fxRateOn ? (
           <span className="inline-flex flex-wrap items-center gap-2 text-fg-muted">
             <span className="num">{`At entry ${formatRate(line.fxRatePkr)} · ${formatDay(line.fxRateOn)}`}</span>
-            <StatusBadge dimension="fx" value={fxStaleness(age ?? 0)} detail={`${age ?? 0} d`} />
+            {fxStaleness(age ?? 0) === 'fresh' ? (
+              <span data-rate-age>{`Rate from ${(age ?? 0) === 0 ? 'today' : agoDays(age ?? 0).toLowerCase()}`}</span>
+            ) : (
+              <StatusBadge dimension="fx" value={fxStaleness(age ?? 0)} detail={days(age ?? 0)} />
+            )}
           </span>
         ) : (
           <StatusBadge dimension="fx-capture" value="none" />
@@ -381,11 +388,7 @@ export function ItemsPanel({
                       ) : null}
                     </p>
                   </div>
-                  <StatusBadge
-                    dimension={cov.kind === 'none' ? 'inquiry' : 'sourcing'}
-                    value={cov.kind === 'covered' ? 'covered' : cov.kind === 'partly' ? 'partly-covered' : cov.kind === 'uncovered' ? 'no-offer' : cov.kind === 'unasked' ? 'not-floated' : 'awaiting'}
-                    label={cov.label}
-                  />
+                  {cov.value ? <StatusBadge dimension="item-price" value={cov.value} detail={cov.detail} /> : null}
                 </header>
 
                 {cov.kind === 'uncovered' ? (
@@ -456,7 +459,7 @@ export function ItemsPanel({
                             <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                               <span className="min-w-0 break-words font-medium">{inquiry.supplierName}</span>
                               {mark ? (
-                                <span className="inline-flex min-h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded border border-tone-success-fg/25 bg-tone-success-bg px-2 text-sm font-medium text-tone-success-fg">
+                                <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-medium text-tone-success-fg">
                                   <Icon icon={ThumbsUp} size="chip" />
                                   {mark === 'recommended' ? 'Recommended' : 'Lowest price'}
                                 </span>
@@ -519,10 +522,7 @@ export function ItemsPanel({
                       {declined.map(({ i, reason }) => (
                         <li key={i.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-5 py-2 text-fg-muted" data-declined={i.supplierId}>
                           <span className="min-w-0 break-words font-medium text-fg-2">{i.supplierName}</span>
-                          <span className="inline-flex h-6 items-center gap-[5px] rounded border border-line-strong bg-surface px-2 text-sm font-medium text-fg-2">
-                            <Icon icon={Ban} size="chip" />
-                            {"Can't quote"}
-                          </span>
+                          <StatusText dimension="inquiry" value="no-offer" />
                           <span className="text-sm">{reasonLabel(reason)}</span>
                           {i.noOfferOn && !i.itemDeclines[item.id] ? <span className="num text-sm">{`· ${formatDay(i.noOfferOn)}`}</span> : null}
                         </li>

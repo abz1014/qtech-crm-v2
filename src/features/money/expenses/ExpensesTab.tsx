@@ -2,14 +2,19 @@ import { useMemo, useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, Pencil, Receipt, Trash2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
+import { matchesAllWords, useQueryParamText } from '@/lib/useQueryParamText'
 import { mapPgError, type MappedError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { EmptyState } from '@/ui/EmptyState'
+import { FilterSheet } from '@/ui/FilterSheet'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
+import { NoResults } from '@/ui/NoResults'
+import { TableFilter } from '@/ui/TableFilter'
+import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
 import { Select } from '@/ui/form/Select'
 import type { ExpenseListing } from '@/features/money/expenses/api'
@@ -33,9 +38,10 @@ import {
 } from '@/features/money/expenses/model'
 
 /*
- * Money › Expenses (M03, M11; admin only). One month at a time, by payment date, with filters by group, category and paid
- * via, totals under the list, edit and delete per row, the burst sheet ("Add expenses") and the recurring templates.
- * Layout from g2-month-end (the Expenses panel behind the burst sheet) and g2-money.
+ * Money › Expenses (M03, M11; admin only). One month at a time, by payment date, with "Search expenses" (payee, detail,
+ * category, order number; kept in `?q=`) and the Filters sheet (group, category, paid via), totals under the list, edit and
+ * delete per row, the burst sheet ("Add expenses") and the recurring templates.
+ * Layout from g2-month-end (the Expenses panel behind the burst sheet) and g2-money; search and Filters per consistency spec 3.2.
  */
 interface ExpensesTabProps {
   /** Month to open on ("2026-11"); today's by default. */
@@ -46,15 +52,24 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
   const today = businessToday()
   const [month, setMonth] = useState(initialMonth ?? monthKey(today))
   const [filters, setFilters] = useState<ExpenseFilters>(NO_FILTERS)
+  const [q, setQ] = useQueryParamText()
   const [editing, setEditing] = useState<ListedExpense | null>(null)
   const [deleting, setDeleting] = useState<ListedExpense | null>(null)
 
   const cats = useCategories()
   const list = useExpenseMonth(month)
   const categories = useMemo(() => cats.data ?? [], [cats.data])
-  const rows = useMemo(() => filterExpenses(list.data?.rows ?? [], filters, categories), [list.data, filters, categories])
+  const rows = useMemo(() => {
+    const kept = filterExpenses(list.data?.rows ?? [], filters, categories)
+    return q.trim() ? kept.filter(r => matchesAllWords(searchText(r, categories, list.data), q)) : kept
+  }, [list.data, filters, categories, q])
   const totals = listTotals(rows)
-  const filtered = filters.group !== 'all' || filters.categoryId !== 'all' || filters.paidVia !== 'all'
+  const filtersOn = filterLabels(filters, categories)
+  const filtered = filtersOn.length > 0 || q.trim() !== ''
+  const clearAll = () => {
+    setFilters(NO_FILTERS)
+    setQ('')
+  }
 
   const columns = useMemo(() => buildColumns(categories, list.data, { onEdit: setEditing, onDelete: setDeleting }), [categories, list.data])
 
@@ -89,13 +104,10 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
           }
           toolbar={
             <div className="flex flex-wrap items-center gap-3">
-              <h2 id="expenses-h" className="text-base font-semibold">
+              <h2 id="expenses-h" className="sr-only">
                 Expenses
               </h2>
-              <span className="inline-flex items-center gap-[6px] text-xs text-fg-muted">
-                <Icon icon={CalendarDays} size="chip" />
-                By payment date
-              </span>
+              <TableFilter label="Search expenses" hint="Finds an expense by payee, detail, category or order number." value={q} onChange={setQ} />
               <div className="inline-flex items-center gap-1" role="group" aria-label="Month">
                 <Button variant="quiet" size="sm" icon={ChevronLeft} aria-label="Previous month" onClick={() => setMonth(m => shiftMonth(m, -1))} />
                 <span className="num min-w-[84px] text-center text-sm font-medium" aria-live="polite" title={monthKeyLabel(month)}>
@@ -103,22 +115,19 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                 </span>
                 <Button variant="quiet" size="sm" icon={ChevronRight} aria-label="Next month" disabled={isCurrent} onClick={() => setMonth(m => shiftMonth(m, 1))} />
               </div>
+              <span className="inline-flex items-center gap-[6px] text-sm text-fg-muted">
+                <Icon icon={CalendarDays} size="chip" />
+                By payment date
+              </span>
               <span className="flex-1" />
-              <FilterSelects categories={categories} filters={filters} onChange={setFilters} />
-              {filtered ? (
-                <Button variant="quiet" size="sm" onClick={() => setFilters(NO_FILTERS)}>
-                  Clear filters
-                </Button>
-              ) : null}
+              <FilterSheet title="Filter expenses" on={filtersOn.length} shown={rows.length} noun={['expense', 'expenses']} onClear={() => setFilters(NO_FILTERS)}>
+                <FilterSelects categories={categories} filters={filters} onChange={setFilters} />
+              </FilterSheet>
             </div>
           }
           empty={
             filtered ? (
-              <EmptyState mood="neutral" title="No expenses match these filters">
-                <Button size="sm" onClick={() => setFilters(NO_FILTERS)}>
-                  Clear filters
-                </Button>
-              </EmptyState>
+              <NoResults query={q} scope={`expenses in ${monthKeyLabel(month)}`} fields="payee, detail, category and order number" filtersOn={filtersOn} onClear={clearAll} />
             ) : (
               <EmptyState icon={Receipt} title={`No expenses in ${monthKeyLabel(month)}`}>
                 Add what was spent and it appears here. Small spends go in together with Add expenses.
@@ -138,7 +147,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
 function FilterSelects({ categories, filters, onChange }: { categories: readonly Category[]; filters: ExpenseFilters; onChange: (f: ExpenseFilters) => void }) {
   return (
     <>
-      <div className="w-[150px]">
+      <div>
         <Select
           aria-label="Group"
           value={filters.group}
@@ -146,7 +155,7 @@ function FilterSelects({ categories, filters, onChange }: { categories: readonly
           options={[{ value: 'all', label: 'All groups' }, ...Object.entries(GROUP_LABEL).map(([value, label]) => ({ value, label }))]}
         />
       </div>
-      <div className="w-[190px]">
+      <div>
         <Select
           aria-label="Category"
           value={filters.categoryId}
@@ -154,7 +163,7 @@ function FilterSelects({ categories, filters, onChange }: { categories: readonly
           options={[{ value: 'all', label: 'All categories' }, ...categories.map(c => ({ value: c.id, label: c.name }))]}
         />
       </div>
-      <div className="w-[150px]">
+      <div>
         <Select
           aria-label="Paid via"
           value={filters.paidVia}
@@ -164,6 +173,21 @@ function FilterSelects({ categories, filters, onChange }: { categories: readonly
       </div>
     </>
   )
+}
+
+/** "Group: Overheads", "Paid via: Bank": the filters that are on, for the Filters sheet and NoResults. */
+function filterLabels(f: ExpenseFilters, categories: readonly Category[]): string[] {
+  const on: string[] = []
+  if (f.group !== 'all') on.push(`Group: ${GROUP_LABEL[f.group]}`)
+  if (f.categoryId !== 'all') on.push(`Category: ${categories.find(c => c.id === f.categoryId)?.name ?? 'removed'}`)
+  if (f.paidVia !== 'all') on.push(`Paid via: ${PAID_VIA_LABEL[f.paidVia]}`)
+  return on
+}
+
+/** What "Search expenses" reads: category, payee, order number and the detail. */
+function searchText(r: ListedExpense, categories: readonly Category[], l: ExpenseListing | undefined): string {
+  const d = describe(r, categories, l)
+  return `${d.name} ${d.detail}`
 }
 
 /** "Supplier payment" over "Alpenmark Controls GmbH · ORD-0038 · note". */
@@ -204,7 +228,7 @@ function buildColumns(
         )
       },
     },
-    { id: 'via', header: 'Paid via', width: 96, value: r => r.paidVia, sortable: true, cell: r => PAID_VIA_LABEL[r.paidVia], hideBelowMd: true },
+    { id: 'via', header: 'Paid via', width: 96, value: r => r.paidVia, sortable: true, cell: r => <Tag>{PAID_VIA_LABEL[r.paidVia]}</Tag>, hideBelowMd: true },
     {
       id: 'tax',
       header: 'Input tax (PKR)',

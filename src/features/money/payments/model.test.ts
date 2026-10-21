@@ -4,6 +4,8 @@ import {
   defaultPaymentAmount,
   filterReceivables,
   paymentNote,
+  receivableNextStep,
+  receivableSearchText,
   receivableTotals,
   reminderDue,
   reminderPhrase,
@@ -67,6 +69,26 @@ describe('receivables, the mockup figures', () => {
     expect(reminderPhrase(2, 2)).toBe('both due a reminder')
     expect(reminderPhrase(2, 1)).toBe('1 due a reminder')
     expect(reminderPhrase(1, 0)).toBe('none due a reminder')
+  })
+
+  it('gives each row ONE Next step in time words (R2-06)', () => {
+    expect(receivableNextStep(row({ state: 'overdue', dueOn: '2026-11-15' }), TODAY)).toEqual({ tone: 'late', label: 'Send a reminder', detail: '12 days overdue' })
+    expect(receivableNextStep(row({ state: 'overdue', dueOn: '2026-11-15', lastRemindedOn: '2026-11-24', reminderCount: 1 }), TODAY)).toEqual({
+      tone: 'waiting',
+      label: 'Reminded 3 days ago',
+      detail: '12 days overdue',
+    })
+    expect(receivableNextStep(row({ state: 'overdue', dueOn: '2026-11-15', lastRemindedOn: TODAY, reminderCount: 1 }), TODAY).label).toBe('Reminded today')
+    expect(receivableNextStep(row({ dueOn: '2026-12-03' }), TODAY)).toEqual({ tone: 'waiting', label: 'Due 3 Dec', detail: 'In 6 days' })
+    expect(receivableNextStep(row({ dueOn: null, invoiceNumbers: [] }), TODAY)).toEqual({ tone: 'inert', label: 'Not invoiced yet' })
+    expect(receivableNextStep(row({ state: 'settled' }), TODAY)).toEqual({ tone: 'done', label: 'Paid' })
+  })
+
+  it('Search balances matches customer, order number and invoice number', () => {
+    const r = row({ companyName: 'Lucky Cement', orderNumber: 27, invoiceNumbers: ['QT-INV-0412'] })
+    expect(receivableSearchText(r)).toContain('ORD-0027')
+    expect(receivableSearchText(r)).toContain('QT-INV-0412')
+    expect(receivableSearchText(r)).toContain('Lucky Cement')
   })
 
   it('filters open, overdue and settled, and puts open orders in due order with the uninvoiced one last', () => {

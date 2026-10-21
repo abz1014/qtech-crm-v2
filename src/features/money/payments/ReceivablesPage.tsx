@@ -4,15 +4,19 @@ import { Banknote, ExternalLink } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
+import { agoDays, inDays } from '@/lib/timeWords'
+import { matchesAllWords, useQueryParamText } from '@/lib/useQueryParamText'
 import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Money } from '@/ui/Money'
+import { NoResults } from '@/ui/NoResults'
 import { SegmentedControl } from '@/ui/SegmentedControl'
-import { StatusBadge } from '@/ui/StatusBadge'
+import { StatusText } from '@/ui/StatusText'
 import { SumBar } from '@/ui/SumBar'
+import { TableFilter } from '@/ui/TableFilter'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
 import { NothingYetState } from '@/features/help/FirstUseState'
@@ -23,6 +27,8 @@ import {
   daysBetween,
   filterReceivables,
   isInvoiced,
+  receivableNextStep,
+  receivableSearchText,
   receivableTotals,
   reminderPhrase,
   sortReceivables,
@@ -34,10 +40,12 @@ import {
  * Money > Who owes us (M02; g2-money "receivables"; one name for admin and sales since the owner decision of 2026-10-19, and
  * where Money opens). What each order still owes, gross, GST included, through order_receivables(): admin and sales see
  * balances; only admin sees payment rows (there are none on this screen) and only admin can record a payment. On a phone each
- * card carries "Record payment" (admin) and "Open order", so the most frequent admin job needs no detour through the order. Open, Overdue and Settled filter the list; the four figures on top split the
- * outstanding balance by status. The payment-reminder panel beside the table is M09 (ReminderPanel): picking a row
- * selects it (the 3 px green edge) and shows its reminder; the order opens from the order number. Beside the table from
- * 1360 px, under it below that.
+ * card carries "Record payment" (admin) and "Open order", so the most frequent admin job needs no detour through the order.
+ * Search balances (customer, order number, invoice number; kept in `?q=`) and Open, Overdue and Paid narrow the list; the
+ * four figures on top split the outstanding balance by status. Each row has ONE Next step (round-2 R2-06): "Send a reminder"
+ * (late), "Reminded 3 days ago" or "Due 3 Nov" (waiting), "Paid" (done). The payment-reminder panel beside the table is M09
+ * (ReminderPanel): picking a row selects it (the 3 px green edge) and shows its reminder; the order opens from the order
+ * number. Beside the table from 1360 px, under it below that.
  *
  *   /money/receivables?pay=1&order=<id>   opens Record payment for that order (admin)
  */
@@ -45,13 +53,25 @@ import {
 // the reminder panel sits beside the table and the Balance column carries the figure that matters; the table then fits without a
 // sideways scroll. They show everywhere else.
 const GROSS_SETTLED = 'hidden md:table-cell min-[1360px]:hidden min-[1536px]:table-cell'
-const DUE_WORD = (d: number) => `${d} ${d === 1 ? 'day' : 'days'}`
+const SEARCH_FIELDS = 'customer, order number and invoice number'
+const FILTER_WORD: Record<ReceivableFilter, string> = { open: 'Open', overdue: 'Overdue', settled: 'Paid' }
+const shortDay = (iso: string) => formatDay(iso).replace(/^\w+ /, '').replace(/ \d{4}$/, '')
+
+function NextStep({ r, today }: { r: ReceivableRow; today: string }) {
+  const s = receivableNextStep(r, today)
+  return (
+    <StatusText tone={s.tone} detail={s.detail}>
+      {s.label}
+    </StatusText>
+  )
+}
 
 export function ReceivablesPage() {
   const session = useSession()
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
   const q = useReceivables()
   const [filter, setFilter] = useState<ReceivableFilter>('open')
+  const [search, setSearch] = useQueryParamText()
   const [paying, setPaying] = useState<string | null>(null)
   const [picked, setPicked] = useState<string | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -63,11 +83,8 @@ export function ReceivablesPage() {
   const summary = useReceivablesSummary(today)
   const local = useMemo(() => receivableTotals(rows, today), [rows, today])
   const totals = summary.data ?? local
-  const counts = useMemo(
-    () => ({ open: filterReceivables(rows, 'open').length, overdue: filterReceivables(rows, 'overdue').length, settled: filterReceivables(rows, 'settled').length }),
-    [rows],
-  )
-  const shown = useMemo(() => sortReceivables(filterReceivables(rows, filter)), [rows, filter])
+  const byState = useMemo(() => filterReceivables(rows, filter), [rows, filter])
+  const shown = useMemo(() => sortReceivables(byState.filter(r => matchesAllWords(receivableSearchText(r), search))), [byState, search])
   // The panel follows the picked row; before a pick (or when it leaves the list) it follows the most overdue row (E-MN-03), else the first.
   const mostOverdue = shown.find(r => r.state === 'overdue') ?? shown[0] ?? null
   const selected = shown.find(r => r.orderId === picked) ?? mostOverdue
@@ -93,8 +110,8 @@ export function ReceivablesPage() {
         value: r => r.companyName,
         cell: r => (
           <span className="grid gap-px">
-            <span className="truncate font-medium">{r.companyName}</span>
-            <span className="num truncate text-xs text-fg-muted">
+            <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{r.companyName}</span>
+            <span className="num min-w-0 [overflow-wrap:anywhere] text-xs text-fg-muted">
               <Link to={`/orders/${r.orderId}`} className="underline-offset-2 hover:underline" aria-label={`Open ${orderRef(r.orderNumber)}`}>
                 {orderRef(r.orderNumber)}
               </Link>
@@ -124,46 +141,19 @@ export function ReceivablesPage() {
         header: 'Due',
         value: r => r.dueOn,
         cell: r => {
-          if (!r.dueOn) return <span className="text-fg-muted">Not invoiced</span>
+          if (!r.dueOn) return <span className="text-fg-muted">{'—'}</span>
           const d = daysBetween(today, r.dueOn)
-          const overdue = r.state === 'overdue'
+          // Words only: the row's one danger mark is its Next step (spec 1.2 rule 6).
           return (
             <span className="grid gap-px">
-              <span className="num font-medium">{formatDay(r.dueOn).replace(/^\w+ /, '').replace(/ \d{4}$/, '')}</span>
-              <span className={overdue ? 'text-xs text-tone-danger-fg' : 'text-xs text-fg-muted'}>{d < 0 ? `${DUE_WORD(-d)} ago` : d === 0 ? 'today' : `in ${DUE_WORD(d)}`}</span>
+              <span className="num font-medium">{shortDay(r.dueOn)}</span>
+              <span className="text-xs text-fg-muted">{d < 0 ? agoDays(-d) : inDays(d)}</span>
             </span>
           )
         },
       },
-      {
-        id: 'payment',
-        header: 'Payment',
-        sortable: false,
-        cell: r =>
-          r.state === 'overdue' && r.dueOn ? (
-            <StatusBadge dimension="payment" value="overdue" label={`${DUE_WORD(Math.max(daysBetween(r.dueOn, today), 1))} overdue`} />
-          ) : (
-            <StatusBadge dimension="payment" value={r.state} label={r.state === 'settled' ? 'Paid' : undefined} />
-          ),
-      },
-      {
-        id: 'reminder',
-        header: 'Last reminder',
-        sortable: false,
-        cell: r =>
-          r.lastRemindedOn ? (
-            <span className="grid gap-px">
-              <span className="font-medium">
-                Reminded <span className="num">{r.reminderCount}×</span>
-              </span>
-              <span className="text-xs text-fg-muted">
-                last <span className="num">{formatDay(r.lastRemindedOn).replace(/^\w+ /, '')}</span> · {daysBetween(r.lastRemindedOn, today)} days ago
-              </span>
-            </span>
-          ) : (
-            <span className="text-fg-muted">{'—'}</span>
-          ),
-      },
+      // ONE Next step (R2-06): replaces the Payment chip and the Last reminder columns.
+      { id: 'next', header: 'Next step', sortable: false, cell: r => <NextStep r={r} today={today} /> },
     ]
     if (isAdmin)
       cols.push({
@@ -179,6 +169,11 @@ export function ReceivablesPage() {
   }, [isAdmin, today])
 
   const tabLabel = 'Who owes us'
+  const searching = search.trim() !== ''
+  const clearSearch = () => {
+    setSearch('')
+    setFilter('open')
+  }
 
   return (
     <MoneyFrame active="receivables">
@@ -205,31 +200,38 @@ export function ReceivablesPage() {
             loading={q.isPending}
             error={q.isError ? { title: 'The balances did not load', message: 'Your invoices and payments are safe. Try again, and if it keeps failing, tell the admin.', onRetry: () => void q.refetch() } : null}
             toolbar={
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-base font-semibold">{tabLabel}</h2>
-                <span className="text-sm text-fg-muted">Balance is gross, GST included</span>
-                {/* ONE tip beside the header (two merges once left a second one beside it): the balance, then reminders. */}
-                <InfoTip label="About the balance and reminders">
-                  What the customer still owes, GST included, after payments recorded. A reminder is due when an order is overdue and has
-                  not been reminded in the last 7 days; copying the reminder records it, and the order moves to Waiting on Today.{' '}
-                  {isAdmin ? 'Record a payment with the button on its row.' : 'Payments are recorded by an admin.'}
-                </InfoTip>
-                <span className="flex-1" />
-                <SegmentedControl
-                  aria-label="Filter"
-                  value={filter}
-                  onValueChange={v => setFilter(v as ReceivableFilter)}
-                  options={[
-                    // a count means "needs you": only Overdue carries one
-                    { value: 'open', label: 'Open' },
-                    { value: 'overdue', label: 'Overdue', count: counts.overdue },
-                    { value: 'settled', label: 'Paid' },
-                  ]}
-                />
+              <div className="grid gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-base font-semibold">{tabLabel}</h2>
+                  <span className="text-sm text-fg-muted">Balance is gross, GST included</span>
+                  {/* ONE tip beside the header (two merges once left a second one beside it): the balance, then reminders. */}
+                  <InfoTip label="About the balance and reminders">
+                    What the customer still owes, GST included, after payments recorded. A reminder is due when an order is overdue and has
+                    not been reminded in the last 7 days; copying the reminder records it, and the order moves to Waiting on Today.{' '}
+                    {isAdmin ? 'Record a payment with the button on its row.' : 'Payments are recorded by an admin.'}
+                  </InfoTip>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <TableFilter label="Search balances" hint="Finds a balance by customer, order number or invoice number." value={search} onChange={setSearch} />
+                  <span className="flex-1" />
+                  {/* No counts: the Who owes us tab carries the to-remind count (spec 2.2 #18). */}
+                  <SegmentedControl
+                    aria-label="Filter"
+                    value={filter}
+                    onValueChange={v => setFilter(v as ReceivableFilter)}
+                    options={[
+                      { value: 'open', label: FILTER_WORD.open },
+                      { value: 'overdue', label: FILTER_WORD.overdue },
+                      { value: 'settled', label: FILTER_WORD.settled },
+                    ]}
+                  />
+                </div>
               </div>
             }
             empty={
-              filter === 'open' && rows.length === 0 ? (
+              searching && byState.length > 0 ? (
+                <NoResults query={search} scope="balances" fields={SEARCH_FIELDS} filtersOn={filter === 'open' ? [] : [FILTER_WORD[filter]]} onClear={clearSearch} />
+              ) : filter === 'open' && rows.length === 0 ? (
                 // No balance has ever been recorded (a new CRM): "Every order is paid in full" would be untrue.
                 <NothingYetState screen="receivables" />
               ) : filter === 'open' ? (
@@ -245,17 +247,14 @@ export function ReceivablesPage() {
             mobileRow={r => (
               <div className="grid gap-1">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="truncate font-medium">{r.companyName}</span>
+                  <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{r.companyName}</span>
                   <Money value={r.balance} prefix={false} strong />
                 </div>
                 <span className="num text-xs text-fg-muted">
                   {orderRef(r.orderNumber)}
                   {isInvoiced(r) ? ` · ${r.invoiceNumbers.join(', ')}` : ' · not invoiced yet'}
                 </span>
-                <div className="flex flex-wrap items-center gap-2">
-                  {r.state === 'overdue' && r.dueOn ? <StatusBadge dimension="payment" value="overdue" label={`${DUE_WORD(Math.max(daysBetween(r.dueOn, today), 1))} overdue`} /> : <StatusBadge dimension="payment" value={r.state} label={r.state === 'settled' ? 'Paid' : undefined} />}
-                  {r.dueOn ? <span className="num text-sm text-fg-muted">Due {formatDay(r.dueOn).replace(/^\w+ /, '').replace(/ \d{4}$/, '')}</span> : null}
-                </div>
+                <NextStep r={r} today={today} />
                 <div className="mt-1 flex flex-wrap gap-2">
                   {isAdmin && r.state !== 'settled' ? (
                     <Button icon={Banknote} size="touch" onClick={() => setPaying(r.orderId)} aria-label={`Record payment for ${orderRef(r.orderNumber)}`}>

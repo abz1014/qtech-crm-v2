@@ -19,6 +19,7 @@
 // Only supplier orders with at least one goods line count (as v_order_state counts them): a supplier added with no lines yet is not a step.
 
 import { daysBetween } from '@/features/rfqs/lib/dateText'
+import type { StepTone } from '@/lib/status'
 
 export type StepKind =
   | 'cancelled'
@@ -40,7 +41,8 @@ export type StepKind =
   | 'done'
   | 'nothing'
 
-export type StepTone = 'late' | 'now' | 'waiting' | 'done'
+/** Who acts next (the shared tone of status text, src/lib/status.ts): a cancelled order is inert. */
+export type { StepTone }
 
 /** A supplier order that supplies at least one goods line. */
 export interface StepLeg {
@@ -97,7 +99,7 @@ function soonest(legs: readonly StepLeg[]): StepLeg | undefined {
 export function nextOrderStep(f: OrderFacts): OrderStep {
   const money = isMoney(f.role)
   const engineer = f.role === 'engineer'
-  if (f.lifecycle === 'cancelled') return { kind: 'cancelled', tone: 'done', rank: 90 }
+  if (f.lifecycle === 'cancelled') return { kind: 'cancelled', tone: 'inert', rank: 90 }
   if (f.role === 'admin' && f.basisUnknown) return { kind: 'resolve-basis', tone: 'now', rank: 10 }
   if (money && f.payment === 'overdue' && (f.balance ?? 1) > 0) {
     return { kind: 'chase-payment', tone: 'late', rank: 0, lateDays: f.dueOn ? Math.max(0, daysBetween(f.dueOn, f.today)) : undefined }

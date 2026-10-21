@@ -134,7 +134,7 @@ test.describe('open RFQs', () => {
     const overdue = row(page, 'priority')
     await expect(overdue.getByText('3 days overdue')).toHaveClass(/text-tone-danger-fg/)
     await expect(overdue.getByText('Needs suppliers', { exact: true })).toBeVisible()
-    await expect(overdue.getByText('Not sent to suppliers yet', { exact: true })).toBeVisible()
+    await expect(overdue.getByText('Nobody asked yet', { exact: true })).toBeVisible()
     await expect(overdue.getByText('Item 1 of priority', { exact: true })).toBeVisible() // what was asked, before the code
     await expect(overdue).toContainText(rfqRef(fx.numbers.priority))
     await expect(overdue).toContainText(`their ref BRD-${fx.tag}-P`)
@@ -150,7 +150,7 @@ test.describe('open RFQs', () => {
 
   test('All shows everyone, each with the next step and what is behind it', async ({ page }) => {
     await openAs(page, 'sales', '/rfqs')
-    await page.getByRole('radio', { name: /^All\s*\d+$/ }).click()
+    await page.getByRole('radio', { name: 'All', exact: true }).click()
     const partly = row(page, 'partly')
     await expect(partly.getByText('Waiting for prices', { exact: true })).toBeVisible()
     await expect(partly.getByText('1 of 2 items priced · waiting on the customer for 1 answer', { exact: true })).toBeVisible()
@@ -158,15 +158,15 @@ test.describe('open RFQs', () => {
     const covered = row(page, 'covered')
     await expect(covered.getByText('Quotation sent', { exact: true })).toBeVisible()
     await expect(covered.getByText(/^Sent \w{3} \d{1,2} \w{3}$/)).toBeVisible()
-    await expect(row(page, 'toask').getByText('Not sent to suppliers yet · 1 question to ask the customer', { exact: true })).toBeVisible()
+    await expect(row(page, 'toask').getByText('Nobody asked yet · 1 question to ask the customer', { exact: true })).toBeVisible()
     await expect(row(page, 'partly').getByRole('img', { name: /./ }).first()).toBeVisible() // owner avatar
     await review(page, 'board-all-1440')
   })
 
-  test('the one next-step filter narrows the rows, its counts follow the owner switch, and it lives in the address', async ({ page }) => {
+  test('the one next-step filter narrows the rows, its needs-you counts follow the owner switch, and it lives in the address', async ({ page }) => {
     await openAs(page, 'admin', '/rfqs') // admin opens on All
-    await expect(page.getByRole('radio', { name: /^All\s*\d+$/ })).toBeChecked()
-    await expect(page.getByRole('radio', { name: /^All open\s*\d+$/ })).toBeChecked()
+    await expect(page.getByRole('radio', { name: 'All', exact: true })).toBeChecked()
+    await expect(page.getByRole('radio', { name: 'All open' })).toBeChecked()
     await show(page, 'Quotation sent', 'sent')
     await expect(row(page, 'covered')).toBeVisible()
     await expect(row(page, 'awaiting')).toHaveCount(0)
@@ -178,12 +178,13 @@ test.describe('open RFQs', () => {
     await expect(row(page, 'partly')).toBeVisible()
     await expect(row(page, 'covered')).toHaveCount(0)
 
-    // The count on the choice equals the rows it shows.
-    const label = await page.getByRole('radio', { name: /^Waiting for prices/ }).innerText()
-    const n = Number(/(\d+)\s*$/.exec(label.trim())?.[1])
-    await expect(page.getByRole('table', { name: 'Open RFQs' }).locator('tbody tr[data-di]')).toHaveCount(n)
+    // Only the steps that wait on us carry a number ("needs you"); it equals the rows the choice shows.
+    await expect(page.getByRole('radio', { name: 'Waiting for prices' })).toBeVisible()
+    const label = await page.getByRole('radio', { name: /^Needs suppliers/ }).innerText()
+    const n = Number(/(\d+)/.exec(label)?.[1])
 
     await show(page, 'Needs suppliers', 'suppliers')
+    await expect(page.getByRole('table', { name: 'Open RFQs' }).locator('tbody tr[data-di]')).toHaveCount(n)
     await expect(row(page, 'toask')).toBeVisible()
     await expect(row(page, 'nooffer')).toBeVisible()
     await expect(row(page, 'awaiting')).toHaveCount(0)
@@ -191,6 +192,7 @@ test.describe('open RFQs', () => {
 
   test('New RFQ opens the intake screen', async ({ page }) => {
     await openAs(page, 'sales', '/rfqs')
+    await expect(page.getByRole('button', { name: 'New RFQ' })).toHaveAttribute('aria-keyshortcuts', 'N')
     await page.getByRole('button', { name: 'New RFQ' }).click()
     await expect(page).toHaveURL(/\/rfqs\/new$/)
   })
@@ -224,25 +226,30 @@ test.describe('toolbar: filter box, the one filter, nav counts', () => {
       await noSidewaysScroll(page)
 
       if (w >= 1280) {
-        // The top bar reads "RFQs <n>": since the owner decision of 2026-10-19 a count means "needs you", so n is the RFQ items
-        // on the admin's own Today, never more than the open RFQs the board lists.
-        const link = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs\s*\d+$/ })
+        // The top bar reads "RFQs <n>", named "RFQs, n need you": a count means "needs you", so n is the RFQ items on the
+        // admin's own Today, never more than the open RFQs the board lists (its lede: "12 open · 4 need you · 3 overdue").
+        const link = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^RFQs\s?, \d+ need you$/ })
         await expect(link).toBeVisible()
-        const needs = Number(/(\d+)$/.exec((await link.innerText()).trim())?.[1])
-        const seg = page.getByRole('radio', { name: /^All open\s*\d+$/ })
-        await expect(seg).toBeChecked()
-        const open = Number(/(\d+)$/.exec((await seg.innerText()).trim())?.[1])
+        const needs = Number(/(\d+) need you/.exec((await link.textContent()) ?? '')?.[1])
+        await expect(page.getByRole('radio', { name: 'All open' })).toBeChecked()
+        const lede = page.getByText(/^\d+ open( · \d+ need you)?( · \d+ overdue)?$/)
+        await expect(lede).toBeVisible()
+        const open = Number(/^(\d+) open/.exec(await lede.innerText())?.[1])
         expect(open).toBeGreaterThanOrEqual(6)
         expect(needs).toBeGreaterThan(0)
         expect(needs).toBeLessThanOrEqual(open)
-        await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Today\s*\d+$/ })).toBeVisible()
+        await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Today\s?, \d+ need you$/ })).toBeVisible()
       } else {
-        // A phone gets the same one filter as a select, not a strip that scrolls sideways.
+        // A phone gets the same one filter as a select, not a strip that scrolls sideways; Mine or All is in the Filters sheet.
         await expect(page.getByRole('combobox', { name: 'Show RFQs' })).toBeVisible()
         await expect(page.getByRole('radio', { name: /^All open/ })).toBeHidden()
+        await expect(page.getByRole('radiogroup', { name: 'Whose RFQs' })).toHaveCount(0)
+        await page.getByRole('button', { name: /^Filters/ }).click()
+        await expect(page.getByRole('dialog', { name: 'Filter RFQs' }).getByRole('radiogroup', { name: 'Whose RFQs' })).toBeVisible()
+        await page.getByRole('dialog', { name: 'Filter RFQs' }).getByRole('button', { name: /^Show \d+ RFQs?$/ }).click()
       }
 
-      const box = page.getByRole('textbox', { name: 'Filter RFQs' })
+      const box = page.getByRole('textbox', { name: 'Search RFQs' })
       await page.keyboard.press('/')
       await expect(box).toBeFocused()
       await box.fill(String(fx.numbers.covered))
@@ -254,10 +261,12 @@ test.describe('toolbar: filter box, the one filter, nav counts', () => {
       await expect(row(page, 'awaiting')).toBeVisible()
 
       await box.fill('Belimo zzz')
-      await expect(page.getByText('No RFQs match “Belimo zzz”')).toBeVisible()
+      await expect(page).toHaveURL(/q=Belimo/)
+      await expect(page.getByText('Nothing matches "Belimo zzz"')).toBeVisible()
+      await expect(page.getByText('Searched open RFQs by number, customer, their reference and item.')).toBeVisible()
       await review(page, `board-nomatch-${w}`)
       expect(await axeViolations(page)).toEqual([])
-      await page.getByRole('button', { name: 'Clear filter' }).click()
+      await page.getByRole('table', { name: 'Open RFQs' }).getByRole('button', { name: 'Clear search' }).click()
       await expect(row(page, 'covered')).toBeVisible()
       // The filter also reads what was asked.
       await box.fill('Item 1 of partly')
@@ -290,12 +299,12 @@ test.describe('closed and won', () => {
     await expect(page.getByText(/^Showing 1 to 25 of/)).toBeVisible()
   })
 
-  test('the filter box searches every closed RFQ on the server: by item text, by company, by number', async ({ page }) => {
+  test('the search box searches every closed RFQ on the server: by item text, by company, by number', async ({ page }) => {
     await openAs(page, 'admin', '/rfqs?show=closed')
     const body = page.getByRole('table', { name: 'Closed and won RFQs' }).locator('tbody tr[data-di]')
     await expect(body.first()).toBeVisible()
     await expect(row(page, 'old')).toHaveCount(0) // a year old: not on the first page
-    const box = page.getByRole('textbox', { name: 'Filter RFQs' })
+    const box = page.getByRole('textbox', { name: 'Search RFQs' })
     await box.fill(`Rosemount gauge ${fx.tag}`)
     await expect(row(page, 'old')).toBeVisible()
     await expect(body).toHaveCount(1)
@@ -306,7 +315,11 @@ test.describe('closed and won', () => {
     await box.fill(rfqRef(fx.numbers.old))
     await expect(row(page, 'old')).toBeVisible()
     await box.fill('zz no such thing zz')
-    await expect(page.getByText('No RFQs match “zz no such thing zz”')).toBeVisible()
+    await expect(page.getByText('Nothing matches "zz no such thing zz"')).toBeVisible()
+    await expect(page.getByText('Searched every closed RFQ by number, customer, their reference and item.')).toBeVisible()
+    // the search is in the address: a reload keeps it
+    await page.reload()
+    await expect(page.getByRole('textbox', { name: 'Search RFQs' })).toHaveValue('zz no such thing zz')
   })
 })
 

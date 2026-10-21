@@ -152,7 +152,7 @@ export const ORDERS = {
     markDone: 'Mark done today',
   },
   cancel: {
-    more: 'More actions',
+    more: /^More( actions)?$/,
     cancel: 'Cancel order',
     reopen: 'Reopen order',
     reason: 'The customer cancelled the PO',

@@ -1,5 +1,7 @@
 import { formatDay } from '@/lib/formatDay'
 import { rfqRef } from '@/lib/refs'
+import { STATUS, type StepTone } from '@/lib/status'
+import { daysOverdue, dueWord } from '@/lib/timeWords'
 
 /*
  * The RFQ board's pure rules (R06, then the UX audit of 2026-10-19): what is sorted first, what the one filter keeps, how a due
@@ -57,11 +59,12 @@ export type NextStep = 'suppliers' | 'prices' | 'ready' | 'sent'
 export type BoardShow = 'all' | NextStep | 'closed'
 export type OwnerFilter = 'mine' | 'all'
 
+/** The step words are the registry's `rfq-stage` labels (DESIGN_SYSTEM section 6), so the board, the RFQ header and Today agree. */
 export const NEXT_STEP_LABEL: Record<NextStep, string> = {
-  suppliers: 'Needs suppliers',
-  prices: 'Waiting for prices',
-  ready: 'Ready to quote',
-  sent: 'Quotation sent',
+  suppliers: STATUS['rfq-stage'].suppliers.label,
+  prices: STATUS['rfq-stage'].prices.label,
+  ready: STATUS['rfq-stage'].ready.label,
+  sent: STATUS['rfq-stage'].sent.label,
 }
 
 export const SHOW_OPTIONS: ReadonlyArray<{ value: BoardShow; label: string }> = [
@@ -96,7 +99,8 @@ export interface NextStepText {
   label: string
   /** One short line under the label: what is behind it, in plain words. */
   detail: string
-  tone: 'warning' | 'info' | 'success' | 'neutral'
+  /** Who acts next (StatusText): we do (suppliers, ready, expired) or someone else does (prices, sent). */
+  tone: Extract<StepTone, 'now' | 'waiting' | 'done' | 'late'>
 }
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
@@ -125,18 +129,18 @@ export function nextStepText(r: StepInput): NextStepText {
   switch (step) {
     case 'sent':
       return r.bidState === 'quotation_expired'
-        ? { step, label, detail: 'The quotation has expired', tone: 'warning' }
-        : { step, label, detail: r.quotedOn ? `Sent ${formatDay(r.quotedOn)}` : 'Waiting for the customer', tone: 'neutral' }
+        ? { step, label: STATUS['rfq-stage'].expired.label, detail: 'Revise it or mark it won', tone: 'now' }
+        : { step, label, detail: r.quotedOn ? `Sent ${formatDay(r.quotedOn)}` : 'Waiting for the customer', tone: 'waiting' }
     case 'suppliers':
-      return { step, label, detail: withQ(r.sourcingState === 'no_offer_anywhere' ? 'Every supplier asked said no' : 'Not sent to suppliers yet'), tone: 'warning' }
+      return { step, label, detail: withQ(r.sourcingState === 'no_offer_anywhere' ? 'Every supplier asked said no' : 'Nobody asked yet'), tone: 'now' }
     case 'ready':
-      return { step, label, detail: withQ(r.itemsTotal === 1 ? 'The item has a price' : `All ${r.itemsTotal} items have a price`), tone: 'success' }
+      return { step, label, detail: withQ(r.itemsTotal === 1 ? 'The item has a price' : `All ${r.itemsTotal} items have a price`), tone: 'now' }
     case 'prices':
       return {
         step,
         label,
         detail: withQ(r.itemsQuoted > 0 ? `${r.itemsQuoted} of ${r.itemsTotal} items priced` : `Asked ${count(r.floated, 'supplier', 'suppliers')}`),
-        tone: 'info',
+        tone: 'waiting',
       }
   }
 }
@@ -197,22 +201,19 @@ export function defaultOwner(role: string): OwnerFilter {
 export interface DueText {
   /** "Thu 26 Nov", or null with no due date. */
   date: string | null
-  /** "3 days overdue", "Due today", "in 4 days". */
+  /** "3 days overdue", "Due today", "Due in 4 days" (timeWords). */
   hint: string
   tone: 'danger' | 'warning' | 'normal'
 }
-
-const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`
 
 export function dueText(r: Pick<BoardRow, 'dueOn' | 'daysToDue' | 'isOverdue'>): DueText {
   if (!r.dueOn) return { date: null, hint: 'No due date', tone: 'normal' }
   const date = formatDay(r.dueOn)
   const n = r.daysToDue
-  if (r.isOverdue) return { date, hint: `${days(Math.abs(n ?? 0))} overdue`, tone: 'danger' }
+  if (r.isOverdue) return { date, hint: daysOverdue(n ?? 0), tone: 'danger' }
   if (n === null) return { date, hint: '', tone: 'normal' }
-  if (n <= 0) return { date, hint: 'Due today', tone: 'warning' }
-  if (n === 1) return { date, hint: 'Due tomorrow', tone: 'warning' }
-  return { date, hint: `in ${days(n)}`, tone: 'normal' }
+  if (n <= 1) return { date, hint: dueWord(Math.max(0, n)), tone: 'warning' }
+  return { date, hint: dueWord(n), tone: 'normal' }
 }
 
 export const CLOSE_REASON: Record<string, string> = {

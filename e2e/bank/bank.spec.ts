@@ -233,7 +233,7 @@ test.describe('bank tick (M12)', () => {
     await addExpense({ amount_pkr: base(), description: 'support staff', category_id: RENT })
     await addDeposit(order.id, `PSID ${Math.floor(Math.random() * 1e8)}`, 12000)
     await openAs(page, 'admin', '/money/month-end/bank')
-    await expect(page.getByTestId('bank-state')).toContainText('not ticked')
+    await expect(page.getByTestId('bank-state')).toContainText(/\d+ to match/)
     await expect(page.getByRole('heading', { name: 'Match bank statement', level: 2 })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Back to Month end' })).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Month-end views' })).toHaveCount(0)

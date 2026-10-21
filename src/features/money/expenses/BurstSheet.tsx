@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
-import { Camera, Check, CircleAlert, Keyboard, Landmark, Plus, Trash2, TriangleAlert, Wallet, X, CalendarDays } from 'lucide-react'
+import { Camera, Check, CircleAlert, Landmark, Plus, Trash2, TriangleAlert, Wallet, X, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { parseDateText } from '@/lib/dateInput'
@@ -276,23 +276,6 @@ function BurstContent({ onClose }: { onClose: () => void }) {
 
   const label = totals.count === 1 ? 'Save 1 expense' : `Save ${totals.count || ''} expenses`.replace('  ', ' ')
 
-  const keyhints = (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-2">
-      <span className="inline-flex items-center gap-[6px]">
-        <Kbd>Enter</Kbd>adds a row
-      </span>
-      <span className="inline-flex items-center gap-[6px]">
-        <Kbd>Tab</Kbd>next cell
-      </span>
-      <span className="inline-flex items-center gap-[6px]">
-        <Kbd>Ctrl</Kbd>+<Kbd>Enter</Kbd>saves all
-      </span>
-      <span className="inline-flex items-center gap-[6px]">
-        <Kbd>Esc</Kbd>closes
-      </span>
-    </div>
-  )
-
   return (
     <RadixDialog.Portal>
       <RadixDialog.Overlay
@@ -312,7 +295,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
           onInteractOutside={e => e.preventDefault()}
           aria-describedby="burst-desc"
           className={cn(
-            'grid w-full grid-rows-[auto_auto_minmax(0,1fr)_auto] bg-surface focus:outline-none',
+            'grid w-full grid-rows-[auto_minmax(0,1fr)_auto] bg-surface focus:outline-none',
             compact
               ? 'min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto]'
               : 'mb-10 max-w-[calc(100vw-2rem)] rounded shadow-modal md:w-[1320px]',
@@ -328,33 +311,17 @@ function BurstContent({ onClose }: { onClose: () => void }) {
               <span className="num text-xs text-fg-muted">PKR {fmt(totals.total)}</span>
             </header>
           ) : (
-            <>
-              <header className="flex items-start gap-4 border-b px-6 pb-4 pt-5">
-                <div className="grid flex-1 gap-[2px]">
-                  <RadixDialog.Title className="text-lg font-semibold tracking-snug">Add expenses</RadixDialog.Title>
-                  <RadixDialog.Description id="burst-desc" className="text-sm text-fg-muted">
-                    Money › Expenses · one row per expense · one save for all of them, or none
-                  </RadixDialog.Description>
-                </div>
-                <RadixDialog.Close asChild>
-                  <Button variant="quiet" size="sm" icon={X} aria-label="Close" disabled={pending} className="-mr-2 text-fg-muted" />
-                </RadixDialog.Close>
-              </header>
-              <div className="flex items-center gap-5 border-b bg-sunken px-6 py-2 text-xs text-fg-2">
-                <span className="inline-flex items-center gap-[6px]">
-                  <i aria-hidden="true" className="inline-block h-[14px] w-[28px] rounded-[3px] border border-dashed border-line-input bg-surface" />
-                  Filled in for you. Type over it to change it.
-                </span>
-                <span className="inline-flex items-center gap-[6px]">
-                  <i aria-hidden="true" className="inline-block h-[14px] w-[28px] rounded-[3px] border border-line-input bg-surface" />
-                  You typed this
-                </span>
-                <span className="ml-auto inline-flex items-center gap-[6px]">
-                  <Icon icon={Keyboard} size="sm" />
-                  Keyboard only: no mouse needed
-                </span>
+            <header className="flex items-start gap-4 border-b px-6 pb-4 pt-5">
+              <div className="grid flex-1 gap-[2px]">
+                <RadixDialog.Title className="text-lg font-semibold tracking-snug">Add expenses</RadixDialog.Title>
+                <RadixDialog.Description id="burst-desc" className="text-sm text-fg-muted">
+                  Money › Expenses · one row per expense · one save for all of them, or none
+                </RadixDialog.Description>
               </div>
-            </>
+              <RadixDialog.Close asChild>
+                <Button variant="quiet" size="sm" icon={X} aria-label="Close" disabled={pending} className="-mr-2 text-fg-muted" />
+              </RadixDialog.Close>
+            </header>
           )}
 
           <div ref={bodyRef} className={cn('min-h-0', compact && 'overflow-y-auto')}>
@@ -450,7 +417,6 @@ function BurstContent({ onClose }: { onClose: () => void }) {
             </footer>
           ) : (
             <footer className="flex flex-wrap items-center gap-4 rounded-b border-t bg-sunken px-6 py-3">
-              {keyhints}
               <span className="flex-1" />
               {badCount > 0 ? (
                 <span className="inline-flex h-5 items-center gap-[5px] rounded border border-tone-warning-fg/25 bg-tone-warning-bg pl-[6px] pr-2 text-xs font-medium text-tone-warning-fg">
@@ -538,7 +504,7 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
         value={row.categoryId}
         aria-label={`Category, row ${index}`}
         size="cell"
-        tag={row.categorySource === 'typed' ? undefined : row.categorySource === 'most-used' ? 'most used' : 'carried'}
+        prefilled={row.categorySource !== 'typed'}
         onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
         onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
         onCreate={onCreate}
@@ -561,9 +527,6 @@ function SheetRow({ row, index, categories, orders, today, onPatch, onKey, onRem
           onChange={e => onPatch({ paidVia: e.target.value as PaidVia })}
           className={cn('h-[36px]', row.paidVia === null && defaultEdge)}
         />
-        {row.paidVia === null ? (
-          <span className="pointer-events-none absolute right-[28px] top-1/2 -translate-y-1/2 whitespace-nowrap text-xs leading-none text-fg-muted">from category</span>
-        ) : null}
       </div>
       <div className="min-w-0">
         <TextField
@@ -851,7 +814,7 @@ function PhoneCard({ row, index, categories, orders, today, onPatch, onKey, onRe
         value={row.categoryId}
         aria-label={`Category, expense ${index}`}
         size="phone"
-        tag={row.categorySource === 'typed' ? undefined : row.categorySource === 'most-used' ? 'most used' : 'carried'}
+        prefilled={row.categorySource !== 'typed'}
         onChange={id => onPatch({ categoryId: id, categorySource: 'typed', categoryText: undefined })}
         onUnmatched={text => onPatch({ categoryText: text ?? undefined })}
         onCreate={onCreate}

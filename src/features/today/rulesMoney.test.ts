@@ -161,7 +161,7 @@ describe('M08 recurring due (admin only)', () => {
   })
   it('waits for the day: a template for the 28th is not due on the 27th', () => {
     expect(ruleRecurringDue(ctx({ recurring: [tpl({ dayOfMonth: 28 })] }))).toEqual([])
-    expect(ruleRecurringDue(ctx({ today: '2026-11-28', recurring: [tpl({ dayOfMonth: 28 })] }))[0]).toMatchObject({ group: 'now', badge: { text: 'today' } })
+    expect(ruleRecurringDue(ctx({ today: '2026-11-28', recurring: [tpl({ dayOfMonth: 28 })] }))[0]).toMatchObject({ group: 'now', badge: { text: 'Due today' } })
   })
   it('a template with no day is due from the 1st', () => {
     expect(ruleRecurringDue(ctx({ today: '2026-11-01', recurring: [tpl({ dayOfMonth: null })] }))).toHaveLength(1)

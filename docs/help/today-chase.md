@@ -8,7 +8,7 @@ related: snooze, whatsapp-or-email
 ---
 1. Tap [Today]. Read [Overdue or due today] first.
 2. Tap a row. The message is already written under [Prepared for you].
-3. Pick [WhatsApp] or [Email]. The app remembers your choice.
+3. The channel you used last is chosen. To switch, tap [Email instead] or [WhatsApp instead].
 4. Tap [Open in WhatsApp] or [Open in email], press Send there, then tap [Mark chased].
 5. The row moves to [Waiting] and comes back on its date if nobody answers.
 

@@ -44,7 +44,7 @@ import {
 /*
  * "Replies from suppliers" (R07; reworked by the UX audit of 2026-10-19): one row per supplier asked, with ONE way in on that row.
  * A supplier we are still waiting on has its reply open, ready to type into (no tap first, FE-2). A supplier who has replied shows
- * one line ("Quoted 2 of 4", Edit reply); one who cannot quote shows the reason and Take back. Opening a row shows the inline reply,
+ * one line ("Priced 2 of 4", Edit reply); one who cannot quote shows the reason and Take back. Opening a row shows the inline reply,
  * no modal: a price per item, the currency already filled in (the supplier's last currency, else the country map: "there is nothing
  * to pick"), lead time and stock once for the whole reply. While a price is typed the row says what it reads as in PKR at today's
  * rate, and whether it would be the lowest; with no rate it says the reply can be saved and the rate added afterwards.
@@ -134,10 +134,10 @@ export function SupplierReplies({ rfq, items, inquiries, rates }: { rfq: RfqHead
 
 /** The status of a supplier's reply, as one chip. */
 function ReplyChip({ inquiry, itemCount }: { inquiry: InquiryRow; itemCount: number }) {
-  if (!inquiry.sentOn && !inquiry.noOfferOn && inquiry.lines.length === 0) return <StatusBadge dimension="inquiry" value="shortlisted" label="Not asked yet" />
+  if (!inquiry.sentOn && !inquiry.noOfferOn && inquiry.lines.length === 0) return <StatusBadge dimension="inquiry" value="shortlisted" />
   if (inquiry.responseState === 'quoted' || inquiry.lines.length > 0) return <StatusBadge dimension="inquiry" value="quoted" detail={`${inquiry.itemsQuoted} of ${itemCount}`} />
-  if (inquiry.responseState === 'no_offer' || inquiry.noOfferOn) return <StatusBadge dimension="inquiry" value="no-offer" label="Can't quote" />
-  return <StatusBadge dimension="inquiry" value="awaiting" />
+  if (inquiry.responseState === 'no_offer' || inquiry.noOfferOn) return <StatusBadge dimension="inquiry" value="no-offer" />
+  return <StatusBadge dimension="inquiry" value={inquiry.chaseCount > 0 ? 'chased' : 'awaiting'} detail={inquiry.chaseCount > 0 ? `chased ×${inquiry.chaseCount}` : undefined} />
 }
 
 /** One line for a supplier whose reply is not open: who, where it stands, and the one way in. */

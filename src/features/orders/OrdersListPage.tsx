@@ -1,22 +1,22 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CircleAlert, CircleCheck, CopyPlus, ListFilter, Users, X } from 'lucide-react'
+import { CircleCheck, CopyPlus, Users } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
 import { businessToday } from '@/lib/dates'
 import { resolveStatus, type StatusDimension } from '@/lib/status'
 import { useMediaQuery } from '@/lib/useMediaQuery'
-import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
-import { Dialog, DialogContent } from '@/ui/Dialog'
 import { EmptyState } from '@/ui/EmptyState'
+import { FilterSheet } from '@/ui/FilterSheet'
+import { NoResults } from '@/ui/NoResults'
+import { PageHeader } from '@/ui/PageHeader'
+import { StatusText } from '@/ui/StatusText'
 import { FirstUseState, NothingYetState } from '@/features/help/FirstUseState'
 import { useFirstUse } from '@/features/help/useFirstUse'
 import { Select } from '@/ui/form/Select'
-import { Icon } from '@/ui/Icon'
-import { Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { TableFilter } from '@/ui/TableFilter'
 import { Tab, TabList, TabPanel, Tabs } from '@/ui/Tabs'
@@ -33,7 +33,6 @@ import {
   isTab,
   defaultOwner,
   TABS,
-  tabCounts,
   type Dimension,
   type ListFilters,
   type OwnerFilter,
@@ -54,7 +53,22 @@ import {
 const LABEL: Record<Dimension, string> = { goods: 'Goods', commissioning: 'Commissioning', invoicing: 'Invoicing', payment: 'Payment' }
 const STATUS_DIM: Record<Dimension, StatusDimension> = { goods: 'goods', commissioning: 'commissioning', invoicing: 'invoicing', payment: 'payment' }
 
-const valueLabel = (dim: Dimension, value: string) => resolveStatus(STATUS_DIM[dim], value).label
+/** Where two view values share one status word, the filter option adds a detail so the choices stay distinct (spec 1.2 rule 4). */
+const FILTER_DETAIL: Partial<Record<string, string>> = {
+  'goods:to_source': 'no supplier yet',
+  'goods:to_place': 'not placed',
+  'goods:received': 'with us',
+  'goods:partly_delivered': 'partly delivered',
+  'invoicing:not_invoiced': 'nothing invoiced',
+  'invoicing:part': 'part invoiced',
+  'payment:unpaid': 'nothing paid',
+  'payment:part': 'part paid',
+}
+const valueLabel = (dim: Dimension, value: string) => {
+  const detail = FILTER_DETAIL[`${dim}:${value}`]
+  const word = resolveStatus(STATUS_DIM[dim], value).label
+  return detail ? `${word} · ${detail}` : word
+}
 
 /** What "done" means differs by role (v_order_state.is_done): sales are done once it is invoiced; their Next step still says if it is unpaid. */
 const doneMeaning = (role: string) =>
@@ -64,20 +78,12 @@ const doneMeaning = (role: string) =>
       ? 'An order is done for you when the goods are delivered and commissioning is done.'
       : 'An order is done when the goods are delivered, commissioning is done, it is paid and its costs are complete.'
 
+/** The row's one Next step as status text (icon and words, no box; spec 1.2 rule 3). */
 function NextStepText({ step }: { step: NextStep }) {
   return (
-    <span
-      data-tone={step.tone}
-      className={cn(
-        'inline-flex items-start gap-[6px] whitespace-normal',
-        step.tone === 'late' && 'font-medium text-tone-danger-fg',
-        step.tone === 'now' && 'font-medium text-fg',
-        (step.tone === 'waiting' || step.tone === 'done') && 'text-fg-muted',
-      )}
-    >
-      {step.tone === 'late' ? <Icon icon={CircleAlert} size="sm" className="mt-[3px] shrink-0" /> : step.tone === 'done' ? <Icon icon={CircleCheck} size="sm" className="mt-[3px] shrink-0" /> : null}
+    <StatusText tone={step.tone} className="whitespace-normal">
       {step.text}
-    </span>
+    </StatusText>
   )
 }
 
@@ -97,7 +103,7 @@ function OrderCell({ row }: { row: OrderListRow }) {
   return (
     <span className="grid min-w-0 gap-px">
       <span className="num">{orderRef(row.number)}</span>
-      <span className="min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">{[row.customerPo ? `PO ${row.customerPo}` : null, row.ownerName].filter(Boolean).join(' · ') || ' '}</span>
+      <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{[row.customerPo ? `PO ${row.customerPo}` : null, row.ownerName].filter(Boolean).join(' · ') || ' '}</span>
     </span>
   )
 }
@@ -126,7 +132,6 @@ export default function OrdersListPage() {
   const navigate = useNavigate()
   const phone = useMediaQuery('(max-width: 639px)')
   const [creating, setCreating] = useState(false)
-  const [sheet, setSheet] = useState(false)
 
   const orders = useOrdersList(role === '' ? null : role)
 
@@ -157,7 +162,6 @@ export default function OrdersListPage() {
   const who = useMemo(() => ({ userId: user?.id ?? null, role }), [user?.id, role])
   const all = useMemo(() => orders.data ?? [], [orders.data])
   const shown = useMemo(() => filterRows(all, filters, who), [all, filters, who])
-  const counts = useMemo(() => tabCounts(all, filters, who), [all, filters, who])
   const mineCount = useMemo(() => filterRows(all, { ...filters, owner: 'mine' }, who).length, [all, filters, who])
   const allCount = useMemo(() => filterRows(all, { ...filters, owner: 'all' }, who).length, [all, filters, who])
   const dimCounts = useMemo(
@@ -237,12 +241,14 @@ export default function OrdersListPage() {
       onValueChange={v => change({ owner: v })}
       fill={phone}
       options={[
-        { value: 'mine', label: ownerLabel, count: orders.isSuccess ? mineCount : undefined },
-        { value: 'all', label: 'All', count: orders.isSuccess ? allCount : undefined },
+        { value: 'mine', label: ownerLabel },
+        { value: 'all', label: 'All' },
       ]}
     />
   )
-  const filterLabel = dimsOn > 0 ? `Filters (${dimsOn})` : 'Filters'
+  // On a phone the owner switch lives in the sheet, so it counts as a filter there when it is off its default.
+  const ownerOff = phone && filters.owner !== defaultOwner(role)
+  const clearSheet = () => change({ goods: null, commissioning: null, invoicing: null, payment: null, ...(phone ? { owner: null } : {}) })
 
   const empty = firstUse.isNew ? (
       <FirstUseState screen="orders" role={role} onEveryone={() => change({ owner: 'all' })} everyoneCount={allCount} className="mx-5 my-4" />
@@ -282,19 +288,29 @@ export default function OrdersListPage() {
         {role === 'engineer' ? 'Jobs you are put on appear here.' : 'Orders you own appear here.'}
       </EmptyState>
     ) : (
-      <EmptyState
-        title="No orders match"
-        actions={
-          <Button icon={X} onClick={reset}>
-            Clear the filters
-          </Button>
-        }
-      >
-        Nothing here matches the search and filters you chose.
-      </EmptyState>
+      <NoResults
+        query={filters.text}
+        scope={`${filters.tab} orders`}
+        fields="customer, site, item, order number and PO"
+        filtersOn={[
+          ...(['goods', 'commissioning', 'invoicing', 'payment'] as const).filter(d => filters[d] !== ALL).map(d => `${LABEL[d]}: ${valueLabel(d, filters[d])}`),
+          ...(split === 'need' ? ['Needs action'] : split === 'waiting' ? ['Waiting'] : []),
+        ]}
+        onClear={reset}
+      />
     )
 
-  const lede = orders.isSuccess ? `${counts.active} active · ${counts.done} done · ${counts.cancelled} cancelled` : 'From the customer’s PO to delivery and payment.'
+  // Words, not pills (consistency spec 2.2 #15): the active orders split by who acts next.
+  const activeMine = useMemo(
+    () => filterRows(all, { ...filters, tab: 'active', goods: ALL, commissioning: ALL, invoicing: ALL, payment: ALL, text: '' }, who),
+    [all, filters, who],
+  )
+  const activeNeed = activeMine.filter(needsAction).length
+  const lede = orders.isSuccess
+    ? activeMine.length === 0
+      ? 'No active orders.'
+      : `${activeNeed} need you · ${activeMine.length - activeNeed} waiting`
+    : 'From the customer’s PO to delivery and payment.'
 
   const table = (label: string) => (
     <DataTable
@@ -303,8 +319,8 @@ export default function OrdersListPage() {
       rows={rows}
       getRowId={r => r.id}
       twoLine
-      densitySwitch={false}
-      defaultSort={{ id: 'order', dir: 'desc' }}
+      // R2-05: the active list starts with the most urgent step first (late, then now, then waiting); done and cancelled newest first
+      defaultSort={filters.tab === 'active' ? { id: 'next', dir: 'asc' } : { id: 'order', dir: 'desc' }}
       mobileRow={r => <OrderCard row={r} step={stepOf(r)} />}
       onRowOpen={r => navigate(`/orders/${r.id}`)}
       loading={orders.isPending}
@@ -319,36 +335,16 @@ export default function OrdersListPage() {
               value={split}
               onValueChange={v => change({ show: v === 'all' ? null : v })}
               options={[
-                { value: 'all', label: 'Any', count: orders.isSuccess ? shown.length : undefined },
-                { value: 'need', label: 'Needs action', count: orders.isSuccess ? needCount : undefined },
-                { value: 'waiting', label: 'Waiting', count: orders.isSuccess ? shown.length - needCount : undefined },
+                { value: 'all', label: 'Any' },
+                { value: 'need', label: 'Needs action', needs: orders.isSuccess ? needCount : undefined },
+                { value: 'waiting', label: 'Waiting' },
               ]}
             />
           ) : null}
-          <TableFilter label="Search orders" placeholder="Customer, item, order or PO" value={filters.text} onChange={v => change({ q: v })} className="min-w-0 flex-1 sm:max-w-[320px]" />
-          {phone ? (
-            <Button icon={ListFilter} onClick={() => setSheet(true)} aria-label={dimsOn > 0 || filters.owner !== defaultOwner(role) ? `Filter, ${dimsOn + (filters.owner !== defaultOwner(role) ? 1 : 0)} on` : 'Filter'}>
-              Filter
-            </Button>
-          ) : (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button icon={ListFilter} variant={dimsOn > 0 ? 'secondary' : 'quiet'}>
-                  {filterLabel}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-[280px]">
-                <div className="grid gap-3 p-1">
-                  {dims}
-                  {dimsOn > 0 ? (
-                    <Button size="sm" variant="quiet" icon={X} className="justify-self-start" onClick={() => change({ goods: null, commissioning: null, invoicing: null, payment: null })}>
-                      Clear these filters
-                    </Button>
-                  ) : null}
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
+          <TableFilter label="Search orders" hint="Finds an order by customer, site, item, order number or PO." value={filters.text} onChange={v => change({ q: v })} className="min-w-0 flex-1 sm:max-w-[320px]" />
+          <FilterSheet title="Filter orders" on={dimsOn + (ownerOff ? 1 : 0)} shown={rows.length} noun={['order', 'orders']} onClear={clearSheet} phoneOnly={ownerSwitch}>
+            {dims}
+          </FilterSheet>
         </div>
       }
       empty={empty}
@@ -357,22 +353,22 @@ export default function OrdersListPage() {
 
   return (
     <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-6 md:px-8">
-      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
-          <p className="text-sm text-fg-muted">{lede}</p>
-        </div>
-        {money ? (
-          <Button icon={CopyPlus} onClick={() => setCreating(true)}>
-            Repeat a past order
-          </Button>
-        ) : null}
-      </header>
+      <PageHeader
+        title="Orders"
+        lede={lede}
+        secondary={
+          money ? (
+            <Button icon={CopyPlus} onClick={() => setCreating(true)}>
+              Repeat a past order
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Tabs className="min-w-0" value={filters.tab} onValueChange={v => change({ tab: v === 'active' ? null : v })}>
         <TabList aria-label="Order lists">
           {TABS.map(t => (
-            <Tab key={t.value} value={t.value} count={orders.isSuccess ? counts[t.value] : undefined}>
+            <Tab key={t.value} value={t.value}>
               {t.label}
             </Tab>
           ))}
@@ -381,31 +377,6 @@ export default function OrdersListPage() {
         <TabPanel value="done">{table('Done orders')}</TabPanel>
         <TabPanel value="cancelled">{table('Cancelled orders')}</TabPanel>
       </Tabs>
-      {phone && sheet ? (
-        <Dialog open onOpenChange={o => !o && setSheet(false)}>
-          <DialogContent
-            title="Filter orders"
-            icon={ListFilter}
-            footer={
-              <>
-                {filtered ? (
-                  <Button className="mr-auto" icon={X} onClick={reset}>
-                    Clear
-                  </Button>
-                ) : null}
-                <Button variant="primary" data-cancel onClick={() => setSheet(false)}>
-                  {`Show ${shown.length} ${shown.length === 1 ? 'order' : 'orders'}`}
-                </Button>
-              </>
-            }
-          >
-            <div className="grid gap-4">
-              {ownerSwitch}
-              {dims}
-            </div>
-          </DialogContent>
-        </Dialog>
-      ) : null}
       {creating ? <NewOrderDialog onClose={() => setCreating(false)} /> : null}
     </div>
   )

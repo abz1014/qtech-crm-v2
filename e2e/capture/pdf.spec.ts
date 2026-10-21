@@ -36,7 +36,9 @@ test('a PDF enquiry dropped in Paste or photo opens New RFQ with its items, refe
   const sheet = page.getByRole('dialog')
   await sheet.locator('input[aria-label="Choose files"]:visible').setInputFiles({ name: 'enquiry.pdf', mimeType: 'application/pdf', buffer: Buffer.from(pdf) })
   await expect(sheet.getByText('enquiry.pdf').first()).toBeVisible()
-  await page.getByRole('radio', { name: /Start a new RFQ/ }).click()
+  // Only the chosen option shows; Something else opens the rest (R2-11).
+  await sheet.getByRole('button', { name: 'Something else' }).click()
+  await sheet.getByRole('radio', { name: /Start a new RFQ/ }).click()
   // No company chosen: the button is not grey, and nothing stops the way.
   await sheet.getByRole('button', { name: 'Continue to New RFQ' }).click()
 

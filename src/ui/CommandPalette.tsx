@@ -98,10 +98,23 @@ interface CommandPaletteProps {
   emptyHint?: ReactNode
   /** The signed-in person: Recent is kept for them alone. Without one, nothing is remembered. */
   personId?: string
+  /** Text the search box starts with each time it opens (`usePalette().open(q)`); empty when not given. */
+  initialQuery?: string
+  /** Shows "? Shortcuts" in the footer (the shell passes it; the sheet is opened with the ? key). */
+  shortcutsHint?: boolean
 }
 
-export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyHint, personId }: CommandPaletteProps) {
-  const [query, setQuery] = useState('')
+export function CommandPalette({
+  open,
+  onOpenChange,
+  sources,
+  onNavigate,
+  emptyHint,
+  personId,
+  initialQuery = '',
+  shortcutsHint = false,
+}: CommandPaletteProps) {
+  const [query, setQuery] = useState(open ? initialQuery : '')
   useBackToClose(open, () => onOpenChange(false), { enabled: useMediaQuery('(max-width: 767px), (pointer: coarse)') })
   const [groups, setGroups] = useState<Group[]>([])
   const [searching, setSearching] = useState(false)
@@ -128,10 +141,10 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
     [sources],
   )
 
-  // However it closed (a row opened, Esc, Cmd+K again, the parent), it opens empty next time.
+  // However it closed (a row opened, Esc, Cmd+K again, the parent), it opens empty next time, or with the text it was opened with.
   useEffect(() => {
-    if (!open) setQuery('')
-  }, [open])
+    setQuery(open ? initialQuery : '')
+  }, [open, initialQuery])
 
   // Fill the list: idle rows for an empty box, search results otherwise.
   useEffect(() => {
@@ -330,6 +343,12 @@ export function CommandPalette({ open, onOpenChange, sources, onNavigate, emptyH
                 <Kbd><Icon icon={CornerDownLeft} size="chip" /></Kbd>
                 open in new tab
               </span>
+              {shortcutsHint ? (
+                <span className="inline-flex items-center gap-[6px] max-md:hidden">
+                  <Kbd>?</Kbd>
+                  Shortcuts
+                </span>
+              ) : null}
               <span className={cn('num ml-auto', !q && 'hidden')} aria-live="polite">
                 {total} {total === 1 ? 'result' : 'results'}
               </span>

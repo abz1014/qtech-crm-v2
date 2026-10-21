@@ -97,7 +97,7 @@ describe('Payment-reminder panel (M09)', () => {
     db()
     mount(<ReminderPanel row={row()} today={TODAY} />)
     await screen.findByTestId('reminder-text')
-    await user.click(screen.getByRole('radio', { name: 'Email' }))
+    await user.click(screen.getByRole('button', { name: 'Email instead' }))
     const t = screen.getByTestId('reminder-text').textContent ?? ''
     expect(t).toContain('Invoice total: PKR 1,911,600')
     expect(t).toContain('Received: PKR 800,000')

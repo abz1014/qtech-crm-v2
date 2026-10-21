@@ -142,6 +142,7 @@ test('engineer: Today to delivered, and no money anywhere', async ({ browser }, 
     await pastePage(page, { text: note, file: { name: 'nameplate.png', type: 'image/png', b64: PNG_B64 } })
     const sheet = page.getByRole('dialog', { name: 'Paste or photo' })
     await expect(sheet).toBeVisible()
+    await sheet.getByRole('button', { name: 'Something else' }).click() // R2-11: the other choices are one tap away
     await sheet.getByRole('button', { name: 'Attach to an order' }).click()
     await expect(sheet.getByRole('radio', { name: new RegExp(`${ref} · ${s.customer.name}`) })).toBeChecked()
     await waitForAnimationsToFinish(page)

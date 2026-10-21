@@ -8,7 +8,7 @@ import { CAPTURE_LABEL } from '@/app/shell/TopBar'
 import { Button } from '@/ui/Button'
 import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
-import { CountBadge } from '@/ui/Tag'
+import { NeedsCount } from '@/ui/Tag'
 import { cn } from '@/lib/utils'
 
 /** Whether there is a previous screen in this app to go back to. BrowserRouter keeps an index in history.state; elsewhere (tests) the first entry's key is 'default'. */
@@ -73,8 +73,8 @@ export function MobileBar({ user, title, onSearch, onCapture }: { user: SessionU
 
 /**
  * Phone tab bar (below 768): the same destinations as the top bar (5 or 6, from navConfig), same role filter,
- * icon over label, 20px glyphs, brand-green indicator on the active one, and the top bar's counts as a badge on
- * the icon. Each column is at least as wide as its label, so "Companies" never clips, even at 320 px.
+ * icon over label, 20px glyphs, brand-green indicator on the active one, and the top bar's "needs you" counts as a
+ * solid warning badge on the icon (NeedsCount badge). Each column is at least as wide as its label, so "Companies" never clips, even at 320 px.
  * Respects the home-bar safe area. Targets are taller than 44px.
  * Not drawn while a screen asks for `hideTabs` (it has its own sticky action bar).
  */
@@ -115,11 +115,12 @@ export function BottomTabs({
                 {isActive ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-3 -top-px h-indicator bg-brand-green" /> : null}
                 <span className="relative">
                   <Icon icon={item.icon} size="lg" />
-                  {count != null && count > 0 ? <CountBadge count={count} /> : null}
+                  {/* Solid warning badge on the icon. Nothing for 0. The link's name says it in words ("RFQs, 4 need you"). */}
+                  <NeedsCount n={count} badge silent />
                 </span>
                 <span className="whitespace-nowrap">
                   {item.label}
-                  {count != null && count > 0 ? <span className="sr-only">{` ${count}`}</span> : null}
+                  {count ? <span className="sr-only">{`, ${count} need you`}</span> : null}
                 </span>
               </>
             )}

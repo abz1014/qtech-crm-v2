@@ -417,7 +417,7 @@ test.describe('R18 company page: What we know', () => {
 
     const deliveries = page.getByRole('region', { name: 'Deliveries' })
     await expect(deliveries.locator('li', { hasText: `ORD-${String(order.number).padStart(4, '0')}` }).first()).toBeVisible()
-    await expect(deliveries).toContainText('Late 6 days')
+    await expect(deliveries).toContainText('Delivered 6 days late')
     await expect(deliveries).toContainText(/PO-\d\d-\d{4}/)
 
     const openPanel = page.getByRole('region', { name: 'Open with them' })

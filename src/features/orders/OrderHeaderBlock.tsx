@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { Icon } from '@/ui/Icon'
-import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, Ellipsis, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, RotateCcw, Scale, Truck, Wrench, type LucideIcon } from 'lucide-react'
+import { Ban, Banknote, CalendarDays, CircleCheck, ClipboardCheck, FileText, MapPin, MessageSquareWarning, Package, Phone, Plus, RotateCcw, Scale, Truck, Wrench, type LucideIcon } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay, formatShortDate } from '@/lib/formatDay'
@@ -10,15 +9,19 @@ import { orderRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Banner } from '@/ui/Banner'
-import { Breadcrumb } from '@/ui/Breadcrumb'
 import { Button } from '@/ui/Button'
+import { DetailHeader } from '@/ui/DetailHeader'
+import { InfoTip } from '@/ui/InfoTip'
 import { MessageActions } from '@/ui/MessageActions'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Radio, RadioGroup } from '@/ui/form/Radio'
-import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
+import { MenuItem } from '@/ui/Popover'
+import { MoreMenu } from '@/ui/MoreMenu'
 import { Skeleton } from '@/ui/Skeleton'
 import { NextStepBox } from '@/ui/NextStepBox'
 import { StatusBadge } from '@/ui/StatusBadge'
+import { StatusText } from '@/ui/StatusText'
+import { StickyActionBar } from '@/ui/StickyActionBar'
 import { useToast } from '@/ui/useToast'
 import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
 import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
@@ -48,8 +51,12 @@ import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features
  * next step with the page's only primary (green) button, then a short status strip. The step comes from lib/orderSteps.ts, the same
  * ordering as the orders list's "Next step" column; lib/primaryAction.ts turns it into this page's button and sentence.
  *
- * The strip has one cell per dimension (Goods, Commissioning; for admin and sales Invoicing and Payment; for admin Costs), each a chip
- * and one short line. What the "Invoices and payments" panel used to say (invoiced, received, balance, due date) now lives in the
+ * The title follows the shared DetailHeader (round-2 spec 5.3): the customer's name (a link) and the order number in the h1, at most
+ * one chip under it (Done or Cancelled; an active order has none), the meta line, the More menu, then the NextStepBox. Estimated
+ * dates (imported orders) are a dashed underline on the ordered date with an InfoTip, not a chip.
+ *
+ * The strip has one cell per dimension (Goods, Commissioning; for admin and sales Invoicing and Payment; for admin Costs), each a
+ * status text (icon and word, no box) and one short line. What the "Invoices and payments" panel used to say (invoiced, received, balance, due date) now lives in the
  * Invoicing and Payment cells, with "Create invoice" (admin and sales) and "Record payment" (admin) beside the figure they change.
  * When either is the next step it is the green button above instead, never both. The ... menu holds Cancel order / Reopen order.
  *
@@ -148,172 +155,183 @@ export function OrderHeaderBlock({
 
   const cols = isAdmin ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
 
+  const estimated = s?.dataTrust === 'estimated_dates'
+  const orderedText = order.orderedOn ? `Ordered ${formatShortDate(order.orderedOn, today)}` : null
+  const customerPo = (
+    <span>
+      Customer PO{' '}
+      <TapText
+        value={order.customerPo}
+        label="Customer PO number"
+        empty="add"
+        placeholder="Not yet received"
+        disabled={isEngineer || cancelled}
+        render={v => <span className="num">{v}</span>}
+        onSave={async v => {
+          try {
+            await update.mutateAsync({ customer_po_number: v })
+          } catch (err) {
+            toast({ title: 'Could not save the PO number', body: mapPgError(err, { entity: 'PO number' }).message, tone: 'danger' })
+          }
+        }}
+      />
+    </span>
+  )
+  // Estimated dates (an imported order) are a dashed underline with an InfoTip, not a chip (consistency spec 1.4, trust:estimated).
+  const ordered = estimated ? (
+    <>
+      <span data-testid="order-dates-estimated" className="underline decoration-dashed decoration-fg-muted underline-offset-4">
+        {orderedText ?? 'Dates estimated'}
+      </span>
+      <InfoTip label="About these dates">
+        The old CRM did not record exact dates for this order, so its dates are estimates. Change any of them if you know the real one.
+      </InfoTip>
+    </>
+  ) : order.imported && orderedText ? (
+    `${orderedText}, imported from the old CRM`
+  ) : (
+    (orderedText ?? (order.imported ? 'Imported from the old CRM' : null))
+  )
+
   return (
     // data-slot="order-actions": every order-level action (the next step, Create invoice, Record payment) is inside this block, once.
-    // The <header> is the title block only (who, the code, at most the Done/Cancelled and trust chips); the next step and the state
-    // strip, one chip per dimension, are the page's first content under it (screen audit: at most 2 chips in a page header).
+    // The <header> (DetailHeader) is the title block only: who, the code, at most the Done/Cancelled chip, the meta line. The next step
+    // and the state strip are the page's first content under it (screen audit: at most 2 chips in a page header).
     <div data-slot="order-actions">
-      <header>
-        <Breadcrumb className="max-md:hidden" items={[{ label: 'Orders', to: '/orders' }, { label: ref, mono: true }]} />
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
-          <div className="min-w-0">
-            <h1 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-2xl font-semibold tracking-snug">
-              <Link to={`/companies/${order.companyId}`} className="min-w-0 break-words hover:underline">
-                {order.companyName}
-              </Link>
-              <span className="num text-lg font-regular text-fg-2">{ref}</span>
-              {/* an active order needs no chip: only Done or Cancelled is news */}
-              {s?.lifecycle && s.lifecycle !== 'active' ? <StatusBadge dimension="order" value={s.lifecycle} /> : null}
-              {/* an unknown price basis is asked in words below ("Is GST included?"); other trust marks keep their chip */}
-              {s && s.dataTrust && s.dataTrust !== 'ok' && !basisUnknown ? <StatusBadge dimension="trust" value={s.dataTrust} /> : null}
-            </h1>
-            <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg-2">
-              {order.site && !isEngineer ? <span>{order.site.name}</span> : null}
-              <span>
-                Customer PO{' '}
-                <TapText
-                  value={order.customerPo}
-                  label="Customer PO number"
-                  empty="add"
-                  placeholder="Not yet received"
-                  disabled={isEngineer || cancelled}
-                  render={v => <span className="num">{v}</span>}
-                  onSave={async v => {
-                    try {
-                      await update.mutateAsync({ customer_po_number: v })
-                    } catch (err) {
-                      toast({ title: 'Could not save the PO number', body: mapPgError(err, { entity: 'PO number' }).message, tone: 'danger' })
-                    }
-                  }}
-                />
-              </span>
-              {order.orderedOn ? <span>Ordered {formatShortDate(order.orderedOn, today)}</span> : null}
-              {order.owner ? <span>Owner {order.owner.name}</span> : null}
-              {money ? <span data-testid="order-terms">{termsText}</span> : null}
-              {order.imported ? <span className="text-fg-muted">Imported from the old CRM</span> : null}
-            </p>
-          </div>
-          {!isEngineer ? <OrderMoreMenu order={order} className="max-md:hidden" /> : null}
-        </div>
-      </header>
-
+      <DetailHeader
+        name={order.companyName}
+        nameHref={`/companies/${order.companyId}`}
+        code={ref}
+        breadcrumb={[{ label: 'Orders', to: '/orders' }, { label: ref, mono: true }]}
+        more={!isEngineer ? <OrderMoreMenu order={order} /> : undefined}
+        // an active order needs no chip: only Done or Cancelled is news
+        chips={s?.lifecycle && s.lifecycle !== 'active' ? <StatusBadge dimension="order" value={s.lifecycle} /> : undefined}
+        meta={[
+          order.site && !isEngineer ? order.site.name : null,
+          customerPo,
+          ordered,
+          order.owner ? `Owner ${order.owner.name}` : null,
+          money ? <span data-testid="order-terms">{termsText}</span> : null,
+        ]}
+      />
       {cancelled ? (
         <Banner tone="warning" title={`Cancelled ${order.cancelledOn ? formatDay(order.cancelledOn) : ''}`} className="mt-4">
           {cancelReasonLabel(order.cancelReason) ? `${cancelReasonLabel(order.cancelReason)}. ` : ''}Nothing on this order can be changed while it is cancelled.
         </Banner>
       ) : null}
 
-      {/* An unknown price basis is asked even on a cancelled order (its invoices and payments still need the net split): the admin's
-          button is the green next step on a live order, and a plain button here on a cancelled one. */}
-      {basisUnknown && !isEngineer ? (
-        <Banner
-          tone="warning"
-          title="Is GST included in these prices?"
-          className="mt-4"
-          action={
-            isAdmin && cancelled ? (
-              <Button icon={Scale} onClick={() => setResolving(true)}>
-                Is GST included?
-              </Button>
-            ) : undefined
-          }
-        >
-          The old CRM did not say. Until someone answers, this order is left out of margin, GST totals and the net cash that counts towards targets. Its payments still count in gross cash.
-        </Banner>
-      ) : null}
+        {/* An unknown price basis is asked even on a cancelled order (its invoices and payments still need the net split): the admin's
+            button is the green next step on a live order, and a plain button here on a cancelled one. */}
+        {basisUnknown && !isEngineer ? (
+          <Banner
+            tone="warning"
+            title="Is GST included in these prices?"
+            className="mt-4"
+            action={
+              isAdmin && cancelled ? (
+                <Button icon={Scale} onClick={() => setResolving(true)}>
+                  Is GST included?
+                </Button>
+              ) : undefined
+            }
+          >
+            The old CRM did not say. Until someone answers, this order is left out of margin, GST totals and the net cash that counts towards targets. Its payments still count in gross cash.
+          </Banner>
+        ) : null}
 
-      {isEngineer ? (
-        <EngineerJob order={order} engineers={engineers} next={next} legs={legs} goodsLegs={goodsLegs} today={today} />
-      ) : !cancelled ? (
-        <NextStep order={order} next={next} legs={legs} engineers={engineers} onResolve={() => setResolving(true)} />
-      ) : null}
+        {isEngineer ? (
+          <EngineerJob order={order} engineers={engineers} next={next} legs={legs} goodsLegs={goodsLegs} today={today} />
+        ) : !cancelled ? (
+          <NextStep order={order} next={next} legs={legs} engineers={engineers} onResolve={() => setResolving(true)} />
+        ) : null}
 
-      {isEngineer ? null : (
-        <div
-          className={`mt-4 grid grid-cols-2 max-[399px]:grid-cols-1 max-[399px]:[&>*:last-child:nth-child(odd)]:col-span-1 rounded border bg-surface lg:divide-x ${cols} [&>*]:border-b [&>*]:border-line lg:[&>*]:border-b-0 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1`}
-          role="group"
-          aria-label="State of this order"
-        >
-          <Cell title="Goods" icon={Package}>
-            {s?.goods && s.goods !== 'n_a' ? <StatusBadge dimension="goods" value={s.goods} /> : null}
-            <p className="text-sm text-fg-2">{goodsLine(goodsLegs, today)}</p>
-          </Cell>
-          <Cell title="Commissioning" icon={Wrench}>
-            {/* no 'n/a' chip: the line says there is none */}
-            {s?.commissioning && s.commissioning !== 'n_a' ? <StatusBadge dimension="commissioning" value={s.commissioning} /> : null}
-            <p className="text-sm text-fg-2">{commissioningLine}</p>
-          </Cell>
-          {money ? (
-            <Cell
-              title="Invoicing"
-              icon={FileText}
-              action={
-                <div className="flex flex-wrap gap-2">
-                  {(invoiced ?? 0) > 0 ? <InvoicePdfButton orderId={order.id} size="sm" /> : null}
-                  {!cancelled && primary?.kind !== 'create-invoice' && s?.invoicing !== 'fully_invoiced' ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
-                </div>
-              }
-            >
-              {s?.invoicing ? <StatusBadge dimension="invoicing" value={s.invoicing} /> : null}
-              <p className="text-sm text-fg-2" data-testid="order-invoiced">
-                {gross === null ? null : (invoiced ?? 0) <= 0 ? (
-                  <>
-                    PKR <span className="num">{formatAmount(gross)}</span> to invoice
-                  </>
-                ) : (invoiced ?? 0) >= gross ? (
-                  <>
-                    Invoiced <span className="num">{formatAmount(invoiced ?? 0)}</span>
-                  </>
-                ) : (
-                  <>
-                    Invoiced <span className="num">{formatAmount(invoiced ?? 0)}</span> of <span className="num">{formatAmount(gross)}</span>
-                  </>
-                )}
-              </p>
+        {isEngineer ? null : (
+          <div
+            className={`mt-4 grid grid-cols-2 max-[399px]:grid-cols-1 max-[399px]:[&>*:last-child:nth-child(odd)]:col-span-1 rounded border bg-surface lg:divide-x ${cols} [&>*]:border-b [&>*]:border-line lg:[&>*]:border-b-0 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1`}
+            role="group"
+            aria-label="State of this order"
+          >
+            <Cell title="Goods" icon={Package}>
+              {s?.goods && s.goods !== 'n_a' ? <StatusText dimension="goods" value={s.goods} /> : null}
+              <p className="text-sm text-fg-2">{goodsLine(goodsLegs, today)}</p>
             </Cell>
-          ) : null}
-          {money ? (
-            <Cell title="Payment" icon={Banknote} action={isAdmin && !cancelled && primary?.kind !== 'record-payment' ? <RecordPaymentButton orderId={order.id} size="sm" /> : null}>
-              {m ? <StatusBadge dimension="payment" value={m.paymentState} /> : null}
-              {moneyLoading ? (
-                <Skeleton className="h-4 w-32" />
-              ) : !m ? (
-                <p className="text-sm text-fg-muted">The balance did not load. Reload to try again.</p>
-              ) : (
-                <p className="grid gap-px text-sm text-fg-2">
-                  {m.settled > 0 ? (
-                    <span>
-                      Received <span className="num">{formatAmount(m.settled)}</span>
-                    </span>
-                  ) : (
-                    <span data-testid="payments-empty">Nothing received yet</span>
-                  )}
-                  <span>
-                    Balance <b className="num font-medium text-fg" data-testid="order-balance">{formatAmount(m.balance)}</b>
-                    {m.dueOn && m.balance > 0 ? <span className={cn(m.paymentState === 'overdue' && 'text-tone-danger-fg')}> · due {formatShortDate(m.dueOn, today)}</span> : null}
-                  </span>
-                </p>
-              )}
+            <Cell title="Commissioning" icon={Wrench}>
+              {/* no 'n/a' chip: the line says there is none */}
+              {s?.commissioning && s.commissioning !== 'n_a' ? <StatusText dimension="commissioning" value={s.commissioning} /> : null}
+              <p className="text-sm text-fg-2">{commissioningLine}</p>
             </Cell>
-          ) : null}
-          {isAdmin ? (
-            <Cell title="Costs" icon={ClipboardCheck}>
-              {m?.costsState ? <StatusBadge dimension="costs" value={m.costsState} /> : null}
-              {m ? (
-                <p className="text-sm text-fg-2">
-                  Paid out <span className="num">{formatAmount(m.actualCost ?? 0)}</span>
-                  {m.expectedCost !== null ? (
+            {money ? (
+              <Cell
+                title="Invoicing"
+                icon={FileText}
+                action={
+                  <div className="flex flex-wrap gap-2">
+                    {(invoiced ?? 0) > 0 ? <InvoicePdfButton orderId={order.id} size="sm" /> : null}
+                    {!cancelled && primary?.kind !== 'create-invoice' && s?.invoicing !== 'fully_invoiced' ? <CreateInvoiceButton orderId={order.id} size="sm" /> : null}
+                  </div>
+                }
+              >
+                {s?.invoicing ? <StatusText dimension="invoicing" value={s.invoicing} /> : null}
+                <p className="text-sm text-fg-2" data-testid="order-invoiced">
+                  {gross === null ? null : (invoiced ?? 0) <= 0 ? (
                     <>
-                      {' of '}
-                      <span className="num">{formatAmount(m.expectedCost)}</span>
+                      PKR <span className="num">{formatAmount(gross)}</span> to invoice
                     </>
-                  ) : null}
+                  ) : (invoiced ?? 0) >= gross ? (
+                    <>
+                      Invoiced <span className="num">{formatAmount(invoiced ?? 0)}</span>
+                    </>
+                  ) : (
+                    <>
+                      Invoiced <span className="num">{formatAmount(invoiced ?? 0)}</span> of <span className="num">{formatAmount(gross)}</span>
+                    </>
+                  )}
                 </p>
-              ) : null}
-            </Cell>
-          ) : null}
-        </div>
-      )}
+              </Cell>
+            ) : null}
+            {money ? (
+              <Cell title="Payment" icon={Banknote} action={isAdmin && !cancelled && primary?.kind !== 'record-payment' ? <RecordPaymentButton orderId={order.id} size="sm" /> : null}>
+                {m ? <StatusText dimension="payment" value={m.paymentState} /> : null}
+                {moneyLoading ? (
+                  <Skeleton className="h-4 w-32" />
+                ) : !m ? (
+                  <p className="text-sm text-fg-muted">The balance did not load. Reload to try again.</p>
+                ) : (
+                  <p className="grid gap-px text-sm text-fg-2">
+                    {m.settled > 0 ? (
+                      <span>
+                        Received <span className="num">{formatAmount(m.settled)}</span>
+                      </span>
+                    ) : (
+                      <span data-testid="payments-empty">Nothing received yet</span>
+                    )}
+                    <span>
+                      Balance <b className="num font-medium text-fg" data-testid="order-balance">{formatAmount(m.balance)}</b>
+                      {/* one danger mark per cell: the Overdue line above carries it */}
+                      {m.dueOn && m.balance > 0 ? <span> · due {formatShortDate(m.dueOn, today)}</span> : null}
+                    </span>
+                  </p>
+                )}
+              </Cell>
+            ) : null}
+            {isAdmin ? (
+              <Cell title="Costs" icon={ClipboardCheck}>
+                {m?.costsState ? <StatusText dimension="costs" value={m.costsState} /> : null}
+                {m ? (
+                  <p className="text-sm text-fg-2">
+                    Paid out <span className="num">{formatAmount(m.actualCost ?? 0)}</span>
+                    {m.expectedCost !== null ? (
+                      <>
+                        {' of '}
+                        <span className="num">{formatAmount(m.expectedCost)}</span>
+                      </>
+                    ) : null}
+                  </p>
+                ) : null}
+              </Cell>
+            ) : null}
+          </div>
+        )}
 
       {resolving ? <ResolveBasisDialog order={order} items={items} money={orderMoney} onClose={() => setResolving(false)} /> : null}
     </div>
@@ -321,10 +339,10 @@ export function OrderHeaderBlock({
 }
 
 /**
- * The order's "more" menu: Cancel order (with a reason, and Undo) or Reopen order. Drawn beside the title from tablet up, and in the
- * phone's one bar (useMobileBar) below 768. Engineers have none.
+ * The order's "More" menu (the shared MoreMenu): Cancel order (with a reason, and Undo) or Reopen order. A "More" text button beside
+ * the title from tablet up, and an icon in the phone's one bar (useMobileBar) below 768. Engineers have none.
  */
-export function OrderMoreMenu({ order, className, touch = false }: { order: OrderHeader; className?: string; touch?: boolean }) {
+export function OrderMoreMenu({ order, touch = false }: { order: OrderHeader; touch?: boolean }) {
   const { toast } = useToast()
   const cancel = useCancelOrder(order.id)
   const [cancelling, setCancelling] = useState(false)
@@ -355,11 +373,7 @@ export function OrderMoreMenu({ order, className, touch = false }: { order: Orde
 
   return (
     <>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button icon={Ellipsis} variant="quiet" size={touch ? 'touch' : undefined} aria-label="More actions" className={className} />
-        </PopoverTrigger>
-        <PopoverContent variant="menu" align="end" aria-label="More actions">
+      <MoreMenu touch={touch} label="More actions">
           {cancelled ? (
             <MenuItem icon={RotateCcw} onClick={() => void reopen()}>
               Reopen order
@@ -369,8 +383,7 @@ export function OrderMoreMenu({ order, className, touch = false }: { order: Orde
               Cancel order
             </MenuItem>
           )}
-        </PopoverContent>
-      </Popover>
+      </MoreMenu>
       {cancelling ? (
         <CancelDialog
           order={order}
@@ -403,17 +416,14 @@ export function OrderMoreMenu({ order, className, touch = false }: { order: Orde
 }
 
 /**
- * Where the page's one primary button sits: in place on a laptop; on a phone (below 768) in a bar fixed to the bottom of the screen, above
- * the home indicator, so the next step is always one tap away. The page hides the bottom tabs while it shows (useMobileBar hideTabs).
+ * Where the page's one primary button sits: in place on a laptop; on a phone (below 768) in the shared StickyActionBar fixed to the
+ * bottom of the screen, so the next step is always one tap away. The page hides the bottom tabs while it shows (useMobileBar hideTabs)
+ * and leaves room for it. Drawn in one place only, so the button's dialog is never mounted twice.
  */
-function PhoneSticky({ children }: { children: ReactNode }) {
+function PrimaryPlacement({ children }: { children: ReactNode }) {
   const phone = useMediaQuery('(max-width: 767px)')
   if (!phone) return <>{children}</>
-  return (
-    <div data-testid="order-sticky-action" data-action-bar className="fixed inset-x-0 bottom-0 z-20 flex border-t bg-surface px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 shadow-pop [&>*]:flex-1">
-      {children}
-    </div>
-  )
+  return <StickyActionBar label="Order actions" primary={children} />
 }
 
 /**
@@ -430,9 +440,9 @@ function NextStep({ order, next, legs, engineers, onResolve }: { order: OrderHea
       tone={step.tone === 'late' ? 'late' : primary ? 'action' : 'quiet'}
       action={
         primary ? (
-          <PhoneSticky>
+          <PrimaryPlacement>
             <PrimaryButton order={order} action={primary} legs={legs} engineers={engineers} onResolve={onResolve} />
-          </PhoneSticky>
+          </PrimaryPlacement>
         ) : null
       }
     />
@@ -585,7 +595,7 @@ function EngineerJob({
           <span className="flex items-center gap-[6px] text-sm text-fg-muted">
             <Icon icon={Package} size="sm" /> Goods
           </span>
-          {order.state?.goods && order.state.goods !== 'n_a' ? <StatusBadge dimension="goods" value={order.state.goods} /> : null}
+          {order.state?.goods && order.state.goods !== 'n_a' ? <StatusText dimension="goods" value={order.state.goods} /> : null}
           <span className="text-sm text-fg-2">{goodsLine(goodsLegs, today)}</span>
         </div>
       </div>
@@ -593,9 +603,9 @@ function EngineerJob({
         <div className="flex flex-wrap items-center gap-2 border-t pt-3">
           <span className={cn('mr-2 text-sm', next.step.tone === 'late' ? 'font-medium text-tone-danger-fg' : 'text-fg-2')}>{next.text}</span>
           {primary ? (
-            <PhoneSticky>
+            <PrimaryPlacement>
               <PrimaryButton order={order} action={primary} legs={legs} />
-            </PhoneSticky>
+            </PrimaryPlacement>
           ) : null}
           {/* before the planned date "Mark done today" is still one tap, just not the page's green button */}
           {open && primary?.kind !== 'mark-done' ? (

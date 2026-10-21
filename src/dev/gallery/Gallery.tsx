@@ -13,7 +13,7 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Icon, type IconSize } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
 import { Skeleton } from '@/ui/Skeleton'
-import { CountPill, ProgressBar, ProgressSegments, Tag } from '@/ui/Tag'
+import { NeedsCount, ProgressBar, ProgressSegments, Tag } from '@/ui/Tag'
 
 /*
  * /dev/gallery (U09): every built primitive and every D08 state on one page, dev builds only.
@@ -44,7 +44,7 @@ const NAV = [
 
 function Foundations() {
   return (
-    <Section id="foundations" title="Foundations" note="Icon, Button, Kbd, Avatar, Tag, CountPill, ProgressSegments, Skeleton.">
+    <Section id="foundations" title="Foundations" note="Icon, Button, Kbd, Avatar, Tag, NeedsCount, ProgressSegments, Skeleton.">
       <div className="rounded border bg-surface px-5">
         <Row title="Icon" note="Sizes 12, 14, 16, 20, 24. Inside a status chip the glyph is 16 (12 with smaller text). Decorative by default.">
           {ICON_SIZES.map(s => (
@@ -89,11 +89,11 @@ function Foundations() {
           <Avatar name="Asad Saleem" />
           <Avatar name="Waqar Anwar" size="sm" />
         </Row>
-        <Row title="Tag, CountPill" note="Mono identifiers, dashed when not firm. Counts beside tab names.">
+        <Row title="Tag, NeedsCount" note="Mono identifiers, dashed when not firm. A number beside a tab always means it needs you.">
           <Tag>ORD-0038</Tag>
           <Tag dashed>no PO yet</Tag>
-          <CountPill>4</CountPill>
-          <CountPill>12</CountPill>
+          <NeedsCount n={4} />
+          <NeedsCount n={2} variant="danger" />
         </Row>
         <Row title="ProgressBar" note="The continuous bar, named by its sentence.">
           <div className="grid w-full max-w-[420px] gap-2">

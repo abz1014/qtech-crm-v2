@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { nextStepSentence, primaryAction, quotationSent, stageChip, type PrimaryInput } from './nextAction'
+import { resolveStatus } from '@/lib/status'
+import { nextStepSentence, primaryAction, quotationSent, stageKey, type PrimaryInput } from './nextAction'
 
 const base: PrimaryInput = {
   outcome: 'open',
@@ -44,15 +45,21 @@ describe('the one green button on the RFQ page', () => {
 })
 
 describe('the stage chip', () => {
-  it('uses the board’s next-step words', () => {
-    expect(stageChip(base).label).toBe('Needs suppliers')
-    expect(stageChip(at({ sourcingState: 'floated_awaiting' })).label).toBe('Waiting for prices')
-    expect(stageChip(at({ sourcingState: 'partly_covered' })).label).toBe('Waiting for prices')
-    expect(stageChip(at({ sourcingState: 'covered' }))).toEqual({ label: 'Ready to quote', tone: 'success' })
-    expect(stageChip(at({ bidState: 'bid_sent' })).label).toBe('Quotation sent')
-    expect(stageChip(at({ bidState: 'quotation_expired' })).label).toBe('Quotation expired')
-    expect(stageChip(at({ outcome: 'won' })).label).toBe('Won')
-    expect(stageChip(at({ outcome: 'closed' })).label).toBe('Closed')
+  const word = (i: PrimaryInput) => {
+    const [d, v] = stageKey(i).split(':')
+    return resolveStatus(d, v)
+  }
+  it('is a registry key, in the board’s next-step words and tones', () => {
+    expect(stageKey(base)).toBe('rfq-stage:suppliers')
+    expect(word(base).label).toBe('Needs suppliers')
+    expect(word(at({ sourcingState: 'floated_awaiting' })).label).toBe('Waiting for prices')
+    expect(word(at({ sourcingState: 'partly_covered' })).label).toBe('Waiting for prices')
+    expect(word(at({ sourcingState: 'covered' }))).toMatchObject({ label: 'Ready to quote', tone: 'warning' })
+    expect(word(at({ bidState: 'bid_sent' }))).toMatchObject({ label: 'Quotation sent', tone: 'info' })
+    expect(word(at({ bidState: 'quotation_expired' })).label).toBe('Quotation expired')
+    expect(word(at({ outcome: 'won' })).label).toBe('Won')
+    expect(word(at({ outcome: 'closed' })).label).toBe('Closed')
+    expect(stageKey(at({ hasOrder: true }))).toBe('rfq-outcome:won')
   })
 })
 

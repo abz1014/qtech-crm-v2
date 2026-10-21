@@ -297,7 +297,7 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
     await expect(a.getByRole('button', { name: `Issue PO, ${s.supplierA.name}` })).toBeVisible()
     await expect(a.getByRole('button', { name: /Mark placed/ })).toHaveCount(0)
     await expect(a).toContainText('suggested from lead time 2 wks')
-    await expect(page.getByTestId('leg-A-state')).toContainText('To place')
+    await expect(page.getByTestId('leg-A-state')).toContainText('To order')
     const placeFromMenu = async () => {
       await t.tap(a.getByRole('button', { name: `More for ${s.supplierA.name}` }))
       await t.tap(page.getByRole('menuitem', { name: 'Mark placed, no PO' }))
@@ -384,7 +384,7 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
     const s = await seedOrder()
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     const b = leg(page, 'B')
-    await expect(page.getByTestId('leg-B-state')).toContainText('Late')
+    await expect(page.getByTestId('leg-B-state')).toContainText('Overdue')
     await b.getByRole('button', { name: `Chase goods, ${s.supplierB.name}` }).click()
     const dialog = page.getByRole('dialog')
     // the same wording as Today: the leg's reference is in the text
@@ -495,7 +495,7 @@ test.describe('O03: commissioning and cancel', () => {
   test('cancel an order with a reason; it stays on record and can be reopened', async ({ page }) => {
     const s = await seedOrder()
     await openAs(page, 'admin', `/orders/${s.order.id}`)
-    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('button', { name: 'More', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Cancel order' }).click()
     const dialog = page.getByRole('dialog')
     // a reason is needed
@@ -516,7 +516,7 @@ test.describe('O03: commissioning and cancel', () => {
     await expect(page.locator('#main').getByText(/The customer cancelled the PO\./)).toBeVisible()
     // nothing can be stamped while it is cancelled
     await expect(page.getByRole('button', { name: /Mark placed/ })).toHaveCount(0)
-    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('button', { name: 'More', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Reopen order' }).click()
     await expect.poll(async () => (await orderRow(s.order.id)).cancelled_on).toBeNull()
     expect((await orderRow(s.order.id)).cancel_reason).toBeNull()
@@ -575,9 +575,9 @@ test.describe('O03: role views', () => {
     await expect(page.getByTestId('items-gst-summary')).toContainText('730,420')
     const dims = page.getByLabel('State of this order')
     for (const d of ['Goods', 'Commissioning', 'Invoicing', 'Payment', 'Costs']) await expect(dims.getByRole('heading', { name: d })).toBeVisible()
-    await expect(dims).toContainText('Not invoiced')
-    await expect(dims).toContainText('Unpaid')
-    await expect(dims).toContainText(/Provisional|Not final/)
+    await expect(dims).toContainText('To invoice')
+    await expect(dims).toContainText('Awaiting payment')
+    await expect(dims).toContainText('Not final')
     await expect(leg(page, 'A')).toContainText('EUR')
     await expect(page.getByTestId('leg-A-total')).toContainText('1,284')
     await expect(page.getByTestId('leg-A-po')).toHaveText('No PO yet')
@@ -616,7 +616,7 @@ test.describe('O03: role views', () => {
     const dims = page.getByLabel('State of this order')
     for (const d of ['Goods', 'Commissioning', 'Invoicing', 'Payment']) await expect(dims.getByRole('heading', { name: d })).toBeVisible()
     await expect(dims.getByRole('heading', { name: 'Costs' })).toHaveCount(0)
-    await expect(dims).toContainText('Part paid')
+    await expect(dims).toContainText('Awaiting payment')
     await expect(page.getByRole('region', { name: 'Margin' })).toHaveCount(0)
     await expect(page.locator('[data-slot="margin-costs"]')).toHaveCount(0)
     await expect(page.getByTestId('order-balance')).toHaveText('630,420')
@@ -751,12 +751,12 @@ for (const width of [1440, 375]) {
     if (width < 768) {
       // one bar with back and the order number; the next step sits in a bar at the bottom instead of the tabs
       await expect(page.getByRole('button', { name: 'Back' })).toBeVisible()
-      await expect(page.getByTestId('order-sticky-action').getByRole('button', { name: /^Chase goods/ })).toBeVisible()
+      await expect(page.getByRole('toolbar', { name: 'Order actions' }).getByRole('button', { name: /^Chase goods/ })).toBeVisible()
       await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0)
     }
     await review(page, `o03-order-admin-${width}`)
 
-    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('button', { name: width < 768 ? 'More actions' : 'More', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Cancel order' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
     expect(await dialogViolations(page)).toEqual([])

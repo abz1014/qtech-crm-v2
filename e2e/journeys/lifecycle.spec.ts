@@ -86,7 +86,7 @@ test.describe('cancelling an order after its PO was issued', () => {
     await must(rest('admin', `supplier_orders?id=eq.${s.leg}`, { method: 'PATCH', body: { expected_on: karachiDay(-3) }, prefer: 'return=minimal' }))
     await todayHas(ctx, 'goods_late', [s.supplier.name], true)
 
-    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
     await page.getByRole('menuitem', { name: 'Cancel order' }).click()
     const d = page.getByRole('dialog')
     await d.getByRole('radio', { name: 'The customer cancelled the PO' }).click()
@@ -111,7 +111,7 @@ test.describe('cancelling an order after its PO was issued', () => {
     const [po] = await must(rest<{ number: number; issued_on: string }[]>('admin', `purchase_orders?supplier_order_id=eq.${s.leg}&select=number,issued_on`))
     const ref = `PO-${po.issued_on.slice(2, 4)}-${String(po.number).padStart(4, '0')}`
 
-    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('button', { name: /^More( actions)?$/ }).click()
     await page.getByRole('menuitem', { name: 'Cancel order' }).click()
     const d = page.getByRole('dialog')
     await expect(d.getByTestId('cancel-sent-pos')).toContainText(`${ref} was sent to ${s.supplier.name}. Tell them it's cancelled.`)

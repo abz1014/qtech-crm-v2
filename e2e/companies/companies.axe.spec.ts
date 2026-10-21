@@ -95,7 +95,7 @@ for (const { label, width, height } of WIDTHS) {
       await createRfq(drop.id)
       await openAs(page, 'admin', `/companies/${drop.id}`)
       await expect(page.getByRole('heading', { name: drop.name, level: 1 })).toBeVisible()
-      await page.getByRole('button', { name: 'More actions' }).click()
+      await page.getByRole('button', { name: /^More( actions)?$/ }).click()
       await page.getByRole('menuitem', { name: 'Merge into another company' }).click()
       const dialog = page.getByRole('dialog', { name: 'Merge duplicate company' })
       await dialog.getByRole('combobox', { name: 'Merge into' }).fill(keep.name)
