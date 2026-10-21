@@ -193,7 +193,7 @@ test('Exchange rate, category, target, phone: edge values (admin)', async ({ bro
     w.at(`target ${amt}`)
     await page.goto('/settings/targets')
     await settle(page)
-    const cell = page.getByRole('button', { name: /target/i }).first()
+    const cell = page.getByRole('button', { name: / target: / }).first()
     await cell.click().catch(() => undefined)
     const input = page.getByLabel(/target in rupees/).first()
     if (!(await input.isVisible().catch(() => false))) {
@@ -208,7 +208,7 @@ test('Exchange rate, category, target, phone: edge values (admin)', async ({ bro
     // the same value, but leave the field by clicking elsewhere (blur) instead of Enter
     await page.goto('/settings/targets')
     await settle(page)
-    await page.getByRole('button', { name: /target/i }).first().click().catch(() => undefined)
+    await page.getByRole('button', { name: / target: / }).first().click().catch(() => undefined)
     await page.getByLabel(/target in rupees/).first().fill(amt).catch(() => undefined)
     await page.locator('h1').first().click()
     const ob = await OUTCOME(page)

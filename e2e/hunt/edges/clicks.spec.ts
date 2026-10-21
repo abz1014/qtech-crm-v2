@@ -104,7 +104,7 @@ for (const run of RUNS) {
     const routes = ROUTES.filter(r => r[run.role] === 'ok' && !/\?(issue|won|new|pay|add|invoice)=/.test(r.path) && !/\/(extra|nope)$|^\/login$|^\/$/.test(r.path))
     const started = Date.now()
     for (const r of routes) {
-      if (Date.now() - started > 330_000) {
+      if (Date.now() - started > 240_000) {
         w.add('budget', `stopped before ${r.path}: time budget`)
         break
       }

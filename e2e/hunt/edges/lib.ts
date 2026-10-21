@@ -47,7 +47,7 @@ async function stateFor(browser: Browser, info: TestInfo, role: Role): Promise<s
 export async function contextAs(browser: Browser, info: TestInfo, role: Role, v: Viewport, extra: Record<string, unknown> = {}): Promise<BrowserContext> {
   const storageState = await stateFor(browser, info, role)
   const phone = v.width < 768
-  return browser.newContext({
+  const context = await browser.newContext({
     baseURL: info.project.use.baseURL,
     storageState,
     viewport: { width: v.width, height: v.height },
@@ -59,6 +59,10 @@ export async function contextAs(browser: Browser, info: TestInfo, role: Role, v:
     permissions: ['clipboard-read', 'clipboard-write'],
     ...extra,
   })
+  // A control that never becomes clickable must not hold the whole exploration until the test timeout.
+  context.setDefaultTimeout(10_000)
+  context.setDefaultNavigationTimeout(30_000)
+  return context
 }
 
 export interface Finding {
@@ -85,7 +89,7 @@ export class Watcher {
     })
     page.on('pageerror', e => this.add('pageerror', `${e.name}: ${e.message}`.slice(0, 400)))
     page.on('response', r => {
-      if (r.status() >= 400) this.add(`http${r.status()}`, `${r.request().method()} ${decodeURIComponent(r.url()).replace(/^https?:\/\/[^/]+/, '').slice(0, 300)}`)
+      if (r.status() >= 400) this.add(`http${r.status()}`, `${r.request().method()} ${safeDecode(r.url()).replace(/^https?:\/\/[^/]+/, '').slice(0, 300)}`)
     })
     page.on('requestfailed', r => {
       const why = r.failure()?.errorText ?? ''
@@ -99,6 +103,14 @@ export class Watcher {
     const f = { kind, ...this.where, detail }
     this.seen.push(f)
     note(f)
+  }
+}
+
+function safeDecode(u: string): string {
+  try {
+    return decodeURIComponent(u)
+  } catch {
+    return u
   }
 }
 
@@ -180,12 +192,16 @@ export function recordLayout(w: Watcher, l: Layout, where: string): void {
   if (l.offscreenDialog.length) w.add('overlay-offscreen', `${where}: ${l.offscreenDialog.join(' | ')}`)
 }
 
+let shotCount = 0
+/** Screenshot file names carry a running number: names that differ only in letter case would collide on Windows and macOS. */
 export function shotName(...parts: string[]): string {
-  return parts
+  shotCount += 1
+  const base = parts
     .join('_')
     .replace(/[^a-zA-Z0-9_-]+/g, '-')
     .replace(/-+/g, '-')
-    .slice(0, 150)
+    .slice(0, 140)
+  return `${base}_${process.pid}-${shotCount}`
 }
 
 export async function shot(page: Page, name: string, fullPage = false): Promise<void> {

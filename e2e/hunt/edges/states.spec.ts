@@ -171,3 +171,76 @@ test('keyboard only: focus is visible on every Tab stop of the main screens', as
   }
   await context.close()
 })
+
+/*
+ * The browser clock at the edges of a period (quarter end and start, the Pakistani tax year end on 30 June). Only times in the PAST
+ * are used, so the signed-in session never looks expired to the client. The database's own "today" stays the real one.
+ */
+const EDGE_TIMES = ['2026-06-30T23:59:30+05:00', '2026-07-01T00:00:30+05:00', '2026-09-30T23:59:30+05:00', '2026-10-01T00:00:30+05:00', '2026-08-31T23:59:30+05:00']
+
+test('clock at quarter, month and tax-year ends', async ({ browser }, info) => {
+  test.setTimeout(300_000)
+  for (const t of EDGE_TIMES) {
+    const context = await contextAs(browser, info, 'admin', vp('w1366'))
+    const page = await context.newPage()
+    await page.clock.setFixedTime(new Date(t))
+    const w = new Watcher(page, { role: 'admin', vp: `w1366-clock-${t.slice(0, 16)}` })
+    for (const path of ['/today', '/settings/targets', '/money/month-end', '/money/reports', '/money/receivables', '/money/expenses?add=1']) {
+      w.at(path)
+      await page.goto(path)
+      await page.locator('#main').waitFor({ timeout: 15_000 }).catch(() => undefined)
+      await settle(page)
+      const main = (await page.locator('body').innerText().catch(() => '')).replace(/\s+/g, ' ')
+      const dates = main.match(/\b(Q[1-4]\b[^.|]{0,20}|(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} \w{3} \d{4}|(January|February|March|April|May|June|July|August|September|October|November|December) \d{4})/g) ?? []
+      note({ kind: 'clock', role: 'admin', vp: 'w1366', path, detail: `${t}: ${[...new Set(dates)].slice(0, 10).join(' ; ')}` })
+      await shot(page, `clock_${t.slice(0, 16)}_${path}`)
+    }
+    await context.close()
+  }
+})
+
+/** Hand-edited and stale links: a malformed id, an id that does not exist, an impossible month, junk query values. */
+const BAD_LINKS = [
+  '/rfqs/not-a-uuid',
+  '/rfqs/00000000-0000-4000-8000-000000000000',
+  '/orders/123',
+  '/orders/00000000-0000-4000-8000-000000000000',
+  '/companies/zzz',
+  '/companies/00000000-0000-4000-8000-000000000000',
+  '/money/month-end?month=2026-13',
+  '/money/month-end?month=garbage',
+  '/money/month-end?month=2030-01',
+  '/money/month-end/bank?month=2030-01',
+  '/money/month-end?month=1999-12',
+  '/money/reports/pnl?month=1999-01',
+  '/money/reports/aging?month=2026-02&asof=2026-02-30',
+  '/money/receivables?pay=1&order=garbage',
+  '/money/receivables?pay=1&order=00000000-0000-4000-8000-000000000000',
+  '/money/gst-register?invoice=garbage',
+  '/money/gst-register?new=1&order=garbage',
+  '/money/expenses?add=1&order=garbage',
+  '/rfqs?show=bogus&owner=nobody',
+  '/orders?tab=bogus',
+  '/settings/targets?year=1800',
+  '/rfqs/new?company=garbage',
+]
+
+test('bad deep links: malformed ids, missing records, impossible months', async ({ browser }, info) => {
+  test.setTimeout(300_000)
+  const context = await contextAs(browser, info, 'admin', vp('w1366'))
+  const page = await context.newPage()
+  const w = new Watcher(page, { role: 'admin', vp: 'w1366-links' })
+  for (const path of BAD_LINKS) {
+    w.at(path)
+    await page.goto(path)
+    await page.locator('#main').waitFor({ timeout: 15_000 }).catch(() => undefined)
+    await settle(page)
+    await page.waitForTimeout(1500)
+    const h1 = (await page.locator('h1').allInnerTexts().catch(() => [] as string[])).join(' | ')
+    const main = (await page.locator('#main').innerText().catch(() => '')).replace(/\s+/g, ' ')
+    const skeleton = await page.locator('#main [aria-busy="true"], #main .animate-pulse').count()
+    note({ kind: 'bad-link', role: 'admin', vp: 'w1366', path, detail: `h1="${h1}" skeletons=${skeleton} dialogs=${await visibleOverlays(page)} text="${main.slice(0, 220)}"` })
+    await shot(page, `badlink_${path}`)
+  }
+  await context.close()
+})
