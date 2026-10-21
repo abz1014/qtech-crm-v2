@@ -3,8 +3,6 @@
 // "Part No" ignored, Dice overlap of the words >= 0.9); then quantity (exact), unit (the customer's unit, "Nos" = "No." = "nos")
 // and part number (exactly as written, inside the description) are checked on it.
 
-import type { EnquiryParse } from '../enquiryParse'
-import type { SupplierQuoteParse } from '../supplierQuoteParse'
 import type { CorpusCase, EnquiryCase, QuoteCase } from './model'
 import { unitFamily } from './units'
 
@@ -64,16 +62,6 @@ export interface EnquiryResult {
   due: string | null
   company: string | null
   domain: string | null
-}
-
-export function enquiryResult(p: EnquiryParse): EnquiryResult {
-  return {
-    items: p.items.map(i => ({ description: i.description, qty: i.qty, unit: i.unit })),
-    ref: p.facts.customerRef?.value ?? null,
-    due: p.facts.dueDate?.iso ?? null,
-    company: p.facts.company?.name ?? null,
-    domain: p.facts.company?.domain ?? null,
-  }
 }
 
 function fact(f: Fields, name: string, want: string | undefined, got: string | null, same: (a: string, b: string) => boolean, problems: string[]): void {
@@ -161,18 +149,6 @@ export interface QuoteResult {
   payment: string | null
   incoterm: string | null
   quoteRef: string | null
-}
-
-export function quoteResult(p: SupplierQuoteParse): QuoteResult {
-  return {
-    offers: p.offers.map(o => ({ itemId: o.rfqItemId, unitPrice: o.unitPrice, currency: o.currency, leadMax: o.leadTimeDaysMax, validityDays: o.validityDays })),
-    currency: p.facts.currency,
-    validityDays: p.facts.validity?.days ?? null,
-    leadMax: p.facts.leadTime?.daysMax ?? null,
-    payment: p.facts.paymentTerms,
-    incoterm: p.facts.incoterm,
-    quoteRef: p.facts.quoteRef,
-  }
 }
 
 export function scoreQuote(c: QuoteCase, got: QuoteResult): CaseScore {

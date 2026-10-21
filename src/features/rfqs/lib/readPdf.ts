@@ -1,10 +1,18 @@
 import { isImageFile, readImageText, type ImageProgress } from '@/lib/docread/imageText'
 import { isPdfFile, readPdfText, type PdfSubject } from '@/lib/docread/pdfText'
 
-/** Reads one PDF on this device: the text, or the reader's plain sentence to show instead (a scan, a locked or damaged file). */
-export async function readPdf(file: File, subject: PdfSubject): Promise<{ text: string } | { message: string }> {
-  const r = await readPdfText(file, { subject })
+/**
+ * Reads one PDF on this device: the text, or the reader's plain sentence to show instead (a locked or damaged file, a scan
+ * that could not be read clearly). A scanned PDF is read page by page by the picture reader, with progress and cancel.
+ */
+export async function readPdf(
+  file: File,
+  subject: PdfSubject,
+  opts: { onProgress?: (p: ImageProgress) => void; signal?: AbortSignal } = {},
+): Promise<{ text: string } | { message: string } | { cancelled: true }> {
+  const r = await readPdfText(file, { subject, onProgress: opts.onProgress, signal: opts.signal })
   if (r.ok) return { text: r.text }
+  if (r.reason === 'aborted') return { cancelled: true }
   return { message: r.message || 'This PDF could not be read.' }
 }
 
@@ -31,7 +39,7 @@ export async function readDocument(
     if (r.reason === 'aborted') return { cancelled: true }
     return { message: r.message }
   }
-  const r = await readPdf(file, subject)
+  const r = await readPdf(file, subject, opts)
   return 'text' in r ? { text: r.text, from: 'pdf' } : r
 }
 

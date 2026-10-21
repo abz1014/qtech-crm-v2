@@ -212,6 +212,11 @@ const HEADER_TERM = new RegExp(
       'code',
       String.raw`description\s+of\s+goods`,
       String.raw`tag\s*(?:no\.?)?`,
+      String.raw`pr\.?\s*#`,
+      String.raw`pur\.?\s*req\.?(?:\s*no\.?)?`,
+      String.raw`org\.?`,
+      String.raw`special\s+instructions?`,
+      String.raw`rate\s*\/\s*unit`,
     ].join('|') +
     ')$',
   'i',
@@ -225,7 +230,7 @@ export function isHeaderCell(text: string): boolean {
     .replace(/[:.\s]+$/, '')
     .replace(/\s+/g, ' ')
     .trim()
-  return core !== '' && HEADER_TERM.test(core)
+  return core !== '' && (HEADER_TERM.test(core) || (/^\S+(?: \S{1,2})+$|^\S{1,2} \S+$/.test(core) && HEADER_TERM.test(core.replace(/\s+/g, ''))))
 }
 
 function isHeaderLine(cells: Cell[]): boolean {
@@ -376,7 +381,8 @@ function buildRows(lines: RawLine[], cols: Column[]): string[][] {
     for (const c of splitToColumns(l.cells, cols)) {
       const i = columnOf(c, cols)
       ;(cells[i] as string[]).push(c.text)
-      if ((isNumericCell(c.text) && (!anyNumberColumn || numberKinds.has(kinds[i] as ColumnKind))) || kinds[i] === 'number') anchor = true
+      // A material code ("18561326") starts a row wherever it stands: a read picture can lose the serial number beside it.
+      if ((isNumericCell(c.text) && (!anyNumberColumn || numberKinds.has(kinds[i] as ColumnKind) || /^\d{5,}$/.test(c.text))) || kinds[i] === 'number') anchor = true
       else if (kinds[i] === 'text') hasText = true
     }
     return { y: l.y + l.page * 100_000, page: l.page, cells, anchor, hasText }

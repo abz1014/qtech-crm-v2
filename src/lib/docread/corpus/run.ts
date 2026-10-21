@@ -8,7 +8,8 @@ import { parseSupplierQuote } from '../supplierQuoteParse'
 import { CORPUS_TODAY } from './corpus'
 import type { CorpusCase } from './model'
 import { docPdf } from './pdf'
-import { enquiryResult, quoteResult, scoreEnquiry, scoreQuote, type CaseScore } from './score'
+import { enquiryResult, quoteResult } from './results'
+import { scoreEnquiry, scoreQuote, type CaseScore } from './score'
 import { docText } from './text'
 
 export interface CaseRun {

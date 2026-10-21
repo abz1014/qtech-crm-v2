@@ -424,8 +424,8 @@ function tableHeader(cells: string[]): TableCols | null {
   if (filled.length < 2 || filled.some(c => /\d{2,}/.test(c.replace(/\(.*?\)/g, '')))) return null
   const hits = filled.filter(isHeaderCell).length
   if (hits < 2 || hits < Math.ceil(filled.length * 0.6)) return null
-  const idx = (re: RegExp) => cells.findIndex(c => re.test(c))
-  let desc = cells.map((c, i) => (/desc|particular|specification|product|item\s*name|short\s*text|item\s*text|goods/i.test(c) ? i : -1)).filter(i => i >= 0)
+  const idx = (re: RegExp) => cells.findIndex(c => re.test(c) || re.test(c.replace(/\s+/g, '')))
+  let desc = cells.map((c, i) => (/desc|particular|specification|product|item\s*name|short\s*text|item\s*text|goods|special\s*instruction/i.test(c) ? i : -1)).filter(i => i >= 0)
   if (desc.length === 0) desc = cells.map((c, i) => (/^item$/i.test(c) ? i : -1)).filter(i => i >= 0)
   if (desc.length === 0) return null
   const extra = cells
@@ -442,7 +442,15 @@ function tableHeader(cells: string[]): TableCols | null {
 
 function tableItem(cells: string[], cols: TableCols): ReadItem | null {
   const cell = (i: number) => (i >= 0 ? (cells[i] ?? '').trim() : '')
-  const main = cols.desc.map(cell).filter(Boolean).join(' ')
+  // Two description columns ("Item Description" and "Special Instructions"): both, unless one only repeats the other.
+  const words = (t: string) => new Set(t.toLowerCase().match(/[a-z0-9]+/g) ?? [])
+  const parts = cols.desc.map(cell).filter(Boolean)
+  const main = parts
+    .filter((p, i) => {
+      const w = words(p)
+      return !parts.some((q, j) => j !== i && q.length > p.length && [...w].every(x => words(q).has(x)))
+    })
+    .join(', ')
   if (!main || /^(?:sub\s*-?\s*total|grand\s+total|total|vat|gst|sales\s+tax|freight|discount)\b/i.test(main)) return null
   const extras = cols.extra
     .map(e => ({ e, v: cell(e.i) }))
@@ -453,8 +461,17 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
   return {
     description: tidy([main, ...extras].join(', ')),
     qty: qm ? toQty(qm[1] as string) : null,
-    unit: unitOf(cell(cols.unit) || qm?.[2] || null),
+    unit: unitOf(unitCell(cell(cols.unit)) || qm?.[2] || null),
   }
+}
+
+/** The unit in a unit cell: the cell itself, its letters run together ("Numbe rs"), or its first word ("PCS Stockitem"). */
+function unitCell(c: string): string {
+  if (!c || UNIT_CELL.test(c)) return c
+  const joined = c.replace(/\s+/g, '')
+  if (UNIT_CELL.test(joined)) return joined
+  const first = c.split(/\s+/)[0] ?? ''
+  return UNIT_CELL.test(first) ? first : c
 }
 
 /** Units an ERP or a purchase clerk writes in capitals; kept as the customer wrote them. */
@@ -777,6 +794,28 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     }
     contentLines++
 
+    // A sentence that wrapped onto this line ("The quotation" / "should mention delivery period ..."): skipped as its first
+    // line was. Our own name and address ("M/s Q-Tech Engineering, Lahore") and a broken-off email address are never items.
+    const last = lines[lines.length - 1]
+    if (
+      last?.kind === 'skipped' &&
+      (last.reason === 'instruction' || last.reason === 'greeting' || last.reason === 'date' || last.reason === 'reference') &&
+      !/[.:!?]$/.test(last.text) &&
+      last.text.split(' ').length >= 6 &&
+      /^[a-z]/.test(t) &&
+      !/\d/.test(t) &&
+      !s.wa &&
+      !t.includes('\t')
+    ) {
+      skip(t, last.reason)
+      continue
+    }
+    if ((own.test(t) && !LABELLED_QTY.test(t) && !/\d\s*(?:nos?|pcs?|sets?)\b/i.test(t)) || (/@/.test(t) && t.split(' ').length <= 3)) {
+      noteContacts(t, 1)
+      skip(t, 'contact')
+      continue
+    }
+
     // ---- tables (tab or pipe separated)
     const cells = splitCells(t)
     if (cells) {
@@ -795,7 +834,11 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         const it = tableItem(cells, table)
         // A form's row with no quantity is the row above wrapping onto the next line.
         if (formMode && row && (table.qty < 0 || !NUM_CELL.test(cells[table.qty] ?? '')) && continuesRow(cells.filter(Boolean).join(' '))) {
-          extend(row, cells.filter(Boolean).join(' '))
+          // Only the text that goes on with the item: the description columns, the Make / Part No columns, and words that
+          // spilled into the serial column; not the plant or the unit wrapping in their own columns ("FCCL" / "Nizampur").
+          const tbl = table
+          const keep = cells.filter((c, i) => c && (tbl.desc.includes(i) || tbl.extra.some(e => e.i === i) || (i === 0 && !/^\d{1,3}\s*\.?$/.test(c))))
+          extend(row, (keep.length ? keep : cells.filter(Boolean)).join(' '))
           continue
         }
         if (it) {

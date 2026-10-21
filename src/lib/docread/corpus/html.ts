@@ -9,11 +9,13 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 function tableHtml(b: Extract<Block, { k: 'table' }>, ui: Shot['ui']): string {
   const al = (i: number) => (b.align[i] === 'r' ? 'right' : b.align[i] === 'c' ? 'center' : 'left')
   const total = 1
-  const col = b.widths.map(w => `<col style="width:${Math.round((w / total) * 100)}%">`).join('')
+  // Only the description column is given a width; the others take their contents' width.
+  const col = b.widths.map((w, i) => (i === b.descCol ? `<col style="width:${Math.round((w / total) * 100)}%">` : '<col>')).join('')
   const cls = b.ruled ? 'ruled' : 'plain'
-  const head = b.head ? `<tr class="h">${b.head.map((c, i) => `<th style="text-align:${al(i)}">${esc(c)}</th>`).join('')}</tr>` : ''
-  const rows = b.rows.map((r, k) => `<tr${b.shaded && k % 2 === 1 ? ' class="alt"' : ''}>${r.map((c, i) => `<td style="text-align:${al(i)}">${esc(c)}</td>`).join('')}</tr>`).join('')
-  const foot = (b.foot ?? []).map(r => `<tr class="f">${r.map((c, i) => `<td style="text-align:${al(i)}">${esc(c)}</td>`).join('')}</tr>`).join('')
+  const ws = (i: number) => (i === b.descCol ? '' : 'white-space:nowrap;')
+  const head = b.head ? `<tr class="h">${b.head.map((c, i) => `<th style="text-align:${al(i)};white-space:nowrap">${esc(c)}</th>`).join('')}</tr>` : ''
+  const rows = b.rows.map((r, k) => `<tr${b.shaded && k % 2 === 1 ? ' class="alt"' : ''}>${r.map((c, i) => `<td style="text-align:${al(i)};${ws(i)}">${esc(c)}</td>`).join('')}</tr>`).join('')
+  const foot = (b.foot ?? []).map(r => `<tr class="f">${r.map((c, i) => `<td style="text-align:${al(i)};${ws(i)}">${esc(c)}</td>`).join('')}</tr>`).join('')
   const width = ui === 'outlook' || ui === 'gmail' ? (b.head ? '100%' : '78%') : '100%'
   return `<table class="${cls}" style="width:${width}"><colgroup>${col}</colgroup>${head}${rows}${foot}</table>`
 }
@@ -124,7 +126,7 @@ export function docHtml(doc: Doc, shot: Shot): string {
     .gap { height: 0.9em; }
     .pair { display: flex; justify-content: space-between; gap: 24px; }
     .pair span:last-child { min-width: 38%; }
-    table { border-collapse: collapse; margin: 8px 0 12px; table-layout: fixed; }
+    table { border-collapse: collapse; margin: 8px 0 12px; }
     td, th { padding: ${sheet ? '1px 5px' : '3px 7px'}; vertical-align: top; word-wrap: break-word; }
     table.ruled td, table.ruled th { border: 1px solid ${sheet ? '#d4d4d4' : line}; }
     tr.h th { background: ${dark ? '#333' : sheet ? '#ddebf7' : '#eef1f5'}; font-weight: bold; }
