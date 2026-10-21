@@ -27,6 +27,14 @@ describe('SegmentedControl on a phone', () => {
     })
   }
 
+  it('a caller that asks for flex-wrap wraps at every width and never scrolls (Today tabs)', () => {
+    render(<SegmentedControl aria-label="Show" className="flex-wrap" value="any" onValueChange={() => undefined} options={options} />)
+    const cls = screen.getByRole('radiogroup').className.split(/\s+/)
+    expect(cls).toContain('flex-wrap')
+    expect(cls).not.toContain('sm:flex-nowrap')
+    expect(cls).not.toContain('sm:overflow-x-auto')
+  })
+
   it('a segment may break a long label onto two lines on a phone, growing taller instead of spilling', () => {
     render(<SegmentedControl aria-label="Show" value="any" onValueChange={() => undefined} options={options} />)
     const cls = screen.getByRole('radio', { name: /Needs action/ }).className.split(/\s+/)
