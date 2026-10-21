@@ -423,8 +423,10 @@ export function PaletteHost({
             }
             emptyHint={
               <>
-                Search covers RFQs, orders, companies and items. Try one word,
-                or press <Kbd>N</Kbd> to start an RFQ.
+                {role === "engineer"
+                  ? "Search covers RFQs, orders, purchase orders, companies, contacts and order items."
+                  : "Search covers RFQs, orders, invoices, purchase orders, companies, contacts and order items."}{" "}
+                Try one word, or press <Kbd>N</Kbd> to start an RFQ.
               </>
             }
           />

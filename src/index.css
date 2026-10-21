@@ -80,9 +80,10 @@
 
   /* ---- 2a. Brand & action ----------------------------------------------- */
   --brand-green: #429446;        /* NON-TEXT ONLY: focus ring, active indicator, progress, logo (3.78:1 on white) */
-  --primary: #1a7b46;             /* primary actions, links, ANY green text (5.30:1 on white) */
+  --primary: #1a7b46;             /* primary action fills (5.30:1 white text on it) */
   --primary-hover: #166a3b;
   --primary-active: #115a31;
+  --primary-text: #187242;        /* ANY green text (text-primary, links): 5.96 on white, 5.15 on --bg-selected, 5.07 on the lowest tint, 3.16 against --fg so an inline link stands out (axe link-in-text-block) (2026-10-22) */
   --on-primary: var(--neutral-0);
 
   /* ---- 2b. Surfaces ------------------------------------------------------ */
@@ -106,16 +107,16 @@
   --focus-width: 2px;
   --focus-offset: 2px;                  /* ring colour is --brand-green */
 
-  /* ---- 2e. Semantic tones (text ≥ 5.4:1 on its own tint, on white and on --bg-selected) */
+  /* ---- 2e. Semantic tones (2026-10-22: text ≥ 7:1 on white, on --bg-selected and on every tint, so a coloured second line on a highlighted row passes 7:1) */
   --tone-neutral-fg: var(--neutral-700);
   --tone-neutral-bg: var(--neutral-100);
-  --tone-info-fg: #185f9e;
+  --tone-info-fg: #124a7c;        /* 9.15 white, 7.90 selected, 7.79 lowest tint */
   --tone-info-bg: #e3f0fb;
-  --tone-success-fg: #0b625b;
+  --tone-success-fg: #0a5049;     /* 9.31 white, 8.04 selected, 7.93 lowest tint */
   --tone-success-bg: #e0f2f1;
-  --tone-warning-fg: #92400e;
+  --tone-warning-fg: #7a3408;     /* 9.04 white, 7.81 selected, 7.70 lowest tint */
   --tone-warning-bg: #fef3c7;
-  --tone-danger-fg: #b21f1f;
+  --tone-danger-fg: #8f1414;      /* 9.22 white, 7.96 selected, 7.85 on its own tint */
   --tone-danger-bg: #fde8e8;
   --tone-ink-fg: var(--neutral-0);
   --tone-ink-bg: var(--neutral-800);
@@ -484,5 +485,15 @@
   /* A block link or summary grown to 44 keeps its line in the middle of the target. */
   :is(:is(.flex, .inline-flex, .grid, .inline-grid) > a[href], a[href]:is(.block, .inline-block), summary):not(.sr-only) {
     align-content: center;
+  }
+}
+
+/* Phones (below md, 768px): every text a person types is at least 16 px, so iOS Safari never zooms in on a tap (rubric "Reading on
+   a phone"). A floor for every input, textarea, select and editable box, however a component sizes it with a mouse (a `text-sm`
+   inside a table cell, a raw <input>); the specificity beats one utility class. Checked at 375 px by e2e/gallery.axe.spec.ts and
+   by the screen audit ("phone inputs under 16 px"). */
+@media (max-width: 767.98px) {
+  :is(input:not([type="hidden"], [type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), textarea, select, [contenteditable="true"], [contenteditable=""]):not(.sr-only) {
+    font-size: max(16px, 1em);
   }
 }

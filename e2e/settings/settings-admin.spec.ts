@@ -52,7 +52,9 @@ test.describe('Settings › Targets (M06)', () => {
   test('admin sets a target in 1 tap plus the amount, and it shows on that person\'s Today (and nowhere else)', async ({ page, browser }) => {
     await openAs(page, 'admin', '/settings/targets')
     await expect(page.getByRole('heading', { level: 1, name: 'Targets' })).toBeVisible()
-    await expect(page.getByTestId('targets-year')).toHaveText(String(YEAR))
+    // this quarter and the next only (audit 2026-10-22); earlier quarters wait behind a button
+    await expect(page.getByRole('columnheader', { name: new RegExp(`^Q${QUARTER} ${YEAR}`) })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Show earlier quarters' })).toBeVisible()
     // the active fixture people are rows; the deactivated one is not
     await expect(page.getByRole('rowheader', { name: /Test Sales/ })).toBeVisible()
     await expect(page.getByRole('rowheader', { name: /Test Deactivated/ })).toHaveCount(0)
@@ -82,7 +84,7 @@ test.describe('Settings › Targets (M06)', () => {
     // achieved and on pace sit beside the target, as rupee figures
     const cell = page.locator(`[data-cell="${SALES}:${QUARTER}"]`)
     await expect(cell).toContainText('Achieved')
-    await expect(cell).toContainText('On pace')
+    await expect(cell).toContainText(/pace/) // one line: "Achieved 0 of 9,876,000 · 1.2 M behind pace"
     expect(await cell.textContent()).not.toMatch(/\d\s?%/)
     await review(page, 'm06-02-grid-with-targets-1440')
 
@@ -143,6 +145,8 @@ test.describe('Settings › Targets (M06)', () => {
 
   test('the year switches back and forward, and an emptied cell removes the target', async ({ page }) => {
     await openAs(page, 'admin', '/settings/targets')
+    await page.getByRole('button', { name: 'Show earlier quarters' }).click()
+    await expect(page.getByTestId('targets-year')).toHaveText(String(YEAR))
     await page.getByRole('button', { name: 'Next year' }).click()
     await expect(page.getByTestId('targets-year')).toHaveText(String(YEAR + 1))
     await expect(page.getByRole('button', { name: /Q1 \d{4} target: Set target/ }).first()).toBeVisible() // nothing set next year yet
@@ -218,25 +222,35 @@ test.describe('Settings › Expense categories (M13)', () => {
   const name = uniqueName('E2E Category')
   const renamed = `${name} renamed`
   const spare = uniqueName('E2E Spare')
+  // Audit 2026-10-22: read-only rows in sections by group, a ⋯ menu per row, Add and Edit in a small dialog.
+  const rowMenu = async (page: Page, cat: string, item: string) => {
+    await page.getByRole('button', { name: `More for ${cat}` }).click()
+    await page.getByRole('menuitem', { name: item }).click()
+  }
+  const addCategory = async (page: Page, cat: string, grp?: string, paid?: string) => {
+    await page.getByRole('button', { name: 'Add category' }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Name', { exact: true }).fill(cat)
+    if (grp) await dialog.getByLabel('Group', { exact: true }).selectOption(grp)
+    if (paid) await dialog.getByLabel('Paid via', { exact: true }).selectOption(paid)
+    await dialog.getByRole('button', { name: 'Add category' }).click()
+  }
 
-  test('lists the seeded categories in order, with usage counts', async ({ page }) => {
+  test('lists the seeded categories in sections by group, in order, with usage counts', async ({ page }) => {
     await openAs(page, 'admin', '/settings/categories')
     await expect(page.getByRole('heading', { level: 1, name: 'Expense categories' })).toBeVisible()
-    await expect(page.getByText('Categories in use cannot be deleted')).toBeVisible()
-    const list = page.getByRole('list', { name: 'Expense categories' })
-    await expect(list.getByRole('listitem')).toHaveCount((await allCategories()).length)
+    for (const g of ['Overheads', 'Order costs', 'Not in P&L']) await expect(page.getByRole('heading', { level: 2, name: g })).toBeVisible()
+    await expect(page.locator('[data-category]')).toHaveCount((await allCategories()).length)
     expect((await allCategories()).length).toBeGreaterThanOrEqual(17)
-    await expect(list.getByRole('listitem').first()).toHaveAttribute('data-category', 'Salaries')
-    await expect(list.locator('[data-category="Rent"]').getByTestId('usage')).toHaveText('Not used yet')
+    await expect(page.getByRole('list', { name: 'Overheads' }).getByRole('listitem').first()).toHaveAttribute('data-category', 'Salaries')
+    await expect(page.locator('[data-category="Rent"]').getByTestId('usage')).toHaveText('Not used yet')
+    await expect(page.getByRole('textbox')).toHaveCount(0) // read-only rows; nothing to type into until Add or Edit
     await review(page, 'm13-01-list-1440')
   })
 
   test('add, rename, change group and paid via, and reorder: each is saved', async ({ page }) => {
     await openAs(page, 'admin', '/settings/categories')
-    await page.getByLabel('New category').fill(name)
-    await page.getByLabel('Group', { exact: true }).selectOption('order_cost')
-    await page.getByLabel('Paid via', { exact: true }).selectOption('cash')
-    await page.getByRole('button', { name: 'Add category' }).click()
+    await addCategory(page, name, 'order_cost', 'cash')
     await expect(page.getByRole('status').filter({ hasText: 'Category added' })).toBeVisible()
     const row = page.locator(`[data-category="${name}"]`)
     await expect(row).toBeVisible()
@@ -247,39 +261,43 @@ test.describe('Settings › Expense categories (M13)', () => {
     expect(all[all.length - 1].id).toBe(added.id)
 
     // a duplicate name (ignoring case) is refused on the field
-    await page.getByLabel('New category').fill(name.toUpperCase())
     await page.getByRole('button', { name: 'Add category' }).click()
-    await expect(page.getByText('A category with this name already exists.')).toBeVisible()
-    await page.getByLabel('New category').fill('')
+    const dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Name', { exact: true }).fill(name.toUpperCase())
+    await dialog.getByRole('button', { name: 'Add category' }).click()
+    await expect(dialog.getByText('A category with this name already exists.')).toBeVisible()
+    await dialog.getByLabel('Name', { exact: true }).fill('')
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(dialog).toHaveCount(0)
 
-    // rename
-    const nameInput = page.getByLabel(`Name of ${name}`)
-    await nameInput.fill(renamed)
-    await nameInput.press('Enter')
+    // rename, group and paid via: one Edit, one save
+    await rowMenu(page, name, 'Edit name, group or paid via')
+    await dialog.getByLabel('Name', { exact: true }).fill(renamed)
+    await dialog.getByLabel('Group', { exact: true }).selectOption('non_pnl')
+    await dialog.getByLabel('Paid via', { exact: true }).selectOption('bank')
+    await dialog.getByRole('button', { name: 'Save category' }).click()
     await expect.poll(async () => (await categoryByName(renamed))?.id).toBe(added.id)
-
-    // group and paid via
-    await page.getByLabel(`Group of ${renamed}`).selectOption('non_pnl')
     await expect.poll(async () => (await categoryByName(renamed)).grp).toBe('non_pnl')
-    await page.getByLabel(`Default paid via for ${renamed}`).selectOption('bank')
     await expect.poll(async () => (await categoryByName(renamed)).default_paid_via).toBe('bank')
 
-    // reorder: up moves it above the one before it, and the order is the saved order
+    // reorder inside its group: up swaps it with the Not in P&L category before it (the last seeded one), and the order is saved
     const before = (await allCategories()).map(c => c.id)
-    await page.getByRole('button', { name: `Move ${renamed} up` }).click()
+    await rowMenu(page, renamed, 'Move up')
     await expect
       .poll(async () => (await allCategories()).map(c => c.id))
       .toEqual([...before.slice(0, -2), before[before.length - 1], before[before.length - 2]])
-    const at = (await allCategories()).findIndex(c => c.id === added.id)
-    expect(at).toBe(before.length - 2)
-    await expect(page.getByRole('list', { name: 'Expense categories' }).getByRole('listitem').nth(at)).toHaveAttribute('data-category', renamed)
+    const section = page.getByRole('list', { name: 'Not in P&L' }).getByRole('listitem')
+    const order = () => section.evaluateAll(els => els.map(e => e.getAttribute('data-category')))
+    await expect.poll(order).toEqual(expect.arrayContaining([renamed]))
+    const at = (await order()).indexOf(renamed)
+    expect((await order())[at + 1]).toBeTruthy() // it is no longer last in its section
     // and it survives a reload
     await page.reload()
-    await expect(page.getByRole('list', { name: 'Expense categories' }).getByRole('listitem').nth(at)).toHaveAttribute('data-category', renamed)
+    await expect(page.getByRole('list', { name: 'Not in P&L' }).getByRole('listitem').nth(at)).toHaveAttribute('data-category', renamed)
     await review(page, 'm13-02-after-edits-1440')
   })
 
-  test('a category in use cannot be deleted: the page says so and offers Deactivate, which hides it from new expenses', async ({ page }) => {
+  test('a category in use cannot be deleted: no Delete on its row, and Deactivate in its menu hides it from new expenses', async ({ page }) => {
     const cat = await categoryByName(renamed)
     const expense = await must(rest<{ id: string }[]>('admin', 'expenses', { method: 'POST', body: { amount_pkr: 1500, category_id: cat.id } }))
     expect(expense).toHaveLength(1)
@@ -287,21 +305,17 @@ test.describe('Settings › Expense categories (M13)', () => {
     await openAs(page, 'admin', '/settings/categories')
     const row = page.locator(`[data-category="${renamed}"]`)
     await expect(row.getByTestId('usage')).toHaveText('1 use')
-    await row.getByRole('button', { name: `Delete ${renamed}` }).click()
-    const panel = row.getByRole('group', { name: `Delete ${renamed}` })
-    await expect(panel).toContainText('so it cannot be deleted')
-    await expect(panel).toContainText('Deactivate it instead')
-    await expect(panel.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0)
-    await review(page, 'm13-03-in-use-delete-advice-1440')
+    await expect(row.getByRole('button', { name: `Delete ${renamed}` })).toHaveCount(0)
+    await review(page, 'm13-03-in-use-no-delete-1440')
 
     // the database agrees: the foreign key refuses
     const del = await rest('admin', `expense_categories?id=eq.${cat.id}`, { method: 'DELETE' })
     expect(del.status).toBe(409)
 
-    // ---- Deactivate from the advice
-    await panel.getByRole('button', { name: 'Deactivate', exact: true }).click()
+    // ---- Deactivate from the row menu
+    await rowMenu(page, renamed, 'Deactivate')
     await expect(row.getByText(/hidden from new expenses/)).toBeVisible()
-    await expect(row.getByRole('checkbox', { name: `${renamed} is active` })).not.toBeChecked()
+    await expect.poll(async () => (await categoryByName(renamed)).active).toBe(false)
     await review(page, 'm13-04-deactivated-1440')
 
     // ---- through the data layer: what new expenses choose from (active = true) no longer includes it
@@ -315,15 +329,14 @@ test.describe('Settings › Expense categories (M13)', () => {
     const kept = await must(rest<{ category_id: string }[]>('admin', `expenses?id=eq.${expense[0].id}&select=category_id`))
     expect(kept[0].category_id).toBe(cat.id)
 
-    // ---- activate again: offered again
-    await row.getByRole('checkbox', { name: `${renamed} is active` }).click()
+    // ---- reactivate: offered again
+    await rowMenu(page, renamed, 'Reactivate')
     await expect.poll(async () => (await categoryByName(renamed)).active).toBe(true)
   })
 
   test('a category nothing uses can be deleted after a question', async ({ page }) => {
     await openAs(page, 'admin', '/settings/categories')
-    await page.getByLabel('New category').fill(spare)
-    await page.getByRole('button', { name: 'Add category' }).click()
+    await addCategory(page, spare)
     const row = page.locator(`[data-category="${spare}"]`)
     await expect(row.getByTestId('usage')).toHaveText('Not used yet')
     await row.getByRole('button', { name: `Delete ${spare}` }).click()
@@ -346,26 +359,28 @@ test.describe('Settings › Expense categories (M13)', () => {
     await login('admin')
   })
 
-  test('axe is clean at 1440 and at 375, with no sideways scroll on a phone', async ({ page }) => {
+  test('axe is clean at 1440 and at 375, with no sideways scroll on a phone and 44 px row menus', async ({ page }) => {
     await openAs(page, 'admin', '/settings/categories')
-    await expect(page.getByRole('list', { name: 'Expense categories' })).toBeVisible()
-    await page.locator(`[data-category="${renamed}"]`).getByRole('button', { name: `Delete ${renamed}` }).click()
-    expect(await axeViolations(page), 'axe at 1440, delete advice open').toEqual([])
-    await page.getByRole('button', { name: 'Close', exact: true }).click()
+    await expect(page.locator(`[data-category="${renamed}"]`)).toBeVisible()
+    await page.getByRole('button', { name: `More for ${renamed}` }).click()
+    expect(await axeViolations(page), 'axe at 1440, row menu open').toEqual([])
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Add category' }).click()
+    expect(await axeViolations(page), 'axe at 1440, add dialog').toEqual([])
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click()
     expect(await axeViolations(page), 'axe at 1440').toEqual([])
 
     await page.setViewportSize({ width: 375, height: 812 })
     await page.goto('/settings/categories')
     await page.locator('#main').waitFor()
-    await expect(page.getByRole('list', { name: 'Expense categories' })).toBeVisible()
+    await expect(page.locator(`[data-category="${renamed}"]`)).toBeVisible()
     expect(await noHorizontalScroll(page)).toBe(true)
     await review(page, 'm13-05-list-375')
     expect(await axeViolations(page), 'axe at 375').toEqual([])
-    const up = await page.getByRole('button', { name: `Move ${renamed} up` }).boundingBox()
-    expect(up?.height ?? 0).toBeGreaterThanOrEqual(44)
+    const more = await page.getByRole('button', { name: `More for ${renamed}` }).boundingBox()
+    expect(more?.height ?? 0).toBeGreaterThanOrEqual(44)
   })
 })
-
 test.describe('Settings on a phone (UX audit 2026-10-19)', () => {
   test('/settings is the list itself, in two groups; a page has one back arrow to it, and Team goes back there too', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })

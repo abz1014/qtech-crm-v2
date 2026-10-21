@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Building2, FileText, Package, Plus, Receipt, ShoppingCart, UserRound, Wrench } from 'lucide-react'
+import { Building2, FileText, List as ListIcon, Package, Plus, Receipt, ShoppingCart, UserRound, Wrench } from 'lucide-react'
 import { usePaletteSource } from '@/app/palette/usePalette'
 import { searchAll, type SearchHit, type SearchKind, type SearchRole } from '@/features/search/api'
 import type { PaletteItem, PaletteSource } from '@/ui/paletteSources'
@@ -9,6 +9,8 @@ import type { PaletteItem, PaletteSource } from '@/ui/paletteSources'
  * references, orders (ORD number, customer PO for admin and sales), order items, supplier PO numbers ("PO-26-0017") and
  * invoice numbers (admin and sales: the database returns none to an engineer, see migration 0054). A burst of keystrokes becomes one request: the source waits DEBOUNCE_MS after the last keystroke, and the
  * palette cancels the signal on the next one, which drops both the wait and a request already in flight.
+ * Each kind shows its best SHOWN_PER_KIND rows; when there are more, a last "See all N results" row opens that kind's own list
+ * with the words in its search box (seeAllHref), so the palette never hides a match (rubric "Finding things").
  * Groups come from the database kind; an RFQ number ("177", "RFQ-0177") puts RFQs first, otherwise companies lead.
  * After the places come the Actions: "New RFQ for <company>" (the best company match, opens intake with it chosen) and
  * "Add <x> as a new company" when no company has exactly that name. Idle rows (Recent, Actions) live in PaletteHost.
@@ -26,6 +28,37 @@ const HEADING: Record<SearchKind, string> = {
   invoice: 'Invoices',
 }
 const ACTIONS = 'Actions'
+
+/** Rows shown per kind; the search asks for up to FETCH_LIMIT (the database's cap, migration 0054) so it can say how many more there are. */
+export const SHOWN_PER_KIND = 6
+export const FETCH_LIMIT = 25
+/** The list a "See all" row opens, by kind. */
+const LIST_NAME: Record<SearchKind, string> = {
+  company: 'Companies',
+  contact: 'Companies',
+  rfq: 'RFQs',
+  order: 'Orders',
+  item: 'Orders',
+  po: 'Orders',
+  invoice: 'Invoices & GST',
+}
+
+/**
+ * "See all N results": the kind's own list with the words in its search box (?q=), across every owner, so nothing found here is
+ * missing there. Contacts open the Companies list (it searches contact names); order items and supplier POs the Orders list.
+ */
+export function seeAllHref(kind: SearchKind, q: string): string {
+  const qs = encodeURIComponent(q)
+  if (kind === 'company' || kind === 'contact') return `/companies?q=${qs}`
+  if (kind === 'rfq') return `/rfqs?owner=all&q=${qs}`
+  if (kind === 'invoice') return `/money/gst-register?q=${qs}`
+  return `/orders?owner=all&q=${qs}`
+}
+
+function seeAll(kind: SearchKind, q: string, count: number): PaletteItem {
+  const n = count >= FETCH_LIMIT ? `${FETCH_LIMIT}+` : String(count)
+  return { id: `see-all-${kind}`, group: HEADING[kind], label: `See all ${n} results`, meta: `In ${LIST_NAME[kind]}`, icon: ListIcon, href: seeAllHref(kind, q) }
+}
 const looksLikeRfqNumber = (q: string) => /^(rfq[-\s]*)?\d{1,15}$/i.test(q.trim())
 const BASE: readonly SearchKind[] = ['company', 'contact', 'rfq', 'order', 'invoice', 'po', 'item']
 
@@ -82,14 +115,13 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS): PaletteSource {
       const q = query.trim()
       if (!q) return []
       if (!(await pause(debounceMs, signal))) return []
-      const hits = await searchAll(q, signal)
+      const hits = await searchAll(q, signal, FETCH_LIMIT)
       if (signal.aborted) return []
-      const items = kindOrder(q).flatMap(kind =>
-        hits
-          .filter(h => h.kind === kind)
-          .sort((a, b) => b.score - a.score)
-          .map(toItem),
-      )
+      const items = kindOrder(q).flatMap(kind => {
+        const ofKind = hits.filter(h => h.kind === kind).sort((a, b) => b.score - a.score)
+        const shown = ofKind.slice(0, SHOWN_PER_KIND).map(toItem)
+        return ofKind.length > SHOWN_PER_KIND ? [...shown, seeAll(kind, q, ofKind.length)] : shown
+      })
       const topCompany = hits.filter(h => h.kind === 'company').sort((a, b) => b.score - a.score)[0]
       if (topCompany) {
         items.push({ id: `rfq-new-${topCompany.id}`, group: ACTIONS, label: `New RFQ for ${topCompany.label}`, meta: 'Go to intake', icon: Plus, href: `/rfqs/new?company=${encodeURIComponent(topCompany.id)}` })

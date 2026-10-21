@@ -127,6 +127,8 @@ test.describe('remove', () => {
     const brand = (await must(rest<{ id: string }[]>('admin', 'brands', { method: 'POST', body: { name: brandName } })))[0]
     await must(rest('admin', 'company_brands', { method: 'POST', body: { company_id: supplier.id, brand_id: brand.id } }))
     await openAs(page, 'engineer', `/companies/${supplier.id}`)
+    // a supplier-only page folds its sites, brands and details under "More about this supplier" (round 3)
+    await page.getByText('More about this supplier').click()
     const panel = page.getByRole('region', { name: 'Details', exact: true }).getByRole('region', { name: 'Brands carried' })
     await panel.getByRole('button', { name: `Remove ${brandName}` }).click()
     await panel.getByRole('group', { name: `Remove ${brandName}?` }).getByRole('button', { name: 'Remove', exact: true }).click()
