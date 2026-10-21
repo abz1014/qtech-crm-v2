@@ -2156,11 +2156,11 @@ isOneToOne: false
 "merge_brands":
 { Args: { "p_drop": string,"p_keep": string }; Returns: undefined
                            },
-"merge_expense_categories":
-{ Args: { "p_from": string,"p_into": string }; Returns: number
-                           },
 "merge_companies":
 { Args: { "p_drop": string,"p_keep": string }; Returns: undefined
+                           },
+"merge_expense_categories":
+{ Args: { "p_from": string,"p_into": string }; Returns: number
                            },
 "model_tokens":
 { Args: { "t": string }; Returns: (string)[]
