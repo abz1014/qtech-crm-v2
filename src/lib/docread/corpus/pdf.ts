@@ -15,6 +15,7 @@ interface Ctx {
   pageW: number
   pageH: number
   rotate: boolean
+  sideways: boolean
   pages: PDFPage[]
   page: PDFPage
   y: number
@@ -80,7 +81,7 @@ function newPage(c: Ctx): void {
   // A turned page: the MediaBox is portrait, the viewer shows it landscape.
   const size: [number, number] = c.rotate ? [c.pageH, c.pageW] : [c.pageW, c.pageH]
   c.page = c.doc.addPage(size)
-  if (c.rotate) c.page.setRotation(degrees(90))
+  if (c.rotate && !c.sideways) c.page.setRotation(degrees(90))
   c.pages.push(c.page)
   c.y = MARGIN + 6
   for (const b of c.letterhead) block(c, b, null)
@@ -199,7 +200,7 @@ export async function docPdf(doc: Doc): Promise<Uint8Array> {
   const fam = doc.page?.font ?? 'helvetica'
   const regular = await pdf.embedFont(fam === 'times' ? StandardFonts.TimesRoman : fam === 'courier' ? StandardFonts.Courier : StandardFonts.Helvetica)
   const bold = await pdf.embedFont(fam === 'times' ? StandardFonts.TimesRomanBold : fam === 'courier' ? StandardFonts.CourierBold : StandardFonts.HelveticaBold)
-  const landscape = Boolean(doc.page?.landscape || doc.page?.rotate)
+  const landscape = Boolean(doc.page?.landscape || doc.page?.rotate || doc.page?.sideways)
   const c = {
     doc: pdf,
     regular,
@@ -207,7 +208,8 @@ export async function docPdf(doc: Doc): Promise<Uint8Array> {
     size: doc.page?.size ?? 9.5,
     pageW: landscape ? 842 : 595,
     pageH: landscape ? 595 : 842,
-    rotate: doc.page?.rotate === 90,
+    rotate: doc.page?.rotate === 90 || Boolean(doc.page?.sideways),
+    sideways: Boolean(doc.page?.sideways),
     pages: [],
     y: 0,
     letterhead: doc.page?.letterhead ?? [],

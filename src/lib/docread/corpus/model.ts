@@ -54,6 +54,8 @@ export interface Doc {
     footer?: string
     /** 90: a portrait page shown as landscape by the viewer (/Rotate 90), the text drawn to read upright. */
     rotate?: 0 | 90
+    /** The page lies on its side with no /Rotate: the text runs up the page as the viewer shows it. */
+    sideways?: boolean
     landscape?: boolean
     /** Rows per page for a long table (forces a multi-page table). */
     rowsPerPage?: number

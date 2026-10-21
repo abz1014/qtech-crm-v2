@@ -71,7 +71,8 @@ export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string
     }
     const labels = src.slice(k, e).map(s => s.t)
     if (labels.length < 3) continue
-    const hasDesc = labels.some(l => headerKind(l, false) === 'desc')
+    // A description heading other than a bare "Item" (then "Item" is the serial-number column).
+    const hasDesc = labels.some(l => headerKind(l, false) === 'desc' && !/^item$/i.test(l))
     const kinds = labels.map(l => headerKind(l, hasDesc))
     if (!kinds.includes('desc') || !(kinds.includes('qty') || kinds.includes('money'))) continue
     const numbered = kinds[0] === 'number'

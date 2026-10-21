@@ -191,7 +191,11 @@ interface ReadItem {
 /** One item's text (its own line, plus any wrapped lines) into description, quantity (null when none) and unit. */
 function readItem(text: string): ReadItem | null {
   // "Item: Push button red; Make: X; Qty: 20 Pcs": the label in front is not part of the description.
-  let t = text.replace(TAIL, '').replace(OPENER, '').replace(/^(?:item|description|product|material|particulars)\s*[:=-]\s*/i, '')
+  let t = text
+    .replace(TAIL, '')
+    .replace(/^(?:(?:plz|pls|please)\s+)?(?:quote|rates?(?:\s+(?:pls|plz|please))?|send\s+rates?)\s*[:,-]\s*/i, '')
+    .replace(OPENER, '')
+    .replace(/^(?:item|description|product|material|particulars)\s*[:=-]\s*/i, '')
   let qty: number | null = null
   let unit: string | null = null
   const lab = LABELLED_QTY.exec(t)
@@ -556,7 +560,7 @@ const isContact = (t: string): boolean => {
     return true
   }
   EMAIL.lastIndex = 0
-  return ADDRESS.test(t) && !PRODUCT.test(t) && !LABELLED_QTY.test(t) && (/,/.test(t) || (t.match(new RegExp(ADDRESS.source, 'gi')) ?? []).length >= 2)
+  return ADDRESS.test(t) && !PRODUCT.test(t) && !LABELLED_QTY.test(t) && !hasCode(t) && !/\d\s*(?:nos?|pcs?|pieces?|sets?|ea|each|units?)\b/i.test(t) && (/,/.test(t) || (t.match(new RegExp(ADDRESS.source, 'gi')) ?? []).length >= 2)
 }
 
 const isCompanyLine = (t: string) =>
@@ -1078,6 +1082,11 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       skip(t, 'greeting')
       continue
     }
+    // A heading over a group of items ("Mechanical spares:", "For ETP plant:").
+    if (!m && /:\s*$/.test(work) && !/\d/.test(work) && work.split(' ').length <= 5) {
+      skip(t, 'header')
+      continue
+    }
     const greetingOnly = GREETING_SENTENCE.test(work) && !/\d/.test(work) && !PRODUCT.test(work) && !hasCode(work) && work.split(' ').length <= 6
     if ((!m && (isCourtesy(work) || greetingOnly)) || (!m && DESIGNATION.test(work) && work.split(' ').length <= 4 && !/\d/.test(work) && !PRODUCT.test(work))) {
       skip(t, 'greeting')
@@ -1096,7 +1105,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       } else skip(t, 'table')
       continue
     }
-    let parts = work.split(/\s+(?:and|&|aur|plus)\s+(?=\d[\d,.]*\s*(?:nos?|pcs?|pieces?|sets?|x)\b)/i)
+    let parts = work.split(new RegExp(String.raw`\s+(?:and|&|aur|plus|\+)\s+(?=\d[\d,.]*\s*(?:${UNIT_SRC}|x)\b)`, 'i'))
     if (parts.length === 1) parts = work.split(/(?<=\d\s*(?:nos?|pcs?|pieces?|sets?|units?)\.?)\s+(?:and|&|aur|plus)\s+/i)
     if (parts.length > 1 && !parts.every(p => readItem(p)?.qty != null)) parts = [work]
     if (!parts.every(p => readItem(p) !== null)) {
