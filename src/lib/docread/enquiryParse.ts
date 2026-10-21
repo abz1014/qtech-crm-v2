@@ -194,6 +194,8 @@ function readItem(text: string): ReadItem | null {
   let t = text
     .replace(TAIL, '')
     .replace(/^(?:(?:plz|pls|please)\s+)?(?:quote|rates?(?:\s+(?:pls|plz|please))?|send\s+rates?)\s*[:,-]\s*/i, '')
+    .replace(/^(?:we\s+require|(?:(?:plz|pls|please|kindly)\s+)?quote\s+for)\s*[:,-]?\s+(?=\d)/i, '')
+    .replace(/\b([Nn])o's\b/g, '$1os')
     .replace(OPENER, '')
     .replace(/^(?:item|description|product|material|particulars)\s*[:=-]\s*/i, '')
   let qty: number | null = null
@@ -627,6 +629,13 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     const web = WA_WEB_PREFIX.test(line)
     const wa = web || (WA_PREFIX.test(line) && /^\s*\[?\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4},?\s+\d{1,2}:\d{2}/.test(line))
     const body = web ? line.replace(WA_WEB_PREFIX, '') : wa ? line.replace(WA_PREFIX, '') : line
+    // A Teams or Slack message header copied with the text: "Danish Abbasi  10:18 AM". Our own name marks our message.
+    const chatHead = /^\s*([A-Z][\w .()'-]{1,40}?)\s{1,4}(?:\d{1,2}\/\d{1,2}\/\d{2,4},?\s+)?\d{1,2}:\d{2}\s*(?:AM|PM)\s*$/i.exec(line)
+    if (chatHead) {
+      ownMessage = own.test(chatHead[1] as string)
+      blank = true
+      continue
+    }
     if (wa) {
       const sender = /(?:\]|\s-)\s*([^:\]]{1,40}):\s*$/.exec(line.slice(0, line.length - body.length))?.[1] ?? ''
       ownMessage = sender !== '' && own.test(sender)

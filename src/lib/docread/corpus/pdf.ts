@@ -16,6 +16,7 @@ interface Ctx {
   pageH: number
   rotate: boolean
   sideways: boolean
+  watermark?: string
   pages: PDFPage[]
   page: PDFPage
   y: number
@@ -83,6 +84,7 @@ function newPage(c: Ctx): void {
   c.page = c.doc.addPage(size)
   if (c.rotate && !c.sideways) c.page.setRotation(degrees(90))
   c.pages.push(c.page)
+  if (c.watermark) c.page.drawText(c.watermark, { x: c.pageW * 0.2, y: c.pageH * 0.3, size: 110, font: c.bold, color: rgb(0.85, 0.85, 0.85), rotate: degrees(40) })
   c.y = MARGIN + 6
   for (const b of c.letterhead) block(c, b, null)
 }
@@ -210,6 +212,7 @@ export async function docPdf(doc: Doc): Promise<Uint8Array> {
     pageH: landscape ? 595 : 842,
     rotate: doc.page?.rotate === 90 || Boolean(doc.page?.sideways),
     sideways: Boolean(doc.page?.sideways),
+    watermark: doc.page?.watermark,
     pages: [],
     y: 0,
     letterhead: doc.page?.letterhead ?? [],
