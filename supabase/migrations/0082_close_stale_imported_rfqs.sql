@@ -1,4 +1,4 @@
--- 0083_close_stale_imported_rfqs (owner decision 2026-10-22): close every IMPORTED RFQ that has had no activity for more
+-- 0082_close_stale_imported_rfqs (owner decision 2026-10-22): close every IMPORTED RFQ that has had no activity for more
 -- than 60 days. Production showed "113 open · 87 overdue" right after the legacy import, some 600 days overdue, flooding
 -- Today and the RFQ list with work nobody will do.
 --
