@@ -175,6 +175,39 @@ describe('NumberInput (U07)', () => {
     await user.click(screen.getByRole('button', { name: 'Reset' }))
     expect(input).toHaveValue('')
   })
+
+  it('HW-1: reads "1.234,50" and "12,5" right, and says why it refuses "12,3456"', async () => {
+    const seen: (number | null)[] = []
+    function Probe() {
+      const [v, setV] = useState<number | null>(null)
+      return (
+        <Field label="Price">
+          <NumberInput
+            value={v}
+            onChange={n => {
+              seen.push(n)
+              setV(n)
+            }}
+          />
+        </Field>
+      )
+    }
+    const user = userEvent.setup()
+    render(<Probe />)
+    const input = screen.getByLabelText('Price')
+    await user.type(input, '1.234,50')
+    expect(seen.at(-1)).toBe(1234.5)
+    await user.clear(input)
+    await user.type(input, '12,5')
+    expect(seen.at(-1)).toBe(12.5)
+    await user.clear(input)
+    await user.type(input, '12,3456')
+    expect(seen.at(-1)).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull() // not while typing
+    await user.tab()
+    expect(screen.getByRole('alert')).toHaveTextContent('Type it like 1,234.50')
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+  })
 })
 
 describe('Select, TextField, TextArea, Checkbox (U07)', () => {
