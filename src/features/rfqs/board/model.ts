@@ -217,7 +217,8 @@ export function dueText(r: Pick<BoardRow, 'dueOn' | 'daysToDue' | 'isOverdue'> &
   if (!r.dueOn) return { date: null, hint: 'No due date', tone: 'normal' }
   const date = formatDay(r.dueOn)
   const n = r.daysToDue
-  if (r.quotedOn) return { date, hint: 'Quotation sent', tone: 'normal' }
+  // The Next step column already says "Quotation sent · Sent Thu 22 Oct": the date stands alone, neutral.
+  if (r.quotedOn) return { date, hint: '', tone: 'normal' }
   if (r.isOverdue) return { date, hint: daysOverdue(n ?? 0), tone: 'danger' }
   if (n === null) return { date, hint: '', tone: 'normal' }
   if (n <= 1) return { date, hint: dueWord(Math.max(0, n)), tone: 'warning' }

@@ -240,7 +240,7 @@ export function OrderHeaderBlock({
         nameHref={`/companies/${order.companyId}`}
         code={ref}
         breadcrumb={[{ label: 'Orders', to: '/orders' }, { label: ref, mono: true }]}
-        more={!isEngineer ? <OrderMoreMenu order={order} recordPayment={next !== null && paymentPlace === 'menu'} /> : undefined}
+        more={!isEngineer ? <OrderMoreMenu order={order} recordPayment={paymentPlace === 'menu'} /> : undefined}
         // an active order needs no chip: only Done or Cancelled is news. Never "Done" while the customer still owes (UX audit P1): an
         // order that is done but not paid shows its payment word ("Waiting for payment", "Overdue") instead.
         chips={

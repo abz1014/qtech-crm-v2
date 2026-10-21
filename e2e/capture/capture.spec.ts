@@ -366,9 +366,8 @@ test.describe('the other destinations', () => {
     await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue('2 nos')
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue(/^ultrasonic level transmitter/)
     await page.getByRole('textbox', { name: 'Description of item 1' }).fill('Ultrasonic level transmitter 0 to 8 m')
-    // On a phone, Save for later sits in the step bar's ⋯ menu.
-    await page.getByRole('region', { name: 'Next step' }).getByRole('button', { name: 'More options' }).click()
-    await page.getByRole('menuitem', { name: "Save for later (don't ask suppliers yet)" }).click()
+    // This suite runs at 1440: Save for later is a button in the step bar (on a phone it sits in the bar's ⋯ menu).
+    await page.getByRole('button', { name: "Save for later (don't ask suppliers yet)" }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
     await expect.poll(async () => (await must(rest<{ id: string }[]>('admin', `rfqs?company_id=eq.${s.co.id}&select=id&order=number`))).length).toBe(2)
     const created = (await must(rest<{ id: string }[]>('admin', `rfqs?company_id=eq.${s.co.id}&select=id&order=number.desc&limit=1`)))[0]

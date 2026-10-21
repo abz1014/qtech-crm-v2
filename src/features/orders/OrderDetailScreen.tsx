@@ -97,7 +97,7 @@ export default function OrderDetailScreen() {
     title: header.data ? orderRef(header.data.number) : 'Order',
     back: 'history',
     fallback: '/orders',
-    actions: header.data && !isEngineer ? <OrderMoreMenu order={header.data} touch recordPayment={next !== null && recordPaymentPlace(header.data, orderMoney.data, primary?.kind, role) === 'menu'} /> : undefined,
+    actions: header.data && !isEngineer ? <OrderMoreMenu order={header.data} touch recordPayment={recordPaymentPlace(header.data, orderMoney.data, primary?.kind, role) === 'menu'} /> : undefined,
     hideTabs: primary !== null,
   })
 
