@@ -410,8 +410,8 @@ test.describe('payments in and receivables (M02)', () => {
     expect(await axeViolations(page)).toEqual([])
     await page.goto('/money/receivables')
     await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('heading', { name: 'Who owes us', level: 2 })).toBeVisible()
-    // the four Money tabs wrap: none is off-screen, and nothing scrolls sideways
+    await expect(page.getByRole('heading', { name: 'Balances', level: 2 })).toBeVisible()
+    // round 3: one row of short tabs on a phone (Reports beside the page action): none is off-screen, nothing scrolls sideways
     for (const t of await page.getByRole('navigation', { name: 'Money views' }).getByRole('link').all()) await expect(t).toBeInViewport()
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
     await review(page, 'm02-receivables-375')
