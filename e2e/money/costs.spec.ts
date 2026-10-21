@@ -196,7 +196,7 @@ test.describe('Money > Month end > Things to check (admin)', () => {
     await expect(over).toContainText('Customer payments (15,000) exceed the order')
     await expect(over).toContainText('Critical.')
     await expect(over.getByRole('link', { name: 'View order' })).toHaveAttribute('href', `/orders/${o.id}`)
-    const basis = list.getByRole('listitem').filter({ hasText: ordRef(unknown.number) }).filter({ hasText: 'Price basis unknown' })
+    const basis = list.getByRole('listitem').filter({ hasText: ordRef(unknown.number) }).filter({ hasText: 'Is GST included?' })
     await expect(basis).toContainText('left out of margin, GST totals and net cash')
     // Critical items come before warnings.
     const severities = await list.getByRole('listitem').evaluateAll(els => els.map(e => e.getAttribute('data-severity')))

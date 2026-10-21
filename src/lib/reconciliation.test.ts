@@ -143,7 +143,7 @@ describe('v2 checks', () => {
   it('flags an order whose price basis is unknown, and says what that leaves out', () => {
     const e = run({ orders: [order({ basisUnknown: true })] })
     expect(e).toHaveLength(1)
-    expect(e[0]).toMatchObject({ category: 'Price basis unknown', severity: 'warning', orderId: 'o1' })
+    expect(e[0]).toMatchObject({ category: 'Is GST included?', severity: 'warning', orderId: 'o1' })
     expect(e[0].message).toContain('margin, GST totals and net cash')
   })
 

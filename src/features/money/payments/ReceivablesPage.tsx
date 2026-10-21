@@ -10,6 +10,7 @@ import { orderRef } from '@/lib/refs'
 import { agoDays, inDays } from '@/lib/timeWords'
 import { matchesAllWords, useQueryParamText } from '@/lib/useQueryParamText'
 import { useSession } from '@/app/session'
+import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
@@ -194,7 +195,25 @@ export function ReceivablesPage() {
   }
 
   return (
-    <MoneyFrame active="receivables">
+    <MoneyFrame
+      active="receivables"
+      actions={
+        // Phone: the panel (and its green Copy and mark reminded) is a sheet, so the page's one green button opens it on the
+        // most overdue order. Desktop has the panel beside the table instead.
+        cards && mostOverdue?.state === 'overdue' ? (
+          <Button
+            variant="primary"
+            size="touch"
+            onClick={() => {
+              setPicked(mostOverdue.orderId)
+              setSheet(true)
+            }}
+          >
+            Send a reminder
+          </Button>
+        ) : undefined
+      }
+    >
       {/* Phone: the key fact stays in view while the cards scroll (the four tiles took half the screen). */}
       <p data-testid="owed-line" className="sticky top-0 z-10 -mx-4 flex flex-wrap items-baseline gap-x-3 border-b bg-canvas px-4 py-2 text-base sm:hidden">
         <span>
