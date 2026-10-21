@@ -23,9 +23,17 @@ test('admin adds a person on a phone', async ({ page }) => {
   await expect(page).toHaveURL(/\/today$/)
 
   await page.goto('/settings/team')
-  const add = page.getByRole('button', { name: /^Add( person)?$/ }).first()
+  // one full-width "Add person" at the top of the page (the small bar "Add" is gone), 44 px tall, nothing on top of it
+  const add = page.getByRole('button', { name: 'Add person' })
+  await expect(add).toHaveCount(1)
   await expect(add).toBeVisible()
   await expect(add).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Add', exact: true })).toHaveCount(0)
+  const box = (await add.boundingBox())!
+  expect(box.height).toBeGreaterThanOrEqual(44)
+  expect(box.width).toBeGreaterThan(page.viewportSize()!.width * 0.8)
+  const hit = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('button')?.textContent ?? '', [box.x + box.width / 2, box.y + box.height / 2])
+  expect(hit).toContain('Add person')
   await add.tap()
 
   const dialog = page.getByRole('dialog', { name: 'Add person' })

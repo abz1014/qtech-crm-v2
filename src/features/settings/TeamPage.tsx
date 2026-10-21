@@ -70,16 +70,9 @@ export function TeamPage() {
     setFilter('all')
   }
 
-  // Phone: the shared bar becomes the back bar of the mockup (chevron back to the Settings list, "Team", a primary Add).
-  useMobileBar({
-    title: 'Team',
-    back: '/settings',
-    actions: (
-      <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading || team.isError} className="h-9">
-        Add
-      </Button>
-    ),
-  })
+  // Phone: the shared bar is the back bar (chevron back to the Settings list, "Team"). Add person is NOT in the bar: the owner
+  // could not find or press the small bar "Add" on Android (2026-10-22), so it is a full-width 44 px button at the top of the page.
+  useMobileBar({ title: 'Team', back: '/settings' })
 
   // A deactivated person's row is quiet: muted ink in every cell and a neutral avatar (the mockup's is-dim row).
   // Initials stay white on it, so it must be dark enough for 4.5:1 (neutral-400 gave 3.4:1 and failed Lighthouse color-contrast).
@@ -156,12 +149,13 @@ export function TeamPage() {
 
   return (
     <div className="grid content-start gap-4">
-      {/* On a phone the h1 is read but not drawn (PageHeader: max-md:sr-only; the bar says Team), and Add lives in the bar. */}
+      {/* On a phone the h1 is read but not drawn (PageHeader: max-md:sr-only; the bar says Team); Add person is full width, 44 px. */}
       <PageHeader
         title="Team"
+        className="max-md:[&>div:last-child]:w-full"
         lede={<span className="max-md:hidden">Everyone who can sign in to Q-Tech CRM. Passwords are created and reset here, and shown once.</span>}
         primary={
-          <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading || team.isError} className="max-md:hidden">
+          <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading || team.isError} className="max-md:h-touch max-md:w-full">
             Add person
           </Button>
         }
