@@ -164,7 +164,8 @@ create schema qtech_private;
 comment on schema qtech_private is
   '0081: not exposed by the API. PostgREST''s pre-request function and the order sums behind v_order_items_total.';
 revoke all on schema qtech_private from public;
-grant usage on schema qtech_private to anon, authenticated, qtech_engineer;
+-- PostgREST runs the pre-request as whichever role the request has: anon, authenticated or service_role.
+grant usage on schema qtech_private to anon, authenticated, service_role, qtech_engineer;
 
 -- No SET clause: SET LOCAL ROLE must outlive the function (a SET clause only scopes its own variable, but nothing here needs one;
 -- every name is schema-qualified).
@@ -174,13 +175,16 @@ language plpgsql
 security invoker
 as $$
 begin
-  if current_user = 'authenticated' and (select public.current_user_role()) = 'engineer' then
-    perform pg_catalog.set_config('role', 'qtech_engineer', true);
+  -- Nested, not AND: only authenticated may run current_user_role() (anon and service_role have no execute on it).
+  if current_user = 'authenticated' then
+    if (select public.current_user_role()) = 'engineer' then
+      perform pg_catalog.set_config('role', 'qtech_engineer', true);
+    end if;
   end if;
 end;
 $$;
 revoke all on function qtech_private.pre_request() from public;
-grant execute on function qtech_private.pre_request() to anon, authenticated;
+grant execute on function qtech_private.pre_request() to anon, authenticated, service_role;
 comment on function qtech_private.pre_request() is
   '0081: PostgREST db-pre-request. An engineer''s request runs as qtech_engineer (no prices); everyone else is untouched.';
 

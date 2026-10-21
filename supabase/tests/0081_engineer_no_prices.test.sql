@@ -68,8 +68,18 @@ select ok(exists (select 1 from pg_db_role_setting s join pg_roles r on r.oid = 
                   where r.rolname = 'authenticator' and 'pgrst.db_pre_request=qtech_private.pre_request' = any (s.setconfig)),
   'the data API runs qtech_private.pre_request before every request');
 select ok(has_function_privilege('anon', 'qtech_private.pre_request()', 'execute')
-      and has_function_privilege('authenticated', 'qtech_private.pre_request()', 'execute'),
-  'every API role can run the pre-request (it does nothing for anon)');
+      and has_function_privilege('authenticated', 'qtech_private.pre_request()', 'execute')
+      and has_function_privilege('service_role', 'qtech_private.pre_request()', 'execute')
+      and has_schema_privilege('anon', 'qtech_private', 'usage') and has_schema_privilege('service_role', 'qtech_private', 'usage'),
+  'every API role (anon, authenticated, service_role) can run the pre-request');
+set local role anon;
+select lives_ok($$select qtech_private.pre_request()$$, 'the pre-request does nothing for anon (and does not fail)');
+select is(current_user::text, 'anon', 'anon stays anon');
+reset role;
+set local role service_role;
+select lives_ok($$select qtech_private.pre_request()$$, 'nor for the service role');
+select is(current_user::text, 'service_role', 'the service role stays itself');
+reset role;
 select ok(not exists (select 1 from pg_proc p where p.pronamespace = 'qtech_private'::regnamespace and p.prosecdef),
   'nothing in qtech_private is SECURITY DEFINER');
 
