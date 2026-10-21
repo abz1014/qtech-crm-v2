@@ -104,8 +104,8 @@ test.describe('companies list search (audit F1)', () => {
 
     await openAs(page, 'sales', '/companies')
     await expect(page.getByRole('heading', { name: 'Companies', level: 1 })).toBeVisible()
-    const search = page.getByRole('textbox', { name: 'Search companies' })
-    await expect(search).toHaveAttribute('placeholder', 'Search companies')
+    const search = page.getByRole('textbox', { name: 'Search companies or contacts' })
+    await expect(search).toHaveAttribute('placeholder', 'Search companies or contacts')
 
     await search.fill(`rukhsana${tag}`)
     const row = page.getByRole('row', { name: new RegExp(company.name) })
@@ -168,18 +168,23 @@ test.describe('company page', () => {
 
     await openAs(page, 'sales', `/companies/${company.id}`)
     const siteRegion = page.getByRole('region', { name: 'Main plant' })
-    await expect(siteRegion.getByRole('columnheader', { name: 'What' })).toBeVisible()
+    await expect(siteRegion.getByText('What', { exact: true })).toBeVisible() // the list's column words
     await expect(siteRegion.getByText('Furnace zone thermocouples and transmitters')).toBeVisible()
-    await expect(siteRegion.getByText(/quotation due \w{3} \d/)).toBeVisible() // weekday and day, as drawn
+    await expect(siteRegion.getByText(/^Quotation due \d{1,2} \w{3}$/)).toBeVisible() // sentence case, like every state (round 3)
     await expect(siteRegion.getByText('Compressed air flow meters')).toBeVisible()
     await expect(siteRegion.getByText('+ 1 more')).toBeVisible()
-    await expect(siteRegion.getByText('no reply from customer')).toBeVisible()
-    const orderRow = siteRegion.getByRole('row', { name: /Annealing lehr instrumentation/ })
+    await expect(siteRegion.getByText('No reply from customer')).toBeVisible()
+    const orderRow = siteRegion.getByRole('listitem').filter({ hasText: 'Annealing lehr instrumentation' })
     await expect(orderRow.getByText('Delivered')).toBeVisible()
     // one state per row: the goods word; invoicing is on the order page, not repeated here
     await expect(orderRow.getByText('To invoice')).toHaveCount(0)
     // Repeat order is live (O02): it opens the New order dialog with this order already chosen (its journey is in e2e/orders/repeat.spec.ts).
-    await expect(orderRow.getByRole('button', { name: /Repeat order/ })).toBeEnabled()
+    const repeat = orderRow.getByRole('button', { name: /Repeat order/ })
+    await expect(repeat).toBeEnabled()
+    // never clipped: the whole button is inside the site's panel (it was cut to "Re" at 1366)
+    const [btn, panel] = await Promise.all([repeat.boundingBox(), siteRegion.boundingBox()])
+    expect(btn!.x + btn!.width).toBeLessThanOrEqual(panel!.x + panel!.width)
+    await expect(repeat).toContainText('Repeat order')
     await expect(siteRegion.getByRole('columnheader', { name: 'Their reference' })).toHaveCount(0)
     await review(page, 'parity-d-company-customer-1440')
   })
@@ -211,7 +216,7 @@ test.describe('company page', () => {
     await expect(l.getByText('Karachi calibration kit')).toHaveCount(0)
   })
 
-  test('a supplier shows what we know from its enquiries, with counts and no score', async ({ page }) => {
+  test('a supplier says its counts once under the name, with one Enquiries list and no score', async ({ page }) => {
     const supplier = await createCompany(uniqueName('Alpenmark Test'), { country: 'Austria' })
     const customer = await createCompany(uniqueName('Enquiring Customer'))
     const rfq = await createRfq(customer.id)
@@ -219,22 +224,24 @@ test.describe('company page', () => {
 
     await openAs(page, 'engineer', `/companies/${supplier.id}`)
     await expect(page.getByRole('heading', { name: supplier.name, level: 1 })).toBeVisible()
-    const what = page.getByRole('region', { name: 'What we know' })
-    await expect(what.getByText('Asked once · no replies')).toBeVisible()
-    await expect(page.getByTestId('supplier-record-line')).toHaveText('Asked once · no replies') // the same counts, once, under the name
-    await expect(page.getByRole('row', { name: new RegExp(rfqRef(rfq.number)) })).toContainText('No reply')
-    expect(await what.innerText()).not.toMatch(/score|rating|rank|%/i)
+    const line = page.getByTestId('supplier-record-line')
+    await expect(line).toHaveText('Asked once · no replies') // the counts, once, under the name ("What we know" is gone, round 3)
+    const enquiries = page.getByRole('region', { name: 'Enquiries' })
+    await expect(enquiries.getByRole('listitem').filter({ hasText: rfqRef(rfq.number) })).toContainText('No reply')
+    expect(await line.innerText()).not.toMatch(/score|rating|rank|%/i)
+    for (const gone of ['What we know', 'Recent quotes', 'Recent enquiries']) await expect(page.getByRole('heading', { name: gone, exact: true })).toHaveCount(0)
 
-    // The useful history comes first: Recent quotes and Deliveries, then the counts, then every enquiry.
+    // The useful history comes first: Enquiries, then Deliveries; sites and details fold under it.
     const top = async (name: string) => (await page.getByRole('heading', { name, level: 2, exact: true }).boundingBox())?.y ?? -1
-    const order = [await top('Recent quotes'), await top('Deliveries'), await top('What we know'), await top('Recent enquiries')]
+    const order = [await top('Enquiries'), await top('Deliveries')]
     expect(order.every(y => y >= 0)).toBe(true)
     expect([...order].sort((a, b) => a - b)).toEqual(order)
+    await expect(page.getByText('More about this supplier')).toBeVisible()
 
     // The rules behind the numbers are behind the (i), not printed on the page.
     await expect(page.getByText('With so few enquiries')).toHaveCount(0)
     await expect(page.getByText(/Where this comes from/)).toHaveCount(0)
-    await what.getByRole('button', { name: 'About these numbers' }).click()
+    await line.getByRole('button', { name: 'About these numbers' }).click()
     await expect(page.getByRole('dialog', { name: 'About these numbers' })).toContainText('With so few enquiries these are facts, not a pattern.')
     await review(page, 'company-supplier-1440')
     await page.keyboard.press('Escape')
@@ -409,7 +416,7 @@ test.describe('review screenshots (only with REVIEW_DIR)', () => {
       await expect(page.getByRole('heading', { name: customer.name, level: 1 })).toBeVisible()
       await review(page, `company-customer-${label}`)
       await page.goto(`/companies/${supplier.id}`)
-      await expect(page.getByRole('heading', { name: 'What we know' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Enquiries', exact: true })).toBeVisible()
       await review(page, `company-supplier-${label}`)
       await context.close()
     })

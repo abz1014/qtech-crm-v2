@@ -27,8 +27,8 @@ import { useToast } from '@/ui/useToast'
  * contact's phone number (companySearch.ts); the filter narrows by role. A row found through a contact
  * says which one. "New company" opens the one-dialog inline create, and /companies?new=1 (the command
  * palette's "New company") opens it too. The search text lives in `?q=` (consistency spec 3.1), so a reload
- * or a shared link keeps it. "Last activity" (R2-19) is the later of the last RFQ received and the last order,
- * worked out from the rows the RFQs and Orders counts already read.
+ * or a shared link keeps it. "Last activity" (R2-19) is the latest RFQ, enquiry, order or supplier order,
+ * from the rows the RFQs and Orders counts already read (listActivity.ts: a supplier counts the RFQs it was asked about).
  */
 type Filter = 'all' | 'customers' | 'suppliers' | 'prospects'
 
@@ -38,7 +38,8 @@ const matches: Record<Filter, (r: CompanyListRow) => boolean> = {
   all: () => true,
   customers: r => r.role === 'customer' || r.role === 'both',
   suppliers: r => r.role === 'supplier' || r.role === 'both',
-  prospects: r => r.role === 'prospect',
+  // a company with no RFQ, order or enquiry yet is a prospect too (it shows the Prospect tag)
+  prospects: r => r.role === 'prospect' || r.role === null,
 }
 
 export function CompaniesPage() {
@@ -110,7 +111,7 @@ export function CompaniesPage() {
         sortable: true,
         width: 140,
         hideBelowMd: true,
-        cell: r => (r.lastActivity ? <span className="num">{formatShortDate(r.lastActivity, today)}</span> : <span className="text-fg-muted">None yet</span>),
+        cell: r => (r.lastActivity ? <span className="num">{formatShortDate(r.lastActivity, today)}</span> : <span className="text-fg-muted">No activity yet</span>),
       },
     ],
     [today],
@@ -155,6 +156,7 @@ export function CompaniesPage() {
               <PlaceLine row={r} />
               <Role row={r} />
             </div>
+            <span className="num text-sm text-fg-muted">{r.lastActivity ? `Last: ${formatShortDate(r.lastActivity, today)}` : 'No activity yet'}</span>
           </div>
         )}
         defaultSort={{ id: 'name', dir: 'asc' }}
@@ -168,9 +170,11 @@ export function CompaniesPage() {
         toolbar={
           // min-w-0: on a phone the filter scrolls inside its own track instead of pushing the search field past the edge.
           <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
-            <TableFilter label="Search companies" hint="Finds a company by name, contact, phone or city." value={text} onChange={v => setText(v)} />
+            <TableFilter label="Search companies or contacts" hint="Finds a company by name, city, or a contact's name or phone." value={text} onChange={v => setText(v)} />
             <SegmentedControl
               aria-label="Show"
+              // wraps onto a second line on a narrow phone instead of scrolling sideways
+              className="flex-wrap overflow-x-visible"
               value={filter}
               onValueChange={v => setFilter(v as Filter)}
               options={[
@@ -263,5 +267,5 @@ function PlaceLine({ row }: { row: Shown }) {
 }
 
 function Role({ row }: { row: Shown }) {
-  return row.role ? <RoleChip role={row.role} /> : <span className="text-sm text-fg-muted">No activity yet</span>
+  return <RoleChip role={row.role ?? 'prospect'} />
 }
