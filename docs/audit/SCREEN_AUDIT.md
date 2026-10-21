@@ -79,12 +79,18 @@ All counts are of **visible** elements: a box larger than 1 px that `checkVisibi
 |---|---|---|
 | Primary buttons | Buttons and links in `<main>` drawn as the primary variant: class `bg-primary` (`src/ui/Button.tsx`), `data-variant="primary"`, or the primary background colour; enabled ones only (a disabled primary is drawn grey and is listed apart, marked "disabled"). The top bar's Capture button is counted apart ("in chrome") | at most 1 (plan step 2) |
 | Header chips | Status chips inside the page header: the `<header>` that holds the page's `<h1>`, else a band from the `<h1>` to 96 px under it. A chip is a `StatusBadge` (`[data-status]`) or any small inline bordered rounded label (14 to 32 px tall, 1 to 48 characters, not a control, not `<kbd>`); nested chips count once | at most 2 (plan step 2) |
-| Characters at 14 px or more | Share of the visible characters whose computed font size is 14 px or larger (under 14, 14 to 15.9 and 16 and over are all recorded, with a per-size histogram) | at least 90% |
+| Characters at 14 px or more | Share of the visible characters whose computed font size is 14 px or larger (under 14, 14 to 15.9 and 16 and over are all recorded, with a per-size histogram) | at least 95% (rubric-10) |
 | Sideways scroll | The document or `<main>` is wider than the viewport; the widest elements not inside their own scroller are listed | none |
 | axe | axe-core with WCAG 2.2 AA plus best practice, as the E2E suites run it (`e2e/support/axe.ts`): failing nodes and rules | 0 |
 | Phone tap targets | On viewports under 768 px (emulated as a touch phone, so `pointer: coarse` applies): every link, button, input, tab, radio, checkbox, menu item and option; size is the smaller side of its box (a native control takes its label's box). Inline links inside a sentence are left out (WCAG 2.5.8) | 0 under 44 px |
 | Navigation strips | `nav` landmarks and tab lists visible above the fold, outside dialogs, breadcrumbs and pagers left out | at most 2 (plan step 3) |
 | Clipped text | Elements whose own text is wider or taller than their box with overflow hidden or clipped, or an ellipsis | 0 |
+| Green buttons, whole screen | Primary buttons in the page plus the top bar (`inMain + inChrome`) | exactly 1 (rubric-10) |
+| Actions above the fold in the page | Buttons and links inside `<main>` that can be seen without scrolling (the top bar and tabs left out) | at most 8 (rubric-10) |
+| Text over text | Two visible text lines on the same layer (the page, one dialog or popover, one fixed or sticky bar) whose painted boxes, clipped to what can be seen, cross by more than 3 px each way and 15% of the smaller box | 0 |
+| Boxes that scroll sideways (phones) | Elements with `overflow-x: auto` or `scroll` whose content is wider than they are (a filter strip, a table wrapper), outside text fields | 0 |
+| Highlighted-row contrast | Text whose nearest opaque background is a highlight (`bg-selected`, `bg-sunken` or a tone tint, read from the app's classes): 4.5:1 for a control label or a heading, 7:1 for everything else; disabled controls exempt | 0 (rubric-10) |
+| Phone text fields | On viewports under 768 px: visible inputs, textareas, selects and editable boxes whose computed text is under 16 px | 0 (rubric-10) |
 | Info only | Buttons and links (fold and page), words (fold and page), chips on the page, most table columns, page length in screens | - |
 
 Known limits: a tap area widened by a pseudo-element (the InfoTip's 44 px area on touch) is measured by its box, so it reads small;

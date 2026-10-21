@@ -16,8 +16,8 @@ export interface Metrics {
   viewport: { width: number; height: number }
   /** Height of the whole page if nothing scrolled inside it (document or <main>). */
   contentHeight: number
-  /** Visible elements with role button or link. */
-  actions: { total: number; aboveFold: number; buttons: number; links: number }
+  /** Visible elements with role button or link. mainAboveFold: those inside <main> that can be seen without scrolling. */
+  actions: { total: number; aboveFold: number; buttons: number; links: number; mainAboveFold?: number }
   /**
    * Primary-variant buttons and links (class bg-primary, data-variant="primary" or the primary background colour). inMain counts the
    * enabled ones in <main>; disabled ones (drawn grey) are counted in disabledInMain; the top bar's are inChrome.
@@ -46,6 +46,20 @@ export interface Metrics {
   nav: { levels: number; labels: string[] }
   /** Elements whose own text is cut off: wider (or taller) than their box with overflow hidden, clip or an ellipsis. */
   clipped: { count: number; ellipsis: number; samples: { text: string; axis: 'x' | 'y'; ellipsis: boolean }[] }
+  /**
+   * Text drawn over other text: two visible text lines on the same layer (the page, one dialog, one fixed bar) whose painted boxes
+   * cross by more than 3 px each way and 15% of the smaller box (a key hint over a label, a reference over an item name).
+   */
+  overlap?: { count: number; samples: string[] }
+  /** Boxes that scroll sideways inside the page (a filter strip, a table wrapper) because their content is wider than they are. */
+  strips?: { count: number; samples: string[] }
+  /**
+   * Text on a highlighted background (selected row, hover row or table header, a tone tint) under its floor: 4.5:1 for a control's
+   * label or a heading, 7:1 for everything else (rubric "Contrast"). Disabled controls are exempt.
+   */
+  contrastHi?: { checked: number; failing: number; samples: string[] }
+  /** Phones only: visible text fields (input, textarea, select, editable box) whose text is under 16 px (iOS zooms on a tap). */
+  inputs?: { checked: number; under16: number; samples: string[] } | null
 }
 
 export function collect(opts: { phone: boolean }): Metrics {
@@ -200,7 +214,7 @@ export function collect(opts: { phone: boolean }): Metrics {
     const cls = typeof (el as HTMLElement).className === 'string' ? (el as HTMLElement).className : ''
     return /(^|\s)bg-primary(\s|$)/.test(cls) || el.getAttribute('data-variant') === 'primary' || (!transparent(primaryBg) && style(el).backgroundColor === primaryBg)
   }
-  const actions: Metrics['actions'] = { total: 0, aboveFold: 0, buttons: 0, links: 0 }
+  const actions: Metrics['actions'] = { total: 0, aboveFold: 0, buttons: 0, links: 0, mainAboveFold: 0 }
   const primary: Metrics['primary'] = { inMain: 0, inMainAboveFold: 0, disabledInMain: 0, inChrome: 0, labels: [] }
   for (const el of Array.from(document.querySelectorAll('button, a[href], [role="button"], [role="link"]'))) {
     const role = ROLE_OF(el)
@@ -210,6 +224,7 @@ export function collect(opts: { phone: boolean }): Metrics {
     else actions.links++
     const fold = inFold(el)
     if (fold) actions.aboveFold++
+    if (fold && main?.contains(el)) actions.mainAboveFold = (actions.mainAboveFold ?? 0) + 1
     if (!isPrimary(el)) continue
     const inMain = Boolean(main?.contains(el))
     if (!inMain) {
@@ -420,6 +435,153 @@ export function collect(opts: { phone: boolean }): Metrics {
     if (clipped.samples.length < 12) clipped.samples.push({ text: (el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 60), axis, ellipsis })
   }
 
+  // ---------------------------------------------------------------- text over text, highlighted-row contrast
+  // A layer is what moves or sits together: a dialog, a popover, a fixed or sticky bar, or the page. Text on two layers may cross
+  // (the page scrolls under a sticky bar); text on one layer must not.
+  const LAYER = '[role="dialog"], [role="alertdialog"], [role="tooltip"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]'
+  const layers = new Map<Element, Element>()
+  const layerOf = (el: Element): Element => {
+    const hit = layers.get(el)
+    if (hit) return hit
+    let l: Element = document.body
+    for (let p: Element | null = el; p && p !== document.body; p = p.parentElement) {
+      const pos = style(p).position
+      if (p.matches(LAYER) || pos === 'fixed' || pos === 'sticky') {
+        l = p
+        break
+      }
+    }
+    layers.set(el, l)
+    return l
+  }
+  const parseColour = (c: string): [number, number, number, number] | null => {
+    const m = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+%?))?\s*\)$/.exec(c)
+    if (!m) return null
+    const a = m[4] === undefined ? 1 : m[4].endsWith('%') ? parseFloat(m[4]) / 100 : parseFloat(m[4])
+    return [Number(m[1]), Number(m[2]), Number(m[3]), a]
+  }
+  const lum = ([r, g, b]: number[]) => {
+    const f = (v: number) => {
+      const x = v / 255
+      return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4
+    }
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+  }
+  const ratio = (a: number[], b: number[]) => {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p)
+    return (x + 0.05) / (y + 0.05)
+  }
+  // The highlighted backgrounds, read from the app's own classes so a token change is followed.
+  const HIGHLIGHT_CLASSES = ['bg-selected', 'bg-sunken', 'bg-tone-neutral-bg', 'bg-tone-info-bg', 'bg-tone-success-bg', 'bg-tone-warning-bg', 'bg-tone-danger-bg']
+  const highlight = new Map<string, string>()
+  for (const cls of HIGHLIGHT_CLASSES) {
+    const p = document.createElement('div')
+    p.className = cls
+    p.style.cssText = 'position:absolute;left:-9999px;top:0;width:4px;height:4px'
+    document.body.appendChild(p)
+    const bg = getComputedStyle(p).backgroundColor
+    p.remove()
+    if (!transparent(bg) && !highlight.has(bg)) highlight.set(bg, cls.slice(3))
+  }
+  const bgOf = new Map<Element, string | null>()
+  const backgroundOf = (el: Element | null): string | null => {
+    if (!el || el === document.documentElement) return null
+    const hit = bgOf.get(el)
+    if (hit !== undefined) return hit
+    const c = style(el).backgroundColor
+    const col = parseColour(c)
+    const v = col && col[3] >= 0.95 ? c : backgroundOf(el.parentElement)
+    bgOf.set(el, v)
+    return v
+  }
+  const LABEL_LIKE = 'button, a[href], [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="option"], [role="radio"], [role="checkbox"], [role="switch"], label, h1, h2, h3, h4, th, [role="columnheader"]'
+  type Line = { el: Element; layer: Element; b: Box; text: string }
+  const lines: Line[] = []
+  const contrastHi = { checked: 0, failing: 0, samples: [] as string[] }
+  const failedEls = new Set<Element>()
+  const walker2 = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+  for (let node = walker2.nextNode(); node; node = walker2.nextNode()) {
+    const t = (node.nodeValue ?? '').replace(/\s+/g, ' ').trim()
+    if (!t || !/[\p{L}\p{N}]/u.test(t)) continue
+    const el = node.parentElement
+    if (!el || SKIP.has(el.tagName) || el.closest('svg') || !visible(el)) continue
+    range.selectNodeContents(node)
+    const seenBox = contentRegionOf(el)
+    for (const r of Array.from(range.getClientRects())) {
+      const b = inter(boxOf(r), seenBox)
+      if (b.r - b.l > 1 && b.b - b.t > 1) lines.push({ el, layer: layerOf(el), b, text: t })
+    }
+    // contrast on a highlighted background
+    const bg = backgroundOf(el)
+    if (!bg || !highlight.has(bg) || failedEls.has(el)) continue
+    if (el.closest(':disabled, [aria-disabled="true"], [data-disabled]')) continue
+    const fg = parseColour(style(el).color)
+    const bgc = parseColour(bg)
+    if (!fg || !bgc) continue
+    const a = fg[3]
+    const painted = [0, 1, 2].map(i => fg[i] * a + bgc[i] * (1 - a))
+    const need = el.closest(LABEL_LIKE) ? 4.5 : 7
+    const got = ratio(painted, bgc)
+    contrastHi.checked++
+    if (got + 0.005 < need) {
+      failedEls.add(el)
+      contrastHi.failing++
+      if (contrastHi.samples.length < 8) contrastHi.samples.push(`"${t.slice(0, 30)}" ${got.toFixed(2)}:1 on ${highlight.get(bg)} (needs ${need}:1)`)
+    }
+  }
+  const overlap = { count: 0, samples: [] as string[] }
+  {
+    const sorted = lines.sort((p, q) => p.b.t - q.b.t)
+    const reported = new Set<string>()
+    for (let i = 0; i < sorted.length; i++) {
+      const A = sorted[i]
+      for (let j = i + 1; j < sorted.length; j++) {
+        const B = sorted[j]
+        if (B.b.t >= A.b.b) break
+        if (A.el === B.el || A.layer !== B.layer) continue
+        const w = Math.min(A.b.r, B.b.r) - Math.max(A.b.l, B.b.l)
+        const h = Math.min(A.b.b, B.b.b) - Math.max(A.b.t, B.b.t)
+        if (w <= 3 || h <= 3) continue
+        const small = Math.min((A.b.r - A.b.l) * (A.b.b - A.b.t), (B.b.r - B.b.l) * (B.b.b - B.b.t))
+        if (w * h < 0.15 * small) continue
+        const key = [A.text, B.text].sort().join('|')
+        if (reported.has(key)) continue
+        reported.add(key)
+        overlap.count++
+        if (overlap.samples.length < 8) overlap.samples.push(`"${A.text.slice(0, 30)}" over "${B.text.slice(0, 30)}"`)
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- boxes that scroll sideways inside the page
+  const strips = { count: 0, samples: [] as string[] }
+  for (const el of Array.from(document.querySelectorAll('body *'))) {
+    if (el === main || el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'PRE') continue
+    const ox = style(el).overflowX
+    if (ox !== 'auto' && ox !== 'scroll') continue
+    if (el.clientWidth <= 0 || el.scrollWidth <= el.clientWidth + 1 || !visible(el)) continue
+    strips.count++
+    const kind = el.querySelector('table, [role="table"], [role="grid"]') ? 'table' : el.matches('[role="tablist"], [role="radiogroup"]') || el.querySelector('[role="tab"], [role="radio"]') ? 'strip' : 'box'
+    if (strips.samples.length < 6) strips.samples.push(`${kind}: ${describe(el)} ${el.scrollWidth}>${el.clientWidth}px`)
+  }
+
+  // ---------------------------------------------------------------- phone text fields under 16 px
+  let inputs: Metrics['inputs'] = null
+  if (opts.phone) {
+    inputs = { checked: 0, under16: 0, samples: [] }
+    const sel =
+      'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]), textarea, select, [contenteditable="true"], [contenteditable=""]'
+    for (const el of Array.from(document.querySelectorAll(sel))) {
+      if (!visible(el)) continue
+      inputs.checked++
+      const px = parseFloat(style(el).fontSize)
+      if (px < 15.95) {
+        inputs.under16++
+        if (inputs.samples.length < 6) inputs.samples.push(`${describe(el)} ${px}px`)
+      }
+    }
+  }
+
   const contentHeight = Math.round(Math.max(se.scrollHeight, main ? main.scrollHeight + (vh - main.clientHeight) : 0))
 
   return {
@@ -439,5 +601,9 @@ export function collect(opts: { phone: boolean }): Metrics {
     tap,
     nav,
     clipped,
+    overlap,
+    strips,
+    contrastHi,
+    inputs,
   }
 }
