@@ -620,7 +620,7 @@ function howTo(item: TodayItem): string {
     case 'fbr_attention':
       return 'The GST on these invoices is not deposited with FBR and the month is over, or an FBR step was recorded out of order. Open Invoices & GST, which is filtered to them.'
     case 'tcs_not_sent':
-      return 'These invoices have no courier (TCS) date three working days after the invoice. Open Invoices & GST, tick them and press "Sent by TCS today" once.'
+      return 'These invoices have no courier (TCS) date three working days after the invoice. Open Invoices & GST, tick them and press "Sent to customer today" once.'
     case 'job_commissioning':
       return 'You are an engineer on this order. Open it to see the site contact and the notes, then "Mark done today" when the commissioning is finished, or change the planned date.'
     case 'job_on_site':

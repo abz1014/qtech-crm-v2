@@ -75,20 +75,20 @@ describe('Money tabs and landing', () => {
     expect(screen.getByRole('link', { name: /^Who owes us/ })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('admin has four tabs in the decided order, and one strip only', async () => {
+  it('admin has five tabs in the decided order (Reports last), one strip only, and the h1 names the tab', async () => {
     at('/money/receivables')
     await screen.findByRole('navigation', { name: 'Money views' })
-    expect(tabs()).toEqual(['Who owes us', 'Invoices & GST', 'Expenses', 'Month end'])
+    expect(tabs()).toEqual(['Who owes us', 'Invoices & GST', 'Expenses', 'Month end', 'Reports'])
     expect(screen.getAllByRole('navigation')).toHaveLength(1)
     expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/money/reports')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Who owes us')
   })
 
   it('sales see the same names (no "Order balances"), two tabs, and Reports', async () => {
     at('/money/receivables', 'sales')
     await screen.findByRole('navigation', { name: 'Money views' })
-    expect(tabs()).toEqual(['Who owes us', 'Invoices & GST'])
+    expect(tabs()).toEqual(['Who owes us', 'Invoices & GST', 'Reports'])
     expect(screen.queryByText('Order balances')).toBeNull()
-    expect(screen.getByRole('link', { name: 'Reports' })).toBeInTheDocument()
   })
 })
 
@@ -96,8 +96,10 @@ describe('old addresses keep working', () => {
   it('a month-end report address opens the same report under Reports, with the month kept', async () => {
     at(`/money/month-end/pnl?month=${MONTH}`)
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(`/money/reports/pnl?month=${MONTH}`))
-    expect(await screen.findByRole('heading', { name: 'Profit and loss', level: 2 })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Back to Reports' })).toHaveAttribute('href', `/money/reports?month=${MONTH}`)
+    expect(await screen.findByRole('heading', { name: 'Profit and loss', level: 1 })).toBeInTheDocument()
+    // a report lights the Reports tab (round 3, M3), and the select says which report this is
+    expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByTestId('report-picker')).toHaveValue('pnl')
   })
 
   it('Margins and Exceptions still open, inside Month end, with their plain names', async () => {
@@ -168,7 +170,7 @@ describe('Month end checklist', () => {
     expect(within(margins).getByRole('link')).toHaveAttribute('href', '/money/margins?filter=paid-provisional')
     expect(screen.queryByTestId('check-uncategorised')).toBeNull()
     expect(screen.getByTestId('checks-summary')).toHaveTextContent('2 checks have something to look at')
-    await waitFor(() => expect(screen.getByTestId('checks-clear')).toHaveTextContent('6 checks are clear'))
+    await waitFor(() => expect(screen.getByTestId('checks-clear')).toHaveTextContent('5 checks are clear'))
     expect(screen.getByTestId('checks-clear')).toHaveTextContent('Expenses without a category')
     expect(screen.getByTestId('checks-clear')).toHaveTextContent('Things to check')
   })
@@ -194,22 +196,31 @@ describe('Month end checklist', () => {
   })
 })
 
-describe('Reports view', () => {
-  it('admin: the money reports for the month in whole rupees, and the enquiry reports', async () => {
+describe('Reports view (one report at a time)', () => {
+  it('admin: opens Profit and loss for the month; the select offers every report; Export CSV is the one green button', async () => {
     at(`/money/reports?month=${MONTH}`)
-    expect(await screen.findByRole('heading', { name: 'Reports', level: 2 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Money for June 2025' })).toBeInTheDocument()
-    const list = screen.getByRole('list', { name: 'Money reports' })
-    for (const t of ['Profit and loss', 'Expenses by category', 'Overdue by age', 'We owe suppliers', 'GST and FBR', 'Sales by person', 'Order margins'])
-      expect(within(list).getAllByText(t).length).toBeGreaterThan(0)
-    expect(screen.getByRole('heading', { name: 'Enquiries and customers' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(`/money/reports/pnl?month=${MONTH}`))
+    expect(await screen.findByRole('heading', { name: 'Profit and loss', level: 1 })).toBeInTheDocument()
+    const picker = screen.getByTestId('report-picker')
+    expect(within(picker).getAllByRole('option').map(o => o.textContent)).toEqual([
+      'Profit and loss',
+      'Money in and out',
+      'Expenses by category',
+      'Overdue by age',
+      'We owe suppliers',
+      'GST and FBR',
+      'Sales by person',
+      'Enquiries and customers',
+    ])
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('sales: only the enquiry reports, and no money report is requested', async () => {
     const db = at('/money/reports', 'sales')
-    expect(await screen.findByRole('heading', { name: 'Enquiries and customers' })).toBeInTheDocument()
-    expect(screen.queryByRole('list', { name: 'Money reports' })).toBeNull()
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/money/reports/enquiries'))
+    expect(await screen.findByRole('heading', { name: 'Enquiries and customers', level: 1 })).toBeInTheDocument()
+    expect(screen.queryByTestId('report-picker')).toBeNull()
     const targets = db.calls.map(c => c.target)
     for (const t of ['v_month_pnl', 'v_payment_net', 'v_month_expense_category', 'rpc:aging_as_of', 'rpc:payables_as_of', 'v_gst_month', 'v_month_team', 'v_order_money', 'rpc:month_end_status'])
       expect(targets, t).not.toContain(t)

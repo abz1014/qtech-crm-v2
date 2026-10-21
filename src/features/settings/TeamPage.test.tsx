@@ -105,8 +105,8 @@ describe('Team screen', () => {
     expect(await screen.findByText('Ayesha Rana')).toBeInTheDocument()
     expect(screen.getByText('You')).toBeInTheDocument()
     expect(within(screen.getByRole('table')).getAllByText('Deactivated').length).toBeGreaterThan(0)
-    // only the exception has a chip: no "Active" on every row (R2-14), and the switch carries no counts
-    expect(within(screen.getByRole('table')).queryByText('Active')).toBeNull()
+    // an active person reads "Active" as plain text (a blank cell read as missing, audit 2026-10-22); only the exception is a chip
+    expect(within(screen.getByRole('table')).getAllByText('Active')).toHaveLength(3)
     expect(screen.getByRole('radio', { name: 'Deactivated' })).toBeInTheDocument()
     expect(screen.getByText('4 people · 3 active, 1 deactivated')).toBeInTheDocument()
     expect(screen.getByText('Deactivated people keep their name on everything they created.')).toBeInTheDocument()

@@ -3,6 +3,7 @@
 
 import type { FxLatestRow } from '@/features/rfqs/api'
 import { REPLY_CURRENCIES } from '@/features/rfqs/lib/replyCurrency'
+import { formatRate } from '@/lib/money'
 
 export const CURRENCY_NAMES: Record<string, string> = {
   USD: 'US dollar',
@@ -81,6 +82,15 @@ export function autoRunStamp(createdAt: string): string {
 /** The words for where a rate came from. */
 export function sourceText(source: 'auto' | 'manual' | null): string {
   return source === 'manual' ? 'Entered by hand' : source === 'auto' ? 'Automatic' : 'No rate yet'
+}
+
+const cardDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' })
+
+/** A phone card's one line (audit 2026-10-22): "USD 280.50 · 22 Oct · by hand", "EUR 301.15 · 21 Oct · automatic", "JPY · no rate yet". */
+export function rateCardLine(r: Pick<RateRow, 'currency' | 'ratePkr' | 'asOf' | 'source'>): string {
+  if (r.ratePkr === null || r.asOf === null) return `${r.currency} · no rate yet`
+  const day = cardDay.format(new Date(`${r.asOf.slice(0, 10)}T00:00:00Z`))
+  return `${r.currency} ${formatRate(r.ratePkr)} · ${day} · ${r.source === 'manual' ? 'by hand' : 'automatic'}`
 }
 
 /** The rate bar on the RFQ page: one entry per currency that matters here (has a rate, or appears on a price). */

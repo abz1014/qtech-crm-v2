@@ -63,7 +63,7 @@ pwa: # weight=10 (no database reset)
   - 'vite.config.ts'
   - 'index.html'
   - 'public/**'
-perf: # weight=260 (Lighthouse, 7 screens x 2; installs lighthouse@12.8.2)
+perf: # weight=380 (Lighthouse: accessibility 7 screens x 2, performance 7 phone screens; installs lighthouse@12.8.2)
   - 'e2e/perf/**'
 journeys: # weight=120 (installs poppler; also runs on every change under src/** through `shared`)
   - 'e2e/journeys/**'

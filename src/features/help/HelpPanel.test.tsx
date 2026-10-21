@@ -67,7 +67,7 @@ describe('Help panel', () => {
     expect(box).toHaveFocus()
     await user.type(box, 'how do I psid')
     const answers = within(panel()).getByRole('region', { name: 'Answers' })
-    expect(within(answers).getByRole('button', { name: 'Mark invoices sent by TCS and deposited with FBR' })).toBeInTheDocument()
+    expect(within(answers).getByRole('button', { name: 'Mark invoices sent to the customer and deposited with FBR' })).toBeInTheDocument()
     await user.clear(box)
     await user.type(box, 'zebra')
     expect(within(panel()).getByRole('status')).toHaveTextContent('Nothing matches “zebra”')
