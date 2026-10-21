@@ -51,6 +51,12 @@ export default {
       status: { fg: v('status-fg'), bg: v('status-bg') },
     },
     borderColor: ({ theme }) => ({ ...theme('colors'), DEFAULT: v('border') }),
+    // Green TEXT reads --primary-text (darker than the button fill), so a link keeps 5:1+ on a selected row or a tint.
+    // text-primary-foreground (white on a green button) is unchanged.
+    textColor: ({ theme }) => ({
+      ...theme('colors'),
+      primary: { DEFAULT: v('primary-text'), hover: v('primary-active'), active: v('primary-active'), foreground: v('on-primary') },
+    }),
     spacing: {
       0: '0px',
       px: 'var(--hairline)',

@@ -1,13 +1,30 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { CalendarDays, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { Skeleton } from '@/ui/Skeleton'
 import { DateInput } from '@/ui/form/DateInput'
 
 /* The small parts every Month-end report is made of (g2-month-end: g-panel, the "By payment date" tag, Export CSV, loading and error). */
+
+/**
+ * The two profits (round 3, money correctness b): Profit and loss counts MONEY RECEIVED (payments net of GST) less costs paid in
+ * the month (v_month_pnl); Money in and out also shows profit ON INVOICES (v_month_profit). Both are right; they are labelled
+ * so they are never read as one number, and the same (i) explains the gap on both pages.
+ */
+export const TWO_PROFITS_LABEL = 'Why two profits?'
+export function TwoProfitsTip() {
+  return (
+    <InfoTip label={TWO_PROFITS_LABEL}>
+      Profit and loss counts money received in the month, GST taken out, less costs paid in the month. Money in and out also shows
+      profit on invoices: sales on their invoice date, less the costs of those orders. They differ when customers pay later than
+      they are invoiced, or a supplier is paid in another month.
+    </InfoTip>
+  )
+}
 
 export function ExportCsvButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   return (
@@ -55,15 +72,38 @@ export function Panel({
   )
 }
 
-/** The as-of date: typed or picked, empty again to go back to the month's end. */
-export function AsOfField({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
+/**
+ * The exact as-of date, behind "Change date" (round 3, M4: the month pager is the page's one date control). Closed: a quiet
+ * "Change date" button. Open, or a date chosen: the date field and "Back to month end".
+ */
+export function AsOfControl({ asOf, chosen, onChange }: { asOf: string; chosen: boolean; onChange: (iso: string | null) => void }) {
+  const [open, setOpen] = useState(false)
+  if (!open && !chosen) {
+    return (
+      <Button variant="quiet" icon={CalendarDays} onClick={() => setOpen(true)} className="max-md:h-touch">
+        Change date
+      </Button>
+    )
+  }
   return (
-    <label className="inline-flex items-center gap-2 text-xs text-fg-muted">
-      As of
-      <span className="w-[232px] shrink-0">
-        <DateInput aria-label="As of date" value={value} onChange={v => v && onChange(v)} defaultToday={false} className="h-[28px] text-xs" />
-      </span>
-    </label>
+    <span className="flex flex-wrap items-center gap-2">
+      <label className="inline-flex items-center gap-2 text-sm text-fg-2">
+        As of
+        <span className="w-[232px] shrink-0">
+          <DateInput aria-label="As of date" value={asOf} onChange={v => v && onChange(v)} defaultToday={false} />
+        </span>
+      </label>
+      <Button
+        variant="quiet"
+        onClick={() => {
+          onChange(null)
+          setOpen(false)
+        }}
+        className="max-md:h-touch"
+      >
+        Back to month end
+      </Button>
+    </span>
   )
 }
 

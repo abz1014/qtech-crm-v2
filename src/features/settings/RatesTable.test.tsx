@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RatesTable } from '@/features/settings/RatesTable'
-import { rateAgeLabel, sortRates, sourceLabel } from '@/features/settings/ratesModel'
+import { rateAgeLabel, ratesStatusLine, sortRates, sourceLabel } from '@/features/settings/ratesModel'
 import { SettingsHomePage } from '@/features/settings/SettingsHomePage'
 import type { FxLatestRow } from '@/features/rfqs/api'
 
@@ -76,16 +76,29 @@ describe('exchange rate table', () => {
 })
 
 describe('Settings home', () => {
-  it('has the Settings title, the rates card with its button, and the company profile card with View', () => {
+  it("is today's rates only (the side menu lists the pages), with a status line from the data and one link to add a rate", () => {
     render(
       <MemoryRouter>
         <SettingsHomePage />
       </MemoryRouter>,
     )
-    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
-    expect(screen.getByText('Company details for documents, and the rates used to compare prices in other currencies.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Open exchange rates/ })).toHaveAttribute('href', '/settings/exchange-rates')
-    expect(screen.getByRole('link', { name: /^View/ })).toHaveAttribute('href', '/settings/company')
-    expect(screen.getByRole('heading', { name: 'Company profile' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: "Today's exchange rates" })).toBeInTheDocument()
+    // RATES: 3 automatic (newest 26 Nov), 1 by hand
+    expect(screen.getByText('Last automatic update Thu 26 Nov. 1 rate entered by hand.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Add a rate or see history/ })).toHaveAttribute('href', '/settings/exchange-rates')
+    expect(screen.queryByRole('heading', { name: 'Company profile' })).toBeNull()
+    expect(screen.queryByText(/Updated every night/)).toBeNull()
+  })
+})
+
+describe('ratesStatusLine', () => {
+  const r = (asOf: string, source: string) => ({ asOf, source })
+  it('says what actually happened, never "updated every night" over rows entered by hand', () => {
+    expect(ratesStatusLine([])).toBe('No rates yet.')
+    expect(ratesStatusLine([r('2026-10-22', 'manual'), r('2026-10-22', 'manual')])).toBe('No automatic update yet. Rates entered by hand.')
+    expect(ratesStatusLine([r('2026-10-20', 'auto'), r('2026-10-22', 'auto')])).toBe('Last automatic update Thu 22 Oct.')
+    expect(ratesStatusLine([r('2026-10-21', 'auto'), r('2026-10-22', 'manual'), r('2026-10-22', 'manual')])).toBe(
+      'Last automatic update Wed 21 Oct. 2 rates entered by hand.',
+    )
   })
 })

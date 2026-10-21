@@ -5,6 +5,7 @@ import { paisaToFixed, sumPaisa } from '@/lib/money'
 import { fetchReceivablesList } from '@/features/money/payments/api'
 import type { RawInquiry, RawItem, RawLeg, RawLine, RawOrderItem, RawRfq, SupplierRecordRaw } from '@/features/companies/supplierRecord'
 import { phoneKey, type SearchContact } from '@/features/companies/companySearch'
+import { companyActivity } from '@/features/companies/listActivity'
 
 /*
  * Companies: every database call for this area (R01 reference implementation). This is the only
@@ -48,39 +49,43 @@ function asRole(r: string | null | undefined): CompanyRole | null {
   return r === 'customer' || r === 'supplier' || r === 'both' || r === 'prospect' ? r : null
 }
 
-/** Every company with its derived role, how many RFQs and orders it has, and its contacts for the search. Five light reads, joined here. */
+/**
+ * Every company with its derived role, how many RFQs and orders it has on either side (companyActivity: a supplier's are the
+ * RFQs it was asked about and the orders with a supplier order from it), and its contacts for the search. Seven light reads, joined here.
+ */
 export async function listCompanies(): Promise<CompanyListRow[]> {
   const db = requireSupabase()
-  const [companies, roles, rfqs, orders, contacts] = await Promise.all([
+  const [companies, roles, rfqs, orders, asks, legs, contacts] = await Promise.all([
     fetchAll<Pick<TableRow<'companies'>, 'id' | 'name' | 'country' | 'city' | 'updated_at'>>((from, to) =>
       db.from('companies').select('id, name, country, city, updated_at').order('name').range(from, to),
     ),
     fetchAll<Pick<ViewRow<'v_company_roles'>, 'company_id' | 'role'>>((from, to) =>
       db.from('v_company_roles').select('company_id, role').range(from, to),
     ),
-    fetchAll<{ company_id: string; received_on: string | null }>((from, to) => db.from('rfqs').select('company_id, received_on').range(from, to)),
-    fetchAll<{ company_id: string; ordered_on: string | null }>((from, to) => db.from('orders').select('company_id, ordered_on').range(from, to)),
+    fetchAll<{ id: string; company_id: string; received_on: string | null }>((from, to) =>
+      db.from('rfqs').select('id, company_id, received_on').order('id').range(from, to),
+    ),
+    fetchAll<{ id: string; company_id: string; ordered_on: string | null }>((from, to) =>
+      db.from('orders').select('id, company_id, ordered_on').order('id').range(from, to),
+    ),
+    fetchAll<{ supplier_id: string; rfq_id: string; sent_on: string | null }>((from, to) =>
+      db.from('supplier_inquiries').select('supplier_id, rfq_id, sent_on').not('sent_on', 'is', null).order('id').range(from, to),
+    ),
+    fetchAll<{ supplier_id: string | null; order_id: string; placed_on: string | null; created_at: string }>((from, to) =>
+      db.from('supplier_orders').select('supplier_id, order_id, placed_on, created_at').order('id').range(from, to),
+    ),
     fetchAll<Pick<TableRow<'contacts'>, 'company_id' | 'name' | 'phone'>>((from, to) =>
       // ordered by id: names repeat ("Accounts"), and only a unique order pages stably across 1000-row pages
       db.from('contacts').select('company_id, name, phone').order('id').range(from, to),
     ),
   ])
   const roleBy = new Map(roles.map(r => [r.company_id, asRole(r.role)]))
-  const count = (rows: { company_id: string }[]) => {
-    const m = new Map<string, number>()
-    for (const r of rows) m.set(r.company_id, (m.get(r.company_id) ?? 0) + 1)
-    return m
-  }
-  const rfqBy = count(rfqs)
-  const orderBy = count(orders)
-  // The same rows the counts come from: no extra request (R2-19). ISO dates compare as text.
-  const lastBy = new Map<string, string>()
-  const later = (id: string, day: string | null) => {
-    const d = day?.slice(0, 10)
-    if (d && d > (lastBy.get(id) ?? '')) lastBy.set(id, d)
-  }
-  for (const r of rfqs) later(r.company_id, r.received_on)
-  for (const o of orders) later(o.company_id, o.ordered_on)
+  const activity = companyActivity({
+    rfqs,
+    orders,
+    asks,
+    legs: legs.flatMap(l => (l.supplier_id ? [{ supplier_id: l.supplier_id, order_id: l.order_id, on: l.placed_on ?? toBusinessDate(new Date(l.created_at)) }] : [])),
+  })
   const contactsBy = new Map<string, SearchContact[]>()
   for (const p of contacts) {
     const list = contactsBy.get(p.company_id) ?? []
@@ -93,9 +98,9 @@ export async function listCompanies(): Promise<CompanyListRow[]> {
     country: c.country,
     city: c.city,
     role: roleBy.get(c.id) ?? null,
-    rfqCount: rfqBy.get(c.id) ?? 0,
-    orderCount: orderBy.get(c.id) ?? 0,
-    lastActivity: lastBy.get(c.id) ?? null,
+    rfqCount: activity.get(c.id)?.rfqs ?? 0,
+    orderCount: activity.get(c.id)?.orders ?? 0,
+    lastActivity: activity.get(c.id)?.last ?? null,
     updatedAt: c.updated_at,
     contacts: contactsBy.get(c.id) ?? [],
   }))

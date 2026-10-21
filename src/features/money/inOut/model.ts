@@ -12,7 +12,7 @@ import { monthKeyLabel, shiftMonth } from '@/features/money/expenses/model'
  */
 
 /** The report's name, on Reports and on its own page. */
-export const IN_OUT_TITLE = 'In vs out'
+export const IN_OUT_TITLE = 'Money in and out'
 
 export type PeriodKind = 'month' | 'quarter'
 export interface Period {

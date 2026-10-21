@@ -142,7 +142,7 @@ export function computeReconciliationExceptions(input: ReconciliationInput): Rec
       out.push({
         key: `order-basis-unknown-${o.id}`,
         severity: 'warning',
-        category: 'Price basis unknown',
+        category: 'Is GST included?',
         message: `${ord(o.number)} has no recorded GST basis, so it is left out of margin, GST totals and net cash. Its payments still count in gross cash.`,
         orderId: o.id,
       })

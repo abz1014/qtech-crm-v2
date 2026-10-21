@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { MapPin, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useSession } from '@/app/session'
@@ -8,11 +8,12 @@ import { ConfirmRemove, Fine, Panel } from '@/features/companies/CompanyParts'
 import { useRemoveSite } from '@/features/companies/hooks'
 import { removeErrorMessage } from '@/features/companies/removeError'
 import { businessToday } from '@/lib/dates'
-import { formatDay, formatShortDate } from '@/lib/formatDay'
+import { formatShortDate } from '@/lib/formatDay'
 import { orderRef, rfqRef } from '@/lib/refs'
+import { cn } from '@/lib/utils'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
-import { DataTable, type Column } from '@/ui/DataTable'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { StatusText } from '@/ui/StatusText'
@@ -41,18 +42,18 @@ interface Item {
   extra: string | null
 }
 
-/** Short words for why an RFQ was closed, as drawn beside the Closed chip ("no reply from customer"). */
+/** Why an RFQ was closed, drawn under "Closed" ("Price too high"). Sentence case, like every state on the page. */
 const CLOSED_WHY: Record<string, string> = {
-  competitor: 'chose a competitor',
-  price: 'price too high',
-  no_reply_to_clarification: 'no reply from customer',
-  customer_cancelled: 'customer cancelled',
-  could_not_source: 'could not source',
-  we_were_late: 'we were too late',
-  other: 'closed, another reason',
+  competitor: 'Chose a competitor',
+  price: 'Price too high',
+  no_reply_to_clarification: 'No reply from customer',
+  customer_cancelled: 'Customer cancelled',
+  could_not_source: 'Could not source',
+  we_were_late: 'We were too late',
+  other: 'Another reason',
 }
 
-function itemsFor(history: CompanyHistory, siteId: string | null): Item[] {
+function itemsFor(history: CompanyHistory, siteId: string | null, today: string): Item[] {
   const rfqs: Item[] = history.rfqs
     .filter(r => r.siteId === siteId)
     .map(r => ({
@@ -68,11 +69,11 @@ function itemsFor(history: CompanyHistory, siteId: string | null): Item[] {
       paymentOverdue: false,
       extra:
         r.outcome === 'won' && r.orderNumber
-          ? `became ${orderRef(r.orderNumber)}`
+          ? `Became ${orderRef(r.orderNumber)}`
           : r.outcome === 'closed'
             ? (CLOSED_WHY[r.closeReason ?? ''] ?? null)
             : r.dueOn
-              ? `quotation due ${formatDay(r.dueOn)}`
+              ? `Quotation due ${formatShortDate(r.dueOn, today)}`
               : null,
     }))
   const orders: Item[] = history.orders
@@ -132,25 +133,7 @@ export function SitesPanel({
       onError: err => setRemoveError(removeErrorMessage(err, 'site')),
     })
   }
-  const columns = useMemo<Column<Item>[]>(
-    () => [
-      { id: 'ref', header: 'Reference', value: r => r.number, cell: r => <RefTag item={r} />, width: 132 },
-      { id: 'what', header: 'What', value: r => r.what, cell: r => <WhatText item={r} /> },
-      { id: 'date', header: 'Date', kind: 'date', value: r => r.date, cell: r => <span className="num">{r.date ? formatShortDate(r.date, today) : 'No date'}</span>, width: 104 },
-      // no fixed width: a fixed width truncates; the state and its reason must wrap, never clip
-      { id: 'state', header: 'State', cell: r => <StateText item={r} /> },
-      {
-        id: 'repeat',
-        header: 'Row actions',
-        hiddenHeader: true,
-        width: 164,
-        cell: r => (r.kind === 'order' && r.orderId ? <RepeatOrderSlot orderId={r.orderId} orderNumber={r.number} /> : null),
-      },
-    ],
-    [today],
-  )
-
-  const unfiled = history ? itemsFor(history, null) : []
+  const unfiled = history ? itemsFor(history, null, today) : []
 
   return (
     <Panel
@@ -185,8 +168,7 @@ export function SitesPanel({
               id={s.id}
               name={s.name}
               address={s.address}
-              items={history ? itemsFor(history, s.id) : []}
-              columns={columns}
+              items={history ? itemsFor(history, s.id, today) : []}
               today={today}
               onEdit={() => onEditSite(s)}
               onRemove={() => {
@@ -208,7 +190,7 @@ export function SitesPanel({
               }
             />
           ))}
-          {unfiled.length > 0 ? <SiteBlock name="Not filed under a site" items={unfiled} columns={columns} today={today} muted /> : null}
+          {unfiled.length > 0 ? <SiteBlock name="Not filed under a site" items={unfiled} today={today} muted /> : null}
         </div>
       )}
     </Panel>
@@ -238,7 +220,6 @@ function SiteBlock({
   name,
   address,
   items,
-  columns,
   today,
   muted,
   onEdit,
@@ -249,7 +230,6 @@ function SiteBlock({
   name: string
   address?: string | null
   items: Item[]
-  columns: Column<Item>[]
   today: string
   muted?: boolean
   onEdit?: () => void
@@ -264,11 +244,13 @@ function SiteBlock({
       <header className="flex items-start gap-3 px-5 py-3">
         <Icon icon={MapPin} className="mt-[3px] text-fg-muted" />
         <div className="min-w-0 flex-1">
-          <h3 className={muted ? 'text-sm font-medium text-fg-muted' : 'text-sm font-semibold'}>{name}</h3>
+          {/* the counts sit on the name's line (wrapping under it only when the name is long) */}
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+            <h3 className={muted ? 'text-base font-medium text-fg-muted' : 'text-base font-semibold'}>{name}</h3>
+            <span className="num text-sm text-fg-muted">{counts}</span>
+          </div>
           {address ? <p className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{address}</p> : null}
-          <p className="num text-sm text-fg-muted sm:hidden">{counts}</p>
         </div>
-        <span className="num hidden shrink-0 pt-[2px] text-sm text-fg-muted sm:inline">{counts}</span>
         {onEdit && onRemove ? (
           <div className="-my-1 flex shrink-0 items-center">
             <Button variant="quiet" size="sm" icon={Pencil} aria-label={`Edit ${name}`} onClick={onEdit} />
@@ -278,11 +260,60 @@ function SiteBlock({
       </header>
       {confirm}
       {items.length > 0 ? (
-        <DataTable label={`RFQs and orders at ${name}`} columns={columns} rows={items} getRowId={r => r.key} mobileRow={r => <ItemCard item={r} today={today} />} />
+        <ItemList label={`RFQs and orders at ${name}`} items={items} today={today} />
       ) : (
         <p className="px-5 pb-4 text-sm text-fg-muted">No RFQs or orders here yet.</p>
       )}
     </section>
+  )
+}
+
+/*
+ * A site's RFQs and orders as a short list, not a table: the item name wraps, so the State and "Repeat order" always fit at 1366
+ * with the side column (a table cut "Repeat order" to "Re"). From md: reference · what · date · state · action; a phone stacks it.
+ */
+const IGRID = 'md:grid md:grid-cols-[112px_minmax(0,1fr)_72px_minmax(0,168px)_auto] md:items-start md:gap-x-4'
+
+function ItemList({ label, items, today }: { label: string; items: Item[]; today: string }) {
+  // one layout in the DOM at a time, so every reference, item and button exists once
+  const wide = useMediaQuery('(min-width: 768px)')
+  return (
+    <div className="border-t">
+      {wide ? (
+        <div className={cn('bg-sunken px-5 py-2 text-sm text-fg-muted', IGRID)} aria-hidden="true">
+          <span>Reference</span>
+          <span>What</span>
+          <span>Date</span>
+          <span>State</span>
+          <span className="w-[136px]" />
+        </div>
+      ) : null}
+      <ul aria-label={label}>
+        {items.map(item => (
+          <li key={item.key} className="border-t px-5 py-3 first:border-t-0 md:py-2">
+            {wide ? (
+              <div className={cn('min-h-touch', IGRID)}>
+                <span className="pt-[6px]">
+                  <RefTag item={item} />
+                </span>
+                <span className="pt-[8px] text-sm">
+                  <WhatText item={item} />
+                </span>
+                <span className="num pt-[8px] text-sm">{item.date ? formatShortDate(item.date, today) : 'No date'}</span>
+                <span className="pt-[8px] text-sm">
+                  <StateText item={item} />
+                </span>
+                <span className="flex w-[136px] justify-end">
+                  {item.kind === 'order' && item.orderId ? <RepeatOrderSlot orderId={item.orderId} orderNumber={item.number} /> : null}
+                </span>
+              </div>
+            ) : (
+              <ItemCard item={item} today={today} />
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

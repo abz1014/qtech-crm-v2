@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Building2, ChevronLeft, FilePlus2, GitMerge, Link2, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Building2, ChevronLeft, ChevronRight, FilePlus2, GitMerge, Link2, MessageCircle, Pencil, Phone, Plus, Trash2 } from 'lucide-react'
 import {
   useCompany,
   useCompanyContacts,
@@ -20,7 +20,7 @@ import { MergeCompanyDialog } from '@/features/companies/MergeCompanyDialog'
 import { SitesPanel } from '@/features/companies/SitesPanel'
 import { SupplierPanel } from '@/features/companies/SupplierPanel'
 import { companyMeta, monthYearOf } from '@/features/companies/companyMeta'
-import { recordLine, supplierFacts } from '@/features/companies/supplierFacts'
+import { factNotes, recordLine, supplierFacts } from '@/features/companies/supplierFacts'
 import { earliestYear } from '@/features/companies/supplierRecord'
 import { copyToClipboard } from '@/lib/clipboard'
 import { OpenWithThem } from '@/features/companies/SupplierRecordPanels'
@@ -33,6 +33,9 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { DetailHeader } from '@/ui/DetailHeader'
 import { EmptyState } from '@/ui/EmptyState'
+import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
+import { waLink } from '@/lib/messageLinks'
 import { Money } from '@/ui/Money'
 import { MoreMenu } from '@/ui/MoreMenu'
 import { NextStepBox } from '@/ui/NextStepBox'
@@ -228,6 +231,75 @@ function Loaded({ company }: { company: CompanyDetail }) {
   // the bar at the bottom instead of the tabs.
   useMobileBar({ title: company.name, back: 'history', fallback: '/companies', actions: moreMenu(true), hideTabs: true })
 
+  const wide = useMediaQuery('(min-width: 1024px)')
+  const contactsPanel = (
+    <ContactsPanel
+      companyId={company.id}
+      contacts={contacts.data}
+      sites={sites.data}
+      loading={contacts.isPending}
+      error={contacts.isError}
+      onAdd={() => setDialog('contact')}
+      onEdit={c => {
+        setEditContact(c)
+        setDialog('contact')
+      }}
+    />
+  )
+  const openPanel = supplierSide ? (
+    <OpenWithThem view={record.view} loading={record.query.isPending} error={record.query.isError} onRetry={() => void record.query.refetch()} />
+  ) : null
+  const supplierPanel = supplierSide ? <SupplierPanel companyId={company.id} /> : null
+  const sitesPanel = showSites ? (
+    <SitesPanel
+      companyId={company.id}
+      sites={sites.data}
+      history={history.data}
+      loading={sites.isPending || history.isPending}
+      error={sites.isError || history.isError}
+      onAddSite={() => setDialog('site')}
+      onEditSite={s => {
+        setEditSite(s)
+        setDialog('site')
+      }}
+    />
+  ) : null
+  const detailsPanel = <DetailsPanel company={company} customerSince={customerSide && !supplierOnly ? customerSince : null} brands={supplierSide || !company.isCustomer} />
+  const notesPanel = company.notes ? (
+    <Panel title="Notes">
+      <p className="whitespace-pre-line px-5 py-4 text-base text-fg-2">{company.notes}</p>
+    </Panel>
+  ) : null
+  // The money panel is rendered for an admin only (and the view refuses anyone else), so it needs no "Admin only" tag.
+  const sidePanels = (
+    <>
+      {isAdmin && money.data && money.data.orders > 0 ? (
+        <Panel title="Money with them">
+          <div className="px-5 py-3">
+            <KeyValue
+              rows={[
+                { key: 'Total (with GST)', value: <Money value={money.data.receivable} /> },
+                { key: 'Received', value: <Money value={money.data.settled} /> },
+                { key: 'Balance', value: <Money value={money.data.balance} strong /> },
+              ]}
+            />
+          </div>
+        </Panel>
+      ) : null}
+      {isAdmin && money.isError ? <Banner tone="warning" title="Couldn't load the money figures">Reload the page to try again.</Banner> : null}
+      {detailsPanel}
+      {notesPanel}
+    </>
+  )
+  // A supplier-only page: its sites, brands and details are looked up now and then, so they fold away under the history.
+  const moreAbout = (
+    <MoreAbout>
+      {sitesPanel}
+      {detailsPanel}
+      {notesPanel}
+    </MoreAbout>
+  )
+
   return (
     <Shell sticky>
       <div className="grid gap-6">
@@ -238,9 +310,19 @@ function Loaded({ company }: { company: CompanyDetail }) {
           // the role is identity, not state: a Tag at the head of the meta line, never a chip in the h1
           meta={[company.role ? <RoleChip key="role" role={company.role} /> : null, ...meta.map((m, i) => (i === 0 ? m : <span key={m} className="text-fg-muted">{m}</span>))]}
         >
-          {supplierRecordLine ? (
-            <p className="mt-2 text-sm text-fg-2" data-testid="supplier-record-line">
-              <CountText text={supplierRecordLine} />
+          {supplierRecordLine && facts ? (
+            // the supplier's counts, said once (round 3: the "What we know" panel repeated them); the rules behind the (i)
+            <p className="mt-2 flex flex-wrap items-center gap-x-1 text-base text-fg-2" data-testid="supplier-record-line">
+              <span>
+                <CountText text={supplierRecordLine} />
+              </span>
+              <InfoTip label="About these numbers">
+                <span className="grid gap-2">
+                  {factNotes(facts, record.view?.span ?? null).map(n => (
+                    <span key={n}>{n}</span>
+                  ))}
+                </span>
+              </InfoTip>
             </p>
           ) : null}
           <NextStepBox
@@ -251,61 +333,34 @@ function Loaded({ company }: { company: CompanyDetail }) {
         </DetailHeader>
         {phone ? <StickyActionBar label="Company actions" primary={primary} /> : null}
 
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="grid min-w-0 gap-6">
-            {supplierSide ? <SupplierPanel companyId={company.id} /> : null}
-            {showSites ? (
-              <SitesPanel
-                companyId={company.id}
-                sites={sites.data}
-                history={history.data}
-                loading={sites.isPending || history.isPending}
-                error={sites.isError || history.isError}
-                onAddSite={() => setDialog('site')}
-                onEditSite={s => {
-                  setEditSite(s)
-                  setDialog('site')
-                }}
-              />
-            ) : null}
+        {wide ? (
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="grid min-w-0 gap-6">
+              {supplierPanel}
+              {supplierOnly ? moreAbout : sitesPanel}
+            </div>
+            <aside className="grid content-start gap-6" aria-label="Company details">
+              {contactsPanel}
+              {openPanel}
+              {supplierOnly ? null : sidePanels}
+            </aside>
           </div>
-
-          <aside className="grid content-start gap-6" aria-label="Company details">
-            <ContactsPanel
-              companyId={company.id}
-              contacts={contacts.data}
-              sites={sites.data}
-              loading={contacts.isPending}
-              error={contacts.isError}
-              onAdd={() => setDialog('contact')}
-              onEdit={c => {
-                setEditContact(c)
-                setDialog('contact')
-              }}
-            />
-            {supplierSide ? <OpenWithThem view={record.view} loading={record.query.isPending} error={record.query.isError} onRetry={() => void record.query.refetch()} /> : null}
-            {isAdmin && money.data && money.data.orders > 0 ? (
-              <Panel title="Money with them" meta="Admin only">
-                <div className="px-5 py-3">
-                  <KeyValue
-                    rows={[
-                      { key: 'Total (with GST)', value: <Money value={money.data.receivable} /> },
-                      { key: 'Received', value: <Money value={money.data.settled} /> },
-                      { key: 'Balance', value: <Money value={money.data.balance} strong /> },
-                    ]}
-                  />
-                </div>
-              </Panel>
-            ) : null}
-            {isAdmin && money.isError ? <Banner tone="warning" title="Couldn't load the money figures">Reload the page to try again.</Banner> : null}
-            <DetailsPanel company={company} customerSince={customerSide && !supplierOnly ? customerSince : null} brands={supplierSide || !company.isCustomer} />
-            {company.notes ? (
-              <Panel title="Notes">
-                <p className="whitespace-pre-line px-5 py-4 text-sm text-fg-2">{company.notes}</p>
-              </Panel>
-            ) : null}
-          </aside>
-        </div>
+        ) : (
+          // Below 1024 one column, in the order a phone needs it: who to call, what is open, the history, then the rest.
+          <div className="grid min-w-0 gap-6">
+            {contactsPanel}
+            {openPanel}
+            {supplierPanel}
+            {supplierOnly ? (
+              moreAbout
+            ) : (
+              <>
+                {sitesPanel}
+                {sidePanels}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <EditCompanyDialog open={dialog === 'edit'} onOpenChange={close} company={company} />
@@ -416,16 +471,12 @@ function ContactsPanel({
                     />
                   </span>
                 </div>
-                {c.job_title ? <span className="text-xs text-fg-muted">{c.job_title}</span> : null}
-                {c.notes ? <span className="text-xs text-fg-muted">{c.notes}</span> : null}
-                {c.site_id && siteName.get(c.site_id) ? <span className="text-xs text-fg-muted">{siteName.get(c.site_id)}</span> : null}
-                {c.phone ? (
-                  <a href={`tel:${c.phone.replace(/\s+/g, '')}`} className="num inline-flex min-h-6 w-fit items-center text-xs text-fg-muted hover:text-fg">
-                    {c.phone}
-                  </a>
-                ) : null}
+                {c.job_title ? <span className="text-sm text-fg-muted">{c.job_title}</span> : null}
+                {c.notes ? <span className="text-sm text-fg-muted">{c.notes}</span> : null}
+                {c.site_id && siteName.get(c.site_id) ? <span className="text-sm text-fg-muted">{siteName.get(c.site_id)}</span> : null}
+                {c.phone ? <PhoneLinks name={c.name} phone={c.phone} /> : null}
                 {c.email ? (
-                  <a href={`mailto:${c.email}`} className="inline-flex min-h-6 w-fit items-center text-xs text-fg-muted hover:text-fg">
+                  <a href={`mailto:${c.email}`} className="inline-flex min-h-8 w-fit items-center text-sm text-fg-2 [overflow-wrap:anywhere] hover:text-fg max-md:min-h-touch">
                     {c.email}
                   </a>
                 ) : null}
@@ -435,6 +486,43 @@ function ContactsPanel({
         )}
       </div>
     </Panel>
+  )
+}
+
+/**
+ * A contact's number, tap to call, and WhatsApp beside it when the number is one WhatsApp can open (waLink: a Pakistani 03xx
+ * number gets its country code). 44 px tall on a phone.
+ */
+function PhoneLinks({ name, phone }: { name: string; phone: string }) {
+  const wa = waLink(phone, '')
+  const link = 'inline-flex min-h-8 items-center gap-1 rounded text-sm hover:underline max-md:min-h-touch'
+  return (
+    <span className="flex flex-wrap items-center gap-x-4">
+      <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} className={cn(link, 'num text-fg-2')} aria-label={`Call ${name}, ${phone}`}>
+        <Icon icon={Phone} size="sm" className="text-fg-muted" />
+        {phone}
+      </a>
+      {wa ? (
+        <a href={wa.url} target="_blank" rel="noopener noreferrer" className={cn(link, 'font-medium text-primary')} aria-label={`WhatsApp ${name}`}>
+          <Icon icon={MessageCircle} size="sm" />
+          WhatsApp
+        </a>
+      ) : null}
+    </span>
+  )
+}
+
+/** "More about this supplier": sites, brands carried and details, folded (closed by default) under the supplier's history. */
+function MoreAbout({ children }: { children: ReactNode }) {
+  return (
+    <details className="group rounded border bg-surface">
+      <summary className="flex min-h-touch cursor-pointer list-none items-center gap-2 rounded px-5 py-3 text-base font-semibold hover:bg-sunken [&::-webkit-details-marker]:hidden">
+        <Icon icon={ChevronRight} size="sm" className="text-fg-muted transition-transform duration-fast group-open:rotate-90" />
+        More about this supplier
+        <span className="text-sm font-regular text-fg-muted">Sites, brands, details</span>
+      </summary>
+      <div className="grid gap-6 border-t p-4">{children}</div>
+    </details>
   )
 }
 

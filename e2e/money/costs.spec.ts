@@ -149,7 +149,6 @@ test.describe('Money > Margins (admin)', () => {
 
     await openAs(page, 'admin', '/money/margins')
     await expect(page.getByRole('heading', { name: 'Order margins' })).toBeVisible()
-    await expect(page.getByText('Whole life of the order')).toBeVisible()
 
     const rowOf = (o: Seeded) => page.getByRole('listitem').filter({ hasText: o.customer })
     const d = rowOf(done)
@@ -159,9 +158,9 @@ test.describe('Money > Margins (admin)', () => {
     await expect(d.getByTestId('margin-value')).toContainText('300,000') // margin 1,000,000 - 700,000, beside the customer
     await expect(d).not.toContainText('Costs complete') // a done state shows no chip
     const p = rowOf(prov)
-    await expect(p).toContainText('Margin not final')
+    await expect(p).toContainText('Not final')
     await expect(p).toContainText('300,000 expected')
-    await expect(p.locator('[data-provisional]')).toHaveCount(2) // the dashed mark on the cost and on the margin
+    await expect(p.getByTestId('margin-value')).toContainText('(est.)') // round 3: a margin not final is an estimate, greyed
     const u = rowOf(unknown)
     await expect(u).toContainText('Is GST included?')
     await expect(u).not.toContainText('150,000') // no margin is calculated
@@ -172,13 +171,14 @@ test.describe('Money > Margins (admin)', () => {
     const live = money.filter(m => !cancelled.some(c => c.id === m.order_id))
     const totals = page.getByTestId('margin-totals')
     await expect(totals).toContainText(`${live.length} ${live.length === 1 ? 'order' : 'orders'}`)
-    await expect(totals).toContainText('Added up:')
+    await expect(totals).toContainText('Total of')
     expect(digits((await totals.innerText()).split('\n').find(l => /^\s*[\d,]+\s*$/.test(l)) ?? '0')).toBe(live.reduce((a, m) => a + Number(m.margin ?? 0), 0)) // the margin comes first
-    await expect(page.getByTestId('margin-left-out')).toContainText(/\d+ with margin not final/)
-    await expect(page.getByTestId('margin-left-out')).toContainText(/\d+ where nobody has said whether GST is included/)
+    await expect(page.getByTestId('margin-left-out')).toContainText(/\d+ orders? not final, not in the total/)
+    await expect(page.getByTestId('margin-left-out')).toContainText(/\d+ waiting for "Is GST included\?"/)
     // the rule behind the totals is one (i), not a paragraph under the table
     await expect(page.getByRole('button', { name: 'About margins' })).toBeVisible()
-    expect(await page.locator('main').innerText()).not.toMatch(/%|score|rating/i)
+    // round 3: a Margin % column (amounts alone cannot be compared across orders); still no score or rating
+    expect(await page.locator('main').innerText()).not.toMatch(/score|rating/i)
     await shot(page, 'm04-money-margins-1440')
   })
 })
@@ -196,7 +196,7 @@ test.describe('Money > Month end > Things to check (admin)', () => {
     await expect(over).toContainText('Customer payments (15,000) exceed the order')
     await expect(over).toContainText('Critical.')
     await expect(over.getByRole('link', { name: 'View order' })).toHaveAttribute('href', `/orders/${o.id}`)
-    const basis = list.getByRole('listitem').filter({ hasText: ordRef(unknown.number) }).filter({ hasText: 'Price basis unknown' })
+    const basis = list.getByRole('listitem').filter({ hasText: ordRef(unknown.number) }).filter({ hasText: 'Is GST included?' })
     await expect(basis).toContainText('left out of margin, GST totals and net cash')
     // Critical items come before warnings.
     const severities = await list.getByRole('listitem').evaluateAll(els => els.map(e => e.getAttribute('data-severity')))

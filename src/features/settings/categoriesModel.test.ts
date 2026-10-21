@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { categoriesFooter, checkCategoryName, deleteAdvice, moveCategory, nextSort, sortCategories, usageText, type Category } from '@/features/settings/categoriesModel'
+import { categoriesFooter, checkCategoryName, deleteAdvice, groupCategories, moveCategory, moveWithinGroup, nextSort, sortCategories, usageText, type Category } from '@/features/settings/categoriesModel'
 
 const c = (id: string, name: string, sort: number, over: Partial<Category> = {}): Category => ({
   id,
@@ -89,5 +89,30 @@ describe('deleteAdvice', () => {
     expect(usageText(0)).toBe('Not used yet')
     expect(usageText(1)).toBe('1 use')
     expect(usageText(5)).toBe('5 uses')
+  })
+})
+
+describe('sections by group (audit 2026-10-22)', () => {
+  const mixed = [c('a', 'Salaries', 10), c('f', 'Freight', 15, { grp: 'order_cost' }), c('b', 'Rent', 20), c('d', 'Drawings', 25, { grp: 'non_pnl' }), c('e', 'Utilities', 30)]
+  it('groups in the fixed order Overheads, Order costs, Not in P&L, each in its saved order, leaving empty groups out', () => {
+    expect(groupCategories(mixed).map(g => [g.label, g.rows.map(r => r.id)])).toEqual([
+      ['Overheads', ['a', 'b', 'e']],
+      ['Order costs', ['f']],
+      ['Not in P&L', ['d']],
+    ])
+    expect(groupCategories([c('a', 'Salaries', 10)]).map(g => g.label)).toEqual(['Overheads'])
+  })
+  it('moves within the group, past other groups, and not past the group ends', () => {
+    // Rent up: passes Freight (order costs) and swaps with Salaries
+    expect(moveWithinGroup(mixed, 'b', -1)).toEqual([
+      { id: 'b', sort: 10 },
+      { id: 'f', sort: 20 },
+      { id: 'a', sort: 30 },
+      { id: 'd', sort: 40 },
+      { id: 'e', sort: 50 },
+    ])
+    expect(moveWithinGroup(mixed, 'a', -1)).toEqual([])
+    expect(moveWithinGroup(mixed, 'e', 1)).toEqual([])
+    expect(moveWithinGroup(mixed, 'f', 1)).toEqual([]) // alone in its group
   })
 })
