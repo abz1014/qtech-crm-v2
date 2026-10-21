@@ -172,6 +172,10 @@ test('Lighthouse mobile (Slow 4G): every main screen paints its largest content 
         throttlingMethod: 'simulate',
         screenEmulation: { mobile: true, width: 412, height: 823, deviceScaleFactor: 1.75, disabled: false },
       })
+      // The whole report per screen (open it in https://googlechrome.github.io/lighthouse/viewer/): the request chain and the
+      // LCP element and its phases say what to fix.
+      mkdirSync('test-results/lighthouse', { recursive: true })
+      writeFileSync(`test-results/lighthouse/${name.replaceAll(' ', '-').toLowerCase()}.json`, JSON.stringify(run?.lhr ?? null))
       const a = run?.lhr.audits ?? {}
       const lcp = a['largest-contentful-paint']?.numericValue
       const fcp = a['first-contentful-paint']?.numericValue
