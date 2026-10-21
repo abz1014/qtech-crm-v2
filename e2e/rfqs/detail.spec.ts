@@ -630,8 +630,15 @@ test.describe('the rate bar and Exchange rates (R15)', () => {
     await expect(page.locator('[data-ratebar] [data-rate="JPY"]')).toContainText('JPY 1.80')
   })
 
-  test('the Exchange rates page: an engineer can add a rate, a bad figure is refused in words', async ({ page }) => {
+  test('the Exchange rates page: an engineer is refused it (no currency amounts, 2026-10-22)', async ({ page }) => {
     await openAs(page, 'engineer', '/settings/exchange-rates')
+    await expect(page.getByRole('heading', { name: 'Exchange rates is for admins and sales' })).toBeVisible()
+    await expect(page.getByLabel('Rate, PKR for 1 unit')).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Exchange rates' })).toHaveCount(0) // not in the Settings list either
+  })
+
+  test('the Exchange rates page: sales can add a rate, a bad figure is refused in words', async ({ page }) => {
+    await openAs(page, 'sales', '/settings/exchange-rates')
     await expect(page.getByRole('link', { name: 'Exchange rates' })).toBeVisible() // in the Settings list
     await page.getByLabel('Rate, PKR for 1 unit').fill('abc')
     await expect(page.getByText('Enter a rate above zero')).toBeVisible()

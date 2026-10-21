@@ -18,6 +18,7 @@ shared:
   - 'scripts/ci/e2e-*'
   - 'vercel.json'
   - 'vite.config.ts'
+  - 'app-version.json'
 auth: # weight=35
   - 'e2e/auth/**'
 companies: # weight=70

@@ -5,6 +5,7 @@ import type { RfqHeader } from '@/features/rfqs/api'
 import { IssueQuotationDialog } from '@/features/quotations/IssueQuotationDialog'
 import { installFakeDb, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
+import { SessionContext } from '@/app/session'
 
 const RFQ: RfqHeader = {
   id: 'r1',
@@ -39,11 +40,13 @@ function setup(memory: () => FakeResult) {
   })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
-    <QueryClientProvider client={client}>
-      <ToastProvider>
-        <IssueQuotationDialog rfq={RFQ} inquiries={[]} onClose={() => {}} />
-      </ToastProvider>
-    </QueryClientProvider>,
+    <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Sana', role: 'sales' } }}>
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <IssueQuotationDialog rfq={RFQ} inquiries={[]} onClose={() => {}} />
+        </ToastProvider>
+      </QueryClientProvider>
+    </SessionContext.Provider>,
   )
 }
 

@@ -173,9 +173,10 @@ export function readSchema(): Schema {
  * The same classification as supabase/tests/0902_verify_engineer_money.test.sql (keep the two in step): for each table, view
  * or function, the money columns and their rule for an engineer.
  *   hidden    must never reach an engineer (a value here is a failure)
- *   m3        selling price, visible to engineers by owner decision 2026-10-19 (SECURITY_REVIEW M-3): reported, not failed
- *   supplier  supplier price, visible to engineers by owner decision (a): reported, not failed
- *   own       the engineer's own target
+ *   m3        selling price. Since 0081 (owner decision 2026-10-22) the database refuses it to an engineer (role qtech_engineer):
+ *             a value reaching an engineer, in the browser or through the API, is a failure
+ *   supplier  supplier price or exchange rate: as m3
+ *   own       the engineer's own target (no longer read by the app for an engineer: it is PKR amounts)
  *   info      not money (a rate, a count)
  * JSON values (legacy_source, quotation lines) are searched for money-named keys; legacy_source must carry none (BUG-RV-01).
  */
@@ -193,10 +194,10 @@ export const MONEY: Record<string, Record<string, Rule>> = {
   rfq_items: { quoted_unit_price_net: 'm3', gst_rate: 'info' },
   quotations: { net_total: 'm3', gst_total: 'm3', lines: 'm3' },
   purchase_orders: { total: 'supplier', lines: 'supplier' },
-  supplier_quote_lines: { unit_price: 'supplier', fx_rate_pkr: 'info' },
+  supplier_quote_lines: { unit_price: 'supplier', fx_rate_pkr: 'supplier' },
   targets: { target_net_pkr: 'own' },
-  fx_rates: { rate_pkr: 'info' },
-  v_fx_latest: { rate_pkr: 'info' },
+  fx_rates: { rate_pkr: 'supplier' },
+  v_fx_latest: { rate_pkr: 'supplier' },
   v_rfq_state: { items_total: 'info', items_quoted: 'info' },
   v_inquiry_state: { items_total: 'info', items_quoted: 'info' },
   v_report_float: { items_total: 'info', items_quoted: 'info' },

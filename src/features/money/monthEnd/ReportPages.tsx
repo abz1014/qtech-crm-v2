@@ -42,6 +42,7 @@ import {
   AGING_BUCKETS,
   BUCKET_LABEL,
   BUCKET_TITLE,
+  advanceLabel,
   agingCsv,
   barShare,
   categoriesCsv,
@@ -620,9 +621,10 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
               <li key={a.orderId} className="grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 text-sm">
                 <Icon icon={Wallet} size="md" className="text-fg-muted" />
                 <span className="grid">
-                  <span>Advance held, not invoiced yet</span>
+                  <span>{advanceLabel(a)}</span>
                   <span className="text-xs text-fg-muted">
                     {a.orderRef ? <Num>{a.orderRef}</Num> : null} · {a.customer}
+                    {a.cancelled ? '. Nobody owes it: refund it or keep it.' : ''}
                   </span>
                 </span>
                 <Money value={a.held} paisa="never" />
