@@ -115,12 +115,12 @@ function asPhone(): () => void {
   }
 }
 
-function renderPanel(inquiries: InquiryRow[], ranking?: Map<string, RankRow>, items: RfqItemRow[] = [item]) {
+function renderPanel(inquiries: InquiryRow[], ranking?: Map<string, RankRow>, items: RfqItemRow[] = [item], role = 'sales') {
   installFakeDb(() => ({ data: [] }))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
     <QueryClientProvider client={client}>
-      <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
+      <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role } }}>
         <MemoryRouter>
           <ToastProvider>
             <ItemsPanel
@@ -296,6 +296,33 @@ describe('the supplier comparison', () => {
     } finally {
       undo()
     }
+  })
+
+  it('an engineer sees who quoted, lead time and stock, and no price, rate, mark, detail or row menu (owner decision 2026-10-22)', () => {
+    // The engineer's lines come without a price (listInquiries reads none): unitPrice 0 and no rate.
+    const bare = (id: string, inquiryId: string): QuoteLineRow => ({ ...line(id, inquiryId, 0), fxRatePkr: null, fxRateOn: null })
+    renderPanel(
+      [inquiry('b', 'Lahore Flow Systems', [bare('lb', 'b')]), inquiry('a', 'ABC Traders', [bare('la', 'a')])],
+      new Map([['la', rank({ quote_line_id: 'la', rank: 1 })], ['lb', rank({ quote_line_id: 'lb', rank: 2 })]]),
+      undefined,
+      'engineer',
+    )
+    expect(screen.getByRole('heading', { level: 2, name: 'Items and supplier replies' })).toBeInTheDocument()
+    const art = screen.getByRole('article', { name: 'Item 1' })
+    expect(art).toHaveTextContent('ABC Traders')
+    expect(art).toHaveTextContent('3 weeks')
+    expect(art).toHaveTextContent('In stock')
+    // listed by name, not by price
+    const names = [...art.querySelectorAll('li')].map(li => li.textContent ?? '').filter(t => /Traders|Systems/.test(t))
+    expect(names[0]).toMatch(/^ABC Traders/)
+    expect(document.body.textContent).not.toMatch(/PKR|USD\s*\d|Rs\.?\s*\d/)
+    expect(screen.queryByText('Recommended')).toBeNull()
+    expect(screen.queryByText('Lowest price')).toBeNull()
+    expect(screen.queryByText(/Cheapest/)).toBeNull()
+    expect(document.querySelector('[data-own-price], [data-cheapest-tag], [data-cheapest], [data-price-detail]')).toBeNull()
+    expect(screen.queryByRole('button', { name: /Show details for/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /More for/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'How are prices compared?' })).toBeNull()
   })
 
   it('explains the order once, in a tip in the panel header', async () => {

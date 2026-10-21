@@ -54,6 +54,10 @@ import {
  * "Can't quote" records one reason for the whole inquiry (no_offer_on and no_offer_reason, a stored key); a different reason for
  * one item is an option, kept in inquiry_item_declines (see lib/cantQuote.ts). The notes stay free for people.
  * Closing with prices typed and not saved asks first (the Dialog's own discard guard).
+ *
+ * An engineer (owner decision 2026-10-22: engineers see and write no prices) never gets this dialog: a reply is prices
+ * (supplier_quote_lines.unit_price is required), so Suppliers asked shows them no Enter or Edit reply and useReplyDialog never opens
+ * it for them (nor from a price row's menu or Capture). Take back on a whole "can't quote" stays in Suppliers asked (no price in it).
  */
 
 /** The status of a supplier's reply, as one chip. */

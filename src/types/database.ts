@@ -2100,6 +2100,11 @@ isOneToOne: false
 "fx_wanted_currencies":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
+"held_advances":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "cancelled_on": string,"company_id": string,"company_name": string,"held": number,"order_id": string,"order_number": number
+            }[]
+                           },
 "import_purge_audit":
 { Args: { "p_ids": (string)[] }; Returns: number
                            },

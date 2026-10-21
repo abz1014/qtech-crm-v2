@@ -414,11 +414,10 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     expect(bad).toEqual([])
   })
 
-  test('an engineer asking the database for the ranking gets no selling price and no spread', async () => {
+  test('an engineer asking the database for the ranking is refused (0081: no price of any kind for an engineer)', async () => {
     const s = await seed()
-    const asEngineer = await must(rest<Array<{ sell_unit_net: number | null; spread_unit: number | null; price: number }>>('engineer', 'rpc/rank_item_quotes', { method: 'POST', body: { p_rfq_id: s.rfq.id } }))
-    expect(asEngineer.length).toBeGreaterThan(0)
-    expect(asEngineer.every(r => r.sell_unit_net === null && r.spread_unit === null)).toBe(true)
+    const asEngineer = await rest('engineer', 'rpc/rank_item_quotes', { method: 'POST', body: { p_rfq_id: s.rfq.id } })
+    expect(asEngineer.status).toBe(403)
     const asSales = await must(rest<Array<{ sell_unit_net: number | null }>>('sales', 'rpc/rank_item_quotes', { method: 'POST', body: { p_rfq_id: s.rfq.id } }))
     expect(asSales.some(r => r.sell_unit_net !== null)).toBe(true)
   })

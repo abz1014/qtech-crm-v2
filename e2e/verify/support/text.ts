@@ -254,8 +254,8 @@ export const BOOKS = {
   },
   pnl: {
     sumBar: 'Profit and loss',
-    netIn: 'Net in',
-    result: 'Result',
+    netIn: 'Received after GST',
+    result: 'Profit',
     afterDrawings: 'After drawings',
   },
   reports: {

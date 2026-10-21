@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
+import { useSeesPrices } from '@/app/session'
 import { OPEN_REPLY_EVENT, type OpenReplyDetail } from '@/features/rfqs/replyFocus'
 
 /** Which supplier's reply dialog is open (SupplierReplies.tsx), and the item whose price box gets the cursor. */
@@ -11,9 +12,14 @@ export interface OpenReply {
 /**
  * The open reply, and the two ways in from elsewhere: "Edit reply" in a price row's menu (OPEN_REPLY_EVENT) and Capture's "This is
  * a supplier's reply" (router state, read out by the dialog itself).
+ *
+ * A reply is prices (supplier_quote_lines.unit_price is required), so for an engineer (owner decision 2026-10-22: engineers see and
+ * write no prices) the dialog never opens, whichever way in is used: `open` stays null and `show` does nothing.
  */
 export function useReplyDialog() {
-  const [open, setOpen] = useState<OpenReply | null>(null)
+  const prices = useSeesPrices()
+  const [state, setOpen] = useState<OpenReply | null>(null)
+  const open = prices ? state : null
   useEffect(() => {
     const on = (e: Event) => {
       const d = (e as CustomEvent<OpenReplyDetail>).detail

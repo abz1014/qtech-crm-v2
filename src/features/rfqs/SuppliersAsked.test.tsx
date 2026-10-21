@@ -64,7 +64,7 @@ function stats(id: string, brandIds: string[]) {
   return { supplier_id: id, asked: 3, replied: 3, no_offer: 0, median_reply_days: 1, last_contact: '2026-09-01', reply_days_n: 3, brand_ids: brandIds, brand_names: brandIds.map(() => 'x') }
 }
 
-function renderWith(items: RfqItemRow[], inq: InquiryRow = inquiry, onCall: (call: FakeCall) => void = () => undefined) {
+function renderWith(items: RfqItemRow[], inq: InquiryRow = inquiry, onCall: (call: FakeCall) => void = () => undefined, role = 'sales') {
   installFakeDb((call: FakeCall) => {
     onCall(call)
     if (call.target === 'rpc:stamp_supplier_chase') return { data: inq.chaseCount + 1 }
@@ -82,7 +82,7 @@ function renderWith(items: RfqItemRow[], inq: InquiryRow = inquiry, onCall: (cal
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
     <QueryClientProvider client={client}>
-      <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
+      <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role } }}>
         <MemoryRouter>
           <ToastProvider>
             <SuppliersAsked rfq={rfq} items={items} inquiries={[inq]} stats={undefined} onFloat={() => undefined} />
@@ -105,6 +105,26 @@ describe('SuppliersAsked escalation', () => {
     renderWith([{ id: 'it-1', number: 1, description: 'Portable pH meter', brandId: null, brandName: null, familyId: 'f-meters', familyName: 'Meters', qty: 1, unit: 'pcs' }])
     const next = await screen.findByRole('list', { name: 'Next in line' })
     expect(within(next).getByText(/Meter House/)).toBeInTheDocument()
+  })
+})
+
+describe('SuppliersAsked reply, by role (owner decision 2026-10-22: engineers see and write no prices)', () => {
+  const items: RfqItemRow[] = [{ id: 'it-1', number: 1, description: 'Hach HQ1110 meter', brandId: 'b-hach', brandName: 'Hach', familyId: null, qty: 1, unit: 'pcs' }]
+
+  it('sales: Enter reply opens the price form', async () => {
+    const user = userEvent.setup()
+    renderWith(items)
+    await user.click(screen.getByRole('button', { name: /^Enter reply, / }))
+    expect(await screen.findByRole('textbox', { name: /^Price for item 1 from / })).toBeInTheDocument()
+  })
+
+  it('an engineer has no Enter or Edit reply, and no price form opens even when asked for from elsewhere', async () => {
+    renderWith(items, inquiry, () => undefined, 'engineer')
+    expect(screen.queryByRole('button', { name: /^(Enter|Edit) reply, / })).toBeNull()
+    window.dispatchEvent(new CustomEvent('qtech:open-reply', { detail: { inquiryId: inquiry.id, itemId: 'it-1' } }))
+    await new Promise(r => setTimeout(r, 0))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('textbox', { name: /^Price for item/ })).toBeNull()
   })
 })
 

@@ -55,9 +55,6 @@ export const GROUPS: readonly Group[] = [
 const KNOWN: Record<string, string> = {
   // Money and Orders: the one-off cost on an order.
   'Add expense': 'Money MarginPanel.tsx and ExpenseDialog.tsx (order page "Add expense")',
-  // Money.
-  Export: 'Money GstRegisterPage.tsx',
-  'Price basis unknown': 'Money, Things to check (lib/reconciliation.ts category)',
 }
 
 const rel = (f: string) => path.relative(SRC, f).split(path.sep).join('/')

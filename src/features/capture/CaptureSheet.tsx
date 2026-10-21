@@ -8,7 +8,7 @@ import { deleteCapture, safely } from '@/lib/capture/store'
 import { readRecentOrders, readRecents } from '@/lib/capture/recents'
 import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
-import { useSession } from '@/app/session'
+import { seesPrices, useSession } from '@/app/session'
 import { getOrderNotes, getRfqNotes, listCandidates, listOrderCandidates, setOrderNotes, setRfqNotes } from '@/features/capture/api'
 import {
   appendNote,
@@ -462,6 +462,8 @@ export default function CaptureSheet() {
               kind={kind}
               off={empty}
               only={!empty && !more}
+              /* A supplier's reply is prices: admin and sales only (owner decision 2026-10-22, engineers see no prices). */
+              prices={seesPrices(user?.role)}
               onChoose={d => {
                 setOrderMode(false)
                 choose(d)

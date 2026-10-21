@@ -17,6 +17,11 @@ export interface PrimaryInput {
   itemCount: number
   /** Suppliers who were asked and still owe a price (canChaseInquiry). */
   chaseable: number
+  /**
+   * The person sees prices (admin, sales). False for an engineer (owner decision 2026-10-22): Issue quotation and Mark won are
+   * never their green button; they get the ask or the chase, else none. Default true.
+   */
+  prices?: boolean
 }
 
 /** A quotation exists: one was issued, or the quotation was marked sent without a PDF (a verbal one). */
@@ -34,8 +39,10 @@ export function quotationSent(i: Pick<PrimaryInput, 'bidState' | 'quotationCount
  */
 export function primaryAction(i: PrimaryInput): RfqPrimary {
   if (i.outcome !== 'open' || i.hasOrder || i.itemCount === 0) return 'none'
-  if (quotationSent(i)) return 'won'
-  if (i.hasPrices) return 'issue'
+  const prices = i.prices ?? true
+  if (prices && quotationSent(i)) return 'won'
+  if (prices && i.hasPrices) return 'issue'
+  if (!prices && (quotationSent(i) || i.hasPrices)) return i.chaseable > 0 ? 'chase' : 'none'
   if (i.sourcingState === 'not_floated' || i.sourcingState === 'no_offer_anywhere' || !i.sourcingState) return 'ask'
   if (i.chaseable > 0) return 'chase'
   return 'none'

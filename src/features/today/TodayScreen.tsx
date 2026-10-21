@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Banknote, CalendarCheck, Calculator, ChevronDown, ChevronRight, FileCheck, HardHat, Hourglass, Landmark, MessageCircleQuestion, Package, PackageCheck, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
-import { useSession } from '@/app/session'
+import { seesPrices, useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
@@ -247,15 +247,15 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
     <div className="grid min-h-full grid-cols-[minmax(0,1fr)] md:h-full md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
       <div className="flex min-h-0 min-w-0 flex-col border-r bg-surface">
         {/* The target tile is the foot of the list, at every width: it scrolls with the list instead of taking a pinned block
-            of the laptop's first screen from the jobs (audit T2). An engineer gets no tile at all: a target is money, and an
-            engineer is shown no money (and no request is made). */}
+            of the laptop's first screen from the jobs (audit T2). An engineer gets no tile at all: a target is PKR amounts, and an
+            engineer sees no prices (owner decision 2026-10-22; no request is made). */}
         <div data-today-list className="min-h-0 min-w-0 flex-1 overflow-x-clip md:overflow-y-auto">
           {list}
-          {user.role === 'engineer' ? null : (
+          {seesPrices(user.role) ? (
             <div className="border-t bg-surface px-4 py-4">
               <TargetTile today={today} className="rounded border bg-surface" />
             </div>
-          )}
+          ) : null}
         </div>
       </div>
       {wide ? (

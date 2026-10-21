@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Check, ChevronDown, Copy, Pencil, Plus, Undo2 } from 'lucide-react'
+import { useSeesPrices } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -44,7 +45,8 @@ import { formatDay } from '@/lib/formatDay'
  * prices chased ×1, Can't quote, Not asked yet), when it was sent and a memory line from v_supplier_stats ("Replied 5 of 7,
  * usually ~2 days, now 5 days"; amber when the wait is longer than usual). "Enter reply" (or "Edit reply" once there is a price)
  * opens the reply dialog (SupplierReplies.tsx), which holds the prices, Paste reply and "Can't quote". A supplier who can't quote
- * shows the reason and Take back.
+ * shows the reason and Take back. An engineer (owner decision 2026-10-22: engineers see and write no prices) sees who replied and
+ * who is waited on, and can chase, but has no Enter or Edit reply: the dialog is a price form and never opens for them.
  *
  * The chase (`chase`):
  *   card    the RFQ is waiting for prices: the first supplier still owing a price shows a short preview of the message and
@@ -90,7 +92,9 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
   const open = chaseable.find(i => i.id === picked) ?? (chase === 'card' ? chaseable[0] : undefined)
   const today = businessToday()
   const reply = useReplyDialog()
-  const replying = reply.open ? inquiries.find(i => i.id === reply.open?.inquiryId) : undefined
+  // A reply is prices: an engineer has no Enter or Edit reply and the dialog never opens (owner decision 2026-10-22).
+  const prices = useSeesPrices()
+  const replying = prices && reply.open ?inquiries.find(i => i.id === reply.open?.inquiryId) : undefined
   const phone = useMediaQuery('(max-width: 767px)')
   // Phone: the answered suppliers opened by a tap (each starts as one line).
   const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(new Set())
@@ -156,7 +160,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
                       {declinedAll ? (
                         <TakeBack rfq={rfq} inquiry={i} />
-                      ) : (
+                      ) : !prices ? null : (
                         <Button size="sm" icon={i.lines.length > 0 ? Pencil : Plus} onClick={() => reply.show(i.id)} aria-label={`${label}, ${i.supplierName}`}>
                           {label}
                         </Button>

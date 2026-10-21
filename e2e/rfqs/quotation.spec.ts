@@ -232,7 +232,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
       })
     })
     const s = await seed()
-    await openAs(page, 'engineer', `/rfqs/${s.rfq.id}`)
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await openIssue(page)
     await dialog(page).getByTestId('chip-sold-1').click()
     await price(page, 2).fill('300')
@@ -485,30 +485,31 @@ for (const width of [1440, 375]) {
   })
 }
 
-// Owner decision 2026-10-19 (DECISIONS.md): engineers MAY see selling prices on the quotation screens and issue quotations.
-// They never see the spread, the margin or the Money pages. This documents that line.
-test.describe('what an engineer sees on the quotation screens (owner decision 2026-10-19)', () => {
-  test('selling prices are visible and an engineer can issue; there is no spread, margin or money request', async ({ page }) => {
+// Owner decision 2026-10-22 (replaces 2026-10-19): engineers see NO prices. On the quotation screens they see that a quotation was
+// issued (its number, dates and state), never its prices, its PDF or the Issue quotation dialog, and no price is even fetched.
+test.describe('what an engineer sees on the quotation screens (owner decision 2026-10-22)', () => {
+  test('no Issue quotation, no dialog from ?issue=1, no gross or PDF on an issued quotation, and no price requested', async ({ page }) => {
     await noShareApi(page)
     const s = await seed()
-    const urls: string[] = []
-    page.on('request', r => urls.push(r.url()))
-    await openAs(page, 'engineer', `/rfqs/${s.rfq.id}`)
-    await openIssue(page)
-    // Selling prices: the memory chips and the price boxes are there.
-    await expect(dialog(page).getByTestId('chip-sold-1')).toContainText('PKR 1,000')
-    await expect(dialog(page).getByTestId('chip-quoted-1')).toContainText('PKR 1,200')
-    await expect(price(page, 1)).toBeVisible()
-    // No spread, margin, sell-versus-cost or markup wording anywhere in the dialog or on the page.
-    const text = `${await dialog(page).innerText()}\n${await page.locator('main').innerText()}`
-    expect(text).not.toMatch(/spread|margin|markup|profit|sell(?:ing)? (?:vs|versus) cost/i)
-    // And an engineer can issue.
-    await dialog(page).getByTestId('chip-sold-1').click()
-    await price(page, 2).fill('300')
-    await dialog(page).getByRole('button', { name: 'Issue quotation' }).click()
-    await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 30_000 })
+    // A quotation issued by the database first (prices 1,000 and 300), so the engineer has one to look at.
+    for (const [i, net] of [[0, 1000], [1, 300]] as const) {
+      await must(rest('admin', `rfq_items?id=eq.${s.items[i].id}`, { method: 'PATCH', body: { quoted_unit_price_net: net }, prefer: 'return=minimal' }))
+    }
+    await issueViaRpc(s.rfq.id)
     expect(await quotationsOf(s.rfq.id)).toHaveLength(1)
-    // No money page or money view was requested.
-    expect(urls.filter(u => /v_order_money|v_payment|v_margin|payments_in|order_costs|v_receivable|order_receivables/.test(u))).toEqual([])
+
+    const urls: string[] = []
+    page.on('request', r => urls.push(decodeURIComponent(r.url())))
+    await openAs(page, 'engineer', `/rfqs/${s.rfq.id}?issue=1`)
+    const block = page.locator('[data-slot="quotations"]')
+    await expect(block.getByRole('row', { name: /QT-/ })).toHaveCount(1)
+    await page.waitForLoadState('networkidle')
+    await expect(dialog(page)).toHaveCount(0)
+    for (const name of [/^Issue quotation$/, /^Revise quotation$/, /^Mark won$/, /^Open PDF$/, /^Share$/]) await expect(page.getByRole('button', { name })).toHaveCount(0)
+    await expect(block.getByRole('columnheader', { name: /Gross/ })).toHaveCount(0)
+    const text = await page.locator('main').innerText()
+    expect(text).not.toMatch(/PKR\s*[\d≈]|≈\s*PKR|1,000|1,200|spread|margin|markup/i)
+    // Nothing that carries a price was asked for.
+    expect(urls.filter(u => /customer_price_memory|rank_item_quotes|supplier_item_memory|v_fx_latest|quoted_unit_price_net|unit_price|net_total|gst_total|v_order_money|payments_in|order_receivables/.test(u))).toEqual([])
   })
 })

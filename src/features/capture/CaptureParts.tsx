@@ -49,9 +49,10 @@ export function CapNote({ children }: { children: ReactNode }) {
 /**
  * The four destinations as radio tiles. With `only` (R2-11) just the chosen one is drawn, wide, and "Something else" (in the sheet)
  * opens the rest; the arrow keys still step through all four, on the same element, so the focus stays put.
+ * `prices` false (an engineer: owner decision 2026-10-22, engineers see no prices) leaves out "A supplier's prices": three tiles.
  */
-export function Tiles({ chosen, kind, off, onChoose, only = false }: { chosen: Dest; kind: PayloadKind; off: boolean; onChoose: (d: Dest) => void; only?: boolean }) {
-  const order = Object.keys(TILES) as TileDest[]
+export function Tiles({ chosen, kind, off, onChoose, only = false, prices = true }: { chosen: Dest; kind: PayloadKind; off: boolean; onChoose: (d: Dest) => void; only?: boolean; prices?: boolean }) {
+  const order = (Object.keys(TILES) as TileDest[]).filter(d => prices || d !== 'reply')
   const shown = only ? order.filter(d => d === chosen) : order
   // Nothing ticked (the choice is under "Something else", or nothing is captured yet): the first tile takes the Tab stop.
   const noneOn = off || !order.includes(chosen as TileDest)
