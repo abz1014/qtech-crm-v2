@@ -1,0 +1,184 @@
+// The reader's corpus: fictional enquiries and supplier quotes in every shape and medium, made from a seed. Batch 0 is split
+// 70% dev / 30% held-out (by a hash of the case id, so adding cases never moves old ones); later batches are fresh: new seeds
+// and template sets written after the reader was tuned, checked once, first try, then added to dev.
+
+import { ENQUIRY_TEMPLATES, QUOTE_TEMPLATES } from './templates'
+import type { CorpusCase, EnquiryCase, Medium, QuoteCase, Shot, TextStyle } from './model'
+import { hash, rng, type Rng } from './rng'
+
+export const CORPUS_TODAY = '2026-10-20'
+
+const FONTS = {
+  calibri: 'Carlito, Calibri, "Segoe UI", Arial, sans-serif',
+  arial: 'Arial, "Liberation Sans", Helvetica, sans-serif',
+  tahoma: 'Tahoma, Verdana, "DejaVu Sans", sans-serif',
+  segoe: '"Segoe UI", Roboto, Arial, sans-serif',
+  times: '"Times New Roman", "Liberation Serif", Times, serif',
+  roboto: 'Roboto, Arial, Helvetica, sans-serif',
+}
+
+function textStyle(r: Rng, hasHead: boolean): TextStyle {
+  const table = r.pick(hasHead ? (['tab', 'tab', 'tab', 'spaces', 'pipes', 'cells'] as const) : (['tab', 'tab', 'tab', 'tab', 'spaces'] as const))
+  return { table, chat: r.pick(['android', 'ios', 'web'] as const) }
+}
+
+function shotFor(r: Rng, c: { doc: CorpusCase['doc']; medium: Medium }): Shot {
+  const look = c.doc.look
+  if (c.medium === 'scan') {
+    return { ui: 'paper', width: 900, scale: r.pick([1.25, 1.5]), font: r.pick([FONTS.arial, FONTS.times, FONTS.calibri]), format: 'jpeg', quality: r.int(60, 85), tilt: r.pick([0, 0.5, -0.8, 1.2, -1.5, 2]), contrast: r.pick([1, 0.9, 0.8]), blur: r.pick([0, 0, 0.4]) }
+  }
+  if (look === 'chat') {
+    return { ui: 'whatsapp', width: 393, scale: r.pick([2, 2.75, 3]), font: r.pick([FONTS.roboto, FONTS.segoe, FONTS.arial]), dark: r.chance(0.35), format: r.pick(['png', 'jpeg', 'png']), quality: 80, phone: true }
+  }
+  if (look === 'paper' || (look === 'sheet' && r.chance(0.5))) {
+    // A phone photo of a printed page.
+    const photo = r.chance(0.7)
+    return {
+      ui: 'paper',
+      width: 900,
+      scale: r.pick([1, 1.25, 1.5]),
+      font: r.pick([FONTS.arial, FONTS.times, FONTS.calibri, FONTS.tahoma]),
+      format: 'jpeg',
+      quality: r.int(55, 85),
+      tilt: photo ? r.pick([3, -3, 4, -5, 6, -6, 8, -8]) : 0,
+      blur: photo ? r.pick([0, 0.5, 0.8, 1]) : 0,
+      shadow: photo && r.chance(0.6),
+      contrast: photo ? r.pick([1, 0.85, 0.7, 0.6]) : 1,
+      photo,
+    }
+  }
+  if (look === 'sheet') return { ui: 'excel', width: 1100, scale: r.pick([1, 1.25, 1.5]), font: r.pick([FONTS.calibri, FONTS.arial]), format: r.pick(['png', 'jpeg']), quality: 85 }
+  const phone = r.chance(0.25)
+  const photo = !phone && r.chance(0.15)
+  return {
+    ui: r.pick(['outlook', 'outlook', 'gmail']),
+    width: phone ? 393 : r.pick([1024, 1280, 1366]),
+    scale: phone ? r.pick([2, 2.75]) : r.pick([1, 1, 1.25, 1.5]),
+    font: r.pick([FONTS.calibri, FONTS.arial, FONTS.tahoma, FONTS.segoe]),
+    dark: !photo && r.chance(0.2),
+    format: photo ? 'jpeg' : r.pick(['png', 'png', 'jpeg', 'webp']),
+    quality: photo ? 70 : 85,
+    phone,
+    photo,
+    tilt: photo ? r.pick([3, -4, 5]) : 0,
+    blur: photo ? 0.6 : 0,
+    contrast: photo ? 0.8 : 1,
+  }
+}
+
+/** The medium mix: most enquiries are pasted text, then PDFs, then pictures. */
+const MEDIUM_WEIGHT: Record<Medium, number> = { text: 0.42, pdf: 0.26, image: 0.22, scan: 0.1 }
+
+function pickMedium(r: Rng, media: Medium[]): Medium {
+  const total = media.reduce((n, m) => n + MEDIUM_WEIGHT[m], 0)
+  let x = r.next() * total
+  for (const m of media) {
+    x -= MEDIUM_WEIGHT[m]
+    if (x <= 0) return m
+  }
+  return media[0] as Medium
+}
+
+function weighted<T extends { weight: number }>(r: Rng, xs: readonly T[]): T {
+  const total = xs.reduce((n, x) => n + x.weight, 0)
+  let x = r.next() * total
+  for (const t of xs) {
+    x -= t.weight
+    if (x <= 0) return t
+  }
+  return xs[0] as T
+}
+
+export interface BatchSpec {
+  batch: number
+  enquiries: number
+  quotes: number
+  /** Template generations used (0: the first set). */
+  gens: number[]
+  /** All of it is for development (more of the same generator, other seeds), none held out. */
+  dev?: boolean
+  /** Run in CI against its floors (a fresh batch joins once it has been checked first-try). */
+  gate?: boolean
+}
+
+/**
+ * Batch 0 is dev + held-out (70/30). Batches 10 and 11 are extra dev data from the same templates. Batches 1, 2, ... are fresh:
+ * new seeds and template generations written after the reader passed what came before; each is checked once, first try.
+ */
+export const BATCHES: BatchSpec[] = [
+  { batch: 0, enquiries: 180, quotes: 72, gens: [0], gate: true },
+  { batch: 10, enquiries: 120, quotes: 48, gens: [0], dev: true, gate: true },
+  { batch: 11, enquiries: 120, quotes: 48, gens: [0], dev: true, gate: true },
+  { batch: 1, enquiries: 120, quotes: 48, gens: [0, 1] },
+  { batch: 2, enquiries: 120, quotes: 48, gens: [0, 1, 2] },
+  { batch: 3, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3] },
+  { batch: 4, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4] },
+]
+
+function splitOf(spec: BatchSpec, id: string): 'dev' | 'held' {
+  if (spec.dev) return 'dev'
+  if (spec.batch === 0) return hash(id) % 10 < 3 ? 'held' : 'dev'
+  return 'held'
+}
+
+export function buildBatch(spec: BatchSpec): CorpusCase[] {
+  const out: CorpusCase[] = []
+  const eTemplates = ENQUIRY_TEMPLATES.filter(t => spec.gens.includes(t.gen))
+  const qTemplates = QUOTE_TEMPLATES.filter(t => spec.gens.includes(t.gen))
+  // A later batch leans on its own new templates, so they are tried with enough cases.
+  const newest = Math.max(...spec.gens)
+  const boost = <T extends { gen: number; weight: number }>(xs: T[]) => xs.map(x => ({ ...x, weight: x.weight * (newest > 0 && x.gen === newest ? 3 : 1) }))
+  const eT = boost(eTemplates)
+  const qT = boost(qTemplates)
+  for (let i = 0; i < spec.enquiries; i++) {
+    const id = `e${spec.batch}-${String(i).padStart(3, '0')}`
+    const r = rng(`enquiry/${spec.batch}/${i}`)
+    const t = weighted(r, eT)
+    const d = t.make(r)
+    const medium = pickMedium(r, d.media)
+    const hasHead = d.doc.blocks.some(b => b.k === 'table' && b.head !== null)
+    const c: EnquiryCase = {
+      kind: 'enquiry',
+      id,
+      gen: t.gen,
+      batch: spec.batch,
+      split: splitOf(spec, id),
+      shape: t.shape,
+      medium,
+      doc: d.doc,
+      textStyle: textStyle(r, hasHead),
+      truth: d.truth,
+    }
+    if (medium === 'image' || medium === 'scan') c.shot = shotFor(r, c)
+    out.push(c)
+  }
+  for (let i = 0; i < spec.quotes; i++) {
+    const id = `q${spec.batch}-${String(i).padStart(3, '0')}`
+    const r = rng(`quote/${spec.batch}/${i}`)
+    const t = weighted(r, qT)
+    const d = t.make(r)
+    const medium = pickMedium(r, d.media)
+    const c: QuoteCase = {
+      kind: 'quote',
+      id,
+      gen: t.gen,
+      batch: spec.batch,
+      split: splitOf(spec, id),
+      shape: t.shape,
+      medium,
+      doc: d.doc,
+      textStyle: textStyle(r, true),
+      rfq: d.rfq,
+      truth: d.truth,
+    }
+    if (medium === 'image' || medium === 'scan') c.shot = shotFor(r, c)
+    out.push(c)
+  }
+  return out
+}
+
+export function batch(n: number): CorpusCase[] {
+  const spec = BATCHES.find(b => b.batch === n)
+  if (!spec) throw new Error(`no batch ${n}`)
+  return buildBatch(spec)
+}
