@@ -51,9 +51,9 @@ const ICON: Record<RuleKey, LucideIcon> = {
   job_on_site: PackageCheck,
 }
 
-// The short forms of the glossary's "Quotations" and "Suppliers & delivery", so the four tabs fit the list column in one row on a
-// laptop; below that they wrap (never a sideways scroll).
-const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Quotes', sourcing: 'Suppliers', money: 'Money' }
+// The glossary's "Quotations", and "Suppliers" (the short form of "Suppliers & delivery"), so the four tabs fit the list column in
+// one row on a laptop; below that they wrap (never a sideways scroll).
+const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Quotations', sourcing: 'Suppliers', money: 'Money' }
 const WAITING_OPEN_MAX = 0 // Waiting opens only when the person opens it (R2-08)
 
 /** Whether the person opened or closed the Waiting group, kept for this browser session only (null: not touched, the size decides). */
@@ -145,11 +145,13 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
         {tabs.length > 0 ? (
           <SegmentedControl
             aria-label="Show"
-            // Tighter segments (px-2, not px-3) so All, Quotes, Suppliers and Money fit the 420 px list on one line (audit T4).
-            className="mt-2 flex-wrap justify-self-start [&>*]:px-2"
+            // One line in the 420 px list at 1366 x 768, even with a 15 px classic scrollbar and two-digit counts (about 360 px
+            // to spare): tighter segments (6 px sides, 4 px to the count, a 4 px count pill), and no count on "All", because the
+            // line above already says how many need you (each fact once). Below that the strip wraps (audit T4).
+            className="mt-2 flex-wrap justify-self-start [&>*]:gap-1 [&>*]:px-1.5 [&_[data-needs-count]]:px-1"
             value={tab}
             onValueChange={v => setTab(v as 'all' | TodayTab)}
-            options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], needs: counts[t] }))}
+            options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], needs: t === 'all' ? undefined : counts[t] }))}
           />
         ) : null}
         <HowItWorksCard userId={user.id} role={user.role} className="mt-2" />

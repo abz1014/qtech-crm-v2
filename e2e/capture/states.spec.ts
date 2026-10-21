@@ -298,7 +298,7 @@ test.describe('signed out in the middle', () => {
 test.describe('after 7 days', () => {
   test.use({ viewport: { width: 375, height: 812 } })
 
-  test('the screen says the item is gone and offers Paste or add a photo', async ({ page }) => {
+  test('the screen says the item is gone and offers Paste or photo', async ({ page }) => {
     const s = await seed()
     await ready(page, s.rfq.id)
     const id = await page.evaluate(
@@ -321,7 +321,7 @@ test.describe('after 7 days', () => {
     await expect(sheet(page).getByText('Shared items are kept for 7 days. Share it again from WhatsApp, or paste it.')).toBeVisible()
     await settle(page)
     await review(page, 'capture-frame-expired-375')
-    await sheet(page).getByRole('button', { name: 'Paste or add a photo' }).click()
+    await sheet(page).getByRole('button', { name: 'Paste or photo', exact: true }).click()
     await expect(sheet(page).getByText('Tap and hold here, then tap Paste')).toBeVisible()
   })
 })

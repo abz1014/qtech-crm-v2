@@ -266,7 +266,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(pane.getByTestId('draft-text')).toContainText('Flange rating and line size')
     await resetCount(t)
     await resetClipboard(t)
-    await pane.getByRole('button', { name: 'Copy message and mark chased' }).click()
+    await pane.getByRole('button', { name: 'Copy and mark chased' }).click()
     await expect(t.getByRole('status').filter({ hasText: `Copied. ${rfqRef(rfq.number)} marked chased.` })).toBeVisible()
     fe2('Chase the customer from Today', (await readCount(t)).mouse, 1)
     await readClipboardWhen(t, 'Flange rating and line size')

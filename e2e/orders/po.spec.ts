@@ -220,6 +220,26 @@ test.describe('O07: Issue PO', () => {
     await expect(page.getByRole('menuitem', { name: /View PO|Revise PO/ })).toHaveCount(0)
   })
 
+  test('once the order is fully invoiced, a supplier order with no PO drops "No PO yet" and Issue PO from its row; Issue PO stays in its menu', async ({ page }) => {
+    const s = await seedPo()
+    const totals = (await get<{ net: number; gst: number }>(`v_order_state?order_id=eq.${s.order.id}&select=net,gst`))[0]
+    await must(
+      rest('admin', 'invoices', {
+        method: 'POST',
+        body: { order_id: s.order.id, number: `INV-PO-${s.tag}`, invoice_date: karachiDay(0), net_amount: totals.net, gst_amount: totals.gst },
+        prefer: 'return=minimal',
+      }),
+    )
+    await expect.poll(async () => (await get<{ invoicing_state: string }>(`v_order_state?order_id=eq.${s.order.id}&select=invoicing_state`))[0].invoicing_state).toBe('fully_invoiced')
+    await openAs(page, 'sales', `/orders/${s.order.id}`)
+    const leg = legLoc(page, 'A')
+    await expect(leg).toBeVisible()
+    await expect(leg.getByTestId('leg-A-po')).toHaveCount(0)
+    await expect(leg.getByRole('button', { name: `Issue PO, ${s.supplier.name}` })).toHaveCount(0)
+    await leg.getByRole('button', { name: `More for ${s.supplier.name}` }).click()
+    await expect(page.getByRole('menuitem', { name: 'Issue PO' })).toBeVisible()
+  })
+
   for (const width of [1440, 375]) {
     test(`axe (WCAG 2.2 AA) and review screenshots at ${width}: the Issue PO dialog`, async ({ page }) => {
       const s = await seedPo()

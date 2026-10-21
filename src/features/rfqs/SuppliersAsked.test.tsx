@@ -150,9 +150,27 @@ describe('SuppliersAsked chase', () => {
   })
 })
 
+/** A phone's media queries (useMediaQuery reads '(max-width: 767px)'); returns the undo. */
+function asPhone(): () => void {
+  const orig = window.matchMedia
+  window.matchMedia = ((q: string) => ({
+    matches: q === '(max-width: 767px)',
+    media: q,
+    onchange: null,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia
+  return () => {
+    window.matchMedia = orig
+  }
+}
+
 describe('SuppliersAsked: each supplier once, with its reply (grade-B R2, R3, R4)', () => {
   const meter: RfqItemRow[] = [{ id: 'it-1', number: 1, description: 'Hach HQ1110 meter', brandId: 'b-hach', brandName: 'Hach', familyId: null, qty: 1, unit: 'pcs' }]
-  function renderMode(chase: 'card' | 'button' | 'none', inq: InquiryRow = { ...inquiry, chaseCount: 0, lastChasedOn: null }) {
+  function renderMode(chase: 'card' | 'button' | 'none', inq: InquiryRow | InquiryRow[] = { ...inquiry, chaseCount: 0, lastChasedOn: null }, jump = false) {
     installFakeDb(() => ({ data: [] }))
     const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
     render(
@@ -160,7 +178,7 @@ describe('SuppliersAsked: each supplier once, with its reply (grade-B R2, R3, R4
         <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
           <MemoryRouter>
             <ToastProvider>
-              <SuppliersAsked rfq={rfq} items={meter} inquiries={[inq]} stats={undefined} chase={chase} onFloat={() => undefined} />
+              <SuppliersAsked rfq={rfq} items={meter} inquiries={Array.isArray(inq) ? inq : [inq]} stats={undefined} chase={chase} jump={jump} onFloat={() => undefined} />
             </ToastProvider>
           </MemoryRouter>
         </SessionContext.Provider>
@@ -190,6 +208,56 @@ describe('SuppliersAsked: each supplier once, with its reply (grade-B R2, R3, R4
     renderMode('none')
     expect(screen.queryByRole('button', { name: 'Chase Silent Traders' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Copy and mark chased' })).toBeNull()
+  })
+
+  const second: InquiryRow = { ...inquiry, id: 'i-2', supplierId: 's-second', supplierName: 'Second Source', chaseCount: 0, lastChasedOn: null }
+  const priced: InquiryRow = {
+    ...inquiry,
+    id: 'i-3',
+    supplierId: 's-priced',
+    supplierName: 'Priced Ltd',
+    chaseCount: 0,
+    lastChasedOn: null,
+    responseState: 'quoted',
+    itemsQuoted: 1,
+    lines: [{ id: 'l-1', inquiryId: 'i-3', itemId: 'it-1', unitPrice: 100, currency: 'PKR', leadTime: null, inStock: null, fxRatePkr: null, fxRateOn: null }],
+  }
+
+  it('waiting for prices: the others get Enter reply and Chase only; the card picker "Message for" switches it (grade-A 9)', async () => {
+    const user = userEvent.setup()
+    renderMode('card', [{ ...inquiry, chaseCount: 0, lastChasedOn: null }, second])
+    expect(screen.queryByRole('button', { name: /^Show message/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Chase Second Source' })).toBeInTheDocument()
+    // The other channel waits with the whole message.
+    expect(screen.queryByRole('button', { name: 'Email instead' })).toBeNull()
+    await user.selectOptions(screen.getByRole('combobox', { name: /^Message for/ }), 'i-2')
+    expect(screen.getByRole('group', { name: 'Chase Second Source' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Chase Silent Traders' })).toBeInTheDocument()
+  })
+
+  it('phone: an answered supplier is one line until tapped; the page opens at the first supplier without a reply', async () => {
+    const undo = asPhone()
+    const seen: string[] = []
+    const scroll = Element.prototype.scrollIntoView
+    Element.prototype.scrollIntoView = function (this: Element) {
+      seen.push(this.getAttribute('data-reply-row') ?? '')
+    }
+    try {
+      const user = userEvent.setup()
+      renderMode('button', [priced, { ...inquiry, chaseCount: 0, lastChasedOn: null }], true)
+      const toggle = screen.getByRole('button', { name: /Priced Ltd/ })
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      expect(screen.queryByRole('button', { name: 'Edit reply, Priced Ltd' })).toBeNull()
+      await user.click(toggle)
+      expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      expect(screen.getByRole('button', { name: 'Edit reply, Priced Ltd' })).toBeInTheDocument()
+      // Still waiting: in full, and where the page opened.
+      expect(screen.getByRole('button', { name: 'Enter reply, Silent Traders' })).toBeInTheDocument()
+      expect(seen).toEqual(['s-silent'])
+    } finally {
+      Element.prototype.scrollIntoView = scroll
+      undo()
+    }
   })
 
   it("a supplier who can't quote shows Take back instead of Enter reply", () => {

@@ -58,6 +58,25 @@ describe('FileDrop and FileRow (U07)', () => {
     expect(screen.getByText('Drop files here')).toBeInTheDocument()
   })
 
+  it('the paste keys are hidden on a touch screen (pointer: coarse), which has none', () => {
+    render(<FileDrop onAdd={() => undefined} />)
+    expect(screen.getByText(/or paste with/)).toHaveClass('[@media(pointer:coarse)]:hidden')
+  })
+
+  it('slim: one "Add file" row that still takes a chosen, dropped or pasted file', async () => {
+    const user = userEvent.setup()
+    const onAdd = vi.fn<(f: AddedFile[]) => void>()
+    const { container } = render(<FileDrop onAdd={onAdd} slim />)
+    expect(screen.queryByText('Drop files here')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Add file' })).toBeInTheDocument()
+    expect(screen.getByText(/or drop it here, or paste with/)).toHaveClass('[@media(pointer:coarse)]:hidden')
+    expect(await axeViolations(container)).toEqual([])
+    await user.upload(screen.getByLabelText('Choose files', { selector: 'input' }), png('plate.png'))
+    await waitFor(() => expect(onAdd).toHaveBeenCalledTimes(1))
+    fireEvent.paste(document.body, { clipboardData: { files: [png('shot.png')] } })
+    await waitFor(() => expect(onAdd).toHaveBeenCalledTimes(2))
+  })
+
   it('a pasted file anywhere on the page is added; paste inside a field is left alone', async () => {
     const onAdd = vi.fn<(f: AddedFile[]) => void>()
     render(

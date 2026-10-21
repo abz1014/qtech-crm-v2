@@ -456,7 +456,7 @@ export function FloatedPanel({
           <label htmlFor="floated-text" className="sr-only">
             Message to copy
           </label>
-          <textarea id="floated-text" readOnly value={text} rows={10} className="w-full rounded border border-line-input bg-sunken px-3 py-3 text-sm leading-5" />
+          <textarea id="floated-text" readOnly value={text} rows={10} className="w-full rounded border border-line-input bg-sunken px-3 py-3 text-sm leading-5 max-md:text-base max-md:leading-6" />
           <div>
             <Button icon={Copy} onClick={onCopyAgain}>
               Copy again

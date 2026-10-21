@@ -44,7 +44,9 @@ import { useWonDialog } from '@/features/orders/useWonDialog'
  * the Quotations table. Right rail: "Suppliers asked", where each supplier is listed once with Enter reply / Edit reply (the
  * reply dialog holds the prices and Can't quote), memory lines, the chase while waiting for prices, Ask more suppliers; or,
  * while nobody has been asked, "Suppliers to ask"; then the questions for the customer (R09) and the files (R10). Phone: one bar
- * (back, the number) and a sticky action bar with the same green action, Chase and More.
+ * (back, the number) and a sticky action bar with the same green action, Chase and More. While suppliers can still be chased the
+ * phone opens at the first supplier without a reply; answered suppliers and priced items are one line each, opened by a tap, and
+ * empty Files is one "Add file" row (grade-A 6 fix 2, 9 fix 3: at most ~25 actions, under ~3,500 px at 375).
  *
  * FE-2 entry burden, listed for the commit:
  *   required     a price (greater than zero) for each item the supplier quoted. Nothing else is required.
@@ -368,10 +370,10 @@ function Loaded({
               onAsk={ticked => void askFrom(ticked, itemList)}
             />
           ) : (
-            <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} rates={rates} chase={chaseMode} onFloat={() => setFloating(true)} />
+            <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} rates={rates} chase={chaseMode} jump={chaseMode !== 'none'} onFloat={() => setFloating(true)} />
           )}
           <ClarificationsPanel rfq={rfq} inquiries={inquiryList} />
-          <AttachmentsPanel rfqId={rfq.id} compact />
+          <AttachmentsPanel rfqId={rfq.id} compact slimWhenEmpty />
         </aside>
       </div>
       <RfqActionBar rfq={rfq} facts={facts} chaseSuppliers={chaseSuppliers} chaseCustomer={chaseCustomer} />

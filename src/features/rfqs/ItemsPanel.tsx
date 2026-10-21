@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react'
 import { ChevronDown, Clock, Copy, Ellipsis, Pencil, Plus, ThumbsUp, Trash2, TriangleAlert } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { cn } from '@/lib/utils'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { businessToday } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
 import { formatDay } from '@/lib/formatDay'
@@ -39,6 +40,11 @@ import { cheapestFirst, comparePrices, itemCoverage, qtyText, reasonForItem, rea
  * "Cheapest: ..." line says so. Without the ranking (still loading, or one price only) the lowest of two or more comparable prices
  * is marked "Lowest price". A price with no usable rate is shown and never blocks anything (BUILD_PLAN A3/A4); it is not compared.
  * Entering replies lives once per supplier in Suppliers asked (SuppliersAsked.tsx opens SupplierReplies.tsx).
+ *
+ * Fewer actions on show (grade-A 9 fix 3): a price line has ONE control, its chevron; its "..." menu (Edit reply, Copy price,
+ * Remove reply) shows once the line is open. Phone (grade-A 6 fix 2): the items are an accordion. An item with prices (or a
+ * can't quote) is its header line until tapped, one open at a time, the first such item open to start; an item only waiting is
+ * its header and chip, the "Waiting on" line left to Suppliers asked.
  */
 
 const daysBetween = (from: string, to: string) => Math.round((Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10)) - Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10))) / 86_400_000)
@@ -270,6 +276,9 @@ export function ItemsPanel({
   // The selling price and the spread are for admin and sales only. The database sends an engineer NULLs; this also keeps their notes off the page.
   const showSell = session.status === 'signed-in' && (session.user.role === 'admin' || session.user.role === 'sales')
   const [opened, setOpened] = useState<Readonly<Record<string, boolean>>>({})
+  const phone = useMediaQuery('(max-width: 767px)')
+  // Phone: the one item open (undefined: the first item with something to show; null: all closed by the person).
+  const [openItem, setOpenItem] = useState<string | null | undefined>(undefined)
   const responders = inquiries.filter(i => i.lines.length > 0)
   // Asked at all: sent, or answered "cannot quote" (a supplier only on the shortlist is not asked yet).
   const askedCount = inquiries.filter(i => i.sentOn || i.noOfferOn).length
@@ -279,6 +288,9 @@ export function ItemsPanel({
     inquiries.flatMap(i => i.lines.map(l => l.currency)),
   )
   const nobodyAsked = inquiries.length === 0
+  // Something under the header besides the waiting line: a price or a can't quote.
+  const hasBody = (itemId: string) => inquiries.some(i => i.lines.some(l => l.itemId === itemId) || Boolean(reasonForItem(itemId, i)))
+  const shownItem = openItem === undefined ? items.find(it => hasBody(it.id))?.id : openItem
   return (
     <DetailPanel
       title="Items and supplier prices"
@@ -348,12 +360,31 @@ export function ItemsPanel({
             const cov = itemCoverage(lines.length, waiting.length, responders.length, askedCount)
             const q = qtyText(item.qty, item.unit)
             const forThis = (suggestions ?? []).filter(s => s.coversItemIds.includes(item.id)).slice(0, 3)
+            // Phone accordion: an item with prices, a can't quote or the warning folds to its header; one open at a time.
+            const foldable = phone && !nobodyAsked && (entries.length > 0 || declined.length > 0 || cov.kind === 'uncovered')
+            const folded = foldable && shownItem !== item.id
+            const bodyId = `item-body-${item.id}`
             return (
-              <article key={item.id} aria-label={`Item ${item.number}`} className="min-w-0">
-                <header className="flex flex-wrap items-start gap-x-3 gap-y-2 px-5 pt-4">
+              <article key={item.id} aria-label={`Item ${item.number}`} className="min-w-0" data-folded={folded ? '' : undefined}>
+                <header className={cn('relative flex flex-wrap items-start gap-x-3 gap-y-2 px-5 pt-4', folded && 'pb-4', phone && !foldable && !nobodyAsked && 'pb-4')}>
                   <span className="num mt-[2px] grid h-6 min-w-6 place-items-center rounded border border-line-strong px-1 text-sm">{item.number}</span>
                   <div className="min-w-0 flex-1 basis-[16rem]">
-                    <h3 className="text-base font-medium text-pretty">{item.description}</h3>
+                    <h3 className="text-base font-medium text-pretty">
+                      {foldable ? (
+                        // The whole header is the tap target (the button's box stretches over it); the name is its label.
+                        <button
+                          type="button"
+                          aria-expanded={!folded}
+                          aria-controls={folded ? undefined : bodyId}
+                          onClick={() => setOpenItem(folded ? item.id : null)}
+                          className="text-left after:absolute after:inset-0 after:content-['']"
+                        >
+                          {item.description}
+                        </button>
+                      ) : (
+                        item.description
+                      )}
+                    </h3>
                     <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-fg-muted">
                       {q ? <span className="num">{q}</span> : null}
                       {item.brandName ? <Dot>{item.brandName}</Dot> : null}
@@ -374,158 +405,165 @@ export function ItemsPanel({
                     </p>
                   </div>
                   {cov.value ? <StatusBadge dimension="item-price" value={cov.value} detail={cov.detail} /> : null}
+                  {foldable ? <Icon icon={ChevronDown} className={cn('mt-[2px] shrink-0 text-fg-muted transition-transform', !folded && 'rotate-180')} /> : null}
                 </header>
 
-                {cov.kind === 'uncovered' ? (
-                  <div className="mt-3 grid gap-0 px-5">
-                    <div role="status" className="flex items-start gap-3 rounded-t border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3">
-                      <Icon icon={TriangleAlert} className="mt-[2px] text-tone-danger-fg" />
-                      <p className="text-fg-2">
-                        <b className="font-semibold text-fg">
-                          {responders.length > 0
-                            ? `None of the ${responders.length} ${responders.length === 1 ? 'supplier' : 'suppliers'} who replied quoted this item.`
-                            : 'Every supplier asked said they cannot quote it.'}
-                        </b>{' '}
-                        {waiting.length > 0 ? `${waiting.map(w => w.supplierName).join(', ')} ${waiting.length === 1 ? 'has' : 'have'} not replied yet. ` : ''}
-                        Ask someone else before the quotation is due.
-                      </p>
-                    </div>
-                    {forThis.length > 0 ? (
-                      <ul className="rounded-b border border-t-0 bg-surface">
-                        {forThis.map(s => (
-                          <li key={s.supplierId} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-4 py-3 first:border-t-0">
-                            <span className="min-w-0 flex-1 basis-[14rem]">
-                              <b className="block font-semibold">{s.name}</b>
-                              <span className="text-sm text-fg-muted">{s.reason}</span>
-                            </span>
-                            <Button size="sm" icon={Copy} onClick={() => onCopyEnquiry(s, item)} aria-label={`Copy message for ${s.name}`}>
-                              Copy message
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {nobodyAsked ? (
-                  <p className="px-5 pb-4 pt-3 text-fg-muted">No supplier has been asked about this item.</p>
-                ) : entries.length > 0 || declined.length > 0 || waiting.length > 0 ? (
-                  <div className="mt-3">
-                    {entries.length > 0 ? (
-                      <div className={HEAD} aria-hidden="true">
-                        <span>Supplier</span>
-                        <span className="text-right">Price, PKR today (≈ = converted)</span>
-                        <span>Lead time</span>
-                        <span>Stock</span>
-                        <span />
+                {folded ? null : (
+                  <div id={bodyId}>
+                    {cov.kind === 'uncovered' ? (
+                      <div className="mt-3 grid gap-0 px-5">
+                        <div role="status" className="flex items-start gap-3 rounded-t border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3">
+                          <Icon icon={TriangleAlert} className="mt-[2px] text-tone-danger-fg" />
+                          <p className="text-fg-2">
+                            <b className="font-semibold text-fg">
+                              {responders.length > 0
+                                ? `None of the ${responders.length} ${responders.length === 1 ? 'supplier' : 'suppliers'} who replied quoted this item.`
+                                : 'Every supplier asked said they cannot quote it.'}
+                            </b>{' '}
+                            {waiting.length > 0 ? `${waiting.map(w => w.supplierName).join(', ')} ${waiting.length === 1 ? 'has' : 'have'} not replied yet. ` : ''}
+                            Ask someone else before the quotation is due.
+                          </p>
+                        </div>
+                        {forThis.length > 0 ? (
+                          <ul className="rounded-b border border-t-0 bg-surface">
+                            {forThis.map(s => (
+                              <li key={s.supplierId} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t px-4 py-3 first:border-t-0">
+                                <span className="min-w-0 flex-1 basis-[14rem]">
+                                  <b className="block font-semibold">{s.name}</b>
+                                  <span className="text-sm text-fg-muted">{s.reason}</span>
+                                </span>
+                                <Button size="sm" icon={Copy} onClick={() => onCopyEnquiry(s, item)} aria-label={`Copy message for ${s.name}`}>
+                                  Copy message
+                                </Button>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
                       </div>
                     ) : null}
-                    <ul>
-                      {entries.map(entry => {
-                        const { line, inquiry, c } = entry
-                        const memRow = memory?.[item.id]?.find(r => r.supplier_id === inquiry.supplierId)
-                        const chip = lastPriceChip(memRow, today)
-                        const rk = ranked ? (rankOf(line) as RankRow) : null
-                        const reasons = rk ? reasonsFor(rk, { showSell, bandSize, evidence: evidenceOf(memRow), names: { brand: item.brandName, family: item.familyName } }) : null
-                        const open = opened[line.id] ?? false
-                        const mark = markOf(entry)
-                        const detailId = `price-detail-${line.id}`
-                        const isCheapestTag = cheaperElsewhere?.line.id === line.id
-                        return (
-                          <Fragment key={line.id}>
-                            <li
-                              className={cn(ROW, rk && rk.rank === null && 'bg-canvas')}
-                              data-lowest={c.lowest ? '' : undefined}
-                              data-recommended={mark === 'recommended' ? '' : undefined}
-                              data-compared={c.compared && c.pkrPaisa !== null ? '' : undefined}
-                              data-ranked={rk ? (rk.rank ?? 'none') : undefined}
-                            >
-                              {/* The mark sits with the name (no column of its own), so the name keeps its width at 16px text. */}
-                              <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                                <span className="min-w-0 break-words font-medium">{inquiry.supplierName}</span>
-                                {mark ? (
-                                  <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-medium text-tone-success-fg">
-                                    <Icon icon={ThumbsUp} size="chip" />
-                                    {mark === 'recommended' ? 'Recommended' : 'Lowest price'}
+
+                    {nobodyAsked ? (
+                      <p className="px-5 pb-4 pt-3 text-fg-muted">No supplier has been asked about this item.</p>
+                    ) : entries.length > 0 || declined.length > 0 || (waiting.length > 0 && !phone) ? (
+                      <div className="mt-3">
+                        {entries.length > 0 ? (
+                          <div className={HEAD} aria-hidden="true">
+                            <span>Supplier</span>
+                            <span className="text-right">Price, PKR today (≈ = converted)</span>
+                            <span>Lead time</span>
+                            <span>Stock</span>
+                            <span />
+                          </div>
+                        ) : null}
+                        <ul>
+                          {entries.map(entry => {
+                            const { line, inquiry, c } = entry
+                            const memRow = memory?.[item.id]?.find(r => r.supplier_id === inquiry.supplierId)
+                            const chip = lastPriceChip(memRow, today)
+                            const rk = ranked ? (rankOf(line) as RankRow) : null
+                            const reasons = rk ? reasonsFor(rk, { showSell, bandSize, evidence: evidenceOf(memRow), names: { brand: item.brandName, family: item.familyName } }) : null
+                            const open = opened[line.id] ?? false
+                            const mark = markOf(entry)
+                            const detailId = `price-detail-${line.id}`
+                            const isCheapestTag = cheaperElsewhere?.line.id === line.id
+                            return (
+                              <Fragment key={line.id}>
+                                <li
+                                  className={cn(ROW, rk && rk.rank === null && 'bg-canvas')}
+                                  data-lowest={c.lowest ? '' : undefined}
+                                  data-recommended={mark === 'recommended' ? '' : undefined}
+                                  data-compared={c.compared && c.pkrPaisa !== null ? '' : undefined}
+                                  data-ranked={rk ? (rk.rank ?? 'none') : undefined}
+                                >
+                                  {/* The mark sits with the name (no column of its own), so the name keeps its width at 16px text. */}
+                                  <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                    <span className="min-w-0 break-words font-medium">{inquiry.supplierName}</span>
+                                    {mark ? (
+                                      <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-medium text-tone-success-fg">
+                                        <Icon icon={ThumbsUp} size="chip" />
+                                        {mark === 'recommended' ? 'Recommended' : 'Lowest price'}
+                                      </span>
+                                    ) : null}
                                   </span>
-                                ) : null}
-                              </span>
-                              {/* Phone: price · lead time · stock on the second line. Desktop: the wrapper dissolves into three columns. */}
-                              <span className="col-span-full flex flex-wrap items-start gap-x-2 gap-y-1 md:contents">
-                                <span className="md:text-right">
-                                  <PriceCell line={line} c={c} cheapest={isCheapestTag} />
-                                </span>
-                                <span aria-hidden="true" className={cn('text-fg-muted md:hidden', !line.leadTime && 'hidden')}>
-                                  ·
-                                </span>
-                                <span className={cn('min-w-0 text-fg-2', !line.leadTime && 'max-md:hidden')}>
-                                  <span className="sr-only">Lead time: </span>
-                                  {line.leadTime ?? <span className="text-fg-muted">—</span>}
-                                </span>
-                                <span aria-hidden="true" className={cn('text-fg-muted md:hidden', line.inStock === null && 'hidden')}>
-                                  ·
-                                </span>
-                                <span className={cn('flex items-center gap-2 text-fg-2', line.inStock === null && 'max-md:hidden')}>
-                                  {line.inStock === null ? (
-                                    <span className="text-fg-muted">
-                                      <span className="sr-only">Stock: </span>—
+                                  {/* Phone: price · lead time · stock on the second line. Desktop: the wrapper dissolves into three columns. */}
+                                  <span className="col-span-full flex flex-wrap items-start gap-x-2 gap-y-1 md:contents">
+                                    <span className="md:text-right">
+                                      <PriceCell line={line} c={c} cheapest={isCheapestTag} />
                                     </span>
-                                  ) : (
-                                    <>
-                                      <i aria-hidden="true" className={`size-[6px] rounded-round ${line.inStock ? 'bg-tone-success-fg' : 'border border-fg-muted'}`} />
-                                      {line.inStock ? 'In stock' : 'Not in stock'}
-                                    </>
-                                  )}
-                                </span>
-                              </span>
-                              <span className="flex justify-end max-md:col-start-2 max-md:row-start-1 max-md:self-start">
-                                <Button
-                                  variant="quiet"
-                                  size="sm"
-                                  aria-expanded={open}
-                                  aria-controls={open ? detailId : undefined}
-                                  aria-label={`${open ? 'Hide' : 'Show'} details for ${inquiry.supplierName}`}
-                                  onClick={() => setOpened(o => ({ ...o, [line.id]: !open }))}
-                                  icon={ChevronDown}
-                                  className={cn('[&_svg]:transition-transform', open && '[&_svg]:rotate-180')}
-                                />
-                                <RowMenu rfqId={rfq.id} entry={entry} item={item} />
-                              </span>
-                              {open ? (
-                                <div id={detailId} className="col-span-full grid gap-2 pb-1 md:col-start-2">
-                                  <PriceDetail line={line} inquiry={inquiry} c={c} rates={rates} />
-                                  {chip ? <LastPriceChipView chip={chip} /> : null}
-                                  {rk && reasons ? <ReasonBlock set={reasons} supplier={inquiry.supplierName} unrankedCurrency={rk.rank === null ? line.currency : null} /> : null}
-                                </div>
-                              ) : null}
+                                    <span aria-hidden="true" className={cn('text-fg-muted md:hidden', !line.leadTime && 'hidden')}>
+                                      ·
+                                    </span>
+                                    <span className={cn('min-w-0 text-fg-2', !line.leadTime && 'max-md:hidden')}>
+                                      <span className="sr-only">Lead time: </span>
+                                      {line.leadTime ?? <span className="text-fg-muted">—</span>}
+                                    </span>
+                                    <span aria-hidden="true" className={cn('text-fg-muted md:hidden', line.inStock === null && 'hidden')}>
+                                      ·
+                                    </span>
+                                    <span className={cn('flex items-center gap-2 text-fg-2', line.inStock === null && 'max-md:hidden')}>
+                                      {line.inStock === null ? (
+                                        <span className="text-fg-muted">
+                                          <span className="sr-only">Stock: </span>—
+                                        </span>
+                                      ) : (
+                                        <>
+                                          <i aria-hidden="true" className={`size-[6px] rounded-round ${line.inStock ? 'bg-tone-success-fg' : 'border border-fg-muted'}`} />
+                                          {line.inStock ? 'In stock' : 'Not in stock'}
+                                        </>
+                                      )}
+                                    </span>
+                                  </span>
+                                  <span className="flex justify-end max-md:col-start-2 max-md:row-start-1 max-md:self-start">
+                                    <Button
+                                      variant="quiet"
+                                      size="sm"
+                                      aria-expanded={open}
+                                      aria-controls={open ? detailId : undefined}
+                                      aria-label={`${open ? 'Hide' : 'Show'} details for ${inquiry.supplierName}`}
+                                      onClick={() => setOpened(o => ({ ...o, [line.id]: !open }))}
+                                      icon={ChevronDown}
+                                      className={cn('[&_svg]:transition-transform', open && '[&_svg]:rotate-180')}
+                                    />
+                                    {/* The menu waits behind the chevron: one control per price line until it is opened. */}
+                                    {open ? <RowMenu rfqId={rfq.id} entry={entry} item={item} /> : null}
+                                  </span>
+                                  {open ? (
+                                    <div id={detailId} className="col-span-full grid gap-2 pb-1 md:col-start-2">
+                                      <PriceDetail line={line} inquiry={inquiry} c={c} rates={rates} />
+                                      {chip ? <LastPriceChipView chip={chip} /> : null}
+                                      {rk && reasons ? <ReasonBlock set={reasons} supplier={inquiry.supplierName} unrankedCurrency={rk.rank === null ? line.currency : null} /> : null}
+                                    </div>
+                                  ) : null}
+                                </li>
+                                {/* Why the Recommended supplier is not the cheapest, directly under the Recommended row (UX audit C1). */}
+                                {cheaperElsewhere && recommended?.line.id === line.id ? (
+                                  <li className="px-5 pb-3 text-fg-2" data-cheapest>
+                                    Cheapest: <b className="font-semibold text-fg">{cheaperElsewhere.inquiry.supplierName}</b>
+                                    {(() => {
+                                      const rec = rankOf(recommended.line)
+                                      const low = rankOf(cheaperElsewhere.line)
+                                      return rec && low ? `. ${recommended.inquiry.supplierName} ${whyNotCheapest(rec, low)}.` : '.'
+                                    })()}
+                                  </li>
+                                ) : null}
+                              </Fragment>
+                            )
+                          })}
+                          {declined.map(({ i, reason }) => (
+                            <li key={i.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-5 py-2 text-fg-muted" data-declined={i.supplierId}>
+                              <span className="min-w-0 break-words font-medium text-fg-2">{i.supplierName}</span>
+                              <StatusText dimension="inquiry" value="no-offer" />
+                              <span className="text-sm">{reasonLabel(reason)}</span>
+                              {i.noOfferOn && !i.itemDeclines[item.id] ? <span className="num text-sm">{`· ${formatDay(i.noOfferOn)}`}</span> : null}
                             </li>
-                            {/* Why the Recommended supplier is not the cheapest, directly under the Recommended row (UX audit C1). */}
-                            {cheaperElsewhere && recommended?.line.id === line.id ? (
-                              <li className="px-5 pb-3 text-fg-2" data-cheapest>
-                                Cheapest: <b className="font-semibold text-fg">{cheaperElsewhere.inquiry.supplierName}</b>
-                                {(() => {
-                                  const rec = rankOf(recommended.line)
-                                  const low = rankOf(cheaperElsewhere.line)
-                                  return rec && low ? `. ${recommended.inquiry.supplierName} ${whyNotCheapest(rec, low)}.` : '.'
-                                })()}
-                              </li>
-                            ) : null}
-                          </Fragment>
-                        )
-                      })}
-                      {declined.map(({ i, reason }) => (
-                        <li key={i.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-5 py-2 text-fg-muted" data-declined={i.supplierId}>
-                          <span className="min-w-0 break-words font-medium text-fg-2">{i.supplierName}</span>
-                          <StatusText dimension="inquiry" value="no-offer" />
-                          <span className="text-sm">{reasonLabel(reason)}</span>
-                          {i.noOfferOn && !i.itemDeclines[item.id] ? <span className="num text-sm">{`· ${formatDay(i.noOfferOn)}`}</span> : null}
-                        </li>
-                      ))}
-                      {waiting.length > 0 ? <WaitingLine waiting={waiting} /> : null}
-                    </ul>
+                          ))}
+                          {/* Phone: the chip says it is waiting and Suppliers asked says on whom; the line stays on desktop. */}
+                          {waiting.length > 0 && !(phone && entries.length === 0 && declined.length === 0) ? <WaitingLine waiting={waiting} /> : null}
+                        </ul>
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
+                )}
               </article>
             )
           })}

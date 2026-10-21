@@ -87,12 +87,12 @@ export function DueCell({ row }: { row: BoardRow }) {
  * ("Tes / t", L2). The avatar carries the full name as its accessible name and title either way, so the first name is not read twice.
  */
 export function OwnerCell({ row, avatarOnly = false }: { row: BoardRow; avatarOnly?: boolean }) {
-  if (!row.ownerName) return <span className="shrink-0 text-sm text-fg-muted">Unassigned</span>
+  if (!row.ownerName) return <span className="shrink-0 whitespace-nowrap text-sm text-fg-muted">Unassigned</span>
   if (avatarOnly) return <Avatar name={row.ownerName} size="sm" />
   return (
-    <span className="inline-flex min-w-0 items-center gap-2">
+    <span className="inline-flex min-w-0 max-w-full items-center gap-2">
       <Avatar name={row.ownerName} size="sm" />
-      <span className="min-w-0" aria-hidden="true">
+      <span className="min-w-0 truncate" aria-hidden="true">
         {row.ownerName.split(' ')[0]}
       </span>
     </span>

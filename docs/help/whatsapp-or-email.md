@@ -5,7 +5,7 @@ roles: sales, admin
 keywords: whatsapp, email, channel, message, copy, send, open
 screens: /today, /rfqs, /money
 ---
-1. Every message the app writes is ready for the channel you used last. Tap [Email instead] or [WhatsApp instead] to switch.
+1. Every message is ready for the channel you used last. Tap [Email instead] or [WhatsApp instead] to switch (on an RFQ, under [Show the whole message]).
 2. The app remembers your choice on this device.
 3. Tap [Open in WhatsApp] or [Open in email]. The message is already filled in.
 4. Press Send there yourself, then tap the app's Mark button so it knows.

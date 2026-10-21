@@ -19,6 +19,7 @@ import { ChasedByNote, ChaseNote, FormattedMessage, MoreToggle, RecipientRow, Re
 import { useClarifications, useFileUrls, useRestoreClarificationAsk, useRfqAttachments, useRfqItems, useSetInquiryRelayed, useStampClarificationAsk } from '@/features/rfqs/hooks'
 import { useSignature } from '@/features/rfqs/useSignature'
 import { useChannelPreference } from '@/lib/useChannelPreference'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import {
   agoText,
   answersToRelay,
@@ -46,6 +47,10 @@ import {
  *
  * FE-2: add questions 1 paste + 1 tap. Copy for the customer 1 tap. Photo answer 2 taps, 0 typed. Typed answer 2 taps + the text.
  * Copy answers for a supplier 1 tap. Withdraw 1 tap. Required fields: the question text, nothing else.
+ *
+ * Fewer actions (grade-A 6 fix 2, 9 fix 3): the other channel's link waits under "Show the whole message". On a phone, questions
+ * already asked and waiting on the customer show one "Chase the customer" button (with the "a chase is due" line when it is)
+ * that opens the chase card; on a wider screen the card shows and the chase stays 1 tap (FE-2).
  */
 
 export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquiries: InquiryRow[] }) {
@@ -392,11 +397,22 @@ function ChaseGroup({
   const count = Math.max(0, ...rows.map(c => c.askCount)) + 1
   const returnsOn = customerReturnsOn(today, rfq.dueOn)
   const text = shown ? shown.body : ''
+  // Phone, waiting on the customer: the chase card opens on "Chase the customer" (one button instead of the whole card).
+  const phone = useMediaQuery('(max-width: 767px)')
+  const [chasing, setChasing] = useState(false)
   return (
     <div className="border-t first:border-t-0">
       <GroupHeading heading={header} hint={hint} />
       <div className="divide-y divide-dashed">{children}</div>
       {repeat ? <ChasedByNote byId={lastBy?.by} at={lastBy?.at} className="px-4 pt-2" /> : null}
+      {repeat && phone && !chasing ? (
+        <div className="mx-4 mb-3 mt-2 grid gap-1">
+          <Button size="sm" icon={Send} className="w-fit" aria-expanded={false} onClick={() => setChasing(true)}>
+            Chase the customer
+          </Button>
+          {dueNote ? <p className="text-sm text-tone-warning-fg">{dueNote}</p> : null}
+        </div>
+      ) : (
       <div className="mx-4 mb-3 mt-2 grid overflow-hidden rounded border bg-surface">
         {/* The questions are listed just above, so the message itself waits under "Show the whole message" (the rail stays short). */}
         {whole ? (
@@ -470,11 +486,12 @@ function ChaseGroup({
           )}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <MoreToggle open={whole} onToggle={() => setWhole(w => !w)} controls={wholeId} />
-            <ChannelLink value={variant} onChange={onVariant} />
+            {whole ? <ChannelLink value={variant} onChange={onVariant} /> : null}
           </div>
           {dueNote && !whole ? <p className="text-sm text-tone-warning-fg">{dueNote}</p> : null}
         </div>
       </div>
+      )}
     </div>
   )
 }

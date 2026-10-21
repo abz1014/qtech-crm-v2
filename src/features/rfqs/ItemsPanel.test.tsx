@@ -97,7 +97,25 @@ const rank = (o: Partial<RankRow>): RankRow =>
     ...o,
   }) as RankRow
 
-function renderPanel(inquiries: InquiryRow[], ranking?: Map<string, RankRow>) {
+/** A phone's media queries (useMediaQuery reads '(max-width: 767px)'); returns the undo. */
+function asPhone(): () => void {
+  const orig = window.matchMedia
+  window.matchMedia = ((q: string) => ({
+    matches: q === '(max-width: 767px)',
+    media: q,
+    onchange: null,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia
+  return () => {
+    window.matchMedia = orig
+  }
+}
+
+function renderPanel(inquiries: InquiryRow[], ranking?: Map<string, RankRow>, items: RfqItemRow[] = [item]) {
   installFakeDb(() => ({ data: [] }))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
@@ -107,7 +125,7 @@ function renderPanel(inquiries: InquiryRow[], ranking?: Map<string, RankRow>) {
           <ToastProvider>
             <ItemsPanel
               rfq={rfq}
-              items={[item]}
+              items={items}
               inquiries={inquiries}
               rates={{ USD: { rate: 280, ageDays: 0, staleness: 'fresh' } }}
               fxRows={[]}
@@ -225,6 +243,59 @@ describe('the supplier comparison', () => {
     const two = screen.getByRole('article', { name: 'Item 1' })
     expect(two.querySelectorAll('[data-waiting]')).toHaveLength(1)
     expect(two.querySelector('[data-waiting]')).toHaveTextContent('Waiting on 2 suppliers')
+  })
+
+  it('a price line shows one control, its chevron; the "..." menu waits until the line is open (grade-A 9)', async () => {
+    const user = userEvent.setup()
+    renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)])])
+    const first = rows()[0]
+    expect(within(first).queryByRole('button', { name: 'More for Lahore Flow Systems' })).toBeNull()
+    await user.click(within(first).getByRole('button', { name: 'Show details for Lahore Flow Systems' }))
+    await user.click(within(first).getByRole('button', { name: 'More for Lahore Flow Systems' }))
+    expect(await screen.findByRole('menuitem', { name: 'Edit reply' })).toBeInTheDocument()
+  })
+
+  it('phone: the items are an accordion, the first priced item open, one at a time; an item only waiting is its header', async () => {
+    const undo = asPhone()
+    try {
+      const user = userEvent.setup()
+      const second: RfqItemRow = { ...item, id: 'it-2', number: 2, description: 'Promag 10W flow meter' }
+      const third: RfqItemRow = { ...item, id: 'it-3', number: 3, description: 'VEGAPULS 21 radar' }
+      const waiting: InquiryRow = { ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0 }
+      renderPanel(
+        [inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100), { ...line('lb', 'a', 50), itemId: 'it-2' }]), waiting],
+        undefined,
+        [item, second, third],
+      )
+      const one = screen.getByRole('article', { name: 'Item 1' })
+      const two = screen.getByRole('article', { name: 'Item 2' })
+      const three = screen.getByRole('article', { name: 'Item 3' })
+      expect(within(one).getByRole('button', { name: item.description })).toHaveAttribute('aria-expanded', 'true')
+      expect(within(one).getAllByRole('button', { name: /^Show details for/ })).toHaveLength(1)
+      expect(within(two).getByRole('button', { name: second.description })).toHaveAttribute('aria-expanded', 'false')
+      expect(within(two).queryByRole('button', { name: /^Show details for/ })).toBeNull()
+      // Nobody who replied quoted item 3: it folds too, its warning inside.
+      expect(within(three).getByRole('button', { name: third.description })).toHaveAttribute('aria-expanded', 'false')
+      await user.click(within(two).getByRole('button', { name: second.description }))
+      expect(within(two).getAllByRole('button', { name: /^Show details for/ })).toHaveLength(1)
+      expect(within(one).queryByRole('button', { name: /^Show details for/ })).toBeNull()
+      await user.click(within(two).getByRole('button', { name: second.description }))
+      expect(within(two).queryByRole('button', { name: /^Show details for/ })).toBeNull()
+    } finally {
+      undo()
+    }
+  })
+
+  it('phone, waiting for prices: an item is its header and chip, with no toggle and no "Waiting on" line', () => {
+    const undo = asPhone()
+    try {
+      renderPanel([{ ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0 }])
+      const one = screen.getByRole('article', { name: 'Item 1' })
+      expect(within(one).queryByRole('button')).toBeNull()
+      expect(one.querySelector('[data-waiting]')).toBeNull()
+    } finally {
+      undo()
+    }
   })
 
   it('explains the order once, in a tip in the panel header', async () => {

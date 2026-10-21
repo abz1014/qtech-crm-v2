@@ -392,7 +392,7 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
     await expect(dialog.getByTestId('draft-text')).toContainText('Memosens pH sensor')
     await shot(page, 'o03-goods-chase-dialog-1440')
     await resetClipboard(page)
-    await dialog.getByRole('button', { name: 'Copy message and mark chased' }).click()
+    await dialog.getByRole('button', { name: 'Copy and mark chased' }).click()
     await expect.poll(async () => (await legRow(s.legB)).chase_count).toBe(1)
     expect((await legRow(s.legB)).last_chased_on).toBe(karachiDay(0))
     await readClipboardWhen(page, 'PI-123')

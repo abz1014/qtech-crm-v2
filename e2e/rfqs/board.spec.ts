@@ -144,7 +144,7 @@ test.describe('open RFQs', () => {
       const r = (el: Element | null) => el?.getBoundingClientRect() ?? null
       const asked = r(tr.querySelector('[data-asked]'))
       const refs = r(tr.querySelector('[data-refs]'))
-      const cut = [...tr.querySelectorAll('td')].filter(td => td.scrollWidth > td.clientWidth + 1).length
+      const cut = Array.from(tr.querySelectorAll('td')).filter(td => td.scrollWidth > td.clientWidth + 1).length
       return { askedBottom: asked?.bottom ?? 0, refsTop: refs?.top ?? -1, cut }
     })
     expect(boxes.refsTop).toBeGreaterThanOrEqual(boxes.askedBottom - 1)

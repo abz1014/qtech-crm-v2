@@ -65,7 +65,7 @@ export function RecipientRow({ channel, contact, lead = 'To', className }: { cha
         <Icon icon={email ? Mail : Phone} size="sm" className="text-fg-muted" />
         {contact ? `${lead} ${contact.name}` : 'No contact on record'}
       </span>
-      {detail ? <span className="num">{detail}</span> : contact ? <span className="text-xs text-fg-muted">{email ? 'no email on file' : 'no phone on file'}</span> : null}
+      {detail ? <span className="num">{detail}</span> : contact ? <span className="text-sm text-fg-muted">{email ? 'no email on file' : 'no phone on file'}</span> : null}
     </div>
   )
 }
@@ -110,7 +110,7 @@ export function TickList({ title, hint = 'Untick to leave one out', rows, onTogg
     <div role="group" aria-label={title} className="grid gap-2 border-b px-4 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-sm font-semibold">{title}</p>
-        <span className="text-xs text-fg-muted">{hint}</span>
+        <span className="text-sm text-fg-muted">{hint}</span>
       </div>
       <ul className="grid gap-2">
         {rows.map(r => (
@@ -122,7 +122,7 @@ export function TickList({ title, hint = 'Untick to leave one out', rows, onTogg
               label={r.label}
               help={r.sub}
             />
-            {r.note ? <span className="num shrink-0 text-xs text-fg-muted">{r.note}</span> : null}
+            {r.note ? <span className="num shrink-0 text-sm text-fg-muted">{r.note}</span> : null}
           </li>
         ))}
       </ul>
@@ -140,7 +140,7 @@ export function ReplyByField({ label, value, onChange, note }: { label: string; 
           <DateInput value={value} onChange={onChange} defaultToday={false} aria-label={label} />
         </div>
       </div>
-      <span className="text-xs text-fg-muted">{note}</span>
+      <span className="text-sm text-fg-muted">{note}</span>
     </div>
   )
 }
@@ -148,7 +148,7 @@ export function ReplyByField({ label, value, onChange, note }: { label: string; 
 /** The hourglass line under the text: what copying records and where the item goes. */
 export function ChaseNote({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <p className={cn('flex items-start gap-2 px-4 py-2 text-xs text-fg-muted', className)}>
+    <p className={cn('flex items-start gap-2 px-4 py-2 text-sm text-fg-muted', className)}>
       <Icon icon={Hourglass} size="sm" className="mt-px shrink-0" />
       <span>{children}</span>
     </p>
@@ -167,7 +167,7 @@ export function ChasedByNote({ byId, at, className }: { byId: string | null | un
   const name = byId ? names.data?.[byId] : undefined
   if (!byId || byId === me || !at || !name) return null
   return (
-    <p data-collision className={cn('flex items-center gap-2 text-xs text-tone-warning-fg', className)}>
+    <p data-collision className={cn('flex items-center gap-2 text-sm text-tone-warning-fg', className)}>
       <Icon icon={Users} size="sm" /> {chasedByText(name, at, Date.now())}
     </p>
   )

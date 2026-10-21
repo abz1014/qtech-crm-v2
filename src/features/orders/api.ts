@@ -1,4 +1,5 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import { poRef } from '@/lib/refs'
 import type { TableUpdate, ViewRow } from '@/features/dbTypes'
 import type { ConvertPayloadLine } from '@/features/orders/lib/convert'
 import { medianDeliveryDays } from '@/features/orders/lib/leadTime'
@@ -682,6 +683,8 @@ export interface OrderListRow {
   itemsText: string
   /** The supplier orders that supply a goods line (as v_order_state counts them): who to order from or chase, no price. */
   legs: StepLeg[]
+  /** Our supplier POs on this order ("PO-26-0017"), every supplier order, delivered or not: the search finds an order by them. No price. */
+  poNumbers: string[]
 }
 
 /**
@@ -692,7 +695,7 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
   const db = requireSupabase()
   const money = role !== 'engineer'
   const stateCols = money ? 'order_id, lifecycle, goods_state, commissioning_state, data_trust, invoicing_state, gross' : 'order_id, lifecycle, goods_state, commissioning_state, data_trust'
-  const [orders, states, users, assigned, pay] = await Promise.all([
+  const [orders, states, users, assigned, pay, pos] = await Promise.all([
     fetchAll(
       (from, to) =>
         db
@@ -726,8 +729,24 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
         ? // paged: the unpaged RPC was cut at 1,000 rows
           (fetchReceivablesList() as unknown as Promise<Array<Record<string, unknown>>>)
         : Promise.resolve([] as Array<Record<string, unknown>>),
+    // Our supplier PO numbers for the search: revision 0 of each (a revision keeps the number; its issue date gives the year). Only
+    // the number and date are read, never the lines (prices).
+    fetchAll(
+      (from, to) =>
+        db
+          .from('purchase_orders')
+          .select('number, issued_on, supplier_orders(order_id)')
+          .eq('revision', 0)
+          .order('number')
+          .range(from, to) as unknown as PromiseLike<{ data: ListPoRow[] | null; error: { code?: string; message: string } | null }>,
+    ),
   ])
   const names = new Map(unwrap(users).map(u => [u.id, u.name]))
+  const posBy = new Map<string, string[]>()
+  for (const p of pos) {
+    const orderId = (Array.isArray(p.supplier_orders) ? p.supplier_orders[0] : p.supplier_orders)?.order_id
+    if (orderId) posBy.set(orderId, [...(posBy.get(orderId) ?? []), poRef(p.number, p.issued_on)])
+  }
   const stateBy = new Map(states.map(s => [s.order_id as string, s]))
   const payBy = new Map(pay.map(p => [p.order_id as string, p]))
   const engBy = new Map<string, string[]>()
@@ -767,9 +786,12 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
         expectedOn: l.expected_on,
         deliveredOn: l.delivered_on,
       })),
+      poNumbers: posBy.get(o.id) ?? [],
     }
   })
 }
+
+type ListPoRow = { number: number; issued_on: string; supplier_orders: { order_id: string } | Array<{ order_id: string }> | null }
 
 /** The orders list's server-side filter on the embedded supplier orders (PostgREST `or`): the ones a Next step can still name. */
 export const LIST_LEG_FILTER = 'delivered_on.is.null,placed_on.is.null'

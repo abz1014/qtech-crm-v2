@@ -32,6 +32,8 @@ import {
   hasFilters,
   isTab,
   defaultOwner,
+  otherMatches,
+  searchGroup,
   TABS,
   type Dimension,
   type ListFilters,
@@ -42,8 +44,9 @@ import {
  * Orders list (O04), reworked by the UX audit of 2026-10-19 (screens.md 7): each row leads with the customer and what they ordered, then
  * ONE plain "Next step" column (lib/nextStep.ts: "Place the supplier order", "Chase payment: 12 days overdue", "Waiting for the goods")
  * instead of four state chips, then the order number. The lifecycle is the tab (Active, Done, Cancelled); the owner switch is Mine or
- * All (for an engineer, "My jobs": the jobs they are assigned to); a search finds an order by number, customer PO, customer, site or
- * item. Who acts next (Needs action or Waiting) and the four state filters (goods, commissioning, and for admin and sales invoicing and payment) sit behind one "Filters" button:
+ * All (for an engineer, "My jobs": the jobs they are assigned to); a search finds an order by number, customer PO, our supplier PO,
+ * customer, site or item, in every tab and for everyone: matches outside this tab or owner come after the list's own under an "Also in
+ * Done" / "Also in Active · not yours" divider (UX audit 2026-10-22, area 4). Who acts next (Needs action or Waiting) and the four state filters (goods, commissioning, and for admin and sales invoicing and payment) sit behind one "Filters" button:
  * a small panel on a laptop, a sheet on a phone (where the owner switch goes into the sheet too, so the list starts right under the
  * search). Filters combine with AND and live in the address, so a reload or a shared link lands on the same view.
  *
@@ -53,10 +56,13 @@ import {
 const LABEL: Record<Dimension, string> = { goods: 'Goods', commissioning: 'Commissioning', invoicing: 'Invoicing', payment: 'Payment' }
 const STATUS_DIM: Record<Dimension, StatusDimension> = { goods: 'goods', commissioning: 'commissioning', invoicing: 'invoicing', payment: 'payment' }
 
-/** Where two view values share one status word, the filter option adds a detail so the choices stay distinct (spec 1.2 rule 4). */
+/**
+ * Where two view values share one status word, the filter option adds a detail so the choices stay distinct (spec 1.2 rule 4). The goods
+ * details use the order page's words ("Not ordered yet", "Ordered", "No supplier yet"), never "placed".
+ */
 const FILTER_DETAIL: Partial<Record<string, string>> = {
   'goods:to_source': 'no supplier yet',
-  'goods:to_place': 'not placed',
+  'goods:to_place': 'supplier chosen',
   'goods:received': 'with us',
   'goods:partly_delivered': 'partly delivered',
   'invoicing:not_invoiced': 'nothing invoiced',
@@ -189,7 +195,19 @@ export default function OrdersListPage() {
   const showParam = params.get('show')
   const split = filters.tab === 'active' && (showParam === 'need' || showParam === 'waiting') ? showParam : 'all'
   const needCount = shown.filter(needsAction).length
-  const rows = split === 'need' ? shown.filter(needsAction) : split === 'waiting' ? shown.filter(r => !needsAction(r)) : shown
+  const bySplit = (r: OrderListRow) => split === 'all' || r.lifecycle !== 'active' || (split === 'need') === needsAction(r)
+  const own = shown.filter(bySplit)
+  // A typed search reaches every tab and every owner: the other matches follow this list's own, each group under its divider.
+  const searching = filters.text.trim() !== ''
+  const others = useMemo(() => otherMatches(all, filters, who), [all, filters, who]).filter(bySplit)
+  const rank = (r: OrderListRow) => searchGroup(r, filters, who).rank
+  const rows = others.length ? [...own, ...[...others].sort((a, b) => rank(a) - rank(b))] : own
+  const groupOf = others.length
+    ? (r: OrderListRow) => {
+        const g = searchGroup(r, filters, who)
+        return { key: g.key, label: g.label }
+      }
+    : undefined
   const columns: Column<OrderListRow>[] = [
     { id: 'customer', header: 'Customer and items', value: r => r.companyName, sortable: true, cell: r => <CustomerCell row={r} /> },
     // text columns sorted by a number (the urgency rank, the order number): compareCells compares text numerically
@@ -311,9 +329,11 @@ export default function OrdersListPage() {
     ) : (
       <NoResults
         query={filters.text}
-        scope={`${filters.tab} orders`}
-        fields="customer, site, item, order number and PO"
+        // a search looks in every tab and at everyone's orders; with no text the tab and the owner switch narrow the list
+        scope={searching ? 'every order (active, done and cancelled, everyone’s)' : `${filters.tab} orders`}
+        fields="customer, site, item, order number, customer PO and supplier PO"
         filtersOn={[
+          ...(!searching && filters.owner === 'mine' ? [ownerLabel] : []),
           ...(['goods', 'commissioning', 'invoicing', 'payment'] as const).filter(d => filters[d] !== ALL).map(d => `${LABEL[d]}: ${valueLabel(d, filters[d])}`),
           ...(split === 'need' ? ['Needs action'] : split === 'waiting' ? ['Waiting'] : []),
         ]}
@@ -339,6 +359,7 @@ export default function OrdersListPage() {
       columns={columns}
       rows={rows}
       getRowId={r => r.id}
+      group={groupOf}
       twoLine
       // R2-05: the active list starts with the most urgent step first (late, then now, then waiting); done and cancelled newest first
       defaultSort={filters.tab === 'active' ? { id: 'next', dir: 'asc' } : { id: 'order', dir: 'desc' }}
@@ -346,14 +367,18 @@ export default function OrdersListPage() {
       onRowOpen={r => navigate(`/orders/${r.id}`)}
       loading={orders.isPending}
       error={orders.isError ? { title: "Couldn't load the orders", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void orders.refetch() } : null}
-      summary={orders.isSuccess ? `Showing ${rows.length} of ${total} ${filters.tab} ${total === 1 ? 'order' : 'orders'}` : undefined}
+      summary={
+        orders.isSuccess
+          ? `Showing ${own.length} of ${total} ${filters.tab} ${total === 1 ? 'order' : 'orders'}${others.length ? ` · ${others.length} more found in other lists` : ''}`
+          : undefined
+      }
       toolbar={
         // One row (UX audit 2026-10-22, O2/O3): Mine or All, the search, and the one Filters button. "Who acts next" lives behind
         // Filters with the state filters (no "Any" segment: no choice is no filter). On a phone the search takes the whole first line
         // (it is never cut off at 320 to 430 px) and Filters, which then holds Mine or All too, wraps under it.
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
           {phone ? null : ownerSwitch}
-          <TableFilter label="Search orders" hint="Finds an order by customer, site, item, order number or PO." value={filters.text} onChange={v => change({ q: v })} className="min-w-0 max-sm:basis-full sm:max-w-[360px] sm:flex-1" />
+          <TableFilter label="Search orders" hint="Finds an order by customer, site, item, order number, customer PO or supplier PO, in every tab." value={filters.text} onChange={v => change({ q: v })} className="min-w-0 max-sm:basis-full sm:max-w-[360px] sm:flex-1" />
           <FilterSheet title="Filter orders" on={dimsOn + (split !== 'all' ? 1 : 0) + (ownerOff ? 1 : 0)} shown={rows.length} noun={['order', 'orders']} onClear={clearSheet} phoneOnly={ownerSwitch}>
             {filters.tab === 'active' ? splitSelect : null}
             {dims}

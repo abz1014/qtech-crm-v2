@@ -27,9 +27,7 @@ import { MAX_STEPS, parseRecipe, type Recipe } from '@/features/help/recipes'
  * Label -> the unmerged branch it is on (checked 2026-10-20 against origin/ux/* with HELP_LABEL_SRC). Delete an entry once
  * that branch is merged: the test says when, by failing with "is on main now".
  */
-const PENDING: Record<string, string> = {
-  'Suppliers & delivery': 'ux/money-today',
-}
+const PENDING: Record<string, string> = {}
 
 const here = __dirname
 const repo = path.resolve(here, '../../..')

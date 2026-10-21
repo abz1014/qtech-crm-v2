@@ -368,7 +368,7 @@ test.describe('chase (FE-2: 1 tap)', () => {
     expect((await inquiryOf(s.china.inquiryId)).chase_count).toBe(2)
   })
 
-  test('the card shows a short preview and the recipient; the whole message lists only the items still without a price; Email is a link; another supplier is one tap away', async ({ page }) => {
+  test('the card shows a short preview and the recipient; the whole message lists only the items still without a price; Email is a link; another supplier is one choice away', async ({ page }) => {
     const s = await seed()
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: s.china.inquiryId, rfq_item_id: s.items[0].id, unit_price: 5, currency: 'CNY' } }))
     await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: s.china.id, name: 'Mr. Li Wei', phone: '+86 138 0000 0000', email: 'li@hengxin.example' } }))
@@ -392,8 +392,9 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await expect(card.getByRole('button', { name: 'Copy subject' })).toBeVisible()
     await expect(card.getByText(/^RFQ-\d+: price needed/)).toBeVisible()
     await expect(card.getByRole('button', { name: 'WhatsApp instead' })).toBeVisible()
-    // Another supplier: "Show message" opens its card.
-    await page.getByRole('button', { name: `Show message, ${s.usd.name}` }).click()
+    // Another supplier: the card's "Message for" picker switches it (one control, not a "Show message" on every row; grade-A 9).
+    await expect(page.getByRole('button', { name: `Show message, ${s.usd.name}` })).toHaveCount(0)
+    await card.getByRole('combobox', { name: /^Message for/ }).selectOption({ label: s.usd.name })
     await expect(page.locator(`[data-chase-card="${s.usd.id}"]`)).toBeVisible()
   })
 
@@ -586,6 +587,9 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     const s = await seed()
     await must(rest('admin', 'supplier_quote_lines', { method: 'POST', body: { inquiry_id: s.usd.inquiryId, rfq_item_id: s.items[0].id, unit_price: 100, currency: 'USD', lead_time: '3 weeks' } }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    // The "..." waits behind the line's chevron (one control per price line until it is opened; grade-A 9).
+    await expect(page.getByRole('button', { name: `More for ${s.usd.name}` })).toHaveCount(0)
+    await page.getByRole('button', { name: `Show details for ${s.usd.name}` }).click()
     const menu = () => page.getByRole('button', { name: `More for ${s.usd.name}` }).click()
     await menu()
     await resetClipboard(page)
@@ -779,6 +783,7 @@ test.describe('optional fields (migration 0039): bid time, company city, contact
       await expect(await row(page, s.china.name)).toContainText('Shenzhen, China')
       await page.keyboard.press('Escape')
       const card = page.locator(`[data-chase-card="${s.china.id}"]`)
+      await card.getByRole('button', { name: 'Show the whole message' }).click() // the other channel waits with the whole message
       await card.getByRole('button', { name: 'Email instead' }).click()
       await expect(card.locator('pre')).toContainText('Q-Tech Solutions\n+92 300 555 0188')
     } finally {

@@ -74,7 +74,7 @@ describe('Today at desktop width, after a chase', () => {
         </QueryClientProvider>,
       )
       // Nothing clicked: the first item (the chase) is in the pane by default.
-      fireEvent.click(await screen.findByRole('button', { name: /Copy message and mark chased/ }))
+      fireEvent.click(await screen.findByRole('button', { name: /Copy and mark chased/ }))
       // Close the Undo window: the stamp settles, Today re-reads, and the chase joins Waiting.
       fireEvent.click(await screen.findByRole('button', { name: 'Dismiss' }))
       expect(await screen.findByText('Moved to Waiting.')).toBeInTheDocument()

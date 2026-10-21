@@ -1,10 +1,14 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Check, Copy, Pencil, Plus, Undo2 } from 'lucide-react'
+import { Check, ChevronDown, Copy, Pencil, Plus, Undo2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
+import { cn } from '@/lib/utils'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { copyToClipboard } from '@/lib/clipboard'
 import { mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
 import { Button } from '@/ui/Button'
+import { Icon } from '@/ui/Icon'
+import { Select } from '@/ui/form/Select'
 import { MessageActions } from '@/ui/MessageActions'
 import { useToast } from '@/ui/useToast'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
@@ -16,7 +20,7 @@ import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
 import { useRestoreSupplierChase, useSetInquiryNoOffer, useStampSupplierChase } from '@/features/rfqs/hooks'
 import { useSignature } from '@/features/rfqs/useSignature'
 import { useChannelPreference } from '@/lib/useChannelPreference'
-import { canChaseInquiry, outstandingItems } from '@/features/rfqs/replyFocus'
+import { awaitingReply, canChaseInquiry, jumpToReplyRow, outstandingItems } from '@/features/rfqs/replyFocus'
 import { ReplyChip, SupplierReplyDialog } from '@/features/rfqs/SupplierReplies'
 import { useReplyDialog } from '@/features/rfqs/useReplyDialog'
 import {
@@ -50,8 +54,13 @@ import { formatDay } from '@/lib/formatDay'
  *   button  prices are in but someone still owes one: a 1-tap "Chase" on that supplier; no card unless "Show message" asks for
  *           it (open by itself it would compete with the green Issue quotation).
  *   none    a quotation went out, or the RFQ is won or closed: no chase at all.
- * The channel is the person's remembered one, with the other as a link. The text lists only the items that supplier has not
- * priced, and never names the customer or our price. From the second chase it asks for a "cannot offer" today.
+ * The channel is the person's remembered one, with the other as a link under "Show the whole message". The text lists only the
+ * items that supplier has not priced, and never names the customer or our price. From the second chase it asks for a "cannot
+ * offer" today. While the card shows, the other suppliers have Enter reply and Chase only: the card's "Message for" picker
+ * switches it to another supplier (one control instead of a "Show message" on every row; grade-A 9, at most ~25 actions).
+ *
+ * Phone (grade-A 6 fix 2): the page opens at the first supplier still without a reply (`jump`), and a supplier who has answered
+ * (priced, or can't quote) is ONE line, the name and its chip, opening on a tap.
  */
 
 export type ChaseMode = 'card' | 'button' | 'none'
@@ -67,10 +76,12 @@ interface Props {
   chase?: ChaseMode
   /** The chase is the page's one green action (waiting for prices, nothing else to do). */
   chaseIsMain?: boolean
+  /** Phone: scroll to the first supplier still without a reply when the page opens (once). */
+  jump?: boolean
   onFloat: () => void
 }
 
-export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase = 'card', chaseIsMain = false, onFloat }: Props) {
+export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase = 'card', chaseIsMain = false, jump = false, onFloat }: Props) {
   const replied = inquiries.filter(i => i.lines.length > 0).length
   const chaseable = chase === 'none' ? [] : inquiries.filter(i => canChaseInquiry(i, items))
   const [picked, setPicked] = useState<string | null>(null)
@@ -80,6 +91,23 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
   const today = businessToday()
   const reply = useReplyDialog()
   const replying = reply.open ? inquiries.find(i => i.id === reply.open?.inquiryId) : undefined
+  const phone = useMediaQuery('(max-width: 767px)')
+  // Phone: the answered suppliers opened by a tap (each starts as one line).
+  const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(new Set())
+  const toggle = (id: string) =>
+    setUnfolded(o => {
+      const n = new Set(o)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  const firstAwaiting = inquiries.find(awaitingReply)?.supplierId
+  const jumped = useRef<string | null>(null)
+  useEffect(() => {
+    if (!phone || !jump || !firstAwaiting || jumped.current === rfq.id) return
+    jumped.current = rfq.id
+    jumpToReplyRow(firstAwaiting)
+  }, [phone, jump, firstAwaiting, rfq.id])
 
   return (
     <DetailPanel title="Suppliers asked" pill={`${inquiries.length} asked · ${replied} replied`} dataSlot="suppliers-asked">
@@ -90,31 +118,72 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
           const can = chase !== 'none' && canChaseInquiry(i, items)
           const declinedAll = Boolean(i.noOfferOn) && i.lines.length === 0
           const label = i.lines.length > 0 ? 'Edit reply' : 'Enter reply'
+          // Phone: a supplier who has answered folds to one line (the name and its chip) until tapped.
+          const foldable = phone && (i.lines.length > 0 || Boolean(i.noOfferOn)) && open?.id !== i.id
+          const folded = foldable && !unfolded.has(i.id)
+          const detailId = `supplier-asked-${i.id}`
           return (
-            <li key={i.id} className="grid gap-1 border-t px-5 py-3 first:border-t-0" data-supplier-asked={i.supplierId} data-reply-row={i.supplierId}>
-              <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
-                <b className="min-w-0 flex-1 basis-[10rem] break-words font-semibold">{i.supplierName}</b>
-                <ReplyChip inquiry={i} itemCount={items.length} />
-              </div>
-              <p className="text-sm text-fg-muted">{sentLine(i)}</p>
-              {mem ? <p className={mem.late ? 'text-sm text-tone-warning-fg' : 'text-sm text-fg-muted'}>{mem.text}</p> : null}
-              <ChasedByNote byId={i.lastChasedBy} at={i.lastChasedOn} />
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
-                {declinedAll ? (
-                  <TakeBack rfq={rfq} inquiry={i} />
-                ) : (
-                  <Button size="sm" icon={i.lines.length > 0 ? Pencil : Plus} onClick={() => reply.show(i.id)} aria-label={`${label}, ${i.supplierName}`}>
-                    {label}
-                  </Button>
-                )}
-                {can && open?.id !== i.id ? <ChaseNow rfq={rfq} items={items} inquiry={i} variant={channel} /> : null}
-                {can && open?.id !== i.id ? (
-                  <Button size="sm" variant="quiet" onClick={() => setPicked(i.id)} aria-label={`Show message, ${i.supplierName}`}>
-                    Show message
-                  </Button>
-                ) : null}
-              </div>
-              {open?.id === i.id ? <ChaseCard rfq={rfq} items={items} inquiry={i} inquiries={inquiries} channel={channel} onChannel={setChannel} main={chaseIsMain} /> : null}
+            <li
+              key={i.id}
+              className="grid scroll-mt-20 gap-1 border-t px-5 py-3 first:border-t-0"
+              data-supplier-asked={i.supplierId}
+              data-reply-row={i.supplierId}
+              data-folded={folded ? '' : undefined}
+            >
+              {foldable ? (
+                <button
+                  type="button"
+                  aria-expanded={!folded}
+                  aria-controls={folded ? undefined : detailId}
+                  onClick={() => toggle(i.id)}
+                  className="-my-2 flex min-h-touch w-full flex-wrap items-center gap-x-3 gap-y-1 rounded text-left"
+                >
+                  <b className="min-w-0 flex-1 basis-[10rem] break-words font-semibold">{i.supplierName}</b>
+                  <ReplyChip inquiry={i} itemCount={items.length} />
+                  <Icon icon={ChevronDown} className={cn('shrink-0 text-fg-muted transition-transform', !folded && 'rotate-180')} />
+                </button>
+              ) : (
+                <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
+                  <b className="min-w-0 flex-1 basis-[10rem] break-words font-semibold">{i.supplierName}</b>
+                  <ReplyChip inquiry={i} itemCount={items.length} />
+                </div>
+              )}
+              {folded ? null : (
+                  <div id={detailId} className="contents">
+                    <p className="text-sm text-fg-muted">{sentLine(i)}</p>
+                    {mem ? <p className={mem.late ? 'text-sm text-tone-warning-fg' : 'text-sm text-fg-muted'}>{mem.text}</p> : null}
+                    <ChasedByNote byId={i.lastChasedBy} at={i.lastChasedOn} />
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+                      {declinedAll ? (
+                        <TakeBack rfq={rfq} inquiry={i} />
+                      ) : (
+                        <Button size="sm" icon={i.lines.length > 0 ? Pencil : Plus} onClick={() => reply.show(i.id)} aria-label={`${label}, ${i.supplierName}`}>
+                          {label}
+                        </Button>
+                      )}
+                      {can && open?.id !== i.id ? <ChaseNow rfq={rfq} items={items} inquiry={i} variant={channel} /> : null}
+                      {/* While a card shows, its "Message for" picker reaches the others; with no card (prices in), each row offers it. */}
+                      {can && !open ? (
+                        <Button size="sm" variant="quiet" onClick={() => setPicked(i.id)} aria-label={`Show message, ${i.supplierName}`}>
+                          Show message
+                        </Button>
+                      ) : null}
+                    </div>
+                    {open?.id === i.id ? (
+                      <ChaseCard
+                        rfq={rfq}
+                        items={items}
+                        inquiry={i}
+                        inquiries={inquiries}
+                        channel={channel}
+                        onChannel={setChannel}
+                        main={chaseIsMain}
+                        others={chaseable}
+                        onPick={setPicked}
+                      />
+                    ) : null}
+                  </div>
+              )}
             </li>
           )
         })}
@@ -281,6 +350,8 @@ function ChaseCard({
   channel,
   onChannel,
   main,
+  others = [],
+  onPick,
 }: {
   rfq: RfqHeader
   items: RfqItemRow[]
@@ -289,6 +360,9 @@ function ChaseCard({
   channel: EnquiryVariant
   onChannel: (v: EnquiryVariant) => void
   main: boolean
+  /** Every supplier who can be chased (this one among them): the "Message for" picker, when there are two or more. */
+  others?: readonly InquiryRow[]
+  onPick?: (inquiryId: string) => void
 }) {
   const choose = useChooseSuppliers(rfq, inquiries)
   const [off, setOff] = useState<ReadonlySet<string>>(new Set())
@@ -413,9 +487,21 @@ function ChaseCard({
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <MoreToggle open={whole} onToggle={() => setWhole(w => !w)} controls={wholeId} />
-            <ChannelLink value={channel} onChange={onChannel} />
+            {/* The other channel is a rare switch: it waits with the whole message (both Open buttons already show). */}
+            {whole ? <ChannelLink value={channel} onChange={onChannel} /> : null}
             <span className="text-sm text-fg-muted">{inquiry.chaseCount === 0 ? 'Not chased yet' : `Chased ${inquiry.chaseCount === 1 ? 'once' : `${inquiry.chaseCount} times`} already`}</span>
           </div>
+          {others.length > 1 && onPick ? (
+            <label className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-2">
+              <span>Message for</span>
+              <Select
+                className="w-auto min-w-[12rem]"
+                value={inquiry.id}
+                onChange={e => onPick(e.target.value)}
+                options={others.map(o => ({ value: o.id, label: o.supplierName }))}
+              />
+            </label>
+          ) : null}
         </div>
       </div>
     </div>

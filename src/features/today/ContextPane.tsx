@@ -55,14 +55,14 @@ import { agoText, distanceText } from '@/features/today/text'
 /*
  * The context pane (direction B, g2-today-b2). Selecting a row shows what explains it and, for a chase, the message
  * already written. Owner decision 2026-10-19: each fact is said once (the four cells; no chip row and no date rail repeating
- * them), and the one job, "Copy message and mark chased", sits right under the card's header, above the message, so it is
+ * them), and the one job, "Copy and mark chased", sits right under the card's header, above the message, so it is
  * on the first screen of a 1366 x 768 laptop at the larger text size. States:
- *   draft        facts, "Prepared for you" with WhatsApp or Email, one tap: "Copy message and mark chased"
+ *   draft        facts, "Prepared for you" with WhatsApp or Email, one tap: "Copy and mark chased"
  *   copied       the green "Copied. Paste it into WhatsApp." bar replaces the card header; the footer says
  *                "Chased today. Moves to Waiting when the undo closes." while the 10 s Undo is open (the toast)
  *   just chased  after the undo closes the row has joined Waiting: the title stays, a "Moved to Waiting" bar says when it
  *                returns, the cells switch to "Chased ..." and "Next nudge", the rail gains the nudge marker, a compact
- *                "Chased today" card replaces the draft, and "Chase again now" brings the draft back
+ *                "Chased today" card replaces the draft, and "Chase again" brings the draft back
  * On a phone the pane is the accordion under the row: no breadcrumb, title or chips; a 2 x 2 grid; the actions are 44 px.
  */
 interface PaneProps {
@@ -245,13 +245,8 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
   const floated = inquiries.data ? inquiries.data.filter(i => i.sentOn).length : 0
   const firstFloat = inquiries.data ? inquiries.data.map(i => i.sentOn).filter((d): d is string => Boolean(d)).sort()[0] : undefined
 
-  const copyLabel = compact
-    ? item.rule === 'payment_overdue'
-      ? 'Copy and mark reminded'
-      : 'Copy and mark chased'
-    : item.rule === 'payment_overdue'
-      ? 'Copy message and mark reminded'
-      : 'Copy message and mark chased'
+  // One label per action at every width (the glossary's short form), so help, toasts and the phone all name the same button.
+  const copyLabel = item.rule === 'payment_overdue' ? 'Copy and mark reminded' : 'Copy and mark chased'
   const touch = compact ? 'min-h-touch' : ''
 
   return (
@@ -695,7 +690,7 @@ function factsFor(
     case 'chase_supplier': {
       const i = c.inquiryFact
       const pricedFact: Fact | null = c.pricedOf ? { label: 'Priced', icon: Check, value: `${c.pricedOf.priced} of ${c.pricedOf.total}`, sub: 'items' } : null
-      const sent: Fact | null = i?.sentOn ? { label: 'Enquiry sent', icon: Clock, value: formatDay(i.sentOn) } : null
+      const sent: Fact | null = i?.sentOn ? { label: 'Sent to suppliers', icon: Clock, value: formatDay(i.sentOn) } : null
       if (c.justChased && item.waiting) {
         out.push(pricedFact, sent, chased('supplier', i?.chaseCount ?? 1, item.waiting.chasedOn), nextNudge(item.waiting.nextNudgeOn))
         break
@@ -822,7 +817,7 @@ function ChasedCard({
           Open {item.ref}
         </Button>
         <Button variant="quiet" icon={AlarmClock} onClick={onAgain}>
-          Chase again now
+          Chase again
         </Button>
         {next ? <span className="ml-auto text-xs text-fg-muted">{next}</span> : null}
       </div>

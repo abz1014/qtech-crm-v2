@@ -150,7 +150,7 @@ test.describe('copy for the customer (FE-2: 1 tap)', () => {
     // Asked: the chip shows how many times, the days since the last ask, and the group offers the chase text.
     await expect(panel(page).getByText('Asked ×1')).toBeVisible()
     await expect(panel(page).getByText(/last asked today/)).toBeVisible()
-    // The message itself waits under "Show the whole message"; Email is a link, and the choice is remembered.
+    // The message itself waits under "Show the whole message", with Email as a link there; the choice is remembered.
     await panel(page).getByRole('button', { name: 'Show the whole message' }).click()
     await panel(page).getByRole('button', { name: 'Email instead' }).click()
     await expect(panel(page).getByRole('button', { name: 'Copy subject' })).toBeVisible()
@@ -275,7 +275,9 @@ test.describe('files (R10)', () => {
   test('PNG, HEIC and PDF are accepted and stored at {rfq_id}/{uuid}.{ext}; the viewer opens an image, a PDF opens in a tab; delete removes the object', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'engineer', `/rfqs/${s.rfq.id}`)
-    await expect(page.getByText(/No files yet/)).toBeVisible()
+    // No file yet: the side column's Files is one "Add file" row (grade-A 6 fix 2).
+    await expect(page.getByRole('group', { name: 'Add files' }).getByRole('button', { name: 'Add file' })).toBeVisible()
+    await expect(page.getByText('Drop files here')).toHaveCount(0)
 
     await fileInput(page).setInputFiles([
       { name: 'tiny.png', mimeType: 'image/png', buffer: PNG },

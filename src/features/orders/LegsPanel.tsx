@@ -36,7 +36,8 @@ import { TapDate, TapText } from '@/features/orders/TapEdit'
  * text that edits on tap (optional). When placed, the expected date is suggested from the placed date plus the supplier's lead time.
  *
  * The page has one green button (the order header's next step, lib/primaryAction.ts); here every button is secondary. Visible on the row:
- * the stamp, "Issue PO" while there is no PO (admin and sales: a PO carries prices; "Mark placed, no PO" is then in the menu) and "Chase
+ * the stamp, "Issue PO" while there is no PO and the goods are neither delivered nor invoiced (admin and sales: a PO carries prices;
+ * "Mark placed, no PO" is then in the menu; once delivered or invoiced, Issue PO moves into the menu) and "Chase
  * goods" once the goods are late. The rest is in the row's menu: View PO, Revise PO, Chase goods (before they are late) and Pay <supplier> (admin; the M03 dialog with this supplier as
  * the payee and Supplier payment as the category: the one Add expense per supplier order).
  */
@@ -219,11 +220,13 @@ function Leg({
   // Not placed and no PO yet (admin and sales): Issue PO is the way to place it, so "Mark placed" (an order placed by phone or WhatsApp,
   // no PO) goes into the menu: never two buttons for one step side by side. An engineer, who cannot issue a PO, keeps the stamp as "I placed this order".
   const placeInMenu = Boolean(money && !po && stamp?.step === 'place')
-  // Delivered with no PO (an order placed by phone, UX audit P3): no "Issue PO" on the row and no "No PO yet" chip, the Ref says what
-  // the supplier's paper was; issuing a PO after the fact stays in the menu.
+  // Delivered, or the whole order already invoiced, with no PO (an order placed by phone, UX audit P3 and area 9): no "Issue PO" on
+  // the row and no "No PO yet" chip, since that step no longer matters; the Ref says what the supplier's paper was, and issuing a PO
+  // after the fact stays in the row's menu.
   const delivered = state === 'delivered' || state === 'received'
-  const issueOnRow = money && !po && !delivered
-  const issueInMenu = money && !po && delivered
+  const pastPo = delivered || order.state?.invoicing === 'fully_invoiced'
+  const issueOnRow = money && !po && !pastPo
+  const issueInMenu = money && !po && pastPo
   const menu = Boolean(money && po) || (canChase && !late) || isAdmin || placeInMenu || issueInMenu
   // An engineer may mark an order placed (they sometimes order by phone on site), in their own words.
   const stampLabel = stamp && stamp.step === 'place' && !money ? 'I placed this order' : stamp?.label
@@ -261,8 +264,8 @@ function Leg({
           <span data-testid={`leg-${letter}-state`}>
             <StatusBadge dimension="goods" value={STATE_DIM[state]} />
           </span>
-          {/* the PO chip: the latest issued revision, or "No PO yet" (not once the goods are delivered) */}
-          {po || !delivered ? (
+          {/* the PO chip: the latest issued revision, or "No PO yet" (not once the goods are delivered or the order is invoiced) */}
+          {po || !pastPo ? (
           <span data-testid={`leg-${letter}-po`} className={cn('num inline-flex h-5 items-center rounded border px-[6px] text-xs', po ? 'border-line-strong text-fg-2' : 'border-dashed border-line-strong text-fg-muted')}>
             {po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision}` : 'No PO yet'}
           </span>
