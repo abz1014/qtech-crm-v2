@@ -132,9 +132,17 @@ const VERIFY_DIRS: Record<string, string> = {
   'verify-resilience': 'resilience',
 }
 const VERIFY_SUITES = Object.keys(VERIFY_DIRS)
+/** The bug-hunt suites (e2e/hunt/workflows/): project -> spec file names (a regex alternation). */
+const HUNT_FILES: Record<string, string> = {
+  'hunt-workflows': 'crawl|bugs',
+  'hunt-workflows-sales': 'sales',
+  'hunt-workflows-orders': 'orderflow',
+  'hunt-workflows-books': 'books',
+  'hunt-workflows-crosscut': 'crosscut',
+}
 // 'db' selects the database-backed server for any combination of --project=<suite> flags. The per-suite values
 // ('auth', 'companies', ...) pick the very same server and are kept so the older one-suite commands still work.
-const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles']
+const dbSuites = ['db', 'auth', 'companies', 'rfq-board', 'rfq-intake', 'rfq-detail', 'rfq-quotation', 'rfq-memory', 'rfq-ranking', 'today', 'search', 'settings-admin', 'orders', 'expenses', 'capture', 'money-costs', 'money-books', 'bank', 'month-end', 'pwa', 'reports', 'journeys', 'perf', 'a11y', ...VERIFY_SUITES, 'verify-roles', ...Object.keys(HUNT_FILES)]
 const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 // GALLERY_PORT overrides it when another checkout already serves 5199 on the same machine.
 const GALLERY_PORT = Number(process.env.GALLERY_PORT ?? 5199)
@@ -428,6 +436,24 @@ export default defineConfig({
         screenshot: 'only-on-failure',
       },
     },
+    // hunt-workflows* (branch hunt/workflows): the exploratory bug hunt, one project per spec so the long files spread over the shards.
+    // Findings go to <REVIEW_DIR>/hunt-workflows/ instead of stopping at the first failure; confirmed bugs are test.fail('HW-n') in
+    // e2e/hunt/workflows/bugs.spec.ts (project hunt-workflows). No retries: a retry would write every finding twice.
+    ...Object.entries(HUNT_FILES).map(([name, files]) => ({
+      name,
+      testMatch: new RegExp(`hunt/workflows/(${files})\\.spec\\.ts$`),
+      fullyParallel: false,
+      retries: 0,
+      timeout: 600_000,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://127.0.0.1:${AUTH_PORT}`,
+        viewport: { width: 1366, height: 768 },
+        permissions: ['clipboard-read', 'clipboard-write'],
+        screenshot: 'on' as const,
+        trace: 'retain-on-failure' as const,
+      },
+    })),
     // The picture reader (src/lib/docread/imageText.ts) on /dev/docread, on the gallery's dev build and server. Under the production
     // Content-Security-Policy with E2E_CSP=1 (ci.yml): E2E_CSP=1 npx playwright test --project=docread
     {
