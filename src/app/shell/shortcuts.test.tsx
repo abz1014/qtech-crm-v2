@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
 import { AppShell } from '@/app/shell/AppShell'
@@ -62,6 +62,12 @@ const press = (key: string, target: EventTarget = window) =>
 afterEach(() => window.localStorage.clear())
 
 describe('palette Actions and global shortcuts (A-89)', () => {
+  // The palette is a lazy chunk, and its first import (Radix, cmdk, a Vite transform shared by every worker) can take several seconds when the suite runs in parallel,
+  // longer than any findBy. Load it first, with a hook timeout of its own, so the tests only exercise opening it.
+  beforeAll(async () => {
+    await import('@/ui/CommandPalette')
+  }, 60_000)
+
   it('idle lists Actions: New RFQ (N), Paste or photo (C), Go to Today (G T)', async () => {
     const user = userEvent.setup()
     shell()
