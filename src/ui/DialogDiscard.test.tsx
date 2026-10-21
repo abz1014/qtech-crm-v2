@@ -89,4 +89,19 @@ describe('Dialog discard guard (learnability 3.3)', () => {
     await user.click(screen.getByRole('button', { name: 'Close' }))
     expect(screen.getByRole('group', { name: 'Discard what you typed?' })).toBeTruthy()
   })
+
+  it('desktop Back asks first once something was typed, and leaves a clean dialog alone (HW-34)', async () => {
+    const user = userEvent.setup()
+    window.history.replaceState(null, '')
+    render(<DirtyDemo />)
+    await new Promise(r => setTimeout(r, 0))
+    expect(window.history.state).toBeNull() // a desktop without typing: no history entry, Back keeps its meaning
+    await user.type(screen.getByRole('textbox', { name: 'Reply' }), 'USD 120')
+    await waitFor(() => expect(window.history.state).not.toBeNull())
+    window.history.back()
+    await waitFor(() => expect(screen.getByRole('group', { name: 'Discard what you typed?' })).toBeTruthy())
+    expect((screen.getByRole('textbox', { name: 'Reply' }) as HTMLTextAreaElement).value).toBe('USD 120')
+    await user.click(screen.getByRole('button', { name: 'Discard' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
 })
