@@ -50,7 +50,9 @@ export async function reloadOntoNewVersion(waitMs = 10_000): Promise<void> {
     return true
   }
   if (takeOver()) return
-  if (wb) {
+  // No worker controls this page (none registered, or service workers are off): a plain reload already fetches the new build.
+  const controlled = typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker.controller !== null
+  if (wb && controlled) {
     try {
       await wb.update()
     } catch {

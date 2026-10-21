@@ -50,7 +50,7 @@ test('route matrix: every page opens for the roles allowed and shows the no-acce
     ['/settings/categories', ADMIN],
     ['/settings/company', ALL],
     ['/settings/details', ALL],
-    ['/settings/exchange-rates', ALL],
+    ['/settings/exchange-rates', MONEY], // engineers: no currency amounts (owner decision 2026-10-22)
     ['/settings/password', ALL],
   ]
   for (const role of ALL) {

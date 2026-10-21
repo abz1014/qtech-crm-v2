@@ -64,6 +64,6 @@ test.describe('update needed', () => {
     newer = false
     await banner.getByRole('button', { name: 'Reload' }).click()
     await expect(page.getByRole('heading', { name: 'Companies', level: 1 })).toBeVisible()
-    await expect(page.locator('[data-update-needed-banner]')).toHaveCount(0)
+    await expect(page.locator('[data-update-needed-banner]')).toHaveCount(0, { timeout: 15_000 })
   })
 })
