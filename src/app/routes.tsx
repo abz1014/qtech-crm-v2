@@ -8,20 +8,21 @@ import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
 import { AdminOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
 import { AppShell } from '@/app/shell/AppShell'
+import { routeChunks } from '@/app/routeChunks'
 
 // Lazy: the sign-in form brings zod, react-hook-form and its resolvers, which nothing else on first paint needs (perf/client).
-const SignInPage = lazy(() => import('@/app/pages/SignInPage').then(m => ({ default: m.SignInPage })))
+const SignInPage = lazy(() => routeChunks.signIn().then(m => ({ default: m.SignInPage })))
 
 /**
  * One lazy-loaded screen per destination (a total map: a new nav key does not compile without its screen).
  * Sub-routes such as /rfqs/:id are declared by the feature under the same key.
  */
 const screens: Record<NavKey, ComponentType> = {
-  today: lazy(() => import('@/features/today/TodayScreen')),
-  companies: lazy(() => import('@/features/companies/CompaniesScreen')),
-  rfqs: lazy(() => import('@/features/rfqs/board/RfqsScreen')),
-  money: lazy(() => import('@/features/money/MoneyScreen')),
-  orders: lazy(() => import('@/features/orders/OrdersScreen')),
+  today: lazy(routeChunks.today),
+  companies: lazy(routeChunks.companies),
+  rfqs: lazy(routeChunks.rfqs),
+  money: lazy(routeChunks.money),
+  orders: lazy(routeChunks.orders),
 }
 
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
@@ -32,7 +33,7 @@ const ChangePasswordPage = lazy(() => import('@/features/settings/ChangePassword
 const MyDetailsPage = lazy(() => import('@/features/settings/MyDetailsPage').then(m => ({ default: m.MyDetailsPage })))
 const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfilePage').then(m => ({ default: m.CompanyProfilePage })))
 /** New RFQ (R05): its own route, so it works under whichever screen owns the rest of /rfqs. */
-const IntakeScreen = lazy(() => import('@/features/rfqs/IntakeScreen'))
+const IntakeScreen = lazy(routeChunks.rfqNew)
 /** The Android share target and sign-in return point (R22): opens the Capture sheet. */
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
 const rfqsItem = navItems.find(i => i.key === 'rfqs')

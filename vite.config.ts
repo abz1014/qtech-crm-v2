@@ -14,11 +14,85 @@ import { defineConfig } from 'vitest/config'
 function previewHeaders(): Record<string, string> | undefined {
   if (!process.env.E2E_CSP) return undefined
   const json = JSON.parse(readFileSync(path.resolve(__dirname, 'vercel.json'), 'utf8')) as { headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }> }
-  const api = new URL(process.env.API_URL ?? 'http://127.0.0.1:54321').origin
+  // E2E_APP_API_URL: the origin the app build talks to when it is not the stack itself (the perf suite's HTTPS proxy).
+  const api = new URL(process.env.E2E_APP_API_URL ?? process.env.API_URL ?? 'http://127.0.0.1:54321').origin
   const all = json.headers.find(h => h.source === '/(.*)')?.headers ?? []
   return Object.fromEntries(
     all.filter(h => h.key !== 'Strict-Transport-Security').map(h => [h.key, h.value.replaceAll('https://yafbphagorydbitfgfmg.supabase.co', api)]),
   )
+}
+
+/*
+ * The rest of vercel.json's headers on the preview server (E2E_CSP=1 only): the per-path rules, such as the year-long
+ * `immutable` cache on /assets/ and `no-cache` on /sw.js, so the e2e suites see the caching production sends. vite preview
+ * already compresses (gzip, about the size Vercel's brotli is for these files: 191 KB against 195 KB for the entry chunk).
+ */
+function vercelPathHeaders(): Plugin {
+  return {
+    name: 'qtech-vercel-path-headers',
+    configurePreviewServer(server) {
+      if (!process.env.E2E_CSP) return
+      const json = JSON.parse(readFileSync(path.resolve(__dirname, 'vercel.json'), 'utf8')) as { headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }> }
+      const rules = json.headers
+        .filter(h => h.source !== '/(.*)')
+        .map(h => ({ test: new RegExp(`^${h.source.replaceAll('.', '\\.').replaceAll('(\\.*)', '.*')}$`), headers: h.headers }))
+      server.middlewares.use((req, res, next) => {
+        const url = (req.url ?? '').split('?')[0] ?? ''
+        for (const rule of rules) if (rule.test.test(url)) for (const h of rule.headers) res.setHeader(h.key, h.value)
+        next()
+      })
+    },
+  }
+}
+
+/*
+ * perf/lcp: the app's one stylesheet (about 18 KB compressed) goes into index.html as a <style> element instead of a separate
+ * render-blocking request. On a phone the page then needs one round trip less before anything can be drawn, and the page's
+ * code starts downloading straight after the HTML instead of after the stylesheet. The Content-Security-Policy allows inline
+ * styles (style-src 'unsafe-inline'), not inline scripts; the font and image URLs inside are absolute, so they resolve as before.
+ */
+function inlineStylesheet(): Plugin {
+  return {
+    name: 'qtech-inline-stylesheet',
+    apply: 'build',
+    // After every other plugin's generateBundle: the HTML is written and the preload lists are filled in by then.
+    generateBundle: {
+      order: 'post',
+      handler(_options, bundle) {
+        const html = bundle['index.html']
+        if (!html || html.type !== 'asset' || typeof html.source !== 'string') return
+        const entry = Object.values(bundle).find(c => c.type === 'chunk' && c.isEntry)
+        if (!entry) return
+        const inlined: string[] = []
+        html.source = html.source.replace(/<link rel="stylesheet"(?: crossorigin)? href="\/(assets\/[^"]+\.css)">/g, (tag, file: string) => {
+          const css = bundle[file]
+          if (!css || css.type !== 'asset') return tag
+          delete bundle[file]
+          inlined.push(file)
+          return `<style>${String(css.source).replaceAll('</style', '<\\/style')}</style>`
+        })
+        // A lazy chunk's preload list names the CSS of the chunks it imports, the entry's included: the preload helper would
+        // fetch the file that is now inline. Each such entry points at the entry chunk instead, which is already loaded (a
+        // no-op), so the list keeps its length and every other index in it.
+        for (const chunk of Object.values(bundle)) {
+          if (chunk.type !== 'chunk') continue
+          for (const file of inlined) chunk.code = chunk.code.replaceAll(`"${file}"`, `"${entry.fileName}"`)
+        }
+      },
+    },
+  }
+}
+
+/*
+ * Production serves the app over HTTPS and HTTP/2 (Vercel). The perf suite (scripts/ci/e2e-run.sh) passes a throwaway
+ * self-signed certificate in E2E_TLS_KEY and E2E_TLS_CERT, and vite preview then serves HTTP/2 over TLS like production:
+ * Lighthouse's simulated Slow 4G models HTTP/1.1 as six connections per origin, each with its own handshake, and HTTP/2 as one
+ * multiplexed connection, so plain HTTP/1.1 measured a page load production never has. Off by default.
+ */
+function previewTls(): { key: Buffer; cert: Buffer } | undefined {
+  const key = process.env.E2E_TLS_KEY
+  const cert = process.env.E2E_TLS_CERT
+  return key && cert ? { key: readFileSync(key), cert: readFileSync(cert) } : undefined
 }
 
 /*
@@ -103,6 +177,8 @@ export default defineConfig(({ command, mode }) => ({
     react(),
     ocrAssets(),
     supabasePreconnect(loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL),
+    vercelPathHeaders(),
+    inlineStylesheet(),
     // Builds src/sw.ts into dist/sw.js and injects the precache list (R21). Build only: the dev server and Vitest
     // run without a worker. The manifest is the hand-written public/manifest.webmanifest.
     ...(command === 'build'
@@ -143,7 +219,7 @@ export default defineConfig(({ command, mode }) => ({
         ]
       : []),
   ],
-  preview: { headers: previewHeaders() },
+  preview: { headers: previewHeaders(), https: previewTls() },
   resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
   test: {
     environment: 'jsdom',

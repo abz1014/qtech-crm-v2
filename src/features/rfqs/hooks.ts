@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/rfqs/api'
@@ -102,16 +102,35 @@ export function useDraftCheck(draft: { rfqId: string; companyId: string | null; 
 
 // ================================================================ RFQ detail (R07)
 
+/** The RFQ page's first reads (its hooks, and the app's start reading them ahead of the page: rfqs/prefetch.ts). */
+export const rfqHeaderQuery = (id: string) => ({ queryKey: qk.rfqs.part(id, 'header'), queryFn: () => api.getRfqHeader(id) })
+export const rfqItemsQuery = (id: string) => ({ queryKey: qk.rfqs.part(id, 'items'), queryFn: () => api.listRfqItems(id) })
+export const rfqInquiriesQuery = (id: string) => ({ queryKey: qk.rfqs.part(id, 'inquiries'), queryFn: () => api.listInquiries(id) })
+
+/**
+ * The id-only reads of the RFQ page's panels (clarifications, files, today's rates, the supplier list), started in the same round
+ * as the header instead of when the panels mount after it (P04: they were a second and third wave). The panels read the same
+ * query keys, so they find the data already there. Nothing here needs the header's data.
+ */
+export function prefetchRfqParts(client: QueryClient, id: string): Promise<unknown> {
+  return Promise.all([
+    client.prefetchQuery({ queryKey: qk.rfqs.part(id, 'clarifications'), queryFn: () => api.listClarifications(id) }),
+    client.prefetchQuery({ queryKey: qk.rfqs.part(id, 'attachments'), queryFn: () => api.listAttachments(id) }),
+    client.prefetchQuery({ queryKey: qk.fx.latest(), queryFn: api.listFxLatest, staleTime: 60_000 }),
+    client.prefetchQuery({ queryKey: qk.intake.suppliers(), queryFn: api.listSupplierCandidates, staleTime: 60_000 }),
+  ])
+}
+
 export function useRfqHeader(id: string | undefined) {
-  return useQuery({ queryKey: qk.rfqs.part(id ?? '', 'header'), queryFn: () => api.getRfqHeader(id as string), enabled: Boolean(id) })
+  return useQuery({ ...rfqHeaderQuery(id ?? ''), enabled: Boolean(id) })
 }
 
 export function useRfqItems(id: string | undefined) {
-  return useQuery({ queryKey: qk.rfqs.part(id ?? '', 'items'), queryFn: () => api.listRfqItems(id as string), enabled: Boolean(id) })
+  return useQuery({ ...rfqItemsQuery(id ?? ''), enabled: Boolean(id) })
 }
 
 export function useRfqInquiries(id: string | undefined) {
-  return useQuery({ queryKey: qk.rfqs.part(id ?? '', 'inquiries'), queryFn: () => api.listInquiries(id as string), enabled: Boolean(id) })
+  return useQuery({ ...rfqInquiriesQuery(id ?? ''), enabled: Boolean(id) })
 }
 
 /** Today's rate per currency. Read-only here; a missing rate never blocks a price. */

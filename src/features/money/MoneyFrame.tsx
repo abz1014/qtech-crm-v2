@@ -4,6 +4,7 @@ import { ChartColumn, ChevronLeft } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import { useSession } from '@/app/session'
+import { usePageSettled } from '@/app/usePageSettled'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Icon } from '@/ui/Icon'
 import { computeReconciliationExceptions } from '@/lib/reconciliation'
@@ -40,13 +41,16 @@ export function MoneyFrame({ active, actions, children }: { active: string | nul
   const money = role === 'admin' || role === 'sales'
   const tabs = MONEY_TABS.filter(t => isAdmin || !t.adminOnly)
   const today = businessToday()
-  const todayView = useTodayView({ id: session.status === 'signed-in' ? session.user.id : '', role: role as Role }, useBusinessToday())
-  const register = useGstRegister(money)
+  // The tab counts read Today's list, the register and the month-end checks. They wait for the page's own reads (perf/lcp), so on
+  // a slow connection the page comes first; a page that reads the same data (Invoices & GST, Month end) shares it as before.
+  const settled = usePageSettled()
+  const todayView = useTodayView({ id: session.status === 'signed-in' ? session.user.id : '', role: role as Role }, useBusinessToday(), settled)
+  const register = useGstRegister(money && settled)
   const monthEnd = defaultMonthEndMonth(today)
-  const checks = useMonthEndStatus(monthEnd, isAdmin)
-  const closed = useClosedMonths(isAdmin)
+  const checks = useMonthEndStatus(monthEnd, isAdmin && settled)
+  const closed = useClosedMonths(isAdmin && settled)
   const monthOpen = closed.data ? !closed.data.some(c => c.key === monthEnd) : false
-  const recon = useReconciliationInput(isAdmin && monthOpen)
+  const recon = useReconciliationInput(isAdmin && monthOpen && settled)
   const things = useMemo(() => (recon.data ? computeReconciliationExceptions(recon.data).length : 0), [recon.data])
   const counts: Record<string, number | undefined> = {
     receivables: todayView.view?.active.filter(i => i.rule === 'payment_overdue').length,

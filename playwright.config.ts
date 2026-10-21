@@ -139,6 +139,11 @@ const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 // GALLERY_PORT overrides it when another checkout already serves 5199 on the same machine.
 const GALLERY_PORT = Number(process.env.GALLERY_PORT ?? 5199)
 const AUTH_PORT = 4173
+/*
+ * The perf suite serves the production build like Vercel does: HTTPS and HTTP/2, from its own build (E2E_DIST) that talks to
+ * the stack through an HTTPS, HTTP/2 proxy like Supabase's (scripts/ci/e2e-run.sh sets E2E_TLS_KEY, E2E_TLS_CERT, E2E_DIST).
+ */
+const AUTH_ORIGIN = `${process.env.E2E_TLS_CERT ? 'https' : 'http'}://127.0.0.1:${AUTH_PORT}`
 
 const galleryUse = {
   baseURL: `http://localhost:${GALLERY_PORT}`,
@@ -361,7 +366,8 @@ export default defineConfig({
       testMatch: /perf\/.*\.spec\.ts/,
       fullyParallel: false,
       retries: 0,
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 } },
+      // The throwaway certificate of the perf suite's HTTPS server and proxy is accepted (local only).
+      use: { ...devices['Desktop Chrome'], baseURL: AUTH_ORIGIN, viewport: { width: 1440, height: 900 }, ignoreHTTPSErrors: true },
     },
     {
       name: 'journeys',
@@ -443,8 +449,9 @@ export default defineConfig({
   webServer:
     suite === 'db'
       ? {
-          command: `npx vite preview --host 127.0.0.1 --port ${AUTH_PORT} --strictPort`,
-          url: `http://127.0.0.1:${AUTH_PORT}/login`,
+          command: `npx vite preview --host 127.0.0.1 --port ${AUTH_PORT} --strictPort${process.env.E2E_DIST ? ` --outDir ${process.env.E2E_DIST}` : ''}`,
+          url: `${AUTH_ORIGIN}/login`,
+          ignoreHTTPSErrors: true,
           reuseExistingServer: !process.env.CI,
           timeout: 60_000,
         }

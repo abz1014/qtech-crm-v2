@@ -1,5 +1,6 @@
 import type { Database } from '@/types/database'
 import { createLeanClient, type LeanSupabaseClient } from '@/lib/supabaseClient'
+import { whenContentDrawn } from '@/lib/afterContent'
 
 /*
  * The one browser Supabase client. It carries the anon key only (public by design; Row Level
@@ -37,7 +38,8 @@ export function getSupabase(): AppSupabase | null {
   if (client !== undefined) return client
   const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
-  client = url && key ? createLeanClient<Database>(url, key, { fetch: activityFetch }) : null
+  // A phone that keeps a fresh session fetches Auth once the opening page is drawn (lazyAuth.ts, afterContent.ts: perf/lcp).
+  client = url && key ? createLeanClient<Database>(url, key, { fetch: activityFetch, deferAuth: whenContentDrawn }) : null
   return client
 }
 

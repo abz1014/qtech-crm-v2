@@ -1,8 +1,8 @@
-import { AuthClient } from '@supabase/auth-js'
 import { FunctionsClient } from '@supabase/functions-js'
 import { PostgrestClient } from '@supabase/postgrest-js'
 import type { StorageClient } from '@supabase/storage-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { lazyAuth } from '@/lib/lazyAuth'
 
 /*
  * The browser client, put together from the four parts the app uses: the database (PostgREST), auth, storage and edge
@@ -14,6 +14,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  * same version as supabase-js (package.json pins them exactly; bump all five together).
  *
  * The type is supabase-js's own, narrowed to these parts: a call to `.channel()` is a type error, not a runtime surprise.
+ *
+ * Auth itself is downloaded on first need (lazyAuth.ts, perf/lcp): `deferAuth` says when a phone that keeps a fresh session
+ * fetches it (the app: once the opening page's content is drawn); without it, at once.
  */
 export type LeanSupabaseClient<Database> = Pick<SupabaseClient<Database>, 'from' | 'rpc' | 'schema' | 'auth' | 'storage' | 'functions'>
 
@@ -52,7 +55,11 @@ function lazyStorage(url: string, headers: Record<string, string>, fetch: typeof
   return { from: bucket } as unknown as StorageClient
 }
 
-export function createLeanClient<Database>(url: string, key: string, options: { fetch?: typeof fetch } = {}): LeanSupabaseClient<Database> {
+export function createLeanClient<Database>(
+  url: string,
+  key: string,
+  options: { fetch?: typeof fetch; deferAuth?: (load: () => void) => void } = {},
+): LeanSupabaseClient<Database> {
   const base = baseUrl(url)
   if (!key) throw new Error('supabaseKey is required.')
   const headers = { 'X-Client-Info': CLIENT_INFO }
@@ -61,25 +68,28 @@ export function createLeanClient<Database>(url: string, key: string, options: { 
   // As supabase-js: the anon key as both apikey and bearer until a session exists, and the same storage key
   // (sb-<project ref>-auth-token), so a phone that is signed in stays signed in. Unset options are passed as undefined,
   // exactly as supabase-js passes them.
-  const auth = new AuthClient({
-    url: new URL('auth/v1', base).href,
-    headers: { Authorization: `Bearer ${key}`, apikey: key, ...headers },
-    storageKey: `sb-${base.hostname.split('.')[0]}-auth-token`,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    storage: undefined,
-    userStorage: undefined,
-    flowType: 'implicit',
-    lock: undefined,
-    debug: undefined,
-    throwOnError: undefined,
-    experimental: undefined,
-    fetch: customFetch,
-    lockAcquireTimeout: undefined,
-    skipAutoInitialize: undefined,
-    hasCustomAuthorizationHeader: false,
-  })
+  const auth = lazyAuth(
+    {
+      url: new URL('auth/v1', base).href,
+      headers: { Authorization: `Bearer ${key}`, apikey: key, ...headers },
+      storageKey: `sb-${base.hostname.split('.')[0]}-auth-token`,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      storage: undefined,
+      userStorage: undefined,
+      flowType: 'implicit',
+      lock: undefined,
+      debug: undefined,
+      throwOnError: undefined,
+      experimental: undefined,
+      fetch: customFetch,
+      lockAcquireTimeout: undefined,
+      skipAutoInitialize: undefined,
+      hasCustomAuthorizationHeader: false,
+    },
+    options.deferAuth ?? (load => load()),
+  )
 
   /** Every database, storage and function request carries the signed-in person's token (supabase-js `fetchWithAuth`). */
   const withAuth = (omitKeyAsBearer: boolean): typeof fetch => {

@@ -1,8 +1,11 @@
+import { useEffect } from 'react'
 import type { NavKey } from '@/app/navConfig'
 import type { SessionUser } from '@/app/session'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import { navSectionOf, type NavSection } from '@/features/today/rules'
 import type { Role } from '@/features/today/types'
+
+export type NavCounts = Partial<Record<NavKey, number>>
 
 /**
  * The numbers beside the top-bar destinations. Every one means "needs you" (DESIGN_SYSTEM section 12, owner decision
@@ -14,9 +17,9 @@ import type { Role } from '@/features/today/types'
  * A destination with nothing to do shows no number, never a 0. An engineer gets no Money count: Today never reads a money fact
  * for them. No request of its own: Today's list is already loaded for the Today count.
  */
-export function useNavCounts(user: SessionUser): Partial<Record<NavKey, number>> {
+export function useNavCounts(user: SessionUser): NavCounts {
   const today = useTodayView({ id: user.id, role: user.role as Role }, useBusinessToday())
-  const counts: Partial<Record<NavKey, number>> = {}
+  const counts: NavCounts = {}
   if (today.view) {
     const active = today.view.active
     const some = (n: number) => (n > 0 ? n : undefined) // nothing waiting: no number, no nag
@@ -27,4 +30,17 @@ export function useNavCounts(user: SessionUser): Partial<Record<NavKey, number>>
     if (user.role === 'admin' || user.role === 'sales') counts.money = section('money')
   }
   return counts
+}
+
+/**
+ * The counts as a component of their own, loaded (with the Today rules) only once the page has its data (AppShell,
+ * usePageSettled): on a slow connection the page's reads go first and the Today read for the numbers follows (perf/lcp).
+ */
+export default function NavCountsSource({ user, onCounts }: { user: SessionUser; onCounts: (counts: NavCounts) => void }) {
+  const counts = useNavCounts(user)
+  const key = JSON.stringify(counts)
+  useEffect(() => {
+    onCounts(JSON.parse(key) as NavCounts)
+  }, [key, onCounts])
+  return null
 }

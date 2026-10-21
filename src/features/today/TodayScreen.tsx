@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Banknote, CalendarCheck, Calculator, ChevronDown, ChevronRight, FileCheck, HardHat, Hourglass, Landmark, MessageCircleQuestion, Package, PackageCheck, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
@@ -12,13 +12,22 @@ import { Skeleton } from '@/ui/Skeleton'
 import { FirstUseState } from '@/features/help/FirstUseState'
 import { HowItWorksCard } from '@/features/help/HowItWorksCard'
 import { useFirstUse } from '@/features/help/useFirstUse'
-import { ContextPane } from '@/features/today/ContextPane'
+import { lazyWithReload } from '@/lib/importWithReload'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import { TargetTile } from '@/features/today/TargetTile'
 import { isFreshChase } from '@/features/today/chaseMemory'
 import { chasedByText } from '@/features/rfqs/lib/collision'
 import { headerDate, waitingLine } from '@/features/today/text'
 import type { Role, RuleKey, TodayItem, TodayTab } from '@/features/today/types'
+
+/*
+ * The context pane (what to do about an item: the chase text, the numbers, the buttons) is its own download (perf/lcp): on a
+ * phone it opens on a tap, so the list does not wait for it. A wide screen shows it at once, so there it starts downloading
+ * with the page.
+ */
+const loadContextPane = () => import('@/features/today/ContextPane')
+const ContextPane = lazyWithReload(() => loadContextPane().then(m => ({ default: m.ContextPane })))
+if (typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches) void loadContextPane().catch(() => {})
 
 /*
  * Today (R11, direction B): a 420px list and a context pane. Groups: overdue or due today, the next 5 days, ready to
@@ -188,7 +197,9 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                     <Row key={i.key} item={i} today={today} names={data?.names} open={openId === i.key} copied={copied.has(i.key)} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
                         <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
-                          <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
+                          <Suspense fallback={null}>
+                            <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
+                          </Suspense>
                         </div>
                       ) : null}
                     </Row>
@@ -223,7 +234,9 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                     <Row key={i.key} item={i} today={today} names={data?.names} waiting open={openId === i.key} copied={false} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
                         <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
-                          <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
+                          <Suspense fallback={null}>
+                            <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
+                          </Suspense>
                         </div>
                       ) : null}
                     </Row>
@@ -251,7 +264,9 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
         <div className="min-h-0 overflow-y-auto px-5 py-6 lg:px-8">
           {current && data ? (
             <div className="mx-auto max-w-[860px]">
-              <ContextPane key={current.key} item={current} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} nextItem={nextOf(current.key)} onSelect={setSelected} />
+              <Suspense fallback={null}>
+                <ContextPane key={current.key} item={current} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} nextItem={nextOf(current.key)} onSelect={setSelected} />
+              </Suspense>
             </div>
           ) : query.isPending ? null : (
             <div className="grid h-full place-items-center text-sm text-fg-muted">Select an item to see what to do about it.</div>

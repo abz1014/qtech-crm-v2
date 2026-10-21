@@ -1,13 +1,16 @@
-import { useRef, useState } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import { Building2, FileText, Plus } from 'lucide-react'
 import type { PdfSubject } from '@/lib/docread/pdfText'
 import { readDocument } from '@/features/rfqs/lib/readPdf'
 import type { SenderHint } from '@/features/companies/api'
 import { useCompanyForSender } from '@/features/companies/hooks'
-import { CreateCompanyInline } from '@/features/companies/CreateCompanyInline'
+import { lazyWithReload } from '@/lib/importWithReload'
 import type { IntakeCompany } from '@/features/rfqs/CompanyPicker'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+
+// The new-company form (and its form library) is downloaded when it is opened (perf/lcp).
+const CreateCompanyInline = lazyWithReload(() => import('@/features/companies/CreateCompanyInline').then(m => ({ default: m.CreateCompanyInline })))
 
 /*
  * PDFs, pictures and the sender, for New RFQ and a supplier's reply (owner decision 2026-10-20, item 3; pictures: owner priority
@@ -108,11 +111,13 @@ export function SenderSuggestion({ hint, canCreate, onUse }: { hint: SenderHint;
   }
   if (!hint.name || !canCreate) return null
   return creating ? (
-    <CreateCompanyInline
-      initialName={hint.name}
-      onCancel={() => setCreating(false)}
-      onCreated={c => onUse({ id: c.id, name: c.name, country: null, city: c.city ?? null, role: 'prospect' })}
-    />
+    <Suspense fallback={null}>
+      <CreateCompanyInline
+        initialName={hint.name}
+        onCancel={() => setCreating(false)}
+        onCreated={c => onUse({ id: c.id, name: c.name, country: null, city: c.city ?? null, role: 'prospect' })}
+      />
+    </Suspense>
   ) : (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border bg-sunken px-3 py-2 text-sm">
       <Icon icon={Building2} className="text-fg-muted" />

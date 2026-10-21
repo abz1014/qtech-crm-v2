@@ -21,7 +21,7 @@ import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
 import { NothingYetState } from '@/features/help/FirstUseState'
 import { useReceivables, useReceivablesSummary } from '@/features/money/payments/hooks'
-import { RecordPaymentDialog } from '@/features/money/payments/RecordPaymentDialog'
+import { lazyDialog } from '@/lib/lazyDialog'
 import { ReminderPanel } from '@/features/money/payments/ReminderPanel'
 import {
   daysBetween,
@@ -35,6 +35,9 @@ import {
   type ReceivableFilter,
   type ReceivableRow,
 } from '@/features/money/payments/model'
+
+// Downloaded the first time it opens (perf/lcp, lazyDialog.tsx).
+const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/RecordPaymentDialog').then(m => m.RecordPaymentDialog))
 
 /*
  * Money > Who owes us (M02; g2-money "receivables"; one name for admin and sales since the owner decision of 2026-10-19, and
