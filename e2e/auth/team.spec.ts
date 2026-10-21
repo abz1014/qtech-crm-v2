@@ -91,7 +91,7 @@ test.describe('Team (A04)', () => {
     await expect(secret).toBeHidden()
     await expect(page.getByText(password)).toHaveCount(0)
     await expect(rowOf(page, name)).toContainText('Sales')
-    await expect(rowOf(page, name)).toContainText('Active')
+    await expect(rowOf(page, name)).not.toContainText('Deactivated') // an active person has no status chip (R2-14)
     await page.reload()
     await expect(rowOf(page, name)).toBeVisible()
     await expect(page.getByText(password)).toHaveCount(0) // gone for good, nothing stored it
@@ -163,7 +163,7 @@ test.describe('Team (A04)', () => {
     await page.getByRole('button', { name: `Reactivate ${name}` }).click()
     await page.getByRole('dialog', { name: `Reactivate ${name}?` }).getByRole('button', { name: 'Reactivate' }).click()
     await expect(page.getByText(`${name} reactivated`)).toBeVisible()
-    await expect(rowOf(page, name)).toContainText('Active')
+    await expect(rowOf(page, name).getByRole('button', { name: `Actions for ${name}` })).toBeVisible() // active again: no chip, the menu is back
     await signIn(newbie.page, email, newPassword)
     await expect(newbie.page.getByRole('button', { name: `Account menu, ${name}` })).toBeVisible() // the app resumes where they were, not always /today
 

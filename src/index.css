@@ -227,110 +227,33 @@
 /* ==========================================================================
    Status → tone map. Every derived state in the app resolves to --status-fg /
    --status-bg through its data-status="group:value" attribute.
-   Dashed border variant = “not firm” (data trust, prospect).
+   Round 2 (R2-01, DESIGN_SYSTEM section 6): the tone says who acts next.
+   warning = we act next, info = someone else acts next, success = finished,
+   danger = past its date and still open, neutral = closed, not asked, not needed.
+   Keys marked hidden in src/lib/status.ts never draw a chip (their tone is used by
+   StatusText only). Dashed border variant = “not firm” (data trust, prospect).
+   --tone-ink-* is no longer a status tone: it stays for the month lock bar only.
    ========================================================================== */
 
+/* neutral (inert): closed, not asked, not needed */
 [data-status="rfq-outcome:closed"],
+[data-status="clarification:none"],
 [data-status="clarification:withdrawn"],
 [data-status="inquiry:shortlisted"],
-[data-status="order:cancelled"],
-[data-status="commissioning:na"],
-[data-status="payment:unpaid"],
-[data-status="trust:estimated"],
-[data-status="tcs:not-started"],
-[data-status="company-role:supplier"],
-[data-status="company-role:prospect"] {
-  --status-fg: var(--tone-neutral-fg);
-  --status-bg: var(--tone-neutral-bg);
-}
-
-[data-status="rfq-outcome:open"],
-[data-status="sourcing:awaiting"],
-[data-status="sourcing:partly-covered"],
-[data-status="clarification:waiting-customer"],
-[data-status="inquiry:sent"],
-[data-status="order:active"],
-[data-status="goods:on-order"],
-[data-status="goods:received"],
-[data-status="goods:partly-delivered"],
-[data-status="commissioning:planned"],
-[data-status="invoicing:part"],
-[data-status="payment:part"],
-[data-status="tcs:copy-received"],
-[data-status="tcs:sent"],
-[data-status="fbr:generated"],
-[data-status="fbr:receipt"],
-[data-status="company-role:customer"] {
-  --status-fg: var(--tone-info-fg);
-  --status-bg: var(--tone-info-bg);
-}
-
-[data-status="rfq-outcome:won"],
-[data-status="sourcing:covered"],
-[data-status="clarification:answered"],
-[data-status="bid:bid-sent"],
-[data-status="inquiry:quoted"],
-[data-status="order:done"],
-[data-status="goods:delivered"],
-[data-status="commissioning:done"],
-[data-status="invoicing:full"],
-[data-status="payment:settled"],
-[data-status="costs:complete"],
-[data-status="tcs:delivered"],
-[data-status="fbr:deposited"] {
-  --status-fg: var(--tone-success-fg);
-  --status-bg: var(--tone-success-bg);
-}
-
-[data-status="sourcing:not-floated"],
-[data-status="clarification:to-ask"],
-[data-status="clarification:answers-to-relay"],
-[data-status="bid:to-bid"],
-[data-status="deadline:due-soon"],
-[data-status="inquiry:chased"],
-[data-status="goods:to-source"],
-[data-status="goods:to-place"],
-[data-status="commissioning:to-plan"],
-[data-status="invoicing:not-invoiced"],
-[data-status="costs:provisional"],
-[data-status="trust:basis-unknown"],
-[data-status="fbr:pending"] {
-  --status-fg: var(--tone-warning-fg);
-  --status-bg: var(--tone-warning-bg);
-}
-
-[data-status="sourcing:no-offer"],
-[data-status="deadline:overdue"],
 [data-status="inquiry:no-offer"],
-[data-status="goods:late"],
-[data-status="payment:overdue"] {
-  --status-fg: var(--tone-danger-fg);
-  --status-bg: var(--tone-danger-bg);
-}
-
-[data-status="company-role:both"] {
-  --status-fg: var(--tone-ink-fg);
-  --status-bg: var(--tone-ink-bg);
-}
-
-[data-status="trust:basis-unknown"],
-[data-status="trust:estimated"],
-[data-status="company-role:prospect"],
-[data-status="excluded:basis-unknown"] {
-  --status-border-style: dashed;
-}
-
-/* ---- Additions (U05, 2026-10-14; DECISIONS.md). Values from DATA_MODEL section 5, the
-   g2-c / g2-d mockup additions (fx, user) and Amendment A6 (month, aging, bank tick). ---- */
-
-[data-status="clarification:none"],
-[data-status="goods:na"],
-[data-status="trust:ok"],
 [data-status="inquiry-blocked:none"],
+[data-status="order:cancelled"],
+[data-status="goods:na"],
+[data-status="commissioning:na"],
+[data-status="trust:ok"],
+[data-status="trust:estimated"],
 [data-status="reminder:none"],
+[data-status="company-role:supplier"],
+[data-status="company-role:both"],
+[data-status="company-role:prospect"],
 [data-status="fx-capture:captured"],
-[data-status="fx-capture:none"],
 [data-status="user:deactivated"],
+[data-status="month:closed"],
 [data-status="aging:0-30"],
 [data-status="paid-via:cash"],
 [data-status="payable:unpriced"],
@@ -344,43 +267,111 @@
   --status-bg: var(--tone-neutral-bg);
 }
 
+/* info (waiting): someone else acts next */
+[data-status="rfq-outcome:open"],
+[data-status="rfq-stage:prices"],
+[data-status="rfq-stage:sent"],
+[data-status="sourcing:awaiting"],
+[data-status="sourcing:partly-covered"],
 [data-status="clarification:asked"],
+[data-status="clarification:waiting-customer"],
+[data-status="bid:bid-sent"],
+[data-status="inquiry:sent"],
+[data-status="inquiry:chased"],
 [data-status="inquiry:awaiting"],
+[data-status="item-price:waiting"],
+[data-status="order:active"],
+[data-status="goods:on-order"],
+[data-status="commissioning:planned"],
+[data-status="payment:unpaid"],
+[data-status="payment:part"],
+[data-status="tcs:sent"],
 [data-status="reminder:reminded"],
+[data-status="company-role:customer"],
+[data-status="month:open"],
 [data-status="aging:advance-held"],
 [data-status="paid-via:bank"],
-[data-status="payable:owing"],
-[data-status="month:open"] {
+[data-status="payable:owing"] {
   --status-fg: var(--tone-info-fg);
   --status-bg: var(--tone-info-bg);
 }
 
+/* success (done): finished */
+[data-status="rfq-outcome:won"],
+[data-status="clarification:answered"],
+[data-status="inquiry:quoted"],
+[data-status="item-price:priced"],
+[data-status="order:done"],
+[data-status="goods:delivered"],
+[data-status="commissioning:done"],
+[data-status="invoicing:full"],
+[data-status="payment:settled"],
+[data-status="costs:complete"],
+[data-status="tcs:delivered"],
+[data-status="fbr:deposited"],
 [data-status="fx:fresh"],
 [data-status="user:active"],
-[data-status="month:closed"],
-[data-status="payable:settled"],
-[data-status="bank:ticked"] {
+[data-status="bank:ticked"],
+[data-status="payable:settled"] {
   --status-fg: var(--tone-success-fg);
   --status-bg: var(--tone-success-bg);
 }
 
+/* warning (now): we act next */
+[data-status="rfq-stage:suppliers"],
+[data-status="rfq-stage:ready"],
+[data-status="rfq-stage:expired"],
+[data-status="sourcing:not-floated"],
+[data-status="sourcing:covered"],
+[data-status="sourcing:no-offer"],
+[data-status="clarification:to-ask"],
+[data-status="clarification:answers-to-relay"],
+[data-status="bid:to-bid"],
 [data-status="bid:expired"],
+[data-status="deadline:due-soon"],
+[data-status="item-price:none"],
 [data-status="inquiry-blocked:open-questions"],
 [data-status="inquiry-blocked:answers-waiting"],
+[data-status="goods:to-source"],
+[data-status="goods:to-place"],
+[data-status="goods:received"],
+[data-status="goods:partly-delivered"],
+[data-status="commissioning:to-plan"],
+[data-status="invoicing:not-invoiced"],
+[data-status="invoicing:part"],
+[data-status="costs:provisional"],
+[data-status="trust:basis-unknown"],
+[data-status="tcs:not-started"],
+[data-status="tcs:copy-received"],
+[data-status="fbr:pending"],
+[data-status="fbr:generated"],
+[data-status="fbr:receipt"],
 [data-status="fx:stale"],
+[data-status="fx:unusable"],
+[data-status="fx-capture:none"],
 [data-status="aging:31-60"],
 [data-status="aging:61-90"],
-[data-status="payable:paid-over"],
 [data-status="bank:unticked"],
+[data-status="payable:paid-over"],
 [data-status="excluded:basis-unknown"] {
   --status-fg: var(--tone-warning-fg);
   --status-bg: var(--tone-warning-bg);
 }
 
-[data-status="fx:unusable"],
+/* danger (late): past its date and still open */
+[data-status="deadline:overdue"],
+[data-status="goods:late"],
+[data-status="payment:overdue"],
 [data-status="aging:90-plus"] {
   --status-fg: var(--tone-danger-fg);
   --status-bg: var(--tone-danger-bg);
+}
+
+[data-status="trust:basis-unknown"],
+[data-status="trust:estimated"],
+[data-status="company-role:prospect"],
+[data-status="excluded:basis-unknown"] {
+  --status-border-style: dashed;
 }
 /* tokens:end */
 

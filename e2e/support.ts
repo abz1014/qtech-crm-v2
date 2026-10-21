@@ -104,6 +104,8 @@ export async function openGallery(page: Page, search = ''): Promise<void> {
   // Stand still before the page exists: no countdown, debounce or relative time can move under a screenshot.
   await page.clock.pauseAt(new Date(FIXED_NOW.getTime() + 1000))
   await page.goto(`/dev/gallery${search}`)
+  // The gallery is lazy-loaded: wait for the page itself, or axe can run on an empty document (no main, no h1).
+  if (!search.includes('scene=')) await page.getByRole('heading', { level: 1, name: 'Component gallery' }).waitFor()
   await page.addStyleTag({ content: FREEZE_CSS })
   await page.evaluate(() => document.fonts.ready)
   const fonts = await page.evaluate(async () => {

@@ -1,20 +1,24 @@
 import { describe, expect, it } from 'vitest'
+import { resolveStatus } from '@/lib/status'
 import { daysSince, dueChipLabel, dueSubLabel, itemCoverage, sentLine, supplierMemoryLine } from './detailView'
 
 describe('itemCoverage', () => {
   it('counts the prices when nobody is still to answer; "so far" while somebody is', () => {
-    expect(itemCoverage(3, 0, 3, 3)).toEqual({ kind: 'covered', label: '3 prices' })
-    expect(itemCoverage(1, 0, 2, 2).label).toBe('1 price')
-    expect(itemCoverage(1, 1, 2, 3)).toEqual({ kind: 'partly', label: '1 price so far' })
-    expect(itemCoverage(2, 2, 2, 4).label).toBe('2 prices so far')
+    expect(itemCoverage(3, 0, 3, 3)).toEqual({ kind: 'covered', value: 'priced', detail: '3 prices' })
+    expect(itemCoverage(1, 0, 2, 2).detail).toBe('1 price')
+    expect(itemCoverage(1, 1, 2, 3)).toEqual({ kind: 'partly', value: 'priced', detail: '1 price so far' })
+    expect(itemCoverage(2, 2, 2, 4).detail).toBe('2 prices so far')
   })
   it('"No price yet" once others replied and nobody priced it; "Waiting for prices" while somebody asked has not answered', () => {
-    expect(itemCoverage(0, 1, 2, 3)).toEqual({ kind: 'uncovered', label: 'No price yet' })
-    expect(itemCoverage(0, 2, 0, 2)).toEqual({ kind: 'none', label: 'Waiting for prices' })
+    expect(itemCoverage(0, 1, 2, 3)).toEqual({ kind: 'uncovered', value: 'none' })
+    expect(itemCoverage(0, 2, 0, 2)).toEqual({ kind: 'none', value: 'waiting' })
   })
-  it('agrees with the header and the board: "Needs suppliers" when nobody is asked, "No price yet" when everyone asked said no', () => {
-    expect(itemCoverage(0, 0, 0, 0)).toEqual({ kind: 'unasked', label: 'Needs suppliers' })
-    expect(itemCoverage(0, 0, 0, 2)).toEqual({ kind: 'uncovered', label: 'No price yet' })
+  it('no item chip while nobody is asked (the header says "Needs suppliers"); "No price yet" when everyone asked said no', () => {
+    expect(itemCoverage(0, 0, 0, 0)).toEqual({ kind: 'unasked', value: null })
+    expect(itemCoverage(0, 0, 0, 2)).toEqual({ kind: 'uncovered', value: 'none' })
+  })
+  it('every value is an item-price key in the registry', () => {
+    for (const v of ['priced', 'waiting', 'none']) expect(() => resolveStatus('item-price', v)).not.toThrow()
   })
 })
 
@@ -48,9 +52,9 @@ describe('sentLine and dates', () => {
   })
   it('words the deadline chip and the bid-due line', () => {
     expect(dueChipLabel(4, false)).toBe('Due in 4 days')
-    expect(dueChipLabel(1, false)).toBe('Due in 1 day')
+    expect(dueChipLabel(1, false)).toBe('Due tomorrow')
     expect(dueChipLabel(0, false)).toBe('Due today')
-    expect(dueChipLabel(-2, true)).toBe('Overdue by 2 days')
+    expect(dueChipLabel(-2, true)).toBe('2 days overdue')
     expect(dueChipLabel(20, false)).toBeNull()
     expect(dueChipLabel(null, false)).toBeNull()
     expect(dueSubLabel(4)).toBe('In 4 days')

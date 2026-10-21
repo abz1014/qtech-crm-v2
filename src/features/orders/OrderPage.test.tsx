@@ -136,6 +136,22 @@ describe('the order page: one primary button, chosen by state', () => {
     expect(container.textContent).not.toMatch(/Everything is delivered|Create invoice ·/)
   })
 
+  it('the title is the shared DetailHeader: name and number in the h1, the state chip under it, estimated dates as an InfoTip, the More menu', () => {
+    installFakeDb(() => ({ data: [] }))
+    const done = { ...order, state: { ...order.state!, lifecycle: 'done', dataTrust: 'estimated_dates' } }
+    const { container } = mount(<OrderHeaderBlock order={done} legs={legs} items={items} engineers={[]} role="admin" orderMoney={money} />)
+    const h1 = screen.getByRole('heading', { level: 1 })
+    expect(h1.querySelector('[data-status]')).toBeNull()
+    expect(h1).toHaveTextContent(`${order.companyName} ORD-0038`)
+    expect(container.querySelectorAll('header [data-status]')).toHaveLength(1)
+    expect(screen.getByTestId('order-dates-estimated')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'About these dates' })).toBeInTheDocument()
+    expect(screen.queryByText('Estimated dates')).toBeNull()
+    expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument()
+    // the status strip draws status text, never a tinted chip
+    expect(screen.getByLabelText('State of this order').querySelector('[data-status]')).toBeNull()
+  })
+
   it('a cancelled order with an unknown price basis can still be answered by admin (review finding 6)', () => {
     installFakeDb(() => ({ data: [] }))
     const cancelled = { ...order, cancelledOn: day(-1), cancelReason: 'customer_cancelled', state: { ...order.state!, lifecycle: 'cancelled', dataTrust: 'basis_unknown' } }
@@ -260,6 +276,8 @@ describe('the orders list: one Next step column', () => {
     expect(a).toHaveTextContent('Place the order with Alpenmark Controls')
     expect(screen.getAllByRole('row', { name: /ORD-0039/ })[0]).toHaveTextContent('Chase the supplier: goods late')
     expect(container.querySelectorAll('tbody [data-status]')).toHaveLength(0)
+    // the Next step is status text (icon and words, no box)
+    expect(a.querySelector('[data-tone="now"]')).not.toBeNull()
     const headers = screen
       .getAllByRole('columnheader')
       .map(h => h.textContent?.trim())
@@ -267,6 +285,16 @@ describe('the orders list: one Next step column', () => {
     expect(headers.slice(0, 3)).toEqual(['Customer and items', 'Next step', 'Order'])
     expect(screen.getByRole('button', { name: 'Repeat a past order' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'New order' })).toBeNull()
+  })
+
+  it('the active list starts with the most urgent step, not the newest order (R2-05)', async () => {
+    // ORD-0038 is late, ORD-0039 only needs placing: by rank 38 comes first, though it is the older order
+    installFakeDb(c => (c.target === 'v_order_state' ? { data: [{ ...states[0], goods_state: 'late' }, { ...states[1], goods_state: 'to_place' }] } : fake(c)))
+    mount(<OrdersListPage />, 'admin')
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /ORD-0038/ }).length).toBeGreaterThan(0))
+    const order = screen.getAllByRole('row').map(r => r.textContent ?? '').filter(t => /ORD-00(38|39)/.test(t))
+    expect(order[0]).toMatch(/ORD-0038/)
+    expect(order[1]).toMatch(/ORD-0039/)
   })
 
   it('the state filters sit behind one Filters button', async () => {

@@ -212,7 +212,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
               <li key={r.id} className="flex items-center justify-between gap-3 rounded border px-3 py-2 text-sm">
                 <button type="button" onClick={() => void open(r.path)} className="inline-flex min-w-0 items-center gap-2 text-left font-medium text-primary hover:underline">
                   <ExternalLink className="size-4 shrink-0" aria-hidden="true" />
-                  <span className="truncate">{r.fileName}</span>
+                  <span className="min-w-0 [overflow-wrap:anywhere] break-all">{r.fileName}</span>
                 </button>
                 {r.invoiceId !== invoice.id ? <span className="shrink-0 text-xs text-fg-muted">same PSID</span> : null}
                 <Button size="sm" variant="quiet" aria-label={`Remove ${r.fileName}`} onClick={() => remove.mutate(r)}>

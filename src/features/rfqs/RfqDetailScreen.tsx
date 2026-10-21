@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { CloudOff, FileQuestion, RefreshCw, X } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { useSeesPrices } from '@/app/session'
+import { cn } from '@/lib/utils'
 import { recordRfqVisit } from '@/lib/capture/recents'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
@@ -36,9 +37,10 @@ import { ConvertDialog } from '@/features/orders/ConvertDialog'
 import { useWonDialog } from '@/features/orders/useWonDialog'
 
 /*
- * RFQ detail (R07; g2-rfq-detail.html; the parity audit's Part C; the UX audit of 2026-10-19). The header has the company, at most
- * two chips and ONE green button chosen by state (lib/nextAction.ts: Ask suppliers, Issue quotation, Mark won; the supplier chase
- * while waiting for prices), with everything else in More. Left column: "Items and supplier prices" (Add item, the rate bar,
+ * RFQ detail (R07; g2-rfq-detail.html; the parity audit's Part C; the UX audit of 2026-10-19; round-2 spec 5.3). The header
+ * (src/ui/DetailHeader) has the company as the h1, linking to it, the code, at most two chips and More; ONE green button chosen by
+ * state (lib/nextAction.ts: Ask suppliers, Issue quotation, Mark won; the supplier chase while waiting for prices) sits in the
+ * Next step box under the title, with everything else in More. Left column: "Items and supplier prices" (Add item, the rate bar,
  * then each item with one line per price, best first, one Recommended mark), "Replies from suppliers" (one row per supplier, open
  * while a reply is expected) and the Quotations table. Right rail: "Suppliers asked" (memory lines, the chase as a short preview,
  * Ask more suppliers) or, while nobody has been asked, "Suppliers to ask"; then the questions for the customer (R09) and the files
@@ -61,8 +63,9 @@ import { useWonDialog } from '@/features/orders/useWonDialog'
  * replied, with lead time and stock, stays. Issue quotation and Mark won (and their ?issue=1 / ?won=1 links) are admin and sales only.
  */
 
-function Shell({ children }: { children: ReactNode }) {
-  return <div className="mx-auto w-full max-w-[1440px] px-4 pb-6 pt-6 md:px-8 md:pb-16">{children}</div>
+/** The detail page frame (round-2 spec 5.1). `bar`: the phone's sticky action bar shows, so the foot is padded clear of it. */
+function Shell({ children, bar = false }: { children: ReactNode; bar?: boolean }) {
+  return <div className={cn('mx-auto w-full max-w-detail px-4 pb-16 pt-4 md:px-8 md:pt-6', bar && 'max-md:pb-[calc(var(--control-lg-h)+2rem)]')}>{children}</div>
 }
 
 /** The loading skeleton mirrors the page: crumb, title, chips, actions, the meta cells, an items panel with rows, and the rail cards (C-15). */
@@ -259,7 +262,7 @@ function Loaded({
     ask({ supplierIds: ticked.map(t => t.supplierId), names: ticked.map(t => t.name), items: list })
 
   return (
-    <Shell>
+    <Shell bar={(rfq.state?.outcome ?? 'open') === 'open'}>
       <RfqHeaderBlock rfq={rfq} facts={facts} />
       {/* data-slot="convert-dialog" (O01): the Create order dialog, open while the address carries ?won=1. */}
       {wonOpen && prices && inquiries.data ? <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} /> : null}

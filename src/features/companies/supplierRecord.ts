@@ -1,6 +1,7 @@
 import { agedDate, priceFactOf, type PriceFact } from '@/lib/memory'
 import { poRef, orderRef, rfqRef } from '@/lib/refs'
 import { formatShortDate } from '@/lib/formatDay'
+import { daysLate, daysOverdue } from '@/lib/timeWords'
 import { reasonLabel } from '@/features/rfqs/lib/cantQuote'
 
 /*
@@ -265,10 +266,10 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
     let result: DeliveryResult
     if (leg.expectedOn && leg.receivedOn) {
       const d = daysBetween(leg.expectedOn, leg.receivedOn)
-      result = d > 0 ? { kind: 'late', days: d, text: `Late ${plural(d, 'day')}` } : { kind: 'ontime', days: Math.max(0, -d), text: 'On time' }
+      result = d > 0 ? { kind: 'late', days: d, text: `Delivered ${daysLate(d)}` } : { kind: 'ontime', days: Math.max(0, -d), text: 'On time' }
     } else if (leg.expectedOn) {
       const over = daysBetween(leg.expectedOn, today)
-      result = over > 0 ? { kind: 'overdue', days: over, text: `Not delivered, ${plural(over, 'day')} past` } : { kind: 'expected', days: Math.max(0, -over), text: 'Not delivered yet' }
+      result = over > 0 ? { kind: 'overdue', days: over, text: daysOverdue(over) } : { kind: 'expected', days: Math.max(0, -over), text: 'Not delivered yet' }
     } else {
       result = { kind: 'undated', days: 0, text: 'No expected date' }
     }

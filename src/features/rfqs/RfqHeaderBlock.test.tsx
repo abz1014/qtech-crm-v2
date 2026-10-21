@@ -83,13 +83,28 @@ const greens = () => screen.queryAllByRole('button').filter(b => b.className.inc
 describe('the RFQ header', () => {
   it('leads with the company, and shows at most two chips: the stage and the due date', () => {
     renderHeader('issue')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Indus Textile Mills')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('RFQ-0177')
-    const chips = screen.getByLabelText('Where this RFQ stands')
-    expect(chips.children).toHaveLength(2)
-    expect(chips).toHaveTextContent('Ready to quote')
-    expect(chips).toHaveTextContent('Due in 2 days')
-    expect(chips).not.toHaveTextContent('Waiting on customer') // the questions show in their own panel
+    const h1 = screen.getByRole('heading', { level: 1 })
+    expect(h1).toHaveTextContent('Indus Textile Mills')
+    expect(h1).toHaveTextContent('RFQ-0177')
+    expect(h1).toHaveClass('tracking-tight')
+    // the company name is the link to the company; no chip inside the h1
+    expect(within(h1).getByRole('link', { name: 'Indus Textile Mills' })).toHaveAttribute('href', '/companies/c-1')
+    expect(h1.querySelector('[data-status]')).toBeNull()
+    const chips = Array.from(document.querySelectorAll('header [data-status]'))
+    expect(chips).toHaveLength(2)
+    expect(chips[0]).toHaveTextContent('Ready to quote')
+    expect(chips[0]).toHaveAttribute('data-status', 'rfq-stage:ready')
+    expect(chips[1]).toHaveTextContent('Due in 2 days')
+    expect(document.querySelector('header')).not.toHaveTextContent('Waiting on customer') // the questions show in their own panel
+    // Top priority sits in the meta line, not in the title
+    expect(h1).not.toHaveTextContent('Top priority')
+    expect(screen.getByText('Top priority')).toBeInTheDocument()
+  })
+
+  it('the facts strip has no Company cell (the title is the company)', () => {
+    renderHeader('issue')
+    expect(screen.queryByText('Company', { selector: 'dt' })).toBeNull()
+    expect(screen.getByText('Customer ref', { selector: 'dt' })).toBeInTheDocument()
   })
 
   it('prices in: Issue quotation is the one green button; Mark won is in More, marked as having no quotation yet', async () => {
@@ -117,7 +132,7 @@ describe('the RFQ header', () => {
     const user = userEvent.setup()
     renderHeader('won', rfq({ state: state({ bid_state: 'bid_sent' }), quotedOn: '2026-11-26' }), { quotationCount: 1 })
     expect(greens().map(b => b.textContent)).toEqual(['Mark won'])
-    expect(screen.getByLabelText('Where this RFQ stands')).toHaveTextContent('Quotation sent')
+    expect(document.querySelector('[data-status="rfq-stage:sent"]')).toHaveTextContent('Quotation sent')
     await user.click(screen.getByRole('button', { name: /^More/ }))
     const menu = screen.getByRole('menu', { name: 'More' })
     expect(within(menu).getByRole('menuitem', { name: 'Revise quotation' })).toBeInTheDocument()

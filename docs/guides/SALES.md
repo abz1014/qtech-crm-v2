@@ -2,6 +2,7 @@ Q-TECH CRM: SALES, DAILY (one page)
 
 Sign in on your phone from the home-screen icon. Bottom bar: Today, RFQs, Orders, Companies, Money.
 A number beside a tab means "this many need you".
+Press ? on a computer to see the keyboard shortcuts.
 
 1. START WITH TODAY
  - Tap Today. Read "Overdue or due today" first, then "Ready to move".
@@ -52,7 +53,7 @@ A number beside a tab means "this many need you".
  - Tap "Create order". The order opens.
 
 8. INVOICE
- - Open the order. In Invoicing tap "Create invoice" (or Money, "Invoices & GST", "New invoice").
+ - Open the order. In Invoicing tap "Create invoice" (or Money, "Invoices & GST", "Create invoice").
  - Check Invoice number (it continues the series), Invoice date, Net amount, GST.
  - Save. Then send the invoice to the customer.
  - Courier sent? In "Invoices & GST" tick the invoices, then "Sent by TCS today". The (i) explains TCS, FBR and PSID.

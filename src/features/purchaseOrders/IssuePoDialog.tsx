@@ -18,6 +18,7 @@ import { Select } from '@/ui/form/Select'
 import { TextArea, TextField } from '@/ui/form/TextField'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
+import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
 import { useFxLatest } from '@/features/rfqs/hooks'
 import { useCompanyProfile } from '@/features/settings/hooks'
@@ -62,14 +63,9 @@ import {
  */
 const CURRENCIES = ['PKR', 'USD', 'EUR', 'GBP', 'AED', 'CNY']
 
+/** Where a price came from is provenance, not state: a neutral Tag (consistency spec 1.5), dashed when typed by hand. */
 function SourceChip({ source, children }: { source: PriceSource; children: string }) {
-  const look: Record<PriceSource, string> = {
-    order: 'border-tone-info-fg/25 bg-tone-info-bg text-tone-info-fg',
-    quote: 'border-tone-info-fg/25 bg-tone-info-bg text-tone-info-fg',
-    last_po: 'border-tone-warning-fg/25 bg-tone-warning-bg text-tone-warning-fg',
-    typed: 'border-dashed border-line-strong bg-surface text-fg-muted',
-  }
-  return <span className={cn('inline-flex h-5 items-center rounded border px-2 text-xs font-medium', look[source])}>{children}</span>
+  return <Tag dashed={source === 'typed'}>{children}</Tag>
 }
 
 export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg: OrderLegRow; onClose: () => void }) {
@@ -240,7 +236,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
       value: r => r.description,
       cell: r => (
         <span className="grid min-w-0 gap-px">
-          <span className="truncate">{r.description}</span>
+          <span className="min-w-0 [overflow-wrap:anywhere]">{r.description}</span>
           <span className="text-xs text-fg-muted">Order line {r.position + 1}</span>
         </span>
       ),
@@ -286,7 +282,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
         return (
           <span data-testid={`po-source-${n + 1}`} className="grid gap-px">
             <SourceChip source={sourceOf(r, typed)}>{st.chip}</SourceChip>
-            <span className="truncate text-xs text-fg-muted">{st.detail}</span>
+            <span className="min-w-0 [overflow-wrap:anywhere] text-xs text-fg-muted">{st.detail}</span>
           </span>
         )
       },

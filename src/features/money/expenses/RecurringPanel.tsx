@@ -116,8 +116,8 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
           {(templates.data ?? []).map(t => (
             <li key={t.id} className="flex min-h-12 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2" data-testid={`recurring-${t.label}`}>
               <span className="grid min-w-0 flex-1 gap-px">
-                <span className="truncate text-sm font-medium">{t.label}</span>
-                <span className="truncate text-xs text-fg-muted">
+                <span className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium">{t.label}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere] text-xs text-fg-muted">
                   {catName(t.categoryId)}
                   {t.dayOfMonth ? ` · day ${t.dayOfMonth}` : ''}
                   {!t.active ? ' · paused' : ''}

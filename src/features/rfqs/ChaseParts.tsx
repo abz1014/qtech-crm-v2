@@ -43,15 +43,8 @@ export interface Recipient {
   email?: string | null
 }
 
-/** "Email instead" / "WhatsApp instead": the other channel as a link, so the remembered one is the default and never a choice to make. */
-export function ChannelLink({ value, onChange, className }: { value: 'whatsapp' | 'email'; onChange: (v: 'whatsapp' | 'email') => void; className?: string }) {
-  const other = value === 'whatsapp' ? 'email' : 'whatsapp'
-  return (
-    <button type="button" onClick={() => onChange(other)} className={cn('rounded text-sm font-medium text-fg-2 underline underline-offset-2 hover:text-fg', className)}>
-      {other === 'email' ? 'Email instead' : 'WhatsApp instead'}
-    </button>
-  )
-}
+/** "Email instead" / "WhatsApp instead": moved to src/ui/ChannelLink.tsx (round 2, R2-07); kept here for the RFQ imports. */
+export { ChannelLink } from '@/ui/ChannelLink'
 
 /** "Show the whole message" / "Show less": opens the full message with its ticks, date and recipient under a short preview. */
 export function MoreToggle({ open, onToggle, controls }: { open: boolean; onToggle: () => void; controls?: string }) {

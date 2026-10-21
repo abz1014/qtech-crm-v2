@@ -20,6 +20,7 @@ import type { CategoryPatch } from '@/features/settings/api'
 import { mapPgError } from '@/lib/pgErrors'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
+import { PageHeader } from '@/ui/PageHeader'
 import { Button } from '@/ui/Button'
 import { Skeleton } from '@/ui/Skeleton'
 import { Tag } from '@/ui/Tag'
@@ -75,12 +76,10 @@ export function CategoriesPage() {
 
   return (
     <div className="grid content-start gap-4">
-      <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Expense categories</h1>
-        <p className="max-w-prose text-sm text-fg-muted">
-          What an expense can be filed under. The order here is the order expenses offer them in; the group decides where reports place them.
-        </p>
-      </header>
+      <PageHeader
+        title="Expense categories"
+        lede="What an expense can be filed under. The order here is the order expenses offer them in; the group decides where reports place them."
+      />
 
       <Banner tone="info" title="Categories in use cannot be deleted">
         Past expenses point to them. Deactivate a category instead: it stops showing up for new expenses and the old ones keep it.

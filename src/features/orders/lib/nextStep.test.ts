@@ -50,7 +50,7 @@ describe('the orders list "Next step" column', () => {
     expect(step({ goods: 'delivered', invoicing: 'fully_invoiced', payment: 'settled', balance: 0, costsState: 'provisional' }).text).toBe('Mark costs complete')
     expect(step({ goods: 'delivered', invoicing: 'fully_invoiced', payment: 'settled', balance: 0, costsState: null }, 'sales')).toMatchObject({ text: 'Nothing left to do', tone: 'done' })
     expect(step({ lifecycle: 'done', goods: 'delivered', invoicing: 'fully_invoiced', payment: 'settled', balance: 0, costsState: 'complete' })).toMatchObject({ text: 'Done', tone: 'done' })
-    expect(step({ lifecycle: 'cancelled', goods: 'late' })).toMatchObject({ text: 'Cancelled', tone: 'done' })
+    expect(step({ lifecycle: 'cancelled', goods: 'late' })).toMatchObject({ text: 'Cancelled', tone: 'inert' })
   })
 
   it('an engineer is never told about money, and never offered a step only admin and sales can take', () => {

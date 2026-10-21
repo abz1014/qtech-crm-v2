@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { SessionContext } from '@/app/session'
@@ -78,6 +78,10 @@ describe('Today at desktop width, after a chase', () => {
       // Close the Undo window: the stamp settles, Today re-reads, and the chase joins Waiting.
       fireEvent.click(await screen.findByRole('button', { name: 'Dismiss' }))
       expect(await screen.findByText('Moved to Waiting.')).toBeInTheDocument()
+      // Waiting starts collapsed (R2-08), a count in words with the next nudge; the open row still shows inside it.
+      const toggle = screen.getByRole('button', { name: /^Waiting · 1 · next nudge \w{3} \d{1,2} \w{3}$/ })
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      expect(within(screen.getByRole('region', { name: 'Waiting' })).getAllByRole('listitem')).toHaveLength(1)
     } finally {
       fake.uninstall()
     }

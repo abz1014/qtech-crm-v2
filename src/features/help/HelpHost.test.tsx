@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import { PaletteContext, type PaletteApi } from '@/app/palette/usePalette'
 import type { SessionState } from '@/app/session'
@@ -47,6 +47,11 @@ function mount(path: string, session: SessionState = sales) {
 afterEach(() => window.localStorage.clear())
 
 describe('HelpHost: one Help for the whole app', () => {
+  // HelpPanel is a lazy chunk; its first import can outlast any findBy when the suite runs in parallel. Load it first, with a hook timeout of its own.
+  beforeAll(async () => {
+    await import('@/features/help/HelpPanel')
+  }, 60_000)
+
   it('a ?help=<id> address opens that recipe (deep link); closing removes it and stays on the page', async () => {
     const user = userEvent.setup()
     mount('/rfqs?help=new-rfq')

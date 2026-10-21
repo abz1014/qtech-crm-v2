@@ -266,7 +266,7 @@ function TextSample({ small }: { small?: boolean }) {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge dimension="sourcing" value="partly-covered" />
-        <StatusBadge dimension="bid" value="to-bid" />
+        <StatusBadge dimension="rfq-stage" value="ready" />
         <StatusBadge dimension="rfq-outcome" value="won" />
         <StatusBadge dimension="deadline" value="overdue" />
         <Tag>ORD-0038</Tag>
@@ -277,9 +277,9 @@ function TextSample({ small }: { small?: boolean }) {
         value={filter}
         onValueChange={setFilter}
         options={[
-          { value: 'all', label: 'All', count: 9 },
-          { value: 'quotes', label: 'Quotations', count: 3 },
-          { value: 'suppliers', label: 'Suppliers & delivery', count: 4 },
+          { value: 'all', label: 'All', needs: 9 },
+          { value: 'quotes', label: 'Quotations', needs: 3 },
+          { value: 'suppliers', label: 'Suppliers & delivery', needs: 4 },
         ]}
       />
       <Field label="Customer reference" help="As printed on their enquiry." id={small ? 'ts-ref-small' : 'ts-ref-normal'}>

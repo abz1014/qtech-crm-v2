@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import ts from 'typescript'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { ADMIN_ALONE, FIRST_USE_COPY } from '@/features/help/firstUseCopy'
 import { HOW_IT_WORKS } from '@/features/help/howItWorks'
 import { MAX_STEPS, parseRecipe, type Recipe } from '@/features/help/recipes'
@@ -179,6 +179,13 @@ const recipes: Recipe[] = readdirSync(DOCS)
 const ids = new Set(recipes.map(r => r.id))
 
 describe('help recipes stay true to the screens (labelSync)', () => {
+  // The corpus parses every source file with the TypeScript compiler (about 5 s on an idle machine). Built lazily it was charged to
+  // whichever recipe test ran first, which hit the 30 s testTimeout when the machine was contended. A hook of its own carries the
+  // one-time cost, with room for a contended machine; the per-recipe tests then only look strings up.
+  beforeAll(() => {
+    corpus()
+  }, 180_000)
+
   it('there are recipes for every role, and ids are unique', () => {
     expect(ids.size).toBe(recipes.length)
     for (const role of ['sales', 'engineer', 'admin']) expect(recipes.filter(r => (r.roles as string[]).includes(role)).length).toBeGreaterThan(2)

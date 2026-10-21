@@ -376,7 +376,8 @@ test.describe('R26 intake: evidence in the list and in the memory card', () => {
     const row = page.locator('li', { has: page.getByRole('checkbox', { name: supplier.name }) })
     await expect(row).toBeVisible()
     await expect(page.getByRole('checkbox', { name: supplier.name })).toBeChecked()
-    await expect(row.locator('[data-evidence]')).toContainText(`Ordered ${desc} ×1 for ${ref}, placed ${dmy(last.placed)}, delivered after ${last.deliveredIn} days (expected 14)`)
+    // R2-10: the order behind the reason is in Memory (the evidence block below), not on the row.
+    await expect(row.locator('[data-evidence]')).toHaveCount(0)
     await expect(row.locator('[data-record]')).toHaveText('On time 3 of 3 deliveries')
     await expect(row.locator('[data-memory-line]')).toContainText('ordered from 3 times') // P9: v_supplier_stats.orders_count, and no "last contacted" beside the cited order
     await expect(row.locator('[data-memory-line]')).not.toContainText('last contacted')

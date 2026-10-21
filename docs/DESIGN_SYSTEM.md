@@ -114,41 +114,81 @@ The green rule from BRAND.md stands: green means primary action, active or selec
 
 ## 6. Status tones
 
-Six tones. Every derived state in the app resolves to one of them through `data-status="group:value"`, which sets `--status-fg` and `--status-bg`. A chip is always **shape + colour + label**: a glyph chosen by tone (hollow circle neutral, dotted circle info, check success, clock warning, alert circle danger) plus the text. Colour is never the only signal. A dashed border means "not firm" (data trust, prospect).
+Five tones, defined by **who acts next**. Every derived state resolves to one of them through `data-status="group:value"`, which sets `--status-fg` and `--status-bg`. The registry (`src/lib/status.ts`) is the one place a key becomes a label, a tone and a glyph; `status.test.ts` fails if it disagrees with the map in `tokens.css`. Database keys and view values never change; only the words and tones do (round 2, R2-01).
 
-| Tone | Text | Tint | Ratio | Meaning |
+| Tone | Name in code | Means | Icon (lucide) | Text | Tint | Ratio | Chip | Status text |
+|---|---|---|---|---|---|---|---|---|
+| `warning` | `now` | We act next (you or a colleague) | `CircleArrowRight` | `--tone-warning-fg` `#92400e` | `--tone-warning-bg` `#fef3c7` | 6.37:1 | amber tint | text `fg`, medium; icon amber |
+| `info` | `waiting` | Someone else acts next (supplier, customer, courier) | `Clock` | `--tone-info-fg` `#185f9e` | `--tone-info-bg` `#e3f0fb` | 5.72:1 | blue tint | text `fg-muted`; icon blue |
+| `success` | `done` | Finished | `CircleCheck` | `--tone-success-fg` `#0b625b` | `--tone-success-bg` `#e0f2f1` | 6.23:1 | teal tint | text `fg-muted`; icon teal |
+| `danger` | `late` | Past its date and still open | `CircleAlert` | `--tone-danger-fg` `#b21f1f` | `--tone-danger-bg` `#fde8e8` | 5.75:1 | red tint | text and icon red, medium |
+| `neutral` | `inert` | Closed, not asked, not needed | `Circle` | `--tone-neutral-fg` `#3d3d44` | `--tone-neutral-bg` `#eeeef1` | 9.30:1 | grey tint | text `fg-muted` |
+
+`ink` is not a status tone. The `--tone-ink-*` tokens stay for emphasis without hue (the month lock bar, avatars, toasts). The step names map to tones through `TONE_OF_STEP` and the shared `StepTone` type in `src/lib/status.ts`.
+
+Icon overrides are allowed only for: `CircleDashed` (dashed edge, not firm: Is GST included?), `Ban` (Cancelled, Deactivated, Can't quote), `Lock` (a closed month) and `CalendarClock` (Due soon).
+
+### Rules
+
+1. **Four ways to show a state.**
+
+   | Form | Component | Use it for |
+   |---|---|---|
+   | **Chip** (tinted box, icon and word) | `StatusBadge` | **Only** (a) the chip row under a page title, at most 2 chips; (b) the one state column of a table whose job is that state (GST register TCS and FBR, closed RFQs' outcome, Team's Deactivated); (c) at most one per row inside a detail panel (a supplier order's goods state, a supplier's reply state, an item's price state) |
+   | **Status text** (icon and word, no box, optional second line) | `StatusText` | Every **Next step** column, status-strip cells, history rows and money reports |
+   | **Tag** (neutral box, no tone) | `Tag` | Identity and category, never state: company role (Customer, Supplier, Customer & supplier, Prospect dashed), paid via (Bank, Cash), PO price source |
+   | **Plain words** | none | History facts ("Ordered elsewhere", "Delivered 3 days late"), quotation versions ("Replaced by revision 2"), report rows |
+
+2. **No chip for the normal state.** These keys carry `hidden: true` and `StatusBadge` renders nothing for them; their label is used only as text: RFQ open; order active; user active; month open; costs complete; trust ok; fx fresh; rate captured; goods and commissioning n/a (tables show "—"; "Not needed" stays only in the filter selects). Also hidden: questions-panel states (they are headings), `bid:to-bid`, inquiry blocked, reminder, company role, aging, bank, paid via, payable, expense group, excluded zero value and unattributed.
+3. **Lists show one Next step, never state chips** (RFQ list, Orders, Who owes us, company history rows).
+4. **One label means one thing and has one tone, everywhere.** A label may carry a mono detail ("2 of 3", "×2", "12 days"). It may be replaced only by a date phrase from the time-words helper (rule 8), never by new words.
+5. **The tone is who acts next** (table above).
+6. **At most one danger mark per row and per header.** Amber or blue text on a selected row turns to `fg-2`.
+7. **Colour is never alone.** Every state shows an icon and a word. Tints are only for chips. A dashed border means "not firm".
+8. **Time words come from `src/lib/timeWords.ts`:** "3 days overdue", "Due today", "Due tomorrow", "Due in 4 days", "In 4 days", "3 days ago", "5 days old", "New". No "d" abbreviations. "Late" alone is a history word: "Delivered 3 days late".
+
+### The 34 status labels
+
+| # | Label | Tone | Meaning | Keys |
 |---|---|---|---|---|
-| `neutral` | `--tone-neutral-fg` `#3d3d44` | `--tone-neutral-bg` `#eeeef1` | 9.30:1 | Inert, informational or closed states |
-| `info` | `--tone-info-fg` `#185f9e` | `--tone-info-bg` `#e3f0fb` | 5.72:1 | In progress, waiting on someone else |
-| `success` | `--tone-success-fg` `#0b625b` | `--tone-success-bg` `#e0f2f1` | 6.23:1 | Done, all priced, settled, delivered |
-| `warning` | `--tone-warning-fg` `#92400e` | `--tone-warning-bg` `#fef3c7` | 6.37:1 | Needs action soon, incomplete, uncertain |
-| `danger` | `--tone-danger-fg` `#b21f1f` | `--tone-danger-bg` `#fde8e8` | 5.75:1 | Overdue, late, failed, nowhere to buy |
-| `ink` | `--tone-ink-fg` `#ffffff` | `--tone-ink-bg` `#26262b` | 15.06:1 | Emphasis without hue (company role: both) |
+| 1 | Needs suppliers | now | Nobody asked, or every supplier asked said no | `rfq-stage:suppliers`, `sourcing:not-floated`, `sourcing:no-offer` |
+| 2 | Waiting for prices | waiting | Asked; not every item priced | `rfq-stage:prices`, `sourcing:awaiting`, `sourcing:partly-covered` ("2 of 3 priced"), `inquiry:sent`, `inquiry:awaiting`, `inquiry:chased` ("chased ×2"), `item-price:waiting` |
+| 3 | Ready to quote | now | Every item has a price | `rfq-stage:ready`, `sourcing:covered` |
+| 4 | Quotation sent | waiting | Our quotation is with the customer | `rfq-stage:sent`, `bid:bid-sent` |
+| 5 | Quotation expired | now | Validity passed without an answer | `rfq-stage:expired`, `bid:expired` |
+| 6 | Won | done | | `rfq-outcome:won` |
+| 7 | Closed | inert | RFQ closed for a reason; month closed (`Lock`) | `rfq-outcome:closed`, `month:closed` |
+| 8 | Not asked yet | inert | On the list, no message sent | `inquiry:shortlisted` |
+| 9 | Priced | done | A supplier or an item has a price ("2 of 3", "3 prices") | `inquiry:quoted`, `item-price:priced` |
+| 10 | No price yet | now | Everyone who replied left this item out | `item-price:none` |
+| 11 | Can't quote | inert (`Ban`) | The supplier said no | `inquiry:no-offer` |
+| 12 | Due soon | now (`CalendarClock`) | Always drawn as a time phrase ("Due today", "Due in 2 days") | `deadline:due-soon` |
+| 13 | Overdue | late | Past its date, still open ("12 days") | `deadline:overdue`, `payment:overdue`, `goods:late` |
+| 14 | Done | done | | `order:done`, `commissioning:done` |
+| 15 | Cancelled | inert (`Ban`) | | `order:cancelled` |
+| 16 | To order | now | A supplier must be chosen or the PO placed | `goods:to-source`, `goods:to-place` |
+| 17 | On order | waiting | With the supplier | `goods:on-order` |
+| 18 | To deliver | now | With us; take it to the customer ("2 of 3 delivered") | `goods:received`, `goods:partly-delivered` |
+| 19 | Delivered | done | | `goods:delivered`, `tcs:delivered` |
+| 20 | To plan | now | Commissioning needs a date | `commissioning:to-plan` |
+| 21 | Planned | waiting | Detail: the date | `commissioning:planned` |
+| 22 | To invoice | now | Nothing or only part invoiced ("rest PKR …") | `invoicing:not-invoiced`, `invoicing:part` |
+| 23 | Invoiced | done | | `invoicing:full` |
+| 24 | Awaiting payment | waiting | Balance open, not yet due ("part paid") | `payment:unpaid`, `payment:part` |
+| 25 | Paid | done | | `payment:settled` |
+| 26 | Not final | now | Costs still estimates | `costs:provisional` |
+| 27 | Is GST included? | now, dashed (`CircleDashed`) | Price basis unknown | `trust:basis-unknown`, `excluded:basis-unknown` |
+| 28 | Not sent | now | Invoice not sent by courier yet ("copy in") | `tcs:not-started`, `tcs:copy-received` |
+| 29 | Sent | waiting | With the courier | `tcs:sent` |
+| 30 | To deposit | now | Tax not deposited ("PSID made", "receipt in") | `fbr:pending`, `fbr:generated`, `fbr:receipt` |
+| 31 | Deposited | done | | `fbr:deposited` |
+| 32 | Old rate | now | Exchange rate older than the limit ("9 days") | `fx:stale` |
+| 33 | No rate | now | No usable rate | `fx:unusable`, `fx-capture:none` |
+| 34 | Deactivated | inert (`Ban`) | | `user:deactivated` |
 
-Mapping rule: **warning** = someone here should act soon, or the data is incomplete; **info** = in progress or waiting on someone else; **success** = finished or fully covered; **danger** = late, overdue or nowhere to buy; **neutral** = inert or closed; **ink** is reserved for company role "both".
+`rfq-stage` and `item-price` are UI-only dimensions (not database values). Words that are not chips keep their registry label for text use (`resolveStatus(...).label`): the questions-panel headings ("To ask", "Waiting on the customer", "Answered", "Answers to send") and the Tag words (Customer, Supplier, Customer & supplier, Prospect, Bank, Cash).
 
-| Status | Values (tone) |
-|---|---|
-| RFQ outcome | Open (info) · Won (success) · Closed (neutral) |
-| RFQ sourcing | Not sent to suppliers (warning) · Waiting for prices (info) · Partly priced (info) · All priced (success) · No price yet (danger) |
-| Clarification | To ask (warning) · Waiting on customer (info) · Answers to send (warning) · Answered (success) · Withdrawn (neutral) |
-| Quotation (`bid`) | To quote (warning) · Quotation sent (success) · Quotation expired (warning) |
-| Deadline risk | Due soon (warning) · Overdue (danger) |
-| Supplier inquiry | Shortlisted (neutral) · Sent (info) · Chased (warning) · Quoted (success) · Can't quote (danger) |
-| Order lifecycle | Active (info) · Cancelled (neutral) · Done (success) |
-| Goods | To source (warning) · To place (warning) · On order (info) · Late (danger) · Received (info) · Partly delivered (info) · Delivered (success) |
-| Commissioning | Not needed (neutral) · To plan (warning) · Planned (info) · Done (success) |
-| Invoicing | Not invoiced (warning) · Part invoiced (info) · Fully invoiced (success) |
-| Payment | Unpaid (neutral) · Part paid (info) · Settled (success) · Overdue (danger) |
-| Costs | Not final (warning) · Complete (success) |
-| Data trust | Is GST included? (warning, dashed) · Estimated dates (neutral, dashed) |
-| Invoice courier (TCS) | Not started (neutral) · Copy received (info) · Sent (info) · Delivered (success) |
-| FBR | Pending (warning) · Generated (info) · Receipt received (info) · Deposited (success) |
-| Company role | Customer (info) · Supplier (neutral) · Both (ink) · Prospect (neutral, dashed) |
-
-Labels follow the plain-words glossary (DECISIONS 2026-10-19). Only the words changed; the `data-status` keys and the view values did not (`src/lib/status.ts`, guarded by `status.test.ts`).
-
-Usage: `<span class="chip" data-status="goods:late">…</span>`. Chip height `--chip-h` (24; 20 with Smaller text) as a minimum, so the label never clips; padding 0 8 (6 on the glyph side); `--text-xs` weight-500 label; the glyph is `--icon-chip` (16; 12 with Smaller text), big enough that neutral (hollow circle), info (dotted circle) and success (check) chips differ by shape without colour; 1px hairline tinted from the text colour. Do not invent per-screen colours for a status; add it to the map in `tokens.css`.
+Chip usage: `<StatusBadge dimension="goods" value="late" />`. Chip height `--chip-h` (24; 20 with Smaller text) as a minimum, so the label never clips; padding 0 8 (6 on the glyph side); `--text-xs` weight-500 label; the glyph is `--icon-chip`; 1px hairline tinted from the text colour. Status text: `<StatusText tone="now" detail="12 days">Send a reminder</StatusText>` or `<StatusText dimension="goods" value="on_order" detail="Due 3 Nov" />`, at body size (`--text-sm` minimum). Do not invent per-screen colours or words for a status; add it to the registry and the map in `tokens.css`.
 
 ## 7. Contrast (WCAG 2.2 AA)
 
@@ -268,13 +308,21 @@ One default, one alternative, at either text size. Compact is never a default.
 | Table text | 15 / 22 | 13 / 20 | |
 | Compact table (`data-density="compact"`) | rows 40, text 14 / 20, cells 8 | rows 32, text 12 / 16 | |
 
-Compact is a per-table toggle remembered per user; it never applies to forms or the Today list. DataTable reads `--row-h`, `--row-h-tall` and `--head-h` from its own computed style for windowing and raises them to what the rows in view need (a row with a 36 px small button needs 49), so virtual rows always match what is drawn. Tap targets on phones are at least 44 (`--hit-touch`), and Smaller text never shrinks a tap target: the coarse-pointer heights are the same at both sizes (`src/lib/tokens.test.ts`).
+Compact is a per-table toggle remembered per user, and since round 2 (consistency spec 3.2) it is off by default: DataTable draws the Comfortable / Compact switch only when a table passes `densitySwitch`, because "Smaller text" in the account menu is the one density control. It never applies to forms or the Today list. DataTable reads `--row-h`, `--row-h-tall` and `--head-h` from its own computed style for windowing and raises them to what the rows in view need (a row with a 36 px small button needs 49), so virtual rows always match what is drawn. Tap targets on phones are at least 44 (`--hit-touch`), and Smaller text never shrinks a tap target: the coarse-pointer heights are the same at both sizes (`src/lib/tokens.test.ts`).
 
 ## 12. Layout
 
-Desktop navigation is either a 224px left rail (`--nav-w`) or a 52px top bar (`--topbar-h`); the Today directions explore both. Exactly five destinations in this order: Today, RFQs, Orders, Companies, Money (owner decision 2026-10-19; engineers get the first four). Reports lives inside Money (`/reports` redirects there). A `⌘K` search field sits with the navigation. Phones use a bottom tab bar with the same five.
+Desktop navigation is a 56 px top bar (`--topbar-h`; 52 with Smaller text). The 224px left rail (`--nav-w`) was explored for Today and not built. Exactly five destinations in this order: Today, RFQs, Orders, Companies, Money (owner decision 2026-10-19; engineers get the first four). Reports lives inside Money (`/reports` redirects there). A `⌘K` search field sits with the navigation. Phones use a bottom tab bar with the same five.
 
-Navigation is at most two levels: the main destinations, then one strip of tabs inside a destination (Money: Who owes us, Invoices & GST, Expenses, Month end). Never a third strip: a page reached from inside a tab (Match bank statement, Margins, Things to check, a report) has a back link (on a phone, the phone bar's back arrow) and a title instead. On a phone no tab strip scrolls sideways: it wraps into a grid, or the list itself is the page (Settings). A count beside a destination or a tab means "needs you" (to do) and nothing else, and agrees with the person's Today list; a tab with nothing to do shows no number. Page content is capped at 860px for single-column work lists and 1280px for tables. The active destination is marked by a 2 to 3px brand-green indicator plus `--bg-selected` or an underline, never a green fill.
+Navigation is at most two levels: the main destinations, then one strip of tabs inside a destination (Money: Who owes us, Invoices & GST, Expenses, Month end). Never a third strip: a page reached from inside a tab (Match bank statement, Margins, Things to check, a report) has a back link (on a phone, the phone bar's back arrow) and a title instead. On a phone no tab strip scrolls sideways: it wraps into a grid, or the list itself is the page (Settings). A count beside a destination or a tab means "needs you" (to do) and nothing else, and agrees with the person's Today list; a tab with nothing to do shows no number. It is drawn by one component, `NeedsCount` (`src/ui/Tag.tsx`: warning tint, mono, ", N need you" for screen readers; `SegmentedControl` and `Tab` take it as `needs`); every other count is written in words (a lede, a footer, "Waiting · 5"). Page content is capped at 860px for single-column work lists and 1280px for tables. The active destination is marked by a 2 to 3px brand-green indicator plus `--bg-selected` or an underline, never a green fill.
+
+### Page templates (round 2)
+
+Every page uses one of three templates, built from shared parts in `src/ui` (API in `design/INVENTORY.md`). Gutters are `px-4` on phones and `md:px-8` everywhere; sections are 24 apart (`gap-6`), header parts 16 (`gap-4`). Page titles are `text-2xl font-semibold tracking-tight`; ledes `text-sm text-fg-muted`, one sentence; meta lines `text-sm text-fg-2` with "·" between at most 5 items.
+
+- **List page** (`pt-6 pb-12`, `max-w-table` 1280): `PageHeader` (an h1 that is `sr-only` on phones because the phone bar already names the page, a lede, at most one green primary and one secondary; nothing else), then at most one strip of tabs or one switch row, then the `DataTable` with its toolbar (search, at most one switch, Filters). Today keeps its own layout.
+- **Detail page** (`pt-6 pb-16`, phone `pt-4`, `max-w-detail` 1440): `DetailHeader`. A breadcrumb (md and up, muted), then the h1 (the name, a link to the company on RFQ and Order) with the code beside it in `num text-lg font-medium text-fg-muted` (hidden below md), and on the right **only** the `MoreMenu` ("More" ▾). Under it a chip row of at most 2 `StatusBadge`s (never inside the h1) and the meta line. The page's one green action is **not** in the header: it sits in the shared `NextStepBox` directly under the title, with the next-step sentence (coordinator decision on round-2 spec 5.3; the same on RFQ, Order, and Company where it has an action). At most one facts strip follows.
+- **Phone** (below 768): one bar, `useMobileBar({ title, back: 'history', fallback, actions: <MoreMenu touch />, hideTabs })`, with at most 2 actions; its title is the code for RFQs and orders and the name for a company, while the content h1 shows the name. List pages keep the bottom tabs and a toolbar of at most 2 rows. Detail pages put the same green action as the NextStepBox in a `StickyActionBar` (fixed, safe-area pad, primary + at most one secondary + More); the page sets `hideTabs: true` and adds `max-md:pb-[calc(var(--control-lg-h)+2rem)]`. Nothing scrolls sideways.
 
 ## 13. Writing in the interface
 
@@ -296,3 +344,7 @@ Gate 2 decisions that shape the interface (all recorded in `DECISIONS.md`, 2026-
 2. **"Can't quote"** records one reason per supplier inquiry, with an optional per-item override. The RFQ detail reply row shows the inquiry-level reason and only offers the override when the person opens it.
 3. **Capture** pre-selects the most likely destination, and one tap confirms it. The chooser is a correction path, not a required step.
 4. **Quotation PDFs** print the bank details only if they are filled in `company_profile`. The field is optional; when blank, no heading, no empty block and no placeholder is printed.
+
+## 16. Keyboard
+
+One list of shortcuts, `src/app/shell/shortcuts.ts`, drawn by the Keyboard shortcuts sheet (`?` outside a text box or dialog, the account menu, or "Keyboard shortcuts" in the search palette; desktop only, phones never see an entry). A new key handler is added to that list in the same change: a source test fails otherwise. Single keys (N, C, G then T, /, ?) never act inside a text field or with a dialog open, and Settings, Your details can turn them off (WCAG 2.1.4); Ctrl/⌘ K and Z always work. ⌘ is shown on a Mac, Ctrl elsewhere (`modKeyLabel`). Hints stay quiet: a key in a button's tooltip ("New RFQ · N"), `aria-keyshortcuts` on the control, the palette and table footers; no always-on legends, and no `Kbd` on phones.

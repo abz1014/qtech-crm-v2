@@ -129,7 +129,7 @@ describe('tab counts mean "needs you", and agree with the pages', () => {
       return respond(c)
     })
     const tab = await screen.findByRole('link', { name: /^Who owes us/ })
-    await waitFor(() => expect(tab).toHaveTextContent('Who owes us, 1 need you'))
+    await waitFor(() => expect(tab).toHaveAccessibleName(/^Who owes us\s*, 1 need you$/))
   })
 
   it('Month end counts the checks with items plus Things to check, the same number the checklist says', async () => {
@@ -139,7 +139,7 @@ describe('tab counts mean "needs you", and agree with the pages', () => {
         : respond(c),
     )
     const tab = await screen.findByRole('link', { name: /^Month end/ })
-    await waitFor(() => expect(tab).toHaveTextContent('Month end, 3 need you'))
+    await waitFor(() => expect(tab).toHaveAccessibleName(/^Month end\s*, 3 need you$/))
     expect(await screen.findByTestId('checks-summary')).toHaveTextContent('3 checks have something to look at')
   })
 })

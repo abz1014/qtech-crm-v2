@@ -22,8 +22,8 @@ import type { Role, RuleKey, TodayItem, TodayTab } from '@/features/today/types'
 
 /*
  * Today (R11, direction B): a 420px list and a context pane. Groups: overdue or due today, the next 5 days, ready to
- * move, then Waiting (the system's cooldown, dimmed, never in the count of things that need you; collapsed when it holds
- * more than 5). On a phone the pane folds into an accordion under the row, and the list comes first: the target tile sits
+ * move, then Waiting (the system's cooldown, dimmed, never in the count of things that need you; collapsed until the person
+ * opens it, "Waiting · 5 · next nudge Mon 30 Nov"). On a phone the pane folds into an accordion under the row, and the list comes first: the target tile sits
  * under it. The empty state is the goal state.
  *
  * Tabs (owner glossary 2026-10-19, short forms): All, Quotes, Suppliers, Money; every count is "needs you". Engineers get no
@@ -54,7 +54,7 @@ const ICON: Record<RuleKey, LucideIcon> = {
 // The short forms of the glossary's "Quotations" and "Suppliers & delivery", so the four tabs fit the list column in one row on a
 // laptop; below that they wrap (never a sideways scroll).
 const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Quotes', sourcing: 'Suppliers', money: 'Money' }
-const WAITING_OPEN_MAX = 5
+const WAITING_OPEN_MAX = 0 // Waiting opens only when the person opens it (R2-08)
 
 /** Whether the person opened or closed the Waiting group, kept for this browser session only (null: not touched, the size decides). */
 let waitingToggledThisSession: boolean | null = null
@@ -115,9 +115,12 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const firstUse = useFirstUse('today', user.id, user.role, !!view && view.active.length === 0 && view.waiting.length === 0)
   const tabs: Array<'all' | TodayTab> = user.role === 'engineer' ? [] : ['all', 'bids', 'sourcing', 'money']
 
-  // Five or fewer: open. More than five: collapsed, and opening it is the person's choice (remembered for the session).
+  // Waiting starts collapsed (round-2 R2-08): it is the system's cooldown, not work. Opening it is the person's choice,
+  // remembered for the session. The collapsed line names the earliest next nudge.
   const waitingOpen = waitingToggled ?? waiting.length <= WAITING_OPEN_MAX
+  const nextNudge = useMemo(() => waiting.map(i => i.waiting?.nextNudgeOn).filter((d): d is string => !!d).sort()[0] ?? null, [waiting])
   const nextOf = (key: string) => active.find(i => i.key !== key)
+  const shownWaiting = waitingOpen ? waiting : waiting.filter(i => i.key === openId)
 
   const pick = (k: string) => {
     if (wide) setSelected(k)
@@ -145,7 +148,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
             className="mt-2 flex-wrap justify-self-start"
             value={tab}
             onValueChange={v => setTab(v as 'all' | TodayTab)}
-            options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], count: counts[t] }))}
+            options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], needs: counts[t] }))}
           />
         ) : null}
         <HowItWorksCard userId={user.id} role={user.role} className="mt-2" />
@@ -206,16 +209,17 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                 className="flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-medium text-fg-2"
               >
                 <Icon icon={waitingOpen ? ChevronDown : ChevronRight} size="sm" />
-                Waiting <span className="num font-regular text-fg-muted">{waiting.length}</span>
-                <span className="ml-auto text-xs font-regular text-fg-muted">
-                  {waitingOpen
-                    ? 'comes back when its date arrives'
-                    : `next nudge ${formatDay(waiting[0].waiting?.nextNudgeOn ?? today)}`}
+                {/* A count in words, never a pill (spec 2.2 #8): "Waiting · 5 · next nudge Mon 30 Nov". */}
+                <span>
+                  Waiting · <span className="num">{waiting.length}</span>
+                  {!waitingOpen && nextNudge ? <span className="font-regular text-fg-muted">{` · next nudge ${formatDay(nextNudge)}`}</span> : null}
                 </span>
+                {waitingOpen ? <span className="ml-auto text-sm font-regular text-fg-muted">comes back when its date arrives</span> : null}
               </button>
-              {waitingOpen ? (
+              {/* Collapsed, it still shows the open row: an item just chased stays where the person is looking. */}
+              {shownWaiting.length > 0 ? (
                 <ul>
-                  {waiting.map(i => (
+                  {shownWaiting.map(i => (
                     <Row key={i.key} item={i} today={today} names={data?.names} waiting open={openId === i.key} copied={false} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
                         <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
@@ -301,7 +305,7 @@ function Row({ item, today, names, waiting = false, open, copied, wide, onPick, 
         ) : copied ? (
           <span className="inline-flex h-5 items-center rounded bg-tone-success-bg px-2 text-xs font-medium text-tone-success-fg">Copied</span>
         ) : (
-          <span className={cn('num whitespace-nowrap pt-1 text-xs', tone)}>{item.badge.text}</span>
+          <span className={cn('whitespace-nowrap pt-px text-sm', tone)}>{item.badge.text}</span>
         )}
         {wide ? null : <Icon icon={ChevronRight} size="sm" className={cn('mt-1 text-fg-muted transition-transform duration-fast', open && 'rotate-90')} />}
       </button>

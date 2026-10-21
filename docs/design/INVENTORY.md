@@ -23,10 +23,11 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 | `Kbd` | Key hint (`⌘K`, `Esc`, `Enter`) | 01, 07 | U02 (built; the shell search shows `⌘K`) |
 | `Avatar` | Initials circle for a person (28, or 22 inside key figures) | 01 | U02 (built) |
 | `Tag` | Mono identifier or brand tag; dashed when not firm | 13 | U05 (built) |
-| `CountPill` | Count beside tab or group names | 13 | U05 (built) |
+| `NeedsCount` (was CountPill) | The "needs you" number beside a nav item, tab or switch; other counts are words | 13 | U05 (built) |
 | `StatusBadge` | Chip for any status value; shape, colour and label together; tones from `tokens.css` | 02 | U05 (built; registry in `src/lib/status.ts`) |
 | `Money` | Net / GST / gross, PKR grouping, foreign variant, estimate, stale-rate and basis-unknown marks, tabular mono | 03 | U06 (built: `Money`, `Margin`, `MoneyFx`, `NetGstGross`) |
-| `StatusTrack` | Three-step track beside a chip for the invoice courier (TCS) and FBR dimensions | money-01, 02 | U05 (built) |
+| `StatusText` | A state as icon and word with no box (Next step columns, status strips, history rows); tone = who acts next. `StatusTrack` was removed in round 2 (R2-21): the GST register shows the chip only | round 2 | Built (`src/ui/StatusText.tsx`) |
+| `FilterSheet`, `NoResults` | Extra list filters in one popover (sheet on a phone) with "Filters · n on"; the shared no-results state with Clear and "Search everywhere" | round 2 | Built (`src/ui/FilterSheet.tsx`, `src/ui/NoResults.tsx`) |
 | `SumBar`, `AfterDrawings` | The Money summary strip (label, figure, one line of context) and the Amendment A6 "Not in P&L" and "After drawings" lines set apart below a month result | money-07, 10 | U06 (built) |
 | `Form`, `Field` | RHF + Zod form, label, help, error line, submitting and unique-violation states | 04 | U07 (built: `Form`, `FormField`, `Field`, `useSubmitForm`, `DateInput`, source note) |
 | `Dialog` | Modal (Radix), header, body, footer, destructive confirm variant, focus return | 05 | U03 (built) |
@@ -35,7 +36,7 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 | `Toast` | With Undo (10 s), plain, error | 08 | U03 (built: `ToastProvider`, `useToast`) |
 | `EmptyState` | Heading, what happens next, optional action; role-limited variant | 09 | U04 (built; goal, neutral and error moods; the role-limited wording is a screen concern) |
 | `Tooltip` | Short hover and focus hint; also carries exact values behind rounded figures | 10 | U03 (built) |
-| `SegmentedControl` | 2 to 5 options, counts, large size; tablist or radiogroup semantics | 11 | U03 (built) |
+| `SegmentedControl` | 2 to 5 options, a `needs` count (NeedsCount) only for things that need someone on our side, large size; tablist or radiogroup semantics | 11 | U03 (built) |
 | `DateRail` | Start-to-due rail with today marker; tones on track, due soon, due today, overdue, done, no date | 12 | Built (`src/ui/DateRail.tsx`, parity pass); Today's context pane uses it |
 | `Popover` | `Menu` variant (actions, 32 px items) and information variant | 13 | U03 (built) |
 | `InlineConfirm` | In-place "Copied. Marked as chased today. Undo" line | 13 | U03 (built) |
@@ -52,12 +53,28 @@ Names are the component names to build. "Ref" is the section of `g2-components` 
 
 **`useChannelPreference`** (`import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPreference'`; `const [channel, setChannel] = useChannelPreference()`, `ContactChannel = 'whatsapp' | 'email'`). Remembers the person's last WhatsApp / Email choice on this device in `localStorage` under `qtech.channel.<user id>` (`qtech.channel.anon` signed out), every read and write in try/catch; default `'whatsapp'`. Feed it to the WhatsApp/Email `SegmentedControl` of `ChasePrep`, reminders and enquiries so they open on the channel used last time. No visual of its own.
 
+### Page templates and keyboard parts added in round 2 (consistency spec sections 4 and 5, R2-07)
+
+The templates are described in DESIGN_SYSTEM section 12; tests in `src/ui/PageTemplates.test.tsx`.
+
+**`PageHeader`** (`src/ui/PageHeader.tsx`; props `title: string`, `lede?: ReactNode`, `primary?: ReactNode`, `secondary?: ReactNode`, `className?`). The head of a list page: an h1 `text-2xl font-semibold tracking-tight max-md:sr-only`, a one-sentence lede, and on the right the secondary then the one green primary. Throws in development and tests with two primaries, two secondaries or a `variant="primary"` secondary.
+
+**`DetailHeader`** (`src/ui/DetailHeader.tsx`; props `name: ReactNode`, `nameHref?: string`, `code?: string`, `breadcrumb?: Crumb[]`, `more?: ReactNode`, `chips?: ReactNode`, `meta?: ReactNode[]`, `children?`, `className?`). Breadcrumb (md+), the h1 (name, optionally a link, then the code in `num text-lg font-medium text-fg-muted`, hidden below md), `more` alone on the right (hidden below md: phones put `<MoreMenu touch />` in the phone bar), a chip row of at most 2 `StatusBadge`s, the meta line (`text-sm text-fg-2`, falsy items dropped, "·" between, at most 5), then `children`: the page's `NextStepBox` with the one green action. No primary button in the header. Throws in development with more than 2 chips or 5 meta items.
+
+**`MoreMenu`** (`src/ui/MoreMenu.tsx`; props `children` (MenuItems), `touch?: boolean`, `label?: string` (default "More actions": the menu's name and the touch button's), `side?: 'top' | 'bottom'`, `align?: 'start' | 'end'` (default end), `className?` (trigger), `menuClassName?`, `disabled?`). Desktop: a secondary text button "More" with `ChevronDown`. `touch`: a quiet `Ellipsis` icon button at the 44 px touch size. Row-level menus stay a small icon button named "More for {name}".
+
+**`StickyActionBar`** (`src/ui/StickyActionBar.tsx`; props `label: string` (toolbar name), `primary?`, `secondary?`, `more?`, `className?`). Phone-only (`md:hidden`), `fixed` to the bottom with a safe-area pad; the primary fills the row, then at most one secondary and `<MoreMenu touch side="top" />`. Its page sets `useMobileBar({ hideTabs: true })` and adds `max-md:pb-[calc(var(--control-lg-h)+2rem)]`.
+
+**`ChannelLink`** (`src/ui/ChannelLink.tsx`, moved from `features/rfqs/ChaseParts.tsx`, which re-exports it; props `value: ContactChannel`, `onChange`, `open?: { to, text, email?, onOpen?, size?, variant? }`, `className?`). The other channel as a quiet link ("Email instead" / "WhatsApp instead"), so the remembered channel is the default and never a two-option switch. With `open`, an "Open in WhatsApp" / "Open in email" button for the chosen channel comes first, built on `src/lib/messageLinks` like `MessageActions` (fills the message in, sends nothing, marks nothing; `onOpen` lets the screen offer its own mark).
+
+**Keyboard shortcuts** (`src/app/shell/shortcuts.ts`: `shortcutList(mod?)` returns `{ group, keys, what, where?, handles? }[]` in 5 groups; `ShortcutsSheet.tsx`: a 520 px `Dialog` "Keyboard shortcuts", lazy-loaded by `PaletteHost`). Opened with `?`, the account menu (fine pointer, md+) or the palette action; `usePalette().openShortcuts()` opens it from code. `usePalette().open(query?)` opens the palette with the search box filled.
+
 ## 2. Composites (built from the primitives; screen tasks own them)
 
 | Composite | Made of | Used on |
 |---|---|---|
 | `AppShell` (top bar, six role-filtered destinations, `⌘K` trigger, role text, account avatar, phone bar and bottom tab bar; a detail page swaps the phone bar for the one-bar form, see section 1). Built in U02: destinations are a `nav` of links with `aria-current="page"`, not `Tabs`; the role is plain text, not a `Tag`; the account menu (`Popover`, name, role, Sign out calling the `session.signOut()` stub) was built in U03; the `⌘K` button opens the U08 palette | `Icon`, `Button`, `Kbd`, `Avatar` | every screen |
-| `PageHeader` (title, sub line, actions, breadcrumb) | `Breadcrumb`, `Button`, `StatusBadge` | all detail and register pages |
+| `PageHeader` (title, sub line, actions; list pages) and `DetailHeader` (breadcrumb, name + code, chips, meta, More; detail pages): see "Page templates" in section 1 | `Breadcrumb`, `Button`, `StatusBadge`, `MoreMenu` | all detail and register pages |
 | `Panel` (titled card with header, meta, actions) | `Button`, `Tag`, `SegmentedControl` | Money, Order, Company |
 | `KeyValue` list | `Money`, `Tag`, `StatusBadge` | Order, Company, Today detail |
 | `TotalsBar` (net / GST / gross summary) | `Money` | Money, Order (the three-cell `NetGstGross` is built in U06; a screen composes the bar from it and `SumBar`) |

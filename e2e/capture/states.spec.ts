@@ -37,6 +37,16 @@ async function ready(page: Page, rfqId: string) {
 }
 
 const sheet = (page: Page) => page.getByRole('dialog', { name: 'Paste or photo' })
+
+/** R2-11: only the chosen option shows; "Something else" opens the other tiles and the reply and order choices (once per capture). */
+async function openMore(page: Page) {
+  const more = sheet(page).getByRole('button', { name: 'Something else' })
+  if ((await more.getAttribute('aria-expanded')) !== 'true') await more.click()
+}
+async function chooseDest(page: Page, name: RegExp) {
+  await openMore(page)
+  await sheet(page).getByRole('radio', { name }).click()
+}
 const settle = (page: Page) => page.waitForTimeout(450)
 
 async function paste(page: Page, text: string, files: { name: string; type: string }[] = []) {
@@ -111,8 +121,9 @@ for (const [name, size] of [
       await review(page, `capture-frame-android-check-${name}`)
       await dlg.getByRole('button', { name: 'Save answer to 2 questions' }).click()
       await expect(dlg.getByRole('heading', { name: `Saved to ${rfqRef(s.rfq.number)}` })).toBeVisible()
-      await expect(dlg.getByText(/2 questions answered and 1 photo attached\. They now wait on Today to be passed on to the suppliers./)).toBeVisible()
-      await expect(dlg.getByText('Answers to send')).toBeVisible()
+      await expect(dlg.getByText('2 questions answered and 1 photo attached.')).toBeVisible()
+      // One sentence instead of the two chips (round 2, 1.5).
+      await expect(dlg.getByText('Marks 2 questions answered. Next: send the answers to the suppliers.')).toBeVisible()
       for (const b of ['Open ' + rfqRef(s.rfq.number), 'Add another', 'Done']) await expect(dlg.getByRole('button', { name: b })).toBeVisible()
       await expect(page.getByRole('status').filter({ hasText: '2 questions answered' }).getByRole('button', { name: /Undo/ })).toBeVisible()
       await settle(page)
@@ -132,7 +143,7 @@ for (const [name, size] of [
       await page.getByRole('button', { name: 'Remove nameplate-photo.png' }).click()
       // b: several questions
       await paste(page, 'Dear Sir, for the Belimo quote please confirm:\n1. Valve size and Kvs\n2. Actuator torque and supply voltage\n3. Fail-safe position on power loss\n4. Medium and maximum temperature')
-      await page.getByRole('radio', { name: /Questions from a supplier/ }).click()
+      await chooseDest(page, /Questions from a supplier/)
       await expect(sheet(page).getByText('Tick the ones to keep')).toBeVisible()
       await expect(sheet(page).getByText('Each line becomes one question on the RFQ, ready to put to the customer.')).toBeVisible()
       await settle(page)
@@ -140,13 +151,13 @@ for (const [name, size] of [
       await sheet(page).getByRole('textbox', { name: 'Pasted text' }).fill('')
       // c: notes
       await paste(page, 'Customer will send the P&ID on Monday. Plant shutdown is 12 to 14 Dec, so delivery must be before 10 Dec.')
-      await page.getByRole('radio', { name: /Add to RFQ notes/ }).click()
+      await chooseDest(page, /Add to RFQ notes/)
       await expect(sheet(page).getByText(/Added to the notes of RFQ-\d+ as written, with your name and the time: “Test Sales, /)).toBeVisible()
       await expect(sheet(page).getByRole('button', { name: 'Add to notes' })).toBeVisible()
       await settle(page)
       await review(page, `capture-frame-destination-notes-${name}`)
       // d: a new RFQ
-      await page.getByRole('radio', { name: /Start a new RFQ/ }).click()
+      await chooseDest(page, /Start a new RFQ/)
       await sheet(page).getByLabel('Which company?').fill(s.customer)
       await expect(page.getByRole('option', { name: new RegExp(`${s.customer} — Faisalabad`) })).toBeVisible()
       await settle(page)

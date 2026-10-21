@@ -11,7 +11,6 @@ import { Field } from '@/ui/form/Field'
 import { Select } from '@/ui/form/Select'
 import { TextArea } from '@/ui/form/TextField'
 import { Icon } from '@/ui/Icon'
-import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader, PersonRow } from '@/features/orders/api'
 import { useAddEngineer, useEngineerCandidates, useRemoveEngineer, useUpdateOrder } from '@/features/orders/hooks'
@@ -42,13 +41,12 @@ export function CommissioningPanel({
   const markDone = useMarkDone(order)
   const [editing, setEditing] = useState(false)
   const [editingNotes, setEditingNotes] = useState(false)
-  const state = order.state?.commissioning
 
   return (
     <section aria-label="Commissioning" className="min-w-0 rounded border bg-surface">
       <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3 md:px-5">
         <h2 className="text-base font-semibold">Commissioning</h2>
-        {state ? <StatusBadge dimension="commissioning" value={state} /> : null}
+        {/* no state chip: the status strip above already says it (consistency spec 1.5) */}
         {!isEngineer && canEdit ? (
           <Button size="sm" variant="quiet" icon={Pencil} className="ml-auto" onClick={() => setEditing(true)}>
             Edit

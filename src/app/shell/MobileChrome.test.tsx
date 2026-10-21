@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
 import { AppShell } from '@/app/shell/AppShell'
@@ -21,10 +21,10 @@ describe('phone tabs: the top bar counts as badges', () => {
       </MemoryRouter>,
     )
     const nav = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(nav).getByRole('link', { name: /^Today\s*9$/ })).toBeInTheDocument()
-    expect(within(nav).getByRole('link', { name: /^RFQs\s*140$/ })).toHaveTextContent('99+')
-    expect(within(nav).getByRole('link', { name: 'Orders' }).querySelector('[data-count]')).toBeNull()
-    expect(within(nav).getByRole('link', { name: 'Companies' }).querySelector('[data-count]')).toBeNull()
+    expect(within(nav).getByRole('link', { name: /^Today\s?, 9 need you$/ })).toBeInTheDocument()
+    expect(within(nav).getByRole('link', { name: /^RFQs\s?, 140 need you$/ })).toHaveTextContent('99+')
+    expect(within(nav).getByRole('link', { name: 'Orders' }).querySelector('[data-needs-count]')).toBeNull()
+    expect(within(nav).getByRole('link', { name: 'Companies' }).querySelector('[data-needs-count]')).toBeNull()
   })
 
   it('every column is at least as wide as its label, so a long label never clips', () => {
@@ -56,6 +56,12 @@ describe('Paste or photo (was Capture; plain-words glossary)', () => {
 })
 
 describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', () => {
+  // The palette is a lazy chunk, and its first import (Radix, cmdk, a Vite transform shared by every worker) can take several seconds when the suite runs in parallel,
+  // longer than any findBy. Load it first, with a hook timeout of its own, so the tests only exercise opening it.
+  beforeAll(async () => {
+    await import('@/ui/CommandPalette')
+  }, 60_000)
+
   const shell = (role: string) => {
     installFakeDb(() => ({ data: [] }))
     const session: SessionState = { status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role } }

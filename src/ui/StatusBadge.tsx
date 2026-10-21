@@ -10,6 +10,7 @@ import type { StatusDimension } from '@/lib/status'
  * The glyph is 16px (12 with smaller text) and the label medium weight, so neutral,
  * info and success chips differ by shape and word, not by colour alone. Height is
  * --chip-h (24, or 20) and grows with the text rather than clipping it.
+ * Renders nothing for a key marked `hidden` in the registry (Open, Active, Not needed, Complete...).
  */
 interface StatusBadgeProps {
   dimension: StatusDimension
@@ -24,6 +25,8 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ dimension, value, label, detail, className }: StatusBadgeProps) {
   const s = useResolved(dimension, value)
+  // The normal state never draws a chip (DESIGN_SYSTEM section 6, rule 2); write it with StatusText if it must show.
+  if (s?.hidden) return null
   return (
     <span
       data-status={s?.key ?? 'unknown'}

@@ -110,7 +110,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
       if (i < amounts.length - 1) await page.keyboard.press('Enter')
     }
     await expect(page.getByRole('textbox', { name: /^Amount, row/ })).toHaveCount(5)
-    await expect(page.getByText('carried')).toHaveCount(4)
+    await expect(page.getByRole('combobox', { name: 'Category, row 5' })).toHaveValue('Office supplies & snacks') // carried down
     await page.keyboard.press('Control+Enter')
     await expect(page.getByRole('dialog')).toBeHidden()
     const c = await readCount(page)
@@ -160,11 +160,11 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     const d = rowOf(m.done)
     await expect(d).toContainText(ordRef(m.done.order.number))
     await expect(d).toContainText('300,000') // 1,000,000 net less 700,000 paid out
-    await expect(d).toContainText('Costs complete')
+    await expect(d).not.toContainText('Costs complete') // a done state shows no chip (R2-13)
     const p = rowOf(m.prov)
     await expect(p).toContainText(ordRef(m.prov.order.number))
     await expect(p).toContainText('Margin not final')
-    await expect(p.locator('[data-provisional]')).toHaveCount(1)
+    await expect(p.locator('[data-provisional]')).toHaveCount(2) // cost and margin
     // Things to check (the old Exceptions tab) is one row of the Month end checklist: one tap from there.
     await page.goto(`/money/month-end?month=${STMT.key}`)
     const row = page.getByTestId('check-things_to_check')

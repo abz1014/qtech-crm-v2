@@ -6,12 +6,14 @@ import { AccountMenu } from '@/app/shell/AccountMenu'
 import { BrandImage } from '@/ui/BrandImage'
 import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
+import { NeedsCount } from '@/ui/Tag'
+import { Tooltip } from '@/ui/Tooltip'
 import { cn } from '@/lib/utils'
 import { searchKeyHint } from '@/ui/paletteSources'
 
 interface TopBarProps {
   user: SessionUser
-  /** Optional counts beside a destination ("RFQs 14"). Supplied by the data layer; nothing is shown when absent. */
+  /** "Needs you" counts beside a destination (NeedsCount: "RFQs 4", named "RFQs, 4 need you"). Nothing is shown for 0 or absent. */
   counts?: Partial<Record<NavKey, number>>
   onSearch?: () => void
   onCapture?: () => void
@@ -49,6 +51,8 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
             key={item.key}
             to={item.path}
             title={item.label}
+            // No aria-label: the name is the label (sr-only when squeezed) then NeedsCount's words, "RFQs, 4 need you", so the
+            // visible text is always part of the name (axe label-content-name-mismatch).
             className={({ isActive }) =>
               cn(
                 'relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded px-2 text-sm font-medium transition-colors duration-fast ease-out xl:px-3',
@@ -63,9 +67,7 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
                 <span data-nav-label="" className={cn(!isActive && 'max-lg:sr-only')}>
                   {item.label}
                 </span>
-                {counts?.[item.key] != null ? (
-                  <span className="num text-xs text-fg-muted max-lg:hidden">{counts[item.key]}</span>
-                ) : null}
+                <NeedsCount n={counts?.[item.key]} className="max-lg:hidden" />
                 {isActive ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-2 -bottom-px h-indicator bg-brand-green xl:inset-x-3" /> : null}
               </>
             )}
@@ -74,8 +76,10 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
       </nav>
 
       {/* The key hints sit beside the buttons, drawn over their right end, not inside them: text inside a button must be part of its
-          name (axe label-content-name-mismatch at 2xl, where the hints show); the name stays the action, the key is aria-keyshortcuts. */}
+          name (axe label-content-name-mismatch at 2xl, where the hints show); the name stays the action, the key is aria-keyshortcuts.
+          Below 2xl the hints hide, so the tooltip carries the key (consistency spec 4.3). */}
       <div className="relative ml-auto shrink-0">
+        <Tooltip content="Search or jump to" shortcut={hint}>
         <button
           type="button"
           onClick={onSearch}
@@ -95,6 +99,7 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
             Search or jump to
           </span>
         </button>
+        </Tooltip>
         <Kbd aria-hidden className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 max-2xl:hidden">
           {hint}
         </Kbd>
@@ -102,6 +107,7 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
 
       {onCapture ? (
         <div className="relative shrink-0">
+          <Tooltip content={CAPTURE_LABEL} shortcut="C">
           <button
             type="button"
             onClick={onCapture}
@@ -118,6 +124,7 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
               {CAPTURE_LABEL}
             </span>
           </button>
+          </Tooltip>
           <Kbd aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 border-primary-foreground/40 bg-transparent text-primary-foreground max-2xl:hidden">
             C
           </Kbd>

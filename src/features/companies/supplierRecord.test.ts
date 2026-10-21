@@ -145,7 +145,7 @@ describe('deliveries', () => {
     )
     const by = Object.fromEntries(r.deliveries.map(d => [d.orderRef, d]))
     expect(by['ORD-0038']).toMatchObject({ po: 'PO-26-0017 · R1', result: { kind: 'ontime', days: 1 } })
-    expect(by['ORD-0034']).toMatchObject({ po: 'PO-26-0004', result: { kind: 'late', days: 6, text: 'Late 6 days' } })
+    expect(by['ORD-0034']).toMatchObject({ po: 'PO-26-0004', result: { kind: 'late', days: 6, text: 'Delivered 6 days late' } })
     expect(by['ORD-0021']).toMatchObject({ po: null, estimated: true, result: { kind: 'ontime', days: 0 } })
     expect(r.deliveries.map(d => d.orderRef)).toEqual(['ORD-0038', 'ORD-0034', 'ORD-0021'])
   })

@@ -70,7 +70,7 @@ export interface FloatRow {
 
 /** In the order the work flows, in the owner's plain words (glossary 2026-10-19). */
 export const FLOAT_STATES = [
-  { key: 'not_floated', label: 'Not sent to suppliers' },
+  { key: 'not_floated', label: 'Needs suppliers' }, // the RFQ step's word (status.ts rfq-stage)
   { key: 'floated_awaiting', label: 'Waiting for prices' },
   { key: 'partly_covered', label: 'Some items priced' },
   { key: 'covered', label: 'All priced' },

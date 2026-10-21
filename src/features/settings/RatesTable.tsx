@@ -9,10 +9,16 @@ import { StatusBadge } from '@/ui/StatusBadge'
 
 /*
  * The exchange-rate table (g2-login-team-settings, Settings home): Currency, PKR for 1 unit, Source,
- * As of, Rate age. The age chip reads the same bands as the price comparison (fresh up to 7 days,
- * stale 8 to 30, unusable over 30), straight from v_fx_latest, so a stale rate looks stale everywhere.
+ * As of, Rate age. The age reads the same bands as the price comparison (fresh up to 7 days, stale 8 to 30,
+ * unusable over 30), straight from v_fx_latest, so an old rate looks old everywhere. A fresh rate shows its age
+ * as plain text; only "Old rate" and "No rate" are chips (round 2, spec 1.5).
  * Read-only: entering a rate by hand happens inline where a price needs it.
  */
+function RateAge({ r }: { r: FxLatestRow }) {
+  if (r.staleness === 'fresh') return <span className="num text-fg-2">{rateAgeLabel(r)}</span>
+  return <StatusBadge dimension="fx" value={r.staleness} detail={`${r.ageDays} ${r.ageDays === 1 ? 'day' : 'days'} old`} />
+}
+
 const COLUMNS: Column<FxLatestRow>[] = [
   { id: 'currency', header: 'Currency', value: r => r.currency, cell: r => <b className="num font-medium">{r.currency}</b> },
   { id: 'rate', header: 'PKR for 1 unit', kind: 'num', value: r => r.ratePkr, cell: r => formatRate(r.ratePkr) },
@@ -22,7 +28,7 @@ const COLUMNS: Column<FxLatestRow>[] = [
     id: 'age',
     header: 'Rate age',
     value: r => r.ageDays,
-    cell: r => <StatusBadge dimension="fx" value={r.staleness} label={rateAgeLabel(r)} />,
+    cell: r => <RateAge r={r} />,
   },
 ]
 
@@ -51,7 +57,7 @@ export function RatesTable({ label = 'Exchange rates' }: { label?: string }) {
           </span>
           <span className="flex items-center justify-between gap-3 text-xs text-fg-muted">
             <span>{`${sourceLabel(r.source)} · ${formatDay(r.asOf)}`}</span>
-            <StatusBadge dimension="fx" value={r.staleness} label={rateAgeLabel(r)} />
+            <RateAge r={r} />
           </span>
         </span>
       )}

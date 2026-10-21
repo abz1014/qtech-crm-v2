@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { RatesTable } from '@/features/settings/RatesTable'
 import { useSeesPrices } from '@/app/session'
 import { Icon } from '@/ui/Icon'
+import { PageHeader } from '@/ui/PageHeader'
 import { cn } from '@/lib/utils'
 
 /*
@@ -38,12 +39,7 @@ export function SettingsHomePage() {
   const prices = useSeesPrices()
   return (
     <div className="grid content-start gap-6">
-      <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="max-w-[62ch] text-sm text-fg-muted">
-          {prices ? 'Company details for documents, and the rates used to compare prices in other currencies.' : 'Company details for documents.'}
-        </p>
-      </header>
+      <PageHeader title="Settings" lede={prices ? 'Company details for documents, and the rates used to compare prices in other currencies.' : 'Company details for documents.'} />
       {prices ? (
         <Card
           id="fxh"

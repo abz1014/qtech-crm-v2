@@ -15,13 +15,14 @@ import { DateInput } from '@/ui/form/DateInput'
 import { Field } from '@/ui/form/Field'
 import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
+import { PageHeader } from '@/ui/PageHeader'
 import { Skeleton } from '@/ui/Skeleton'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import { Panel } from '@/features/companies/CompanyParts'
 import { useFxLatest } from '@/features/rfqs/hooks'
 import { useFxHistory, useFxLastAutoRun, useSetFxRate } from '@/features/fx/hooks'
-import { ageText, autoRunStamp, bandLabel, buildRateRows, sourceText, unusableWarning, type RateRow } from '@/features/fx/ratesModel'
+import { ageText, autoRunStamp, bandDetail, buildRateRows, sourceText, unusableWarning, type RateRow } from '@/features/fx/ratesModel'
 
 /*
  * Settings > Exchange rates (R15; g2-money "Admin: exchange rates" and g2-login-team-settings "Settings home, sales").
@@ -30,6 +31,8 @@ import { ageText, autoRunStamp, bandLabel, buildRateRows, sourceText, unusableWa
  * stale rate looks stale everywhere: fresh up to 7 days, stale 8 to 30, unusable over 30 (not compared).
  *
  * FE-2 entry burden: required = currency and rate. Pre-filled = the currency (the one most in need), the date (today).
+ * Round 2: PageHeader with one lede sentence; the background lives in the (i) only (R2-17). The Age column is the age as text
+ * for a fresh rate, and a chip only for "Old rate" and "No rate" (spec 1.5).
  */
 
 export function ExchangeRatesPage() {
@@ -43,12 +46,17 @@ export function ExchangeRatesPage() {
 
   return (
     <div className="grid min-w-0 content-start gap-4">
-      <header className="grid gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Exchange rates <InfoTip label="About rates">Updated every night. Used only to compare supplier prices in PKR, never for invoices.</InfoTip></h1>
-        <p className="max-w-prose text-sm text-fg-muted">
-          Updated every night. Anyone on the team can enter today&apos;s rate by hand, for example the bank&apos;s rate. The rates are used to compare prices in other currencies.
-        </p>
-      </header>
+      <PageHeader
+        title="Exchange rates"
+        lede={
+          <>
+            Anyone on the team can enter today&apos;s rate by hand.{' '}
+            <InfoTip label="About rates">
+              Updated every night. Used only to compare supplier prices in PKR, never for invoices. You can enter the bank&apos;s rate instead.
+            </InfoTip>
+          </>
+        }
+      />
 
       {latest.isPending ? (
         <div role="status" aria-busy="true" aria-label="Loading the exchange rates" className="grid gap-4">
@@ -113,7 +121,6 @@ function RatesTable({ rows, onPick }: { rows: RateRow[]; onPick: (c: string) => 
       cell: r => (r.ratePkr === null ? <span className="font-sans text-fg-muted">No rate yet</span> : <span className="num">{formatRate(r.ratePkr)}</span>),
     },
     { id: 'asof', header: 'As of', kind: 'date', value: r => r.asOf, cell: r => (r.asOf ? <span className="num">{day(r.asOf)}</span> : <span className="text-fg-muted">—</span>) },
-    { id: 'age', header: 'Age', hideBelowMd: true, value: r => r.ageDays, cell: r => (r.ageDays === null ? <span className="text-fg-muted">—</span> : <span className="num">{ageText(r.ageDays)}</span>) },
     {
       id: 'source',
       header: 'Source',
@@ -130,10 +137,17 @@ function RatesTable({ rows, onPick }: { rows: RateRow[]; onPick: (c: string) => 
         ),
     },
     {
-      id: 'band',
-      header: 'Band',
-      value: r => r.staleness,
-      cell: r => (r.staleness && r.ageDays !== null ? <StatusBadge dimension="fx" value={r.staleness} label={bandLabel(r.staleness, r.ageDays)} /> : null),
+      id: 'age',
+      header: 'Age',
+      value: r => r.ageDays,
+      cell: r =>
+        r.staleness === null || r.ageDays === null ? (
+          <span className="text-fg-muted">—</span>
+        ) : r.staleness === 'fresh' ? (
+          <span className="num text-fg-2">{ageText(r.ageDays)}</span>
+        ) : (
+          <StatusBadge dimension="fx" value={r.staleness} detail={bandDetail(r.ageDays)} />
+        ),
     },
     {
       id: 'action',

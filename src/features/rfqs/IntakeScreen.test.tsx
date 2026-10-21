@@ -18,6 +18,13 @@ const EMAIL = ['Dear Sir, please quote:', '1) Hach HQ1110 portable meter - 1 no'
 
 let copied: string[] = []
 
+/** Companies read one at a time (a company page's ?company= or a supplier page's ?supplier=). */
+const BY_ID: Record<string, { name: string; country: string; city: string }> = {
+  'c-acme': { name: 'Acme Plastics', country: 'Pakistan', city: 'Lahore' },
+  's-orient': { name: 'Orient Analytical', country: 'Pakistan', city: 'Karachi' },
+  's-zeta': { name: 'Zeta Instruments', country: 'Pakistan', city: 'Lahore' },
+}
+
 /** Companies, sites and contacts on file (a restored draft is checked against them). */
 const ON_FILE = new Set(['c-acme', 's-orient', 'c-old'])
 /** RFQs already saved, by id (a kept draft whose RFQ is one of these offers "Open" instead of Continue). */
@@ -29,9 +36,9 @@ function respond(call: FakeCall): FakeResult {
   const eqId = opArgs(call, 'eq')?.[1] as string | undefined
   switch (call.target) {
     case 'brands':
-      return { data: [{ id: 'b-hach', name: 'Hach', kind: 'brand' }] }
+      return { data: [{ id: 'b-hach', name: 'Hach', kind: 'brand' }, { id: 'f-pt', name: 'Pressure transmitters', kind: 'family' }] }
     case 'companies':
-      if (has('maybeSingle')) return { data: eqId === 'c-acme' ? { id: 'c-acme', name: 'Acme Plastics', country: 'Pakistan', city: 'Lahore' } : null }
+      if (has('maybeSingle')) return { data: eqId !== undefined && BY_ID[eqId] ? { id: eqId, ...BY_ID[eqId] } : null }
       if (has('limit') && eqId !== undefined) return { data: ON_FILE.has(eqId) ? [{ id: eqId }] : [] }
       return ilike
         ? { data: [{ id: 'c-acme', name: 'Acme Plastics', country: 'Pakistan' }] }
@@ -186,6 +193,25 @@ describe('intake screen', () => {
     expect(screen.getByText(/Item 2, .* has no supplier ticked\./)).toBeInTheDocument()
   })
 
+  it('shows the Family column only when a row named neither a brand nor a family; the family can always be set', async () => {
+    installFakeDb(respond)
+    setup()
+    renderScreen()
+    fireEvent.paste(document.body, { clipboardData: { getData: () => '1) Hach HQ1110 portable meter - 1 no' } })
+    expect(await screen.findByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Hach HQ1110 portable meter')
+    await waitFor(() => expect(within(screen.getByRole('combobox', { name: 'Brand of item 1' })).getByRole('option', { selected: true })).toHaveTextContent('Hach'))
+    // The brand was found: no Family column, but the row still sets its family after the brand.
+    expect(screen.getByText('Brand and family')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Family of item 1' })).toBeInTheDocument()
+    expect(screen.getByText('+ family', { selector: 'span' })).toBeInTheDocument()
+    // A row with nothing to go on: the Family column appears.
+    fireEvent.paste(document.body, { clipboardData: { getData: () => '1) 24V actuator for ball valve x 2' } })
+    expect(await screen.findByRole('textbox', { name: 'Description of item 2' })).toHaveValue('24V actuator for ball valve')
+    expect(screen.queryByText('Brand and family')).toBeNull()
+    expect(screen.getByText('Family')).toBeInTheDocument()
+    expect(screen.getAllByText('no family', { selector: 'span' })).toHaveLength(2)
+  })
+
   it('opens a Memory card per supplier: tier label, last quote at the time, brands, replies; one memory call per item, none per row', async () => {
     const db = installFakeDb(respond)
     const user = setup()
@@ -201,6 +227,10 @@ describe('intake screen', () => {
     expect(db.calls.filter(c => c.target === 'rpc:supplier_item_memory')).toHaveLength(2)
 
     expect(screen.queryByLabelText('What we know about Orient Analytical')).not.toBeInTheDocument()
+    // R2-10: the pill counts items ("1 item · same model"), and the order behind the reason is in Memory, not on the row.
+    const row = screen.getByRole('checkbox', { name: 'Orient Analytical' }).closest('li') as HTMLElement
+    expect(row).toHaveTextContent(/1 item\s*·\s*same model/)
+    expect(row.querySelector('[data-evidence]')).toBeNull()
     const button = screen.getByRole('button', { name: 'Memory, Orient Analytical' })
     expect(button).toHaveAttribute('aria-expanded', 'false')
     await user.click(button)
@@ -292,6 +322,40 @@ describe('intake screen', () => {
     await user.click(await screen.findByRole('button', { name: 'Copy message for 1 supplier' }))
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.queryByText(/is waiting for prices/)).toBeNull()
+  })
+})
+
+describe('New RFQ from a supplier\'s page (?supplier=)', () => {
+  async function toSuppliers(user: ReturnType<typeof setup>) {
+    await user.type(screen.getByRole('combobox', { name: 'Company' }), 'Acme')
+    await user.click(await screen.findByRole('option', { name: /Acme Plastics/ }))
+    fireEvent.paste(document.body, { clipboardData: { getData: () => EMAIL } })
+    expect(await screen.findByText('2 items found')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Looks right: find suppliers' }))
+  }
+
+  it('the supplier is already on the list to ask, ticked, with no extra step', async () => {
+    installFakeDb(respond)
+    const user = setup()
+    renderScreen('/rfqs/new?supplier=s-zeta')
+    expect(await screen.findByText(/is ticked as a supplier to ask\./)).toHaveTextContent('Zeta Instruments is ticked as a supplier to ask.')
+    await toSuppliers(user)
+    const added = await screen.findByRole('region', { name: 'Added by you' })
+    expect(within(added).getByRole('checkbox', { name: 'Zeta Instruments' })).toBeChecked()
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Orient Analytical' })).toBeChecked())
+    await user.click(screen.getByRole('button', { name: 'Write the message' }))
+    expect(await screen.findByRole('button', { name: 'Copy message for 2 suppliers' })).toBeInTheDocument()
+  })
+
+  it('a supplier that is suggested anyway shows once, ticked in its reason group', async () => {
+    installFakeDb(respond)
+    const user = setup()
+    renderScreen('/rfqs/new?supplier=s-orient')
+    expect(await screen.findByText(/is ticked as a supplier to ask\./)).toHaveTextContent('Orient Analytical is ticked as a supplier to ask.')
+    await toSuppliers(user)
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Orient Analytical' })).toBeChecked())
+    expect(screen.getAllByRole('checkbox', { name: 'Orient Analytical' })).toHaveLength(1)
+    expect(screen.queryByRole('region', { name: 'Added by you' })).toBeNull()
   })
 })
 
@@ -502,7 +566,11 @@ describe('the New RFQ draft (kept on this device)', () => {
     installFakeDb(respond)
     setup()
     renderScreen()
+    // R2-09: no "This RFQ" or "Progress" side boxes; the step line is the only progress shown, at every width.
+    expect(screen.queryByRole('complementary', { name: 'This RFQ' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Progress' })).toBeNull()
     const line = screen.getByRole('list', { name: 'Step 1 of 4' })
+    expect(line.className).not.toMatch(/hidden/)
     expect(within(line).getAllByRole('listitem').map(li => li.textContent?.replace(/,.*$/, ''))).toEqual(['Items', 'Suppliers', 'Message', 'Done'])
     const customer = screen.getByRole('region', { name: 'Customer' })
     expect(within(customer).getByRole('textbox', { name: 'Customer reference' })).toBeInTheDocument()

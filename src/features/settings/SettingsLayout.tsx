@@ -84,7 +84,7 @@ export function SettingsLayout() {
           ) : null,
         )}
       </nav>
-      <div className="min-w-0 px-4 pb-12 pt-6 md:px-10 md:pb-12 md:pt-8">
+      <div className="min-w-0 px-4 pb-12 pt-6 md:px-8 md:pb-12 md:pt-8">
         <div className="grid max-w-[940px] grid-cols-[minmax(0,1fr)] gap-6">
           <InstallBanner />
           <Outlet />

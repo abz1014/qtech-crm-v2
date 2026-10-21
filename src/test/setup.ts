@@ -1,10 +1,20 @@
 import '@testing-library/jest-dom/vitest'
 import { afterEach } from 'vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 afterEach(() => cleanup())
+
+/*
+ * findBy*, waitFor and waitForElementToBeRemoved give up after 1000 ms by default. Vitest runs ~200 jsdom files in parallel
+ * workers, and the first render of a whole screen (Today, the palette, Help) plus the first transform of a lazy chunk is
+ * CPU-bound: on a contended machine (a busy laptop, a shared CI runner) it passes 1 s and the lookup fails although the app
+ * is fine. The failures were always "Unable to find role=..." on a screen still mid-render, never a wrong result. This only
+ * raises the ceiling of a lookup that is still failing: a lookup that succeeds returns at once, and a real regression still
+ * fails (after 5 s, well inside the 30 s testTimeout).
+ */
+configure({ asyncUtilTimeout: 5000 })
 
 // jsdom lacks these; Radix and cmdk call them.
 class ResizeObserverStub {

@@ -58,7 +58,7 @@ test('route matrix: every page opens for the roles allowed and shows the no-acce
     const page = await open(ctx, '/today')
     // The main navigation offers exactly the role's destinations.
     const nav = page.getByRole('navigation', { name: ROLES.nav.main })
-    const links = (await nav.getByRole('link').allInnerTexts()).map(t => t.replace(/\s+\d+$/, '').trim()).filter(Boolean)
+    const links = (await nav.getByRole('link').allInnerTexts()).map(t => t.split(/\n/)[0].replace(/\s+\d+$/, '').trim()).filter(Boolean) // the label line, without the NeedsCount pill or its words
     expect.soft(links, `${role}: the main navigation`).toEqual([...ROLES.navLabels[role]])
     for (const [path, allowed] of routes) {
       await page.goto(path)

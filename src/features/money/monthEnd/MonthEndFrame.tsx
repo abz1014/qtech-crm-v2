@@ -5,7 +5,7 @@ import { monthKeyLabel, monthKeyShort } from '@/features/money/monthEnd/model'
 
 /*
  * The month controls Month end and the money reports share: the pager (the month rides in the address, ?month=2026-10) and the
- * Open or Closed chip. The old strip of Month-end views is gone (owner decision 2026-10-19: Money is two levels deep); the
+ * Closed chip (an open month has none: Open is a hidden key, spec 1.5). The old strip of Month-end views is gone (owner decision 2026-10-19: Money is two levels deep); the
  * checklist links to each fix and Reports lists every report.
  */
 

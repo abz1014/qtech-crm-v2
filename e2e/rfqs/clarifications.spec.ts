@@ -119,7 +119,7 @@ test.describe('adding questions (FE-2: 1 paste + 1 tap)', () => {
     ])
     expect(rows.map(r => r.raised_by_inquiry_id)).toEqual([null, null, s.lpc.inquiryId])
     expect(rows.every(r => r.ask_count === 0 && r.first_asked_at === null)).toBe(true)
-    await expect(panel(page).getByText('To ask', { exact: true })).toBeVisible()
+    await expect(panel(page).getByRole('heading', { level: 3, name: /^To ask the customer · \d+$/ })).toBeVisible()
     await expect(panel(page).getByText(`Asked by ${s.lpc.name}`)).toBeVisible()
     await expect(panel(page).getByText('Our question').first()).toBeVisible()
   })
@@ -189,7 +189,7 @@ test.describe('answers', () => {
     expect(atts[0].path.startsWith(`${s.rfq.id}/`)).toBe(true)
     expect(await objectStatus(atts[0].path)).toBe(200)
     await expect(panel(page).getByText('Answered with a photo')).toBeVisible()
-    await expect(panel(page).getByText('Answered', { exact: true })).toBeVisible()
+    await expect(panel(page).getByRole('heading', { level: 3, name: /^Answered · \d+$/ })).toBeVisible()
     // The same photo is in the Files panel, marked as the answer.
     await expect(page.getByRole('list', { name: 'Files on this RFQ' })).toContainText('Photo answer')
   })

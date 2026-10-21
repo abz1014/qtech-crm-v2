@@ -39,16 +39,19 @@ afterEach(() => installFakeDb(() => ({})).uninstall())
 const saves = (db: ReturnType<typeof installFakeDb>) => db.calls.filter(c => c.target === 'expenses' && c.verb === 'upsert')
 
 describe('burst entry sheet (M11)', () => {
-  it('shows the defaults: most used category, today, paid via from the category, and the key hints', async () => {
+  it('shows the defaults: most used category, today, paid via from the category, with no tags or key legends (R2-12)', async () => {
     setup()
     const amount = await screen.findByRole('textbox', { name: 'Amount, row 1' })
-    expect(screen.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Office supplies & snacks')
-    expect(screen.getByText('most used')).toBeInTheDocument()
+    const category = screen.getByRole('combobox', { name: 'Category, row 1' })
+    expect(category).toHaveValue('Office supplies & snacks')
+    expect(category).toHaveClass('border-dashed') // filled in for you: the dashed edge, no words
     expect(screen.getByText('today')).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Paid via, row 1' })).toHaveValue('cash')
-    expect(screen.getByText('from category')).toBeInTheDocument()
-    expect(screen.getByText('adds a row')).toBeInTheDocument()
-    expect(screen.getByText(/saves all/)).toBeInTheDocument()
+    for (const gone of ['most used', 'from category', 'adds a row', /saves all/, /Filled in for you/, 'You typed this', /Keyboard only/]) {
+      expect(screen.queryByText(gone)).not.toBeInTheDocument()
+    }
+    // Ctrl Enter is still said inside the Save button
+    expect(screen.getByRole('button', { name: /^Save/ })).toHaveTextContent('Ctrl')
     await waitFor(() => expect(amount).toHaveFocus())
   })
 
@@ -59,8 +62,8 @@ describe('burst entry sheet (M11)', () => {
     await waitFor(() => expect(first).toHaveFocus())
     await user.keyboard('450{Enter}600{Enter}3500{Enter}850{Enter}1200')
     expect(screen.getAllByRole('textbox', { name: /^Amount, row/ })).toHaveLength(5)
-    // the category carried down every row
-    expect(screen.getAllByText('carried')).toHaveLength(4)
+    // the category carried down every row, shown by the dashed edge
+    for (const n of [2, 3, 4, 5]) expect(screen.getByRole('combobox', { name: `Category, row ${n}` })).toHaveClass('border-dashed')
     await user.keyboard('{Control>}{Enter}{/Control}')
     await waitFor(() => expect(saves(db)).toHaveLength(1))
     const rows = opArgs(saves(db)[0], 'upsert')?.[0] as { id: string; amount_pkr: number; paid_via: string }[]

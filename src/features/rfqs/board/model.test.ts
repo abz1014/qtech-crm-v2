@@ -133,7 +133,7 @@ describe('due text', () => {
   it('warns on today and tomorrow, and stays calm beyond', () => {
     expect(dueText({ dueOn: '2026-11-27', daysToDue: 0, isOverdue: false })).toMatchObject({ hint: 'Due today', tone: 'warning' })
     expect(dueText({ dueOn: '2026-11-28', daysToDue: 1, isOverdue: false })).toMatchObject({ hint: 'Due tomorrow', tone: 'warning' })
-    expect(dueText({ dueOn: '2026-12-01', daysToDue: 4, isOverdue: false })).toMatchObject({ hint: 'in 4 days', tone: 'normal' })
+    expect(dueText({ dueOn: '2026-12-01', daysToDue: 4, isOverdue: false })).toMatchObject({ hint: 'Due in 4 days', tone: 'normal' })
   })
   it('says so when there is no due date', () => {
     expect(dueText({ dueOn: null, daysToDue: null, isOverdue: false })).toEqual({ date: null, hint: 'No due date', tone: 'normal' })
@@ -142,20 +142,20 @@ describe('due text', () => {
 
 describe('next step words', () => {
   it('says what is behind the step in plain words', () => {
-    expect(nextStepText(row({ sourcingState: 'not_floated' }))).toEqual({ step: 'suppliers', label: 'Needs suppliers', detail: 'Not sent to suppliers yet', tone: 'warning' })
+    expect(nextStepText(row({ sourcingState: 'not_floated' }))).toEqual({ step: 'suppliers', label: 'Needs suppliers', detail: 'Nobody asked yet', tone: 'now' })
     expect(nextStepText(row({ sourcingState: 'no_offer_anywhere' })).detail).toBe('Every supplier asked said no')
     expect(nextStepText(row({ sourcingState: 'floated_awaiting', floated: 3 })).detail).toBe('Asked 3 suppliers')
     expect(nextStepText(row({ sourcingState: 'partly_covered', itemsQuoted: 2, itemsTotal: 5 })).detail).toBe('2 of 5 items priced')
-    expect(nextStepText(row({ sourcingState: 'covered', itemsTotal: 4 }))).toMatchObject({ label: 'Ready to quote', detail: 'All 4 items have a price', tone: 'success' })
+    expect(nextStepText(row({ sourcingState: 'covered', itemsTotal: 4 }))).toMatchObject({ label: 'Ready to quote', detail: 'All 4 items have a price', tone: 'now' })
     expect(nextStepText(row({ sourcingState: 'covered', itemsTotal: 1 })).detail).toBe('The item has a price')
-    expect(nextStepText(row({ bidState: 'bid_sent', quotedOn: '2026-11-26' }))).toMatchObject({ label: 'Quotation sent', detail: 'Sent Thu 26 Nov' })
-    expect(nextStepText(row({ bidState: 'quotation_expired' }))).toMatchObject({ detail: 'The quotation has expired', tone: 'warning' })
+    expect(nextStepText(row({ bidState: 'bid_sent', quotedOn: '2026-11-26' }))).toMatchObject({ label: 'Quotation sent', detail: 'Sent Thu 26 Nov', tone: 'waiting' })
+    expect(nextStepText(row({ bidState: 'quotation_expired' }))).toMatchObject({ step: 'sent', label: 'Quotation expired', detail: 'Revise it or mark it won', tone: 'now' })
   })
   it('adds the customer questions to the line when there are any', () => {
     expect(nextStepText(row({ sourcingState: 'partly_covered', itemsQuoted: 1, itemsTotal: 2, clarificationState: 'waiting_on_customer', waiting: 2 })).detail).toBe(
       '1 of 2 items priced · waiting on the customer for 2 answers',
     )
-    expect(nextStepText(row({ clarificationState: 'to_ask', toAsk: 1 })).detail).toBe('Not sent to suppliers yet · 1 question to ask the customer')
+    expect(nextStepText(row({ clarificationState: 'to_ask', toAsk: 1 })).detail).toBe('Nobody asked yet · 1 question to ask the customer')
     expect(nextStepText(row({ sourcingState: 'covered', clarificationState: 'answers_to_relay', toRelay: 1 })).detail).toBe('All 4 items have a price · 1 answer to pass on to suppliers')
   })
   it('names what was asked for, shortened, with how many more', () => {

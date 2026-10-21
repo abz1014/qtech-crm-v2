@@ -1,13 +1,14 @@
 import { forwardRef, type ComponentPropsWithoutRef, type ElementRef, type ReactNode } from 'react'
 import * as RadixTabs from '@radix-ui/react-tabs'
 import { cn } from '@/lib/utils'
+import { NeedsCount } from '@/ui/Tag'
 
 /*
  * Tabs (INVENTORY: U03; D08 section 01). In-page and in-panel tabs with optional
  * count pills: role=tablist/tab/tabpanel, Left/Right move and select, Home/End jump.
  * NOT for site navigation: that is the `nav` of links in AppShell.
  *   <Tabs defaultValue="items">
- *     <TabList aria-label="RFQ sections"><Tab value="items">Items</Tab><Tab value="q" count={2}>Questions</Tab></TabList>
+ *     <TabList aria-label="RFQ sections"><Tab value="items">Items</Tab><Tab value="q" needs={2}>Questions</Tab></TabList>
  *     <TabPanel value="items">…</TabPanel>
  *   </Tabs>
  */
@@ -30,12 +31,14 @@ export const TabList = forwardRef<ElementRef<typeof RadixTabs.List>, ComponentPr
 
 interface TabProps extends Omit<ComponentPropsWithoutRef<typeof RadixTabs.Trigger>, 'children'> {
   children: ReactNode
-  /** Count pill beside the name ("Questions 2"). Mono. */
-  count?: number
+  /** How many items in this tab need you ("Questions 2"): NeedsCount, nothing for 0. Never a total (consistency spec 2.1). */
+  needs?: number
+  /** 'danger' for critical items. */
+  needsVariant?: 'warning' | 'danger'
 }
 
 export const Tab = forwardRef<ElementRef<typeof RadixTabs.Trigger>, TabProps>(function Tab(
-  { children, count, className, ...rest },
+  { children, needs, needsVariant, className, ...rest },
   ref,
 ) {
   return (
@@ -49,11 +52,7 @@ export const Tab = forwardRef<ElementRef<typeof RadixTabs.Trigger>, TabProps>(fu
       {...rest}
     >
       {children}
-      {count !== undefined ? (
-        <span className="num inline-grid h-[var(--lh-xs)] min-w-[var(--lh-xs)] place-items-center rounded-round bg-selected px-[6px] text-xs leading-none text-fg-2">
-          {count}
-        </span>
-      ) : null}
+      <NeedsCount n={needs} variant={needsVariant} />
       <span
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-3 -bottom-px h-indicator bg-brand-green opacity-0 group-data-[state=active]:opacity-100"

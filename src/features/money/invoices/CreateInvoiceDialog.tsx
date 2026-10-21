@@ -27,7 +27,7 @@ import { GST_OPTION_LABEL, gstForNet, gstRowLabel, invoiceStart, orderDueOn, rou
 
 /*
  * Create invoice (M01; g2-money "create invoice dialog"). Opened from an order (the order page, or a link) or from the register's
- * "New invoice". The invoice number is the next one in the series and the date is today; net, GST (18% or exempt, never another
+ * "Create invoice". The invoice number is the next one in the series and the date is today; net, GST (18% or exempt, never another
  * rate) and the due date come from the order's lines. So: open it (1), Create invoice (2), nothing typed.
  *
  *   /money/gst-register?new=1&order=<id>   opens it for that order

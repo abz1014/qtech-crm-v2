@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useChannelPreference, type ContactChannel } from '@/lib/useChannelPreference'
+import { useChannelPreference } from '@/lib/useChannelPreference'
 import { Check, MessageSquareWarning, Phone } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { copyToClipboard } from '@/lib/clipboard'
@@ -9,9 +9,9 @@ import { mapPgError } from '@/lib/pgErrors'
 import { orderRef } from '@/lib/refs'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
+import { ChannelLink } from '@/ui/ChannelLink'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { MessageActions } from '@/ui/MessageActions'
-import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
 import { chaseClipboardText, COMPANY_NAME } from '@/features/rfqs/lib'
@@ -24,6 +24,9 @@ import { useMyJobTitle } from '@/features/orders/hooks'
  * Goods chase from the order page (O03). It reuses the R16 generator (buildGoodsDraft, so the wording, the reference and the firmer tone
  * after 30 days are the same as on Today) and the R16 stamp (stamp_goods_chase through performChase, with the same 10 s Undo).
  * "Copy message and mark chased" is one tap: copy, stamp, Undo.
+ * The message shown is in the channel the person used last (useChannelPreference); the other is a quiet link (ChannelLink, R2-07),
+ * never a two-option switch. The Open in WhatsApp / Open in email buttons are the footer's MessageActions, so ChannelLink here has no
+ * open slot of its own (it would draw the same button twice).
  */
 export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; leg: OrderLegRow; onClose: () => void }) {
   const session = useSession()
@@ -187,15 +190,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
                   <Phone className="size-[14px] text-fg-muted" aria-hidden="true" />
                   {draft.contact ? `To ${draft.contact.name}${draft.contact.phone ? ` · ${draft.contact.phone}` : ''}` : 'No contact on record'}
                 </span>
-                <SegmentedControl
-                  aria-label="Message channel"
-                  value={channel}
-                  onValueChange={v => setChannel(v as ContactChannel)}
-                  options={[
-                    { value: 'whatsapp', label: 'WhatsApp' },
-                    { value: 'email', label: 'Email' },
-                  ]}
-                />
+                <ChannelLink value={channel} onChange={setChannel} />
               </div>
               <pre data-testid="draft-text" className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded border bg-sunken p-3 font-sans text-sm text-fg">
                 {channel === 'email' && draft.email.subject ? `Subject: ${draft.email.subject}\n\n` : ''}

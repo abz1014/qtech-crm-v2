@@ -2,7 +2,13 @@ import { createContext, useContext, useEffect } from 'react'
 import type { PaletteSource } from '@/ui/paletteSources'
 
 export interface PaletteApi {
-  open: () => void
+  /** Opens the palette. With `query`, the search box starts with that text (a "No results" state hands its words over). */
+  open: (query?: string) => void
+  /**
+   * Opens the Keyboard shortcuts sheet (the `?` key, the account menu, the palette's idle action). PaletteHost always
+   * provides it; optional only so test doubles of this API need not.
+   */
+  openShortcuts?: () => void
   register: (source: PaletteSource) => () => void
 }
 export const PaletteContext = createContext<PaletteApi | null>(null)

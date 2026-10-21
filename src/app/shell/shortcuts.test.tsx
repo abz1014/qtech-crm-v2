@@ -1,12 +1,16 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
 import { AppShell } from '@/app/shell/AppShell'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
+import { KEY_WORDS, handledKeys, shortcutList } from '@/app/shell/shortcuts'
+import { setSingleKeyShortcuts } from '@/ui/useShortcutsSetting'
 import { Avatar } from '@/ui/Avatar'
 import { installFakeDb } from '@/test/fakeSupabase'
 
@@ -59,9 +63,18 @@ const press = (key: string, target: EventTarget = window) =>
     target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
   })
 
-afterEach(() => window.localStorage.clear())
+afterEach(() => {
+  window.localStorage.clear()
+  setSingleKeyShortcuts(true)
+})
 
 describe('palette Actions and global shortcuts (A-89)', () => {
+  // The palette is a lazy chunk, and its first import (Radix, cmdk, a Vite transform shared by every worker) can take several seconds when the suite runs in parallel,
+  // longer than any findBy. Load it first, with a hook timeout of its own, so the tests only exercise opening it.
+  beforeAll(async () => {
+    await import('@/ui/CommandPalette')
+  }, 60_000)
+
   it('idle lists Actions: New RFQ (N), Paste or photo (C), Go to Today (G T)', async () => {
     const user = userEvent.setup()
     shell()
@@ -80,7 +93,8 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     press('g')
     press('t')
     expect(screen.getByTestId('where').textContent).toBe('/today')
-    press('c')
+    // From the page, as a real key press is: CaptureProvider's document listener answers C (PaletteHost no longer does).
+    press('c', document.body)
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
     expect(screen.getByTestId('where').textContent).toBe('/today')
   })
@@ -92,6 +106,69 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     const field = screen.getByRole('textbox', { name: 'Notes' })
     press('n', field)
     expect(screen.getByTestId('where').textContent).toBe('/today')
+  })
+})
+
+describe('Keyboard shortcuts sheet (round 2, 4.4)', () => {
+  it('? opens the sheet, drawn from shortcuts.ts: every shortcut and its keys appear in it', async () => {
+    shell('/rfqs')
+    press('?')
+    const dlg = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })
+    for (const g of ['Anywhere', 'Lists and tables', 'Search box', 'Writing', 'Add expenses'])
+      expect(within(dlg).getByRole('heading', { name: g })).toBeInTheDocument()
+    const rows = [...dlg.querySelectorAll('dt')].map(dt => ({
+      what: dt.textContent ?? '',
+      keys: [...(dt.nextElementSibling?.children ?? [])].map(k => k.textContent),
+    }))
+    for (const s of shortcutList()) {
+      const row = rows.find(r => r.what === s.what + (s.where ?? '') && r.keys.join(' ') === s.keys.join(' '))
+      expect(row, `${s.group}: ${s.what}`).toBeTruthy()
+    }
+    // Joining words are text; every other key is a key cap.
+    const caps = [...dlg.querySelectorAll('kbd')].map(k => k.textContent)
+    for (const k of shortcutList().flatMap(s => s.keys).filter(k => !KEY_WORDS.has(k))) expect(caps).toContain(k)
+  })
+
+  it('? does nothing while typing, with a dialog open, or with single-key shortcuts off', async () => {
+    const user = userEvent.setup()
+    shell('/today')
+    press('?', screen.getByRole('textbox', { name: 'Notes' }))
+    expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).toBeNull()
+
+    await user.click(screen.getAllByRole('button', { name: /^Search or jump to/ })[0])
+    await screen.findByRole('dialog', { name: 'Search or jump to' })
+    press('?', document.body)
+    expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).toBeNull()
+    await user.keyboard('{Escape}')
+
+    setSingleKeyShortcuts(false)
+    press('?')
+    expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).toBeNull()
+  })
+
+  it('every key handled in the shell, palette, tables, toasts and Add expenses is listed in shortcuts.ts', () => {
+    const root = path.resolve(__dirname, '../../..')
+    const files = [
+      'src/app/capture/CaptureProvider.tsx',
+      'src/app/palette/PaletteHost.tsx',
+      'src/ui/CommandPalette.tsx',
+      'src/ui/DataTable.tsx',
+      'src/ui/Toast.tsx',
+      'src/features/money/expenses/BurstSheet.tsx',
+    ]
+    // e.key === 'x', e.key.toLowerCase() !== 'x', k === "x" (PaletteHost reads e.key into k), and switch (e.key) cases.
+    const compare = /\b(?:e\.key(?:\.toLowerCase\(\))?|k)\s*[!=]==\s*(['"])(.+?)\1/g
+    const listed = handledKeys()
+    const missing: string[] = []
+    for (const f of files) {
+      const src = readFileSync(path.join(root, f), 'utf8')
+      const found = [...src.matchAll(compare)].map(m => m[2])
+      for (const sw of src.matchAll(/switch \(e\.key\) \{([\s\S]*?)\n {4}\}/g))
+        found.push(...[...sw[1].matchAll(/case (['"])(.*?)\1:/g)].map(m => m[2]))
+      expect(found.length, f).toBeGreaterThan(0)
+      for (const key of found) if (!listed.has(key.toLowerCase())) missing.push(`${f}: '${key}'`)
+    }
+    expect(missing).toEqual([])
   })
 })
 

@@ -622,6 +622,8 @@ export function agingCsv(v: AgingView): { headers: string[]; rows: unknown[][] }
 export interface PayableRow {
   legId: string
   supplier: string
+  /** The customer order the supplier order belongs to (payables_as_of.order_id), for the report's "Pay" link. */
+  orderId?: string | null
   orderRef: string | null
   /** "supplier order A" */
   leg: string | null

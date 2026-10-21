@@ -32,9 +32,9 @@ describe('companies reads', () => {
         case 'v_company_roles':
           return { data: [{ company_id: 'a', role: 'supplier' }, { company_id: 'b', role: 'customer' }] }
         case 'rfqs':
-          return { data: [{ company_id: 'b' }, { company_id: 'b' }] }
+          return { data: [{ company_id: 'b', received_on: '2026-09-02' }, { company_id: 'b', received_on: '2026-10-05' }] }
         case 'orders':
-          return { data: [{ company_id: 'b' }] }
+          return { data: [{ company_id: 'b', ordered_on: '2026-09-20' }] }
         case 'contacts':
           return { data: [{ company_id: 'b', name: 'Naveed Akhtar', phone: '+92 301 555 0142' }, { company_id: 'b', name: 'Front desk', phone: null }] }
         default:
@@ -44,7 +44,7 @@ describe('companies reads', () => {
     const { result } = renderHook(() => useCompanyList(), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data).toEqual([
-      { id: 'a', name: 'Alpenmark', country: 'Austria', city: 'Linz', role: 'supplier', rfqCount: 0, orderCount: 0, updatedAt: 't', contacts: [] },
+      { id: 'a', name: 'Alpenmark', country: 'Austria', city: 'Linz', role: 'supplier', rfqCount: 0, orderCount: 0, lastActivity: null, updatedAt: 't', contacts: [] },
       {
         id: 'b',
         name: 'Karachi Glassworks',
@@ -53,6 +53,8 @@ describe('companies reads', () => {
         role: 'customer',
         rfqCount: 2,
         orderCount: 1,
+        // R2-19: the later of the last RFQ received and the last order
+        lastActivity: '2026-10-05',
         updatedAt: 't',
         contacts: [
           { name: 'Naveed Akhtar', phoneKey: '3015550142' },

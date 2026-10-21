@@ -646,13 +646,6 @@ export async function listSupplierChoices(): Promise<Array<{ id: string; name: s
 
 // ---------------------------------------------------------------- the orders list (O04)
 
-/** The number beside Orders in the top bar: one head request that counts the active orders (v_order_state is readable by every staff role, and carries no money). */
-export async function countActiveOrders(): Promise<number | null> {
-  const { count, error } = await requireSupabase().from('v_order_state').select('order_id', { count: 'exact', head: true }).eq('lifecycle', 'active')
-  if (error) throw error
-  return count ?? null
-}
-
 export interface OrderListRow {
   id: string
   number: number

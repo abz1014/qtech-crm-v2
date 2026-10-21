@@ -1,20 +1,25 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CalendarDays, Check, Download, Plus, Search, Truck, TriangleAlert } from 'lucide-react'
+import { CalendarDays, Check, Download, Plus, Truck, TriangleAlert } from 'lucide-react'
 import { generateCSV, downloadCSV } from '@/lib/csvExport'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef } from '@/lib/refs'
+import { useQueryParamText } from '@/lib/useQueryParamText'
 import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
+import { MoreMenu } from '@/ui/MoreMenu'
+import { NoResults } from '@/ui/NoResults'
+import { MenuItem } from '@/ui/Popover'
+import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { SumBar } from '@/ui/SumBar'
-import { ToggleButton } from '@/ui/ToggleButton'
+import { TableFilter } from '@/ui/TableFilter'
 import { useToast } from '@/ui/useToast'
 import { TextField } from '@/ui/form/TextField'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
@@ -46,8 +51,14 @@ import {
  *
  * Month stamping: tick a month (1), then "Sent by TCS today" (2), paste the PSID once and press Enter or "Add PSID", then
  * "Deposited today" (3): at most 3 taps and 1 paste. Each stamp writes today's date to the ticked invoices, and Undo stays on the
- * toast for 10 seconds. Export is admin only; sales see the same register without it.
+ * toast for 10 seconds. Export is admin only (in the toolbar's More menu); sales see the same register without it.
+ *
+ * Toolbar (round-2 R2-15, spec 3.2): "Search invoices" (kept in `?q=`), ONE switch "All · Needs attention N · Not sent by TCS N"
+ * (the counts are needs-you pills), More (Export). "Create invoice" is the page's one green action, in the Money header, the
+ * same words as on the order.
  */
+type RegisterView = 'all' | 'attention' | 'tcs'
+
 export function GstRegisterPage() {
   const session = useSession()
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
@@ -55,9 +66,11 @@ export function GstRegisterPage() {
   const toast = useToast()
   const stamps = useStamps()
   const [params, setParams] = useSearchParams()
-  const [attention, setAttention] = useState(() => params.get('attention') === '1') // Today's "FBR attention" item opens it filtered
-  const [tcs, setTcs] = useState(() => params.get('tcs') === '1') // and so does "not sent by TCS"
-  const [search, setSearch] = useState('')
+  // Today's "FBR attention" item opens it on Needs attention (?attention=1), and "not sent by TCS" on that view (?tcs=1).
+  const [view, setView] = useState<RegisterView>(() => (params.get('attention') === '1' ? 'attention' : params.get('tcs') === '1' ? 'tcs' : 'all'))
+  const attention = view === 'attention'
+  const tcs = view === 'tcs'
+  const [search, setSearch] = useQueryParamText()
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set())
   const [psid, setPsid] = useState('')
   const [busy, setBusy] = useState(false)
@@ -129,8 +142,8 @@ export function GstRegisterPage() {
           const why = attentionReason(r)
           return (
             <span className="grid gap-px">
-              <span className="truncate font-medium">{r.companyName ?? 'No customer'}</span>
-              {why ? <span className={`truncate text-xs ${ticked.has(r.invoiceId) ? 'text-fg-2' : 'text-tone-warning-fg'}`}>{why}</span> : r.orderNumber !== null ? <span className="num text-xs text-fg-muted">{orderRef(r.orderNumber)}</span> : null}
+              <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{r.companyName ?? 'No customer'}</span>
+              {why ? <span className={`min-w-0 [overflow-wrap:anywhere] text-xs ${ticked.has(r.invoiceId) ? 'text-fg-2' : 'text-tone-warning-fg'}`}>{why}</span> : r.orderNumber !== null ? <span className="num text-xs text-fg-muted">{orderRef(r.orderNumber)}</span> : null}
             </span>
           )
         },
@@ -217,31 +230,43 @@ export function GstRegisterPage() {
         tax office: the GST on every invoice is deposited with FBR. <b className="font-medium text-fg">PSID</b> is the payment slip number FBR gives a deposit;
         one PSID can cover several invoices. Dates here are invoice dates; money actually received is under Who owes us.
       </InfoTip>
+    </div>
+  )
+  // Toolbar row 2 (spec 3.2): the search, ONE switch (each view matches one stamping job; the needs-you counts as NeedsCount
+  // pills), and Export in a More menu for the admin.
+  const controls = (
+    <div className="flex flex-wrap items-center gap-3">
+      <TableFilter label="Search invoices" hint="Finds an invoice by invoice number, customer or order number." value={search} onChange={setSearch} />
       <span className="flex-1" />
-      <ToggleButton pressed={attention} onPressedChange={setAttention} icon={TriangleAlert}>
-        Needs attention <span className="num">{attentionCount}</span>
-      </ToggleButton>
-      <ToggleButton pressed={tcs} onPressedChange={setTcs} icon={Truck}>
-        Not sent by TCS <span className="num">{tcsCount}</span>
-      </ToggleButton>
-      <label className="relative block w-[220px] max-md:w-full">
-        <span className="sr-only">Search invoices</span>
-        <Icon icon={Search} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
-        <TextField type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Invoice or customer" autoComplete="off" className="pl-8" />
-      </label>
+      <SegmentedControl
+        aria-label="Show"
+        value={view}
+        onValueChange={v => setView(v as RegisterView)}
+        options={[
+          { value: 'all', label: 'All' },
+          { value: 'attention', label: 'Needs attention', needs: attentionCount },
+          { value: 'tcs', label: 'Not sent by TCS', needs: tcsCount },
+        ]}
+      />
       {isAdmin ? (
-        <Button size="sm" icon={Download} onClick={exportCsv} disabled={shown.length === 0}>
-          Export
-        </Button>
+        <MoreMenu label="More for the register">
+          <MenuItem icon={Download} onClick={exportCsv} disabled={shown.length === 0}>
+            Export
+          </MenuItem>
+        </MoreMenu>
       ) : null}
-      <Button size="sm" variant="primary" icon={Plus} onClick={() => setCreating(true)}>
-        New invoice
-      </Button>
     </div>
   )
 
   return (
-    <MoneyFrame active="gst-register">
+    <MoneyFrame
+      active="gst-register"
+      actions={
+        <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
+          Create invoice
+        </Button>
+      }
+    >
       <SumBar
         label="Totals for the invoices shown"
         items={
@@ -278,6 +303,7 @@ export function GstRegisterPage() {
         toolbar={({ selectedCount }) => (
           <div className="grid gap-3">
             {header}
+            {controls}
             {selectedCount > 0 ? (
               <div data-testid="batch-bar" className="-mx-4 flex w-[calc(100%+2rem)] flex-wrap items-center gap-3 border-y bg-sunken px-4 py-2">
                 <span className="text-sm">
@@ -316,14 +342,19 @@ export function GstRegisterPage() {
           </div>
         )}
         empty={
-          attention || tcs || search ? (
-            <EmptyState mood="neutral" title="No invoices match">
-              <Button size="sm" onClick={() => { setAttention(false); setTcs(false); setSearch('') }}>
-                Clear filters
-              </Button>
-            </EmptyState>
+          attention || tcs || search.trim() ? (
+            <NoResults
+              query={search}
+              scope="invoices"
+              fields="invoice number, customer and order number"
+              filtersOn={attention ? ['Needs attention'] : tcs ? ['Not sent by TCS'] : []}
+              onClear={() => {
+                setView('all')
+                setSearch('')
+              }}
+            />
           ) : (
-            <EmptyState title="No invoices yet" actions={<Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>New invoice</Button>}>
+            <EmptyState title="No invoices yet" actions={<Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>Create invoice</Button>}>
               Invoices appear here as you create them from an order, by invoice date. Every invoice goes to FBR.
             </EmptyState>
           )
@@ -334,7 +365,7 @@ export function GstRegisterPage() {
               <span className="num font-medium">{r.number ?? 'No number'}</span>
               <Money value={r.gross} prefix={false} />
             </div>
-            <span className="truncate text-sm">{r.companyName}</span>
+            <span className="min-w-0 [overflow-wrap:anywhere] text-sm">{r.companyName}</span>
             {attentionReason(r) ? <span className="text-sm text-tone-warning-fg">{attentionReason(r)}</span> : null}
             <div className="flex flex-wrap gap-2">
               <StatusBadge dimension="tcs" value={r.courierState} />

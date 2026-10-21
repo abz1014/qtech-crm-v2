@@ -281,7 +281,6 @@ function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
       groupStyle="big"
       footerLabel="Money out"
       noun="lines"
-      densitySwitch={false}
       toolbar={
         <div className="flex flex-wrap items-center gap-3">
           <h3 className="text-base font-semibold">Money out by category, {v.label}</h3>
@@ -310,7 +309,6 @@ function TrendPanel({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }
       getRowId={t => t.period.key}
       activeRowId={v.period.key}
       onRowOpen={t => onPick(t.period)}
-      densitySwitch={false}
       summary="Open a row to see that period"
       toolbar={<h3 className="text-base font-semibold">{title}</h3>}
     />

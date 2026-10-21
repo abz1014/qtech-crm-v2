@@ -145,7 +145,7 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     await expect(page.locator(`[data-reply-row="${s.china.id}"]`).getByRole('button', { name: `Edit reply, ${s.china.name}` })).toBeVisible()
     await one.getByRole('button', { name: `Show details for ${s.china.name}` }).click()
     await expect(one.getByText('not compared — no rate').first()).toBeVisible()
-    await expect(one.getByText('No rate captured').first()).toBeVisible()
+    await expect(one.locator('[data-status="fx-capture:none"]').first()).toHaveText('No rate') // a chip only when the rate is a problem
   })
 
   test('a USD price captures today\'s rate and is shown with the rate\'s age', async ({ page }) => {
@@ -170,6 +170,7 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     await expect(item.getByText('Quoted USD 100.00')).toBeVisible()
     await expect(item.getByText("USD 280.00, today's rate")).toBeVisible()
     await expect(item.getByText(/At entry 280\.00/)).toBeVisible()
+    await expect(item.getByText('Rate from today')).toBeVisible() // a fresh rate is its age in words, no chip
   })
 })
 
@@ -245,7 +246,7 @@ test.describe('comparison', () => {
     // The rate behind the figure is one tap away.
     await lowest.getByRole('button', { name: `Show details for ${s.germany.name}` }).click()
     await expect(lowest).toContainText('rate 12 days old')
-    await expect(lowest).toContainText('Stale')
+    await expect(lowest.locator('[data-status="fx:stale"]')).toContainText('Old rate')
     // The CNY line is out of the comparison: its own figure, marked not compared, listed after the ranked ones.
     const cny = art.locator('li[data-ranked]', { hasText: s.china.name })
     await expect(cny).toContainText('not compared, no rate')
@@ -482,8 +483,12 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await expect(rail.getByRole('heading', { name: 'Questions for the customer' })).toBeVisible()
     await expect(rail.getByRole('heading', { name: 'Files' })).toBeVisible()
     // The header: at most two chips, ONE green button by state (waiting for prices: the supplier chase in the rail), the rest in More.
-    await expect(page.getByLabel('Where this RFQ stands').locator('> *')).toHaveCount(2)
+    await expect(page.locator('header:has(h1) > div [data-status]')).toHaveCount(2) // the chip row under the title, none in the h1
+    await expect(page.locator('h1 [data-status]')).toHaveCount(0)
     await expect(page.locator('[data-stage]')).toHaveText('Waiting for prices')
+    // The h1 is the company, a link to it; the facts strip has no Company cell.
+    await expect(page.getByRole('heading', { level: 1 }).getByRole('link')).toHaveAttribute('href', /\/companies\//)
+    await expect(page.locator('dt', { hasText: /^Company$/ })).toHaveCount(0)
     await expect(page.locator('#main button.bg-primary:not([disabled]):visible')).toHaveCount(1)
     // The green one is in the Next step box under the title (coordinator decision 2026-10-20), and goes to the chase in the rail.
     const next = page.getByRole('region', { name: 'Next step' })
@@ -499,8 +504,8 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await page.keyboard.press('Escape')
     await expect(page.getByRole('button', { name: 'Bid and close' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Close or lose' })).toHaveCount(0)
-    // Owner role and customer since sit under their values.
-    await expect(page.locator('dl').first()).toContainText('Customer since')
+    // The owner's role sits under the name in the facts strip; "Customer since" moved to the meta line under the title (R2 DetailHeader).
+    await expect(page.getByText(/^(Customer since .+|New customer)$/).first()).toBeVisible()
     await expect(page.locator('dl').first()).toContainText('Admin')
   })
 
@@ -604,8 +609,8 @@ test.describe('the rate bar and Exchange rates (R15)', () => {
     await bar.getByRole('link', { name: 'Exchange rates' }).click()
     await expect(page).toHaveURL(/\/settings\/exchange-rates$/)
     await expect(page.getByRole('heading', { name: 'Exchange rates', level: 1 })).toBeVisible()
-    await expect(page.getByRole('row', { name: /USD/ })).toContainText('Fresh')
-    await expect(page.getByRole('row', { name: /EUR/ })).toContainText('Stale, 12 days')
+    await expect(page.getByRole('row', { name: /USD/ })).not.toContainText('Old rate') // a fresh rate: its age as text, no chip
+    await expect(page.getByRole('row', { name: /EUR/ })).toContainText(/Old rate\s*12 days old/)
     await expect(page.getByRole('row', { name: /JPY/ })).toContainText('No rate yet')
 
     // Anyone on the team can enter today's rate by hand.
@@ -615,7 +620,7 @@ test.describe('the rate bar and Exchange rates (R15)', () => {
     await expect(page.getByRole('status').filter({ hasText: 'Rate saved' })).toBeVisible()
     const saved = await must(rest<{ rate_pkr: number; source: string }[]>('admin', `fx_rates?currency=eq.JPY&select=rate_pkr,source`))
     expect(saved).toEqual([{ rate_pkr: 1.8, source: 'manual' }])
-    await expect(page.getByRole('row', { name: /JPY/ })).toContainText('Fresh')
+    await expect(page.getByRole('row', { name: /JPY/ })).toContainText('today') // fresh: the age as text
     await review(page, 'exchange-rates-1440')
 
     await page.goto(`/rfqs/${s.rfq.id}`)
@@ -651,7 +656,8 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     const usd = rail.locator(`[data-supplier-asked="${s.usd.id}"]`)
     await expect(usd).toContainText(/Asked (once|twice), 1 reply\. Not enough history to say more\./)
     await expect(usd).toContainText('Sent ')
-    await expect(usd.getByText('Awaiting reply')).toBeVisible()
+    await expect(usd.locator('[data-status^="inquiry:"]')).toHaveCount(1) // one chip per supplier
+    await expect(usd.locator('[data-status^="inquiry:"]')).toContainText('Waiting for prices')
 
     await rail.getByRole('button', { name: 'Ask more suppliers' }).click()
     const dialog = page.getByRole('dialog', { name: /Ask more suppliers/ })
@@ -680,7 +686,7 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     await expect(panel).toContainText('2 items · nobody asked yet')
     await expect(panel).toContainText('Ask suppliers for prices. One tap copies a message listing every item')
     await expect(page.getByText('No supplier has been asked about this item.')).toHaveCount(2)
-    await expect(page.getByRole('article', { name: 'Item 1' }).getByText('Needs suppliers', { exact: true })).toBeVisible() // the stage chip's words
+    await expect(page.getByRole('article', { name: 'Item 1' }).locator('[data-status]')).toHaveCount(0) // no item chip while nobody is asked: the header says it
     await expect(page.locator('[data-stage]')).toHaveText('Needs suppliers')
     await expect(page.locator('[data-slot="ask-suppliers"]').getByRole('button', { name: 'Ask suppliers' })).toHaveClass(/bg-primary/)
     await expect(page.locator('#main button.bg-primary:not([disabled]):visible')).toHaveCount(1)
@@ -770,7 +776,7 @@ test.describe('the phone layout (C-100 to C-105; UX audit: one bar)', () => {
     await page.setViewportSize({ width: 375, height: 812 })
     // Opened from the board, inside the app: back returns there (history), not to a fixed place.
     await openAs(page, 'sales', '/rfqs?owner=all')
-    await page.getByRole('textbox', { name: 'Filter RFQs' }).fill(s.customer)
+    await page.getByRole('textbox', { name: 'Search RFQs' }).fill(s.customer)
     await page.getByRole('link', { name: s.customer }).first().click()
     await expect(page).toHaveURL(new RegExp(`/rfqs/${s.rfq.id}$`))
     const bar = page.locator('header[data-mobile-bar="detail"]')
@@ -814,7 +820,7 @@ test.describe('the phone layout (C-100 to C-105; UX audit: one bar)', () => {
     await review(page, 'rfq-detail-mobile-bar-375')
     // Back goes to where the person came from.
     await bar.getByRole('button', { name: 'Back' }).click()
-    await expect(page).toHaveURL(/\/rfqs\?owner=all$/)
+    await expect(page).toHaveURL(/\/rfqs\?owner=all(&q=[^&]*)?$/)
   })
 
   test('with prices in, at 320 and 375: nothing scrolls sideways, and the green action is Issue quotation', async ({ page }) => {

@@ -305,7 +305,7 @@ export interface TodayItem {
    */
   actionDueOn: string | null
   group: TodayGroup
-  /** Right-hand chip: "12d late", "today", "3d", "3d old". */
+  /** Right-hand words (src/lib/timeWords): "12 days overdue", "Due today", "Due in 3 days", "3 days old". */
   badge: { text: string; tone: Tone }
   isPriority: boolean
   rfqId?: string

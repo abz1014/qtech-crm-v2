@@ -47,7 +47,7 @@ describe('exchange rate helpers', () => {
 })
 
 describe('exchange rate table', () => {
-  it('shows currency, PKR for 1 unit, source, as of and the rate age chip', () => {
+  it('shows currency, PKR for 1 unit, source, as of and the rate age (text when fresh, a chip only for Old rate / No rate)', () => {
     render(<RatesTable />)
     const table = screen.getByRole('table', { name: 'Exchange rates' })
     for (const head of ['Currency', 'PKR for 1 unit', 'Source', 'As of', 'Rate age']) {
@@ -58,8 +58,14 @@ describe('exchange rate table', () => {
     expect(within(usd).getByText('Automatic')).toBeInTheDocument()
     expect(within(usd).getByText('Thu 26 Nov')).toBeInTheDocument()
     expect(within(usd).getByText('1 day old')).toBeInTheDocument()
+    expect(within(usd).queryByText('Fresh')).toBeNull()
     expect(within(table).getByText('Entered by hand')).toBeInTheDocument()
-    expect(within(table).getByText('52 days old, not compared')).toBeInTheDocument()
+    const cny = within(table).getByText('CNY').closest('tr') as HTMLElement
+    expect(within(cny).getByText('Old rate')).toBeInTheDocument()
+    expect(within(cny).getByText('14 days old')).toBeInTheDocument()
+    const aed = within(table).getByText('AED').closest('tr') as HTMLElement
+    expect(within(aed).getByText('No rate')).toBeInTheDocument()
+    expect(within(aed).getByText('52 days old')).toBeInTheDocument()
   })
 
   it('says plainly when the rates cannot load', () => {

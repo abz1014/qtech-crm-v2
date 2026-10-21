@@ -136,7 +136,7 @@ describe('Match bank statement (M12, the old Bank tick)', () => {
     const sums = screen.getByRole('region', { name: 'Running ticked totals' })
     expect(within(sums).getByText('Ticked, money in').parentElement).toHaveTextContent('800,000')
     expect(within(sums).getByText('Not ticked, out').parentElement).toHaveTextContent('564,650')
-    expect(screen.getByTestId('bank-state')).toHaveTextContent('4 not ticked') // p1, e1, e0 and one PSID group
+    expect(screen.getByTestId('bank-state')).toHaveTextContent('4 to match') // p1, e1, e0 and one PSID group
     // the group lists its invoices
     expect(within(out).getByText(/INV-2271/, { selector: '.num' })).toBeInTheDocument()
   })
@@ -177,10 +177,10 @@ describe('Match bank statement (M12, the old Bank tick)', () => {
     )
   })
 
-  it('says Everything ticked when nothing is left, and the empty month says so', async () => {
+  it('says Everything matched when nothing is left, and the empty month says so', async () => {
     h.load.mockResolvedValue({ payments: [{ ...DATA.payments[1] }], expenses: [], deposits: [] })
     mount()
-    await waitFor(() => expect(screen.getByTestId('bank-state')).toHaveTextContent('Everything ticked'))
+    await waitFor(() => expect(screen.getByTestId('bank-state')).toHaveTextContent('Everything matched'))
     h.load.mockResolvedValue({ payments: [], expenses: [], deposits: [] })
     mount('/money/month-end/bank?month=2026-08')
     expect(await screen.findByText('Nothing to tick for August 2026')).toBeInTheDocument()
