@@ -1,7 +1,7 @@
 begin;
 select * from no_plan();
 
--- 0083 (owner decision 2026-10-22): imported RFQs with no real activity for more than 60 days are closed as
+-- 0082 (owner decision 2026-10-22): imported RFQs with no real activity for more than 60 days are closed as
 -- no_reply_to_clarification with an automatic note; Today and the open / overdue counts stop showing them. Fixtures are
 -- written as the owner with no signed-in person (as the import's service role writes them), so their audit rows carry no
 -- person. Fixture users from supabase/seed.sql: admin a0..01, sales a0..02.

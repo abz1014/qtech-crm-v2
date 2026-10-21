@@ -111,7 +111,7 @@ $$;
 revoke all on function legacy_archive.close_stale_imported_rfqs(date, integer) from public, anon, authenticated, service_role;
 
 comment on function legacy_archive.close_stale_imported_rfqs(date, integer) is
-  'Owner decision 2026-10-22 (0083): closes imported, open RFQs whose last real activity (legacy_archive.rfq_last_activity) '
+  'Owner decision 2026-10-22 (0082): closes imported, open RFQs whose last real activity (legacy_archive.rfq_last_activity) '
   'is more than p_days before p_today, as "no_reply_to_clarification" with an automatic note. Returns the count. Idempotent.';
 
 do $do$
@@ -119,6 +119,6 @@ declare
   n integer;
 begin
   n := legacy_archive.close_stale_imported_rfqs();
-  raise notice '0083: closed % stale imported RFQ(s)', n;
+  raise notice '0082: closed % stale imported RFQ(s)', n;
 end
 $do$;
