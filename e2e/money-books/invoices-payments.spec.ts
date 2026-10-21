@@ -307,24 +307,26 @@ test.describe('payments in and receivables (M02)', () => {
     await expect(page.getByRole('dialog', { name: 'Record payment' })).toBeVisible()
   })
 
-  test('Money opens on Who owes us; on a phone each card records a payment and opens its order (no detour)', async ({ page }) => {
+  test('Money opens on Who owes us; on a phone a card opens its reminder sheet with Record payment and Open order', async ({ page }) => {
     const order = await seedOrder(100000)
     await seedInvoice(order, { net_amount: 100000, gst_amount: 18000, invoice_date: karachiDay(-60) })
     await openAs(page, 'admin', '/money')
     await expect(page).toHaveURL(/\/money\/receivables$/)
-    await expect(page.getByRole('heading', { name: 'Who owes us', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Who owes us', level: 1 })).toBeAttached()
     await page.setViewportSize({ width: 375, height: 812 })
-    const ref = `ORD-${String(order.number).padStart(4, '0')}`
     const card = page.locator('tr[data-card]').filter({ hasText: order.company.name })
     await expect(card).toBeVisible()
-    await expect(card.getByRole('link', { name: 'Open order' })).toHaveAttribute('href', `/orders/${order.id}`)
     await startCounting(page)
-    await card.getByRole('button', { name: `Record payment for ${ref}` }).click() // tap 1
+    // round 3: one action per card; tapping it opens the order's reminder as a sheet, with Record payment and Open order
+    await card.click() // tap 1
+    const sheet = page.getByRole('dialog', { name: order.company.name })
+    await expect(sheet.getByRole('link', { name: 'Open order' })).toHaveAttribute('href', `/orders/${order.id}`)
+    await sheet.getByRole('button', { name: 'Record payment' }).click() // tap 2
     const dialog = page.getByRole('dialog', { name: 'Record payment' })
     await expect(dialog.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue('118,000')
-    await dialog.getByRole('button', { name: 'Save payment' }).click() // tap 2
-    await expect(page.getByRole('dialog')).toBeHidden()
-    expect((await counted(page)).mouse).toBe(2)
+    await dialog.getByRole('button', { name: 'Save payment' }).click() // tap 3
+    await expect(dialog).toBeHidden()
+    expect((await counted(page)).mouse).toBe(3)
     expect(await receivable(order.id)).toMatchObject({ balance: 0, payment_state: 'settled' })
   })
 
