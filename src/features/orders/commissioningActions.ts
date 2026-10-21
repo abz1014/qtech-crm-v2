@@ -1,6 +1,7 @@
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
+import { useInFlight } from '@/lib/useInFlight'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader } from '@/features/orders/api'
 import { useUpdateOrder } from '@/features/orders/hooks'
@@ -11,27 +12,31 @@ import { useUpdateOrder } from '@/features/orders/hooks'
 export function useMarkDone(order: OrderHeader) {
   const { toast } = useToast()
   const update = useUpdateOrder(order.id)
+  const once = useInFlight() // HW-15: a double tap sends one write, one toast, one Undo
   return {
     pending: update.isPending,
-    run: async () => {
-      const previous = order.doneOn
-      try {
-        await update.mutateAsync({ commissioning_done_on: businessToday() })
-        toast({
-          title: 'Commissioning marked done',
-          body: `${order.companyName}, today`,
-          undo: {
-            onUndo: async () => {
-              await update.mutateAsync({ commissioning_done_on: previous })
+    run: () =>
+      once(async () => {
+        // idempotent: already done (a repeat press after the first landed) writes nothing
+        if (order.doneOn) return
+        const previous = null
+        try {
+          await update.mutateAsync({ commissioning_done_on: businessToday() })
+          toast({
+            title: 'Commissioning marked done',
+            body: `${order.companyName}, today`,
+            undo: {
+              onUndo: async () => {
+                await update.mutateAsync({ commissioning_done_on: previous })
+              },
+              settledTitle: 'Commissioning marked done',
+              undoneTitle: 'Taken back',
             },
-            settledTitle: 'Commissioning marked done',
-            undoneTitle: 'Taken back',
-          },
-        })
-      } catch (err) {
-        toast({ title: 'Could not mark it done', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
-      }
-    },
+          })
+        } catch (err) {
+          toast({ title: 'Could not mark it done', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
+        }
+      }),
   }
 }
 
