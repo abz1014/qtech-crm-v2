@@ -679,6 +679,8 @@ test.describe('the rate bar and Exchange rates (R15)', () => {
     await page.getByLabel('Rate, PKR for 1 unit').fill('abc')
     await expect(page.getByText('Enter a rate above zero')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Save rate' })).toBeDisabled()
+    // A row's History opens that currency's recent rates (one dialog, not a second panel repeating the table).
+    await page.getByRole('button', { name: /^History of / }).first().click()
     await expect(page.getByRole('heading', { name: /^Recent .* rates$/ })).toBeVisible()
   })
 })

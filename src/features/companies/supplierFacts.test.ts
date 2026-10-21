@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SupplierStats } from '@/features/companies/api'
-import { deliveryLine, factNotes, recordLine, supplierFacts } from '@/features/companies/supplierFacts'
+import { chosenText, deliveryLine, factNotes, recordLine, supplierFacts } from '@/features/companies/supplierFacts'
 
 const base: SupplierStats = {
   supplier_id: 's',
@@ -56,6 +56,19 @@ describe('supplierFacts (5c display rules)', () => {
     expect(f.deliveries).toEqual({ kind: 'known', total: 4, late: 1, medianDaysLate: null })
   })
 
+  it('never says "Nothing ordered yet" while there are orders with them (a PO issued on an order with no RFQ item behind it)', () => {
+    // audit seed: Dubai Instrumentation has ORD-0011 with PO-26-0004 issued, ORD-0003 and ORD-0005, none made from one of their quotes
+    const f = supplierFacts({ ...base, asked: 4, replied: 4, quoted: 4, chosen_of: 0, chosen: 0, orders_count: 3 })!
+    expect(f.chosen).toEqual({ kind: 'orders', orders: 3 })
+    expect(chosenText(f)).toBe('3 orders with them')
+    expect(factNotes(f, null)).toContain('Ordered: 3 orders with them, none traced back to one of their quotes.')
+    expect(chosenText(supplierFacts({ ...base, orders_count: 1 })!)).toBe('1 order with them')
+    // traced quotes win: "2 of 3 quoted items"
+    expect(chosenText(supplierFacts({ ...base, chosen_of: 3, chosen: 2, orders_count: 5 })!)).toBe('2 of 3 quoted items')
+    // truly nothing: no traced quote and no supplier order
+    expect(chosenText(supplierFacts(base)!)).toBe('Nothing ordered yet')
+  })
+
   it('is empty only when nothing at all is recorded', () => {
     expect(supplierFacts(base)!.empty).toBe(true)
     expect(supplierFacts({ ...base, last_contact: '2026-11-24' })!.empty).toBe(false)
@@ -77,6 +90,12 @@ describe('recordLine (the counts in the page header)', () => {
   })
   it('states the raw fact below three enquiries', () => {
     expect(recordLine(supplierFacts({ ...base, asked: 1 })!)).toBe('Asked once · no replies')
+  })
+  it('folds the usual reply time and the order count in (the "What we know" panel is gone)', () => {
+    expect(
+      recordLine(supplierFacts({ ...base, asked: 4, replied: 4, quoted: 4, reply_days_n: 4, median_reply_days: 9, orders_count: 3, deliveries: 2, late: 2 })!),
+    ).toBe('Replied 4 of 4 in about 9 days · quoted 4 · 3 orders · late 2 of 2')
+    expect(recordLine(supplierFacts({ ...base, orders_count: 1 })!)).toBe('1 order')
   })
   it('deliveries alone start with a capital', () => {
     expect(recordLine(supplierFacts({ ...base, deliveries: 2, late: 0 })!)).toBe('Late 0 of 2')
@@ -106,7 +125,7 @@ describe('factNotes (the rules behind "What we know", shown in its (i) tip)', ()
     expect(factNotes(f, null)).toEqual([
       'Counted from enquiries, quotes, POs and delivery dates. Nothing is typed in.',
       'Reply time is the middle of the 5 replies logged here.',
-      'Chosen: quoted items later ordered from them.',
+      'Chosen: 2 of 4 quoted items were later ordered from them.',
     ])
   })
   it('mixed history: how much was imported, hidden prices and replies left out', () => {

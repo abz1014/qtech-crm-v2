@@ -15,7 +15,13 @@ export interface SupplierFacts {
   /** "Replied 5 of 6 · quoted 4" once there are 3 or more enquiries; "Asked twice · 1 reply" below that. */
   enquirySummary: string
   replyTime: { kind: 'known'; days: number; logged: number; importedLeftOut: number } | { kind: 'withheld'; logged: number; importedOnly: boolean }
-  chosen: { kind: 'known'; chosen: number; of: number } | { kind: 'none' }
+  /**
+   * known: quoted items later ordered (from them or someone else). orders: no quoted item was ordered yet, but there are orders with
+   * a supplier order from them (a repeat or a direct order has no RFQ item to trace back), so "nothing ordered" would be false.
+   */
+  chosen: { kind: 'known'; chosen: number; of: number } | { kind: 'orders'; orders: number } | { kind: 'none' }
+  /** Orders with a supplier order from them (v_supplier_stats.orders_count), cancelled ones left out. */
+  orders: number
   deliveries: { kind: 'known'; total: number; late: number; medianDaysLate: number | null } | { kind: 'none' }
   lastContact: string | null
   provenance: { legacyAsked: number; pricesHidden: number; importedOnly: boolean; hasImported: boolean }
@@ -38,6 +44,7 @@ export function supplierFacts(s: SupplierStats | null): SupplierFacts | null {
   const deliveries = s.deliveries ?? 0
   const late = s.late ?? 0
   const chosenOf = s.chosen_of ?? 0
+  const orders = s.orders_count ?? 0
 
   const enquirySummary =
     asked >= 3
@@ -57,7 +64,8 @@ export function supplierFacts(s: SupplierStats | null): SupplierFacts | null {
       s.median_reply_days !== null && s.median_reply_days !== undefined
         ? { kind: 'known', days: Math.round(s.median_reply_days), logged, importedLeftOut: Math.max(replied - logged, 0) }
         : { kind: 'withheld', logged, importedOnly: asked > 0 && legacyAsked === asked },
-    chosen: chosenOf >= 1 ? { kind: 'known', chosen: s.chosen ?? 0, of: chosenOf } : { kind: 'none' },
+    chosen: chosenOf >= 1 ? { kind: 'known', chosen: s.chosen ?? 0, of: chosenOf } : orders > 0 ? { kind: 'orders', orders } : { kind: 'none' },
+    orders,
     deliveries:
       deliveries >= 1 ? { kind: 'known', total: deliveries, late, medianDaysLate: s.median_days_late ?? null } : { kind: 'none' },
     lastContact: s.last_contact ?? null,
@@ -72,13 +80,28 @@ export function supplierFacts(s: SupplierStats | null): SupplierFacts | null {
   }
 }
 
-/** The supplier's record in one line, for the page header: "Replied 5 of 6 · quoted 4 · late 1 of 4". Null with nothing to say. */
+/**
+ * The supplier's record in one line, for the page header (it replaced the "What we know" panel, round 3):
+ * "Replied 5 of 6 in about 3 days · quoted 4 · 2 orders · late 1 of 4". Null with nothing to say.
+ */
 export function recordLine(f: SupplierFacts): string | null {
   const parts: string[] = []
-  if (f.asked >= 3) parts.push(`Replied ${f.replied} of ${f.asked}`, `quoted ${f.quoted}`)
+  const inDays = f.replyTime.kind === 'known' ? ` in about ${f.replyTime.days} ${f.replyTime.days === 1 ? 'day' : 'days'}` : ''
+  if (f.asked >= 3) parts.push(`Replied ${f.replied} of ${f.asked}${inDays}`, `quoted ${f.quoted}`)
   else if (f.asked > 0) parts.push(f.enquirySummary)
-  if (f.deliveries.kind === 'known') parts.push(`${parts.length > 0 ? 'late' : 'Late'} ${f.deliveries.late} of ${f.deliveries.total}`)
-  return parts.length > 0 ? parts.join(' · ') : null
+  if (f.orders > 0) parts.push(`${f.orders} ${f.orders === 1 ? 'order' : 'orders'}`)
+  if (f.deliveries.kind === 'known') parts.push(`late ${f.deliveries.late} of ${f.deliveries.total}`)
+  if (parts.length === 0) return null
+  const line = parts.join(' · ')
+  return line[0].toUpperCase() + line.slice(1)
+}
+
+/** What "Chosen" says: "2 of 5 quoted items", "3 orders with them", or "Nothing ordered yet" only when there is truly none. */
+export function chosenText(f: SupplierFacts): string {
+  const c = f.chosen
+  if (c.kind === 'known') return `${c.chosen} of ${c.of} quoted items`
+  if (c.kind === 'orders') return `${c.orders} ${c.orders === 1 ? 'order' : 'orders'} with them`
+  return 'Nothing ordered yet'
 }
 
 /** Deliveries in a few words: "Late 1 of 4 · about 6 days over", "Late 0 of 3 · dates estimated", "None recorded yet". */
@@ -117,7 +140,8 @@ export function factNotes(f: SupplierFacts, span: { from: string; to: string } |
   } else if (f.asked > 0) {
     out.push(`Reply time shows once 3 replies are logged here (${r.logged} so far).`)
   }
-  if (f.chosen.kind === 'known') out.push('Chosen: quoted items later ordered from them.')
+  if (f.chosen.kind === 'known') out.push(`Chosen: ${chosenText(f)} were later ordered from them.`)
+  else if (f.chosen.kind === 'orders') out.push(`Ordered: ${chosenText(f)}, none traced back to one of their quotes.`)
   // Imported delivery dates being estimates is said by the Deliveries tip and the "est." beside each such date.
   if (f.lowData && !p.importedOnly) out.push('With so few enquiries these are facts, not a pattern.')
   return out

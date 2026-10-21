@@ -53,6 +53,33 @@ describe('screen audit report', () => {
     expect(bad.tap).toEqual({ value: 3, pass: false })
   })
 
+  it('rubric-10 targets: 95% text, one green button on the whole screen, 8 actions in the page, no overlap, strips, low contrast or small inputs', () => {
+    const s = score(
+      cap('admin', 'rfq', '375x812', {
+        actions: { total: 40, aboveFold: 20, buttons: 30, links: 10, mainAboveFold: 12 },
+        text: { chars: 1000, under14: 60, from14to16: 800, atLeast16: 140, foldChars: 0, foldUnder14: 0, minPx: 12, sizes: {} },
+        overlap: { count: 2, samples: ['"a" over "b"'] },
+        strips: { count: 1, samples: ['strip: div "Any"'] },
+        contrastHi: { checked: 30, failing: 3, samples: [] },
+        inputs: { checked: 4, under16: 1, samples: [] },
+      }),
+    )
+    expect(s.text14).toEqual({ value: 94, pass: false })
+    expect(s.greenAll).toEqual({ value: 2, pass: false })
+    expect(s.mainActionsFold).toEqual({ value: 12, pass: false })
+    expect(s.overlap.pass).toBe(false)
+    expect(s.strips.pass).toBe(false)
+    expect(s.contrastHi.pass).toBe(false)
+    expect(s.inputs16.pass).toBe(false)
+    // desktop: the phone-only targets do not apply; a capture made before the new metrics existed leaves them out
+    const old = score(cap('admin', 'rfq', '1366x768', { primary: { inMain: 1, inMainAboveFold: 1, disabledInMain: 0, inChrome: 0, labels: [] }, overlap: undefined, overflow: undefined }))
+    expect(old.greenAll).toEqual({ value: 1, pass: true })
+    expect(old.mainActionsFold).toBeUndefined()
+    expect(old.overlap).toBeUndefined()
+    expect(old.strips).toBeUndefined()
+    expect(old.inputs16).toBeUndefined()
+  })
+
   it('merges parts, the newer capture of the same screen winning, in role then screen then viewport order', () => {
     const older = { meta: { ref: 'main', sha: 'abc1234', finishedAt: '2026-10-20T01:00:00Z', viewports: ['1366x768', '375x812'] }, captures: [cap('sales', 'today', '1366x768', { words: { aboveFold: 1, total: 1 } })] }
     const newer = {
@@ -119,7 +146,7 @@ describe('screen audit report', () => {
     expect(score(old).cut).toBeUndefined()
     const md = renderMarkdown(buildResults([{ meta: { finishedAt: '2026-10-22T00:00:00Z', viewports: ['1366x768'] }, captures: [two, none, old] }]))
     expect(md).toContain('green on screen: "New RFQ", "Paste or photo [bar]"')
-    expect(md).toContain('overlap: "flow meter" x "RFQ-0008" (12x18px)')
+    expect(md).toContain('text over text: "flow meter" x "RFQ-0008" (12x18px)')
     expect(md).toContain('cut off: "waiting or" in span')
     expect(md).toContain('past right edge: input "Search" right=402')
     expect(md).toContain('scrolls sideways: div.flex +40px')
