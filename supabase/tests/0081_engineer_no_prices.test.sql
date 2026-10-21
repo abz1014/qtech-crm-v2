@@ -133,6 +133,14 @@ select is((select coalesce(array_agg(format('%s on %s', pol.polname, c.relname) 
              and not ('qtech_engineer'::regrole = any (pol.polroles))),
           '{}'::text[], 'coverage: every row-security policy for authenticated applies to qtech_engineer too');
 
+select is((select coalesce(array_agg(p.proname::text order by p.proname), '{}') from pg_proc p
+           where p.pronamespace = 'public'::regnamespace
+             and p.prosrc ~ 'current_user\s*(=|<>)\s*''authenticated'''),
+          '{}'::text[], 'no guard limits only the role authenticated: every one also covers qtech_engineer');
+select ok((select count(*) from pg_proc p where p.pronamespace = 'public'::regnamespace
+           and p.prosrc like '%current_user not in (''authenticated'', ''qtech_engineer'')%') >= 5,
+  'the 0065/0068/0073/0078 guards name qtech_engineer too');
+
 -- ------------------------------------------------------------------ the switch
 select is(pg_temp.as_('engineer', 'select current_user::text'), 'qtech_engineer', 'an engineer''s request runs as qtech_engineer');
 select is(pg_temp.as_('admin', 'select current_user::text'), 'authenticated', 'an admin''s request is untouched');
@@ -188,6 +196,11 @@ select is(pg_temp.as_('engineer', $q$with i as (insert into public.rfq_items (rf
   '0081 added by the engineer', 'the engineer adds an item to an RFQ (Add item)');
 select is(pg_temp.as_('engineer', $q$with u as (update public.rfq_items set description = '0081 renamed' where id = 'e0000000-0000-4000-8000-000000000a81' returning id) select count(*)::text from u$q$),
   '1', 'and edits an item''s description');
+
+select is(pg_temp.as_('engineer', $q$with u as (update public.orders set legacy_source = '{"forged": true}'::jsonb where id = 'a1000000-0000-4000-8000-000000000a81' returning 1) select count(*)::text from u$q$),
+  'E:42501', 'the legacy-column guard (0078) still refuses the engineer');
+select is(pg_temp.as_('engineer', $q$with u as (update public.order_items set unit_price_net = 1 where id = 'a3000000-0000-4000-8000-000000000a81' returning 1) select count(*)::text from u$q$),
+  'E:42501', 'and the money-fields guard (0065, M-1) still refuses an engineer''s price change on an existing order');
 
 -- ------------------------------------------------------------------ admin and sales: unchanged
 select is(pg_temp.as_('sales', $q$select quoted_unit_price_net::text from public.rfq_items where id = 'e0000000-0000-4000-8000-000000000a81'$q$),

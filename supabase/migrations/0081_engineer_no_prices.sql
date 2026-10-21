@@ -159,6 +159,30 @@ begin
 end
 $$;
 
+-- ================================================================ guards that name the API role
+-- The 0065/0068/0073/0078 triggers limit "a signed-in person" by `current_user = 'authenticated'` (the service role and the
+-- definer functions are not limited). An engineer's request is now qtech_engineer, so each of them must treat it the same, or
+-- the guard would let an engineer through (legacy columns, money fields of an order line, created_by, the chase actor...).
+-- Rewritten in place from their current definitions; pgTAP 0081 fails if any function still names only 'authenticated'.
+do $$
+declare
+  f record;
+  def text;
+begin
+  for f in
+    select p.oid
+    from pg_catalog.pg_proc p
+    where p.pronamespace = 'public'::regnamespace
+      and p.prosrc ~ 'current_user\s*(=|<>)\s*''authenticated'''
+  loop
+    def := pg_catalog.pg_get_functiondef(f.oid);
+    def := regexp_replace(def, 'current_user\s*<>\s*''authenticated''', 'current_user not in (''authenticated'', ''qtech_engineer'')', 'g');
+    def := regexp_replace(def, 'current_user\s*=\s*''authenticated''', 'current_user in (''authenticated'', ''qtech_engineer'')', 'g');
+    execute def;
+  end loop;
+end
+$$;
+
 -- ================================================================ the private schema: pre-request and the order sums
 create schema qtech_private;
 comment on schema qtech_private is

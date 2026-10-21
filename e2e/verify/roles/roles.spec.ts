@@ -211,10 +211,8 @@ test('an engineer walking every screen asks for no money and never sees a price 
   await page.waitForTimeout(800)
   await page.keyboard.press('Escape')
   expect(moneyRequests(log.urls), 'the engineer must make no money request on any screen').toEqual([])
-  const ranked = await rpcAs<{ selling_price_net: number | null; spread_each: number | null }[]>('engineer', 'rank_item_quotes', { p_rfq_id: won.rfq.id })
-  expect(ranked.status).toBeLessThan(300)
-  for (const row of ranked.body as unknown as Record<string, unknown>[]) {
-    for (const [k, v] of Object.entries(row)) if (/sell|spread|margin/.test(k)) expect.soft(v, `rank_item_quotes.${k} for an engineer`).toBeNull()
-  }
+  // 0081 (owner decision 2026-10-22): the database refuses the ranking (supplier prices) to an engineer outright.
+  const ranked = await rpcAs('engineer', 'rank_item_quotes', { p_rfq_id: won.rfq.id })
+  expect(ranked.status).toBe(403)
   await eng.close()
 })
