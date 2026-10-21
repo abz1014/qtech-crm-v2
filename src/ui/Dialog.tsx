@@ -286,7 +286,7 @@ export function DialogContent({
                 {titleChip}
               </div>
               {context ? (
-                <RadixDialog.Description className="text-sm text-fg-2">{context}</RadixDialog.Description>
+                <RadixDialog.Description className="text-base text-fg-2">{context}</RadixDialog.Description>
               ) : null}
             </div>
             {meta ? <div className="mr-2 shrink-0 self-start">{meta}</div> : null}
@@ -297,7 +297,8 @@ export function DialogContent({
           <div
             data-dialog-body
             className={cn(
-              'grid min-h-0 content-start gap-4 overflow-y-auto px-5 pb-5 pt-4 text-sm text-fg-2 transition-opacity duration-fast [&>p]:max-w-[62ch]',
+              // Reading text is 16 px (text-base, owner decision 2026-10-19); controls inside set their own size.
+              'grid min-h-0 content-start gap-4 overflow-y-auto px-5 pb-5 pt-4 text-base text-fg-2 transition-opacity duration-fast [&>p]:max-w-[62ch]',
               busy && 'opacity-80',
             )}
           >

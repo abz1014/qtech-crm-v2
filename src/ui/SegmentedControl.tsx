@@ -16,7 +16,8 @@ import { NeedsCount } from '@/ui/Tag'
  *                           arrows move focus, Space or Enter selects.
  * Track bg-selected, selected segment is a surface with a border-strong edge.
  * Each segment is --segment-h tall (36, 26 with smaller text, 44 on touch), --control-h when `large`.
- * A phone scrolls it inside its own container.
+ * Below 640 px the segments WRAP onto a second row instead of scrolling sideways (rubric: no sideways-scrolling filter
+ * strips on a phone); from 640 px up a track too narrow for its words scrolls inside itself, never overlapping labels.
  */
 export interface SegmentOption {
   value: string
@@ -60,7 +61,8 @@ export function SegmentedControl({
 }: SegmentedControlProps) {
   const trackRef = useScrollActiveIntoView<HTMLDivElement>()
   const track = cn(
-    'inline-flex max-w-full gap-[2px] overflow-x-auto rounded bg-selected p-[2px]',
+    // Phones wrap (flex-wrap, no horizontal overflow); wider screens keep one row and scroll inside the track if they must.
+    'inline-flex max-w-full flex-wrap gap-[2px] rounded bg-selected p-[2px] sm:flex-nowrap sm:overflow-x-auto',
     fill && 'flex w-full',
     className,
   )
@@ -79,9 +81,12 @@ export function SegmentedControl({
     'data-[state=active]:border-fg data-[state=active]:bg-surface data-[state=active]:text-fg',
     // locked (a submitting form disables its fieldset): the selected segment keeps its surface but greys out
     'disabled:data-[state=checked]:text-fg-disabled disabled:data-[state=active]:text-fg-disabled',
-    large ? 'h-control' : 'h-segment',
-    // Shares the width but never shrinks below its words: a track too narrow scrolls instead of overlapping labels.
+    // On a phone the height is a floor, so a label that has to break onto two lines grows the segment instead of spilling out.
+    large ? 'h-control max-sm:h-auto max-sm:min-h-control' : 'h-segment max-sm:h-auto max-sm:min-h-segment',
+    // Shares the width but never shrinks below its words: a track too narrow wraps (phones) or scrolls (wider) instead of overlapping labels.
     fill && 'flex-1 px-2',
+    // A segment longer than the phone itself (one very long label) breaks onto two lines rather than poking out of the track.
+    'max-sm:max-w-full max-sm:whitespace-normal max-sm:text-center',
   )
 
   if (mode === 'tabs') {
