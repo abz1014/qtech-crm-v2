@@ -235,7 +235,10 @@ function readItem(text: string): ReadItem | null {
       // (that would be a range, "0 - 10").
       const dash = /\s[–-]\s+(\d{1,4})$/.exec(description)
       // "Silicone tube 8mm 0.5 m": a quantity with a decimal point and a length or weight unit at the end.
-      const dec = /\s(\d+\.\d+)\s*(m|mtrs?|meters?|metres?|kgs?|ltrs?|l)\.?$/i.exec(description)
+      // ... or a whole number with a length or weight word ("Cable 7 core 0.75 mm2 shielded 100 m"), not the end of a range
+      // ("0-10 m", "0 to 10 m") or a measurement ("range 20 m").
+      const dec0 = /\s(\d+(?:\.\d+)?)\s*(m|mtrs?|meters?|metres?|kgs?|ltrs?|l)\.?$/i.exec(description)
+      const dec = dec0 && !/(?:[-–]|\bto|\brange|\blength|\bdepth|\bheight|\bcable\s+length)\s*$/i.test(description.slice(0, dec0.index)) && !/\d\s*$/.test(description.slice(0, dec0.index)) ? dec0 : null
       if (ex) {
         qty = toQty(ex[1] as string)
         unit = unitOf(ex[2])
