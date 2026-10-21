@@ -159,8 +159,8 @@ function Row({ line, just, onTick }: { line: BankLine; just: boolean; onTick: (l
           {formatShortDate(line.date, today)}
         </span>
         <span className="grid min-w-0 gap-px">
-          <span className={cn('line-clamp-2 text-sm', quiet ? 'font-regular text-fg-muted' : 'font-medium')}>{line.title}</span>
-          <span className="line-clamp-2 text-xs text-fg-muted">
+          <span className={cn('min-w-0 text-sm [overflow-wrap:anywhere]', quiet ? 'font-regular text-fg-muted' : 'font-medium')}>{line.title}</span>
+          <span className="min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">
             {sub.map((part, i) => (
               <Part key={i} first={i === 0}>
                 {part}
@@ -181,7 +181,7 @@ function Row({ line, just, onTick }: { line: BankLine; just: boolean; onTick: (l
             >
               <span aria-hidden="true" className="h-full w-px justify-self-center bg-line-strong" />
               <span className="num">{k.date ? formatShortDate(k.date, today) : ''}</span>
-              <span className="line-clamp-2">
+              <span className="min-w-0 [overflow-wrap:anywhere]">
                 <span className="num text-fg-2">{k.number ?? 'No number'}</span>
                 {k.company ? ` · ${k.company}` : ''} · GST
               </span>

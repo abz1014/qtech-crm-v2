@@ -194,7 +194,9 @@ export function OrderHeaderBlock({
   )
 
   return (
-    // data-slot="order-actions": every order-level action (the next step, Create invoice, Record payment) is inside the header, once.
+    // data-slot="order-actions": every order-level action (the next step, Create invoice, Record payment) is inside this block, once.
+    // The <header> (DetailHeader) is the title block only: who, the code, at most the Done/Cancelled chip, the meta line. The next step
+    // and the state strip are the page's first content under it (screen audit: at most 2 chips in a page header).
     <div data-slot="order-actions">
       <DetailHeader
         name={order.companyName}
@@ -211,12 +213,12 @@ export function OrderHeaderBlock({
           order.owner ? `Owner ${order.owner.name}` : null,
           money ? <span data-testid="order-terms">{termsText}</span> : null,
         ]}
-      >
-        {cancelled ? (
-          <Banner tone="warning" title={`Cancelled ${order.cancelledOn ? formatDay(order.cancelledOn) : ''}`} className="mt-4">
-            {cancelReasonLabel(order.cancelReason) ? `${cancelReasonLabel(order.cancelReason)}. ` : ''}Nothing on this order can be changed while it is cancelled.
-          </Banner>
-        ) : null}
+      />
+      {cancelled ? (
+        <Banner tone="warning" title={`Cancelled ${order.cancelledOn ? formatDay(order.cancelledOn) : ''}`} className="mt-4">
+          {cancelReasonLabel(order.cancelReason) ? `${cancelReasonLabel(order.cancelReason)}. ` : ''}Nothing on this order can be changed while it is cancelled.
+        </Banner>
+      ) : null}
 
         {/* An unknown price basis is asked even on a cancelled order (its invoices and payments still need the net split): the admin's
             button is the green next step on a live order, and a plain button here on a cancelled one. */}
@@ -331,8 +333,7 @@ export function OrderHeaderBlock({
           </div>
         )}
 
-        {resolving ? <ResolveBasisDialog order={order} items={items} money={orderMoney} onClose={() => setResolving(false)} /> : null}
-      </DetailHeader>
+      {resolving ? <ResolveBasisDialog order={order} items={items} money={orderMoney} onClose={() => setResolving(false)} /> : null}
     </div>
   )
 }

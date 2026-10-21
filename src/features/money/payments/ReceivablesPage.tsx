@@ -110,8 +110,8 @@ export function ReceivablesPage() {
         value: r => r.companyName,
         cell: r => (
           <span className="grid gap-px">
-            <span className="line-clamp-2 font-medium">{r.companyName}</span>
-            <span className="num line-clamp-2 text-xs text-fg-muted">
+            <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{r.companyName}</span>
+            <span className="num min-w-0 [overflow-wrap:anywhere] text-xs text-fg-muted">
               <Link to={`/orders/${r.orderId}`} className="underline-offset-2 hover:underline" aria-label={`Open ${orderRef(r.orderNumber)}`}>
                 {orderRef(r.orderNumber)}
               </Link>
@@ -247,7 +247,7 @@ export function ReceivablesPage() {
             mobileRow={r => (
               <div className="grid gap-1">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="line-clamp-2 font-medium">{r.companyName}</span>
+                  <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{r.companyName}</span>
                   <Money value={r.balance} prefix={false} strong />
                 </div>
                 <span className="num text-xs text-fg-muted">

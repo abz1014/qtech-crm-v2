@@ -75,17 +75,20 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
         ))}
       </nav>
 
-      {/* The key hints hide below 2xl, so the tooltip carries the key (consistency spec 4.3). */}
-      <Tooltip content="Search or jump to" shortcut={hint}>
+      {/* The key hints sit beside the buttons, drawn over their right end, not inside them: text inside a button must be part of its
+          name (axe label-content-name-mismatch at 2xl, where the hints show); the name stays the action, the key is aria-keyshortcuts.
+          Below 2xl the hints hide, so the tooltip carries the key (consistency spec 4.3). */}
+      <div className="relative ml-auto shrink-0">
+        <Tooltip content="Search or jump to" shortcut={hint}>
         <button
           type="button"
           onClick={onSearch}
           aria-label="Search or jump to"
-          aria-keyshortcuts="Control+K Meta+K"
+          aria-keyshortcuts={hint === '⌘K' ? 'Meta+K' : 'Control+K'}
           className={cn(
-            'ml-auto flex h-control shrink-0 items-center gap-2 rounded border border-line-strong bg-sunken text-left text-sm text-fg-muted',
+            'flex h-control items-center gap-2 rounded border border-line-strong bg-sunken text-left text-sm text-fg-muted',
             'transition-colors duration-fast ease-out hover:border-line-input',
-            'w-control justify-center lg:w-[150px] lg:justify-start lg:pl-3 lg:pr-2 xl:w-[220px] 2xl:w-[280px]',
+            'w-control justify-center lg:w-[150px] lg:justify-start lg:pl-3 lg:pr-2 xl:w-[220px] 2xl:w-[280px] 2xl:pr-16',
           )}
         >
           <Icon icon={Search} />
@@ -95,19 +98,23 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
           <span aria-hidden="true" className="flex-1 truncate max-xl:hidden">
             Search or jump to
           </span>
-          <Kbd className="max-2xl:hidden">{hint}</Kbd>
         </button>
-      </Tooltip>
+        </Tooltip>
+        <Kbd aria-hidden className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 max-2xl:hidden">
+          {hint}
+        </Kbd>
+      </div>
 
       {onCapture ? (
-        <Tooltip content={CAPTURE_LABEL} shortcut="C">
+        <div className="relative shrink-0">
+          <Tooltip content={CAPTURE_LABEL} shortcut="C">
           <button
             type="button"
             onClick={onCapture}
             aria-label={CAPTURE_LABEL}
             aria-keyshortcuts="C"
             className={cn(
-              'flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground',
+              'flex h-control items-center gap-2 whitespace-nowrap rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground 2xl:pr-11',
               'transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover active:bg-primary-active',
               'max-lg:w-control max-lg:justify-center max-lg:px-0',
             )}
@@ -116,9 +123,12 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
             <span aria-hidden="true" className="max-lg:hidden">
               {CAPTURE_LABEL}
             </span>
-            <Kbd className="border-primary-foreground/40 bg-transparent text-primary-foreground max-2xl:hidden">C</Kbd>
           </button>
-        </Tooltip>
+          </Tooltip>
+          <Kbd aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 border-primary-foreground/40 bg-transparent text-primary-foreground max-2xl:hidden">
+            C
+          </Kbd>
+        </div>
       ) : null}
 
       <div className="flex shrink-0 items-center gap-3">

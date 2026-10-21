@@ -94,7 +94,7 @@ function CustomerCell({ row }: { row: OrderListRow }) {
         {row.companyName}
         {row.siteName ? <span className="font-regular text-fg-muted">{` · ${row.siteName}`}</span> : null}
       </span>
-      <span className="line-clamp-1 text-sm text-fg-2">{row.what ? `${row.what}${row.moreLines ? ' + more' : ''}` : <span className="text-fg-muted">No lines yet</span>}</span>
+      <span className="min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]">{row.what ? `${row.what}${row.moreLines ? ' + more' : ''}` : <span className="text-fg-muted">No lines yet</span>}</span>
     </span>
   )
 }
@@ -103,7 +103,7 @@ function OrderCell({ row }: { row: OrderListRow }) {
   return (
     <span className="grid min-w-0 gap-px">
       <span className="num">{orderRef(row.number)}</span>
-      <span className="line-clamp-2 text-sm text-fg-muted">{[row.customerPo ? `PO ${row.customerPo}` : null, row.ownerName].filter(Boolean).join(' · ') || ' '}</span>
+      <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{[row.customerPo ? `PO ${row.customerPo}` : null, row.ownerName].filter(Boolean).join(' · ') || ' '}</span>
     </span>
   )
 }
@@ -115,8 +115,10 @@ function OrderCard({ row, step }: { row: OrderListRow; step: NextStep }) {
         <span className="min-w-0 font-medium">{row.companyName}</span>
         <span className="num shrink-0 text-sm text-fg-muted">{orderRef(row.number)}</span>
       </span>
-      {row.what ? <span className="line-clamp-2 text-sm text-fg-2">{`${row.what}${row.moreLines ? ' + more' : ''}`}</span> : null}
-      <NextStepText step={step} />
+      {row.what ? <span className="min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]">{`${row.what}${row.moreLines ? ' + more' : ''}`}</span> : null}
+      <span className="text-sm">
+        <NextStepText step={step} />
+      </span>
     </span>
   )
 }

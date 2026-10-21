@@ -161,10 +161,10 @@
   --row-h: 32px;
 }
 
-/* Phones and tablets, at EITHER text size: 44px controls and large buttons, 40px small buttons and segments, 48px rows.
+/* Phones and tablets, at EITHER text size: every control, small button and segment 44px (--hit-touch, WCAG 2.5.5), 48px rows.
    Smaller text never shrinks a tap target (this block comes after [data-text="small"] and wins at equal specificity). */
 @media (pointer: coarse) {
-  :root { --control-h: 44px; --control-lg-h: 44px; --control-sm-h: 40px; --segment-h: 40px; --row-h: 48px; }
+  :root { --control-h: 44px; --control-lg-h: 44px; --control-sm-h: 44px; --segment-h: 44px; --row-h: 48px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -198,7 +198,7 @@ function WaitingRow({ rfqId, inquiry, item }: { rfqId: string; inquiry: InquiryR
     <li className="flex items-center gap-x-4 border-t bg-sunken px-5 py-2 text-sm" data-waiting={inquiry.supplierId}>
       <span className="flex min-w-0 flex-1 items-center gap-2 text-fg-2">
         <Icon icon={Clock} className="shrink-0 text-fg-muted" />
-        <span className="line-clamp-2 min-w-0 break-words">
+        <span className="min-w-0 [overflow-wrap:anywhere]">
           Waiting on <b className="font-semibold text-fg">{inquiry.supplierName}</b>
           <span className="text-fg-muted">{` · asked ${formatDay(inquiry.sentOn as string)}${chase}`}</span>
         </span>

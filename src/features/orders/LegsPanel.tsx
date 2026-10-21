@@ -251,7 +251,7 @@ function Leg({
             />
           </span>
         </div>
-        {lines ? <p className="line-clamp-2 text-sm text-fg-muted">{lines}</p> : null}
+        {lines ? <p className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{lines}</p> : null}
         {changed && po ? (
           <div role="status" data-testid={`leg-${letter}-changed`} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
             <Icon icon={TriangleAlert} className="text-tone-warning-fg" />

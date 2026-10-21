@@ -142,8 +142,8 @@ export function GstRegisterPage() {
           const why = attentionReason(r)
           return (
             <span className="grid gap-px">
-              <span className="line-clamp-2 font-medium">{r.companyName ?? 'No customer'}</span>
-              {why ? <span className={`line-clamp-2 text-xs ${ticked.has(r.invoiceId) ? 'text-fg-2' : 'text-tone-warning-fg'}`}>{why}</span> : r.orderNumber !== null ? <span className="num text-xs text-fg-muted">{orderRef(r.orderNumber)}</span> : null}
+              <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{r.companyName ?? 'No customer'}</span>
+              {why ? <span className={`min-w-0 [overflow-wrap:anywhere] text-xs ${ticked.has(r.invoiceId) ? 'text-fg-2' : 'text-tone-warning-fg'}`}>{why}</span> : r.orderNumber !== null ? <span className="num text-xs text-fg-muted">{orderRef(r.orderNumber)}</span> : null}
             </span>
           )
         },
@@ -365,7 +365,7 @@ export function GstRegisterPage() {
               <span className="num font-medium">{r.number ?? 'No number'}</span>
               <Money value={r.gross} prefix={false} />
             </div>
-            <span className="line-clamp-2 text-sm">{r.companyName}</span>
+            <span className="min-w-0 [overflow-wrap:anywhere] text-sm">{r.companyName}</span>
             {attentionReason(r) ? <span className="text-sm text-tone-warning-fg">{attentionReason(r)}</span> : null}
             <div className="flex flex-wrap gap-2">
               <StatusBadge dimension="tcs" value={r.courierState} />

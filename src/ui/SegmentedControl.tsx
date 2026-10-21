@@ -15,7 +15,7 @@ import { NeedsCount } from '@/ui/Tag'
  *   mode="tabs"             role=tablist: switches a panel (render <TabPanel> children);
  *                           arrows move focus, Space or Enter selects.
  * Track bg-selected, selected segment is a surface with a border-strong edge.
- * Each segment is --segment-h tall (36, 26 with smaller text, 40 on touch), --control-h when `large`.
+ * Each segment is --segment-h tall (36, 26 with smaller text, 44 on touch), --control-h when `large`.
  * A phone scrolls it inside its own container.
  */
 export interface SegmentOption {

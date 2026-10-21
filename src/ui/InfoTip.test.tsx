@@ -76,7 +76,7 @@ describe('InfoTip (UX 2026-10-19)', () => {
     render(<Tip />)
     const button = screen.getByRole('button', { name: 'About PSID' })
     expect(button.className).toContain('size-6')
-    expect(button.className).toContain('[@media(pointer:coarse)]:before:h-touch [@media(pointer:coarse)]:before:w-touch')
+    expect(button.className).toContain('[@media(pointer:coarse)]:size-touch [@media(pointer:coarse)]:-m-[10px]')
     await user.click(button)
     const tip = await screen.findByRole('dialog')
     expect(tip.className).toContain('max-w-[32ch]')

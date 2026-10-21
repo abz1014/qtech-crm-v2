@@ -265,7 +265,7 @@ function SiteBlock({
         <Icon icon={MapPin} className="mt-[3px] text-fg-muted" />
         <div className="min-w-0 flex-1">
           <h3 className={muted ? 'text-sm font-medium text-fg-muted' : 'text-sm font-semibold'}>{name}</h3>
-          {address ? <p className="line-clamp-2 text-sm text-fg-muted">{address}</p> : null}
+          {address ? <p className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{address}</p> : null}
           <p className="num text-sm text-fg-muted sm:hidden">{counts}</p>
         </div>
         <span className="num hidden shrink-0 pt-[2px] text-sm text-fg-muted sm:inline">{counts}</span>

@@ -120,8 +120,8 @@ export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompa
               >
                 <Icon icon={Building2} className="text-fg-muted" />
                 <span className="grid min-w-0 flex-1">
-                  <span className="line-clamp-2 break-words">{h.name}</span>
-                  {optionMeta(h) ? <span className="line-clamp-2 text-xs text-fg-muted">{optionMeta(h)}</span> : null}
+                  <span className="min-w-0 [overflow-wrap:anywhere]">{h.name}</span>
+                  {optionMeta(h) ? <span className="min-w-0 [overflow-wrap:anywhere] text-xs text-fg-muted">{optionMeta(h)}</span> : null}
                 </span>
               </li>
             ))}
@@ -145,7 +145,7 @@ export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompa
                 >
                   <Icon icon={Plus} className="text-primary" />
                   <span className="grid min-w-0 flex-1">
-                    <span className="line-clamp-2 break-words">Add “{typed}” as a new company</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere]">Add “{typed}” as a new company</span>
                     <span className="text-xs text-fg-muted">Saved as a prospect until the first order</span>
                   </span>
                   <kbd aria-hidden="true" className="hidden rounded border border-line-strong bg-sunken px-1 text-xs text-fg-muted sm:inline">

@@ -239,7 +239,7 @@ export function CaptureArea({
           <li key={r.id} className="flex items-center gap-3 rounded border border-line-strong bg-surface px-3 py-2 text-sm">
             <span aria-hidden="true" className="size-[40px] shrink-0 rounded border bg-selected" />
             <span className="grid min-w-0 flex-1">
-              <b className="line-clamp-2 break-all font-medium">{r.name}</b>
+              <b className="min-w-0 [overflow-wrap:anywhere] break-all font-medium">{r.name}</b>
               <span className="text-xs text-fg-muted">Resizing</span>
             </span>
             <span role="progressbar" aria-label={`Resizing ${r.name}`} className="h-[6px] w-[64px] overflow-hidden rounded-round bg-selected">
@@ -276,11 +276,11 @@ function Row({ c, on, onPick, hint, tabIndex }: { c: Candidate; on: boolean; onP
         <Icon icon={FileText} />
       </span>
       <span className="grid min-w-0 flex-1">
-        <b className="line-clamp-2 break-words text-sm font-medium leading-snug">
+        <b className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium leading-snug">
           <span className="num">{rfqRef(c.number)}</span> · {c.companyName}
           {c.city ? ` — ${c.city}` : ''}
         </b>
-        <span className="line-clamp-2 text-xs leading-snug text-fg-muted">{hint}</span>
+        <span className="min-w-0 [overflow-wrap:anywhere] text-xs leading-snug text-fg-muted">{hint}</span>
       </span>
       <span aria-hidden="true" className={cn('grid size-[16px] shrink-0 place-items-center rounded-round border', on ? 'border-brand-green bg-brand-green' : 'border-line-input bg-surface')}>
         {on ? <span className="size-[6px] rounded-round bg-surface" /> : null}
@@ -326,7 +326,7 @@ export function RfqPicker({ list, chosenId, now, onPick }: { list: readonly Cand
                 <li key={h.id}>
                   <button type="button" onClick={() => pickHit(h)} className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm hover:bg-sunken">
                     <b className="num font-medium">{rfqRef(h.number)}</b>
-                    <span className="line-clamp-2 min-w-0 text-fg-muted">{h.companyName}</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere] text-fg-muted">{h.companyName}</span>
                   </button>
                 </li>
               ))}
@@ -382,10 +382,10 @@ export function OrderPicker({ list, chosenId, now, includePo, onPick }: { list: 
                 <Icon icon={FileText} />
               </span>
               <span className="grid min-w-0 flex-1">
-                <b className="line-clamp-2 break-words text-sm font-medium leading-snug">
+                <b className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium leading-snug">
                   <span className="num">{orderRef(c.number)}</span> · {c.companyName}
                 </b>
-                <span className="line-clamp-2 text-xs leading-snug text-fg-muted">{c.openedAt ? `Opened ${openedAgo(c.openedAt, now)}` : 'Found by search'}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere] text-xs leading-snug text-fg-muted">{c.openedAt ? `Opened ${openedAgo(c.openedAt, now)}` : 'Found by search'}</span>
               </span>
               <span aria-hidden="true" className={cn('grid size-[16px] shrink-0 place-items-center rounded-round border', c.id === chosenId ? 'border-brand-green bg-brand-green' : 'border-line-input bg-surface')}>
                 {c.id === chosenId ? <span className="size-[6px] rounded-round bg-surface" /> : null}
@@ -401,7 +401,7 @@ export function OrderPicker({ list, chosenId, now, includePo, onPick }: { list: 
                 <li key={h.id}>
                   <button type="button" onClick={() => pickHit(h)} className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm hover:bg-sunken">
                     <b className="num font-medium">{orderRef(h.number)}</b>
-                    <span className="line-clamp-2 min-w-0 text-fg-muted">{h.companyName}</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere] text-fg-muted">{h.companyName}</span>
                   </button>
                 </li>
               ))}

@@ -32,7 +32,7 @@ export function ItemChips({ items }: { items: readonly DraftItem[] }) {
       {items.map((it, i) => (
         <li key={it.key} title={it.description} className="inline-grid min-h-[22px] max-w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[6px] rounded border border-line-strong bg-surface py-[2px] pl-[6px] pr-2 text-xs text-fg-2">
           <span className="num grid size-4 shrink-0 place-items-center rounded-full bg-selected text-xs leading-none text-fg">{i + 1}</span>
-          <span className="line-clamp-2 break-words">{it.description}</span>
+          <span className="min-w-0 [overflow-wrap:anywhere]">{it.description}</span>
           <span className="num shrink-0 text-fg-muted">× {effectiveQty(it)}</span>
         </li>
       ))}

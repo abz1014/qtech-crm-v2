@@ -75,7 +75,7 @@ export function TeamPage() {
     title: 'Team',
     back: '/settings',
     actions: (
-      <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading} className="h-9">
+      <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading || team.isError} className="h-9">
         Add
       </Button>
     ),
@@ -98,12 +98,10 @@ export function TeamPage() {
           <Avatar name={m.name} className={avatarTone(m)} />
           <span className="grid min-w-0">
             <span className="flex items-center gap-1">
-              <span className="line-clamp-2 break-words font-medium">{m.name}</span>
+              <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{m.name}</span>
               {m.id === me ? <Tag className="ml-1">You</Tag> : null}
             </span>
-            <span className="num truncate text-xs text-fg-muted" title={m.email ?? undefined}>
-              {m.email ?? 'No email on record'}
-            </span>
+            <span className="num min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">{m.email ?? 'No email on record'}</span>
           </span>
         </span>
       ),
@@ -158,12 +156,12 @@ export function TeamPage() {
 
   return (
     <div className="grid content-start gap-4">
-      {/* On a phone the h1 is read but not drawn (the bar says Team), and Add lives in the bar. */}
+      {/* On a phone the h1 is read but not drawn (PageHeader: max-md:sr-only; the bar says Team), and Add lives in the bar. */}
       <PageHeader
         title="Team"
         lede={<span className="max-md:hidden">Everyone who can sign in to Q-Tech CRM. Passwords are created and reset here, and shown once.</span>}
         primary={
-          <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading} className="max-md:hidden">
+          <Button variant="primary" icon={UserPlus} onClick={openAdd} disabled={team.isLoading || team.isError} className="max-md:hidden">
             Add person
           </Button>
         }
@@ -217,8 +215,8 @@ export function TeamPage() {
           <span className={cn('flex items-center gap-3', dim(m))}>
             <Avatar name={m.name} size="xl" className={avatarTone(m)} />
             <span className="grid min-w-0 flex-1">
-              <span className="line-clamp-2 break-words text-sm font-medium">{m.name}</span>
-              <span className="line-clamp-2 text-xs text-fg-muted">
+              <span className="min-w-0 text-sm font-medium [overflow-wrap:anywhere]">{m.name}</span>
+              <span className="min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">
                 {roleLabel(m.role)}
                 {m.job_title ? ` · ${m.job_title}` : ''}
               </span>

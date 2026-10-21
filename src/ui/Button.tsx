@@ -7,7 +7,7 @@ import { Icon } from '@/ui/Icon'
 /*
  * Button (docs/design/INVENTORY.md; D08 section 01). Variants primary,
  * secondary, quiet, danger. Sizes read the density tokens, so they follow the text size:
- * lg 44 (40 with smaller text), md 40 (32; 44 on touch), sm 36 (28; 40 on touch), touch 44 (phone chrome).
+ * lg 44 (40 with smaller text), md 40 (32; 44 on touch), sm 36 (28; 44 on touch), touch 44 (phone chrome).
  * States: default, hover, pressed, focus (global ring), disabled, busy.
  */
 const button = cva(

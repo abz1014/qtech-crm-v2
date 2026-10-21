@@ -222,8 +222,8 @@ function buildColumns(
         const d = describe(r, categories, listing)
         return (
           <div className="grid min-w-0 gap-px">
-            <span className="line-clamp-2 font-medium">{d.name}</span>
-            {d.detail ? <span className="line-clamp-2 text-xs text-fg-muted">{d.detail}</span> : null}
+            <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{d.name}</span>
+            {d.detail ? <span className="min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">{d.detail}</span> : null}
           </div>
         )
       },
@@ -257,9 +257,9 @@ function ExpenseCard({ row, categories, listing }: { row: ListedExpense; categor
   const d = describe(row, categories, listing)
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-[2px] py-1">
-      <span className="line-clamp-2 font-medium">{d.name}</span>
+      <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{d.name}</span>
       <Money value={row.amount} prefix={false} />
-      <span className="line-clamp-2 text-xs text-fg-muted">{d.detail || ' '}</span>
+      <span className="min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">{d.detail || ' '}</span>
       <span className="num text-xs text-fg-muted">
         {formatShortDate(row.paidOn, businessToday())} · {PAID_VIA_LABEL[row.paidVia]}
       </span>

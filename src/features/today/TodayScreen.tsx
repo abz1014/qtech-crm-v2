@@ -239,8 +239,8 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
 
   return (
     // 768 to 1023 px (a tablet, a narrow window): the list takes two fifths so the pane keeps room; 420 px from 1024.
-    <div className="grid min-h-full md:h-full md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
-      <div className="flex min-h-0 flex-col border-r bg-surface">
+    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] md:h-full md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
+      <div className="flex min-h-0 min-w-0 flex-col border-r bg-surface">
         {/* The target tile is the foot of the list column: under the list on a phone, pinned at the bottom on desktop. */}
         <div data-today-list className="min-h-0 min-w-0 flex-1 overflow-x-clip md:overflow-y-auto">{list}</div>
         <div className={wide ? 'border-t bg-surface' : 'border-t bg-surface px-4 py-4'}>
@@ -284,8 +284,8 @@ function Row({ item, today, names, waiting = false, open, copied, wide, onPick, 
           <Icon icon={ICON[item.rule]} size="md" />
         </span>
         <span className="grid min-w-0 gap-px">
-          <span className={cn('line-clamp-2 text-sm font-medium', waiting && 'font-regular text-fg-2')}>{waiting ? (item.waitingTitle ?? item.title) : item.title}</span>
-          <span className="line-clamp-2 text-xs text-fg-muted">
+          <span className={cn('min-w-0 text-sm font-medium [overflow-wrap:anywhere]', waiting && 'font-regular text-fg-2')}>{waiting ? (item.waitingTitle ?? item.title) : item.title}</span>
+          <span className="min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">
             <span className="num">{item.ref}</span> · {item.party}
           </span>
           {item.collision && names?.[item.collision.by] ? (

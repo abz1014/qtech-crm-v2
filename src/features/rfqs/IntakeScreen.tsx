@@ -1167,7 +1167,7 @@ function CustomerChip({ company, contacts, onChange }: { company: Company; conta
     <div className="flex min-h-12 flex-wrap items-center gap-3 rounded border bg-surface px-3 py-2">
       <Avatar name={company.name} className="!bg-selected !text-fg-2" />
       <div className="min-w-0">
-        <p className="m-0 line-clamp-2 break-words text-sm font-medium">{company.name}</p>
+        <p className="m-0 min-w-0 [overflow-wrap:anywhere] text-sm font-medium">{company.name}</p>
         <p className="m-0 text-xs text-fg-muted">{[company.city ?? company.country, contactNote].filter(Boolean).join(' · ')}</p>
       </div>
       <span className="ml-auto" />

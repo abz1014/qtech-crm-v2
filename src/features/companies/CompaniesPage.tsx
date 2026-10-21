@@ -250,7 +250,7 @@ export function CompaniesPage() {
 
 function NameLink({ row }: { row: Shown }) {
   return (
-    <Link to={`/companies/${row.id}`} className="line-clamp-2 font-medium text-fg hover:underline">
+    <Link to={`/companies/${row.id}`} className="min-w-0 [overflow-wrap:anywhere] font-medium text-fg hover:underline">
       {row.name}
     </Link>
   )
@@ -259,7 +259,7 @@ function NameLink({ row }: { row: Shown }) {
 /** The city (or "City, Country" abroad), and the contact a search found it through. */
 function PlaceLine({ row }: { row: Shown }) {
   if (!row.place && !row.via) return null
-  return <span className="line-clamp-2 min-w-0 text-sm text-fg-muted">{[row.place, row.via ? `Contact: ${row.via}` : null].filter(Boolean).join(' · ')}</span>
+  return <span className="min-w-0 [overflow-wrap:anywhere] text-sm text-fg-muted">{[row.place, row.via ? `Contact: ${row.via}` : null].filter(Boolean).join(' · ')}</span>
 }
 
 function Role({ row }: { row: Shown }) {

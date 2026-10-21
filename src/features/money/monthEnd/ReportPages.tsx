@@ -374,7 +374,7 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
         cell: l => (
           <span className="grid gap-px">
             <span className="font-medium">{l.category}</span>
-            {notes.data?.[l.categoryId] ? <span className="line-clamp-2 text-xs font-regular text-fg-muted">{notes.data[l.categoryId]}</span> : null}
+            {notes.data?.[l.categoryId] ? <span className="min-w-0 text-xs font-regular text-fg-muted [overflow-wrap:anywhere]">{notes.data[l.categoryId]}</span> : null}
           </span>
         ),
       },
@@ -503,8 +503,8 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
         value: r => r.customer,
         cell: r => (
           <span className="grid gap-px">
-            <span className="line-clamp-2 font-medium">{r.customer}</span>
-            <span className="num line-clamp-2 text-xs text-fg-muted">
+            <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{r.customer}</span>
+            <span className="min-w-0 num text-xs text-fg-muted [overflow-wrap:anywhere]">
               {r.invoiceNumber}
               {r.orderRef ? ` · ${r.orderRef}` : ''}
             </span>
@@ -625,8 +625,8 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
         value: r => r.supplier,
         cell: r => (
           <span className="grid gap-px">
-            <span className="line-clamp-2 font-medium">{r.supplier}</span>
-            <span className="num line-clamp-2 text-xs text-fg-muted">
+            <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{r.supplier}</span>
+            <span className="min-w-0 num text-xs text-fg-muted [overflow-wrap:anywhere]">
               {r.orderId && r.orderRef ? (
                 <Link to={`/orders/${r.orderId}`} className="rounded hover:underline">
                   {r.orderRef}

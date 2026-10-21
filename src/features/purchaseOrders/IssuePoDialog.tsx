@@ -236,7 +236,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
       value: r => r.description,
       cell: r => (
         <span className="grid min-w-0 gap-px">
-          <span className="line-clamp-2">{r.description}</span>
+          <span className="min-w-0 [overflow-wrap:anywhere]">{r.description}</span>
           <span className="text-xs text-fg-muted">Order line {r.position + 1}</span>
         </span>
       ),
@@ -282,7 +282,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
         return (
           <span data-testid={`po-source-${n + 1}`} className="grid gap-px">
             <SourceChip source={sourceOf(r, typed)}>{st.chip}</SourceChip>
-            <span className="line-clamp-2 text-xs text-fg-muted">{st.detail}</span>
+            <span className="min-w-0 [overflow-wrap:anywhere] text-xs text-fg-muted">{st.detail}</span>
           </span>
         )
       },

@@ -194,7 +194,7 @@ export function TargetsPage() {
               <div role="rowheader" className="flex min-w-0 items-center gap-3 md:px-4 md:py-3">
                 <Avatar name={m.name} />
                 <span className="grid min-w-0">
-                  <span className="line-clamp-2 break-words text-sm font-medium">{m.name}</span>
+                  <span className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium">{m.name}</span>
                   <span className="text-xs text-fg-muted">{roleLabel(m.role)}</span>
                 </span>
               </div>
