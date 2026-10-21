@@ -192,7 +192,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     await resetCount(page)
     await closeBtn.click()
     const d = page.getByRole('dialog', { name: `Close ${STMT.label}?` })
-    await expect(d.getByRole('list', { name: 'Warnings' }).getByRole('listitem')).toHaveCount(7)
+    await expect(d.getByRole('list', { name: 'Warnings' }).getByRole('listitem')).toHaveCount(6) // round 3: the FBR-deposit check is part of the bank check
     await d.getByRole('button', { name: closeName }).click()
     await expect(page.getByTestId('lock-bar')).toContainText(`${STMT.label} is closed.`)
     fe2('Close the month (checklist reviewed): the button, then the confirmation', (await readCount(page)).mouse, 2)

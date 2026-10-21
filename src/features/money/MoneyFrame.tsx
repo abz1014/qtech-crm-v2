@@ -130,19 +130,19 @@ function TabLink({ tab, to, on, n, phone }: { tab: MoneyTab; to: string; on: boo
     <Link
       to={to}
       aria-current={on ? 'page' : undefined}
-      // The name starts with the visible short word (WCAG 2.5.3 label in name), then the full name
-      aria-label={phone && tab.short !== tab.label ? `${tab.short}: ${tab.label}${n ? `, ${n} need you` : ''}` : undefined}
       className={cn(
         'inline-flex items-center rounded border font-medium transition-colors duration-fast ease-out',
         phone ? 'min-h-touch min-w-0 flex-auto justify-center gap-1 px-1 text-xs' : 'min-h-control gap-2 px-4 text-sm',
         on ? 'border-fg bg-surface text-fg' : 'border-transparent text-fg-muted hover:text-fg',
       )}
     >
+      {/* The name is the visible words plus, for a short phone label, the full name for screen readers (WCAG 2.5.3 label in name). */}
       <span className="whitespace-nowrap">{phone ? tab.short : tab.label}</span>
+      {phone && tab.short !== tab.label ? <span className="sr-only">{` (${tab.label})`}</span> : null}
       {phone && n ? (
         <>
           {/* Under 360 px four labels and their counts do not fit one row: the count becomes a dot (the name still says it). */}
-          <span className="max-[359px]:hidden">
+          <span className="max-[359px]:sr-only">
             <NeedsCount n={n} />
           </span>
           <i aria-hidden="true" className="hidden size-2 shrink-0 rounded-round bg-tone-warning-fg max-[359px]:block" />
