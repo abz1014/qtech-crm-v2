@@ -9,11 +9,12 @@ select * from no_plan();
 -- new money column must be classified before CI is green). The fixtures (copied from S14) hold a non-null value in every
 -- money column; each rule is then probed as the engineer:
 --   hidden    the engineer must get no non-null value (zero rows, or the column NULL)            -> real assertions
---   m3        selling prices: visible to engineers by the owner's decision of 2026-10-19 (SECURITY_REVIEW M-3,
---             DATA_MODEL s10 order_items/quotations).  The brief's rule says hidden, so the strict check is run inside a
---             todo block: it documents the exposure in every run without failing CI.
---   supplier  supplier prices (our cost side): visible to engineers by owner decision (a) (s10 supplier_quote_lines,
---             purchase_orders). Same treatment as m3.
+--   m3        selling prices (rfq_items, quotations, order_items, the order totals). Since 0081 (owner decision 2026-10-22,
+--             replacing the 2026-10-19 M-3 acceptance) the engineer gets none: real assertions, like hidden.
+--   supplier  supplier prices (our cost side: supplier_quote_lines, purchase_orders, order_items.supplier_unit_price) and
+--             the price RPCs. Since 0081 the engineer gets none either: real assertions.
+-- Each probe runs as the API runs it: role authenticated with the persona's claims, then qtech_private.pre_request() (0081),
+-- which moves an engineer onto qtech_engineer exactly as PostgREST's db-pre-request does.
 --   own       the engineer's own target figures (s10 targets "S own", my_target_progress "own"): only their own row.
 --   info      not money (a rate, a count, days).
 -- JSON columns are searched recursively for money-named keys with a value (pg_temp.money_keys), which is how the legacy
@@ -44,6 +45,8 @@ begin
   begin
     perform set_config('request.jwt.claims', json_build_object('sub', pg_temp.uid(persona), 'role', 'authenticated')::text, true);
     set local role authenticated;
+    -- 0081: what PostgREST runs before every request: an engineer continues as qtech_engineer (no price columns)
+    perform qtech_private.pre_request();
     execute s into v;
     get diagnostics n = row_count;
     raise exception 'scalar done' using errcode = 'P0999',
@@ -198,7 +201,7 @@ insert into money_cols (obj, col, rule, bug) values
   ('audit_log', 'old_value', 'hidden', null), ('audit_log', 'new_value', 'hidden', null),
   ('companies', 'legacy_source', 'hidden', null),
   ('expenses', 'amount_pkr', 'hidden', null), ('expenses', 'input_tax_pkr', 'hidden', null), ('expenses', 'legacy_source', 'hidden', null),
-  ('fx_rates', 'rate_pkr', 'info', null),
+  ('fx_rates', 'rate_pkr', 'supplier', null),
   ('invoices', 'net_amount', 'hidden', null), ('invoices', 'gst_amount', 'hidden', null), ('invoices', 'tax_deposit_amount', 'hidden', null),
   ('invoices', 'legacy_source', 'hidden', null),
   ('month_snapshots', 'pnl', 'hidden', null), ('month_snapshots', 'adjust', 'hidden', null), ('month_snapshots', 'status', 'hidden', null),
@@ -222,13 +225,13 @@ insert into money_cols (obj, col, rule, bug) values
   ('rfqs', 'legacy_source', 'hidden', null),
   ('supplier_inquiries', 'legacy_source', 'hidden', null),
   ('supplier_orders', 'legacy_source', 'hidden', null),
-  ('supplier_quote_lines', 'unit_price', 'supplier', null), ('supplier_quote_lines', 'fx_rate_pkr', 'info', null),
+  ('supplier_quote_lines', 'unit_price', 'supplier', null), ('supplier_quote_lines', 'fx_rate_pkr', 'supplier', null),
   ('supplier_quote_lines', 'legacy_source', 'supplier', null),
   ('targets', 'target_net_pkr', 'own', null),
   -- views
   ('v_cash_month', 'gross_received', 'hidden', null), ('v_cash_month', 'gst_received', 'hidden', null), ('v_cash_month', 'money_out', 'hidden', null),
   ('v_cash_month', 'net_received', 'hidden', null), ('v_cash_month', 'unresolved_gross', 'hidden', null),
-  ('v_fx_latest', 'rate_pkr', 'info', null),
+  ('v_fx_latest', 'rate_pkr', 'supplier', null),
   ('v_gst_month', 'net', 'hidden', null), ('v_gst_month', 'gst', 'hidden', null), ('v_gst_month', 'deposited_amount', 'hidden', null),
   ('v_gst_month', 'gst_to_deposit', 'hidden', null), ('v_gst_month', 'input_tax', 'hidden', null), ('v_gst_month', 'deposited_count', 'info', null),
   ('v_gst_register', 'net_amount', 'hidden', null), ('v_gst_register', 'gst_amount', 'hidden', null), ('v_gst_register', 'gross_amount', 'hidden', null),
@@ -379,15 +382,21 @@ from money_cols m where m.rule = 'hidden' and m.bug is null order by m.obj, m.co
 select is(pg_temp.engineer_sees(m.obj, m.col), '0', format('BUG-RV-01 engineer reads no money in %s.%s', m.obj, m.col))
 from money_cols m where m.col = 'legacy_source' order by m.obj, m.col;
 
--- Accepted by the owner (not new bugs): the strict rule of the brief, run as todo so each run lists the exposure.
-select todo_start('M-3 (owner decision 2026-10-19): engineers may see selling prices; strict brief rule not applied');
-select is(pg_temp.engineer_sees(m.obj, m.col), '0', format('M-3 engineer reads no selling price in %s.%s', m.obj, m.col))
+-- 0081 (owner decision 2026-10-22): selling and supplier prices and exchange rates are now refused at the database too.
+select ok(pg_temp.engineer_sees(m.obj, m.col) in ('0', 'E:42501'),
+  format('0081 engineer reads no selling price in %s.%s (got %s)', m.obj, m.col, pg_temp.engineer_sees(m.obj, m.col)))
 from money_cols m where m.rule = 'm3' order by m.obj, m.col;
-select todo_end();
-select todo_start('owner decision (a): supplier prices are visible to engineers; strict brief rule not applied');
-select is(pg_temp.engineer_sees(m.obj, m.col), '0', format('(a) engineer reads no supplier price in %s.%s', m.obj, m.col))
+select ok(pg_temp.engineer_sees(m.obj, m.col) in ('0', 'E:42501'),
+  format('0081 engineer reads no supplier price or rate in %s.%s (got %s)', m.obj, m.col, pg_temp.engineer_sees(m.obj, m.col)))
 from money_cols m where m.rule = 'supplier' order by m.obj, m.col;
-select todo_end();
+-- and the admin and sales still read them (nothing changed for them)
+select ok(pg_temp.scalar_as(format('select count(*) from public.%I where %I is not null', m.obj, m.col), p) not in ('0', '<none>')
+          and pg_temp.scalar_as(format('select count(*) from public.%I where %I is not null', m.obj, m.col), p) not like 'E:%',
+  format('0081 %s still reads %s.%s', p, m.obj, m.col))
+from money_cols m cross join unnest(array['admin', 'sales']) p
+where m.rule in ('m3', 'supplier') and m.col not in ('legacy_source', 'fx_rate_pkr')
+  and (select data_type from information_schema.columns where table_schema = 'public' and table_name = m.obj and column_name = m.col) not in ('jsonb', 'json')
+order by m.obj, m.col, p;
 
 -- own: only the engineer's own target.
 select is(pg_temp.scalar_as('select count(*) from public.targets where user_id <> auth.uid()', 'engineer'), '0',
@@ -426,14 +435,18 @@ select ok(pg_temp.scalar_as($q$select count(*) from public.search_all('INV', 25)
 select is(pg_temp.scalar_as('select count(*) from public.my_target_progress()', 'engineer'), '1',
   'my_target_progress answers the engineer about themselves only (no parameter)');
 
-select todo_start('M-3 / (a): customer and supplier price memory are visible to engineers by owner decision');
+-- 0081: the price RPCs are refused to the engineer (no execute).
 select is(pg_temp.scalar_as('select count(*) from public.customer_price_memory(@15) where quoted_price is not null or sold_price is not null', 'engineer'),
-  '0', 'M-3 customer_price_memory gives the engineer no selling price');
+  'E:42501', '0081 customer_price_memory is refused to the engineer');
 select is(pg_temp.scalar_as('select count(*) from public.po_line_prefill(@23) where unit_price is not null', 'engineer'),
-  '0', '(a) po_line_prefill gives the engineer no supplier price');
+  'E:42501', '0081 po_line_prefill is refused to the engineer');
 select is(pg_temp.scalar_as('select count(*) from public.rank_item_quotes(@15) where price is not null or pkr_unit_price is not null', 'engineer'),
-  '0', '(a) rank_item_quotes gives the engineer no supplier price');
-select todo_end();
+  'E:42501', '0081 rank_item_quotes is refused to the engineer');
+select is(pg_temp.scalar_as($q$select count(*) from public.supplier_item_memory(array[@03], @13, null, 'Fixture order item') where last_quote_price is not null or last_po_price is not null or last_ordered_price is not null$q$, 'engineer'),
+  'E:42501', '0081 supplier_item_memory is refused to the engineer');
+select ok(pg_temp.scalar_as('select count(*) from public.rank_item_quotes(@15) where price is not null', 'sales') not in ('0', '<none>')
+          and pg_temp.scalar_as('select count(*) from public.rank_item_quotes(@15) where price is not null', 'sales') not like 'E:%',
+  '0081 sales still get the ranked supplier prices');
 
 -- ------------------------------------------------------------------ embedded selects (what PostgREST builds for ?select=*,invoices(*)...)
 -- PostgREST embeds a related table as a correlated sub-select run as the caller, so row security of each embedded

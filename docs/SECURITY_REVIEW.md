@@ -21,7 +21,7 @@ engineers never see money (payments, expenses, costs, margins, cash, invoices); 
 | H-1 | High | Any staff member could replace or re-point the PDF of an issued quotation or supplier PO, with any content type | **Fixed in 0057** |
 | M-1 | Medium | A closed month's net income, team credit and target progress still change when order data changes, including by engineers | **Fixed in 0065** (closed-month P&L also frozen at close by 0058) |
 | M-2 | Medium | Any staff member can reassign an order's owner, which decides who is credited with the next payment (targets) | **Fixed in 0065** |
-| M-3 | Medium | Selling prices are hidden from engineers by the app only; the database grants them to all staff (section 10) | **Owner decision 2026-10-22** (replaces 2026-10-19): engineers see no prices and the app no longer fetches them; DB grants unchanged (residual) |
+| M-3 | Medium | Selling prices are hidden from engineers by the app only; the database grants them to all staff (section 10) | **Owner decision 2026-10-22** (replaces 2026-10-19): engineers see no prices; the app no longer fetches them and, since 0081, the database refuses them (role `qtech_engineer`) |
 | L-1 | Low | Actor columns can be named by the caller: the chase actor (0048) and every `created_by` | **Fixed in 0065** |
 | L-2 | Low | anon keeps Supabase's default grants on the sequences in `public` | **Fixed in 0065** |
 | L-3 | Low | pg_net's `net.http_get` keeps Supabase's execute grant to anon and authenticated | **Cannot be changed by the project** (platform grant); not reachable |
@@ -139,13 +139,22 @@ FETCHING prices for an engineer (one rule, `seesPrices(role)` in `src/app/sessio
   engineer; the Settings home shows no rates).
 - Orders, Money, invoices, POs and the search palette were already gated and are unchanged.
 
-**Residual (accepted until a follow-up).** The database grants are unchanged: section 10 still lets an engineer read
-`supplier_quote_lines.unit_price`, `rfq_items.quoted_unit_price_net`, `quotations` lines and totals, `order_items` prices,
-`purchase_orders` totals, the money columns of `v_order_state` / `v_order_items_total`, the RPCs above and the stored PDFs in
-`generated-docs`, through the REST API with their own token. Closing that is the column-level move described under Fix
-(admin-and-sales tables, or role-guarded views and definer functions). The e2e suites prove the app side: verify-roles crawls
-every route as the engineer with no price allowance (any amount on screen, or any selling or supplier price in an API answer,
-fails) and the engineer journey and verify/roles walk refuse every price read; the API column sweep reports the residual.
+**Database (0081, same branch).** The residual is closed at the database. Every signed-in person is the Postgres role
+`authenticated`, so PostgREST's db-pre-request (`qtech_private.pre_request()`, set on the `authenticator` role) moves an
+engineer's request onto `qtech_engineer`: every privilege `authenticated` has in public (tables, views, sequences, functions,
+row-security policies) EXCEPT SELECT on `rfq_items.quoted_unit_price_net`, `supplier_quote_lines.unit_price` and `fx_rate_pkr`,
+`quotations.lines`, `net_total` and `gst_total`, `order_items.unit_price_net` and `supplier_unit_price`, `purchase_orders.total`
+and `lines`, `fx_rates.rate_pkr`, the view `v_fx_latest`, and EXECUTE on `rank_item_quotes`, `customer_price_memory`,
+`supplier_item_memory`, `po_line_prefill` and the pricing actions (`issue_quotation`, `issue_purchase_order`,
+`convert_rfq_to_order`, `create_repeat_order`, `split_order_item`, `set_fx_rate`). `select=*` on a price table is refused (403);
+every other column reads. The order totals (`v_order_items_total`, hence `v_order_state`) are computed in
+`qtech_private.order_item_totals` (not exposed by the API) and are NULL for anyone but admin and sales. `generated-docs` (the
+quotation and PO PDFs) is admin and sales only. Admin, sales, anon and service_role are untouched. Proof: pgTAP
+`0081_engineer_no_prices` (the switch, every price column refused, the rest readable, admin and sales unchanged, coverage: a new
+table, function or policy granted to authenticated and not to qtech_engineer fails) and 0902 (every money column as the engineer,
+through the pre-request: m3 and supplier are real assertions now), and the verify-roles API sweep (the engineer's token gets 403 on
+every price column and no price in any answer). Remaining: Storage requests do not go through PostgREST; the bucket rule covers
+them. A new price column must be added to the list in 0081 (and its test).
 
 ## L-1 (Low): actor columns can be named by the caller
 
@@ -236,8 +245,8 @@ and S14 has the new rows.
   only sets owners when it creates a row.
 - **M-3.** Owner decision 2026-10-22 (replaces the 2026-10-19 acceptance, when engineers could see selling prices on
   quotation screens): engineers see no prices at all, and the app does not fetch them for an engineer (see the M-3 section).
-  The database keeps section 10 as it is for now: that is the recorded residual. `rank_item_quotes` returning NULL selling
-  price and spread to engineers stays.
+  Since 0081 the database refuses them too: an engineer's API requests run as `qtech_engineer`, with no SELECT on any price,
+  total or rate column and no price RPC (see the M-3 section).
 - **L-1.**
   - `created_by`, on every table that has it, is set to the caller on insert and can never be rewritten (one trigger
     per table, `<table>_force_created_by`).

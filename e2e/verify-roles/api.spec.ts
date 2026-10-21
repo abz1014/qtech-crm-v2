@@ -118,27 +118,72 @@ test('a person with no users row cannot give themselves one, and nobody changes 
   expect(react.status, 'admin reactivates directly (only admin-users may)').toBeGreaterThanOrEqual(400)
 })
 
-// Selling and supplier prices (m3, supplier) are still granted to engineers by the database: since the owner decision of 2026-10-22
-// the app neither shows nor fetches them for an engineer (roles.spec.ts holds that), and the table grants are the RESIDUAL
-// recorded in SECURITY_REVIEW M-3 (a column-level move is the follow-up). This sweep reports them; it fails on hidden money only.
-test('engineer: no hidden money in any table or view, column by column', async () => {
+// Since 0081 (owner decision 2026-10-22) the database refuses prices to an engineer too: PostgREST's pre-request moves an engineer's
+// request onto the role qtech_engineer, which has no SELECT on any price, total or rate column. `select=*` on such a table is refused
+// (403); every other column still reads. So selling and supplier prices (m3, supplier) are leaks now, like hidden money.
+const PRICE_COLUMNS: Record<string, string[]> = {
+  rfq_items: ['quoted_unit_price_net'],
+  supplier_quote_lines: ['unit_price', 'fx_rate_pkr'],
+  quotations: ['lines', 'net_total', 'gst_total'],
+  order_items: ['unit_price_net', 'supplier_unit_price'],
+  purchase_orders: ['total', 'lines'],
+  fx_rates: ['rate_pkr'],
+}
+
+test('engineer: no money of any kind in any table or view, column by column (prices included, 0081)', async () => {
   const leaks: string[] = []
-  const accepted: string[] = []
+  const refused: string[] = []
   for (const o of [...schema.tables, ...schema.views]) {
     const r = await api('engineer', `/rest/v1/${o}?select=*&limit=500`)
-    if (r.status !== 200) continue
+    if (r.status !== 200) {
+      refused.push(`${o} ${r.status}`)
+      continue
+    }
     for (const l of moneyIn(o, r.body)) {
       if (l.rule === 'legacy') continue // BUG-RV-01, its own test
-      if (l.rule === 'm3' || l.rule === 'supplier' || l.rule === 'own') accepted.push(`${l.where}.${l.field} [${l.rule}]`)
-      else leaks.push(`${l.where}.${l.field} [${l.rule}] = ${l.value}`)
+      if (l.rule === 'own') continue // the engineer's own target (s10 targets "S own")
+      leaks.push(`${l.where}.${l.field} [${l.rule}] = ${l.value}`)
     }
   }
-  test.info().annotations.push({ type: 'residual DB exposure (SECURITY_REVIEW M-3, 2026-10-22: app never fetches it)', description: [...new Set(accepted)].join(' ; ') })
+  test.info().annotations.push({ type: 'refused to the engineer (select=*)', description: refused.join(' ; ') })
   expect([...new Set(leaks)]).toEqual([])
   // Precondition: the admin reads the same money, so the engineer's silence is a refusal, not an empty table.
   for (const t of ['payments_in', 'invoices', 'expenses', 'order_costs', 'v_order_money', 'v_payment_net']) {
     const r = await api('admin', `/rest/v1/${t}?select=*&order_id=eq.${world.order.id}`)
     expect.soft((r.body as unknown[]).length, `precondition: the admin reads ${t} of the order`).toBeGreaterThan(0)
+  }
+})
+
+test('engineer: every price, total and rate column is refused by the database; the rest reads; admin and sales unchanged (0081)', async () => {
+  for (const [table, cols] of Object.entries(PRICE_COLUMNS)) {
+    const all = await api('engineer', `/rest/v1/${table}?select=*&limit=1`)
+    expect.soft(all.status, `engineer ${table}?select=*`).toBe(403)
+    const ids = await api('engineer', `/rest/v1/${table}?select=id&limit=1`)
+    expect.soft(ids.status, `engineer reads ${table}.id: ${ids.text.slice(0, 120)}`).toBe(200)
+    for (const c of cols) {
+      const r = await api('engineer', `/rest/v1/${table}?select=${c}&limit=1`)
+      expect.soft(r.status, `engineer ${table}.${c}`).toBe(403)
+      for (const p of ['admin', 'sales'] as const) {
+        const ok = await api(p, `/rest/v1/${table}?select=${c}&limit=1`)
+        expect.soft(ok.status, `${p} still reads ${table}.${c}`).toBe(200)
+      }
+    }
+  }
+  const item = await api('engineer', `/rest/v1/rfq_items?id=eq.${world.rfqItem}&select=description,qty`)
+  expect((item.body as unknown[]).length, 'the engineer still reads the RFQ item itself').toBe(1)
+  const totals = await api('engineer', `/rest/v1/v_order_state?order_id=eq.${world.order.id}&select=lifecycle,net,gst,gross`)
+  expect(totals.status).toBe(200)
+  expect(totals.body, 'the order totals are NULL for the engineer').toEqual([expect.objectContaining({ net: null, gst: null, gross: null })])
+  const adminTotals = await api('admin', `/rest/v1/v_order_state?order_id=eq.${world.order.id}&select=gross`)
+  expect((adminTotals.body as { gross: number | null }[])[0]?.gross, 'precondition: the admin gets the order total').not.toBeNull()
+  const fx = await api('engineer', '/rest/v1/v_fx_latest?select=*')
+  expect(fx.status, 'exchange rates are refused').toBe(403)
+  for (const f of ['rank_item_quotes', 'customer_price_memory', 'po_line_prefill']) {
+    const body = f === 'po_line_prefill' ? { p_supplier_order_id: world.leg } : { p_rfq_id: world.rfq.id }
+    const r = await api('engineer', `/rest/v1/rpc/${f}`, { method: 'POST', body })
+    expect.soft(r.status, `engineer calls ${f}`).toBeGreaterThanOrEqual(400)
+    const s = await api('sales', `/rest/v1/rpc/${f}`, { method: 'POST', body })
+    expect.soft(s.status, `sales still call ${f}`).toBe(200)
   }
 })
 

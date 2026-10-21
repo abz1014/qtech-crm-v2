@@ -255,9 +255,11 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'revoke_user_sessions', '',      '',     '',     ''),     -- A01: service role only (the admin-users Edge Function); no client persona
   ('bucket', 'rfq-files',        '',  'SIUD', 'SIUD', 'SIUD'),           -- s10 "attachments (RFQ/clarification)": bucket rfq-files, same rules
   ('bucket', 'gst-receipts',     '',  'SIUD', 'SIUD', ''),               -- s10 "attachments (invoice)": bucket gst-receipts, admin and sales
-  ('bucket', 'generated-docs',   '',  'SIUD', 'SIU',  'SIU'),            -- s10 "bucket generated-docs" (D admin only, A5)
+  ('bucket', 'generated-docs',   '',  'SIUD', 'SIU',  ''),   -- 0081: engineers none (prices on every page)
+  -- was SIU for the engineer;            -- s10 "bucket generated-docs" (D admin only, A5)
   ('bucket', 'expense-receipts', '',  'SIUD', '',     ''),               -- A6 s10 "attachments (parent is an expense)": bucket expense-receipts, admin only
-  ('bucket', 'generated-docs',   'issued',  'SU', 'S',  'S'),            -- 0057 (H-1): a PDF an issued quotation or PO points at is overwritten by an admin only
+  ('bucket', 'generated-docs',   'issued',  'SU', 'S',  ''),   -- 0081: engineers none
+  -- was S for the engineer;            -- 0057 (H-1): a PDF an issued quotation or PO points at is overwritten by an admin only
   ('table', 'quotations',        'pdf_attached', 'U', '', ''),           -- 0057 (H-1): once a PDF is attached, only an admin re-points or clears pdf_path
   ('table', 'purchase_orders',   'pdf_attached', 'U', '', ''),           -- 0057 (H-1): same for a supplier PO
   ('table', 'orders',            'legacy_flags', '', '', ''),            -- 0065 (M-1): the value basis flag goes only through resolve_value_basis, for everyone
