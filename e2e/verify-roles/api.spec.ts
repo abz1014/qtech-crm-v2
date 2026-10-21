@@ -118,6 +118,9 @@ test('a person with no users row cannot give themselves one, and nobody changes 
   expect(react.status, 'admin reactivates directly (only admin-users may)').toBeGreaterThanOrEqual(400)
 })
 
+// Selling and supplier prices (m3, supplier) are still granted to engineers by the database: since the owner decision of 2026-10-22
+// the app neither shows nor fetches them for an engineer (roles.spec.ts holds that), and the table grants are the RESIDUAL
+// recorded in SECURITY_REVIEW M-3 (a column-level move is the follow-up). This sweep reports them; it fails on hidden money only.
 test('engineer: no hidden money in any table or view, column by column', async () => {
   const leaks: string[] = []
   const accepted: string[] = []
@@ -130,7 +133,7 @@ test('engineer: no hidden money in any table or view, column by column', async (
       else leaks.push(`${l.where}.${l.field} [${l.rule}] = ${l.value}`)
     }
   }
-  test.info().annotations.push({ type: 'accepted exposure (M-3, (a), own target)', description: [...new Set(accepted)].join(' ; ') })
+  test.info().annotations.push({ type: 'residual DB exposure (SECURITY_REVIEW M-3, 2026-10-22: app never fetches it)', description: [...new Set(accepted)].join(' ; ') })
   expect([...new Set(leaks)]).toEqual([])
   // Precondition: the admin reads the same money, so the engineer's silence is a refusal, not an empty table.
   for (const t of ['payments_in', 'invoices', 'expenses', 'order_costs', 'v_order_money', 'v_payment_net']) {

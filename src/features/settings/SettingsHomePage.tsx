@@ -2,12 +2,14 @@ import type { ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { RatesTable } from '@/features/settings/RatesTable'
+import { useSeesPrices } from '@/app/session'
 import { Icon } from '@/ui/Icon'
 import { cn } from '@/lib/utils'
 
 /*
  * Settings home (g2-login-team-settings, "Settings home, sales"): where sales and engineers land.
- * The exchange rates at a glance, and a link to the read-only company profile.
+ * The exchange rates at a glance, and a link to the read-only company profile. An engineer gets the company profile only: rates
+ * are currency amounts (owner decision 2026-10-22), so they are neither shown nor fetched.
  */
 function Card({ id, title, text, to, cta, children }: { id: string; title: string; text: string; to: string; cta: string; children?: ReactNode }) {
   return (
@@ -33,23 +35,26 @@ function Card({ id, title, text, to, cta, children }: { id: string; title: strin
 }
 
 export function SettingsHomePage() {
+  const prices = useSeesPrices()
   return (
     <div className="grid content-start gap-6">
       <header className="grid gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="max-w-[62ch] text-sm text-fg-muted">
-          Company details for documents, and the rates used to compare prices in other currencies.
+          {prices ? 'Company details for documents, and the rates used to compare prices in other currencies.' : 'Company details for documents.'}
         </p>
       </header>
-      <Card
-        id="fxh"
-        title="Exchange rates"
-        text="Updated every night. Anyone on the team can enter today’s rate by hand, for example the bank’s rate."
-        to="/settings/exchange-rates"
-        cta="Open exchange rates"
-      >
-        <RatesTable label="Exchange rates summary" />
-      </Card>
+      {prices ? (
+        <Card
+          id="fxh"
+          title="Exchange rates"
+          text="Updated every night. Admin and sales can enter today’s rate by hand, for example the bank’s rate."
+          to="/settings/exchange-rates"
+          cta="Open exchange rates"
+        >
+          <RatesTable label="Exchange rates summary" />
+        </Card>
+      ) : null}
       <Card
         id="cph"
         title="Company profile"

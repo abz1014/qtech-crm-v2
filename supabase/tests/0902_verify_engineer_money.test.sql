@@ -268,6 +268,7 @@ insert into money_fns values
   ('aging_as_of', 'gross', 'hidden'), ('aging_as_of', 'applied', 'hidden'), ('aging_as_of', 'remaining', 'hidden'), ('aging_as_of', 'advance_held', 'hidden'),
   ('payables_as_of', 'committed', 'hidden'), ('payables_as_of', 'committed_pkr', 'hidden'), ('payables_as_of', 'fx_rate', 'hidden'),
   ('payables_as_of', 'paid_pkr', 'hidden'), ('payables_as_of', 'owed_pkr', 'hidden'),
+  ('held_advances', 'held', 'hidden'),   -- 0080: advances held on cancelled orders, admin only
   ('order_receivables', 'gross_target', 'hidden'), ('order_receivables', 'settled', 'hidden'), ('order_receivables', 'balance', 'hidden'),
   ('order_receivables', 'overpaid_by', 'hidden'),
   ('month_end_check_details', 'detail', 'hidden'),
@@ -400,6 +401,7 @@ select ok(pg_temp.scalar_as(s, 'engineer') in ('0', '<null>', '<none>', 'E:42501
 from (values
   ('aging_as_of', 'select count(*) from public.aging_as_of(public.today_pkt())'),
   ('payables_as_of', 'select count(*) from public.payables_as_of(public.today_pkt())'),
+  ('held_advances (0080)', 'select count(*) from public.held_advances()'),
   ('order_receivables', 'select count(*) from public.order_receivables()'),
   ('order_receivables(order)', 'select count(*) from public.order_receivables(@20)'),
   ('receivables_list (0074)', 'select count(*) from public.receivables_list(null, null, null, true)'),

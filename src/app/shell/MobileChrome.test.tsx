@@ -82,8 +82,8 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
     return dlg
   }
 
-  it('every role finds Exchange rates, as the Settings menu offers it to everyone, and Enter opens it', async () => {
-    for (const role of ['admin', 'sales', 'engineer']) {
+  it('admin and sales find Exchange rates, as the Settings menu offers it to them, and Enter opens it', async () => {
+    for (const role of ['admin', 'sales']) {
       const u = userEvent.setup()
       shell(role)
       const dlg = await search(u, 'rates')
@@ -94,8 +94,15 @@ describe('palette Jump to: Settings pages (audit: hidden behind the avatar)', ()
     }
   })
 
+  it('an engineer is not offered Exchange rates (owner decision 2026-10-22: no currency amounts)', async () => {
+    const u = userEvent.setup()
+    shell('engineer')
+    const dlg = await search(u, 'exchange rates')
+    expect(within(dlg).queryByRole('option', { name: /Exchange rates/ })).toBeNull()
+  })
+
   it('Jump to offers exactly the Settings pages the Settings menu lists for the role (one list, settingsLinks.ts)', async () => {
-    for (const role of ['admin', 'sales'] as const) {
+    for (const role of ['admin', 'sales', 'engineer'] as const) {
       const u = userEvent.setup()
       shell(role)
       const dlg = await search(u, 'settings')

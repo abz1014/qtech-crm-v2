@@ -7,7 +7,7 @@ import { DestinationPage } from '@/app/pages/DestinationPage'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
-import { AdminOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
+import { AdminOnly, PricesOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
 import { AppShell } from '@/app/shell/AppShell'
 
 // Lazy: the sign-in form brings zod, react-hook-form and its resolvers, which nothing else on first paint needs (perf/client).
@@ -152,9 +152,11 @@ export function AppRoutes() {
             <Route
               path="exchange-rates"
               element={
-                <Suspense fallback={null}>
-                  <ExchangeRatesPage />
-                </Suspense>
+                <PricesOnly area="Exchange rates">
+                  <Suspense fallback={null}>
+                    <ExchangeRatesPage />
+                  </Suspense>
+                </PricesOnly>
               }
             />
             <Route

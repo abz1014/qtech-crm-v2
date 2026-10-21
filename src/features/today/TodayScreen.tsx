@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Banknote, CalendarCheck, Calculator, ChevronDown, ChevronRight, FileCheck, HardHat, Hourglass, Landmark, MessageCircleQuestion, Package, PackageCheck, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
-import { useSession } from '@/app/session'
+import { seesPrices, useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
@@ -239,9 +239,12 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
       <div className="flex min-h-0 min-w-0 flex-col border-r bg-surface">
         {/* The target tile is the foot of the list column: under the list on a phone, pinned at the bottom on desktop. */}
         <div data-today-list className="min-h-0 min-w-0 flex-1 overflow-x-clip md:overflow-y-auto">{list}</div>
-        <div className={wide ? 'border-t bg-surface' : 'border-t bg-surface px-4 py-4'}>
-          <TargetTile today={today} className={wide ? undefined : 'rounded border bg-surface'} />
-        </div>
+        {/* An engineer has no target tile: it is PKR amounts (owner decision 2026-10-22, engineers see no prices). */}
+        {seesPrices(user.role) ? (
+          <div className={wide ? 'border-t bg-surface' : 'border-t bg-surface px-4 py-4'}>
+            <TargetTile today={today} className={wide ? undefined : 'rounded border bg-surface'} />
+          </div>
+        ) : null}
       </div>
       {wide ? (
         <div className="min-h-0 overflow-y-auto px-5 py-6 lg:px-8">

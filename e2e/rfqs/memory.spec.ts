@@ -390,7 +390,8 @@ test.describe('R18 company page: What we know', () => {
     const openLeg = await post('supplier_orders', { order_id: order.id, supplier_id: sup.id, currency: 'EUR', placed_on: karachiDay(-2), expected_on: karachiDay(5) })
     void openLeg
 
-    await openAs(page, 'engineer', `/companies/${sup.id}`)
+    // Sales: the prices are theirs to see. An engineer sees no price or rate here (owner decision 2026-10-22; verify-roles crawls it).
+    await openAs(page, 'sales', `/companies/${sup.id}`)
     const what = page.getByRole('region', { name: 'What we know' })
     await expect(what).toBeVisible()
     expect(await what.innerText()).not.toMatch(/score|rating|rank|%/i)

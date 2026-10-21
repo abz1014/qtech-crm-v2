@@ -230,40 +230,28 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     expect(await violations(page)).toEqual([])
   })
 
-  test('engineer: supplier prices, the rank and the reliability and history reasons; no selling price, no spread, no extra money request (fixture i)', async ({ page }) => {
+  // Owner decision 2026-10-22 (engineers see no prices): the ranking is prices, so it is neither shown nor fetched for an engineer.
+  test('engineer: who quoted, with lead time and stock; no price, no rank, no reasons, and the ranking is never requested (fixture i)', async ({ page }) => {
     const s = await seed()
     const urls: string[] = []
-    const bodies: string[] = []
-    page.on('request', r => urls.push(r.url()))
-    page.on('response', async r => {
-      if (r.url().includes('rank_item_quotes')) bodies.push(await r.text())
-    })
+    page.on('request', r => urls.push(decodeURIComponent(r.url())))
     await openAs(page, 'engineer', `/rfqs/${s.rfqId}`)
     const art = page.getByRole('article', { name: 'Item 1' })
-    await expect(art.locator('li[data-ranked]')).toHaveCount(4)
-    const names = await art.locator('li[data-ranked]').allInnerTexts()
-    expect(names[0]).toContain(s.bravo.name)
-    await expect(rowOf(page, 'Item 1', s.bravo.name)).toContainText('Recommended')
-    await rowOf(page, 'Item 1', s.bravo.name).getByRole('button', { name: `Show details for ${s.bravo.name}` }).click()
-    await expect(rowOf(page, 'Item 1', s.bravo.name)).toContainText('On time 3 of 3 deliveries')
-    await expect(rowOf(page, 'Item 1', s.bravo.name)).toContainText('Within 2% of the best price: ordered by delivery record')
-    await expect(rowOf(page, 'Item 1', s.bravo.name).locator('[data-reason="evidence"]')).toContainText('delivered after')
+    for (const sup of [s.apex, s.bravo, s.charlie, s.delta]) await expect(art).toContainText(sup.name)
+    await page.waitForLoadState('networkidle')
+    await expect(art.locator('li[data-ranked]')).toHaveCount(0)
+    await expect(art.getByText('Recommended')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^Show details for / })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'How are prices compared?' })).toHaveCount(0)
 
-    // Nothing about our selling price or the spread is on the items panel.
+    // No price, selling price or spread anywhere on the items panel.
     const panel = page.locator('[data-slot="items"]')
     const text = await panel.innerText()
-    expect(text).not.toMatch(/spread|selling price|quoted price|last sold|40,000/i)
+    expect(text).not.toMatch(/PKR|USD\s*\d|EUR\s*\d|spread|selling price|quoted price|last sold|40,000/i)
     await expect(panel.locator('[data-sell-note]')).toHaveCount(0)
 
-    // The one new request returned no money, and no money view or price memory was read by the ranking.
-    await expect.poll(() => bodies.length).toBeGreaterThan(0)
-    const rows = JSON.parse(bodies[0]) as Record<string, unknown>[]
-    expect(rows.length).toBeGreaterThan(0)
-    for (const r of rows) {
-      for (const k of ['sell_unit_net', 'sell_order_number', 'sell_on', 'spread_unit', 'spread_total']) expect(r[k]).toBeNull()
-    }
-    expect(urls.filter(u => u.includes('rank_item_quotes'))).toHaveLength(1)
-    expect(urls.filter(u => /customer_price_memory|v_order_money|v_payment|v_margin/.test(u))).toEqual([])
+    // Nothing that carries a price was requested.
+    expect(urls.filter(u => /rank_item_quotes|supplier_item_memory|customer_price_memory|v_fx_latest|unit_price|v_order_money|v_payment|v_margin/.test(u))).toEqual([])
     await full(page, 'a8-rfq-ranked-engineer-1440')
     expect(await violations(page)).toEqual([])
   })

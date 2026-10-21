@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RatesTable } from '@/features/settings/RatesTable'
 import { rateAgeLabel, sortRates, sourceLabel } from '@/features/settings/ratesModel'
+import { SessionContext } from '@/app/session'
 import { SettingsHomePage } from '@/features/settings/SettingsHomePage'
 import type { FxLatestRow } from '@/features/rfqs/api'
 
@@ -69,17 +70,35 @@ describe('exchange rate table', () => {
   })
 })
 
+const signedIn = (role: string) => ({ status: 'signed-in' as const, user: { id: 'u1', name: 'Sana', role } })
+
 describe('Settings home', () => {
   it('has the Settings title, the rates card with its button, and the company profile card with View', () => {
     render(
-      <MemoryRouter>
-        <SettingsHomePage />
-      </MemoryRouter>,
+      <SessionContext.Provider value={signedIn('sales')}>
+        <MemoryRouter>
+          <SettingsHomePage />
+        </MemoryRouter>
+      </SessionContext.Provider>,
     )
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
     expect(screen.getByText('Company details for documents, and the rates used to compare prices in other currencies.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Open exchange rates/ })).toHaveAttribute('href', '/settings/exchange-rates')
     expect(screen.getByRole('link', { name: /^View/ })).toHaveAttribute('href', '/settings/company')
+    expect(screen.getByRole('heading', { name: 'Company profile' })).toBeInTheDocument()
+  })
+
+  it('an engineer gets the company profile only: no rates card, no rates read (owner decision 2026-10-22)', () => {
+    render(
+      <SessionContext.Provider value={signedIn('engineer')}>
+        <MemoryRouter>
+          <SettingsHomePage />
+        </MemoryRouter>
+      </SessionContext.Provider>,
+    )
+    expect(screen.getByText('Company details for documents.')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Exchange rates' })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Open exchange rates/ })).toBeNull()
     expect(screen.getByRole('heading', { name: 'Company profile' })).toBeInTheDocument()
   })
 })

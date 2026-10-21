@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Circle, CircleAlert, CircleCheck, CircleDashed, CircleDot, Lock, type LucideIcon } from 'lucide-react'
 import { useFxLatest } from '@/features/rfqs/hooks'
+import { useSeesPrices } from '@/app/session'
 import { formatRate } from '@/lib/money'
 import type { DeliveryRow, QuoteOutcome, QuoteRow, SupplierRecord } from '@/features/companies/supplierRecord'
 import { Panel } from '@/features/companies/CompanyParts'
@@ -18,7 +19,8 @@ import { Tag } from '@/ui/Tag'
  * The supplier's record (R18; g2-company.html): recent quotes with the PKR value at the time, deliveries from purchase
  * orders and delivery dates, and "Open with them". Every line is a fact with its count; there is no score, no ranking and
  * no percentage. What each row says is decided in supplierRecord.ts (pure, tested); this file lays it out. The notes that
- * explained the columns are in an (i) tip on each panel (UX audit 2026-10-19).
+ * explained the columns are in an (i) tip on each panel (UX audit 2026-10-19). An engineer (owner decision 2026-10-22) gets no
+ * price column and no rate: the read carries neither.
  */
 
 const CHIP = 'inline-flex h-5 w-fit items-center gap-[6px] whitespace-nowrap rounded-round px-2 text-xs'
@@ -95,6 +97,10 @@ function latestOf(shown: number, total: number): ReactNode {
 const QGRID = 'md:grid-cols-[minmax(0,1fr)_minmax(0,176px)_minmax(0,176px)] md:gap-x-5'
 const QHEAD = cn('hidden border-b bg-sunken px-5 py-2 text-sm text-fg-muted md:grid', QGRID)
 const QROW = cn('grid grid-cols-2 gap-x-4 gap-y-3 border-t px-5 py-3 first:border-t-0', QGRID)
+/** An engineer's quotes: what, and what came of it (no price). */
+const QGRID_NO_PRICES = 'md:grid-cols-[minmax(0,1fr)_minmax(0,176px)] md:gap-x-5'
+const QHEAD_NO_PRICES = cn('hidden border-b bg-sunken px-5 py-2 text-sm text-fg-muted md:grid', QGRID_NO_PRICES)
+const QROW_NO_PRICES = cn('grid grid-cols-2 gap-x-4 gap-y-3 border-t px-5 py-3 first:border-t-0', QGRID_NO_PRICES)
 
 function PriceCell({ r }: { r: QuoteRow }) {
   const p = r.price
@@ -171,16 +177,19 @@ export function RecentQuotes({
   onRetry: () => void
   enquiriesAnchor: string
 }) {
+  const prices = useSeesPrices()
   return (
     <Panel
       title="Recent quotes"
       info={
-        <InfoTip label="About the prices">
-          <span className="grid gap-2">
-            <span>Each price is in the currency they quoted. “≈ PKR” uses the rate saved when the quote was typed in, not today’s.</span>
-            <span>A locked price is on file, but its currency was never checked, so it is not shown.</span>
-          </span>
-        </InfoTip>
+        prices ? (
+          <InfoTip label="About the prices">
+            <span className="grid gap-2">
+              <span>Each price is in the currency they quoted. “≈ PKR” uses the rate saved when the quote was typed in, not today’s.</span>
+              <span>A locked price is on file, but its currency was never checked, so it is not shown.</span>
+            </span>
+          </InfoTip>
+        ) : undefined
       }
       meta={view ? latestOf(view.quotes.length, view.quoteCount) : undefined}
       actions={
@@ -197,21 +206,23 @@ export function RecentQuotes({
         <p className="px-5 py-6 text-sm text-fg-muted">No quotes from them yet.</p>
       ) : (
         <div>
-          <div className={QHEAD} aria-hidden="true">
+          <div className={prices ? QHEAD : QHEAD_NO_PRICES} aria-hidden="true">
             <span>Item</span>
-            <span className="text-right">Quoted price</span>
+            {prices ? <span className="text-right">Quoted price</span> : null}
             <span>Outcome</span>
           </div>
           <ul>
             {view.quotes.map(r => (
-              <li key={r.key} className={QROW}>
+              <li key={r.key} className={prices ? QROW : QROW_NO_PRICES}>
                 <div className="col-span-2 grid content-start md:col-span-1">
                   <ItemCell r={r} />
                 </div>
-                <div className="grid content-start gap-1 md:justify-items-end md:text-right">
-                  <Label>Quoted price</Label>
-                  <PriceCell r={r} />
-                </div>
+                {prices ? (
+                  <div className="grid content-start gap-1 md:justify-items-end md:text-right">
+                    <Label>Quoted price</Label>
+                    <PriceCell r={r} />
+                  </div>
+                ) : null}
                 <div className="grid content-start gap-1">
                   <Label>Outcome</Label>
                   <OutcomeCell r={r} />

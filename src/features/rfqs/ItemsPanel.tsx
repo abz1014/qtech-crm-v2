@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Ban, ChevronDown, Clock, Copy, Ellipsis, Pencil, Plus, ThumbsUp, Trash2, TriangleAlert } from 'lucide-react'
-import { useSession } from '@/app/session'
+import { useSeesPrices } from '@/app/session'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { copyToClipboard } from '@/lib/clipboard'
@@ -37,6 +37,10 @@ import { CANT_QUOTE_REASONS, comparePrices, itemCoverage, qtyText, reasonForItem
  * "Cheapest: ..." line says so. Without the ranking (still loading, or one price only) the lowest of two or more comparable prices
  * is marked "Lowest price". A price with no usable rate is shown and never blocks anything (BUILD_PLAN A3/A4); it is not compared.
  * Entering replies lives in the next panel, one row per supplier (SupplierReplies.tsx).
+ *
+ * An engineer (owner decision 2026-10-22: no prices anywhere) gets the same items with who replied, lead time and stock only: no
+ * price column, no rate bar, no marks, no price details, no row menu (Edit reply and Copy price are price work). The lines come
+ * without prices (listInquiries), so they are listed by supplier name.
  */
 
 const daysBetween = (from: string, to: string) => Math.round((Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10)) - Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10))) / 86_400_000)
@@ -46,6 +50,10 @@ const COLS = 'md:grid-cols-[minmax(0,1fr)_176px_minmax(0,136px)_128px_72px]'
 const HEAD = `hidden gap-x-4 px-5 py-2 text-sm text-fg-muted md:grid ${COLS}`
 /** Phone: the supplier and the price on one line, lead time, stock and the two buttons on the next (the mark, when there is one, above). */
 const ROW = `relative grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 border-t px-5 py-3 md:gap-x-4 ${COLS}`
+/** An engineer's row: the supplier, lead time and stock (no price, no buttons). */
+const COLS_NO_PRICES = 'md:grid-cols-[minmax(0,1fr)_minmax(0,136px)_128px]'
+const HEAD_NO_PRICES = `hidden gap-x-4 px-5 py-2 text-sm text-fg-muted md:grid ${COLS_NO_PRICES}`
+const ROW_NO_PRICES = `relative grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 border-t px-5 py-3 md:gap-x-4 ${COLS_NO_PRICES}`
 
 interface Entry {
   line: QuoteLineRow
@@ -268,28 +276,30 @@ export function ItemsPanel({
   onCopyEnquiry: (supplier: SupplierSuggestion, item: RfqItemRow) => void
 }) {
   const today = businessToday()
-  const session = useSession()
-  // The selling price and the spread are for admin and sales only. The database sends an engineer NULLs; this also keeps their notes off the page.
-  const showSell = session.status === 'signed-in' && (session.user.role === 'admin' || session.user.role === 'sales')
+  // Every price (supplier, selling, spread) is for admin and sales only (owner decision 2026-10-22); an engineer's lines carry none.
+  const prices = useSeesPrices()
+  const showSell = prices
   const [opened, setOpened] = useState<Readonly<Record<string, boolean>>>({})
   const responders = inquiries.filter(i => i.lines.length > 0)
   // Asked at all: sent, or answered "cannot quote" (a supplier only on the shortlist is not asked yet).
   const askedCount = inquiries.filter(i => i.sentOn || i.noOfferOn).length
   const pricedItems = items.filter(it => inquiries.some(i => i.lines.some(l => l.itemId === it.id))).length
-  const rateBar = buildRateBar(
-    fxRows,
-    inquiries.flatMap(i => i.lines.map(l => l.currency)),
-  )
+  const rateBar = prices
+    ? buildRateBar(
+        fxRows,
+        inquiries.flatMap(i => i.lines.map(l => l.currency)),
+      )
+    : []
   const nobodyAsked = inquiries.length === 0
   return (
     <DetailPanel
-      title="Items and supplier prices"
-      tip={!nobodyAsked ? <HowCompared /> : null}
+      title={prices ? 'Items and supplier prices' : 'Items and supplier replies'}
+      tip={!nobodyAsked && prices ? <HowCompared /> : null}
       dataSlot="items"
       meta={
         <>
           {items.length} {items.length === 1 ? 'item' : 'items'} ·{' '}
-          {nobodyAsked ? 'nobody asked yet' : `${inquiries.length} ${inquiries.length === 1 ? 'supplier' : 'suppliers'} asked · ${pricedItems} ${pricedItems === 1 ? 'item has' : 'items have'} a price`}
+          {nobodyAsked ? 'nobody asked yet' : `${inquiries.length} ${inquiries.length === 1 ? 'supplier' : 'suppliers'} asked · ${pricedItems} ${pricedItems === 1 ? 'item has' : 'items have'} ${prices ? 'a price' : 'a reply'}`}
         </>
       }
       actions={
@@ -318,8 +328,10 @@ export function ItemsPanel({
             for (const { l, i } of lines) entries.push({ line: l, inquiry: i, c: cmp.lines.find(x => x.id === l.id) as ComparedLine })
             // The database's ranking (R25) when it has every line of this item; else the plain order: cheapest first among the compared, then the lines left out.
             const rankOf = (l: QuoteLineRow) => ranking?.get(l.id)
-            const ranked = lines.length >= 2 && lines.every(({ l }) => rankOf(l) !== undefined)
-            if (ranked) {
+            const ranked = prices && lines.length >= 2 && lines.every(({ l }) => rankOf(l) !== undefined)
+            if (!prices) {
+              entries.sort((a, b) => a.inquiry.supplierName.localeCompare(b.inquiry.supplierName))
+            } else if (ranked) {
               entries.sort((a, b) => {
                 const ra = rankOf(a.line) as RankRow
                 const rb = rankOf(b.line) as RankRow
@@ -340,10 +352,10 @@ export function ItemsPanel({
             // One mark per item: the database's rank 1 when two or more lines are ranked; else the plain lowest of two or more.
             const markOf = (e: Entry): 'recommended' | 'lowest' | null => {
               if (ranked) return rankedCount >= 2 && rankOf(e.line)?.rank === 1 ? 'recommended' : null
-              return e.c.lowest ? 'lowest' : null
+              return prices && e.c.lowest ? 'lowest' : null
             }
             const recommended = ranked && rankedCount >= 2 ? entries.find(e => rankOf(e.line)?.rank === 1) : undefined
-            const cheapest = entries.find(e => e.c.lowest)
+            const cheapest = prices ? entries.find(e => e.c.lowest) : undefined
             const cheaperElsewhere = recommended && cheapest && cheapest.line.id !== recommended.line.id ? cheapest : undefined
             const sell = ranked ? sellNote(itemRanks, showSell) : null
             const declined = inquiries
@@ -424,13 +436,19 @@ export function ItemsPanel({
                   <p className="px-5 pb-4 pt-3 text-fg-muted">No supplier has been asked about this item.</p>
                 ) : entries.length > 0 || declined.length > 0 || waiting.length > 0 ? (
                   <div className="mt-3">
-                    {entries.length > 0 ? (
+                    {entries.length > 0 && prices ? (
                       <div className={HEAD} aria-hidden="true">
                         <span>Supplier</span>
                         <span className="text-right">Price, PKR today</span>
                         <span>Lead time</span>
                         <span>Stock</span>
                         <span />
+                      </div>
+                    ) : entries.length > 0 ? (
+                      <div className={HEAD_NO_PRICES} aria-hidden="true">
+                        <span>Supplier</span>
+                        <span>Lead time</span>
+                        <span>Stock</span>
                       </div>
                     ) : null}
                     <ul>
@@ -446,10 +464,10 @@ export function ItemsPanel({
                         return (
                           <li
                             key={line.id}
-                            className={cn(ROW, rk && rk.rank === null && 'bg-canvas')}
-                            data-lowest={c.lowest ? '' : undefined}
+                            className={cn(prices ? ROW : ROW_NO_PRICES, rk && rk.rank === null && 'bg-canvas')}
+                            data-lowest={prices && c.lowest ? '' : undefined}
                             data-recommended={mark === 'recommended' ? '' : undefined}
-                            data-compared={c.compared && c.pkrPaisa !== null ? '' : undefined}
+                            data-compared={prices && c.compared && c.pkrPaisa !== null ? '' : undefined}
                             data-ranked={rk ? (rk.rank ?? 'none') : undefined}
                           >
                             {/* The mark sits with the name (no column of its own), so the name keeps its width at 16px text. */}
@@ -462,9 +480,11 @@ export function ItemsPanel({
                                 </span>
                               ) : null}
                             </span>
-                            <span className="text-right max-md:col-span-2">
-                              <PriceCell line={line} c={c} />
-                            </span>
+                            {prices ? (
+                              <span className="text-right max-md:col-span-2">
+                                <PriceCell line={line} c={c} />
+                              </span>
+                            ) : null}
                             <span className="min-w-0 text-fg-2">
                               <span className="sr-only">Lead time: </span>
                               {line.leadTime ?? <span className="text-fg-muted">—</span>}
@@ -481,20 +501,22 @@ export function ItemsPanel({
                                 </>
                               )}
                             </span>
-                            <span className="flex justify-end">
-                              <Button
-                                variant="quiet"
-                                size="sm"
-                                aria-expanded={open}
-                                aria-controls={open ? detailId : undefined}
-                                aria-label={`${open ? 'Hide' : 'Show'} details for ${inquiry.supplierName}`}
-                                onClick={() => setOpened(o => ({ ...o, [line.id]: !open }))}
-                                icon={ChevronDown}
-                                className={cn('[&_svg]:transition-transform', open && '[&_svg]:rotate-180')}
-                              />
-                              <RowMenu rfqId={rfq.id} entry={entry} item={item} />
-                            </span>
-                            {open ? (
+                            {prices ? (
+                              <span className="flex justify-end">
+                                <Button
+                                  variant="quiet"
+                                  size="sm"
+                                  aria-expanded={open}
+                                  aria-controls={open ? detailId : undefined}
+                                  aria-label={`${open ? 'Hide' : 'Show'} details for ${inquiry.supplierName}`}
+                                  onClick={() => setOpened(o => ({ ...o, [line.id]: !open }))}
+                                  icon={ChevronDown}
+                                  className={cn('[&_svg]:transition-transform', open && '[&_svg]:rotate-180')}
+                                />
+                                <RowMenu rfqId={rfq.id} entry={entry} item={item} />
+                              </span>
+                            ) : null}
+                            {open && prices ? (
                               <div id={detailId} className="col-span-full grid gap-2 pb-1 md:col-start-2">
                                 <PriceDetail line={line} inquiry={inquiry} c={c} rates={rates} />
                                 {chip ? <LastPriceChipView chip={chip} /> : null}

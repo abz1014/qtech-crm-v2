@@ -30,6 +30,16 @@ describe('the one green button on the RFQ page', () => {
     expect(quotationSent({ bidState: 'to_bid', quotationCount: 2 })).toBe(true)
   })
 
+  it('an engineer (no prices: owner decision 2026-10-22) is never given Issue quotation or Mark won; the ask or the chase stay', () => {
+    const eng = (over: Partial<PrimaryInput>) => at({ ...over, prices: false })
+    expect(primaryAction(eng({}))).toBe('ask')
+    expect(primaryAction(eng({ sourcingState: 'floated_awaiting', chaseable: 2 }))).toBe('chase')
+    expect(primaryAction(eng({ sourcingState: 'partly_covered', hasPrices: true, chaseable: 1 }))).toBe('chase')
+    expect(primaryAction(eng({ sourcingState: 'covered', hasPrices: true }))).toBe('none')
+    expect(primaryAction(eng({ sourcingState: 'covered', hasPrices: true, quotationCount: 1, bidState: 'bid_sent' }))).toBe('none')
+    expect(primaryAction(eng({ bidState: 'bid_sent' }))).toBe('none')
+  })
+
   it('asks other suppliers when everyone said no', () => {
     expect(primaryAction(at({ sourcingState: 'no_offer_anywhere' }))).toBe('ask')
   })

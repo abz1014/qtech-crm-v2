@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -59,13 +59,13 @@ function Where() {
   return <p data-testid="where">{l.search}</p>
 }
 
-function renderHeader(primary: RfqPrimary, r: RfqHeader = rfq(), facts: Partial<HeaderFacts> = {}) {
+function renderHeader(primary: RfqPrimary, r: RfqHeader = rfq(), facts: Partial<HeaderFacts> = {}, role = 'sales') {
   installFakeDb(() => ({ data: [] }))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   let asked = 0
   render(
     <QueryClientProvider client={client}>
-      <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
+      <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role } }}>
         <MemoryRouter initialEntries={['/rfqs/r-1']}>
           <ToastProvider>
             <RfqHeaderBlock rfq={r} facts={{ primary, itemCount: 3, quotationCount: 0, onAsk: () => asked++, ...facts }} />
@@ -165,6 +165,22 @@ describe('the RFQ header', () => {
     const box = screen.getByRole('region', { name: 'Next step' })
     expect(box).toHaveTextContent('Waiting for prices from 2 suppliers. Chase them.')
     expect(greens().map(b => b.textContent)).toEqual(['Chase suppliers'])
+  })
+
+  it('an engineer has no Issue quotation and no Mark won, in More or beside a closed RFQ (owner decision 2026-10-22)', async () => {
+    const user = userEvent.setup()
+    renderHeader('none', rfq({ state: state({ outcome: 'closed' }), closedOn: '2026-11-30', closeReason: 'price' }), {}, 'engineer')
+    const box = screen.getByRole('region', { name: 'Next step' })
+    expect(within(box).getByRole('button', { name: 'Reopen' })).toBeInTheDocument()
+    expect(within(box).queryByRole('button', { name: 'Mark won' })).toBeNull()
+    cleanup()
+    renderHeader('none', rfq({ state: state({ bid_state: 'bid_sent' }), quotedOn: '2026-11-26' }), { quotationCount: 1 }, 'engineer')
+    expect(greens()).toHaveLength(0)
+    await user.click(screen.getByRole('button', { name: /^More/ }))
+    const menu = screen.getByRole('menu', { name: 'More' })
+    expect(within(menu).queryByRole('menuitem', { name: /Issue quotation|Revise quotation/ })).toBeNull()
+    expect(within(menu).queryByRole('menuitem', { name: /Mark won/ })).toBeNull()
+    expect(within(menu).getByRole('menuitem', { name: /Quotation sent again/ })).toBeInTheDocument()
   })
 
   it('nothing to do: the box is a quiet sentence with no button', () => {

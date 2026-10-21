@@ -369,7 +369,7 @@ export async function getSupplierBrandQuotes(companyId: string): Promise<Record<
  * Everything the supplier's recent quotes, deliveries and "Open with them" panels say, as plain rows
  * (supplierRecord.ts turns them into the display). Reads the newest 60 enquiries and 60 legs with this supplier.
  */
-export async function getSupplierRecord(companyId: string): Promise<SupplierRecordRaw> {
+export async function getSupplierRecord(companyId: string, prices = true): Promise<SupplierRecordRaw> {
   const db = requireSupabase()
   const [inqRes, legRes] = await Promise.all([
     db
@@ -415,7 +415,13 @@ export async function getSupplierRecord(companyId: string): Promise<SupplierReco
       b =>
         db
           .from('supplier_quote_lines')
-          .select('id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, fx_rate_pkr, fx_rate_on, created_at, legacy_flags, imported:legacy_source->imported')
+          // An engineer never fetches a price or a rate (owner decision 2026-10-22).
+          // The rows are read as DbLine below; the cast only gives the typed client a select it can parse.
+          .select(
+            (prices
+              ? 'id, inquiry_id, rfq_item_id, unit_price, currency, lead_time, fx_rate_pkr, fx_rate_on, created_at, legacy_flags, imported:legacy_source->imported'
+              : 'id, inquiry_id, rfq_item_id, currency, lead_time, created_at, legacy_flags, imported:legacy_source->imported') as 'id, inquiry_id, rfq_item_id',
+          )
           .in('inquiry_id', b),
     ),
     inBatches(rfqIds, b => db.from('rfq_items').select('id, rfq_id, position, description, qty, unit, brand_id').in('rfq_id', b)),
@@ -436,15 +442,28 @@ export async function getSupplierRecord(companyId: string): Promise<SupplierReco
   ])
   const brandName = new Map(brandRows.map(b => [b.id, b.name]))
 
-  const lines: RawLine[] = lineRows.map(l => ({
+  type DbLine = {
+    id: string
+    inquiry_id: string
+    rfq_item_id: string
+    unit_price?: number
+    currency: string
+    lead_time: string | null
+    fx_rate_pkr?: number | null
+    fx_rate_on?: string | null
+    created_at: string
+    legacy_flags: string[]
+    imported: unknown
+  }
+  const lines: RawLine[] = (lineRows as unknown as DbLine[]).map(l => ({
     id: l.id,
     inquiryId: l.inquiry_id,
     itemId: l.rfq_item_id,
-    unitPrice: Number(l.unit_price),
+    unitPrice: l.unit_price === undefined ? 0 : Number(l.unit_price),
     currency: l.currency.trim(),
     leadTime: l.lead_time,
-    fxRatePkr: l.fx_rate_pkr === null ? null : Number(l.fx_rate_pkr),
-    fxRateOn: l.fx_rate_on,
+    fxRatePkr: l.fx_rate_pkr === null || l.fx_rate_pkr === undefined ? null : Number(l.fx_rate_pkr),
+    fxRateOn: l.fx_rate_on ?? null,
     enteredOn: toBusinessDate(new Date(l.created_at)),
     hidden: l.legacy_flags.includes('currency_unverified'),
     legacy: l.imported != null,

@@ -21,7 +21,7 @@ engineers never see money (payments, expenses, costs, margins, cash, invoices); 
 | H-1 | High | Any staff member could replace or re-point the PDF of an issued quotation or supplier PO, with any content type | **Fixed in 0057** |
 | M-1 | Medium | A closed month's net income, team credit and target progress still change when order data changes, including by engineers | **Fixed in 0065** (closed-month P&L also frozen at close by 0058) |
 | M-2 | Medium | Any staff member can reassign an order's owner, which decides who is credited with the next payment (targets) | **Fixed in 0065** |
-| M-3 | Medium | Selling prices are hidden from engineers by the app only; the database grants them to all staff (section 10) | **Accepted** by the owner, 2026-10-19 |
+| M-3 | Medium | Selling prices are hidden from engineers by the app only; the database grants them to all staff (section 10) | **Owner decision 2026-10-22** (replaces 2026-10-19): engineers see no prices and the app no longer fetches them; DB grants unchanged (residual) |
 | L-1 | Low | Actor columns can be named by the caller: the chase actor (0048) and every `created_by` | **Fixed in 0065** |
 | L-2 | Low | anon keeps Supabase's default grants on the sequences in `public` | **Fixed in 0065** |
 | L-3 | Low | pg_net's `net.http_get` keeps Supabase's execute grant to anon and authenticated | **Cannot be changed by the project** (platform grant); not reachable |
@@ -123,6 +123,30 @@ price and spread. The RFQ page already shows the Quotations panel, with prices, 
 admin-and-sales tables (or behind definer functions) is a schema change across RFQs, quotations and orders, and
 section 10 must change first. If not, the A8 wording should say the rule is a display rule. No migration was made.
 
+**Owner decision 2026-10-22 (replaces the 2026-10-19 acceptance below).** Engineers see NO prices anywhere: selling prices,
+quote prices, supplier prices, totals, exchange rates and any PKR or currency amount, on every screen, dialog, PDF button and
+palette result. They still see items, quantities, brands, suppliers' names, dates, sites and jobs. The app now also stops
+FETCHING prices for an engineer (one rule, `seesPrices(role)` in `src/app/session.ts`):
+
+- RFQ page: the quote lines are read without `unit_price` and the rates (`listInquiries`), the quotations without `lines`,
+  `net_total` and `gst_total`; `rank_item_quotes`, `supplier_item_memory`, `customer_price_memory`, `v_fx_latest` and the
+  quote-items read are never requested. The items panel shows who replied with lead time and stock only; replies are read-only
+  (entering one is entering a price); Issue quotation, Revise, Mark won, Open PDF and Share are admin and sales only, and the
+  `?issue=1` / `?won=1` links open nothing for an engineer.
+- New RFQ and Ask more suppliers: no supplier memory (prices) is read. Capture: no "This is a supplier's reply".
+- Company page (supplier record): no price or rate column is read or shown.
+- Today: no target tile and no `my_target_progress` read. Settings: Exchange rates is admin and sales (no-access page for an
+  engineer; the Settings home shows no rates).
+- Orders, Money, invoices, POs and the search palette were already gated and are unchanged.
+
+**Residual (accepted until a follow-up).** The database grants are unchanged: section 10 still lets an engineer read
+`supplier_quote_lines.unit_price`, `rfq_items.quoted_unit_price_net`, `quotations` lines and totals, `order_items` prices,
+`purchase_orders` totals, the money columns of `v_order_state` / `v_order_items_total`, the RPCs above and the stored PDFs in
+`generated-docs`, through the REST API with their own token. Closing that is the column-level move described under Fix
+(admin-and-sales tables, or role-guarded views and definer functions). The e2e suites prove the app side: verify-roles crawls
+every route as the engineer with no price allowance (any amount on screen, or any selling or supplier price in an API answer,
+fails) and the engineer journey and verify/roles walk refuse every price read; the API column sweep reports the residual.
+
 ## L-1 (Low): actor columns can be named by the caller
 
 The 0048 triggers set `last_asked_by` / `last_chased_by` only when the update does not name the column, so any staff
@@ -210,9 +234,10 @@ and S14 has the new rows.
 - **M-2.** `orders.owner_id` and `rfqs.owner_id` are changed by an admin only. The RFQ is included because convert
   copies the RFQ owner into the order. Sales may take an order or RFQ that has no owner (NULL to themselves). The app
   only sets owners when it creates a row.
-- **M-3.** Accepted. On 2026-10-19 the owner decided that engineers may see selling prices on quotation screens, so the
-  database keeps section 10 as it is. `rank_item_quotes` returning NULL selling price and spread to engineers stays as
-  a display rule.
+- **M-3.** Owner decision 2026-10-22 (replaces the 2026-10-19 acceptance, when engineers could see selling prices on
+  quotation screens): engineers see no prices at all, and the app does not fetch them for an engineer (see the M-3 section).
+  The database keeps section 10 as it is for now: that is the recorded residual. `rank_item_quotes` returning NULL selling
+  price and spread to engineers stays.
 - **L-1.**
   - `created_by`, on every table that has it, is set to the caller on insert and can never be rewritten (one trigger
     per table, `<table>_force_created_by`).
@@ -295,7 +320,8 @@ The values are what this project needs; change any setting that differs.
 - 0039 `users.phone`: a column grant plus a policy (own row, or admin); nothing else on `users` is writable.
 - 0041 `customer_price_memory`, 0043 `po_line_prefill`, 0049 `rank_item_quotes` / `supplier_item_memory`, 0050
   `split_order_item` / `convert_rfq_to_order`, 0054 `search_all`: SECURITY INVOKER, empty search_path, no anon execute,
-  no money table read (subject to M-3 for selling prices).
+  no money table read (subject to M-3: the database still returns selling and supplier prices to an engineer; the app never
+  asks, 2026-10-22).
 - 0042 order attachments: one parent per row, bucket matches parent, the policy for non-invoice, non-expense parents
   is "every active role", as section 10 says.
 - 0044 `next_invoice_number`: admin and sales only (42501 for others).

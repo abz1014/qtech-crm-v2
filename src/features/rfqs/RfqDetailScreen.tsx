@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { CloudOff, FileQuestion, RefreshCw, X } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
+import { useSeesPrices } from '@/app/session'
 import { recordRfqVisit } from '@/lib/capture/recents'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
@@ -54,6 +55,10 @@ import { useWonDialog } from '@/features/orders/useWonDialog'
  *                mark quotation sent (no PDF): 2 taps (More, choose). close or lose: 2 taps (More, choose the reason).
  *
  * A missing exchange rate never blocks anything (BUILD_PLAN A3/A4): the line shows "not compared, no rate".
+ *
+ * An engineer (owner decision 2026-10-22) sees no price on this page and none is fetched: the quote lines come without price or
+ * rate, and the exchange rates, the ranking, the supplier memory and the quotations' lines and totals are never asked for. Who
+ * replied, with lead time and stock, stays. Issue quotation and Mark won (and their ?issue=1 / ?won=1 links) are admin and sales only.
  */
 
 function Shell({ children }: { children: ReactNode }) {
@@ -112,13 +117,14 @@ export default function RfqDetailScreen() {
   // Start the id-only reads now, in the same round as the header, instead of when the panels mount after it (P04: they were a second and
   // third wave). The panels read the same query keys, so they find the data already there. Nothing here needs the header's data.
   const client = useQueryClient()
+  const prices = useSeesPrices()
   useEffect(() => {
     if (!id) return
     void client.prefetchQuery({ queryKey: qk.rfqs.part(id, 'clarifications'), queryFn: () => rfqApi.listClarifications(id) })
     void client.prefetchQuery({ queryKey: qk.rfqs.part(id, 'attachments'), queryFn: () => rfqApi.listAttachments(id) })
-    void client.prefetchQuery({ queryKey: qk.fx.latest(), queryFn: rfqApi.listFxLatest, staleTime: 60_000 })
+    if (prices) void client.prefetchQuery({ queryKey: qk.fx.latest(), queryFn: rfqApi.listFxLatest, staleTime: 60_000 })
     void client.prefetchQuery({ queryKey: qk.intake.suppliers(), queryFn: rfqApi.listSupplierCandidates, staleTime: 60_000 })
-  }, [id, client])
+  }, [id, client, prices])
 
   // Capture offers recently opened RFQs first (R22): note this visit, on this device only.
   const openedId = header.data?.id
@@ -181,6 +187,7 @@ function Loaded({
   inquiries: ReturnType<typeof useRfqInquiries>
 }) {
   const [wonOpen, setWonOpen] = useWonDialog()
+  const prices = useSeesPrices()
   const fx = useFxLatest()
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
   const itemList = useMemo<RfqItemRow[]>(() => items.data ?? [], [items.data])
@@ -243,6 +250,7 @@ function Loaded({
           quotationCount,
           itemCount: itemList.length,
           chaseable: chaseSuppliers,
+          prices,
         })
   const awaiting = inquiryList.filter(i => i.sentOn && !i.noOfferOn && i.lines.length === 0).length
   const facts: HeaderFacts = { primary, itemCount: itemList.length, quotationCount, onAsk: () => setFloating(true), awaiting }
@@ -254,7 +262,7 @@ function Loaded({
     <Shell>
       <RfqHeaderBlock rfq={rfq} facts={facts} />
       {/* data-slot="convert-dialog" (O01): the Create order dialog, open while the address carries ?won=1. */}
-      {wonOpen && inquiries.data ? <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} /> : null}
+      {wonOpen && prices && inquiries.data ? <ConvertDialog rfq={rfq} inquiries={inquiries.data} rates={rates} onClose={() => setWonOpen(false)} /> : null}
       {loadError ? (
         <p className="mt-3 text-sm text-fg-muted" role="status">
           {`Showing the details saved on this device at ${timeOf(headerAt)}. Replies and questions did not load.`}

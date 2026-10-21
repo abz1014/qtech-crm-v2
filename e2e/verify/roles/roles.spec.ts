@@ -177,7 +177,7 @@ test('order page by role: sales see no payment action or margin; the engineer se
   await eng.close()
 })
 
-test('an engineer walking every screen asks for no money and never sees a spread', async ({ browser }, info) => {
+test('an engineer walking every screen asks for no money and never sees a price or a spread', async ({ browser }, info) => {
   const won = await quotedRfq({ items: [{ description: 'Engineer walk radar gauge', qty: 2, price: 87654.32, supplierPrice: 61000 }] })
   const second = await supplier('Verify Walk Second Supplier', 'Pakistan')
   await quote(won.rfq.id, second, [{ itemId: won.items[0].id, price: 63500 }], 'PKR')
@@ -192,11 +192,19 @@ test('an engineer walking every screen asks for no money and never sees a spread
     await page.locator('#main').waitFor()
     await page.waitForLoadState('networkidle')
   }
-  // The RFQ page: supplier prices and the rank are fine for an engineer; the spread (selling vs buying) is not.
+  // The RFQ page (owner decision 2026-10-22: engineers see no prices): who quoted is there, no price, no rank, no spread.
   await page.goto(`/rfqs/${won.rfq.id}`)
   await page.locator('#main').waitFor()
-  await expect(page.locator('li[data-ranked]').first()).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  const item = page.getByRole('article', { name: 'Item 1' })
+  await expect(item).toContainText('Verify Lahore Stockist')
+  await expect(item).toContainText('Verify Walk Second Supplier')
+  await expect(page.locator('li[data-ranked]')).toHaveCount(0)
   await expect(page.getByText(ROLES.rfq.spread)).toHaveCount(0)
+  const rfqText = await page.locator('#main').innerText()
+  expect.soft(rfqText, 'the engineer RFQ page shows no PKR amount').not.toMatch(/PKR\s*[\d≈]|≈\s*PKR/)
+  for (const f of ['87,654', '61,000', '63,500']) expect.soft(rfqText, `the engineer RFQ page must not show ${f}`).not.toContain(f)
+  expect(log.urls.filter(u => /unit_price|fx_rate_pkr|net_total|gst_total|quoted_unit_price_net/.test(u)), 'no price column asked for on the RFQ page').toEqual([])
   // The search palette, typed with the order number.
   await page.keyboard.press('Control+k')
   await page.getByRole('combobox').fill(`ORD-${String(o.order.number).padStart(4, '0')}`)
