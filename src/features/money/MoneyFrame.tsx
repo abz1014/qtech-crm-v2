@@ -12,6 +12,7 @@ import { useReconciliationInput } from '@/features/money/hooks'
 import { useGstRegister } from '@/features/money/invoices/hooks'
 import { needsAttention } from '@/features/money/invoices/model'
 import { MONEY_TABS, moneyTabLabel, type MoneyTab } from '@/features/money/moneyTabs'
+import { openFindings } from '@/features/money/exceptions/checked'
 import { useClosedMonths, useMonthEndStatus } from '@/features/money/monthEnd/hooks'
 import { buildChecklist, checksWithItems, defaultMonthEndMonth, isMonthKey } from '@/features/money/monthEnd/model'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
@@ -60,7 +61,7 @@ export function MoneyFrame({
   const closed = useClosedMonths(isAdmin)
   const monthOpen = closed.data ? !closed.data.some(c => c.key === monthEnd) : false
   const recon = useReconciliationInput(isAdmin && monthOpen)
-  const things = useMemo(() => (recon.data ? computeReconciliationExceptions(recon.data).length : 0), [recon.data])
+  const things = useMemo(() => (recon.data ? openFindings(session.status === 'signed-in' ? session.user.id : null, computeReconciliationExceptions(recon.data)).length : 0), [recon.data, session])
   const counts: Record<string, number | undefined> = {
     receivables: todayView.view?.active.filter(i => i.rule === 'payment_overdue').length,
     'gst-register': register.data?.filter(needsAttention).length,
@@ -100,13 +101,13 @@ export function MoneyFrame({
           }
         />
         {phone ? (
-          <nav aria-label="Money views" data-testid="money-tabs-phone" className="flex min-w-0 gap-[2px] rounded bg-selected p-[2px]">
+          <nav aria-label="Money views" className="flex min-w-0 gap-[2px] rounded bg-selected p-[2px]" data-testid="money-tabs-phone">
             {phoneTabs.map(t => (
               <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} n={counts[t.key]} phone />
             ))}
           </nav>
         ) : (
-          <nav aria-label="Money views" data-testid="money-tabs" className="inline-flex max-w-full gap-[2px] justify-self-start rounded bg-selected p-[2px]">
+          <nav aria-label="Money views" className="inline-flex max-w-full gap-[2px] justify-self-start rounded bg-selected p-[2px]" data-testid="money-tabs">
             {tabs.map(t => (
               <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} n={counts[t.key]} />
             ))}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { marginNote, marginTotals, sortMargins, type MarginRow } from '@/features/money/margins/model'
+import { marginNote, marginPct, marginTotals, sortMargins, type MarginRow } from '@/features/money/margins/model'
 
 const row = (n: number, over: Partial<MarginRow> = {}): MarginRow => ({
   orderId: `o${n}`,
@@ -36,9 +36,28 @@ describe('marginTotals (only costs-complete orders are added up)', () => {
 })
 
 describe('sortMargins', () => {
-  it('lists the newest order first', () => {
+  it('lists the newest order first within a group', () => {
     const list = sortMargins([row(1, { orderedOn: '2026-10-01' }), row(2, { orderedOn: '2026-11-05' }), row(3, { orderedOn: '2026-11-05' })])
     expect(list.map(r => r.orderNumber)).toEqual([3, 2, 1])
+  })
+  it('puts problems first: a loss, then no margin, then not final, then final (round 3)', () => {
+    const list = sortMargins([
+      row(1, { orderedOn: '2026-11-09' }),
+      row(2, { state: 'provisional', orderedOn: '2026-11-08' }),
+      row(3, { state: 'basis_unknown', margin: null, netSale: null, orderedOn: '2026-11-07' }),
+      row(5, { margin: -584000, orderedOn: '2026-09-01' }),
+    ])
+    expect(list.map(r => r.orderNumber)).toEqual([5, 3, 2, 1])
+  })
+})
+
+describe('marginPct', () => {
+  it('is the margin over the net sale, to one decimal, by hand', () => {
+    expect(marginPct({ margin: 400, netSale: 1000 })).toBe('40.0%')
+    expect(marginPct({ margin: -584000, netSale: 896000 })).toBe('-65.2%') // -0.65178... rounds to -65.2
+    expect(marginPct({ margin: 1185000, netSale: 1313000 })).toBe('90.3%') // 0.90251... rounds to 90.3
+    expect(marginPct({ margin: null, netSale: 1000 })).toBeNull()
+    expect(marginPct({ margin: 10, netSale: 0 })).toBeNull()
   })
 })
 
