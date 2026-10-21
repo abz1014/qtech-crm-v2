@@ -163,8 +163,8 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     await expect(d).not.toContainText('Costs complete') // a done state shows no chip (R2-13)
     const p = rowOf(m.prov)
     await expect(p).toContainText(ordRef(m.prov.order.number))
-    await expect(p).toContainText('Margin not final')
-    await expect(p.locator('[data-provisional]')).toHaveCount(2) // cost and margin
+    await expect(p).toContainText('Not final')
+    await expect(p.getByTestId('margin-value')).toContainText('(est.)') // round 3: an estimate, greyed
     // Things to check (the old Exceptions tab) is one row of the Month end checklist: one tap from there.
     await page.goto(`/money/month-end?month=${STMT.key}`)
     const row = page.getByTestId('check-things_to_check')
