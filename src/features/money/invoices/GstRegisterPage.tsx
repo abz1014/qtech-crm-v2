@@ -277,6 +277,7 @@ export function GstRegisterPage() {
 
       <DataTable
         label="GST register"
+        sortParam="sort"
         columns={columns}
         rows={shown}
         getRowId={r => r.invoiceId}
@@ -292,7 +293,8 @@ export function GstRegisterPage() {
             : null
         }
         toolbar={({ selectedCount }) => (
-          <div className="grid gap-3">
+          // The full width of the card and no wider (min-w-0): on a phone the search and the view select stay on screen.
+          <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
             {header}
             {controls}
             {selectedCount > 0 ? (

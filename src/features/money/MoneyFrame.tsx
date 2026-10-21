@@ -75,10 +75,12 @@ export function MoneyFrame({
   const phoneTabs = crowded ? tabs.filter(t => t.key !== 'reports') : tabs
   const reportsTab = phone && crowded ? tabs.find(t => t.key === 'reports') : undefined
   return (
-    <div className="grid w-full min-w-0 content-start gap-4 px-4 pb-12 pt-4 md:px-8 md:pt-6">
+    // One column no wider than the screen (minmax(0, 1fr)): a wide child (a register's table) scrolls inside its own card
+    // instead of stretching the column, and every card with it, past the right edge of a phone.
+    <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-4 md:px-8 md:pt-6">
       {/* The phone bar's title. Rendered before the page, so a sub-page's own bar (MoneySubHeader) wins. */}
       <FrameBar title={heading} />
-      <div className="grid gap-3 md:gap-4">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3 md:gap-4">
         {/* The list-page head (spec 5.2): the view's name and the page's one green action (`actions`). */}
         <PageHeader
           title={heading}
