@@ -285,7 +285,7 @@ begin
   end if;
   if v_from.grp <> v_into.grp then
     select min(date_trunc('month', e.paid_on)::date) into v_closed
-    from public.expenses e where e.category_id = v_from.id and public.month_is_closed(e.paid_on);
+    from public.expenses e where e.category_id = v_from.id and exists (select 1 from public.closed_months m where m.month = date_trunc('month', e.paid_on)::date);   -- invoker: the admin reads closed_months
     if v_closed is not null then
       raise exception '"%" has expenses in % and that month is closed. Merging it into a category of another kind would change that month''s profit. Pick a category of the same kind, or reopen the month first.',
         v_from.name, to_char(v_closed, 'FMMonth YYYY') using errcode = '23514';
