@@ -317,7 +317,11 @@ test('BUG-RV-04: the command palette\'s recent items are cleared on sign-out and
   await palette.getByRole('combobox').fill(world.invoice.number)
   await palette.getByRole('option', { name: new RegExp(world.invoice.number) }).first().click()
   await expect(page).toHaveURL(/\/money\/gst-register\?invoice=/)
+  // The invoice opens in a sheet over the register; wait for it, or Escape lands before it and the sheet hides the account menu.
+  const sheet = page.getByRole('dialog', { name: new RegExp(`Invoice ${world.invoice.number}`) })
+  await expect(sheet).toBeVisible()
   await page.keyboard.press('Escape')
+  await expect(sheet).toBeHidden()
   await signOut(page)
   // Recents are kept per person (qtech.palette.recent.<user id>); sign-out removes every one, and the old shared key.
   const after = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.palette.recent')).join(',') || null)
