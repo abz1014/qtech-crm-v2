@@ -125,10 +125,15 @@ describe('RFQ board', () => {
     expect(within(rows[1]).getByText('Needs suppliers')).toBeInTheDocument()
     expect(within(rows[2]).getByText('Waiting for prices')).toBeInTheDocument()
     expect(within(rows[2]).getByText('2 of 5 items priced · waiting on the customer for 2 answers')).toBeInTheDocument()
-    // the row leads with the company and what was asked, then the code and their ref
-    expect(within(rows[2]).getByText('Cerabar PMC71 pressure transmitter + 4 more')).toBeInTheDocument()
-    expect(within(rows[2]).getByText('· RFQ-0177')).toBeInTheDocument()
-    expect(within(rows[2]).getByText('their ref ENQ-2211', { exact: false })).toBeInTheDocument()
+    // the row leads with the company and what was asked, then, on a line of their own (they never share one to be drawn over each
+    // other, UX audit 2026-10-22 L1), the code and their ref; the cell wraps instead of being cut
+    const asked = within(rows[2]).getByText('Cerabar PMC71 pressure transmitter + 4 more')
+    const refs = rows[2].querySelector('[data-refs]')
+    expect(refs).toHaveTextContent(/^RFQ-0177 · their ref ENQ-2211$/)
+    expect(asked.contains(refs)).toBe(false)
+    expect(asked.parentElement).toBe(refs?.parentElement)
+    expect(asked.parentElement).toHaveClass('whitespace-normal')
+    expect(within(rows[2]).getByText('Waiting for prices').closest('[data-next-step]')).toHaveClass('whitespace-normal')
     expect(screen.getAllByRole('columnheader').map(h => h.textContent)).toEqual(['RFQ', 'Next step', 'Due', 'Owner'])
   })
 
@@ -247,6 +252,33 @@ describe('RFQ board toolbar', () => {
     await user.click(screen.getByRole('radio', { name: /^Closed/ }))
     expect(await screen.findByRole('table', { name: 'Closed and won RFQs' })).toBeInTheDocument()
     expect(screen.getByTestId('where-board')).toHaveTextContent('show=closed')
+  })
+
+  it('Closed says each outcome in words, links a won RFQ to its order, dates the close, and counts the closed list in the subline', async () => {
+    const lost = state({ rfq_id: 'l', number: 14, outcome: 'closed', close_reason: 'price', closed_on: '2026-10-04', companies: { name: 'Old Mill' } })
+    const won = state({ rfq_id: 'w', number: 15, outcome: 'won', companies: { name: 'New Mill' } })
+    const d = installFakeDb((c: FakeCall): FakeResult => {
+      if (c.target === 'v_rfq_state') return opArgs(c, 'in') ? { data: [lost, won], count: 8 } : { data: OPEN }
+      if (c.target === 'orders') return { data: [{ id: 'o12', number: 12, rfq_id: 'w', ordered_on: '2026-10-02' }] }
+      return { data: [] }
+    })
+    renderBoard('admin', '/rfqs?show=closed')
+    const table = await screen.findByRole('table', { name: 'Closed and won RFQs' })
+    expect(await within(table).findByRole('link', { name: 'ORD-0012' })).toHaveAttribute('href', '/orders/o12')
+    const rows = within(table).getAllByRole('row').slice(1)
+    expect(rows[0]).toHaveTextContent('Lost on price')
+    expect(rows[0]).toHaveTextContent('Sun 4 Oct')
+    expect(rows[1]).toHaveTextContent('Won → ORD-0012')
+    expect(rows[1]).toHaveTextContent('Fri 2 Oct')
+    // no grey "Closed" chip repeated on every row
+    expect(within(table).queryByText('Closed', { exact: true })).toBeNull()
+    expect(within(table).getAllByRole('columnheader').map(h => h.textContent)).toEqual(['RFQ', 'Outcome', 'Closed on', 'Received', 'Owner'])
+    expect(screen.getByText('8 closed')).toBeInTheDocument()
+    expect(screen.queryByText(/open ·/)).toBeNull()
+    // only the won RFQ's live order is read
+    const orders = d.calls.find(c => c.target === 'orders')!
+    expect(opArgs(orders, 'in')).toEqual(['rfq_id', ['w']])
+    expect(opArgs(orders, 'is')).toEqual(['cancelled_on', null])
   })
 
   it('the old ?tab=closed address still lands on Closed; the owner switch is not drawn there (the Closed list is everyone\'s)', async () => {

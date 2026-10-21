@@ -18,7 +18,7 @@ import {
   type NextStep,
   type OwnerFilter,
 } from '@/features/rfqs/board/model'
-import { ClosedCard, DueCell, NextStepCell, OpenCard, OutcomeCell, OwnerCell, ReceivedCell, RfqCell } from '@/features/rfqs/board/BoardParts'
+import { ClosedCard, ClosedOnCell, DueCell, NextStepCell, OpenCard, OutcomeCell, OwnerCell, ReceivedCell, RfqCell } from '@/features/rfqs/board/BoardParts'
 import { StepFilter } from '@/features/rfqs/board/StepFilter'
 import { useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
@@ -130,8 +130,9 @@ export function BoardPage() {
   const closedColumns = useMemo<Column<BoardRow>[]>(
     () => [
       { id: 'rfq', header: 'RFQ', value: r => r.companyName, cell: r => <RfqCell row={r} /> },
-      { id: 'outcome', header: 'Outcome', value: r => r.outcome, width: 220, cell: r => <OutcomeCell row={r} /> },
-      { id: 'received', header: 'Received', kind: 'date', value: r => r.receivedOn, width: 150, hideBelowMd: true, cell: r => <ReceivedCell row={r} /> },
+      { id: 'outcome', header: 'Outcome', value: r => r.outcome, cell: r => <OutcomeCell row={r} /> },
+      { id: 'closedOn', header: 'Closed on', kind: 'date', value: r => r.closedOn ?? null, width: 140, cell: r => <ClosedOnCell row={r} /> },
+      { id: 'received', header: 'Received', kind: 'date', value: r => r.receivedOn, width: 140, hideBelowLg: true, cell: r => <ReceivedCell row={r} /> },
       { id: 'owner', header: 'Owner', value: r => r.ownerName, width: 130, hideBelowMd: true, cell: r => <OwnerCell row={r} /> },
     ],
     [],
@@ -244,7 +245,12 @@ export function BoardPage() {
     </div>
   )
 
-  const lede = open.isSuccess
+  // On Closed the subline counts that list ("8 closed"), not the open work.
+  const lede = closedTab
+    ? closed.isSuccess && !searched
+      ? `${closed.data.total} closed`
+      : 'Won and closed RFQs, newest first.'
+    : open.isSuccess
     ? total === 0
       ? 'Nothing is waiting on you.'
       : [`${total} open`, needYou ? `${needYou} need you` : null, overdue ? `${overdue} overdue` : null].filter(Boolean).join(' · ')

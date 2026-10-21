@@ -138,6 +138,17 @@ test.describe('open RFQs', () => {
     await expect(overdue.getByText('Item 1 of priority', { exact: true })).toBeVisible() // what was asked, before the code
     await expect(overdue).toContainText(rfqRef(fx.numbers.priority))
     await expect(overdue).toContainText(`their ref BRD-${fx.tag}-P`)
+    // L1 (UX audit 2026-10-22): what was asked and "RFQ-0008 · their ref ..." are separate lines, never drawn over each other,
+    // and no cell text runs out of its cell (the Next step detail wraps instead of being cut).
+    const boxes = await overdue.evaluate(tr => {
+      const r = (el: Element | null) => el?.getBoundingClientRect() ?? null
+      const asked = r(tr.querySelector('[data-asked]'))
+      const refs = r(tr.querySelector('[data-refs]'))
+      const cut = Array.from(tr.querySelectorAll('td')).filter(td => td.scrollWidth > td.clientWidth + 1).length
+      return { askedBottom: asked?.bottom ?? 0, refsTop: refs?.top ?? -1, cut }
+    })
+    expect(boxes.refsTop).toBeGreaterThanOrEqual(boxes.askedBottom - 1)
+    expect(boxes.cut).toBe(0)
     await expect(row(page, 'awaiting').getByText('Waiting for prices', { exact: true })).toBeVisible()
     await expect(row(page, 'awaiting').getByText('Asked 1 supplier', { exact: true })).toBeVisible()
     await expect(row(page, 'nooffer').getByText('Every supplier asked said no', { exact: true })).toBeVisible()
@@ -285,8 +296,11 @@ test.describe('closed and won', () => {
     await expect(page.getByText(/^Showing 1 to 25 of \d+$/)).toBeVisible()
     const body = page.getByRole('table', { name: 'Closed and won RFQs' }).locator('tbody tr[data-di]')
     await expect(body).toHaveCount(25)
-    await expect(body.first()).toContainText('Closed')
-    await expect(body.first()).toContainText('Price')
+    // L3: the outcome in words, with the day it closed; no grey "Closed" chip on every row; the subline counts this list
+    await expect(body.first()).toContainText('Lost on price')
+    await expect(page.getByRole('table', { name: 'Closed and won RFQs' }).getByText('Closed', { exact: true })).toHaveCount(0)
+    await expect(page.getByRole('columnheader', { name: 'Closed on' })).toBeVisible()
+    await expect(page.getByText(/^\d+ closed$/)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Previous' })).toBeDisabled()
     await review(page, 'board-closed-1440')
 
@@ -450,4 +464,76 @@ test.describe('Value column (O-11)', () => {
     expect(urls.some(u => u.includes('quoted_unit_price_net'))).toBe(false)
     await ctx.close()
   })
+})
+
+test.describe('long real-world text (live import, 2026-10-22)', () => {
+  // Imported RFQs carry 150+ character descriptions, part numbers with no spaces, long customer refs and due dates 600+ days
+  // past. Nothing may be drawn over its neighbour or cut off, at laptop widths and on phones.
+  for (const [w, h] of [
+    [1366, 768],
+    [1920, 1080],
+    [375, 812],
+    [320, 640],
+  ] as const) {
+    test(`a long row stays readable at ${w}`, async ({ page }) => {
+      const tag = Math.random().toString(36).slice(2, 6)
+      const name = `Board long ${tag} Overseas Logistics and Chemicals (Private) Limited`
+      const company = await createCompany(name)
+      const rfq = (
+        await must(
+          rest<{ id: string }[]>('admin', 'rfqs', {
+            method: 'POST',
+            body: { company_id: company.id, owner_id: admin, due_on: karachiDay(-601), customer_ref: `QTS-OLC-4500-000001-RFQ-${tag}` },
+          }),
+        )
+      )[0]
+      const description =
+        'ROSEMOUNT 3051CD2A22A1AM5B4Q4 differential pressure transmitter, 0-250 inH2O, 316L SST isolating diaphragms, HART 4-20 mA, ' +
+        'with 3-valve manifold 305RC32B11B4 and SS mounting bracket B4, tag PDT-4401A/B, certificate 3.1 required'
+      await must(
+        rest('admin', 'rfq_items', {
+          method: 'POST',
+          body: [
+            { rfq_id: rfq.id, position: 0, description: `SIEMENS7MF4433-1DA02-2AB6-ZA01+Y01+Y15-${tag}-SPARE-TRANSMITTER-ASSEMBLY ${description}`, qty: 2 },
+            { rfq_id: rfq.id, position: 1, description, qty: 1 },
+          ],
+          prefer: 'return=minimal',
+        }),
+      )
+      await page.setViewportSize({ width: w, height: h })
+      await openAs(page, 'admin', '/rfqs?owner=all')
+      const r = page.getByRole('row').filter({ hasText: `Board long ${tag}` }).first()
+      await r.scrollIntoViewIfNeeded()
+      await expect(r).toBeVisible()
+      await expect(r.getByText('601 days overdue')).toBeVisible()
+      const found = await r.evaluate(tr => {
+        // Every painted text box in the row, from the text nodes themselves (an element can clip while its text overflows).
+        const boxes: { x: number; y: number; r: number; b: number; node: Text }[] = []
+        const walk = document.createTreeWalker(tr, NodeFilter.SHOW_TEXT)
+        for (let n = walk.nextNode() as Text | null; n; n = walk.nextNode() as Text | null) {
+          if (!n.data.trim()) continue
+          const range = document.createRange()
+          range.selectNodeContents(n)
+          for (const q of Array.from(range.getClientRects())) if (q.width > 0 && q.height > 0) boxes.push({ x: q.left, y: q.top, r: q.right, b: q.bottom, node: n })
+        }
+        let overlaps = 0
+        for (let i = 0; i < boxes.length; i++)
+          for (let j = i + 1; j < boxes.length; j++) {
+            const a = boxes[i]
+            const c = boxes[j]
+            if (a.node === c.node) continue
+            if (Math.min(a.r, c.r) - Math.max(a.x, c.x) > 2 && Math.min(a.b, c.b) - Math.max(a.y, c.y) > 2) overlaps++
+          }
+        const cut = Array.from(tr.querySelectorAll<HTMLElement>('td, td *')).filter(el => {
+          const s = getComputedStyle(el)
+          return (s.overflowX === 'hidden' || s.overflowX === 'clip') && s.textOverflow !== 'ellipsis' && el.scrollWidth > el.clientWidth + 1
+        }).length
+        return { overlaps, cut, rightEdge: Math.max(...boxes.map(b => b.r)), docWidth: document.documentElement.scrollWidth }
+      })
+      expect(found.overlaps).toBe(0)
+      expect(found.cut).toBe(0)
+      expect(found.rightEdge).toBeLessThanOrEqual(w)
+      expect(found.docWidth).toBeLessThanOrEqual(w)
+    })
+  }
 })

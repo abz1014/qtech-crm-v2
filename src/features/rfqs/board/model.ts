@@ -43,6 +43,10 @@ export interface BoardRow {
   bidState: BidState
   /** When the quotation was sent (rfqs.quoted_on), for "Sent Thu 26 Nov". */
   quotedOn: string | null
+  /** Closed list only: the day it was closed (rfqs.closed_on), or for a won RFQ the day its order was placed. */
+  closedOn?: string | null
+  /** Closed list only: the live order a won RFQ became, for "Won → ORD-0012". */
+  wonOrder?: { id: string; number: number } | null
 }
 
 /*
@@ -216,14 +220,22 @@ export function dueText(r: Pick<BoardRow, 'dueOn' | 'daysToDue' | 'isOverdue'>):
   return { date, hint: dueWord(n), tone: 'normal' }
 }
 
+/** The closed list's outcome in words (UX audit 2026-10-22, L3): why it was closed, as a sentence, not a grey "Closed" chip. */
 export const CLOSE_REASON: Record<string, string> = {
   competitor: 'Lost to a competitor',
-  price: 'Price',
+  price: 'Lost on price',
   no_reply_to_clarification: 'No reply to our question',
   customer_cancelled: 'Customer cancelled',
   could_not_source: 'Could not source',
   we_were_late: 'We were late',
   other: 'Other reason',
+}
+
+/** "Lost on price", "Customer cancelled", or "Won" (the order code is drawn beside it as a link). */
+export function outcomeText(r: Pick<BoardRow, 'outcome' | 'closeReason'>): string {
+  if (r.outcome === 'won') return 'Won'
+  if (r.outcome === 'open') return 'Open'
+  return r.closeReason ? (CLOSE_REASON[r.closeReason] ?? 'Other reason') : 'Closed, no reason given'
 }
 
 export const PAGE_SIZE = 25
