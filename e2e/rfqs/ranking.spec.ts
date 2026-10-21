@@ -305,7 +305,9 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfqId}`)
     const art = page.getByRole('article', { name: 'Item 1' })
     await expect(art.locator('li[data-ranked]')).toHaveCount(4)
-    await expect(art.locator('li[data-ranked]').first()).toContainText(s.bravo.name)
+    // Cheapest first (grade-B C1): Apex leads the list, Bravo keeps the Recommended mark.
+    await expect(art.locator('li[data-ranked]').first()).toContainText(s.apex.name)
+    await expect(rowOf(page, 'Item 1', s.bravo.name)).toHaveAttribute('data-recommended', '')
     // Echo quotes far below everyone (its currency is picked with one chip tap, never typed): it becomes rank 1 without a reload.
     // The reply opens from the supplier's "Enter reply" in Suppliers asked, in a dialog named after them (grade-B R2/R4).
     await page.getByRole('button', { name: `Enter reply, ${echo.name}`, exact: true }).click()
@@ -315,6 +317,7 @@ test.describe('R25 ranked comparison on the RFQ page', () => {
     await region.getByRole('button', { name: 'Save reply' }).click()
     await expect(art.locator('li[data-ranked]')).toHaveCount(5)
     await expect(art.locator('li[data-ranked]').first()).toContainText(echo.name)
+    await expect(rowOf(page, 'Item 1', echo.name)).toHaveAttribute('data-recommended', '')
   })
 })
 

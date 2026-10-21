@@ -338,6 +338,10 @@ test.describe("can't quote (Enter reply, Can't quote, the reason)", () => {
     const after = await inquiryOf(s.germany.inquiryId)
     expect(after.notes).toBeNull()
     expect(after.no_offer_on).toBeNull()
+    // The reply dialog says it at once; the page behind it (hidden while the dialog is open) shows it on the item once it closes.
+    await expect(r).toContainText("Can't quote: Item discontinued")
+    await page.keyboard.press('Escape')
+    await expect(r).toHaveCount(0)
     await expect(page.getByRole('article', { name: 'Item 2' }).locator(`[data-declined="${s.germany.id}"]`)).toContainText('Item discontinued')
   })
 })
@@ -902,6 +906,8 @@ test.describe('the side column at 1366 (UX audit: never longer than the page bes
     ], prefer: 'return=minimal' }))
     await page.setViewportSize({ width: 1366, height: 768 })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    // Prices are in, so no chase card shows by itself (round 3 R): open the waiting supplier's message so the rail is at its fullest.
+    await page.getByRole('button', { name: `Show message, ${s.china.name}`, exact: true }).click()
     await expect(page.locator(`[data-chase-card="${s.china.id}"]`)).toBeVisible()
     await expect(page.locator('[data-slot="clarifications"]')).toContainText('Is the line size DN50 or DN80?')
     const h = await page.evaluate(() => {

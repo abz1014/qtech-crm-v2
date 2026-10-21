@@ -178,6 +178,8 @@ export const MONEY = {
   order: {
     createInvoice: 'Create invoice',
     recordPayment: 'Record payment',
+    /** The order's More menu: Record payment lives there once nothing is owed (an advance, more than is owed; UX audit P2). */
+    more: /^More( actions)?$/,
   },
   invoice: {
     dialog: 'Create invoice',
@@ -336,7 +338,8 @@ export const RESILIENCE = {
   tryAgain: 'Try again',
   undo: /^Undo/,
   order: {
-    actions: { createInvoice: 'Create invoice', recordPayment: 'Record payment' },
+    /** `more`: the order's More menu, where Record payment lives before an invoice (an advance; UX audit P2). */
+    actions: { createInvoice: 'Create invoice', recordPayment: 'Record payment', more: /^More( actions)?$/ },
     invoiceDialog: 'Create invoice',
     createInvoice: 'Create invoice',
     paymentDialog: 'Record payment',

@@ -201,7 +201,10 @@ test.describe('payments in', () => {
     })
 
     await test.step('more than is owed: the dialog says so, the payment is kept, and Exceptions reports it', async () => {
-      await orderPage(page).getByRole('button', { name: MONEY.order.recordPayment }).click()
+      // nothing is owed, so Record payment is no longer offered up front: it is in the order's More menu (UX audit P2)
+      await expect(orderPage(page).getByRole('button', { name: MONEY.order.recordPayment })).toHaveCount(0)
+      await orderPage(page).getByRole('button', { name: MONEY.order.more }).click()
+      await page.getByRole('menuitem', { name: MONEY.order.recordPayment }).click()
       await expect(amountBox).toHaveValue('') // nothing is due
       await amountBox.fill('5000.55')
       await expect(dialog.getByTestId('payment-note')).toHaveText(MONEY.payment.over(amount(5000.55)))

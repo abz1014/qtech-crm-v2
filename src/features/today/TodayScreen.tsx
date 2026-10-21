@@ -148,7 +148,9 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
             // One line in the 420 px list at 1366 x 768, even with a 15 px classic scrollbar and two-digit counts (about 360 px
             // to spare): tighter segments (6 px sides, 4 px to the count, a 4 px count pill), and no count on "All", because the
             // line above already says how many need you (each fact once). Below that the strip wraps (audit T4).
-            className="mt-2 flex-wrap justify-self-start [&>*]:gap-1 [&>*]:px-1.5 [&_[data-needs-count]]:px-1"
+            // Measured with Geist 500 at 14 px: 352 px with three two-digit counts. `px-[6px]`, not `px-1.5`: Tailwind 3 never
+            // generated `[&>*]:px-1.5` (the dot), so the segments kept their 12 px sides and Money fell to a second line.
+            className="mt-2 flex-wrap justify-self-start [&>*]:gap-1 [&>*]:px-[6px] [&_[data-needs-count]]:px-1"
             value={tab}
             onValueChange={v => setTab(v as 'all' | TodayTab)}
             options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], needs: t === 'all' ? undefined : counts[t] }))}
