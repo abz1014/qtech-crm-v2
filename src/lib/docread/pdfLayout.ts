@@ -219,6 +219,8 @@ const HEADER_TERM = new RegExp(
       String.raw`rate\s*\/\s*unit`,
       String.raw`item\s*name(?:\s*\/\s*spec(?:ification)?s?)?`,
       String.raw`a\s*\/\s*u`,
+      String.raw`wks?\.?`,
+      String.raw`weeks?`,
     ].join('|') +
     ')$',
   'i',

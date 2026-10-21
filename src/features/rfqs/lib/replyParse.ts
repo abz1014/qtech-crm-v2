@@ -724,13 +724,14 @@ function tableHeader(cells: string[]): TableCols | null {
   const price = find(/price|rate|u\/p|unit\s*cost|unit\s*value/i, /total|amount/i)
   if (price < 0 && total < 0) return null
   const priceCell = cells[price] ?? cells[total] ?? ''
-  const leadCell = cells[find(/lead|delivery|dlv|availability|eta/i)] ?? ''
+  const leadAt = find(/lead|delivery|dlv|availability|eta|^(?:wks?|weeks?|days)\.?$/i)
+  const leadCell = cells[leadAt] ?? ''
   return {
     n: cells.length,
     price,
     total,
     qty: find(/^(?:qty|quantity|q'ty|nos)\b/i),
-    lead: find(/lead|delivery|dlv|availability|eta/i),
+    lead: leadAt,
     origin: find(/origin|country/i),
     moq: find(/moq/i),
     valid: find(/valid/i),

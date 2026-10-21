@@ -637,7 +637,10 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       continue
     }
     // Columns lined up with spaces (copied from a PDF viewer): two or more wide gaps make it a tab row.
-    const spaced = !body.includes('\t') && (body.trim().match(/\S {3,}(?=\S)/g) ?? []).length >= 2 ? body.trim().replace(/ {3,}/g, '\t') : body
+    // Columns lined up with spaces: two or more wide gaps make a tab row; one gap of four or more spaces makes two cells (a
+    // signature laid out side by side: "Margalla Mills Ltd    Plot 128-A, ...").
+    const gaps = (body.trim().match(/\S {3,}(?=\S)/g) ?? []).length
+    const spaced = body.includes('\t') ? body : gaps >= 2 ? body.trim().replace(/ {3,}/g, '\t') : /\S {4,}\S/.test(body.trim()) ? body.trim().replace(/ {4,}/g, '\t') : body
     const kept = spaced.includes('\t') ? spaced.replace(/[ ]+/g, ' ').replace(/^ +| +$/g, '').replace(/(?:\s*\t\s*)+$/, '') : spaced.replace(/[ ]+/g, ' ').trim()
     if (!kept.replace(/\t/g, '').trim()) {
       blank = true
@@ -757,7 +760,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   }
   const noteCompany = (t: string, rank: number) => {
     // "Example Mills Limited, Some Centre, 2nd Floor,": the company is one part of an address line.
-    for (const part of t.split(/\s*[|,]\s*/)) {
+    for (const part of t.split(/\s*[|,\t]\s*/)) {
       const p = part.replace(EMAIL, '').trim()
       if (p && isCompanyLine(p) && !own.test(p)) names.push({ n: p, rank })
     }
@@ -1105,7 +1108,8 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       } else skip(t, 'table')
       continue
     }
-    let parts = work.split(new RegExp(String.raw`\s+(?:and|&|aur|plus|\+)\s+(?=\d[\d,.]*\s*(?:${UNIT_SRC}|x)\b)`, 'i'))
+    // Several items in one line or sentence, each with its quantity in front: "4 nos sensor M8; 1 nos gasket set and 3 nos ...".
+    let parts = work.split(new RegExp(String.raw`(?:\s+(?:and|&|aur|plus|\+)\s+|\s*;\s*)(?=\d[\d,.]*\s*(?:${UNIT_SRC}|x)(?![A-Za-z0-9]))`, 'i'))
     if (parts.length === 1) parts = work.split(/(?<=\d\s*(?:nos?|pcs?|pieces?|sets?|units?)\.?)\s+(?:and|&|aur|plus)\s+/i)
     if (parts.length > 1 && !parts.every(p => readItem(p)?.qty != null)) parts = [work]
     if (!parts.every(p => readItem(p) !== null)) {
@@ -1166,6 +1170,8 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   const name =
     names[0]?.n
       .replace(/^(?:for\s+(?:and\s+on\s+behalf\s+of\s+)?|on\s+behalf\s+of\s+|m\/s\.?\s*|messrs\.?\s+)/i, '')
+      // "Example Mills Ltd - Purchase Requisition": the document's title after the name.
+      .replace(/\s+[-–|:]\s+(?![^-–|:]*\b(?:ltd|limited|pvt|private|inc|llc)\b).*$/i, '')
       .replace(/[\s,:;]+$/, '')
       .trim() ?? null
   const realEmails = [...new Set(goodEmails.map(x => x.e).filter(e => !e.startsWith('web@')))]

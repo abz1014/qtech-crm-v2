@@ -21,7 +21,9 @@ function headerKind(label: string, hasDesc: boolean): Kind {
   if (/^(?:s\.?\s*no|sr|sl|#|no\.?$|pos|line|itm)/i.test(label) || (hasDesc && /^item(?:\s*no\.?)?$/i.test(label))) return 'number'
   if (/desc|particular|specification|product|item\s*name|short\s*text|goods|^item$/i.test(label)) return 'desc'
   if (/qty|quantity/i.test(label)) return 'qty'
-  if (/^(?:uom|units?|u\/m|a\s*\/\s*u)\b/i.test(label) && !/price|rate/i.test(label)) return 'unit'
+  // "Unit EUR" is a price per unit; "Unit" and "UOM" alone are the unit.
+  if (/\b(?:usd|eur|rmb|cny|pkr|aed|gbp|rs)\b|[$€¥￥£]/i.test(label)) return 'money'
+  if (/^(?:uom|units?|u\/m|a\s*\/\s*u)\.?$/i.test(label)) return 'unit'
   if (/part|model|cat|code|material/i.test(label)) return 'code'
   if (/make|brand/i.test(label)) return 'make'
   if (/date/i.test(label)) return 'date'
@@ -89,7 +91,10 @@ export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string
       const hasNeed = () => cells.some((c, x) => x > (numbered ? 1 : 0) && (need === 'qty' ? NUM.test(c) : MONEY.test(c)))
       while (q < src.length && cells.length < width && !(src[q] as T).blankBefore) {
         const t = (src[q] as T).t
-        if (numbered && hasNeed() && t.replace(/\.$/, '') === String(serial + 1)) break
+        // The next serial number starts the next row (followed by its description, not by another number: a last cell can
+        // equal the next serial, "... 6240.00 / 2 / 2 / Amerix ...").
+        const after = (src[q + 1] as T | undefined)?.t ?? ''
+        if (numbered && hasNeed() && t.replace(/\.$/, '') === String(serial + 1) && !NUM.test(after)) break
         // A row that already has its cells (tab separated) is a table of its own: the header words above are stacked headings.
         if (stop(t) || t.includes('\t')) break
         // A sentence under a complete row is the text after the table ("Last date for submission: 3 November").

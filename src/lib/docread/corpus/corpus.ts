@@ -113,7 +113,9 @@ export const BATCHES: BatchSpec[] = [
   { batch: 1, enquiries: 120, quotes: 48, gens: [0, 1], dev: true, gate: true },
   // Fresh batch 2, first try (text and PDF): enquiry items 97.6% / 83.7% (sideways pages, SMS-style lines), quotes 88.1% / 97.5%: dev now.
   { batch: 2, enquiries: 120, quotes: 48, gens: [0, 1, 2], dev: true, gate: true },
-  { batch: 3, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3] },
+  // Fresh batch 3, first try (text and PDF): enquiry items 98.5% / 96.0% (items in one sentence), company 66.7%; quotes 98.6% / 100%,
+  // lead time 84.7% (a Wks column): dev now.
+  { batch: 3, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3], dev: true, gate: true },
   { batch: 4, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4] },
 ]
 
