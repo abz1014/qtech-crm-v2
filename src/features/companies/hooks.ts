@@ -147,6 +147,10 @@ export function useCreateCompany() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: async (input: api.NewCompany & { contactName?: string | null }) => {
+      // HW-33: the unique index ignores only case and surrounding spaces, so "A  B" or "A B." would slip past it. Check by
+      // the stricter key first; a retry finds its own row (same request id) and carries on. A failed check does not block.
+      const existing = await api.findCompanyByName(input.name).catch(() => null)
+      if (existing && existing.id !== input.id) throw new DuplicateCompanyError(existing)
       try {
         let created: { id: string; name: string }
         try {
@@ -155,7 +159,7 @@ export function useCreateCompany() {
           // A retry reuses the request id: the company is already saved (an earlier attempt failed after it, e.g. on the
           // contact), so carry on with the contact instead of ending as "already saved" without it.
           const e = err as { code?: string; message?: string }
-          if (e?.code === '23505' && /companies_pkey/.test(e.message ?? '')) created = { id: input.id, name: input.name.trim() }
+          if (e?.code === '23505' && /companies_pkey/.test(e.message ?? '')) created = { id: input.id, name: api.tidyCompanyName(input.name) }
           else throw err
         }
         if (input.contactName?.trim()) await api.addContact({ id: crypto.randomUUID(), companyId: created.id, name: input.contactName })

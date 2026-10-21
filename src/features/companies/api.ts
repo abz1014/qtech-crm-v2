@@ -208,13 +208,30 @@ export async function findCompanyForSender(h: SenderHint): Promise<(CompanyHit &
   return null
 }
 
-/** The company whose name equals `name` ignoring case and surrounding spaces, as the unique index sees it. */
+/** A company name as it is saved: no spaces around it, and runs of spaces inside become one ("A  B " is saved "A B"). */
+export const tidyCompanyName = (name: string): string => name.replace(/\s+/g, ' ').trim()
+
+/**
+ * The key two names are the same company by (HW-33): case, extra spaces and punctuation at the end do not count, so
+ * "Hunt  Traders." and "hunt traders" are one company. Stricter than companyNameKey, which also drops legal words.
+ */
+export const sameCompanyNameKey = (name: string): string =>
+  tidyCompanyName(name.normalize('NFKC'))
+    .toLowerCase()
+    .replace(/[\s.,;:!?'"\-–—/]+$/u, '')
+
+/**
+ * The company already on file under this name (sameCompanyNameKey), or null. The unique index only ignores case and
+ * surrounding spaces, so this is the check that stops "A  B" or "A B." becoming a second company.
+ */
 export async function findCompanyByName(name: string): Promise<CompanyHit | null> {
   const db = requireSupabase()
-  const wanted = name.trim()
-  if (!wanted) return null
-  const rows = unwrap(await db.from('companies').select('id, name, country').ilike('name', likeEscape(wanted)).limit(5))
-  const hit = rows.find(r => r.name.trim().toLowerCase() === wanted.toLowerCase())
+  const key = sameCompanyNameKey(name)
+  if (!key) return null
+  // Every word in order, anything between and after: finds "A  B" and "A B." for "A B"; the exact match is decided below.
+  const pattern = `${key.split(' ').map(likeEscape).join('%')}%`
+  const rows = unwrap(await db.from('companies').select('id, name, country').ilike('name', pattern).limit(20))
+  const hit = rows.find(r => sameCompanyNameKey(r.name) === key)
   return hit ? { id: hit.id, name: hit.name, country: hit.country, role: null } : null
 }
 
@@ -669,7 +686,7 @@ export async function createCompany(input: NewCompany): Promise<{ id: string; na
       .from('companies')
       .insert({
         id: input.id,
-        name: input.name.trim(),
+        name: tidyCompanyName(input.name),
         country: input.country?.trim() || null,
         notes: input.notes?.trim() || null,
         city: input.city?.trim() || null,
@@ -682,7 +699,7 @@ export async function createCompany(input: NewCompany): Promise<{ id: string; na
 export async function updateCompany(id: string, patch: { name?: string; country?: string | null; city?: string | null; notes?: string | null }) {
   const db = requireSupabase()
   const next = {
-    ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
+    ...(patch.name !== undefined ? { name: tidyCompanyName(patch.name) } : {}),
     ...(patch.country !== undefined ? { country: patch.country?.trim() || null } : {}),
     ...(patch.city !== undefined ? { city: patch.city?.trim() || null } : {}),
     ...(patch.notes !== undefined ? { notes: patch.notes?.trim() || null } : {}),
