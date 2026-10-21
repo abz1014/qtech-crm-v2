@@ -123,7 +123,7 @@ test.describe('O07: Issue PO', () => {
     await expect(page.getByRole('menuitem', { name: 'View PO' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Revise PO (R1)' })).toBeVisible()
     await page.keyboard.press('Escape')
-    await expect(legLoc(page, 'A').getByTestId('leg-A-state')).toContainText('On order')
+    await expect(legLoc(page, 'A').getByTestId('leg-A-state')).toContainText('Ordered')
     await shot(page, 'o07-leg-with-po-1440')
   })
 

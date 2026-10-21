@@ -29,7 +29,7 @@ export const CAPTURE_LABEL = 'Paste or photo'
  * search with the command-palette hint, the paste-or-photo action, role and avatar. Words beat icons for this
  * team, so the labels stay on from 1024 up (a 1366 laptop at 125% is about 1093 px) and the icons, key hints and
  * role go first when room runs out. Never wider than the window (e2e/money-books/shell-overflow.spec.ts):
- *   2xl, 1536 up  icon + label + count, wordmark, 280 search with the key hint, the action with C, role.
+ *   2xl, 1536 up  icon + label + count, wordmark, 280 search with the key hint, the action (outlined), role.
  *   xl, 1280-1535 label + count, wordmark, 220 search; no icons, key hints or role.
  *   lg, 1024-1279 label + count, logo mark, a short "Search" box, the action labelled.
  *   md, 768-1023  icons, the active label only, logo mark, search and the action as icon buttons.
@@ -75,9 +75,9 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
         ))}
       </nav>
 
-      {/* The key hints sit beside the buttons, drawn over their right end, not inside them: text inside a button must be part of its
-          name (axe label-content-name-mismatch at 2xl, where the hints show); the name stays the action, the key is aria-keyshortcuts.
-          Below 2xl the hints hide, so the tooltip carries the key (consistency spec 4.3). */}
+      {/* The search key hint sits beside the button, drawn over its right end (inside the 2xl:pr-16 padding), not inside it: text inside
+          a button must be part of its name (axe label-content-name-mismatch at 2xl, where the hint shows); the name stays the action, the
+          key is aria-keyshortcuts. Below 2xl the hint hides, so the tooltip carries the key (consistency spec 4.3). */}
       <div className="relative ml-auto shrink-0">
         <Tooltip content="Search or jump to" shortcut={hint}>
         <button
@@ -106,29 +106,26 @@ export function TopBar({ user, counts, onSearch, onCapture, items: given }: TopB
       </div>
 
       {onCapture ? (
-        <div className="relative shrink-0">
-          <Tooltip content={CAPTURE_LABEL} shortcut="C">
+        // Outlined, never green (audit X1): every screen has its own one primary button, and this sits beside it. No key hint drawn on
+        // it (at 2xl it overlapped the label, "Paste or ph[C]o"); the tooltip and aria-keyshortcuts carry the C.
+        <Tooltip content={CAPTURE_LABEL} shortcut="C">
           <button
             type="button"
             onClick={onCapture}
             aria-label={CAPTURE_LABEL}
             aria-keyshortcuts="C"
             className={cn(
-              'flex h-control items-center gap-2 whitespace-nowrap rounded border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground 2xl:pr-11',
-              'transition-colors duration-fast ease-out hover:border-primary-hover hover:bg-primary-hover active:bg-primary-active',
+              'flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded border border-line-strong bg-surface px-3 text-sm font-medium text-fg',
+              'transition-colors duration-fast ease-out hover:border-line-input hover:bg-sunken active:bg-selected',
               'max-lg:w-control max-lg:justify-center max-lg:px-0',
             )}
           >
-            <Icon icon={Import} />
+            <Icon icon={Import} className="text-fg-muted" />
             <span aria-hidden="true" className="max-lg:hidden">
               {CAPTURE_LABEL}
             </span>
           </button>
-          </Tooltip>
-          <Kbd aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 border-primary-foreground/40 bg-transparent text-primary-foreground max-2xl:hidden">
-            C
-          </Kbd>
-        </div>
+        </Tooltip>
       ) : null}
 
       <div className="flex shrink-0 items-center gap-3">

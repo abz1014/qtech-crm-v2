@@ -78,11 +78,12 @@ export function DetailHeader({ name, nameHref, code, breadcrumb, more, chips, me
       </div>
       {chips ? <div className="mt-2 flex flex-wrap items-center gap-2">{chips}</div> : null}
       {items.length ? (
-        <p className="mt-2 text-sm text-fg-2">
+        // On a phone the meta wraps anyway, so it is a plain list, one item per line, without the "·" (a wrapped "· Owner X ·" looks broken).
+        <p className="mt-2 text-sm text-fg-2 max-md:grid max-md:justify-items-start max-md:gap-1">
           {items.map((m, i) => (
             <Fragment key={i}>
               {i ? (
-                <span aria-hidden="true" className="mx-2 text-fg-muted">
+                <span aria-hidden="true" className="mx-2 text-fg-muted max-md:hidden">
                   ·
                 </span>
               ) : null}

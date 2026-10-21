@@ -12,6 +12,6 @@ related: supplier-prices
 4. Under [Send it to each supplier], tap [Open in WhatsApp] for each one and press Send there.
 5. Later, to ask more: open the RFQ and tap [Ask more suppliers].
 
-Tip: On an RFQ nobody has been asked about yet, the green button is [Ask suppliers].
+Tip: An item with no supplier ticked is named under the list; tap [Tick] to add the supplier that carries its brand. On an RFQ nobody has been asked about yet, the green button is [Ask suppliers].
 
 Safe to try: wrong supplier? Tap [Undo] on the message at the bottom.

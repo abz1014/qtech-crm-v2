@@ -12,6 +12,11 @@ import type { Fixture } from './seed'
 export interface CaptureOptions {
   /** Scroll this element to the top of the view before measuring (the fold then starts there). */
   scrollTo?: string
+  /**
+   * Measure inside this element instead of <main>, for a dialog (it is outside <main>); everything outside it counts as covered.
+   * The full-page shot then grows the viewport by what the dialog's own scroller hides.
+   */
+  root?: string
 }
 export type Capture = (screen: string, opts?: CaptureOptions) => Promise<void>
 export interface Visit {
@@ -73,6 +78,16 @@ async function press(page: Page, names: RegExp[], what: string): Promise<void> {
   throw new Error(`no visible, enabled button for "${what}" (tried ${names.map(String).join(', ')})`)
 }
 
+/** Like press, but answers false instead of throwing when no such button is there. */
+async function tryPress(page: Page, names: RegExp[], what: string): Promise<boolean> {
+  return press(page, names, what).then(
+    () => true,
+    () => false,
+  )
+}
+
+const DIALOG = '[role="dialog"]'
+
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /**
@@ -129,14 +144,74 @@ const newRfq: Visit = {
     await press(page, [/write the (enquiry|message)/i, /write (a )?message/i, /^next/i], 'write the message')
     await capture('rfq-new-3-message')
 
-    await press(page, [/copy (&|and) mark/i, /copy message for/i, /^ask \d+ suppliers?/i, /mark (as )?sent/i], 'copy and mark sent')
+    await press(page, [/copy (&|and) mark/i, /copy message for/i, /^ask \d+ suppliers?/i, /mark (as )?sent/i, /^copy (the )?message/i], 'copy and mark sent')
     await page
-      .getByText(/out for prices|waiting for prices|sent to \d+|asked \d+ supplier/i)
+      .getByText(/out for prices|waiting for prices|sent to \d+|asked \d+ supplier|copied\. paste/i)
       .first()
       .waitFor({ timeout: 10_000 })
       .catch(() => undefined)
     await settle(page)
     await capture('rfq-new-4-sent')
+  },
+}
+
+/** A supplier's reply as it arrives on WhatsApp (to the waiting RFQ KRS-MM-0457): what people paste most. */
+const SUPPLIER_REPLY = [
+  'Dear Sir,',
+  'Ref your enquiry KRS-MM-0457, please find our best prices:',
+  '1) Rosemount 3051CD DP transmitter - GBP 1,840 each, 4 weeks ex-works',
+  '2) Rosemount 644 temperature transmitter - GBP 385 each, ex-stock',
+  '3) Danfoss MBS 3000 - regret, cannot quote',
+  'Validity 30 days. Payment 100% advance.',
+  'Regards, Oliver Grant, Midlands Valves Ltd',
+].join('\n')
+
+/** The Paste or photo sheet (the top-bar button, or the phone bar's): empty, then with a supplier's reply pasted in. */
+const pasteOrPhoto: Visit = {
+  id: 'paste-or-photo',
+  title: 'Paste or photo',
+  roles: ALL,
+  screens: ['paste-or-photo-empty', 'paste-or-photo-pasted'],
+  run: async (page, _fx, capture) => {
+    await open(page, '/today')
+    await press(page, [/^paste or photo$/i, /paste or photo/i, /^capture$/i], 'open Paste or photo')
+    await page.locator(DIALOG).first().waitFor({ timeout: 10_000 })
+    const box = page.locator(DIALOG).getByRole('textbox', { name: /pasted text/i }).first()
+    // A draft kept on the device (IndexedDB) from an earlier, interrupted run is emptied first: the empty state is what is graded.
+    if ((await box.count()) && (await box.inputValue()) !== '') {
+      await box.fill('')
+      await page.waitForTimeout(800)
+    }
+    await settle(page)
+    await capture('paste-or-photo-empty', { root: DIALOG })
+
+    await box.fill(SUPPLIER_REPLY)
+    await page.waitForTimeout(500)
+    await settle(page)
+    await capture('paste-or-photo-pasted', { root: DIALOG })
+
+    // Leave nothing behind: an emptied draft is deleted from the device (debounced 300 ms), then the sheet is closed.
+    await box.fill('')
+    await page.waitForTimeout(800)
+    await page.keyboard.press('Escape')
+    await page.locator(DIALOG).first().waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => undefined)
+  },
+}
+
+/** The Issue quotation dialog, opened from an RFQ with prices in (the green button; its ?issue=1 address if no button is found). */
+const issueQuotation: Visit = {
+  id: 'issue-quotation',
+  title: 'Issue quotation dialog',
+  roles: MONEY,
+  screens: ['issue-quotation'],
+  run: async (page, fx, capture) => {
+    await open(page, `/rfqs/${fx.rfq.pricesIn}`)
+    const pressed = await tryPress(page, [/^issue quotation$/i, /^(make|write|send) (a )?quotation$/i, /issue quotation/i], 'Issue quotation')
+    if (!pressed) await open(page, `/rfqs/${fx.rfq.pricesIn}?issue=1`)
+    await page.locator(DIALOG).first().waitFor({ timeout: 10_000 })
+    await settle(page)
+    await capture('issue-quotation', { root: DIALOG })
+    await page.keyboard.press('Escape')
   },
 }
 
@@ -148,6 +223,18 @@ export const VISITS: readonly Visit[] = [
   screen('rfq-waiting', 'RFQ page: waiting for prices', ALL, fx => `/rfqs/${fx.rfq.waiting}`),
   screen('rfq-prices-in', 'RFQ page: prices in', ALL, fx => `/rfqs/${fx.rfq.pricesIn}`),
   screen('rfq-quoted', 'RFQ page: quotation sent', ALL, fx => `/rfqs/${fx.rfq.quoted}`),
+  {
+    id: 'rfq-won',
+    title: 'RFQ page: won, made into an order',
+    roles: ALL,
+    screens: ['rfq-won'],
+    run: async (page, fx, capture) => {
+      // seed.json from before the won RFQ was seeded has no id for it: delete it (and reset the database) to seed again.
+      if (!fx.rfq.won) throw new Error('the seed has no won RFQ (an older seed.json); reseed to capture it')
+      await open(page, `/rfqs/${fx.rfq.won}`)
+      await capture('rfq-won')
+    },
+  },
   screen('rfq-compare', 'Supplier comparison (4 suppliers, 3 currencies)', ALL, fx => `/rfqs/${fx.rfq.compare}`, { scrollTo: '[data-compared]' }),
   screen('orders', 'Orders list', ALL, () => '/orders'),
   screen('order-not-placed', 'Order page: supplier order not placed', ALL, fx => `/orders/${fx.order.notPlaced}`),
@@ -181,6 +268,8 @@ export const VISITS: readonly Visit[] = [
   screen('settings-details', 'Settings: your details', ALL, () => '/settings/details'),
   screen('settings-exchange-rates', 'Settings: exchange rates', ALL, () => '/settings/exchange-rates'),
   screen('settings-password', 'Settings: change password', ALL, () => '/settings/password'),
+  pasteOrPhoto,
+  issueQuotation,
   // Last: it creates an RFQ, which would otherwise show on the lists above.
   newRfq,
 ]

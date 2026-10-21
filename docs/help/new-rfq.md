@@ -12,6 +12,6 @@ related: ask-suppliers
 4. Check the items, then tap [Looks right: find suppliers].
 5. Next, ask suppliers for prices.
 
-Tip: The reference and due date are filled in from the PDF when it has them. Left halfway? Open [New RFQ] again and tap [Continue your draft]. A message or photo from WhatsApp can also start with [Paste or photo].
+Tip: The reference and due date are filled in from the PDF when it has them. More to add after the split? Tap [Paste more]. Not ready to ask suppliers? Tap [Save for later (don't ask suppliers yet)]; on a phone it is under the ⋯ button. Left halfway? Open [New RFQ] again and tap [Continue your draft]. A message or photo from WhatsApp can also start with [Paste or photo].
 
 Safe to try: nothing is saved until you copy the supplier message or save.

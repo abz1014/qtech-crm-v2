@@ -170,18 +170,27 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
               <span>{unknown ? 'Margin' : 'Margin so far'}</span>
               <span className="text-xs text-fg-muted">{unknown ? 'Not calculated' : 'Sale less costs paid'}</span>
             </div>
-            <div className="text-xl">
-              <Margin value={m.margin} state={m.marginState as 'provisional' | 'final' | 'basis_unknown' | null} size="xl" />
-            </div>
-            <p className="text-sm text-fg-2">
-              {unknown
-                ? `Not worked out until someone answers "Is GST included?" at the top of the page.${actual > 0 ? ` Imported costs of PKR ${formatAmount(actual)} are on file.` : ''}`
-                : complete
-                  ? 'Final: costs complete.'
-                  : expected !== null
-                    ? `Not final: ${formatAmount(actual)} of ${formatAmount(expected)} paid.`
-                    : 'Not final: counts only what is paid so far.'}
-            </p>
+            {/* No cost yet: a margin would be the whole sale (100 %), which says nothing (UX audit P5). "Not final" is the header chip, once. */}
+            {!unknown && !complete && actual <= 0 ? (
+              <p className="text-sm text-fg-2" data-testid="margin-no-costs">
+                No costs yet. Margin appears when the first cost is recorded.
+              </p>
+            ) : (
+              <>
+                <div className="text-xl">
+                  <Margin value={m.margin} state={m.marginState as 'provisional' | 'final' | 'basis_unknown' | null} size="xl" mark="underline" />
+                </div>
+                <p className="text-sm text-fg-2">
+                  {unknown
+                    ? `Not worked out until someone answers "Is GST included?" at the top of the page.${actual > 0 ? ` Imported costs of PKR ${formatAmount(actual)} are on file.` : ''}`
+                    : complete
+                      ? 'Final: costs complete.'
+                      : expected !== null
+                        ? `${formatAmount(actual)} of ${formatAmount(expected)} paid so far.`
+                        : 'Counts only what is paid so far.'}
+                </p>
+              </>
+            )}
           </div>
 
           {!unknown && expected !== null && net !== null ? (

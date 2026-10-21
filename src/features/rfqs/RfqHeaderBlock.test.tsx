@@ -142,6 +142,37 @@ describe('the RFQ header', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('won=1')
   })
 
+  it('quotation sent: no overdue chip but when it was sent; the next step names the contact, with a quiet Mark lost menu', async () => {
+    const user = userEvent.setup()
+    renderHeader(
+      'won',
+      rfq({ state: state({ bid_state: 'bid_sent', days_to_due: -1, is_overdue: true }), contact: { name: 'Kamran Zafar' } as RfqHeader['contact'] }),
+      { quotationCount: 1, sentOn: '2026-10-22', validUntil: '2026-11-21' },
+    )
+    expect(document.querySelector('header [data-status^="deadline"]')).toBeNull()
+    expect(screen.queryByText(/overdue/)).toBeNull()
+    expect(document.querySelector('[data-sent]')).toHaveTextContent(/^Sent .*22 Oct · valid to .*21 Nov$/)
+    expect(screen.getByText('Quotation due', { selector: 'dt' })).not.toHaveClass('text-tone-warning-fg')
+    const box = screen.getByRole('region', { name: 'Next step' })
+    expect(box).toHaveTextContent('Follow up with Kamran Zafar.')
+    expect(greens().map(b => b.textContent)).toEqual(['Mark won'])
+    await user.click(within(box).getByRole('button', { name: 'Mark lost' }))
+    expect(within(screen.getByRole('menu', { name: 'Lost because' })).getByRole('menuitem', { name: /Price too high/ })).toBeInTheDocument()
+  })
+
+  it('the Quotation due tile is orange only when two days or less away', () => {
+    renderHeader('issue', rfq({ state: state({ days_to_due: 6 }) }))
+    expect(screen.getByText('Quotation due', { selector: 'dt' })).not.toHaveClass('text-tone-warning-fg')
+    expect(document.querySelector('header [data-status^="deadline"]')).toBeNull()
+  })
+
+  it('a long customer ref can break after each "/" on a narrow phone', () => {
+    renderHeader('issue', rfq({ customerRef: 'RFF/PUR/261/1' }))
+    const ref = screen.getByText('Customer ref', { selector: 'dt' }).parentElement?.querySelector('dd span.num')
+    expect(ref).toHaveTextContent('RFF/PUR/261/1')
+    expect(ref?.querySelectorAll('wbr')).toHaveLength(4)
+  })
+
   it('Issue quotation is never silently disabled: it opens from More, and with no item the menu says why', async () => {
     const user = userEvent.setup()
     renderHeader('none', rfq({ state: state({ sourcing_state: 'floated_awaiting' }) }), { itemCount: 0 })

@@ -26,6 +26,15 @@ export const TARGETS = [
     worse: 'higher',
   },
   {
+    key: 'green',
+    label: 'Green buttons on screen (page and bars)',
+    target: 'at most 1',
+    source: 'rubric: exactly one green main button; counts the top bar and phone bars too (0 is listed, not failed)',
+    value: c => c.metrics.primary.onScreen ?? null,
+    pass: v => v <= 1,
+    worse: 'higher',
+  },
+  {
     key: 'headerChips',
     label: 'Status chips in the page header',
     target: 'at most 2',
@@ -93,6 +102,24 @@ export const TARGETS = [
     pass: v => v === 0,
     worse: 'higher',
   },
+  {
+    key: 'overlap',
+    label: 'Text drawn over other text',
+    target: '0',
+    source: 'grade B gap 1, 2 and 5: overlapping text the clipped check missed',
+    value: c => c.metrics.overlap?.count ?? null,
+    pass: v => v === 0,
+    worse: 'higher',
+  },
+  {
+    key: 'cut',
+    label: 'Text cut off or past the right edge',
+    target: '0',
+    source: 'grade B gap 3: cut with no ellipsis, or running off the screen while the page does not scroll',
+    value: c => (c.metrics.overflow ? c.metrics.overflow.cut + c.metrics.overflow.offscreen : null),
+    pass: v => v === 0,
+    worse: 'higher',
+  },
 ]
 
 /** Measured and reported, no target. */
@@ -102,6 +129,7 @@ export const INFO = [
   { key: 'wordsFold', label: 'Words above the fold', value: c => c.metrics.words.aboveFold, worse: 'higher' },
   { key: 'words', label: 'Words on the page', value: c => c.metrics.words.total, worse: 'higher' },
   { key: 'chips', label: 'Status chips on the page', value: c => c.metrics.chips.total, worse: 'higher' },
+  { key: 'scrollers', label: 'Boxes that scroll sideways inside the page', value: c => c.metrics.overflow?.scrollers ?? null, worse: 'higher' },
   { key: 'columns', label: 'Most table columns', value: c => c.metrics.tables.maxColumns, worse: 'higher' },
   {
     key: 'length',
@@ -205,7 +233,7 @@ function captureRow(c) {
   if (!measured(c)) {
     const why = c.status === 'error' ? `error: ${c.error ?? ''}` : c.status
     const shot = c.shots?.error ? ` [screen](${c.shots.error})` : c.shots?.fold ? ` [fold](${c.shots.fold})` : ''
-    return `| ${vp} | ${cell(why)}${shot} |${' |'.repeat(14)}`
+    return `| ${vp} | ${cell(why)}${shot} |${' |'.repeat(17)}`
   }
   const m = c.metrics
   const s = score(c)
@@ -221,9 +249,9 @@ function captureRow(c) {
   const length = INFO.find(d => d.key === 'length').value(c)
   const shots = [c.shots?.fold ? `[fold](${c.shots.fold})` : '', c.shots?.full ? `[full](${c.shots.full})` : ''].filter(Boolean).join(' ')
   return (
-    `| ${vp} | ${m.actions.aboveFold} / ${m.actions.total} | ${show('primary')} | ${show('headerChips')} | ${m.chips.total} | ${m.tables.maxColumns || '-'} ` +
+    `| ${vp} | ${m.actions.aboveFold} / ${m.actions.total} | ${show('primary')} | ${show('green')} | ${show('headerChips')} | ${m.chips.total} | ${m.tables.maxColumns || '-'} ` +
     `| ${m.words.aboveFold} / ${m.words.total} | ${p(pct(t.under14, t.chars))} | ${show('text14')} | ${show('hScroll')} | ${tap} | ${show('nav')} ` +
-    `| ${show('clipped')} | ${axe} | ${length} | ${shots} |`
+    `| ${show('clipped')} | ${show('overlap')} | ${show('cut')} | ${axe} | ${length} | ${shots} |`
   )
 }
 
@@ -234,11 +262,18 @@ function details(group) {
     const m = c.metrics
     const bits = []
     if (m.primary.inMain > 1) bits.push(`primary: ${m.primary.labels.map(l => `"${l}"`).join(', ')}`)
+    if (m.primary.onScreen > 1) bits.push(`green on screen: ${m.primary.onScreenLabels.map(l => `"${l}"`).join(', ')}`)
+    if (m.primary.onScreen === 0) bits.push('info: no green button on screen')
     if (m.chips.header > 2) bits.push(`header chips (${m.chips.headerMethod}): ${m.chips.headerLabels.map(l => `"${l}"`).join(', ')}`)
     if (m.nav.levels > 2) bits.push(`nav: ${m.nav.labels.join('; ')}`)
     if (m.hScroll.offenders.length) bits.push(`too wide: ${m.hScroll.offenders.slice(0, 3).join('; ')}`)
     if (m.tap?.under44) bits.push(`small targets: ${m.tap.worst.slice(0, 4).map(w => `"${w.label}" ${w.w}x${w.h}`).join(', ')}`)
     if (m.clipped.count) bits.push(`clipped: ${m.clipped.samples.slice(0, 3).map(x => `"${x.text}"`).join(', ')}`)
+    if (m.overlap?.count) bits.push(`overlap: ${m.overlap.samples.slice(0, 3).join(', ')}`)
+    for (const kind of ['cut', 'offscreen', 'scroller']) {
+      const xs = (m.overflow?.samples ?? []).filter(x => x.kind === kind)
+      if (xs.length) bits.push(`${kind === 'scroller' ? 'scrolls sideways' : kind === 'cut' ? 'cut off' : 'past right edge'}: ${xs.slice(0, 3).map(x => x.what).join(', ')}`)
+    }
     if (c.axe?.nodes) bits.push(`axe: ${Object.entries(c.axe.byRule).map(([k, v]) => `${k} x${v}`).join(', ')}`)
     if (bits.length) lines.push(`- ${c.viewport}: ${bits.map(cell).join(' | ')}`)
   }
@@ -289,9 +324,10 @@ export function renderMarkdown(results) {
 
   out.push('## Per screen', '')
   out.push(
-    'Columns: buttons and links (fold / page); primary buttons in the page; status chips in the header; chips on the page; most table columns; ' +
-      'words (fold / page); share of characters under 14 px; share at 14 px or more; sideways scroll; phone tap targets under 44 px (smallest); ' +
-      'navigation strips; clipped text; axe failing nodes / rules; page length in screens; screenshots.',
+    'Columns: buttons and links (fold / page); primary buttons in the page; green buttons on screen (page plus bars); status chips in the header; chips on the page; most table columns; ' +
+      'words (fold / page); share of characters under 14 px; share at 14 px or more; sideways scroll; ' +
+      'phone tap targets under 44 px (smallest); navigation strips; clipped text; text over text; text cut off or past the right edge; ' +
+      'axe failing nodes / rules; page length in screens; screenshots.',
     '',
   )
   const groups = new Map()
@@ -305,8 +341,8 @@ export function renderMarkdown(results) {
     const url = group.find(measured)?.metrics.url
     out.push(`### ${c0.role} / ${c0.title} (\`${c0.screen}\`)`, '')
     if (url) out.push(`\`${url}\``, '')
-    out.push('| Viewport | Actions | Primary | Hdr chips | Chips | Cols | Words | <14px | 14px+ | Sideways | Tap <44 | Nav | Clipped | axe | Length | Shots |')
-    out.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
+    out.push('| Viewport | Actions | Primary | Green | Hdr chips | Chips | Cols | Words | <14px | 14px+ | Sideways | Tap <44 | Nav | Clipped | Overlap | Cut | axe | Length | Shots |')
+    out.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|')
     for (const c of group) out.push(captureRow(c))
     const d = details(group)
     if (d.length) out.push('', ...d)

@@ -6,7 +6,6 @@ import { formatAmount } from '@/lib/money'
 import { formatDay, formatShortDate } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef } from '@/lib/refs'
-import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
@@ -25,6 +24,7 @@ import { StickyActionBar } from '@/ui/StickyActionBar'
 import { useToast } from '@/ui/useToast'
 import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/OrderMoneyButtons'
 import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
+import { RecordPaymentDialog } from '@/features/money/payments/RecordPaymentDialog'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
 import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
 import { useCompanyProfile } from '@/features/settings/hooks'
@@ -35,8 +35,9 @@ import { CommissioningEditDialog } from '@/features/orders/CommissioningPanel'
 import { AddLegDialog } from '@/features/orders/AddDialogs'
 import { GoodsChaseDialog } from '@/features/orders/GoodsChaseDialog'
 import { ResolveBasisDialog } from '@/features/orders/ResolveBasisDialog'
+import { CopyReminderButton } from '@/features/orders/CopyReminderButton'
 import { legState } from '@/features/orders/lib/legModel'
-import { orderFacts, pageStep, type PrimaryAction } from '@/features/orders/lib/primaryAction'
+import { orderFacts, pageStep, recordPaymentPlace, type PrimaryAction } from '@/features/orders/lib/primaryAction'
 import type { OrderStep } from '@/features/orders/lib/orderSteps'
 import { useLegActions } from '@/features/orders/useLegActions'
 import { IssuePoDialog } from '@/features/purchaseOrders/IssuePoDialog'
@@ -63,8 +64,8 @@ import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features
  * The step is only shown once the supplier orders (and for admin and sales their POs and the balance) have loaded, so the green button
  * never jumps from a wrong guess to the right one; the page passes `next: null` until then (a quiet placeholder), and when they fail.
  *
- * An engineer's page leads with their job: the site, its contact, the planned date ("Change planned date"), the goods, the step's button
- * (Delivered today; Mark done today once the planned date has come) and "Mark done today" as a secondary button before that.
+ * An engineer gets the same Next step band (its button: Delivered today; Mark done today once the planned date has come), then their
+ * job: the site, its contact, the planned date ("Change planned date"), the goods, and "Mark done today" as a secondary button before that.
  * No price, invoice, payment or cost is read or drawn for them.
  */
 
@@ -87,17 +88,49 @@ function Cell({ title, icon, children, action }: { title: string; icon: LucideIc
   )
 }
 
-/** "1 of 2 not placed · 1 late": the supplier orders that supply goods, in a few words. */
+/** "1 of 2 not ordered yet · 1 late": the supplier orders that supply goods, in a few words (the goods status words, src/lib/status.ts). */
 function goodsLine(legs: readonly OrderLegRow[], today: string): string {
   if (legs.length === 0) return 'No supplier orders'
   const states = legs.map(l => legState({ placedOn: l.placedOn, expectedOn: l.expectedOn, receivedOn: l.receivedOn, deliveredOn: l.deliveredOn }, today))
   const count = (s: string) => states.filter(x => x === s).length
   const parts: string[] = []
-  if (count('to-place')) parts.push(`${count('to-place')} of ${legs.length} not placed`)
+  if (count('to-place')) parts.push(`${count('to-place')} of ${legs.length} not ordered yet`)
   if (count('late')) parts.push(`${count('late')} late`)
-  if (count('on-order')) parts.push(`${count('on-order')} on order`)
+  if (count('on-order')) parts.push(`${count('on-order')} ordered`)
   if (count('received') + count('delivered')) parts.push(`${count('received') + count('delivered')} delivered`)
   return parts.join(' · ')
+}
+
+/**
+ * The Costs cell's line (admin): "Costs 1,268,000 of 6,350,000 expected"; once more is paid out than expected, "Costs 1,480,000
+ * (expected 640,000) · over by 840,000" in the warning colour (UX audit P6), never "Paid out 1,480,000 of 640,000".
+ */
+function CostsLine({ actual, expected }: { actual: number; expected: number | null }) {
+  if (expected !== null && actual > expected) {
+    return (
+      <p className="text-sm font-medium text-tone-warning-fg" data-testid="order-costs">
+        Costs <span className="num">{formatAmount(actual)}</span> (expected <span className="num">{formatAmount(expected)}</span>) · over by{' '}
+        <span className="num">{formatAmount(actual - expected)}</span>
+      </p>
+    )
+  }
+  return (
+    <p className="text-sm text-fg-2" data-testid="order-costs">
+      {actual > 0 ? (
+        <>
+          Costs <span className="num">{formatAmount(actual)}</span>
+        </>
+      ) : (
+        'No costs yet'
+      )}
+      {expected !== null ? (
+        <>
+          {actual > 0 ? ' of ' : ' · '}
+          <span className="num">{formatAmount(expected)}</span> expected
+        </>
+      ) : null}
+    </p>
+  )
 }
 
 export function OrderHeaderBlock({
@@ -140,9 +173,12 @@ export function OrderHeaderBlock({
   const invoiced = s?.invoiced ?? null
   // Only supplier orders that supply a goods line count, as v_order_state counts them.
   const goodsLegs = legs.filter(l => items.some(i => i.legId === l.id && !i.isService))
+  // Done, but the customer still owes (admin and sales know the balance; an engineer's "Done" is about their job).
+  const owing = money && !cancelled && s?.lifecycle === 'done' && (m?.balance ?? 0) > 0
 
   const next = nextProp === undefined ? pageStep(orderFacts(order, legs, items, pos, role, orderMoney, today)) : nextProp
   const primary = next?.primary ?? null
+  const paymentPlace = recordPaymentPlace(order, orderMoney, primary?.kind, role)
 
   const commissioningLine =
     s?.commissioning === 'n_a' || !order.needsCommissioning
@@ -203,9 +239,16 @@ export function OrderHeaderBlock({
         nameHref={`/companies/${order.companyId}`}
         code={ref}
         breadcrumb={[{ label: 'Orders', to: '/orders' }, { label: ref, mono: true }]}
-        more={!isEngineer ? <OrderMoreMenu order={order} /> : undefined}
-        // an active order needs no chip: only Done or Cancelled is news
-        chips={s?.lifecycle && s.lifecycle !== 'active' ? <StatusBadge dimension="order" value={s.lifecycle} /> : undefined}
+        more={!isEngineer ? <OrderMoreMenu order={order} recordPayment={next !== null && paymentPlace === 'menu'} /> : undefined}
+        // an active order needs no chip: only Done or Cancelled is news. Never "Done" while the customer still owes (UX audit P1): an
+        // order that is done but not paid shows its payment word ("Waiting for payment", "Overdue") instead.
+        chips={
+          owing ? (
+            <StatusBadge dimension="payment" value={m?.paymentState ?? 'unpaid'} />
+          ) : s?.lifecycle && s.lifecycle !== 'active' ? (
+            <StatusBadge dimension="order" value={s.lifecycle} />
+          ) : undefined
+        }
         meta={[
           order.site && !isEngineer ? order.site.name : null,
           customerPo,
@@ -239,11 +282,8 @@ export function OrderHeaderBlock({
           </Banner>
         ) : null}
 
-        {isEngineer ? (
-          <EngineerJob order={order} engineers={engineers} next={next} legs={legs} goodsLegs={goodsLegs} today={today} />
-        ) : !cancelled ? (
-          <NextStep order={order} next={next} legs={legs} engineers={engineers} onResolve={() => setResolving(true)} />
-        ) : null}
+        {!cancelled ? <NextStep order={order} next={next} legs={legs} engineers={engineers} orderMoney={orderMoney} onResolve={() => setResolving(true)} /> : null}
+        {isEngineer ? <EngineerJob order={order} engineers={engineers} next={next} goodsLegs={goodsLegs} today={today} /> : null}
 
         {isEngineer ? null : (
           <div
@@ -290,7 +330,12 @@ export function OrderHeaderBlock({
               </Cell>
             ) : null}
             {money ? (
-              <Cell title="Payment" icon={Banknote} action={isAdmin && !cancelled && primary?.kind !== 'record-payment' ? <RecordPaymentButton orderId={order.id} size="sm" /> : null}>
+              <Cell
+                title="Payment"
+                icon={Banknote}
+                // only once an invoice exists and while something is owed (UX audit P2): never on an order not yet invoiced, nor on a paid one
+                action={paymentPlace === 'cell' ? <RecordPaymentButton orderId={order.id} size="sm" /> : null}
+              >
                 {m ? <StatusText dimension="payment" value={m.paymentState} /> : null}
                 {moneyLoading ? (
                   <Skeleton className="h-4 w-32" />
@@ -317,17 +362,7 @@ export function OrderHeaderBlock({
             {isAdmin ? (
               <Cell title="Costs" icon={ClipboardCheck}>
                 {m?.costsState ? <StatusText dimension="costs" value={m.costsState} /> : null}
-                {m ? (
-                  <p className="text-sm text-fg-2">
-                    Paid out <span className="num">{formatAmount(m.actualCost ?? 0)}</span>
-                    {m.expectedCost !== null ? (
-                      <>
-                        {' of '}
-                        <span className="num">{formatAmount(m.expectedCost)}</span>
-                      </>
-                    ) : null}
-                  </p>
-                ) : null}
+                {m ? <CostsLine actual={m.actualCost ?? 0} expected={m.expectedCost} /> : null}
               </Cell>
             ) : null}
           </div>
@@ -342,10 +377,11 @@ export function OrderHeaderBlock({
  * The order's "More" menu (the shared MoreMenu): Cancel order (with a reason, and Undo) or Reopen order. A "More" text button beside
  * the title from tablet up, and an icon in the phone's one bar (useMobileBar) below 768. Engineers have none.
  */
-export function OrderMoreMenu({ order, touch = false }: { order: OrderHeader; touch?: boolean }) {
+export function OrderMoreMenu({ order, touch = false, recordPayment = false }: { order: OrderHeader; touch?: boolean; /** Admin: Record payment lives here before an invoice (an advance) or once paid. */ recordPayment?: boolean }) {
   const { toast } = useToast()
   const cancel = useCancelOrder(order.id)
   const [cancelling, setCancelling] = useState(false)
+  const [paying, setPaying] = useState(false)
   const cancelled = order.cancelledOn !== null
   const ref = orderRef(order.number)
   const today = businessToday()
@@ -374,6 +410,11 @@ export function OrderMoreMenu({ order, touch = false }: { order: OrderHeader; to
   return (
     <>
       <MoreMenu touch={touch} label="More actions">
+          {recordPayment ? (
+            <MenuItem icon={Banknote} onClick={() => setPaying(true)}>
+              Record payment
+            </MenuItem>
+          ) : null}
           {cancelled ? (
             <MenuItem icon={RotateCcw} onClick={() => void reopen()}>
               Reopen order
@@ -384,6 +425,7 @@ export function OrderMoreMenu({ order, touch = false }: { order: OrderHeader; to
             </MenuItem>
           )}
       </MoreMenu>
+      {recordPayment ? <RecordPaymentDialog open={paying} onOpenChange={setPaying} orderId={order.id} /> : null}
       {cancelling ? (
         <CancelDialog
           order={order}
@@ -431,7 +473,21 @@ function PrimaryPlacement({ children }: { children: ReactNode }) {
  * (Issue PO opens its dialog; Chase goods its message; Mark placed and Delivered today stamp it, with Undo); the same step stays on the
  * supplier order's own row as a secondary button. With no button for this person, the sentence says what the order is waiting for.
  */
-function NextStep({ order, next, legs, engineers, onResolve }: { order: OrderHeader; next: NextForPage | null; legs: readonly OrderLegRow[]; engineers: readonly PersonRow[]; onResolve: () => void }) {
+function NextStep({
+  order,
+  next,
+  legs,
+  engineers,
+  orderMoney,
+  onResolve,
+}: {
+  order: OrderHeader
+  next: NextForPage | null
+  legs: readonly OrderLegRow[]
+  engineers: readonly PersonRow[]
+  orderMoney: OrderMoney | null | undefined
+  onResolve: () => void
+}) {
   if (!next) return <NextStepBox loading />
   const { primary, step, text } = next
   return (
@@ -441,7 +497,7 @@ function NextStep({ order, next, legs, engineers, onResolve }: { order: OrderHea
       action={
         primary ? (
           <PrimaryPlacement>
-            <PrimaryButton order={order} action={primary} legs={legs} engineers={engineers} onResolve={onResolve} />
+            <PrimaryButton order={order} action={primary} legs={legs} engineers={engineers} orderMoney={orderMoney} onResolve={onResolve} />
           </PrimaryPlacement>
         ) : null
       }
@@ -454,12 +510,14 @@ function PrimaryButton({
   action,
   legs,
   engineers,
+  orderMoney,
   onResolve,
 }: {
   order: OrderHeader
   action: PrimaryAction
   legs: readonly OrderLegRow[]
   engineers?: readonly PersonRow[]
+  orderMoney?: OrderMoney | null
   onResolve?: () => void
 }) {
   const leg = action.legId ? legs.find(l => l.id === action.legId) : undefined
@@ -480,6 +538,8 @@ function PrimaryButton({
       return <CreateInvoiceButton orderId={order.id} variant="primary" className={cls} />
     case 'record-payment':
       return <RecordPaymentButton orderId={order.id} variant="primary" className={cls} />
+    case 'copy-reminder':
+      return <CopyReminderButton order={order} money={orderMoney} className={cls} />
     case 'mark-done':
       return (
         <Button variant="primary" icon={CircleCheck} className={cls} onClick={() => void markDone.run()} busy={markDone.pending} busyLabel="Saving">
@@ -540,14 +600,12 @@ function EngineerJob({
   order,
   engineers,
   next,
-  legs,
   goodsLegs,
   today,
 }: {
   order: OrderHeader
   engineers: readonly PersonRow[]
   next: NextForPage | null
-  legs: readonly OrderLegRow[]
   goodsLegs: readonly OrderLegRow[]
   today: string
 }) {
@@ -599,14 +657,9 @@ function EngineerJob({
           <span className="text-sm text-fg-2">{goodsLine(goodsLegs, today)}</span>
         </div>
       </div>
-      {next && !cancelled ? (
+      {/* The step and its green button are in the Next step band above, as on the admin's and sales' page (UX audit P7). */}
+      {next && open ? (
         <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-          <span className={cn('mr-2 text-sm', next.step.tone === 'late' ? 'font-medium text-tone-danger-fg' : 'text-fg-2')}>{next.text}</span>
-          {primary ? (
-            <PrimaryPlacement>
-              <PrimaryButton order={order} action={primary} legs={legs} />
-            </PrimaryPlacement>
-          ) : null}
           {/* before the planned date "Mark done today" is still one tap, just not the page's green button */}
           {open && primary?.kind !== 'mark-done' ? (
             <Button icon={CircleCheck} onClick={() => void markDone.run()} busy={markDone.pending} busyLabel="Saving">

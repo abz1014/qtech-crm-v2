@@ -117,9 +117,9 @@ export const STATUS = {
   order: { active: hid('Active', 'info'), cancelled: def('Cancelled', 'neutral', { icon: Ban }), done: def('Done', 'success') },
   goods: {
     na: hid('Not needed', 'neutral'),
-    'to-source': def('To order', 'warning'),
-    'to-place': def('To order', 'warning'),
-    'on-order': def('On order', 'info'),
+    'to-source': def('Not ordered yet', 'warning'),
+    'to-place': def('Not ordered yet', 'warning'),
+    'on-order': def('Ordered', 'info'),
     late: def('Overdue', 'danger'),
     received: def('To deliver', 'warning'),
     'partly-delivered': def('To deliver', 'warning'),
@@ -137,8 +137,8 @@ export const STATUS = {
     full: def('Invoiced', 'success'),
   },
   payment: {
-    unpaid: def('Awaiting payment', 'info'),
-    part: def('Awaiting payment', 'info'),
+    unpaid: def('Waiting for payment', 'info'),
+    part: def('Waiting for payment', 'info'),
     settled: def('Paid', 'success'),
     overdue: def('Overdue', 'danger'),
   },

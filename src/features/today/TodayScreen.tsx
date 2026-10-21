@@ -23,8 +23,8 @@ import type { Role, RuleKey, TodayItem, TodayTab } from '@/features/today/types'
 /*
  * Today (R11, direction B): a 420px list and a context pane. Groups: overdue or due today, the next 5 days, ready to
  * move, then Waiting (the system's cooldown, dimmed, never in the count of things that need you; collapsed until the person
- * opens it, "Waiting · 5 · next nudge Mon 30 Nov"). On a phone the pane folds into an accordion under the row, and the list comes first: the target tile sits
- * under it. The empty state is the goal state.
+ * opens it, "Waiting · 5 · next nudge Mon 30 Nov"). On a phone the pane folds into an accordion under the row. The target tile sits
+ * under the list at every width (never for an engineer). The empty state is the goal state.
  *
  * Tabs (owner glossary 2026-10-19, short forms): All, Quotes, Suppliers, Money; every count is "needs you". Engineers get no
  * tabs at all: their list is short (their jobs, their goods, the RFQs they own) and one list is easier.
@@ -145,7 +145,8 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
         {tabs.length > 0 ? (
           <SegmentedControl
             aria-label="Show"
-            className="mt-2 flex-wrap justify-self-start"
+            // Tighter segments (px-2, not px-3) so All, Quotes, Suppliers and Money fit the 420 px list on one line (audit T4).
+            className="mt-2 flex-wrap justify-self-start [&>*]:px-2"
             value={tab}
             onValueChange={v => setTab(v as 'all' | TodayTab)}
             options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], needs: counts[t] }))}
@@ -241,10 +242,16 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
     // 768 to 1023 px (a tablet, a narrow window): the list takes two fifths so the pane keeps room; 420 px from 1024.
     <div className="grid min-h-full grid-cols-[minmax(0,1fr)] md:h-full md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
       <div className="flex min-h-0 min-w-0 flex-col border-r bg-surface">
-        {/* The target tile is the foot of the list column: under the list on a phone, pinned at the bottom on desktop. */}
-        <div data-today-list className="min-h-0 min-w-0 flex-1 overflow-x-clip md:overflow-y-auto">{list}</div>
-        <div className={wide ? 'border-t bg-surface' : 'border-t bg-surface px-4 py-4'}>
-          <TargetTile today={today} className={wide ? undefined : 'rounded border bg-surface'} />
+        {/* The target tile is the foot of the list, at every width: it scrolls with the list instead of taking a pinned block
+            of the laptop's first screen from the jobs (audit T2). An engineer gets no tile at all: a target is money, and an
+            engineer is shown no money (and no request is made). */}
+        <div data-today-list className="min-h-0 min-w-0 flex-1 overflow-x-clip md:overflow-y-auto">
+          {list}
+          {user.role === 'engineer' ? null : (
+            <div className="border-t bg-surface px-4 py-4">
+              <TargetTile today={today} className="rounded border bg-surface" />
+            </div>
+          )}
         </div>
       </div>
       {wide ? (

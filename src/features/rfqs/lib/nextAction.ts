@@ -48,6 +48,8 @@ export interface NextStepInput {
   itemCount: number
   /** Suppliers asked who have not replied (no price, no "cannot quote"). */
   awaiting: number
+  /** The customer's contact on the RFQ: once the quotation is out, the person to follow up with (grade-B R6). */
+  contactName?: string | null
 }
 
 /**
@@ -66,7 +68,7 @@ export function nextStepSentence(i: NextStepInput): string {
     case 'won':
       return i.bidState === 'quotation_expired'
         ? 'The quotation has expired. Mark it won if they ordered, or revise it from More.'
-        : 'Quotation sent. Mark it won when the customer orders.'
+        : `Follow up with ${i.contactName || 'the customer'}. Mark it won when they order, or lost.`
     case 'chase':
       return `Waiting for prices from ${who}. Chase them.`
     default:

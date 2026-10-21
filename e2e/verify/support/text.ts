@@ -63,7 +63,7 @@ export const SALES = {
     quantity: (n: number) => `Quantity of item ${n}`,
     anyDescription: /^Description of item \d+$/,
     found: (items: number, lines: number) => `${items} ${items === 1 ? 'item' : 'items'} found in ${lines} ${lines === 1 ? 'line' : 'lines'}`,
-    saveOnly: 'Save without asking',
+    saveOnly: "Save for later (don't ask suppliers yet)",
     saved: /is saved/,
     /** BUG-SALES-3: a second paste of the same lines (src/features/rfqs/lib/skipRepeats.ts repeatedNote). */
     alreadyThere: (n: number) => `${n} ${n === 1 ? 'line was' : 'lines were'} already there`,
@@ -261,7 +261,7 @@ export const BOOKS = {
   },
   margin: {
     panel: 'Margin',
-    provisionalNoExpected: 'Not final: counts only what is paid so far.',
+    provisionalNoExpected: 'Counts only what is paid so far.',
     final: 'Final: costs complete.',
     markComplete: 'Mark costs complete',
     reopenCosts: 'Reopen costs',

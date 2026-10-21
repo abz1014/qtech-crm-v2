@@ -58,14 +58,20 @@ and viewport).
 
 `e2e/audit/screens.ts` is the one list (routes and button names change as the UX work lands; adjust it there). Per role, as far as
 the role can reach: Today (with items); RFQ list open and closed; an RFQ in each stage (not sent to suppliers, waiting for prices,
-prices in, quotation sent); the supplier comparison (4 suppliers in 3 currencies, scrolled to the ranked prices); Orders list; an order
+prices in, quotation sent, won and made into an order: `rfq-won`); the supplier comparison (4 suppliers in 3 currencies, scrolled to the ranked prices); Orders list; an order
 not placed, with a PO issued, delivered, invoiced, paid, and one with 3 supplier orders and commissioning; Companies, a customer and a
 supplier; every Money view (GST register, receivables, expenses, the month-end checklist, bank tick, the six month-end reports,
-margins, exceptions); Reports; every Settings page including Team; and New RFQ steps 1 to 4 (items pasted, suppliers, the message,
-sent), driven through the real screen with the old and the plain-words button names.
+margins, exceptions); Reports; every Settings page including Team; the Paste or photo sheet, empty and with a supplier's reply
+pasted in (`paste-or-photo-empty`, `paste-or-photo-pasted`; the draft is emptied and the sheet closed afterwards); the Issue quotation
+dialog on the prices-in RFQ (`issue-quotation`, admin and sales); and New RFQ steps 1 to 4 (items pasted, suppliers, the message,
+sent), driven through the real screen with the old and the plain-words button names (last, as it creates an RFQ).
+
+A dialog is measured on its own: the visit passes `root: '[role="dialog"]'`, so the metrics count inside the dialog instead of
+`<main>`, everything outside it counts as covered, and the full-page shot grows by what the dialog's own scroller hides.
 
 The data (`e2e/audit/seed.ts`) is a small trading company's month: 10 customers, 6 suppliers in 5 currencies, a prospect, about
-20 open and 8 closed RFQs, 13 orders in every state, invoices, payments, expenses, targets and exchange rates. Records are owned by
+20 open RFQs, 8 closed ones (lost on price, to a competitor and other reasons) and 1 won (quoted, then made into an order by
+`convert_rfq_to_order`), 14 orders in every state, invoices, payments, expenses, targets and exchange rates. Records are owned by
 all three users so every Today has items. Dates are relative to the day of the run.
 
 ## How each number is taken
@@ -77,6 +83,7 @@ All counts are of **visible** elements: a box larger than 1 px that `checkVisibi
 
 | Metric | Definition | Target |
 |---|---|---|
+| Green buttons on screen | Enabled primary-variant buttons and links (as below) a person sees without scrolling **anywhere**: `<main>`, the top bar and the phone bars together; hidden ones and anything under an open modal dialog left out. Labels outside `<main>` end in `[bar]`. 0 is listed as info, not failed (a list or settings page may have none) | at most 1 (rubric: exactly one green main button) |
 | Primary buttons | Buttons and links in `<main>` drawn as the primary variant: class `bg-primary` (`src/ui/Button.tsx`), `data-variant="primary"`, or the primary background colour; enabled ones only (a disabled primary is drawn grey and is listed apart, marked "disabled"). The top bar's Capture button is counted apart ("in chrome") | at most 1 (plan step 2) |
 | Header chips | Status chips inside the page header: the `<header>` that holds the page's `<h1>`, else a band from the `<h1>` to 96 px under it. A chip is a `StatusBadge` (`[data-status]`) or any small inline bordered rounded label (14 to 32 px tall, 1 to 48 characters, not a control, not `<kbd>`); nested chips count once | at most 2 (plan step 2) |
 | Characters at 14 px or more | Share of the visible characters whose computed font size is 14 px or larger (under 14, 14 to 15.9 and 16 and over are all recorded, with a per-size histogram) | at least 90% |
@@ -85,6 +92,9 @@ All counts are of **visible** elements: a box larger than 1 px that `checkVisibi
 | Phone tap targets | On viewports under 768 px (emulated as a touch phone, so `pointer: coarse` applies): every link, button, input, tab, radio, checkbox, menu item and option; size is the smaller side of its box (a native control takes its label's box). Inline links inside a sentence are left out (WCAG 2.5.8) | 0 under 44 px |
 | Navigation strips | `nav` landmarks and tab lists visible above the fold, outside dialogs, breadcrumbs and pagers left out | at most 2 (plan step 3) |
 | Clipped text | Elements whose own text is wider or taller than their box with overflow hidden or clipped, or an ellipsis | 0 |
+| Text over text | Painted text boxes (`Range.getClientRects()` of each text node, cut by every overflow hidden/clip ancestor) from different text nodes in the same layer (fixed and sticky bars are their own layer) that overlap by more than 2 px across and by more than 2 px and 30% of the shorter box down. Catches `min-w-0` spans painting over each other on one flex line, a number running into a name, a key hint over a label. Up to 6,000 boxes, bucketed in a 48 px grid | 0 |
+| Text cut or off screen | Text nodes cut off by an overflow hidden/clip box with no ellipsis or line clamp (either axis; a few px of glyph overhang down is allowed), plus text and controls running past the viewport's right edge while the page itself does not scroll sideways (a filter strip whose search box is cut off at 375 px) | 0 |
+| Sideways scrollers | Info: boxes other than `<main>` and form fields that scroll sideways on their own (`scrollWidth > clientWidth`, overflow-x auto or scroll), listed with how much they hide | - |
 | Info only | Buttons and links (fold and page), words (fold and page), chips on the page, most table columns, page length in screens | - |
 
 Known limits: a tap area widened by a pseudo-element (the InfoTip's 44 px area on touch) is measured by its box, so it reads small;

@@ -138,6 +138,17 @@ test.describe('open RFQs', () => {
     await expect(overdue.getByText('Item 1 of priority', { exact: true })).toBeVisible() // what was asked, before the code
     await expect(overdue).toContainText(rfqRef(fx.numbers.priority))
     await expect(overdue).toContainText(`their ref BRD-${fx.tag}-P`)
+    // L1 (UX audit 2026-10-22): what was asked and "RFQ-0008 · their ref ..." are separate lines, never drawn over each other,
+    // and no cell text runs out of its cell (the Next step detail wraps instead of being cut).
+    const boxes = await overdue.evaluate(tr => {
+      const r = (el: Element | null) => el?.getBoundingClientRect() ?? null
+      const asked = r(tr.querySelector('[data-asked]'))
+      const refs = r(tr.querySelector('[data-refs]'))
+      const cut = [...tr.querySelectorAll('td')].filter(td => td.scrollWidth > td.clientWidth + 1).length
+      return { askedBottom: asked?.bottom ?? 0, refsTop: refs?.top ?? -1, cut }
+    })
+    expect(boxes.refsTop).toBeGreaterThanOrEqual(boxes.askedBottom - 1)
+    expect(boxes.cut).toBe(0)
     await expect(row(page, 'awaiting').getByText('Waiting for prices', { exact: true })).toBeVisible()
     await expect(row(page, 'awaiting').getByText('Asked 1 supplier', { exact: true })).toBeVisible()
     await expect(row(page, 'nooffer').getByText('Every supplier asked said no', { exact: true })).toBeVisible()
@@ -285,8 +296,11 @@ test.describe('closed and won', () => {
     await expect(page.getByText(/^Showing 1 to 25 of \d+$/)).toBeVisible()
     const body = page.getByRole('table', { name: 'Closed and won RFQs' }).locator('tbody tr[data-di]')
     await expect(body).toHaveCount(25)
-    await expect(body.first()).toContainText('Closed')
-    await expect(body.first()).toContainText('Price')
+    // L3: the outcome in words, with the day it closed; no grey "Closed" chip on every row; the subline counts this list
+    await expect(body.first()).toContainText('Lost on price')
+    await expect(page.getByRole('table', { name: 'Closed and won RFQs' }).getByText('Closed', { exact: true })).toHaveCount(0)
+    await expect(page.getByRole('columnheader', { name: 'Closed on' })).toBeVisible()
+    await expect(page.getByText(/^\d+ closed$/)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Previous' })).toBeDisabled()
     await review(page, 'board-closed-1440')
 

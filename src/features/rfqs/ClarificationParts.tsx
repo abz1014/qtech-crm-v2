@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Camera, MessageSquareText, Undo2, X } from 'lucide-react'
+import { Camera, MessageSquareText, Plus, Undo2, X } from 'lucide-react'
 import { formatDay } from '@/lib/formatDay'
 import { toBusinessDate } from '@/lib/dates'
 import { intakeFiles } from '@/lib/fileIntake'
@@ -26,7 +26,26 @@ export interface InquiryOption {
 
 // ---------------------------------------------------------------- add by paste
 
-export function AddQuestions({ rfqId, inquiries }: { rfqId: string; inquiries: readonly InquiryOption[] }) {
+/**
+ * "+ Add question" (grade-B R9): one line until it is tapped, then the paste box. `empty`: the RFQ has no questions yet, and the
+ * line says so beside the button.
+ */
+export function AddQuestions({ rfqId, inquiries, empty = false }: { rfqId: string; inquiries: readonly InquiryOption[]; empty?: boolean }) {
+  const [open, setOpen] = useState(false)
+  if (!open) {
+    return (
+      <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3 ${empty ? '' : 'border-t'}`}>
+        {empty ? <span className="min-w-0 flex-1 text-fg-muted">No questions yet.</span> : null}
+        <Button size="sm" icon={Plus} onClick={() => setOpen(true)}>
+          Add question
+        </Button>
+      </div>
+    )
+  }
+  return <AddQuestionsForm rfqId={rfqId} inquiries={inquiries} onDone={() => setOpen(false)} />
+}
+
+function AddQuestionsForm({ rfqId, inquiries, onDone }: { rfqId: string; inquiries: readonly InquiryOption[]; onDone: () => void }) {
   const { toast } = useToast()
   const add = useAddClarifications(rfqId)
   const [text, setText] = useState('')
@@ -52,6 +71,7 @@ export function AddQuestions({ rfqId, inquiries }: { rfqId: string; inquiries: r
       setText('')
       setDropped(new Set())
       setTags({})
+      onDone()
     } catch (err) {
       toast({ title: 'Could not add the questions', body: mapPgError(err, { entity: 'question' }).message, tone: 'danger' })
     }
@@ -65,6 +85,7 @@ export function AddQuestions({ rfqId, inquiries }: { rfqId: string; inquiries: r
       <TextArea
         id={`${labelId}-in`}
         rows={2}
+        autoFocus
         value={text}
         placeholder="Paste a question or type one. A pasted message becomes one question per line."
         onChange={e => setText(e.target.value)}
@@ -98,8 +119,12 @@ export function AddQuestions({ rfqId, inquiries }: { rfqId: string; inquiries: r
         </ol>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="primary" icon={MessageSquareText} disabled={lines.length === 0} busy={add.isPending} busyLabel="Adding" onClick={() => void submit()}>
+        {/* Not green: the page's one green button is its Next step (owner rule). */}
+        <Button icon={MessageSquareText} disabled={lines.length === 0} busy={add.isPending} busyLabel="Adding" onClick={() => void submit()}>
           {lines.length > 1 ? `Add ${lines.length} questions` : 'Add question'}
+        </Button>
+        <Button variant="quiet" onClick={onDone} disabled={add.isPending}>
+          Cancel
         </Button>
         {lines.length > 0 && inquiries.length > 0 ? <span className="text-sm text-fg-muted">Say which supplier asked, or leave it as our own question.</span> : null}
       </div>

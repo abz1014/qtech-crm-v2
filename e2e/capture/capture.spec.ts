@@ -91,7 +91,7 @@ async function share(page: Page, payload: Shared) {
 
 const sheet = (page: Page) => page.getByRole('dialog', { name: 'Paste or photo' })
 
-/** R2-11: only the chosen option shows; "Something else" opens the other tiles and the reply and order choices (once per capture). */
+/** R2-11: only the chosen option shows; "Something else" opens the other tiles and the questions and order choices (once per capture). */
 async function openMore(page: Page) {
   const more = sheet(page).getByRole('button', { name: 'Something else' })
   if ((await more.getAttribute('aria-expanded')) !== 'true') await more.click()
@@ -99,6 +99,11 @@ async function openMore(page: Page) {
 async function chooseDest(page: Page, name: RegExp) {
   await openMore(page)
   await sheet(page).getByRole('radio', { name }).click()
+}
+/** grade-B K2: "Questions from a supplier" is a choice under "Something else" (the reply with prices took its tile). */
+async function chooseQuestions(page: Page) {
+  await openMore(page)
+  await sheet(page).getByRole('button', { name: 'Questions from a supplier' }).click()
 }
 // The Undo toast (the saved panel is a status too, so the toast is the one with an Undo button).
 const toast = (page: Page, text: string) => page.getByRole('status').filter({ hasText: text }).filter({ has: page.getByRole('button', { name: /Undo/ }) })
@@ -327,7 +332,7 @@ test.describe('the other destinations', () => {
     const s = await seed()
     await ready(page, s.rfq.id)
     await paste(page, { text: '1. Valve size and Kvs?\n2. Actuator torque and supply voltage?\n3. Fail-safe position on power loss?' })
-    await chooseDest(page, /Questions from a supplier/)
+    await chooseQuestions(page)
     await sheet(page).getByRole('checkbox', { name: /Actuator torque/ }).click()
     await sheet(page).getByRole('button', { name: 'Add 2 questions' }).click()
     await expect(toast(page, `Saved to ${rfqRef(s.rfq.number)}`)).toBeVisible()
@@ -339,8 +344,7 @@ test.describe('the other destinations', () => {
     const s = await seed()
     await ready(page, s.rfq.id)
     await paste(page, { text: 'Dear Sir, price for item 1 is USD 1,200 each, delivery 3 weeks, ex stock.' })
-    await openMore(page)
-    await page.getByRole('button', { name: 'This is a supplier’s reply' }).click()
+    await chooseDest(page, /A supplier’s prices/) // grade-B K2: one of the four tiles
     await expect(sheet(page).getByRole('radio', { name: s.supplier.name })).toBeChecked()
     await sheet(page).getByRole('button', { name: 'Read the reply' }).click()
     await expect(page).toHaveURL(new RegExp(`/rfqs/${s.rfq.id}$`))
@@ -362,7 +366,9 @@ test.describe('the other destinations', () => {
     await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue('2 nos')
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue(/^ultrasonic level transmitter/)
     await page.getByRole('textbox', { name: 'Description of item 1' }).fill('Ultrasonic level transmitter 0 to 8 m')
-    await page.getByRole('button', { name: 'Save without asking' }).click()
+    // On a phone, Save for later sits in the step bar's ⋯ menu.
+    await page.getByRole('region', { name: 'Next step' }).getByRole('button', { name: 'More options' }).click()
+    await page.getByRole('menuitem', { name: "Save for later (don't ask suppliers yet)" }).click()
     await expect(page.getByText(/is saved/)).toBeVisible()
     await expect.poll(async () => (await must(rest<{ id: string }[]>('admin', `rfqs?company_id=eq.${s.co.id}&select=id&order=number`))).length).toBe(2)
     const created = (await must(rest<{ id: string }[]>('admin', `rfqs?company_id=eq.${s.co.id}&select=id&order=number.desc&limit=1`)))[0]

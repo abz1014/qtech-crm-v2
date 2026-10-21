@@ -164,7 +164,12 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
     <div data-slot="clarifications">
       <Panel
         title="Questions for the customer"
-        info={<InfoTip label="About questions">A supplier asked something the customer must answer. Copy the questions, then send each supplier the answers.</InfoTip>}
+        info={
+          <InfoTip label="About questions">
+            A supplier asked something the customer must answer. Copy the questions, then send each supplier the answers. Ones raised by suppliers, or your own, are
+            listed here and bundled for the customer in one tap.
+          </InfoTip>
+        }
         meta={clars.isSuccess && count > 0 ? <span className="num">{count} {count === 1 ? 'question' : 'questions'}</span> : undefined}
       >
         {clars.isPending ? (
@@ -179,9 +184,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
               Try again
             </Button>
           </div>
-        ) : rows.length === 0 ? (
-          <p className="px-5 py-4 text-sm text-fg-muted">No questions yet. Ones raised by suppliers, or your own, are listed here and bundled for the customer in one tap.</p>
-        ) : (
+        ) : rows.length === 0 ? null : (
           <>
             {relays.map(({ inq, answered }) => (
               <div key={inq.id} className="mx-4 mb-3 mt-3 flex flex-wrap items-center gap-2 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
@@ -279,7 +282,7 @@ export function ClarificationsPanel({ rfq, inquiries }: { rfq: RfqHeader; inquir
             ) : null}
           </>
         )}
-        {clars.isSuccess ? <AddQuestions rfqId={rfq.id} inquiries={options} /> : null}
+        {clars.isSuccess ? <AddQuestions rfqId={rfq.id} inquiries={options} empty={rows.length === 0} /> : null}
       </Panel>
     </div>
   )

@@ -43,7 +43,7 @@ import {
  * ONE plain "Next step" column (lib/nextStep.ts: "Place the supplier order", "Chase payment: 12 days overdue", "Waiting for the goods")
  * instead of four state chips, then the order number. The lifecycle is the tab (Active, Done, Cancelled); the owner switch is Mine or
  * All (for an engineer, "My jobs": the jobs they are assigned to); a search finds an order by number, customer PO, customer, site or
- * item. The four state filters (goods, commissioning, and for admin and sales invoicing and payment) sit behind one "Filters" button:
+ * item. Who acts next (Needs action or Waiting) and the four state filters (goods, commissioning, and for admin and sales invoicing and payment) sit behind one "Filters" button:
  * a small panel on a laptop, a sheet on a phone (where the owner switch goes into the sheet too, so the list starts right under the
  * search). Filters combine with AND and live in the address, so a reload or a shared link lands on the same view.
  *
@@ -99,11 +99,15 @@ function CustomerCell({ row }: { row: OrderListRow }) {
   )
 }
 
+/**
+ * The order code over its customer PO and owner. The second line wraps inside the cell (table cells are nowrap by default), so a
+ * long PO never runs into the Value column beside it ("PO CPC/PO/INST/2219 · Test Admin" over "10,558,640", UX audit 2026-10-22 O1).
+ */
 function OrderCell({ row }: { row: OrderListRow }) {
   return (
-    <span className="grid min-w-0 gap-px">
+    <span className="grid min-w-[140px] max-w-[240px] gap-px whitespace-normal">
       <span className="num">{orderRef(row.number)}</span>
-      <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{[row.customerPo ? `PO ${row.customerPo}` : null, row.ownerName].filter(Boolean).join(' · ') || ' '}</span>
+      <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:break-word]">{[row.customerPo ? `PO ${row.customerPo}` : null, row.ownerName].filter(Boolean).join(' · ') || ' '}</span>
     </span>
   )
 }
@@ -248,7 +252,24 @@ export default function OrdersListPage() {
   )
   // On a phone the owner switch lives in the sheet, so it counts as a filter there when it is off its default.
   const ownerOff = phone && filters.owner !== defaultOwner(role)
-  const clearSheet = () => change({ goods: null, commissioning: null, invoicing: null, payment: null, ...(phone ? { owner: null } : {}) })
+  const clearSheet = () => change({ goods: null, commissioning: null, invoicing: null, payment: null, show: null, ...(phone ? { owner: null } : {}) })
+  // R2-05: the active orders split by who acts next, the first choice in Filters. Its counts are words in the options, as the states'.
+  const splitSelect = (
+    <label className="grid gap-1 text-sm">
+      <span className="text-fg-muted">Who acts next</span>
+      <Select
+        aria-label="Who acts next"
+        value={split === 'all' ? '' : split}
+        placeholder="Any"
+        onChange={e => change({ show: e.target.value || null })}
+        className="w-full"
+        options={[
+          { value: 'need', label: orders.isSuccess ? `Needs action (${needCount})` : 'Needs action' },
+          { value: 'waiting', label: orders.isSuccess ? `Waiting (${shown.length - needCount})` : 'Waiting' },
+        ]}
+      />
+    </label>
+  )
 
   const empty = firstUse.isNew ? (
       <FirstUseState screen="orders" role={role} onEveryone={() => change({ owner: 'all' })} everyoneCount={allCount} className="mx-5 my-4" />
@@ -327,22 +348,14 @@ export default function OrdersListPage() {
       error={orders.isError ? { title: "Couldn't load the orders", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void orders.refetch() } : null}
       summary={orders.isSuccess ? `Showing ${rows.length} of ${total} ${filters.tab} ${total === 1 ? 'order' : 'orders'}` : undefined}
       toolbar={
+        // One row (UX audit 2026-10-22, O2/O3): Mine or All, the search, and the one Filters button. "Who acts next" lives behind
+        // Filters with the state filters (no "Any" segment: no choice is no filter). On a phone the search takes the whole first line
+        // (it is never cut off at 320 to 430 px) and Filters, which then holds Mine or All too, wraps under it.
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
           {phone ? null : ownerSwitch}
-          {filters.tab === 'active' ? (
-            <SegmentedControl
-              aria-label="Who acts next"
-              value={split}
-              onValueChange={v => change({ show: v === 'all' ? null : v })}
-              options={[
-                { value: 'all', label: 'Any' },
-                { value: 'need', label: 'Needs action', needs: orders.isSuccess ? needCount : undefined },
-                { value: 'waiting', label: 'Waiting' },
-              ]}
-            />
-          ) : null}
-          <TableFilter label="Search orders" hint="Finds an order by customer, site, item, order number or PO." value={filters.text} onChange={v => change({ q: v })} className="min-w-0 flex-1 sm:max-w-[320px]" />
-          <FilterSheet title="Filter orders" on={dimsOn + (ownerOff ? 1 : 0)} shown={rows.length} noun={['order', 'orders']} onClear={clearSheet} phoneOnly={ownerSwitch}>
+          <TableFilter label="Search orders" hint="Finds an order by customer, site, item, order number or PO." value={filters.text} onChange={v => change({ q: v })} className="min-w-0 max-sm:basis-full sm:max-w-[360px] sm:flex-1" />
+          <FilterSheet title="Filter orders" on={dimsOn + (split !== 'all' ? 1 : 0) + (ownerOff ? 1 : 0)} shown={rows.length} noun={['order', 'orders']} onClear={clearSheet} phoneOnly={ownerSwitch}>
+            {filters.tab === 'active' ? splitSelect : null}
             {dims}
           </FilterSheet>
         </div>

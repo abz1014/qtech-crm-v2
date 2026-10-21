@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -136,14 +136,20 @@ describe('the supplier comparison', () => {
         ['la', rank({ quote_line_id: 'la', rank: 2, pct_above_best: 0, deliveries: 1, on_time: 0, late: 1, reliability_band: 3 })],
       ]),
     )
+    // Rows are cheapest first (UX audit C1); the Recommended mark stays on ABC Traders, now the second row.
     const [first, second] = rows()
-    expect(first).toHaveTextContent('ABC Traders')
-    expect(within(first).getByText('Recommended')).toBeInTheDocument()
-    expect(within(second).queryByText('Recommended')).toBeNull()
+    expect(first).toHaveTextContent('Lahore Flow Systems')
+    expect(within(first).queryByText('Recommended')).toBeNull()
+    expect(within(first).getByText('Cheapest')).toBeInTheDocument() // the tag beside the cheapest price
+    expect(second).toHaveTextContent('ABC Traders')
+    expect(within(second).getByText('Recommended')).toBeInTheDocument()
+    expect(within(second).queryByText('Cheapest')).toBeNull()
     expect(screen.getAllByText('Recommended')).toHaveLength(1) // one mark per item
     expect(screen.queryByText('Lowest price')).toBeNull()
     const cheapest = screen.getByText(/^Cheapest:/).closest('[data-cheapest]') as HTMLElement
     expect(cheapest).toHaveTextContent('Cheapest: Lahore Flow Systems. ABC Traders is only 1.3% dearer and has the better delivery record.')
+    // The reason sits directly under the Recommended row, not below the list.
+    expect(second.nextElementSibling).toBe(cheapest)
   })
 
   it('with the same delivery record, the Cheapest line gives the reason the database used: more orders with us', () => {
@@ -173,6 +179,7 @@ describe('the supplier comparison', () => {
     )
     expect(within(rows()[0]).getByText('Recommended')).toBeInTheDocument()
     expect(screen.queryByText(/^Cheapest:/)).toBeNull()
+    expect(screen.queryByText('Cheapest')).toBeNull() // no tag either
   })
 
   it('without the ranking, the lowest of two comparable prices is the one mark', () => {
@@ -192,6 +199,7 @@ describe('the supplier comparison', () => {
     )
     const first = rows()[0]
     expect(first).toHaveTextContent('≈ PKR 28,000')
+    expect(first.querySelector('[data-own-price]')).toHaveTextContent('USD 100') // the supplier's own figure, in grey under the PKR
     expect(first).toHaveTextContent('3 weeks')
     expect(first).toHaveTextContent('In stock')
     // closed by default: no own-currency figure, no reasons
@@ -204,14 +212,19 @@ describe('the supplier comparison', () => {
     expect(first.querySelector('[data-reasons-for="Lahore Flow Systems"]')).not.toBeNull()
   })
 
-  it('has no Add reply on the item or on a waiting supplier: replies are entered once per supplier, below', () => {
+  it('has no reply or Can\'t quote buttons on an item: the suppliers still to answer are one "Waiting on" line (grade-B R1)', () => {
     const waiting: InquiryRow = { ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0 }
+    const other: InquiryRow = { ...inquiry('x', 'Midlands Valves', []), responseState: 'awaiting', itemsQuoted: 0 }
     renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)]), waiting])
-    expect(screen.queryByRole('button', { name: /Add reply/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Add reply|Enter reply|Can't quote/ })).toBeNull()
     const art = screen.getByRole('article', { name: 'Item 1' })
-    expect(within(art).getByText('Keller GmbH')).toBeInTheDocument()
-    expect(within(art).getByRole('button', { name: "Can't quote, Keller GmbH, item 1" })).toBeInTheDocument()
+    expect(within(art).getByText('Keller GmbH')).toBeInTheDocument() // one supplier: named
     expect(within(art).getByText('1 price so far')).toBeInTheDocument()
+    cleanup()
+    renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)]), waiting, other])
+    const two = screen.getByRole('article', { name: 'Item 1' })
+    expect(two.querySelectorAll('[data-waiting]')).toHaveLength(1)
+    expect(two.querySelector('[data-waiting]')).toHaveTextContent('Waiting on 2 suppliers')
   })
 
   it('explains the order once, in a tip in the panel header', async () => {

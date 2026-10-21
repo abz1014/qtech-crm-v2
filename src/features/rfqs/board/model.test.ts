@@ -11,6 +11,7 @@ import {
   isBoardShow,
   nextStepOf,
   nextStepText,
+  outcomeText,
   pageSummary,
   sortBoard,
   stepCounts,
@@ -168,8 +169,19 @@ describe('next step words', () => {
 })
 
 describe('status words come from the U05 registry', () => {
-  it('the closed list still shows the outcome chip', () => {
+  it('the rfq-outcome dimension still knows every outcome', () => {
     for (const v of ['open', 'won', 'closed']) expect(() => resolveStatus('rfq-outcome', v)).not.toThrow()
+  })
+})
+
+describe('the closed list says the outcome in words (L3)', () => {
+  it('a closed RFQ reads as its reason, a won one as Won', () => {
+    expect(outcomeText(row({ outcome: 'closed', closeReason: 'price' }))).toBe('Lost on price')
+    expect(outcomeText(row({ outcome: 'closed', closeReason: 'competitor' }))).toBe('Lost to a competitor')
+    expect(outcomeText(row({ outcome: 'closed', closeReason: 'customer_cancelled' }))).toBe('Customer cancelled')
+    expect(outcomeText(row({ outcome: 'closed', closeReason: 'something_new' }))).toBe('Other reason')
+    expect(outcomeText(row({ outcome: 'closed', closeReason: null }))).toBe('Closed, no reason given')
+    expect(outcomeText(row({ outcome: 'won', closeReason: null }))).toBe('Won')
   })
 })
 

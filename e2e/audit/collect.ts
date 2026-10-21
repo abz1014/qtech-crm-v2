@@ -22,7 +22,22 @@ export interface Metrics {
    * Primary-variant buttons and links (class bg-primary, data-variant="primary" or the primary background colour). inMain counts the
    * enabled ones in <main>; disabled ones (drawn grey) are counted in disabledInMain; the top bar's are inChrome.
    */
-  primary: { inMain: number; inMainAboveFold: number; disabledInMain: number; inChrome: number; labels: string[] }
+  primary: {
+    inMain: number
+    inMainAboveFold: number
+    disabledInMain: number
+    inChrome: number
+    labels: string[]
+    /**
+     * Enabled green buttons anywhere a person sees them without scrolling: <main>, the top bar and the phone bars together (hidden
+     * ones, and anything under an open dialog, left out). The rubric's "exactly one green main button" is this number.
+     */
+    onScreen: number
+    /** The same, over the whole page (below the fold too). */
+    anywhere: number
+    /** Labels of the onScreen ones; the ones outside <main> end in "[bar]". */
+    onScreenLabels: string[]
+  }
   /** Status chips and tags: StatusBadge ([data-status]) and any small bordered inline label. Header = the page title's block. */
   chips: { total: number; aboveFold: number; header: number; headerMethod: string; headerLabels: string[] }
   tables: { count: number; maxColumns: number; columns: number[] }
@@ -46,12 +61,32 @@ export interface Metrics {
   nav: { levels: number; labels: string[] }
   /** Elements whose own text is cut off: wider (or taller) than their box with overflow hidden, clip or an ellipsis. */
   clipped: { count: number; ellipsis: number; samples: { text: string; axis: 'x' | 'y'; ellipsis: boolean }[] }
+  /**
+   * Painted text drawn over other painted text: pairs of text boxes (Range.getClientRects of text nodes, cut by every overflow
+   * hidden/clip ancestor) from different text nodes in the same layer that overlap by more than 2 px across and by more than 2 px and
+   * 30% of the shorter box down (so two lines with tight leading are not counted).
+   */
+  overlap: { count: number; checked: number; samples: string[] }
+  /**
+   * Content that does not fit sideways. scrollers: elements (not <main>, not form fields) that scroll sideways on their own
+   * (scrollWidth > clientWidth with overflow-x auto or scroll). cut: text nodes cut off by an overflow hidden/clip box with no
+   * ellipsis (either axis; a line clamp counts as an ellipsis). offscreen: text and controls running past the viewport's right edge
+   * while the page itself does not scroll sideways.
+   */
+  overflow: { scrollers: number; cut: number; offscreen: number; samples: { kind: 'scroller' | 'cut' | 'offscreen'; what: string }[] }
 }
 
-export function collect(opts: { phone: boolean }): Metrics {
+export interface CollectOptions {
+  phone: boolean
+  /** Measure inside this element instead of <main> (a dialog); everything outside it is treated as covered. */
+  root?: string | null
+}
+
+export function collect(opts: CollectOptions): Metrics {
   const vw = window.innerWidth
   const vh = window.innerHeight
-  const main = document.querySelector<HTMLElement>('#main')
+  const rootEl = opts.root ? document.querySelector<HTMLElement>(opts.root) : null
+  const main = rootEl ?? document.querySelector<HTMLElement>('#main')
 
   type Box = { l: number; t: number; r: number; b: number }
   const VIEW: Box = { l: 0, t: 0, r: vw, b: vh }
@@ -150,6 +185,46 @@ export function collect(opts: { phone: boolean }): Metrics {
     return `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${cls ? `.${cls}` : ''} "${label(el).slice(0, 40)}"`
   }
 
+  // An open dialog (the measured root, else the last visible modal one) covers the rest of the screen: nothing outside it is
+  // counted where "seen" matters (green buttons on screen, clipped, overlaps, overflow). A popover (also role dialog) does not.
+  const dialogs = Array.from(document.querySelectorAll('[role="dialog"][aria-modal="true"], [role="alertdialog"]')).filter(d => visible(d))
+  const topDialog: Element | null = rootEl ?? dialogs[dialogs.length - 1] ?? null
+  const covered = (el: Element) => Boolean(topDialog && !topDialog.contains(el))
+
+  // Where an element's children can paint: its ancestors' (and its own) overflow hidden/clip boxes, per axis. Scrolling boxes
+  // (auto, scroll) are left out: their content is reachable. A fixed element escapes its ancestors' clips.
+  const FAR: Box = { l: -1e9, t: -1e9, r: 1e9, b: 1e9 }
+  const paintClips = new Map<Element, Box>()
+  const paintClipOf = (el: Element | null): Box => {
+    if (!el || el === document.body || el === document.documentElement) return FAR
+    const hit = paintClips.get(el)
+    if (hit) return hit
+    const s = style(el)
+    let box = s.position === 'fixed' ? FAR : paintClipOf(el.parentElement)
+    const hx = s.overflowX === 'hidden' || s.overflowX === 'clip'
+    const hy = s.overflowY === 'hidden' || s.overflowY === 'clip'
+    if (hx || hy) {
+      const r = rect(el)
+      box = inter(box, { l: hx ? r.left : -1e9, r: hx ? r.right : 1e9, t: hy ? r.top : -1e9, b: hy ? r.bottom : 1e9 })
+    }
+    paintClips.set(el, box)
+    return box
+  }
+  // The paint layer: the nearest fixed or sticky ancestor (a bar drawn over scrolled content is not a collision).
+  const layers = new Map<Element, Element | null>()
+  const layerOf = (el: Element | null): Element | null => {
+    if (!el || el === document.body || el === document.documentElement) return null
+    if (layers.has(el)) return layers.get(el) ?? null
+    const p = style(el).position
+    const v = p === 'fixed' || p === 'sticky' ? el : layerOf(el.parentElement)
+    layers.set(el, v)
+    return v
+  }
+  const short = (s: string, n = 28) => {
+    const t = s.replace(/\s+/g, ' ').trim()
+    return t.length > n ? `${t.slice(0, n - 3)}...` : t
+  }
+
   // ---------------------------------------------------------------- page status and title
   const h1s = Array.from(document.querySelectorAll('h1'))
   const h1 = h1s.find(h => main?.contains(h) && visible(h)) ?? h1s.find(h => visible(h)) ?? null
@@ -160,6 +235,11 @@ export function collect(opts: { phone: boolean }): Metrics {
   const text: Metrics['text'] = { chars: 0, under14: 0, from14to16: 0, atLeast16: 0, foldChars: 0, foldUnder14: 0, minPx: null, sizes: {} }
   const words = { aboveFold: 0, total: 0 }
   const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'TITLE'])
+  // Painted text boxes for the overlap and off-screen checks (one per line fragment of a text node).
+  type TextBox = { node: number; el: Element; layer: Element | null; raw: Box; b: Box; text: string }
+  const MAX_TEXT_BOXES = 6000
+  const textBoxes: TextBox[] = []
+  let nodeIndex = 0
   const range = document.createRange()
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -170,6 +250,17 @@ export function collect(opts: { phone: boolean }): Metrics {
     range.selectNodeContents(node)
     const r = range.getBoundingClientRect()
     if (r.width < 1 || r.height < 1) continue
+    if (textBoxes.length < MAX_TEXT_BOXES && !covered(el)) {
+      const clip = paintClipOf(el)
+      const layer = layerOf(el)
+      nodeIndex++
+      for (const cr of Array.from(range.getClientRects())) {
+        if (cr.width < 1 || cr.height < 1) continue
+        const raw = boxOf(cr)
+        const b = inter(clip, raw)
+        if (hasArea(b)) textBoxes.push({ node: nodeIndex, el, layer, raw, b, text: t })
+      }
+    }
     const px = parseFloat(style(el).fontSize)
     const chars = t.replace(/\s/g, '').length
     const n = t.split(' ').filter(w => /[\p{L}\p{N}]/u.test(w)).length
@@ -201,7 +292,7 @@ export function collect(opts: { phone: boolean }): Metrics {
     return /(^|\s)bg-primary(\s|$)/.test(cls) || el.getAttribute('data-variant') === 'primary' || (!transparent(primaryBg) && style(el).backgroundColor === primaryBg)
   }
   const actions: Metrics['actions'] = { total: 0, aboveFold: 0, buttons: 0, links: 0 }
-  const primary: Metrics['primary'] = { inMain: 0, inMainAboveFold: 0, disabledInMain: 0, inChrome: 0, labels: [] }
+  const primary: Metrics['primary'] = { inMain: 0, inMainAboveFold: 0, disabledInMain: 0, inChrome: 0, labels: [], onScreen: 0, anywhere: 0, onScreenLabels: [] }
   for (const el of Array.from(document.querySelectorAll('button, a[href], [role="button"], [role="link"]'))) {
     const role = ROLE_OF(el)
     if ((role !== 'button' && role !== 'link') || !visible(el)) continue
@@ -212,12 +303,20 @@ export function collect(opts: { phone: boolean }): Metrics {
     if (fold) actions.aboveFold++
     if (!isPrimary(el)) continue
     const inMain = Boolean(main?.contains(el))
+    const disabled = (el as HTMLButtonElement).disabled || el.getAttribute('aria-disabled') === 'true'
+    if (!disabled && !covered(el)) {
+      primary.anywhere++
+      if (fold) {
+        primary.onScreen++
+        primary.onScreenLabels.push(inMain ? label(el) : `${label(el)} [bar]`)
+      }
+    }
     if (!inMain) {
       primary.inChrome++
       continue
     }
     // A disabled primary is drawn grey (Button.tsx), so it is no competing green: counted apart, not in inMain.
-    if ((el as HTMLButtonElement).disabled || el.getAttribute('aria-disabled') === 'true') {
+    if (disabled) {
       primary.disabledInMain++
       primary.labels.push(`${label(el)} (disabled)`)
       continue
@@ -405,7 +504,7 @@ export function collect(opts: { phone: boolean }): Metrics {
   for (const el of Array.from(document.querySelectorAll('body *'))) {
     if (!(el instanceof HTMLElement) || SKIP.has(el.tagName)) continue
     const ownText = Array.from(el.childNodes).some(n => n.nodeType === Node.TEXT_NODE && (n.nodeValue ?? '').trim())
-    if (!ownText || !visible(el)) continue
+    if (!ownText || covered(el) || !visible(el)) continue
     const s = style(el)
     if (s.display.startsWith('inline') && s.display !== 'inline-block' && s.display !== 'inline-flex' && s.display !== 'inline-grid') continue
     const hidesX = s.overflowX === 'hidden' || s.overflowX === 'clip'
@@ -418,6 +517,112 @@ export function collect(opts: { phone: boolean }): Metrics {
     clipped.count++
     if (ellipsis) clipped.ellipsis++
     if (clipped.samples.length < 12) clipped.samples.push({ text: (el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 60), axis, ellipsis })
+  }
+
+  // ---------------------------------------------------------------- overlapping text
+  const overlap: Metrics['overlap'] = { count: 0, checked: textBoxes.length, samples: [] }
+  {
+    const CELL = 48
+    const grid = new Map<string, number[]>()
+    textBoxes.forEach((tb, i) => {
+      for (let cx = Math.floor(tb.b.l / CELL); cx <= Math.floor(tb.b.r / CELL); cx++) {
+        for (let cy = Math.floor(tb.b.t / CELL); cy <= Math.floor(tb.b.b / CELL); cy++) {
+          const k = `${cx},${cy}`
+          const list = grid.get(k)
+          if (list) list.push(i)
+          else grid.set(k, [i])
+        }
+      }
+    })
+    const seenPairs = new Set<string>()
+    for (const list of grid.values()) {
+      for (let x = 0; x < list.length; x++) {
+        for (let y = x + 1; y < list.length; y++) {
+          const a = textBoxes[list[x]]
+          const b = textBoxes[list[y]]
+          if (a.node === b.node || a.layer !== b.layer) continue
+          const key = a.node < b.node ? `${a.node}:${b.node}` : `${b.node}:${a.node}`
+          if (seenPairs.has(key)) continue
+          const ox = Math.min(a.b.r, b.b.r) - Math.max(a.b.l, b.b.l)
+          const oy = Math.min(a.b.b, b.b.b) - Math.max(a.b.t, b.b.t)
+          if (ox <= 2 || oy <= Math.max(2, 0.3 * Math.min(a.b.b - a.b.t, b.b.b - b.b.t))) continue
+          seenPairs.add(key)
+          overlap.count++
+          if (overlap.samples.length < 8) overlap.samples.push(`"${short(a.text)}" x "${short(b.text)}" (${Math.round(ox)}x${Math.round(oy)}px)`)
+        }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- sideways overflow inside the page
+  const overflow: Metrics['overflow'] = { scrollers: 0, cut: 0, offscreen: 0, samples: [] }
+  {
+    const perKind = { scroller: 0, cut: 0, offscreen: 0 }
+    const sample = (kind: keyof typeof perKind, what: string) => {
+      if (perKind[kind]++ < 4) overflow.samples.push({ kind, what })
+    }
+    const FIELDS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'OPTION'])
+    const cutNodes = new Set<Text>()
+    const shellMain = document.querySelector('#main')
+    const textWalk = document.createRange()
+    for (const el of Array.from(document.querySelectorAll('body *'))) {
+      if (!(el instanceof HTMLElement) || SKIP.has(el.tagName) || FIELDS.has(el.tagName) || el.closest('svg')) continue
+      if (el === main || el === shellMain || covered(el)) continue
+      const overX = el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1
+      const overY = el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 1
+      if (!overX && !overY) continue
+      if (!visible(el)) continue
+      const s = style(el)
+      if (overX && (s.overflowX === 'auto' || s.overflowX === 'scroll')) {
+        overflow.scrollers++
+        sample('scroller', `${describe(el)} +${el.scrollWidth - el.clientWidth}px`)
+      }
+      const hidesX = overX && (s.overflowX === 'hidden' || s.overflowX === 'clip') && s.textOverflow !== 'ellipsis'
+      const clamp = s.getPropertyValue('-webkit-line-clamp')
+      const hidesY = overY && (s.overflowY === 'hidden' || s.overflowY === 'clip') && (!clamp || clamp === 'none') && rect(el).height > 8
+      if (!hidesX && !hidesY) continue
+      // Which text actually runs past the box (the overflow may be an icon or a shadow): each text node counted once.
+      const r = rect(el)
+      const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      for (let n = walk.nextNode() as Text | null; n; n = walk.nextNode() as Text | null) {
+        if (cutNodes.has(n) || !(n.nodeValue ?? '').trim() || !n.parentElement || !visible(n.parentElement)) continue
+        if (n.parentElement.closest('svg')) continue
+        // An ellipsis on the text's own box means the cut is shown.
+        if (style(n.parentElement).textOverflow === 'ellipsis') continue
+        textWalk.selectNodeContents(n)
+        // Down, a glyph box may stick out of a tight line box by a few px without anything being lost.
+        const out = Array.from(textWalk.getClientRects()).some(t => {
+          if (t.width < 1) return false
+          const slackY = Math.max(3, 0.3 * t.height)
+          return (hidesX && (t.right > r.right + 1 || t.left < r.left - 1)) || (hidesY && (t.bottom > r.bottom + slackY || t.top < r.top - slackY))
+        })
+        if (!out) continue
+        cutNodes.add(n)
+        overflow.cut++
+        sample('cut', `"${short(n.nodeValue ?? '', 40)}" in ${describe(el).split(' ')[0]}`)
+      }
+    }
+    // Past the right edge of the viewport while the page itself does not scroll sideways (pageOver is measured above).
+    if (pageOver <= 1) {
+      const reported = new Set<Element>()
+      for (const tb of textBoxes) {
+        if (tb.raw.r > vw + 1 && tb.raw.l < vw - 1 && tb.b.r > vw + 1 && !reported.has(tb.el)) {
+          reported.add(tb.el)
+          overflow.offscreen++
+          sample('offscreen', `"${short(tb.text)}" right=${Math.round(tb.raw.r)}`)
+        }
+      }
+      const controls = 'a[href], button, input:not([type="hidden"]), select, textarea, [role="button"], [role="link"], [role="tab"], [role="combobox"], [role="searchbox"]'
+      for (const el of Array.from(document.querySelectorAll(controls))) {
+        if (covered(el) || !visible(el) || reported.has(el)) continue
+        const r = rect(el)
+        if (r.right <= vw + 1 || r.left >= vw - 1 || paintClipOf(el.parentElement).r <= vw + 1) continue
+        if (Array.from(reported).some(p => p.contains(el) || el.contains(p))) continue
+        reported.add(el)
+        overflow.offscreen++
+        sample('offscreen', `${describe(el)} right=${Math.round(r.right)}`)
+      }
+    }
   }
 
   const contentHeight = Math.round(Math.max(se.scrollHeight, main ? main.scrollHeight + (vh - main.clientHeight) : 0))
@@ -439,5 +644,7 @@ export function collect(opts: { phone: boolean }): Metrics {
     tap,
     nav,
     clipped,
+    overlap,
+    overflow,
   }
 }

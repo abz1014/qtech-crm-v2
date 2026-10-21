@@ -11,4 +11,6 @@ related: commissioning-done
 3. Tap [Delivered today]. One tap: the date is today's.
 4. Delivered on another day? Tap the date and change it.
 
+Tip: Engineers: ordered from the supplier yourself? Tap [I placed this order] on that supplier order.
+
 Safe to try: tapped by mistake? Tap [Undo] on the message at the bottom.

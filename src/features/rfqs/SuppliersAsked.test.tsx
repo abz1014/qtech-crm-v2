@@ -149,3 +149,52 @@ describe('SuppliersAsked chase', () => {
     localStorage.removeItem('qtech.channel.u1')
   })
 })
+
+describe('SuppliersAsked: each supplier once, with its reply (grade-B R2, R3, R4)', () => {
+  const meter: RfqItemRow[] = [{ id: 'it-1', number: 1, description: 'Hach HQ1110 meter', brandId: 'b-hach', brandName: 'Hach', familyId: null, qty: 1, unit: 'pcs' }]
+  function renderMode(chase: 'card' | 'button' | 'none', inq: InquiryRow = { ...inquiry, chaseCount: 0, lastChasedOn: null }) {
+    installFakeDb(() => ({ data: [] }))
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
+          <MemoryRouter>
+            <ToastProvider>
+              <SuppliersAsked rfq={rfq} items={meter} inquiries={[inq]} stats={undefined} chase={chase} onFloat={() => undefined} />
+            </ToastProvider>
+          </MemoryRouter>
+        </SessionContext.Provider>
+      </QueryClientProvider>,
+    )
+  }
+
+  it('Enter reply opens the price form for that supplier only when tapped', async () => {
+    const user = userEvent.setup()
+    renderMode('card')
+    expect(screen.queryByRole('textbox', { name: 'Price for item 1 from Silent Traders' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Enter reply, Silent Traders' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Silent Traders' })
+    expect(within(dialog).getByRole('textbox', { name: 'Price for item 1 from Silent Traders' })).toBeInTheDocument()
+  })
+
+  it('prices in: a 1-tap Chase, and the card only on Show message', async () => {
+    const user = userEvent.setup()
+    renderMode('button')
+    expect(screen.getByRole('button', { name: 'Chase Silent Traders' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Copy and mark chased' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Show message, Silent Traders' }))
+    expect(screen.getByRole('button', { name: 'Copy and mark chased' })).toBeInTheDocument()
+  })
+
+  it('quotation sent: no chase at all', () => {
+    renderMode('none')
+    expect(screen.queryByRole('button', { name: 'Chase Silent Traders' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Copy and mark chased' })).toBeNull()
+  })
+
+  it("a supplier who can't quote shows Take back instead of Enter reply", () => {
+    renderMode('card', { ...inquiry, noOfferOn: '2026-10-03', noOfferReason: 'other' })
+    expect(screen.getByRole('button', { name: "Take back can't quote, Silent Traders" })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Enter reply/ })).toBeNull()
+  })
+})

@@ -109,7 +109,7 @@ test.describe('O04: the orders list', () => {
     await expect(row(page, s.orders.a)).toBeVisible()
     await expect(row(page, s.orders.b)).toHaveCount(0)
     await page.getByLabel('Invoicing state').selectOption({ label: 'To invoice · nothing invoiced (1)' })
-    await page.getByLabel('Payment state').selectOption({ label: 'Awaiting payment · nothing paid (1)' })
+    await page.getByLabel('Payment state').selectOption({ label: 'Waiting for payment · nothing paid (1)' })
     await expect(row(page, s.orders.a)).toBeVisible()
     await expect(page).toHaveURL(/commissioning=planned/)
     await expect(page).toHaveURL(/invoicing=not_invoiced/)
@@ -197,6 +197,13 @@ test.describe('O04: the orders list', () => {
       // nothing scrolls sideways at this width
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
       await shot(page, `o04-orders-list-axe-${width}`)
+      // O2/O3 (UX audit 2026-10-22): one toolbar row, no "Any" segment (Who acts next is in Filters), and the search box is whole
+      // on screen (an inner strip that runs off the edge does not show as page scroll, so measure the box itself)
+      await expect(page.getByRole('radio', { name: 'Any' })).toHaveCount(0)
+      const box = await page.getByRole('textbox', { name: 'Search orders' }).boundingBox()
+      expect(box && box.x >= 0 && box.x + box.width <= width).toBe(true)
+      // no cell runs into its neighbour: the Order cell's PO and owner wrap rather than spill over the Value column
+      expect(await page.locator('table tbody td').evaluateAll(tds => tds.filter(td => td.scrollWidth > td.clientWidth + 1).length)).toBe(0)
       if (width < 640) {
         // a phone gets one Filter button instead of six controls; the owner switch and the four filters are in its sheet
         await expect(page.getByRole('radio', { name: /^All/ })).toHaveCount(0)
@@ -204,6 +211,7 @@ test.describe('O04: the orders list', () => {
         const sheet = page.getByRole('dialog', { name: 'Filter orders' })
         await expect(sheet.getByRole('radio', { name: /^All/ })).toBeVisible()
         await expect(sheet.getByLabel('Goods state')).toBeVisible()
+        await expect(sheet.getByLabel('Who acts next')).toBeVisible()
         expect(await axeViolations(page, { landmarks: false })).toEqual([])
         await shot(page, 'o04-orders-list-filter-sheet-375')
         await sheet.getByRole('button', { name: /^Show \d+ orders?$/ }).click()

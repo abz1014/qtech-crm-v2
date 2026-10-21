@@ -10,7 +10,7 @@ import { OrderHeaderBlock, OrderMoreMenu } from '@/features/orders/OrderHeaderBl
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { orderRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
-import { orderFacts, pageStep } from '@/features/orders/lib/primaryAction'
+import { orderFacts, pageStep, recordPaymentPlace } from '@/features/orders/lib/primaryAction'
 import { businessToday } from '@/lib/dates'
 import { OrderItemsPanel } from '@/features/orders/OrderItemsPanel'
 import { LegsPanel } from '@/features/orders/LegsPanel'
@@ -97,7 +97,7 @@ export default function OrderDetailScreen() {
     title: header.data ? orderRef(header.data.number) : 'Order',
     back: 'history',
     fallback: '/orders',
-    actions: header.data && !isEngineer ? <OrderMoreMenu order={header.data} touch /> : undefined,
+    actions: header.data && !isEngineer ? <OrderMoreMenu order={header.data} touch recordPayment={next !== null && recordPaymentPlace(header.data, orderMoney.data, primary?.kind, role) === 'menu'} /> : undefined,
     hideTabs: primary !== null,
   })
 
@@ -197,7 +197,8 @@ export default function OrderDetailScreen() {
               <div className="grid min-w-0 gap-6">
                 <LegsPanel order={order} legs={legs.data} items={items.data} pos={pos.data ?? []} money={money} isAdmin={isAdmin} canEdit={canEdit} />
                 <CommissioningPanel order={order} engineers={engineers.data ?? []} isEngineer={isEngineer} canEdit={canEdit} markDoneAbove={primary?.kind === 'mark-done'} />
-                <AttachmentsPanel orderId={order.id} />
+                {/* compact: a short drop zone, so an order with no files does not spend a screen on it (UX audit P9) */}
+                <AttachmentsPanel orderId={order.id} compact />
               </div>
               {/* The side column is admin's Margin (with the one order-level Add expense) and the payment rows (Correct / Void, 0073). The
                   invoiced and received figures are in the header's status strip, and the engineer's site is in the header's "Your job". */}

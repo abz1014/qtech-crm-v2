@@ -15,7 +15,9 @@ import { millions, targetWorking, type TargetWorking } from '@/features/today/ta
  * no parameters, so nobody else's number can reach this component. A status, never a task: it creates no list item and
  * sends no reminder. The day line opens the working, so every figure shows where it came from.
  */
-const pkr = (n: number) => `PKR ${formatAmount(n)}`
+// Whole rupees on the tile and in the working (audit T3: "PKR 3,862,102", not "3,862,101.69"); the hover title keeps the paisa.
+const rupees = (n: number) => formatAmount(n, 'never')
+const pkr = (n: number) => `PKR ${rupees(n)}`
 
 export function TargetTile({ today, className }: { today: string; className?: string }) {
   const q = useMyTarget()
@@ -56,7 +58,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
         <Status w={w} />
       </div>
       <p className="text-lg">
-        <span className="num font-medium" title={`Exact: ${pkr(w.achieved)}`}>{pkr(w.achieved)}</span>{' '}
+        <span className="num font-medium" title={`Exact: PKR ${formatAmount(w.achieved)}`}>{pkr(w.achieved)}</span>{' '}
         <span className="num text-xs text-fg-muted">of {pkr(w.target)}</span>
       </p>
       <div className="grid gap-1">
@@ -104,8 +106,8 @@ export function TargetTile({ today, className }: { today: string; className?: st
           <div className="my-1 border-t" />
           <Row k={w.status === 'ahead' ? 'Ahead of pace' : 'Behind pace'} v={pkr(w.status === 'ahead' ? w.ahead : w.behind)} strong />
           <p className="mt-1 text-fg-muted">
-            Net cash received by you since {w.startText}, GST left out. Shown to the nearest PKR 10,000: exact on pace {formatAmount(w.onPaceExact)}
-            {w.status === 'ahead' ? `, ahead ${formatAmount(w.aheadExact)}` : `, behind ${formatAmount(w.behindExact)}`}.
+            Net cash received by you since {w.startText}, GST left out. Shown to the nearest PKR 10,000: exact on pace {rupees(w.onPaceExact)}
+            {w.status === 'ahead' ? `, ahead ${rupees(w.aheadExact)}` : `, behind ${rupees(w.behindExact)}`}.
             {w.excludedCount > 0 ? ` ${w.excludedCount} ${w.excludedCount === 1 ? 'payment is' : 'payments are'} not counted yet: nobody has said whether GST is included.` : ''}
           </p>
         </div>

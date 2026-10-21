@@ -146,13 +146,23 @@ async function dropPage(role: Role, vp: Viewport): Promise<void> {
 
 // ---------------------------------------------------------------- one capture
 
-async function fullShot(page: Page, vp: Viewport, path: string): Promise<void> {
-  const height = await page.evaluate(() => {
+async function fullShot(page: Page, vp: Viewport, path: string, root: string | null): Promise<void> {
+  const height = await page.evaluate(sel => {
+    // A dialog: the viewport grows by what its tallest inner scroller hides, so the whole dialog is in the picture.
+    const dialog = sel ? document.querySelector<HTMLElement>(sel) : null
+    if (dialog) {
+      let hidden = 0
+      for (const el of [dialog, ...Array.from(dialog.querySelectorAll<HTMLElement>('*'))]) {
+        const oy = getComputedStyle(el).overflowY
+        if (oy === 'auto' || oy === 'scroll') hidden = Math.max(hidden, el.scrollHeight - el.clientHeight)
+      }
+      return window.innerHeight + hidden
+    }
     const main = document.querySelector<HTMLElement>('#main')
     main?.scrollTo(0, 0)
     const se = document.scrollingElement ?? document.documentElement
     return Math.max(se.scrollHeight, main ? main.scrollHeight + (window.innerHeight - main.clientHeight) : 0)
-  })
+  }, root)
   const tall = Math.min(Math.max(height, vp.height), MAX_FULL_HEIGHT)
   // The app scrolls <main>, not the document: the page is made as tall as its content, photographed, and put back.
   if (tall > vp.height + 1) {
@@ -183,14 +193,15 @@ async function captureOne(page: Page, role: Role, visit: Visit, screen: string, 
       // Scroll <main> only: scrollIntoView would also move the document and push the top bar off the screen.
       if (main && target) main.scrollTop = target.getBoundingClientRect().top - main.getBoundingClientRect().top - 8
     }, opts.scrollTo ?? null)
-    const metrics = await page.evaluate(collect, { phone: vp.width < 768 })
+    if (opts.root) await page.locator(opts.root).first().waitFor({ timeout: 10_000 })
+    const metrics = await page.evaluate(collect, { phone: vp.width < 768, root: opts.root ?? null })
     const fold = join(dir, `${vp.name}-fold.png`)
     await page.screenshot({ path: fold, animations: 'disabled', caret: 'hide' })
     const axe = AXE ? summariseAxe(await axeViolations(page)) : undefined
     let full: string | undefined
     if (FULL) {
       full = join(dir, `${vp.name}-full.jpg`)
-      await fullShot(page, vp, full)
+      await fullShot(page, vp, full, opts.root ?? null)
     }
     return { ...base, status: metrics.status, ms: Date.now() - t0, metrics, axe, shots: { fold: rel(fold), full: full ? rel(full) : undefined } }
   } catch (e) {

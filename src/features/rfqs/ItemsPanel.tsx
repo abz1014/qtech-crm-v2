@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { ChevronDown, Clock, Copy, Ellipsis, Pencil, Plus, ThumbsUp, Trash2, TriangleAlert } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { cn } from '@/lib/utils'
@@ -24,8 +24,8 @@ import { ReasonBlock } from '@/features/rfqs/ranking/RankParts'
 import { bandSizeOf, evidenceOf, reasonsFor, sellNote, whyNotCheapest, type RankRow } from '@/features/rfqs/lib/ranking/reasons'
 import { lastPriceChip, type MemoryRow } from '@/lib/memory'
 import type { FxLatestRow, InquiryRow, QuoteLineRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
-import { useRemoveQuoteLine, useRestoreQuoteLine, useSetItemDecline } from '@/features/rfqs/hooks'
-import { CANT_QUOTE_REASONS, comparePrices, itemCoverage, qtyText, reasonForItem, reasonLabel, type ComparedLine, type RateTable, type SupplierSuggestion } from '@/features/rfqs/lib'
+import { useRemoveQuoteLine, useRestoreQuoteLine } from '@/features/rfqs/hooks'
+import { cheapestFirst, comparePrices, itemCoverage, qtyText, reasonForItem, reasonLabel, type ComparedLine, type RateTable, type SupplierSuggestion } from '@/features/rfqs/lib'
 
 /*
  * Items and supplier prices (g2-rfq-detail "Items and supplier replies", R07; the supplier comparison of R25; reworked by the UX
@@ -38,16 +38,19 @@ import { CANT_QUOTE_REASONS, comparePrices, itemCoverage, qtyText, reasonForItem
  * rank 1 (rank_item_quotes, R25); when the cheapest is someone else (the 2% rule ordered them by delivery record) a plain
  * "Cheapest: ..." line says so. Without the ranking (still loading, or one price only) the lowest of two or more comparable prices
  * is marked "Lowest price". A price with no usable rate is shown and never blocks anything (BUILD_PLAN A3/A4); it is not compared.
- * Entering replies lives in the next panel, one row per supplier (SupplierReplies.tsx).
+ * Entering replies lives once per supplier in Suppliers asked (SuppliersAsked.tsx opens SupplierReplies.tsx).
  */
 
 const daysBetween = (from: string, to: string) => Math.round((Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10)) - Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10))) / 86_400_000)
 
 // Every row is its own grid, so the tracks are fixed to line up; sized for 16px text ("≈ PKR 1,234,567", "Not in stock").
-const COLS = 'md:grid-cols-[minmax(0,1fr)_176px_minmax(0,136px)_128px_72px]'
-const HEAD = `hidden gap-x-4 px-5 py-2 text-sm text-fg-muted md:grid ${COLS}`
-/** Phone: the supplier and the price on one line, lead time, stock and the two buttons on the next (the mark, when there is one, above). */
-const ROW = `relative grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 border-t px-5 py-3 md:gap-x-4 ${COLS}`
+const COLS = 'md:grid-cols-[minmax(0,1fr)_184px_minmax(0,136px)_128px_72px]'
+const HEAD = `hidden items-end gap-x-4 px-5 py-2 text-sm text-fg-muted md:grid ${COLS}`
+/**
+ * Phone (UX audit C3): two lines per supplier. The name (and its mark) across the row with the two buttons at its end; then
+ * price · lead time · stock on one wrapping line. On desktop the second line's wrapper dissolves (md:contents) into the columns.
+ */
+const ROW = `relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t px-5 py-3 md:gap-x-4 ${COLS}`
 
 interface Entry {
   line: QuoteLineRow
@@ -55,22 +58,47 @@ interface Entry {
   c: ComparedLine
 }
 
-/** The price people compare: PKR at today's rate when there is a usable rate, else the supplier's own figure, marked not compared. */
-function PriceCell({ line, c }: { line: QuoteLineRow; c: ComparedLine }) {
+/** The "Cheapest" tag beside a price, when the Recommended supplier is someone else (UX audit C1). */
+function CheapestTag() {
+  return (
+    <span className="whitespace-nowrap rounded border border-line-strong px-1 font-sans text-sm font-medium text-fg-2" data-cheapest-tag>
+      Cheapest
+    </span>
+  )
+}
+
+/**
+ * The price people compare: PKR at today's rate when there is a usable rate, with the supplier's own figure in grey under it
+ * (UX audit C2); else the supplier's own figure, marked not compared. Desktop: right-aligned, one figure per line. Phone: left-aligned.
+ */
+function PriceCell({ line, c, cheapest }: { line: QuoteLineRow; c: ComparedLine; cheapest: boolean }) {
   if (line.currency === 'PKR' || c.pkrPaisa !== null) {
     return (
-      <span className="num whitespace-nowrap text-base font-medium">
-        {/* A real space, not a margin: a screen reader reads "≈ PKR 33,600", not "PKR33,600". */}
-        <span className="font-sans text-sm font-regular text-fg-muted">{line.currency === 'PKR' ? 'PKR' : '≈ PKR'}</span>{' '}
-        {line.currency === 'PKR' ? formatAmount(line.unitPrice, 'auto') : formatPaisa(c.pkrPaisa as bigint, 'auto')}
+      <span className="inline-grid justify-items-start gap-x-2 md:grid md:justify-items-end">
+        <span className="flex flex-wrap items-center gap-x-2 md:justify-end">
+          {cheapest ? <CheapestTag /> : null}
+          <span className="num whitespace-nowrap text-base font-medium">
+            {/* A real space, not a margin: a screen reader reads "≈ PKR 33,600", not "PKR33,600". */}
+            <span className="font-sans text-sm font-regular text-fg-muted">{line.currency === 'PKR' ? 'PKR' : '≈ PKR'}</span>{' '}
+            {line.currency === 'PKR' ? formatAmount(line.unitPrice, 'auto') : formatPaisa(c.pkrPaisa as bigint, 'auto')}
+          </span>
+        </span>
+        {line.currency === 'PKR' ? null : (
+          <span className="num whitespace-nowrap text-sm text-fg-muted" data-own-price>
+            {`${line.currency} ${formatAmount(line.unitPrice, 'auto')}`}
+          </span>
+        )}
       </span>
     )
   }
   return (
-    <span className="grid justify-items-end">
-      <span className="num whitespace-nowrap text-base font-medium">
-        <span className="font-sans text-sm font-regular text-fg-muted">{line.currency}</span>{' '}
-        {formatAmount(line.unitPrice, 'always')}
+    <span className="inline-grid justify-items-start md:grid md:justify-items-end">
+      <span className="flex flex-wrap items-center gap-x-2 md:justify-end">
+        {cheapest ? <CheapestTag /> : null}
+        <span className="num whitespace-nowrap text-base font-medium">
+          <span className="font-sans text-sm font-regular text-fg-muted">{line.currency}</span>{' '}
+          {formatAmount(line.unitPrice, 'always')}
+        </span>
       </span>
       <span className="text-sm text-fg-muted">{c.notCompared === 'unusable' ? 'not compared, rate too old' : 'not compared, no rate'}</span>
     </span>
@@ -171,56 +199,19 @@ function RowMenu({ rfqId, entry, item }: { rfqId: string; entry: Entry; item: Rf
   )
 }
 
-/** A supplier asked about this item who has not answered it: one line, "Waiting on X · asked ...", and a Can't quote menu (C-37). */
-function WaitingRow({ rfqId, inquiry, item }: { rfqId: string; inquiry: InquiryRow; item: RfqItemRow }) {
-  const { toast } = useToast()
-  const decline = useSetItemDecline(rfqId)
-  const chase = inquiry.lastChasedOn ? `, chased ${formatDay(inquiry.lastChasedOn)}` : ''
-  const record = async (reason: string) => {
-    try {
-      await decline.mutateAsync({ inquiryId: inquiry.id, itemId: item.id, reason })
-      toast({
-        title: "Marked can't quote",
-        body: `${inquiry.supplierName} · item ${item.number} · ${reasonLabel(reason)}`,
-        undo: {
-          onUndo: async () => {
-            await decline.mutateAsync({ inquiryId: inquiry.id, itemId: item.id, reason: null })
-          },
-          settledTitle: "Marked can't quote",
-          undoneTitle: "Can't quote taken back",
-        },
-      })
-    } catch (err) {
-      toast({ title: "Could not mark can't quote", body: mapPgError(err, { entity: 'reply' }).message, tone: 'danger' })
-    }
-  }
+/**
+ * The suppliers asked about this item who have not answered yet, as ONE line (grade-B R1): "Waiting on Midlands Valves Ltd", or
+ * "Waiting on 3 suppliers" with the names in the title. Who they are, the chase and "Can't quote" live once per supplier in
+ * Suppliers asked (SuppliersAsked.tsx), not on every item.
+ */
+function WaitingLine({ waiting }: { waiting: readonly InquiryRow[] }) {
+  const names = waiting.map(w => w.supplierName)
   return (
-    <li className="flex items-center gap-x-4 border-t bg-sunken px-5 py-2 text-sm" data-waiting={inquiry.supplierId}>
-      <span className="flex min-w-0 flex-1 items-center gap-2 text-fg-2">
-        <Icon icon={Clock} className="shrink-0 text-fg-muted" />
-        <span className="min-w-0 [overflow-wrap:anywhere]">
-          Waiting on <b className="font-semibold text-fg">{inquiry.supplierName}</b>
-          <span className="text-fg-muted">{` · asked ${formatDay(inquiry.sentOn as string)}${chase}`}</span>
-        </span>
+    <li className="flex items-center gap-2 border-t bg-sunken px-5 py-2 text-fg-2" data-waiting={waiting.map(w => w.supplierId).join(' ')} title={names.join(', ')}>
+      <Icon icon={Clock} className="shrink-0 text-fg-muted" />
+      <span className="min-w-0 [overflow-wrap:anywhere]">
+        Waiting on {waiting.length === 1 ? <b className="font-semibold text-fg">{names[0]}</b> : `${waiting.length} suppliers`}
       </span>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button size="sm" aria-label={`Can't quote, ${inquiry.supplierName}, item ${item.number}`}>
-            {"Can't quote"}
-            <Icon icon={ChevronDown} size="sm" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent variant="menu" align="end" aria-label="Reason">
-          <p role="none" className="px-2 pb-1 pt-1 text-sm text-fg-muted">
-            One tap records the reason
-          </p>
-          {CANT_QUOTE_REASONS.map(r => (
-            <MenuItem key={r.key} onClick={() => void record(r.key)}>
-              {r.label}
-            </MenuItem>
-          ))}
-        </PopoverContent>
-      </Popover>
     </li>
   )
 }
@@ -323,24 +314,18 @@ export function ItemsPanel({
               rates,
             )
             for (const { l, i } of lines) entries.push({ line: l, inquiry: i, c: cmp.lines.find(x => x.id === l.id) as ComparedLine })
-            // The database's ranking (R25) when it has every line of this item; else the plain order: cheapest first among the compared, then the lines left out.
+            // The database's ranking (R25) when it has every line of this item. The rows are always cheapest first (UX audit C1): the
+            // Recommended mark stays where the ranking put it, wherever that row lands; lines left out of the comparison come last.
             const rankOf = (l: QuoteLineRow) => ranking?.get(l.id)
             const ranked = lines.length >= 2 && lines.every(({ l }) => rankOf(l) !== undefined)
-            if (ranked) {
-              entries.sort((a, b) => {
-                const ra = rankOf(a.line) as RankRow
-                const rb = rankOf(b.line) as RankRow
-                if ((ra.rank === null) !== (rb.rank === null)) return ra.rank === null ? 1 : -1
-                if (ra.rank !== null && rb.rank !== null && ra.rank !== rb.rank) return ra.rank - rb.rank
+            entries.sort((a, b) =>
+              cheapestFirst({ c: a.c, amount: a.line.unitPrice }, { c: b.c, amount: b.line.unitPrice }, () => {
+                const ra = rankOf(a.line)?.rank ?? null
+                const rb = rankOf(b.line)?.rank ?? null
+                if (ra !== rb) return ra === null ? 1 : rb === null ? -1 : ra - rb
                 return a.inquiry.supplierName.localeCompare(b.inquiry.supplierName)
-              })
-            } else {
-              entries.sort((a, b) => {
-                if (a.c.compared !== b.c.compared) return a.c.compared ? -1 : 1
-                if (a.c.pkrPaisa !== null && b.c.pkrPaisa !== null) return a.c.pkrPaisa < b.c.pkrPaisa ? -1 : a.c.pkrPaisa > b.c.pkrPaisa ? 1 : 0
-                return a.line.unitPrice - b.line.unitPrice
-              })
-            }
+              }),
+            )
             const itemRanks = ranked ? entries.map(e => rankOf(e.line) as RankRow) : []
             const bandSize = bandSizeOf(itemRanks)
             const rankedCount = itemRanks.filter(r => r.rank !== null).length
@@ -430,7 +415,7 @@ export function ItemsPanel({
                     {entries.length > 0 ? (
                       <div className={HEAD} aria-hidden="true">
                         <span>Supplier</span>
-                        <span className="text-right">Price, PKR today</span>
+                        <span className="text-right">Price, PKR today (≈ = converted)</span>
                         <span>Lead time</span>
                         <span>Stock</span>
                         <span />
@@ -446,79 +431,89 @@ export function ItemsPanel({
                         const open = opened[line.id] ?? false
                         const mark = markOf(entry)
                         const detailId = `price-detail-${line.id}`
+                        const isCheapestTag = cheaperElsewhere?.line.id === line.id
                         return (
-                          <li
-                            key={line.id}
-                            className={cn(ROW, rk && rk.rank === null && 'bg-canvas')}
-                            data-lowest={c.lowest ? '' : undefined}
-                            data-recommended={mark === 'recommended' ? '' : undefined}
-                            data-compared={c.compared && c.pkrPaisa !== null ? '' : undefined}
-                            data-ranked={rk ? (rk.rank ?? 'none') : undefined}
-                          >
-                            {/* The mark sits with the name (no column of its own), so the name keeps its width at 16px text. */}
-                            <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                              <span className="min-w-0 break-words font-medium">{inquiry.supplierName}</span>
-                              {mark ? (
-                                <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-medium text-tone-success-fg">
-                                  <Icon icon={ThumbsUp} size="chip" />
-                                  {mark === 'recommended' ? 'Recommended' : 'Lowest price'}
+                          <Fragment key={line.id}>
+                            <li
+                              className={cn(ROW, rk && rk.rank === null && 'bg-canvas')}
+                              data-lowest={c.lowest ? '' : undefined}
+                              data-recommended={mark === 'recommended' ? '' : undefined}
+                              data-compared={c.compared && c.pkrPaisa !== null ? '' : undefined}
+                              data-ranked={rk ? (rk.rank ?? 'none') : undefined}
+                            >
+                              {/* The mark sits with the name (no column of its own), so the name keeps its width at 16px text. */}
+                              <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                <span className="min-w-0 break-words font-medium">{inquiry.supplierName}</span>
+                                {mark ? (
+                                  <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-medium text-tone-success-fg">
+                                    <Icon icon={ThumbsUp} size="chip" />
+                                    {mark === 'recommended' ? 'Recommended' : 'Lowest price'}
+                                  </span>
+                                ) : null}
+                              </span>
+                              {/* Phone: price · lead time · stock on the second line. Desktop: the wrapper dissolves into three columns. */}
+                              <span className="col-span-full flex flex-wrap items-start gap-x-2 gap-y-1 md:contents">
+                                <span className="md:text-right">
+                                  <PriceCell line={line} c={c} cheapest={isCheapestTag} />
                                 </span>
+                                <span aria-hidden="true" className={cn('text-fg-muted md:hidden', !line.leadTime && 'hidden')}>
+                                  ·
+                                </span>
+                                <span className={cn('min-w-0 text-fg-2', !line.leadTime && 'max-md:hidden')}>
+                                  <span className="sr-only">Lead time: </span>
+                                  {line.leadTime ?? <span className="text-fg-muted">—</span>}
+                                </span>
+                                <span aria-hidden="true" className={cn('text-fg-muted md:hidden', line.inStock === null && 'hidden')}>
+                                  ·
+                                </span>
+                                <span className={cn('flex items-center gap-2 text-fg-2', line.inStock === null && 'max-md:hidden')}>
+                                  {line.inStock === null ? (
+                                    <span className="text-fg-muted">
+                                      <span className="sr-only">Stock: </span>—
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <i aria-hidden="true" className={`size-[6px] rounded-round ${line.inStock ? 'bg-tone-success-fg' : 'border border-fg-muted'}`} />
+                                      {line.inStock ? 'In stock' : 'Not in stock'}
+                                    </>
+                                  )}
+                                </span>
+                              </span>
+                              <span className="flex justify-end max-md:col-start-2 max-md:row-start-1 max-md:self-start">
+                                <Button
+                                  variant="quiet"
+                                  size="sm"
+                                  aria-expanded={open}
+                                  aria-controls={open ? detailId : undefined}
+                                  aria-label={`${open ? 'Hide' : 'Show'} details for ${inquiry.supplierName}`}
+                                  onClick={() => setOpened(o => ({ ...o, [line.id]: !open }))}
+                                  icon={ChevronDown}
+                                  className={cn('[&_svg]:transition-transform', open && '[&_svg]:rotate-180')}
+                                />
+                                <RowMenu rfqId={rfq.id} entry={entry} item={item} />
+                              </span>
+                              {open ? (
+                                <div id={detailId} className="col-span-full grid gap-2 pb-1 md:col-start-2">
+                                  <PriceDetail line={line} inquiry={inquiry} c={c} rates={rates} />
+                                  {chip ? <LastPriceChipView chip={chip} /> : null}
+                                  {rk && reasons ? <ReasonBlock set={reasons} supplier={inquiry.supplierName} unrankedCurrency={rk.rank === null ? line.currency : null} /> : null}
+                                </div>
                               ) : null}
-                            </span>
-                            <span className="text-right max-md:col-span-2">
-                              <PriceCell line={line} c={c} />
-                            </span>
-                            <span className="min-w-0 text-fg-2">
-                              <span className="sr-only">Lead time: </span>
-                              {line.leadTime ?? <span className="text-fg-muted">—</span>}
-                            </span>
-                            <span className="flex items-center gap-2 text-fg-2">
-                              {line.inStock === null ? (
-                                <span className="text-fg-muted">
-                                  <span className="sr-only">Stock: </span>—
-                                </span>
-                              ) : (
-                                <>
-                                  <i aria-hidden="true" className={`size-[6px] rounded-round ${line.inStock ? 'bg-tone-success-fg' : 'border border-fg-muted'}`} />
-                                  {line.inStock ? 'In stock' : 'Not in stock'}
-                                </>
-                              )}
-                            </span>
-                            <span className="flex justify-end">
-                              <Button
-                                variant="quiet"
-                                size="sm"
-                                aria-expanded={open}
-                                aria-controls={open ? detailId : undefined}
-                                aria-label={`${open ? 'Hide' : 'Show'} details for ${inquiry.supplierName}`}
-                                onClick={() => setOpened(o => ({ ...o, [line.id]: !open }))}
-                                icon={ChevronDown}
-                                className={cn('[&_svg]:transition-transform', open && '[&_svg]:rotate-180')}
-                              />
-                              <RowMenu rfqId={rfq.id} entry={entry} item={item} />
-                            </span>
-                            {open ? (
-                              <div id={detailId} className="col-span-full grid gap-2 pb-1 md:col-start-2">
-                                <PriceDetail line={line} inquiry={inquiry} c={c} rates={rates} />
-                                {chip ? <LastPriceChipView chip={chip} /> : null}
-                                {rk && reasons ? <ReasonBlock set={reasons} supplier={inquiry.supplierName} unrankedCurrency={rk.rank === null ? line.currency : null} /> : null}
-                              </div>
+                            </li>
+                            {/* Why the Recommended supplier is not the cheapest, directly under the Recommended row (UX audit C1). */}
+                            {cheaperElsewhere && recommended?.line.id === line.id ? (
+                              <li className="px-5 pb-3 text-fg-2" data-cheapest>
+                                Cheapest: <b className="font-semibold text-fg">{cheaperElsewhere.inquiry.supplierName}</b>
+                                {(() => {
+                                  const rec = rankOf(recommended.line)
+                                  const low = rankOf(cheaperElsewhere.line)
+                                  return rec && low ? `. ${recommended.inquiry.supplierName} ${whyNotCheapest(rec, low)}.` : '.'
+                                })()}
+                              </li>
                             ) : null}
-                          </li>
+                          </Fragment>
                         )
                       })}
-                      {cheaperElsewhere && recommended ? (
-                        <li className="flex items-start gap-2 border-t px-5 py-2 text-sm text-fg-2" data-cheapest>
-                          <span>
-                            Cheapest: <b className="font-semibold text-fg">{cheaperElsewhere.inquiry.supplierName}</b>
-                            {(() => {
-                              const rec = rankOf(recommended.line)
-                              const low = rankOf(cheaperElsewhere.line)
-                              return rec && low ? `. ${recommended.inquiry.supplierName} ${whyNotCheapest(rec, low)}.` : '.'
-                            })()}
-                          </span>
-                        </li>
-                      ) : null}
                       {declined.map(({ i, reason }) => (
                         <li key={i.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-5 py-2 text-fg-muted" data-declined={i.supplierId}>
                           <span className="min-w-0 break-words font-medium text-fg-2">{i.supplierName}</span>
@@ -527,9 +522,7 @@ export function ItemsPanel({
                           {i.noOfferOn && !i.itemDeclines[item.id] ? <span className="num text-sm">{`· ${formatDay(i.noOfferOn)}`}</span> : null}
                         </li>
                       ))}
-                      {waiting.map(w => (
-                        <WaitingRow key={w.id} rfqId={rfq.id} inquiry={w} item={item} />
-                      ))}
+                      {waiting.length > 0 ? <WaitingLine waiting={waiting} /> : null}
                     </ul>
                   </div>
                 ) : null}

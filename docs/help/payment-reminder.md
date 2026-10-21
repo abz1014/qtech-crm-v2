@@ -3,7 +3,7 @@ id: payment-reminder
 title: Remind a customer to pay
 roles: sales, admin
 keywords: payment, reminder, overdue, owes, balance, late, receivable
-screens: /money, /today
+screens: /money, /today, /orders
 related: record-payment
 ---
 1. Tap [Money]. It opens on [Who owes us].
@@ -11,6 +11,6 @@ related: record-payment
 3. The channel you used last is chosen. To switch, tap [Email instead] or [WhatsApp instead].
 4. Tap [Open in WhatsApp] or [Open in email], press Send there, then tap [Mark reminded].
 
-Tip: [Copy and mark reminded] copies and marks in one tap. Overdue payments also show on Today. Payments are recorded by the admin.
+Tip: [Copy and mark reminded] copies and marks in one tap. On an order the customer still owes on, [Copy reminder] is the green button. Overdue payments also show on Today. Payments are recorded by the admin.
 
 Safe to try: reminded by mistake? Tap [Undo] on the message at the bottom.

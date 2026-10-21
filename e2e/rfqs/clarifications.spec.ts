@@ -8,7 +8,7 @@ import { readClipboardWhen, resetClipboard } from '../support/clipboard'
  * through the real login form. Every test seeds its own company and RFQ, so tests do not depend on each other.
  *
  * FE-2 targets asserted here (BUILD_PLAN FE-2 and A3 R09):
- *   Add questions       1 paste + 1 tap (the paste splits into one question per line)
+ *   Add questions       1 tap to open + 1 paste + 1 tap (the paste splits into one question per line; the box is hidden until needed)
  *   Copy for customer   1 tap (copies the approved wording and stamps the asked times)
  *   Photo answer        at most 3 taps, 0 typed (here: 2 taps)
  *   Copy answers        1 tap (stamps last_relayed_at); a photo-only answer reads "see attached photo"
@@ -92,7 +92,7 @@ async function seedPhoto(rfqId: string, clarificationId: string | null, name: st
 const panel = (page: Page) => page.locator('[data-slot="clarifications"]')
 const toast = (page: Page, text: string) => page.getByRole('status').filter({ hasText: text })
 
-test.describe('adding questions (FE-2: 1 paste + 1 tap)', () => {
+test.describe('adding questions (FE-2: open, 1 paste + 1 tap)', () => {
   test('a pasted message splits into separate questions, each can be tagged to the supplier who asked', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
@@ -100,6 +100,10 @@ test.describe('adding questions (FE-2: 1 paste + 1 tap)', () => {
 
     let pastes = 0
     let taps = 0
+    // One line until it is needed (grade-B R9): "+ Add question" opens the paste box.
+    await expect(panel(page).getByRole('textbox', { name: 'Add questions' })).toHaveCount(0)
+    await panel(page).getByRole('button', { name: 'Add question', exact: true }).click()
+    taps++
     await panel(page).getByRole('textbox', { name: 'Add questions' }).fill('1. What flange size and rating does the LR250 mount on?\n2. Is Ex certification needed for the Unit 2 dyeing area?\n- Should the Cerabar output be HART or plain 4 to 20 mA?')
     pastes++
     const list = panel(page).getByRole('list', { name: 'Questions to add' })
@@ -108,7 +112,7 @@ test.describe('adding questions (FE-2: 1 paste + 1 tap)', () => {
     await panel(page).getByRole('button', { name: 'Add 3 questions' }).click()
     taps++
     expect(pastes).toBe(1)
-    expect(taps).toBe(1)
+    expect(taps).toBe(2)
 
     await expect(toast(page, '3 questions added')).toBeVisible()
     const rows = await clarsOf(s.rfq.id)
@@ -365,6 +369,7 @@ for (const width of [1440, 375]) {
     expect(await violations(page)).toEqual([])
     await review(page, `r09-clarifications-populated-${width}`)
 
+    await panel(page).getByRole('button', { name: 'Add question', exact: true }).click()
     await panel(page).getByRole('textbox', { name: 'Add questions' }).fill('Which cable gland size?\nHow long a cable?')
     expect(await violations(page)).toEqual([])
     await review(page, `r09-clarifications-adding-${width}`)
