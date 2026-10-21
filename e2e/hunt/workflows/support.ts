@@ -1,7 +1,7 @@
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { type Browser, type BrowserContext, type Page, type TestInfo } from '@playwright/test'
+import { type Browser, type BrowserContext, type Page, type Request, type TestInfo } from '@playwright/test'
 import { openAs, type Role } from '../../support/stack'
 
 /*
@@ -108,11 +108,11 @@ export function watch(page: Page, info: TestInfo, label: string, opts: { allowSt
   page.on('console', m => {
     if (m.type() === 'error' || m.type() === 'warning') {
       const text = m.text()
-      if (/Download the React DevTools|was preloaded using link preload/.test(text)) return
+      if (/Download the React DevTools|was preloaded using link preload|Service Worker registration blocked by Playwright/.test(text)) return
       note(info, { kind: 'console', where: `${label} ${page.url()}`, what: `[${m.type()}] ${text.slice(0, 400)}` })
     }
   })
-  page.on('pageerror', e => note(info, { kind: 'pageerror', where: `${label} ${page.url()}`, what: e.message.slice(0, 400) }))
+  page.on('pageerror', e => /reading 'waiting'/.test(e.message) && page.context().serviceWorkers().length === 0 ? undefined : note(info, { kind: 'pageerror', where: `${label} ${page.url()}`, what: e.message.slice(0, 400) }))
   page.on('response', async r => {
     const s = r.status()
     if (s < 400 || allow.has(s) || IGNORE_URL.some(x => x.test(r.url()))) return
@@ -124,12 +124,19 @@ export function watch(page: Page, info: TestInfo, label: string, opts: { allowSt
     }
     note(info, { kind: 'http', where: `${label} ${page.url()}`, what: `${s} ${r.request().method()} ${decodeURIComponent(r.url()).replace(/^https?:\/\/[^/]+/, '').slice(0, 250)}`, detail: body })
   })
+  const inflight = new Map<Request, number>()
+  INFLIGHT.set(page, inflight)
+  page.on('request', r => inflight.set(r, Date.now()))
+  page.on('requestfinished', r => inflight.delete(r))
   page.on('requestfailed', r => {
+    inflight.delete(r)
     const err = r.failure()?.errorText ?? ''
     if (/ERR_ABORTED/.test(err) || IGNORE_URL.some(x => x.test(r.url()))) return
     note(info, { kind: 'requestfailed', where: `${label} ${page.url()}`, what: `${err} ${r.method()} ${r.url().replace(/^https?:\/\/[^/]+/, '').slice(0, 200)}` })
   })
 }
+
+const INFLIGHT = new WeakMap<Page, Map<Request, number>>()
 
 /** Open a page in a context with watching on; returns the page and how long the screen took to settle (ms). */
 export async function go(ctx: BrowserContext, info: TestInfo, path: string, label = ''): Promise<{ page: Page; ms: number }> {
@@ -144,10 +151,16 @@ export async function visit(page: Page, info: TestInfo, path: string, label = ''
   const t0 = Date.now()
   await page.goto(path)
   await page.locator('#main').waitFor({ timeout: 20_000 }).catch(() => undefined)
+  // What a person waits for: the heading and no skeleton. Network idle is measured separately (a poll keeps it busy).
+  await page.locator('#main h1, #main h2').first().waitFor({ timeout: 15_000 }).catch(() => undefined)
+  await page.locator('#main .skeleton').first().waitFor({ state: 'detached', timeout: 15_000 }).catch(() => undefined)
+  const shown = Date.now() - t0
+  const pending = [...(INFLIGHT.get(page)?.entries() ?? [])].filter(([, at]) => Date.now() - at > 1500).map(([r]) => `${r.method()} ${decodeURIComponent(r.url()).replace(/^https?:\/\/[^/]+/, '').slice(0, 120)}`)
   await settle(page)
   const ms = Date.now() - t0
-  if (ms > 2000) note(info, { kind: 'slow', where: `${label} ${path}`, what: `took ${ms} ms to settle` })
-  return ms
+  if (shown > 2000) note(info, { kind: 'slow', where: `${label} ${path}`, what: `content took ${shown} ms to show (network idle at ${ms} ms)`, detail: pending.slice(0, 6) })
+  else if (ms > 4000) note(info, { kind: 'slow', where: `${label} ${path}`, what: `shown in ${shown} ms but the network stayed busy until ${ms} ms`, detail: pending.slice(0, 6) })
+  return shown
 }
 
 export async function settle(page: Page): Promise<void> {
@@ -170,7 +183,16 @@ export async function layout(page: Page, info: TestInfo, label: string): Promise
       const vw = window.innerWidth
       const doc = document.scrollingElement as HTMLElement
       if (doc.scrollWidth > vw + 1) out.push({ kind: 'page-scrolls-sideways', text: `scrollWidth ${doc.scrollWidth} > ${vw}` })
+      const hidden = (el: Element) => Boolean(el.closest('.sr-only, [aria-hidden="true"]'))
+      const scrollsX = (el: Element) => {
+        for (let a = el.parentElement; a; a = a.parentElement) {
+          const o = getComputedStyle(a).overflowX
+          if ((o === 'auto' || o === 'scroll') && a.scrollWidth > a.clientWidth) return true
+        }
+        return false
+      }
       const visible = (el: Element) => {
+        if (hidden(el)) return false
         const r = el.getBoundingClientRect()
         const cs = getComputedStyle(el)
         return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' && Number(cs.opacity) > 0.05
@@ -188,7 +210,7 @@ export async function layout(page: Page, info: TestInfo, label: string): Promise
           out.push({ kind: cs.textOverflow === 'ellipsis' ? 'text-truncated-ellipsis' : 'text-clipped', text: txt, box: describe(el) })
         }
         const r = el.getBoundingClientRect()
-        if (r.right > vw + 2 && cs.position !== 'fixed') out.push({ kind: 'off-screen-right', text: txt, box: `${describe(el)} right=${Math.round(r.right)}` })
+        if (r.right > vw + 2 && cs.position !== 'fixed' && !scrollsX(el)) out.push({ kind: 'off-screen-right', text: txt, box: `${describe(el)} right=${Math.round(r.right)}` })
       }
       // Overlapping text: leaf text boxes whose rectangles intersect by more than 3 px both ways.
       const leaves: { r: DOMRect; t: string }[] = []

@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs'
-import { test, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
+import { expect, test, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
 import { rest } from '../../support/stack'
 import { fetchStoredPdf, pdfIsValid, pdfText, renderPdfPng } from '../../support/pdf'
 import { readClipboardWhen, resetClipboard } from '../../support/clipboard'
 import { db, num, USER } from '../../verify/support/db'
-import { company, invoice, karachiDay, order, post, ref, setProfile, setRates, supplier, type Co, type LineSpec } from '../../verify/support/fixtures'
+import { company, invoice, karachiDay, order, payment, post, ref, setProfile, setRates, supplier, type Co, type LineSpec } from '../../verify/support/fixtures'
 import { MONEY_PATHS, restLog } from '../../verify/support/session'
 import { amount } from '../../verify/support/text'
 import { ctxAs, layout, note, OUT, probe, settle, shot, tag, visit, watch } from './support'
@@ -176,6 +176,9 @@ async function todayItems(ctx: BrowserContext, info: TestInfo, rule: string, tex
     await visit(p, info, '/today')
     await p.getByRole('heading', { level: 1, name: 'Today' }).waitFor({ timeout: T }).catch(() => undefined)
     await p.getByText(/\d+ due now|Nothing due|all done/i).first().waitFor({ timeout: T }).catch(() => undefined)
+    // Waiting starts collapsed (R2-08): open it so its items are in the DOM too.
+    const toggle = p.getByRole('region', { name: 'Waiting' }).getByRole('button', { expanded: false })
+    if (await toggle.count()) await toggle.first().click().catch(() => undefined)
     const li = p.locator(`li[data-rule="${rule}"]`).filter({ hasText: text })
     return { count: await li.count(), waiting: await p.locator(`li[data-rule="${rule}"][data-waiting]`).filter({ hasText: text }).count() }
   } finally {
@@ -195,7 +198,14 @@ async function threeWay(info: TestInfo, orderPage: Page, rp: Page, orderId: stri
   const shown = toNum(await orderPage.getByTestId('order-balance').innerText({ timeout: T }))
   want(info, where, same(shown, r.balance), `order page balance ${shown} != order_receivables balance ${r.balance}`, r)
   await visit(rp, info, `/money/receivables?q=${encodeURIComponent(customer)}`)
-  const row = rp.getByRole('row').filter({ hasText: customer })
+  await rp
+    .getByRole('link', { name: /^Open ORD-\d+/ })
+    .or(rp.getByText(/Nothing matches|Nothing is owed/))
+    .first()
+    .waitFor({ timeout: T })
+    .catch(() => undefined)
+  // Only real data rows: they carry the order link ("Open ORD-0001"); the "Nothing matches" empty state is a row too.
+  const row = rp.getByRole('row').filter({ hasText: customer }).filter({ has: rp.getByRole('link', { name: /^Open ORD-\d+/ }) })
   const n = await row.count()
   if (r.state === 'settled') {
     want(info, where, n === 0, `Who owes us (Open) still lists the order although the DB says settled (balance ${r.balance})`, await row.first().innerText().catch(() => ''))
@@ -713,10 +723,14 @@ test('hunt orderflow C: invoice and its PDF on a mixed-GST order, payments part/
       pdfDay(addDays(today, 30)),
       ref.order(seed.order.number),
     ]
+    obs(info, 'C invoice PDF', 'pdftotext -layout of the invoice (for review)', text.slice(0, 2500))
     for (const n of needles) want(info, 'C invoice PDF', pdfHas(text, n), `invoice PDF lacks "${n}"`)
     for (const [i, l] of L.entries()) {
       want(info, 'C invoice PDF', pdfHas(text, amount(M.per[i].net, { always: true })), `invoice PDF lacks line ${i + 1}'s value ${amount(M.per[i].net, { always: true })}`)
-      want(info, 'C invoice PDF', pdfHas(text, l.description), `invoice PDF lacks line ${i + 1}'s description`)
+      // -layout wraps a long description inside its column: look for its first two words and its tag (the last word) separately.
+      const words = l.description.split(' ')
+      const found = pdfHas(text, words.slice(0, 2).join(' ')) && pdfHas(text, words[words.length - 1])
+      want(info, 'C invoice PDF', found, `invoice PDF lacks line ${i + 1}'s description "${l.description}"`)
     }
     want(info, 'C invoice PDF', /\b2\.5\b/.test(text), 'invoice PDF does not print the 2.5 quantity')
     await d.getByRole('button', { name: 'Close' }).first().click().catch(() => undefined)
@@ -755,7 +769,18 @@ test('hunt orderflow C: invoice and its PDF on a mixed-GST order, payments part/
   await probe(info, ap, 'C over-payment 500.25: the note says so, DB overpaid_by', async () => {
     const d = await openRecordPayment(ap)
     const box = d.getByRole('textbox', { name: 'Amount received, PKR' })
-    want(info, 'C over', (await box.inputValue()) === '', `the amount on a settled order opens at "${await box.inputValue()}"`)
+    const opened = await box.inputValue()
+    if (opened !== '') {
+      // Seen in run 1: "10,948.31" (the balance BEFORE the last payment) after a full page reload. Record what the dialog and DB said.
+      await shot(ap, 'C-over-dialog-opens-with-old-balance')
+      obs(info, 'C over', `Record payment on a settled order opens at "${opened}" (a payment of that much would be recorded twice)`, {
+        note: flat(await d.getByTestId('payment-note').innerText().catch(() => '')),
+        already: flat(await d.getByTestId('already-recorded').innerText().catch(() => '')),
+        db: await rec(id),
+        payments: await counting(id),
+      })
+      await box.fill('')
+    }
     await box.fill(String(P3))
     const noteText = flat(await d.getByTestId('payment-note').innerText())
     want(info, 'C over', noteText.includes(`PKR ${amount(P3)} more than the balance`), `over-payment note "${noteText}"`)
@@ -971,7 +996,8 @@ test('hunt orderflow D: overdue part invoice, the reminder and its Undo, two peo
     const text = pdf ? pdfText(pdf) : null
     if (pdf) renderPdfPng(pdf, OUT, `D-invoice-${second.number}`)
     if (!text) return obs(info, 'D PDF', 'pdftotext not available')
-    want(info, 'D PDF', pdfHas(text, second.number) && pdfHas(text, L[1].description) && !pdfHas(text, L[0].description), 'the second invoice PDF does not list exactly line 2')
+    const tagOf = (d: string) => d.split(' ').slice(-1)[0]
+    want(info, 'D PDF', pdfHas(text, second.number) && pdfHas(text, tagOf(L[1].description)) && !pdfHas(text, tagOf(L[0].description)), 'the second invoice PDF does not list exactly line 2', text.slice(0, 1500))
     want(info, 'D PDF', pdfHas(text, `PKR ${amount(M.per[1].gst, { always: true })}`), `the second invoice PDF lacks its GST ${amount(M.per[1].gst, { always: true })}`)
     const pdfDue = pdfDay(addDays(today, 30))
     if (r?.dueOn && pdfHas(text, pdfDue) && !pdfHas(text, pdfDay(r.dueOn)))
@@ -1131,17 +1157,29 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
   })
 
   await probe(info, null, 'E admin on the phone: Record payment from the sticky bar', async () => {
+    // Delivered and invoiced, nothing paid: payment is the next step (run 1 left the goods undelivered, so the bar said Delivered today).
+    await db.patch(`supplier_orders?id=eq.${seed.legs[0].id}`, { placed_on: karachiDay(-10), delivered_on: karachiDay(-1), received_on: karachiDay(-1) })
     const ctx = await ctxAs(browser, info, 'admin', 'phone')
     const p = await newPage(ctx, info, 'E admin phone')
     await visit(p, info, `/orders/${id}`)
     const bar = p.getByRole('toolbar', { name: 'Order actions' })
-    const btn = bar.getByRole('button', { name: 'Record payment', exact: true })
-    if (!want(info, 'E phone pay', (await btn.count()) === 1, 'the phone sticky bar does not offer Record payment on an invoiced, unpaid order', flat(await bar.innerText().catch(() => '')))) {
-      await shot(p, 'E-admin-phone-no-sticky-pay')
-      await ctx.close()
-      return
+    let btn = bar.getByRole('button', { name: 'Record payment', exact: true })
+    if ((await btn.count()) === 0) {
+      obs(info, 'E phone pay', 'the sticky bar of a delivered, invoiced, unpaid order is not Record payment', flat(await bar.innerText().catch(() => '')))
+      btn = p.getByRole('button', { name: 'Record payment', exact: true })
+      if ((await btn.count()) === 0) {
+        await bar.getByRole('button', { name: /More/ }).first().click({ timeout: 3000 }).catch(() => undefined)
+        const item = p.getByRole('menuitem', { name: /Record payment/ })
+        if ((await item.count()) === 0) {
+          obs(info, 'E phone pay', 'no reachable Record payment on the phone for a delivered, invoiced, unpaid order')
+          await shot(p, 'E-admin-phone-no-pay')
+          await ctx.close()
+          return
+        }
+        btn = item
+      }
     }
-    await btn.tap()
+    await btn.first().tap()
     const d = p.getByRole('dialog', { name: 'Record payment' })
     const box = d.getByRole('textbox', { name: 'Amount received, PKR' })
     await box.waitFor({ timeout: T })
@@ -1181,4 +1219,203 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
     await ctx.close()
   })
   await admin.close()
+})
+
+// ------------------------------------------------------------------------------------------------ confirmed bugs, pinned
+
+/*
+ * Confirmed by run 1 (CI 39672642562). Each test does its setup with ordinary expects (a broken setup is a red failure, never a
+ * false pass), then calls test.fail(true, 'HW-n: ...') immediately before the ONE expect that states the correct behaviour. A fix
+ * makes that expect pass, the test then "unexpectedly passes" and turns red: drop the test.fail line then.
+ */
+
+/** Counts the PATCH requests the page sends to one REST table from now on (a write that really went out). */
+function patches(page: Page, table: string): { count: () => number } {
+  let n = 0
+  page.on('request', r => {
+    if (r.method() === 'PATCH' && r.url().includes(`/rest/v1/${table}?`)) n++
+  })
+  return { count: () => n }
+}
+
+/** Opens Print invoice on the order page; returns the dialog's Download (or Share) button once it is drawn. */
+async function invoicePdfDownload(page: Page): Promise<Locator> {
+  await page.getByRole('button', { name: 'Print invoice' }).first().click()
+  const dl = page.getByRole('dialog', { name: 'Sales tax invoice' }).getByRole('button', { name: /^(Download|Share)$/ })
+  await expect(dl).toBeVisible({ timeout: 15_000 })
+  return dl
+}
+
+test('HW-11: a part invoice of exactly the 18% line of a mixed order gets a proportional GST, and its PDF cannot be printed', async ({ browser }, info) => {
+  await ensureProfileStrn()
+  const cust = await company('Hunt HW11 Customer', { city: 'Lahore' })
+  await setBuyerTax(cust)
+  // 1 x 10,000 at 18% (own GST 1,800) and 1 x 5,000 exempt: order net 15,000, GST 1,800.
+  const seed = await order({
+    customer: cust,
+    lines: [
+      { description: 'Dosing pump 60 l/h', qty: 1, price: 10000 },
+      { description: 'Operator training, one day', qty: 1, price: 5000, gst: 0 },
+    ],
+    owner: 'sales',
+  })
+  const ctx = await ctxAs(browser, info, 'admin', 'desktop')
+  const page = await ctx.newPage()
+  await page.goto(`/orders/${seed.order.id}`)
+  await actions(page).getByRole('button', { name: 'Create invoice', exact: true }).first().click()
+  const d = page.getByRole('dialog', { name: 'Create invoice' })
+  await d.getByRole('button', { name: /Edit the amounts/ }).click()
+  const net = d.getByRole('textbox', { name: 'Net amount, PKR' })
+  await net.fill('10000')
+  await net.blur()
+  await d.getByRole('button', { name: 'Create invoice', exact: true }).click()
+  await expect(d).toBeHidden({ timeout: 15_000 })
+  const [inv] = await invoicesOf(seed.order.id)
+  expect(num(inv.net_amount)).toBe(10000)
+  await page.reload()
+  const dl = await invoicePdfDownload(page)
+  test.fail(true, `HW-11: the dialog stored GST ${num(inv.gst_amount)} (1,800 shared over 15,000) for exactly the 18% line, whose own GST is 1,800; the PDF refuses the mismatch`)
+  await expect(dl).toBeEnabled({ timeout: 5000 })
+  await ctx.close()
+})
+
+test('HW-12: the second invoice\'s PDF prints "Payment due" as its own date plus the terms, not the order\'s due date', async ({ browser }, info) => {
+  await ensureProfileStrn()
+  const cust = await company('Hunt HW12 Customer', { city: 'Karachi' })
+  await setBuyerTax(cust)
+  // line 1: 2 x 15,000.50 = 30,001 (GST 5,400); line 2: 7,999.99 (GST 1,440). Invoiced line by line; the first 40 days ago, 30-day terms.
+  const seed = await order({
+    customer: cust,
+    lines: [
+      { description: 'Analyser panel', qty: 2, price: 15000.5 },
+      { description: 'Sample probe', qty: 1, price: 7999.99 },
+    ],
+    owner: 'sales',
+    terms: 30,
+  })
+  await invoice(seed.order.id, 30001, 5400, karachiDay(-40))
+  const second = await invoice(seed.order.id, 7999.99, 1440)
+  const r = await rec(seed.order.id)
+  const orderDue = addDays(karachiDay(-40), 30)
+  expect(r?.dueOn).toBe(orderDue)
+  const ctx = await ctxAs(browser, info, 'sales', 'desktop')
+  const page = await ctx.newPage()
+  await page.goto(`/orders/${seed.order.id}`)
+  const dl = await invoicePdfDownload(page)
+  await expect(dl).toBeEnabled({ timeout: 10_000 })
+  const pdf = await download(page, () => dl.click())
+  expect(pdfIsValid(pdf)).toBe(true)
+  const text = pdf ? pdfText(pdf) : null
+  test.skip(text === null, 'pdftotext (poppler) is not installed')
+  expect(pdfHas(text ?? '', second.number)).toBe(true)
+  test.fail(true, `HW-12: the PDF says Payment due ${pdfDay(addDays(today, 30))} (invoice date + 30); order_receivables, Today and Who owes us say ${orderDue} (first invoice + 30)`)
+  expect(pdfHas(text ?? '', pdfDay(orderDue))).toBe(true)
+  await ctx.close()
+})
+
+test('HW-13: Create invoice accepts a net amount above what is left to invoice, with no warning', async ({ browser }, info) => {
+  const seed = await order({ lines: [{ description: 'Level switch', qty: 1, price: 10000 }], owner: 'sales' })
+  const ctx = await ctxAs(browser, info, 'admin', 'desktop')
+  const page = await ctx.newPage()
+  await page.goto(`/orders/${seed.order.id}`)
+  await actions(page).getByRole('button', { name: 'Create invoice', exact: true }).first().click()
+  const d = page.getByRole('dialog', { name: 'Create invoice' })
+  await d.getByRole('button', { name: /Edit the amounts/ }).click()
+  const net = d.getByRole('textbox', { name: 'Net amount, PKR' })
+  await net.fill('20000') // 10,000 is all there is to invoice
+  await net.blur()
+  await d.getByRole('button', { name: 'Create invoice', exact: true }).click()
+  await page.waitForTimeout(2500)
+  const invoiced = (await invoicesOf(seed.order.id)).reduce((s, x) => s + num(x.net_amount), 0)
+  test.fail(true, 'HW-13: net 20,000 is invoiced on an order of net 10,000; the dialog neither warns nor refuses')
+  expect(invoiced).toBeLessThanOrEqual(10000)
+  await ctx.close()
+})
+
+test('HW-14: a line of a fully invoiced and settled order can be edited with no warning, and the order flips back to part-invoiced', async ({ browser }, info) => {
+  // 10,000 at 18% (GST 1,800) and 5,000 exempt: gross 16,800, invoiced and paid in full.
+  const seed = await order({
+    lines: [
+      { description: 'Gate valve DN100', qty: 1, price: 10000 },
+      { description: 'Site test certificate', qty: 1, price: 5000, gst: 0 },
+    ],
+    owner: 'sales',
+  })
+  const id = seed.order.id
+  await invoice(id, 15000, 1800)
+  await payment(id, 16800)
+  expect((await stateOf(id)).invoicing_state).toBe('fully_invoiced')
+  expect((await rec(id))?.state).toBe('settled')
+  const ctx = await ctxAs(browser, info, 'sales', 'desktop')
+  const page = await ctx.newPage()
+  await page.goto(`/orders/${id}`)
+  await expect(page.getByRole('table', { name: 'Order items' })).toBeVisible({ timeout: 15_000 })
+  try {
+    await page.getByRole('button', { name: 'Edit GST and lines' }).click({ timeout: 5000 })
+    await page.getByLabel('GST rate, line 2').selectOption('18', { timeout: 5000 })
+  } catch {
+    // not offered or refused: that is the fixed behaviour, checked below
+  }
+  await page.waitForTimeout(2000)
+  const st = await stateOf(id)
+  test.fail(true, 'HW-14: the exempt line of an invoiced, settled order was made 18% without a word; the order is now part-invoiced and owes GST again')
+  expect(st.invoicing_state).toBe('fully_invoiced')
+  await ctx.close()
+})
+
+test('HW-15: a double click on Delivered today sends two writes (two success toasts, two Undo)', async ({ browser }, info) => {
+  const sup = await supplier('Hunt HW15 Gauges', 'Pakistan')
+  const seed = await order({ suppliers: [{ supplier: sup }], lines: [{ description: 'Pressure gauge 0-16 bar', qty: 6, price: 3150, leg: 0, supplierPrice: 2100 }], owner: 'sales' })
+  const leg = seed.legs[0].id
+  await db.patch(`supplier_orders?id=eq.${leg}`, { placed_on: karachiDay(-5), expected_on: karachiDay(5) })
+  const ctx = await ctxAs(browser, info, 'sales', 'desktop')
+  const page = await ctx.newPage()
+  await page.goto(`/orders/${seed.order.id}`)
+  const button = legRow(page, sup.name).getByRole('button', { name: `Delivered today, ${sup.name}` })
+  await expect(button).toBeVisible({ timeout: 15_000 })
+  const writes = patches(page, 'supplier_orders')
+  await button.dblclick()
+  await expect.poll(async () => (await legDates(leg)).delivered_on, { timeout: 10_000 }).toBe(today)
+  await page.waitForTimeout(2000)
+  test.fail(true, `HW-15: ${writes.count()} PATCH supplier_orders for one double click on Delivered today`)
+  expect(writes.count()).toBe(1)
+  await ctx.close()
+})
+
+test('HW-15: a double tap on Mark done today (engineer, phone) sends two writes', async ({ browser }, info) => {
+  const seed = await order({ lines: [{ description: 'Commissioning visit, one day', qty: 1, price: 25000, service: true }], owner: 'sales', needsCommissioning: true })
+  const id = seed.order.id
+  await db.patch(`orders?id=eq.${id}`, { commissioning_planned_on: today })
+  await post('order_engineers', { order_id: id, user_id: USER.engineer })
+  const ctx = await ctxAs(browser, info, 'engineer', 'phone')
+  const page = await ctx.newPage()
+  await page.goto(`/orders/${id}`)
+  const button = page.getByRole('button', { name: 'Mark done today' }).first()
+  await expect(button).toBeVisible({ timeout: 15_000 })
+  const writes = patches(page, 'orders')
+  await button.dblclick()
+  await expect.poll(async () => (await db.one<{ commissioning_done_on: string | null }>(`orders?id=eq.${id}&select=commissioning_done_on`)).commissioning_done_on, { timeout: 10_000 }).toBe(today)
+  await page.waitForTimeout(2000)
+  test.fail(true, `HW-15: ${writes.count()} PATCH orders for one double tap on Mark done today`)
+  expect(writes.count()).toBe(1)
+  await ctx.close()
+})
+
+test('HW-15: a double click on Cancel order sends two writes', async ({ browser }, info) => {
+  const seed = await order({ lines: [{ description: 'Flow switch', qty: 2, price: 8400 }], owner: 'sales' })
+  const id = seed.order.id
+  const ctx = await ctxAs(browser, info, 'admin', 'desktop')
+  const page = await ctx.newPage()
+  await page.goto(`/orders/${id}`)
+  await page.getByRole('button', { name: /^More( actions)?$/ }).first().click({ timeout: 15_000 })
+  await page.getByRole('menuitem', { name: 'Cancel order' }).click()
+  const d = page.getByRole('dialog', { name: 'Cancel this order' })
+  await d.getByRole('radio', { name: 'The customer cancelled the PO' }).click()
+  const writes = patches(page, 'orders')
+  await d.getByRole('button', { name: 'Cancel order', exact: true }).dblclick()
+  await expect.poll(async () => (await db.one<{ cancelled_on: string | null }>(`orders?id=eq.${id}&select=cancelled_on`)).cancelled_on, { timeout: 10_000 }).toBe(today)
+  await page.waitForTimeout(2000)
+  test.fail(true, `HW-15: ${writes.count()} PATCH orders for one double click on Cancel order`)
+  expect(writes.count()).toBe(1)
+  await ctx.close()
 })

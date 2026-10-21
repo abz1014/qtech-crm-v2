@@ -1,10 +1,10 @@
 import { rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { test, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
+import { expect, test, type Browser, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
 import { db, SERVICE_KEY, USER } from '../../verify/support/db'
 import { company, karachiDay, order, post, postMany, quote, ref, rfq, supplier } from '../../verify/support/fixtures'
-import { blankCtx, ctxAs, layout, note, probe, settle, shot, tag, visit, watch, type Viewport } from './support'
+import { blankCtx, ctxAs, layout, note, probe, probe as huntProbe, settle, shot, tag, visit, watch, type Viewport } from './support'
 import type { Role } from '../../support/stack'
 
 /*
@@ -110,7 +110,9 @@ async function checkParity(page: Page, info: TestInfo, where: string) {
 async function openItem(page: Page, vp: Viewport, rule: string, refText: string): Promise<Locator> {
   const row = page.locator(`#main li[data-rule="${rule}"]`).filter({ hasText: refText }).first()
   await row.waitFor({ timeout: 15_000 })
-  await row.getByRole('button').first().click()
+  const head = row.getByRole('button').first()
+  // On a phone the row is an accordion: a second tap would close what an earlier step left open.
+  if (vp !== 'phone' || (await head.getAttribute('aria-expanded')) !== 'true') await head.click()
   if (vp === 'phone') return row
   const pane = page.getByRole('region', { name: new RegExp(`${refText}$`) }).last()
   await pane.waitFor({ timeout: 10_000 })
@@ -536,15 +538,18 @@ test('crosscut: Help from every main screen, its recipes, and the How it works c
 // ================================================================================================ long lists: RFQ board and Orders
 
 test('crosscut: RFQ board and Orders with long lists, filters, sort, Back and refresh', async ({ browser }, info) => {
-  const cust = await post<{ id: string; name: string }>('companies', { name: `Hunt Long List ${T} Engineering` })
+  // Its own tag: every other test in this file names its records with T, and the board and orders searches find those too.
+  const L = tag(6)
+  const LU = L.toUpperCase()
+  const cust = await post<{ id: string; name: string }>('companies', { name: `Hunt Long List ${L} Engineering` })
   await postMany(
     'rfqs',
-    Array.from({ length: 60 }, (_, i) => ({ company_id: cust.id, owner_id: USER.admin, due_on: karachiDay((i % 20) - 5), customer_ref: `HL-${TU}-${i}` })),
+    Array.from({ length: 60 }, (_, i) => ({ company_id: cust.id, owner_id: USER.admin, due_on: karachiDay((i % 20) - 5), customer_ref: `HL-${LU}-${i}` })),
   )
   await probe(info, null, 'seed 30 closed RFQs', () =>
-    postMany('rfqs', Array.from({ length: 30 }, (_, i) => ({ company_id: cust.id, owner_id: USER.sales, closed_on: karachiDay(-(i % 10)), close_reason: 'other', customer_ref: `HLC-${TU}-${i}` }))),
+    postMany('rfqs', Array.from({ length: 30 }, (_, i) => ({ company_id: cust.id, owner_id: USER.sales, closed_on: karachiDay(-(i % 10)), close_reason: 'other', customer_ref: `HLC-${LU}-${i}` }))),
   )
-  for (let i = 0; i < 3; i++) await order({ customer: cust, lines: [{ description: `Hunt list line ${T} ${i}`, qty: 1 + i, price: 1000 * (i + 1) }], owner: i === 0 ? 'admin' : 'sales', customerPo: `HLPO-${TU}-${i}` })
+  for (let i = 0; i < 3; i++) await order({ customer: cust, lines: [{ description: `Hunt list line ${L} ${i}`, qty: 1 + i, price: 1000 * (i + 1) }], owner: i === 0 ? 'admin' : 'sales', customerPo: `HLPO-${LU}-${i}` })
 
   const ctx = await ctxAs(browser, info, 'admin', 'desktop')
   const page = await newPage(ctx, info, 'lists/admin')
@@ -555,11 +560,11 @@ test('crosscut: RFQ board and Orders with long lists, filters, sort, Back and re
   }, y)
 
   await probe(info, page, 'board: search keeps 60 rows and the URL', async () => {
-    await visit(page, info, `/rfqs?owner=all&q=${T}`, 'board')
+    await visit(page, info, `/rfqs?owner=all&q=${L}`, 'board')
     const t = await mainText(page)
     const m = /Showing (\d+) of (\d+)/.exec(t)
     if (!m || Number(m[1]) !== 60) note(info, { kind: 'observation', where: 'board search', what: `expected Showing 60 for the seeded customer, got "${m?.[0] ?? 'no summary'}"` })
-    if ((await page.getByRole('textbox', { name: 'Search RFQs' }).inputValue()) !== T) note(info, { kind: 'observation', where: 'board search', what: 'the search box does not show ?q=' })
+    if ((await page.getByRole('textbox', { name: 'Search RFQs' }).inputValue()) !== L) note(info, { kind: 'observation', where: 'board search', what: 'the search box does not show ?q=' })
     await layout(page, info, 'board 60 rows')
     await shot(page, 'board-60-rows', false)
   })
@@ -601,7 +606,7 @@ test('crosscut: RFQ board and Orders with long lists, filters, sort, Back and re
     await settle(page)
     const back = await until(() => mainScroll(), v => Math.abs(v - y) < 80, 3_000)
     if (Math.abs(back - y) >= 80) note(info, { kind: 'observation', where: 'board Back', what: `scroll place not restored: left at ${y}, back at ${back}` })
-    if (!page.url().includes(`q=${T}`)) note(info, { kind: 'observation', where: 'board Back', what: `search lost on Back (${page.url()})` })
+    if (!page.url().includes(`q=${L}`)) note(info, { kind: 'observation', where: 'board Back', what: `search lost on Back (${page.url()})` })
     const sortAfter = await page.getByRole('columnheader', { name: /Due/ }).first().getAttribute('aria-sort')
     if (sortAfter !== sortBefore) note(info, { kind: 'observation', where: 'board Back', what: `sort not kept on Back: ${sortBefore} -> ${sortAfter} (DataTable sort is component state, not in the URL)` })
     await page.goForward()
@@ -623,7 +628,7 @@ test('crosscut: RFQ board and Orders with long lists, filters, sort, Back and re
       note(info, { kind: 'observation', where: 'board lede', what: `the lede ("${mine}") is the same for Mine and All while the list differs (${mineShow} vs ${allShow}): "need you" and "overdue" count everyone's RFQs` })
   })
   await probe(info, page, 'board: closed list pages, refresh on page 2, page=999', async () => {
-    await visit(page, info, `/rfqs?show=closed&q=${T}`, 'board closed')
+    await visit(page, info, `/rfqs?show=closed&q=${L}`, 'board closed')
     await page.waitForTimeout(800) // the closed search is debounced
     await settle(page)
     const pages = page.getByRole('navigation', { name: 'Pages' })
@@ -636,14 +641,14 @@ test('crosscut: RFQ board and Orders with long lists, filters, sort, Back and re
     await page.reload()
     await settle(page)
     if (!/Page 2 of/.test(await mainText(page))) note(info, { kind: 'observation', where: 'board closed', what: 'page 2 not kept on refresh' })
-    await visit(page, info, `/rfqs?show=closed&q=${T}&page=999`, 'board closed 999')
+    await visit(page, info, `/rfqs?show=closed&q=${L}&page=999`, 'board closed 999')
     await page.waitForTimeout(800)
     const t = (await mainText(page)).replace(/\s+/g, ' ')
     note(info, { kind: 'observation', where: 'board closed page=999', what: `shows: ${t.slice(0, 240)}` })
     await shot(page, 'board-closed-page-999', false)
   })
   await probe(info, page, 'orders: search, sort, filters in the URL, refresh, junk', async () => {
-    await visit(page, info, `/orders?owner=all&q=${T}`, 'orders')
+    await visit(page, info, `/orders?owner=all&q=${L}`, 'orders')
     const m = /Showing (\d+) of/.exec(await mainText(page))
     if (!m || Number(m[1]) !== 3) note(info, { kind: 'observation', where: 'orders search', what: `expected 3 orders for the customer, got "${m?.[0] ?? 'none'}"` })
     const head = page.getByRole('columnheader', { name: /^Order/ }).first()
@@ -680,7 +685,7 @@ test('crosscut: RFQ board and Orders with long lists, filters, sort, Back and re
   const pctx = await ctxAs(browser, info, 'admin', 'phone')
   const pp = await newPage(pctx, info, 'lists/admin/phone')
   await probe(info, pp, 'board phone: 60 cards, filter sheet, layout', async () => {
-    await visit(pp, info, `/rfqs?owner=all&q=${T}`, 'board phone')
+    await visit(pp, info, `/rfqs?owner=all&q=${L}`, 'board phone')
     await layout(pp, info, 'board phone')
     await shot(pp, 'board-phone', false)
     await pp.evaluate(() => {
@@ -698,7 +703,7 @@ test('crosscut: RFQ board and Orders with long lists, filters, sort, Back and re
       await shot(pp, 'board-phone-filter-sheet', false)
       await pp.keyboard.press('Escape')
     }
-    await visit(pp, info, `/orders?owner=all&q=${T}`, 'orders phone')
+    await visit(pp, info, `/orders?owner=all&q=${L}`, 'orders phone')
     await layout(pp, info, 'orders phone')
     await shot(pp, 'orders-phone', false)
   })
@@ -708,6 +713,10 @@ test('crosscut: RFQ board and Orders with long lists, filters, sort, Back and re
 // ================================================================================================ companies
 
 test('crosscut: companies: new, near-duplicates, merge, no delete, a stale second tab', async ({ browser }, info) => {
+  // Made before any page loads: the Merge dialog picks from the cached company list (30 s fresh, kept across reloads), so a
+  // company made after /companies was opened is not offered for a while (run 1).
+  const keep = await post<{ id: string; name: string }>('companies', { name: `Hunt Merge Keep ${T}` })
+  const drop = await post<{ id: string; name: string }>('companies', { name: `Hunt Merge Keep ${T} Pvt` })
   const ctx = await ctxAs(browser, info, 'admin', 'desktop')
   const page = await newPage(ctx, info, 'companies/admin')
   const base = `Hunt Dup ${T} Traders`
@@ -742,16 +751,29 @@ test('crosscut: companies: new, near-duplicates, merge, no delete, a stale secon
     })
 
   await probe(info, page, 'merge a duplicate: RFQ and contact move, duplicate removed', async () => {
-    const keep = await post<{ id: string; name: string }>('companies', { name: `Hunt Merge Keep ${T}` })
-    const drop = await post<{ id: string; name: string }>('companies', { name: `Hunt Merge Keep ${T} Pvt` })
     const r = await post<{ id: string }>('rfqs', { company_id: drop.id, owner_id: USER.sales })
     const c = await post<{ id: string }>('contacts', { company_id: drop.id, name: `Hunt Merge Contact ${T}` })
     await visit(page, info, `/companies/${drop.id}`, 'merge')
     await page.getByRole('button', { name: /^(More|More actions)$/ }).filter({ visible: true }).first().click()
     await page.getByRole('menuitem', { name: 'Merge into another company' }).click()
     const d = page.getByRole('dialog', { name: 'Merge duplicate company' })
-    await d.getByRole('combobox').fill(`Merge Keep ${T}`)
-    await d.getByRole('option', { name: new RegExp(`^Hunt Merge Keep ${T}$|^Hunt Merge Keep ${T}\\b(?! Pvt)`) }).first().click()
+    const box = d.getByRole('combobox')
+    await box.click()
+    await box.pressSequentially(`Merge Keep ${T}`, { delay: 20 })
+    const option = page.getByRole('option', { name: `Hunt Merge Keep ${T}`, exact: true })
+    if (!(await option.isVisible({ timeout: 8_000 }).catch(() => false))) {
+      const offered = await page.getByRole('option').allInnerTexts()
+      note(info, { kind: 'observation', where: 'merge', what: `the Merge into list does not offer "${keep.name}" (made before the page opened)`, detail: offered.slice(0, 8) })
+      // The list is cached: a reload past its 30 s freshness should bring it.
+      await page.waitForTimeout(31_000)
+      await visit(page, info, `/companies/${drop.id}`, 'merge retry')
+      await page.getByRole('button', { name: /^(More|More actions)$/ }).filter({ visible: true }).first().click()
+      await page.getByRole('menuitem', { name: 'Merge into another company' }).click()
+      await box.click()
+      await box.pressSequentially(`Merge Keep ${T}`, { delay: 20 })
+    }
+    // The list is a portal outside the dialog.
+    await option.click()
     await d.getByRole('button', { name: /^Merge into/ }).click()
     await page.waitForURL(new RegExp(`/companies/${keep.id}`), { timeout: 10_000 }).catch(() => note(info, { kind: 'observation', where: 'merge', what: `after merge the page is ${page.url()}, not the kept company` }))
     const rr = await db.one<{ company_id: string }>(`rfqs?id=eq.${r.id}&select=company_id`)
@@ -814,8 +836,26 @@ test('crosscut: companies: new, near-duplicates, merge, no delete, a stale secon
 // ================================================================================================ offline saves
 
 test('crosscut: offline saves keep the input, show a plain message, and Try again saves once', async ({ browser }, info) => {
-  const ctx = await ctxAs(browser, info, 'sales', 'desktop')
+  // The service worker is allowed here (as in production, where it precaches every JS chunk), and warmed up before going offline:
+  // with it blocked, the first lazy chunk fetched offline crashes the page, which production never does.
+  const ctx = await ctxAs(browser, info, 'sales', 'desktop', { serviceWorkers: 'allow' })
   const page = await newPage(ctx, info, 'offline/sales')
+  await page.goto('/today')
+  await page.evaluate(async () => {
+    const reg = await navigator.serviceWorker.ready
+    if (!navigator.serviceWorker.controller) await new Promise(r => setTimeout(r, 3000))
+    return reg.active?.state
+  })
+  await page.reload()
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller), null, { timeout: 30_000 }).catch(() => note(info, { kind: 'observation', where: 'offline setup', what: 'service worker never took control' }))
+  await page.waitForTimeout(3000)
+  const probe = async (i: typeof info, p: Page, where: string, fn: () => Promise<unknown>) => {
+    try {
+      return await huntProbe(i, p, where, fn)
+    } finally {
+      await ctx.setOffline(false)
+    }
+  }
   const banner = page.locator('[data-offline-banner]')
   const goOffline = async () => {
     await ctx.setOffline(true)
@@ -1115,4 +1155,260 @@ test('crosscut: a 120-character company and a long contact name at phone size', 
     })
   await dctx.close()
   if (!SERVICE_KEY) note(info, { kind: 'observation', where: 'setup', what: 'SERVICE_ROLE_KEY not set: DB checks read as the admin fixture user' })
+})
+
+// ================================================================================================ confirmed bugs, pinned
+/*
+ * One test per bug the probes above confirmed (run 1, CI 39672642562). The setup runs normally and asserts what it needs, so a
+ * broken setup is a red failure; test.fail() sits immediately before the one expect() that states the correct behaviour, so a fix
+ * turns the test red ("expected to fail") and it is then flipped to a plain test.
+ */
+const pinned: BrowserContext[] = []
+test.afterEach(async () => {
+  for (const c of pinned.splice(0)) await c.close().catch(() => undefined)
+})
+
+async function pin(browser: Browser, info: TestInfo, role: Role, vp: Viewport = 'desktop'): Promise<{ ctx: BrowserContext; page: Page }> {
+  const ctx = await ctxAs(browser, info, role, vp)
+  pinned.push(ctx)
+  const page = await ctx.newPage()
+  page.setDefaultTimeout(15_000)
+  return { ctx, page }
+}
+
+async function land(page: Page, path: string): Promise<void> {
+  await page.goto(path)
+  await page.locator('#main').waitFor({ timeout: 20_000 })
+  await settle(page)
+}
+
+const moreMenu = (page: Page) => page.getByRole('button', { name: /^(More|More actions)$/ }).filter({ visible: true }).first()
+
+async function editCompany(page: Page, change: (d: Locator) => Promise<void>): Promise<void> {
+  await moreMenu(page).click()
+  await page.getByRole('menuitem', { name: 'Edit company' }).click()
+  const d = page.getByRole('dialog', { name: 'Edit company' })
+  await change(d)
+  await d.getByRole('button', { name: 'Save changes' }).click()
+  await expect(d).toBeHidden({ timeout: 10_000 })
+}
+
+test('HW-24: an unknown filter value in the address (/orders?goods=bogus) crashes the Orders page', async ({ browser }, info) => {
+  const { page } = await pin(browser, info, 'admin')
+  await land(page, '/orders?owner=all')
+  await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible()
+  await land(page, '/orders?owner=all&goods=bogus')
+  test.fail(true, 'HW-24: NoResults names the filter with valueLabel -> resolveStatus, which throws UnknownStatusError for a value it does not know, so the page shows "Something went wrong" (src/features/orders/OrdersListPage.tsx filtersOn)')
+  await expect(page.getByRole('heading', { name: 'Orders', level: 1 })).toBeVisible({ timeout: 10_000 })
+})
+
+test("HW-25: a stale second tab's Edit company save silently wipes the Notes saved from the first tab", async ({ browser }, info) => {
+  const co = await company(`Hunt HW25 ${T}`, { city: 'Lahore' })
+  const notes = `Notes from tab A ${T}`
+  const { ctx, page: a } = await pin(browser, info, 'admin')
+  const b = await ctx.newPage()
+  b.setDefaultTimeout(15_000)
+  await land(a, `/companies/${co.id}`)
+  await land(b, `/companies/${co.id}`)
+  await expect(a.getByRole('heading', { name: co.name, level: 1 })).toBeVisible()
+  await expect(b.getByRole('heading', { name: co.name, level: 1 })).toBeVisible()
+  await a.bringToFront()
+  await editCompany(a, d => d.getByLabel('Notes').fill(notes))
+  await b.bringToFront()
+  await editCompany(b, d => d.getByLabel('City').fill('Multan'))
+  const row = await db.one<{ notes: string | null; city: string | null }>(`companies?id=eq.${co.id}&select=notes,city`)
+  expect(row.city).toBe('Multan')
+  test.fail(true, 'HW-25: EditCompanyDialog sends every field from the form it opened with (src/features/companies/CompanyDialogs.tsx:80), and a tab that comes back within 30 s is not refreshed, so the City save writes the old empty Notes over the other tab\'s')
+  expect(row.notes).toBe(notes)
+})
+
+test('HW-26: the C shortcut (Paste or photo) still fires with single-key shortcuts turned off, and while a menu is open', async ({ browser }, info) => {
+  const { page } = await pin(browser, info, 'admin')
+  await land(page, '/today')
+  await page.evaluate(() => localStorage.setItem('qtech.single-keys', 'off'))
+  await land(page, '/today')
+  expect(await page.evaluate(() => localStorage.getItem('qtech.single-keys'))).toBe('off')
+  await blur(page)
+  await page.keyboard.press('c')
+  await page.waitForTimeout(800)
+  test.fail(true, 'HW-26: CaptureProvider\'s C handler never reads shortcutsEnabled() and only skips text fields and role=dialog, so it fires with shortcuts off and with a role=menu open (src/app/capture/CaptureProvider.tsx:202-205)')
+  await expect(page.getByRole('dialog', { name: /^(Capture|Paste or photo)$/ })).toBeHidden()
+})
+
+test('HW-27: with the Help side panel open, / and N do nothing on the page', async ({ browser }, info) => {
+  const { page } = await pin(browser, info, 'admin')
+  await land(page, '/rfqs?help=')
+  await expect(page.getByRole('dialog', { name: 'Help' })).toBeVisible()
+  await page.getByRole('heading', { name: 'RFQs', level: 1 }).click()
+  await blur(page)
+  await page.keyboard.press('/')
+  test.fail(true, 'HW-27: isTypingContext (src/app/palette/PaletteHost.tsx:184-186) and DataTable\'s / handler treat any role=dialog as typing, and the desktop Help panel is a non-modal dialog beside the page, so every single-key shortcut is dead while it is open')
+  await expect(page.getByRole('textbox', { name: 'Search RFQs' })).toBeFocused()
+})
+
+test('HW-28: Ctrl+K opens the palette on top of an open dialog', async ({ browser }, info) => {
+  const r = await rfq({ customer: await company(`Hunt HW28 ${T}`), items: [{ description: `Hunt hw28 gauge ${T}`, qty: 1 }] })
+  const { page } = await pin(browser, info, 'admin')
+  await land(page, `/rfqs/${r.rfq.id}`)
+  await page.getByRole('button', { name: 'Add item' }).first().click()
+  const d = page.getByRole('dialog', { name: 'Add an item' })
+  await d.getByLabel('Description').fill(`Half typed ${T}`)
+  await expect(d).toBeVisible()
+  await page.keyboard.press('Control+k')
+  await page.waitForTimeout(800)
+  test.fail(true, 'HW-28: the palette\'s Ctrl+K handler (src/ui/CommandPalette.tsx:128-136, PaletteHost.tsx) opens it whatever is open, so it stacks over the Add an item dialog and its typed text')
+  await expect(page.getByRole('dialog', { name: 'Search or jump to' })).toBeHidden()
+})
+
+test("HW-29: palette: '%' and '_' list unrelated results, a name with a backslash cannot be found, extra spaces find nothing", async ({ browser }, info) => {
+  const { page } = await pin(browser, info, 'admin')
+  await land(page, '/today')
+  const dialog = await openPalette(page)
+  await expect(dialog).toBeVisible()
+  const a = await paletteAsk(page, dialog, '%')
+  const unrelated = a.options.filter(o => !o.includes('%') && !/^Add “/.test(o))
+  test.fail(
+    true,
+    "HW-29: '%' or '_' alone (or any text with no a-z/0-9 word, Urdu too) lists every 'How do I…' recipe: searchRecipes returns all when no word is left (src/features/help/recipes.ts:153). Also: 'back\\slash' never finds 'Hunt Back\\slash …' because search_all's replace(t, '\\', '\\') is a no-op (supabase/migrations/0054_search_v2.sql:36-37), and '  srch   word  ' finds nothing (inner spaces are not collapsed)",
+  )
+  expect(unrelated).toEqual([])
+})
+
+test('HW-30: list sort (RFQ board, Orders) is lost on Back and on refresh', async ({ browser }, info) => {
+  await rfq({ customer: await company(`Hunt HW30 ${T}`), items: [{ description: `Hunt hw30 gauge ${T}`, qty: 1 }], owner: 'admin' })
+  const { page } = await pin(browser, info, 'admin')
+  await land(page, '/rfqs?owner=all')
+  const due = () => page.getByRole('columnheader', { name: /Due/ }).first()
+  await due().getByRole('button').click()
+  await expect(due()).toHaveAttribute('aria-sort', 'ascending')
+  await page.reload()
+  await page.locator('#main').waitFor()
+  await settle(page)
+  await expect(due()).toBeVisible()
+  test.fail(true, 'HW-30: DataTable keeps the sort in component state (src/ui/DataTable.tsx:168), not in the address, so refresh and Back (which remount the list) drop it; the same on Orders')
+  await expect(due()).toHaveAttribute('aria-sort', 'ascending')
+})
+
+test("HW-31: the RFQ board header 'need you / overdue' counts everyone's RFQs while Mine is selected", async ({ browser }, info) => {
+  // One RFQ of the salesperson's (so Mine has a list) and one owned by the admin that needs suppliers: in All, not in Mine.
+  await rfq({ customer: await company(`Hunt HW31 mine ${T}`), items: [{ description: `Hunt hw31 own gauge ${T}`, qty: 1 }], owner: 'sales' })
+  await rfq({ customer: await company(`Hunt HW31 ${T}`), items: [{ description: `Hunt hw31 gauge ${T}`, qty: 1 }], owner: 'admin' })
+  const { page } = await pin(browser, info, 'sales')
+  const lede = async () => (await mainText(page)).split('New RFQ')[0]
+  const need = (t: string) => Number(/(\d+) need you/.exec(t)?.[1] ?? 0)
+  const showing = (t: string) => Number(/Showing (\d+) of/.exec(t)?.[1] ?? NaN)
+  await land(page, '/rfqs?owner=mine')
+  const mine = await lede()
+  const mineShown = showing(await mainText(page))
+  await land(page, '/rfqs?owner=all')
+  const all = await lede()
+  const allShown = showing(await mainText(page))
+  expect(mineShown).toBeLessThan(allShown)
+  expect(need(all)).toBeGreaterThan(0)
+  test.fail(true, `HW-31: the lede's "need you" and "overdue" are counted over open.data, every owner's RFQs (src/features/rfqs/board/BoardPage.tsx:107-112), so Mine shows "${mine.trim()}" exactly like All`)
+  expect(need(mine)).toBeLessThan(need(all))
+})
+
+test("HW-32: the Orders page's 'need you' and the Orders nav badge count different things", async ({ browser }, info) => {
+  const { page } = await pin(browser, info, 'sales')
+  const read = async () => {
+    await land(page, '/orders')
+    const n = Number(/(\d+) need you/.exec(await mainText(page))?.[1] ?? 0)
+    const nav = (await todayNumbers(page)).nav
+    return { page: n, badge: nav.Orders ?? 0 }
+  }
+  const before = await read()
+  // An order of the salesperson's whose payment is 15 days overdue: the Orders page's next step is "Chase payment".
+  const o = await order({ lines: [{ description: `Hunt hw32 service visit ${T}`, qty: 1, price: 100000, service: true }], owner: 'sales', terms: 30, orderedOn: karachiDay(-50) })
+  await post('invoices', { order_id: o.order.id, company_id: o.customer.id, number: `HW32-${TU}`, invoice_date: karachiDay(-45), net_amount: 100000, gst_amount: 18000 })
+  const after = await read()
+  expect(after.page).toBe(before.page + 1)
+  test.fail(true, 'HW-32: the Orders page counts late/now next steps of its rows (OrdersListPage.tsx lede, including chase payment and create invoice), while the Orders badge counts Today items in the orders section (useNavCounts + NAV_SECTION puts payment_overdue under Money), so the two disagree ("7 need you" vs badge 1 in run 1)')
+  expect(after.badge - before.badge).toBe(after.page - before.page)
+})
+
+test("HW-33: near-duplicate company names are accepted ('A  B' with doubled spaces, a trailing full stop)", async ({ browser }, info) => {
+  const base = await company(`Hunt HW33 ${T} Traders`)
+  const variant = base.name.replace(/ /g, '  ')
+  const { page } = await pin(browser, info, 'admin')
+  await land(page, '/companies')
+  await page.getByRole('button', { name: 'New company' }).first().click()
+  const d = page.getByRole('dialog', { name: 'New company' })
+  await d.getByRole('textbox', { name: /Company name/ }).fill(variant)
+  await expect(d.getByRole('textbox', { name: /Company name/ })).toHaveValue(variant)
+  await d.getByRole('button', { name: 'Add company' }).click()
+  test.fail(true, 'HW-33: the unique index is lower(btrim(name)) (supabase/migrations/0006_companies.sql:22) and the client check compares trim/lower only, so doubled inner spaces or a trailing full stop make a second company')
+  await expect(d.getByText(/already exists/)).toBeVisible({ timeout: 8_000 })
+})
+
+test('HW-34: desktop Back with Edit company open leaves the page and drops the typed notes without asking', async ({ browser }, info) => {
+  // On a phone Back asks first (Dialog's useBackToClose with the dirty guard), which is right; this pins the desktop only.
+  const co = await company(`Hunt HW34 ${T}`)
+  const { page } = await pin(browser, info, 'sales')
+  await land(page, '/companies')
+  await land(page, `/companies/${co.id}`)
+  await moreMenu(page).click()
+  await page.getByRole('menuitem', { name: 'Edit company' }).click()
+  const d = page.getByRole('dialog', { name: 'Edit company' })
+  await d.getByLabel('Notes').fill(`Unsaved words ${T}`)
+  await expect(d.getByLabel('Notes')).toHaveValue(`Unsaved words ${T}`)
+  await page.goBack()
+  await page.waitForTimeout(800)
+  test.fail(true, 'HW-34: useBackToClose is enabled only for touch / under 768 px (src/ui/Dialog.tsx:101-106), so desktop Back navigates away under a dirty dialog with no "discard?" question')
+  await expect(page).toHaveURL(new RegExp(`/companies/${co.id}$`))
+})
+
+test('HW-35: refresh drops the New company dialog (?new=1)', async ({ browser }, info) => {
+  const name = `Hunt HW35 ${T}`
+  const { page } = await pin(browser, info, 'sales')
+  await land(page, `/companies?new=1&name=${encodeURIComponent(name)}`)
+  const d = page.getByRole('dialog', { name: 'New company' })
+  await expect(d).toBeVisible()
+  await page.reload()
+  await page.locator('#main').waitFor()
+  await settle(page)
+  test.fail(true, 'HW-35: CompaniesPage opens the dialog once and then removes new=1 from the address (src/features/companies/CompaniesPage.tsx:56-64), so a refresh (or a phone reloading the tab) loses the dialog')
+  await expect(d).toBeVisible()
+})
+
+test('HW-36: the RFQ board table header scrolls away (not sticky) in a long list', async ({ browser }, info) => {
+  const L = tag(6)
+  const co = await post<{ id: string }>('companies', { name: `Hunt HW36 ${L} Sticky` })
+  await postMany('rfqs', Array.from({ length: 40 }, (_, i) => ({ company_id: co.id, owner_id: USER.admin, due_on: karachiDay(i % 10), customer_ref: `HW36-${L}-${i}` })))
+  const { page } = await pin(browser, info, 'admin')
+  await land(page, `/rfqs?owner=all&q=${L}`)
+  await expect(page.getByText(/Showing 40 of/)).toBeVisible()
+  const geo = await page.evaluate(() => {
+    const main = document.getElementById('main') as HTMLElement
+    main.scrollTop = 1200
+    const th = document.querySelector('#main table thead th') as HTMLElement
+    return { scrolled: main.scrollTop, mainTop: main.getBoundingClientRect().top, thTop: th.getBoundingClientRect().top }
+  })
+  expect(geo.scrolled).toBeGreaterThan(1000)
+  test.fail(true, 'HW-36: the th is sticky top-0 inside DataTable\'s overflow-auto wrapper (src/ui/DataTable.tsx:710-716,767), which only scrolls itself in virtual mode (over 80 rows); below that #main scrolls and the header goes with the rows')
+  expect(geo.thTop).toBeGreaterThanOrEqual(geo.mainTop - 2)
+})
+
+test('HW-37: the palette offers to add a 300-character text as a new company', async ({ browser }, info) => {
+  const { page } = await pin(browser, info, 'admin')
+  await land(page, '/today')
+  const dialog = await openPalette(page)
+  await expect(dialog).toBeVisible()
+  const a = await paletteAsk(page, dialog, 'x'.repeat(300))
+  test.fail(true, 'HW-37: search_all ignores input over 100 characters (0054_search_v2.sql:48) and the palette then always adds "Add “…” as a new company" (src/features/search/paletteSource.ts:96-98), whatever the length')
+  expect(a.options.filter(o => /^Add “/.test(o))).toEqual([])
+})
+
+test('HW-38: closing the palette with Escape leaves focus on <body>', async ({ browser }, info) => {
+  const { page } = await pin(browser, info, 'admin')
+  await land(page, '/today')
+  await page.waitForTimeout(1500) // the palette's own Ctrl+K handler is loaded on idle
+  await page.keyboard.press('Control+k')
+  const dialog = page.getByRole('dialog', { name: 'Search or jump to' })
+  await expect(dialog).toBeVisible()
+  await paletteAsk(page, dialog, 'gauge')
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  test.fail(true, 'HW-38: the palette returns focus to the element focused when it opened (src/ui/CommandPalette.tsx:248,254); opened with Ctrl+K from the page, there is none, so keyboard users restart from the top of the page')
+  expect(await page.evaluate(() => document.activeElement?.tagName ?? 'none')).not.toBe('BODY')
 })

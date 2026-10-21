@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { test, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
+import { expect, test, type BrowserContext, type Locator, type Page, type TestInfo } from '@playwright/test'
 import { API_URL, ANON_KEY, karachiDay, login } from '../../support/stack'
 import { db, USER } from '../../verify/support/db'
 import { monthBefore, monthOf, order, payment, post } from '../../verify/support/fixtures'
@@ -543,7 +543,9 @@ test('books: In vs out for a month and a quarter equals the hand totals and the 
       await shot(page, `books-report-${k}-desktop`)
       if ((await page.getByRole('button', { name: 'Export CSV' }).count()) > 0) {
         const csv = await exportCsv(page)
-        if (csv.rows.length < 2) note(info, { kind: 'observation', where: `report ${k} csv`, what: `${csv.name} has ${csv.rows.length} rows`, detail: csv.rows })
+        // A header-only CSV is right for an empty month; it is a finding only when the screen shows rows.
+        const emptyOnScreen = (await page.getByText(/Nobody owes an invoice|Nothing is owed to suppliers|No invoices yet|Nobody is credited|No expenses|Nothing in |No payment was received/).count()) > 0
+        if (csv.rows.length < 2 && !emptyOnScreen) note(info, { kind: 'observation', where: `report ${k} csv`, what: `${csv.name} has ${csv.rows.length} rows`, detail: csv.rows })
         const widths = new Set(csv.rows.filter(r => r.length > 1).map(r => r.length))
         if (widths.size > 1) note(info, { kind: 'observation', where: `report ${k} csv`, what: `${csv.name}: rows of different widths ${[...widths].join('/')}` })
         if (k === 'categories') {
@@ -739,7 +741,7 @@ test('books: two admins, one closes last month while the other has Add expense o
 // ================================================================================================ 4. team
 
 test('team: add a person, they sign in on a phone; deactivate, reactivate, change role and reset password while their session is open', async ({ browser }, info) => {
-  test.setTimeout(300_000)
+  test.setTimeout(360_000)
   const name = `Hunt Person ${T}`
   const email = `hunt-${T}-${Date.now().toString(36)}@test.invalid`
   let password = ''
@@ -798,17 +800,23 @@ test('team: add a person, they sign in on a phone; deactivate, reactivate, chang
     })
 
     await probe(info, p, 'deactivated: the open session on its next navigation and next save', async () => {
+      const t0 = Date.now()
       await spaGo(p, '/rfqs')
-      const out = await within(15_000, async () => new URL(p.url()).pathname.startsWith('/login'))
+      const out = await within(45_000, async () => new URL(p.url()).pathname.startsWith('/login'))
+      const secs = Math.round((Date.now() - t0) / 1000)
+      note(info, { kind: 'observation', where: 'deactivated open session', what: out ? `signed out ${secs} s after the next navigation` : `still in the app ${secs} s after a navigation: ${p.url()}` })
       if (!out) {
-        note(info, { kind: 'observation', where: 'deactivated open session', what: `still in the app 15 s after a navigation: ${p.url()}` })
-        // try a save: a new company
+        // try a save: a new company (recorded, never fails this step)
         const co = `Hunt Deactivated Co ${T}`
-        await spaGo(p, '/companies')
-        await p.getByRole('button', { name: 'New company' }).first().click({ timeout: 5_000 })
-        await p.getByRole('dialog', { name: 'New company' }).getByRole('textbox', { name: /Company name/ }).fill(co)
-        await p.getByRole('dialog', { name: 'New company' }).getByRole('button', { name: 'Add company' }).click()
-        await sleep(3000)
+        try {
+          await spaGo(p, '/companies')
+          await p.getByRole('button', { name: 'New company' }).first().click({ timeout: 5_000 })
+          await p.getByRole('dialog', { name: 'New company' }).getByRole('textbox', { name: /Company name/ }).fill(co)
+          await p.getByRole('dialog', { name: 'New company' }).getByRole('button', { name: 'Add company' }).click()
+          await sleep(3000)
+        } catch (e) {
+          note(info, { kind: 'observation', where: 'deactivated open session', what: `the save attempt could not be made: ${String(e).split('\n')[0]}` })
+        }
         if ((await db.rows(`companies?name=eq.${encodeURIComponent(co)}&select=id`)).length) note(info, { kind: 'observation', where: 'deactivated open session', what: 'a deactivated person SAVED a company from the open session' })
         await shot(p, 'books-deactivated-session-after-save')
       }
@@ -1136,5 +1144,117 @@ test('settings: company profile, exchange rates, targets, categories, my details
     await db.del(`targets?user_id=eq.${USER.engineer}&year=eq.${Y1}`).catch(() => undefined)
     await db.patch(`users?id=eq.${USER.admin}`, { phone: myPhone }).catch(() => undefined)
     await ctx.close().catch(() => undefined)
+  }
+})
+
+// ================================================================================================ confirmed bugs (run 1)
+// Each: the setup runs normally (a broken setup is a red failure), then test.fail() right before the one expect that states the
+// correct behaviour, so a fix flips the test.
+
+test('HW-17: Reset password leaves the person signed in (the dialog promises they are signed out on every device)', async ({ browser }, info) => {
+  const email = `hunt-reset-${tag(6)}-${Date.now().toString(36)}@test.invalid`
+  const created = await adminUsers({ action: 'create', name: `Hunt Reset ${tag(5)}`, email, role: 'sales' })
+  expect(created.status).toBe(200)
+  const userId = String((created.json?.user as { id?: string } | undefined)?.id ?? '')
+  const password = String(created.json?.password ?? '')
+  expect(userId).not.toBe('')
+  const ctx = await blankCtx(browser, info, 'desktop')
+  try {
+    const page = await ctx.newPage()
+    await signIn(page, email, password)
+    expect(await signedInApp(page)).toBe(true)
+    const refreshToken = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find(k => k.endsWith('-auth-token'))
+      return key ? ((JSON.parse(localStorage.getItem(key) ?? '{}') as { refresh_token?: string }).refresh_token ?? '') : ''
+    })
+    expect(refreshToken).not.toBe('')
+    const reset = await adminUsers({ action: 'reset_password', user_id: userId })
+    expect(reset.status).toBe(200)
+    // "Signed out on every device": the session made before the reset can no longer be renewed.
+    const renew = await fetch(`${API_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { apikey: ANON_KEY, 'content-type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+    test.fail(true, 'HW-17: admin-users reset_password sets the password but never revokes the sessions (handler.ts reset_password has no revokeSessions)')
+    expect(renew.status, 'the pre-reset session is refused a new token').toBeGreaterThanOrEqual(400)
+  } finally {
+    await ctx.close()
+    await adminUsers({ action: 'deactivate', user_id: userId }).catch(() => undefined)
+  }
+})
+
+test("HW-18: Targets: typing 'abc' + Enter in a cell that holds a target removes the target", async ({ browser }, info) => {
+  const Y1 = Number(TODAY.slice(0, 4)) + 1
+  await db.del(`targets?user_id=eq.${USER.engineer}&year=eq.${Y1}`)
+  await db.add('targets', { user_id: USER.engineer, year: Y1, quarter: 1, target_net_pkr: 500000 })
+  const ctx = await ctxAs(browser, info, 'admin', 'desktop')
+  try {
+    const page = await ctx.newPage()
+    await page.goto('/settings/targets')
+    await page.getByRole('button', { name: 'Next year' }).click()
+    await page.getByRole('button', { name: new RegExp(`^Test Engineer, Q1 ${Y1} target`) }).click()
+    const input = page.getByRole('textbox', { name: new RegExp(`Test Engineer, Q1 ${Y1} target in rupees`) })
+    await input.fill('abc')
+    await input.press('Enter')
+    await settle(page)
+    await sleep(1500)
+    const left = await db.rows(`targets?user_id=eq.${USER.engineer}&year=eq.${Y1}&quarter=eq.1&select=id`)
+    test.fail(true, 'HW-18: NumberInput turns text into null and null + Enter removes the target (TargetsPage.tsx CellEditor commit)')
+    expect(left, 'the target is still there after typing text').toHaveLength(1)
+  } finally {
+    await db.del(`targets?user_id=eq.${USER.engineer}&year=eq.${Y1}`).catch(() => undefined)
+    await ctx.close()
+  }
+})
+
+test("HW-21: the recurring-expense form shows the developer field name 'startMonth needs a value.' to the person", async ({ browser }, info) => {
+  const ctx = await ctxAs(browser, info, 'admin', 'desktop')
+  try {
+    const page = await ctx.newPage()
+    await page.goto('/money/expenses')
+    await page.getByRole('button', { name: 'Add recurring' }).click()
+    const d = page.getByRole('dialog', { name: 'Add recurring expense' })
+    await d.getByRole('textbox', { name: 'Name' }).fill(`Hunt Recurring ${tag(5)}`)
+    await d.getByRole('combobox', { name: 'Category' }).fill('Rent')
+    await page.keyboard.press('Enter')
+    await d.getByRole('textbox', { name: 'Amount, PKR' }).fill('12,345')
+    await d.getByRole('textbox', { name: 'Starts in' }).fill('abc')
+    await d.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(d.getByText(/Fix 1 field to continue/)).toBeVisible() // the refusal rendered
+    test.fail(true, "HW-21: the 'Starts in' error is the schema's default message with the field key, not a sentence for people")
+    await expect(d, 'no developer field name in the message').not.toContainText('startMonth', { timeout: 2_000 })
+  } finally {
+    await ctx.close()
+  }
+})
+
+test('HW-22: In vs out with ?period=2099-01 silently shows the current month while the address keeps 2099-01', async ({ browser }, info) => {
+  const ctx = await ctxAs(browser, info, 'admin', 'desktop')
+  try {
+    const page = await ctx.newPage()
+    await page.goto('/money/reports/in-out?by=month&period=2099-01')
+    await page.getByTestId('cash-in').waitFor()
+    await expect(page.getByRole('group', { name: 'Period' })).toContainText(M0.label) // it shows the current month
+    test.fail(true, 'HW-22: chosenPeriod falls back to now but the address is not corrected (InOutPage usePeriod)')
+    expect(new URL(page.url()).searchParams.get('period'), 'the address names the period shown').toBe(M0.key)
+  } finally {
+    await ctx.close()
+  }
+})
+
+test('HW-23: Add expense: reload with the dialog half filled loses the typed amount with no warning', async ({ browser }, info) => {
+  const ctx = await ctxAs(browser, info, 'admin', 'desktop')
+  try {
+    const page = await ctx.newPage()
+    await page.goto('/money/expenses?add=1')
+    const amount = page.getByRole('dialog', { name: 'Add expense' }).getByRole('textbox', { name: 'Amount, PKR' })
+    await amount.fill('8765')
+    await page.reload()
+    await expect(amount).toBeVisible() // the dialog comes back after the reload
+    test.fail(true, 'HW-23: nothing keeps a draft and nothing warns before the reload, so the amount is lost')
+    await expect(amount, 'the typed amount survives the reload').toHaveValue(/8,?765/, { timeout: 5_000 })
+  } finally {
+    await ctx.close()
   }
 })

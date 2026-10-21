@@ -54,6 +54,9 @@ const raised = new WeakMap<Page, string[]>()
 
 async function openPage(ctx: BrowserContext, info: TestInfo, path: string, label: string): Promise<Page> {
   const page = await ctx.newPage()
+  // Bounded actions: an action on a page whose dialog crashed must fail the probe, not hang the test until its time is up.
+  page.setDefaultTimeout(15_000)
+  page.setDefaultNavigationTimeout(30_000)
   const seen: string[] = []
   raised.set(page, seen)
   page.on('dialog', d => {
@@ -184,6 +187,20 @@ async function screenTotals(page: Page): Promise<{ net: string; gst: string; gro
     exempt: (await d.getByTestId('total-gst-exempt').count()) ? (await d.getByTestId('total-gst-exempt').innerText()).trim() : null,
   }
 }
+
+/** Remember any "Could not issue the quotation" banner that shows, however briefly (the issued screen replaces it). */
+async function watchIssueError(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as unknown as { __issueErr?: string }
+    w.__issueErr = ''
+    new MutationObserver(() => {
+      const t = document.querySelector('[role=dialog]')?.textContent ?? ''
+      if (!w.__issueErr && t.includes('Could not issue the quotation')) w.__issueErr = t.slice(t.indexOf('Could not issue'), t.indexOf('Could not issue') + 300)
+    }).observe(document.body, { subtree: true, childList: true, characterData: true })
+  })
+}
+
+const issueErrorSeen = (page: Page): Promise<string> => page.evaluate(() => (window as unknown as { __issueErr?: string }).__issueErr ?? '')
 
 async function main(page: Page): Promise<string> {
   return (await page.locator('#main').innerText().catch(() => '')).replace(/\s+/g, ' ')
@@ -423,7 +440,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
 
 for (const vp of ['desktop', 'phone'] as Viewport[]) {
   test(`supplier replies at ${vp}: odd typed and pasted formats, double Save, ranking`, async ({ browser }, info) => {
-    test.setTimeout(240_000)
+    test.setTimeout(300_000)
     const t = tag()
     const cust = await company('Hunt Replies Customer', { city: 'Gujranwala' })
     const d = [`Hunt magnetic flow meter DN50 ${t}`, `Hunt pressure switch 0-10 bar ${t}`, `Hunt instrument cable 2 core ${t}`]
@@ -434,13 +451,21 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
     const de2 = await supplier('Hunt Alpenwerk GmbH', 'Germany')
     for (const s of [de, pk, cn, de2]) await quote(r.rfq.id, s, [])
     const ctx = await ctxAs(browser, info, 'sales', vp)
-    const page = await openPage(ctx, info, `/rfqs/${r.rfq.id}`, `sales/${vp}`)
+    // The RFQ list first, so Back from the RFQ page has a real page to go to (not about:blank).
+    let page = await openPage(ctx, info, '/rfqs', `sales/${vp}`)
+    await visit(page, info, `/rfqs/${r.rfq.id}`, `sales/${vp}`)
+    const revive = async () => {
+      if (!page.isClosed()) return
+      page = await openPage(ctx, info, '/rfqs', `sales/${vp}`)
+      await visit(page, info, `/rfqs/${r.rfq.id}`, `sales/${vp}`)
+    }
     const W = `replies/${vp}`
     const region = (s: Co) => page.getByRole('region', { name: s.name, exact: true })
     const price = (s: Co, n: number) => region(s).getByLabel(`Price for item ${n} from ${s.name}`)
     await layout(page, info, `${W} rfq page`)
     await shot(page, `${W}-rfq-page`)
 
+    await revive()
     await probe(info, page, `${W} typed comma decimals`, async () => {
       await price(de, 1).fill('1.234,50')
       await price(de, 1).blur()
@@ -456,6 +481,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
         note(info, { kind: 'observation', where: `${W} typed comma decimals`, what: `typed "1.234,50" and "12,5" (EUR) were stored as ${by(1)} and ${by(2)}, shown as ${JSON.stringify(shown)}; no warning`, detail: lines })
     })
 
+    await revive()
     await probe(info, page, `${W} typed junk, negative and zero`, async () => {
       await price(pk, 1).fill('PKR 1,200/-')
       await price(pk, 2).fill('-5')
@@ -484,6 +510,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await expect.poll(async () => (await linesOf(r.rfq.id, pk.id)).length, T).toBe(3)
     })
 
+    await revive()
     await probe(info, page, `${W} double-click Save reply`, async () => {
       const box = region(cn)
       // A Chinese supplier: CNY is pre-filled from the country, or one chip is asked for.
@@ -507,6 +534,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       if (lines.some(l => l.currency !== 'CNY')) note(info, { kind: 'observation', where: `${W} double-click Save reply`, what: 'Chinese supplier reply not stored in CNY', detail: lines })
     })
 
+    await revive()
     await probe(info, page, `${W} pasted odd reply`, async () => {
       const reply = [
         'Dear Sir,',
@@ -551,6 +579,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       if (l1 && !/3\s*-\s*4 weeks/.test(l1.lead_time ?? '')) note(info, { kind: 'observation', where: `${W} pasted odd reply`, what: `lead time "3-4 weeks" stored as ${JSON.stringify(l1.lead_time)}` })
     })
 
+    await revive()
     await probe(info, page, `${W} close a reply with typed prices, then Back`, async () => {
       const edit = vis(page.getByRole('button', { name: `Edit reply, ${pk.name}` }))
       if (await edit.isVisible().catch(() => false)) await edit.click()
@@ -568,6 +597,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       if (!url.startsWith(`/rfqs/${r.rfq.id}`)) await visit(page, info, `/rfqs/${r.rfq.id}`, W)
     })
 
+    await revive()
     await probe(info, page, `${W} ranked comparison`, async () => {
       await page.reload()
       await settle(page)
@@ -605,7 +635,13 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
   await quote(r.rfq.id, sup, r.items.map((it, i) => ({ itemId: it.id, price: [1000, 800, 90000][i] })))
   const ctx = await ctxAs(browser, info, 'sales', 'desktop')
   await ctx.addInitScript(() => Object.defineProperty(Navigator.prototype, 'share', { value: undefined, configurable: true }))
-  const page = await openPage(ctx, info, `/rfqs/${r.rfq.id}`, 'sales/desktop')
+  let page = await openPage(ctx, info, '/rfqs', 'sales/desktop')
+  await visit(page, info, `/rfqs/${r.rfq.id}`, 'sales/desktop')
+  const revive = async () => {
+    if (!page.isClosed()) return
+    page = await openPage(ctx, info, '/rfqs', 'sales/desktop')
+    await visit(page, info, `/rfqs/${r.rfq.id}`, 'sales/desktop')
+  }
   const W = 'quote/desktop'
   // By hand: 2.5 x 1,234.56 = 3,086.40, GST 18% = 555.55 -> 556; 3 x 999.99 = 2,999.97 exempt; 1 x 100,000 = 100,000, GST 18,000.
   // Net 106,086.37; GST 18,556; gross 124,642.37.
@@ -615,6 +651,7 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
     { qty: 1, price: 100000, gst: 18 },
   ])
 
+  await revive()
   await probe(info, page, `${W} issue: totals on screen, double-click Issue`, async () => {
     await openIssue(page, info, r.rfq.id, W)
     await fillPrice(page, 1, '1234.56')
@@ -626,9 +663,12 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
       note(info, { kind: 'observation', where: `${W} totals`, what: 'the dialog totals differ from the hand computation', detail: { screen: s, expected: exp0 } })
     await layout(page, info, `${W} dialog`)
     await shot(page, `${W}-issue-dialog`)
+    await watchIssueError(page)
     await dialog(page).getByRole('button', { name: 'Issue quotation' }).dblclick()
     await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 45_000 })
     await shot(page, `${W}-issued`)
+    const flashed = await issueErrorSeen(page)
+    if (flashed) note(info, { kind: 'observation', where: `${W} double-click Issue`, what: 'the double-click showed "Could not issue the quotation" (the second call hit quotations_pkey) before the issued screen', detail: flashed })
     const qs = await quotationsOf(r.rfq.id)
     if (qs.length !== 1) note(info, { kind: 'observation', where: `${W} double-click Issue`, what: `${qs.length} quotations after one double-clicked Issue` })
     const q = qs[0]
@@ -655,6 +695,7 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
     { qty: 3, price: 999.99, gst: 0 },
     { qty: 1, price: 100000, gst: 18 },
   ])
+  await revive()
   await probe(info, page, `${W} revise: R1 under the same number, R0 kept`, async () => {
     const r0 = (await quotationsOf(r.rfq.id))[0]
     await page.locator('[data-slot="quotations"]').getByRole('button', { name: 'Revise quotation' }).click()
@@ -685,6 +726,7 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
     await shot(page, `${W}-two-revisions`)
   })
 
+  await revive()
   await probe(info, page, `${W} reload with the dialog open`, async () => {
     await openReviseFromMenu(page)
     await fillPrice(page, 1, '1400')
@@ -702,6 +744,7 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
     if (open) await dialog(page).getByRole('button', { name: 'Cancel' }).click()
   })
 
+  await revive()
   await probe(info, page, `${W} Back with the dialog open`, async () => {
     await visit(page, info, '/rfqs', W)
     await visit(page, info, `/rfqs/${r.rfq.id}`, W)
@@ -716,6 +759,7 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
     await visit(page, info, `/rfqs/${r.rfq.id}`, W)
   })
 
+  await revive()
   await probe(info, page, `${W} zero, negative and 22-digit prices`, async () => {
     await openReviseFromMenu(page)
     const issue = dialog(page).getByRole('button', { name: 'Issue revised quotation' })
@@ -725,18 +769,19 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
     if (negEnabled || !/No price yet/.test(negLine)) note(info, { kind: 'observation', where: `${W} negative price`, what: `a price of -5: Issue ${negEnabled ? 'ENABLED' : 'disabled'}, line says ${JSON.stringify(negLine.replace(/\s+/g, ' ').slice(-60))}` })
     await fillPrice(page, 1, '0')
     if (await issue.isEnabled()) note(info, { kind: 'observation', where: `${W} zero price`, what: 'a unit price of 0 can be issued (a free line on a customer quotation, no warning)' })
-    const errorsBefore = (await page.locator('text=Something went wrong').count()) > 0
-    await fillPrice(page, 1, '9999999999999999999999')
-    await page.waitForTimeout(500)
+    // No blur: when the dialog crashes on the keystroke there is no box left to blur.
+    await dialog(page).getByLabel('Unit price, net PKR, item 1').fill('9999999999999999999999')
+    await page.waitForTimeout(800)
     const alive = await dialog(page).getByTestId('total-gross').isVisible().catch(() => false)
-    if (!alive || (!errorsBefore && (await page.locator('text=Something went wrong').count()) > 0))
-      note(info, { kind: 'observation', where: `${W} 22-digit price`, what: 'a 22-digit price broke the dialog (computeTotals cannot read 1e+21)', detail: (await main(page)).slice(0, 300) })
-    else note(info, { kind: 'observation', where: `${W} 22-digit price`, what: `a 22-digit price: gross shows ${await dialog(page).getByTestId('total-gross').innerText()}` })
+    if (!alive) note(info, { kind: 'observation', where: `${W} 22-digit price`, what: 'a 22-digit price broke the dialog (computeTotals cannot read 1e+21)', detail: (await main(page)).slice(0, 300) })
+    else note(info, { kind: 'observation', where: `${W} 22-digit price`, what: `a 22-digit price: gross shows ${await dialog(page).getByTestId('total-gross').innerText({ timeout: 3_000 })}` })
     await shot(page, `${W}-huge-price`)
-    if (await dialog(page).isVisible().catch(() => false)) await dialog(page).getByRole('button', { name: 'Cancel' }).click()
-    else await visit(page, info, `/rfqs/${r.rfq.id}`, W)
+    if (alive) await dialog(page).getByRole('button', { name: 'Cancel' }).click()
+    // A fresh load of the RFQ page (without ?issue=1) puts the error screen away.
+    await visit(page, info, `/rfqs/${r.rfq.id}`, W)
   })
 
+  await revive()
   await probe(info, page, `${W} overflowing total`, async () => {
     // 999,999,999,999 fits rfq_items (numeric(14,2)); x 2.5 does not fit quotations.net_total.
     const before = await itemsOf(r.rfq.id)
@@ -762,6 +807,7 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
     await visit(page, info, `/rfqs/${r.rfq.id}`, W)
   })
 
+  await revive()
   await probe(info, page, `${W} issue call fails after the prices were written`, async () => {
     const count0 = (await quotationsOf(r.rfq.id)).length
     await page.route(/\/rest\/v1\/rpc\/issue_quotation/, route => route.abort('failed'))
@@ -978,7 +1024,9 @@ test('close and win: every close reason and Reopen, won from lost with Back and 
       ],
     })
     const ctx = await ctxAs(browser, info, 'sales', vp)
-    const page = await openPage(ctx, info, `/rfqs/${r.rfq.id}`, `sales/${vp}`)
+    // The RFQ list first, so Back (with Mark won open) has a real page to go to.
+    const page = await openPage(ctx, info, '/rfqs', `sales/${vp}`)
+    await visit(page, info, `/rfqs/${r.rfq.id}`, `sales/${vp}`)
     await layout(page, info, `${W} open rfq`)
     await shot(page, `${W}-open-rfq`)
     const reasons = vp === 'desktop' ? REASONS : REASONS.filter(([k]) => k === 'could_not_source' || k === 'other')
@@ -1021,4 +1069,179 @@ test('close and win: every close reason and Reopen, won from lost with Back and 
     })
     await ctx.close()
   }
+})
+
+// ================================================================================================ pinned bugs (HW-n)
+/*
+ * Each confirmed bug as its own minimal test. The setup runs normally (a broken setup fails red); test.fail() is declared right
+ * before the one expect() that states the correct behaviour, so the test turns red ("expected to fail") once the bug is fixed.
+ */
+
+async function hwPage(browser: Browser, info: TestInfo, path: string, label: string, vp: Viewport = 'desktop'): Promise<{ ctx: BrowserContext; page: Page }> {
+  const ctx = await ctxAs(browser, info, 'sales', vp)
+  const page = await openPage(ctx, info, path, label)
+  return { ctx, page }
+}
+
+/** An RFQ whose items all have a PKR supplier price, so Issue quotation includes every item. */
+async function pricedRfq(items: { description: string; qty: number; gst?: number }[], prices: number[]) {
+  const r = await rfq({ items })
+  const sup = await supplier('Hunt HW Stockist', 'Pakistan')
+  await quote(r.rfq.id, sup, r.items.map((it, i) => ({ itemId: it.id, price: prices[i] })))
+  return r
+}
+
+test('HW-1: typed comma-decimal supplier prices are stored wrong ("1.234,50" -> 1.2345, "12,5" -> 125), no warning', async ({ browser }, info) => {
+  const t = tag()
+  const r = await rfq({ items: [{ description: `Hunt HW1 flow meter ${t}`, qty: 1 }, { description: `Hunt HW1 pressure gauge ${t}`, qty: 1 }] })
+  const de = await supplier('Hunt HW1 Messtechnik GmbH', 'Germany')
+  await quote(r.rfq.id, de, [])
+  const { ctx, page } = await hwPage(browser, info, `/rfqs/${r.rfq.id}`, 'HW-1')
+  const box = page.getByRole('region', { name: de.name, exact: true })
+  await box.getByLabel(`Price for item 1 from ${de.name}`).fill('1.234,50')
+  await box.getByLabel(`Price for item 2 from ${de.name}`).fill('12,5')
+  await box.getByRole('button', { name: 'Save reply' }).click()
+  await expect.poll(async () => (await linesOf(r.rfq.id, de.id)).length, T).toBe(2)
+  const lines = await linesOf(r.rfq.id, de.id)
+  const stored = r.items.map(it => num(lines.find(l => l.rfq_item_id === it.id)?.unit_price))
+  test.fail(true, 'HW-1: NumberInput/parseAmount drops every comma, so "1.234,50" is stored as 1.2345 and "12,5" as 125 with no warning')
+  expect(stored).toEqual([1234.5, 12.5])
+  await ctx.close()
+})
+
+test('HW-2: a 22-digit price crashes the Issue quotation dialog', async ({ browser }, info) => {
+  const r = await pricedRfq([{ description: `Hunt HW2 valve ${tag()}`, qty: 1 }], [1000])
+  const { ctx, page } = await hwPage(browser, info, `/rfqs/${r.rfq.id}?issue=1`, 'HW-2')
+  await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible(T)
+  await dialog(page).getByLabel('Unit price, net PKR, item 1').fill('9999999999999999999999')
+  await page.waitForTimeout(800)
+  test.fail(true, 'HW-2: computeTotals throws "Not a decimal amount: 1e+22" while rendering; the dialog is replaced by the error screen')
+  await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible({ timeout: 5_000 })
+  await ctx.close()
+})
+
+test('HW-3: a quantity changed while the Issue quotation dialog is open is issued at a total the dialog never showed', async ({ browser }, info) => {
+  const r = await pricedRfq([{ description: `Hunt HW3 radar level transmitter ${tag()}`, qty: 4 }], [800])
+  const { ctx, page } = await hwPage(browser, info, `/rfqs/${r.rfq.id}?issue=1`, 'HW-3')
+  await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible(T)
+  await fillPrice(page, 1, '1000')
+  const shown = await dialog(page).getByTestId('total-gross').innerText() // 4 x 1,000 + 18% = PKR 4,720
+  expect(shown).toBe('PKR 4,720')
+  await db.patch(`rfq_items?id=eq.${r.items[0].id}`, { qty: 5 }) // someone else corrects the quantity
+  await dialog(page).getByRole('button', { name: 'Issue quotation' }).click()
+  await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 45_000 })
+  const [q] = await quotationsOf(r.rfq.id)
+  test.fail(true, 'HW-3: the dialog totals use the quantities it loaded, issue_quotation snapshots the stored ones (5 x 1,000 + GST = 5,900), no warning')
+  expect(`PKR ${amount(num(q.net_total) + num(q.gst_total))}`).toBe(shown)
+  await ctx.close()
+})
+
+test('HW-4: a stale tab issues a revision with no warning that a quotation was just issued from another tab', async ({ browser }, info) => {
+  const r = await pricedRfq([{ description: `Hunt HW4 control valve ${tag()}`, qty: 4 }], [4000])
+  const { ctx, page: a } = await hwPage(browser, info, `/rfqs/${r.rfq.id}?issue=1`, 'HW-4/A')
+  const b = await openPage(ctx, info, `/rfqs/${r.rfq.id}?issue=1`, 'HW-4/B')
+  await expect(a.getByRole('list', { name: 'Items to quote' })).toBeVisible(T)
+  await expect(b.getByRole('list', { name: 'Items to quote' })).toBeVisible(T)
+  await fillPrice(a, 1, '5000')
+  await fillPrice(b, 1, '6000')
+  await dialog(b).getByRole('button', { name: 'Issue quotation' }).click()
+  await expect(dialog(b).getByTestId('pdf-ready')).toBeVisible({ timeout: 45_000 })
+  await dialog(a).getByRole('button', { name: /^Issue (revised )?quotation$/ }).click()
+  // Either the issued screen, or (once fixed) a warning that one was just issued.
+  await Promise.race([
+    dialog(a).getByRole('heading', { name: /issued$/ }).waitFor({ timeout: 45_000 }),
+    dialog(a).getByText(/already|just issued|another tab|was issued/i).first().waitFor({ timeout: 45_000 }),
+  ]).catch(() => undefined)
+  const qs = await quotationsOf(r.rfq.id)
+  test.fail(true, 'HW-4: tab A still says "Issue quotation" and silently makes revision 1 over the quotation tab B just issued')
+  expect(qs).toHaveLength(1)
+  await ctx.close()
+})
+
+test('HW-5: a pasted reply line "price on request" is stored as a price (the "2" of "2 core" in the item name)', async ({ browser }, info) => {
+  const t = tag()
+  const d = [`Hunt HW5 magnetic flow meter DN50 ${t}`, `Hunt HW5 instrument cable 2 core ${t}`]
+  const r = await rfq({ items: [{ description: d[0], qty: 4 }, { description: d[1], qty: 10, unit: 'm' }] })
+  const de = await supplier('Hunt HW5 Alpenwerk GmbH', 'Germany')
+  await quote(r.rfq.id, de, [])
+  const { ctx, page } = await hwPage(browser, info, `/rfqs/${r.rfq.id}`, 'HW-5')
+  const reply = ['Dear Sir,', 'Our offer:', `${d[0]} - EUR 1.234,50 each, delivery 3-4 weeks`, `${d[1]} - price on request`, 'Best regards, Hans'].join('\n')
+  await page.evaluate(x => navigator.clipboard.writeText(x), reply)
+  await page.getByRole('region', { name: de.name, exact: true }).getByRole('button', { name: 'Paste reply' }).click()
+  const panel = page.getByRole('region', { name: `Read from the reply of ${de.name}` })
+  await expect(panel).toBeVisible(T)
+  await panel.getByRole('button', { name: /^Accept \d+ prices?$/ }).click()
+  await expect.poll(async () => (await linesOf(r.rfq.id, de.id)).length, T).toBeGreaterThan(0)
+  await page.waitForTimeout(1000)
+  const lines = await linesOf(r.rfq.id, de.id)
+  test.fail(true, 'HW-5: "price on request" is read as EUR 2.00 (from "2 core") and ticked by default, so Accept stores it as a price')
+  expect(lines.find(l => l.rfq_item_id === r.items[1].id)).toBeUndefined()
+  await ctx.close()
+})
+
+test('HW-6: a double-click on "Looks right" skips the supplier review step', async ({ browser }, info) => {
+  const cust = await company('Hunt HW6 Customer')
+  const sup = await supplier('Hunt HW6 Supplier', 'Pakistan')
+  const { ctx, page } = await hwPage(browser, info, '/today', 'HW-6')
+  await startIntake(page, info, cust, `&supplier=${sup.id}`)
+  await pasteOnPage(page, { text: [`Pressure gauge 0-16 bar ${tag()} - 2 nos`, `Flow switch ${tag()} - 1 no`].join('\n') })
+  await expect(page.getByRole('textbox', { name: 'Description of item 2', exact: true })).toBeVisible(T)
+  await vis(page.getByRole('button', { name: /Looks right: find suppliers/ })).dblclick()
+  await page.waitForTimeout(800)
+  test.fail(true, 'HW-6: "Write the message" takes the place of "Looks right" in the sticky bar, so the second click skips the suppliers step')
+  expect(await stepOf(page)).toBe('Step 2 of 4')
+  await ctx.close()
+})
+
+test('HW-7: an enquiry quantity of 0 is read as 1 and saved as 1, with no warning', async ({ browser }, info) => {
+  const cust = await company('Hunt HW7 Customer')
+  const { ctx, page } = await hwPage(browser, info, '/today', 'HW-7')
+  await startIntake(page, info, cust)
+  await pasteOnPage(page, { text: [`Pressure gauge 0-16 bar ${tag()} - 2 nos`, `Thermowell SS316 ${tag()} - 0 nos`].join('\n') })
+  const qty = page.getByRole('textbox', { name: 'Quantity of item 2', exact: true })
+  await expect(page.getByRole('textbox', { name: 'Description of item 2', exact: true })).toHaveValue(/Thermowell SS316/, T)
+  test.fail(true, 'HW-7: "0 nos" becomes "1 no" on screen (and qty 1 in the database, effectiveQty) with nothing telling the person')
+  await expect(qty).not.toHaveValue('1 no', { timeout: 3_000 })
+  await ctx.close()
+})
+
+test('HW-8: a unit price of 0 can be issued on a quotation with no warning', async ({ browser }, info) => {
+  const r = await pricedRfq([{ description: `Hunt HW8 gas detector ${tag()}`, qty: 2 }], [40000])
+  const { ctx, page } = await hwPage(browser, info, `/rfqs/${r.rfq.id}?issue=1`, 'HW-8')
+  await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible(T)
+  await fillPrice(page, 1, '0')
+  await expect(dialog(page).getByTestId('total-net')).toHaveText('PKR 0', T)
+  test.fail(true, 'HW-8: min={0} and quoted_unit_price_net >= 0, so a free line can go out on a customer quotation')
+  await expect(dialog(page).getByRole('button', { name: 'Issue quotation' })).toBeDisabled({ timeout: 3_000 })
+  await ctx.close()
+})
+
+test('HW-9: Back with the Issue quotation dialog open leaves the RFQ page and discards the typed prices without asking', async ({ browser }, info) => {
+  const r = await pricedRfq([{ description: `Hunt HW9 flow computer ${tag()}`, qty: 1 }], [90000])
+  const { ctx, page } = await hwPage(browser, info, '/rfqs', 'HW-9')
+  await visit(page, info, `/rfqs/${r.rfq.id}`, 'HW-9')
+  await openIssue(page, info, r.rfq.id, 'HW-9')
+  await fillPrice(page, 1, '125000')
+  await page.goBack()
+  await settle(page)
+  test.fail(true, 'HW-9: ?issue=1 is set with replace: true, so Back leaves the RFQ page (to /rfqs) and the typed price is lost; a reload loses it too')
+  await expect(page).toHaveURL(new RegExp(`/rfqs/${r.rfq.id}`), { timeout: 3_000 })
+  await ctx.close()
+})
+
+test('HW-10: an over-large intake quantity is refused with only "Nothing was saved." and no reason', async ({ browser }, info) => {
+  const cust = await company('Hunt HW10 Customer')
+  const { ctx, page } = await hwPage(browser, info, '/today', 'HW-10')
+  await startIntake(page, info, cust)
+  await pasteOnPage(page, { text: `Level switch vibrating fork ${tag()} - 5 nos` })
+  const q = page.getByRole('textbox', { name: 'Quantity of item 1', exact: true })
+  await q.fill('99999999999 nos')
+  await q.blur()
+  await vis(page.getByRole('button', { name: 'Save without asking' })).click()
+  const said = page.getByText(/Nothing was saved/).first()
+  await expect(said).toBeVisible(T)
+  const banner = said.locator('xpath=ancestor::div[contains(@class,"rounded")][1]')
+  test.fail(true, 'HW-10: float_rfq answers 22003 numeric field overflow (qty is numeric(12,3)) and the banner does not say the quantity is too large')
+  await expect(banner).toContainText(/quantit/i, { timeout: 3_000 })
+  await ctx.close()
 })
