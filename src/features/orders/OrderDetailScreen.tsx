@@ -13,10 +13,18 @@ import { cn } from '@/lib/utils'
 import { orderFacts, pageStep } from '@/features/orders/lib/primaryAction'
 import { businessToday } from '@/lib/dates'
 import { OrderItemsPanel } from '@/features/orders/OrderItemsPanel'
-import { LegsPanel } from '@/features/orders/LegsPanel'
-import { CommissioningPanel } from '@/features/orders/CommissioningPanel'
-import { InvoicesPanel, MarginPanel } from '@/features/orders/MoneyPanels'
-import { AttachmentsPanel } from '@/features/rfqs/AttachmentsPanel'
+import { lazyWithReload } from '@/lib/importWithReload'
+import { BelowTheFold } from '@/ui/BelowTheFold'
+
+/*
+ * The panels under the items (supplier orders, commissioning, files) and admin's margin column are downloads of their own, fetched
+ * once the order's header and items are drawn (perf/lcp, BelowTheFold): on a phone they are below the first screen.
+ */
+const LegsPanel = lazyWithReload(() => import('@/features/orders/LegsPanel').then(m => ({ default: m.LegsPanel })))
+const CommissioningPanel = lazyWithReload(() => import('@/features/orders/CommissioningPanel').then(m => ({ default: m.CommissioningPanel })))
+const AttachmentsPanel = lazyWithReload(() => import('@/features/rfqs/AttachmentsPanel').then(m => ({ default: m.AttachmentsPanel })))
+const MarginPanel = lazyWithReload(() => import('@/features/orders/MoneyPanels').then(m => ({ default: m.MarginPanel })))
+const InvoicesPanel = lazyWithReload(() => import('@/features/orders/MoneyPanels').then(m => ({ default: m.InvoicesPanel })))
 
 /*
  * Order detail (O03; g2-order-detail.html). /orders/:id.
@@ -195,16 +203,20 @@ export default function OrderDetailScreen() {
             <OrderItemsPanel order={order} items={items.data} legs={legs.data} money={money} canEdit={canEdit && money} basisUnknown={basisUnknown} pos={pos.data ?? []} />
             <div className={isAdmin ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]' : 'grid gap-6'}>
               <div className="grid min-w-0 gap-6">
-                <LegsPanel order={order} legs={legs.data} items={items.data} pos={pos.data ?? []} money={money} isAdmin={isAdmin} canEdit={canEdit} />
-                <CommissioningPanel order={order} engineers={engineers.data ?? []} isEngineer={isEngineer} canEdit={canEdit} markDoneAbove={primary?.kind === 'mark-done'} />
-                <AttachmentsPanel orderId={order.id} />
+                <BelowTheFold fallback={<Skeleton className="h-56 w-full" />}>
+                  <LegsPanel order={order} legs={legs.data} items={items.data} pos={pos.data ?? []} money={money} isAdmin={isAdmin} canEdit={canEdit} />
+                  <CommissioningPanel order={order} engineers={engineers.data ?? []} isEngineer={isEngineer} canEdit={canEdit} markDoneAbove={primary?.kind === 'mark-done'} />
+                  <AttachmentsPanel orderId={order.id} />
+                </BelowTheFold>
               </div>
               {/* The side column is admin's Margin (with the one order-level Add expense) and the payment rows (Correct / Void, 0073). The
                   invoiced and received figures are in the header's status strip, and the engineer's site is in the header's "Your job". */}
               {isAdmin ? (
                 <aside className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:col-start-2 lg:row-start-1" aria-label="Margin and costs">
-                  <MarginPanel order={order} money={orderMoney.data} loading={orderMoney.isPending} error={orderMoney.isError} />
-                  <InvoicesPanel orderId={order.id} orderNumber={order.number} />
+                  <BelowTheFold fallback={<Skeleton className="h-40 w-full" />}>
+                    <MarginPanel order={order} money={orderMoney.data} loading={orderMoney.isPending} error={orderMoney.isError} />
+                    <InvoicesPanel orderId={order.id} orderNumber={order.number} />
+                  </BelowTheFold>
                 </aside>
               ) : null}
             </div>

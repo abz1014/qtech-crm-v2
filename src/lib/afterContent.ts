@@ -22,6 +22,11 @@ function release(): void {
   for (const run of waiting.splice(0)) run()
 }
 
+/** Whether the opening page's content is on screen already (always, after the first page). */
+export function isContentDrawn(): boolean {
+  return drawn
+}
+
 /** Run `run` once the opening page's content is on screen (at once if it already is). */
 export function whenContentDrawn(run: () => void): void {
   if (drawn) run()

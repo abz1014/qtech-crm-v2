@@ -31,7 +31,6 @@ import { useCompanyProfile } from '@/features/settings/hooks'
 import { termsLabel } from '@/features/settings/companyProfile'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
 import { useMarkDone, useSetPlanned } from '@/features/orders/commissioningActions'
-import { CommissioningEditDialog } from '@/features/orders/CommissioningPanel'
 import { ResolveBasisDialog } from '@/features/orders/ResolveBasisDialog'
 import { legState } from '@/features/orders/lib/legModel'
 import { orderFacts, pageStep, type PrimaryAction } from '@/features/orders/lib/primaryAction'
@@ -45,6 +44,7 @@ import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features
 import { lazyShown } from '@/lib/lazyDialog'
 
 // Downloaded the first time it opens, not with the order page (perf/lcp, lazyDialog.tsx).
+const CommissioningEditDialog = lazyShown(() => import('@/features/orders/CommissioningPanel').then(m => m.CommissioningEditDialog))
 const IssuePoDialog = lazyShown(() => import('@/features/purchaseOrders/IssuePoDialog').then(m => m.IssuePoDialog))
 const GoodsChaseDialog = lazyShown(() => import('@/features/orders/GoodsChaseDialog').then(m => m.GoodsChaseDialog))
 const AddLegDialog = lazyShown(() => import('@/features/orders/AddDialogs').then(m => m.AddLegDialog))
