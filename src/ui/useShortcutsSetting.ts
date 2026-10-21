@@ -23,6 +23,15 @@ export function shortcutsEnabled(): boolean {
   return memory ?? stored()
 }
 
+/**
+ * True while something that owns the keyboard is open: a dialog, an alert dialog or a menu. Page shortcuts (N, C, "/",
+ * Ctrl+K) wait until it closes. A panel that sits beside the page and says so (aria-modal="false", the desktop Help panel)
+ * does not count, so the page's keys keep working next to it.
+ */
+export function blockingOverlayOpen(): boolean {
+  return Boolean(document.querySelector('[role="dialog"]:not([aria-modal="false"]),[role="alertdialog"],[role="menu"]'))
+}
+
 export function setSingleKeyShortcuts(on: boolean): void {
   memory = on
   try {
