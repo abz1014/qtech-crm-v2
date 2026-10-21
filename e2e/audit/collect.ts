@@ -321,7 +321,8 @@ export function collect(opts: CollectOptions): Metrics {
       }
     }
     if (!inMain) {
-      primary.inChrome++
+      // Behind an open modal dialog (the dialog is what is measured): not on screen, not a competing green.
+      if (!covered(el)) primary.inChrome++
       continue
     }
     // A disabled primary is drawn grey (Button.tsx), so it is no competing green: counted apart, not in inMain.

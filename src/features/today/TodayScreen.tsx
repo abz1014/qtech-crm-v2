@@ -150,7 +150,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
             // line above already says how many need you (each fact once). Below that the strip wraps (audit T4).
             // Measured with Geist 500 at 14 px: 352 px with three two-digit counts. `px-[6px]`, not `px-1.5`: Tailwind 3 never
             // generated `[&>*]:px-1.5` (the dot), so the segments kept their 12 px sides and Money fell to a second line.
-            className="mt-2 flex-wrap justify-self-start [&>*]:gap-1 [&>*]:px-[6px] [&_[data-needs-count]]:px-1"
+            className="mt-2 flex-wrap justify-self-start max-md:[&>*]:min-w-[44px] [&>*]:justify-center [&>*]:gap-1 [&>*]:px-[6px] [&_[data-needs-count]]:px-1"
             value={tab}
             onValueChange={v => setTab(v as 'all' | TodayTab)}
             options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], needs: t === 'all' ? undefined : counts[t] }))}
