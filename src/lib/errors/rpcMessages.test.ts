@@ -73,6 +73,13 @@ describe('mapPgError uses the table', () => {
     expect(m).toEqual({ kind: 'closed-month', message: 'March 2026 is closed. An admin can reopen it.' })
   })
 
+  it('P0001 reopen out of order names the month to reopen first (0080, owner decision 2026-10-22)', () => {
+    const m = mapPgError({ code: 'P0001', message: 'August 2026 cannot be reopened while September 2026 is closed. Reopen September 2026 first.' })
+    expect(m.message).toBe('Reopen September 2026 first. Months reopen newest first, so August 2026 can be reopened once every month after it is open.')
+    expect(m.help).toBe('month-end-close')
+    expect(m.action?.href).toBe('/money/month-end')
+  })
+
   it('internal texts still fall back', () => {
     expect(mapPgError({ code: 'P0001', message: 'float_rfq needs at least one item' }).message).toBe('This change was refused. Nothing was saved.')
   })

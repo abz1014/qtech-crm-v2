@@ -44,15 +44,15 @@ insert into public.expense_groups (id, name, kind, sort) values
 alter table public.expense_groups enable row level security;
 
 revoke all on table public.expense_groups from public, anon, authenticated;
-grant select, insert, update, delete on table public.expense_groups to authenticated;
+grant select, insert, update, delete on table public.expense_groups to authenticated, qtech_engineer;   -- 0081: the engineer's API role mirrors authenticated (the policies still give them nothing)
 
-create policy expense_groups_select_admin on public.expense_groups for select to authenticated
+create policy expense_groups_select_admin on public.expense_groups for select to authenticated, qtech_engineer
   using ((select public.current_user_role()) = 'admin');
-create policy expense_groups_insert_admin on public.expense_groups for insert to authenticated
+create policy expense_groups_insert_admin on public.expense_groups for insert to authenticated, qtech_engineer
   with check ((select public.current_user_role()) = 'admin');
-create policy expense_groups_update_admin on public.expense_groups for update to authenticated
+create policy expense_groups_update_admin on public.expense_groups for update to authenticated, qtech_engineer
   using ((select public.current_user_role()) = 'admin') with check ((select public.current_user_role()) = 'admin');
-create policy expense_groups_delete_admin on public.expense_groups for delete to authenticated
+create policy expense_groups_delete_admin on public.expense_groups for delete to authenticated, qtech_engineer
   using ((select public.current_user_role()) = 'admin');
 
 -- ================================================================ B. categories: group and budget
@@ -303,7 +303,7 @@ end;
 $$;
 
 revoke all on function public.merge_expense_categories(uuid, uuid) from public, anon, authenticated;
-grant execute on function public.merge_expense_categories(uuid, uuid) to authenticated;
+grant execute on function public.merge_expense_categories(uuid, uuid) to authenticated, qtech_engineer;   -- 0081: mirrors authenticated; refused inside for anyone but an admin
 
 comment on function public.merge_expense_categories(uuid, uuid) is
   '0083: moves every expense and recurring template of one category into another and removes the first. Admin only. Closed months keep every figure (only the category of their expenses changes, and only between categories of the same kind).';

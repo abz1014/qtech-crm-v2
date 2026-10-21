@@ -146,7 +146,16 @@ export function CategoriesPage() {
     <div className="grid content-start gap-6">
       <PageHeader
         title="Expense categories"
-        lede="Every expense goes under a category, and every category under a group."
+        lede={
+          <>
+            Every expense goes under a category, and every category under a group.{' '}
+            <InfoTip label="About categories">
+              <p>A category in use is never deleted: past expenses point to it. Archive it to stop offering it for new expenses (the old ones keep it), or merge it into another category to move its expenses there.</p>
+              <p className="mt-2">The group decides where spending shows in Profit and loss: running costs, order costs, or not a cost (owner drawings and loan repayments).</p>
+              <p className="mt-2">A budget is a monthly limit for one category, compared with what was paid that month.</p>
+            </InfoTip>
+          </>
+        }
         secondary={
           <Button icon={FolderPlus} onClick={() => setOpen({ kind: 'add-group' })} disabled={loading || failed}>
             Add group
@@ -191,16 +200,7 @@ export function CategoriesPage() {
         </div>
       ) : (
         <>
-          <div className="-mb-3 flex items-center gap-1 text-sm text-fg-muted">
-            <span>
-              Amounts are what was paid in {monthName}, cash and bank together.
-            </span>
-            <InfoTip label="About categories">
-              <p>A category in use is never deleted: past expenses keep it. Archive it to hide it from new expenses, or merge it into another category to move its expenses there.</p>
-              <p className="mt-2">The group decides where spending shows in Profit and loss: running costs, order costs, or not a cost (owner drawings and loan repayments).</p>
-              <p className="mt-2">A budget is a monthly limit for one category, compared with what was paid that month.</p>
-            </InfoTip>
-          </div>
+          <p className="-mb-3 text-sm text-fg-muted">Amounts are what was paid in {monthName}, cash and bank together.</p>
           {sections.map(s => (
             <GroupSection key={s.group.id} s={s} phone={phone} totals={totals} groupItems={groupItems(s)} itemsFor={c => categoryItems(c, s)} onAdd={() => setOpen({ kind: 'add', groupId: s.group.id })} />
           ))}
@@ -277,7 +277,7 @@ function GroupSection({
           </span>
           <span className="text-sm text-fg-muted">this month</span>
         </div>
-        <RowMenu label={`Actions for the group ${s.group.name}`} title={s.group.name} subtitle={KIND_WORDS[s.group.kind]} items={groupItems} phone={phone} />
+        <RowMenu label={`More for the group ${s.group.name}`} title={s.group.name} subtitle={KIND_WORDS[s.group.kind]} items={groupItems} phone={phone} />
       </header>
       {s.rows.length === 0 ? (
         <div className="flex min-h-touch items-center gap-3 px-4 py-2 text-base text-fg-muted">
@@ -325,7 +325,7 @@ function CategoryRow({ c, spent, phone, items, groupName }: { c: Category; spent
           </span>
         ) : null}
       </div>
-      <RowMenu label={`Actions for ${c.name}`} title={c.name} subtitle={meta} items={items} phone={phone} />
+      <RowMenu label={`More for ${c.name}`} title={c.name} subtitle={meta} items={items} phone={phone} />
     </li>
   )
 }

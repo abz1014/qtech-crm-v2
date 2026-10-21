@@ -95,8 +95,8 @@ beforeEach(() => {
 const row = (name: string) => document.querySelector(`[data-category="${name}"]`) as HTMLElement
 const loaded = () => screen.findByText('Rent')
 async function menu(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await user.click(screen.getByRole('button', { name: `Actions for ${name}` }))
-  return screen.getByRole('menu', { name: `Actions for ${name}` })
+  await user.click(screen.getByRole('button', { name: `More for ${name}` }))
+  return screen.getByRole('menu', { name: `More for ${name}` })
 }
 const items = (m: HTMLElement) => [...m.querySelectorAll('[role^="menuitem"]')].map(i => i.textContent)
 
@@ -122,6 +122,7 @@ describe('Expense categories (M13, 0083)', () => {
     expect(within(document.querySelector('[data-group="Site visits"]') as HTMLElement).getByText('No categories yet.')).toBeInTheDocument()
     // the archived one waits, collapsed, at the foot
     expect(screen.getByText(/Archived \(1\)/)).toBeInTheDocument()
+    expect(screen.queryAllByRole('textbox')).toHaveLength(0) // read-only rows: nothing to type into until a dialog opens
     expect(screen.getByTestId('categories-footer')).toHaveTextContent('6 categories · 1 archived · 4 groups')
   })
 

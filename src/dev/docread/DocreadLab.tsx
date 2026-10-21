@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react'
+import type { ReplyItemRef } from '@/features/rfqs/lib/replyParse'
+import { enquiryResult, quoteResult } from '@/lib/docread/corpus/results'
 import { parseEnquiry } from '@/lib/docread/enquiryParse'
 import { readImageText, type ImageTextResult } from '@/lib/docread/imageText'
+import { readPdfText } from '@/lib/docread/pdfText'
+import { parseSupplierQuote } from '@/lib/docread/supplierQuoteParse'
 
 /*
  * /dev/docread: dev builds only (dead code in production). A bare page that reads a picture with readImageText and puts the
@@ -18,6 +22,27 @@ const itemsOf = (text: string) => {
 }
 // The spec compares what a picture gives with what the same text gives when pasted.
 ;(window as unknown as { __docreadItems?: typeof itemsOf }).__docreadItems = itemsOf
+
+const bytes = (b64: string) => Uint8Array.from(atob(b64), c => c.charCodeAt(0))
+/**
+ * For e2e/docread/corpus.spec.ts: the real readers on a picture or a PDF given as base64 (scored in the spec against the
+ * fictional corpus's truth), and the parsers' verdicts in the shape the scorer takes.
+ */
+const corpusApi = {
+  async readImage(b64: string, type: string) {
+    const t0 = performance.now()
+    const r = await readImageText(new Blob([bytes(b64)], { type }))
+    return { ok: r.ok, text: r.ok ? r.text : '', reason: r.ok ? null : r.reason, confidence: r.ok ? r.confidence : null, ms: Math.round(performance.now() - t0) }
+  },
+  async readPdf(b64: string) {
+    const t0 = performance.now()
+    const r = await readPdfText(bytes(b64))
+    return { ok: r.ok, text: r.ok ? r.text : '', reason: r.ok ? null : r.reason, confidence: r.ok ? r.ocrConfidence : null, ms: Math.round(performance.now() - t0) }
+  },
+  parseEnquiry: (text: string) => enquiryResult(parseEnquiry(text, { today: TODAY })),
+  parseQuote: (text: string, rfq: ReplyItemRef[]) => quoteResult(parseSupplierQuote(text, rfq, { today: TODAY })),
+}
+;(window as unknown as { __docread?: typeof corpusApi }).__docread = corpusApi
 
 export default function DocreadLab() {
   const [progress, setProgress] = useState('')
@@ -46,12 +71,28 @@ export default function DocreadLab() {
     if (ctrl.current === c) setResult({ ...r, ms: Math.round(performance.now() - t0) })
   }
 
+  // A PDF (a scan is read page by page by the picture reader), shown the same way.
+  const readPdfFile = async (file: File | undefined) => {
+    if (!file) return
+    ctrl.current?.abort()
+    const c = new AbortController()
+    ctrl.current = c
+    setResult(null)
+    const t0 = performance.now()
+    const r = await readPdfText(file, { signal: c.signal, onProgress: p => setProgress(p.message) })
+    const shown: ImageTextResult = r.ok ? { ok: true, text: r.text, lines: r.lines, confidence: r.ocrConfidence ?? 100, tableRows: r.tableRows } : { ok: false, reason: r.reason === 'aborted' ? 'aborted' : 'unclear', message: r.message }
+    if (ctrl.current === c) setResult({ ...shown, ms: Math.round(performance.now() - t0) })
+  }
+
   const items = result?.ok ? itemsOf(result.text) : null
   return (
     <main className="mx-auto max-w-3xl space-y-3 p-4">
       <h1 className="text-lg font-semibold">Read a picture</h1>
       <label className="block">
         Picture <input type="file" accept="image/*" onChange={e => void read(e.target.files?.[0])} />
+      </label>
+      <label className="block">
+        PDF <input type="file" accept="application/pdf" onChange={e => void readPdfFile(e.target.files?.[0])} />
       </label>
       <button type="button" className="underline" onClick={() => ctrl.current?.abort()}>
         Cancel

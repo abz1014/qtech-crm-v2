@@ -5,7 +5,7 @@ const searchAll = vi.fn<(text: string, signal?: AbortSignal) => Promise<SearchHi
 vi.mock('@/features/search/api', () => ({ searchAll: (t: string, s?: AbortSignal) => searchAll(t, s) }))
 vi.mock('@/app/palette/usePalette', () => ({ usePaletteSource: () => undefined }))
 
-import { kindOrder, searchPaletteSource } from '@/features/search/paletteSource'
+import { kindOrder, searchPaletteSource, seeAllHref } from '@/features/search/paletteSource'
 
 const hit = (kind: SearchHit['kind'], id: string, label: string, extra: Partial<SearchHit> = {}): SearchHit => ({
   kind, id, label, meta: null, companyId: null, orderId: null, role: null, score: 1, ...extra,
@@ -104,6 +104,33 @@ describe('search palette source (R12)', () => {
       ['Purchase orders', '/orders/o1'],
       ['Order items', '/orders/o1'],
     ])
+  })
+
+  it('shows six per kind, then "See all N results" opening that list with the words in its search (every owner)', async () => {
+    const rfqs = Array.from({ length: 9 }, (_, i) => hit('rfq', `r${i}`, `RFQ-00${10 + i} Abc Ltd`, { score: 9 - i }))
+    const contacts = Array.from({ length: 25 }, (_, i) => hit('contact', `k${i}`, `Ab ${i}`, { companyId: 'c1' }))
+    const companies = [hit('company', 'c1', 'Abc Ltd')]
+    searchAll.mockResolvedValue([...rfqs, ...contacts, ...companies])
+    const p = searchPaletteSource(0).search!('ab c', new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(5)
+    const items = await p
+    expect(searchAll).toHaveBeenCalledTimes(1)
+    const rfqRows = items.filter(i => i.group === 'RFQs')
+    expect(rfqRows).toHaveLength(7)
+    expect(rfqRows.slice(0, 6).map(i => i.id)).toEqual(['rfq-r0', 'rfq-r1', 'rfq-r2', 'rfq-r3', 'rfq-r4', 'rfq-r5'])
+    expect(rfqRows[6]).toMatchObject({ label: 'See all 9 results', meta: 'In RFQs', href: '/rfqs?owner=all&q=ab%20c' })
+    // 25 is the most the search returns, so it may be more
+    expect(items.filter(i => i.group === 'Contacts').at(-1)).toMatchObject({ label: 'See all 25+ results', href: '/companies?q=ab%20c' })
+    // one company: no "See all" row
+    expect(items.filter(i => i.group === 'Companies').map(i => i.label)).toEqual(['Abc Ltd'])
+  })
+
+  it('"See all" opens each kind\'s own list', () => {
+    expect(seeAllHref('order', 'x')).toBe('/orders?owner=all&q=x')
+    expect(seeAllHref('item', 'x')).toBe('/orders?owner=all&q=x')
+    expect(seeAllHref('po', 'x')).toBe('/orders?owner=all&q=x')
+    expect(seeAllHref('invoice', 'INV 1')).toBe('/money/gst-register?q=INV%201')
+    expect(seeAllHref('company', 'x')).toBe('/companies?q=x')
   })
 
   it('P02: a typed prefix puts what it names first', () => {

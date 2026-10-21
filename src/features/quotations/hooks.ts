@@ -3,27 +3,36 @@ import { qk } from '@/features/queryKeys'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/quotations/api'
 import * as companiesApi from '@/features/companies/api'
+import { useSeesPrices } from '@/app/session'
 
+/** Every revision of the RFQ's quotation. An engineer's read leaves out the lines and totals (owner decision 2026-10-22); the key says which. */
 export function useQuotations(rfqId: string | undefined) {
-  return useQuery({ queryKey: qk.rfqs.part(rfqId ?? '', 'quotations'), queryFn: () => api.listQuotations(rfqId as string), enabled: Boolean(rfqId) })
+  const prices = useSeesPrices()
+  return useQuery({
+    queryKey: [...qk.rfqs.part(rfqId ?? '', 'quotations'), prices ? 'prices' : 'no-prices'],
+    queryFn: () => api.listQuotations(rfqId as string, prices),
+    enabled: Boolean(rfqId),
+  })
 }
 
 /** Items with their working quoted prices. Read only while the dialog is open, and never kept, so it is always fresh. */
 export function useQuoteItems(rfqId: string | undefined, enabled: boolean) {
+  const prices = useSeesPrices()
   return useQuery({
     queryKey: qk.rfqs.part(rfqId ?? '', 'quote-items'),
     queryFn: () => api.listQuoteItems(rfqId as string),
-    enabled: enabled && Boolean(rfqId),
+    enabled: enabled && Boolean(rfqId) && prices,
     staleTime: 0,
     gcTime: 0,
   })
 }
 
 export function usePriceMemory(rfqId: string | undefined, enabled: boolean) {
+  const prices = useSeesPrices()
   return useQuery({
     queryKey: qk.rfqs.part(rfqId ?? '', 'price-memory'),
     queryFn: () => api.getPriceMemory(rfqId as string),
-    enabled: enabled && Boolean(rfqId),
+    enabled: enabled && Boolean(rfqId) && prices,
     gcTime: 0,
   })
 }

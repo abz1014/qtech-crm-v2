@@ -43,6 +43,13 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^(.+?) is closed\. Reopen it first \(Money, Month-end\), then change this payment\.?$/, action: MONTH_END },
   { match: /^(.+?) is still open\. Close earlier months first/, message: m => `Close ${m[1]} first. Months close in order.`, help: 'month-end-close', action: MONTH_END },
   { match: /^The new date is in (.+?), which is closed\./, action: MONTH_END },
+  // 0080 (owner decision 2026-10-22): months reopen newest first.
+  {
+    match: /^(.+?) cannot be reopened while (.+?) is closed\. Reopen (.+?) first\.?$/,
+    message: m => `Reopen ${m[2]} first. Months reopen newest first, so ${m[1]} can be reopened once every month after it is open.`,
+    help: 'month-end-close',
+    action: MONTH_END,
+  },
   { match: /^a month is required$/, message: () => 'Choose a month first.' },
   { match: /^only an admin can (close|reopen) a month$/, message: m => `Only an admin can ${m[1]} a month. Ask an admin if it needs doing.` },
 

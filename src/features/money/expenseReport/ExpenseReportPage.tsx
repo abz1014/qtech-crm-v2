@@ -11,13 +11,13 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { useToast } from '@/ui/useToast'
-import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
-import { ExportCsvButton, ReportError, ReportLoading } from '@/features/money/monthEnd/ReportParts'
+import { ReportsFrame } from '@/features/reports/ReportsFrame'
+import { IN_OUT_REPORT_TITLE } from '@/features/money/monthEnd/reportList'
+import { ReportError, ReportLoading } from '@/features/money/monthEnd/ReportParts'
 import { downloadReport } from '@/features/money/monthEnd/reportFiles'
 import { chosenPeriod, periodLabel, periodOf, shiftPeriod, type Period, type PeriodKind } from '@/features/money/inOut/model'
 import { useExpenseReport } from '@/features/money/expenseReport/hooks'
 import {
-  EXPENSE_REPORT_TITLE,
   entriesCsv,
   expenseReportCsv,
   type AcrossDetail,
@@ -48,7 +48,8 @@ function usePeriod() {
   const today = businessToday()
   const [params, setParams] = useSearchParams()
   const kind: PeriodKind = params.get('by') === 'quarter' ? 'quarter' : 'month'
-  const askedKey = params.get('period')
+  // ?month= (kept by the Report select from a month report) opens that month; ?period= wins when both are there
+  const askedKey = params.get('period') ?? (kind === 'month' ? params.get('month') : null)
   const period = useMemo(() => chosenPeriod(kind, askedKey, today), [kind, askedKey, today])
   const now = periodOf(kind, today.slice(0, 7))
   const set = (p: Period) => {
@@ -78,36 +79,26 @@ export function ExpenseReportPage() {
       setPdfBusy(false)
     }
   }
-  const files = (view: ExpenseReportView) => (
-    <>
-      <ExportCsvButton onClick={() => downloadReport(expenseReportCsv(view), `expenses-${period.key}.csv`)} />
-      <Button size="sm" icon={FileText} busy={pdfBusy} busyLabel="Making PDF" onClick={() => void savePdf()}>
-        Download PDF
-      </Button>
-    </>
-  )
   return (
-    <MoneyFrame active="reports">
-      <MoneySubHeader
-        back={{ to: '/money/reports', label: 'Reports' }}
-        title={EXPENSE_REPORT_TITLE}
-        meta={
-          <span className="flex flex-wrap items-center gap-3">
-            <SegmentedControl
-              aria-label="Month or quarter"
-              options={[
-                { value: 'month', label: 'Month' },
-                { value: 'quarter', label: 'Quarter' },
-              ]}
-              value={period.kind}
-              onValueChange={k => set(periodOf(k as PeriodKind, k === period.kind ? period.key : today.slice(0, 7)))}
-              large
-            />
-            <PeriodPager period={period} atNow={period.key >= now.key} go={by => set(shiftPeriod(period, by))} />
-          </span>
-        }
-        actions={v ? <span className="flex flex-wrap gap-2 max-md:hidden">{files(v)}</span> : null}
-      />
+    <ReportsFrame
+      report="expenses"
+      csv={v ? () => downloadReport(expenseReportCsv(v), `expenses-${period.key}.csv`) : null}
+      period={
+        <span className="flex flex-wrap items-center gap-3">
+          <SegmentedControl
+            aria-label="Month or quarter"
+            options={[
+              { value: 'month', label: 'Month' },
+              { value: 'quarter', label: 'Quarter' },
+            ]}
+            value={period.kind}
+            onValueChange={k => set(periodOf(k as PeriodKind, k === period.kind ? period.key : today.slice(0, 7)))}
+            large
+          />
+          <PeriodPager period={period} atNow={period.key >= now.key} go={by => set(shiftPeriod(period, by))} />
+        </span>
+      }
+    >
       {q.isError ? (
         <ReportError title="The expenses report did not load" onRetry={q.refetch} />
       ) : q.isPending || !v ? (
@@ -115,11 +106,14 @@ export function ExpenseReportPage() {
       ) : (
         <>
           <Body v={v} onPick={set} />
-          {/* on a phone the files go last, so the total is on the first screen */}
-          <div className="flex flex-wrap gap-2 md:hidden">{files(v)}</div>
+          <div className="flex flex-wrap gap-2">
+            <Button icon={FileText} busy={pdfBusy} busyLabel="Making PDF" onClick={() => void savePdf()}>
+              Download PDF
+            </Button>
+          </div>
         </>
       )}
-    </MoneyFrame>
+    </ReportsFrame>
   )
 }
 
@@ -221,7 +215,7 @@ function Summary({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => v
             to={`/money/reports/in-out?by=${v.period.kind}&period=${v.period.key}`}
             className="inline-flex min-h-touch items-center gap-1 justify-self-start text-sm font-medium text-primary hover:underline md:min-h-0"
           >
-            Compare with money in: In vs out
+            {IN_OUT_REPORT_TITLE}, same period
             <Icon icon={ChevronRight} size="sm" />
           </Link>
           {toPaisa(v.unexplained) !== 0n ? (

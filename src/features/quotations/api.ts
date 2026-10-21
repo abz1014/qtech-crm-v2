@@ -75,10 +75,16 @@ function toRow(r: DbQuotation): QuotationRow {
   }
 }
 
-/** Every revision of the RFQ's quotation, newest first. */
-export async function listQuotations(rfqId: string): Promise<QuotationRow[]> {
-  const rows = unwrap(await requireSupabase().from('quotations').select(COLS).eq('rfq_id', rfqId).order('revision', { ascending: false }))
-  return (rows as unknown as DbQuotation[]).map(toRow)
+/** The same without the lines and totals: what an engineer reads (owner decision 2026-10-22: no prices, not even fetched). */
+const COLS_NO_PRICES = 'id, number, revision, issued_on, valid_until, contact_id, delivery_text, payment_terms, notes, signatory_id, pdf_path'
+
+/**
+ * Every revision of the RFQ's quotation, newest first. `prices` false (an engineer) reads no lines and no totals: the rows
+ * then carry no lines and zero totals, which no engineer screen shows.
+ */
+export async function listQuotations(rfqId: string, prices = true): Promise<QuotationRow[]> {
+  const rows = unwrap(await requireSupabase().from('quotations').select(prices ? COLS : COLS_NO_PRICES).eq('rfq_id', rfqId).order('revision', { ascending: false }))
+  return (rows as unknown as DbQuotation[]).map(r => toRow(prices ? r : { ...r, lines: [], net_total: 0, gst_total: 0 }))
 }
 
 export async function getQuotation(id: string): Promise<QuotationRow> {

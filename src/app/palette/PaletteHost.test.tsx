@@ -49,6 +49,16 @@ function desktop(matches: boolean) {
 afterEach(() => vi.restoreAllMocks())
 
 describe('PaletteHost', () => {
+  it('when nothing is found, the hint names everything search covers (contacts, invoices and POs included)', async () => {
+    const user = userEvent.setup()
+    host()
+    await user.click(screen.getByRole('button', { name: 'Plain open' }))
+    const dlg = await screen.findByRole('dialog', { name: 'Search or jump to' })
+    await user.type(within(dlg).getByRole('combobox'), 'zzqqxx')
+    const status = await within(dlg).findByText(/Search covers/)
+    expect(status).toHaveTextContent('Search covers RFQs, orders, invoices, purchase orders, companies, contacts and order items.')
+  })
+
   it('open(query) starts the search box with that text; a plain open, after closing, starts empty', async () => {
     const user = userEvent.setup()
     host()

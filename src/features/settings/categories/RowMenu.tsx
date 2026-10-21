@@ -24,7 +24,7 @@ export interface RowMenuItem {
 }
 
 interface RowMenuProps {
-  /** "Actions for Water": names the button and the menu. */
+  /** "More for Water" (the row-menu name, src/ui/MoreMenu): names the button and the menu. */
   label: string
   /** The sheet's heading and sub line on a phone. */
   title: string

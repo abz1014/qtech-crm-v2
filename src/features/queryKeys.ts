@@ -263,6 +263,8 @@ function money() {
       all: [...all, 'receivables'] as const,
       list: () => [...all, 'receivables', 'list'] as const,
       summary: (today: string) => [...all, 'receivables', 'summary', today] as const,
+      /** 0080 (owner decision 2026-10-22): advances held on cancelled, never-invoiced orders (admin). */
+      held: () => [...all, 'receivables', 'held'] as const,
       order: (orderId: string) => [...all, 'receivables', 'order', orderId] as const,
       payments: (orderId: string) => [...all, 'receivables', 'payments', orderId] as const,
     },

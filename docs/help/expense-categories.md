@@ -2,11 +2,11 @@
 id: expense-categories
 title: Arrange expense categories
 roles: admin
-keywords: category, categories, group, groups, merge, archive, budget, rename, move, vehicles, office, staff, water, electricity
+keywords: expense category, category, deactivate, paid via, categories, group, groups, merge, archive, budget, rename, move, vehicles, office, staff, water, electricity
 screens: /settings/categories
 related: add-expenses, expense-report
 ---
-1. Tap your avatar at the top, then [Expense categories].
+1. Tap your avatar at the top, then [Settings], then [Expense categories].
 2. To add one, tap [Add category], pick its group and how it is usually paid.
 3. To change one, tap its ⋯ menu: [Rename], [Move to group…] or [Set monthly budget…].
 4. Two categories for the same thing? Open one's ⋯ menu, tap [Merge into…] and pick the other. Its expenses move across.

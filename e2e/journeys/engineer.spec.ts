@@ -21,11 +21,15 @@ import { fe2, ordRef, openPage, pastePage, PNG_B64, readCount, resetCount, roleC
 
 const ENGINEER = 'a0000000-0000-4000-8000-000000000003'
 
-/** A path in the REST or RPC API that an engineer's screens must never ask for. */
+/**
+ * A path in the REST or RPC API that an engineer's screens must never ask for. Since the owner decision of 2026-10-22 (engineers see
+ * no prices) that includes every read that only carries prices or rates: the ranking, the price memories, the PO pre-fill, the
+ * exchange rates and the person's own target.
+ */
 const MONEY_REQUEST =
-  /\/rest\/v1\/(v_order_money|v_order_basis|v_order_items_total|v_payment_net|v_cash_month|v_month_|v_margin|order_costs|expenses|expense_categories|recurring_expenses|payments_in|invoices|closed_months|customer_price_memory)\b|\/rpc\/(order_receivables|month_end_status|aging_as_of|payables_as_of|close_month|close_months_through|reopen_month|next_invoice_number)\b/
-/** Columns that carry a selling price, a cost, a spread or a payment. */
-const MONEY_COLUMN = /unit_price_net|supplier_unit_price|quoted_unit_price_net|sell_unit_net|sell_order_number|spread_unit|spread_total|net_amount|gst_amount|amount_pkr|input_tax_pkr|expected_cost_pkr/
+  /\/rest\/v1\/(v_order_money|v_order_basis|v_order_items_total|v_payment_net|v_cash_month|v_month_|v_margin|order_costs|expenses|expense_categories|recurring_expenses|payments_in|invoices|closed_months|customer_price_memory|v_fx_latest|fx_rates)\b|\/rpc\/(order_receivables|month_end_status|aging_as_of|payables_as_of|close_month|close_months_through|reopen_month|next_invoice_number|rank_item_quotes|customer_price_memory|supplier_item_memory|po_line_prefill|my_target_progress)\b/
+/** Columns that carry a price (selling, supplier, totals: 2026-10-22), a cost, a spread or a payment. */
+const MONEY_COLUMN = /unit_price|pkr_unit_price|net_total|gst_total|unit_price_net|supplier_unit_price|quoted_unit_price_net|sell_unit_net|sell_order_number|spread_unit|spread_total|net_amount|gst_amount|amount_pkr|input_tax_pkr|expected_cost_pkr/
 /** Words a screen would use for money. */
 const MONEY_WORDS = /PKR|GST|Invoic|Margin|Receivable|Spread|Selling price|Payment|Balance|187,400|187400/
 

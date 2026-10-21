@@ -5,11 +5,13 @@ import { amountInWords } from '@/features/quotations/lib/totals'
 import { gstOn } from '@/features/money/invoices/model'
 import { buildInvoiceDoc, type InvoicePdfSource } from '@/features/money/invoices/pdf/doc'
 import {
+  COPY_LABEL,
   buyerRegistered,
   invoiceFigures,
   invoiceFileName,
   invoiceReadiness,
   matchLines,
+  signatureLines,
   MAX_SEARCH_LINES,
   spreadGstDifference,
   type BuyerTax,
@@ -394,5 +396,17 @@ describe('invoiceFileName', () => {
     expect(invoiceFileName('INV-0012', 'original')).toBe('INV-0012.pdf')
     expect(invoiceFileName('QT/2026/12 ', 'duplicate')).toBe('QT-2026-12-duplicate.pdf')
     expect(invoiceFileName('///', 'original')).toBe('invoice.pdf')
+  })
+})
+
+describe('signature box and copies (owner decision 2026-10-22)', () => {
+  it('prints "For <legal name>" and "Authorised signatory"', () => {
+    expect(signatureLines('Q-Tech Engineering (Pvt) Ltd')).toEqual(['For Q-Tech Engineering (Pvt) Ltd', 'Authorised signatory'])
+    expect(signatureLines('  ')).toEqual(['For the seller', 'Authorised signatory'])
+  })
+  it('has two copies only: Original and Duplicate', () => {
+    expect(Object.keys(COPY_LABEL)).toEqual(['original', 'duplicate'])
+    expect(COPY_LABEL.original).toMatch(/^Original/)
+    expect(COPY_LABEL.duplicate).toMatch(/^Duplicate/)
   })
 })

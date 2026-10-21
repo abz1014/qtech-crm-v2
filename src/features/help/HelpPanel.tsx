@@ -116,7 +116,7 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
             ) : (
               <div className="grid content-start gap-6">
                 {recipeId && !recipe ? (
-                  <p role="status" className="rounded bg-sunken px-3 py-2 text-sm text-fg-2">
+                  <p role="status" className="rounded bg-sunken px-3 py-2 text-base text-fg-2">
                     That help page is not here any more. Pick one below.
                   </p>
                 ) : null}
@@ -130,7 +130,7 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
                     Show “How this works” again
                   </Button>
                 ) : null}
-                <p className="text-sm text-fg-muted">Still stuck? Tell the owner what you were trying to do. They can add a step here.</p>
+                <p className="text-base text-fg-muted">Still stuck? Tell the owner what you were trying to do. They can add a step here.</p>
               </div>
             )}
           </div>
@@ -153,7 +153,7 @@ function RecipeList({ title, recipes, onShow }: { title: string; recipes: readon
             <button
               type="button"
               onClick={() => onShow(r.id)}
-              className="flex min-h-touch w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-fg hover:bg-sunken lg:min-h-control"
+              className="flex min-h-touch w-full items-center gap-2 rounded px-2 py-2 text-left text-base text-fg hover:bg-sunken lg:min-h-control"
             >
               <span className="flex-1 text-pretty">{r.title}</span>
               <Icon icon={ChevronRight} size="sm" className="text-fg-muted" />
@@ -168,7 +168,7 @@ function RecipeList({ title, recipes, onShow }: { title: string; recipes: readon
 function Results({ results, query, onShow }: { results: readonly Recipe[]; query: string; onShow: (id: string) => void }) {
   return (
     <div className="grid content-start gap-3">
-      <p role="status" className="text-sm text-fg-muted">
+      <p role="status" className="text-base text-fg-muted">
         {results.length ? `${results.length} ${results.length === 1 ? 'answer' : 'answers'} for “${query.trim()}”` : `Nothing matches “${query.trim()}”. Try one word, like quotation or payment.`}
       </p>
       {results.length ? <RecipeList title="Answers" recipes={results} onShow={onShow} /> : null}

@@ -6,6 +6,7 @@ import { ENQUIRY_FULL_EMAILS } from './__fixtures__/enquiryFullEmails'
 import { ENQUIRY_EMAIL_TABLES } from './__fixtures__/enquiryEmailTables'
 import { CORPUS_TODAY, ENQUIRY_EMAILS, type EnquiryCase } from './__fixtures__/enquiryEmails'
 import { norm, pct, scoreFact, scoreItems, type FactScore } from './__fixtures__/score'
+import { unitFamily } from './corpus/units'
 import { asParseResult, findDate, parseEnquiry, unitOf } from './enquiryParse'
 
 const parse = (text: string) => parseEnquiry(text, { today: CORPUS_TODAY })
@@ -69,7 +70,7 @@ describe('parseEnquiry: items over several lines and quantity shapes', () => {
     ['Bearing 6205 2.000 EA', 'Bearing 6205', 2, 'EA'],
     ['Proximity sensor M30 x2', 'Proximity sensor M30', 2, null],
     ['Flame scanner (2 Nos)', 'Flame scanner', 2, 'nos'],
-    ['Hydraulic oil ISO VG 68 - 4 Drums', 'Hydraulic oil ISO VG 68', 4, 'drums'],
+    ['Hydraulic oil ISO VG 68 - 4 Drums', 'Hydraulic oil ISO VG 68', 4, 'Drums'],
     ['Gear motor 1.5kW, Qty: 2 Nos, Make: SEW', 'Gear motor 1.5kW, Make: SEW', 2, 'nos'],
     ['Siemens 6ES7 231-4HD32-0XB0 – 2', 'Siemens 6ES7 231-4HD32-0XB0', 2, null],
     ['Ultrasonic level transmitter 0-10m qty 3', 'Ultrasonic level transmitter 0-10m', 3, null],
@@ -83,7 +84,7 @@ describe('parseEnquiry: items over several lines and quantity shapes', () => {
   })
 
   it('normalises units as the intake does', () => {
-    expect([unitOf('EA'), unitOf("No's"), unitOf('Mtr'), unitOf('No.'), unitOf('Kgs'), unitOf(null)]).toEqual(['nos', 'nos', 'm', 'nos', 'kg', null])
+    expect([unitOf('EA'), unitOf("No's"), unitOf('Mtr'), unitOf('No.'), unitOf('Kgs'), unitOf(null)]).toEqual(['EA', 'nos', 'm', 'nos', 'kg', null])
   })
 })
 
@@ -149,7 +150,9 @@ describe('the enquiry corpus (realistic emails, WhatsApp exports, PDF text)', ()
   })
 
   it('still reads every case of the intake corpus exactly as the old parser does', () => {
-    for (const c of ENQUIRY_CORPUS) expect(parse(c.text).items, c.name).toEqual(c.items)
+    // Same items; the unit is the customer's own now ("pcs" stays pcs), so it is compared by family (corpus/units.ts).
+    const fam = (xs: Array<{ description: string; qty: number; unit: string | null }>) => xs.map(x => ({ ...x, unit: unitFamily(x.unit) === 'pcs' || unitFamily(x.unit) === 'ea' ? 'nos' : unitFamily(x.unit) }))
+    for (const c of ENQUIRY_CORPUS) expect(fam(parse(c.text).items), c.name).toEqual(fam(c.items))
   })
 })
 
@@ -261,7 +264,7 @@ describe('parseEnquiry: the shapes the sales verification found (BUG-SALES-1, BU
     ].join('\n')
     expect(rows(text)).toEqual([
       ['radar level transmitter 0-10 m', 2, 'nos'],
-      ['pressure gauge 0-16 bar', 4, 'nos'],
+      ['pressure gauge 0-16 bar', 4, 'pcs'],
     ])
   })
 
@@ -297,5 +300,30 @@ describe('parseEnquiry: a printed form whose part number breaks at a dash (ficti
     expect(r.items).toHaveLength(1)
     expect(r.items[0]?.description).toContain('6ES7000-1AA00-0AB0')
     expect(r.items[0]?.qty).toBe(2)
+  })
+})
+
+describe('parseEnquiry: edge cases from the bug hunt (2026-10-22)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('keeps a list pasted with leading spaces as one item per line, and still joins a wrapped line', () => {
+    expect(rows('Pressure gauge 0-10 bar - 2 Nos\n    Ball valve 1 inch - 4 Nos\n    Cable gland PG16 - 10 Nos')).toEqual([
+      ['Pressure gauge 0-10 bar', 2, 'nos'],
+      ['Ball valve 1 inch', 4, 'nos'],
+      ['Cable gland PG16', 10, 'nos'],
+    ])
+    expect(rows('Solenoid valve 1/2 inch 24VDC\n    brass body, NC - 2 Nos')).toEqual([['Solenoid valve 1/2 inch 24VDC brass body, NC', 2, 'nos']])
+  })
+
+  it('reads Urdu quantities and request words, and decimal quantities', () => {
+    expect(rows('1. Relay 24VDC - 4 عدد\n2. Thermocouple type K 300mm  ۲ عدد بھیج دیں')).toEqual([
+      ['Relay 24VDC', 4, 'nos'],
+      ['Thermocouple type K 300mm', 2, 'nos'],
+    ])
+    expect(rows('Silicone tube 8mm 0.5 m\nCable 4 core 2.5mm2 - 0.5 m\nTeflon tape 0.5 kg')).toEqual([
+      ['Silicone tube 8mm', 0.5, 'm'],
+      ['Cable 4 core 2.5mm2', 0.5, 'm'],
+      ['Teflon tape', 0.5, 'kg'],
+    ])
   })
 })

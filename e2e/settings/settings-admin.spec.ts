@@ -54,7 +54,9 @@ test.describe('Settings › Targets (M06)', () => {
   test('admin sets a target in 1 tap plus the amount, and it shows on that person\'s Today (and nowhere else)', async ({ page, browser }) => {
     await openAs(page, 'admin', '/settings/targets')
     await expect(page.getByRole('heading', { level: 1, name: 'Targets' })).toBeVisible()
-    await expect(page.getByTestId('targets-year')).toHaveText(String(YEAR))
+    // this quarter and the next only (audit 2026-10-22); earlier quarters wait behind a button
+    await expect(page.getByRole('columnheader', { name: new RegExp(`^Q${QUARTER} ${YEAR}`) })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Show earlier quarters' })).toBeVisible()
     // the active fixture people are rows; the deactivated one is not
     await expect(page.getByRole('rowheader', { name: /Test Sales/ })).toBeVisible()
     await expect(page.getByRole('rowheader', { name: /Test Deactivated/ })).toHaveCount(0)
@@ -84,7 +86,7 @@ test.describe('Settings › Targets (M06)', () => {
     // achieved and on pace sit beside the target, as rupee figures
     const cell = page.locator(`[data-cell="${SALES}:${QUARTER}"]`)
     await expect(cell).toContainText('Achieved')
-    await expect(cell).toContainText('On pace')
+    await expect(cell).toContainText(/pace/) // one line: "Achieved 0 of 9,876,000 · 1.2 M behind pace"
     expect(await cell.textContent()).not.toMatch(/\d\s?%/)
     await review(page, 'm06-02-grid-with-targets-1440')
 
@@ -145,6 +147,8 @@ test.describe('Settings › Targets (M06)', () => {
 
   test('the year switches back and forward, and an emptied cell removes the target', async ({ page }) => {
     await openAs(page, 'admin', '/settings/targets')
+    await page.getByRole('button', { name: 'Show earlier quarters' }).click()
+    await expect(page.getByTestId('targets-year')).toHaveText(String(YEAR))
     await page.getByRole('button', { name: 'Next year' }).click()
     await expect(page.getByTestId('targets-year')).toHaveText(String(YEAR + 1))
     await expect(page.getByRole('button', { name: /Q1 \d{4} target: Set target/ }).first()).toBeVisible() // nothing set next year yet
@@ -216,7 +220,7 @@ test.describe('Settings › Targets (M06)', () => {
   })
 })
 
-test.describe('Settings › Expense categories (M13, groups 0083)', () => {
+test.describe('Settings › Expense categories (M13, groups 0082)', () => {
   const OFFICE = 'ca7e9000-0000-4000-8000-000000000001'
   const VEHICLES = 'ca7e9000-0000-4000-8000-000000000002'
   const OWNER = 'ca7e9000-0000-4000-8000-000000000006'
@@ -228,8 +232,8 @@ test.describe('Settings › Expense categories (M13, groups 0083)', () => {
 
   const rowOf = (page: Page, n: string) => page.locator(`[data-category="${n}"]`)
   const menuOf = async (page: Page, n: string) => {
-    await page.getByRole('button', { name: `Actions for ${n}`, exact: true }).click()
-    return page.getByRole('menu', { name: `Actions for ${n}`, exact: true })
+    await page.getByRole('button', { name: `More for ${n}`, exact: true }).click()
+    return page.getByRole('menu', { name: `More for ${n}`, exact: true })
   }
   const addCategory = async (page: Page, n: string, opts: { group?: string; pay?: 'Cash' | 'Bank'; budget?: string } = {}) => {
     await page.getByRole('button', { name: 'Add category' }).click()
@@ -259,6 +263,7 @@ test.describe('Settings › Expense categories (M13, groups 0083)', () => {
     await expect(office.locator('[data-category="Rent"]').getByTestId('usage')).toHaveText('Usually bank · Not used yet')
     await expect(page.locator('[data-group="Vehicles"] [data-category="Token tax"]')).toBeVisible()
     await expect(page.locator('[data-group="Order costs"] [data-category="Customs duty"]')).toBeVisible()
+    await expect(page.getByRole('textbox')).toHaveCount(0) // read-only rows; nothing to type into until a dialog opens
     // every active seeded category is listed once
     const active = (await allCategories()).filter(c => c.active)
     await expect(page.locator('[data-group] [data-category]')).toHaveCount(active.length)
@@ -407,10 +412,10 @@ test.describe('Settings › Expense categories (M13, groups 0083)', () => {
     await expect(page.locator('[data-group]').first()).toBeVisible()
     expect(await axeViolations(page), 'axe at 1440').toEqual([])
     await menuOf(page, 'Water')
-    expect(await axeViolations(page, { landmarks: false }), 'axe at 1440, row menu open').toEqual([])
+    expect(await axeViolations(page), 'axe at 1440, row menu open').toEqual([])
     await page.getByRole('menuitem', { name: 'Merge into…' }).click()
     await expect(page.getByRole('dialog', { name: 'Merge Water' })).toBeVisible()
-    expect(await axeViolations(page, { landmarks: false }), 'axe at 1440, merge dialog').toEqual([])
+    expect(await axeViolations(page), 'axe at 1440, merge dialog').toEqual([])
     await page.getByRole('button', { name: 'Cancel' }).click()
 
     await page.setViewportSize({ width: 375, height: 812 })
@@ -420,13 +425,13 @@ test.describe('Settings › Expense categories (M13, groups 0083)', () => {
     expect(await noHorizontalScroll(page)).toBe(true)
     await review(page, 'm13-06-list-375')
     expect(await axeViolations(page), 'axe at 375').toEqual([])
-    const more = page.getByRole('button', { name: 'Actions for Water', exact: true })
+    const more = page.getByRole('button', { name: 'More for Water', exact: true })
     const box = await more.boundingBox()
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
     await more.click()
     await expect(page.getByRole('dialog', { name: 'Water' })).toBeVisible()
     await review(page, 'm13-07-row-sheet-375')
-    expect(await axeViolations(page, { landmarks: false }), 'axe at 375, row sheet').toEqual([])
+    expect(await axeViolations(page), 'axe at 375, row sheet').toEqual([])
   })
 })
 

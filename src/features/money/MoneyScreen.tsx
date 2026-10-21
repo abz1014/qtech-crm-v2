@@ -15,7 +15,7 @@ import { ExceptionsPage } from '@/features/money/exceptions/ExceptionsPage'
 import { MarginsPage } from '@/features/money/margins/MarginsPage'
 import { InOutPage } from '@/features/money/inOut/InOutPage'
 import { ExpenseReportPage } from '@/features/money/expenseReport/ExpenseReportPage'
-import { ReportsPage } from '@/features/reports/ReportsPage'
+import { EnquiriesReportPage, ReportsPage } from '@/features/reports/ReportsPage'
 
 /**
  * Everything under /money (owner decision 2026-10-19: four tabs, two levels).
@@ -70,6 +70,7 @@ function OldCategoriesAddress() {
 
 function ReportRoute({ isAdmin }: { isAdmin: boolean }) {
   const { report } = useParams()
+  if (report === 'enquiries') return <EnquiriesReportPage />
   if (!isAdmin) return <NoAccessPage area="Money reports" />
   switch (report) {
     case 'pnl':

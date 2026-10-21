@@ -492,7 +492,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     () => ({ rows: memory.data ?? {}, items: suggestionItems.map((i, n) => ({ id: i.id, number: n + 1, description: i.description, brandId: i.brandId ?? null, familyId: i.familyId ?? null, brandName: i.brandName ?? null, familyName: i.familyName ?? null })), today }),
     [memory.data, suggestionItems, today],
   )
-  const suppliersLoading = wantSuppliers && (candidates.isPending || (candidates.isSuccess && memory.isPending && suggestionItems.length > 0 && candidateList.length > 0))
+  const suppliersLoading = wantSuppliers && (candidates.isPending || (candidates.isSuccess && memory.isLoading && suggestionItems.length > 0 && candidateList.length > 0))
   const suppliersError = candidates.isError || memory.isError
 
   // Never ask the customer itself (a supplier page's company can also be the customer chosen here).

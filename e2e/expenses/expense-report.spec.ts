@@ -56,7 +56,7 @@ test.describe('expenses report (2026-10-22)', () => {
     const total = await spentBetween('2023-04-01', '2023-04-30')
     expect(total).toBeGreaterThanOrEqual(21150.5)
     await openAs(page, 'admin', '/money/reports/expenses?by=month&period=2023-04')
-    await expect(page.getByRole('heading', { name: 'Expenses', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Expenses', level: 1 })).toBeVisible()
     await expect(page.getByTestId('expense-report-total')).toContainText(whole(total))
     await expect(page.getByRole('table', { name: /^Where the money went/ }).getByRole('row').filter({ hasText: /^Total/ })).toContainText(whole(total))
 
@@ -96,10 +96,11 @@ test.describe('expenses report (2026-10-22)', () => {
     expect(await axeViolations(page, { landmarks: false })).toEqual([])
   })
 
-  test('the Reports list links to it and the old Expenses by category address lands on it', async ({ page }) => {
+  test('the Report select opens it on the month kept, and the old Expenses by category address lands on it', async ({ page }) => {
     await openAs(page, 'admin', '/money/reports?month=2023-04')
-    await page.getByTestId('report-expenses').getByRole('link', { name: 'Expenses', exact: true }).click()
-    await expect(page).toHaveURL(/\/money\/reports\/expenses\?by=month&period=2023-04/)
+    await page.getByTestId('report-picker').selectOption('expenses')
+    await expect(page).toHaveURL(/\/money\/reports\/expenses\?month=2023-04/)
+    await expect(page.getByTestId('expense-report-period')).toContainText('April 2023')
     await page.goto('/money/reports/categories?month=2023-05')
     await expect(page).toHaveURL(/\/money\/reports\/expenses\?by=month&period=2023-05/)
   })

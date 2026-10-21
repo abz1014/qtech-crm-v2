@@ -59,30 +59,26 @@ interface CheckDef {
 }
 
 /**
- * The seven checks, in the order of the approved mockup (g2-month-end "Checklist"), named in plain words (owner glossary
+ * The checks, in the order of the approved mockup (g2-month-end "Checklist"), named in plain words (owner glossary
  * 2026-10-19: Bank tick is "Match bank statement", Provisional margin is "Margin not final", Unresolved payments are
  * "Payments not split"). Each links to the screen where it is fixed.
+ *
+ * ONE definition of "to match" (round 3; it used to say 5 here and 7 on Match bank statement): a line on the bank statement
+ * not ticked yet and dated up to the month's end, where an FBR payment is ONE line per PSID (one bank debit, however many
+ * invoices it covers). So the bank card counts bank payments in, bank expenses out AND the FBR payment lines, exactly the lines
+ * Match bank statement lists as not ticked (`bankLinesToMatch`). The database still answers two rows (bank_unticked: payments
+ * and expenses; fbr_deposits_unticked: invoices, with their PSID groups in the details); `buildChecklist` adds them up.
  */
 export const CHECKS: readonly CheckDef[] = [
   {
     key: 'bank_unticked',
     label: 'Not matched to the bank statement',
     unit: ['item', 'items'],
-    has: () => 'Bank payments and expenses dated up to month end with no statement month. Items still in transit are expected.',
+    has: () => 'Bank payments, bank expenses and FBR payments dated up to month end and not ticked yet.',
     none: () => 'Every bank item is matched to a statement.',
     linkLabel: 'Match bank statement',
     to: m => `/money/month-end/bank?month=${m}`,
     glyph: 'landmark',
-  },
-  {
-    key: 'fbr_deposits_unticked',
-    label: 'FBR deposits not matched',
-    unit: ['invoice', 'invoices'],
-    has: () => 'Deposits to FBR with no statement month. One tick covers a whole PSID group.',
-    none: () => 'Every FBR deposit is matched to a statement.',
-    linkLabel: 'Match the PSID group',
-    to: m => `/money/month-end/bank?month=${m}`,
-    glyph: 'receipt',
   },
   {
     key: 'uncategorised',
@@ -189,20 +185,18 @@ function describe(c: CheckDef, month: string, n: number, d: Record<string, unkno
       const prior = num(d.prior_n)
       const first = monthWord(d.prior_first)
       const last = monthWord(d.prior_last)
-      const parts: Fact[] = [{ mono: String(inN) }, ' money in (', pkr(d.in_amount), '), ', { mono: String(outN) }, ' money out (', pkr(d.out_amount), ')']
+      const fbrN = num(d.fbr_n)
+      const bits: Fact[][] = []
+      if (inN > 0) bits.push([{ mono: String(inN) }, ' money in (', pkr(d.in_amount), ')'])
+      if (outN > 0) bits.push([{ mono: String(outN) }, ' money out (', pkr(d.out_amount), ')'])
+      if (fbrN > 0) bits.push([{ mono: String(fbrN) }, plural(fbrN, ' FBR payment', ' FBR payments'), ' (', pkr(d.fbr_amount), ')'])
+      const parts: Fact[] = bits.flatMap((b, i) => (i === 0 ? b : [', ', ...b]))
       if (prior > 0 && last) parts.push(', ', { mono: String(prior) }, ` of ${prior === 1 ? 'it' : 'them'} from ${last}${first && first !== last ? ' or earlier' : ''}`)
-      parts.push('. Items still in transit are expected.')
+      parts.push('.')
       return { ...base, parts }
     }
-    case 'fbr_deposits_unticked': {
-      if (n === 0) return fallback
-      const groups = num(d.groups)
-      return {
-        linkLabel: plural(groups, 'Match the PSID group', 'Match the PSID groups'),
-        to: base.to,
-        parts: [pkr(d.amount), ' in ', { mono: String(groups) }, plural(groups, ' PSID group', ' PSID groups'), `. One tick covers ${plural(groups, 'the whole group', 'a whole group')}.`],
-      }
-    }
+    case 'fbr_deposits_unticked':
+      return fallback // counted in the bank card (one definition of "to match"); never drawn on its own
     case 'uncategorised':
       return n === 0 ? fallback : { ...base, parts: [`${name} expenses with no clear category, or an order cost with no order: `, pkr(d.amount), '.'] }
     case 'recurring_not_recorded': {
@@ -247,11 +241,31 @@ function describe(c: CheckDef, month: string, n: number, d: Record<string, unkno
 
 const plain = (parts: readonly Fact[]): string => parts.map(p => (typeof p === 'string' ? p : p.mono)).join('')
 
+/**
+ * The one definition of "to match" for a statement month: the bank items not ticked (payments in, expenses out) plus the FBR
+ * payment LINES not ticked, one per PSID (an invoice with no PSID is its own line). Month end's bank card and Match bank
+ * statement's "N to match" both say this number.
+ */
+export const bankLinesToMatch = (bankItems: number, fbrLines: number): number => bankItems + fbrLines
+
+/** month_end_status counts FBR deposits by invoice; the lines are its PSID groups (details), else the invoices. */
+function fbrLines(invoices: number, detail: Record<string, unknown> | undefined): number {
+  if (invoices === 0) return 0
+  const groups = Number(detail?.groups)
+  return Number.isFinite(groups) && groups > 0 ? groups : invoices
+}
+
 export function buildChecklist(rows: readonly StatusRow[], month: string, details?: CheckDetails): CheckCard[] {
   const by = new Map(rows.map(r => [r.check_key, Number(r.n) || 0]))
+  const fbrDetail = details?.fbr_deposits_unticked
+  const fbr = fbrLines(by.get('fbr_deposits_unticked') ?? 0, fbrDetail)
   return CHECKS.map(c => {
-    const n = by.get(c.key) ?? 0
-    const detail = details?.[c.key]
+    const own = by.get(c.key) ?? 0
+    const n = c.key === 'bank_unticked' ? bankLinesToMatch(own, fbr) : own
+    const detail =
+      c.key === 'bank_unticked' && details?.bank_unticked
+        ? { ...details.bank_unticked, fbr_n: fbr, fbr_amount: fbrDetail?.amount ?? 0, live: details.bank_unticked.live ?? fbrDetail?.live }
+        : details?.[c.key]
     const described = describe(c, month, n, detail)
     // A month closed before migration 0076 has no frozen details: its count is frozen but the figures under it are today's.
     const line = detail?.live === true && n > 0 ? { ...described, parts: [...described.parts, ' (live figures, not frozen at close)'] } : described
@@ -559,7 +573,12 @@ export interface AdvanceRow {
   orderRef: string | null
   customer: string
   held: string
+  /** The order was cancelled by the date (0080): the advance is held to refund or keep. */
+  cancelled?: boolean
 }
+
+/** The aging report's words for an advance (owner decision 2026-10-22: a cancelled order's advance is never owed). */
+export const advanceLabel = (a: Pick<AdvanceRow, 'cancelled'>): string => (a.cancelled ? 'Advance held — refund or keep (order cancelled)' : 'Advance held, not invoiced yet')
 
 export const AGING_BUCKETS = ['0-30', '31-60', '61-90', '90+'] as const
 export type AgingBucket = (typeof AGING_BUCKETS)[number]
@@ -612,7 +631,7 @@ export function agingCsv(v: AgingView): { headers: string[]; rows: unknown[][] }
         csvNum(r.applied),
         ...AGING_BUCKETS.map(b => (r.bucket === b ? csvNum(r.remaining) : '')),
       ]),
-      ...v.advances.map(a => [v.asOf, a.customer, 'Advance held, not invoiced yet', a.orderRef ?? '', '', '', '', csvNum(a.held), '', '', '', '']),
+      ...v.advances.map(a => [v.asOf, a.customer, advanceLabel(a), a.orderRef ?? '', '', '', '', csvNum(a.held), '', '', '', '']),
     ],
   }
 }
@@ -673,6 +692,49 @@ export function buildPayables(asOf: string, rows: readonly PayableRow[]): Payabl
     settledLeft: paisaToFixed(left.reduce((a, b) => a + b, 0n)),
     paidOver: paisaToFixed(over.filter(p => p > 0n).reduce((a, b) => a + b, 0n)),
   }
+}
+
+/**
+ * One state word per supplier order for the report (round 3: "No rate in the 30 days before…" was printed on every row; the
+ * missing rate is now one banner). What was paid decides it: Not paid, Part paid, Paid, Paid over; or No price yet.
+ */
+export function payableStateWord(r: PayableRow): string {
+  if (r.state === 'unpriced') return 'No price yet'
+  if (r.state === 'settled') return r.flag === 'overpaid' ? 'Paid over' : 'Paid'
+  return toPaisa(r.paidPkr) === 0n ? 'Not paid' : 'Part paid'
+}
+
+/** A currency's supplier orders that could not be turned into PKR (no rate in the 30 days before the date). */
+export interface Unconverted {
+  currency: string
+  /** Committed, in that currency, on every supplier order of it with no rate. */
+  committed: string
+  /** Owed, in that currency: the committed amount of those not paid at all (nothing paid, so all of it is owed). */
+  owed: string
+  /** Supplier orders of it with no rate. */
+  count: number
+  /** Of them, part paid in PKR: what is owed on these needs the rate, so it is not in `owed`. */
+  partPaid: number
+}
+
+/**
+ * What cannot be shown in PKR because a rate is missing, per currency (biggest first). Payments are in PKR, so a part-paid
+ * supplier order's balance needs the rate; an unpaid one owes its whole committed amount in its own currency.
+ */
+export function unconvertedByCurrency(rows: readonly PayableRow[]): Unconverted[] {
+  const by = new Map<string, { committed: bigint; owed: bigint; count: number; partPaid: number }>()
+  for (const r of rows) {
+    if (r.state !== 'no_rate' || r.committed === null) continue
+    const e = by.get(r.currency) ?? { committed: 0n, owed: 0n, count: 0, partPaid: 0 }
+    e.committed += toPaisa(r.committed)
+    e.count += 1
+    if (toPaisa(r.paidPkr) === 0n) e.owed += toPaisa(r.committed)
+    else e.partPaid += 1
+    by.set(r.currency, e)
+  }
+  return [...by.entries()]
+    .map(([currency, e]) => ({ currency, committed: paisaToFixed(e.committed), owed: paisaToFixed(e.owed), count: e.count, partPaid: e.partPaid }))
+    .sort((a, b) => Number(toPaisa(b.committed) - toPaisa(a.committed)) || a.currency.localeCompare(b.currency))
 }
 
 export const PAYABLE_STATE_LABEL: Record<PayableRow['state'], string> = {

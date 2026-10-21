@@ -52,9 +52,9 @@ with u as (update storage.objects set name = '0057/moved.pdf' where bucket_id = 
 select is((select count(*)::int from u), 0, 'H-1: nor move the PDF of an issued PO out of the way');
 -- An upload with upsert onto an existing object is an UPDATE of that row for row security, so the two checks above cover it.
 with u as (update storage.objects set metadata = '{"x":1}' where bucket_id = 'generated-docs' and name = '0057/loose.pdf' returning 1)
-select is((select count(*)::int from u), 1, 'an object no document points at stays writable (first generation unchanged)');
-select is((select count(*)::int from storage.objects where bucket_id = 'generated-docs' and name like '57000000-0000-4000-8000-0000000000%'), 2,
-  'the engineer can still read the issued PDFs');
+select is((select count(*)::int from u), 0, '0081: generated-docs is admin and sales only, so an engineer writes no PDF at all (owner decision 2026-10-22)');
+select is((select count(*)::int from storage.objects where bucket_id = 'generated-docs' and name like '57000000-0000-4000-8000-0000000000%'), 0,
+  '0081: the engineer reads no quotation or PO PDF (prices on every page)');
 
 select throws_ok($$update public.quotations set pdf_path = '0057/loose.pdf' where id = '57000000-0000-4000-8000-000000000020'$$,
   '42501', null, 'H-1: an engineer cannot point an issued quotation at another file');

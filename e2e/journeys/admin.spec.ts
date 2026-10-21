@@ -79,7 +79,7 @@ async function seedFavouriteCategory() {
 
 /** The "Ticked, money in" figure in rupees. */
 async function tickedIn(page: Page): Promise<number> {
-  const text = await page.getByRole('region', { name: 'Running ticked totals' }).getByText('Ticked, money in').locator('..').innerText()
+  const text = await page.getByRole('region', { name: 'Running ticked totals' }).getByText('Matched, money in').locator('..').innerText()
   return Number((/PKR\s*([\d,.]+)/.exec(text)?.[1] ?? 'NaN').replace(/,/g, ''))
 }
 

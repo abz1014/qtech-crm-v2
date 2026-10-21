@@ -21,7 +21,7 @@ import { chasedByText } from '@/features/rfqs/lib/collision'
 export function FormattedMessage({ text, className, testId, chaseText = false }: { text: string; className?: string; testId?: string; chaseText?: boolean }) {
   const parts = text.split(/(\*[^*\n]+\*)/g)
   return (
-    <pre data-testid={testId} data-chase-text={chaseText ? '' : undefined} className={cn('whitespace-pre-wrap break-words font-sans text-sm text-fg', className)}>
+    <pre data-testid={testId} data-chase-text={chaseText ? '' : undefined} className={cn('whitespace-pre-wrap break-words font-sans text-base text-fg', className)}>
       {parts.map((p, i) =>
         /^\*[^*\n]+\*$/.test(p) ? (
           <span key={i}>
