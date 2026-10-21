@@ -16,6 +16,7 @@ describe('toPaisa and formatting', () => {
   it('reads numbers and decimal strings exactly', () => {
     expect(toPaisa('1250000')).toBe(125000000n)
     expect(toPaisa(410514.4)).toBe(41051440n)
+    expect(toPaisa(1e22)).toBe(10n ** 24n) // HW-2: toFixed writes "1e+22" from 1e21, which used to throw
     expect(toPaisa('0.07')).toBe(7n)
     expect(toPaisa(0.1 + 0.2)).toBe(30n) // float noise does not leak in
     expect(toPaisa('-84500.5')).toBe(-8450050n)

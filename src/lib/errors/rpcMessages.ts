@@ -70,6 +70,12 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^payment reminders are for admin and sales only$/, message: () => ADMIN_SALES },
 
   // Quotations and POs
+  { match: /^a quoted price above zero is needed for: (.+)$/, message: m => `A quotation can't carry a price of 0. Enter the price for "${m[1]}", or untick it.`, help: 'issue-quotation' },
+  {
+    match: /^the quantity of (.+) changed to (.+) since this quotation was opened$/,
+    message: m => `Someone changed the quantity of "${m[1]}" to ${m[2]} while this was open. Nothing was issued. Check the new total below, then issue again.`,
+    help: 'issue-quotation',
+  },
   { match: /^a quoted price is needed for: (.+)$/, message: m => `Add a price for "${m[1]}", then issue the quotation again.`, help: 'issue-quotation' },
   { match: /^a selling price is needed for: (.+)$/, message: m => `Add a selling price for "${m[1]}", then try again.` },
   { match: /^a price is needed for: (.+)$/, message: m => `Add the supplier price for "${m[1]}", then issue the PO again.`, help: 'issue-po' },

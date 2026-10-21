@@ -168,6 +168,8 @@ export interface IssueItemInput {
   unitPrice: number
   gstRate: number
   leadTime: string | null
+  /** The quantity the person saw. The server refuses the issue when the stored one differs (HW-3). */
+  qty?: number
 }
 
 export interface IssueInput {
@@ -184,20 +186,12 @@ export interface IssueInput {
 }
 
 /**
- * The prices go into rfq_items first (that is what issue_quotation snapshots), then the RPC makes the revision. A failure
- * of the RPC leaves the working prices saved, which is what the person wants: nothing typed is lost.
+ * One call (0084): issue_quotation writes the prices into rfq_items and makes the revision in one transaction, so a refused
+ * issue (an overflowing total, a quantity changed meanwhile, a dropped connection) changes no price (HW-43). What was typed
+ * is kept by the dialog's draft (issueDraft.ts), not by writing it early.
  */
 export async function issueQuotation(input: IssueInput): Promise<QuotationRow> {
   const db = requireSupabase()
-  await Promise.all(
-    input.items.map(async it => {
-      const { error } = await db
-        .from('rfq_items')
-        .update({ quoted_unit_price_net: it.unitPrice, gst_rate: it.gstRate, quoted_lead_time: it.leadTime })
-        .eq('id', it.id)
-      if (error) throw error
-    }),
-  )
   const { error } = await db.rpc('issue_quotation', {
     p_quotation_id: input.id,
     p_rfq_id: input.rfqId,
@@ -208,6 +202,13 @@ export async function issueQuotation(input: IssueInput): Promise<QuotationRow> {
     p_payment_terms: input.paymentTerms ?? '',
     p_notes: input.notes ?? '',
     p_item_ids: input.items.map(i => i.id),
+    p_lines: input.items.map(i => ({
+      id: i.id,
+      unit_price: i.unitPrice,
+      gst_rate: i.gstRate,
+      lead_time: i.leadTime,
+      ...(i.qty !== undefined ? { qty: i.qty } : {}),
+    })),
   })
   if (error) throw error
   return getQuotation(input.id)
