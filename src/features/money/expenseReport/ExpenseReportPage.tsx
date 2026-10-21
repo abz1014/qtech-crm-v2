@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, CircleAlert, Download, FileText, Lock } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
-import { formatPaisa, toPaisa, type Amount } from '@/lib/money'
+import { formatPaisa, paisaToFixed, sumPaisa, toPaisa, type Amount } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
@@ -297,7 +297,7 @@ function Trend({ bars, kind, onPick }: { bars: TrendBar[]; kind: PeriodKind; onP
             key={b.period.key}
             type="button"
             onClick={() => onPick(b.period)}
-            aria-label={`${b.label}: PKR ${rupees(b.amount)} spent${b.current ? ', shown' : ''}`}
+            aria-label={`${b.current ? `${compact(b.amount)}, ` : ''}${b.label}: PKR ${rupees(b.amount)} spent${b.current ? ', shown' : ''}`}
             aria-current={b.current || undefined}
             title={`${b.label}: PKR ${rupees(b.amount)}`}
             className="group relative flex h-full flex-col items-center justify-end rounded-t-[2px] focus-visible:outline-offset-0"
@@ -394,7 +394,8 @@ function Breakdown({ v }: { v: ExpenseReportView }) {
       kind: 'money',
       width: 150,
       value: r => r.amount,
-      total: true,
+      // whole rupees, like every figure on the screen (the CSV keeps paisa)
+      total: list => <span className="num font-medium">{rupees(paisaToFixed(sumPaisa(list.map(r => r.amount))))}</span>,
       paisa: 'never',
       cell: r => (r.count === 0 ? <span className="text-fg-muted">—</span> : <span className="num">{rupees(r.amount)}</span>),
     },
@@ -534,7 +535,7 @@ function ByDetail({ v }: { v: ExpenseReportView }) {
     { id: 'detail', header: 'Detail', value: d => d.detail, cell: d => <span className="font-medium">{d.detail}</span> },
     { id: 'cats', header: 'Categories', hideBelowMd: true, value: d => d.categories.join(', ') },
     { id: 'count', header: 'Count', kind: 'num', width: 100, hideBelowMd: true, value: d => d.count, total: true },
-    { id: 'amount', header: 'Paid (PKR)', kind: 'money', width: 160, value: d => d.amount, total: true, paisa: 'never' },
+    { id: 'amount', header: 'Paid (PKR)', kind: 'money', width: 160, value: d => d.amount, total: list => <span className="num font-medium">{rupees(paisaToFixed(sumPaisa(list.map(d => d.amount))))}</span>, paisa: 'never' },
   ]
   return (
     <div data-testid="expense-report-by-detail">

@@ -263,7 +263,7 @@ test.describe('expenses (M03, M11)', () => {
     await page.keyboard.press('Tab')
     await page.keyboard.type('fu')
     await expect(page.getByRole('option', { name: /Fuel & travel/ })).toBeVisible()
-    await expect(page.getByText('1 of 17')).toBeVisible()
+    await expect(page.getByText(/^1 of \d+$/)).toBeVisible() // 0082 seeds more categories
     await review(page, 'm11-burst-typeahead-1440')
     await page.keyboard.press('Tab')
     await expect(page.getByRole('combobox', { name: 'Category, row 1' })).toHaveValue('Fuel & travel')
