@@ -99,7 +99,7 @@ const WA_WEB_PREFIX = /^\s*\[\d{1,2}:\d{2}(?::\d{2})?\s*(?:[ap]\.?\s?m\.?)?,\s*\
 const EMOJI = /\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}]|\u{FE0F}|\u{200D}/gu
 /** What a chat export writes for a voice note, a photo, a file or a deleted message. */
 const CHAT_MEDIA =
-  /^‎?(?:<media omitted>|<attached:[^>]*>|(?:audio|image|video|sticker|gif|document|contact card)\s+omitted|this message was deleted|you deleted this message|null|\S+\.(?:opus|ogg|m4a|aac|mp3|jpe?g|png|webp|mp4|pdf|docx?|xlsx?)\s*\(file attached\)|missed (?:voice|video) call)\.?$/i
+  /^‎?(?:<media omitted>|<attached:[^>]*>|(?:audio|image|video|sticker|gif|document|contact card)\s+omitted|this message was deleted|you deleted this message|null|\S+\.(?:opus|ogg|m4a|aac|mp3|jpe?g|png|webp|mp4|pdf|docx?|xlsx?)\s*\(file attached\)|missed (?:voice|video) call|forwarded(?: many times)?|\[(?:cid:)?image[^\]]*\])\.?$/i
 /** A chat reply that only acknowledges ("Noted", "Ok sir, will share today", "Sure, checking"). */
 const ACK = /^(?:ok(?:ay)?|noted|sure|done|received|thanks?|thank\s+you|thx|jee|ji|g\b|acha|theek|right|alright|great|will\s+(?:do|share|send|check|revert|update))\b/i
 const INSTRUCTION =
@@ -194,7 +194,7 @@ function readItem(text: string): ReadItem | null {
   let t = text
     .replace(TAIL, '')
     .replace(/^(?:(?:plz|pls|please)\s+)?(?:quote|rates?(?:\s+(?:pls|plz|please))?|send\s+rates?)\s*[:,-]\s*/i, '')
-    .replace(/^(?:we\s+require|(?:(?:plz|pls|please|kindly)\s+)?quote\s+for)\s*[:,-]?\s+(?=\d)/i, '')
+    .replace(/^(?:we\s+require|(?:(?:plz|pls|please|kindly)\s+)?quote(?:\s+for)?)\s*[:,-]?\s+(?=\d)/i, '')
     .replace(/\b([Nn])o's\b/g, '$1os')
     .replace(OPENER, '')
     .replace(/^(?:item|description|product|material|particulars)\s*[:=-]\s*/i, '')
@@ -490,7 +490,8 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
   if (!main || /^(?:sub\s*-?\s*total|grand\s+total|total|vat|gst|sales\s+tax|freight|discount)\b/i.test(main)) return null
   const extras = cols.extra
     .map(e => ({ e, v: cell(e.i) }))
-    .filter(({ e, v }) => v && !(e.codes && /^\d+$/.test(v)))
+    // A Make or Part No the description already names is not written twice.
+    .filter(({ e, v }) => v && !(e.codes && /^\d+$/.test(v)) && !main.toLowerCase().includes(v.toLowerCase()))
     .map(({ e, v }) => `${e.label}: ${v}`)
   const q = cell(cols.qty)
   const qm = /^(\d[\d,]*(?:\.\d+)?)\s*([A-Za-z'.]+)?$/.exec(q)
@@ -628,7 +629,12 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   /** Inside a chat message we sent ourselves (its sender is our own name): not the customer's words. */
   let ownMessage = false
   for (const line0 of alignSpacedRows(text.split('\n'))) {
-    const line = line0.replace(EMOJI, '').replace(/\s+$/, '')
+    // WhatsApp's *bold*, _italic_ and ~strike~ marks are formatting, not text.
+    const line = line0
+      .replace(EMOJI, '')
+      .replace(/(^|[\s(:])[*_~]+(?=[^\s*_~])/g, '$1')
+      .replace(/(?<=[^\s*_~])[*_~]+(?=$|[\s),.:;-])/g, '')
+      .replace(/\s+$/, '')
     const web = WA_WEB_PREFIX.test(line)
     const wa = web || (WA_PREFIX.test(line) && /^\s*\[?\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4},?\s+\d{1,2}:\d{2}/.test(line))
     const body = web ? line.replace(WA_WEB_PREFIX, '') : wa ? line.replace(WA_PREFIX, '') : line
@@ -910,6 +916,12 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         skip(t, 'table')
         continue
       }
+      // A closing sentence that a PDF laid over the table's columns ("Quotation ⇥ must reach us on or before 16/11/2026.")
+      // ends the table and is read as text.
+      if (table && (table.qty < 0 || !NUM_CELL.test(cells[table.qty] ?? '')) && findDue(cells.filter(Boolean).join(' '), today)) {
+        table = null
+        close()
+      }
       if (table) {
         // A header word the picture reader got wrong ("Qry", "uUomMm"): the column is found from the first row that has a
         // number after the description (the quantity) and a unit word (the unit).
@@ -1097,8 +1109,8 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       skip(t, 'greeting')
       continue
     }
-    // A heading over a group of items ("Mechanical spares:", "For ETP plant:").
-    if (!m && /:\s*$/.test(work) && !/\d/.test(work) && work.split(' ').length <= 5) {
+    // A heading over a group of items ("Mechanical spares:", "For ETP plant:", "Required items").
+    if (!m && ((/:\s*$/.test(work) && !/\d/.test(work) && work.split(' ').length <= 5) || /^(?:required\s+items?|items?\s+required|requirements?|item\s+list|list\s+of\s+items|item\s+details|required\s+material)$/i.test(work))) {
       skip(t, 'header')
       continue
     }

@@ -126,6 +126,10 @@ export const BATCHES: BatchSpec[] = [
   // Fresh batch 7, first try (text and PDF): every field >= 98% (items 99.5%), quotes 100%, but one shape 94.4% (a WhatsApp list
   // with dashes): dev now.
   { batch: 7, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7], dev: true, gate: true },
+  // Fresh batch 8, first try (text and PDF): enquiry items 95.2% / 100% (a forwarded WhatsApp list in *bold*), quotes 100%: dev now.
+  { batch: 8, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8], dev: true, gate: true },
+  // Fresh batch 9, first try (text and PDF): enquiry items 98.6% / 98.6%, due 95.5%, count 97.8%; quotes 100%: dev now.
+  { batch: 9, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dev: true, gate: true },
 ]
 
 function splitOf(spec: BatchSpec, id: string): 'dev' | 'held' {
