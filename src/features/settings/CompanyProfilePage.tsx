@@ -295,7 +295,11 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
             form={sf.formId}
             busy={sf.pending}
             busyLabel="Saving"
-            disabled={dirty.length === 0}
+            // the screen's one green button stays green; with nothing changed it is aria-disabled and does nothing
+            aria-disabled={dirty.length === 0 || undefined}
+            onClick={e => {
+              if (dirty.length === 0) e.preventDefault()
+            }}
           >
             {sf.failed ? 'Try again' : 'Save changes'}
           </Button>

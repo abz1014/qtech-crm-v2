@@ -7,6 +7,7 @@ import type { DeliveryRow, QuoteOutcome, QuoteRow, SupplierRecord } from '@/feat
 import { Panel } from '@/features/companies/CompanyParts'
 import { formatShortDate } from '@/lib/formatDay'
 import { cn } from '@/lib/utils'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
@@ -275,6 +276,7 @@ function ResultCell({ r }: { r: DeliveryRow }) {
 }
 
 export function Deliveries({ view, loading, error, onRetry, today }: { view: SupplierRecord | null; loading: boolean; error: boolean; onRetry: () => void; today: string }) {
+  const wide = useMediaQuery('(min-width: 768px)')
   return (
     <Panel
       title="Deliveries"
@@ -293,14 +295,31 @@ export function Deliveries({ view, loading, error, onRetry, today }: { view: Sup
         <p className="px-5 py-6 text-sm text-fg-muted">No deliveries from them yet.</p>
       ) : (
         <div>
-          <div className={DHEAD} aria-hidden="true">
+          <div className={cn(DHEAD, !wide && 'md:hidden')} aria-hidden="true">
             <span>Order</span>
             <span>Expected</span>
             <span>Delivered</span>
             <span>Result</span>
           </div>
           <ul>
-            {view.deliveries.map(r => (
+            {view.deliveries.map(r =>
+              !wide ? (
+                // a phone: two lines, "ORD-0011 · PO-26-0004" over "Expected 2 Nov · Not delivered yet"
+                <li key={r.key} className="grid gap-1 border-t px-5 py-3 first:border-t-0">
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="num font-medium">{r.orderRef}</span>
+                    {r.po ? <Tag>{r.po}</Tag> : r.estimated ? <Tag dashed>Imported</Tag> : <span className="text-sm text-fg-muted">No PO</span>}
+                  </span>
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                    <span className="text-fg-2">
+                      {r.receivedOn ? 'Delivered ' : 'Expected '}
+                      <DateText iso={r.receivedOn ?? r.expectedOn} today={today} estimated={r.estimated} />
+                    </span>
+                    <span aria-hidden="true" className="text-fg-muted">·</span>
+                    <ResultCell r={r} />
+                  </span>
+                </li>
+              ) : (
               <li key={r.key} className={DROW}>
                 <div className="grid content-start justify-items-start gap-1">
                   <Label>Order</Label>
@@ -320,7 +339,8 @@ export function Deliveries({ view, loading, error, onRetry, today }: { view: Sup
                   <ResultCell r={r} />
                 </div>
               </li>
-            ))}
+              ),
+            )}
           </ul>
         </div>
       )}

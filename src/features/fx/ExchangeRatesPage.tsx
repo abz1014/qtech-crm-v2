@@ -281,7 +281,14 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
           <Field label="As of">
             <DateInput value={asOf} onChange={setAsOf} />
           </Field>
-          <Button type="submit" variant="primary" className="justify-self-start" busy={save.isPending} busyLabel="Saving" disabled={rate === null || rate <= 0}>
+          <Button type="submit" variant="primary" className="justify-self-start" busy={save.isPending}
+            busyLabel="Saving"
+            // the screen's one green button stays green; until a rate is typed it is aria-disabled and does nothing
+            aria-disabled={rate === null || rate <= 0 || undefined}
+            onClick={e => {
+              if (rate === null || rate <= 0) e.preventDefault()
+            }}
+          >
             Save rate
           </Button>
         </form>
