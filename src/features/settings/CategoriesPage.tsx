@@ -1,12 +1,14 @@
-import { useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
+import { useId, useMemo, useState } from 'react'
+import { ArrowDown, ArrowUp, Ellipsis, EyeOff, Eye, Pencil, Plus, Receipt, Trash2 } from 'lucide-react'
 import { useSession } from '@/app/session'
 import {
   categoriesFooter,
   checkCategoryName,
   deleteAdvice,
   GROUP_LABEL,
-  moveCategory,
+  GROUPS,
+  groupCategories,
+  moveWithinGroup,
   nextSort,
   PAID_VIA_LABEL,
   sortCategories,
@@ -20,23 +22,28 @@ import type { CategoryPatch } from '@/features/settings/api'
 import { mapPgError } from '@/lib/pgErrors'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
-import { PageHeader } from '@/ui/PageHeader'
 import { Button } from '@/ui/Button'
+import { Dialog, DialogContent } from '@/ui/Dialog'
+import { InfoTip } from '@/ui/InfoTip'
+import { PageHeader } from '@/ui/PageHeader'
+import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { Skeleton } from '@/ui/Skeleton'
 import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
-import { Checkbox } from '@/ui/form/Checkbox'
 import { Field } from '@/ui/form/Field'
 import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 
 /*
- * Settings › Expense categories (M13, admin only). Rename, reorder (up and down), activate or deactivate, change the
- * group and the default paid-via. Expenses point at a category with a RESTRICT foreign key, so a category that is in use
- * can never be deleted: the page says so in words and offers Deactivate, which hides it from new expenses and leaves the
- * old ones alone. The usage count is expenses plus recurring templates.
+ * Settings › Expense categories (M13, admin only). Expenses point at a category with a RESTRICT foreign key, so a category
+ * that is in use can never be deleted: Deactivate hides it from new expenses and leaves the old ones alone. The usage count
+ * is expenses plus recurring templates.
+ *
+ * Audit 2026-10-22 (was 68 always-editable controls, 6,731 px on a phone): read-only rows in three sections by group
+ * (Overheads, Order costs, Not in P&L), each row "Name / Paid via bank · 14 uses" with one ⋯ menu (Edit, Move up, Move down,
+ * Deactivate or Reactivate). The trash button is only on a row nothing uses; the "cannot be deleted" rule sits in the (i).
+ * "Add category" is the page's one green button and opens a small dialog; Edit opens the same dialog filled in.
  */
-const GROUPS: CategoryGroup[] = ['overhead', 'order_cost', 'non_pnl']
 const GROUP_OPTIONS = GROUPS.map(g => ({ value: g, label: GROUP_LABEL[g] }))
 const PAID_OPTIONS = (['bank', 'cash'] as PaidVia[]).map(p => ({ value: p, label: PAID_VIA_LABEL[p] }))
 
@@ -49,26 +56,31 @@ export function CategoriesPage() {
   const { toast } = useToast()
   const [announce, setAnnounce] = useState('')
   const [asking, setAsking] = useState<string | null>(null)
+  const [dialog, setDialog] = useState<{ kind: 'add' } | { kind: 'edit'; c: Category } | null>(null)
 
   const rows = useMemo(() => sortCategories(q.data ?? []), [q.data])
+  const groups = useMemo(() => groupCategories(rows), [rows])
   const fail = (title: string, err: unknown) => toast({ title, body: mapPgError(err, { entity: 'category' }).message, tone: 'danger' })
 
   const patch = async (c: Category, p: CategoryPatch, done?: string) => {
     try {
       await update.mutateAsync({ id: c.id, patch: p })
       if (done) toast({ title: done, body: c.name, tone: 'success' })
+      return true
     } catch (err) {
       fail(`Couldn't change ${c.name}`, err)
+      return false
     }
   }
 
   const move = async (c: Category, dir: -1 | 1) => {
-    const changes = moveCategory(rows, c.id, dir)
+    const changes = moveWithinGroup(rows, c.id, dir)
     if (changes.length === 0) return
     try {
       await reorder.mutateAsync(changes)
-      const pos = rows.findIndex(r => r.id === c.id) + dir + 1
-      setAnnounce(`${c.name} moved ${dir < 0 ? 'up' : 'down'} to position ${pos} of ${rows.length}.`)
+      const inGroup = rows.filter(r => r.grp === c.grp)
+      const pos = inGroup.findIndex(r => r.id === c.id) + dir + 1
+      setAnnounce(`${c.name} moved ${dir < 0 ? 'up' : 'down'} to position ${pos} of ${inGroup.length} in ${GROUP_LABEL[c.grp]}.`)
     } catch (err) {
       fail(`Couldn't move ${c.name}`, err)
     }
@@ -78,14 +90,23 @@ export function CategoriesPage() {
     <div className="grid content-start gap-4">
       <PageHeader
         title="Expense categories"
-        lede="What an expense can be filed under. The order here is the order expenses offer them in; the group decides where reports place them."
+        lede={
+          <>
+            What an expense can be filed under, in the order expenses offer them.{' '}
+            <InfoTip label="About categories">
+              The group decides where reports place a category. A category in use cannot be deleted, because past expenses point to it:
+              deactivate it instead, and it stops showing up for new expenses while the old ones keep it.
+            </InfoTip>
+          </>
+        }
+        primary={
+          isAdmin ? (
+            <Button variant="primary" icon={Plus} onClick={() => setDialog({ kind: 'add' })} disabled={q.isPending || q.isError}>
+              Add category
+            </Button>
+          ) : undefined
+        }
       />
-
-      <Banner tone="info" title="Categories in use cannot be deleted">
-        Past expenses point to them. Deactivate a category instead: it stops showing up for new expenses and the old ones keep it.
-      </Banner>
-
-      <AddCategory rows={rows} />
 
       <p className="sr-only" role="status" aria-live="polite">
         {announce}
@@ -104,119 +125,74 @@ export function CategoriesPage() {
           ))}
         </div>
       ) : (
-        <ul aria-label="Expense categories" className="overflow-hidden rounded border bg-surface">
-          {rows.map((c, i) => (
-            <CategoryRow
-              key={c.id}
-              c={c}
-              all={rows}
-              first={i === 0}
-              last={i === rows.length - 1}
-              busy={reorder.isPending}
-              asking={asking === c.id}
-              onAsk={open => setAsking(open ? c.id : null)}
-              onMove={dir => void move(c, dir)}
-              onPatch={(p, done) => patch(c, p, done)}
-            />
+        <div className="grid gap-4" data-testid="categories">
+          {groups.map(g => (
+            <Group key={g.grp} label={g.label}>
+              {g.rows.map((c, i) => (
+                <CategoryRow
+                  key={c.id}
+                  c={c}
+                  first={i === 0}
+                  last={i === g.rows.length - 1}
+                  busy={reorder.isPending}
+                  asking={asking === c.id}
+                  onAsk={open => setAsking(open ? c.id : null)}
+                  onMove={dir => void move(c, dir)}
+                  onEdit={() => setDialog({ kind: 'edit', c })}
+                  onPatch={(p, done) => patch(c, p, done)}
+                />
+              ))}
+            </Group>
           ))}
-        </ul>
+        </div>
       )}
       {q.data ? (
-        <p className="text-xs text-fg-muted" data-testid="categories-footer">
+        <p className="text-sm text-fg-muted" data-testid="categories-footer">
           {categoriesFooter(q.data)}
         </p>
+      ) : null}
+
+      {dialog ? (
+        <CategoryDialog
+          rows={rows}
+          editing={dialog.kind === 'edit' ? dialog.c : null}
+          onClose={() => setDialog(null)}
+          onPatch={(c, p) => patch(c, p, 'Category saved')}
+        />
       ) : null}
     </div>
   )
 }
 
-function AddCategory({ rows }: { rows: readonly Category[] }) {
-  const create = useCreateCategory()
-  const { toast } = useToast()
-  const [name, setName] = useState('')
-  const [grp, setGrp] = useState<CategoryGroup>('overhead')
-  const [paid, setPaid] = useState<PaidVia>('bank')
-  const [error, setError] = useState<string | null>(null)
-  const nameRef = useRef<HTMLInputElement>(null)
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const check = checkCategoryName(name, rows)
-    if (!check.ok) return setError(check.message)
-    try {
-      await create.mutateAsync({ name: check.name, grp, default_paid_via: paid, sort: nextSort(rows) })
-      toast({ title: 'Category added', body: check.name, tone: 'success' })
-      setName('')
-      setError(null)
-      nameRef.current?.focus()
-    } catch (err) {
-      const m = mapPgError(err, { entity: 'category' })
-      setError(m.kind === 'unique' ? 'A category with this name already exists.' : m.message)
-    }
-  }
-
+function Group({ label, children }: { label: string; children: React.ReactNode }) {
+  const id = useId()
   return (
-    <form onSubmit={e => void submit(e)} noValidate aria-label="Add a category" className="grid items-start gap-3 rounded border bg-sunken p-3 md:grid-cols-[minmax(0,1fr)_170px_130px_auto]">
-      <Field label="New category" error={error ?? undefined}>
-        <TextField
-          ref={nameRef}
-          value={name}
-          placeholder="Name"
-          maxLength={60}
-          onChange={e => {
-            setName(e.target.value)
-            setError(null)
-          }}
-        />
-      </Field>
-      <Field label="Group">
-        <Select value={grp} onChange={e => setGrp(e.target.value as CategoryGroup)} options={GROUP_OPTIONS} />
-      </Field>
-      <Field label="Paid via">
-        <Select value={paid} onChange={e => setPaid(e.target.value as PaidVia)} options={PAID_OPTIONS} />
-      </Field>
-      <div className="md:pt-[26px]">
-        <Button type="submit" variant="primary" icon={Plus} busy={create.isPending} busyLabel="Adding" className="max-md:w-full">
-          Add category
-        </Button>
-      </div>
-    </form>
+    <section aria-labelledby={id} className="overflow-hidden rounded border bg-surface">
+      <h2 id={id} className="border-b bg-sunken px-4 py-2 text-base font-semibold">
+        {label}
+      </h2>
+      <ul aria-labelledby={id}>{children}</ul>
+    </section>
   )
 }
 
 interface RowProps {
   c: Category
-  all: readonly Category[]
   first: boolean
   last: boolean
   busy: boolean
   asking: boolean
   onAsk: (open: boolean) => void
   onMove: (dir: -1 | 1) => void
-  onPatch: (p: CategoryPatch, done?: string) => Promise<void>
+  onEdit: () => void
+  onPatch: (p: CategoryPatch, done?: string) => Promise<boolean>
 }
 
-function CategoryRow({ c, all, first, last, busy, asking, onAsk, onMove, onPatch }: RowProps) {
+function CategoryRow({ c, first, last, busy, asking, onAsk, onMove, onEdit, onPatch }: RowProps) {
   const del = useDeleteCategory()
   const { toast } = useToast()
-  const [name, setName] = useState(c.name)
-  const [nameError, setNameError] = useState<string | null>(null)
   const advice = deleteAdvice(c)
-
-  // Follow the saved name when it changes elsewhere, but never while it is being typed.
-  const lastSaved = useRef(c.name)
-  if (lastSaved.current !== c.name) {
-    lastSaved.current = c.name
-    if (name !== c.name) setName(c.name)
-  }
-
-  const saveName = async () => {
-    if (name === c.name) return setNameError(null)
-    const check = checkCategoryName(name, all, c.id)
-    if (!check.ok) return setNameError(check.message)
-    setNameError(null)
-    await onPatch({ name: check.name }, 'Category renamed')
-  }
+  const unused = c.used === 0
 
   const remove = async () => {
     try {
@@ -234,87 +210,153 @@ function CategoryRow({ c, all, first, last, busy, asking, onAsk, onMove, onPatch
     }
   }
 
-  const idBase = `cat-${c.id}`
+  const toggle = () => void onPatch({ active: !c.active }, c.active ? 'Category deactivated' : 'Category activated')
+
   return (
-    <li data-category={c.name} className={cn('grid gap-3 border-b px-3 py-3 last:border-b-0', !c.active && 'bg-sunken')}>
-      <div className="grid items-start gap-3 md:grid-cols-[64px_minmax(0,1fr)_150px_110px_120px_auto]">
-        <div className="flex gap-1">
-          <Button icon={ArrowUp} variant="quiet" className="max-md:h-touch max-md:w-touch" aria-label={`Move ${c.name} up`} disabled={first || busy} onClick={() => onMove(-1)} />
-          <Button icon={ArrowDown} variant="quiet" className="max-md:h-touch max-md:w-touch" aria-label={`Move ${c.name} down`} disabled={last || busy} onClick={() => onMove(1)} />
+    <li data-category={c.name} className={cn('grid gap-2 border-b px-4 py-2 last:border-b-0', !c.active && 'bg-sunken')}>
+      <div className="flex min-h-touch items-center gap-2">
+        <div className="grid min-w-0 flex-1">
+          <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{c.name}</span>
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-muted">
+            <span>Paid via {PAID_VIA_LABEL[c.default_paid_via].toLowerCase()}</span>
+            <span aria-hidden="true">·</span>
+            <span className="num" data-testid="usage">
+              {usageText(c.used)}
+            </span>
+            {c.active ? null : <Tag dashed>Inactive: hidden from new expenses</Tag>}
+          </span>
         </div>
-        <div className="grid min-w-0 gap-1">
-          <TextField
-            aria-label={`Name of ${c.name}`}
-            aria-invalid={nameError ? true : undefined}
-            aria-describedby={nameError ? `${idBase}-err` : undefined}
-            value={name}
-            maxLength={60}
-            onChange={e => {
-              setName(e.target.value)
-              setNameError(null)
-            }}
-            onBlur={() => void saveName()}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                void saveName()
-              } else if (e.key === 'Escape') {
-                setName(c.name)
-                setNameError(null)
-              }
-            }}
+        {unused ? (
+          <Button
+            icon={Trash2}
+            variant="quiet"
+            size="sm"
+            className="max-md:h-touch max-md:w-touch"
+            aria-label={`Delete ${c.name}`}
+            aria-expanded={asking}
+            onClick={() => onAsk(!asking)}
           />
-          {nameError ? (
-            <p id={`${idBase}-err`} role="alert" className="text-xs text-tone-danger-fg">
-              {nameError}
-            </p>
-          ) : null}
-        </div>
-        <Select
-          aria-label={`Group of ${c.name}`}
-          value={c.grp}
-          options={GROUP_OPTIONS}
-          onChange={e => void onPatch({ grp: e.target.value as CategoryGroup }, 'Group changed')}
-        />
-        <Select
-          aria-label={`Default paid via for ${c.name}`}
-          value={c.default_paid_via}
-          options={PAID_OPTIONS}
-          onChange={e => void onPatch({ default_paid_via: e.target.value as PaidVia }, 'Paid via changed')}
-        />
-        <p className="num flex h-control items-center text-sm text-fg-muted" data-testid="usage">
-          {usageText(c.used)}
-        </p>
-        <div className="flex h-control items-center justify-between gap-3 max-md:min-h-touch md:justify-end">
-          <Checkbox
-            aria-label={`${c.name} is active`}
-            label="Active"
-            checked={c.active}
-            onCheckedChange={v => void onPatch({ active: v === true }, v === true ? 'Category activated' : 'Category deactivated')}
-          />
-          <Button icon={Trash2} variant="quiet" className="max-md:h-touch max-md:w-touch" aria-label={`Delete ${c.name}`} aria-expanded={asking} onClick={() => onAsk(!asking)} />
-        </div>
+        ) : null}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="quiet" size="sm" icon={Ellipsis} className="max-md:h-touch max-md:w-touch" aria-label={`More for ${c.name}`} />
+          </PopoverTrigger>
+          <PopoverContent variant="menu" align="end" aria-label={`More for ${c.name}`}>
+            <MenuItem icon={Pencil} onClick={onEdit}>
+              Edit name, group or paid via
+            </MenuItem>
+            <MenuItem icon={ArrowUp} disabled={first || busy} onClick={() => onMove(-1)}>
+              Move up
+            </MenuItem>
+            <MenuItem icon={ArrowDown} disabled={last || busy} onClick={() => onMove(1)}>
+              Move down
+            </MenuItem>
+            <MenuSeparator />
+            <MenuItem icon={c.active ? EyeOff : Eye} onClick={toggle}>
+              {c.active ? 'Deactivate' : 'Reactivate'}
+            </MenuItem>
+          </PopoverContent>
+        </Popover>
       </div>
-      {!c.active ? (
-        <p className="md:pl-[76px]">
-          <Tag dashed>Inactive: hidden from new expenses</Tag>
-        </p>
-      ) : null}
-      {asking ? (
-        <div role="group" aria-label={`Delete ${c.name}`} className="flex flex-wrap items-center gap-3 rounded border bg-surface px-3 py-2 text-sm md:ml-[76px]">
+      {asking && advice.canDelete ? (
+        <div role="group" aria-label={`Delete ${c.name}`} className="flex flex-wrap items-center gap-3 rounded border bg-surface px-3 py-2 text-sm">
           <p className="min-w-0 flex-1 text-pretty">{advice.message}</p>
-          {advice.canDelete ? (
-            <Button variant="danger" icon={Trash2} busy={del.isPending} busyLabel="Deleting" onClick={() => void remove()}>
-              Delete
-            </Button>
-          ) : c.active ? (
-            <Button variant="primary" onClick={() => void onPatch({ active: false }, 'Category deactivated').then(() => onAsk(false))}>
-              Deactivate
-            </Button>
-          ) : null}
-          <Button onClick={() => onAsk(false)}>{advice.canDelete ? 'Cancel' : 'Close'}</Button>
+          <Button variant="danger" icon={Trash2} busy={del.isPending} busyLabel="Deleting" onClick={() => void remove()}>
+            Delete
+          </Button>
+          <Button onClick={() => onAsk(false)}>Cancel</Button>
         </div>
       ) : null}
     </li>
+  )
+}
+
+/** Add a category, or edit one (the same three fields, filled in). Only what changed is saved. */
+function CategoryDialog({
+  rows,
+  editing,
+  onClose,
+  onPatch,
+}: {
+  rows: readonly Category[]
+  editing: Category | null
+  onClose: () => void
+  onPatch: (c: Category, p: CategoryPatch) => Promise<boolean>
+}) {
+  const create = useCreateCategory()
+  const { toast } = useToast()
+  const formId = useId()
+  const [name, setName] = useState(editing?.name ?? '')
+  const [grp, setGrp] = useState<CategoryGroup>(editing?.grp ?? 'overhead')
+  const [paid, setPaid] = useState<PaidVia>(editing?.default_paid_via ?? 'bank')
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const dirty = editing ? name !== editing.name || grp !== editing.grp || paid !== editing.default_paid_via : name.trim() !== ''
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const check = checkCategoryName(name, rows, editing?.id)
+    if (!check.ok) return setError(check.message)
+    setSaving(true)
+    try {
+      if (editing) {
+        const p: CategoryPatch = {}
+        if (check.name !== editing.name) p.name = check.name
+        if (grp !== editing.grp) p.grp = grp
+        if (paid !== editing.default_paid_via) p.default_paid_via = paid
+        if (Object.keys(p).length === 0 || (await onPatch(editing, p))) onClose()
+      } else {
+        await create.mutateAsync({ name: check.name, grp, default_paid_via: paid, sort: nextSort(rows) })
+        toast({ title: 'Category added', body: check.name, tone: 'success' })
+        onClose()
+      }
+    } catch (err) {
+      const m = mapPgError(err, { entity: 'category' })
+      setError(m.kind === 'unique' ? 'A category with this name already exists.' : m.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={open => !open && !saving && onClose()} busy={saving} dirty={dirty}>
+      <DialogContent
+        title={editing ? `Edit ${editing.name}` : 'Add category'}
+        icon={Receipt}
+        size="sm"
+        footer={
+          <>
+            <Button data-cancel disabled={saving} onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" form={formId} icon={editing ? undefined : Plus} busy={saving} busyLabel="Saving">
+              {editing ? 'Save category' : 'Add category'}
+            </Button>
+          </>
+        }
+      >
+        <form id={formId} onSubmit={e => void submit(e)} noValidate className="grid gap-4">
+          <Field label="Name" error={error ?? undefined}>
+            <TextField
+              value={name}
+              maxLength={60}
+              autoComplete="off"
+              onChange={e => {
+                setName(e.target.value)
+                setError(null)
+              }}
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+            <Field label="Group">
+              <Select value={grp} onChange={e => setGrp(e.target.value as CategoryGroup)} options={GROUP_OPTIONS} />
+            </Field>
+            <Field label="Paid via">
+              <Select value={paid} onChange={e => setPaid(e.target.value as PaidVia)} options={PAID_OPTIONS} />
+            </Field>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -130,8 +130,8 @@ export function TeamPage() {
       id: 'status',
       header: 'Status',
       value: m => (isActive(m) ? 'Active' : 'Deactivated'),
-      // Only the exception is drawn: an active person's cell is empty (rule 2, R2-14).
-      cell: m => (isActive(m) ? null : <StatusBadge dimension="user" value="deactivated" />),
+      // An active person reads "Active" in plain text (a blank cell read as missing, audit 2026-10-22); only the exception is a chip.
+      cell: m => (isActive(m) ? <span className="text-fg-2">Active</span> : <StatusBadge dimension="user" value="deactivated" />),
       hideBelowMd: true,
     },
     {
