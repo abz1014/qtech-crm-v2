@@ -1,4 +1,5 @@
 import { requireSupabase, unwrap } from '@/lib/supabase'
+import { toBusinessDate } from '@/lib/dates'
 import type { InvoicePdfSource } from '@/features/money/invoices/pdf/doc'
 import type { BuyerTax } from '@/features/money/invoices/pdf/model'
 
@@ -73,7 +74,7 @@ export async function loadInvoicePdfSource(invoiceId: string): Promise<InvoicePd
       ? (async () =>
           unwrap(await db.from('order_items').select('id, description, qty, unit, unit_price_net, gst_rate').eq('order_id', orderId).order('position').order('created_at')))()
       : [],
-    orderId ? (async () => unwrap(await db.from('invoices').select('id, number, net_amount').eq('order_id', orderId).neq('id', invoiceId).order('invoice_date')))() : [],
+    orderId ? (async () => unwrap(await db.from('invoices').select('id, number, net_amount, invoice_date, created_at').eq('order_id', orderId).neq('id', invoiceId).order('invoice_date')))() : [],
   ])
 
   return {
@@ -98,7 +99,13 @@ export async function loadInvoicePdfSource(invoiceId: string): Promise<InvoicePd
       unitPriceNet: l.unit_price_net,
       gstRate: l.gst_rate,
     })),
-    otherInvoices: (others ?? []).map(o => ({ id: o.id, number: o.number, net: o.net_amount })),
+    otherInvoices: (others ?? []).map(o => ({
+      id: o.id,
+      number: o.number,
+      net: o.net_amount,
+      // the due basis order_receivables uses (0076): the invoice date, else the order date, else the day it was imported
+      dueBasis: o.invoice_date ?? order?.ordered_on ?? (o.created_at ? toBusinessDate(new Date(o.created_at)) : null),
+    })),
   }
 }
 
