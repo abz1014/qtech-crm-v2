@@ -165,6 +165,9 @@ async function until<V>(read: () => Promise<V>, ok: (v: V) => boolean, ms = 8000
 
 async function newPage(ctx: BrowserContext, info: TestInfo, label: string): Promise<Page> {
   const p = await ctx.newPage()
+  // Run 2: with no action timeout a missing button waited until the 600 s test limit and every later probe was lost.
+  p.setDefaultTimeout(15_000)
+  p.setDefaultNavigationTimeout(30_000)
   watch(p, info, label)
   return p
 }

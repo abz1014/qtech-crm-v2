@@ -44,7 +44,7 @@ async function stateFor(browser: Browser, info: TestInfo, role: Role): Promise<s
 /** A signed-in context for `role` at the given viewport (phone = 375x812 with touch). */
 export async function ctxAs(browser: Browser, info: TestInfo, role: Role, vp: Viewport = 'desktop', extra: Record<string, unknown> = {}): Promise<BrowserContext> {
   const storageState = await stateFor(browser, info, role)
-  return browser.newContext({
+  const ctx = await browser.newContext({
     baseURL: info.project.use.baseURL,
     ...VIEWPORTS[vp],
     locale: 'en-GB',
@@ -53,6 +53,10 @@ export async function ctxAs(browser: Browser, info: TestInfo, role: Role, vp: Vi
     storageState,
     ...extra,
   })
+  // A missing control fails its probe in 15 s instead of waiting for the test's 600 s limit.
+  ctx.setDefaultTimeout(15_000)
+  ctx.setDefaultNavigationTimeout(30_000)
+  return ctx
 }
 
 /** A fresh, signed-out context (for sign-in as a user made during the test). */

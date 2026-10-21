@@ -1151,7 +1151,7 @@ test('settings: company profile, exchange rates, targets, categories, my details
 // Each: the setup runs normally (a broken setup is a red failure), then test.fail() right before the one expect that states the
 // correct behaviour, so a fix flips the test.
 
-test('HW-17: Reset password leaves the person signed in (the dialog promises they are signed out on every device)', async ({ browser }, info) => {
+test('HW-17: after Reset password the open session keeps working (the dialog promises they are signed out on every device)', async ({ browser }, info) => {
   const email = `hunt-reset-${tag(6)}-${Date.now().toString(36)}@test.invalid`
   const created = await adminUsers({ action: 'create', name: `Hunt Reset ${tag(5)}`, email, role: 'sales' })
   expect(created.status).toBe(200)
@@ -1163,21 +1163,18 @@ test('HW-17: Reset password leaves the person signed in (the dialog promises the
     const page = await ctx.newPage()
     await signIn(page, email, password)
     expect(await signedInApp(page)).toBe(true)
-    const refreshToken = await page.evaluate(() => {
+    const accessToken = await page.evaluate(() => {
       const key = Object.keys(localStorage).find(k => k.endsWith('-auth-token'))
-      return key ? ((JSON.parse(localStorage.getItem(key) ?? '{}') as { refresh_token?: string }).refresh_token ?? '') : ''
+      return key ? ((JSON.parse(localStorage.getItem(key) ?? '{}') as { access_token?: string }).access_token ?? '') : ''
     })
-    expect(refreshToken).not.toBe('')
+    expect(accessToken).not.toBe('')
     const reset = await adminUsers({ action: 'reset_password', user_id: userId })
     expect(reset.status).toBe(200)
-    // "Signed out on every device": the session made before the reset can no longer be renewed.
-    const renew = await fetch(`${API_URL}/auth/v1/token?grant_type=refresh_token`, {
-      method: 'POST',
-      headers: { apikey: ANON_KEY, 'content-type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    })
-    test.fail(true, 'HW-17: admin-users reset_password sets the password but never revokes the sessions (handler.ts reset_password has no revokeSessions)')
-    expect(renew.status, 'the pre-reset session is refused a new token').toBeGreaterThanOrEqual(400)
+    // "Signed out on every device": the session made before the reset must not read data any more. (Run 2: its refresh token IS
+    // refused, but the access token it already holds keeps working until it expires, up to an hour.)
+    const read = await fetch(`${API_URL}/rest/v1/companies?select=id&limit=1`, { headers: { apikey: ANON_KEY, authorization: `Bearer ${accessToken}` } })
+    test.fail(true, 'HW-17: admin-users reset_password changes the password but the open session keeps reading data on its access token until it expires (the dialog says they are signed out on every device)')
+    expect(read.status, 'the pre-reset session is refused').toBeGreaterThanOrEqual(400)
   } finally {
     await ctx.close()
     await adminUsers({ action: 'deactivate', user_id: userId }).catch(() => undefined)

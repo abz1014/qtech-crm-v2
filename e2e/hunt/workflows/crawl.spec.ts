@@ -165,3 +165,25 @@ test('crawl: deep links to records that do not exist, and junk params', async ({
     })
   await ctx.close()
 })
+
+test('crawl: an open order page and RFQ page stay quiet (no repeated data requests while nobody touches them)', async ({ browser }, info) => {
+  for (const vp of ['desktop', 'phone'] as Viewport[])
+    for (const path of [`/orders/${ids.order}`, `/rfqs/${ids.rfq}`, '/today']) {
+      const ctx = await ctxAs(browser, info, 'admin', vp)
+      const page = await ctx.newPage()
+      watch(page, info, `quiet ${vp}`)
+      await probe(info, page, `quiet ${vp} ${path}`, async () => {
+        const t0 = Date.now()
+        await page.goto(path)
+        await page.locator('#main').waitFor()
+        const h = await page.locator('#main h1, #main h2, h1').first().waitFor({ timeout: 15_000 }).then(() => Date.now() - t0).catch(() => -1)
+        await page.waitForTimeout(4000)
+        const seen: string[] = []
+        page.on('request', r => seen.push(`${r.method()} ${decodeURIComponent(r.url()).replace(/^https?:\/\/[^/]+/, '').slice(0, 140)}`))
+        await page.waitForTimeout(10_000)
+        const headings = await page.locator('h1').allInnerTexts().catch(() => [] as string[])
+        note(info, { kind: 'observation', where: `quiet ${vp} ${path}`, what: `first heading after ${h} ms (h1s: ${JSON.stringify(headings).slice(0, 120)}); ${seen.length} requests in 10 idle seconds`, detail: seen.slice(0, 12) })
+      })
+      await ctx.close()
+    }
+})

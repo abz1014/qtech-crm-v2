@@ -1179,19 +1179,7 @@ test('HW-5: a pasted reply line "price on request" is stored as a price (the "2"
   await ctx.close()
 })
 
-test('HW-6: a double-click on "Looks right" skips the supplier review step', async ({ browser }, info) => {
-  const cust = await company('Hunt HW6 Customer')
-  const sup = await supplier('Hunt HW6 Supplier', 'Pakistan')
-  const { ctx, page } = await hwPage(browser, info, '/today', 'HW-6')
-  await startIntake(page, info, cust, `&supplier=${sup.id}`)
-  await pasteOnPage(page, { text: [`Pressure gauge 0-16 bar ${tag()} - 2 nos`, `Flow switch ${tag()} - 1 no`].join('\n') })
-  await expect(page.getByRole('textbox', { name: 'Description of item 2', exact: true })).toBeVisible(T)
-  await vis(page.getByRole('button', { name: /Looks right: find suppliers/ })).dblclick()
-  await page.waitForTimeout(800)
-  test.fail(true, 'HW-6: "Write the message" takes the place of "Looks right" in the sticky bar, so the second click skips the suppliers step')
-  expect(await stepOf(page)).toBe('Step 2 of 4')
-  await ctx.close()
-})
+// HW-6 (double-click on Looks right skips the suppliers step) was seen in run 1 but did not reproduce in run 2: not pinned.
 
 test('HW-7: an enquiry quantity of 0 is read as 1 and saved as 1, with no warning', async ({ browser }, info) => {
   const cust = await company('Hunt HW7 Customer')
@@ -1243,5 +1231,26 @@ test('HW-10: an over-large intake quantity is refused with only "Nothing was sav
   const banner = said.locator('xpath=ancestor::div[contains(@class,"rounded")][1]')
   test.fail(true, 'HW-10: float_rfq answers 22003 numeric field overflow (qty is numeric(12,3)) and the banner does not say the quantity is too large')
   await expect(banner).toContainText(/quantit/i, { timeout: 3_000 })
+  await ctx.close()
+})
+
+test('HW-43: a refused Issue quotation still changes the item prices (Mark won then offers a price never quoted)', async ({ browser }, info) => {
+  const r = await pricedRfq([{ description: `Hunt HW43 pressure transmitter ${tag()}`, qty: 2.5 }], [1000])
+  const { ctx, page } = await hwPage(browser, info, `/rfqs/${r.rfq.id}?issue=1`, 'HW-43')
+  await expect(page.getByRole('list', { name: 'Items to quote' })).toBeVisible(T)
+  await fillPrice(page, 1, '1300')
+  await dialog(page).getByRole('button', { name: 'Issue quotation' }).click()
+  await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 45_000 })
+  await dialog(page).getByRole('button', { name: 'Done' }).click()
+  expect(num((await itemsOf(r.rfq.id))[0].quoted_unit_price_net)).toBe(1300)
+  // Revise at 999,999,999,999: it fits rfq_items (numeric(14,2)) but 2.5 x it overflows quotations.net_total, so the issue is refused.
+  await openReviseFromMenu(page)
+  await fillPrice(page, 1, '999999999999')
+  await dialog(page).getByRole('button', { name: 'Issue revised quotation' }).click()
+  await expect(dialog(page).getByText('Could not issue the quotation')).toBeVisible({ timeout: 30_000 })
+  expect(await quotationsOf(r.rfq.id)).toHaveLength(1)
+  const price = num((await itemsOf(r.rfq.id))[0].quoted_unit_price_net)
+  test.fail(true, 'HW-43: issueQuotation updates rfq_items before the issue_quotation RPC, so a refused issue leaves a price no quotation carries (and Mark won uses it)')
+  expect(price).toBe(1300)
   await ctx.close()
 })
