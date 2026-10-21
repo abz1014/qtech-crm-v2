@@ -336,15 +336,17 @@ test('BUG-RV-04: the command palette\'s recent items are cleared on sign-out and
 
 test('New RFQ drafts (post-merge) are kept per person and cleared on sign-out', async ({ page }) => {
   await openAs(page, 'sales', '/rfqs/new')
+  // The screen listens for a paste once it is drawn: pasting before then went nowhere (flaky on CI).
+  await expect(page.getByRole('heading', { name: 'New RFQ', level: 1 })).toBeVisible()
   // A pasted enquiry, as a person would (the intake listens for paste anywhere on the screen).
   await page.evaluate(text => {
     const dt = new DataTransfer()
     dt.setData('text/plain', text)
     document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
   }, `${world.tag} enquiry\n2 x Rosemount 3051 pressure transmitter\n1 x Yokogawa EJA110E`)
-  await page.waitForTimeout(1500)
-  const keys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.rfqs.intakeDraft.')))
-  expect(keys, 'one draft, keyed by the person').toEqual([`qtech.rfqs.intakeDraft.${IDS.sales}`])
+  await expect
+    .poll(() => page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.rfqs.intakeDraft.'))), { message: 'one draft, keyed by the person' })
+    .toEqual([`qtech.rfqs.intakeDraft.${IDS.sales}`])
   await page.goto('/today')
   await signOut(page)
   expect(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.rfqs.intakeDraft.')))).toEqual([])
