@@ -1,5 +1,8 @@
 begin;
 select plan(18);
+-- po_line_prefill dates a quote by created_at::date in the session time zone; run the session on Karachi time so "and on which day"
+-- (today_pkt) holds between 19:00 and 24:00 UTC too, when the UTC date is a day behind Karachi's (it failed CI at 19:15 UTC).
+set local timezone = 'Asia/Karachi';
 
 -- O07: po_line_prefill(leg) says what issue_purchase_order will pre-fill, and where each price came from.
 -- Fixture users come from supabase/seed.sql: admin a0..01, sales a0..02, engineer a0..03, deactivated a0..04.
