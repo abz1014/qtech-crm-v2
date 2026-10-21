@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ChartColumn, ChevronRight, CircleCheck, Landmark, Lock, LockOpen } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ChartColumn, ChevronRight, CircleCheck, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { computeReconciliationExceptions } from '@/lib/reconciliation'
 import { Button } from '@/ui/Button'
@@ -13,12 +13,14 @@ import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { monthKeyLabel } from '@/features/money/expenses/model'
 import { useReconciliationInput } from '@/features/money/hooks'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
+import { useSession } from '@/app/session'
+import { openFindings } from '@/features/money/exceptions/checked'
 import { InfoTip } from '@/ui/InfoTip'
 import { CloseMonthDialog, ReopenMonthDialog } from '@/features/money/monthEnd/MonthDialogs'
 import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
 import { useMonthEnd, type MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
 import { ReportError, Panel } from '@/features/money/monthEnd/ReportParts'
-import { closeWindowDay, formatClosedAt, formatClosedDay, longDay } from '@/features/money/monthEnd/format'
+import { closeWindowDay, formatClosedAt, formatClosedDay } from '@/features/money/monthEnd/format'
 import { closeButtonLabel, closedThrough, monthName, type CheckCard, type ClosedMonth, type Fact } from '@/features/money/monthEnd/model'
 
 /*
@@ -45,7 +47,8 @@ export function ChecklistPage() {
   const [reopen, setReopen] = useState<ClosedMonth | null>(null)
   const isClosed = ctx.state?.kind === 'closed'
   const recon = useReconciliationInput(true)
-  const things = useMemo(() => (recon.data ? computeReconciliationExceptions(recon.data) : null), [recon.data])
+  const session = useSession()
+  const things = useMemo(() => (recon.data ? openFindings(session.status === 'signed-in' ? session.user.id : null, computeReconciliationExceptions(recon.data)) : null), [recon.data, session])
 
   return (
     <MoneyFrame active="month-end">
@@ -53,16 +56,7 @@ export function ChecklistPage() {
         <MonthPager month={ctx.month} thisMonth={ctx.thisMonth} go={ctx.go} />
         {ctx.state ? <MonthStateChip closed={isClosed} /> : null}
         <span className="flex-1" />
-        {/* Always here, not only while a bank check has items: comparing totals, unticking a mistake and matching a closed month. */}
-        <Link
-          to={`/money/month-end/bank${ctx.search}`}
-          className="inline-flex min-h-touch items-center gap-2 text-sm font-medium text-primary hover:underline md:min-h-0"
-          data-testid="month-bank-link"
-        >
-          <Icon icon={Landmark} size="sm" />
-          Match bank statement
-          <Icon icon={ChevronRight} size="sm" />
-        </Link>
+        {/* Match bank statement is the bank check's own row (and the clear line's link when it has nothing), never twice. */}
         <Link
           to={`/money/reports${ctx.search}`}
           className="inline-flex min-h-touch items-center gap-2 text-sm font-medium text-primary hover:underline md:min-h-0"
@@ -121,7 +115,7 @@ function LockBar({ month }: { month: string }) {
         <span className="font-medium">{monthKeyLabel(month)} is closed.</span> Payments, expenses and invoices dated in {name} are frozen.
       </span>
       <span className="flex-1" />
-      <span className="text-sm opacity-90">Bank matching and the TCS and FBR stamps stay open.</span>
+      <span className="text-sm opacity-90">Bank matching and the sent-to-customer and FBR dates stay open.</span>
     </div>
   )
 }
@@ -137,10 +131,12 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const phone = useMediaQuery('(max-width: 767px)')
   // The sticky bar replaces the bottom tabs on a phone (StickyActionBar's contract); the bar's back arrow leads out.
   useMobileBar({ title: 'Month end', back: 'history', fallback: '/money/receivables', hideTabs: true })
+  const navigate = useNavigate()
+  // A closed month's next step is reading its reports (reopening is in the list below), so that is the one green button.
   const button = (size: 'lg' | 'touch') =>
     closed ? (
-      <Button size={size} icon={Lock} disabled>
-        Closed
+      <Button size={size} variant="primary" icon={ChartColumn} onClick={() => navigate(`/money/reports${ctx.search}`)}>
+        Reports for {name}
       </Button>
     ) : (
       <Button size={size} variant="primary" icon={Lock} disabled={state?.kind === 'not-ended'} onClick={() => setOpen(true)}>
@@ -150,7 +146,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const tip = (
     <InfoTip label="About closing a month">
       {state?.kind === 'not-ended' ? <>{name} can be closed once it has ended. </> : null}
-      Closing freezes payments, expenses and invoices dated in {name}. Bank matching and the TCS and FBR stamps stay open. You can reopen
+      Closing freezes payments, expenses and invoices dated in {name}. Bank matching and the sent-to-customer and FBR dates stay open. You can reopen
       it any time; both are written to the audit log. An earlier open month with money in it is closed in the same step.
     </InfoTip>
   )
@@ -171,13 +167,12 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
             </>
           )}
         </p>
-        <span className="text-sm text-fg-muted">
-          {closed && ctx.closedEntry
-            ? `Closed ${formatClosedAt(ctx.closedEntry.closedAt)}`
-            : day
-              ? `${longDay(ctx.today)}: day ${day} of the 10-day close window`
-              : longDay(ctx.today)}
-        </span>
+        {/* Only a fact that matters: when it was closed, or how far into the 10-day close window we are. No bare date. */}
+        {closed && ctx.closedEntry ? (
+          <span className="text-sm text-fg-muted">Closed {formatClosedAt(ctx.closedEntry.closedAt)}</span>
+        ) : day ? (
+          <span className="text-sm text-fg-muted">Day {day} of the 10-day close window</span>
+        ) : null}
       </div>
       {phone ? (
         // The phone's one action bar (spec 5.3), the same button as on desktop.
@@ -197,6 +192,8 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
 function CheckList({ ctx, things }: { ctx: MonthEndCtx; things: ReturnType<typeof computeReconciliationExceptions> | null }) {
   const rows: Row[] = ctx.cards.filter(c => !c.clear).map(fromCard)
   const clear: string[] = ctx.cards.filter(c => c.clear).map(c => c.label)
+  // Still reachable when nothing is left to match (comparing totals, unticking a mistake): one link, on the clear line.
+  const bankClear = ctx.cards.some(c => c.key === 'bank_unticked' && c.clear)
   if (things && things.length > 0) {
     const critical = things.filter(t => t.severity === 'critical').length
     rows.push({
@@ -248,6 +245,14 @@ function CheckList({ ctx, things }: { ctx: MonthEndCtx; things: ReturnType<typeo
               {clear.length} {clear.length === 1 ? 'check is' : 'checks are'} clear:
             </b>{' '}
             {clear.join(', ')}.
+            {bankClear ? (
+              <>
+                {' '}
+                <Link to={`/money/month-end/bank${ctx.search}`} data-testid="month-bank-link" className="font-medium text-primary hover:underline">
+                  Match bank statement
+                </Link>
+              </>
+            ) : null}
           </span>
         </p>
       ) : null}
@@ -261,22 +266,13 @@ export function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: 
   const [all, setAll] = useState(false)
   const through = closedThrough(ctx.closed)
   const shown = all ? ctx.closed : ctx.closed.slice(0, 4)
-  const state = ctx.state
   // Owner decision 2026-10-22 (0080): months reopen newest first. Only the latest closed month has Reopen; the others say which
   // month to reopen before them, so nobody meets the database's refusal.
   const latest = ctx.closed.reduce<string | null>((m, c) => (m === null || c.key > m ? c.key : m), null)
   return (
     <Panel title="Closed months" meta={through ? <span className="text-sm text-fg-muted">Closed through {through}</span> : null} className="max-w-[720px]">
+      {/* Closed months only (an open month here contradicted the title); the month on screen says Open or Closed above. */}
       <ul aria-label="Closed months">
-        {state?.kind === 'open' ? (
-          <li className="grid grid-cols-[20px_minmax(0,1fr)] items-center gap-3 bg-selected px-5 py-3 text-sm">
-            <Icon icon={LockOpen} size="md" className="text-tone-info-fg" />
-            <span className="grid">
-              <span className="font-medium">{monthKeyLabel(ctx.month)}</span>
-              <span className="text-sm text-fg-muted">Open</span>
-            </span>
-          </li>
-        ) : null}
         {shown.map(c => (
           <li
             key={c.key}
@@ -303,11 +299,7 @@ export function ClosedList({ ctx, onReopen }: { ctx: MonthEndCtx; onReopen: (c: 
             )}
           </li>
         ))}
-        {ctx.closed.length === 0 && state?.kind !== 'open' ? (
-          <li className="px-5 py-6">
-            <EmptyState title="No month is closed yet">Closing a month freezes what was paid and received in it.</EmptyState>
-          </li>
-        ) : null}
+        {ctx.closed.length === 0 ? <li className="px-5 py-4 text-sm text-fg-2">None closed yet.</li> : null}
       </ul>
       {ctx.closed.length > 4 ? (
         <div className="border-t px-5 py-2">

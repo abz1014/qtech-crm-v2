@@ -1,62 +1,57 @@
-import type { ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { RatesTable } from '@/features/settings/RatesTable'
 import { useSeesPrices } from '@/app/session'
+import { useFxLatest } from '@/features/rfqs/hooks'
+import { RatesTable } from '@/features/settings/RatesTable'
+import { ratesStatusLine } from '@/features/settings/ratesModel'
 import { Icon } from '@/ui/Icon'
 import { PageHeader } from '@/ui/PageHeader'
-import { cn } from '@/lib/utils'
 
 /*
- * Settings home (g2-login-team-settings, "Settings home, sales"): where sales and engineers land.
- * The exchange rates at a glance, and a link to the read-only company profile. An engineer gets the company profile only: rates
- * are currency amounts (owner decision 2026-10-22), so they are neither shown nor fetched.
+ * Settings home: where sales and engineers land (an admin goes to Team). The side menu already lists Company profile and
+ * Exchange rates, so the body does not repeat them as cards (audit 2026-10-22): it is today's rates, with one status line that
+ * says what actually happened ("Last automatic update Thu 22 Oct. 2 rates entered by hand.") and one quiet link to add a rate.
+ * An engineer sees no rates (currency amounts, owner decision 2026-10-22): neither shown nor fetched; the page points to the
+ * company profile instead.
  */
-function Card({ id, title, text, to, cta, children }: { id: string; title: string; text: string; to: string; cta: string; children?: ReactNode }) {
+export function SettingsHomePage() {
+  return useSeesPrices() ? <RatesHome /> : <NoRatesHome />
+}
+
+const LINK =
+  'inline-flex h-control shrink-0 items-center gap-2 rounded border border-line-strong bg-surface px-3 text-sm font-medium text-fg hover:bg-sunken max-md:h-touch'
+
+function RatesHome() {
+  const fx = useFxLatest()
   return (
-    <section aria-labelledby={id} className="grid gap-4 rounded border bg-surface p-5">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="grid gap-[2px]">
-          <h2 id={id} className="text-base font-semibold">{title}</h2>
-          <p className="max-w-[62ch] text-sm text-fg-muted text-pretty">{text}</p>
-        </div>
-        <Link
-          to={to}
-          className={cn(
-            'inline-flex h-control shrink-0 items-center gap-2 rounded border border-line-strong bg-surface px-3 text-sm font-medium text-fg hover:bg-sunken',
-          )}
-        >
-          {cta}
-          <Icon icon={ChevronRight} />
-        </Link>
-      </header>
-      {children}
-    </section>
+    <div className="grid content-start gap-4">
+      <PageHeader
+        title="Today's exchange rates"
+        lede={fx.data ? ratesStatusLine(fx.data) : undefined}
+        secondary={
+          <Link to="/settings/exchange-rates" className={LINK}>
+            Add a rate or see history
+            <Icon icon={ChevronRight} />
+          </Link>
+        }
+      />
+      <RatesTable label="Today's exchange rates" />
+    </div>
   )
 }
 
-export function SettingsHomePage() {
-  const prices = useSeesPrices()
+function NoRatesHome() {
   return (
-    <div className="grid content-start gap-6">
-      <PageHeader title="Settings" lede={prices ? 'Company details for documents, and the rates used to compare prices in other currencies.' : 'Company details for documents.'} />
-      {prices ? (
-        <Card
-          id="fxh"
-          title="Exchange rates"
-          text="Updated every night. Admin and sales can enter today’s rate by hand, for example the bank’s rate."
-          to="/settings/exchange-rates"
-          cta="Open exchange rates"
-        >
-          <RatesTable label="Exchange rates summary" />
-        </Card>
-      ) : null}
-      <Card
-        id="cph"
-        title="Company profile"
-        text="Legal name, address, tax numbers and standard terms. Ask an admin to change them."
-        to="/settings/company"
-        cta="View"
+    <div className="grid content-start gap-4">
+      <PageHeader
+        title="Settings"
+        lede="Company details for documents. Ask an admin to change them."
+        secondary={
+          <Link to="/settings/company" className={LINK}>
+            View company profile
+            <Icon icon={ChevronRight} />
+          </Link>
+        }
       />
     </div>
   )

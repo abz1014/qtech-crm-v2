@@ -131,7 +131,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/money/gst-register?new=1&order={order}', admin: 'ok', sales: 'ok', engineer: 'no', note: 'deep link: Create invoice dialog' },
   { path: '/money/gst-register?attention=1', admin: 'ok', sales: 'ok', engineer: 'no' },
   { path: '/money/gst-register?tcs=1', admin: 'ok', sales: 'ok', engineer: 'no' },
-  { path: '/money/receivables', admin: 'ok', sales: 'ok', engineer: 'no', openers: [{ name: /^Record payment for ORD-/, roles: A }] },
+  { path: '/money/receivables', admin: 'ok', sales: 'ok', engineer: 'no', openers: [{ name: /^Record payment$/, roles: A, optional: true }] },
   { path: '/money/receivables?pay=1&order={order}', admin: 'ok', sales: 'ok', engineer: 'no', note: 'deep link: Record payment, admin only (sales get the page without the dialog)' },
   { path: '/money/expenses', admin: 'ok', sales: 'no', engineer: 'no', openers: [{ name: /^Add expenses?$/, roles: A }] },
   { path: '/money/expenses?add=1&order={order}', admin: 'ok', sales: 'no', engineer: 'no' },

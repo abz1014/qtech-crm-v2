@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  compactPkr,
+  progressLine,
+  shownQuarters,
   cellKey,
   cellProgress,
   checkTargetAmount,
@@ -129,5 +132,27 @@ describe('index', () => {
     const idx = indexTargets([t('a', 2026, 2, 5)])
     expect(idx.get(cellKey('a', 2026, 2))?.target_net_pkr).toBe(5)
     expect(idx.get(cellKey('a', 2026, 3))).toBeUndefined()
+  })
+})
+
+describe('targets grid, audit 2026-10-22', () => {
+  it('shows this quarter and the next by default (across the year end), or the four of one year', () => {
+    expect(shownQuarters('now', '2026-10-15', 2026)).toEqual([
+      { year: 2026, quarter: 4 },
+      { year: 2027, quarter: 1 },
+    ])
+    expect(shownQuarters('now', '2026-05-02', 2026)).toEqual([
+      { year: 2026, quarter: 2 },
+      { year: 2026, quarter: 3 },
+    ])
+    expect(shownQuarters('year', '2026-10-15', 2025).map(q => `${q.year}Q${q.quarter}`)).toEqual(['2025Q1', '2025Q2', '2025Q3', '2025Q4'])
+  })
+
+  it('says achieved against the target and the gap to pace in one line, the gap short from a million up', () => {
+    expect(progressLine({ achieved: 3_862_102, ahead: 1_950_000 }, 8_000_000)).toBe('Achieved 3,862,102 of 8,000,000 · 1.95 M ahead of pace')
+    expect(progressLine({ achieved: 1_200_000, ahead: -300_000 }, 5_000_000)).toBe('Achieved 1,200,000 of 5,000,000 · 300,000 behind pace')
+    expect(progressLine({ achieved: 10, ahead: 0 }, 100)).toBe('Achieved 10 of 100 · On pace')
+    expect(compactPkr(2_000_000)).toBe('2 M')
+    expect(compactPkr(-1_234_567)).toBe('1.23 M')
   })
 })

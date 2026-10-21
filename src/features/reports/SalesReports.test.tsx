@@ -53,7 +53,8 @@ describe('Enquiry and customer reports (inside Money > Reports)', () => {
     const glance = await screen.findByRole('region', { name: 'At a glance' })
     expect(within(glance).getByText('25%')).toBeInTheDocument() // 1 won of 4 decided
     expect(within(glance).getByText('Of the 4 RFQs decided')).toBeInTheDocument()
-    expect(within(glance).getByText('Customers who came back')).toBeInTheDocument()
+    // round 3: "Customers who came back" is its own report line, not also a tile (the same fact twice)
+    expect(within(glance).queryByText('Customers who came back')).toBeNull()
     // every report is a closed line with its headline; nothing to read until it is opened
     expect(screen.getByText('1 won, 3 lost, 3 open')).toBeInTheDocument()
     expect(screen.getByText('1 of 2 came back')).toBeInTheDocument()

@@ -40,7 +40,7 @@ export function SettingsLayout() {
   const groups = SETTINGS_GROUPS.map(g => ({ ...g, links: g.links.filter(l => canOpenSettingsLink(l, role)) }))
   const current = groups.flatMap(g => g.links).find(l => pathname.startsWith(l.to))
   return (
-    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] max-md:grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[220px_minmax(0,1fr)]">
+    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] max-md:grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[244px_minmax(0,1fr)]">
       {/* Team sets its own phone bar; every other page under Settings gets the back arrow to the list. */}
       {!atHome && current && current.to !== '/settings/team' ? <BackToSettings title={current.label} /> : null}
       <nav aria-label="Settings" className={cn('bg-surface px-4 py-3 md:border-r md:px-3 md:py-6', atHome ? 'max-md:border-b' : 'max-md:hidden')}>

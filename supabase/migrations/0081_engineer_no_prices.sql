@@ -6,8 +6,9 @@
 --
 --   qtech_engineer          a NOLOGIN role with every privilege `authenticated` has in public (tables, views, sequences,
 --                           functions, row-security policies), EXCEPT:
---                             - no SELECT on the price, total and rate columns (PRICE below): `select=*` on those tables is
---                               refused (42501), any other column reads as before;
+--                             - no SELECT, INSERT or UPDATE on the price, total and rate columns (PRICE below): `select=*` on
+--                               those tables is refused (42501), any other column reads and writes as before, and an engineer
+--                               can never set or change a price;
 --                             - no SELECT on v_fx_latest (exchange rates);
 --                             - no EXECUTE on the price RPCs (rank_item_quotes, customer_price_memory, supplier_item_memory,
 --                               po_line_prefill) nor on the pricing actions that read prices (issue_quotation,
@@ -106,12 +107,13 @@ begin
       execute format('grant %s on sequence public.%I to qtech_engineer', r.privilege_type, r.relname);
     elsif r.privilege_type = 'SELECT' and r.relname = any (no_select) then
       continue;
-    elsif r.privilege_type = 'SELECT' and price ? r.relname then
+    elsif r.privilege_type in ('SELECT', 'INSERT', 'UPDATE') and price ? r.relname then
+      -- read, add or change every column but the prices: an engineer neither reads nor writes a price
       select string_agg(quote_ident(att.attname), ', ' order by att.attnum) into cols
       from pg_catalog.pg_attribute att
       where att.attrelid = r.oid and att.attnum > 0 and not att.attisdropped
         and not ((price -> r.relname) ? att.attname::text);
-      execute format('grant select (%s) on public.%I to qtech_engineer', cols, r.relname);
+      execute format('grant %s (%s) on public.%I to qtech_engineer', r.privilege_type, cols, r.relname);
     else
       execute format('grant %s on public.%I to qtech_engineer', r.privilege_type, r.relname);
     end if;
@@ -125,7 +127,7 @@ begin
     cross join lateral aclexplode(att.attacl) a
     where cl.relnamespace = 'public'::regnamespace and a.grantee = 'authenticated'::regrole
   loop
-    if r.privilege_type = 'SELECT' and price ? r.relname and (price -> r.relname) ? r.attname::text then
+    if r.privilege_type in ('SELECT', 'INSERT', 'UPDATE') and price ? r.relname and (price -> r.relname) ? r.attname::text then
       continue;
     end if;
     execute format('grant %s (%I) on public.%I to qtech_engineer', r.privilege_type, r.attname, r.relname);

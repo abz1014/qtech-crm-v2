@@ -44,8 +44,10 @@ insert into public.supplier_inquiries (id, rfq_id, supplier_id, sent_on) values
   ('f0000000-0000-4000-8000-000000000a81', 'd0000000-0000-4000-8000-000000000a81', 'c0000000-0000-4000-8000-000000000a82', public.today_pkt());
 insert into public.supplier_quote_lines (id, inquiry_id, rfq_item_id, unit_price, currency, lead_time) values
   ('f1000000-0000-4000-8000-000000000a81', 'f0000000-0000-4000-8000-000000000a81', 'e0000000-0000-4000-8000-000000000a81', 3000, 'PKR', '2 weeks');
-insert into public.orders (id, company_id, owner_id) values
-  ('a1000000-0000-4000-8000-000000000a81', 'c0000000-0000-4000-8000-000000000a81', 'a0000000-0000-4000-8000-000000000002');
+-- Created yesterday: 0065's money-fields guard lets an engineer write prices only in the transaction that creates the order
+-- (convert_rfq_to_order, which 0081 no longer lets an engineer run), and pgTAP runs everything in one transaction.
+insert into public.orders (id, company_id, owner_id, created_at) values
+  ('a1000000-0000-4000-8000-000000000a81', 'c0000000-0000-4000-8000-000000000a81', 'a0000000-0000-4000-8000-000000000002', now() - interval '1 day');
 insert into public.supplier_orders (id, order_id, supplier_id, currency) values
   ('a2000000-0000-4000-8000-000000000a81', 'a1000000-0000-4000-8000-000000000a81', 'c0000000-0000-4000-8000-000000000a82', 'PKR');
 insert into public.order_items (id, order_id, position, description, qty, unit, unit_price_net, gst_rate, supplier_order_id, supplier_unit_price) values
@@ -93,6 +95,9 @@ insert into price values
 select is((select coalesce(array_agg(obj || '.' || col order by obj, col), '{}') from price
            where has_column_privilege('qtech_engineer', format('public.%I', obj), col, 'select')),
           '{}'::text[], 'qtech_engineer holds SELECT on none of the price, total and rate columns');
+select is((select coalesce(array_agg(obj || '.' || col || ' ' || p order by obj, col, p), '{}') from price cross join unnest(array['insert', 'update']) p
+           where has_column_privilege('qtech_engineer', format('public.%I', obj), col, p)),
+          '{}'::text[], 'nor INSERT or UPDATE on any of them: an engineer never sets or changes a price');
 select is((select coalesce(array_agg(obj || '.' || col order by obj, col), '{}') from price
            where not has_column_privilege('authenticated', format('public.%I', obj), col, 'select')),
           '{}'::text[], 'authenticated (admin and sales) still holds SELECT on all of them');
@@ -111,14 +116,17 @@ select is((select coalesce(array_agg(x order by x), '{}') from (
              where c.relnamespace = 'public'::regnamespace and c.relkind in ('r', 'p', 'v', 'm')
                and has_table_privilege('authenticated', c.oid, p.priv)
                and not has_table_privilege('qtech_engineer', c.oid, p.priv)
-               and not (p.priv = 'SELECT' and (c.relname in (select obj from price) or c.relname = 'v_fx_latest'))) u),
+               and not (p.priv in ('SELECT', 'INSERT', 'UPDATE') and c.relname in (select obj from price))
+               and not (p.priv = 'SELECT' and c.relname = 'v_fx_latest')) u),
           '{}'::text[], 'coverage: qtech_engineer holds every table privilege authenticated holds (prices excepted)');
 select is((select coalesce(array_agg(format('%s.%s', c.relname, a.attname) order by c.relname, a.attname), '{}')
            from pg_class c join pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped
            where c.relname in (select obj from price) and c.relnamespace = 'public'::regnamespace
              and not exists (select 1 from price p where p.obj = c.relname and p.col = a.attname)
-             and not has_column_privilege('qtech_engineer', c.oid, a.attnum, 'select')),
-          '{}'::text[], 'coverage: qtech_engineer reads every other column of the price tables');
+             and (not has_column_privilege('qtech_engineer', c.oid, a.attnum, 'select')
+                  or (has_table_privilege('authenticated', c.oid, 'insert') and not has_column_privilege('qtech_engineer', c.oid, a.attnum, 'insert'))
+                  or (has_table_privilege('authenticated', c.oid, 'update') and not has_column_privilege('qtech_engineer', c.oid, a.attnum, 'update')))),
+          '{}'::text[], 'coverage: qtech_engineer reads, adds and changes every other column of the price tables as authenticated does');
 select is((select coalesce(array_agg(p.oid::regprocedure::text order by 1), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace
              and has_function_privilege('authenticated', p.oid, 'execute')
@@ -201,6 +209,11 @@ select is(pg_temp.as_('engineer', $q$with u as (update public.orders set legacy_
   'E:42501', 'the legacy-column guard (0078) still refuses the engineer');
 select is(pg_temp.as_('engineer', $q$with u as (update public.order_items set unit_price_net = 1 where id = 'a3000000-0000-4000-8000-000000000a81' returning 1) select count(*)::text from u$q$),
   'E:42501', 'and the money-fields guard (0065, M-1) still refuses an engineer''s price change on an existing order');
+select is(pg_temp.as_('engineer', $q$with i as (insert into public.order_items (order_id, position, description, qty, unit_price_net, gst_rate)
+            values ('a1000000-0000-4000-8000-000000000a81', 5, '0081 engineer line', 1, 999, 18) returning 1) select count(*)::text from i$q$),
+  'E:42501', 'nor can an engineer add a priced line to an order');
+select is(pg_temp.as_('engineer', $q$with u as (update public.rfq_items set quoted_unit_price_net = 1 where id = 'e0000000-0000-4000-8000-000000000a81' returning 1) select count(*)::text from u$q$),
+  'E:42501', 'nor set a quoted price on an RFQ item and read it back');
 
 -- ------------------------------------------------------------------ admin and sales: unchanged
 select is(pg_temp.as_('sales', $q$select quoted_unit_price_net::text from public.rfq_items where id = 'e0000000-0000-4000-8000-000000000a81'$q$),

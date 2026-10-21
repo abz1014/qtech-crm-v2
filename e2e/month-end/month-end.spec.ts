@@ -99,7 +99,8 @@ test.describe('month-end (M10)', () => {
     await openAs(page, 'admin', `/money/month-end?month=${OLDER.key}`)
     await expect(page.getByTestId('checks-summary')).toBeVisible()
     await startCounting(page)
-    await page.getByTestId('month-bank-link').click()
+    // the bank check's own row when it has items, else the link on the clear line: one place, never two (round 3)
+    await page.getByTestId('check-bank_unticked').getByRole('link').or(page.getByTestId('month-bank-link')).first().click()
     await expect(page).toHaveURL(new RegExp(`/money/month-end/bank\\?month=${OLDER.key}`))
     await expect(page.getByRole('heading', { name: 'Match bank statement', level: 2 })).toBeVisible()
     expect(await mouse(page)).toBe(1)
@@ -114,12 +115,12 @@ test.describe('month-end (M10)', () => {
     await expect(page.getByRole('button', { name: 'About closing a month' })).toBeVisible()
     await startCounting(page)
     await page.getByTestId('month-reports-link').click()
-    await expect(page).toHaveURL(new RegExp(`/money/reports\\?month=${STMT.key}`))
-    await expect(page.getByRole('list', { name: 'Money reports' })).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(`/money/reports/pnl\\?month=${STMT.key}`))
+    await expect(page.getByRole('heading', { name: 'Profit and loss', level: 1 })).toBeVisible()
     expect(await mouse(page)).toBe(1)
   })
 
-  test('every report is one tap from Reports and one tap on Export CSV', async ({ page }) => {
+  test('every report is one pick in the Report select, and one tap on Export CSV', async ({ page }) => {
     test.setTimeout(120_000) // six reports, each opened, read and exported
     const { order } = await newOrder('Report Payer')
     await addPayment(order.id)
@@ -127,50 +128,40 @@ test.describe('month-end (M10)', () => {
     await addExpense({ category_id: SUPPLIER, amount_pkr: 11800, input_tax_pkr: 1800 })
     await addInvoice(order.id)
     const reports: { title: string; key: string; file: string; header: string; shows: RegExp }[] = [
-      { title: 'Profit and loss', key: 'pnl', file: `profit-and-loss-${STMT.key}.csv`, header: 'Section', shows: new RegExp(`Result for ${STMT.name}`) },
+      { title: 'Profit and loss', key: 'pnl', file: `profit-and-loss-${STMT.key}.csv`, header: 'Section', shows: new RegExp(`Profit for ${STMT.name}`) },
       { title: 'Expenses by category', key: 'categories', file: `expenses-by-category-${STMT.key}.csv`, header: 'Month', shows: /Overheads/ },
       { title: 'Overdue by age', key: 'aging', file: `overdue-by-age-${STMT.key}.csv`, header: 'As of', shows: /What customers owe, by how late/ },
       { title: 'We owe suppliers', key: 'owe', file: `we-owe-suppliers-${STMT.key}.csv`, header: 'As of', shows: /What we owe suppliers/ },
       { title: 'GST and FBR', key: 'gst', file: `gst-and-fbr-${STMT.key}.csv`, header: 'Invoice month', shows: /GST and FBR, by invoice month/ },
       { title: 'Sales by person', key: 'team', file: `sales-by-person-${STMT.key}.csv`, header: 'Month', shows: /Net cash credited to each person/ },
     ]
-    await openAs(page, 'admin', `/money/reports?month=${STMT.key}`) // one sign-in; then each report from the Reports list
+    await openAs(page, 'admin', `/money/reports?month=${STMT.key}`) // one sign-in; then each report from the Report select
     for (const r of reports) {
       await page.goto(`/money/reports?month=${STMT.key}`)
-      const line = page.getByTestId(`report-${r.key}`)
-      await expect(line.getByRole('button', { name: 'Export CSV' })).toBeEnabled()
-      await startCounting(page)
-      await line.getByRole('link', { name: r.title, exact: true }).click()
-      await expect(page.getByText(r.shows).first()).toBeVisible()
-      await expect(page.getByRole('heading', { name: r.title, level: 2 })).toBeVisible()
-      expect(await mouse(page), `${r.title}: one tap from Reports`).toBe(1)
+      await page.getByTestId('report-picker').selectOption(r.key)
       await expect(page).toHaveURL(new RegExp(`/money/reports/${r.key}\\?month=${STMT.key}`))
+      await expect(page.getByText(r.shows).first()).toBeVisible()
+      await expect(page.getByRole('heading', { name: r.title, level: 1 })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Export CSV' })).toBeEnabled()
       await page.waitForLoadState('networkidle')
+      await startCounting(page)
       const csv = await exportCsv(page)
-      expect(await mouse(page), `${r.title}: the report and its CSV are two taps in all`).toBe(2)
+      expect(await mouse(page), `${r.title}: its CSV is one tap`).toBe(1)
       expect(csv.name).toBe(r.file)
       expect(csv.text.split('\n')[0]).toContain(`"${r.header}"`)
     }
-    // and straight from the Reports list: one tap, the same file
-    await page.goto(`/money/reports?month=${STMT.key}`)
-    await page.waitForLoadState('networkidle')
-    await startCounting(page)
-    const csv = await exportCsv(page, page.getByTestId('report-pnl'))
-    expect(await mouse(page)).toBe(1)
-    expect(csv.name).toBe(`profit-and-loss-${STMT.key}.csv`)
   })
 
   test('the old month-end report addresses open the same report under Reports, month kept', async ({ page }) => {
     await openAs(page, 'admin', `/money/month-end/aging?month=${STMT.key}`)
     await expect(page).toHaveURL(new RegExp(`/money/reports/aging\\?month=${STMT.key}`))
-    await expect(page.getByRole('heading', { name: 'Overdue by age', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Overdue by age', level: 1 })).toBeVisible()
   })
 
   test('the P&L shows the payment with no net split apart, and its CSV carries Gross, GST and Net columns', async ({ page }) => {
     await openAs(page, 'admin', `/money/reports/pnl?month=${STMT.key}`)
     await expect(page.getByText('less payments not yet split')).toBeVisible()
-    await expect(page.getByText('not revenue')).toBeVisible()
-    await expect(page.getByRole('region', { name: 'Not in P&L' })).toBeVisible()
+    await expect(page.getByText('GST, not ours')).toBeVisible()
     const csv = await exportCsv(page)
     expect(csv.text.split('\n')[0]).toBe('"Section","Line","Count","Gross","GST or input tax","Net"')
     expect(csv.text).toContain('Payments not yet split (excluded from net)')

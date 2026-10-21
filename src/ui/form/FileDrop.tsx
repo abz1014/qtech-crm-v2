@@ -113,8 +113,12 @@ export function FileDrop({
         <>
           <b className="font-medium text-fg">Drop files here</b>
           <span className="inline-flex flex-wrap items-center justify-center gap-1 text-fg-muted">
-            or paste with <Kbd>{isMac ? '⌘' : 'Ctrl'}</Kbd>
-            <Kbd>V</Kbd> · up to {formatBytes(maxBytes)} each
+            {/* A key hint means nothing on a touch screen (rubric "Getting around on a phone"): hidden on a coarse pointer. */}
+            <span className="inline-flex items-center gap-1 [@media(pointer:coarse)]:hidden">
+              or paste with <Kbd>{isMac ? '⌘' : 'Ctrl'}</Kbd>
+              <Kbd>V</Kbd> ·
+            </span>{' '}
+            up to {formatBytes(maxBytes)} each
           </span>
           <Button size="sm" onClick={() => input.current?.click()}>
             Choose files
