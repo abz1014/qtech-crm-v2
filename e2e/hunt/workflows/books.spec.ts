@@ -1173,7 +1173,6 @@ test('HW-17: after Reset password the open session keeps working (the dialog pro
     // "Signed out on every device": the session made before the reset must not read data any more. (Run 2: its refresh token IS
     // refused, but the access token it already holds keeps working until it expires, up to an hour.)
     const read = await fetch(`${API_URL}/rest/v1/companies?select=id&limit=1`, { headers: { apikey: ANON_KEY, authorization: `Bearer ${accessToken}` } })
-    test.fail(true, 'HW-17: admin-users reset_password changes the password but the open session keeps reading data on its access token until it expires (the dialog says they are signed out on every device)')
     expect(read.status, 'the pre-reset session is refused').toBeGreaterThanOrEqual(400)
   } finally {
     await ctx.close()

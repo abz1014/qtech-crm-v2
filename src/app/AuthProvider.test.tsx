@@ -18,6 +18,8 @@ const h = vi.hoisted(() => ({
   failLookup: false,
   /** The lookup is refused as an invalid token (PostgREST PGRST301). */
   refuse: false,
+  /** What the refusal says: PGRST301 (bad token), or the 0087 pre-request check (PT401) for an ended session or a deactivated account. */
+  refusal: { message: 'JWT expired', details: '', hint: '', code: 'PGRST301' },
   start: vi.fn(),
   forgetSaved: vi.fn(),
   forgetCaptures: vi.fn(),
@@ -27,7 +29,6 @@ const h = vi.hoisted(() => ({
 
 vi.mock('@/lib/supabase', () => {
   const failed = { data: null, error: { message: 'TypeError: Failed to fetch', details: '', hint: '', code: '' } }
-  const refused = { data: null, error: { message: 'JWT expired', details: '', hint: '', code: 'PGRST301' } }
   const client = {
     auth: {
       onAuthStateChange: (cb: AuthCb) => {
@@ -46,13 +47,13 @@ vi.mock('@/lib/supabase', () => {
     from: () => ({
       select: () => ({
         eq: () => ({
-          maybeSingle: () => Promise.resolve(h.refuse ? refused : h.failLookup ? failed : { data: h.name ? { id: 'u1', name: h.name } : null, error: null }),
+          maybeSingle: () => Promise.resolve(h.refuse ? { data: null, error: h.refusal } : h.failLookup ? failed : { data: h.name ? { id: 'u1', name: h.name } : null, error: null }),
         }),
       }),
     }),
-    rpc: () => Promise.resolve(h.refuse ? refused : h.failLookup ? failed : { data: h.role, error: null }),
+    rpc: () => Promise.resolve(h.refuse ? { data: null, error: h.refusal } : h.failLookup ? failed : { data: h.role, error: null }),
   }
-  return { onApiActivity: () => () => {}, getSupabase: () => client }
+  return { onApiActivity: () => () => {}, onSessionRefused: () => () => {}, getSupabase: () => client }
 })
 
 vi.mock('@/lib/storedSession', async importOriginal => ({
@@ -115,6 +116,7 @@ beforeEach(() => {
   h.initial = 'user'
   h.failLookup = false
   h.refuse = false
+  h.refusal = { message: 'JWT expired', details: '', hint: '', code: 'PGRST301' }
   h.stored = 'u1'
   h.start.mockClear()
   h.forgetSaved.mockClear()
@@ -287,5 +289,23 @@ describe('nothing is kept for a person the server no longer accepts (owner secur
     await waitFor(() => expect(h.signOut).toHaveBeenCalled())
     expect(h.forgetCaptures).toHaveBeenCalled()
     expect(h.forgetSaved).toHaveBeenCalled()
+  })
+
+  it('HW-17: a session ended elsewhere (Reset password; PT401 from the pre-request check): signed out and wiped', async () => {
+    rememberUser({ id: 'u1', name: 'Ayesha', role: 'sales' })
+    h.refuse = true
+    h.refusal = { message: 'Your session has ended. Sign in again.', details: 'session_ended', hint: '', code: 'PT401' }
+    mount()
+    expect(await screen.findByText('signed-out::none')).toBeInTheDocument()
+    await waitFor(() => expect(h.signOut).toHaveBeenCalled())
+    expect(h.forgetCaptures).toHaveBeenCalled()
+  })
+
+  it('HW-45: the pre-request check refusing a deactivated account signs out with the reason', async () => {
+    h.refuse = true
+    h.refusal = { message: 'This account has been deactivated.', details: 'account_deactivated', hint: '', code: 'PT401' }
+    mount()
+    expect(await screen.findByText('signed-out::deactivated')).toBeInTheDocument()
+    await waitFor(() => expect(h.signOut).toHaveBeenCalled())
   })
 })
