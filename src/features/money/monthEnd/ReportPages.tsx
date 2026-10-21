@@ -1,12 +1,11 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Lock, Receipt, Wallet } from 'lucide-react'
+import { Receipt, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
 import { SegmentedControl } from '@/ui/SegmentedControl'
-import { StatusText } from '@/ui/StatusText'
 import { SumBar } from '@/ui/SumBar'
 import { Tag } from '@/ui/Tag'
 import { DataTable, type Column } from '@/ui/DataTable'
@@ -15,15 +14,16 @@ import { InfoTip } from '@/ui/InfoTip'
 import { formatPaisa, paisaToFixed, sumPaisa, toPaisa, type Amount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
 import { monthKeyLabel } from '@/features/money/expenses/model'
-import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
+import { ReportsFrame } from '@/features/reports/ReportsFrame'
 import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
-import { MONTH_REPORT_TITLE, type MonthReportKey } from '@/features/money/monthEnd/reportList'
+import { type MonthReportKey } from '@/features/money/monthEnd/reportList'
 import { useMonthEnd, type MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
+import { Banner } from '@/ui/Banner'
 import {
-  AsOfField,
+  AsOfControl,
   ClockTag,
-  ExportCsvButton,
   Panel,
+  TwoProfitsTip,
   ReportError,
   ReportLoading,
 } from '@/features/money/monthEnd/ReportParts'
@@ -50,8 +50,10 @@ import {
   monthName,
   negate,
   payablesCsv,
+  payableStateWord,
   pnlCsv,
   teamCsv,
+  unconvertedByCurrency,
   type AgingRow,
   type CategoryLine,
   type GstMonthRow,
@@ -68,23 +70,41 @@ import {
  * without the old strip of report tabs. Every figure comes from the database views of migration 0028; nothing is recomputed
  * here beyond adding what is drawn.
  */
-function ReportPage({ report, children }: { report: MonthReportKey; children: (ctx: MonthEndCtx) => ReactNode }) {
+type SetCsv = (make: (() => void) | null) => void
+
+/**
+ * One report in Money > Reports (round 3: one report at a time, the report select and the month pager on top, Export CSV the
+ * page's one green button). The body hands its CSV up with `useCsv` once its figures are in.
+ */
+function ReportPage({ report, children }: { report: MonthReportKey; children: (ctx: MonthEndCtx, setCsv: SetCsv) => ReactNode }) {
   const ctx = useMonthEnd()
+  const [csv, setCsvState] = useState<{ run: () => void } | null>(null)
+  const setCsv = useCallback<SetCsv>(make => setCsvState(make ? { run: make } : null), [])
   return (
-    <MoneyFrame active="reports">
-      <MoneySubHeader
-        back={{ to: `/money/reports${ctx.search}`, label: 'Reports' }}
-        title={MONTH_REPORT_TITLE[report]}
-        meta={
-          <span className="flex flex-wrap items-center gap-3">
-            <MonthPager month={ctx.month} thisMonth={ctx.thisMonth} go={ctx.go} />
-            {ctx.state ? <MonthStateChip closed={ctx.state.kind === 'closed'} /> : null}
-          </span>
-        }
-      />
-      {children(ctx)}
-    </MoneyFrame>
+    <ReportsFrame
+      report={report}
+      csv={csv ? csv.run : null}
+      period={
+        <span className="flex flex-wrap items-center gap-3">
+          <MonthPager month={ctx.month} thisMonth={ctx.thisMonth} go={ctx.go} />
+          {ctx.state ? <MonthStateChip closed={ctx.state.kind === 'closed'} /> : null}
+        </span>
+      }
+    >
+      {children(ctx, setCsv)}
+    </ReportsFrame>
   )
+}
+
+/** Hands a report's CSV to the frame's Export CSV while the figures `key` stand; null while they load. */
+function useCsv(setCsv: SetCsv, key: unknown, make: (() => void) | null) {
+  const ref = useRef(make)
+  ref.current = make
+  const ready = make !== null
+  useEffect(() => {
+    setCsv(ready ? () => ref.current?.() : null)
+    return () => setCsv(null)
+  }, [setCsv, key, ready])
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
@@ -160,14 +180,15 @@ function Line({
 export function PnlPage() {
   return (
     <ReportPage report="pnl">
-      {ctx => <PnlBody ctx={ctx} />}
+      {(ctx, setCsv) => <PnlBody ctx={ctx} setCsv={setCsv} />}
     </ReportPage>
   )
 }
 
-function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
+function PnlBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   const q = usePnlReport(ctx.month)
   const v = q.view
+  useCsv(setCsv, v, v ? () => downloadReport(pnlCsv(v), csvFile('profit-and-loss', ctx.month)) : null)
   if (q.isError) return <ReportError title="The profit and loss did not load" onRetry={q.refetch} />
   if (q.isPending || !v) return <ReportLoading label="Loading the profit and loss" />
   if (isEmptyMonth(v)) return <Empty ctx={ctx} what="No payment was received and no expense was paid." />
@@ -177,15 +198,15 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
   const base = Math.max(Number(toPaisa(v.netIn)), Number(spent), 1)
   const w = (x: bigint) => `${Math.min(100, Math.max(0, (Number(x) / base) * 100))}%`
   const resultPositive = toPaisa(v.result) > 0n
+  const drawings = toPaisa(v.notInPnl.total.net) !== 0n || v.notInPnl.lines.length > 0 || toPaisa(v.adjustNonPnl) !== 0n
   return (
     <>
       <SumBar
         label="Profit and loss"
         items={[
           {
-            label: 'Net in',
+            label: 'Received after GST',
             amount: v.netIn,
-            
             sub: (
               <>
                 <Num>{split}</Num> {split === 1 ? 'payment' : 'payments'}
@@ -193,30 +214,21 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
               </>
             ),
           },
-          { label: 'GST in the payments', amount: v.gstIn,  sub: 'Shown here, never counted as revenue' },
-          { label: 'Result', amount: v.result,  sub: 'Net in less order costs and overheads' },
-          {
-            label: 'After drawings',
-            amount: v.afterDrawings,
-            
-            sub: <>Result less {rupees(v.notInPnl.total.net)} not in the P&amp;L</>,
-          },
+          { label: 'Profit', amount: v.result, sub: 'On money received, after costs' },
+          ...(drawings ? [{ label: 'After drawings', amount: v.afterDrawings, sub: <>Profit less {rupees(v.notInPnl.total.net)} drawn or repaid</> }] : []),
         ]}
       />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
         <div className="grid gap-6">
           <Panel
-            title="Profit and loss"
+            title="Profit on money received"
             meta={
               <>
                 <ClockTag>By payment date</ClockTag>
-                <InfoTip label="About the payment date">
-                  This counts money on the day it moved. It will not match Invoices &amp; GST, which counts invoices on their date.
-                </InfoTip>
+                <TwoProfitsTip />
                 {v.frozenAt ? <span className="text-xs text-fg-muted" data-testid="pnl-frozen">Frozen when the month was closed</span> : null}
               </>
             }
-            actions={<ExportCsvButton onClick={() => downloadReport(pnlCsv(v), csvFile('profit-and-loss', ctx.month))} />}
           >
             <div role="table" aria-label="Profit and loss">
               <div role="row" className="hidden min-h-[36px] grid-cols-[minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,auto)] items-center gap-x-4 border-b bg-sunken px-5 text-xs font-medium text-fg-muted md:grid">
@@ -228,7 +240,7 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
               </div>
               <Line tone="group" label="Money in" />
               <Line label="Payments received, gross" basis={<><Num>{v.payments.count}</Num> {v.payments.count === 1 ? 'payment' : 'payments'}</>} amount={v.grossReceived} />
-              <Line tone="sub" label="less GST inside the payments" tag="not revenue" basis="Shared by invoice" amount={negate(v.gstIn)} />
+              <Line tone="sub" label="less GST inside the payments" tag="GST, not ours" basis="Shared by invoice" amount={negate(v.gstIn)} />
               {v.payments.unresolved.length ? (
                 <Line
                   tone="sub"
@@ -243,7 +255,7 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
                   amount={negate(v.unresolvedGross)}
                 />
               ) : null}
-              <Line tone="total" label="Net in" amount={v.netIn} />
+              <Line tone="total" label="Received, after GST" amount={v.netIn} />
               <Line tone="group" label="Money out, counted in the P&L" />
               <Line
                 label="Order costs"
@@ -259,18 +271,18 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
               {toPaisa(v.adjustResult) !== 0n ? (
                 <Line tone="sub" label="Changes to closed months" tag="counted this month" basis="Found after those months were closed" amount={v.adjustResult} />
               ) : null}
-              <Line tone="result" label={`Result for ${name}`} amount={v.result} />
+              <Line tone="result" label={`Profit for ${name}`} amount={v.result} />
             </div>
           </Panel>
 
+          {/* Shown only when something was drawn or repaid: an empty panel every month was noise. */}
+          {drawings ? (
           <section aria-label="Not in P&L" className="overflow-hidden rounded border border-dashed border-line-input bg-canvas">
             <header className="flex flex-wrap items-center gap-3 border-b border-dashed border-line-input px-5 py-3">
-              <h4 className="text-sm font-semibold">Not in P&amp;L</h4>
-              <span className="text-xs text-fg-muted">Owner drawings and loan repayment are money out, but not a cost of doing business</span>
+              <h4 className="text-base font-semibold">Drawings and loan repayment</h4>
+              <InfoTip label="About drawings">Owner drawings and loan repayment are money out, but not a cost of doing business, so they are not in the profit.</InfoTip>
             </header>
-            {v.notInPnl.lines.length === 0 ? (
-              <p className="px-5 py-4 text-sm text-fg-muted">Nothing was drawn or repaid in {name}.</p>
-            ) : (
+            {v.notInPnl.lines.length === 0 ? null : (
               <div role="table" aria-label="Not in P&L">
                 {v.notInPnl.lines.map(l => (
                   <Line key={l.categoryId} label={l.category} basis={<><Num>{l.count}</Num> {l.count === 1 ? 'expense' : 'expenses'}, {l.paidVia}</>} amount={negate(l.net)} />
@@ -278,25 +290,26 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
                 {toPaisa(v.adjustNonPnl) !== 0n ? (
                   <Line tone="sub" label="Changes to closed months" tag="counted this month" amount={negate(v.adjustNonPnl)} />
                 ) : null}
-                <Line tone="total" label="Not in P&L, total" basis={<><Num>{v.notInPnl.total.count}</Num> {v.notInPnl.total.count === 1 ? 'expense' : 'expenses'}</>} amount={negate(v.notInPnl.total.net)} />
+                <Line tone="total" label="Drawn or repaid, total" basis={<><Num>{v.notInPnl.total.count}</Num> {v.notInPnl.total.count === 1 ? 'expense' : 'expenses'}</>} amount={negate(v.notInPnl.total.net)} />
               </div>
             )}
             <div className="flex items-baseline justify-between gap-4 rounded-b border-t bg-selected px-5 py-4">
               <div className="grid">
                 <span className="text-base font-semibold">After drawings</span>
                 <span className="text-xs text-fg-muted">
-                  Result <Num>{rupees(v.result)}</Num> less <Num>{rupees(v.notInPnl.total.net)}</Num>
+                  Profit <Num>{rupees(v.result)}</Num> less <Num>{rupees(v.notInPnl.total.net)}</Num>
                 </span>
               </div>
               <Money value={v.afterDrawings} size="xl" paisa="never" strong data-testid="after-drawings" />
             </div>
           </section>
+          ) : null}
         </div>
 
         <div className="grid gap-6">
-          <Panel title="Where the net in went" meta={<span className="num text-xs text-fg-muted">PKR {rupees(v.netIn)}</span>}>
+          <Panel title="Where the money went" meta={<span className="num text-sm text-fg-2">PKR {rupees(v.netIn)} received</span>}>
             <div className="grid gap-3 px-5 py-4">
-              <div role="img" aria-label="Order costs, overheads and result against net in" className="flex h-4 overflow-hidden rounded border bg-surface">
+              <div role="img" aria-label="Order costs, overheads and profit against money received" className="flex h-4 overflow-hidden rounded border bg-surface">
                 <i className="block bg-fg" style={{ width: w(toPaisa(v.orderCosts.net)) }} />
                 <i className="block bg-fg-muted" style={{ width: w(toPaisa(v.overheads.net)) }} />
                 {resultPositive ? <i className="block flex-1 bg-surface" /> : null}
@@ -304,19 +317,19 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
               <ul className="grid gap-2 text-sm">
                 <li className="flex items-center gap-2">
                   <i className="size-[10px] rounded-[2px] bg-fg" />
-                  Order costs <span className="text-xs text-fg-muted"><Num>{v.orderCosts.count}</Num> expenses</span>
+                  Order costs <span className="text-xs text-fg-muted">{plural(v.orderCosts.count, 'expense')}</span>
                   <span className="flex-1" />
                   <Money value={v.orderCosts.net} prefix={false} paisa="never" plainNegative />
                 </li>
                 <li className="flex items-center gap-2">
                   <i className="size-[10px] rounded-[2px] bg-fg-muted" />
-                  Overheads <span className="text-xs text-fg-muted"><Num>{v.overheads.count}</Num> expenses</span>
+                  Overheads <span className="text-xs text-fg-muted">{plural(v.overheads.count, 'expense')}</span>
                   <span className="flex-1" />
                   <Money value={v.overheads.net} prefix={false} paisa="never" plainNegative />
                 </li>
                 <li className="flex items-center gap-2">
                   <i className="size-[10px] rounded-[2px] border border-line-strong bg-surface" />
-                  Result
+                  Profit
                   <span className="flex-1" />
                   <Money value={v.result} prefix={false} paisa="never" plainNegative />
                 </li>
@@ -324,13 +337,13 @@ function PnlBody({ ctx }: { ctx: MonthEndCtx }) {
             </div>
           </Panel>
 
-          <Panel title="Cash lines" meta={<span className="text-xs text-fg-muted">What actually left</span>}>
+          <Panel title="Paid out this month">
             <dl className="text-table">
               {[
-                ['All expenses paid, ' + v.cash.allPaidCount, v.cash.allPaid],
+                [`All expenses paid, ${plural(v.cash.allPaidCount, 'expense')}`, v.cash.allPaid],
                 ['of which input tax', v.cash.inputTax],
-                ['paid in cash, ' + v.cash.cashCount, v.cash.cashAmount],
-                ['paid by bank, ' + v.cash.bankCount, v.cash.bankAmount],
+                [`paid in cash, ${v.cash.cashCount}`, v.cash.cashAmount],
+                [`paid by bank, ${v.cash.bankCount}`, v.cash.bankAmount],
               ].map(([k, amt]) => (
                 <div key={k} className="flex min-h-[40px] items-center justify-between gap-4 border-t px-5 first:border-t-0">
                   <dt className="text-fg-2">{k}</dt>
@@ -354,16 +367,17 @@ const VIA_LABEL: Record<ViaFilter, string> = { all: 'All paid via', bank: 'Bank'
 export function CategoriesPage() {
   return (
     <ReportPage report="categories">
-      {ctx => <CategoriesBody ctx={ctx} />}
+      {(ctx, setCsv) => <CategoriesBody ctx={ctx} setCsv={setCsv} />}
     </ReportPage>
   )
 }
 
-function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
+function CategoriesBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   const q = useCategoryReport(ctx.month)
   const notes = useCategoryNotes(ctx.month)
   const [via, setVia] = useState<ViaFilter>('all')
   const v = q.view
+  useCsv(setCsv, `${via}`, v ? () => downloadReport(categoriesCsv(v, ctx.month, via), csvFile('expenses-by-category', ctx.month)) : null)
   const lines = useMemo(() => (v ? v.groups.flatMap(g => g.lines).filter(l => via === 'all' || l.paidVia === via) : []), [v, via])
   const columns = useMemo<Column<CategoryLine>[]>(
     () => [
@@ -472,9 +486,20 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
               onValueChange={x => setVia(x as ViaFilter)}
               options={(['all', 'bank', 'cash'] as const).map(k => ({ value: k, label: VIA_LABEL[k] }))}
             />
-            <ExportCsvButton onClick={() => downloadReport(categoriesCsv(v, ctx.month, via), csvFile('expenses-by-category', ctx.month))} />
           </div>
         }
+        mobileRow={l => (
+          <span className="grid gap-1">
+            <span className="flex items-baseline justify-between gap-3">
+              <span className="font-medium">{l.category}</span>
+              <Money value={l.net} prefix={false} paisa="never" />
+            </span>
+            <span className="text-sm text-fg-2">
+              {plural(l.count, 'expense')} · {VIA_LABEL[l.paidVia]}
+              {toPaisa(l.inputTax) > 0n ? <> · input tax <Num>{rupees(l.inputTax)}</Num></> : null}
+            </span>
+          </span>
+        )}
         empty={<EmptyState title="No expenses paid this way">Choose another way of paying to see the rest.</EmptyState>}
       />
     </>
@@ -486,15 +511,16 @@ function CategoriesBody({ ctx }: { ctx: MonthEndCtx }) {
 export function AgingPage() {
   return (
     <ReportPage report="aging">
-      {ctx => <AgingBody ctx={ctx} />}
+      {(ctx, setCsv) => <AgingBody ctx={ctx} setCsv={setCsv} />}
     </ReportPage>
   )
 }
 
-function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
+function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   const { asOf, chosen, setAsOf } = useAsOf(ctx.month, ctx.today)
   const q = useAgingReport(asOf)
   const v = q.view
+  useCsv(setCsv, v, v ? () => downloadReport(agingCsv(v), csvFile('overdue-by-age', ctx.month)) : null)
   const columns = useMemo<Column<AgingRow>[]>(
     () => [
       {
@@ -563,21 +589,30 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
           toolbar={
             <div className="flex flex-wrap items-center gap-3">
               <h3 className="text-base font-semibold">What customers owe, by how late</h3>
-              <ClockTag>As of {asOfLabel}</ClockTag>
               <InfoTip label="About overdue by age">
-                Payments are applied first in, first out to the oldest invoice of each order. Invoices dated after {asOfLabel} are left out.
+                As of {asOfLabel}. Payments are applied first in, first out to the oldest invoice of each order. Invoices dated after{' '}
+                {asOfLabel} are left out.
               </InfoTip>
               <span className="flex-1" />
-              <AsOfField value={asOf} onChange={d => setAsOf(d)} />
-              {chosen ? (
-                <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => setAsOf(null)}>
-                  Back to month end
-                </button>
-              ) : null}
-              <ExportCsvButton onClick={() => downloadReport(agingCsv(v), csvFile('overdue-by-age', ctx.month))} />
+              <AsOfControl asOf={asOf} chosen={chosen} onChange={setAsOf} />
             </div>
           }
           empty={<EmptyState mood="goal" title="Nobody owes an invoice">Every invoice dated up to {asOfLabel} is paid.</EmptyState>}
+          mobileRow={r => (
+            <span className="grid gap-1">
+              <span className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{r.customer}</span>
+                <Money value={r.remaining} prefix={false} paisa="never" strong />
+              </span>
+              <span className="text-sm text-fg-2">
+                <Num>{r.invoiceNumber}</Num>
+                {r.orderRef ? <> · <Num>{r.orderRef}</Num></> : null} ·{' '}
+                <span className={cn(r.bucket === '61-90' && 'text-tone-warning-fg', r.bucket === '90+' && 'font-medium text-tone-danger-fg')}>
+                  <Num>{r.ageDays}</Num> days old
+                </span>
+              </span>
+            </span>
+          )}
         />
         {v.advances.length ? (
           <ul aria-label="Advances held" className="rounded-b border border-t-0 border-dashed border-line-input bg-canvas">
@@ -587,7 +622,7 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
                 <span className="grid">
                   <span>Advance held, not invoiced yet</span>
                   <span className="text-xs text-fg-muted">
-                    {a.orderRef ? <Num>{a.orderRef}</Num> : null} · {a.customer}. Held apart, never shown as negative aging.
+                    {a.orderRef ? <Num>{a.orderRef}</Num> : null} · {a.customer}
                   </span>
                 </span>
                 <Money value={a.held} paisa="never" />
@@ -608,15 +643,38 @@ function AgingBody({ ctx }: { ctx: MonthEndCtx }) {
 export function OwePage() {
   return (
     <ReportPage report="owe">
-      {ctx => <OweBody ctx={ctx} />}
+      {(ctx, setCsv) => <OweBody ctx={ctx} setCsv={setCsv} />}
     </ReportPage>
   )
 }
 
-function OweBody({ ctx }: { ctx: MonthEndCtx }) {
+/** "USD 2,640.00": an amount in its own currency. */
+const inCurrency = (currency: string, v: Amount, paisa: 'always' | 'never' = 'never') => `${currency} ${formatPaisa(toPaisa(v), paisa)}`
+const rateTitle = (r: PayableRow) => (r.rate !== null && r.currency !== 'PKR' ? `At ${Number(r.rate).toFixed(2)} PKR per ${r.currency}` : undefined)
+
+/** What is owed on one supplier order, in words a person can act on: PKR when converted, its own currency when unpaid, else why not. */
+function OwedCell({ r }: { r: PayableRow }) {
+  if (r.owedPkr !== null)
+    return (
+      <span title={rateTitle(r)}>
+        <Money value={r.owedPkr} prefix={false} paisa="never" strong />
+      </span>
+    )
+  if (r.state === 'no_rate' && r.committed !== null)
+    return toPaisa(r.paidPkr) === 0n ? <span className="num font-medium">{inCurrency(r.currency, r.committed)}</span> : <span className="text-fg-2">Needs a rate</span>
+  return <span className="text-fg-muted">{'—'}</span>
+}
+
+/**
+ * We owe suppliers (round 3, was the worst Money screen): five columns (supplier and order, committed in its own currency, paid,
+ * owed, state); a missing exchange rate is ONE banner, never "PKR 0" in the headline and never the same sentence on every
+ * row; what cannot be converted is shown in its own currency. Phone: one card per supplier order.
+ */
+function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   const { asOf, chosen, setAsOf } = useAsOf(ctx.month, ctx.today)
   const q = useOweReport(asOf)
   const v = q.view
+  useCsv(setCsv, v, v ? () => downloadReport(payablesCsv(v), csvFile('we-owe-suppliers', ctx.month)) : null)
   const columns = useMemo<Column<PayableRow>[]>(
     () => [
       {
@@ -626,7 +684,7 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
         cell: r => (
           <span className="grid gap-px">
             <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{r.supplier}</span>
-            <span className="min-w-0 num text-xs text-fg-muted [overflow-wrap:anywhere]">
+            <span className="min-w-0 num text-xs text-fg-2 [overflow-wrap:anywhere]">
               {r.orderId && r.orderRef ? (
                 <Link to={`/orders/${r.orderId}`} className="rounded hover:underline">
                   {r.orderRef}
@@ -639,59 +697,73 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
           </span>
         ),
       },
-      { id: 'currency', header: 'Currency', value: r => r.currency, cell: r => <Tag>{r.currency}</Tag> },
-      { id: 'committed', header: 'Committed', kind: 'money', value: r => r.committed, paisa: 'always', cell: r => (r.committed === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.committed} prefix={false} paisa="always" />) },
-      { id: 'rate', header: 'Rate', kind: 'num', value: r => (r.rate === null ? null : Number(r.rate)), cell: r => (r.rate === null ? <span className="text-fg-muted">no rate</span> : <span className={cn('num', r.currency === 'PKR' && 'text-fg-muted')}>{Number(r.rate).toFixed(2)}</span>) },
-      { id: 'committedPkr', header: 'Committed, PKR', kind: 'money', value: r => r.committedPkr, ...whole<PayableRow>(r => r.committedPkr), cell: r => (r.committedPkr === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.committedPkr} prefix={false} paisa="never" />) },
-      { id: 'paid', header: 'Paid, PKR', kind: 'money', value: r => r.paidPkr, ...whole<PayableRow>(r => r.paidPkr), cell: r => (toPaisa(r.paidPkr) === 0n ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.paidPkr} prefix={false} paisa="never" />) },
-      { id: 'owed', header: 'Owed, PKR (≈)', kind: 'money', value: r => r.owedPkr, ...whole<PayableRow>(r => r.owedPkr), cell: r => (r.owedPkr === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.owedPkr} prefix={false} paisa="never" strong />) },
+      {
+        id: 'committed',
+        header: 'Committed',
+        kind: 'money',
+        value: r => r.committed,
+        cell: r =>
+          r.committed === null ? (
+            <span className="text-fg-muted">{'—'}</span>
+          ) : (
+            <span className="num" title={rateTitle(r)}>
+              {inCurrency(r.currency, r.committed, 'always')}
+            </span>
+          ),
+      },
+      {
+        id: 'paid',
+        header: 'Paid, PKR',
+        kind: 'money',
+        value: r => r.paidPkr,
+        ...whole<PayableRow>(r => r.paidPkr),
+        cell: r => (toPaisa(r.paidPkr) === 0n ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.paidPkr} prefix={false} paisa="never" />),
+      },
+      { id: 'owed', header: 'Owed', kind: 'money', value: r => r.owedPkr, cell: r => <OwedCell r={r} /> },
       {
         id: 'state',
         header: 'State',
         sortable: false,
-        // Report text, not a chip (round 2, spec 1.5): the state word and its reason under it.
-        cell: r => (
-          <StatusText
-            dimension="payable"
-            value={r.flag === 'overpaid' && r.state === 'settled' ? 'paid-over' : r.state === 'no_rate' ? 'no-rate' : r.state}
-            label={r.state === 'unpriced' ? 'Supplier price missing' : undefined}
-            detail={
-              r.state === 'owing' ? (toPaisa(r.paidPkr) === 0n ? 'No payment yet' : 'Part paid') : r.state === 'settled' ? (r.flag === 'overpaid' ? 'Owed shown as 0' : 'Within 3% of paid, or paid') : r.state === 'unpriced' ? "The supplier's price is not on the items yet" : 'No rate in the 30 days before; add one on Exchange rates'
-            }
-          />
-        ),
-      },
-      {
-        id: 'pay',
-        header: 'Pay',
-        sortable: false,
-        // The same Pay {supplier} dialog as the order's supplier order menu: the order, the supplier order, the supplier and the
-        // amount owed are filled in (ExpensesPage reads ?add=1&order&leg&amount&note).
-        cell: r => {
-          const href = payHref(r, asOf)
-          return href ? (
-            <Link to={href} className="inline-flex items-center gap-1 rounded text-sm font-medium text-primary hover:underline" aria-label={`Pay ${r.supplier}${r.orderRef ? `, ${r.orderRef}` : ''}`}>
-              <Icon icon={Receipt} size="sm" />
-              Pay
-            </Link>
-          ) : null
-        },
+        cell: r => <PayState r={r} asOf={asOf} />,
       },
     ],
     [asOf],
   )
   if (q.isError) return <ReportError title="What we owe did not load" onRetry={q.refetch} />
   if (q.isPending || !v) return <ReportLoading label="Loading what we owe" />
+  const day = `${Number(asOf.slice(8))} ${monthName(asOf.slice(0, 7)).slice(0, 3)}`
   const asOfLabel = `${Number(asOf.slice(8))} ${monthName(asOf.slice(0, 7))} ${asOf.slice(0, 4)}`
+  const unconv = unconvertedByCurrency(v.rows)
+  const missing = unconv.map(u => u.currency)
+  const partPaid = unconv.reduce((n, u) => n + u.partPaid, 0)
+  const owedFigure = [...(toPaisa(v.owed) > 0n || !missing.length ? [`PKR ${rupees(v.owed)}`] : []), ...unconv.filter(u => toPaisa(u.owed) > 0n).map(u => inCurrency(u.currency, u.owed))]
+  const orderedFigure = [...(toPaisa(v.committed) > 0n || !missing.length ? [`PKR ${rupees(v.committed)}`] : []), ...unconv.map(u => inCurrency(u.currency, u.committed))]
+  const owedOrders = v.owedCount + unconv.reduce((n, u) => n + u.count, 0)
   return (
     <>
+      {missing.length ? (
+        <Banner
+          tone="warning"
+          title={`No exchange rate for ${day}, so ${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} shown in ${missing.length === 1 ? 'its' : 'their'} own currency`}
+          action={
+            <Link to="/settings/exchange-rates" className="inline-flex h-control items-center rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken max-md:h-touch">
+              Add {missing.join(', ')} rates
+            </Link>
+          }
+        >
+          {partPaid ? `${plural(partPaid, 'supplier order is', 'supplier orders are')} part paid in PKR: what is left on ${partPaid === 1 ? 'it' : 'them'} shows once a rate is added.` : null}
+        </Banner>
+      ) : null}
       <SumBar
         label="What we owe"
         items={[
-          { label: 'Owed, open supplier orders', amount: v.owed, sub: <><Num>{v.owedCount}</Num> supplier {v.owedCount === 1 ? 'order' : 'orders'}, about, at the rate on {Number(asOf.slice(8))} {monthName(asOf.slice(0, 7)).slice(0, 3)}</> },
-          { label: 'Committed, all supplier orders', amount: v.committed, sub: <><Num>{v.committedLegs}</Num> placed supplier {v.committedLegs === 1 ? 'order' : 'orders'} on live orders</> },
-          { label: 'Paid so far', amount: v.paid, sub: <><Num>{v.paidLegs}</Num> supplier {v.paidLegs === 1 ? 'order' : 'orders'} with a payment</> },
-          { label: 'Settled (≈)', count: v.settledCount, sub: 'Within 3% of paid, or paid over' },
+          missing.length
+            ? { label: 'Owed', figure: owedFigure.join(' · ') || '0', sub: plural(owedOrders, 'supplier order') }
+            : { label: 'Owed', amount: v.owed, sub: <>{plural(v.owedCount, 'supplier order')}, at the rate on {day}</> },
+          missing.length
+            ? { label: 'Total ordered', figure: orderedFigure.join(' · '), sub: plural(v.rows.length, 'supplier order') }
+            : { label: 'Total ordered', amount: v.committed, sub: plural(v.committedLegs, 'supplier order') },
+          { label: 'Paid so far', amount: v.paid, sub: <>{plural(v.paidLegs, 'supplier order')} with a payment</> },
         ]}
       />
       <DataTable
@@ -704,25 +776,50 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
         toolbar={
           <div className="flex flex-wrap items-center gap-3">
             <h3 className="text-base font-semibold">What we owe suppliers</h3>
-            <ClockTag>As of {asOfLabel}</ClockTag>
             <InfoTip label="About what we owe">
-              Owed is approximate: the committed amount at the rate on or before {asOfLabel}, less what was paid. Open supplier orders{' '}
-              <Num>{rupees(v.owed)}</Num> + settled (≈) <Num>{rupees(v.settledLeft)}</Num> − paid over <Num>{rupees(v.paidOver)}</Num> ={' '}
-              <Num>{rupees(toPaisa(v.committed) - toPaisa(v.paid))}</Num> committed less paid.
+              As of {asOfLabel}. Owed is approximate: the committed amount at the latest rate in the 30 days up to then, less what was
+              paid. A supplier order paid to within 3% counts as paid.
             </InfoTip>
             <span className="flex-1" />
-            <AsOfField value={asOf} onChange={d => setAsOf(d)} />
-            {chosen ? (
-              <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => setAsOf(null)}>
-                Back to month end
-              </button>
-            ) : null}
-            <ExportCsvButton onClick={() => downloadReport(payablesCsv(v), csvFile('we-owe-suppliers', ctx.month))} />
+            <AsOfControl asOf={asOf} chosen={chosen} onChange={setAsOf} />
           </div>
         }
         empty={<EmptyState mood="goal" title="Nothing is owed to suppliers">No placed supplier order has a price to pay on {asOfLabel}.</EmptyState>}
+        mobileRow={r => (
+          <span className="grid gap-1">
+            <span className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 font-medium [overflow-wrap:anywhere]">{r.supplier}</span>
+              <span className="shrink-0 text-sm font-medium">{payableStateWord(r)}</span>
+            </span>
+            <span className="num text-sm text-fg-2">
+              {r.orderRef ?? ''}
+              {r.leg ? ` · ${r.leg}` : ''}
+            </span>
+            <span className="text-sm text-fg-2">
+              {r.committed !== null ? <span className="num">{inCurrency(r.currency, r.committed)}</span> : 'No price yet'} ordered
+              {toPaisa(r.paidPkr) > 0n ? <> · <span className="num">PKR {rupees(r.paidPkr)}</span> paid</> : null}
+              {r.owedPkr !== null ? <> · owes <span className="num font-medium text-fg">PKR {rupees(r.owedPkr)}</span></> : null}
+            </span>
+          </span>
+        )}
       />
     </>
+  )
+}
+
+/** The state word, and Pay where something is owed (the same Pay {supplier} dialog as the order's supplier order menu). */
+function PayState({ r, asOf }: { r: PayableRow; asOf: string }) {
+  const href = payHref(r, asOf)
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span className={cn('text-sm', r.flag === 'overpaid' ? 'font-medium text-tone-warning-fg' : 'text-fg')}>{payableStateWord(r)}</span>
+      {href ? (
+        <Link to={href} className="inline-flex items-center gap-1 rounded text-sm font-medium text-primary hover:underline" aria-label={`Pay ${r.supplier}${r.orderRef ? `, ${r.orderRef}` : ''}`}>
+          <Icon icon={Receipt} size="sm" />
+          Pay
+        </Link>
+      ) : null}
+    </span>
   )
 }
 
@@ -731,14 +828,15 @@ function OweBody({ ctx }: { ctx: MonthEndCtx }) {
 export function GstFbrPage() {
   return (
     <ReportPage report="gst">
-      {ctx => <GstBody ctx={ctx} />}
+      {(ctx, setCsv) => <GstBody ctx={ctx} setCsv={setCsv} />}
     </ReportPage>
   )
 }
 
-function GstBody({ ctx }: { ctx: MonthEndCtx }) {
+function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   const q = useGstReport(ctx.month)
   const v = q.view
+  useCsv(setCsv, v, v ? () => downloadReport(gstCsv(v), csvFile('gst-and-fbr', ctx.month)) : null)
   const columns = useMemo<Column<GstMonthRow>[]>(
     () => [
       {
@@ -805,29 +903,30 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
               FBR is the tax office: the GST on every invoice is deposited with it, and a PSID is the payment slip number of one deposit.
               Sales see Invoices &amp; GST only, never input tax or this report.
             </InfoTip>
-            <span className="flex-1" />
-            {v.showInputTax ? (
-              <span className="inline-flex h-6 items-center gap-[6px] rounded bg-tone-ink-bg px-2 text-xs font-medium text-tone-ink-fg">
-                <Icon icon={Lock} size="chip" />
-                Input tax: admin only
-              </span>
-            ) : null}
-            <ExportCsvButton onClick={() => downloadReport(gstCsv(v), csvFile('gst-and-fbr', ctx.month))} />
           </div>
         }
         empty={<EmptyState title="No invoices yet">Invoices appear here by their date, with their PSID sets and deposits.</EmptyState>}
+        mobileRow={r => (
+          <span className="grid gap-1">
+            <span className="flex items-baseline justify-between gap-3">
+              <span className="font-medium">{monthKeyLabel(r.month)}</span>
+              <span className="num text-sm">GST {rupees(r.gst)}</span>
+            </span>
+            <span className="text-sm text-fg-2">
+              {plural(r.invoiceCount, 'invoice')} · <Num>{r.depositedCount}</Num> deposited
+              {toPaisa(r.toDeposit) > 0n ? <> · <Num>{rupees(r.toDeposit)}</Num> to deposit</> : null}
+            </span>
+          </span>
+        )}
       />
       {v.showInputTax ? (
         <Panel
           title="Output GST and input tax, side by side"
           meta={
-            <>
-              <span className="text-sm text-fg-muted">Never netted on this page</span>
-              <InfoTip label="About input tax">
-                Filing stays with the tax agent. Input tax is the part of a Supplier payment, Clearing or Freight amount that Q-Tech can claim; the
-                profit and loss and the margins use the amount without it.
-              </InfoTip>
-            </>
+            <InfoTip label="About input tax">
+              Never netted on this page; filing stays with the tax agent. Input tax is the part of a Supplier payment, Clearing or Freight
+              amount that Q-Tech can claim; the profit and loss and the margins use the amount without it.
+            </InfoTip>
           }
         >
           <div className="grid gap-4 px-5 py-4">
@@ -839,13 +938,7 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
                 </span>
               </div>
               <div className="grid gap-1 px-4 py-3">
-                <span className="flex items-center gap-2 text-xs text-fg-2">
-                  Input tax paid in {name}, for the tax agent
-                  <Tag>
-                    <Icon icon={Lock} size="chip" />
-                    Admin
-                  </Tag>
-                </span>
+                <span className="text-xs text-fg-2">Input tax paid in {name}, for the tax agent</span>
                 <span className="num text-base">{pkr(sel?.inputTax ?? 0)}</span>
               </div>
             </div>
@@ -861,14 +954,15 @@ function GstBody({ ctx }: { ctx: MonthEndCtx }) {
 export function TeamPage() {
   return (
     <ReportPage report="team">
-      {ctx => <TeamBody ctx={ctx} />}
+      {(ctx, setCsv) => <TeamBody ctx={ctx} setCsv={setCsv} />}
     </ReportPage>
   )
 }
 
-function TeamBody({ ctx }: { ctx: MonthEndCtx }) {
+function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   const q = useTeamReport(ctx.month, ctx.today)
   const v = q.view
+  useCsv(setCsv, v, v ? () => downloadReport(teamCsv(v, ctx.month), csvFile('sales-by-person', ctx.month)) : null)
   const columns = useMemo<Column<TeamRow>[]>(
     () => [
       {
@@ -938,14 +1032,24 @@ function TeamBody({ ctx }: { ctx: MonthEndCtx }) {
             <h3 className="text-base font-semibold">Net cash credited to each person</h3>
             <ClockTag>By payment date</ClockTag>
             <InfoTip label="About sales by person">
-              The total matches Net in on the Profit and loss report. The <Num>{rupees(v.unresolved)}</Num> not yet split into net and GST has no net,
-              so nobody is credited for it.
+              The total matches Received after GST on the Profit and loss report. The <Num>{rupees(v.unresolved)}</Num> not yet split into net
+              and GST has no net, so nobody is credited for it.
             </InfoTip>
-            <span className="flex-1" />
-            <ExportCsvButton onClick={() => downloadReport(teamCsv(v, ctx.month), csvFile('sales-by-person', ctx.month))} />
           </div>
         }
         empty={<EmptyState title="Nobody is credited">No payment counted towards a person in {monthName(ctx.month)}.</EmptyState>}
+        mobileRow={r => (
+          <span className="grid gap-1">
+            <span className="flex items-baseline justify-between gap-3">
+              <span className="font-medium">{r.name}</span>
+              {r.net === null ? <span className="text-sm text-fg-muted">{'—'}</span> : <Money value={r.net} prefix={false} paisa="never" strong />}
+            </span>
+            <span className="text-sm text-fg-2">
+              {plural(r.payments, 'payment')} · quarter <Num>{rupees(r.quarterNet ?? 0)}</Num>
+              {r.quarterTarget !== null ? <> of <Num>{rupees(r.quarterTarget)}</Num></> : ', no target'}
+            </span>
+          </span>
+        )}
       />
     </>
   )

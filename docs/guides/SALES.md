@@ -56,7 +56,7 @@ Press ? on a computer to see the keyboard shortcuts.
  - Open the order. In Invoicing tap "Create invoice" (or Money, "Invoices & GST", "Create invoice").
  - Check Invoice number (it continues the series), Invoice date, Net amount, GST.
  - Save. Then send the invoice to the customer.
- - Courier sent? In "Invoices & GST" tick the invoices, then "Sent by TCS today". The (i) explains TCS, FBR and PSID.
+ - Courier sent? In "Invoices & GST" tick the invoices, then "Sent to customer today". The (i) explains TCS, FBR and PSID.
 
 9. MONEY: WHO OWES US
  - Money opens on "Who owes us": what each order still owes. Overdue is in red.
