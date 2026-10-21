@@ -37,13 +37,13 @@ export const TARGETS = [
   {
     key: 'text14',
     label: 'Characters at 14 px or larger',
-    target: 'at least 90%',
-    source: 'readability.md; owner decision: 14 px is the smallest step',
+    target: 'at least 95%',
+    source: 'rubric-10 "Text size": at least 95% of visible text 14 px or larger',
     value: c => {
       const t = c.metrics.text
       return t.chars ? pct(t.from14to16 + t.atLeast16, t.chars) : null
     },
-    pass: v => v >= 90,
+    pass: v => v >= 95,
     worse: 'lower',
     format: v => `${Math.round(v)}%`,
   },
@@ -90,6 +90,61 @@ export const TARGETS = [
     target: '0',
     source: 'bigger text must not cut words off',
     value: c => c.metrics.clipped.count,
+    pass: v => v === 0,
+    worse: 'higher',
+  },
+  // Rubric-10 targets (2026-10-22). A capture made before a metric existed has no value for it and is left out of that row.
+  {
+    key: 'greenAll',
+    label: 'Green buttons on the whole screen (page + top bar)',
+    target: 'exactly 1',
+    source: 'rubric-10 "What stands out first": exactly one green main button on every screen',
+    value: c => c.metrics.primary.inMain + c.metrics.primary.inChrome,
+    pass: v => v === 1,
+    worse: 'higher',
+  },
+  {
+    key: 'mainActionsFold',
+    label: 'Buttons and links above the fold in the page (main)',
+    target: 'at most 8',
+    source: 'rubric-10 "How crowded screens are": at most about 8 actions visible at once',
+    value: c => c.metrics.actions.mainAboveFold ?? null,
+    pass: v => v <= 8,
+    worse: 'higher',
+  },
+  {
+    key: 'overlap',
+    label: 'Text drawn over other text',
+    target: '0',
+    source: 'rubric-10 "Reading on a phone": nothing cut off or drawn over',
+    value: c => c.metrics.overlap?.count ?? null,
+    pass: v => v === 0,
+    worse: 'higher',
+  },
+  {
+    key: 'strips',
+    label: 'Boxes that scroll sideways inside a phone page',
+    target: '0',
+    source: 'rubric-10 "Getting around on a phone": no sideways-scrolling filter strips; nothing scrolls sideways',
+    value: c => (isPhone(c.viewport) && c.metrics.strips ? c.metrics.strips.count : null),
+    pass: v => v === 0,
+    worse: 'higher',
+  },
+  {
+    key: 'contrastHi',
+    label: 'Text under 7:1 (labels 4.5:1) on highlighted rows and tints',
+    target: '0',
+    source: 'rubric-10 "Contrast": secondary text 7:1, labels 4.5:1, including on highlighted rows',
+    value: c => c.metrics.contrastHi?.failing ?? null,
+    pass: v => v === 0,
+    worse: 'higher',
+  },
+  {
+    key: 'inputs16',
+    label: 'Phone text fields under 16 px',
+    target: '0',
+    source: 'rubric-10 "Reading on a phone": input text 16 px everywhere (no iPhone zoom)',
+    value: c => (isPhone(c.viewport) && c.metrics.inputs ? c.metrics.inputs.under16 : null),
     pass: v => v === 0,
     worse: 'higher',
   },
@@ -240,6 +295,12 @@ function details(group) {
     if (m.tap?.under44) bits.push(`small targets: ${m.tap.worst.slice(0, 4).map(w => `"${w.label}" ${w.w}x${w.h}`).join(', ')}`)
     if (m.clipped.count) bits.push(`clipped: ${m.clipped.samples.slice(0, 3).map(x => `"${x.text}"`).join(', ')}`)
     if (c.axe?.nodes) bits.push(`axe: ${Object.entries(c.axe.byRule).map(([k, v]) => `${k} x${v}`).join(', ')}`)
+    if (m.primary.inMain + m.primary.inChrome !== 1) bits.push(`green buttons ${m.primary.inMain} in page + ${m.primary.inChrome} in top bar${m.primary.labels.length ? ` (${m.primary.labels.map(l => `"${l}"`).join(', ')})` : ''}`)
+    if ((m.actions.mainAboveFold ?? 0) > 8) bits.push(`${m.actions.mainAboveFold} actions above the fold in the page`)
+    if (m.overlap?.count) bits.push(`text over text: ${m.overlap.samples.slice(0, 3).join(', ')}`)
+    if (isPhone(c.viewport) && m.strips?.count) bits.push(`scrolls sideways inside: ${m.strips.samples.slice(0, 3).join('; ')}`)
+    if (m.contrastHi?.failing) bits.push(`low contrast on highlight: ${m.contrastHi.samples.slice(0, 3).join(', ')}`)
+    if (m.inputs?.under16) bits.push(`inputs under 16 px: ${m.inputs.samples.slice(0, 3).join(', ')}`)
     if (bits.length) lines.push(`- ${c.viewport}: ${bits.map(cell).join(' | ')}`)
   }
   return lines

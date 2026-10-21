@@ -3,7 +3,7 @@ id: create-invoice
 title: Create an invoice
 roles: sales, admin
 keywords: invoice, bill, gst, invoice number, series, delivered, print, pdf, sales tax invoice, ntn, strn
-screens: /orders, /money/gst-register
+screens: /orders, /money/gst-register, /companies
 related: tcs-fbr, payment-reminder
 ---
 1. Open the order. Once everything is delivered, the green button is [Create invoice].
