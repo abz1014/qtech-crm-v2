@@ -516,13 +516,17 @@ test.describe('long real-world text (live import, 2026-10-22)', () => {
           range.selectNodeContents(n)
           for (const q of Array.from(range.getClientRects())) if (q.width > 0 && q.height > 0) boxes.push({ x: q.left, y: q.top, r: q.right, b: q.bottom, node: n })
         }
-        let overlaps = 0
+        const overlaps: string[] = []
         for (let i = 0; i < boxes.length; i++)
           for (let j = i + 1; j < boxes.length; j++) {
             const a = boxes[i]
             const c = boxes[j]
             if (a.node === c.node) continue
-            if (Math.min(a.r, c.r) - Math.max(a.x, c.x) > 2 && Math.min(a.b, c.b) - Math.max(a.y, c.y) > 2) overlaps++
+            // A glyph box is taller than a tight line box, so two wrapped lines touch by a few px: count a real crossing only (the
+            // screen audit's rule, e2e/audit/collect.ts: over 2 px across and over 30% of the shorter box down).
+            const oy = Math.min(a.b, c.b) - Math.max(a.y, c.y)
+            if (Math.min(a.r, c.r) - Math.max(a.x, c.x) > 2 && oy > Math.max(2, 0.3 * Math.min(a.b - a.y, c.b - c.y)))
+              overlaps.push(`"${a.node.data.trim().slice(0, 30)}" x "${c.node.data.trim().slice(0, 30)}"`)
           }
         const cut = Array.from(tr.querySelectorAll<HTMLElement>('td, td *')).filter(el => {
           const s = getComputedStyle(el)
@@ -530,7 +534,7 @@ test.describe('long real-world text (live import, 2026-10-22)', () => {
         }).length
         return { overlaps, cut, rightEdge: Math.max(...boxes.map(b => b.r)), docWidth: document.documentElement.scrollWidth }
       })
-      expect(found.overlaps).toBe(0)
+      expect(found.overlaps).toEqual([])
       expect(found.cut).toBe(0)
       expect(found.rightEdge).toBeLessThanOrEqual(w)
       expect(found.docWidth).toBeLessThanOrEqual(w)
