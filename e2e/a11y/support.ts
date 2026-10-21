@@ -39,7 +39,7 @@ export const UI = {
   chase: /mark chased/i,
   undo: /Undo/,
   filterRfqs: /^Search RFQs$/,
-  searchCompanies: /^Search companies$/,
+  searchCompanies: /^Search companies or contacts$/,
   showing: /Showing \d+ of \d+/,
   rate: /^Rate, PKR/,
   saveRate: /^Save rate$/,

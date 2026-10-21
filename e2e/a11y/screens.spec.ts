@@ -53,7 +53,6 @@ for (const viewport of [
     })
 
     test('Team: the Add person dialog', async ({ page }) => {
-      test.skip(viewport.width < 768, 'a phone has no Add person button on Team')
       await open(page, '/settings/team')
       await page.getByRole('button', { name: UI.addPerson }).click()
       await expect(page.getByRole('dialog')).toBeVisible()

@@ -92,7 +92,9 @@ function paint(className: string, prop: 'bg' | 'border' | 'text', prefixes: stri
     const variant = prefixes.find(p => cls.startsWith(p))
     const bare = variant ? cls.slice(variant.length) : cls.includes(':') ? null : cls
     if (!bare?.startsWith(`${prop}-`)) continue
-    const token = tokenOfClass(bare.slice(prop.length + 1))
+    const named = tokenOfClass(bare.slice(prop.length + 1))
+    // tailwind.config.ts maps text-primary to --primary-text (darker than the button fill).
+    const token = prop === 'text' && named === 'primary' ? 'primary-text' : named
     if (!token) continue
     // A state variant is more specific than the base class, so it wins whatever their order.
     if (variant) state = token
@@ -202,7 +204,7 @@ describe('a selected table row (DataTable) and the text that sits on it', () => 
     expect(rowBg, 'DataTable.tsx changed shape: update this guard').toBeTruthy()
   })
 
-  const texts = ['fg', 'fg-2', 'fg-muted', 'primary', 'tone-neutral-fg', 'tone-info-fg', 'tone-success-fg', 'tone-danger-fg']
+  const texts = ['fg', 'fg-2', 'fg-muted', 'primary-text', 'tone-neutral-fg', 'tone-info-fg', 'tone-success-fg', 'tone-danger-fg']
   for (const text of texts) {
     it(`${text} text stays at 4.5:1 on a selected row and on the hover row (WCAG 1.4.3)`, () => {
       expect(contrast(text, selectedRow)).toBeGreaterThanOrEqual(4.5)
@@ -241,5 +243,37 @@ describe('the focus ring (brand-green) on every surface it can sit on (WCAG 1.4.
     const rings = [...toast.matchAll(/focus-visible:outline-([\w-]+)/g)].map(m => m[1])
     expect(rings.length, 'every control in a toast sets its own ring colour').toBeGreaterThanOrEqual(3)
     for (const r of rings) expect(contrast(tokenOfClass(r) ?? r, tokenOfClass(fill!.slice(3)) ?? 'tone-danger-fg'), r).toBeGreaterThanOrEqual(3)
+  })
+})
+
+/*
+ * Highlighted rows and tints (rubric "Contrast": secondary text at least 7:1 and labels at least 4.5:1, including on highlighted
+ * rows). A coloured second line ("1 day overdue", "Quotation due") can sit on white, on the hover row, on a selected row or inside
+ * any tinted panel, so every tone text must clear 7:1 on all of them. Green text (links, text-primary) is a label: 4.5:1 is the rule,
+ * and 5:1 is kept so it never sits on the edge. The button fill (--primary) only ever carries white text.
+ */
+describe('tone text and green text on highlighted rows and tints', () => {
+  const backgrounds = ['bg-surface', 'bg-canvas', 'bg-sunken', 'bg-selected', 'tone-neutral-bg', 'tone-info-bg', 'tone-success-bg', 'tone-warning-bg', 'tone-danger-bg']
+  const secondary = ['fg-muted', 'tone-neutral-fg', 'tone-info-fg', 'tone-success-fg', 'tone-warning-fg', 'tone-danger-fg']
+  for (const text of secondary) {
+    it(`${text} is at least 7:1 on every background it can sit on`, () => {
+      const low = backgrounds.map(b => [b, contrast(text, b)] as const).filter(([, r]) => r < 7)
+      expect(low, low.map(([b, r]) => `${text} on ${b}: ${r}:1`).join(', ')).toEqual([])
+    })
+  }
+  it('green text (primary-text) is at least 5:1 on every background it can sit on', () => {
+    const low = backgrounds.map(b => [b, contrast('primary-text', b)] as const).filter(([, r]) => r < 5)
+    expect(low, low.map(([b, r]) => `primary-text on ${b}: ${r}:1`).join(', ')).toEqual([])
+  })
+  it('a green link inside a sentence is told apart from the text around it: 3:1 against fg (axe link-in-text-block)', () => {
+    expect(contrast('primary-text', 'fg')).toBeGreaterThanOrEqual(3)
+  })
+  it('white text stays at 4.5:1 on the green button and on every tone used as a fill', () => {
+    for (const fill of ['primary', 'primary-hover', 'primary-active', 'tone-info-fg', 'tone-success-fg', 'tone-warning-fg', 'tone-danger-fg']) {
+      expect(contrast('on-primary', fill), fill).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+  it('tailwind.config.ts maps text-primary to --primary-text, not to the button fill', () => {
+    expect(read('tailwind.config.ts')).toMatch(/textColor:[\s\S]*primary:\s*\{\s*DEFAULT:\s*v\('primary-text'\)/)
   })
 })

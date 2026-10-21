@@ -5,6 +5,7 @@ import {
   dueOn,
   gstOn,
   gstRowLabel,
+  invoiceNextStep,
   invoiceStart,
   matchesSearch,
   rangeLabel,
@@ -98,6 +99,15 @@ describe('the register', () => {
     expect(matchesSearch(row(), 'ord-0041')).toBe(true)
     expect(matchesSearch(row(), 'margalla')).toBe(false)
     expect(matchesSearch(row(), '  ')).toBe(true)
+  })
+
+  it('says ONE next step per invoice: out-of-order step, late GST, send to customer, deposit GST, done', () => {
+    expect(invoiceNextStep(row()).label).toBe('Send to customer')
+    expect(invoiceNextStep(row({ courierState: 'sent' }))).toEqual({ tone: 'now', label: 'Deposit GST' })
+    expect(invoiceNextStep(row({ courierState: 'sent', fbrState: 'deposited', psid: 'P1' }))).toEqual({ tone: 'done', label: 'Done' })
+    expect(invoiceNextStep(row({ needsAttention: true, invoiceDate: '2026-09-02', courierState: 'sent' }))).toEqual({ tone: 'late', label: 'Deposit GST', detail: 'September invoice, tax not deposited' })
+    expect(invoiceNextStep(row({ fbrException: true, fbrState: 'deposited', psid: 'P1', courierState: 'sent' })).label).toBe('Add deposit receipt')
+    expect(invoiceNextStep(row({ fbrException: true, fbrState: 'deposited', psid: null })).label).toBe('Add the PSID')
   })
 
   it('names the months the register covers', () => {

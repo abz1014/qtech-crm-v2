@@ -88,14 +88,15 @@ describe('Targets (M06)', () => {
     expect(await screen.findByText('Ayesha Rana')).toBeInTheDocument()
     expect(screen.queryByText('Saad Hussain')).toBeNull() // deactivated people get no row
     expect(cell('Ayesha Rana', 4)).toHaveTextContent('5,000,000')
-    expect(cell('Ayesha Rana', 3)).toHaveTextContent('4,000,000')
     expect(cell('Bilal Chaudhry', 4)).toHaveTextContent('Set target')
+    // this quarter and the next only: Q3 is over and not drawn until asked for
+    expect(screen.queryByRole('button', { name: /^Ayesha Rana, Q3 2026 target/ })).toBeNull()
+    expect(cell('Ayesha Rana', 1)).toHaveTextContent('Set target') // Q1 2027
 
     const c = document.querySelector('[data-cell="ayesha:4"]') as HTMLElement
-    expect(within(c).getByText(/Achieved/)).toHaveTextContent('1,200,000')
-    expect(within(c).getByText(/^On pace/)).toHaveTextContent('1,500,000')
-    expect(c).toHaveTextContent('300,000')
-    expect(c).toHaveTextContent('behind pace')
+    // one line and a bar, not three lines
+    expect(within(c).getByText(/Achieved/)).toHaveTextContent('Achieved 1,200,000 of 5,000,000 · 300,000 behind pace')
+    expect(within(c).getByRole('img', { name: 'Achieved 1200000 of 5000000; on pace is 1500000' })).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/\d\s?%/)
   })
 
@@ -110,6 +111,7 @@ describe('Targets (M06)', () => {
     h.targets.mockResolvedValue([target('ayesha', 2027, 2, 6_000_000)])
     mount()
     await screen.findByText('Ayesha Rana')
+    await user.click(screen.getByRole('button', { name: 'Show earlier quarters' }))
     await user.click(screen.getByRole('button', { name: 'Next year' }))
     await waitFor(() => expect(screen.getByTestId('targets-year')).toHaveTextContent('2027'))
     expect(h.targets).toHaveBeenLastCalledWith(2027)
@@ -186,12 +188,19 @@ describe('Targets (M06)', () => {
     await waitFor(() => expect(h.remove).toHaveBeenCalledWith(['usman-2026-4']))
   })
 
-  it('Copy is disabled, and says why, when there is nothing to copy', async () => {
-    h.targets.mockResolvedValue([target('ayesha', 2026, 4, 5_000_000)])
+  it('Copy is not shown at all when there is nothing to copy', async () => {
+    h.targets.mockResolvedValue([])
     mount()
     await screen.findByText('Ayesha Rana')
-    expect(screen.getByRole('button', { name: 'Copy last quarter' })).toBeDisabled()
-    expect(screen.getByText(/Nothing to copy/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Copy last quarter' })).toBeNull()
+    expect(screen.queryByText(/Nothing to copy/)).toBeNull()
+  })
+
+  it('an engineer with no target reads No target, and can still be given one', async () => {
+    mount()
+    await screen.findByText('Ayesha Rana')
+    expect(cell('Usman Tariq', 1)).toHaveTextContent('No target')
+    expect(cell('Bilal Chaudhry', 1)).toHaveTextContent('Set target')
   })
 
   it('a failed load shows a retry; failed progress still lets targets be edited', async () => {

@@ -39,7 +39,7 @@ const NOTE = {
 
 export function MarkdownBlocks({ blocks, className }: { blocks: readonly Block[]; className?: string }) {
   return (
-    <div className={cn('grid content-start gap-3 text-sm text-fg-2', className)}>
+    <div className={cn('grid content-start gap-3 text-base text-fg-2', className)}>
       {blocks.map((b, i) => {
         switch (b.kind) {
           case 'heading':

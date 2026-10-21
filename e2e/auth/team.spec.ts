@@ -245,7 +245,7 @@ test.describe('Company profile (A06)', () => {
     await expect(page).toHaveURL(/\/settings\/team$/) // an admin's Settings opens on Team
     await page.getByRole('link', { name: 'Company profile' }).click()
     await expect(page.getByRole('heading', { name: 'Company profile', level: 1 })).toBeVisible()
-    await expect(page.getByText("PDFs can't be issued until legal name and address are set")).toBeVisible()
+    await expect(page.getByText(/^Missing for documents: Legal name, Address/)).toBeVisible()
     await expect(page.getByLabel('Quotation validity')).toHaveValue('30') // default pre-filled
     await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled()
 
@@ -261,7 +261,7 @@ test.describe('Company profile (A06)', () => {
     expect(actions).toBe(3)
     await expect(page.getByText('Company profile saved')).toBeVisible()
     await expect(page.getByText('PDFs can be issued now.')).toBeVisible()
-    await expect(page.getByText("PDFs can't be issued until legal name and address are set")).toHaveCount(0)
+    await expect(page.getByText(/^Missing for documents: Legal name/)).toHaveCount(0)
 
     // Stored as typed; the optional bank details stay null (nothing prints for them).
     const res = await fetch(`${API_URL}/rest/v1/company_profile?id=eq.1&select=legal_name,address,bank_iban,bank_name,quotation_validity_days,updated_by`, {

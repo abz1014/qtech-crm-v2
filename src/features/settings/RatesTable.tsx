@@ -55,7 +55,7 @@ export function RatesTable({ label = 'Exchange rates' }: { label?: string }) {
             <b className="num font-medium">{r.currency}</b>
             <span className="num">{formatRate(r.ratePkr)}</span>
           </span>
-          <span className="flex items-center justify-between gap-3 text-xs text-fg-muted">
+          <span className="flex items-center justify-between gap-3 text-sm text-fg-muted">
             <span>{`${sourceLabel(r.source)} · ${formatDay(r.asOf)}`}</span>
             <RateAge r={r} />
           </span>

@@ -53,8 +53,9 @@ export function NeedsCount({
           'num inline-grid place-items-center rounded-round leading-none',
           badge
             ? cn(
-                'absolute -top-[6px] left-[calc(100%-7px)] h-[max(16px,calc(var(--lh-xs)-2px))] min-w-[max(16px,calc(var(--lh-xs)-2px))] px-[5px]',
-                'text-[length:max(11px,calc(var(--text-xs)-2px))] font-medium text-surface ring-2 ring-surface',
+                // 14 px (text-xs) on a 20 px pill: the count says how much needs you, so it is never smaller than other small text.
+                'absolute -top-[8px] left-[calc(100%-8px)] h-[var(--lh-xs)] min-w-[var(--lh-xs)] px-[5px]',
+                'text-xs font-medium text-surface ring-2 ring-surface',
                 variant === 'danger' ? 'bg-tone-danger-fg' : 'bg-tone-warning-fg',
               )
             : cn(

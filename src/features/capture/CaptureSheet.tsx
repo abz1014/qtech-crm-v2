@@ -669,7 +669,7 @@ export default function CaptureSheet() {
                     Shared items are kept for 7 days. Share it again from WhatsApp, or paste it.
                   </Banner>
                   <Button variant="primary" icon={ClipboardPaste} onClick={cap.openCapture} className="h-touch w-full">
-                    Paste or add a photo
+                    Paste or photo
                   </Button>
                 </div>
               ) : result ? (

@@ -8,8 +8,9 @@ import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { SegmentedControl } from '@/ui/SegmentedControl'
-import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
-import { ClockTag, ExportCsvButton, Panel, ReportError, ReportLoading } from '@/features/money/monthEnd/ReportParts'
+import { InfoTip } from '@/ui/InfoTip'
+import { ReportsFrame } from '@/features/reports/ReportsFrame'
+import { ClockTag, Panel, ReportError, ReportLoading, TwoProfitsTip } from '@/features/money/monthEnd/ReportParts'
 import { downloadReport } from '@/features/money/monthEnd/reportFiles'
 import { useInOutReport } from '@/features/money/inOut/hooks'
 import {
@@ -46,7 +47,8 @@ function usePeriod() {
   const today = businessToday()
   const [params, setParams] = useSearchParams()
   const kind: PeriodKind = params.get('by') === 'quarter' ? 'quarter' : 'month'
-  const askedKey = params.get('period')
+  // ?month= (kept by the Report select from a month report) opens that month; ?period= wins when both are there
+  const askedKey = params.get('period') ?? (kind === 'month' ? params.get('month') : null)
   const period = useMemo(() => chosenPeriod(kind, askedKey, today), [kind, askedKey, today])
   const now = periodOf(kind, today.slice(0, 7))
   const set = (p: Period) => {
@@ -63,41 +65,38 @@ export function InOutPage() {
   const q = useInOutReport(period)
   const v = q.view
   return (
-    <MoneyFrame active="reports">
-      <MoneySubHeader
-        back={{ to: '/money/reports', label: 'Reports' }}
-        title={IN_OUT_TITLE}
-        meta={
-          <span className="flex flex-wrap items-center gap-3">
-            <SegmentedControl
-              aria-label="Month or quarter"
-              options={[
-                { value: 'month', label: 'Month' },
-                { value: 'quarter', label: 'Quarter' },
-              ]}
-              value={period.kind}
-              onValueChange={k => set(periodOf(k as PeriodKind, k === period.kind ? period.key : today.slice(0, 7)))}
-              large
-            />
-            <PeriodPager period={period} atNow={period.key >= now.key} go={by => set(shiftPeriod(period, by))} />
-          </span>
-        }
-        actions={v ? <ExportCsvButton onClick={() => downloadReport(inOutCsv(v), `in-vs-out-${period.key}.csv`)} /> : null}
-      />
-      <p className="max-w-prose text-base text-fg-2" data-testid="in-out-explainer">
-        <b className="font-semibold text-fg">Cash in vs out</b> is the money trail: every payment received and every expense or supplier
-        payment, counted on the day it moved, GST included. <b className="font-semibold text-fg">Profit (invoiced basis)</b> counts sales on
-        their invoice date without GST, and each order&apos;s supplier costs with its sales. Quarters are calendar quarters (Q1 is January to
-        March).
-      </p>
+    <ReportsFrame
+      report="in-out"
+      csv={v ? () => downloadReport(inOutCsv(v), `money-in-and-out-${period.key}.csv`) : null}
+      period={
+        <span className="flex flex-wrap items-center gap-3">
+          <SegmentedControl
+            aria-label="Month or quarter"
+            options={[
+              { value: 'month', label: 'Month' },
+              { value: 'quarter', label: 'Quarter' },
+            ]}
+            value={period.kind}
+            onValueChange={k => set(periodOf(k as PeriodKind, k === period.kind ? period.key : today.slice(0, 7)))}
+            large
+          />
+          <PeriodPager period={period} atNow={period.key >= now.key} go={by => set(shiftPeriod(period, by))} />
+          <InfoTip label={`About ${IN_OUT_TITLE.toLowerCase()}`}>
+            Cash in and out is the money trail: every payment received and every expense or supplier payment, on the day it moved, GST
+            included. Profit on invoices counts sales on their invoice date without GST, and each order&apos;s supplier costs with its sales.
+            Quarters are calendar quarters (Q1 is January to March).
+          </InfoTip>
+        </span>
+      }
+    >
       {q.isError ? (
-        <ReportError title="In vs out did not load" onRetry={q.refetch} />
+        <ReportError title={`${IN_OUT_TITLE} did not load`} onRetry={q.refetch} />
       ) : q.isPending || !v ? (
-        <ReportLoading label="Loading in vs out" />
+        <ReportLoading label={`Loading ${IN_OUT_TITLE.toLowerCase()}`} />
       ) : (
         <Body v={v} onPick={set} />
       )}
-    </MoneyFrame>
+    </ReportsFrame>
   )
 }
 
@@ -182,31 +181,35 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
         </section>
       ) : null}
       <div className="grid items-start gap-6 lg:grid-cols-2">
-        <Panel title="Cash in vs out" meta={<><ClockTag>On the day money moved</ClockTag>{frozen ? <span className="text-sm text-fg-muted" data-testid="in-out-frozen">{frozen}</span> : null}</>}>
-          <div role="table" aria-label="Cash in vs out">
+        <Panel title="Cash in and out" meta={<><ClockTag>On the day money moved</ClockTag>{frozen ? <span className="text-sm text-fg-muted" data-testid="in-out-frozen">{frozen}</span> : null}</>}>
+          <div role="table" aria-label="Cash in and out">
             <Head prev={prev} />
             <Row testId="cash-in" label="Money in" sub={`${plural(v.cash.payments, 'customer payment')} received, GST included`} now={v.cash.in} before={v.prevCash.in} />
             <Row testId="cash-out" label="Money out" sub={`${plural(v.cash.expenses, 'expense')} and supplier payments, input tax included`} now={v.cash.out} before={v.prevCash.out} />
-            <Row testId="cash-net" label="Cash net" sub="Money in less money out" now={v.cash.net} before={v.prevCash.net} strong />
+            <Row testId="cash-net" label="Cash in minus cash out" now={v.cash.net} before={v.prevCash.net} strong />
           </div>
         </Panel>
-        <Panel title="Profit (invoiced basis)" meta={<ClockTag>By invoice date</ClockTag>}>
-          <div role="table" aria-label="Profit, invoiced basis">
+        <Panel title="Profit on invoices" meta={<><ClockTag>By invoice date</ClockTag><TwoProfitsTip /></>}>
+          <div role="table" aria-label="Profit on invoices">
             <Head prev={prev} />
             <Row label="Sales" sub={`${plural(v.profit.invoices, 'invoice')}, GST taken out`} now={v.profit.sales} before={v.prevProfit.sales} />
             <Row label="Order costs" sub="Supplier, freight and clearing, counted with the order's sales" now={v.profit.orderCosts} before={v.prevProfit.orderCosts} />
             <Row label="Overheads" sub="When paid, input tax taken out" now={v.profit.overheads} before={v.prevProfit.overheads} />
-            <Row testId="profit" label="Profit" sub="Sales less order costs and overheads" now={v.profit.profit} before={v.prevProfit.profit} strong />
+            <Row testId="profit" label="Profit on invoices" now={v.profit.profit} before={v.prevProfit.profit} strong />
           </div>
         </Panel>
       </div>
 
       <section aria-labelledby="in-out-why" className="grid gap-2 rounded border bg-surface px-5 py-4" data-testid="in-out-why">
-        <h3 id="in-out-why" className="text-base font-semibold">
+        <h3 id="in-out-why" className="flex flex-wrap items-center gap-2 text-base font-semibold">
           Why profit and cash differ in {v.label}
+          <InfoTip label="About supplier bills">
+            Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. What we still owe suppliers is in the We
+            owe suppliers report.
+          </InfoTip>
         </h3>
         <p className="num text-base">
-          Profit {pkr(v.profit.profit)} less cash net {pkr(v.cash.net)} = {signed(r.gap)}, made of:
+          Profit on invoices {pkr(v.profit.profit)} less cash in minus cash out {pkr(v.cash.net)} = {signed(r.gap)}, made of:
         </p>
         <ul className="grid gap-1 text-base text-fg-2">
           <li>
@@ -230,10 +233,6 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             </li>
           ) : null}
         </ul>
-        <p className="text-sm text-fg-muted">
-          Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. What we still owe suppliers is in the We owe suppliers
-          report.
-        </p>
       </section>
 
       <CategoryPanel v={v} prev={prev} />
@@ -282,10 +281,7 @@ function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
       footerLabel="Money out"
       noun="lines"
       toolbar={
-        <div className="flex flex-wrap items-center gap-3">
-          <h3 className="text-base font-semibold">Money out by category, {v.label}</h3>
-          <span className="text-sm text-fg-muted">Each category with its details (the car, the bill)</span>
-        </div>
+        <h3 className="text-base font-semibold">Money out by category, {v.label}</h3>
       }
       empty={<EmptyState title="Nothing was paid out">Expenses and supplier payments dated in this period show here.</EmptyState>}
     />
@@ -299,7 +295,7 @@ function TrendPanel({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }
     { id: 'in', header: 'Money in (PKR)', kind: 'money', value: t => t.in, paisa: 'never' },
     { id: 'out', header: 'Money out (PKR)', kind: 'money', value: t => t.out, paisa: 'never' },
     { id: 'net', header: 'Cash net (PKR)', kind: 'money', value: t => t.net, paisa: 'never' },
-    { id: 'profit', header: 'Profit, invoiced (PKR)', kind: 'money', value: t => t.profit, paisa: 'never' },
+    { id: 'profit', header: 'Profit on invoices (PKR)', kind: 'money', value: t => t.profit, paisa: 'never' },
   ]
   return (
     <DataTable
@@ -311,6 +307,14 @@ function TrendPanel({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }
       onRowOpen={t => onPick(t.period)}
       summary="Open a row to see that period"
       toolbar={<h3 className="text-base font-semibold">{title}</h3>}
+      mobileRow={t => (
+        <span className="grid gap-1">
+          <span className={cn('font-medium', t.period.key === v.period.key && 'font-semibold')}>{t.label}</span>
+          <span className="num text-sm text-fg-2">
+            In {rupees(t.in)} · out {rupees(t.out)} · profit {rupees(t.profit)}
+          </span>
+        </span>
+      )}
     />
   )
 }

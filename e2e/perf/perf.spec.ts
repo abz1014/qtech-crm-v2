@@ -120,6 +120,77 @@ test('Lighthouse accessibility is at least 95 on the main screens (desktop and p
   }
 })
 
+/*
+ * Speed on a phone over mobile data (rubric "Speed of everyday jobs": screens open fast on a phone). The REAL Lighthouse performance
+ * category on the production build, mobile form factor with its default simulated Slow 4G and 4x CPU slowdown (Lighthouse's own
+ * "mobile" preset: 150 ms RTT, 1.6 Mbps), signed in as the admin, one cold load per main screen: the HTTP cache, the service
+ * worker and Cache Storage are cleared before each run (storage reset stays off so the session survives). LCP must be at most
+ * 2.5 s on every screen; LCP, FCP, TBT and the transferred JS are reported per screen.
+ */
+const MAX_LCP_MS = 2500
+
+type PerfRun = { lhr: { categories: { performance: { score: number | null } }; audits: Record<string, { numericValue?: number; details?: { items?: Array<{ resourceType?: string; transferSize?: number }> } }> } } | undefined
+
+test('Lighthouse mobile (Slow 4G): every main screen paints its largest content within 2.5 s', async ({ baseURL }) => {
+  // Known failure (first measured 2026-10-22: LCP 5.0 to 6.9 s on all seven screens). The table still prints every run; take the
+  // .fail off when the perf/lcp branch brings every screen under 2.5 s (Playwright then says it passed unexpectedly).
+  test.fail(true, 'PERF-LCP-1: owned by perf/lcp')
+  test.setTimeout(900_000)
+  const s = await seed()
+  const profile = mkdtempSync(join(tmpdir(), 'perf-profile-'))
+  const ctx = await chromium.launchPersistentContext(profile, { args: [`--remote-debugging-port=${PORT}`], baseURL, viewport: { width: 412, height: 823 } })
+  try {
+    const page = ctx.pages()[0] ?? (await ctx.newPage())
+    await openAs(page, 'admin', '/today')
+    const cdp = await ctx.newCDPSession(page)
+    const origin = new URL(baseURL!).origin
+    const pkg = 'lighthouse'
+    const lighthouse = ((await import(/* @vite-ignore */ pkg)) as { default: (url: string, flags: Record<string, unknown>) => Promise<PerfRun> }).default
+    const targets: Array<[string, string]> = [
+      ['Today', '/today'],
+      ['RFQ list', '/rfqs'],
+      ['RFQ page', `/rfqs/${s.rfqId}`],
+      ['Orders list', '/orders'],
+      ['Order page', `/orders/${s.orderId}`],
+      ['Who owes us', '/money/receivables'],
+      ['Companies', '/companies'],
+    ]
+    const rows = ['### Lighthouse mobile, simulated Slow 4G (rubric: LCP at most 2.5 s)', '', '| Screen | Score | FCP | LCP | TBT | JS transferred |', '|---|---|---|---|---|---|']
+    const out: Record<string, unknown> = {}
+    const slow: string[] = []
+    const ms = (v?: number) => (v === undefined ? '-' : `${(v / 1000).toFixed(2)} s`)
+    for (const [name, path] of targets) {
+      await cdp.send('Network.clearBrowserCache')
+      await cdp.send('Storage.clearDataForOrigin', { origin, storageTypes: 'service_workers,cache_storage' })
+      const run = await lighthouse(`${baseURL}${path}`, {
+        port: PORT,
+        output: 'json',
+        logLevel: 'error',
+        onlyCategories: ['performance'],
+        disableStorageReset: true,
+        formFactor: 'mobile',
+        throttlingMethod: 'simulate',
+        screenEmulation: { mobile: true, width: 412, height: 823, deviceScaleFactor: 1.75, disabled: false },
+      })
+      const a = run?.lhr.audits ?? {}
+      const lcp = a['largest-contentful-paint']?.numericValue
+      const fcp = a['first-contentful-paint']?.numericValue
+      const tbt = a['total-blocking-time']?.numericValue
+      const js = (a['network-requests']?.details?.items ?? []).filter(i => i.resourceType === 'Script').reduce((n, i) => n + (i.transferSize ?? 0), 0)
+      const score = Math.round((run?.lhr.categories.performance.score ?? 0) * 100)
+      out[name] = { score, fcpMs: fcp, lcpMs: lcp, tbtMs: tbt, jsTransferBytes: js }
+      rows.push(`| ${name} | ${score} | ${ms(fcp)} | ${ms(lcp)} | ${tbt === undefined ? '-' : `${Math.round(tbt)} ms`} | ${Math.round(js / 1024)} KB |`)
+      if (lcp === undefined || lcp > MAX_LCP_MS) slow.push(`${name}: LCP ${ms(lcp)}`)
+    }
+    mkdirSync('test-results', { recursive: true })
+    writeFileSync('test-results/lighthouse-perf.json', JSON.stringify(out, null, 2))
+    summary(rows.join('\n'))
+    expect(slow, slow.join('\n')).toEqual([])
+  } finally {
+    await ctx.close()
+  }
+})
+
 /** Data requests the app made to the stack, with the time each started and ended (ms since the trace began). */
 function trace(page: Page) {
   const log: Array<{ key: string; start: number; end: number }> = []
