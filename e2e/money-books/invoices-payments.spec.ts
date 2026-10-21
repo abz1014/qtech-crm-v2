@@ -344,10 +344,11 @@ test.describe('payments in and receivables (M02)', () => {
     await expect(page.getByRole('button', { name: 'Create invoice' })).toBeVisible()
     await expect(page.getByRole('link', { name: /Expenses/ })).toHaveCount(0)
     await review(page, 'm01-gst-register-sales-1440')
-    // sales stamp too (Today sends them the TCS and FBR items): the ticks, the toggles and the FBR column stay; Net and GST go
+    // sales stamp too (Today sends them the TCS and FBR items): the ticks, the toggles and the Next step column stay (one column
+    // for sent-to-customer and FBR since round 3, 4c34aee); Net and GST go
     await expect(page.getByRole('checkbox', { name: `Select ${inv.number}` })).toBeVisible()
     await expect(page.getByRole('radio', { name: /Not sent yet/ })).toBeVisible()
-    await expect(page.getByRole('columnheader', { name: /FBR/ })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Next step' })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'Net', exact: true })).toHaveCount(0)
     await page.getByRole('checkbox', { name: `Select ${inv.number}` }).click()
     await page.getByTestId('batch-bar').getByRole('button', { name: 'Sent to customer today' }).click()

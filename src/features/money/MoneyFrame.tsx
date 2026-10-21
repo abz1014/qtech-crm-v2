@@ -126,12 +126,15 @@ function FrameBar({ title }: { title: string }) {
 
 /** One Money tab. A plain Link: the lit tab follows `active` (Month end stays lit on the pages reached from it), not the address. */
 function TabLink({ tab, to, on, n, phone }: { tab: MoneyTab; to: string; on: boolean; n: number | undefined; phone?: boolean }) {
+  // A phone tab with a short word carries its whole name (and the count in words) in aria-label, so the count adds no words of
+  // its own: they would be "visible" text missing from the name (axe label-content-name-mismatch).
+  const named = Boolean(phone && tab.short !== tab.label)
   return (
     <Link
       to={to}
       aria-current={on ? 'page' : undefined}
       // The name starts with the visible short word (WCAG 2.5.3 label in name), then the full name
-      aria-label={phone && tab.short !== tab.label ? `${tab.short}: ${tab.label}${n ? `, ${n} need you` : ''}` : undefined}
+      aria-label={named ? `${tab.short}: ${tab.label}${n ? `, ${n} need you` : ''}` : undefined}
       className={cn(
         'inline-flex items-center rounded border font-medium transition-colors duration-fast ease-out',
         phone ? 'min-h-touch min-w-0 flex-auto justify-center gap-1 px-1 text-xs' : 'min-h-control gap-2 px-4 text-sm',
@@ -143,7 +146,7 @@ function TabLink({ tab, to, on, n, phone }: { tab: MoneyTab; to: string; on: boo
         <>
           {/* Under 360 px four labels and their counts do not fit one row: the count becomes a dot (the name still says it). */}
           <span className="max-[359px]:hidden">
-            <NeedsCount n={n} />
+            <NeedsCount n={n} silent={named} />
           </span>
           <i aria-hidden="true" className="hidden size-2 shrink-0 rounded-round bg-tone-warning-fg max-[359px]:block" />
         </>
