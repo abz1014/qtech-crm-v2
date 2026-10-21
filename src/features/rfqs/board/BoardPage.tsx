@@ -9,6 +9,7 @@ import {
   defaultOwner,
   failureReference,
   isBoardShow,
+  isLate,
   NEXT_STEP_LABEL,
   PAGE_SIZE,
   pageSummary,
@@ -108,7 +109,7 @@ export function BoardPage() {
   const step: 'all' | NextStep = show === 'closed' ? 'all' : show
   const shown = useMemo(() => applyQuery(applyStep(byOwner, step), q), [byOwner, step, q])
   const mineCount = useMemo(() => applyOwner(open.data ?? [], 'mine', user?.id ?? null).length, [open.data, user?.id])
-  const overdue = useMemo(() => (open.data ?? []).filter(r => r.isOverdue).length, [open.data])
+  const overdue = useMemo(() => (open.data ?? []).filter(isLate).length, [open.data])
   // "Need you": the two steps that wait on our side (ask suppliers, send the quotation); the others wait on someone else.
   const needYou = useMemo(() => {
     const c = stepCounts(open.data ?? [])
