@@ -50,11 +50,34 @@ function rescueFocus() {
   }, 100)
 }
 
+const DIALOG = '[role="dialog"],[role="alertdialog"]'
+
+/**
+ * Whether a dialog or sheet is open, watched only while a toast is showing. On a phone the toasts then move to the top
+ * of the screen: at the bottom they sat on the dialog's buttons (an Undo toast hid "Preview PDF" and "Cancel").
+ */
+function useDialogOpen(watch: boolean): boolean {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (!watch || typeof document === 'undefined' || typeof MutationObserver === 'undefined') {
+      setOpen(false)
+      return
+    }
+    const check = () => setOpen(document.querySelector(DIALOG) !== null)
+    check()
+    const mo = new MutationObserver(check)
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['role'] })
+    return () => mo.disconnect()
+  }, [watch])
+  return open
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([])
   const seq = useRef(0)
   const itemsRef = useRef<Item[]>([])
   itemsRef.current = items
+  const overDialog = useDialogOpen(items.length > 0)
 
   const remove = useCallback((id: string) => setItems(list => list.filter(i => i.id !== id)), [])
 
@@ -137,7 +160,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         role="region"
         aria-label="Notifications"
-        className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[380px] max-w-full flex-col gap-2 max-md:inset-x-4 max-md:bottom-[76px] max-md:w-auto"
+        data-over-dialog={overDialog || undefined}
+        className={cn(
+          'pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[380px] max-w-full flex-col gap-2 max-md:inset-x-4 max-md:bottom-[76px] max-md:w-auto',
+          // A phone with a dialog open: at the top, clear of the dialog's buttons (they sit at its bottom).
+          overDialog && 'max-md:bottom-auto max-md:top-[calc(env(safe-area-inset-top)+8px)]',
+        )}
       >
         {/* WCAG 4.1.3: errors speak for themselves as role="alert". Every other toast goes into one persistent polite
             live region, so it is announced on arrival (a status inserted with its content is often missed) and again

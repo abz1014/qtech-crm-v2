@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, Pencil, Receipt, Trash2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
+import { pkr } from '@/lib/formRules'
 import { matchesAllWords, useQueryParamText } from '@/lib/useQueryParamText'
 import { mapPgError, type MappedError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
@@ -97,8 +98,8 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
           summary={
             list.isSuccess ? (
               <span className="num">
-                {totals.count} {totals.count === 1 ? 'expense' : 'expenses'} · PKR {totals.total.toLocaleString('en-US')}
-                {totals.inputTax > 0 ? ` · input tax PKR ${totals.inputTax.toLocaleString('en-US')} · cost PKR ${totals.cost.toLocaleString('en-US')}` : ''}
+                {totals.count} {totals.count === 1 ? 'expense' : 'expenses'} · {pkr(totals.total)}
+                {totals.inputTax > 0 ? ` · input tax ${pkr(totals.inputTax)} · cost ${pkr(totals.cost)}` : ''}
               </span>
             ) : undefined
           }
@@ -292,7 +293,7 @@ function DeleteExpenseDialog({ expense, categories, onClose }: { expense: Listed
               onClick={() =>
                 del.mutate(expense.id, {
                   onSuccess: () => {
-                    toast.toast({ title: 'Deleted expense', body: `${name} · PKR ${expense.amount.toLocaleString('en-US')}`, tone: 'neutral' })
+                    toast.toast({ title: 'Deleted expense', body: `${name} · ${pkr(expense.amount)}`, tone: 'neutral' })
                     onClose()
                   },
                   onError: e => setError(mapPgError(e, { entity: 'expense' })),

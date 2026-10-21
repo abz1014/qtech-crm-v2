@@ -41,6 +41,18 @@ describe('importWithReload', () => {
     expect(window.sessionStorage.getItem(RELOAD_MARK)).toBeNull()
   })
 
+  it('reload: false (an idle-time preload) never reloads or applies an update: it throws the plain sentence', async () => {
+    h.apply.mockReturnValue('applying')
+    const load = vi.fn().mockRejectedValue(stale())
+    const err = await importWithReload(load, { reload: false }).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(StaleAppError)
+    expect((err as StaleAppError).message).toMatch(/could not be downloaded/)
+    expect(reload).not.toHaveBeenCalled()
+    expect(h.apply).not.toHaveBeenCalled()
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    await expect(importWithReload(load, { reload: false })).rejects.toThrow(/You are offline/)
+  })
+
   it('retries a failed import once (a dropped connection) without reloading', async () => {
     const load = vi.fn().mockRejectedValueOnce(stale()).mockResolvedValueOnce({ ok: 2 })
     await expect(importWithReload(load)).resolves.toEqual({ ok: 2 })

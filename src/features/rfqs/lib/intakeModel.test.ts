@@ -4,6 +4,7 @@ import {
   effectiveQty,
   fillRfqRef,
   itemsWithoutSupplier,
+  qtyTooLarge,
   realItems,
   RFQ_REF_PLACEHOLDER,
   tickedIds,
@@ -109,5 +110,17 @@ describe('the RFQ number placeholder', () => {
     const t = copyText({ subject: `${RFQ_REF_PLACEHOLDER}: quotation requested`, body: `ref ${RFQ_REF_PLACEHOLDER}` }, 'RFQ-0185')
     expect(t).toBe('Subject: RFQ-0185: quotation requested\n\nref RFQ-0185')
     expect(copyText({ subject: null, body: 'hi' }, 'RFQ-1')).toBe('hi')
+  })
+})
+
+describe('a quantity too large for the database (HE-11)', () => {
+  const it2 = (description: string, qty: number | null): DraftItem => ({ key: description, description, qty, unit: '', brandId: null, familyId: null })
+  it('names the first row whose quantity does not fit numeric(12,3)', () => {
+    const r = qtyTooLarge([it2('Valve', 2), it2('', 9e12), it2('Pressure gauge', 9_999_999_999)])
+    expect(r?.row).toBe(3)
+    expect(r?.message).toMatch(/^Item 3: the quantity is too large \(most 999,999,999\)/)
+  })
+  it('lets the largest quantity that fits through', () => {
+    expect(qtyTooLarge([it2('Cable', 999_999_999), it2('Wire', null)])).toBeNull()
   })
 })

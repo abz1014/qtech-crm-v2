@@ -19,6 +19,7 @@ import {
   guessBrandFamily,
   itemsWithoutSupplier,
   joinNames,
+  qtyTooLarge,
   realItems,
   RFQ_REF_PLACEHOLDER,
   suggestSuppliers,
@@ -104,6 +105,9 @@ class AlreadySaved extends Error {
     this.rfq = rfq
   }
 }
+
+/** An item's quantity does not fit the database: nothing was sent (HE-11). The message names the row. */
+class QtyTooLarge extends Error {}
 
 const TEAM_COMPANY = 'Q-Tech Solutions'
 
@@ -558,6 +562,9 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
    * (review item 2), and clears only this RFQ's draft. A save that finds the RFQ already saved rejects with AlreadySaved.
    */
   const createRfq = (markSent: boolean): Promise<SavedRfq> => {
+    // A quantity the database cannot hold is refused here, naming the row, instead of failing the save (HE-11).
+    const tooLarge = qtyTooLarge(items)
+    if (tooLarge) return Promise.reject(new QtyTooLarge(tooLarge.message))
     const input = buildInput(markSent)
     return float.mutateAsync(input).then(s => {
       clearIntakeDraft(userId, input.id)
@@ -571,7 +578,15 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
       setError({ message: `Already saved as ${rfqRef(err.rfq.number)}`, existing: err.rfq, already: true })
       return
     }
+    if (err instanceof QtyTooLarge) {
+      setError({ message: err.message })
+      return
+    }
     const e = err as { code?: string; message?: string }
+    if (e?.code === '22003') {
+      setError({ message: 'A quantity is too large to save (most 999,999,999). Correct it, then save.' })
+      return
+    }
     if (e?.code === '23505' && /customer_ref/.test(constraintOf(e) ?? e.message ?? '')) {
       const existing = company ? await findRfqByCustomerRef(company.id, customerRef).catch(() => null) : null
       setError({ message: 'This customer already has an RFQ with that reference.', existing, customerRef: true })

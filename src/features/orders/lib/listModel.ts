@@ -95,5 +95,10 @@ export const DIMENSION_VALUES: Record<Dimension, readonly string[]> = {
   payment: ['overdue', 'unpaid', 'part', 'settled'],
 }
 
+/** A dimension value read from the address: anything not in DIMENSION_VALUES (an old link, a typo) means no filter. */
+export function dimensionParam(dim: Dimension, raw: string | null): string {
+  return raw !== null && DIMENSION_VALUES[dim].includes(raw) ? raw : ALL
+}
+
 export const hasFilters = (f: ListFilters, role: string): boolean =>
   f.owner !== defaultOwner(role) || f.goods !== ALL || f.commissioning !== ALL || f.invoicing !== ALL || f.payment !== ALL || f.text.trim() !== ''

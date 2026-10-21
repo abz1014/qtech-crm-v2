@@ -28,6 +28,7 @@ import {
   ALL,
   DIMENSION_VALUES,
   dimensionCounts,
+  dimensionParam,
   filterRows,
   hasFilters,
   isTab,
@@ -142,10 +143,11 @@ export default function OrdersListPage() {
     return {
       tab: isTab(tabParam) ? tabParam : 'active',
       owner: (p.get('owner') === 'all' ? 'all' : p.get('owner') === 'mine' ? 'mine' : defaultOwner(role)) as OwnerFilter,
-      goods: p.get('goods') ?? ALL,
-      commissioning: p.get('commissioning') ?? ALL,
-      invoicing: money ? (p.get('invoicing') ?? ALL) : ALL,
-      payment: money ? (p.get('payment') ?? ALL) : ALL,
+      // An unknown value (an old link such as ?invoicing=open, or a typo) is ignored, never looked up (HE-1).
+      goods: dimensionParam('goods', p.get('goods')),
+      commissioning: dimensionParam('commissioning', p.get('commissioning')),
+      invoicing: money ? dimensionParam('invoicing', p.get('invoicing')) : ALL,
+      payment: money ? dimensionParam('payment', p.get('payment')) : ALL,
       text: p.get('q') ?? '',
     }
   }, [query, role, money])

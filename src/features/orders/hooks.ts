@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
+import { nullOnInvalidId } from '@/lib/uuid'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/orders/api'
 import type { LegPatch } from '@/features/orders/lib/legModel'
@@ -11,7 +12,7 @@ import type { LegPatch } from '@/features/orders/lib/legModel'
  */
 
 export function useOrderHeader(id: string | undefined, money: boolean) {
-  return useQuery({ queryKey: qk.orders.part(id ?? '', 'header'), queryFn: () => api.getOrderHeader(id as string, money), enabled: Boolean(id) })
+  return useQuery({ queryKey: qk.orders.part(id ?? '', 'header'), queryFn: () => api.getOrderHeader(id as string, money).catch(nullOnInvalidId), enabled: Boolean(id) })
 }
 
 export function useOrderItems(id: string | undefined, money: boolean) {

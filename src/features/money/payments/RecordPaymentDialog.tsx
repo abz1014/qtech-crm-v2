@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, Info } from 'lucide-react'
 import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
+import { amountSchema, businessDateRange, inDateRange, pkr } from '@/lib/formRules'
 import { orderRef } from '@/lib/refs'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
@@ -68,8 +69,8 @@ function PaymentLoader(props: { orderId: string; onBusy: (b: boolean) => void; o
 }
 
 const schema = z.object({
-  amount: z.number({ invalid_type_error: 'Enter the amount received', required_error: 'Enter the amount received' }).positive('The amount must be above zero'),
-  receivedOn: z.string().min(1, 'Choose a date'),
+  amount: amountSchema('Enter the amount received'),
+  receivedOn: z.string().min(1, 'Choose a date').superRefine(inDateRange(() => businessDateRange())),
   reference: z.string(),
   paidVia: z.enum(['bank', 'cash']),
 })
@@ -98,7 +99,7 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
     onSubmit: (v, { requestId }) =>
       record.mutateAsync({ id: requestId, orderId: row.orderId, receivedOn: v.receivedOn, amount: v.amount, reference: v.reference.trim() || null, paidVia: v.paidVia as PaidVia }),
     onSuccess: v => {
-      toast.toast({ title: 'Recorded payment', body: `${orderRef(row.orderNumber)} · PKR ${v.amount.toLocaleString('en-US')}`, tone: 'success' })
+      toast.toast({ title: 'Recorded payment', body: `${orderRef(row.orderNumber)} · ${pkr(v.amount)}`, tone: 'success' })
       onDone()
     },
   })

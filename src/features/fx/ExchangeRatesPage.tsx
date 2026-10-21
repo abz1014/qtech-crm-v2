@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { History, Pencil, Plus, RefreshCw } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
+import { formatDateText } from '@/lib/dateInput'
+import { dateRangeProblem, MAX_RATE, rateDateRange, storedRate } from '@/lib/formRules'
 import { formatRate } from '@/lib/money'
 import { parseAmount } from '@/lib/number'
 import { mapPgError } from '@/lib/pgErrors'
@@ -240,7 +242,11 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
   const history = useFxHistory(currency)
   const lastAuto = history.data?.find(h => h.source === 'auto')
   const rate = parseAmount(rateText)
-  const invalid = rateText.trim() !== '' && (rate === null || rate <= 0)
+  const tooLarge = rate !== null && rate > MAX_RATE
+  const invalid = rateText.trim() !== '' && (rate === null || rate <= 0 || tooLarge)
+  // A rate counts only from its date, so one dated 2200 (a typo) would silently do nothing until then (hunt HE-9).
+  const dateProblem = asOf ? dateRangeProblem(asOf, rateDateRange()) : null
+  const unusable = rate === null || rate <= 0 || tooLarge || dateProblem !== null
   const rateRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -252,10 +258,11 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
   }, [focusTick])
 
   const submit = async () => {
-    if (rate === null || rate <= 0) return
+    if (unusable || rate === null) return
     try {
       await save.mutateAsync({ currency, ratePkr: rate, asOf: asOf || undefined })
-      toast({ title: 'Rate saved', body: `${currency} ${formatRate(rate)} for ${formatDay(asOf)}`, tone: 'success' })
+      // The rate as numeric(14,6) keeps it, and the date with its year (hunt HE-9, HE-10).
+      toast({ title: 'Rate saved', body: `${currency} ${storedRate(rate)} for ${formatDateText(asOf || businessToday())}`, tone: 'success' })
       setRateText('')
     } catch (err) {
       toast({ title: 'Could not save the rate', body: mapPgError(err, { entity: 'rate' }).message, tone: 'danger' })
@@ -275,18 +282,18 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
           <Field label="Currency" help={lastAuto ? `Last automatic: ${formatRate(lastAuto.ratePkr)} on ${shortDay(lastAuto.asOf)}` : undefined}>
             <Select value={currency} onChange={e => onCurrency(e.target.value)} options={rows.map(r => ({ value: r.currency, label: r.currency }))} />
           </Field>
-          <Field label="Rate, PKR for 1 unit" help="For example the bank's TT rate." error={invalid ? 'Enter a rate above zero, for example 281.35.' : undefined}>
+          <Field label="Rate, PKR for 1 unit" help="For example the bank's TT rate." error={invalid ? (tooLarge ? 'That rate is too large. Check it for an extra digit.' : 'Enter a rate above zero, for example 281.35.') : undefined}>
             <TextField ref={rateRef} inputMode="decimal" className="num text-right" value={rateText} onChange={e => setRateText(e.target.value)} placeholder="0.00" autoComplete="off" />
           </Field>
-          <Field label="As of">
+          <Field label="As of" error={dateProblem ? `${dateProblem}.` : undefined}>
             <DateInput value={asOf} onChange={setAsOf} />
           </Field>
           <Button type="submit" variant="primary" className="justify-self-start" busy={save.isPending}
             busyLabel="Saving"
-            // the screen's one green button stays green; until a rate is typed it is aria-disabled and does nothing
-            aria-disabled={rate === null || rate <= 0 || undefined}
+            // the screen's one green button stays green; until a usable rate and date are in, it is aria-disabled and does nothing
+            aria-disabled={unusable || undefined}
             onClick={e => {
-              if (rate === null || rate <= 0) e.preventDefault()
+              if (unusable) e.preventDefault()
             }}
           >
             Save rate

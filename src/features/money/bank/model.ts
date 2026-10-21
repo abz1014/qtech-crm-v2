@@ -261,3 +261,13 @@ export function defaultStatementMonth(today: string): string {
 }
 
 export const isMonthKey = (s: string | null): s is string => !!s && /^\d{4}-(0[1-9]|1[0-2])$/.test(s)
+
+/** The earliest month a Month-end or bank link may open (nothing in the books is older). */
+export const FIRST_OPENABLE_MONTH = '2000-01'
+
+/**
+ * A month from the address that may be opened: well formed, not before 2000 and not after this month (HE-21). A future month
+ * has nothing to check or match, so a link to one falls back to the default month, as Reports does.
+ */
+export const isOpenableMonth = (s: string | null, today: string): s is string =>
+  isMonthKey(s) && s >= FIRST_OPENABLE_MONTH && s <= today.slice(0, 7)

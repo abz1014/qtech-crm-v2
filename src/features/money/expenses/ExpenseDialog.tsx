@@ -3,6 +3,7 @@ import { Camera, Check, Lock } from 'lucide-react'
 import { z } from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { businessToday } from '@/lib/dates'
+import { amountSchema, businessDateRange, inDateRange, MAX_AMOUNT, pkr } from '@/lib/formRules'
 import { intakeFiles, type AddedFile } from '@/lib/fileIntake'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
@@ -112,17 +113,18 @@ export function AddExpenseDialog({ open, onOpenChange, context, expense, onSaved
 
 const schema = z
   .object({
-    amount: z.number({ invalid_type_error: 'Enter the amount', required_error: 'Enter the amount' }).positive('The amount must be above zero'),
+    amount: amountSchema('Enter the amount'),
     categoryId: z.string().min(1, 'Choose a category'),
-    paidOn: z.string().min(1, 'Choose a date'),
+    paidOn: z.string().min(1, 'Choose a date').superRefine(inDateRange(() => businessDateRange())),
     paidVia: z.enum(['bank', 'cash']),
     note: z.string(),
-    inputTax: z.number().min(0).nullable(),
+    inputTax: z.number().min(0, 'Input tax cannot be below zero').max(MAX_AMOUNT, 'That input tax is too large').nullable(),
     orderId: z.string().nullable(),
     legId: z.string().nullable(),
     payeeId: z.string().nullable(),
   })
-  .refine(v => (v.inputTax ?? 0) <= v.amount, { path: ['inputTax'], message: 'Input tax cannot be more than what was paid' })
+  // Only against a usable amount: a negative amount is the amount's problem, not the input tax's (hunt HE-18).
+  .refine(v => !v.inputTax || !(v.amount > 0) || v.inputTax <= v.amount, { path: ['inputTax'], message: 'Input tax cannot be more than what was paid' })
 
 type Values = z.input<typeof schema>
 
@@ -225,7 +227,7 @@ function ExpenseFormReady({
       const name = categories.find(c => c.id === v.categoryId)?.name ?? 'Expense'
       toast.toast({
         title: expense ? 'Saved expense' : 'Added expense',
-        body: `PKR ${v.amount.toLocaleString('en-US')} · ${name}`,
+        body: `${pkr(v.amount)} · ${name}`,
         tone: 'success',
       })
       onDone()
@@ -300,7 +302,7 @@ function ExpenseFormReady({
 
   return (
     <>
-      <Form sf={sf} labels={{ amount: 'Amount', categoryId: 'Category', paidOn: 'Date paid' }} className="grid gap-4">
+      <Form sf={sf} labels={{ amount: 'Amount', categoryId: 'Category', paidOn: 'Date paid', paidVia: 'Paid via', note: 'Note', inputTax: 'Input tax', orderId: 'Order', legId: 'Order', payeeId: 'Paid to' }} className="grid gap-4">
         {/* Enter in the amount saves: the form has several fields, so it needs a default button of its own for implicit submission. */}
         <button type="submit" hidden tabIndex={-1} />
         <div className="grid gap-4 md:grid-cols-2">

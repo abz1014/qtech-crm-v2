@@ -5,6 +5,7 @@
  *   23505 unique_violation       "already exists"
  *   23503 foreign_key_violation  a linked record is missing, or still in use
  *   23514 check_violation        a value is outside what the table allows
+ *   22003 numeric_value_out_of_range  a number too large for its column ("too large", never "try again")
  *   42501 insufficient_privilege row-level security refused it: trying again will not help
  *   PGRST116                     .single() found no row: it was removed meanwhile
  *   ''    + "TypeError: ..."     postgrest-js resolves a failed fetch as an error object, not a throw
@@ -108,6 +109,12 @@ export function mapPgError(err: unknown, opts: MapOptions = {}): MappedError {
         kind: 'check',
         message: 'One of the values is not allowed. Check that amounts are above zero and dates are in order, then save again.',
         constraint,
+      }
+    case '22003':
+      // numeric_value_out_of_range: trying again can never work, so the sentence says what to change (hunt HE-7)
+      return {
+        kind: 'check',
+        message: 'That number is too large to save. Check it for an extra digit, then save again. Nothing was saved.',
       }
     case '42501':
       return { kind: 'permission', message: 'Your role cannot make this change. Nothing was saved. Ask an admin if it needs doing.' }

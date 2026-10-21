@@ -51,6 +51,7 @@ import { Kbd } from '@/ui/Kbd'
 import { Combobox } from '@/ui/form/Combobox'
 import { Radio, RadioGroup } from '@/ui/form/Radio'
 import { useToast } from '@/ui/useToast'
+import { returnTarget } from '@/ui/menuTrigger'
 
 /*
  * The Capture sheet (R22; docs/design/mockups/g2-capture.html). A 960 px modal on desktop with two columns, a full-screen sheet on a
@@ -154,6 +155,7 @@ export default function CaptureSheet() {
 
   // ---- saving
   const [busy, setBusy] = useState(false)
+  const openerRef = useRef<HTMLElement | null>(null)
   useBackToClose(true, () => {
     if (!busy) cap.close()
   })
@@ -629,9 +631,20 @@ export default function CaptureSheet() {
             onInteractOutside={e => result && e.preventDefault()}
             onOpenAutoFocus={e => {
               e.preventDefault()
+              openerRef.current = returnTarget(document.activeElement)
               // The paste zone takes focus when there is nothing yet (iPhone: press and hold, then Paste); otherwise the sheet itself.
+              // The phone and desktop layouts each have a paste zone and one of them is display:none: focusing the hidden one
+              // fails silently, focus stays behind the sheet and the focus trap has nothing to hold (hunt HE-13).
               const root = e.currentTarget as HTMLElement
-              ;(root.querySelector<HTMLElement>('textarea[placeholder]') ?? root).focus()
+              const zone = [...root.querySelectorAll<HTMLElement>('textarea[placeholder]')].find(t => t.getClientRects().length > 0)
+              ;(zone ?? root).focus()
+              if (!root.contains(document.activeElement)) root.focus()
+            }}
+            // No <Dialog.Trigger>: Radix would drop focus on <body>. Go back to what opened the sheet (WCAG 2.4.3).
+            onCloseAutoFocus={e => {
+              if (!openerRef.current?.isConnected) return
+              e.preventDefault()
+              openerRef.current.focus()
             }}
             className="grid max-h-[calc(100dvh-64px)] w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded bg-surface shadow-modal focus:outline-none md:w-[min(960px,calc(100vw-2rem))] max-md:h-dvh max-md:max-h-none max-md:animate-sheet-in max-md:rounded-none md:animate-rise-6"
           >

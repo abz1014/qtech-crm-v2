@@ -42,8 +42,10 @@ export async function registerServiceWorker(): Promise<void> {
   if (!import.meta.env.PROD || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
   if (wb) return
   // Loaded on demand, not in the first-load JS (bundle budget, P04): registration waits for nothing on screen.
-  const { Workbox } = await import('workbox-window')
-  if (wb) return
+  // No signal on a first visit: the chunk cannot load. Registration is retried on the next page load; nothing to tell anyone.
+  const loaded = await import('workbox-window').catch(() => null)
+  if (!loaded || wb) return
+  const { Workbox } = loaded
   const instance = new Workbox('/sw.js', { scope: '/' })
   wb = instance
   instance.addEventListener('waiting', () => {
@@ -63,6 +65,10 @@ export async function registerServiceWorker(): Promise<void> {
       lastCheck = now
       void reg.update().catch(() => {})
     })
+  }).catch(() => {
+    // Registration refused (private mode, storage full, a blocked /sw.js): the app works without offline support, and an
+    // unhandled rejection here would only be noise. Let a later page load try again.
+    if (wb === instance) wb = null
   })
 }
 

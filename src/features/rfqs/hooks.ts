@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
+import { nullOnInvalidId } from '@/lib/uuid'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/rfqs/api'
 import { searchCompanies } from '@/features/companies/api'
@@ -103,7 +104,7 @@ export function useDraftCheck(draft: { rfqId: string; companyId: string | null; 
 // ================================================================ RFQ detail (R07)
 
 export function useRfqHeader(id: string | undefined) {
-  return useQuery({ queryKey: qk.rfqs.part(id ?? '', 'header'), queryFn: () => api.getRfqHeader(id as string), enabled: Boolean(id) })
+  return useQuery({ queryKey: qk.rfqs.part(id ?? '', 'header'), queryFn: () => api.getRfqHeader(id as string).catch(nullOnInvalidId), enabled: Boolean(id) })
 }
 
 export function useRfqItems(id: string | undefined) {

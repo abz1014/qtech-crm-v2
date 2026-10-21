@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { Check } from 'lucide-react'
+import { amountSchema } from '@/lib/formRules'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { useToast } from '@/ui/useToast'
@@ -16,7 +17,7 @@ import type { Category, RecurringTemplate } from '@/features/money/expenses/mode
 const schema = z.object({
   label: z.string().trim().min(1, 'Name it, for example Rent'),
   categoryId: z.string().min(1, 'Choose a category'),
-  amount: z.number({ invalid_type_error: 'Enter the amount', required_error: 'Enter the amount' }).positive('The amount must be above zero'),
+  amount: amountSchema('Enter the amount'),
   dayOfMonth: z.number().int().min(1, 'Use a day from 1 to 28').max(28, 'Use a day from 1 to 28').nullable(),
   startMonth: z.string().regex(/^(\d{4}-(0[1-9]|1[0-2]))?$/, 'Use the form 2026-11'),
   active: z.boolean(),
