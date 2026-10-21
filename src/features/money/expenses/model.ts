@@ -11,10 +11,69 @@ export type CategoryGroup = 'overhead' | 'order_cost' | 'non_pnl'
 export interface Category {
   id: string
   name: string
+  /** The P&L kind; always the kind of the category's group (0082 keeps them in step). */
   grp: CategoryGroup
+  /** The group it is listed under ("Office running"), 0082. */
+  groupId: string
   defaultPaidVia: PaidVia
   sort: number
+  /** false: archived (hidden from pickers, history kept). */
   active: boolean
+  /** Optional monthly budget in PKR (gross paid), 0082. */
+  budget: number | null
+}
+
+/** The first level of the expense list (0082): "Office running", "Vehicles", "Order costs". Its kind is the P&L place of its categories. */
+export interface ExpenseGroup {
+  id: string
+  name: string
+  kind: CategoryGroup
+  sort: number
+}
+
+/** The seeded groups (0082), by fixed id. */
+export const GROUP_IDS = {
+  office: 'ca7e9000-0000-4000-8000-000000000001',
+  vehicles: 'ca7e9000-0000-4000-8000-000000000002',
+  staff: 'ca7e9000-0000-4000-8000-000000000003',
+  other: 'ca7e9000-0000-4000-8000-000000000004',
+  orderCosts: 'ca7e9000-0000-4000-8000-000000000005',
+  owner: 'ca7e9000-0000-4000-8000-000000000006',
+} as const
+
+/** The P&L kind of a group, in words: where its spending shows in Profit and loss. */
+export const KIND_LABEL: Record<CategoryGroup, string> = { overhead: 'Running costs', order_cost: 'Order costs', non_pnl: 'Not a cost (drawings, loans)' }
+
+export const sortGroups = (groups: readonly ExpenseGroup[]): ExpenseGroup[] =>
+  [...groups].sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+
+export interface GroupedCategories {
+  group: ExpenseGroup
+  categories: Category[]
+}
+
+/**
+ * Categories under their groups, in the saved order (groups by sort, then categories by sort and name). A category whose group
+ * is not in the list (not loaded yet) is left out. `activeOnly` hides archived ones (pickers); empty groups are kept unless `dropEmpty`.
+ */
+export function groupCategories(
+  categories: readonly Category[],
+  groups: readonly ExpenseGroup[],
+  opts: { activeOnly?: boolean; dropEmpty?: boolean; keepId?: string | null } = {},
+): GroupedCategories[] {
+  const byGroup = new Map<string, Category[]>()
+  for (const c of categories) {
+    if (opts.activeOnly && !c.active && c.id !== opts.keepId) continue
+    byGroup.set(c.groupId, [...(byGroup.get(c.groupId) ?? []), c])
+  }
+  return sortGroups(groups)
+    .map(group => ({ group, categories: (byGroup.get(group.id) ?? []).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name)) }))
+    .filter(g => !opts.dropEmpty || g.categories.length > 0)
+}
+
+/** The group new categories go to when none is chosen: Office running, else the first group of running costs. */
+export function defaultGroupId(groups: readonly ExpenseGroup[]): string | null {
+  return groups.find(g => g.id === GROUP_IDS.office)?.id ?? sortGroups(groups).find(g => g.kind === 'overhead')?.id ?? sortGroups(groups)[0]?.id ?? null
 }
 
 export const SUPPLIER_PAYMENT_ID = 'ca7e0000-0000-4000-8000-000000000011'
@@ -28,8 +87,9 @@ export const showsInputTax = (categoryId: string | null | undefined): boolean =>
 export const GROUP_LABEL: Record<CategoryGroup, string> = { overhead: 'Overhead', order_cost: 'Order cost', non_pnl: 'Not in P&L' }
 export const PAID_VIA_LABEL: Record<PaidVia, string> = { bank: 'Bank', cash: 'Cash' }
 
-/** "Overhead · cash": the trailing text of a category in the type-ahead (g2-month-end, Row details). */
-export const categoryMeta = (c: Category): string => `${GROUP_LABEL[c.grp]} · ${c.defaultPaidVia}`
+/** "Office running · cash": the trailing text of a category in the type-ahead (its group, else its kind, and how it is usually paid). */
+export const categoryMeta = (c: Category, groups?: readonly ExpenseGroup[]): string =>
+  `${groups?.find(g => g.id === c.groupId)?.name ?? GROUP_LABEL[c.grp]} · ${c.defaultPaidVia}`
 
 /** Active categories first in their own order; used where only a pick is offered. */
 export const activeCategories = (all: readonly Category[]): Category[] => all.filter(c => c.active).sort((a, b) => a.sort - b.sort)
@@ -230,6 +290,8 @@ export interface RecurringTemplate {
   active: boolean
   startMonth: string | null
   notes: string | null
+  /** How it is usually paid (0082); null follows the category's own default. */
+  paidVia: PaidVia | null
 }
 
 /** Due this month: active, started, and not yet recorded for the period (recurring_id, period is unique). */

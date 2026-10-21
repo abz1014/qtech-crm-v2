@@ -8,6 +8,7 @@ import {
   monthStart,
   type Category,
   type DetailUse,
+  type ExpenseGroup,
   type ExpenseInsert,
   type ListedExpense,
   type PaidVia,
@@ -39,15 +40,47 @@ const toCategory = (r: CategoryRow): Category => ({
   id: r.id,
   name: r.name,
   grp: r.grp as Category['grp'],
+  groupId: r.group_id,
   defaultPaidVia: r.default_paid_via as PaidVia,
   sort: r.sort,
   active: r.active,
+  budget: r.monthly_budget_pkr === null ? null : Number(r.monthly_budget_pkr),
 })
 
 export async function listCategories(): Promise<Category[]> {
   const db = requireSupabase()
   const rows = unwrap(await db.from('expense_categories').select('*').order('sort')) ?? []
   return rows.map(toCategory)
+}
+
+/** The expense groups (0082), in their saved order. */
+export async function listGroups(): Promise<ExpenseGroup[]> {
+  const db = requireSupabase()
+  const rows = unwrap(await db.from('expense_groups').select('id, name, kind, sort').order('sort').order('name')) ?? []
+  return rows.map(r => ({ id: r.id, name: r.name, kind: r.kind as ExpenseGroup['kind'], sort: r.sort }))
+}
+
+/**
+ * Every expense paid from one month to another ("2026-07" to "2026-09"), oldest first: what the Expenses report reads for the
+ * period it shows (a quarter is at most three months of rows, so the list is read whole, paged past the 1,000-row cap).
+ */
+export async function listExpensesBetween(fromMonth: string, toMonth: string): Promise<ExpenseListing> {
+  const db = requireSupabase()
+  const raw = await fetchAll<TableRow<'expenses'>>((from, to) =>
+    db
+      .from('expenses')
+      .select('*')
+      .gte('paid_on', monthStart(fromMonth))
+      .lte('paid_on', monthEnd(toMonth))
+      .order('paid_on', { ascending: true })
+      .order('created_at', { ascending: true })
+      .range(from, to),
+  )
+  const rows = raw.map(toListed)
+  const payeeIds = [...new Set(rows.map(r => r.payeeId).filter((x): x is string => !!x))]
+  const orderIds = [...new Set(rows.map(r => r.orderId).filter((x): x is string => !!x))]
+  const labels = await lookupLabels({ companies: payeeIds, orders: orderIds })
+  return { rows, payees: { ...labels.companies }, orders: orderRefsOf(labels) }
 }
 
 const toListed = (r: TableRow<'expenses'>): ListedExpense => ({
@@ -286,6 +319,7 @@ const toTemplate = (r: TableRow<'recurring_expenses'>): RecurringTemplate => ({
   active: r.active,
   startMonth: r.start_month,
   notes: r.notes,
+  paidVia: (r.paid_via as PaidVia | null) ?? null,
 })
 
 export async function listRecurring(): Promise<RecurringTemplate[]> {
@@ -313,6 +347,8 @@ export interface RecurringInput {
   active: boolean
   startMonth: string | null
   notes: string | null
+  /** How it is usually paid; null follows the category. */
+  paidVia?: PaidVia | null
 }
 
 export async function saveRecurring(input: RecurringInput): Promise<void> {
@@ -325,6 +361,7 @@ export async function saveRecurring(input: RecurringInput): Promise<void> {
     active: input.active,
     start_month: input.startMonth,
     notes: input.notes,
+    ...(input.paidVia !== undefined ? { paid_via: input.paidVia } : {}),
   }
   const res = input.id
     ? await db.from('recurring_expenses').update(row).eq('id', input.id)

@@ -220,7 +220,7 @@ export async function addTargets(rows: readonly { user_id: string; year: number;
 
 // ---------------------------------------------------------------- expense categories (M13, admin only)
 
-const CATEGORY_COLS = 'id, name, grp, default_paid_via, sort, active'
+const CATEGORY_COLS = 'id, name, grp, group_id, monthly_budget_pkr, default_paid_via, sort, active'
 
 /** Every category with how many expenses and recurring templates use it (embedded counts, one request). */
 export async function listCategories(): Promise<Category[]> {
@@ -241,7 +241,17 @@ export async function listCategories(): Promise<Category[]> {
     sort: Number(r.sort),
     active: Boolean(r.active),
     used: count(r.expenses) + count(r.recurring_expenses),
+    group_id: String(r.group_id),
+    monthly_budget_pkr: r.monthly_budget_pkr === null || r.monthly_budget_pkr === undefined ? null : Number(r.monthly_budget_pkr),
   }))
+}
+
+/** What each category has had paid this month so far ("2026-10"), gross, by category id (v_month_cash_out_detail, 0079). */
+export async function categoryMonthTotals(month: string): Promise<Record<string, number>> {
+  const rows = unwrap(await requireSupabase().from('v_month_cash_out_detail').select('category_id, gross_paid').eq('month', `${month}-01`)) ?? []
+  const out: Record<string, number> = {}
+  for (const r of rows) if (r.category_id) out[r.category_id] = Math.round(((out[r.category_id] ?? 0) + Number(r.gross_paid ?? 0)) * 100) / 100
+  return out
 }
 
 /**
@@ -261,7 +271,7 @@ export async function listActiveCategories(): Promise<Omit<Category, 'used'>[]> 
   return rows as unknown as Omit<Category, 'used'>[]
 }
 
-export type CategoryPatch = Partial<Pick<Category, 'name' | 'grp' | 'default_paid_via' | 'active'>>
+export type CategoryPatch = Partial<Pick<Category, 'name' | 'group_id' | 'default_paid_via' | 'active' | 'monthly_budget_pkr' | 'sort'>>
 
 export async function updateCategory(id: string, patch: CategoryPatch): Promise<void> {
   const rows = unwrap(await requireSupabase().from('expense_categories').update(patch).eq('id', id).select('id'))
@@ -269,7 +279,15 @@ export async function updateCategory(id: string, patch: CategoryPatch): Promise<
 }
 
 /** Adds a category and returns its id (an expense form that creates one inline selects it straight away). */
-export async function createCategory(v: { name: string; grp: CategoryGroup; default_paid_via: PaidVia; sort: number }): Promise<string> {
+export async function createCategory(v: {
+  name: string
+  group_id: string
+  /** The group's kind; the database sets it from the group anyway (0082). */
+  grp: CategoryGroup
+  default_paid_via: PaidVia
+  sort: number
+  monthly_budget_pkr?: number | null
+}): Promise<string> {
   const rows = unwrap(await requireSupabase().from('expense_categories').insert(v).select('id'))
   if (!rows?.[0]) throw new PlainError('Only an admin can add categories.')
   return rows[0].id
@@ -286,4 +304,29 @@ export async function reorderCategories(changes: readonly { id: string; sort: nu
 export async function deleteCategory(id: string): Promise<void> {
   const rows = unwrap(await requireSupabase().from('expense_categories').delete().eq('id', id).select('id'))
   if (!rows || rows.length === 0) throw new PlainError('Only an admin can delete categories.')
+}
+
+/** Moves every expense and recurring template of `from` into `into`, then removes `from` (0082). Returns how many expenses moved. */
+export async function mergeCategories(from: string, into: string): Promise<number> {
+  const n = unwrap(await requireSupabase().rpc('merge_expense_categories', { p_from: from, p_into: into }))
+  return Number(n ?? 0)
+}
+
+// ---------------------------------------------------------------- expense groups (0082, admin only)
+
+export async function createGroup(v: { name: string; kind: CategoryGroup; sort: number }): Promise<string> {
+  const rows = unwrap(await requireSupabase().from('expense_groups').insert(v).select('id'))
+  if (!rows?.[0]) throw new PlainError('Only an admin can add groups.')
+  return rows[0].id
+}
+
+export async function updateGroup(id: string, patch: { name?: string; sort?: number }): Promise<void> {
+  const rows = unwrap(await requireSupabase().from('expense_groups').update(patch).eq('id', id).select('id'))
+  if (!rows || rows.length === 0) throw new PlainError('Only an admin can change groups.')
+}
+
+/** An empty group can go; one that still lists a category is refused by the foreign key (23503). */
+export async function deleteGroup(id: string): Promise<void> {
+  const rows = unwrap(await requireSupabase().from('expense_groups').delete().eq('id', id).select('id'))
+  if (!rows || rows.length === 0) throw new PlainError('Only an admin can delete groups.')
 }

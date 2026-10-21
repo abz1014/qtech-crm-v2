@@ -12,6 +12,7 @@ import { MONTH_REPORT_KEYS } from '@/features/money/monthEnd/reportList'
 import { ExceptionsPage } from '@/features/money/exceptions/ExceptionsPage'
 import { MarginsPage } from '@/features/money/margins/MarginsPage'
 import { InOutPage } from '@/features/money/inOut/InOutPage'
+import { ExpenseReportPage } from '@/features/money/expenseReport/ExpenseReportPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 
 /**
@@ -70,6 +71,8 @@ function ReportRoute({ isAdmin }: { isAdmin: boolean }) {
       return <GstFbrPage />
     case 'in-out':
       return <InOutPage />
+    case 'expenses':
+      return <ExpenseReportPage />
     case 'team':
       return <TeamPage />
     default:

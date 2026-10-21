@@ -9,7 +9,7 @@ import { NumberInput } from '@/ui/form/NumberInput'
 import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 import { CategoryPicker } from '@/features/money/expenses/CategoryPicker'
-import { useInlineCategoryCreate, useSaveRecurring } from '@/features/money/expenses/hooks'
+import { useGroups, useInlineCategoryCreate, useSaveRecurring } from '@/features/money/expenses/hooks'
 import type { Category, RecurringTemplate } from '@/features/money/expenses/model'
 
 /** Add or edit a recurring template: what it is called, its category, the amount, and the day it usually falls on. */
@@ -25,7 +25,8 @@ type Values = z.input<typeof schema>
 
 export function RecurringDialog({ template, categories, onClose }: { template?: RecurringTemplate; categories: readonly Category[]; onClose: () => void }) {
   const save = useSaveRecurring()
-  const createCategory = useInlineCategoryCreate(categories)
+  const groupsQ = useGroups()
+  const createCategory = useInlineCategoryCreate(categories, groupsQ.data)
   const toast = useToast()
   const sf = useSubmitForm({
     schema,

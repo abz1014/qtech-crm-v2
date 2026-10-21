@@ -15,6 +15,10 @@ export interface Category {
   active: boolean
   /** Expenses plus recurring templates that use it. */
   used: number
+  /** The group it is listed under (0082). */
+  group_id: string
+  /** Optional monthly budget, PKR (0082). */
+  monthly_budget_pkr: number | null
 }
 
 export const GROUP_LABEL: Record<CategoryGroup, string> = {

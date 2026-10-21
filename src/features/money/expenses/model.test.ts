@@ -31,7 +31,7 @@ import {
   type RecurringTemplate,
 } from '@/features/money/expenses/model'
 
-const cat = (id: string, name: string, grp: Category['grp'], via: 'bank' | 'cash', active = true): Category => ({ id, name, grp, defaultPaidVia: via, sort: 0, active })
+const cat = (id: string, name: string, grp: Category['grp'], via: 'bank' | 'cash', active = true): Category => ({ id, name, grp, groupId: grp, defaultPaidVia: via, sort: 0, active, budget: null })
 const CATS: Category[] = [
   cat('snacks', 'Office supplies & snacks', 'overhead', 'cash'),
   cat('fuel', 'Fuel & travel', 'overhead', 'cash'),
@@ -145,7 +145,7 @@ describe('months', () => {
 })
 
 describe('recurring templates', () => {
-  const t = (id: string, over: Partial<RecurringTemplate> = {}): RecurringTemplate => ({ id, label: id, categoryId: 'sal', amount: 1, dayOfMonth: null, active: true, startMonth: null, notes: null, ...over })
+  const t = (id: string, over: Partial<RecurringTemplate> = {}): RecurringTemplate => ({ id, label: id, categoryId: 'sal', amount: 1, dayOfMonth: null, active: true, startMonth: null, notes: null, paidVia: null, ...over })
 
   it('due this month: active, started, and not recorded for the period', () => {
     const list = [t('rent'), t('paused', { active: false }), t('later', { startMonth: '2026-12' }), t('done'), t('now', { startMonth: '2026-11' })]

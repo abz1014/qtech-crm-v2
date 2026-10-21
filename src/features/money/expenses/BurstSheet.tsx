@@ -21,6 +21,7 @@ import { TextField } from '@/ui/form/TextField'
 import { CategoryPicker, type CreateCategoryResult } from '@/features/money/expenses/CategoryPicker'
 import {
   useCategories,
+  useGroups,
   useInlineCategoryCreate,
   useInsertExpenses,
   useMostUsedCategory,
@@ -100,7 +101,8 @@ function BurstContent({ onClose }: { onClose: () => void }) {
   const orderQ = useOrderOptions(true)
   const orders: readonly OrderTagOption[] = orderQ.data ?? NO_ORDERS
   const uploadReceipt = useUploadReceipt()
-  const createCategory = useInlineCategoryCreate(categories)
+  const groupsQ = useGroups()
+  const createCategory = useInlineCategoryCreate(categories, groupsQ.data)
   const detailQ = useRecentDetails(true)
   const details = detailQ.data ?? NO_DETAILS
 

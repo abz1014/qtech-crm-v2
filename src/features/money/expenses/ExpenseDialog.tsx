@@ -22,6 +22,7 @@ import { CategoryPicker } from '@/features/money/expenses/CategoryPicker'
 import {
   useCategories,
   useDeleteReceipt,
+  useGroups,
   useInlineCategoryCreate,
   useInsertExpenses,
   useLastCategoryForOrder,
@@ -258,7 +259,8 @@ function ExpenseFormReady({
   const receipts = useReceipts(expense?.id)
   const deleteReceipt = useDeleteReceipt(expense?.id ?? '')
   const lockedPayee = !!context?.payeeId
-  const createCategory = useInlineCategoryCreate(categories)
+  const groupsQ = useGroups()
+  const createCategory = useInlineCategoryCreate(categories, groupsQ.data)
   const recentDetails = useRecentDetails(showNote)
   const detailOptions = useMemo(() => detailSuggestions(recentDetails.data ?? [], categoryId), [recentDetails.data, categoryId])
 
