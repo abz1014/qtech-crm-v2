@@ -18,6 +18,7 @@ import { scoreEnquiry, scoreQuote, type EnquiryResult, type QuoteResult } from '
  *   CORPUS_OCR_BATCHES=0,10,11   batches to run (CI: 0)
  *   CORPUS_OCR_OUT=<file.json>   save every case's text ({ id: text }) for `CORPUS_OCR=<file> npx vitest run src/lib/docread/corpus`
  *   CORPUS_WRITE_FLOOR=1         record this run as the new floors
+ *   CORPUS_IDS=e0-003,q0-005     only these cases;  CORPUS_SAVE=<dir>  save each picture there
  */
 
 interface Read {
@@ -114,7 +115,9 @@ test('the corpus as pictures and scans: every field at or above its floor, a scr
   const api = <K extends keyof Docread>(name: K, ...args: Parameters<Docread[K]>) =>
     page.evaluate(({ name, args }) => (window as unknown as { __docread: Record<string, (...a: unknown[]) => unknown> }).__docread[name]!(...args), { name, args }) as Promise<Awaited<ReturnType<Docread[K]>>>
 
-  const cases: CorpusCase[] = RUN.flatMap(b => batch(b)).filter(c => c.medium === 'image' || c.medium === 'scan')
+  const only = process.env.CORPUS_IDS ? new Set(process.env.CORPUS_IDS.split(',')) : null
+  const cases: CorpusCase[] = RUN.flatMap(b => batch(b)).filter(c => (c.medium === 'image' || c.medium === 'scan') && (!only || only.has(c.id)))
+  const save = process.env.CORPUS_SAVE
   const scores: Scored[] = []
   const texts: Record<string, string> = {}
   const times: Array<{ id: string; ms: number; clean: boolean }> = []
@@ -125,12 +128,14 @@ test('the corpus as pictures and scans: every field at or above its floor, a scr
     let read: Read
     if (c.medium === 'image') {
       const [pic] = await develop(page, png, shot, false)
+      if (save) writeFileSync(`${save}/${c.id}.${shot.format === 'jpeg' ? 'jpg' : shot.format}`, Buffer.from(pic!.b64, 'base64'))
       read = await api('readImage', pic!.b64, MIME[shot.format])
       // A clean screenshot (not a photo, not a scan) on a laptop or a phone: the 3 s budget. The first read loads the engine.
       if (!first) times.push({ id: c.id, ms: read.ms, clean: !shot.photo && !shot.tilt })
       first = false
     } else {
       const pics = await develop(page, png, shot, true)
+      if (save) pics.forEach((p, i) => writeFileSync(`${save}/${c.id}-p${i + 1}.jpg`, Buffer.from(p.b64, 'base64')))
       const pdf = await scanPdf(pics.map(p => ({ bytes: Buffer.from(p.b64, 'base64'), type: 'jpeg' as const, width: p.width, height: p.height })))
       read = await api('readPdf', Buffer.from(pdf).toString('base64'))
     }

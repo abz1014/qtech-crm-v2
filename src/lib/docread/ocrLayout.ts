@@ -62,7 +62,39 @@ export function cleanWord(w: OcrWord): string | null {
   if (text === '') return null
   if (w.confidence < MIN_WORD_CONFIDENCE) return null
   if (RULE_ONLY.test(text) && !(text === '-' && w.confidence >= 80)) return null
-  return text
+  return fixOcrWord(text)
+}
+
+/** A part or model number: letters and digits mixed, maybe with dashes or slashes ("6ES7717-3EX68-0LC0", "P098A8460"). */
+const CODE = /^(?=[A-Za-z0-9/.-]*\d[A-Za-z0-9/.-]*\d)(?=[A-Za-z0-9/.-]*[A-Za-z])[A-Za-z0-9][A-Za-z0-9/.-]{3,}$/
+/** Sizes and ratings that look like codes; their letters are never digits ("24VDC", "100MM", "PT100"). */
+const SPEC = /^(?:\d+(?:\.\d+)?(?:[xX]\d+)*(?:V|VDC|VAC|A|KA|KW|W|MM|M|BAR|MA|UF|HZ|RPM|PPR|DI|DO|CO|I\/O)?|PT\d+|DN\d+|PN\d+|M\d+|PG\d+(?:\.\d+)?|[0-9.-]+(?:BAR|MA|MM|C))$/i
+
+/**
+ * Letters and digits the engine takes for each other, put right where the domain says which it must be: inside a part number
+ * an O or an I next to a digit is a 0 or a 1 (catalogues avoid O and I there for this reason), "INO+INC" is the contact
+ * arrangement 1NO+1NC, "141/0" is "14I/O", a company's "Lid" is "Ltd", "§" is S and "«" is the + of a phone number.
+ */
+export function fixOcrWord(text: string): string {
+  let t = text.replace(/§/g, 'S').replace(/^«(?=\d)/, '+')
+  // Contacts: 1NO, 1NC, 2NO+1NC.
+  t = t.replace(/(^|[^A-Za-z0-9])[Il|T]N([OC])(?=$|[^A-Za-z])/g, '$11N$2').replace(/(\d)[Il|]N([OC])\b/g, '$1N$2')
+  // I/O count: "141/0" or "14 1/0" for 14I/O.
+  t = t.replace(/(\d)1\/0(?![0-9])/g, '$1I/O').replace(/^1\/0$/, 'I/O')
+  if (/^L[il1]d\.?$/.test(t)) t = t.replace(/^L[il1]d/, 'Ltd')
+  if (CODE.test(t) && !SPEC.test(t)) {
+    const chars = [...t]
+    const isDigit = (c: string | undefined) => c !== undefined && /\d/.test(c)
+    for (let i = 0; i < chars.length; i++) {
+      const c = chars[i] as string
+      if (!/[OoIl]/.test(c)) continue
+      // Next to a digit, or at the edge of a dash-separated part ("-OETO", "UMY4HO"): a digit.
+      const edge = chars[i - 1] === '-' || chars[i + 1] === '-' || i === chars.length - 1
+      if (isDigit(chars[i - 1]) || isDigit(chars[i + 1]) || (edge && /[Oo]/.test(c) && (t.match(/\d/g) ?? []).length >= 3)) chars[i] = /[Oo]/.test(c) ? '0' : '1'
+    }
+    t = chars.join('')
+  }
+  return t
 }
 
 /** Where the baseline is under x (the line may be slightly tilted). Falls back to the word's own bottom. */
@@ -100,7 +132,9 @@ function lineSize(line: OcrLine, typical: number | null): number {
   return typical ? Math.min(own, 1.25 * typical) : own
 }
 
-const LIST_MARKER = /^(?:\(?\d{1,3}[.)]|[a-z][.)]|[-•*·–])$/i
+/** Three or more letters, digits and the punctuation of a part description, at least two of them letters. */
+const PLAUSIBLE = /^(?=(?:[^\p{L}]*\p{L}){2})[\p{L}\p{N}][\p{L}\p{N},;:./()+&'-]{2,}$/u
+const LIST_MARKER =/^(?:\(?\d{1,3}[.)]|[a-z][.)]|[-•*·–+»]|[il]?tem)$/i
 const LONE_TAIL = /^(?:\d+(?:[.,]\d+)?|nos?\.?|pcs?\.?|ea|each|sets?|units?|lots?|pairs?|meters?|mtrs?|m|kgs?|ltrs?)$/i
 
 /**
@@ -112,10 +146,13 @@ export function lineWords(l: OcrLine): Array<{ word: OcrWord; text: string }> {
   const out: Array<{ word: OcrWord; text: string }> = []
   l.words.forEach((w, i) => {
     let text = sure[i] ?? null
-    if (text === null && w.confidence >= 10 && /[\p{L}\p{N}]{2}/u.test(w.text)) {
+    // The engine can give a well-read word no confidence at all when it is unusual ("VALVE,BALL;FLANGED" in an ERP row): a
+    // word shaped like a word or a code, on a line with sure words, is kept.
+    const plausible = PLAUSIBLE.test(w.text.replace(EDGE_BARS, '').trim())
+    if (text === null && (w.confidence >= 10 || plausible) && /[\p{L}\p{N}]{2}/u.test(w.text)) {
       const before = sure.slice(0, i).some(t => t !== null)
       const after = sure.slice(i + 1).some(t => t !== null)
-      if (before && after) text = w.text.replace(EDGE_BARS, '').trim()
+      if ((before && after) || (plausible && (before || after))) text = fixOcrWord(w.text.replace(EDGE_BARS, '').trim())
     }
     if (text) out.push({ word: w, text })
   })
@@ -182,7 +219,12 @@ export function unwrapLines(lines: readonly OcrLine[], typical: number | null = 
       const firstText = cleanWord(first) as string
       const under = Math.abs(l.bbox.x0 - prev.bbox.x0) < 0.8 * size && l.bbox.y0 > prev.bbox.y0 && l.bbox.y0 - prev.bbox.y1 < 0.7 * size
       const full = prev.bbox.x1 + 0.3 * size + (first.bbox.x1 - first.bbox.x0) > right - 0.3 * size
-      const tail = !LIST_MARKER.test(firstText) && (/^\p{Ll}/u.test(firstText) || (words.length === 1 && LONE_TAIL.test(firstText)))
+      // A tail: lower case, a lone quantity or unit, a size or a part number ("150mm with head", "PMC72-EWG6B2 - 03 Each"),
+      // or anything after a line that stops on a word that needs more ("..., Model" / "729B0969 Qty 2").
+      const prevText = prevWords.map(w => cleanWord(w) ?? '').join(' ')
+      const dangling = /(?:[/:-]|\b(?:model|type|qty\.?|quantity|p\/n|part\s*no\.?|make|brand|size|range|code))$/i.test(prevText)
+      const sizeOrCode = /^\d+(?:[.,]\d+)?[A-Za-z"]/.test(firstText) || (/^[A-Z0-9][A-Z0-9/.-]{3,}[,.]?$/.test(firstText) && /\d/.test(firstText) && /[A-Z]/.test(firstText))
+      const tail = !LIST_MARKER.test(firstText) && (/^\p{Ll}/u.test(firstText) || (words.length === 1 && LONE_TAIL.test(firstText)) || dangling || sizeOrCode)
       const sentenceEnd = /[.:;!?]$/.test(cleanWord(prevLast) ?? '')
       // The same size of letters: a smaller line under a name ("online", a caption) is not its tail.
       const sameSize = !l.rowHeight || !prev.rowHeight || Math.abs(l.rowHeight - prev.rowHeight) <= 0.2 * prev.rowHeight
@@ -247,7 +289,7 @@ function applyRules(runs: TextRun[], rules: TableRules): void {
     const across = rules.horizontal.filter(h => h.x0 <= cx && h.x1 >= cx)
     const above = Math.max(...across.filter(h => h.y1 <= r.y - 0.5 * r.size).map(h => h.y1))
     const below = Math.min(...across.filter(h => h.y0 >= r.y - 0.2 * r.size).map(h => h.y0))
-    if (!Number.isFinite(above) || !Number.isFinite(below) || below - above > 3 * r.size) continue
+    if (!Number.isFinite(above) || !Number.isFinite(below) || below - above > 2 * r.size) continue
     const key = `${above}:${below}`
     bands.set(key, [...(bands.get(key) ?? []), r])
   }
@@ -262,7 +304,7 @@ export function pageConfidence(lines: readonly OcrLine[]): { confidence: number;
   let sum = 0
   let letters = 0
   for (const l of lines) {
-    for (const w of kept(l)) {
+    for (const w of kept(l).filter(x => x.confidence >= MIN_WORD_CONFIDENCE)) {
       const n = w.text.replace(/[^\p{L}\p{N}]/gu, '').length
       sum += w.confidence * n
       letters += n

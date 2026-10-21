@@ -210,8 +210,10 @@ function readItem(text: string): ReadItem | null {
   if (!t) return null
   // The intake's own reading: polite openers, greetings, "2 nos ..." at the start, "... - 2 nos" at the end. With the
   // quantity already read, a stand-in "qty 1" is what it takes off the end, so a size ("0-10m") is not read as one.
-  const old = parsePaste(qty === null ? t : `${t} qty 1`).items[0]
+  let old = parsePaste(qty === null ? t : `${t} qty 1`).items[0]
   if (!old) return null
+  // "Model FX3U-48M": the end of a part number, not 48 metres.
+  if (qty === null && old.unit && /[A-Za-z0-9]-\d+(?:\.\d+)?[A-Za-z]+\.?$/.test(t)) old = { description: tidy(t), qty: 1, unit: null }
   let description = qty === null ? old.description : old.description.replace(/\s*qty 1$/i, '')
   if (qty === null) {
     const explicit = old.qty !== 1 || old.unit !== null || /(?:^|\s)(?:[x×]\s*0*1|0*1\s*[x×])(?:\s|$)/i.test(t)
@@ -384,7 +386,15 @@ function findRefs(text: string): RefHit[] {
 // ------------------------------------------------------------------------------------------------ lines
 
 const MARKER =
-  /^\s*(?:item\s*(?:no\.?)?\s*#?\s*\d{1,3}\s*(?:[:.)-]\s*|$)|\(?\d{1,3}\)\s*|\d{1,3}[.:]\s+|\d{1,3}\s?-\s+|\(?[a-h]\)\s+|\(?(?:i{1,3}|iv|vi{0,3}|ix|x)\)\s+|[-•*·–]\s+|#\s*\d{1,3}[.:)]?\s+|0\d{3,4}\s+)/i
+  /^\s*(?:(?:item|ltem|tem)\s*(?:no\.?)?\s*#?\s*\d{1,3}\s*(?:[:.)-]\s*|$)|\(?\d{1,3}\)\s*|\d{1,3}[.:]\s+|\d{1,3}\s?-\s+|\(?[a-h]\)\s+|\(?(?:i{1,3}|iv|vi{0,3}|ix|x)\)\s+|[-•*·–®©°«»¢]\s+|\+\s+(?=[A-Za-z])|#\s*\d{1,3}[.:)]?\s+|0\d{3,4}\s+)/i
+
+/** A line that stops where it cannot end: the next line goes on with it ("..., Model" / "FX4U-48MT/ESS"). */
+const DANGLING = /(?:[,/&(:-]|\b(?:with|and|for|of|model|model\s*no\.?|type|qty\.?|quantity|p\/n|part\s*no\.?|make|brand|size|range|code))$/i
+
+/** Lines of one item put together: a word broken at its dash ("g5zk-" / "051") is joined without a space. */
+function joinWrapped(texts: string[]): string {
+  return texts.reduce((a, b) => (a === '' ? b : /[A-Za-z0-9]-$/.test(a) && /^[A-Za-z0-9]/.test(b) ? a + b : `${a} ${b}`), '')
+}
 
 /** A label line that belongs to the item above ("Make: Siemens", "Qty: 2 Nos", "Description: ..."). */
 const ATTR =
@@ -460,7 +470,7 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
   const qm = /^(\d[\d,]*(?:\.\d+)?)\s*([A-Za-z'.]+)?$/.exec(q)
   return {
     description: tidy([main, ...extras].join(', ')),
-    qty: qm ? toQty(qm[1] as string) : null,
+    qty: qm ? toQty(qm[1] as string) : unitQty(cell(cols.unit)),
     unit: unitOf(unitCell(cell(cols.unit)) || qm?.[2] || null),
   }
 }
@@ -471,7 +481,9 @@ function unitCell(c: string): string {
   const joined = c.replace(/\s+/g, '')
   if (UNIT_CELL.test(joined)) return joined
   const first = c.split(/\s+/)[0] ?? ''
-  return UNIT_CELL.test(first) ? first : c
+  if (UNIT_CELL.test(first)) return first
+  const lastWord = c.split(/\s+/).pop() ?? ''
+  return /\d\s+\S+$/.test(c) && UNIT_CELL.test(lastWord) ? lastWord : c
 }
 
 /** Units an ERP or a purchase clerk writes in capitals; kept as the customer wrote them. */
@@ -509,7 +521,15 @@ const TERMS_HEAD = /^(?:special\s+instructions|(?:general\s+)?terms\s*(?:and|&)\
 const TOTALS = /\b(?:sub\s*-?\s*total|grand\s+total|total\s+amount|total)\b.*$/i
 const MAX_DESCRIPTION = 400
 
+/** A quantity read into the unit cell with its unit ("aty 8 Each", "8 Each"). */
+function unitQty(c: string): number | null {
+  const m = /(?:^|\s)(\d[\d,]*(?:\.\d+)?)\s+([A-Za-z']+)\.?$/.exec(c)
+  return m && UNIT_CELL.test(m[2] as string) ? toQty(m[1] as string) : null
+}
+
 const isContact = (t: string): boolean => {
+  // A city on a line of its own under the address ("Lahore.").
+  if (/^[A-Z][a-z]+\.?$/.test(t.trim()) && ADDRESS.test(t)) return true
   if (PHONE_LABEL.test(t) && (PHONE.test(t) || /@|www\.|https?:/i.test(t) || /^(?:address|e-?mail|email|web|website)\b/i.test(t))) return true
   const bare = t.replace(EMAIL, ' ').replace(URL, ' ').replace(PHONE, ' ').replace(/[|,;:/()+\-–\s]+/g, ' ').trim()
   if ((EMAIL.test(t) || URL.test(t) || PHONE.test(t)) && bare.split(' ').filter(w => w.length > 1).length <= 4 && !PRODUCT.test(bare)) {
@@ -590,7 +610,12 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     }
     // Columns lined up with spaces (copied from a PDF viewer): two or more wide gaps make it a tab row.
     const spaced = !body.includes('\t') && (body.trim().match(/\S {3,}(?=\S)/g) ?? []).length >= 2 ? body.trim().replace(/ {3,}/g, '\t') : body
-    src.push({ t: spaced.replace(/[ ]+/g, ' ').trim(), indent: /^\s*/.exec(body)?.[0].replace(/\t/g, '    ').length ?? 0, blankBefore: blank, wa })
+    const kept = spaced.includes('\t') ? spaced.replace(/[ ]+/g, ' ').replace(/^ +| +$/g, '').replace(/(?:\s*\t\s*)+$/, '') : spaced.replace(/[ ]+/g, ' ').trim()
+    if (!kept.replace(/\t/g, '').trim()) {
+      blank = true
+      continue
+    }
+    src.push({ t: kept, indent: /^\s*/.exec(body)?.[0].replace(/\t/g, '    ').length ?? 0, blankBefore: blank, wa })
     blank = false
   }
   rebuildCellTables(src, t => SIGN_OFF.test(t) || DISCLAIMER.test(t) || findDue(t, today) !== null)
@@ -811,6 +836,8 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       continue
     }
     if ((own.test(t) && !LABELLED_QTY.test(t) && !/\d\s*(?:nos?|pcs?|sets?)\b/i.test(t)) || (/@/.test(t) && t.split(' ').length <= 3)) {
+      for (const r of findRefs(t)) refs.push({ ...r, line: t })
+      if (!due) due = findDue(t, today) ?? dueOnNext(t, src[k + 1]?.t)
       noteContacts(t, 1)
       skip(t, 'contact')
       continue
@@ -831,9 +858,25 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         continue
       }
       if (table) {
+        // A header word the picture reader got wrong ("Qry", "uUomMm"): the column is found from the first row that has a
+        // number after the description (the quantity) and a unit word (the unit).
+        if (table.qty < 0 || table.unit < 0) {
+          const after = (i: number) => i > Math.max(...table!.desc) && !table!.extra.some(e => e.i === i)
+          if (table.qty < 0) {
+            const q = cells.findIndex((c, i) => after(i) && NUM_CELL.test(c))
+            if (q >= 0 && cells.some((c, i) => i !== q && after(i) && UNIT_CELL.test(unitCell(c)))) table.qty = q
+          }
+          if (table.unit < 0 && table.qty >= 0) {
+            const u = cells.findIndex((c, i) => i !== table!.qty && after(i) && UNIT_CELL.test(unitCell(c)))
+            if (u >= 0) table.unit = u
+          }
+        }
         const it = tableItem(cells, table)
         // A form's row with no quantity is the row above wrapping onto the next line.
-        if (formMode && row && (table.qty < 0 || !NUM_CELL.test(cells[table.qty] ?? '')) && continuesRow(cells.filter(Boolean).join(' '))) {
+        // A row with its own serial number or material code is an item even when its quantity was not read.
+        const rowShape = (table.unit >= 0 && UNIT_CELL.test(unitCell(cells[table.unit] ?? ''))) || cells.some(c => /^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$/.test(c))
+        const ownRow = rowShape && (/^\d{1,5}\s*\.?$/.test(cells[0] ?? '') || table.extra.some(e => e.codes && /^\d{5,}$/.test(cells[e.i] ?? '')))
+        if (formMode && row && !ownRow && (table.qty < 0 || !NUM_CELL.test(cells[table.qty] ?? '')) && continuesRow(cells.filter(Boolean).join(' '))) {
           // Only the text that goes on with the item: the description columns, the Make / Part No columns, and words that
           // spilled into the serial column; not the plant or the unit wrapping in their own columns ("FCCL" / "Nizampur").
           const tbl = table
@@ -962,7 +1005,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         continue
       }
     }
-    const qOnly = QTY_ONLY.exec(work)
+    const qOnly = QTY_ONLY.exec(work.replace(TAIL, '').trim())
     if (qOnly && !m && !cur) {
       // a number on its own with no item above (a table pasted one cell per line: the row number)
       skip(t, 'table')
@@ -980,8 +1023,8 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     if (cur && !m && !s.blankBefore) {
       const d = cur as Draft
       const prev = d.texts[d.texts.length - 1] ?? ''
-      const wraps = s.indent > d.indent || /(?:[,/&(-]|\b(?:with|and|for|of))$/i.test(prev)
-      const curHasQty = d.qty !== null || (d.texts.length > 0 && readItem(d.texts.join(' '))?.qty != null)
+      const wraps = s.indent > d.indent || DANGLING.test(prev)
+      const curHasQty = d.qty !== null || (d.texts.length > 0 && readItem(joinWrapped(d.texts))?.qty != null)
       if (wraps || (markerMode && !isCourtesy(work) && !SIGN_OFF.test(work) && !(ownQty && curHasQty))) {
         d.texts.push(work)
         lines.push({ text: t, kind: 'joined', reason: null, marker: null })
@@ -1039,7 +1082,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       items.push({ description: d.fromTable.description, qty: d.fromTable.qty ?? 1, unit: writtenUnit(d) ?? d.fromTable.unit })
       continue
     }
-    const r = d.texts.length ? readItem(d.texts.join(' ')) : null
+    const r = d.texts.length ? readItem(joinWrapped(d.texts)) : null
     const description = tidy([r?.description ?? '', ...d.attrs].filter(Boolean).join(', '))
     if (!description) continue
     const qty = r && r.qty !== null ? { qty: r.qty, unit: r.unit } : d.qty
