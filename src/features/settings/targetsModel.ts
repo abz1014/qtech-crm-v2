@@ -138,3 +138,38 @@ export function cellProgress(target: TargetRow | undefined, p: ProgressRow | und
   const got = Math.round(achieved)
   return { kind: 'running', achieved: got, onPace, ahead: got - onPace, excluded }
 }
+
+/** The quarter after: Q4 runs into the next year's Q1. */
+export const nextQuarter = (year: number, quarter: number): { year: number; quarter: Quarter } =>
+  quarter === 4 ? { year: year + 1, quarter: 1 } : { year, quarter: (quarter + 1) as Quarter }
+
+export type QuarterRef = { year: number; quarter: Quarter }
+
+/**
+ * Which quarters the grid shows (audit 2026-10-22: ten dashed "Set target" boxes for quarters already over). By default this
+ * quarter and the next, which may run into next year; "Show earlier quarters" shows the four of one chosen year.
+ */
+export function shownQuarters(mode: 'now' | 'year', today: string, year: number): QuarterRef[] {
+  if (mode === 'year') return QUARTERS.map(quarter => ({ year, quarter }))
+  const now = quarterOfDate(today)
+  return [now, nextQuarter(now.year, now.quarter)]
+}
+
+const grouped = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
+
+/** A gap in few characters: "300,000" below a million, "1.95 M" from a million up. */
+export function compactPkr(n: number): string {
+  const a = Math.abs(n)
+  if (a < 1_000_000) return grouped.format(a)
+  return `${(a / 1_000_000).toFixed(2).replace(/\.?0+$/, '')} M`
+}
+
+/**
+ * A running cell's one line (audit 2026-10-22, was three lines): "Achieved 3,862,102 of 8,000,000 · 1.95 M ahead of pace".
+ * Rupee figures only, never a percentage.
+ */
+export function progressLine(p: Pick<CellProgress, 'achieved' | 'ahead'>, target: number): string {
+  const head = `Achieved ${grouped.format(p.achieved)} of ${grouped.format(target)}`
+  if (p.ahead === 0) return `${head} · On pace`
+  return `${head} · ${compactPkr(p.ahead)} ${p.ahead < 0 ? 'behind pace' : 'ahead of pace'}`
+}

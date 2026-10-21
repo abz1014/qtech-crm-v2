@@ -85,6 +85,8 @@ export type QuoteOutcome = 'quoted' | 'ordered-here' | 'ordered-elsewhere' | 'no
 
 export interface QuoteRow {
   key: string
+  /** The enquiry this row answers (or is still waiting on): the merged Enquiries list takes its reply time from it. */
+  inquiryId: string
   /** Sorting date, YYYY-MM-DD. */
   date: string
   dateText: string
@@ -137,6 +139,8 @@ export type LastContactPart = string | { rfqId: string; ref: string }
 
 export interface SupplierRecord {
   quotes: QuoteRow[]
+  /** Every row fetched (the newest 60 enquiries), for "Show all" on the Enquiries list. */
+  allQuotes: QuoteRow[]
   quoteCount: number
   deliveries: DeliveryRow[]
   deliveryCount: number
@@ -196,6 +200,7 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
     const here = orders.filter(o => o.supplierId === raw.supplierId).sort((a, b) => b.orderNumber - a.orderNumber)[0]
     rows.push({
       key: `q-${l.id}`,
+      inquiryId: inq.id,
       date,
       dateText: l.legacy ? monthYear(date) : formatShortDate(date, today),
       ago: agedDate(date, today).ago,
@@ -233,6 +238,7 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
     const outcome: QuoteOutcome = inq.noOfferOn ? 'declined' : waited >= 7 ? 'no-reply' : 'waiting'
     rows.push({
       key: `i-${inq.id}`,
+      inquiryId: inq.id,
       date: inq.sentOn,
       dateText: inq.legacy ? monthYear(inq.sentOn) : formatShortDate(inq.sentOn, today),
       ago: agedDate(inq.sentOn, today).ago,
@@ -350,6 +356,7 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
 
   return {
     quotes: rows.slice(0, QUOTE_ROWS_SHOWN),
+    allQuotes: rows,
     quoteCount: rows.length,
     deliveries: legRows.slice(0, DELIVERY_ROWS_SHOWN).map(x => x.row),
     deliveryCount: legRows.length,

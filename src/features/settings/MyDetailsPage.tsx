@@ -113,7 +113,13 @@ function DetailsForm({ details }: { details: MyDetails }) {
           <Button disabled={!dirty || sf.pending} onClick={() => sf.form.reset({ phone: details.phone ?? '' })}>
             Discard
           </Button>
-          <Button variant="primary" type="submit" form={sf.formId} busy={sf.pending} busyLabel="Saving" disabled={!dirty}>
+          <Button variant="primary" type="submit" form={sf.formId} busy={sf.pending} busyLabel="Saving"
+            // the screen's one green button stays green; with nothing changed it is aria-disabled and does nothing
+            aria-disabled={!dirty || undefined}
+            onClick={e => {
+              if (!dirty) e.preventDefault()
+            }}
+          >
             {sf.failed ? 'Try again' : 'Save changes'}
           </Button>
         </div>
