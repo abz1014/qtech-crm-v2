@@ -2113,7 +2113,7 @@ isOneToOne: false
 { Args: { "p_delivery_terms"?: string,"p_incoterm"?: string,"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_po_id": string,"p_ship_to"?: string,"p_supplier_order_id": string }; Returns: string
                            },
 "issue_quotation":
-{ Args: { "p_contact_id"?: string,"p_delivery_text"?: string,"p_item_ids"?: (string)[],"p_notes"?: string,"p_payment_terms"?: string,"p_quotation_id": string,"p_rfq_id": string,"p_valid_until"?: string }; Returns: string
+{ Args: { "p_contact_id"?: string,"p_delivery_text"?: string,"p_item_ids"?: (string)[],"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_quotation_id": string,"p_rfq_id": string,"p_valid_until"?: string }; Returns: string
                            },
 "item_match_tier":
 { Args: { "c_brand": string,"c_family": string,"c_guessed"?: boolean,"c_norm": string,"c_tokens": (string)[],"t_brand": string,"t_family": string,"t_norm": string,"t_tokens": (string)[] }; Returns: number
