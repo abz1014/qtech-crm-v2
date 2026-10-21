@@ -81,7 +81,7 @@ export function FormSummary({ labels }: { labels: Partial<Record<string, string>
           </button>
         </span>
       ))}
-      {names.length === 1 ? ' needs a value or a fix.' : ' need a value or a fix.'}
+      {names.length === 1 ? ' needs a value.' : ' need a value.'}
     </Banner>
   )
 }

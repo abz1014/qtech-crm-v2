@@ -203,7 +203,7 @@ describe('Form (U07): errors keep the entries and speak plainly', () => {
     expect(await screen.findByText('Fix 1 field to continue')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Starts in' })).toBeInTheDocument()
     expect(screen.queryByText(/startMonth/)).toBeNull()
-    expect(screen.getByText(/needs a value or a fix\./)).toBeInTheDocument()
+    expect(screen.getByText(/needs a value\./)).toBeInTheDocument()
   })
 })
 
