@@ -1217,7 +1217,6 @@ test("HW-25: a stale second tab's Edit company save silently wipes the Notes sav
   await editCompany(b, d => d.getByLabel('City').fill('Multan'))
   const row = await db.one<{ notes: string | null; city: string | null }>(`companies?id=eq.${co.id}&select=notes,city`)
   expect(row.city).toBe('Multan')
-  test.fail(true, 'HW-25: EditCompanyDialog sends every field from the form it opened with (src/features/companies/CompanyDialogs.tsx:80), and a tab that comes back within 30 s is not refreshed, so the City save writes the old empty Notes over the other tab\'s')
   expect(row.notes).toBe(notes)
 })
 

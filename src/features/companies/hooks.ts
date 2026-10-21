@@ -179,7 +179,8 @@ export function useCreateCompany() {
 export function useUpdateCompany(id: string) {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (patch: { name?: string; country?: string | null; city?: string | null; notes?: string | null }) => api.updateCompany(id, patch),
+    mutationFn: ({ base, ...patch }: { name?: string; country?: string | null; city?: string | null; notes?: string | null; base?: Parameters<typeof api.updateCompany>[2] }) =>
+      api.updateCompany(id, patch, base),
     onSuccess: () => invalidateAfter(client, 'company.update', { id }),
   })
 }
