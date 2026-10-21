@@ -174,7 +174,11 @@ export interface PaymentNote {
  * stays due), or more than is due. Within Rs 1 of the balance counts as settling it, as the database does.
  */
 export function paymentNote(f: PaymentFacts, amount: number | null): PaymentNote {
-  if (amount === null || !(amount > 0)) return { kind: 'none', text: 'Type the amount received.' }
+  if (amount === null || !(amount > 0)) {
+    // HW-44: a paid order opens empty and says so, so a second Save cannot record the last payment again by accident
+    if (f.balance <= 0 && f.gross > 0) return { kind: 'none', text: 'Nothing is due on this order: it is paid. Anything recorded here is more than the balance.' }
+    return { kind: 'none', text: 'Type the amount received.' }
+  }
   const after = f.balance - amount
   const priorText =
     f.prior.length === 0

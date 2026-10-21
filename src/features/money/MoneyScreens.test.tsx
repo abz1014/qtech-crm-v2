@@ -51,7 +51,7 @@ function db(extra: (c: FakeCall) => FakeResult | undefined = () => undefined) {
       case 'v_order_items_total':
         return { data: { net: 1949800, gst: 350964 } }
       case 'order_items':
-        return { data: Array.from({ length: 8 }, () => ({ gst_rate: 18 })) }
+        return { data: Array.from({ length: 8 }, () => ({ qty: 1, unit_price_net: 243725, gst_rate: 18 })) }
       case 'payments_in':
         return c.verb === 'insert' ? {} : { data: [{ received_on: '2026-11-09', amount: 700000 }] }
       case 'invoices':

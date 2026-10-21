@@ -375,6 +375,16 @@ describe('buildInvoiceDoc', () => {
     expect(r.ok && [r.doc.dueOn, r.doc.poDate, r.doc.copy]).toEqual(['2026-11-19', null, 'duplicate'])
   })
 
+  it('a later invoice prints the ORDER’s due date: the first invoice plus the terms (HW-12)', () => {
+    const src = source({ otherInvoices: [{ id: 'i0', number: 'INV-0009', net: '1000.00', dueBasis: '2026-09-01' }] })
+    const r = buildInvoiceDoc(src, PROFILE, all(src.lines), 'original')
+    expect(r.ok && r.doc.dueOn).toBe('2026-10-16') // 1 Sep + 45 days, not 20 Oct + 45
+    // an earlier invoice of a LATER date does not move it
+    const later = source({ otherInvoices: [{ id: 'i2', number: 'INV-0013', net: '1000.00', dueBasis: '2026-10-25' }] })
+    const r2 = buildInvoiceDoc(later, PROFILE, all(later.lines), 'original')
+    expect(r2.ok && r2.doc.dueOn).toBe('2026-12-04')
+  })
+
   it('is not built while something is missing, and says what', () => {
     const src = source({ buyer: { id: 'c1', ...BUYER, strn: null } })
     const r = buildInvoiceDoc(src, PROFILE, all(src.lines), 'original')
