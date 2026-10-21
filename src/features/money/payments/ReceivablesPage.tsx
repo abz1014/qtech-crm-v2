@@ -1,13 +1,15 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Banknote, ExternalLink } from 'lucide-react'
+import { FilePlus } from 'lucide-react'
+import { useMediaQuery } from '@/lib/useMediaQuery'
+import { Dialog, DialogContent } from '@/ui/Dialog'
+import { CreateInvoiceDialog } from '@/features/money/invoices/CreateInvoiceDialog'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
 import { agoDays, inDays } from '@/lib/timeWords'
 import { matchesAllWords, useQueryParamText } from '@/lib/useQueryParamText'
 import { useSession } from '@/app/session'
-import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
@@ -57,8 +59,24 @@ const SEARCH_FIELDS = 'customer, order number and invoice number'
 const FILTER_WORD: Record<ReceivableFilter, string> = { open: 'Open', overdue: 'Overdue', settled: 'Paid' }
 const shortDay = (iso: string) => formatDay(iso).replace(/^\w+ /, '').replace(/ \d{4}$/, '')
 
-function NextStep({ r, today }: { r: ReceivableRow; today: string }) {
+function NextStep({ r, today, onInvoice }: { r: ReceivableRow; today: string; onInvoice: (orderId: string) => void }) {
   const s = receivableNextStep(r, today)
+  // "Not invoiced yet" is a state, not a step: the step is to create the invoice, one tap from here (round 3).
+  if (r.state !== 'settled' && !isInvoiced(r))
+    return (
+      <button
+        type="button"
+        onClick={e => {
+          e.stopPropagation()
+          onInvoice(r.orderId)
+        }}
+        className="inline-flex min-h-touch items-center gap-1 rounded text-left text-sm font-medium text-primary hover:underline md:min-h-0"
+        aria-label={`Create invoice for ${orderRef(r.orderNumber)}`}
+      >
+        <Icon icon={FilePlus} size="sm" />
+        Create invoice
+      </button>
+    )
   return (
     <StatusText tone={s.tone} detail={s.detail}>
       {s.label}
@@ -74,6 +92,10 @@ export function ReceivablesPage() {
   const [search, setSearch] = useQueryParamText()
   const [paying, setPaying] = useState<string | null>(null)
   const [picked, setPicked] = useState<string | null>(null)
+  const [invoicing, setInvoicing] = useState<string | null>(null)
+  const [sheet, setSheet] = useState(false)
+  // DataTable draws cards below 640 px; there the reminder is a sheet, not a panel at the foot of a long page.
+  const cards = useMediaQuery('(max-width: 639px)')
   const panelRef = useRef<HTMLDivElement>(null)
   const [params, setParams] = useSearchParams()
   const today = businessToday()
@@ -90,6 +112,11 @@ export function ReceivablesPage() {
   const selected = shown.find(r => r.orderId === picked) ?? mostOverdue
   const pick = (r: ReceivableRow) => {
     setPicked(r.orderId)
+    // A phone has no room for the panel beside the cards: the picked card's reminder opens as a bottom sheet.
+    if (cards) {
+      setSheet(true)
+      return
+    }
     // Under 1360 px the panel is below the table: bring it into view.
     if (typeof window !== 'undefined' && !window.matchMedia?.('(min-width: 1360px)').matches) panelRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
   }
@@ -152,21 +179,12 @@ export function ReceivablesPage() {
           )
         },
       },
-      // ONE Next step (R2-06): replaces the Payment chip and the Last reminder columns.
-      { id: 'next', header: 'Next step', sortable: false, cell: r => <NextStep r={r} today={today} /> },
+      // ONE Next step (R2-06): replaces the Payment chip and the Last reminder columns. Record payment lives in ONE place, the
+      // panel of the picked row (round 3: the unlabelled icon button on every row is gone).
+      { id: 'next', header: 'Next step', sortable: false, cell: r => <NextStep r={r} today={today} onInvoice={setInvoicing} /> },
     ]
-    if (isAdmin)
-      cols.push({
-        id: 'actions',
-        header: 'Actions',
-        sortable: false,
-        cell: r =>
-          r.state === 'settled' ? null : (
-            <Button size="sm" icon={Banknote} aria-label={`Record payment for ${orderRef(r.orderNumber)}`} title="Record payment" onClick={() => setPaying(r.orderId)} />
-          ),
-      })
     return cols
-  }, [isAdmin, today])
+  }, [today])
 
   const tabLabel = 'Who owes us'
   const searching = search.trim() !== ''
@@ -177,7 +195,19 @@ export function ReceivablesPage() {
 
   return (
     <MoneyFrame active="receivables">
+      {/* Phone: the key fact stays in view while the cards scroll (the four tiles took half the screen). */}
+      <p data-testid="owed-line" className="sticky top-0 z-10 -mx-4 flex flex-wrap items-baseline gap-x-3 border-b bg-canvas px-4 py-2 text-base sm:hidden">
+        <span>
+          Owed <b className="num font-semibold">PKR {Math.round(totals.outstanding).toLocaleString('en-US')}</b>
+        </span>
+        {totals.overdueCount > 0 ? (
+          <span className="text-tone-danger-fg">
+            Overdue <b className="num font-semibold">PKR {Math.round(totals.overdue).toLocaleString('en-US')}</b> · <span className="num">{totals.overdueCount}</span>
+          </span>
+        ) : null}
+      </p>
       <SumBar
+        className="max-sm:hidden"
         label="Balance by status"
         items={[
           { label: 'Outstanding', amount: totals.outstanding, sub: `${totals.openCount} open ${totals.openCount === 1 ? 'order' : 'orders'}` },
@@ -202,13 +232,13 @@ export function ReceivablesPage() {
             toolbar={
               <div className="grid gap-3">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-base font-semibold">{tabLabel}</h2>
-                  <span className="text-sm text-fg-muted">Balance is gross, GST included</span>
+                  <h2 className="text-base font-semibold">Balances</h2>
                   {/* ONE tip beside the header (two merges once left a second one beside it): the balance, then reminders. */}
                   <InfoTip label="About the balance and reminders">
-                    What the customer still owes, GST included, after payments recorded. A reminder is due when an order is overdue and has
-                    not been reminded in the last 7 days; copying the reminder records it, and the order moves to Waiting on Today.{' '}
-                    {isAdmin ? 'Record a payment with the button on its row.' : 'Payments are recorded by an admin.'}
+                    The balance is what the customer still owes, gross (GST included), after payments recorded. A reminder is due when an
+                    order is overdue and has not been reminded in the last 7 days; copying the reminder records it, and the order moves to
+                    Waiting on Today.{' '}
+                    {isAdmin ? 'Pick an order to see its reminder and Record payment.' : 'Payments are recorded by an admin.'}
                   </InfoTip>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -250,33 +280,30 @@ export function ReceivablesPage() {
                   <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{r.companyName}</span>
                   <Money value={r.balance} prefix={false} strong />
                 </div>
-                <span className="num text-xs text-fg-muted">
+                <span className="num text-sm text-fg-2">
                   {orderRef(r.orderNumber)}
-                  {isInvoiced(r) ? ` · ${r.invoiceNumbers.join(', ')}` : ' · not invoiced yet'}
+                  {isInvoiced(r) ? ` · ${r.invoiceNumbers.join(', ')}` : ''}
                 </span>
-                <NextStep r={r} today={today} />
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {isAdmin && r.state !== 'settled' ? (
-                    <Button icon={Banknote} size="touch" onClick={() => setPaying(r.orderId)} aria-label={`Record payment for ${orderRef(r.orderNumber)}`}>
-                      Record payment
-                    </Button>
-                  ) : null}
-                  <Link
-                    to={`/orders/${r.orderId}`}
-                    className="inline-flex min-h-touch items-center gap-2 rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken"
-                  >
-                    <Icon icon={ExternalLink} size="sm" className="text-fg-muted" />
-                    Open order
-                  </Link>
-                </div>
+                {/* One action per card: tap it for the reminder, Record payment and Open order (a sheet). */}
+                <NextStep r={r} today={today} onInvoice={setInvoicing} />
               </div>
             )}
           />
         </div>
-        <div ref={panelRef} className="scroll-mt-4">
-          <ReminderPanel row={selected} today={today} />
-        </div>
+        {cards ? null : (
+          <div ref={panelRef} className="scroll-mt-4">
+            <ReminderPanel row={selected} today={today} />
+          </div>
+        )}
       </div>
+      {cards ? (
+        <Dialog open={sheet && selected !== null} onOpenChange={setSheet}>
+          <DialogContent title={selected ? selected.companyName : 'Payment reminder'} size="md">
+            {selected ? <ReminderPanel row={selected} today={today} /> : null}
+          </DialogContent>
+        </Dialog>
+      ) : null}
+      <CreateInvoiceDialog open={invoicing !== null} onOpenChange={o => (o ? undefined : setInvoicing(null))} orderId={invoicing ?? undefined} />
       <RecordPaymentDialog open={paying !== null || linkedPay !== null} orderId={paying ?? linkedPay} onOpenChange={o => { if (!o) { setPaying(null); if (linkedPay) closeLinked() } }} />
     </MoneyFrame>
   )

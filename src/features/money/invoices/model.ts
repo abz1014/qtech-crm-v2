@@ -149,6 +149,28 @@ export function attentionReason(r: Pick<GstRow, 'fbrException' | 'needsAttention
 
 export const needsAttention = (r: GstRow): boolean => attentionReason(r) !== null
 
+export interface InvoiceNextStep {
+  tone: 'late' | 'now' | 'done'
+  label: string
+  detail?: string
+}
+
+/**
+ * The register's ONE Next step (round 3: it replaces the two chip columns "Sent to customer" and "Tax deposited"): a step
+ * recorded out of order first, then GST late for an earlier month, then sending the invoice to the customer (by the TCS
+ * courier), then depositing its GST, else Done.
+ */
+export function invoiceNextStep(r: GstRow): InvoiceNextStep {
+  if (r.fbrException) {
+    const noPsid = (r.fbrState === 'deposited' || r.fbrState === 'receipt_received') && !r.psid
+    return { tone: 'now', label: noPsid ? 'Add the PSID' : 'Add deposit receipt', detail: attentionReason(r) ?? undefined }
+  }
+  if (r.needsAttention && r.fbrState !== 'deposited') return { tone: 'late', label: 'Deposit GST', detail: attentionReason(r) ?? undefined }
+  if (tcsNotSent(r)) return { tone: 'now', label: 'Send to customer' }
+  if (r.fbrState !== 'deposited') return { tone: 'now', label: 'Deposit GST' }
+  return { tone: 'done', label: 'Done' }
+}
+
 /** No courier date yet (not started, or only the optional "copy received"): the register's "Not sent by TCS" filter. */
 export const tcsNotSent = (r: Pick<GstRow, 'courierState'>): boolean => r.courierState === 'not_started' || r.courierState === 'copy_received'
 

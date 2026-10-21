@@ -95,7 +95,8 @@ test('one month of books by hand: P&L, team, GST month, checklist and aging; the
       expect(p.frozen).toBe(false)
       const sum = page.getByRole('region', { name: BOOKS.pnl.sumBar }).first()
       await expect(sum).toContainText(amount(70000))
-      await expect(sum).toContainText(amount(12600))
+      // round 3: two tiles (Received after GST, Profit) plus After drawings when drawn; the 12,600 GST is a line of the statement
+      await expect(page.getByRole('row', { name: /less GST inside the payments/ })).toContainText(amount(12600))
       await expect(sum).toContainText(amount(37654)) // headline figures are whole rupees
       await expect(sum).toContainText(amount(30654))
       await expect(page.getByTestId('pnl-frozen')).toHaveCount(0)

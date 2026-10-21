@@ -8,6 +8,7 @@ import {
   olderNote,
   type RawBank,
 } from '@/features/money/bank/model'
+import { bankLinesToMatch, buildChecklist } from '@/features/money/monthEnd/model'
 
 const OCT = '2026-10-01'
 const SEP = '2026-09-01'
@@ -119,10 +120,15 @@ describe('which lines a statement month shows', () => {
     const open = buildBankView(raw, '2026-10').out.open
     expect(open).toHaveLength(3)
     const g = open.find(l => l.key === 'psid:4471 9038 2216')
-    expect(g).toMatchObject({ kind: 'fbr', ids: ['1', '2'], amount: '463500.50', title: 'FBR deposit · PSID 4471 9038 2216' })
-    expect(g?.sub[0]).toBe('2 invoices: INV-1, INV-2')
+    expect(g).toMatchObject({ kind: 'fbr', ids: ['1', '2'], amount: '463500.50', title: 'FBR payment', psid: '4471 9038 2216' })
+    expect(g?.sub).toEqual(['PSID …2216', '2 invoices: INV-1, INV-2'])
     expect(g?.kids).toHaveLength(2)
-    expect(open.find(l => l.key === 'invoice:4')?.title).toBe('FBR deposit · no PSID recorded')
+    expect(open.find(l => l.key === 'invoice:4')?.sub[0]).toBe('no PSID recorded')
+  })
+
+  it('names an expense by its category alone when the detail only repeats it', () => {
+    const raw: RawBank = { ...empty, expenses: [exp('a', '2026-10-05', '1.00', null, { note: 'Salaries' }), exp('b', '2026-10-05', '1.00', null, { note: 'support staff' })] }
+    expect(buildBankView(raw, '2026-10').out.open.map(l => l.title).sort()).toEqual(['Salaries', 'Salaries, support staff'])
   })
 
   it('a PSID group is ticked only when every invoice is; a late invoice on an old PSID stands alone', () => {
@@ -199,5 +205,29 @@ describe('months', () => {
   })
   it('words the older note by month', () => {
     expect(olderNote('2026-09-30')).toBe('September, not ticked then')
+  })
+})
+
+describe('one definition of "to match" (round 3: Month end said 5, this page said 7)', () => {
+  it('the not-ticked lines here equal Month end: bank items + one line per PSID', () => {
+    // The audit's September, by hand: 1 payment in; 4 bank expenses out; 2 FBR invoices under 2 PSIDs; plus a 3rd invoice
+    // sharing the first PSID (one bank debit) and a cash-free ticked line that must not count.
+    const raw: RawBank = {
+      payments: [pay('p1', '2026-09-22', '2932300.00')],
+      expenses: [
+        exp('e1', '2026-09-19', '180000.00'),
+        exp('e2', '2026-09-16', '41200.00'),
+        exp('e3', '2026-09-12', '1480000.00'),
+        exp('e4', '2026-09-05', '685000.00'),
+        exp('e5', '2026-09-03', '9000.00', SEP), // ticked against September: not "to match"
+      ],
+      deposits: [dep('d1', '1203260012345', '2026-09-22', '161280.00'), dep('d2', '1203260011987', '2026-09-12', '447300.00'), dep('d3', '1203260012345', '2026-09-22', '1000.00')],
+    }
+    const t = bankTotals(buildBankView(raw, '2026-09'))
+    const onPage = t.openIn.count + t.openOut.count
+    // month_end_status for the same rows: bank_unticked = 1 + 4 = 5; fbr_deposits_unticked = 3 invoices in 2 PSID groups
+    expect(onPage).toBe(7)
+    expect(bankLinesToMatch(5, 2)).toBe(onPage)
+    expect(buildChecklist([{ check_key: 'bank_unticked', n: 5 }, { check_key: 'fbr_deposits_unticked', n: 3 }], '2026-09', { bank_unticked: { in_n: 1, out_n: 4 }, fbr_deposits_unticked: { amount: 609580, groups: 2 } })[0].n).toBe(onPage)
   })
 })

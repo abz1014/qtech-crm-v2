@@ -98,12 +98,20 @@ const MONEY_PLACES: ReadonlyArray<{
   },
   {
     id: "money:in-out",
-    label: "In vs out",
+    label: "Money in and out",
     href: "/money/reports/in-out",
     icon: ChartColumn,
     roles: ["admin"],
-    keywords: ["cash flow", "money in", "money out", "quarter", "profit"],
+    keywords: ["in vs out", "cash flow", "money in", "money out", "quarter", "profit"],
   },
+  // round 3: every money report is found by name (each opens in Money > Reports)
+  { id: "money:pnl", label: "Profit and loss", href: "/money/reports/pnl", icon: ChartColumn, roles: ["admin"], keywords: ["p&l", "profit", "result"] },
+  { id: "money:aging", label: "Overdue by age", href: "/money/reports/aging", icon: ChartColumn, roles: ["admin"], keywords: ["aging", "overdue"] },
+  { id: "money:owe", label: "We owe suppliers", href: "/money/reports/owe", icon: ChartColumn, roles: ["admin"], keywords: ["payables", "suppliers", "we owe"] },
+  { id: "money:gst-month", label: "GST and FBR", href: "/money/reports/gst", icon: ChartColumn, roles: ["admin"], keywords: ["fbr", "gst month", "input tax"] },
+  { id: "money:team", label: "Sales by person", href: "/money/reports/team", icon: ChartColumn, roles: ["admin"], keywords: ["team", "targets", "credited"] },
+  { id: "money:categories", label: "Expenses by category", href: "/money/reports/categories", icon: ChartColumn, roles: ["admin"], keywords: ["categories", "spend"] },
+  { id: "money:enquiries", label: "Enquiries and customers", href: "/money/reports/enquiries", icon: ChartColumn, roles: ["admin", "sales"], keywords: ["win rate", "repeat customers"] },
   {
     id: "money:month-end",
     label: "Month end",

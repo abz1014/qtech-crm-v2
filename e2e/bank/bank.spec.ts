@@ -78,7 +78,7 @@ const mouse = (page: Page) => page.evaluate(() => (window as unknown as { __mous
 
 /** The "Ticked, money in" figure in rupees. */
 async function tickedTotal(page: Page): Promise<number> {
-  const text = await page.getByRole('region', { name: 'Running ticked totals' }).getByText('Ticked, money in').locator('..').innerText()
+  const text = await page.getByRole('region', { name: 'Running ticked totals' }).getByText('Matched, money in').locator('..').innerText()
   return Number((/PKR\s*([\d,.]+)/.exec(text)?.[1] ?? 'NaN').replace(/,/g, ''))
 }
 
@@ -129,7 +129,7 @@ test.describe('bank tick (M12)', () => {
     const a = await addDeposit(order.id, psid, 39240)
     const b = await addDeposit(order.id, psid, 7110)
     await openAs(page, 'admin', '/money/month-end/bank')
-    const group = page.getByRole('checkbox', { name: new RegExp(`FBR deposit · PSID ${psid}`) })
+    const group = page.getByRole('checkbox', { name: new RegExp(`FBR payment.*PSID …${psid.replace(/\D/g, '').slice(-4)}`) })
     await expect(group).toContainText('2 invoices')
     await expect(group).toContainText('46,350')
     const seen = writes(page)
