@@ -5,7 +5,7 @@
 import { addBusinessDays } from '@/features/rfqs/lib/dateText'
 import { orderRef } from '@/lib/refs'
 import type { StepTone } from '@/lib/status'
-import { agoDays, daysOverdue, inDays } from '@/lib/timeWords'
+import { agoDays, daysOverdue, inDays, overdueWords } from '@/lib/timeWords'
 
 export type PaymentState = 'unpaid' | 'part' | 'settled' | 'overdue'
 
@@ -98,7 +98,7 @@ export interface ReceivableNextStep {
 export function receivableNextStep(r: ReceivableRow, today: string): ReceivableNextStep {
   if (r.state === 'settled') return { tone: 'done', label: 'Paid' }
   if (r.state === 'overdue') {
-    const late = daysOverdue(r.dueOn ? daysBetween(r.dueOn, today) : 1)
+    const late = r.dueOn ? overdueWords(daysBetween(r.dueOn, today), r.dueOn) : daysOverdue(1) // never a count above 30 days (redesign phase 0)
     if (reminderDue(r, today) || !r.lastRemindedOn) return { tone: 'late', label: 'Send a reminder', detail: late }
     return { tone: 'waiting', label: `Reminded ${agoDays(daysBetween(r.lastRemindedOn, today)).toLowerCase()}`, detail: late }
   }
