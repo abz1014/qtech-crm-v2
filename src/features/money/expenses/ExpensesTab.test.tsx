@@ -8,8 +8,7 @@ import { installFakeDb, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
 /*
- * Money › Expenses list (0086): grouped by the category's group with one total in the toolbar, delete with Undo (nothing is
- * removed until the Undo window closes), and a closed month's rows locked.
+ * Money › Expenses list (0086): grouped by the category's group with one total in the toolbar, delete (one confirm, then at once and for good), and a closed month's rows locked.
  */
 const OFFICE = 'ca7e9000-0000-4000-8000-000000000001'
 const ORDERS = 'ca7e9000-0000-4000-8000-000000000005'
@@ -24,10 +23,11 @@ const exp = (id: string, paid_on: string, amount_pkr: number, category_id: strin
 })
 const ROWS = [exp('e1', '2026-09-03', 500, 'c-water', 'Office water'), exp('e2', '2026-09-11', 380000, 'c-sup', null), exp('e3', '2026-09-17', 1150, 'c-water', 'Office water')]
 
-function setup(closed: string[] = []) {
+function setup(closed: string[] = [], onDelete: () => { data?: unknown; error?: unknown } = () => ({ data: [{ id: 'x' }] })) {
   const db = installFakeDb((c: FakeCall) => {
     if (c.target === 'expense_categories') return { data: CATEGORIES }
     if (c.target === 'expense_groups') return { data: GROUPS }
+    if (c.target === 'expenses' && c.verb === 'delete') return onDelete() as never
     if (c.target === 'expenses' && c.verb === 'select') return { data: ROWS }
     if (c.target === 'closed_months') return { data: closed.map(m => ({ month: `${m}-01`, closed_at: '2026-10-03T10:00:00Z', closed_by: 'u1', note: null })) }
     if (c.target === 'users') return { data: [{ id: 'u1', name: 'Wasif' }] }
@@ -64,31 +64,47 @@ describe('Expenses list (0086)', () => {
     expect(text.indexOf('Office running')).toBeLessThan(text.indexOf('Order costs'))
   })
 
-  it('delete asks nothing: the row goes at once, Undo brings it back, and nothing was deleted', async () => {
+  it('delete asks once, then runs at once; the toast comes after the server confirms', async () => {
     const user = userEvent.setup()
     const db = setup()
     await screen.findByTestId('expenses-month-total')
     await user.click(screen.getByRole('button', { name: 'More for Supplier payment of 380000' }))
     await user.click(screen.getByRole('menuitem', { name: 'Delete expense' }))
-    await waitFor(() => expect(screen.getByTestId('expenses-month-total')).toHaveTextContent('PKR 1,650 · 2 expenses'))
-    await user.click(screen.getByRole('button', { name: /Undo/ }))
-    await waitFor(() => expect(screen.getByTestId('expenses-month-total')).toHaveTextContent('PKR 381,650 · 3 expenses'))
-    expect(db.calls.some(c => c.target === 'expenses' && c.verb === 'delete')).toBe(false)
+    expect(await screen.findByTestId('delete-expense-what')).toHaveTextContent('Supplier payment · PKR 380,000 · 11 Sep 2026')
+    expect(screen.getByText('This can’t be undone.')).toBeInTheDocument()
+    expect(db.calls.some(c => c.verb === 'delete')).toBe(false)
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(db.calls.some(c => c.target === 'expenses' && c.verb === 'delete')).toBe(true))
+    expect(await screen.findByText('Expense deleted')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Undo/ })).not.toBeInTheDocument()
   })
 
-  it('the delete is sent once the Undo window closes (here: the toast is dismissed)', async () => {
+  it('Cancel on the confirm deletes nothing', async () => {
     const user = userEvent.setup()
     const db = setup()
     await screen.findByTestId('expenses-month-total')
     await user.click(screen.getByRole('button', { name: 'More for Water of 500' }))
     await user.click(screen.getByRole('menuitem', { name: 'Delete expense' }))
-    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
-    await waitFor(() => expect(db.calls.some(c => c.target === 'expenses' && c.verb === 'delete')).toBe(true))
+    await user.click(await screen.findByRole('button', { name: 'Cancel' }))
+    expect(db.calls.some(c => c.verb === 'delete')).toBe(false)
+    expect(screen.getByTestId('expenses-month-total')).toHaveTextContent('3 expenses')
+  })
+
+  it('a refused delete shows the server sentence and keeps the row', async () => {
+    const user = userEvent.setup()
+    setup([], () => ({ error: { code: 'P0001', message: 'September 2026 is closed. An admin can reopen it.' } }))
+    await screen.findByTestId('expenses-month-total')
+    await user.click(screen.getByRole('button', { name: 'More for Water of 500' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Delete expense' }))
+    await user.click(await screen.findByRole('button', { name: 'Delete' }))
+    expect((await screen.findAllByText('September 2026 is closed. Reopen it on Month end first.')).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Expense deleted')).not.toBeInTheDocument()
+    expect(screen.getByTestId('expenses-month-total')).toHaveTextContent('3 expenses')
   })
 
   it('a closed month: one line says so, every row is locked and nothing opens for editing', async () => {
     setup(['2026-09'])
-    expect(await screen.findByTestId('expenses-closed')).toHaveTextContent('September 2026 is closed.')
+    expect(await screen.findByTestId('expenses-closed')).toHaveTextContent('September 2026 is closed. Month closed. Reopen it on Month end to change or delete.')
     await screen.findByTestId('expenses-month-total')
     expect(screen.queryByRole('button', { name: /^More for/ })).not.toBeInTheDocument()
     expect(screen.getAllByText('Locked, the month is closed').length).toBe(3)

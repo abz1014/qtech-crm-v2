@@ -14,7 +14,7 @@ const CATEGORIES = [
   { id: SUPPLIER_PAYMENT_ID, name: 'Supplier payment', grp: 'order_cost', default_paid_via: 'bank', sort: 110, active: true },
 ]
 
-function setup(opts: { upsert?: () => FakeResult; context?: ExpenseContext; lastForOrder?: string; expense?: ListedExpense } = {}) {
+function setup(opts: { upsert?: () => FakeResult; del?: () => FakeResult; closed?: string[]; context?: ExpenseContext; lastForOrder?: string; expense?: ListedExpense } = {}) {
   const db = installFakeDb((c: FakeCall) => {
     if (c.target === 'expense_categories') return { data: CATEGORIES }
     if (c.target === 'expenses' && c.verb === 'select') {
@@ -22,6 +22,9 @@ function setup(opts: { upsert?: () => FakeResult; context?: ExpenseContext; last
       if (c.ops.some(([n]) => n === 'eq')) return { data: opts.lastForOrder ? [{ category_id: opts.lastForOrder }] : [] }
       return { data: [{ category_id: 'c-snacks', paid_on: '2026-11-01' }] }
     }
+    if (c.target === 'closed_months') return { data: (opts.closed ?? []).map(m => ({ month: `${m}-01`, closed_at: '2026-10-03T10:00:00Z', closed_by: 'u1', note: null })) }
+    if (c.target === 'users') return { data: [{ id: 'u1', name: 'Wasif' }] }
+    if (c.target === 'expenses' && c.verb === 'delete') return opts.del?.() ?? { data: [{ id: 'e1' }] }
     if (c.target === 'expenses' && c.verb === 'upsert') return opts.upsert?.() ?? {}
     return { data: [] }
   })
@@ -138,5 +141,48 @@ describe('Add expense dialog (M03)', () => {
     window.sessionStorage.setItem(key, JSON.stringify({ amount: 8765 })) // as a reload finds it
     setup()
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('8,765'))
+  })
+
+  describe('Delete expense', () => {
+    const expense: ListedExpense = {
+      id: 'e1', paidOn: '2026-11-03', amount: 1111, inputTax: 0, categoryId: 'c-rent', paidVia: 'bank', note: null,
+      orderId: null, legId: null, payeeId: null, recurringId: null, bankMonth: null,
+    }
+    const deletes = (db: ReturnType<typeof installFakeDb>) => db.calls.filter(c => c.target === 'expenses' && c.verb === 'delete')
+
+    it('is a visible button when editing, and not when adding', async () => {
+      setup({ expense })
+      expect(await screen.findByRole('button', { name: 'Delete expense' })).toBeVisible()
+      cleanup()
+      setup()
+      await screen.findByRole('textbox', { name: 'Amount, PKR' })
+      expect(screen.queryByRole('button', { name: 'Delete expense' })).not.toBeInTheDocument()
+    })
+
+    it('confirm calls the API and then says Expense deleted', async () => {
+      const user = userEvent.setup()
+      const db = setup({ expense })
+      await user.click(await screen.findByRole('button', { name: 'Delete expense' }))
+      expect(await screen.findByTestId('delete-expense-what')).toHaveTextContent('Rent · PKR 1,111 · 3 Nov 2026')
+      expect(deletes(db)).toHaveLength(0)
+      await user.click(screen.getByRole('button', { name: 'Delete' }))
+      await waitFor(() => expect(deletes(db)).toHaveLength(1))
+      expect(await screen.findByText('Expense deleted')).toBeInTheDocument()
+    })
+
+    it('a delete that removes 0 rows shows an error, not a success', async () => {
+      const user = userEvent.setup()
+      setup({ expense, del: () => ({ data: [] }) })
+      await user.click(await screen.findByRole('button', { name: 'Delete expense' }))
+      await user.click(await screen.findByRole('button', { name: 'Delete' }))
+      expect((await screen.findAllByText('Not deleted. You may not have permission, or the month is closed.')).length).toBeGreaterThan(0)
+      expect(screen.queryByText('Expense deleted')).not.toBeInTheDocument()
+    })
+
+    it('a closed month shows the lock line and no Delete', async () => {
+      setup({ expense, closed: ['2026-11'] })
+      expect(await screen.findByTestId('expense-closed-line')).toHaveTextContent('Month closed. Reopen it on Month end to change or delete.')
+      expect(screen.queryByRole('button', { name: 'Delete expense' })).not.toBeInTheDocument()
+    })
   })
 })
