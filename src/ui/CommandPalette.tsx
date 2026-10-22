@@ -258,7 +258,9 @@ export function CommandPalette({
             if (opener && opener !== document.body && opener.isConnected) opener.focus()
             else {
               const now = document.activeElement
-              if (!now || now === document.body || contentRef.current?.contains(now)) document.getElementById('main')?.focus({ preventScroll: true })
+              // Not when the pick opened another dialog (an invoice, a record): that dialog owns focus and its Esc.
+              const otherDialog = Array.from(document.querySelectorAll('[role="dialog"],[role="alertdialog"]')).some(d => !contentRef.current?.contains(d) && d !== contentRef.current)
+              if (!otherDialog && (!now || now === document.body || contentRef.current?.contains(now))) document.getElementById('main')?.focus({ preventScroll: true })
             }
           }}
           className="fixed left-1/2 top-[96px] z-50 flex max-h-[calc(100dvh-112px)] w-[640px] flex-col max-md:max-h-[calc(100dvh-32px)] max-w-[calc(100vw-32px)] -translate-x-1/2 overflow-hidden rounded bg-surface shadow-modal focus:outline-none max-md:top-4"

@@ -40,7 +40,8 @@ const activityFetch: typeof fetch = async (input, init) => {
   const res = await fetch(input, init)
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
   if (url.includes('/rest/v1/') && !isSessionLookup(url)) listeners.forEach((l) => l())
-  if (res.status === 401 && url.includes('/rest/v1/')) refusedListeners.forEach((l) => l())
+  // Not for the session lookups themselves: the re-check they would trigger is the one already running (it would cancel itself).
+  if (res.status === 401 && url.includes('/rest/v1/') && !isSessionLookup(url)) refusedListeners.forEach((l) => l())
   return res
 }
 

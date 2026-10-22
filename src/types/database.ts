@@ -2068,9 +2068,6 @@ isOneToOne: false
 "can_access_bucket":
 { Args: { "bucket": string }; Returns: boolean
                            },
-"check_session":
-{ Args: Record<PropertyKey, never>; Returns: undefined
-                           },
 "close_month":
 { Args: { "p_month": string }; Returns: undefined
                            },

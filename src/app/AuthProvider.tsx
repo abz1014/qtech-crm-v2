@@ -151,7 +151,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       recheck()
     })
     // A data request refused for the token itself: check now, not on the next tick (HW-45), so the shell goes at once.
-    const stopRefused = onSessionRefused(recheck)
+    // cancelRefetch false: several refused requests at once join the one check instead of restarting it.
+    const stopRefused = onSessionRefused(() => void queryClient.refetchQueries({ queryKey: [...KEY, userId] }, { cancelRefetch: false }))
     window.addEventListener('focus', recheck)
     return () => {
       stop()
