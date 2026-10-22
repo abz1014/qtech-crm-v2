@@ -68,14 +68,14 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     await openAs(page, 'admin', '/money/expenses')
     const qa = page.getByTestId('quick-add')
     await expect(qa.getByRole('button', { name: 'Water', exact: true })).toBeVisible()
-    const amount = qa.getByRole('textbox', { name: 'Amount, PKR' })
+    const amount = qa.getByRole('textbox', { name: 'Amount (PKR)' })
     const b = base()
     await startCounting(page)
     await amount.click() // tap 1
     await page.keyboard.type('500')
     await qa.getByRole('button', { name: 'Water', exact: true }).click() // tap 2: cash comes from the category
     await expect(qa.getByRole('button', { name: 'Cash' })).toHaveAttribute('aria-pressed', 'true')
-    await qa.getByRole('button', { name: 'Save', exact: true }).click() // tap 3
+    await qa.getByRole('button', { name: 'Save this expense' }).click() // tap 3
     await expect(amount).toHaveValue('')
     await expect(amount).toBeFocused() // the row stays open for the next one
     expect(await taps(page)).toBe(3)
@@ -87,7 +87,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     for (const [amt, name] of [[b + 1, 'Fuel & travel'], [b + 2, 'Office supplies & snacks'], [b + 3, 'Water']] as const) {
       await page.keyboard.type(String(amt))
       await qa.getByRole('button', { name, exact: true }).click()
-      await qa.getByRole('button', { name: 'Save', exact: true }).click()
+      await qa.getByRole('button', { name: 'Save this expense' }).click()
       await expect(amount).toHaveValue('')
     }
     expect(await taps(page)).toBe(7)
@@ -105,12 +105,12 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     await expect(qa.getByRole('button', { name: 'Supplier payment' })).toHaveCount(0)
     await expect(qa.getByRole('combobox', { name: 'More categories' }).locator('option', { hasText: 'Supplier payment' })).toHaveCount(0)
     const amt = base() + 7
-    await qa.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(amt))
+    await qa.getByRole('textbox', { name: 'Amount (PKR)' }).fill(String(amt))
     await pickCategory(qa, 'Repairs & maintenance')
-    await qa.getByRole('checkbox', { name: 'More: has a GST invoice' }).click()
+    await qa.getByRole('checkbox', { name: 'Has a GST invoice' }).click()
     await qa.getByRole('textbox', { name: 'GST on this bill (input tax), PKR' }).fill('180')
-    await qa.getByRole('button', { name: 'Save', exact: true }).click()
-    await expect(qa.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('')
+    await qa.getByRole('button', { name: 'Save this expense' }).click()
+    await expect(qa.getByRole('textbox', { name: 'Amount (PKR)' })).toHaveValue('')
     const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amt}&select=*`))
     expect(row).toMatchObject({ category_id: 'ca7e0000-0000-4000-8000-000000000007', input_tax_pkr: 180 })
   })
@@ -122,14 +122,14 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     const amt = 150000 + base()
     await openAs(page, 'admin', '/money/expenses')
     const qa = page.getByTestId('quick-add')
-    await qa.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(amt))
+    await qa.getByRole('textbox', { name: 'Amount (PKR)' }).fill(String(amt))
     await pickCategory(qa, 'Salaries')
-    await qa.getByLabel('Date paid').fill(paidOn)
+    await qa.getByLabel('Paid on').fill(paidOn)
     await expect(page.getByTestId('quick-for-month')).toContainText('This bill is for')
     await expect(page.getByTestId('quick-for-month').getByRole('combobox')).toHaveValue(last)
     await review(page, 'p1-for-month-1440')
-    await qa.getByRole('button', { name: 'Save', exact: true }).click()
-    await expect(qa.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('')
+    await qa.getByRole('button', { name: 'Save this expense' }).click()
+    await expect(qa.getByRole('textbox', { name: 'Amount (PKR)' })).toHaveValue('')
     const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amt}&select=*`))
     expect(row).toMatchObject({ category_id: SALARIES, paid_on: paidOn, period: last })
     // the list (by the day paid) shows it in this month, "for <last month>"
@@ -162,11 +162,11 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     await expect(t).toBeHidden()
     // a cash expense through quick add
     const qa = page.getByTestId('quick-add')
-    await qa.getByRole('textbox', { name: 'Amount, PKR' }).fill('1200')
+    await qa.getByRole('textbox', { name: 'Amount (PKR)' }).fill('1200')
     await pickCategory(qa, 'Courier & postage')
     await qa.getByRole('button', { name: 'Cash' }).click()
-    await qa.getByRole('button', { name: 'Save', exact: true }).click()
-    await expect(qa.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('')
+    await qa.getByRole('button', { name: 'Save this expense' }).click()
+    await expect(qa.getByRole('textbox', { name: 'Amount (PKR)' })).toHaveValue('')
     const expected = start + 5000 - 1200
     await expect(page.getByTestId('cash-expected')).toContainText(expected.toLocaleString('en-US'))
     // count 300 less than the books expect

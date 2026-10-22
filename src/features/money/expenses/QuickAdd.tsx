@@ -169,8 +169,10 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
       >
         <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
           <div className="grid content-start gap-2">
+            {/* Words of their own (Amount (PKR), Paid on, Has a GST invoice): the Add expense dialog over this screen says
+                Amount, PKR and Date paid, and one name must find one field. */}
             <label htmlFor={`${uid}-amount`} className="text-base font-medium">
-              Amount, PKR
+              Amount (PKR)
             </label>
             <NumberInput
               id={`${uid}-amount`}
@@ -262,7 +264,7 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
           </div>
           <div className="grid gap-2">
             <label htmlFor={`${uid}-date`} className="text-base font-medium">
-              Date paid
+              Paid on
             </label>
             <input
               id={`${uid}-date`}
@@ -313,12 +315,13 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
             />
             <Button type="submit" variant="primary" size="touch" icon={Check} busy={busy} busyLabel="Saving" className="min-w-[112px] text-base">
               Save
+              <span className="sr-only"> this expense</span>
             </Button>
           </div>
         </div>
 
         <div className="grid gap-3">
-          <Checkbox label={<span className="text-base">More: has a GST invoice</span>} checked={hasGst} onCheckedChange={c => setHasGst(c === true)} className="w-fit" />
+          <Checkbox label={<span className="text-base">Has a GST invoice</span>} checked={hasGst} onCheckedChange={c => setHasGst(c === true)} className="w-fit" />
           {hasGst ? (
             <div className="flex flex-wrap items-center gap-3 rounded border bg-canvas px-4 py-3 text-base">
               <label htmlFor={`${uid}-tax`} className="font-medium">
