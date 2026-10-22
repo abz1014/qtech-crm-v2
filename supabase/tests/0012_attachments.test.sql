@@ -43,7 +43,7 @@ select is((select count(*)::int from storage.buckets
            where id in ('rfq-files', 'gst-receipts') and public = false and file_size_limit = 5242880), 2,
   'both buckets are private with a 5 MB file size limit');
 select is((select array_agg(policyname::text order by policyname) from pg_policies
-           where schemaname = 'storage' and tablename = 'objects' and policyname like 'qtech\_%'),
+           where schemaname = 'storage' and tablename = 'objects' and policyname like 'qtech\_objects\_%'),   -- 0087's qtech_claim_objects_* (claim-receipts) are its own test
   array['qtech_objects_delete', 'qtech_objects_insert', 'qtech_objects_select', 'qtech_objects_update'],
   'storage.objects has the four Q-Tech policies');
 

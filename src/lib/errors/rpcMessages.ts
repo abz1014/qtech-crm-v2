@@ -77,6 +77,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^which payment a correction replaces cannot be changed$/, internal: true },
   { match: /^settled before cutover is set by the legacy import only$/, internal: true },
   { match: /^legacy_source is set by the legacy import only$/, internal: true },
+  { match: /^\w+ \d{4} has not ended: only months that have ended can be locked as Imported\.$/, internal: true },
+  { match: /^No active admin: the imported months cannot be locked\.$/, internal: true },
   { match: /^payment reminders are for admin and sales only$/, message: () => ADMIN_SALES },
 
   // Quotations and POs
@@ -129,6 +131,12 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^One of these categories is no longer there\./ },
   { match: /^Pick two different categories to merge\.$/ },
   { match: /^".+?" is archived\. Bring it back first, or merge into another category\.$/ },
+  // 0087: engineers' "I paid" claims (already written for people)
+  { match: /^Only an admin approves an expense claim\.$/, message: () => ADMIN_ONLY },
+  { match: /^Choose how it was paid: cash given back, from petty cash, or by bank\.$/ },
+  { match: /^A supplier payment is recorded with Pay on the supplier order\.$/, help: 'pay-supplier' },
+  { match: /^That claim was not found\.$/, message: () => RELOAD },
+  { match: /^This claim is already (.+)\.$/, message: m => `This claim was already ${m[1] === 'rejected' ? 'not approved' : m[1]}. Reload the page.` },
   { match: /^the order has no unresolved value basis$/, message: () => 'This order has no value basis left to resolve. Reload the page.' },
   { match: /^basis must be net or gross$/, message: () => 'Choose net or gross.' },
   { match: /^a PSID is required$/, message: () => 'Enter the PSID, then save.' },
