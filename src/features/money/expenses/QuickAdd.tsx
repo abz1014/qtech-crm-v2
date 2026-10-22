@@ -175,6 +175,8 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
               Amount (PKR)
             </label>
             <NumberInput
+              // a fresh field per entry: the box is empty again after Save even though it gets the focus at once
+              key={entryId}
               id={`${uid}-amount`}
               ref={amountRef}
               value={amount}

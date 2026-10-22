@@ -303,13 +303,21 @@ export interface LegOption {
   label: string
   supplierId: string
   supplierName: string
+  /** The supplier order's currency (Pay asks the amount in it); null when not set. */
+  currency: string | null
 }
 
 export async function listLegOptions(orderId: string): Promise<LegOption[]> {
   const db = requireSupabase()
-  const rows = unwrap(await db.from('supplier_orders').select('id, supplier_id, created_at').eq('order_id', orderId).order('created_at')) ?? []
+  const rows = unwrap(await db.from('supplier_orders').select('id, supplier_id, created_at, currency').eq('order_id', orderId).order('created_at')) ?? []
   const names = await companyNames([...new Set(rows.map(r => r.supplier_id))])
-  return rows.map((r, i) => ({ id: r.id, label: `supplier order ${String.fromCharCode(65 + i)}`, supplierId: r.supplier_id, supplierName: names[r.supplier_id] ?? '' }))
+  return rows.map((r, i) => ({
+    id: r.id,
+    label: `supplier order ${String.fromCharCode(65 + i)}`,
+    supplierId: r.supplier_id,
+    supplierName: names[r.supplier_id] ?? '',
+    currency: r.currency ?? null,
+  }))
 }
 
 // ------------------------------------------------------------------ recurring templates

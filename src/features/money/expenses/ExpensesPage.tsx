@@ -80,7 +80,7 @@ export function ExpensesPage() {
         <PayDialog
           open
           onOpenChange={o => !o && closeLinked()}
-          context={{ orderId: context.orderId as string, orderLabel: context.orderLabel, legId: leg.id, supplierId: leg.supplierId, supplierName: leg.supplierName, amount: context.amount, amountNote: context.amountNote }}
+          context={{ orderId: context.orderId as string, orderLabel: context.orderLabel, legId: leg.id, supplierId: leg.supplierId, supplierName: leg.supplierName, currency: leg.currency, amount: context.amount, amountNote: context.amountNote }}
         />
       ) : linkReady && !legId ? (
         <AddExpenseDialog open context={context} onOpenChange={o => !o && closeLinked()} />
