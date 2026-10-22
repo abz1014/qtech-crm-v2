@@ -17,7 +17,8 @@ const OWNER: Record<'admin' | 'sales', string> = {
   admin: 'a0000000-0000-4000-8000-000000000001',
   sales: 'a0000000-0000-4000-8000-000000000002',
 }
-const FALSE_OVERDUE = /\b([3-9]\d|\d{3,}) days (overdue|late)\b/
+// Over 30 days is never a count (COUNT_WORDS_MAX_DAYS = 30): exactly 30 is still said in days, so another suite's 30-day-late RFQ on the shared board is legitimate.
+const FALSE_OVERDUE = /b(3[1-9]|[4-9]d|d{3,}) days (overdue|late)b/
 const FOLDS = 'section[aria-label="Imported, to review"], section[aria-label="Older than 30 days"]'
 const CONTROL_GROSS = 118_000
 
