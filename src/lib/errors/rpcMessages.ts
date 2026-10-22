@@ -141,6 +141,24 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^basis must be net or gross$/, message: () => 'Choose net or gross.' },
   { match: /^a PSID is required$/, message: () => 'Enter the PSID, then save.' },
 
+  // 0092 (owner decisions): fixing and removing mistakes. The server texts are already plain; each carries a HINT
+  // (not_yours, admin_only, not_found, has_order, has_invoice, has_payment, has_expense, has_po, bank_ticked, voided,
+  // correction_chain, not_latest, in_use, linked_to_order) that mapPgError passes on as `hint`.
+  { match: /^Only the person who entered this, or an admin, can change it\.$/ },
+  { match: /^Only an admin can delete this\. Nothing was deleted\.$/, message: () => ADMIN_ONLY },
+  { match: /^This (RFQ|order|invoice|quotation|purchase order|company) is no longer there\. Reload the page\.$/ },
+  { match: /^This RFQ has an order\. / },
+  { match: /^This order has an invoice\. / },
+  { match: /^This order has a payment recorded against it, a voided one included, / },
+  { match: /^This order has an expense recorded against it\. / },
+  { match: /^This order has an issued purchase order\. / },
+  { match: /^This invoice has its tax deposit ticked against the (.+?) bank statement\. /, action: BANK },
+  { match: /^This payment is part of a correction, so it is kept as history\./ },
+  { match: /^Only the latest revision can be deleted\. / },
+  { match: /^This company is used by RFQs, orders, invoices or expenses, / },
+  { match: /^An order line is based on this item, / },
+  { match: /^0092: /, internal: true },
+
   // Not found
   { match: /^(RFQ|inquiry|order|order line|supplier order) (.+?) not found$/, message: () => RELOAD },
   { match: /^(brand|company) not found$/, message: () => RELOAD },

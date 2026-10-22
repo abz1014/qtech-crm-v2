@@ -397,13 +397,26 @@ insert into probes values
   -- 0087
   ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),
   ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),
-  ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', false)$q$);
+  ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', false)$q$),
+  ('delete_rfq', '', 'X', 'select 1 where (select count(*) from public.delete_rfq(@16)) >= 0'),   -- 0092: admin only (42501 for everyone else); rolled back
+  ('delete_order', '', 'X', 'select 1 where (select count(*) from public.delete_order(@21)) >= 0'),
+  ('delete_invoice', '', 'X', 'select 1 where (select count(*) from public.delete_invoice(@27)) >= 0'),
+  ('delete_payment', '', 'X', 'select 1 from (select public.delete_payment(@28) r) x'),
+  ('delete_quotation_revision', '', 'X', 'select 1 where (select count(*) from public.delete_quotation_revision(@3a)) >= 0'),
+  ('delete_po_revision', '', 'X', 'select 1 where (select count(*) from public.delete_po_revision(@3b)) >= 0'),
+  ('delete_company', '', 'X', 'select 1 from (select public.delete_company(@02) r) x');   -- 0092
 
 -- 0074 receivables: money, so an engineer is refused too (they run order_receivables()).
 select is(pg_temp.actual(f, '', 'engineer'), '', format('engineer gets nothing from %s', f))
 from unnest(array['receivables_list', 'receivables_summary']) f;
 select is(pg_temp.actual(f, '', 'sales'), 'X', format('precondition: sales get %s', f))
 from unnest(array['receivables_list', 'receivables_summary']) f;
+
+-- 0092 (owner decision: delete is permanent and admin only): the seven delete RPCs refuse sales and engineers inside the function.
+select is(pg_temp.actual(f, '', p.persona), '', format('%s is refused %s', p.persona, f))
+from unnest(array['delete_rfq', 'delete_order', 'delete_invoice', 'delete_payment', 'delete_quotation_revision',
+                  'delete_po_revision', 'delete_company']) f
+cross join (values ('sales'), ('engineer'), ('deactivated')) p (persona);
 
 -- ------------------------------------------------------------------ coverage: every object has probes
 select is((select coalesce(array_agg(t.tablename::text order by t.tablename), '{}') from pg_tables t
