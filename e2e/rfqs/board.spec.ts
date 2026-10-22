@@ -174,7 +174,7 @@ test.describe('open RFQs', () => {
     await review(page, 'board-all-1440')
   })
 
-  test('the one next-step filter narrows the rows, its needs-you counts follow the owner switch, and it lives in the address', async ({ page }) => {
+  test('the one next-step filter narrows the rows, carries no counts, and lives in the address', async ({ page }) => {
     await openAs(page, 'admin', '/rfqs') // admin opens on All
     await expect(page.getByRole('radio', { name: 'All', exact: true })).toBeChecked()
     await expect(page.getByRole('radio', { name: 'All open' })).toBeChecked()
@@ -189,13 +189,12 @@ test.describe('open RFQs', () => {
     await expect(row(page, 'partly')).toBeVisible()
     await expect(row(page, 'covered')).toHaveCount(0)
 
-    // Only the steps that wait on us carry a number ("needs you"); it equals the rows the choice shows.
+    // No step carries a number (redesign phase 0: the one "needs you" count is Today's)
     await expect(page.getByRole('radio', { name: 'Waiting for prices' })).toBeVisible()
-    const label = await page.getByRole('radio', { name: /^Needs suppliers/ }).innerText()
-    const n = Number(/(\d+)/.exec(label)?.[1])
+    await expect(page.getByRole('radio', { name: 'Needs suppliers', exact: true })).toBeVisible()
+    await expect(page.getByRole('radiogroup', { name: 'Show RFQs' }).locator('[data-needs-count]')).toHaveCount(0)
 
     await show(page, 'Needs suppliers', 'suppliers')
-    await expect(page.getByRole('table', { name: 'Open RFQs' }).locator('tbody tr[data-di]')).toHaveCount(n)
     await expect(row(page, 'toask')).toBeVisible()
     await expect(row(page, 'nooffer')).toBeVisible()
     await expect(row(page, 'awaiting')).toHaveCount(0)

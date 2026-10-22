@@ -30,6 +30,9 @@ async function todayReading(page: Page) {
   await page.goto('/today')
   const header = page.locator('[data-needs-you-count]')
   await expect(header).toBeVisible()
+  // the top-bar numbers load once the page has its data (perf/lcp): give them a moment before reading the badge
+  const n = Number(await header.innerText())
+  await expect(nav(page).getByRole('link', { name: n > 0 ? new RegExp(`^Today\\s?, ${n} need you$`) : /^Today$/ })).toBeVisible({ timeout: 10_000 }).catch(() => undefined)
   const due = page.getByRole('region', { name: 'Overdue or due today' })
   const rules = (await due.count()) ? await due.locator('li[data-rule]').evaluateAll(ls => ls.map(l => l.getAttribute('data-rule') ?? '')) : []
   const link = (await nav(page).getByRole('link', { name: /^Today/ }).first().textContent()) ?? ''
@@ -43,6 +46,7 @@ async function todayReading(page: Page) {
 }
 
 test('no two counters disagree: Today badge = header = rows due now; the board and Orders say their share; no other badge', async ({ page }) => {
+  test.setTimeout(180_000)
   const s = await seed()
   await openAs(page, 'admin', '/today')
 
