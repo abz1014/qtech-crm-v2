@@ -97,7 +97,7 @@ describe('categories api (M13)', () => {
   })
 })
 
-describe('expense groups, budgets and merge (0084)', () => {
+describe('expense groups, budgets and merge (0086)', () => {
   it('reads the group and the budget of each category', async () => {
     fake(() => ({
       data: [

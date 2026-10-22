@@ -22,7 +22,7 @@ import {
 /*
  * Recurring templates (M03): rent, salaries, internet. Each active template that has not been recorded for this month
  * shows "Record" (one tap: one expense, dated its day of the month or today, with (recurring_id, period) so it can only
- * exist once), paid the way the template says (0084), else as its category usually is. "Record all N" records every due one.
+ * exist once), paid the way the template says (0086), else as its category usually is. "Record all N" records every due one.
  * With none set up the panel is one line (grader: the explanation lives in the (i)). Record is a secondary button: the
  * screen's one green button is Add expenses.
  */

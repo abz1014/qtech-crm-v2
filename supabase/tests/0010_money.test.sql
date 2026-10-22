@@ -35,7 +35,7 @@ select columns_are('public', 'expenses',
 select columns_are('public', 'recurring_expenses',
   array['id', 'created_at', 'created_by', 'label', 'category_id', 'amount', 'day_of_month', 'active', 'start_month',
         'notes', 'paid_via'],
-  'recurring_expenses has the section 2.19 columns (0084: paid_via)');
+  'recurring_expenses has the section 2.19 columns (0086: paid_via)');
 select ok((select bool_and(relrowsecurity) from pg_class
            where oid in ('public.invoices'::regclass, 'public.payments_in'::regclass, 'public.expenses'::regclass,
                          'public.recurring_expenses'::regclass)),

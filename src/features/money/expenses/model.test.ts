@@ -220,7 +220,7 @@ describe('the Detail field (owner request 2026-10-20)', () => {
   })
 })
 
-describe('0084: recent categories, Every month rows, the list by group', () => {
+describe('0086: recent categories, Every month rows, the list by group', () => {
   it('ranks categories by use, ties by the latest; Recent drops archived ones and keeps at most five', () => {
     const rows = [
       { category_id: 'fuel', paid_on: '2026-11-01' },

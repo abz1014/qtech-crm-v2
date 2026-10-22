@@ -42,7 +42,7 @@ import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
 
 /*
- * Settings › Expense categories (M13; groups, budgets, merge and archive 0084; admin only). Two levels, read-only rows:
+ * Settings › Expense categories (M13; groups, budgets, merge and archive 0086; admin only). Two levels, read-only rows:
  *   group header   name, where it shows in Profit and loss, what it had paid this month, ⋯ (Rename, Delete when empty)
  *   category row   name, how it is usually paid and how often it is used; this month's spend and the budget left or over; ⋯
  * Every change goes through the row's ⋯ (a bottom sheet on a phone): Rename, Move to group, Monthly budget, Usually paid

@@ -200,7 +200,7 @@ insert into money_cols (obj, col, rule, bug) values
   -- tables
   ('audit_log', 'old_value', 'hidden', null), ('audit_log', 'new_value', 'hidden', null),
   ('companies', 'legacy_source', 'hidden', null),
-  ('expense_categories', 'monthly_budget_pkr', 'hidden', null),   -- 0084
+  ('expense_categories', 'monthly_budget_pkr', 'hidden', null),   -- 0086
   ('expenses', 'amount_pkr', 'hidden', null), ('expenses', 'input_tax_pkr', 'hidden', null), ('expenses', 'legacy_source', 'hidden', null),
   ('fx_rates', 'rate_pkr', 'supplier', null),
   ('invoices', 'net_amount', 'hidden', null), ('invoices', 'gst_amount', 'hidden', null), ('invoices', 'tax_deposit_amount', 'hidden', null),

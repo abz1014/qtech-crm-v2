@@ -8,7 +8,7 @@ import { controlClass, useControlProps } from '@/ui/form/fieldContext'
 import { categoryMeta, defaultGroupId, guessGroupId, sortGroups, type Category, type ExpenseGroup, type PaidVia } from '@/features/money/expenses/model'
 
 /*
- * CategoryPicker (M03, M11; g2-month-end "Category type-ahead"; grouped 0084). Opened empty, the list shows the categories used
+ * CategoryPicker (M03, M11; g2-month-end "Category type-ahead"; grouped 0086). Opened empty, the list shows the categories used
  * most in the last 30 days under "Recent", then every active category under its group ("Office running", "Vehicles"...). Two or
  * three letters narrow it across all groups; each match says its group and its own paid-via ("Vehicles · cash"). The first
  * match is already highlighted, Enter or Tab accepts it (Tab then carries on to the next cell), Up and Down choose, Esc closes
@@ -45,7 +45,7 @@ interface CategoryPickerProps {
   onUnmatched?: (text: string | null) => void
   /** Creates a category from the typed name (admin; the same rules as Settings) and returns its id, or a sentence why not. */
   onCreate?: (name: string, paidVia: PaidVia, groupId?: string | null) => Promise<CreateCategoryResult>
-  /** The expense groups (0084): headings in the list, and the group a new category is filed under. */
+  /** The expense groups (0086): headings in the list, and the group a new category is filed under. */
   groups?: readonly ExpenseGroup[]
   /** The "Recent" section: the most used categories of the last 30 days (up to 5). */
   recent?: readonly Category[]

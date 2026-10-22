@@ -100,7 +100,7 @@ async function menu(user: ReturnType<typeof userEvent.setup>, name: string) {
 }
 const items = (m: HTMLElement) => [...m.querySelectorAll('[role^="menuitem"]')].map(i => i.textContent)
 
-describe('Expense categories (M13, 0084)', () => {
+describe('Expense categories (M13, 0086)', () => {
   it('lists the groups in order, each with its categories, this month and the budget left or over', async () => {
     mount()
     await loaded()

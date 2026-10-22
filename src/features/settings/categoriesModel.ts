@@ -1,5 +1,5 @@
 /*
- * Pure helpers for Settings › Expense categories (M13; groups, budgets and merge 0084). Two levels: a group ("Office
+ * Pure helpers for Settings › Expense categories (M13; groups, budgets and merge 0086). Two levels: a group ("Office
  * running") holds categories ("Water"). The group's kind is where its spending shows in Profit and loss, and every category
  * in it takes that kind. A category that expenses point to cannot be deleted (the foreign key is RESTRICT): Archive hides it
  * from new expenses and leaves the old ones as they are; Merge moves every expense of one category into another.
@@ -16,9 +16,9 @@ export interface Category {
   active: boolean
   /** Expenses plus recurring templates that use it. */
   used: number
-  /** The group it is listed under (0084). */
+  /** The group it is listed under (0086). */
   group_id: string
-  /** Optional monthly budget, PKR (0084). */
+  /** Optional monthly budget, PKR (0086). */
   monthly_budget_pkr: number | null
 }
 
@@ -88,7 +88,7 @@ export const categoriesFooter = (rows: readonly Pick<Category, 'active'>[]): str
 
 export const usageText = (used: number) => (used === 0 ? 'Not used yet' : `${used} ${used === 1 ? 'use' : 'uses'}`)
 
-// ------------------------------------------------------------------ groups (0084)
+// ------------------------------------------------------------------ groups (0086)
 
 /** A group: the first level of the list. Its kind is the P&L place of every category in it. */
 export interface ExpenseGroup {

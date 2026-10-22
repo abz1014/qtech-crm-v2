@@ -178,7 +178,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'set_rfq_floated',         '',    'X',    'X',    'X'),    -- R05: Undo of a float / float a saved RFQ, all staff
   ('function', 'merge_companies',         '',    'X',    '',     ''),     -- s10 "RPCs merge_companies, merge_brands, resolve_value_basis"
   ('function', 'merge_brands',            '',    'X',    '',     ''),     -- s10 (same row)
-  ('function', 'merge_expense_categories', '',   'X',    '',     ''),     -- 0084: admin only (42501 for everyone else)
+  ('function', 'merge_expense_categories', '',   'X',    '',     ''),     -- 0086: admin only (42501 for everyone else)
   ('function', 'resolve_value_basis',     '',    'X',    '',     ''),     -- s10 (same row)
   ('function', 'model_tokens',            '',    'X',    'X',    'X'),    -- s10 "model_tokens()"
   ('function', 'item_text_norm',          '',    'X',    'X',    'X'),    -- A5: helper, all staff
@@ -227,7 +227,7 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'can_access_bucket',       '',    'X',    'X',    'X'),    -- NOT in s10: storage policy helper (true for the caller's own buckets)
   ('function', 'today_pkt',               '',    'X',    'X',    'X'),    -- NOT in s10: pure date helper
   ('table', 'expense_categories',  '',           'SIUD', '',     ''),     -- A6 s10 "expense_categories": admin only, delete blocked while in use
-  ('table', 'expense_groups',      '',           'SIUD', '',     ''),     -- 0084: the first level of the expense list, admin only
+  ('table', 'expense_groups',      '',           'SIUD', '',     ''),     -- 0086: the first level of the expense list, admin only
   ('table', 'closed_months',       '',           'S',    '',     ''),     -- A6 s10 "closed_months": admin reads; written only through the admin RPCs
   ('table', 'month_snapshots',     '',           'S',    '',     ''),     -- 0058 (owner decision D-MR2): a closed month's frozen figures; admin reads, written only by the close trigger
   ('table', 'attachments',         'expense',    'SIUD', '',     ''),     -- A6 s10 "attachments (parent is an expense)": admin only
@@ -328,7 +328,7 @@ insert into public.attachments (id, bucket, path, file_name, mime_type, size_byt
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id) values   -- R22 (0042)
   (pg_temp.f('3f'), 'rfq-files', 'm/4.jpg', 'd.jpg', 'image/jpeg', 10, pg_temp.f('20'));
 insert into public.expense_categories (id, name, grp) values (pg_temp.f('3d'), 'M Category', 'overhead');   -- A6
-insert into public.expense_groups (id, name, kind) values (pg_temp.f('d0'), 'M Group', 'overhead');   -- 0084
+insert into public.expense_groups (id, name, kind) values (pg_temp.f('d0'), 'M Group', 'overhead');   -- 0086
 insert into public.closed_months (month, closed_by) values ('2019-01-01', 'a0000000-0000-4000-8000-000000000001');   -- A6
 update public.supplier_orders set placed_on = public.today_pkt() where id = pg_temp.f('23');   -- A6: payables_as_of needs a placed leg
 insert into public.snoozes (user_id, rule, subject_id, until_on)
@@ -389,7 +389,7 @@ insert into spec values
   ('expenses', '', 'id = @29', 'description', $q$insert into public.expenses (id, amount_pkr, category_id) values (@ae, 5, 'ca7e0000-0000-4000-8000-000000000010')$q$),
   ('recurring_expenses', '', 'id = @2a', 'label', $q$insert into public.recurring_expenses (id, label, category_id, amount) values (@af, 'l', 'ca7e0000-0000-4000-8000-000000000002', 5)$q$),
   ('expense_categories', '', 'id = @3d', 'name', $q$insert into public.expense_categories (id, name, grp) values (@b6, 'probe category', 'overhead')$q$),   -- A6
-  ('expense_groups', '', 'id = @d0', 'name', $q$insert into public.expense_groups (id, name, kind) values (@d1, 'probe group', 'overhead')$q$),   -- 0084
+  ('expense_groups', '', 'id = @d0', 'name', $q$insert into public.expense_groups (id, name, kind) values (@d1, 'probe group', 'overhead')$q$),   -- 0086
   ('closed_months', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.closed_months (month, closed_by) values ('2019-02-01', '{uid}')$q$),   -- A6
   ('month_snapshots', '', $q$month = '2019-01-01'$q$, 'taken_at', $q$insert into public.month_snapshots (month, pnl, adjust, status, categories, team, payments, via, aging, payables) values ('2019-01-01', '{}', '{}', '[]', '[]', '[]', '{}', '{}', '[]', '[]')$q$),   -- 0058 (D-MR2)
   ('attachments', 'expense', 'id = @3c', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values (@b7, 'expense-receipts', 'p/3.jpg', 'c.jpg', 'image/jpeg', 10, @29)$q$),   -- A6
@@ -456,7 +456,7 @@ insert into probes values
   ('split_order_item', '', 'X', 'select public.split_order_item(@25, 0.5, @24)'),   -- A8 (0050): moves half of the fixture line to the order's other leg
   ('merge_companies', '', 'X', 'select public.merge_companies(@01, @02)'),
   ('merge_brands', '', 'X', 'select public.merge_brands(@13, @14)'),
-  ('merge_expense_categories', '', 'X', $q$select public.merge_expense_categories(@3d, 'ca7e0000-0000-4000-8000-000000000010')$q$),   -- 0084: the fixture category into Other (both overheads)
+  ('merge_expense_categories', '', 'X', $q$select public.merge_expense_categories(@3d, 'ca7e0000-0000-4000-8000-000000000010')$q$),   -- 0086: the fixture category into Other (both overheads)
   ('resolve_value_basis', '', 'X', $q$select public.resolve_value_basis(@21, 'net')$q$),
   ('model_tokens', '', 'X', $q$select public.model_tokens('ABC123')$q$),
   ('item_text_norm', '', 'X', $q$select public.item_text_norm('ABC 123')$q$),

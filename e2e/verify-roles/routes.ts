@@ -152,7 +152,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/money/exceptions', admin: 'ok', sales: 'no', engineer: 'no' },
   { path: '/money/reports', admin: 'new', sales: 'new', engineer: 'no', note: 'post-merge: the one Reports view' },
   ...MONTH_REPORTS.map((k): RouteSpec => ({ path: `/money/reports/${k}?month={month}`, admin: 'new', sales: 'no', engineer: 'no' })),
-  { path: '/money/reports/expenses?by=quarter', admin: 'new', sales: 'no', engineer: 'no' },   // 0084: the Expenses report
+  { path: '/money/reports/expenses?by=quarter', admin: 'new', sales: 'no', engineer: 'no' },   // 0086: the Expenses report
   { path: '/money/reports/bogus', admin: 'no', sales: 'no', engineer: 'no' },
   { path: '/money/nope', admin: 'no', sales: 'no', engineer: 'no' },
   { path: '/reports', admin: 'ok', sales: 'ok', engineer: 'no', note: 'main: Reports screen; post: redirects to /money/reports' },
