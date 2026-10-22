@@ -157,6 +157,9 @@ insert into public.attachments (id, bucket, path, file_name, mime_type, size_byt
   (pg_temp.f('3f'), 'rfq-files', 'm/4.jpg', 'd.jpg', 'image/jpeg', 10, pg_temp.f('20'));
 insert into public.expense_categories (id, name, grp) values (pg_temp.f('3d'), 'M Category', 'overhead');   -- A6
 insert into public.expense_groups (id, name, kind) values (pg_temp.f('d0'), 'M Group', 'overhead');   -- 0086
+insert into public.expense_claims (id, created_by, amount_pkr) values (pg_temp.f('e0'), 'a0000000-0000-4000-8000-000000000003', 5);   -- 0087
+insert into public.cash_topups (id, amount_pkr) values (pg_temp.f('e2'), 5);   -- 0087
+insert into public.cash_counts (id, counted_pkr, is_opening) values (pg_temp.f('e3'), 10, true);   -- 0087
 insert into public.closed_months (month, closed_by) values ('2019-01-01', 'a0000000-0000-4000-8000-000000000001');   -- A6
 update public.supplier_orders set placed_on = public.today_pkt() where id = pg_temp.f('23');   -- A6: payables_as_of needs a placed leg
 insert into public.snoozes (user_id, rule, subject_id, until_on)
@@ -218,6 +221,9 @@ insert into spec values
   ('recurring_expenses', '', 'id = @2a', 'label', $q$insert into public.recurring_expenses (id, label, category_id, amount) values (@af, 'l', 'ca7e0000-0000-4000-8000-000000000002', 5)$q$),
   ('expense_categories', '', 'id = @3d', 'name', $q$insert into public.expense_categories (id, name, grp) values (@b6, 'probe category', 'overhead')$q$),   -- A6
   ('expense_groups', '', 'id = @d0', 'name', $q$insert into public.expense_groups (id, name, kind) values (@d1, 'probe group', 'overhead')$q$),   -- 0086
+  ('expense_claims', '', 'id = @e0', 'note', $q$insert into public.expense_claims (id, amount_pkr) values (@e4, 5)$q$),   -- 0087
+  ('cash_topups', '', 'id = @e2', 'note', $q$insert into public.cash_topups (id, amount_pkr) values (@e5, 5)$q$),   -- 0087
+  ('cash_counts', '', 'id = @e3', 'note', $q$insert into public.cash_counts (id, counted_pkr) values (@e6, 7)$q$),   -- 0087
   ('closed_months', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.closed_months (month, closed_by) values ('2019-02-01', '{uid}')$q$),   -- A6
   ('month_snapshots', '', $q$month = '2019-01-01'$q$, 'taken_at', $q$insert into public.month_snapshots (month, pnl, adjust, status, categories, team, payments, via, aging, payables) values ('2019-01-01', '{}', '{}', '[]', '[]', '[]', '{}', '{}', '[]', '[]')$q$),   -- 0058 (D-MR2)
   ('attachments', 'expense', 'id = @3c', 'file_name', $q$insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, expense_id) values (@b7, 'expense-receipts', 'p/3.jpg', 'c.jpg', 'image/jpeg', 10, @29)$q$),   -- A6
@@ -387,7 +393,11 @@ insert into probes values
   ('receivables_list', '', 'X', $q$select * from public.receivables_list(null, null, null, true)$q$),
   ('receivables_summary', '', 'X', $q$select * from public.receivables_summary() where gross > 0$q$),
   ('today_inquiry_facts', '', 'X', $q$select * from public.today_inquiry_facts()$q$),
-  ('lookup_labels', '', 'X', $q$select 1 from (select public.lookup_labels(array[@01], array[@23], array[@20]) j) x where j::text ~ 'M Main|ORD-'$q$);
+  ('lookup_labels', '', 'X', $q$select 1 from (select public.lookup_labels(array[@01], array[@23], array[@20]) j) x where j::text ~ 'M Main|ORD-'$q$),
+  -- 0087
+  ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),
+  ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),
+  ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', false)$q$);
 
 -- 0074 receivables: money, so an engineer is refused too (they run order_receivables()).
 select is(pg_temp.actual(f, '', 'engineer'), '', format('engineer gets nothing from %s', f))

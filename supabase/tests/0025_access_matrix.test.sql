@@ -267,7 +267,16 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('table', 'orders',            'legacy_flags', '', '', ''),            -- 0065 (M-1): the value basis flag goes only through resolve_value_basis, for everyone
   ('table', 'orders',            'owner_id', 'U', '', ''),               -- 0065 (M-2): who owns an order (and gets its payments' credit) is changed by an admin
   ('table', 'rfqs',              'owner_id', 'U', '', ''),               -- 0065 (M-2): same for an RFQ (convert copies its owner into the order)
-  ('function', 'receipt_locked', '', 'X', 'X', '');                      -- 0065 (L-6): storage policy helper; NULL (no row) for anyone who cannot use the bucket
+  ('function', 'receipt_locked', '', 'X', 'X', ''),                      -- 0065 (L-6): storage policy helper; NULL (no row) for anyone who cannot use the bucket
+  ('table', 'expense_claims',    'own',   'SUD',  '',     'SID'),         -- 0087: an engineer's own pending "I paid" claim: they add, read and withdraw it; the admin reads, decides, deletes; sales nothing
+  ('table', 'expense_claims',    'other', 'SUD',  '',     ''),            -- 0087: someone else's claim is closed to an engineer
+  ('table', 'cash_topups',       '',      'SIUD', '',     ''),            -- 0087: cash drawn from the bank, admin only
+  ('table', 'cash_counts',       '',      'SID',  '',     ''),            -- 0087: cash counts, admin only, never edited (delete and count again)
+  ('function', 'approve_expense_claim', '', 'X',  '',     ''),            -- 0087: admin only (42501 for everyone else)
+  ('function', 'cash_in_hand',   '',      'X',    '',     ''),            -- 0087: admin only (no row for the others)
+  ('function', 'claim_object_ok', '',     'X',    '',     'X'),           -- 0087: storage helper; true for the admin and for the engineer on their own pending claim
+  ('bucket', 'claim-receipts',   'own',   'SID',  '',     'SID'),         -- 0087: receipt photos under <claim id>/: the admin, and the engineer on their own pending claim
+  ('bucket', 'claim-receipts',   'other', 'SID',  '',     '');            -- 0087: another person's claim photos are closed to an engineer
 
 -- ------------------------------------------------------------------ fixtures (as the table owner, admin claims)
 -- Row ids are written in hex and appear in the probes as @NN (same two hex digits).
@@ -330,6 +339,14 @@ insert into public.attachments (id, bucket, path, file_name, mime_type, size_byt
 insert into public.expense_categories (id, name, grp) values (pg_temp.f('3d'), 'M Category', 'overhead');   -- A6
 insert into public.expense_groups (id, name, kind) values (pg_temp.f('d0'), 'M Group', 'overhead');   -- 0086
 insert into public.closed_months (month, closed_by) values ('2019-01-01', 'a0000000-0000-4000-8000-000000000001');   -- A6
+-- 0087: a pending claim of the engineer (@e0) and one of the admin's (@e1), cash drawn and an opening count, and their photos
+insert into public.expense_claims (id, created_by, amount_pkr, note) values
+  (pg_temp.f('e0'), 'a0000000-0000-4000-8000-000000000003', 5, 'engineer claim'),
+  (pg_temp.f('e1'), 'a0000000-0000-4000-8000-000000000001', 5, 'other claim');
+insert into public.cash_topups (id, amount_pkr) values (pg_temp.f('e2'), 5);
+insert into public.cash_counts (id, counted_pkr, is_opening) values (pg_temp.f('e3'), 10, true);
+insert into storage.objects (bucket_id, name) values
+  ('claim-receipts', pg_temp.f('e0')::text || '/r.jpg'), ('claim-receipts', pg_temp.f('e1')::text || '/r.jpg');
 update public.supplier_orders set placed_on = public.today_pkt() where id = pg_temp.f('23');   -- A6: payables_as_of needs a placed leg
 insert into public.snoozes (user_id, rule, subject_id, until_on)
 select u, 'r', pg_temp.f('2d'), public.today_pkt() + 3
@@ -406,7 +423,11 @@ insert into spec values
   ('fx_fetch_log', '', 'id = @3e', 'detail', $q$insert into public.fx_fetch_log (kind, detail) values ('info', 'probe')$q$),   -- R23 (0038)
   ('quotations', '', 'id = @3a', 'pdf_path', $q$insert into public.quotations (id, rfq_id, number, revision, valid_until, lines) values (@b4, @16, 7101, 0, current_date + 1, '[{"qty":1,"unit_price_net":1,"gst_rate":0}]')$q$),
   ('purchase_orders', '', 'id = @3b', 'pdf_path', $q$insert into public.purchase_orders (id, supplier_order_id, number, revision, currency, total, lines) values (@b5, @24, 7102, 0, 'USD', 0, '[{"qty":1,"unit_price":1}]')$q$),
-  ('company_profile', '', 'id = 1', 'phone', $q$insert into public.company_profile (id) values (2)$q$);
+  ('company_profile', '', 'id = 1', 'phone', $q$insert into public.company_profile (id) values (2)$q$),
+  ('expense_claims', 'own', 'id = @e0', 'note', $q$insert into public.expense_claims (id, amount_pkr) values (@e4, 5)$q$),   -- 0087
+  ('expense_claims', 'other', 'id = @e1', 'note', null),   -- 0087: a claim is always the caller's own, so "someone else's" cannot be inserted
+  ('cash_topups', '', 'id = @e2', 'note', $q$insert into public.cash_topups (id, amount_pkr) values (@e5, 5)$q$),   -- 0087
+  ('cash_counts', '', 'id = @e3', 'note', $q$insert into public.cash_counts (id, counted_pkr) values (@e6, 7)$q$);   -- 0087
 
 
 insert into probes
@@ -515,7 +536,10 @@ insert into probes values
   ('revoke_user_sessions', '', 'X', $q$select public.revoke_user_sessions(gen_random_uuid())$q$),   -- A01
   ('void_payment', '', 'X', $q$select public.void_payment(@28, 'probe')$q$),   -- 0073
   ('correct_payment', '', 'X', $q$select public.correct_payment(@28, 100, public.today_pkt(), 'bank', null, 'probe')$q$),   -- 0073
-  ('restore_payment', '', 'X', $q$select public.restore_payment(@c0)$q$);   -- 0073: @c0 was voided by the admin in this transaction
+  ('restore_payment', '', 'X', $q$select public.restore_payment(@c0)$q$),   -- 0073: @c0 was voided by the admin in this transaction
+  ('approve_expense_claim', '', 'X', $q$select public.approve_expense_claim(@e0, 'ca7e0000-0000-4000-8000-000000000004', 'cash_back')$q$),   -- 0087
+  ('cash_in_hand', '', 'X', 'select 1 from public.cash_in_hand()'),   -- 0087: one row for the admin, none for the others
+  ('claim_object_ok', '', 'X', $q$select 1 where public.claim_object_ok(@e0::text || '/r.jpg', true)$q$);   -- 0087
 
 -- ------------------------------------------------------------------ probes: storage buckets
 -- Storage refuses a direct SQL DELETE on storage.objects for every role (its protect_delete guard fires before row
@@ -536,6 +560,21 @@ select b, '', 'D', format($q$select 1 from storage.objects where bucket_id = '%s
   (select string_agg('(' || coalesce(pl.qual, 'false') || ')', ' or ') from pg_policies pl
    where pl.schemaname = 'storage' and pl.tablename = 'objects' and pl.cmd = 'DELETE'))
 from unnest(array['rfq-files','gst-receipts','generated-docs','expense-receipts']) b;
+-- 0087: claim-receipts holds files under <claim id>/; "own" is the engineer's pending claim @e0, "other" the admin's @e1.
+insert into probes
+select 'claim-receipts', v, 'S', format($q$select 1 from storage.objects where bucket_id = 'claim-receipts' and name = %s::text || '/r.jpg'$q$, c)
+from (values ('own', '@e0'), ('other', '@e1')) x (v, c)
+union all
+select 'claim-receipts', v, 'I', format($q$insert into storage.objects (bucket_id, name) values ('claim-receipts', %s::text || '/p.jpg')$q$, c)
+from (values ('own', '@e0'), ('other', '@e1')) x (v, c)
+union all
+select 'claim-receipts', v, 'U', format($q$update storage.objects set name = name where bucket_id = 'claim-receipts' and name = %s::text || '/r.jpg'$q$, c)
+from (values ('own', '@e0'), ('other', '@e1')) x (v, c)
+union all
+select 'claim-receipts', v, 'D', format($q$select 1 from storage.objects where bucket_id = 'claim-receipts' and name = %s::text || '/r.jpg' and (%s)$q$, c,
+  (select string_agg('(' || coalesce(pl.qual, 'false') || ')', ' or ') from pg_policies pl
+   where pl.schemaname = 'storage' and pl.tablename = 'objects' and pl.cmd = 'DELETE'))
+from (values ('own', '@e0'), ('other', '@e1')) x (v, c);
 
 -- 0057 (H-1): issued PDFs and attached pdf_path values.
 insert into probes values
@@ -551,8 +590,8 @@ insert into probes values
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
-  'coverage: the matrix lists every table in schema public (34)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 34, 'coverage: 34 tables');
+  'coverage: the matrix lists every table in schema public (37)');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 37, 'coverage: 37 tables');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');

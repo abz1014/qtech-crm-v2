@@ -137,6 +137,12 @@ insert into public.attachments (id, bucket, path, file_name, mime_type, size_byt
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, order_id) values   -- R22 (0042)
   (pg_temp.f('3f'), 'rfq-files', 'm/4.jpg', 'd.jpg', 'image/jpeg', 10, pg_temp.f('20'));
 insert into public.expense_categories (id, name, grp) values (pg_temp.f('3d'), 'M Category', 'overhead');   -- A6
+update public.expenses set fx_currency = 'USD', fx_amount = 1 where id = pg_temp.f('29');   -- 0087
+insert into public.expense_claims (id, created_by, amount_pkr) values   -- 0087: one claim of the engineer's, one of the admin's
+  (pg_temp.f('e0'), 'a0000000-0000-4000-8000-000000000003', 5), (pg_temp.f('e1'), 'a0000000-0000-4000-8000-000000000001', 7);
+insert into public.cash_topups (id, amount_pkr) values (pg_temp.f('e2'), 5);   -- 0087
+insert into public.cash_counts (id, counted_pkr, is_opening) values (pg_temp.f('e3'), 10, true);   -- 0087
+insert into public.cash_counts (id, counted_pkr) values (pg_temp.f('e5'), 9);   -- 0087: a count, so expected and difference hold money
 insert into public.closed_months (month, closed_by) values ('2019-01-01', 'a0000000-0000-4000-8000-000000000001');   -- A6
 update public.supplier_orders set placed_on = public.today_pkt() where id = pg_temp.f('23');   -- A6: payables_as_of needs a placed leg
 insert into public.snoozes (user_id, rule, subject_id, until_on)
@@ -202,6 +208,10 @@ insert into money_cols (obj, col, rule, bug) values
   ('companies', 'legacy_source', 'hidden', null),
   ('expense_categories', 'monthly_budget_pkr', 'hidden', null),   -- 0086
   ('expenses', 'amount_pkr', 'hidden', null), ('expenses', 'input_tax_pkr', 'hidden', null), ('expenses', 'legacy_source', 'hidden', null),
+  ('expenses', 'fx_amount', 'hidden', null),   -- 0087: a supplier payment in the supplier's currency
+  ('expense_claims', 'amount_pkr', 'own', null),   -- 0087: an engineer reads the amounts of their own "I paid" claims only (probed below)
+  ('cash_topups', 'amount_pkr', 'hidden', null),   -- 0087
+  ('cash_counts', 'counted_pkr', 'hidden', null), ('cash_counts', 'expected_pkr', 'hidden', null), ('cash_counts', 'difference_pkr', 'hidden', null),   -- 0087
   ('fx_rates', 'rate_pkr', 'supplier', null),
   ('invoices', 'net_amount', 'hidden', null), ('invoices', 'gst_amount', 'hidden', null), ('invoices', 'tax_deposit_amount', 'hidden', null),
   ('invoices', 'legacy_source', 'hidden', null),
@@ -273,6 +283,8 @@ insert into money_fns values
   ('payables_as_of', 'committed', 'hidden'), ('payables_as_of', 'committed_pkr', 'hidden'), ('payables_as_of', 'fx_rate', 'hidden'),
   ('payables_as_of', 'paid_pkr', 'hidden'), ('payables_as_of', 'owed_pkr', 'hidden'),
   ('held_advances', 'held', 'hidden'),   -- 0080: advances held on cancelled orders, admin only
+  ('cash_in_hand', 'base_pkr', 'hidden'), ('cash_in_hand', 'topups_pkr', 'hidden'), ('cash_in_hand', 'cash_out_pkr', 'hidden'),   -- 0087
+  ('cash_in_hand', 'expected_pkr', 'hidden'), ('cash_in_hand', 'last_difference_pkr', 'hidden'), ('cash_in_hand', 'cash_out_count', 'info'),
   ('order_receivables', 'gross_target', 'hidden'), ('order_receivables', 'settled', 'hidden'), ('order_receivables', 'balance', 'hidden'),
   ('order_receivables', 'overpaid_by', 'hidden'),
   ('month_end_check_details', 'detail', 'hidden'),
@@ -404,6 +416,12 @@ select is(pg_temp.scalar_as('select count(*) from public.targets where user_id <
   'engineer reads no one else''s target');
 select is(pg_temp.scalar_as('select count(*) from public.targets where user_id = auth.uid()', 'engineer'), '1',
   'engineer reads their own target (s10 targets: S own)');
+-- 0087: an engineer's own "I paid" claims, with the amount they typed, and nobody else's; sales read none.
+select is(pg_temp.scalar_as('select count(*) from public.expense_claims where created_by <> auth.uid()', 'engineer'), '0',
+  '0087 engineer reads no one else''s claim');
+select is(pg_temp.scalar_as('select sum(amount_pkr)::int from public.expense_claims', 'engineer'), '5',
+  '0087 engineer reads the amount of their own claim (5), not the admin''s (7)');
+select is(pg_temp.scalar_as('select count(*) from public.expense_claims', 'sales'), '0', '0087 sales read no claim');
 
 -- ------------------------------------------------------------------ functions, as the engineer
 select ok(pg_temp.scalar_as(s, 'engineer') in ('0', '<null>', '<none>', 'E:42501'),
@@ -412,6 +430,7 @@ from (values
   ('aging_as_of', 'select count(*) from public.aging_as_of(public.today_pkt())'),
   ('payables_as_of', 'select count(*) from public.payables_as_of(public.today_pkt())'),
   ('held_advances (0080)', 'select count(*) from public.held_advances()'),
+  ('cash_in_hand (0087)', 'select count(*) from public.cash_in_hand()'),
   ('order_receivables', 'select count(*) from public.order_receivables()'),
   ('order_receivables(order)', 'select count(*) from public.order_receivables(@20)'),
   ('receivables_list (0074)', 'select count(*) from public.receivables_list(null, null, null, true)'),
