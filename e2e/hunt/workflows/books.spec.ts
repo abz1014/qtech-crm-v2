@@ -1188,6 +1188,8 @@ test("HW-18: Targets: typing 'abc' + Enter in a cell that holds a target removes
   try {
     const page = await ctx.newPage()
     await page.goto('/settings/targets')
+    // the grid opens on this quarter and the next (5f7d305); the year view, with Next year, is behind "Show earlier quarters"
+    await page.getByRole('button', { name: 'Show earlier quarters' }).click()
     await page.getByRole('button', { name: 'Next year' }).click()
     await page.getByRole('button', { name: new RegExp(`^Test Engineer, Q1 ${Y1} target`) }).click()
     const input = page.getByRole('textbox', { name: new RegExp(`Test Engineer, Q1 ${Y1} target in rupees`) })

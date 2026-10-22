@@ -43,7 +43,8 @@ for (const { label, width, height } of WIDTHS) {
       await openAs(page, 'sales', `/companies/${company.id}`)
       await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
       await expect(page.getByText('Naveed Akhtar')).toBeVisible()
-      await expect(page.getByRole('region', { name: 'Main plant' }).getByRole('row').nth(1)).toBeVisible()
+      // A site's RFQs and orders are a list, not a table (eda1ce5: "site RFQs and orders as a wrapping list").
+      await expect(page.getByRole('region', { name: 'Main plant' }).getByRole('list', { name: 'RFQs and orders at Main plant' }).getByRole('listitem').first()).toBeVisible()
       await settle(page)
       expect(await violations(page, true)).toEqual([])
     })
