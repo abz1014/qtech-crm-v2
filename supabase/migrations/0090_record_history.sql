@@ -72,6 +72,9 @@ insert into public.history_sources (child_table, parent_table, parent_col, label
   ('attachments',        'invoices',  'invoice_id', 'file_name',   '{admin,sales}'),
   ('attachments',        'expenses',  'expense_id', 'file_name',   '{admin}');
 
+create trigger history_sources_audit after insert or update or delete on public.history_sources
+  for each row execute function public.audit_row_change();
+
 -- ================================================================ 2. indexes: children found by their parent id in the insert and delete images
 create index audit_log_parent_order_idx on public.audit_log ((coalesce(new_value, old_value) ->> 'order_id'))
   where action in ('insert', 'delete');

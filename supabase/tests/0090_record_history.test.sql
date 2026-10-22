@@ -57,6 +57,13 @@ begin
 end;
 $f$;
 
+-- every key of an event's was and now (either may be JSON null)
+create function pg_temp.keys(e jsonb) returns setof text language sql as $
+  select jsonb_object_keys(e -> 'was') where jsonb_typeof(e -> 'was') = 'object'
+  union all
+  select jsonb_object_keys(e -> 'now') where jsonb_typeof(e -> 'now') = 'object'
+$;
+
 -- events of a result that match a table (and an action)
 create function pg_temp.n(j jsonb, tbl text, act text default null) returns int language sql as $$
   select count(*)::int from jsonb_array_elements(j -> 'events') e
@@ -118,10 +125,10 @@ select is(pg_temp.scalar_as(format('select public.record_history_rows(%L, %L)::t
   '(a) record_history_rows called directly is refused (admin)');
 select is(pg_temp.scalar_as(format('select public.record_history_rows(%L, %L)::text', 'orders', pg_temp.f('20')), 'sales'), 'E:42501',
   '(a) record_history_rows called directly is refused (sales)');
-select is(pg_temp.scalar_as(format($q$select public.record_history_rows(%L, %L)::text from (select set_config('qtech.history_for', 'orders:other', true)) m$q$,
+select is(pg_temp.scalar_as(format($q$select public.record_history_rows(%L, %L, null, case when m.s is null then 50 else 50 end)::text from (select set_config('qtech.history_for', 'orders:other', true) as s) m$q$,
                                    'orders', pg_temp.f('20')), 'admin'), 'E:42501',
   '(a) a mark for another record does not open it');
-select is(pg_temp.scalar_as(format($q$select public.record_history_rows(%L, %L)::text from (select set_config('qtech.history_for', %L, true)) m$q$,
+select is(pg_temp.scalar_as(format($q$select public.record_history_rows(%L, %L, null, case when m.s is null then 50 else 50 end)::text from (select set_config('qtech.history_for', %L, true) as s) m$q$,
                                    'orders', pg_temp.f('20'), 'orders:' || pg_temp.f('20')), 'deactivated'), 'E:42501',
   '(a) a person without a role is refused even with the mark');
 select is(pg_temp.scalar_as(format('select public.record_history_rows(%L, %L)::text', 'orders', pg_temp.f('20')), 'engineer'), 'E:42501',
@@ -147,7 +154,7 @@ select ok((select bool_and(e ->> 'by' = 'a0000000-0000-4000-8000-000000000001' a
            from adm, jsonb_array_elements(adm.j -> 'events') e where e ->> 'table' = 'order_items'),
   'every event says by whom (id and name) and when');
 select is((select count(*)::int from adm, jsonb_array_elements(adm.j -> 'events') e,
-                 lateral jsonb_object_keys(coalesce(e -> 'was', '{}'::jsonb) || coalesce(e -> 'now', '{}'::jsonb)) k
+                 lateral pg_temp.keys(e) k
            where k in ('updated_at', 'model_tokens', 'legacy_source')), 0, 'updated_at, model_tokens and legacy_source are never returned');
 select ok((select pg_temp.n(j, 'invoices') >= 2 and pg_temp.n(j, 'payments_in') >= 2 and pg_temp.n(j, 'expenses') >= 2 and pg_temp.n(j, 'attachments', 'insert') = 1 from adm),
   'admin: invoice, payment, expense and order-file events are there');
@@ -167,12 +174,12 @@ select ok(not (select j ? 'error' from eng), 'the engineer reads the history of 
 select is((select pg_temp.n(j, 'order_items', 'update') from eng), 1,
   '(b) the engineer''s order line has only the rename: the price change returns no event');
 select is((select count(*)::int from eng, jsonb_array_elements(eng.j -> 'events') e,
-                 lateral jsonb_object_keys(coalesce(e -> 'was', '{}'::jsonb) || coalesce(e -> 'now', '{}'::jsonb)) k
+                 lateral pg_temp.keys(e) k
            where k in ('unit_price_net', 'supplier_unit_price', 'quoted_unit_price_net', 'unit_price', 'fx_rate_pkr', 'rate_pkr',
                        'net_total', 'gst_total', 'lines', 'total')), 0,
   '(b) no PRICE key appears in any event');
 select is((select count(*)::int from eng, jsonb_array_elements(eng.j -> 'events') e,
-                 lateral jsonb_object_keys(coalesce(e -> 'was', '{}'::jsonb) || coalesce(e -> 'now', '{}'::jsonb)) k
+                 lateral pg_temp.keys(e) k
            where not has_column_privilege('qtech_engineer', 'public.' || (e ->> 'table'), k, 'SELECT')), 0,
   '(b) every key of every event is a column qtech_engineer may SELECT');
 select is((select position('unit_price_net' in j::text) from eng), 0, '(b) the price column name is not in the result at all');
@@ -183,10 +190,10 @@ select is((select pg_temp.n(j, 'invoices') + pg_temp.n(j, 'payments_in') + pg_te
   '(b) the engineer gets no invoice, payment, expense or cost events');
 select is(pg_temp.hist('engineer', 'rfqs', pg_temp.f('10')) -> 'events' @> '[]'::jsonb, true, 'the engineer reads an RFQ history');
 select is((select count(*)::int from jsonb_array_elements(pg_temp.hist('engineer', 'rfqs', pg_temp.f('10')) -> 'events') e,
-                 lateral jsonb_object_keys(coalesce(e -> 'was', '{}'::jsonb) || coalesce(e -> 'now', '{}'::jsonb)) k
+                 lateral pg_temp.keys(e) k
            where k = 'quoted_unit_price_net'), 0, '(b) no RFQ-line price for the engineer');
 select ok((select count(*) >= 1 from jsonb_array_elements(pg_temp.hist('sales', 'rfqs', pg_temp.f('10')) -> 'events') e,
-                 lateral jsonb_object_keys(coalesce(e -> 'was', '{}'::jsonb) || coalesce(e -> 'now', '{}'::jsonb)) k
+                 lateral pg_temp.keys(e) k
            where k = 'quoted_unit_price_net'), 'sales do see the RFQ-line price (the filter is the engineer''s only)');
 
 -- ------------------------------------------------------------------ (d) removed lines still show

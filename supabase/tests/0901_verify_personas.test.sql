@@ -500,8 +500,8 @@ select is((select array_agg(p.proname::text order by p.proname::text) from pg_pr
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')),
           array['close_month', 'close_months_through', 'current_user_role', 'my_target_progress', 'order_receivables',
-                'receipt_locked', 'reopen_month'],
-  'the client-callable SECURITY DEFINER functions are exactly the reviewed seven');
+                'receipt_locked', 'record_history_rows', 'reopen_month'],
+  'the client-callable SECURITY DEFINER functions are exactly the reviewed eight (0090: record_history_rows, refused unless record_history marked the transaction)');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')
