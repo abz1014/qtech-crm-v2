@@ -5,6 +5,7 @@
 // Polite at first; firmer once the invoice is more than 30 days overdue (DECISIONS 2026-10-14). It states the balance,
 // what has been paid, the due date and how many reminders came before. It never invents a figure.
 
+import { COUNT_WORDS_MAX_DAYS } from '@/lib/timeWords'
 import { formatAmount } from '@/lib/money'
 import type { Amount } from '@/lib/money'
 import { addBusinessDays, dayMonth, dayMonthYear, daysBetween } from './dateText'
@@ -72,7 +73,11 @@ export function generatePaymentReminder(input: PaymentReminderInput): PaymentRem
   const facts = `${invoice} still has an outstanding balance of ${balance}${paid}.`
   // Sent before the due date (from the order page, "Customer owes ..."): a gentle note, not "fell due".
   const notDueYet = daysBetween(input.dueOn, today) < 0
-  const due = firm
+  // Past 30 days never a count ("757 days" is a wrong figure on an imported invoice): the date and "still unpaid" (redesign phase 0).
+  const longOverdue = daysOverdue > COUNT_WORDS_MAX_DAYS
+  const due = longOverdue
+    ? `It fell due on ${dayMonthYear(input.dueOn)} and is still unpaid.${reminded}`
+    : firm
     ? `It was due on ${dayMonthYear(input.dueOn)} and is now ${daysOverdue} days overdue.${reminded}`
     : notDueYet
       ? `It is due on ${dayMonthYear(input.dueOn)}.${reminded}`
@@ -89,7 +94,7 @@ export function generatePaymentReminder(input: PaymentReminderInput): PaymentRem
       ...(Number(input.settled) > 0 ? [`Received: PKR ${formatAmount(input.settled)}`] : []),
       `Outstanding: ${balance}`,
       `Due date: ${dayMonthYear(input.dueOn)}`,
-      `Days overdue: ${daysOverdue}`,
+      ...(longOverdue ? [] : [`Days overdue: ${daysOverdue}`]),
       '',
     )
   }
