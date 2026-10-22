@@ -67,6 +67,8 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
         <RadixDialog.Content
           aria-describedby={undefined}
           data-help-panel={wide ? 'side' : 'sheet'}
+          // Says which it is, so the page's single-key shortcuts keep working beside the side panel (blockingOverlayOpen).
+          aria-modal={!wide}
           // The side panel leaves the page usable: a click on the page does not close it.
           onInteractOutside={e => (wide ? e.preventDefault() : undefined)}
           onOpenAutoFocus={e => {

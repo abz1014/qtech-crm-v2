@@ -13,6 +13,7 @@ import { CaptureProvider } from '@/app/capture/CaptureProvider'
 import { useCapture } from '@/app/capture/useCapture'
 import { TopBar } from '@/app/shell/TopBar'
 import { useNavCounts } from '@/app/shell/useNavCounts'
+import { NavCountsContext } from '@/app/shell/navCountsContext'
 import { useRouteFocus } from '@/app/shell/useRouteFocus'
 import { HelpHost } from '@/features/help/HelpHost'
 
@@ -45,7 +46,8 @@ export function AppShell({ counts }: AppShellProps) {
 }
 
 function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Record<NavKey, number>> }) {
-  const counts = { ...useNavCounts(user), ...given }
+  const nav = useNavCounts(user)
+  const counts = { ...nav.counts, ...given }
   const palette = usePalette()
   const { openCapture } = useCapture()
   useSearchPaletteSource()
@@ -68,7 +70,9 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
       <MobileBar user={user} title={title} onSearch={palette.open} onCapture={openCapture} />
       <main id="main" tabIndex={-1} className="min-h-0 overflow-y-auto focus:outline-none">
         <ErrorBoundary key={pathname} variant="inline">
-          <Outlet />
+          <NavCountsContext.Provider value={nav.ready ? counts : null}>
+            <Outlet />
+          </NavCountsContext.Provider>
         </ErrorBoundary>
       </main>
       <BottomTabs role={user.role} counts={counts} />

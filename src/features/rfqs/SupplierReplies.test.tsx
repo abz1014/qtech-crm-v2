@@ -120,4 +120,35 @@ describe('SupplierReplies', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.queryByRole('textbox', { name: 'Price for item 1 from Orient Analytical' })).toBeNull()
   })
+
+  it('HW-48: a price that is not a number says why next to the box; "PKR 1,200/-" is read as 1200', async () => {
+    installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
+          <MemoryRouter>
+            <ToastProvider>
+              <SupplierReplies rfq={rfq} items={items} inquiries={[inquiry]} rates={{}} />
+            </ToastProvider>
+          </MemoryRouter>
+        </SessionContext.Provider>
+      </QueryClientProvider>,
+    )
+    const box = screen.getByRole('textbox', { name: 'Price for item 1 from Orient Analytical' })
+    await user.type(box, '-5')
+    expect(screen.getByText("A price can't be below zero.")).toBeInTheDocument()
+    expect(box).toHaveAttribute('aria-invalid', 'true')
+    await user.clear(box)
+    await user.type(box, 'about 12')
+    expect(screen.getByText('Type the price as a number, like 1200.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save reply' })).toBeDisabled()
+    await user.clear(box)
+    await user.type(box, 'PKR 1,200/-')
+    expect(screen.queryByText(/Type the price as a number/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Save reply' })).toBeEnabled()
+    await user.tab()
+    expect(box).toHaveValue('1,200')
+  })
 })

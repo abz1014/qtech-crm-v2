@@ -36,6 +36,7 @@ import {
   useUploadReceipt,
 } from '@/features/money/expenses/hooks'
 import { InputTax } from '@/features/money/expenses/InputTax'
+import { clearExpenseDraft, expenseDraftKey, loadExpenseDraft, saveExpenseDraft } from '@/features/money/expenses/addDraft'
 import {
   PAID_VIA_LABEL,
   SUPPLIER_PAYMENT_ID,
@@ -247,10 +248,35 @@ function ExpenseFormReady({
   const fileRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => onBusy(sf.pending), [sf.pending, onBusy])
-  // Amount first: the person types it and presses Enter (A6.5: one expense in the default category).
+  // A reload keeps what was typed (HW-23): the draft is in this tab's sessionStorage while the dialog is open, and goes when it
+  // closes (saved, cancelled, discarded). Restored as changes, so closing still asks "Discard what you typed?".
+  // Amount first: the person types it and presses Enter (A6.5: one expense in the default category). After a restore the
+  // focus waits a tick, so the amount field shows the kept number (a focused number field does not take outside changes).
+  const draftKey = expense ? null : expenseDraftKey(context?.orderId, context?.legId)
   useEffect(() => {
-    amountRef.current?.focus()
-  }, [])
+    const kept = draftKey ? loadExpenseDraft(draftKey) : null
+    if (!kept) {
+      amountRef.current?.focus()
+    } else {
+      for (const k of ['amount', 'categoryId', 'paidOn', 'note'] as const)
+        if (kept[k] !== undefined) form.setValue(k, kept[k] as never, { shouldDirty: true })
+      if (kept.note) setShowNote(true)
+      setTimeout(() => amountRef.current?.focus(), 0)
+    }
+    if (!draftKey) return
+    const sub = form.watch(v =>
+      saveExpenseDraft(draftKey, {
+        amount: typeof v.amount === 'number' ? v.amount : undefined,
+        categoryId: form.getFieldState('categoryId').isDirty ? v.categoryId : undefined,
+        paidOn: form.getFieldState('paidOn').isDirty ? v.paidOn : undefined,
+        note: v.note?.trim() ? v.note : undefined,
+      }),
+    )
+    return () => {
+      sub.unsubscribe()
+      clearExpenseDraft(draftKey)
+    }
+  }, [draftKey, form])
 
   const categoryId = form.watch('categoryId')
   const amount = form.watch('amount')

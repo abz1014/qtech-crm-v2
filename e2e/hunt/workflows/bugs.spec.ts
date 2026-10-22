@@ -20,7 +20,6 @@ test('HW-42: on a phone, Invoices & GST puts the search box and the filter tabs 
   expect(box).not.toBeNull()
   await shot(page, 'HW-42-phone-gst-register', false)
   const width = page.viewportSize()?.width ?? 375
-  test.fail(true, 'HW-42: the GST register card is wider than the phone screen; the search box and the "Not sent by TCS" tab are cut off')
   expect(Math.round(box!.x + box!.width), 'right edge of the Search invoices box').toBeLessThanOrEqual(width)
   await ctx.close()
 })

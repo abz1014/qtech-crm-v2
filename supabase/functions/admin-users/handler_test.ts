@@ -141,13 +141,14 @@ Deno.test('create rolls back the auth user when the profile insert fails', async
 })
 
 Deno.test('reset_password sets a new password, returns it, audits without it', async () => {
-  const { handler, state, audits } = setup()
+  const { handler, state, audits, calls } = setup()
   const res = await call(handler, { action: 'reset_password', user_id: SALES })
   assertEquals(res.status, 200)
   assertEquals((await res.json()).password, 'Generated-Pass-1234')
   assertEquals(state.passwords.get(SALES), 'Generated-Pass-1234')
   assertEquals(audits[0].new_value, { event: 'reset_password' })
   assert(!JSON.stringify(audits).includes('Generated-Pass'))
+  assertEquals(calls, ['revoke']) // HW-17: signed out on every device
 })
 
 Deno.test('reset_password for an unknown or malformed id', async () => {
@@ -229,10 +230,11 @@ Deno.test('deactivate locks the row, bans, revokes sessions, audits', async () =
   assertEquals(audits[0].new_value?.deactivated_at, rows.get(SALES)!.deactivated_at)
 })
 
-Deno.test('deactivate twice is a no-op', async () => {
-  const { handler, calls } = setup()
+Deno.test('deactivate twice finishes the ban and the sign-out again, with no second audit row', async () => {
+  const { handler, calls, audits } = setup()
   assertEquals((await call(handler, { action: 'deactivate', user_id: GONE })).status, 200)
-  assertEquals(calls, [])
+  assertEquals(calls, ['ban', 'revoke'])
+  assertEquals(audits.length, 0)
 })
 
 Deno.test('reactivate lifts the ban and clears the date', async () => {
