@@ -60,6 +60,8 @@ async function order(role: 'admin' | 'sales', o: {
   }
   if (o.imported) {
     await db.patch(`orders?id=eq.${ord.id}`, { legacy_source: { imported: true, table: 'orders' } })
+    // the import marks the purchase-order legs too (the supplier page reads supplier_orders.legacy_source)
+    await db.patch(`supplier_orders?order_id=eq.${ord.id}`, { legacy_source: { imported: true, table: 'supplier_orders' } })
     if (o.invoice) await db.patch(`invoices?order_id=eq.${ord.id}`, { legacy_source: { imported: true, table: 'invoices' } })
   }
   return { id: ord.id, customer, supplier, supplierId: sup.id }
