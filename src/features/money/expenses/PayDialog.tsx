@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, CircleAlert, Landmark, Wallet } from 'lucide-react'
+import { Check, CircleAlert } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Icon } from '@/ui/Icon'
-import { SegmentedControl } from '@/ui/SegmentedControl'
+import { PaidByToggle } from '@/features/money/expenses/PaidByToggle'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
 import { Checkbox } from '@/ui/form/Checkbox'
@@ -204,16 +204,7 @@ function PayFormReady({
           <span className="font-medium" aria-hidden="true">
             Paid by
           </span>
-          <SegmentedControl
-            aria-label="Paid by"
-            value={paidVia}
-            onValueChange={v => setPaidVia(v as PaidVia)}
-            large
-            options={[
-              { value: 'bank', label: 'Bank', icon: Landmark },
-              { value: 'cash', label: 'Cash', icon: Wallet },
-            ]}
-          />
+          <PaidByToggle value={paidVia} onChange={setPaidVia} order={['bank', 'cash']} />
         </div>
       </div>
       <label className="grid gap-2">

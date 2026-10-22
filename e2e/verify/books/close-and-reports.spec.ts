@@ -247,28 +247,35 @@ test('we owe a supplier: the leg total in USD at the rate, less the supplier pay
   await expect(page.getByTestId('leg-A-total')).toContainText(amount(2033.25))
   await expect(page.getByTestId('leg-A')).toContainText(amount(569818))
 
-  // The supplier order's Add expense is "Pay <supplier>" in its menu, named by the supplier (no leg letters on screen since the UX merges).
+  // Pay <supplier> in the supplier order's menu is the one door for a supplier payment (redesign phase 1, 0087): what was paid in
+  // the supplier's currency, the PKR the bank debited, and the bank charges as their own line.
   await page.getByTestId('leg-A').getByRole('button', { name: BOOKS.owe.moreFor(sup.name) }).click()
   await page.getByRole('menuitem', { name: BOOKS.owe.payFor(sup.name) }).click()
-  const d = page.getByRole('dialog', { name: BOOKS.owe.dialog })
-  await expect(d.getByRole('combobox', { name: BOOKS.owe.category })).toHaveValue(BOOKS.owe.supplierPayment)
-  await d.getByRole('textbox', { name: BOOKS.owe.amount }).fill('300000')
+  const d = page.getByRole('dialog', { name: BOOKS.owe.dialog(sup.name) })
+  await expect(d).toContainText(BOOKS.owe.supplierPayment)
+  await d.getByRole('textbox', { name: BOOKS.owe.paidIn('USD') }).fill('1000')
+  await d.getByRole('textbox', { name: BOOKS.owe.pkrDebited }).fill('300000')
+  await d.getByRole('textbox', { name: BOOKS.owe.bankCharges }).fill('2500')
   await d.getByRole('button', { name: BOOKS.owe.save }).click()
   await expect(d).toBeHidden()
-  const [e] = await db.rows<{ amount_pkr: number; supplier_order_id: string; payee_id: string; category_id: string; order_id: string }>(`expenses?supplier_order_id=eq.${seed.legs[0].id}&select=*`)
-  expect(e).toMatchObject({ supplier_order_id: seed.legs[0].id, payee_id: sup.id, category_id: SUPPLIER_PAYMENT, order_id: seed.order.id })
+  const [e] = await db.rows<{ amount_pkr: number; supplier_order_id: string; payee_id: string; category_id: string; order_id: string; fx_currency: string; fx_amount: number }>(`expenses?supplier_order_id=eq.${seed.legs[0].id}&select=*`)
+  expect(e).toMatchObject({ supplier_order_id: seed.legs[0].id, payee_id: sup.id, category_id: SUPPLIER_PAYMENT, order_id: seed.order.id, fx_currency: 'USD' })
   expect(num(e.amount_pkr)).toBe(300000)
+  expect(num(e.fx_amount)).toBe(1000)
+  const charges = await db.rows<{ amount_pkr: number; category_id: string; supplier_order_id: string | null }>(`expenses?order_id=eq.${seed.order.id}&category_id=eq.ca7e0000-0000-4000-8000-000000000008&select=*`)
+  expect(charges.map(c => [num(c.amount_pkr), c.supplier_order_id])).toEqual([[2500, null]])
 
+  // USD 1,000 of USD 2,033.25 is paid at whatever rate it cost; the other USD 1,033.25 is owed at the book rate.
   const rows = await db.adminRpc<{ supplier_order_id: string; committed: number; fx_rate: number; committed_pkr: number; paid_pkr: number; owed_pkr: number; state: string }[]>('payables_as_of', { p_date: today })
   const leg = rows.find(r => r.supplier_order_id === seed.legs[0].id)
-  expect(leg && [num(leg.committed), num(leg.fx_rate), num(leg.committed_pkr), num(leg.paid_pkr), num(leg.owed_pkr), leg.state]).toEqual([2033.25, 280.25, 569818.31, 300000, 269818.31, 'owing'])
+  expect(leg && [num(leg.committed), num(leg.fx_rate), num(leg.committed_pkr), num(leg.paid_pkr), num(leg.owed_pkr), leg.state]).toEqual([2033.25, 280.25, 569818.31, 300000, 289568.31, 'owing'])
 
   await page.goto(BOOKS.monthEnd.owe(monthOf(today).key))
   const row = page.getByRole('row', { name: new RegExp(sup.name) })
   await expect(row).toContainText(amount(2033.25, { always: true }))
   // round 3: five columns; the PKR value of the commitment is the rate tooltip, not a column
   await expect(row).toContainText(amount(300000))
-  await expect(row).toContainText(amount(269818))
+  await expect(row).toContainText(amount(289568))
   await expect(row).toContainText(BOOKS.owe.partPaid)
   await admin.close()
 })

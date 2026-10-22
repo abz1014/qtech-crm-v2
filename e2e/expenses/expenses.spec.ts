@@ -22,6 +22,14 @@ const SALARIES = 'ca7e0000-0000-4000-8000-000000000001'
 const RENT = 'ca7e0000-0000-4000-8000-000000000002'
 const UTILITIES = 'ca7e0000-0000-4000-8000-000000000003'
 const SUPPLIER_PAYMENT = 'ca7e0000-0000-4000-8000-000000000011'
+const FREIGHT = 'ca7e0000-0000-4000-8000-000000000012'
+/** 0087 for-month: a bill paid on day 1 to 10 is for the month before. */
+const forMonthOf = (day: string) => {
+  const [y, m, d] = day.split('-').map(Number)
+  if (d > 10) return day.slice(0, 7)
+  const p = new Date(Date.UTC(y, m - 2, 1))
+  return `${p.getUTCFullYear()}-${String(p.getUTCMonth() + 1).padStart(2, '0')}`
+}
 
 const today = () => karachiDay(0)
 const unique = () => Math.random().toString(36).slice(2, 8)
@@ -159,7 +167,7 @@ test.describe('expenses (M03, M11)', () => {
     expect(rows.every(r => r.category_id === SNACKS && r.paid_via === 'cash' && r.paid_on === today())).toBe(true)
   })
 
-  test('X1: a supplier payment typed in the burst sheet is tagged to its order from the keyboard; the tag is optional and Tab skips it', async ({ page }) => {
+  test('X1: an order cost typed in the burst sheet is tagged to its order from the keyboard; the tag is optional and Tab skips it', async ({ page }) => {
     const customer = await createCompany(uniqueName('Tag Customer'))
     const supplier = await createCompany(uniqueName('Tag Supplier'))
     const [order] = await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id } }))
@@ -173,7 +181,7 @@ test.describe('expenses (M03, M11)', () => {
     await startCounting(page)
     await page.keyboard.type(String(tagged))
     await page.keyboard.press('Tab') // category
-    await page.keyboard.type('supplier')
+    await page.keyboard.type('freight') // 0087: a supplier payment is never typed here (one door: Pay)
     await page.keyboard.press('Tab') // date (the highlighted category is taken)
     await page.keyboard.press('Tab') // paid via
     await page.keyboard.press('Tab') // detail
@@ -193,7 +201,8 @@ test.describe('expenses (M03, M11)', () => {
     await expect(page.getByRole('dialog')).toBeHidden()
     expect((await counted(page)).mouse).toBe(0)
     const [t] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${tagged}&select=*`))
-    expect(t).toMatchObject({ category_id: SUPPLIER_PAYMENT, order_id: order.id, supplier_order_id: leg.id, payee_id: supplier.id })
+    expect(t).toMatchObject({ category_id: FREIGHT, order_id: order.id })
+    expect(leg.id).toBeTruthy()
     const [u] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${untagged}&select=*`))
     expect(u).toMatchObject({ order_id: null, supplier_order_id: null })
   })
@@ -293,15 +302,15 @@ test.describe('expenses (M03, M11)', () => {
     expect(att.path.startsWith(`${row.id}/`)).toBe(true)
   })
 
-  test('input tax is collapsed, optional, and only on Supplier payment, Freight and Clearing', async ({ page }) => {
+  test('input tax is collapsed and optional on Freight and Clearing; any other category takes it through "Has a GST invoice" (0087)', async ({ page }) => {
     const amt = 590000 + base() + 8
     await openAs(page, 'admin', '/money/expenses?add=1')
     await expect(page.getByText('Input tax, optional')).toHaveCount(0)
     const category = page.getByRole('combobox', { name: 'Category' })
     await category.click()
-    await page.keyboard.type('sup')
+    await page.keyboard.type('frei')
     await page.keyboard.press('Tab')
-    await expect(category).toHaveValue('Supplier payment')
+    await expect(category).toHaveValue('Freight')
     await page.getByRole('button', { name: /Input tax, optional/ }).click()
     await page.getByRole('textbox', { name: 'Input tax, PKR' }).fill('90,000')
     await page.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(amt))
@@ -310,38 +319,73 @@ test.describe('expenses (M03, M11)', () => {
     await page.getByRole('button', { name: 'Save expense' }).click()
     await expect(page.getByRole('dialog')).toBeHidden()
     const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amt}&select=*`))
-    expect(row).toMatchObject({ category_id: SUPPLIER_PAYMENT, input_tax_pkr: 90000, paid_via: 'bank' })
-    // a category without input tax never offers it
+    expect(row).toMatchObject({ category_id: FREIGHT, input_tax_pkr: 90000, paid_via: 'bank' })
+    // any other category: no input tax field until "Has a GST invoice" is ticked
     await page.goto('/money/expenses?add=1')
     await page.getByRole('combobox', { name: 'Category' }).click()
     await page.keyboard.type('rent')
     await page.keyboard.press('Tab')
     await expect(page.getByText('Input tax, optional')).toHaveCount(0)
+    await page.getByRole('checkbox', { name: 'More: has a GST invoice' }).click()
+    await expect(page.getByRole('textbox', { name: 'Input tax, PKR' })).toBeVisible()
   })
 
-  test('from a leg: Supplier payment, payee and leg filled, amount at the balance, 2 taps', async ({ page }) => {
+  test('Supplier payment is offered nowhere but Pay: not in the dialog, not in the burst sheet (one door, 0087)', async ({ page }) => {
+    await openAs(page, 'admin', '/money/expenses?add=1')
+    await page.getByRole('combobox', { name: 'Category' }).click()
+    await page.keyboard.type('supplier pay')
+    await expect(page.getByRole('option', { name: /^Supplier payment/ })).toHaveCount(0)
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog')).toBeHidden()
+    await page.getByRole('button', { name: 'Add expenses' }).click()
+    await page.getByRole('combobox', { name: 'Category, row 1' }).click()
+    await page.keyboard.type('supplier pay')
+    await expect(page.getByRole('option', { name: /^Supplier payment/ })).toHaveCount(0)
+    await expect(page.getByTestId('quick-add').getByRole('button', { name: 'Supplier payment' })).toHaveCount(0)
+  })
+
+  test('from a leg: Pay <supplier>, the one door for a supplier payment; the amount starts at the balance, 2 taps (0087)', async ({ page }) => {
     const customer = await createCompany(uniqueName('Leg Customer'))
     const supplier = await createCompany(uniqueName('Leg Supplier'))
     const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id } })))[0]
     const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: supplier.id } })))[0]
     await openAs(page, 'admin', '/today')
-    const note = 'Still owed on leg A: EUR 2,430.00 less the 412,300 advance'
+    const note = 'Owed (about) on 30 Nov, from We owe suppliers'
     await page.goto(`/money/expenses?add=1&order=${order.id}&leg=${leg.id}&amount=384497&note=${encodeURIComponent(note)}`)
-    const dialog = page.getByRole('dialog', { name: 'Add expense' })
+    const dialog = page.getByRole('dialog', { name: `Pay ${supplier.name}` })
     await expect(dialog).toBeVisible()
-    await expect(dialog.getByRole('combobox', { name: 'Category' })).toHaveValue('Supplier payment')
-    await expect(dialog.getByText('Opened from a supplier order')).toBeVisible()
-    // the payee box names the supplier only: no "· leg A" after it (plain words, 2026-10-19)
-    await expect(dialog.getByLabel('Payee, from the supplier order')).toHaveText(supplier.name)
+    await expect(dialog).toContainText('Supplier payment')
     await expect(dialog.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('384,497')
-    await expect(dialog.getByText(note)).toBeVisible()
-    await review(page, 'm03-add-expense-from-a-leg-1440')
+    await expect(dialog).toContainText(note)
+    await review(page, 'm03-pay-supplier-1440')
     await startCounting(page)
-    await dialog.getByRole('button', { name: 'Save expense' }).click() // tap 2 (tap 1 was "Add expense" on the leg)
+    await dialog.getByRole('button', { name: 'Save payment' }).click() // tap 2 (tap 1 was Pay on the leg)
     await expect(page.getByRole('dialog')).toBeHidden()
     expect((await counted(page)).mouse).toBe(1)
     const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?order_id=eq.${order.id}&select=*`))
     expect(row).toMatchObject({ amount_pkr: 384497, category_id: SUPPLIER_PAYMENT, supplier_order_id: leg.id, payee_id: supplier.id, paid_via: 'bank', paid_on: today() })
+  })
+
+  test('Pay a foreign supplier: the amount in their currency, the PKR debited, bank charges as their own expense (0087)', async ({ page }) => {
+    const customer = await createCompany(uniqueName('Fx Customer'))
+    const supplier = await createCompany(uniqueName('Fx Supplier GmbH'))
+    const order = (await must(rest<{ id: string; number: number }[]>('admin', 'orders', { method: 'POST', body: { company_id: customer.id } })))[0]
+    const leg = (await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: supplier.id, currency: 'EUR' } })))[0]
+    await openAs(page, 'admin', '/today')
+    await page.goto(`/money/expenses?add=1&order=${order.id}&leg=${leg.id}`)
+    const dialog = page.getByRole('dialog', { name: `Pay ${supplier.name}` })
+    await dialog.getByRole('textbox', { name: 'Paid in EUR' }).fill('2,430')
+    await dialog.getByRole('textbox', { name: 'PKR debited from the bank' }).fill('765,450')
+    await expect(dialog).toContainText('That is PKR 315 per EUR')
+    await dialog.getByRole('textbox', { name: 'Bank charges, PKR' }).fill('3,250')
+    await dialog.getByRole('button', { name: 'Save payment' }).click()
+    await expect(page.getByRole('dialog')).toBeHidden()
+    const rows = await must(rest<(ExpenseRow & { fx_currency: string | null; fx_amount: number | null })[]>('admin', `expenses?order_id=eq.${order.id}&select=*&order=amount_pkr.desc`))
+    expect(rows.map(r => [r.category_id, r.amount_pkr, r.fx_currency, r.fx_amount, r.supplier_order_id])).toEqual([
+      [SUPPLIER_PAYMENT, 765450, 'EUR', 2430, leg.id],
+      ['ca7e0000-0000-4000-8000-000000000008', 3250, null, null, null],
+    ])
   })
 
   test('from an order: the last category used on it', async ({ page }) => {
@@ -430,9 +474,12 @@ test.describe('expenses (M03, M11)', () => {
     expect((await counted(page)).mouse).toBe(1) // 1 tap
     const rows = await must(rest<ExpenseRow[]>('admin', `expenses?recurring_id=eq.${tpl.id}&select=*`))
     expect(rows).toHaveLength(1)
-    expect(rows[0]).toMatchObject({ amount_pkr: 9500, category_id: UTILITIES, period: today().slice(0, 7), description: label })
+    // 0087 for-month: a template due on day 1 (to 10) pays LAST month's bill, so it is recorded for last month
+    const billMonth = forMonthOf(`${today().slice(0, 7)}-01`)
+    expect(rows[0]).toMatchObject({ amount_pkr: 9500, category_id: UTILITIES, period: billMonth, description: label })
+    await expect(item).toContainText(`for ${new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(`${billMonth}-01T00:00:00Z`))}`)
     // (recurring_id, period) is unique: a second record for the month is refused by the database
-    const again = await rest('admin', 'expenses', { method: 'POST', body: { amount_pkr: 9500, category_id: UTILITIES, paid_via: 'bank', recurring_id: tpl.id, period: today().slice(0, 7) } })
+    const again = await rest('admin', 'expenses', { method: 'POST', body: { amount_pkr: 9500, category_id: UTILITIES, paid_via: 'bank', recurring_id: tpl.id, period: billMonth } })
     expect(again.status).toBe(409)
     // and the template can be added and edited from the panel
     await page.getByRole('button', { name: 'Add recurring' }).click()
@@ -552,9 +599,10 @@ test.describe('expenses (M03, M11)', () => {
     await page.keyboard.press('Control+Enter')
     await expect(page.getByRole('dialog')).toBeHidden()
     const [tpl] = await must(rest<{ id: string; amount: number; day_of_month: number; start_month: string; active: boolean }[]>('admin', `recurring_expenses?label=eq.${encodeURIComponent(label)}&select=*`))
-    expect(tpl).toMatchObject({ amount, active: true, start_month: today().slice(0, 7), day_of_month: Math.min(Number(today().slice(8, 10)), 28) })
+    // 0087 for-month: a row paid on day 1 to 10 is last month's bill, and the template starts there
+    expect(tpl).toMatchObject({ amount, active: true, start_month: forMonthOf(today()), day_of_month: Math.min(Number(today().slice(8, 10)), 28) })
     const [row] = await must(rest<ExpenseRow[]>('admin', `expenses?amount_pkr=eq.${amount}&select=*`))
-    expect(row).toMatchObject({ recurring_id: tpl.id, period: today().slice(0, 7) })
+    expect(row).toMatchObject({ recurring_id: tpl.id, period: forMonthOf(today()) })
     // the recurring panel shows it recorded for this month (no Record button)
     const item = page.getByTestId(`recurring-${label}`)
     await expect(item).toBeVisible()

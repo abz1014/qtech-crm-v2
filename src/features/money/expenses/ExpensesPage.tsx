@@ -62,7 +62,7 @@ export function ExpensesPage() {
       }
     >
       {cats.data ? <ClaimsReview categories={cats.data} groups={groups.data ?? []} /> : null}
-      {cats.data ? <QuickAdd categories={cats.data} /> : <div className="h-[220px] animate-pulse rounded border bg-sunken" aria-busy="true" aria-label="Loading quick add" />}
+      {cats.data ? <QuickAdd categories={cats.data} /> : <div className="h-[220px] animate-pulse rounded border bg-sunken" aria-hidden="true" />}
       <CashInHandLine />
       <ExpensesTab />
       <BurstSheet

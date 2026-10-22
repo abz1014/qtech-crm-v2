@@ -154,7 +154,8 @@ function MyClaims() {
 
       <section aria-labelledby="mine-h" className="grid gap-2">
         <h2 id="mine-h" className="text-lg font-semibold">
-          My claims {pending.length > 0 ? <span className="font-regular text-fg-2">· {pending.length} waiting</span> : null}
+          <span>My claims</span>
+          {pending.length > 0 ? <span className="font-regular text-fg-2"> · {pending.length} waiting</span> : null}
         </h2>
         {claims.isPending ? (
           <div className="h-16 animate-pulse rounded border bg-sunken" aria-busy="true" />

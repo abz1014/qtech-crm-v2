@@ -200,15 +200,16 @@ test.describe('O07: Issue PO', () => {
     expect(await posOf(s.leg)).toHaveLength(0)
   })
 
-  test('Pay <supplier> on a supplier order opens the M03 dialog with this order and supplier order, the supplier as payee', async ({ page }) => {
+  test('Pay <supplier> on a supplier order opens the Pay dialog: the one door for a supplier payment (0087)', async ({ page }) => {
     const s = await seedPo({ allPriced: true })
     await openAs(page, 'admin', `/orders/${s.order.id}`)
     await legLoc(page, 'A').getByRole('button', { name: `More for ${s.supplier.name}` }).click()
     await page.getByRole('menuitem', { name: `Pay ${s.supplier.name}` }).click()
     const d = dialog(page)
-    await expect(d.getByRole('heading', { name: /expense/i })).toBeVisible()
-    await expect(d).toContainText(s.supplier.name)
-    await expect(d.getByRole('combobox', { name: 'Category' })).toHaveValue('Supplier payment')
+    await expect(d.getByRole('heading', { name: `Pay ${s.supplier.name}` })).toBeVisible()
+    await expect(d).toContainText('Supplier payment')
+    await expect(d.getByRole('textbox', { name: 'Bank charges, PKR' })).toBeVisible()
+    await expect(d.getByRole('button', { name: 'Save payment' })).toBeVisible()
   })
 
   test('an engineer never sees Issue PO, View PO or a price, but does see the PO chip', async ({ page }) => {

@@ -455,6 +455,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"expense_categories": {
+                  Row: {
+                    "active": boolean,"created_at": string,"created_by": string | null,"default_paid_via": string,"group_id": string,"grp": string,"id": string,"monthly_budget_pkr": number | null,"name": string,"sort": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"default_paid_via"?: string,"group_id": string,"grp": string,"id"?: string,"monthly_budget_pkr"?: number | null,"name": string,"sort"?: number
+                  }
+                  Update: {
+                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"default_paid_via"?: string,"group_id"?: string,"grp"?: string,"id"?: string,"monthly_budget_pkr"?: number | null,"name"?: string,"sort"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "expense_categories_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "expense_categories_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "expense_groups"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"expense_claims": {
                   Row: {
                     "amount_pkr": number,"created_at": string,"created_by": string | null,"decided_at": string | null,"decided_by": string | null,"expense_id": string | null,"id": string,"note": string | null,"order_id": string | null,"paid_how": string | null,"reject_reason": string | null,"spent_on": string,"status": string
@@ -482,7 +508,7 @@ isOneToOne: false
     },{
       foreignKeyName: "expense_claims_expense_id_fkey"
       columns: ["expense_id"]
-isOneToOne: false
+isOneToOne: true
       referencedRelation: "expenses"
       referencedColumns: ["id"]
     },{
@@ -491,32 +517,30 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "orders"
       referencedColumns: ["id"]
-    }
-                  ]
-                },"expense_categories": {
-                  Row: {
-                    "active": boolean,"created_at": string,"created_by": string | null,"default_paid_via": string,"group_id": string,"grp": string,"id": string,"monthly_budget_pkr": number | null,"name": string,"sort": number
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"default_paid_via"?: string,"group_id": string,"grp": string,"id"?: string,"monthly_budget_pkr"?: number | null,"name": string,"sort"?: number
-                  }
-                  Update: {
-                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"default_paid_via"?: string,"group_id"?: string,"grp"?: string,"id"?: string,"monthly_budget_pkr"?: number | null,"name"?: string,"sort"?: number
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "expense_categories_created_by_fkey"
-      columns: ["created_by"]
-isOneToOne: false
-      referencedRelation: "users"
-      referencedColumns: ["id"]
     },{
-      foreignKeyName: "expense_categories_group_id_fkey"
-      columns: ["group_id"]
+      foreignKeyName: "expense_claims_order_id_fkey"
+      columns: ["order_id"]
 isOneToOne: false
-      referencedRelation: "expense_groups"
-      referencedColumns: ["id"]
+      referencedRelation: "v_order_basis"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "expense_claims_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_items_total"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "expense_claims_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_money"
+      referencedColumns: ["order_id"]
+    },{
+      foreignKeyName: "expense_claims_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "v_order_state"
+      referencedColumns: ["order_id"]
     }
                   ]
                 },"expense_groups": {
@@ -2160,11 +2184,11 @@ isOneToOne: false
               "advance_held": number,"age_days": number,"applied": number,"bucket": string,"company_id": string,"gross": number,"invoice_date": string,"invoice_id": string,"invoice_number": string,"kind": string,"order_id": string,"order_number": number,"remaining": number
             }[]
                            },
-"approve_expense_claim":
-{ Args: { "p_category": string,"p_claim": string,"p_paid_how": string,"p_paid_on"?: string }; Returns: string
-                           },
 "apply_fx_payload":
 { Args: { "p_batch"?: string,"p_payload": Json,"p_source": string }; Returns: Json
+                           },
+"approve_expense_claim":
+{ Args: { "p_category": string,"p_claim": string,"p_paid_how": string,"p_paid_on"?: string }; Returns: string
                            },
 "brand_tokens":
 { Args: Record<PropertyKey, never>; Returns: (string)[]

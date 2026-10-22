@@ -1,12 +1,12 @@
 import { useId, useMemo, useRef, useState } from 'react'
-import { Camera, Check, CircleAlert, Landmark, Wallet, X } from 'lucide-react'
+import { Camera, Check, CircleAlert, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { intakeFiles, type AddedFile } from '@/lib/fileIntake'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
-import { SegmentedControl } from '@/ui/SegmentedControl'
+import { PaidByToggle } from '@/features/money/expenses/PaidByToggle'
 import { useToast } from '@/ui/useToast'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { NumberInput } from '@/ui/form/NumberInput'
@@ -258,16 +258,7 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
             <span className="text-base font-medium" aria-hidden="true">
               Paid by
             </span>
-            <SegmentedControl
-              aria-label="Paid by"
-              value={paidVia}
-              onValueChange={v => setVia(v as PaidVia)}
-              large
-              options={[
-                { value: 'cash', label: 'Cash', icon: Wallet },
-                { value: 'bank', label: 'Bank', icon: Landmark },
-              ]}
-            />
+            <PaidByToggle value={paidVia} onChange={setVia} />
           </div>
           <div className="grid gap-2">
             <label htmlFor={`${uid}-date`} className="text-base font-medium">

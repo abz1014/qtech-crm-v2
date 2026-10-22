@@ -26,7 +26,7 @@ export function CashInHandLine({ compact = false }: { compact?: boolean }) {
   const [counting, setCounting] = useState(false)
   const [drawing, setDrawing] = useState(false)
   const c = q.data
-  if (q.isPending) return <div className="h-[60px] animate-pulse rounded border bg-sunken" aria-busy="true" aria-label="Loading cash in hand" />
+  if (q.isPending) return <div className="h-[60px] animate-pulse rounded border bg-sunken" aria-hidden="true" />
   if (q.isError || !c) return null
   const none = c.kind === 'none' || c.expected === null
   return (
