@@ -68,3 +68,13 @@ describe('the orders list "Next step" column', () => {
     expect([...ranks].sort((a, b) => a - b)).toEqual(ranks)
   })
 })
+
+describe('imported rows in the list', () => {
+  it('say "Imported, to review" instead of a late count, but money still wins', () => {
+    const l = leg({ placedOn: '2025-01-01', expectedOn: '2025-02-01' })
+    expect(step({ imported: true, goods: 'late', legs: [l] }).text).toBe('Imported, to review')
+    expect(step({ imported: true, goods: 'late', legs: [l], payment: 'overdue', dueOn: '2025-03-01', balance: 5 }).kind).toBe('chase-payment')
+    expect(step({ goods: 'late', legs: [l] }).text).not.toMatch(/\b([3-9]\d|\d{3,}) days (overdue|late)\b/)
+    expect(step({ imported: true, goods: 'late', legs: [l] }, 'engineer').text).toBe('Imported, to review')
+  })
+})

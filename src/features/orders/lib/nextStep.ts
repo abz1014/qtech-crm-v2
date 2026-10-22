@@ -27,6 +27,7 @@ export function rowFacts(row: OrderListRow, role: string, today: string): OrderF
     role,
     lifecycle: row.lifecycle,
     basisUnknown: row.dataTrust === 'basis_unknown',
+    imported: row.imported,
     goods: row.goods,
     commissioning: row.commissioning,
     plannedOn: row.plannedOn,
@@ -48,6 +49,8 @@ export function listText(step: OrderStep, f: OrderFacts): string {
   switch (step.kind) {
     case 'cancelled':
       return 'Cancelled'
+    case 'review-imported':
+      return 'Imported, to review'
     case 'resolve-basis':
       return 'Is GST included? Answer it'
     case 'chase-payment': {

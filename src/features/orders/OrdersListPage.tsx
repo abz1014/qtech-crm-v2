@@ -195,7 +195,9 @@ export default function OrdersListPage() {
   const stepOf = (r: OrderListRow) => steps.get(r.id) ?? listNextStep(r, role, today)
   // R2-05: Active orders split by who acts next. "Needs action" is a late or now step; everything else waits on someone else.
   const needsAction = (r: OrderListRow) => {
-    const t = stepOf(r).tone
+    const st = stepOf(r)
+    if (st.kind === 'review-imported') return false
+    const t = st.tone
     return t === 'late' || t === 'now'
   }
   const showParam = params.get('show')

@@ -2,6 +2,7 @@
 // state"). WHICH step is next comes from lib/orderSteps.ts, the same ordering as the orders list's "Next step" column; this file turns that
 // step into the page's button (or none) and its sentence. Pure.
 //
+//   review-imported     the sentence only, no button (owner decision 1b)
 //   resolve-basis       admin: "Is GST included?"
 //   chase-payment       admin: Record payment; sales: Copy reminder (the payment reminder text, on the clipboard)
 //   goods-late          admin and sales: Chase goods; an engineer: Delivered today (they are the ones on site)
@@ -18,6 +19,7 @@
 
 import { formatAmount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
+import { daysLate, overdueWords, COUNT_WORDS_MAX_DAYS, sinceWords } from '@/lib/timeWords'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney } from '@/features/orders/api'
 import { nextOrderStep, type OrderFacts, type OrderStep, type StepLeg } from '@/features/orders/lib/orderSteps'
 
@@ -54,6 +56,7 @@ export function orderFacts(
     role,
     lifecycle: order.cancelledOn !== null ? 'cancelled' : (s?.lifecycle ?? 'active'),
     basisUnknown: s?.dataTrust === 'basis_unknown',
+    imported: order.imported,
     goods: s?.goods ?? null,
     commissioning: order.needsCommissioning ? (order.doneOn ? 'done' : (s?.commissioning ?? (order.plannedOn ? 'planned' : 'to_plan'))) : 'n_a',
     plannedOn: order.plannedOn,
@@ -109,14 +112,16 @@ export function pageText(step: OrderStep, f: OrderFacts & { unsourced?: number }
   switch (step.kind) {
     case 'cancelled':
       return 'This order is cancelled'
+    case 'review-imported':
+      return 'Imported, to review'
     case 'resolve-basis':
       return 'The old CRM did not say whether these prices include GST'
     case 'chase-payment': {
-      const late = step.lateDays && step.lateDays > 0 ? `${plural(step.lateDays, 'day', 'days')} overdue` : 'overdue'
+      const late = step.lateDays && step.lateDays > 0 && f.dueOn ? overdueWords(step.lateDays, f.dueOn) : 'overdue'
       return `Customer owes ${pkr(f.balance)}, ${late}`
     }
     case 'goods-late': {
-      const late = step.lateDays && step.lateDays > 0 ? `${plural(step.lateDays, 'day', 'days')} late` : 'late'
+      const late = step.lateDays && step.lateDays > 0 ? (step.lateDays > COUNT_WORDS_MAX_DAYS ? (step.leg?.expectedOn ? sinceWords(step.leg.expectedOn) : 'late') : daysLate(step.lateDays)) : 'late'
       return `Goods from ${supplier} are ${late}`
     }
     case 'add-supplier':
