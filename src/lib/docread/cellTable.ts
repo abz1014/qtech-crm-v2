@@ -17,11 +17,16 @@ const NUM = /^\d[\d,]*(?:\.\d+)?$/
 const MONEY = /^(?:[A-Za-z$€¥￥£₨.]{0,4}\s?)?\d[\d,]*(?:\.\d+)?(?:\/-)?(?:\s?[A-Za-z$€]{0,4})?$/
 const PLACEHOLDER = /^[-–—]$|^n\/?a$/i
 
+const STOCK_QTY = /stock|on\s*hand|available|balance|issued|received|consum/i
+
 function headerKind(label: string, hasDesc: boolean): Kind {
-  if (/^(?:s\.?\s*no|sr|sl|#|no\.?$|pos|line|itm)/i.test(label) || (hasDesc && /^item(?:\s*no\.?)?$/i.test(label))) return 'number'
+  if (/^(?:s\.?\s*no|s\.?\s*#|sr|sl|#|no\.?$|pos|line|itm)/i.test(label) || (hasDesc && /^item(?:\s*no\.?)?$/i.test(label))) return 'number'
   if (/desc|particular|specification|product|item\s*name|short\s*text|goods|^item$/i.test(label)) return 'desc'
-  if (/qty|quantity/i.test(label)) return 'qty'
-  if (/^(?:uom|units?|u\/m)\b/i.test(label) && !/price|rate/i.test(label)) return 'unit'
+  // "Qty in Stock" is what the store holds, not what is asked for.
+  if (/qty|quantity/i.test(label) && !STOCK_QTY.test(label)) return 'qty'
+  // "Unit EUR" is a price per unit; "Unit" and "UOM" alone are the unit.
+  if (/\b(?:usd|eur|rmb|cny|pkr|aed|gbp|rs)\b|[$€¥￥£]/i.test(label)) return 'money'
+  if (/^(?:uom|units?|u\/m|a\s*\/\s*u)\.?$/i.test(label)) return 'unit'
   if (/part|model|cat|code|material/i.test(label)) return 'code'
   if (/make|brand/i.test(label)) return 'make'
   if (/date/i.test(label)) return 'date'
@@ -35,7 +40,8 @@ function fits(kind: Kind, c: string): boolean {
     case 'number':
       return /^\d{1,4}\.?$/.test(c)
     case 'qty':
-      return NUM.test(c)
+      // "6 Numbers": the quantity and its unit in one cell.
+      return NUM.test(c) || (/^\d[\d,]*(?:\.\d+)?\s*\S+$/.test(c) && UNIT.test(c.replace(/^\d[\d,]*(?:\.\d+)?\s*/, '')))
     case 'unit':
       return UNIT.test(c)
     case 'code':
@@ -49,6 +55,31 @@ function fits(kind: Kind, c: string): boolean {
     default:
       return true
   }
+}
+
+/** Each cell goes to the first column from the last placed one on that it fits; a cell that fits none goes on the text before. */
+function place(cells: string[], kinds: Kind[]): { out: string[]; col: number } {
+  const out: string[] = kinds.map(() => '')
+  let col = 0
+  for (const c of cells) {
+    let at = -1
+    for (let x = col; x < kinds.length; x++) {
+      // An order or material code before the description can be all digits ("10" / "9248471" / "Butterfly valve ...").
+      const numericCode = kinds[x] === 'code' && /^\d{5,}$/.test(c) && kinds.indexOf('desc') > x
+      if (numericCode || fits(kinds[x] as Kind, c)) {
+        at = x
+        break
+      }
+    }
+    if (at < 0) {
+      const lastText = out.reduce((a, v, x) => (v && (kinds[x] === 'desc' || kinds[x] === 'text') ? x : a), -1)
+      if (lastText >= 0) out[lastText] = `${out[lastText]} ${c}`
+      continue
+    }
+    out[at] = PLACEHOLDER.test(c) ? '' : c
+    col = at + 1
+  }
+  return { out, col }
 }
 
 export interface CellLine {
@@ -66,59 +97,61 @@ export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string
     let e = k
     while (e < src.length) {
       const t = (src[e] as T).t
-      if (/\d|\t/.test(t.replace(/\(.*?\)/g, '')) || t.split(' ').length > 4 || !isHeaderCell(t) || (e > k && (src[e] as T).blankBefore)) break
+      if (/\d|\t/.test(t.replace(/\(.*?\)/g, '')) || t.replace(/\(.*?\)/g, '').trim().split(' ').length > 4 || !isHeaderCell(t) || (e > k && (src[e] as T).blankBefore)) break
       e++
     }
     const labels = src.slice(k, e).map(s => s.t)
     if (labels.length < 3) continue
-    const hasDesc = labels.some(l => headerKind(l, false) === 'desc')
+    // A description heading other than a bare "Item" (then "Item" is the serial-number column).
+    const hasDesc = labels.some(l => headerKind(l, false) === 'desc' && !/^item$/i.test(l))
     const kinds = labels.map(l => headerKind(l, hasDesc))
     if (!kinds.includes('desc') || !(kinds.includes('qty') || kinds.includes('money'))) continue
     const numbered = kinds[0] === 'number'
     const need: Kind = kinds.includes('qty') ? 'qty' : 'money'
     const rows: string[][] = []
     let j = e
-    let serial = 1
+    // Positions count 1, 2, 3 or 10, 20, 30 (a German or SAP quotation).
+    const step = numbered && /^10\.?$/.test((src[e] as T | undefined)?.t ?? '') ? 10 : 1
+    let serial = step
     while (j < src.length) {
       const first = (src[j] as T).t
       if ((numbered && first.replace(/\.$/, '') !== String(serial)) || first.includes('\t')) break
       const cells: string[] = numbered ? [first] : []
       let q = numbered ? j + 1 : j
       const width = numbered ? Infinity : labels.length
-      const hasNeed = () => cells.some((c, x) => x > (numbered ? 1 : 0) && (need === 'qty' ? NUM.test(c) : MONEY.test(c)))
+      // The row has its quantity (or price) once a cell has landed in that column ("0" under Qty in Stock is not it).
+      const hasNeed = () => {
+        const { out } = place(cells, kinds)
+        return out.some((v, x) => v && kinds[x] === need)
+      }
       while (q < src.length && cells.length < width && !(src[q] as T).blankBefore) {
         const t = (src[q] as T).t
-        if (numbered && hasNeed() && t.replace(/\.$/, '') === String(serial + 1)) break
+        // The next serial number starts the next row (followed by its description, not by another number: a last cell can
+        // equal the next serial, "... 6240.00 / 2 / 2 / Amerix ...").
+        const after = (src[q + 1] as T | undefined)?.t ?? ''
+        if (numbered && hasNeed() && t.replace(/\.$/, '') === String(serial + step) && !NUM.test(after)) break
         // A row that already has its cells (tab separated) is a table of its own: the header words above are stacked headings.
         if (stop(t) || t.includes('\t')) break
         // A sentence under a complete row is the text after the table ("Last date for submission: 3 November").
-        if (hasNeed() && (/[A-Za-z]:\s/.test(t) || t.split(' ').length >= 7)) break
+        // (Complete means its description too: with the description column last, a long description follows the quantity.)
+        const hasDesc = () => place(cells, kinds).out.some((v, x) => v && kinds[x] === 'desc')
+        if (hasNeed() && hasDesc() && (/[A-Za-z]:\s/.test(t) || t.split(' ').length >= 7)) break
+        // With no serial column, empty cells at the end of a row ("4" / "NO" / "Panel meter" / "" under Part No) are not
+        // written either: a cell that fits no column from here on but fits the first one (a quantity) starts the next row.
+        if (!numbered && cells.length && kinds[0] !== 'desc' && kinds[0] !== 'text' && !PLACEHOLDER.test(t)) {
+          const { out, col } = place(cells, kinds)
+          if (out.some((v, x) => v && kinds[x] === 'desc') && fits(kinds[0] as Kind, t) && kinds.slice(col).every(k => !fits(k, t))) break
+        }
         cells.push(t)
         q++
         if (numbered && cells.length >= labels.length) break
       }
-      // Each cell goes to the first column from here on that it fits.
-      const out: string[] = labels.map(() => '')
-      let col = 0
-      for (const c of cells) {
-        let at = -1
-        for (let x = col; x < kinds.length; x++) {
-          if (fits(kinds[x] as Kind, c)) {
-            at = x
-            break
-          }
-        }
-        if (at < 0) {
-          const lastText = out.reduce((a, v, x) => (v && (kinds[x] === 'desc' || kinds[x] === 'text') ? x : a), -1)
-          if (lastText >= 0) out[lastText] = `${out[lastText]} ${c}`
-          continue
-        }
-        out[at] = PLACEHOLDER.test(c) ? '' : c
-        col = at + 1
-      }
+      const { out } = place(cells, kinds)
       if (!out.some((v, x) => v && kinds[x] === 'desc')) break
+      // With no serial numbers to go by, a row with no quantity is the text after the table (the sender's name).
+      if (!numbered && need === 'qty' && !out.some((v, x) => v && kinds[x] === 'qty')) break
       rows.push(out)
-      serial++
+      serial += step
       j = q
     }
     if (rows.length === 0) continue
@@ -166,6 +199,9 @@ export function alignSpacedRows(lines: string[]): string[] {
           best = i
         }
       })
+      // A second piece in a column already filled, with an empty column after it, is that column's: a right-aligned
+      // "5 Each" wider than its "Qty" heading starts under the description.
+      if (cells[best] && best + 1 < h.length && !cells[best + 1] && x.a > (h[best + 1] as { a: number }).a - x.t.length) best++
       cells[best] = cells[best] ? `${cells[best]} ${x.t}` : x.t
     }
     return cells.join('\t')
