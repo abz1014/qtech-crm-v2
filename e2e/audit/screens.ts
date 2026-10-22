@@ -168,7 +168,6 @@ export const VISITS: readonly Visit[] = [
   screen('money-expenses-add', 'Money: Add expenses sheet', ADMIN, () => '/money/expenses?burst=1'),
   screen('money-expense-report', 'Money: Expenses report, month', ADMIN, () => '/money/reports/expenses?by=month'),
   screen('money-expense-report-quarter', 'Money: Expenses report, quarter', ADMIN, () => '/money/reports/expenses?by=quarter'),
-  screen('money-in-out', 'Money: In vs out', ADMIN, () => '/money/reports/in-out?by=month'),
   screen('money-aging', 'Money: aging', ADMIN, () => '/money/month-end/aging'),
   screen('money-owe', 'Money: we owe suppliers', ADMIN, () => '/money/month-end/owe'),
   screen('money-gst-fbr', 'Money: GST/FBR', ADMIN, () => '/money/month-end/gst'),
