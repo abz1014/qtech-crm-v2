@@ -8,12 +8,8 @@ import type { Role } from '@/features/today/types'
  * The numbers beside the top-bar destinations. Every one means "needs you" (DESIGN_SYSTEM section 12, owner decision
  * 2026-10-19), and every one is read from the person's own Today list, so the counts can never disagree with Today:
  *   Today   the length of the "needs you" list.
- *   RFQs, Money  that list split by navSectionOf (today/rules.ts). Money is for admin and sales only.
- *   Orders  no number (audit O4, 2026-10-22). The Orders page says "N need you" from each order's next step (late or now,
- *           orders/lib/nextStep listNextStep), filtered by Mine or All; Today's order items are a different, rule-based set, so a badge
- *           from Today read "Orders 1" beside a page saying "6 need you". Counting the page's way would need the whole orders
- *           list and its next-step model in the shell (a second request and more first-load code), so the badge is dropped;
- *           the order items still count under Today.
+ *   RFQs, Orders, Money  that list split by navSectionOf (today/rules.ts): every item lands in exactly one, so the three
+ *           always add up to Today's number. Money is for admin and sales only.
  * The top bar and the phone tabs draw them with NeedsCount (", 4 need you" for screen readers).
  * A destination with nothing to do shows no number, never a 0. An engineer gets no Money count: Today never reads a money fact
  * for them. No request of its own: Today's list is already loaded for the Today count.
@@ -29,6 +25,7 @@ export function useNavCounts(user: SessionUser): { counts: Partial<Record<NavKey
     const section = (key: NavSection) => some(active.filter(i => navSectionOf(i) === key).length)
     counts.today = some(active.length)
     counts.rfqs = section('rfqs')
+    counts.orders = section('orders')
     if (user.role === 'admin' || user.role === 'sales') counts.money = section('money')
   }
   return { counts, ready: today.view !== null }
