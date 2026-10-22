@@ -105,12 +105,13 @@ test.describe('expenses report (2026-10-22)', () => {
     await expect(page).toHaveURL(/\/money\/reports\/expenses\?by=month&period=2023-05/)
   })
 
-  test('sales and engineers do not get the report', async ({ page }) => {
-    for (const role of ['sales', 'engineer'] as const) {
+  // one test per role: each gets its own browser context, so signing in as the second role is a fresh login
+  for (const role of ['sales', 'engineer'] as const) {
+    test(`${role} does not get the report`, async ({ page }) => {
       await openAs(page, role, '/money/reports/expenses?by=month&period=2023-04')
       await expect(page.getByTestId('expense-report-total')).toHaveCount(0)
       const r = await rest<Row[]>(role, 'expenses?paid_on=gte.2023-04-01&select=amount_pkr')
       if (r.status < 300) expect(r.body, role).toEqual([]) // rows hidden by row security, or the request refused outright
-    }
-  })
+    })
+  }
 })
