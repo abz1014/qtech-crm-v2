@@ -143,6 +143,12 @@ export const BATCHES: BatchSpec[] = [
   // correcting the template's incoterm truth to "FOB Shenzhen"), but two shapes below 95% on one case each ("1NO" read as a
   // quantity; an offer missed in an order-code table): dev now.
   { batch: 15, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], dev: true, gate: true },
+  // Fresh batch 16, first try (text and PDF): enquiry items 99.3% / 99.6%, count 98.8%, quotes 100%, but one shape at 0% (an item
+  // code column before the item name, one case): dev now.
+  { batch: 16, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], dev: true, gate: true },
+  // Fresh batch 17, first try (text and PDF): enquiry items 95.3% / 97.6%, count 85.1% (the item only in the subject line, a
+  // document title over an ERP table, "Also add: 2 sets ..., 1 each ..."), quotes 100%: dev now.
+  { batch: 17, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], dev: true, gate: true },
 ]
 
 function splitOf(spec: BatchSpec, id: string): 'dev' | 'held' {

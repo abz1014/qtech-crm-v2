@@ -372,7 +372,10 @@ function subjectRef(line: string): RefHit | null {
   const tokens = body.split(/[\s,;:()]+/).filter(Boolean)
   const isCode = (w: string) => /\d/.test(w) && w.length >= 4 && cleanRef(w) !== null && !/^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$/.test(w)
   const after = body.slice(kw.index + kw[0].length).trim().split(/[\s,;:()]+/)[0] ?? ''
-  const pick = isCode(after) ? after : [...tokens].reverse().find(isCode)
+  // A subject that names a product ("RFQ: Butterfly valve DN200 - 5 Sets") has its specs as codes: only the code right after
+  // the word counts there.
+  const itemSubject = PRODUCT.test(body) && new RegExp(String.raw`\d\s*(?:${UNIT_SRC})\.?\s*$`, 'i').test(body)
+  const pick = isCode(after) ? after : itemSubject ? undefined : [...tokens].reverse().find(isCode)
   const value = pick ? cleanRef(pick) : null
   return value ? { value, label: 'Subject', rank: 4 } : null
 }
@@ -429,6 +432,9 @@ function labelledRow(line: string): string | null {
   const extra = [make && !desc.toLowerCase().includes(make.toLowerCase()) ? make : '', part && !desc.includes(part) ? part : ''].filter(Boolean).join(' ')
   return `${desc}${extra ? ` ${extra}` : ''} - ${qty}${unit ? ` ${unit}` : ''}`
 }
+
+/** A body sentence that points at the subject line for the item. */
+const SUBJECT_ASK = /\b(?:in|as\s+per|per|mentioned\s+in|given\s+in|stated\s+in)\s+(?:the\s+)?subject\b|\bsubject(?:ed)?\s+items?\b/i
 
 /** A section heading row in a table: "A. ELECTRICAL", "B) Instruments", "Electrical Spares", "Mechanical / Others". */
 const SECTION_ROW = /^(?=\D*$)(?:[A-Z][.)]\s+[A-Za-z][A-Za-z &/-]{2,30}|(?:\S+\s+){0,3}(?:items?|spares|materials?|parts|others|consumables|equipments?|instruments?)\s*:?)$/i
@@ -516,7 +522,8 @@ function tableItem(cells: string[], cols: TableCols): ReadItem | null {
   const extras = cols.extra
     .map(e => ({ e, v: cell(e.i) }))
     // A Make or Part No the description already names is not written twice.
-    .filter(({ e, v }) => v && !(e.codes && /^\d+$/.test(v)) && !main.toLowerCase().includes(v.toLowerCase()))
+    // The customer's own store code ("13404632", "IC-4100") under Material / Item Code means nothing to a supplier.
+    .filter(({ e, v }) => v && !(e.codes && /^(?:\d+|[A-Za-z]{1,4}[-/]?\d{3,})$/.test(v)) && !main.toLowerCase().includes(v.toLowerCase()))
     .map(({ e, v }) => `${e.label}: ${v}`)
   const q = cell(cols.qty)
   const qm = /^(\d[\d,]*(?:\.\d+)?)\s*([A-Za-z'.]+)?$/.exec(q)
@@ -651,6 +658,9 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   }
   const src: Src[] = []
   let blank = false
+  /** The email's subject, and whether the body asks for the item it names ("the item in the subject"). */
+  let subject: string | null = null
+  let subjectAsked = false
   /** Inside a chat message we sent ourselves (its sender is our own name): not the customer's words. */
   let ownMessage = false
   for (const line00 of alignSpacedRows(text.split('\n'))) {
@@ -709,6 +719,20 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         p0 = k
       }
     }
+    // With no blank line before it, the signature is the run of name, title and company lines at the very end.
+    const person = /^(?:(?:mr|ms|mrs|engr|dr)\.?\s+)?[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}$/
+    let k = src.length
+    let anchored = false
+    while (k > 0) {
+      const t = (src[k - 1] as Src).t.trim()
+      const sig = !/\t/.test(t) && !PRODUCT.test(t) && !hasCode(t) && !LABELLED_QTY.test(t)
+      const company = isContact(t) || isCompanyLine(t)
+      if (!sig || !(company || (person.test(t) && !/\d/.test(t)) || (DESIGNATION.test(t) && t.split(' ').length <= 4 && !/\d/.test(t)))) break
+      if (company) anchored = true
+      k--
+    }
+    // The name and title lines only: company and contact lines are read as they always are.
+    if (anchored && k > 0) for (let q = k; q < src.length; q++) if (!isContact((src[q] as Src).t) && !isCompanyLine((src[q] as Src).t)) sigLines.add(q)
   }
 
   // A reply on top of an older thread: once the new message above the separator ("____", "-----Original Message-----",
@@ -873,6 +897,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       if (/^(?:from|reply-to)\s*:/i.test(t)) noteContacts(t, 3)
       else if (/^(?:to|cc)\s*:/i.test(t)) noteContacts(t, 0)
       if (/^subject\s*:/i.test(t)) {
+        if (subject === null) subject = t.replace(/^subject\s*:\s*/i, '')
         noteFacts(t)
         const sr = findRefs(t).length ? null : subjectRef(t)
         if (sr) refs.push({ ...sr, line: t })
@@ -1075,6 +1100,13 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         continue
       }
     }
+    // "Please quote for the item in the subject": the item is the subject line's.
+    if (SUBJECT_ASK.test(work) && !/\d/.test(work)) {
+      subjectAsked = true
+      close()
+      skip(t, 'instruction')
+      continue
+    }
     if (INSTRUCTION.test(work) && !ATTR.test(work)) {
       close()
       skip(t, 'instruction')
@@ -1151,7 +1183,9 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       continue
     }
     // A heading over a group of items ("Mechanical spares:", "For ETP plant:", "Required items").
-    if (!m && ((/:\s*$/.test(work) && !/\d/.test(work) && work.split(' ').length <= 5) || /^(?:required\s+items?|items?\s+required|requirements?|item\s+list|list\s+of\s+items|item\s+details|required\s+material)$/i.test(work))) {
+    // So is a document title ("Enquiry - Stores & Spares", "Purchase Requisition: Boiler House").
+    const title = /^(?:enquiry|inquiry|rfq|request\s+for\s+(?:quotation|quote)|purchase\s+requisition|material\s+requisition|indent|demand\s+note)\s*[-–:|]\s*\D{0,40}$/i.test(work)
+    if (!m && (title || (/:\s*$/.test(work) && !/\d/.test(work) && work.split(' ').length <= 5) || /^(?:required\s+items?|items?\s+required|requirements?|item\s+list|list\s+of\s+items|item\s+details|required\s+material)$/i.test(work))) {
       skip(t, 'header')
       continue
     }
@@ -1174,8 +1208,11 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       continue
     }
     // Several items in one line or sentence, each with its quantity in front: "4 nos sensor M8; 1 nos gasket set and 3 nos ...".
+    // "Also add: 2 sets ..., 1 each ...": items added after our reply, listed with commas.
+    work = work.replace(/^(?:also\s+)?(?:add|include)\s*[:-]\s*/i, '')
     let parts = work.split(new RegExp(String.raw`(?:\s+(?:and|&|aur|plus|\+)\s+|\s*;\s*)(?=\d[\d,.]*\s*(?:${UNIT_SRC}|x)(?![A-Za-z0-9]))`, 'i'))
     if (parts.length === 1) parts = work.split(/(?<=\d\s*(?:nos?|pcs?|pieces?|sets?|units?)\.?)\s+(?:and|&|aur|plus)\s+/i)
+    if (parts.length === 1) parts = work.split(new RegExp(String.raw`\s*,\s+(?=\d+\s*(?:${UNIT_SRC})\.?\s+[A-Za-z])`, 'i'))
     if (parts.length > 1 && !parts.every(p => readItem(p)?.qty != null)) parts = [work]
     if (!parts.every(p => readItem(p) !== null)) {
       skip(t, 'greeting')
@@ -1218,6 +1255,13 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     if (!description) continue
     const qty = r && r.qty !== null ? { qty: r.qty, unit: r.unit } : d.qty
     items.push({ description, qty: qty?.qty ?? 1, unit: (qty ? writtenUnit(d) : null) ?? qty?.unit ?? null })
+  }
+  if (subjectAsked && subject && items.length === 0) {
+    const named = subject
+      .replace(/^(?:(?:re|fw|fwd)\s*:\s*)+/i, '')
+      .replace(/^(?:rfq|enquiry|inquiry|request\s+for\s+(?:quotation|quote)|quotation\s+required|price\s+(?:inquiry|enquiry|request))\b[^:–-]{0,25}[:–-]\s*/i, '')
+    const r = readItem(named)
+    if (r && r.qty !== null) items.push({ description: r.description, qty: r.qty, unit: r.unit })
   }
 
   // ---- facts

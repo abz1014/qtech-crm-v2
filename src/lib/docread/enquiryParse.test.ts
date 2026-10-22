@@ -378,3 +378,31 @@ describe('parseEnquiry: corpus batches 12 and 13 (fictional)', () => {
     expect(r.facts.dueDate?.iso).toBe('2026-10-29')
   })
 })
+
+describe('parseEnquiry: corpus batches 16 and 17 (fictional)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('reads the item from the subject when the body points at it', () => {
+    const r = parse('From: A Buyer <buyer@example-mills.example>\nSubject: RFQ: Butterfly valve DN200, wafer type - 5 Sets\n\nDear Sir,\nPlease quote for the item in the subject.\nRegards')
+    expect(r.items).toEqual([{ description: 'Butterfly valve DN200, wafer type', qty: 5, unit: 'set' }])
+    expect(r.facts.customerRef).toBeNull()
+  })
+
+  it('splits "Also add: 2 sets ..., 1 each ..." into its items', () => {
+    expect(rows('Also add: 2 sets Gasket set for pump 50-200, 1 each Flow meter DN100, 4-20mA')).toEqual([
+      ['Gasket set for pump 50-200', 2, 'set'],
+      ['Flow meter DN100, 4-20mA', 1, 'each'],
+    ])
+  })
+
+  it('skips a document title, the customer\'s own item code and the name under a table', () => {
+    const text = [
+      'Enquiry - Stores & Spares',
+      'Item Code\tItem Name\tRequired Qty',
+      'IC-4100\tButterfly valve DN100 wafer type\t2 Each',
+      'Naveed Example',
+      'Example Sugar Mills (Pvt) Ltd',
+    ].join('\n')
+    expect(rows(text)).toEqual([['Butterfly valve DN100 wafer type', 2, 'Each']])
+  })
+})
