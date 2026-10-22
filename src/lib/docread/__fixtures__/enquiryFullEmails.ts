@@ -265,13 +265,13 @@ Spare transducers for the above, Qty: 1 Set
 Best regards,
 Nadia Hussain
 Senior Engineer Instrumentation
-Fauji Demo Power Company Ltd
-nadia.hussain@faujipower-demo.pk
+Eastfield Demo Power Company Ltd
+nadia.hussain@eastfieldpower-demo.pk
 
 On Sat, 17 Oct 2026, 14:03 Ali Raza, <ali@qtech-solutions.pk> wrote:
 > Noted, will revert.`,
     items: [i('Ultrasonic flow meter clamp-on, DN50-DN300', 1, 'nos'), i('Spare transducers for the above', 1, 'sets')],
-    company: { domain: 'faujipower-demo.pk' },
+    company: { domain: 'eastfieldpower-demo.pk' },
   },
   {
     name: 'Very short WhatsApp line, an item in a sentence with x quantity',

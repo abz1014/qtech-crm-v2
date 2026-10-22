@@ -1,7 +1,7 @@
 // Builds import/fixtures/legacy/dump.json: a SYNTHETIC copy of the old database, shaped like the old schema.
 //   node import/fixtures/build-legacy-dump.mjs
 // Every name, number and amount here is made up. gst_invoices.amount INCLUDES GST (net = amount - gst_amount), as in the old register.
-//  Only the shapes the acceptance rows name are reused ("Ghani Glass" with
+//  Only the shapes the acceptance rows name are reused ("Northgate Glass" with
 // three rows, "Red Lion USA (via Four Stars)", the "31/01/2024" due date, PO 000001 Unit A and Unit B). Phone numbers
 // and e-mail addresses are obviously fake (reserved .invalid domain).
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -35,9 +35,9 @@ const GONE = id('users', 4)
 // ---------------------------------------------------------------- clients (11 rows -> 9 companies)
 const clientNames = [
   ['Alpha Textile Mills Head Office', 'Textile', 'Test Contact One', '+92 300 0000001', 'one@example.invalid', 'Plot 1, Test Road, Karachi'],
-  ['Ghani Glass (KHI)', 'Glass', 'Test Contact Two', '+92 300 0000002', '', 'Test Estate, Karachi'],
-  ['Ghani Glass (LHR)', 'Glass', '', '', '', 'Test Estate, Lahore'],
-  ['Ghani Glass', 'Glass', '', '', '', 'Pakistan'],
+  ['Northgate Glass (KHI)', 'Glass', 'Test Contact Two', '+92 300 0000002', '', 'Test Estate, Karachi'],
+  ['Northgate Glass (LHR)', 'Glass', '', '', '', 'Test Estate, Lahore'],
+  ['Northgate Glass', 'Glass', '', '', '', 'Pakistan'],
   ['Beta Dairy Foods', 'Dairy', 'Test Contact Three', '', 'three@example.invalid', 'Pakistan'],
   ['Gamma Cement', 'Cement', '', '', '', 'Pakistan'],
   ['Delta Chemicals', 'Chemicals', '', '+92 300 0000004', '', 'Pakistan'],
@@ -62,8 +62,8 @@ tables.prospects = [
 const vendorRows = [
   ['Meacon Instruments', 'China', 'Ultrasonic Flow Meters, Flow Meter'],
   ['Eurofilter GmbH', 'Germany', 'Pneumatics / Air Filters, Filter inserts'],
-  ['XIAMEN TONGKONG (Moxa Taiwan)', 'China / Taiwan', 'Industrial Networking'],
-  ['DEAO China (Siemens Distributor)', 'China', 'Automation / PLC'],
+  ['PORTVIEW TONGDA (Moxa Taiwan)', 'China / Taiwan', 'Industrial Networking'],
+  ['ORVEN China (Siemens Distributor)', 'China', 'Automation / PLC'],
   ['Red Lion USA (via Four Stars)', 'USA', 'Sensors'],
   ['Strongman Meters', 'China', 'Flow Meter'],
   ['Heibi Analytics', 'China', 'Analyser'],
@@ -74,7 +74,7 @@ const vendorRows = [
 tables.vendors = vendorRows.map((v, i) => ({
   id: id('vendors', i + 1), name: v[0], country: v[1], contact_person: '', phone: '', email: '', products_supplied: v[2], created_at: ts(i),
 }))
-const V = Object.fromEntries(['meacon', 'euro', 'xiamen', 'deao', 'redlion', 'strong', 'heibi', 'goffran', 'shandong', 'tecto'].map((k, i) => [k, id('vendors', i + 1)]))
+const V = Object.fromEntries(['meacon', 'euro', 'portview', 'orven', 'redlion', 'strong', 'heibi', 'goffran', 'shandong', 'tecto'].map((k, i) => [k, id('vendors', i + 1)]))
 
 // ---------------------------------------------------------------- orders (17 -> 16)
 const O = {}
@@ -94,11 +94,11 @@ tables.orders = [
   ord('o4', 4, { client_id: C.gamma, vendor_id: V.strong, product_type: 'Flow Meter', order_value: 355319, cost_value: 261784, status: 'payment_received', notes: 'PO# 010395-1. Electromagnetic Flow Meter x1. Final remaining payment received 08-01-2025.', confirmed_date: '2024-09-20', customer_po_number: '010395-1' }),
   ord('o5', 5, { client_id: C.zeta, vendor_id: V.euro, product_type: 'Pneumatics / Air Filters', order_value: 650163, cost_value: 370000, status: 'completed', notes: 'PO# 248504. Compressed Air Filters and Filter Inserts x5. Received, delivered & payment received.', confirmed_date: '2024-08-02', customer_po_number: '248504', invoice_number: 'INV-0004', invoice_date: '2024-08-20' }),
   ord('o6', 6, { client_id: C.delta, vendor_id: V.heibi, product_type: 'Analyser', order_value: 212659, cost_value: 116950, status: 'procurement', notes: 'PO# PO250105. Conductivity Meter and Sensor x1. Arrangement for delivery in process.', customer_po_number: 'PO250105', delivery_date: '2025-02-10', rfq_id: null }),
-  ord('o7', 7, { client_id: C.zeta, vendor_id: V.xiamen, product_type: 'Industrial Networking', order_value: 73986, cost_value: 50108, status: 'completed', notes: 'PO# 000001 (Unit A). Moxa Serial-Ethernet Converter x2. Received & delivered.', customer_po_date: '2024-12-02', customer_po_number: '000001', delivery_date: '2024-12-20' }),
-  ord('o8', 8, { client_id: C.zeta, vendor_id: V.xiamen, product_type: 'Industrial Networking', order_value: 73986, cost_value: 50108, status: 'completed', notes: 'PO# 000001 (Unit B). Moxa Serial-Ethernet Converter x2. Received & delivered.', customer_po_date: '2024-12-05', customer_po_number: '000001', delivery_date: '2024-12-24' }),
-  ord('o9', 9, { client_id: C.zeta, vendor_id: V.xiamen, product_type: 'Industrial Networking', order_value: 73986, cost_value: 50108, status: 'completed', notes: 'Batch A. Moxa Serial-Ethernet Converter x2. Received & delivered.', confirmed_date: '2024-12-10T00:00:00+00:00' }),
-  ord('o10', 10, { client_id: C.zeta, vendor_id: V.xiamen, product_type: 'Industrial Networking', order_value: 73986, cost_value: 50108, status: 'completed', notes: 'Batch B. Moxa Serial-Ethernet Converter x2. Received & delivered.', customer_po_date: '2024-12-12', customer_po_number: '90222' }),
-  ord('o11', 11, { client_id: C.gamma, vendor_id: V.deao, product_type: 'Automation / PLC', order_value: 617258, cost_value: 464712, status: 'completed', notes: 'PO# 010801-1. Siemens CPU x1. Received & delivered. Remaining receivable pending.', confirmed_date: '2024-10-07', customer_po_number: '010801-1' }),
+  ord('o7', 7, { client_id: C.zeta, vendor_id: V.portview, product_type: 'Industrial Networking', order_value: 73986, cost_value: 50108, status: 'completed', notes: 'PO# 000001 (Unit A). Moxa Serial-Ethernet Converter x2. Received & delivered.', customer_po_date: '2024-12-02', customer_po_number: '000001', delivery_date: '2024-12-20' }),
+  ord('o8', 8, { client_id: C.zeta, vendor_id: V.portview, product_type: 'Industrial Networking', order_value: 73986, cost_value: 50108, status: 'completed', notes: 'PO# 000001 (Unit B). Moxa Serial-Ethernet Converter x2. Received & delivered.', customer_po_date: '2024-12-05', customer_po_number: '000001', delivery_date: '2024-12-24' }),
+  ord('o9', 9, { client_id: C.zeta, vendor_id: V.portview, product_type: 'Industrial Networking', order_value: 73986, cost_value: 50108, status: 'completed', notes: 'Batch A. Moxa Serial-Ethernet Converter x2. Received & delivered.', confirmed_date: '2024-12-10T00:00:00+00:00' }),
+  ord('o10', 10, { client_id: C.zeta, vendor_id: V.portview, product_type: 'Industrial Networking', order_value: 73986, cost_value: 50108, status: 'completed', notes: 'Batch B. Moxa Serial-Ethernet Converter x2. Received & delivered.', customer_po_date: '2024-12-12', customer_po_number: '90222' }),
+  ord('o11', 11, { client_id: C.gamma, vendor_id: V.orven, product_type: 'Automation / PLC', order_value: 617258, cost_value: 464712, status: 'completed', notes: 'PO# 010801-1. Siemens CPU x1. Received & delivered. Remaining receivable pending.', confirmed_date: '2024-10-07', customer_po_number: '010801-1' }),
   ord('o12', 12, { client_id: C.beta, vendor_id: V.shandong, product_type: 'Safety Equipment', order_value: 290222, cost_value: 238260, status: 'completed', notes: 'X-Ray Curtains x2. Received & delivered.', confirmed_date: '2024-11-02' }),
   ord('o13', 13, { client_id: C.theta, vendor_id: V.tecto, product_type: 'Pumps', order_value: 177000, cost_value: 200000, status: 'in_transit', notes: 'PO# TF-7788. Dosing pump x2. Note: 200,000 total landing.', confirmed_date: '2025-01-15', customer_po_number: 'TF-7788', delivery_date: '2025-03-01' }),
   ord('o14', 14, { client_id: C.epsilon, vendor_id: null, product_type: 'Valves', order_value: 95000, cost_value: 60000, status: 'po_received', notes: 'PO# EW-1. Control valves x4.', confirmed_date: '2025-01-20', customer_po_number: 'EW-1' }),
@@ -208,7 +208,7 @@ tables.gst_invoices = [
   gst(8, { order_id: O.o13, gst_invoice_number: 'INV-2025-0105', invoice_date: '2025-01-30', amount: 177000, gst_amount: 27000, fbr_status: 'Pending' }),
   gst(9, { order_id: null, gst_invoice_number: 'INV-0099', invoice_date: '2025-02-01', client_name: '', amount: 1180, gst_amount: 180 }),
   // One register row for three POs, typed loosely; the Delta PO 7003 belongs to another customer.
-  gst(10, { order_id: null, gst_invoice_number: 'INV-2025-0301', invoice_date: '2025-01-20', client_name: 'Ghani Glass (LHR)', customer_po_number: ' po 7001 &7002 & 7003', amount: 177000, gst_amount: 27000 }),
+  gst(10, { order_id: null, gst_invoice_number: 'INV-2025-0301', invoice_date: '2025-01-20', client_name: 'Northgate Glass (LHR)', customer_po_number: ' po 7001 &7002 & 7003', amount: 177000, gst_amount: 27000 }),
   gst(11, { order_id: null, gst_invoice_number: 'INV-2025-0302', invoice_date: '2025-01-25', client_name: 'Theta Finishing Mills', customer_po_number: '8100', amount: 94400, gst_amount: 14400 }),
 ]
 
@@ -277,7 +277,7 @@ tables.expenses = [
   exp(8, 'Rent', -50, '2024-11-01'),
   exp(9, 'Utilities', 15000, 'yesterday'),
   exp(10, 'Salaries', 300000, '31/12/2024'),
-  exp(11, 'Freight', 18000, '2024-11-12', { order_id: O.o9, vendor_id: V.xiamen }),
+  exp(11, 'Freight', 18000, '2024-11-12', { order_id: O.o9, vendor_id: V.portview }),
 ]
 tables.recurring_expenses = [
   { id: id('recurring', 1), label: 'Staff salaries', category: 'Salaries', amount: 300000, day_of_month: 25, active: true, start_month: '', notes: null, created_by: ADMIN, created_at: ts(1300) },

@@ -281,7 +281,7 @@ describe('Today reads only the overdue receivables (receivables_list p_state ove
 describe('label lookups go through lookup_labels (ids in the body) with the same labels', () => {
   const orders = [
     { id: 'o1', number: 38, company_id: 'c1', company_name: 'Indus' },
-    { id: 'o2', number: 7, company_id: 'c2', company_name: 'Fauji' },
+    { id: 'o2', number: 7, company_id: 'c2', company_name: 'Eastfield' },
   ]
   const legs = [
     { id: 'l1', order_id: 'o1', supplier_id: 's1', created_at: '2026-01-01' },
@@ -295,7 +295,7 @@ describe('label lookups go through lookup_labels (ids in the body) with the same
       const position = (l: (typeof legs)[number]) => legs.filter(x => x.order_id === l.order_id && (x.created_at < l.created_at || (x.created_at === l.created_at && x.id < l.id))).length
       return {
         data: {
-          companies: Object.fromEntries([['c1', 'Indus'], ['c2', 'Fauji']].filter(([id]) => a.p_company_ids?.includes(id))),
+          companies: Object.fromEntries([['c1', 'Indus'], ['c2', 'Eastfield']].filter(([id]) => a.p_company_ids?.includes(id))),
           orders: Object.fromEntries(orders.filter(o => a.p_order_ids?.includes(o.id)).map(o => [o.id, { number: o.number, company_id: o.company_id, company_name: o.company_name }])),
           legs: Object.fromEntries(legs.filter(l => a.p_leg_ids?.includes(l.id)).map(l => [l.id, { order_id: l.order_id, supplier_id: l.supplier_id, position: position(l) }])),
         },
@@ -305,7 +305,7 @@ describe('label lookups go through lookup_labels (ids in the body) with the same
 
   it('company names, order refs and supplier-order letters', async () => {
     serveLabels()
-    expect(await companyNames(['c1', 'c2', 'nope'])).toEqual({ c1: 'Indus', c2: 'Fauji' })
+    expect(await companyNames(['c1', 'c2', 'nope'])).toEqual({ c1: 'Indus', c2: 'Eastfield' })
     expect(await orderRefs(['o1', 'o2'])).toEqual({ o1: orderRef(38), o2: orderRef(7) })
     // old: "supplier order A/B" by created_at among the order's legs
     expect(await legLabels(['l2', 'l3'])).toEqual({ l2: 'supplier order B', l3: 'supplier order A' })

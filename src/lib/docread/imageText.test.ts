@@ -75,13 +75,13 @@ describe('readImageText', () => {
     const H = 160
     const px = new Uint8ClampedArray(W * H * 4).fill(255)
     for (let y = 72; y < 100; y++) for (let x = 330; x < 362; x++) px.fill(0, 4 * (y * W + x), 4 * (y * W + x) + 3)
-    const words = page(['CAPACITOR 100UF'])
+    const words = page(['CAPACITOR 220UF'])
     const lines: OcrLine[] = [{ words: [{ text: '10', confidence: 96, bbox: { x0: 16, y0: 16, x1: 80, y1: 72 } }], bbox: { x0: 16, y0: 16, x1: 80, y1: 72 }, rowHeight: 56 }]
     const read = vi.fn(async (_i: unknown, o: { mode?: string }) => (o.mode === 'line' ? lines : words))
     const crop = vi.fn(() => new Blob(['c']))
     const r = await readImageText(png(), { prepare: async () => ({ ...prepared(), width: W, height: H, pixels: px, crop }), engine: { read } })
     expect(read.mock.calls.map(c => (c[1] as { mode?: string }).mode ?? 'page')).toEqual(['page', 'line'])
-    expect(r.ok && r.text).toBe('CAPACITOR 100UF\t10')
+    expect(r.ok && r.text).toBe('CAPACITOR 220UF\t10')
   })
 
   it('says plainly when it could not read the picture clearly, or found no text', async () => {

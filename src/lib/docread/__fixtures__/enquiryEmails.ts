@@ -46,11 +46,11 @@ Regards,
 
 Asad Mehmood
 Senior Purchase Officer
-Northern Cement Company Limited
+Hilltop Cement Company Limited
 Plot 14, Industrial Estate Hattar, District Haripur
 Tel: +92 995 617 220  Ext 145
 Cell: 0300-5551234
-Email: asad.mehmood@northerncement.com.pk
+Email: asad.mehmood@hilltopcement.com.pk
 
 DISCLAIMER: This e-mail and any files transmitted with it are confidential and intended solely for the use of the individual to whom they are addressed.`,
     items: [
@@ -60,7 +60,7 @@ DISCLAIMER: This e-mail and any files transmitted with it are confidential and i
     ],
     ref: 'NCL/PUR/2026/0418',
     due: '2026-10-28',
-    company: { name: 'Northern Cement Company Limited', domain: 'northerncement.com.pk' },
+    company: { name: 'Hilltop Cement Company Limited', domain: 'hilltopcement.com.pk' },
   },
   {
     name: 'unnumbered email: signature lines must not become items',
@@ -127,13 +127,13 @@ RFQ Date: 14.10.2026
 Quotations must reach us before 11-NOV-26
 
 Item\tMaterial\tDescription\tQuantity\tUnit\tDelivery Date
-00010\t1000012345\tTRANSMITTER,PRESSURE;0-16BAR,4-20MA Make: Rosemount, Model: 3051TG\t2.000\tEA\t15.12.2026
+00010\t1000012345\tTRANSMITTER,PRESSURE;0-25BAR,4-20MA Make: Rosemount, Model: 3051TG\t2.000\tEA\t15.12.2026
 00020\t1000067890\tGAUGE,PRESSURE;0-10BAR,4" DIAL\t6.000\tEA\t15.12.2026
 00030\t1000099911\tVALVE,MANIFOLD;3 WAY,SS316\t2.000\tEA\t15.12.2026
 
 Please quote on your letterhead with validity and delivery period.`,
     items: [
-      i('TRANSMITTER,PRESSURE;0-16BAR,4-20MA Make: Rosemount, Model: 3051TG', 2, 'EA'),
+      i('TRANSMITTER,PRESSURE;0-25BAR,4-20MA Make: Rosemount, Model: 3051TG', 2, 'EA'),
       i('GAUGE,PRESSURE;0-10BAR,4" DIAL', 6, 'EA'),
       i('VALVE,MANIFOLD;3 WAY,SS316', 2, 'EA'),
     ],
@@ -173,7 +173,7 @@ Hamza
 -----Original Message-----
 From: Ali Raza <ali@qtech.example>
 Sent: Monday, October 19, 2026 4:10 PM
-To: Hamza Iqbal <hamza.iqbal@crescentsteel.com.pk>
+To: Hamza Iqbal <hamza.iqbal@redgatesteel.com.pk>
 Subject: RE: RFQ-CS-7781 Panel accessories
 
 Dear Hamza,
@@ -181,14 +181,14 @@ Please find attached our quotation QT-0331 for
 1) MCB 2 pole 16A - 10 Nos`,
     items: [i('Cable gland M20 brass', 20, 'nos'), i('Cable lugs 16mm2', 100, 'nos')],
     ref: 'RFQ-CS-7781',
-    company: { domain: 'crescentsteel.com.pk' },
+    company: { domain: 'redgatesteel.com.pk' },
   },
   {
     name: 'forwarded enquiry: the items are below the forward line',
     text: `Please see below enquiry and arrange quotation.
 
 ---------- Forwarded message ---------
-From: Procurement <procurement@karakoramgases.com.pk>
+From: Procurement <procurement@highridgegases.com.pk>
 Date: Tue, 20 Oct 2026 at 09:41
 Subject: Enquiry No. KGL-ENQ-55120 - Gas detection
 To: <sales@qtech.example>
@@ -201,11 +201,11 @@ Offer should reach us before 30th October 2026.
 
 Regards,
 Procurement Department
-Karakoram Gases Limited`,
+Highridge Gases Limited`,
     items: [i('Portable 4-gas detector (O2, CO, H2S, LEL) with charger', 3, 'nos'), i('Calibration gas cylinder 34L mix', 2, 'nos')],
     ref: 'KGL-ENQ-55120',
     due: '2026-10-30',
-    company: { name: 'Karakoram Gases Limited', domain: 'karakoramgases.com.pk' },
+    company: { name: 'Highridge Gases Limited', domain: 'highridgegases.com.pk' },
   },
   {
     name: 'PR number, a delivery date that is not the due date, and the due date',
@@ -306,9 +306,9 @@ Muhammad Imran
 Maintenance Engineer
 Tel: +92 21 3512 3456 | Fax: +92 21 3512 3457
 Plot 23, Sector 15, Korangi Industrial Area, Karachi
-imran@meherchemicals.com.pk`,
+imran@stonebridgechemicals.com.pk`,
     items: [i('Gate valve 4" class 150 flanged WCB body', 10, 'nos'), i('Globe valve 2" class 300 SW', 4, 'nos')],
-    company: { domain: 'meherchemicals.com.pk' },
+    company: { domain: 'stonebridgechemicals.com.pk' },
   },
   {
     name: 'spreadsheet paste with S.No, Item Description, Part No, REQ QTY and UOM',
@@ -343,7 +343,7 @@ Push button green 22mm, QTY: 10 EA`,
   },
   {
     name: 'pasted with the email headers: ref in the subject, deadline in the body, sender domain',
-    text: `From: Waqas Ali <waqas.ali@sialkottanneries.com>
+    text: `From: Waqas Ali <waqas.ali@riverbendtanneries.com>
 Sent: Tuesday, October 20, 2026 9:15 AM
 To: sales@qtech.example
 Subject: RFQ-ST-2026-118 Pressure gauges
@@ -357,7 +357,7 @@ Waqas Ali`,
     items: [i('Pressure gauge 0-10 bar 4" dial bottom entry', 8, 'nos'), i('Pressure gauge 0-25 bar 2.5" dial back entry', 4, 'nos')],
     ref: 'RFQ-ST-2026-118',
     due: '2026-10-26',
-    company: { domain: 'sialkottanneries.com' },
+    company: { domain: 'riverbendtanneries.com' },
   },
   {
     name: 'Urdu mix with no prefixes: chahiye, bhi, rate bata dein',
@@ -475,14 +475,14 @@ Please quote:
 Thanks,
 Engr. Nadia Khan
 Electrical Dept.
-Fazal Cloth Mills Ltd | nadia.khan@fazalclothmills.com`,
+Brightway Cloth Mills Ltd | nadia.khan@brightwayclothmills.com`,
     items: [
       i('Contactor 3RT2026-1BB40, 24VDC coil', 6),
       i('Auxiliary contact block 3RH2911-1HA22', 6),
       i('Overload relay 3RU2126-4AB0, 11-16A', 6),
     ],
     ref: '7700123',
-    company: { name: 'Fazal Cloth Mills Ltd', domain: 'fazalclothmills.com' },
+    company: { name: 'Brightway Cloth Mills Ltd', domain: 'brightwayclothmills.com' },
   },
   {
     name: 'Qty-2, x2 and "Sent from my iPhone"',

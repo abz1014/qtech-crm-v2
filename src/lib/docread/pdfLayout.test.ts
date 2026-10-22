@@ -14,8 +14,8 @@ describe('layoutPages: lines', () => {
   })
 
   it('splits a letterhead line into its far-apart parts, but keeps "label:   value" together', () => {
-    const page = [run('Fauji Cement Company Ltd', 40, 60), run('RFQ No: 6000012345', 400, 60), run('Qty:', 40, 72), run('2 Nos', 120, 72)]
-    expect(text([page])).toBe('Fauji Cement Company Ltd\nRFQ No: 6000012345\nQty: 2 Nos')
+    const page = [run('Eastfield Cement Company Ltd', 40, 60), run('RFQ No: 6000012345', 400, 60), run('Qty:', 40, 72), run('2 Nos', 120, 72)]
+    expect(text([page])).toBe('Eastfield Cement Company Ltd\nRFQ No: 6000012345\nQty: 2 Nos')
   })
 
   it('drops page numbers, keeps one copy of fake-bold text and marks paragraph breaks with a blank line', () => {
@@ -67,7 +67,7 @@ describe('layoutPages: tables', () => {
     const page = [
       run('Item', 40, 200), run('Material', 80, 200), run('Description', 150, 200), run('Quantity', 360, 200), run('Unit', 410, 200), run('Delivery', 440, 200),
       run('Date', 440, 209),
-      run('00010', 40, 225), run('1000012345', 80, 225), run('TRANSMITTER,PRESSURE;0-16BAR', 150, 225), rnum('2.000', 400, 225), run('EA', 410, 225), run('15.08.2026', 440, 225),
+      run('00010', 40, 225), run('1000012345', 80, 225), run('TRANSMITTER,PRESSURE;0-25BAR', 150, 225), rnum('2.000', 400, 225), run('EA', 410, 225), run('15.08.2026', 440, 225),
       run('Make: Rosemount, Model: 3051TG', 150, 236),
       run('00020', 40, 251), run('1000067890', 80, 251), run('GAUGE,PRESSURE;0-10BAR,4"', 150, 251), rnum('6.000', 400, 251), run('EA', 410, 251), run('15.08.2026', 440, 251),
       run('Terms and conditions apply.', 40, 300),
@@ -75,7 +75,7 @@ describe('layoutPages: tables', () => {
     expect(text([page])).toBe(
       [
         'Item\tMaterial\tDescription\tQuantity\tUnit\tDelivery Date',
-        '00010\t1000012345\tTRANSMITTER,PRESSURE;0-16BAR Make: Rosemount, Model: 3051TG\t2.000\tEA\t15.08.2026',
+        '00010\t1000012345\tTRANSMITTER,PRESSURE;0-25BAR Make: Rosemount, Model: 3051TG\t2.000\tEA\t15.08.2026',
         '00020\t1000067890\tGAUGE,PRESSURE;0-10BAR,4"\t6.000\tEA\t15.08.2026',
         '',
         'Terms and conditions apply.',

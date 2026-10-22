@@ -404,7 +404,7 @@ Saved time uses the volumes above. Risk means risk to bookkeeping accuracy. "Con
 
 1. **Documents in, data out:**
    - A PDF, Excel sheet or photo of an enquiry or a supplier quote becomes reviewed rows with one confirm (items 3 and 12).
-   - Email intake for the repeat corporate customers (Fauji Cement, Ibrahim Fibres, Ghani Glass, Sapphire send structured enquiries). A zero-cost route: a Gmail Apps Script or Cloudflare Email Worker that posts to a Supabase Edge Function, which opens a draft RFQ. The legacy discovery called this the only way input arrives (`Qtech-CRM-fresh/docs/discovery/02_findings.md` §4).
+   - Email intake for the repeat corporate customers (Eastfield Cement, Clearwater Fibres, Northgate Glass, Silverlake send structured enquiries). A zero-cost route: a Gmail Apps Script or Cloudflare Email Worker that posts to a Supabase Edge Function, which opens a draft RFQ. The legacy discovery called this the only way input arrives (`Qtech-CRM-fresh/docs/discovery/02_findings.md` §4).
 2. **The enquiry paste reads what is written:** company, contact, ref, due date and multi-line items, with the raw text kept (item 5).
 3. **Quotations propose every number:** price chip, lead-time chip, terms from this customer's last quotation (items 4 and 6), so a quotation for known items is review plus Issue.
 4. **Every outbound message is one tap into the right chat** (item 2), and the sales-tax invoice comes out of the CRM (item 1).

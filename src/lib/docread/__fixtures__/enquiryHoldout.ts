@@ -25,11 +25,11 @@ Bid due date: 04/11/2026
 
 Kind Regards,
 Shahid Iqbal
-Sapphire Fibres Demo Ltd`,
+Silverlake Fibres Demo Ltd`,
     items: [i('Level switch vibrating fork, 24VDC', 2, 'nos'), i('Rotary paddle level switch 220VAC', 3, 'nos')],
     ref: 'SFL/RFQ/26/1043',
     due: '2026-11-04',
-    company: { name: 'Sapphire Fibres Demo Ltd' },
+    company: { name: 'Silverlake Fibres Demo Ltd' },
   },
   {
     name: 'WhatsApp, Urdu quantity word and "bhej dein"',

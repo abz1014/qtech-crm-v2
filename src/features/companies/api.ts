@@ -161,7 +161,7 @@ export interface SenderHint {
   phones: string[]
 }
 
-/** "Fauji Cement Company Limited" and "Fauji Cement Co. Ltd" read the same: legal words, dots and case do not count. */
+/** "Eastfield Cement Company Limited" and "Eastfield Cement Co. Ltd" read the same: legal words, dots and case do not count. */
 export function companyNameKey(name: string): string {
   return name
     .toLowerCase()

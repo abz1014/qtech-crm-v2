@@ -1,6 +1,6 @@
 // Fictional vocabulary for the reader's corpus: customers, people, suppliers, brands and parts. Every company, person, brand,
-// address, phone number and part number is invented (part numbers only follow the SHAPES real catalogues use: "6ES7953-8LJ31-0AA0",
-// "FX3U-80M", "P830A3203"). Nothing here comes from a real customer file.
+// address, phone number and part number is invented (part numbers only follow the SHAPES real catalogues use: "6ES7953-8LM31-0AA0",
+// "FX3U-64M", "P830B4417"). Nothing here comes from a real customer file.
 
 import type { Rng } from './rng'
 
@@ -163,7 +163,7 @@ export interface Part {
   plain: string
   /** Capitals, as an Outlook RFQ or a store requisition writes it ("PRESSURE TRANSMITTER 0-16 BAR 4-20MA"). */
   caps: string
-  /** ERP master-data style ("TRANSMITTER,PRESSURE;0-16BAR,4-20MA"). */
+  /** ERP master-data style ("TRANSMITTER,PRESSURE;0-25BAR,4-20MA"). */
   erp: string
   /** Part or model number, when the item names one. */
   part: string | null

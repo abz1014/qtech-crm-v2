@@ -29,7 +29,7 @@ Evidence I relied on beyond the brief:
 |---|---|---|
 | 1 | `users` | Staff profile. Mirrors `auth.users`; holds role and deactivation. |
 | 2 | `companies` | Every external organisation: customers, suppliers, agents, forwarders. Its role is derived, not flagged. |
-| 3 | `company_sites` | Plants or branches of a company (Ghani Glass KHI / LHR, IFL Head Office). |
+| 3 | `company_sites` | Plants or branches of a company (Northgate Glass KHI / LHR, CFL Head Office). |
 | 4 | `contacts` | People at a company, so the owner knows who to chase and on which channel. |
 | 5 | `brands` | Short names of brands and product families. This is a tag list, not a catalog. |
 | 6 | `company_brands` | "Who carries Belimo" and the standing shortlist per product family. |
@@ -1082,7 +1082,7 @@ Prices older than 18 months show their age prominently, e.g. "Mar 2025 — 19 mo
 
 ### B. Companies: one table, derived roles, plus sites and contacts
 
-- **Problem solved:** Agents, distributors and customers are all just organisations. Ghani Glass KHI/LHR must aggregate up to one company while staying distinct per plant. Today's 3 Ghani rows (FACT) split the history.
+- **Problem solved:** Agents, distributors and customers are all just organisations. Northgate Glass KHI/LHR must aggregate up to one company while staying distinct per plant. Today's 3 Northgate rows (FACT) split the history.
 - **Why better:**
   - Separate clients/vendors/prospects tables duplicate companies that are both, and need converting a prospect to a client (that was paperwork).
   - Hand-set role flags drift. Derived roles cost zero input.
@@ -1119,7 +1119,7 @@ The two attach points are RFQ/clarification and the GST invoice receipt. Storage
 
 ### E. Brands and families as tags with a supplier link
 
-- **Problem solved:** "Who carries Belimo" is answerable without a catalog. Today brand is encoded in vendor names ("DEAO China (Siemens Distributor)", FACT).
+- **Problem solved:** "Who carries Belimo" is answerable without a catalog. Today brand is encoded in vendor names ("ORVEN China (Siemens Distributor)", FACT).
 - **Why better than a free-text array on companies:** RFQ and order items need the same identity in order to auto-suggest suppliers. Merges fix typos once.
 - **Complexity added:** 2 tables, plus the auto-learn trigger from quote lines.
 - **Justified:** The supplier shortlist pre-fill is concrete daily work: who supplied it before, who carries the brand, and the family shortlist.
@@ -1260,14 +1260,14 @@ This reverses the non-goal "no PDF generation", for these two documents only. Sa
 | Old table | Destination | Transform rules | Flags / drops |
 |---|---|---|---|
 | users | users + new auth users | Match by email. Admin creates auth users and issues one-time passwords. Keep an old-id → new-id map in the script (not persisted). | — |
-| clients | companies (+ company_sites + contacts) | Owner reviews a merge list (e.g. "Ghani Glass", "(KHI)", "(LHR)" become one company with 2 sites; "IFL Head Office" becomes IFL plus a Head Office site). Non-empty contact fields become a contact. `industry` → notes. `address` → site address. | `legacy_source` keeps the original row. |
+| clients | companies (+ company_sites + contacts) | Owner reviews a merge list (e.g. "Northgate Glass", "(KHI)", "(LHR)" become one company with 2 sites; "CFL Head Office" becomes CFL plus a Head Office site). Non-empty contact fields become a contact. `industry` → notes. `address` → site address. | `legacy_source` keeps the original row. |
 | prospects | companies | Dedupe against clients by normalised name. `lead_source` → notes. | Drop `status`, `follow_up_date`, `assigned_to`, `converted_client_id`. |
-| vendors | companies + brands + company_brands | Reviewed parse list: "Red Lion USA (via Four Stars)" becomes company Four Stars with brand Red Lion; "DEAO China (Siemens Distributor)" becomes DEAO with brand Siemens; "XIAMEN TONGKONG (Moxa Taiwan)" becomes XIAMEN TONGKONG with brand Moxa. `products_supplied` → family tags where they match, else notes. `country` kept. | Unparsed names import as-is, flagged `name_unparsed`. |
+| vendors | companies + brands + company_brands | Reviewed parse list: "Red Lion USA (via Four Stars)" becomes company Four Stars with brand Red Lion; "ORVEN China (Siemens Distributor)" becomes ORVEN with brand Siemens; "PORTVIEW TONGDA (Moxa Taiwan)" becomes PORTVIEW TONGDA with brand Moxa. `products_supplied` → family tags where they match, else notes. `country` kept. | Unparsed names import as-is, flagged `name_unparsed`. |
 | rfqs | rfqs | See the rules after this table. | Drop `estimated_value`, `quoted_price`, `quote_expiry_date`, `converted_order_id`, and the text identity fields once matched. |
 | rfq_line_items | rfq_items | `specification` → description. `product_type` → family brand. `quantity` → qty. | Drop `target_price`. |
 | supplier_inquiries | supplier_inquiries | `sent_at` → `sent_on` (parsed). Old `no_response` status means silence and is left derived; it is NOT mapped to `no_offer_on`. "Floated but could not find offer" phrases in RFQ notes are surfaced for manual tagging. | Drop `email_draft` (kept in `legacy_source`), `follow_up_date`. |
 | supplier_quotes | supplier_quote_lines | Old quotes are RFQ-level. If the RFQ has exactly 1 item, link to it; otherwise link to the first item. `lead_time_days` → text. | Flag `item_guessed` on multi-item RFQs. Flag `currency_unverified` on every row (the hardcoded-PKR bug). Drop `moq`, `validity_days`, `is_selected`. |
-| orders | orders + order_items + supplier_orders + **order_costs** | As before, except:<br>• `cost_value` → `order_costs.expected_cost_pkr` (one row per order where cost_value > 0).<br>• **PO 000001 Unit A and Unit B are merged (owner decision):**<br>&nbsp;&nbsp;– one order with `customer_po_number` 000001, `ordered_on` = the earlier date, one supplier order (XIAMEN TONGKONG)<br>&nbsp;&nbsp;– two items: "Moxa Serial-Ethernet Converter x2 — Unit A" and "… — Unit B", each qty 1 at 73,986<br>&nbsp;&nbsp;– both invoices (INV-0001 and -009, or their live GST-register equivalents) attached to the merged order<br>&nbsp;&nbsp;– all payments and expenses from both old orders moved to the merged order<br>&nbsp;&nbsp;– `legacy_source` holds both original rows<br>• **batch A** (no PO) and **batch B** (PO 90222) stay as separate orders. They don't clash on PO number, so they don't need the `po_shared` flag.<br>• Any *other* PO-number clash found in the live data goes to the owner as a merge-or-flag decision. | `po_shared` is used only if such clashes exist. |
+| orders | orders + order_items + supplier_orders + **order_costs** | As before, except:<br>• `cost_value` → `order_costs.expected_cost_pkr` (one row per order where cost_value > 0).<br>• **PO 000001 Unit A and Unit B are merged (owner decision):**<br>&nbsp;&nbsp;– one order with `customer_po_number` 000001, `ordered_on` = the earlier date, one supplier order (PORTVIEW TONGDA)<br>&nbsp;&nbsp;– two items: "Moxa Serial-Ethernet Converter x2 — Unit A" and "… — Unit B", each qty 1 at 73,986<br>&nbsp;&nbsp;– both invoices (INV-0001 and -009, or their live GST-register equivalents) attached to the merged order<br>&nbsp;&nbsp;– all payments and expenses from both old orders moved to the merged order<br>&nbsp;&nbsp;– `legacy_source` holds both original rows<br>• **batch A** (no PO) and **batch B** (PO 90222) stay as separate orders. They don't clash on PO number, so they don't need the `po_shared` flag.<br>• Any *other* PO-number clash found in the live data goes to the owner as a merge-or-flag decision. | `po_shared` is used only if such clashes exist. |
 | order_engineers | order_engineers + order commissioning dates | `needs_commissioning` = true. `start_date` → `commissioning_planned_on`. Status completed → `commissioning_done_on`. | Estimated done date flagged `dates_estimated`. Drop `site_location` (→ notes). |
 | gst_invoices | invoices + attachments | As before. `fbr_status` maps as follows:<br>• Pending → none of the FBR dates set<br>• 'Generated' or 'Fully Generated' → generated (`psid` as stored); if `psid` is empty, add flag `fbr_generated_legacy` so the row still shows as generated<br>• 'Receipt Received' and 'Deposited' → checked against `wasif_receipt_on` and `tax_deposited_on`<br>Any remaining disagreement is flagged `fbr_status_mismatch`. | Same as before. |
 | invoices (bookkeeping) | invoices, only where the order has no gst_invoices row and no `orders.invoice_number` | `invoice_amount` treated per the order's basis rule. | `amount_paid` NOT turned into payments; flagged `paid_per_old_invoice` if payments_in disagrees. Seed rows likely exist (17). |

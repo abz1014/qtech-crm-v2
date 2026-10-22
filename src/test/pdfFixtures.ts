@@ -135,7 +135,7 @@ export async function sapEnquiryPdf(): Promise<Uint8Array> {
       { x: 440, header: 'Delivery Date' },
     ],
     rows: [
-      ['00010', '1000012345', 'TRANSMITTER,PRESSURE;0-16BAR', '2.000', 'EA', '15.12.2026'],
+      ['00010', '1000012345', 'TRANSMITTER,PRESSURE;0-25BAR', '2.000', 'EA', '15.12.2026'],
       ['00020', '1000067890', 'GAUGE,PRESSURE;0-10BAR,4" DIAL', '6.000', 'EA', '15.12.2026'],
     ],
     wraps: { 0: ['Make: Rosemount, Model: 3051TG'] },

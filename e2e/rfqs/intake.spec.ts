@@ -634,11 +634,11 @@ test.describe('a screenshot on a phone (375)', () => {
 
     await page.getByTestId('pdf-input-items').setInputFiles({ name: 'Screenshot_20261013.png', mimeType: 'image/png', buffer })
     await expect(page.getByText('8 items found').first()).toBeVisible({ timeout: 120_000 })
-    await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue('CAPACITOR 100UF 450 V-01')
+    await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue('CAPACITOR 220UF 450 V-01')
     await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue(/^10\b/)
     await expect(page.getByRole('textbox', { name: 'Description of item 8' })).toHaveValue('FUSE GLASS 5X20 2A-01')
     await expect(page.getByRole('textbox', { name: 'Quantity of item 8' })).toHaveValue(/^200\b/)
-    await expect(page.getByRole('textbox', { name: 'Customer reference' })).toHaveValue('131026')
+    await expect(page.getByRole('textbox', { name: 'Customer reference' })).toHaveValue('482917')
     await review(page, 'intake-photo-375')
   })
 })

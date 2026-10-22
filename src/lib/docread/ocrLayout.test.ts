@@ -108,7 +108,7 @@ describe('unwrapLines', () => {
 describe('deskew', () => {
   it('turns a slanted photo level, so a row lines up across its columns', () => {
     const level = [
-      line(100, 40, ['CAPACITOR', '100UF', '450', 'V-01', { t: '10', gap: 12 }, { t: 'EA', gap: 4 }]),
+      line(100, 40, ['CAPACITOR', '220UF', '450', 'V-01', { t: '10', gap: 12 }, { t: 'EA', gap: 4 }]),
       line(150, 40, ['FUSE', 'GLASS', '5X20', '2A-01', { t: '200', gap: 12 }, { t: 'EA', gap: 4 }]),
     ]
     const a = (2 * Math.PI) / 180
@@ -122,7 +122,7 @@ describe('deskew', () => {
       const q = tilt(l.baseline!.x1, l.baseline!.y1)
       return { ...l, bbox: box(l.bbox), baseline: { x0: p.x, y0: p.y, x1: q.x, y1: q.y }, words: l.words.map(w => ({ ...w, bbox: box(w.bbox) })) }
     })
-    expect(text(slanted)).toBe('CAPACITOR 100UF 450 V-01\t10\tEA\nFUSE GLASS 5X20 2A-01\t200\tEA')
+    expect(text(slanted)).toBe('CAPACITOR 220UF 450 V-01\t10\tEA\nFUSE GLASS 5X20 2A-01\t200\tEA')
     const back = deskew(slanted)[0]!
     expect(Math.abs(back.words[0]!.bbox.y1 - back.words[5]!.bbox.y1)).toBeLessThan(1)
   })

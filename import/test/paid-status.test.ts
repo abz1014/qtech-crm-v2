@@ -61,7 +61,7 @@ describe('reading PO numbers', () => {
 
 describe('the GST register wins: bookkeeping invoices that repeat it are not imported', () => {
   it('matches a multi-PO register row, through the company merge, whatever the case and spacing', () => {
-    // INV-B-701 (Ghani Glass Lahore, "PO 7001.") and INV-B-702 (Ghani Glass Karachi, "  po#7002  ") repeat INV-2025-0301
+    // INV-B-701 (Northgate Glass Lahore, "PO 7001.") and INV-B-702 (Northgate Glass Karachi, "  po#7002  ") repeat INV-2025-0301
     expect(invoiceOf(result, 'INV-B-701')).toBeUndefined()
     expect(invoiceOf(result, 'INV-B-702')).toBeUndefined()
     expect(invoiceOf(result, 'INV-2025-0301')).toBeTruthy()
@@ -70,7 +70,7 @@ describe('the GST register wins: bookkeeping invoices that repeat it are not imp
   })
 
   it('does not match the same PO of another customer, and lists it for the owner', () => {
-    // INV-B-703 is Delta's PO 7003; the register row's 7003 belongs to Ghani Glass
+    // INV-B-703 is Delta's PO 7003; the register row's 7003 belongs to Northgate Glass
     expect(invoiceOf(result, 'INV-B-703')).toBeTruthy()
     const near = review(result, 'invoice_duplicates').find(i => i.label === 'INV-B-703')!
     expect(near.fields).toMatchObject({ match: 'not matched: customer differs', gst_invoice: 'INV-2025-0301' })
@@ -97,7 +97,7 @@ describe('the GST register wins: bookkeeping invoices that repeat it are not imp
     expect(flagsOf(single)).toContain('order_from_bookkeeping_twin')
     const multi = invoiceOf(result, 'INV-2025-0301')!
     expect(multi['order_id']).toBeNull()
-    expect(multi['company_id']).toBe(t.companies.find(c => c['name'] === 'Ghani Glass')!['id'])
+    expect(multi['company_id']).toBe(t.companies.find(c => c['name'] === 'Northgate Glass')!['id'])
   })
 
   it('does not match a different customer even when the PO is the only one on the register row', () => {
@@ -261,7 +261,7 @@ describe('what is still owed is listed, not assumed', () => {
   it('lists every imported invoice left with an open balance, with its customer, PO and order link', () => {
     expect(owed(result, 'INV-2025-0301')!.fields).toEqual({
       invoice_number: 'INV-2025-0301',
-      customer: 'Ghani Glass',
+      customer: 'Northgate Glass',
       invoice_date: '2025-01-20',
       gross: 177000,
       open: 27000,

@@ -27,8 +27,8 @@ const lineOf = (words: ReturnType<typeof word>[]): OcrLine => ({
 })
 
 describe('findMissedBoxes', () => {
-  // A row: "CAPACITOR 100UF" read; "10" and "EA" in the right-hand cells skipped. An icon far below, on no row.
-  const read = [word('CAPACITOR', { x0: 20, y0: 40, x1: 160, y1: 64 }), word('100UF', { x0: 175, y0: 40, x1: 250, y1: 64 })]
+  // A row: "CAPACITOR 220UF" read; "10" and "EA" in the right-hand cells skipped. An icon far below, on no row.
+  const read = [word('CAPACITOR', { x0: 20, y0: 40, x1: 160, y1: 64 }), word('220UF', { x0: 175, y0: 40, x1: 250, y1: 64 })]
   const qty = { x0: 420, y0: 42, x1: 444, y1: 64 }
   const unit = { x0: 500, y0: 42, x1: 532, y1: 64 }
   const icon = { x0: 300, y0: 150, x1: 330, y1: 175 }

@@ -21,7 +21,7 @@ const DEMOS = {
     props: { to: { name: 'Bilal Khan', phone: null, email: 'bilal@example.invalid' }, text: TEXT, email: EMAIL, variant: 'primary' },
     fix: true,
   },
-  landline: { title: 'Only a landline, no email: Copy is the way', props: { to: { name: 'Ghani Glass', phone: '+92 42 555 0138' }, text: TEXT, variant: 'primary' } },
+  landline: { title: 'Only a landline, no email: Copy is the way', props: { to: { name: 'Northgate Glass', phone: '+92 42 555 0138' }, text: TEXT, variant: 'primary' } },
   severalNumbers: {
     title: 'Several numbers in one field: the WhatsApp one is used',
     props: { to: { name: 'Naveed Akhtar', phone: 'Off: 042-35761234 / WhatsApp: 0321 7654321', email: null }, text: TEXT },

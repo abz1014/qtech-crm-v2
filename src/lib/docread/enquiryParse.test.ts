@@ -19,7 +19,7 @@ Regards,
 Bilal Khan
 Purchase Officer
 Tel: 042-35761234
-bilal@northerncement.com.pk
+bilal@hilltopcement.com.pk
 DISCLAIMER: This e-mail is confidential.`)
     expect(r.items).toEqual([{ description: 'gate valve 4 inch class 150', qty: 2, unit: 'nos' }])
     expect(r.lines.filter(l => l.kind === 'skipped').map(l => l.reason)).toEqual(['signature', 'signature', 'signature', 'signature', 'signature', 'disclaimer'])
@@ -112,8 +112,8 @@ describe('parseEnquiry: header facts', () => {
   it('offers the signature company and the sender domain, never our own or a free mail domain', () => {
     const r = parse('Please quote 1 no PLC\nRegards\nAsad\nIndus Fibres Ltd.\nasad@gmail.com\nFrom: sales@qtech.example')
     expect(r.facts.company).toMatchObject({ name: 'Indus Fibres Ltd.', domain: null })
-    const d = parse('From: Waqas <waqas@sialkottanneries.com>\nPlease quote 2 nos gauge')
-    expect(d.facts.company).toMatchObject({ name: null, domain: 'sialkottanneries.com', emails: ['waqas@sialkottanneries.com'] })
+    const d = parse('From: Waqas <waqas@riverbendtanneries.com>\nPlease quote 2 nos gauge')
+    expect(d.facts.company).toMatchObject({ name: null, domain: 'riverbendtanneries.com', emails: ['waqas@riverbendtanneries.com'] })
   })
 
   it('gives the intake its own ParseResult shape for the paste panel', () => {

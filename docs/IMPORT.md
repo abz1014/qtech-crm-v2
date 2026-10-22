@@ -282,7 +282,7 @@ Each is one small rule in `import/src/transform/`, covered by a test.
 1. **Which RFQ numbers are the customer's own (confirmed).** `rfq_number` becomes `customer_ref` unless it looks like Q-Tech's own series (`RFQ-12`, `QT-12`, `QTECH12`). A repeat of a customer reference on the same company keeps only the first (`customer_ref_duplicate`).
 2. **Composite vendor names (confirmed).** A vendor name is flagged `name_unparsed` only when it looks composite (brackets, "via", a slash) and is not in `vendor_parse.csv`; plain names import as they are without a flag, so the list stays short.
 3. **The GST register wins over a bookkeeping invoice of the same sale (owner, 2026-10-19).** A bookkeeping invoice (old
-   `invoices`, INV-2024-xxx) is a duplicate when, for the same customer (resolved through `company_merge.csv`, so the Ghani Glass
+   `invoices`, INV-2024-xxx) is a duplicate when, for the same customer (resolved through `company_merge.csv`, so the Northgate Glass
    plants count as one), its PO equals one of the PO numbers of a `gst_invoices` row. Its PO comes from its notes ("PO 251809."),
    else its order's `customer_po_number`, else the order's notes ("PO# 251809"); a register cell may list several ("253074 &
    252993 & 254040"); "PO", "#", spaces and case are ignored. A duplicate is not imported: it is in `dropped_rows` ("duplicate of

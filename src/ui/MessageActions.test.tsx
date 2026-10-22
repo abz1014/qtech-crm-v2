@@ -121,10 +121,10 @@ describe('MessageActions (owner decision 2026-10-20)', () => {
   })
 
   it('only a landline and no email: no email button, and Copy is the primary', () => {
-    show({ to: { name: 'Ghani Glass', phone: '+92 42 555 0138', email: null }, variant: 'primary' })
+    show({ to: { name: 'Northgate Glass', phone: '+92 42 555 0138', email: null }, variant: 'primary' })
     expect(names()).toEqual(['Open in WhatsApp', 'Copy message'])
     expect(screen.getByRole('button', { name: 'Open in WhatsApp' })).toBeDisabled()
-    expect(screen.getByText('Only a landline saved for Ghani Glass — add a mobile number')).toBeInTheDocument()
+    expect(screen.getByText('Only a landline saved for Northgate Glass — add a mobile number')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Copy message' })).toHaveClass('bg-primary')
     expect(screen.queryByRole('button', { name: 'add a mobile number' })).toBeNull() // plain words without onFixContact
   })

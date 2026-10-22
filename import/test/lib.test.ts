@@ -66,7 +66,7 @@ describe('dates', () => {
 
 describe('text', () => {
   it('normalises names for matching', () => {
-    expect(normName('  Ghani   GLASS ')).toBe('ghani glass')
+    expect(normName('  Northgate   GLASS ')).toBe('northgate glass')
     expect(normName(null)).toBe('')
     expect(normName('Ｚeta')).toBe('zeta')
   })
@@ -80,9 +80,9 @@ describe('text', () => {
 
 describe('csv', () => {
   it('reads quotes, commas inside quotes, comments and a BOM', () => {
-    const rows = parseCsv(String.fromCharCode(0xfeff) + '# a comment\nold_name,company,site\n"Ghani Glass (KHI), old",Ghani Glass,Karachi\n# another\nB,"C ""quoted""",\n')
+    const rows = parseCsv(String.fromCharCode(0xfeff) + '# a comment\nold_name,company,site\n"Northgate Glass (KHI), old",Northgate Glass,Karachi\n# another\nB,"C ""quoted""",\n')
     expect(rows).toEqual([
-      { old_name: 'Ghani Glass (KHI), old', company: 'Ghani Glass', site: 'Karachi' },
+      { old_name: 'Northgate Glass (KHI), old', company: 'Northgate Glass', site: 'Karachi' },
       { old_name: 'B', company: 'C "quoted"', site: '' },
     ])
   })
@@ -99,13 +99,13 @@ describe('csv', () => {
 describe('mappings', () => {
   it('reads the reviewed lists and ignores blank and comment lines', () => {
     const m = parseMappings({
-      companyMerge: '# c\nold_name,company,site\nGhani Glass (KHI),Ghani Glass,Karachi\n,,\n',
+      companyMerge: '# c\nold_name,company,site\nNorthgate Glass (KHI),Northgate Glass,Karachi\n,,\n',
       vendorParse: 'old_name,company,brand,country\nRed Lion USA (via Four Stars),Four Stars,Red Lion,USA\n',
       expenseCategories: 'legacy_category,category\nPetrol,Fuel & travel\n',
       users: 'old_name,new_name,owner_reliable\nA,B,no\nC,,yes\n',
       poClashes: 'customer_po_number,decision\nEW-1,merge\nX,whatever\n',
     })
-    expect(m.companyMerge.get('ghani glass (khi)')).toEqual({ company: 'Ghani Glass', site: 'Karachi' })
+    expect(m.companyMerge.get('northgate glass (khi)')).toEqual({ company: 'Northgate Glass', site: 'Karachi' })
     expect(m.vendorParse.get('red lion usa (via four stars)')).toEqual({ company: 'Four Stars', brand: 'Red Lion', country: 'USA' })
     expect(m.expenseCategories.get('petrol')).toBe('Fuel & travel')
     expect(m.users.get('a')).toEqual({ newName: 'B' })

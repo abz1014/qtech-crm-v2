@@ -67,17 +67,17 @@ describe('the output as a whole', () => {
 })
 
 describe('I02 companies, sites, contacts, vendors', () => {
-  it("turns Ghani's 3 rows into 1 company with 2 sites", () => {
-    const ghani = t.companies.filter(c => String(c['name']).startsWith('Ghani Glass'))
-    expect(ghani).toHaveLength(1)
-    const sites = t.company_sites.filter(s => s['company_id'] === ghani[0]!['id'])
+  it("turns Northgate's 3 rows into 1 company with 2 sites", () => {
+    const northgate = t.companies.filter(c => String(c['name']).startsWith('Northgate Glass'))
+    expect(northgate).toHaveLength(1)
+    const sites = t.company_sites.filter(s => s['company_id'] === northgate[0]!['id'])
     expect(sites.map(s => s['name']).sort()).toEqual(['Karachi', 'Lahore'])
-    expect((ghani[0]!['legacy_source'] as { rows: unknown[] }).rows).toHaveLength(3)
+    expect((northgate[0]!['legacy_source'] as { rows: unknown[] }).rows).toHaveLength(3)
     // The address of each plant is the site's address.
     expect(sites.find(s => s['name'] === 'Lahore')!['address']).toBe('Test Estate, Lahore')
   })
 
-  it('makes "IFL Head Office"-style names a company plus a Head Office site', () => {
+  it('makes "CFL Head Office"-style names a company plus a Head Office site', () => {
     const alpha = byName('Alpha Textile Mills')
     expect(t.company_sites.some(s => s['company_id'] === alpha['id'] && s['name'] === 'Head Office')).toBe(true)
     expect(t.companies.some(c => String(c['name']).includes('Head Office'))).toBe(false)
@@ -90,9 +90,9 @@ describe('I02 companies, sites, contacts, vendors', () => {
     expect(t.company_brands).toContainEqual({ company_id: fourStars['id'], brand_id: redLion['id'] })
     expect(fourStars['country']).toBe('USA')
     expect(t.companies.some(c => String(c['name']).includes('Red Lion'))).toBe(false)
-    const d = byName('DEAO')
+    const d = byName('ORVEN')
     expect(t.company_brands).toContainEqual({ company_id: d['id'], brand_id: t.brands.find(b => b['name'] === 'Siemens')!['id'] })
-    expect(byName('XIAMEN TONGKONG')).toBeTruthy()
+    expect(byName('PORTVIEW TONGDA')).toBeTruthy()
   })
 
   it('imports a composite vendor name nobody parsed as it is, flagged name_unparsed', () => {
@@ -299,7 +299,7 @@ describe('I04 orders', () => {
 
     const legs = t.supplier_orders.filter(l => l['order_id'] === merged['id'])
     expect(legs).toHaveLength(1)
-    expect(legs[0]!['supplier_id']).toBe(byName('XIAMEN TONGKONG')['id'])
+    expect(legs[0]!['supplier_id']).toBe(byName('PORTVIEW TONGDA')['id'])
     for (const i of items) expect(i['supplier_order_id']).toBe(legs[0]!['id'])
 
     const invoices = t.invoices.filter(i => i['order_id'] === merged['id'])

@@ -44,7 +44,7 @@
    },
    {
     "id": "c1000000-0000-4000-8000-000000000002",
-    "company_name": "Ghani Glass (KHI)",
+    "company_name": "Northgate Glass (KHI)",
     "industry": "Glass",
     "contact_person": "Test Contact Two",
     "phone": "+92 300 0000002",
@@ -55,7 +55,7 @@
    },
    {
     "id": "c1000000-0000-4000-8000-000000000003",
-    "company_name": "Ghani Glass (LHR)",
+    "company_name": "Northgate Glass (LHR)",
     "industry": "Glass",
     "contact_person": "",
     "phone": "",
@@ -66,7 +66,7 @@
    },
    {
     "id": "c1000000-0000-4000-8000-000000000004",
-    "company_name": "Ghani Glass",
+    "company_name": "Northgate Glass",
     "industry": "Glass",
     "contact_person": "",
     "phone": "",
@@ -217,7 +217,7 @@
    },
    {
     "id": "d1000000-0000-4000-8000-000000000003",
-    "name": "XIAMEN TONGKONG (Moxa Taiwan)",
+    "name": "PORTVIEW TONGDA (Moxa Taiwan)",
     "country": "China / Taiwan",
     "contact_person": "",
     "phone": "",
@@ -227,7 +227,7 @@
    },
    {
     "id": "d1000000-0000-4000-8000-000000000004",
-    "name": "DEAO China (Siemens Distributor)",
+    "name": "ORVEN China (Siemens Distributor)",
     "country": "China",
     "contact_person": "",
     "phone": "",
@@ -1847,7 +1847,7 @@
     "order_id": null,
     "gst_invoice_number": "INV-2025-0301",
     "invoice_date": "2025-01-20",
-    "client_name": "Ghani Glass (LHR)",
+    "client_name": "Northgate Glass (LHR)",
     "supplier_company": "Q-Tech Test",
     "customer_po_number": " po 7001 &7002 & 7003",
     "item_name": "",

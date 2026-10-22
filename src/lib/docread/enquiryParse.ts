@@ -384,7 +384,7 @@ function cleanRef(v: string): string | null {
 }
 
 /**
- * A subject line that names an enquiry but carries its number without a label: "RFQ FOR THE ELECTRONICS ITEMS REQUIRED 131026",
+ * A subject line that names an enquiry but carries its number without a label: "RFQ FOR THE ELECTRONICS ITEMS REQUIRED 482917",
  * "RFQ PLC SPARES EML-RFQ-2210", "Enquiry 2210-B for PLC spares". The code right after the word, else the last code on the line.
  */
 function subjectRef(line: string): RefHit | null {
@@ -833,7 +833,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   const extend = (d: Draft, t: string) => {
     const it = d.fromTable as ReadItem
     const more = tidy(t.replace(TOTALS, ''))
-    // A part number broken at its dash ("6ES7647-8BB61-" / "7CS1") is joined back without a space.
+    // A part number broken at its dash ("6ES7647-8BD61-" / "7CS1") is joined back without a space.
     const glue = hyphenated.has(d) ? '-' : ' '
     hyphenated.delete(d)
     if (/[A-Za-z0-9]-\s*$/.test(t)) hyphenated.add(d)
@@ -1074,7 +1074,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         const ownRow = rowShape && (/^\d{1,5}\s*\.?$/.test(cells[0] ?? '') || table.extra.some(e => e.codes && /^\d{5,}$/.test(cells[e.i] ?? '')))
         if (formMode && row && !ownRow && (table.qty < 0 || !NUM_CELL.test(cells[table.qty] ?? '')) && continuesRow(cells.filter(Boolean).join(' '))) {
           // Only the text that goes on with the item: the description columns, the Make / Part No columns, and words that
-          // spilled into the serial column; not the plant or the unit wrapping in their own columns ("FCCL" / "Nizampur").
+          // spilled into the serial column; not the plant or the unit wrapping in their own columns ("ECCL" / "Rawat").
           const tbl = table
           const keep = cells.filter((c, i) => c && (tbl.desc.includes(i) || tbl.extra.some(e => e.i === i) || (i === 0 && !/^\d{1,3}\s*\.?$/.test(c))))
           extend(row, (keep.length ? keep : cells.filter(Boolean)).join(' '))

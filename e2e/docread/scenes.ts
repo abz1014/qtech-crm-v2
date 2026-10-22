@@ -167,15 +167,15 @@ function outlookText(m: OutlookRfq): string {
   ].join('\n')
 }
 
-const RFQ_131026: OutlookRfq = {
+const RFQ_482917: OutlookRfq = {
   from: 'Asad Mehmood <asad.mehmood@fictional-power.example>',
   sent: 'Tuesday, October 13, 2026 10:21 AM',
-  subject: 'RFQ FOR THE ELECTRONICS ITEMS REQUIRED 131026',
+  subject: 'RFQ FOR THE ELECTRONICS ITEMS REQUIRED 482917',
   intro: ['Dear Sir,', '', 'Hope you are doing well.', 'Please share the price and availability for the below mentioned parts.'],
   rows: [
-    ['CAPACITOR 100UF 450 V-01', 10, 'EA'],
+    ['CAPACITOR 220UF 450 V-01', 10, 'EA'],
     ['OPTO COUPLER A 3120 , TYPE SMD, 8 PIN-01', 25, 'EA'],
-    ['IGBT VINCO P830A3203 -01', 4, 'EA'],
+    ['IGBT VINCO P830B4417 -01', 4, 'EA'],
     ['RESISTOR 10K 1/4 W-01', 100, 'EA'],
     ['DIODE FAST RECOVERY 1N4937-01', 50, 'EA'],
     ['VOLTAGE REGULATOR 7805 TO-220-01', 20, 'EA'],
@@ -194,8 +194,8 @@ const RFQ_131026: OutlookRfq = {
 
 // The unit is kept as the customer wrote it (EA). The trailing "-01" is the customer's line code: kept as text, never a quantity.
 const RFQ_EXPECTED = {
-  items: RFQ_131026.rows.map(([description, qty, unit]) => ({ description, qty, unit })),
-  customerRef: '131026',
+  items: RFQ_482917.rows.map(([description, qty, unit]) => ({ description, qty, unit })),
+  customerRef: '482917',
   domain: 'fictional-power.example',
 }
 
@@ -286,8 +286,8 @@ export const SCENES: Scene[] = [
     kind: 'Outlook RFQ, laptop (no header row)',
     viewport: { width: 1366, height: 700 },
     deviceScaleFactor: 1,
-    html: outlook(RFQ_131026),
-    paste: outlookText(RFQ_131026),
+    html: outlook(RFQ_482917),
+    paste: outlookText(RFQ_482917),
     clean: true,
     expected: RFQ_EXPECTED,
   },
@@ -296,8 +296,8 @@ export const SCENES: Scene[] = [
     kind: 'Outlook RFQ, alternate rows shaded, 125%',
     viewport: { width: 1280, height: 700 },
     deviceScaleFactor: 1.25,
-    html: outlook(RFQ_131026, { shaded: true }),
-    paste: outlookText(RFQ_131026),
+    html: outlook(RFQ_482917, { shaded: true }),
+    paste: outlookText(RFQ_482917),
     clean: true,
     expected: RFQ_EXPECTED,
   },
@@ -306,8 +306,8 @@ export const SCENES: Scene[] = [
     kind: 'Outlook RFQ, phone photo of the screen (JPEG)',
     viewport: { width: 760, height: 760 },
     deviceScaleFactor: 2,
-    html: outlook(RFQ_131026, { shaded: true, photo: true }),
-    paste: outlookText(RFQ_131026),
+    html: outlook(RFQ_482917, { shaded: true, photo: true }),
+    paste: outlookText(RFQ_482917),
     clean: false,
     format: 'jpeg',
     expected: RFQ_EXPECTED,

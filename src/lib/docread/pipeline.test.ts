@@ -16,7 +16,7 @@ describe('PDF to rows', () => {
     if (!pdf.ok) return
     const r = parseEnquiry(pdf.text, { today: '2026-10-20' })
     expect(r.items).toEqual([
-      { description: 'TRANSMITTER,PRESSURE;0-16BAR Make: Rosemount, Model: 3051TG', qty: 2, unit: 'EA' },
+      { description: 'TRANSMITTER,PRESSURE;0-25BAR Make: Rosemount, Model: 3051TG', qty: 2, unit: 'EA' },
       { description: 'GAUGE,PRESSURE;0-10BAR,4" DIAL', qty: 6, unit: 'EA' },
     ])
     expect(r.facts.customerRef?.value).toBe('4500012345')

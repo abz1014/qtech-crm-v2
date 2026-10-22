@@ -206,7 +206,7 @@ The draft test after the trial: if engineers paste the draft and edit only Qty a
 | O03 | Order detail: items (GST rate per line, exempt-all toggle, service flag), legs (placed, expected, received, delivered, reference), commissioning (needs it, engineers, planned, done), cancel | Status badges come from v_order_state. Engineer can edit commissioning fields. | O01 | |
 | O04 | Orders list with filters per dimension | Filter combinations, end-to-end. | O03 | i |
 | O05 | Today v2 rules: place PO, goods late, plan commissioning, delivered but not invoiced (admin and sales) | Unit tests. Engineer doesn't see the invoicing rule. | O03, R11 | i |
-| O06 | Company history per site (orders and RFQs) | Ghani KHI and LHR are shown separately under one company. | O03 | i |
+| O06 | Company history per site (orders and RFQs) | Northgate KHI and LHR are shown separately under one company. | O03 | i |
 
 ### P6 Money
 
@@ -239,7 +239,7 @@ I01–I05 start after S06 and run in parallel with P2–P7.
 | ID | Deliverable | Acceptance | Deps | ∥ | Flag |
 |---|---|---|---|---|---|
 | I01 | Import framework (Node TS):<br>• **extract**: old project REST API with an admin session, or the dump<br>• **transform**: pure functions<br>• **load**: service role, deterministic UUIDv5 from old ids; idempotent: delete only rows with a legacy source, reinsert; never touches rows created in v2; companies matched by normalised name<br>• **report**: counts, totals, review CSVs<br>Fixtures built from `seed_historical_data.sql`. | A run against the fixtures twice gives identical ids and counts. Rows created in v2 survive. | S06 | m | |
-| I02 | Transforms: companies, sites, contacts, prospects, vendors (driven by the reviewed `mappings/company_merge.csv` and `vendor_parse.csv`) | Ghani's 3 rows become 1 company with 2 sites. "Red Lion USA (via Four Stars)" becomes Four Stars carrying Red Lion. | I01 | m | |
+| I02 | Transforms: companies, sites, contacts, prospects, vendors (driven by the reviewed `mappings/company_merge.csv` and `vendor_parse.csv`) | Northgate's 3 rows become 1 company with 2 sites. "Red Lion USA (via Four Stars)" becomes Four Stars carrying Red Lion. | I01 | m | |
 | I03 | Transforms: RFQs (due-date parse, flags, owner reliability), items, inquiries, quote lines (`item_guessed`, `currency_unverified`) | The "31/01/2024" fixture gets the `due_before_received` flag. | I01 | m | |
 | I04 | Transforms: orders → items, legs, order_costs; basis resolution against GST invoices; **merge PO 000001 Unit A/B into one order with 2 invoices**; batch A/B kept separate; other flags | 17 seed orders become 16 orders. Invoice totals reconcile. | I01 | m | |
 | I05 | Transforms: invoices (from gst_invoices, bookkeeping invoices, `orders.invoice_number`), payments (credited user), expenses (supplier_payments, payable_payments, double-count flag), recurring, order_engineers, storage file copy, `fbr_status` mapping | Money totals: old Σ equals new Σ, per category, on the fixtures. | I01 | m | |
