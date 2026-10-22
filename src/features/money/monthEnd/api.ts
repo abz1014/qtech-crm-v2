@@ -234,9 +234,17 @@ export async function loadAging(asOf: string): Promise<{ rows: AgingRow[]; advan
   const snap = await snapshotAsOf(asOf)
   const data: AgingRaw[] = snap ? snap.aging : (unwrap(await db.rpc('aging_as_of', { p_date: asOf })) ?? [])
   const names = await companyNames([...new Set(data.map(r => r.company_id).filter((x): x is string => !!x))])
+  // Imported invoices not linked to an order (owner decision 1b): aging_as_of does not say which are imported, so ask for the ids.
+  const unlinked = data.filter(r => r.kind === 'invoice' && !r.order_id).map(r => r.invoice_id)
+  const importedIds = new Set<string>()
+  for (let i = 0; i < unlinked.length; i += 200) {
+    const part = unwrap(await db.from('invoices').select('id').in('id', unlinked.slice(i, i + 200)).not('legacy_source', 'is', null))
+    for (const x of part ?? []) importedIds.add(x.id)
+  }
   const rows: AgingRow[] = data
     .filter(r => r.kind === 'invoice')
     .map(r => ({
+      importedUnlinked: !r.order_id && importedIds.has(r.invoice_id),
       invoiceId: r.invoice_id,
       customer: names[r.company_id] ?? 'Customer',
       invoiceNumber: r.invoice_number,

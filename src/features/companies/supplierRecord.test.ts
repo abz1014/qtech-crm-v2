@@ -159,6 +159,15 @@ describe('deliveries', () => {
     expect(r.deliveries.find(d => d.orderRef === 'ORD-0003')?.result).toMatchObject({ kind: 'overdue', days: 7 })
     expect(r.deliveries.find(d => d.orderRef === 'ORD-0004')?.result).toMatchObject({ kind: 'expected', days: 13 })
   })
+
+  it('an imported leg past its date that was never marked delivered is not called overdue and has no day count', () => {
+    const r = buildSupplierRecord(raw({ legs: [leg('a', 1, { expectedOn: '2026-06-01', legacy: true }), leg('b', 2, { expectedOn: '2026-06-01' })] }), TODAY)
+    const imp = r.deliveries.find(d => d.orderRef === 'ORD-0001')!
+    expect(imp.result).toEqual({ kind: 'imported', days: 0, text: 'Imported, not marked delivered' })
+    expect(r.deliveries.find(d => d.orderRef === 'ORD-0002')?.result.kind).toBe('overdue')
+    expect(r.open.legs.find(l => l.orderRef === 'ORD-0001')?.text).not.toMatch(/late|\d+ days/)
+    expect(r.open.legs.find(l => l.orderRef === 'ORD-0002')?.text).toMatch(/days late/)
+  })
 })
 
 describe('open with them', () => {
