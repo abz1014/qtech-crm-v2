@@ -199,7 +199,7 @@ insert into public.expenses (amount_pkr, category_id, paid_via, order_id, suppli
 select results_eq($$select owed_pkr, state, flag from public.payables_as_of(public.today_pkt()) where supplier_order_id = '87000000-0000-4000-8000-0000000000d1'$$,
   $$values (0::numeric, 'settled', null::text)$$,
   'paid USD 1,000 in all: settled at any rate');
-select is(pg_temp.as_('engineer', 'select count(*) from public.payables_as_of(public.today_pkt())'), '0', 'We owe suppliers stays admin only');
+select ok(pg_temp.as_('engineer', 'select count(*) from public.payables_as_of(public.today_pkt())') in ('0', 'E:42501'), 'We owe suppliers stays admin only');
 
 select * from finish();
 rollback;

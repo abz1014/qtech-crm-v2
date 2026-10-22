@@ -7,6 +7,9 @@ import { qk } from '@/features/queryKeys'
 import { checkCategoryName, nextSort } from '@/features/settings/categoriesModel'
 import { useCreateCategory } from '@/features/settings/hooks'
 import * as api from '@/features/money/expenses/api'
+import * as claims from '@/features/money/expenses/claimsApi'
+import { billPeriods } from '@/features/money/expenses/forMonth'
+import type { PayRow } from '@/features/money/expenses/pay'
 import type { CreateCategoryResult } from '@/features/money/expenses/CategoryPicker'
 import {
   SUPPLIER_PAYMENT_ID,
@@ -181,4 +184,85 @@ export function useRecordRecurring() {
       api.recordRecurring(v.template, { id: v.id, period: v.period, paidOn: v.paidOn, paidVia: v.paidVia }),
     onSuccess: () => invalidateAfter(client, 'recurring.record', {}),
   })
+}
+
+// ------------------------------------------------------------------ 0087: monthly bills by period, Pay, claims, cash in hand
+
+/** Template ids recorded for last month and this month (Monthly bills' due list and quick add's "settles this bill"). */
+export function useRecordedBills(today: string, enabled = true) {
+  const periods = billPeriods(today)
+  return useQuery({ queryKey: qk.money.recurring.recorded(periods.join('+')), queryFn: () => api.recordedRecurringFor(periods), enabled })
+}
+
+/** What one supplier order still needs (Pay dialog). */
+export function useLegPayState(legId: string | null | undefined, enabled = true) {
+  return useQuery({
+    queryKey: qk.money.expenses.legPay(legId ?? ''),
+    queryFn: () => api.legPayState(legId as string, businessToday()),
+    enabled: enabled && Boolean(legId),
+    staleTime: 0,
+  })
+}
+
+/** The supplier payment and its bank charges, in one request (all or nothing). */
+export function useInsertPayment() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (rows: PayRow[]) => api.insertExpenses(rows),
+    onSuccess: () => invalidateAfter(client, 'expense.save', {}),
+  })
+}
+
+export function usePendingClaims(enabled = true) {
+  return useQuery({ queryKey: qk.money.expenses.claims('pending'), queryFn: claims.listPendingClaims, enabled })
+}
+
+export function useMyClaims(enabled = true) {
+  return useQuery({ queryKey: qk.money.expenses.claims('mine'), queryFn: claims.listMyClaims, enabled })
+}
+
+export function useClaimPhotos(claimId: string | null | undefined) {
+  return useQuery({ queryKey: qk.money.expenses.claimPhotos(claimId ?? ''), queryFn: () => claims.listClaimPhotos(claimId as string), enabled: Boolean(claimId) })
+}
+
+export function useCreateClaim() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async (v: claims.NewClaim & { photo: File | null }) => {
+      await claims.createClaim(v)
+      // A photo that fails never undoes the claim: the caller says so and the claim stays.
+      if (v.photo) return claims.uploadClaimPhoto(v.id, v.photo).then(() => true, () => false)
+      return true
+    },
+    onSuccess: () => invalidateAfter(client, 'expense.save', {}),
+  })
+}
+
+export function useWithdrawClaim() {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => claims.withdrawClaim(id), onSuccess: () => invalidateAfter(client, 'expense.save', {}) })
+}
+
+export function useApproveClaim() {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: claims.approveClaim, onSuccess: () => invalidateAfter(client, 'expense.save', {}) })
+}
+
+export function useRejectClaim() {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: claims.rejectClaim, onSuccess: () => invalidateAfter(client, 'expense.save', {}) })
+}
+
+export function useCashInHand(enabled = true) {
+  return useQuery({ queryKey: qk.money.expenses.cash(), queryFn: claims.loadCashInHand, enabled, staleTime: 0 })
+}
+
+export function useRecordCashCount() {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: claims.recordCashCount, onSuccess: () => invalidateAfter(client, 'expense.save', {}) })
+}
+
+export function useAddCashTopup() {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: claims.addCashTopup, onSuccess: () => invalidateAfter(client, 'expense.save', {}) })
 }

@@ -4,6 +4,7 @@ import type { ViewRow } from '@/features/dbTypes'
 import { previousMonthStart } from '@/features/today/rules'
 import { addDays } from '@/features/rfqs/lib/dateText'
 import { fetchReceivablesList, type ReceivablesListRow } from '@/features/money/payments/api'
+import { billPeriod, billPeriods } from '@/features/money/expenses/forMonth'
 import type {
   ClarificationFact,
   CostFact,
@@ -424,22 +425,25 @@ async function loadInvoiceFacts(today: string): Promise<InvoiceFact[]> {
     }))
 }
 
-/** M08, admin only: the active recurring templates and whether an expense exists for each this month. */
+/**
+ * M08, admin only: the active recurring templates and whether an expense exists for each for the month its bill is for (0087
+ * for-month: a template paid on day 1 to 10 pays last month's bill, the same rule as Expenses' Monthly bills).
+ */
 async function loadRecurringFacts(today: string): Promise<RecurringFact[]> {
   const db = requireSupabase()
-  const period = today.slice(0, 7)
+  const periods = billPeriods(today)
   const [templates, recorded] = await Promise.all([
     db.from('recurring_expenses').select('id, label, day_of_month, active, start_month').eq('active', true).order('label'),
-    db.from('expenses').select('recurring_id').eq('period', period).not('recurring_id', 'is', null),
+    db.from('expenses').select('recurring_id, period').in('period', periods).not('recurring_id', 'is', null),
   ])
-  const done = new Set((unwrap(recorded) ?? []).map(r => r.recurring_id as string))
+  const done = new Set((unwrap(recorded) ?? []).map(r => `${r.recurring_id as string}|${r.period as string}`))
   return (unwrap(templates) ?? []).map(t => ({
     id: t.id,
     label: t.label,
     dayOfMonth: t.day_of_month,
     active: t.active,
     startMonth: t.start_month,
-    recorded: done.has(t.id),
+    recorded: done.has(`${t.id}|${billPeriod({ dayOfMonth: t.day_of_month }, today)}`),
   }))
 }
 

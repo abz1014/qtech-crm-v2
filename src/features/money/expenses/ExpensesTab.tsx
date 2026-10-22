@@ -26,6 +26,7 @@ import type { ExpenseListing } from '@/features/money/expenses/api'
 import { AddExpenseDialog } from '@/features/money/expenses/ExpenseDialog'
 import { useCategories, useExpenseMonth, useGroups } from '@/features/money/expenses/hooks'
 import { RecurringPanel } from '@/features/money/expenses/RecurringPanel'
+import { forMonthNote } from '@/features/money/expenses/forMonth'
 import {
   NO_FILTERS,
   PAID_VIA_LABEL,
@@ -201,7 +202,8 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                     {` · ${totals.count} ${totals.count === 1 ? 'expense' : 'expenses'}${filtered ? ' shown' : ''}`}
                   </span>
                   <InfoTip label="About this total">
-                    What was paid in {monthKeyLabel(month)}, by payment date, input tax included (what left the bank or the cash box).
+                    What was paid in {monthKeyLabel(month)}, by the day paid, input tax included (what left the bank or the cash box). A monthly bill
+                    paid this month for last month is in this total; the Expenses report counts it in the month it is for.
                     {totals.inputTax > 0 ? ` Input tax ${pkr(totals.inputTax)} of it is claimed back, so the cost is ${pkr(totals.cost)}.` : ''}
                   </InfoTip>
                 </span>
@@ -300,7 +302,8 @@ function describe(r: ListedExpense, categories: readonly Category[], l: ExpenseL
   const cat = categories.find(c => c.id === r.categoryId)
   const name = cat?.name ?? 'Category removed'
   const note = r.note && r.note.trim().toLowerCase() !== name.toLowerCase() ? r.note : null
-  const parts = [r.payeeId ? l?.payees[r.payeeId] : null, r.orderId ? l?.orders[r.orderId] : null, note].filter(Boolean) as string[]
+  // 0087: "for September" when a monthly bill is for another month than the one it was paid in
+  const parts = [forMonthNote(r.paidOn, r.period), r.payeeId ? l?.payees[r.payeeId] : null, r.orderId ? l?.orders[r.orderId] : null, note].filter(Boolean) as string[]
   return { name, detail: parts.join(' · '), inactive: cat ? !cat.active : false }
 }
 

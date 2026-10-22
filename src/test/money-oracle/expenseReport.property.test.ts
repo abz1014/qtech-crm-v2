@@ -4,7 +4,8 @@ import type { Category, ExpenseGroup, ListedExpense } from '@/features/money/exp
 import type { FlowRow } from '@/features/money/inOut/model'
 import { periodOf } from '@/features/money/inOut/model'
 import { buildExpenseReport, toEntries } from '@/features/money/expenseReport/model'
-import { cashMonth, monthOf, monthPnlLive, quarterMonths, roundDiv, rs, sumP, type Books, type Expense, type Group } from '@/test/money-oracle/oracle'
+import { shiftMonth } from '@/features/money/expenses/model'
+import { cashMonth, expensesFor, forMonthOfExpense, monthOf, monthPnlLive, quarterMonths, roundDiv, rs, sumP, type Books, type Expense, type Group } from '@/test/money-oracle/oracle'
 import { RUNS_HEAVY, booksArb, paisaArb } from '@/test/money-oracle/arbitraries'
 
 /*
@@ -15,6 +16,9 @@ import { RUNS_HEAVY, booksArb, paisaArb } from '@/test/money-oracle/arbitraries'
  *   input tax                    = the oracle's input tax;  running + order + not a cost + input tax = total
  *   cash + bank                  = total, each the oracle's own sum by paid via
  *   groups, categories, details  add up to the total; the In vs out cross-check is 0
+ * 0087 for-month: some expenses carry a period (a monthly bill for the month before or after the one paid). The report then
+ * counts each one in the month it is FOR (the oracle's expensesFor), while its `paid` side still equals In vs out and the P&L,
+ * and the bridge holds to the paisa: for-total - paid elsewhere + paid here for other months = paid.
  */
 const GROUPS: ExpenseGroup[] = [
   { id: 'g-run', name: 'Office running', kind: 'overhead', sort: 10 },
@@ -47,6 +51,7 @@ const scenarioArb = booksArb.chain(b =>
           day: fc.integer({ min: 1, max: 28 }),
           cash: fc.boolean(),
           detail: fc.nat({ max: DETAILS.length - 1 }),
+          shift: fc.constantFrom(0, 0, 0, -1, 1),
         }),
         { maxLength: 40 },
       ),
@@ -67,6 +72,7 @@ const scenarioArb = booksArb.chain(b =>
           supplierPayment: c.id === 'cat-sup',
           via: e.cash ? 'cash' : 'bank',
           detail: DETAILS[e.detail],
+          period: e.shift === 0 ? null : shiftMonth(e.month, e.shift),
         }
       })
       const books: Books = { ...b, expenses }
@@ -88,6 +94,7 @@ const listed = (xs: readonly Ex[]): ListedExpense[] =>
     payeeId: null,
     recurringId: null,
     bankMonth: null,
+    period: e.period ?? null,
   }))
 const flowsOf = (books: Books): FlowRow[] =>
   MONTHS.map(m => {
@@ -103,15 +110,26 @@ function check(kind: 'month' | 'quarter') {
       const ms = kind === 'month' ? [month] : quarterMonths(p.key)
       const pnl = ms.map(m => monthPnlLive(m, books))
       const out = sumP(ms.map(m => cashMonth(m, books).out))
-      const mine = expenses.filter(e => ms.includes(monthOf(e.date)))
-      expect(v.total.amount).toBe(rs(out))
-      expect(v.total.count).toBe(mine.length)
-      expect(v.kinds).toEqual({
+      const paidHere = expenses.filter(e => ms.includes(monthOf(e.date)))
+      const mine = expenses.filter(e => ms.includes(forMonthOfExpense(e)))
+      const f = expensesFor(ms, books)
+      // the cash side: In vs out's money out and the P&L lines, by the day paid
+      expect(v.paid.amount).toBe(rs(out))
+      expect(v.paid.count).toBe(paidHere.length)
+      expect(v.paidKinds).toEqual({
         running: rs(sumP(pnl.map(x => x.overheads))),
         order: rs(sumP(pnl.map(x => x.orderCosts))),
         notCost: rs(sumP(pnl.map(x => x.nonPnl))),
         inputTax: rs(sumP(pnl.map(x => x.inputTax))),
       })
+      // the report itself, by the month each expense is for
+      expect(v.total.amount).toBe(rs(f.amount))
+      expect(v.total.count).toBe(f.count)
+      expect(v.kinds).toEqual({ running: rs(f.overheads), order: rs(f.orderCosts), notCost: rs(f.nonPnl), inputTax: rs(f.inputTax) })
+      expect(v.forHerePaidElsewhere).toBe(rs(f.forHerePaidElsewhere))
+      expect(v.paidForOther).toBe(rs(f.paidForOther))
+      const P = (a: string) => BigInt(Math.round(Number(a) * 100))
+      expect(rs(P(v.total.amount) - P(v.forHerePaidElsewhere) + P(v.paidForOther))).toBe(v.paid.amount)
       const k = v.kinds
       expect(rs(sumP([k.running, k.order, k.notCost, k.inputTax].map(a => BigInt(Math.round(Number(a) * 100)))))).toBe(v.total.amount)
       expect(v.total.cash).toBe(rs(sumP(mine.filter(e => e.via === 'cash').map(e => e.amount))))
@@ -123,7 +141,7 @@ function check(kind: 'month' | 'quarter') {
         expect(rs(sumP(g.categories.map(c => toP(c.amount))))).toBe(g.amount)
         for (const c of g.categories) expect(rs(sumP(c.details.map(d => toP(d.amount))))).toBe(c.amount)
       }
-      expect(v.trend[v.trend.length - 1].amount).toBe(v.total.amount)
+      expect(v.trend[v.trend.length - 1].amount).toBe(v.paid.amount)
     }),
     RUNS_HEAVY,
   )
