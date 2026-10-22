@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { karachiDay, must, openAs, review, rest } from '../support/stack'
 import { axeViolations } from '../support/axe'
 
@@ -44,6 +44,13 @@ async function seedUse(ids: readonly string[]) {
   for (const id of ids)
     for (let i = 0; i < 6; i++)
       await must(rest('admin', 'expenses', { method: 'POST', body: { amount_pkr: 11 + i, category_id: id, paid_on: today(), paid_via: 'cash', description: 'qa-seed' } }))
+}
+
+/** Taps a category: its button when it is one of the six, else picks it from More. */
+async function pickCategory(qa: Locator, name: string) {
+  const button = qa.getByRole('button', { name, exact: true })
+  if (await button.count()) await button.click()
+  else await qa.getByRole('combobox', { name: 'More categories' }).selectOption({ label: name })
 }
 
 const monthName = (key: string) => new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(`${key}-01T00:00:00Z`))
@@ -99,7 +106,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     await expect(qa.getByRole('combobox', { name: 'More categories' }).locator('option', { hasText: 'Supplier payment' })).toHaveCount(0)
     const amt = base() + 7
     await qa.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(amt))
-    await qa.getByRole('combobox', { name: 'More categories' }).selectOption({ label: 'Repairs & maintenance' })
+    await pickCategory(qa, 'Repairs & maintenance')
     await qa.getByRole('checkbox', { name: 'More: has a GST invoice' }).click()
     await qa.getByRole('textbox', { name: 'GST on this bill (input tax), PKR' }).fill('180')
     await qa.getByRole('button', { name: 'Save', exact: true }).click()
@@ -116,9 +123,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     await openAs(page, 'admin', '/money/expenses')
     const qa = page.getByTestId('quick-add')
     await qa.getByRole('textbox', { name: 'Amount, PKR' }).fill(String(amt))
-    await qa.getByRole('combobox', { name: 'More categories' }).selectOption({ label: 'Salaries' }).catch(async () => {
-      await qa.getByRole('button', { name: 'Salaries', exact: true }).click()
-    })
+    await pickCategory(qa, 'Salaries')
     await qa.getByLabel('Date paid').fill(paidOn)
     await expect(page.getByTestId('quick-for-month')).toContainText('This bill is for')
     await expect(page.getByTestId('quick-for-month').getByRole('combobox')).toHaveValue(last)
@@ -158,7 +163,7 @@ test.describe('expense gaps (redesign phase 1, 0087)', () => {
     // a cash expense through quick add
     const qa = page.getByTestId('quick-add')
     await qa.getByRole('textbox', { name: 'Amount, PKR' }).fill('1200')
-    await qa.getByRole('combobox', { name: 'More categories' }).selectOption({ label: 'Courier & postage' }).catch(() => qa.getByRole('button', { name: 'Courier & postage' }).click())
+    await pickCategory(qa, 'Courier & postage')
     await qa.getByRole('button', { name: 'Cash' }).click()
     await qa.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(qa.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue('')
