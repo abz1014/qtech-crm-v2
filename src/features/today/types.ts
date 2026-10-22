@@ -129,7 +129,7 @@ export interface LegFact {
    * Imported from the old CRM (orders.legacy_source is set). Owner decision 2026-10-22 (1b): its order and invoicing tasks are
    * not today's work until the one-off "Review imported" (phase 2) says the order is still live, because the imported invoices
    * are not linked to their orders yet (so "still to invoice" is not true). They sit in Today's grey "Imported, to review" fold,
-   * never counted. A late payment on an invoice is not one of them: it stays.
+   * never counted. A late payment on a v2 order is not one of them: it stays (on an imported order it waits in the fold, with its amount).
    */
   legacy?: boolean
 }
@@ -162,7 +162,7 @@ export interface OrderFact {
    * Imported from the old CRM (orders.legacy_source is set). Owner decision 2026-10-22 (1b): its order and invoicing tasks are
    * not today's work until the one-off "Review imported" (phase 2) says the order is still live, because the imported invoices
    * are not linked to their orders yet (so "still to invoice" is not true). They sit in Today's grey "Imported, to review" fold,
-   * never counted. A late payment on an invoice is not one of them: it stays.
+   * never counted. A late payment on a v2 order is not one of them: it stays (on an imported order it waits in the fold, with its amount).
    */
   legacy?: boolean
 }
@@ -179,6 +179,8 @@ export interface ReceivableFact {
   isOverdue: boolean
   lastRemindedOn: string | null
   reminderCount: number
+  /** The order was imported from the old CRM (owner decision 2026-10-22, 1): its late payment waits in the Imported fold, with its amount. v2 orders: false or absent. */
+  legacy?: boolean
 }
 
 export interface MonthEndFact {
@@ -340,6 +342,8 @@ export interface TodayItem {
   number: number
   /** About an order imported from the old CRM (OrderFact.legacy): listed in the "Imported, to review" fold, never counted. */
   imported?: boolean
+  /** Money still owed, on a payment_overdue item only (the Imported fold header sums it). */
+  amount?: number
 }
 
 export interface TodayView {
