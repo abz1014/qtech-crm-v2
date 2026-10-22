@@ -33,6 +33,7 @@ import {
 } from '@/features/rfqs/lib'
 import { fillRfqRef, firstQtyProblem, MAX_QTY } from '@/features/rfqs/lib/intakeModel'
 import { ItemRows, PastedPanel, PasteZone, type PastedBlock } from '@/features/rfqs/ItemsEditor'
+import { classifyDoc, KIND_LABEL, NOT_AN_ENQUIRY, type DocKind } from '@/lib/docread/docKind'
 import { asParseResult, parseEnquiry } from '@/lib/docread/enquiryParse'
 import type { SenderHint } from '@/features/companies/api'
 import { PdfPickButton, SenderSuggestion } from '@/features/rfqs/PdfIntake'
@@ -167,6 +168,9 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   const [isPriority, setIsPriority] = useState(false)
   const [items, setItems] = useState<DraftItem[]>([])
   const [pasted, setPasted] = useState<PastedBlock | null>(null)
+  // A paste or PDF that is not an enquiry (a purchase order, a brochure, our own quotation) is held here, not read into items; the
+  // person can still read it as an enquiry (nothing is dropped).
+  const [heldDoc, setHeldDoc] = useState<{ text: string; from: 'pdf' | 'photo' | 'paste'; kind: DocKind; reasons: string[] } | null>(null)
   const [focusKey, setFocusKey] = useState<string | null>(null)
   // Once the paste is split into items, the paste box and "Choose PDF or photo" wait behind one "+ Paste more" (owner audit N3).
   const [pasteMore, setPasteMore] = useState(false)
@@ -258,7 +262,13 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   const filled = useRef({ customerRef, dueOn })
   filled.current = { customerRef, dueOn }
   const takePaste = useCallback(
-    (text: string, from: 'pdf' | 'photo' | 'paste' = 'paste') => {
+    (text: string, from: 'pdf' | 'photo' | 'paste' = 'paste', anyway = false) => {
+      const kind = classifyDoc(text)
+      if (!anyway && NOT_AN_ENQUIRY.includes(kind.kind)) {
+        setHeldDoc({ text, from, kind: kind.kind, reasons: kind.reasons })
+        return
+      }
+      setHeldDoc(null)
       const read = parseEnquiry(text)
       const result = asParseResult(read)
       setPasted({ result })
@@ -972,6 +982,20 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                   <h2 id="h-items" className="text-lg font-semibold tracking-snug">Items</h2>
                   <p className="text-sm text-fg-muted">{pasted ? 'Split from the pasted text' : 'Paste once. We split it.'}</p>
                 </div>
+                {heldDoc ? (
+                  <Banner
+                    tone="warning"
+                    className="text-base"
+                    title={`This looks like ${KIND_LABEL[heldDoc.kind]}, not an enquiry.`}
+                    action={
+                      <Button size="lg" onClick={() => takePaste(heldDoc.text, heldDoc.from, true)}>
+                        Read as an enquiry anyway
+                      </Button>
+                    }
+                  >
+                    No items were added. It looked like this because: {heldDoc.reasons.join('; ')}.
+                  </Banner>
+                ) : null}
                 {pasted ? <PastedPanel block={pasted} /> : null}
                 {items.length > 0 ? (
                   <ItemRows
