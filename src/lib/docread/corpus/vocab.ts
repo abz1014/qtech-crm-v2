@@ -1,5 +1,5 @@
 // Fictional vocabulary for the reader's corpus: customers, people, suppliers, brands and parts. Every company, person, brand,
-// address, phone number and part number is invented (part numbers only follow the SHAPES real catalogues use: "6ES7953-8LM31-0AA0",
+// address, phone number and part number is invented (part numbers only follow the SHAPES real catalogues use: "6ES7954-8LM31-0AA0",
 // "FX3U-64M", "P830B4417"). Nothing here comes from a real customer file.
 
 import type { Rng } from './rng'

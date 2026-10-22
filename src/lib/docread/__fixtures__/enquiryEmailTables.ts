@@ -40,7 +40,7 @@ const ROWS: Array<[string, number, string]> = [
 ]
 
 const PARTS: Array<[string, number, string]> = [
-  ['MEMMORY CARD 6ES7953-8LM31-0AA0-01', 6, 'EA'],
+  ['MEMMORY CARD 6ES7954-8LM31-0AA0-01', 6, 'EA'],
   ['DIGITAL INPUT MODULE 6ES7521-1BL00-0AB0-01', 2, 'EA'],
   ['FRONT CONNECTOR 6ES7592-1AM00-0XB0-01', 4, 'EA'],
   ['CABLE PROFIBUS 6XV1830-0EH10', 100, 'MTR'],
@@ -52,38 +52,38 @@ const pad = (s: string, n: number) => s + ' '.repeat(Math.max(3, n - s.length))
 export const ENQUIRY_EMAIL_TABLES: EnquiryCase[] = [
   {
     name: 'Outlook copy, tab-separated rows with no header, ref at the end of the subject',
-    text: `${header('RFQ FOR THE ELECTRONICS ITEMS REQUIRED 482917')}
+    text: `${header('RFQ FOR THE ELECTRONICS ITEMS REQUIRED 735216')}
 ${ROWS.map(([d, q, u]) => `${d}\t${q}\t${u}`).join('\n')}
 ${signature}`,
     items: ROWS.map(([d, q, u]) => i(d, q, u)),
-    ref: '482917',
+    ref: '735216',
     company: { name: 'Example Mills Limited' },
   },
   {
     name: 'Outlook plain text, the same rows lined up with spaces',
-    text: `${header('RFQ FOR THE ELECTRONICS ITEMS REQUIRED 482917')}
+    text: `${header('RFQ FOR THE ELECTRONICS ITEMS REQUIRED 735216')}
 ${ROWS.map(([d, q, u]) => `${pad(d, 44)}${pad(String(q), 8)}${u}`).join('\n')}
 ${signature}`,
     items: ROWS.map(([d, q, u]) => i(d, q, u)),
-    ref: '482917',
+    ref: '735216',
     company: { name: 'Example Mills Limited' },
   },
   {
     name: 'Outlook copy as it reaches the clipboard on Windows: CRLF, a trailing tab, no-break spaces',
-    text: `${header('RFQ FOR THE ELECTRONICS ITEMS REQUIRED 482917')}
+    text: `${header('RFQ FOR THE ELECTRONICS ITEMS REQUIRED 735216')}
 ${ROWS.map(([d, q, u]) => `${d.replace(/ /g, ' ')}\t${q}\t${u}\t`).join('\r\n')}
 ${signature}`.replace(/\n/g, '\r\n').replace(/\r\r/g, '\r'),
     items: ROWS.map(([d, q, u]) => i(d, q, u)),
-    ref: '482917',
+    ref: '735216',
     company: { name: 'Example Mills Limited' },
   },
   {
     name: 'The cells collapsed to single spaces by the mail client: "desc 12 EA"',
-    text: `${header('RFQ FOR THE ELECTRONICS ITEMS REQUIRED 482917')}
+    text: `${header('RFQ FOR THE ELECTRONICS ITEMS REQUIRED 735216')}
 ${ROWS.map(([d, q, u]) => `${d} ${q} ${u}`).join('\n')}
 ${signature}`,
     items: ROWS.map(([d, q, u]) => i(d, q, u)),
-    ref: '482917',
+    ref: '735216',
     company: { name: 'Example Mills Limited' },
   },
   {

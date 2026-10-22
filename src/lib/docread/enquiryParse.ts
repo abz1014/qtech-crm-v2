@@ -384,7 +384,7 @@ function cleanRef(v: string): string | null {
 }
 
 /**
- * A subject line that names an enquiry but carries its number without a label: "RFQ FOR THE ELECTRONICS ITEMS REQUIRED 482917",
+ * A subject line that names an enquiry but carries its number without a label: "RFQ FOR THE ELECTRONICS ITEMS REQUIRED 735216",
  * "RFQ PLC SPARES EML-RFQ-2210", "Enquiry 2210-B for PLC spares". The code right after the word, else the last code on the line.
  */
 function subjectRef(line: string): RefHit | null {

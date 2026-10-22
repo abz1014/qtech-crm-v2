@@ -638,7 +638,7 @@ test.describe('a screenshot on a phone (375)', () => {
     await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue(/^10\b/)
     await expect(page.getByRole('textbox', { name: 'Description of item 8' })).toHaveValue('FUSE GLASS 5X20 2A-01')
     await expect(page.getByRole('textbox', { name: 'Quantity of item 8' })).toHaveValue(/^200\b/)
-    await expect(page.getByRole('textbox', { name: 'Customer reference' })).toHaveValue('482917')
+    await expect(page.getByRole('textbox', { name: 'Customer reference' })).toHaveValue('735216')
     await review(page, 'intake-photo-375')
   })
 })
