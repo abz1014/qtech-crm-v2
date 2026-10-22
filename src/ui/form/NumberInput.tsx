@@ -1,6 +1,6 @@
-import { forwardRef, useEffect, useLayoutEffect, useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react'
+import { forwardRef, useEffect, useId, useLayoutEffect, useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { formatAmount, parseAmount } from '@/lib/number'
+import { amountProblem, formatAmount, parseAmount } from '@/lib/number'
 import { controlClass, useControlProps } from '@/ui/form/fieldContext'
 import { Adorned } from '@/ui/form/TextField'
 
@@ -51,7 +51,13 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(functi
     setText(formatAmount(value, decimals))
   }, [value, decimals, focused])
 
+  // HW-1: text that is not read as an amount ("12,3456", "PKR 1,200/-", 22 digits) is refused, and says why once the person
+  // leaves the box, instead of being stored as some other number.
+  const problem = focused ? null : amountProblem(text)
+  const problemId = `${useId()}-problem`
+
   return (
+    <>
     <Adorned prefix={prefix} suffix={suffix}>
       <input
         ref={node => {
@@ -64,6 +70,9 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(functi
         autoComplete="off"
         {...rest}
         {...a11y}
+        {...(problem
+          ? { 'aria-invalid': true, 'aria-describedby': [a11y['aria-describedby'], problemId].filter(Boolean).join(' ') }
+          : {})}
         value={text}
         onFocus={e => {
           setFocused(true)
@@ -93,5 +102,11 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(functi
         )}
       />
     </Adorned>
+    {problem ? (
+      <p id={problemId} role="alert" className="mt-1 text-sm text-tone-danger-fg">
+        {problem}
+      </p>
+    ) : null}
+    </>
   )
 })

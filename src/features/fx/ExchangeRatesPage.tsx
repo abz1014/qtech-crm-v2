@@ -24,7 +24,7 @@ import { Panel } from '@/features/companies/CompanyParts'
 import { useFxLatest } from '@/features/rfqs/hooks'
 import { useFxHistory, useFxLastAutoRun, useSetFxRate } from '@/features/fx/hooks'
 import { ratesStatusLine } from '@/features/settings/ratesModel'
-import { ageText, autoRunStamp, bandDetail, buildRateRows, rateCardLine, sourceText, unusableWarning, type RateRow } from '@/features/fx/ratesModel'
+import { ageText, autoRunStamp, bandDetail, buildRateRows, manualRateProblem, rateCardLine, sourceText, unusableWarning, type RateRow } from '@/features/fx/ratesModel'
 
 /*
  * Settings > Exchange rates (R15). Open to the whole team: any staff member may enter today's rate by hand (fx_rates RLS allows
@@ -240,7 +240,9 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
   const history = useFxHistory(currency)
   const lastAuto = history.data?.find(h => h.source === 'auto')
   const rate = parseAmount(rateText)
-  const invalid = rateText.trim() !== '' && (rate === null || rate <= 0)
+  const last = rows.find(r => r.currency === currency)?.ratePkr ?? null
+  const check = manualRateProblem({ text: rateText, rate, asOf, today: businessToday(), last })
+  const blocked = rate === null || check.error !== null
   const rateRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -252,7 +254,7 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
   }, [focusTick])
 
   const submit = async () => {
-    if (rate === null || rate <= 0) return
+    if (rate === null || blocked) return
     try {
       await save.mutateAsync({ currency, ratePkr: rate, asOf: asOf || undefined })
       toast({ title: 'Rate saved', body: `${currency} ${formatRate(rate)} for ${formatDay(asOf)}`, tone: 'success' })
@@ -275,18 +277,22 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
           <Field label="Currency" help={lastAuto ? `Last automatic: ${formatRate(lastAuto.ratePkr)} on ${shortDay(lastAuto.asOf)}` : undefined}>
             <Select value={currency} onChange={e => onCurrency(e.target.value)} options={rows.map(r => ({ value: r.currency, label: r.currency }))} />
           </Field>
-          <Field label="Rate, PKR for 1 unit" help="For example the bank's TT rate." error={invalid ? 'Enter a rate above zero, for example 281.35.' : undefined}>
+          <Field
+            label="Rate, PKR for 1 unit"
+            help={check.warning ?? "For example the bank's TT rate."}
+            error={check.field === 'rate' ? (check.error ?? undefined) : undefined}
+          >
             <TextField ref={rateRef} inputMode="decimal" className="num text-right" value={rateText} onChange={e => setRateText(e.target.value)} placeholder="0.00" autoComplete="off" />
           </Field>
-          <Field label="As of">
+          <Field label="As of" error={check.field === 'asOf' ? (check.error ?? undefined) : undefined}>
             <DateInput value={asOf} onChange={setAsOf} />
           </Field>
           <Button type="submit" variant="primary" className="justify-self-start" busy={save.isPending}
             busyLabel="Saving"
             // the screen's one green button stays green; until a rate is typed it is aria-disabled and does nothing
-            aria-disabled={rate === null || rate <= 0 || undefined}
+            aria-disabled={blocked || undefined}
             onClick={e => {
-              if (rate === null || rate <= 0) e.preventDefault()
+              if (blocked) e.preventDefault()
             }}
           >
             Save rate
