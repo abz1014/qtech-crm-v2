@@ -86,6 +86,9 @@ export function fixOcrWord(text: string): string {
   t = t.replace(/^(DN|PN|NH)([0-9OSs]{2,4})(?=$|[^A-Za-z0-9])/, (_, a: string, b: string) => a + b.replace(/[Oo]/g, '0').replace(/[Ss]/g, '5'))
   t = t.replace(/^(?:S5|5S|\$5|\$S|55)(3\d\d)/, 'SS$1')
   if (/^Mode[!|1l]$/.test(t)) t = 'Model'
+  // Unit words with one letter misread: "Picces", "Pleces", "MIR", "Nas".
+  const unit = /^(P[il1][ec]c[ec]s|P[il1]eces|Pi[ec]ccs)$/.test(t) ? 'Pieces' : /^(?:P[il1][ec]c[ec]s|P[il1]eces)$/i.test(t) ? 'pieces' : /^M[I1l]R(S?)$/.test(t) ? `MTR${t.endsWith('S') ? 'S' : ''}` : null
+  if (unit) t = unit
   // A date with the month in letters ("19-OCT-26", "0CT" read for OCT): the month, not a code.
   t = t.replace(/^(\d{1,2}[-./]?)0(CT)([-./]?\d{2,4}[.,]?)$/i, '$1O$2$3')
   const date = /^\d{1,2}[-./]?(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*[-./]?\d{2,4}[.,]?$/i.test(t)
@@ -271,6 +274,18 @@ export function wordsToRuns(lines: readonly OcrLine[], typical: number | null = 
     const size = lineSize(line, typical)
     let last: TextRun | null = null
     const keep = new Map(lineWords(line).map(k => [k.word, k.text]))
+    // The line's own baseline from its words' bottoms, for when the engine's is unusable: a robust slope (Theil-Sen) and the
+    // lower third of the bottoms (letters with a descender, "y" or ",", sit lower), so one line's words keep one baseline.
+    const pts = line.words.filter(w => keep.has(w)).map(w => ({ x: (w.bbox.x0 + w.bbox.x1) / 2, y: w.bbox.y1 }))
+    let fit: ((x: number) => number) | null = null
+    if (pts.length >= 3) {
+      const slopes: number[] = []
+      for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) if (Math.abs(pts[j]!.x - pts[i]!.x) > size) slopes.push((pts[j]!.y - pts[i]!.y) / (pts[j]!.x - pts[i]!.x))
+      const slope = Math.max(-0.1, Math.min(0.1, median(slopes) ?? 0))
+      const icpt = pts.map(p => p.y - slope * p.x).sort((a, b) => a - b)
+      const base = icpt[Math.floor((icpt.length - 1) / 3)] as number
+      fit = x => base + slope * x
+    }
     for (const w of line.words) {
       const text = keep.get(w) ?? null
       if (text === null) {
@@ -278,7 +293,9 @@ export function wordsToRuns(lines: readonly OcrLine[], typical: number | null = 
         continue
       }
       const cx = (w.bbox.x0 + w.bbox.x1) / 2
-      last = { str: text, x: w.bbox.x0, y: baselineAt(line, cx, w.bbox.y1, size), w: Math.max(1, w.bbox.x1 - w.bbox.x0), size }
+      // A word whose bottom is far from the line's fitted baseline (a lone digit, a mark) keeps its own place.
+      const fitted = fit && Math.abs(fit(cx) - w.bbox.y1) < 0.5 * size ? fit(cx) : null
+      last = { str: text, x: w.bbox.x0, y: fitted ?? baselineAt(line, cx, w.bbox.y1, size), w: Math.max(1, w.bbox.x1 - w.bbox.x0), size }
       runs.push(last)
     }
   }
@@ -308,6 +325,11 @@ function applyRules(runs: TextRun[], rules: TableRules): void {
     bands.set(key, [...(bands.get(key) ?? []), r])
   }
   for (const band of bands.values()) {
+    // A band holding two lines of a wrapped cell (tight line spacing) is not one line: its words keep their own baselines,
+    // or the two lines' words would be read in one, interleaved ("CYLINDER83DWITHTEST...").
+    // (Two words one above the other: their x ranges overlap and their baselines differ.)
+    const stacked = band.some(a => band.some(b => a !== b && Math.abs(a.y - b.y) > 0.4 * a.size && overlap(a.x, a.x + a.w, b.x, b.x + b.w) > 0))
+    if (stacked) continue
     const y = median(band.map(r => r.y)) as number
     for (const r of band) r.y = y
   }

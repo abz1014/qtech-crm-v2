@@ -114,6 +114,20 @@ export function dueChipLabel(daysToDue: number | null | undefined, isOverdue: bo
   return dueWord(Math.max(0, daysToDue))
 }
 
+/**
+ * The quotation due date needs attention (grade-B R7): overdue, or two days or less away. Only then is it orange (the tile) and a
+ * chip; further off it is plain text.
+ */
+export function dueIsUrgent(daysToDue: number | null | undefined, isOverdue: boolean): boolean {
+  if (isOverdue) return true
+  return daysToDue !== null && daysToDue !== undefined && daysToDue <= 2
+}
+
+/** Customer refs like "RFF/PUR/261/1": the places a long one may break on a narrow phone (after each "/", "-" or "_"). */
+export function refBreaks(ref: string): string[] {
+  return ref.split(/(?<=[/_-])/)
+}
+
 /** The label for a bid-due sub-line: "In 4 days", "Tomorrow", "Today", "3 days ago". */
 export function dueSubLabel(daysToDue: number | null | undefined): string | null {
   if (daysToDue === null || daysToDue === undefined) return null

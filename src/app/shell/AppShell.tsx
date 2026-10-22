@@ -1,3 +1,4 @@
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { navItemForPath, type NavKey } from '@/app/navConfig'
@@ -12,10 +13,18 @@ import { PwaPrompts } from '@/app/shell/PwaPrompts'
 import { CaptureProvider } from '@/app/capture/CaptureProvider'
 import { useCapture } from '@/app/capture/useCapture'
 import { TopBar } from '@/app/shell/TopBar'
-import { useNavCounts } from '@/app/shell/useNavCounts'
+import type { NavCounts } from '@/app/shell/useNavCounts'
+import { usePageSettled } from '@/app/usePageSettled'
+import { markContentDrawn } from '@/lib/afterContent'
 import { NavCountsContext } from '@/app/shell/navCountsContext'
 import { useRouteFocus } from '@/app/shell/useRouteFocus'
 import { HelpHost } from '@/features/help/HelpHost'
+
+/*
+ * The top bar's counts read the whole Today list (a dozen requests). They load, with the Today rules, once the page has its
+ * data (perf/lcp). A failed download only means no numbers, never a broken shell.
+ */
+const NavCountsSource = lazy(() => import('@/app/shell/useNavCounts').catch(() => ({ default: () => null })))
 
 interface AppShellProps {
   /** Counts beside the destinations. Today and RFQs are read from the shared cache; a value passed here wins. */
@@ -46,8 +55,12 @@ export function AppShell({ counts }: AppShellProps) {
 }
 
 function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Record<NavKey, number>> }) {
-  const nav = useNavCounts(user)
+  const [nav, setNav] = useState<{ counts: NavCounts; ready: boolean }>({ counts: {}, ready: false })
+  const settled = usePageSettled()
   const counts = { ...nav.counts, ...given }
+  useEffect(() => {
+    if (settled) markContentDrawn()
+  }, [settled])
   const palette = usePalette()
   const { openCapture } = useCapture()
   useSearchPaletteSource()
@@ -77,6 +90,11 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
       </main>
       <BottomTabs role={user.role} counts={counts} />
       <HelpHost />
+      {settled ? (
+        <Suspense fallback={null}>
+          <NavCountsSource user={user} onCounts={setNav} />
+        </Suspense>
+      ) : null}
     </div>
   )
 }

@@ -12,6 +12,6 @@ related: snooze, whatsapp-or-email
 4. Tap [Open in WhatsApp] or [Open in email], press Send there, then tap [Mark chased].
 5. The row moves to [Waiting] and comes back on its date if nobody answers.
 
-Tip: [Copy and mark chased] copies the message and marks it in one tap. The tabs [Quotes] and [Suppliers] show one kind of work each.
+Tip: [Copy and mark chased] copies and marks in one tap. The tabs [Quotations], [Suppliers] and [Money] each show one kind of work.
 
 Safe to try: chased by mistake? Tap [Undo] on the message at the bottom.

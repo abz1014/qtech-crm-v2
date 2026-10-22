@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Banknote, CalendarCheck, Calculator, ChevronDown, ChevronRight, FileCheck, HardHat, Hourglass, Landmark, MessageCircleQuestion, Package, PackageCheck, PackageSearch, Repeat, ReceiptText, Reply, Send, Share2, ShoppingCart, Truck, Users, Wrench, type LucideIcon } from 'lucide-react'
 import { seesPrices, useSession } from '@/app/session'
 import { formatDay } from '@/lib/formatDay'
@@ -12,7 +12,7 @@ import { Skeleton } from '@/ui/Skeleton'
 import { FirstUseState } from '@/features/help/FirstUseState'
 import { HowItWorksCard } from '@/features/help/HowItWorksCard'
 import { useFirstUse } from '@/features/help/useFirstUse'
-import { ContextPane } from '@/features/today/ContextPane'
+import { lazyWithReload } from '@/lib/importWithReload'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import { TargetTile } from '@/features/today/TargetTile'
 import { isFreshChase } from '@/features/today/chaseMemory'
@@ -21,10 +21,19 @@ import { headerDate, waitingLine } from '@/features/today/text'
 import type { Role, RuleKey, TodayItem, TodayTab } from '@/features/today/types'
 
 /*
+ * The context pane (what to do about an item: the chase text, the numbers, the buttons) is its own download (perf/lcp): on a
+ * phone it opens on a tap, so the list does not wait for it. A wide screen shows it at once, so there it starts downloading
+ * with the page.
+ */
+const loadContextPane = () => import('@/features/today/ContextPane')
+const ContextPane = lazyWithReload(() => loadContextPane().then(m => ({ default: m.ContextPane })))
+if (typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').matches) void loadContextPane().catch(() => {})
+
+/*
  * Today (R11, direction B): a 420px list and a context pane. Groups: overdue or due today, the next 5 days, ready to
  * move, then Waiting (the system's cooldown, dimmed, never in the count of things that need you; collapsed until the person
- * opens it, "Waiting · 5 · next nudge Mon 30 Nov"). On a phone the pane folds into an accordion under the row, and the list comes first: the target tile sits
- * under it. The empty state is the goal state.
+ * opens it, "Waiting · 5 · next nudge Mon 30 Nov"). On a phone the pane folds into an accordion under the row. The target tile sits
+ * under the list at every width (never for an engineer). The empty state is the goal state.
  *
  * Tabs (owner glossary 2026-10-19, short forms): All, Quotes, Suppliers, Money; every count is "needs you". Engineers get no
  * tabs at all: their list is short (their jobs, their goods, the RFQs they own) and one list is easier.
@@ -51,9 +60,9 @@ const ICON: Record<RuleKey, LucideIcon> = {
   job_on_site: PackageCheck,
 }
 
-// The short forms of the glossary's "Quotations" and "Suppliers & delivery", so the four tabs fit the list column in one row on a
-// laptop; below that they wrap (never a sideways scroll).
-const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Quotes', sourcing: 'Suppliers', money: 'Money' }
+// The glossary's "Quotations", and "Suppliers" (the short form of "Suppliers & delivery"), so the four tabs fit the list column in
+// one row on a laptop; below that they wrap (never a sideways scroll).
+const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Quotations', sourcing: 'Suppliers', money: 'Money' }
 const WAITING_OPEN_MAX = 0 // Waiting opens only when the person opens it (R2-08)
 
 /** Whether the person opened or closed the Waiting group, kept for this browser session only (null: not touched, the size decides). */
@@ -145,10 +154,15 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
         {tabs.length > 0 ? (
           <SegmentedControl
             aria-label="Show"
-            className="mt-2 flex-wrap justify-self-start"
+            // One line in the 420 px list at 1366 x 768, even with a 15 px classic scrollbar and two-digit counts (about 360 px
+            // to spare): tighter segments (6 px sides, 4 px to the count, a 4 px count pill), and no count on "All", because the
+            // line above already says how many need you (each fact once). Below that the strip wraps (audit T4).
+            // Measured with Geist 500 at 14 px: 352 px with three two-digit counts. `px-[6px]`, not `px-1.5`: Tailwind 3 never
+            // generated `[&>*]:px-1.5` (the dot), so the segments kept their 12 px sides and Money fell to a second line.
+            className="mt-2 flex-wrap justify-self-start max-md:[&>*]:min-w-[44px] [&>*]:justify-center [&>*]:gap-1 [&>*]:px-[6px] [&_[data-needs-count]]:px-1"
             value={tab}
             onValueChange={v => setTab(v as 'all' | TodayTab)}
-            options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], needs: counts[t] }))}
+            options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], needs: t === 'all' ? undefined : counts[t] }))}
           />
         ) : null}
         <HowItWorksCard userId={user.id} role={user.role} className="mt-2" />
@@ -188,7 +202,9 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                     <Row key={i.key} item={i} today={today} names={data?.names} open={openId === i.key} copied={copied.has(i.key)} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
                         <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
-                          <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
+                          <Suspense fallback={null}>
+                            <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
+                          </Suspense>
                         </div>
                       ) : null}
                     </Row>
@@ -223,7 +239,9 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                     <Row key={i.key} item={i} today={today} names={data?.names} waiting open={openId === i.key} copied={false} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
                         <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
-                          <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
+                          <Suspense fallback={null}>
+                            <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
+                          </Suspense>
                         </div>
                       ) : null}
                     </Row>
@@ -241,20 +259,25 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
     // 768 to 1023 px (a tablet, a narrow window): the list takes two fifths so the pane keeps room; 420 px from 1024.
     <div className="grid min-h-full grid-cols-[minmax(0,1fr)] md:h-full md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:grid-cols-[420px_minmax(0,1fr)]" data-user={name}>
       <div className="flex min-h-0 min-w-0 flex-col border-r bg-surface">
-        {/* The target tile is the foot of the list column: under the list on a phone, pinned at the bottom on desktop. */}
-        <div data-today-list className="min-h-0 min-w-0 flex-1 overflow-x-clip md:overflow-y-auto">{list}</div>
-        {/* An engineer has no target tile: it is PKR amounts (owner decision 2026-10-22, engineers see no prices). */}
-        {seesPrices(user.role) ? (
-          <div className={wide ? 'border-t bg-surface' : 'border-t bg-surface px-4 py-4'}>
-            <TargetTile today={today} className={wide ? undefined : 'rounded border bg-surface'} />
-          </div>
-        ) : null}
+        {/* The target tile is the foot of the list, at every width: it scrolls with the list instead of taking a pinned block
+            of the laptop's first screen from the jobs (audit T2). An engineer gets no tile at all: a target is PKR amounts, and an
+            engineer sees no prices (owner decision 2026-10-22; no request is made). */}
+        <div data-today-list className="min-h-0 min-w-0 flex-1 overflow-x-clip md:overflow-y-auto">
+          {list}
+          {seesPrices(user.role) ? (
+            <div className="border-t bg-surface px-4 py-4">
+              <TargetTile today={today} className="rounded border bg-surface" />
+            </div>
+          ) : null}
+        </div>
       </div>
       {wide ? (
         <div className="min-h-0 overflow-y-auto px-5 py-6 lg:px-8">
           {current && data ? (
             <div className="mx-auto max-w-[860px]">
-              <ContextPane key={current.key} item={current} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} nextItem={nextOf(current.key)} onSelect={setSelected} />
+              <Suspense fallback={null}>
+                <ContextPane key={current.key} item={current} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} nextItem={nextOf(current.key)} onSelect={setSelected} />
+              </Suspense>
             </div>
           ) : query.isPending ? null : (
             <div className="grid h-full place-items-center text-sm text-fg-muted">Select an item to see what to do about it.</div>

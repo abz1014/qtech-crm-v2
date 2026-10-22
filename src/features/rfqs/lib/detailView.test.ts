@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { resolveStatus } from '@/lib/status'
-import { daysSince, dueChipLabel, dueSubLabel, itemCoverage, sentLine, supplierMemoryLine } from './detailView'
+import { daysSince, dueChipLabel, dueIsUrgent, dueSubLabel, itemCoverage, refBreaks, sentLine, supplierMemoryLine } from './detailView'
 
 describe('itemCoverage', () => {
   it('counts the prices when nobody is still to answer; "so far" while somebody is', () => {
@@ -57,6 +57,19 @@ describe('sentLine and dates', () => {
     expect(dueChipLabel(-2, true)).toBe('2 days overdue')
     expect(dueChipLabel(20, false)).toBeNull()
     expect(dueChipLabel(null, false)).toBeNull()
+  })
+  it('the due date is urgent (orange) only when overdue or two days or less away', () => {
+    expect(dueIsUrgent(7, false)).toBe(false)
+    expect(dueIsUrgent(3, false)).toBe(false)
+    expect(dueIsUrgent(2, false)).toBe(true)
+    expect(dueIsUrgent(0, false)).toBe(true)
+    expect(dueIsUrgent(-1, true)).toBe(true)
+    expect(dueIsUrgent(null, false)).toBe(false)
+  })
+  it('a long customer ref breaks after each separator', () => {
+    expect(refBreaks('RFF/PUR/261/1')).toEqual(['RFF/', 'PUR/', '261/', '1'])
+    expect(refBreaks('KRS-MM-0457')).toEqual(['KRS-', 'MM-', '0457'])
+    expect(refBreaks('PO123')).toEqual(['PO123'])
     expect(dueSubLabel(4)).toBe('In 4 days')
     expect(dueSubLabel(0)).toBe('Today')
     expect(dueSubLabel(-3)).toBe('3 days ago')

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
-import { Upload } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import { acceptLabel, DEFAULT_ACCEPT, DEFAULT_MAX_BYTES, formatBytes, intakeFiles, type AddedFile } from '@/lib/fileIntake'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
@@ -14,6 +14,8 @@ import { Kbd } from '@/ui/Kbd'
  * with an `error` so a FileRow can say why, nothing is dropped silently.
  * States: resting, drag over (brand-green dashed edge, "Release to add 2 files").
  * `onAdd` receives every file that came in, good or bad.
+ * The keyboard hint ("or paste with Ctrl V") is hidden on a touch screen (pointer: coarse), which has no keys to press.
+ * `slim`: one "Add file" row instead of the zone (an empty side panel); drop and paste still work on it.
  */
 interface FileDropProps {
   onAdd: (files: AddedFile[]) => void
@@ -22,6 +24,8 @@ interface FileDropProps {
   multiple?: boolean
   /** Listen for Cmd/Ctrl+V on the whole page. Default on. */
   pasteAnywhere?: boolean
+  /** One "Add file" row instead of the drop zone (drop and paste still work). */
+  slim?: boolean
   className?: string
 }
 
@@ -31,6 +35,7 @@ export function FileDrop({
   accept = DEFAULT_ACCEPT,
   multiple = true,
   pasteAnywhere = true,
+  slim = false,
   className,
 }: FileDropProps) {
   const input = useRef<HTMLInputElement>(null)
@@ -82,6 +87,61 @@ export function FileDrop({
     void take(e.dataTransfer.files)
   }
 
+  const picker = (
+    <input
+      ref={input}
+      type="file"
+      multiple={multiple}
+      accept={accept.join(',')}
+      tabIndex={-1}
+      aria-label="Choose files"
+      className="sr-only"
+      onChange={e => {
+        void take(e.target.files)
+        e.target.value = ''
+      }}
+    />
+  )
+  const pasteKeys = (
+    <>
+      <Kbd>{isMac ? '⌘' : 'Ctrl'}</Kbd>
+      <Kbd>V</Kbd>
+    </>
+  )
+
+  if (slim) {
+    return (
+      <div
+        ref={zone}
+        role="group"
+        aria-label="Add files"
+        onDragEnter={onDragEnter}
+        onDragOver={e => e.preventDefault()}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        className={cn(
+          'flex min-h-touch flex-wrap items-center gap-x-3 gap-y-1 rounded border border-dashed px-2 py-1 text-sm text-fg-muted',
+          over !== null ? 'border-2 border-brand-green bg-surface' : 'border-transparent',
+          className,
+        )}
+      >
+        {over !== null ? (
+          <b className="font-medium text-fg" aria-live="polite">
+            Release to add {over} {over === 1 ? 'file' : 'files'}
+          </b>
+        ) : (
+          <>
+            <Button size="sm" variant="quiet" icon={Plus} onClick={() => input.current?.click()}>
+              Add file
+            </Button>
+            <span className="inline-flex flex-wrap items-center gap-1 [@media(pointer:coarse)]:hidden">or drop it here, or paste with {pasteKeys}</span>
+          </>
+        )}
+        {picker}
+      </div>
+    )
+  }
+
   return (
     <div
       ref={zone}
@@ -125,19 +185,7 @@ export function FileDrop({
           </Button>
         </>
       )}
-      <input
-        ref={input}
-        type="file"
-        multiple={multiple}
-        accept={accept.join(',')}
-        tabIndex={-1}
-        aria-label="Choose files"
-        className="sr-only"
-        onChange={e => {
-          void take(e.target.files)
-          e.target.value = ''
-        }}
-      />
+      {picker}
     </div>
   )
 }

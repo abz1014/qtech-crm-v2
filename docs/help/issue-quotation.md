@@ -8,7 +8,7 @@ related: revise-quotation, mark-won
 ---
 1. On the RFQ, tap the green [Issue quotation].
 2. Check [Unit price, net PKR] for each item. Tap a suggested price or type one.
-3. Check [Validity], [Delivery] and [Payment terms].
+3. Check [Valid until], [Delivery] and [Payment terms].
 4. Tap [Preview PDF] if you want to see it first.
 5. Tap [Issue quotation], then [Share] or [Download PDF], and send it to the customer.
 6. Quoted by phone instead? Tap [More], then [Mark quotation sent].

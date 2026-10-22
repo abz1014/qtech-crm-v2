@@ -6,7 +6,7 @@
 //  - There is no score. Every key behind the order is printed as a count out of a count ("on time 4 of 4 deliveries").
 //  - Evidence cites the order number, the date we placed it and the days to delivery, in the words "delivered after N days".
 //    There is no "Received" step on a leg: a leg goes Placed, then Delivered.
-//  - A supplier with fewer than 3 deliveries is never called proven or late: "Too few to judge", with the counts.
+//  - A supplier with fewer than 3 deliveries is never called proven or often late: just the counts ("2 deliveries, both late").
 //  - The selling price and the spread are for admin and sales only. They are composed only when `showSell` is true AND the row
 //    carries them (the database returns NULL for an engineer, so an engineer's strings can never hold one).
 //  - Prices that are an estimate (a conversion, a difference) are rounded to the nearest 100 PKR and carry the sign "≈".
@@ -251,13 +251,16 @@ export function reliabilityBand(f: Pick<RecordFacts, 'deliveries' | 'onTime'>): 
   return f.onTime * 3 >= f.deliveries * 2 ? 1 : 3
 }
 
-function deliveriesWord(c: number) {
-  return plural(c, 'delivery', 'deliveries')
-}
-
-/** What "Too few to judge" prints: "1 delivery, on time" or "2 deliveries, 1 on time". */
-function fewCounts(f: RecordFacts): string {
-  return `${deliveriesWord(f.deliveries)}, ${f.onTime === f.deliveries ? 'on time' : `${f.onTime} on time`}`
+/**
+ * Fewer than 3 deliveries, in plain words (owner audit N4): "1 delivery, late", "2 deliveries, both late", "2 deliveries, 1 on
+ * time", "2 deliveries, both on time". The number of deliveries is the leading count; this is the rest of the line.
+ */
+function fewRest(f: RecordFacts): string {
+  const word = f.deliveries === 1 ? 'delivery' : 'deliveries'
+  const all = f.deliveries === 1 ? '' : f.deliveries === 2 ? 'both ' : 'all '
+  if (f.onTime >= f.deliveries) return `${word}, ${all}on time`
+  if (f.onTime <= 0) return `${word}, ${all}late`
+  return `${word}, ${f.onTime} on time`
 }
 
 /** The delivery record line. `long` is the opened-row wording; the short one fits a collapsed row. */
@@ -272,8 +275,8 @@ export function recordReason(f: RecordFacts, long: boolean): Reason {
     return reason('record', 'late', parts, 'warn')
   }
   return long
-    ? reason('record', 'few', [t('Too few deliveries to judge ('), n(String(f.deliveries)), t(` ${f.deliveries === 1 ? 'delivery' : 'deliveries'}, ${f.onTime === f.deliveries ? 'on time' : `${f.onTime} on time`})`)])
-    : reason('record', 'few', [t('Too few to judge: '), n(String(f.deliveries)), t(` ${fewCounts(f).replace(/^\d+ /, '')}`)])
+    ? reason('record', 'few', [n(String(f.deliveries)), t(` ${fewRest(f)} (too few to judge)`)])
+    : reason('record', 'few', [n(String(f.deliveries)), t(` ${fewRest(f)}`)])
 }
 
 /** For the float suggestions and the memory line: the same record line from v_supplier_stats columns. Null when nothing was asked. */

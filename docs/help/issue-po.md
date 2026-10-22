@@ -12,4 +12,4 @@ related: goods-delivered
 4. Tap [Issue PO], then send the PDF to the supplier.
 5. Ordered some other way? On the supplier order, tap ⋯ then [Mark placed, no PO].
 
-Tip: Issuing marks the supplier order placed today. Today then reminds you when the goods are late.
+Tip: Issuing marks the supplier order placed today. Today then reminds you when the goods are late. Goods already delivered without a PO? [Issue PO] is under ⋯ on that supplier order.

@@ -65,7 +65,7 @@ export function listText(step: OrderStep, f: OrderFacts): string {
     case 'place':
       return supplier ? `Place the order with ${supplier}` : 'Place the supplier order'
     case 'wait-placing':
-      return supplier ? `Waiting for the PO to ${supplier}` : 'Waiting for the PO to be sent'
+      return supplier ? `Waiting for admin to place the order with ${supplier}` : 'Waiting for admin to place the order'
     case 'plan-commissioning':
       return 'Plan commissioning'
     case 'wait-plan':

@@ -16,10 +16,25 @@ import { attachmentPath, RFQ_FILE_ACCEPT } from '@/features/rfqs/lib'
  * 5 MB or of another type is refused with the reason beside it (FileDrop and FileRow, U07), and HEIC photos are accepted.
  * Files go to the private rfq-files bucket at {rfq_id}/{uuid}.{ext}. Nothing is typed: the name is the file's own.
  *
- *   FE-2  add a file   drop, paste or 1 tap on Choose files. 0 typed. Required: the file. Nothing else.
+ *   FE-2  add a file   drop, paste or 1 tap on Choose files (Add file). 0 typed. Required: the file. Nothing else.
+ *
+ * `slimWhenEmpty` (the RFQ page): with no file yet, the panel is one "Add file" row (grade-A 6 fix 2; grade-B P9 asks the same
+ * of the order page, which can pass it too); drop and paste still land on it. Once there are files, they list above the zone.
  */
 
-export function AttachmentsPanel({ rfqId, orderId, compact = false }: { rfqId?: string; orderId?: string; /** A shorter drop zone and one-line empty text (the RFQ page side column). */ compact?: boolean }) {
+export function AttachmentsPanel({
+  rfqId,
+  orderId,
+  compact = false,
+  slimWhenEmpty = false,
+}: {
+  rfqId?: string
+  orderId?: string
+  /** A shorter drop zone and one-line empty text (the RFQ page side column, the order page). */
+  compact?: boolean
+  /** With no file yet, one "Add file" row instead of the zone (the RFQ page). */
+  slimWhenEmpty?: boolean
+}) {
   // One panel for an RFQ's files and an order's files (R22): give it the RFQ, or the order.
   const parentId = (orderId ?? rfqId) as string
   const rfqAtts = useRfqAttachments(orderId ? undefined : rfqId)
@@ -61,11 +76,13 @@ export function AttachmentsPanel({ rfqId, orderId, compact = false }: { rfqId?: 
   }
 
   const list = atts.data ?? []
+  // Compact and empty: one "Add file" row, no zone and no "No files yet" line (the meta already says "None yet").
+  const slim = slimWhenEmpty && atts.isSuccess && list.length === 0 && refused.length === 0
   return (
     <Panel title="Files" meta={atts.isSuccess ? (list.length === 0 ? 'None yet' : `${list.length} ${list.length === 1 ? 'file' : 'files'}`) : undefined}>
-      <div className="grid gap-3 p-4">
-        <FileDrop onAdd={files => void onAdd(files)} accept={RFQ_FILE_ACCEPT} className={compact ? 'min-h-[72px] py-3' : 'min-h-[132px] py-5'} />
-        <p role="status" aria-live="polite" className="text-xs text-fg-muted empty:hidden">
+      <div className={slim ? 'grid px-3 py-2' : 'grid gap-3 p-4'}>
+        <FileDrop onAdd={files => void onAdd(files)} accept={RFQ_FILE_ACCEPT} slim={slim} className={slim ? undefined : compact ? 'min-h-[72px] py-3' : 'min-h-[132px] py-5'} />
+        <p role="status" aria-live="polite" className="text-sm text-fg-muted empty:hidden">
           {sending > 0 ? `Adding ${sending} ${sending === 1 ? 'file' : 'files'}` : ''}
         </p>
         {refused.length > 0 ? (
@@ -86,7 +103,7 @@ export function AttachmentsPanel({ rfqId, orderId, compact = false }: { rfqId?: 
               Try again
             </button>
           </p>
-        ) : list.length === 0 ? (
+        ) : slim ? null : list.length === 0 ? (
           <p className="text-sm text-fg-muted">{orderId ? 'No files yet. The customer’s PO or a photo from site goes here.' : compact ? 'No files yet.' : 'No files yet. A nameplate photo or the customer’s enquiry PDF goes here, next to the questions.'}</p>
         ) : (
           <ul className="grid gap-2" aria-label={orderId ? 'Files on this order' : 'Files on this RFQ'}>

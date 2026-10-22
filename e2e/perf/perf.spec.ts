@@ -17,6 +17,8 @@ import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../su
  *  3. Request shape: on Today and the RFQ page no data request is made twice, and the request waves are reported.
  */
 const PORT = 9333
+/** The suite's server and Supabase proxy use a throwaway self-signed certificate (scripts/ci/e2e-run.sh); Lighthouse's tab must accept it too. */
+const TLS_ARGS = ['--ignore-certificate-errors']
 const MIN_SCORE = 95
 const summary = (md: string) => {
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${md}\n`)
@@ -67,7 +69,7 @@ test('Lighthouse accessibility is at least 95 on the main screens (desktop and p
   test.setTimeout(900_000)
   const s = await seed()
   const profile = mkdtempSync(join(tmpdir(), 'p04-profile-'))
-  const ctx = await chromium.launchPersistentContext(profile, { args: [`--remote-debugging-port=${PORT}`], baseURL, viewport: { width: 1440, height: 900 } })
+  const ctx = await chromium.launchPersistentContext(profile, { args: [`--remote-debugging-port=${PORT}`, ...TLS_ARGS], ignoreHTTPSErrors: true, baseURL, viewport: { width: 1440, height: 900 } })
   try {
     const page = ctx.pages()[0] ?? (await ctx.newPage())
     await openAs(page, 'admin', '/today')
@@ -125,20 +127,22 @@ test('Lighthouse accessibility is at least 95 on the main screens (desktop and p
  * category on the production build, mobile form factor with its default simulated Slow 4G and 4x CPU slowdown (Lighthouse's own
  * "mobile" preset: 150 ms RTT, 1.6 Mbps), signed in as the admin, one cold load per main screen: the HTTP cache, the service
  * worker and Cache Storage are cleared before each run (storage reset stays off so the session survives). LCP must be at most
- * 2.5 s on every screen; LCP, FCP, TBT and the transferred JS are reported per screen.
+ * 2.5 s on every screen; LCP, FCP, TBT and the transferred JS are reported per screen (PERF-LCP-1, fixed on perf/lcp).
+ *
+ * Served as production serves it (scripts/ci/e2e-run.sh): the app over HTTPS and HTTP/2 with compression and vercel.json's
+ * headers (as Vercel), and the stack behind an HTTPS, HTTP/2 proxy (as Supabase's edge). Lighthouse's simulation models HTTP/1.1
+ * as six connections per origin, each with its own handshake, and HTTP/2 as one, so plain HTTP/1.1 measured something production
+ * never does.
  */
 const MAX_LCP_MS = 2500
 
 type PerfRun = { lhr: { categories: { performance: { score: number | null } }; audits: Record<string, { numericValue?: number; details?: { items?: Array<{ resourceType?: string; transferSize?: number }> } }> } } | undefined
 
 test('Lighthouse mobile (Slow 4G): every main screen paints its largest content within 2.5 s', async ({ baseURL }) => {
-  // Known failure (first measured 2026-10-22: LCP 5.0 to 6.9 s on all seven screens). The table still prints every run; take the
-  // .fail off when the perf/lcp branch brings every screen under 2.5 s (Playwright then says it passed unexpectedly).
-  test.fail(true, 'PERF-LCP-1: owned by perf/lcp')
   test.setTimeout(900_000)
   const s = await seed()
   const profile = mkdtempSync(join(tmpdir(), 'perf-profile-'))
-  const ctx = await chromium.launchPersistentContext(profile, { args: [`--remote-debugging-port=${PORT}`], baseURL, viewport: { width: 412, height: 823 } })
+  const ctx = await chromium.launchPersistentContext(profile, { args: [`--remote-debugging-port=${PORT}`, ...TLS_ARGS], ignoreHTTPSErrors: true, baseURL, viewport: { width: 412, height: 823 } })
   try {
     const page = ctx.pages()[0] ?? (await ctx.newPage())
     await openAs(page, 'admin', '/today')
@@ -172,6 +176,10 @@ test('Lighthouse mobile (Slow 4G): every main screen paints its largest content 
         throttlingMethod: 'simulate',
         screenEmulation: { mobile: true, width: 412, height: 823, deviceScaleFactor: 1.75, disabled: false },
       })
+      // The whole report per screen (open it in https://googlechrome.github.io/lighthouse/viewer/): the request chain and the
+      // LCP element and its phases say what to fix.
+      mkdirSync('test-results/lighthouse', { recursive: true })
+      writeFileSync(`test-results/lighthouse/${name.replaceAll(' ', '-').toLowerCase()}.json`, JSON.stringify(run?.lhr ?? null))
       const a = run?.lhr.audits ?? {}
       const lcp = a['largest-contentful-paint']?.numericValue
       const fcp = a['first-contentful-paint']?.numericValue

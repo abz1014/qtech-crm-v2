@@ -11,6 +11,6 @@ related: issue-po, create-invoice
 3. Type the [Customer PO number] if you have it, and check [Payment terms in days].
 4. Tap [Create order]. The order opens.
 
-Tip: Every order starts from a won RFQ. The customer ordering the same again? Use [Repeat a past order].
+Tip: The customer said no? Tap [Mark lost] instead and pick the reason. Every order starts from a won RFQ. The customer ordering the same again? Use [Repeat a past order].
 
 Safe to try: pressing [Create order] twice never makes two orders.

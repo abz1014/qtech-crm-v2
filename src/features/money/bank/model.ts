@@ -1,4 +1,5 @@
 import { paisaToFixed, toPaisa } from '@/lib/money'
+import { isMonthKey } from '@/features/money/monthKey'
 import { GROUP_LABEL, monthEnd, monthKeyLabel, monthStart, type CategoryGroup } from '@/features/money/expenses/model'
 
 /*
@@ -260,7 +261,7 @@ export function defaultStatementMonth(today: string): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
-export const isMonthKey = (s: string | null): s is string => !!s && /^\d{4}-(0[1-9]|1[0-2])$/.test(s)
+export { isMonthKey }
 
 /** The earliest month a Month-end or bank link may open (nothing in the books is older). */
 export const FIRST_OPENABLE_MONTH = '2000-01'

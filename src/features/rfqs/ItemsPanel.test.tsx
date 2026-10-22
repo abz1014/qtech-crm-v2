@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -97,7 +97,25 @@ const rank = (o: Partial<RankRow>): RankRow =>
     ...o,
   }) as RankRow
 
-function renderPanel(inquiries: InquiryRow[], ranking?: Map<string, RankRow>, role = 'sales') {
+/** A phone's media queries (useMediaQuery reads '(max-width: 767px)'); returns the undo. */
+function asPhone(): () => void {
+  const orig = window.matchMedia
+  window.matchMedia = ((q: string) => ({
+    matches: q === '(max-width: 767px)',
+    media: q,
+    onchange: null,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia
+  return () => {
+    window.matchMedia = orig
+  }
+}
+
+function renderPanel(inquiries: InquiryRow[], ranking?: Map<string, RankRow>, items: RfqItemRow[] = [item], role = 'sales') {
   installFakeDb(() => ({ data: [] }))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
@@ -107,7 +125,7 @@ function renderPanel(inquiries: InquiryRow[], ranking?: Map<string, RankRow>, ro
           <ToastProvider>
             <ItemsPanel
               rfq={rfq}
-              items={[item]}
+              items={items}
               inquiries={inquiries}
               rates={{ USD: { rate: 280, ageDays: 0, staleness: 'fresh' } }}
               fxRows={[]}
@@ -136,14 +154,20 @@ describe('the supplier comparison', () => {
         ['la', rank({ quote_line_id: 'la', rank: 2, pct_above_best: 0, deliveries: 1, on_time: 0, late: 1, reliability_band: 3 })],
       ]),
     )
+    // Rows are cheapest first (UX audit C1); the Recommended mark stays on ABC Traders, now the second row.
     const [first, second] = rows()
-    expect(first).toHaveTextContent('ABC Traders')
-    expect(within(first).getByText('Recommended')).toBeInTheDocument()
-    expect(within(second).queryByText('Recommended')).toBeNull()
+    expect(first).toHaveTextContent('Lahore Flow Systems')
+    expect(within(first).queryByText('Recommended')).toBeNull()
+    expect(within(first).getByText('Cheapest')).toBeInTheDocument() // the tag beside the cheapest price
+    expect(second).toHaveTextContent('ABC Traders')
+    expect(within(second).getByText('Recommended')).toBeInTheDocument()
+    expect(within(second).queryByText('Cheapest')).toBeNull()
     expect(screen.getAllByText('Recommended')).toHaveLength(1) // one mark per item
     expect(screen.queryByText('Lowest price')).toBeNull()
     const cheapest = screen.getByText(/^Cheapest:/).closest('[data-cheapest]') as HTMLElement
     expect(cheapest).toHaveTextContent('Cheapest: Lahore Flow Systems. ABC Traders is only 1.3% dearer and has the better delivery record.')
+    // The reason sits directly under the Recommended row, not below the list.
+    expect(second.nextElementSibling).toBe(cheapest)
   })
 
   it('with the same delivery record, the Cheapest line gives the reason the database used: more orders with us', () => {
@@ -173,6 +197,7 @@ describe('the supplier comparison', () => {
     )
     expect(within(rows()[0]).getByText('Recommended')).toBeInTheDocument()
     expect(screen.queryByText(/^Cheapest:/)).toBeNull()
+    expect(screen.queryByText('Cheapest')).toBeNull() // no tag either
   })
 
   it('without the ranking, the lowest of two comparable prices is the one mark', () => {
@@ -192,6 +217,7 @@ describe('the supplier comparison', () => {
     )
     const first = rows()[0]
     expect(first).toHaveTextContent('≈ PKR 28,000')
+    expect(first.querySelector('[data-own-price]')).toHaveTextContent('USD 100') // the supplier's own figure, in grey under the PKR
     expect(first).toHaveTextContent('3 weeks')
     expect(first).toHaveTextContent('In stock')
     // closed by default: no own-currency figure, no reasons
@@ -204,14 +230,72 @@ describe('the supplier comparison', () => {
     expect(first.querySelector('[data-reasons-for="Lahore Flow Systems"]')).not.toBeNull()
   })
 
-  it('has no Add reply on the item or on a waiting supplier: replies are entered once per supplier, below', () => {
+  it('has no reply or Can\'t quote buttons on an item: the suppliers still to answer are one "Waiting on" line (grade-B R1)', () => {
     const waiting: InquiryRow = { ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0 }
+    const other: InquiryRow = { ...inquiry('x', 'Midlands Valves', []), responseState: 'awaiting', itemsQuoted: 0 }
     renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)]), waiting])
-    expect(screen.queryByRole('button', { name: /Add reply/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Add reply|Enter reply|Can't quote/ })).toBeNull()
     const art = screen.getByRole('article', { name: 'Item 1' })
-    expect(within(art).getByText('Keller GmbH')).toBeInTheDocument()
-    expect(within(art).getByRole('button', { name: "Can't quote, Keller GmbH, item 1" })).toBeInTheDocument()
+    expect(within(art).getByText('Keller GmbH')).toBeInTheDocument() // one supplier: named
     expect(within(art).getByText('1 price so far')).toBeInTheDocument()
+    cleanup()
+    renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)]), waiting, other])
+    const two = screen.getByRole('article', { name: 'Item 1' })
+    expect(two.querySelectorAll('[data-waiting]')).toHaveLength(1)
+    expect(two.querySelector('[data-waiting]')).toHaveTextContent('Waiting on 2 suppliers')
+  })
+
+  it('a price line shows one control, its chevron; the "..." menu waits until the line is open (grade-A 9)', async () => {
+    const user = userEvent.setup()
+    renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)])])
+    const first = rows()[0]
+    expect(within(first).queryByRole('button', { name: 'More for Lahore Flow Systems' })).toBeNull()
+    await user.click(within(first).getByRole('button', { name: 'Show details for Lahore Flow Systems' }))
+    await user.click(within(first).getByRole('button', { name: 'More for Lahore Flow Systems' }))
+    expect(await screen.findByRole('menuitem', { name: 'Edit reply' })).toBeInTheDocument()
+  })
+
+  it('phone: the items are an accordion, the first priced item open, one at a time; an item only waiting is its header', async () => {
+    const undo = asPhone()
+    try {
+      const user = userEvent.setup()
+      const second: RfqItemRow = { ...item, id: 'it-2', number: 2, description: 'Promag 10W flow meter' }
+      const third: RfqItemRow = { ...item, id: 'it-3', number: 3, description: 'VEGAPULS 21 radar' }
+      const waiting: InquiryRow = { ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0 }
+      renderPanel(
+        [inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100), { ...line('lb', 'a', 50), itemId: 'it-2' }]), waiting],
+        undefined,
+        [item, second, third],
+      )
+      const one = screen.getByRole('article', { name: 'Item 1' })
+      const two = screen.getByRole('article', { name: 'Item 2' })
+      const three = screen.getByRole('article', { name: 'Item 3' })
+      expect(within(one).getByRole('button', { name: item.description })).toHaveAttribute('aria-expanded', 'true')
+      expect(within(one).getAllByRole('button', { name: /^Show details for/ })).toHaveLength(1)
+      expect(within(two).getByRole('button', { name: second.description })).toHaveAttribute('aria-expanded', 'false')
+      expect(within(two).queryByRole('button', { name: /^Show details for/ })).toBeNull()
+      // Nobody who replied quoted item 3: it folds too, its warning inside.
+      expect(within(three).getByRole('button', { name: third.description })).toHaveAttribute('aria-expanded', 'false')
+      await user.click(within(two).getByRole('button', { name: second.description }))
+      expect(within(two).getAllByRole('button', { name: /^Show details for/ })).toHaveLength(1)
+      expect(within(one).queryByRole('button', { name: /^Show details for/ })).toBeNull()
+      await user.click(within(two).getByRole('button', { name: second.description }))
+      expect(within(two).queryByRole('button', { name: /^Show details for/ })).toBeNull()
+    } finally {
+      undo()
+    }
+  })
+
+  it('phone, waiting for prices: an item is its header and chip, with no toggle and no "Waiting on" line', () => {
+    const undo = asPhone()
+    try {
+      renderPanel([{ ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0 }])
+      const one = screen.getByRole('article', { name: 'Item 1' })
+      expect(within(one).queryByRole('button')).toBeNull()
+      expect(one.querySelector('[data-waiting]')).toBeNull()
+    } finally {
+      undo()
+    }
   })
 
   it('an engineer sees who quoted, lead time and stock, and no price, rate, mark, detail or row menu (owner decision 2026-10-22)', () => {
@@ -220,6 +304,7 @@ describe('the supplier comparison', () => {
     renderPanel(
       [inquiry('b', 'Lahore Flow Systems', [bare('lb', 'b')]), inquiry('a', 'ABC Traders', [bare('la', 'a')])],
       new Map([['la', rank({ quote_line_id: 'la', rank: 1 })], ['lb', rank({ quote_line_id: 'lb', rank: 2 })]]),
+      undefined,
       'engineer',
     )
     expect(screen.getByRole('heading', { level: 2, name: 'Items and supplier replies' })).toBeInTheDocument()
@@ -234,6 +319,7 @@ describe('the supplier comparison', () => {
     expect(screen.queryByText('Recommended')).toBeNull()
     expect(screen.queryByText('Lowest price')).toBeNull()
     expect(screen.queryByText(/Cheapest/)).toBeNull()
+    expect(document.querySelector('[data-own-price], [data-cheapest-tag], [data-cheapest], [data-price-detail]')).toBeNull()
     expect(screen.queryByRole('button', { name: /Show details for/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /More for/ })).toBeNull()
     expect(screen.queryByRole('button', { name: 'How are prices compared?' })).toBeNull()

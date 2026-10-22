@@ -423,7 +423,16 @@ export function PaletteHost({
   );
   useEffect(() => {
     if (loaded && !paletteFailed) return;
-    const t = loaded ? undefined : window.setTimeout(() => setLoaded(true), 1200);
+    // Preloaded first, then mounted (perf/lcp): a download that fails (no signal yet) never mounts anything; the next open
+    // mounts a fresh attempt inside <LoadBoundary>, whose failure stays local (HE-2).
+    const t = loaded
+      ? undefined
+      : window.setTimeout(() => {
+          loadPalette().then(
+            () => setLoaded(true),
+            () => {},
+          );
+        }, 1200);
     const onKey = (e: KeyboardEvent) => {
       if (
         (e.metaKey || e.ctrlKey) &&

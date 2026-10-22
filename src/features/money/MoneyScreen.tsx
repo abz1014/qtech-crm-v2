@@ -2,20 +2,28 @@ import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-do
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
-import { BankTickPage } from '@/features/money/bank/BankTickPage'
-import { ExpensesPage } from '@/features/money/expenses/ExpensesPage'
-import { GstRegisterPage } from '@/features/money/invoices/GstRegisterPage'
-import { ReceivablesPage } from '@/features/money/payments/ReceivablesPage'
-import { ChecklistPage } from '@/features/money/monthEnd/ChecklistPage'
-import { AgingPage, GstFbrPage, OwePage, PnlPage, TeamPage } from '@/features/money/monthEnd/ReportPages'
+import { lazyWithReload as lazy } from '@/lib/importWithReload'
+import { MONTH_REPORT_KEYS } from '@/features/money/monthEnd/reportList'
 import { defaultMonthEndMonth, isMonthKey } from '@/features/money/monthEnd/model'
 import { businessToday } from '@/lib/dates'
-import { MONTH_REPORT_KEYS } from '@/features/money/monthEnd/reportList'
-import { ExceptionsPage } from '@/features/money/exceptions/ExceptionsPage'
-import { MarginsPage } from '@/features/money/margins/MarginsPage'
-import { InOutPage } from '@/features/money/inOut/InOutPage'
-import { ExpenseReportPage } from '@/features/money/expenseReport/ExpenseReportPage'
-import { EnquiriesReportPage, ReportsPage } from '@/features/reports/ReportsPage'
+
+// One download per page (perf/lcp): opening Who owes us does not bring the month-end reports, the expense sheet and the rest.
+const ReceivablesPage = lazy(() => import('@/features/money/payments/ReceivablesPage').then(m => ({ default: m.ReceivablesPage })))
+const GstRegisterPage = lazy(() => import('@/features/money/invoices/GstRegisterPage').then(m => ({ default: m.GstRegisterPage })))
+const ExpensesPage = lazy(() => import('@/features/money/expenses/ExpensesPage').then(m => ({ default: m.ExpensesPage })))
+const ChecklistPage = lazy(() => import('@/features/money/monthEnd/ChecklistPage').then(m => ({ default: m.ChecklistPage })))
+const BankTickPage = lazy(() => import('@/features/money/bank/BankTickPage').then(m => ({ default: m.BankTickPage })))
+const ExceptionsPage = lazy(() => import('@/features/money/exceptions/ExceptionsPage').then(m => ({ default: m.ExceptionsPage })))
+const MarginsPage = lazy(() => import('@/features/money/margins/MarginsPage').then(m => ({ default: m.MarginsPage })))
+const InOutPage = lazy(() => import('@/features/money/inOut/InOutPage').then(m => ({ default: m.InOutPage })))
+const ReportsPage = lazy(() => import('@/features/reports/ReportsPage').then(m => ({ default: m.ReportsPage })))
+const PnlPage = lazy(() => import('@/features/money/monthEnd/ReportPages').then(m => ({ default: m.PnlPage })))
+const AgingPage = lazy(() => import('@/features/money/monthEnd/ReportPages').then(m => ({ default: m.AgingPage })))
+const OwePage = lazy(() => import('@/features/money/monthEnd/ReportPages').then(m => ({ default: m.OwePage })))
+const GstFbrPage = lazy(() => import('@/features/money/monthEnd/ReportPages').then(m => ({ default: m.GstFbrPage })))
+const TeamPage = lazy(() => import('@/features/money/monthEnd/ReportPages').then(m => ({ default: m.TeamPage })))
+const ExpenseReportPage = lazy(() => import('@/features/money/expenseReport/ExpenseReportPage').then(m => ({ default: m.ExpenseReportPage })))
+const EnquiriesReportPage = lazy(() => import('@/features/reports/ReportsPage').then(m => ({ default: m.EnquiriesReportPage })))
 
 /**
  * Everything under /money (owner decision 2026-10-19: four tabs, two levels).

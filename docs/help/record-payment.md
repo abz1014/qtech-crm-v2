@@ -11,4 +11,4 @@ related: payment-reminder
 3. [Amount received, PKR] starts at the balance due. Change it for a part payment.
 4. Check [Date received] and [Paid via], then tap [Save payment].
 
-Tip: The balance is gross, GST included.
+Tip: The balance is gross, GST included. An advance before the invoice? Open the order, tap [More], then [Record payment].

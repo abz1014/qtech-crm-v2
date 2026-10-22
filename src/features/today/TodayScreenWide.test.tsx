@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { SessionContext } from '@/app/session'
@@ -30,7 +30,8 @@ describe('Today at desktop width', () => {
         </SessionContext.Provider>
       </QueryClientProvider>,
     )
-    expect((await screen.findAllByText('Chase customer for clarifications')).length).toBeGreaterThan(1) // the row and the pane's heading
+    // The row and the pane's heading. The pane is a download of its own (perf/lcp), so it may come a moment after the row.
+    await waitFor(() => expect(screen.getAllByText('Chase customer for clarifications').length).toBeGreaterThan(1))
     expect(await screen.findAllByText(/Ali chased this/)).not.toHaveLength(0)
   })
 })
@@ -74,7 +75,7 @@ describe('Today at desktop width, after a chase', () => {
         </QueryClientProvider>,
       )
       // Nothing clicked: the first item (the chase) is in the pane by default.
-      fireEvent.click(await screen.findByRole('button', { name: /Copy message and mark chased/ }))
+      fireEvent.click(await screen.findByRole('button', { name: /Copy and mark chased/ }))
       // Close the Undo window: the stamp settles, Today re-reads, and the chase joins Waiting.
       fireEvent.click(await screen.findByRole('button', { name: 'Dismiss' }))
       expect(await screen.findByText('Moved to Waiting.')).toBeInTheDocument()

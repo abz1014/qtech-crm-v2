@@ -20,8 +20,9 @@ import type { CompanyHit } from '@/features/companies/api'
  * data into state or context, and it does not decide what to refresh: the invalidation map does.
  */
 
+export const companyListQuery = () => ({ queryKey: qk.companies.list(), queryFn: api.listCompanies })
 export function useCompanyList() {
-  return useQuery({ queryKey: qk.companies.list(), queryFn: api.listCompanies })
+  return useQuery(companyListQuery())
 }
 
 export function useCompany(id: string | undefined) {

@@ -97,20 +97,22 @@ verify-resilience: # weight=120 (workflow verification)
 verify-roles: # weight=240 (every route as every role, the data API per persona, admin-users, data safety)
   - 'e2e/verify-roles/**'
   - 'supabase/functions/admin-users/**'
-hunt-edges: # weight=600 (exploratory edge-case hunt: empty states, forms, offline/slow/Back/keyboard, 1,000+ rows; pinned bugs)
+hunt-edges: # weight=330 (edge-case hunt: empty states and the HE-n bug tests)
   - 'e2e/hunt/edges/a-empty.spec.ts'
+  - 'e2e/hunt/edges/bugs.spec.ts'
+  - 'e2e/hunt/edges/lib.ts'
+hunt-edges-probe: # weight=700 (edge-case hunt probes: forms, offline/slow/Back/keyboard/clock/links, 1,000+ rows)
   - 'e2e/hunt/edges/forms.spec.ts'
   - 'e2e/hunt/edges/states.spec.ts'
   - 'e2e/hunt/edges/zz-big.spec.ts'
-  - 'e2e/hunt/edges/bugs.spec.ts'
   - 'e2e/hunt/edges/lib.ts'
-hunt-edges-sweep-a: # weight=900 (every route x role at 1920, 1366, 768)
+hunt-edges-sweep-a: # weight=220 (every route x role at 1920, 1366, 768)
   - 'e2e/hunt/edges/sweep.spec.ts'
   - 'e2e/hunt/edges/lib.ts'
-hunt-edges-sweep-b: # weight=900 (every route x role at 375, 320, 200% zoom)
+hunt-edges-sweep-b: # weight=270 (every route x role at 375, 320, 200% zoom)
   - 'e2e/hunt/edges/sweep.spec.ts'
   - 'e2e/hunt/edges/lib.ts'
-hunt-edges-clicks: # weight=1100 (click every button and menu item as each role)
+hunt-edges-clicks: # weight=830 (click every button and menu item as each role)
   - 'e2e/hunt/edges/clicks.spec.ts'
   - 'e2e/hunt/edges/lib.ts'
 hunt-workflows: # weight=700 (exploratory bug hunt, branch hunt/workflows: the crawl and the confirmed bugs)

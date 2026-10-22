@@ -63,7 +63,7 @@ export const SALES = {
     quantity: (n: number) => `Quantity of item ${n}`,
     anyDescription: /^Description of item \d+$/,
     found: (items: number, lines: number) => `${items} ${items === 1 ? 'item' : 'items'} found in ${lines} ${lines === 1 ? 'line' : 'lines'}`,
-    saveOnly: 'Save without asking',
+    saveOnly: "Save for later (don't ask suppliers yet)",
     saved: /is saved/,
     /** BUG-SALES-3: a second paste of the same lines (src/features/rfqs/lib/skipRepeats.ts repeatedNote). */
     alreadyThere: (n: number) => `${n} ${n === 1 ? 'line was' : 'lines were'} already there`,
@@ -178,6 +178,8 @@ export const MONEY = {
   order: {
     createInvoice: 'Create invoice',
     recordPayment: 'Record payment',
+    /** The order's More menu: Record payment lives there once nothing is owed (an advance, more than is owed; UX audit P2). */
+    more: /^More( actions)?$/,
   },
   invoice: {
     dialog: 'Create invoice',
@@ -261,7 +263,7 @@ export const BOOKS = {
   },
   margin: {
     panel: 'Margin',
-    provisionalNoExpected: 'Not final: counts only what is paid so far.',
+    provisionalNoExpected: 'Counts only what is paid so far.',
     final: 'Final: costs complete.',
     markComplete: 'Mark costs complete',
     reopenCosts: 'Reopen costs',
@@ -336,7 +338,8 @@ export const RESILIENCE = {
   tryAgain: 'Try again',
   undo: /^Undo/,
   order: {
-    actions: { createInvoice: 'Create invoice', recordPayment: 'Record payment' },
+    /** `more`: the order's More menu, where Record payment lives before an invoice (an advance; UX audit P2). */
+    actions: { createInvoice: 'Create invoice', recordPayment: 'Record payment', more: /^More( actions)?$/ },
     invoiceDialog: 'Create invoice',
     createInvoice: 'Create invoice',
     paymentDialog: 'Record payment',

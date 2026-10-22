@@ -23,7 +23,7 @@ import { useMyJobTitle } from '@/features/orders/hooks'
 /*
  * Goods chase from the order page (O03). It reuses the R16 generator (buildGoodsDraft, so the wording, the reference and the firmer tone
  * after 30 days are the same as on Today) and the R16 stamp (stamp_goods_chase through performChase, with the same 10 s Undo).
- * "Copy message and mark chased" is one tap: copy, stamp, Undo.
+ * "Copy and mark chased" is one tap: copy, stamp, Undo.
  * The message shown is in the channel the person used last (useChannelPreference); the other is a quiet link (ChannelLink, R2-07),
  * never a two-option switch. The Open in WhatsApp / Open in email buttons are the footer's MessageActions, so ChannelLink here has no
  * open slot of its own (it would draw the same button twice).
@@ -149,7 +149,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
                   text={draft.whatsapp.body}
                   email={{ subject: draft.email.subject, body: draft.email.body }}
                   variant={opened ? 'secondary' : 'primary'}
-                  copy={{ label: 'Copy message and mark chased', onCopy: copyAndMark, busy, busyLabel: 'Marking' }}
+                  copy={{ label: 'Copy and mark chased', onCopy: copyAndMark, busy, busyLabel: 'Marking' }}
                   onOpen={() => setOpened(true)}
                   channel={channel}
                   onChannelChange={setChannel}
@@ -162,7 +162,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
               </>
             ) : (
               <Button variant="primary" disabled>
-                Copy message and mark chased
+                Copy and mark chased
               </Button>
             )}
           </>

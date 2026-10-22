@@ -116,6 +116,8 @@ test.describe('focus after an action (2.4.3)', () => {
     await open(page, '/money/expenses')
     await page.getByRole('button', { name: UI.addExpenses }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
+    // The sheet focuses row 1's amount once it has opened: typing before that lands nowhere and no second row is ever added.
+    await expect(page.getByRole('textbox', { name: /^Amount, (row|expense) 1$/ })).toBeFocused()
     await page.keyboard.type('450')
     await page.keyboard.press('Enter')
     await page.keyboard.type('600')

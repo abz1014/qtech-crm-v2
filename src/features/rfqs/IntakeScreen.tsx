@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { ChevronRight, Copy, Save, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Copy, Plus, Save, TriangleAlert } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { copyToClipboard } from '@/lib/clipboard'
@@ -37,7 +37,7 @@ import { asParseResult, parseEnquiry } from '@/lib/docread/enquiryParse'
 import type { SenderHint } from '@/features/companies/api'
 import { PdfPickButton, SenderSuggestion } from '@/features/rfqs/PdfIntake'
 import { isReadableFile, pastedPictures, readDocument } from '@/features/rfqs/lib/readPdf'
-import { DraftOffer, EnquiryCard, FloatedPanel, Hint, StepLine, type Step } from '@/features/rfqs/IntakeParts'
+import { DraftOffer, EnquiryCard, FloatedPanel, SAVE_FOR_LATER, StepBar, StepLine, type BarAction, type Step } from '@/features/rfqs/IntakeParts'
 import { clearIntakeDraft, draftHasContent, draftSummary, loadIntakeDraft, saveIntakeDraft, type IntakeDraft } from '@/features/rfqs/lib/intakeDraftStore'
 import { useLeaveGuard } from '@/features/rfqs/useLeaveGuard'
 import { repeatedNote, skipRepeats } from '@/features/rfqs/lib/skipRepeats'
@@ -55,7 +55,6 @@ import { Field } from '@/ui/form/Field'
 import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { Icon } from '@/ui/Icon'
-import { STATUS } from '@/lib/status'
 import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
 
@@ -74,7 +73,7 @@ import { useToast } from '@/ui/useToast'
  *   interactions pick the company, paste, "Looks right: find suppliers" (new RFQ: 2 actions and 1 paste);
  *                "Write the message", "Copy message for N suppliers" (ask: 2 taps).
  *
- * Nothing is saved to the database until the person copies the message or chooses "Save without asking". What they type is
+ * Nothing is saved to the database until the person copies the message or chooses "Save for later". What they type is
  * kept on this device as they go (lib/intakeDraftStore.ts), and leaving with items on the form asks first (useLeaveGuard.ts).
  * A kept draft is offered on EVERY way in (the New RFQ button, N, the palette, a company page, Paste or photo): "Continue your
  * draft" or "Start new". Until the person answers, nothing is kept over it and nothing the visit arrived with (a company, a pasted
@@ -169,6 +168,8 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   const [items, setItems] = useState<DraftItem[]>([])
   const [pasted, setPasted] = useState<PastedBlock | null>(null)
   const [focusKey, setFocusKey] = useState<string | null>(null)
+  // Once the paste is split into items, the paste box and "Choose PDF or photo" wait behind one "+ Paste more" (owner audit N3).
+  const [pasteMore, setPasteMore] = useState(false)
   const zoneRef = useRef<HTMLTextAreaElement>(null)
   // What the PDF or the paste said, used only where the person has typed nothing: shown as "From the PDF" / "From the paste".
   const [refSource, setRefSource] = useState<string | null>(null)
@@ -316,6 +317,10 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
       }
     })()
   }, [arrival, captured, takePaste])
+
+  useEffect(() => {
+    if (pasteMore) zoneRef.current?.focus()
+  }, [pasteMore])
 
   // A paste made with nothing focused (Ctrl+V anywhere on the page) is handled here; the paste zone handles its own.
   useEffect(() => {
@@ -678,7 +683,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
   }
 
   // ---- text
-  const heading = step === 'floated' ? 'Sent. Paste the message into each supplier’s chat.' : null
+  const heading = step === 'floated' ? (copied ? 'Copied. Paste it into each supplier’s chat.' : 'Marked as sent. Copy the message below.') : null
   const lede =
     step === 'build'
       ? real.length > 0
@@ -696,11 +701,24 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
     ? `${pasted.result.items.length} ${pasted.result.items.length === 1 ? 'item' : 'items'} found in ${pasted.result.lineCount} ${pasted.result.lineCount === 1 ? 'line' : 'lines'}. Edit any cell to fix a split.`
     : 'Edit any cell to change it. Quantity is 1 unless you say otherwise.'
 
+  // An item no ticked supplier is asked about (owner audit N4): name it by its brand, and when a listed supplier carries it, offer
+  // that supplier with a one-tap tick ("Item 3 (VEGA): tick Rhein Automation GmbH?"). Nothing is ticked for the person: only
+  // suppliers who supplied the item before are ticked on their own.
+  const itemTag = (key: string) => {
+    const it = suggestionItems.find(i => i.id === key)
+    return it?.brandName ?? it?.familyName ?? shortItem(key)
+  }
+  const fixFor = (keys: readonly string[]) => suggestions.suppliers.find(s => !tickedSet.has(s.supplierId) && keys.every(k => s.coversItemIds.includes(k)))
+  const noSupplierFix = flaggedKeys.length > 0 && ticked.length > 0 ? (fixFor(flaggedKeys) ?? null) : null
   const noSupplierLine =
     flaggedKeys.length > 0 && ticked.length > 0
       ? flaggedKeys.length === 1
-        ? `Item ${itemNumber(flaggedKeys[0])}, ${shortItem(flaggedKeys[0])}, has no supplier ticked.`
-        : `${flaggedKeys.length} items have no supplier ticked.`
+        ? noSupplierFix
+          ? `Item ${itemNumber(flaggedKeys[0])} (${itemTag(flaggedKeys[0])}): tick ${noSupplierFix.name}?`
+          : `Item ${itemNumber(flaggedKeys[0])} (${itemTag(flaggedKeys[0])}) has no supplier ticked.`
+        : noSupplierFix
+          ? `${flaggedKeys.length} items have no supplier ticked: tick ${noSupplierFix.name}?`
+          : `${flaggedKeys.length} items have no supplier ticked.`
       : null
 
   const errorBanner: ReactNode = error?.already && error.existing ? (
@@ -794,6 +812,48 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
       action: !done && alt ? { label: `Ask them for item ${itemNumber(k)}`, onClick: () => void floatItem(k, alt.supplierId, alt.name), busy: floating === k } : undefined,
     }
   })
+
+  // The step bar of steps 1 and 2. With nobody ticked on step 2, saving for later is the one green button.
+  const saveAction: BarAction = { label: SAVE_FOR_LATER, icon: Save, quiet: true, onClick: whenReady(() => void saveOnly()), busy: busy === 'save', busyLabel: 'Saving' }
+  const stepBar: { summary?: ReactNode; warning?: ReactNode; primary?: BarAction; more: BarAction[] } =
+    step === 'build'
+      ? {
+          summary: ready ? (
+            <>Creates a new RFQ for <strong className="font-medium text-fg">{company?.name}</strong> with <strong className="num font-medium text-fg">{real.length}</strong> {real.length === 1 ? 'item' : 'items'}.</>
+          ) : blocked ? undefined : (
+            why
+          ),
+          warning:
+            !ready && blocked ? (
+              <span role="alert" className="font-medium">
+                {why}
+              </span>
+            ) : undefined,
+          primary: { label: 'Looks right: find suppliers', next: true, onClick: whenReady(() => setStep('suppliers')) },
+          more: [saveAction],
+        }
+      : {
+          summary: (
+            <>
+              <strong className="num font-medium text-fg">{ticked.length}</strong> {ticked.length === 1 ? 'supplier' : 'suppliers'} ticked
+            </>
+          ),
+          warning: noSupplierLine ? (
+            <>
+              <span className="inline-flex min-w-0 items-center gap-[6px]">
+                <Icon icon={TriangleAlert} size="sm" className="shrink-0" />
+                {noSupplierLine}
+              </span>
+              {noSupplierFix ? (
+                <Button className="max-md:h-touch" onClick={() => toggleSupplier(noSupplierFix.supplierId, true)} aria-label={`Tick ${noSupplierFix.name}`}>
+                  Tick
+                </Button>
+              ) : null}
+            </>
+          ) : undefined,
+          primary: ticked.length > 0 ? { label: 'Write the message', next: true, onClick: () => setStep('enquiry') } : saveAction,
+          more: [{ label: 'Back to items', icon: ArrowLeft, onClick: () => setStep('build') }, ...(ticked.length > 0 ? [saveAction] : [])],
+        }
 
   return (
     <div className="mx-auto w-full max-w-[1100px] px-4 pb-12 pt-6 md:px-8">
@@ -924,20 +984,30 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                     focusKey={focusKey}
                   />
                 ) : null}
-                <PasteZone zoneRef={zoneRef} onText={takePaste} onPicture={takePicture} filled={items.length > 0} />
+                {items.length === 0 || pasteMore ? (
+                  <>
+                    <PasteZone zoneRef={zoneRef} onText={takePaste} onPicture={takePicture} filled={items.length > 0} />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <PdfPickButton
+                        label="Choose PDF or photo"
+                        subject="items"
+                        onFile={f => pickedFiles.current.push(f)}
+                        onText={(t, from) => takePaste(t, from)}
+                        onMessage={setPdfNote}
+                      />
+                      {items.length === 0 ? (
+                        <Button variant="quiet" onClick={addBlank}>Add an item by hand</Button>
+                      ) : null}
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <Button variant="quiet" icon={Plus} onClick={() => setPasteMore(true)}>
+                      Paste more
+                    </Button>
+                  </div>
+                )}
                 {pdfNote ? <Banner tone="warning" title={pdfNote} /> : null}
-                <div className="flex flex-wrap items-center gap-2">
-                  <PdfPickButton
-                    label="Choose PDF or photo"
-                    subject="items"
-                    onFile={f => pickedFiles.current.push(f)}
-                    onText={(t, from) => takePaste(t, from)}
-                    onMessage={setPdfNote}
-                  />
-                  {items.length === 0 ? (
-                    <Button variant="quiet" onClick={addBlank}>Add an item by hand</Button>
-                  ) : null}
-                </div>
               </section>
 
               <section aria-label="Optional details" className="grid items-end gap-4 sm:grid-cols-2">
@@ -1019,9 +1089,6 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                   {rfqRef(saved.number)} is saved with {ticked.length} {ticked.length === 1 ? 'supplier' : 'suppliers'} shortlisted. Copy the message again when you send it.
                 </Banner>
               ) : null}
-              <Hint>
-                <b className="font-medium text-fg">Spec lines are blank on purpose.</b> Type what the customer gave you under any item, or leave it. The app never writes a spec for you, and a blank one is fine to send.
-              </Hint>
               <EnquiryCard
                 count={ticked.length}
                 variant={variant}
@@ -1031,21 +1098,31 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
                 subject={draft.subject}
                 body={body}
                 onBody={text => setEdit(e => ({ sig, text: { ...(e.sig === sig ? e.text : {}), [variant]: text } }))}
-                note={saved ? `${rfqRef(saved.number)} is saved. Paste it into each supplier’s chat.` : 'The RFQ number is filled in when you copy. Paste it into each supplier’s chat.'}
                 locked={Boolean(saved)}
-                actions={
-                  <>
-                    <Button variant="primary" icon={Copy} onClick={copyAndFloat} busy={busy === 'copy'} busyLabel="Copying" disabled={ticked.length === 0}>
-                      Copy message for {ticked.length} {ticked.length === 1 ? 'supplier' : 'suppliers'}
-                    </Button>
-                    {saved ? null : <Button onClick={() => setStep('suppliers')}>Back to suppliers</Button>}
-                    <Button variant="quiet" icon={Save} onClick={saveOnly} busy={busy === 'save'} busyLabel="Saving">
-                      Save without asking
-                    </Button>
-                  </>
-                }
               />
               {errorBanner}
+              {/* The actions sit in the sticky step bar, so Copy is above the fold at 1366 however long the message (owner audit N5). */}
+              <StepBar
+                summary={
+                  saved ? (
+                    <><span className="num">{rfqRef(saved.number)}</span> is saved. Copy, then paste it into each supplier’s chat.</>
+                  ) : (
+                    'Copies the message and marks the RFQ as sent to them.'
+                  )
+                }
+                primary={{
+                  label: `Copy message for ${ticked.length} ${ticked.length === 1 ? 'supplier' : 'suppliers'}`,
+                  icon: Copy,
+                  onClick: () => void copyAndFloat(),
+                  busy: busy === 'copy',
+                  busyLabel: 'Copying',
+                  disabled: ticked.length === 0,
+                }}
+                more={[
+                  ...(saved ? [] : [{ label: 'Back to suppliers', icon: ArrowLeft, onClick: () => setStep('suppliers') }]),
+                  { label: SAVE_FOR_LATER, icon: Save, quiet: true, onClick: () => void saveOnly(), busy: busy === 'save', busyLabel: 'Saving' },
+                ]}
+              />
             </>
           ) : null}
 
@@ -1093,58 +1170,7 @@ function IntakeForm({ onAnother }: { onAnother: () => void }) {
           {(step === 'build' && !offer) || step === 'suppliers' ? (
             <>
               {errorBanner}
-              <div
-                role="region"
-                aria-label="Next step"
-                data-sticky-bar
-                className="sticky bottom-3 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 rounded border bg-surface px-4 py-3 shadow-pop"
-              >
-                <p className="m-0 min-w-0 text-sm text-fg-2">
-                  {step === 'build' ? (
-                    ready ? (
-                      <>Creates a new RFQ for <strong className="font-medium text-fg">{company?.name}</strong> with <strong className="num font-medium text-fg">{real.length}</strong> {real.length === 1 ? 'item' : 'items'}.</>
-                    ) : (
-                      <span role={blocked ? 'alert' : undefined} className={blocked ? 'font-medium text-tone-warning-fg' : undefined}>
-                        {why}
-                      </span>
-                    )
-                  ) : (
-                    <>
-                      <strong className="num font-medium text-fg">{ticked.length}</strong> {ticked.length === 1 ? 'supplier' : 'suppliers'} ticked
-                    </>
-                  )}
-                </p>
-                {step === 'suppliers' && noSupplierLine ? (
-                  <span className="inline-flex min-w-0 items-center gap-[6px] text-xs text-tone-warning-fg">
-                    <Icon icon={TriangleAlert} size="sm" />
-                    {noSupplierLine}
-                  </span>
-                ) : null}
-                <span className="flex-1" />
-                <div className="ml-auto flex flex-wrap items-center gap-2">
-                  {step === 'suppliers' ? <Button onClick={() => setStep('build')}>Back to items</Button> : null}
-                  <Button
-                    variant={step === 'suppliers' && ticked.length === 0 ? 'primary' : 'quiet'}
-                    icon={Save}
-                    onClick={whenReady(() => void saveOnly())}
-                    busy={busy === 'save'}
-                    busyLabel="Saving"
-                  >
-                    Save without asking
-                  </Button>
-                  {step === 'build' ? (
-                    <Button variant="primary" onClick={whenReady(() => setStep('suppliers'))}>
-                      Looks right: find suppliers
-                      <Icon icon={ChevronRight} />
-                    </Button>
-                  ) : ticked.length > 0 ? (
-                    <Button variant="primary" onClick={() => setStep('enquiry')}>
-                      Write the message
-                      <Icon icon={ChevronRight} />
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
+              <StepBar {...stepBar} />
             </>
           ) : null}
         </div>
@@ -1197,8 +1223,8 @@ function CustomerChip({ company, contacts, onChange }: { company: Company; conta
         <p className="m-0 text-xs text-fg-muted">{[company.city ?? company.country, contactNote].filter(Boolean).join(' · ')}</p>
       </div>
       <span className="ml-auto" />
-      {/* Identity, not state: a Tag, as on the company page (the company-role chip is hidden in the registry). */}
-      {company.role ? <Tag dashed={company.role === 'prospect'}>{company.role === 'prospect' ? 'New prospect' : STATUS['company-role'][company.role].label}</Tag> : null}
+      {/* A plain "Customer" tag said nothing here (owner audit N3): only a new prospect is worth a mark. */}
+      {company.role === 'prospect' ? <Tag dashed>New prospect</Tag> : null}
       <Button variant="quiet" size="sm" onClick={onChange} aria-label={`Change company, now ${company.name}`}>
         Change
       </Button>

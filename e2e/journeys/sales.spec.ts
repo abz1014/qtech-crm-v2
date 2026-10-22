@@ -29,7 +29,13 @@ import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 const letters = () => Math.random().toString(36).slice(2, 6).replace(/[0-9]/g, c => 'abcdefghij'[Number(c)])
 const dialog = (page: Page) => page.getByRole('dialog')
 const toast = (page: Page, text: string) => page.getByRole('status').filter({ hasText: text })
-const region = (page: Page, name: string) => page.getByRole('region', { name })
+/** A supplier's reply (grade-B R2/R4): "Enter reply" on the supplier in Suppliers asked opens it in a dialog named after them. */
+const reply = async (page: Page, name: string) => {
+  await page.getByRole('button', { name: `Enter reply, ${name}`, exact: true }).click()
+  const dialog = page.getByRole('dialog', { name, exact: true })
+  await expect(dialog).toBeVisible()
+  return dialog
+}
 
 type Co = { id: string; name: string }
 
@@ -184,10 +190,11 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(page.getByRole('heading', { level: 1, name: new RegExp(`RFQ-0*${rfq.number}`) })).toBeVisible()
     const panel = page.locator('[data-slot="clarifications"]')
     await resetCount(page)
+    await panel.getByRole('button', { name: 'Add question', exact: true }).click() // opens the box (hidden until needed: grade-B R9)
     await panel.getByRole('textbox', { name: 'Add questions' }).fill('Flange rating and line size on the process line, please?') // the paste
     await panel.getByRole('button', { name: 'Add question', exact: true }).click()
     await expect(page.getByRole('status').filter({ hasText: /questions? added/i }).first()).toBeVisible()
-    fe2('Add a question: 1 paste + 1 tap', (await readCount(page)).mouse, 1)
+    fe2('Add a question: open + 1 paste + 1 tap', (await readCount(page)).mouse, 2)
     await resetCount(page)
     await resetClipboard(page)
     await panel.getByRole('button', { name: 'Copy questions for customer' }).click()
@@ -211,7 +218,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
         ),
       )
     // Alpenmark: the currency follows the supplier (EUR, usual for Germany); two prices typed, one Save reply.
-    const a = region(page, s.alpen.name)
+    const a = await reply(page, s.alpen.name)
     await expect(a.getByText(/EUR, usual for Germany/)).toBeVisible()
     await resetCount(page)
     let typed = 0
@@ -230,7 +237,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     ])
 
     // Lahore: the reply as the supplier wrote it, pasted from the clipboard; nothing is saved until Accept.
-    const b = region(page, s.lahore.name)
+    const b = await reply(page, s.lahore.name)
     await page.evaluate(t => navigator.clipboard.writeText(t), ['Dear Sir,', `${s.model1} DN50 - USD 100.00 each, 3 weeks`, `${s.model2} 0-10 bar - USD 190.00 each, 2 weeks`, 'Regards'].join('\n'))
     await resetCount(page)
     await b.getByRole('button', { name: 'Paste reply' }).click()
@@ -259,7 +266,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(pane.getByTestId('draft-text')).toContainText('Flange rating and line size')
     await resetCount(t)
     await resetClipboard(t)
-    await pane.getByRole('button', { name: 'Copy message and mark chased' }).click()
+    await pane.getByRole('button', { name: 'Copy and mark chased' }).click()
     await expect(t.getByRole('status').filter({ hasText: `Copied. ${rfqRef(rfq.number)} marked chased.` })).toBeVisible()
     fe2('Chase the customer from Today', (await readCount(t)).mouse, 1)
     await readClipboardWhen(t, 'Flange rating and line size')
@@ -458,7 +465,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
       expect(text).toContain(s.alpen.name)
       expect(text).toContain('EUR 270.00')
     }
-    await expect(legLoc(page, letter).getByTestId(`leg-${letter}-state`)).toContainText('On order')
+    await expect(legLoc(page, letter).getByTestId(`leg-${letter}-state`)).toContainText('Ordered')
     // Hand-off: Alpenmark is placed, Lahore is still to place.
     await todayHas(salesCtx, 'place_po', [ordRef(order.number), s.alpen.name], false)
     await todayHas(salesCtx, 'place_po', [ordRef(order.number), s.lahore.name], true)

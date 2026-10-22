@@ -32,7 +32,7 @@ vi.mock('@/features/rfqs/api', async importOriginal => ({ ...(await importOrigin
 const RFQ: Candidate = { id: 'rfq-1', number: 177, companyName: 'Acme', ownerId: 'u1', city: null, openedAt: Date.now(), open: [] }
 const photo = { id: 'f1', file: new File(['x'], 'a.jpg', { type: 'image/jpeg' }), originalSize: 1 }
 
-function show(draft: Draft) {
+function show(draft: Draft, role = 'sales') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const cap: CaptureApi = {
     open: true,
@@ -51,7 +51,7 @@ function show(draft: Draft) {
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha', role: 'sales' } }}>
+        <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha', role } }}>
           <ToastContext.Provider value={{ toast: vi.fn(() => 't'), dismiss: vi.fn() }}>
             <CaptureContext.Provider value={cap}>
               <CaptureSheet />
@@ -137,7 +137,7 @@ describe('Capture sheet: after a save the RFQs on offer are read again', () => {
 })
 
 describe('Capture sheet: only the chosen option shows (R2-11)', () => {
-  it('draws the chosen tile alone; Something else opens the other three and the reply and order choices', async () => {
+  it('draws the chosen tile alone; Something else opens the other three and the questions and order choices', async () => {
     show({ id: 'd1', source: 'paste', text: 'Fluid is hot water', files: [] })
     const group = await screen.findByRole('radiogroup', { name: 'What should we do with it' })
     await waitFor(() => expect(within(group).getAllByRole('radio')).toHaveLength(1))
@@ -147,8 +147,26 @@ describe('Capture sheet: only the chosen option shows (R2-11)', () => {
     expect(more).toHaveAttribute('aria-expanded', 'false')
     fireEvent.click(more)
     expect(more).toHaveAttribute('aria-expanded', 'true')
-    expect(within(screen.getByRole('radiogroup', { name: 'What should we do with it' })).getAllByRole('radio')).toHaveLength(4)
+    const tiles = within(screen.getByRole('radiogroup', { name: 'What should we do with it' })).getAllByRole('radio')
+    expect(tiles).toHaveLength(4)
+    // grade-B K2: a supplier's reply with prices is a tile; "Questions from a supplier" moved under Something else.
+    expect(tiles.map(t => t.getAttribute('data-dest'))).toEqual(['answer', 'reply', 'notes', 'new-rfq'])
+    expect(screen.getByRole('radio', { name: /A supplier’s prices/ })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Read the items from this text/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Attach to an order' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Questions from a supplier' }))
+    expect(screen.getByRole('button', { name: 'Questions from a supplier' })).toHaveAttribute('aria-pressed', 'true')
+    // none of the four tiles is the choice now
+    expect(within(screen.getByRole('radiogroup', { name: 'What should we do with it' })).queryByRole('radio', { checked: true })).toBeNull()
+  })
+
+  it("an engineer has no \"A supplier's prices\" tile: three tiles (owner decision 2026-10-22, engineers see no prices)", async () => {
+    show({ id: 'd1', source: 'paste', text: 'Fluid is hot water', files: [] }, 'engineer')
+    fireEvent.click(await screen.findByRole('button', { name: 'Something else' }))
+    const tiles = within(screen.getByRole('radiogroup', { name: 'What should we do with it' })).getAllByRole('radio')
+    expect(tiles.map(t => t.getAttribute('data-dest'))).toEqual(['answer', 'notes', 'new-rfq'])
+    expect(screen.queryByRole('radio', { name: /A supplier’s prices/ })).toBeNull()
+    expect(screen.queryByText(/supplier’s reply/)).toBeNull()
   })
 
   it('the saved answer says what happens next in one sentence, not two chips', () => {

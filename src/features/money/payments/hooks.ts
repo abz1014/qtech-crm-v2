@@ -4,13 +4,15 @@ import { qk } from '@/features/queryKeys'
 import * as api from '@/features/money/payments/api'
 
 /** Payments and receivables hooks (R01 pattern). Reads take `enabled`; a payment row is admin only. */
+export const receivablesQuery = () => ({ queryKey: qk.money.receivables.list(), queryFn: api.listReceivables })
 export function useReceivables(enabled = true) {
-  return useQuery({ queryKey: qk.money.receivables.list(), queryFn: api.listReceivables, enabled })
+  return useQuery({ ...receivablesQuery(), enabled })
 }
 
 /** Who owes us totals, counted on the server (receivables_summary). */
+export const receivablesSummaryQuery = (today: string) => ({ queryKey: qk.money.receivables.summary(today), queryFn: () => api.getReceivablesSummary(today) })
 export function useReceivablesSummary(today: string, enabled = true) {
-  return useQuery({ queryKey: qk.money.receivables.summary(today), queryFn: () => api.getReceivablesSummary(today), enabled })
+  return useQuery({ ...receivablesSummaryQuery(today), enabled })
 }
 
 /** Advances held on cancelled orders (admin only: pass enabled = isAdmin). */

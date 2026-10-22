@@ -3,7 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { FilePlus } from 'lucide-react'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Dialog, DialogContent } from '@/ui/Dialog'
-import { CreateInvoiceDialog } from '@/features/money/invoices/CreateInvoiceDialog'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
@@ -24,9 +23,10 @@ import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
 import { NothingYetState } from '@/features/help/FirstUseState'
 import { useReceivables, useReceivablesSummary } from '@/features/money/payments/hooks'
-import { HeldAdvancesPanel } from '@/features/money/payments/HeldAdvancesPanel'
-import { RecordPaymentDialog } from '@/features/money/payments/RecordPaymentDialog'
-import { ReminderPanel } from '@/features/money/payments/ReminderPanel'
+import { lazyDialog } from '@/lib/lazyDialog'
+import { BelowTheFold } from '@/ui/BelowTheFold'
+import { lazyWithReload } from '@/lib/importWithReload'
+import { Skeleton } from '@/ui/Skeleton'
 import {
   daysBetween,
   filterReceivables,
@@ -39,6 +39,14 @@ import {
   type ReceivableFilter,
   type ReceivableRow,
 } from '@/features/money/payments/model'
+
+// Downloaded the first time it opens (perf/lcp, lazyDialog.tsx).
+// The reminder panel under the list is a download of its own, fetched once the list is drawn (perf/lcp, BelowTheFold).
+// Admin's held advances (usually nothing to show) are read and drawn after the list too.
+const HeldAdvancesPanel = lazyWithReload(() => import('@/features/money/payments/HeldAdvancesPanel').then(m => ({ default: m.HeldAdvancesPanel })))
+const ReminderPanel = lazyWithReload(() => import('@/features/money/payments/ReminderPanel').then(m => ({ default: m.ReminderPanel })))
+const CreateInvoiceDialog = lazyDialog(() => import('@/features/money/invoices/CreateInvoiceDialog').then(m => m.CreateInvoiceDialog))
+const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/RecordPaymentDialog').then(m => m.RecordPaymentDialog))
 
 /*
  * Money > Who owes us (M02; g2-money "receivables"; one name for admin and sales since the owner decision of 2026-10-19, and
@@ -309,11 +317,15 @@ export function ReceivablesPage() {
               </div>
             )}
           />
-          <HeldAdvancesPanel isAdmin={isAdmin} />
+          <BelowTheFold fallback={null}>
+            <HeldAdvancesPanel isAdmin={isAdmin} />
+          </BelowTheFold>
         </div>
         {cards ? null : (
           <div ref={panelRef} className="scroll-mt-4">
-            <ReminderPanel row={selected} today={today} />
+            <BelowTheFold fallback={<Skeleton className="h-40 w-full" />}>
+              <ReminderPanel row={selected} today={today} />
+            </BelowTheFold>
           </div>
         )}
       </div>

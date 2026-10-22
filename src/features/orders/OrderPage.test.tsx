@@ -96,9 +96,8 @@ describe('the order page: one primary button, chosen by state', () => {
     expect(next).toHaveTextContent('Goods from Dubai Instrumentation are 3 days late')
     expect(greens(container)).toHaveLength(1)
     expect(greens(container)[0]).toHaveAccessibleName('Chase goods, Dubai Instrumentation')
-    // Record payment appears once (the Payment cell), never in the header as well; Add expense is not in the header
-    expect(screen.getAllByRole('button', { name: 'Record payment' })).toHaveLength(1)
-    expect(within(screen.getByLabelText('State of this order')).getByRole('button', { name: 'Record payment' })).toBeInTheDocument()
+    // nothing is invoiced yet, so there is no Record payment anywhere (UX audit P2); Add expense is not in the header
+    expect(screen.queryByRole('button', { name: 'Record payment' })).toBeNull()
     expect(within(container.querySelector('header') as HTMLElement).queryByRole('button', { name: 'Add expense' })).toBeNull()
     // the balance moved from the Invoices panel into the strip
     expect(screen.getByTestId('order-balance')).toHaveTextContent('730,420')
@@ -319,8 +318,74 @@ describe('the orders list: one Next step column', () => {
     mount(<OrdersListPage />, 'admin')
     await waitFor(() => expect(screen.getAllByRole('row', { name: /ORD-0038/ }).length).toBeGreaterThan(0))
     expect(screen.queryByLabelText('Goods state')).toBeNull()
+    // one toolbar row: Mine or All, the search, Filters. Who acts next is in Filters, with no "Any" segment (UX audit 2026-10-22, O2)
+    expect(screen.queryByRole('radiogroup', { name: 'Who acts next' })).toBeNull()
+    expect(screen.queryByRole('radio', { name: 'Any' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Filters' }))
     expect(screen.getByLabelText('Goods state')).toBeInTheDocument()
     expect(screen.getByLabelText('Payment state')).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('Who acts next'), 'need')
+    expect(screen.getByRole('button', { name: 'Filters · 1 on' })).toBeInTheDocument()
+    expect(screen.getAllByRole('row', { name: /ORD-0039/ }).length).toBeGreaterThan(0)
+  })
+})
+
+describe('the order page after the 2026-10-22 audit (P1 to P10)', () => {
+  const delivered = legs.map(l => ({ ...l, placedOn: day(-10), deliveredOn: day(-2), receivedOn: day(-2) }))
+  const invoicedOrder: OrderHeader = { ...order, needsCommissioning: false, state: { ...order.state!, lifecycle: 'done', goods: 'delivered', commissioning: 'n_a', invoicing: 'fully_invoiced', invoiced: 730420 } }
+
+  it('sales, invoiced and unpaid: no "Done" chip, the payment word instead, and Copy reminder is the one green button', () => {
+    installFakeDb(() => ({ data: [] }))
+    const { container } = page('sales', invoicedOrder, delivered, { ...money, dueOn: day(12) })
+    const header = container.querySelector('header') as HTMLElement
+    expect(header).toHaveTextContent('Waiting for payment')
+    expect(header).not.toHaveTextContent(/\bDone\b/)
+    expect(screen.getByRole('region', { name: 'Next step' })).toHaveTextContent('Customer owes PKR 730,420, due')
+    expect(greens(container).map(b => b.textContent)).toEqual(['Copy reminder'])
+  })
+
+  it('admin: no Record payment once the balance is 0', () => {
+    installFakeDb(() => ({ data: [] }))
+    page('admin', invoicedOrder, delivered, { ...money, paymentState: 'settled', settled: 730420, balance: 0 })
+    expect(screen.queryByRole('button', { name: 'Record payment' })).toBeNull()
+  })
+
+  it('a delivered supplier order with no PO has no Issue PO on its row; with two or more suppliers it folds to one line', async () => {
+    installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    page('admin', invoicedOrder, delivered)
+    const folded = screen.getByTestId('leg-A')
+    expect(folded).toHaveTextContent('Alpenmark Controls')
+    expect(folded).toHaveTextContent('Delivered')
+    expect(within(folded).queryByRole('button', { name: /Issue PO/ })).toBeNull()
+    await user.click(within(folded).getByRole('button', { name: /Alpenmark Controls/ }))
+    const open = screen.getByTestId('leg-A')
+    expect(within(open).queryByRole('button', { name: 'Issue PO, Alpenmark Controls' })).toBeNull()
+    expect(within(open).queryByText('No PO yet')).toBeNull()
+  })
+
+  it('costs over the expected amount read "over by", in the warning colour', () => {
+    installFakeDb(() => ({ data: [] }))
+    page('admin', invoicedOrder, delivered, { ...money, actualCost: 1480000, expectedCost: 640000 })
+    const line = screen.getByTestId('order-costs')
+    expect(line).toHaveTextContent('Costs 1,480,000 (expected 640,000) · over by 840,000')
+    expect(line).toHaveClass('text-tone-warning-fg')
+  })
+
+  it('the engineer gets the Next step band, and words their own placing as "I placed this order"', () => {
+    installFakeDb(() => ({ data: [] }))
+    page('engineer', { ...order, state: { ...order.state!, goods: 'to_place' } }, [legs[0]])
+    expect(screen.getByRole('region', { name: 'Next step' })).toHaveTextContent('Waiting for admin to place the order with Alpenmark Controls')
+    expect(screen.getByRole('button', { name: 'I placed this order, Alpenmark Controls' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Mark placed/ })).toBeNull()
+  })
+
+  it('goods words "not ordered yet", and "1 no" not "1 nos"', () => {
+    installFakeDb(() => ({ data: [] }))
+    mount(<OrderItemsPanel order={order} items={[{ ...items[0], qty: 1, unit: 'nos' }]} legs={legs} money canEdit={false} basisUnknown={false} />)
+    const table = screen.getByRole('table', { name: 'Order items' })
+    expect(table).toHaveTextContent('1 no')
+    expect(table).not.toHaveTextContent('1 nos')
+    expect(table).toHaveTextContent('not ordered yet')
   })
 })

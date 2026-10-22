@@ -22,5 +22,5 @@ export const passwordSchema = z
   })
 export type PasswordValues = z.infer<typeof passwordSchema>
 
-export const WRONG_CURRENT = 'Current password is incorrect.'
-export const WEAK_NEW = 'That password is too easy to guess. Choose a longer or less common one.'
+// The two sentences the settings calls also use live in passwordText.ts, so those calls do not bring zod along (perf/lcp).
+export { WEAK_NEW, WRONG_CURRENT } from '@/features/settings/passwordText'

@@ -134,10 +134,10 @@ const VERIFY_DIRS: Record<string, string> = {
 const VERIFY_SUITES = Object.keys(VERIFY_DIRS)
 /**
  * The exploratory edge-case hunt (e2e/hunt/edges, branch hunt/edges): records findings and screenshots into review-shots/hunt-edges and
- * pins the confirmed bugs as test.fail('HE-n'). Split in four so each fits a shard: forms/states/empty/big, the two halves of the
- * every-route x role x viewport sweep, and click-every-button.
+ * holds the HE-n bug tests. Split in five so each fits a shard: empty states with the bug tests, the forms/states/1,000-rows probes,
+ * the two halves of the every-route x role x viewport sweep, and click-every-button.
  */
-const HUNT_EDGES = ['hunt-edges', 'hunt-edges-sweep-a', 'hunt-edges-sweep-b', 'hunt-edges-clicks']
+const HUNT_EDGES = ['hunt-edges', 'hunt-edges-probe', 'hunt-edges-sweep-a', 'hunt-edges-sweep-b', 'hunt-edges-clicks']
 /** The bug-hunt suites (e2e/hunt/workflows/): project -> spec file names (a regex alternation). */
 const HUNT_FILES: Record<string, string> = {
   'hunt-workflows': 'crawl|bugs',
@@ -153,6 +153,11 @@ const suite = dbSuites.includes(process.env.E2E_SUITE ?? '') ? 'db' : 'gallery'
 // GALLERY_PORT overrides it when another checkout already serves 5199 on the same machine.
 const GALLERY_PORT = Number(process.env.GALLERY_PORT ?? 5199)
 const AUTH_PORT = 4173
+/*
+ * The perf suite serves the production build like Vercel does: HTTPS and HTTP/2, from its own build (E2E_DIST) that talks to
+ * the stack through an HTTPS, HTTP/2 proxy like Supabase's (scripts/ci/e2e-run.sh sets E2E_TLS_KEY, E2E_TLS_CERT, E2E_DIST).
+ */
+const AUTH_ORIGIN = `${process.env.E2E_TLS_CERT ? 'https' : 'http'}://127.0.0.1:${AUTH_PORT}`
 
 const galleryUse = {
   baseURL: `http://localhost:${GALLERY_PORT}`,
@@ -375,7 +380,8 @@ export default defineConfig({
       testMatch: /perf\/.*\.spec\.ts/,
       fullyParallel: false,
       retries: 0,
-      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 } },
+      // The throwaway certificate of the perf suite's HTTPS server and proxy is accepted (local only).
+      use: { ...devices['Desktop Chrome'], baseURL: AUTH_ORIGIN, viewport: { width: 1440, height: 900 }, ignoreHTTPSErrors: true },
     },
     {
       name: 'journeys',
@@ -445,7 +451,9 @@ export default defineConfig({
     // The edge-case hunt (e2e/hunt/edges): see HUNT_EDGES above. Contexts are made per viewport by the specs themselves.
     ...(
       [
-        ['hunt-edges', /hunt\/edges\/(a-empty|forms|states|zz-big|bugs)\.spec\.ts$/, undefined],
+        ['hunt-edges', /hunt\/edges\/(a-empty|bugs)\.spec\.ts$/, undefined],
+        // zz-big seeds 1,000+ rows: it stays last in its project, after the forms and states probes.
+        ['hunt-edges-probe', /hunt\/edges\/(forms|states|zz-big)\.spec\.ts$/, undefined],
         ['hunt-edges-sweep-a', /hunt\/edges\/sweep\.spec\.ts$/, /@ (w1920|w1366|w768)$/],
         ['hunt-edges-sweep-b', /hunt\/edges\/sweep\.spec\.ts$/, /@ (w375|w320|z200)$/],
         ['hunt-edges-clicks', /hunt\/edges\/clicks\.spec\.ts$/, undefined],
@@ -492,8 +500,9 @@ export default defineConfig({
   webServer:
     suite === 'db'
       ? {
-          command: `npx vite preview --host 127.0.0.1 --port ${AUTH_PORT} --strictPort`,
-          url: `http://127.0.0.1:${AUTH_PORT}/login`,
+          command: `npx vite preview --host 127.0.0.1 --port ${AUTH_PORT} --strictPort${process.env.E2E_DIST ? ` --outDir ${process.env.E2E_DIST}` : ''}`,
+          url: `${AUTH_ORIGIN}/login`,
+          ignoreHTTPSErrors: true,
           reuseExistingServer: !process.env.CI,
           timeout: 60_000,
         }

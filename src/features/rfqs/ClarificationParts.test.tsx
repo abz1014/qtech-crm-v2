@@ -38,6 +38,9 @@ describe('AddQuestions', () => {
   it('a paste becomes one question per line, and one tap adds them all with the tag chosen', async () => {
     const user = userEvent.setup()
     const { writes, container } = setup([{ id: 'i-lpc', name: 'Lahore Process Controls' }])
+    // One line until tapped: no paste box yet (grade-B R9).
+    expect(screen.queryByRole('textbox', { name: 'Add questions' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Add question' }))
     expect(screen.getByRole('button', { name: 'Add question' })).toBeDisabled()
     await user.click(screen.getByRole('textbox', { name: 'Add questions' }))
     await user.paste('1. What flange size?\n2. HART or plain 4-20 mA?\n\n3) Is Ex certification needed?')
@@ -54,12 +57,15 @@ describe('AddQuestions', () => {
       ['HART or plain 4-20 mA?', 'i-lpc', 'r-1'],
     ])
     expect(rows[0].id).toMatch(/^[0-9a-f-]{36}$/)
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Add questions' })).toHaveValue(''))
+    // Added: the box closes back to its one line.
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Add questions' })).toBeNull())
+    expect(screen.getByRole('button', { name: 'Add question' })).toBeEnabled()
   })
 
   it('with no supplier asked there is no tag to choose', async () => {
     const user = userEvent.setup()
     setup([])
+    await user.click(screen.getByRole('button', { name: 'Add question' }))
     await user.click(screen.getByRole('textbox', { name: 'Add questions' }))
     await user.paste('Which probe kit?')
     expect(screen.queryByLabelText(/Who asked/)).toBeNull()

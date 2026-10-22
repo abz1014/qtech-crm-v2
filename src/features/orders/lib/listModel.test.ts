@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { OrderListRow } from '@/features/orders/api'
-import { ALL, dimensionCounts, emptyFilters, filterRows, hasFilters, matchesText, tabCounts, type ListFilters } from '@/features/orders/lib/listModel'
+import { ALL, dimensionCounts, emptyFilters, filterRows, hasFilters, matchesText, otherMatches, searchGroup, tabCounts, type ListFilters } from '@/features/orders/lib/listModel'
 
 const row = (over: Partial<OrderListRow>): OrderListRow => ({
   id: 'o',
@@ -28,11 +28,12 @@ const row = (over: Partial<OrderListRow>): OrderListRow => ({
   moreLines: false,
   itemsText: 'belimo actuator · memosens ph sensor · cable gland kit',
   legs: [],
+  poNumbers: [],
   ...over,
 })
 
 const rows: OrderListRow[] = [
-  row({ id: 'a', number: 38, customerPo: '253074', goods: 'to_place', commissioning: 'planned', engineerIds: ['u-eng'] }),
+  row({ id: 'a', number: 38, customerPo: '253074', goods: 'to_place', commissioning: 'planned', engineerIds: ['u-eng'], poNumbers: ['PO-26-0017'] }),
   row({ id: 'b', number: 39, companyName: 'Faisalabad Textile Mills', siteName: null, goods: 'late', invoicing: 'part', payment: 'overdue', ownerId: 'u-other' }),
   row({ id: 'c', number: 40, goods: 'delivered', commissioning: 'done', invoicing: 'fully_invoiced', payment: 'settled', lifecycle: 'done' }),
   row({ id: 'd', number: 41, lifecycle: 'cancelled', goods: 'to_place' }),
@@ -97,5 +98,38 @@ describe('orders list filters (O04)', () => {
     const eng = rows.map(r => ({ ...r, invoicing: null, payment: null, gross: null, balance: null }))
     expect(ids(filterRows(eng, f({ payment: 'overdue' }), sales))).toEqual([])
     expect(dimensionCounts(eng, 'payment', f(), sales).size).toBe(0)
+  })
+
+  it('finds an order by our supplier PO number, but a bare number stays an order number', () => {
+    for (const q of ['PO-26-0017', 'po 0017', 'PO-17', 'po 26 17', 'po-26-00']) expect(matchesText(rows[0], q)).toBe(true)
+    expect(matchesText(rows[0], 'PO-25-0017')).toBe(false)
+    expect(matchesText(rows[0], 'PO-18')).toBe(false)
+    expect(matchesText(rows[0], '17')).toBe(false)
+    expect(matchesText(rows[0], '0017')).toBe(false)
+  })
+
+  it('a typed search reaches the other tabs and, on Mine, everyone else: those come after under a divider', () => {
+    const mine = f({ owner: 'mine', text: 'cement' })
+    // this list: sales' own active order a; b is someone else's (and not cement), c is done, d cancelled
+    expect(ids(filterRows(rows, mine, sales))).toEqual(['a'])
+    expect(ids(otherMatches(rows, mine, sales))).toEqual(['c', 'd'])
+    expect(searchGroup(rows[0], mine, sales)).toMatchObject({ key: 'here', label: 'In Active · yours' })
+    expect(searchGroup(rows[2], mine, sales).label).toBe('Also in Done')
+    expect(searchGroup(rows[3], mine, sales).label).toBe('Also in Cancelled')
+    // someone else's order in this tab, while Mine is on
+    const faisalabad = f({ owner: 'mine', text: 'faisalabad' })
+    expect(ids(filterRows(rows, faisalabad, sales))).toEqual([])
+    expect(ids(otherMatches(rows, faisalabad, sales))).toEqual(['b'])
+    expect(searchGroup(rows[1], faisalabad, sales).label).toBe('Also in Active · not yours')
+    expect(searchGroup(rows[1], faisalabad, { userId: 'u-eng', role: 'engineer' }).label).toBe('Also in Active · not your jobs')
+    // the groups come in order: Active (yours, then not), Done, Cancelled
+    expect(searchGroup(rows[1], faisalabad, sales).rank).toBeLessThan(searchGroup(rows[2], mine, sales).rank)
+    expect(searchGroup(rows[2], mine, sales).rank).toBeLessThan(searchGroup(rows[3], mine, sales).rank)
+    // the state filters still apply to the other matches
+    expect(ids(otherMatches(rows, { ...mine, goods: 'to_place' }, sales))).toEqual(['d'])
+    // no search, no other matches: the tab and the owner switch narrow as usual
+    expect(otherMatches(rows, f({ owner: 'mine' }), sales)).toEqual([])
+    // on All, only the other tabs
+    expect(ids(otherMatches(rows, f({ text: 'faisalabad' }), sales))).toEqual([])
   })
 })

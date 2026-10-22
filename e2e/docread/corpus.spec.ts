@@ -116,7 +116,11 @@ test('the corpus as pictures and scans: every field at or above its floor, a scr
     page.evaluate(({ name, args }) => (window as unknown as { __docread: Record<string, (...a: unknown[]) => unknown> }).__docread[name]!(...args), { name, args }) as Promise<Awaited<ReturnType<Docread[K]>>>
 
   const only = process.env.CORPUS_IDS ? new Set(process.env.CORPUS_IDS.split(',')) : null
-  const cases: CorpusCase[] = RUN.flatMap(b => batch(b)).filter(c => (c.medium === 'image' || c.medium === 'scan') && (!only || only.has(c.id)))
+  // CORPUS_SHAPES=outlook_table: the dev cases of those shapes only (to work on one shape).
+  const shapes = process.env.CORPUS_SHAPES ? new Set(process.env.CORPUS_SHAPES.split(',')) : null
+  const cases: CorpusCase[] = RUN.flatMap(b => batch(b)).filter(
+    c => (c.medium === 'image' || c.medium === 'scan') && (!only || only.has(c.id)) && (!shapes || (shapes.has(c.shape) && c.split === 'dev')),
+  )
   const save = process.env.CORPUS_SAVE
   const scores: Scored[] = []
   const texts: Record<string, string> = {}
@@ -127,7 +131,10 @@ test('the corpus as pictures and scans: every field at or above its floor, a scr
     const png = await photograph(browser, docHtml(c.doc, shot), shot)
     let read: Read
     if (c.medium === 'image') {
-      const [pic] = await develop(page, png, shot, false)
+      // CORPUS_PICTURES=<dir>: the pictures CI saved (artifact "ocr-texts"), read here as CI read them.
+      const ext = shot.format === 'jpeg' ? 'jpg' : shot.format
+      const saved = process.env.CORPUS_PICTURES ? `${process.env.CORPUS_PICTURES}/${c.id}.${ext}` : null
+      const [pic] = saved && existsSync(saved) ? [{ b64: readFileSync(saved).toString('base64') }] : await develop(page, png, shot, false)
       if (save) writeFileSync(`${save}/${c.id}.${shot.format === 'jpeg' ? 'jpg' : shot.format}`, Buffer.from(pic!.b64, 'base64'))
       read = await api('readImage', pic!.b64, MIME[shot.format])
       // A clean screenshot (not a photo, not a scan) on a laptop or a phone: the 3 s budget. The first read loads the engine.

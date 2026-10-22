@@ -6,8 +6,8 @@ Press ? on a computer to see the keyboard shortcuts.
 
 1. START WITH TODAY
  - Tap Today. Read "Overdue or due today" first, then "Ready to move".
- - Tabs: All, Quotes, Suppliers, Money.
- - Tap a row. The message is already written. Tap "Copy message and mark chased" (or "... mark reminded"), paste it into WhatsApp, send.
+ - Tabs: All, Quotations, Suppliers, Money.
+ - Tap a row. The message is already written. Tap "Copy and mark chased" (or "Copy and mark reminded"), paste it into WhatsApp, send.
  - WhatsApp or Email: pick once, the app remembers.
  - Not now? Tap Snooze, pick a date.
 
@@ -42,7 +42,7 @@ Press ? on a computer to see the keyboard shortcuts.
  - Change it later: "Revise quotation". The first one stays as it was.
 
 6. CHASE
- - Customer quiet? Today shows it. Open it, tap "Copy message and mark chased".
+ - Customer quiet? Today shows it. Open it, tap "Copy and mark chased".
  - Or on the RFQ, under "Questions for the customer", tap "Copy chase text". After 3 chases with no answer, the app asks if you want to close it.
  - Close an RFQ: More, then pick the reason under "Close the RFQ because".
 

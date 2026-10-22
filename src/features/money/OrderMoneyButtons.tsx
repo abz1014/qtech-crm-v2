@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { Banknote, FilePlus2 } from 'lucide-react'
 import { Button, type ButtonProps } from '@/ui/Button'
-import { CreateInvoiceDialog } from '@/features/money/invoices/CreateInvoiceDialog'
-import { RecordPaymentDialog } from '@/features/money/payments/RecordPaymentDialog'
+import { lazyDialog } from '@/lib/lazyDialog'
+
+// Downloaded the first time each opens (perf/lcp, lazyDialog.tsx): the order page and Who owes us do not wait for the forms.
+const CreateInvoiceDialog = lazyDialog(() => import('@/features/money/invoices/CreateInvoiceDialog').then(m => m.CreateInvoiceDialog))
+const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/RecordPaymentDialog').then(m => m.RecordPaymentDialog))
 
 /*
  * The two money actions on the order page (g2-order-detail, data-slot="order-actions"): each is a button with its own dialog, so the

@@ -9,7 +9,8 @@ screens: /today, /rfqs, /orders
 2. Tap [Choose photos], or [Tap and hold here, then tap Paste] for copied text.
 3. Pick where it goes: [On which RFQ] or [On which order]. Search by customer if it is not listed.
 4. Tap [Save]. There are no other fields.
-5. A customer's PDF enquiry? Tap [Something else], pick [Start a new RFQ], then [Continue to New RFQ]. The items are read from the PDF.
+5. A supplier's prices? Tap [Something else], pick [A supplier’s prices], then [Read the reply]. The RFQ opens with the prices read out.
+6. A customer's PDF enquiry? Tap [Something else], pick [Start a new RFQ], then [Continue to New RFQ]. The items are read from the PDF.
 
 Tip: The button grey? The reason is written beside it. No signal? It is kept on this phone.
 

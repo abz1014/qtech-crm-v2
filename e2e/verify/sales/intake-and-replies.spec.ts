@@ -200,7 +200,9 @@ test('prices in three currencies are stored with the rate of the day and ranked 
     [lahore, '27450'],
     [houston, '101.20'],
   ] as const) {
-    const region = page.getByRole('region', { name: sup.name })
+    // Each supplier is listed once, in Suppliers asked: "Enter reply" opens its price form in a dialog (grade-B R2/R4).
+    await page.getByRole('button', { name: `Enter reply, ${sup.name}`, exact: true }).click()
+    const region = page.getByRole('dialog', { name: sup.name, exact: true })
     await region.getByLabel(SALES.reply.price(1, sup.name)).fill(price)
     await region.getByRole('button', { name: SALES.reply.save }).click()
     await expect(page.getByRole('status').filter({ hasText: SALES.reply.saved }).first()).toBeVisible()

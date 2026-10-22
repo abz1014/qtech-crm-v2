@@ -3,23 +3,25 @@
 // step into the page's button (or none) and its sentence. Pure.
 //
 //   resolve-basis       admin: "Is GST included?"
-//   chase-payment       admin: Record payment; sales: the sentence only (they chase from Today)
+//   chase-payment       admin: Record payment; sales: Copy reminder (the payment reminder text, on the clipboard)
 //   goods-late          admin and sales: Chase goods; an engineer: Delivered today (they are the ones on site)
 //   add-supplier        admin and sales: Add supplier
-//   place               admin and sales: Issue PO (Mark placed when its PO already exists)
+//   place               admin and sales: Issue PO (Mark placed when its PO already exists); an engineer waits for the admin
 //   plan-commissioning  admin and sales: Plan commissioning (the Commissioning dialog)
 //   deliver             everyone: Delivered today
 //   mark-done           everyone: Mark done today (only once the planned date has come)
 //   create-invoice      admin and sales: Create invoice
-//   await-payment       admin: Record payment; sales: the sentence only
-//   the waiting steps, costs, done: the sentence only (an engineer keeps "Mark done today" as a secondary button in "Your job")
+//   await-payment       admin: Record payment; sales: Copy reminder
+//   done                admin and sales: Repeat order (the Repeat a past order dialog with this order chosen; audit 39676918821: a done,
+//                       paid order had no green button); an engineer: the sentence only
+//   the waiting steps, costs: the sentence only (an engineer keeps "Mark done today" as a secondary button in "Your job")
 
 import { formatAmount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney } from '@/features/orders/api'
 import { nextOrderStep, type OrderFacts, type OrderStep, type StepLeg } from '@/features/orders/lib/orderSteps'
 
-export type PrimaryKind = 'resolve-basis' | 'record-payment' | 'chase-goods' | 'deliver' | 'add-supplier' | 'issue-po' | 'mark-placed' | 'plan-commissioning' | 'mark-done' | 'create-invoice'
+export type PrimaryKind = 'resolve-basis' | 'record-payment' | 'chase-goods' | 'deliver' | 'add-supplier' | 'issue-po' | 'mark-placed' | 'plan-commissioning' | 'mark-done' | 'create-invoice' | 'copy-reminder' | 'repeat-order'
 
 export interface PrimaryAction {
   kind: PrimaryKind
@@ -78,7 +80,7 @@ export function pagePrimary(step: OrderStep, f: OrderFacts): PrimaryAction | nul
       return admin ? { kind: 'resolve-basis', label: 'Is GST included?' } : null
     case 'chase-payment':
     case 'await-payment':
-      return admin ? { kind: 'record-payment', label: 'Record payment' } : null
+      return admin ? { kind: 'record-payment', label: 'Record payment' } : money ? { kind: 'copy-reminder', label: 'Copy reminder' } : null
     case 'goods-late':
       return money ? onLeg('chase-goods', 'Chase goods') : onLeg('deliver', 'Delivered today')
     case 'add-supplier':
@@ -93,6 +95,8 @@ export function pagePrimary(step: OrderStep, f: OrderFacts): PrimaryAction | nul
       return { kind: 'mark-done', label: 'Mark done today' }
     case 'create-invoice':
       return money ? { kind: 'create-invoice', label: 'Create invoice' } : null
+    case 'done':
+      return money ? { kind: 'repeat-order', label: 'Repeat order' } : null
     default:
       return null
   }
@@ -109,7 +113,7 @@ export function pageText(step: OrderStep, f: OrderFacts & { unsourced?: number }
       return 'The old CRM did not say whether these prices include GST'
     case 'chase-payment': {
       const late = step.lateDays && step.lateDays > 0 ? `${plural(step.lateDays, 'day', 'days')} overdue` : 'overdue'
-      return `Payment ${late}: ${pkr(f.balance)} still owed${f.role === 'sales' ? '. Chase the customer' : ''}`
+      return `Customer owes ${pkr(f.balance)}, ${late}`
     }
     case 'goods-late': {
       const late = step.lateDays && step.lateDays > 0 ? `${plural(step.lateDays, 'day', 'days')} late` : 'late'
@@ -122,7 +126,7 @@ export function pageText(step: OrderStep, f: OrderFacts & { unsourced?: number }
     case 'place':
       return `Order the goods from ${supplier}`
     case 'wait-placing':
-      return `Waiting for the PO to ${supplier}`
+      return `Waiting for admin to place the order with ${supplier}`
     case 'plan-commissioning':
       return 'Commissioning needs a date'
     case 'wait-plan':
@@ -136,7 +140,7 @@ export function pageText(step: OrderStep, f: OrderFacts & { unsourced?: number }
     case 'commissioning-later':
       return f.plannedOn ? `Commissioning planned ${formatShortDate(f.plannedOn, f.today)}` : 'Waiting for the commissioning date'
     case 'await-payment':
-      return f.dueOn ? `${pkr(f.balance)} still owed, due ${formatShortDate(f.dueOn, f.today)}` : `${pkr(f.balance)} still owed`
+      return `Customer owes ${pkr(f.balance)}${f.dueOn ? `, due ${formatShortDate(f.dueOn, f.today)}` : ''}`
     case 'costs':
       return 'Mark costs complete in the Margin panel'
     case 'done':
@@ -149,4 +153,15 @@ export function pageText(step: OrderStep, f: OrderFacts & { unsourced?: number }
 export function pageStep(f: OrderFacts & { unsourced?: number }): { step: OrderStep; primary: PrimaryAction | null; text: string } {
   const step = nextOrderStep(f)
   return { step, primary: pagePrimary(step, f), text: pageText(step, f) }
+}
+
+/**
+ * Where an admin's "Record payment" goes (UX audit P2): the green next step when payment is the step; in the Payment cell once an
+ * invoice exists and something is owed; otherwise (an advance before the invoice, or more than is owed) in the order's More menu,
+ * so it is never offered up front on an order not yet invoiced or already paid, yet an advance can still be recorded.
+ */
+export function recordPaymentPlace(order: OrderHeader, money: OrderMoney | null | undefined, primaryKind: string | undefined, role: string): 'primary' | 'cell' | 'menu' | null {
+  if (role !== 'admin' || order.cancelledOn !== null) return null
+  if (primaryKind === 'record-payment') return 'primary'
+  return (order.state?.invoiced ?? 0) > 0 && (money?.balance ?? 0) > 0 ? 'cell' : 'menu'
 }

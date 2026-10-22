@@ -2,6 +2,7 @@ import { Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { usePaletteSource } from '@/app/palette/usePalette'
 import { useSession } from '@/app/session'
+import { whenContentDrawn } from '@/lib/afterContent'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import type { helpPaletteSource } from '@/features/help/helpPalette'
 import { howItWorksFor, howItWorksKey } from '@/features/help/howItWorks'
@@ -48,7 +49,12 @@ export function HelpHost() {
   // Help is opened (recipesTry), and only Help then says it could not load.
   const [recipesTry, setRecipesTry] = useState(0)
   const [recipesFailed, setRecipesFailed] = useState(false)
+  // Downloaded once the opening page's content is drawn (perf/lcp, afterContent.ts), or at once when Help is asked for.
+  const [drawn, setDrawn] = useState(false)
+  useEffect(() => whenContentDrawn(() => setDrawn(true)), [])
+  const wanted = drawn || open
   useEffect(() => {
+    if (!wanted) return
     let live = true
     importWithReload(loadRecipes, { reload: false })
       .then(([m, p]) => {
@@ -63,7 +69,7 @@ export function HelpHost() {
     return () => {
       live = false
     }
-  }, [recipesTry])
+  }, [wanted, recipesTry])
   const panel = useRetryableLazy(loadHelpPanel)
   const toast = useContext(ToastContext)?.toast
   const retryPanel = panel.retry

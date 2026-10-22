@@ -53,12 +53,6 @@ export const GROUPS: readonly Group[] = [
  * screen changes; the test says when.
  */
 const KNOWN: Record<string, string> = {
-  // Today (features/today): the desktop pane's long button names, the tab name, a fact name.
-  'Copy message and mark chased': 'Today ContextPane.tsx (desktop) and Orders GoodsChaseDialog.tsx',
-  'Copy message and mark reminded': 'Today ContextPane.tsx (desktop)',
-  Quotes: 'Today TodayScreen.tsx tab',
-  'Enquiry sent': 'Today ContextPane.tsx fact',
-  'Chase again now': 'Today ContextPane.tsx',
   // Money and Orders: the one-off cost on an order.
   'Add expense': 'Money MarginPanel.tsx and ExpenseDialog.tsx (order page "Add expense")',
 }

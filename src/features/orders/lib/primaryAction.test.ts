@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney } from '@/features/orders/api'
 import { header, item, legRow, money } from '@/features/orders/lib/stepFixtures'
-import { orderFacts, pageStep } from '@/features/orders/lib/primaryAction'
+import { orderFacts, pageStep, recordPaymentPlace } from '@/features/orders/lib/primaryAction'
 
 const today = '2026-11-20'
 
@@ -20,7 +20,7 @@ describe('the order page: one primary button, chosen by the shared ordering', ()
     expect(page(header({}, { goods: 'delivered' }), [delivered], [item('1', 'a')]).primary).toMatchObject({ kind: 'create-invoice' })
     const invoiced = page(header({}, { goods: 'delivered', invoicing: 'fully_invoiced', invoiced: 1180 }), [delivered], [item('1', 'a')], 'admin', money({ dueOn: '2026-12-20' }))
     expect(invoiced.primary).toMatchObject({ kind: 'record-payment' })
-    expect(invoiced.text).toBe('PKR 1,180 still owed, due 20 Dec')
+    expect(invoiced.text).toBe('Customer owes PKR 1,180, due 20 Dec')
   })
 
   it('late goods come first: admin and sales chase them; an engineer marks them delivered', () => {
@@ -76,10 +76,19 @@ describe('the order page: one primary button, chosen by the shared ordering', ()
     expect(page(header({}, { goods: 'to_place' }), [legRow('a')], [item('1', 'a')], 'engineer').primary).toBeNull()
   })
 
-  it('sales never get Record payment (it is admin only), but are told when it is overdue', () => {
+  it('sales never get Record payment (it is admin only): they get Copy reminder while the customer owes, overdue or not', () => {
     const r = page(header({}, { goods: 'delivered', invoicing: 'fully_invoiced', invoiced: 1180 }), [], [], 'sales', money({ paymentState: 'overdue', dueOn: '2026-11-10' }))
+    expect(r.primary).toMatchObject({ kind: 'copy-reminder', label: 'Copy reminder' })
+    expect(r.text).toBe('Customer owes PKR 1,180, 10 days overdue')
+    const notDue = page(header({}, { goods: 'delivered', invoicing: 'fully_invoiced', invoiced: 1180 }), [], [], 'sales', money({ dueOn: '2026-12-03' }))
+    expect(notDue.primary).toMatchObject({ kind: 'copy-reminder' })
+    expect(notDue.text).toBe('Customer owes PKR 1,180, due 3 Dec')
+  })
+
+  it('an engineer waits for the admin to place the order, and is told so', () => {
+    const r = page(header({}, { goods: 'to_place' }), [legRow('a', { supplierName: 'Dubai Instrumentation' })], [item('1', 'a')], 'engineer')
     expect(r.primary).toBeNull()
-    expect(r.text).toBe('Payment 10 days overdue: PKR 1,180 still owed. Chase the customer')
+    expect(r.text).toBe('Waiting for admin to place the order with Dubai Instrumentation')
   })
 
   it('admin, paid in full, costs open: the page says Mark costs complete, like the list', () => {
@@ -87,6 +96,27 @@ describe('the order page: one primary button, chosen by the shared ordering', ()
     expect(r.step.kind).toBe('costs')
     expect(r.primary).toBeNull()
     expect(r.text).toBe('Mark costs complete in the Margin panel')
+  })
+
+  it('Record payment: in the Payment cell only once invoiced and owed; before the invoice (an advance) or once paid, in the More menu', () => {
+    const invoiced = header({}, { invoiced: 1180 })
+    expect(recordPaymentPlace(header(), money(), undefined, 'admin')).toBe('menu')
+    expect(recordPaymentPlace(invoiced, money(), undefined, 'admin')).toBe('cell')
+    expect(recordPaymentPlace(invoiced, money({ balance: 0, settled: 1180, paymentState: 'settled' }), undefined, 'admin')).toBe('menu')
+    expect(recordPaymentPlace(invoiced, money(), 'record-payment', 'admin')).toBe('primary')
+    expect(recordPaymentPlace(invoiced, money(), undefined, 'sales')).toBeNull()
+    expect(recordPaymentPlace(header({ cancelledOn: '2026-11-19' }), money(), undefined, 'admin')).toBeNull()
+  })
+
+  it('a done, paid order: admin and sales get Repeat order as the green button; an engineer gets none (audit 39676918821)', () => {
+    const done = header({}, { lifecycle: 'done', goods: 'delivered', invoicing: 'fully_invoiced', invoiced: 1180 })
+    const paid = money({ paymentState: 'settled', balance: 0, settled: 1180, costsState: 'complete' })
+    const admin = page(done, [], [], 'admin', paid)
+    expect(admin.step.kind).toBe('done')
+    expect(admin.primary).toEqual({ kind: 'repeat-order', label: 'Repeat order' })
+    expect(admin.text).toBe('Nothing left to do on this order')
+    expect(page(done, [], [], 'sales', paid).primary).toMatchObject({ kind: 'repeat-order' })
+    expect(page(done, [], [], 'engineer').primary).toBeNull()
   })
 
   it('a cancelled order has no primary step', () => {

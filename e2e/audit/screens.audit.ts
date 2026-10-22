@@ -5,7 +5,7 @@ import { openAs, type Role } from '../support/stack'
 import { axeViolations, waitForAnimationsToFinish } from '../support/axe'
 import { collect, type Metrics } from './collect'
 import { seedAudit, type Fixture } from './seed'
-import { VISITS, type CaptureOptions, type Visit } from './screens'
+import { VISITS, bounded, type CaptureOptions, type Visit } from './screens'
 
 /*
  * The screen audit (docs/audit/SCREEN_AUDIT.md): every main screen and key state, for each role, at each viewport, measured in
@@ -38,6 +38,8 @@ const ONLY = process.env.AUDIT_SCREENS ? new RegExp(process.env.AUDIT_SCREENS) :
 const AXE = process.env.AUDIT_AXE !== '0'
 const FULL = process.env.AUDIT_FULL !== '0'
 const MAX_FULL_HEIGHT = 15_000
+/** How long one visit may take at one viewport, per screen it captures (axe and the full-page shot included). */
+const VISIT_BUDGET_PER_SCREEN = 100_000
 
 export interface AxeSummary {
   rules: number
@@ -133,6 +135,9 @@ async function pageFor(browser: Browser, info: TestInfo, role: Role, vp: Viewpor
   const page = await context.newPage()
   // Its own sign-in through the login form, so no two contexts share (and rotate) one refresh token.
   await openAs(page, role, '/today')
+  // No click, fill or wait may hang a visit: without this, an action on an element that never shows waits for the whole test timeout.
+  page.setDefaultTimeout(20_000)
+  page.setDefaultNavigationTimeout(30_000)
   pages.set(key, { context, page })
   return page
 }
@@ -146,13 +151,23 @@ async function dropPage(role: Role, vp: Viewport): Promise<void> {
 
 // ---------------------------------------------------------------- one capture
 
-async function fullShot(page: Page, vp: Viewport, path: string): Promise<void> {
-  const height = await page.evaluate(() => {
+async function fullShot(page: Page, vp: Viewport, path: string, root: string | null): Promise<void> {
+  const height = await page.evaluate(sel => {
+    // A dialog: the viewport grows by what its tallest inner scroller hides, so the whole dialog is in the picture.
+    const dialog = sel ? document.querySelector<HTMLElement>(sel) : null
+    if (dialog) {
+      let hidden = 0
+      for (const el of [dialog, ...Array.from(dialog.querySelectorAll<HTMLElement>('*'))]) {
+        const oy = getComputedStyle(el).overflowY
+        if (oy === 'auto' || oy === 'scroll') hidden = Math.max(hidden, el.scrollHeight - el.clientHeight)
+      }
+      return window.innerHeight + hidden
+    }
     const main = document.querySelector<HTMLElement>('#main')
     main?.scrollTo(0, 0)
     const se = document.scrollingElement ?? document.documentElement
     return Math.max(se.scrollHeight, main ? main.scrollHeight + (window.innerHeight - main.clientHeight) : 0)
-  })
+  }, root)
   const tall = Math.min(Math.max(height, vp.height), MAX_FULL_HEIGHT)
   // The app scrolls <main>, not the document: the page is made as tall as its content, photographed, and put back.
   if (tall > vp.height + 1) {
@@ -183,14 +198,15 @@ async function captureOne(page: Page, role: Role, visit: Visit, screen: string, 
       // Scroll <main> only: scrollIntoView would also move the document and push the top bar off the screen.
       if (main && target) main.scrollTop = target.getBoundingClientRect().top - main.getBoundingClientRect().top - 8
     }, opts.scrollTo ?? null)
-    const metrics = await page.evaluate(collect, { phone: vp.width < 768 })
+    if (opts.root) await page.locator(opts.root).first().waitFor({ timeout: 10_000 })
+    const metrics = await page.evaluate(collect, { phone: vp.width < 768, root: opts.root ?? null })
     const fold = join(dir, `${vp.name}-fold.png`)
     await page.screenshot({ path: fold, animations: 'disabled', caret: 'hide' })
     const axe = AXE ? summariseAxe(await axeViolations(page)) : undefined
     let full: string | undefined
     if (FULL) {
       full = join(dir, `${vp.name}-full.jpg`)
-      await fullShot(page, vp, full)
+      await fullShot(page, vp, full, opts.root ?? null)
     }
     return { ...base, status: metrics.status, ms: Date.now() - t0, metrics, axe, shots: { fold: rel(fold), full: full ? rel(full) : undefined } }
   } catch (e) {
@@ -223,9 +239,18 @@ for (const role of ROLES) {
           try {
             page = await pageFor(browser, info, role, vp)
             const current = page
-            await visit.run(current, fx, async (screen, opts) => {
-              done.add(screen)
-              records.push(await captureOne(current, role, visit, screen, vp, opts))
+            let late = false
+            // A backstop: a visit that is still going after its budget is recorded as an error and its page replaced (below).
+            await bounded(visit.screens.length * VISIT_BUDGET_PER_SCREEN, `${visit.id} at ${vp.name}`, () =>
+              visit.run(current, fx, async (screen, opts) => {
+                if (late) throw new Error('visit timed out')
+                done.add(screen)
+                const record = await captureOne(current, role, visit, screen, vp, opts)
+                if (!late) records.push(record)
+              }),
+            ).catch(e => {
+              late = true
+              throw e
             })
           } catch (e) {
             let shot: string | undefined

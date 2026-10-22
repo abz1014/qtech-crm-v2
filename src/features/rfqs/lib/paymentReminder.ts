@@ -70,9 +70,13 @@ export function generatePaymentReminder(input: PaymentReminderInput): PaymentRem
 
   const lines: string[] = [greeting, '', 'I hope you are well.']
   const facts = `${invoice} still has an outstanding balance of ${balance}${paid}.`
+  // Sent before the due date (from the order page, "Customer owes ..."): a gentle note, not "fell due".
+  const notDueYet = daysBetween(input.dueOn, today) < 0
   const due = firm
     ? `It was due on ${dayMonthYear(input.dueOn)} and is now ${daysOverdue} days overdue.${reminded}`
-    : daysOverdue <= 1
+    : notDueYet
+      ? `It is due on ${dayMonthYear(input.dueOn)}.${reminded}`
+      : daysOverdue <= 1
       ? `It fell due on ${dayMonthYear(input.dueOn)}.${reminded}`
       : `It fell due on ${dayMonthYear(input.dueOn)}, ${daysOverdue} days ago.${reminded}`
   lines.push(`Our records show that ${facts} ${due}`, '')
