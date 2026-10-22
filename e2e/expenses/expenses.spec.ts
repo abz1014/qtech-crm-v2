@@ -443,21 +443,64 @@ test.describe('expenses (M03, M11)', () => {
     await expect(page.getByRole('dialog')).toBeHidden()
     await expect(page.getByText(`${tag} a`)).toBeVisible()
     expect((await byNote(`${tag} a`))[0].amount_pkr).toBe(1500)
-    // delete asks nothing: the row goes at once with an Undo, and Undo brings it back untouched
+    // delete (the row's menu): one confirm that names the expense, Cancel keeps it, Delete removes it at once and for good
     const del = async () => {
       await page.getByRole('button', { name: new RegExp(`^More for Office supplies & snacks of ${x2}$`) }).click()
       await page.getByRole('menuitem', { name: 'Delete expense' }).click()
-      await expect(page.getByText(`${tag} b`)).toHaveCount(0)
     }
     await del()
-    await page.getByRole('button', { name: /^Undo/ }).click()
+    await expect(page.getByTestId('delete-expense-what')).toContainText(`Office supplies & snacks · PKR ${x2.toLocaleString('en-US')}`)
+    await page.getByRole('button', { name: 'Cancel' }).click()
     await expect(page.getByText(`${tag} b`)).toBeVisible()
     expect(await byNote(`${tag} b`)).toHaveLength(1)
-    // deleted for good once the Undo window closes (dismissing the toast closes it)
     await del()
-    await page.getByText('Deleted expense', { exact: true }).locator('xpath=ancestor::*[.//button[@aria-label="Dismiss"]][1]').getByRole('button', { name: 'Dismiss' }).click()
-    await expect.poll(async () => (await byNote(`${tag} b`)).length).toBe(0)
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click()
+    await expect(page.getByText('Expense deleted')).toBeVisible()
+    await expect(page.getByText(`${tag} b`)).toHaveCount(0)
+    expect(await byNote(`${tag} b`)).toHaveLength(0)
   })
+
+  for (const [label, size] of [['1440', { width: 1440, height: 900 }], ['375', { width: 375, height: 812 }]] as const) {
+    test(`delete at ${label}: open the expense, Delete expense, confirm; the total drops and stays down after a reload`, async ({ page }) => {
+      const tag = `del${label}-${unique()}`
+      const x = base() + 21
+      await addExpense({ amount_pkr: x, category_id: SNACKS, paid_via: 'cash', description: `${tag} twice` })
+      await addExpense({ amount_pkr: x, category_id: SNACKS, paid_via: 'cash', description: `${tag} twice` }) // entered twice by mistake
+      await page.setViewportSize(size)
+      await openAs(page, 'admin', '/money/expenses')
+      await expect(page.getByText(`${tag} twice`)).toHaveCount(2)
+      const total = page.getByTestId('expenses-month-total')
+      const count = async () => Number(/(\d+) expenses/.exec((await total.textContent()) ?? '')?.[1])
+      const before = await count()
+      const sum = async () => Number(/PKR ([\d,]+)/.exec((await total.textContent()) ?? '')?.[1].replace(/,/g, ''))
+      const sumBefore = await sum()
+      // a tap on the row (the card on a phone) opens the dialog, which has Delete
+      await page.getByText(`${tag} twice`).first().click()
+      const dialog = page.getByRole('dialog', { name: 'Edit expense' })
+      await dialog.getByRole('button', { name: 'Delete expense' }).click()
+      await page.getByRole('dialog', { name: 'Delete this expense?' }).getByRole('button', { name: 'Delete', exact: true }).click()
+      await expect(page.getByText('Expense deleted')).toBeVisible()
+      await expect(page.getByText(`${tag} twice`)).toHaveCount(1)
+      await expect.poll(count).toBe(before - 1)
+      await page.reload()
+      await expect(page.getByText(`${tag} twice`)).toHaveCount(1)
+      await expect.poll(count).toBe(before - 1)
+      await expect.poll(sum).toBe(sumBefore - x)
+      expect(await byNote(`${tag} twice`)).toHaveLength(1)
+      if (label === '375') {
+        // the card has its own visible "⋯" with Edit and Delete, at least 44px
+        const more = page.getByRole('button', { name: new RegExp(`^More for Office supplies & snacks of ${x}$`) })
+        const box = await more.boundingBox()
+        expect(box?.width).toBeGreaterThanOrEqual(44)
+        expect(box?.height).toBeGreaterThanOrEqual(44)
+        await more.click()
+        await page.getByRole('menuitem', { name: 'Delete expense' }).click()
+        await page.getByRole('dialog', { name: 'Delete this expense?' }).getByRole('button', { name: 'Delete', exact: true }).click()
+        await expect(page.getByText(`${tag} twice`)).toHaveCount(0)
+        expect(await byNote(`${tag} twice`)).toHaveLength(0)
+      }
+    })
+  }
 
   test('recurring is one tap, and only once for a month', async ({ page }) => {
     const label = `Internet ${unique()}`

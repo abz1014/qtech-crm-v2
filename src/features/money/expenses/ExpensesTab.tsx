@@ -1,11 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 import { ChartColumn, ChevronLeft, ChevronRight, Ellipsis, Lock, Pencil, Receipt, Trash2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { matchesAllWords, useQueryParamText } from '@/lib/useQueryParamText'
-import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
@@ -17,13 +15,11 @@ import { NoResults } from '@/ui/NoResults'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { TableFilter } from '@/ui/TableFilter'
 import { Tag } from '@/ui/Tag'
-import { useToast } from '@/ui/useToast'
 import { Select } from '@/ui/form/Select'
-import { invalidateAfter } from '@/features/invalidation'
 import { useClosedMonths } from '@/features/money/monthEnd/hooks'
-import * as api from '@/features/money/expenses/api'
 import type { ExpenseListing } from '@/features/money/expenses/api'
 import { AddExpenseDialog } from '@/features/money/expenses/ExpenseDialog'
+import { CLOSED_MONTH_LINE, useDeleteExpenseFlow } from '@/features/money/expenses/deleteFlow'
 import { useCategories, useExpenseMonth, useGroups } from '@/features/money/expenses/hooks'
 import { RecurringPanel } from '@/features/money/expenses/RecurringPanel'
 import { forMonthNote } from '@/features/money/expenses/forMonth'
@@ -54,7 +50,7 @@ import {
  * category's group (Office running, Vehicles, Staff, Order costs, Owner and loans) with a subtotal each, so supplier payments
  * never hide among the snacks. "Search expenses" (payee, detail, category, order number; `?q=`) and Filters (group, category,
  * paid via). Input tax shows as a column only in a month that has some. A row opens for editing; its "⋯" holds Edit and Delete.
- * Delete asks nothing: the row goes at once with an Undo, and the expense is removed when the Undo window closes. A closed
+ * Delete (here and in the edit dialog, one flow: deleteFlow.tsx) asks once, then deletes at once and for good. A closed
  * month's rows carry a lock and cannot be edited or deleted (the database refuses too); one line says so and links Month end.
  */
 interface ExpensesTabProps {
@@ -70,10 +66,6 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
   const [filters, setFilters] = useState<ExpenseFilters>(NO_FILTERS)
   const [q, setQ] = useQueryParamText()
   const [editing, setEditing] = useState<ListedExpense | null>(null)
-  /** Rows deleted but still inside their Undo window: hidden here, removed from the books when the window closes. */
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
-  const toast = useToast()
-  const client = useQueryClient()
 
   const cats = useCategories()
   const groupsQ = useGroups()
@@ -83,10 +75,10 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
   const groups = groupsQ.data ?? NO_GROUPS
   const monthClosed = (closedQ.data ?? []).some(c => c.key === month)
   const rows = useMemo(() => {
-    const kept = filterExpenses(list.data?.rows ?? [], filters, categories).filter(r => !hidden.has(r.id))
+    const kept = filterExpenses(list.data?.rows ?? [], filters, categories)
     const found = q.trim() ? kept.filter(r => matchesAllWords(searchText(r, categories, list.data), q)) : kept
     return bySection(found, categories, groups)
-  }, [list.data, filters, categories, groups, q, hidden])
+  }, [list.data, filters, categories, groups, q])
   const totals = listTotals(rows)
   const sections = useMemo(() => sectionTotals(rows, categories, groups), [rows, categories, groups])
   const showTax = rows.some(r => r.inputTax > 0)
@@ -97,39 +89,11 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
     setQ('')
   }
 
-  const unhide = (id: string) =>
-    setHidden(h => {
-      const next = new Set(h)
-      next.delete(id)
-      return next
-    })
-  const remove = (r: ListedExpense) => {
-    const name = categories.find(c => c.id === r.categoryId)?.name ?? 'Expense'
-    setHidden(h => new Set(h).add(r.id))
-    toast.toast({
-      title: 'Deleted expense',
-      body: `${name} · ${pkr(r.amount)} · ${formatShortDate(r.paidOn)}`,
-      tone: 'neutral',
-      undo: {
-        onUndo: () => unhide(r.id),
-        undoneTitle: 'Expense kept',
-        undoneBody: `${name} · ${pkr(r.amount)}`,
-        // The row was only hidden; it leaves the books (with its receipt photos) once the Undo is no longer offered.
-        onSettle: () => {
-          api.deleteExpense(r.id).then(
-            () => invalidateAfter(client, 'expense.save', {}),
-            e => {
-              unhide(r.id)
-              toast.toast({ title: "Couldn't delete the expense", body: mapPgError(e, { entity: 'expense' }).message, tone: 'danger' })
-            },
-          )
-        },
-      },
-    })
-  }
+  const deleteFlow = useDeleteExpenseFlow(r => categories.find(c => c.id === r.categoryId)?.name ?? 'Expense')
+  const onDelete = deleteFlow.ask
 
   const columns = useMemo(
-    () => buildColumns(categories, list.data, { showTax, locked: monthClosed, onEdit: setEditing, onDelete: remove }),
+    () => buildColumns(categories, list.data, { showTax, locked: monthClosed, onEdit: setEditing, onDelete }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [categories, list.data, showTax, monthClosed],
   )
@@ -145,7 +109,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded border bg-sunken px-4 py-2 text-sm text-fg-2" data-testid="expenses-closed">
             <Icon icon={Lock} className="text-fg-muted" />
             <span>
-              <b className="font-medium text-fg">{monthKeyLabel(month)} is closed.</b> Its expenses are locked.
+              <b className="font-medium text-fg">{monthKeyLabel(month)} is closed.</b> {CLOSED_MONTH_LINE}
             </span>
             <Link to={`/money/month-end?month=${month}`} className="font-medium text-primary underline-offset-2 hover:underline">
               Open Month end
@@ -231,11 +195,12 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
               </EmptyState>
             )
           }
-          mobileRow={r => <ExpenseCard row={r} categories={categories} listing={list.data} locked={monthClosed} />}
+          mobileRow={r => <ExpenseCard row={r} categories={categories} listing={list.data} locked={monthClosed} onEdit={setEditing} onDelete={onDelete} />}
         />
       </section>
 
       {editing ? <AddExpenseDialog open expense={editing} onOpenChange={o => !o && setEditing(null)} /> : null}
+      {deleteFlow.node}
     </div>
   )
 }
@@ -390,12 +355,43 @@ function buildColumns(
   return cols
 }
 
-function ExpenseCard({ row, categories, listing, locked }: { row: ListedExpense; categories: readonly Category[]; listing: ExpenseListing | undefined; locked: boolean }) {
+function ExpenseCard({
+  row,
+  categories,
+  listing,
+  locked,
+  onEdit,
+  onDelete,
+}: {
+  row: ListedExpense
+  categories: readonly Category[]
+  listing: ExpenseListing | undefined
+  locked: boolean
+  onEdit: (r: ListedExpense) => void
+  onDelete: (r: ListedExpense) => void
+}) {
   const d = describe(row, categories, listing)
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-[2px] py-1">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-[2px] py-1">
       <span className="min-w-0 text-base font-medium [overflow-wrap:anywhere]">{d.name}</span>
       <Money value={row.amount} prefix={false} className="justify-self-end text-right text-base font-medium" />
+      {locked ? (
+        <span aria-hidden="true" />
+      ) : (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="quiet" size="touch" icon={Ellipsis} className="row-span-2 min-w-[44px]" aria-label={`More for ${d.name} of ${row.amount}`} />
+          </PopoverTrigger>
+          <PopoverContent variant="menu" align="end">
+            <MenuItem icon={Pencil} onClick={() => onEdit(row)}>
+              Edit expense
+            </MenuItem>
+            <MenuItem icon={Trash2} onClick={() => onDelete(row)}>
+              Delete expense
+            </MenuItem>
+          </PopoverContent>
+        </Popover>
+      )}
       <span className="min-w-0 text-sm text-fg-2 [overflow-wrap:anywhere]">{d.detail || ' '}</span>
       <span className="num inline-flex items-center gap-1 justify-self-end text-sm text-fg-muted">
         {locked ? <Icon icon={Lock} size="chip" aria-label="Locked" /> : null}

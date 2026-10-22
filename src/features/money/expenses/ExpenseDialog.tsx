@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Camera, Check, Lock } from 'lucide-react'
+import { Camera, Check, Lock, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { businessToday } from '@/lib/dates'
@@ -19,6 +19,8 @@ import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 import { qk } from '@/features/queryKeys'
+import { useClosedMonths } from '@/features/money/monthEnd/hooks'
+import { CLOSED_MONTH_LINE, useDeleteExpenseFlow } from '@/features/money/expenses/deleteFlow'
 import { CategoryPicker } from '@/features/money/expenses/CategoryPicker'
 import {
   useCategories,
@@ -251,6 +253,14 @@ function ExpenseFormReady({
   })
   const failedPhoto = () =>
     toast.toast({ title: 'Saved, but the receipt photo did not upload', body: 'Open the expense and add the photo again.', tone: 'neutral' })
+
+  // Delete (edit only): one confirm, one behaviour, shared with the list. A closed month shows the lock line instead.
+  const closedQ = useClosedMonths(!!expense)
+  const monthClosed = !!expense && (closedQ.data ?? []).some(c => c.key === expense.paidOn.slice(0, 7))
+  const deleteFlow = useDeleteExpenseFlow(
+    r => categories.find(c => c.id === r.categoryId)?.name ?? 'Expense',
+    () => onDone(),
+  )
 
   const { form } = sf
   const [gstTick, setGstTick] = useState(!!expense?.inputTax && !showsInputTax(expense.categoryId))
@@ -532,6 +542,25 @@ function ExpenseFormReady({
         />
       </Form>
       <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
+        {expense ? (
+          monthClosed ? (
+            <p className="mr-auto flex items-center gap-2 text-base text-fg-2 max-md:mr-0" data-testid="expense-closed-line">
+              <Icon icon={Lock} className="shrink-0 text-fg-muted" />
+              {CLOSED_MONTH_LINE}
+            </p>
+          ) : (
+            <Button
+              variant="secondary"
+              size="lg"
+              icon={Trash2}
+              className="mr-auto min-h-[44px] border-tone-danger-fg text-base text-tone-danger-fg max-md:mr-0"
+              onClick={() => deleteFlow.ask(expense)}
+              disabled={sf.pending}
+            >
+              Delete expense
+            </Button>
+          )
+        ) : null}
         <Button variant="quiet" onClick={onCancel} data-cancel>
           Cancel
         </Button>
@@ -539,6 +568,7 @@ function ExpenseFormReady({
           {sf.failed ? 'Try again' : 'Save expense'}
         </Button>
       </div>
+      {deleteFlow.node}
     </>
   )
 }
