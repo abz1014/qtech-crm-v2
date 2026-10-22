@@ -109,7 +109,8 @@ async function expectNoFalseOverdue(page: Page, where: string): Promise<void> {
 /** Red: any match of the text (the title or the badge) or one of its few ancestors carries a danger tone class. */
 async function isRed(l: Locator): Promise<boolean> {
   const reds = await l.evaluateAll(els => els.map(el => {
-    for (let n: Element | null = el, i = 0; n && i < 6; n = n.parentElement, i++) if (/danger|red/.test(n.getAttribute('class') ?? '')) return true
+    // The status word and its icon are red; the second line ("5 days overdue") under it is a quieter grey by design (StatusText), so look at the same status block too.
+    for (let n: Element | null = el, i = 0; n && i < 6; n = n.parentElement, i++) if (/danger|red/.test(n.getAttribute('class') ?? "") || (i >= 1 && i <= 2 && n.querySelector('[class*=danger]') !== null)) return true
     return false
   }))
   return reds.some(Boolean)
