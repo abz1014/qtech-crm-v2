@@ -39,7 +39,7 @@ import { useLegActions } from '@/features/orders/useLegActions'
 import { useSentPos } from '@/features/purchaseOrders/hooks'
 import { cancellationMessage, sentPoSentence } from '@/features/purchaseOrders/lib/cancelText'
 import { copyToClipboard } from '@/lib/clipboard'
-import { COMPANY_NAME } from '@/features/rfqs/lib'
+import { COMPANY_NAME } from '@/features/rfqs/lib/chaseCommon'
 import { CANCEL_REASONS, cancelReasonLabel, type CancelReason } from '@/features/orders/lib/cancel'
 import { lazyShown } from '@/lib/lazyDialog'
 

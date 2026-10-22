@@ -12,14 +12,14 @@ import { orderRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { orderFacts, pageStep } from '@/features/orders/lib/primaryAction'
 import { businessToday } from '@/lib/dates'
-import { OrderItemsPanel } from '@/features/orders/OrderItemsPanel'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { BelowTheFold } from '@/ui/BelowTheFold'
 
 /*
- * The panels under the items (supplier orders, commissioning, files) and admin's margin column are downloads of their own, fetched
- * once the order's header and items are drawn (perf/lcp, BelowTheFold): on a phone they are below the first screen.
+ * The panels under the header (items, supplier orders, commissioning, files) and admin's margin column are downloads of their own,
+ * fetched once the order's header is drawn (perf/lcp, BelowTheFold): on a phone the header fills the first screen.
  */
+const OrderItemsPanel = lazyWithReload(() => import('@/features/orders/OrderItemsPanel').then(m => ({ default: m.OrderItemsPanel })))
 const LegsPanel = lazyWithReload(() => import('@/features/orders/LegsPanel').then(m => ({ default: m.LegsPanel })))
 const CommissioningPanel = lazyWithReload(() => import('@/features/orders/CommissioningPanel').then(m => ({ default: m.CommissioningPanel })))
 const AttachmentsPanel = lazyWithReload(() => import('@/features/rfqs/AttachmentsPanel').then(m => ({ default: m.AttachmentsPanel })))
@@ -200,7 +200,9 @@ export default function OrderDetailScreen() {
           </div>
         ) : (
           <>
-            <OrderItemsPanel order={order} items={items.data} legs={legs.data} money={money} canEdit={canEdit && money} basisUnknown={basisUnknown} pos={pos.data ?? []} />
+            <BelowTheFold fallback={<Skeleton className="h-56 w-full" />}>
+              <OrderItemsPanel order={order} items={items.data} legs={legs.data} money={money} canEdit={canEdit && money} basisUnknown={basisUnknown} pos={pos.data ?? []} />
+            </BelowTheFold>
             <div className={isAdmin ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]' : 'grid gap-6'}>
               <div className="grid min-w-0 gap-6">
                 <BelowTheFold fallback={<Skeleton className="h-56 w-full" />}>
