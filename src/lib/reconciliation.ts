@@ -35,6 +35,8 @@ export interface RcOrder {
   cancelled: boolean
   /** Legacy flag value_basis_unknown: no net is guessed, so margin and net cash leave it out. */
   basisUnknown: boolean
+  /** Imported from the old CRM (orders.legacy_source is set; 0088). History: no finding is raised on it (redesign phase 0, D10). */
+  legacy?: boolean
 }
 
 /** One row per order from v_order_basis and v_order_money. */
@@ -305,9 +307,16 @@ export function computeReconciliationExceptions(input: ReconciliationInput): Rec
     }
   }
 
+  // Imported records are history (redesign phase 0, D10: "Things to check" lists real mistakes in live data only). A finding about
+  // an imported order, or an imported invoice, is dropped: the old CRM's books were kept there, and the one-off Review imported
+  // (phase 2) is where an imported record that is still open gets looked at.
+  const legacyOrders = new Set(input.orders.filter(o => o.legacy).map(o => o.id))
+  const legacyInvoices = new Set(input.invoices.filter(g => g.legacy).map(g => g.id))
+  const live = out.filter(e => !(e.orderId && legacyOrders.has(e.orderId)) && !(e.invoiceId && legacyInvoices.has(e.invoiceId)))
+
   // Most serious first, then in a stable order.
   const rank = (s: ExceptionSeverity) => (s === 'critical' ? 0 : 1)
-  return out.sort((a, b) => rank(a.severity) - rank(b.severity) || a.key.localeCompare(b.key))
+  return live.sort((a, b) => rank(a.severity) - rank(b.severity) || a.key.localeCompare(b.key))
 }
 
 export function countBySeverity(list: readonly ReconciliationException[]): { critical: number; warning: number } {

@@ -141,11 +141,16 @@ const ctx = (o: Partial<TodayInputs> = {}, role: Role = 'sales'): TodayInputs =>
 })
 
 describe('helpers', () => {
-  it('dueBadge words the distance', () => {
-    expect(dueBadge('2026-11-15', TODAY)).toEqual({ text: '12 days overdue', tone: 'danger' })
-    expect(dueBadge(TODAY, TODAY)).toEqual({ text: 'Due today', tone: 'danger' })
-    expect(dueBadge('2026-11-28', TODAY)).toEqual({ text: 'Due tomorrow', tone: 'warning' })
-    expect(dueBadge('2026-12-01', TODAY)).toEqual({ text: 'Due in 4 days', tone: 'neutral' })
+  it('dueBadge words the distance, and is red only for late money or a slipped promise to a customer (redesign phase 0)', () => {
+    expect(dueBadge('2026-11-15', TODAY, 'bid_due')).toEqual({ text: '12 days overdue', tone: 'danger' })
+    expect(dueBadge('2026-11-15', TODAY, 'payment_overdue')).toEqual({ text: '12 days overdue', tone: 'danger' })
+    expect(dueBadge('2026-11-15', TODAY, 'chase_supplier')).toEqual({ text: '12 days overdue', tone: 'warning' })
+    expect(dueBadge(TODAY, TODAY, 'bid_due')).toEqual({ text: 'Due today', tone: 'warning' })
+    expect(dueBadge('2026-11-28', TODAY, 'bid_due')).toEqual({ text: 'Due tomorrow', tone: 'warning' })
+    expect(dueBadge('2026-12-01', TODAY, 'bid_due')).toEqual({ text: 'Due in 4 days', tone: 'neutral' })
+    // past 30 days: a date, not a count, and no colour; a late payment stays red
+    expect(dueBadge('2024-03-07', TODAY, 'bid_due')).toEqual({ text: 'since 7 Mar 2024', tone: 'neutral' })
+    expect(dueBadge('2026-06-01', TODAY, 'payment_overdue')).toEqual({ text: 'since 1 Jun 2026', tone: 'danger' })
   })
   it('groups by the date', () => {
     expect(groupFor('2026-11-26', TODAY)).toBe('now')
@@ -257,7 +262,7 @@ describe('rule: not floated', () => {
   it('without a bid date shows its age instead', () => {
     const [e] = ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'not_floated', dueOn: null })] }))
     expect(e.actionDueOn).toBe('2026-11-17') // due the day it arrived
-    expect(e.badge).toEqual({ text: '10 days overdue', tone: 'danger' })
+    expect(e.badge).toEqual({ text: '10 days overdue', tone: 'warning' }) // our own pace: amber, never red
     expect(e.group).toBe('now')
   })
 })
@@ -321,7 +326,8 @@ describe('rule: bid due', () => {
     )
     expect(rows.map(r => r.subjectId)).toEqual(['a', 'b', 'c'])
     expect(rows.map(r => r.title)).toEqual(['Quotation due today', 'Quotation 2 days overdue', 'Quotation due Wednesday 2 December'])
-    expect(rows[0].badge).toEqual({ text: 'Due today', tone: 'danger' })
+    expect(rows[0].badge).toEqual({ text: 'Due today', tone: 'warning' })
+    expect(rows[1].badge).toEqual({ text: '2 days overdue', tone: 'danger' }) // a promise to the customer that slipped
   })
   it('names the bid time when the RFQ has one (rfqs.due_time)', () => {
     expect(ruleBidDue(ctx({ rfqs: [rfq({ dueOn: TODAY, dueTime: '17:00:00' })] }))[0].title).toBe('Quotation due today, 17:00')
@@ -661,7 +667,7 @@ describe('actionDueOn per rule', () => {
     const [e] = ruleChaseCustomer(ctx({ rfqs: [rfq({ dueOn: '2026-12-11' })], clarifications: [clar({ lastAskedOn: '2026-11-18' })] }))
     expect(e.actionDueOn).toBe('2026-11-23') // Wed 18 + 3 working days = Mon 23
     expect(e.group).toBe('now')
-    expect(e.badge).toEqual({ text: '4 days overdue', tone: 'danger' })
+    expect(e.badge).toEqual({ text: '4 days overdue', tone: 'warning' })
     // with the bid close the wait is 1 working day
     expect(ruleChaseCustomer(ctx({ rfqs: [rfq({ dueOn: '2026-12-01' })], clarifications: [clar({ lastAskedOn: '2026-11-25' })] }))[0].actionDueOn).toBe('2026-11-26')
   })
@@ -672,7 +678,7 @@ describe('actionDueOn per rule', () => {
   it('relay answers: the day the customer answered', () => {
     const [e] = ruleRelayAnswers(ctx({ rfqs: [rfq()], inquiries: [inq({ answersToRelay: 2, answeredOn: '2026-11-25' })] }))
     expect(e.actionDueOn).toBe('2026-11-25')
-    expect(e.badge).toEqual({ text: '2 days overdue', tone: 'danger' })
+    expect(e.badge).toEqual({ text: '2 days overdue', tone: 'warning' })
   })
   it('not floated: the day the RFQ was received', () => {
     expect(ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'not_floated', receivedOn: '2026-11-27' })] }))[0]).toMatchObject({ actionDueOn: '2026-11-27', group: 'now', badge: { text: 'Due today' } })
@@ -796,8 +802,9 @@ describe('rule: order rules (O05)', () => {
   describe('stale legs and orders with no PO', () => {
     it('goods late fires for a leg whose expected date is months past and is not delivered', () => {
       const [e] = ruleGoodsLate(ctx({ legs: [leg({ expectedOn: '2026-08-27' })] }))
-      expect(e).toMatchObject({ rule: 'goods_late', title: 'Goods 92 days late from supplier', group: 'now' })
-      expect(e.badge.tone).toBe('danger')
+      // past 30 days the title names the date, and the badge is grey (buildToday then moves it to the "Older than 30 days" fold)
+      expect(e).toMatchObject({ rule: 'goods_late', title: 'Goods late from supplier since 27 Aug 2026', group: 'now' })
+      expect(e.badge).toEqual({ text: 'since 27 Aug 2026', tone: 'neutral' })
     })
     it('place PO fires for a won order whose leg has no PO, however old, and not once the PO is placed', () => {
       expect(rulePlacePo(ctx({ legs: [leg({ placedOn: null, orderedOn: '2026-08-01' })] }))[0]).toMatchObject({ rule: 'place_po', group: 'ready' })

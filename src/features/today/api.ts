@@ -379,10 +379,16 @@ async function loadCosts(): Promise<CostFact[]> {
   )
   const ids = rows.map(r => r.order_id).filter((id): id is string => Boolean(id))
   const cancelled = new Set<string>()
+  const imported = new Set<string>()
   for (let i = 0; i < ids.length; i += 150) {
     const slice = ids.slice(i, i + 150)
-    const found = unwrap(await db.from('orders').select('id').in('id', slice).not('cancelled_on', 'is', null)) ?? []
-    for (const o of found) cancelled.add(o.id)
+    const [found, old] = await Promise.all([
+      db.from('orders').select('id').in('id', slice).not('cancelled_on', 'is', null),
+      // which came from the old CRM: the ids only (legacy_source itself is never read here)
+      db.from('orders').select('id').in('id', slice).not('legacy_source', 'is', null),
+    ])
+    for (const o of unwrap(found) ?? []) cancelled.add(o.id)
+    for (const o of unwrap(old) ?? []) imported.add(o.id)
   }
   return rows
     .filter(r => r.order_id)
@@ -395,6 +401,7 @@ async function loadCosts(): Promise<CostFact[]> {
       costsState: r.costs_state ?? '',
       basisUnknown: r.data_trust === 'basis_unknown',
       cancelled: cancelled.has(r.order_id as string),
+      legacy: imported.has(r.order_id as string),
     }))
 }
 

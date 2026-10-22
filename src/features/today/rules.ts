@@ -14,7 +14,8 @@ import { timeText } from '@/features/rfqs/lib/chaseCommon'
 import { supplierReplyBy } from '@/features/rfqs/lib/supplierChase'
 import { formatAmount } from '@/lib/money'
 import { orderRef, rfqRef } from '@/lib/refs'
-import { ageWords, dueWord } from '@/lib/timeWords'
+import { ageOrSince, dateWords, dueWord, sinceWords } from '@/lib/timeWords'
+import { isStale, STALE_AFTER_DAYS, toneFor } from './needsYou'
 import {
   SNOOZE_RULE,
   type ClarificationFact,
@@ -86,18 +87,22 @@ export function routesToUser(ownerId: string | null, ctx: TodayInputs): boolean 
 }
 
 /**
- * Time words from src/lib/timeWords (R2-08): "12 days overdue", "Due today", "Due tomorrow", "Due in 4 days". Danger when late or
- * today, warning within three days, neutral beyond.
+ * Time words from src/lib/timeWords (R2-08): "12 days overdue", "Due today", "Due tomorrow", "Due in 4 days"; past 30 days
+ * "since 31 Jan 2025" (never "995 days overdue"). The tone is the one colour rule (needsYou.ts toneFor): red only for late
+ * money and a slipped promise to a customer, amber for due today or tomorrow and for our own pace, grey beyond.
  */
-export function dueBadge(dueOn: string, today: string): { text: string; tone: Tone } {
+export function dueBadge(dueOn: string, today: string, rule: RuleKey): { text: string; tone: Tone } {
   const d = daysBetween(today, dueOn)
-  return { text: dueWord(d), tone: d <= 0 ? 'danger' : d <= 3 ? 'warning' : 'neutral' }
+  return { text: d < -STALE_AFTER_DAYS ? sinceWords(dueOn) : dueWord(d), tone: toneFor(rule, d) }
 }
 
-/** "5 days old", "New" (ageWords). */
+/** "5 days old", "New" (ageWords); past 30 days "since 31 Jan 2025". */
 function ageBadge(since: string | null, today: string): { text: string; tone: Tone } {
-  return { text: ageWords(since ? Math.max(0, daysBetween(since, today)) : 0), tone: 'neutral' }
+  return { text: since ? ageOrSince(daysBetween(since, today), since) : 'New', tone: 'neutral' }
 }
+
+/** More than 30 days ago: a title then names the date instead of a count nobody reads ("995 days"). */
+const old = (since: string, today: string): boolean => daysBetween(since, today) > STALE_AFTER_DAYS
 
 /** The collision line (O-3): somebody else made the last chase. Nothing when it was you or nobody is on record. */
 export function collisionOf(by: string | null | undefined, at: string | null | undefined, ctx: TodayInputs): { by: string; at: string } | undefined {
@@ -187,7 +192,7 @@ export function ruleChaseCustomer(ctx: TodayInputs): Entry[] {
         ref: rfqRef(r.number),
         party: r.companyName,
         actionDueOn: w.nextNudgeOn, // last ask + the wait
-        badge: dueBadge(w.nextNudgeOn, ctx.today),
+        badge: dueBadge(w.nextNudgeOn, ctx.today, 'chase_customer'),
         isPriority: r.isPriority,
         rfqId: r.id,
         href: RFQ_HREF(r.id),
@@ -221,7 +226,7 @@ export function ruleRelayAnswers(ctx: TodayInputs): Entry[] {
           ref: rfqRef(r.number),
           party: r.companyName,
           actionDueOn: i.answeredOn ?? ctx.today, // the day the customer answered
-          badge: dueBadge(i.answeredOn ?? ctx.today, ctx.today),
+          badge: dueBadge(i.answeredOn ?? ctx.today, ctx.today, 'relay_answers'),
           isPriority: r.isPriority,
           rfqId: r.id,
           inquiryId: i.id,
@@ -250,7 +255,7 @@ export function ruleNotFloated(ctx: TodayInputs): Entry[] {
           ref: rfqRef(r.number),
           party: r.companyName,
           actionDueOn: r.receivedOn, // due the day it arrived (+0): floating is the first thing to do
-          badge: dueBadge(r.receivedOn, ctx.today),
+          badge: dueBadge(r.receivedOn, ctx.today, 'not_floated'),
           isPriority: r.isPriority,
           rfqId: r.id,
           href: RFQ_HREF(r.id),
@@ -302,7 +307,7 @@ export function ruleChaseSupplier(ctx: TodayInputs): Entry[] {
         ref: rfqRef(r.number),
         party: i.supplierName,
         actionDueOn: actionOn,
-        badge: dueBadge(actionOn, ctx.today),
+        badge: dueBadge(actionOn, ctx.today, 'chase_supplier'),
         isPriority: r.isPriority,
         rfqId: r.id,
         inquiryId: i.id,
@@ -322,6 +327,7 @@ export function ruleChaseSupplier(ctx: TodayInputs): Entry[] {
 function dueWords(dueOn: string, today: string, dueTime?: string | null): string {
   const d = daysBetween(today, dueOn)
   const at = timeText(dueTime)
+  if (d < -STALE_AFTER_DAYS) return `Quotation was due ${dateWords(dueOn)}, not sent`
   if (d < 0) return `Quotation ${-d} ${-d === 1 ? 'day' : 'days'} overdue`
   if (d === 0) return `Quotation due today${at ? `, ${at}` : ''}`
   if (d === 1) return `Quotation due tomorrow${at ? `, ${at}` : ''}`
@@ -344,7 +350,7 @@ export function ruleBidDue(ctx: TodayInputs): Entry[] {
           ref: rfqRef(r.number),
           party: r.companyName,
           actionDueOn: r.dueOn,
-          badge: dueBadge(r.dueOn, ctx.today),
+          badge: dueBadge(r.dueOn, ctx.today, 'bid_due'),
           isPriority: r.isPriority,
           rfqId: r.id,
           href: RFQ_HREF(r.id),
@@ -373,7 +379,7 @@ export function ruleDecisionOverdue(ctx: TodayInputs): Entry[] {
             ref: rfqRef(r.number),
             party: r.companyName,
             actionDueOn: r.quotationValidUntil,
-            badge: dueBadge(r.quotationValidUntil, ctx.today),
+            badge: dueBadge(r.quotationValidUntil, ctx.today, 'decision_overdue'),
             isPriority: r.isPriority,
             rfqId: r.id,
             href: RFQ_HREF(r.id),
@@ -387,18 +393,17 @@ export function ruleDecisionOverdue(ctx: TodayInputs): Entry[] {
     if (r.bidState !== 'bid_sent' || !r.quotedOn) continue
     const decisionDue = addBusinessDays(r.quotedOn, THRESHOLDS.decisionOverdueDays)
     if (ctx.today < decisionDue) continue
-    const since = daysBetween(r.quotedOn, ctx.today)
     out.push(
       build(
         {
           rule: 'decision_overdue',
           subjectId: r.id,
           tab: tabFor('decision_overdue'),
-          title: `No decision yet: quotation sent ${since} days ago`,
+          title: old(r.quotedOn, ctx.today) ? `No decision yet: quotation sent ${dateWords(r.quotedOn)}` : `No decision yet: quotation sent ${daysBetween(r.quotedOn, ctx.today)} days ago`,
           ref: rfqRef(r.number),
           party: r.companyName,
           actionDueOn: decisionDue,
-          badge: dueBadge(decisionDue, ctx.today),
+          badge: dueBadge(decisionDue, ctx.today, 'decision_overdue'),
           isPriority: r.isPriority,
           rfqId: r.id,
           href: RFQ_HREF(r.id),
@@ -423,7 +428,6 @@ export function rulePaymentOverdue(ctx: TodayInputs): Entry[] {
     const ownerRole = ctx.roleOf(p.ownerId)
     const mine = ctx.user.role === 'sales' ? p.ownerId === ctx.user.id : ownerRole !== 'sales'
     if (!mine) continue
-    const late = daysBetween(p.dueOn, ctx.today)
     const w = chaseState({
       lastTouchOn: p.lastRemindedOn ?? p.dueOn,
       waitDays: THRESHOLDS.paymentReminderDays,
@@ -438,12 +442,12 @@ export function rulePaymentOverdue(ctx: TodayInputs): Entry[] {
         rule: 'payment_overdue',
         subjectId: p.orderId,
         tab: tabFor('payment_overdue'),
-        title: `Payment ${late} ${late === 1 ? 'day' : 'days'} overdue`,
+        title: old(p.dueOn, ctx.today) ? `Payment late ${sinceWords(p.dueOn)}` : `Payment ${plural(daysBetween(p.dueOn, ctx.today), 'day', 'days')} overdue`,
         waitingTitle: 'Payment reminded',
         ref: orderRef(p.orderNumber),
         party: p.customerName,
         actionDueOn: actionOn, // the due date for the first reminder; the last reminder plus the cooldown after that
-        badge: dueBadge(actionOn, ctx.today),
+        badge: dueBadge(actionOn, ctx.today, 'payment_overdue'),
         isPriority: false,
         orderId: p.orderId,
         href: `/orders/${p.orderId}`,
@@ -462,7 +466,6 @@ export function ruleGoodsLate(ctx: TodayInputs): Entry[] {
   const out: Entry[] = []
   for (const l of ctx.legs) {
     if (!l.placedOn || !l.expectedOn || l.deliveredOn || l.expectedOn >= ctx.today || !routesToUser(l.ownerId, ctx)) continue
-    const late = daysBetween(l.expectedOn, ctx.today)
     const w = chaseState({
       lastTouchOn: l.lastChasedOn ?? l.expectedOn,
       waitDays: THRESHOLDS.goodsChaseDays,
@@ -476,12 +479,12 @@ export function ruleGoodsLate(ctx: TodayInputs): Entry[] {
         rule: 'goods_late',
         subjectId: l.id,
         tab: tabFor('goods_late'),
-        title: `Goods ${late} ${late === 1 ? 'day' : 'days'} late from supplier`,
+        title: old(l.expectedOn, ctx.today) ? `Goods late from supplier ${sinceWords(l.expectedOn)}` : `Goods ${plural(daysBetween(l.expectedOn, ctx.today), 'day', 'days')} late from supplier`,
         waitingTitle: 'Supplier chased for goods',
         ref: l.reference ? `PO ${l.reference.replace(/^PO\s+/i, '')}` : orderRef(l.orderNumber),
         party: l.supplierName,
         actionDueOn: actionOn, // the expected date for the first chase; the last chase plus the cooldown after that
-        badge: dueBadge(actionOn, ctx.today),
+        badge: dueBadge(actionOn, ctx.today, 'goods_late'),
         isPriority: false,
         orderId: l.orderId,
         legId: l.id,
@@ -646,7 +649,7 @@ export function ruleDeliveredNotInvoiced(ctx: TodayInputs): Entry[] {
           ref: orderRef(o.number),
           party: o.customerName,
           actionDueOn: dueOn,
-          badge: dueBadge(dueOn, ctx.today),
+          badge: dueBadge(dueOn, ctx.today, 'delivered_not_invoiced'),
           isPriority: false,
           orderId: o.id,
           href: `/orders/${o.id}`,
@@ -737,7 +740,8 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
  */
 export function ruleCostsIncomplete(ctx: TodayInputs): Entry[] {
   if (ctx.user.role !== 'admin') return []
-  const rows = (ctx.costs ?? []).filter(c => c.paymentState === 'settled' && c.costsState === 'provisional' && !c.basisUnknown && !c.cancelled)
+  // A settled imported order is history (redesign phase 0): its costs were kept in the old CRM, so it is never chased for them here.
+  const rows = (ctx.costs ?? []).filter(c => c.paymentState === 'settled' && c.costsState === 'provisional' && !c.basisUnknown && !c.cancelled && !c.legacy)
   if (rows.length === 0) return []
   const noExpected = rows.filter(c => c.expectedCost === null).length
   const oldest = rows.reduce((a, b) => (a.orderNumber <= b.orderNumber ? a : b))
@@ -853,7 +857,7 @@ export function ruleRecurringDue(ctx: TodayInputs): Entry[] {
         ref: 'Expenses',
         party: labels.length > 3 ? `${labels.slice(0, 3).join(', ')} and ${labels.length - 3} more` : labels.join(', '),
         actionDueOn: actionOn,
-        badge: dueBadge(actionOn, ctx.today),
+        badge: dueBadge(actionOn, ctx.today, 'recurring_due'),
         isPriority: false,
         href: '/money/expenses',
         number: 0,
@@ -899,7 +903,7 @@ export function ruleJobCommissioning(ctx: TodayInputs): Entry[] {
           ref: orderRef(j.orderNumber),
           party: j.siteName ? `${j.customerName}, ${j.siteName}` : j.customerName,
           actionDueOn: j.plannedOn,
-          badge: dueBadge(j.plannedOn, ctx.today),
+          badge: dueBadge(j.plannedOn, ctx.today, 'job_commissioning'),
           isPriority: false,
           orderId: j.orderId,
           href: `/orders/${j.orderId}`,
@@ -979,7 +983,7 @@ export function groupItems(items: readonly Entry[]): TodayView {
   const waiting = items
     .filter(i => i.waiting)
     .sort((a, b) => (a.waiting!.nextNudgeOn === b.waiting!.nextNudgeOn ? byAge(a, b) : a.waiting!.nextNudgeOn < b.waiting!.nextNudgeOn ? -1 : 1))
-  return { now, soon, ready, waiting, active: [...now, ...soon, ...ready] }
+  return { now, soon, ready, waiting, active: [...now, ...soon, ...ready], stale: [] }
 }
 
 /** Every rule, in one place, so a test can name them. */
@@ -1005,10 +1009,20 @@ export const RULES: Record<RuleKey, (ctx: TodayInputs) => Entry[]> = {
   job_on_site: ruleJobOnSite,
 }
 
-/** The whole Today list for one person on one day: every rule, snoozes subtracted, grouped. Engineers never get a money rule. */
+/**
+ * The whole Today list for one person on one day: every rule, snoozes subtracted, grouped. Engineers never get a money rule.
+ * An item older than 30 days (needsYou.ts isStale; never a late payment) leaves the groups for the grey "Older than 30 days"
+ * fold, oldest last, its date in words ("since 31 Jan 2025") and no colour. A Waiting item stays in Waiting: someone chased it.
+ */
 export function buildToday(ctx: TodayInputs): TodayView {
-  const all = (Object.keys(RULES) as RuleKey[]).flatMap(k => RULES[k](ctx))
-  return groupItems(applySnoozes(all, ctx.snoozes, ctx.today))
+  const all = applySnoozes((Object.keys(RULES) as RuleKey[]).flatMap(k => RULES[k](ctx)), ctx.snoozes, ctx.today)
+  const stale = (i: Entry) => !i.waiting && isStale(i, ctx.today)
+  const view = groupItems(all.filter(i => !stale(i)))
+  view.stale = all
+    .filter(stale)
+    .sort((a, b) => ((a.actionDueOn ?? '') === (b.actionDueOn ?? '') ? byAge(a, b) : (a.actionDueOn ?? '') > (b.actionDueOn ?? '') ? -1 : 1))
+    .map(i => ({ ...i, badge: { text: sinceWords(i.actionDueOn as string), tone: 'neutral' } }))
+  return view
 }
 
 /** Which top-bar destination counts an item: every Today item belongs to exactly one, so the nav numbers add up to Today's. */

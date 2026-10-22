@@ -1,16 +1,20 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import { AppShell } from '@/app/shell/AppShell'
+import { addDays } from '@/features/rfqs/lib/dateText'
+import { businessToday } from '@/lib/dates'
 import { installFakeDb } from '@/test/fakeSupabase'
 
 /*
- * E-SH-01, revised by the owner decision of 2026-10-19: every top-bar number means "needs you", read from the person's own
- * Today list. RFQs is no longer every open RFQ, and Orders is no longer every active order.
+ * E-SH-01, revised by the owner's redesign approval of 2026-10-22 (phase 0, "stop the noise"): ONE number in the top bar, on
+ * Today, and it means "needs you" by the one definition (features/today/needsYou.ts): due today or late, not Waiting, not older
+ * than 30 days. RFQs, Orders and Money carry no number any more. Every number still comes from the person's own Today list.
  */
-const open = (n: number) => ({ rfq_id: `r${n}`, number: n, company_id: 'c', owner_id: null as string | null, received_on: '2026-11-01', due_on: '2026-12-01', outcome: 'open', sourcing_state: 'not_floated', clarification_state: 'none', bid_state: 'to_bid', companies: { name: 'Acme' }, users: null })
+const twoDaysAgo = addDays(businessToday(), -2) as string
+const open = (n: number, receivedOn = twoDaysAgo) => ({ rfq_id: `r${n}`, number: n, company_id: 'c', owner_id: null as string | null, received_on: receivedOn, due_on: null, outcome: 'open', sourcing_state: 'not_floated', clarification_state: 'none', bid_state: 'to_bid', companies: { name: 'Acme' }, users: null })
 const toPlan = { order_id: 'o1', number: 7, company_id: 'c', owner_id: 'u1', lifecycle: 'active', goods_state: 'n_a', commissioning_state: 'to_plan', invoicing_state: null }
 
 function mount(role: 'admin' | 'engineer', rfqs = [open(1)]) {
@@ -33,34 +37,35 @@ function mount(role: 'admin' | 'engineer', rfqs = [open(1)]) {
   return { fake, bar: screen.getAllByRole('navigation', { name: 'Main' })[0] }
 }
 
-describe('top-bar counts mean "needs you"', () => {
+describe('the top bar has one number: Today\'s "needs you"', () => {
   it('makes no head request for active orders: every number comes from the Today list', async () => {
     const { fake, bar } = mount('admin')
-    await within(bar).findByRole('link', { name: /^Orders\s?, 1 need you$/ })
+    await within(bar).findByRole('link', { name: /^Today\s?, 1 need you$/ })
     expect(fake.calls.some(c => c.target === 'v_order_state' && /head|count/.test(JSON.stringify(c)))).toBe(false)
   })
 
-  it('RFQs counts the RFQ items on Today (three not sent to suppliers), not every open RFQ', async () => {
+  it('Today counts the items due today or late (three RFQs nobody asked suppliers about); RFQs, Orders and Money carry no number', async () => {
     const { bar } = mount('admin', [open(1), open(2), open(3)])
-    expect(await within(bar).findByRole('link', { name: /^RFQs\s?, 3 need you$/ })).toBeInTheDocument()
-    expect(within(bar).getByRole('link', { name: /^Today\s?, \d+ need you$/ })).toBeInTheDocument()
-  })
-
-  it('an open RFQ that needs nothing today gets no number', async () => {
-    const { bar } = mount('admin', [{ ...open(1), sourcing_state: 'floated_awaiting', owner_id: 'someone-else' }])
-    expect(await within(bar).findByRole('link', { name: /^Orders\s?, 1 need you$/ })).toBeInTheDocument()
+    expect(await within(bar).findByRole('link', { name: /^Today\s?, 3 need you$/ })).toBeInTheDocument()
+    // "Plan commissioning" and the FBR roll-up are ready-to-move chores: listed on Today, never counted
     expect(within(bar).getByRole('link', { name: 'RFQs' })).toBeInTheDocument()
+    expect(within(bar).getByRole('link', { name: 'Orders' })).toBeInTheDocument()
+    expect(within(bar).getByRole('link', { name: 'Money' })).toBeInTheDocument()
+    expect(bar.querySelectorAll('[data-needs-count]')).toHaveLength(1)
   })
 
-  it('admin: Orders from the order items on Today (plan commissioning), Money from the money items', async () => {
-    const { bar } = mount('admin')
-    expect(await within(bar).findByRole('link', { name: /^Orders\s?, 1 need you$/ })).toBeInTheDocument()
-    expect(await within(bar).findByRole('link', { name: /^Money\s?, 1 need you$/ })).toBeInTheDocument() // the one FBR item
+  it('an item older than 30 days is not counted (it waits in Today\'s grey fold)', async () => {
+    const { fake, bar } = mount('admin', [open(1, '2025-01-27'), open(2)])
+    // the fresh one is counted, the one from January 2025 is not
+    expect(await within(bar).findByRole('link', { name: /^Today\s?, 1 need you$/ })).toBeInTheDocument()
+    expect(fake.calls.some(c => c.target === 'v_rfq_state')).toBe(true)
+    expect(bar.querySelectorAll('[data-needs-count]')).toHaveLength(1)
   })
 
-  it('an engineer gets an Orders count, no Money entry, and makes no money request', async () => {
+  it('an engineer: no Money entry, no money request, and no number for a chore that is not due (plan commissioning)', async () => {
     const { fake, bar } = mount('engineer')
-    expect(await within(bar).findByRole('link', { name: /^Orders\s?, 1 need you$/ })).toBeInTheDocument()
+    await waitFor(() => expect(fake.calls.some(c => c.target === 'v_order_state')).toBe(true))
+    expect(bar.querySelectorAll('[data-needs-count]')).toHaveLength(0)
     expect(within(bar).queryByRole('link', { name: /Money/ })).not.toBeInTheDocument()
     const money = /^(v_invoice_state|v_order_money|payments_in|invoices|expenses|recurring_expenses|rpc:order_receivables|rpc:month_end_status)$/
     expect(fake.calls.filter(c => money.test(c.target))).toEqual([])

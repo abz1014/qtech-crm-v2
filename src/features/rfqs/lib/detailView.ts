@@ -1,7 +1,7 @@
 // Pure rules behind the RFQ page as drawn in g2-rfq-detail (parity audit Part C). Framework-free, so they are tested without a screen.
 
 import { formatDay } from '@/lib/formatDay'
-import { daysOverdue, dueWord, inDays } from '@/lib/timeWords'
+import { COUNT_WORDS_MAX_DAYS, daysOverdue, dueWord, inDays } from '@/lib/timeWords'
 
 // ------------------------------------------------------------------------------------------------ coverage of one item
 
@@ -104,11 +104,15 @@ export function daysSince(from: string, to: string): number {
 
 // ------------------------------------------------------------------------------------------------ the deadline chip
 
+/** Due more than 30 days ago: red is kept for a promise that slipped within the last 30 days (redesign phase 0). */
+const longLate = (daysToDue: number | null | undefined): boolean => daysToDue !== null && daysToDue !== undefined && -daysToDue > COUNT_WORDS_MAX_DAYS
+
 /**
  * "Due in 4 days", "Due tomorrow", "3 days overdue" as one chip (C-05), in the shared time words (src/lib/timeWords.ts). Null when
  * there is nothing to say (no date, or more than a week away).
  */
 export function dueChipLabel(daysToDue: number | null | undefined, isOverdue: boolean): string | null {
+  if (longLate(daysToDue)) return null // more than 30 days late: no red chip and no count (redesign phase 0); the date tile says it
   if (isOverdue && daysToDue !== null && daysToDue !== undefined && daysToDue < 0) return daysOverdue(-daysToDue)
   if (daysToDue === null || daysToDue === undefined || daysToDue > 7) return null
   return dueWord(Math.max(0, daysToDue))
@@ -119,6 +123,7 @@ export function dueChipLabel(daysToDue: number | null | undefined, isOverdue: bo
  * chip; further off it is plain text.
  */
 export function dueIsUrgent(daysToDue: number | null | undefined, isOverdue: boolean): boolean {
+  if (longLate(daysToDue)) return false
   if (isOverdue) return true
   return daysToDue !== null && daysToDue !== undefined && daysToDue <= 2
 }

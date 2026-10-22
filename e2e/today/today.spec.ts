@@ -118,7 +118,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     await expect(overdue.locator('li[data-rule="chase_customer"]').filter({ hasText: s.ref })).toBeVisible()
     await expect(row.getByText(/^\d+ days? overdue$/)).toBeVisible()
     await expect(page.getByRole('region', { name: 'Ready to move' }).filter({ hasText: s.ref })).toHaveCount(0)
-    await expect(page.getByText(/\d+ due now/)).not.toContainText('0 due now')
+    await expect(page.locator('[data-needs-you-count]')).not.toHaveText('0') // the one count (redesign phase 0)
     await row.getByRole('button').first().click() // selecting a row is not a chase
     const pane = paneFor(page, s.ref)
     await expect(pane.getByText('Prepared for you')).toBeVisible()

@@ -9,11 +9,9 @@ import {
   defaultOwner,
   failureReference,
   isBoardShow,
-  isLate,
   NEXT_STEP_LABEL,
   PAGE_SIZE,
   pageSummary,
-  stepCounts,
   type BoardRow,
   type BoardShow,
   type NextStep,
@@ -22,6 +20,7 @@ import {
 import { ClosedCard, ClosedOnCell, DueCell, NextStepCell, OpenCard, OutcomeCell, OwnerCell, ReceivedCell, RfqCell } from '@/features/rfqs/board/BoardParts'
 import { StepFilter } from '@/features/rfqs/board/StepFilter'
 import { useSession } from '@/app/session'
+import { useSharedNavCounts } from '@/app/shell/navCountsContext'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
@@ -39,7 +38,7 @@ import { useQueryParamText } from '@/lib/useQueryParamText'
 
 /*
  * RFQ board (R06; UX audit 2026-10-19). Open RFQs in the order the work is due: due date first, then priority. One filter worded
- * as the next step (All open, Needs suppliers, Waiting for prices, Ready to quote, Quotation sent, Closed) with live counts, and
+ * as the next step (All open, Needs suppliers, Waiting for prices, Ready to quote, Quotation sent, Closed), no counts on it, and
  * the owner switch (Mine or All; Mine is the default for sales). Each row leads with the company and what was asked, then the
  * code, and one "Next step" column says where it stands. Where you are (what is shown, owner, page) lives in the address, so a
  * reload or a shared link lands on the same view. An empty open list is the goal state.
@@ -103,16 +102,16 @@ export function BoardPage() {
   const values = useRfqValues(canSeeMoney)
   const closed = useClosedRfqs(page, searched, closedTab)
 
-  // Owner narrows first, so the step counts always add up to what the owner switch shows.
+  // Owner narrows first (Mine or All), then the step and the search.
   const byOwner = useMemo(() => applyOwner(open.data ?? [], owner, user?.id ?? null), [open.data, owner, user?.id])
-  const counts = useMemo(() => stepCounts(byOwner), [byOwner])
   const step: 'all' | NextStep = show === 'closed' ? 'all' : show
   const shown = useMemo(() => applyQuery(applyStep(byOwner, step), q), [byOwner, step, q])
   const mineCount = useMemo(() => applyOwner(open.data ?? [], 'mine', user?.id ?? null).length, [open.data, user?.id])
-  // The header counts the owner's view (Mine or All), like the step counts, so Mine never shows everyone's numbers.
-  const overdue = useMemo(() => byOwner.filter(isLate).length, [byOwner])
-  // "Need you": the two steps that wait on our side (ask suppliers, send the quotation); the others wait on someone else.
-  const needYou = counts.suppliers + counts.ready
+  // "Need you" is the one definition (features/today/needsYou.ts, redesign phase 0): the RFQ items on this person's own Today that
+  // are due today or late and not older than 30 days, handed down by the shell, so this number and Today's never disagree. Outside
+  // the shell, or before Today has loaded, the header says only how many are open. No "overdue" count: a date column says it.
+  const navCounts = useSharedNavCounts()
+  const needYou = navCounts ? (navCounts.rfqs ?? 0) : 0
 
   const openColumns = useMemo<Column<BoardRow>[]>(
     () => [
@@ -236,7 +235,6 @@ export function BoardPage() {
           <StepFilter
             value={show}
             onChange={v => change({ show: v === 'all' ? null : v, page: null })}
-            needs={open.isSuccess ? { suppliers: counts.suppliers, ready: counts.ready } : {}}
           />
         </div>
         <InfoTip label="About next steps">Needs suppliers → Waiting for prices → Ready to quote → Quotation sent → Won or closed.</InfoTip>
@@ -252,7 +250,7 @@ export function BoardPage() {
     : open.isSuccess
     ? byOwner.length === 0
       ? 'Nothing is waiting on you.'
-      : [`${byOwner.length} open`, needYou ? `${needYou} need you` : null, overdue ? `${overdue} overdue` : null].filter(Boolean).join(' · ')
+      : [`${byOwner.length} open`, needYou ? `${needYou} need you` : null].filter(Boolean).join(' · ')
     : 'Open RFQs, earliest due date first.'
 
   const closedSummary = closed.isSuccess ? pageSummary(page, PAGE_SIZE, closed.data.total) : undefined
