@@ -131,7 +131,10 @@ test('the corpus as pictures and scans: every field at or above its floor, a scr
     const png = await photograph(browser, docHtml(c.doc, shot), shot)
     let read: Read
     if (c.medium === 'image') {
-      const [pic] = await develop(page, png, shot, false)
+      // CORPUS_PICTURES=<dir>: the pictures CI saved (artifact "ocr-texts"), read here as CI read them.
+      const ext = shot.format === 'jpeg' ? 'jpg' : shot.format
+      const saved = process.env.CORPUS_PICTURES ? `${process.env.CORPUS_PICTURES}/${c.id}.${ext}` : null
+      const [pic] = saved && existsSync(saved) ? [{ b64: readFileSync(saved).toString('base64') }] : await develop(page, png, shot, false)
       if (save) writeFileSync(`${save}/${c.id}.${shot.format === 'jpeg' ? 'jpg' : shot.format}`, Buffer.from(pic!.b64, 'base64'))
       read = await api('readImage', pic!.b64, MIME[shot.format])
       // A clean screenshot (not a photo, not a scan) on a laptop or a phone: the 3 s budget. The first read loads the engine.

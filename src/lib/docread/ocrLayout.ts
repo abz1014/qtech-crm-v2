@@ -311,6 +311,11 @@ function applyRules(runs: TextRun[], rules: TableRules): void {
     bands.set(key, [...(bands.get(key) ?? []), r])
   }
   for (const band of bands.values()) {
+    // A band holding two lines of a wrapped cell (tight line spacing) is not one line: its words keep their own baselines,
+    // or the two lines' words would be read in one, interleaved ("CYLINDER83DWITHTEST...").
+    // (Two words one above the other: their x ranges overlap and their baselines differ.)
+    const stacked = band.some(a => band.some(b => a !== b && Math.abs(a.y - b.y) > 0.4 * a.size && overlap(a.x, a.x + a.w, b.x, b.x + b.w) > 0))
+    if (stacked) continue
     const y = median(band.map(r => r.y)) as number
     for (const r of band) r.y = y
   }
