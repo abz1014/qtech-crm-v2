@@ -30,3 +30,26 @@ describe('alignSpacedRows: columns lined up with spaces', () => {
     expect(alignSpacedRows(lines)).toEqual(['Item\tDescription\tModel No.\tMake\tQty\tUnits', '1\tFuse 100A\t\tLumenta\t150\tEA', '2\tGasket set for pump 50-200\t\t\t4\tSet'])
   })
 })
+
+describe('rebuildCellText: quantity first, no serial column (fictional)', () => {
+  it('starts the next row at the next quantity when the last cell of a row is empty', () => {
+    const text = ['Qty', 'Unit', 'Description', 'Part No.', '4', 'NO', 'Panel meter voltmeter', '10', 'PCS', 'Relay 24VDC', 'RX-2201', '2', 'SET', 'Gasket set'].join('\n')
+    expect(rebuildCellText(text).split('\n')).toEqual([
+      'Qty\tUnit\tDescription\tPart No.',
+      '4\tNO\tPanel meter voltmeter\t',
+      '10\tPCS\tRelay 24VDC\tRX-2201',
+      '2\tSET\tGasket set\t',
+    ])
+  })
+})
+
+describe('rebuildCellText: positions 10, 20 and an all-digit order code (fictional)', () => {
+  it('puts each position back in its row', () => {
+    const text = ['Pos', 'Order code', 'Description', 'Qty', 'Unit price EUR', '10', '9248471', 'Butterfly valve DN50', '8', '87.00', '20', '5322172', 'Power supply 24VDC 10A', '1', '640.00'].join('\n')
+    expect(rebuildCellText(text).split('\n')).toEqual([
+      'Pos\tOrder code\tDescription\tQty\tUnit price EUR',
+      '10\t9248471\tButterfly valve DN50\t8\t87.00',
+      '20\t5322172\tPower supply 24VDC 10A\t1\t640.00',
+    ])
+  })
+})

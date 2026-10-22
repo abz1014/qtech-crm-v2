@@ -248,6 +248,11 @@ function findLeadTime(w: string, raw: string): (LeadTime & Span) | null {
     const cut = Math.max(before.lastIndexOf(','), before.lastIndexOf(';'), before.lastIndexOf('|'))
     const ctx = cut >= 0 ? before.slice(cut + 1) : before
     if (NOT_LEAD_BEFORE.test(ctx)) continue
+    // "$18.00 - 8 weeks": the first number is a price, not the start of a range.
+    if (/(?:[$€£¥￥₨]|\b(?:usd|eur|rmb|cny|aed|pkr|gbp|rs)\.?)\s*$/i.test(before)) {
+      re.lastIndex = m.index + (m[1] ?? '').length + 1
+      continue
+    }
     if (NOT_LEAD_AFTER.test(w.slice(m.index + m[0].length, m.index + m[0].length + 14))) continue
     const mult = unitDays(unit)
     const lo = Number(m[1])
@@ -580,6 +585,8 @@ function analyse(raw: string, today: string | undefined, skipPrice = false): Lin
 
   // "Relay 12VDC, 2 CO, Model X: Sorry, not available": a regret with only a bare number in it quotes nothing.
   if (f.prices.length && f.prices.every(p => !p.anchored) && REGRET_RE.test(w)) f.prices = []
+  // "Offer 6816 - prices in USD": a line that declares the currency, with only a bare number (the offer's number) in it.
+  if (f.prices.length && f.prices.every(p => !p.anchored) && DECLARE_RE.test(w) && !/\t|\|/.test(w)) f.prices = []
   const priced = f.prices.length > 0
   if (!priced) {
     const d = DECLARE_RE.exec(w)
@@ -614,7 +621,7 @@ const words = (s: string): string[] => {
 }
 
 /** Spec shapes that look like codes but are sizes or ratings; they must never identify an item. */
-const SPEC_SHAPE = /^(?:DN|PN|NPS|NB|BSP|NPT|SCH|IP|IE|CL|CLASS|G|M|R|RC|RP)\d+$|^\d+(?:V|VAC|VDC|MA|MM|CM|M|KV|KW|W|HZ|BAR|PSI|C|A|VA|KG|MPA|KPA|RPM|HP)$|^\d+X\d+$|^\d+MM\d*$/
+const SPEC_SHAPE = /^(?:DN|PN|NPS|NB|BSP|NPT|SCH|IP|IE|CL|CLASS|G|M|R|RC|RP)\d+$|^\d+(?:V|VAC|VDC|MA|MM|CM|M|KV|KW|W|HZ|BAR|PSI|C|A|VA|KG|MPA|KPA|RPM|HP)$|^\d+X\d+$|^\d+MM\d*$|^(?:SS|AISI|SUS)\d{3}L?$|^\d+(?:PPR|DI|DO|AI|AO|PIN|CORE|UF|NF|PF|NO|NC|CO|P|POLE)$/
 
 interface ItemIndex {
   id: string
@@ -641,6 +648,7 @@ function matchByContent(raw: string, idx: ItemIndex[]): Match | null {
   const lineToks = new Set(raw.toUpperCase().split(/[\s,;|()[\]]+/).map(t => t.replace(/[-./_]/g, '')).filter(Boolean))
   // 1. model codes
   let best: Match | null = null
+  let tied = false
   idx.forEach((it, i) => {
     if (!it.tokens.length) return
     let hit = 0
@@ -651,9 +659,14 @@ function matchByContent(raw: string, idx: ItemIndex[]): Match | null {
     }
     if (!hit) return
     const score = 0.7 + 0.25 * (hit / total)
-    if (!best || score > best.score) best = { idx: i, by: 'model', score }
+    if (best && Math.abs(score - best.score) < 1e-9) tied = true
+    else if (!best || score > best.score) {
+      best = { idx: i, by: 'model', score }
+      tied = false
+    }
   })
-  if (best) return best
+  // A code that two items share in the same measure ("SS316" in a valve and a level switch) does not pick one: the wording does.
+  if (best && !tied) return best
   // 2. description similarity: how much of the item's own wording the line repeats
   const lw = new Set(words(raw))
   let bestD: Match | null = null
@@ -713,24 +726,29 @@ function splitCells(line: string): string[] | null {
   return cells.length >= 2 ? cells : null
 }
 
-const HEADER_WORD = /^(?:#|no\.?|sr\.?|s\/n|sl|item|items|description|desc|product|particulars|qty|quantity|unit\s*price|price|rate|lead\s*time|lead|delivery|total|amount|origin|country|moq|currency|brand|make|model|part\s*(?:no|number)?|validity|remarks?|unit|uom|stock|availability)\b/i
+const HEADER_WORD = /^(?:#|no\.?|sr\.?|s\/n|sl|item|items|description|desc|product|particulars|qty|quantity|unit\s*price|price|rate|lead\s*time|lead|delivery|total|amount|origin|country|moq|currency|brand|make|model|part\s*(?:no|number)?|validity|remarks?|unit|uom|stock|availability|pos|menge|einzelpreis|gesamtpreis|beschreibung|bezeichnung|artikel|lieferzeit)\b/i
 
 function tableHeader(cells: string[]): TableCols | null {
   if (cells.length < 3) return null
   if (cells.filter(c => HEADER_WORD.test(c)).length < 2) return null
   if (cells.some(c => /\d{2,}/.test(c.replace(/\([^)]*\)/g, '')))) return null
   const find = (re: RegExp, not?: RegExp) => cells.findIndex(c => re.test(c) && !(not && not.test(c)))
-  const total = find(/total|amount|ext\b|line\s*value/i)
-  const price = find(/price|rate|u\/p|unit\s*cost|unit\s*value/i, /total|amount/i)
+  const total = find(/total|amount|ext\b|line\s*value|gesamt/i)
+  // With a list price and a discount, the price is the net one ("List Price | Disc. % | Net Price").
+  const PRICE = /price|rate|u\/p|unit\s*cost|unit\s*value|einzelpreis|e-?preis|preis/i
+  const net = find(/\bnet\b|after\s*disc|discounted/i, /total|amount/i)
+  const notList = find(PRICE, /total|amount|gesamt|\blist\b|\bgross\b/i)
+  const price = net >= 0 && PRICE.test(cells[net] ?? '') ? net : notList >= 0 ? notList : find(PRICE, /total|amount|gesamt/i)
   if (price < 0 && total < 0) return null
   const priceCell = cells[price] ?? cells[total] ?? ''
-  const leadCell = cells[find(/lead|delivery|dlv|availability|eta/i)] ?? ''
+  const leadAt = find(/lead|delivery|dlv|availability|eta|lieferzeit|^(?:wks?|weeks?|days)\.?$/i)
+  const leadCell = cells[leadAt] ?? ''
   return {
     n: cells.length,
     price,
     total,
-    qty: find(/^(?:qty|quantity|q'ty|nos)\b/i),
-    lead: find(/lead|delivery|dlv|availability|eta/i),
+    qty: find(/^(?:qty|quantity|q'ty|nos|menge|anzahl)\b/i),
+    lead: leadAt,
     origin: find(/origin|country/i),
     moq: find(/moq/i),
     valid: find(/valid/i),
