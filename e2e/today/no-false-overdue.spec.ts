@@ -215,7 +215,7 @@ async function checkControl(page: Page, s: Seeded): Promise<void> {
 async function checkSupplier(page: Page, s: Seeded): Promise<void> {
   for (const o of [s.poOpen, s.partInvoiced]) {
     await page.goto(`/companies/${o.supplierId}`)
-    await expect(page.getByText(o.supplier).first()).toBeVisible()
+    await expect(page.getByText(o.supplier).filter({ visible: true }).first()).toBeVisible()
     await expectNoFalseOverdue(page, 'the supplier page')
   }
   await page.goto(`/companies/${s.poOpen.supplierId}`)
