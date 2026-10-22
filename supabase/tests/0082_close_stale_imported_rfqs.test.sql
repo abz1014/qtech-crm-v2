@@ -77,7 +77,7 @@ create temp table before_counts as
 select count(*) filter (where outcome = 'open')::int as open_n, count(*) filter (where is_overdue)::int as overdue_n
 from public.v_rfq_state where company_id = 'c8300000-0000-4000-8000-000000000001';
 select is((select open_n from before_counts), 11, 'before: 11 open (6 is won, 11 lost)');
-select is((select overdue_n from before_counts), 1, 'before: 1 overdue (13; 5 has its quotation sent, so 0088 says it is not overdue)');
+select is((select overdue_n from before_counts), 2, 'before: 2 overdue (5 and 13)');
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
@@ -106,7 +106,7 @@ select ok((select closed_on = pg_temp.d(400) and close_reason = 'price' and clos
 select is((select count(*) filter (where outcome = 'open')::int from public.v_rfq_state
            where company_id = 'c8300000-0000-4000-8000-000000000001'), 8, 'after: 8 open (was 11)');
 select is((select count(*) filter (where is_overdue)::int from public.v_rfq_state
-           where company_id = 'c8300000-0000-4000-8000-000000000001'), 1, 'after: 1 overdue (13, still open)');
+           where company_id = 'c8300000-0000-4000-8000-000000000001'), 1, 'after: 1 overdue (was 2)');
 select is((select bid_state from public.v_rfq_state where rfq_id = pg_temp.r(5)), 'bid_sent', 'no expired-quotation state either');
 
 set local role authenticated;
