@@ -286,7 +286,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
               Add the items to the RFQ first.
             </Banner>
           ) : (
-            <div className="overflow-hidden rounded border" role="group" aria-label="Suppliers by line">
+            <div className="overflow-hidden rounded-panel border" role="group" aria-label="Suppliers by line">
               <div className={cn('hidden border-b bg-sunken px-4 py-2 text-xs font-medium leading-snug text-fg-muted', GRID)}>
                 <span />
                 <span>Item</span>
@@ -404,7 +404,7 @@ export function ConvertDialog({ rfq, onClose }: Props) {
                     {isSplitItem && chk ? (
                       <>
                         {chk.mismatch && !chk.incomplete ? (
-                          <div role="alert" className="mx-4 mb-3 flex items-start gap-3 rounded border border-tone-warning-fg/30 bg-tone-warning-bg px-3 py-2 text-xs">
+                          <div role="alert" className="mx-4 mb-3 flex items-start gap-3 rounded-row border border-tone-warning-fg/30 bg-tone-warning-bg px-3 py-2 text-xs">
                             <Icon icon={TriangleAlert} size="sm" className="mt-px text-tone-warning-fg" />
                             <span>
                               <b className="font-medium">

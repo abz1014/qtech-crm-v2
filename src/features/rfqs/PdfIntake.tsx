@@ -99,7 +99,7 @@ export function SenderSuggestion({ hint, canCreate, onUse }: { hint: SenderHint;
   const hit = found.data
   if (hit) {
     return (
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border bg-sunken px-3 py-2 text-sm">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-row border bg-sunken px-3 py-2 text-sm">
         <Icon icon={Building2} className="text-fg-muted" />
         <span className="min-w-0 flex-1">
           <span className="text-fg-2">From the text: </span>
@@ -122,7 +122,7 @@ export function SenderSuggestion({ hint, canCreate, onUse }: { hint: SenderHint;
       />
     </Suspense>
   ) : (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border bg-sunken px-3 py-2 text-sm">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-row border bg-sunken px-3 py-2 text-sm">
       <Icon icon={Building2} className="text-fg-muted" />
       <span className="min-w-0 flex-1">
         <span className="text-fg-2">From the text: </span>

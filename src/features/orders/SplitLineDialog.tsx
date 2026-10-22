@@ -238,7 +238,7 @@ export function SplitLineDialog({
           )}
 
           {resultText ? (
-            <div className="grid gap-0.5 rounded bg-sunken px-3 py-2 text-sm" data-testid="split-result">
+            <div className="grid gap-0.5 rounded-row bg-sunken px-3 py-2 text-sm" data-testid="split-result">
               <span className="flex items-start gap-1">
                 <span>
                   <b className="font-medium">Result:</b> {resultText}
@@ -251,7 +251,7 @@ export function SplitLineDialog({
           ) : null}
 
           {sourcePo ? (
-            <div className="flex items-start gap-3 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
+            <div className="flex items-start gap-3 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
               <Icon icon={TriangleAlert} className="mt-0.5 text-tone-warning-fg" />
               <p>
                 The PO to {sourceName}{' '}

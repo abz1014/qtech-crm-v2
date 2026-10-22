@@ -35,7 +35,7 @@ export function SumBar({ items, label, className }: { items: SumBarItem[]; label
     <section
       aria-label={label}
       className={cn(
-        'grid grid-cols-2 gap-px overflow-hidden rounded border bg-line md:grid-flow-col md:auto-cols-fr md:grid-cols-none',
+        'grid grid-cols-2 gap-px overflow-hidden rounded-panel border bg-line md:grid-flow-col md:auto-cols-fr md:grid-cols-none',
         className,
       )}
     >
@@ -77,7 +77,7 @@ export function AfterDrawings({ result, notInPnl, afterDrawings, className }: Af
   return (
     <dl
       data-mismatch={mismatch ? '' : undefined}
-      className={cn('grid gap-2 rounded border border-dashed border-line-strong bg-sunken px-5 py-3 text-sm', className)}
+      className={cn('grid gap-2 rounded-row border border-dashed border-line-strong bg-sunken px-5 py-3 text-sm', className)}
     >
       <div className="flex items-baseline justify-between gap-4">
         <dt className="text-fg-muted">Not in P&amp;L: drawings and loan repayments</dt>

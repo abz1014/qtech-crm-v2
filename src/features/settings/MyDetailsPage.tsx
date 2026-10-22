@@ -56,7 +56,7 @@ export function MyDetailsPage() {
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
-    <section className="grid gap-4 rounded border bg-surface p-5">
+    <section className="grid gap-4 rounded-panel border bg-surface p-5">
       <div className="grid gap-[2px]">
         <h2 className="text-base font-semibold">{title}</h2>
         {hint ? <p className="max-w-[62ch] text-sm text-fg-muted text-pretty">{hint}</p> : null}
@@ -105,7 +105,7 @@ function DetailsForm({ details }: { details: MyDetails }) {
         </Section>
       </Form>
 
-      <div className="flex flex-wrap items-center gap-3 rounded border bg-surface px-5 py-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-panel border bg-surface px-5 py-3">
         {dirty ? <Icon icon={CircleDot} size="sm" className="text-fg-muted" /> : null}
         <p role="status" className="text-sm text-fg-muted">
           {dirty ? '1 unsaved change: Phone' : 'Nothing to save yet'}

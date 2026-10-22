@@ -441,7 +441,7 @@ function ExpenseFormReady({
 
         {photo ? <FileRow item={photo} onRemove={() => setPhoto(null)} /> : null}
         {(receipts.data ?? []).map(r => (
-          <div key={r.id} className="flex items-center justify-between gap-3 rounded border border-line-strong px-3 py-2 text-sm">
+          <div key={r.id} className="flex items-center justify-between gap-3 rounded-row border border-line-strong px-3 py-2 text-sm">
             <span className="truncate">{r.fileName}</span>
             <Button size="sm" variant="quiet" onClick={() => deleteReceipt.mutate(r)} aria-label={`Remove ${r.fileName}`}>
               Remove

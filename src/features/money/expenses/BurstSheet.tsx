@@ -653,7 +653,7 @@ function ClosedError({ message, others }: { message: string; others: number }) {
   return (
     <div
       role="alert"
-      className="col-start-3 col-end-10 -mt-[2px] mb-2 flex items-start gap-3 rounded border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3"
+      className="col-start-3 col-end-10 -mt-[2px] mb-2 flex items-start gap-3 rounded-row border border-tone-danger-fg/30 bg-tone-danger-bg px-4 py-3"
     >
       <Icon icon={CircleAlert} className="mt-[2px] text-tone-danger-fg" />
       <div className="grid gap-0">

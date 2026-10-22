@@ -146,11 +146,11 @@ function Body({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => void
     <>
       <Summary v={v} onPick={onPick} />
       {v.total.count === 0 && v.prev.count === 0 ? (
-        <section className="rounded border bg-surface">
+        <section className="rounded-panel border bg-surface">
           <EmptyState title={`No expenses in ${v.label}`}>Expenses dated in this period show here. The columns above still show the periods before.</EmptyState>
         </section>
       ) : (
-        <section aria-labelledby="exp-where" className="overflow-hidden rounded border bg-surface">
+        <section aria-labelledby="exp-where" className="overflow-hidden rounded-panel border bg-surface">
           <header className="flex min-h-[56px] flex-wrap items-center gap-3 border-b px-5 py-2">
             <h2 id="exp-where" className="text-lg font-semibold">
               Where the money went
@@ -182,7 +182,7 @@ function Summary({ v, onPick }: { v: ExpenseReportView; onPick: (p: Period) => v
   const cashShare = toPaisa(v.total.amount) === 0n ? 0 : Number((toPaisa(v.total.cash) * 1000n) / toPaisa(v.total.amount)) / 10
   const frozen = v.frozenMonths === 0 ? null : v.frozenMonths === v.months ? 'Closed: figures frozen' : `${plural(v.frozenMonths, 'month')} closed: figures frozen`
   return (
-    <section aria-label={`Spent in ${v.label}`} className="overflow-hidden rounded border bg-surface">
+    <section aria-label={`Spent in ${v.label}`} className="overflow-hidden rounded-panel border bg-surface">
       <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-10">
         <div className="grid content-start gap-3">
           <p className="text-base text-fg-2">
@@ -567,7 +567,7 @@ function ByDetail({ v }: { v: ExpenseReportView }) {
 function TopTen({ v }: { v: ExpenseReportView }) {
   const names = new Map(v.groups.flatMap(g => g.categories.map(c => [c.id, c.name] as const)))
   return (
-    <section aria-labelledby="exp-top" className="overflow-hidden rounded border bg-surface" data-testid="expense-report-top">
+    <section aria-labelledby="exp-top" className="overflow-hidden rounded-panel border bg-surface" data-testid="expense-report-top">
       <header className="flex min-h-[56px] items-center border-b px-5">
         <h2 id="exp-top" className="text-lg font-semibold">
           {v.top.length === 10 ? 'The 10 biggest expenses' : `The ${plural(v.top.length, 'expense')}`}

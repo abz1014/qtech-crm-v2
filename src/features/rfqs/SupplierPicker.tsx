@@ -156,7 +156,7 @@ function SupplierRow({ s, ticked, onToggle, memory }: { s: SupplierSuggestion; t
 
 function Group({ g, ticked, onToggle, memory }: { g: SuggestionGroupResult; ticked: ReadonlySet<string>; onToggle: (id: string, on: boolean) => void; memory?: MemoryContext }) {
   return (
-    <section aria-label={g.label} className="overflow-hidden rounded border bg-surface">
+    <section aria-label={g.label} className="overflow-hidden rounded-panel border bg-surface">
       <header className="flex items-baseline gap-3 border-b bg-sunken px-5 py-3">
         <h3 className="m-0 text-sm font-semibold">{g.label}</h3>
         <span className="ml-auto text-xs text-fg-muted">
@@ -241,7 +241,7 @@ export function SupplierPicker({
       )}
 
       {shownManual.length > 0 ? (
-        <section aria-label="Added by you" className="overflow-hidden rounded border bg-surface">
+        <section aria-label="Added by you" className="overflow-hidden rounded-panel border bg-surface">
           <header className="flex items-baseline gap-3 border-b bg-sunken px-5 py-3">
             <h3 className="m-0 text-sm font-semibold">Added by you</h3>
           </header>

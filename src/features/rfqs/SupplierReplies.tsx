@@ -325,7 +325,7 @@ export function SupplierReplyDialog({
       >
         <div className="grid gap-4 text-base text-fg" data-reply-form={inquiry.supplierId}>
           {declinedAll ? (
-            <div className="flex flex-wrap items-center gap-3 rounded border border-line bg-sunken px-3 py-2">
+            <div className="flex flex-wrap items-center gap-3 rounded-row border border-line bg-sunken px-3 py-2">
               <span>
                 <span className="font-medium">{"Can't quote"}</span>
                 {inquiry.noOfferReason ? `: ${reasonLabel(inquiry.noOfferReason)}` : ''}
@@ -365,7 +365,7 @@ export function SupplierReplyDialog({
                 />
               ) : null}
               {!draft.currency ? (
-                <div role="group" aria-label={`Currency for ${inquiry.supplierName}`} className="flex flex-wrap items-center gap-2 rounded border border-line bg-sunken px-3 py-2">
+                <div role="group" aria-label={`Currency for ${inquiry.supplierName}`} className="flex flex-wrap items-center gap-2 rounded-row border border-line bg-sunken px-3 py-2">
                   <span className="text-fg-2">Which currency are they quoting in? Asked once, then remembered.</span>
                   {CURRENCY_CHIPS.map(c => (
                     <button

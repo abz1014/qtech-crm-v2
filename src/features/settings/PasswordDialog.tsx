@@ -91,7 +91,7 @@ export function PasswordDialog({ kind, person, password, onClose }: SecretDialog
         <div
           data-copied={copy === 'copied' || undefined}
           className={cn(
-            'grid gap-2 rounded border px-4 py-3 transition-colors duration-fast ease-out',
+            'grid gap-2 rounded-row border px-4 py-3 transition-colors duration-fast ease-out',
             copy === 'copied' ? 'border-solid border-tone-success-fg bg-tone-success-bg' : 'border-dashed border-line-input bg-sunken',
           )}
         >

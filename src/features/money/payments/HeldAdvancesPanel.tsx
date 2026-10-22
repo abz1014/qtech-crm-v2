@@ -24,7 +24,7 @@ export function HeldAdvancesPanel({ isAdmin }: { isAdmin: boolean }) {
 export function HeldAdvancesList({ rows }: { rows: readonly HeldAdvance[] }) {
   const total = rows.reduce((s, r) => s + r.held, 0)
   return (
-    <section aria-label="Advance held — refund or keep" className="mt-6 rounded border border-dashed border-line-input bg-canvas">
+    <section aria-label="Advance held — refund or keep" className="mt-6 rounded-panel border border-dashed border-line-input bg-canvas">
       <header className="flex flex-wrap items-center gap-3 border-b border-dashed border-line-input px-5 py-3">
         <h2 className="text-base font-semibold">Advance held — refund or keep</h2>
         <InfoTip label="About advances held">

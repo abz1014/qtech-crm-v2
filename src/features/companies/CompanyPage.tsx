@@ -522,7 +522,7 @@ function PhoneLinks({ name, phone }: { name: string; phone: string }) {
  */
 function MoreAbout({ children, defaultOpen = false }: { children: ReactNode; defaultOpen?: boolean }) {
   return (
-    <details className="group rounded border bg-surface" open={defaultOpen || undefined}>
+    <details className="group rounded-panel border bg-surface" open={defaultOpen || undefined}>
       <summary className="flex min-h-touch cursor-pointer list-none items-center gap-2 rounded px-5 py-3 text-base font-semibold hover:bg-sunken [&::-webkit-details-marker]:hidden">
         <Icon icon={ChevronRight} size="sm" className="text-fg-muted transition-transform duration-fast group-open:rotate-90" />
         More about this supplier

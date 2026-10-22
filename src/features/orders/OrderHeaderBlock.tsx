@@ -644,7 +644,7 @@ function EngineerJob({
   const primary = next?.primary ?? null
   const phone = order.contact?.phone ?? null
   return (
-    <section aria-label="Your job" className="mt-4 grid gap-3 rounded border border-line-strong bg-surface px-4 py-4 md:px-5">
+    <section aria-label="Your job" className="mt-4 grid gap-3 rounded-panel border border-line-strong bg-surface px-4 py-4 md:px-5">
       <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] md:gap-6">
         <div className="grid min-w-0 content-start gap-1">
           <span className="flex items-center gap-[6px] text-sm text-fg-muted">

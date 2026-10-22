@@ -90,7 +90,7 @@ export function LegsPanel({
   const imported = order.imported
 
   return (
-    <section aria-label="Supplier orders" className="min-w-0 rounded border bg-surface">
+    <section aria-label="Supplier orders" className="min-w-0 rounded-panel border bg-surface">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-3 md:px-5">
         <h2 className="text-base font-semibold">Supplier orders</h2>
         <InfoTip label="About supplier orders">One supplier's part of this order: their PO, when it was placed, received and delivered.</InfoTip>
@@ -301,7 +301,7 @@ function Leg({
         </div>
         {lines ? <p className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]">{lines}</p> : null}
         {changed && po ? (
-          <div role="status" data-testid={`leg-${letter}-changed`} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
+          <div role="status" data-testid={`leg-${letter}-changed`} className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-row border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-2 text-sm">
             <Icon icon={TriangleAlert} className="text-tone-warning-fg" />
             <span className="min-w-0 flex-1 text-pretty">
               <b className="font-semibold">

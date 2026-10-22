@@ -29,7 +29,7 @@ function leave(config: MobileBarConfig, navigate: NavigateFunction, location: Lo
 }
 
 /**
- * Phone header (below 768). Default: logo mark, the current destination as the title, search, the paste-or-photo
+ * Phone header (below 768), navy (data-surface="navy"). Default: logo mark, the current destination as the title, search, the paste-or-photo
  * action (an outlined 44 px icon button, never green: the screen's own button is the one primary) and the avatar, --topbar-h
  * tall. Room is tight at the bigger text size, so the logo mark goes below 400 px (the Today tab is home); the title truncates last.
  * A screen can ask for the one-bar form through useMobileBar(): chevron-left or x, its own title, and one slot on the
@@ -44,20 +44,20 @@ export function MobileBar({ user, title, onSearch, onCapture }: { user: SessionU
     const isBack = Boolean(config.back)
     const label = (typeof config.back === 'object' ? config.back.label : undefined) ?? (isBack ? 'Back' : 'Close')
     return (
-      <header data-mobile-bar="detail" className="flex h-topbar items-center gap-1 border-b bg-surface px-2 md:hidden">
+      <header data-mobile-bar="detail" data-surface="navy" className="flex h-topbar items-center gap-1 bg-chrome px-2 text-fg md:hidden">
         <Button variant="quiet" size="touch" icon={isBack ? ChevronLeft : X} aria-label={label} onClick={() => leave(config, navigate, location)} />
-        <p className="min-w-0 flex-1 break-words text-lg font-semibold leading-tight tracking-snug max-[399px]:text-base">{config.title ?? title}</p>
+        <p className="min-w-0 flex-1 break-words font-display text-lg font-semibold leading-tight max-[399px]:text-base">{config.title ?? title}</p>
         {actions ? <div className="flex shrink-0 items-center">{actions}</div> : null}
       </header>
     )
   }
   return (
-    <header data-mobile-bar="default" className="flex h-topbar items-center gap-1 border-b bg-surface pl-4 pr-2 md:hidden max-[399px]:pl-3">
+    <header data-mobile-bar="default" data-surface="navy" className="flex h-topbar items-center gap-1 bg-chrome pl-4 pr-2 text-fg md:hidden max-[399px]:pl-3">
       <NavLink to="/" aria-label="Q-Tech, home" className="mr-2 shrink-0 rounded max-[399px]:hidden">
         <BrandImage name="logo-mark" alt="" width={28} height={28} className="block size-[28px]" />
       </NavLink>
       {/* Not a heading: every screen draws its own h1, and two h1s on a phone is wrong. */}
-      <p className="min-w-0 flex-1 break-words text-base font-semibold leading-tight tracking-snug max-[399px]:text-sm">{config?.title ?? title}</p>
+      <p className="min-w-0 flex-1 break-words font-display text-lg font-heavy leading-tight max-[399px]:text-base">{config?.title ?? title}</p>
       {actions ?? <Button variant="quiet" size="touch" icon={Search} aria-label="Search" onClick={onSearch} />}
       {onCapture ? (
         // Icon only and secondary (audit X1): the screen's own green button is the one primary on a phone; the name is "Paste or photo".
@@ -109,7 +109,7 @@ export function BottomTabs({
           >
             {({ isActive }) => (
               <>
-                {isActive ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-3 -top-px h-indicator bg-brand-green" /> : null}
+                {isActive ? <span aria-hidden="true" className="pointer-events-none absolute inset-x-3 -top-px h-1 rounded-b bg-brand-green" /> : null}
                 <span className="relative">
                   <Icon icon={item.icon} size="lg" />
                   {/* Solid warning badge on the icon. Nothing for 0. The link's name says it in words ("RFQs, 4 need you"). */}

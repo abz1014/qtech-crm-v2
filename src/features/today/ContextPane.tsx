@@ -278,7 +278,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       ) : null}
 
       {justChased && item.waiting ? (
-        <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded border border-tone-success-fg/25 bg-tone-success-bg px-4 py-3 text-sm text-tone-success-fg">
+        <div role="status" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-row border border-tone-success-fg/25 bg-tone-success-bg px-4 py-3 text-sm text-tone-success-fg">
           <Icon icon={Hourglass} />
           <span className="min-w-0 flex-1 basis-[15rem]">
             <b className="font-semibold">Moved to Waiting.</b> It comes back to your list on {formatDay(item.waiting.nextNudgeOn)}, or sooner if {replyWho(item)}.
@@ -296,7 +296,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       ) : null}
 
       {facts.length > 0 ? (
-        <dl className={cn('grid grid-cols-2 overflow-hidden rounded border bg-surface', !compact && 'lg:grid-cols-4')}>
+        <dl className={cn('grid grid-cols-2 overflow-hidden rounded-panel border bg-surface', !compact && 'lg:grid-cols-4')}>
           {facts.map(f => (
             <div
               key={f.label}
@@ -340,7 +340,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           onAgain={() => setAgain(true)}
         />
       ) : draft ? (
-        <div className="grid overflow-hidden rounded border bg-surface">
+        <div className="grid overflow-hidden rounded-panel border bg-surface">
           {wasCopied ? (
             <p role="status" className="flex items-center gap-2 bg-tone-success-bg px-4 py-3 text-sm text-tone-success-fg">
               <Icon icon={CircleCheck} size="sm" /> {sentKey === item.key ? `Marked ${verb}.` : `Copied. Paste it into ${channel === 'email' ? 'your email' : 'WhatsApp'}.`}
@@ -435,7 +435,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           ) : null}
         </div>
       ) : isChase(item) && (draftReady || !pending(header, items, inquiries, leg, payment)) ? (
-        <div className="flex flex-wrap items-center gap-2 rounded border bg-surface p-4">
+        <div className="flex flex-wrap items-center gap-2 rounded-panel border bg-surface p-4">
           <p className="mr-auto text-sm text-fg-muted">{noDraftText(item)}</p>
           <Button icon={ExternalLink} onClick={() => navigate(item.href)}>
             Open {item.ref}
@@ -443,13 +443,13 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
           <SnoozeMenu item={item} today={today} />
         </div>
       ) : isChase(item) ? (
-        <div className="grid gap-2 rounded border bg-surface p-4" aria-busy="true">
+        <div className="grid gap-2 rounded-panel border bg-surface p-4" aria-busy="true">
           <Skeleton className="h-4 w-1/3" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-5/6" />
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-2 rounded border bg-surface p-4">
+        <div className="flex flex-wrap items-center gap-2 rounded-panel border bg-surface p-4">
           <p className="mr-auto text-sm text-fg-2">{howTo(item)}</p>
           <Button variant="primary" icon={ExternalLink} onClick={() => navigate(item.href)} className={touch}>
             Open {item.ref}
@@ -466,7 +466,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
 
       {customerRule && questions.length > 0 && !compact ? (
         <div className="grid gap-3 md:grid-cols-2">
-          <section aria-label="Open questions" className="grid content-start gap-2 rounded border bg-surface p-4">
+          <section aria-label="Open questions" className="grid content-start gap-2 rounded-panel border bg-surface p-4">
             <h3 className="text-base font-semibold">Open questions</h3>
             <ol className="grid gap-3">
               {questions.map((q, i) => (
@@ -483,7 +483,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
               ))}
             </ol>
           </section>
-          <section aria-label="What happened" className="grid content-start gap-2 rounded border bg-surface p-4">
+          <section aria-label="What happened" className="grid content-start gap-2 rounded-panel border bg-surface p-4">
             <h3 className="text-base font-semibold">What happened</h3>
             <ul className="grid gap-2 text-sm">
               {rfq ? <Event on={rfq.receivedOn} text="RFQ received from customer" /> : null}
@@ -502,7 +502,7 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
         </div>
       ) : null}
       {item.rule === 'goods_late' && leg.data && leg.data.items.length > 0 && !compact ? (
-        <section aria-label="Goods on this order" className="grid gap-2 rounded border bg-surface p-4">
+        <section aria-label="Goods on this order" className="grid gap-2 rounded-panel border bg-surface p-4">
           <h3 className="text-base font-semibold">Goods still to arrive</h3>
           <ol className="grid gap-1 text-sm">
             {leg.data.items.map((it, i) => (
@@ -797,7 +797,7 @@ function ChasedCard({
         : null
   const excerpt = memo ? excerptOf(memo.text) : null
   return (
-    <section aria-label={title} className="grid overflow-hidden rounded border bg-surface">
+    <section aria-label={title} className="grid overflow-hidden rounded-panel border bg-surface">
       <div className="flex items-start justify-between gap-3 px-4 py-3">
         <div className="grid gap-px">
           <h3 className="text-base font-semibold">{title}</h3>

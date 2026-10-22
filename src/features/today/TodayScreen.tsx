@@ -65,6 +65,24 @@ const ICON: Record<RuleKey, LucideIcon> = {
 const TAB_LABEL: Record<'all' | TodayTab, string> = { all: 'All', bids: 'Quotations', sourcing: 'Suppliers', money: 'Money' }
 const WAITING_OPEN_MAX = 0 // Waiting opens only when the person opens it (R2-08)
 
+/*
+ * Colour blocks (direction C): each group is a block, its rows white tiles on it. Late is red, and only when the group holds
+ * something past its date (red only for late money or a broken promise); otherwise the due-now group is the yellow Today block.
+ * The next five days are the blue This week block; Ready to move and Waiting are quiet. An empty group draws no block.
+ * The heading takes the block's own ink (7.8:1 or better); hints never sit on the yellow, they sit on the white tiles.
+ */
+type Block = 'late' | 'today' | 'week' | 'quiet'
+const BLOCK: Record<Block, string> = {
+  late: 'bg-block-late text-block-late-fg',
+  today: 'bg-block-today text-block-today-fg',
+  week: 'bg-block-week text-block-week-fg',
+  quiet: 'bg-block-quiet text-block-quiet-fg',
+}
+function blockOf(id: string, items: readonly TodayItem[], today: string): Block {
+  if (id === 'now') return items.some(i => i.actionDueOn !== null && i.actionDueOn < today) ? 'late' : 'today'
+  return id === 'soon' ? 'week' : 'quiet'
+}
+
 /** Whether the person opened or closed the Waiting group, kept for this browser session only (null: not touched, the size decides). */
 let waitingToggledThisSession: boolean | null = null
 
@@ -140,7 +158,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
     // One column that may shrink to the pane: no card or row can make the list wider than its pane (no sideways scroll).
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start">
       <header className="grid gap-1 px-5 pb-3 pt-5">
-        <h1 className={wide ? 'text-2xl font-semibold tracking-tight' : 'sr-only'}>Today</h1>
+        <h1 className={wide ? 'text-2xl font-heavy tracking-tight' : 'sr-only'}>Today</h1>
         <p className="text-sm text-fg-muted">
           {headerDate(today)}
           {view ? (
@@ -193,15 +211,15 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
           ) : null}
           {groups.map(g =>
             g.items.length === 0 ? null : (
-              <section key={g.id} aria-label={g.title}>
-                <h2 className="flex items-baseline gap-2 border-y bg-sunken px-5 py-2 text-xs font-medium text-fg-2">
-                  {g.title} <span className="num font-regular text-fg-muted">{g.items.length}</span>
+              <section key={g.id} aria-label={g.title} data-block={blockOf(g.id, g.items, today)} className={cn('mx-3 mb-3 rounded-panel p-3 first-of-type:mt-1', BLOCK[blockOf(g.id, g.items, today)])}>
+                <h2 className="flex items-baseline gap-2 px-1 pb-2 text-lg font-heavy">
+                  {g.title} <span className="num">{g.items.length}</span>
                 </h2>
-                <ul>
+                <ul className="grid gap-2">
                   {g.items.map(i => (
                     <Row key={i.key} item={i} today={today} names={data?.names} open={openId === i.key} copied={copied.has(i.key)} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
-                        <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
+                        <div className="rounded-b-row border-l-2 border-brand-green bg-canvas px-4 py-4">
                           <Suspense fallback={null}>
                             <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
                           </Suspense>
@@ -214,7 +232,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
             ),
           )}
           {waiting.length > 0 ? (
-            <section aria-label="Waiting" className="border-t bg-sunken">
+            <section aria-label="Waiting" data-block="quiet" className="mx-3 mb-3 rounded-panel bg-block-quiet text-block-quiet-fg">
               <button
                 type="button"
                 aria-expanded={waitingOpen}
@@ -222,7 +240,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                   waitingToggledThisSession = !waitingOpen
                   setWaitingToggled(!waitingOpen)
                 }}
-                className="flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-medium text-fg-2"
+                className="flex w-full items-center gap-2 rounded-panel px-4 py-3 text-left text-base font-semibold text-fg-2"
               >
                 <Icon icon={waitingOpen ? ChevronDown : ChevronRight} size="sm" />
                 {/* A count in words, never a pill (spec 2.2 #8): "Waiting · 5 · next nudge Mon 30 Nov". */}
@@ -234,11 +252,11 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
               </button>
               {/* Collapsed, it still shows the open row: an item just chased stays where the person is looking. */}
               {shownWaiting.length > 0 ? (
-                <ul>
+                <ul className="grid gap-2 px-3 pb-3">
                   {shownWaiting.map(i => (
                     <Row key={i.key} item={i} today={today} names={data?.names} waiting open={openId === i.key} copied={false} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
-                        <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
+                        <div className="rounded-b-row border-l-2 border-brand-green bg-canvas px-4 py-4">
                           <Suspense fallback={null}>
                             <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
                           </Suspense>
@@ -265,8 +283,8 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
         <div data-today-list className="min-h-0 min-w-0 flex-1 overflow-x-clip md:overflow-y-auto">
           {list}
           {seesPrices(user.role) ? (
-            <div className="border-t bg-surface px-4 py-4">
-              <TargetTile today={today} className="rounded border bg-surface" />
+            <div className="bg-surface px-3 pb-4 pt-1">
+              <TargetTile today={today} className="rounded-panel border bg-surface" />
             </div>
           ) : null}
         </div>
@@ -292,25 +310,25 @@ function Row({ item, today, names, waiting = false, open, copied, wide, onPick, 
   // On the selected row's background the amber is below 4.5:1, so a warning badge reads in the body colour there (as on the GST register).
   const tone = item.badge.tone === 'danger' ? 'text-tone-danger-fg' : item.badge.tone === 'warning' ? (open ? 'text-fg-2' : 'text-tone-warning-fg') : 'text-fg-muted'
   return (
-    <li data-rule={item.rule} data-waiting={waiting || undefined} className="border-b last:border-b-0">
+    <li data-rule={item.rule} data-waiting={waiting || undefined} className="rounded-row bg-surface text-fg">
       <button
         type="button"
         onClick={onPick}
         aria-expanded={wide ? undefined : open}
         aria-current={wide && open ? 'true' : undefined}
         className={cn(
-          'grid w-full items-start gap-3 border-l-2 px-5 py-3 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken',
-          open ? 'border-brand-green bg-selected' : 'border-transparent',
+          'grid min-h-row-tall w-full items-start gap-3 rounded-row px-4 py-3 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken',
+          // The open row: an ink ring inside the tile (direction C), 18:1 against the white tile.
+          open && 'ring-2 ring-inset ring-fg',
           wide ? 'grid-cols-[2rem_minmax(0,1fr)_auto]' : 'grid-cols-[2rem_minmax(0,1fr)_auto_auto]',
-          waiting && 'bg-sunken',
           waiting && item.waiting?.chasedOn === today && isFreshChase(item.key) && 'row-settle',
         )}
       >
-        <span className={cn('grid size-8 place-items-center rounded border bg-surface', waiting ? 'text-fg-muted' : 'text-fg-2')}>
+        <span className={cn('grid size-8 place-items-center rounded bg-sunken', waiting ? 'text-fg-muted' : 'text-fg-2')}>
           <Icon icon={ICON[item.rule]} size="md" />
         </span>
         <span className="grid min-w-0 gap-px">
-          <span className={cn('min-w-0 text-sm font-medium [overflow-wrap:anywhere]', waiting && 'font-regular text-fg-2')}>{waiting ? (item.waitingTitle ?? item.title) : item.title}</span>
+          <span className={cn('min-w-0 text-base font-semibold [overflow-wrap:anywhere]', waiting && 'font-regular text-fg-2')}>{waiting ? (item.waitingTitle ?? item.title) : item.title}</span>
           <span className="min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">
             <span className="num">{item.ref}</span> · {item.party}
           </span>
@@ -326,9 +344,9 @@ function Row({ item, today, names, waiting = false, open, copied, wide, onPick, 
         {waiting ? (
           <span className="sr-only">Waiting</span>
         ) : copied ? (
-          <span className="inline-flex h-5 items-center rounded bg-tone-success-bg px-2 text-xs font-medium text-tone-success-fg">Copied</span>
+          <span className="inline-flex min-h-chip items-center rounded-round bg-tone-success-bg px-[10px] text-xs font-semibold text-tone-success-fg">Copied</span>
         ) : (
-          <span className={cn('whitespace-nowrap pt-px text-sm', tone)}>{item.badge.text}</span>
+          <span className={cn('whitespace-nowrap pt-px text-sm font-semibold', tone)}>{item.badge.text}</span>
         )}
         {wide ? null : <Icon icon={ChevronRight} size="sm" className={cn('mt-1 text-fg-muted transition-transform duration-fast', open && 'rotate-90')} />}
       </button>

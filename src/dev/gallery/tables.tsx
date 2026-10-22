@@ -171,7 +171,7 @@ export function StatusMoneyTableSections() {
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {STEPS.map(({ step, title }) => (
-            <div key={step} className="grid content-start gap-3 rounded border bg-surface p-4">
+            <div key={step} className="grid content-start gap-3 rounded-panel border bg-surface p-4">
               <p className="flex justify-between text-sm font-medium"><span>{title}</span><span className="num text-fg-muted">{VOCAB[TONE_OF_STEP[step]].length}</span></p>
               <ul className="grid gap-2">
                 {VOCAB[TONE_OF_STEP[step]].map(([d, v, label]) => (
@@ -184,7 +184,7 @@ export function StatusMoneyTableSections() {
             </div>
           ))}
         </div>
-        <div className="mt-4 grid content-start gap-3 rounded border bg-surface p-4">
+        <div className="mt-4 grid content-start gap-3 rounded-panel border bg-surface p-4">
           <p className="text-sm font-medium">Text only: the normal state never draws a chip</p>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             {HIDDEN.map(([d, v]) => <StatusText key={`${d}:${v}`} dimension={d} value={v} detail={`${d}:${v}`} />)}
@@ -193,7 +193,7 @@ export function StatusMoneyTableSections() {
       </Section>
 
       <Section id="money" title="Money" note="PKR and foreign amounts, with what is known and what is not.">
-        <div className="rounded border bg-surface px-5">
+        <div className="rounded-panel border bg-surface px-5">
           <Row title="PKR net, GST, gross" note="Gross is always net + GST, computed in paisa."><NetGstGross net="1250000" gst="225000" gstRate={18} /></Row>
           <Row title="Paisa kept" note="A figure with paisa shows both digits."><Money value="410514.4" size="lg" /><Money value="-84500" size="lg" /></Row>
           <Row title="Foreign currency, fresh rate" note="Original first, then the conversion at the rate and its date."><MoneyFx amount="4820" currency="USD" rate="278.40" rateOn="2026-11-26" ageDays={1} /></Row>

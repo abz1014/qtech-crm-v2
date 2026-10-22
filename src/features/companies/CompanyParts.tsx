@@ -37,7 +37,7 @@ export function Panel({
     </h2>
   )
   return (
-    <section aria-labelledby={headingId} className={cn('min-w-0 rounded border bg-surface', className)}>
+    <section aria-labelledby={headingId} className={cn('min-w-0 rounded-panel border bg-surface', className)}>
       <header className="flex min-h-[52px] flex-wrap items-center gap-x-3 gap-y-1 border-b py-2 pl-5 pr-4">
         {info ? (
           <div className="-my-1 flex items-center gap-1">
@@ -136,7 +136,7 @@ export function ConfirmRemove({
       role={error ? 'alert' : 'group'}
       aria-label={error ? undefined : title}
       className={cn(
-        'grid gap-2 rounded border px-3 py-3 text-sm',
+        'grid gap-2 rounded-row border px-3 py-3 text-sm',
         error ? 'border-tone-danger-fg/25 bg-tone-danger-bg' : 'border-tone-warning-fg/25 bg-tone-warning-bg',
         className,
       )}

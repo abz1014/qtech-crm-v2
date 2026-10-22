@@ -139,7 +139,7 @@ export function MemoryCardView({
   const tier = card.tierLabel ?? fallbackTier ?? null
   const scope = card.scope
   return (
-    <section id={id} aria-label={`What we know about ${supplierName}`} className="overflow-hidden rounded border bg-surface" data-memory-card>
+    <section id={id} aria-label={`What we know about ${supplierName}`} className="overflow-hidden rounded-panel border bg-surface" data-memory-card>
       <header className="flex flex-wrap items-start gap-x-3 gap-y-1 border-b bg-sunken px-4 py-3">
         <div className="min-w-0 flex-1 basis-[15rem]">
           <h4 className="text-sm font-semibold">What we know about {supplierName}</h4>

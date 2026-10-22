@@ -45,7 +45,7 @@ const NAV = [
 function Foundations() {
   return (
     <Section id="foundations" title="Foundations" note="Icon, Button, Kbd, Avatar, Tag, NeedsCount, ProgressSegments, Skeleton.">
-      <div className="rounded border bg-surface px-5">
+      <div className="rounded-panel border bg-surface px-5">
         <Row title="Icon" note="Sizes 12, 14, 16, 20, 24. Inside a status chip the glyph is 16 (12 with smaller text). Decorative by default.">
           {ICON_SIZES.map(s => (
             <Icon key={s} icon={Bell} size={s} />

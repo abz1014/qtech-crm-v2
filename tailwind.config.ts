@@ -144,6 +144,7 @@ export default {
         segment: v('segment-h'),
         chip: v('chip-h'),
         row: v('row-h'),
+        'row-tall': v('row-h-tall'),
         head: v('head-h'),
         touch: v('hit-touch'),
       },

@@ -148,7 +148,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
   }
 
   return (
-    <section aria-label="Margin" data-slot="margin-costs" className="rounded border bg-surface">
+    <section aria-label="Margin" data-slot="margin-costs" className="rounded-panel border bg-surface">
       <div className="flex items-center gap-2 border-b px-4 py-3 md:px-5">
         <h2 className="text-base font-semibold">Margin</h2>
         <InfoTip label="About the margin">
@@ -168,7 +168,7 @@ export function MarginPanel({ order, money, loading, error }: { order: OrderHead
         <p className="p-5 text-sm text-fg-muted">The margin could not be read. Reload the page to try again.</p>
       ) : (
         <div className="grid gap-4 p-4 md:p-5">
-          <div className="grid gap-1 rounded border border-dashed border-line-strong p-4">
+          <div className="grid gap-1 rounded-panel border border-dashed border-line-strong p-4">
             <div className="flex items-baseline justify-between gap-3 text-sm text-fg-2">
               <span>{unknown ? 'Margin' : 'Margin so far'}</span>
               <span className="text-xs text-fg-muted">{unknown ? 'Not calculated' : 'Sale less costs paid'}</span>

@@ -750,7 +750,7 @@ function TableView<T>(props: DataTableProps<T>) {
       data-table-root
       data-density={density === 'compact' ? 'compact' : undefined}
       // overflow: clip, not hidden: it rounds the corners without making a scroll box, so the sticky header follows #main.
-      className={cn('min-w-0 overflow-clip rounded border bg-surface', className)}
+      className={cn('min-w-0 overflow-clip rounded-panel border bg-surface', className)}
     >
       <p aria-live="polite" aria-atomic="true" className="sr-only" data-table-count>
         {announced}
@@ -822,7 +822,7 @@ function TableView<T>(props: DataTableProps<T>) {
             ) : null}
             <tr aria-rowindex={virtual ? 1 : undefined}>
               {selection ? (
-                <th className="sticky top-0 z-[1] h-head w-10 border-b border-line bg-sunken px-[var(--cell-px)] first:pl-5 last:pr-5">
+                <th className="sticky top-0 z-[1] h-head w-10 border-b-2 border-fg bg-surface px-[var(--cell-px)] first:pl-5 last:pr-5">
                   {checkbox(headState, () => setMany(ids, !allOn), 'Select all rows')}
                 </th>
               ) : null}
@@ -836,7 +836,7 @@ function TableView<T>(props: DataTableProps<T>) {
                     aria-sort={dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : sortable ? 'none' : undefined}
                     style={c.width !== undefined ? { width: c.width } : undefined}
                     className={cn(
-                      'group sticky top-0 z-[1] h-head whitespace-nowrap border-b border-line bg-sunken px-[var(--cell-px)] text-xs font-medium first:pl-5 last:pr-5',
+                      'group sticky top-0 z-[1] h-head whitespace-nowrap border-b-2 border-fg bg-surface px-[var(--cell-px)] text-xs font-semibold first:pl-5 last:pr-5',
                       alignRight(c) ? 'text-right' : 'text-left',
                       dir ? 'text-fg' : 'text-fg-2',
                       hide(c),

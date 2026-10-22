@@ -30,13 +30,13 @@ export const ToggleButton = forwardRef<HTMLButtonElement, ToggleButtonProps>(fun
       }}
       className={cn(
         'inline-flex h-control items-center gap-2 whitespace-nowrap rounded border px-3 text-sm font-medium transition-colors duration-fast ease-out',
-        pressed ? 'border-fg bg-selected text-fg' : 'border-line-strong bg-surface text-fg hover:border-line-input hover:bg-sunken',
+        pressed ? 'border-chrome bg-chrome text-chrome-fg' : 'border-line-strong bg-surface text-fg hover:border-line-input hover:bg-sunken',
         'disabled:border-line disabled:bg-sunken disabled:text-fg-disabled disabled:hover:border-line',
         className,
       )}
       {...rest}
     >
-      {icon ? <Icon icon={icon} className="text-fg-muted" /> : null}
+      {icon ? <Icon icon={icon} className={pressed ? "text-chrome-fg-2" : "text-fg-muted"} /> : null}
       {children}
     </button>
   )
