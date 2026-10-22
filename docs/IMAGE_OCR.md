@@ -38,7 +38,10 @@ Failure reasons and their messages (`imageFailureMessage`):
 3. Letters smaller than 24 px: read again from a copy scaled so they are about 34 px (a laptop screenshot at 100% zoom).
 4. Ink no word covers, on a row that was read (a lone "4" or "EA" in a bordered cell): each piece read again on its own
    (`ocrRecover.ts`).
-5. Word boxes to lines and table rows with pdfLayout's row and column logic (cells joined by a tab), slant turned level, wrapped
+5. Before the first read: the page lit evenly (shadows and paper tone flattened), a dark border from a photo's background
+   removed, and a tilted photo turned level by its text lines (`flattenLight`, `clearBorderDark`, `estimateSkew`). Words read
+   with low confidence are read again from an enlarged crop (`rereadDoubtful`).
+6. Word boxes to lines and table rows with pdfLayout's row and column logic (cells joined by a tab), slant turned level, wrapped
    chat lines joined, phone and chat chrome dropped (`ocrLayout.ts`).
 
 ## What it costs (built, gzip)
@@ -69,7 +72,8 @@ goes to `readPdfText`, a picture to `readImageText`; both give text for the same
 - Photos sent as a clarification answer or as attachments are not read: they are pictures of parts, not text.
 - The paste zone on a touch screen shows a Paste button (the clipboard read where the browser allows it, else "Tap and hold in
   the box, then Paste"), never "Press Ctrl V".
-- A scanned or unreadable PDF now points to the photo route ("Take a screenshot or photo of it and choose that instead").
+- A scanned PDF (pages with no text, only a picture) is read page by page: each page drawn by pdf.js and read like a photo,
+  with "Reading the scan… 40%" on the button and Cancel (`readPdfText`, lazy: nothing loads for a PDF that has text).
 
 ## Tests
 
@@ -81,3 +85,22 @@ goes to `readPdfText`, a picture to `readImageText`; both give text for the same
   rendered in the test, no images committed) are read and their items scored through `parseEnquiry`; the accuracy table goes to
   the job summary. Gate: >= 90% item recall and precision on clean screenshots.
   `E2E_CSP=1 npx playwright test --project=docread` (`GALLERY_PORT=5287` when another checkout serves 5199).
+
+## The reader corpus (accuracy gate)
+
+`src/lib/docread/corpus/` generates fictional enquiries and supplier quotations (every name, part and number invented; no
+customer data in the repository) from templates in 29 generations, as the text a person pastes, as PDFs (multi-page, wrapped,
+turned, two-column headers, watermarks) and as pictures (screenshots at 100-150%, dark mode, phone chats, JPEG, blur, 3-8° tilt,
+low contrast, shadows, scanned PDFs). `score.ts` scores every field per case (items, description, quantity, the customer's unit,
+part number, reference, due date, company; price, currency, lead time, validity, payment, incoterm per quotation line) and
+per shape.
+
+- Batch 0 is split 70% dev / 30% held out; batches 1-30 are fresh batches, each made with new seeds and a new template
+  generation written before the reader saw it, and checked once, first try. A fresh batch below 98% on any field or 95% on any
+  shape became dev data and was fixed; batches 6, 29 and 30 passed first try and stay held out.
+- `corpus.test.ts` (Vitest, in CI) reads text and PDF and fails on any value below `floor.text.json`.
+- `e2e/docread/corpus.spec.ts` (CI job "e2e") renders the picture and scan cases in Chromium, reads them with the real OCR and
+  fails below `floor.ocr.json` or when a clean screenshot's median read time passes 3 s. The OCR floors are measured on CI's
+  Linux browser (fonts render differently from Windows or Mac); the run prints `OCR_VALUES {...}` to set them from.
+- Re-measure locally: `CORPUS_BATCHES=0,1,... CORPUS_OUT=report.md npx vitest run src/lib/docread/corpus`;
+  `CORPUS_WRITE_FLOOR=1` writes the floors after a change that improves them.

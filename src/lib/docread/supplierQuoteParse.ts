@@ -168,6 +168,9 @@ export function parseSupplierQuote(raw: string, rfqItems: ReplyItemRef[], opts: 
     .reduce<string[]>((out, l) => {
       const prev = out[out.length - 1]
       if (prev !== undefined && TERM_LABEL.test(prev.trim()) && l.trim() && !TERM_LABEL.test(l.trim())) out[out.length - 1] = `${prev.trim().replace(/:$/, '')}: ${l.trim()}`
+      // A sentence a picture broke before its value ("Offer valid for" / "30 days").
+      else if (prev !== undefined && /\b(?:valid\s+(?:for|till|until)|validity\s+of|delivery\s+(?:in|within)|payment\s*:?)\s*$/i.test(prev.trim()) && /^\d[\d\s-]*\s*(?:days?|weeks?|wks?|months?)\b/i.test(l.trim()))
+        out[out.length - 1] = `${prev.trim()} ${l.trim()}`
       else out.push(l)
       return out
     }, [])

@@ -457,3 +457,33 @@ describe('parseEnquiry: corpus batches 22 and 23 (fictional)', () => {
     expect(rows('need 3 phase motor 5.5 kW')[0]?.[1]).toBe(1)
   })
 })
+
+describe('parseEnquiry: an Outlook table read from a screenshot (fictional OCR text)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('splits a row whose quantity the picture lost from the row above, and keeps its unit', () => {
+    const text = [
+      'Kindly quote your most competitive rates for the following material.',
+      '',
+      'SAFETY RELAY 24VDC DIN RAIL 3RT9889-4FB57-02\t1\tEA',
+      'PRESSURE GAUGE 0-10 BAR 63MM DIAL BOTTOM ENTRY AA632-10P -01',
+      'PCS',
+      'BALL VALVE PN16-01\t6\tNO',
+    ].join('\n')
+    expect(rows(text)).toEqual([
+      ['SAFETY RELAY 24VDC DIN RAIL 3RT9889-4FB57-02', 1, 'EA'],
+      ['PRESSURE GAUGE 0-10 BAR 63MM DIAL BOTTOM ENTRY AA632-10P -01', 1, 'PCS'],
+      ['BALL VALVE PN16-01', 6, 'NO'],
+    ])
+  })
+
+  it('joins a part number broken over two lines and reads its O as 0', () => {
+    const text = 'Please quote:\n\nTEMPERATURE\t5\tNO\nTRANSMITTER HEAD\n6ES7853-8WM79-\nOETO'
+    expect(parse(text).items[0]?.description).toBe('TEMPERATURE TRANSMITTER HEAD 6ES7853-8WM79-0ET0')
+  })
+
+  it('reads the reference from a mail app\'s subject line, also when it wrapped', () => {
+    expect(parse('Enquiry 1000083843 for maintenance spares\nA Buyer <a@example-mills.example>\nDear Sir').facts.customerRef?.value).toBe('1000083843')
+    expect(parse('Request for Quotation\nT-2026-11A\nA Buyer <a@example-mills.example>\nDear Sir').facts.customerRef?.value).toBe('T-2026-11A')
+  })
+})

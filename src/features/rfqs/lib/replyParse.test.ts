@@ -624,3 +624,16 @@ describe('a German table with prices written 1.250,00 € (fictional)', () => {
     expect(o.currency).toBe('EUR')
   })
 })
+
+describe('a quotation read from a picture (fictional OCR text)', () => {
+  it('takes the unit price from quantity x price = total when the table heading was lost', () => {
+    const text = '1\tSITRANS P320 pressure transmitter 0-10 bar\tWHY-3023-R7\t4\t480\t1920.00\t3 weeks'
+    const o = one(parseSupplierReply(text, ITEMS, { today: '2026-10-20' }).offers, 'i1')
+    expect(o.unitPrice).toBe(480)
+  })
+
+  it('reads no price in a mail header date', () => {
+    const r = parseSupplierReply('Wednesday, October 21, 2026 9:14 AM\nP320 transmitter USD 400', ITEMS, { today: '2026-10-20' })
+    expect(r.offers.map(o => o.unitPrice)).toEqual([400])
+  })
+})
