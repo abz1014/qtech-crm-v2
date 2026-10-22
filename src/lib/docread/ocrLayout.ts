@@ -274,6 +274,18 @@ export function wordsToRuns(lines: readonly OcrLine[], typical: number | null = 
     const size = lineSize(line, typical)
     let last: TextRun | null = null
     const keep = new Map(lineWords(line).map(k => [k.word, k.text]))
+    // The line's own baseline from its words' bottoms, for when the engine's is unusable: a robust slope (Theil-Sen) and the
+    // lower third of the bottoms (letters with a descender, "y" or ",", sit lower), so one line's words keep one baseline.
+    const pts = line.words.filter(w => keep.has(w)).map(w => ({ x: (w.bbox.x0 + w.bbox.x1) / 2, y: w.bbox.y1 }))
+    let fit: ((x: number) => number) | null = null
+    if (pts.length >= 3) {
+      const slopes: number[] = []
+      for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) if (Math.abs(pts[j]!.x - pts[i]!.x) > size) slopes.push((pts[j]!.y - pts[i]!.y) / (pts[j]!.x - pts[i]!.x))
+      const slope = Math.max(-0.1, Math.min(0.1, median(slopes) ?? 0))
+      const icpt = pts.map(p => p.y - slope * p.x).sort((a, b) => a - b)
+      const base = icpt[Math.floor((icpt.length - 1) / 3)] as number
+      fit = x => base + slope * x
+    }
     for (const w of line.words) {
       const text = keep.get(w) ?? null
       if (text === null) {
@@ -281,7 +293,9 @@ export function wordsToRuns(lines: readonly OcrLine[], typical: number | null = 
         continue
       }
       const cx = (w.bbox.x0 + w.bbox.x1) / 2
-      last = { str: text, x: w.bbox.x0, y: baselineAt(line, cx, w.bbox.y1, size), w: Math.max(1, w.bbox.x1 - w.bbox.x0), size }
+      // A word whose bottom is far from the line's fitted baseline (a lone digit, a mark) keeps its own place.
+      const fitted = fit && Math.abs(fit(cx) - w.bbox.y1) < 0.5 * size ? fit(cx) : null
+      last = { str: text, x: w.bbox.x0, y: fitted ?? baselineAt(line, cx, w.bbox.y1, size), w: Math.max(1, w.bbox.x1 - w.bbox.x0), size }
       runs.push(last)
     }
   }
