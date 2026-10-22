@@ -242,8 +242,8 @@ export const BOOKS = {
     team: (month: string) => `/money/month-end/team?month=${month}`,
     aging: (month: string, asOf: string) => `/money/month-end/aging?month=${month}&asof=${asOf}`,
     owe: (month: string) => `/money/month-end/owe?month=${month}`,
-    /** "Close October" or "Close through October" (the screen picks one from the months with money in them). */
-    closeButton: (monthName: string) => new RegExp(`^Close (through )?${monthName}$`),
+    /** "Close October": one month at a time (owner decision 2026-10-22); there is no "Close through". */
+    closeButton: (monthName: string) => new RegExp(`^Close ${monthName}$`),
     closeDialog: (label: string) => `Close ${label}?`,
     closedBar: (label: string) => `${label} is closed.`,
     reopenButton: (label: string) => `Reopen ${label}`,

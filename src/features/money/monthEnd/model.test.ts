@@ -16,6 +16,7 @@ import {
   closeButtonLabel,
   closeState,
   closedThrough,
+  closeTarget,
   defaultMonthEndMonth,
   gstCsv,
   payablesCsv,
@@ -113,17 +114,29 @@ describe('closing', () => {
   })
   it('an open month after closed ones closes on its own', () => {
     const s = closeState('2026-10', '2026-11-06', closed, ['2026-08', '2026-09', '2026-10'])
-    expect(s).toEqual({ kind: 'open', through: false, earlier: [] })
+    expect(s).toEqual({ kind: 'open', target: '2026-10', earlier: [] })
     expect(closeButtonLabel('2026-10', s)).toBe('Close October')
+    expect(closeTarget('2026-10', s)).toBe('2026-10')
   })
-  it('an earlier open month with money in it turns the button into Close through', () => {
+  it('an earlier open month with money in it is closed first, on its own, and the button names it (one month at a time)', () => {
     const s = closeState('2026-10', '2026-11-06', new Set(['2026-08']), ['2026-08', '2026-09', '2026-10'])
-    expect(s).toEqual({ kind: 'open', through: true, earlier: ['2026-09'] })
-    expect(closeButtonLabel('2026-10', s)).toBe('Close through October')
+    expect(s).toEqual({ kind: 'open', target: '2026-09', earlier: ['2026-09'] })
+    expect(closeButtonLabel('2026-10', s)).toBe('Close September 2026')
+  })
+  it('with two years of imported history open, the button closes only the oldest month, never all of them', () => {
+    const history = Array.from({ length: 24 }, (_, i) => `${2024 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}`)
+    const s = closeState('2026-09', '2026-10-22', new Set(), [...history, '2026-09'])
+    expect(s).toMatchObject({ kind: 'open', target: '2024-01' })
+    expect(closeButtonLabel('2026-09', s)).toBe('Close January 2024')
+    expect(closeButtonLabel('2026-09', s)).not.toMatch(/through/i)
   })
   it('an earlier open month with no money in it does not matter', () => {
     const s = closeState('2026-10', '2026-11-06', new Set(), ['2026-10'])
-    expect(s).toMatchObject({ kind: 'open', through: false })
+    expect(s).toMatchObject({ kind: 'open', target: '2026-10', earlier: [] })
+  })
+  it('a closed or not-ended month has no other target', () => {
+    expect(closeTarget('2026-11', closeState('2026-11', '2026-11-06', new Set(), ['2026-01']))).toBe('2026-11')
+    expect(closeTarget('2026-09', null)).toBe('2026-09')
   })
   it('names the latest closed month', () => {
     expect(closedThrough([{ key: '2026-08', closedAt: '', closedBy: null, note: null }, { key: '2026-09', closedAt: '', closedBy: null, note: null }])).toBe('September')

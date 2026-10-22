@@ -301,8 +301,12 @@ export type CloseState =
   | { kind: 'closed' }
   /** The month is the current month or later: the database refuses, so the button waits. */
   | { kind: 'not-ended' }
-  /** An earlier month with money in it is still open: the button reads "Close through", one tap for all of them. */
-  | { kind: 'open'; through: boolean; earlier: string[] }
+  /**
+   * The month can be closed. Owner decision 2026-10-22 (redesign, decision 5): months lock ONE AT A TIME, oldest first. `target` is
+   * the one month the button closes: the oldest open month with money in it before this one (`earlier[0]`), else this month.
+   * There is no "close through": one tap never closes more than one month.
+   */
+  | { kind: 'open'; target: string; earlier: string[] }
 
 /**
  * Whether a month can be closed now. `moneyMonths` are the months that have any payment or expense (the months of
@@ -312,12 +316,19 @@ export function closeState(month: string, today: string, closed: ReadonlySet<str
   if (closed.has(month)) return { kind: 'closed' }
   if (month >= today.slice(0, 7)) return { kind: 'not-ended' }
   const earlier = moneyMonths.filter(m => m < month && !closed.has(m)).sort()
-  return { kind: 'open', through: earlier.length > 0, earlier }
+  return { kind: 'open', target: earlier[0] ?? month, earlier }
 }
 
+/** The one month the close button would close: the target when open, else the month on screen. */
+export const closeTarget = (month: string, state: CloseState | null): string => (state?.kind === 'open' ? state.target : month)
+
+/**
+ * The close button names the one month it closes: "Close October" for the month on screen, "Close March 2024" (with the year)
+ * when an older month must be closed first.
+ */
 export function closeButtonLabel(month: string, state: CloseState): string {
-  const name = monthName(month)
-  return state.kind === 'open' && state.through ? `Close through ${name}` : `Close ${name}`
+  const target = closeTarget(month, state)
+  return target === month ? `Close ${monthName(month)}` : `Close ${monthKeyLabel(target)}`
 }
 
 /** "Closed through September" for the closed list header: the latest closed month. */

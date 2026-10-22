@@ -1,7 +1,7 @@
 name: E2E
 
 # The database-backed suites are listed in ONE place, .github/e2e-suites.yml (paths that trigger each suite, plus a rough weight).
-# A small `changes` job picks the suites to run and balances them across up to 7 parallel shard jobs (scripts/ci/e2e-matrix.py).
+# A small `changes` job picks the suites to run and balances them across up to 8 parallel shard jobs (scripts/ci/e2e-matrix.py).
 # Each shard boots its own Supabase stack and its own build, then runs its suites one after another with a database reset between
 # them (scripts/ci/e2e-run.sh). The final job, "E2E", needs every shard and is the single result to read (and to require).
 # Pushes to main and manual runs (Actions, E2E, Run workflow) run every suite. See docs/CI.md.
@@ -61,7 +61,7 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.any == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
