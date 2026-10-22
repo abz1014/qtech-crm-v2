@@ -3,35 +3,33 @@ import type { NavKey } from '@/app/navConfig'
 import type { SessionUser } from '@/app/session'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
 import { navSectionOf, type NavSection } from '@/features/today/rules'
-import type { Role } from '@/features/today/types'
+import { needsYouItems } from '@/features/today/needsYou'
+import type { Role, TodayView } from '@/features/today/types'
 
 export type NavCounts = Partial<Record<NavKey, number>>
 
 /**
- * The numbers beside the top-bar destinations. Every one means "needs you" (DESIGN_SYSTEM section 12, owner decision
- * 2026-10-19), and every one is read from the person's own Today list, so the counts can never disagree with Today:
- *   Today   the length of the "needs you" list.
- *   RFQs, Orders, Money  that list split by navSectionOf (today/rules.ts): every item lands in exactly one, so the three
- *           always add up to Today's number. Money is for admin and sales only.
- * The top bar and the phone tabs draw them with NeedsCount (", 4 need you" for screen readers).
- * A destination with nothing to do shows no number, never a 0. An engineer gets no Money count: Today never reads a money fact
- * for them. No request of its own: Today's list is already loaded for the Today count.
- * The shell also hands them to its pages (navCountsContext), so the Orders page's "N need you" is the Orders badge's number.
+ * The "needs you" numbers, all from ONE definition (features/today/needsYou.ts, redesign phase 0): the items on the person's own
+ * Today that are due today or late, not Waiting, not snoozed and not older than 30 days (a late payment never ages out).
+ *   today   how many: the ONLY number drawn in the top bar and the phone tabs (plan section (c): every other badge goes).
+ *   rfqs, orders, money  the same items split by navSectionOf (today/rules.ts): every item lands in exactly one, so the three
+ *           always add up to Today's number. They are not drawn as badges; the shell hands them to its pages (navCountsContext),
+ *           so the RFQ board's and the Orders list's "N need you" are these numbers. Money is for admin and sales only.
+ * A destination with nothing to do shows no number, never a 0. No request of its own: Today's list is already loaded.
  * `ready`: Today's list has loaded (before that every count is missing, which is not the same as nothing to do).
  */
+export function navCountsFrom(view: TodayView, role: string): NavCounts {
+  const items = needsYouItems(view)
+  const some = (n: number) => (n > 0 ? n : undefined) // nothing waiting: no number, no nag
+  const section = (key: NavSection) => some(items.filter(i => navSectionOf(i) === key).length)
+  const counts: NavCounts = { today: some(items.length), rfqs: section('rfqs'), orders: section('orders') }
+  if (role === 'admin' || role === 'sales') counts.money = section('money')
+  return counts
+}
+
 export function useNavCounts(user: SessionUser): { counts: NavCounts; ready: boolean } {
   const today = useTodayView({ id: user.id, role: user.role as Role }, useBusinessToday())
-  const counts: NavCounts = {}
-  if (today.view) {
-    const active = today.view.active
-    const some = (n: number) => (n > 0 ? n : undefined) // nothing waiting: no number, no nag
-    const section = (key: NavSection) => some(active.filter(i => navSectionOf(i) === key).length)
-    counts.today = some(active.length)
-    counts.rfqs = section('rfqs')
-    counts.orders = section('orders')
-    if (user.role === 'admin' || user.role === 'sales') counts.money = section('money')
-  }
-  return { counts, ready: today.view !== null }
+  return { counts: today.view ? navCountsFrom(today.view, user.role) : {}, ready: today.view !== null }
 }
 
 /**

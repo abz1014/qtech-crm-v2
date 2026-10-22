@@ -157,6 +157,7 @@ function oldToRow(r: Raw, names: Map<string, string>, invoices: Map<string, stri
     state: r.payment_state ?? 'unpaid',
     lastRemindedOn: r.last_reminded_on,
     reminderCount: num(r.reminder_count),
+    imported: false,
   }
 }
 function oldMaps(w: World, raw: Raw[]) {

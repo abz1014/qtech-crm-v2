@@ -264,10 +264,23 @@ describe('aging', () => {
   })
   it('the CSV lists advances apart, never as negative aging', () => {
     const csv = agingCsv(v)
-    expect(csv.headers.slice(-4)).toEqual(['0 to 30', '31 to 60', '61 to 90', '90+'])
+    expect(csv.headers.slice(-5)).toEqual(['0 to 30', '31 to 60', '61 to 90', '90+', 'Imported, not linked to an order'])
     const adv = csv.rows.at(-1)!
     expect(adv[2]).toBe('Advance held, not invoiced yet')
-    expect(adv.slice(-4)).toEqual(['', '', '', ''])
+    expect(adv.slice(-5)).toEqual(['', '', '', '', ''])
+    expect(adv).toHaveLength(csv.headers.length)
+  })
+  it('imported invoices with no order leave the 90+ bucket for their own group, and the grand total is unchanged', () => {
+    const imp = A({ invoiceId: 'z', bucket: '90+', remaining: '250000.00', orderRef: null, invoiceNumber: 'INV-0009', importedUnlinked: true })
+    const w = buildAging('2026-10-31', [...rows, imp], [])
+    expect(w.totals['90+']).toEqual({ amount: '322500.00', count: 1 })
+    expect(w.imported).toEqual({ amount: '250000.00', count: 1 })
+    expect(w.outstanding).toBe('2236340.00')
+    expect(buildAging('2026-10-31', [...rows, { ...imp, importedUnlinked: false }], []).outstanding).toBe(w.outstanding)
+    expect(v.imported).toEqual({ amount: '0.00', count: 0 })
+    const csv = agingCsv(w)
+    const row = csv.rows.find(r => r[2] === 'INV-0009')!
+    expect(row.slice(-5)).toEqual(['', '', '', '', 250000])
   })
   it('an advance on a cancelled order says refund or keep, never "not invoiced yet" (owner decision 2026-10-22)', () => {
     const w = buildAging('2026-10-31', [], [{ orderId: 'x', orderRef: 'ORD-0099', customer: 'C', held: '5000.00', cancelled: true }])

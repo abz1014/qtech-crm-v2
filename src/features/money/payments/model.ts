@@ -5,7 +5,7 @@
 import { addBusinessDays } from '@/features/rfqs/lib/dateText'
 import { orderRef } from '@/lib/refs'
 import type { StepTone } from '@/lib/status'
-import { agoDays, daysOverdue, inDays } from '@/lib/timeWords'
+import { agoDays, daysOverdue, inDays, overdueWords } from '@/lib/timeWords'
 
 export type PaymentState = 'unpaid' | 'part' | 'settled' | 'overdue'
 
@@ -26,6 +26,8 @@ export interface ReceivableRow {
   state: PaymentState
   lastRemindedOn: string | null
   reminderCount: number
+  /** Imported from the old CRM (orders.legacy_source): its invoices are not linked to the order yet (owner decision 1b). */
+  imported: boolean
 }
 
 export const isInvoiced = (r: ReceivableRow): boolean => r.invoiceNumbers.length > 0
@@ -69,6 +71,9 @@ export interface ReceivableTotals {
   notYetDue: number
   notInvoicedCount: number
   notInvoiced: number
+  /** Imported and not invoiced: apart from "Not invoiced yet", to review. */
+  importedCount: number
+  imported: number
   gross: number
   settled: number
 }
@@ -98,11 +103,11 @@ export interface ReceivableNextStep {
 export function receivableNextStep(r: ReceivableRow, today: string): ReceivableNextStep {
   if (r.state === 'settled') return { tone: 'done', label: 'Paid' }
   if (r.state === 'overdue') {
-    const late = daysOverdue(r.dueOn ? daysBetween(r.dueOn, today) : 1)
+    const late = r.dueOn ? overdueWords(daysBetween(r.dueOn, today), r.dueOn) : daysOverdue(1) // never a count above 30 days (redesign phase 0)
     if (reminderDue(r, today) || !r.lastRemindedOn) return { tone: 'late', label: 'Send a reminder', detail: late }
     return { tone: 'waiting', label: `Reminded ${agoDays(daysBetween(r.lastRemindedOn, today)).toLowerCase()}`, detail: late }
   }
-  if (!r.dueOn) return { tone: 'inert', label: 'Not invoiced yet' }
+  if (!r.dueOn) return { tone: 'inert', label: r.imported && !isInvoiced(r) ? 'Imported, to review' : 'Not invoiced yet' }
   return { tone: 'waiting', label: `Due ${day(r.dueOn)}`, detail: inDays(daysBetween(today, r.dueOn)) }
 }
 
@@ -114,7 +119,8 @@ export function receivableSearchText(r: ReceivableRow): string {
 export function receivableTotals(rows: readonly ReceivableRow[], today: string): ReceivableTotals {
   const open = rows.filter(isOpen)
   const overdue = open.filter(r => r.state === 'overdue')
-  const notInvoiced = open.filter(r => !isInvoiced(r))
+  const notInvoiced = open.filter(r => !isInvoiced(r) && !r.imported)
+  const imported = open.filter(r => !isInvoiced(r) && r.imported)
   const notYetDue = open.filter(r => isInvoiced(r) && r.state !== 'overdue')
   const sum = (l: readonly ReceivableRow[], k: 'balance' | 'gross' | 'settled') => round2(l.reduce((s, r) => s + r[k], 0))
   return {
@@ -127,6 +133,8 @@ export function receivableTotals(rows: readonly ReceivableRow[], today: string):
     notYetDue: sum(notYetDue, 'balance'),
     notInvoicedCount: notInvoiced.length,
     notInvoiced: sum(notInvoiced, 'balance'),
+    importedCount: imported.length,
+    imported: sum(imported, 'balance'),
     gross: sum(open, 'gross'),
     settled: sum(open, 'settled'),
   }

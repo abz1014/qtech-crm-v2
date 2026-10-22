@@ -160,7 +160,7 @@ export const ORDERS = {
   today: {
     path: '/today',
     heading: 'Today',
-    loaded: /\d+ due now/,
+    loaded: /\d+ need you/,
   },
   invoice: {
     create: 'Create invoice',

@@ -195,12 +195,13 @@ export default function OrdersListPage() {
   const stepOf = (r: OrderListRow) => steps.get(r.id) ?? listNextStep(r, role, today)
   // R2-05: Active orders split by who acts next. "Needs action" is a late or now step; everything else waits on someone else.
   const needsAction = (r: OrderListRow) => {
-    const t = stepOf(r).tone
+    const st = stepOf(r)
+    if (st.kind === 'review-imported') return false
+    const t = st.tone
     return t === 'late' || t === 'now'
   }
   const showParam = params.get('show')
   const split = filters.tab === 'active' && (showParam === 'need' || showParam === 'waiting') ? showParam : 'all'
-  const needCount = shown.filter(needsAction).length
   const bySplit = (r: OrderListRow) => split === 'all' || r.lifecycle !== 'active' || (split === 'need') === needsAction(r)
   const own = shown.filter(bySplit)
   // A typed search reaches every tab and every owner: the other matches follow this list's own, each group under its divider.
@@ -277,7 +278,8 @@ export default function OrdersListPage() {
   // On a phone the owner switch lives in the sheet, so it counts as a filter there when it is off its default.
   const ownerOff = phone && filters.owner !== defaultOwner(role)
   const clearSheet = () => change({ goods: null, commissioning: null, invoicing: null, payment: null, show: null, ...(phone ? { owner: null } : {}) })
-  // R2-05: the active orders split by who acts next, the first choice in Filters. Its counts are words in the options, as the states'.
+  // R2-05: the active orders split by who acts next, the first choice in Filters. No counts in the options (redesign phase 0): the
+  // one "needs you" number is the header's, from Today's definition, and a second, different count here would disagree with it.
   const splitSelect = (
     <label className="grid gap-1 text-sm">
       <span className="text-fg-muted">Who acts next</span>
@@ -288,8 +290,8 @@ export default function OrdersListPage() {
         onChange={e => change({ show: e.target.value || null })}
         className="w-full"
         options={[
-          { value: 'need', label: orders.isSuccess ? `Needs action (${needCount})` : 'Needs action' },
-          { value: 'waiting', label: orders.isSuccess ? `Waiting (${shown.length - needCount})` : 'Waiting' },
+          { value: 'need', label: 'Needs action' },
+          { value: 'waiting', label: 'Waiting' },
         ]}
       />
     </label>
@@ -352,8 +354,9 @@ export default function OrdersListPage() {
     () => filterRows(all, { ...filters, tab: 'active', goods: ALL, commissioning: ALL, invoicing: ALL, payment: ALL, text: '' }, who),
     [all, filters, who],
   )
-  // "Need you" is the Orders badge's number, read from the shell (one rule: the person's Today items about orders), so the
-  // header and the badge never disagree. Outside the shell, or before Today has loaded, the header just counts the orders.
+  // "Need you" is the one definition (features/today/needsYou.ts, redesign phase 0): the order items on this person's own Today that
+  // are due today or late and not older than 30 days, read from the shell, so the header and Today never disagree. Outside the
+  // shell, or before Today has loaded, the header just counts the orders.
   const navCounts = useSharedNavCounts()
   const needYou = navCounts ? (navCounts.orders ?? 0) : null
   const lede = orders.isSuccess

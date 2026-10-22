@@ -11,6 +11,7 @@ export const listRow = (over: Partial<OrderListRow>): OrderListRow => ({
   companyId: 'c',
   companyName: 'Punjab Cement Ltd',
   siteName: null,
+  imported: false,
   lifecycle: 'active',
   goods: 'on_order',
   commissioning: 'n_a',
