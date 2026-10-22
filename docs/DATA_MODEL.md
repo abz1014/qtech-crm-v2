@@ -1617,8 +1617,8 @@ A blocked change raises errcode **P0001** with the message "September 2026 is cl
 
 | RPC | Behaviour |
 |---|---|
-| `close_month(p_month)` | Refuses the current month or a future month. Refuses if an earlier month that has money rows is still open; the UI then offers `close_months_through`. |
-| `close_months_through(p_month)` | Closes every open month up to and including `p_month`. One tap closes all imported history. |
+| `close_month(p_month)` | Refuses the current month or a future month. Refuses if an earlier month that has money rows is still open. The app closes one month per tap, oldest first (owner decision 2026-10-22). |
+| `close_months_through(p_month)` | Closes every open month up to and including `p_month`. Runbook and tests only: the app never calls it (months lock one at a time, owner decision 2026-10-22). |
 | `reopen_month(p_month, p_note default null)` | Reopens one month. The note is optional. |
 
 #### 0028_month_reports (task S23)

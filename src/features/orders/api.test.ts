@@ -32,6 +32,19 @@ describe('orders api: an engineer is never sent a price', () => {
   })
 })
 
+describe('orders api: the header in one round', () => {
+  it('reads the customer, site, contact and owner embedded in the order, not in a second round (perf/lcp)', async () => {
+    const order = { id: 'o1', number: 38, company_id: 'c1', site_id: 's1', contact_id: null, owner_id: 'u1', legacy_source: null, needs_commissioning: false }
+    const db = installFakeDb(call =>
+      call.target === 'orders' ? { data: { ...order, company: { name: 'Punjab Cement' }, site: { name: 'Plant 2', address: 'Wah' }, contact: null, owner: { id: 'u1', name: 'Asad' } } } : { data: null },
+    )
+    uninstall = db.uninstall
+    const h = await getOrderHeader('o1', true)
+    expect(db.calls.map(c => c.target).filter(t => ['companies', 'company_sites', 'contacts', 'users'].includes(t))).toEqual([])
+    expect(h).toMatchObject({ companyName: 'Punjab Cement', site: { name: 'Plant 2', address: 'Wah' }, contact: null, owner: { id: 'u1', name: 'Asad' } })
+  })
+})
+
 describe('orders api: convert and search', () => {
   it('sends the client-made order id, only the PO and terms that were given, and returns the order id', async () => {
     const db = installFakeDb(() => ({ data: 'order-1' }))

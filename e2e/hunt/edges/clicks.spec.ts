@@ -14,7 +14,7 @@ test.beforeAll(async () => {
   world = await seedWorld('HC')
 })
 
-const SKIP = /^(Sign out|Q-Tech|Search or jump to|Search)$|Deactivate|Reset password|Remove access|Close (through )?\w+$|^Reopen \w+ \d{4}$/
+const SKIP = /^(Sign out|Q-Tech|Search or jump to|Search)$|Deactivate|Reset password|Remove access|Close \w+( \d{4})?$|^Reopen \w+ \d{4}$/
 const OVERLAY = '[role="dialog"]:visible, [role="alertdialog"]:visible, [role="menu"]:visible, [role="listbox"]:visible'
 
 /** Tags every visible button and tab with data-hunt="<name>#<n>" (n counts repeats of the same name) and returns the tags. */
