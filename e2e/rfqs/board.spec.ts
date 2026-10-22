@@ -511,7 +511,8 @@ test.describe('long real-world text (live import, 2026-10-22)', () => {
         const boxes: { x: number; y: number; r: number; b: number; node: Text }[] = []
         const walk = document.createTreeWalker(tr, NodeFilter.SHOW_TEXT)
         for (let n = walk.nextNode() as Text | null; n; n = walk.nextNode() as Text | null) {
-          if (!n.data.trim()) continue
+          // Text for screen readers only (sr-only: a 1 px clipped box) is never painted, though its range still has a box.
+          if (!n.data.trim() || !n.parentElement || n.parentElement.closest('.sr-only') || n.parentElement.getBoundingClientRect().width <= 1) continue
           const range = document.createRange()
           range.selectNodeContents(n)
           for (const q of Array.from(range.getClientRects())) if (q.width > 0 && q.height > 0) boxes.push({ x: q.left, y: q.top, r: q.right, b: q.bottom, node: n })
