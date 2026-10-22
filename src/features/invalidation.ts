@@ -47,6 +47,8 @@ export interface WriteVars {
   'target.save': Record<string, never>
   /** M13: any change to a category (name, group, paid via, order, active, add, delete). */
   'category.save': Record<string, never>
+  /** 0086: two categories merged (every expense of one moved into the other). */
+  'category.merge': Record<string, never>
   /** M12: a bank tick (or untick) of a payment, an expense or an FBR deposit group. */
   'bank.tick': Record<string, never>
   /** M10: closing a month, or reopening it. */
@@ -153,7 +155,9 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'company-profile.update': () => [qk.settings.profile(), qk.money.receivables.all, qk.today.all],
   'target.save': () => [qk.settings.targets(), qk.today.target()],
   // Money's own category list (new expense forms, the Expenses list) reads the same rows, so it goes stale too.
-  'category.save': () => [qk.settings.categories(), qk.money.categories()],
+  'category.save': () => [qk.settings.categories(), qk.money.categories(), qk.money.groups()],
+  // A merge re-files expenses: every expense list, the reports that split by category and the recurring templates change.
+  'category.merge': () => [qk.settings.categories(), qk.money.categories(), qk.money.groups(), qk.money.expenses.all, qk.money.monthEnd.all, qk.money.recurring.all],
   // A tick changes only the bank screen (the month-end checklist counts arrive with M10 and read through this prefix too).
   'bank.tick': () => [qk.money.bank.all, qk.money.monthEnd.all],
   // Closing or reopening a month changes the checklist and closed list; a lock also changes what the expense and bank screens may write.

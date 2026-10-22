@@ -8,7 +8,18 @@ import { checkCategoryName, nextSort } from '@/features/settings/categoriesModel
 import { useCreateCategory } from '@/features/settings/hooks'
 import * as api from '@/features/money/expenses/api'
 import type { CreateCategoryResult } from '@/features/money/expenses/CategoryPicker'
-import { SUPPLIER_PAYMENT_ID, monthKey, mostUsedCategory, shiftMonth, type Category, type PaidVia, type RecurringTemplate } from '@/features/money/expenses/model'
+import {
+  SUPPLIER_PAYMENT_ID,
+  defaultGroupId,
+  monthKey,
+  rankCategoryUse,
+  shiftMonth,
+  type Category,
+  type CategoryUse,
+  type ExpenseGroup,
+  type PaidVia,
+  type RecurringTemplate,
+} from '@/features/money/expenses/model'
 
 /** The details typed in the last twelve months, for the Detail field's suggestions (detailSuggestions orders them per row). */
 export function useRecentDetails(enabled = true) {
@@ -17,26 +28,41 @@ export function useRecentDetails(enabled = true) {
 }
 
 /**
- * "Create" in the category picker (owner request 2026-10-20): the same name rule and the same request as Settings > Expense
- * categories (useCreateCategory, so the same lists refresh), filed under Overheads, placed last, paid via as tapped. Resolves
- * once the category lists hold the new one, so the picker shows it straight away.
+ * "Create" in the category picker (owner request 2026-10-20; group 0086): the same name rule and the same request as Settings >
+ * Expense categories (useCreateCategory, so the same lists refresh), filed under the chosen group (Office running when none is
+ * chosen), placed last, paid via as tapped. Resolves once the category lists hold the new one, so the picker shows it straight away.
  */
-export function useInlineCategoryCreate(categories: readonly Category[] | undefined): (name: string, paidVia: PaidVia) => Promise<CreateCategoryResult> {
+export function useInlineCategoryCreate(
+  categories: readonly Category[] | undefined,
+  groups: readonly ExpenseGroup[] | undefined,
+): (name: string, paidVia: PaidVia, groupId?: string | null) => Promise<CreateCategoryResult> {
   const { mutateAsync } = useCreateCategory()
   return useCallback(
-    async (raw: string, paidVia: PaidVia) => {
+    async (raw: string, paidVia: PaidVia, groupId?: string | null) => {
       const all = categories ?? []
       const check = checkCategoryName(raw, all)
       if (!check.ok) return { error: check.message }
+      const group = (groups ?? []).find(g => g.id === (groupId ?? defaultGroupId(groups ?? [])))
+      if (!group) return { error: 'The expense groups have not loaded yet. Try again in a moment.' }
       try {
-        const id = await mutateAsync({ name: check.name, grp: 'overhead', default_paid_via: paidVia, sort: nextSort(all) })
+        const id = await mutateAsync({ name: check.name, group_id: group.id, grp: group.kind, default_paid_via: paidVia, sort: nextSort(all) })
         return { id }
       } catch (err) {
         return { error: mapPgError(err, { entity: 'category' }).message }
       }
     },
-    [categories, mutateAsync],
+    [categories, groups, mutateAsync],
   )
+}
+
+/** The expense groups (0086), admin only (`enabled`). */
+export function useGroups(enabled = true) {
+  return useQuery({ queryKey: qk.money.groups(), queryFn: api.listGroups, enabled, staleTime: 5 * 60_000 })
+}
+
+/** Every expense paid from one month to another ("2026-07".."2026-09"), for the Expenses report. Live (staleTime 0), like every report. */
+export function useExpensesBetween(fromMonth: string, toMonth: string, enabled = true) {
+  return useQuery({ queryKey: qk.money.expenses.range(fromMonth, toMonth), queryFn: () => api.listExpensesBetween(fromMonth, toMonth), enabled, staleTime: 0 })
 }
 
 /*
@@ -51,14 +77,17 @@ export function useExpenseMonth(month: string, enabled = true) {
   return useQuery({ queryKey: qk.money.expenses.month(month), queryFn: () => api.listExpenses(month), enabled })
 }
 
+/** Categories by use in the last 30 days, most used first: one read for the default and the picker's Recent section. */
+const recentUseQuery = (day: string) => ({ queryKey: qk.money.expenses.recentUse(day), queryFn: async () => rankCategoryUse(await api.recentCategoryUse()) })
+
 /** The most-used category of the last 30 days, with its count (the burst sheet's first-row default). */
 export function useMostUsedCategory(enabled = true) {
-  const day = businessToday()
-  return useQuery({
-    queryKey: qk.money.expenses.recentUse(day),
-    queryFn: async () => mostUsedCategory(await api.recentCategoryUse()),
-    enabled,
-  })
+  return useQuery({ ...recentUseQuery(businessToday()), enabled, select: (use: CategoryUse[]) => (use[0] ? { id: use[0].id, count: use[0].count } : null) })
+}
+
+/** Categories by use in the last 30 days (the picker's Recent section). */
+export function useCategoryUse(enabled = true) {
+  return useQuery({ ...recentUseQuery(businessToday()), enabled })
 }
 
 export function useLastCategoryForOrder(orderId: string | null | undefined) {

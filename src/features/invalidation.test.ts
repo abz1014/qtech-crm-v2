@@ -32,6 +32,7 @@ const vars: { [N in WriteName]: WriteVars[N] } = {
   'company-profile.update': {},
   'target.save': {},
   'category.save': {},
+  'category.merge': {},
   'bank.tick': {},
   'month.close': { month: '2026-10' },
   'month.reopen': { month: '2026-10' },

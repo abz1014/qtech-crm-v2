@@ -417,18 +417,44 @@ isOneToOne: false
                   ]
                 },"expense_categories": {
                   Row: {
-                    "active": boolean,"created_at": string,"created_by": string | null,"default_paid_via": string,"grp": string,"id": string,"name": string,"sort": number
+                    "active": boolean,"created_at": string,"created_by": string | null,"default_paid_via": string,"group_id": string,"grp": string,"id": string,"monthly_budget_pkr": number | null,"name": string,"sort": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"default_paid_via"?: string,"grp": string,"id"?: string,"name": string,"sort"?: number
+                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"default_paid_via"?: string,"group_id": string,"grp": string,"id"?: string,"monthly_budget_pkr"?: number | null,"name": string,"sort"?: number
                   }
                   Update: {
-                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"default_paid_via"?: string,"grp"?: string,"id"?: string,"name"?: string,"sort"?: number
+                    "active"?: boolean,"created_at"?: string,"created_by"?: string | null,"default_paid_via"?: string,"group_id"?: string,"grp"?: string,"id"?: string,"monthly_budget_pkr"?: number | null,"name"?: string,"sort"?: number
                   }
                   Relationships: [
                     {
       foreignKeyName: "expense_categories_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "expense_categories_group_id_fkey"
+      columns: ["group_id"]
+isOneToOne: false
+      referencedRelation: "expense_groups"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"expense_groups": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"kind": string,"name": string,"sort": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"kind": string,"name": string,"sort"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: string,"name"?: string,"sort"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "expense_groups_created_by_fkey"
       columns: ["created_by"]
 isOneToOne: false
       referencedRelation: "users"
@@ -1111,14 +1137,14 @@ isOneToOne: false
                   ]
                 },"recurring_expenses": {
                   Row: {
-                    "active": boolean,"amount": number,"category_id": string,"created_at": string,"created_by": string | null,"day_of_month": number | null,"id": string,"label": string,"notes": string | null,"start_month": string | null
+                    "active": boolean,"amount": number,"category_id": string,"created_at": string,"created_by": string | null,"day_of_month": number | null,"id": string,"label": string,"notes": string | null,"paid_via": string | null,"start_month": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"amount": number,"category_id": string,"created_at"?: string,"created_by"?: string | null,"day_of_month"?: number | null,"id"?: string,"label": string,"notes"?: string | null,"start_month"?: string | null
+                    "active"?: boolean,"amount": number,"category_id": string,"created_at"?: string,"created_by"?: string | null,"day_of_month"?: number | null,"id"?: string,"label": string,"notes"?: string | null,"paid_via"?: string | null,"start_month"?: string | null
                   }
                   Update: {
-                    "active"?: boolean,"amount"?: number,"category_id"?: string,"created_at"?: string,"created_by"?: string | null,"day_of_month"?: number | null,"id"?: string,"label"?: string,"notes"?: string | null,"start_month"?: string | null
+                    "active"?: boolean,"amount"?: number,"category_id"?: string,"created_at"?: string,"created_by"?: string | null,"day_of_month"?: number | null,"id"?: string,"label"?: string,"notes"?: string | null,"paid_via"?: string | null,"start_month"?: string | null
                   }
                   Relationships: [
                     {
@@ -2137,6 +2163,9 @@ isOneToOne: false
                            },
 "merge_companies":
 { Args: { "p_drop": string,"p_keep": string }; Returns: undefined
+                           },
+"merge_expense_categories":
+{ Args: { "p_from": string,"p_into": string }; Returns: number
                            },
 "model_tokens":
 { Args: { "t": string }; Returns: (string)[]

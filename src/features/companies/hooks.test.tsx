@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DuplicateCompanyError, useCompany, useCompanyList, useCompanyMoney, useCreateCompany, useMergeCompanies, useSupplierStats } from '@/features/companies/hooks'
-import { searchCompanies } from '@/features/companies/api'
+import { sameCompanyNameKey, searchCompanies, tidyCompanyName } from '@/features/companies/api'
 import { qk } from '@/features/queryKeys'
 import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 
@@ -132,10 +132,35 @@ describe('companies writes', () => {
     const spy = vi.spyOn(client, 'invalidateQueries')
     const { result } = renderHook(() => useCreateCompany(), { wrapper })
     await act(async () => {
-      await result.current.mutateAsync({ id: 'new-id', name: '  Indus Textile ', country: ' ' })
+      await result.current.mutateAsync({ id: 'new-id', name: '  Indus   Textile ', country: ' ' })
     })
-    expect(opArgs(db.calls[0], 'insert')).toEqual([{ id: 'new-id', name: 'Indus Textile', country: null, notes: null, city: null }])
+    const insert = db.calls.find(c => c.verb === 'insert')!
+    expect(opArgs(insert, 'insert')).toEqual([{ id: 'new-id', name: 'Indus Textile', country: null, notes: null, city: null }])
     expect(spy).toHaveBeenCalledWith({ queryKey: qk.companies.lists() })
+  })
+
+  it('HW-33: a near duplicate (doubled spaces, a full stop at the end) is refused before the insert, carrying the existing company', async () => {
+    const { wrapper, db } = setup(c => (c.verb === 'insert' ? { data: { id: 'x', name: 'x' } } : { data: [{ id: 'existing', name: 'Hunt Traders', country: null }] }))
+    const { result } = renderHook(() => useCreateCompany(), { wrapper })
+    let caught: unknown
+    await act(async () => {
+      try {
+        await result.current.mutateAsync({ id: 'x', name: 'hunt  TRADERS.' })
+      } catch (e) {
+        caught = e
+      }
+    })
+    expect(caught).toBeInstanceOf(DuplicateCompanyError)
+    expect((caught as DuplicateCompanyError).existing?.id).toBe('existing')
+    expect(opArgs(db.calls[0], 'ilike')).toEqual(['name', 'hunt%traders%'])
+    expect(db.calls.some(c => c.verb === 'insert')).toBe(false)
+  })
+
+  it('sameCompanyNameKey ignores case, extra spaces and punctuation at the end, but not words', () => {
+    expect(sameCompanyNameKey('  Hunt  HW33   Traders. ')).toBe('hunt hw33 traders')
+    expect(sameCompanyNameKey('Hunt HW33 Traders,')).toBe('hunt hw33 traders')
+    expect(sameCompanyNameKey('Hunt HW33 Traders Ltd')).toBe('hunt hw33 traders ltd')
+    expect(tidyCompanyName('  A   B. ')).toBe('A B.')
   })
 
   it('a duplicate name (23505 on companies_name_key) comes back as DuplicateCompanyError carrying the existing company', async () => {

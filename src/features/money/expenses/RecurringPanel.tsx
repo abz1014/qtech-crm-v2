@@ -3,6 +3,7 @@ import { Check, Pencil, Plus, Repeat } from 'lucide-react'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { InfoTip } from '@/ui/InfoTip'
 import { Money } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
@@ -21,7 +22,9 @@ import {
 /*
  * Recurring templates (M03): rent, salaries, internet. Each active template that has not been recorded for this month
  * shows "Record" (one tap: one expense, dated its day of the month or today, with (recurring_id, period) so it can only
- * exist once). Templates are listed, added and edited here.
+ * exist once), paid the way the template says (0086), else as its category usually is. "Record all N" records every due one.
+ * With none set up the panel is one line (grader: the explanation lives in the (i)). Record is a secondary button: the
+ * screen's one green button is Add expenses.
  */
 export function RecurringPanel({ categories, today }: { categories: readonly Category[]; today: string }) {
   const period = monthKey(today)
@@ -36,11 +39,12 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
   const due = dueThisMonth(templates.data ?? [], recordedIds, period)
   const dueIds = new Set(due.map(d => d.id))
   const catName = (id: string) => categories.find(c => c.id === id)?.name ?? ''
+  const viaOf = (t: RecurringTemplate) => t.paidVia ?? paidViaFor(t.categoryId, categories)
 
   const doRecord = (t: RecurringTemplate) => {
     setRecording(t.id)
     record.mutate(
-      { template: t, id: crypto.randomUUID(), period, paidOn: recurringPaidOn(t, today), paidVia: paidViaFor(t.categoryId, categories) },
+      { template: t, id: crypto.randomUUID(), period, paidOn: recurringPaidOn(t, today), paidVia: viaOf(t) },
       {
         onSuccess: () => toast.toast({ title: `Recorded ${t.label}`, body: `PKR ${t.amount.toLocaleString('en-US')} · ${monthKeyLabel(period)}`, tone: 'success' }),
         onError: e => {
@@ -63,7 +67,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
     const failed: string[] = []
     for (const t of due) {
       try {
-        await record.mutateAsync({ template: t, id: crypto.randomUUID(), period, paidOn: recurringPaidOn(t, today), paidVia: paidViaFor(t.categoryId, categories) })
+        await record.mutateAsync({ template: t, id: crypto.randomUUID(), period, paidOn: recurringPaidOn(t, today), paidVia: viaOf(t) })
         done += 1
         total += t.amount
       } catch (e) {
@@ -76,14 +80,34 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
   }
 
   const loading = templates.isPending || recorded.isPending
+  const none = !loading && !templates.isError && (templates.data ?? []).length === 0
+  if (none)
+    return (
+      <section aria-labelledby="recurring-h" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded border bg-surface px-4 py-2">
+        <Icon icon={Repeat} className="text-fg-muted" />
+        <h2 id="recurring-h" className="text-sm font-semibold">
+          Recurring
+        </h2>
+        <span className="text-sm text-fg-muted">none set up</span>
+        <InfoTip label="About recurring expenses">
+          Rent, salaries and internet that are paid every month. Add one and it shows here as due each month, ready to record in one tap. You can
+          also tick Every month on a row in Add expenses.
+        </InfoTip>
+        <span className="flex-1" />
+        <Button size="sm" variant="quiet" icon={Plus} onClick={() => setEditing('new')}>
+          Add recurring
+        </Button>
+        {editing ? <RecurringDialog categories={categories} onClose={() => setEditing(null)} /> : null}
+      </section>
+    )
   return (
     <section aria-labelledby="recurring-h" className="rounded border bg-surface">
       <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
         <h2 id="recurring-h" className="text-base font-semibold">
           Recurring
         </h2>
-        <span className="text-xs text-fg-muted">
-          {loading ? 'Loading' : due.length > 0 ? `${due.length} due for ${monthKeyLabel(period)}` : `Nothing due for ${monthKeyLabel(period)}`}
+        <span className="text-sm text-fg-muted">
+          {loading ? 'Loading' : due.length > 0 ? `${due.length} due for ${monthKeyLabel(period)}` : `All recorded for ${monthKeyLabel(period)}`}
         </span>
         <span className="flex-1" />
         {due.length > 1 ? (
@@ -91,7 +115,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
             {`Record all ${due.length}`}
           </Button>
         ) : null}
-        <Button size="sm" icon={Plus} onClick={() => setEditing('new')}>
+        <Button size="sm" variant="quiet" icon={Plus} onClick={() => setEditing('new')}>
           Add recurring
         </Button>
       </header>
@@ -106,37 +130,43 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
             Try again
           </button>
         </p>
-      ) : (templates.data ?? []).length === 0 ? (
-        <p className="flex items-center gap-2 p-4 text-sm text-fg-muted">
-          <Icon icon={Repeat} />
-          Rent, salaries and internet that repeat every month go here. Add one and it shows up as due each month, ready to record in one tap.
-        </p>
       ) : (
         <ul className="divide-y">
           {(templates.data ?? []).map(t => (
-            <li key={t.id} className="flex min-h-12 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2" data-testid={`recurring-${t.label}`}>
-              <span className="grid min-w-0 flex-1 gap-px">
-                <span className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium">{t.label}</span>
-                <span className="min-w-0 [overflow-wrap:anywhere] text-xs text-fg-muted">
+            <li key={t.id} className="grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2" data-testid={`recurring-${t.label}`}>
+              {/* the name opens the template (on a phone this is the edit control; the pencil shows from sm up) */}
+              <button type="button" onClick={() => setEditing(t)} className="grid min-w-0 gap-px rounded text-left">
+                <span className="min-w-0 [overflow-wrap:anywhere] text-base font-medium">{t.label}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere] text-sm text-fg-muted">
                   {catName(t.categoryId)}
-                  {t.dayOfMonth ? ` · day ${t.dayOfMonth}` : ''}
+                  {t.dayOfMonth ? ` · day ${t.dayOfMonth}` : ''} · {viaOf(t) === 'cash' ? 'cash' : 'bank'}
                   {!t.active ? ' · paused' : ''}
                 </span>
+              </button>
+              <span className="flex items-center gap-2 sm:gap-3">
+                <Money value={t.amount} prefix={false} className="text-base" />
+                {dueIds.has(t.id) ? (
+                  <Button
+                    size="sm"
+                    icon={Check}
+                    busy={recording === t.id}
+                    busyLabel="Recording"
+                    onClick={() => doRecord(t)}
+                    aria-label={`Record ${t.label}`}
+                    className="max-sm:min-h-[44px]"
+                  >
+                    Record
+                  </Button>
+                ) : t.active ? (
+                  <span className="inline-flex items-center gap-1 text-sm text-tone-success-fg sm:w-[96px]">
+                    <Icon icon={Check} size="sm" />
+                    Recorded
+                  </span>
+                ) : (
+                  <span className="sm:w-[96px]" />
+                )}
+                <Button variant="quiet" size="sm" icon={Pencil} aria-label={`Edit ${t.label}`} onClick={() => setEditing(t)} className="max-sm:hidden" />
               </span>
-              <Money value={t.amount} prefix={false} className="text-sm" />
-              {dueIds.has(t.id) ? (
-                <Button variant="primary" size="sm" icon={Check} busy={recording === t.id} busyLabel="Recording" onClick={() => doRecord(t)} aria-label={`Record ${t.label}`}>
-                  Record
-                </Button>
-              ) : t.active ? (
-                <span className="inline-flex w-[84px] items-center gap-1 text-xs text-tone-success-fg">
-                  <Icon icon={Check} size="sm" />
-                  Recorded
-                </span>
-              ) : (
-                <span className="w-[84px]" />
-              )}
-              <Button variant="quiet" size="sm" icon={Pencil} aria-label={`Edit ${t.label}`} onClick={() => setEditing(t)} />
             </li>
           ))}
         </ul>

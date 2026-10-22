@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { TableRow, ViewRow } from '@/features/dbTypes'
 import { toBusinessDate } from '@/lib/dates'
+import { PlainError } from '@/lib/errors/plainError'
 import { paisaToFixed, sumPaisa } from '@/lib/money'
 import { fetchReceivablesList } from '@/features/money/payments/api'
 import type { RawInquiry, RawItem, RawLeg, RawLine, RawOrderItem, RawRfq, SupplierRecordRaw } from '@/features/companies/supplierRecord'
@@ -208,13 +209,30 @@ export async function findCompanyForSender(h: SenderHint): Promise<(CompanyHit &
   return null
 }
 
-/** The company whose name equals `name` ignoring case and surrounding spaces, as the unique index sees it. */
+/** A company name as it is saved: no spaces around it, and runs of spaces inside become one ("A  B " is saved "A B"). */
+export const tidyCompanyName = (name: string): string => name.replace(/\s+/g, ' ').trim()
+
+/**
+ * The key two names are the same company by (HW-33): case, extra spaces and punctuation at the end do not count, so
+ * "Hunt  Traders." and "hunt traders" are one company. Stricter than companyNameKey, which also drops legal words.
+ */
+export const sameCompanyNameKey = (name: string): string =>
+  tidyCompanyName(name.normalize('NFKC'))
+    .toLowerCase()
+    .replace(/[\s.,;:!?'"\-–—/]+$/u, '')
+
+/**
+ * The company already on file under this name (sameCompanyNameKey), or null. The unique index only ignores case and
+ * surrounding spaces, so this is the check that stops "A  B" or "A B." becoming a second company.
+ */
 export async function findCompanyByName(name: string): Promise<CompanyHit | null> {
   const db = requireSupabase()
-  const wanted = name.trim()
-  if (!wanted) return null
-  const rows = unwrap(await db.from('companies').select('id, name, country').ilike('name', likeEscape(wanted)).limit(5))
-  const hit = rows.find(r => r.name.trim().toLowerCase() === wanted.toLowerCase())
+  const key = sameCompanyNameKey(name)
+  if (!key) return null
+  // Every word in order, anything between and after: finds "A  B" and "A B." for "A B"; the exact match is decided below.
+  const pattern = `${key.split(' ').map(likeEscape).join('%')}%`
+  const rows = unwrap(await db.from('companies').select('id, name, country').ilike('name', pattern).limit(20))
+  const hit = rows.find(r => sameCompanyNameKey(r.name) === key)
   return hit ? { id: hit.id, name: hit.name, country: hit.country, role: null } : null
 }
 
@@ -688,7 +706,7 @@ export async function createCompany(input: NewCompany): Promise<{ id: string; na
       .from('companies')
       .insert({
         id: input.id,
-        name: input.name.trim(),
+        name: tidyCompanyName(input.name),
         country: input.country?.trim() || null,
         notes: input.notes?.trim() || null,
         city: input.city?.trim() || null,
@@ -698,15 +716,48 @@ export async function createCompany(input: NewCompany): Promise<{ id: string; na
   )
 }
 
-export async function updateCompany(id: string, patch: { name?: string; country?: string | null; city?: string | null; notes?: string | null }) {
+type CompanyEditable = { name?: string; country?: string | null; city?: string | null; notes?: string | null }
+const EDITABLE = ['name', 'country', 'city', 'notes'] as const
+const EDITABLE_LABEL: Record<(typeof EDITABLE)[number], string> = { name: 'Company name', country: 'Country', city: 'City', notes: 'Notes' }
+
+/** HW-25: the code of the refusal when someone else changed a field this save would overwrite. */
+export const STALE_EDIT = 'stale-edit'
+
+/**
+ * Saves a company's details. With `base` (the values the form opened with) the save is optimistic-concurrency safe (HW-25):
+ * - only the fields the person changed are sent, so a stale tab never writes its old copy of the other fields (Notes saved
+ *   elsewhere survive a City change);
+ * - when someone else changed one of those same fields since the form opened, nothing is saved and the person is told to reload;
+ * - the write carries the row's updated_at as read just before, so a change landing in between is refused the same way.
+ */
+export async function updateCompany(id: string, patch: CompanyEditable, base?: Required<{ [K in keyof CompanyEditable]: string | null }>) {
   const db = requireSupabase()
-  const next = {
-    ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
+  const next: { name?: string; country?: string | null; city?: string | null; notes?: string | null } = {
+    ...(patch.name !== undefined ? { name: tidyCompanyName(patch.name) } : {}),
     ...(patch.country !== undefined ? { country: patch.country?.trim() || null } : {}),
     ...(patch.city !== undefined ? { city: patch.city?.trim() || null } : {}),
     ...(patch.notes !== undefined ? { notes: patch.notes?.trim() || null } : {}),
   }
-  unwrap(await db.from('companies').update(next).eq('id', id).select('id').single())
+  if (!base) {
+    unwrap(await db.from('companies').update(next).eq('id', id).select('id').single())
+    return
+  }
+  const changed = EDITABLE.filter(k => k in next && (next[k] ?? null) !== (base[k] ?? null))
+  if (changed.length === 0) return
+  const current: Pick<TableRow<'companies'>, 'name' | 'country' | 'city' | 'notes' | 'updated_at'> | null = unwrap(
+    await db.from('companies').select('name, country, city, notes, updated_at').eq('id', id).maybeSingle(),
+  )
+  if (!current) throw new PlainError('This company is no longer there. It may have been merged or removed. Reload the page.')
+  const stale = () => {
+    const theirs = changed.filter(k => (current[k] ?? null) !== (base[k] ?? null)).map(k => EDITABLE_LABEL[k])
+    const what = theirs.length ? theirs.join(', ') : 'This company'
+    return new PlainError(`Changed by someone else while you were editing (${what}). Nothing was saved. Reload the page to see their change, then make yours again.`, STALE_EDIT)
+  }
+  if (changed.some(k => (current[k] ?? null) !== (base[k] ?? null))) throw stale()
+  const send: typeof next = {}
+  for (const k of changed) Object.assign(send, { [k]: next[k] })
+  const saved = unwrap(await db.from('companies').update(send).eq('id', id).eq('updated_at', current.updated_at).select('id'))
+  if (saved.length === 0) throw stale()
 }
 
 export async function addSite(input: { id: string; companyId: string; name: string; address?: string | null }) {
