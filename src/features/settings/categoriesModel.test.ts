@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { categoriesFooter, checkCategoryName, deleteAdvice, groupCategories, moveCategory, moveWithinGroup, nextSort, sortCategories, usageText, type Category } from '@/features/settings/categoriesModel'
+import {
+  budgetState,
+  categoriesFooter,
+  categorySections,
+  checkCategoryName,
+  checkGroupName,
+  deleteAdvice,
+  groupLabel,
+  kindNote,
+  mergeSummary,
+  mergeTargets,
+  moveCategory,
+  nextSort,
+  nextSortIn,
+  sortCategories,
+  usageText,
+  type Category,
+  type ExpenseGroup,
+} from '@/features/settings/categoriesModel'
 
 const c = (id: string, name: string, sort: number, over: Partial<Category> = {}): Category => ({
   id,
@@ -9,6 +27,8 @@ const c = (id: string, name: string, sort: number, over: Partial<Category> = {})
   sort,
   active: true,
   used: 0,
+  group_id: 'office',
+  monthly_budget_pkr: null,
   ...over,
 })
 const rows = [c('a', 'Salaries', 10), c('b', 'Rent', 20), c('c', 'Utilities', 30)]
@@ -62,9 +82,9 @@ describe('checkCategoryName', () => {
 })
 
 describe('categoriesFooter', () => {
-  it('counts the categories and the active ones', () => {
-    expect(categoriesFooter([c('a', 'A', 1), c('b', 'B', 2, { active: false }), c('c', 'C', 3)])).toBe('3 categories · 2 active')
-    expect(categoriesFooter([c('a', 'A', 1)])).toBe('1 category · 1 active')
+  it('counts the categories and the archived ones', () => {
+    expect(categoriesFooter([c('a', 'A', 1), c('b', 'B', 2, { active: false }), c('c', 'C', 3)])).toBe('3 categories · 1 archived')
+    expect(categoriesFooter([c('a', 'A', 1)])).toBe('1 category')
   })
 })
 
@@ -73,17 +93,18 @@ describe('deleteAdvice', () => {
     const a = deleteAdvice(c('x', 'Spare', 1))
     expect(a.canDelete).toBe(true)
   })
-  it('refuses an used one and points at Deactivate', () => {
+  it('refuses a used one and points at Archive and Merge', () => {
     const a = deleteAdvice(c('x', 'Rent', 1, { used: 12 }))
     expect(a.canDelete).toBe(false)
     expect(a.message).toContain('12')
     expect(a.message).toContain('cannot be deleted')
-    expect(a.message).toContain('Deactivate')
+    expect(a.message).toContain('Archive it instead')
+    expect(a.message).toContain('merge')
   })
-  it('an already inactive used category says it is already hidden', () => {
+  it('an archived used category says it is already hidden', () => {
     const a = deleteAdvice(c('x', 'Rent', 1, { used: 1, active: false }))
     expect(a.canDelete).toBe(false)
-    expect(a.message).toContain('already deactivated')
+    expect(a.message).toContain('It is archived')
   })
   it('counts in words', () => {
     expect(usageText(0)).toBe('Not used yet')
@@ -92,27 +113,71 @@ describe('deleteAdvice', () => {
   })
 })
 
-describe('sections by group (audit 2026-10-22)', () => {
-  const mixed = [c('a', 'Salaries', 10), c('f', 'Freight', 15, { grp: 'order_cost' }), c('b', 'Rent', 20), c('d', 'Drawings', 25, { grp: 'non_pnl' }), c('e', 'Utilities', 30)]
-  it('groups in the fixed order Overheads, Order costs, Not in P&L, each in its saved order, leaving empty groups out', () => {
-    expect(groupCategories(mixed).map(g => [g.label, g.rows.map(r => r.id)])).toEqual([
-      ['Overheads', ['a', 'b', 'e']],
-      ['Order costs', ['f']],
-      ['Not in P&L', ['d']],
+const g = (id: string, name: string, kind: ExpenseGroup['kind'], sort: number): ExpenseGroup => ({ id, name, kind, sort })
+const GROUPS = [g('cars', 'Vehicles', 'overhead', 20), g('office', 'Office running', 'overhead', 10), g('orders', 'Order costs', 'order_cost', 50), g('empty', 'Site visits', 'overhead', 70)]
+
+describe('categorySections (0086)', () => {
+  const list = [
+    c('water', 'Water', 20, { group_id: 'office' }),
+    c('rent', 'Rent', 10, { group_id: 'office' }),
+    c('fuel', 'Fuel', 10, { group_id: 'cars' }),
+    c('old', 'Old fuel', 5, { group_id: 'cars', active: false }),
+    c('freight', 'Freight', 10, { group_id: 'orders', grp: 'order_cost' }),
+    c('lost', 'No group loaded', 10, { group_id: 'gone' }),
+  ]
+  it('lists every group in order with its active categories in the saved order, and the archived ones apart', () => {
+    const { sections, archived } = categorySections(list, GROUPS, { water: 1150, rent: 85000, old: 300, freight: 42000 })
+    expect(sections.map(s => [s.group.name, s.rows.map(r => r.name), s.held, s.monthTotal])).toEqual([
+      ['Office running', ['Rent', 'Water'], 2, 86150],
+      ['Vehicles', ['Fuel'], 2, 300],
+      ['Order costs', ['Freight'], 1, 42000],
+      ['Site visits', [], 0, 0],
     ])
-    expect(groupCategories([c('a', 'Salaries', 10)]).map(g => g.label)).toEqual(['Overheads'])
+    expect(archived.map(a => a.name)).toEqual(['Old fuel'])
   })
-  it('moves within the group, past other groups, and not past the group ends', () => {
-    // Rent up: passes Freight (order costs) and swaps with Salaries
-    expect(moveWithinGroup(mixed, 'b', -1)).toEqual([
-      { id: 'b', sort: 10 },
-      { id: 'f', sort: 20 },
-      { id: 'a', sort: 30 },
-      { id: 'd', sort: 40 },
-      { id: 'e', sort: 50 },
-    ])
-    expect(moveWithinGroup(mixed, 'a', -1)).toEqual([])
-    expect(moveWithinGroup(mixed, 'e', 1)).toEqual([])
-    expect(moveWithinGroup(mixed, 'f', 1)).toEqual([]) // alone in its group
+})
+
+describe('budgetState', () => {
+  it('no budget, under (exactly on counts as under) and over', () => {
+    expect(budgetState(500, null)).toEqual({ kind: 'none' })
+    expect(budgetState(500, 0)).toEqual({ kind: 'none' })
+    expect(budgetState(2800, 3000)).toEqual({ kind: 'under', left: 200, budget: 3000 })
+    expect(budgetState(3000, 3000)).toEqual({ kind: 'under', left: 0, budget: 3000 })
+    expect(budgetState(3400.5, 3000)).toEqual({ kind: 'over', over: 400.5, budget: 3000 })
+  })
+})
+
+describe('merge', () => {
+  const fuel = c('fuel', 'Fuel', 10, { group_id: 'cars', used: 3 })
+  const list = [fuel, c('rent', 'Rent', 10, { group_id: 'office' }), c('car', 'Car fuel', 20, { group_id: 'cars' }), c('freight', 'Freight', 10, { group_id: 'orders', grp: 'order_cost' }), c('old', 'Old', 5, { group_id: 'office', active: false })]
+  it('offers the active categories of the same kind first, in group order, then the others; never itself or an archived one', () => {
+    const t = mergeTargets(fuel, list, GROUPS)
+    expect(t.same.map(x => x.name)).toEqual(['Rent', 'Car fuel'])
+    expect(t.other.map(x => x.name)).toEqual(['Freight'])
+  })
+  it('says what will happen', () => {
+    expect(mergeSummary(fuel, { name: 'Car fuel' })).toBe('Moves 3 expenses and templates from "Fuel" into "Car fuel". "Fuel" is removed.')
+    expect(mergeSummary({ name: 'X', used: 1 }, { name: 'Y' })).toBe('Moves 1 expense or template from "X" into "Y". "X" is removed.')
+    expect(mergeSummary({ name: 'X', used: 0 }, { name: 'Y' })).toBe('Nothing uses "X" yet. It is removed and "Y" stays.')
+  })
+})
+
+describe('groups', () => {
+  it('a new category goes last in its group, or last overall when the group is empty', () => {
+    const list = [c('a', 'A', 10, { group_id: 'office' }), c('b', 'B', 40, { group_id: 'cars' })]
+    expect(nextSortIn(list, 'office')).toBe(20)
+    expect(nextSortIn(list, 'empty')).toBe(50)
+  })
+  it('group names are unique ignoring case and spaces', () => {
+    expect(checkGroupName('  site   visits ', GROUPS)).toMatchObject({ ok: false, message: 'A group with this name already exists.' })
+    expect(checkGroupName('Site visits', GROUPS, 'empty').ok).toBe(true)
+    expect(checkGroupName(' ', GROUPS).ok).toBe(false)
+    expect(checkGroupName('Generator', GROUPS)).toEqual({ ok: true, name: 'Generator' })
+  })
+  it('names the kind only when the group name does not already say it', () => {
+    expect(groupLabel(GROUPS[0])).toBe('Vehicles (Running costs)')
+    expect(groupLabel(GROUPS[2])).toBe('Order costs')
+    expect(kindNote(GROUPS[2])).toBeNull()
+    expect(kindNote(GROUPS[1])).toBe('Running costs')
   })
 })

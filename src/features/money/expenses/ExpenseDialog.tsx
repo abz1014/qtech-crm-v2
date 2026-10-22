@@ -21,7 +21,9 @@ import { qk } from '@/features/queryKeys'
 import { CategoryPicker } from '@/features/money/expenses/CategoryPicker'
 import {
   useCategories,
+  useCategoryUse,
   useDeleteReceipt,
+  useGroups,
   useInlineCategoryCreate,
   useInsertExpenses,
   useLastCategoryForOrder,
@@ -41,6 +43,7 @@ import {
   cleanDetail,
   detailSuggestions,
   paidViaFor,
+  recentCategories,
   showsInputTax,
   type Category,
   type ListedExpense,
@@ -284,7 +287,10 @@ function ExpenseFormReady({
   const receipts = useReceipts(expense?.id)
   const deleteReceipt = useDeleteReceipt(expense?.id ?? '')
   const lockedPayee = !!context?.payeeId
-  const createCategory = useInlineCategoryCreate(categories)
+  const groupsQ = useGroups()
+  const createCategory = useInlineCategoryCreate(categories, groupsQ.data)
+  const useQ = useCategoryUse()
+  const recent = useMemo(() => recentCategories(useQ.data ?? [], categories), [useQ.data, categories])
   const recentDetails = useRecentDetails(showNote)
   const detailOptions = useMemo(() => detailSuggestions(recentDetails.data ?? [], categoryId), [recentDetails.data, categoryId])
 
@@ -337,6 +343,8 @@ function ExpenseFormReady({
                 value={f.value}
                 onChange={f.onChange}
                 onCreate={createCategory}
+                groups={groupsQ.data}
+                recent={recent}
                 chevron
               />
             )}
@@ -361,7 +369,7 @@ function ExpenseFormReady({
           <FormField<Values, 'note'> name="note" label="Detail" requirement="optional">
             {f => (
               <>
-                <TextField {...f} placeholder="e.g. LEA-1234, office water" list="expense-detail-options" autoComplete="off" />
+                <TextField {...f} placeholder="e.g. LESCO bill, office water, LEA-1234" list="expense-detail-options" autoComplete="off" />
                 <datalist id="expense-detail-options">
                   {detailOptions.map(d => (
                     <option key={d} value={d} />

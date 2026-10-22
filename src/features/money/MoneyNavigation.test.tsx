@@ -205,7 +205,7 @@ describe('Reports view (one report at a time)', () => {
     expect(within(picker).getAllByRole('option').map(o => o.textContent)).toEqual([
       'Profit and loss',
       'Money in and out',
-      'Expenses by category',
+      'Expenses',
       'Overdue by age',
       'We owe suppliers',
       'GST and FBR',
@@ -222,7 +222,29 @@ describe('Reports view (one report at a time)', () => {
     expect(await screen.findByRole('heading', { name: 'Enquiries and customers', level: 1 })).toBeInTheDocument()
     expect(screen.queryByTestId('report-picker')).toBeNull()
     const targets = db.calls.map(c => c.target)
-    for (const t of ['v_month_pnl', 'v_payment_net', 'v_month_expense_category', 'rpc:aging_as_of', 'rpc:payables_as_of', 'v_gst_month', 'v_month_team', 'v_order_money', 'rpc:month_end_status'])
+    for (const t of ['v_month_pnl', 'v_payment_net', 'v_month_expense_category', 'expenses', 'expense_groups', 'expense_categories', 'rpc:aging_as_of', 'rpc:payables_as_of', 'v_gst_month', 'v_month_team', 'v_order_money', 'rpc:month_end_status'])
       expect(targets, t).not.toContain(t)
+  })
+})
+
+describe('Expenses report (2026-10-22)', () => {
+  it('the old Expenses by category address opens the Expenses report for that month', async () => {
+    at(`/money/reports/categories?month=${MONTH}`)
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(`/money/reports/expenses?by=month&period=${MONTH}`))
+    expect(await screen.findByRole('heading', { name: 'Expenses', level: 1 })).toBeInTheDocument()
+    expect(screen.getByTestId('report-picker')).toHaveValue('expenses')
+  })
+
+  it('the old month-end address leads there too, and the Report select opens it on the month kept', async () => {
+    at(`/money/month-end/categories?month=${MONTH}`)
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(`/money/reports/expenses?by=month&period=${MONTH}`))
+    expect(await screen.findByTestId('expense-report-period')).toHaveTextContent('June 2025')
+  })
+
+  it('sales get the no-access page and make no expense request', async () => {
+    const db = at(`/money/reports/expenses?by=month&period=${MONTH}`, 'sales')
+    expect((await screen.findAllByText(/Money reports is for/)).length).toBeGreaterThan(0)
+    const targets = db.calls.map(c => c.target)
+    for (const t of ['expenses', 'expense_groups', 'expense_categories', 'v_month_cash_flow']) expect(targets, t).not.toContain(t)
   })
 })

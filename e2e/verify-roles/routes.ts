@@ -152,6 +152,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/money/exceptions', admin: 'ok', sales: 'no', engineer: 'no' },
   { path: '/money/reports', admin: 'new', sales: 'new', engineer: 'no', note: 'post-merge: the one Reports view' },
   ...MONTH_REPORTS.map((k): RouteSpec => ({ path: `/money/reports/${k}?month={month}`, admin: 'new', sales: 'no', engineer: 'no' })),
+  { path: '/money/reports/expenses?by=quarter', admin: 'new', sales: 'no', engineer: 'no' },   // 0086: the Expenses report
   { path: '/money/reports/bogus', admin: 'no', sales: 'no', engineer: 'no' },
   { path: '/money/nope', admin: 'no', sales: 'no', engineer: 'no' },
   { path: '/reports', admin: 'ok', sales: 'ok', engineer: 'no', note: 'main: Reports screen; post: redirects to /money/reports' },
@@ -192,4 +193,4 @@ export const ENGINEER_OWN_SELECTORS = ['section[aria-label$=" target"]']
  * supplier and customer price memories, the PO line pre-fill, the exchange rates and the person's own target.
  */
 export const MONEY_REQUEST =
-  /\/rest\/v1\/(rpc\/)?(rank_item_quotes|customer_price_memory|supplier_item_memory|po_line_prefill|v_fx_latest|fx_rates|my_target_progress|v_order_money|v_order_basis|v_payment_net|v_cash_month|v_month_\w+|v_gst_\w+|v_invoice_state|v_target_progress|order_costs|expenses|expense_categories|recurring_expenses|payments_in|invoices|closed_months|month_snapshots|audit_log|order_receivables|receivables_list|receivables_summary|month_end_status|month_end_check_details|aging_as_of|payables_as_of|money_exceptions_input|month_pnl_drift|month_pnl_adjusted|close_month|close_months_through|reopen_month|next_invoice_number|stamp_payment_reminder|stamp_tcs_sent|stamp_fbr_psid|stamp_tax_deposited)\b/
+  /\/rest\/v1\/(rpc\/)?(rank_item_quotes|customer_price_memory|supplier_item_memory|po_line_prefill|v_fx_latest|fx_rates|my_target_progress|v_order_money|v_order_basis|v_payment_net|v_cash_month|v_month_\w+|v_gst_\w+|v_invoice_state|v_target_progress|order_costs|expenses|expense_categories|expense_groups|merge_expense_categories|recurring_expenses|payments_in|invoices|closed_months|month_snapshots|audit_log|order_receivables|receivables_list|receivables_summary|month_end_status|month_end_check_details|aging_as_of|payables_as_of|money_exceptions_input|month_pnl_drift|month_pnl_adjusted|close_month|close_months_through|reopen_month|next_invoice_number|stamp_payment_reminder|stamp_tcs_sent|stamp_fbr_psid|stamp_tax_deposited)\b/

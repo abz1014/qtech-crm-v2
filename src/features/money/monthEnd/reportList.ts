@@ -8,7 +8,8 @@ export type MonthReportKey = (typeof MONTH_REPORT_KEYS)[number]
 
 export const MONTH_REPORT_TITLE: Record<MonthReportKey, string> = {
   pnl: 'Profit and loss',
-  categories: 'Expenses by category',
+  // replaced by the Expenses report (/money/reports/expenses, 2026-10-22); the old address redirects there
+  categories: 'Expenses',
   aging: 'Overdue by age',
   owe: 'We owe suppliers',
   gst: 'GST and FBR',
@@ -20,7 +21,7 @@ export const MONTH_REPORT_TITLE: Record<MonthReportKey, string> = {
  * the select offers, in its order, with who may open it. The address is /money/reports/<key>; /money/reports opens the first
  * report the person may see.
  */
-export type ReportKey = MonthReportKey | 'in-out' | 'enquiries'
+export type ReportKey = MonthReportKey | 'in-out' | 'expenses' | 'enquiries'
 
 export interface ReportOption {
   key: ReportKey
@@ -33,7 +34,8 @@ export const IN_OUT_REPORT_TITLE = 'Money in and out'
 export const REPORT_OPTIONS: readonly ReportOption[] = [
   { key: 'pnl', title: MONTH_REPORT_TITLE.pnl, adminOnly: true },
   { key: 'in-out', title: IN_OUT_REPORT_TITLE, adminOnly: true },
-  { key: 'categories', title: MONTH_REPORT_TITLE.categories, adminOnly: true },
+  // the Expenses report (2026-10-22) replaced "Expenses by category"; /money/reports/categories redirects to it
+  { key: 'expenses', title: 'Expenses', adminOnly: true },
   { key: 'aging', title: MONTH_REPORT_TITLE.aging, adminOnly: true },
   { key: 'owe', title: MONTH_REPORT_TITLE.owe, adminOnly: true },
   { key: 'gst', title: MONTH_REPORT_TITLE.gst, adminOnly: true },

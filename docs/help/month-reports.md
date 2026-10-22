@@ -7,7 +7,7 @@ screens: /money
 related: in-vs-out
 ---
 1. Tap [Money], then [Reports]. Or tap [Reports for <month>] on Month end.
-2. In [Report], pick [Profit and loss], [Overdue by age], [We owe suppliers] or another report.
+2. In [Report], pick [Expenses], [Profit and loss], [Overdue by age], [We owe suppliers] or another report.
 3. Use the arrows to change the month.
 4. Tap [Export CSV] for the exact figures. The screen shows whole rupees.
 

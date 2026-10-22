@@ -211,13 +211,12 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     await expect(page.getByRole('textbox', { name: 'Amount, PKR' })).toHaveValue(amount.toLocaleString('en-US'))
     expect(await must(rest<{ id: string }[]>('admin', `expenses?amount_pkr=eq.${amount}&select=id`))).toHaveLength(0)
 
-    // Deleting one that is already in the closed month gets the same sentence, and the row stays.
+    // An expense already in the closed month is locked on the list: no Edit or Delete is offered, and the row stays.
     await page.goto('/money/expenses')
     await page.getByRole('button', { name: 'Previous month' }).click()
     await expect(page.getByText('before the close')).toHaveCount(1)
-    await page.getByRole('button', { name: /^Delete Rent of 11/ }).click()
-    await page.getByRole('button', { name: 'Delete expense' }).click()
-    await expect(page.getByText(sentence)).toBeVisible()
+    await expect(page.getByTestId('expenses-closed')).toBeVisible()
+    await expect(page.getByRole('button', { name: /^More for Rent of 11/ })).toHaveCount(0)
     expect(await must(rest<{ id: string }[]>('admin', `expenses?description=eq.${encodeURIComponent('before the close')}&select=id`))).toHaveLength(1)
 
     // The database says the same, in the same words, to anything that tries.

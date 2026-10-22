@@ -3,7 +3,7 @@ import { invalidateAfter } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
 import * as api from '@/features/settings/api'
 import type { Role } from '@/features/settings/api'
-import type { CategoryGroup, PaidVia } from '@/features/settings/categoriesModel'
+import type { CategoryGroup } from '@/features/settings/categoriesModel'
 import type { ProfileValues } from '@/features/settings/companyProfile'
 
 /*
@@ -136,6 +136,11 @@ export function useAddTargets() {
 
 // ---------------------------------------------------------------- expense categories (M13)
 
+/** The expense groups (0086). Same key as the expense screens' read, so one cache serves both. Admin only (`enabled`). */
+export function useExpenseGroups(enabled: boolean) {
+  return useQuery({ queryKey: qk.money.groups(), queryFn: () => api.listGroups(), enabled, staleTime: 5 * 60_000 })
+}
+
 export function useCategories(enabled: boolean) {
   return useQuery({ queryKey: qk.settings.categories(), queryFn: () => api.listCategories(), enabled })
 }
@@ -150,7 +155,7 @@ export function useUpdateCategory() {
 export function useCreateCategory() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: (v: { name: string; grp: CategoryGroup; default_paid_via: PaidVia; sort: number }) => api.createCategory(v),
+    mutationFn: (v: Parameters<typeof api.createCategory>[0]) => api.createCategory(v),
     onSuccess: () => invalidateAfter(client, 'category.save', {}, { wait: 'all' }),
   })
 }
@@ -158,6 +163,38 @@ export function useReorderCategories() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (changes: readonly { id: string; sort: number }[]) => api.reorderCategories(changes),
+    onSuccess: () => invalidateAfter(client, 'category.save', {}, { wait: 'all' }),
+  })
+}
+/** What each category had paid this month (gross), for the list's "this month" figure. Admin only (`enabled`). */
+export function useCategoryMonthTotals(month: string, enabled: boolean) {
+  return useQuery({ queryKey: qk.money.categoryMonth(month), queryFn: () => api.categoryMonthTotals(month), enabled, staleTime: 0 })
+}
+export function useMergeCategories() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { from: string; into: string }) => api.mergeCategories(v.from, v.into),
+    onSuccess: () => invalidateAfter(client, 'category.merge', {}, { wait: 'all' }),
+  })
+}
+export function useCreateGroup() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { name: string; kind: CategoryGroup; sort: number }) => api.createGroup(v),
+    onSuccess: () => invalidateAfter(client, 'category.save', {}, { wait: 'all' }),
+  })
+}
+export function useUpdateGroup() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { id: string; patch: { name?: string; sort?: number } }) => api.updateGroup(v.id, v.patch),
+    onSuccess: () => invalidateAfter(client, 'category.save', {}, { wait: 'all' }),
+  })
+}
+export function useDeleteGroup() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.deleteGroup(id),
     onSuccess: () => invalidateAfter(client, 'category.save', {}, { wait: 'all' }),
   })
 }

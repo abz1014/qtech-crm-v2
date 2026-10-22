@@ -1251,7 +1251,7 @@ test('HW-43: a refused Issue quotation still changes the item prices (Mark won t
   await dialog(page).getByRole('button', { name: 'Done' }).click()
   expect(num((await itemsOf(r.rfq.id))[0].quoted_unit_price_net)).toBe(1300)
   // Revise at 999,999,999,999: it fits rfq_items (numeric(14,2)) but 2.5 x it overflows quotations.net_total. Since the fix the
-  // dialog refuses it before sending, with the reason (and pgTAP 0084 proves the database rolls the prices back on that refusal).
+  // dialog refuses it before sending, with the reason (and pgTAP 0086 proves the database rolls the prices back on that refusal).
   await openReviseFromMenu(page)
   await fillPrice(page, 1, '999999999999')
   await expect(dialog(page).getByRole('button', { name: 'Issue revised quotation' })).toBeDisabled(T)
@@ -1264,7 +1264,7 @@ test('HW-43: a refused Issue quotation still changes the item prices (Mark won t
   await page.unroute('**/rest/v1/rpc/issue_quotation*')
   expect(await quotationsOf(r.rfq.id)).toHaveLength(1)
   const price = num((await itemsOf(r.rfq.id))[0].quoted_unit_price_net)
-  // Fixed (HW-43): the prices are written by issue_quotation itself (0084), in the same transaction, so nothing changed.
+  // Fixed (HW-43): the prices are written by issue_quotation itself (0086), in the same transaction, so nothing changed.
   expect(price).toBe(1300)
   await ctx.close()
 })
