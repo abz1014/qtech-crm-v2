@@ -179,6 +179,11 @@ export const BATCHES: BatchSpec[] = [
   // Fresh batch 27, first try (text and PDF): enquiry items 99.1% / 99.1%, unit 98.6% / 97.7% ("two nos" in words, "5 Each" wider
   // than its Qty heading, a quantity corrected in a later message); quotes currency 91.0% ("Offer 6816 - prices in USD"): dev now.
   { batch: 27, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25], dev: true, gate: true },
+  // Fresh batch 28, first try (text and PDF): enquiry items 98.3% / 98.3%, every field >= 98%, quotes 100%, but one shape at 45.5%
+  // ("... 5 pc (urgent)"): dev now.
+  { batch: 28, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26], dev: true, gate: true },
+  // Fresh batch 29, first try (text and PDF): every field and every shape 100%, enquiries and quotes. Kept held out, run in CI.
+  { batch: 29, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gate: true },
 ]
 
 function splitOf(spec: BatchSpec, id: string): 'dev' | 'held' {

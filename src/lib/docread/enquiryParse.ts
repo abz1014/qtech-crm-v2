@@ -194,6 +194,8 @@ interface ReadItem {
 function readItem(text: string): ReadItem | null {
   // "Item: Push button red; Make: X; Qty: 20 Pcs": the label in front is not part of the description.
   const t0 = text
+    // "... 5 pc (urgent)": a tag in brackets after the item.
+    .replace(/\s*\(\s*(?:very\s+)?(?:urgent|urgently\s+required|asap|priority|important|imp|top\s+priority)\s*!*\s*\)[\s.!]*$/i, '')
     .replace(TAIL, '')
     .replace(/^(?:(?:plz|pls|please)\s+)?(?:quote|rates?(?:\s+(?:pls|plz|please))?|send\s+rates?)\s*[:,-]\s*/i, '')
   const asked = /^(?:we\s+require|(?:we\s+|i\s+)?(?:need|want|require)|(?:(?:plz|pls|please|kindly)\s+)?quote(?:\s+for)?)\s*[:,-]?\s+(?=\d)/i
