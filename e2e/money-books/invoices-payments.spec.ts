@@ -411,7 +411,9 @@ test.describe('payments in and receivables (M02)', () => {
     expect(await axeViolations(page)).toEqual([])
     await page.goto('/money/receivables')
     await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('heading', { name: 'Who owes us', level: 2 })).toBeVisible()
+    // round 3 (4c34aee): the h1 is the tab name, carried by the phone bar; the list is cards
+    await expect(page.getByRole('heading', { name: 'Who owes us', level: 1 })).toBeAttached()
+    await expect(page.locator('tr[data-card]').filter({ hasText: order.company.name })).toBeVisible()
     // the four Money tabs wrap: none is off-screen, and nothing scrolls sideways
     for (const t of await page.getByRole('navigation', { name: 'Money views' }).getByRole('link').all()) await expect(t).toBeInViewport()
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
