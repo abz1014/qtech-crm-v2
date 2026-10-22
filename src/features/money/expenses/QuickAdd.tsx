@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Camera, Check, CircleAlert, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
@@ -72,6 +72,8 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
   const [problem, setProblem] = useState<string | null>(null)
   const [saved, setSaved] = useState<{ amount: number }[]>([])
   const [busy, setBusy] = useState(false)
+  /** Bumped after each Save: the effect below puts the focus back on the (fresh) amount box once it is in the page. */
+  const [refocus, setRefocus] = useState(0)
   const amountRef = useRef<HTMLInputElement | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
 
@@ -96,8 +98,20 @@ export function QuickAdd({ categories }: { categories: readonly Category[] }) {
     setPhoto(null)
     setVia(null)
     setProblem(null)
-    requestAnimationFrame(() => amountRef.current?.focus())
+    setRefocus(n => n + 1)
   }
+
+  // The amount box is a new element per entry (key={entryId}), so focusing it from reset() could hit the old, about-to-go one
+  // (a frame can come before React's render) and the focus fell to <body>. Focus it after the commit that mounts it, and once
+  // more on the next frame (the Save button leaves its busy state in the same pass). No keyboard-dismiss: the phone keyboard stays up.
+  useEffect(() => {
+    if (refocus === 0) return
+    amountRef.current?.focus({ preventScroll: true })
+    const id = requestAnimationFrame(() => {
+      if (!document.activeElement || document.activeElement === document.body) amountRef.current?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [refocus])
 
   const save = async () => {
     if (busy) return
