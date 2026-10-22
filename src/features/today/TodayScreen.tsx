@@ -211,7 +211,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
           ) : null}
           {groups.map(g =>
             g.items.length === 0 ? null : (
-              <section key={g.id} aria-label={g.title} data-block={blockOf(g.id, g.items, today)} className={cn('mx-3 mb-3 rounded-panel p-3 first-of-type:mt-1', BLOCK[blockOf(g.id, g.items, today)])}>
+              <section key={g.id} aria-label={g.title} data-block={blockOf(g.id, g.items, today)} className={cn('mx-2 mb-3 rounded-panel p-2 first-of-type:mt-1 md:mx-3 md:p-3', BLOCK[blockOf(g.id, g.items, today)])}>
                 <h2 className="flex items-baseline gap-2 px-1 pb-2 text-lg font-heavy">
                   {g.title} <span className="num">{g.items.length}</span>
                 </h2>
@@ -232,7 +232,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
             ),
           )}
           {waiting.length > 0 ? (
-            <section aria-label="Waiting" data-block="quiet" className="mx-3 mb-3 rounded-panel bg-block-quiet text-block-quiet-fg">
+            <section aria-label="Waiting" data-block="quiet" className="mx-2 mb-3 rounded-panel bg-block-quiet text-block-quiet-fg md:mx-3">
               <button
                 type="button"
                 aria-expanded={waitingOpen}
@@ -252,7 +252,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
               </button>
               {/* Collapsed, it still shows the open row: an item just chased stays where the person is looking. */}
               {shownWaiting.length > 0 ? (
-                <ul className="grid gap-2 px-3 pb-3">
+                <ul className="grid gap-2 px-2 pb-2 md:px-3 md:pb-3">
                   {shownWaiting.map(i => (
                     <Row key={i.key} item={i} today={today} names={data?.names} waiting open={openId === i.key} copied={false} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
@@ -317,7 +317,7 @@ function Row({ item, today, names, waiting = false, open, copied, wide, onPick, 
         aria-expanded={wide ? undefined : open}
         aria-current={wide && open ? 'true' : undefined}
         className={cn(
-          'grid min-h-row-tall w-full items-start gap-3 rounded-row px-4 py-3 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken',
+          'grid min-h-row-tall w-full items-start gap-2 rounded-row px-3 py-3 text-left md:gap-3 md:px-4 transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken',
           // The open row: an ink ring inside the tile (direction C), 18:1 against the white tile.
           open && 'ring-2 ring-inset ring-fg',
           wide ? 'grid-cols-[2rem_minmax(0,1fr)_auto]' : 'grid-cols-[2rem_minmax(0,1fr)_auto_auto]',

@@ -44,7 +44,8 @@ export function HowItWorksCard({ userId, role, since, now, className }: HowItWor
   return (
     <section aria-labelledby={titleId} className={cn('rounded-panel border bg-surface', className)}>
       <div className="flex items-center">
-        <h2 id={titleId} className="min-w-0 flex-1">
+        {/* A disclosure, not a title: the UI face, not the wide display cut. */}
+        <h2 id={titleId} className="min-w-0 flex-1 font-sans">
           <button
             type="button"
             aria-expanded={expanded}
