@@ -32,8 +32,11 @@ interface ExpenseRow {
 
 async function startCounting(page: Page) {
   await page.evaluate(() => {
-    const w = window as unknown as { __mouse: number }
+    const w = window as unknown as { __mouse: number; __mouseOn?: boolean }
     w.__mouse = 0
+    // one listener for the page: a second call only resets the count (two listeners counted every tap twice)
+    if (w.__mouseOn) return
+    w.__mouseOn = true
     document.addEventListener('mousedown', () => (w.__mouse += 1), true)
   })
 }
