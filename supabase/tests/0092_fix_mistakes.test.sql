@@ -296,7 +296,7 @@ select is(pg_temp.code_('sales', 'update public.invoices set net_amount = 200 wh
   'sales change an invoice they entered');
 select is(pg_temp.code_('sales', 'update public.invoices set net_amount = 200 where id = @32 returning 1'), 'E:P0001:',
   'in a closed month the month lock answers first, not the guard (even for an invoice that is not theirs)');
-select like(pg_temp.try_('sales', 'update public.invoices set net_amount = 200 where id = @32 returning 1'), '%January 2019 is closed. An admin can reopen it.',
+select alike(pg_temp.try_('sales', 'update public.invoices set net_amount = 200 where id = @32 returning 1'), '%January 2019 is closed. An admin can reopen it.',
   'with its own sentence');
 select is(pg_temp.code_('admin', 'update public.invoices set net_amount = 200 where id = @32 returning 1'), 'E:P0001:',
   'and an admin is refused the same: a locked month must be reopened first');
@@ -341,7 +341,7 @@ select is(pg_temp.code_('admin', 'select count(*)::text from public.delete_invoi
   'delete_invoice: a bank-ticked tax deposit is bank_ticked');
 select is(pg_temp.code_('admin', 'select count(*)::text from public.delete_invoice(@32)'), 'E:P0001:',
   'delete_invoice: a closed month is refused by the month lock');
-select like(pg_temp.try_('admin', 'select count(*)::text from public.delete_invoice(@32)'), '%January 2019 is closed. An admin can reopen it.',
+select alike(pg_temp.try_('admin', 'select count(*)::text from public.delete_invoice(@32)'), '%January 2019 is closed. An admin can reopen it.',
   'with the month lock''s sentence');
 
 select is(pg_temp.code_('admin', 'select public.delete_payment(@ee)::text'), 'E:P0002:not_found', 'delete_payment: not_found');

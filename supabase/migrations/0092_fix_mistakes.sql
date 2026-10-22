@@ -62,8 +62,8 @@ begin
   end if;
 
   v_uid := auth.uid();
-  v_mine := v_uid is not null
-            and ((v_old ->> 'created_by') = v_uid::text or (v_old ->> 'owner_id') = v_uid::text);
+  v_mine := coalesce(v_uid is not null
+                     and ((v_old ->> 'created_by') = v_uid::text or (v_old ->> 'owner_id') = v_uid::text), false);
   if not v_mine and v_uid is not null and tg_table_name = 'rfq_items' then
     v_mine := exists (select 1 from public.rfqs r
                       where r.id = (v_old ->> 'rfq_id')::uuid and (r.created_by = v_uid or r.owner_id = v_uid));
