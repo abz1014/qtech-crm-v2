@@ -58,11 +58,11 @@ end;
 $f$;
 
 -- every key of an event's was and now (either may be JSON null)
-create function pg_temp.keys(e jsonb) returns setof text language sql as $
+create function pg_temp.keys(e jsonb) returns setof text language sql as $$
   select jsonb_object_keys(e -> 'was') where jsonb_typeof(e -> 'was') = 'object'
   union all
   select jsonb_object_keys(e -> 'now') where jsonb_typeof(e -> 'now') = 'object'
-$;
+$$;
 
 -- events of a result that match a table (and an action)
 create function pg_temp.n(j jsonb, tbl text, act text default null) returns int language sql as $$
