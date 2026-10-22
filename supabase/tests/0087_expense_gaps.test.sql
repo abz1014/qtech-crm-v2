@@ -170,6 +170,19 @@ select is(pg_temp.as_('engineer', 'select count(*) from public.cash_in_hand()'),
 select is(pg_temp.as_('sales', 'select count(*) from public.cash_topups'), '0', 'cash drawn is admin only');
 select is(pg_temp.as_('admin', $q$update public.cash_counts set counted_pkr = 1 returning 1$q$), 'E:42501', 'a count is never edited');
 
+-- ------------------------------------------------------------------ for-month: the cash reports stay by the day paid
+-- A salary for October 2016 paid on 5 November 2016 (period 2016-10): In vs out and the P&L count it in November (paid), and a
+-- monthly template due on the 5th counts as recorded for October (Month end's "monthly bills" check reads the period).
+insert into public.recurring_expenses (id, label, category_id, amount, day_of_month, start_month) values
+  ('87000000-0000-4000-8000-0000000000f1', '0087 salary', 'ca7e0000-0000-4000-8000-000000000001', 90000, 5, '2016-10');
+insert into public.expenses (amount_pkr, category_id, paid_on, paid_via, recurring_id, period) values
+  (90000, 'ca7e0000-0000-4000-8000-000000000001', '2016-11-05', 'bank', '87000000-0000-4000-8000-0000000000f1', '2016-10');
+select is((select money_out from public.v_month_cash_flow where month = '2016-11-01'), 90000::numeric, 'paid on 5 Nov for October: In vs out counts it in November');
+select is(coalesce((select money_out from public.v_month_cash_flow where month = '2016-10-01'), 0), 0::numeric, 'and not in October');
+select is((select overheads from public.v_month_pnl where month = '2016-11-01'), 90000::numeric, 'the P&L also counts it when paid');
+select is((select n from public.month_end_status('2016-10-31') where check_key = 'recurring_not_recorded'), 0,
+  'Month end finds October''s salary recorded (by its period), so Expenses and Month end agree');
+
 -- ------------------------------------------------------------------ supplier payments in the supplier's currency
 select throws_ok($q$insert into public.expenses (amount_pkr, category_id, paid_via, fx_currency, fx_amount) values (1, 'ca7e0000-0000-4000-8000-000000000010', 'bank', 'PKR', 1)$q$,
   '23514', null, 'a PKR payment carries no fx amount');
