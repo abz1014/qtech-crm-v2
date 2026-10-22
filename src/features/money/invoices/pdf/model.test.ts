@@ -5,11 +5,13 @@ import { amountInWords } from '@/features/quotations/lib/totals'
 import { gstOn } from '@/features/money/invoices/model'
 import { buildInvoiceDoc, type InvoicePdfSource } from '@/features/money/invoices/pdf/doc'
 import {
+  COPY_LABEL,
   buyerRegistered,
   invoiceFigures,
   invoiceFileName,
   invoiceReadiness,
   matchLines,
+  signatureLines,
   MAX_SEARCH_LINES,
   spreadGstDifference,
   type BuyerTax,
@@ -375,6 +377,16 @@ describe('buildInvoiceDoc', () => {
     expect(r.ok && [r.doc.dueOn, r.doc.poDate, r.doc.copy]).toEqual(['2026-11-19', null, 'duplicate'])
   })
 
+  it('a later invoice prints the ORDER’s due date: the first invoice plus the terms (HW-12)', () => {
+    const src = source({ otherInvoices: [{ id: 'i0', number: 'INV-0009', net: '1000.00', dueBasis: '2026-09-01' }] })
+    const r = buildInvoiceDoc(src, PROFILE, all(src.lines), 'original')
+    expect(r.ok && r.doc.dueOn).toBe('2026-10-16') // 1 Sep + 45 days, not 20 Oct + 45
+    // an earlier invoice of a LATER date does not move it
+    const later = source({ otherInvoices: [{ id: 'i2', number: 'INV-0013', net: '1000.00', dueBasis: '2026-10-25' }] })
+    const r2 = buildInvoiceDoc(later, PROFILE, all(later.lines), 'original')
+    expect(r2.ok && r2.doc.dueOn).toBe('2026-12-04')
+  })
+
   it('is not built while something is missing, and says what', () => {
     const src = source({ buyer: { id: 'c1', ...BUYER, strn: null } })
     const r = buildInvoiceDoc(src, PROFILE, all(src.lines), 'original')
@@ -394,5 +406,17 @@ describe('invoiceFileName', () => {
     expect(invoiceFileName('INV-0012', 'original')).toBe('INV-0012.pdf')
     expect(invoiceFileName('QT/2026/12 ', 'duplicate')).toBe('QT-2026-12-duplicate.pdf')
     expect(invoiceFileName('///', 'original')).toBe('invoice.pdf')
+  })
+})
+
+describe('signature box and copies (owner decision 2026-10-22)', () => {
+  it('prints "For <legal name>" and "Authorised signatory"', () => {
+    expect(signatureLines('Q-Tech Engineering (Pvt) Ltd')).toEqual(['For Q-Tech Engineering (Pvt) Ltd', 'Authorised signatory'])
+    expect(signatureLines('  ')).toEqual(['For the seller', 'Authorised signatory'])
+  })
+  it('has two copies only: Original and Duplicate', () => {
+    expect(Object.keys(COPY_LABEL)).toEqual(['original', 'duplicate'])
+    expect(COPY_LABEL.original).toMatch(/^Original/)
+    expect(COPY_LABEL.duplicate).toMatch(/^Duplicate/)
   })
 })

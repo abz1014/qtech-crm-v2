@@ -180,14 +180,16 @@ export function normaliseCurrency(raw: string | null | undefined): ReplyCurrency
   return CUR_MAP[k] ?? null
 }
 
-const CUR_PREFIX_SRC = String.raw`(?<![A-Za-z])(US\s?\$|U\.S\.\s?\$|USD|\$|EUR|€|CNY|RMB|CN¥|¥|￥|AED|GBP|£|PKR|₨|Rs\.?(?!-?\s?(?:485|232|422)\b))\s*`
-const CUR_SUFFIX_SRC = String.raw`\s*(USD|US\$|\$|EUR|€|CNY|RMB|¥|￥|AED|GBP|£|PKR|₨|Rs\.?|dollars?|euros?|yuan|dirhams?|dhs|pounds?|rupees?|元|块)(?![A-Za-z])`
+const CUR_PREFIX_SRC = String.raw`(?<![A-Za-z])(US\s?\$|U\.S\.\s?\$|USD|\$|EUR|€|CNY|RMB|CN¥|¥|￥|AED|Dhs?\.?|GBP|£|PKR|₨|Rs\.?(?!-?\s?(?:485|232|422)\b))\s*`
+const CUR_SUFFIX_SRC = String.raw`(?:\s*(USD|US\$|\$|EUR|€|CNY|RMB|¥|￥|AED|GBP|£|PKR|₨|dollars?|euros?|yuan|dirhams?|dhs|pounds?|rupees?|元|块)|(?:\/-)?\s+(Rs\.?))(?![A-Za-z])`
 const CUR_CODE_SRC = String.raw`(US\s?\$|USD|\$|EUR|€|CNY|RMB|¥|￥|AED|GBP|£|PKR|₨|Rs\.?|dollars?|euros?|yuan|dirhams?|pounds?|rupees?)`
 // An amount: with thousands groups (comma, dot, apostrophe, or space when SP) and up to four decimals, or plain; an optional k.
 // Pakistani (lakh) grouping first: "1,25,000", "12,50,000", "1,00,00,000". A multiplier word may follow: k, lakh / lac, crore.
 const LAKH_GROUPS = String.raw`\d{1,2}(?:,\d{2})+,\d{3}(?:\.\d{1,4})?`
 const MULT_WORD = String.raw`(\s?(?:[kK]|[lL]akhs?|[lL]acs?|[cC]rores?)(?![A-Za-z]))?`
 const AMOUNT_SP = String.raw`(?<![A-Za-z0-9.,])(${LAKH_GROUPS}|\d{1,3}(?:[ ,.'’]\d{3})+(?:[.,]\d{1,4})?|\d+(?:[.,]\d{1,4})?)${MULT_WORD}`
+/** The same amount right after a currency written in front of it ("Rs.182,000", "USD890"): no gap needed. */
+const AMOUNT_AFTER_CUR = String.raw`(?<!\d|\d[.,])(${LAKH_GROUPS}|\d{1,3}(?:[ ,.'’]\d{3})+(?:[.,]\d{1,4})?|\d+(?:[.,]\d{1,4})?)${MULT_WORD}`
 const AMOUNT = String.raw`(?<![A-Za-z0-9.,])(${LAKH_GROUPS}|\d{1,3}(?:[,.'’]\d{3})+(?:[.,]\d{1,4})?|\d+(?:[.,]\d{1,4})?)${MULT_WORD}`
 // What may follow a price without making it a size or code ("USD 120pcs", "USD 24V" is not a price).
 const AFTER_OK = /^(?:pc|pcs|piece|pieces|each|ea\b|per|only|net|ex\b|fob|cif|cfr|exw|ddp|dap|incl|excl|plus|vat|gst|unit|nos|no\b|set|lot|\/|\+)/i
@@ -241,6 +243,7 @@ function findLeadTime(w: string, raw: string): (LeadTime & Span) | null {
     const gap = m[3] ?? ''
     const unit = m[4] ?? ''
     if (/^[dw]$/i.test(unit) && gap) continue
+    if (/^[dw]$/i.test(unit) && (/[-/]/.test(w[m.index + m[0].length] ?? '') || /[A-Za-z0-9][-/]$/.test(w.slice(Math.max(0, m.index - 2), m.index)))) continue
     const before = w.slice(Math.max(0, m.index - 30), m.index)
     const cut = Math.max(before.lastIndexOf(','), before.lastIndexOf(';'), before.lastIndexOf('|'))
     const ctx = cut >= 0 ? before.slice(cut + 1) : before
@@ -444,6 +447,7 @@ function maskNonPrice(w: string): string {
     /\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b/g,
     /\b\d{1,2}(?:st|nd|rd|th)?[\s-]+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?(?:[\s,-]+\d{2,4})?/gi,
     /(?<![A-Za-z0-9])\d+(?:[.,]\d+)?\s?%/g,
+    /(?<![A-Za-z0-9.,])\d+(?:\s*(?:-|to)\s*\d+)?\s*(?:working\s+|business\s+)?(?:days?|weeks?|wks?|months?|mths?|years?|yrs?)(?![A-Za-z])/gi,
     // ranges and values with a technical unit: 4-20mA, 0-10 bar, 24V, 100mm, 5 kW, 1/2", 12.5 kg
     /(?<![A-Za-z0-9.,])\d+(?:[.,]\d+)?\s*-\s*\d+(?:[.,]\d+)?\s*(?:ma|v|vdc|vac|bar|psi|mpa|kpa|mbar|mm|cm|m|a|hz|°\s?c|c|kw|w|rpm|ohm|kohm|mtr|%)(?![A-Za-z])/gi,
     /(?<![A-Za-z0-9.,])\d+(?:[.,]\d+)?\s*(?:ma|vdc|vac|va|bar|psi|mpa|kpa|mbar|mm|cm|kw|hz|rpm|°\s?c|ohm|kohm|kg|inch|amps?|hp|kva|lpm|l\/min|m3\/h|nm|mtr|ltr|mhz|ghz|kb|mb|gb|awg|sqmm)(?![A-Za-z])/gi,
@@ -467,6 +471,8 @@ function findAnchoredPrices(w: string, hintCurrency: ReplyCurrency | null): Pric
     if (overlaps(start, end)) return
     const rest = w.slice(endOfNumber)
     if (/^[A-Za-z]/.test(rest) && !AFTER_OK.test(rest)) return
+    // "RS756-56J", "USD-2400-B": the digits run on into a code, so they are not an amount.
+    if (/^[-/][A-Za-z0-9]*[A-Za-z]/.test(rest) && !/^\/\s*(?:pc|pcs|piece|unit|no|nos|ea|each|set|m|mtr|kg|l|lot|pair|roll|box)\b/i.test(rest)) return
     const cur = normaliseCurrency(curRaw)
     const amt = parseAmount(`${m[numIdx] ?? ''}${m[kIdx] ?? ''}`, cur ?? hintCurrency)
     if (!amt || amt.value <= 0) return
@@ -474,12 +480,12 @@ function findAnchoredPrices(w: string, hintCurrency: ReplyCurrency | null): Pric
     out.push({ ...amt, currency: cur, anchored: true, start, end, kind: 'unknown', forQty: null })
   }
   // currency first: "USD 1,234.50", "US$120", "Rs. 4 500", "RMB350"
-  const pre = new RegExp(CUR_PREFIX_SRC + AMOUNT_SP, 'gi')
+  const pre = new RegExp(CUR_PREFIX_SRC + AMOUNT_AFTER_CUR, 'gi')
   let m: RegExpExecArray | null
   while ((m = pre.exec(w))) accept(m, 2, 3, m[1] ?? '', m.index, m.index + m[0].length, m.index + m[0].length)
   // amount first: "120 USD", "350元", "1.2k usd"
   const suf = new RegExp(AMOUNT_SP + CUR_SUFFIX_SRC, 'gi')
-  while ((m = suf.exec(w))) accept(m, 1, 2, m[3] ?? '', m.index, m.index + m[0].length, m.index + m[0].length)
+  while ((m = suf.exec(w))) accept(m, 1, 2, m[3] ?? m[4] ?? '', m.index, m.index + m[0].length, m.index + m[0].length)
   out.sort((a, b) => a.start - b.start)
   // classify each by the words around it
   for (const c of out) {
@@ -520,6 +526,9 @@ function findBarePrices(w: string, anchoredCount: number): PriceCand[] {
   }
   return found.length === 1 ? found : []
 }
+
+const NO_PRICE_RE =
+  /\b(?:price|prices|rate|cost)\s+(?:(?:on|upon)\s+(?:request|application|enquiry|inquiry)|to\s+(?:follow|be\s+(?:advised|confirmed|quoted))|tba|tbc|later)\b|(?:^|[-:|]\s*)(?:on\s+request|to\s+be\s+(?:advised|confirmed|quoted)|tba|tbc)\s*\.?\s*$|(?<![A-Za-z])P\.?\s?O\.?\s?R(?![A-Za-z])/i
 
 const DECLARE_RE = new RegExp(String.raw`\b(?:prices?|rates?|quot(?:e|ed|ation)s?|currency|amounts?|offers?)\b[^.\n]{0,40}?${CUR_CODE_SRC}(?![A-Za-z])|${CUR_CODE_SRC}(?![A-Za-z])\s+(?:prices?|rates?|basis|only)\b`, 'i')
 
@@ -564,9 +573,13 @@ function analyse(raw: string, today: string | undefined, skipPrice = false): Lin
   if (!skipPrice) {
     const anchored = findAnchoredPrices(w, null)
     for (const c of anchored) w = blank(w, c)
-    f.prices = anchored.length ? anchored : findBarePrices(w, 0)
+    // HW-5: "price on request" / "POR" / "TBA" says there is no price on this line, so a bare number on it ("2 core",
+    // "3 way") is part of the item, never a price. A price written with its currency still counts.
+    f.prices = anchored.length ? anchored : NO_PRICE_RE.test(w) ? [] : findBarePrices(w, 0)
   }
 
+  // "Relay 12VDC, 2 CO, Model X: Sorry, not available": a regret with only a bare number in it quotes nothing.
+  if (f.prices.length && f.prices.every(p => !p.anchored) && REGRET_RE.test(w)) f.prices = []
   const priced = f.prices.length > 0
   if (!priced) {
     const d = DECLARE_RE.exec(w)

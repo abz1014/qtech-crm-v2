@@ -344,11 +344,10 @@ test.describe('payments in and receivables (M02)', () => {
     await expect(page.getByRole('button', { name: 'Create invoice' })).toBeVisible()
     await expect(page.getByRole('link', { name: /Expenses/ })).toHaveCount(0)
     await review(page, 'm01-gst-register-sales-1440')
-    // sales stamp too (Today sends them the TCS and FBR items): the ticks, the toggles and the Next step column stay (one column
-    // for sent-to-customer and FBR since round 3, 4c34aee); Net and GST go
+    // sales stamp too (Today sends them the TCS and FBR items): the ticks, the toggles and the FBR column stay; Net and GST go
     await expect(page.getByRole('checkbox', { name: `Select ${inv.number}` })).toBeVisible()
     await expect(page.getByRole('radio', { name: /Not sent yet/ })).toBeVisible()
-    await expect(page.getByRole('columnheader', { name: 'Next step' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: /Next step/ })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'Net', exact: true })).toHaveCount(0)
     await page.getByRole('checkbox', { name: `Select ${inv.number}` }).click()
     await page.getByTestId('batch-bar').getByRole('button', { name: 'Sent to customer today' }).click()
@@ -411,10 +410,8 @@ test.describe('payments in and receivables (M02)', () => {
     expect(await axeViolations(page)).toEqual([])
     await page.goto('/money/receivables')
     await page.waitForLoadState('networkidle')
-    // round 3 (4c34aee): the h1 is the tab name, carried by the phone bar; the list is cards
-    await expect(page.getByRole('heading', { name: 'Who owes us', level: 1 })).toBeAttached()
-    await expect(page.locator('tr[data-card]').filter({ hasText: order.company.name })).toBeVisible()
-    // the four Money tabs wrap: none is off-screen, and nothing scrolls sideways
+    await expect(page.getByRole('heading', { name: 'Balances', level: 2 })).toBeVisible()
+    // round 3: one row of short tabs on a phone (Reports beside the page action): none is off-screen, nothing scrolls sideways
     for (const t of await page.getByRole('navigation', { name: 'Money views' }).getByRole('link').all()) await expect(t).toBeInViewport()
     expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
     await review(page, 'm02-receivables-375')

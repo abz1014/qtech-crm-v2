@@ -2,7 +2,7 @@ import type { Amount } from '@/lib/money'
 import { orderRef } from '@/lib/refs'
 import type { CompanyProfile } from '@/features/settings/companyProfile'
 import { amountInWords } from '@/features/quotations/lib/totals'
-import { dueOn } from '@/features/money/invoices/model'
+import { orderDueOn } from '@/features/money/invoices/model'
 import {
   buyerAddress,
   buyerRegistered,
@@ -38,14 +38,17 @@ export interface InvoicePdfSource {
   site: { name: string; address: string | null } | null
   lines: PdfOrderLine[]
   /** The order's other invoices, so the dialog can say this one is a part. */
-  otherInvoices: Array<{ id: string; number: string | null; net: Amount }>
+  otherInvoices: Array<{ id: string; number: string | null; net: Amount; /** Its date for the order's due date (order_receivables). */ dueBasis?: string | null }>
 }
 
 export interface InvoiceDoc {
   number: string
   invoiceDate: string
   copy: InvoiceCopy
-  /** Invoice date plus the order's payment terms (else the company default); null with neither. */
+  /**
+   * The order's due date: its EARLIEST invoice plus the payment terms (else the company default), the date order_receivables,
+   * Today and Who owes us use (HW-12). A second or part invoice does not move it later. Null without terms.
+   */
   dueOn: string | null
   orderRef: string | null
   customerPo: string | null
@@ -60,6 +63,11 @@ export interface InvoiceDoc {
 export type BuildResult =
   | { ok: true; doc: InvoiceDoc; readiness: Readiness }
   | { ok: false; readiness: Readiness; problem: FiguresProblem | null }
+
+/** The earliest due basis among the order's other invoices, or null. */
+function earliestOther(src: InvoicePdfSource): string | null {
+  return src.otherInvoices.reduce<string | null>((m, o) => (o.dueBasis && (m === null || o.dueBasis < m) ? o.dueBasis : m), null)
+}
 
 export function readinessOf(src: InvoicePdfSource, profile: CompanyProfile | null | undefined): Readiness {
   return invoiceReadiness({
@@ -93,7 +101,7 @@ export function buildInvoiceDoc(
       number: src.invoice.number.trim(),
       invoiceDate: src.invoice.invoiceDate,
       copy,
-      dueOn: dueOn(src.invoice.invoiceDate, terms),
+      dueOn: orderDueOn(src.invoice.invoiceDate, earliestOther(src), terms),
       orderRef: src.order ? orderRef(src.order.number) : null,
       customerPo: src.order?.customerPo?.trim() || null,
       poDate: src.order?.customerPo?.trim() ? src.order.orderedOn : null,

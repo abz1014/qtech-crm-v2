@@ -126,28 +126,24 @@ function FrameBar({ title }: { title: string }) {
 
 /** One Money tab. A plain Link: the lit tab follows `active` (Month end stays lit on the pages reached from it), not the address. */
 function TabLink({ tab, to, on, n, phone }: { tab: MoneyTab; to: string; on: boolean; n: number | undefined; phone?: boolean }) {
-  // A phone tab with a short word carries its whole name in aria-label. WCAG 2.5.3 (axe label-content-name-mismatch): what is
-  // seen, the short word and then the count digit ("Owed 1"), must be the name's first words in that order, so the name is
-  // "Owed, 1 need you, Who owes us" and the badge adds no words of its own (checked against axe 4.14 in Chromium).
-  const named = Boolean(phone && tab.short !== tab.label)
   return (
     <Link
       to={to}
       aria-current={on ? 'page' : undefined}
-      aria-label={named ? `${tab.short}${n ? `, ${n} need you` : ''}, ${tab.label}` : undefined}
       className={cn(
         'inline-flex items-center rounded border font-medium transition-colors duration-fast ease-out',
         phone ? 'min-h-touch min-w-0 flex-auto justify-center gap-1 px-1 text-xs' : 'min-h-control gap-2 px-4 text-sm',
         on ? 'border-fg bg-surface text-fg' : 'border-transparent text-fg-muted hover:text-fg',
       )}
     >
+      {/* The name is the visible words plus, for a short phone label, the full name for screen readers (WCAG 2.5.3 label in name). */}
       <span className="whitespace-nowrap">{phone ? tab.short : tab.label}</span>
+      {phone && tab.short !== tab.label ? <span className="sr-only">{` (${tab.label})`}</span> : null}
       {phone && n ? (
         <>
-          {/* a space between the word and the count, so the text read for label-in-name is "Owed 1", not "Owed1" */}{' '}
           {/* Under 360 px four labels and their counts do not fit one row: the count becomes a dot (the name still says it). */}
-          <span className="max-[359px]:hidden">
-            <NeedsCount n={n} silent={named} />
+          <span className="max-[359px]:sr-only">
+            <NeedsCount n={n} />
           </span>
           <i aria-hidden="true" className="hidden size-2 shrink-0 rounded-round bg-tone-warning-fg max-[359px]:block" />
         </>

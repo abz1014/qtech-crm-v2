@@ -170,7 +170,6 @@ test.describe('Money > Margins (admin)', () => {
     const cancelled = await must(rest<{ id: string }[]>('admin', 'orders?cancelled_on=not.is.null&select=id'))
     const live = money.filter(m => !cancelled.some(c => c.id === m.order_id))
     const totals = page.getByTestId('margin-totals')
-    // "Total of N final orders" (54f6f9a: the footer says the orders it adds up are the final ones)
     await expect(totals).toContainText(`${live.length} final ${live.length === 1 ? 'order' : 'orders'}`)
     await expect(totals).toContainText('Total of')
     expect(digits((await totals.innerText()).split('\n').find(l => /^\s*[\d,]+\s*$/.test(l)) ?? '0')).toBe(live.reduce((a, m) => a + Number(m.margin ?? 0), 0)) // the margin comes first

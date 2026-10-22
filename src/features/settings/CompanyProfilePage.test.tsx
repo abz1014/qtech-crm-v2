@@ -95,6 +95,15 @@ describe('company profile rules', () => {
     expect(profileSchema.safeParse({ ...toFormValues(EMPTY), default_payment_terms_days: 2.5 }).success).toBe(false)
   })
 
+  it('HW-47: negative terms say so, and the NTN must look like an NTN', () => {
+    const neg = profileSchema.safeParse({ ...toFormValues(EMPTY), default_payment_terms_days: -5 })
+    expect(neg.success ? [] : neg.error.issues.map(i => i.message)).toEqual(['Payment terms cannot be negative.'])
+    for (const ok of ['', '1234567-8', '12345678', '1234567', '35202-1234567-1', '3520212345671'])
+      expect(profileSchema.safeParse({ ...toFormValues(EMPTY), ntn: ok }).success, ok).toBe(true)
+    for (const bad of ['not-an-ntn !!', '123', '1234567-89', 'NTN 1234567-8'])
+      expect(profileSchema.safeParse({ ...toFormValues(EMPTY), ntn: bad }).success, bad).toBe(false)
+  })
+
   it('own terms on an order win (including 0); with none the company default applies and is labelled', () => {
     expect(effectiveTerms(10, 30)).toEqual({ days: 10, isDefault: false })
     expect(effectiveTerms(0, 30)).toEqual({ days: 0, isDefault: false })

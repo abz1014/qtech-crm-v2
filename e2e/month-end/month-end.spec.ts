@@ -263,8 +263,7 @@ test.describe('month-end (M10)', () => {
     await startCounting(page)
     await closeBtn.click()
     const dialog = page.getByRole('dialog', { name: `Close ${STMT.label}?` })
-    // six checks: FBR payments are counted in "Not matched to the bank statement" since round 3 (4c34aee)
-    await expect(dialog.getByRole('list', { name: 'Warnings' }).getByRole('listitem')).toHaveCount(6)
+    await expect(dialog.getByRole('list', { name: 'Warnings' }).getByRole('listitem')).toHaveCount(6) // round 3: the FBR-deposit check is part of the bank check
     await review(page, 'm10-close-dialog-1440')
     await dialog.getByRole('button', { name: new RegExp(`^Close (through )?${STMT.name}$`) }).click()
     await expect(page.getByTestId('lock-bar')).toContainText(`${STMT.label} is closed.`)

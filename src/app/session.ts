@@ -26,6 +26,21 @@ export function useSession(): SessionState {
   return useContext(SessionContext)
 }
 
+/**
+ * Prices (owner decision 2026-10-22): admin and sales see selling prices, quote prices, supplier prices, totals and every
+ * PKR or currency amount; an engineer sees none of them anywhere, and the app does not even fetch them for an engineer.
+ * New code asks this, not the role, so the rule lives in one place. An unknown role sees no prices.
+ */
+export function seesPrices(role: string | null | undefined): boolean {
+  return role === 'admin' || role === 'sales'
+}
+
+/** seesPrices() for the signed-in person; false while signed out or loading. */
+export function useSeesPrices(): boolean {
+  const s = useSession()
+  return s.status === 'signed-in' && seesPrices(s.user.role)
+}
+
 export const ROLE_LABEL: Record<string, string> = { admin: 'Admin', sales: 'Sales', engineer: 'Engineer' }
 
 /** Why the person is on the sign-in screen without having asked to be. */
