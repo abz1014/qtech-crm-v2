@@ -84,7 +84,8 @@ export function fixOcrWord(text: string): string {
   if (/^L[il1]d\.?$/.test(t)) t = t.replace(/^L[il1]d/, 'Ltd')
   // Sizes and ratings: DN50, NH00, SS316, M12.
   t = t.replace(/^(DN|PN|NH)([0-9OSs]{2,4})(?=$|[^A-Za-z0-9])/, (_, a: string, b: string) => a + b.replace(/[Oo]/g, '0').replace(/[Ss]/g, '5'))
-  t = t.replace(/^S5(3\d\d)/, 'SS$1').replace(/^5S(3\d\d)/, 'SS$1')
+  t = t.replace(/^(?:S5|5S|\$5|\$S|55)(3\d\d)/, 'SS$1')
+  if (/^Mode[!|1l]$/.test(t)) t = 'Model'
   // A date with the month in letters ("19-OCT-26", "0CT" read for OCT): the month, not a code.
   t = t.replace(/^(\d{1,2}[-./]?)0(CT)([-./]?\d{2,4}[.,]?)$/i, '$1O$2$3')
   const date = /^\d{1,2}[-./]?(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*[-./]?\d{2,4}[.,]?$/i.test(t)
@@ -101,7 +102,7 @@ export function fixOcrWord(text: string): string {
       const segStart = Math.max(t.lastIndexOf('-', i), t.lastIndexOf('/', i)) + 1
       const segEnd = [t.indexOf('-', i), t.indexOf('/', i)].filter(x => x >= 0).reduce((a, b) => Math.min(a, b), t.length)
       const inside = i > 0 && /[OI]/.test(c) && (t.match(/\d/g) ?? []).length >= 3 && /\d/.test(t.slice(segStart, segEnd))
-      if (isDigit(chars[i - 1]) || isDigit(chars[i + 1]) || inside || (edge && (segStart > 0 || /\d/.test(t.slice(segStart, segEnd))) && /[Oo]/.test(c) && (t.match(/\d/g) ?? []).length >= 3)) chars[i] = /[Oo]/.test(c) ? '0' : '1'
+      if (isDigit(chars[i - 1]) || isDigit(chars[i + 1]) || inside || (edge && ((segStart > 0 && segEnd - segStart >= 4) || /\d/.test(t.slice(segStart, segEnd))) && /[Oo]/.test(c) && (t.match(/\d/g) ?? []).length >= 3)) chars[i] = /[Oo]/.test(c) ? '0' : '1'
     }
     t = chars.join('')
   }
@@ -235,8 +236,10 @@ export function unwrapLines(lines: readonly OcrLine[], typical: number | null = 
       const prevText = prevWords.map(w => cleanWord(w) ?? '').join(' ')
       const dangling = /(?:[/:-]|\b(?:model|type|qty\.?|quantity|p\/n|part\s*no\.?|make|brand|size|range|code))$/i.test(prevText)
       const sizeOrCode = /^\d+(?:[.,]\d+)?[A-Za-z"]/.test(firstText) || (/^[A-Z0-9][A-Z0-9/.-]{3,}[,.]?$/.test(firstText) && /\d/.test(firstText) && /[A-Z]/.test(firstText))
-      const tail = !LIST_MARKER.test(firstText) && (/^\p{Ll}/u.test(firstText) || (words.length === 1 && LONE_TAIL.test(firstText)) || dangling || sizeOrCode)
-      const sentenceEnd = /[.:;!?]$/.test(cleanWord(prevLast) ?? '')
+      // A line that already ends with its quantity ("... pvc 100 m") is complete: what follows is a new item.
+      const complete = /\d+(?:[.,]\d+)?\s*(?:nos?|no's|pcs?|pieces?|sets?|ea|each|m|mtrs?|meters?|kgs?|rolls?|box(?:es)?|pairs?|lots?|units?|numbers?)\.?\s*(?:bhi|urgent|chahiye|bhej\s+dein)?$/i.test(prevText)
+      const tail = !LIST_MARKER.test(firstText) && !(complete && !dangling) && (/^\p{Ll}/u.test(firstText) || (words.length === 1 && LONE_TAIL.test(firstText)) || dangling || sizeOrCode)
+      const sentenceEnd = /[.:;!?]$/.test(cleanWord(prevLast) ?? '') && !/\bqty\.?:$|quantity:$/i.test(cleanWord(prevLast) ?? '')
       // The same size of letters: a smaller line under a name ("online", a caption) is not its tail.
       const sameSize = !l.rowHeight || !prev.rowHeight || Math.abs(l.rowHeight - prev.rowHeight) <= 0.2 * prev.rowHeight
       if (under && full && tail && sameSize && !sentenceEnd && !isChromeLine(kept(l).map(w => w.text).join(' '))) {

@@ -160,6 +160,9 @@ test('the corpus as pictures and scans: every field at or above its floor, a scr
   const timing = `Picture reading time: clean screenshots median ${(median / 1000).toFixed(1)} s (n=${clean.length}, max ${(Math.max(0, ...clean) / 1000).toFixed(1)} s); all pictures median ${((all[Math.floor(all.length / 2)] ?? 0) / 1000).toFixed(1)} s, max ${(Math.max(0, ...all) / 1000).toFixed(1)} s`
   const summary = [...g.report, timing, g.belowBars.length ? `Below the owner's bars:\n${g.belowBars.join('\n')}` : "All owner's bars met.", drops.length ? `BELOW FLOOR:\n${drops.join('\n')}` : 'No field below its floor.']
   console.log(summary.join('\n'))
+  // The measured values in one line, so the floors can be set from what CI's Linux browser reads (fonts render differently
+  // from a Windows or Mac machine, so a local run is not the measure).
+  console.log(`OCR_VALUES ${JSON.stringify(g.values)}`)
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary.join('\n')}\n`)
   expect(violations, violations.join('\n')).toEqual([])
   expect(drops).toEqual([])
