@@ -3,6 +3,7 @@ import {
   compactPkr,
   progressLine,
   shownQuarters,
+  cellIntent,
   cellKey,
   cellProgress,
   checkTargetAmount,
@@ -51,6 +52,15 @@ describe('quarters', () => {
   it('names the months', () => {
     expect(quarterMonths(1)).toBe('Jan to Mar')
     expect(quarterMonths(4)).toBe('Oct to Dec')
+  })
+})
+
+describe('cellIntent (hunt HE-12)', () => {
+  it('only a really empty cell removes; junk text is unreadable, never "empty"', () => {
+    expect(cellIntent('', null)).toEqual({ kind: 'remove' })
+    expect(cellIntent('   ', null)).toEqual({ kind: 'remove' })
+    expect(cellIntent('abc', null).kind).toBe('unreadable')
+    expect(cellIntent('500,000', 500000)).toEqual({ kind: 'amount', value: 500000 })
   })
 })
 

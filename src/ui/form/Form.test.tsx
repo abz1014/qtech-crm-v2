@@ -203,7 +203,9 @@ describe('Form (U07): errors keep the entries and speak plainly', () => {
     expect(await screen.findByText('Fix 1 field to continue')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Starts in' })).toBeInTheDocument()
     expect(screen.queryByText(/startMonth/)).toBeNull()
-    expect(screen.getByText(/needs a value\./)).toBeInTheDocument()
+    // HE-6: the summary repeats the field's own message, not a generic "needs a value" (the field has one)
+    expect(screen.getByRole('alert').textContent ?? document.body.textContent).toMatch(/Starts in: Pick the month it starts\./)
+    expect(screen.queryByText(/needs a value/)).toBeNull()
   })
 })
 

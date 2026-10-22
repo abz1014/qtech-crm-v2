@@ -1,6 +1,5 @@
 import {
   Suspense,
-  lazy,
   useCallback,
   useContext,
   useEffect,
@@ -33,6 +32,9 @@ import { PaletteContext, type PaletteApi } from "@/app/palette/usePalette";
 import { CAPTURE_LABEL } from "@/app/shell/TopBar";
 import { KEYBOARD_MEDIA } from "@/app/shell/shortcuts";
 import { Kbd } from "@/ui/Kbd";
+import { LoadBoundary } from "@/ui/LoadBoundary";
+import { ToastContext } from "@/ui/useToast";
+import { useRetryableLazy } from "@/lib/importWithReload";
 import { blockingOverlayOpen, shortcutsEnabled } from "@/ui/useShortcutsSetting";
 import {
   filterItems,
@@ -203,16 +205,22 @@ function isTypingContext(e: KeyboardEvent): boolean {
  * RFQ numbers), screens register their actions ("New RFQ") while they are mounted.
  */
 // The palette (and cmdk) load after the first screen: on idle, or at once when it is opened (bundle budget, P04).
-const loadPalette = () => import("@/ui/CommandPalette");
-const CommandPalette = lazy(() =>
-  loadPalette().then((m) => ({ default: m.CommandPalette })),
-);
+// Both load through useRetryableLazy inside <LoadBoundary>: with no signal, a chunk that was never downloaded fails only
+// search (or the sheet), with a "Try again", never the whole app and what is being typed (hunt HE-2).
+const loadPalette = () =>
+  import("@/ui/CommandPalette").then((m) => ({ default: m.CommandPalette }));
 // The Keyboard shortcuts sheet loads only when someone asks for it (?, the account menu, the palette action).
-const ShortcutsSheet = lazy(() =>
+const loadShortcuts = () =>
   import("@/app/shell/ShortcutsSheet").then((m) => ({
     default: m.ShortcutsSheet,
-  })),
-);
+  }));
+
+/** The plain sentence of a load failure (importWithReload's StaleAppError), or a general one. */
+function loadFailureText(err: unknown): string {
+  return err instanceof Error && err.name === "StaleAppError"
+    ? err.message
+    : "Check your signal, then try again.";
+}
 
 function hasKeyboard(): boolean {
   return typeof window !== "undefined" && typeof window.matchMedia === "function"
@@ -244,6 +252,13 @@ export function PaletteHost({
     setOpen(next);
   }, []);
   const [extra, setExtra] = useState<PaletteSource[]>([]);
+  const toast = useContext(ToastContext)?.toast;
+  const palette = useRetryableLazy(loadPalette);
+  const shortcuts = useRetryableLazy(loadShortcuts);
+  // The palette chunk failed to load (idle preload or an open): nothing is mounted until the next open tries again.
+  const [paletteFailed, setPaletteFailed] = useState(false);
+  const openRef = useRef(open);
+  openRef.current = open;
   const seq = useRef(0);
   const openCapture = useContext(CaptureContext)?.openCapture;
 
@@ -368,16 +383,56 @@ export function PaletteHost({
 
   // Until the palette has loaded, Ctrl+K here opens it (and loads it); after that the palette's own key handles it.
   const [loaded, setLoaded] = useState(false);
+  // After a failed load the next open mounts a fresh attempt (palette.retry() already made it).
+  const openPalette = useCallback(() => {
+    setPaletteFailed(false);
+    setLoaded(true);
+    setOpen(true);
+  }, []);
+  const retryPalette = palette.retry;
+  const onPaletteLoadError = useCallback(
+    (err: unknown) => {
+      setPaletteFailed(true);
+      retryPalette();
+      // Failed in the background: say nothing now, the next open tries again. Failed while open: close it and say so.
+      if (!openRef.current) return;
+      setOpen(false);
+      toast?.({
+        tone: "danger",
+        title: "Search could not open",
+        body: loadFailureText(err),
+        action: { label: "Try again", onClick: openPalette },
+      });
+    },
+    [toast, openPalette, retryPalette],
+  );
+  const retryShortcuts = shortcuts.retry;
+  const onShortcutsLoadError = useCallback(
+    (err: unknown) => {
+      setShortcutsOpen(false);
+      setShortcutsLoaded(false);
+      retryShortcuts();
+      toast?.({
+        tone: "danger",
+        title: "Keyboard shortcuts could not open",
+        body: loadFailureText(err),
+        action: { label: "Try again", onClick: openShortcuts },
+      });
+    },
+    [toast, openShortcuts, retryShortcuts],
+  );
   useEffect(() => {
-    if (loaded) return;
-    // Preloaded, then mounted: a download that fails (no signal yet) must not take the shell down (perf/lcp made the first
-    // screen quick enough for that to happen); opening the palette tries again.
-    const t = window.setTimeout(() => {
-      loadPalette().then(
-        () => setLoaded(true),
-        () => {},
-      );
-    }, 1200);
+    if (loaded && !paletteFailed) return;
+    // Preloaded first, then mounted (perf/lcp): a download that fails (no signal yet) never mounts anything; the next open
+    // mounts a fresh attempt inside <LoadBoundary>, whose failure stays local (HE-2).
+    const t = loaded
+      ? undefined
+      : window.setTimeout(() => {
+          loadPalette().then(
+            () => setLoaded(true),
+            () => {},
+          );
+        }, 1200);
     const onKey = (e: KeyboardEvent) => {
       if (
         (e.metaKey || e.ctrlKey) &&
@@ -387,8 +442,7 @@ export function PaletteHost({
         e.preventDefault();
         // Not on top of an open dialog or menu: its half-typed text stays where it is.
         if (blockingOverlayOpen()) return;
-        setLoaded(true);
-        setOpen(true);
+        openPalette();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -396,7 +450,7 @@ export function PaletteHost({
       window.clearTimeout(t);
       window.removeEventListener("keydown", onKey);
     };
-  }, [loaded]);
+  }, [loaded, paletteFailed, openPalette]);
 
   const sources = useMemo(
     () => [...extra, actions, goTo],
@@ -407,21 +461,21 @@ export function PaletteHost({
       open: (query?: string) => {
         // Buttons pass `open` straight to onClick, so a click event can arrive here: only a string is a query.
         setInitialQuery(typeof query === "string" ? query.trim() : "");
-        setLoaded(true);
-        setOpen(true);
+        openPalette();
       },
       openShortcuts,
       register,
     }),
-    [register, openShortcuts],
+    [register, openShortcuts, openPalette],
   );
 
   return (
     <PaletteContext.Provider value={api}>
       {children}
-      {loaded || open ? (
+      {(loaded || open) && !paletteFailed ? (
+        <LoadBoundary key={palette.attempt} onError={onPaletteLoadError}>
         <Suspense fallback={null}>
-          <CommandPalette
+          <palette.Component
             open={open}
             onOpenChange={onPaletteOpenChange}
             sources={sources}
@@ -441,11 +495,14 @@ export function PaletteHost({
             }
           />
         </Suspense>
+        </LoadBoundary>
       ) : null}
       {shortcutsLoaded ? (
-        <Suspense fallback={null}>
-          <ShortcutsSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
-        </Suspense>
+        <LoadBoundary key={shortcuts.attempt} onError={onShortcutsLoadError}>
+          <Suspense fallback={null}>
+            <shortcuts.Component open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+          </Suspense>
+        </LoadBoundary>
       ) : null}
     </PaletteContext.Provider>
   );

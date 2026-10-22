@@ -12,6 +12,7 @@ import {
   useSetRole,
 } from '@/features/settings/hooks'
 import { firstName, isOnlyActiveAdmin, PHONE_MAX, ROLE_OPTIONS, roleLabel } from '@/features/settings/teamModel'
+import { phoneText } from '@/lib/formRules'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
@@ -175,7 +176,7 @@ export function EditJobTitleDialog({ member, onClose }: Base & { member: TeamMem
 
 // ---------------------------------------------------------------- Edit phone
 
-const phoneSchema = z.object({ phone: z.string().trim().max(PHONE_MAX, `Keep the phone number under ${PHONE_MAX} characters.`) })
+const phoneSchema = z.object({ phone: z.string().trim().max(PHONE_MAX, `Keep the phone number under ${PHONE_MAX} characters.`).pipe(phoneText) })
 
 export function EditPhoneDialog({ member, onClose }: Base & { member: TeamMember }) {
   const { toast } = useToast()

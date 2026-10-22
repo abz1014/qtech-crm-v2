@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { Icon } from '@/ui/Icon'
+import { returnTarget } from '@/ui/menuTrigger'
 import { MarkdownBlocks } from '@/features/help/RecipeText'
 import { findRecipe, groupByArea, recipesForPath, recipesForRole, searchRecipes, type Recipe } from '@/features/help/recipes'
 
@@ -38,6 +39,7 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
   const [query, setQuery] = useState('')
   const [everyone, setEveryone] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  const openerRef = useRef<HTMLElement | null>(null)
   const recipeHeadingRef = useRef<HTMLHeadingElement>(null)
   const recipe = findRecipe(recipeId, recipes as Recipe[])
   const view: 'results' | 'recipe' | 'home' = query.trim() ? 'results' : recipe ? 'recipe' : 'home'
@@ -73,8 +75,16 @@ export function HelpPanel({ recipes, role, pathname, recipeId, onShow, onClose, 
           onInteractOutside={e => (wide ? e.preventDefault() : undefined)}
           onOpenAutoFocus={e => {
             e.preventDefault()
+            openerRef.current = returnTarget(document.activeElement)
             if (recipe) recipeHeadingRef.current?.focus()
             else searchRef.current?.focus()
+          }}
+          // Opened from code (Account menu > Help, the ? button, a link): no <Dialog.Trigger>, so Radix would leave focus on
+          // <body>. Go back to what opened it, or to the menu button when it came from a menu item (hunt HE-14).
+          onCloseAutoFocus={e => {
+            if (!openerRef.current?.isConnected) return
+            e.preventDefault()
+            openerRef.current.focus()
           }}
           className={cn(
             'fixed z-40 flex flex-col bg-surface focus:outline-none',

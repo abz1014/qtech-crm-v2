@@ -4,6 +4,7 @@ import { useSession } from '@/app/session'
 import type { TeamMember } from '@/features/settings/api'
 import { useAddTargets, useRemoveTargets, useSaveTarget, useTargetProgress, useTargets, useTeam } from '@/features/settings/hooks'
 import {
+  cellIntent,
   cellKey,
   cellProgress,
   checkTargetAmount,
@@ -27,6 +28,7 @@ import {
 } from '@/features/settings/targetsModel'
 import { roleLabel } from '@/features/settings/teamModel'
 import { businessToday } from '@/lib/dates'
+import { pkr } from '@/lib/formRules'
 import { mapPgError } from '@/lib/pgErrors'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/ui/Avatar'
@@ -354,6 +356,7 @@ function CellEditor({ member, year, quarter, target, what, onClose }: Pick<CellP
   const [value, setValue] = useState<number | null>(target?.target_net_pkr ?? null)
   const [error, setError] = useState<string | null>(null)
   const finished = useRef(false)
+  const inputRef = useRef<HTMLInputElement | null>(null)
   const busy = save.isPending || remove.isPending
   const errId = `err-${member.id}-${quarter}`
 
@@ -362,13 +365,25 @@ function CellEditor({ member, year, quarter, target, what, onClose }: Pick<CellP
     onClose()
   }
 
-  /** Enter saves. Blur saves too when the value is good and changed; otherwise it simply closes. */
+  /** Blur with something unusable typed: the target is kept, and the person is told why nothing changed. */
+  const keepWithNote = (message: string) => {
+    finish()
+    toast({ title: 'Target not changed', body: `${what}: ${message}`, tone: 'neutral' })
+  }
+
+  /**
+   * Enter saves. Blur saves too when the value is good and changed. Only a really empty cell removes (Enter); text that
+   * is not an amount never does (hunt HE-12): Enter shows why, blur closes and says the target was kept.
+   */
   const commit = async (fromBlur: boolean) => {
     if (finished.current || busy) return
+    const intent = cellIntent(inputRef.current?.value ?? '', value)
+    if (intent.kind === 'unreadable') return fromBlur ? keepWithNote(intent.message) : setError(intent.message)
+    const typed = intent.kind === 'amount' ? intent.value : null
     const before = target?.target_net_pkr ?? null
-    if (value === before) return finish()
+    if (typed === before) return finish()
 
-    if (value === null) {
+    if (typed === null) {
       if (!target) return finish()
       if (fromBlur) return finish() // an emptied cell is only removed by pressing Enter
       finished.current = true
@@ -393,16 +408,13 @@ function CellEditor({ member, year, quarter, target, what, onClose }: Pick<CellP
       return
     }
 
-    const check = checkTargetAmount(value)
-    if (!check.ok) {
-      if (fromBlur) return finish()
-      return setError(check.message)
-    }
+    const check = checkTargetAmount(typed)
+    if (!check.ok) return fromBlur ? keepWithNote(check.message) : setError(check.message)
     finished.current = true
     try {
       await save.mutateAsync({ userId: member.id, year, quarter, amount: check.amount })
       onClose()
-      toast({ title: 'Target saved', body: `${what}: PKR ${new Intl.NumberFormat('en-US').format(check.amount)}`, tone: 'success' })
+      toast({ title: 'Target saved', body: `${what}: ${pkr(check.amount)}`, tone: 'success' })
     } catch (err) {
       finished.current = false
       setError(mapPgError(err, { entity: 'target' }).message)
@@ -412,6 +424,7 @@ function CellEditor({ member, year, quarter, target, what, onClose }: Pick<CellP
   return (
     <div className="grid gap-1">
       <NumberInput
+        ref={inputRef}
         autoFocus
         aria-label={`${what} target in rupees`}
         aria-invalid={error ? true : undefined}

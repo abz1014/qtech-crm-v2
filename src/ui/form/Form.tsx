@@ -16,6 +16,7 @@ import type { MappedError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
 import { useReportDialogDirty } from '@/ui/Dialog'
 import { Field, type FieldSource } from '@/ui/form/Field'
+import { humaniseFieldName, summaryLine } from '@/ui/form/summaryText'
 import type { SubmitForm } from '@/ui/form/useSubmitForm'
 
 interface FormProps<TIn extends FieldValues, TOut> {
@@ -62,7 +63,12 @@ const lockKeys = (e: KeyboardEvent) => {
   if (e.key !== 'Tab' && e.key !== 'Escape' && e.key !== 'Shift') e.preventDefault()
 }
 
-/** "Fix 2 fields to continue", with each field a control that moves focus to it. Shown after a submit that failed validation. */
+/**
+ * "Fix 2 fields to continue", with each field a control that moves focus to it and the field's own message after it
+ * ("Amount received: The amount must be above zero."), so a field that has a value is never told it "needs a value"
+ * (hunt HE-6), and a field the form gave no label shows words, not its schema key (HE-18).
+ * Shown after a submit that failed validation.
+ */
 export function FormSummary({ labels }: { labels: Partial<Record<string, string>> }) {
   const {
     formState: { errors, isSubmitted },
@@ -75,13 +81,13 @@ export function FormSummary({ labels }: { labels: Partial<Record<string, string>
     <Banner tone="danger" title={`Fix ${names.length} ${names.length === 1 ? 'field' : 'fields'} to continue`}>
       {names.map((n, i) => (
         <span key={n}>
-          {i > 0 ? (i === names.length - 1 ? ' and ' : ', ') : ''}
+          {i > 0 ? ' ' : ''}
           <button type="button" onClick={() => setFocus(n)} className="rounded text-primary underline decoration-1 underline-offset-2">
-            {labels[n] ?? fieldLabels?.get(n) ?? 'One field'}
+            {labels[n] ?? fieldLabels?.get(n) ?? humaniseFieldName(n)}
           </button>
+          {`: ${summaryLine(errors[n]?.message)}`}
         </span>
       ))}
-      {names.length === 1 ? ' needs a value.' : ' need a value.'}
     </Banner>
   )
 }

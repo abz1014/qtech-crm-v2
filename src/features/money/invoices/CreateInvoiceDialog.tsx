@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { formatDateText } from '@/lib/dateInput'
+import { MAX_AMOUNT, pkr } from '@/lib/formRules'
 import { orderRef } from '@/lib/refs'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
@@ -111,8 +112,8 @@ function InvoiceLoader(props: { orderId: string; onBusy: (b: boolean) => void; o
 const baseSchema = z.object({
   number: z.string().trim().min(1, 'Enter the invoice number').max(40, 'Keep the number under 40 characters'),
   invoiceDate: z.string().min(1, 'Choose a date'),
-  net: z.number({ invalid_type_error: 'Enter the net amount', required_error: 'Enter the net amount' }).positive('The net amount must be above zero'),
-  gst: z.number().min(0),
+  net: z.number({ invalid_type_error: 'Enter the net amount', required_error: 'Enter the net amount' }).positive('The net amount must be above zero').max(MAX_AMOUNT, 'That amount is too large. Check it for an extra digit'),
+  gst: z.number().min(0, 'GST cannot be below zero').max(MAX_AMOUNT, 'That GST is too large'),
   option: z.enum(['18', 'exempt', 'mixed']),
 })
 type Values = z.input<typeof baseSchema>
@@ -161,7 +162,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
     onSubmit: (v, { requestId }) =>
       create.mutateAsync({ id: requestId, orderId: order.id, number: v.number, invoiceDate: v.invoiceDate, net: v.net, gst: v.gst }),
     onSuccess: v => {
-      toast.toast({ title: `Created invoice ${v.number}`, body: `${orderRef(order.number)} · PKR ${(round2(v.net + v.gst)).toLocaleString('en-US')}`, tone: 'success' })
+      toast.toast({ title: `Created invoice ${v.number}`, body: `${orderRef(order.number)} · ${pkr(round2(v.net + v.gst))}`, tone: 'success' })
       onDone(v.number)
     },
   })
@@ -193,7 +194,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
   return (
     <>
       <p className="-mt-3 text-sm text-fg-muted">{context}</p>
-      <Form sf={sf} labels={{ number: 'Invoice number', invoiceDate: 'Invoice date', net: 'Net amount' }} className="grid gap-4">
+      <Form sf={sf} labels={{ number: 'Invoice number', invoiceDate: 'Invoice date', net: 'Net amount', gst: 'GST', option: 'GST rate' }} className="grid gap-4">
         <button type="submit" hidden tabIndex={-1} />
         {order.cancelled ? <Banner tone="warning" title="This order is cancelled">An invoice can still be created, for example to record what was already supplied.</Banner> : null}
         {start.fullyInvoiced ? (

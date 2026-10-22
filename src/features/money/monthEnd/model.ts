@@ -1,7 +1,7 @@
 import { formatPaisa, paisaToFixed, sumPaisa, toPaisa, type Amount } from '@/lib/money'
 import { orderRef } from '@/lib/refs'
 import { monthEnd, monthKeyLabel, monthKeyShort, shiftMonth } from '@/features/money/expenses/model'
-import { isMonthKey } from '@/features/money/bank/model'
+import { isMonthKey, isOpenableMonth } from '@/features/money/bank/model'
 
 /*
  * Month-end (M10), the pure part: the checklist cards, who may close what, and every report's figures and CSV rows.
@@ -10,7 +10,7 @@ import { isMonthKey } from '@/features/money/bank/model'
  * them. Money is carried as fixed two-decimal strings and added in paisa, never as floating point.
  */
 
-export { isMonthKey, monthKeyLabel, monthKeyShort, shiftMonth }
+export { isMonthKey, isOpenableMonth, monthKeyLabel, monthKeyShort, shiftMonth }
 
 const fx = (n: Amount | null | undefined): string => paisaToFixed(toPaisa(n ?? 0))
 /** For a CSV cell: a real number, so a negative amount stays a number in Excel. */

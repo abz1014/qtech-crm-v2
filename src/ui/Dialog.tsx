@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { useBackToClose } from '@/lib/useBackToClose'
-import { recentMenuTrigger } from '@/ui/menuTrigger'
+import { returnTarget } from '@/ui/menuTrigger'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 
 /*
@@ -189,23 +189,6 @@ interface DialogContentProps {
   /** The body. Scrolls on its own; header and footer stay put. */
   children?: ReactNode
   className?: string
-}
-
-/**
- * Where focus goes back to when the dialog closes. Opened from a menu item, the item is gone by then (the menu closed), so
- * focus would fall to <body> (WCAG 2.4.3): return to the button that opened the menu (the one whose aria-controls names it).
- */
-function returnTarget(active: Element | null): HTMLElement | null {
-  const fromMenu = recentMenuTrigger()
-  if (!(active instanceof HTMLElement) || active === document.body) return fromMenu
-  if (!active.closest('[role="menu"]')) return active
-  if (fromMenu) return fromMenu
-  for (let x: HTMLElement | null = active; x; x = x.parentElement) {
-    if (!x.id) continue
-    const trigger = document.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(x.id)}"]`)
-    if (trigger) return trigger
-  }
-  return document.querySelector<HTMLElement>('[aria-expanded="true"][aria-haspopup]') ?? active
 }
 
 export function DialogContent({

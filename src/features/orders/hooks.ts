@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
+import { nullOnInvalidId } from '@/lib/uuid'
 import { seesPrices } from '@/app/session'
 import { invalidateAfter } from '@/features/invalidation'
 import * as api from '@/features/orders/api'
@@ -12,7 +13,7 @@ import type { LegPatch } from '@/features/orders/lib/legModel'
  */
 
 /** The order page's first reads (its hooks, and the app's start reading them ahead of the page: orders/prefetch.ts). */
-export const orderHeaderQuery = (id: string, money: boolean) => ({ queryKey: qk.orders.part(id, 'header'), queryFn: () => api.getOrderHeader(id, money) })
+export const orderHeaderQuery = (id: string, money: boolean) => ({ queryKey: qk.orders.part(id, 'header'), queryFn: () => api.getOrderHeader(id, money).catch(nullOnInvalidId) })
 export const orderItemsQuery = (id: string, money: boolean) => ({ queryKey: qk.orders.part(id, 'items'), queryFn: () => api.listOrderItems(id, money) })
 export const orderLegsQuery = (id: string) => ({ queryKey: qk.orders.part(id, 'legs'), queryFn: () => api.fetchOrderLegs(id) })
 export const orderEngineersQuery = (id: string) => ({ queryKey: qk.orders.part(id, 'engineers'), queryFn: () => api.listOrderEngineers(id) })

@@ -65,6 +65,17 @@ export function quarterPhase(year: number, quarter: number, today: string): Quar
 export const quarterStartText = (year: number, quarter: number) => `1 ${MONTHS[(quarter - 1) * 3]} ${year}`
 
 export type AmountCheck = { ok: true; amount: number } | { ok: false; message: string }
+
+/**
+ * What the typed text of a target cell means. Only a cell that is really empty removes a target: text that is not an
+ * amount ("abc") reads as null too, and must never be taken for "empty" (hunt HE-12, it deleted a saved target).
+ */
+export type CellIntent = { kind: 'remove' } | { kind: 'unreadable'; message: string } | { kind: 'amount'; value: number }
+export function cellIntent(text: string, value: number | null): CellIntent {
+  if (text.trim() === '') return { kind: 'remove' }
+  if (value === null) return { kind: 'unreadable', message: 'That is not an amount. Type digits, for example 500000, or clear the cell to remove the target.' }
+  return { kind: 'amount', value }
+}
 /** What may be saved in a cell. Empty is handled by the caller (it removes the target). */
 export function checkTargetAmount(n: number | null): AmountCheck {
   if (n === null) return { ok: false, message: 'Enter an amount in rupees.' }

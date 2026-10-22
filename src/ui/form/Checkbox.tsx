@@ -51,7 +51,8 @@ export const Checkbox = forwardRef<ElementRef<typeof RadixCheckbox.Root>, Checkb
         ref={ref}
         id={id}
         aria-describedby={help ? `${id}-help` : undefined}
-        className={cn(SQUARE, SQUARE_STATES, 'mt-[calc((var(--lh-sm)-18px)/2)]', TOUCH_BOX, className)}
+        // before: a 24px hit area around the 18px square (WCAG 2.5.8), nothing drawn; the label is a target as well
+        className={cn(SQUARE, SQUARE_STATES, 'relative mt-[calc((var(--lh-sm)-18px)/2)] before:absolute before:-inset-[3px] before:content-[""]', TOUCH_BOX, className)}
         {...rest}
       >
         {indicator}

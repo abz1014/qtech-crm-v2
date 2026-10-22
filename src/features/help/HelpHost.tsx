@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { usePaletteSource } from '@/app/palette/usePalette'
 import { useSession } from '@/app/session'
@@ -9,9 +9,14 @@ import { howItWorksFor, howItWorksKey } from '@/features/help/howItWorks'
 import type { Recipe } from '@/features/help/recipes'
 import { useDismissed } from '@/features/help/useDismissed'
 import { HELP_PARAM, useHelp, withHelp } from '@/features/help/useHelp'
+import { importWithReload, useRetryableLazy } from '@/lib/importWithReload'
+import { LoadBoundary } from '@/ui/LoadBoundary'
+import { ToastContext } from '@/ui/useToast'
 
 /** The panel and the recipes are lazy chunks: nothing of Help is in the initial JavaScript. */
-const HelpPanel = lazy(() => import('@/features/help/HelpPanel').then(m => ({ default: m.HelpPanel })))
+const loadHelpPanel = () => import('@/features/help/HelpPanel').then(m => ({ default: m.HelpPanel }))
+/** The recipes (and the palette group that searches them) load in the background on every page. */
+const loadRecipes = () => Promise.all([import('@/features/help/recipes'), import('@/features/help/helpPalette')])
 
 /*
  * Mount once inside the shell (AppShell's Frame, which sits inside PaletteHost): <HelpHost />.
@@ -40,6 +45,10 @@ export function HelpHost() {
   // The palette group's code comes with the recipes (it searches them), so neither is in the first load (perf/trim).
   const [toSource, setToSource] = useState<{ make: typeof helpPaletteSource } | null>(null)
 
+  // A background load: no signal before it was ever downloaded must not break anything (hunt HE-2). It is tried again when
+  // Help is opened (recipesTry), and only Help then says it could not load.
+  const [recipesTry, setRecipesTry] = useState(0)
+  const [recipesFailed, setRecipesFailed] = useState(false)
   // Downloaded once the opening page's content is drawn (perf/lcp, afterContent.ts), or at once when Help is asked for.
   const [drawn, setDrawn] = useState(false)
   useEffect(() => whenContentDrawn(() => setDrawn(true)), [])
@@ -47,15 +56,54 @@ export function HelpHost() {
   useEffect(() => {
     if (!wanted) return
     let live = true
-    void Promise.all([import('@/features/help/recipes'), import('@/features/help/helpPalette')]).then(([m, p]) => {
-      if (!live) return
-      setRecipes(m.allRecipes())
-      setToSource({ make: p.helpPaletteSource })
-    })
+    importWithReload(loadRecipes, { reload: false })
+      .then(([m, p]) => {
+        if (!live) return
+        setRecipesFailed(false)
+        setRecipes(m.allRecipes())
+        setToSource({ make: p.helpPaletteSource })
+      })
+      .catch(() => {
+        if (live) setRecipesFailed(true)
+      })
     return () => {
       live = false
     }
-  }, [wanted])
+  }, [wanted, recipesTry])
+  const panel = useRetryableLazy(loadHelpPanel)
+  const toast = useContext(ToastContext)?.toast
+  const retryPanel = panel.retry
+  const failHelp = useCallback(
+    (err?: unknown) => {
+      closeHelp()
+      toast?.({
+        tone: 'danger',
+        title: 'Help could not open',
+        body: err instanceof Error && err.name === 'StaleAppError' ? err.message : 'Check your signal, then try again.',
+        action: { label: 'Try again', onClick: () => openHelp() },
+      })
+    },
+    [closeHelp, openHelp, toast],
+  )
+  const onPanelLoadError = useCallback(
+    (err: unknown) => {
+      retryPanel()
+      failHelp(err)
+    },
+    [retryPanel, failHelp],
+  )
+  // Opened while the recipes are missing: try them again once; if that fails as well, say so.
+  const askedAgain = useRef(false)
+  useEffect(() => {
+    if (!open || !recipesFailed) {
+      if (!open) askedAgain.current = false
+      return
+    }
+    if (!askedAgain.current) {
+      askedAgain.current = true
+      setRecipesTry(n => n + 1)
+    } else failHelp()
+  }, [open, recipesFailed, failHelp])
 
   // Help follows the person to the page a link took them to; Back (POP) and Close (POP or REPLACE) are left alone.
   const lastOpen = useRef<string | null>(null)
@@ -84,8 +132,9 @@ export function HelpHost() {
   const carrying = !open && navigationType === 'PUSH' ? lastOpen.current : null
   if ((!open && carrying === null) || !user || !recipes) return null
   return (
+    <LoadBoundary key={panel.attempt} onError={onPanelLoadError}>
     <Suspense fallback={null}>
-      <HelpPanel
+      <panel.Component
         recipes={recipes}
         role={user.role}
         pathname={location.pathname}
@@ -96,5 +145,6 @@ export function HelpHost() {
         onShowHowItWorks={dismissed && howItWorksFor(user.role).length ? () => setDismissed(false) : undefined}
       />
     </Suspense>
+    </LoadBoundary>
   )
 }

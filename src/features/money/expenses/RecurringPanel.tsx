@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Check, Pencil, Plus, Repeat } from 'lucide-react'
+import { pkr } from '@/lib/formRules'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
@@ -46,7 +47,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
     record.mutate(
       { template: t, id: crypto.randomUUID(), period, paidOn: recurringPaidOn(t, today), paidVia: viaOf(t) },
       {
-        onSuccess: () => toast.toast({ title: `Recorded ${t.label}`, body: `PKR ${t.amount.toLocaleString('en-US')} · ${monthKeyLabel(period)}`, tone: 'success' }),
+        onSuccess: () => toast.toast({ title: `Recorded ${t.label}`, body: `${pkr(t.amount)} · ${monthKeyLabel(period)}`, tone: 'success' }),
         onError: e => {
           const m = mapPgError(e, { entity: 'expense' })
           // (recurring_id, period) is unique: a second press, or another tab, finds it already recorded.
@@ -75,7 +76,7 @@ export function RecurringPanel({ categories, today }: { categories: readonly Cat
       }
     }
     setRecordingAll(false)
-    if (done > 0) toast.toast({ title: `Recorded ${done} recurring ${done === 1 ? 'expense' : 'expenses'}`, body: `PKR ${total.toLocaleString('en-US')} · ${monthKeyLabel(period)}`, tone: 'success' })
+    if (done > 0) toast.toast({ title: `Recorded ${done} recurring ${done === 1 ? 'expense' : 'expenses'}`, body: `${pkr(total)} · ${monthKeyLabel(period)}`, tone: 'success' })
     if (failed.length > 0) toast.toast({ title: `Couldn't record ${failed.join(', ')}`, body: 'Nothing else was changed. Try again.', tone: 'danger' })
   }
 

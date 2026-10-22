@@ -5,6 +5,7 @@ import { useSession } from '@/app/session'
 import { useMyDetails, useSetPhone } from '@/features/settings/hooks'
 import type { MyDetails } from '@/features/settings/api'
 import { PHONE_MAX } from '@/features/settings/teamModel'
+import { phoneText } from '@/lib/formRules'
 import { Button } from '@/ui/Button'
 import { PageHeader } from '@/ui/PageHeader'
 import { EmptyState } from '@/ui/EmptyState'
@@ -17,7 +18,7 @@ import { Form, FormField } from '@/ui/form/Form'
 import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 
-const schema = z.object({ phone: z.string().trim().max(PHONE_MAX, `Keep the phone number under ${PHONE_MAX} characters.`) })
+const schema = z.object({ phone: z.string().trim().max(PHONE_MAX, `Keep the phone number under ${PHONE_MAX} characters.`).pipe(phoneText) })
 
 /**
  * Your details: the signed-in person's own row, for every role. Name, email and job title are set by

@@ -18,3 +18,20 @@ export function rememberMenuTrigger(menu: HTMLElement | null): void {
 export function recentMenuTrigger(): HTMLElement | null {
   return last && last.isConnected && Date.now() - at < 2000 ? last : null
 }
+
+/**
+ * Where focus goes back to when the dialog closes. Opened from a menu item, the item is gone by then (the menu closed), so
+ * focus would fall to <body> (WCAG 2.4.3): return to the button that opened the menu (the one whose aria-controls names it).
+ */
+export function returnTarget(active: Element | null): HTMLElement | null {
+  const fromMenu = recentMenuTrigger()
+  if (!(active instanceof HTMLElement) || active === document.body) return fromMenu
+  if (!active.closest('[role="menu"]')) return active
+  if (fromMenu) return fromMenu
+  for (let x: HTMLElement | null = active; x; x = x.parentElement) {
+    if (!x.id) continue
+    const trigger = document.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(x.id)}"]`)
+    if (trigger) return trigger
+  }
+  return document.querySelector<HTMLElement>('[aria-expanded="true"][aria-haspopup]') ?? active
+}

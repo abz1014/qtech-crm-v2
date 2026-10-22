@@ -1,4 +1,4 @@
-import { createElement, forwardRef, lazy, type ComponentProps, type ComponentType, type LazyExoticComponent } from 'react'
+import { createElement, forwardRef, lazy, useCallback, useMemo, useState, type ComponentProps, type ComponentType, type LazyExoticComponent } from 'react'
 import { PlainError } from '@/lib/errors/plainError'
 import { hasDirtyForms } from '@/lib/pwa/dirtyForms'
 import { applyUpdate } from '@/lib/pwa/updates'
@@ -38,7 +38,7 @@ export function isChunkLoadError(err: unknown): boolean {
 }
 
 export class StaleAppError extends PlainError {
-  constructor(message: string, code: 'offline' | 'unsaved' | 'reload-spent') {
+  constructor(message: string, code: 'offline' | 'unsaved' | 'reload-spent' | 'not-loaded') {
     super(message, code)
     this.name = 'StaleAppError'
   }
@@ -47,6 +47,7 @@ export class StaleAppError extends PlainError {
 const OFFLINE = 'You are offline, and this part of Q-Tech has not been downloaded to this device yet. Try again when you have signal.'
 const UNSAVED = 'Q-Tech has been updated. Save what you are typing, then reload the page and try again.'
 const SPENT = 'Q-Tech has been updated. Close the app (or the tab) and open it again, then try once more.'
+const NOT_LOADED = 'This part of Q-Tech could not be downloaded. Check your signal, then try again.'
 
 function readMark(): boolean {
   try {
@@ -89,7 +90,15 @@ async function recover(): Promise<never> {
  * `await importWithReload(() => import('./heavy'))`: a dynamic import that survives a deploy. Errors that are not
  * about loading the chunk (the module itself threw) are rethrown untouched.
  */
-export async function importWithReload<T>(load: () => Promise<T>): Promise<T> {
+export interface ImportOptions {
+  /**
+   * false: never reload the page, just throw the plain sentence. For loads nobody asked for (an idle-time preload): a
+   * reload the person did not cause would be a surprise, and the failure must stay local to the part that needed the chunk.
+   */
+  reload?: boolean
+}
+
+export async function importWithReload<T>(load: () => Promise<T>, { reload = true }: ImportOptions = {}): Promise<T> {
   let mod: T
   try {
     mod = await load()
@@ -98,6 +107,10 @@ export async function importWithReload<T>(load: () => Promise<T>): Promise<T> {
       mod = await load()
     } catch (err) {
       if (!isChunkLoadError(err)) throw err
+      if (!reload) {
+        const offline = typeof navigator !== 'undefined' && navigator.onLine === false
+        throw new StaleAppError(offline ? OFFLINE : NOT_LOADED, offline ? 'offline' : 'not-loaded')
+      }
       return recover()
     }
   }
@@ -107,13 +120,13 @@ export async function importWithReload<T>(load: () => Promise<T>): Promise<T> {
 
 /** React.lazy with the same recovery. A drop-in for `lazy` in the route table. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the same constraint React.lazy itself uses
-export function lazyWithReload<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>): LazyExoticComponent<T> {
+export function lazyWithReload<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>, options?: ImportOptions): LazyExoticComponent<T> {
   // React.lazy keeps a failed download for good. A part that could not be downloaded (no signal) is tried again the next time it
   // is drawn (ChunkBoundary draws it again when the phone is back online): each failure swaps in a fresh lazy component.
   let current: LazyExoticComponent<T>
   const make = (): LazyExoticComponent<T> =>
     lazy(() =>
-      importWithReload(factory).catch((err: unknown) => {
+      importWithReload(factory, options).catch((err: unknown) => {
         current = make()
         throw err
       }),
@@ -121,4 +134,19 @@ export function lazyWithReload<T extends ComponentType<any>>(factory: () => Prom
   current = make()
   const Retrying = forwardRef<unknown, ComponentProps<T>>((props, ref) => createElement(current, { ...props, ref } as ComponentProps<T>))
   return Retrying as unknown as LazyExoticComponent<T>
+}
+
+/**
+ * A lazy component that can be tried again. React.lazy keeps a failed import for good, so `retry()` makes a fresh one.
+ * Pair it with <LoadBoundary key={attempt}> (src/ui/LoadBoundary.tsx) so a chunk that cannot load (no signal) breaks
+ * only that part, not the whole app (hunt HE-2). The first attempt is often an idle-time preload: it never reloads the
+ * page (`reload: false`); an attempt the person asked for (retry) may, under importWithReload's usual rules.
+ * `factory` must be stable (a module-level function).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the same constraint React.lazy itself uses
+export function useRetryableLazy<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  const [attempt, setAttempt] = useState(0)
+  const Component = useMemo(() => lazyWithReload(factory, { reload: attempt > 0 }), [factory, attempt])
+  const retry = useCallback(() => setAttempt(a => a + 1), [])
+  return { Component, attempt, retry }
 }

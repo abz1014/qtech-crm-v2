@@ -8,7 +8,7 @@ names from dorny/paths-filter (CHANGED), and RUN_ALL ("true" runs every suite). 
 """
 import json, math, os, re, sys
 
-SHARDS_MAX = int(os.environ.get("E2E_MAX_SHARDS", "5"))
+SHARDS_MAX = int(os.environ.get("E2E_MAX_SHARDS", "7"))  # 7 since the hunt suites joined: 5 x 30 min no longer held a full run
 TARGET_SECONDS = 200  # one shard should not take more than about this much test time
 
 suites, weights = [], {}
