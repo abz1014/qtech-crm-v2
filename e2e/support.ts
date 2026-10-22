@@ -20,6 +20,12 @@ export interface Scene {
 
 type Steps = (page: Page) => Promise<void>
 
+/**
+ * The scene page is lazy-loaded and the toast is raised from an effect, so its countdown timer can be set after
+ * openGallery returns. Running the paused clock before then moves nothing (toast-settled was photographed at "1s").
+ */
+const toastShown = (page: Page) => page.getByRole('status').first().waitFor()
+
 /** Interactions that open a scene. A scene not listed here is photographed as it loads. */
 const STEPS: Record<string, Steps> = {
   'palette-typing': async page => {
@@ -31,17 +37,21 @@ const STEPS: Record<string, Steps> = {
     await page.clock.runFor(600)
   },
   'toast-settled': async page => {
+    await toastShown(page)
     await page.clock.runFor(1300)
   },
   // Paused: four seconds of the countdown go by, then the pointer rests on the toast and it stops at 6 s.
   'toast-paused': async page => {
+    await toastShown(page)
     await page.clock.runFor(4000)
     await page.getByRole('status').first().hover()
   },
   'toast-two': async page => {
+    await toastShown(page)
     await page.clock.runFor(2000)
   },
   'toast-phone': async page => {
+    await toastShown(page)
     await page.clock.runFor(1000)
   },
   'infotip-open': async page => {

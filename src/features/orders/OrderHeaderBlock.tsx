@@ -27,6 +27,7 @@ import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton
 import { RecordPaymentDialog } from '@/features/money/payments/RecordPaymentDialog'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow, OrderMoney, PersonRow } from '@/features/orders/api'
 import { useCancelOrder, useUpdateOrder } from '@/features/orders/hooks'
+import { useInFlight } from '@/lib/useInFlight'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { termsLabel } from '@/features/settings/companyProfile'
 import { TapDate, TapText } from '@/features/orders/TapEdit'
@@ -387,32 +388,35 @@ export function OrderHeaderBlock({
 export function OrderMoreMenu({ order, touch = false, recordPayment = false }: { order: OrderHeader; touch?: boolean; /** Admin: Record payment lives here before an invoice (an advance) or once paid. */ recordPayment?: boolean }) {
   const { toast } = useToast()
   const cancel = useCancelOrder(order.id)
+  const once = useInFlight() // HW-15: one cancel / reopen per press, however many clicks
   const [cancelling, setCancelling] = useState(false)
   const [paying, setPaying] = useState(false)
   const cancelled = order.cancelledOn !== null
   const ref = orderRef(order.number)
   const today = businessToday()
 
-  const reopen = async () => {
-    const before = { cancelled_on: order.cancelledOn, cancel_reason: order.cancelReason }
-    try {
-      // the reason goes with the date: the database refuses a reason on an active order
-      await cancel.mutateAsync({ cancelled_on: null, cancel_reason: null })
-      toast({
-        title: 'Order reopened',
-        body: ref,
-        undo: {
-          onUndo: async () => {
-            await cancel.mutateAsync(before)
+  const reopen = () =>
+    once(async () => {
+      if (order.cancelledOn === null) return
+      const before = { cancelled_on: order.cancelledOn, cancel_reason: order.cancelReason }
+      try {
+        // the reason goes with the date: the database refuses a reason on an active order
+        await cancel.mutateAsync({ cancelled_on: null, cancel_reason: null })
+        toast({
+          title: 'Order reopened',
+          body: ref,
+          undo: {
+            onUndo: async () => {
+              await cancel.mutateAsync(before)
+            },
+            settledTitle: 'Order reopened',
+            undoneTitle: 'Cancelled again',
           },
-          settledTitle: 'Order reopened',
-          undoneTitle: 'Cancelled again',
-        },
-      })
-    } catch (err) {
-      toast({ title: 'Could not reopen', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
-    }
-  }
+        })
+      } catch (err) {
+        toast({ title: 'Could not reopen', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
+      }
+    })
 
   return (
     <>
@@ -438,26 +442,30 @@ export function OrderMoreMenu({ order, touch = false, recordPayment = false }: {
           order={order}
           busy={cancel.isPending}
           onClose={() => setCancelling(false)}
-          onConfirm={async reason => {
-            const before = { cancelled_on: order.cancelledOn, cancel_reason: order.cancelReason }
-            try {
-              await cancel.mutateAsync({ cancelled_on: today, cancel_reason: reason })
-              setCancelling(false)
-              toast({
-                title: 'Order cancelled',
-                body: ref,
-                undo: {
-                  onUndo: async () => {
-                    await cancel.mutateAsync(before)
+          onConfirm={reason =>
+            once(async () => {
+              // idempotent: an order already cancelled (a second press that slipped through) is not written again
+              if (order.cancelledOn !== null) return setCancelling(false)
+              const before = { cancelled_on: order.cancelledOn, cancel_reason: order.cancelReason }
+              try {
+                await cancel.mutateAsync({ cancelled_on: today, cancel_reason: reason })
+                setCancelling(false)
+                toast({
+                  title: 'Order cancelled',
+                  body: ref,
+                  undo: {
+                    onUndo: async () => {
+                      await cancel.mutateAsync(before)
+                    },
+                    settledTitle: 'Order cancelled',
+                    undoneTitle: 'Order is active again',
                   },
-                  settledTitle: 'Order cancelled',
-                  undoneTitle: 'Order is active again',
-                },
-              })
-            } catch (err) {
-              toast({ title: 'Could not cancel the order', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
-            }
-          }}
+                })
+              } catch (err) {
+                toast({ title: 'Could not cancel the order', body: mapPgError(err, { entity: 'order' }).message, tone: 'danger' })
+              }
+            })
+          }
         />
       ) : null}
     </>
@@ -549,7 +557,7 @@ function PrimaryButton({
       return <CopyReminderButton order={order} money={orderMoney} className={cls} />
     case 'mark-done':
       return (
-        <Button variant="primary" icon={CircleCheck} className={cls} onClick={() => void markDone.run()} busy={markDone.pending} busyLabel="Saving">
+        <Button variant="primary" icon={CircleCheck} className={cls} onClick={markDone.run} busy={markDone.pending} busyLabel="Saving">
           {action.label}
         </Button>
       )
@@ -678,7 +686,7 @@ function EngineerJob({
         <div className="flex flex-wrap items-center gap-2 border-t pt-3">
           {/* before the planned date "Mark done today" is still one tap, just not the page's green button */}
           {open && primary?.kind !== 'mark-done' ? (
-            <Button icon={CircleCheck} onClick={() => void markDone.run()} busy={markDone.pending} busyLabel="Saving">
+            <Button icon={CircleCheck} onClick={markDone.run} busy={markDone.pending} busyLabel="Saving">
               Mark done today
             </Button>
           ) : null}
@@ -698,7 +706,7 @@ function CancelDialog({
   order: OrderHeader
   busy: boolean
   onClose: () => void
-  onConfirm: (reason: CancelReason) => void | Promise<void>
+  onConfirm: (reason: CancelReason) => Promise<unknown>
 }) {
   const [reason, setReason] = useState<CancelReason | null>(null)
   const { toast } = useToast()
@@ -716,7 +724,7 @@ function CancelDialog({
             <Button data-cancel onClick={onClose} disabled={busy}>
               Keep the order
             </Button>
-            <Button variant="danger" busy={busy} busyLabel="Cancelling" disabled={!reason} onClick={() => reason && void onConfirm(reason)}>
+            <Button variant="danger" busy={busy} busyLabel="Cancelling" disabled={!reason} onClick={() => (reason ? onConfirm(reason) : undefined)}>
               Cancel order
             </Button>
           </>

@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
@@ -51,6 +51,19 @@ function usePeriod() {
   const askedKey = params.get('period') ?? (kind === 'month' ? params.get('month') : null)
   const period = useMemo(() => chosenPeriod(kind, askedKey, today), [kind, askedKey, today])
   const now = periodOf(kind, today.slice(0, 7))
+  // HW-22: a period that is not real or still to come falls back to now; the address then names the period actually shown
+  useEffect(() => {
+    if (askedKey === null || askedKey === period.key) return
+    setParams(
+      prev => {
+        const next = new URLSearchParams(prev)
+        next.set('by', period.kind)
+        next.set('period', period.key)
+        return next
+      },
+      { replace: true },
+    )
+  }, [askedKey, period, setParams])
   const set = (p: Period) => {
     const next = new URLSearchParams(params)
     next.set('by', p.kind)

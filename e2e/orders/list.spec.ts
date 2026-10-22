@@ -61,7 +61,8 @@ test.describe('O04: the orders list', () => {
     await expect(page.getByRole('tab', { name: 'Active' })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Done' })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Cancelled' })).toBeVisible()
-    await expect(page.getByText(/^\d+ need you · \d+ waiting$/)).toBeVisible()
+    // HW-32: "need you" is the Orders badge's own number, so the page and the nav agree
+    await expect(page.getByText(/^\d+ need you · \d+ active$/)).toBeVisible()
     // one plain next step per row instead of four chips
     // the supplier is named, and late goods say by how many days (b was expected 2 days ago)
     await expect(row(page, s.orders.a)).toContainText(`Place the order with ${s.supplierName}`)

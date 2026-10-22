@@ -40,6 +40,7 @@ import {
   type SuggestionSet,
   type ReplyDraft,
 } from '@/features/rfqs/lib'
+import { parseReplyPrice, replyPriceProblem } from '@/features/rfqs/lib/replyPrice'
 
 /*
  * A supplier's reply (R07; grade-B R2 and R4, 2026-10-22). The suppliers are listed ONCE, in "Suppliers asked" (SuppliersAsked.tsx):
@@ -153,10 +154,15 @@ export function SupplierReplyDialog({
   const [changeCurrency, setChangeCurrency] = useState(false)
   const [pasteMode, setPasteMode] = useState<null | 'box' | 'suggest'>(null)
   const [suggestions, setSuggestions] = useState<SuggestionSet | null>(null)
+  /** What was typed in each price box, for the reason shown when it is not a price (HW-48). */
+  const [priceText, setPriceText] = useState<Record<string, string>>({})
 
   const hasLines = inquiry.lines.length > 0
   const declinedAll = Boolean(inquiry.noOfferOn) && !hasLines
   const dirty = isReplyDirty(existing, draft)
+  // Text in a price box that is not a price yet ("about 12", or "PKR 1," half typed) is typed work too: closing asks first, and
+  // the guard does not switch off and on again between keystrokes (HW-48).
+  const unread = items.some(it => !inquiry.itemDeclines[it.id] && typeof draft.prices[it.id] !== 'number' && replyPriceProblem(priceText[it.id] ?? '') !== null)
   const typed = Object.values(draft.prices).filter(p => typeof p === 'number' && p > 0).length
   const others = inquiries.filter(i => i.id !== inquiry.id)
 
@@ -295,7 +301,7 @@ export function SupplierReplyDialog({
   const autofocusId = focusItemId ?? items.find(it => !inquiry.itemDeclines[it.id])?.id
 
   return (
-    <Dialog open onOpenChange={o => (o ? null : onClose())} dirty={dirty} busy={save.isPending}>
+    <Dialog open onOpenChange={o => (o ? null : onClose())} dirty={dirty || unread} busy={save.isPending}>
       <DialogContent
         size="lg"
         title={inquiry.supplierName}
@@ -374,6 +380,8 @@ export function SupplierReplyDialog({
                   const q = qtyText(it.qty, it.unit)
                   const reason = inquiry.itemDeclines[it.id]
                   const price = draft.prices[it.id]
+                  // A number in the draft is fine as it is (a pasted reply or a saved price may have replaced the text typed).
+                  const problem = reason || (typeof price === 'number' && price > 0) ? null : replyPriceProblem(priceText[it.id] ?? '')
                   return (
                     <li key={it.id} className="grid content-start gap-1">
                       <div className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_170px]">
@@ -393,8 +401,18 @@ export function SupplierReplyDialog({
                             id={replyInputId(inquiry.id, it.id)}
                             data-autofocus={it.id === autofocusId ? '' : undefined}
                             aria-label={`Price for item ${it.number} from ${inquiry.supplierName}`}
+                            aria-invalid={problem ? true : undefined}
+                            aria-describedby={problem ? `${replyInputId(inquiry.id, it.id)}-problem` : undefined}
                             value={price ?? null}
-                            onChange={v => setDraft(d => ({ ...d, prices: { ...d.prices, [it.id]: v } }))}
+                            // HW-48: the typed text is read here (onInput), so "PKR 1,200/-" counts as 1200 and text that is
+                            // not a price gets a reason below the box; NumberInput's own reading would only say null.
+                            onChange={() => undefined}
+                            onInput={e => {
+                              const text = e.currentTarget.value
+                              const n = parseReplyPrice(text)
+                              setPriceText(t => ({ ...t, [it.id]: text }))
+                              setDraft(d => ({ ...d, prices: { ...d.prices, [it.id]: n !== null && n >= 0 ? n : null } }))
+                            }}
                             prefix={draft.currency}
                             placeholder="Price"
                             min={0}
@@ -407,6 +425,11 @@ export function SupplierReplyDialog({
                           />
                         )}
                       </div>
+                      {problem ? (
+                        <p id={`${replyInputId(inquiry.id, it.id)}-problem`} className="text-sm font-medium text-tone-danger-fg sm:text-right">
+                          {problem}
+                        </p>
+                      ) : null}
                       {!reason && typeof price === 'number' && price > 0 ? <PricePreview itemId={it.id} amount={price} currency={draft.currency} others={others} rates={rates} /> : null}
                     </li>
                   )

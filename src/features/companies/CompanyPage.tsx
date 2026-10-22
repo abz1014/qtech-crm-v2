@@ -100,7 +100,8 @@ export function CompanyPage() {
       </Shell>
     )
   }
-  return <Loaded company={company.data} />
+  // keyed: what the page first showed (becameSupplierHere) belongs to one company
+  return <Loaded key={company.data.id} company={company.data} />
 }
 
 function AllCompaniesButton() {
@@ -194,6 +195,9 @@ function Loaded({ company }: { company: CompanyDetail }) {
   // A supplier-only company has no plants to list until one is added; a customer always shows its sites.
   const showSites = company.isCustomer || !company.isSupplier || (sites.data?.length ?? 0) > 0 || sites.isPending
   const supplierOnly = supplierSide && !company.isCustomer
+  // Adding the first brand (or enquiry) makes a company with no role a supplier while the page is open: its Details move into
+  // "More about this supplier". Open the fold then, or the brand just added vanishes from under the person.
+  const [becameSupplierHere] = useState(() => !supplierOnly)
   // The page's one green action: New RFQ with this company as the customer; on a supplier-only page, New RFQ with this supplier
   // already chosen to ask for prices (IntakeScreen reads ?supplier=). A company that is both keeps the second in the More menu.
   const newRfq = () => navigate(supplierOnly ? `/rfqs/new?supplier=${company.id}` : `/rfqs/new?company=${company.id}`)
@@ -293,7 +297,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
   )
   // A supplier-only page: its sites, brands and details are looked up now and then, so they fold away under the history.
   const moreAbout = (
-    <MoreAbout>
+    <MoreAbout defaultOpen={becameSupplierHere}>
       {sitesPanel}
       {detailsPanel}
       {notesPanel}
@@ -512,10 +516,13 @@ function PhoneLinks({ name, phone }: { name: string; phone: string }) {
   )
 }
 
-/** "More about this supplier": sites, brands carried and details, folded (closed by default) under the supplier's history. */
-function MoreAbout({ children }: { children: ReactNode }) {
+/**
+ * "More about this supplier": sites, brands carried and details, folded (closed by default) under the supplier's history.
+ * defaultOpen: the page became supplier-only while it was open (see becameSupplierHere).
+ */
+function MoreAbout({ children, defaultOpen = false }: { children: ReactNode; defaultOpen?: boolean }) {
   return (
-    <details className="group rounded border bg-surface">
+    <details className="group rounded border bg-surface" open={defaultOpen || undefined}>
       <summary className="flex min-h-touch cursor-pointer list-none items-center gap-2 rounded px-5 py-3 text-base font-semibold hover:bg-sunken [&::-webkit-details-marker]:hidden">
         <Icon icon={ChevronRight} size="sm" className="text-fg-muted transition-transform duration-fast group-open:rotate-90" />
         More about this supplier

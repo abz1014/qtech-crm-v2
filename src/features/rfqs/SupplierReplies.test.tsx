@@ -114,4 +114,23 @@ describe('SupplierReplyDialog', () => {
     await user.click(within(screen.getByRole('dialog', { name: 'Orient Analytical' })).getByRole('button', { name: 'Close' }))
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('HW-48: a price that is not a number says why next to the box; "PKR 1,200/-" is read as 1200', async () => {
+    installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    renderDialog()
+    const box = screen.getByRole('textbox', { name: 'Price for item 1 from Orient Analytical' })
+    await user.type(box, '-5')
+    expect(screen.getByText("A price can't be below zero.")).toBeInTheDocument()
+    expect(box).toHaveAttribute('aria-invalid', 'true')
+    // The typed text is replaced in one go (selected, then typed over), as a person does; the box is never left empty between.
+    await user.type(box, 'about 12', { initialSelectionStart: 0, initialSelectionEnd: 2 })
+    expect(screen.getByText('Type the price as a number, like 1200.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save reply' })).toBeDisabled()
+    await user.type(box, 'PKR 1,200/-', { initialSelectionStart: 0, initialSelectionEnd: 8 })
+    expect(screen.queryByText(/Type the price as a number/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Save reply' })).toBeEnabled()
+    await user.tab()
+    expect(box).toHaveValue('1,200')
+  })
 })

@@ -17,8 +17,10 @@ import type { Role } from '@/features/today/types'
  * The top bar and the phone tabs draw them with NeedsCount (", 4 need you" for screen readers).
  * A destination with nothing to do shows no number, never a 0. An engineer gets no Money count: Today never reads a money fact
  * for them. No request of its own: Today's list is already loaded for the Today count.
+ * The shell also hands them to its pages (navCountsContext), so the Orders page's "N need you" is the Orders badge's number.
+ * `ready`: Today's list has loaded (before that every count is missing, which is not the same as nothing to do).
  */
-export function useNavCounts(user: SessionUser): Partial<Record<NavKey, number>> {
+export function useNavCounts(user: SessionUser): { counts: Partial<Record<NavKey, number>>; ready: boolean } {
   const today = useTodayView({ id: user.id, role: user.role as Role }, useBusinessToday())
   const counts: Partial<Record<NavKey, number>> = {}
   if (today.view) {
@@ -29,5 +31,5 @@ export function useNavCounts(user: SessionUser): Partial<Record<NavKey, number>>
     counts.rfqs = section('rfqs')
     if (user.role === 'admin' || user.role === 'sales') counts.money = section('money')
   }
-  return counts
+  return { counts, ready: today.view !== null }
 }

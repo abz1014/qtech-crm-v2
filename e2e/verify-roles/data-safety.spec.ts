@@ -317,7 +317,11 @@ test('BUG-RV-04: the command palette\'s recent items are cleared on sign-out and
   await palette.getByRole('combobox').fill(world.invoice.number)
   await palette.getByRole('option', { name: new RegExp(world.invoice.number) }).first().click()
   await expect(page).toHaveURL(/\/money\/gst-register\?invoice=/)
+  // The invoice opens in a sheet over the register; wait for it, or Escape lands before it and the sheet hides the account menu.
+  const sheet = page.getByRole('dialog', { name: new RegExp(`Invoice ${world.invoice.number}`) })
+  await expect(sheet).toBeVisible()
   await page.keyboard.press('Escape')
+  await expect(sheet).toBeHidden()
   await signOut(page)
   // Recents are kept per person (qtech.palette.recent.<user id>); sign-out removes every one, and the old shared key.
   const after = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.palette.recent')).join(',') || null)
@@ -332,15 +336,17 @@ test('BUG-RV-04: the command palette\'s recent items are cleared on sign-out and
 
 test('New RFQ drafts (post-merge) are kept per person and cleared on sign-out', async ({ page }) => {
   await openAs(page, 'sales', '/rfqs/new')
+  // The screen listens for a paste once it is drawn: pasting before then went nowhere (flaky on CI).
+  await expect(page.getByRole('heading', { name: 'New RFQ', level: 1 })).toBeVisible()
   // A pasted enquiry, as a person would (the intake listens for paste anywhere on the screen).
   await page.evaluate(text => {
     const dt = new DataTransfer()
     dt.setData('text/plain', text)
     document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
   }, `${world.tag} enquiry\n2 x Rosemount 3051 pressure transmitter\n1 x Yokogawa EJA110E`)
-  await page.waitForTimeout(1500)
-  const keys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.rfqs.intakeDraft.')))
-  expect(keys, 'one draft, keyed by the person').toEqual([`qtech.rfqs.intakeDraft.${IDS.sales}`])
+  await expect
+    .poll(() => page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.rfqs.intakeDraft.'))), { message: 'one draft, keyed by the person' })
+    .toEqual([`qtech.rfqs.intakeDraft.${IDS.sales}`])
   await page.goto('/today')
   await signOut(page)
   expect(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('qtech.rfqs.intakeDraft.')))).toEqual([])

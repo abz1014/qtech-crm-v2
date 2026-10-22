@@ -27,7 +27,7 @@ const KINDS: readonly string[] = ['company', 'contact', 'rfq', 'order', 'item', 
 const ROLES: readonly string[] = ['customer', 'supplier', 'both', 'prospect']
 
 export async function searchAll(text: string, signal?: AbortSignal, limit = 6): Promise<SearchHit[]> {
-  const q = text.trim()
+  const q = text.trim().replace(/\s+/g, ' ')
   if (!q) return []
   const db = requireSupabase()
   let req = db.rpc('search_all', { q, lim: limit })

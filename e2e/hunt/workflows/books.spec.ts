@@ -1179,7 +1179,6 @@ test('HW-17: after Reset password the open session keeps working (the dialog pro
     // "Signed out on every device": the session made before the reset must not read data any more. (Run 2: its refresh token IS
     // refused, but the access token it already holds keeps working until it expires, up to an hour.)
     const read = await fetch(`${API_URL}/rest/v1/companies?select=id&limit=1`, { headers: { apikey: ANON_KEY, authorization: `Bearer ${accessToken}` } })
-    test.fail(true, 'HW-17: admin-users reset_password changes the password but the open session keeps reading data on its access token until it expires (the dialog says they are signed out on every device)')
     expect(read.status, 'the pre-reset session is refused').toBeGreaterThanOrEqual(400)
   } finally {
     await ctx.close()
@@ -1195,6 +1194,8 @@ test("HW-18: Targets: typing 'abc' + Enter in a cell that holds a target removes
   try {
     const page = await ctx.newPage()
     await page.goto('/settings/targets')
+    // the grid opens on this quarter and the next (5f7d305); the year view, with Next year, is behind "Show earlier quarters"
+    await page.getByRole('button', { name: 'Show earlier quarters' }).click()
     await page.getByRole('button', { name: 'Next year' }).click()
     await page.getByRole('button', { name: new RegExp(`^Test Engineer, Q1 ${Y1} target`) }).click()
     const input = page.getByRole('textbox', { name: new RegExp(`Test Engineer, Q1 ${Y1} target in rupees`) })
@@ -1225,7 +1226,6 @@ test("HW-21: the recurring-expense form shows the developer field name 'startMon
     await d.getByRole('textbox', { name: 'Starts in' }).fill('abc')
     await d.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(d.getByText(/Fix 1 field to continue/)).toBeVisible() // the refusal rendered
-    test.fail(true, "HW-21: the 'Starts in' error is the schema's default message with the field key, not a sentence for people")
     await expect(d, 'no developer field name in the message').not.toContainText('startMonth', { timeout: 2_000 })
   } finally {
     await ctx.close()
@@ -1239,7 +1239,6 @@ test('HW-22: In vs out with ?period=2099-01 silently shows the current month whi
     await page.goto('/money/reports/in-out?by=month&period=2099-01')
     await page.getByTestId('cash-in').waitFor()
     await expect(page.getByRole('group', { name: 'Period' })).toContainText(M0.label) // it shows the current month
-    test.fail(true, 'HW-22: chosenPeriod falls back to now but the address is not corrected (InOutPage usePeriod)')
     expect(new URL(page.url()).searchParams.get('period'), 'the address names the period shown').toBe(M0.key)
   } finally {
     await ctx.close()
@@ -1255,7 +1254,6 @@ test('HW-23: Add expense: reload with the dialog half filled loses the typed amo
     await amount.fill('8765')
     await page.reload()
     await expect(amount).toBeVisible() // the dialog comes back after the reload
-    test.fail(true, 'HW-23: nothing keeps a draft and nothing warns before the reload, so the amount is lost')
     await expect(amount, 'the typed amount survives the reload').toHaveValue(/8,?765/, { timeout: 5_000 })
   } finally {
     await ctx.close()

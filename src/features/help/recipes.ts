@@ -143,13 +143,15 @@ function haystack(r: Recipe): string {
 /**
  * Search, for the panel and the palette: every typed word must appear (title, keywords or steps). Title matches first.
  * "how", "do", "i" and "help" on their own are not search words, so "how do I quote" finds the quotation recipes and
- * "help" alone lists everything.
+ * "help" alone lists everything. Text with no letter or digit we can search by ("%", "_", Urdu) finds nothing, not everything.
  */
 export function searchRecipes(recipes: readonly Recipe[], query: string): Recipe[] {
-  const words = query
+  const tokens = query
     .toLowerCase()
     .split(/[^a-z0-9&']+/)
-    .filter(w => w && !STOP.has(w))
+    .filter(w => /[a-z0-9]/.test(w))
+  if (!tokens.length) return []
+  const words = tokens.filter(w => !STOP.has(w))
   if (!words.length) return recipes.slice()
   const scored = recipes
     .map(r => {
