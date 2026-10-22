@@ -52,17 +52,21 @@ export interface OrderHeader {
   } | null
 }
 
-type Maybe<T> = { data: T | null; error: { code?: string; message: string } | null }
-const none = Promise.resolve({ data: null, error: null })
-
 const STATE_NO_MONEY = 'order_id, lifecycle, goods_state, commissioning_state, data_trust'
 const STATE_WITH_MONEY = 'order_id, lifecycle, goods_state, commissioning_state, invoicing_state, data_trust, net, gst, gross, invoiced'
 
 /** The order, its people and its derived states. Null when there is no such order. `money` is false for an engineer. */
 export async function getOrderHeader(id: string, money: boolean): Promise<OrderHeader | null> {
   const db = requireSupabase()
+  // The customer, site, contact and owner come embedded in the order's own read, not in a second round after it (perf/lcp: the
+  // customer's name is the page's largest text, and a second round trip on a phone's mobile data held it back). Row Level Security
+  // applies to an embedded row as to its own read: one the person may not see comes back null, as its own read did.
   const [orderRes, stateRes] = await Promise.all([
-    db.from('orders').select('*').eq('id', id).maybeSingle(),
+    db
+      .from('orders')
+      .select('*, company:companies!orders_company_id_fkey(name), site:company_sites!orders_site_id_fkey(name, address), contact:contacts!orders_contact_id_fkey(name, phone), owner:users!orders_owner_id_fkey(id, name)')
+      .eq('id', id)
+      .maybeSingle(),
     db
       .from('v_order_state')
       .select(money ? STATE_WITH_MONEY : STATE_NO_MONEY)
@@ -71,18 +75,17 @@ export async function getOrderHeader(id: string, money: boolean): Promise<OrderH
   ])
   const o = unwrap(orderRes)
   if (!o) return null
-  const [company, site, contact, owner] = await Promise.all([
-    db.from('companies').select('name').eq('id', o.company_id).maybeSingle(),
-    o.site_id ? db.from('company_sites').select('name, address').eq('id', o.site_id).maybeSingle() : none,
-    o.contact_id ? db.from('contacts').select('name, phone').eq('id', o.contact_id).maybeSingle() : none,
-    o.owner_id ? db.from('users').select('id, name').eq('id', o.owner_id).maybeSingle() : none,
-  ])
+  const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null))
+  const company = one(o.company)
+  const site = o.site_id ? one(o.site) : null
+  const contact = o.contact_id ? one(o.contact) : null
+  const owner = o.owner_id ? one(o.owner) : null
   const s = unwrap(stateRes) as Partial<OrderStateRow> | null
   return {
     id: o.id,
     number: o.number,
     companyId: o.company_id,
-    companyName: unwrap(company)?.name ?? 'Unknown company',
+    companyName: company?.name ?? 'Unknown company',
     rfqId: o.rfq_id,
     customerPo: o.customer_po_number,
     orderedOn: o.ordered_on,
@@ -94,9 +97,9 @@ export async function getOrderHeader(id: string, money: boolean): Promise<OrderH
     cancelReason: o.cancel_reason,
     imported: o.legacy_source !== null,
     notes: o.notes,
-    site: unwrap(site as Maybe<NonNullable<OrderHeader["site"]>>),
-    contact: unwrap(contact as Maybe<NonNullable<OrderHeader["contact"]>>),
-    owner: unwrap(owner as Maybe<NonNullable<OrderHeader["owner"]>>),
+    site,
+    contact,
+    owner,
     state: s
       ? {
           lifecycle: s.lifecycle ?? null,

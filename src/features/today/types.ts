@@ -125,6 +125,13 @@ export interface LegFact {
   lastChasedOn: string | null
   lastChasedBy?: string | null
   chaseCount: number
+  /**
+   * Imported from the old CRM (orders.legacy_source is set). Owner decision 2026-10-22 (1b): its order and invoicing tasks are
+   * not today's work until the one-off "Review imported" (phase 2) says the order is still live, because the imported invoices
+   * are not linked to their orders yet (so "still to invoice" is not true). They sit in Today's grey "Imported, to review" fold,
+   * never counted. A late payment on an invoice is not one of them: it stays.
+   */
+  legacy?: boolean
 }
 
 /**
@@ -151,6 +158,13 @@ export interface OrderFact {
   lastInvoicedOn: string | null
   /** The latest leg delivered_on, or the commissioning done date: the day the order became deliverable-complete. Null when unknown. */
   deliveredOn: string | null
+  /**
+   * Imported from the old CRM (orders.legacy_source is set). Owner decision 2026-10-22 (1b): its order and invoicing tasks are
+   * not today's work until the one-off "Review imported" (phase 2) says the order is still live, because the imported invoices
+   * are not linked to their orders yet (so "still to invoice" is not true). They sit in Today's grey "Imported, to review" fold,
+   * never counted. A late payment on an invoice is not one of them: it stays.
+   */
+  legacy?: boolean
 }
 
 export interface ReceivableFact {
@@ -324,6 +338,8 @@ export interface TodayItem {
   collision?: { by: string; at: string }
   /** Number the list breaks ties with (RFQ or order number). */
   number: number
+  /** About an order imported from the old CRM (OrderFact.legacy): listed in the "Imported, to review" fold, never counted. */
+  imported?: boolean
 }
 
 export interface TodayView {
@@ -339,4 +355,6 @@ export interface TodayView {
    * person, in a grey fold ("Older than 30 days"). A late payment is never stale.
    */
   stale: TodayItem[]
+  /** Order tasks on imported orders (owner decision 2026-10-22, 1b): out of every group and every count, in a grey fold. */
+  imported: TodayItem[]
 }

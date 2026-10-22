@@ -1,12 +1,27 @@
 import { Copy } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useSession } from '@/app/session'
 import { copyToClipboard } from '@/lib/clipboard'
 import { businessToday } from '@/lib/dates'
 import { Button } from '@/ui/Button'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader, OrderMoney } from '@/features/orders/api'
-import { chaseClipboardText, COMPANY_NAME, generatePaymentReminder } from '@/features/rfqs/lib'
-import { usePaymentDraft } from '@/features/today/hooks'
+import { qk } from '@/features/queryKeys'
+// The two files the reminder needs, not the rfqs/lib barrel (which brings the enquiry parser and every chase text with it).
+import { chaseClipboardText, COMPANY_NAME } from '@/features/rfqs/lib/chaseCommon'
+import { generatePaymentReminder } from '@/features/rfqs/lib/paymentReminder'
+
+/**
+ * Today's usePaymentDraft (same key, same read, same refetch), with Today's reads module fetched when the read starts instead of with
+ * the order page's first download (perf/lcp): today/api brings Today's whole rule engine, and this button sits in the order's header.
+ */
+function usePaymentDraft(orderId: string) {
+  return useQuery({
+    queryKey: qk.today.payment(orderId),
+    queryFn: () => import('@/features/today/api').then(m => m.getPaymentDraft(orderId)),
+    refetchOnMount: 'always',
+  })
+}
 
 /*
  * Sales' one green button on an invoiced order the customer still owes on (UX audit P1): the payment reminder in the approved wording
@@ -17,7 +32,7 @@ import { usePaymentDraft } from '@/features/today/hooks'
 export function CopyReminderButton({ order, money, className }: { order: OrderHeader; money: OrderMoney | null | undefined; className?: string }) {
   const { toast } = useToast()
   const session = useSession()
-  const draft = usePaymentDraft(order.id, true)
+  const draft = usePaymentDraft(order.id)
   const copy = async () => {
     const d = draft.data
     if (!d || !money || !money.dueOn) {

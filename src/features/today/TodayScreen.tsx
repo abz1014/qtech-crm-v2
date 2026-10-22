@@ -72,6 +72,8 @@ const WAITING_OPEN_MAX = 0 // Waiting opens only when the person opens it (R2-08
 let waitingToggledThisSession: boolean | null = null
 /** Whether the person opened the "Older than 30 days" fold, for this browser session only. */
 let staleOpenThisSession = false
+/** Whether the person opened the "Imported, to review" fold, for this browser session only. */
+let importedOpenThisSession = false
 
 export default function TodayScreen() {
   const session = useSession()
@@ -89,6 +91,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const [copied, setCopied] = useState<ReadonlySet<string>>(new Set())
   const [waitingToggled, setWaitingToggled] = useState<boolean | null>(waitingToggledThisSession)
   const [staleOpen, setStaleOpen] = useState(staleOpenThisSession)
+  const [importedOpen, setImportedOpen] = useState(importedOpenThisSession)
   const markCopied = (k: string) => {
     setCopied(s => new Set(s).add(k))
     // On desktop the first item is shown without being picked; pin it, so the pane stays on it ("Moved to Waiting")
@@ -106,6 +109,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const active = useMemo(() => (view ? view.active.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
   const waiting = useMemo(() => (view ? view.waiting.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
   const stale = useMemo(() => (view ? view.stale.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
+  const imported = useMemo(() => (view ? view.imported.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
   const groups = useMemo(
     () => (view ? [
       { id: 'now', title: 'Overdue or due today', items: view.now.filter(inTab) },
@@ -114,7 +118,10 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
     ] : []),
     [view, tab], // eslint-disable-line react-hooks/exhaustive-deps
   )
-  const all = useMemo(() => [...active, ...waiting, ...(staleOpen ? stale : [])], [active, waiting, stale, staleOpen])
+  const all = useMemo(
+    () => [...active, ...waiting, ...(importedOpen ? imported : []), ...(staleOpen ? stale : [])],
+    [active, waiting, imported, importedOpen, stale, staleOpen],
+  )
   // Desktop always has something selected (the first item); a selection that left the list moves on.
   const current = all.find(i => i.key === selected) ?? (wide ? active[0] ?? waiting[0] : undefined)
   const openId = wide ? current?.key : expanded
@@ -125,7 +132,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
 
   // The one count (needsYou.ts): what is due today or late, not Waiting, not older than 30 days. The same number as the Today badge.
   const needYou = view ? needsYouItems(view).length : 0
-  const firstUse = useFirstUse('today', user.id, user.role, !!view && view.active.length === 0 && view.waiting.length === 0 && view.stale.length === 0)
+  const firstUse = useFirstUse('today', user.id, user.role, !!view && view.active.length === 0 && view.waiting.length === 0 && view.stale.length === 0 && view.imported.length === 0)
   const tabs: Array<'all' | TodayTab> = user.role === 'engineer' ? [] : ['all', 'bids', 'sourcing', 'money']
 
   // Waiting starts collapsed (round-2 R2-08): it is the system's cooldown, not work. Opening it is the person's choice,
@@ -185,7 +192,9 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
             <EmptyState mood="goal" title={tab === 'all' ? 'Nothing needs you today' : 'Nothing here needs you today'}>
               {waiting.length > 0
                 ? 'Everything you chased is waiting for its date. It comes back here when it is time to nudge.'
-                : stale.length > 0
+                : imported.length > 0
+                  ? 'Orders imported from the old CRM are folded away below until you review them. They are not counted.'
+                  : stale.length > 0
                   ? 'Work older than 30 days is folded away below. It is not counted.'
                   : user.role === 'engineer'
                   ? 'Commissioning jobs you are assigned to, and the goods on your orders, appear here.'
@@ -238,6 +247,42 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                 <ul>
                   {shownWaiting.map(i => (
                     <Row key={i.key} item={i} today={today} names={data?.names} waiting open={openId === i.key} copied={false} wide={wide} onPick={() => pick(i.key)}>
+                      {!wide && expanded === i.key && data ? (
+                        <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
+                          <Suspense fallback={null}>
+                            <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
+                          </Suspense>
+                        </div>
+                      ) : null}
+                    </Row>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+          ) : null}
+          {imported.length > 0 ? (
+            // Owner decision 2026-10-22 (1b): order tasks on imported orders wait here, grey and never counted, until the one-off
+            // Review imported (redesign phase 2) says which orders are still live. Their invoices are not linked to them yet.
+            <section aria-label="Imported, to review" className="border-t bg-sunken" data-imported-fold="">
+              <button
+                type="button"
+                aria-expanded={importedOpen}
+                onClick={() => {
+                  importedOpenThisSession = !importedOpen
+                  setImportedOpen(!importedOpen)
+                }}
+                className="flex w-full items-center gap-2 px-5 py-3 text-left text-base font-medium text-fg-2"
+              >
+                <Icon icon={importedOpen ? ChevronDown : ChevronRight} size="sm" />
+                <span>
+                  Imported, to review · <span className="num">{imported.length}</span>
+                  <span className="font-regular text-fg-muted">{importedOpen ? ' · not counted' : ' · show'}</span>
+                </span>
+              </button>
+              {importedOpen ? (
+                <ul>
+                  {imported.map(i => (
+                    <Row key={i.key} item={i} today={today} names={data?.names} faded open={openId === i.key} copied={copied.has(i.key)} wide={wide} onPick={() => pick(i.key)}>
                       {!wide && expanded === i.key && data ? (
                         <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
                           <Suspense fallback={null}>
@@ -328,7 +373,7 @@ function Row({ item, today, names, waiting = false, faded = false, open, copied,
   // On the selected row's background the amber is below 4.5:1, so a warning badge reads in the body colour there (as on the GST register).
   const tone = item.badge.tone === 'danger' ? 'text-tone-danger-fg' : item.badge.tone === 'warning' ? (open ? 'text-fg-2' : 'text-tone-warning-fg') : 'text-fg-muted'
   return (
-    <li data-rule={item.rule} data-waiting={waiting || undefined} data-stale={faded || undefined} className="border-b last:border-b-0">
+    <li data-rule={item.rule} data-waiting={waiting || undefined} data-stale={(faded && !item.imported) || undefined} data-imported={item.imported || undefined} className="border-b last:border-b-0">
       <button
         type="button"
         onClick={onPick}

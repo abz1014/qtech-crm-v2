@@ -173,6 +173,21 @@ type LegRow = {
   orders: { number: number; owner_id: string | null; ordered_on: string | null; company_id: string } | null
 }
 
+/**
+ * Which of these orders came from the old CRM (owner decision 2026-10-22, 1b: their order tasks wait for Review imported). The ids
+ * only: legacy_source itself is never read here. In chunks of 100, so a long list never makes a long address.
+ */
+async function importedOrderIds(orderIds: readonly string[]): Promise<Set<string>> {
+  const db = requireSupabase()
+  const ids = [...new Set(orderIds)]
+  const out = new Set<string>()
+  for (let i = 0; i < ids.length; i += 100) {
+    const found = unwrap(await db.from('orders').select('id').in('id', ids.slice(i, i + 100)).not('legacy_source', 'is', null)) ?? []
+    for (const o of found) out.add(o.id)
+  }
+  return out
+}
+
 async function loadLegs(names: Map<string, string>, labels: Map<string, string>): Promise<LegFact[]> {
   const db = requireSupabase()
   const rows = await fetchAll<LegRow>(
@@ -185,10 +200,12 @@ async function loadLegs(names: Map<string, string>, labels: Map<string, string>)
         .order('created_at')
         .range(from, to) as unknown as Page<LegRow>,
   )
+  const imported = await importedOrderIds(rows.filter(l => l.orders).map(l => l.order_id))
   return rows
     .filter(l => l.orders)
     .map(l => ({
       id: l.id,
+      legacy: imported.has(l.order_id),
       orderId: l.order_id,
       orderNumber: num(l.orders?.number),
       ownerId: l.orders?.owner_id ?? null,
@@ -233,6 +250,7 @@ async function loadOrders(role: Role, names: Map<string, string>): Promise<Order
   const toSourceIds = new Set(live.filter(r => r.goods_state === 'to_source').map(r => r.order_id as string))
   const partIds = new Set(live.filter(r => r.invoicing_state === 'part').map(r => r.order_id as string))
   const ids = live.map(r => r.order_id as string)
+  const imported = await importedOrderIds(ids)
   for (let i = 0; i < ids.length; i += 100) {
     const chunk = ids.slice(i, i + 100)
     const [orders, legs, invoices, lines] = await Promise.all([
@@ -270,6 +288,7 @@ async function loadOrders(role: Role, names: Map<string, string>): Promise<Order
       toInvoice: money && r.invoicing_state === 'part' ? Math.max(0, num(r.gross) - num(r.invoiced)) : null,
       lastInvoicedOn: lastInvoiced.get(r.order_id as string) ?? null,
       deliveredOn,
+      legacy: imported.has(r.order_id as string),
     }
   })
 }
