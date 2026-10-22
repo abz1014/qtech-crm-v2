@@ -28,7 +28,6 @@ import { lazyDialog } from '@/lib/lazyDialog'
 import { BelowTheFold } from '@/ui/BelowTheFold'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { Skeleton } from '@/ui/Skeleton'
-import { HeldAdvancesPanel } from '@/features/money/payments/HeldAdvancesPanel'
 import {
   daysBetween,
   filterReceivables,
@@ -44,6 +43,8 @@ import {
 
 // Downloaded the first time it opens (perf/lcp, lazyDialog.tsx).
 // The reminder panel under the list is a download of its own, fetched once the list is drawn (perf/lcp, BelowTheFold).
+// Admin's held advances (usually nothing to show) are read and drawn after the list too.
+const HeldAdvancesPanel = lazyWithReload(() => import('@/features/money/payments/HeldAdvancesPanel').then(m => ({ default: m.HeldAdvancesPanel })))
 const ReminderPanel = lazyWithReload(() => import('@/features/money/payments/ReminderPanel').then(m => ({ default: m.ReminderPanel })))
 const RecordPaymentDialog = lazyDialog(() => import('@/features/money/payments/RecordPaymentDialog').then(m => m.RecordPaymentDialog))
 
@@ -316,7 +317,9 @@ export function ReceivablesPage() {
               </div>
             )}
           />
-          <HeldAdvancesPanel isAdmin={isAdmin} />
+          <BelowTheFold fallback={null}>
+            <HeldAdvancesPanel isAdmin={isAdmin} />
+          </BelowTheFold>
         </div>
         {cards ? null : (
           <div ref={panelRef} className="scroll-mt-4">

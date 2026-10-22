@@ -15,11 +15,21 @@ export type AppSupabase = LeanSupabaseClient<Database>
 let client: AppSupabase | null | undefined
 
 const listeners = new Set<() => void>()
+const refusedListeners = new Set<() => void>()
 
 /** Called after every data request (not the session lookup itself) so the session can be re-checked soon after. */
 export function onApiActivity(cb: () => void): () => void {
   listeners.add(cb)
   return () => listeners.delete(cb)
+}
+
+/**
+ * Called at once when the API refuses the token itself (HTTP 401: the session was ended by Reset password, Deactivate or a
+ * sign-out elsewhere; supabase/migrations/0085_session_cutoff.sql), so the app signs out and wipes the device now (HW-17, HW-45).
+ */
+export function onSessionRefused(cb: () => void): () => void {
+  refusedListeners.add(cb)
+  return () => refusedListeners.delete(cb)
 }
 
 /** The session lookups must not trigger themselves. */
@@ -31,6 +41,8 @@ const activityFetch: typeof fetch = async (input, init) => {
   const res = await fetch(input, init)
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
   if (url.includes('/rest/v1/') && !isSessionLookup(url)) listeners.forEach((l) => l())
+  // Not for the session lookups themselves: the re-check they would trigger is the one already running (it would cancel itself).
+  if (res.status === 401 && url.includes('/rest/v1/') && !isSessionLookup(url)) refusedListeners.forEach((l) => l())
   return res
 }
 

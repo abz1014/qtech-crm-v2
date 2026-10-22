@@ -40,6 +40,7 @@ import {
   type SuggestionSet,
   type ReplyDraft,
 } from '@/features/rfqs/lib'
+import { parseReplyPrice, replyPriceProblem } from '@/features/rfqs/lib/replyPrice'
 
 // The file and reply readers (src/lib/docread: PDF text, the on-device picture reader, the quote parser) are downloaded the first
 // time a file or a reply is read, not with the RFQ page (perf/lcp).
@@ -249,6 +250,8 @@ function ReplyRow({
   const [changeCurrency, setChangeCurrency] = useState(false)
   const [pasteMode, setPasteMode] = useState<null | 'box' | 'suggest'>(null)
   const [suggestions, setSuggestions] = useState<SuggestionSet | null>(null)
+  /** What was typed in each price box, for the reason shown when it is not a price (HW-48). */
+  const [priceText, setPriceText] = useState<Record<string, string>>({})
 
   const hasLines = inquiry.lines.length > 0
   const declinedAll = Boolean(inquiry.noOfferOn) && !hasLines
@@ -491,6 +494,8 @@ function ReplyRow({
               const q = qtyText(it.qty, it.unit)
               const reason = inquiry.itemDeclines[it.id]
               const price = draft.prices[it.id]
+              // A number in the draft is fine as it is (a pasted reply or a saved price may have replaced the text typed).
+              const problem = reason || (typeof price === 'number' && price > 0) ? null : replyPriceProblem(priceText[it.id] ?? '')
               return (
                 <li key={it.id} className="grid content-start gap-1">
                   <div className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_140px]">
@@ -509,8 +514,18 @@ function ReplyRow({
                       <NumberInput
                         id={replyInputId(inquiry.id, it.id)}
                         aria-label={`Price for item ${it.number} from ${inquiry.supplierName}`}
+                        aria-invalid={problem ? true : undefined}
+                        aria-describedby={problem ? `${replyInputId(inquiry.id, it.id)}-problem` : undefined}
                         value={price ?? null}
-                        onChange={v => setDraft(d => ({ ...d, prices: { ...d.prices, [it.id]: v } }))}
+                        // HW-48: the typed text is read here (onInput), so "PKR 1,200/-" counts as 1200 and text that is
+                        // not a price gets a reason below the box; NumberInput's own reading would only say null.
+                        onChange={() => undefined}
+                        onInput={e => {
+                          const text = e.currentTarget.value
+                          const n = parseReplyPrice(text)
+                          setPriceText(t => ({ ...t, [it.id]: text }))
+                          setDraft(d => ({ ...d, prices: { ...d.prices, [it.id]: n !== null && n >= 0 ? n : null } }))
+                        }}
                         prefix={draft.currency}
                         placeholder="Price"
                         min={0}
@@ -523,6 +538,11 @@ function ReplyRow({
                       />
                     )}
                   </div>
+                  {problem ? (
+                    <p id={`${replyInputId(inquiry.id, it.id)}-problem`} className="text-sm font-medium text-tone-danger-fg sm:text-right">
+                      {problem}
+                    </p>
+                  ) : null}
                   {!reason && typeof price === 'number' && price > 0 ? (
                     <div className="sm:pr-[152px]">
                       <PricePreview itemId={it.id} amount={price} currency={draft.currency} others={others} rates={rates} />

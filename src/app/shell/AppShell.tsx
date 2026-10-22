@@ -16,6 +16,7 @@ import { TopBar } from '@/app/shell/TopBar'
 import type { NavCounts } from '@/app/shell/useNavCounts'
 import { usePageSettled } from '@/app/usePageSettled'
 import { markContentDrawn } from '@/lib/afterContent'
+import { NavCountsContext } from '@/app/shell/navCountsContext'
 import { useRouteFocus } from '@/app/shell/useRouteFocus'
 import { HelpHost } from '@/features/help/HelpHost'
 
@@ -54,9 +55,9 @@ export function AppShell({ counts }: AppShellProps) {
 }
 
 function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Record<NavKey, number>> }) {
-  const [navCounts, setNavCounts] = useState<NavCounts>({})
+  const [nav, setNav] = useState<{ counts: NavCounts; ready: boolean }>({ counts: {}, ready: false })
   const settled = usePageSettled()
-  const counts = { ...navCounts, ...given }
+  const counts = { ...nav.counts, ...given }
   useEffect(() => {
     if (settled) markContentDrawn()
   }, [settled])
@@ -82,14 +83,16 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
       <MobileBar user={user} title={title} onSearch={palette.open} onCapture={openCapture} />
       <main id="main" tabIndex={-1} className="min-h-0 overflow-y-auto focus:outline-none">
         <ErrorBoundary key={pathname} variant="inline">
-          <Outlet />
+          <NavCountsContext.Provider value={nav.ready ? counts : null}>
+            <Outlet />
+          </NavCountsContext.Provider>
         </ErrorBoundary>
       </main>
       <BottomTabs role={user.role} counts={counts} />
       <HelpHost />
       {settled ? (
         <Suspense fallback={null}>
-          <NavCountsSource user={user} onCounts={setNavCounts} />
+          <NavCountsSource user={user} onCounts={setNav} />
         </Suspense>
       ) : null}
     </div>

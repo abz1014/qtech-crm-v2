@@ -32,6 +32,8 @@ const ACTIONS = 'Actions'
 /** Rows shown per kind; the search asks for up to FETCH_LIMIT (the database's cap, migration 0054) so it can say how many more there are. */
 export const SHOWN_PER_KIND = 6
 export const FETCH_LIMIT = 25
+/** The longest text offered as a new company name: search_all ignores anything longer (migration 0054), so it could never say the company exists. */
+export const NEW_COMPANY_MAX = 100
 /** The list a "See all" row opens, by kind. */
 const LIST_NAME: Record<SearchKind, string> = {
   company: 'Companies',
@@ -112,7 +114,8 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS): PaletteSource {
     group: 'Results',
     order: 10,
     search: async (query, signal) => {
-      const q = query.trim()
+      // Doubled spaces inside the text are one space, as the database search treats them (migration 0084).
+      const q = query.trim().replace(/\s+/g, ' ')
       if (!q) return []
       if (!(await pause(debounceMs, signal))) return []
       const hits = await searchAll(q, signal, FETCH_LIMIT)
@@ -126,7 +129,7 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS): PaletteSource {
       if (topCompany) {
         items.push({ id: `rfq-new-${topCompany.id}`, group: ACTIONS, label: `New RFQ for ${topCompany.label}`, meta: 'Go to intake', icon: Plus, href: `/rfqs/new?company=${encodeURIComponent(topCompany.id)}` })
       }
-      if (!hits.some(h => h.kind === 'company' && h.label.trim().toLowerCase() === q.toLowerCase())) {
+      if (q.length <= NEW_COMPANY_MAX && !hits.some(h => h.kind === 'company' && h.label.trim().toLowerCase() === q.toLowerCase())) {
         items.push({ id: 'company-new-typed', group: ACTIONS, label: `Add “${q}” as a new company`, meta: 'Action', icon: Plus, href: `/companies?new=1&name=${encodeURIComponent(q)}` })
       }
       return items

@@ -76,7 +76,15 @@ function EditBody({ onOpenChange, company }: { onOpenChange: (o: boolean) => voi
     schema: editSchema,
     entity: 'company',
     defaultValues: { name: company.name, country: company.country ?? '', city: company.city ?? '', notes: company.notes ?? '' },
-    onSubmit: v => update.mutateAsync({ name: v.name, country: v.country || null, city: v.city || null, notes: v.notes || null }),
+    // HW-25: `base` makes the save send only what changed here and refuse when someone else changed the same field meanwhile
+    onSubmit: v =>
+      update.mutateAsync({
+        name: v.name,
+        country: v.country || null,
+        city: v.city || null,
+        notes: v.notes || null,
+        base: { name: company.name, country: company.country, city: company.city, notes: company.notes },
+      }),
     routeError: e =>
       e.kind === 'unique' ? { field: 'name', message: 'Another company already has this name. Merge them from the other company instead.' } : undefined,
     onSuccess: () => onOpenChange(false),

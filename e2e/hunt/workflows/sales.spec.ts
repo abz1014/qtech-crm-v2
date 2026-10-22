@@ -1158,7 +1158,6 @@ test('HW-4: a stale tab issues a revision with no warning that a quotation was j
     dialog(a).getByText(/already|just issued|another tab|was issued/i).first().waitFor({ timeout: 45_000 }),
   ]).catch(() => undefined)
   const qs = await quotationsOf(r.rfq.id)
-  test.fail(true, 'HW-4: tab A still says "Issue quotation" and silently makes revision 1 over the quotation tab B just issued')
   expect(qs).toHaveLength(1)
   await ctx.close()
 })

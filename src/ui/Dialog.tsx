@@ -97,13 +97,14 @@ export function Dialog({ busy = false, dirty = false, open, defaultOpen, onOpenC
   )
   // Android Back (and the browser's) closes the open dialog instead of leaving the page: the same path as Esc (asks first
   // when something was typed), and ignored while a save is in flight.
-  // Phones and touch screens only: that is where a system Back button closes a sheet (desktop Back keeps its meaning).
+  // Phones and touch screens always: that is where a system Back button closes a sheet. On a desktop only while something
+  // is typed (Back asks "Discard what you typed?" instead of leaving the page); a clean dialog leaves Back its usual meaning.
   const touch = useMediaQuery('(max-width: 767px), (pointer: coarse)')
   useBackToClose(isOpen, () => {
     if (busy) return
     if (guarded) setAsking(true)
     else change(false)
-  }, { enabled: touch })
+  }, { enabled: touch || guarded })
 
   return (
     <GuardContext.Provider value={guard}>

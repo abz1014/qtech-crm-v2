@@ -363,7 +363,9 @@ test.describe('Settings › Expense categories (M13)', () => {
     await openAs(page, 'admin', '/settings/categories')
     await expect(page.locator(`[data-category="${renamed}"]`)).toBeVisible()
     await page.getByRole('button', { name: `More for ${renamed}` }).click()
-    expect(await axeViolations(page), 'axe at 1440, row menu open').toEqual([])
+    // The row menu (5f7d305) is a popover portalled to <body>, outside <main>: the region rule is off for an open overlay
+    // only, as everywhere (AxeOptions.landmarks). The page itself is checked with it on, below.
+    expect(await axeViolations(page, { landmarks: false }), 'axe at 1440, row menu open').toEqual([])
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Add category' }).click()
     expect(await axeViolations(page), 'axe at 1440, add dialog').toEqual([])

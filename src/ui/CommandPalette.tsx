@@ -8,6 +8,7 @@ import { Icon } from '@/ui/Icon'
 import { Kbd } from '@/ui/Kbd'
 import { modKeyLabel, type PaletteItem, type PaletteSource } from '@/ui/paletteSources'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { blockingOverlayOpen } from '@/ui/useShortcutsSetting'
 
 /*
  * CommandPalette (INVENTORY: U08; D08 section 07). Cmd+K or Ctrl+K from anywhere,
@@ -124,11 +125,12 @@ export function CommandPalette({
   const openerRef = useRef<HTMLElement | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
-  // Cmd+K / Ctrl+K from anywhere.
+  // Cmd+K / Ctrl+K from anywhere, except on top of another open dialog or menu (its half-typed text stays put).
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k') {
         e.preventDefault()
+        if (!open && blockingOverlayOpen()) return
         onOpenChange(!open)
       }
     }
@@ -248,10 +250,18 @@ export function CommandPalette({
             openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
             contentRef.current?.querySelector<HTMLElement>('[cmdk-input]')?.focus()
           }}
-          // No <Trigger> here (the button and Cmd+K are elsewhere): put focus back on whatever had it.
+          // No <Trigger> here (the button and Cmd+K are elsewhere): put focus back on whatever had it. Opened from the page
+          // (nothing focused) or when that element is gone, the main content gets it, so keyboard users do not restart at the top.
           onCloseAutoFocus={e => {
             e.preventDefault()
-            if (openerRef.current?.isConnected) openerRef.current.focus()
+            const opener = openerRef.current
+            if (opener && opener !== document.body && opener.isConnected) opener.focus()
+            else {
+              const now = document.activeElement
+              // Not when the pick opened another dialog (an invoice, a record): that dialog owns focus and its Esc.
+              const otherDialog = Array.from(document.querySelectorAll('[role="dialog"],[role="alertdialog"]')).some(d => !contentRef.current?.contains(d) && d !== contentRef.current)
+              if (!otherDialog && (!now || now === document.body || contentRef.current?.contains(now))) document.getElementById('main')?.focus({ preventScroll: true })
+            }
           }}
           className="fixed left-1/2 top-[96px] z-50 flex max-h-[calc(100dvh-112px)] w-[640px] flex-col max-md:max-h-[calc(100dvh-32px)] max-w-[calc(100vw-32px)] -translate-x-1/2 overflow-hidden rounded bg-surface shadow-modal focus:outline-none max-md:top-4"
         >

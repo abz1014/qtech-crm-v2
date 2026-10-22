@@ -42,6 +42,28 @@ export interface SortState {
   dir: SortDir
 }
 
+/**
+ * The sort as it is kept in the address (`?sort=due.asc`), so a refresh or Back lands on the same order. 'none' means the
+ * person turned the default sort off. Returns undefined when the address says nothing usable (no value, an unknown column,
+ * a bad direction): the table's default sort applies.
+ */
+export function parseSortParam(raw: string | null, columnIds: readonly string[]): SortState | null | undefined {
+  if (!raw) return undefined
+  if (raw === 'none') return null
+  const dot = raw.lastIndexOf('.')
+  const id = dot > 0 ? raw.slice(0, dot) : ''
+  const dir = raw.slice(dot + 1)
+  if (!columnIds.includes(id) || (dir !== 'asc' && dir !== 'desc')) return undefined
+  return { id, dir }
+}
+
+/** The address value for a sort: null (leave the address alone) when it is the default sort. */
+export function formatSortParam(sort: SortState | null, defaultSort: SortState | null): string | null {
+  const same = sort === null ? defaultSort === null : defaultSort !== null && sort.id === defaultSort.id && sort.dir === defaultSort.dir
+  if (same) return null
+  return sort === null ? 'none' : `${sort.id}.${sort.dir}`
+}
+
 const num = (v: Cell): bigint | number | null => {
   if (v === null || v === undefined || v === '') return null
   return typeof v === 'number' ? v : Number(v)

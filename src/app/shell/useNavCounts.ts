@@ -16,8 +16,10 @@ export type NavCounts = Partial<Record<NavKey, number>>
  * The top bar and the phone tabs draw them with NeedsCount (", 4 need you" for screen readers).
  * A destination with nothing to do shows no number, never a 0. An engineer gets no Money count: Today never reads a money fact
  * for them. No request of its own: Today's list is already loaded for the Today count.
+ * The shell also hands them to its pages (navCountsContext), so the Orders page's "N need you" is the Orders badge's number.
+ * `ready`: Today's list has loaded (before that every count is missing, which is not the same as nothing to do).
  */
-export function useNavCounts(user: SessionUser): NavCounts {
+export function useNavCounts(user: SessionUser): { counts: NavCounts; ready: boolean } {
   const today = useTodayView({ id: user.id, role: user.role as Role }, useBusinessToday())
   const counts: NavCounts = {}
   if (today.view) {
@@ -29,18 +31,18 @@ export function useNavCounts(user: SessionUser): NavCounts {
     counts.orders = section('orders')
     if (user.role === 'admin' || user.role === 'sales') counts.money = section('money')
   }
-  return counts
+  return { counts, ready: today.view !== null }
 }
 
 /**
  * The counts as a component of their own, loaded (with the Today rules) only once the page has its data (AppShell,
  * usePageSettled): on a slow connection the page's reads go first and the Today read for the numbers follows (perf/lcp).
  */
-export default function NavCountsSource({ user, onCounts }: { user: SessionUser; onCounts: (counts: NavCounts) => void }) {
-  const counts = useNavCounts(user)
-  const key = JSON.stringify(counts)
+export default function NavCountsSource({ user, onCounts }: { user: SessionUser; onCounts: (nav: { counts: NavCounts; ready: boolean }) => void }) {
+  const nav = useNavCounts(user)
+  const key = JSON.stringify(nav)
   useEffect(() => {
-    onCounts(JSON.parse(key) as NavCounts)
+    onCounts(JSON.parse(key) as { counts: NavCounts; ready: boolean })
   }, [key, onCounts])
   return null
 }
