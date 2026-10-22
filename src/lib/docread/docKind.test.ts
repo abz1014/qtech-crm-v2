@@ -3,7 +3,7 @@ import { ENQUIRY_EMAIL_TABLES } from './__fixtures__/enquiryEmailTables'
 import { ENQUIRY_EMAILS } from './__fixtures__/enquiryEmails'
 import { ENQUIRY_FULL_EMAILS } from './__fixtures__/enquiryFullEmails'
 import { ENQUIRY_HOLDOUT } from './__fixtures__/enquiryHoldout'
-import { classifyDoc, KIND_LABEL, NOT_AN_ENQUIRY } from './docKind'
+import { classifyDoc, KIND_LABEL, NOT_A_SUPPLIER_QUOTE, NOT_AN_ENQUIRY } from './docKind'
 
 // Every document below is invented.
 
@@ -110,5 +110,94 @@ describe('classifyDoc', () => {
     expect(all.length).toBeGreaterThan(30)
     const blocked = all.map(c => ({ name: c.name, kind: classifyDoc(c.text).kind })).filter(c => NOT_AN_ENQUIRY.includes(c.kind))
     expect(blocked).toEqual([])
+  })
+})
+
+// ---- emails: the newest message decides, not the enquiry quoted under it ----
+const OUR_RFQ = ['From: sales@q-tech.example', 'Sent: Monday, October 5, 2026 9:00 AM', 'To: sales@vendor.example', 'Subject: Urgent RFQ: Pressure gauge', '', 'Dear Sales Team,', 'Please quote the best price of below items.', '1) Pressure gauge 0-10 bar - 4 nos', 'Regards, Q-Tech'].join('\n')
+const below = (top: string) => `${top}\n\n________________________________\n${OUR_RFQ}`
+const CTX_OUT = { from: 'Sam <sam@vendor.example>', subject: 'RE: Urgent RFQ: Pressure gauge' }
+
+describe('classifyDoc on an email thread', () => {
+  it('reads a supplier price reply as a supplier quotation, not the enquiry quoted under it', () => {
+    expect(classifyDoc(below('Hello,\nPlease see price: USD 45 each, lead time 3 days.\nRegards, Sam'), CTX_OUT).kind).toBe('supplier-quote')
+    expect(classifyDoc(below('Dear sir, good day.\nPlease see our price below:\nGauge 0-10 bar\t4\t$45.00\nBest regards'), CTX_OUT).kind).toBe('supplier-quote')
+  })
+
+  it('reads a regret, a holding note or a question as a supplier reply too', () => {
+    expect(classifyDoc(below('Sorry, we cannot offer this item.'), CTX_OUT).kind).toBe('supplier-quote')
+    expect(classifyDoc(below('Please give us some time to check with the factory.'), CTX_OUT).kind).toBe('supplier-quote')
+    expect(classifyDoc(below('Could you send photos of the nameplate?'), CTX_OUT).kind).toBe('supplier-quote')
+    expect(classifyDoc(below('Please provide the update on the order that was previously inquired about.'), CTX_OUT).kind).toBe('supplier-quote')
+  })
+
+  it('finds the quoted part in the other layouts: tabs, Original Message, Replied Message, wrote, other languages', () => {
+    const top = 'Pls see price: USD 45 each.'
+    const layouts = [
+      `${top}\n\n-----Original Message-----\nFrom: sales@q-tech.example\nSent: Monday\nTo: x\nSubject: RFQ\n\nPlease quote the best price: 4 nos gauge`,
+      `${top}\n---- Replied Message ----\nFrom\t<sales@q-tech.example>\nDate\t10/18/2026\nSubject\tRFQ\n\nPlease quote the best price: 4 nos gauge`,
+      `${top}\n\nOn Mon, 5 Oct 2026, Q-Tech <sales@q-tech.example> wrote:\n> Please quote the best price: 4 nos gauge`,
+      `${top}\n\nDa: sales@q-tech.example\nInviato: lunedi 5 ottobre\nA: x\nOggetto: RFQ\n\nPlease quote the best price: 4 nos gauge`,
+    ]
+    for (const t of layouts) expect(classifyDoc(t, CTX_OUT).kind).toBe('supplier-quote')
+  })
+
+  it('cuts at a quoted header even when the reply is a single short line', () => {
+    expect(classifyDoc(below('not have'), CTX_OUT).kind).toBe('supplier-quote')
+  })
+
+  it('reads a customer chasing, or talking about an order, as a follow-up', () => {
+    const thread = (top: string) => `${top}\n\nFrom: Sales <sales@q-tech.example>\nSent: Monday\nTo: buyer@mill.example\nSubject: Quotation - relay\n\nThank you for your inquiry. Please find the attached quotation and feel free to contact us.`
+    expect(classifyDoc(thread('Please share the update?'), { from: 'Buyer <buyer@mill.example>', subject: 'RE: Quotation - relay' }).kind).toBe('follow-up')
+    expect(classifyDoc(thread('Kindly confirm the delivery date.'), { from: 'Buyer <buyer@mill.example>', subject: 'RE: PO # 1234: Quotation' }).kind).toBe('follow-up')
+  })
+
+  it('reads a forward of a customer enquiry as an enquiry, with or without a header block under the banner', () => {
+    const cust = ['Dear Team,', 'Kindly provide your offer for the below items.', '1) Pressure gauge 0-10 bar - 4 nos', 'Regards']
+    const fwd1 = ['FYI', '', '---------- Forwarded message ---------', 'From: Buyer <buyer@mill.example>', 'Date: Fri, 16 Oct 2026', 'Subject: Purchase inquiry 1234', '', ...cust].join('\n')
+    const fwd2 = ['FN', '', '---------- Forwarded message ---------', ...cust].join('\n')
+    expect(classifyDoc(fwd1, { from: 'Q-Tech <q@gmail.example>', subject: 'Fwd: Purchase inquiry 1234' }).kind).toBe('rfq')
+    expect(classifyDoc(fwd2).kind).toBe('rfq')
+  })
+
+  it('reads a forward of a supplier offer as a supplier quotation', () => {
+    const t = ['FYI', 'From: Gesint <info@vendor.example>', 'Sent: Wednesday', 'To: q@q-tech.example', 'Subject: R: RFQ', '', 'Below our best offer for the item requested:', 'Gauge 1 pc EUR 230,00 each', 'Delivery time: 1 week', '', 'Da: q@q-tech.example', 'Inviato: lunedi', 'Oggetto: RFQ', '', 'Please quote the best price for 1 gauge.'].join('\n')
+    expect(classifyDoc(t, { from: 'Q-Tech <q@gmail.example>', subject: 'FW: RFQ' }).kind).toBe('supplier-quote')
+  })
+
+  it('reads mail we wrote as our own enquiry, our own quotation or an internal note', () => {
+    const us = { from: 'Q-Tech <sales@q-tech.example>' }
+    expect(classifyDoc('Dear Cathy,\n\nPlease send the price quotation with reseller price of below part.\n\nInductive sensor X1\nQuantity 4 nos', us).kind).toBe('own-rfq')
+    expect(classifyDoc('Dear Sir,\nThank you for considering us. Please find attached our price quotation along with the catalogue.', us).kind).toBe('own-quote')
+    expect(classifyDoc('Dear Maggie,\nThank you for sharing the price quote. Please confirm the model is correct.', us).kind).toBe('follow-up')
+    const note = 'REMINDER\n\nFrom: Q-Tech <sales@q-tech.example>\nSent: Monday\nTo: buyer@mill.example\nSubject: Re: technical advice\n\nDear Mr. Ali, hope you are fine. Awaiting your reply.'
+    expect(classifyDoc(note, { from: 'Q-Tech <q@gmail.example>', subject: 'Fw: technical advice' }).kind).toBe('follow-up')
+  })
+
+  it('reads a cold sales mail as marketing even when it invites our RFQs, and a customer request as an enquiry', () => {
+    const cold = 'Hi dear,\nThis is Max from Acme Trading, an independent distributor of electronic components. We have competitive pricing and stable supply.\nIf you have any current RFQs, please send them to me and I will provide you with our best prices.\nBest regards, Max'
+    expect(classifyDoc(cold, { from: 'max@acme.example', subject: 'Industrial parts supply' }).kind).toBe('marketing')
+    expect(classifyDoc('Dear Sir,\nWe kindly request a quotation for Collective No:1000011040 at your earliest convenience.', { from: 'buyer@mill.example', subject: 'Collective No:1000011040' }).kind).toBe('rfq')
+  })
+
+  it('reads a fresh supplier mail with a quotation attached as a supplier quotation', () => {
+    expect(classifyDoc('Dear Faizan,\nGood day, thank you for your inquiry. Please find the quotation attached.\nModel X1  1  6500  1-2 weeks', { from: 'sales@vendor.example', subject: 'Urgent RFQ: relays' }).kind).toBe('supplier-quote')
+  })
+
+  it('reads our quotation PDF by its reference and a datasheet by its title and figures', () => {
+    const q = ['QUOTATION', 'M/s: Example Mills Limited', 'Quotation Ref: QTS-EML6510', 'Sr#\tItem Description\tQuantity\tUnit Pr. (PKR)\tTotal Pr. (PKR)', '1 Sensor\t3\t148,016\t444,048', 'Gross Amount W/O GST\t444,048'].join('\n')
+    expect(classifyDoc(q).kind).toBe('own-quote')
+    const sheet = ['TECH DATA SHEET', 'Power supply', '230Vac (15mA)', 'Working temperature', '0 to 50 C, 5A 250V', 'Dimensions', 'H = 100mm  L = 45mm', 'Weight', '390 g max', 'Pressure range 0.3 to 10 bar'].join('\n')
+    expect(classifyDoc(sheet, { isPdf: true }).kind).toBe('brochure')
+  })
+
+  it('never lets an RS232 connector name pass for a price', () => {
+    expect(classifyDoc('Interfaces\nRS232C (In/Out), RJ45\nRS232C (In) Gender\nRS485 port\n', { isPdf: true }).kind).not.toBe('supplier-quote')
+  })
+
+  it('does not block on unknown, in either screen', () => {
+    expect(NOT_AN_ENQUIRY).not.toContain('unknown')
+    expect(NOT_A_SUPPLIER_QUOTE).not.toContain('unknown')
+    expect(classifyDoc('ok, noted').kind).toBe('unknown')
   })
 })

@@ -150,6 +150,17 @@ describe('SupplierReplyDialog', () => {
     expect(screen.queryByRole('button', { name: 'Read as a quotation anyway' })).toBeNull()
   })
 
+  it('does not warn about a paste it cannot place (unknown)', async () => {
+    installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    renderDialog()
+    await user.click(screen.getByRole('button', { name: 'Paste reply' }))
+    fireEvent.paste(await screen.findByRole('textbox', { name: 'Paste what they sent' }), { clipboardData: { getData: () => 'ok, noted' } })
+    await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Paste what they sent' })).toBeNull())
+    expect(screen.queryByText(/This looks like/)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Read as a quotation anyway' })).toBeNull()
+  })
+
   it("does not warn about a supplier's quotation", async () => {
     installFakeDb(() => ({ data: [] }))
     const user = userEvent.setup()

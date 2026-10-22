@@ -653,6 +653,16 @@ describe('the New RFQ draft (kept on this device)', () => {
       expect(screen.getByRole('button', { name: 'Read as an enquiry anyway' })).toBeInTheDocument()
     })
 
+    it('a paste it cannot place (unknown) shows no warning and is never held back', async () => {
+      installFakeDb(respond)
+      setup()
+      renderScreen()
+      fireEvent.paste(document.body, { clipboardData: { getData: () => 'hello, call me when you are free' } })
+      await screen.findByRole('textbox', { name: 'Customer reference' })
+      expect(screen.queryByText(/This looks like/)).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Read as an enquiry anyway' })).toBeNull()
+    })
+
     it('a real enquiry shows no warning', async () => {
       installFakeDb(respond)
       setup()
