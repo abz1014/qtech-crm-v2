@@ -50,6 +50,12 @@ describe('the pre-selected destination (one tap confirms)', () => {
     expect(guessDestination('text', 'Customer will send the P&ID on Monday', none)).toBe('notes')
     expect(guessDestination('files', '', none)).toBe('notes')
     expect(guessDestination('text', 'Please quote 2 nos transmitter', [])).toBe('new-rfq')
+    // A supplier's price reply goes to "A supplier's prices", even with a question waiting; never for an engineer (no prices).
+    const reply = 'Dear Sir,\n1) Rosemount 3051CD - GBP 1,840 each, 4 weeks\n2) Rosemount 644 - GBP 385 each'
+    expect(guessDestination('text', reply, waiting)).toBe('reply')
+    expect(guessDestination('text', reply, none)).toBe('reply')
+    expect(guessDestination('text', reply, waiting, false)).toBe('answer')
+    expect(guessDestination('text', 'Budget is USD 5,000 for the lot', none)).toBe('notes')
   })
 
   it('the RFQ for an answer is the first with an open question; otherwise the most recent', () => {

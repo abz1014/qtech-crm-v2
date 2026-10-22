@@ -140,7 +140,7 @@ export default function CaptureSheet() {
   // R2-11: only the chosen option is shown; "Something else" opens the other three tiles and the questions and order choices.
   const [more, setMore] = useState(false)
 
-  const dest: Dest = orderMode ? 'order' : (userDest ?? guessDestination(kind, draft.text, ordered))
+  const dest: Dest = orderMode ? 'order' : (userDest ?? guessDestination(kind, draft.text, ordered, seesPrices(user?.role)))
   const rfq = dest === 'order' ? null : (ordered.find(c => c.id === userRfqId) ?? defaultRfq(dest, ordered))
   const open = rfq?.open ?? []
   const ticked = tickState && rfq && tickState.rfqId === rfq.id ? tickState.ids : new Set(defaultTicks(kind, open))
