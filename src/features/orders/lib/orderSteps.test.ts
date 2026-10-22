@@ -73,3 +73,54 @@ describe('the list and the page agree on the next step', () => {
     })
   }
 })
+
+describe('imported orders wait for a review (owner decision 1b)', () => {
+  const NO_BIG_COUNT = /\b([3-9]\d|\d{3,}) days (overdue|late)\b/
+  const legs = [legRow('a', { placedOn: '2025-01-01', expectedOn: '2025-02-01' })]
+  const items = [item('1', 'a')]
+  const imp = header({ imported: true }, { goods: 'late' })
+
+  it('an imported order with open work is "Imported, to review", grey, with no button, on the list and the page', () => {
+    const p = pageStep(orderFacts(imp, legs, items, [], 'admin', money(), '2026-11-20'))
+    expect(p.step).toMatchObject({ kind: 'review-imported', tone: 'inert', rank: 60 })
+    expect(p.primary).toBeNull()
+    expect(p.text).toBe('Imported, to review')
+    const l = listNextStep(listRow({ imported: true, goods: 'late', legs: [{ id: 'a', supplierName: 'S', placedOn: '2025-01-01', expectedOn: '2025-02-01', deliveredOn: null }] }), 'sales', '2026-11-20')
+    expect(l).toMatchObject({ kind: 'review-imported', text: 'Imported, to review', tone: 'inert' })
+    expect(`${p.text} ${l.text}`).not.toMatch(NO_BIG_COUNT)
+  })
+
+  it('an unpaid overdue invoice still gives chase-payment, and never prints a count over 30 days', () => {
+    const m = money({ paymentState: 'overdue', dueOn: '2025-03-01', balance: 500 })
+    const p = pageStep(orderFacts(imp, legs, items, [], 'admin', m, '2026-11-20'))
+    expect(p.step.kind).toBe('chase-payment')
+    expect(p.text).toContain('since 1 Mar 2025')
+    expect(p.text).not.toMatch(NO_BIG_COUNT)
+    const l = listNextStep(listRow({ imported: true, payment: 'overdue', balance: 500, dueOn: '2025-03-01' }), 'admin', '2026-11-20')
+    expect(l.kind).toBe('chase-payment')
+    expect(l.text).not.toMatch(NO_BIG_COUNT)
+  })
+
+  it('old late goods on a non-imported order say "since <date>", not a big count', () => {
+    const p = pageStep(orderFacts(header({}, { goods: 'late' }), legs, items, [], 'admin', money(), '2026-11-20'))
+    expect(p.text).not.toMatch(NO_BIG_COUNT)
+    expect(p.text).toContain('since 1 Feb 2025')
+  })
+
+  it('a v2 order 5 days late keeps its normal step and tone', () => {
+    const late = [legRow('a', { placedOn: '2026-11-01', expectedOn: '2026-11-15' })]
+    const p = pageStep(orderFacts(header({}, { goods: 'late' }), late, items, [], 'admin', money(), '2026-11-20'))
+    expect(p.step).toMatchObject({ kind: 'goods-late', tone: 'now' })
+    expect(p.text).toContain('5 days late')
+    const m = money({ paymentState: 'overdue', dueOn: '2026-11-15', balance: 500 })
+    const c = pageStep(orderFacts(header(), late.map(l => ({ ...l, deliveredOn: '2026-11-16' })), items, [], 'admin', m, '2026-11-20'))
+    expect(c.step).toMatchObject({ kind: 'chase-payment', tone: 'late' })
+    expect(c.text).toContain('5 days overdue')
+  })
+
+  it('an engineer sees the review step too, and no price', () => {
+    const p = pageStep(orderFacts(imp, legs, items, [], 'engineer', null, '2026-11-20'))
+    expect(p.step.kind).toBe('review-imported')
+    expect(p.text).not.toMatch(/PKR/)
+  })
+})

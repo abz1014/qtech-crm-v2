@@ -123,3 +123,12 @@ describe('the order page: one primary button, chosen by the shared ordering', ()
     expect(page(header({ cancelledOn: '2026-11-19' }), [legRow('a')], [item('1', 'a')]).primary).toBeNull()
   })
 })
+
+describe('the order page for an imported order', () => {
+  it('has no green button and says it is to review', () => {
+    const r = page(header({ imported: true }, { goods: 'to_place' }), [legRow('a')], [item('1', 'a')])
+    expect(r.step.kind).toBe('review-imported')
+    expect(r.primary).toBeNull()
+    expect(r.text).toBe('Imported, to review')
+  })
+})
