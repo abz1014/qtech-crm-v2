@@ -18,8 +18,8 @@ $f$;
 
 -- ------------------------------------------------------------------ structure
 select columns_are('public', 'expense_categories',
-  array['id', 'created_at', 'created_by', 'name', 'grp', 'default_paid_via', 'sort', 'active', 'group_id', 'monthly_budget_pkr'],
-  'expense_categories has the A6.1 columns (and 0086: group_id, monthly_budget_pkr)');
+  array['id', 'created_at', 'created_by', 'name', 'grp', 'default_paid_via', 'sort', 'active', 'group_id', 'monthly_budget_pkr', 'is_misc'],
+  'expense_categories has the A6.1 columns (and 0086: group_id, monthly_budget_pkr; 0091: is_misc)');
 select hasnt_column('public', 'expenses', 'category', 'expenses.category (text) is gone');
 select hasnt_column('public', 'recurring_expenses', 'category', 'recurring_expenses.category (text) is gone');
 select col_not_null('public', 'expenses', 'category_id', 'expenses.category_id is required');

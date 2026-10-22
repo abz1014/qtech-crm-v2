@@ -146,6 +146,7 @@ insert into public.invoices (id, order_id, number, net_amount, gst_amount) value
   (pg_temp.f('26'), pg_temp.f('20'), 'INV-M1', 100, 18), (pg_temp.f('27'), pg_temp.f('20'), 'INV-M2', 100, 18);
 insert into public.payments_in (id, order_id, amount) values (pg_temp.f('28'), pg_temp.f('20'), 118);
 insert into public.expenses (id, amount_pkr, category_id) values (pg_temp.f('29'), 5, 'ca7e0000-0000-4000-8000-000000000005');
+insert into public.expenses (id, amount_pkr, category_id, description) values ('e0910000-0000-4000-8000-0000000000f1', 5, 'ca7e0000-0000-4000-8000-000000000031', 'probe title');   -- 0091: a titled expense under a misc category (promote probe)
 insert into public.recurring_expenses (id, label, category_id, amount) values (pg_temp.f('2a'), 'rent', 'ca7e0000-0000-4000-8000-000000000002', 5);
 insert into public.attachments (id, bucket, path, file_name, mime_type, size_bytes, rfq_id) values
   (pg_temp.f('2b'), 'rfq-files', 'm/1.pdf', 'a.pdf', 'application/pdf', 10, pg_temp.f('15'));
@@ -287,6 +288,8 @@ insert into probes values
   ('merge_companies', '', 'X', 'select public.merge_companies(@01, @02)'),
   ('merge_brands', '', 'X', 'select public.merge_brands(@13, @14)'),
   ('merge_expense_categories', '', 'X', $q$select public.merge_expense_categories(@3d, 'ca7e0000-0000-4000-8000-000000000010')$q$),   -- 0086: the fixture category into Other (both overheads)
+  ('suggest_misc_categories', '', 'X', 'select 1 where (select count(*) from public.suggest_misc_categories()) >= 0'),   -- 0091: refused for everyone but an admin
+  ('promote_misc_title', '', 'X', $q$select 1 from (select public.promote_misc_title('ca7e0000-0000-4000-8000-000000000031', 'probe title', 'Probe category') r) x where r > 0$q$),   -- 0091: the fixture expense below
   ('resolve_value_basis', '', 'X', $q$select public.resolve_value_basis(@21, 'net')$q$),
   ('model_tokens', '', 'X', $q$select public.model_tokens('ABC123')$q$),
   ('item_text_norm', '', 'X', $q$select public.item_text_norm('ABC 123')$q$),

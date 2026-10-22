@@ -87,7 +87,7 @@ as $$
 declare
   v_role text := (select public.current_user_role());
 begin
-  if v_role is not null and v_role <> 'admin' then
+  if auth.uid() is not null and v_role is distinct from 'admin' then
     return new;   -- row security answers for everyone else
   end if;
   if tg_op = 'INSERT' and (cardinality(new.legacy_flags) > 0 or new.legacy_source is not null) then

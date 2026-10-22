@@ -185,17 +185,19 @@ insert into public.payments_in (order_id, received_on, amount, paid_via, bank_mo
   ('a1000000-0000-4000-8000-000000000035', '2025-12-08',  500, 'bank', null),          -- CK5 part paid, unticked
   ('a1000000-0000-4000-8000-000000000036', '2025-12-09',  118, 'bank', null),          -- CKU basis unknown, unticked
   ('a1000000-0000-4000-8000-000000000037', '2025-12-10',   50, 'cash', null);          -- CKZ zero value, cash
+select set_config('qtech.category_merge', 'on', true);   -- 0091: lets the untitled Other row (e4) in as before
 insert into public.expenses (paid_on, amount_pkr, category_id, description, order_id, bank_month, legacy_flags) values
   ('2025-12-05', 1000, 'ca7e0000-0000-4000-8000-000000000001', null,    null, null, '{}'),                       -- e1 bank, unticked
   ('2025-12-06',  500, 'ca7e0000-0000-4000-8000-000000000002', null,    null, '2025-12-01', '{}'),               -- e2 bank, ticked
   ('2025-12-07',  100, 'ca7e0000-0000-4000-8000-000000000004', null,    null, null, '{}'),                       -- e3 cash (Fuel)
-  ('2025-12-08',   10, 'ca7e0000-0000-4000-8000-000000000010', 'Stationery',    null, null, '{}'),                       -- e4 Other, no description
+  ('2025-12-08',   10, 'ca7e0000-0000-4000-8000-000000000010', null,    null, null, '{}'),                       -- e4 Other, no description
   ('2025-12-09',   20, 'ca7e0000-0000-4000-8000-000000000010', 'Water', null, null, '{}'),                       -- e5 Other with description
   ('2025-12-10',   30, 'ca7e0000-0000-4000-8000-000000000012', null,    null, null, '{}'),                       -- e6 Freight, no order
   ('2025-12-11',   40, 'ca7e0000-0000-4000-8000-000000000012', null,    'a1000000-0000-4000-8000-000000000031', '2025-12-01', '{}'), -- e7 Freight on an order, ticked
   ('2025-12-12',   50, 'ca7e0000-0000-4000-8000-000000000010', 'old',   null, null, array['category_unmapped']),  -- e8 legacy unmapped
   ('2025-11-20',   60, 'ca7e0000-0000-4000-8000-000000000001', null,    null, null, '{}'),                       -- e9 an older unticked bank item
   ('2026-01-15',   70, 'ca7e0000-0000-4000-8000-000000000001', null,    null, null, '{}');                       -- e10 after month end
+select set_config('qtech.category_merge', 'off', true);
 insert into public.recurring_expenses (id, label, category_id, amount, active, start_month) values
   ('b3000000-0000-4000-8000-000000000001', 'R1 recorded',   'ca7e0000-0000-4000-8000-000000000002', 500, true,  null),
   ('b3000000-0000-4000-8000-000000000002', 'R2 missing',    'ca7e0000-0000-4000-8000-000000000003', 100, true,  null),
