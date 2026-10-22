@@ -63,6 +63,25 @@ describe('parseItemLine: quantity is never a model code or a size', () => {
   it('reads a decimal quantity', () => {
     expect(parseItemLine('Cable - 2.5 m').qty).toBe(2.5)
   })
+
+  // feat/reader-gaps: these used to come out as "1", no unit.
+  it.each([
+    ['Bearing 6205 ZZ 4 عدد', 4, 'nos', 'Bearing 6205 ZZ'],
+    ['Bearing 6205 ZZ ۴ عدد', 4, 'nos', 'Bearing 6205 ZZ'],
+    ['Silicone tube 8mm 0.5 m', 0.5, 'm', 'Silicone tube 8mm'],
+    ['Copper wire 2.5 kg', 2.5, 'kg', 'Copper wire'],
+    ['Welding rod 2.5 kgs', 2.5, 'kg', 'Welding rod'],
+    ['Cable tie 200mm 1,000 nos', 1000, 'nos', 'Cable tie 200mm'],
+    ['0.5 m PU tube 6mm', 0.5, 'm', 'PU tube 6mm'],
+    ['2.5 kg grease EP2', 2.5, 'kg', 'grease EP2'],
+    ['Level sensor range 20 m', 1, null, 'Level sensor range 20 m'],
+  ])('%s', (line, qty, unit, description) => {
+    expect(parseItemLine(line)).toEqual({ description, qty, unit })
+  })
+
+  it('reads a row pasted from Excel whose unit is the Urdu word for pieces', () => {
+    expect(parsePaste('Fuse 10A\t4\tعدد').items).toEqual([{ description: 'Fuse 10A', qty: 4, unit: 'nos' }])
+  })
 })
 
 describe('parsePaste: other shapes', () => {

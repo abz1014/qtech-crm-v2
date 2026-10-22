@@ -294,6 +294,18 @@ describe('sample 14: PKR', () => {
   })
 })
 
+describe('a quantity in thousands or with a point (feat/reader-gaps)', () => {
+  const CABLES: ReplyItemRef[] = [
+    { id: 'tie', description: 'Cable tie 300 mm nylon black', qty: 1000 },
+    { id: 'cab', description: 'Instrument cable 2 pair x 1.5 mm2', qty: 2.5 },
+  ]
+  it('derives the unit price from a total for 1,000 pcs and for 2.5 m', () => {
+    const r = parseSupplierReply('Cable tie 300 mm nylon black, 1,000 pcs, total USD 40\nInstrument cable 2 pair x 1.5 mm2: Qty 2.5 mtr, total USD 10', CABLES)
+    expect(one(r.offers, 'tie')).toMatchObject({ qty: 1000, unitPrice: 0.04 })
+    expect(one(r.offers, 'cab')).toMatchObject({ qty: 2.5, unitPrice: 4 })
+  })
+})
+
 describe('sample 15: total only, quantity on the line', () => {
   const r = parseSupplierReply(`P320 transmitter 5 pcs USD 600 total, 3 weeks`, ITEMS)
   it('derives the unit price from the total and says so', () => {
