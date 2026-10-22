@@ -919,7 +919,9 @@ test('crosscut: offline saves keep the input, show a plain message, and Try agai
     const sup = await supplier(`Hunt Offline Supplier ${T}`, 'Pakistan')
     const inq = await quote(r.rfq.id, sup, [], 'PKR')
     await visit(page, info, `/rfqs/${r.rfq.id}`, 'offline reply')
-    const region = page.getByRole('region', { name: sup.name })
+    // The reply form is a dialog named after the supplier, opened by "Enter reply" in Suppliers asked (r3/rfq-orders).
+    await page.getByRole('button', { name: `Enter reply, ${sup.name}`, exact: true }).click()
+    const region = page.getByRole('dialog', { name: sup.name, exact: true })
     const price = region.getByLabel(`Price for item 1 from ${sup.name}`)
     await price.fill('4321')
     await goOffline()

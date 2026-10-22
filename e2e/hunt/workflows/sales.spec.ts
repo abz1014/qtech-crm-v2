@@ -16,7 +16,7 @@ import { ctxAs, layout, note, probe, settle, shot, tag, visit, watch, type Viewp
  *                        whitespace-only lines and a blank hand-added row), what is stored vs what was shown; double-click on
  *                        "Looks right" (does the second click land on the next step's button?); double-click on "Copy message";
  *                        the copied supplier message; a PDF enquiry made here with pdf-lib (Choose PDF or photo) and a double
- *                        "Save without asking"; a screenshot of an enquiry (rendered here, pasted on desktop, picked on the
+ *                        "Save for later"; a screenshot of an enquiry (rendered here, pasted on desktop, picked on the
  *                        phone) read on the device; reload mid-form (warned? draft offered and restored?); browser Back
  *                        with items on the form, and Back while "Leave this new RFQ?" is open; a quantity past numeric(12,3).
  *   replies (both)       typed prices in odd formats ("1.234,50", "12,5", "PKR 1,200/-", "-5", "0") and what is stored; a
@@ -48,6 +48,31 @@ const toast = (p: Page, t: string | RegExp) => p.getByRole('status').filter({ ha
 const vis = (l: Locator) => l.filter({ visible: true }).first()
 const moreButton = (p: Page) => vis(p.getByRole('button', { name: /^More( actions)?$/ }))
 const T = { timeout: 15_000 }
+/** New RFQ's save-only action (r3/rfq-orders renamed "Save without asking"); on a phone it sits in the step bar's ⋯ menu. */
+const SAVE_FOR_LATER = "Save for later (don't ask suppliers yet)"
+
+/**
+ * A supplier's reply form. Each supplier is listed once, in Suppliers asked, and "Enter reply" (or "Edit reply" once there is a
+ * price) opens the price form in a dialog named after the supplier (r3/rfq-orders, grade-B R2/R4). Opens it if it is not open yet.
+ */
+async function replyDialog(page: Page, name: string): Promise<Locator> {
+  const d = page.getByRole('dialog', { name, exact: true })
+  if (!(await d.isVisible().catch(() => false)))
+    await vis(page.getByRole('button', { name: `Enter reply, ${name}`, exact: true }).or(page.getByRole('button', { name: `Edit reply, ${name}`, exact: true }))).click()
+  await expect(d).toBeVisible(T)
+  return d
+}
+
+/** Clicks New RFQ's save-only action: a button on desktop, an item of the step bar's "More options" menu on a phone. */
+async function saveForLater(page: Page, how: 'click' | 'dblclick' = 'click'): Promise<void> {
+  const button = vis(page.getByRole('button', { name: SAVE_FOR_LATER }))
+  if (await button.isVisible().catch(() => false)) {
+    await button[how]()
+    return
+  }
+  await page.getByRole('region', { name: 'Next step' }).getByRole('button', { name: 'More options' }).click()
+  await page.getByRole('menuitem', { name: SAVE_FOR_LATER })[how]()
+}
 
 /** beforeunload (and any other) dialogs a page raised, accepted so a reload goes ahead. */
 const raised = new WeakMap<Page, string[]>()
@@ -291,7 +316,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await shot(page, `${W}-floated`)
     })
 
-    // ---- (b) a PDF enquiry, then a double "Save without asking"
+    // ---- (b) a PDF enquiry, then a double "Save for later"
     await probe(info, page, `${W} PDF enquiry`, async () => {
       const t = tag()
       const cust = await company('Hunt PDF Customer', { city: 'Sialkot' })
@@ -312,11 +337,11 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       if (!ok) note(info, { kind: 'observation', where: `${W} PDF enquiry`, what: 'the PDF did not give the two items with their quantities', detail: rows })
       await layout(page, info, `${W} pdf items`)
       await shot(page, `${W}-pdf-items`)
-      await vis(page.getByRole('button', { name: 'Save without asking' })).dblclick()
+      await saveForLater(page, 'dblclick')
       await expect(page.getByText(/is saved/).first()).toBeVisible(T)
       await page.waitForTimeout(2000)
       const saved = await rfqsOf(cust.id)
-      if (saved.length !== 1) note(info, { kind: 'observation', where: `${W} double Save without asking`, what: `${saved.length} RFQs saved` })
+      if (saved.length !== 1) note(info, { kind: 'observation', where: `${W} double Save for later`, what: `${saved.length} RFQs saved` })
       const files = await db.rows<{ file_name: string | null }>(`attachments?rfq_id=eq.${saved[0].id}&select=file_name`)
       if (files.length !== 1) note(info, { kind: 'observation', where: `${W} PDF enquiry`, what: `the picked PDF is attached ${files.length} times (expected once)`, detail: files })
       await shot(page, `${W}-pdf-saved`)
@@ -338,7 +363,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       if (!ok) note(info, { kind: 'observation', where: `${W} screenshot enquiry`, what: 'the screenshot did not give the two items with their quantities', detail: rows })
       await layout(page, info, `${W} screenshot items`)
       await shot(page, `${W}-screenshot-items`)
-      await vis(page.getByRole('button', { name: 'Save without asking' })).click()
+      await saveForLater(page)
       await expect(page.getByText(/is saved/).first()).toBeVisible(T)
     })
 
@@ -415,7 +440,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       const q = page.getByRole('textbox', { name: 'Quantity of item 1', exact: true })
       await q.fill('99999999999 nos')
       await q.blur()
-      await vis(page.getByRole('button', { name: 'Save without asking' })).click()
+      await saveForLater(page)
       const outcome = await Promise.race([
         page.getByText(/is saved/).first().waitFor({ timeout: 15_000 }).then(() => 'saved'),
         page.getByText(/Nothing was saved/).first().waitFor({ timeout: 15_000 }).then(() => 'refused'),
@@ -460,13 +485,15 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await visit(page, info, `/rfqs/${r.rfq.id}`, `sales/${vp}`)
     }
     const W = `replies/${vp}`
-    const region = (s: Co) => page.getByRole('region', { name: s.name, exact: true })
+    // The reply form is a dialog named after the supplier, opened from Suppliers asked (replyDialog); `price` reads the open one.
+    const region = (s: Co) => page.getByRole('dialog', { name: s.name, exact: true })
     const price = (s: Co, n: number) => region(s).getByLabel(`Price for item ${n} from ${s.name}`)
     await layout(page, info, `${W} rfq page`)
     await shot(page, `${W}-rfq-page`)
 
     await revive()
     await probe(info, page, `${W} typed comma decimals`, async () => {
+      await replyDialog(page, de.name)
       await price(de, 1).fill('1.234,50')
       await price(de, 1).blur()
       await price(de, 2).fill('12,5')
@@ -483,6 +510,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
 
     await revive()
     await probe(info, page, `${W} typed junk, negative and zero`, async () => {
+      await replyDialog(page, pk.name)
       await price(pk, 1).fill('PKR 1,200/-')
       await price(pk, 2).fill('-5')
       await price(pk, 3).fill('0')
@@ -502,6 +530,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
         await save.click()
         await page.waitForTimeout(1500)
         note(info, { kind: 'observation', where: `${W} typed junk`, what: 'saved with junk prices', detail: await linesOf(r.rfq.id, pk.id) })
+        await replyDialog(page, pk.name) // a save closes the dialog: open it again (Edit reply)
       }
       await price(pk, 1).fill('1200')
       await price(pk, 2).fill('3500')
@@ -512,7 +541,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
 
     await revive()
     await probe(info, page, `${W} double-click Save reply`, async () => {
-      const box = region(cn)
+      const box = await replyDialog(page, cn.name)
       // A Chinese supplier: CNY is pre-filled from the country, or one chip is asked for.
       const chip = box.getByRole('group', { name: `Currency for ${cn.name}` }).getByRole('button', { name: 'CNY', exact: true })
       if (await chip.isVisible().catch(() => false)) await chip.click()
@@ -545,7 +574,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
         'Validity 30 days. Best regards, Hans',
       ].join('\n')
       await page.evaluate(x => navigator.clipboard.writeText(x), reply)
-      await region(de2).getByRole('button', { name: 'Paste reply' }).click()
+      await (await replyDialog(page, de2.name)).getByRole('button', { name: 'Paste reply' }).click()
       const panel = page.getByRole('region', { name: `Read from the reply of ${de2.name}` })
       const box = page.getByRole('region', { name: 'Paste their reply' })
       if (await box.isVisible().catch(() => false)) {
@@ -581,11 +610,11 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
 
     await revive()
     await probe(info, page, `${W} close a reply with typed prices, then Back`, async () => {
-      const edit = vis(page.getByRole('button', { name: `Edit reply, ${pk.name}` }))
-      if (await edit.isVisible().catch(() => false)) await edit.click()
+      await replyDialog(page, pk.name)
       await price(pk, 1).fill('1111')
-      await region(pk).getByRole('button', { name: `Close the reply, ${pk.name}` }).click()
-      const confirm = page.getByRole('dialog', { name: 'Close without saving the prices?' })
+      // The dialog's Close with a typed price asks first, in the dialog's own bar ("Discard what you typed?").
+      await region(pk).getByRole('button', { name: 'Close', exact: true }).click()
+      const confirm = page.getByRole('group', { name: 'Discard what you typed?' })
       await expect(confirm).toBeVisible(T)
       await page.goBack()
       await settle(page)
@@ -603,6 +632,9 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await settle(page)
       // Item 1 in PKR at EUR 300 / CNY 40: Karachi 1,200; Rheinmess 1.2345 EUR (or 1,234.50) x 300; Ningbo 2,100 x 40 = 84,000; Alpenwerk 1,234.50 x 300.
       const art = page.getByRole('article', { name: 'Item 1' })
+      // On a phone the items are an accordion (r3/rfq-orders): a folded item with prices opens with a tap on its header.
+      const folded = art.locator('h3').getByRole('button', { expanded: false })
+      if (vp === 'phone' && (await folded.isVisible().catch(() => false))) await folded.click()
       await expect(art.locator('li[data-ranked]').first()).toBeVisible(T)
       const rows = (await art.locator('li[data-ranked]').allInnerTexts()).map(s => s.replace(/\s+/g, ' ').slice(0, 120))
       note(info, { kind: 'observation', where: `${W} ranked comparison`, what: 'item 1 ranking as shown', detail: rows })
@@ -1097,7 +1129,7 @@ test('HW-1: typed comma-decimal supplier prices are stored wrong ("1.234,50" -> 
   const de = await supplier('Hunt HW1 Messtechnik GmbH', 'Germany')
   await quote(r.rfq.id, de, [])
   const { ctx, page } = await hwPage(browser, info, `/rfqs/${r.rfq.id}`, 'HW-1')
-  const box = page.getByRole('region', { name: de.name, exact: true })
+  const box = await replyDialog(page, de.name)
   await box.getByLabel(`Price for item 1 from ${de.name}`).fill('1.234,50')
   await box.getByLabel(`Price for item 2 from ${de.name}`).fill('12,5')
   await box.getByRole('button', { name: 'Save reply' }).click()
@@ -1172,7 +1204,7 @@ test('HW-5: a pasted reply line "price on request" is stored as a price (the "2"
   const { ctx, page } = await hwPage(browser, info, `/rfqs/${r.rfq.id}`, 'HW-5')
   const reply = ['Dear Sir,', 'Our offer:', `${d[0]} - EUR 1.234,50 each, delivery 3-4 weeks`, `${d[1]} - price on request`, 'Best regards, Hans'].join('\n')
   await page.evaluate(x => navigator.clipboard.writeText(x), reply)
-  await page.getByRole('region', { name: de.name, exact: true }).getByRole('button', { name: 'Paste reply' }).click()
+  await (await replyDialog(page, de.name)).getByRole('button', { name: 'Paste reply' }).click()
   const panel = page.getByRole('region', { name: `Read from the reply of ${de.name}` })
   await expect(panel).toBeVisible(T)
   await panel.getByRole('button', { name: /^Accept \d+ prices?$/ }).click()
@@ -1234,7 +1266,7 @@ test('HW-10: an over-large intake quantity is refused with only "Nothing was sav
   const q = page.getByRole('textbox', { name: 'Quantity of item 1', exact: true })
   await q.fill('99999999999 nos')
   await q.blur()
-  await vis(page.getByRole('button', { name: 'Save without asking' })).click()
+  await saveForLater(page)
   const said = page.getByText(/Nothing was saved/).first()
   await expect(said).toBeVisible(T)
   const banner = said.locator('xpath=ancestor::div[contains(@class,"rounded")][1]')

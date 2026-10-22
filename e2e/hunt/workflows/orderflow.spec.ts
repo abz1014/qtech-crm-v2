@@ -249,8 +249,17 @@ async function paymentMenu(p: Page, amt: number, item: RegExp): Promise<void> {
   await p.getByRole('menuitem', { name: item }).click({ timeout: T })
 }
 
+/**
+ * Opens Record payment. It is a button in the order header while an invoice is owed; before an invoice (an advance) and once the
+ * order is paid it lives in the order's More menu (r3/rfq-orders, UX audit P2).
+ */
 async function openRecordPayment(p: Page): Promise<Locator> {
-  await actions(p).getByRole('button', { name: 'Record payment', exact: true }).first().click({ timeout: T })
+  const button = actions(p).getByRole('button', { name: 'Record payment', exact: true }).first()
+  if (await button.waitFor({ timeout: 5000 }).then(() => true).catch(() => false)) await button.click({ timeout: T })
+  else {
+    await p.getByRole('button', { name: /^More( actions)?$/ }).first().click({ timeout: T })
+    await p.getByRole('menuitem', { name: 'Record payment' }).click({ timeout: T })
+  }
   const d = p.getByRole('dialog', { name: 'Record payment' })
   await d.getByRole('textbox', { name: 'Amount received, PKR' }).waitFor({ timeout: T })
   return d
@@ -436,7 +445,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     for (const leak of ['1,234.56', '15,000.50', seed.customer.name]) want(info, 'A chase', !draft.includes(leak), `the supplier chase text mentions "${leak}" (our price or customer)`, draft)
     await shot(page, 'A-goods-chase-dialog')
     await resetClipboard(page)
-    await d.getByRole('button', { name: 'Copy message and mark chased' }).click()
+    await d.getByRole('button', { name: 'Copy and mark chased' }).click()
     const clip = flat(await readClipboardWhen(page, s => s.length > 20))
     want(info, 'A chase', clip.includes(draft.slice(0, 60)) || draft.includes(clip.slice(0, 60)), 'the clipboard text is not the draft shown', { draft: draft.slice(0, 200), clip: clip.slice(0, 200) })
     const stamped = await until(() => legDates(legE), r => r.chase_count === 1)
@@ -450,7 +459,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     await settle(page)
     await legRow(page, supE.name).getByRole('button', { name: `Chase goods, ${supE.name}` }).click({ timeout: T })
     await resetClipboard(page)
-    await page.getByRole('dialog', { name: 'Chase the goods' }).getByRole('button', { name: 'Copy message and mark chased' }).click({ timeout: T })
+    await page.getByRole('dialog', { name: 'Chase the goods' }).getByRole('button', { name: 'Copy and mark chased' }).click({ timeout: T })
     await until(() => legDates(legE), r => r.chase_count === 1)
     const after = await todayItems(sales, info, 'goods_late', supE.name)
     want(info, 'A Today goods_late', after.waiting === 1, `after a chase Today's goods_late is not in Waiting: ${JSON.stringify(after)}`)
@@ -481,7 +490,12 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
   await probe(info, page, 'A part delivery: goods state on the page and in the DB; engineer Today job_on_site', async () => {
     await page.reload()
     await settle(page)
-    await legRow(page, supE.name).getByRole('button', { name: `Delivered today, ${supE.name}` }).click({ timeout: T })
+    // With two suppliers, a supplier order already delivered when the page opens folds to one line (r3/rfq-orders, UX audit P9):
+    // open it first. A folded one is delivered already (the Undo above did not take it back) and has no Delivered today: only a
+    // supplier order still to deliver is stamped here.
+    const fold = legRow(page, supE.name).locator(':scope > button[aria-expanded="false"]')
+    if (await fold.isVisible().catch(() => false)) await fold.click()
+    if ((await legDates(legE)).delivered_on === null) await legRow(page, supE.name).getByRole('button', { name: `Delivered today, ${supE.name}` }).click({ timeout: T })
     await until(() => legDates(legE), r => r.delivered_on === today)
     const s = await until(() => stateOf(id), v => v.goods_state !== 'on_order')
     want(info, 'A part delivery', /part/.test(s.goods_state), `goods_state with one of two suppliers delivered is "${s.goods_state}"`)
