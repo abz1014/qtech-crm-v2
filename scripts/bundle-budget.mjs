@@ -16,6 +16,8 @@ import {
   pdfjsInInitial,
   pdfReaderFiles,
   precacheSize,
+  sheetInInitial,
+  sheetReaderFiles,
 } from './bundle-budget.lib.mjs'
 
 const dist = resolve(process.argv[2] ?? 'dist')
@@ -27,6 +29,7 @@ const reader = pdfReaderFiles(dist, listing)
 const readerRaw = reader.reduce((n, f) => n + f.raw, 0)
 const readerGzip = reader.reduce((n, f) => n + f.gzip, 0)
 const ocr = ocrReaderFiles(dist, listing)
+const sheet = sheetReaderFiles(dist, listing)
 
 const lines = [
   '### Bundle budget (P04)',
@@ -41,6 +44,9 @@ const lines = [
   ...(ocr.length
     ? ocr.map(f => `| Picture reader (tesseract.js, lazy): ${f.file} | ${kb(f.raw)} | ${kb(f.gzip)} | not on first load, not precached |`)
     : ['| Picture reader (tesseract.js, lazy) | - | - | not in the build: no screen reads pictures yet |']),
+  ...(sheet.length
+    ? sheet.map(f => `| Spreadsheet reader (SheetJS, lazy): ${f.file} | ${kb(f.raw)} | ${kb(f.gzip)} | not on first load, not precached |`)
+    : ['| Spreadsheet reader (SheetJS, lazy) | - | - | not in the build: no screen reads spreadsheets yet |']),
   `| Service worker precache (${pre.entries} entries) | ${kb(pre.raw)} | ${kb(pre.gzip)} | shell only |`,
   `| sw.js itself | ${kb(pre.swRaw)} | ${kb(pre.swGzip)} | |`,
 ]
@@ -81,6 +87,17 @@ if (ocrEager.length) {
 const ocrCached = ocr.filter(f => pre.urls.includes(f.file))
 if (ocrCached.length) {
   console.error(`\nFAIL: the picture reader ${ocrCached.map(f => f.file).join(', ')} is in the service worker precache.`)
+  process.exit(1)
+}
+// The spreadsheet reader is loaded only when an .xlsx, .xls or .csv is read: never in the first load, never precached.
+const sheetEager = sheetInInitial(dist, initial)
+if (sheetEager.length) {
+  console.error(`\nFAIL: SheetJS is in the first load (${sheetEager.join(', ')}). Import it only through src/lib/docread/sheetText.ts.`)
+  process.exit(1)
+}
+const sheetCached = sheet.filter(f => pre.urls.includes(f.file))
+if (sheetCached.length) {
+  console.error(`\nFAIL: the spreadsheet reader ${sheetCached.map(f => f.file).join(', ')} is in the service worker precache.`)
   process.exit(1)
 }
 console.log('\nOK: within budget.')
