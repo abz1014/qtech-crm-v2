@@ -149,6 +149,46 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"cash_counts": {
+                  Row: {
+                    "counted_on": string,"counted_pkr": number,"created_at": string,"created_by": string | null,"difference_pkr": number | null,"expected_pkr": number | null,"id": string,"is_opening": boolean,"note": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "counted_on"?: string,"counted_pkr": number,"created_at"?: string,"created_by"?: string | null,"difference_pkr"?: never,"expected_pkr"?: number | null,"id"?: string,"is_opening"?: boolean,"note"?: string | null
+                  }
+                  Update: {
+                    "counted_on"?: string,"counted_pkr"?: number,"created_at"?: string,"created_by"?: string | null,"difference_pkr"?: never,"expected_pkr"?: number | null,"id"?: string,"is_opening"?: boolean,"note"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "cash_counts_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"cash_topups": {
+                  Row: {
+                    "amount_pkr": number,"created_at": string,"created_by": string | null,"drawn_on": string,"id": string,"note": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount_pkr": number,"created_at"?: string,"created_by"?: string | null,"drawn_on"?: string,"id"?: string,"note"?: string | null
+                  }
+                  Update: {
+                    "amount_pkr"?: number,"created_at"?: string,"created_by"?: string | null,"drawn_on"?: string,"id"?: string,"note"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "cash_topups_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"clarifications": {
                   Row: {
                     "answer": string | null,"answered_at": string | null,"ask_count": number,"created_at": string,"created_by": string | null,"first_asked_at": string | null,"id": string,"last_asked_at": string | null,"last_asked_by": string | null,"question": string,"raised_by_inquiry_id": string | null,"rfq_id": string,"rfq_item_id": string | null,"withdrawn_at": string | null
@@ -415,6 +455,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"expense_claims": {
+                  Row: {
+                    "amount_pkr": number,"created_at": string,"created_by": string | null,"decided_at": string | null,"decided_by": string | null,"expense_id": string | null,"id": string,"note": string | null,"order_id": string | null,"paid_how": string | null,"reject_reason": string | null,"spent_on": string,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount_pkr": number,"created_at"?: string,"created_by"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"expense_id"?: string | null,"id"?: string,"note"?: string | null,"order_id"?: string | null,"paid_how"?: string | null,"reject_reason"?: string | null,"spent_on"?: string,"status"?: string
+                  }
+                  Update: {
+                    "amount_pkr"?: number,"created_at"?: string,"created_by"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"expense_id"?: string | null,"id"?: string,"note"?: string | null,"order_id"?: string | null,"paid_how"?: string | null,"reject_reason"?: string | null,"spent_on"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "expense_claims_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "expense_claims_decided_by_fkey"
+      columns: ["decided_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "expense_claims_expense_id_fkey"
+      columns: ["expense_id"]
+isOneToOne: false
+      referencedRelation: "expenses"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "expense_claims_order_id_fkey"
+      columns: ["order_id"]
+isOneToOne: false
+      referencedRelation: "orders"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"expense_categories": {
                   Row: {
                     "active": boolean,"created_at": string,"created_by": string | null,"default_paid_via": string,"group_id": string,"grp": string,"id": string,"monthly_budget_pkr": number | null,"name": string,"sort": number
@@ -463,14 +541,14 @@ isOneToOne: false
                   ]
                 },"expenses": {
                   Row: {
-                    "amount_pkr": number,"bank_month": string | null,"category_id": string,"created_at": string,"created_by": string | null,"description": string | null,"id": string,"input_tax_pkr": number,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string | null,"paid_on": string,"paid_via": string,"payee_id": string | null,"period": string | null,"recurring_id": string | null,"reference": string | null,"supplier_order_id": string | null
+                    "amount_pkr": number,"bank_month": string | null,"category_id": string,"created_at": string,"created_by": string | null,"description": string | null,"fx_amount": number | null,"fx_currency": string | null,"id": string,"input_tax_pkr": number,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string | null,"paid_on": string,"paid_via": string,"payee_id": string | null,"period": string | null,"recurring_id": string | null,"reference": string | null,"supplier_order_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "amount_pkr": number,"bank_month"?: string | null,"category_id": string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"id"?: string,"input_tax_pkr"?: number,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string | null,"paid_on"?: string,"paid_via": string,"payee_id"?: string | null,"period"?: string | null,"recurring_id"?: string | null,"reference"?: string | null,"supplier_order_id"?: string | null
+                    "amount_pkr": number,"bank_month"?: string | null,"category_id": string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"fx_amount"?: number | null,"fx_currency"?: string | null,"id"?: string,"input_tax_pkr"?: number,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string | null,"paid_on"?: string,"paid_via": string,"payee_id"?: string | null,"period"?: string | null,"recurring_id"?: string | null,"reference"?: string | null,"supplier_order_id"?: string | null
                   }
                   Update: {
-                    "amount_pkr"?: number,"bank_month"?: string | null,"category_id"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"id"?: string,"input_tax_pkr"?: number,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string | null,"paid_on"?: string,"paid_via"?: string,"payee_id"?: string | null,"period"?: string | null,"recurring_id"?: string | null,"reference"?: string | null,"supplier_order_id"?: string | null
+                    "amount_pkr"?: number,"bank_month"?: string | null,"category_id"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"fx_amount"?: number | null,"fx_currency"?: string | null,"id"?: string,"input_tax_pkr"?: number,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string | null,"paid_on"?: string,"paid_via"?: string,"payee_id"?: string | null,"period"?: string | null,"recurring_id"?: string | null,"reference"?: string | null,"supplier_order_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -2082,6 +2160,9 @@ isOneToOne: false
               "advance_held": number,"age_days": number,"applied": number,"bucket": string,"company_id": string,"gross": number,"invoice_date": string,"invoice_id": string,"invoice_number": string,"kind": string,"order_id": string,"order_number": number,"remaining": number
             }[]
                            },
+"approve_expense_claim":
+{ Args: { "p_category": string,"p_claim": string,"p_paid_how": string,"p_paid_on"?: string }; Returns: string
+                           },
 "apply_fx_payload":
 { Args: { "p_batch"?: string,"p_payload": Json,"p_source": string }; Returns: Json
                            },
@@ -2093,6 +2174,14 @@ isOneToOne: false
                            },
 "can_access_bucket":
 { Args: { "bucket": string }; Returns: boolean
+                           },
+"cash_in_hand":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "base_at": string,"base_kind": string,"base_on": string,"base_pkr": number,"cash_out_count": number,"cash_out_pkr": number,"expected_pkr": number,"last_difference_pkr": number,"topup_count": number,"topups_pkr": number
+            }[]
+                           },
+"claim_object_ok":
+{ Args: { "p_name": string,"p_write": boolean }; Returns: boolean
                            },
 "close_month":
 { Args: { "p_month": string }; Returns: undefined
