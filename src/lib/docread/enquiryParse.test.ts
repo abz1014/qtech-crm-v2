@@ -352,6 +352,27 @@ describe('parseEnquiry: corpus batches 12 and 13 (fictional)', () => {
     ])
   })
 
+  it('reads a portal line with labelled fields, a quantity in square brackets and running metres', () => {
+    const r = parse('Buyer: Example Mills Ltd\nLine 1 | Short text: Relay 24VDC 2 CO | Quantity: 4 EA | Need by: 29/11/2026')
+    expect(r.items).toEqual([{ description: 'Relay 24VDC 2 CO', qty: 4, unit: 'EA' }])
+    expect(r.facts.company?.name).toBe('Example Mills Ltd')
+    expect(rows('1) Fuse glass 5x20 [Qty: 150 Nos.]\n2) Cable 4 core 2.5 mm2, armoured - 25 RM')).toEqual([
+      ['Fuse glass 5x20', 150, 'nos'],
+      ['Cable 4 core 2.5 mm2, armoured', 25, 'm'],
+    ])
+  })
+
+  it('reads "1NO" at the end of an item as its contacts, and takes the quantity from the next line', () => {
+    expect(rows('• Push button red, 1NO\n   Qty: 10 Pcs\n• Relay 24VDC 2NO+2NC - 4 Nos')).toEqual([
+      ['Push button red, 1NO', 10, 'Pcs'],
+      ['Relay 24VDC 2NO+2NC', 4, 'nos'],
+    ])
+  })
+
+  it('ends the table at a signature laid over its columns', () => {
+    expect(rows('SR\tDESCRIPTION\tQTY\tUNIT\n01\tCONTACTOR 9A 220VAC\t5\tPCS\nSTORE\tKEEPER\t\t')).toEqual([['CONTACTOR 9A 220VAC', 5, 'PCS']])
+  })
+
   it('reads the closing date written just above the signature', () => {
     const r = parse('1. Relay 24VDC = 4 Nos\n\nQuotations are required before 29 October 2026.\nExample Mills Limited, Maintenance Department')
     expect(r.facts.dueDate?.iso).toBe('2026-10-29')

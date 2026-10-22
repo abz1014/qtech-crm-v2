@@ -162,6 +162,10 @@ const HEADER_TERM = new RegExp(
   '^(?:' +
     [
       String.raw`s\.?\s*no\.?`,
+      String.raw`s\.?\s*#`,
+      String.raw`order\s*(?:code|no\.?)`,
+      String.raw`art(?:icle|\.)?\s*(?:no\.?|code|#)`,
+      String.raw`cat(?:alog(?:ue)?|\.)?\s*(?:no\.?|#)`,
       String.raw`sr\.?(?:\s*no\.?|\s*#)?`,
       String.raw`sl\.?(?:\s*no\.?)?`,
       '#',
@@ -200,6 +204,7 @@ const HEADER_TERM = new RegExp(
       String.raw`hs\s*code`,
       String.raw`disc(?:ount)?\.?\s*%?`,
       String.raw`(?:list|gross)\s*(?:price|rate)`,
+      String.raw`(?:estimated|est\.?|approx\.?|budget(?:ary)?|target|last\s*purchase)\s*(?:unit\s*)?(?:rate|price|cost|amount|value)`,
       'tax',
       'gst',
       String.raw`sales\s*tax`,
@@ -513,7 +518,14 @@ export function layoutPages(pages: ReadonlyArray<readonly TextRun[]>): LaidLine[
         const startsLeft = single !== null && !isNumericCell(single.text) && single.x0 < first.x0 - 2 * single.size
         // A sentence written from the table's left edge across two or more columns is a paragraph under the table, not a cell.
         const edgesCrossed = single ? t.cols.slice(1).filter(c => c.x0 > single.x0 + single.size && c.x0 < single.x1).length : 0
-        const paragraph = single !== null && !isNumericCell(single.text) && regionOf(single.x0 + 0.5 * single.size, t.cols) === 0 && edgesCrossed >= 2
+        // Under a serial-number column, words starting in it and running into the next column are a sentence too: a row's
+        // wrapped text does not spill into the serial column ("Rates are in PKR. GST 18% extra.").
+        const serialFirst = /^(?:s\.?\s*(?:no|#)|sr|sl|#|no\.?$|pos|item\s*(?:no|#))/i.test(first.label.trim())
+        const paragraph =
+          single !== null &&
+          !isNumericCell(single.text) &&
+          regionOf(single.x0 + 0.5 * single.size, t.cols) === 0 &&
+          (edgesCrossed >= 2 || (serialFirst && edgesCrossed >= 1 && single.text.split(' ').length >= 3))
         // A line that starts with a closing word ("Bid due:", "Regards,", "Terms") and has no number in a cell of its own.
         const closing = END_OF_TABLE.test((l.cells[0] as Cell).text) && (single !== null || !l.cells.slice(1).some(c => isNumericCell(c.text)))
         // A numbered sentence written from the table's left edge ("1. Bid security 2% of the quoted amount."): the terms under it.

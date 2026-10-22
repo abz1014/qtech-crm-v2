@@ -108,7 +108,7 @@ const INSTRUCTION =
 const COMPANY =
   /\b(?:ltd|limited|pvt|private|inc|llc|corp(?:oration)?|company|co\.|industries|mills|group|enterprises?|traders|associates|sons)\b/i
 const DESIGNATION =
-  /\b(?:engineer|engr\.?|manager|officer|executive|incharge|in-charge|director|assistant|supervisor|coordinator|buyer|purchaser|procurement|purchase|stores?|department|dept\.?|section|ceo|gm|dgm|agm|senior|junior|deputy)\b/i
+  /\b(?:engineer|engr\.?|manager|officer|executive|incharge|in-charge|director|assistant|supervisor|coordinator|buyer|purchaser|procurement|purchase|stores?|(?:store\s*)?keeper|storekeeper|clerk|foreman|department|dept\.?|section|ceo|gm|dgm|agm|senior|junior|deputy)\b/i
 const ADDRESS =
   /\b(?:road|rd\.?|street|block|sector|phase|plot|floor|building|bldg|tower|plaza|town|colony|industrial\s+(?:area|estate|zone)|p\.?\s?o\.?\s?box|district|tehsil|karachi|lahore|islamabad|rawalpindi|faisalabad|multan|peshawar|sialkot|gujranwala|hyderabad|quetta|haripur|hattar|sheikhupura|kasur|pakistan|plant\s+site|head\s+office)\b/i
 const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g
@@ -122,7 +122,7 @@ const FREE_MAIL = /^(?:gmail|googlemail|yahoo|ymail|hotmail|outlook|live|msn|icl
 const UNIT_SRC = String.raw`nos?\.?|no's|numbers?|pcs?\.?|pieces?|ea|each|units?|sets?|lots?|pairs?|rolls?|mtrs?|meters?|metres?|m|ltrs?|litres?|liters?|l|kgs?|ft|feet|prs?|adad|rmt?|lengths?|boxe?s?|pkts?|packets?|bags?|drums?|cans?|sheets?|coils?|cartons?`
 const QTY_WORD = String.raw`(?:qty\.?\s*req(?:uired|d)?\.?|req(?:uired|\.)?\s*qty\.?|required\s+(?:qty\.?|quantity)|quantity\s+required|qty\.?|quantity|q'ty|qnty)`
 const LABELLED_QTY = new RegExp(
-  String.raw`(^|[\s,;(|])${QTY_WORD}\s*[:=.\-–]?\s*(\d[\d,]*(?:\.\d+)?)(?:\s*(${UNIT_SRC}))?(?![A-Za-z0-9])`,
+  String.raw`(^|[\s,;(|[])${QTY_WORD}\s*[:=.\-–]?\s*(\d[\d,]*(?:\.\d+)?)(?:\s*(${UNIT_SRC}))?(?![A-Za-z0-9])`,
   'i',
 )
 const EXTRA_TRAIL = new RegExp(String.raw`(?:^|[\s,;(–—-])\s*(\d[\d,]*(?:\.\d+)?)\s*(nos?|no's|numbers?|adad|drums?|bags?|boxe?s?|cans?|sheets?|coils?|cartons?|pkts?|packets?|lengths?|kgs?|prs?|pairs?|rolls?|ea|each|pieces?|pcs?|sets?|lots?)\.?\s*\)?\.?$`, 'i')
@@ -205,7 +205,8 @@ function readItem(text: string): ReadItem | null {
     qty = toQty(lab[2] as string)
     unit = unitOf(lab[3])
     const start = lab.index + (lab[1] as string).length
-    t = `${t.slice(0, start)} ${t.slice(lab.index + lab[0].length)}`
+    // "Fuse glass 5x20 [Qty: 150 Nos.]": the brackets that held the quantity go with it.
+    t = `${t.slice(0, start)} ${t.slice(lab.index + lab[0].length)}`.replace(/[([]\s*\.?\s*[)\]]/g, ' ')
   } else {
     // "20 Kg lubricating grease", "5 kgs ...", "2 PR carbon brush": a quantity and unit in front.
     const lead = LEAD_UNIT.exec(t)
@@ -215,7 +216,8 @@ function readItem(text: string): ReadItem | null {
       t = t.slice(lead[0].length)
     }
   }
-  t = tidy(t.replace(OPENER, ''))
+  // "25 RM" / "25 RMT" (running metres): metres to the intake's own reading.
+  t = tidy(t.replace(OPENER, '').replace(/(\d)\s*rmt?\.?$/i, '$1 mtr'))
   if (!t) return null
   // The intake's own reading: polite openers, greetings, "2 nos ..." at the start, "... - 2 nos" at the end. With the
   // quantity already read, a stand-in "qty 1" is what it takes off the end, so a size ("0-10m") is not read as one.
@@ -223,6 +225,9 @@ function readItem(text: string): ReadItem | null {
   if (!old) return null
   // "Model FX3U-48M": the end of a part number, not 48 metres.
   if (qty === null && old.unit && /[A-Za-z0-9]-\d+(?:\.\d+)?[A-Za-z]+\.?$/.test(t)) old = { description: tidy(t), qty: 1, unit: null }
+  // "Push button red, 1NO", "Contactor 9A 2NO+2NC": contacts, not one "No".
+  const contacts = /(?:^|[\s,+])\dN[OC](?:\+\dN[OC])*$/.test(t)
+  if (qty === null && old.unit && contacts) old = { description: tidy(t), qty: 1, unit: null }
   let description = qty === null ? old.description : old.description.replace(/\s*qty 1$/i, '')
   if (qty === null) {
     const explicit = old.qty !== 1 || old.unit !== null || /(?:^|\s)(?:[x×]\s*0*1|0*1\s*[x×])(?:\s|$)/i.test(t)
@@ -230,7 +235,7 @@ function readItem(text: string): ReadItem | null {
       qty = old.qty
       unit = old.unit ? unitOf(writtenUnitFor(t, old.qty) ?? old.unit) : null
     } else {
-      const ex = EXTRA_TRAIL.exec(description)
+      const ex = contacts ? null : EXTRA_TRAIL.exec(description)
       // "Siemens 6ES7 231-4HD32-0XB0 – 2": a bare number after a spaced dash, when what is before it is not a number
       // (that would be a range, "0 - 10").
       const dash = /\s[–-]\s+(\d{1,4})$/.exec(description)
@@ -407,6 +412,24 @@ const MARKER =
   /^\s*(?:(?:item|ltem|tem)\s*(?:no\.?)?\s*#?\s*\d{1,3}\s*(?:[:.)-]\s*|$)|\(?\d{1,3}\)\s*|\d{1,3}[.:]\s+|\d{1,3}\s?-\s+|\(?[a-h]\)\s+|\(?(?:i{1,3}|iv|vi{0,3}|ix|x)\)\s+|[-•*·–®©°«»¢]\s+|\+\s+(?=[A-Za-z])|\[\d{1,3}\]\s*|#\s*\d{1,3}[.:)]?\s+|0\d{3,4}\s+)/i
 
 /** A line that stops where it cannot end: the next line goes on with it ("..., Model" / "FX4U-48MT/ESS"). */
+/**
+ * A supplier-portal or ERP line with its fields labelled ("Line 1 | Short text: Relay 24VDC | Quantity: 4 EA | Need by: 29/11/2026")
+ * as an item line ("Relay 24VDC - 4 EA"); the need-by date and the line number are not part of the item. Null for other lines.
+ */
+function labelledRow(line: string): string | null {
+  if (!/[|\t]/.test(line)) return null
+  const cells = line.split(/\s*[|\t]\s*/).map(c => /^([A-Za-z][A-Za-z .'/#]{1,30}?)\s*:\s*(.+)$/.exec(c.trim()))
+  const get = (re: RegExp) => cells.find(m => m && re.test((m[1] as string).trim()))?.[2]?.trim() ?? ''
+  const desc = get(/^(?:short\s*text|description|item(?:\s*(?:description|text|name))?|material(?:\s*description)?|product|particulars|specification)$/i)
+  const qty = get(/^(?:qty|quantity|q'ty|req(?:uired|\.)?\s*qty|order\s*qty)$/i)
+  if (!desc || !/^\d[\d,]*(?:\.\d+)?\b/.test(qty)) return null
+  const unit = get(/^(?:uom|unit|unit\s*of\s*measure)$/i)
+  const part = get(/^(?:part\s*(?:no\.?|number|#)|model(?:\s*no\.?)?|mfr\.?\s*part(?:\s*no\.?)?)$/i)
+  const make = get(/^(?:make|brand|manufacturer)$/i)
+  const extra = [make && !desc.toLowerCase().includes(make.toLowerCase()) ? make : '', part && !desc.includes(part) ? part : ''].filter(Boolean).join(' ')
+  return `${desc}${extra ? ` ${extra}` : ''} - ${qty}${unit ? ` ${unit}` : ''}`
+}
+
 /** A section heading row in a table: "A. ELECTRICAL", "B) Instruments", "Electrical Spares", "Mechanical / Others". */
 const SECTION_ROW = /^(?=\D*$)(?:[A-Z][.)]\s+[A-Za-z][A-Za-z &/-]{2,30}|(?:\S+\s+){0,3}(?:items?|spares|materials?|parts|others|consumables|equipments?|instruments?)\s*:?)$/i
 const DANGLING =/(?:[,/&(:-]|\b(?:with|and|for|of|model|model\s*no\.?|type|qty\.?|quantity|p\/n|part\s*no\.?|make|brand|size|range|code))$/i
@@ -630,7 +653,8 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   let blank = false
   /** Inside a chat message we sent ourselves (its sender is our own name): not the customer's words. */
   let ownMessage = false
-  for (const line0 of alignSpacedRows(text.split('\n'))) {
+  for (const line00 of alignSpacedRows(text.split('\n'))) {
+    const line0 = labelledRow(line00) ?? line00
     // WhatsApp's *bold*, _italic_ and ~strike~ marks are formatting, not text.
     const line = line0
       .replace(EMOJI, '')
@@ -922,7 +946,10 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       }
       // A closing sentence that a PDF laid over the table's columns ("Quotation ⇥ must reach us on or before 16/11/2026.")
       // ends the table and is read as text.
-      if (table && (table.qty < 0 || !NUM_CELL.test(cells[table.qty] ?? '')) && findDue(cells.filter(Boolean).join(' '), today)) {
+      // So does a signature laid over the columns ("STORE ⇥ KEEPER", "Purchase ⇥ Officer").
+      const joinedRow = cells.filter(Boolean).join(' ')
+      const signed = DESIGNATION.test(joinedRow) && joinedRow.split(' ').length <= 4 && !/\d/.test(joinedRow) && !PRODUCT.test(joinedRow)
+      if (table && (table.qty < 0 || !NUM_CELL.test(cells[table.qty] ?? '')) && (signed || findDue(joinedRow, today))) {
         table = null
         close()
       }
@@ -1207,6 +1234,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
   // "For Example Mills Ltd" under a letter, "M/s Example Mills": the company is what follows.
   const name =
     names[0]?.n
+      .replace(/^(?:buyer|customer|client|company|purchaser|organi[sz]ation)\s*:\s*/i, '')
       .replace(/^(?:for\s+(?:and\s+on\s+behalf\s+of\s+)?|on\s+behalf\s+of\s+|m\/s\.?\s*|messrs\.?\s+)/i, '')
       // "Example Mills Ltd - Purchase Requisition": the document's title after the name.
       .replace(/\s+[-–|:]\s+(?![^-–|:]*\b(?:ltd|limited|pvt|private|inc|llc)\b).*$/i, '')

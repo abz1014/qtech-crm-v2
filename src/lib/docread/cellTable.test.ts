@@ -42,3 +42,14 @@ describe('rebuildCellText: quantity first, no serial column (fictional)', () => 
     ])
   })
 })
+
+describe('rebuildCellText: positions 10, 20 and an all-digit order code (fictional)', () => {
+  it('puts each position back in its row', () => {
+    const text = ['Pos', 'Order code', 'Description', 'Qty', 'Unit price EUR', '10', '9248471', 'Butterfly valve DN50', '8', '87.00', '20', '5322172', 'Power supply 24VDC 10A', '1', '640.00'].join('\n')
+    expect(rebuildCellText(text).split('\n')).toEqual([
+      'Pos\tOrder code\tDescription\tQty\tUnit price EUR',
+      '10\t9248471\tButterfly valve DN50\t8\t87.00',
+      '20\t5322172\tPower supply 24VDC 10A\t1\t640.00',
+    ])
+  })
+})

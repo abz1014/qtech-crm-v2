@@ -18,7 +18,7 @@ const MONEY = /^(?:[A-Za-z$€¥￥£₨.]{0,4}\s?)?\d[\d,]*(?:\.\d+)?(?:\/-)?(?
 const PLACEHOLDER = /^[-–—]$|^n\/?a$/i
 
 function headerKind(label: string, hasDesc: boolean): Kind {
-  if (/^(?:s\.?\s*no|sr|sl|#|no\.?$|pos|line|itm)/i.test(label) || (hasDesc && /^item(?:\s*no\.?)?$/i.test(label))) return 'number'
+  if (/^(?:s\.?\s*no|s\.?\s*#|sr|sl|#|no\.?$|pos|line|itm)/i.test(label) || (hasDesc && /^item(?:\s*no\.?)?$/i.test(label))) return 'number'
   if (/desc|particular|specification|product|item\s*name|short\s*text|goods|^item$/i.test(label)) return 'desc'
   if (/qty|quantity/i.test(label)) return 'qty'
   // "Unit EUR" is a price per unit; "Unit" and "UOM" alone are the unit.
@@ -60,7 +60,9 @@ function place(cells: string[], kinds: Kind[]): { out: string[]; col: number } {
   for (const c of cells) {
     let at = -1
     for (let x = col; x < kinds.length; x++) {
-      if (fits(kinds[x] as Kind, c)) {
+      // An order or material code before the description can be all digits ("10" / "9248471" / "Butterfly valve ...").
+      const numericCode = kinds[x] === 'code' && /^\d{5,}$/.test(c) && kinds.indexOf('desc') > x
+      if (numericCode || fits(kinds[x] as Kind, c)) {
         at = x
         break
       }
@@ -104,7 +106,9 @@ export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string
     const need: Kind = kinds.includes('qty') ? 'qty' : 'money'
     const rows: string[][] = []
     let j = e
-    let serial = 1
+    // Positions count 1, 2, 3 or 10, 20, 30 (a German or SAP quotation).
+    const step = numbered && /^10\.?$/.test((src[e] as T | undefined)?.t ?? '') ? 10 : 1
+    let serial = step
     while (j < src.length) {
       const first = (src[j] as T).t
       if ((numbered && first.replace(/\.$/, '') !== String(serial)) || first.includes('\t')) break
@@ -117,7 +121,7 @@ export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string
         // The next serial number starts the next row (followed by its description, not by another number: a last cell can
         // equal the next serial, "... 6240.00 / 2 / 2 / Amerix ...").
         const after = (src[q + 1] as T | undefined)?.t ?? ''
-        if (numbered && hasNeed() && t.replace(/\.$/, '') === String(serial + 1) && !NUM.test(after)) break
+        if (numbered && hasNeed() && t.replace(/\.$/, '') === String(serial + step) && !NUM.test(after)) break
         // A row that already has its cells (tab separated) is a table of its own: the header words above are stacked headings.
         if (stop(t) || t.includes('\t')) break
         // A sentence under a complete row is the text after the table ("Last date for submission: 3 November").
@@ -135,7 +139,7 @@ export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string
       const { out } = place(cells, kinds)
       if (!out.some((v, x) => v && kinds[x] === 'desc')) break
       rows.push(out)
-      serial++
+      serial += step
       j = q
     }
     if (rows.length === 0) continue
