@@ -220,7 +220,8 @@ select is((select array_agg(t.tgrelid::regclass::text order by t.tgrelid::regcla
   array['invoices', 'order_items', 'orders', 'rfq_items', 'rfqs'], 'the guard sits on rfqs, rfq_items, orders, order_items and invoices');
 
 select is((select array_agg(distinct p.proname::text order by p.proname::text) from pg_proc p
-           where p.pronamespace = 'public'::regnamespace and p.prosrc like '%qtech.entered_by_bypass%'),
+           where p.pronamespace = 'public'::regnamespace and p.prosrc like '%qtech.entered_by_bypass%'
+             and p.proname <> 'guard_entered_by'),
   array['issue_purchase_order', 'issue_quotation', 'split_order_item'],
   'the three workflow RPCs that write prices and quantities of others'' records carry the guard''s bypass marker (keep it when editing them)');
 
