@@ -568,3 +568,15 @@ describe('validity date written without a year', () => {
     expect(r.offers[0]?.validityDays).toBe(20)
   })
 })
+
+describe('a table with list price, discount and net price (fictional)', () => {
+  it('takes the net price as the unit price', () => {
+    const text = [
+      'Pos\tDescription\tQty\tList Price USD\tDisc. %\tNet Price USD\tTotal USD',
+      '1\tSITRANS P320 pressure transmitter 0-10 bar\t4\t480.00\t15%\t408.00\t1632.00',
+    ].join('\n')
+    const o = one(parseSupplierReply(text, ITEMS, { today: '2026-10-20' }).offers, 'i1')
+    expect(o.unitPrice).toBe(408)
+    expect(o.currency).toBe('USD')
+  })
+})

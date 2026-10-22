@@ -30,3 +30,15 @@ describe('alignSpacedRows: columns lined up with spaces', () => {
     expect(alignSpacedRows(lines)).toEqual(['Item\tDescription\tModel No.\tMake\tQty\tUnits', '1\tFuse 100A\t\tLumenta\t150\tEA', '2\tGasket set for pump 50-200\t\t\t4\tSet'])
   })
 })
+
+describe('rebuildCellText: quantity first, no serial column (fictional)', () => {
+  it('starts the next row at the next quantity when the last cell of a row is empty', () => {
+    const text = ['Qty', 'Unit', 'Description', 'Part No.', '4', 'NO', 'Panel meter voltmeter', '10', 'PCS', 'Relay 24VDC', 'RX-2201', '2', 'SET', 'Gasket set'].join('\n')
+    expect(rebuildCellText(text).split('\n')).toEqual([
+      'Qty\tUnit\tDescription\tPart No.',
+      '4\tNO\tPanel meter voltmeter\t',
+      '10\tPCS\tRelay 24VDC\tRX-2201',
+      '2\tSET\tGasket set\t',
+    ])
+  })
+})

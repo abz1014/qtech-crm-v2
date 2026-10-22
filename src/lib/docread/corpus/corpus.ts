@@ -130,6 +130,12 @@ export const BATCHES: BatchSpec[] = [
   { batch: 8, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8], dev: true, gate: true },
   // Fresh batch 9, first try (text and PDF): enquiry items 98.6% / 98.6%, due 95.5%, count 97.8%; quotes 100%: dev now.
   { batch: 9, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dev: true, gate: true },
+  // Fresh batch 12, first try (text and PDF): enquiry items 99.4% / 99.0%, count 97.9%, due 100% / 95.8%; quotes offers 80.0% / 97.8%,
+  // price 87.9% / 85.9% (list price, discount and net price columns): dev now.
+  { batch: 12, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dev: true, gate: true },
+  // Fresh batch 13, first try (text and PDF): enquiry items 99.0% / 99.5%, count 97.8% (section rows inside a table), quotes 100%:
+  // dev now.
+  { batch: 13, enquiries: 120, quotes: 48, gens: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dev: true, gate: true },
 ]
 
 function splitOf(spec: BatchSpec, id: string): 'dev' | 'held' {

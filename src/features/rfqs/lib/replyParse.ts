@@ -721,7 +721,11 @@ function tableHeader(cells: string[]): TableCols | null {
   if (cells.some(c => /\d{2,}/.test(c.replace(/\([^)]*\)/g, '')))) return null
   const find = (re: RegExp, not?: RegExp) => cells.findIndex(c => re.test(c) && !(not && not.test(c)))
   const total = find(/total|amount|ext\b|line\s*value/i)
-  const price = find(/price|rate|u\/p|unit\s*cost|unit\s*value/i, /total|amount/i)
+  // With a list price and a discount, the price is the net one ("List Price | Disc. % | Net Price").
+  const PRICE = /price|rate|u\/p|unit\s*cost|unit\s*value/i
+  const net = find(/\bnet\b|after\s*disc|discounted/i, /total|amount/i)
+  const notList = find(PRICE, /total|amount|\blist\b|\bgross\b/i)
+  const price = net >= 0 && PRICE.test(cells[net] ?? '') ? net : notList >= 0 ? notList : find(PRICE, /total|amount/i)
   if (price < 0 && total < 0) return null
   const priceCell = cells[price] ?? cells[total] ?? ''
   const leadAt = find(/lead|delivery|dlv|availability|eta|^(?:wks?|weeks?|days)\.?$/i)

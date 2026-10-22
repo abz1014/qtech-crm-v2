@@ -407,7 +407,9 @@ const MARKER =
   /^\s*(?:(?:item|ltem|tem)\s*(?:no\.?)?\s*#?\s*\d{1,3}\s*(?:[:.)-]\s*|$)|\(?\d{1,3}\)\s*|\d{1,3}[.:]\s+|\d{1,3}\s?-\s+|\(?[a-h]\)\s+|\(?(?:i{1,3}|iv|vi{0,3}|ix|x)\)\s+|[-•*·–®©°«»¢]\s+|\+\s+(?=[A-Za-z])|\[\d{1,3}\]\s*|#\s*\d{1,3}[.:)]?\s+|0\d{3,4}\s+)/i
 
 /** A line that stops where it cannot end: the next line goes on with it ("..., Model" / "FX4U-48MT/ESS"). */
-const DANGLING = /(?:[,/&(:-]|\b(?:with|and|for|of|model|model\s*no\.?|type|qty\.?|quantity|p\/n|part\s*no\.?|make|brand|size|range|code))$/i
+/** A section heading row in a table: "A. ELECTRICAL", "B) Instruments", "Electrical Spares", "Mechanical / Others". */
+const SECTION_ROW = /^(?=\D*$)(?:[A-Z][.)]\s+[A-Za-z][A-Za-z &/-]{2,30}|(?:\S+\s+){0,3}(?:items?|spares|materials?|parts|others|consumables|equipments?|instruments?)\s*:?)$/i
+const DANGLING =/(?:[,/&(:-]|\b(?:with|and|for|of|model|model\s*no\.?|type|qty\.?|quantity|p\/n|part\s*no\.?|make|brand|size|range|code))$/i
 
 /** Lines of one item put together: a word broken at its dash ("g5zk-" / "051") is joined without a space. */
 function joinWrapped(texts: string[]): string {
@@ -858,6 +860,8 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     if (zone === 'signature' || sigLines.has(k)) {
       noteContacts(t, 3)
       noteCompany(t, 3)
+      // A closing date just above the sender's name ("Quotations are required before 29 October 2026.").
+      if (!due) due = findDue(t, today)
       skip(t, 'signature')
       continue
     }
@@ -936,6 +940,14 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
             if (u >= 0) table.unit = u
           }
         }
+        // A section row inside the table ("ELECTRICAL ITEMS", "B. Instruments", "Mechanical Spares"): one cell of words, no
+        // number; it heads the rows under it and is no item, nor the item above wrapping.
+        const filled = cells.filter(Boolean)
+        if (filled.length === 1 && SECTION_ROW.test((filled[0] as string).trim())) {
+          row = null
+          skip(t, 'table')
+          continue
+        }
         const it = tableItem(cells, table)
         // A form's row with no quantity is the row above wrapping onto the next line.
         // A row with its own serial number or material code is an item even when its quantity was not read.
@@ -972,7 +984,7 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
         lines.push({ text: t, kind: 'item', reason: null, marker: null })
         continue
       }
-      if (row && !/^(?:comments?|remarks?|note)\s*:/i.test(t) && continuesRow(t)) {
+      if (row && !/^(?:comments?|remarks?|note)\s*:/i.test(t) && !SECTION_ROW.test(t.trim()) && continuesRow(t)) {
         extend(row, cells ? cells.filter(Boolean).join(' ') : t)
         continue
       }
@@ -1092,7 +1104,9 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
       const prev = d.texts[d.texts.length - 1] ?? ''
       // An indented line under an item is its wrapped text, unless both have a quantity of their own (a list pasted with
       // leading spaces: "Pressure gauge - 2 Nos" / "   Ball valve - 4 Nos").
-      const wraps = !d.qtyLine && ((s.indent > d.indent && !(ownQty && curHasQty0())) || DANGLING.test(prev))
+      // A word that usually goes on ("type", "with") does not pull in a next line that is an item of its own
+      // ("5 x Butterfly valve DN50, wafer type" / "2 x Flow meter ...").
+      const wraps = !d.qtyLine && !(ownQty && curHasQty0()) && (s.indent > d.indent || DANGLING.test(prev))
       const curHasQty = d.qty !== null || (d.texts.length > 0 && readItem(joinWrapped(d.texts))?.qty != null)
       // In a marked list, an unmarked line naming a product after an item that has its quantity starts a new item (its
       // quantity can follow on the next line: "Insulation tape self amalgamating" / "25 rolls").

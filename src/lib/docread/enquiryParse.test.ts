@@ -327,3 +327,33 @@ describe('parseEnquiry: edge cases from the bug hunt (2026-10-22)', () => {
     ])
   })
 })
+
+describe('parseEnquiry: corpus batches 12 and 13 (fictional)', () => {
+  const rows = (t: string) => parse(t).items.map(i => [i.description, i.qty, i.unit])
+
+  it('skips section rows inside a table', () => {
+    const text = [
+      'S.No\tDescription of Material\tUOM\tQty',
+      '\tA. ELECTRICAL\t\t',
+      '1\tBearing 6205 ZZ\tPCS\t5',
+      'INSTRUMENTATION ITEMS',
+      '2\tPressure gauge 0-10 bar\tNOS\t2',
+    ].join('\n')
+    expect(rows(text)).toEqual([
+      ['Bearing 6205 ZZ', 5, 'PCS'],
+      ['Pressure gauge 0-10 bar', 2, 'nos'],
+    ])
+  })
+
+  it('does not pull an item with its own quantity onto a line ending in "type"', () => {
+    expect(rows('5 x Butterfly valve DN50, wafer type\n2 x Flow meter DN25')).toEqual([
+      ['Butterfly valve DN50, wafer type', 5, null],
+      ['Flow meter DN25', 2, null],
+    ])
+  })
+
+  it('reads the closing date written just above the signature', () => {
+    const r = parse('1. Relay 24VDC = 4 Nos\n\nQuotations are required before 29 October 2026.\nExample Mills Limited, Maintenance Department')
+    expect(r.facts.dueDate?.iso).toBe('2026-10-29')
+  })
+})

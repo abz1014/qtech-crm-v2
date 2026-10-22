@@ -53,6 +53,29 @@ function fits(kind: Kind, c: string): boolean {
   }
 }
 
+/** Each cell goes to the first column from the last placed one on that it fits; a cell that fits none goes on the text before. */
+function place(cells: string[], kinds: Kind[]): { out: string[]; col: number } {
+  const out: string[] = kinds.map(() => '')
+  let col = 0
+  for (const c of cells) {
+    let at = -1
+    for (let x = col; x < kinds.length; x++) {
+      if (fits(kinds[x] as Kind, c)) {
+        at = x
+        break
+      }
+    }
+    if (at < 0) {
+      const lastText = out.reduce((a, v, x) => (v && (kinds[x] === 'desc' || kinds[x] === 'text') ? x : a), -1)
+      if (lastText >= 0) out[lastText] = `${out[lastText]} ${c}`
+      continue
+    }
+    out[at] = PLACEHOLDER.test(c) ? '' : c
+    col = at + 1
+  }
+  return { out, col }
+}
+
 export interface CellLine {
   t: string
   blankBefore: boolean
@@ -99,29 +122,17 @@ export function rebuildCellTables<T extends CellLine>(src: T[], stop: (t: string
         if (stop(t) || t.includes('\t')) break
         // A sentence under a complete row is the text after the table ("Last date for submission: 3 November").
         if (hasNeed() && (/[A-Za-z]:\s/.test(t) || t.split(' ').length >= 7)) break
+        // With no serial column, empty cells at the end of a row ("4" / "NO" / "Panel meter" / "" under Part No) are not
+        // written either: a cell that fits no column from here on but fits the first one (a quantity) starts the next row.
+        if (!numbered && cells.length && kinds[0] !== 'desc' && kinds[0] !== 'text' && !PLACEHOLDER.test(t)) {
+          const { out, col } = place(cells, kinds)
+          if (out.some((v, x) => v && kinds[x] === 'desc') && fits(kinds[0] as Kind, t) && kinds.slice(col).every(k => !fits(k, t))) break
+        }
         cells.push(t)
         q++
         if (numbered && cells.length >= labels.length) break
       }
-      // Each cell goes to the first column from here on that it fits.
-      const out: string[] = labels.map(() => '')
-      let col = 0
-      for (const c of cells) {
-        let at = -1
-        for (let x = col; x < kinds.length; x++) {
-          if (fits(kinds[x] as Kind, c)) {
-            at = x
-            break
-          }
-        }
-        if (at < 0) {
-          const lastText = out.reduce((a, v, x) => (v && (kinds[x] === 'desc' || kinds[x] === 'text') ? x : a), -1)
-          if (lastText >= 0) out[lastText] = `${out[lastText]} ${c}`
-          continue
-        }
-        out[at] = PLACEHOLDER.test(c) ? '' : c
-        col = at + 1
-      }
+      const { out } = place(cells, kinds)
       if (!out.some((v, x) => v && kinds[x] === 'desc')) break
       rows.push(out)
       serial++
