@@ -145,15 +145,20 @@ jobs:
           # The text read from each fictional corpus picture, kept as an artifact to work on the reader from (Linux renders the
           # fonts differently from a developer's machine).
           CORPUS_OCR_OUT: ocr-texts.json
-        run: npx playwright test --project=docread
-      - name: Upload the corpus OCR texts
+          CORPUS_SAVE: ocr-pictures
+        run: |
+          mkdir -p ocr-pictures
+          npx playwright test --project=docread
+      - name: Upload the corpus OCR texts and pictures
         if: ${{ always() && !(github.event_name == 'workflow_dispatch' && inputs.update_baselines) }}
         uses: actions/upload-artifact@v7
         with:
           name: ocr-texts
-          path: ocr-texts.json
+          path: |
+            ocr-texts.json
+            ocr-pictures
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
       - name: Upload generated baselines
         if: ${{ always() && (steps.visual.outputs.generated == 'true' || (github.event_name == 'workflow_dispatch' && inputs.update_baselines)) }}
         uses: actions/upload-artifact@v7
