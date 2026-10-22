@@ -205,6 +205,8 @@ export interface CostFact {
   basisUnknown: boolean
   /** The order was cancelled. */
   cancelled: boolean
+  /** Imported from the old CRM (orders.legacy_source is set): a settled imported order is history and raises nothing. */
+  legacy?: boolean
 }
 
 /** M08: one invoice, as v_invoice_state describes it. Admin and sales only. */
@@ -346,8 +348,13 @@ export interface TodayView {
   soon: TodayItem[]
   ready: TodayItem[]
   waiting: TodayItem[]
-  /** All active items in list order (now, soon, ready). */
+  /** All active items in list order (now, soon, ready). Never a stale item. */
   active: TodayItem[]
+  /**
+   * Older than 30 days (needsYou.ts, redesign phase 0): out of the active groups and never counted, but still listed for the
+   * person, in a grey fold ("Older than 30 days"). A late payment is never stale.
+   */
+  stale: TodayItem[]
   /** Order tasks on imported orders (owner decision 2026-10-22, 1b): out of every group and every count, in a grey fold. */
   imported: TodayItem[]
 }

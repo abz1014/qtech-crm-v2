@@ -14,6 +14,7 @@ import { HowItWorksCard } from '@/features/help/HowItWorksCard'
 import { useFirstUse } from '@/features/help/useFirstUse'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { useBusinessToday, useTodayView } from '@/features/today/hooks'
+import { needsYouItems } from '@/features/today/needsYou'
 import { TargetTile } from '@/features/today/TargetTile'
 import { isFreshChase } from '@/features/today/chaseMemory'
 import { chasedByText } from '@/features/rfqs/lib/collision'
@@ -35,8 +36,10 @@ if (typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').m
  * opens it, "Waiting · 5 · next nudge Mon 30 Nov"). On a phone the pane folds into an accordion under the row. The target tile sits
  * under the list at every width (never for an engineer). The empty state is the goal state.
  *
- * Tabs (owner glossary 2026-10-19, short forms): All, Quotes, Suppliers, Money; every count is "needs you". Engineers get no
- * tabs at all: their list is short (their jobs, their goods, the RFQs they own) and one list is easier.
+ * Tabs (owner glossary 2026-10-19, short forms): All, Quotes, Suppliers, Money. They filter; they carry no number (redesign phase
+ * 0: the one count, "N need you", is the header's and the Today badge's, from features/today/needsYou.ts). Engineers get no tabs
+ * at all: their list is short (their jobs, their goods, the RFQs they own) and one list is easier.
+ * Older than 30 days (needsYou.ts): a grey fold under Waiting, closed until opened, never counted. A late payment never goes there.
  */
 const ICON: Record<RuleKey, LucideIcon> = {
   chase_customer: MessageCircleQuestion,
@@ -67,6 +70,8 @@ const WAITING_OPEN_MAX = 0 // Waiting opens only when the person opens it (R2-08
 
 /** Whether the person opened or closed the Waiting group, kept for this browser session only (null: not touched, the size decides). */
 let waitingToggledThisSession: boolean | null = null
+/** Whether the person opened the "Older than 30 days" fold, for this browser session only. */
+let staleOpenThisSession = false
 /** Whether the person opened the "Imported, to review" fold, for this browser session only. */
 let importedOpenThisSession = false
 
@@ -85,6 +90,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const [expanded, setExpanded] = useState<string | null>(null)
   const [copied, setCopied] = useState<ReadonlySet<string>>(new Set())
   const [waitingToggled, setWaitingToggled] = useState<boolean | null>(waitingToggledThisSession)
+  const [staleOpen, setStaleOpen] = useState(staleOpenThisSession)
   const [importedOpen, setImportedOpen] = useState(importedOpenThisSession)
   const markCopied = (k: string) => {
     setCopied(s => new Set(s).add(k))
@@ -102,6 +108,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
   const inTab = (i: TodayItem) => tab === 'all' || i.tab === tab
   const active = useMemo(() => (view ? view.active.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
   const waiting = useMemo(() => (view ? view.waiting.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
+  const stale = useMemo(() => (view ? view.stale.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
   const imported = useMemo(() => (view ? view.imported.filter(inTab) : []), [view, tab]) // eslint-disable-line react-hooks/exhaustive-deps
   const groups = useMemo(
     () => (view ? [
@@ -111,7 +118,10 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
     ] : []),
     [view, tab], // eslint-disable-line react-hooks/exhaustive-deps
   )
-  const all = useMemo(() => [...active, ...waiting, ...(importedOpen ? imported : [])], [active, waiting, imported, importedOpen])
+  const all = useMemo(
+    () => [...active, ...waiting, ...(importedOpen ? imported : []), ...(staleOpen ? stale : [])],
+    [active, waiting, imported, importedOpen, stale, staleOpen],
+  )
   // Desktop always has something selected (the first item); a selection that left the list moves on.
   const current = all.find(i => i.key === selected) ?? (wide ? active[0] ?? waiting[0] : undefined)
   const openId = wide ? current?.key : expanded
@@ -120,12 +130,9 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
     if (selected && !all.some(i => i.key === selected) && !copied.has(selected)) setSelected(null)
   }, [all, selected, copied])
 
-  const counts = useMemo(() => {
-    const a = view?.active ?? []
-    return { all: a.length, bids: a.filter(i => i.tab === 'bids').length, sourcing: a.filter(i => i.tab === 'sourcing').length, money: a.filter(i => i.tab === 'money').length }
-  }, [view])
-  const dueNow = view?.now.length ?? 0
-  const firstUse = useFirstUse('today', user.id, user.role, !!view && view.active.length === 0 && view.waiting.length === 0 && view.imported.length === 0)
+  // The one count (needsYou.ts): what is due today or late, not Waiting, not older than 30 days. The same number as the Today badge.
+  const needYou = view ? needsYouItems(view).length : 0
+  const firstUse = useFirstUse('today', user.id, user.role, !!view && view.active.length === 0 && view.waiting.length === 0 && view.stale.length === 0 && view.imported.length === 0)
   const tabs: Array<'all' | TodayTab> = user.role === 'engineer' ? [] : ['all', 'bids', 'sourcing', 'money']
 
   // Waiting starts collapsed (round-2 R2-08): it is the system's cooldown, not work. Opening it is the person's choice,
@@ -145,28 +152,23 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start">
       <header className="grid gap-1 px-5 pb-3 pt-5">
         <h1 className={wide ? 'text-2xl font-semibold tracking-tight' : 'sr-only'}>Today</h1>
-        <p className="text-sm text-fg-muted">
+        <p className="text-base text-fg-muted">
           {headerDate(today)}
           {view ? (
             <>
-              {wide ? ' · ' : ' · '}
-              <b className="num font-medium text-fg">{counts.all}</b> need you{wide ? ' · ' : ', '}
-              <b className="num font-medium text-fg">{dueNow}</b> due now
+              {' · '}
+              <b className="num font-medium text-fg" data-needs-you-count>{needYou}</b> need you
             </>
           ) : null}
         </p>
         {tabs.length > 0 ? (
           <SegmentedControl
             aria-label="Show"
-            // One line in the 420 px list at 1366 x 768, even with a 15 px classic scrollbar and two-digit counts (about 360 px
-            // to spare): tighter segments (6 px sides, 4 px to the count, a 4 px count pill), and no count on "All", because the
-            // line above already says how many need you (each fact once). Below that the strip wraps (audit T4).
-            // Measured with Geist 500 at 14 px: 352 px with three two-digit counts. `px-[6px]`, not `px-1.5`: Tailwind 3 never
-            // generated `[&>*]:px-1.5` (the dot), so the segments kept their 12 px sides and Money fell to a second line.
-            className="mt-2 flex-wrap justify-self-start max-md:[&>*]:min-w-[44px] [&>*]:justify-center [&>*]:gap-1 [&>*]:px-[6px] [&_[data-needs-count]]:px-1"
+            // A filter with no numbers (redesign phase 0: the line above is the one count). It wraps when the list is narrow (audit T4).
+            className="mt-2 flex-wrap justify-self-start max-md:[&>*]:min-w-[44px] [&>*]:justify-center"
             value={tab}
             onValueChange={v => setTab(v as 'all' | TodayTab)}
-            options={tabs.map(t => ({ value: t, label: TAB_LABEL[t], needs: t === 'all' ? undefined : counts[t] }))}
+            options={tabs.map(t => ({ value: t, label: TAB_LABEL[t] }))}
           />
         ) : null}
         <HowItWorksCard userId={user.id} role={user.role} className="mt-2" />
@@ -192,6 +194,8 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                 ? 'Everything you chased is waiting for its date. It comes back here when it is time to nudge.'
                 : imported.length > 0
                   ? 'Orders imported from the old CRM are folded away below until you review them. They are not counted.'
+                  : stale.length > 0
+                  ? 'Work older than 30 days is folded away below. It is not counted.'
                   : user.role === 'engineer'
                   ? 'Commissioning jobs you are assigned to, and the goods on your orders, appear here.'
                   : 'Chases, quotations, goods and payments that need you will appear here.'}
@@ -200,7 +204,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
           {groups.map(g =>
             g.items.length === 0 ? null : (
               <section key={g.id} aria-label={g.title}>
-                <h2 className="flex items-baseline gap-2 border-y bg-sunken px-5 py-2 text-xs font-medium text-fg-2">
+                <h2 className="flex items-baseline gap-2 border-y bg-sunken px-5 py-2 text-base font-medium text-fg-2">
                   {g.title} <span className="num font-regular text-fg-muted">{g.items.length}</span>
                 </h2>
                 <ul>
@@ -228,7 +232,7 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
                   waitingToggledThisSession = !waitingOpen
                   setWaitingToggled(!waitingOpen)
                 }}
-                className="flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-medium text-fg-2"
+                className="flex w-full items-center gap-2 px-5 py-3 text-left text-base font-medium text-fg-2"
               >
                 <Icon icon={waitingOpen ? ChevronDown : ChevronRight} size="sm" />
                 {/* A count in words, never a pill (spec 2.2 #8): "Waiting · 5 · next nudge Mon 30 Nov". */}
@@ -292,6 +296,41 @@ function TodayBody({ user, name }: { user: { id: string; role: Role }; name: str
               ) : null}
             </section>
           ) : null}
+          {stale.length > 0 ? (
+            // Older than 30 days (needsYou.ts): kept in sight for the person who has to act, never counted, never coloured.
+            <section aria-label="Older than 30 days" className="border-t bg-sunken" data-stale-fold="">
+              <button
+                type="button"
+                aria-expanded={staleOpen}
+                onClick={() => {
+                  staleOpenThisSession = !staleOpen
+                  setStaleOpen(!staleOpen)
+                }}
+                className="flex w-full items-center gap-2 px-5 py-3 text-left text-base font-medium text-fg-2"
+              >
+                <Icon icon={staleOpen ? ChevronDown : ChevronRight} size="sm" />
+                <span>
+                  Older than 30 days · <span className="num">{stale.length}</span>
+                  <span className="font-regular text-fg-muted">{staleOpen ? ' · not counted' : ' · show'}</span>
+                </span>
+              </button>
+              {staleOpen ? (
+                <ul>
+                  {stale.map(i => (
+                    <Row key={i.key} item={i} today={today} names={data?.names} faded open={openId === i.key} copied={copied.has(i.key)} wide={wide} onPick={() => pick(i.key)}>
+                      {!wide && expanded === i.key && data ? (
+                        <div className="border-l-2 border-brand-green bg-canvas px-4 py-4">
+                          <Suspense fallback={null}>
+                            <ContextPane item={i} data={data} today={today} copied={copied} onCopied={markCopied} onReleased={release} compact nextItem={nextOf(i.key)} onSelect={k => setExpanded(k)} />
+                          </Suspense>
+                        </div>
+                      ) : null}
+                    </Row>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+          ) : null}
         </>
       )}
     </div>
@@ -334,7 +373,7 @@ function Row({ item, today, names, waiting = false, faded = false, open, copied,
   // On the selected row's background the amber is below 4.5:1, so a warning badge reads in the body colour there (as on the GST register).
   const tone = item.badge.tone === 'danger' ? 'text-tone-danger-fg' : item.badge.tone === 'warning' ? (open ? 'text-fg-2' : 'text-tone-warning-fg') : 'text-fg-muted'
   return (
-    <li data-rule={item.rule} data-waiting={waiting || undefined} data-imported={item.imported || undefined} className="border-b last:border-b-0">
+    <li data-rule={item.rule} data-waiting={waiting || undefined} data-stale={(faded && !item.imported) || undefined} data-imported={item.imported || undefined} className="border-b last:border-b-0">
       <button
         type="button"
         onClick={onPick}
@@ -352,8 +391,8 @@ function Row({ item, today, names, waiting = false, faded = false, open, copied,
           <Icon icon={ICON[item.rule]} size="md" />
         </span>
         <span className="grid min-w-0 gap-px">
-          <span className={cn('min-w-0 text-sm font-medium [overflow-wrap:anywhere]', (waiting || faded) && 'font-regular text-fg-2')}>{waiting ? (item.waitingTitle ?? item.title) : item.title}</span>
-          <span className="min-w-0 text-xs text-fg-muted [overflow-wrap:anywhere]">
+          <span className={cn('min-w-0 text-base font-medium [overflow-wrap:anywhere]', (waiting || faded) && 'font-regular text-fg-2')}>{waiting ? (item.waitingTitle ?? item.title) : item.title}</span>
+          <span className="min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">
             <span className="num">{item.ref}</span> · {item.party}
           </span>
           {item.collision && names?.[item.collision.by] ? (

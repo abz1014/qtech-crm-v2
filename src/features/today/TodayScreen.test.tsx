@@ -1,16 +1,19 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { SessionContext, type SessionState } from '@/app/session'
 import { ToastProvider } from '@/ui/Toast'
 import { installFakeDb, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 import TodayScreen from '@/features/today/TodayScreen'
+import { businessToday } from '@/lib/dates'
+import { addDays } from '@/features/rfqs/lib/dateText'
 
 /* Smoke test of the screen over a fake database: the states render and the money reads are gated by role. The real
  * queries are proven against the real database by e2e/today. */
 const rfqState = {
-  rfq_id: 'r1', number: 184, company_id: 'c1', owner_id: 'me', received_on: '2026-01-01', due_on: null, is_priority: false, quoted_on: null, closed_on: null,
+  // received two days ago: still "needs you" (an item older than 30 days moves to the grey fold)
+  rfq_id: 'r1', number: 184, company_id: 'c1', owner_id: 'me', received_on: addDays(businessToday(), -2), due_on: null, is_priority: false, quoted_on: null, closed_on: null,
   outcome: 'open', sourcing_state: 'not_floated', bid_state: 'to_bid', quotation_valid_until: null, companies: { name: 'Mehran Paper Board' },
 }
 
@@ -49,6 +52,27 @@ describe('Today screen', () => {
     expect(await screen.findByText('Needs suppliers')).toBeInTheDocument()
     expect(screen.getAllByText('RFQ-0184').length).toBeGreaterThan(0)
     expect(screen.getByRole('radio', { name: /Money/ })).toBeInTheDocument()
+  })
+
+  it('counts it once in the header, and shows no number on the tabs (redesign phase 0)', async () => {
+    fake = install()
+    renderAs('sales')
+    await screen.findByText('Needs suppliers')
+    expect(document.querySelector('[data-needs-you-count]')?.textContent).toBe('1')
+    expect(screen.queryByText(/due now/)).toBeNull()
+    expect(document.querySelector('[data-needs-count]')).toBeNull()
+  })
+
+  it('an item older than 30 days sits in the grey "Older than 30 days" fold, not counted', async () => {
+    fake = install({ rfqs: [{ ...rfqState, received_on: '2025-01-27' }] })
+    renderAs('sales')
+    const fold = await screen.findByRole('region', { name: 'Older than 30 days' })
+    expect(document.querySelector('[data-needs-you-count]')?.textContent).toBe('0')
+    expect(screen.getByText('Nothing needs you today')).toBeInTheDocument()
+    expect(within(fold).queryByText('Needs suppliers')).toBeNull() // closed until opened
+    fireEvent.click(within(fold).getByRole('button', { name: /Older than 30 days/ }))
+    expect(within(fold).getByText('Needs suppliers')).toBeInTheDocument()
+    expect(within(fold).getByText('since 27 Jan 2025')).toBeInTheDocument()
   })
 
   it('reads as the goal state when nothing needs you', async () => {

@@ -115,34 +115,32 @@ describe('old addresses keep working', () => {
   })
 })
 
-describe('tab counts mean "needs you", and agree with the pages', () => {
-  it('Who owes us counts exactly Today\'s payment items for this person: routed by owner, the reminded one waiting', async () => {
-    const overdue = (id: string, owner: string, remindedDaysAgo: number | null) => ({
+describe('no Money tab carries a number (redesign phase 0: the one count is Today\'s)', () => {
+  it('Who owes us has no count, even with overdue payments (they are rows on Today)', async () => {
+    const overdue = (id: string, owner: string) => ({
       order_id: id, order_number: Number(id.slice(1)), company_id: 'c', owner_id: owner, gross_target: 118000, settled: 0, balance: 118000, overpaid_by: 0,
-      due_on: '2025-01-01', is_overdue: true, payment_state: 'overdue', reminder_count: remindedDaysAgo === null ? 0 : 1, data_trust: 'ok',
-      last_reminded_on: remindedDaysAgo === null ? null : new Date(Date.now() - remindedDaysAgo * 86_400_000).toISOString().slice(0, 10),
+      due_on: '2025-01-01', is_overdue: true, payment_state: 'overdue', reminder_count: 0, data_trust: 'ok', last_reminded_on: null,
     })
     at('/money/receivables', 'admin', c => {
-      if (c.target === 'rpc:receivables_list')
-        return receivablesListResult(c, [overdue('o1', 'u', null), overdue('o2', 'u', 1), overdue('o3', 's', null)])
-      if (c.target === 'rpc:order_receivables')
-        return { data: [overdue('o1', 'u', null), overdue('o2', 'u', 1), overdue('o3', 's', null)] } // mine, mine but just reminded, a sales person's
+      if (c.target === 'rpc:receivables_list') return receivablesListResult(c, [overdue('o1', 'u'), overdue('o3', 's')])
+      if (c.target === 'rpc:order_receivables') return { data: [overdue('o1', 'u'), overdue('o3', 's')] }
       if (c.target === 'users') return { data: [{ id: 'u', role: 'admin', name: 'A' }, { id: 's', role: 'sales', name: 'S' }] }
       return respond(c)
     })
     const tab = await screen.findByRole('link', { name: /^Who owes us/ })
-    await waitFor(() => expect(tab).toHaveAccessibleName(/^Who owes us\s*, 1 need you$/))
+    await new Promise(r => setTimeout(r, 50))
+    expect(tab).toHaveAccessibleName(/^Who owes us$/)
+    expect(screen.getByTestId('money-tabs').querySelectorAll('[data-needs-count]')).toHaveLength(0)
   })
 
-  it('Month end counts the checks with items plus Things to check, the same number the checklist says', async () => {
+  it('Month end has no count; the checklist still says how many checks have something', async () => {
     at(`/money/month-end?month=${MONTH}`, 'admin', c =>
       c.target === 'rpc:money_exceptions_input'
         ? { data: { orders: [{ id: 'o1', number: 7, orderedOn: null, cancelled: false, basisUnknown: true }], money: [], payments: [], expenses: [], invoices: [], legs: [], pos: [], legPaid: [] } }
         : respond(c),
     )
-    const tab = await screen.findByRole('link', { name: /^Month end/ })
-    await waitFor(() => expect(tab).toHaveAccessibleName(/^Month end\s*, 3 need you$/))
     expect(await screen.findByTestId('checks-summary')).toHaveTextContent('3 checks have something to look at')
+    expect(screen.getByRole('link', { name: /^Month end/ })).toHaveAccessibleName(/^Month end$/)
   })
 })
 

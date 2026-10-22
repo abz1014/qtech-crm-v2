@@ -6,7 +6,7 @@
 import { formatAmount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
 import type { StepTone } from '@/lib/status'
-import { daysLate, daysOverdue } from '@/lib/timeWords'
+import { COUNT_WORDS_MAX_DAYS, daysLate, overdueWords } from '@/lib/timeWords'
 import type { OrderListRow } from '@/features/orders/api'
 import { nextOrderStep, type OrderFacts, type OrderStep, type StepKind } from '@/features/orders/lib/orderSteps'
 
@@ -51,11 +51,12 @@ export function listText(step: OrderStep, f: OrderFacts): string {
     case 'resolve-basis':
       return 'Is GST included? Answer it'
     case 'chase-payment': {
-      const late = step.lateDays && step.lateDays > 0 ? daysOverdue(step.lateDays) : 'overdue'
+      const late = step.lateDays && step.lateDays > 0 && f.dueOn ? overdueWords(step.lateDays, f.dueOn) : 'overdue'
       return `Chase payment: ${late}${pkr(f.balance) ? ` · ${pkr(f.balance)}` : ''}`
     }
     case 'goods-late': {
-      const late = step.lateDays && step.lateDays > 0 ? `goods ${daysLate(step.lateDays)}` : 'goods late'
+      // Past 30 days a count says nothing (redesign phase 0): "goods late", the expected date is on the order.
+      const late = step.lateDays && step.lateDays > 0 && step.lateDays <= COUNT_WORDS_MAX_DAYS ? `goods ${daysLate(step.lateDays)}` : 'goods late'
       return supplier ? `Chase ${supplier}: ${late}` : `Chase the supplier: ${late}`
     }
     case 'add-supplier':

@@ -146,7 +146,8 @@ describe('RFQ board', () => {
     await user.click(screen.getByRole('radio', { name: 'Quotation sent' }))
     await waitFor(() => expect(bodyRows()).toHaveLength(1))
     expect(bodyRows()[0]).toHaveTextContent('Punjab Cement')
-    await user.click(screen.getByRole('radio', { name: /^Needs suppliers\s*, 1 need you$/ }))
+    // no count on a step (redesign phase 0: the one "needs you" number is Today's)
+    await user.click(screen.getByRole('radio', { name: /^Needs suppliers$/ }))
     await waitFor(() => expect(bodyRows()[0]).toHaveTextContent('Sargodha Dairy'))
     expect(screen.queryByRole('radio', { name: 'Compact' })).toBeNull() // no density switch any more
   })

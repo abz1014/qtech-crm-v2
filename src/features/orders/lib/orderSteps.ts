@@ -110,7 +110,8 @@ export function nextOrderStep(f: OrderFacts): OrderStep {
   if (late.length > 0 || f.goods === 'late') {
     // the longest late first
     const leg = late.length > 0 ? soonest(late) : soonest(open)
-    return { kind: 'goods-late', tone: 'late', rank: 1, leg, lateDays: leg?.expectedOn ? Math.max(0, daysBetween(leg.expectedOn, f.today)) : undefined }
+    // Amber, not red (redesign phase 0): late goods are our own pace slipping; red is kept for late money and promises to customers.
+    return { kind: 'goods-late', tone: 'now', rank: 1, leg, lateDays: leg?.expectedOn ? Math.max(0, daysBetween(leg.expectedOn, f.today)) : undefined }
   }
 
   if (f.goods === 'to_source') return engineer ? { kind: 'wait-supplier', tone: 'waiting', rank: 43 } : { kind: 'add-supplier', tone: 'now', rank: 11 }
